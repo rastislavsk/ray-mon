@@ -272,13 +272,10 @@ b {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    /* Výška pása na mobile a tablete stojí na tomto paddingu a na veľkosti ikony. Pôvodných
-       12/10px a 22px ikona dávali pás vysoký 64.5px, dnešných 7/6px a 18px ikona dávajú
-       51.5px, teda o 20 % menej. Keď sa ikona zmenšila z 22px na 18px, padding narástol
-       z 5/4px na 7/6px o presne tie isté 4px - výška pása sa tým nemenila, uvoľnené miesto
-       ostalo ikone ako vzduch okolo nej. Popiska (14.5px) a medzera 5px sú bez zmeny,
-       rovnako 1px horný okraj pása. Desktop (od 1024px) má vlastný padding aj vlastnú
+    /* Výška pása na mobile a tablete stojí na tomto paddingu a na veľkosti ikony - popiska
+       je vizuálne skrytá (viď .nav-item .lbl nižšie), takže do výšky ani šírky nezasahuje.
+       Pôvodných 12/10px a 22px ikona dávali pás vysoký 64.5px, dnešných 7/6px a 18px ikona
+       dávajú 51.5px, teda o 20 % menej. Desktop (od 1024px) má vlastný padding aj vlastnú
        veľkosť ikon, tieto riadky naň nedosiahnu. */
     padding: 7px 0 6px;
     color: var(--ink-35);
@@ -294,10 +291,20 @@ b {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
+/* Popiska ostáva v DOM kvôli čítačke obrazovky (button tak má prístupný názov), len sa
+   vizuálne neukazuje - ikony na páse stačia na rozoznanie karty. Toto je bežný vzor
+   "visually hidden": na rozdiel od display:none alebo aria-hidden ho čítačka aj axe
+   stále vidia, len sa nekreslí. */
 .nav-item .lbl {
-    font-size: var(--fs-xs);
-    letter-spacing: 0.08em;
-    color: inherit;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 .nav-item.active {
     color: var(--ink);
@@ -2025,12 +2032,9 @@ b {
         width: 16px;
         height: 16px;
     }
-    .nav-item .lbl {
-        line-height: 1.2;
-    }
-    /* Na desktope je položka v riadku: ikona (16px) stojí pri ľavom okraji, popiska vedľa nej.
-       Podsvietenie preto necentrujeme na šírku položky, ale na ikonu - 8px od ľavého okraja
-       a na polovicu výšky. */
+    /* Na desktope je položka v riadku, ale keďže popiska je vizuálne skrytá, v riadku je
+       fakticky len ikona. Podsvietenie preto necentrujeme na šírku položky, ale na ikonu -
+       8px od ľavého okraja a na polovicu výšky. */
     .nav-item.active::after {
         top: 50%;
         left: 8px;
