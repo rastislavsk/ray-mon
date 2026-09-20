@@ -11,7 +11,7 @@ import { FIXED_NOW, fixtureData } from '../helpers.js';
 const PORT = 8123;
 const SIRKA = 390;
 const VYSKA = 844;
-// Karta Zdieľať tu zámerne nie je: jej QR kód kreslí knižnica z CDN, takže bez prístupu
+// Karta Nastavenie tu zámerne nie je: QR kód v nej kreslí knižnica z CDN, takže bez prístupu
 // naň by z nej bol prázdny biely rámik. Je to aj tak len QR kód a odkaz.
 const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },

@@ -566,8 +566,8 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
 
 test('nastavenie: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }) => {
     const errors = await openApp(page);
-    await page.locator('#nav-zdielat').click();
-    await expect(page.locator('#nav-zdielat .lbl')).toHaveText('Nastavenie');
+    await page.locator('#nav-nastavenie').click();
+    await expect(page.locator('#nav-nastavenie .lbl')).toHaveText('Nastavenie');
     await expect(page.locator('#settings-title')).toHaveText('Nastavenie');
 
     // Karta je zoznam nastavení: položka je vidno, jej obsah až po ťuknutí na ňu.
@@ -617,7 +617,7 @@ test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ p
 test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ page }) => {
     const errors = await openApp(page);
     // Karty sa vykresľujú až po otvorení, aby test videl aj ich obsah.
-    for (const nav of ['#nav-7dni', '#nav-zdielat', '#nav-info', '#nav-terazky']) await page.locator(nav).click();
+    for (const nav of ['#nav-7dni', '#nav-nastavenie', '#nav-info', '#nav-terazky']) await page.locator(nav).click();
 
     const broken = await page.evaluate(() => {
         const out = [];
@@ -653,7 +653,7 @@ const pockajNaPrechod = (page) =>
 
 test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({ page }) => {
     await openApp(page);
-    for (const panel of ['terazky', '7dni', 'zdielat', 'info']) {
+    for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
         await page.locator(`#nav-${panel}`).click();
         await pockajNaPrechod(page);
         const results = await new AxeBuilder({ page }).analyze();
@@ -741,7 +741,7 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
     for (const [nav, panel] of [
         ['#nav-terazky', '#panel-terazky'],
         ['#nav-7dni', '#panel-7dni'],
-        ['#nav-zdielat', '#panel-zdielat'],
+        ['#nav-nastavenie', '#panel-nastavenie'],
         ['#nav-info', '#panel-info'],
     ]) {
         await page.locator(nav).click();
@@ -844,7 +844,7 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
  */
 test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     const errors = await openApp(page);
-    for (const panel of ['terazky', '7dni', 'zdielat', 'info']) {
+    for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
         await page.locator(`#nav-${panel}`).click();
         await expect(page.locator(`#panel-${panel}`)).toBeVisible();
         const zamknute = await page.evaluate(() =>
@@ -863,7 +863,7 @@ test('široká obrazovka: prepnutie na 7 dní skryje kartu Spotrebiče', async (
     await page.locator('#nav-7dni').click();
     await expect(page.locator('#panel-7dni')).toBeVisible();
     await expect(page.locator('#panel-terazky')).toBeHidden();
-    await page.locator('#nav-zdielat').click();
+    await page.locator('#nav-nastavenie').click();
     await expect(page.locator('#panel-terazky')).toBeHidden();
     expect(errors).toEqual([]);
 });
@@ -1072,7 +1072,7 @@ test('prechod medzi kartami: smer podľa poradia a nič nepretečie do strán', 
                 requestAnimationFrame(krok);
             }),
     );
-    await page.locator('#nav-zdielat').click();
+    await page.locator('#nav-nastavenie').click();
     expect(await sledujPretecenie, 'stránku sa dalo počas prechodu poscrollovať do strán').toBe(0);
     expect(errors).toEqual([]);
 });
@@ -1086,7 +1086,7 @@ test('tlačidlo Späť vracia o krok v appke, dopredu ide zase tam', async ({ pa
     const errors = await openApp(page);
     const adresa = page.url();
 
-    await page.locator('#nav-zdielat').click();
+    await page.locator('#nav-nastavenie').click();
     await page.locator('#nav-7dni').click();
     await page.locator('#week-list [data-day-index="5"]').click();
     await expect(page.locator('#week-day-head')).toBeVisible();
@@ -1097,13 +1097,13 @@ test('tlačidlo Späť vracia o krok v appke, dopredu ide zase tam', async ({ pa
     await expect(page.locator('#week-day-head')).toBeHidden();
     await ocakavajKartu(page, '7dni');
     await page.goBack();
-    await ocakavajKartu(page, 'zdielat');
+    await ocakavajKartu(page, 'nastavenie');
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
 
     // Dopredu vedie tá istá cesta naspäť, vrátane otvoreného detailu dňa.
     await page.goForward();
-    await ocakavajKartu(page, 'zdielat');
+    await ocakavajKartu(page, 'nastavenie');
     await page.goForward();
     await ocakavajKartu(page, '7dni');
     await page.goForward();
@@ -1151,7 +1151,7 @@ test.describe('listovanie kariet prstom', () => {
         await swipe(page, '#dial-hero', { dx: -120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
-        await ocakavajKartu(page, 'zdielat');
+        await ocakavajKartu(page, 'nastavenie');
         await swipe(page, '.settings-list', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
@@ -1286,7 +1286,7 @@ test.describe('listovanie kariet prstom', () => {
         // Rebríček sa nemá kam posúvať do strán, gesto teda patrí karte. Klik, ktorý by po
         // ťahu otvoril detail dňa, appka zruší.
         await swipe(page, '#week-list', { dx: -120 });
-        await ocakavajKartu(page, 'zdielat');
+        await ocakavajKartu(page, 'nastavenie');
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#week-day-head')).toBeHidden();
         expect(errors).toEqual([]);
@@ -1314,7 +1314,7 @@ test.describe('listovanie kariet prstom', () => {
             expect(pretecenie, `šírka ${width}px: prehľad dní pretekal do strán`).toBeLessThanOrEqual(0);
 
             await swipe(page, '#week-list', { dx: -120 });
-            await ocakavajKartu(page, 'zdielat');
+            await ocakavajKartu(page, 'nastavenie');
             expect(errors).toEqual([]);
         }
     });
@@ -1520,7 +1520,7 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
     const errors = await openApp(page);
     await page.addStyleTag({ content: `:root { --safe-top: ${SAFE_TOP}px; }` });
 
-    for (const panel of ['terazky', '7dni', 'zdielat']) {
+    for (const panel of ['terazky', '7dni', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         const vrch = await page.evaluate(() => document.querySelector('.appbar-inner').getBoundingClientRect().top);
         expect(vrch, `karta ${panel}: hlavička zasahuje do stavového riadku`).toBeGreaterThanOrEqual(SAFE_TOP);

@@ -3,7 +3,7 @@
 // položku do histórie prehliadača; Späť ju vyberie a appka sa vráti tam, kde bola.
 //
 // Appka pritom nemení adresu: položky histórie sú len značky s krokom navigácie, aby
-// odkaz na appku ostal jeden (zdieľa sa na karte Zdieľať) a neťahal si za sebou, na
+// odkaz na appku ostal jeden (zdieľa sa na karte Nastavenie) a neťahal si za sebou, na
 // ktorej karte kto naposledy stál.
 //
 // Zatvorenie appky sa nikde nevynucuje a ani nedá: stránka sa sama zavrieť nevie a

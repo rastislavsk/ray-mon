@@ -34,14 +34,14 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
     store.setState({ panel: 'terazky', wide: true });
     assert.equal(calls, 0);
     off();
-    store.setState({ panel: 'zdielat' });
+    store.setState({ panel: 'nastavenie' });
     assert.equal(calls, 0);
 });
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
     assert.equal(nextPanel('terazky', 1), '7dni');
-    assert.equal(nextPanel('7dni', 1), 'zdielat');
-    assert.equal(nextPanel('zdielat', 1), 'info');
+    assert.equal(nextPanel('7dni', 1), 'nastavenie');
+    assert.equal(nextPanel('nastavenie', 1), 'info');
     assert.equal(nextPanel('info', 1), null, 'za poslednou kartou už nič nie je');
     assert.equal(nextPanel('7dni', -1), 'terazky');
     assert.equal(nextPanel('terazky', -1), null, 'pred prvou kartou už nič nie je');
@@ -58,9 +58,9 @@ test('poradie dní v detaile dňa: na kraji týždňa sa nezacyklí', () => {
 
 test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa prepínalo', () => {
     assert.deepEqual(panelChange('terazky', '7dni'), { panel: '7dni', panelDir: 1, weekDetail: null });
-    assert.deepEqual(panelChange('zdielat', '7dni'), { panel: '7dni', panelDir: -1, weekDetail: null });
-    assert.equal(panelChange('terazky', 'zdielat').panelDir, 1);
-    assert.equal(panelChange('zdielat', 'terazky').panelDir, -1);
+    assert.deepEqual(panelChange('nastavenie', '7dni'), { panel: '7dni', panelDir: -1, weekDetail: null });
+    assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
+    assert.equal(panelChange('nastavenie', 'terazky').panelDir, -1);
 });
 
 test('krok navigácie pre tlačidlo Späť je karta a otvorený detail, nič iné', () => {
@@ -75,7 +75,7 @@ test('krok navigácie pre tlačidlo Späť je karta a otvorený detail, nič in�
 });
 
 test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia', () => {
-    assert.deepEqual(navChange('zdielat', { panel: '7dni', weekDetail: 'day' }), {
+    assert.deepEqual(navChange('nastavenie', { panel: '7dni', weekDetail: 'day' }), {
         panel: '7dni',
         panelDir: -1,
         weekDetail: 'day',

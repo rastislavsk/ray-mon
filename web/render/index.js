@@ -25,5 +25,6 @@ export function render(state, dom) {
     renderPanels(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
-    if (state.panel === 'zdielat') renderZdielat(state, dom);
+    // Karta Nastavenie má zatiaľ jedinú položku, ktorá niečo kreslí - zdieľanie appky.
+    if (state.panel === 'nastavenie') renderZdielat(state, dom);
 }
