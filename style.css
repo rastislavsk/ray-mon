@@ -272,19 +272,22 @@ b {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Výška pása na mobile a tablete stojí na tomto paddingu a na veľkosti ikony - popiska
-       je vizuálne skrytá (viď .nav-item .lbl nižšie), takže do výšky ani šírky nezasahuje.
-       Pôvodných 12/10px a 22px ikona dávali pás vysoký 64.5px, dnešných 7/6px a 18px ikona
-       dávajú 51.5px, teda o 20 % menej. Desktop (od 1024px) má vlastný padding aj vlastnú
-       veľkosť ikon, tieto riadky naň nedosiahnu. */
+    /* Výška pása na mobile a tablete stojí na tomto paddingu a na veľkosti ikony. Popiska je
+       vizuálne skrytá (viď .nav-item .lbl nižšie) - priestor, ktorý predtým zaberala pod
+       ikonou, dostala späť ikona samotná (38px namiesto 18px), takže výška pása (7+38+6=51px)
+       ostáva rovnaká ako predtým s textom. Bez tohto by pás so samotnou malou ikonou zaberal
+       len 31px a na telefóne s natrvalo zobrazenou navigačnou lištou by pôsobil, akoby sa pod
+       ňu schovával - safe-area rezerva nižšie je síce rovnaká, ale s nižším pásom je k nej
+       ikona bližšie. Desktop (od 1024px) má vlastný padding aj vlastnú veľkosť ikon, tieto
+       riadky naň nedosiahnu. */
     padding: 7px 0 6px;
     color: var(--ink-35);
     position: relative;
     transition: color var(--dur);
 }
 .nav-item svg {
-    width: 18px;
-    height: 18px;
+    width: 38px;
+    height: 38px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2.2;
@@ -310,19 +313,21 @@ b {
     color: var(--ink);
 }
 /* Podsvietenie ikony: rozmazaný farebný kruh za ňou. Stred sadá presne na ikonu - na mobile
-   je 7px horný padding a ikona 18px, teda 7 + 9 = 16px od vrchu položky. Kruh je plná farba
-   stlmená cez opacity, nie priehľadná farba v gradiente: `background-color` tak ostáva presne
-   tá istá hodnota ako má stavová bodka pri čase (e2e test ich porovnáva). `z-index: -1` ho
-   posunie za ikonu aj popisku; pozadie pása to neprekryje, lebo .bottomnav je vlastný
-   stacking context (má z-index) a záporná vrstva sa kreslí až nad jeho pozadím. */
+   je 7px horný padding a ikona 38px, teda 7 + 19 = 26px od vrchu položky. Kruh má rovnakú
+   12px rezervu okolo ikony ako predtým (30px kruh okolo 18px ikony), teraz teda 50px okolo
+   38px ikony. Kruh je plná farba stlmená cez opacity, nie priehľadná farba v gradiente:
+   `background-color` tak ostáva presne tá istá hodnota ako má stavová bodka pri čase (e2e
+   test ich porovnáva). `z-index: -1` ho posunie za ikonu aj popisku; pozadie pása to
+   neprekryje, lebo .bottomnav je vlastný stacking context (má z-index) a záporná vrstva sa
+   kreslí až nad jeho pozadím. */
 .nav-item.active::after {
     content: '';
     position: absolute;
-    top: 16px;
+    top: 26px;
     left: 50%;
-    width: 30px;
-    height: 30px;
-    margin: -15px 0 0 -15px;
+    width: 50px;
+    height: 50px;
+    margin: -25px 0 0 -25px;
     border-radius: 50%;
     /* Tá istá farba ako stavová bodka pri čase - podsvietenie aj bodka hovoria o tom istom stave. */
     background: rgb(var(--live-rgb));
