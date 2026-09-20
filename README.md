@@ -17,8 +17,8 @@ Karty sú pomenované tak, ako ich vidno v spodnej navigácii.
 | ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Info](docs/img/info.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
-sú syntetické. Prekresliť ich vie `npm run screenshots`. Karta Zdieľať na obrázku nie je,
-jej QR kód kreslí knižnica z CDN.
+sú syntetické. Prekresliť ich vie `npm run screenshots`. Karta Nastavenie na obrázku nie je,
+QR kód v nej kreslí knižnica z CDN.
 
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
@@ -37,7 +37,9 @@ jej QR kód kreslí knižnica z CDN.
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
-- **Zdieľať** – QR kód, odkaz na appku a tlačidlo na poslanie cez WhatsApp.
+- **Nastavenie** – zoznam nastavení appky. Položka sa ťuknutím rozbalí na mieste; zatiaľ
+  je v zozname jediná – **Zdieľať appku** (QR kód, odkaz na appku a tlačidlo na poslanie
+  cez WhatsApp).
 - **Info** – návod k ciferníku z karty Terazky: ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,
   jazdec na prstenci). Obsah je statický, appka ho neprepočítava.

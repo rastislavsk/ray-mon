@@ -1,4 +1,5 @@
-// Karta Zdieľať: QR kód (knižnica z CDN, generuje sa až pri prvom otvorení) a odkazy.
+// Karta Nastavenie, položka „Zdieľať appku": QR kód (knižnica z CDN, generuje sa až pri prvom
+// otvorení karty, nie až po rozbalení položky) a odkazy.
 
 import { APP_URL } from '../../shared/config.js';
 
