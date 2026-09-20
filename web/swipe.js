@@ -1,6 +1,12 @@
 // Listovanie potiahnutím prsta (mobil, tablet): karty, a v detaile dňa dni v týždni. Gesto
 // len rozhodne, čo je na rade; zmenu robí setState ako všetko ostatné, takže sa to od kliku
 // na navigáciu nelíši.
+//
+// Poslucháče sedia na dokumente, nie na stránke s kartami (#page). Tá je vysoká presne
+// toľko, koľko má karta obsahu - krátka karta (Nastavenie s jedinou položkou) tak nechá pod
+// sebou kus obrazovky, ktorý do nej nepatrí, a ťah v ňom by sa k listovaniu vôbec nedostal.
+// Pre prst je to pritom stále tá istá karta. Gesto patrí celej appke, nie prvku, ktorý sa
+// práve nachádza pod prstom; #page ostáva len hranicou pri hľadaní vnútorných pásov nižšie.
 
 import { SWIPE } from '../shared/config.js';
 import { nextPanel, nextWeekDay, panelChange } from './state.js';
@@ -95,7 +101,7 @@ export function initSwipe(store, dom, hideTooltips) {
     let start = null;
     const cancel = () => (start = null);
 
-    dom.page.addEventListener(
+    document.addEventListener(
         'touchstart',
         (e) => {
             const target = e.target;
@@ -117,10 +123,10 @@ export function initSwipe(store, dom, hideTooltips) {
         { passive: true },
     );
     // Druhý prst znamená pinch-zoom, nie listovanie.
-    dom.page.addEventListener('touchmove', (e) => e.touches.length > 1 && cancel(), { passive: true });
-    dom.page.addEventListener('touchcancel', cancel, { passive: true });
+    document.addEventListener('touchmove', (e) => e.touches.length > 1 && cancel(), { passive: true });
+    document.addEventListener('touchcancel', cancel, { passive: true });
 
-    dom.page.addEventListener(
+    document.addEventListener(
         'touchend',
         (e) => {
             const from = start;
