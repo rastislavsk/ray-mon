@@ -564,10 +564,24 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
     expect(errors).toEqual([]);
 });
 
-test('zdieľať: odkaz na appku', async ({ page }) => {
-    await openApp(page);
+test('nastavenie: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }) => {
+    const errors = await openApp(page);
     await page.locator('#nav-zdielat').click();
+    await expect(page.locator('#nav-zdielat .lbl')).toHaveText('Nastavenie');
+    await expect(page.locator('#settings-title')).toHaveText('Nastavenie');
+
+    // Karta je zoznam nastavení: položka je vidno, jej obsah až po ťuknutí na ňu.
+    await expect(page.locator('#settings-share summary')).toBeVisible();
+    await expect(page.locator('#share-whatsapp')).toBeHidden();
+    await page.locator('#settings-share summary').click();
+    await expect(page.locator('#qrcode')).toBeVisible();
+    await expect(page.locator('#share-whatsapp')).toBeVisible();
     await expect(page.locator('#share-whatsapp')).toHaveAttribute('href', /wa\.me/);
+
+    // Druhé ťuknutie položku zase zavrie - nič iné na karte sa tým nemení.
+    await page.locator('#settings-share summary').click();
+    await expect(page.locator('#share-whatsapp')).toBeHidden();
+    expect(errors).toEqual([]);
 });
 
 test('info: karta vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
@@ -1138,7 +1152,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
         await ocakavajKartu(page, 'zdielat');
-        await swipe(page, '#qrcode', { dx: 120 });
+        await swipe(page, '.settings-list', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');

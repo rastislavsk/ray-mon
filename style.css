@@ -993,7 +993,7 @@ b {
    ale appka sa na túto kartu správa ako obrazovka, nie dokument (rovnaký princíp ako
    .panel na desktope nižšie). :has() zapne režim len vtedy, keď #page má
    data-panel="terazky" (nastavuje ho renderPanels vo web/render/index.js) - iné karty
-   (Dnes-Zajtra, 7 dní, Zdieľať) zostávajú bežne scrollovateľné, nič na nich sa nemení.
+   (Dnes-Zajtra, 7 dní, Nastavenie) zostávajú bežne scrollovateľné, nič na nich sa nemení.
 
    Druhá podmienka je min-height: 620px, teda "keď je dosť výšky". Pod ňou sa režim vôbec
    nezapne a karta je bežný scrollovateľný dokument ako ostatné tri. Dôvod: v režime
@@ -1845,7 +1845,75 @@ b {
     color: var(--ink-35);
     margin-left: 2px;
 }
-/* ---- Zdieľať ---------------------------------------------------------------- */
+/* ---- Nastavenie ------------------------------------------------------------- */
+/* Zoznam nastavení. Položka je <details>, takže rozbalenie rieši prehliadač sám - appka
+   o ňom nevie a nepotrebuje naň stav ani prekreslenie. Ďalšie nastavenie je o jeden <li>
+   viac, žiadne pravidlo tu sa pritom nemení. */
+.settings-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--sp-3);
+}
+.settings-item {
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+}
+.settings-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    cursor: pointer;
+    /* Obe riadky zhasínajú natívnu šípku pred položkou: `list-style` v moderných
+       prehliadačoch, `::-webkit-details-marker` v starších WebKitoch (Safari). */
+    list-style: none;
+}
+.settings-summary::-webkit-details-marker {
+    display: none;
+}
+.settings-icon {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: var(--ink-70);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.settings-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.settings-hint {
+    font-size: var(--fs-sm);
+    color: var(--ink-35);
+}
+.settings-chevron {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--ink-35);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform var(--dur);
+}
+.settings-item[open] .settings-chevron {
+    transform: rotate(90deg);
+}
+.settings-body {
+    padding: 0 16px 18px;
+}
+
+/* ---- Zdieľanie appky (položka nastavenia) ----------------------------------- */
 .share-panel {
     display: flex;
     flex-direction: column;
