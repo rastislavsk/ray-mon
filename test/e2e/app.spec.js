@@ -951,6 +951,17 @@ async function swipe(page, sel, { dx, dy = 0, ms = 0 }) {
     await cdp.detach();
 }
 
+/** Ťah prstom v danom mieste obrazovky. Prázdne miesto pod krátkou kartou nie je prvok,
+ * takže sa nedá zamerať selektorom ako pri `swipe`.
+ * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dx: number }} opts */
+async function tahajVBode(page, { x, y, dx }) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (const t of [0.5, 1]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * t, y }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+}
+
 /** Ťahanie prstom od stredu prvku, nie ponad neho: gesto musí začať presne na ňom. Bežec na
  * páse dňa je široký 34 px, takže `swipe` (ten začína o pol ťahu skôr) by sa naň netrafil.
  * @param {import('@playwright/test').Page} page @param {string} sel @param {{ dx: number, dy?: number, ms?: number }} opts */
@@ -1164,6 +1175,28 @@ test.describe('listovanie kariet prstom', () => {
         // Šikmý ťah je posúvanie po stránke, nie listovanie.
         await swipe(page, '#dial-hero', { dx: -120, dy: 120 });
         await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    /**
+     * Karta Nastavenie má zatiaľ jedinú položku, takže je oveľa kratšia než obrazovka. Kus
+     * plochy pod ňou pre prst ku karte patrí - a musí tam listovať rovnako ako nad obsahom.
+     * Kým poslucháče gesta sedeli na #page (tá je vysoká presne podľa obsahu karty), ťah
+     * v tomto mieste neurobil nič a karta sa dala prelistovať len nad jej hornou časťou.
+     */
+    test('ťah v prázdnom mieste pod krátkou kartou listuje rovnako ako nad jej obsahom', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await ocakavajKartu(page, 'nastavenie');
+
+        const karta = await page.locator('#panel-nastavenie').boundingBox();
+        const prazdno = { x: 195, y: karta.y + karta.height + 120, dx: -120 };
+        expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(844 - 120);
+
+        await tahajVBode(page, prazdno);
+        await ocakavajKartu(page, 'info');
+        await tahajVBode(page, { ...prazdno, dx: 120 });
+        await ocakavajKartu(page, 'nastavenie');
         expect(errors).toEqual([]);
     });
 
