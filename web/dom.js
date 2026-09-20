@@ -1,14 +1,28 @@
 // Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
 // Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
+// Karta Nastavenie sa v kóde stále volá `zdielat` a premenúva sa v dvoch nasadeniach: HTML
+// a moduly vo web/ majú vlastnú cache, takže prehliadač vie desať minút miešať novú stránku
+// so starým skriptom (viď CLAUDE.md). Kým nie sú nové obe strany, prvok sa hľadá pod oboma
+// názvami - potom je jedno, ktorá polovica príde z cache. Po druhom nasadení (a vypršaní
+// cache) tento zoznam aj záložné hľadanie v byId zmaž.
+/** @type {Record<string, string>} */
+const ALIAS = {
+    'panel-zdielat': 'panel-nastavenie',
+    'panel-nastavenie': 'panel-zdielat',
+    'nav-zdielat': 'nav-nastavenie',
+    'nav-nastavenie': 'nav-zdielat',
+};
+
 const byId = (/** @type {string} */ id) => {
-    const el = document.getElementById(id);
+    const alias = ALIAS[id];
+    const el = document.getElementById(id) ?? (alias ? document.getElementById(alias) : null);
     if (!el) throw new Error(`Chýba element #${id}`);
     return el;
 };
 
 // Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", zdielat = „Zdieľať",
+// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", zdielat = „Nastavenie",
 // info = „Info". Popiska je text pre používateľa a mení sa podľa chuti; kódový názov drží
 // HTML id, CSS selektory aj stav, tak nech ho popiska nemusí naháňať.
 export const PANELS = /** @type {const} */ (['terazky', '7dni', 'zdielat', 'info']);
