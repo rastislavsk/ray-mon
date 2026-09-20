@@ -10,7 +10,8 @@ Cloudflare Worker.
 
 ## Čo appka ukazuje
 
-Karty sú pomenované tak, ako ich vidno v spodnej navigácii.
+Spodná navigácia má len ikony bez textu – mená kariet nižšie slúžia len na orientáciu
+v tomto popise.
 
 |                Terazky                 |               7 dní               |               Info               |
 | :------------------------------------: | :-------------------------------: | :------------------------------: |
