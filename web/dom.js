@@ -1,11 +1,11 @@
 // Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
 // Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
-// Karta Nastavenie sa v kóde stále volá `zdielat` a premenúva sa v dvoch nasadeniach: HTML
-// a moduly vo web/ majú vlastnú cache, takže prehliadač vie desať minút miešať novú stránku
-// so starým skriptom (viď CLAUDE.md). Kým nie sú nové obe strany, prvok sa hľadá pod oboma
-// názvami - potom je jedno, ktorá polovica príde z cache. Po druhom nasadení (a vypršaní
-// cache) tento zoznam aj záložné hľadanie v byId zmaž.
+// Druhý krok premenovania karty `zdielat` na `nastavenie`: id v index.html aj názov v PANELS
+// sú už nové. Záložné hľadanie tu ešte chvíľu ostáva, lebo stránka a moduly vo web/ majú
+// vlastnú cache - prehliadač vie desať minút miešať novú stránku so starým skriptom, a byId
+// na chýbajúci prvok zhodí appku ešte pred prvým render() (viď CLAUDE.md). Po nasadení tohto
+// kroku (a vypršaní cache) tento zoznam aj záložné hľadanie v byId zmaž - tretí, posledný krok.
 /** @type {Record<string, string>} */
 const ALIAS = {
     'panel-zdielat': 'panel-nastavenie',
@@ -13,6 +13,14 @@ const ALIAS = {
     'nav-zdielat': 'nav-nastavenie',
     'nav-nastavenie': 'nav-zdielat',
 };
+
+/**
+ * Názov karty z príznaku data-panel v stránke. Z toho istého dôvodu ako ALIAS vyššie:
+ * stránka v cache môže byť staršia než skript a niesť ešte starý názov tretej karty.
+ * Patrí k tomu istému upratovaniu - zmaž ju v poslednom kroku premenovania.
+ * @param {string} raw @returns {string}
+ */
+export const panelFromHtml = (raw) => (raw === 'zdielat' ? 'nastavenie' : raw);
 
 const byId = (/** @type {string} */ id) => {
     const alias = ALIAS[id];
@@ -22,10 +30,10 @@ const byId = (/** @type {string} */ id) => {
 };
 
 // Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", zdielat = „Nastavenie",
+// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", nastavenie = „Nastavenie",
 // info = „Info". Popiska je text pre používateľa a mení sa podľa chuti; kódový názov drží
 // HTML id, CSS selektory aj stav, tak nech ho popiska nemusí naháňať.
-export const PANELS = /** @type {const} */ (['terazky', '7dni', 'zdielat', 'info']);
+export const PANELS = /** @type {const} */ (['terazky', '7dni', 'nastavenie', 'info']);
 
 function headerDom() {
     return {
@@ -120,7 +128,8 @@ function sedemdniDom() {
     };
 }
 
-function zdielatDom() {
+// Karta Nastavenie: zatiaľ len prvky jej jedinej položky, ktorá niečo kreslí - zdieľania appky.
+function nastavenieDom() {
     return {
         qrcode: byId('qrcode'),
         shareWhatsapp: /** @type {HTMLAnchorElement} */ (byId('share-whatsapp')),
@@ -128,7 +137,7 @@ function zdielatDom() {
 }
 
 export function collectDom() {
-    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...zdielatDom() };
+    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...nastavenieDom() };
 }
 
 /** @typedef {ReturnType<typeof collectDom>} Dom */

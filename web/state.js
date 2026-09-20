@@ -5,7 +5,7 @@ import { PANELS } from './dom.js';
 
 /**
  * @typedef {import('../shared/config.js').Season} Season
- * @typedef {'terazky' | '7dni' | 'zdielat' | 'info'} Panel
+ * @typedef {'terazky' | '7dni' | 'nastavenie' | 'info'} Panel
  * @typedef {{
  *   now: Date,
  *   season: Season,
