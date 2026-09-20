@@ -1,11 +1,11 @@
 // Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
 // Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
-// Druhý krok premenovania karty `zdielat` na `nastavenie`: id v index.html aj názov v PANELS
-// sú už nové. Záložné hľadanie tu ešte chvíľu ostáva, lebo stránka a moduly vo web/ majú
-// vlastnú cache - prehliadač vie desať minút miešať novú stránku so starým skriptom, a byId
-// na chýbajúci prvok zhodí appku ešte pred prvým render() (viď CLAUDE.md). Po nasadení tohto
-// kroku (a vypršaní cache) tento zoznam aj záložné hľadanie v byId zmaž - tretí, posledný krok.
+// Posledný zvyšok premenovania karty `zdielat` na `nastavenie`: v index.html aj v PANELS je
+// už všade nový názov, tieto dva preklady len držia pri živote stránku a skripty z minulých
+// nasadení, ktoré môžu byť ešte v cache (prehliadač ich vie desať minút miešať a byId na
+// chýbajúci prvok zhodí appku ešte pred prvým render(), viď CLAUDE.md). Po nasadení tohto
+// kroku a vypršaní cache zmaž ALIAS, panelFromHtml aj ich použitie - premenovanie je hotové.
 /** @type {Record<string, string>} */
 const ALIAS = {
     'panel-zdielat': 'panel-nastavenie',
