@@ -14,7 +14,6 @@ import {
 } from '../shared/config.js';
 import { minutesOfDay } from '../shared/hero-model.js';
 import { loadData } from './data.js';
-import { panelFromHtml } from './dom.js';
 import { initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { panelChange } from './state.js';
@@ -35,7 +34,7 @@ function initNavigation(store, dom) {
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
         // z tej istej strany ako pri ťahaní prstom.
         if (panelBtn instanceof HTMLElement && panelBtn.dataset.panel) {
-            store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelFromHtml(panelBtn.dataset.panel))));
+            store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
         }
         // Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra, v prepínači dní aj
         // priamo v grafoch. Prehľad dní - v oboch podobách - navyše otvorí detail dňa (na mobile;
