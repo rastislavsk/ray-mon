@@ -1,30 +1,8 @@
 // Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
 // Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
-// Posledný zvyšok premenovania karty `zdielat` na `nastavenie`: v index.html aj v PANELS je
-// už všade nový názov, tieto dva preklady len držia pri živote stránku a skripty z minulých
-// nasadení, ktoré môžu byť ešte v cache (prehliadač ich vie desať minút miešať a byId na
-// chýbajúci prvok zhodí appku ešte pred prvým render(), viď CLAUDE.md). Po nasadení tohto
-// kroku a vypršaní cache zmaž ALIAS, panelFromHtml aj ich použitie - premenovanie je hotové.
-/** @type {Record<string, string>} */
-const ALIAS = {
-    'panel-zdielat': 'panel-nastavenie',
-    'panel-nastavenie': 'panel-zdielat',
-    'nav-zdielat': 'nav-nastavenie',
-    'nav-nastavenie': 'nav-zdielat',
-};
-
-/**
- * Názov karty z príznaku data-panel v stránke. Z toho istého dôvodu ako ALIAS vyššie:
- * stránka v cache môže byť staršia než skript a niesť ešte starý názov tretej karty.
- * Patrí k tomu istému upratovaniu - zmaž ju v poslednom kroku premenovania.
- * @param {string} raw @returns {string}
- */
-export const panelFromHtml = (raw) => (raw === 'zdielat' ? 'nastavenie' : raw);
-
 const byId = (/** @type {string} */ id) => {
-    const alias = ALIAS[id];
-    const el = document.getElementById(id) ?? (alias ? document.getElementById(alias) : null);
+    const el = document.getElementById(id);
     if (!el) throw new Error(`Chýba element #${id}`);
     return el;
 };
