@@ -767,6 +767,16 @@ b {
     align-items: center;
     gap: 6px;
 }
+/* Podpis pod kartou Info. */
+.app-credit {
+    font-size: var(--fs-xs);
+    color: var(--ink-20);
+    text-align: center;
+    margin: var(--sp-4) 0 0;
+}
+.app-credit + .app-credit {
+    margin-top: 0;
+}
 
 /* ---- Spotrebiče: verdikt a spotrebiče ------------------------------------- */
 .verdict {
@@ -1974,12 +1984,6 @@ b {
     width: 18px;
     height: 18px;
     fill: currentColor;
-}
-.share-credit {
-    font-size: var(--fs-xs);
-    color: var(--ink-20);
-    text-align: center;
-    margin: 0;
 }
 
 /* ---- Širšie obrazovky ----------------------------------------------------- */
