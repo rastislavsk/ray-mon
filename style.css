@@ -1712,11 +1712,7 @@ b {
    voči najsilnejšiemu dňu v týždni, takže sa dni dajú porovnať očami, bez čítania čísel -
    preto tu nie sú stĺpce Využitie a Špička, tie ostávajú v detaile dňa.
    Blok je vidno len pod 768 px; na širokej obrazovke mu renderView nechá .hidden, lebo
-   tam je na prehľad miesta dosť na bubliny aj tabuľku.
-
-   Obal .week-list-card okolo zoznamu tu už nemá vlastný vzhľad: rám nesú jednotlivé riadky.
-   Z index.html ho zmaže až ďalšie nasadenie (prvý krok zmaže vykresľovanie, druhý prvok -
-   viď CLAUDE.md). */
+   tam je na prehľad miesta dosť na bubliny aj tabuľku. */
 /* Bublina so súčtom aj riadky dní sú tlačidlá, takže potrebujú späť zarovnanie a šírku,
    ktoré si tlačidlo inak určí samo (to isté robia bubliny .stat vyššie). */
 .week-list-hero,
