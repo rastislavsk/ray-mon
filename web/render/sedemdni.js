@@ -227,6 +227,8 @@ function renderView(detail, narrow, tall, dom) {
     for (const key of ['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve'])
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
     dom.weekDayHead.classList.toggle('hidden', !detail);
+    // Bodky patria k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
+    dayDotsPas(dom).classList.toggle('hidden', detail !== 'day');
     // Deň si používateľ vybral klikom v prehľade, prepínač dní nad krivkou je tu navyše.
     dom.weekDayTabs.classList.toggle('hidden', !!detail);
 }
@@ -235,6 +237,53 @@ function renderView(detail, narrow, tall, dom) {
  * @param {'day' | 'week' | null} detail @param {ForecastDay} day @param {number} sel @param {import('../dom.js').Dom} dom */
 function renderDayHead(detail, day, sel, dom) {
     dom.weekDayTitle.textContent = detail === 'week' ? 'Celý týždeň' : weekDayLong(day.date, sel);
+}
+
+/**
+ * Pás bodiek pod hlavičkou detailu dňa. Robí si ho render, nie index.html: nový prvok
+ * v statickom HTML by si vyžiadal dve nasadenia (byId vo web/dom.js na chýbajúci prvok
+ * úmyselne hodí výnimku a stará stránka z cache ho desať minút nemá - viď CLAUDE.md),
+ * takto na sebe HTML a JS nezávisia a zmena ide von naraz. Vzniká raz, pri prvom
+ * vykreslení karty, a ostáva v stránke aj mimo detailu - skrytý, ako všetko ostatné.
+ * @type {HTMLElement | null}
+ */
+let dayDots = null;
+
+/** Pás stojí medzi hlavičkou a mriežkou, teda mimo oboch prvkov, ktoré sa pri prelistovaní
+ * prisúvajú (viď renderDayAnim): bodky majú pri listovaní stáť, nie cestovať s obsahom.
+ * @param {import('../dom.js').Dom} dom */
+function dayDotsPas(dom) {
+    if (!dayDots) {
+        dayDots = document.createElement('div');
+        dayDots.className = 'day-dots';
+        dom.weekDayHead.after(dayDots);
+    }
+    return dayDots;
+}
+
+/**
+ * Bodky pod hlavičkou: koľko dní týždeň má, na ktorom stojíme a že sa dá listovať ďalej.
+ * Ťah prstom sa sám neohlási, takže dovtedy nič nenaznačovalo, že susedný deň je o gesto
+ * vedľa.
+ *
+ * Bodka je tlačidlo s data-day-index, takže deň prepne ten istý poslucháč ako riadok
+ * rebríčka (viď web/interactions.js) - a s ním aj myš a klávesnica. Tvar má spoločný
+ * s bodkami pageru na karte Terazky; ten ich poslucháč hľadá v zozname verdictDotButtons,
+ * kde tieto nie sú, takže mu prejdú popod ruky.
+ * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel
+ * @param {import('../dom.js').Dom} dom
+ */
+function renderDayDots(detail, days, sel, dom) {
+    if (detail !== 'day') return;
+    dayDotsPas(dom).innerHTML = days
+        .map((d, i) => {
+            // aria-current hovorí čítačke to, čo oku hovorí plná bodka - bez neho je to
+            // sedem rovnakých tlačidiel.
+            const tu = i === sel ? ' active' : '';
+            const teraz = i === sel ? ' aria-current="true"' : '';
+            return `<button type="button" class="pager-dot${tu}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}></button>`;
+        })
+        .join('');
 }
 
 /**
@@ -333,6 +382,7 @@ export function renderSedemdni(state, dom) {
     const sel = Math.min(state.weekSelDay, days.length - 1);
 
     renderDayHead(detail, days[sel], sel, dom);
+    renderDayDots(detail, days, sel, dom);
     renderDayAnim(detail, sel, state.weekDayDir, dom);
     const stats = weekStatsModel(days, state.pv, state.forecast ? state.forecast.tomorrowSunny : false);
     renderStats(stats, dom, !!detail);
