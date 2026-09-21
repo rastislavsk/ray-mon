@@ -1,0 +1,7 @@
+# Textové súbory majú v repozitári aj v pracovnom strome vždy LF, bez ohľadu na
+# core.autocrlf na stroji vývojára. Prettier (endOfLine: lf) by inak na Windows
+# hlásil každý súbor ako chybne naformátovaný.
+* text=auto eol=lf
+
+# Binárne súbory sa nenormalizujú.
+*.png binary
