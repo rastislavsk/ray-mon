@@ -1072,8 +1072,19 @@ async function sledujAnimacie(page) {
     });
 }
 
-/** Mená animácií prisunutia dňa, ktoré odvtedy naskočili. @param {import('@playwright/test').Page} page */
+/**
+ * Mená animácií prisunutia dňa, ktoré odvtedy naskočili.
+ *
+ * Najprv sa počká na dva snímky. Triedu s animáciou pridá render synchrónne, ale
+ * `animationstart` ohlási prehliadač až vo svojom ďalšom snímku - na zaťaženom stroji tak
+ * test čítal zoznam skôr, než doň čokoľvek pribudlo, a prisunutie mu vychádzalo ako
+ * nenaskočené (na štyroch jadrách padal asi každý dvanásty pokus). Čaká sa rovnako aj tam,
+ * kde je správne očakávanie nula: inak by "nič sa nespustilo" prešlo len preto, že sa čítalo
+ * priskoro.
+ * @param {import('@playwright/test').Page} page
+ */
 async function animacieDna(page) {
+    await page.evaluate(() => new Promise((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo(undefined)))));
     const mena = await page.evaluate(() => window.spusteneAnimacie);
     return mena.filter((/** @type {string} */ n) => n.startsWith('day-in'));
 }
