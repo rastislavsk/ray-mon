@@ -1706,18 +1706,17 @@ b {
 }
 
 /* ---- 7 dní: rebríček dní (prehľad na mobile) -------------------------------- */
-/* Dve karty pod sebou: bublina so súčtom za týždeň a pod ňou sedem riadkov s pásikmi.
-   Rám okolo súčtu hovorí, že je to súhrn dní, nie ďalší riadok zoznamu. Dĺžka pásika je
-   výroba dňa voči najsilnejšiemu dňu v týždni, takže sa dni dajú porovnať očami, bez
-   čítania čísel - preto tu nie sú stĺpce Využitie a Špička, tie ostávajú v detaile dňa.
+/* Osem kariet pod sebou: bublina so súčtom za týždeň a pod ňou sedem dní, každý vo vlastnom
+   ráme. Súčet a deň tak vyzerajú ako to, čím sú - dve rovnocenné tlačidlá, jedno do detailu
+   týždňa, druhé do detailu dňa - a dni sa od seba jasne oddelia. Dĺžka pásika je výroba dňa
+   voči najsilnejšiemu dňu v týždni, takže sa dni dajú porovnať očami, bez čítania čísel -
+   preto tu nie sú stĺpce Využitie a Špička, tie ostávajú v detaile dňa.
    Blok je vidno len pod 768 px; na širokej obrazovke mu renderView nechá .hidden, lebo
-   tam je na prehľad miesta dosť na bubliny aj tabuľku. */
-.week-list-card {
-    border: 1px solid var(--ink-08);
-    border-radius: var(--radius-md);
-    background: var(--card-bg);
-    padding: var(--sp-3);
-}
+   tam je na prehľad miesta dosť na bubliny aj tabuľku.
+
+   Obal .week-list-card okolo zoznamu tu už nemá vlastný vzhľad: rám nesú jednotlivé riadky.
+   Z index.html ho zmaže až ďalšie nasadenie (prvý krok zmaže vykresľovanie, druhý prvok -
+   viď CLAUDE.md). */
 /* Bublina so súčtom aj riadky dní sú tlačidlá, takže potrebujú späť zarovnanie a šírku,
    ktoré si tlačidlo inak určí samo (to isté robia bubliny .stat vyššie). */
 .week-list-hero,
@@ -1780,7 +1779,7 @@ b {
 .week-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--sp-2);
 }
 /* Meno dňa má pevný stĺpec, aby pásiky začínali pod sebou a dali sa porovnať; 70 px je
    šírka najdlhšieho názvu ("Pondelok") pri tomto písme. Ikona oblohy je 12 px (.cloud-cell
@@ -1792,8 +1791,10 @@ b {
     grid-template-columns: 70px 16px 1fr auto 10px;
     align-items: center;
     gap: var(--sp-2);
-    padding: 9px 4px;
-    border-radius: var(--radius-sm);
+    padding: 9px var(--sp-3);
+    border: 1px solid var(--ink-08);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
 }
 /* Šípka pri každom dni hovorí, že riadok je tlačidlo - predtým to bola veta pod zoznamom.
    Kreslí ju CSS ako ďalšiu bunku mriežky, takže render v JS ostáva taký, aký bol. */
@@ -1803,8 +1804,12 @@ b {
     font-size: var(--fs-md);
     text-align: right;
 }
+/* Vybraný deň: svetlejší rám a o odtieň svetlejšia výplň. Výplň je druhá vrstva nad
+   podkladom karty - samotné `background: var(--ink-05)` by podklad nahradilo a priesvitná
+   vrstva by ležala rovno na pozadí stránky, takže by riadok prestal vyzerať ako karta. */
 .wday.sel {
-    background: var(--ink-05);
+    border-color: var(--ink-20);
+    background-image: linear-gradient(var(--ink-05), var(--ink-05));
 }
 /* Dnešok sa nezvýrazňuje: v rebríčku stojí vždy prvý a volá sa "Dnes", takže by farba
    hovorila to, čo už povedalo poradie aj meno. */
