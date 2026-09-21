@@ -23,6 +23,24 @@ import { initSwipe } from './swipe.js';
 /** @typedef {import('./dom.js').Dom} Dom */
 /** @typedef {import('./state.js').Panel} Panel */
 
+/**
+ * Čo spraví klik na deň. Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra,
+ * v prepínači dní, v bodkách pod hlavičkou detailu aj priamo v grafoch. Prehľad dní - v oboch
+ * podobách - navyše otvorí detail dňa (na mobile; na širokej obrazovke sa stav neprejaví),
+ * kým výber v grafoch a v prepínači len prepína, čo je na nich vidno.
+ *
+ * Bodka deň tiež len prepína, ale nesie aj smer skoku: detail sa potom prisunie z tej strany,
+ * ktorou sa skočilo - to isté, čo pri ťahu prstom dopočíta targetFor vo web/swipe.js.
+ * @param {Store} store @param {Dom} dom @param {Element} btn
+ * @returns {Partial<import('./state.js').AppState>}
+ */
+function dayPick(store, dom, btn) {
+    const weekSelDay = Number(btn.getAttribute('data-day-index'));
+    if (dom.weekList.contains(btn) || dom.weekTbody.contains(btn) || dom.weekTrio.contains(btn)) return { weekSelDay, weekDetail: 'day' };
+    if (!btn.closest('.day-dots')) return { weekSelDay };
+    return { weekSelDay, weekDayDir: weekSelDay < store.get().weekSelDay ? -1 : 1 };
+}
+
 /** @param {Store} store @param {Dom} dom */
 function initNavigation(store, dom) {
     document.addEventListener('click', (e) => {
@@ -36,18 +54,10 @@ function initNavigation(store, dom) {
         if (panelBtn instanceof HTMLElement && panelBtn.dataset.panel) {
             store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
         }
-        // Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra, v prepínači dní aj
-        // priamo v grafoch. Prehľad dní - v oboch podobách - navyše otvorí detail dňa (na mobile;
-        // na širokej obrazovke sa stav neprejaví), kým výber v grafoch a v prepínači len prepína,
-        // čo je na nich vidno.
         const totalBtn = target.closest('[data-week-detail]');
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
         const weekBtn = target.closest('[data-day-index]');
-        if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) {
-            const weekSelDay = Number(weekBtn.getAttribute('data-day-index'));
-            const doDetailu = dom.weekList.contains(weekBtn) || dom.weekTbody.contains(weekBtn) || dom.weekTrio.contains(weekBtn);
-            store.setState(doDetailu ? { weekSelDay, weekDetail: 'day' } : { weekSelDay });
-        }
+        if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) store.setState(dayPick(store, dom, weekBtn));
         // Bodka len posunie pás; stránka sa dopočíta z výslednej pozície ako pri prste. Cieľ je
         // samotná stránka (scrollIntoView), nie index krát clientWidth - ten je celočíselný, kým
         // skutočná šírka stránky býva desatinná, čo na desktope (klik na bodku, nie prstom) nechávalo
