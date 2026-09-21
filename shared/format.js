@@ -79,11 +79,15 @@ export function weekDayName(dateStr, index) {
     return WEEK_DAYS_LONG[dateParts(dateStr).dow];
 }
 
-/** "Dnes", "Zajtra", inak "Štvrtok 10.9." - nadpis obrazovky s detailom dňa, kde je na
- * celé slovo miesto (v tabuľke a v grafoch ho na skratku tlačí šírka stĺpca).
+/** "Dnes 5.9.", "Zajtra 6.9.", inak "Štvrtok 10.9." - nadpis obrazovky s detailom dňa,
+ * kde je na celé slovo aj dátum miesto (v tabuľke a v grafoch ho na skratku tlačí šírka
+ * stĺpca).
+ *
+ * Dátum nesie aj Dnes a Zajtra, hoci inde v appke nie. V detaile je nadpis jediné, čo
+ * hovorí, o ktorý deň ide, a pri listovaní medzi dňami tak dátum stojí na tom istom mieste
+ * pri každom z nich - nie až od tretieho.
  * @param {string} dateStr @param {number} index */
 export function weekDayLong(dateStr, index) {
-    if (index < 2) return weekDayShort(dateStr, index);
     return `${weekDayName(dateStr, index)} ${weekDateLabel(dateStr)}`;
 }
 
