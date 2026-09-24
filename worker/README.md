@@ -1,15 +1,28 @@
 # Worker `rackofci-energy-sro-fable`
 
-Jediný zdroj dát pre appku. Cron každých päť minút stiahne kiosk Huawei FusionSolar a raz
-za hodinu prepočíta predpoveď z Open-Meteo. Obe uloží do KV. `GET /` ich vráti spolu.
+Živé meranie pre appku. `POST /pv` stiahne kiosk Huawei FusionSolar, ktorý si používateľ
+zadal v Nastavení. Pôvodná cesta pre elektráreň v Dvoranoch zatiaľ ostáva: cron každých päť
+minút stiahne jej kiosk a raz za hodinu prepočíta predpoveď z Open-Meteo, obe uloží do KV
+a `GET /` ich vráti spolu. Predpoveď si appka dnes počíta sama, tú z Workera už nečíta.
 
 Prečo Worker a nie GitHub Actions: naplánované behy v Actions sú pri päťminútovom intervale
 nespoľahlivé a každý beh by musel commitnúť dáta do repozitára. Cron v Cloudflare beží
 načas a KV nezanáša históriu.
 
-## Endpoint
+## Endpointy
 
-`GET /` vráti:
+### `POST /pv`
+
+Telo je text: odkaz na verejný kiosk FusionSolar (stránka kiosku alebo priamo adresa dát).
+Worker z neho vezme len server (`*.fusionsolar.huawei.com`, https) a kľúč `kk`, adresu dát
+si zloží sám a vráti `{ "pv": { … }, "servedAt": "…" }`. Cudzí odkaz dostane 400 bez
+jediného sťahovania, nedostupný alebo nezmyselný kiosk 502. Odkaz je v tele, nie v adrese,
+aby neskončil v logoch; Worker si ho nikam neukladá. Telo je `text/plain`, takže prehliadač
+nerobí predbežnú CORS požiadavku.
+
+### `GET /`
+
+Vráti:
 
 ```json
 { "pv": { "realTimePowerKw": 6.41, "...": "..." }, "forecast": { "days": [] }, "servedAt": "2026-09-05T11:00:00.000Z" }
@@ -24,7 +37,7 @@ takže pri chýbajúcich dátach netreba hádať medzi výpadkom zdroja a zlým 
 
 Hlavičky: CORS pre všetkých, `cache-control: max-age=60` a `x-data-stale` s hodnotou `1`,
 keď je predpoveď staršia než tri hodiny, inak `0` – hlavička je tam vždy. Iné cesty vracajú
-404, iné metódy 405, `OPTIONS` dostane 204.
+404, iné metódy 405 (okrem `POST /pv`), `OPTIONS` dostane 204.
 
 ### `GET /status`
 

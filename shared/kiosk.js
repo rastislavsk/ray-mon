@@ -1,5 +1,7 @@
 // Parser verejného kiosk JSON z Huawei FusionSolar. Jediné miesto, kde vzniká formát `pv`.
 
+import { KIOSK } from './config.js';
+
 /**
  * @typedef {{ realTimePowerKw: number | null, dailyEnergyKwh: number | null, monthEnergyKwh: number | null,
  *   yearEnergyKwh: number | null, cumulativeEnergyKwh: number | null, stationName: string | null,
@@ -58,4 +60,25 @@ export function parseKiosk(outer, now) {
         realCurveToday: extractRealCurveToday(inner.powerCurve),
         updatedAt: now.toISOString(),
     };
+}
+
+/**
+ * Adresa dát kiosku z odkazu, ktorý vložil používateľ. Prijme odkaz na stránku kiosku
+ * (kľúč `kk` býva za mriežkou) aj priamo adresu dát. Vráti null, keď to nie je kiosk
+ * FusionSolar - server musí byť FusionSolar a kľúč len z písmen, číslic a `-_`.
+ * @param {unknown} input @returns {string | null}
+ */
+export function kioskApiUrl(input) {
+    if (typeof input !== 'string') return null;
+    /** @type {URL} */ let url;
+    try {
+        url = new URL(input.trim());
+    } catch {
+        return null;
+    }
+    const host = url.hostname.toLowerCase();
+    const okHost = host === KIOSK.hostSuffix || host.endsWith(`.${KIOSK.hostSuffix}`);
+    if (url.protocol !== 'https:' || !okHost || url.port) return null;
+    const kk = /[?&]kk=([A-Za-z0-9_-]{4,128})(?:[&#]|$)/.exec(`${url.search}${url.hash.replace(/^#[^?]*/, '')}`);
+    return kk ? `https://${host}${KIOSK.apiPath}?kk=${kk[1]}` : null;
 }

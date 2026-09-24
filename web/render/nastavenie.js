@@ -19,6 +19,7 @@ function writeFields(state, dom) {
     dom.setLon.value = fieldText(site.lon);
     dom.setWp.value = fieldText(plant.panelWp);
     dom.setAc.value = fieldText(plant.acLimitKw);
+    dom.setKiosk.value = state.settingsDraft.kiosk;
     plant.strings.forEach((x, i) => {
         const r = dom.setRoofs[i];
         r.panels.value = fieldText(x.panels);
@@ -43,7 +44,7 @@ function geoHtml(geo) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderNastavenie(state, dom) {
-    const saved = { site: state.site, plant: state.plant };
+    const saved = { site: state.site, plant: state.plant, kiosk: state.kiosk };
     const draft = state.settingsDraft;
     dom.settingsDemo.classList.toggle('hidden', !state.demo);
     dom.setHint.textContent = settingsHint(saved, state.demo);
@@ -51,6 +52,7 @@ export function renderNastavenie(state, dom) {
 
     writeHtml(dom.setGeo, geoHtml(state.geo), 'setGeo');
     dom.setPlaceMeta.textContent = siteMetaText(draft.site);
+    dom.setKioskMeta.textContent = draft.kiosk ? 'Po uložení overím, či kiosk odpovedá.' : 'Bez odkazu ukážem len predpoveď.';
 
     const count = draft.plant.strings.length;
     dom.setRoofs.forEach((r, i) => {
