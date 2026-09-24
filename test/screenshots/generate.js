@@ -4,6 +4,7 @@
 // Prehliadač berie skript ten, ktorý má nainštalovaný Playwright. Keď treba iný (napr. keď
 // je v systéme len staršia verzia), dá sa podstrčiť cez CHROMIUM_PATH=/cesta/k/chromium.
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_PV_URL } from '../../shared/config.js';
 import { toUser } from '../../shared/settings.js';
@@ -33,7 +34,9 @@ async function pockajNaServer(url, pokusy = 40) {
     throw new Error(`Server na ${url} nenaskočil`);
 }
 
-const server = spawn('npx', ['http-server', '-p', String(PORT), '-c-1', '-s', '.'], { stdio: 'ignore' });
+// Priamo cez node, nie cez npx: na Windows je npx len .cmd, ktorý spawn bez shellu nenájde.
+const httpServer = fileURLToPath(new URL('../../node_modules/http-server/bin/http-server', import.meta.url));
+const server = spawn(process.execPath, [httpServer, '-p', String(PORT), '-c-1', '-s', '.'], { stdio: 'ignore' });
 try {
     const url = `http://127.0.0.1:${PORT}/`;
     await pockajNaServer(url);
@@ -59,7 +62,7 @@ try {
         await page.locator(`#${nav}`).click();
         // Písma z CDN a prvé prekreslenie po prepnutí karty.
         await page.waitForTimeout(400);
-        await page.screenshot({ path: new URL(`../../docs/img/${subor}`, import.meta.url).pathname });
+        await page.screenshot({ path: fileURLToPath(new URL(`../../docs/img/${subor}`, import.meta.url)) });
         console.log(`hotovo: docs/img/${subor}`);
     }
     await browser.close();
