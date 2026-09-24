@@ -79,10 +79,11 @@ export const SLOT_MESSAGES = {
  * Odporúčanie pre kombináciu tarify a výkonu, s ohľadom na predpoveď.
  * @param {Tier | null} tier @param {number} powerKw
  * @param {{ strongerWindowAhead?: boolean, windowDaypart?: string | null, tomorrowSunny?: boolean } | null} forecast
+ * @param {import('./config.js').PowerThresholds} th
  * @returns {Message | null}
  */
-export function getSlotMessage(tier, powerKw, forecast) {
-    const level = productionLevel(powerKw);
+export function getSlotMessage(tier, powerKw, forecast, th) {
+    const level = productionLevel(powerKw, th);
     if (!level || !tier) return null;
     const entry = SLOT_MESSAGES[tier][level];
 

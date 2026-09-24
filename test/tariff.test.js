@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { POWER_HIGH_KW, POWER_LOW_KW } from '../shared/config.js';
+import { DEMO_PLANT, PLANT, powerThresholds } from '../shared/config.js';
 import {
     autoTier,
     deviceStates,
@@ -14,6 +14,7 @@ import {
 } from '../shared/tariff.js';
 
 const m = (/** @type {number} */ h, /** @type {number} */ min = 0) => h * 60 + min;
+const th = powerThresholds(PLANT);
 
 test('seasonFor: marec až október leto, inak zima', () => {
     assert.equal(seasonFor(new Date(2026, 2, 1)), 'summer');
@@ -64,24 +65,37 @@ test('stripSegments: súčet 1440 minút a rovnaký vzor ako pôvodná appka', (
     );
 });
 
-test('productionLevel a smartTier používajú hranice z configu', () => {
-    assert.equal(productionLevel(NaN), null);
-    assert.equal(productionLevel(POWER_LOW_KW - 0.01), 'niz');
-    assert.equal(productionLevel(POWER_LOW_KW), 'str');
-    assert.equal(productionLevel(POWER_HIGH_KW), 'vys');
-    assert.equal(smartTier('red', NaN), 'red');
-    assert.equal(smartTier('red', NaN, null), null);
-    assert.equal(smartTier('red', POWER_LOW_KW), 'green');
-    assert.equal(smartTier('red', 0.5), 'red');
-    assert.equal(smartTier('amber', 0.5), 'amber');
-    assert.equal(smartTier('green', 0.5), 'amber');
+test('powerThresholds: Dvorany majú 2 / 4 / 1,5 kW, iná elektráreň v pomere najvyššieho výkonu', () => {
+    assert.deepEqual(th, { lowKw: 2, highKw: 4, marginKw: 1.5 });
+    // Ukážka: 12 × 435 Wp = 5,2 kWp, menič 5 kW -> polovica Dvorian (10 kW).
+    assert.deepEqual(powerThresholds(DEMO_PLANT), { lowKw: 1, highKw: 2, marginKw: 0.75 });
+    // Menič menší než panely: rozhoduje menič, inak by vysoká výroba nebola nikdy.
+    const smallInverter = powerThresholds({ ...PLANT, acLimitKw: 3 });
+    assert.ok(smallInverter.highKw < 3);
+    // Menič väčší než panely: rozhodujú panely (24 × 250 Wp = 6 kWp).
+    assert.equal(powerThresholds({ ...PLANT, panelWp: 250, acLimitKw: 20 }).highKw, 2.4);
+});
+
+test('productionLevel a smartTier používajú hranice elektrárne', () => {
+    assert.equal(productionLevel(NaN, th), null);
+    assert.equal(productionLevel(th.lowKw - 0.01, th), 'niz');
+    assert.equal(productionLevel(th.lowKw, th), 'str');
+    assert.equal(productionLevel(th.highKw, th), 'vys');
+    assert.equal(smartTier('red', NaN, th), 'red');
+    assert.equal(smartTier('red', NaN, th, null), null);
+    assert.equal(smartTier('red', th.lowKw, th), 'green');
+    assert.equal(smartTier('red', 0.5, th), 'red');
+    assert.equal(smartTier('amber', 0.5, th), 'amber');
+    assert.equal(smartTier('green', 0.5, th), 'amber');
+    // Pri menšej elektrárni je rovnaký výkon „viac“.
+    assert.equal(productionLevel(2.5, powerThresholds(DEMO_PLANT)), 'vys');
 });
 
 test('autoTier: noc amber, slabé slnko red, silné slnko + lacná sieť green', () => {
-    assert.equal(autoTier(m(1), 'amber', 0), 'amber');
-    assert.equal(autoTier(m(12), 'green', 1), 'red');
-    assert.equal(autoTier(m(12), 'green', POWER_HIGH_KW), 'green');
-    assert.equal(autoTier(m(8), 'red', POWER_HIGH_KW), 'amber');
+    assert.equal(autoTier(m(1), 'amber', 0, th), 'amber');
+    assert.equal(autoTier(m(12), 'green', 1, th), 'red');
+    assert.equal(autoTier(m(12), 'green', th.highKw, th), 'green');
+    assert.equal(autoTier(m(8), 'red', th.highKw, th), 'amber');
 });
 
 test('deviceStates: v zelenom okne go, mimo wait, v zime sušička a umývačka no', () => {

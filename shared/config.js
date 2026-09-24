@@ -89,10 +89,31 @@ export function installedKw(plant) {
 // Bezoblačný model (Meinel + Laueho výšková korekcia) - horný strop výroby.
 export const CLEAR_SKY = { tau: 0.8, dhiFraction: 0.12 };
 
-// Hranice výkonu FV, na ktorých stojí farba aj text odporúčaní.
-export const POWER_LOW_KW = 2; // pod touto hodnotou panely "nedávajú veľa"
-export const POWER_HIGH_KW = 4; // od tejto hodnoty je výroba "vysoká"
-export const STRONGER_WINDOW_MARGIN_KW = 1.5; // o koľko musí byť budúce okno lepšie než teraz
+/** Najvyšší výkon, aký elektráreň vie dodať: menší z výkonu panelov a meniča, v kW. @param {Plant} plant */
+function maxOutputKw(plant) {
+    return Math.min(installedKw(plant), plant.acLimitKw);
+}
+
+// Hranice výkonu FV, na ktorých stojí farba aj text odporúčaní, nastavené pre Dvorany.
+// Inej elektrárni sa prepočítajú v pomere jej najvyššieho výkonu - 3 kWp strecha by inak
+// „vysokú výrobu“ nevidela skoro nikdy.
+const POWER_THRESHOLDS_DVORANY = {
+    lowKw: 2, // pod touto hodnotou panely "nedávajú veľa"
+    highKw: 4, // od tejto hodnoty je výroba "vysoká" a oplatí sa nabíjať auto zo slnka
+    marginKw: 1.5, // o koľko musí byť budúce okno lepšie než teraz
+};
+
+/** @typedef {typeof POWER_THRESHOLDS_DVORANY} PowerThresholds */
+
+/** Hranice výkonu pre danú elektráreň, v kW. @param {Plant} plant @returns {PowerThresholds} */
+export function powerThresholds(plant) {
+    const scale = maxOutputKw(plant) / maxOutputKw(PLANT);
+    return {
+        lowKw: POWER_THRESHOLDS_DVORANY.lowKw * scale,
+        highKw: POWER_THRESHOLDS_DVORANY.highKw * scale,
+        marginKw: POWER_THRESHOLDS_DVORANY.marginKw * scale,
+    };
+}
 
 // Predpoveď: koľko dní z Open-Meteo (9 = rezerva, aby 7 miestnych dní bolo úplných aj s posunom UTC).
 export const FORECAST_API_DAYS = 9;
@@ -188,9 +209,6 @@ export const DEVICES = [
     { name: 'Auto', powerKw: 11 },
     { name: 'Bojler', powerKw: 2 },
 ];
-
-// Auto má vlastný (vyšší) prah výkonu FV, pri ktorom sa oplatí nabíjať zo slnka.
-export const AUTO_MIN_PV_KW = POWER_HIGH_KW;
 
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/rackofci-energy-sro-fable/';

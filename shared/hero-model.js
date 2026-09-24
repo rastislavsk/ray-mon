@@ -1,7 +1,7 @@
 // Model hlavnej karty (ciferník, verdikt, spotrebiče) pre daný čas dňa.
 // Rovnaká logika pre živé "teraz" aj pre náhľad iného času; líši sa len zdroj výkonu.
 
-import { installedKw } from './config.js';
+import { installedKw, powerThresholds } from './config.js';
 import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes } from './solar.js';
@@ -38,9 +38,12 @@ function waitTimeFor(state, hasDevices) {
     return `${pad2((hour + Math.round(/** @type {number} */ (f.hoursAhead))) % 24)}:00`;
 }
 
-/** Ciferník: podiel inštalovaného výkonu a farba podľa pásma výroby. @param {number} power @param {number} kwp */
-function dialFor(power, kwp) {
-    const level = productionLevel(power);
+/**
+ * Ciferník: podiel inštalovaného výkonu a farba podľa pásma výroby.
+ * @param {number} power @param {number} kwp @param {import('./config.js').PowerThresholds} th
+ */
+function dialFor(power, kwp, th) {
+    const level = productionLevel(power, th);
     /** @type {Record<string, import('./config.js').Tier>} */ const tierByLevel = { niz: 'red', str: 'amber', vys: 'green' };
     return {
         fraction: Number.isFinite(power) ? Math.max(0, Math.min(1, power / kwp)) : 0,
@@ -54,12 +57,13 @@ export function heroModel(state) {
     const preview = state.previewMinutes !== null;
     const minutes = preview ? /** @type {number} */ (state.previewMinutes) : nowMinutes;
     const power = powerFor(state, minutes, nowMinutes);
+    const th = powerThresholds(state.plant);
     // Okná pokrývajú celý deň (overené testom); fallback je len poistka proti chybnému configu.
     const win = windowAt(minutes, state.season) || windowsFor(state.season)[0];
     const tier = win.status;
     const isNight = !!win.night;
-    const message = (isNight ? null : getSlotMessage(tier, power, state.forecast)) || { headline: win.title, body: win.sub };
-    const deviceTier = smartTier(tier, power, null);
+    const message = (isNight ? null : getSlotMessage(tier, power, state.forecast, th)) || { headline: win.title, body: win.sub };
+    const deviceTier = smartTier(tier, power, th, null);
     const measured = (() => {
         const boundary = realCurveBoundary(state.pv ? state.pv.realCurveToday : null, nowMinutes);
         return boundary !== null && minutes <= boundary;
@@ -70,15 +74,15 @@ export function heroModel(state) {
         preview,
         power,
         tier,
-        accent: smartTier(tier, power),
+        accent: smartTier(tier, power, th),
         isNight,
         message,
         devices: deviceStates(minutes, state.season).map((d) => ({
             ...d,
-            tier: d.name === 'Auto' ? autoTier(minutes, tier, power) : deviceTier,
+            tier: d.name === 'Auto' ? autoTier(minutes, tier, power, th) : deviceTier,
         })),
         waitTime: waitTimeFor(state, !!win.devices),
-        dial: dialFor(power, installedKw(state.plant)),
+        dial: dialFor(power, installedKw(state.plant), th),
         powerText: Number.isFinite(power) ? power.toFixed(2) : '–',
         unitText: preview ? (measured ? 'kW (merané)' : 'kW (odhad)') : state.pv ? 'kW teraz' : 'kW (odhad)',
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,

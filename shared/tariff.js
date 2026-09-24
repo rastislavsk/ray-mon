@@ -1,21 +1,13 @@
 // Tarifné okná, sezóna a farebné "tiery" - všetko, čo odvodzuje stav siete a spotrebičov
 // z času dňa a výkonu FV. Čisté funkcie bez DOM.
 
-import {
-    AUTO_MIN_PV_KW,
-    AUTO_NIGHT_WINDOW,
-    DEVICES,
-    MINUTES_PER_DAY,
-    POWER_HIGH_KW,
-    POWER_LOW_KW,
-    SUMMER_MONTHS,
-    TARIFF_WINDOWS,
-} from './config.js';
+import { AUTO_NIGHT_WINDOW, DEVICES, MINUTES_PER_DAY, SUMMER_MONTHS, TARIFF_WINDOWS } from './config.js';
 import { timeStrToMinutes } from './format.js';
 
 /** @typedef {import('./config.js').Season} Season */
 /** @typedef {import('./config.js').Tier} Tier */
 /** @typedef {(typeof TARIFF_WINDOWS)[number]} TariffWindow */
+/** @typedef {import('./config.js').PowerThresholds} PowerThresholds */
 
 /**
  * Je čas v okne [start, end)? Okno môže prechádzať cez polnoc (start > end).
@@ -67,23 +59,26 @@ export function stripSegments(season) {
     return segments;
 }
 
-/** Zaradenie výkonu FV do pásma: 'niz' | 'str' | 'vys' | null bez dát. @param {number} powerKw */
-export function productionLevel(powerKw) {
+/**
+ * Zaradenie výkonu FV do pásma: 'niz' | 'str' | 'vys' | null bez dát.
+ * @param {number} powerKw @param {PowerThresholds} th hranice elektrárne (`powerThresholds`)
+ */
+export function productionLevel(powerKw, th) {
     if (!Number.isFinite(powerKw)) return null;
-    if (powerKw < POWER_LOW_KW) return 'niz';
-    if (powerKw < POWER_HIGH_KW) return 'str';
+    if (powerKw < th.lowKw) return 'niz';
+    if (powerKw < th.highKw) return 'str';
     return 'vys';
 }
 
 /**
- * Farba reaguje aj na výkon FV: od POWER_LOW_KW je zelená bez ohľadu na tarifu,
+ * Farba reaguje aj na výkon FV: od dolnej hranice je zelená bez ohľadu na tarifu,
  * pod ňou ostáva podľa rozvrhu (červená v drahých slotoch, inak oranžová).
- * @param {Tier | null} tier @param {number} powerKw @param {Tier | null} [fallback]
+ * @param {Tier | null} tier @param {number} powerKw @param {PowerThresholds} th @param {Tier | null} [fallback]
  * @returns {Tier | null}
  */
-export function smartTier(tier, powerKw, fallback = tier) {
+export function smartTier(tier, powerKw, th, fallback = tier) {
     if (!Number.isFinite(powerKw)) return fallback;
-    if (powerKw >= POWER_LOW_KW) return 'green';
+    if (powerKw >= th.lowKw) return 'green';
     return tier === 'red' ? 'red' : 'amber';
 }
 
@@ -99,12 +94,12 @@ export function isAutoNightWindow(minutes) {
 
 /**
  * Auto má vlastnú farebnú logiku: v noci oranžové (lacná sadzba bez slnka),
- * cez deň zelené len pri silnom slnku a lacnej sieti.
- * @param {number} minutes @param {Tier | null} tier @param {number} powerKw @returns {Tier}
+ * cez deň zelené len pri vysokej výrobe a lacnej sieti.
+ * @param {number} minutes @param {Tier | null} tier @param {number} powerKw @param {PowerThresholds} th @returns {Tier}
  */
-export function autoTier(minutes, tier, powerKw) {
+export function autoTier(minutes, tier, powerKw, th) {
     if (isAutoNightWindow(minutes)) return 'amber';
-    if (!Number.isFinite(powerKw) || powerKw < AUTO_MIN_PV_KW) return 'red';
+    if (!Number.isFinite(powerKw) || powerKw < th.highKw) return 'red';
     return isLowTariff(tier) ? 'green' : 'amber';
 }
 

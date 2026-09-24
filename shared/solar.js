@@ -3,7 +3,7 @@
 // Čisté funkcie bez I/O - beží v Node, prehliadači aj Cloudflare Workeri.
 // Lokalita a zostava panelov prichádzajú ako parameter, nič z nich tu nie je natvrdo.
 
-import { CLEAR_SKY, FORECAST_DAYS_SHOWN, POWER_HIGH_KW, STRONGER_WINDOW_MARGIN_KW } from './config.js';
+import { CLEAR_SKY, FORECAST_DAYS_SHOWN, powerThresholds } from './config.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
@@ -252,8 +252,9 @@ function buildDay(dayKey, entries, site, plant) {
 /**
  * Príde ešte dnes citeľne silnejšie slnko než teraz? (Pre texty "počkaj na slnko".)
  * @param {HourEntry[]} hourly @param {string} todayKey @param {number} nowHourUtc @param {string} timezone
+ * @param {import('./config.js').PowerThresholds} th
  */
-function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone) {
+function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone, th) {
     const none = {
         strongerWindowAhead: false,
         windowDaypart: /** @type {string | null} */ (null),
@@ -266,7 +267,7 @@ function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone) {
     if (!futureToday.length) return none;
     let peak = futureToday[0];
     for (const h of futureToday) if (h.acKw > peak.acKw) peak = h;
-    if (peak.acKw < POWER_HIGH_KW || peak.acKw < baselineKw + STRONGER_WINDOW_MARGIN_KW) return none;
+    if (peak.acKw < th.highKw || peak.acKw < baselineKw + th.marginKw) return none;
     return {
         strongerWindowAhead: true,
         windowDaypart: daypartFor(peak.dateUtc, timezone),
@@ -309,7 +310,8 @@ export function buildForecast(data, now, site, plant) {
         };
     });
 
-    const ahead = strongerWindowAhead(hourly, todayKey, nowHourUtc, tz);
+    const th = powerThresholds(plant);
+    const ahead = strongerWindowAhead(hourly, todayKey, nowHourUtc, tz, th);
 
     const dayKeyOffset = (/** @type {number} */ days) => localDateKey(new Date(now.getTime() + days * 86400000), tz);
     const tomorrowKey = dayKeyOffset(1);
@@ -331,7 +333,7 @@ export function buildForecast(data, now, site, plant) {
 
     return {
         ...ahead,
-        tomorrowSunny: tomorrowPeakKw >= POWER_HIGH_KW,
+        tomorrowSunny: tomorrowPeakKw >= th.highKw,
         tomorrowPeakKw: round(tomorrowPeakKw, 2),
         hourlyToday: hourlySeries(
             hourly.filter((h) => h.localDate === todayKey),
