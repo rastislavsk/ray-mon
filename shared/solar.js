@@ -1,8 +1,12 @@
 // Fyzika predpovede výroby FV: poloha slnka (zjednodušený NOAA), žiarenie na naklonenú
 // rovinu (izotropný model), bezoblačný strop (Meinel) a skladanie výstupu predpovede.
 // Čisté funkcie bez I/O - beží v Node, prehliadači aj Cloudflare Workeri.
+// Lokalita a zostava panelov prichádzajú ako parameter, nič z nich tu nie je natvrdo.
 
-import { CLEAR_SKY, FORECAST_DAYS_SHOWN, PLANT, POWER_HIGH_KW, SITE, STRONGER_WINDOW_MARGIN_KW } from './config.js';
+import { CLEAR_SKY, FORECAST_DAYS_SHOWN, POWER_HIGH_KW, STRONGER_WINDOW_MARGIN_KW } from './config.js';
+
+/** @typedef {import('./config.js').Site} Site */
+/** @typedef {import('./config.js').Plant} Plant */
 
 /** @typedef {{ hour: number, kw: number, cloud: number | null }} HourPoint */
 /** @typedef {HourPoint & { clearKw: number }} DayHourPoint */
@@ -26,7 +30,7 @@ const round = (/** @type {number} */ v, /** @type {number} */ digits) => Number(
  * Počíta sa priamo v UTC - dĺžka ide do rovnice času, civilné pásmo netreba.
  * @param {Date} dateUtc @param {number} latDeg @param {number} lonDeg
  */
-export function solarPosition(dateUtc, latDeg = SITE.lat, lonDeg = SITE.lon) {
+export function solarPosition(dateUtc, latDeg, lonDeg) {
     const startOfYear = Date.UTC(dateUtc.getUTCFullYear(), 0, 1);
     const dayOfYear = Math.floor((dateUtc.getTime() - startOfYear) / 86400000) + 1;
     const hourUtc = dateUtc.getUTCHours() + dateUtc.getUTCMinutes() / 60;
@@ -72,9 +76,9 @@ export function solarPosition(dateUtc, latDeg = SITE.lat, lonDeg = SITE.lon) {
 
 /**
  * Žiarenie na naklonenej rovine panelu (W/m²), izotropný model oblohy.
- * @param {Irradiance} irr @param {SunPosition} sun @param {PanelPlane} panel
+ * @param {Irradiance} irr @param {SunPosition} sun @param {PanelPlane} panel @param {number} albedo odrazivosť terénu
  */
-export function poaIrradiance(irr, sun, panel) {
+export function poaIrradiance(irr, sun, panel, albedo) {
     if (sun.elevationDeg <= 0) return 0;
     const elevationRad = toRad(sun.elevationDeg);
     const tiltRad = toRad(panel.tiltDeg);
@@ -82,46 +86,49 @@ export function poaIrradiance(irr, sun, panel) {
     const cosAoi = Math.sin(elevationRad) * Math.cos(tiltRad) + Math.cos(elevationRad) * Math.sin(tiltRad) * Math.cos(azDiffRad);
     const beam = Math.max(0, irr.dni * cosAoi);
     const diffuseIso = (irr.dhi * (1 + Math.cos(tiltRad))) / 2;
-    const ground = (irr.ghi * PLANT.albedo * (1 - Math.cos(tiltRad))) / 2;
+    const ground = (irr.ghi * albedo * (1 - Math.cos(tiltRad))) / 2;
     return Math.max(0, beam + diffuseIso + ground);
 }
 
 /**
  * AC výkon celej elektrárne (kW) pre dané žiarenie, teplotu a polohu slnka:
- * obe skupiny stringov, teplotný odber, účinnosť a limit striedača.
- * @param {Irradiance} irr @param {number} tempC @param {SunPosition} sun
+ * všetky skupiny stringov, teplotný odber, účinnosť a limit striedača.
+ * @param {Irradiance} irr @param {number} tempC @param {SunPosition} sun @param {Plant} plant
  */
-export function plantAcKw(irr, tempC, sun) {
+export function plantAcKw(irr, tempC, sun, plant) {
     if (sun.elevationDeg <= 0) return 0;
     let dcWatts = 0;
-    for (const s of PLANT.strings) {
-        const poa = poaIrradiance(irr, sun, s);
-        const cellTemp = tempC + ((PLANT.noctC - 20) / 800) * poa;
-        const tempFactor = 1 + (PLANT.tempCoefPctPerC / 100) * (cellTemp - 25);
-        dcWatts += s.panels * PLANT.panelWp * (poa / 1000) * Math.max(0, tempFactor);
+    for (const s of plant.strings) {
+        const poa = poaIrradiance(irr, sun, s, plant.albedo);
+        const cellTemp = tempC + ((plant.noctC - 20) / 800) * poa;
+        const tempFactor = 1 + (plant.tempCoefPctPerC / 100) * (cellTemp - 25);
+        dcWatts += s.panels * plant.panelWp * (poa / 1000) * Math.max(0, tempFactor);
     }
-    const acKw = (dcWatts / 1000) * PLANT.systemEfficiency;
-    return clamp(acKw, 0, PLANT.acLimitKw);
+    const acKw = (dcWatts / 1000) * plant.systemEfficiency;
+    return clamp(acKw, 0, plant.acLimitKw);
 }
 
-/** Predpovedaný AC výkon (kW) z Open-Meteo hodnôt pre daný UTC čas. */
+/** Predpovedaný AC výkon (kW) z Open-Meteo hodnôt pre daný UTC čas, lokalitu a zostavu. */
 export function forecastAcKw(
-    /** @type {number} */ ghi,
-    /** @type {number} */ dni,
-    /** @type {number} */ dhi,
+    /** @type {Irradiance} */ irr,
     /** @type {number} */ tempC,
     /** @type {Date} */ dateUtc,
+    /** @type {Site} */ site,
+    /** @type {Plant} */ plant,
 ) {
-    return plantAcKw({ ghi, dni, dhi }, tempC, solarPosition(dateUtc));
+    return plantAcKw(irr, tempC, solarPosition(dateUtc, site.lat, site.lon), plant);
 }
 
-/** Žiarenie bezoblačnej oblohy (Meinelov útlm, výšková korekcia) pre danú eleváciu. @param {number} elevationDeg */
-export function clearSkyIrradiance(elevationDeg) {
+/**
+ * Žiarenie bezoblačnej oblohy (Meinelov útlm, výšková korekcia) pre danú eleváciu slnka.
+ * @param {number} elevationDeg @param {number} siteElevationM nadmorská výška lokality
+ */
+export function clearSkyIrradiance(elevationDeg, siteElevationM) {
     if (elevationDeg <= 0.5) return { ghi: 0, dni: 0, dhi: 0 };
     const zenithDeg = 90 - elevationDeg;
     const cosZ = Math.cos(toRad(zenithDeg));
     const airMass = 1 / (cosZ + 0.50572 * Math.pow(96.07995 - zenithDeg, -1.6364));
-    const hkm = Math.max(0, SITE.elevationM) / 1000;
+    const hkm = Math.max(0, siteElevationM) / 1000;
     const dni = 1353 * ((1 - 0.14 * hkm) * Math.pow(CLEAR_SKY.tau, Math.pow(airMass, 0.678)) + 0.14 * hkm);
     const dhi = CLEAR_SKY.dhiFraction * dni * cosZ;
     return { ghi: dni * cosZ + dhi, dni, dhi };
@@ -131,33 +138,47 @@ export function clearSkyIrradiance(elevationDeg) {
  * Horný strop výroby (kW): koľko by elektráreň dala v tejto hodine pri úplne jasnej oblohe.
  * Teplota je tá istá ako v predpovedi danej hodiny, takže pomer výroba/strop vyjadruje
  * čistú stratu oblačnosťou a nikdy neprekročí 100 % (pri 25 °C by chladný deň dal viac).
- * @param {Date} dateUtc @param {number} [ambientC]
+ * @param {Date} dateUtc @param {Site} site @param {Plant} plant @param {number} [ambientC]
  */
-export function clearSkyAcKw(dateUtc, ambientC = 25) {
-    const sun = solarPosition(dateUtc);
-    return plantAcKw(clearSkyIrradiance(sun.elevationDeg), ambientC, sun);
+export function clearSkyAcKw(dateUtc, site, plant, ambientC = 25) {
+    const sun = solarPosition(dateUtc, site.lat, site.lon);
+    return plantAcKw(clearSkyIrradiance(sun.elevationDeg, site.elevationM), ambientC, sun, plant);
 }
 
-// Formátovače sú drahé na vytvorenie a lacné na použitie, preto vzniknú raz pre celý modul.
-// Predpoveď ich volá tisíckrát; stavať ich pri každom volaní stálo 99 % času buildForecast.
-const HOUR_FORMAT = new Intl.DateTimeFormat('en-GB', { timeZone: SITE.timezone, hour: '2-digit', hour12: false });
-const DATE_FORMAT = new Intl.DateTimeFormat('en-CA', { timeZone: SITE.timezone });
+// Formátovače sú drahé na vytvorenie a lacné na použitie, preto vzniknú raz pre každé
+// časové pásmo. Predpoveď ich volá tisíckrát; stavať ich pri každom volaní stálo 99 % času
+// buildForecast.
+/** @type {Map<string, { hour: Intl.DateTimeFormat, date: Intl.DateTimeFormat }>} */
+const FORMATS = new Map();
 
-/** Miestna hodina (0-23) pre UTC čas. @param {Date} dateUtc */
-export function localHour(dateUtc) {
-    const parts = HOUR_FORMAT.formatToParts(dateUtc);
+/** @param {string} timezone */
+function formatsFor(timezone) {
+    let f = FORMATS.get(timezone);
+    if (!f) {
+        f = {
+            hour: new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', hour12: false }),
+            date: new Intl.DateTimeFormat('en-CA', { timeZone: timezone }),
+        };
+        FORMATS.set(timezone, f);
+    }
+    return f;
+}
+
+/** Miestna hodina (0-23) pre UTC čas v danom časovom pásme. @param {Date} dateUtc @param {string} timezone */
+export function localHour(dateUtc, timezone) {
+    const parts = formatsFor(timezone).hour.formatToParts(dateUtc);
     const hour = parts.find((p) => p.type === 'hour');
     return Number(hour ? hour.value : 0) % 24;
 }
 
-/** Miestny dátum "YYYY-MM-DD" pre UTC čas. @param {Date} dateUtc */
-export function localDateKey(dateUtc) {
-    return DATE_FORMAT.format(dateUtc);
+/** Miestny dátum "YYYY-MM-DD" pre UTC čas v danom časovom pásme. @param {Date} dateUtc @param {string} timezone */
+export function localDateKey(dateUtc, timezone) {
+    return formatsFor(timezone).date.format(dateUtc);
 }
 
-/** Časť dňa pre text "silnejšie slnko príde ...". @param {Date} dateUtc */
-export function daypartFor(dateUtc) {
-    const h = localHour(dateUtc);
+/** Časť dňa pre text "silnejšie slnko príde ...". @param {Date} dateUtc @param {string} timezone */
+export function daypartFor(dateUtc, timezone) {
+    const h = localHour(dateUtc, timezone);
     if (h >= 12 && h < 17) return 'poobede';
     if (h >= 17 && h < 20) return 'podvečer';
     return 'neskôr';
@@ -165,11 +186,14 @@ export function daypartFor(dateUtc) {
 
 /** @typedef {{ dateUtc: Date, acKw: number, localDate: string, cloudPct: number | null, tempC: number }} HourEntry */
 
-/** Hodinové pole pre graf, zoradené podľa miestnej hodiny. @param {HourEntry[]} entries @returns {HourPoint[]} */
-export function hourlySeries(entries) {
+/**
+ * Hodinové pole pre graf, zoradené podľa miestnej hodiny.
+ * @param {HourEntry[]} entries @param {string} timezone @returns {HourPoint[]}
+ */
+export function hourlySeries(entries, timezone) {
     return entries
         .map((h) => ({
-            hour: localHour(h.dateUtc),
+            hour: localHour(h.dateUtc, timezone),
             kw: round(h.acKw, 2),
             cloud: Number.isFinite(h.cloudPct) ? Math.round(/** @type {number} */ (h.cloudPct)) : null,
         }))
@@ -178,20 +202,20 @@ export function hourlySeries(entries) {
 
 /**
  * Jeden deň pre kartu "7 dní": hodinová predpoveď + bezoblačný strop + súhrny.
- * @param {string} dayKey @param {HourEntry[]} entries @returns {ForecastDay}
+ * @param {string} dayKey @param {HourEntry[]} entries @param {Site} site @param {Plant} plant @returns {ForecastDay}
  */
-function buildDay(dayKey, entries) {
+function buildDay(dayKey, entries, site, plant) {
     // Mapa nahrádza hľadanie cez `find` v cykle. Prvý záznam hodiny vyhráva rovnako ako tam,
     // takže zhoda s pôvodným správaním platí aj v deň prechodu na zimný čas, keď miestna
     // hodina 2 existuje dvakrát (v noci, čiže strop je tak či tak nulový).
     /** @type {Map<number, HourEntry>} */ const entryByHour = new Map();
     for (const e of entries) {
-        const hour = localHour(e.dateUtc);
+        const hour = localHour(e.dateUtc, site.timezone);
         if (!entryByHour.has(hour)) entryByHour.set(hour, e);
     }
-    const hourly = hourlySeries(entries).map((h) => {
+    const hourly = hourlySeries(entries, site.timezone).map((h) => {
         const entry = entryByHour.get(h.hour);
-        return { ...h, clearKw: entry ? round(clearSkyAcKw(entry.dateUtc, entry.tempC), 2) : 0 };
+        return { ...h, clearKw: entry ? round(clearSkyAcKw(entry.dateUtc, site, plant, entry.tempC), 2) : 0 };
     });
     let peak = hourly[0] || { hour: null, kw: 0 };
     for (const h of hourly) if (h.kw > peak.kw) peak = h;
@@ -215,9 +239,9 @@ function buildDay(dayKey, entries) {
 
 /**
  * Príde ešte dnes citeľne silnejšie slnko než teraz? (Pre texty "počkaj na slnko".)
- * @param {HourEntry[]} hourly @param {string} todayKey @param {number} nowHourUtc
+ * @param {HourEntry[]} hourly @param {string} todayKey @param {number} nowHourUtc @param {string} timezone
  */
-function strongerWindowAhead(hourly, todayKey, nowHourUtc) {
+function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone) {
     const none = {
         strongerWindowAhead: false,
         windowDaypart: /** @type {string | null} */ (null),
@@ -233,21 +257,22 @@ function strongerWindowAhead(hourly, todayKey, nowHourUtc) {
     if (peak.acKw < POWER_HIGH_KW || peak.acKw < baselineKw + STRONGER_WINDOW_MARGIN_KW) return none;
     return {
         strongerWindowAhead: true,
-        windowDaypart: daypartFor(peak.dateUtc),
+        windowDaypart: daypartFor(peak.dateUtc, timezone),
         peakKw: round(peak.acKw, 2),
         hoursAhead: Math.round((peak.dateUtc.getTime() - nowHourUtc) / 3600000),
     };
 }
 
 /**
- * Zloží celý výstup predpovede z odpovede Open-Meteo. Toto je jediné miesto,
- * kde vzniká formát `forecast` - používa ho Worker aj testy.
+ * Zloží celý výstup predpovede z odpovede Open-Meteo pre danú lokalitu a zostavu. Toto je
+ * jediné miesto, kde vzniká formát `forecast` - používa ho Worker aj testy.
  * @param {{ hourly: { time: string[], shortwave_radiation: number[], direct_normal_irradiance: number[],
  *   diffuse_radiation: number[], temperature_2m: number[], cloud_cover?: number[] } }} data
- * @param {Date} now
+ * @param {Date} now @param {Site} site @param {Plant} plant
  * @returns {Forecast}
  */
-export function buildForecast(data, now) {
+export function buildForecast(data, now, site, plant) {
+    const tz = site.timezone;
     const {
         time,
         shortwave_radiation: ghiArr,
@@ -257,7 +282,7 @@ export function buildForecast(data, now) {
         cloud_cover: cloudArr,
     } = data.hourly;
 
-    const todayKey = localDateKey(now);
+    const todayKey = localDateKey(now, tz);
     const nowHourUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours());
 
     /** @type {HourEntry[]} */
@@ -265,16 +290,16 @@ export function buildForecast(data, now) {
         const dateUtc = new Date(`${t}Z`);
         return {
             dateUtc,
-            acKw: forecastAcKw(ghiArr[i], dniArr[i], dhiArr[i], tempArr[i], dateUtc),
-            localDate: localDateKey(dateUtc),
+            acKw: forecastAcKw({ ghi: ghiArr[i], dni: dniArr[i], dhi: dhiArr[i] }, tempArr[i], dateUtc, site, plant),
+            localDate: localDateKey(dateUtc, tz),
             cloudPct: cloudArr ? cloudArr[i] : null,
             tempC: tempArr[i],
         };
     });
 
-    const ahead = strongerWindowAhead(hourly, todayKey, nowHourUtc);
+    const ahead = strongerWindowAhead(hourly, todayKey, nowHourUtc, tz);
 
-    const dayKeyOffset = (/** @type {number} */ days) => localDateKey(new Date(now.getTime() + days * 86400000));
+    const dayKeyOffset = (/** @type {number} */ days) => localDateKey(new Date(now.getTime() + days * 86400000), tz);
     const tomorrowKey = dayKeyOffset(1);
     const tomorrowEntries = hourly.filter((h) => h.localDate === tomorrowKey);
     const tomorrowPeakKw = tomorrowEntries.reduce((max, h) => Math.max(max, h.acKw), 0);
@@ -286,6 +311,8 @@ export function buildForecast(data, now) {
             buildDay(
                 key,
                 hourly.filter((h) => h.localDate === key),
+                site,
+                plant,
             ),
         );
     }
@@ -294,8 +321,11 @@ export function buildForecast(data, now) {
         ...ahead,
         tomorrowSunny: tomorrowPeakKw >= POWER_HIGH_KW,
         tomorrowPeakKw: round(tomorrowPeakKw, 2),
-        hourlyToday: hourlySeries(hourly.filter((h) => h.localDate === todayKey)),
-        hourlyTomorrow: hourlySeries(tomorrowEntries),
+        hourlyToday: hourlySeries(
+            hourly.filter((h) => h.localDate === todayKey),
+            tz,
+        ),
+        hourlyTomorrow: hourlySeries(tomorrowEntries, tz),
         days,
         updatedAt: now.toISOString(),
     };

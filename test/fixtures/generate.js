@@ -2,6 +2,7 @@
 // pustiť Open-Meteo ani kiosk, preto sú SYNTETICKÉ: Open-Meteo z bezoblačného modelu
 // × pevný vzor oblačnosti, kiosk z tvaru skutočnej odpovede. Spusti: node test/fixtures/generate.js
 import { writeFileSync } from 'node:fs';
+import { SITE } from '../../shared/config.js';
 import { clearSkyIrradiance, solarPosition } from '../../shared/solar.js';
 
 const OUT = new URL('./', import.meta.url);
@@ -21,8 +22,8 @@ const hourly = {
 };
 for (let i = 0; i < DAYS * 24; i++) {
     const t = new Date(START.getTime() + i * 3600 * 1000);
-    const sun = solarPosition(t);
-    const clear = clearSkyIrradiance(sun.elevationDeg);
+    const sun = solarPosition(t, SITE.lat, SITE.lon);
+    const clear = clearSkyIrradiance(sun.elevationDeg, SITE.elevationM);
     const cloud = CLOUD_BY_DAY[Math.floor(i / 24)] + 5 * Math.sin(i / 3);
     const cloudFrac = Math.max(0, Math.min(1, cloud / 100));
     // Oblačnosť tlmí priame žiarenie silno, rozptýlené naopak zvýši. Celkové žiarenie

@@ -5,6 +5,19 @@
 /** @typedef {'summer' | 'winter'} Season */
 /** @typedef {'red' | 'amber' | 'green'} Tier */
 
+/**
+ * Lokalita elektrárne. Časové pásmo určuje, ktorá hodina a ktorý deň je „miestny“.
+ * @typedef {{ name: string, lat: number, lon: number, elevationM: number, timezone: string }} Site
+ */
+/**
+ * Zostava fotovoltiky: skupiny panelov s vlastnou orientáciou (azimut 180 = juh) a sklonom,
+ * spoločný typ panelu a menič.
+ * @typedef {{ panels: number, azimuthDeg: number, tiltDeg: number }} PlantString
+ * @typedef {{ strings: PlantString[], panelWp: number, acLimitKw: number, systemEfficiency: number,
+ *   tempCoefPctPerC: number, noctC: number, albedo: number }} Plant
+ */
+
+/** Lokalita elektrárne v Dvoranoch. Výpočty ju dostávajú ako parameter. @type {Site} */
 export const SITE = {
     name: 'Dvorany nad Nitrou',
     lat: 48.48,
@@ -13,7 +26,7 @@ export const SITE = {
     timezone: 'Europe/Bratislava',
 };
 
-// Zostava fotovoltiky: dve skupiny stringov (juh + východ), rovnaký sklon.
+/** Zostava v Dvoranoch: dve skupiny stringov (juh + východ), rovnaký sklon. @type {Plant} */
 export const PLANT = {
     strings: [
         { panels: 16, azimuthDeg: 180, tiltDeg: 40 },
@@ -30,8 +43,13 @@ export const PLANT = {
 /** Minút v dni. Ciferník ich rozloží po obvode, tarifné okná ich delia na pásma. */
 export const MINUTES_PER_DAY = 1440;
 
-/** Inštalovaný výkon v kWp odvodený zo zostavy (24 × 435 Wp = 10,44 kWp, zaokrúhlené na desatinu). */
-export const INSTALLED_PV_KW = Math.round((PLANT.strings.reduce((sum, s) => sum + s.panels, 0) * PLANT.panelWp) / 100) / 10;
+/** Inštalovaný výkon zostavy v kWp, zaokrúhlený na desatinu. @param {Plant} plant */
+export function installedKw(plant) {
+    return Math.round((plant.strings.reduce((sum, s) => sum + s.panels, 0) * plant.panelWp) / 100) / 10;
+}
+
+/** Inštalovaný výkon v Dvoranoch (24 × 435 Wp = 10,44 kWp, zaokrúhlené na desatinu). */
+export const INSTALLED_PV_KW = installedKw(PLANT);
 
 // Bezoblačný model (Meinel + Laueho výšková korekcia) - horný strop výroby.
 export const CLEAR_SKY = { tau: 0.8, dhiFraction: 0.12 };
@@ -44,11 +62,15 @@ export const STRONGER_WINDOW_MARGIN_KW = 1.5; // o koľko musí byť budúce okn
 // Predpoveď: koľko dní z Open-Meteo (9 = rezerva, aby 7 miestnych dní bolo úplných aj s posunom UTC).
 export const FORECAST_API_DAYS = 9;
 export const FORECAST_DAYS_SHOWN = 7;
-export const OPEN_METEO_URL =
-    'https://api.open-meteo.com/v1/forecast' +
-    `?latitude=${SITE.lat}&longitude=${SITE.lon}` +
-    '&hourly=shortwave_radiation,direct_normal_irradiance,diffuse_radiation,temperature_2m,cloud_cover' +
-    `&forecast_days=${FORECAST_API_DAYS}&timezone=UTC`;
+/** Adresa hodinovej predpovede Open-Meteo pre danú lokalitu (časy v UTC). @param {Site} site */
+export function openMeteoUrl(site) {
+    return (
+        'https://api.open-meteo.com/v1/forecast' +
+        `?latitude=${site.lat}&longitude=${site.lon}` +
+        '&hourly=shortwave_radiation,direct_normal_irradiance,diffuse_radiation,temperature_2m,cloud_cover' +
+        `&forecast_days=${FORECAST_API_DAYS}&timezone=UTC`
+    );
+}
 
 /**
  * Tarifné okná dňa. Poradie je chronologické, nočné okno prechádza cez polnoc.

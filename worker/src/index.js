@@ -1,7 +1,7 @@
 // Cloudflare Worker: jediný zdroj dát appky. Cron každých 5 minút stiahne kiosk,
 // raz za hodinu prepočíta predpoveď z Open-Meteo a obe uloží do KV. GET / ich vráti.
 
-import { OPEN_METEO_URL, STALE_FORECAST_MS, STALE_PV_MS } from '../../shared/config.js';
+import { PLANT, SITE, STALE_FORECAST_MS, STALE_PV_MS, openMeteoUrl } from '../../shared/config.js';
 import { fetchWithRetry } from '../../shared/http.js';
 import { parseKiosk } from '../../shared/kiosk.js';
 import { buildForecast } from '../../shared/solar.js';
@@ -39,8 +39,8 @@ export async function refreshPv(env, now, fetchImpl = fetch) {
 export async function refreshForecastIfStale(env, now, fetchImpl = fetch) {
     const existing = await env.PV_DATA.get(KV_FORECAST, 'json');
     if (existing && existing.updatedAt && now.getTime() - Date.parse(existing.updatedAt) < FORECAST_REFRESH_MS) return existing;
-    const res = await fetchWithRetry(OPEN_METEO_URL, {}, { fetchImpl });
-    const forecast = buildForecast(await res.json(), now);
+    const res = await fetchWithRetry(openMeteoUrl(SITE), {}, { fetchImpl });
+    const forecast = buildForecast(await res.json(), now, SITE, PLANT);
     await env.PV_DATA.put(KV_FORECAST, JSON.stringify(forecast));
     return forecast;
 }
