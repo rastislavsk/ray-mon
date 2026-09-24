@@ -2012,7 +2012,9 @@ b {
 .unit-wrap .field-input {
     padding-right: 44px;
 }
-.unit {
+/* Len vnútri poľa: holé .unit by chytilo aj popisok pod číslom v ciferníku a odsunulo ho
+   k pravému okraju cez hodinu 6. */
+.unit-wrap .unit {
     position: absolute;
     right: 12px;
     top: 50%;

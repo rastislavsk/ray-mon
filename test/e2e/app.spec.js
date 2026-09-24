@@ -363,6 +363,16 @@ test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
     await expect(ring).toHaveCSS('stroke-linecap', 'butt');
 });
 
+test('popisok jednotky v ciferníku sedí pod číslom, nie pri okraji', async ({ page }) => {
+    await openApp(page);
+    // Pravidlo .unit pre polia v Nastavení ho raz chytilo tiež a odsunulo cez hodinu 6.
+    const val = await page.locator('#pv-power').boundingBox();
+    const unit = await page.locator('#pv-power-unit').boundingBox();
+    if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
+    expect(unit.y).toBeGreaterThanOrEqual(val.y + val.height - 1);
+    expect(Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2))).toBeLessThan(4);
+});
+
 /** Poradie viditeľných blokov karty 7 dní zhora nadol - tak, ako ich vidí používateľ
  * (CSS `order` mení poradie oproti HTML). @param {import('@playwright/test').Page} page */
 function viditelneBloky(page) {
