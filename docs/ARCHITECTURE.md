@@ -18,8 +18,11 @@ a zostavu panelov ako parameter.** Appka ho volá v prehliadači pre elektráre�
 používateľ zadal v karte Nastavenie (kým nič nezadá, pre ukážku v Londýne). Tá istá funkcia
 sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliadača aj bez siete.
 
-Živé meranie zatiaľ dodáva Worker len pre elektráreň v Dvoranoch. Appka ho preto pýta len
-vtedy, keď je uložená lokalita pri Dvoranoch (`nearOwnerPlant`); inde je aj „teraz“ odhad
+Živé meranie: kto si v Nastavení vložil odkaz na kiosk FusionSolar, tomu ho appka pošle
+Workeru (`POST /pv`, odkaz v tele) a Worker kiosk stiahne a prevedie na `pv`. Z odkazu
+berie len server a kľúč kiosku (`kioskApiUrl`) a adresu dát si zloží sám, takže nesťahuje
+nič iné než kiosk FusionSolar. Kto odkaz nevložil a má lokalitu pri Dvoranoch
+(`nearOwnerPlant`), dostane zatiaľ meranie z cronu Workera; ostatní vidia odhad
 z predpovede. Worker ešte stále počíta aj predpoveď pre Dvorany, appka ju však už nečíta.
 
 ## Vrstvy

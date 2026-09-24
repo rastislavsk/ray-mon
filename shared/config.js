@@ -188,6 +188,19 @@ export const AUTO_MIN_PV_KW = POWER_HIGH_KW;
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/rackofci-energy-sro-fable/';
 export const WORKER_URL = 'https://rackofci-energy-sro-fable.rastislav-racek.workers.dev/';
+// Živé meranie z kiosku, ktorý si používateľ zadal v Nastavení. Odkaz ide v tele POST
+// požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera.
+export const WORKER_PV_URL = `${WORKER_URL}pv`;
+
+/**
+ * Verejný kiosk Huawei FusionSolar. Worker sťahuje len z týchto serverov a len túto cestu,
+ * odkaz od používateľa dodá iba server a kľúč kiosku - inak by z Workera bol proxy server
+ * na čokoľvek.
+ */
+export const KIOSK = {
+    hostSuffix: 'fusionsolar.huawei.com',
+    apiPath: '/rest/pvms/web/kiosk/v1/station-kiosk-file',
+};
 // Dočasný záložný zdroj, kým nový Worker nebeží: dáta pôvodnej appky (rovnaký formát).
 export const LEGACY_SOURCES = {
     pv: 'https://pv-proxy.rastislav-racek.workers.dev/',

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeEntities, extractRealCurveToday, parseKiosk } from '../shared/kiosk.js';
+import { decodeEntities, extractRealCurveToday, kioskApiUrl, parseKiosk } from '../shared/kiosk.js';
 import { FIXED_NOW, fixture } from './helpers.js';
 
 test('decodeEntities dekóduje HTML entity', () => {
@@ -34,4 +34,36 @@ test('parseKiosk: chýbajúce polia dajú null, bez data hodí chybu', () => {
     assert.equal(pv.stationName, null);
     assert.deepEqual(pv.realCurveToday, []);
     assert.throws(() => parseKiosk({}, FIXED_NOW));
+});
+
+test('kioskApiUrl: odkaz na stránku aj na dáta vedie na tú istú adresu dát', () => {
+    const api = 'https://region01eu5.fusionsolar.huawei.com/rest/pvms/web/kiosk/v1/station-kiosk-file?kk=Abc123_-xyz';
+    assert.equal(
+        kioskApiUrl('https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123_-xyz'),
+        api,
+    );
+    assert.equal(kioskApiUrl(`  ${api}  `), api);
+    assert.equal(kioskApiUrl('https://REGION01EU5.FusionSolar.Huawei.com/x?a=1&kk=Abc123_-xyz&b=2'), api);
+    assert.equal(
+        kioskApiUrl('https://fusionsolar.huawei.com/?kk=abcd'),
+        'https://fusionsolar.huawei.com/rest/pvms/web/kiosk/v1/station-kiosk-file?kk=abcd',
+    );
+});
+
+test('kioskApiUrl: iné servery, protokoly a kľúče neprejdú', () => {
+    for (const bad of [
+        '',
+        'nie odkaz',
+        42,
+        null,
+        'http://region01eu5.fusionsolar.huawei.com/?kk=abcd1234',
+        'https://fusionsolar.huawei.com.zly.sk/?kk=abcd1234',
+        'https://zlyfusionsolar.huawei.com/?kk=abcd1234',
+        'https://example.com/?kk=abcd1234',
+        'https://region01eu5.fusionsolar.huawei.com:8443/?kk=abcd1234',
+        'https://region01eu5.fusionsolar.huawei.com/?kk=ab',
+        'https://region01eu5.fusionsolar.huawei.com/?kk=abc%2F..%2Fx',
+        'https://region01eu5.fusionsolar.huawei.com/?kiosk=abcd1234',
+    ])
+        assert.equal(kioskApiUrl(bad), null, String(bad));
 });

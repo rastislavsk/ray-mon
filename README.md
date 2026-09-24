@@ -40,7 +40,8 @@ QR kód v nej kreslí knižnica z CDN.
   naraz.
 - **Nastavenie** – zoznam nastavení appky. Položka sa ťuknutím rozbalí na mieste.
   **Moja elektráreň**: lokalita kdekoľvek na svete (vyhľadávanie alebo ručné súradnice)
-  a jedna až tri plochy panelov s počtom, orientáciou a sklonom, výkon panelu a menič.
+  a jedna až tri plochy panelov s počtom, orientáciou a sklonom, výkon panelu a menič,
+  nepovinne odkaz na kiosk Huawei FusionSolar pre živé meranie.
   Nastavenie sa ukladá len v prehliadači. Kým si ho človek neuloží, appka ukazuje ukážku
   vymyslenej elektrárne v Londýne. **Zdieľať appku**: QR kód, odkaz na appku a tlačidlo na
   poslanie cez WhatsApp.
@@ -77,7 +78,7 @@ nemení, takže odkaz na appku ostáva jeden.
 
 ```
 Open-Meteo (žiarenie) ──────────────────────────────→ appka počíta predpoveď
-Huawei FusionSolar kiosk ─→ Cloudflare Worker ─→ KV ─→ appka (živé meranie, len Dvorany)
+Huawei FusionSolar kiosk ─→ Cloudflare Worker ─────→ appka (živé meranie)
 ```
 
 Appka si pre lokalitu z karty Nastavenie stiahne z Open-Meteo hodinové žiarenie, teplotu
@@ -85,11 +86,15 @@ a oblačnosť a sama z nich dopočíta predpoveď výroby: polohu slnka, žiaren
 panelov, teplotný odber a limit meniča. Tá istá funkcia počíta aj strop pri úplne jasnej
 oblohe, z ktorého vychádza údaj „využitie“. Počasie sa sťahuje najviac raz za hodinu.
 
-Živé meranie dodáva Worker, ktorý každých päť minút stiahne verejný kiosk elektrárne
-v Dvoranoch a uloží ho do Cloudflare KV. Appka ho pýta len vtedy, keď je nastavená
-lokalita pri Dvoranoch; inde ukazuje odhad z predpovede. Ak by Worker vypadol, appka
-skúsi záložný zdroj pôvodnej appky (`LEGACY_SOURCES` v `shared/config.js`), ktorý číta
-ten istý kiosk. Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
+Živé meranie je nepovinné. Kto si v Nastavení vloží odkaz na verejný kiosk svojej
+elektrárne z Huawei FusionSolar, tomu ho appka každú minútu stiahne cez Worker (prehliadač
+sa na kiosk priamo nedostane). Odkaz ostáva uložený len v prehliadači a Worker si ho nikam
+neukladá. Bez odkazu appka ukazuje odhad z predpovede.
+
+Pre elektráreň v Dvoranoch zatiaľ beží aj pôvodná cesta: Worker každých päť minút stiahne
+jej kiosk do Cloudflare KV a appka ho použije pri lokalite pri Dvoranoch, ak kiosk odkaz
+v Nastavení nie je. Pri jej výpadku skúsi záložný zdroj pôvodnej appky (`LEGACY_SOURCES`).
+Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 
 ## Štruktúra
 

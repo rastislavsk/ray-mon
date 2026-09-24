@@ -13,6 +13,7 @@ import {
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
+    WORKER_PV_URL,
     WORKER_URL,
 } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
@@ -75,6 +76,7 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
     );
     await page.route(WORKER_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
     await page.route(LEGACY_SOURCES.pv, (route) => route.abort());
+    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
     if (settings)
@@ -1760,5 +1762,28 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#set-msgs')).toContainText('južnej pologuli');
         await page.locator('#set-roof-add').click();
         await expect(page.locator('#set-roof-2 [data-az="0"]')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    test('vlastný kiosk: cudzí odkaz nejde uložiť, kiosk FusionSolar dodá živé meranie aj mimo Dvorian', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        /** @type {string[]} */ const bodies = [];
+        page.on('request', (r) => r.url() === WORKER_PV_URL && bodies.push(r.postData() || ''));
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await expect(page.locator('#set-kiosk-meta')).toHaveText('Bez odkazu ukážem len predpoveď.');
+        await page.locator('#set-kiosk').fill('https://example.com/?kk=Abc123xyz');
+        await expect(page.locator('#set-msgs .err')).toContainText('kiosk FusionSolar');
+        await expect(page.locator('#set-save')).toBeDisabled();
+        const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+        await page.locator('#set-kiosk').fill(kiosk);
+        await expect(page.locator('#set-msgs')).toBeEmpty();
+        await expect(page.locator('#set-kiosk-meta')).toHaveText('Po uložení overím, či kiosk odpovedá.');
+        await page.locator('#set-save').click();
+        // Londýn, FIXED_NOW 11:00 UTC = 12:00 miestneho.
+        await expect(page.locator('#pv-updated')).toHaveText('aktualizované 12:00');
+        expect(bodies).toContain(kiosk);
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+        expect(errors).toEqual([]);
     });
 });

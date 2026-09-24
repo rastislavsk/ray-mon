@@ -521,6 +521,7 @@ function onSettingsInput(dom, ops, search, e) {
         ops.setDraft({ ...d, site });
     } else if (field === 'wp') ops.setDraft({ ...d, plant: { ...d.plant, panelWp: numberOf(t) } });
     else if (field === 'ac') ops.setDraft({ ...d, plant: { ...d.plant, acLimitKw: numberOf(t) } });
+    else if (field === 'kiosk') ops.setDraft({ ...d, kiosk: t.value.trim() });
     else if (field === 'panels') ops.setString(i, (x) => ({ ...x, panels: numberOf(t) }));
     else if (field === 'tilt') ops.setString(i, (x) => ({ ...x, tiltDeg: Number(t.value) }));
 }
@@ -544,9 +545,9 @@ function onSettingsButton(store, dom, ops, b) {
         const azimuthDeg = ops.draft().site.lat < 0 ? 0 : 180;
         ops.setStrings((xs) => [...xs, { panels: 6, azimuthDeg, tiltDeg: 30 }]);
     } else if (b === dom.setReset) {
-        const { site, plant } = store.get();
+        const { site, plant, kiosk } = store.get();
         store.setState({ geo: { status: 'idle', results: [] } });
-        ops.setDraft({ site, plant }, true);
+        ops.setDraft({ site, plant, kiosk }, true);
     }
 }
 
@@ -562,6 +563,7 @@ function saveDraft(store, refresh) {
     store.setState({
         site: next.site,
         plant: next.plant,
+        kiosk: next.kiosk,
         demo: false,
         pv: null,
         forecast: null,
@@ -590,10 +592,11 @@ function initSettings(store, dom, refresh) {
 /** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
 function initTicks(store, mq) {
     const refresh = async () => {
-        const { site, plant } = store.get();
-        const result = await loadData({ site, plant }, new Date());
+        const { site, plant, kiosk } = store.get();
+        const result = await loadData({ site, plant, kiosk }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
-        if (store.get().site !== site || store.get().plant !== plant) return;
+        const now = store.get();
+        if (now.site !== site || now.plant !== plant || now.kiosk !== kiosk) return;
         store.setState({
             pv: result.pv,
             forecast: result.forecast,

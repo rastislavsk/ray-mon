@@ -11,8 +11,8 @@ import { localMinutes } from '../../shared/solar.js';
 export function updatedLine(state) {
     if (state.dataError || (!state.pv && !state.forecast)) return 'dáta nedostupné';
     if (state.demo) return 'ukážka · nastav si elektráreň';
-    // Živé meranie má zatiaľ len elektráreň v Dvoranoch; inde je všetko odhad z predpovede.
-    if (!state.pv) return nearOwnerPlant(state.site) ? 'živý výkon nedostupný' : 'odhad z predpovede';
+    // Kto meranie má (vlastný kiosk, alebo zatiaľ Dvorany), tomu chýba; ostatní vidia odhad.
+    if (!state.pv) return state.kiosk || nearOwnerPlant(state.site) ? 'živý výkon nedostupný' : 'odhad z predpovede';
     const updated = new Date(state.pv.updatedAt);
     const label = `aktualizované ${minutesToTimeStr(localMinutes(updated, state.site.timezone))}`;
     const stale = state.now.getTime() - updated.getTime() > STALE_PV_MS;

@@ -26,6 +26,7 @@ import { PANELS } from './dom.js';
  *   chartSizes: Record<string, { w: number, h: number }>,
  *   site: import('../shared/config.js').Site,
  *   plant: import('../shared/config.js').Plant,
+ *   kiosk: string,
  *   demo: boolean,
  *   settingsDraft: import('../shared/settings.js').Settings,
  *   settingsRev: number,
@@ -76,6 +77,8 @@ export function initialState(now, season, layout, settings, demo) {
         // nezadá, ukážka (demo).
         site: settings.site,
         plant: settings.plant,
+        // Odkaz na kiosk pre živé meranie; prázdny = bez merania.
+        kiosk: settings.kiosk,
         demo,
         // Rozpísaný formulár v karte Nastavenie. Hodnoty polí píše render len pri zmene
         // settingsRev (načítanie, výber lokality, pridanie plochy, zahodenie zmien), inak by

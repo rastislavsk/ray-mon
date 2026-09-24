@@ -137,6 +137,8 @@ function nastavenieDom() {
         setRoofAdd: /** @type {HTMLButtonElement} */ (byId('set-roof-add')),
         setWp: /** @type {HTMLInputElement} */ (byId('set-wp')),
         setAc: /** @type {HTMLInputElement} */ (byId('set-ac')),
+        setKiosk: /** @type {HTMLInputElement} */ (byId('set-kiosk')),
+        setKioskMeta: byId('set-kiosk-meta'),
         setTotalKwp: byId('set-total-kwp'),
         setTotalMeta: byId('set-total-meta'),
         setMsgs: byId('set-msgs'),

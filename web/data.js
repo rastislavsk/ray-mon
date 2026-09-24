@@ -1,8 +1,9 @@
 // Načítanie dát. Predpoveď sa počíta tu v prehliadači z počasia Open-Meteo pre lokalitu
-// z nastavenia. Živé meranie dáva zatiaľ len Worker, a to len pre elektráreň v Dvoranoch
-// (pri jeho zlyhaní záložný zdroj pôvodnej appky). Neplatné dáta sa správajú ako chýbajúce.
+// z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal. Kto kiosk
+// nezadal a má lokalitu pri Dvoranoch, dostane zatiaľ meranie z cronu Workera (pri jeho
+// zlyhaní záložný zdroj pôvodnej appky). Neplatné dáta sa správajú ako chýbajúce.
 
-import { geocodeUrl, LEGACY_SOURCES, openMeteoUrl, WEATHER_CACHE_MS, WORKER_URL } from '../shared/config.js';
+import { geocodeUrl, LEGACY_SOURCES, openMeteoUrl, WEATHER_CACHE_MS, WORKER_PV_URL, WORKER_URL } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { nearOwnerPlant, parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -20,8 +21,21 @@ async function getJson(url, fetchImpl) {
 /** @param {unknown} pv */
 const validPv = (pv) => (pv && validatePv(pv).length === 0 ? /** @type {import('../shared/kiosk.js').PvData} */ (pv) : null);
 
-/** Živé meranie: Worker, pri zlyhaní záložný zdroj. @param {typeof fetch} fetchImpl */
-async function loadPv(fetchImpl) {
+/**
+ * Živé meranie z vlastného kiosku. Odkaz ide v tele ako text - taká požiadavka nepotrebuje
+ * predbežnú CORS kontrolu a odkaz sa nedostane do adresy, ktorá končí v logoch.
+ * @param {string} kiosk @param {typeof fetch} fetchImpl
+ */
+async function loadKioskPv(kiosk, fetchImpl) {
+    const res = await fetchImpl(WORKER_PV_URL, { method: 'POST', body: kiosk, cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} kiosk`);
+    const pv = validPv((await res.json()).pv);
+    if (!pv) throw new Error('Kiosk nevrátil platné dáta');
+    return { pv, source: /** @type {const} */ ('worker') };
+}
+
+/** Živé meranie elektrárne v Dvoranoch: Worker, pri zlyhaní záložný zdroj. @param {typeof fetch} fetchImpl */
+async function loadOwnerPv(fetchImpl) {
     try {
         const pv = validPv((await getJson(WORKER_URL, fetchImpl)).pv);
         if (pv) return { pv, source: /** @type {const} */ ('worker') };
@@ -42,7 +56,9 @@ let weather = null;
 async function loadWeather(site, now, fetchImpl) {
     const url = openMeteoUrl(site);
     const cached = weather && weather.url === url ? weather : null;
-    if (cached && now.getTime() - cached.at < WEATHER_CACHE_MS) return cached.json;
+    // Záporný vek znamená, že sa hodiny telefónu posunuli dozadu - vtedy sa stiahne nanovo.
+    const age = cached ? now.getTime() - cached.at : Infinity;
+    if (cached && age >= 0 && age < WEATHER_CACHE_MS) return cached.json;
     try {
         weather = { url, at: now.getTime(), json: await getJson(url, fetchImpl) };
         return weather.json;
@@ -68,7 +84,11 @@ function forecastFrom(json, now, s) {
  */
 export async function loadData(settings, now, fetchImpl = fetch) {
     const [pvRes, weatherRes] = await Promise.allSettled([
-        nearOwnerPlant(settings.site) ? loadPv(fetchImpl) : Promise.resolve(null),
+        settings.kiosk
+            ? loadKioskPv(settings.kiosk, fetchImpl)
+            : nearOwnerPlant(settings.site)
+              ? loadOwnerPv(fetchImpl)
+              : Promise.resolve(null),
         loadWeather(settings.site, now, fetchImpl),
     ]);
     const live = pvRes.status === 'fulfilled' ? pvRes.value : null;

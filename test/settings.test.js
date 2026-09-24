@@ -15,7 +15,8 @@ import {
     toUser,
 } from '../shared/settings.js';
 
-const DVORANY = { site: SITE, plant: PLANT };
+const DVORANY = { site: SITE, plant: PLANT, kiosk: '' };
+const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
 
 test('ukážka je Londýn s vlastnou zostavou a prejde kontrolou', () => {
     const demo = demoSettings();
@@ -80,7 +81,7 @@ test('uloženie a načítanie: odborné parametre sa dopĺňajú z config.js', (
     assert.equal('albedo' in stored, false);
     const back = parseStoredSettings(stored);
     assert.ok(back);
-    assert.deepEqual(back, { site: SITE, plant: PLANT });
+    assert.deepEqual(back, DVORANY);
     assert.ok(sameSettings(back, DVORANY));
     assert.ok(!sameSettings(back, demoSettings()));
 });
@@ -156,4 +157,18 @@ test('texty: súradnice podľa pologule, súhrn s ukážkou', () => {
     assert.equal(siteMetaText({ ...SITE, lat: NaN }), 'Súradnice nie sú zadané.');
     assert.equal(settingsHint(DVORANY, false), 'Dvorany nad Nitrou · 10,44 kWp');
     assert.equal(settingsHint(demoSettings(), true), 'Ukážka · Londýn · 5,22 kWp');
+});
+
+test('kiosk: prázdny je bez merania, cudzí odkaz je chyba, uloží sa a staré nastavenie bez neho platí', () => {
+    assert.deepEqual(checkSettings({ ...DVORANY, kiosk: KIOSK }).errors, []);
+    assert.ok(checkSettings({ ...DVORANY, kiosk: 'https://example.com/?kk=Abc123xyz' }).errors.some((e) => e.includes('kiosk')));
+    const withKiosk = parseStoredSettings(toUser({ ...DVORANY, kiosk: KIOSK }));
+    assert.equal(withKiosk && withKiosk.kiosk, KIOSK);
+    assert.ok(!sameSettings({ ...DVORANY, kiosk: KIOSK }, DVORANY));
+    // Nastavenie uložené pred pridaním kiosku.
+    const old = /** @type {Partial<ReturnType<typeof toUser>>} */ (toUser(DVORANY));
+    delete old.kiosk;
+    const back = parseStoredSettings(old);
+    assert.equal(back && back.kiosk, '');
+    assert.equal(parseStoredSettings({ ...toUser(DVORANY), kiosk: 'https://example.com/?kk=Abc123xyz' }), null);
 });

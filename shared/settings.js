@@ -3,20 +3,25 @@
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
 import { DEMO_PLANT, DEMO_SITE, OWNER_NEAR_DEG, PLANT, SETTINGS_LIMITS, SITE } from './config.js';
+import { kioskApiUrl } from './kiosk.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
 /** @typedef {import('./config.js').PlantString} PlantString */
-/** Nastavenie tak, ako ho používa výpočet. @typedef {{ site: Site, plant: Plant }} Settings */
+/**
+ * Nastavenie tak, ako ho používa appka. `kiosk` je odkaz na verejný kiosk elektrárne pre živé
+ * meranie, prázdny reťazec znamená „bez merania“.
+ * @typedef {{ site: Site, plant: Plant, kiosk: string }} Settings
+ */
 /**
  * To, čo používateľ naozaj zadáva a čo sa ukladá. Odborné parametre zostavy sa neukladajú,
  * dopĺňajú sa vždy z config.js - keby sa tam zmenili, prejaví sa to aj u uložených nastavení.
- * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number }} UserSettings
+ * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, kiosk: string }} UserSettings
  */
 
 /** Ukážka pre nového používateľa. @returns {Settings} */
 export function demoSettings() {
-    return { site: DEMO_SITE, plant: DEMO_PLANT };
+    return { site: DEMO_SITE, plant: DEMO_PLANT, kiosk: '' };
 }
 
 /** Doplní zadané údaje o odborné parametre zostavy. @param {UserSettings} user @returns {Settings} */
@@ -24,6 +29,7 @@ export function settingsFrom(user) {
     return {
         site: user.site,
         plant: { ...PLANT, strings: user.strings, panelWp: user.panelWp, acLimitKw: user.acLimitKw },
+        kiosk: user.kiosk,
     };
 }
 
@@ -34,6 +40,7 @@ export function toUser(s) {
         strings: s.plant.strings.map((x) => ({ panels: x.panels, azimuthDeg: x.azimuthDeg, tiltDeg: x.tiltDeg })),
         panelWp: s.plant.panelWp,
         acLimitKw: s.plant.acLimitKw,
+        kiosk: s.kiosk,
     };
 }
 
@@ -91,6 +98,8 @@ export function checkSettings(s) {
     /** @type {string[]} */ const warnings = [];
     checkSite(site, errors);
     checkPlant(plant, errors);
+    if (s.kiosk && !kioskApiUrl(s.kiosk))
+        errors.push('Odkaz nie je kiosk FusionSolar. Skopíruj ho v aplikácii FusionSolar pri zdieľaní elektrárne cez kiosk.');
     const panels = plant.strings.reduce((sum, x) => sum + (Number.isFinite(x.panels) ? x.panels : 0), 0);
     const kwp = errors.length ? null : (panels * plant.panelWp) / 1000;
     if (kwp !== null && kwp > plant.acLimitKw * SETTINGS_LIMITS.dcAcWarnRatio)
@@ -130,6 +139,8 @@ export function parseStoredSettings(raw) {
         })),
         panelWp: Number(o.panelWp),
         acLimitKw: Number(o.acLimitKw),
+        // Nastavenia uložené pred pridaním kiosku ho nemajú - to je „bez merania“.
+        kiosk: typeof o.kiosk === 'string' ? o.kiosk : '',
     };
     const s = settingsFrom(user);
     return user.site.name && checkSettings(s).errors.length === 0 ? s : null;
@@ -159,8 +170,8 @@ export function parseGeocode(json) {
 }
 
 /**
- * Leží lokalita pri elektrárni v Dvoranoch? Dočasný most: kým si používateľ nevie vložiť
- * vlastný kiosk odkaz, živé meranie z Workera patrí len k tejto elektrárni.
+ * Leží lokalita pri elektrárni v Dvoranoch? Dočasný most pre toho, kto si ešte nevložil
+ * vlastný kiosk odkaz: živé meranie z cronu Workera patrí len k tejto elektrárni.
  * @param {Site} site
  */
 export function nearOwnerPlant(site) {

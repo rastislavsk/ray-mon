@@ -1,9 +1,10 @@
-// Cloudflare Worker: jediný zdroj dát appky. Cron každých 5 minút stiahne kiosk,
-// raz za hodinu prepočíta predpoveď z Open-Meteo a obe uloží do KV. GET / ich vráti.
+// Cloudflare Worker: živé meranie pre appku. POST /pv stiahne kiosk, ktorý si používateľ
+// zadal v Nastavení. Pôvodná cesta pre elektráreň v Dvoranoch ostáva: cron každých 5 minút
+// stiahne jej kiosk, raz za hodinu prepočíta predpoveď a obe uloží do KV; GET / ich vráti.
 
 import { PLANT, SITE, STALE_FORECAST_MS, STALE_PV_MS, openMeteoUrl } from '../../shared/config.js';
 import { fetchWithRetry } from '../../shared/http.js';
-import { parseKiosk } from '../../shared/kiosk.js';
+import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { buildForecast } from '../../shared/solar.js';
 
 const KV_PV = 'pv';
@@ -16,7 +17,7 @@ const FORECAST_REFRESH_MS = 55 * 60 * 1000;
 
 const CORS_HEADERS = {
     'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'public, max-age=60',
 };
@@ -110,12 +111,36 @@ async function readStored(env) {
     return { pv: pv || null, forecast: forecast || null, status: status || null };
 }
 
-/** Odpoveď na GET / a GET /status; chýbajúce dáta sú null. @param {Request} request @param {Env} env @param {Date} now */
-export async function handleRequest(request, env, now = new Date()) {
+/** @param {number} status @param {unknown} body @param {Record<string, string>} [extra] */
+const json = (status, body, extra = {}) => new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, ...extra } });
+
+/**
+ * POST /pv: živé meranie z kiosku, ktorého odkaz je v tele požiadavky (text). Worker z neho
+ * vezme len server a kľúč kiosku a adresu dát si zloží sám, takže nesťahuje nič iné než
+ * kiosk FusionSolar. Odkaz si nikam neukladá.
+ * @param {Request} request @param {Date} now @param {typeof fetch} fetchImpl
+ */
+export async function handlePv(request, now, fetchImpl = fetch) {
+    const url = kioskApiUrl((await request.text()).slice(0, 2000));
+    if (!url) return json(400, { error: 'odkaz nie je kiosk FusionSolar' });
+    try {
+        const res = await fetchWithRetry(url, {}, { fetchImpl, attempts: 2, delayMs: 500 });
+        return json(200, { pv: parseKiosk(await res.json(), now), servedAt: now.toISOString() }, { 'cache-control': 'no-store' });
+    } catch {
+        // Bez podrobností: tie by mohli obsahovať odkaz, a ten do odpovedí ani logov nepatrí.
+        return json(502, { error: 'kiosk neodpovedá alebo vrátil nečakané dáta' }, { 'cache-control': 'no-store' });
+    }
+}
+
+/**
+ * Odpoveď na GET /, GET /status a POST /pv; chýbajúce dáta sú null.
+ * @param {Request} request @param {Env} env @param {Date} now @param {typeof fetch} [fetchImpl]
+ */
+export async function handleRequest(request, env, now = new Date(), fetchImpl = fetch) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
-    if (request.method !== 'GET')
-        return new Response(JSON.stringify({ error: 'method not allowed' }), { status: 405, headers: CORS_HEADERS });
     const path = new URL(request.url).pathname;
+    if (path === '/pv' && request.method === 'POST') return handlePv(request, now, fetchImpl);
+    if (request.method !== 'GET') return json(405, { error: 'method not allowed' });
     if (path !== '/' && path !== '/status')
         return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: CORS_HEADERS });
 
