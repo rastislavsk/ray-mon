@@ -4,7 +4,6 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
 import {
-    LEGACY_SOURCES,
     PLANT,
     PREVIEW,
     SETTINGS_STORAGE_KEY,
@@ -14,7 +13,6 @@ import {
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
     WORKER_PV_URL,
-    WORKER_URL,
 } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, weekDayLong } from '../../shared/format.js';
@@ -28,7 +26,9 @@ const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
 const weather = fixture('open-meteo.json');
 /** Elektráreň v Dvoranoch - pre ňu sú fixtures aj očakávané texty. */
-const OWNER = { site: SITE, plant: PLANT };
+/** Odkaz na kiosk v testoch; Worker na ňu odpovedá nameraným pv z fixtures. */
+const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
+const OWNER = { site: SITE, plant: PLANT, kiosk: TEST_KIOSK };
 /** Predpoveď tak, ako ju prehliadač postaví v danej chvíli. @param {Date} time */
 const forecastAt = (time) => buildForecast(weather, time, SITE, PLANT);
 /** Odpoveď vyhľadávania miest: jedno mesto na severe, jedno na juhu. */
@@ -74,8 +74,6 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
     await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com/, (route) =>
         route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
     );
-    await page.route(WORKER_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
-    await page.route(LEGACY_SOURCES.pv, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
@@ -1739,6 +1737,8 @@ test.describe('moja elektráreň', () => {
         await page.locator('.geo-pick', { hasText: 'Sevilla' }).click();
         await expect(page.locator('#set-place')).toHaveValue('Sevilla');
         await expect(page.locator('#set-place-meta')).toHaveText('37,39° s. š. · 5,98° z. d. · 10 m n. m. · Europe/Madrid');
+        // Bez kiosku ukáže appka odhad z predpovede.
+        await page.locator('#set-kiosk').fill('');
         await page.locator('#set-save').click();
         await expect(page.locator('#set-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
         await expect(page.locator('#set-hint')).toHaveText('Sevilla · 10,44 kWp');

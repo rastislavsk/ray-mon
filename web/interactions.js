@@ -567,7 +567,6 @@ function saveDraft(store, refresh) {
         demo: false,
         pv: null,
         forecast: null,
-        source: null,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
     });
@@ -600,7 +599,6 @@ function initTicks(store, mq) {
         store.setState({
             pv: result.pv,
             forecast: result.forecast,
-            source: result.source,
             dataError: !result.pv && !result.forecast,
             now: new Date(),
         });
