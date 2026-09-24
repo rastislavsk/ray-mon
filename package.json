@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "TZ=Europe/Bratislava node --test --experimental-test-coverage --test-coverage-include='shared/**' --test-coverage-include='web/state.js' --test-coverage-lines=90 test/*.test.js worker/test/*.test.js",
+    "test": "node test/run.js",
     "test:e2e": "playwright test",
     "fixtures": "node test/fixtures/generate.js",
     "screenshots": "node test/screenshots/generate.js",
