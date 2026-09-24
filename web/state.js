@@ -24,12 +24,25 @@ import { PANELS } from './dom.js';
  *   wide: boolean,
  *   tall: boolean,
  *   chartSizes: Record<string, { w: number, h: number }>,
+ *   site: import('../shared/config.js').Site,
+ *   plant: import('../shared/config.js').Plant,
+ *   demo: boolean,
+ *   settingsDraft: import('../shared/settings.js').Settings,
+ *   settingsRev: number,
+ *   settingsNote: string,
+ *   geo: GeoSearch,
  * }} AppState
+ * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
-/** @param {Date} now @param {Season} season @param {{ wide: boolean, tall: boolean }} layout @returns {AppState} */
-export function initialState(now, season, layout) {
+/**
+ * @param {Date} now @param {Season} season @param {{ wide: boolean, tall: boolean }} layout
+ * @param {import('../shared/settings.js').Settings} settings uložené nastavenie, alebo ukážka
+ * @param {boolean} demo či ide o ukážku (používateľ si ešte nič neuložil)
+ * @returns {AppState}
+ */
+export function initialState(now, season, layout, settings, demo) {
     return {
         now,
         season,
@@ -59,6 +72,19 @@ export function initialState(now, season, layout) {
         // Skutočné rozmery plátien grafov. Napĺňa ich ResizeObserver v interactions.js;
         // kým sú prázdne, grafy sa kreslia na pevné plátno z chartDims.
         chartSizes: {},
+        // Elektráreň, pre ktorú appka počíta: uložené nastavenie, kým si ho používateľ
+        // nezadá, ukážka (demo).
+        site: settings.site,
+        plant: settings.plant,
+        demo,
+        // Rozpísaný formulár v karte Nastavenie. Hodnoty polí píše render len pri zmene
+        // settingsRev (načítanie, výber lokality, pridanie plochy, zahodenie zmien), inak by
+        // počas písania prepisoval to, čo človek práve píše.
+        settingsDraft: settings,
+        settingsRev: 0,
+        // Hlásenie pod tlačidlom Uložiť; pri ďalšej úprave zmizne.
+        settingsNote: '',
+        geo: { status: 'idle', results: [] },
     };
 }
 

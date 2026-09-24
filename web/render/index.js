@@ -2,6 +2,7 @@
 
 import { PANELS } from '../dom.js';
 import { renderHeader } from './header.js';
+import { renderNastavenie } from './nastavenie.js';
 import { renderSedemdni } from './sedemdni.js';
 import { renderTerazky } from './terazky.js';
 import { renderZdielat } from './zdielat.js';
@@ -25,6 +26,8 @@ export function render(state, dom) {
     renderPanels(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
-    // Karta Nastavenie má zatiaľ jedinú položku, ktorá niečo kreslí - zdieľanie appky.
-    if (state.panel === 'nastavenie') renderZdielat(state, dom);
+    if (state.panel === 'nastavenie') {
+        renderNastavenie(state, dom);
+        renderZdielat(state, dom);
+    }
 }

@@ -2,15 +2,19 @@
 // pre pozadie celej stránky (vrátane náhľadu iného času).
 
 import { STALE_PV_MS } from '../../shared/config.js';
-import { pad2 } from '../../shared/format.js';
+import { minutesToTimeStr } from '../../shared/format.js';
 import { heroModel } from '../../shared/hero-model.js';
+import { nearOwnerPlant } from '../../shared/settings.js';
+import { localMinutes } from '../../shared/solar.js';
 
 /** @param {import('../state.js').AppState} state */
 export function updatedLine(state) {
     if (state.dataError || (!state.pv && !state.forecast)) return 'dáta nedostupné';
-    if (!state.pv) return 'živý výkon nedostupný';
+    if (state.demo) return 'ukážka · nastav si elektráreň';
+    // Živé meranie má zatiaľ len elektráreň v Dvoranoch; inde je všetko odhad z predpovede.
+    if (!state.pv) return nearOwnerPlant(state.site) ? 'živý výkon nedostupný' : 'odhad z predpovede';
     const updated = new Date(state.pv.updatedAt);
-    const label = `aktualizované ${pad2(updated.getHours())}:${pad2(updated.getMinutes())}`;
+    const label = `aktualizované ${minutesToTimeStr(localMinutes(updated, state.site.timezone))}`;
     const stale = state.now.getTime() - updated.getTime() > STALE_PV_MS;
     const suffix = state.source === 'legacy' ? ' · záložný zdroj' : '';
     return stale ? `${label} · zastarané${suffix}` : `${label}${suffix}`;
@@ -18,7 +22,8 @@ export function updatedLine(state) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
-    dom.currentTimeDisplay.textContent = `${pad2(state.now.getHours())}:${pad2(state.now.getMinutes())}`;
+    // Čas lokality, nie telefónu - k nemu sa vzťahujú tarifné okná aj predpoveď.
+    dom.currentTimeDisplay.textContent = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     dom.pvUpdated.textContent = updatedLine(state);
     // Bodka je vždy o stave teraz, preto ju náhľad iného času nezaujíma. Pozadie naopak
     // sleduje aj bežca na prstenci, takže pri jeho posúvaní vidno farbu okna, na ktoré sa

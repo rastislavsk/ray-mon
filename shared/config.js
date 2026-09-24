@@ -40,6 +40,37 @@ export const PLANT = {
     albedo: 0.2,
 };
 
+/**
+ * Ukážka pre nového používateľa, kým si neuloží vlastnú elektráreň: vymyslená bežná strecha
+ * v Londýne. Odborné parametre (účinnosť, teplotný koeficient, NOCT, albedo) sú tie isté ako
+ * v Dvoranoch - používateľ ich nemení.
+ * @type {Site}
+ */
+export const DEMO_SITE = { name: 'Londýn', lat: 51.51, lon: -0.13, elevationM: 25, timezone: 'Europe/London' };
+/** @type {Plant} */
+export const DEMO_PLANT = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 35 }], acLimitKw: 5 };
+
+/** Povolené rozsahy údajov, ktoré používateľ zadáva v Nastavení. */
+export const SETTINGS_LIMITS = {
+    maxStrings: 3,
+    panels: { min: 1, max: 200 },
+    panelWp: { min: 100, max: 800 },
+    acLimitKw: { min: 1, max: 100 },
+    tiltDeg: { min: 0, max: 90 },
+    // Nad týmto pomerom výkonu panelov k meniču bude menič za jasných dní orezávať špičky.
+    dcAcWarnRatio: 1.3,
+};
+
+// Dočasne, kým si používateľ nevie vložiť vlastný kiosk odkaz: živé meranie z Workera sa
+// ukáže len pri lokalite do tejto vzdialenosti (stupne, ~10 km) od elektrárne v Dvoranoch.
+export const OWNER_NEAR_DEG = 0.1;
+
+// Vyhľadávanie lokality sa spustí, až keď človek toľkoto milisekúnd nepíše.
+export const SEARCH_DEBOUNCE_MS = 350;
+
+/** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
+export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
+
 /** Minút v dni. Ciferník ich rozloží po obvode, tarifné okná ich delia na pásma. */
 export const MINUTES_PER_DAY = 1440;
 
@@ -47,9 +78,6 @@ export const MINUTES_PER_DAY = 1440;
 export function installedKw(plant) {
     return Math.round((plant.strings.reduce((sum, s) => sum + s.panels, 0) * plant.panelWp) / 100) / 10;
 }
-
-/** Inštalovaný výkon v Dvoranoch (24 × 435 Wp = 10,44 kWp, zaokrúhlené na desatinu). */
-export const INSTALLED_PV_KW = installedKw(PLANT);
 
 // Bezoblačný model (Meinel + Laueho výšková korekcia) - horný strop výroby.
 export const CLEAR_SKY = { tau: 0.8, dhiFraction: 0.12 };
@@ -62,6 +90,15 @@ export const STRONGER_WINDOW_MARGIN_KW = 1.5; // o koľko musí byť budúce okn
 // Predpoveď: koľko dní z Open-Meteo (9 = rezerva, aby 7 miestnych dní bolo úplných aj s posunom UTC).
 export const FORECAST_API_DAYS = 9;
 export const FORECAST_DAYS_SHOWN = 7;
+// Počasie z Open-Meteo sa sťahuje nanovo najskôr po tomto čase; predpoveď sa z neho medzitým
+// len prepočítava pre aktuálny čas. Open-Meteo ju aj tak obnovuje raz za hodinu.
+export const WEATHER_CACHE_MS = 55 * 60 * 1000;
+
+/** Vyhľadávanie miest Open-Meteo (celý svet, názvy po slovensky, kde ich poznajú). @param {string} query */
+export function geocodeUrl(query) {
+    return `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=sk&format=json`;
+}
+
 /** Adresa hodinovej predpovede Open-Meteo pre danú lokalitu (časy v UTC). @param {Site} site */
 export function openMeteoUrl(site) {
     return (
@@ -154,7 +191,6 @@ export const WORKER_URL = 'https://rackofci-energy-sro-fable.rastislav-racek.wor
 // Dočasný záložný zdroj, kým nový Worker nebeží: dáta pôvodnej appky (rovnaký formát).
 export const LEGACY_SOURCES = {
     pv: 'https://pv-proxy.rastislav-racek.workers.dev/',
-    forecast: 'https://rastislavsk.github.io/Kedy-zapinat-spotrebice-Claude/data/forecast.json',
 };
 
 // Ako často sa čo obnovuje (ms).

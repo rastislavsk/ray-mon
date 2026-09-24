@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { PLANT, SITE } from '../shared/config.js';
 import { heroModel, minutesOfDay } from '../shared/hero-model.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -10,10 +11,12 @@ const at = (/** @type {string} */ hm) => {
     d.setHours(h, m, 0, 0);
     return d;
 };
-const base = { season: /** @type {const} */ ('summer'), pv, forecast, previewMinutes: null };
+const base = { season: /** @type {const} */ ('summer'), pv, forecast, previewMinutes: null, site: SITE, plant: PLANT };
 
 test('minutesOfDay', () => {
-    assert.equal(minutesOfDay(at('13:05')), 13 * 60 + 5);
+    assert.equal(minutesOfDay(at('13:05'), SITE.timezone), 13 * 60 + 5);
+    // Tá istá chvíľa v Londýne je o hodinu skôr.
+    assert.equal(minutesOfDay(at('13:05'), 'Europe/London'), 12 * 60 + 5);
 });
 
 test('13:00 v lete so 6,4 kW: zelené okno, všetky spotrebiče go, žiadne čakanie', () => {
@@ -58,4 +61,14 @@ test('náhľad iného času berie výkon z krivky: minulosť merané, budúcnos�
     assert.equal(future.unitText, 'kW (odhad)');
     assert.equal(future.waitTime, null);
     assert.ok(Number.isFinite(future.power));
+});
+
+test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria voči vlastnej zostave', () => {
+    const m = heroModel({ ...base, now: at('13:00'), pv: null });
+    assert.ok(Number.isFinite(m.power) && m.power > 0, `odhad ${m.power}`);
+    assert.equal(m.unitText, 'kW teraz (odhad)');
+    // Tá istá výroba na polovičnej zostave vyplní ciferník dvakrát viac (strop je 100 %).
+    const half = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 40 }] };
+    const small = heroModel({ ...base, now: at('13:00'), pv: null, plant: half });
+    assert.ok(Math.abs(small.dial.fraction - Math.min(1, 2 * m.dial.fraction)) < 0.02, `${small.dial.fraction} vs ${m.dial.fraction}`);
 });

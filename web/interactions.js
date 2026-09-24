@@ -7,15 +7,19 @@ import {
     PAGER_SETTLE_MS,
     PREVIEW,
     REFRESH,
+    SEARCH_DEBOUNCE_MS,
+    SETTINGS_LIMITS,
     SWIPE,
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
 import { minutesOfDay } from '../shared/hero-model.js';
-import { loadData } from './data.js';
+import { checkSettings } from '../shared/settings.js';
+import { loadData, searchPlaces } from './data.js';
 import { initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
+import { saveSettings } from './settings-store.js';
 import { panelChange } from './state.js';
 import { initSwipe } from './swipe.js';
 
@@ -95,7 +99,7 @@ function initTimePreview(store, dom) {
     const grip = dom.dialGrip;
     const move = (/** @type {PointerEvent} */ e) => {
         const minutes = minutesFromPoint(dom, e.clientX, e.clientY);
-        const nowMinutes = minutesOfDay(store.get().now);
+        const nowMinutes = minutesOfDay(store.get().now, store.get().site.timezone);
         store.setState({ previewMinutes: ringGap(minutes, nowMinutes) <= PREVIEW.snapToNowMin ? null : minutes });
     };
     grip.addEventListener('pointerdown', (e) => {
@@ -129,7 +133,7 @@ function initTimePreview(store, dom) {
                   : 0;
         if (!step) return;
         e.preventDefault();
-        const from = store.get().previewMinutes ?? minutesOfDay(store.get().now);
+        const from = store.get().previewMinutes ?? minutesOfDay(store.get().now, store.get().site.timezone);
         store.setState({ previewMinutes: (((from + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY });
     });
     // Enter a medzerník na značke "teraz" otvoria náhľad na aktuálnom čase.
@@ -138,7 +142,7 @@ function initTimePreview(store, dom) {
     // ťahanie totiž na konci pošle aj klik.
     grip.addEventListener('click', (e) => {
         if (e.detail === 0 && store.get().previewMinutes === null) {
-            store.setState({ previewMinutes: minutesOfDay(store.get().now) });
+            store.setState({ previewMinutes: minutesOfDay(store.get().now, store.get().site.timezone) });
         }
     });
     dom.dialWrap.addEventListener('click', (e) => {
@@ -450,10 +454,146 @@ export function isTall() {
     return (window.visualViewport ? window.visualViewport.height : window.innerHeight) >= WEEK_MSG_MIN_H;
 }
 
+/** Číslo z poľa formulára; prijme aj desatinnú čiarku. Prázdne pole je NaN. @param {HTMLInputElement} input */
+function numberOf(input) {
+    const text = input.value.trim().replace(',', '.');
+    return text === '' ? NaN : Number(text);
+}
+
+/** @typedef {import('../shared/settings.js').Settings} Settings */
+/** @typedef {import('../shared/config.js').PlantString} PlantString */
+
+/** Úpravy rozpísaného nastavenia. `rewrite` prepíše aj hodnoty polí formulára. @param {Store} store */
+function draftOps(store) {
+    const draft = () => store.get().settingsDraft;
+    /** @param {Settings} next @param {boolean} [rewrite] */
+    const setDraft = (next, rewrite = false) =>
+        store.setState({
+            settingsDraft: next,
+            settingsNote: '',
+            ...(rewrite ? { settingsRev: store.get().settingsRev + 1 } : {}),
+        });
+    /** @param {number} i @param {(x: PlantString) => PlantString} fn @param {boolean} [rewrite] */
+    const setString = (i, fn, rewrite = false) => {
+        const d = draft();
+        setDraft({ ...d, plant: { ...d.plant, strings: d.plant.strings.map((x, j) => (j === i ? fn(x) : x)) } }, rewrite);
+    };
+    /** @param {(xs: PlantString[]) => PlantString[]} fn */
+    const setStrings = (fn) => {
+        const d = draft();
+        setDraft({ ...d, plant: { ...d.plant, strings: fn(d.plant.strings) } }, true);
+    };
+    return { draft, setDraft, setString, setStrings };
+}
+
+/** Vyhľadávanie lokality: až keď človek chvíľu nepíše, a počíta sa len posledná odpoveď. @param {Store} store */
+function placeSearch(store) {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    let lastId = 0;
+    return (/** @type {string} */ query) => {
+        clearTimeout(timer);
+        const id = ++lastId;
+        if (query.length < 2) return store.setState({ geo: { status: 'idle', results: [] } });
+        timer = setTimeout(async () => {
+            store.setState({ geo: { status: 'loading', results: [] } });
+            try {
+                const results = await searchPlaces(query);
+                if (id === lastId) store.setState({ geo: { status: 'done', results } });
+            } catch {
+                if (id === lastId) store.setState({ geo: { status: 'error', results: [] } });
+            }
+        }, SEARCH_DEBOUNCE_MS);
+    };
+}
+
+/** Písanie do polí formulára. @param {Dom} dom @param {ReturnType<typeof draftOps>} ops @param {(q: string) => void} search @param {Event} e */
+function onSettingsInput(dom, ops, search, e) {
+    const t = /** @type {HTMLInputElement} */ (e.target);
+    const d = ops.draft();
+    const field = t.dataset.field;
+    const i = Number(t.dataset.roof);
+    if (t === dom.setPlace) search(t.value.trim());
+    else if (field === 'lat' || field === 'lon') {
+        // Ručné súradnice berú časové pásmo telefónu - kto ich zadáva, je zvyčajne doma.
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const site = { name: 'Vlastné súradnice', lat: numberOf(dom.setLat), lon: numberOf(dom.setLon), elevationM: 0, timezone };
+        ops.setDraft({ ...d, site });
+    } else if (field === 'wp') ops.setDraft({ ...d, plant: { ...d.plant, panelWp: numberOf(t) } });
+    else if (field === 'ac') ops.setDraft({ ...d, plant: { ...d.plant, acLimitKw: numberOf(t) } });
+    else if (field === 'panels') ops.setString(i, (x) => ({ ...x, panels: numberOf(t) }));
+    else if (field === 'tilt') ops.setString(i, (x) => ({ ...x, tiltDeg: Number(t.value) }));
+}
+
+/** Tlačidlá formulára. @param {Store} store @param {Dom} dom @param {ReturnType<typeof draftOps>} ops @param {HTMLElement} b */
+function onSettingsButton(store, dom, ops, b) {
+    const i = Number(b.dataset.roof);
+    const L = SETTINGS_LIMITS.panels;
+    if (b.dataset.geo !== undefined) {
+        const pick = store.get().geo.results[Number(b.dataset.geo)];
+        store.setState({ geo: { status: 'idle', results: [] } });
+        if (pick) ops.setDraft({ ...ops.draft(), site: pick.site }, true);
+    } else if (b.dataset.az !== undefined) ops.setString(i, (x) => ({ ...x, azimuthDeg: Number(b.dataset.az) }));
+    else if (b.dataset.step !== undefined) {
+        // Pri neplatnom čísle v poli začne krok od najmenšej povolenej hodnoty.
+        const next = (/** @type {number} */ n) => (Number.isInteger(n) ? n : L.min) + Number(b.dataset.step);
+        ops.setString(i, (x) => ({ ...x, panels: Math.max(L.min, Math.min(L.max, next(x.panels))) }), true);
+    } else if (b === dom.setRoofs[i]?.del) ops.setStrings((xs) => xs.filter((_, j) => j !== i));
+    else if (b === dom.setRoofAdd) {
+        // Nová plocha smeruje k rovníku: na severnej pologuli na juh, na južnej na sever.
+        const azimuthDeg = ops.draft().site.lat < 0 ? 0 : 180;
+        ops.setStrings((xs) => [...xs, { panels: 6, azimuthDeg, tiltDeg: 30 }]);
+    } else if (b === dom.setReset) {
+        const { site, plant } = store.get();
+        store.setState({ geo: { status: 'idle', results: [] } });
+        ops.setDraft({ site, plant }, true);
+    }
+}
+
+/** Uloženie: zapíše nastavenie do prehliadača a stiahne predpoveď pre novú elektráreň. @param {Store} store @param {() => Promise<void>} refresh */
+function saveDraft(store, refresh) {
+    const next = store.get().settingsDraft;
+    if (checkSettings(next).errors.length) return;
+    if (!saveSettings(next)) {
+        store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
+        return;
+    }
+    // Dáta starej elektrárne sa zahodia hneď, aby sa ani na chvíľu nemiešali s novou.
+    store.setState({
+        site: next.site,
+        plant: next.plant,
+        demo: false,
+        pv: null,
+        forecast: null,
+        source: null,
+        settingsNote: 'Uložené. Prepočítavam predpoveď.',
+        settingsRev: store.get().settingsRev + 1,
+    });
+    refresh();
+}
+
+/** Formulár „Moja elektráreň“ v karte Nastavenie. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
+function initSettings(store, dom, refresh) {
+    const ops = draftOps(store);
+    const search = placeSearch(store);
+    dom.setForm.addEventListener('input', (e) => onSettingsInput(dom, ops, search, e));
+    dom.setForm.addEventListener('click', (e) => {
+        const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
+        if (b) onSettingsButton(store, dom, ops, b);
+    });
+    dom.setForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveDraft(store, refresh);
+    });
+}
+
 /** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
 function initTicks(store, mq) {
     const refresh = async () => {
-        const result = await loadData();
+        const { site, plant } = store.get();
+        const result = await loadData({ site, plant }, new Date());
+        // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
+        if (store.get().site !== site || store.get().plant !== plant) return;
         store.setState({
             pv: result.pv,
             forecast: result.forecast,
@@ -489,5 +629,7 @@ export function initInteractions(store, dom, mq) {
     initRectTooltip(dom.weekBarsWrap, dom.weekBarsTooltip);
     initDeviceChips(dom);
     initChartSizes(store, dom);
-    return initTicks(store, mq);
+    const refresh = initTicks(store, mq);
+    initSettings(store, dom, refresh);
+    return refresh;
 }
