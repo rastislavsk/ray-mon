@@ -22,8 +22,28 @@ Telo je text: odkaz na verejný kiosk FusionSolar, ktorý si používateľ zadal
 - Telo je `text/plain`, takže prehliadač nerobí predbežnú CORS požiadavku.
 - Iné cesty vracajú 404, iné metódy 405, `OPTIONS` dostane 204. Odpovede sa necachujú.
 
-Obmedzenie počtu požiadaviek zatiaľ nie je: každý otvorený telefón s kioskom znamená jednu
-požiadavku na Huawei za minútu.
+## Denný limit a obmedzenie počtu požiadaviek
+
+Bezplatný plán Workers má **100 000 požiadaviek denne** (resetuje sa o polnoci UTC). Po jeho
+vyčerpaní Cloudflare vracia chybu **1027** a živé meranie do konca dňa nefunguje nikomu –
+appka potom ukazuje len odhad z predpovede. Každý otvorený a viditeľný telefón s kioskom
+znamená jednu požiadavku za minútu, takže limit by vyčerpalo zhruba 70 kariet otvorených
+celý deň, alebo niekto úmyselne.
+
+Obmedzenie počtu požiadaviek vo Workeri (väzba `ratelimit`) zámerne nie je. Na kvótu by
+nepomohlo: aby Worker požiadavku odmietol, musí sa spustiť, a každé spustenie sa do limitu
+počíta. Chránilo by len kiosky FusionSolar pred zahltením cez tento Worker – pri pár
+používateľoch zbytočné.
+
+Keby sa limit začal míňať, možnosti sú dve:
+
+- **Workers Paid** (5 $ mesačne) – denný limit nemá.
+- **Vlastná doména** namiesto `workers.dev` a na nej pravidlo Rate limiting v Cloudflare
+  WAF. To zastaví nadmerné požiadavky ešte pred Workerom, takže sa do kvóty nepočítajú.
+  Treba potom zmeniť aj `WORKER_URL` v `shared/config.js`.
+
+Koľko požiadaviek denne Worker dostáva, ukazuje dashboard → Workers & Pages →
+`rackofci-energy-sro-fable` → Metrics.
 
 ## Nasadenie
 
