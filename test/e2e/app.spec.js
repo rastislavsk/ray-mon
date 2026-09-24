@@ -3,22 +3,69 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
-import { LEGACY_SOURCES, PREVIEW, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H, WORKER_URL } from '../../shared/config.js';
+import {
+    LEGACY_SOURCES,
+    PLANT,
+    PREVIEW,
+    SETTINGS_STORAGE_KEY,
+    SITE,
+    SWIPE,
+    TOOLTIP_FADE_MS,
+    TOOLTIP_HOLD_MS,
+    WEEK_MSG_MIN_H,
+    WORKER_URL,
+} from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, weekDayLong } from '../../shared/format.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
-import { FIXED_NOW, fixtureData } from '../helpers.js';
+import { toUser } from '../../shared/settings.js';
+import { buildForecast } from '../../shared/solar.js';
+import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
+// Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
+const weather = fixture('open-meteo.json');
+/** Elektráreň v Dvoranoch - pre ňu sú fixtures aj očakávané texty. */
+const OWNER = { site: SITE, plant: PLANT };
+/** Predpoveď tak, ako ju prehliadač postaví v danej chvíli. @param {Date} time */
+const forecastAt = (time) => buildForecast(weather, time, SITE, PLANT);
+/** Odpoveď vyhľadávania miest: jedno mesto na severe, jedno na juhu. */
+const GEOCODE = {
+    results: [
+        {
+            name: 'Sevilla',
+            latitude: 37.39,
+            longitude: -5.98,
+            elevation: 10,
+            timezone: 'Europe/Madrid',
+            admin1: 'Andalúzia',
+            country: 'Španielsko',
+        },
+        {
+            name: 'Sydney',
+            latitude: -33.87,
+            longitude: 151.21,
+            elevation: 40,
+            timezone: 'Australia/Sydney',
+            admin1: 'Nový Južný Wales',
+            country: 'Austrália',
+        },
+    ],
+};
 
 // Testy bežia bez siete: externé zdroje (fonty, QR knižnica) sa odpovedia prázdnym telom,
 // zdroje dát podľa scenára. Zlyhanie zámerne zablokovaného zdroja nie je chyba appky,
 // preto sa z konzoly zbierajú len skutočné výnimky a chyby, nie hlásenia o nenačítaní zdroja.
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 
-/** @param {import('@playwright/test').Page} page @param {{ time?: Date, workerDown?: boolean, forecastOverride?: typeof forecast }} [opts] */
-async function openApp(page, { time = FIXED_NOW, workerDown = false, forecastOverride = forecast } = {}) {
+/**
+ * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
+ * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil).
+ * @param {import('@playwright/test').Page} page
+ * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null }} [opts]
+ */
+async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -26,30 +73,29 @@ async function openApp(page, { time = FIXED_NOW, workerDown = false, forecastOve
     await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com/, (route) =>
         route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
     );
-    await page.route(WORKER_URL, (route) =>
-        workerDown ? route.abort() : route.fulfill({ json: { pv, forecast: forecastOverride, servedAt: time.toISOString() } }),
-    );
+    await page.route(WORKER_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
     await page.route(LEGACY_SOURCES.pv, (route) => route.abort());
-    await page.route(LEGACY_SOURCES.forecast, (route) => route.abort());
+    await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
+    await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
+    if (settings)
+        await page.addInitScript(
+            ([key, value]) => localStorage.getItem(key) || localStorage.setItem(key, value),
+            [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
+        );
     await page.clock.setFixedTime(time);
     await page.goto('/');
     await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
     return errors;
 }
 
-/**
- * Prehliadač beží v Europe/Bratislava, testovací proces v ľubovoľnej zóne. Preto sa pre
- * prehliadač používa presný okamih (`instant`) a pre model dátum s rovnakým nástenným časom
- * v zóne procesu (`wall`) - výsledok tak nezávisí od toho, kde sa testy spustia.
- * @param {string} hm
- */
+/** Presný okamih daného času 5. 9. 2026 v Bratislave (letný čas, UTC+2). @param {string} hm */
 function atTime(hm) {
-    const [h, m] = hm.split(':').map(Number);
-    return { instant: new Date(`2026-09-05T${hm}:00+02:00`), wall: new Date(2026, 8, 5, h, m, 0, 0) };
+    return { instant: new Date(`2026-09-05T${hm}:00+02:00`) };
 }
 
-/** @param {Date} wall */
-const modelAt = (wall) => heroModel({ now: wall, season: 'summer', pv, forecast, previewMinutes: null });
+/** Model hlavnej karty v danej chvíli, s predpoveďou postavenou v tej istej chvíli ako v appke. @param {Date} instant */
+const modelAt = (instant) =>
+    heroModel({ now: instant, season: 'summer', pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
 
 const todayForecastMsg = forecastDayMessage(visibleHours(forecast.hourlyToday), true);
 
@@ -69,7 +115,7 @@ const APP_NOW = (() => {
 
 test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     const errors = await openApp(page);
-    const expected = modelAt(atTime('13:00').wall);
+    const expected = modelAt(atTime('13:00').instant);
     await expect(page.locator('#current-time-display')).toHaveText('13:00');
     await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
     await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
@@ -112,11 +158,11 @@ test('klik na spotrebič (mobil) ukáže tooltip s príkonom, nie je orezaný pa
 });
 
 test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpoveď dňa, kedy bude lepšie', async ({ page }) => {
-    const { instant, wall } = atTime('09:00');
-    // Fixtures nemajú pred sebou silnejšie okno, bez tejto úpravy by čakací čas nikdy nevznikol.
-    const sunnier = { ...forecast, strongerWindowAhead: true, hoursAhead: 3, windowDaypart: 'poobede' };
-    const errors = await openApp(page, { time: instant, forecastOverride: sunnier });
-    const expected = heroModel({ now: wall, season: 'summer', pv, forecast: sunnier, previewMinutes: null });
+    const { instant } = atTime('09:00');
+    // O 09:00 má predpoveď pred sebou silnejšie okno (okolo poludnia), takže čakací čas vznikne.
+    const errors = await openApp(page, { time: instant });
+    const expected = modelAt(instant);
+    expect(expected.waitTime).not.toBeNull();
 
     const dots = page.locator('#verdict-dots .pager-dot');
     await expect(page.locator('#verdict-dots')).toBeVisible();
@@ -176,9 +222,9 @@ for (const [hm, label] of [
     ['02:00', 'noc'],
 ]) {
     test(`verdikt o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
-        const { instant, wall } = atTime(hm);
+        const { instant } = atTime(hm);
         const errors = await openApp(page, { time: instant });
-        const expected = modelAt(wall);
+        const expected = modelAt(instant);
         await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
         // Pozadie stránky drží farbu tarifného okna. Tieto tri časy pokryjú všetky tri
         // farby (08:00 červená, 19:30 aj 02:00 oranžová), 13:00 zelenú v teste vyššie.
@@ -193,9 +239,9 @@ for (const [hm, label] of [
     ['02:00', 'oranžová'],
 ]) {
     test(`podsvietenie ikony aktívnej karty má rovnakú farbu ako stavová bodka (${hm}, ${label})`, async ({ page }) => {
-        const { instant, wall } = atTime(hm);
+        const { instant } = atTime(hm);
         await openApp(page, { time: instant });
-        await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(wall).accent || '');
+        await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(instant).accent || '');
         const dot = await page.locator('.appbar-clock .live-dot').evaluate((el) => getComputedStyle(el).backgroundColor);
         const glow = await page.locator('.nav-item.active').evaluate((el) => getComputedStyle(el, '::after').backgroundColor);
         expect(dot).toMatch(/^rgb\(/);
@@ -638,7 +684,7 @@ test('info: karta vysvetľuje všetky štyri časti ciferníka', async ({ page }
 });
 
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
-    const errors = await openApp(page, { workerDown: true });
+    const errors = await openApp(page, { offline: true });
     await expect(page.locator('#pv-updated')).toHaveText('dáta nedostupné');
     await expect(page.locator('#pv-power')).toHaveText('–');
     await expect(page.locator('#verdict-headline')).not.toHaveText('Načítavam…');
@@ -738,7 +784,7 @@ test('široká obrazovka: Spotrebiče majú celú šírku stránky', async ({ pa
     expect(Math.abs(rozlozenie.pager - rozlozenie.obsah), 'pager odporúčaní nevyplní celú šírku karty').toBeLessThanOrEqual(1);
 
     // Defaultná prvá stránka pageru (Čo robiť teraz) nesmie ostať prázdna ani na desktope.
-    const expectedNow = modelAt(atTime('13:00').wall).message;
+    const expectedNow = modelAt(atTime('13:00').instant).message;
     await expect(page.locator('#verdict-dots .pager-dot').first()).toHaveClass(/active/);
     await expect(page.locator('#verdict-headline')).toBeVisible();
     await expect(page.locator('#verdict-headline')).toHaveText(expectedNow.headline);
@@ -1616,4 +1662,103 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
     const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
     expect(scroll, `karta Terazky preteká o ${scroll} px`).toBeLessThanOrEqual(0);
     expect(errors).toEqual([]);
+});
+
+test.describe('moja elektráreň', () => {
+    test('bez uloženého nastavenia je ukážka Londýna: čas, výkon aj predpoveď sú londýnske', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+        // FIXED_NOW je 11:00 UTC, v Londýne (letný čas) 12:00.
+        await expect(page.locator('#current-time-display')).toHaveText('12:00');
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz (odhad)');
+        await expect(page.locator('#pv-power')).not.toHaveText('–');
+        await page.locator('#nav-7dni').click();
+        await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,2 kWp');
+        await page.locator('#nav-nastavenie').click();
+        await expect(page.locator('#settings-demo')).toBeVisible();
+        await expect(page.locator('#set-hint')).toHaveText('Ukážka · Londýn · 5,22 kWp');
+        expect(errors).toEqual([]);
+    });
+
+    test('úprava zostavy: súčet sa ráta hneď, chyba zablokuje uloženie, zahodenie vráti pôvodné', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await expect(page.locator('#settings-demo')).toBeHidden();
+        await page.locator('#settings-plant > summary').click();
+        await expect(page.locator('#set-hint')).toHaveText('Dvorany nad Nitrou · 10,44 kWp');
+        await expect(page.locator('#set-total-kwp')).toHaveText('10,44 kWp');
+        const save = page.locator('#set-save');
+        await expect(save).toBeDisabled();
+
+        await page.locator('#set-roof-0 [data-step="1"]').click();
+        await expect(page.locator('#set-panels-0')).toHaveValue('17');
+        await expect(page.locator('#set-total-kwp')).toHaveText('10,88 kWp');
+        await expect(save).toBeEnabled();
+
+        await page.locator('#set-wp').fill('50');
+        await expect(page.locator('#set-msgs .err')).toContainText('Výkon panelu');
+        await expect(save).toBeDisabled();
+
+        await page.locator('#set-reset').click();
+        await expect(page.locator('#set-wp')).toHaveValue('435');
+        await expect(page.locator('#set-panels-0')).toHaveValue('16');
+        await expect(page.locator('#set-msgs')).toBeEmpty();
+        await expect(save).toBeDisabled();
+        expect(errors).toEqual([]);
+    });
+
+    test('plochy: pridať do troch, odstrániť, orientácia a sklon', async ({ page }) => {
+        await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await expect(page.locator('#set-roof-2')).toBeHidden();
+        await page.locator('#set-roof-add').click();
+        await expect(page.locator('#set-roof-2')).toBeVisible();
+        await expect(page.locator('#set-roof-add')).toBeHidden();
+        await expect(page.locator('#set-roof-2 [data-az="180"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.locator('#set-roof-2 [data-az="270"]').click();
+        await expect(page.locator('#set-roof-2 [data-az="270"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#set-roof-2 [data-az="180"]')).toHaveAttribute('aria-pressed', 'false');
+        await page.locator('#set-tilt-2').fill('55');
+        await expect(page.locator('#set-tilt-out-2')).toHaveText('55°');
+        await expect(page.locator('#set-total-kwp')).toHaveText('13,05 kWp');
+        await page.locator('#set-roof-del-0').click();
+        await expect(page.locator('#set-roof-2')).toBeHidden();
+        // Po odstránení prvej sa zvyšné posunú: pôvodná druhá (8 panelov) je teraz prvá.
+        await expect(page.locator('#set-panels-0')).toHaveValue('8');
+        await expect(page.locator('#set-tilt-out-1')).toHaveText('55°');
+    });
+
+    test('nová lokalita: vyhľadanie, uloženie, predpoveď bez živého merania, prežije načítanie', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await page.locator('#set-place').fill('Sev');
+        await page.locator('.geo-pick', { hasText: 'Sevilla' }).click();
+        await expect(page.locator('#set-place')).toHaveValue('Sevilla');
+        await expect(page.locator('#set-place-meta')).toHaveText('37,39° s. š. · 5,98° z. d. · 10 m n. m. · Europe/Madrid');
+        await page.locator('#set-save').click();
+        await expect(page.locator('#set-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
+        await expect(page.locator('#set-hint')).toHaveText('Sevilla · 10,44 kWp');
+        await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
+        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
+        expect(stored.site.name).toBe('Sevilla');
+
+        await page.reload();
+        await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
+        await page.locator('#nav-7dni').click();
+        await expect(page.locator('#week-sub')).toHaveText('Sevilla · 10,4 kWp');
+        expect(errors).toEqual([]);
+    });
+
+    test('južná pologuľa: varovanie pri ploche na juh, nová plocha smeruje na sever', async ({ page }) => {
+        await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await page.locator('#set-place').fill('Syd');
+        await page.locator('.geo-pick', { hasText: 'Sydney' }).click();
+        await expect(page.locator('#set-msgs')).toContainText('južnej pologuli');
+        await page.locator('#set-roof-add').click();
+        await expect(page.locator('#set-roof-2 [data-az="0"]')).toHaveAttribute('aria-pressed', 'true');
+    });
 });

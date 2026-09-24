@@ -3,42 +3,43 @@
 ## Prehľad
 
 ```
-        Huawei FusionSolar kiosk        Open-Meteo (žiarenie, teplota, oblačnosť)
-                    │                              │
-                    └───────────┬──────────────────┘
-                                ▼
-                 Cloudflare Worker  ── cron */5 min
-                 shared/kiosk.js · shared/solar.js
-                                │
-                                ▼
-                       KV: "pv" + "forecast"
-                                │
-                          GET / (CORS, cache 60 s)
-                                ▼
-        Appka: web/data.js → setState → render → DOM
+   Huawei FusionSolar kiosk                    Open-Meteo (žiarenie, teplota, oblačnosť)
+            │                                           │
+   Cloudflare Worker ── cron */5 min                    │  pre lokalitu z Nastavenia
+   shared/kiosk.js → KV "pv"                            │
+            │ GET / (len elektráreň v Dvoranoch)        │
+            └──────────────┬────────────────────────────┘
+                           ▼
+   Appka: web/data.js (shared/solar.js počíta predpoveď) → setState → render → DOM
 ```
 
-Kľúčové rozhodnutie: **výpočet je jeden a beží v Cloudflare Workeri.** Appka nič
-nepočíta z meteorologických dát, iba kreslí. Tá istá funkcia (`shared/solar.js`) sa dá
-zavolať v Node z testov, takže predpoveď je overiteľná bez prehliadača aj bez siete.
+Kľúčové rozhodnutie: **výpočet predpovede je jeden (`shared/solar.js`) a dostáva lokalitu
+a zostavu panelov ako parameter.** Appka ho volá v prehliadači pre elektráreň, ktorú si
+používateľ zadal v karte Nastavenie (kým nič nezadá, pre ukážku v Londýne). Tá istá funkcia
+sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliadača aj bez siete.
+
+Živé meranie zatiaľ dodáva Worker len pre elektráreň v Dvoranoch. Appka ho preto pýta len
+vtedy, keď je uložená lokalita pri Dvoranoch (`nearOwnerPlant`); inde je aj „teraz“ odhad
+z predpovede. Worker ešte stále počíta aj predpoveď pre Dvorany, appka ju však už nečíta.
 
 ## Vrstvy
 
 **`shared/` – doména bez vstupov a výstupov.** Nesmie sa dotknúť DOM, siete ani
 aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 
-| Modul            | Zodpovednosť                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------- |
-| `config.js`      | Všetky konštanty: lokalita, zostava panelov, hranice výkonu, tarifné okná, spotrebiče, adresy.          |
-| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede. |
-| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                  |
-| `tariff.js`      | Sezóna, tarifné okná, pásma výkonu, stav spotrebičov.                                                   |
-| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                |
-| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                       |
-| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                   |
-| `schema.js`      | Kontrakt dát medzi Workerom a appkou.                                                                   |
-| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                             |
-| `http.js`        | Retry pre sieťové volania Workera; jeden prechodný výpadok nezhodí celý beh.                            |
+| Modul            | Zodpovednosť                                                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `config.js`      | Všetky konštanty: Dvorany a ukážka, rozsahy nastavenia, hranice výkonu, tarifné okná, spotrebiče, adresy. |
+| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.   |
+| `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                          |
+| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                    |
+| `tariff.js`      | Sezóna, tarifné okná, pásma výkonu, stav spotrebičov.                                                     |
+| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                  |
+| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                         |
+| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                     |
+| `schema.js`      | Kontrakt dát medzi Workerom a appkou.                                                                     |
+| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                               |
+| `http.js`        | Retry pre sieťové volania Workera; jeden prechodný výpadok nezhodí celý beh.                              |
 
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
@@ -53,7 +54,11 @@ neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri 
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
 najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
 Menovaný je jediný prvok – úchytka bežca na páse dňa, ktorá sa ťahá a neposúva.
-`history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
+`settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Formulár v karte
+Nastavenie píše rozpísané nastavenie do stavu (`settingsDraft`); render z neho dopočíta
+súčty a hlásenia, ale hodnoty polí prepíše len pri zmene `settingsRev`, aby neprepisoval
+to, čo človek práve píše. Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
+nie telefónu. `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
 istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je
 len značka s krokom navigácie, takže odkaz na appku ostáva jeden.

@@ -1948,6 +1948,304 @@ b {
     padding: 0 16px 18px;
 }
 
+/* ---- Moja elektráreň (položka nastavenia) ----------------------------------- */
+.demo-note {
+    display: grid;
+    gap: 2px;
+    margin-bottom: var(--sp-3);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(var(--amber-rgb), 0.1);
+    border: 1px solid rgba(var(--amber-rgb), 0.35);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.demo-note b {
+    color: var(--amber);
+    font-size: var(--fs-md);
+}
+.plant-form {
+    display: grid;
+    gap: 18px;
+}
+.field {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+.field-label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.field-input {
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+    font-size: 16px; /* menšie písmo by iOS pri ťuknutí do poľa priblížil */
+    color: var(--ink);
+    background: var(--ink-05);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+}
+.field-input.num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+.field-meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-35);
+}
+.two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.unit-wrap {
+    position: relative;
+    display: block;
+}
+.unit-wrap .field-input {
+    padding-right: 44px;
+}
+.unit {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-35);
+    pointer-events: none;
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+.link-btn {
+    justify-self: start;
+    font: inherit;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+    background: none;
+    border: 0;
+    padding: 4px 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.coords {
+    display: grid;
+    gap: 8px;
+}
+.coords > summary {
+    list-style: none;
+}
+.coords > summary::-webkit-details-marker {
+    display: none;
+}
+.geo-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    display: grid;
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+}
+.geo-pick {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px;
+    font: inherit;
+    font-size: var(--fs-md);
+    text-align: left;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.geo-pick small {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-35);
+    text-align: right;
+}
+.geo-status {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.roof {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--ink-08);
+    border-radius: var(--radius-md);
+    background: var(--ink-05);
+}
+.roof-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.roof-kwp {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.stepper {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.stepper button {
+    font: inherit;
+    font-size: 18px;
+    color: var(--ink);
+    background: var(--ink-05);
+    border: 0;
+    cursor: pointer;
+}
+.stepper .field-input {
+    border: 0;
+    border-radius: 0;
+    text-align: center;
+    background: transparent;
+}
+.compass {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 3px;
+}
+.compass-btn {
+    min-width: 0;
+    padding: 8px 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+    background: transparent;
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.compass-btn[aria-pressed='true'] {
+    color: var(--bg);
+    background: var(--amber);
+    border-color: var(--amber);
+    font-weight: 700;
+}
+.range-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    align-items: center;
+    gap: 10px;
+}
+.range-row input {
+    width: 100%;
+    accent-color: var(--amber);
+}
+.range-out {
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
+    text-align: right;
+}
+.add-roof {
+    font: inherit;
+    font-size: var(--fs-md);
+    color: var(--ink-70);
+    background: transparent;
+    border: 1px dashed var(--ink-20);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    cursor: pointer;
+}
+.plant-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(var(--green-rgb), 0.08);
+    border: 1px solid rgba(var(--green-rgb), 0.3);
+}
+.plant-total-kwp {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+}
+.plant-total-meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.plant-msgs {
+    display: grid;
+    gap: 6px;
+}
+.plant-msgs:empty {
+    display: none;
+}
+.plant-msg {
+    margin: 0;
+    padding: 2px 0 2px 10px;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+    border-left: 2px solid var(--amber);
+}
+.plant-msg.err {
+    color: var(--red);
+    border-color: var(--red);
+}
+.plant-actions {
+    display: grid;
+    gap: 8px;
+}
+.plant-actions .link-btn {
+    justify-self: center;
+}
+.plant-save {
+    font: inherit;
+    font-weight: 600;
+    font-size: var(--fs-md);
+    color: var(--bg);
+    background: var(--green);
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 12px;
+    cursor: pointer;
+}
+.plant-save:disabled {
+    color: var(--ink-35);
+    background: var(--ink-12);
+    cursor: default;
+}
+.plant-note {
+    min-height: 1.5em;
+    text-align: center;
+    font-size: var(--fs-sm);
+    color: var(--green);
+}
+
 /* ---- Zdieľanie appky (položka nastavenia) ----------------------------------- */
 .share-panel {
     display: flex;

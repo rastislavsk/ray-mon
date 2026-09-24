@@ -92,7 +92,7 @@ function renderDayRing(state, dom) {
  * náhľadu sa mení na objímku a značku "teraz" preberie samostatná bodka.
  * @param {import('../state.js').AppState} state @param {ReturnType<typeof heroModel>} hero @param {import('../dom.js').Dom} dom */
 function renderRingMarks(state, hero, dom) {
-    const nowMinutes = minutesOfDay(state.now);
+    const nowMinutes = minutesOfDay(state.now, state.site.timezone);
     placeOnRing(dom.dialNow, nowMinutes);
     dom.dialNow.classList.toggle('hidden', !hero.preview);
 

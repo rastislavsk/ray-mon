@@ -5,8 +5,9 @@
 // je v systéme len staršia verzia), dá sa podstrčiť cez CHROMIUM_PATH=/cesta/k/chromium.
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
-import { LEGACY_SOURCES, WORKER_URL } from '../../shared/config.js';
-import { FIXED_NOW, fixtureData } from '../helpers.js';
+import { LEGACY_SOURCES, PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_URL } from '../../shared/config.js';
+import { toUser } from '../../shared/settings.js';
+import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const PORT = 8123;
 const SIRKA = 390;
@@ -36,13 +37,18 @@ const server = spawn('npx', ['http-server', '-p', String(PORT), '-c-1', '-s', '.
 try {
     const url = `http://127.0.0.1:${PORT}/`;
     await pockajNaServer(url);
-    const { pv, forecast } = fixtureData();
+    const { pv } = fixtureData();
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
     const page = await browser.newPage({ viewport: { width: SIRKA, height: VYSKA }, locale: 'sk-SK', timezoneId: 'Europe/Bratislava' });
     // Živé zdroje sa nahradia fixtures, zvyšok (písma) sa načíta ako v appke.
-    await page.route(WORKER_URL, (r) => r.fulfill({ json: { pv, forecast, servedAt: FIXED_NOW.toISOString() } }));
+    // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
+    await page.route(WORKER_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
     await page.route(LEGACY_SOURCES.pv, (r) => r.abort());
-    await page.route(LEGACY_SOURCES.forecast, (r) => r.abort());
+    await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: fixture('open-meteo.json') }));
+    await page.addInitScript(
+        ([key, value]) => localStorage.setItem(key, value),
+        [SETTINGS_STORAGE_KEY, JSON.stringify(toUser({ site: SITE, plant: PLANT }))],
+    );
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto(url);
     await page.locator('#pv-updated').filter({ hasNotText: 'načítavam…' }).waitFor();

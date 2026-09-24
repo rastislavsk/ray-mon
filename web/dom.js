@@ -106,9 +106,43 @@ function sedemdniDom() {
     };
 }
 
-// Karta Nastavenie: zatiaľ len prvky jej jedinej položky, ktorá niečo kreslí - zdieľania appky.
+/** Počet plôch panelov vo formulári - toľko ich je v index.html. */
+export const ROOF_SLOTS = 3;
+
+/** Prvky jednej plochy panelov vo formulári. @param {number} i */
+function roofDom(i) {
+    return {
+        box: byId(`set-roof-${i}`),
+        kwp: byId(`set-roof-kwp-${i}`),
+        del: byId(`set-roof-del-${i}`),
+        panels: /** @type {HTMLInputElement} */ (byId(`set-panels-${i}`)),
+        compass: /** @type {HTMLButtonElement[]} */ (Array.from(byId(`set-compass-${i}`).querySelectorAll('button'))),
+        tilt: /** @type {HTMLInputElement} */ (byId(`set-tilt-${i}`)),
+        tiltOut: byId(`set-tilt-out-${i}`),
+    };
+}
+
+// Karta Nastavenie: formulár elektrárne a zdieľanie appky.
 function nastavenieDom() {
     return {
+        settingsDemo: byId('settings-demo'),
+        setHint: byId('set-hint'),
+        setForm: /** @type {HTMLFormElement} */ (byId('set-form')),
+        setPlace: /** @type {HTMLInputElement} */ (byId('set-place')),
+        setGeo: byId('set-geo'),
+        setPlaceMeta: byId('set-place-meta'),
+        setLat: /** @type {HTMLInputElement} */ (byId('set-lat')),
+        setLon: /** @type {HTMLInputElement} */ (byId('set-lon')),
+        setRoofs: Array.from({ length: ROOF_SLOTS }, (_, i) => roofDom(i)),
+        setRoofAdd: /** @type {HTMLButtonElement} */ (byId('set-roof-add')),
+        setWp: /** @type {HTMLInputElement} */ (byId('set-wp')),
+        setAc: /** @type {HTMLInputElement} */ (byId('set-ac')),
+        setTotalKwp: byId('set-total-kwp'),
+        setTotalMeta: byId('set-total-meta'),
+        setMsgs: byId('set-msgs'),
+        setSave: /** @type {HTMLButtonElement} */ (byId('set-save')),
+        setReset: byId('set-reset'),
+        setNote: byId('set-note'),
         qrcode: byId('qrcode'),
         shareWhatsapp: /** @type {HTMLAnchorElement} */ (byId('share-whatsapp')),
     };

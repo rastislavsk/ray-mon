@@ -38,9 +38,12 @@ QR kód v nej kreslí knižnica z CDN.
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
-- **Nastavenie** – zoznam nastavení appky. Položka sa ťuknutím rozbalí na mieste; zatiaľ
-  je v zozname jediná – **Zdieľať appku** (QR kód, odkaz na appku a tlačidlo na poslanie
-  cez WhatsApp).
+- **Nastavenie** – zoznam nastavení appky. Položka sa ťuknutím rozbalí na mieste.
+  **Moja elektráreň**: lokalita kdekoľvek na svete (vyhľadávanie alebo ručné súradnice)
+  a jedna až tri plochy panelov s počtom, orientáciou a sklonom, výkon panelu a menič.
+  Nastavenie sa ukladá len v prehliadači. Kým si ho človek neuloží, appka ukazuje ukážku
+  vymyslenej elektrárne v Londýne. **Zdieľať appku**: QR kód, odkaz na appku a tlačidlo na
+  poslanie cez WhatsApp.
 - **Info** – návod k ciferníku z karty Terazky: ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,
   jazdec na prstenci). Obsah je statický, appka ho neprepočítava.
@@ -73,24 +76,20 @@ nemení, takže odkaz na appku ostáva jeden.
 ## Ako to funguje
 
 ```
-Huawei FusionSolar kiosk ─┐
-                          ├─→ Cloudflare Worker (cron 5 min) ─→ KV ─→ GET / ─→ appka
-Open-Meteo (žiarenie) ────┘
+Open-Meteo (žiarenie) ──────────────────────────────→ appka počíta predpoveď
+Huawei FusionSolar kiosk ─→ Cloudflare Worker ─→ KV ─→ appka (živé meranie, len Dvorany)
 ```
 
-Worker každých päť minút stiahne živý výkon z verejného kiosk odkazu a raz za hodinu
-prepočíta predpoveď z Open-Meteo. Obe uloží do Cloudflare KV a servíruje ich na jednom
-endpointe s CORS hlavičkami a minútovou cache. Appka teda robí jeden request.
+Appka si pre lokalitu z karty Nastavenie stiahne z Open-Meteo hodinové žiarenie, teplotu
+a oblačnosť a sama z nich dopočíta predpoveď výroby: polohu slnka, žiarenie na roviny
+panelov, teplotný odber a limit meniča. Tá istá funkcia počíta aj strop pri úplne jasnej
+oblohe, z ktorého vychádza údaj „využitie“. Počasie sa sťahuje najviac raz za hodinu.
 
-Predpoveď sa nesťahuje hotová: Worker si z meteorologického žiarenia sám dopočíta polohu
-slnka, premietne žiarenie na roviny panelov (juh a východ), pripočíta teplotný odber a
-limit striedača. Tá istá funkcia počíta aj strop pri úplne jasnej oblohe, z ktorého
-vychádza údaj „využitie“.
-
-Ak by Worker vypadol, appka spadne na záložné zdroje pôvodnej appky (`LEGACY_SOURCES`
-v `shared/config.js`) — tie čítajú ten istý kiosk. Záloha je ponechaná zámerne: pôvodná
-appka beží ďalej, takže poistka nič nestojí. Keď nie je dostupný ani jeden zdroj, appka
-ukáže „dáta nedostupné“ a nespadne.
+Živé meranie dodáva Worker, ktorý každých päť minút stiahne verejný kiosk elektrárne
+v Dvoranoch a uloží ho do Cloudflare KV. Appka ho pýta len vtedy, keď je nastavená
+lokalita pri Dvoranoch; inde ukazuje odhad z predpovede. Ak by Worker vypadol, appka
+skúsi záložný zdroj pôvodnej appky (`LEGACY_SOURCES` v `shared/config.js`), ktorý číta
+ten istý kiosk. Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 
 ## Štruktúra
 

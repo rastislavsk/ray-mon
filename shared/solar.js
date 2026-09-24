@@ -148,7 +148,7 @@ export function clearSkyAcKw(dateUtc, site, plant, ambientC = 25) {
 // Formátovače sú drahé na vytvorenie a lacné na použitie, preto vzniknú raz pre každé
 // časové pásmo. Predpoveď ich volá tisíckrát; stavať ich pri každom volaní stálo 99 % času
 // buildForecast.
-/** @type {Map<string, { hour: Intl.DateTimeFormat, date: Intl.DateTimeFormat }>} */
+/** @type {Map<string, { hour: Intl.DateTimeFormat, hm: Intl.DateTimeFormat, date: Intl.DateTimeFormat }>} */
 const FORMATS = new Map();
 
 /** @param {string} timezone */
@@ -157,6 +157,7 @@ function formatsFor(timezone) {
     if (!f) {
         f = {
             hour: new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', hour12: false }),
+            hm: new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }),
             date: new Intl.DateTimeFormat('en-CA', { timeZone: timezone }),
         };
         FORMATS.set(timezone, f);
@@ -169,6 +170,17 @@ export function localHour(dateUtc, timezone) {
     const parts = formatsFor(timezone).hour.formatToParts(dateUtc);
     const hour = parts.find((p) => p.type === 'hour');
     return Number(hour ? hour.value : 0) % 24;
+}
+
+/**
+ * Minúta dňa (0-1439) v danom časovom pásme. Hodiny, ciferník aj tarifné okná appky idú
+ * podľa času lokality, nie telefónu - kto sa pozerá na elektráreň v inom pásme, vidí jej čas.
+ * @param {Date} dateUtc @param {string} timezone
+ */
+export function localMinutes(dateUtc, timezone) {
+    const parts = formatsFor(timezone).hm.formatToParts(dateUtc);
+    const num = (/** @type {string} */ type) => Number((parts.find((p) => p.type === type) || { value: 0 }).value);
+    return (num('hour') % 24) * 60 + num('minute');
 }
 
 /** Miestny dátum "YYYY-MM-DD" pre UTC čas v danom časovom pásme. @param {Date} dateUtc @param {string} timezone */
