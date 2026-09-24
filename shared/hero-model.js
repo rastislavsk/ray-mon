@@ -1,10 +1,10 @@
 // Model hlavnej karty (ciferník, verdikt, spotrebiče) pre daný čas dňa.
 // Rovnaká logika pre živé "teraz" aj pre náhľad iného času; líši sa len zdroj výkonu.
 
-import { installedKw, powerThresholds } from './config.js';
+import { installedKw, powerThresholds, STALE_PV_MS, STALE_PV_SUN_DEG } from './config.js';
 import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
-import { localMinutes } from './solar.js';
+import { localMinutes, solarPosition } from './solar.js';
 import { getSlotMessage } from './messages.js';
 import { autoTier, deviceStates, productionLevel, smartTier, windowAt, windowsFor } from './tariff.js';
 
@@ -28,6 +28,31 @@ export function minutesOfDay(date, timezone) {
 function powerFor(state, minutes, nowMinutes) {
     if (state.previewMinutes === null && state.pv) return Number(state.pv.realTimePowerKw);
     return dayKwAt(minutes, state.pv ? state.pv.realCurveToday : null, state.forecast ? state.forecast.hourlyToday : null, nowMinutes);
+}
+
+/**
+ * Kedy menič naposledy meral a či je to priveľmi dávno. Čas merania je posledný bod dnešnej
+ * krivky - "aktualizované" (čas stiahnutia) by pri výpadku meniča ďalej rástlo, krivka nie.
+ * Mlčanie krivky je chyba, len keď slnko svietilo celé okno STALE_PV_MS; inak je večer
+ * a noc bez merania normálne. Bez bodu krivky zostáva čas stiahnutia.
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site }} state
+ * @returns {{ label: string, stale: boolean }}
+ */
+export function pvFreshness({ now, pv, site }) {
+    const nowMinutes = localMinutes(now, site.timezone);
+    const updated = new Date(pv.updatedAt);
+    const fetchStale = now.getTime() - updated.getTime() > STALE_PV_MS;
+    const measured = realCurveBoundary(pv.realCurveToday, nowMinutes);
+    const windowStart = new Date(now.getTime() - STALE_PV_MS);
+    const sunUp = solarPosition(windowStart, site.lat, site.lon).elevationDeg > STALE_PV_SUN_DEG;
+    const silent = sunUp && (measured === null || (nowMinutes - measured) * 60000 > STALE_PV_MS);
+    return {
+        label:
+            measured === null
+                ? `aktualizované ${minutesToTimeStr(localMinutes(updated, site.timezone))}`
+                : `meranie ${minutesToTimeStr(measured)}`,
+        stale: fetchStale || silent,
+    };
 }
 
 /** "Lepšie bude o HH:00" - len naživo, mimo okna so spotrebičmi a keď predpoveď hlási silnejšie slnko. @param {HeroInput} state @param {boolean} hasDevices */

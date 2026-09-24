@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, SITE } from '../shared/config.js';
-import { heroModel, minutesOfDay } from '../shared/hero-model.js';
+import { heroModel, minutesOfDay, pvFreshness } from '../shared/hero-model.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -71,4 +71,22 @@ test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria v
     const half = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 40 }] };
     const small = heroModel({ ...base, now: at('13:00'), pv: null, plant: half });
     assert.ok(Math.abs(small.dial.fraction - Math.min(1, 2 * m.dial.fraction)) < 0.02, `${small.dial.fraction} vs ${m.dial.fraction}`);
+});
+
+test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je zastarané', () => {
+    // Stiahnuté práve teraz - sleduje sa len krivka, ktorá vo vzorke končí o 13:00.
+    const fresh = (/** @type {Date} */ now, curve = pv.realCurveToday) =>
+        pvFreshness({ now, site: SITE, pv: { ...pv, realCurveToday: curve, updatedAt: now.toISOString() } });
+    assert.deepEqual(fresh(at('13:00')), { label: 'meranie 13:00', stale: false });
+    assert.deepEqual(fresh(at('13:15')), { label: 'meranie 13:00', stale: false });
+    assert.deepEqual(fresh(at('13:30')), { label: 'meranie 13:00', stale: true });
+    // Večer a v noci menič nemeria a nie je to chyba.
+    const evening = [...pv.realCurveToday, { hour: 18.75, kw: 0.1 }];
+    assert.deepEqual(fresh(at('21:00'), evening), { label: 'meranie 18:45', stale: false });
+    // Ráno tesne po východe slnka krivka ešte nemusí mať ani bod; o desiatej už áno.
+    assert.deepEqual(fresh(at('07:00'), []), { label: 'aktualizované 07:00', stale: false });
+    assert.equal(fresh(at('10:00'), []).stale, true);
+    // Staré stiahnutie je zastarané aj v noci.
+    const old = pvFreshness({ now: at('22:00'), site: SITE, pv: { ...pv, updatedAt: at('21:00').toISOString() } });
+    assert.equal(old.stale, true);
 });

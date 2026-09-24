@@ -122,7 +122,7 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
     await expect(page.locator('#pv-power')).toHaveText('6.41');
     await expect(page.locator('#verdict-go-row .go-chip')).toHaveCount(5);
-    await expect(page.locator('#pv-updated')).toContainText('aktualizované 13:00');
+    await expect(page.locator('#pv-updated')).toContainText('meranie 13:00');
     // Teraz, Spotrebiče a Predpoveď dňa sú tam vždy - bodky sú vidno, no štvrtá
     // (Lepšie bude) nie je.
     await expect(page.locator('#verdict-dots .pager-dot')).toHaveCount(4);
@@ -1791,7 +1791,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#set-kiosk-meta')).toHaveText('Po uložení overím, či kiosk odpovedá.');
         await page.locator('#set-save').click();
         // Londýn, FIXED_NOW 11:00 UTC = 12:00 miestneho.
-        await expect(page.locator('#pv-updated')).toHaveText('aktualizované 12:00');
+        await expect(page.locator('#pv-updated')).toHaveText('meranie 12:00');
         expect(bodies).toContain(kiosk);
         await page.locator('#nav-terazky').click();
         await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
@@ -1812,7 +1812,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
         await page.locator('#import-accept').click();
         await expect(offer).toBeHidden();
-        await expect(page.locator('#pv-updated')).toHaveText('aktualizované 13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
         expect(errors).toEqual([]);
