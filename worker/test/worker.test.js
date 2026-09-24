@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildStatus, handleRequest, refreshForecastIfStale, refreshPv, runScheduled } from '../src/index.js';
-import { OPEN_METEO_URL } from '../../shared/config.js';
+import { SITE, openMeteoUrl } from '../../shared/config.js';
+
+const OPEN_METEO_URL = openMeteoUrl(SITE);
 
 const fixture = (/** @type {string} */ name) => readFileSync(new URL(`../../test/fixtures/${name}`, import.meta.url), 'utf8');
 const NOW = new Date('2026-09-05T11:00:00Z');
