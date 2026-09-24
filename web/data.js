@@ -1,15 +1,14 @@
 // Načítanie dát. Predpoveď sa počíta tu v prehliadači z počasia Open-Meteo pre lokalitu
-// z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal. Kto kiosk
-// nezadal a má lokalitu pri Dvoranoch, dostane zatiaľ meranie z cronu Workera (pri jeho
-// zlyhaní záložný zdroj pôvodnej appky). Neplatné dáta sa správajú ako chýbajúce.
+// z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal; bez kiosku
+// meranie nie je. Neplatné dáta sa správajú ako chýbajúce.
 
-import { geocodeUrl, LEGACY_SOURCES, openMeteoUrl, WEATHER_CACHE_MS, WORKER_PV_URL, WORKER_URL } from '../shared/config.js';
+import { geocodeUrl, openMeteoUrl, WEATHER_CACHE_MS, WORKER_PV_URL } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
-import { nearOwnerPlant, parseGeocode } from '../shared/settings.js';
+import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
 
 /** @typedef {import('../shared/settings.js').Settings} Settings */
-/** @typedef {{ pv: import('../shared/kiosk.js').PvData | null, forecast: import('../shared/solar.js').Forecast | null, source: 'worker' | 'legacy' | null }} DataResult */
+/** @typedef {{ pv: import('../shared/kiosk.js').PvData | null, forecast: import('../shared/solar.js').Forecast | null }} DataResult */
 
 /** @param {string} url @param {typeof fetch} fetchImpl */
 async function getJson(url, fetchImpl) {
@@ -31,20 +30,7 @@ async function loadKioskPv(kiosk, fetchImpl) {
     if (!res.ok) throw new Error(`HTTP ${res.status} kiosk`);
     const pv = validPv((await res.json()).pv);
     if (!pv) throw new Error('Kiosk nevrátil platné dáta');
-    return { pv, source: /** @type {const} */ ('worker') };
-}
-
-/** Živé meranie elektrárne v Dvoranoch: Worker, pri zlyhaní záložný zdroj. @param {typeof fetch} fetchImpl */
-async function loadOwnerPv(fetchImpl) {
-    try {
-        const pv = validPv((await getJson(WORKER_URL, fetchImpl)).pv);
-        if (pv) return { pv, source: /** @type {const} */ ('worker') };
-    } catch {
-        // pokračuje sa záložným zdrojom
-    }
-    const pv = validPv(await getJson(LEGACY_SOURCES.pv, fetchImpl));
-    if (!pv) throw new Error('Záložný zdroj nevrátil platné dáta');
-    return { pv, source: /** @type {const} */ ('legacy') };
+    return pv;
 }
 
 // Posledné stiahnuté počasie. Predpoveď sa z neho prepočítava pri každej obnove (mení sa „teraz“),
@@ -84,16 +70,12 @@ function forecastFrom(json, now, s) {
  */
 export async function loadData(settings, now, fetchImpl = fetch) {
     const [pvRes, weatherRes] = await Promise.allSettled([
-        settings.kiosk
-            ? loadKioskPv(settings.kiosk, fetchImpl)
-            : nearOwnerPlant(settings.site)
-              ? loadOwnerPv(fetchImpl)
-              : Promise.resolve(null),
+        settings.kiosk ? loadKioskPv(settings.kiosk, fetchImpl) : Promise.resolve(null),
         loadWeather(settings.site, now, fetchImpl),
     ]);
-    const live = pvRes.status === 'fulfilled' ? pvRes.value : null;
+    const pv = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
-    return { pv: live ? live.pv : null, forecast, source: live ? live.source : null };
+    return { pv, forecast };
 }
 
 /**

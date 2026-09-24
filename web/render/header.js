@@ -4,20 +4,18 @@
 import { STALE_PV_MS } from '../../shared/config.js';
 import { minutesToTimeStr } from '../../shared/format.js';
 import { heroModel } from '../../shared/hero-model.js';
-import { nearOwnerPlant } from '../../shared/settings.js';
 import { localMinutes } from '../../shared/solar.js';
 
 /** @param {import('../state.js').AppState} state */
 export function updatedLine(state) {
     if (state.dataError || (!state.pv && !state.forecast)) return 'dáta nedostupné';
     if (state.demo) return 'ukážka · nastav si elektráreň';
-    // Kto meranie má (vlastný kiosk, alebo zatiaľ Dvorany), tomu chýba; ostatní vidia odhad.
-    if (!state.pv) return state.kiosk || nearOwnerPlant(state.site) ? 'živý výkon nedostupný' : 'odhad z predpovede';
+    // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
+    if (!state.pv) return state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede';
     const updated = new Date(state.pv.updatedAt);
     const label = `aktualizované ${minutesToTimeStr(localMinutes(updated, state.site.timezone))}`;
     const stale = state.now.getTime() - updated.getTime() > STALE_PV_MS;
-    const suffix = state.source === 'legacy' ? ' · záložný zdroj' : '';
-    return stale ? `${label} · zastarané${suffix}` : `${label}${suffix}`;
+    return stale ? `${label} · zastarané` : label;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

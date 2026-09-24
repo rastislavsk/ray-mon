@@ -1,12 +1,13 @@
 # Račkofci Energy s.r.o.
 
-Webová appka pre domácnosť s fotovoltikou v Dvoranoch nad Nitrou. Na jednej obrazovke
+Webová appka pre domácnosť s fotovoltikou – pôvodne pre Dvorany nad Nitrou, dnes pre
+kohokoľvek, kto si v Nastavení zadá svoju elektráreň. Na jednej obrazovke
 odpovedá na otázku „môžem teraz zapnúť práčku?“ a k tomu ukazuje živý výkon panelov,
 predpoveď výroby na dnes a zajtra a prehľad na sedem dní. Robená je pre telefón, na
 tablete a desktope má vlastné rozloženie.
 
-Appka je statická stránka bez build kroku. Beží na GitHub Pages, dáta jej dodáva
-Cloudflare Worker.
+Appka je statická stránka bez build kroku. Beží na GitHub Pages, predpoveď si počíta sama
+z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 
 ## Čo appka ukazuje
 
@@ -91,9 +92,6 @@ elektrárne z Huawei FusionSolar, tomu ho appka každú minútu stiahne cez Work
 sa na kiosk priamo nedostane). Odkaz ostáva uložený len v prehliadači a Worker si ho nikam
 neukladá. Bez odkazu appka ukazuje odhad z predpovede.
 
-Pre elektráreň v Dvoranoch zatiaľ beží aj pôvodná cesta: Worker každých päť minút stiahne
-jej kiosk do Cloudflare KV a appka ho použije pri lokalite pri Dvoranoch, ak kiosk odkaz
-v Nastavení nie je. Pri jej výpadku skúsi záložný zdroj pôvodnej appky (`LEGACY_SOURCES`).
 Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 
 ## Štruktúra
@@ -102,7 +100,7 @@ Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shared/`                           | Doménová logika bez vstupov a výstupov: konštanty, fyzika slnka, parser kiosku, tarify, texty, modely grafov. Beží v prehliadači, v Node aj vo Workeri. |
 | `web/`                              | Stav appky, načítanie dát, vykresľovanie po kartách, poslucháče udalostí, skladanie SVG.                                                                |
-| `worker/`                           | Cloudflare Worker: cron, KV, jeden endpoint.                                                                                                            |
+| `worker/`                           | Cloudflare Worker: jeden endpoint, ktorý stiahne kiosk FusionSolar.                                                                                     |
 | `test/`                             | Jednotkové testy, kontrakt dát a end-to-end testy v prehliadači.                                                                                        |
 | `index.html`, `style.css`, `app.js` | Samotná stránka. Žiadny bundler, žiadny framework.                                                                                                      |
 
@@ -132,9 +130,5 @@ Oboje je nasadené a beží.
 - **Stránka**: GitHub Pages, _Deploy from a branch_, vetva `main`, priečinok `/ (root)`.
   Adresa: <https://rastislavsk.github.io/rackofci-energy-sro-fable/>
 - **Worker** `rackofci-energy-sro-fable`: nasadzuje sa sám pri pushnutí do `main` cez
-  Git integráciu Cloudflare. Postup, nastavenia buildu a potrebné tajomstvá sú
-  v [`worker/README.md`](worker/README.md).
-
-Zdravie systému sa dá skontrolovať jedným pohľadom na
-`https://rackofci-energy-sro-fable.rastislav-racek.workers.dev/status` — `"ok": true`
-znamená, že cron beží a obe časti dát sú čerstvé.
+  Git integráciu Cloudflare. Postup a nastavenia buildu sú v
+  [`worker/README.md`](worker/README.md).

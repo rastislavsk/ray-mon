@@ -17,7 +17,11 @@
  *   tempCoefPctPerC: number, noctC: number, albedo: number }} Plant
  */
 
-/** Lokalita elektrárne v Dvoranoch. Výpočty ju dostávajú ako parameter. @type {Site} */
+/**
+ * Elektráreň v Dvoranoch: referenčná lokalita, na ktorej stoja testy a zamknutá predpoveď
+ * (golden). Appka počíta pre to, čo si používateľ uloží v Nastavení.
+ * @type {Site}
+ */
 export const SITE = {
     name: 'Dvorany nad Nitrou',
     lat: 48.48,
@@ -26,7 +30,11 @@ export const SITE = {
     timezone: 'Europe/Bratislava',
 };
 
-/** Zostava v Dvoranoch: dve skupiny stringov (juh + východ), rovnaký sklon. @type {Plant} */
+/**
+ * Zostava v Dvoranoch: dve skupiny stringov (juh + východ), rovnaký sklon. Odborné parametre
+ * (účinnosť, teplotný koeficient, NOCT, albedo) z nej preberá každé nastavenie používateľa.
+ * @type {Plant}
+ */
 export const PLANT = {
     strings: [
         { panels: 16, azimuthDeg: 180, tiltDeg: 40 },
@@ -60,10 +68,6 @@ export const SETTINGS_LIMITS = {
     // Nad týmto pomerom výkonu panelov k meniču bude menič za jasných dní orezávať špičky.
     dcAcWarnRatio: 1.3,
 };
-
-// Dočasne, kým si používateľ nevie vložiť vlastný kiosk odkaz: živé meranie z Workera sa
-// ukáže len pri lokalite do tejto vzdialenosti (stupne, ~10 km) od elektrárne v Dvoranoch.
-export const OWNER_NEAR_DEG = 0.1;
 
 // Vyhľadávanie lokality sa spustí, až keď človek toľkoto milisekúnd nepíše.
 export const SEARCH_DEBOUNCE_MS = 350;
@@ -201,10 +205,6 @@ export const KIOSK = {
     hostSuffix: 'fusionsolar.huawei.com',
     apiPath: '/rest/pvms/web/kiosk/v1/station-kiosk-file',
 };
-// Dočasný záložný zdroj, kým nový Worker nebeží: dáta pôvodnej appky (rovnaký formát).
-export const LEGACY_SOURCES = {
-    pv: 'https://pv-proxy.rastislav-racek.workers.dev/',
-};
 
 // Ako často sa čo obnovuje (ms).
 export const REFRESH = {
@@ -234,7 +234,6 @@ export const PAGER_SETTLE_MS = 90;
 
 // Dáta staršie než toto sú "zastarané" a appka to ukáže.
 export const STALE_PV_MS = 20 * 60 * 1000;
-export const STALE_FORECAST_MS = 3 * 60 * 60 * 1000;
 
 // Náhľad iného času jazdcom na dennom prstenci (web/interactions.js).
 export const PREVIEW = {

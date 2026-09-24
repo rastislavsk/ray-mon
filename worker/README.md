@@ -1,117 +1,53 @@
 # Worker `rackofci-energy-sro-fable`
 
-Živé meranie pre appku. `POST /pv` stiahne kiosk Huawei FusionSolar, ktorý si používateľ
-zadal v Nastavení. Pôvodná cesta pre elektráreň v Dvoranoch zatiaľ ostáva: cron každých päť
-minút stiahne jej kiosk a raz za hodinu prepočíta predpoveď z Open-Meteo, obe uloží do KV
-a `GET /` ich vráti spolu. Predpoveď si appka dnes počíta sama, tú z Workera už nečíta.
+Živé meranie pre appku. Prehliadač sa na kiosk Huawei FusionSolar priamo nedostane, preto
+ho za neho stiahne tento Worker. Nič neukladá: nemá úložisko, tajomstvá ani plánované behy.
+Predpoveď si appka počíta sama v prehliadači.
 
-Prečo Worker a nie GitHub Actions: naplánované behy v Actions sú pri päťminútovom intervale
-nespoľahlivé a každý beh by musel commitnúť dáta do repozitára. Cron v Cloudflare beží
-načas a KV nezanáša históriu.
+## Endpoint `POST /pv`
 
-## Endpointy
-
-### `POST /pv`
-
-Telo je text: odkaz na verejný kiosk FusionSolar (stránka kiosku alebo priamo adresa dát).
-Worker z neho vezme len server (`*.fusionsolar.huawei.com`, https) a kľúč `kk`, adresu dát
-si zloží sám a vráti `{ "pv": { … }, "servedAt": "…" }`. Cudzí odkaz dostane 400 bez
-jediného sťahovania, nedostupný alebo nezmyselný kiosk 502. Odkaz je v tele, nie v adrese,
-aby neskončil v logoch; Worker si ho nikam neukladá. Telo je `text/plain`, takže prehliadač
-nerobí predbežnú CORS požiadavku.
-
-### `GET /`
-
-Vráti:
+Telo je text: odkaz na verejný kiosk FusionSolar, ktorý si používateľ zadal v Nastavení
+(stránka kiosku alebo priamo adresa dát). Worker z neho vezme len server
+(`*.fusionsolar.huawei.com`, https) a kľúč `kk`, adresu dát si zloží sám
+(`kioskApiUrl` v `shared/kiosk.js`) a vráti:
 
 ```json
-{ "pv": { "realTimePowerKw": 6.41, "...": "..." }, "forecast": { "days": [] }, "servedAt": "2026-09-05T11:00:00.000Z" }
+{ "pv": { "realTimePowerKw": 6.41, "...": "..." }, "servedAt": "2026-09-05T11:00:00.000Z" }
 ```
 
-Chýbajúca časť je `null`, nie chyba. Pole `status` hovorí, ako dopadol posledný beh cronu,
-takže pri chýbajúcich dátach netreba hádať medzi výpadkom zdroja a zlým nastavením:
+- Cudzí odkaz dostane **400** bez jediného sťahovania. Z Workera sa tak nedá spraviť proxy
+  na čokoľvek iné než kiosk FusionSolar.
+- Nedostupný alebo nezmyselný kiosk dostane **502**. Odpoveď neobsahuje odkaz ani podrobnosti.
+- Odkaz je v tele, nie v adrese, aby neskončil v logoch. Worker si ho nikam neukladá.
+- Telo je `text/plain`, takže prehliadač nerobí predbežnú CORS požiadavku.
+- Iné cesty vracajú 404, iné metódy 405, `OPTIONS` dostane 204. Odpovede sa necachujú.
 
-```json
-{ "status": { "pv": { "ok": false, "at": "…", "error": "KIOSK_URL secret nie je nastavený" }, "forecast": { "ok": true, "at": "…" } } }
+Obmedzenie počtu požiadaviek zatiaľ nie je: každý otvorený telefón s kioskom znamená jednu
+požiadavku na Huawei za minútu.
+
+## Nasadenie
+
+**Git integrácia**: Cloudflare dashboard → Workers & Pages → `rackofci-energy-sro-fable` →
+Settings → Build → Connect to Git, root directory `worker/`. Po každom pushnutí do `main`
+sa Worker nasadí sám.
+
+Pozor, dva príkazy v tom istom nastavení sa správajú rozdielne:
+
+| Príkaz                              | Odkiaľ beží                           | Ako ho nastaviť                                              |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| **Deploy command** (vetva `main`)   | z Root directory, teda už z `worker/` | `npx wrangler deploy` — **bez** `--config`                   |
+| **Version command** (pull requesty) | z koreňa repozitára                   | `npx wrangler versions upload --config worker/wrangler.toml` |
+
+Pridať `--config worker/wrangler.toml` aj do Deploy command je častá chyba: cesta sa
+zdvojí na `worker/worker/wrangler.toml` a nasadenie zlyhá na
+`ENOENT: no such file or directory`. Prepínač patrí len do Version command.
+
+## Overenie
+
+```bash
+npm --prefix worker test                                   # endpoint proti fixtures
+cd worker && npx wrangler deploy --dry-run --outdir dist   # zbalí sa aj shared/
 ```
-
-Hlavičky: CORS pre všetkých, `cache-control: max-age=60` a `x-data-stale` s hodnotou `1`,
-keď je predpoveď staršia než tri hodiny, inak `0` – hlavička je tam vždy. Iné cesty vracajú
-404, iné metódy 405 (okrem `POST /pv`), `OPTIONS` dostane 204.
-
-### `GET /status`
-
-Krátke zhrnutie na kontrolu jedným pohľadom, bez celej predpovede. Odpoveď je odsadená
-a bez cache, takže sa dá otvoriť priamo v prehliadači:
-
-```json
-{
-  "ok": false,
-  "pv": {
-    "ok": false,
-    "updatedAt": null,
-    "ageMinutes": null,
-    "lastRun": { "ok": false, "at": "…", "error": "KIOSK_URL secret nie je nastavený" }
-  },
-  "forecast": { "ok": true, "updatedAt": "…", "ageMinutes": 5, "lastRun": { "ok": true, "at": "…" } },
-  "servedAt": "…"
-}
-```
-
-`ok` je `true`, len keď sú obe časti dát čerstvé: živý výkon do 20 minút, predpoveď do
-troch hodín. `lastRun` hovorí, ako dopadol posledný beh cronu, aj keď v KV ešte leží
-staršia použiteľná hodnota. Cesta vždy vracia 200, aj keď `ok` je `false` — je to hlásenie
-o stave, nie brána, ktorá by mala padať.
 
 Podrobnejšie hlásenia sú v logoch Workera (dashboard → Observability), ktoré sú zapnuté
 vo `wrangler.toml`.
-
-## Nasadenie (jednorazovo)
-
-1. **KV namespace** — už existuje (`rackofci-energy-pv-data`) a jeho `id` je vyplnené vo
-   `wrangler.toml`. Nové by sa vytvorilo takto:
-
-   ```bash
-   cd worker
-   npx wrangler kv namespace create PV_DATA
-   ```
-
-   Vrátené `id` patrí do `wrangler.toml` pod binding `PV_DATA`.
-
-2. **Tajomstvo s kiosk odkazom** (verejný odkaz na kiosk elektrárne, v kóde nie je).
-   V dashboarde: Workers & Pages → `rackofci-energy-sro-fable` → Settings → Variables and Secrets →
-   Add, názov `KIOSK_URL`, typ **Secret**. Alebo z príkazového riadku:
-
-   ```bash
-   npx wrangler secret put KIOSK_URL
-   ```
-
-3. **Git integrácia**: Cloudflare dashboard → Workers & Pages → `rackofci-energy-sro-fable` →
-   Settings → Build → Connect to Git, root directory `worker/`. Po každom pushnutí do
-   `main` sa Worker nasadí sám.
-
-   Pozor, dva príkazy v tom istom nastavení sa správajú rozdielne:
-
-   | Príkaz                              | Odkiaľ beží                           | Ako ho nastaviť                                              |
-   | ----------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
-   | **Deploy command** (vetva `main`)   | z Root directory, teda už z `worker/` | `npx wrangler deploy` — **bez** `--config`                   |
-   | **Version command** (pull requesty) | z koreňa repozitára                   | `npx wrangler versions upload --config worker/wrangler.toml` |
-
-   Pridať `--config worker/wrangler.toml` aj do Deploy command je častá chyba: cesta sa
-   zdvojí na `worker/worker/wrangler.toml` a nasadenie zlyhá na
-   `ENOENT: no such file or directory`. Prepínač patrí len do Version command.
-
-4. **Cron** `*/5 * * * *` je v `wrangler.toml`, netreba ho klikať.
-
-## Overenie a údržba
-
-```bash
-npm --prefix worker test                 # logika cronu a endpointu proti fixtures
-cd worker && npx wrangler deploy --dry-run --outdir dist   # zbalí sa aj shared/
-npx wrangler dev --test-scheduled        # potom: curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"
-```
-
-Zdravý Worker vráti `pv.updatedAt` mladšie než dvadsať minút a `forecast.updatedAt`
-mladšie než tri hodiny – sú to tie isté hranice, podľa ktorých počíta `ok` aj `GET /status`
-(`STALE_PV_MS` a `STALE_FORECAST_MS` v `shared/config.js`). Keď jeden zdroj vypadne, cron
-nechá v KV predchádzajúcu hodnotu a appka podľa `updatedAt` ukáže, že dáta sú zastarané.

@@ -1,21 +1,11 @@
-# Cloudflare Worker "rackofci-energy-sro-fable": zdroj dát pre appku (kiosk + predpoveď v KV).
-# Nasadenie: pozri worker/README.md. Secret KIOSK_URL sa nastavuje cez `wrangler secret put`.
-# Meno musí sedieť s Workerom v Cloudflare účte, inak by wrangler nasadil
-# do iného (prázdneho) Workera bez secretu KIOSK_URL.
+# Cloudflare Worker "rackofci-energy-sro-fable": živé meranie z kiosku, ktorý si zadal
+# používateľ appky (POST /pv). Nasadenie: pozri worker/README.md.
+# Meno musí sedieť s Workerom v Cloudflare účte, inak by wrangler nasadil do iného Workera
+# a appka by volala starú verziu.
 name = "rackofci-energy-sro-fable"
 main = "src/index.js"
 compatibility_date = "2026-08-29"
 
-[triggers]
-crons = ["*/5 * * * *"]
-
-# Úložisko dát (KV namespace "rackofci-energy-pv-data"). Nie je to tajomstvo,
-# prístup k nemu má len tento Worker a majiteľ účtu.
-[[kv_namespaces]]
-binding = "PV_DATA"
-id = "9e63c7f573a04b81addbef33625861a2"
-
-# Uchovávanie logov, aby sa dala dohľadať príčina zlyhania cronu spätne,
-# nielen v živom výpise.
+# Uchovávanie logov, aby sa dala dohľadať príčina zlyhania spätne, nielen v živom výpise.
 [observability]
 enabled = true

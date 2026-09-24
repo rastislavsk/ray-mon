@@ -5,7 +5,7 @@
 // je v systéme len staršia verzia), dá sa podstrčiť cez CHROMIUM_PATH=/cesta/k/chromium.
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
-import { LEGACY_SOURCES, PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_URL } from '../../shared/config.js';
+import { PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_PV_URL } from '../../shared/config.js';
 import { toUser } from '../../shared/settings.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -42,12 +42,14 @@ try {
     const page = await browser.newPage({ viewport: { width: SIRKA, height: VYSKA }, locale: 'sk-SK', timezoneId: 'Europe/Bratislava' });
     // Živé zdroje sa nahradia fixtures, zvyšok (písma) sa načíta ako v appke.
     // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
-    await page.route(WORKER_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
-    await page.route(LEGACY_SOURCES.pv, (r) => r.abort());
+    await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: fixture('open-meteo.json') }));
     await page.addInitScript(
         ([key, value]) => localStorage.setItem(key, value),
-        [SETTINGS_STORAGE_KEY, JSON.stringify(toUser({ site: SITE, plant: PLANT }))],
+        [
+            SETTINGS_STORAGE_KEY,
+            JSON.stringify(toUser({ site: SITE, plant: PLANT, kiosk: 'https://fusionsolar.huawei.com/?kk=Screenshot' })),
+        ],
     );
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto(url);

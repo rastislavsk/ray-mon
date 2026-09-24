@@ -5,7 +5,6 @@ import {
     checkSettings,
     demoSettings,
     isTimezone,
-    nearOwnerPlant,
     parseGeocode,
     parseStoredSettings,
     sameSettings,
@@ -138,13 +137,6 @@ test('parseGeocode: lokalita s krajom a štátom, bez časového pásma sa vynec
     ]);
     assert.deepEqual(parseGeocode({}), []);
     assert.deepEqual(parseGeocode(null), []);
-});
-
-test('nearOwnerPlant: Dvorany aj s trochu inými súradnicami áno, Nitra a Londýn nie', () => {
-    assert.ok(nearOwnerPlant(SITE));
-    assert.ok(nearOwnerPlant({ ...SITE, lat: 48.49, lon: 18.13 }));
-    assert.ok(!nearOwnerPlant({ ...SITE, lat: 48.31, lon: 18.09 }));
-    assert.ok(!nearOwnerPlant(DEMO_SITE));
 });
 
 test('texty: súradnice podľa pologule, súhrn s ukážkou', () => {

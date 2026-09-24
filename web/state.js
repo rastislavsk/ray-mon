@@ -13,7 +13,6 @@ import { PANELS } from './dom.js';
  *   panelDir: 1 | -1,
  *   pv: import('../shared/kiosk.js').PvData | null,
  *   forecast: import('../shared/solar.js').Forecast | null,
- *   source: 'worker' | 'legacy' | null,
  *   dataError: boolean,
  *   weekSelDay: number,
  *   weekDayDir: 1 | -1,
@@ -53,7 +52,6 @@ export function initialState(now, season, layout, settings, demo) {
         panelDir: 1,
         pv: null,
         forecast: null,
-        source: null,
         dataError: false,
         weekSelDay: 0,
         // Smer posledného prelistovania dní v detaile dňa: 1 na ďalší deň, -1 na predchádzajúci.

@@ -3,12 +3,11 @@
 ## Prehľad
 
 ```
-   Huawei FusionSolar kiosk                    Open-Meteo (žiarenie, teplota, oblačnosť)
-            │                                           │
-   Cloudflare Worker ── cron */5 min                    │  pre lokalitu z Nastavenia
-   shared/kiosk.js → KV "pv"                            │
-            │ GET / (len elektráreň v Dvoranoch)        │
-            └──────────────┬────────────────────────────┘
+   Open-Meteo (žiarenie, teplota, oblačnosť)      Huawei FusionSolar kiosk
+            │ pre lokalitu z Nastavenia                   │
+            │                                  Cloudflare Worker: POST /pv
+            │                                  shared/kiosk.js → pv
+            └──────────────┬──────────────────────────────┘
                            ▼
    Appka: web/data.js (shared/solar.js počíta predpoveď) → setState → render → DOM
 ```
@@ -21,9 +20,8 @@ sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliada
 Živé meranie: kto si v Nastavení vložil odkaz na kiosk FusionSolar, tomu ho appka pošle
 Workeru (`POST /pv`, odkaz v tele) a Worker kiosk stiahne a prevedie na `pv`. Z odkazu
 berie len server a kľúč kiosku (`kioskApiUrl`) a adresu dát si zloží sám, takže nesťahuje
-nič iné než kiosk FusionSolar. Kto odkaz nevložil a má lokalitu pri Dvoranoch
-(`nearOwnerPlant`), dostane zatiaľ meranie z cronu Workera; ostatní vidia odhad
-z predpovede. Worker ešte stále počíta aj predpoveď pre Dvorany, appka ju však už nečíta.
+nič iné než kiosk FusionSolar. Bez odkazu je aj „teraz“ odhad z predpovede. Worker nič
+neukladá a nemá plánované behy.
 
 ## Vrstvy
 
@@ -40,9 +38,9 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                  |
 | `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                         |
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                     |
-| `schema.js`      | Kontrakt dát medzi Workerom a appkou.                                                                     |
+| `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                        |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                               |
-| `http.js`        | Retry pre sieťové volania Workera; jeden prechodný výpadok nezhodí celý beh.                              |
+| `http.js`        | Retry pre sieťové volania Workera; jeden prechodný výpadok kiosku nezhodí odpoveď.                        |
 
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
@@ -91,7 +89,7 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 (udalosť → `setState` → `render`), takže render funkcie nemusia nič merať a ostávajú
 čisté.
 
-**`worker/`** je tenký: stiahni, zavolaj `shared/`, ulož do KV, vráť JSON.
+**`worker/`** je tenký: over odkaz, stiahni kiosk, zavolaj `shared/`, vráť JSON.
 
 ## Prečo takto
 
@@ -123,7 +121,8 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
   kým predpoveď pri skutočnej teplote. V chladný jasný deň preto „využitie“ vychádzalo nad
   100 %. Tu majú obe rovnakú teplotu, takže pomer vyjadruje čistú stratu oblačnosťou.
 - **Dáta sa nekomitujú do repozitára.** Pôvodná appka ukladala JSON do gitu každých päť
-  minút cez GitHub Actions. Teraz sú v KV.
+  minút cez GitHub Actions. Teraz sa neukladajú nikde: meranie ide z kiosku rovno do
+  appky a predpoveď si appka počíta sama.
 - **Tarifné okná sú dáta, nie HTML.** Pôvodne boli v `data-` atribútoch skrytého zoznamu,
   teraz v `config.js`, odkiaľ ich číta appka aj testy.
 
@@ -248,7 +247,7 @@ e2e test, ktorý prejde všetky prvky vo všetkých kartách.
 | Doména            | `node --test`, pokrytie `shared/` aspoň 90 % riadkov                      |
 | Výstup predpovede | golden súbor `test/golden/forecast.json`                                  |
 | Kontrakt dát      | `schema.js` proti výstupu parsera a predpovede                            |
-| Worker            | cron a endpoint proti KV v pamäti a podvrhnutému `fetch`                  |
+| Worker            | endpoint `POST /pv` proti podvrhnutému `fetch`                            |
 | Appka             | Playwright: tri karty, interakcie, chyby v konzole, prístupnosť cez axe   |
 | Kaskáda CSS       | `.hidden` sa skúša na každom prvku vo všetkých kartách                    |
 | Rozloženie        | na 1366 × 768 nesmie žiadna karta pretekať a tabuľka ukáže všetkých 7 dní |
@@ -257,21 +256,13 @@ E2E testy nepoužívajú vlastné očakávané reťazce – volajú tú istú fu
 porovnávajú ju s DOM. Test tak nezlyhá pri zmene textu, ale zlyhá, keď sa appka rozíde
 s modelom.
 
-## Vzťah k pôvodnej appke
-
-Pôvodná appka _Kedy zapínať spotrebiče_ beží ďalej a má vlastný Cloudflare Worker
-`pv-proxy`, ktorý číta ten istý kiosk. Preto zostávajú v `config.js` aj `LEGACY_SOURCES`:
-keď nový Worker vypadne, appka prečíta dáta odtiaľ. Kým starý systém beží, je to poistka
-zadarmo. Ak sa raz pôvodná appka vypne, treba `LEGACY_SOURCES` odstrániť spolu s ňou —
-inak by po nej ostala mŕtva závislosť.
-
 ## Známe obmedzenia
 
 - Fixtures v `test/fixtures/` sú syntetické, vygenerované z bezoblačného modelu, nie
   stiahnuté zo živých zdrojov. Sú deterministické, čo je pre testy výhoda; nezachytia
   však zvláštnosti, ktoré skutočná odpoveď kiosku alebo Open-Meteo môže mať.
-- `pv` a `forecast` sa obnovujú rôzne často (5 minút a hodina), takže `updatedAt` oboch
-  častí sa bežne líši. `GET /status` preto posudzuje čerstvosť každej zvlášť.
+- `pv` a `forecast` sa obnovujú rôzne často (minúta a hodina), takže `updatedAt` oboch
+  častí sa bežne líši.
 - V grafe dennej výroby sa popisok hodnoty nad stĺpcom môže prekryť s čiarkovanou čiarou
   stropu jasnej oblohy, keď je deň blízko stropu (typicky 2 zo 7 dní). Nesúvisí to
   s veľkosťou plátna – je to tak na každej šírke.

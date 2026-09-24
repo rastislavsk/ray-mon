@@ -2,7 +2,7 @@
 // panelov. Kontrola vstupu, prevod na formát výpočtu a čítanie uloženej či nájdenej lokality.
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
-import { DEMO_PLANT, DEMO_SITE, OWNER_NEAR_DEG, PLANT, SETTINGS_LIMITS, SITE } from './config.js';
+import { DEMO_PLANT, DEMO_SITE, PLANT, SETTINGS_LIMITS } from './config.js';
 import { kioskApiUrl } from './kiosk.js';
 
 /** @typedef {import('./config.js').Site} Site */
@@ -167,15 +167,6 @@ export function parseGeocode(json) {
             },
             detail: [r.admin1, r.country].filter((x) => typeof x === 'string' && x).join(', '),
         }));
-}
-
-/**
- * Leží lokalita pri elektrárni v Dvoranoch? Dočasný most pre toho, kto si ešte nevložil
- * vlastný kiosk odkaz: živé meranie z cronu Workera patrí len k tejto elektrárni.
- * @param {Site} site
- */
-export function nearOwnerPlant(site) {
-    return Math.abs(site.lat - SITE.lat) <= OWNER_NEAR_DEG && Math.abs(site.lon - SITE.lon) <= OWNER_NEAR_DEG;
 }
 
 /** Číslo s dvomi desatinnými miestami a slovenskou čiarkou. @param {number} n */
