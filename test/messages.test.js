@@ -1,25 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { PLANT, powerThresholds } from '../shared/config.js';
 import { dayDetailMessage, forecastDayMessage, getSlotMessage, SLOT_MESSAGES, weekMessage } from '../shared/messages.js';
+
+const th = powerThresholds(PLANT);
 
 test('getSlotMessage: každá kombinácia tarify × výroby má neprázdny nadpis aj text', () => {
     for (const tier of /** @type {const} */ (['red', 'amber', 'green'])) {
         for (const kw of [0.5, 3, 6]) {
-            const msg = getSlotMessage(tier, kw, null);
+            const msg = getSlotMessage(tier, kw, null, th);
             assert.ok(msg && msg.headline && msg.body, `${tier} ${kw}`);
         }
     }
-    assert.equal(getSlotMessage('red', NaN, null), null);
-    assert.equal(getSlotMessage(null, 3, null), null);
+    assert.equal(getSlotMessage('red', NaN, null, th), null);
+    assert.equal(getSlotMessage(null, 3, null, th), null);
 });
 
 test('getSlotMessage: override pri silnejšom slnku, green podľa zajtrajška', () => {
     const forecast = { strongerWindowAhead: true, windowDaypart: 'poobede', tomorrowSunny: true };
-    assert.equal(getSlotMessage('red', 0.5, forecast)?.headline, SLOT_MESSAGES.red.niz.override.h);
-    assert.match(getSlotMessage('amber', 3, forecast)?.body || '', /poobede/);
-    assert.equal(getSlotMessage('red', 6, forecast)?.headline, SLOT_MESSAGES.red.vys.h, 'vysoká výroba nemá override');
-    assert.match(getSlotMessage('green', 0.5, forecast)?.body || '', /Zajtra bude slnečno/);
-    assert.match(getSlotMessage('green', 0.5, { tomorrowSunny: false })?.body || '', /slnečno nebude/);
+    assert.equal(getSlotMessage('red', 0.5, forecast, th)?.headline, SLOT_MESSAGES.red.niz.override.h);
+    assert.match(getSlotMessage('amber', 3, forecast, th)?.body || '', /poobede/);
+    assert.equal(getSlotMessage('red', 6, forecast, th)?.headline, SLOT_MESSAGES.red.vys.h, 'vysoká výroba nemá override');
+    assert.match(getSlotMessage('green', 0.5, forecast, th)?.body || '', /Zajtra bude slnečno/);
+    assert.match(getSlotMessage('green', 0.5, { tomorrowSunny: false }, th)?.body || '', /slnečno nebude/);
 });
 
 test('forecastDayMessage: slabý deň, dnes a zajtra', () => {
