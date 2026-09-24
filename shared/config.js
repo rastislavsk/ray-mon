@@ -72,6 +72,9 @@ export const SETTINGS_LIMITS = {
 // Vyhľadávanie lokality sa spustí, až keď človek toľkoto milisekúnd nepíše.
 export const SEARCH_DEBOUNCE_MS = 350;
 
+/** Kľúč za mriežkou v odkaze, ktorý nesie nastavenie elektrárne: `…/#nastavenie=…`. */
+export const SHARE_HASH_KEY = 'nastavenie';
+
 /** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
 export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 

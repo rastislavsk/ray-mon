@@ -1,6 +1,6 @@
 // Štart appky: DOM, stav, prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
-import { demoSettings } from './shared/settings.js';
+import { demoSettings, sameSettings, settingsFromLink } from './shared/settings.js';
 import { seasonFor } from './shared/tariff.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
@@ -15,8 +15,14 @@ const dom = collectDom();
 const now = new Date();
 // Kto si ešte nič neuložil, vidí ukážku.
 const saved = loadSettings();
+// Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží. Časť za
+// mriežkou sa hneď zmaže, aby sa pri obnovení stránky nepýtala znova a aby odkaz, ktorý si
+// človek ďalej skopíruje z adresného riadka, už nastavenie neniesol.
+const linked = settingsFromLink(location.hash);
+if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+const incoming = linked && !(saved && sameSettings(linked, saved)) ? linked : null;
 const layout = { wide: mq.wide.matches, tall: isTall() };
-const store = createStore(initialState(now, seasonFor(now), layout, saved || demoSettings(), !saved));
+const store = createStore(initialState(now, seasonFor(now), layout, { settings: saved || demoSettings(), demo: !saved, incoming }));
 
 store.subscribe((state) => render(state, dom));
 const refresh = initInteractions(store, dom, mq);

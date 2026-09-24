@@ -45,7 +45,9 @@ QR kód v nej kreslí knižnica z CDN.
   nepovinne odkaz na kiosk Huawei FusionSolar pre živé meranie.
   Nastavenie sa ukladá len v prehliadači. Kým si ho človek neuloží, appka ukazuje ukážku
   vymyslenej elektrárne v Londýne. **Zdieľať appku**: QR kód, odkaz na appku a tlačidlo na
-  poslanie cez WhatsApp.
+  poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné nastavenie elektrárne, voliteľne aj
+  s kiosk odkazom. Kto taký odkaz otvorí (alebo ho prilepí do Nastavenia), dostane ponuku
+  nastavenie prevziať; appka ho bez potvrdenia neuloží.
 - **Info** – návod k ciferníku z karty Terazky: ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,
   jazdec na prstenci). Obsah je statický, appka ho neprepočítava.

@@ -66,7 +66,7 @@ test('náhľad iného času berie výkon z krivky: minulosť merané, budúcnos�
 test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria voči vlastnej zostave', () => {
     const m = heroModel({ ...base, now: at('13:00'), pv: null });
     assert.ok(Number.isFinite(m.power) && m.power > 0, `odhad ${m.power}`);
-    assert.equal(m.unitText, 'kW teraz (odhad)');
+    assert.equal(m.unitText, 'kW (odhad)');
     // Tá istá výroba na polovičnej zostave vyplní ciferník dvakrát viac (strop je 100 %).
     const half = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 40 }] };
     const small = heroModel({ ...base, now: at('13:00'), pv: null, plant: half });
