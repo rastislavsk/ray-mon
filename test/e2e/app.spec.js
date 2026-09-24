@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
 import {
+    APP_URL,
     PLANT,
     PREVIEW,
     SETTINGS_STORAGE_KEY,
@@ -18,7 +19,7 @@ import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, weekDayLong } from '../../shared/format.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
-import { toUser } from '../../shared/settings.js';
+import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { buildForecast } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -64,9 +65,9 @@ const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
  * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil).
  * @param {import('@playwright/test').Page} page
- * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null }} [opts]
+ * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, hash?: string }} [opts]
  */
-async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER } = {}) {
+async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER, hash = '' } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -83,7 +84,7 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
     await page.clock.setFixedTime(time);
-    await page.goto('/');
+    await page.goto(`/${hash}`);
     await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
     return errors;
 }
@@ -1670,7 +1671,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
         // FIXED_NOW je 11:00 UTC, v Londýne (letný čas) 12:00.
         await expect(page.locator('#current-time-display')).toHaveText('12:00');
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz (odhad)');
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
         await expect(page.locator('#pv-power')).not.toHaveText('–');
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,2 kWp');
@@ -1785,5 +1786,75 @@ test.describe('moja elektráreň', () => {
         await page.locator('#nav-terazky').click();
         await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
         expect(errors).toEqual([]);
+    });
+});
+
+test.describe('zdieľanie nastavenia odkazom', () => {
+    const LINK = shareUrl(APP_URL, OWNER, true);
+    const HASH = `#${LINK.split('#')[1]}`;
+
+    test('odkaz s nastavením: ponuka, adresa bez nastavenia, po prevzatí Dvorany so živým meraním', async ({ page }) => {
+        const errors = await openApp(page, { settings: null, hash: HASH });
+        const offer = page.locator('#import-offer');
+        await expect(offer).toBeVisible();
+        await expect(page.locator('#import-offer-text')).toHaveText('Dvorany nad Nitrou · 10,44 kWp · so živým meraním.');
+        expect(new URL(page.url()).hash).toBe('');
+        await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+        await page.locator('#import-accept').click();
+        await expect(offer).toBeHidden();
+        await expect(page.locator('#pv-updated')).toHaveText('aktualizované 13:00');
+        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
+        expect(stored).toEqual(toUser(OWNER));
+        expect(errors).toEqual([]);
+    });
+
+    test('odmietnutie nič neuloží, rovnaké nastavenie sa ani neponúkne', async ({ page }) => {
+        await openApp(page, { settings: null, hash: HASH });
+        await page.locator('#import-decline').click();
+        await expect(page.locator('#import-offer')).toBeHidden();
+        await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+        expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+    });
+
+    test('rovnaké nastavenie, aké už je uložené, sa neponúka', async ({ page }) => {
+        await openApp(page, { hash: HASH });
+        await expect(page.locator('#import-offer')).toBeHidden();
+    });
+
+    test('zdieľanie: odkaz nesie nastavenie a kiosk len po zaškrtnutí', async ({ page }) => {
+        await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-share > summary').click();
+        const wa = page.locator('#share-whatsapp');
+        const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
+        expect(await shared()).toBe(APP_URL);
+        await expect(page.locator('#share-kiosk-row')).toBeHidden();
+        await page.locator('#share-with-settings').check();
+        expect(settingsFromLink(await shared())).toEqual({ ...OWNER, kiosk: '' });
+        await expect(page.locator('#share-kiosk-row')).toBeVisible();
+        await page.locator('#share-with-kiosk').check();
+        expect(settingsFromLink(await shared())).toEqual(OWNER);
+    });
+
+    test('ukážku sa zdieľať nedá, len holý odkaz', async ({ page }) => {
+        await openApp(page, { settings: null });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-share > summary').click();
+        await expect(page.locator('#share-options')).toBeHidden();
+    });
+
+    test('prilepený odkaz: nesprávny ohlási chybu, správny ponúkne prevziať', async ({ page }) => {
+        await openApp(page, { settings: null });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await page.locator('#set-import').fill('https://example.com/nieco');
+        await expect(page.locator('#set-import-note')).toHaveText('Tento odkaz neobsahuje platné nastavenie elektrárne.');
+        await expect(page.locator('#import-offer')).toBeHidden();
+        await page.locator('#set-import').fill(LINK);
+        await expect(page.locator('#import-offer')).toBeVisible();
+        await page.locator('#import-accept').click();
+        await expect(page.locator('#set-hint')).toHaveText('Dvorany nad Nitrou · 10,44 kWp');
+        await expect(page.locator('#set-kiosk')).toHaveValue(TEST_KIOSK);
+        await expect(page.locator('#set-import')).toHaveValue('');
     });
 });

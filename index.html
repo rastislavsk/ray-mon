@@ -339,6 +339,19 @@
                             </summary>
                             <form class="settings-body plant-form" id="set-form" novalidate>
                                 <div class="field">
+                                    <label class="field-label" for="set-import">Máš odkaz s nastavením?</label>
+                                    <input
+                                        class="field-input"
+                                        id="set-import"
+                                        data-field="import"
+                                        type="url"
+                                        inputmode="url"
+                                        autocomplete="off"
+                                        placeholder="Vlož odkaz, ktorý ti niekto poslal"
+                                    />
+                                    <div class="field-meta" id="set-import-note"></div>
+                                </div>
+                                <div class="field">
                                     <label class="field-label" for="set-place">Lokalita</label>
                                     <input
                                         class="field-input"
@@ -662,6 +675,16 @@
                                 </svg>
                             </summary>
                             <div class="settings-body share-panel">
+                                <div class="share-options" id="share-options">
+                                    <label class="check-row">
+                                        <input type="checkbox" id="share-with-settings" />
+                                        <span>Pridať moje nastavenie elektrárne</span>
+                                    </label>
+                                    <label class="check-row" id="share-kiosk-row">
+                                        <input type="checkbox" id="share-with-kiosk" />
+                                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                                    </label>
+                                </div>
                                 <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
                                 <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -751,6 +774,17 @@
                 <p class="app-credit mono">Made by 2R &amp; Claude ¯\_(ツ)_/¯</p>
             </section>
         </main>
+
+        <!-- Ponuka prevziať nastavenie z odkazu. Pevne nad spodnou navigáciou, aby bola
+             vidieť na ktorejkoľvek karte a pri akomkoľvek posunutí stránky. -->
+        <section class="import-offer hidden" id="import-offer" aria-live="polite" aria-labelledby="import-offer-title">
+            <b id="import-offer-title">Prevziať nastavenie?</b>
+            <span class="import-offer-text" id="import-offer-text"></span>
+            <div class="import-offer-actions">
+                <button type="button" class="plant-save" id="import-accept">Prevziať</button>
+                <button type="button" class="link-btn" id="import-decline">Nie, ďakujem</button>
+            </div>
+        </section>
 
         <script type="module" src="app.js"></script>
     </body>

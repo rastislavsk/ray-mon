@@ -20,6 +20,7 @@ function writeFields(state, dom) {
     dom.setWp.value = fieldText(plant.panelWp);
     dom.setAc.value = fieldText(plant.acLimitKw);
     dom.setKiosk.value = state.settingsDraft.kiosk;
+    dom.setImport.value = '';
     plant.strings.forEach((x, i) => {
         const r = dom.setRoofs[i];
         r.panels.value = fieldText(x.panels);
@@ -78,4 +79,19 @@ export function renderNastavenie(state, dom) {
     );
     dom.setSave.disabled = check.errors.length > 0 || (!state.demo && sameSettings(draft, saved));
     dom.setNote.textContent = state.settingsNote;
+    dom.setImportNote.textContent = state.importNote;
+}
+
+/**
+ * Ponuka prevziať nastavenie z odkazu. Je mimo kariet, aby ju bolo vidno hneď po otvorení
+ * odkazu, nech je appka na ktorejkoľvek karte.
+ * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
+ */
+export function renderImportOffer(state, dom) {
+    const s = state.incoming;
+    dom.importOffer.classList.toggle('hidden', !s);
+    if (!s) return;
+    const live = s.kiosk ? ' · so živým meraním' : '';
+    const replaces = state.demo ? '' : ' Nahradí tvoje doterajšie nastavenie.';
+    dom.importOfferText.textContent = `${settingsHint(s, false)}${live}.${replaces}`;
 }

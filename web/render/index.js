@@ -2,7 +2,7 @@
 
 import { PANELS } from '../dom.js';
 import { renderHeader } from './header.js';
-import { renderNastavenie } from './nastavenie.js';
+import { renderImportOffer, renderNastavenie } from './nastavenie.js';
 import { renderSedemdni } from './sedemdni.js';
 import { renderTerazky } from './terazky.js';
 import { renderZdielat } from './zdielat.js';
@@ -24,6 +24,7 @@ function renderPanels(state, dom) {
 export function render(state, dom) {
     renderHeader(state, dom);
     renderPanels(state, dom);
+    renderImportOffer(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
     if (state.panel === 'nastavenie') {

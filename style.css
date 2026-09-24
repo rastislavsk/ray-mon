@@ -2284,6 +2284,56 @@ b {
     fill: currentColor;
 }
 
+.share-options {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+}
+.check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: var(--fs-md);
+    color: var(--ink-70);
+    cursor: pointer;
+}
+.check-row input {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin: 1px 0 0;
+    accent-color: var(--green);
+}
+
+/* ---- Ponuka prevziať nastavenie z odkazu ------------------------------------- */
+.import-offer {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+    z-index: 40;
+    width: min(calc(100% - 32px), 448px);
+    transform: translateX(-50%);
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    border: 1px solid rgba(var(--green-rgb), 0.45);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.import-offer-text {
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.import-offer-actions {
+    display: grid;
+    gap: 6px;
+    margin-top: 4px;
+}
+.import-offer-actions .link-btn {
+    justify-self: center;
+}
+
 /* ---- Širšie obrazovky ----------------------------------------------------- */
 @media (min-width: 768px) {
     :root {
@@ -2300,6 +2350,10 @@ b {
     }
 }
 @media (min-width: 1024px) {
+    /* Navigácia je tu hore pod hlavičkou, ponuka teda sedí pri spodnom okraji okna. */
+    .import-offer {
+        bottom: 16px;
+    }
     :root {
         --page-max: 1120px;
     }

@@ -31,6 +31,10 @@ import { PANELS } from './dom.js';
  *   settingsRev: number,
  *   settingsNote: string,
  *   geo: GeoSearch,
+ *   incoming: import('../shared/settings.js').Settings | null,
+ *   importNote: string,
+ *   shareSettings: boolean,
+ *   shareKiosk: boolean,
  * }} AppState
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null }} NavStep krok navigácie pre tlačidlo Späť
@@ -38,11 +42,12 @@ import { PANELS } from './dom.js';
 
 /**
  * @param {Date} now @param {Season} season @param {{ wide: boolean, tall: boolean }} layout
- * @param {import('../shared/settings.js').Settings} settings uložené nastavenie, alebo ukážka
- * @param {boolean} demo či ide o ukážku (používateľ si ešte nič neuložil)
+ * @param {{ settings: import('../shared/settings.js').Settings, demo: boolean,
+ *   incoming?: import('../shared/settings.js').Settings | null }} start uložené nastavenie (alebo ukážka,
+ *   vtedy `demo`) a nastavenie z odkazu, ktoré appka ponúkne prevziať
  * @returns {AppState}
  */
-export function initialState(now, season, layout, settings, demo) {
+export function initialState(now, season, layout, { settings, demo, incoming = null }) {
     return {
         now,
         season,
@@ -86,6 +91,13 @@ export function initialState(now, season, layout, settings, demo) {
         // Hlásenie pod tlačidlom Uložiť; pri ďalšej úprave zmizne.
         settingsNote: '',
         geo: { status: 'idle', results: [] },
+        // Nastavenie z odkazu (otvoreného alebo prilepeného), ktoré čaká na potvrdenie.
+        // Odkaz môže poslať ktokoľvek, preto ho appka sama neuloží.
+        incoming,
+        importNote: '',
+        // Čo pribaliť k zdieľanému odkazu na appku.
+        shareSettings: false,
+        shareKiosk: false,
     };
 }
 

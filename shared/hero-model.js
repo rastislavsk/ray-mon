@@ -80,7 +80,7 @@ export function heroModel(state) {
         waitTime: waitTimeFor(state, !!win.devices),
         dial: dialFor(power, installedKw(state.plant)),
         powerText: Number.isFinite(power) ? power.toFixed(2) : '–',
-        unitText: preview ? (measured ? 'kW (merané)' : 'kW (odhad)') : state.pv ? 'kW teraz' : 'kW teraz (odhad)',
+        unitText: preview ? (measured ? 'kW (merané)' : 'kW (odhad)') : state.pv ? 'kW teraz' : 'kW (odhad)',
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };
 }

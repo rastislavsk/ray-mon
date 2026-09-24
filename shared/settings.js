@@ -2,7 +2,7 @@
 // panelov. Kontrola vstupu, prevod na formát výpočtu a čítanie uloženej či nájdenej lokality.
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
-import { DEMO_PLANT, DEMO_SITE, PLANT, SETTINGS_LIMITS } from './config.js';
+import { DEMO_PLANT, DEMO_SITE, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY } from './config.js';
 import { kioskApiUrl } from './kiosk.js';
 
 /** @typedef {import('./config.js').Site} Site */
@@ -193,4 +193,49 @@ export function settingsHint(s, demo) {
     const panels = s.plant.strings.reduce((sum, x) => sum + x.panels, 0);
     const text = `${s.site.name} · ${kwpText((panels * s.plant.panelWp) / 1000)}`;
     return demo ? `Ukážka · ${text}` : text;
+}
+
+// ---- Zdieľanie nastavenia odkazom ------------------------------------------------------
+// Nastavenie sa zbalí do časti adresy za mriežkou. Tú prehliadač neposiela na server, takže
+// lokalita ani kiosk odkaz nekončia v logoch webového servera.
+
+/** Text -> base64url (bez `+`, `/` a `=`, aby sa nemusel v adrese kódovať). @param {string} text */
+function toBase64Url(text) {
+    let bin = '';
+    for (const b of new TextEncoder().encode(text)) bin += String.fromCharCode(b);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** base64url -> text; pri neplatnom vstupe hádže. @param {string} token */
+function fromBase64Url(token) {
+    const b64 = token.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+    return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+/**
+ * Odkaz na appku, voliteľne s nastavením elektrárne. Bez `settings` je to holý odkaz.
+ * @param {string} appUrl @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ */
+export function shareUrl(appUrl, settings, withKiosk) {
+    if (!settings) return appUrl;
+    const user = toUser(settings);
+    if (!withKiosk) user.kiosk = '';
+    return `${appUrl}#${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`;
+}
+
+/**
+ * Nastavenie z odkazu - z časti za mriežkou pri otvorení appky, alebo z celého odkazu, ktorý
+ * človek prilepil. Odkaz môže prísť od kohokoľvek, preto prejde tou istou kontrolou ako
+ * nastavenie z úložiska; čokoľvek nesedí, vráti null.
+ * @param {string} text @returns {Settings | null}
+ */
+export function settingsFromLink(text) {
+    const m = new RegExp(`[#&]${SHARE_HASH_KEY}=([A-Za-z0-9_-]{1,4000})`).exec(String(text || '').trim());
+    if (!m) return null;
+    try {
+        return parseStoredSettings(JSON.parse(fromBase64Url(m[1])));
+    } catch {
+        return null;
+    }
 }

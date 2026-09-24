@@ -15,7 +15,7 @@ import {
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
 import { minutesOfDay } from '../shared/hero-model.js';
-import { checkSettings } from '../shared/settings.js';
+import { checkSettings, settingsFromLink } from '../shared/settings.js';
 import { loadData, searchPlaces } from './data.js';
 import { initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
@@ -551,9 +551,11 @@ function onSettingsButton(store, dom, ops, b) {
     }
 }
 
-/** Uloženie: zapíše nastavenie do prehliadača a stiahne predpoveď pre novú elektráreň. @param {Store} store @param {() => Promise<void>} refresh */
-function saveDraft(store, refresh) {
-    const next = store.get().settingsDraft;
+/**
+ * Uloží nastavenie do prehliadača, prepne naň appku a stiahne predpoveď pre novú elektráreň.
+ * @param {Store} store @param {Settings} next @param {() => Promise<void>} refresh @param {Partial<import('./state.js').AppState>} [extra]
+ */
+function applySettings(store, next, refresh, extra = {}) {
     if (checkSettings(next).errors.length) return;
     if (!saveSettings(next)) {
         store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
@@ -567,24 +569,50 @@ function saveDraft(store, refresh) {
         demo: false,
         pv: null,
         forecast: null,
+        settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
+        ...extra,
     });
     refresh();
+}
+
+/** Prilepený odkaz s nastavením: nájdené nastavenie appka ponúkne prevziať. @param {Store} store @param {string} text */
+function onImportInput(store, text) {
+    if (!text.trim()) return store.setState({ importNote: '' });
+    const found = settingsFromLink(text);
+    store.setState(
+        found
+            ? { incoming: found, importNote: 'Nastavenie som našiel. Potvrď ho v okne dole.' }
+            : { importNote: 'Tento odkaz neobsahuje platné nastavenie elektrárne.' },
+    );
+}
+
+/** Zdieľanie odkazu s nastavením a ponuka prevziať nastavenie z odkazu. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
+function initSharing(store, dom, refresh) {
+    dom.shareWithSettings.addEventListener('change', () => store.setState({ shareSettings: dom.shareWithSettings.checked }));
+    dom.shareWithKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.shareWithKiosk.checked }));
+    dom.importAccept.addEventListener('click', () => {
+        const incoming = store.get().incoming;
+        if (incoming) applySettings(store, incoming, refresh, { incoming: null, importNote: '' });
+    });
+    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
 }
 
 /** Formulár „Moja elektráreň“ v karte Nastavenie. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
 function initSettings(store, dom, refresh) {
     const ops = draftOps(store);
     const search = placeSearch(store);
-    dom.setForm.addEventListener('input', (e) => onSettingsInput(dom, ops, search, e));
+    dom.setForm.addEventListener('input', (e) =>
+        e.target === dom.setImport ? onImportInput(store, dom.setImport.value) : onSettingsInput(dom, ops, search, e),
+    );
     dom.setForm.addEventListener('click', (e) => {
         const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
         if (b) onSettingsButton(store, dom, ops, b);
     });
     dom.setForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        saveDraft(store, refresh);
+        applySettings(store, store.get().settingsDraft, refresh);
     });
 }
 
@@ -632,5 +660,6 @@ export function initInteractions(store, dom, mq) {
     initChartSizes(store, dom);
     const refresh = initTicks(store, mq);
     initSettings(store, dom, refresh);
+    initSharing(store, dom, refresh);
     return refresh;
 }

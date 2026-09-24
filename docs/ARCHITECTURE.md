@@ -59,7 +59,11 @@ Menovaný je jediný prvok – úchytka bežca na páse dňa, ktorá sa ťahá a
 Nastavenie píše rozpísané nastavenie do stavu (`settingsDraft`); render z neho dopočíta
 súčty a hlásenia, ale hodnoty polí prepíše len pri zmene `settingsRev`, aby neprepisoval
 to, čo človek práve píše. Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
-nie telefónu. `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
+nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
+`settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
+neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
+`app.js` ho z adresy hneď zmaže a appka ho len ponúkne prevziať (`incoming` v stave).
+`history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
 istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je
 len značka s krokom navigácie, takže odkaz na appku ostáva jeden.

@@ -164,3 +164,37 @@ test('kiosk: prázdny je bez merania, cudzí odkaz je chyba, uloží sa a staré
     assert.equal(back && back.kiosk, '');
     assert.equal(parseStoredSettings({ ...toUser(DVORANY), kiosk: 'https://example.com/?kk=Abc123xyz' }), null);
 });
+
+test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou a južnou pologuľou', async () => {
+    const { shareUrl, settingsFromLink } = await import('../shared/settings.js');
+    const app = 'https://example.test/appka/';
+    assert.equal(shareUrl(app, null, true), app);
+    const withKiosk = { ...DVORANY, kiosk: KIOSK };
+    const url = shareUrl(app, withKiosk, true);
+    assert.match(url, /^https:\/\/example\.test\/appka\/#nastavenie=[A-Za-z0-9_-]+$/);
+    assert.deepEqual(settingsFromLink(url), withKiosk);
+    // Bez kiosku ostane všetko ostatné.
+    assert.deepEqual(settingsFromLink(shareUrl(app, withKiosk, false)), DVORANY);
+    // Samotná časť za mriežkou (location.hash) stačí rovnako.
+    assert.deepEqual(settingsFromLink(`#${url.split('#')[1]}`), withKiosk);
+    const south = settingsFrom({
+        ...toUser(DVORANY),
+        site: { name: 'Žilina – Považský Chlmec', lat: -33.87, lon: 151.21, elevationM: 40, timezone: 'Australia/Sydney' },
+    });
+    assert.deepEqual(settingsFromLink(shareUrl(app, south, true)), south);
+});
+
+test('zdieľanie: nezmysel, cudzí kiosk alebo poškodený odkaz nič neprevezme', async () => {
+    const { shareUrl, settingsFromLink } = await import('../shared/settings.js');
+    const url = shareUrl('https://x.test/', DVORANY, true);
+    for (const bad of [
+        '',
+        'https://x.test/',
+        'https://x.test/#nastavenie=',
+        'https://x.test/#nastavenie=@@@',
+        'https://x.test/#nastavenie=bm9uLWpzb24',
+        url.slice(0, -10),
+        shareUrl('https://x.test/', { ...DVORANY, kiosk: 'https://example.com/?kk=Abc123xyz' }, true),
+    ])
+        assert.equal(settingsFromLink(bad), null, bad);
+});
