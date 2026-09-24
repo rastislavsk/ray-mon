@@ -42,7 +42,15 @@ try {
     await pockajNaServer(url);
     const { pv } = fixtureData();
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-    const page = await browser.newPage({ viewport: { width: SIRKA, height: VYSKA }, locale: 'sk-SK', timezoneId: 'Europe/Bratislava' });
+    // reducedMotion vypne v appke prechody (style.css), takže snímka zachytí konečný stav.
+    // Inak prstenec ciferníka na prvej karte ešte dobiehal a o výsledku rozhodovalo, ako
+    // rýchlo prišli písma z CDN - tá istá appka dala raz takú, raz inú terazky.png.
+    const page = await browser.newPage({
+        viewport: { width: SIRKA, height: VYSKA },
+        locale: 'sk-SK',
+        timezoneId: 'Europe/Bratislava',
+        reducedMotion: 'reduce',
+    });
     // Živé zdroje sa nahradia fixtures, zvyšok (písma) sa načíta ako v appke.
     // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
@@ -60,7 +68,7 @@ try {
 
     for (const { subor, nav } of KARTY) {
         await page.locator(`#${nav}`).click();
-        // Písma z CDN a prvé prekreslenie po prepnutí karty.
+        // Prvé prekreslenie po prepnutí karty.
         await page.waitForTimeout(400);
         await page.screenshot({ path: fileURLToPath(new URL(`../../docs/img/${subor}`, import.meta.url)) });
         console.log(`hotovo: docs/img/${subor}`);
