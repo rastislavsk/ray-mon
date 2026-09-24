@@ -253,8 +253,13 @@ export const TOOLTIP_FADE_MS = 200;
 // Ako dlho po poslednom posune sa listovanie považuje za ustálené (ms).
 export const PAGER_SETTLE_MS = 90;
 
-// Dáta staršie než toto sú "zastarané" a appka to ukáže.
+// Dáta staršie než toto sú "zastarané" a appka to ukáže. Platí pre stiahnutie z kiosku
+// aj pre posledné meranie z meniča.
 export const STALE_PV_MS = 20 * 60 * 1000;
+
+// Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
+// Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
+export const STALE_PV_SUN_DEG = 5;
 
 // Náhľad iného času jazdcom na dennom prstenci (web/interactions.js).
 export const PREVIEW = {

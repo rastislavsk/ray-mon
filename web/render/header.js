@@ -1,9 +1,8 @@
 // Hlavička: čas, stavová bodka (tarifa × výkon), riadok o aktuálnosti dát a farba tarify
 // pre pozadie celej stránky (vrátane náhľadu iného času).
 
-import { STALE_PV_MS } from '../../shared/config.js';
 import { minutesToTimeStr } from '../../shared/format.js';
-import { heroModel } from '../../shared/hero-model.js';
+import { heroModel, pvFreshness } from '../../shared/hero-model.js';
 import { localMinutes } from '../../shared/solar.js';
 
 /** @param {import('../state.js').AppState} state */
@@ -12,9 +11,7 @@ export function updatedLine(state) {
     if (state.demo) return 'ukážka · nastav si elektráreň';
     // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
     if (!state.pv) return state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede';
-    const updated = new Date(state.pv.updatedAt);
-    const label = `aktualizované ${minutesToTimeStr(localMinutes(updated, state.site.timezone))}`;
-    const stale = state.now.getTime() - updated.getTime() > STALE_PV_MS;
+    const { label, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
     return stale ? `${label} · zastarané` : label;
 }
 
