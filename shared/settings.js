@@ -2,7 +2,8 @@
 // panelov. Kontrola vstupu, prevod na formát výpočtu a čítanie uloženej či nájdenej lokality.
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
-import { DEMO_PLANT, DEMO_SITE, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY } from './config.js';
+import { DEMO_PLANT, DEMO_SITE, installedKw, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY } from './config.js';
+import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
 
 /** @typedef {import('./config.js').Site} Site */
@@ -100,8 +101,10 @@ export function checkSettings(s) {
     checkPlant(plant, errors);
     if (s.kiosk && !kioskApiUrl(s.kiosk))
         errors.push('Odkaz nie je kiosk FusionSolar. Skopíruj ho v aplikácii FusionSolar pri zdieľaní elektrárne cez kiosk.');
+    // Panely sa rátajú aj pri chybách - súčet pod formulárom ich ukazuje stále. Výkon až keď
+    // je zostava v poriadku, a potom ten istý, aký appka používa všade inde.
     const panels = plant.strings.reduce((sum, x) => sum + (Number.isFinite(x.panels) ? x.panels : 0), 0);
-    const kwp = errors.length ? null : (panels * plant.panelWp) / 1000;
+    const kwp = errors.length ? null : installedKw(plant);
     if (kwp !== null && kwp > plant.acLimitKw * SETTINGS_LIMITS.dcAcWarnRatio)
         warnings.push(`Panely majú spolu viac než menič zvládne. Za jasných dní bude menič orezávať špičky na ${plant.acLimitKw} kW.`);
     // Na južnej pologuli je slnko na severe. Plocha otočená na juh tam dostane málo, čo je
@@ -169,14 +172,6 @@ export function parseGeocode(json) {
         }));
 }
 
-/** Číslo s dvomi desatinnými miestami a slovenskou čiarkou. @param {number} n */
-const fmt2 = (n) => n.toFixed(2).replace('.', ',');
-
-/** Výkon v kWp pre text, napr. „10,44 kWp“. @param {number} kwp */
-export function kwpText(kwp) {
-    return `${fmt2(kwp)} kWp`;
-}
-
 /**
  * Riadok pod názvom lokality: súradnice, výška, časové pásmo.
  * @param {Site} site
@@ -190,8 +185,7 @@ export function siteMetaText(site) {
 
 /** Súhrn uloženej elektrárne v zatvorenej položke nastavenia. @param {Settings} s @param {boolean} demo */
 export function settingsHint(s, demo) {
-    const panels = s.plant.strings.reduce((sum, x) => sum + x.panels, 0);
-    const text = `${s.site.name} · ${kwpText((panels * s.plant.panelWp) / 1000)}`;
+    const text = `${s.site.name} · ${kwpText(installedKw(s.plant))}`;
     return demo ? `Ukážka · ${text}` : text;
 }
 

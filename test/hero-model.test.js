@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, SITE } from '../shared/config.js';
-import { heroModel, minutesOfDay, pvFreshness } from '../shared/hero-model.js';
+import { heroModel, pvFreshness } from '../shared/hero-model.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -13,12 +13,6 @@ const at = (/** @type {string} */ hm) => {
 };
 const base = { season: /** @type {const} */ ('summer'), pv, forecast, previewMinutes: null, site: SITE, plant: PLANT };
 
-test('minutesOfDay', () => {
-    assert.equal(minutesOfDay(at('13:05'), SITE.timezone), 13 * 60 + 5);
-    // Tá istá chvíľa v Londýne je o hodinu skôr.
-    assert.equal(minutesOfDay(at('13:05'), 'Europe/London'), 12 * 60 + 5);
-});
-
 test('13:00 v lete so 6,4 kW: zelené okno, všetky spotrebiče go, žiadne čakanie', () => {
     const m = heroModel({ ...base, now: at('13:00') });
     assert.equal(m.tier, 'green');
@@ -29,6 +23,14 @@ test('13:00 v lete so 6,4 kW: zelené okno, všetky spotrebiče go, žiadne čak
     assert.equal(m.powerText, '6.41');
     assert.equal(m.unitText, 'kW teraz');
     assert.equal(m.dial.tier, 'green');
+});
+
+test('číslo v ciferníku má najviac päť znakov, aj pri 100 kW', () => {
+    // Šesť znakov („100.00“) sa medzi prstence nezmestí - od 100 kW ostáva jedno desatinné miesto.
+    const vykon = (/** @type {number} */ kw) => heroModel({ ...base, now: at('13:00'), pv: { ...pv, realTimePowerKw: kw } }).powerText;
+    assert.equal(vykon(10.44), '10.44');
+    assert.equal(vykon(100), '100.0');
+    assert.equal(vykon(99.996), '100.0', 'zaokrúhlenie na dve desatiny by dalo šesť znakov');
 });
 
 test('02:00 nočný slot: text z okna, auto oranžové', () => {

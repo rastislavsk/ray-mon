@@ -14,11 +14,6 @@ import { autoTier, deviceStates, productionLevel, smartTier, windowAt, windowsFo
  *   site: import('./config.js').Site, plant: import('./config.js').Plant }} HeroInput
  */
 
-/** Minúta dňa v čase lokality. @param {Date} date @param {string} timezone */
-export function minutesOfDay(date, timezone) {
-    return localMinutes(date, timezone);
-}
-
 /**
  * Živý výkon z kiosku, alebo null, keď ho niet: v náhľade iného času, bez kiosku, aj keď kiosk
  * výkon neposlal. Posledný prípad treba strážiť zvlášť - kontrakt `pv` null povoľuje
@@ -69,8 +64,18 @@ export function pvFreshness({ now, pv, site }) {
 function waitTimeFor(state, hasDevices) {
     const f = state.forecast;
     if (state.previewMinutes !== null || hasDevices || !f || !f.strongerWindowAhead || !Number.isFinite(f.hoursAhead)) return null;
-    const hour = Math.floor(minutesOfDay(state.now, state.site.timezone) / 60);
+    const hour = Math.floor(localMinutes(state.now, state.site.timezone) / 60);
     return `${pad2((hour + Math.round(/** @type {number} */ (f.hoursAhead))) % 24)}:00`;
+}
+
+/**
+ * Výkon do stredu ciferníka: dve desatinné miesta, no najviac päť znakov. Šesť („100.00“) sa
+ * medzi prstence nezmestí (viď .dial-num .val v style.css), preto od 100 kW ostáva jedno.
+ * @param {number} kw
+ */
+function dialText(kw) {
+    const text = kw.toFixed(2);
+    return text.length > 5 ? kw.toFixed(1) : text;
 }
 
 /**
@@ -88,7 +93,7 @@ function dialFor(power, kwp, th) {
 
 /** @param {HeroInput} state */
 export function heroModel(state) {
-    const nowMinutes = minutesOfDay(state.now, state.site.timezone);
+    const nowMinutes = localMinutes(state.now, state.site.timezone);
     const preview = state.previewMinutes !== null;
     const minutes = preview ? /** @type {number} */ (state.previewMinutes) : nowMinutes;
     const live = livePower(state);
@@ -119,7 +124,7 @@ export function heroModel(state) {
         })),
         waitTime: waitTimeFor(state, !!win.devices),
         dial: dialFor(power, installedKw(state.plant), th),
-        powerText: Number.isFinite(power) ? power.toFixed(2) : '–',
+        powerText: Number.isFinite(power) ? dialText(power) : '–',
         unitText: live !== null ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)',
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };

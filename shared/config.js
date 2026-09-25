@@ -81,9 +81,14 @@ export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 /** Minút v dni. Ciferník ich rozloží po obvode, tarifné okná ich delia na pásma. */
 export const MINUTES_PER_DAY = 1440;
 
-/** Inštalovaný výkon zostavy v kWp, zaokrúhlený na desatinu. @param {Plant} plant */
+/**
+ * Inštalovaný výkon zostavy v kWp: počet panelov × výkon panelu. Jediné miesto, kde sa počíta -
+ * ciferník, hranice výkonu, karta 7 dní aj Nastavenie ho berú odtiaľto. Nezaokrúhľuje sa,
+ * zaokrúhľuje až text (kwpText v format.js).
+ * @param {Plant} plant
+ */
 export function installedKw(plant) {
-    return Math.round((plant.strings.reduce((sum, s) => sum + s.panels, 0) * plant.panelWp) / 100) / 10;
+    return (plant.strings.reduce((sum, s) => sum + s.panels, 0) * plant.panelWp) / 1000;
 }
 
 // Bezoblačný model (Meinel + Laueho výšková korekcia) - horný strop výroby.

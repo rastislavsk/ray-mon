@@ -4,8 +4,8 @@
 // nastavenia v stave.
 
 import { SETTINGS_LIMITS } from '../../shared/config.js';
-import { escapeHtml } from '../../shared/format.js';
-import { checkSettings, kwpText, sameSettings, settingsHint, siteMetaText } from '../../shared/settings.js';
+import { escapeHtml, kwpText } from '../../shared/format.js';
+import { checkSettings, sameSettings, settingsHint, siteMetaText } from '../../shared/settings.js';
 import { changed, writeHtml } from '../memo.js';
 
 /** Číslo do poľa formulára; neplatné ostane prázdne. @param {number} n */

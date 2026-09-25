@@ -559,8 +559,9 @@ b {
 }
 .dial-num .val {
     font-family: var(--font-mono);
-    /* 17 % menšieho rozmeru ciferníka - najdlhšie reálne číslo ("10.44") sa tak zmestí
-       medzi prstence pri každej jeho veľkosti. */
+    /* 17 % menšieho rozmeru ciferníka - najdlhšie číslo má päť znakov ("10.44", od 100 kW
+       "100.0", viď dialText v shared/hero-model.js) a zmestí sa tak medzi prstence pri každej
+       jeho veľkosti. */
     font-size: clamp(22px, 17cqmin, 58px);
     font-weight: 600;
     letter-spacing: -0.03em;

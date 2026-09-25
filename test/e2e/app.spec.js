@@ -1694,7 +1694,8 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
         await expect(page.locator('#pv-power')).not.toHaveText('–');
         await page.locator('#nav-7dni').click();
-        await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,2 kWp');
+        // Ten istý výkon ako v Nastavení - kWp sa počíta aj píše na jednom mieste.
+        await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,22 kWp');
         await page.locator('#nav-nastavenie').click();
         await expect(page.locator('#settings-demo')).toBeVisible();
         await expect(page.locator('#set-hint')).toHaveText('Ukážka · Londýn · 5,22 kWp');
@@ -1770,7 +1771,7 @@ test.describe('moja elektráreň', () => {
         await page.reload();
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
         await page.locator('#nav-7dni').click();
-        await expect(page.locator('#week-sub')).toHaveText('Sevilla · 10,4 kWp');
+        await expect(page.locator('#week-sub')).toHaveText('Sevilla · 10,44 kWp');
         expect(errors).toEqual([]);
     });
 

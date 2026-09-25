@@ -39,6 +39,17 @@ export function fmt1(n) {
     return n.toFixed(1).replace('.', ',');
 }
 
+/** Číslo s dvomi desatinnými miestami a slovenskou čiarkou. @param {number} n */
+export function fmt2(n) {
+    return n.toFixed(2).replace('.', ',');
+}
+
+/** Výkon elektrárne pre text, napr. „10,44 kWp“ - všade rovnako, s dvomi desatinnými miestami,
+ * ako sa výkon zostavy udáva (24 × 435 Wp = 10,44 kWp). @param {number} kwp */
+export function kwpText(kwp) {
+    return `${fmt2(kwp)} kWp`;
+}
+
 /** Popisok mriežky v kW: celé číslo bez desatín, inak max. dve desatiny bez koncovej nuly. @param {number} kw */
 export function formatGridKw(kw) {
     if (Number.isInteger(kw)) return String(kw);
