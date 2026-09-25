@@ -24,7 +24,7 @@ import {
     weekHeatModel,
     weekStatsModel,
 } from '../shared/chart-model.js';
-import { hourLabel, weekDateLabel, weekDayShort } from '../shared/format.js';
+import { fmt2, hourLabel, weekDateLabel, weekDayShort } from '../shared/format.js';
 import { fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -77,10 +77,10 @@ test('forecastChartModel: null bez dát, maxKw = 1,15 × maximum, mriežka podľ
     assert.equal(wide.nowX, null);
 });
 
-test('chartTooltipModel: ľavý okraj = 06:00, pravý = 21:00, strop len ak body majú clearKw', () => {
+test('chartTooltipModel: ľavý okraj = 05:00, pravý = 21:00, strop len ak body majú clearKw', () => {
     const m = forecastChartModel({ pts: forecast.hourlyToday, dims: chartDims(true) });
     assert.ok(m);
-    assert.equal(chartTooltipModel(m, 0).time, '06:00');
+    assert.equal(chartTooltipModel(m, 0).time, '05:00');
     assert.equal(chartTooltipModel(m, 1).time, '21:00');
     assert.equal(chartTooltipModel(m, 0.5).clearKw, null);
     const week = forecastChartModel({ pts: forecast.days[0].hourly, dims: chartDims(true) });
@@ -170,7 +170,7 @@ test('weekHeatModel: tooltip bunky patrí svojmu dňu a svojej hodine', () => {
         const point = day.hourly.find((h) => h.hour === hour);
         // Okamih, nie úsek - hodnota je okamžitý výkon o celej hodine.
         assert.equal(cell.tip.title, `${weekDayShort(day.date, ri)} ${weekDateLabel(day.date)} · ${hourLabel(hour)}`);
-        assert.ok(cell.tip.text.startsWith(`${(point ? point.kw : 0).toFixed(2)} kW`), `text bunky [${ri}][${ci}]: ${cell.tip.text}`);
+        assert.ok(cell.tip.text.startsWith(`${fmt2(point ? point.kw : 0)} kW`), `text bunky [${ri}][${ci}]: ${cell.tip.text}`);
     }
 });
 

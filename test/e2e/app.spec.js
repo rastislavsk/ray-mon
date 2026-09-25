@@ -712,8 +712,7 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
     await page.locator('#nav-7dni').click();
     const today = forecast.days[0];
     const pct = usePct(today);
-    const expectedMeta =
-        `⚡ ${today.peakKw.toFixed(1)} kW o ${hourLabel(today.peakHour)}` + (pct == null ? '' : `${pct} % z jasnej oblohy`);
+    const expectedMeta = `⚡ ${fmt1(today.peakKw)} kW o ${hourLabel(today.peakHour)}` + (pct == null ? '' : `${pct} % z jasnej oblohy`);
     await expect(page.locator('#week-today-meta')).toBeVisible();
     await expect(page.locator('#week-today-meta')).toHaveText(expectedMeta);
     await expect(page.locator('#week-tomorrow-meta')).toBeVisible();

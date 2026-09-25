@@ -65,6 +65,10 @@ export const SETTINGS_LIMITS = {
     panelWp: { min: 100, max: 800 },
     acLimitKw: { min: 1, max: 100 },
     tiltDeg: { min: 0, max: 90 },
+    // Nadmorská výška lokality (m). Zadáva ju vyhľadávanie, nie človek - rozsah stráži najmä
+    // odkaz s nastavením, ktorý mohol ktokoľvek upraviť. Mimo neho by bezoblačný model dal
+    // nezmyselný strop (od ~7 km mu vychádza záporný útlm atmosféry).
+    elevationM: { min: -500, max: 6000 },
     // Nad týmto pomerom výkonu panelov k meniču bude menič za jasných dní orezávať špičky.
     dcAcWarnRatio: 1.3,
 };

@@ -41,7 +41,7 @@ function checkDay(d, i, errors) {
 
 /** @param {unknown} forecast @returns {string[]} */
 export function validateForecast(forecast) {
-    const errors = [];
+    /** @type {string[]} */ const errors = [];
     if (!forecast || typeof forecast !== 'object') return ['forecast: očakávaný objekt'];
     const o = /** @type {Record<string, any>} */ (forecast);
     if (typeof o.strongerWindowAhead !== 'boolean') errors.push('forecast.strongerWindowAhead: boolean');

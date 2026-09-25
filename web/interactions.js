@@ -14,6 +14,7 @@ import {
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
+import { fmt2 } from '../shared/format.js';
 import { checkSettings, settingsFromLink } from '../shared/settings.js';
 import { localMinutes } from '../shared/solar.js';
 import { loadData, searchPlaces } from './data.js';
@@ -334,9 +335,8 @@ function initCurveTooltip(store, wrap, svg, tooltip, modelFor) {
         const relX = (clientX - rect.left) / (rect.width || 1);
         const tip = chartTooltipModel(model, relX);
         const extra =
-            (tip.clearKw !== null ? ` · strop ${tip.clearKw.toFixed(2)} kW` : '') +
-            (tip.cloud !== null ? ` · ${tip.cloud}% oblačnosť` : '');
-        showTooltip(tooltip, tip.time, `${tip.kw.toFixed(2)} kW${extra}`, {
+            (tip.clearKw !== null ? ` · strop ${fmt2(tip.clearKw)} kW` : '') + (tip.cloud !== null ? ` · ${tip.cloud}% oblačnosť` : '');
+        showTooltip(tooltip, tip.time, `${fmt2(tip.kw)} kW${extra}`, {
             left: clientX - rect.left,
             top: tip.yFrac * rect.height,
             maxWidth: rect.width,

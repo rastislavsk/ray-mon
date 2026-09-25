@@ -2,7 +2,7 @@
 // Kreslenie (SVG reťazce) je vo web/svg.js; tu nie je nič, čo by potrebovalo DOM.
 
 import { MINUTES_PER_DAY } from './config.js';
-import { formatGridKw, hourLabel, hourFloatToTimeStr, weekDateLabel, weekDayName, weekDayShort } from './format.js';
+import { fmt1, fmt2, formatGridKw, hourLabel, hourFloatToTimeStr, weekDateLabel, weekDayName, weekDayShort } from './format.js';
 import { stripSegments } from './tariff.js';
 
 /** @typedef {{ x: number, y: number }} Pt */
@@ -10,9 +10,11 @@ import { stripSegments } from './tariff.js';
 /** @typedef {import('./solar.js').ForecastDay} ForecastDay */
 /** @typedef {{ w: number, h: number, padL: number, padR: number, padT: number, padB: number, hourStep: number, xLabelGap: number, yAxis: boolean }} Dims */
 
-// Os X grafov predpovede je pevná 06:00-21:00: pokrýva celé produkčné okno dňa.
-export const HOUR_RANGE = { min: 6, max: 21 };
-export const WEEK_HOURS = Array.from({ length: 17 }, (_, i) => 5 + i);
+// Produkčné okno dňa: os X grafu priebehu aj stĺpce heatmapy. Jedno pre oba, aby heatmapa
+// neukazovala hodinu, ktorú graf pod ňou nemá. Od piatej, lebo v lete sa v Dvoranoch vyrába
+// už vtedy (východ slnka ~4:50).
+export const HOUR_RANGE = { min: 5, max: 21 };
+export const WEEK_HOURS = Array.from({ length: HOUR_RANGE.max - HOUR_RANGE.min + 1 }, (_, i) => HOUR_RANGE.min + i);
 
 /** Dve veľkosti plátna: mobil a široká karta (popisky ostávajú zhruba 1:1). @param {boolean} wide @returns {Dims} */
 export function chartDims(wide) {
@@ -127,12 +129,9 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
 
     const cloudAvailable = visible.every((p) => Number.isFinite(p.cloud));
     const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
-    const peak = visible.reduce((a, b) => (b.kw > a.kw ? b : a), visible[0]);
 
     return {
         dims,
-        hMin,
-        hMax,
         maxKw,
         pts: visible,
         line: visible.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) })),
@@ -142,8 +141,6 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
         gridX,
         gridY,
         nowX: nowHour === null ? null : scale.x(Math.max(hMin, Math.min(hMax, nowHour))),
-        peak: { hour: peak.hour, kw: peak.kw },
-        totalKwh: Math.round(visible.reduce((s, p) => s + p.kw, 0) * 10) / 10,
     };
 }
 
@@ -259,7 +256,7 @@ function cellTip(d, i, h, map) {
     const cloudTxt = cell && cell.cloud != null ? ` · ${Math.round(cell.cloud)} % oblačnosť` : '';
     return {
         title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)} · ${hourLabel(h)}`,
-        text: `${(cell ? cell.kw : 0).toFixed(2)} kW${cloudTxt}`,
+        text: `${fmt2(cell ? cell.kw : 0)} kW${cloudTxt}`,
     };
 }
 
@@ -325,6 +322,7 @@ export function weekHeatModel(days, selDay, size = null, jedenDen = false) {
               today: di === 0,
               sel: di === selDay,
           }));
+    /** @type {Array<{ x: number, y: number, w: number, h: number, frac: number, tier: ReturnType<typeof heatBand> | null, dayIndex: number, tip: { title: string, text: string } | null }>} */
     const cells = [];
     riadky.forEach((di, ri) => {
         WEEK_HOURS.forEach((h, ci) => {
@@ -374,7 +372,7 @@ export function weekBarsModel(days, selDay, size = { W: 440, H: 190 }, showCeili
     const tiers = weekDayTiers(days);
     const bars = days.map((d, i) => {
         const cx = padL + i * slot + slot / 2;
-        const usePct = d.clearKwhTotal > 0 ? Math.round((100 * d.kwhTotal) / d.clearKwhTotal) : 0;
+        const pct = usePct(d);
         return {
             dayIndex: i,
             sel: i === selDay,
@@ -386,13 +384,13 @@ export function weekBarsModel(days, selDay, size = { W: 440, H: 190 }, showCeili
             h: Math.max(0, (d.kwhTotal / maxV) * plotH),
             cx,
             clearY: showCeiling ? yFor(d.clearKwhTotal) : null,
-            valueLabel: d.kwhTotal.toFixed(1),
+            valueLabel: fmt1(d.kwhTotal),
             dayLabel: weekDayShort(d.date, i),
             dateLabel: weekDateLabel(d.date),
             hit: { x: padL + i * slot, w: slot },
             tip: {
                 title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)}`,
-                text: `${d.kwhTotal.toFixed(1)} kWh · strop ${d.clearKwhTotal.toFixed(1)} kWh (${usePct} %)`,
+                text: `${fmt1(d.kwhTotal)} kWh · strop ${fmt1(d.clearKwhTotal)} kWh${pct == null ? '' : ` (${pct} %)`}`,
             },
         };
     });
