@@ -203,6 +203,10 @@ b {
     letter-spacing: 0.18em;
     color: #fff;
 }
+/* Podpis za názvom: o desatinu menší. V em, aby sa zmenšoval spolu s názvom aj na úzkom displeji. */
+.appbar-by {
+    font-size: 0.9em;
+}
 .appbar-clock {
     display: flex;
     align-items: center;
