@@ -132,7 +132,7 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     await expect(page.locator('#current-time-display')).toHaveText('13:00');
     await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
     await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
-    await expect(page.locator('#pv-power')).toHaveText('6.41');
+    await expect(page.locator('#pv-power')).toHaveText('6,41');
     await expect(page.locator('#verdict-go-row .go-chip')).toHaveCount(5);
     await expect(page.locator('#pv-updated')).toContainText('meranie 13:00');
     // Teraz, Spotrebiče a Predpoveď dňa sú tam vždy - bodky sú vidno, no štvrtá
@@ -370,7 +370,7 @@ test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
     // preto sa na ten čas zrovná - inak by prstenec tvrdil, že sa niečo vyrába.
     const noc = ringXY(box, 2 * 60);
     await page.mouse.click(noc.x, noc.y);
-    await expect(page.locator('#pv-power')).toHaveText('0.00');
+    await expect(page.locator('#pv-power')).toHaveText('0,00');
     await expect(ring).toHaveClass(/empty/);
     await expect(ring).toHaveCSS('stroke-linecap', 'butt');
 });
