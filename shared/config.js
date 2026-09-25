@@ -256,6 +256,14 @@ export const REFRESH = {
     dataMs: 60 * 1000,
 };
 
+// Najdlhšie čakanie na jednu sieťovú požiadavku (ms). Bez limitu by zaseknuté spojenie
+// čakalo donekonečna. Worker čaká na kiosk kratšie než appka na Worker, aby sa aj s jedným
+// opakovaním (2 × 5 s + 0,5 s) zmestil do jej limitu.
+export const TIMEOUT = {
+    appMs: 15 * 1000,
+    kioskMs: 5 * 1000,
+};
+
 // Od akej viditeľnej výšky okna (px) sa v prehľade dní na karte 7 dní ukáže aj správa
 // týždňa. Prehľad sám sa zmestí od 710 px; so správou potrebuje 835 px, a pri najdlhšej
 // možnej správe na úzkom displeji (320 px) 854 px - namerané v Chromiu pri predvolenej

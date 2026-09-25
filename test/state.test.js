@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { STALE_PV_MS } from '../shared/config.js';
 import { demoSettings } from '../shared/settings.js';
 import {
     clockPatch,
@@ -9,6 +10,7 @@ import {
     navStep,
     navStepFrom,
     nextPanel,
+    nextPv,
     nextWeekDay,
     panelChange,
     sameNavStep,
@@ -113,4 +115,17 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
     assert.equal(navStepFrom({ step: { panel: '7dni' } }), null, 'neúplný krok');
     // Položka zo staršej verzie appky nesie true/false - tú už appka prečítať nevie.
     assert.equal(navStepFrom({ step: { panel: '7dni', weekDetail: true } }), null, 'krok zo staršej verzie');
+});
+
+test('nextPv: pri výpadku kiosku ostáva posledné meranie, no nie staršie než STALE_PV_MS', () => {
+    const t0 = new Date('2026-09-05T11:00:00Z');
+    const stare = /** @type {import('../shared/kiosk.js').PvData} */ ({ realTimePowerKw: 5, updatedAt: t0.toISOString() });
+    const nove = /** @type {import('../shared/kiosk.js').PvData} */ ({ realTimePowerKw: 6, updatedAt: t0.toISOString() });
+    const o = (/** @type {number} */ ms) => new Date(t0.getTime() + ms);
+    assert.equal(nextPv(stare, { pv: nove, pvFailed: false }, o(60_000)), nove, 'nové meranie vyhráva');
+    assert.equal(nextPv(stare, { pv: null, pvFailed: true }, o(60_000)), stare, 'jedna nevydarená minúta');
+    assert.equal(nextPv(stare, { pv: null, pvFailed: true }, o(STALE_PV_MS)), stare, 'presne na hranici ešte áno');
+    assert.equal(nextPv(stare, { pv: null, pvFailed: true }, o(STALE_PV_MS + 1)), null, 'staršie by sa tvárilo ako "teraz"');
+    assert.equal(nextPv(stare, { pv: null, pvFailed: false }, o(60_000)), null, 'bez kiosku sa nemá čo nechávať');
+    assert.equal(nextPv(null, { pv: null, pvFailed: true }, o(60_000)), null);
 });

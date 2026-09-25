@@ -2,17 +2,21 @@
 // z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal; bez kiosku
 // meranie nie je. Neplatné dáta sa správajú ako chýbajúce.
 
-import { geocodeUrl, openMeteoUrl, WEATHER_CACHE_MS, WORKER_PV_URL } from '../shared/config.js';
+import { geocodeUrl, openMeteoUrl, TIMEOUT, WEATHER_CACHE_MS, WORKER_PV_URL } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
 
 /** @typedef {import('../shared/settings.js').Settings} Settings */
-/** @typedef {{ pv: import('../shared/kiosk.js').PvData | null, forecast: import('../shared/solar.js').Forecast | null }} DataResult */
+/**
+ * `pvFailed` odlišuje "meranie sa nepodarilo" od "meranie nie je" (bez kiosku) - pri prvom si
+ * appka na chvíľu nechá posledné meranie, pri druhom nemá čo nechávať.
+ * @typedef {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean, forecast: import('../shared/solar.js').Forecast | null }} DataResult
+ */
 
 /** @param {string} url @param {typeof fetch} fetchImpl */
 async function getJson(url, fetchImpl) {
-    const res = await fetchImpl(url, { cache: 'no-store' });
+    const res = await fetchImpl(url, { cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT.appMs) });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
     return res.json();
 }
@@ -26,7 +30,12 @@ const validPv = (pv) => (pv && validatePv(pv).length === 0 ? /** @type {import('
  * @param {string} kiosk @param {typeof fetch} fetchImpl
  */
 async function loadKioskPv(kiosk, fetchImpl) {
-    const res = await fetchImpl(WORKER_PV_URL, { method: 'POST', body: kiosk, cache: 'no-store' });
+    const res = await fetchImpl(WORKER_PV_URL, {
+        method: 'POST',
+        body: kiosk,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(TIMEOUT.appMs),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status} kiosk`);
     const pv = validPv((await res.json()).pv);
     if (!pv) throw new Error('Kiosk nevrátil platné dáta');
@@ -75,7 +84,7 @@ export async function loadData(settings, now, fetchImpl = fetch) {
     ]);
     const pv = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
-    return { pv, forecast };
+    return { pv, pvFailed: pvRes.status === 'rejected', forecast };
 }
 
 /**

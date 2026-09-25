@@ -2,6 +2,7 @@
 // ktorého odkaz si používateľ zadal v Nastavení, a vráti ho vo formáte `pv`. Prehliadač
 // by sa na kiosk priamo nedostal. Worker nič neukladá - nemá úložisko ani plánované behy.
 
+import { TIMEOUT } from '../../shared/config.js';
 import { fetchWithRetry } from '../../shared/http.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 
@@ -25,7 +26,7 @@ export async function handlePv(request, now, fetchImpl = fetch) {
     const url = kioskApiUrl((await request.text()).slice(0, 2000));
     if (!url) return json(400, { error: 'odkaz nie je kiosk FusionSolar' });
     try {
-        const res = await fetchWithRetry(url, {}, { fetchImpl, attempts: 2, delayMs: 500 });
+        const res = await fetchWithRetry(url, {}, { fetchImpl, attempts: 2, delayMs: 500, timeoutMs: TIMEOUT.kioskMs });
         return json(200, { pv: parseKiosk(await res.json(), now), servedAt: now.toISOString() });
     } catch {
         // Bez podrobností: tie by mohli obsahovať odkaz, a ten do odpovedí ani logov nepatrí.

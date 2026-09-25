@@ -18,6 +18,8 @@ Telo je text: odkaz na verejný kiosk FusionSolar, ktorý si používateľ zadal
 - Cudzí odkaz dostane **400** bez jediného sťahovania. Z Workera sa tak nedá spraviť proxy
   na čokoľvek iné než kiosk FusionSolar.
 - Nedostupný alebo nezmyselný kiosk dostane **502**. Odpoveď neobsahuje odkaz ani podrobnosti.
+  Na kiosk čaká Worker najviac `TIMEOUT.kioskMs` (5 s) a pri výpadku alebo 5xx to skúsi ešte
+  raz. Odpoveď 4xx (napr. neplatný kľúč) sa neopakuje – druhý pokus by dopadol rovnako.
 - Odkaz je v tele, nie v adrese, aby neskončil v logoch. Worker si ho nikam neukladá.
 - Telo je `text/plain`, takže prehliadač nerobí predbežnú CORS požiadavku.
 - Iné cesty vracajú 404, iné metódy 405, `OPTIONS` dostane 204. Odpovede sa necachujú.

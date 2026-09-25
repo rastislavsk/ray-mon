@@ -758,6 +758,50 @@ test('info: položka Ako čítať ciferník vysvetľuje všetky štyri časti ci
     expect(errors).toEqual([]);
 });
 
+/** Dve snímky prehliadača: čo appka po udalosti zapísala, je potom na obrazovke. @param {import('@playwright/test').Page} page */
+const dveSnimky = (page) =>
+    page.evaluate(() => new Promise((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo(undefined)))));
+
+/** Jedna nevydarená obnova nemá prepnúť živý výkon na odhad - o minútu by sa vrátil späť
+ * a nameraná krivka by medzitým z grafu zmizla. */
+test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', async ({ page }) => {
+    const errors = await openApp(page);
+    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+
+    await page.route(WORKER_PV_URL, (route) => route.abort());
+    const zlyhala = page.waitForEvent('requestfailed', (r) => r.url() === WORKER_PV_URL);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await zlyhala;
+    await dveSnimky(page);
+    // Jedno čítanie, nie čakanie: stav hneď po nevydarenej obnove.
+    expect(await page.locator('#pv-power-unit').textContent()).toBe('kW teraz');
+    expect(await page.locator('#pv-updated').textContent()).not.toBe('živý výkon nedostupný');
+    expect(errors).toEqual([]);
+});
+
+/** Pri pomalej sieti by každý minútový časovač a návrat z pozadia pridal ďalšiu požiadavku
+ * a staršia odpoveď mohla prepísať novšiu. */
+test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbehnutej', async ({ page }) => {
+    const errors = await openApp(page);
+    let volania = 0;
+    /** @type {() => void} */
+    let pustit = () => {};
+    const zadrzane = new Promise((r) => (pustit = () => r(undefined)));
+    await page.route(WORKER_PV_URL, async (route) => {
+        volania++;
+        await zadrzane;
+        await route.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } });
+    });
+    for (let i = 0; i < 3; i++) await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(() => volania).toBe(1);
+    // Chvíľa na to, aby prípadné ďalšie požiadavky stihli prísť.
+    await page.waitForTimeout(300);
+    expect(volania, 'súbežné obnovy poslali viac požiadaviek').toBe(1);
+    pustit();
+    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+    expect(errors).toEqual([]);
+});
+
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
     const errors = await openApp(page, { offline: true });
     await expect(page.locator('#pv-updated')).toHaveText('dáta nedostupné');

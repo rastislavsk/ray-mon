@@ -31,6 +31,7 @@ test('bez kiosku: Worker sa ani nevolá, predpoveď je počítaná v prehliadač
     const r = await loadData({ site: SITE, plant: PLANT, kiosk: '' }, FIXED_NOW, f.impl);
     assert.deepEqual(f.calls, [openMeteoUrl(SITE)]);
     assert.equal(r.pv, null);
+    assert.equal(r.pvFailed, false, 'bez kiosku meranie nie je, ale nezlyhalo');
     assert.deepEqual(r.forecast, fixtureData().forecast);
 });
 
@@ -95,11 +96,18 @@ test('vlastný kiosk: odkaz ide Workeru v tele POST, cron Workera sa nepýta', a
     assert.ok(post);
     assert.equal(post.init.method, 'POST');
     assert.equal(post.init.body, kiosk);
+    // Každá požiadavka má časový limit - zaseknuté spojenie nesmie čakať donekonečna.
+    assert.ok(
+        calls.every((c) => c.init.signal instanceof AbortSignal),
+        'požiadavka bez časového limitu',
+    );
+    assert.equal(r.pvFailed, false);
     assert.ok(!calls.some((c) => c.url.includes('Abc123xyz')), 'odkaz nie je v žiadnej adrese');
 
     const down = fakeFetch({ [openMeteoUrl(DEMO_SITE)]: weatherJson });
     const failed = await loadData({ site: DEMO_SITE, plant: DEMO_PLANT, kiosk }, FIXED_NOW, down.impl);
     assert.equal(failed.pv, null);
+    assert.equal(failed.pvFailed, true, 'výpadok kiosku sa odlíši od chýbajúceho kiosku');
     assert.ok(failed.forecast, 'výpadok kiosku predpoveď nezhodí');
 });
 
