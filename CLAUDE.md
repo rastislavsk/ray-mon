@@ -31,7 +31,8 @@ nedbalosť: skôr stála len na konci súboru a spoliehala sa na poradie, lenže
 rozhoduje iba pri rovnakej špecificite. Pätnásť pravidiel s `display` ju prebíjalo a dve
 z nich sa naozaj prejavili. Vymenúvať, čo je zakázané (ID selektory, potomkovské
 selektory, …), nefunguje – to sme už raz skúsili a chyba prišla dierou, ktorá v zozname
-nebola. Inde `!important` nepíš.
+nebola. Inde `!important` nepíš. Jedinou ďalšou výnimkou je `prefers-reduced-motion`, ktoré
+musí vypnúť animácie a prechody všade – z rovnakého dôvodu: nesmie ho nič prebiť.
 
 Kontroluje to e2e test „`.hidden` skryje každý prvok v stránke“, ktorý prejde všetky
 prvky vo všetkých kartách. Nový prvok netreba nikam dopisovať – test ho uvidí sám.

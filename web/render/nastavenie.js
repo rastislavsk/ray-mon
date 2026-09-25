@@ -3,7 +3,7 @@
 // človek práve píše. Všetko ostatné (súčty, hlásenia, tlačidlá) sa odvíja od rozpísaného
 // nastavenia v stave.
 
-import { SETTINGS_LIMITS } from '../../shared/config.js';
+import { installedKw, SETTINGS_LIMITS } from '../../shared/config.js';
 import { escapeHtml, kwpText } from '../../shared/format.js';
 import { checkSettings, sameSettings, settingsHint, siteMetaText } from '../../shared/settings.js';
 import { changed, writeHtml } from '../memo.js';
@@ -62,7 +62,9 @@ export function renderNastavenie(state, dom) {
         r.del.classList.toggle('hidden', count < 2);
         if (!x) return;
         r.kwp.textContent =
-            Number.isFinite(x.panels) && Number.isFinite(draft.plant.panelWp) ? kwpText((x.panels * draft.plant.panelWp) / 1000) : '–';
+            Number.isFinite(x.panels) && Number.isFinite(draft.plant.panelWp)
+                ? kwpText(installedKw({ ...draft.plant, strings: [x] }))
+                : '–';
         r.tiltOut.textContent = `${x.tiltDeg}°`;
         for (const b of r.compass) b.setAttribute('aria-pressed', String(Number(b.dataset.az) === x.azimuthDeg));
     });

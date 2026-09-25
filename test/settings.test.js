@@ -201,6 +201,8 @@ test('zdieľanie: nezmysel, cudzí kiosk alebo poškodený odkaz nič neprevezme
         'https://x.test/#nastavenie=bm9uLWpzb24',
         url.slice(0, -10),
         shareUrl('https://x.test/', { ...DVORANY, kiosk: 'https://example.com/?kk=Abc123xyz' }, true),
+        // Výška mimo rozsahu by bezoblačnému modelu dala nezmyselný strop.
+        shareUrl('https://x.test/', { ...DVORANY, site: { ...DVORANY.site, elevationM: 1e6 } }, false),
     ])
         assert.equal(settingsFromLink(bad), null, bad);
 });

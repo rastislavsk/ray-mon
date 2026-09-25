@@ -5,6 +5,8 @@ import { FIXED_NOW, fixture } from './helpers.js';
 
 test('decodeEntities dekóduje HTML entity', () => {
     assert.equal(decodeEntities('&quot;a&quot; &amp; &lt;b&gt; &#39;c&#39;'), '"a" & <b> \'c\'');
+    // Text "&lt;" v názve elektrárne je zakódovaný ako "&amp;lt;" - dekóduje sa raz, nie dvakrát.
+    assert.equal(decodeEntities('R&amp;lt;D'), 'R&lt;D');
 });
 
 test('extractRealCurveToday preskočí prázdne, neplatné a "-" hodnoty', () => {

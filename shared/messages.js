@@ -1,6 +1,6 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
-import { hourLabel, weekDayLabel } from './format.js';
+import { fmt1, hourLabel, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').Tier} Tier */
@@ -36,7 +36,7 @@ export const SLOT_MESSAGES = {
     amber: {
         niz: {
             h: 'Malé spotrebiče áno. Veľké nezapínaj, ak nemusíš.',
-            p: 'Sieť je ale lacná, takže ak potrebuješ, kľudne zapni aj veľké spotrebiče.',
+            p: 'Sieť je ale lacná, takže ak potrebuješ, pokojne zapni aj veľké spotrebiče.',
             override: {
                 h: 'Radšej počkaj na slnko',
                 p: (/** @type {string} */ d) =>
@@ -62,11 +62,11 @@ export const SLOT_MESSAGES = {
             p: (/** @type {{ tomorrowSunny: boolean }} */ ctx) =>
                 ctx.tomorrowSunny
                     ? 'Panely momentálne nedávajú veľa. Zajtra bude slnečno, tak to pokojne nechaj na zajtra.'
-                    : 'Panely momentálne nedávajú veľa. Zajtra podľa predpovede slnečno nebude, tak kľudne zapni, čo potrebuješ.',
+                    : 'Panely momentálne nedávajú veľa. Zajtra podľa predpovede slnečno nebude, tak pokojne zapni, čo potrebuješ.',
         },
         str: {
             h: 'Dobrý čas, využi ho',
-            p: 'Slnko okay, cena elektriny ok. Zapni práčku, umývačku, čo potrebuješ.',
+            p: 'Slnko slušne svieti a elektrina je lacná. Zapni práčku, umývačku, čo potrebuješ.',
         },
         vys: {
             h: 'Najlepší čas dňa — zapni všetko',
@@ -120,7 +120,7 @@ export function dayDetailMessage(pts, th) {
     const peakLabel = hourLabel(peak.hour);
     return {
         title: `Najsilnejšie slnko okolo ${peakLabel}`,
-        body: `Špička ~${peak.kw.toFixed(1)} kW. Veľké spotrebiče majú najviac zmysel medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
+        body: `Špička ~${fmt1(peak.kw)} kW. Veľké spotrebiče majú najviac zmysel medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
     };
 }
 
@@ -149,7 +149,7 @@ export function forecastDayMessage(pts, isToday, th) {
     }
     return {
         title: 'Zajtra bude slnečno',
-        body: `Špička okolo ${peakLabel} (~${peak.kw.toFixed(1)} kW). Veľké spotrebiče má zmysel naplánovať medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
+        body: `Špička okolo ${peakLabel} (~${fmt1(peak.kw)} kW). Veľké spotrebiče má zmysel naplánovať medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
     };
 }
 
@@ -166,9 +166,9 @@ export function weekMessage(days) {
         if (d.kwhTotal < worst.kwhTotal) worst = d;
     });
     const bestLabel = weekDayLabel(best.date, days.indexOf(best));
-    let body = `${bestLabel} má vyjsť najlepšie (${best.kwhTotal.toFixed(1)} kWh).`;
+    let body = `${bestLabel} má vyjsť najlepšie (${fmt1(best.kwhTotal)} kWh).`;
     if (worst !== best) {
-        body += ` Najslabšie bude ${weekDayLabel(worst.date, days.indexOf(worst)).toLowerCase()} (${worst.kwhTotal.toFixed(1)} kWh).`;
+        body += ` Najslabšie bude ${weekDayLabel(worst.date, days.indexOf(worst)).toLowerCase()} (${fmt1(worst.kwhTotal)} kWh).`;
     }
     return { title: `Najsilnejší deň: ${bestLabel}`, body };
 }
@@ -176,5 +176,4 @@ export function weekMessage(days) {
 export const EMPTY_MESSAGES = {
     forecast: { title: 'Predpoveď sa pripravuje', body: 'Hodinové dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
     week: { title: 'Predpoveď sa pripravuje', body: 'Týždenné dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
-    loading: { headline: 'Načítavam…', body: '' },
 };

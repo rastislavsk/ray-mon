@@ -161,6 +161,8 @@ b {
     font-weight: 600;
     color: var(--ink);
 }
+/* Kto si v systéme vypol pohyb, nesmie ho vidieť nikde - ani tam, kde by animáciu malo
+   pravidlo s vyššou špecificitou. Preto `!important`, rovnako ako pri .hidden. */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -2643,8 +2645,8 @@ b {
    pravidiel s `display` malo vyššiu špecificitu a dve z nich sa naozaj prejavili
    (`.chart-legend span` nechávalo v legende položky ku krivkám, ktoré sa nekreslili).
    Poradie v súbore proti vyššej špecificite nepomôže, preto tu `!important` je.
-   Je to jediné miesto v tomto súbore, kde sa používa, a je to zámer: prvok s triedou
-   .hidden nemá byť vidno nikdy, takže niet čo prebíjať. Stráži to e2e test
+   Okrem prefers-reduced-motion hore je to jediné miesto v tomto súbore, kde sa používa,
+   a je to zámer: prvok s triedou .hidden nemá byť vidno nikdy, takže niet čo prebíjať. Stráži to e2e test
    ".hidden skryje každý prvok v stránke". */
 .hidden {
     display: none !important;

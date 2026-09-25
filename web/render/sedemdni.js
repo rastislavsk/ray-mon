@@ -69,7 +69,7 @@ function weatherBadge(sunny, cloudPct) {
 function peakMetaLine(day) {
     if (!Number.isFinite(day.peakKw) || day.peakHour == null) return '';
     const pct = usePct(day);
-    let html = `<span>⚡ <b>${day.peakKw.toFixed(1)} kW</b> o ${hourLabel(day.peakHour)}</span>`;
+    let html = `<span>⚡ <b>${fmt1(day.peakKw)} kW</b> o ${hourLabel(day.peakHour)}</span>`;
     if (pct != null) html += `<span>${pct} % z jasnej oblohy</span>`;
     return html;
 }
@@ -145,8 +145,8 @@ function renderTableAndTabs(days, sel, dom) {
             const peakAt = d.peakHour == null ? '–' : `o ${hourLabel(d.peakHour)}`;
             return (
                 `<tr class="${i === 0 ? 'today' : ''}${i === sel ? ' sel' : ''}" data-day-index="${i}"><td>${weekDayShort(d.date, i)}${dateSub}</td>` +
-                `<td class="${tiers[i] ? `tier-${tiers[i]}` : ''}">${d.kwhTotal.toFixed(1)} kWh</td><td class="mid">${skyCell(d.cloudAvgPct)}</td><td class="mid${useTier(pct)}">${pct == null ? '–' : `${pct} %`}</td>` +
-                `<td>${d.peakKw.toFixed(1)} kW<span class="sub">${peakAt}</span></td></tr>`
+                `<td class="${tiers[i] ? `tier-${tiers[i]}` : ''}">${fmt1(d.kwhTotal)} kWh</td><td class="mid">${skyCell(d.cloudAvgPct)}</td><td class="mid${useTier(pct)}">${pct == null ? '–' : `${pct} %`}</td>` +
+                `<td>${fmt1(d.peakKw)} kW<span class="sub">${peakAt}</span></td></tr>`
             );
         })
         .join('');
@@ -189,7 +189,7 @@ function renderList(s, rows, dom) {
 function dayInfo(day, progress) {
     const parts = [];
     if (Number.isFinite(day.peakKw) && day.peakHour != null)
-        parts.push(`<span>Špička <b>${day.peakKw.toFixed(1)} kW</b> o ${hourLabel(day.peakHour)}</span>`);
+        parts.push(`<span>Špička <b>${fmt1(day.peakKw)} kW</b> o ${hourLabel(day.peakHour)}</span>`);
     parts.push(`<span>Výroba <b>${fmt1(day.kwhTotal)} kWh</b></span>`);
     const pct = usePct(day);
     if (pct != null) parts.push(`<span>Využitie <b>${pct} %</b> z jasnej oblohy</span>`);
@@ -230,7 +230,7 @@ function renderView(detail, narrow, tall, dom) {
     // a ostalo na ňu miesto (`tall`, viď WEEK_MSG_MIN_H) - prehľad sa nemá kvôli nej rozscrollovať.
     dom.weekMsgBlock.classList.toggle('hidden', narrow && !detail && !tall);
     const vidno = detail === 'day' ? ['weekBlockCurve', 'weekBlockHeat'] : detail === 'week' ? ['weekBlockBars', 'weekBlockHeat'] : [];
-    for (const key of ['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve'])
+    for (const key of /** @type {const} */ (['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve']))
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
     dom.weekDayHead.classList.toggle('hidden', !detail);
     // Bodky patria k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
@@ -339,7 +339,7 @@ function renderHeat(state, days, sel, detail, dom) {
     dom.weekHeat.setAttribute('viewBox', `0 0 ${heat.W} ${heat.H}`);
     dom.weekHeat.setAttribute('height', String(heat.H));
     writeHtml(dom.weekHeat, weekHeatSvg(heat), 'weekHeat');
-    dom.weekHeatScale.innerHTML = `<span>0 kW</span><span class="sw">${heat.legend.map((l) => `<i class="tier-${l.tier}" style="opacity:${(0.12 + l.frac * 0.8).toFixed(2)}"></i>`).join('')}</span><span>${heat.max.toFixed(1)} kW</span>`;
+    dom.weekHeatScale.innerHTML = `<span>0 kW</span><span class="sw">${heat.legend.map((l) => `<i class="tier-${l.tier}" style="opacity:${(0.12 + l.frac * 0.8).toFixed(2)}"></i>`).join('')}</span><span>${fmt1(heat.max)} kW</span>`;
 }
 
 /** @param {import('../dom.js').Dom} dom */

@@ -68,6 +68,8 @@ function checkSite(site, errors) {
     if (!Number.isFinite(site.lat) || Math.abs(site.lat) > 90) errors.push('Zemepisná šírka musí byť od −90 do 90.');
     if (!Number.isFinite(site.lon) || Math.abs(site.lon) > 180) errors.push('Zemepisná dĺžka musí byť od −180 do 180.');
     if (!isTimezone(site.timezone)) errors.push('Lokalite chýba časové pásmo. Vyber ju zo zoznamu.');
+    const E = SETTINGS_LIMITS.elevationM;
+    if (!inRange(site.elevationM, E)) errors.push(`Nadmorská výška musí byť od ${E.min} do ${E.max} m.`);
 }
 
 /** Chyby jednej plochy panelov. @param {PlantString} x @param {number} i @param {string[]} errors */

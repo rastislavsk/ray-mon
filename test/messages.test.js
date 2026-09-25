@@ -39,7 +39,7 @@ test('forecastDayMessage: slabý deň, dnes a zajtra', () => {
     const today = forecastDayMessage(pts, true, th);
     assert.equal(today.title, 'Najsilnejšie slnko okolo 13:00');
     assert.match(today.body, /medzi 11:00 a 16:00/);
-    assert.match(forecastDayMessage(pts, false, th).body, /~6\.0 kW/);
+    assert.match(forecastDayMessage(pts, false, th).body, /~6,0 kW/);
     assert.equal(forecastDayMessage([], true, th).title, 'Dnes bude slabo');
 });
 
@@ -57,7 +57,7 @@ test('dayDetailMessage: text platí pre ktorýkoľvek deň, lebo deň nepomenúv
     ];
     const msg = dayDetailMessage(pts, th);
     assert.equal(msg.title, 'Najsilnejšie slnko okolo 13:00');
-    assert.match(msg.body, /~6\.0 kW/);
+    assert.match(msg.body, /~6,0 kW/);
     assert.match(msg.body, /medzi 11:00 a 16:00/);
     // Žiadne "dnes" ani "zajtra" - správa sa ukazuje aj pri dňoch o päť dní ďalej.
     assert.doesNotMatch(`${msg.title} ${msg.body}`, /dnes|zajtra/i);

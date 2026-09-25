@@ -8,14 +8,15 @@ import { KIOSK } from './config.js';
  *   realCurveToday: Array<{ hour: number, kw: number }>, updatedAt: string }} PvData
  */
 
-/** Kiosk vracia vnútorné JSON ako HTML-escapovaný reťazec. @param {string} str */
+/** Kiosk vracia vnútorné JSON ako HTML-escapovaný reťazec. `&amp;` ide posledný - inak by
+ * text "&lt;", ktorý bol v názve naozaj, skončil ako "<" (dekódovaný dvakrát). @param {string} str */
 export function decodeEntities(str) {
     return str
         .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
-        .replace(/&#39;/g, "'");
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&');
 }
 
 /**
