@@ -661,31 +661,35 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
     expect(errors).toEqual([]);
 });
 
-test('nastavenie: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }) => {
+test('info: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }) => {
     const errors = await openApp(page);
-    await page.locator('#nav-nastavenie').click();
-    await expect(page.locator('#nav-nastavenie .lbl')).toHaveText('Nastavenie');
-    await expect(page.locator('#settings-title')).toHaveText('Nastavenie');
+    await page.locator('#nav-info').click();
+    await expect(page.locator('#nav-info .lbl')).toHaveText('Info');
+    // Zdieľanie sa presunulo z Nastavenia do Info - v Nastavení už nie je.
+    await expect(page.locator('#panel-nastavenie #info-share')).toHaveCount(0);
 
-    // Karta je zoznam nastavení: položka je vidno, jej obsah až po ťuknutí na ňu.
-    await expect(page.locator('#settings-share summary')).toBeVisible();
+    // Karta je zoznam položiek: položka je vidno, jej obsah až po ťuknutí na ňu.
+    await expect(page.locator('#info-share summary')).toBeVisible();
     await expect(page.locator('#share-whatsapp')).toBeHidden();
-    await page.locator('#settings-share summary').click();
+    await page.locator('#info-share summary').click();
     await expect(page.locator('#qrcode')).toBeVisible();
     await expect(page.locator('#share-whatsapp')).toBeVisible();
     await expect(page.locator('#share-whatsapp')).toHaveAttribute('href', /wa\.me/);
 
     // Druhé ťuknutie položku zase zavrie - nič iné na karte sa tým nemení.
-    await page.locator('#settings-share summary').click();
+    await page.locator('#info-share summary').click();
     await expect(page.locator('#share-whatsapp')).toBeHidden();
     expect(errors).toEqual([]);
 });
 
-test('info: karta vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
+test('info: položka Ako čítať ciferník vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-info').click();
     await expect(page.locator('#panel-info')).toBeVisible();
-    await expect(page.locator('#info-title')).toHaveText('Ako čítať ciferník');
+    await expect(page.locator('#info-title')).toHaveText('Info');
+    // Karta je zoznam položiek ako Nastavenie: návod je vidno až po ťuknutí na položku.
+    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await page.locator('#info-guide > summary').click();
     // Ilustračný ciferník aj štyri vysvetlivky: prstenec, bodka "teraz", oblúk výkonu, jazdec.
     await expect(page.locator('#panel-info .info-dial')).toBeVisible();
     await expect(page.locator('#panel-info .info-row')).toHaveCount(4);
@@ -1271,7 +1275,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
         await ocakavajKartu(page, 'nastavenie');
-        await swipe(page, '.settings-list', { dx: 120 });
+        await swipe(page, '#panel-nastavenie .settings-list', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
@@ -1833,8 +1837,8 @@ test.describe('zdieľanie nastavenia odkazom', () => {
 
     test('zdieľanie: odkaz nesie nastavenie a kiosk len po zaškrtnutí', async ({ page }) => {
         await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-share > summary').click();
+        await page.locator('#nav-info').click();
+        await page.locator('#info-share > summary').click();
         const wa = page.locator('#share-whatsapp');
         const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
         expect(await shared()).toBe(APP_URL);
@@ -1848,8 +1852,8 @@ test.describe('zdieľanie nastavenia odkazom', () => {
 
     test('ukážku sa zdieľať nedá, len holý odkaz', async ({ page }) => {
         await openApp(page, { settings: null });
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-share > summary').click();
+        await page.locator('#nav-info').click();
+        await page.locator('#info-share > summary').click();
         await expect(page.locator('#share-options')).toBeHidden();
     });
 

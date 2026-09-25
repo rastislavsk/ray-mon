@@ -1,4 +1,4 @@
-// Karta Nastavenie, položka „Zdieľať appku": QR kód (knižnica z CDN, generuje sa pri prvom
+// Karta Info, položka „Zdieľať appku": QR kód (knižnica z CDN, generuje sa pri prvom
 // otvorení karty) a odkaz na WhatsApp. Odkaz môže niesť aj nastavenie elektrárne, takže sa
 // QR kód prekreslí, keď sa zmení to, čo sa pribaľuje.
 
