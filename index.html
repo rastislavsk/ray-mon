@@ -17,15 +17,12 @@
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="RAY-MON" />
-        <!-- Písma: štýl je na fonts.googleapis.com, samotné súbory na fonts.gstatic.com. Spojenie
-             na oba servery sa otvorí hneď, nie až keď prehliadač štýl stiahne a prečíta.
-             crossorigin je pri gstatic nutný: písma sa sťahujú v režime CORS. -->
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
-        />
+        <!-- Písma sú v repozitári (fonts/, @font-face v style.css). Tieto dve sú na obrazovke od
+             prvej chvíle - text stránky a veľké číslo v ciferníku - tak ich prehliadač začne
+             sťahovať hneď, nie až po prečítaní štýlu. crossorigin je pri písmach povinný, inak
+             by ich stiahol dvakrát. -->
+        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="preload" href="fonts/ibm-plex-mono-600-latin.woff2" as="font" type="font/woff2" crossorigin />
         <link rel="stylesheet" href="style.css" />
         <!-- integrity: prehliadač knižnicu spustí, len ak je to presne tento súbor (hash z cdnjs).
              Keby niekto na CDN obsah podvrhol, cudzí skript by mal prístup k uloženému

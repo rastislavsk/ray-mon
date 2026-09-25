@@ -5,3 +5,6 @@
 
 # Binárne súbory sa nenormalizujú.
 *.png binary
+
+# Písma sú binárne, git ich nesmie normalizovať.
+*.woff2 binary

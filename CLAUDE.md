@@ -10,8 +10,9 @@ ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 - **Žiadny build krok, framework ani bundler.** Stránka sa servíruje tak, ako leží v repozitári.
 - **Žiadne runtime závislosti.** Jediná externá knižnica je QR kód z CDN, načítaný s `defer`
   a nepovinný. Má v `index.html` hash v `integrity` – pri zmene verzie treba zmeniť aj ten
-  (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Vývojové závislosti (lint,
-  testy) sú v poriadku.
+  (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Písma sú v repozitári
+  (`fonts/`, licencia OFL), nie z Google Fonts. Vývojové závislosti (lint, testy) sú
+  v poriadku.
 - **Typy cez JSDoc a `tsc --checkJs`**, nie cez `.ts` súbory.
 - **Doménová logika patrí do `shared/`** a nesmie sa dotýkať DOM, siete ani `Date.now()`.
   Čas a dáta do nej vstupujú ako parametre, aby sa dala testovať.
@@ -80,9 +81,9 @@ Predpoveď je zamknutá súborom `test/golden/forecast.json`. Zmenu výpočtu po
 `UPDATE_GOLDEN=1 npm test` a popíš ju v pull requeste – inak ide o neúmyselnú regresiu.
 
 Keď meníš vzhľad, pusti `npm run screenshots` a pribalené obrázky daj do toho istého pull
-requestu – inak sa README rozíde s appkou. V CI to zámerne nebeží: generátor si ťahá písma
-z CDN a berie prehliadač z Playwrightu, takže by každá aktualizácia písma alebo Chromia
-sčervenala PR, ktorý sa vzhľadu ani netýka. Na jednom stroji sú obrázky bajtovo rovnaké,
+requestu – inak sa README rozíde s appkou. V CI to zámerne nebeží: generátor berie prehliadač
+z Playwrightu, takže by každá aktualizácia Chromia sčervenala PR, ktorý sa vzhľadu ani netýka.
+(Písma sú v repozitári, `fonts/`, takže od verzie na CDN už snímky nezávisia.) Na jednom stroji sú obrázky bajtovo rovnaké,
 takže rozdiel v `git status` znamená naozajstnú zmenu vzhľadu.
 
 ## Nasadenie a cache: prvok v HTML a `byId` sa menia v dvoch krokoch
