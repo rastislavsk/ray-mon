@@ -648,6 +648,60 @@ test('7 dní na desktope: karta ostáva celá, výber dňa naprieč komponentmi'
     expect(errors).toEqual([]);
 });
 
+/** Karta 7 dní sa prekresľuje pri každom tiknutí hodín a obnove dát. Prepísané tlačidlo by
+ * zobralo so sebou aj fokus klávesnice - človek by z rebríčka vypadol každých pár sekúnd. */
+test('7 dní: fokus klávesnice prežije obnovu dát aj výber dňa v prepínači', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-7dni').click();
+    const riadok = page.locator('#week-list [data-day-index="2"]');
+    await riadok.focus();
+    // Značka na prvku: nové tlačidlo s rovnakým obsahom by ju nemalo.
+    await riadok.evaluate((el) => (el.dataset.povodne = '1'));
+    // Vyššie okno prekreslí kartu (ukáže sa správa týždňa) - rovnaké prekreslenie ako pri
+    // tiknutí hodín, len ho netreba čakať pol minúty.
+    await page.setViewportSize({ width: 390, height: WEEK_MSG_MIN_H + 40 });
+    await expect(page.locator('#week-msg-block')).toBeVisible();
+    expect(await page.evaluate(() => document.activeElement?.getAttribute('data-povodne')), 'prekreslenie zhodilo fokus z rebríčka').toBe(
+        '1',
+    );
+
+    // Na širokej obrazovke: Enter na dni v prepínači zmení výber a prepíše prepínač - fokus
+    // ostane na tom istom dni.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    const tab = page.locator('#week-day-tabs [data-day-index="4"]');
+    await tab.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#week-day-tabs .utab.active')).toHaveAttribute('data-day-index', '4');
+    expect(
+        await page.evaluate(
+            () => document.activeElement?.closest('#week-day-tabs') && document.activeElement.getAttribute('data-day-index'),
+        ),
+    ).toBe('4');
+    expect(errors).toEqual([]);
+});
+
+test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta nedostupné"', async ({ page }) => {
+    /** @type {() => void} */
+    let pustit = () => {};
+    const zadrzane = new Promise((r) => (pustit = () => r(undefined)));
+    // Počasie príde až na pokyn; dovtedy appka len načítava.
+    await page.route(/api\.open-meteo\.com/, async (route) => {
+        await zadrzane;
+        await route.fulfill({ json: weather });
+    });
+    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com/, (route) =>
+        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
+    );
+    await page.clock.setFixedTime(FIXED_NOW);
+    await page.goto('/');
+    // Hodiny vykreslí až appka (v HTML je 00:00) - "načítavam…" potom nie je len text zo
+    // statickej stránky, ale to, čo appka sama napísala. Ukážka je Londýn, teda 12:00.
+    await expect(page.locator('#current-time-display')).toHaveText('12:00');
+    await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
+    pustit();
+    await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+});
+
 /**
  * Bubliny sú od zavedenia rebríčka len na širokej obrazovke, kde majú všetky tri meta riadok
  * so špičkou a využitím. Na mobile to, čo v ňom stálo, hovorí detail dňa.

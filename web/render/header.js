@@ -7,7 +7,8 @@ import { localMinutes } from '../../shared/solar.js';
 
 /** @param {import('../state.js').AppState} state */
 export function updatedLine(state) {
-    if (state.dataError || (!state.pv && !state.forecast)) return 'dáta nedostupné';
+    if (state.loading) return 'načítavam…';
+    if (!state.pv && !state.forecast) return 'dáta nedostupné';
     if (state.demo) return 'ukážka · nastav si elektráreň';
     // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
     if (!state.pv) return state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede';
