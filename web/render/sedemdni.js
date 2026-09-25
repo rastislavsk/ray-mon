@@ -42,8 +42,8 @@ function dimsFor(state, key) {
     return size ? fillDims(size.w, size.h) : chartDims(state.wide);
 }
 
-/** Vstup grafu priebehu vybraného dňa - zdieľaný s tooltipom. Dnešok tu ukazuje nameranú
- * krivku rovnako ako graf na karte Dnes-Zajtra; ostatné dni zatiaľ merané nemajú.
+/** Vstup grafu priebehu vybraného dňa - zdieľaný s tooltipom. Dnešok tu ukazuje aj nameranú
+ * krivku; ostatné dni zatiaľ merané nemajú.
  * @param {import('../state.js').AppState} state */
 export function weekCurveModel(state) {
     const days = state.forecast ? state.forecast.days : [];

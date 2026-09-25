@@ -22,7 +22,8 @@ const linked = settingsFromLink(location.hash);
 if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
 const incoming = linked && !(saved && sameSettings(linked, saved)) ? linked : null;
 const layout = { wide: mq.wide.matches, tall: isTall() };
-const store = createStore(initialState(now, seasonFor(now), layout, { settings: saved || demoSettings(), demo: !saved, incoming }));
+const settings = saved || demoSettings();
+const store = createStore(initialState(now, seasonFor(now, settings.site.timezone), layout, { settings, demo: !saved, incoming }));
 
 store.subscribe((state) => render(state, dom));
 const refresh = initInteractions(store, dom, mq);

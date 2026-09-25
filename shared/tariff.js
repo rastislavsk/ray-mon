@@ -3,6 +3,7 @@
 
 import { AUTO_NIGHT_WINDOW, DEVICES, MINUTES_PER_DAY, SUMMER_MONTHS, TARIFF_WINDOWS } from './config.js';
 import { timeStrToMinutes } from './format.js';
+import { localDateKey } from './solar.js';
 
 /** @typedef {import('./config.js').Season} Season */
 /** @typedef {import('./config.js').Tier} Tier */
@@ -20,9 +21,13 @@ export function isInWindow(minutes, start, end) {
     return minutes >= s && minutes < e;
 }
 
-/** Leto = marec až október. @param {Date} date @returns {Season} */
-export function seasonFor(date) {
-    const month = date.getMonth() + 1;
+/**
+ * Leto = marec až október. Mesiac sa berie v časovom pásme lokality, nie telefónu - ako
+ * všetko ostatné, čo appka o čase elektrárne hovorí.
+ * @param {Date} date @param {string} timezone @returns {Season}
+ */
+export function seasonFor(date, timezone) {
+    const month = Number(localDateKey(date, timezone).slice(5, 7));
     return month >= SUMMER_MONTHS.from && month <= SUMMER_MONTHS.to ? 'summer' : 'winter';
 }
 
@@ -42,7 +47,7 @@ export function deviceWindow(season) {
 }
 
 /**
- * Segmenty pásu dňa od 00:00 do 24:00: {startMin, min, cls}. Odvodené z okien,
+ * Tarifné pásma dňa (denný prstenec ciferníka) od 00:00 do 24:00: {startMin, min, cls}. Odvodené z okien,
  * nočné okno je rozdelené na koniec a začiatok dňa.
  * @param {Season} season
  */

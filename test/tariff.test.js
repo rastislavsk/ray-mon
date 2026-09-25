@@ -17,10 +17,18 @@ const m = (/** @type {number} */ h, /** @type {number} */ min = 0) => h * 60 + m
 const th = powerThresholds(PLANT);
 
 test('seasonFor: marec až október leto, inak zima', () => {
-    assert.equal(seasonFor(new Date(2026, 2, 1)), 'summer');
-    assert.equal(seasonFor(new Date(2026, 9, 31)), 'summer');
-    assert.equal(seasonFor(new Date(2026, 10, 1)), 'winter');
-    assert.equal(seasonFor(new Date(2026, 1, 15)), 'winter');
+    const tz = 'Europe/Bratislava';
+    assert.equal(seasonFor(new Date('2026-03-01T12:00:00Z'), tz), 'summer');
+    assert.equal(seasonFor(new Date('2026-10-31T12:00:00Z'), tz), 'summer');
+    assert.equal(seasonFor(new Date('2026-11-01T12:00:00Z'), tz), 'winter');
+    assert.equal(seasonFor(new Date('2026-02-15T12:00:00Z'), tz), 'winter');
+});
+
+test('seasonFor: mesiac ide podľa pásma lokality, nie telefónu', () => {
+    // 31. 10. 23:30 UTC: v Bratislave (UTC+1) je už 1. novembra, v Londýne ešte 31. októbra.
+    const prelom = new Date('2026-10-31T23:30:00Z');
+    assert.equal(seasonFor(prelom, 'Europe/Bratislava'), 'winter');
+    assert.equal(seasonFor(prelom, 'Europe/London'), 'summer');
 });
 
 test('isInWindow zvláda okno cez polnoc', () => {

@@ -549,8 +549,8 @@ test('7 dní na mobile: bublina so súčtom otvára detail týždňa', async ({ 
 });
 
 /**
- * Priebeh výroby na karte 7 dní ukazuje dnešok rovnako ako graf na karte Dnes-Zajtra:
- * nameraná krivka a položka v legende. Iný deň nameraný nie je, takže z neho musí
+ * Priebeh výroby na karte 7 dní ukazuje pri dnešku aj nameranú výrobu: krivku a položku
+ * v legende. Iný deň nameraný nie je, takže z neho musí
  * zmiznúť aj krivka, aj legenda.
  */
 test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page }) => {
@@ -709,11 +709,12 @@ test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ p
 });
 
 /**
- * Utilita .hidden je jediná trieda (špecificita 0,1,0) a nepoužíva !important, takže ju
- * prebije akékoľvek pravidlo s `display` a vyššou špecificitou - ID selektor (#panel-x),
- * ale rovnako aj potomkovský (.chart-legend span). Appka by potom prvok "skryla" a on by
- * ostal na obrazovke. Test preto neberie zoznam prvkov, ktorý by sa dal zabudnúť doplniť,
- * ale prejde všetky prvky v stránke a overí, že .hidden na každom z nich naozaj zaberie.
+ * Utilita .hidden je jediná trieda (špecificita 0,1,0). Bez `!important` ju prebilo akékoľvek
+ * pravidlo s `display` a vyššou špecificitou - ID selektor (#panel-x), ale rovnako aj
+ * potomkovský (.chart-legend span) - a appka by prvok "skryla", hoci by ostal na obrazovke.
+ * Preto má `!important` ako jediné miesto v style.css (viď CLAUDE.md). Test neberie zoznam
+ * prvkov, ktorý by sa dal zabudnúť doplniť, ale prejde všetky prvky v stránke a overí, že
+ * .hidden na každom z nich naozaj zaberie.
  */
 test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ page }) => {
     const errors = await openApp(page);
@@ -868,12 +869,11 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
 
 /**
  * Na mobile a tablete (do 1023px) a od 620px výšky sa karta Terazky správa ako obrazovka,
- * nie dokument (rovnaký princíp ako desktop vyššie): ciferník ustupuje podľa výšky okna
- * (clamp s dvh), aby pod ním vždy ostalo miesto na pás dňa. Testuje sa naprieč bežnými
- * výškami mobilov, od veľkého telefónu (844px) po malý (667px, iPhone SE) až po spodnú
- * hranicu režimu (620px) - všade musí byť vidno naraz ciferník, odporúčanie aj celý pás
- * dňa (vrátane časovej osi 00-24), bez scrollovania a bez toho, aby čokoľvek zapadlo pod
- * spodnú navigáciu. Čo sa deje pod 620px, hovorí test hneď za týmto.
+ * nie dokument (rovnaký princíp ako desktop vyššie): ciferník ustupuje podľa výšky okna,
+ * aby pod ním vždy ostalo miesto na odporúčanie. Testuje sa naprieč bežnými výškami mobilov,
+ * od veľkého telefónu (844px) po malý (667px, iPhone SE) až po spodnú hranicu režimu
+ * (620px) - všade musí byť vidno naraz ciferník s denným prstencom aj odporúčanie s bodkami,
+ * bez scrollovania a bez toho, aby čokoľvek zapadlo pod spodnú navigáciu. Čo sa deje pod 620px, hovorí test hneď za týmto.
  */
 test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollovania', async ({ page }) => {
     for (const height of [844, 740, 667, 620]) {
@@ -1063,8 +1063,8 @@ async function tahajVBode(page, { x, y, dx }) {
     await cdp.detach();
 }
 
-/** Ťahanie prstom od stredu prvku, nie ponad neho: gesto musí začať presne na ňom. Bežec na
- * páse dňa je široký 34 px, takže `swipe` (ten začína o pol ťahu skôr) by sa naň netrafil.
+/** Ťahanie prstom od stredu prvku, nie ponad neho: gesto musí začať presne na ňom. Jazdec na
+ * prstenci je široký 44 px, takže `swipe` (ten začína o pol ťahu skôr) by sa naň netrafil.
  * @param {import('@playwright/test').Page} page @param {string} sel @param {{ dx: number, dy?: number, ms?: number }} opts */
 async function tahajOdStredu(page, sel, { dx, dy = 0, ms = 300 }) {
     const box = await page.locator(sel).boundingBox();

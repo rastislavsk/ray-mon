@@ -20,7 +20,7 @@ import { loadData, searchPlaces } from './data.js';
 import { initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { saveSettings } from './settings-store.js';
-import { panelChange } from './state.js';
+import { clockPatch, panelChange } from './state.js';
 import { initSwipe } from './swipe.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -569,6 +569,8 @@ function applySettings(store, next, refresh, extra = {}) {
         demo: false,
         pv: null,
         forecast: null,
+        // Nová lokalita môže mať iné pásmo, a na prelome mesiaca teda aj inú sezónu.
+        ...clockPatch(new Date(), next.site),
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
@@ -628,10 +630,10 @@ function initTicks(store, mq) {
             pv: result.pv,
             forecast: result.forecast,
             dataError: !result.pv && !result.forecast,
-            now: new Date(),
+            ...clockPatch(new Date(), site),
         });
     };
-    setInterval(() => !document.hidden && store.setState({ now: new Date() }), REFRESH.clockMs);
+    setInterval(() => !document.hidden && store.setState(clockPatch(new Date(), store.get().site)), REFRESH.clockMs);
     setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
     document.addEventListener('visibilitychange', () => !document.hidden && refresh());
     mq.wide.addEventListener('change', (e) => store.setState({ wide: e.matches }));

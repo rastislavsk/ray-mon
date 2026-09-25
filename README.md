@@ -19,8 +19,8 @@ v tomto popise.
 | ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Info](docs/img/info.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
-sú syntetické. Prekresliť ich vie `npm run screenshots`. Karta Nastavenie na obrázku nie je,
-QR kód v nej kreslí knižnica z CDN.
+sú syntetické. Prekresliť ich vie `npm run screenshots`. Karta Nastavenie na obrázku nie je
+a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kreslí knižnica z CDN.
 
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
@@ -66,8 +66,8 @@ tooltip sa pri ňom neukáže tiež. Nová karta sa pritom prisunie z tej strany
 rovnako pri ťahaní aj pri kliku na navigáciu. Kto má v systéme zapnutý útlm pohybu, dostane
 prepnutie bez animácie. Ťahanie si pre seba
 nechávajú len veci, ktoré sa samy posúvajú do strán: pás odporúčaní na karte Terazky – ten
-si ho necháva aj na krajnej správe, takže ťah v ňom nikdy neopustí kartu. Bežec na páse dňa
-sa ťahá ako predtým.
+si ho necháva aj na krajnej správe, takže ťah v ňom nikdy neopustí kartu – a jazdec na prstenci
+ciferníka, ktorý sa ťahá a kartu neprepne.
 
 Systémové tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) vracia o krok späť
 v appke: najprv zavrie detail dňa, potom sa vracia po kartách v opačnom poradí, než si

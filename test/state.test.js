@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { demoSettings } from '../shared/settings.js';
 import {
+    clockPatch,
     createStore,
     initialState,
     navChange,
@@ -39,6 +40,17 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
     off();
     store.setState({ panel: 'nastavenie' });
     assert.equal(calls, 0);
+});
+
+test('posun hodín cez prelom októbra a novembra prepne sezónu bez načítania stránky', () => {
+    const site = demoSettings().site;
+    const store = createStore(
+        initialState(new Date('2026-10-31T12:00:00Z'), 'summer', { wide: false, tall: false }, { settings: demoSettings(), demo: true }),
+    );
+    store.setState(clockPatch(new Date('2026-10-31T23:59:00Z'), site));
+    assert.equal(store.get().season, 'summer', 'v Londýne je ešte 31. októbra');
+    store.setState(clockPatch(new Date('2026-11-01T00:01:00Z'), site));
+    assert.equal(store.get().season, 'winter');
 });
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {

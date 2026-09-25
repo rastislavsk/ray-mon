@@ -474,8 +474,7 @@ b {
     container-type: size;
 }
 /* Nad ciferníkom nie je nič - ciferník tak môže byť na každej šírke rovnako veľký.
-   Strop 280px drží jazdec: pri 6. a 18. hodine trčí do strán a vo vnútri karty musí
-   ostať aj na úzkom displeji. */
+   Jeho strop drží --dial-max na obale (.dial-wrap), plátno ho len vyplní. */
 .dial-svg {
     width: 100%;
     height: 100%;
@@ -577,7 +576,8 @@ b {
 }
 
 /* ---- Spotrebiče: jazdec na dennom prstenci ----------------------------------
-   Vrstva nad ciferníkom. Značka "teraz" je vidno stále, jazdec len počas náhľadu.
+   Vrstva nad ciferníkom. Jazdec je v nej stále: v pokoji je značkou "teraz" (.at-now),
+   počas náhľadu objímkou a značku "teraz" vtedy preberá samostatná bodka (.dial-now).
    Obe sedia v percentách obalu, takže sa s ciferníkom samy zmenšujú. */
 .dial-layer {
     position: absolute;
@@ -991,11 +991,9 @@ b {
     font-size: var(--fs-sm);
 }
 
-/* Mobil a tablet (do 1023px): karta stráca nadpisy "Aktuálny výkon" a "Čo robiť teraz",
-   uvoľnené miesto dostanú menšie medzery medzi ciferníkom, odporúčaním a pásom dňa -
-   komponenty tak sedia bližšie pri sebe namiesto toho, aby po nadpisoch ostala diera.
-   Na desktope (viď nižšie) ide uvoľnené miesto inam - do väčšieho ciferníka - preto sa
-   táto medzera netrhá tam.
+/* Mobil a tablet (do 1023px): menšie medzery medzi ciferníkom a odporúčaním - na úzkej
+   obrazovke je výška vzácnejšia než vzduch medzi komponentmi. Na desktope (viď nižšie) je
+   miesta dosť, tam ostávajú medzery plné.
    Medzera pod kartou "Čo robiť teraz" tu nie je - .verdict je posledná vec v karte. */
 @media (max-width: 1023px) {
     .dial-hero {
@@ -1019,12 +1017,12 @@ b {
    ale appka sa na túto kartu správa ako obrazovka, nie dokument (rovnaký princíp ako
    .panel na desktope nižšie). :has() zapne režim len vtedy, keď #page má
    data-panel="terazky" (nastavuje ho renderPanels vo web/render/index.js) - iné karty
-   (Dnes-Zajtra, 7 dní, Nastavenie) zostávajú bežne scrollovateľné, nič na nich sa nemení.
+   (7 dní, Nastavenie, Info) zostávajú bežne scrollovateľné, nič na nich sa nemení.
 
    Druhá podmienka je min-height: 620px, teda "keď je dosť výšky". Pod ňou sa režim vôbec
    nezapne a karta je bežný scrollovateľný dokument ako ostatné tri. Dôvod: v režime
    obrazovky sa pretečený obsah odstrihne (.page { overflow: hidden } nižšie), a odstrihnúť
-   časovú os pása dňa je horšie než dovoliť scroll. Podmienka je na výšku, nie na
+   odporúčanie pod ciferníkom je horšie než dovoliť scroll. Podmienka je na výšku, nie na
    orientáciu - telefón na šírku je len jeden z prípadov, kedy výška nestačí; to isté robí
    zväčšené systémové písmo, rozdelená obrazovka aj starý malý telefón na výšku.
    620px nie je nové číslo: je to najnižšia výška, ktorú overuje e2e test garancie, takže
@@ -1290,7 +1288,7 @@ b {
 }
 /* pan-y, nie none: zvislé posúvanie stránky patrí prehliadaču, aj keď prst začne na grafe -
    inak sa cez graf nedá scrollovať vôbec. Vodorovnú zložku si necháva JS (listovanie kariet
-   vo web/swipe.js, tooltip vo web/interactions.js), rovnako ako pri páse dňa vyššie. */
+   vo web/swipe.js, tooltip vo web/interactions.js). */
 .chart-wrap {
     position: relative;
     touch-action: pan-y;

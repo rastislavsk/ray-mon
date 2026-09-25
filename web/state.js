@@ -1,6 +1,7 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
+import { seasonFor } from '../shared/tariff.js';
 import { PANELS } from './dom.js';
 
 /**
@@ -128,6 +129,16 @@ export function createStore(initial) {
 }
 
 /** @typedef {ReturnType<typeof createStore<AppState>>} Store */
+
+/**
+ * Posun hodín: nový čas a s ním aj sezóna. Sezóna nie je nastavenie z času štartu -
+ * appka otvorená cez prelom októbra a novembra musí prejsť na zimné tarifné okná sama,
+ * bez načítania stránky. Počíta sa v pásme lokality, rovnako ako hodiny.
+ * @param {Date} now @param {import('../shared/config.js').Site} site
+ */
+export function clockPatch(now, site) {
+    return { now, season: seasonFor(now, site.timezone) };
+}
 
 /**
  * Susedná karta v poradí navigácie, alebo null na kraji - listovanie sa nezacyklí.
