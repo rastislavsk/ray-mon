@@ -2,29 +2,35 @@
 // pustiť Open-Meteo ani kiosk, preto sú SYNTETICKÉ: Open-Meteo z bezoblačného modelu
 // × pevný vzor oblačnosti, kiosk z tvaru skutočnej odpovede. Spusti: node test/fixtures/generate.js
 import { writeFileSync } from 'node:fs';
-import { SITE } from '../../shared/config.js';
+import { FORECAST_API_DAYS, FORECAST_PAST_DAYS, OPEN_METEO_RADIATION, SITE } from '../../shared/config.js';
 import { clearSkyIrradiance, solarPosition } from '../../shared/solar.js';
 
 const OUT = new URL('./', import.meta.url);
+// Prvý predpovedaný deň (UTC). Pred ním je ešte FORECAST_PAST_DAYS dní minulosti, rovnako
+// ako v skutočnej odpovedi - hodina i = 0 ostáva polnocou tohto dňa, takže doterajšie dni
+// majú bajtovo tie isté hodnoty.
 const START = new Date('2026-09-05T00:00:00Z');
-const DAYS = 9;
 
 // Oblačnosť po dňoch: slnečno, polooblačno, zamračené, ... nech sú v týždni rôzne dni.
 const CLOUD_BY_DAY = [10, 45, 90, 25, 60, 5, 75, 30, 50];
+// Včerajšok (past_days).
+const CLOUD_PAST = 35;
 
+const R = OPEN_METEO_RADIATION;
+/** @type {Record<string, Array<string | number>>} */
 const hourly = {
     time: [],
-    shortwave_radiation: [],
-    direct_normal_irradiance: [],
-    diffuse_radiation: [],
+    [R.ghi]: [],
+    [R.dni]: [],
+    [R.dhi]: [],
     temperature_2m: [],
     cloud_cover: [],
 };
-for (let i = 0; i < DAYS * 24; i++) {
+for (let i = -FORECAST_PAST_DAYS * 24; i < FORECAST_API_DAYS * 24; i++) {
     const t = new Date(START.getTime() + i * 3600 * 1000);
     const sun = solarPosition(t, SITE.lat, SITE.lon);
     const clear = clearSkyIrradiance(sun.elevationDeg, SITE.elevationM);
-    const cloud = CLOUD_BY_DAY[Math.floor(i / 24)] + 5 * Math.sin(i / 3);
+    const cloud = (i < 0 ? CLOUD_PAST : CLOUD_BY_DAY[Math.floor(i / 24)]) + 5 * Math.sin(i / 3);
     const cloudFrac = Math.max(0, Math.min(1, cloud / 100));
     // Oblačnosť tlmí priame žiarenie silno, rozptýlené naopak zvýši. Celkové žiarenie
     // však nikdy neprekročí bezoblačnú oblohu - inak by "využitie" vyšlo nad 100 %.
@@ -33,15 +39,16 @@ for (let i = 0; i < DAYS * 24; i++) {
     const dhi = Math.min(clear.dhi * (1 + 2.5 * cloudFrac), Math.max(0, clear.ghi - dni * cosZ));
     const ghi = sun.elevationDeg > 0 ? dni * cosZ + dhi : 0;
     hourly.time.push(t.toISOString().slice(0, 16));
-    hourly.shortwave_radiation.push(Number(ghi.toFixed(1)));
-    hourly.direct_normal_irradiance.push(Number(dni.toFixed(1)));
-    hourly.diffuse_radiation.push(Number(dhi.toFixed(1)));
+    // Okamžité hodnoty v čase t - presne to, čo znamenajú premenné `_instant`.
+    hourly[R.ghi].push(Number(ghi.toFixed(1)));
+    hourly[R.dni].push(Number(dni.toFixed(1)));
+    hourly[R.dhi].push(Number(dhi.toFixed(1)));
     hourly.temperature_2m.push(Number((14 + 8 * Math.sin(((t.getUTCHours() - 8) / 24) * 2 * Math.PI)).toFixed(1)));
     hourly.cloud_cover.push(Math.round(Math.max(0, Math.min(100, cloud))));
 }
 writeFileSync(
     new URL('open-meteo.json', OUT),
-    JSON.stringify({ latitude: 48.48, longitude: 18.12, hourly_units: { shortwave_radiation: 'W/m²' }, hourly }, null, 1) + '\n',
+    JSON.stringify({ latitude: 48.48, longitude: 18.12, hourly_units: { [R.ghi]: 'W/m²' }, hourly }, null, 1) + '\n',
 );
 
 // Kiosk: 5-minútová krivka do 11:00 UTC (13:00 miestneho), vrchol okolo poludnia.

@@ -250,14 +250,15 @@ function hourMap(day) {
 }
 
 /** Popisky tooltipu pre bunku hodina × deň. Mapu hodín dostáva hotovú - stavať ju pre každú
- * bunku znovu znamenalo prejsť dáta dňa 13x namiesto raz.
+ * bunku znovu znamenalo prejsť dáta dňa 13x namiesto raz. Čas je okamih, nie úsek: predpoveď
+ * je okamžitý výkon o celej hodine (viď OPEN_METEO_RADIATION v config.js).
  * @param {ForecastDay} d @param {number} i @param {number} h
  * @param {Record<number, import('./solar.js').DayHourPoint>} map */
 function cellTip(d, i, h, map) {
     const cell = map[h];
     const cloudTxt = cell && cell.cloud != null ? ` · ${Math.round(cell.cloud)} % oblačnosť` : '';
     return {
-        title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)} · ${hourLabel(h)}–${hourLabel(h + 1)}`,
+        title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)} · ${hourLabel(h)}`,
         text: `${(cell ? cell.kw : 0).toFixed(2)} kW${cloudTxt}`,
     };
 }
