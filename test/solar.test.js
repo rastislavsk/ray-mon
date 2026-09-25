@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { PLANT, SITE } from '../shared/config.js';
+import { OPEN_METEO_RADIATION, openMeteoUrl, PLANT, SITE } from '../shared/config.js';
 import {
+    addDays,
     alignToLocalHours,
     buildForecast,
     clearSkyAcKw,
@@ -144,9 +145,9 @@ test('buildForecast: 7 dní, dnes = miestny dátum, zajtra má 24 hodín, golden
     assert.equal(forecast.days[0].date, '2026-09-05');
     assert.equal(forecast.hourlyTomorrow.length, 24);
     assert.equal(forecast.updatedAt, FIXED_NOW.toISOString());
-    // Open-Meteo začína o 00:00 UTC, takže dnešný miestny deň má v lete len 22 hodín, ďalšie dni 24.
+    // Open-Meteo začína o 00:00 UTC, ale o deň skôr (past_days), takže aj dnešok má všetkých 24 hodín.
     assert.ok(
-        forecast.days.every((d, i) => d.clearKwhTotal > 0 && d.hourly.length === (i === 0 ? 22 : 24)),
+        forecast.days.every((d) => d.clearKwhTotal > 0 && d.hourly.length === 24),
         'každý deň má bezoblačný strop a plný počet hodín',
     );
     // "Využitie" v karte 7 dní je pomer týchto dvoch čísel, takže nesmie vyjsť nad 100 %.
@@ -162,7 +163,8 @@ test('buildForecast: 7 dní, dnes = miestny dátum, zajtra má 24 hodín, golden
     );
 
     const goldenPath = new URL('./golden/forecast.json', import.meta.url);
-    if (!existsSync(goldenPath) || process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify(forecast, null, 1) + '\n');
+    // Odsadenie ako v uloženom súbore, aby zmena golden bola v diffe len tým, čo sa naozaj zmenilo.
+    if (!existsSync(goldenPath) || process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify(forecast, null, 2) + '\n');
     assert.deepEqual(
         forecast,
         JSON.parse(readFileSync(goldenPath, 'utf8')),
@@ -197,9 +199,73 @@ test('iná zostava: výkon rastie s počtom panelov a panel otočený od slnka d
 test('buildForecast: dni sa delia podľa časového pásma lokality', () => {
     const plant = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 0, tiltDeg: 30 }] };
     const forecast = buildForecast(fixture('open-meteo.json'), FIXED_NOW, SYDNEY, plant);
-    // FIXED_NOW je 11:00 UTC, v Sydney 21:00 toho istého dňa. Fixture začína 00:00 UTC, čo je
-    // v Sydney 10:00, takže dnešný deň tam má 14 hodín.
+    // FIXED_NOW je 11:00 UTC, v Sydney 21:00 toho istého dňa. Fixture začína deň pred ním
+    // o 00:00 UTC (past_days), v Sydney o 10:00 predošlého dňa, takže dnešok je celý.
     assert.equal(forecast.days[0].date, '2026-09-05');
-    assert.equal(forecast.days[0].hourly.length, 14);
+    assert.equal(forecast.days[0].hourly.length, 24);
     assert.equal(forecast.days.length, 7);
+});
+
+test('západne od Greenwichu je večer dnešok celý, aj keď v UTC je už zajtra', () => {
+    // Geografia Dvorian, len pásmo UTC−7 (Phoenix nemá letný čas). 5. 9. o 20:00 miestneho je
+    // v UTC už 6. 9. - bez dňa dozadu by Open-Meteo začalo až 5. 9. o 17:00 miestneho
+    // a z dneška by ostal len večer.
+    assert.match(openMeteoUrl(SITE), /[?&]past_days=1(&|$)/);
+    const phoenix = { ...SITE, timezone: 'America/Phoenix' };
+    const f = buildForecast(fixture('open-meteo.json'), new Date('2026-09-06T03:00:00Z'), phoenix, PLANT);
+    assert.equal(f.days[0].date, '2026-09-05');
+    assert.deepEqual(
+        f.days[0].hourly.map((h) => h.hour),
+        Array.from({ length: 24 }, (_, h) => h),
+    );
+    assert.ok(f.days[0].kwhTotal > 0, 'dnešok má dennú výrobu, nie len noc');
+});
+
+test('Open-Meteo: žiarenie okamžité, nie priemer predošlej hodiny', () => {
+    // Hodinové premenné sú priemerom za hodinu pred časom záznamu, poloha slnka sa ale ráta
+    // v čase záznamu - krivka bola o pol hodiny posunutá a v zime o 5 % nižšia.
+    const hourly = new URL(openMeteoUrl(SITE)).searchParams.get('hourly')?.split(',') ?? [];
+    for (const name of Object.values(OPEN_METEO_RADIATION)) assert.ok(name.endsWith('_instant') && hourly.includes(name), name);
+    assert.ok(!hourly.some((v) => /radiation$|irradiance$/.test(v)), `hodinové priemery: ${hourly.join(',')}`);
+});
+
+test('addDays: kalendárne dni aj cez prelom mesiaca, roka a prechod času', () => {
+    assert.equal(addDays('2026-03-28', 1), '2026-03-29');
+    assert.equal(addDays('2026-10-24', 2), '2026-10-26');
+    assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+    assert.equal(addDays('2028-02-28', 1), '2028-02-29');
+});
+
+test('prechod času: sedem po sebe idúcich dní, žiadny dvakrát a žiadny nechýba', () => {
+    /** Syntetické počasie od danej UTC polnoci, na hodinu pravidelné. @param {string} from @param {number} hours */
+    const weather = (from, hours) => {
+        const time = Array.from({ length: hours }, (_, i) =>
+            new Date(Date.parse(`${from}T00:00:00Z`) + i * 3600000).toISOString().slice(0, 16),
+        );
+        const v = time.map(() => 100);
+        const R = OPEN_METEO_RADIATION;
+        return { hourly: { time, [R.ghi]: v, [R.dni]: v, [R.dhi]: v, temperature_2m: v.map(() => 10), cloud_cover: v.map(() => 50) } };
+    };
+    const dni = (/** @type {string} */ from, /** @type {string} */ now) =>
+        buildForecast(weather(from, 24 * 12), new Date(now), SITE, PLANT).days.map((d) => d.date);
+    // Jeseň: 25. 10. má 25 hodín. O 00:30 20. 10. sa 25. 10. predtým objavil dvakrát a 26. 10. chýbal.
+    assert.deepEqual(dni('2026-10-19', '2026-10-19T22:30:00Z'), [
+        '2026-10-20',
+        '2026-10-21',
+        '2026-10-22',
+        '2026-10-23',
+        '2026-10-24',
+        '2026-10-25',
+        '2026-10-26',
+    ]);
+    // Jar: 29. 3. má 23 hodín. O 23:30 28. 3. sa „zajtra“ predtým preskočilo rovno na 30. 3.
+    assert.deepEqual(dni('2026-03-27', '2026-03-28T22:30:00Z'), [
+        '2026-03-28',
+        '2026-03-29',
+        '2026-03-30',
+        '2026-03-31',
+        '2026-04-01',
+        '2026-04-02',
+        '2026-04-03',
+    ]);
 });

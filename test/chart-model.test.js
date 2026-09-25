@@ -168,10 +168,8 @@ test('weekHeatModel: tooltip bunky patrí svojmu dňu a svojej hodine', () => {
         assert.equal(cell.dayIndex, ri);
         if (!cell.tip) continue;
         const point = day.hourly.find((h) => h.hour === hour);
-        assert.equal(
-            cell.tip.title,
-            `${weekDayShort(day.date, ri)} ${weekDateLabel(day.date)} · ${hourLabel(hour)}–${hourLabel(hour + 1)}`,
-        );
+        // Okamih, nie úsek - hodnota je okamžitý výkon o celej hodine.
+        assert.equal(cell.tip.title, `${weekDayShort(day.date, ri)} ${weekDateLabel(day.date)} · ${hourLabel(hour)}`);
         assert.ok(cell.tip.text.startsWith(`${(point ? point.kw : 0).toFixed(2)} kW`), `text bunky [${ri}][${ci}]: ${cell.tip.text}`);
     }
 });

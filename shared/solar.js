@@ -3,7 +3,7 @@
 // Čisté funkcie bez I/O - beží v Node, prehliadači aj Cloudflare Workeri.
 // Lokalita a zostava panelov prichádzajú ako parameter, nič z nich tu nie je natvrdo.
 
-import { CLEAR_SKY, FORECAST_DAYS_SHOWN, powerThresholds } from './config.js';
+import { CLEAR_SKY, FORECAST_DAYS_SHOWN, OPEN_METEO_RADIATION, powerThresholds } from './config.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
@@ -188,6 +188,17 @@ export function localDateKey(dateUtc, timezone) {
     return formatsFor(timezone).date.format(dateUtc);
 }
 
+/**
+ * Dátum "YYYY-MM-DD" posunutý o celé kalendárne dni. Nie o 24 hodín: deň prechodu na letný
+ * čas má 23 hodín a na zimný 25, takže 24 h od 23:30 pred jarným prechodom preskočí celý
+ * nasledujúci deň a 48 h od 00:30 pred jesenným skončí v tom istom dni druhýkrát.
+ * @param {string} dateKey @param {number} days
+ */
+export function addDays(dateKey, days) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
 /** Časť dňa pre text "silnejšie slnko príde ...". @param {Date} dateUtc @param {string} timezone */
 export function daypartFor(dateUtc, timezone) {
     const h = localHour(dateUtc, timezone);
@@ -312,22 +323,18 @@ function between(a, b, t) {
 
 /**
  * Zloží celý výstup predpovede z odpovede Open-Meteo pre danú lokalitu a zostavu. Toto je
- * jediné miesto, kde vzniká formát `forecast` - používa ho Worker aj testy.
- * @param {{ hourly: { time: string[], shortwave_radiation: number[], direct_normal_irradiance: number[],
- *   diffuse_radiation: number[], temperature_2m: number[], cloud_cover?: number[] } }} data
+ * jediné miesto, kde vzniká formát `forecast` - používa ho Worker aj testy. Žiarenie je
+ * okamžité (OPEN_METEO_RADIATION v config.js), teda patrí presne k času záznamu.
+ * @param {{ hourly: { time: string[], temperature_2m: number[], cloud_cover?: number[] } & Record<string, number[]> }} data
  * @param {Date} now @param {Site} site @param {Plant} plant
  * @returns {Forecast}
  */
 export function buildForecast(data, now, site, plant) {
     const tz = site.timezone;
-    const {
-        time,
-        shortwave_radiation: ghiArr,
-        direct_normal_irradiance: dniArr,
-        diffuse_radiation: dhiArr,
-        temperature_2m: tempArr,
-        cloud_cover: cloudArr,
-    } = data.hourly;
+    const { time, temperature_2m: tempArr, cloud_cover: cloudArr } = data.hourly;
+    const ghiArr = data.hourly[OPEN_METEO_RADIATION.ghi];
+    const dniArr = data.hourly[OPEN_METEO_RADIATION.dni];
+    const dhiArr = data.hourly[OPEN_METEO_RADIATION.dhi];
 
     const todayKey = localDateKey(now, tz);
     // Začiatok aktuálnej miestnej hodiny. Záznamy predpovede stoja na celých miestnych hodinách
@@ -354,7 +361,7 @@ export function buildForecast(data, now, site, plant) {
     const th = powerThresholds(plant);
     const ahead = strongerWindowAhead(hourly, todayKey, nowHourStart, tz, th);
 
-    const dayKeyOffset = (/** @type {number} */ days) => localDateKey(new Date(now.getTime() + days * 86400000), tz);
+    const dayKeyOffset = (/** @type {number} */ days) => addDays(todayKey, days);
     const tomorrowKey = dayKeyOffset(1);
     const tomorrowEntries = hourly.filter((h) => h.localDate === tomorrowKey);
     const tomorrowPeakKw = tomorrowEntries.reduce((max, h) => Math.max(max, h.acKw), 0);

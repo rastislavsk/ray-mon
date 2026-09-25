@@ -124,6 +124,12 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 - **Bezoblačný strop pri teplote danej hodiny.** Pôvodná appka počítala strop pri 25 °C,
   kým predpoveď pri skutočnej teplote. V chladný jasný deň preto „využitie“ vychádzalo nad
   100 %. Tu majú obe rovnakú teplotu, takže pomer vyjadruje čistú stratu oblačnosťou.
+- **Okamžité žiarenie, nie hodinový priemer.** Hodinové premenné Open-Meteo sú priemerom
+  predošlej hodiny, poloha slnka sa ale počíta v čase záznamu. Krivka tak bola o pol hodiny
+  posunutá proti nameranej a denný súčet nízky – oproti výpočtu po minútach o 1,5 % v lete
+  a 5,4 % v zime. Premenné `_instant` patria presne k svojmu času (chyba pod 0,5 %), takže
+  bod o 13:00 je výkon o 13:00, rovnako ako v krivke z kiosku. Appka si pýta aj jeden deň
+  dozadu (`past_days`), inak by západne od Greenwichu večer chýbala doterajšia časť dneška.
 - **Dáta sa nekomitujú do repozitára.** Pôvodná appka ukladala JSON do gitu každých päť
   minút cez GitHub Actions. Teraz sa neukladajú nikde: meranie ide z kiosku rovno do
   appky a predpoveď si appka počíta sama.

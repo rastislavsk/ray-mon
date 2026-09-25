@@ -124,6 +124,9 @@ export function powerThresholds(plant) {
 
 // Predpoveď: koľko dní z Open-Meteo (9 = rezerva, aby 7 miestnych dní bolo úplných aj s posunom UTC).
 export const FORECAST_API_DAYS = 9;
+// A jeden deň dozadu. Open-Meteo začína polnocou UTC, takže západne od Greenwichu by večer,
+// keď v UTC už je zajtra, chýbala celá doterajšia časť miestneho dneška (v UTC−7 po 17:00).
+export const FORECAST_PAST_DAYS = 1;
 export const FORECAST_DAYS_SHOWN = 7;
 // Počasie z Open-Meteo sa sťahuje nanovo najskôr po tomto čase; predpoveď sa z neho medzitým
 // len prepočítava pre aktuálny čas. Open-Meteo ju aj tak obnovuje raz za hodinu.
@@ -134,13 +137,26 @@ export function geocodeUrl(query) {
     return `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=sk&format=json`;
 }
 
+/**
+ * Premenné žiarenia z Open-Meteo. Okamžité (`_instant`), nie hodinové: tie sú priemerom
+ * predošlej hodiny, kým predpoveď k nim ráta polohu slnka v čase záznamu - krivka tak bola
+ * o pol hodiny posunutá a denný súčet nízky (v zime o 5 %). Okamžitá hodnota patrí presne
+ * k svojmu času, rovnako ako body nameranej krivky z kiosku.
+ */
+export const OPEN_METEO_RADIATION = {
+    ghi: 'shortwave_radiation_instant',
+    dni: 'direct_normal_irradiance_instant',
+    dhi: 'diffuse_radiation_instant',
+};
+
 /** Adresa hodinovej predpovede Open-Meteo pre danú lokalitu (časy v UTC). @param {Site} site */
 export function openMeteoUrl(site) {
+    const R = OPEN_METEO_RADIATION;
     return (
         'https://api.open-meteo.com/v1/forecast' +
         `?latitude=${site.lat}&longitude=${site.lon}` +
-        '&hourly=shortwave_radiation,direct_normal_irradiance,diffuse_radiation,temperature_2m,cloud_cover' +
-        `&forecast_days=${FORECAST_API_DAYS}&timezone=UTC`
+        `&hourly=${R.ghi},${R.dni},${R.dhi},temperature_2m,cloud_cover` +
+        `&forecast_days=${FORECAST_API_DAYS}&past_days=${FORECAST_PAST_DAYS}&timezone=UTC`
     );
 }
 
