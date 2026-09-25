@@ -20,7 +20,7 @@ import { loadData, searchPlaces } from './data.js';
 import { closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { saveSettings } from './settings-store.js';
-import { clockPatch, panelChange } from './state.js';
+import { clockPatch, nextPv, panelChange } from './state.js';
 import { initSwipe } from './swipe.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -631,21 +631,43 @@ function initSettings(store, dom, refresh) {
     });
 }
 
-/** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
-function initTicks(store, mq) {
-    const refresh = async () => {
-        const { site, plant, kiosk } = store.get();
+/**
+ * Obnova dát pre elektráreň, ktorá je práve v stave. Beží najviac jedna naraz: kým sa
+ * sťahuje, ďalšie volanie (minútový časovač, návrat z pozadia) dostane tú istú rozbehnutú -
+ * inak by sa pri pomalej sieti požiadavky hromadili a staršia odpoveď mohla prepísať novšiu.
+ * Nová elektráreň (uložené nastavenie) čakať nemusí, jej obnova sa rozbehne hneď.
+ * @param {Store} store @returns {() => Promise<void>}
+ */
+function createRefresh(store) {
+    /** @type {{ site: object, plant: object, kiosk: string, promise: Promise<void> } | null} */
+    let bezi = null;
+    /** @param {import('../shared/settings.js').Settings} s */
+    const obnov = async ({ site, plant, kiosk }) => {
         const result = await loadData({ site, plant, kiosk }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
-        const now = store.get();
-        if (now.site !== site || now.plant !== plant || now.kiosk !== kiosk) return;
+        const teraz = store.get();
+        if (teraz.site !== site || teraz.plant !== plant || teraz.kiosk !== kiosk) return;
         store.setState({
-            pv: result.pv,
+            pv: nextPv(teraz.pv, result, new Date()),
             forecast: result.forecast,
             loading: false,
             ...clockPatch(new Date(), site),
         });
     };
+    return () => {
+        const { site, plant, kiosk } = store.get();
+        if (bezi && bezi.site === site && bezi.plant === plant && bezi.kiosk === kiosk) return bezi.promise;
+        const promise = obnov({ site, plant, kiosk }).finally(() => {
+            if (bezi && bezi.promise === promise) bezi = null;
+        });
+        bezi = { site, plant, kiosk, promise };
+        return promise;
+    };
+}
+
+/** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
+function initTicks(store, mq) {
+    const refresh = createRefresh(store);
     setInterval(() => !document.hidden && store.setState(clockPatch(new Date(), store.get().site)), REFRESH.clockMs);
     setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
     document.addEventListener('visibilitychange', () => !document.hidden && refresh());

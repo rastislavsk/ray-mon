@@ -1,6 +1,7 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
+import { STALE_PV_MS } from '../shared/config.js';
 import { seasonFor } from '../shared/tariff.js';
 import { PANELS } from './dom.js';
 
@@ -140,6 +141,19 @@ export function createStore(initial) {
  */
 export function clockPatch(now, site) {
     return { now, season: seasonFor(now, site.timezone) };
+}
+
+/**
+ * Meranie po obnove dát. Keď kiosk raz neodpovie, ostáva posledné meranie - appka inak na
+ * minútu preskočila na odhad, z grafu zmizla nameraná krivka a o minútu sa všetko vrátilo.
+ * Najviac však STALE_PV_MS od stiahnutia: staršie meranie by sa tvárilo ako výkon "teraz".
+ * Bez kiosku (`pvFailed` je false) sa nemá čo nechávať.
+ * @param {import('../shared/kiosk.js').PvData | null} prev
+ * @param {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean }} result @param {Date} now
+ */
+export function nextPv(prev, result, now) {
+    if (result.pv || !result.pvFailed || !prev) return result.pv;
+    return now.getTime() - Date.parse(prev.updatedAt) <= STALE_PV_MS ? prev : null;
 }
 
 /**

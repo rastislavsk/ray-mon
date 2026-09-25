@@ -51,6 +51,20 @@ test('POST /pv: cudzí odkaz 400 bez sťahovania, výpadok kiosku 502 bez odkazu
     assert.equal(junk.status, 502);
 });
 
+test('POST /pv: neplatný kľúč (kiosk vráti 404) sa neopakuje, výpadok servera áno', async () => {
+    /** @type {string[]} */ const calls = [];
+    /** @param {number} status */
+    const kiosk = (status) =>
+        /** @type {typeof fetch} */ (
+            /** @type {unknown} */ (async (/** @type {string} */ url) => (calls.push(url), new Response('x', { status })))
+        );
+    assert.equal((await handlePv(pvRequest(KIOSK_PAGE), NOW, kiosk(404))).status, 502);
+    assert.equal(calls.length, 1, 'druhý pokus by dopadol rovnako');
+    calls.length = 0;
+    assert.equal((await handlePv(pvRequest(KIOSK_PAGE), NOW, kiosk(503))).status, 502);
+    assert.equal(calls.length, 2);
+});
+
 test('iné cesty 404, iné metódy 405, OPTIONS 204', async () => {
     assert.equal((await handleRequest(new Request('https://w.test/'), NOW)).status, 404);
     assert.equal((await handleRequest(new Request('https://w.test/status'), NOW)).status, 404);

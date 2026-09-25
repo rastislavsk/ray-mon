@@ -40,7 +40,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                     |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                        |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                               |
-| `http.js`        | Retry pre sieťové volania Workera; jeden prechodný výpadok kiosku nezhodí odpoveď.                        |
+| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                        |
 
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
