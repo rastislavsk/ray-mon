@@ -298,6 +298,8 @@ test('weekStatsModel', () => {
     assert.ok(Math.abs(s.totalKwh - forecast.days.reduce((a, d) => a + d.kwhTotal, 0)) < 1e-9);
     assert.ok(s.best.kwh >= s.avgKwh);
     assert.equal(weekStatsModel(forecast.days, null, false).progress, null);
+    // Kiosk dennú výrobu neposlal (null) - to nie je nameraná nula, takže ani progress.
+    assert.equal(weekStatsModel(forecast.days, { ...pv, dailyEnergyKwh: null }, false).progress, null);
     assert.equal(typeof s.trendPct, 'number');
     assert.equal(usePct({ ...forecast.days[0], clearKwhTotal: 0 }), null);
 });

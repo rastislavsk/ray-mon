@@ -73,10 +73,10 @@ test('stripSegments: súčet 1440 minút a rovnaký vzor ako pôvodná appka', (
     );
 });
 
-test('powerThresholds: Dvorany majú 2 / 4 / 1,5 kW, iná elektráreň v pomere najvyššieho výkonu', () => {
-    assert.deepEqual(th, { lowKw: 2, highKw: 4, marginKw: 1.5 });
+test('powerThresholds: Dvorany majú 2 / 4 / 1,5 / 1,2 kW, iná elektráreň v pomere najvyššieho výkonu', () => {
+    assert.deepEqual(th, { lowKw: 2, highKw: 4, marginKw: 1.5, weakPeakKw: 1.2 });
     // Ukážka: 12 × 435 Wp = 5,2 kWp, menič 5 kW -> polovica Dvorian (10 kW).
-    assert.deepEqual(powerThresholds(DEMO_PLANT), { lowKw: 1, highKw: 2, marginKw: 0.75 });
+    assert.deepEqual(powerThresholds(DEMO_PLANT), { lowKw: 1, highKw: 2, marginKw: 0.75, weakPeakKw: 0.6 });
     // Menič menší než panely: rozhoduje menič, inak by vysoká výroba nebola nikdy.
     const smallInverter = powerThresholds({ ...PLANT, acLimitKw: 3 });
     assert.ok(smallInverter.highKw < 3);

@@ -101,6 +101,7 @@ const POWER_THRESHOLDS_DVORANY = {
     lowKw: 2, // pod touto hodnotou panely "nedávajú veľa"
     highKw: 4, // od tejto hodnoty je výroba "vysoká" a oplatí sa nabíjať auto zo slnka
     marginKw: 1.5, // o koľko musí byť budúce okno lepšie než teraz
+    weakPeakKw: 1.2, // keď špička dňa nedosiahne ani toto, je to "slabý deň"
 };
 
 /** @typedef {typeof POWER_THRESHOLDS_DVORANY} PowerThresholds */
@@ -112,6 +113,7 @@ export function powerThresholds(plant) {
         lowKw: POWER_THRESHOLDS_DVORANY.lowKw * scale,
         highKw: POWER_THRESHOLDS_DVORANY.highKw * scale,
         marginKw: POWER_THRESHOLDS_DVORANY.marginKw * scale,
+        weakPeakKw: POWER_THRESHOLDS_DVORANY.weakPeakKw * scale,
     };
 }
 

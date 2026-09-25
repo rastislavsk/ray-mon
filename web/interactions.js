@@ -612,6 +612,12 @@ function initSettings(store, dom, refresh) {
         const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
         if (b) onSettingsButton(store, dom, ops, b);
     });
+    // Lokalita a pole na odkaz sú vo formulári, no nie sú údajmi elektrárne: Enter v nich (na
+    // mobile kláves Hľadať či Choď) by formulár odoslal a uložil rozpísané nastavenie - v ukážke
+    // Londýn ako vlastnú elektráreň. V ostatných poliach Enter ukladá, ako sa od formulára čaká.
+    dom.setForm.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing && (e.target === dom.setPlace || e.target === dom.setImport)) e.preventDefault();
+    });
     dom.setForm.addEventListener('submit', (e) => {
         e.preventDefault();
         applySettings(store, store.get().settingsDraft, refresh);

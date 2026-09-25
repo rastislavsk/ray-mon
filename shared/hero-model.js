@@ -20,13 +20,23 @@ export function minutesOfDay(date, timezone) {
 }
 
 /**
- * Výkon pre danú minútu: naživo z kiosku, v náhľade z krivky dňa (namerané/predpoveď).
- * Bez živého merania je aj „teraz“ odhad z predpovede - appka tak funguje aj pre toho,
- * kto meranie nemá.
- * @param {HeroInput} state @param {number} minutes @param {number} nowMinutes
+ * Živý výkon z kiosku, alebo null, keď ho niet: v náhľade iného času, bez kiosku, aj keď kiosk
+ * výkon neposlal. Posledný prípad treba strážiť zvlášť - kontrakt `pv` null povoľuje
+ * a Number(null) je 0, takže chýbajúci údaj by sa tváril ako nameraná nula.
+ * @param {HeroInput} state @returns {number | null}
  */
-function powerFor(state, minutes, nowMinutes) {
-    if (state.previewMinutes === null && state.pv) return Number(state.pv.realTimePowerKw);
+function livePower(state) {
+    const kw = state.previewMinutes === null && state.pv ? state.pv.realTimePowerKw : null;
+    return Number.isFinite(kw) ? kw : null;
+}
+
+/**
+ * Výkon pre danú minútu: naživo z kiosku, inak z krivky dňa (namerané/predpoveď) - v náhľade
+ * aj „teraz“ bez živého výkonu. Appka tak funguje aj pre toho, kto meranie nemá.
+ * @param {HeroInput} state @param {number | null} live @param {number} minutes @param {number} nowMinutes
+ */
+function powerFor(state, live, minutes, nowMinutes) {
+    if (live !== null) return live;
     return dayKwAt(minutes, state.pv ? state.pv.realCurveToday : null, state.forecast ? state.forecast.hourlyToday : null, nowMinutes);
 }
 
@@ -81,7 +91,8 @@ export function heroModel(state) {
     const nowMinutes = minutesOfDay(state.now, state.site.timezone);
     const preview = state.previewMinutes !== null;
     const minutes = preview ? /** @type {number} */ (state.previewMinutes) : nowMinutes;
-    const power = powerFor(state, minutes, nowMinutes);
+    const live = livePower(state);
+    const power = powerFor(state, live, minutes, nowMinutes);
     const th = powerThresholds(state.plant);
     // Okná pokrývajú celý deň (overené testom); fallback je len poistka proti chybnému configu.
     const win = windowAt(minutes, state.season) || windowsFor(state.season)[0];
@@ -109,7 +120,7 @@ export function heroModel(state) {
         waitTime: waitTimeFor(state, !!win.devices),
         dial: dialFor(power, installedKw(state.plant), th),
         powerText: Number.isFinite(power) ? power.toFixed(2) : '–',
-        unitText: preview ? (measured ? 'kW (merané)' : 'kW (odhad)') : state.pv ? 'kW teraz' : 'kW (odhad)',
+        unitText: live !== null ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)',
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };
 }
