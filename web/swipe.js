@@ -9,6 +9,7 @@
 // práve nachádza pod prstom; #page ostáva len hranicou pri hľadaní vnútorných pásov nižšie.
 
 import { SWIPE } from '../shared/config.js';
+import { closeDetail } from './history.js';
 import { nextPanel, nextWeekDay, panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -71,6 +72,9 @@ function pansInner(from, dx) {
     return from.room.pager || (dx < 0 ? from.room.right : from.room.left) > 1;
 }
 
+/** Cieľ gesta "späť do prehľadu dní". Nie je to zmena stavu, ale krok v histórii (closeDetail). */
+const SPAT = /** @type {const} */ ('spat');
+
 /** Kam gesto vedie: buď na susedný deň (v detaile dňa), alebo späť do prehľadu dní, alebo
  * na susednú kartu, alebo nikam (koniec poradia dní, kraj poradia kariet).
  *
@@ -83,7 +87,7 @@ function pansInner(from, dx) {
  * @param {import('./state.js').AppState} state @param {number} dx */
 function targetFor(state, dx) {
     if (state.panel === '7dni' && state.weekDetail && !state.wide) {
-        const spat = dx > 0 ? { weekDetail: null } : null;
+        const spat = dx > 0 ? SPAT : null;
         if (state.weekDetail !== 'day') return spat;
         const dir = /** @type {1 | -1} */ (dx < 0 ? 1 : -1);
         const den = nextWeekDay(state.weekSelDay, dir, state.forecast?.days.length ?? 0);
@@ -151,7 +155,8 @@ export function initSwipe(store, dom, hideTooltips) {
             // Tooltip grafu ostal otvorený pod prstom - po odchode z karty (aj po prelistovaní
             // na iný deň) ukazuje hodnotu, ktorá už pod ním nie je.
             hideTooltips();
-            store.setState(patch);
+            if (patch === SPAT) closeDetail(store);
+            else store.setState(patch);
         },
         { passive: false },
     );

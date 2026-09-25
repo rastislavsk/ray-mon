@@ -17,7 +17,7 @@ import {
 import { checkSettings, settingsFromLink } from '../shared/settings.js';
 import { localMinutes } from '../shared/solar.js';
 import { loadData, searchPlaces } from './data.js';
-import { initHistory } from './history.js';
+import { closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { saveSettings } from './settings-store.js';
 import { clockPatch, panelChange } from './state.js';
@@ -77,7 +77,7 @@ function initNavigation(store, dom) {
         }
     });
     dom.previewReset.addEventListener('click', () => store.setState({ previewMinutes: null, isDragging: false }));
-    dom.weekDayBack.addEventListener('click', () => store.setState({ weekDetail: null }));
+    dom.weekDayBack.addEventListener('click', () => closeDetail(store));
 }
 
 /** Uhol bodu voči stredu ciferníka -> minúta dňa. @param {Dom} dom @param {number} clientX @param {number} clientY */
@@ -231,6 +231,10 @@ function bindTouch(wrap, handle, hide) {
     /** @type {Zaciatok | null} */
     let start = null;
     let shown = false;
+    // Zhasnutie tooltipu po zdvihnutí prsta. Je jedno na graf: nové gesto to predošlé zruší,
+    // inak by časovač z prvého ťuknutia zhasol tooltip z druhého skôr, než by sa dal prečítať.
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let zhasni;
     // Začiatok gesta ide dovnútra ako parameter, nie cez `start` zvonku: v touchend je už
     // vynulovaný a vzdialenosť by sa merala od ľavého horného rohu displeja.
     const vzdialenost = (/** @type {Touch} */ t, /** @type {Zaciatok} */ from) => Math.hypot(t.clientX - from.x, t.clientY - from.y);
@@ -240,6 +244,7 @@ function bindTouch(wrap, handle, hide) {
         (e) => {
             start = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: e.timeStamp, scrollY: window.scrollY };
             shown = false;
+            clearTimeout(zhasni);
         },
         { passive: true },
     );
@@ -269,7 +274,8 @@ function bindTouch(wrap, handle, hide) {
             vzdialenost(e.changedTouches[0], bolStart) < SWIPE.minDistPx
         )
             handle(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        setTimeout(hide, TOOLTIP_HOLD_MS);
+        clearTimeout(zhasni);
+        zhasni = setTimeout(hide, TOOLTIP_HOLD_MS);
     });
 }
 

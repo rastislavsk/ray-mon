@@ -1262,6 +1262,25 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     expect(errors).toEqual([]);
 });
 
+/** Šípka v hlavičke detailu je ten istý krok ako tlačidlo Späť. Keby zapísala nový krok
+ * (prehľad), ostal by detail v histórii za ním a Späť na telefóne by ho znovu otvorilo. */
+test('šípka späť z detailu dňa je krok späť: Späť potom detail znovu neotvorí', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-7dni').click();
+    await page.locator('#week-list [data-day-index="5"]').click();
+    await expect(page.locator('#week-day-head')).toBeVisible();
+
+    await page.locator('#week-day-back').click();
+    await expect(page.locator('#week-day-head')).toBeHidden();
+    await ocakavajKartu(page, '7dni');
+
+    // Ďalší krok späť vedie tam, odkiaľ sa na kartu 7 dní prišlo - nie do detailu.
+    await page.goBack();
+    await ocakavajKartu(page, 'terazky');
+    await expect(page.locator('#week-day-head')).toBeHidden();
+    expect(errors).toEqual([]);
+});
+
 test.describe('listovanie kariet prstom', () => {
     test.use({ hasTouch: true });
 
@@ -1427,6 +1446,42 @@ test.describe('listovanie kariet prstom', () => {
             await page.evaluate(() => document.getElementById('week-curve-tooltip')?.classList.contains('visible')),
             'tooltip po ťuknutí hneď zhasol',
         ).toBe(true);
+        expect(errors).toEqual([]);
+    });
+
+    /** Každé zdvihnutie prsta naplánuje zhasnutie tooltipu. Druhé ťuknutie preto musí zrušiť
+     * časovač prvého - inak by tooltip z druhého ťuknutia zhasol skôr, než by sa dal prečítať. */
+    test('druhé ťuknutie na graf nechá tooltip svietiť celý čas, nezhasne ho časovač prvého', async ({ page }) => {
+        const errors = await openApp(page);
+        await otvorDetailDna(page);
+        const graf = await page.locator('#week-curve-wrap').boundingBox();
+        if (!graf) throw new Error('graf priebehu dňa nie je vidno');
+        const y = graf.y + graf.height / 2;
+        const svieti = () => page.evaluate(() => document.getElementById('week-curve-tooltip')?.classList.contains('visible'));
+
+        await tuknutieBezPohybu(page, graf.x + graf.width * 0.4, y);
+        await page.waitForTimeout(TOOLTIP_HOLD_MS * 0.6);
+        await tuknutieBezPohybu(page, graf.x + graf.width * 0.6, y);
+        // Časovač prvého ťuknutia už vypršal, druhého ešte nie.
+        await page.waitForTimeout(TOOLTIP_HOLD_MS * 0.6);
+        expect(await svieti(), 'tooltip druhého ťuknutia zhasol po časovači prvého').toBe(true);
+        expect(errors).toEqual([]);
+    });
+
+    test('ťah doprava z detailu dňa je krok späť: Späť potom detail znovu neotvorí', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-7dni').click();
+        await page.locator('#week-list [data-day-index="0"]').click();
+        await ocakavajDetailDna(page, 0);
+
+        // Z prvého dňa nie je kam listovať, ťah doprava zavrie detail - rovnako ako šípka.
+        await swipe(page, '#week-day-head', { dx: 120 });
+        await expect(page.locator('#week-day-head')).toBeHidden();
+        await ocakavajKartu(page, '7dni');
+
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
+        await expect(page.locator('#week-day-head')).toBeHidden();
         expect(errors).toEqual([]);
     });
 
