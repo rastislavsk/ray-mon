@@ -24,7 +24,7 @@ import { escapeHtml, fmt1, hourLabel, kwpText, weekDateLabel, weekDayLong, weekD
 import { dayDetailMessage, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_CLOUD, ICON_PARTLY, ICON_SUN } from '../icons.js';
-import { changed } from '../memo.js';
+import { changed, writeHtml } from '../memo.js';
 import { forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
 
 /** @typedef {import('../../shared/solar.js').ForecastDay} ForecastDay */
@@ -127,14 +127,18 @@ export function useTier(pct) {
 
 /** @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom */
 function renderTableAndTabs(days, sel, dom) {
-    dom.weekDayTabs.innerHTML = days
-        .map(
-            (d, i) =>
-                `<button type="button" role="tab" class="utab${i === sel ? ' active' : ''}" aria-selected="${i === sel}" data-day-index="${i}">${weekDayShort(d.date, i)}</button>`,
-        )
-        .join('');
+    writeHtml(
+        dom.weekDayTabs,
+        days
+            .map(
+                (d, i) =>
+                    `<button type="button" role="tab" class="utab${i === sel ? ' active' : ''}" aria-selected="${i === sel}" data-day-index="${i}">${weekDayShort(d.date, i)}</button>`,
+            )
+            .join(''),
+        'weekDayTabs',
+    );
     const tiers = weekDayTiers(days);
-    dom.weekTbody.innerHTML = days
+    const rows = days
         .map((d, i) => {
             const pct = usePct(d);
             const dateSub = i > 1 ? `<span class="sub">${weekDateLabel(d.date)}</span>` : '';
@@ -146,6 +150,7 @@ function renderTableAndTabs(days, sel, dom) {
             );
         })
         .join('');
+    writeHtml(dom.weekTbody, rows, 'weekTbody');
 }
 
 /**
@@ -161,7 +166,7 @@ function renderTableAndTabs(days, sel, dom) {
 function renderList(s, rows, dom) {
     dom.weekListTotal.textContent = String(Math.round(s.totalKwh));
     dom.weekListAvg.textContent = `${fmt1(s.avgKwh)} kWh`;
-    dom.weekList.innerHTML = rows
+    const html = rows
         .map((r) => {
             // Pásmo dňa nesie pásik aj číslo vedľa neho - tá istá farba a tá istá mierka
             // ako v heatmape (viď weekDayTiers v shared/chart-model.js).
@@ -175,6 +180,7 @@ function renderList(s, rows, dom) {
             );
         })
         .join('');
+    writeHtml(dom.weekList, html, 'weekList');
 }
 
 /** Info o vybranom dni pod grafom: čo sa čaká, koľko z toho je jasná obloha a - pri dnešku -
@@ -196,7 +202,7 @@ function dayInfo(day, progress) {
  * @param {ReturnType<typeof weekStatsModel>['progress']} progress @param {import('../dom.js').Dom} dom */
 function renderCurve(state, day, progress, dom) {
     const m = weekCurveModel(state);
-    dom.weekCurve.innerHTML = m ? forecastChartSvg(m) : '';
+    writeHtml(dom.weekCurve, m ? forecastChartSvg(m) : '', 'weekCurve');
     if (m) dom.weekCurve.setAttribute('viewBox', `0 0 ${m.dims.w} ${m.dims.h}`);
     // Položka legendy patrí ku krivke - keď sa krivka nekreslí, legenda by ohlasovala
     // niečo, čo v grafe nie je.
@@ -275,7 +281,7 @@ function dayDotsPas(dom) {
  */
 function renderDayDots(detail, days, sel, dom) {
     if (detail !== 'day') return;
-    dayDotsPas(dom).innerHTML = days
+    const html = days
         .map((d, i) => {
             // aria-current hovorí čítačke to, čo oku hovorí plná bodka - bez neho je to
             // sedem rovnakých tlačidiel.
@@ -284,6 +290,7 @@ function renderDayDots(detail, days, sel, dom) {
             return `<button type="button" class="pager-dot${tu}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}></button>`;
         })
         .join('');
+    writeHtml(dayDotsPas(dom), html, 'dayDots');
 }
 
 /**
@@ -331,24 +338,24 @@ function renderHeat(state, days, sel, detail, dom) {
     dom.weekHeatLabel.textContent = jedenDen ? 'Heatmapa dňa (kW)' : 'Heatmapa (kW) · hodina × deň';
     dom.weekHeat.setAttribute('viewBox', `0 0 ${heat.W} ${heat.H}`);
     dom.weekHeat.setAttribute('height', String(heat.H));
-    dom.weekHeat.innerHTML = weekHeatSvg(heat);
+    writeHtml(dom.weekHeat, weekHeatSvg(heat), 'weekHeat');
     dom.weekHeatScale.innerHTML = `<span>0 kW</span><span class="sw">${heat.legend.map((l) => `<i class="tier-${l.tier}" style="opacity:${(0.12 + l.frac * 0.8).toFixed(2)}"></i>`).join('')}</span><span>${heat.max.toFixed(1)} kW</span>`;
 }
 
 /** @param {import('../dom.js').Dom} dom */
 function renderEmpty(dom) {
-    for (const el of [
-        dom.weekHeat,
-        dom.weekBars,
-        dom.weekCurve,
-        dom.weekBarsStat,
-        dom.weekCurveStat,
-        dom.weekDayTabs,
-        dom.weekTbody,
-        dom.weekList,
-        dom.weekHeatScale,
-    ])
-        el.innerHTML = '';
+    // Prvky, do ktorých render píše cez writeHtml, sa vyprázdňujú tiež cez neho - zápis okolo
+    // pamäte by memo nevidelo a po návrate rovnakých dát by ich nechalo prázdne.
+    for (const [el, name] of /** @type {const} */ ([
+        [dom.weekHeat, 'weekHeat'],
+        [dom.weekBars, 'weekBars'],
+        [dom.weekCurve, 'weekCurve'],
+        [dom.weekDayTabs, 'weekDayTabs'],
+        [dom.weekTbody, 'weekTbody'],
+        [dom.weekList, 'weekList'],
+    ]))
+        writeHtml(el, '', name);
+    for (const el of [dom.weekBarsStat, dom.weekCurveStat, dom.weekHeatScale]) el.innerHTML = '';
     for (const el of [dom.weekToday, dom.weekTomorrow, dom.weekTotal, dom.weekListTotal, dom.weekListAvg]) el.textContent = '–';
     dom.weekCurveLiveLegend.classList.add('hidden');
     for (const el of [
@@ -398,7 +405,7 @@ export function renderSedemdni(state, dom) {
     const bars = weekBarsModel(days, sel, barsSize ? { W: barsSize.w, H: barsSize.h } : undefined, !state.wide);
     dom.weekBars.setAttribute('viewBox', `0 0 ${bars.W} ${bars.H}`);
     dom.weekBars.setAttribute('height', String(bars.H));
-    dom.weekBars.innerHTML = weekBarsSvg(bars);
+    writeHtml(dom.weekBars, weekBarsSvg(bars), 'weekBars');
     dom.weekBarsClearLegend.classList.toggle('hidden', state.wide);
 
     renderTableAndTabs(days, sel, dom);

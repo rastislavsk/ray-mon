@@ -569,6 +569,7 @@ function applySettings(store, next, refresh, extra = {}) {
         demo: false,
         pv: null,
         forecast: null,
+        loading: true,
         // Nová lokalita môže mať iné pásmo, a na prelome mesiaca teda aj inú sezónu.
         ...clockPatch(new Date(), next.site),
         settingsDraft: next,
@@ -635,7 +636,7 @@ function initTicks(store, mq) {
         store.setState({
             pv: result.pv,
             forecast: result.forecast,
-            dataError: !result.pv && !result.forecast,
+            loading: false,
             ...clockPatch(new Date(), site),
         });
     };

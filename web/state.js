@@ -14,7 +14,7 @@ import { PANELS } from './dom.js';
  *   panelDir: 1 | -1,
  *   pv: import('../shared/kiosk.js').PvData | null,
  *   forecast: import('../shared/solar.js').Forecast | null,
- *   dataError: boolean,
+ *   loading: boolean,
  *   weekSelDay: number,
  *   weekDayDir: 1 | -1,
  *   weekDetail: 'day' | 'week' | null,
@@ -58,7 +58,9 @@ export function initialState(now, season, layout, { settings, demo, incoming = n
         panelDir: 1,
         pv: null,
         forecast: null,
-        dataError: false,
+        // Dáta pre aktuálnu elektráreň sa ešte sťahujú (štart appky, uloženie nastavenia).
+        // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba - hlavička hovorí "načítavam…".
+        loading: true,
         weekSelDay: 0,
         // Smer posledného prelistovania dní v detaile dňa: 1 na ďalší deň, -1 na predchádzajúci.
         // Od neho závisí, z ktorej strany sa detail prisunie (viď day-in-* v style.css) - to isté,

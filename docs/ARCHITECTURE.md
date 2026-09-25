@@ -113,7 +113,9 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
   tak jeden zbytočný zápis zdražel každý ďalší pohyb prsta. `memo.js` si preto pamätá, čo sám
   naposledy zapísal, a denný prstenec aj chipy spotrebičov sa prekresľujú len
   pri zmene vlastných vstupov. Namerané: 1,675 → 0,675 ms na pohyb na mobilnej šírke,
-  2,817 → 0,892 ms na desktope.
+  2,817 → 0,892 ms na desktope. Na karte 7 dní má to isté ešte jeden dôvod: prepísané
+  tlačidlo berie so sebou fokus klávesnice, takže rebríček, prepínač dní, bodky aj tabuľka
+  idú cez `writeHtml`. Keď sa obsah naozaj zmení, vráti fokus na prvok na tom istom mieste.
 - **Plátno grafu sa rovná karte.** Grafy sa nekreslia na pevné plátno, ktoré potom CSS
   natiahne, ale rovno na skutočný rozmer karty (`fillDims`). Naťahovanie skresľovalo
   popisky a pri nízkej karte kreslilo do zápornej plochy; opačná voľba (zachovať pomer
