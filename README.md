@@ -1,4 +1,4 @@
-# Račkofci Energy s.r.o.
+# RAY-MON
 
 Webová appka pre domácnosť s fotovoltikou – pôvodne pre Dvorany nad Nitrou, dnes pre
 kohokoľvek, kto si v Nastavení zadá svoju elektráreň. Na jednej obrazovke
