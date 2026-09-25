@@ -57,21 +57,18 @@ const GEOCODE = {
     ],
 };
 
-// Testy bežia bez siete: externé zdroje (fonty, QR knižnica) sa odpovedia prázdnym telom,
-// zdroje dát podľa scenára. Zlyhanie zámerne zablokovaného zdroja nie je chyba appky,
+// Testy bežia bez siete: QR knižnica z CDN sa nenačíta, zdroje dát odpovedajú podľa scenára.
+// Písma sú v repozitári, takže testy merajú rozloženie s tými istými písmami ako appka. Zlyhanie zámerne zablokovaného zdroja nie je chyba appky,
 // preto sa z konzoly zbierajú len skutočné výnimky a chyby, nie hlásenia o nenačítaní zdroja.
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 
 /**
- * Písma a QR knižnica z CDN. Písma dostanú prázdne telo. QR knižnica má v stránke hash
- * (integrity) - prázdne telo by prehliadač zamietol s chybou v konzole, tak sa nenačíta
+ * QR knižnica z CDN - jediný externý zdroj stránky. Má v stránke hash (integrity), takže
+ * podvrhnuté telo by prehliadač zamietol s chybou v konzole; v testoch sa preto nenačíta
  * vôbec. Nedostupná knižnica je pre appku bežný stav, QR kód je nepovinný.
  * @param {import('@playwright/test').Page} page
  */
 async function blokujCdn(page) {
-    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com/, (route) =>
-        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
-    );
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
 }
 
@@ -813,9 +810,6 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
 /** Cudzí skript na CDN by mal prístup k uloženému nastaveniu aj odkazu na kiosk - prehliadač
  * ho preto spustí, len ak sedí hash v atribúte integrity. */
 test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', async ({ page }) => {
-    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com/, (route) =>
-        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
-    );
     // CORS hlavička je tu naschvál: skript sa má zastaviť na hashi, nie na CORS.
     await page.route(/cdnjs\.cloudflare\.com/, (route) =>
         route.fulfill({

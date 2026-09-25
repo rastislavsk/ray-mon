@@ -45,14 +45,14 @@ try {
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
     // reducedMotion vypne v appke prechody (style.css), takže snímka zachytí konečný stav.
     // Inak prstenec ciferníka na prvej karte ešte dobiehal a o výsledku rozhodovalo, ako
-    // rýchlo prišli písma z CDN - tá istá appka dala raz takú, raz inú terazky.png.
+    // rýchlo sa načítali písma - tá istá appka dala raz takú, raz inú terazky.png.
     const page = await browser.newPage({
         viewport: { width: SIRKA, height: VYSKA },
         locale: 'sk-SK',
         timezoneId: 'Europe/Bratislava',
         reducedMotion: 'reduce',
     });
-    // Živé zdroje sa nahradia fixtures, zvyšok (písma) sa načíta ako v appke.
+    // Živé zdroje sa nahradia fixtures, zvyšok (písma z fonts/, QR knižnica z CDN) sa načíta ako v appke.
     // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: fixture('open-meteo.json') }));
