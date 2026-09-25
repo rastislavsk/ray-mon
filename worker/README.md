@@ -51,16 +51,17 @@ Koľko požiadaviek denne Worker dostáva, ukazuje dashboard → Workers & Pages
 Settings → Build → Connect to Git, root directory `worker/`. Po každom pushnutí do `main`
 sa Worker nasadí sám.
 
-Pozor, dva príkazy v tom istom nastavení sa správajú rozdielne:
+Oba príkazy bežia z Root directory, teda už z `worker/`, a `wrangler.toml` si nájdu samy:
 
-| Príkaz                              | Odkiaľ beží                           | Ako ho nastaviť                                              |
-| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
-| **Deploy command** (vetva `main`)   | z Root directory, teda už z `worker/` | `npx wrangler deploy` — **bez** `--config`                   |
-| **Version command** (pull requesty) | z koreňa repozitára                   | `npx wrangler versions upload --config worker/wrangler.toml` |
+| Príkaz                              | Ako ho nastaviť                |
+| ----------------------------------- | ------------------------------ |
+| **Deploy command** (vetva `main`)   | `npx wrangler deploy`          |
+| **Version command** (pull requesty) | `npx wrangler versions upload` |
 
-Pridať `--config worker/wrangler.toml` aj do Deploy command je častá chyba: cesta sa
-zdvojí na `worker/worker/wrangler.toml` a nasadenie zlyhá na
-`ENOENT: no such file or directory`. Prepínač patrí len do Version command.
+Prepínač `--config worker/wrangler.toml` nepatrí ani do jedného: cesta sa zdvojí na
+`worker/worker/wrangler.toml` a build zlyhá na `ENOENT: no such file or directory`.
+Stalo sa to pri prvom builde Workera `ray-mon` – tento súbor dovtedy tvrdil, že Version
+command beží z koreňa repozitára.
 
 ## Overenie
 
