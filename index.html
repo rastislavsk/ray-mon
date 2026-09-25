@@ -17,13 +17,26 @@
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="RAY-MON" />
+        <!-- Písma: štýl je na fonts.googleapis.com, samotné súbory na fonts.gstatic.com. Spojenie
+             na oba servery sa otvorí hneď, nie až keď prehliadač štýl stiahne a prečíta.
+             crossorigin je pri gstatic nutný: písma sa sťahujú v režime CORS. -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
         />
         <link rel="stylesheet" href="style.css" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+        <!-- integrity: prehliadač knižnicu spustí, len ak je to presne tento súbor (hash z cdnjs).
+             Keby niekto na CDN obsah podvrhol, cudzí skript by mal prístup k uloženému
+             nastaveniu vrátane odkazu na kiosk. QR kód je nepovinný - bez knižnice karta funguje. -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+            defer
+        ></script>
     </head>
     <body>
         <header class="appbar">

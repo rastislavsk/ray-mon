@@ -9,7 +9,9 @@ ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 
 - **Žiadny build krok, framework ani bundler.** Stránka sa servíruje tak, ako leží v repozitári.
 - **Žiadne runtime závislosti.** Jediná externá knižnica je QR kód z CDN, načítaný s `defer`
-  a nepovinný. Vývojové závislosti (lint, testy) sú v poriadku.
+  a nepovinný. Má v `index.html` hash v `integrity` – pri zmene verzie treba zmeniť aj ten
+  (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Vývojové závislosti (lint,
+  testy) sú v poriadku.
 - **Typy cez JSDoc a `tsc --checkJs`**, nie cez `.ts` súbory.
 - **Doménová logika patrí do `shared/`** a nesmie sa dotýkať DOM, siete ani `Date.now()`.
   Čas a dáta do nej vstupujú ako parametre, aby sa dala testovať.

@@ -63,6 +63,19 @@ const GEOCODE = {
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 
 /**
+ * Písma a QR knižnica z CDN. Písma dostanú prázdne telo. QR knižnica má v stránke hash
+ * (integrity) - prázdne telo by prehliadač zamietol s chybou v konzole, tak sa nenačíta
+ * vôbec. Nedostupná knižnica je pre appku bežný stav, QR kód je nepovinný.
+ * @param {import('@playwright/test').Page} page
+ */
+async function blokujCdn(page) {
+    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com/, (route) =>
+        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
+    );
+    await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
+}
+
+/**
  * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil).
  * @param {import('@playwright/test').Page} page
@@ -73,9 +86,7 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
-    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com/, (route) =>
-        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
-    );
+    await blokujCdn(page);
     await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
@@ -689,9 +700,7 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta ne
         await zadrzane;
         await route.fulfill({ json: weather });
     });
-    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com/, (route) =>
-        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
-    );
+    await blokujCdn(page);
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto('/');
     // Hodiny vykreslí až appka (v HTML je 00:00) - "načítavam…" potom nie je len text zo
@@ -800,6 +809,30 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
     pustit();
     await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
     expect(errors).toEqual([]);
+});
+
+/** Cudzí skript na CDN by mal prístup k uloženému nastaveniu aj odkazu na kiosk - prehliadač
+ * ho preto spustí, len ak sedí hash v atribúte integrity. */
+test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', async ({ page }) => {
+    await page.route(/fonts\.googleapis\.com|fonts\.gstatic\.com/, (route) =>
+        route.fulfill({ status: 200, body: '', contentType: 'text/plain' }),
+    );
+    // CORS hlavička je tu naschvál: skript sa má zastaviť na hashi, nie na CORS.
+    await page.route(/cdnjs\.cloudflare\.com/, (route) =>
+        route.fulfill({
+            status: 200,
+            body: 'window.podvrhnute = true;',
+            contentType: 'application/javascript',
+            headers: { 'access-control-allow-origin': '*' },
+        }),
+    );
+    await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
+    await page.clock.setFixedTime(FIXED_NOW);
+    await page.goto('/');
+    await page.waitForLoadState('load');
+    await expect(page.locator('#current-time-display')).toHaveText('12:00');
+    expect(await page.evaluate(() => /** @type {any} */ (window).podvrhnute)).toBeUndefined();
+    await expect(page.locator('script[src*="qrcode"]')).toHaveAttribute('crossorigin', 'anonymous');
 });
 
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
