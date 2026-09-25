@@ -109,11 +109,12 @@ function peakWindow(pts) {
  * Správa v detaile dňa. O ktorý deň ide, hovorí hlavička nad ňou, takže text sám deň
  * nepomenúva - inak by sa pre stredu musel prekladať do "v stredu" a pre štvrtok do
  * "vo štvrtok". Dnes a Zajtra majú vlastné znenie vo forecastDayMessage nižšie.
- * @param {Array<{hour: number, kw: number}>} pts @returns {{ title: string, body: string }}
+ * @param {Array<{hour: number, kw: number}>} pts @param {import('./config.js').PowerThresholds} th
+ * @returns {{ title: string, body: string }}
  */
-export function dayDetailMessage(pts) {
+export function dayDetailMessage(pts, th) {
     const { peak, rangeStart, rangeEnd } = peakWindow(pts);
-    if (peak.kw < 1.2) {
+    if (peak.kw < th.weakPeakKw) {
         return { title: 'Slabý deň', body: 'Výroba bude celý deň nízka. Veľké spotrebiče si radšej naplánuj na iný deň.' };
     }
     const peakLabel = hourLabel(peak.hour);
@@ -126,12 +127,13 @@ export function dayDetailMessage(pts) {
 /**
  * Správa pod grafom predpovede pre jeden deň.
  * @param {Array<{hour: number, kw: number}>} pts @param {boolean} isToday
+ * @param {import('./config.js').PowerThresholds} th
  * @returns {{ title: string, body: string }}
  */
-export function forecastDayMessage(pts, isToday) {
+export function forecastDayMessage(pts, isToday, th) {
     const { peak, rangeStart, rangeEnd } = peakWindow(pts);
 
-    if (peak.kw < 1.2) {
+    if (peak.kw < th.weakPeakKw) {
         return isToday
             ? { title: 'Dnes bude slabo', body: 'Výroba bude celý deň nízka. Veľké spotrebiče si radšej naplánuj na iný deň.' }
             : { title: 'Zajtra bude slabšie', body: 'Predpoveď počíta s nízkou výrobou. Ak to nie je súrne, počkaj na slnečnejší deň.' };

@@ -73,6 +73,21 @@ test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria v
     assert.ok(Math.abs(small.dial.fraction - Math.min(1, 2 * m.dial.fraction)) < 0.02, `${small.dial.fraction} vs ${m.dial.fraction}`);
 });
 
+test('kiosk bez živého výkonu: nie nameraná nula, ale posledné meranie z krivky alebo odhad', () => {
+    // Kontrakt pv povoľuje null - kiosk údaj neposlal. Number(null) je 0, takže appka o 13:00
+    // za plného slnka ukazovala nameraných 0 kW a radila nič nezapínať.
+    const bezVykonu = { ...pv, realTimePowerKw: null };
+    const posledny = pv.realCurveToday[pv.realCurveToday.length - 1];
+    assert.equal(posledny.hour, 13, 'krivka v ukážke končí o 13:00');
+    const teraz = heroModel({ ...base, now: at('13:00'), pv: bezVykonu });
+    assert.equal(teraz.power, posledny.kw);
+    assert.equal(teraz.unitText, 'kW (merané)');
+    // Za koncom krivky ostáva odhad z predpovede, rovnako ako bez kiosku.
+    const neskor = heroModel({ ...base, now: at('13:30'), pv: bezVykonu });
+    assert.ok(neskor.power > 0, `odhad ${neskor.power}`);
+    assert.equal(neskor.unitText, 'kW (odhad)');
+});
+
 test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je zastarané', () => {
     // Stiahnuté práve teraz - sleduje sa len krivka, ktorá vo vzorke končí o 13:00.
     const fresh = (/** @type {Date} */ now, curve = pv.realCurveToday) =>

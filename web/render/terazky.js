@@ -1,6 +1,6 @@
 // Karta Spotrebiče: ciferník s denným prstencom, verdikt a spotrebiče. Čistý zápis modelu do DOM.
 
-import { MINUTES_PER_DAY } from '../../shared/config.js';
+import { MINUTES_PER_DAY, powerThresholds } from '../../shared/config.js';
 import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/chart-model.js';
 import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
 import { heroModel, minutesOfDay } from '../../shared/hero-model.js';
@@ -45,7 +45,7 @@ function renderVerdictPager(state, m, dom) {
  * bez ohľadu na tam zvolený deň. @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 function renderForecastPage(state, dom) {
     const visible = state.forecast ? visibleHours(state.forecast.hourlyToday) : [];
-    const msg = visible.length ? forecastDayMessage(visible, true) : EMPTY_MESSAGES.forecast;
+    const msg = visible.length ? forecastDayMessage(visible, true, powerThresholds(state.plant)) : EMPTY_MESSAGES.forecast;
     dom.verdictForecastTitle.textContent = msg.title;
     dom.verdictForecastBody.textContent = msg.body;
 }

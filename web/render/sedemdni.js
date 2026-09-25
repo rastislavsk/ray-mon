@@ -19,7 +19,7 @@ import {
     weekListModel,
     weekStatsModel,
 } from '../../shared/chart-model.js';
-import { installedKw } from '../../shared/config.js';
+import { installedKw, powerThresholds } from '../../shared/config.js';
 import { escapeHtml, fmt1, hourLabel, weekDateLabel, weekDayLong, weekDayShort } from '../../shared/format.js';
 import { dayDetailMessage, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
 import { localMinutes } from '../../shared/solar.js';
@@ -178,8 +178,9 @@ function renderList(s, rows, dom) {
 }
 
 /** Info o vybranom dni pod grafom: čo sa čaká, koľko z toho je jasná obloha a - pri dnešku -
- * koľko už nabehlo. @param {import('../state.js').AppState} state @param {ForecastDay} day */
-function dayInfo(state, day) {
+ * koľko už nabehlo. To posledné počíta weekStatsModel, rovnako ako pre bublinu Dnes.
+ * @param {ForecastDay} day @param {ReturnType<typeof weekStatsModel>['progress']} progress len pri dnešku */
+function dayInfo(day, progress) {
     const parts = [];
     if (Number.isFinite(day.peakKw) && day.peakHour != null)
         parts.push(`<span>Špička <b>${day.peakKw.toFixed(1)} kW</b> o ${hourLabel(day.peakHour)}</span>`);
@@ -187,22 +188,20 @@ function dayInfo(state, day) {
     const pct = usePct(day);
     if (pct != null) parts.push(`<span>Využitie <b>${pct} %</b> z jasnej oblohy</span>`);
     if (day.cloudAvgPct != null) parts.push(`<span>Oblačnosť <b>${Math.round(day.cloudAvgPct)} %</b></span>`);
-    const realKwh =
-        state.weekSelDay === 0 && state.pv && Number.isFinite(Number(state.pv.dailyEnergyKwh)) ? Number(state.pv.dailyEnergyKwh) : null;
-    if (realKwh !== null && day.kwhTotal > 0)
-        parts.push(`<span>Doteraz <b>${fmt1(realKwh)} kWh</b> · ${Math.round((100 * realKwh) / day.kwhTotal)} % z predpovede</span>`);
+    if (progress) parts.push(`<span>Doteraz <b>${fmt1(progress.realKwh)} kWh</b> · ${progress.pct} % z predpovede</span>`);
     return parts.join('');
 }
 
-/** @param {import('../state.js').AppState} state @param {ForecastDay} day @param {import('../dom.js').Dom} dom */
-function renderCurve(state, day, dom) {
+/** @param {import('../state.js').AppState} state @param {ForecastDay} day
+ * @param {ReturnType<typeof weekStatsModel>['progress']} progress @param {import('../dom.js').Dom} dom */
+function renderCurve(state, day, progress, dom) {
     const m = weekCurveModel(state);
     dom.weekCurve.innerHTML = m ? forecastChartSvg(m) : '';
     if (m) dom.weekCurve.setAttribute('viewBox', `0 0 ${m.dims.w} ${m.dims.h}`);
     // Položka legendy patrí ku krivke - keď sa krivka nekreslí, legenda by ohlasovala
     // niečo, čo v grafe nie je.
     dom.weekCurveLiveLegend.classList.toggle('hidden', !m || !m.real.length);
-    dom.weekCurveStat.innerHTML = dayInfo(state, day);
+    dom.weekCurveStat.innerHTML = dayInfo(day, state.weekSelDay === 0 ? progress : null);
 }
 
 /**
@@ -403,8 +402,8 @@ export function renderSedemdni(state, dom) {
     dom.weekBarsClearLegend.classList.toggle('hidden', state.wide);
 
     renderTableAndTabs(days, sel, dom);
-    renderCurve(state, days[sel], dom);
-    const msg = detail === 'day' ? dayDetailMessage(visibleHours(days[sel].hourly)) : weekMessage(days);
+    renderCurve(state, days[sel], stats.progress, dom);
+    const msg = detail === 'day' ? dayDetailMessage(visibleHours(days[sel].hourly), powerThresholds(state.plant)) : weekMessage(days);
     dom.weekMsgTitle.textContent = msg.title;
     dom.weekMsgBody.textContent = msg.body;
 }

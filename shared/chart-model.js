@@ -411,8 +411,9 @@ export function weekStatsModel(days, pv, tomorrowSunny) {
         }
     });
     // Dnešná nabehnutá výroba proti predpovedi. Iné dni namerané nie sú, takže progress
-    // patrí vždy k dnešku.
-    const realKwh = pv && Number.isFinite(Number(pv.dailyEnergyKwh)) ? Number(pv.dailyEnergyKwh) : null;
+    // patrí vždy k dnešku. Kiosk, ktorý dennú výrobu neposlal, má null - Number(null) by
+    // z neho spravil nameraných 0 kWh.
+    const realKwh = pv && Number.isFinite(pv.dailyEnergyKwh) ? pv.dailyEnergyKwh : null;
     const progress = realKwh !== null && today.kwhTotal > 0 ? { realKwh, pct: Math.round((100 * realKwh) / today.kwhTotal) } : null;
     const trendPct = tomorrow && today.kwhTotal > 0 ? Math.round((100 * (tomorrow.kwhTotal - today.kwhTotal)) / today.kwhTotal) : null;
     return {

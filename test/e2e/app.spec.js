@@ -6,6 +6,7 @@ import { ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HO
 import {
     APP_URL,
     PLANT,
+    powerThresholds,
     PREVIEW,
     SETTINGS_STORAGE_KEY,
     SITE,
@@ -98,7 +99,7 @@ function atTime(hm) {
 const modelAt = (instant) =>
     heroModel({ now: instant, season: 'summer', pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
 
-const todayForecastMsg = forecastDayMessage(visibleHours(forecast.hourlyToday), true);
+const todayForecastMsg = forecastDayMessage(visibleHours(forecast.hourlyToday), true, powerThresholds(PLANT));
 
 /** Nástenný čas FIXED_NOW v zóne prehliadača, nie procesu - z rovnakého dôvodu, aký
  * popisuje atTime nižšie. Testy ho potrebujú v oboch podobách: ako text v ciferníku
@@ -433,7 +434,9 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
 
     // Oba ukazujú ten istý deň: jeho krivka a jediný riadok mapy, ktorý mu patrí, a pod nimi
     // správa o tom dni - očakávanie sa počíta tou istou funkciou ako v appke.
-    await expect(page.locator('#week-msg-title')).toHaveText(dayDetailMessage(visibleHours(forecast.days[5].hourly)).title);
+    await expect(page.locator('#week-msg-title')).toHaveText(
+        dayDetailMessage(visibleHours(forecast.days[5].hourly), powerThresholds(PLANT)).title,
+    );
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[5].kwhTotal)} kWh`);
     // Jediný riadok mapy patrí vybranému dňu; skratka dňa v ňom nie je, deň hovorí hlavička.
     await expect(page.locator('#week-heat .day-label')).toHaveCount(0);
@@ -560,11 +563,14 @@ test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page 
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(1);
     await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(1);
     await expect(page.locator('#week-curve-live-legend')).toBeVisible();
+    // Koľko už z predpovede nabehlo, patrí tiež len dnešku.
+    await expect(page.locator('#week-curve-stat')).toContainText(`Doteraz ${fmt1(pv.dailyEnergyKwh)} kWh`);
 
     await page.locator('#week-day-back').click();
     await page.locator('#week-list [data-day-index="3"]').click();
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
     await expect(page.locator('#week-curve-live-legend')).toBeHidden();
+    await expect(page.locator('#week-curve-stat')).not.toContainText('Doteraz');
     expect(errors).toEqual([]);
 });
 
@@ -1768,6 +1774,24 @@ test.describe('moja elektráreň', () => {
         expect(errors).toEqual([]);
     });
 
+    /** Lokalita je pole formulára elektrárne, takže Enter v nej (na mobile kláves Hľadať)
+     * formulár odoslal. V ukážke, kde je Uložiť vždy povolené, sa tak Londýn uložil ako vlastná
+     * elektráreň - človek pritom len hľadal svoju obec. */
+    test('Enter vo vyhľadávaní lokality nič neuloží, len hľadá', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+        await expect(page.locator('#set-save')).toBeEnabled();
+
+        await page.locator('#set-place').fill('Sev');
+        await page.locator('#set-place').press('Enter');
+        await expect(page.locator('.geo-pick', { hasText: 'Sevilla' })).toBeVisible();
+        await expect(page.locator('#set-note')).toBeEmpty();
+        await expect(page.locator('#settings-demo')).toBeVisible();
+        expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+        expect(errors).toEqual([]);
+    });
+
     test('južná pologuľa: varovanie pri ploche na juh, nová plocha smeruje na sever', async ({ page }) => {
         await openApp(page);
         await page.locator('#nav-nastavenie').click();
@@ -1855,6 +1879,22 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await page.locator('#nav-info').click();
         await page.locator('#info-share > summary').click();
         await expect(page.locator('#share-options')).toBeHidden();
+    });
+
+    /** Pole na odkaz je vo formulári elektrárne. Enter po vložení odkazu (na mobile kláves Choď)
+     * formulár odoslal a uložil rozpísané nastavenie - v ukážke Londýn -, nie to z odkazu. */
+    test('Enter v poli s odkazom neuloží formulár, len ponúkne prevziať', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-plant > summary').click();
+
+        await page.locator('#set-import').fill(LINK);
+        await page.locator('#set-import').press('Enter');
+        await expect(page.locator('#import-offer')).toBeVisible();
+        await expect(page.locator('#set-note')).toBeEmpty();
+        await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+        expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+        expect(errors).toEqual([]);
     });
 
     test('prilepený odkaz: nesprávny ohlási chybu, správny ponúkne prevziať', async ({ page }) => {
