@@ -44,14 +44,14 @@ QR kód v nej kreslí knižnica z CDN.
   a jedna až tri plochy panelov s počtom, orientáciou a sklonom, výkon panelu a menič,
   nepovinne odkaz na kiosk Huawei FusionSolar pre živé meranie.
   Nastavenie sa ukladá len v prehliadači. Kým si ho človek neuloží, appka ukazuje ukážku
-  vymyslenej elektrárne v Londýne. **Zdieľať appku**: QR kód, odkaz na appku a tlačidlo na
-  poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné nastavenie elektrárne, voliteľne aj
-  s kiosk odkazom. Kto taký odkaz otvorí (alebo ho prilepí do Nastavenia), dostane ponuku
-  nastavenie prevziať; appka ho bez potvrdenia neuloží.
+  vymyslenej elektrárne v Londýne.
 - **Info** – zoznam položiek v rovnakom dizajne ako Nastavenie. **Ako čítať ciferník**:
   návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,
-  jazdec na prstenci). Obsah je statický, appka ho neprepočítava.
+  jazdec na prstenci). Obsah je statický, appka ho neprepočítava. **Zdieľať appku**: QR kód,
+  odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
+  nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
+  prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.
 
 Medzi kartami sa dá na dotykovej obrazovke prechádzať aj potiahnutím prsta do strán, v
 poradí spodnej navigácie – aj ponad grafy a prehľad dní. V detaile dňa listuje to isté

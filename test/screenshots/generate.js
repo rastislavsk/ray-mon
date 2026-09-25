@@ -13,12 +13,12 @@ import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 const PORT = 8123;
 const SIRKA = 390;
 const VYSKA = 844;
-// Karta Nastavenie tu zámerne nie je: QR kód v nej kreslí knižnica z CDN, takže bez prístupu
-// naň by z nej bol prázdny biely rámik. Je to aj tak len QR kód a odkaz.
+// Karta Nastavenie tu nie je. Na karte Info sa rozbalí len návod k ciferníku, inak by bol
+// na snímke iba zoznam položiek. Zdieľať appku ostáva zavreté: QR kód v ňom kreslí knižnica
+// z CDN, takže bez prístupu naň by z neho bol prázdny biely rámik.
 const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
-    // Na karte Info sa rozbalí návod k ciferníku, inak by bol na snímke len zoznam položiek.
     { subor: 'info.png', nav: 'nav-info', otvor: '#info-guide > summary' },
 ];
 

@@ -27,8 +27,6 @@ export function render(state, dom) {
     renderImportOffer(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
-    if (state.panel === 'nastavenie') {
-        renderNastavenie(state, dom);
-        renderZdielat(state, dom);
-    }
+    if (state.panel === 'nastavenie') renderNastavenie(state, dom);
+    if (state.panel === 'info') renderZdielat(state, dom);
 }

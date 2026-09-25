@@ -2245,7 +2245,7 @@ b {
     color: var(--green);
 }
 
-/* ---- Zdieľanie appky (položka nastavenia) ----------------------------------- */
+/* ---- Zdieľanie appky (položka karty Info) ---------------------------------- */
 .share-panel {
     display: flex;
     flex-direction: column;

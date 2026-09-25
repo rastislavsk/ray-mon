@@ -657,46 +657,6 @@
                             </form>
                         </details>
                     </li>
-                    <li>
-                        <details class="settings-item" id="settings-share">
-                            <summary class="settings-summary">
-                                <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <circle cx="18" cy="5" r="3" />
-                                    <circle cx="6" cy="12" r="3" />
-                                    <circle cx="18" cy="19" r="3" />
-                                    <path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8" />
-                                </svg>
-                                <span class="settings-text">
-                                    <b>Zdieľať appku</b>
-                                    <span class="settings-hint">QR kód a odkaz na iný telefón</span>
-                                </span>
-                                <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M9 5l7 7-7 7" />
-                                </svg>
-                            </summary>
-                            <div class="settings-body share-panel">
-                                <div class="share-options" id="share-options">
-                                    <label class="check-row">
-                                        <input type="checkbox" id="share-with-settings" />
-                                        <span>Pridať moje nastavenie elektrárne</span>
-                                    </label>
-                                    <label class="check-row" id="share-kiosk-row">
-                                        <input type="checkbox" id="share-with-kiosk" />
-                                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
-                                    </label>
-                                </div>
-                                <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
-                                <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                        <path
-                                            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.001 2C6.478 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2.05 22l5.096-1.293A9.958 9.958 0 0012.001 22c5.523 0 10-4.477 10-10S17.524 2 12.001 2zm0 18.161c-1.635 0-3.146-.457-4.436-1.246l-.318-.19-3.3.837.882-3.222-.207-.331a8.117 8.117 0 01-1.24-4.328c0-4.5 3.66-8.161 8.16-8.161 4.502 0 8.161 3.66 8.161 8.161 0 4.502-3.66 8.161-8.161 8.161z"
-                                        />
-                                    </svg>
-                                    Zdieľať cez WhatsApp
-                                </a>
-                            </div>
-                        </details>
-                    </li>
                 </ul>
             </section>
 
@@ -708,7 +668,7 @@
             <section id="panel-info" class="panel hidden" aria-labelledby="info-title">
                 <div class="section-head centered">
                     <h2 class="section-title" id="info-title">Info</h2>
-                    <div class="section-sub">Návod k appke</div>
+                    <div class="section-sub">Návod a zdieľanie</div>
                 </div>
                 <ul class="settings-list">
                     <li>
@@ -787,6 +747,46 @@
                                         </div>
                                     </li>
                                 </ul>
+                            </div>
+                        </details>
+                    </li>
+                    <li>
+                        <details class="settings-item" id="info-share">
+                            <summary class="settings-summary">
+                                <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="18" cy="5" r="3" />
+                                    <circle cx="6" cy="12" r="3" />
+                                    <circle cx="18" cy="19" r="3" />
+                                    <path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8" />
+                                </svg>
+                                <span class="settings-text">
+                                    <b>Zdieľať appku</b>
+                                    <span class="settings-hint">QR kód a odkaz na iný telefón</span>
+                                </span>
+                                <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M9 5l7 7-7 7" />
+                                </svg>
+                            </summary>
+                            <div class="settings-body share-panel">
+                                <div class="share-options" id="share-options">
+                                    <label class="check-row">
+                                        <input type="checkbox" id="share-with-settings" />
+                                        <span>Pridať moje nastavenie elektrárne</span>
+                                    </label>
+                                    <label class="check-row" id="share-kiosk-row">
+                                        <input type="checkbox" id="share-with-kiosk" />
+                                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                                    </label>
+                                </div>
+                                <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
+                                <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path
+                                            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.001 2C6.478 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2.05 22l5.096-1.293A9.958 9.958 0 0012.001 22c5.523 0 10-4.477 10-10S17.524 2 12.001 2zm0 18.161c-1.635 0-3.146-.457-4.436-1.246l-.318-.19-3.3.837.882-3.222-.207-.331a8.117 8.117 0 01-1.24-4.328c0-4.5 3.66-8.161 8.16-8.161 4.502 0 8.161 3.66 8.161 8.161 0 4.502-3.66 8.161-8.161 8.161z"
+                                        />
+                                    </svg>
+                                    Zdieľať cez WhatsApp
+                                </a>
                             </div>
                         </details>
                     </li>
