@@ -131,7 +131,12 @@ keď zmeníš výpočet zámerne, spusti `UPDATE_GOLDEN=1 npm test` a zmenu pop�
 Oboje je nasadené a beží.
 
 - **Stránka**: GitHub Pages, _Deploy from a branch_, vetva `main`, priečinok `/ (root)`.
-  Adresa: <https://rastislavsk.github.io/rackofci-energy-sro-fable/>
-- **Worker** `rackofci-energy-sro-fable`: nasadzuje sa sám pri pushnutí do `main` cez
+  Adresa: <https://rastislavsk.github.io/ray-mon/>
+- **Stará adresa** `…/rackofci-energy-sro-fable/`: repozitár sa tak volal do premenovania
+  na RAY-MON. GitHub Pages staré adresy neprevádza, preto na nej ostáva samostatný
+  repozitár [`rackofci-energy-sro-fable`](https://github.com/rastislavsk/rackofci-energy-sro-fable)
+  so stránkou, ktorá presmeruje na novú adresu aj s nastavením v odkaze. Drží pri živote
+  uložené odkazy, QR kódy a ikony na ploche.
+- **Worker** `ray-mon`: nasadzuje sa sám pri pushnutí do `main` cez
   Git integráciu Cloudflare. Postup a nastavenia buildu sú v
   [`worker/README.md`](worker/README.md).

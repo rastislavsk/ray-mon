@@ -211,8 +211,8 @@ export const DEVICES = [
 ];
 
 // Kde appka beží a odkiaľ číta dáta.
-export const APP_URL = 'https://rastislavsk.github.io/rackofci-energy-sro-fable/';
-export const WORKER_URL = 'https://rackofci-energy-sro-fable.rastislav-racek.workers.dev/';
+export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
+export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
 // Živé meranie z kiosku, ktorý si používateľ zadal v Nastavení. Odkaz ide v tele POST
 // požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera.
 export const WORKER_PV_URL = `${WORKER_URL}pv`;

@@ -1,8 +1,8 @@
-# Cloudflare Worker "rackofci-energy-sro-fable": živé meranie z kiosku, ktorý si zadal
+# Cloudflare Worker "ray-mon": živé meranie z kiosku, ktorý si zadal
 # používateľ appky (POST /pv). Nasadenie: pozri worker/README.md.
 # Meno musí sedieť s Workerom v Cloudflare účte, inak by wrangler nasadil do iného Workera
 # a appka by volala starú verziu.
-name = "rackofci-energy-sro-fable"
+name = "ray-mon"
 main = "src/index.js"
 compatibility_date = "2026-08-29"
 

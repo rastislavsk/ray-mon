@@ -1,5 +1,5 @@
 {
-  "name": "rackofci-energy-worker",
+  "name": "ray-mon-worker",
   "private": true,
   "type": "module",
   "scripts": {
