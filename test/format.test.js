@@ -21,6 +21,10 @@ test('čas', () => {
     assert.equal(minutesToTimeStr(-5), '23:55');
     assert.equal(timeStrToMinutes('23:30'), 1410);
     assert.equal(hourFloatToTimeStr(13.5), '13:30');
+    // Posledná pol minúta hodiny patrí k ďalšej hodine, nie k minúte 60 (tooltip ukazoval "13:60").
+    assert.equal(hourFloatToTimeStr(13.995), '14:00');
+    assert.equal(hourFloatToTimeStr(13.9999), '14:00');
+    assert.equal(hourFloatToTimeStr(6), '06:00');
 });
 
 test('čísla a popisky', () => {

@@ -66,7 +66,9 @@ neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z
 `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
 istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je
-len značka s krokom navigácie, takže odkaz na appku ostáva jeden.
+len značka s krokom navigácie, takže odkaz na appku ostáva jeden. Šípka späť v detaile dňa
+a ťah doprava z neho sú ten istý krok ako tlačidlo Späť, preto volajú `history.back()`
+(`closeDetail`) a nový krok nezapisujú – inak by Späť na telefóne detail znovu otvorilo.
 
 Prechod medzi kartami je iba CSS: `panelChange` v `state.js` dopočíta k novej karte aj smer
 (`panelDir`), `renderPanels` ho vyloží na `#page[data-dir]` a zvyšok je animácia `panel-in-*`

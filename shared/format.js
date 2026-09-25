@@ -22,11 +22,10 @@ export function timeStrToMinutes(str) {
     return h * 60 + m;
 }
 
-/** Desatinná hodina (13.5) -> "13:30". @param {number} hourFloat */
+/** Desatinná hodina (13.5) -> "13:30". Zaokrúhľuje celý čas na minúty, nie minúty zvlášť -
+ * inak by 13,995 h dalo "13:60". @param {number} hourFloat */
 export function hourFloatToTimeStr(hourFloat) {
-    const hh = Math.floor(hourFloat);
-    const mm = Math.round((hourFloat - hh) * 60);
-    return `${pad2(hh)}:${pad2(mm)}`;
+    return minutesToTimeStr(hourFloat * 60);
 }
 
 /** Celá hodina -> "HH:00". @param {number} hour */

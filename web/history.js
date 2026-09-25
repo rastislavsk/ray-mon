@@ -13,6 +13,23 @@
 
 import { navChange, navStep, navStepFrom, sameNavStep } from './state.js';
 
+/**
+ * Návrat z detailu do prehľadu dní - šípkou v hlavičke detailu aj ťahom doprava. Je to ten
+ * istý krok ako tlačidlo Späť, tak ide aj tou istou cestou: `history.back()` vyberie položku
+ * detailu a popstate nižšie zmení stav. Keby sa namiesto toho zapísal nový krok (prehľad),
+ * ostal by detail v histórii za ním a Späť na telefóne by ho znovu otvorilo.
+ *
+ * Detail sa dá otvoriť len z prehľadu dní, takže položka pred ním je vždy prehľad. Keď
+ * aktuálna položka histórie detail nie je (nepatrí appke, alebo nesedí so stavom), zmena
+ * ide priamo cez setState ako doteraz.
+ * @param {import('./state.js').Store} store
+ */
+export function closeDetail(store) {
+    const step = navStepFrom(history.state);
+    if (step && step.weekDetail && sameNavStep(step, navStep(store.get()))) history.back();
+    else store.setState({ weekDetail: null });
+}
+
 /** @param {import('./state.js').Store} store */
 export function initHistory(store) {
     // Kým sa appka vracia späť, nesmie ten istý krok zapísať do histórie znovu - inak by
