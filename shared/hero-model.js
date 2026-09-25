@@ -3,7 +3,7 @@
 
 import { installedKw, powerThresholds, STALE_PV_MS, STALE_PV_SUN_DEG } from './config.js';
 import { dayKwAt, realCurveBoundary } from './chart-model.js';
-import { fmt1, fmt2, minutesToTimeStr, pad2 } from './format.js';
+import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
 import { getSlotMessage } from './messages.js';
 import { autoTier, deviceStates, productionLevel, smartTier, windowAt, windowsFor } from './tariff.js';
@@ -69,14 +69,15 @@ function waitTimeFor(state, hasDevices) {
 }
 
 /**
- * Výkon do stredu ciferníka so slovenskou desatinnou čiarkou, ako všade inde v appke: dve
- * desatinné miesta, no najviac päť znakov. Šesť („100,00“) sa medzi prstence nezmestí (viď
- * .dial-num .val v style.css), preto od 100 kW ostáva jedno.
+ * Výkon do stredu ciferníka: dve desatinné miesta, no najviac päť znakov. Šesť („100.00“) sa
+ * medzi prstence nezmestí (viď .dial-num .val v style.css), preto od 100 kW ostáva jedno.
+ * Bodka je tu zámerne, hoci zvyšok appky píše desatinnú čiarku: veľké číslo ako na displeji
+ * meniča s ňou vyzerá lepšie. Čiarku sme skúsili (#180) a vrátili.
  * @param {number} kw
  */
 function dialText(kw) {
-    const text = fmt2(kw);
-    return text.length > 5 ? fmt1(kw) : text;
+    const text = kw.toFixed(2);
+    return text.length > 5 ? kw.toFixed(1) : text;
 }
 
 /**
