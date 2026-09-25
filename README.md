@@ -48,7 +48,8 @@ QR kód v nej kreslí knižnica z CDN.
   poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné nastavenie elektrárne, voliteľne aj
   s kiosk odkazom. Kto taký odkaz otvorí (alebo ho prilepí do Nastavenia), dostane ponuku
   nastavenie prevziať; appka ho bez potvrdenia neuloží.
-- **Info** – návod k ciferníku z karty Terazky: ilustračný ciferník a štyri vysvetlivky
+- **Info** – zoznam položiek v rovnakom dizajne ako Nastavenie. **Ako čítať ciferník**:
+  návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,
   jazdec na prstenci). Obsah je statický, appka ho neprepočítava.
 

@@ -18,7 +18,8 @@ const VYSKA = 844;
 const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
-    { subor: 'info.png', nav: 'nav-info' },
+    // Na karte Info sa rozbalí návod k ciferníku, inak by bol na snímke len zoznam položiek.
+    { subor: 'info.png', nav: 'nav-info', otvor: '#info-guide > summary' },
 ];
 
 /** Počká, kým server odpovie, aby sa prvý pokus o snímku netrafil do prázdna. */
@@ -66,8 +67,9 @@ try {
     await page.goto(url);
     await page.locator('#pv-updated').filter({ hasNotText: 'načítavam…' }).waitFor();
 
-    for (const { subor, nav } of KARTY) {
+    for (const { subor, nav, otvor } of KARTY) {
         await page.locator(`#${nav}`).click();
+        if (otvor) await page.locator(otvor).click();
         // Prvé prekreslenie po prepnutí karty.
         await page.waitForTimeout(400);
         await page.screenshot({ path: fileURLToPath(new URL(`../../docs/img/${subor}`, import.meta.url)) });

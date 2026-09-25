@@ -681,11 +681,14 @@ test('nastavenie: položka Zdieľať appku sa otvorí až ťuknutím', async ({ 
     expect(errors).toEqual([]);
 });
 
-test('info: karta vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
+test('info: položka Ako čítať ciferník vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-info').click();
     await expect(page.locator('#panel-info')).toBeVisible();
-    await expect(page.locator('#info-title')).toHaveText('Ako čítať ciferník');
+    await expect(page.locator('#info-title')).toHaveText('Info');
+    // Karta je zoznam položiek ako Nastavenie: návod je vidno až po ťuknutí na položku.
+    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await page.locator('#info-guide > summary').click();
     // Ilustračný ciferník aj štyri vysvetlivky: prstenec, bodka "teraz", oblúk výkonu, jazdec.
     await expect(page.locator('#panel-info .info-dial')).toBeVisible();
     await expect(page.locator('#panel-info .info-row')).toHaveCount(4);
@@ -1271,7 +1274,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
         await ocakavajKartu(page, 'nastavenie');
-        await swipe(page, '.settings-list', { dx: 120 });
+        await swipe(page, '#panel-nastavenie .settings-list', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
