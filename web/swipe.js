@@ -37,7 +37,7 @@ const SNAPS_X = /^(x|both)\b/;
 
 /**
  * Koľko miesta ostáva najbližšiemu vnútornému pásu pod prstom, ktorý sa dá posúvať do strán:
- * pás odporúčaní na karte Terazky, na úzkych displejoch aj tabuľka 7 dní. Kým má taký pás
+ * napríklad pás odporúčaní na karte Terazky. Kým má taký pás
  * kam ísť, patrí gesto jemu a nie karte - rovnaké pravidlo, aké medzi sebou používajú vnorené
  * pásy. Menovať jednotlivé miesta netreba: pás sa pozná podľa toho, že sa naozaj má kam
  * posunúť - a že sa posunúť vôbec dá.
@@ -136,7 +136,7 @@ export function initSwipe(store, dom, hideTooltips) {
             const dy = e.changedTouches[0].clientY - from.y;
             if (!isSwipe(from, dx, dy, e.timeStamp - from.t) || pansInner(from, dx)) return;
             // Po geste prehliadač ešte posiela klik na miesto, kde prst skončil - ťah ponad
-            // pás dňa by tak nastavil náhľad iného času, ťah ponad tabuľku 7 dní otvoril
+            // ciferník by tak nastavil náhľad iného času, ťah ponad rebríček dní otvoril
             // detail dňa. preventDefault na touchend ten klik zruší. Je tu pred rozhodnutím
             // o karte zámerne: aj ťah, ktorý narazil na kraj poradia a nikam nevedie, je
             // gesto, nie ťuknutie.

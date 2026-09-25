@@ -54,7 +54,7 @@ susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovk
 neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
 najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
-Menovaný je jediný prvok – úchytka bežca na páse dňa, ktorá sa ťahá a neposúva.
+Menovaný je jediný prvok – jazdec na dennom prstenci ciferníka, ktorý sa ťahá a neposúva.
 `settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Formulár v karte
 Nastavenie píše rozpísané nastavenie do stavu (`settingsDraft`); render z neho dopočíta
 súčty a hlásenia, ale hodnoty polí prepíše len pri zmene `settingsRev`, aby neprepisoval
