@@ -66,12 +66,13 @@ const Y_LABEL_SPACE_PX = 22;
 /**
  * Krok vodorovnej mriežky: najjemnejší s okrúhlymi číslami, ktorý sa na plátno ešte zmestí.
  * `maxLines` obmedzuje počet čiar podľa dostupnej výšky - na nízkom plátne by ich desať
- * splynulo do jedného stĺpca číslic.
+ * splynulo do jedného stĺpca číslic. Slúži kW v grafe priebehu aj kWh v dennej výrobe, preto
+ * rad siaha od štvrtín po tisícky: od malej strechy v zamračenom týždni po stovky kWh za deň.
  * @param {number} maxKw @param {number} [maxLines]
  */
 export function kwGridStep(maxKw, maxLines = 10) {
     const limit = Math.max(1, Math.min(10, Math.floor(maxLines)));
-    const steps = [0.25, 0.5, 1, 2, 2.5, 5, 10, 20];
+    const steps = [0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
     return steps.find((s) => maxKw / s <= limit) || steps[steps.length - 1];
 }
 
@@ -361,11 +362,14 @@ export function weekBarsModel(days, selDay, size = { W: 440, H: 190 }, showCeili
     const bw = slot * 0.5;
     const plotH = H - padT - padB;
     const maxV = Math.max(...days.map((d) => Math.max(d.kwhTotal, showCeiling ? d.clearKwhTotal : 0)), 1) * 1.08;
-    const gridStep = maxV > 80 ? 40 : maxV > 40 ? 20 : maxV > 16 ? 10 : 5;
+    // Najviac štyri úseky nad nulou, viac popiskov na mobilné plátno nevojde. Krok je z toho
+    // istého okrúhleho radu ako v grafe priebehu, takže sedí na desatiny kWh aj na stovky.
+    const gridStep = kwGridStep(maxV, 4);
     const yFor = (/** @type {number} */ v) => padT + plotH - (v / maxV) * plotH;
 
     const grid = [];
-    for (let g = 0; g <= maxV; g += gridStep) grid.push({ y: yFor(g), label: String(g) });
+    // Násobenie krokom, nie pripočítavanie - inak by sa pri desatinách nazbierala chyba.
+    for (let i = 0; i * gridStep <= maxV; i++) grid.push({ y: yFor(i * gridStep), label: formatGridKw(i * gridStep) });
     const tiers = weekDayTiers(days);
     const bars = days.map((d, i) => {
         const cx = padL + i * slot + slot / 2;

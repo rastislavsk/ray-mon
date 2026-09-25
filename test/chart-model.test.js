@@ -52,7 +52,7 @@ test('smoothPath a kwGridStep', () => {
     );
     assert.equal(kwGridStep(1.5), 0.25);
     assert.equal(kwGridStep(9), 1);
-    assert.equal(kwGridStep(500), 20);
+    assert.equal(kwGridStep(500), 50, 'aj stovky majú okrúhly krok, nie desiatky čiar po 20');
     // Na nízkom plátne sa krok zhrubne, aby popisky osi Y nesplynuli do stĺpca číslic.
     assert.equal(kwGridStep(9, 2), 5, 'dve čiary namiesto deviatich');
     assert.equal(kwGridStep(9, 1), 10, 'jedna čiara');
@@ -218,6 +218,27 @@ test('weekBarsModel: stĺpce s tooltipom a stropom, vybraný deň označený', (
         'geometria je v plátne',
     );
     assert.ok(m.grid.length >= 2);
+});
+
+test('weekBarsModel: mriežka má pár čiar pri každej veľkosti elektrárne', () => {
+    const krat = (/** @type {number} */ k) =>
+        forecast.days.map((d) => ({ ...d, kwhTotal: d.kwhTotal * k, clearKwhTotal: d.clearKwhTotal * k }));
+    // Elektráreň so stovkou kW vyrobí za deň stovky kWh. Krok 40 kWh by dal vyše dvadsať čiar
+    // s popiskami na 190 px vysokom plátne a popisky by sa zliali.
+    const velka = weekBarsModel(krat(12), 0);
+    assert.ok(velka.grid.length >= 2 && velka.grid.length <= 5, `veľká: ${velka.grid.length} čiar`);
+    // Maličká strecha v zamračenom týždni: krok 5 kWh nechal len nulu. Desatiny majú čiarku.
+    const mala = weekBarsModel(krat(0.02), 0);
+    assert.ok(mala.grid.length >= 2 && mala.grid.length <= 5, `malá: ${mala.grid.length} čiar`);
+    assert.ok(
+        mala.grid.every((g) => !g.label.includes('.')),
+        mala.grid.map((g) => g.label).join(' '),
+    );
+    // Bežná veľkosť ostáva, aká bola: Dvorany majú čiary po 20 kWh.
+    assert.deepEqual(
+        weekBarsModel(forecast.days, 0).grid.map((g) => g.label),
+        ['0', '20', '40', '60'],
+    );
 });
 
 test('weekBarsModel: showCeiling = false vypne čiaru stropu, ale nie tooltip', () => {

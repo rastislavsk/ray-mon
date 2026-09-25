@@ -14,8 +14,8 @@ import {
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
-import { minutesOfDay } from '../shared/hero-model.js';
 import { checkSettings, settingsFromLink } from '../shared/settings.js';
+import { localMinutes } from '../shared/solar.js';
 import { loadData, searchPlaces } from './data.js';
 import { initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
@@ -99,7 +99,7 @@ function initTimePreview(store, dom) {
     const grip = dom.dialGrip;
     const move = (/** @type {PointerEvent} */ e) => {
         const minutes = minutesFromPoint(dom, e.clientX, e.clientY);
-        const nowMinutes = minutesOfDay(store.get().now, store.get().site.timezone);
+        const nowMinutes = localMinutes(store.get().now, store.get().site.timezone);
         store.setState({ previewMinutes: ringGap(minutes, nowMinutes) <= PREVIEW.snapToNowMin ? null : minutes });
     };
     grip.addEventListener('pointerdown', (e) => {
@@ -133,7 +133,7 @@ function initTimePreview(store, dom) {
                   : 0;
         if (!step) return;
         e.preventDefault();
-        const from = store.get().previewMinutes ?? minutesOfDay(store.get().now, store.get().site.timezone);
+        const from = store.get().previewMinutes ?? localMinutes(store.get().now, store.get().site.timezone);
         store.setState({ previewMinutes: (((from + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY });
     });
     // Enter a medzerník na značke "teraz" otvoria náhľad na aktuálnom čase.
@@ -142,7 +142,7 @@ function initTimePreview(store, dom) {
     // ťahanie totiž na konci pošle aj klik.
     grip.addEventListener('click', (e) => {
         if (e.detail === 0 && store.get().previewMinutes === null) {
-            store.setState({ previewMinutes: minutesOfDay(store.get().now, store.get().site.timezone) });
+            store.setState({ previewMinutes: localMinutes(store.get().now, store.get().site.timezone) });
         }
     });
     dom.dialWrap.addEventListener('click', (e) => {

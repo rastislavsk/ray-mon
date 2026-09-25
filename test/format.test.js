@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
     escapeHtml,
     fmt1,
+    fmt2,
     formatGridKw,
     hourFloatToTimeStr,
+    kwpText,
     minutesToTimeStr,
     timeStrToMinutes,
     weekDayLabel,
@@ -23,6 +25,9 @@ test('čas', () => {
 
 test('čísla a popisky', () => {
     assert.equal(fmt1(3.14), '3,1');
+    assert.equal(fmt2(48.48), '48,48');
+    assert.equal(kwpText(10.44), '10,44 kWp');
+    assert.equal(kwpText(5.2), '5,20 kWp');
     assert.equal(formatGridKw(2), '2');
     assert.equal(formatGridKw(0.25), '0,25');
     assert.equal(formatGridKw(0.5), '0,5');

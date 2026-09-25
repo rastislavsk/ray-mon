@@ -3,8 +3,9 @@
 import { MINUTES_PER_DAY, powerThresholds } from '../../shared/config.js';
 import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/chart-model.js';
 import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
-import { heroModel, minutesOfDay } from '../../shared/hero-model.js';
+import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
+import { localMinutes } from '../../shared/solar.js';
 import { DEVICE_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 import { dayRingSvg } from '../svg.js';
@@ -92,7 +93,7 @@ function renderDayRing(state, dom) {
  * náhľadu sa mení na objímku a značku "teraz" preberie samostatná bodka.
  * @param {import('../state.js').AppState} state @param {ReturnType<typeof heroModel>} hero @param {import('../dom.js').Dom} dom */
 function renderRingMarks(state, hero, dom) {
-    const nowMinutes = minutesOfDay(state.now, state.site.timezone);
+    const nowMinutes = localMinutes(state.now, state.site.timezone);
     placeOnRing(dom.dialNow, nowMinutes);
     dom.dialNow.classList.toggle('hidden', !hero.preview);
 

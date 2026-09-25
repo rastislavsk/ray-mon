@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { PLANT, SITE } from '../shared/config.js';
 import {
+    alignToLocalHours,
     buildForecast,
     clearSkyAcKw,
     clearSkyIrradiance,
@@ -11,6 +12,7 @@ import {
     hourlySeries,
     localDateKey,
     localHour,
+    localMinutes,
     plantAcKw,
     poaIrradiance,
     solarPosition,
@@ -77,6 +79,49 @@ test('localHour/localDateKey/daypartFor: Europe/Bratislava vrátane letného ča
     assert.equal(daypartFor(new Date('2026-07-01T12:00:00Z'), TZ), 'poobede');
     assert.equal(daypartFor(new Date('2026-07-01T16:00:00Z'), TZ), 'podvečer');
     assert.equal(daypartFor(new Date('2026-07-01T19:00:00Z'), TZ), 'neskôr');
+});
+
+test('localMinutes: minúta dňa v pásme lokality, aj s polhodinovým posunom', () => {
+    const chvila = new Date('2026-09-05T11:05:00Z');
+    assert.equal(localMinutes(chvila, TZ), 13 * 60 + 5);
+    // Tá istá chvíľa v Londýne je o hodinu skôr, v Indii (+5:30) o tri a pol hodiny neskôr.
+    assert.equal(localMinutes(chvila, 'Europe/London'), 12 * 60 + 5);
+    assert.equal(localMinutes(chvila, 'Asia/Kolkata'), 16 * 60 + 35);
+});
+
+test('alignToLocalHours: celé hodiny nechá, polhodinové posunie na celú miestnu hodinu', () => {
+    const hodina = (/** @type {string} */ iso, /** @type {number} */ ghi, /** @type {number | null} */ cloudPct = 50) => ({
+        dateUtc: new Date(iso),
+        irr: { ghi, dni: 2 * ghi, dhi: ghi / 2 },
+        tempC: ghi / 10,
+        cloudPct,
+    });
+    const raw = [hodina('2026-09-05T05:00:00Z', 0), hodina('2026-09-05T06:00:00Z', 100, null)];
+    // Bratislava (+2): UTC hodina je aj celá miestna hodina, nemení sa nič.
+    assert.deepEqual(alignToLocalHours(raw, TZ), raw);
+    // India (+5:30): 06:00 UTC je 11:30 miestneho. Hodnota patrí na 11:00, teda 05:30 UTC -
+    // v polovici cesty od predošlej UTC hodiny.
+    const india = alignToLocalHours(raw, 'Asia/Kolkata');
+    assert.equal(india.length, 1, 'prvá hodina nemá predchodcu, z ktorého by sa dopočítala');
+    assert.equal(india[0].dateUtc.toISOString(), '2026-09-05T05:30:00.000Z');
+    assert.deepEqual(india[0].irr, { ghi: 50, dni: 100, dhi: 25 });
+    assert.equal(india[0].tempC, 5);
+    assert.equal(india[0].cloudPct, null, 'chýbajúca oblačnosť sa nedopočítava');
+    // Nepál (+5:45): 06:00 UTC je 11:45 miestneho, 11:00 je 05:15 UTC - štvrtina cesty.
+    const nepal = alignToLocalHours(raw, 'Asia/Kathmandu');
+    assert.equal(nepal[0].dateUtc.toISOString(), '2026-09-05T05:15:00.000Z');
+    assert.equal(nepal[0].irr.ghi, 25);
+});
+
+test('pásmo s polhodinovým posunom: čas silnejšieho slnka ukazuje na hodinu, kde je špička', () => {
+    // Geografia Dvorian, len pásmo +5:30. O 04:40 UTC je tam 10:10 a špička príde poobede.
+    const india = { ...SITE, timezone: 'Asia/Kolkata' };
+    const f = buildForecast(fixture('open-meteo.json'), new Date('2026-09-05T04:40:00Z'), india, PLANT);
+    assert.ok(f.strongerWindowAhead && f.hoursAhead !== null, 'predpoveď musí hlásiť silnejšie slnko');
+    const buduce = f.hourlyToday.filter((h) => h.hour > 10);
+    const spicka = buduce.reduce((a, b) => (b.kw > a.kw ? b : a));
+    // „Lepšie bude o HH:00“ skladá appka z aktuálnej miestnej hodiny a hoursAhead.
+    assert.equal(10 + f.hoursAhead, spicka.hour);
 });
 
 test('hourlySeries: zoradené podľa miestnej hodiny, kw na 2 desatiny, cloud zaokrúhlený', () => {

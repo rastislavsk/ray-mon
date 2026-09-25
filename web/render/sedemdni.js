@@ -20,7 +20,7 @@ import {
     weekStatsModel,
 } from '../../shared/chart-model.js';
 import { installedKw, powerThresholds } from '../../shared/config.js';
-import { escapeHtml, fmt1, hourLabel, weekDateLabel, weekDayLong, weekDayShort } from '../../shared/format.js';
+import { escapeHtml, fmt1, hourLabel, kwpText, weekDateLabel, weekDayLong, weekDayShort } from '../../shared/format.js';
 import { dayDetailMessage, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_CLOUD, ICON_PARTLY, ICON_SUN } from '../icons.js';
@@ -367,7 +367,7 @@ function renderEmpty(dom) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderSedemdni(state, dom) {
-    dom.weekSub.textContent = `${state.site.name} · ${fmt1(installedKw(state.plant))} kWp`;
+    dom.weekSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
     const days = state.forecast && Array.isArray(state.forecast.days) ? state.forecast.days : [];
     // Bez dát nie je čo otvárať - karta ostáva na prehľade so správou "Predpoveď sa pripravuje".
     const detail = !state.wide && days.length > 0 ? state.weekDetail : null;

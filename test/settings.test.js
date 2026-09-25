@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_PLANT, DEMO_SITE, PLANT, SITE } from '../shared/config.js';
+import { DEMO_PLANT, DEMO_SITE, installedKw, PLANT, SITE } from '../shared/config.js';
 import {
     checkSettings,
     demoSettings,
@@ -29,6 +29,12 @@ test('ukážka je Londýn s vlastnou zostavou a prejde kontrolou', () => {
 
 test('Dvorany prejdú kontrolou bez varovaní', () => {
     assert.deepEqual(checkSettings(DVORANY), { errors: [], warnings: [], kwp: (24 * 435) / 1000, panels: 24 });
+});
+
+test('kWp je v appke jedno číslo: kontrola, súhrn aj ciferník ho berú z installedKw', () => {
+    // Karta 7 dní ukazovala 10,4 kWp (zaokrúhlené installedKw), Nastavenie 10,44 kWp (vlastný súčet).
+    assert.equal(installedKw(PLANT), 10.44);
+    assert.equal(checkSettings(DVORANY).kwp, installedKw(PLANT));
 });
 
 test('chyby: rozsahy, celé čísla, časové pásmo, počet plôch', () => {

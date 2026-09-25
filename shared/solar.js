@@ -251,19 +251,20 @@ function buildDay(dayKey, entries, site, plant) {
 
 /**
  * Príde ešte dnes citeľne silnejšie slnko než teraz? (Pre texty "počkaj na slnko".)
- * @param {HourEntry[]} hourly @param {string} todayKey @param {number} nowHourUtc @param {string} timezone
+ * @param {HourEntry[]} hourly @param {string} todayKey
+ * @param {number} nowHourStart začiatok aktuálnej miestnej hodiny (ms) @param {string} timezone
  * @param {import('./config.js').PowerThresholds} th
  */
-function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone, th) {
+function strongerWindowAhead(hourly, todayKey, nowHourStart, timezone, th) {
     const none = {
         strongerWindowAhead: false,
         windowDaypart: /** @type {string | null} */ (null),
         peakKw: /** @type {number | null} */ (null),
         hoursAhead: /** @type {number | null} */ (null),
     };
-    const currentHour = hourly.find((h) => h.dateUtc.getTime() === nowHourUtc);
+    const currentHour = hourly.find((h) => h.dateUtc.getTime() === nowHourStart);
     const baselineKw = currentHour ? currentHour.acKw : 0;
-    const futureToday = hourly.filter((h) => h.localDate === todayKey && h.dateUtc.getTime() > nowHourUtc);
+    const futureToday = hourly.filter((h) => h.localDate === todayKey && h.dateUtc.getTime() > nowHourStart);
     if (!futureToday.length) return none;
     let peak = futureToday[0];
     for (const h of futureToday) if (h.acKw > peak.acKw) peak = h;
@@ -272,7 +273,40 @@ function strongerWindowAhead(hourly, todayKey, nowHourUtc, timezone, th) {
         strongerWindowAhead: true,
         windowDaypart: daypartFor(peak.dateUtc, timezone),
         peakKw: round(peak.acKw, 2),
-        hoursAhead: Math.round((peak.dateUtc.getTime() - nowHourUtc) / 3600000),
+        hoursAhead: Math.round((peak.dateUtc.getTime() - nowHourStart) / 3600000),
+    };
+}
+
+/** @typedef {{ dateUtc: Date, irr: Irradiance, tempC: number, cloudPct: number | null }} WeatherHour */
+
+/**
+ * Open-Meteo dáva hodiny v UTC. V pásme s polhodinovým posunom (India +5:30, Nepál +5:45,
+ * Newfoundland −3:30) tak padne každá hodnota na hh:30 miestneho času, kým appka kreslí aj
+ * počíta po celých miestnych hodinách - krivka by bola o pol hodiny posunutá proti slnku aj
+ * proti tarifným oknám. Taká hodnota sa preto presunie na celú miestnu hodinu pred ňou
+ * a dopočíta sa lineárne od predošlej UTC hodiny. Prvá hodina predošlú nemá, a tak vypadne.
+ * V pásme s celými hodinami sa nemení nič.
+ * @param {WeatherHour[]} hours @param {string} timezone @returns {WeatherHour[]}
+ */
+export function alignToLocalHours(hours, timezone) {
+    const out = [];
+    for (let i = 0; i < hours.length; i++) {
+        const minute = localMinutes(hours[i].dateUtc, timezone) % 60;
+        if (minute === 0) out.push(hours[i]);
+        else if (i > 0) out.push(between(hours[i - 1], hours[i], (60 - minute) / 60));
+    }
+    return out;
+}
+
+/** Počasie v zlomku `t` cesty od hodiny `a` k hodine `b` (0 = a, 1 = b).
+ * @param {WeatherHour} a @param {WeatherHour} b @param {number} t @returns {WeatherHour} */
+function between(a, b, t) {
+    const mix = (/** @type {number} */ x, /** @type {number} */ y) => x + (y - x) * t;
+    return {
+        dateUtc: new Date(mix(a.dateUtc.getTime(), b.dateUtc.getTime())),
+        irr: { ghi: mix(a.irr.ghi, b.irr.ghi), dni: mix(a.irr.dni, b.irr.dni), dhi: mix(a.irr.dhi, b.irr.dhi) },
+        tempC: mix(a.tempC, b.tempC),
+        cloudPct: a.cloudPct === null || b.cloudPct === null ? null : mix(a.cloudPct, b.cloudPct),
     };
 }
 
@@ -296,22 +330,29 @@ export function buildForecast(data, now, site, plant) {
     } = data.hourly;
 
     const todayKey = localDateKey(now, tz);
-    const nowHourUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours());
+    // Začiatok aktuálnej miestnej hodiny. Záznamy predpovede stoja na celých miestnych hodinách
+    // (alignToLocalHours), takže sa s ním dajú porovnať priamo. Pri pásme s celými hodinami je
+    // to začiatok UTC hodiny.
+    const nowHourStart = now.getTime() - (localMinutes(now, tz) % 60) * 60000 - (now.getTime() % 60000);
 
+    /** @type {WeatherHour[]} */
+    const weather = time.map((t, i) => ({
+        dateUtc: new Date(`${t}Z`),
+        irr: { ghi: ghiArr[i], dni: dniArr[i], dhi: dhiArr[i] },
+        tempC: tempArr[i],
+        cloudPct: cloudArr ? cloudArr[i] : null,
+    }));
     /** @type {HourEntry[]} */
-    const hourly = time.map((t, i) => {
-        const dateUtc = new Date(`${t}Z`);
-        return {
-            dateUtc,
-            acKw: forecastAcKw({ ghi: ghiArr[i], dni: dniArr[i], dhi: dhiArr[i] }, tempArr[i], dateUtc, site, plant),
-            localDate: localDateKey(dateUtc, tz),
-            cloudPct: cloudArr ? cloudArr[i] : null,
-            tempC: tempArr[i],
-        };
-    });
+    const hourly = alignToLocalHours(weather, tz).map((w) => ({
+        dateUtc: w.dateUtc,
+        acKw: forecastAcKw(w.irr, w.tempC, w.dateUtc, site, plant),
+        localDate: localDateKey(w.dateUtc, tz),
+        cloudPct: w.cloudPct,
+        tempC: w.tempC,
+    }));
 
     const th = powerThresholds(plant);
-    const ahead = strongerWindowAhead(hourly, todayKey, nowHourUtc, tz, th);
+    const ahead = strongerWindowAhead(hourly, todayKey, nowHourStart, tz, th);
 
     const dayKeyOffset = (/** @type {number} */ days) => localDateKey(new Date(now.getTime() + days * 86400000), tz);
     const tomorrowKey = dayKeyOffset(1);
