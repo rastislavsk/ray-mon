@@ -1,4 +1,4 @@
-# Worker `rackofci-energy-sro-fable`
+# Worker `ray-mon`
 
 Živé meranie pre appku. Prehliadač sa na kiosk Huawei FusionSolar priamo nedostane, preto
 ho za neho stiahne tento Worker. Nič neukladá: nemá úložisko, tajomstvá ani plánované behy.
@@ -43,11 +43,11 @@ Keby sa limit začal míňať, možnosti sú dve:
   Treba potom zmeniť aj `WORKER_URL` v `shared/config.js`.
 
 Koľko požiadaviek denne Worker dostáva, ukazuje dashboard → Workers & Pages →
-`rackofci-energy-sro-fable` → Metrics.
+`ray-mon` → Metrics.
 
 ## Nasadenie
 
-**Git integrácia**: Cloudflare dashboard → Workers & Pages → `rackofci-energy-sro-fable` →
+**Git integrácia**: Cloudflare dashboard → Workers & Pages → `ray-mon` →
 Settings → Build → Connect to Git, root directory `worker/`. Po každom pushnutí do `main`
 sa Worker nasadí sám.
 
