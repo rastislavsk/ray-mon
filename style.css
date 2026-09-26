@@ -399,7 +399,10 @@ b {
        dáva pás vysoký 43px (7+30+6), čo je dostatočná rezerva nad safe-area zdola. Desktop
        (od 1024px) má vlastný padding aj vlastnú veľkosť ikon, tieto riadky naň nedosiahnu. */
     padding: 7px 0 6px;
-    color: var(--ink-35);
+    /* Plná sivá, nie priehľadná --ink-35: ikona je poskladaná z viacerých ťahov a kde sa
+       priehľadné ťahy prekrývajú, priehľadnosť sa sčíta - ikona pôsobila rozmazane a mala
+       svetlejšie fľaky. Táto sivá je --ink-35 zmiešaná s tmavým pásom, jas ostáva rovnaký. */
+    color: #878682;
     position: relative;
     transition: color var(--dur);
 }
@@ -408,7 +411,7 @@ b {
     height: 30px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
