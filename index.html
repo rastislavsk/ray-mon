@@ -84,7 +84,8 @@
             <!-- PANEL: TERAZKY -->
             <section id="panel-terazky" class="panel panel-terazky" aria-labelledby="verdict-headline">
                 <div class="dial-hero card" id="dial-hero">
-                    <!-- Ciferník sa číta ako 24-hodinový: 00:00 hore, deň v smere hodinových ručičiek.
+                    <!-- Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo,
+                         polnoc dole - deň v smere hodinových ručičiek, slnko ide zľava doprava.
                          Vonkajší prstenec je deň s tarifnými pásmami (dopĺňa ho JS, viď dayRingSvg),
                          vnútorný oblúk aktuálny výkon. Pás dňa pod kartou zanikol - jeho úlohu
                          (nastaviť náhľad iného času) prevzal jazdec na dennom prstenci. -->
@@ -94,10 +95,10 @@
                             <!-- Hodiny sedia v medzere medzi prstencami (polomer 93 z 240 viewBoxu):
                                  vonkajší prstenec zaberá 102-110, vnútorný 71-85. Na samotnom
                                  prstenci predtým prekrývali tarifné pásma. -->
-                            <text class="dial-hour" x="120" y="27">0</text>
-                            <text class="dial-hour" x="213" y="120">6</text>
-                            <text class="dial-hour" x="120" y="213">12</text>
-                            <text class="dial-hour" x="27" y="120">18</text>
+                            <text class="dial-hour" x="120" y="27">12</text>
+                            <text class="dial-hour" x="213" y="120">18</text>
+                            <text class="dial-hour" x="120" y="213">0</text>
+                            <text class="dial-hour" x="27" y="120">6</text>
                             <circle class="dial-track" cx="120" cy="120" r="78" />
                             <circle id="dial-ring" class="dial-ring" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
                         </svg>
@@ -605,19 +606,23 @@
                             </summary>
                             <div class="settings-body info-panel">
                                 <svg class="info-dial" viewBox="0 0 240 240" aria-hidden="true">
-                                    <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
-                                    <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
-                                    <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
-                                    <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
-                                    <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
-                                    <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
-                                    <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
-                                    <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
-                                    <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
-                                    <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
+                                    <!-- Pásma a bodka sú kreslené s polnocou hore; otočenie ich posadí ako na ciferníku
+                                         v karte Terazky - poludnie hore. Oblúk výkonu nie je čas, ten sa neotáča. -->
+                                    <g transform="rotate(180 120 120)">
+                                        <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
+                                        <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
+                                        <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
+                                        <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
+                                        <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
+                                        <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
+                                        <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
+                                        <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
+                                        <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
+                                        <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
+                                        <circle class="info-dial-now" cx="92.57" cy="222.39" r="5" />
+                                    </g>
                                     <circle class="dial-track" cx="120" cy="120" r="78" />
                                     <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
-                                    <circle class="info-dial-now" cx="92.57" cy="222.39" r="5" />
                                 </svg>
 
                                 <ul class="info-rows">

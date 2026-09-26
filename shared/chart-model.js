@@ -165,13 +165,14 @@ export function chartTooltipModel(model, relX) {
 }
 
 // ---- Denný prstenec (ciferník na karte Terazky) ----------------------------------
-// Ciferník sa číta ako 24-hodinový: 00:00 hore, deň v smere hodinových ručičiek.
+// Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo, polnoc dole.
+// Deň ide v smere hodinových ručičiek, takže slnko prejde zľava cez vrch doprava.
 // Vonkajší prstenec je deň s tarifnými pásmami, vnútorný oblúk aktuálny výkon.
 export const RING = { viewBox: 240, rDay: 106, dayWidth: 8, rPower: 78, powerWidth: 14 };
 
 /** Bod na kružnici pre minútu dňa, v jednotkách viewBoxu. @param {number} r @param {number} minutes */
 export function ringPoint(r, minutes) {
-    const rad = ((minutes / MINUTES_PER_DAY) * 2 - 0.5) * Math.PI;
+    const rad = ((minutes / MINUTES_PER_DAY) * 2 + 0.5) * Math.PI;
     const c = RING.viewBox / 2;
     return { x: c + r * Math.cos(rad), y: c + r * Math.sin(rad) };
 }
@@ -186,8 +187,8 @@ export function ringPercent(minutes) {
 /** Uhol jazdca od stredu ciferníka -> minúta dňa. Opak ringPoint; polnoc nie je stena,
  * záporný uhol sa obtočí. @param {number} dx @param {number} dy vzdialenosť od stredu */
 export function minutesFromAngle(dx, dy) {
-    const deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
-    return Math.round(((deg < 0 ? deg + 360 : deg) / 360) * MINUTES_PER_DAY) % MINUTES_PER_DAY;
+    const deg = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
+    return Math.round((((deg + 360) % 360) / 360) * MINUTES_PER_DAY) % MINUTES_PER_DAY;
 }
 
 /** Vzdialenosť dvoch minút po obvode - cez polnoc je to bližšie než rozdiel čísel.
