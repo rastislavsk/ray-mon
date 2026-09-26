@@ -343,12 +343,17 @@ test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ p
         else await expect(grip, minutesToTimeStr(min)).not.toHaveClass(/night/);
     }
 
-    // Počas náhľadu nesie značku "teraz" samostatná bodka - aj tá je v noci mesiac.
+    // Počas náhľadu je na prstenci len objímka jazdca - slnko ani mesiac tam nie sú.
+    // Vráti ich tlačidlo "Teraz".
+    const grip = page.locator('#dial-grip');
     const box = await page.locator('#dial-wrap').boundingBox();
     if (!box) throw new Error('ciferník nemá rozmer');
     await page.mouse.click(ringXY(box, 12 * 60).x, ringXY(box, 12 * 60).y);
-    await expect(page.locator('#dial-now')).toBeVisible();
-    await expect(page.locator('#dial-now')).toHaveClass(/night/);
+    await expect(grip).not.toHaveClass(/at-now/);
+    await expect(page.locator('#dial-now')).toBeHidden();
+    await page.locator('#preview-reset').click();
+    await expect(grip).toHaveClass(/at-now/);
+    await expect(grip).toHaveClass(/night/);
 });
 
 test('náhľad času sa dá celý ovládať z klávesnice, nielen prstom', async ({ page }) => {
