@@ -100,7 +100,7 @@ function renderRingMarks(state, hero, dom) {
     placeOnRing(dom.dialGrip, hero.minutes);
     dom.dialGrip.classList.toggle('at-now', !hero.preview);
     // Otočenie o uhol času: dlhá os objímky tak leží po obvode prstenca.
-    dom.dialGrip.style.transform = `translate(-50%, -50%) rotate(${(hero.minutes / MINUTES_PER_DAY) * 360}deg)`;
+    dom.dialGrip.style.transform = `translate(-50%, -50%) rotate(${(hero.minutes / MINUTES_PER_DAY) * 360 + 180}deg)`;
     dom.dialGrip.setAttribute('aria-valuenow', String(hero.minutes));
     dom.dialGrip.setAttribute('aria-valuetext', `${hero.preview ? 'Náhľad' : 'Teraz'} ${minutesToTimeStr(hero.minutes)}`);
 }

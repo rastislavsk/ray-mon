@@ -95,14 +95,14 @@ test('chartTooltipModel: ľavý okraj = 05:00, pravý = 21:00, strop len ak body
     assert.ok(tip.clearKw !== null && tip.yFrac > 0 && tip.yFrac < 1);
 });
 
-test('denný prstenec: 00:00 hore, pásma obídu celý deň, uhol a minúta sú navzájom opačné', () => {
+test('denný prstenec: poludnie hore, pásma obídu celý deň, uhol a minúta sú navzájom opačné', () => {
     const c = RING.viewBox / 2;
-    const top = ringPoint(RING.rDay, 0);
-    assert.ok(Math.abs(top.x - c) < 1e-9 && top.y < c, '00:00 je hore');
+    const midnight = ringPoint(RING.rDay, 0);
+    assert.ok(Math.abs(midnight.x - c) < 1e-9 && midnight.y > c, 'polnoc je dole');
     const noon = ringPoint(RING.rDay, MINUTES_PER_DAY / 2);
-    assert.ok(Math.abs(noon.x - c) < 1e-9 && noon.y > c, 'poludnie je dole');
+    assert.ok(Math.abs(noon.x - c) < 1e-9 && noon.y < c, 'poludnie je hore');
     const six = ringPoint(RING.rDay, MINUTES_PER_DAY / 4);
-    assert.ok(six.x > c && Math.abs(six.y - c) < 1e-9, '06:00 je vpravo - deň ide v smere ručičiek');
+    assert.ok(six.x < c && Math.abs(six.y - c) < 1e-9, '06:00 je vľavo - slnko ide zľava doprava');
 
     // minutesFromAngle je opak ringPoint: čo jeden vyrobí, druhý prečíta späť.
     for (const m of [0, 95, 370, 786, 1000, 1435]) {
@@ -111,7 +111,7 @@ test('denný prstenec: 00:00 hore, pásma obídu celý deň, uhol a minúta sú 
     }
 
     const mid = ringPercent(MINUTES_PER_DAY / 2);
-    assert.ok(Math.abs(mid.left - 50) < 1e-9 && mid.top > 50, 'percentá sedia s bodom');
+    assert.ok(Math.abs(mid.left - 50) < 1e-9 && mid.top < 50, 'percentá sedia s bodom');
 
     // Polnoc nie je stena: 23:50 a 00:10 sú od seba 20 minút, nie 1420.
     assert.equal(ringGap(1430, 10), 20);
