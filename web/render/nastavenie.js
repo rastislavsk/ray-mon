@@ -60,7 +60,7 @@ const TEXTS = {
         lead: 'Nájdeš ho na štítku na zadnej strane panelu pri „Pmax“, alebo v zmluve, napríklad „24 × 435 Wp“.',
     },
     smer: {
-        title: 'Kam sa pozerajú panely?',
+        title: 'Kam smerujú panely?',
         lead: 'Ťukni na stranu, na ktorú je strecha s panelmi otočená. Oranžový oblúk je dráha slnka cez deň.',
     },
     sklon: { title: 'Aká strmá je strecha?', lead: 'Vyber typ strechy. Kto pozná presné stupne, doladí ich posúvačom.' },
