@@ -902,13 +902,13 @@ test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({
 });
 
 /**
- * Karta Spotrebiče má na širokej obrazovke celú šírku stránky - kým existovala karta
+ * Karta Terazky má na širokej obrazovke celú šírku stránky - kým existovala karta
  * Dnes-Zajtra, delili si ju na polovicu. Stránka je tu položkou zvislého flexu a vystredenie
  * cez `margin: 0 auto` jej vypína naťahovanie na šírku; karta pritom vlastnú šírku nemá
  * (ciferník sa počíta z percent, odporúčanie je `container-type: inline-size`), takže bez
  * `width: 100%` by sa stránka scvrkla na svoje okraje. Práve to test stráži.
  */
-test('široká obrazovka: Spotrebiče majú celú šírku stránky', async ({ page }) => {
+test('široká obrazovka: karta Terazky má celú šírku stránky', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const errors = await openApp(page);
     await expect(page.locator('#panel-terazky')).toBeVisible();
@@ -1088,7 +1088,7 @@ test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     expect(errors).toEqual([]);
 });
 
-test('široká obrazovka: prepnutie na 7 dní skryje kartu Spotrebiče', async ({ page }) => {
+test('široká obrazovka: prepnutie na 7 dní skryje kartu Terazky', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();

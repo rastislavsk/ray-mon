@@ -164,7 +164,7 @@ export function chartTooltipModel(model, relX) {
     };
 }
 
-// ---- Denný prstenec (ciferník na karte Spotrebiče) --------------------------------
+// ---- Denný prstenec (ciferník na karte Terazky) ----------------------------------
 // Ciferník sa číta ako 24-hodinový: 00:00 hore, deň v smere hodinových ručičiek.
 // Vonkajší prstenec je deň s tarifnými pásmami, vnútorný oblúk aktuálny výkon.
 export const RING = { viewBox: 240, rDay: 106, dayWidth: 8, rPower: 78, powerWidth: 14 };

@@ -1,4 +1,4 @@
-// Karta Spotrebiče: ciferník s denným prstencom, verdikt a spotrebiče. Čistý zápis modelu do DOM.
+// Karta Terazky: ciferník s denným prstencom, verdikt a spotrebiče. Čistý zápis modelu do DOM.
 
 import { MINUTES_PER_DAY, powerThresholds } from '../../shared/config.js';
 import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/chart-model.js';
