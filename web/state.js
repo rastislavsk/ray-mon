@@ -4,7 +4,7 @@
 import { STALE_PV_MS } from '../shared/config.js';
 import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { seasonFor } from '../shared/tariff.js';
-import { PANELS } from './dom.js';
+import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
  * @typedef {import('../shared/config.js').Season} Season
@@ -45,11 +45,13 @@ import { PANELS } from './dom.js';
  *   setupPick: { wp: Pick, ac: Pick },
  *   setupLive: boolean,
  *   setupLink: string,
+ *   infoOpen: InfoItem | null,
  * }} AppState
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka karty Info
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -128,6 +130,9 @@ export function initialState(now, season, layout, { settings, demo, incoming = n
         setupLive: !!settings.kiosk,
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
+        // Rozbalená položka karty Info (null = zoznam). Je to krok navigácie, takže tlačidlo
+        // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
+        infoOpen: null,
     };
 }
 
@@ -208,7 +213,7 @@ export function nextWeekDay(sel, dir, count) {
 /**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
  * v navigácii, nie z toho, či sa ťahalo alebo klikalo - prechod tak vyzerá rovnako pri
- * oboch. Detail dňa sa pritom zatvára: je to vec jedného pozretia, nie stav, do ktorého
+ * oboch. Detail dňa aj rozbalená položka karty Info sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */
@@ -217,23 +222,24 @@ export function panelChange(from, to) {
         panel: to,
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
+        infoOpen: /** @type {null} */ (null),
     };
 }
 
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
- * a obrazovka sprievodcu nastavením aj s plochou panelov. Zvyšok stavu (vybraný deň, stránka
+ * obrazovka sprievodcu nastavením aj s plochou panelov a rozbalená položka karty Info. Zvyšok stavu (vybraný deň, stránka
  * verdiktu, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
  */
 export function navStep(state) {
-    return { panel: state.panel, weekDetail: state.weekDetail, setup: state.setupStep, roof: state.setupRoof };
+    return { panel: state.panel, weekDetail: state.weekDetail, setup: state.setupStep, roof: state.setupRoof, info: state.infoOpen };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.weekDetail === b.weekDetail && a.setup === b.setup && a.roof === b.roof;
+    return a.panel === b.panel && a.weekDetail === b.weekDetail && a.setup === b.setup && a.roof === b.roof && a.info === b.info;
 }
 
 /**
@@ -250,6 +256,7 @@ export function navChange(from, step) {
         weekDetail: step.weekDetail,
         setupStep: step.setup,
         setupRoof: step.roof,
+        infoOpen: step.info,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -267,25 +274,32 @@ export function navStepFrom(raw) {
 
 /**
  * Krok navigácie z hodnoty v položke histórie. Položka zo staršej verzie appky sprievodcu
- * nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty.
+ * ani položky karty Info nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
+ * a chýbajúca položka Info tiež `null`, teda zoznam.
  * @param {unknown} step @returns {NavStep | null}
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0 } = /** @type {Record<string, unknown>} */ (step);
+    const { panel, weekDetail, setup = null, roof = 0, info = null } = /** @type {Record<string, unknown>} */ (step);
     if (!(weekDetail === null || weekDetail === 'day' || weekDetail === 'week') || !PANELS.some((p) => p === panel)) return null;
-    if (!validSetupPlace(setup, roof)) return null;
+    if (!validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
         weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
         setup: /** @type {SetupStep | null} */ (setup),
         roof: /** @type {number} */ (roof),
+        info: /** @type {InfoItem | null} */ (info),
     };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */
 function validSetupPlace(setup, roof) {
     return (setup === null || SETUP_STEPS.some((s) => s === setup)) && Number.isInteger(roof) && /** @type {number} */ (roof) >= 0;
+}
+
+/** Položka karty Info z položky histórie. @param {unknown} info */
+function validInfoItem(info) {
+    return info === null || INFO_ITEMS.some((i) => i === info);
 }
 
 /**

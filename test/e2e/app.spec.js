@@ -1381,7 +1381,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0 },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null },
     });
     expect(errors).toEqual([]);
 });
@@ -1402,6 +1402,35 @@ test('šípka späť z detailu dňa je krok späť: Späť potom detail znovu ne
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     await expect(page.locator('#week-day-head')).toBeHidden();
+    expect(errors).toEqual([]);
+});
+
+/** Rozbalená položka karty Info je krok navigácie: Späť na telefóne ju zbalí a ukáže zoznam,
+ * až ďalšie Späť prepne kartu. Zbalenie ťuknutím je ten istý krok - Späť ju potom znovu nerozbalí. */
+test('Späť v karte Info zbalí položku a vráti na zoznam, nie na predchádzajúcu kartu', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-7dni').click();
+    await page.locator('#nav-info').click();
+    await page.locator('#info-guide > summary').click();
+    await expect(page.locator('#panel-info .info-dial')).toBeVisible();
+
+    await page.goBack();
+    await ocakavajKartu(page, 'info');
+    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await expect(page.locator('#info-share > summary')).toBeVisible();
+
+    // Zbalenie ťuknutím ide cez históriu: ďalšie Späť už prepne kartu, položku znovu nerozbalí.
+    await page.locator('#info-share > summary').click();
+    await expect(page.locator('#qrcode')).toBeVisible();
+    await page.locator('#info-share > summary').click();
+    await expect(page.locator('#qrcode')).toBeHidden();
+    await page.goBack();
+    await ocakavajKartu(page, '7dni');
+
+    // Po návrate na kartu Info je zoznam zbalený, nič neostalo rozbalené z minula.
+    await page.locator('#nav-info').click();
+    await expect(page.locator('#qrcode')).toBeHidden();
+    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
     expect(errors).toEqual([]);
 });
 

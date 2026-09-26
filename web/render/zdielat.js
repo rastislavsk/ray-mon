@@ -1,4 +1,4 @@
-// Karta Info, položka „Zdieľať appku": QR kód (knižnica z CDN, generuje sa pri prvom
+// Karta Info: ktorá položka je rozbalená, a položka „Zdieľať appku": QR kód (knižnica z CDN, generuje sa pri prvom
 // otvorení karty) a odkaz na WhatsApp. Odkaz môže niesť aj nastavenie elektrárne, takže sa
 // QR kód prekreslí, keď sa zmení to, čo sa pribaľuje.
 
@@ -17,7 +17,13 @@ export function currentShareUrl(state) {
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
-export function renderZdielat(state, dom) {
+export function renderInfo(state, dom) {
+    for (const [key, el] of Object.entries(dom.infoItems)) el.open = key === state.infoOpen;
+    renderZdielat(state, dom);
+}
+
+/** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
+function renderZdielat(state, dom) {
     dom.shareOptions.classList.toggle('hidden', state.demo);
     dom.shareWithSettings.checked = state.shareSettings;
     dom.shareWithKiosk.checked = state.shareKiosk;

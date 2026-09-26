@@ -13,6 +13,9 @@ const byId = (/** @type {string} */ id) => {
 // HTML id, CSS selektory aj stav, tak nech ho popiska nemusí naháňať.
 export const PANELS = /** @type {const} */ (['terazky', '7dni', 'nastavenie', 'info']);
 
+// Položky karty Info (natívne <details>); id v HTML je `info-<položka>`.
+export const INFO_ITEMS = /** @type {const} */ (['guide', 'share']);
+
 function headerDom() {
     return {
         // <html>, nie <body>: farba tarify sa zapisuje sem, lebo --bg-page je zložené
@@ -220,6 +223,9 @@ function wizardFieldsDom() {
 // Karta Info a ponuka prevziať nastavenie z odkazu.
 function zdielanieDom() {
     return {
+        infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (
+            Object.fromEntries(INFO_ITEMS.map((i) => [i, byId(`info-${i}`)]))
+        ),
         shareOptions: byId('share-options'),
         shareWithSettings: input('share-with-settings'),
         shareWithKiosk: input('share-with-kiosk'),

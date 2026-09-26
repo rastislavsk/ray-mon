@@ -15,7 +15,7 @@ import {
 import { fmt2 } from '../shared/format.js';
 import { localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
-import { closeDetail, initHistory } from './history.js';
+import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { clockPatch, nextPv, panelChange } from './state.js';
 import { applySettings, initSetup } from './setup-interactions.js';
@@ -457,6 +457,24 @@ export function isTall() {
     return (window.visualViewport ? window.visualViewport.height : window.innerHeight) >= WEEK_MSG_MIN_H;
 }
 
+/**
+ * Položky karty Info sú natívne <details>: rozbalí ich prehliadač sám (ťuknutie, klávesnica,
+ * hľadanie v stránke), appka to len prevezme do stavu. Zbalenie ťuknutím je ten istý krok ako
+ * tlačidlo Späť, preto ide cez backTo - inak by položka ostala v histórii a Späť by ju znovu
+ * rozbalilo. Keď sa `open` zhoduje so stavom, udalosť spôsobilo prekreslenie a netreba nič.
+ * @param {Store} store @param {Dom} dom
+ */
+function initInfoItems(store, dom) {
+    for (const [key, el] of Object.entries(dom.infoItems)) {
+        el.addEventListener('toggle', () => {
+            const item = /** @type {import('./state.js').InfoItem} */ (key);
+            if (el.open === (store.get().infoOpen === item)) return;
+            if (el.open) store.setState({ infoOpen: item });
+            else backTo(store, { infoOpen: null });
+        });
+    }
+}
+
 /** Zdieľanie odkazu s nastavením a ponuka prevziať nastavenie z otvoreného odkazu. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
 function initSharing(store, dom, refresh) {
     dom.shareWithSettings.addEventListener('change', () => store.setState({ shareSettings: dom.shareWithSettings.checked }));
@@ -534,6 +552,7 @@ export function initInteractions(store, dom, mq) {
     initChartSizes(store, dom);
     const refresh = initTicks(store, mq);
     initSetup(store, dom, refresh);
+    initInfoItems(store, dom);
     initSharing(store, dom, refresh);
     return refresh;
 }
