@@ -3,6 +3,7 @@
 import { MINUTES_PER_DAY, powerThresholds } from '../../shared/config.js';
 import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/chart-model.js';
 import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
+import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
 import { sunUp } from '../../shared/solar.js';
@@ -79,13 +80,14 @@ function placeOnRing(el, minutes) {
     el.style.top = `${top}%`;
 }
 
-/** Denný prstenec závisí len na sezóne, takže sa prekresľuje iba pri jej zmene - o to sa
- * stará writeHtml sám. Druhá stráž navyše tu byť nesmie: memo.js si pamätá podľa názvu,
- * takže dve stráže s rovnakým názvom by si pamäť prepisovali a prstenec by sa prekresľoval
- * pri každom pohybe prsta po jazdci.
+/** Denný prstenec je plán dňa: tarifa a krivka výroby. Mení sa len s nimi (nové meranie,
+ * predpoveď, deň, uložené nastavenie), nie pri pohybe jazdca - o zbytočný zápis sa stará
+ * writeHtml sám. Druhá stráž navyše tu byť nesmie: memo.js si pamätá podľa názvu, takže dve
+ * stráže s rovnakým názvom by si pamäť prepisovali a prstenec by sa prekresľoval pri každom
+ * pohybe prsta po jazdci.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 function renderDayRing(state, dom) {
-    writeHtml(dom.dayRing, dayRingSvg(dayRingModel(state.season)), 'day-ring');
+    writeHtml(dom.dayRing, dayRingSvg(dayRingModel(dayPlan(state))), 'day-ring');
 }
 
 /** Jazdec na dennom prstenci. Je v stránke stále, aj keď náhľad nebeží - v pokoji je

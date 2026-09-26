@@ -4,6 +4,7 @@
 
 import { SETTINGS_STORAGE_KEY } from '../shared/config.js';
 import { parseStoredSettings, shareHash, toUser } from '../shared/settings.js';
+import { savedSettings } from './state.js';
 
 /** @returns {import('../shared/settings.js').Settings | null} */
 export function loadSettings() {
@@ -27,7 +28,7 @@ export function initUrlMirror(store) {
     /** @param {import('./state.js').AppState} s */
     const mirror = (s) => {
         if (s.incoming) return;
-        const hash = shareHash(s.demo ? null : { site: s.site, plant: s.plant, kiosk: s.kiosk }, true);
+        const hash = shareHash(s.demo ? null : savedSettings(s), true);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);
     };
     mirror(store.get());

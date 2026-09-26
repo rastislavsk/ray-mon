@@ -5,6 +5,7 @@
 import { APP_URL } from '../../shared/config.js';
 import { shareUrl } from '../../shared/settings.js';
 import { changed } from '../memo.js';
+import { savedSettings } from '../state.js';
 
 /** @type {any} */
 let qr = null;
@@ -12,7 +13,7 @@ let qr = null;
 /** Odkaz, ktorý sa práve zdieľa. @param {import('../state.js').AppState} state */
 export function currentShareUrl(state) {
     // Ukážku nemá zmysel posielať ďalej - k odkazu sa pribaľuje len uložené nastavenie.
-    const settings = state.shareSettings && !state.demo ? { site: state.site, plant: state.plant, kiosk: state.kiosk } : null;
+    const settings = state.shareSettings && !state.demo ? savedSettings(state) : null;
     return shareUrl(APP_URL, settings, state.shareKiosk);
 }
 

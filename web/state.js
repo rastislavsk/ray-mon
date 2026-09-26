@@ -3,15 +3,12 @@
 
 import { STALE_PV_MS } from '../shared/config.js';
 import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
-import { seasonFor } from '../shared/tariff.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
- * @typedef {import('../shared/config.js').Season} Season
  * @typedef {'terazky' | '7dni' | 'nastavenie' | 'info'} Panel
  * @typedef {{
  *   now: Date,
- *   season: Season,
  *   panel: Panel,
  *   panelDir: 1 | -1,
  *   pv: import('../shared/kiosk.js').PvData | null,
@@ -28,6 +25,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   chartSizes: Record<string, { w: number, h: number }>,
  *   site: import('../shared/config.js').Site,
  *   plant: import('../shared/config.js').Plant,
+ *   tariff: import('../shared/config.js').Tariff,
  *   kiosk: string,
  *   demo: boolean,
  *   settingsDraft: import('../shared/settings.js').Settings,
@@ -45,6 +43,9 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   setupPick: { wp: Pick, ac: Pick },
  *   setupLive: boolean,
  *   setupLink: string,
+ *   setupSched: number,
+ *   setupBrush: string | null,
+ *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
  * }} AppState
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
@@ -55,16 +56,15 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  */
 
 /**
- * @param {Date} now @param {Season} season @param {{ wide: boolean, tall: boolean }} layout
+ * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
  * @param {{ settings: import('../shared/settings.js').Settings, demo: boolean,
  *   incoming?: import('../shared/settings.js').Settings | null }} start uložené nastavenie (alebo ukážka,
  *   vtedy `demo`) a nastavenie z odkazu, ktoré appka ponúkne prevziať
  * @returns {AppState}
  */
-export function initialState(now, season, layout, { settings, demo, incoming = null }) {
+export function initialState(now, layout, { settings, demo, incoming = null }) {
     return {
         now,
-        season,
         panel: 'terazky',
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
@@ -96,6 +96,8 @@ export function initialState(now, season, layout, { settings, demo, incoming = n
         // nezadá, ukážka (demo).
         site: settings.site,
         plant: settings.plant,
+        // Tarifa: pásma, rozvrh a ceny. Kedy svieti slnko, v nej nie je - to je z predpovede.
+        tariff: settings.tariff,
         // Odkaz na kiosk pre živé meranie; prázdny = bez merania.
         kiosk: settings.kiosk,
         demo,
@@ -130,6 +132,12 @@ export function initialState(now, season, layout, { settings, demo, incoming = n
         setupLive: !!settings.kiosk,
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
+        // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým
+        // sa maľuje po kruhu (null = najdrahšie). Nastavenie vnútri obrazovky, nie krok navigácie.
+        setupSched: 0,
+        setupBrush: null,
+        // Človek pri tarife ťukol na „Neviem“ - obrazovka vysvetlí, s čím appka počíta.
+        setupDunno: false,
         // Rozbalená položka karty Info (null = zoznam). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
@@ -163,16 +171,6 @@ export function createStore(initial) {
 }
 
 /** @typedef {ReturnType<typeof createStore<AppState>>} Store */
-
-/**
- * Posun hodín: nový čas a s ním aj sezóna. Sezóna nie je nastavenie z času štartu -
- * appka otvorená cez prelom októbra a novembra musí prejsť na zimné tarifné okná sama,
- * bez načítania stránky. Počíta sa v pásme lokality, rovnako ako hodiny.
- * @param {Date} now @param {import('../shared/config.js').Site} site
- */
-export function clockPatch(now, site) {
-    return { now, season: seasonFor(now, site.timezone) };
-}
 
 /**
  * Meranie po obnove dát. Keď kiosk raz neodpovie, ostáva posledné meranie - appka inak na
@@ -310,6 +308,11 @@ function validInfoItem(info) {
 export function navPrevFrom(raw) {
     if (!raw || typeof raw !== 'object') return null;
     return navStepIn(/** @type {{ prev?: unknown }} */ (raw).prev);
+}
+
+/** Uložené nastavenie, pre ktoré appka práve počíta. @param {AppState} state @returns {import('../shared/settings.js').Settings} */
+export function savedSettings(state) {
+    return { site: state.site, plant: state.plant, tariff: state.tariff, kiosk: state.kiosk };
 }
 
 /**

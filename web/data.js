@@ -63,7 +63,7 @@ async function loadWeather(site, now, fetchImpl) {
     }
 }
 
-/** Predpoveď z počasia; čokoľvek nečakané v dátach znamená „predpoveď nie je“. @param {any} json @param {Date} now @param {Settings} s */
+/** Predpoveď z počasia; čokoľvek nečakané v dátach znamená „predpoveď nie je“. @param {any} json @param {Date} now @param {Pick<Settings, 'site' | 'plant'>} s */
 function forecastFrom(json, now, s) {
     try {
         const f = buildForecast(json, now, s.site, s.plant);
@@ -74,8 +74,9 @@ function forecastFrom(json, now, s) {
 }
 
 /**
- * Dáta pre dané nastavenie. Nikdy nehádže - čo chýba, je null a appka to ukáže.
- * @param {Settings} settings @param {Date} now @param {typeof fetch} [fetchImpl] @returns {Promise<DataResult>}
+ * Dáta pre dané nastavenie. Nikdy nehádže - čo chýba, je null a appka to ukáže. Tarifa
+ * dáta nemení (predpoveď ani meranie od nej nezávisia), preto ju netreba.
+ * @param {Pick<Settings, 'site' | 'plant' | 'kiosk'>} settings @param {Date} now @param {typeof fetch} [fetchImpl] @returns {Promise<DataResult>}
  */
 export async function loadData(settings, now, fetchImpl = fetch) {
     const [pvRes, weatherRes] = await Promise.allSettled([

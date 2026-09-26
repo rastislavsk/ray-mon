@@ -3,13 +3,13 @@
 import { fmt1, hourLabel, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
-/** @typedef {import('./config.js').Tier} Tier */
+/** @typedef {import('./config.js').PriceLevel} PriceLevel */
 /** @typedef {{ headline: string, body: string }} Message */
 
-// Mriežka textov: sieť (red = drahá, amber = lacná, green = ideálne okno) × výroba (niz/str/vys).
+// Mriežka textov: cenová úroveň pásma (draha / bezna / lacna) × výroba (niz/str/vys).
 // "override" nahradí základný text, keď z predpovede vyplýva citeľne silnejšie slnko ešte dnes.
 export const SLOT_MESSAGES = {
-    red: {
+    draha: {
         niz: {
             h: 'Nezapínaj veľké spotrebiče',
             p: 'Slnko dnes už výraznejšie nepridá a elektrina je drahá. Práčku, sušičku ani nabíjanie auta teraz nespúšťaj.',
@@ -25,7 +25,7 @@ export const SLOT_MESSAGES = {
             override: {
                 h: 'Počkaj, bude to lepšie',
                 p: (/** @type {string} */ d) =>
-                    `Panely zatiaľ len pomáhajú, sieť je drahá. Silnejšie slnko a lacnejšia elektrina prídu ${d} — veľké spotrebiče si nechaj na vtedy.`,
+                    `Panely zatiaľ len pomáhajú, sieť je drahá. Silnejšie slnko príde ${d} — veľké spotrebiče si nechaj na vtedy.`,
             },
         },
         vys: {
@@ -33,7 +33,33 @@ export const SLOT_MESSAGES = {
             p: 'Aj v drahej hodine dávajú panely slušný výkon. Jeden väčší spotrebič si môžeš dovoliť.',
         },
     },
-    amber: {
+    bezna: {
+        niz: {
+            h: 'Zváž, či nepočkať',
+            p: (/** @type {{ tomorrowSunny: boolean }} */ ctx) =>
+                ctx.tomorrowSunny
+                    ? 'Panely momentálne nedávajú veľa. Zajtra bude slnečno, tak to pokojne nechaj na zajtra.'
+                    : 'Panely momentálne nedávajú veľa. Zajtra podľa predpovede slnečno nebude, tak pokojne zapni, čo potrebuješ.',
+            override: {
+                h: 'Počkaj na slnko',
+                p: (/** @type {string} */ d) =>
+                    `Panely teraz veľa nedávajú. Silnejšie slnko príde ${d} — veľké spotrebiče si nechaj na vtedy.`,
+            },
+        },
+        str: {
+            h: 'Dobrý čas, využi ho',
+            p: 'Slnko slušne svieti. Zapni práčku, umývačku, čo potrebuješ.',
+            override: {
+                h: 'Počkaj, ak to nie je súrne',
+                p: (/** @type {string} */ d) => `Teraz je to dobré, ale silnejšie slnko príde ${d}. Ak môžeš počkať, oplatí sa.`,
+            },
+        },
+        vys: {
+            h: 'Výborný čas na spotrebiče',
+            p: 'Vysoká výroba pokryje aj veľké spotrebiče vrátane nabíjania auta.',
+        },
+    },
+    lacna: {
         niz: {
             h: 'Malé spotrebiče áno. Veľké nezapínaj, ak nemusíš.',
             p: 'Sieť je ale lacná, takže ak potrebuješ, pokojne zapni aj veľké spotrebiče.',
@@ -45,56 +71,56 @@ export const SLOT_MESSAGES = {
         },
         str: {
             h: 'Dobrý čas na bežnú prevádzku',
-            p: 'Slušná výroba aj lacná sieť — toto je dnes už asi najlepšie, čo bude. Práčka, umývačka aj iné bežné spotrebiče môžu ísť.',
+            p: 'Slušná výroba aj lacná sieť. Práčka, umývačka aj iné bežné spotrebiče môžu ísť.',
             override: {
                 h: 'Počkaj, ak to nie je súrne',
                 p: (/** @type {string} */ d) => `Teraz je to dobré, ale zadarmo elektrina zo slnka príde ${d}. Ak môžeš počkať, oplatí sa.`,
             },
         },
         vys: {
-            h: 'Výborný čas na spotrebiče',
-            p: 'Vysoká výroba a lacná sieť. Využi to na veľké spotrebiče vrátane nabíjania auta.',
-        },
-    },
-    green: {
-        niz: {
-            h: 'Zváž, či nepočkať',
-            p: (/** @type {{ tomorrowSunny: boolean }} */ ctx) =>
-                ctx.tomorrowSunny
-                    ? 'Panely momentálne nedávajú veľa. Zajtra bude slnečno, tak to pokojne nechaj na zajtra.'
-                    : 'Panely momentálne nedávajú veľa. Zajtra podľa predpovede slnečno nebude, tak pokojne zapni, čo potrebuješ.',
-        },
-        str: {
-            h: 'Dobrý čas, využi ho',
-            p: 'Slnko slušne svieti a elektrina je lacná. Zapni práčku, umývačku, čo potrebuješ.',
-        },
-        vys: {
             h: 'Najlepší čas dňa — zapni všetko',
-            p: 'Plný výkon a nulová cena. Ideálny moment na práčku, sušičku aj nabíjanie auta.',
+            p: 'Plný výkon a k tomu lacná sieť. Ideálny moment na práčku, sušičku aj nabíjanie auta.',
         },
     },
 };
 
+/** V noci (slnko pod obzorom) hovorí text len o cene. @type {Record<PriceLevel, Message>} */
+export const NIGHT_MESSAGES = {
+    draha: {
+        headline: 'Drahá sieť a tma',
+        body: 'Slnko nesvieti a elektrina je drahá. Veľké spotrebiče nechaj na lacnejšie pásmo alebo na slnko.',
+    },
+    bezna: {
+        headline: 'Slnko nesvieti',
+        body: 'Zo siete platíš bežnú cenu. Čo môže počkať, nechaj na zajtra na slnko.',
+    },
+    lacna: { headline: 'Lacný nočný prúd', body: 'Slnko nesvieti, no sieť je lacná. Vhodné na bojler a nabíjanie auta.' },
+};
+
+/** Bez výkonu (žiadne dáta) ostáva len cena. @type {Record<PriceLevel, Message>} */
+export const PRICE_MESSAGES = {
+    draha: { headline: 'Drahá elektrina', body: 'Výkon panelov teraz nepoznám a sieť je drahá. Veľké spotrebiče radšej nezapínaj.' },
+    bezna: { headline: 'Bežná cena elektriny', body: 'Výkon panelov teraz nepoznám.' },
+    lacna: { headline: 'Lacná elektrina', body: 'Výkon panelov teraz nepoznám, sieť je ale lacná.' },
+};
+
 /**
- * Odporúčanie pre kombináciu tarify a výkonu, s ohľadom na predpoveď.
- * @param {Tier | null} tier @param {number} powerKw
+ * Odporúčanie pre kombináciu ceny a výkonu, s ohľadom na predpoveď.
+ * @param {PriceLevel | null} level @param {number} powerKw
  * @param {{ strongerWindowAhead?: boolean, windowDaypart?: string | null, tomorrowSunny?: boolean } | null} forecast
  * @param {import('./config.js').PowerThresholds} th
  * @returns {Message | null}
  */
-export function getSlotMessage(tier, powerKw, forecast, th) {
-    const level = productionLevel(powerKw, th);
-    if (!level || !tier) return null;
-    const entry = SLOT_MESSAGES[tier][level];
-
-    if (tier === 'green') {
-        const body = typeof entry.p === 'function' ? entry.p({ tomorrowSunny: !!(forecast && forecast.tomorrowSunny) }) : entry.p;
-        return { headline: entry.h, body };
-    }
-    if ('override' in entry && forecast && forecast.strongerWindowAhead && forecast.windowDaypart) {
+export function getSlotMessage(level, powerKw, forecast, th) {
+    const prod = productionLevel(powerKw, th);
+    if (!prod || !level) return null;
+    /** @type {{ h: string, p: string | ((ctx: { tomorrowSunny: boolean }) => string), override?: { h: string, p: (d: string) => string } }} */
+    const entry = SLOT_MESSAGES[level][prod];
+    if (entry.override && forecast && forecast.strongerWindowAhead && forecast.windowDaypart) {
         return { headline: entry.override.h, body: entry.override.p(forecast.windowDaypart) };
     }
-    return { headline: entry.h, body: /** @type {string} */ (entry.p) };
+    const body = typeof entry.p === 'function' ? entry.p({ tomorrowSunny: !!(forecast && forecast.tomorrowSunny) }) : entry.p;
+    return { headline: entry.h, body };
 }
 
 /** Špička dňa a okno, v ktorom výroba drží aspoň 60 % špičky - z toho sa skladajú obe

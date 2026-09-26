@@ -1,28 +1,41 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEMO_PLANT, PLANT, powerThresholds } from '../shared/config.js';
-import { dayDetailMessage, forecastDayMessage, getSlotMessage, SLOT_MESSAGES, weekMessage } from '../shared/messages.js';
+import { PRICE_LEVELS } from '../shared/config.js';
+import {
+    dayDetailMessage,
+    forecastDayMessage,
+    getSlotMessage,
+    NIGHT_MESSAGES,
+    PRICE_MESSAGES,
+    SLOT_MESSAGES,
+    weekMessage,
+} from '../shared/messages.js';
 
 const th = powerThresholds(PLANT);
 
-test('getSlotMessage: každá kombinácia tarify × výroby má neprázdny nadpis aj text', () => {
-    for (const tier of /** @type {const} */ (['red', 'amber', 'green'])) {
+test('getSlotMessage: každá kombinácia ceny × výroby má neprázdny nadpis aj text', () => {
+    for (const level of PRICE_LEVELS) {
         for (const kw of [0.5, 3, 6]) {
-            const msg = getSlotMessage(tier, kw, null, th);
-            assert.ok(msg && msg.headline && msg.body, `${tier} ${kw}`);
+            const msg = getSlotMessage(level, kw, null, th);
+            assert.ok(msg && msg.headline && msg.body, `${level} ${kw}`);
         }
+        assert.ok(NIGHT_MESSAGES[level].headline && NIGHT_MESSAGES[level].body);
+        assert.ok(PRICE_MESSAGES[level].headline && PRICE_MESSAGES[level].body);
     }
-    assert.equal(getSlotMessage('red', NaN, null, th), null);
+    assert.equal(getSlotMessage('draha', NaN, null, th), null);
     assert.equal(getSlotMessage(null, 3, null, th), null);
 });
 
-test('getSlotMessage: override pri silnejšom slnku, green podľa zajtrajška', () => {
+test('getSlotMessage: override pri silnejšom slnku, pri bežnej cene rozhodne zajtrajšok', () => {
     const forecast = { strongerWindowAhead: true, windowDaypart: 'poobede', tomorrowSunny: true };
-    assert.equal(getSlotMessage('red', 0.5, forecast, th)?.headline, SLOT_MESSAGES.red.niz.override.h);
-    assert.match(getSlotMessage('amber', 3, forecast, th)?.body || '', /poobede/);
-    assert.equal(getSlotMessage('red', 6, forecast, th)?.headline, SLOT_MESSAGES.red.vys.h, 'vysoká výroba nemá override');
-    assert.match(getSlotMessage('green', 0.5, forecast, th)?.body || '', /Zajtra bude slnečno/);
-    assert.match(getSlotMessage('green', 0.5, { tomorrowSunny: false }, th)?.body || '', /slnečno nebude/);
+    assert.equal(getSlotMessage('draha', 0.5, forecast, th)?.headline, SLOT_MESSAGES.draha.niz.override.h);
+    assert.match(getSlotMessage('lacna', 3, forecast, th)?.body || '', /poobede/);
+    assert.equal(getSlotMessage('draha', 6, forecast, th)?.headline, SLOT_MESSAGES.draha.vys.h, 'vysoká výroba nemá override');
+    assert.match(getSlotMessage('bezna', 0.5, forecast, th)?.body || '', /poobede/, 'silnejšie slnko ešte dnes má prednosť');
+    assert.match(getSlotMessage('bezna', 0.5, { tomorrowSunny: true }, th)?.body || '', /Zajtra bude slnečno/);
+    assert.match(getSlotMessage('bezna', 0.5, { tomorrowSunny: false }, th)?.body || '', /slnečno nebude/);
+    assert.equal(getSlotMessage('lacna', 6, null, th)?.headline, 'Najlepší čas dňa — zapni všetko');
 });
 
 test('forecastDayMessage: slabý deň, dnes a zajtra', () => {

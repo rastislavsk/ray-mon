@@ -5,11 +5,12 @@ import { installedKw, powerThresholds, STALE_PV_MS, STALE_PV_SUN_DEG } from './c
 import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
-import { getSlotMessage } from './messages.js';
-import { autoTier, deviceStates, productionLevel, smartTier, windowAt, windowsFor } from './tariff.js';
+import { planAt } from './day-plan.js';
+import { getSlotMessage, NIGHT_MESSAGES, PRICE_MESSAGES } from './messages.js';
+import { autoTier, deviceStates, productionLevel, smartTier } from './tariff.js';
 
 /**
- * @typedef {{ now: Date, season: import('./config.js').Season, pv: import('./kiosk.js').PvData | null,
+ * @typedef {{ now: Date, tariff: import('./config.js').Tariff, pv: import('./kiosk.js').PvData | null,
  *   forecast: import('./solar.js').Forecast | null, previewMinutes: number | null,
  *   site: import('./config.js').Site, plant: import('./config.js').Plant }} HeroInput
  */
@@ -60,10 +61,10 @@ export function pvFreshness({ now, pv, site }) {
     };
 }
 
-/** "Lepšie bude o HH:00" - len naživo, mimo okna so spotrebičmi a keď predpoveď hlási silnejšie slnko. @param {HeroInput} state @param {boolean} hasDevices */
-function waitTimeFor(state, hasDevices) {
+/** "Lepšie bude o HH:00" - len naživo, keď slnko ešte nepokrýva veľké spotrebiče a predpoveď hlási silnejšie. @param {HeroInput} state @param {boolean} sunny */
+function waitTimeFor(state, sunny) {
     const f = state.forecast;
-    if (state.previewMinutes !== null || hasDevices || !f || !f.strongerWindowAhead || !Number.isFinite(f.hoursAhead)) return null;
+    if (state.previewMinutes !== null || sunny || !f || !f.strongerWindowAhead || !Number.isFinite(f.hoursAhead)) return null;
     const hour = Math.floor(localMinutes(state.now, state.site.timezone) / 60);
     return `${pad2((hour + Math.round(/** @type {number} */ (f.hoursAhead))) % 24)}:00`;
 }
@@ -101,12 +102,15 @@ export function heroModel(state) {
     const live = livePower(state);
     const power = powerFor(state, live, minutes, nowMinutes);
     const th = powerThresholds(state.plant);
-    // Okná pokrývajú celý deň (overené testom); fallback je len poistka proti chybnému configu.
-    const win = windowAt(minutes, state.season) || windowsFor(state.season)[0];
-    const tier = win.status;
-    const isNight = !!win.night;
-    const message = (isNight ? null : getSlotMessage(tier, power, state.forecast, th)) || { headline: win.title, body: win.sub };
-    const deviceTier = smartTier(tier, power, th, null);
+    // Štvrťhodina plánu dňa: pásmo tarify a farba z krivky dňa. Pozadie (tier) sa tak zhoduje
+    // so segmentom pod bežcom na prstenci; bodka (accent) počíta so živým výkonom.
+    const slot = planAt(state, minutes);
+    const level = slot.level;
+    const message = slot.night ? NIGHT_MESSAGES[level] : getSlotMessage(level, power, state.forecast, th) || PRICE_MESSAGES[level];
+    const deviceTier = smartTier(level, power, th, null);
+    // Slabý deň: dnešná špička nedosiahne ani jeho hranicu, slnko veľké spotrebiče nepokryje.
+    const today = state.forecast ? state.forecast.days[0] : null;
+    const weakDay = !!today && today.peakKw < th.weakPeakKw;
     const measured = (() => {
         const boundary = realCurveBoundary(state.pv ? state.pv.realCurveToday : null, nowMinutes);
         return boundary !== null && minutes <= boundary;
@@ -116,15 +120,16 @@ export function heroModel(state) {
         minutes,
         preview,
         power,
-        tier,
-        accent: smartTier(tier, power, th),
-        isNight,
+        tier: slot.tier,
+        band: slot.band,
+        accent: smartTier(level, power, th),
+        isNight: slot.night,
         message,
-        devices: deviceStates(minutes, state.season).map((d) => ({
+        devices: deviceStates(slot, weakDay).map((d) => ({
             ...d,
-            tier: d.name === 'Auto' ? autoTier(minutes, tier, power, th) : deviceTier,
+            tier: d.name === 'Auto' ? autoTier(level, power, th) : deviceTier,
         })),
-        waitTime: waitTimeFor(state, !!win.devices),
+        waitTime: waitTimeFor(state, slot.tier === 'green'),
         dial: dialFor(power, installedKw(state.plant), th),
         powerText: Number.isFinite(power) ? dialText(power) : '–',
         unitText: live !== null ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)',

@@ -20,6 +20,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                     |
 | `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť) |
 | `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)   |
+| `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup        |
 
 ## Prečo je to v repozitári
 

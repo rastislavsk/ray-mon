@@ -2,27 +2,29 @@
 // panelov. Kontrola vstupu, prevod na formát výpočtu a čítanie uloženej či nájdenej lokality.
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
-import { DEMO_PLANT, DEMO_SITE, installedKw, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY } from './config.js';
+import { DEMO_PLANT, DEMO_SITE, DEMO_TARIFF, installedKw, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY, TARIFF } from './config.js';
 import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
+import { checkTariff, parseStoredTariff } from './tariff.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
 /** @typedef {import('./config.js').PlantString} PlantString */
+/** @typedef {import('./config.js').Tariff} Tariff */
 /**
- * Nastavenie tak, ako ho používa appka. `kiosk` je odkaz na verejný kiosk elektrárne pre živé
- * meranie, prázdny reťazec znamená „bez merania“.
- * @typedef {{ site: Site, plant: Plant, kiosk: string }} Settings
+ * Nastavenie tak, ako ho používa appka. `tariff` sú pásma a rozvrh ceny elektriny. `kiosk` je
+ * odkaz na verejný kiosk elektrárne pre živé meranie, prázdny reťazec znamená „bez merania“.
+ * @typedef {{ site: Site, plant: Plant, tariff: Tariff, kiosk: string }} Settings
  */
 /**
  * To, čo používateľ naozaj zadáva a čo sa ukladá. Odborné parametre zostavy sa neukladajú,
  * dopĺňajú sa vždy z config.js - keby sa tam zmenili, prejaví sa to aj u uložených nastavení.
- * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, kiosk: string }} UserSettings
+ * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, tariff: Tariff, kiosk: string }} UserSettings
  */
 
 /** Ukážka pre nového používateľa. @returns {Settings} */
 export function demoSettings() {
-    return { site: DEMO_SITE, plant: DEMO_PLANT, kiosk: '' };
+    return { site: DEMO_SITE, plant: DEMO_PLANT, tariff: DEMO_TARIFF, kiosk: '' };
 }
 
 /** Doplní zadané údaje o odborné parametre zostavy. @param {UserSettings} user @returns {Settings} */
@@ -30,6 +32,7 @@ export function settingsFrom(user) {
     return {
         site: user.site,
         plant: { ...PLANT, strings: user.strings, panelWp: user.panelWp, acLimitKw: user.acLimitKw },
+        tariff: user.tariff,
         kiosk: user.kiosk,
     };
 }
@@ -41,6 +44,7 @@ export function toUser(s) {
         strings: s.plant.strings.map((x) => ({ panels: x.panels, azimuthDeg: x.azimuthDeg, tiltDeg: x.tiltDeg })),
         panelWp: s.plant.panelWp,
         acLimitKw: s.plant.acLimitKw,
+        tariff: s.tariff,
         kiosk: s.kiosk,
     };
 }
@@ -101,6 +105,9 @@ export function checkSettings(s) {
     /** @type {string[]} */ const warnings = [];
     checkSite(site, errors);
     checkPlant(plant, errors);
+    const tariff = checkTariff(s.tariff);
+    errors.push(...tariff.errors);
+    warnings.push(...tariff.warnings);
     if (s.kiosk && !kioskApiUrl(s.kiosk))
         errors.push('Odkaz nie je kiosk FusionSolar. Skopíruj ho v aplikácii FusionSolar pri zdieľaní elektrárne cez kiosk.');
     // Panely sa rátajú aj pri chybách - súčet pod formulárom ich ukazuje stále. Výkon až keď
@@ -146,7 +153,11 @@ export function parseStoredSettings(raw) {
         acLimitKw: Number(o.acLimitKw),
         // Nastavenia uložené pred pridaním kiosku ho nemajú - to je „bez merania“.
         kiosk: typeof o.kiosk === 'string' ? o.kiosk : '',
+        // Nastavenia uložené pred vlastnými tarifami ju nemajú - dostanú tarifu Dvorian, s ktorou
+        // appka dovtedy počítala. Tarifa, ktorá tam je, no nesedí, zahodí všetko.
+        tariff: 'tariff' in o ? /** @type {Tariff} */ (parseStoredTariff(o.tariff)) : TARIFF,
     };
+    if (!user.tariff) return null;
     const s = settingsFrom(user);
     return user.site.name && checkSettings(s).errors.length === 0 ? s : null;
 }
@@ -235,7 +246,7 @@ export function shareUrl(appUrl, settings, withKiosk) {
  * @param {string} text @returns {Settings | null}
  */
 export function settingsFromLink(text) {
-    const m = new RegExp(`[#&]${SHARE_HASH_KEY}=([A-Za-z0-9_-]{1,4000})`).exec(String(text || '').trim());
+    const m = new RegExp(`[#&]${SHARE_HASH_KEY}=([A-Za-z0-9_-]{1,8000})`).exec(String(text || '').trim());
     if (!m) return null;
     try {
         return parseStoredSettings(JSON.parse(fromBase64Url(m[1])));

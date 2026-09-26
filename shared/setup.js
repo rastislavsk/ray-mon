@@ -1,7 +1,7 @@
 // Sprievodca nastavením elektrárne: poradie krokov, kedy sa dá ísť ďalej a prázdne nastavenie
 // pre nového používateľa. Čisté funkcie - obrazovky kreslí web/render/nastavenie.js.
 
-import { PLANT, SETTINGS_LIMITS, SETUP } from './config.js';
+import { PLANT, SETTINGS_LIMITS, SETUP, TARIFF } from './config.js';
 import { kioskApiUrl } from './kiosk.js';
 import { checkSettings, isTimezone } from './settings.js';
 
@@ -96,6 +96,7 @@ export function emptySettings() {
     return {
         site: { name: '', lat: NaN, lon: NaN, elevationM: 0, timezone: '' },
         plant: { ...PLANT, strings: [newRoof(0)], panelWp: NaN, acLimitKw: NaN },
+        tariff: TARIFF,
         kiosk: '',
     };
 }

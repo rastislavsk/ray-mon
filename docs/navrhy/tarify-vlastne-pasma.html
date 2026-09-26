@@ -1,0 +1,3117 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Vlastné tarifné pásma</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        />
+        <style>
+            /* Návrh vlastných tarifných pásiem pre RAY-MON. Farby, písma a rozmery sú prevzaté zo
+       style.css appky, telefón je v mierke 375 px. Appka je zámerne len tmavá, preto aj tento
+       návrh. Údaje v telefóne sú vzorové (elektráreň v Dvoranoch, septembrový deň). */
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-35: rgba(242, 240, 234, 0.54);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --grey: #b9b6ac;
+                --green-rgb: 158, 242, 91;
+                --amber-rgb: 255, 194, 75;
+                --red-rgb: 255, 107, 87;
+                --grey-rgb: 185, 182, 172;
+                --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+                --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+                --radius-sm: 6px;
+                --radius-md: 12px;
+                --radius-lg: 18px;
+                --radius-pill: 999px;
+                --dur: 0.25s;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
+            }
+            body {
+                margin: 0;
+                background:
+                    radial-gradient(circle at 15% 0%, rgba(var(--amber-rgb), 0.1) 0%, rgba(var(--amber-rgb), 0) 40%),
+                    radial-gradient(circle at 85% 4%, rgba(var(--amber-rgb), 0.08) 0%, rgba(var(--amber-rgb), 0) 45%), var(--bg);
+                background-attachment: fixed;
+                color: var(--ink);
+                font-family: var(--font-body);
+                font-size: 15px;
+                line-height: 1.5;
+                font-variant-numeric: tabular-nums;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+            }
+            button:disabled {
+                cursor: default;
+            }
+            :focus-visible {
+                outline: 2px solid var(--amber);
+                outline-offset: 2px;
+                border-radius: var(--radius-sm);
+            }
+            code {
+                font-family: var(--font-mono);
+                font-size: 0.86em;
+                color: var(--ink-70);
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                border-radius: 4px;
+                padding: 0 4px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+
+            /* ---- Dokument ------------------------------------------------------------ */
+            .doc {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding-inline: 20px;
+                padding-block: 40px 72px;
+            }
+            .eyebrow {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--amber);
+            }
+            h1 {
+                font-size: clamp(28px, 4vw, 40px);
+                line-height: 1.1;
+                letter-spacing: -0.02em;
+                margin: 8px 0 12px;
+                text-wrap: balance;
+            }
+            h2.sec {
+                font-size: 24px;
+                letter-spacing: -0.015em;
+                margin: 0 0 6px;
+                text-wrap: balance;
+            }
+            .sec-lead {
+                color: var(--ink-45);
+                max-width: 72ch;
+                margin: 0 0 22px;
+            }
+            .lead {
+                max-width: 72ch;
+                color: var(--ink-45);
+                margin: 0;
+                font-size: 16px;
+            }
+            section.block {
+                margin-top: 64px;
+            }
+            .principles {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                gap: 12px;
+                margin-top: 28px;
+            }
+            .principle {
+                padding: 16px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+            }
+            .principle b {
+                display: block;
+                margin-bottom: 4px;
+            }
+            .principle p {
+                margin: 0;
+                font-size: 14px;
+                color: var(--ink-45);
+            }
+            .tbl-wrap {
+                overflow-x: auto;
+                border: 1px solid var(--ink-08);
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 10px 14px;
+                border-bottom: 1px solid var(--ink-05);
+                vertical-align: top;
+            }
+            th {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                font-weight: 500;
+                border-bottom-color: var(--ink-08);
+                white-space: nowrap;
+            }
+            tr:last-child td {
+                border-bottom: 0;
+            }
+            td.dim {
+                color: var(--ink-45);
+            }
+            .callout {
+                margin-top: 14px;
+                padding: 14px 16px;
+                border-radius: var(--radius-md);
+                border: 1px solid rgba(var(--amber-rgb), 0.35);
+                background: rgba(var(--amber-rgb), 0.07);
+                max-width: 90ch;
+                color: var(--ink-70);
+            }
+            .callout b {
+                color: var(--amber);
+            }
+
+            /* Tok dát */
+            .flow {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr auto 1fr;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 24px;
+            }
+            @media (max-width: 860px) {
+                .flow {
+                    grid-template-columns: 1fr;
+                }
+                .flow .arrow {
+                    transform: rotate(90deg);
+                    justify-self: center;
+                }
+            }
+            .flow-col {
+                display: grid;
+                gap: 10px;
+            }
+            .fbox {
+                padding: 12px 14px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-12);
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .fbox b {
+                display: block;
+                color: var(--ink);
+                font-size: 14px;
+            }
+            .fbox code {
+                font-size: 11px;
+            }
+            .fbox.key {
+                border-color: rgba(var(--green-rgb), 0.45);
+            }
+            .fbox.user {
+                border-color: rgba(var(--amber-rgb), 0.45);
+            }
+            .arrow {
+                color: var(--ink-35);
+                font-family: var(--font-mono);
+                font-size: 18px;
+            }
+            .outs {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .outs span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                padding: 2px 8px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                color: var(--ink-70);
+            }
+            .two-col {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+                gap: 24px;
+                align-items: start;
+            }
+            @media (max-width: 420px) {
+                .two-col {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            h3.sub {
+                font-size: 17px;
+                margin: 0 0 10px;
+                letter-spacing: -0.01em;
+            }
+            .rules {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                display: grid;
+                gap: 8px;
+            }
+            .rules li {
+                display: grid;
+                grid-template-columns: 22px 16px 1fr;
+                gap: 10px;
+                align-items: start;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                font-size: 14px;
+            }
+            .rules .n {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-35);
+                padding-top: 2px;
+            }
+            .rules .sw {
+                margin-top: 4px;
+            }
+            .rules small {
+                display: block;
+                color: var(--ink-45);
+                font-size: 12px;
+            }
+            .sw {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 3px;
+                flex: 0 0 auto;
+            }
+            .sw.green {
+                background: var(--green);
+            }
+            .sw.amber {
+                background: var(--amber);
+            }
+            .sw.red {
+                background: var(--red);
+            }
+            .sw.grey {
+                background: var(--grey);
+            }
+            pre {
+                margin: 0;
+                padding: 14px 16px;
+                border-radius: var(--radius-md);
+                background: #0e0f0d;
+                border: 1px solid var(--ink-08);
+                overflow-x: auto;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                line-height: 1.55;
+                color: var(--ink-70);
+            }
+            pre .c {
+                color: var(--ink-35);
+            }
+            .plain-list {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                color: var(--ink-70);
+                font-size: 14px;
+            }
+
+            /* ---- Pódium s telefónom ---------------------------------------------------- */
+            .stage {
+                display: grid;
+                grid-template-columns: 210px 375px minmax(0, 1fr);
+                gap: 32px;
+                align-items: start;
+            }
+            @media (max-width: 1100px) {
+                .stage {
+                    grid-template-columns: 375px minmax(0, 1fr);
+                }
+                .steps {
+                    grid-column: 1 / -1;
+                }
+            }
+            @media (max-width: 760px) {
+                .stage {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            .steps {
+                display: grid;
+                gap: 18px;
+                position: sticky;
+                top: 20px;
+            }
+            @media (max-width: 1100px) {
+                .steps {
+                    position: static;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                }
+            }
+            .steps-group {
+                display: grid;
+                gap: 2px;
+            }
+            .steps-group > span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                margin-bottom: 4px;
+            }
+            .step-link {
+                text-align: left;
+                padding: 6px 10px;
+                border-radius: var(--radius-sm);
+                color: var(--ink-45);
+                font-size: 14px;
+                border-left: 2px solid transparent;
+            }
+            .step-link[aria-current='true'] {
+                color: var(--ink);
+                background: var(--ink-05);
+                border-left-color: var(--amber);
+            }
+            .notes {
+                display: grid;
+                gap: 18px;
+                max-width: 60ch;
+            }
+            .notes h3 {
+                margin: 0;
+                font-size: 20px;
+                letter-spacing: -0.01em;
+                text-wrap: balance;
+            }
+            .notes h4 {
+                margin: 0 0 6px;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                font-weight: 500;
+            }
+            .notes ul {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                color: var(--ink-70);
+            }
+            .notes .impl ul {
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .try {
+                font-size: 13px;
+                color: var(--amber);
+                border-top: 1px solid var(--ink-08);
+                padding-top: 12px;
+            }
+            .ctls {
+                display: grid;
+                gap: 14px;
+                padding: 14px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+            }
+            .ctl {
+                display: grid;
+                gap: 6px;
+            }
+            .ctl-l {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .ctl-l b {
+                color: var(--ink);
+                font-size: 12px;
+                letter-spacing: 0;
+                margin-left: 6px;
+            }
+            .ctl input[type='range'] {
+                width: 100%;
+                accent-color: var(--amber);
+            }
+
+            /* ---- Telefón -------------------------------------------------------------- */
+            .phone {
+                --tint-rgb: var(--amber-rgb);
+                width: min(375px, 100%);
+                height: 780px;
+                margin: 0 auto;
+                border-radius: 42px;
+                border: 1px solid var(--ink-12);
+                box-shadow:
+                    0 0 0 8px #050505,
+                    0 0 0 9px var(--ink-12),
+                    0 30px 80px rgba(0, 0, 0, 0.6);
+                background:
+                    radial-gradient(circle at 20% 0%, rgba(var(--tint-rgb), 0.14) 0%, rgba(var(--tint-rgb), 0) 42%),
+                    radial-gradient(circle at 82% 5%, rgba(var(--tint-rgb), 0.13) 0%, rgba(var(--tint-rgb), 0) 46%), var(--bg);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                font-size: 14px;
+                line-height: 1.45;
+                position: relative;
+            }
+            .appbar {
+                padding: 30px 20px 10px;
+                flex: 0 0 auto;
+            }
+            .appbar-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+            }
+            .appbar-label {
+                font-family: var(--font-mono);
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                color: #fff;
+            }
+            .appbar-clock {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .live-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--green);
+            }
+            .pv-line {
+                margin-top: 4px;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.04em;
+                color: var(--ink-35);
+            }
+            .scr {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                padding: 10px 20px 20px;
+                scrollbar-width: none;
+            }
+            .scr::-webkit-scrollbar {
+                display: none;
+            }
+            .foot {
+                flex: 0 0 auto;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                padding: 10px 20px 12px;
+                border-top: 1px solid var(--ink-08);
+                background: rgba(10, 10, 10, 0.6);
+            }
+            .foot:empty {
+                display: none;
+            }
+            .bottomnav {
+                flex: 0 0 auto;
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: 1fr;
+                background: rgba(10, 10, 10, 0.92);
+                padding-bottom: 14px;
+                position: relative;
+                z-index: 0;
+            }
+            .nav-item {
+                display: flex;
+                justify-content: center;
+                padding: 7px 0 6px;
+                color: var(--ink-35);
+                position: relative;
+            }
+            .nav-item svg {
+                width: 26px;
+                height: 26px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.1;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .nav-item.active {
+                color: var(--ink);
+            }
+            .nav-item.active::after {
+                content: '';
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                width: 40px;
+                height: 40px;
+                margin: -20px 0 0 -20px;
+                border-radius: 50%;
+                background: rgb(var(--tint-rgb));
+                opacity: 0.45;
+                filter: blur(8px);
+                z-index: -1;
+            }
+
+            /* ---- Obsah karty Nastavenie a sprievodca ------------------------------------ */
+            .section-head {
+                text-align: center;
+                margin: 6px 0 16px;
+            }
+            .section-title {
+                font-size: 26px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                margin: 0;
+            }
+            .section-sub,
+            .lbl {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .wz-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .wz-step {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .wz-close {
+                width: 32px;
+                height: 32px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                color: var(--ink-45);
+                border: 1px solid var(--ink-12);
+            }
+            .wz-close svg {
+                width: 14px;
+                height: 14px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.4;
+                stroke-linecap: round;
+            }
+            .wz-prog {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 4px;
+                margin: 10px 0 18px;
+            }
+            .wz-prog i {
+                height: 4px;
+                border-radius: 2px;
+                background: var(--ink-12);
+            }
+            .wz-prog i.done {
+                background: rgba(var(--green-rgb), 0.7);
+            }
+            .wz-prog i.now {
+                background: var(--ink);
+            }
+            .wz-sub {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--amber);
+                margin: 0 0 4px;
+            }
+            .wz-title {
+                font-size: 23px;
+                line-height: 1.15;
+                font-weight: 600;
+                letter-spacing: -0.015em;
+                margin: 0 0 6px;
+                text-wrap: balance;
+            }
+            .wz-lead {
+                margin: 0 0 16px;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .btn-primary {
+                flex: 1;
+                font-weight: 600;
+                color: var(--bg);
+                background: var(--green);
+                border-radius: var(--radius-pill);
+                padding: 13px 16px;
+                text-align: center;
+            }
+            .btn-ghost {
+                padding: 13px 16px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                color: var(--ink-70);
+            }
+            .btn-ghost:disabled {
+                color: var(--ink-20);
+                border-color: var(--ink-05);
+            }
+            .link-btn {
+                font-size: 13px;
+                color: var(--ink-45);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                padding: 4px 0;
+            }
+            .choice {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                width: 100%;
+                text-align: left;
+                padding: 14px;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+            }
+            .choice + .choice {
+                margin-top: 8px;
+            }
+            .choice[aria-pressed='true'] {
+                border-color: var(--amber);
+                background: rgba(var(--amber-rgb), 0.08);
+            }
+            .choice:disabled {
+                opacity: 0.5;
+            }
+            .choice .dot {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2px solid var(--ink-20);
+                flex: 0 0 auto;
+            }
+            .choice[aria-pressed='true'] .dot {
+                border-color: var(--amber);
+                box-shadow: inset 0 0 0 4px var(--bg);
+                background: var(--amber);
+            }
+            .choice .t {
+                display: grid;
+                gap: 1px;
+                flex: 1;
+                min-width: 0;
+            }
+            .choice .t b {
+                font-weight: 600;
+            }
+            .choice .t span {
+                font-size: 12px;
+                color: var(--ink-45);
+            }
+            .mini {
+                width: 30px;
+                height: 30px;
+                flex: 0 0 auto;
+            }
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .chip {
+                padding: 7px 11px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .chip[aria-pressed='true'] {
+                background: var(--amber);
+                border-color: var(--amber);
+                color: var(--bg);
+                font-weight: 700;
+            }
+            .chip.soft {
+                border-style: dashed;
+                color: var(--ink-45);
+            }
+            .field-label {
+                display: block;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                margin: 18px 0 8px;
+            }
+            .field-input {
+                width: 100%;
+                min-width: 0;
+                font: inherit;
+                font-size: 16px;
+                color: var(--ink);
+                background: var(--ink-05);
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-md);
+                padding: 10px 12px;
+            }
+            .field-input.num {
+                font-family: var(--font-mono);
+                text-align: right;
+            }
+            .msg {
+                margin: 10px 0 0;
+                padding: 2px 0 2px 10px;
+                font-size: 13px;
+                color: var(--ink-70);
+                border-left: 2px solid var(--green);
+            }
+            .msg.warn {
+                border-color: var(--amber);
+            }
+            .help {
+                margin-top: 16px;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .help summary {
+                cursor: pointer;
+                color: var(--ink-70);
+            }
+            .help p {
+                margin: 6px 0 0;
+            }
+            .seg {
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: 1fr;
+                gap: 4px;
+                padding: 4px;
+                border-radius: var(--radius-pill);
+                background: var(--ink-05);
+                margin: 0 0 14px;
+            }
+            .seg button {
+                padding: 7px 4px;
+                border-radius: var(--radius-pill);
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--ink);
+                color: var(--bg);
+            }
+            .seg.lvl {
+                margin: 8px 0 0;
+            }
+            .seg.lvl button[aria-pressed='true'][data-level='lacna'] {
+                background: var(--amber);
+            }
+            .seg.lvl button[aria-pressed='true'][data-level='bezna'] {
+                background: var(--grey);
+            }
+            .seg.lvl button[aria-pressed='true'][data-level='draha'] {
+                background: var(--red);
+            }
+
+            /* Maľovanie rozvrhu po kruhu */
+            .brushes {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 6px;
+            }
+            .brush {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                font-size: 13px;
+            }
+            .brush small {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-45);
+            }
+            .brush[aria-pressed='true'] {
+                border-color: var(--ink);
+                background: var(--ink-08);
+            }
+            .painter {
+                display: block;
+                width: 100%;
+                max-width: 280px;
+                margin: 6px auto 0;
+                touch-action: none;
+                cursor: crosshair;
+                user-select: none;
+            }
+            .painter text {
+                font-family: var(--font-mono);
+                text-anchor: middle;
+                dominant-baseline: middle;
+            }
+            .painter-sum {
+                text-align: center;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-45);
+                margin: 4px 0 0;
+            }
+            .ivals {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+                overflow: hidden;
+            }
+            .ivals li {
+                display: grid;
+                grid-template-columns: 12px 1fr auto 28px;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 10px 9px 12px;
+                border-bottom: 1px solid var(--ink-05);
+                font-size: 13px;
+            }
+            .ivals li:last-child {
+                border-bottom: 0;
+            }
+            .ivals .tm {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .ivals .tm small {
+                color: var(--ink-35);
+                margin-left: 6px;
+            }
+            .ivals .x {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                color: var(--ink-35);
+                display: grid;
+                place-items: center;
+            }
+            .ivals .x svg {
+                width: 12px;
+                height: 12px;
+                stroke: currentColor;
+                stroke-width: 2.4;
+                stroke-linecap: round;
+            }
+            .band-row {
+                padding: 12px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-12);
+                margin-bottom: 8px;
+            }
+            .band-top {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .band-top .field-input {
+                padding: 8px 10px;
+                font-size: 15px;
+            }
+            .rm {
+                font-size: 12px;
+                color: var(--ink-45);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                padding: 4px;
+                flex: 0 0 auto;
+            }
+            .months {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 4px;
+                margin-top: 8px;
+            }
+            .months .chip {
+                padding: 6px 0;
+                text-align: center;
+                font-size: 11px;
+            }
+            .price-row {
+                display: grid;
+                grid-template-columns: 12px 1fr 110px 26px;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 8px;
+            }
+            .price-row .cur {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-45);
+            }
+            .auto-list {
+                margin: 10px 0 0;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                background: var(--ink-05);
+                font-size: 13px;
+                display: grid;
+                gap: 4px;
+            }
+            .auto-list div {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .sched-list {
+                display: grid;
+                gap: 8px;
+                margin-top: 4px;
+            }
+            .sched-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+            }
+            .sched-row .t {
+                flex: 1;
+                display: grid;
+                font-size: 14px;
+            }
+            .sched-row .t span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-45);
+            }
+
+            /* Prehľad elektrárne */
+            .sum-hero {
+                text-align: center;
+                padding: 6px 0 14px;
+            }
+            .sum-hero .big {
+                font-family: var(--font-mono);
+                font-size: 40px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                color: var(--green);
+                line-height: 1.1;
+            }
+            .sum-hero .sub {
+                color: var(--ink-45);
+                font-size: 13px;
+            }
+            .sum-list {
+                display: grid;
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+                overflow: hidden;
+                margin-bottom: 12px;
+            }
+            .sum-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                text-align: left;
+                padding: 11px 14px;
+                border-bottom: 1px solid var(--ink-05);
+            }
+            .sum-row:last-child {
+                border-bottom: 0;
+            }
+            .sum-row.new {
+                background: rgba(var(--amber-rgb), 0.06);
+                box-shadow: inset 2px 0 0 var(--amber);
+            }
+            .sum-row .k {
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .sum-row .t {
+                flex: 1;
+                display: grid;
+                min-width: 0;
+            }
+            .sum-row .v {
+                font-size: 14px;
+            }
+            .sum-row .k2 {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-45);
+            }
+            .sum-ico {
+                width: 34px;
+                height: 34px;
+                flex: 0 0 auto;
+                display: grid;
+                place-items: center;
+                border-radius: 10px;
+                background: var(--ink-05);
+            }
+            .sum-ico svg.ico {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: var(--ink-70);
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .chev {
+                width: 16px;
+                height: 16px;
+                flex: 0 0 auto;
+                fill: none;
+                stroke: var(--ink-35);
+                stroke-width: 2.2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .tag {
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                border-radius: var(--radius-pill);
+                padding: 1px 7px;
+                border: 1px solid currentColor;
+                white-space: nowrap;
+            }
+            .tag.new {
+                color: var(--amber);
+            }
+            .tag.moved {
+                color: var(--green);
+            }
+            .tag.kept {
+                color: var(--ink-35);
+            }
+
+            /* Ciferník a verdikt */
+            .card {
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                border-radius: var(--radius-lg);
+            }
+            .dial-card {
+                padding: 14px;
+                margin-bottom: 12px;
+            }
+            .dial-wrap {
+                position: relative;
+                width: 240px;
+                max-width: 100%;
+                margin: 0 auto;
+                aspect-ratio: 1;
+            }
+            .dial-wrap svg {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+            .dial-hour {
+                fill: var(--ink-35);
+                font-family: var(--font-mono);
+                font-size: 10px;
+                text-anchor: middle;
+                dominant-baseline: middle;
+            }
+            .dial-num {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                place-content: center;
+                text-align: center;
+                pointer-events: none;
+            }
+            .dial-num .when {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .dial-num .when.preview {
+                color: var(--amber);
+            }
+            .dial-num .val {
+                font-family: var(--font-mono);
+                font-size: 36px;
+                font-weight: 700;
+                line-height: 1.1;
+                letter-spacing: -0.02em;
+            }
+            .dial-num .unit {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-45);
+            }
+            .dial-num .band {
+                margin-top: 6px;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-70);
+                padding: 2px 8px;
+                border-radius: var(--radius-pill);
+                background: var(--ink-05);
+                border: 1px dashed var(--ink-20);
+                justify-self: center;
+            }
+            .verdict {
+                padding: 18px;
+            }
+            .verdict h1 {
+                font-size: 21px;
+                line-height: 1.2;
+                margin: 0 0 6px;
+                letter-spacing: -0.01em;
+            }
+            .verdict p {
+                margin: 0;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .pdots {
+                display: flex;
+                justify-content: center;
+                gap: 6px;
+                margin-top: 14px;
+            }
+            .pdots i {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--ink-20);
+            }
+            .pdots i:first-child {
+                background: var(--ink);
+                width: 18px;
+                border-radius: 3px;
+            }
+            .info-card {
+                padding: 16px;
+            }
+            .info-card h3 {
+                margin: 0 0 10px;
+                font-size: 16px;
+            }
+            .legend {
+                list-style: none;
+                margin: 12px 0 0;
+                padding: 0;
+                display: grid;
+                gap: 8px;
+                font-size: 13px;
+            }
+            .legend li {
+                display: grid;
+                grid-template-columns: 12px 1fr;
+                gap: 10px;
+                align-items: start;
+            }
+            .legend .sw {
+                margin-top: 4px;
+            }
+            .legend small {
+                display: block;
+                color: var(--ink-45);
+            }
+
+            /* Porovnanie prstencov */
+            .cmp {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            @media (max-width: 640px) {
+                .cmp {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            .cmp figure {
+                margin: 0;
+                padding: 18px;
+                display: grid;
+                gap: 12px;
+                justify-items: center;
+            }
+            .cmp figure.pick {
+                border-color: rgba(var(--green-rgb), 0.45);
+            }
+            .cmp .dial-wrap {
+                width: 220px;
+            }
+            .cmp figcaption {
+                display: grid;
+                gap: 4px;
+                max-width: 44ch;
+            }
+            .cmp figcaption b {
+                font-size: 16px;
+            }
+            .cmp figcaption p {
+                margin: 0;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .cmp-ctls {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 14px;
+            }
+
+            /* Matica textov */
+            .matrix td {
+                min-width: 170px;
+            }
+            .matrix td b {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .matrix td small {
+                display: block;
+                color: var(--ink-45);
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+            .matrix th.row {
+                white-space: nowrap;
+                vertical-align: top;
+            }
+            .matrix th.row .sw {
+                margin-right: 6px;
+                vertical-align: -1px;
+            }
+            .plan {
+                margin: 0;
+                padding-left: 22px;
+                display: grid;
+                gap: 12px;
+                max-width: 86ch;
+                color: var(--ink-70);
+            }
+            .plan b {
+                color: var(--ink);
+            }
+            .plan span {
+                color: var(--ink-45);
+            }
+            .questions {
+                margin: 0;
+                padding-left: 22px;
+                display: grid;
+                gap: 12px;
+                max-width: 86ch;
+                color: var(--ink-70);
+            }
+            .questions b {
+                color: var(--ink);
+            }
+            .questions .rec {
+                display: block;
+                color: var(--green);
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="doc">
+            <header>
+                <div class="eyebrow">RAY-MON · návrh · tarifné pásma</div>
+                <h1>Vlastné tarifné pásma</h1>
+                <p class="lead">
+                    Dnes appka pozná jedinú tarifu, natvrdo v <code>shared/config.js</code>. Návrh ju mení na údaj, ktorý si zadá každý sám:
+                    jedna cena, dve pásma, viac pásiem, výnimky pre víkend či časť roka a nepovinne ceny. Farby ciferníka, texty odporúčaní
+                    aj spotrebiče ostávajú, len sa prestanú spoliehať na slovenský rozvrh a slovenské leto.
+                </p>
+                <div class="principles">
+                    <div class="principle">
+                        <b>Cena a slnko sú dve osi</b>
+                        <p>
+                            Tarifa hovorí len o cene elektriny zo siete. Kedy svieti slnko, vie appka z predpovede a do tarify sa to nepíše.
+                        </p>
+                    </div>
+                    <div class="principle">
+                        <b>Tri cenové úrovne</b>
+                        <p>
+                            Každé pásmo je lacné, bežné alebo drahé. Na týchto troch úrovniach stoja farby, texty aj spotrebiče, nech má kto
+                            koľko pásiem.
+                        </p>
+                    </div>
+                    <div class="principle">
+                        <b>Predvoľba je šablóna</b>
+                        <p>
+                            Časy NT určuje distribučka pre konkrétne odberné miesto. Šablóna dá tvar dňa, presné časy si človek opraví podľa
+                            faktúry.
+                        </p>
+                    </div>
+                    <div class="principle">
+                        <b>Jeden tok dát</b>
+                        <p>Tarifa, potom pásma dňa, potom plán dňa s predpoveďou. Spot cena neskôr nahradí len prvý krok, zvyšok ostane.</p>
+                    </div>
+                </div>
+            </header>
+
+            <section class="block" id="dnes">
+                <h2 class="sec">Čo je dnes v tarife natvrdo</h2>
+                <p class="sec-lead">
+                    <code>TARIFF_WINDOWS</code> mieša tri rôzne veci: cenu zo siete, odhad slnka a texty. Pre Dvorany to funguje, lebo boli
+                    napísané pre ne. Pre Londýn, Sydney alebo iný produkt už nie.
+                </p>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>V config.js</th>
+                                <th>Čo to naozaj je</th>
+                                <th>Kam to patrí po zmene</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>status: 'red' | 'amber'</code></td>
+                                <td>VT a NT, teda cena zo siete</td>
+                                <td class="dim">Tarifa používateľa: pásma a ich úroveň</td>
+                            </tr>
+                            <tr>
+                                <td>zelené okno 10:30–17:30 (leto), 10:30–14:30 (zima)</td>
+                                <td>odhad, kedy panely vyrábajú</td>
+                                <td class="dim">Predpoveď výroby, ktorú appka už má (výkon ≥ dolná hranica)</td>
+                            </tr>
+                            <tr>
+                                <td><code>seasons</code>, <code>SUMMER_MONTHS</code> (marec – október)</td>
+                                <td>dĺžka slnečného okna, len pre severnú pologuľu</td>
+                                <td class="dim">Zaniká. Sezónna tarifa je výnimka v rozvrhu (vybrané mesiace)</td>
+                            </tr>
+                            <tr>
+                                <td><code>night: true</code> na okne 23:30–07:30</td>
+                                <td>„slnko nesvieti“</td>
+                                <td class="dim">Výroba z predpovede je nulová</td>
+                            </tr>
+                            <tr>
+                                <td><code>AUTO_NIGHT_WINDOW</code> 23:30–06:00</td>
+                                <td>NT na nabíjanie auta</td>
+                                <td class="dim">Najlacnejšie pásmo z tarify</td>
+                            </tr>
+                            <tr>
+                                <td><code>devices</code> v zelenom okne, v zime bez sušičky a umývačky</td>
+                                <td>krátke slnečné okno v zime</td>
+                                <td class="dim">Predpoveď dňa (slabý deň), nie kalendár</td>
+                            </tr>
+                            <tr>
+                                <td><code>title</code>, <code>sub</code> okien</td>
+                                <td>text pre noc a záložný text</td>
+                                <td class="dim">Matica textov: cena × slnko, plus riadok pre noc</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="callout">
+                    <b>Naozajstná tarifa je v tom len jedna vec:</b> štyri hodiny VT (07:30–08:30, 09:30–10:30, 20:30–21:30, 22:30–23:30),
+                    zvyšných 20 hodín NT. Všetko ostatné je slnko zapísané ako pevný čas. Preto sa zmena tarify nedá urobiť bez toho, aby
+                    zelenú, noc a sezóny prevzala predpoveď.
+                </p>
+            </section>
+
+            <section class="block" id="logika">
+                <h2 class="sec">Logika</h2>
+                <p class="sec-lead">
+                    Všetko, čo dnes číta tarifné okno, bude čítať jeden <b>plán dňa</b>: pre každú minútu pásmo, jeho úroveň, výrobu a z
+                    toho farbu. Plán sa počíta v <code>shared/</code> z tarify, dátumu v pásme lokality a predpovede, bez DOM a bez
+                    <code>Date.now()</code>.
+                </p>
+                <div class="flow">
+                    <div class="flow-col">
+                        <div class="fbox user"><b>Tarifa</b>pásma, rozvrh, výnimky, ceny · zadá človek v Nastavení</div>
+                        <div class="fbox"><b>Dátum a pásmo lokality</b>deň v týždni a mesiac vyberú rozvrh</div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-col">
+                        <div class="fbox">
+                            <b>Pásma dňa</b><code>priceSegments(tariff, dateKey)</code> · od 00:00 do 24:00, každá minúta práve jedno pásmo
+                        </div>
+                        <div class="fbox"><b>Výroba v každej minúte</b>meranie, potom predpoveď (<code>dayKwAt</code>, už existuje)</div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-col">
+                        <div class="fbox key">
+                            <b>Plán dňa</b><code>dayPlan(...)</code> · úroveň, farba, noc
+                            <div class="outs">
+                                <span>ciferník</span><span>pozadie</span><span>bodka</span><span>verdikt</span><span>spotrebiče</span
+                                ><span>„lepšie bude“</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="two-col">
+                    <div>
+                        <h3 class="sub">Pravidlo farby</h3>
+                        <ol class="rules">
+                            <li>
+                                <span class="n">1</span><i class="sw green"></i>
+                                <span
+                                    >Výroba je aspoň na dolnej hranici (<code>lowKw</code>)
+                                    <small>Slnko pokryje veľké spotrebiče, cena zo siete nehrá rolu.</small></span
+                                >
+                            </li>
+                            <li>
+                                <span class="n">2</span><i class="sw red"></i>
+                                <span>Inak drahé pásmo <small>VT, špička, P1…</small></span>
+                            </li>
+                            <li>
+                                <span class="n">3</span><i class="sw grey"></i>
+                                <span
+                                    >Inak bežné pásmo <span class="tag new">nové</span
+                                    ><small>Jednotarif alebo stredné pásmo z troch.</small></span
+                                >
+                            </li>
+                            <li>
+                                <span class="n">4</span><i class="sw amber"></i>
+                                <span>Inak lacné pásmo <small>NT, mimo špičky, nočný prúd…</small></span>
+                            </li>
+                        </ol>
+                        <p class="msg">
+                            Je to dnešný <code>smartTier</code>, len namiesto pevného okna 10:30–17:30 berie predpoveď. Zamračený deň potom
+                            na prstenci zelenú nemá, a to je pravda.
+                        </p>
+
+                        <h3 class="sub" style="margin-top: 26px">Úroveň pásma</h3>
+                        <ul class="plain-list">
+                            <li>Zadá ju človek pri pásme: Lacné, Bežné alebo Drahé.</li>
+                            <li>
+                                Keď zadá ceny, appka úrovne navrhne sama: najlacnejšie pásmo je lacné, najdrahšie drahé, ostatné bežné. Keď
+                                si to s voľbou protirečí, upozorní.
+                            </li>
+                            <li>Jediné pásmo (jedna cena) je vždy bežné. Ciferník potom farbí len slnko.</li>
+                            <li>Dve pásma s rovnakou úrovňou sú v poriadku, len majú rovnakú farbu.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="sub">Dátový model (JSDoc, <code>shared/config.js</code>)</h3>
+                        <pre><span class="c">/** @typedef {'lacna' | 'bezna' | 'draha'} PriceLevel */
+/** @typedef {{ id: string, name: string, level: PriceLevel,
+ *   price: number | null }} Band */
+/** @typedef {{ days: number[], months: number[],
+ *   changes: Array&lt;{ from: string, band: string }&gt; }} Schedule */
+/** @typedef {{ name: string, currency: string, bands: Band[],
+ *   schedules: Schedule[] }} Tariff */
+
+// Dvorany: referenčná tarifa pre testy, prevedená z TARIFF_WINDOWS.
+// schedules[0] je základ (všetky dni aj mesiace), ďalšie sú výnimky
+// a vyhráva posledná, ktorá na deň sedí.</span>
+export const TARIFF = {
+    name: 'Dve pásma · 20 h NT',
+    currency: '€',
+    bands: [
+        { id: 'nt', name: 'NT', level: 'lacna', price: null },
+        { id: 'vt', name: 'VT', level: 'draha', price: null },
+    ],
+    schedules: [{
+        days: [1, 2, 3, 4, 5, 6, 7],
+        months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        changes: [
+            { from: '00:00', band: 'nt' }, { from: '07:30', band: 'vt' },
+            { from: '08:30', band: 'nt' }, { from: '09:30', band: 'vt' },
+            { from: '10:30', band: 'nt' }, { from: '20:30', band: 'vt' },
+            { from: '21:30', band: 'nt' }, { from: '22:30', band: 'vt' },
+            { from: '23:30', band: 'nt' },
+        ],
+    }],
+};</pre>
+                        <p class="msg">
+                            Rozvrh je zoznam zmien od 00:00, nie zoznam okien. Deň je tak pokrytý bez dier a prekryvov už zo stavby a test
+                            „každá minúta je v práve jednom okne“ netreba.
+                        </p>
+                    </div>
+                </div>
+
+                <h3 class="sub" style="margin-top: 32px">Funkcie v <code>shared/tariff.js</code></h3>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Funkcia</th>
+                                <th>Čo robí</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>scheduleFor(tariff, dateKey)</code></td>
+                                <td class="dim">
+                                    Rozvrh pre deň: posledná výnimka, ktorá sedí na deň v týždni a mesiac, inak základ. Nahrádza
+                                    <code>seasonFor</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>priceSegments(tariff, dateKey)</code></td>
+                                <td class="dim">
+                                    <code>[{ startMin, min, band, level }]</code> od 00:00 do 24:00. Nahrádza
+                                    <code>stripSegments(season)</code>.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>dayPlan(segments, hourly, th)</code></td>
+                                <td class="dim">
+                                    Pridá výrobu: <code>[{ startMin, min, band, level, tier, night }]</code>. Z neho čítajú ciferník,
+                                    <code>heroModel</code>, texty aj spotrebiče.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>autoLevels(bands)</code></td>
+                                <td class="dim">Úrovne z cien, keď ich človek zadal.</td>
+                            </tr>
+                            <tr>
+                                <td><code>checkTariff(tariff)</code></td>
+                                <td class="dim">Chyby a varovania, rovnako ako <code>checkSettings</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>parseStoredTariff(raw)</code></td>
+                                <td class="dim">Pre úložisko aj odkaz <code>#nastavenie=…</code>. Čokoľvek nesedí, vráti null.</td>
+                            </tr>
+                            <tr>
+                                <td><code>nextCheaper(plan, minutes)</code></td>
+                                <td class="dim">Nepovinné: „Lacné pásmo od 22:00“ na stránke „Lepšie bude“.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="two-col" style="margin-top: 28px">
+                    <div>
+                        <h3 class="sub">Kto čo číta dnes a po zmene</h3>
+                        <div class="tbl-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Miesto</th>
+                                        <th>Dnes</th>
+                                        <th>Po zmene</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Denný prstenec</td>
+                                        <td class="dim"><code>stripSegments(season)</code></td>
+                                        <td class="dim"><code>tier</code> z plánu dňa</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pozadie</td>
+                                        <td class="dim"><code>win.status</code></td>
+                                        <td class="dim"><code>tier</code> v minúte bežca, pribudne <code>neutral</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bodka</td>
+                                        <td class="dim"><code>smartTier(status, výkon)</code></td>
+                                        <td class="dim"><code>smartTier(level, výkon)</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Verdikt</td>
+                                        <td class="dim"><code>SLOT_MESSAGES[red|amber|green]</code>, noc z okna</td>
+                                        <td class="dim"><code>[draha|bezna|lacna]</code> × výroba, noc z výroby</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Spotrebiče</td>
+                                        <td class="dim">zelené okno, zoznam na sezónu, auto 23:30–06:00</td>
+                                        <td class="dim">práčka, sušička a umývačka podľa slnka; auto a bojler aj v najlacnejšom pásme</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Stav appky</td>
+                                        <td class="dim"><code>season</code> v <code>clockPatch</code></td>
+                                        <td class="dim">zaniká, v stave pribudne <code>tariff</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="sub">Kontrola tarify (<code>checkTariff</code>)</h3>
+                        <ul class="plain-list">
+                            <li>1 až 4 pásma (<code>TARIFF_LIMITS.maxBands</code>), meno 1 až 16 znakov, jedinečné <code>id</code>.</li>
+                            <li>
+                                Každý rozvrh začína 00:00, časy rastú a ležia na mriežke 15 minút. Dve zmeny za sebou s rovnakým pásmom sa
+                                zlúčia, chyba to nie je.
+                            </li>
+                            <li>Rozvrh smie odkazovať len na existujúce pásmo. Nepoužité pásmo je varovanie.</li>
+                            <li>
+                                Prvý rozvrh platí pre všetky dni aj mesiace. Najviac 4 rozvrhy, výnimka nesmie mať prázdne dni ani mesiace.
+                            </li>
+                            <li>Cena je null alebo číslo od 0 do 10. Varovanie, keď úroveň protirečí cene.</li>
+                        </ul>
+                        <h3 class="sub" style="margin-top: 22px">Úložisko a odkaz</h3>
+                        <ul class="plain-list">
+                            <li><code>UserSettings</code> dostane pole <code>tariff</code>, kľúč <code>elektraren-v1</code> ostáva.</li>
+                            <li>
+                                Uloženie bez tarify (všetci doterajší) dostane <code>TARIFF</code> Dvorian, takže sa nikomu nič nezmení.
+                            </li>
+                            <li>Ukážka v Londýne dostane vlastnú <code>DEMO_TARIFF</code> (7 h lacno v noci, inak bežná cena).</li>
+                            <li>Tarifa ide aj do zdieľaného odkazu. Deväť zmien je asi 300 znakov JSON, limit odkazu je 4000.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="block" id="mockupy">
+                <h2 class="sec">Mockupy</h2>
+                <p class="sec-lead">
+                    Tarifa je šiesta časť sprievodcu nastavením, medzi Meraním a Kontrolou. Po uložení je v prehľade elektrárne jeden riadok
+                    a ťuk naň otvorí len krok Tarifa, rovnako ako pri plochách. Obrazovky sú klikacie a rozvrh sa dá naozaj maľovať.
+                </p>
+                <div class="stage">
+                    <nav class="steps" id="steps" aria-label="Obrazovky návrhu"></nav>
+                    <div class="phone" id="phone">
+                        <div class="appbar">
+                            <div class="appbar-top">
+                                <span class="appbar-label">RAY-MON</span>
+                                <span class="appbar-clock"><i class="live-dot" id="live-dot"></i>13:00</span>
+                            </div>
+                            <div class="pv-line">odhad z predpovede</div>
+                        </div>
+                        <div class="scr" id="scr"></div>
+                        <div class="foot" id="foot"></div>
+                        <nav class="bottomnav" id="bnav"></nav>
+                    </div>
+                    <div class="notes" id="notes"></div>
+                </div>
+            </section>
+
+            <section class="block" id="prstenec">
+                <h2 class="sec">Ciferník: variant A a B</h2>
+                <p class="sec-lead">
+                    Rovnaké dáta, dve kresby. A zlúči cenu a slnko do jedného prstenca podľa pravidla farby vyššie. B necháva cenu na
+                    vonkajšej dráhe a slnko kreslí zvlášť tenkou čiarou pod ňou.
+                </p>
+                <div class="ctls cmp-ctls" id="cmp-ctls"></div>
+                <div class="cmp">
+                    <figure class="card pick">
+                        <div class="dial-wrap" id="cmp-a"></div>
+                        <figcaption>
+                            <b>A · jeden prstenec (odporúčam)</b>
+                            <p>
+                                Hovorí to isté ako bodka a pozadie: zelená je „zapni zo slnka“, inak cena. Nič nové sa človek učiť nemusí a
+                                Info ostáva jednoduché.
+                            </p>
+                        </figcaption>
+                    </figure>
+                    <figure class="card">
+                        <div class="dial-wrap" id="cmp-b"></div>
+                        <figcaption>
+                            <b>B · cena a slnko zvlášť</b>
+                            <p>
+                                Vidno aj cenu pod slnkom, napríklad že o 12:00 je špička. Za cenu druhej dráhy, tesnejšieho ciferníka a
+                                dlhšej legendy.
+                            </p>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="block" id="texty">
+                <h2 class="sec">Texty odporúčaní</h2>
+                <p class="sec-lead">
+                    Mriežka v <code>messages.js</code> dostane riadky podľa ceny namiesto okien. Pôvodné riadky red a amber ostávajú pre
+                    drahé a lacné pásmo, texty zo zeleného okna a nočného okna sa presunú, nový je riadok pre bežnú cenu. Prepis „Počkaj na
+                    slnko“ (override) funguje ako dnes.
+                </p>
+                <div class="tbl-wrap">
+                    <table class="matrix" id="matrix"></table>
+                </div>
+            </section>
+
+            <section class="block" id="spot">
+                <h2 class="sec">Spot a dynamické ceny, neskôr</h2>
+                <div class="two-col">
+                    <ul class="plain-list">
+                        <li>
+                            Namiesto rozvrhu príde cena na každú hodinu alebo štvrťhodinu dneška, zajtrajšok po zverejnení denného trhu.
+                        </li>
+                        <li>
+                            Úroveň sa odvodí z rozdelenia cien dňa: najlacnejšia štvrtina je lacná, najdrahšia štvrtina drahá, zvyšok bežný.
+                            Funguje aj bez presnej konečnej ceny s poplatkami dodávateľa.
+                        </li>
+                        <li>
+                            Ceny stiahne Worker (nový endpoint, napríklad <code>GET /prices?zone=SK</code>) a podrží ich v cache. Nič
+                            neukladá, rovnako ako pri kiosku.
+                        </li>
+                    </ul>
+                    <ul class="plain-list">
+                        <li>
+                            Od <code>priceSegments</code> ďalej sa nemení nič. Ciferník, texty aj spotrebiče fungujú tak ako pri rozvrhu.
+                        </li>
+                        <li>
+                            Zdroj treba ešte vybrať a overiť pre každý trh. ENTSO-E pokrýva Európu, ale chce API kľúč, ktorý by bol
+                            tajomstvom vo Workeri.
+                        </li>
+                        <li>
+                            V sprievodcovi je voľba viditeľná od začiatku, len zatiaľ nedostupná, aby bolo jasné, že s ňou appka počíta.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="block" id="postup">
+                <h2 class="sec">Postup po pull requestoch</h2>
+                <p class="sec-lead">
+                    Poradie drží pravidlo z CLAUDE.md: prvok v HTML ide von o nasadenie skôr, než ho začne vyžadovať <code>dom.js</code>.
+                </p>
+                <ol class="plan">
+                    <li>
+                        <b>Model tarify v <code>shared/</code>.</b>
+                        <span
+                            >Typy, <code>TARIFF</code> prevedená z okien, <code>priceSegments</code>, <code>checkTariff</code>, parser.
+                            Appka z toho zatiaľ číta len VT a NT, zelené okno ostáva. Navonok sa nemení nič, test drží vzor Dvorian.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Slnko z predpovede.</b>
+                        <span
+                            ><code>dayPlan</code>, zelená a noc z výroby, zánik sezón a <code>SUMMER_MONTHS</code>, riadok bežnej ceny v
+                            textoch, spotrebiče, legenda v Info. Mení vzhľad, takže <code>npm run screenshots</code>. Golden predpovede sa
+                            nemení.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Tarifa v nastavení.</b>
+                        <span><code>UserSettings.tariff</code>, úložisko, odkaz, predvolená tarifa pre staré uloženia a ukážku.</span>
+                    </li>
+                    <li>
+                        <b>Sprievodca, prvé nasadenie.</b>
+                        <span>Obrazovky Tarifa v <code>index.html</code> a <code>style.css</code>. Nikto ich ešte nezobrazuje.</span>
+                    </li>
+                    <li>
+                        <b>Sprievodca, druhé nasadenie</b> (aspoň 10 minút po predošlom).
+                        <span
+                            ><code>dom.js</code>, render, interakcie, kroky v <code>shared/setup.js</code>, riadok Tarifa v prehľade.</span
+                        >
+                    </li>
+                    <li><b>Nepovinné doplnky.</b> <span>Pásmo a cena v náhľade času, „Lacné pásmo od…“, neskôr odhad úspory.</span></li>
+                    <li><b>Spot.</b> <span>Endpoint vo Workeri a úrovne z rozdelenia cien.</span></li>
+                </ol>
+            </section>
+
+            <section class="block" id="otazky">
+                <h2 class="sec">Na rozhodnutie</h2>
+                <ol class="questions">
+                    <li><b>Prstenec A alebo B?</b><span class="rec">Odporúčam A. Hovorí to isté čo bodka a pozadie.</span></li>
+                    <li>
+                        <b>Zelená od dolnej hranice výkonu (lowKw), alebo až od vysokej výroby (highKw)?</b
+                        ><span class="rec">Odporúčam lowKw, rovnako ako dnešná bodka.</span>
+                    </li>
+                    <li>
+                        <b>Sivá pre bežnú cenu, alebo len dve farby siete?</b
+                        ><span class="rec">Odporúčam tri úrovne. Jedna cena by inak nemala akú farbu dostať.</span>
+                    </li>
+                    <li>
+                        <b>Tarifa ako šiesta časť sprievodcu elektrárne, alebo samostatná položka v Nastavení?</b
+                        ><span class="rec">Odporúčam sprievodcu. Nový človek ju prejde raz, zmena ide cez riadok v prehľade.</span>
+                    </li>
+                    <li>
+                        <b>Doterajšie uloženia bez tarify: Dvorany, alebo jedna cena s výzvou?</b
+                        ><span class="rec">Odporúčam Dvorany. Tebe sa nič nezmení a nemusíš nič nastavovať.</span>
+                    </li>
+                    <li>
+                        <b>Spotrebiče: zrušiť sezónne „nie“ pre sušičku a umývačku?</b
+                        ><span class="rec">Odporúčam áno a nahradiť ho slabým dňom z predpovede.</span>
+                    </li>
+                    <li>
+                        <b>Ceny už v prvej verzii, alebo až s odhadom úspory?</b
+                        ><span class="rec">Odporúčam pýtať ich hneď ako nepovinné. Úrovne z nich vychádzajú spoľahlivejšie.</span>
+                    </li>
+                    <li><b>Spot: pre ktoré trhy a je v poriadku API kľúč vo Workeri?</b></li>
+                    <li>
+                        <b>Sviatky zatiaľ ignorovať?</b
+                        ><span class="rec">Odporúčam áno. Potrebovali by kalendár sviatkov pre každú krajinu.</span>
+                    </li>
+                </ol>
+            </section>
+        </main>
+
+        <script>
+            // ---- Konštanty a pomôcky ------------------------------------------------------
+            const SLOTS = 96; // 15-minútové úseky dňa
+            const LOW = 2; // kW, dolná hranica Dvorian
+            const HIGH = 4;
+            const MARGIN = 1.5;
+            const KWP = 10.44;
+            const NOW_MIN = 780; // 13:00 v mockupe
+            const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
+            const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const MONTH_SHORT = ['jan', 'feb', 'mar', 'apr', 'máj', 'jún', 'júl', 'aug', 'sep', 'okt', 'nov', 'dec'];
+            const MONTH_LONG = [
+                'január',
+                'február',
+                'marec',
+                'apríl',
+                'máj',
+                'jún',
+                'júl',
+                'august',
+                'september',
+                'október',
+                'november',
+                'december',
+            ];
+            const RANK = { lacna: 0, bezna: 1, draha: 2 };
+            const LV = {
+                lacna: { label: 'lacné', name: 'Lacné', cls: 'amber' },
+                bezna: { label: 'bežné', name: 'Bežné', cls: 'grey' },
+                draha: { label: 'drahé', name: 'Drahé', cls: 'red' },
+            };
+            const COLOR = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', grey: 'var(--grey)' };
+            const TINT = { green: 'var(--green-rgb)', amber: 'var(--amber-rgb)', red: 'var(--red-rgb)', grey: 'var(--grey-rgb)' };
+
+            const $ = (s, el = document) => el.querySelector(s);
+            const clone = (o) => JSON.parse(JSON.stringify(o));
+            const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+            const t2m = (s) => {
+                const [h, m] = s.split(':').map(Number);
+                return h * 60 + m;
+            };
+            const m2t = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+            const fmt2 = (n) => n.toFixed(2).replace('.', ',');
+            const hoursText = (slots) => {
+                const h = slots / 4;
+                return `${Number.isInteger(h) ? h : String(h).replace('.', ',')} h`;
+            };
+
+            /** 96 úsekov: základné pásmo a úseky [od, do, pásmo]; úsek môže ísť cez polnoc. */
+            function slotsFrom(base, ranges) {
+                const s = Array(SLOTS).fill(base);
+                for (const [a, b, band] of ranges) {
+                    let i = t2m(a) / 15;
+                    const e = (t2m(b) / 15) % SLOTS;
+                    do {
+                        s[i] = band;
+                        i = (i + 1) % SLOTS;
+                    } while (i !== e);
+                }
+                return s;
+            }
+            const sched = (days, months, slots) => ({ days, months, slots });
+
+            // ---- Predvoľby (šablóny, ceny sú ilustračné) --------------------------------------
+            const VT4 = [
+                ['07:30', '08:30', 'vt'],
+                ['09:30', '10:30', 'vt'],
+                ['20:30', '21:30', 'vt'],
+                ['22:30', '23:30', 'vt'],
+            ];
+            const PRESETS = {
+                zse: {
+                    name: 'Dve pásma · 20 h NT',
+                    currency: '€',
+                    bands: [
+                        { id: 'nt', name: 'NT', level: 'lacna', price: 0.12 },
+                        { id: 'vt', name: 'VT', level: 'draha', price: 0.19 },
+                    ],
+                    schedules: [sched(ALL_DAYS, ALL_MONTHS, slotsFrom('nt', VT4))],
+                },
+                noc8: {
+                    name: 'Dve pásma · 8 h lacno v noci',
+                    currency: '€',
+                    bands: [
+                        { id: 'nt', name: 'NT', level: 'lacna', price: 0.11 },
+                        { id: 'vt', name: 'VT', level: 'draha', price: 0.21 },
+                    ],
+                    schedules: [sched(ALL_DAYS, ALL_MONTHS, slotsFrom('vt', [['22:00', '06:00', 'nt']]))],
+                },
+                jedna: {
+                    name: 'Jedna cena',
+                    currency: '€',
+                    bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: 0.16 }],
+                    schedules: [sched(ALL_DAYS, ALL_MONTHS, slotsFrom('j', []))],
+                },
+                es: {
+                    name: 'Tri pásma so víkendom',
+                    currency: '€',
+                    bands: [
+                        { id: 'p3', name: 'Mimo špičky', level: 'lacna', price: 0.11 },
+                        { id: 'p2', name: 'Bežné', level: 'bezna', price: 0.17 },
+                        { id: 'p1', name: 'Špička', level: 'draha', price: 0.25 },
+                    ],
+                    schedules: [
+                        sched(
+                            ALL_DAYS,
+                            ALL_MONTHS,
+                            slotsFrom('p3', [
+                                ['08:00', '10:00', 'p2'],
+                                ['10:00', '14:00', 'p1'],
+                                ['14:00', '18:00', 'p2'],
+                                ['18:00', '22:00', 'p1'],
+                                ['22:00', '00:00', 'p2'],
+                            ]),
+                        ),
+                        sched([6, 7], ALL_MONTHS, slotsFrom('p3', [])),
+                    ],
+                },
+            };
+            const PRODUCTS = [
+                { id: 'zse', label: 'ZSE 20 h NT' },
+                { id: 'noc8', label: '8 h lacno v noci' },
+                { id: 'jedna', label: 'Jedna cena' },
+                { id: 'es', label: 'Tri pásma (napr. ES)' },
+                { id: 'moja', label: 'Moja zo sprievodcu' },
+            ];
+            const WEATHER = [
+                { id: 'sun', label: 'Slnečno' },
+                { id: 'part', label: 'Polooblačno' },
+                { id: 'cloud', label: 'Zamračené' },
+            ];
+
+            /** Tarifa bez cien: tak začína v sprievodcovi. */
+            function template(kind) {
+                const t = clone(kind === 'jedna' ? PRESETS.jedna : kind === 'viac' ? PRESETS.es : PRESETS.zse);
+                t.bands.forEach((b) => (b.price = null));
+                return t;
+            }
+
+            // ---- Stav mockupu ---------------------------------------------------------------
+            const S = {
+                screen: 'typ',
+                kind: 'dvoj',
+                dunno: false,
+                tariff: template('dvoj'),
+                brush: 'vt',
+                sched: 0,
+                demo: { product: 'zse', weather: 'sun', weekend: false, minutes: NOW_MIN },
+            };
+
+            function setKind(k) {
+                S.kind = k;
+                S.dunno = false;
+                S.tariff = template(k);
+                S.brush = S.tariff.bands[S.tariff.bands.length - 1].id;
+                S.sched = 0;
+            }
+            const bandOf = (t, id) => t.bands.find((b) => b.id === id) || t.bands[0];
+
+            // ---- Výroba a plán dňa (vzorový septembrový deň) -----------------------------------
+            function kwAt(min, weather) {
+                const h = min / 60;
+                const rise = 6.7;
+                const set = 18.8;
+                if (h <= rise || h >= set) return 0;
+                const x = (h - rise) / (set - rise);
+                const shape = Math.pow(Math.sin(Math.PI * x), 1.25);
+                const peak = { sun: 8.3, part: 5.2, cloud: 1.3 }[weather];
+                const dip = weather === 'part' ? 1 - 0.45 * Math.exp(-((h - 12.2) ** 2) / 1.2) : 1;
+                return Math.min(peak * shape * dip, 10);
+            }
+            /** Index rozvrhu pre deň: posledná výnimka, ktorá sedí, inak základ. Mesiac je september. */
+            function schedIndexFor(t, weekend) {
+                const day = weekend ? 6 : 3;
+                let idx = 0;
+                t.schedules.forEach((s, i) => {
+                    if (i > 0 && s.days.includes(day) && s.months.includes(9)) idx = i;
+                });
+                return idx;
+            }
+            function demoTariff() {
+                return S.demo.product === 'moja' ? S.tariff : PRESETS[S.demo.product];
+            }
+            /** Plán dňa: pre každý úsek pásmo, úroveň, výroba a farba podľa pravidla. */
+            function planCells(t, weather, weekend) {
+                const slots = t.schedules[schedIndexFor(t, weekend)].slots;
+                return slots.map((id, i) => {
+                    const b = bandOf(t, id);
+                    const kw = kwAt(i * 15 + 7.5, weather);
+                    return { band: b, level: b.level, kw, cls: kw >= LOW ? 'green' : LV[b.level].cls };
+                });
+            }
+
+            // ---- Kreslenie prstencov ----------------------------------------------------------
+            function ringPoint(r, min) {
+                const rad = ((min / 1440) * 2 - 0.5) * Math.PI;
+                return { x: 120 + r * Math.cos(rad), y: 120 + r * Math.sin(rad) };
+            }
+            const n2 = (v) => v.toFixed(2);
+            function arcD(r, m0, m1) {
+                if (m1 - m0 >= 1440)
+                    return `M 120 ${n2(120 - r)} A ${r} ${r} 0 1 1 120 ${n2(120 + r)} A ${r} ${r} 0 1 1 120 ${n2(120 - r)}`;
+                const a = ringPoint(r, m0);
+                const b = ringPoint(r, m1);
+                return `M ${n2(a.x)} ${n2(a.y)} A ${r} ${r} 0 ${m1 - m0 > 720 ? 1 : 0} 1 ${n2(b.x)} ${n2(b.y)}`;
+            }
+            /** Súvislé úseky rovnakej hodnoty; úsek cez polnoc je jeden. */
+            function runs(arr) {
+                const out = [];
+                arr.forEach((v, i) => {
+                    const last = out[out.length - 1];
+                    if (last && last.v === v) last.n++;
+                    else out.push({ start: i, n: 1, v });
+                });
+                if (out.length > 1 && out[0].v === out[out.length - 1].v) {
+                    const l = out.pop();
+                    out[0].start = l.start;
+                    out[0].n += l.n;
+                }
+                return out;
+            }
+            function ringPaths(clsArr, r, w, op) {
+                return runs(clsArr)
+                    .filter((s) => s.v !== 'none')
+                    .map(
+                        (s) =>
+                            `<path d="${arcD(r, s.start * 15, (s.start + s.n) * 15)}" fill="none" stroke="${COLOR[s.v]}" stroke-width="${w}" stroke-opacity="${op}"/>`,
+                    )
+                    .join('');
+            }
+            function miniRing(t, idx = 0) {
+                const cls = t.schedules[idx].slots.map((id) => LV[bandOf(t, id).level].cls);
+                const paths = runs(cls)
+                    .map((s) => {
+                        const r = 10;
+                        const d = (() => {
+                            const m0 = s.start * 15;
+                            const m1 = (s.start + s.n) * 15;
+                            if (m1 - m0 >= 1440) return `M 15 5 A 10 10 0 1 1 15 25 A 10 10 0 1 1 15 5`;
+                            const p = (m) => {
+                                const rad = ((m / 1440) * 2 - 0.5) * Math.PI;
+                                return `${n2(15 + r * Math.cos(rad))} ${n2(15 + r * Math.sin(rad))}`;
+                            };
+                            return `M ${p(m0)} A 10 10 0 ${m1 - m0 > 720 ? 1 : 0} 1 ${p(m1)}`;
+                        })();
+                        return `<path d="${d}" fill="none" stroke="${COLOR[s.v]}" stroke-width="5"/>`;
+                    })
+                    .join('');
+                return `<svg class="mini" viewBox="0 0 30 30" aria-hidden="true">${paths}</svg>`;
+            }
+            function spotMini() {
+                const cls = Array.from({ length: 24 }, (_, i) => {
+                    const v = Math.sin((i - 3) / 3.2) + Math.sin(i / 1.7) * 0.5;
+                    return v > 0.6 ? 'red' : v < -0.4 ? 'amber' : 'grey';
+                });
+                const paths = cls
+                    .map((c, i) => {
+                        const p = (m) => {
+                            const rad = ((m / 1440) * 2 - 0.5) * Math.PI;
+                            return `${n2(15 + 10 * Math.cos(rad))} ${n2(15 + 10 * Math.sin(rad))}`;
+                        };
+                        return `<path d="M ${p(i * 60)} A 10 10 0 0 1 ${p(i * 60 + 58)}" fill="none" stroke="${COLOR[c]}" stroke-width="5"/>`;
+                    })
+                    .join('');
+                return `<svg class="mini" viewBox="0 0 30 30" aria-hidden="true">${paths}</svg>`;
+            }
+
+            // ---- Texty (jedna matica pre telefón aj tabuľku) -----------------------------------
+            const MSG = {
+                draha: {
+                    niz: {
+                        h: 'Nezapínaj veľké spotrebiče',
+                        p: 'Slnko teraz veľa nedáva a elektrina je drahá. Práčku, sušičku ani nabíjanie auta teraz nespúšťaj.',
+                        tag: 'kept',
+                    },
+                    str: {
+                        h: 'Len menšie spotrebiče',
+                        p: 'Panely čiastočne pomáhajú, sieť je stále drahá. Kanvica či nabíjačky áno, veľké spotrebiče radšej nie.',
+                        tag: 'kept',
+                    },
+                    vys: {
+                        h: 'Môžeš zapnúť aj väčší spotrebič',
+                        p: 'Aj v drahej hodine dávajú panely slušný výkon. Jeden väčší spotrebič si môžeš dovoliť.',
+                        tag: 'kept',
+                    },
+                    noc: {
+                        h: 'Drahá sieť a tma',
+                        p: 'Slnko nesvieti a elektrina je drahá. Veľké spotrebiče nechaj na lacné pásmo alebo na slnko.',
+                        tag: 'new',
+                    },
+                },
+                bezna: {
+                    niz: {
+                        h: 'Zváž, či nepočkať',
+                        p: 'Panely teraz veľa nedávajú a zo siete platíš bežnú cenu. Ak to nie je súrne, počkaj na slnko.',
+                        tag: 'moved',
+                    },
+                    str: { h: 'Dobrý čas, využi ho', p: 'Slnko slušne svieti. Zapni práčku, umývačku, čo potrebuješ.', tag: 'moved' },
+                    vys: {
+                        h: 'Výborný čas na spotrebiče',
+                        p: 'Vysoká výroba pokryje aj veľké spotrebiče vrátane nabíjania auta.',
+                        tag: 'new',
+                    },
+                    noc: { h: 'Slnko nesvieti', p: 'Zo siete platíš bežnú cenu. Čo môže počkať, nechaj na zajtra na slnko.', tag: 'new' },
+                },
+                lacna: {
+                    niz: {
+                        h: 'Malé spotrebiče áno. Veľké nezapínaj, ak nemusíš.',
+                        p: 'Sieť je ale lacná, takže ak potrebuješ, pokojne zapni aj veľké spotrebiče.',
+                        tag: 'kept',
+                    },
+                    str: {
+                        h: 'Dobrý čas na bežnú prevádzku',
+                        p: 'Slušná výroba aj lacná sieť. Práčka, umývačka aj iné bežné spotrebiče môžu ísť.',
+                        tag: 'kept',
+                    },
+                    vys: {
+                        h: 'Najlepší čas dňa — zapni všetko',
+                        p: 'Plný výkon a k tomu lacná sieť. Ideálny moment na práčku, sušičku aj nabíjanie auta.',
+                        tag: 'moved',
+                    },
+                    noc: { h: 'Lacný nočný prúd', p: 'Slnko nesvieti, no sieť je lacná. Vhodné na bojler a nabíjanie auta.', tag: 'moved' },
+                },
+            };
+            const OVERRIDE = {
+                draha: (d) => ({
+                    h: 'Počkaj na slnko',
+                    p: `Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde ${d}, veľké spotrebiče si nechaj na vtedy.`,
+                }),
+                bezna: (d) => ({
+                    h: 'Počkaj na slnko',
+                    p: `Panely zatiaľ veľa nedávajú. Silnejšie slnko príde ${d}, veľké spotrebiče si nechaj na vtedy.`,
+                }),
+                lacna: (d) => ({
+                    h: 'Radšej počkaj na slnko',
+                    p: `Sieť je síce lacná, ale zadarmo elektrina zo slnka príde ${d}. Ak to nie je súrne, počkaj.`,
+                }),
+            };
+            const TAG_TEXT = { kept: 'pôvodný', moved: 'presunutý', new: 'nový' };
+
+            function verdictAt(t, min) {
+                const w = S.demo.weather;
+                const slots = t.schedules[schedIndexFor(t, S.demo.weekend)].slots;
+                const b = bandOf(t, slots[Math.floor(min / 15)]);
+                const kw = kwAt(min, w);
+                if (kw <= 0.01) return { ...MSG[b.level].noc, b, kw };
+                const prod = kw < LOW ? 'niz' : kw < HIGH ? 'str' : 'vys';
+                if (prod !== 'vys') {
+                    let best = { kw: 0, m: 0 };
+                    for (let x = Math.ceil((min + 1) / 60) * 60; x < 1440; x += 60) {
+                        const k = kwAt(x, w);
+                        if (k > best.kw) best = { kw: k, m: x };
+                    }
+                    if (best.kw >= HIGH && best.kw >= kw + MARGIN)
+                        return { ...OVERRIDE[b.level](`okolo ${Math.floor(best.m / 60)}:00`), b, kw };
+                }
+                return { ...MSG[b.level][prod], b, kw };
+            }
+
+            // ---- Ciferník pre Terazky a porovnanie ---------------------------------------------
+            function dialHtml(variant, withNum) {
+                const t = demoTariff();
+                const cells = planCells(t, S.demo.weather, S.demo.weekend);
+                const m = S.demo.minutes;
+                const kw = kwAt(m, S.demo.weather);
+                const lvl = kw < LOW ? 'red' : kw < HIGH ? 'amber' : 'green';
+                const C = 2 * Math.PI * 78;
+                const frac = Math.max(0, Math.min(1, kw / KWP));
+                let g = '';
+                let rNow = 106;
+                if (variant === 'A') {
+                    g += ringPaths(
+                        cells.map((c) => c.cls),
+                        106,
+                        8,
+                        0.6,
+                    );
+                } else {
+                    rNow = 108;
+                    g += `<circle cx="120" cy="120" r="99" fill="none" stroke="var(--ink-05)" stroke-width="3"/>`;
+                    g += ringPaths(
+                        cells.map((c) => LV[c.level].cls),
+                        108,
+                        5,
+                        0.65,
+                    );
+                    g += ringPaths(
+                        cells.map((c) => (c.kw >= LOW ? 'green' : 'none')),
+                        99,
+                        3,
+                        0.9,
+                    );
+                }
+                g += `<text class="dial-hour" x="120" y="27">0</text><text class="dial-hour" x="213" y="120">6</text><text class="dial-hour" x="120" y="213">12</text><text class="dial-hour" x="27" y="120">18</text>`;
+                g += `<circle cx="120" cy="120" r="78" fill="none" stroke="var(--ink-08)" stroke-width="14"/>`;
+                if (frac > 0)
+                    g += `<circle cx="120" cy="120" r="78" fill="none" stroke="${COLOR[lvl]}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${n2(C)}" stroke-dashoffset="${n2(C * (1 - frac))}" transform="rotate(-90 120 120)"/>`;
+                if (m !== NOW_MIN) {
+                    const pn = ringPoint(rNow, NOW_MIN);
+                    g += `<circle cx="${n2(pn.x)}" cy="${n2(pn.y)}" r="3.5" fill="none" stroke="#fff" stroke-width="1.5"/>`;
+                }
+                const p = ringPoint(rNow, m);
+                g += `<circle cx="${n2(p.x)}" cy="${n2(p.y)}" r="6" fill="#fff" stroke="var(--bg)" stroke-width="2"/>`;
+                let num = '';
+                if (withNum) {
+                    const v = verdictAt(t, m);
+                    const price = v.b.price != null ? ` · ${fmt2(v.b.price)} ${t.currency}` : '';
+                    num =
+                        `<div class="dial-num"><span class="when${m !== NOW_MIN ? ' preview' : ''}">${m !== NOW_MIN ? 'Náhľad · ' : ''}${m2t(m)}</span>` +
+                        `<span class="val" style="color:${kw > 0 ? COLOR[cells[Math.floor(m / 15)].cls] : 'var(--ink)'}">${kw.toFixed(2)}</span>` +
+                        `<span class="unit">kW (odhad)</span>` +
+                        `<span class="band">${esc(v.b.name)} · ${LV[v.b.level].label}${price}</span></div>`;
+                }
+                return `<svg viewBox="0 0 240 240" aria-hidden="true">${g}</svg>${num}`;
+            }
+            function tierAt(min) {
+                const t = demoTariff();
+                const slots = t.schedules[schedIndexFor(t, S.demo.weekend)].slots;
+                const b = bandOf(t, slots[Math.floor(min / 15)]);
+                return kwAt(min, S.demo.weather) >= LOW ? 'green' : LV[b.level].cls;
+            }
+
+            // ---- Maliar rozvrhu ---------------------------------------------------------------
+            const PR = 90; // polomer maľovaného prstenca
+            function painterG() {
+                const t = S.tariff;
+                const slots = t.schedules[S.sched].slots;
+                let g = `<circle cx="120" cy="120" r="${PR}" fill="none" stroke="var(--ink-05)" stroke-width="28"/>`;
+                const rs = runs(slots);
+                g += rs
+                    .map((s) => {
+                        const b = bandOf(t, s.v);
+                        return `<path d="${arcD(PR, s.start * 15, (s.start + s.n) * 15)}" fill="none" stroke="${COLOR[LV[b.level].cls]}" stroke-width="28" stroke-opacity="0.85"/>`;
+                    })
+                    .join('');
+                if (rs.length > 1)
+                    g += rs
+                        .map((s) => {
+                            const a = ringPoint(PR - 15, s.start * 15);
+                            const b = ringPoint(PR + 15, s.start * 15);
+                            return `<line x1="${n2(a.x)}" y1="${n2(a.y)}" x2="${n2(b.x)}" y2="${n2(b.y)}" stroke="var(--bg)" stroke-width="1.5"/>`;
+                        })
+                        .join('');
+                for (let h = 0; h < 24; h++) {
+                    const a = ringPoint(107, h * 60);
+                    const b = ringPoint(h % 6 === 0 ? 114 : 110, h * 60);
+                    g += `<line x1="${n2(a.x)}" y1="${n2(a.y)}" x2="${n2(b.x)}" y2="${n2(b.y)}" stroke="var(--ink-20)" stroke-width="1"/>`;
+                    if (h % 3 === 0) {
+                        const p = ringPoint(62, h * 60);
+                        g += `<text x="${n2(p.x)}" y="${n2(p.y)}" font-size="9" fill="var(--ink-35)">${h}</text>`;
+                    }
+                }
+                const br = bandOf(t, S.brush);
+                g += `<text x="120" y="104" font-size="8" fill="var(--ink-35)" letter-spacing="1">MAĽUJEŠ</text>`;
+                g += `<text x="120" y="121" font-size="15" font-weight="700" fill="${COLOR[LV[br.level].cls]}">${esc(br.name.slice(0, 12))}</text>`;
+                g += `<text x="120" y="137" font-size="8" fill="var(--ink-45)">${LV[br.level].label}</text>`;
+                return g;
+            }
+            function painterSum() {
+                const t = S.tariff;
+                const slots = t.schedules[S.sched].slots;
+                return t.bands
+                    .map((b) => ({ b, n: slots.filter((x) => x === b.id).length }))
+                    .filter((x) => x.n)
+                    .map((x) => `${esc(x.b.name)} ${hoursText(x.n)}`)
+                    .join(' · ');
+            }
+            function segList() {
+                const slots = S.tariff.schedules[S.sched].slots;
+                return runs(slots).sort((a, b) => a.start - b.start);
+            }
+            function ivalsHtml() {
+                const segs = segList();
+                return segs
+                    .map((s, i) => {
+                        const b = bandOf(S.tariff, s.v);
+                        const del =
+                            segs.length > 1
+                                ? `<button class="x" type="button" data-del="${i}" aria-label="Zmazať úsek ${m2t(s.start * 15)} až ${m2t((s.start + s.n) * 15)}"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>`
+                                : '<span></span>';
+                        return `<li><i class="sw ${LV[b.level].cls}"></i><span>${esc(b.name)}</span><span class="tm">${m2t(s.start * 15)} – ${m2t(((s.start + s.n) * 15) % 1440)}<small>${hoursText(s.n)}</small></span>${del}</li>`;
+                    })
+                    .join('');
+            }
+            function refreshPainter() {
+                const g = $('#painter-g');
+                if (!g) return;
+                g.innerHTML = painterG();
+                $('#painter-sum').innerHTML = painterSum();
+                $('#ivals').innerHTML = ivalsHtml();
+            }
+            let painting = null;
+            function slotFromEvent(svg, e) {
+                const r = svg.getBoundingClientRect();
+                const dx = e.clientX - (r.left + r.width / 2);
+                const dy = e.clientY - (r.top + r.height / 2);
+                const dist = Math.hypot(dx, dy) * (240 / r.width);
+                let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+                if (deg < 0) deg += 360;
+                return { slot: Math.floor((deg / 360) * SLOTS) % SLOTS, dist };
+            }
+            function paintTo(slot) {
+                const slots = S.tariff.schedules[S.sched].slots;
+                let i = painting.last;
+                const diff = (slot - i + SLOTS) % SLOTS;
+                const step = diff <= SLOTS / 2 ? 1 : -1;
+                slots[i] = S.brush;
+                while (i !== slot) {
+                    i = (i + step + SLOTS) % SLOTS;
+                    slots[i] = S.brush;
+                }
+                painting.last = slot;
+                refreshPainter();
+            }
+
+            // ---- Popisy rozvrhov --------------------------------------------------------------
+            const isWeekendSched = (s) => s.days.length === 2 && s.days.includes(6) && s.days.includes(7) && s.months.length === 12;
+            const isSeasonSched = (s) => s.days.length === 7 && s.months.length < 12;
+            function daysText(d) {
+                if (d.length === 7) return 'každý deň';
+                if (d.join() === '6,7') return 'So – Ne';
+                if (d.join() === '1,2,3,4,5') return 'Po – Pi';
+                return d.map((x) => ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'][x - 1]).join(', ');
+            }
+            function monthsText(m) {
+                if (m.length === 12) return 'celý rok';
+                if (!m.length) return 'žiadny mesiac';
+                const contiguous = m.every((x, i) => i === 0 || x === m[i - 1] + 1);
+                return contiguous
+                    ? `${MONTH_LONG[m[0] - 1]} – ${MONTH_LONG[m[m.length - 1] - 1]}`
+                    : m.map((x) => MONTH_SHORT[x - 1]).join(', ');
+            }
+            function schedLabel(t, i) {
+                const s = t.schedules[i];
+                if (i > 0)
+                    return isWeekendSched(s)
+                        ? 'Víkend'
+                        : isSeasonSched(s)
+                          ? `${MONTH_LONG[s.months[0] - 1][0].toUpperCase()}${MONTH_LONG[s.months[0] - 1].slice(1)} – ${MONTH_LONG[s.months[s.months.length - 1] - 1]}`
+                          : 'Výnimka';
+                if (t.schedules.length === 1) return 'Každý deň';
+                return t.schedules.some(isWeekendSched) ? 'Pracovné dni' : 'Zvyšok roka';
+            }
+            function schedDetail(t, i) {
+                const s = t.schedules[i];
+                if (i === 0) {
+                    const wk = t.schedules.some(isWeekendSched);
+                    const se = t.schedules.find((x, j) => j > 0 && isSeasonSched(x));
+                    return `${wk ? 'Po – Pi' : 'každý deň'} · ${se ? 'mimo ' + monthsText(se.months) : 'celý rok'}`;
+                }
+                return `${daysText(s.days)} · ${monthsText(s.months)}`;
+            }
+            function tariffSummary(t) {
+                if (t.bands.length === 1) return 'Jedna cena celý deň';
+                const base = t.schedules[0].slots;
+                const cheap = base.filter((id) => bandOf(t, id).level === 'lacna').length;
+                const exc =
+                    t.schedules.length > 1
+                        ? ` · ${t.schedules
+                              .slice(1)
+                              .map((s, j) => schedLabel(t, j + 1).toLowerCase())
+                              .join(', ')} inak`
+                        : '';
+                return `${t.bands.length} pásma · lacno ${hoursText(cheap)}${exc}`;
+            }
+            function autoLevels(bands) {
+                if (bands.some((b) => b.price == null)) return null;
+                if (bands.length === 1) return { [bands[0].id]: 'bezna' };
+                const ps = bands.map((b) => b.price);
+                const min = Math.min(...ps);
+                const max = Math.max(...ps);
+                const out = {};
+                bands.forEach((b) => (out[b.id] = min === max ? 'bezna' : b.price === min ? 'lacna' : b.price === max ? 'draha' : 'bezna'));
+                return out;
+            }
+
+            // ---- Obrazovky ----------------------------------------------------------------------
+            const CLOSE = `<button class="wz-close" type="button" aria-label="Zavrieť sprievodcu"><svg viewBox="0 0 14 14"><path d="M2 2l10 10M12 2L2 12"/></svg></button>`;
+            function wzHead(sub) {
+                const prog = Array.from({ length: 7 }, (_, i) => `<i class="${i < 5 ? 'done' : i === 5 ? 'now' : ''}"></i>`).join('');
+                return `<div class="wz-head"><span class="wz-step">Krok 6 z 7 · Tarifa</span>${CLOSE}</div><div class="wz-prog">${prog}</div>${sub ? `<p class="wz-sub">${esc(sub)}</p>` : ''}`;
+            }
+            function flow() {
+                if (S.kind === 'jedna') return ['typ', 'ceny'];
+                if (S.kind === 'viac') return ['typ', 'pasma', 'rozvrh', 'vynimky', 'ceny'];
+                return ['typ', 'rozvrh', 'vynimky', 'ceny'];
+            }
+            function wizardFoot(extraLeft) {
+                const f = flow();
+                const i = f.indexOf(S.screen);
+                const left = extraLeft || `<button class="btn-ghost" type="button" data-prev ${i <= 0 ? 'disabled' : ''}>Späť</button>`;
+                return `${left}<button class="btn-primary" type="button" data-next>${i === f.length - 1 ? 'Na kontrolu' : 'Ďalej'}</button>`;
+            }
+
+            const SCREENS = {
+                typ: {
+                    nav: 'nastavenie',
+                    body() {
+                        const ch = (k, title, sub, icon, disabled) =>
+                            `<button class="choice" type="button" data-kind="${k}" aria-pressed="${S.kind === k}" ${disabled ? 'disabled' : ''}><span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span>${icon}</button>`;
+                        return (
+                            wzHead() +
+                            `<h2 class="wz-title">Ako platíš za elektrinu?</h2><p class="wz-lead">Podľa toho appka zafarbí ciferník a poradí, kedy zapínať spotrebiče.</p>` +
+                            ch('jedna', 'Jedna cena celý deň', 'jednotarif', miniRing(PRESETS.jedna)) +
+                            ch('dvoj', 'Lacnejšie a drahšie hodiny', 'dvojtarif · VT a NT · nočný prúd', miniRing(PRESETS.zse)) +
+                            ch('viac', 'Tri a viac pásiem', 'špička · bežné · mimo špičky', miniRing(PRESETS.es)) +
+                            ch('spot', 'Cena sa mení každú hodinu', 'spot · dynamická cena · pripravujeme', spotMini(), true) +
+                            `<p style="margin:14px 0 0"><button class="link-btn" type="button" data-dunno>Neviem</button></p>` +
+                            (S.dunno
+                                ? `<p class="msg warn">Appka bude počítať s jednou cenou a ciferník zafarbí len podľa slnka. Tarifu nájdeš na faktúre alebo v zmluve a doplníš ju kedykoľvek v Nastavení.</p>`
+                                : '')
+                        );
+                    },
+                    foot: () => wizardFoot(),
+                },
+                pasma: {
+                    nav: 'nastavenie',
+                    body() {
+                        const t = S.tariff;
+                        const rows = t.bands
+                            .map(
+                                (b) =>
+                                    `<div class="band-row"><div class="band-top"><i class="sw ${LV[b.level].cls}"></i><input class="field-input" type="text" maxlength="16" value="${esc(b.name)}" data-bandname="${b.id}" aria-label="Meno pásma" />${t.bands.length > 2 ? `<button class="rm" type="button" data-rmband="${b.id}">Zmazať</button>` : ''}</div>` +
+                                    `<div class="seg lvl" role="group" aria-label="Úroveň">${['lacna', 'bezna', 'draha'].map((l) => `<button type="button" data-band="${b.id}" data-level="${l}" aria-pressed="${b.level === l}">${LV[l].name}</button>`).join('')}</div></div>`,
+                            )
+                            .join('');
+                        return (
+                            wzHead('Pásma') +
+                            `<h2 class="wz-title">Aké pásma máš?</h2><p class="wz-lead">Pomenuj ich ako na faktúre. Úroveň hovorí appke, akou farbou ich kresliť.</p>` +
+                            rows +
+                            (t.bands.length < 4
+                                ? `<button class="btn-ghost" type="button" data-addband style="width:100%">+ Pridať pásmo</button>`
+                                : `<p class="msg warn">Štyri pásma sú maximum.</p>`)
+                        );
+                    },
+                    foot: () => wizardFoot(),
+                },
+                rozvrh: {
+                    nav: 'nastavenie',
+                    body() {
+                        const t = S.tariff;
+                        if (S.sched >= t.schedules.length) S.sched = 0;
+                        const tabs =
+                            t.schedules.length > 1
+                                ? `<div class="seg" role="group" aria-label="Rozvrh">${t.schedules.map((s, i) => `<button type="button" data-sched="${i}" aria-pressed="${S.sched === i}">${esc(schedLabel(t, i))}</button>`).join('')}</div>`
+                                : '';
+                        const brushes = t.bands
+                            .map(
+                                (b) =>
+                                    `<button class="brush" type="button" data-brush="${b.id}" aria-pressed="${S.brush === b.id}"><i class="sw ${LV[b.level].cls}"></i>${esc(b.name)}<small>${LV[b.level].label}</small></button>`,
+                            )
+                            .join('');
+                        const tpls =
+                            t.bands.length === 2
+                                ? `<div class="field-label">Šablóny tvaru</div><div class="chips"><button class="chip" type="button" data-tpl="20h">Lacno 20 h, 4 h drahé</button><button class="chip" type="button" data-tpl="noc8">Lacno 8 h v noci</button><button class="chip soft" type="button" data-tpl="all">Všetko lacné</button></div>`
+                                : `<div class="field-label">Šablóny</div><div class="chips"><button class="chip soft" type="button" data-tpl="all">Všetko najlacnejšie</button></div>`;
+                        return (
+                            wzHead(t.schedules.length > 1 ? `Rozvrh · ${schedLabel(t, S.sched)}` : 'Rozvrh dňa') +
+                            `<h2 class="wz-title">Kedy platí ktoré pásmo?</h2><p class="wz-lead">Vyber pásmo a prejdi prstom po kruhu. Krok je 15 minút.</p>` +
+                            tabs +
+                            `<div class="brushes">${brushes}</div>` +
+                            `<svg id="painter" class="painter" viewBox="0 0 240 240" role="img" aria-label="Rozvrh dňa na kruhu"><g id="painter-g">${painterG()}</g></svg>` +
+                            `<p class="painter-sum" id="painter-sum">${painterSum()}</p>` +
+                            tpls +
+                            `<div class="field-label">Úseky</div><ul class="ivals" id="ivals">${ivalsHtml()}</ul>` +
+                            `<details class="help"><summary>Kde nájdem časy?</summary><p>Na faktúre alebo na stránke distribučky pri časoch prepínania (HDO). Aj v rámci jednej distribučky sa líšia podľa odberného miesta, preto šablóna dá len tvar.</p></details>`
+                        );
+                    },
+                    foot: () => wizardFoot(),
+                },
+                vynimky: {
+                    nav: 'nastavenie',
+                    body() {
+                        const t = S.tariff;
+                        const hasW = t.schedules.some((s, i) => i > 0 && isWeekendSched(s));
+                        const se = t.schedules.find((s, i) => i > 0 && isSeasonSched(s));
+                        const ch = (k, title, sub, pressed) =>
+                            `<button class="choice" type="button" data-exc="${k}" aria-pressed="${pressed}"><span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span></button>`;
+                        const list = t.schedules
+                            .map(
+                                (s, i) =>
+                                    `<div class="sched-row">${miniRing(t, i)}<span class="t">${esc(schedLabel(t, i))}<span>${esc(schedDetail(t, i))}</span></span><button class="link-btn" type="button" data-editsched="${i}">Upraviť</button></div>`,
+                            )
+                            .join('');
+                        const months = se
+                            ? `<div class="field-label">Mesiace výnimky</div><div class="months">${ALL_MONTHS.map((m) => `<button class="chip" type="button" data-month="${m}" aria-pressed="${se.months.includes(m)}">${MONTH_SHORT[m - 1]}</button>`).join('')}</div>`
+                            : '';
+                        return (
+                            wzHead('Výnimky') +
+                            `<h2 class="wz-title">Platí to každý deň rovnako?</h2><p class="wz-lead">Niektoré tarify majú iný rozvrh cez víkend alebo v časti roka.</p>` +
+                            ch('none', 'Áno, každý deň rovnako', 'jeden rozvrh na celý rok', t.schedules.length === 1) +
+                            ch('weekend', 'Cez víkend je to inak', 'sobota a nedeľa majú vlastný rozvrh', hasW) +
+                            ch('season', 'V časti roka je to inak', 'napríklad letná a zimná sadzba', !!se) +
+                            months +
+                            `<div class="field-label">Rozvrhy</div><div class="sched-list">${list}</div>`
+                        );
+                    },
+                    foot: () => wizardFoot(),
+                },
+                ceny: {
+                    nav: 'nastavenie',
+                    body() {
+                        const t = S.tariff;
+                        const cur = ['€', 'Kč', '£', 'zł', 'Ft', '$']
+                            .map(
+                                (c) =>
+                                    `<button class="chip" type="button" data-cur="${c}" aria-pressed="${t.currency === c}">${c}</button>`,
+                            )
+                            .join('');
+                        const rows = t.bands
+                            .map(
+                                (b) =>
+                                    `<label class="price-row"><i class="sw ${LV[b.level].cls}"></i><span>${esc(b.name)}</span><input class="field-input num" type="text" inputmode="decimal" placeholder="0,00" value="${b.price == null ? '' : fmt2(b.price)}" data-price="${b.id}" /><span class="cur">${esc(t.currency)}</span></label>`,
+                            )
+                            .join('');
+                        return (
+                            wzHead('Ceny') +
+                            `<h2 class="wz-title">Koľko stojí kilowatthodina?</h2><p class="wz-lead">Nepovinné. Nájdeš to na faktúre alebo v cenníku dodávateľa, stačí približne.</p>` +
+                            `<div class="field-label">Mena</div><div class="chips">${cur}</div>` +
+                            `<div class="field-label">Cena za kWh</div>${rows}` +
+                            `<div id="pricecheck">${priceCheckHtml()}</div>`
+                        );
+                    },
+                    foot: () => wizardFoot(`<button class="btn-ghost" type="button" data-next>Neviem</button>`),
+                },
+                prehlad: {
+                    nav: 'nastavenie',
+                    body() {
+                        const t = S.tariff;
+                        const ico = (d) => `<span class="sum-ico"><svg class="ico" viewBox="0 0 24 24">${d}</svg></span>`;
+                        const chev = `<svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>`;
+                        const row = (icon, k, v, k2, cls = '') =>
+                            `<button class="sum-row ${cls}" type="button" ${cls ? 'data-go="typ"' : ''}>${icon}<span class="t"><span class="k">${k}</span><span class="v">${v}</span>${k2 ? `<span class="k2">${k2}</span>` : ''}</span>${chev}</button>`;
+                        const prices = t.bands.every((b) => b.price != null)
+                            ? t.bands.map((b) => `${esc(b.name)} ${fmt2(b.price)}`).join(' · ') + ` ${esc(t.currency)}/kWh`
+                            : 'bez cien';
+                        return (
+                            `<div class="section-head"><h2 class="section-title">Nastavenie</h2><div class="section-sub">Appka a jej nastavenia</div></div>` +
+                            `<div class="lbl">Moja elektráreň</div>` +
+                            `<div class="sum-hero"><div class="big">10,44 kWp</div><div class="sub">Dvorany nad Nitrou · dnes za jasnej oblohy približne 55 kWh</div></div>` +
+                            `<div class="sum-list">` +
+                            row(
+                                ico('<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+                                'Poloha',
+                                'Dvorany nad Nitrou',
+                            ) +
+                            row(ico('<rect x="4" y="5" width="16" height="12" rx="1"/><path d="M4 11h16M12 5v12"/>'), 'Panel', '435 Wp') +
+                            row(
+                                ico('<path d="M3 12l9-7 9 7"/><path d="M6 10v9h12v-9"/>'),
+                                'Plocha 1',
+                                'Juh · 40° · 16 panelov',
+                                '6,96 kWp',
+                            ) +
+                            row(
+                                ico('<path d="M3 12l9-7 9 7"/><path d="M6 10v9h12v-9"/>'),
+                                'Plocha 2',
+                                'Východ · 40° · 8 panelov',
+                                '3,48 kWp',
+                            ) +
+                            row(ico('<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6"/>'), 'Menič', '10 kW') +
+                            row(ico('<path d="M4 18V9M10 18V5M16 18v-7M22 18H2"/>'), 'Živé meranie', 'kiosk FusionSolar') +
+                            row(
+                                `<span class="sum-ico">${miniRing(t)}</span>`,
+                                'Tarifa <span class="tag new">nové</span>',
+                                esc(tariffSummary(t)),
+                                prices,
+                                'new',
+                            ) +
+                            `</div>` +
+                            `<p class="msg">Ťuk na riadok Tarifa otvorí len jej kroky a po nich sa vráti sem.</p>`
+                        );
+                    },
+                    foot: () => '',
+                },
+                terazky: {
+                    nav: 'terazky',
+                    body() {
+                        const t = demoTariff();
+                        const v = verdictAt(t, S.demo.minutes);
+                        return (
+                            `<div class="card dial-card"><div class="dial-wrap">${dialHtml('A', true)}</div></div>` +
+                            `<div class="card verdict"><h1>${esc(v.h)}</h1><p>${esc(v.p)}</p><div class="pdots"><i></i><i></i><i></i></div></div>`
+                        );
+                    },
+                    foot: () => '',
+                },
+                info: {
+                    nav: 'info',
+                    body() {
+                        const saved = { ...S.demo };
+                        Object.assign(S.demo, { product: 'zse', weather: 'sun', weekend: false, minutes: NOW_MIN });
+                        const dial = dialHtml('A', false);
+                        Object.assign(S.demo, saved);
+                        return (
+                            `<div class="section-head"><h2 class="section-title">Info</h2><div class="section-sub">Návod a zdieľanie</div></div>` +
+                            `<div class="card info-card"><h3>Ako čítať ciferník</h3><div class="dial-wrap" style="width:200px">${dial}</div>` +
+                            `<ul class="legend">` +
+                            `<li><i class="sw green"></i><span>Slnko pokryje veľké spotrebiče <span class="tag moved">preformulované</span><small>podľa predpovede na dnes, pri zamračenom dni chýba</small></span></li>` +
+                            `<li><i class="sw amber"></i><span>Lacné pásmo<small>NT, mimo špičky, nočný prúd</small></span></li>` +
+                            `<li><i class="sw grey"></i><span>Bežná cena <span class="tag new">nové</span><small>jedna cena celý deň alebo stredné pásmo</small></span></li>` +
+                            `<li><i class="sw red"></i><span>Drahé pásmo<small>VT, špička</small></span></li>` +
+                            `</ul></div>`
+                        );
+                    },
+                    foot: () => '',
+                },
+            };
+
+            function priceCheckHtml() {
+                const t = S.tariff;
+                if (t.bands.length === 1) return `<p class="msg">Pri jednej cene je pásmo vždy bežné, ciferník farbí len slnko.</p>`;
+                const filled = t.bands.filter((b) => b.price != null).length;
+                if (!filled) return `<p class="help">Bez cien appka použije úrovne, ktoré máš pri pásmach.</p>`;
+                if (filled < t.bands.length) return `<p class="help">Doplň ceny všetkých pásiem a navrhnem úrovne.</p>`;
+                const auto = autoLevels(t.bands);
+                const list = t.bands
+                    .map(
+                        (b) =>
+                            `<div><i class="sw ${LV[auto[b.id]].cls}"></i>${esc(b.name)} · ${fmt2(b.price)} ${esc(t.currency)} → ${LV[auto[b.id]].label}</div>`,
+                    )
+                    .join('');
+                const clash = t.bands.filter((b) => auto[b.id] !== b.level);
+                return (
+                    `<div class="auto-list">${list}</div>` +
+                    (clash.length
+                        ? `<p class="msg warn">Podľa cien by ${clash.map((b) => `${esc(b.name)} bolo ${LV[auto[b.id]].label}`).join(' a ')}, máš to inak. <button class="link-btn" type="button" data-applyauto>Použiť úrovne podľa cien</button></p>`
+                        : `<p class="msg">Úrovne sedia s cenami.</p>`)
+                );
+            }
+
+            // ---- Poznámky vedľa telefónu --------------------------------------------------------
+            const NOTES = {
+                typ: {
+                    title: 'Typ sadzby',
+                    what: [
+                        'Štyri možnosti pokryjú bežné domáce produkty: jednotarif, dvojtarif (VT a NT, nočný prúd), viac pásiem a spot.',
+                        'Spot je vidno, ale zatiaľ sa nedá vybrať. Príde v poslednej fáze a rozvrh nepotrebuje, len zónu trhu.',
+                        '„Neviem“ znamená jednu cenu. Ciferník potom farbí len slnko a nič si nevymýšľa.',
+                    ],
+                    impl: [
+                        'Nová časť sprievodcu Tarifa medzi Meranie a Kontrola, v SETUP_SECTIONS bude sedem častí.',
+                        'Obrazovky tarifa, pasma, rozvrh, vynimky, ceny v SETUP_STEPS. nextSetupPlace preskočí Pásma pri dvoch pásmach, Rozvrh a Výnimky pri jednej cene.',
+                        'Zmena typu naplní tarifu šablónou bez cien.',
+                    ],
+                    try: 'Skús prepnúť na „Tri a viac pásiem“ a prejsť Ďalej.',
+                },
+                pasma: {
+                    title: 'Pásma (tri a viac)',
+                    what: [
+                        'Najviac štyri pásma. Viac nemá bežný domáci produkt a na prstenci by sa nedali rozlíšiť.',
+                        'Úroveň je to, čo potrebuje appka: tri farby. Meno je pre človeka (VT, P1, Špička) a appka ho ukáže v náhľade času.',
+                        'Dve pásma s rovnakou úrovňou sú v poriadku, napríklad dve ceny v špičke.',
+                    ],
+                    impl: [
+                        'Band = { id, name, level, price }. id je krátky reťazec, ktorý sa pri premenovaní nemení, lebo naň odkazuje rozvrh.',
+                        'Zmazanie pásma prefarbí jeho úseky na susedné pásmo.',
+                    ],
+                    try: 'Premenuj pásmo alebo mu zmeň úroveň, farba sa prejaví v rozvrhu aj v prehľade.',
+                },
+                rozvrh: {
+                    title: 'Rozvrh dňa',
+                    what: [
+                        'Maľovanie po kruhu je ten istý pohyb ako jazdec na ciferníku, takže ho človek pozná. Krok je 15 minút.',
+                        'Zoznam úsekov je presná cesta aj pre klávesnicu a čítačku obrazovky. Krížik úsek zmaže a zleje ho so susedom, v appke pôjde aj zmeniť čas.',
+                        'Šablóny sú tvary, nie produkty. V SR určuje časy NT distribučka pre konkrétne odberné miesto (HDO), takže „20 h NT“ nemá u dvoch ľudí rovnaké hodiny.',
+                    ],
+                    impl: [
+                        'Kruh má touch-action: none, lebo je to úchytka na ťahanie. swipe.js ho musí poznať rovnako ako jazdec na prstenci (CLAUDE.md, časť Dotyk a kurzor).',
+                        'Ukladá sa ako zoznam zmien { from, band } od 00:00. Maľovanie pracuje nad 96 úsekmi a pri uložení sa zmení na zmeny.',
+                        'Kreslenie kruhu je model v chart-model.js a SVG v svg.js, ako kompas v sprievodcovi.',
+                    ],
+                    try: 'Vyber pásmo a potiahni prstom alebo myšou po kruhu.',
+                },
+                vynimky: {
+                    title: 'Výnimky',
+                    what: [
+                        'Základný rozvrh platí vždy. Výnimky ho prebíjajú pre vybrané dni v týždni alebo mesiace a vyhráva posledná, ktorá na deň sedí.',
+                        'Pokryje víkendy (napríklad Španielsko má cez víkend celý deň mimo špičky), letné a zimné sadzby aj sezónne NT.',
+                        'Najviac štyri rozvrhy. Sviatky zatiaľ nie, potrebovali by kalendár pre každú krajinu.',
+                    ],
+                    impl: [
+                        'Schedule = { days: 1–7, months: 1–12, changes }. scheduleFor(tariff, dateKey) v pásme lokality, rovnako ako dnešný seasonFor.',
+                        'SUMMER_MONTHS a Season zanikajú.',
+                    ],
+                    try: 'Skús „Cez víkend je to inak“. Pribudne kópia základu a v Rozvrhu karta Víkend.',
+                },
+                ceny: {
+                    title: 'Ceny (nepovinné)',
+                    what: [
+                        'Bez cien stačí úroveň, ktorú človek zvolil pri pásme.',
+                        'S cenami appka navrhne úrovne sama (najlacnejšie je lacné, najdrahšie drahé) a upozorní, keď si to s voľbou protirečí.',
+                        'Mena je len text pri čísle, appka nič neprepočítava. Stačí, aby sa ceny dali porovnať.',
+                    ],
+                    impl: [
+                        'price je null alebo číslo od 0 do 10. Pole prijme čiarku aj bodku.',
+                        'Neskôr odhad úspory („presunutím práčky na 12:00 ušetríš asi 0,30 €“), ten ceny potrebuje.',
+                    ],
+                    try: 'Zadaj pásmu VT nižšiu cenu než NT a pozri upozornenie.',
+                },
+                prehlad: {
+                    title: 'Prehľad elektrárne',
+                    what: [
+                        'Nový riadok Tarifa s malým prstencom, rovnako ako plochy majú malý kompas.',
+                        'Uloženia bez tarify (všetci doterajší) dostanú tarifu Dvorian, takže sa im nič nezmení. Riadok vtedy povie „ukážková, nastav si svoju“.',
+                        'Tarifa ide aj do zdieľaného odkazu #nastavenie=….',
+                    ],
+                    impl: [
+                        'summaryRows dostane riadok tarifa, ťuk nastaví setupReturn na prehlad.',
+                        'Mini prstenec je ten istý model ako veľký, len menší polomer.',
+                    ],
+                    try: 'Ťukni na riadok Tarifa.',
+                },
+                terazky: {
+                    title: 'Terazky · ciferník',
+                    what: [
+                        'Prstenec je cena z tarify a navrch zelená tam, kde predpoveď dáva aspoň dolnú hranicu výkonu. Zamračený deň zelenú nemá.',
+                        'Pozadie ide s bežcom ako dnes, bodka ostáva o stave teraz.',
+                        'Nepovinné: pod výkonom pásmo a cena v danej chvíli (čiarkovaná pilulka). Odznak tarify z karty kedysi zmizol, toto je menšie a len pri ciferníku.',
+                    ],
+                    impl: [
+                        'heroModel dostane plán dňa namiesto sezóny. tier aj accent idú z toho istého pravidla, líšia sa len zdrojom výkonu (predpoveď alebo meranie).',
+                        'e2e testy farby pozadia ostanú, očakávanú farbu počítajú tou istou funkciou ako appka.',
+                    ],
+                    controls: true,
+                },
+                info: {
+                    title: 'Info · Ako čítať ciferník',
+                    what: [
+                        'Legenda dostane štvrtú farbu (sivá, bežná cena) a zelená sa preformuluje: namiesto „ideálne okno“ povie, že slnko pokryje veľké spotrebiče.',
+                        'Ilustrácia ostáva statická, ako dnes.',
+                    ],
+                    impl: ['Zmena textu a CSS, HTML aj JS sa navzájom nepotrebujú, takže ide jedným nasadením.'],
+                },
+            };
+
+            const NAV = [
+                {
+                    group: 'Sprievodca · Tarifa',
+                    items: [
+                        ['typ', 'Typ sadzby'],
+                        ['pasma', 'Pásma (tri a viac)'],
+                        ['rozvrh', 'Rozvrh dňa'],
+                        ['vynimky', 'Výnimky'],
+                        ['ceny', 'Ceny'],
+                    ],
+                },
+                {
+                    group: 'Po uložení',
+                    items: [
+                        ['prehlad', 'Nastavenie · prehľad'],
+                        ['terazky', 'Terazky · ciferník'],
+                        ['info', 'Info · legenda'],
+                    ],
+                },
+            ];
+
+            function demoControls(prefix) {
+                const chips = (list, attr, cur) =>
+                    list
+                        .map(
+                            (x) =>
+                                `<button class="chip" type="button" ${attr}="${x.id}" aria-pressed="${cur === x.id}">${x.label}</button>`,
+                        )
+                        .join('');
+                return (
+                    `<div class="ctl"><span class="ctl-l">Tarifa</span><div class="chips">${chips(PRODUCTS, 'data-demo-product', S.demo.product)}</div></div>` +
+                    `<div class="ctl"><span class="ctl-l">Počasie</span><div class="chips">${chips(WEATHER, 'data-demo-weather', S.demo.weather)}</div></div>` +
+                    `<div class="ctl"><span class="ctl-l">Deň</span><div class="chips"><button class="chip" type="button" data-demo-day="0" aria-pressed="${!S.demo.weekend}">Pracovný deň</button><button class="chip" type="button" data-demo-day="1" aria-pressed="${S.demo.weekend}">Víkend</button></div></div>` +
+                    `<label class="ctl"><span class="ctl-l">Čas na ciferníku<b data-time-label>${m2t(S.demo.minutes)}</b></span><input type="range" id="${prefix}-time" data-time min="0" max="1425" step="15" value="${S.demo.minutes}" /></label>`
+                );
+            }
+
+            // ---- Vykresľovanie ------------------------------------------------------------------
+            const NAV_ICONS = {
+                terazky: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+                '7dni': '<path d="M5 20V11M10 20V6M15 20v-6M20 20V9"/>',
+                nastavenie:
+                    '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+                info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+            };
+            function renderPhone() {
+                const scr = SCREENS[S.screen];
+                $('#scr').innerHTML = scr.body();
+                $('#foot').innerHTML = scr.foot();
+                $('#bnav').innerHTML = Object.keys(NAV_ICONS)
+                    .map(
+                        (k) =>
+                            `<span class="nav-item${scr.nav === k ? ' active' : ''}"><svg viewBox="0 0 24 24">${NAV_ICONS[k]}</svg></span>`,
+                    )
+                    .join('');
+                const tint = S.screen === 'terazky' ? tierAt(S.demo.minutes) : S.screen === 'info' ? 'amber' : 'green';
+                $('#phone').style.setProperty('--tint-rgb', TINT[tint]);
+                $('#live-dot').style.background = S.screen === 'terazky' ? COLOR[tierAt(NOW_MIN)] : 'var(--green)';
+            }
+            function renderNav() {
+                $('#steps').innerHTML = NAV.map(
+                    (g) =>
+                        `<div class="steps-group"><span>${g.group}</span>${g.items.map(([id, label]) => `<button class="step-link" type="button" data-go="${id}" aria-current="${S.screen === id}">${label}</button>`).join('')}</div>`,
+                ).join('');
+            }
+            function renderNotes() {
+                const n = NOTES[S.screen];
+                $('#notes').innerHTML =
+                    `<h3>${n.title}</h3>` +
+                    (n.controls ? `<div class="ctls">${demoControls('ph')}</div>` : '') +
+                    `<div><h4>Čo sa tu rieši</h4><ul>${n.what.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` +
+                    `<div class="impl"><h4>Implementácia</h4><ul>${n.impl.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` +
+                    (n.try ? `<div class="try">${esc(n.try)}</div>` : '');
+            }
+            function renderCompare() {
+                $('#cmp-a').innerHTML = dialHtml('A', false);
+                $('#cmp-b').innerHTML = dialHtml('B', false);
+            }
+            function renderAll() {
+                renderNav();
+                renderPhone();
+                renderNotes();
+                $('#cmp-ctls').innerHTML = demoControls('cmp');
+                renderCompare();
+            }
+            function renderMatrix() {
+                const cols = [
+                    ['niz', 'Málo slnka', 'pod dolnou hranicou'],
+                    ['str', 'Stredne', 'od dolnej hranice'],
+                    ['vys', 'Veľa slnka', 'od vysokej výroby'],
+                    ['noc', 'Noc', 'výroba je nulová'],
+                ];
+                const head = `<thead><tr><th>Cena \\ slnko</th>${cols.map((c) => `<th>${c[1]}<br><span style="text-transform:none;letter-spacing:0">${c[2]}</span></th>`).join('')}</tr></thead>`;
+                const body = ['draha', 'bezna', 'lacna']
+                    .map(
+                        (l) =>
+                            `<tr><th class="row"><i class="sw ${LV[l].cls}"></i>${LV[l].name}${l === 'bezna' ? ' <span class="tag new">nové</span>' : ''}</th>${cols
+                                .map((c) => {
+                                    const m = MSG[l][c[0]];
+                                    return `<td><b>${esc(m.h)}</b><small>${esc(m.p)}</small><span class="tag ${m.tag}">${TAG_TEXT[m.tag]}</span></td>`;
+                                })
+                                .join('')}</tr>`,
+                    )
+                    .join('');
+                $('#matrix').innerHTML = head + `<tbody>${body}</tbody>`;
+            }
+
+            // ---- Udalosti -----------------------------------------------------------------------
+            function go(screen) {
+                if (screen === 'pasma' && S.kind !== 'viac') setKind('viac');
+                if ((screen === 'rozvrh' || screen === 'vynimky') && S.kind === 'jedna') setKind('dvoj');
+                S.screen = screen;
+                renderAll();
+                $('#scr').scrollTop = 0;
+            }
+            document.addEventListener('click', (e) => {
+                const el = e.target.closest('button');
+                if (!el) return;
+                const d = el.dataset;
+                const t = S.tariff;
+                if (d.go) return go(d.go);
+                if (d.kind) {
+                    setKind(d.kind);
+                    return renderAll();
+                }
+                if ('dunno' in d) {
+                    setKind('jedna');
+                    S.dunno = true;
+                    return renderAll();
+                }
+                if ('next' in d) {
+                    const f = flow();
+                    const i = f.indexOf(S.screen);
+                    return go(i < 0 || i === f.length - 1 ? 'prehlad' : f[i + 1]);
+                }
+                if ('prev' in d) {
+                    const f = flow();
+                    const i = f.indexOf(S.screen);
+                    if (i > 0) go(f[i - 1]);
+                    return;
+                }
+                if (d.brush) {
+                    S.brush = d.brush;
+                    return renderPhone();
+                }
+                if (d.sched) {
+                    S.sched = Number(d.sched);
+                    return renderPhone();
+                }
+                if (d.editsched) {
+                    S.sched = Number(d.editsched);
+                    return go('rozvrh');
+                }
+                if (d.tpl) {
+                    const sorted = [...t.bands].sort((a, b) => RANK[a.level] - RANK[b.level]);
+                    const cheap = sorted[0].id;
+                    const exp = sorted[sorted.length - 1].id;
+                    const slots =
+                        d.tpl === '20h'
+                            ? slotsFrom(
+                                  cheap,
+                                  VT4.map(([a, b]) => [a, b, exp]),
+                              )
+                            : d.tpl === 'noc8'
+                              ? slotsFrom(exp, [['22:00', '06:00', cheap]])
+                              : slotsFrom(cheap, []);
+                    t.schedules[S.sched].slots = slots;
+                    return renderPhone();
+                }
+                if (d.del !== undefined) {
+                    const segs = segList();
+                    const i = Number(d.del);
+                    const prev = segs[(i - 1 + segs.length) % segs.length];
+                    const s = segs[i];
+                    const slots = t.schedules[S.sched].slots;
+                    for (let k = 0; k < s.n; k++) slots[(s.start + k) % SLOTS] = prev.v;
+                    return refreshPainter();
+                }
+                if (d.level && d.band) {
+                    bandOf(t, d.band).level = d.level;
+                    return renderPhone();
+                }
+                if ('addband' in d) {
+                    const id = `b${Date.now().toString(36)}`;
+                    t.bands.push({ id, name: `Pásmo ${t.bands.length + 1}`, level: 'bezna', price: null });
+                    return renderPhone();
+                }
+                if (d.rmband) {
+                    const i = t.bands.findIndex((b) => b.id === d.rmband);
+                    const repl = t.bands[i === 0 ? 1 : i - 1].id;
+                    t.bands.splice(i, 1);
+                    t.schedules.forEach((s) => (s.slots = s.slots.map((x) => (x === d.rmband ? repl : x))));
+                    if (S.brush === d.rmband) S.brush = repl;
+                    return renderPhone();
+                }
+                if (d.exc) {
+                    if (d.exc === 'none') t.schedules = [t.schedules[0]];
+                    if (d.exc === 'weekend') {
+                        const i = t.schedules.findIndex((s, j) => j > 0 && isWeekendSched(s));
+                        if (i > 0) t.schedules.splice(i, 1);
+                        else t.schedules.push(sched([6, 7], ALL_MONTHS.slice(), t.schedules[0].slots.slice()));
+                    }
+                    if (d.exc === 'season') {
+                        const i = t.schedules.findIndex((s, j) => j > 0 && isSeasonSched(s));
+                        if (i > 0) t.schedules.splice(i, 1);
+                        else t.schedules.push(sched(ALL_DAYS.slice(), [6, 7, 8, 9], t.schedules[0].slots.slice()));
+                    }
+                    S.sched = 0;
+                    return renderPhone();
+                }
+                if (d.month) {
+                    const se = t.schedules.find((s, j) => j > 0 && isSeasonSched(s));
+                    if (!se) return;
+                    const m = Number(d.month);
+                    const next = se.months.includes(m) ? se.months.filter((x) => x !== m) : [...se.months, m].sort((a, b) => a - b);
+                    if (next.length && next.length < 12) se.months = next;
+                    return renderPhone();
+                }
+                if (d.cur) {
+                    t.currency = d.cur;
+                    return renderPhone();
+                }
+                if ('applyauto' in d) {
+                    const auto = autoLevels(t.bands);
+                    if (auto) t.bands.forEach((b) => (b.level = auto[b.id]));
+                    return renderPhone();
+                }
+                if (d.demoProduct) {
+                    S.demo.product = d.demoProduct;
+                    return renderAll();
+                }
+                if (d.demoWeather) {
+                    S.demo.weather = d.demoWeather;
+                    return renderAll();
+                }
+                if (d.demoDay !== undefined) {
+                    S.demo.weekend = d.demoDay === '1';
+                    return renderAll();
+                }
+            });
+            document.addEventListener('input', (e) => {
+                const el = e.target;
+                if (el.dataset.bandname) {
+                    bandOf(S.tariff, el.dataset.bandname).name = el.value || 'Pásmo';
+                    return;
+                }
+                if (el.dataset.price) {
+                    const v = parseFloat(el.value.replace(',', '.'));
+                    bandOf(S.tariff, el.dataset.price).price = Number.isFinite(v) && v >= 0 && v <= 10 ? v : null;
+                    $('#pricecheck').innerHTML = priceCheckHtml();
+                    return;
+                }
+                if ('time' in el.dataset) {
+                    S.demo.minutes = Number(el.value);
+                    document.querySelectorAll('[data-time]').forEach((r) => r !== el && (r.value = el.value));
+                    document.querySelectorAll('[data-time-label]').forEach((l) => (l.textContent = m2t(S.demo.minutes)));
+                    if (S.screen === 'terazky') renderPhone();
+                    renderCompare();
+                }
+            });
+            const scrEl = $('#scr');
+            scrEl.addEventListener('pointerdown', (e) => {
+                const svg = e.target.closest('#painter');
+                if (!svg) return;
+                const { slot, dist } = slotFromEvent(svg, e);
+                if (dist < 60 || dist > 122) return;
+                e.preventDefault();
+                svg.setPointerCapture(e.pointerId);
+                painting = { svg, last: slot };
+                paintTo(slot);
+            });
+            scrEl.addEventListener('pointermove', (e) => {
+                if (!painting) return;
+                paintTo(slotFromEvent(painting.svg, e).slot);
+            });
+            const stopPaint = () => (painting = null);
+            scrEl.addEventListener('pointerup', stopPaint);
+            scrEl.addEventListener('pointercancel', stopPaint);
+
+            renderMatrix();
+            renderAll();
+        </script>
+    </body>
+</html>

@@ -47,13 +47,15 @@ const FOCUSABLE = 'button, a[href], input, [tabindex]';
  * Keď sa obsah naozaj zmení (napr. vybraný deň v prepínači), fokus sa vráti na prvok na tom
  * istom mieste v poradí. Čítanie `activeElement` layout nepočíta, takže neplatí za neho
  * nič z toho, kvôli čomu tento modul existuje.
- * @param {HTMLElement} el @param {string} html @param {string} name
+ * @param {Element} el @param {string} html @param {string} name
+ * @returns {boolean} zapísalo sa? Nové polia formulára potom treba naplniť.
  */
 export function writeHtml(el, html, name) {
-    if (!changed(name, html)) return;
+    if (!changed(name, html)) return false;
     const active = document.activeElement;
     const index = active && el.contains(active) ? Array.from(el.querySelectorAll(FOCUSABLE)).indexOf(active) : -1;
     el.innerHTML = html;
     const next = index >= 0 ? el.querySelectorAll(FOCUSABLE)[index] : null;
     if (next instanceof HTMLElement) next.focus({ preventScroll: true });
+    return true;
 }

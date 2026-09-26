@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MINUTES_PER_DAY } from '../shared/config.js';
+import { MINUTES_PER_DAY, PLANT, SITE, TARIFF } from '../shared/config.js';
+import { dayPlan } from '../shared/day-plan.js';
 import {
     chartDims,
     chartTooltipModel,
@@ -31,7 +32,7 @@ import {
     weekStatsModel,
 } from '../shared/chart-model.js';
 import { fmt2, hourLabel, weekDateLabel, weekDayShort } from '../shared/format.js';
-import { fixtureData } from './helpers.js';
+import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
 
@@ -117,11 +118,11 @@ test('denný prstenec: poludnie hore, pásma obídu celý deň, uhol a minúta s
     assert.equal(ringGap(1430, 10), 20);
     assert.equal(ringGap(600, 700), 100);
 
-    const bands = dayRingModel('summer');
-    assert.ok(bands.length > 1 && bands.every((b) => ['green', 'amber', 'red'].includes(b.cls)));
+    const bands = dayRingModel(dayPlan({ now: FIXED_NOW, tariff: TARIFF, site: SITE, plant: PLANT, pv, forecast }));
+    assert.ok(bands.length > 1 && bands.every((b) => ['green', 'amber', 'red'].includes(String(b.cls))));
     assert.ok(
         bands.every((b) => b.large === 0),
-        'žiadne letné okno nie je dlhšie než pol dňa',
+        'žiadny oblúk Dvorian nie je dlhší než pol dňa',
     );
     // Posledné pásmo končí tesne pred polnocou, nie na nej - oblúk s totožnými koncami
     // by sa nevykreslil vôbec.

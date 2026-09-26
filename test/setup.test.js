@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PLANT, SETTINGS_LIMITS, SITE } from '../shared/config.js';
+import { PLANT, SETTINGS_LIMITS, SITE, TARIFF } from '../shared/config.js';
 import { checkSettings } from '../shared/settings.js';
 import {
     emptySettings,
@@ -16,7 +16,7 @@ import {
 } from '../shared/setup.js';
 
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-const DVORANY = { site: SITE, plant: PLANT, kiosk: '' };
+const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
 const ok = (/** @type {any} */ at, draft = DVORANY, opts = {}) => setupStepOk(at, draft, { totalKwp: null, live: false, ...opts });
 
 /** Prejde celého sprievodcu tlačidlom Ďalej a vráti poradie obrazoviek. @param {number} roofs */

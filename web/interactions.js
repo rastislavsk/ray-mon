@@ -17,7 +17,7 @@ import { localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
-import { clockPatch, nextPv, panelChange } from './state.js';
+import { nextPv, panelChange } from './state.js';
 import { applySettings, initSetup } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -496,7 +496,7 @@ function initSharing(store, dom, refresh) {
 function createRefresh(store) {
     /** @type {{ site: object, plant: object, kiosk: string, promise: Promise<void> } | null} */
     let bezi = null;
-    /** @param {import('../shared/settings.js').Settings} s */
+    /** @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'kiosk'>} s */
     const obnov = async ({ site, plant, kiosk }) => {
         const result = await loadData({ site, plant, kiosk }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
@@ -506,7 +506,7 @@ function createRefresh(store) {
             pv: nextPv(teraz.pv, result, new Date()),
             forecast: result.forecast,
             loading: false,
-            ...clockPatch(new Date(), site),
+            now: new Date(),
         });
     };
     return () => {
@@ -523,7 +523,7 @@ function createRefresh(store) {
 /** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
 function initTicks(store, mq) {
     const refresh = createRefresh(store);
-    setInterval(() => !document.hidden && store.setState(clockPatch(new Date(), store.get().site)), REFRESH.clockMs);
+    setInterval(() => !document.hidden && store.setState({ now: new Date() }), REFRESH.clockMs);
     setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
     document.addEventListener('visibilitychange', () => !document.hidden && refresh());
     mq.wide.addEventListener('change', (e) => store.setState({ wide: e.matches }));
