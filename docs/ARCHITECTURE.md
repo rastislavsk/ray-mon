@@ -229,7 +229,7 @@ mriežka zanikla s ňou a Terazky idú cez celú šírku stránky. Stránka je t
 flexu a vystredenie cez `margin: 0 auto` jej vypína naťahovanie na šírku rodiča, takže
 potrebuje `width: 100%`: karta Terazky vlastnú šírku nemá (ciferník sa počíta z percent,
 odporúčanie je `container-type: inline-size`, teda so size containmentom v osi x), takže bez
-toho by sa stránka scvrkla na svoje okraje. Stráži to e2e test „Spotrebiče majú celú šírku
+toho by sa stránka scvrkla na svoje okraje. Stráži to e2e test „karta Terazky má celú šírku
 stránky“.
 
 Meranie pred tou zmenou ukázalo, že problém bol užší, než sa zdalo: karty Terazky

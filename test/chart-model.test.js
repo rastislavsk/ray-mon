@@ -8,6 +8,7 @@ import {
     dayKwAt,
     dayRingModel,
     forecastChartModel,
+    HOUR_RANGE,
     interpolate,
     kwGridStep,
     minutesFromAngle,
@@ -62,9 +63,9 @@ test('smoothPath a kwGridStep', () => {
 
 test('forecastChartModel: null bez dát, maxKw = 1,15 × maximum, mriežka podľa plátna', () => {
     assert.equal(forecastChartModel({ pts: [], dims: chartDims(false) }), null);
-    assert.equal(forecastChartModel({ pts: [{ hour: 2, kw: 1, cloud: 0 }], dims: chartDims(false) }), null, 'body mimo 06-21 sa nekreslia');
+    assert.equal(forecastChartModel({ pts: [{ hour: 2, kw: 1, cloud: 0 }], dims: chartDims(false) }), null, 'body mimo 05-21 sa nekreslia');
     const pts = forecast.hourlyToday;
-    const maxPt = Math.max(...pts.filter((p) => p.hour >= 6 && p.hour <= 21).map((p) => p.kw));
+    const maxPt = Math.max(...pts.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max).map((p) => p.kw));
     const mobile = forecastChartModel({ pts, dims: chartDims(false), nowHour: 13 });
     assert.ok(mobile);
     assert.ok(Math.abs(mobile.maxKw - Math.max(maxPt, 0.5) * 1.15) < 1e-9);

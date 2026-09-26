@@ -532,7 +532,7 @@ b {
     color: var(--ink-45);
 }
 
-/* ---- Spotrebiče: náhľad času -----------------------------------------------
+/* ---- Terazky: náhľad času -------------------------------------------------
    Bublina s časom nad pásom dňa zanikla spolu s pásom. Čas je teraz vnútri ciferníka
    nad hodnotou (.dial-num .when) a návrat na "teraz" je tlačidlo pod jednotkou. Ani
    jedno nestojí mimo kruhu, takže zobrazenie náhľadu nič v layoute neposunie. */
@@ -567,7 +567,7 @@ b {
     flex-shrink: 0;
 }
 
-/* ---- Spotrebiče: ciferník --------------------------------------------------- */
+/* ---- Terazky: ciferník ----------------------------------------------------- */
 .dial-hero {
     text-align: center;
     padding-top: var(--sp-1);
@@ -687,7 +687,7 @@ b {
     color: var(--ink-35);
 }
 
-/* ---- Spotrebiče: jazdec na dennom prstenci ----------------------------------
+/* ---- Terazky: jazdec na dennom prstenci ------------------------------------
    Vrstva nad ciferníkom. Jazdec je v nej stále: v pokoji je značkou "teraz" (.at-now),
    počas náhľadu objímkou a značku "teraz" vtedy preberá samostatná bodka (.dial-now).
    Obe sedia v percentách obalu, takže sa s ciferníkom samy zmenšujú. */
@@ -894,7 +894,7 @@ b {
     margin-top: 0;
 }
 
-/* ---- Spotrebiče: verdikt a spotrebiče ------------------------------------- */
+/* ---- Terazky: verdikt a spotrebiče --------------------------------------- */
 .verdict {
     text-align: center;
     /* Container query jednotky (cqw) nižšie potrebujú predka s inline-size kontajnmentom -
@@ -2532,7 +2532,7 @@ b {
         height: 26px;
         margin: -13px 0 0 -13px;
     }
-    /* Spotrebiče majú na širokej obrazovke celú šírku stránky. Kým vedľa nich stála karta
+    /* Karta Terazky má na širokej obrazovke celú šírku stránky. Kým vedľa nej stála karta
        Dnes-Zajtra, delila si stránka šírku mriežkou 1:1; tá karta zanikla (jej dáta sú
        v karte 7 dní), takže tu mriežka nie je a karta ide cez celú šírku - ciferník
        s odporúčaním pod ním sa vystredia, spotrebiče a hlášky v pageri dostanú celý riadok. */
@@ -2556,7 +2556,7 @@ b {
    a karty vyplnia výšku okna. Grafy sa tak samy natiahnu na veľkom monitore
    a stlačia na nízkom notebooku.
 
-   Meranie pred touto zmenou: karty Spotrebiče a Zdieľať sa zmestili už predtým
+   Meranie pred touto zmenou: karty Terazky a Zdieľať sa zmestili už predtým
    (na 1920x1080 im ostávalo 347 px prázdneho miesta), pretekala len karta 7 dní
    a to o 97 az 409 px podľa výšky okna. */
 @media (min-width: 1024px) {
@@ -2580,7 +2580,7 @@ b {
         padding-bottom: var(--sp-3);
         /* Stránka je tu položkou zvislého flexu a `margin: 0 auto` (vystredenie na širokom
            monitore) jej vypína naťahovanie na šírku rodiča - bez tohto by si šírku vzala
-           podľa obsahu. Karta Spotrebiče pritom vlastnú šírku nemá: ciferník sa počíta
+           podľa obsahu. Karta Terazky pritom vlastnú šírku nemá: ciferník sa počíta
            z percent a odporúčanie je `container-type: inline-size`, takže do nej nerátajú
            ani ony. Stránka by sa scvrkla na svoje okraje. */
         width: 100%;
