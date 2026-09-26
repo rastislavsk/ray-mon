@@ -39,12 +39,16 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
-- **Nastavenie** – zoznam nastavení appky. Položka sa ťuknutím rozbalí na mieste.
-  **Moja elektráreň**: lokalita kdekoľvek na svete (vyhľadávanie alebo ručné súradnice)
-  a jedna až tri plochy panelov s počtom, orientáciou a sklonom, výkon panelu a menič,
-  nepovinne odkaz na kiosk Huawei FusionSolar pre živé meranie.
-  Nastavenie sa ukladá len v prehliadači. Kým si ho človek neuloží, appka ukazuje ukážku
-  vymyslenej elektrárne v Londýne.
+- **Nastavenie** – moja elektráreň. Kým si ju človek neuloží, appka ukazuje ukážku
+  vymyslenej elektrárne v Londýne a karta ponúka **sprievodcu**: šesť krokov s jednou
+  otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
+  alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
+  alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou
+  slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne odkaz na
+  kiosk Huawei FusionSolar pre živé meranie a na koniec zhrnutie s výrobou za jasného
+  dneška. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je karta
+  prehľad elektrárne a ťuknutie na riadok otvorí len jeho krok. Tlačidlo Späť na telefóne
+  vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
 - **Info** – zoznam položiek v rovnakom dizajne ako Nastavenie. **Ako čítať ciferník**:
   návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s tarifnými pásmami, biela bodka „teraz“, vnútorný oblúk výkonu,

@@ -6,6 +6,7 @@ import {
     addDays,
     alignToLocalHours,
     buildForecast,
+    clearDayKwh,
     clearSkyAcKw,
     clearSkyIrradiance,
     daypartFor,
@@ -14,9 +15,11 @@ import {
     localDateKey,
     localHour,
     localMinutes,
+    orientationShare,
     plantAcKw,
     poaIrradiance,
     solarPosition,
+    sunTimes,
 } from '../shared/solar.js';
 import { FIXED_NOW, fixture } from './helpers.js';
 
@@ -268,4 +271,38 @@ test('prechod času: sedem po sebe idúcich dní, žiadny dvakrát a žiadny nec
         '2026-04-02',
         '2026-04-03',
     ]);
+});
+
+test('sunTimes: východ a západ slnka v miestnom čase lokality', () => {
+    // 5. 9. v Dvoranoch vychádza slnko okolo 6:10 a zapadá okolo 19:25 (letný čas).
+    const { rise, set } = sunTimes(SITE, '2026-09-05');
+    assert.ok(rise !== null && rise > 6 * 60 && rise < 6 * 60 + 20, `východ ${rise}`);
+    assert.ok(set !== null && set > 19 * 60 + 15 && set < 19 * 60 + 35, `západ ${set}`);
+    // Ten istý deň v Sydney (UTC+10): slnko vychádza ráno podľa tamojších hodín, nie našich.
+    const syd = sunTimes(SYDNEY, '2026-09-05');
+    assert.ok(syd.rise !== null && syd.rise > 5 * 60 + 30 && syd.rise < 6 * 60 + 30, `Sydney východ ${syd.rise}`);
+    // Polárny deň za polárnym kruhom: slnko nevychádza ani nezapadá.
+    const tromso = { name: 'Tromsø', lat: 69.65, lon: 18.96, elevationM: 10, timezone: 'Europe/Oslo' };
+    assert.deepEqual(sunTimes(tromso, '2026-06-21'), { rise: null, set: null });
+});
+
+test('clearDayKwh: výroba za jasného dňa - v lete viac než v zime, nikdy nad menič × 24 h', () => {
+    const leto = clearDayKwh(SITE, PLANT, '2026-06-21');
+    const zima = clearDayKwh(SITE, PLANT, '2026-12-21');
+    assert.ok(leto > 50 && leto < PLANT.acLimitKw * 24, `leto ${leto}`);
+    assert.ok(zima > 0 && zima < leto / 2, `zima ${zima}`);
+    // Rovnaký deň ako v predpovedi: strop z golden predpovede je súčet po hodinách, tu po desiatich minútach.
+    const day = buildForecast(fixture('open-meteo.json'), FIXED_NOW, SITE, PLANT).days[0];
+    assert.ok(Math.abs(clearDayKwh(SITE, PLANT, day.date) - day.clearKwhTotal) / day.clearKwhTotal < 0.1);
+});
+
+test('orientationShare: juh najlepší na severnej pologuli, sever na južnej', () => {
+    const share = (/** @type {typeof SITE} */ site, /** @type {number} */ az, tilt = 35) =>
+        orientationShare(site, { azimuthDeg: az, tiltDeg: tilt }, PLANT.albedo);
+    const juh = share(SITE, 180);
+    assert.ok(juh > 0.97 && juh <= 1, `juh ${juh}`);
+    assert.ok(share(SITE, 90) < juh && share(SITE, 0) < share(SITE, 90), 'sever je horší než východ, ten horší než juh');
+    assert.ok(Math.abs(share(SITE, 90) - share(SITE, 270)) < 0.05, 'východ a západ sú skoro rovnaké');
+    assert.ok(share(SITE, 0, 0) === share(SITE, 180, 0), 'na plochej streche na smere nezáleží');
+    assert.ok(share(SYDNEY, 0) > share(SYDNEY, 180), 'na južnej pologuli je lepší sever');
 });

@@ -106,62 +106,135 @@ function sedemdniDom() {
     };
 }
 
-/** Počet plôch panelov vo formulári - toľko ich je v index.html. */
-export const ROOF_SLOTS = 3;
+/** Obrazovky sprievodcu nastavením - každá je vlastná sekcia v index.html, render ukáže jednu. */
+const SETUP_SCREENS = /** @type {const} */ ([
+    'start',
+    'odkaz',
+    'lokalita',
+    'panel',
+    'smer',
+    'sklon',
+    'pocet',
+    'dalsia',
+    'menic',
+    'meranie',
+    'suhrn',
+]);
 
-/** Prvky jednej plochy panelov vo formulári. @param {number} i */
-function roofDom(i) {
+const input = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (byId(id));
+
+// Karta Nastavenie: prehľad elektrárne a sprievodca nastavením.
+function setupDom() {
     return {
-        box: byId(`set-roof-${i}`),
-        kwp: byId(`set-roof-kwp-${i}`),
-        del: byId(`set-roof-del-${i}`),
-        panels: /** @type {HTMLInputElement} */ (byId(`set-panels-${i}`)),
-        compass: /** @type {HTMLButtonElement[]} */ (Array.from(byId(`set-compass-${i}`).querySelectorAll('button'))),
-        tilt: /** @type {HTMLInputElement} */ (byId(`set-tilt-${i}`)),
-        tiltOut: byId(`set-tilt-out-${i}`),
+        ...setupHomeDom(),
+        ...wizardDom(),
+        ...wizardFieldsDom(),
     };
 }
 
-// Karta Nastavenie: formulár elektrárne a zdieľanie appky.
-function nastavenieDom() {
+// Prehľad uloženej elektrárne (alebo výzva k sprievodcovi) a hlavička sprievodcu.
+function setupHomeDom() {
     return {
-        settingsDemo: byId('settings-demo'),
-        setHint: byId('set-hint'),
-        setForm: /** @type {HTMLFormElement} */ (byId('set-form')),
-        setPlace: /** @type {HTMLInputElement} */ (byId('set-place')),
-        setGeo: byId('set-geo'),
-        setPlaceMeta: byId('set-place-meta'),
-        setLat: /** @type {HTMLInputElement} */ (byId('set-lat')),
-        setLon: /** @type {HTMLInputElement} */ (byId('set-lon')),
-        setRoofs: Array.from({ length: ROOF_SLOTS }, (_, i) => roofDom(i)),
-        setRoofAdd: /** @type {HTMLButtonElement} */ (byId('set-roof-add')),
-        setWp: /** @type {HTMLInputElement} */ (byId('set-wp')),
-        setAc: /** @type {HTMLInputElement} */ (byId('set-ac')),
-        setKiosk: /** @type {HTMLInputElement} */ (byId('set-kiosk')),
-        setImport: /** @type {HTMLInputElement} */ (byId('set-import')),
-        setImportNote: byId('set-import-note'),
+        settingsHead: byId('settings-head'),
+        setup: byId('setup'),
+        setupHome: byId('setup-home'),
+        setupDemo: byId('setup-demo'),
+        setupCta: byId('setup-cta'),
+        setupOverview: byId('setup-overview'),
+        setupHero: byId('setup-hero'),
+        setupRows: byId('setup-rows'),
+        setupWarnings: byId('setup-warnings'),
+        setupNote: byId('setup-note'),
+        wizard: byId('wizard'),
+        wzStep: byId('wz-step'),
+        wzClose: byId('wz-close'),
+        wzProg: byId('wz-prog'),
+        wzSub: byId('wz-sub'),
+        wzTitle: byId('wz-title'),
+        wzLead: byId('wz-lead'),
+        wzRoofTabs: byId('wz-roof-tabs'),
+    };
+}
+
+// Obrazovky sprievodcu a ich prvky.
+function wizardDom() {
+    return {
+        wzScreens: /** @type {Record<(typeof SETUP_SCREENS)[number], HTMLElement>} */ (
+            Object.fromEntries(SETUP_SCREENS.map((s) => [s, byId(`wz-${s}`)]))
+        ),
+        wzLink: input('wz-link'),
+        wzLinkNote: byId('wz-link-note'),
+        wzLinkPreview: byId('wz-link-preview'),
+        wzPlace: input('wz-place'),
+        wzGeo: byId('wz-geo'),
+        wzPlaceCard: byId('wz-place-card'),
+        wzLat: input('wz-lat'),
+        wzLon: input('wz-lon'),
+        wzWpModePanel: byId('wz-wpmode-panel'),
+        wzWpModeKwp: byId('wz-wpmode-kwp'),
+        wzWpPanel: byId('wz-wp-panel'),
+        wzWpLabel: byId('wz-wp-label'),
+        wzWpChips: byId('wz-wp-chips'),
+        wzWpOther: byId('wz-wp-other'),
+        wzWp: input('wz-wp'),
+        wzWpGuess: byId('wz-wp-guess'),
+        wzWpTotal: byId('wz-wp-total'),
+        wzKwp: input('wz-kwp'),
+    };
+}
+
+// Druhá polovica obrazoviek: plochy, menič, meranie, zhrnutie a tlačidlá dole.
+function wizardFieldsDom() {
+    return {
+        wzCompass: byId('wz-compass'),
+        wzDirName: byId('wz-dir-name'),
+        wzDirDeg: byId('wz-dir-deg'),
+        wzDirQuality: byId('wz-dir-quality'),
+        wzTiltArt: byId('wz-tilt-art'),
+        wzTiltPresets: byId('wz-tilt-presets'),
+        wzTilt: input('wz-tilt'),
+        wzTiltOut: byId('wz-tilt-out'),
+        wzTiltQuality: byId('wz-tilt-quality'),
+        wzPanels: input('wz-panels'),
+        wzPanelGrid: byId('wz-panel-grid'),
+        wzPanelsKwp: byId('wz-panels-kwp'),
+        wzRoofs: byId('wz-roofs'),
+        wzDerived: byId('wz-derived'),
+        wzRoofAdd: byId('wz-roof-add'),
+        wzAcBars: byId('wz-ac-bars'),
+        wzAcChips: byId('wz-ac-chips'),
+        wzAcOther: byId('wz-ac-other'),
+        wzAc: input('wz-ac'),
+        wzAcGuess: byId('wz-ac-guess'),
+        wzLiveYes: byId('wz-live-yes'),
+        wzLiveNo: byId('wz-live-no'),
+        wzKioskBlock: byId('wz-kiosk-block'),
+        wzKiosk: input('wz-kiosk'),
+        wzKioskNote: byId('wz-kiosk-note'),
+        wzSummary: byId('wz-summary'),
+        wzBack: /** @type {HTMLButtonElement} */ (byId('wz-back')),
+        wzNext: /** @type {HTMLButtonElement} */ (byId('wz-next')),
+    };
+}
+
+// Karta Info a ponuka prevziať nastavenie z odkazu.
+function zdielanieDom() {
+    return {
         shareOptions: byId('share-options'),
-        shareWithSettings: /** @type {HTMLInputElement} */ (byId('share-with-settings')),
-        shareWithKiosk: /** @type {HTMLInputElement} */ (byId('share-with-kiosk')),
+        shareWithSettings: input('share-with-settings'),
+        shareWithKiosk: input('share-with-kiosk'),
         shareKioskRow: byId('share-kiosk-row'),
         importOffer: byId('import-offer'),
         importOfferText: byId('import-offer-text'),
         importAccept: byId('import-accept'),
         importDecline: byId('import-decline'),
-        setKioskMeta: byId('set-kiosk-meta'),
-        setTotalKwp: byId('set-total-kwp'),
-        setTotalMeta: byId('set-total-meta'),
-        setMsgs: byId('set-msgs'),
-        setSave: /** @type {HTMLButtonElement} */ (byId('set-save')),
-        setReset: byId('set-reset'),
-        setNote: byId('set-note'),
         qrcode: byId('qrcode'),
         shareWhatsapp: /** @type {HTMLAnchorElement} */ (byId('share-whatsapp')),
     };
 }
 
 export function collectDom() {
-    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...nastavenieDom() };
+    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...setupDom(), ...zdielanieDom() };
 }
 
 /** @typedef {ReturnType<typeof collectDom>} Dom */

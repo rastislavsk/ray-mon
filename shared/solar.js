@@ -199,6 +199,81 @@ export function addDays(dateKey, days) {
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+// Okno UTC, v ktorom leží celý miestny deň v akomkoľvek časovom pásme (UTC−12 až UTC+14).
+const DAY_WINDOW = { beforeMs: 14 * 3600000, afterMs: 38 * 3600000 };
+
+/**
+ * Časy miestneho dňa v krokoch `stepMin` - všetky okamihy, ktorých miestny dátum je `dateKey`.
+ * @param {string} dateKey @param {string} timezone @param {number} stepMin
+ */
+function localDayTimes(dateKey, timezone, stepMin) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const midnightUtc = Date.UTC(y, m - 1, d);
+    /** @type {Date[]} */ const out = [];
+    for (let t = midnightUtc - DAY_WINDOW.beforeMs; t < midnightUtc + DAY_WINDOW.afterMs; t += stepMin * 60000) {
+        const date = new Date(t);
+        if (localDateKey(date, timezone) === dateKey) out.push(date);
+    }
+    return out;
+}
+
+// Slnko "vyšlo", keď je jeho horný okraj nad obzorom - štandardná korekcia na lom svetla.
+const SUNRISE_ELEVATION_DEG = -0.833;
+
+/**
+ * Východ a západ slnka v daný miestny deň, ako minúta dňa v pásme lokality. Počas polárneho
+ * dňa či noci niektorý z nich nie je (null). Slúži sprievodcovi nastavením ako potvrdenie
+ * lokality, takže presnosť na minútu stačí.
+ * @param {Site} site @param {string} dateKey @returns {{ rise: number | null, set: number | null }}
+ */
+export function sunTimes(site, dateKey) {
+    const up = (/** @type {Date} */ t) => solarPosition(t, site.lat, site.lon).elevationDeg > SUNRISE_ELEVATION_DEG;
+    const times = localDayTimes(dateKey, site.timezone, 10);
+    /** @type {{ rise: number | null, set: number | null }} */ const out = { rise: null, set: null };
+    for (let i = 1; i < times.length; i++) {
+        const was = up(times[i - 1]);
+        if (was === up(times[i])) continue;
+        // Presná minúta medzi dvoma desaťminútovými bodmi.
+        let t = times[i - 1].getTime();
+        while (t < times[i].getTime() && up(new Date(t)) === was) t += 60000;
+        const minute = localMinutes(new Date(t), site.timezone);
+        if (was) out.set ??= minute;
+        else out.rise ??= minute;
+    }
+    return out;
+}
+
+/**
+ * Výroba za jasnej oblohy v daný miestny deň (kWh): súčet bezoblačného stropu po desiatich
+ * minútach. Pri predvolenej teplote 25 °C, lebo sprievodca počíta aj pre lokalitu, ku ktorej
+ * appka predpoveď ešte nemá.
+ * @param {Site} site @param {Plant} plant @param {string} dateKey
+ */
+export function clearDayKwh(site, plant, dateKey) {
+    return localDayTimes(dateKey, site.timezone, 10).reduce((kwh, t) => kwh + clearSkyAcKw(t, site, plant) / 6, 0);
+}
+
+/**
+ * Koľko energie dostane rovina panelu za rok pri jasnej oblohe oproti najlepšej rovine na tom
+ * istom mieste (0-1). Najlepšia sa pozerá k rovníku so sklonom, ktorý tam dá najviac. Ročný
+ * súčet stačí vzorkou: jeden deň v mesiaci, bod každú pol hodinu.
+ * @param {Site} site @param {PanelPlane} plane @param {number} albedo
+ */
+export function orientationShare(site, plane, albedo) {
+    /** @type {Array<{ irr: Irradiance, sun: SunPosition }>} */ const samples = [];
+    for (let month = 0; month < 12; month++) {
+        for (let half = 0; half < 48; half++) {
+            const sun = solarPosition(new Date(Date.UTC(2026, month, 15, 0, half * 30)), site.lat, site.lon);
+            if (sun.elevationDeg > 0) samples.push({ sun, irr: clearSkyIrradiance(sun.elevationDeg, site.elevationM) });
+        }
+    }
+    const energy = (/** @type {PanelPlane} */ p) => samples.reduce((sum, s) => sum + poaIrradiance(s.irr, s.sun, p, albedo), 0);
+    const toEquator = site.lat < 0 ? 0 : 180;
+    let best = 0;
+    for (let tilt = 0; tilt <= 90; tilt += 5) best = Math.max(best, energy({ tiltDeg: tilt, azimuthDeg: toEquator }));
+    return best > 0 ? Math.min(1, energy(plane) / best) : 0;
+}
+
 /** Časť dňa pre text "silnejšie slnko príde ...". @param {Date} dateUtc @param {string} timezone */
 export function daypartFor(dateUtc, timezone) {
     const h = localHour(dateUtc, timezone);

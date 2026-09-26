@@ -11,7 +11,7 @@
 // však narovnako - keď sa Späť vyčerpajú kroky v appke, ďalší stlačok ju opustí, čo je
 // v nainštalovanej appke (PWA) jej zatvorenie.
 
-import { navChange, navStep, navStepFrom, sameNavStep } from './state.js';
+import { navChange, navPrevFrom, navStep, navStepFrom, sameNavStep } from './state.js';
 
 /**
  * Návrat z detailu do prehľadu dní - šípkou v hlavičke detailu aj ťahom doprava. Je to ten
@@ -30,6 +30,21 @@ export function closeDetail(store) {
     else store.setState({ weekDetail: null });
 }
 
+/**
+ * Krok späť v sprievodcovi nastavením (tlačidlo „Späť“ a „Späť na zhrnutie“). Keď appka do
+ * aktuálnej položky histórie prišla práve z cieľového kroku, je to ten istý krok ako tlačidlo
+ * Späť na telefóne a ide cez `history.back()` - rovnako ako closeDetail vyššie. Inak (skok
+ * zo zhrnutia, cudzia položka) sa krok zapíše ako nový.
+ * @param {import('./state.js').Store} store @param {Partial<import('./state.js').AppState>} patch
+ */
+export function backTo(store, patch) {
+    const state = store.get();
+    const here = navStepFrom(history.state);
+    const prev = navPrevFrom(history.state);
+    if (here && prev && sameNavStep(here, navStep(state)) && sameNavStep(prev, navStep({ ...state, ...patch }))) history.back();
+    else store.setState(patch);
+}
+
 /** @param {import('./state.js').Store} store */
 export function initHistory(store) {
     // Kým sa appka vracia späť, nesmie ten istý krok zapísať do histórie znovu - inak by
@@ -39,7 +54,8 @@ export function initHistory(store) {
     history.replaceState({ step: navStep(store.get()) }, '');
     store.subscribe((state, prev) => {
         if (vraciaSa || sameNavStep(navStep(state), navStep(prev))) return;
-        history.pushState({ step: navStep(state) }, '');
+        // `prev` hovorí, odkiaľ sa sem prišlo - podľa neho backTo vie, či smie ísť cez históriu.
+        history.pushState({ step: navStep(state), prev: navStep(prev) }, '');
     });
 
     window.addEventListener('popstate', (e) => {
