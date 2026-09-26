@@ -1,6 +1,7 @@
 // Tlačidlo Späť (mobil, tablet, aj šípka v prehliadači) vracia o krok v appke, nie rovno
-// preč zo stránky. Každý krok navigácie - prepnutie karty, otvorenie detailu dňa - pridá
-// položku do histórie prehliadača; Späť ju vyberie a appka sa vráti tam, kde bola.
+// preč zo stránky. Každý krok navigácie - prepnutie karty, otvorenie detailu dňa, rozbalenie
+// položky v karte Info - pridá položku do histórie prehliadača; Späť ju vyberie a appka sa
+// vráti tam, kde bola.
 //
 // Appka pritom nemení adresu: položky histórie sú len značky s krokom navigácie, aby
 // odkaz na appku ostal jeden (zdieľa sa na karte Nastavenie) a neťahal si za sebou, na
@@ -31,7 +32,8 @@ export function closeDetail(store) {
 }
 
 /**
- * Krok späť v sprievodcovi nastavením (tlačidlo „Späť“ a „Späť na zhrnutie“). Keď appka do
+ * Krok späť v sprievodcovi nastavením (tlačidlo „Späť“ a „Späť na zhrnutie“) a zbalenie
+ * položky v karte Info. Keď appka do
  * aktuálnej položky histórie prišla práve z cieľového kroku, je to ten istý krok ako tlačidlo
  * Späť na telefóne a ide cez `history.back()` - rovnako ako closeDetail vyššie. Inak (skok
  * zo zhrnutia, cudzia položka) sa krok zapíše ako nový.
