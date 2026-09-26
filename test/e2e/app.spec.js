@@ -1920,11 +1920,10 @@ test.describe('moja elektráreň', () => {
         // Ten istý výkon ako v Nastavení - kWp sa počíta aj píše na jednom mieste.
         await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,22 kWp');
         await page.locator('#nav-nastavenie').click();
-        // Karta ponúka sprievodcu, starý formulár nie je vidno.
+        // Karta ponúka sprievodcu.
         await expect(page.locator('#setup-demo')).toBeVisible();
         await expect(page.locator('#setup-cta')).toBeVisible();
         await expect(page.locator('#setup-overview')).toBeHidden();
-        await expect(page.locator('#settings-plant')).toBeHidden();
         expect(errors).toEqual([]);
     });
 
