@@ -1,0 +1,2799 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Sprievodca elektrárňou</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        />
+        <style>
+            /* Návrh sprievodcu nastavením elektrárne pre RAY-MON. Farby, písma a rozmery sú prevzaté
+       zo style.css appky, telefón je v mierke 375 px. Appka je zámerne len tmavá, preto aj
+       tento návrh. Údaje v telefóne sú vzorové (elektráreň v Dvoranoch). */
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-35: rgba(242, 240, 234, 0.54);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --green-rgb: 158, 242, 91;
+                --amber-rgb: 255, 194, 75;
+                --red-rgb: 255, 107, 87;
+                --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+                --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+                --radius-sm: 6px;
+                --radius-md: 12px;
+                --radius-lg: 18px;
+                --radius-pill: 999px;
+                --dur: 0.25s;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-tap-highlight-color: transparent;
+            }
+            body {
+                margin: 0;
+                background:
+                    radial-gradient(circle at 15% 0%, rgba(var(--amber-rgb), 0.1) 0%, rgba(var(--amber-rgb), 0) 40%),
+                    radial-gradient(circle at 85% 4%, rgba(var(--amber-rgb), 0.08) 0%, rgba(var(--amber-rgb), 0) 45%), var(--bg);
+                background-attachment: fixed;
+                color: var(--ink);
+                font-family: var(--font-body);
+                font-size: 15px;
+                line-height: 1.5;
+                font-variant-numeric: tabular-nums;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+            }
+            :focus-visible {
+                outline: 2px solid var(--amber);
+                outline-offset: 2px;
+                border-radius: var(--radius-sm);
+            }
+            code {
+                font-family: var(--font-mono);
+                font-size: 0.86em;
+                color: var(--ink-70);
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                border-radius: 4px;
+                padding: 0 4px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+
+            /* ---- Dokument okolo telefónu -------------------------------------------- */
+            .doc {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding-inline: 20px;
+                padding-block: 40px 64px;
+            }
+            .eyebrow {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--amber);
+            }
+            h1 {
+                font-size: clamp(28px, 4vw, 40px);
+                line-height: 1.1;
+                letter-spacing: -0.02em;
+                margin: 8px 0 12px;
+                text-wrap: balance;
+            }
+            .lead {
+                max-width: 68ch;
+                color: var(--ink-45);
+                margin: 0;
+                font-size: 16px;
+            }
+            .principles {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 12px;
+                margin: 28px 0 36px;
+                padding: 0;
+                list-style: none;
+            }
+            .principles li {
+                padding: 14px 16px;
+                border-top: 2px solid var(--ink-12);
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .principles b {
+                display: block;
+                color: var(--ink);
+                font-weight: 600;
+                margin-bottom: 2px;
+            }
+            h2.doc-h {
+                font-size: 22px;
+                letter-spacing: -0.01em;
+                margin: 0 0 14px;
+                text-wrap: balance;
+            }
+
+            .stage {
+                display: grid;
+                grid-template-columns: 210px 375px minmax(0, 1fr);
+                gap: 32px;
+                align-items: start;
+            }
+            @media (max-width: 1100px) {
+                .stage {
+                    grid-template-columns: 375px minmax(0, 1fr);
+                }
+                .steps {
+                    grid-column: 1 / -1;
+                }
+            }
+            @media (max-width: 760px) {
+                .stage {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+
+            /* Zoznam obrazoviek: skok na ktorúkoľvek obrazovku návrhu. */
+            .steps {
+                display: grid;
+                gap: 18px;
+                position: sticky;
+                top: 20px;
+            }
+            @media (max-width: 1100px) {
+                .steps {
+                    position: static;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                }
+            }
+            .steps-group {
+                display: grid;
+                gap: 2px;
+            }
+            .steps-group > span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                margin-bottom: 4px;
+            }
+            .step-link {
+                text-align: left;
+                padding: 6px 10px;
+                border-radius: var(--radius-sm);
+                color: var(--ink-45);
+                font-size: 14px;
+                border-left: 2px solid transparent;
+            }
+            .step-link[aria-current='true'] {
+                color: var(--ink);
+                background: var(--ink-05);
+                border-left-color: var(--amber);
+            }
+
+            .notes {
+                display: grid;
+                gap: 18px;
+                max-width: 60ch;
+            }
+            .notes h3 {
+                margin: 0;
+                font-size: 20px;
+                letter-spacing: -0.01em;
+                text-wrap: balance;
+            }
+            .notes h4 {
+                margin: 0 0 6px;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                font-weight: 500;
+            }
+            .notes ul {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                color: var(--ink-70);
+            }
+            .notes .impl ul {
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .notes-hint {
+                font-size: 13px;
+                color: var(--ink-35);
+                border-top: 1px solid var(--ink-08);
+                padding-top: 12px;
+            }
+
+            .compare {
+                margin-top: 56px;
+            }
+            .tbl-wrap {
+                overflow-x: auto;
+                border: 1px solid var(--ink-08);
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 10px 14px;
+                border-bottom: 1px solid var(--ink-05);
+                vertical-align: top;
+            }
+            th {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                font-weight: 500;
+                border-bottom-color: var(--ink-08);
+            }
+            td:first-child {
+                color: var(--ink-45);
+                width: 42%;
+            }
+            tr:last-child td {
+                border-bottom: 0;
+            }
+            .questions {
+                margin-top: 48px;
+                max-width: 78ch;
+            }
+            .questions ol {
+                margin: 0;
+                padding-left: 22px;
+                display: grid;
+                gap: 12px;
+                color: var(--ink-70);
+            }
+            .questions ol b {
+                color: var(--ink);
+            }
+            .questions ol span {
+                color: var(--ink-45);
+            }
+
+            /* ---- Prepínač pohľadu a prehľad všetkých obrazoviek ------------------------ */
+            [hidden] {
+                display: none !important;
+            }
+            .view-switch {
+                display: inline-grid;
+                grid-auto-flow: column;
+                gap: 4px;
+                padding: 4px;
+                border-radius: var(--radius-pill);
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                margin-bottom: 28px;
+            }
+            .view-switch button {
+                padding: 8px 16px;
+                border-radius: var(--radius-pill);
+                font-size: 14px;
+                color: var(--ink-45);
+            }
+            .view-switch button[aria-pressed='true'] {
+                background: var(--ink);
+                color: var(--bg);
+                font-weight: 600;
+            }
+            .overview {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(316px, 1fr));
+                gap: 40px 24px;
+                align-items: start;
+            }
+            .shot {
+                margin: 0;
+                display: grid;
+                gap: 14px;
+                justify-items: center;
+            }
+            /* Obrazovka v prehľade je telefón v mierke 0,82 a na celú výšku obsahu - nič v nej
+       nie je schované za scrollovaním. */
+            .phone.static {
+                zoom: 0.82;
+                height: auto;
+                min-height: 780px;
+                box-shadow:
+                    0 0 0 8px #050505,
+                    0 0 0 9px var(--ink-12),
+                    0 20px 50px rgba(0, 0, 0, 0.5);
+            }
+            .phone.static .scr {
+                overflow: visible;
+            }
+            .shot figcaption {
+                width: min(308px, 100%);
+                display: grid;
+                gap: 4px;
+            }
+            .shot .num {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+            }
+            .shot b {
+                font-size: 16px;
+                font-weight: 600;
+            }
+            .shot p {
+                margin: 0;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .shot .try {
+                justify-self: start;
+                margin-top: 4px;
+                font-size: 13px;
+                color: var(--ink-70);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            .overview-group {
+                grid-column: 1 / -1;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                border-top: 1px solid var(--ink-08);
+                padding-top: 14px;
+                margin-bottom: -20px;
+            }
+
+            /* ---- Telefón -------------------------------------------------------------- */
+            .phone {
+                width: min(375px, 100%);
+                height: 780px;
+                margin: 0 auto;
+                border-radius: 42px;
+                border: 1px solid var(--ink-12);
+                box-shadow:
+                    0 0 0 8px #050505,
+                    0 0 0 9px var(--ink-12),
+                    0 30px 80px rgba(0, 0, 0, 0.6);
+                background:
+                    radial-gradient(circle at 20% 0%, rgba(var(--green-rgb), 0.12) 0%, rgba(var(--green-rgb), 0) 42%),
+                    radial-gradient(circle at 82% 5%, rgba(var(--green-rgb), 0.11) 0%, rgba(var(--green-rgb), 0) 46%), var(--bg);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                font-size: 14px;
+                line-height: 1.45;
+            }
+            @media (max-width: 760px) {
+                .phone {
+                    margin-top: 8px;
+                }
+            }
+            .appbar {
+                padding: 30px 20px 10px;
+                flex: 0 0 auto;
+            }
+            .appbar-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+            }
+            .appbar-label {
+                font-family: var(--font-mono);
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                color: #fff;
+                white-space: nowrap;
+            }
+            .appbar-by {
+                font-size: 0.72em;
+                font-weight: 500;
+                color: var(--ink-45);
+            }
+            .appbar-clock {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .live-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--green);
+                box-shadow: 0 0 8px rgba(var(--green-rgb), 0.55);
+            }
+            .pv-line {
+                margin-top: 4px;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.04em;
+                color: var(--ink-35);
+            }
+            .scr {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                padding: 10px 20px 20px;
+                scrollbar-width: none;
+            }
+            .scr::-webkit-scrollbar {
+                display: none;
+            }
+            .foot {
+                flex: 0 0 auto;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                padding: 10px 20px 12px;
+                border-top: 1px solid var(--ink-08);
+                background: rgba(10, 10, 10, 0.6);
+            }
+            .foot:empty {
+                display: none;
+            }
+            .bottomnav {
+                flex: 0 0 auto;
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: 1fr;
+                background: rgba(10, 10, 10, 0.92);
+                padding-bottom: 14px;
+            }
+            .nav-item {
+                display: flex;
+                justify-content: center;
+                padding: 7px 0 6px;
+                color: var(--ink-35);
+                position: relative;
+            }
+            .nav-item svg {
+                width: 28px;
+                height: 28px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .nav-item.active {
+                color: var(--ink);
+            }
+            .nav-item.active::after {
+                content: '';
+                position: absolute;
+                top: 21px;
+                left: 50%;
+                width: 40px;
+                height: 40px;
+                margin: -20px 0 0 -20px;
+                border-radius: 50%;
+                background: var(--green);
+                opacity: 0.45;
+                filter: blur(8px);
+                z-index: -1;
+            }
+            .bottomnav {
+                position: relative;
+                z-index: 0;
+            }
+
+            /* ---- Obsah karty Nastavenie --------------------------------------------- */
+            .section-head {
+                text-align: center;
+                margin: 6px 0 16px;
+            }
+            .section-title {
+                font-size: 26px;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                margin: 0;
+            }
+            .section-sub,
+            .lbl {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .section-sub {
+                margin-top: 4px;
+            }
+            .demo-note {
+                display: grid;
+                gap: 2px;
+                margin-bottom: 12px;
+                padding: 12px 14px;
+                border-radius: var(--radius-md);
+                background: rgba(var(--amber-rgb), 0.1);
+                border: 1px solid rgba(var(--amber-rgb), 0.35);
+                font-size: 12px;
+                color: var(--ink-45);
+            }
+            .demo-note b {
+                color: var(--amber);
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .cta {
+                display: grid;
+                gap: 12px;
+                padding: 18px;
+                border-radius: var(--radius-lg);
+                background: var(--card-bg);
+                border: 1px solid rgba(var(--green-rgb), 0.35);
+                margin-bottom: 12px;
+            }
+            .cta h3 {
+                margin: 0;
+                font-size: 19px;
+                letter-spacing: -0.01em;
+            }
+            .cta p {
+                margin: 0;
+                color: var(--ink-45);
+            }
+            .cta svg.house {
+                width: 100%;
+                height: 96px;
+            }
+            .settings-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                text-align: left;
+                padding: 14px 16px;
+                background: var(--card-bg);
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-lg);
+                margin-bottom: 10px;
+            }
+            .settings-item .ico {
+                width: 22px;
+                height: 22px;
+                flex: 0 0 auto;
+                fill: none;
+                stroke: var(--ink-70);
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .settings-item .txt {
+                flex: 1;
+                min-width: 0;
+                display: grid;
+                gap: 1px;
+            }
+            .settings-item .txt b {
+                font-weight: 600;
+            }
+            .settings-item .txt span {
+                font-size: 12px;
+                color: var(--ink-35);
+            }
+            .chev {
+                width: 16px;
+                height: 16px;
+                flex: 0 0 auto;
+                fill: none;
+                stroke: var(--ink-35);
+                stroke-width: 2.2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            /* ---- Sprievodca ---------------------------------------------------------- */
+            .wz-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .wz-step {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .wz-close {
+                width: 32px;
+                height: 32px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                color: var(--ink-45);
+                border: 1px solid var(--ink-12);
+            }
+            .wz-close svg {
+                width: 14px;
+                height: 14px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.4;
+                stroke-linecap: round;
+            }
+            .wz-prog {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 4px;
+                margin: 10px 0 18px;
+            }
+            .wz-prog i {
+                height: 4px;
+                border-radius: 2px;
+                background: var(--ink-12);
+            }
+            .wz-prog i.done {
+                background: rgba(var(--green-rgb), 0.7);
+            }
+            .wz-prog i.now {
+                background: var(--ink);
+            }
+            .wz-sub {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            .wz-title {
+                font-size: 23px;
+                line-height: 1.15;
+                font-weight: 600;
+                letter-spacing: -0.015em;
+                margin: 0 0 6px;
+                text-wrap: balance;
+            }
+            .wz-lead {
+                margin: 0 0 16px;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .btn-primary {
+                flex: 1;
+                font-weight: 600;
+                color: var(--bg);
+                background: var(--green);
+                border-radius: var(--radius-pill);
+                padding: 13px 16px;
+                text-align: center;
+            }
+            .btn-primary:disabled {
+                color: var(--ink-35);
+                background: var(--ink-12);
+                cursor: default;
+            }
+            .btn-ghost {
+                padding: 13px 16px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                color: var(--ink-70);
+            }
+            .btn-wide {
+                width: 100%;
+            }
+            .link-btn {
+                font-size: 13px;
+                color: var(--ink-45);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                padding: 4px 0;
+            }
+            .choice {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                width: 100%;
+                text-align: left;
+                padding: 14px;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+            }
+            .choice + .choice {
+                margin-top: 8px;
+            }
+            .choice[aria-pressed='true'] {
+                border-color: var(--amber);
+                background: rgba(var(--amber-rgb), 0.08);
+            }
+            .choice .dot {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2px solid var(--ink-20);
+                flex: 0 0 auto;
+            }
+            .choice[aria-pressed='true'] .dot {
+                border-color: var(--amber);
+                box-shadow: inset 0 0 0 4px var(--bg);
+                background: var(--amber);
+            }
+            .choice .t {
+                display: grid;
+                gap: 1px;
+                flex: 1;
+            }
+            .choice .t b {
+                font-weight: 600;
+            }
+            .choice .t span {
+                font-size: 12px;
+                color: var(--ink-45);
+            }
+            .checklist {
+                list-style: none;
+                margin: 0 0 16px;
+                padding: 12px 14px;
+                border-radius: var(--radius-md);
+                background: var(--ink-05);
+                display: grid;
+                gap: 6px;
+                font-size: 13px;
+                color: var(--ink-70);
+            }
+            .checklist li {
+                display: flex;
+                gap: 8px;
+            }
+            .checklist li::before {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--amber);
+                margin-top: 7px;
+                flex: 0 0 auto;
+            }
+            .field-input {
+                width: 100%;
+                min-width: 0;
+                font: inherit;
+                font-size: 16px;
+                color: var(--ink);
+                background: var(--ink-05);
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-md);
+                padding: 11px 12px;
+            }
+            .field-input.num {
+                font-family: var(--font-mono);
+            }
+            .search {
+                position: relative;
+            }
+            .search svg {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                width: 16px;
+                height: 16px;
+                transform: translateY(-50%);
+                fill: none;
+                stroke: var(--ink-35);
+                stroke-width: 2;
+                stroke-linecap: round;
+            }
+            .search .field-input {
+                padding-left: 36px;
+            }
+            .geo-list {
+                list-style: none;
+                margin: 8px 0 0;
+                padding: 4px;
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-md);
+                background: var(--bg);
+            }
+            .geo-pick {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 8px;
+                padding: 10px;
+                text-align: left;
+                border-radius: var(--radius-sm);
+            }
+            .geo-pick small {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-35);
+                text-align: right;
+            }
+            .place-card {
+                margin-top: 12px;
+                padding: 14px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid rgba(var(--green-rgb), 0.35);
+                display: grid;
+                gap: 10px;
+            }
+            .place-card .name {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .place-card .name b {
+                font-size: 17px;
+            }
+            .place-card .meta {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-35);
+            }
+            .sunline {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                align-items: center;
+                gap: 10px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+            }
+            .sunline svg {
+                width: 100%;
+                height: 38px;
+            }
+            .sunline span {
+                display: grid;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            .sunline span small {
+                font-size: 9px;
+                font-weight: 400;
+                color: var(--ink-35);
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .two {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-top: 8px;
+            }
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .chip {
+                padding: 8px 12px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-12);
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .chip[aria-pressed='true'] {
+                background: var(--amber);
+                border-color: var(--amber);
+                color: var(--bg);
+                font-weight: 700;
+            }
+            .chip.soft {
+                border-style: dashed;
+                color: var(--ink-45);
+            }
+            .chip-col {
+                display: grid;
+                gap: 2px;
+                text-align: left;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                font-family: var(--font-body);
+            }
+            .chip-col small {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                opacity: 0.75;
+            }
+            .preset-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .preset-grid .chip-col:last-child:nth-child(odd) {
+                grid-column: 1 / -1;
+            }
+            .art {
+                display: block;
+                width: 100%;
+                margin: 0 auto 8px;
+            }
+            .compass {
+                max-width: 290px;
+            }
+            .compass .sec {
+                cursor: pointer;
+            }
+            .compass .sec path {
+                fill: transparent;
+                stroke: var(--ink-08);
+                stroke-width: 1;
+                transition: fill var(--dur);
+            }
+            .compass .sec.on path {
+                fill: rgba(var(--amber-rgb), 0.2);
+                stroke: var(--amber);
+            }
+            .compass .sec text {
+                fill: var(--ink-45);
+                font-family: var(--font-mono);
+                font-size: 12px;
+                text-anchor: middle;
+                dominant-baseline: middle;
+            }
+            .compass .sec.on text {
+                fill: var(--amber);
+                font-weight: 700;
+            }
+            .compass .sec:focus-visible {
+                outline: none;
+            }
+            .compass .sec:focus-visible path {
+                stroke: var(--ink);
+                stroke-width: 2;
+            }
+            .readout {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .readout b {
+                font-size: 20px;
+                font-weight: 600;
+            }
+            .readout span {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .quality {
+                display: grid;
+                gap: 6px;
+                padding: 12px 14px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+            }
+            .quality .bar {
+                height: 6px;
+                border-radius: 3px;
+                background: var(--ink-08);
+                overflow: hidden;
+            }
+            .quality .bar i {
+                display: block;
+                height: 100%;
+                border-radius: 3px;
+                transition: width var(--dur);
+            }
+            .quality .row {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 13px;
+            }
+            .quality .row span {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .help {
+                margin-top: 12px;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .help p {
+                margin: 6px 0 0;
+            }
+            .range {
+                width: 100%;
+                accent-color: var(--amber);
+                margin: 12px 0 4px;
+            }
+            .stepper {
+                display: grid;
+                grid-template-columns: 56px minmax(0, 1fr) 56px;
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-md);
+                overflow: hidden;
+                margin-bottom: 12px;
+            }
+            .stepper button {
+                font-size: 22px;
+                background: var(--ink-05);
+            }
+            .stepper input {
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+                text-align: center;
+                font-size: 26px;
+                font-weight: 600;
+                padding: 8px;
+            }
+            .kwp-line {
+                text-align: center;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-45);
+                margin-top: 8px;
+            }
+            .kwp-line b {
+                color: var(--green);
+                font-size: 15px;
+            }
+            .roofs {
+                display: grid;
+                gap: 8px;
+                margin-bottom: 18px;
+            }
+            .roof-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+            }
+            .roof-row .t {
+                flex: 1;
+                display: grid;
+                font-size: 13px;
+            }
+            .roof-row .t span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-45);
+            }
+            .mini {
+                width: 34px;
+                height: 34px;
+                flex: 0 0 auto;
+            }
+            .mini-act {
+                font-size: 12px;
+                color: var(--ink-45);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                padding: 4px;
+            }
+            .compare-bars {
+                display: grid;
+                gap: 10px;
+                padding: 14px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                margin-bottom: 14px;
+            }
+            .cb {
+                display: grid;
+                grid-template-columns: 58px 1fr 64px;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+            }
+            .cb .track {
+                height: 12px;
+                border-radius: 3px;
+                background: var(--ink-05);
+                overflow: hidden;
+            }
+            .cb .track i {
+                display: block;
+                height: 100%;
+                border-radius: 3px;
+                transition: width var(--dur);
+            }
+            .cb b {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                text-align: right;
+            }
+            .msg {
+                margin: 0;
+                padding: 2px 0 2px 10px;
+                font-size: 13px;
+                color: var(--ink-70);
+                border-left: 2px solid var(--green);
+            }
+            .msg.warn {
+                border-color: var(--amber);
+            }
+            .msg.err {
+                border-color: var(--red);
+                color: var(--red);
+            }
+            .field-label {
+                display: block;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                margin: 16px 0 6px;
+            }
+            .howto {
+                margin: 12px 0 0;
+                padding: 0;
+                list-style: none;
+                counter-reset: k;
+                display: grid;
+                gap: 8px;
+                font-size: 13px;
+                color: var(--ink-70);
+            }
+            .howto li {
+                counter-increment: k;
+                display: flex;
+                gap: 10px;
+            }
+            .howto li::before {
+                content: counter(k);
+                flex: 0 0 22px;
+                height: 22px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                background: var(--ink-08);
+                color: var(--ink-70);
+            }
+            .mock-tag {
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                border: 1px dashed var(--ink-20);
+                border-radius: var(--radius-pill);
+                padding: 2px 8px;
+                margin-left: 6px;
+            }
+            .sum-hero {
+                text-align: center;
+                padding: 6px 0 14px;
+            }
+            .sum-hero .big {
+                font-family: var(--font-mono);
+                font-size: 40px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                color: var(--green);
+                line-height: 1.1;
+            }
+            .sum-hero .sub {
+                color: var(--ink-45);
+                font-size: 13px;
+            }
+            .sum-list {
+                display: grid;
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+                overflow: hidden;
+                margin-bottom: 12px;
+            }
+            .sum-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                text-align: left;
+                padding: 12px 14px;
+                border-bottom: 1px solid var(--ink-05);
+            }
+            .sum-row:last-child {
+                border-bottom: 0;
+            }
+            .sum-row .k {
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .sum-row .t {
+                flex: 1;
+                display: grid;
+                min-width: 0;
+            }
+            .sum-row .v {
+                font-size: 14px;
+            }
+            .sum-row .est {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--amber);
+            }
+            .sum-ico {
+                width: 34px;
+                height: 34px;
+                flex: 0 0 auto;
+                display: grid;
+                place-items: center;
+                border-radius: 10px;
+                background: var(--ink-05);
+            }
+            .sum-ico svg {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: var(--ink-70);
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .sum-ico svg.mini {
+                width: 30px;
+                height: 30px;
+            }
+            .note-ok {
+                text-align: center;
+                font-size: 12px;
+                color: var(--green);
+                margin: 4px 0 10px;
+            }
+            .seg {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                padding: 4px;
+                border-radius: var(--radius-pill);
+                background: var(--ink-05);
+                margin: 12px 0 16px;
+            }
+            .seg.seg2 {
+                grid-template-columns: repeat(2, 1fr);
+                margin-top: 0;
+            }
+            .seg button {
+                padding: 7px 0;
+                border-radius: var(--radius-pill);
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--ink);
+                color: var(--bg);
+            }
+            .label-card {
+                max-width: 240px;
+            }
+            .sr-only {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="doc">
+            <header>
+                <div class="eyebrow">RAY-MON · návrh · karta Nastavenie</div>
+                <h1>Moja elektráreň ako sprievodca</h1>
+                <p class="lead">
+                    Dnešný formulár má všetko na jednej obrazovke: odkaz, lokalitu, súradnice, tri plochy s ôsmimi tlačidlami smerov, výkon
+                    panelu, menič a kiosk. Kto elektráreň nastavuje prvýkrát, vidí dvadsať polí naraz. Návrh ho prevedie šiestimi krokmi s
+                    jednou otázkou na obrazovku a tam, kde sa to dá, nahradí čísla obrázkom. Telefón nižšie sa dá celý preklikať.
+                </p>
+                <ul class="principles">
+                    <li><b>Jedna otázka na obrazovku</b>Ukazovateľ krokov hovorí, koľko ešte ostáva.</li>
+                    <li><b>Obrázok namiesto čísla</b>Kompas s dráhou slnka, strecha z boku, mriežka panelov, štítok panelu.</li>
+                    <li><b>Tlačidlo „Neviem“</b>Pri údajoch zo štítku dosadí bežnú hodnotu a zhrnutie ju označí ako odhad.</li>
+                    <li><b>Úprava bez sprievodcu</b>Po uložení je karta prehľad. Zmena jednej veci otvorí len jej krok.</li>
+                </ul>
+            </header>
+
+            <div class="view-switch" role="group" aria-label="Pohľad na návrh">
+                <button type="button" id="view-all" data-view="all" aria-pressed="true">Všetky obrazovky</button>
+                <button type="button" id="view-click" data-view="click" aria-pressed="false">Klikací telefón</button>
+            </div>
+
+            <section class="overview" id="overview" aria-label="Všetky obrazovky sprievodcu"></section>
+
+            <section class="stage" id="stage" aria-label="Klikací návrh" hidden>
+                <nav class="steps" id="steps" aria-label="Obrazovky návrhu"></nav>
+                <div class="phone" id="phone">
+                    <div class="appbar">
+                        <div class="appbar-top">
+                            <span class="appbar-label">RAY-MON <span class="appbar-by">Toilet Apps Ltd.</span></span>
+                            <span class="appbar-clock"><span class="live-dot"></span>13:00</span>
+                        </div>
+                        <div class="pv-line" id="pv-line">ukážka · nastav si elektráreň</div>
+                    </div>
+                    <div class="scr" id="scr"></div>
+                    <div class="foot" id="foot"></div>
+                    <nav class="bottomnav" aria-label="Navigácia appky (v návrhu neaktívna)">
+                        <span class="nav-item"
+                            ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg
+                        ></span>
+                        <span class="nav-item"
+                            ><svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+                                <path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2" /></svg
+                        ></span>
+                        <span class="nav-item active"
+                            ><svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M4 7h8M16 7h4M4 12h4M12 12h8M4 17h10M18 17h2" />
+                                <circle cx="14" cy="7" r="2" />
+                                <circle cx="10" cy="12" r="2" />
+                                <circle cx="16" cy="17" r="2" /></svg
+                        ></span>
+                        <span class="nav-item"
+                            ><svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 7.5h.01" /></svg
+                        ></span>
+                    </nav>
+                </div>
+                <aside class="notes" id="notes" aria-live="polite"></aside>
+            </section>
+
+            <section class="compare">
+                <h2 class="doc-h">Čo sa mení oproti dnešnému formuláru</h2>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Dnes</th>
+                                <th>V sprievodcovi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Jeden dlhý formulár, všetky polia naraz</td>
+                                <td>Šesť krokov s jednou otázkou na obrazovku a ukazovateľom postupu</td>
+                            </tr>
+                            <tr>
+                                <td>Pole „Máš odkaz s nastavením?“ navrchu formulára</td>
+                                <td>Samostatná cesta z úvodu a z prehľadu, s náhľadom pred prevzatím</td>
+                            </tr>
+                            <tr>
+                                <td>Vyhľadanie lokality a riadok so súradnicami a časovým pásmom</td>
+                                <td>Vyhľadanie a potvrdenie východom a západom slnka v danej obci</td>
+                            </tr>
+                            <tr>
+                                <td>Osem textových tlačidiel S, SV, V … SZ</td>
+                                <td>Kompas s dráhou slnka a strechou, ktorá sa otáča s výberom</td>
+                            </tr>
+                            <tr>
+                                <td>Posúvač sklonu 0–90°</td>
+                                <td>Predvoľby podľa typu strechy, nákres z boku, posúvač pre presné stupne</td>
+                            </tr>
+                            <tr>
+                                <td>Počet panelov s tlačidlami − a +</td>
+                                <td>To isté a pod tým mriežka panelov a kWp plochy</td>
+                            </tr>
+                            <tr>
+                                <td>Výkon panelu a menič vedľa seba</td>
+                                <td>Výkon panelu so štítkom, alebo len celkový výkon zo zmluvy; menič až po súčte panelov, s porovnaním</td>
+                            </tr>
+                            <tr>
+                                <td>Kiosk ako ďalšie pole formulára</td>
+                                <td>Vedome nepovinný krok s návodom, dá sa preskočiť jedným ťuknutím</td>
+                            </tr>
+                            <tr>
+                                <td>Súčet a hlásenia pod formulárom</td>
+                                <td>Zhrnutie so všetkými údajmi, varovaniami a výrobou za jasného dneška</td>
+                            </tr>
+                            <tr>
+                                <td>Po uložení ostáva otvorený formulár</td>
+                                <td>Prehľad; ťuknutie na riadok otvorí len jeho krok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="questions">
+                <h2 class="doc-h">Rozhodnutia</h2>
+                <ol>
+                    <li><b>Poloha telefónu nebude.</b> <span>Lokalita sa hľadá podľa názvu, prípadne súradnicami.</span></li>
+                    <li>
+                        <b>Kompas má osem smerov</b> <span>a vyberá sa ťuknutím. Žiadna nová výnimka v <code>swipe.js</code>.</span>
+                    </li>
+                    <li>
+                        <b>Skratka cez celkový výkon áno.</b>
+                        <span
+                            >V kroku 2 sa dá prepnúť na „Poznám len celkový výkon“. Výkon jedného panelu sa dopočíta, keď sú spočítané
+                            panely na všetkých plochách, a zhrnutie ho tak aj označí. Uložený formát sa nemení: stále <code>panelWp</code> a
+                            počty panelov.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Späť na telefóne vracia o krok sprievodcu.</b>
+                        <span
+                            >Krok sprievodcu bude súčasťou <code>NavStep</code> vo <code>web/history.js</code>, rovnako ako dnes detail
+                            dňa.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Zhrnutie ukazuje výrobu za jasného dneška.</b>
+                        <span
+                            >Počíta ju <code>clearSkyAcKw</code>, ten istý strop, z ktorého appka ráta využitie. Návrh ho počíta rovnakým
+                            modelom, len pri 25 °C; appka použije teplotu z predpovede.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Nové prvky idú do <code>index.html</code>, teda na viac nasadení.</b>
+                        <span
+                            >1. nasadenie pridá sprievodcu do HTML skrytého a nepoužitého. 2. nasadenie ho zapne v <code>dom.js</code> a v
+                            rendri a prestane čítať starý formulár (ten v HTML ostane). 3. nasadenie zmaže starý formulár z HTML a jeho
+                            pravidlá zo <code>style.css</code>. Medzi nasadeniami aspoň desať minút.</span
+                        >
+                    </li>
+                </ol>
+            </section>
+        </main>
+
+        <script>
+            // ---- Údaje a pomocné výpočty -------------------------------------------------
+            const PLACES = [
+                {
+                    name: 'Dvorany nad Nitrou',
+                    detail: 'Nitriansky kraj, Slovensko',
+                    lat: 48.48,
+                    lon: 18.12,
+                    el: 180,
+                    tz: 'Europe/Bratislava',
+                },
+                { name: 'Nitra', detail: 'Nitriansky kraj, Slovensko', lat: 48.31, lon: 18.09, el: 150, tz: 'Europe/Bratislava' },
+                { name: 'Nové Zámky', detail: 'Nitriansky kraj, Slovensko', lat: 47.99, lon: 18.16, el: 118, tz: 'Europe/Bratislava' },
+                { name: 'Bratislava', detail: 'Bratislavský kraj, Slovensko', lat: 48.15, lon: 17.11, el: 140, tz: 'Europe/Bratislava' },
+                { name: 'Košice', detail: 'Košický kraj, Slovensko', lat: 48.72, lon: 21.26, el: 206, tz: 'Europe/Bratislava' },
+                { name: 'Nová Baňa', detail: 'Banskobystrický kraj, Slovensko', lat: 48.42, lon: 18.64, el: 197, tz: 'Europe/Bratislava' },
+                { name: 'Sevilla', detail: 'Andalúzia, Španielsko', lat: 37.39, lon: -5.98, el: 10, tz: 'Europe/Madrid' },
+                { name: 'Sydney', detail: 'Nový Južný Wales, Austrália', lat: -33.87, lon: 151.21, el: 40, tz: 'Australia/Sydney' },
+                { name: 'Londýn', detail: 'Anglicko, Spojené kráľovstvo', lat: 51.51, lon: -0.13, el: 25, tz: 'Europe/London' },
+            ];
+            const DIRS = [
+                { az: 0, short: 'S', name: 'Sever' },
+                { az: 45, short: 'SV', name: 'Severovýchod' },
+                { az: 90, short: 'V', name: 'Východ' },
+                { az: 135, short: 'JV', name: 'Juhovýchod' },
+                { az: 180, short: 'J', name: 'Juh' },
+                { az: 225, short: 'JZ', name: 'Juhozápad' },
+                { az: 270, short: 'Z', name: 'Západ' },
+                { az: 315, short: 'SZ', name: 'Severozápad' },
+            ];
+            const TILTS = [
+                { v: 10, name: 'Plochá', sub: 'na stojanoch, ~10°' },
+                { v: 20, name: 'Mierna', sub: '~20°' },
+                { v: 35, name: 'Bežná šikmá', sub: '~35°' },
+                { v: 45, name: 'Strmá', sub: '~45°' },
+                { v: 90, name: 'Na stene', sub: 'fasáda, 90°' },
+            ];
+            const WP_CHIPS = [400, 410, 435, 450, 500];
+            const AC_CHIPS = [3, 5, 6, 8, 10, 12, 15, 20];
+            const DAY = '2026-09-26';
+            const SAMPLE_KIOSK =
+                'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+            const SAMPLE_LINK = 'https://rastislavsk.github.io/ray-mon/#nastavenie=eyJzaXRlIjp7Im5hbWUiOiJEdm9yYW55IG5hZCBOaXRyb3Ui';
+
+            const fmt = (n, d = 2) => n.toFixed(d).replace('.', ',');
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+            const rad = (d) => (d * Math.PI) / 180;
+            const dirOf = (az) => DIRS.find((d) => d.az === az) || { short: `${az}°`, name: `${az}°` };
+
+            /** Poloha slnka (elevácia a azimut) - ten istý zjednodušený NOAA ako shared/solar.js. */
+            function sunPos(ms, lat, lon) {
+                const d = new Date(ms);
+                const doy = Math.floor((ms - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000) + 1;
+                const h = d.getUTCHours() + d.getUTCMinutes() / 60;
+                const g = ((2 * Math.PI) / 365) * (doy - 1 + (h - 12) / 24);
+                const eq =
+                    229.18 *
+                    (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+                const decl =
+                    0.006918 -
+                    0.399912 * Math.cos(g) +
+                    0.070257 * Math.sin(g) -
+                    0.006758 * Math.cos(2 * g) +
+                    0.000907 * Math.sin(2 * g) -
+                    0.002697 * Math.cos(3 * g) +
+                    0.00148 * Math.sin(3 * g);
+                const haDeg = (h * 60 + eq + 4 * lon) / 4 - 180;
+                const ha = rad(haDeg);
+                const elR = Math.asin(
+                    Math.max(-1, Math.min(1, Math.sin(rad(lat)) * Math.sin(decl) + Math.cos(rad(lat)) * Math.cos(decl) * Math.cos(ha))),
+                );
+                const el = (elR * 180) / Math.PI;
+                let az = 180;
+                if (el > 0) {
+                    const c = (Math.sin(decl) - Math.sin(elR) * Math.sin(rad(lat))) / (Math.cos(elR) * Math.cos(rad(lat)));
+                    const a = (Math.acos(Math.max(-1, Math.min(1, c))) * 180) / Math.PI;
+                    az = haDeg > 0 ? 360 - a : a;
+                }
+                return { el, az };
+            }
+            const elevation = (ms, la, lo) => sunPos(ms, la, lo).el;
+
+            /** Výkon elektrárne pri jasnej oblohe (kW) - bezoblačný model, žiarenie na rovinu panelu,
+             * teplotný odber a limit meniča ako v shared/solar.js. Teplota 25 °C, appka by vzala
+             * teplotu z predpovede. */
+            function clearAcKw(ms) {
+                const site = st.site;
+                const sun = sunPos(ms, site.lat, site.lon);
+                if (sun.el <= 0.5) return 0;
+                const zen = 90 - sun.el;
+                const cosZ = Math.cos(rad(zen));
+                const am = 1 / (cosZ + 0.50572 * Math.pow(96.07995 - zen, -1.6364));
+                const hkm = Math.max(0, site.el) / 1000;
+                const dni = 1353 * ((1 - 0.14 * hkm) * Math.pow(0.8, Math.pow(am, 0.678)) + 0.14 * hkm);
+                const dhi = 0.12 * dni * cosZ;
+                const ghi = dni * cosZ + dhi;
+                const wp = wpEff();
+                let dc = 0;
+                for (const s of st.strings) {
+                    const t = rad(s.tilt);
+                    const cosAoi = Math.sin(rad(sun.el)) * Math.cos(t) + Math.cos(rad(sun.el)) * Math.sin(t) * Math.cos(rad(sun.az - s.az));
+                    const poa = Math.max(0, dni * cosAoi) + (dhi * (1 + Math.cos(t))) / 2 + (ghi * 0.2 * (1 - Math.cos(t))) / 2;
+                    const cell = 25 + ((45 - 20) / 800) * poa;
+                    dc += s.panels * wp * (poa / 1000) * Math.max(0, 1 - 0.0041 * (cell - 25));
+                }
+                return Math.min((dc / 1000) * 0.88, st.ac);
+            }
+            /** Výroba za jasného dneška (kWh) - súčet po desiatich minútach cez miestny deň. */
+            function clearTodayKwh() {
+                if (!st.site) return 0;
+                const f = fmtFor(st.site.tz);
+                const [y, m, d] = DAY.split('-').map(Number);
+                let kwh = 0;
+                for (let t = Date.UTC(y, m - 1, d) - 15 * 3600000; t < Date.UTC(y, m - 1, d) + 39 * 3600000; t += 600000) {
+                    if (f.day.format(t) === DAY) kwh += clearAcKw(t) / 6;
+                }
+                return kwh;
+            }
+            const fmts = new Map();
+            function fmtFor(tz) {
+                if (!fmts.has(tz))
+                    fmts.set(tz, {
+                        day: new Intl.DateTimeFormat('en-CA', { timeZone: tz }),
+                        hm: new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }),
+                    });
+                return fmts.get(tz);
+            }
+            /** Východ a západ slnka v daný miestny deň. */
+            function sunTimes(p) {
+                const f = fmtFor(p.tz);
+                const [y, m, d] = DAY.split('-').map(Number);
+                let prev = null;
+                let rise = null;
+                let set = null;
+                for (let t = Date.UTC(y, m - 1, d) - 15 * 3600000; t < Date.UTC(y, m - 1, d) + 39 * 3600000; t += 120000) {
+                    if (f.day.format(t) !== DAY) continue;
+                    const up = elevation(t, p.lat, p.lon) > -0.833;
+                    if (prev !== null && up !== prev) {
+                        if (up && !rise) rise = t;
+                        if (!up && !set) set = t;
+                    }
+                    prev = up;
+                }
+                return { rise: rise && f.hm.format(rise), set: set && f.hm.format(set), riseMs: rise, setMs: set };
+            }
+
+            /** Podiel ročnej výroby oproti najlepšiemu smeru a sklonu - orientačne pre stredné šírky.
+             * V appke by ho spočítal solar.js pre konkrétnu lokalitu. */
+            function yieldFactor(az, tilt, lat) {
+                const best = lat < 0 ? 0 : 180;
+                const d = Math.abs(((az - best + 540) % 360) - 180);
+                const t = 1 - 0.00012 * (tilt - 35) ** 2;
+                const lossMax = 0.8 * Math.pow(Math.sin(rad(tilt)), 1.2);
+                const loss = lossMax * Math.pow((1 - Math.cos(rad(d))) / 2, 1.3);
+                return Math.max(0.3, t * (1 - loss));
+            }
+            function qualityOf(f) {
+                if (f >= 0.95) return { label: 'Výborné', color: 'var(--green)' };
+                if (f >= 0.85) return { label: 'Dobré', color: 'var(--green)' };
+                if (f >= 0.7) return { label: 'Slušné', color: 'var(--amber)' };
+                return { label: 'Slabšie', color: 'var(--red)' };
+            }
+            const totalPanels = () => st.strings.reduce((a, s) => a + (s.panels || 0), 0);
+            /** Výkon jedného panelu: zadaný, alebo dopočítaný z celkového výkonu a počtu panelov. */
+            const wpEff = () => (st.wpMode === 'kwp' ? (totalPanels() ? (st.kwpTotal * 1000) / totalPanels() : 0) : st.wp);
+            const wpOk = () => wpEff() >= 100 && wpEff() <= 800;
+            const kwpOf = (s) => (s.panels * wpEff()) / 1000;
+            const totalKwp = () => st.strings.reduce((a, s) => a + kwpOf(s), 0);
+            const lat = () => (st.site ? st.site.lat : 48);
+            /** Hlásenie, keď z celkového výkonu a počtu panelov vychádza nezmyselný panel. */
+            function derivedWpMsg() {
+                if (st.wpMode !== 'kwp') return '';
+                const wp = Math.round(wpEff());
+                if (wpOk())
+                    return `<p class="msg" style="margin-bottom:12px">Spolu ${totalPanels()} panelov a ${fmt(st.kwpTotal)} kWp, teda ${wp} Wp na panel.</p>`;
+                return `<p class="msg err" style="margin-bottom:12px">Z ${fmt(st.kwpTotal)} kWp a ${totalPanels()} panelov vychádza ${wp} Wp na panel, to nie je možné (100 až 800 Wp). Skontroluj počty panelov alebo celkový výkon.</p>`;
+            }
+            function kioskOk(input) {
+                try {
+                    const u = new URL(input.trim());
+                    const host = u.hostname.toLowerCase();
+                    const okHost = host === 'fusionsolar.huawei.com' || host.endsWith('.fusionsolar.huawei.com');
+                    if (u.protocol !== 'https:' || !okHost || u.port) return false;
+                    return /[?&]kk=([A-Za-z0-9_-]{4,128})(?:[&#]|$)/.test(`${u.search}${u.hash.replace(/^#[^?]*/, '')}`);
+                } catch {
+                    return false;
+                }
+            }
+
+            // ---- Stav návrhu -------------------------------------------------------------
+            const st = {
+                screen: 'karta-demo',
+                edit: null, // null | 'suhrn' | 'karta' - kam sa vracia úprava jedného kroku
+                saved: false,
+                site: PLACES[0],
+                query: 'Dvorany nad Nitrou',
+                coords: false,
+                wp: 435,
+                wpOther: false,
+                wpGuess: false,
+                wpMode: 'panel', // 'panel' | 'kwp' - či človek zadáva výkon panelu, alebo len celkový výkon
+                kwpTotal: 10.44,
+                strings: [
+                    { az: 180, tilt: 40, panels: 16 },
+                    { az: 90, tilt: 40, panels: 8 },
+                ],
+                cur: 0,
+                ac: 10,
+                acOther: false,
+                acGuess: false,
+                live: 'no', // 'yes' | 'no'
+                kiosk: '',
+                link: '',
+            };
+
+            const SECTIONS = ['Poloha', 'Panely', 'Strecha', 'Menič', 'Meranie', 'Kontrola'];
+            const SECTION_OF = { lokalita: 0, panel: 1, smer: 2, sklon: 2, pocet: 2, dalsia: 2, menic: 3, meranie: 4, suhrn: 5 };
+
+            // ---- Kúsky grafiky -----------------------------------------------------------
+            const ICONS = {
+                close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+                chev: '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+                search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+                plant: '<path d="M3 20h18M5 20l2-9h10l2 9M7 11l1-5h8l1 5M9.5 6v5M14.5 6v5M6 15.5h12"/>',
+                pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0112 2.5a7 7 0 017 7C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+                panel: '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M3 11h18M9 5v12M15 5v12M12 17v3M8 20h8"/>',
+                inverter: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6"/><circle cx="12" cy="16.5" r="1"/>',
+                live: '<path d="M3 17l5-6 4 4 5-8 4 5"/>',
+                link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+            };
+
+            function houseArt() {
+                return `<svg class="house" viewBox="0 0 320 96" aria-hidden="true">
+            <line x1="10" y1="88" x2="310" y2="88" stroke="var(--ink-12)"/>
+            <circle cx="262" cy="26" r="11" fill="var(--amber)"/>
+            ${[0, 45, 90, 135, 180, 225, 270, 315]
+                .map((a) => {
+                    const x1 = 262 + 16 * Math.cos(rad(a));
+                    const y1 = 26 + 16 * Math.sin(rad(a));
+                    const x2 = 262 + 22 * Math.cos(rad(a));
+                    const y2 = 26 + 22 * Math.sin(rad(a));
+                    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>`;
+                })
+                .join('')}
+            <rect x="110" y="56" width="100" height="32" fill="var(--card-bg)" stroke="var(--ink-20)"/>
+            <polygon points="100,58 160,24 220,58" fill="var(--ink-05)" stroke="var(--ink-20)"/>
+            <g transform="rotate(-29.5 160 24)">${[0, 1, 2]
+                .map(
+                    (i) =>
+                        `<rect x="${166 + i * 16}" y="27" width="14" height="10" fill="rgba(var(--amber-rgb),.35)" stroke="var(--amber)" stroke-width="1"/>`,
+                )
+                .join('')}</g>
+            <rect x="148" y="68" width="14" height="20" fill="var(--ink-08)"/>
+        </svg>`;
+            }
+
+            const pt = (a, r, c = 150) => [c + r * Math.sin(rad(a)), c - r * Math.cos(rad(a))];
+            const P = (p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+
+            function compassSvg(az, south) {
+                const secs = DIRS.map((d) => {
+                    const r0 = 74;
+                    const r1 = 124;
+                    const a0 = d.az - 22.5;
+                    const a1 = d.az + 22.5;
+                    const path = `M ${P(pt(a0, r1))} A ${r1} ${r1} 0 0 1 ${P(pt(a1, r1))} L ${P(pt(a1, r0))} A ${r0} ${r0} 0 0 0 ${P(pt(a0, r0))} Z`;
+                    const on = d.az === az;
+                    const [lx, ly] = pt(d.az, 100);
+                    return `<g class="sec${on ? ' on' : ''}" role="radio" aria-checked="${on}" aria-label="${d.name}" tabindex="${on ? 0 : -1}" data-act="az:${d.az}">
+                <path d="${path}"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}">${d.short}</text></g>`;
+                }).join('');
+                // Dráha slnka cez deň: východ - poludnie - západ, na južnej pologuli cez sever.
+                const noon = south ? 0 : 180;
+                const r = 138;
+                const arc = south
+                    ? `M ${P(pt(90, r))} A ${r} ${r} 0 0 0 ${P(pt(0, r))} A ${r} ${r} 0 0 0 ${P(pt(270, r))}`
+                    : `M ${P(pt(90, r))} A ${r} ${r} 0 0 1 ${P(pt(180, r))} A ${r} ${r} 0 0 1 ${P(pt(270, r))}`;
+                const [sx, sy] = pt(noon, r);
+                const panels = [0, 1, 2, 3]
+                    .flatMap((i) =>
+                        [0, 1].map(
+                            (j) =>
+                                `<rect x="${117 + i * 17}" y="${155 + j * 15}" width="14" height="12" rx="1" fill="rgba(var(--amber-rgb),.3)" stroke="var(--amber)" stroke-width="1"/>`,
+                        ),
+                    )
+                    .join('');
+                return `<svg class="art compass" viewBox="0 0 300 300" role="radiogroup" aria-label="Smer panelov">
+            <circle cx="150" cy="150" r="126" fill="none" stroke="var(--ink-12)"/>
+            <path d="${arc}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round" opacity=".8"/>
+            <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="7" fill="var(--amber)"/>
+            ${secs}
+            <g transform="rotate(${az - 180} 150 150)" style="transition: transform var(--dur)">
+                <rect x="112" y="112" width="76" height="76" rx="4" fill="var(--card-bg)" stroke="var(--ink-20)"/>
+                <line x1="112" y1="150" x2="188" y2="150" stroke="var(--ink-35)" stroke-width="1.5"/>
+                ${panels}
+                <line x1="150" y1="190" x2="150" y2="214" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"/>
+                <polygon points="150,222 144.5,212 155.5,212" fill="var(--amber)"/>
+            </g>
+        </svg>`;
+            }
+
+            function miniCompass(az, cls = 'mini') {
+                const [x, y] = pt(az, 11, 17);
+                return `<svg class="${cls}" viewBox="0 0 34 34" aria-hidden="true">
+            <circle cx="17" cy="17" r="15" fill="none" stroke="var(--ink-20)"/>
+            <text x="17" y="6.5" text-anchor="middle" font-size="6" font-family="IBM Plex Mono, monospace" fill="var(--ink-35)">S</text>
+            <line x1="17" y1="17" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="17" cy="17" r="2.5" fill="var(--amber)"/>
+        </svg>`;
+            }
+
+            function tiltSvg(tilt) {
+                const px = 250;
+                const py = 112;
+                const L = 104;
+                const ex = px - L * Math.cos(rad(tilt));
+                const ey = py - L * Math.sin(rad(tilt));
+                const ax = px - 40 * Math.cos(rad(tilt));
+                const ay = py - 40 * Math.sin(rad(tilt));
+                const lx = px - 60 * Math.cos(rad(tilt / 2));
+                const ly = py - 60 * Math.sin(rad(tilt / 2)) + 4;
+                const mx = (px + ex) / 2;
+                const my = (py + ey) / 2;
+                return `<svg class="art" viewBox="0 0 320 190" role="img" aria-label="Nákres strechy z boku, sklon ${tilt} stupňov">
+            <line x1="14" y1="172" x2="306" y2="172" stroke="var(--ink-12)"/>
+            <rect x="150" y="${py}" width="100" height="${172 - py}" fill="var(--card-bg)" stroke="var(--ink-20)"/>
+            <polygon points="${px},${py} ${ex.toFixed(1)},${ey.toFixed(1)} ${ex.toFixed(1)},${py}" fill="var(--ink-05)" stroke="var(--ink-12)"/>
+            <line x1="${px}" y1="${py}" x2="${(px - 110).toFixed(1)}" y2="${py}" stroke="var(--ink-20)" stroke-dasharray="3 4"/>
+            <line x1="${px}" y1="${py}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="var(--amber)" stroke-width="7"/>
+            <line x1="${(mx + 2).toFixed(1)}" y1="${(my - 1).toFixed(1)}" x2="296" y2="30" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2 5" opacity=".6"/>
+            <circle cx="296" cy="30" r="10" fill="var(--amber)"/>
+            ${tilt > 2 ? `<path d="M ${px - 40} ${py} A 40 40 0 0 1 ${ax.toFixed(1)} ${ay.toFixed(1)}" fill="none" stroke="var(--ink-70)" stroke-width="1.5"/>` : ''}
+            <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">${tilt}°</text>
+        </svg>`;
+            }
+
+            function panelGrid(n) {
+                const shown = Math.min(n, 40);
+                const cols = 10;
+                const rows = Math.max(1, Math.ceil(shown / cols));
+                const w = 24;
+                const h = 34;
+                const g = 5;
+                let out = '';
+                for (let i = 0; i < shown; i++) {
+                    const x = (i % cols) * (w + g) + 3;
+                    const y = Math.floor(i / cols) * (h + g) + 3;
+                    out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="rgba(var(--amber-rgb),.22)" stroke="var(--amber)" stroke-width="1"/>
+                <line x1="${x}" y1="${y + h / 2}" x2="${x + w}" y2="${y + h / 2}" stroke="rgba(var(--amber-rgb),.5)"/>`;
+                }
+                const H = rows * (h + g) + 6;
+                const more =
+                    n > shown
+                        ? `<text x="290" y="${H - 8}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink-45)">+${n - shown}</text>`
+                        : '';
+                return `<svg class="art" viewBox="0 0 296 ${H + (more ? 14 : 0)}" role="img" aria-label="${n} panelov">${out}${more}</svg>`;
+            }
+
+            function labelSvg(wp) {
+                return `<svg class="art label-card" viewBox="0 0 240 132" role="img" aria-label="Štítok panelu, výkon Pmax ${wp} W">
+            <rect x="1" y="1" width="238" height="130" rx="8" fill="#e9e6de"/>
+            <text x="14" y="24" font-family="IBM Plex Mono, monospace" font-size="10" fill="#555">PHOTOVOLTAIC MODULE</text>
+            <text x="14" y="42" font-family="IBM Plex Mono, monospace" font-size="10" fill="#555">Model  XY-${wp}M-54HL</text>
+            <rect x="8" y="52" width="224" height="24" rx="4" fill="var(--amber)"/>
+            <text x="14" y="69" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="700" fill="#111">Pmax  ${wp} W</text>
+            <text x="14" y="94" font-family="IBM Plex Mono, monospace" font-size="10" fill="#555">Voc 39,4 V   Isc 13,9 A</text>
+            <text x="14" y="112" font-family="IBM Plex Mono, monospace" font-size="10" fill="#555">Vmp 32,6 V   Imp 13,3 A</text>
+        </svg>`;
+            }
+
+            function sunlineSvg() {
+                return `<svg viewBox="0 0 120 38" aria-hidden="true">
+            <line x1="2" y1="34" x2="118" y2="34" stroke="var(--ink-20)"/>
+            <path d="M 4 34 Q 60 -18 116 34" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="3 4"/>
+            <circle cx="60" cy="9" r="5" fill="var(--amber)"/>
+        </svg>`;
+            }
+
+            // ---- Obrazovky ---------------------------------------------------------------
+            function head({ sub = '', title, lead = '' }) {
+                const sec = SECTION_OF[st.screen];
+                if (st.edit) {
+                    const back = st.edit === 'suhrn' ? 'zhrnutie' : 'prehľad';
+                    return `<div class="wz-head"><span class="wz-step">Úprava · ${SECTIONS[sec]}</span>
+                <button class="wz-close" data-act="done" aria-label="Späť na ${back}">${ICONS.close}</button></div>
+                <div style="height:14px"></div>
+                ${sub ? `<div class="wz-sub">${sub}</div>` : ''}
+                <h2 class="wz-title">${title}</h2>${lead ? `<p class="wz-lead">${lead}</p>` : ''}`;
+                }
+                const prog = SECTIONS.map((_, i) => `<i class="${i < sec ? 'done' : i === sec ? 'now' : ''}"></i>`).join('');
+                return `<div class="wz-head"><span class="wz-step">Krok ${sec + 1} z ${SECTIONS.length} · ${SECTIONS[sec]}</span>
+            <button class="wz-close" data-act="close" aria-label="Zavrieť sprievodcu">${ICONS.close}</button></div>
+            <div class="wz-prog" aria-hidden="true">${prog}</div>
+            ${sub ? `<div class="wz-sub">${sub}</div>` : ''}
+            <h2 class="wz-title">${title}</h2>${lead ? `<p class="wz-lead">${lead}</p>` : ''}`;
+            }
+
+            function foot(nextLabel = 'Ďalej', enabled = true, back = true) {
+                if (st.edit) {
+                    const label = st.edit === 'suhrn' ? 'Späť na zhrnutie' : 'Uložiť zmenu';
+                    return `<button class="btn-primary" data-act="done"${enabled ? '' : ' disabled'}>${label}</button>`;
+                }
+                return `${back ? '<button class="btn-ghost" data-act="back">Späť</button>' : ''}<button class="btn-primary" data-act="next"${enabled ? '' : ' disabled'}>${nextLabel}</button>`;
+            }
+
+            function roofSub() {
+                const n = st.strings.length;
+                return `Plocha ${st.cur + 1}${n > 1 ? ` z ${n}` : ''}`;
+            }
+            function roofTabs() {
+                if (!st.edit) return '';
+                const b = (s, l) => `<button data-act="tab:${s}" aria-pressed="${st.screen === s}">${l}</button>`;
+                return `<div class="seg" role="group" aria-label="Časť plochy">${b('smer', 'Smer')}${b('sklon', 'Sklon')}${b('pocet', 'Panely')}</div>`;
+            }
+
+            const SCREENS = {
+                'karta-demo': () => ({
+                    body: `<div class="section-head"><h2 class="section-title">Nastavenie</h2><div class="section-sub">Appka a jej nastavenia</div></div>
+                <div class="demo-note"><b>Ukážka: Londýn</b><span>Appka zatiaľ počíta pre vymyslenú elektráreň.</span></div>
+                <div class="cta">${houseArt()}
+                    <h3>Nastav si svoju elektráreň</h3>
+                    <p>Sprievodca sa spýta na polohu, strechu a panely. Trvá to asi dve minúty.</p>
+                    <button class="btn-primary btn-wide" data-act="go:start">Začať</button>
+                    <button class="link-btn" data-act="go:odkaz" style="justify-self:center">Mám odkaz s nastavením</button>
+                </div>
+                <button class="settings-item" data-act="go:start"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS.plant}</svg>
+                    <span class="txt"><b>Moja elektráreň</b><span>Ukážka · Londýn · 5,22 kWp</span></span>${ICONS.chev}</button>`,
+                    foot: '',
+                }),
+
+                start: () => ({
+                    body: `${houseArt()}
+                <h2 class="wz-title" style="margin-top:8px">Nastavme tvoju elektráreň</h2>
+                <p class="wz-lead">Šesť krátkych otázok. Na čo nevieš odpoveď, preskočíš tlačidlom „Neviem“ a všetko sa dá neskôr zmeniť.</p>
+                <ul class="checklist">
+                    <li>kde elektráreň stojí</li>
+                    <li>ktorým smerom sú otočené panely a koľko ich je</li>
+                    <li>výkon panelu a meniča (štítok alebo zmluva)</li>
+                </ul>
+                <button class="choice" data-act="go:odkaz"><span class="sum-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS.link}</svg></span>
+                    <span class="t"><b>Mám odkaz s nastavením</b><span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span></span>${ICONS.chev}</button>`,
+                    foot: `<button class="btn-ghost" data-act="close">Neskôr</button><button class="btn-primary" data-act="go:lokalita">Začať</button>`,
+                }),
+
+                odkaz: () => {
+                    const ok = st.link.includes('#nastavenie=');
+                    const bad = st.link.trim() && !ok;
+                    return {
+                        body: `<div class="wz-head"><span class="wz-step">Nastavenie z odkazu</span>
+                    <button class="wz-close" data-act="close" aria-label="Zavrieť">${ICONS.close}</button></div>
+                    <div style="height:14px"></div>
+                    <h2 class="wz-title">Vlož odkaz s nastavením</h2>
+                    <p class="wz-lead">Odkaz ti mohol poslať niekto, kto appku už používa. Pred uložením uvidíš, čo obsahuje.</p>
+                    <label class="sr-only" for="in-link">Odkaz s nastavením</label>
+                    <input class="field-input" id="in-link" type="url" inputmode="url" autocomplete="off" placeholder="https://…#nastavenie=…" value="${esc(st.link)}">
+                    ${st.link ? '' : `<p style="margin:8px 0 0"><button class="link-btn" data-act="linkSample">Vložiť ukážkový odkaz</button><span class="mock-tag">len v návrhu</span></p>`}
+                    ${bad ? '<p class="msg err" style="margin-top:12px">Tento odkaz neobsahuje nastavenie elektrárne. Skontroluj, či si skopíroval celý.</p>' : ''}
+                    ${
+                        ok
+                            ? `<div class="place-card"><span class="lbl">V odkaze je</span>
+                        <div class="name"><b>Dvorany nad Nitrou</b><span class="meta">10,44 kWp</span></div>
+                        <div class="meta">2 plochy (juh, východ) · 24 panelov · menič 10 kW · so živým meraním</div></div>`
+                            : ''
+                    }`,
+                        foot: `<button class="btn-ghost" data-act="go:start">Späť</button><button class="btn-primary" data-act="linkAccept"${ok ? '' : ' disabled'}>Pozrieť a prevziať</button>`,
+                    };
+                },
+
+                lokalita: () => {
+                    const q = norm(st.query.trim());
+                    const picked = st.site && st.query === st.site.name;
+                    const hits = !picked && q.length >= 2 ? PLACES.filter((p) => norm(p.name).includes(q)).slice(0, 6) : [];
+                    let place = '';
+                    if (picked) {
+                        const s = sunTimes(st.site);
+                        const ns = st.site.lat >= 0 ? 's. š.' : 'j. š.';
+                        const ew = st.site.lon >= 0 ? 'v. d.' : 'z. d.';
+                        place = `<div class="place-card">
+                    <div class="name"><b>${esc(st.site.name)}</b><button class="mini-act" data-act="clearSite">Zmeniť</button></div>
+                    <div class="meta">${esc(st.site.detail)}</div>
+                    <div class="sunline"><span>${s.rise || '–'}<small>východ</small></span>${sunlineSvg()}<span style="text-align:right">${s.set || '–'}<small>západ</small></span></div>
+                    <div class="meta">Dnes, 26. 9. · ${fmt(Math.abs(st.site.lat))}° ${ns} · ${fmt(Math.abs(st.site.lon))}° ${ew} · ${st.site.el} m n. m.</div>
+                </div>`;
+                    }
+                    const list = hits.length
+                        ? `<ul class="geo-list">${hits.map((p) => `<li><button class="geo-pick" data-act="pick:${PLACES.indexOf(p)}">${esc(p.name)}<small>${esc(p.detail)}</small></button></li>`).join('')}</ul>`
+                        : !picked && q.length >= 2
+                          ? '<p class="help">Nič som nenašiel. Skús väčšie mesto v okolí alebo zadaj súradnice.</p>'
+                          : '';
+                    const coords = st.coords
+                        ? `<div class="two"><label><span class="sr-only">Zemepisná šírka</span><input class="field-input num" id="in-lat" inputmode="decimal" placeholder="48,48" value=""></label>
+                   <label><span class="sr-only">Zemepisná dĺžka</span><input class="field-input num" id="in-lon" inputmode="decimal" placeholder="18,12" value=""></label></div>`
+                        : '';
+                    return {
+                        body: `${head({ title: 'Kde je tvoja elektráreň?', lead: 'Podľa polohy appka vie, kde je na oblohe slnko a ktorá hodina je tam miestna.' })}
+                    <div class="search">${ICONS.search}<label class="sr-only" for="in-q">Obec alebo mesto</label>
+                    <input class="field-input" id="in-q" type="search" autocomplete="off" placeholder="Obec alebo mesto" value="${esc(st.query)}"></div>
+                    ${list}${place}
+                    <p style="margin:12px 0 0"><button class="link-btn" data-act="coords">${st.coords ? 'Skryť súradnice' : 'Zadať súradnice ručne'}</button></p>${coords}`,
+                        foot: foot('Ďalej', picked, !st.edit),
+                    };
+                },
+
+                panel: () => {
+                    const mode = `<div class="seg seg2" role="group" aria-label="Čo o výkone vieš">
+                <button data-act="wpMode:panel" aria-pressed="${st.wpMode === 'panel'}">Výkon panelu</button>
+                <button data-act="wpMode:kwp" aria-pressed="${st.wpMode === 'kwp'}">Celkový výkon</button></div>`;
+                    if (st.wpMode === 'kwp') {
+                        const ok = st.kwpTotal >= 0.1 && st.kwpTotal <= 160;
+                        return {
+                            body: `${head({ title: 'Aký výkon má celá elektráreň?', lead: 'Nájdeš ho v zmluve alebo na faktúre, napríklad „10,44 kWp“. Výkon jedného panelu dopočítam, keď spočítame panely na strechách.' })}
+                        ${mode}
+                        <label class="field-label" for="in-kwp">Celkový výkon panelov</label>
+                        <div style="position:relative"><input class="field-input num" id="in-kwp" inputmode="decimal" value="${String(st.kwpTotal).replace('.', ',')}" style="padding-right:56px">
+                        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:var(--font-mono);font-size:12px;color:var(--ink-35)">kWp</span></div>
+                        ${ok ? '' : '<p class="msg err" style="margin-top:12px">Zadaj výkon v kWp, napríklad 10,44.</p>'}`,
+                            foot: foot('Ďalej', ok),
+                        };
+                    }
+                    const opts = WP_CHIPS.map(
+                        (v) =>
+                            `<button class="chip" data-act="wp:${v}" aria-pressed="${!st.wpOther && !st.wpGuess && st.wp === v}">${v} Wp</button>`,
+                    ).join('');
+                    return {
+                        body: `${head({ title: 'Aký výkon má jeden panel?', lead: 'Nájdeš ho na štítku na zadnej strane panelu pri „Pmax“, alebo v zmluve, napríklad „24 × 435 Wp“.' })}
+                    ${mode}
+                    ${labelSvg(st.wp)}
+                    <div class="chips" role="group" aria-label="Výkon panelu">${opts}
+                        <button class="chip" data-act="wpOther" aria-pressed="${st.wpOther}">Iný</button>
+                        <button class="chip soft" data-act="wpGuess" aria-pressed="${st.wpGuess}">Neviem</button></div>
+                    ${st.wpOther ? `<label class="field-label" for="in-wp">Výkon panelu (Wp)</label><input class="field-input num" id="in-wp" inputmode="numeric" value="${st.wp}">` : ''}
+                    ${st.wpGuess ? `<p class="msg warn" style="margin-top:14px">Počítam s bežnými ${st.wp} Wp. V zhrnutí to bude označené ako odhad, kedykoľvek to opravíš.</p>` : ''}`,
+                        foot: foot('Ďalej', st.wp >= 100 && st.wp <= 800),
+                    };
+                },
+
+                smer: () => {
+                    const s = st.strings[st.cur];
+                    const south = lat() < 0;
+                    const f = yieldFactor(s.az, s.tilt, lat());
+                    const q = qualityOf(f);
+                    return {
+                        body: `${head({
+                            sub: roofSub(),
+                            title: 'Kam sa pozerajú panely?',
+                            lead: 'Ťukni na stranu, na ktorú je strecha s panelmi otočená. Oranžový oblúk je dráha slnka cez deň.',
+                        })}${roofTabs()}
+                    ${compassSvg(s.az, south)}
+                    <div class="readout"><b>${dirOf(s.az).name}</b><span>${s.az}°</span></div>
+                    <div class="quality"><div class="row"><b>${q.label}</b><span>~${Math.round(f * 100)} % najlepšieho smeru</span></div>
+                        <div class="bar"><i style="width:${Math.round(f * 100)}%;background:${q.color}"></i></div></div>
+                    <details class="help"><summary class="link-btn">Ako zistím, kam sa pozerajú?</summary>
+                        <p>Nájdi dom na satelitnej mape, sever je hore. Panely sa pozerajú tam, kam strecha klesá, teda k odkvapu.</p></details>`,
+                        foot: foot(),
+                    };
+                },
+
+                sklon: () => {
+                    const s = st.strings[st.cur];
+                    const f = yieldFactor(s.az, s.tilt, lat());
+                    const q = qualityOf(f);
+                    const chips = TILTS.map(
+                        (t) =>
+                            `<button class="chip chip-col" data-act="tilt:${t.v}" aria-pressed="${s.tilt === t.v}"><b>${t.name}</b><small>${t.sub}</small></button>`,
+                    ).join('');
+                    return {
+                        body: `${head({ sub: roofSub(), title: 'Aká strmá je strecha?', lead: 'Vyber typ strechy. Kto pozná presné stupne, doladí ich posúvačom.' })}${roofTabs()}
+                    ${tiltSvg(s.tilt)}
+                    <div class="preset-grid" role="group" aria-label="Typ strechy">${chips}</div>
+                    <label class="sr-only" for="in-tilt">Sklon v stupňoch</label>
+                    <input class="range" id="in-tilt" type="range" min="0" max="90" step="5" value="${s.tilt}">
+                    <div class="quality"><div class="row"><b>${q.label}</b><span>~${Math.round(f * 100)} % najlepšieho sklonu a smeru</span></div>
+                        <div class="bar"><i style="width:${Math.round(f * 100)}%;background:${q.color}"></i></div></div>`,
+                        foot: foot(),
+                    };
+                },
+
+                pocet: () => {
+                    const s = st.strings[st.cur];
+                    return {
+                        body: `${head({ sub: roofSub(), title: 'Koľko panelov je na tejto ploche?' })}${roofTabs()}
+                    <div class="stepper"><button data-act="panels:-1" aria-label="O panel menej">−</button>
+                        <label class="sr-only" for="in-panels">Počet panelov</label>
+                        <input class="field-input num" id="in-panels" inputmode="numeric" value="${s.panels}">
+                        <button data-act="panels:1" aria-label="O panel viac">+</button></div>
+                    ${panelGrid(s.panels)}
+                    ${
+                        st.wpMode === 'kwp'
+                            ? `<p class="kwp-line">${s.panels} panelov · výkon panelu dopočítam z ${fmt(st.kwpTotal)} kWp, keď budú spočítané všetky plochy</p>`
+                            : `<p class="kwp-line">${s.panels} × ${st.wp} Wp = <b>${fmt(kwpOf(s))} kWp</b></p>`
+                    }`,
+                        foot: foot('Ďalej', s.panels >= 1 && s.panels <= 200),
+                    };
+                },
+
+                dalsia: () => {
+                    const rows = st.strings
+                        .map(
+                            (
+                                s,
+                                i,
+                            ) => `<div class="roof-row">${miniCompass(s.az)}<span class="t"><b>Plocha ${i + 1} · ${dirOf(s.az).name}</b>
+                    <span>${s.tilt}° · ${s.panels} panelov · ${fmt(kwpOf(s))} kWp</span></span>
+                    <button class="mini-act" data-act="editRoof:${i}">Upraviť</button>
+                    ${st.strings.length > 1 ? `<button class="mini-act" data-act="delRoof:${i}">Odstrániť</button>` : ''}</div>`,
+                        )
+                        .join('');
+                    const full = st.strings.length >= 3;
+                    return {
+                        body: `${head({ title: full ? 'Tri plochy sú maximum' : 'Máš panely aj na inej strane strechy?', lead: full ? 'Viac plôch appka nepočíta.' : 'Napríklad časť na juh a časť na východ. Každá strana je samostatná plocha, najviac tri.' })}
+                    <div class="roofs">${rows}</div>
+                    ${derivedWpMsg()}
+                    ${full ? '' : '<button class="choice" data-act="addRoof"><span class="dot" style="border-style:dashed"></span><span class="t"><b>Áno, pridať ďalšiu plochu</b><span>Opýtam sa na smer, sklon a počet panelov.</span></span></button>'}`,
+                        foot: foot(full ? 'Ďalej' : 'Nie, to je všetko', wpOk()),
+                    };
+                },
+
+                menic: () => {
+                    const kwp = totalKwp();
+                    const max = Math.max(kwp, st.ac) * 1.05;
+                    const ratio = kwp / st.ac;
+                    const msg =
+                        ratio > 1.3
+                            ? `<p class="msg warn">Panely majú viac, než menič zvládne. Za jasných dní bude menič orezávať špičky na ${fmt(st.ac, 0)} kW.</p>`
+                            : ratio > 1
+                              ? '<p class="msg">Menič je o trochu menší než panely. To je bežné a skoro nič to nestojí.</p>'
+                              : '<p class="msg">Menič zvládne plný výkon panelov.</p>';
+                    const opts = AC_CHIPS.map(
+                        (v) =>
+                            `<button class="chip" data-act="ac:${v}" aria-pressed="${!st.acOther && !st.acGuess && st.ac === v}">${v} kW</button>`,
+                    ).join('');
+                    return {
+                        body: `${head({ title: 'Aký veľký je menič?', lead: `Panely majú spolu ${fmt(kwp)} kWp. Výkon meniča je na jeho štítku alebo v zmluve, napríklad SUN2000-10KTL je 10 kW.` })}
+                    <div class="compare-bars">
+                        <div class="cb"><span>Panely</span><span class="track"><i style="width:${(kwp / max) * 100}%;background:rgba(var(--amber-rgb),.7)"></i></span><b>${fmt(kwp)} kWp</b></div>
+                        <div class="cb"><span>Menič</span><span class="track"><i style="width:${(st.ac / max) * 100}%;background:rgba(var(--green-rgb),.7)"></i></span><b>${fmt(st.ac, st.ac % 1 ? 1 : 0)} kW</b></div>
+                        ${msg}
+                    </div>
+                    <div class="chips" role="group" aria-label="Výkon meniča">${opts}
+                        <button class="chip" data-act="acOther" aria-pressed="${st.acOther}">Iný</button>
+                        <button class="chip soft" data-act="acGuess" aria-pressed="${st.acGuess}">Neviem</button></div>
+                    ${st.acOther ? `<label class="field-label" for="in-ac">Výkon meniča (kW)</label><input class="field-input num" id="in-ac" inputmode="decimal" value="${String(st.ac).replace('.', ',')}">` : ''}
+                    ${st.acGuess ? '<p class="msg warn" style="margin-top:14px">Počítam s meničom rovnako veľkým ako panely. V zhrnutí to bude označené ako odhad.</p>' : ''}`,
+                        foot: foot('Ďalej', st.ac >= 1 && st.ac <= 100),
+                    };
+                },
+
+                meranie: () => {
+                    const yes = st.live === 'yes';
+                    const valid = kioskOk(st.kiosk);
+                    const bad = yes && st.kiosk.trim() && !valid;
+                    const chart = `<svg class="art" viewBox="0 0 300 90" role="img" aria-label="Odhad z predpovede a skutočný výkon">
+                <line x1="6" y1="82" x2="294" y2="82" stroke="var(--ink-12)"/>
+                <path d="M 10 82 C 70 82, 100 14, 150 14 C 200 14, 230 82, 290 82" fill="none" stroke="var(--ink-70)" stroke-width="1.5" stroke-dasharray="4 4"/>
+                <path d="M 10 82 C 60 82, 90 30, 112 34 C 128 37, 132 18, 150 22" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+                <circle cx="150" cy="22" r="4" fill="var(--green)"/>
+                <text x="160" y="28" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--green)">teraz</text>
+            </svg>`;
+                    return {
+                        body: `${head({ title: 'Chceš vidieť skutočný výkon?', lead: 'Bez merania appka ukazuje odhad z predpovede počasia. S meraním vidíš aj to, čo panely naozaj vyrábajú.' })}
+                    ${chart}
+                    <button class="choice" data-act="live:yes" aria-pressed="${yes}"><span class="dot"></span><span class="t"><b>Áno, mám menič Huawei s appkou FusionSolar</b><span>Vložíš odkaz na kiosk elektrárne.</span></span></button>
+                    <button class="choice" data-act="live:no" aria-pressed="${!yes}"><span class="dot"></span><span class="t"><b>Nie, stačí mi odhad</b><span>Meranie sa dá pridať neskôr.</span></span></button>
+                    ${
+                        yes
+                            ? `<ol class="howto">
+                            <li>V appke FusionSolar otvor svoju elektráreň.</li>
+                            <li>Zvoľ zdieľanie cez kiosk a skopíruj odkaz.</li>
+                            <li>Vlož ho sem.</li></ol>
+                        <label class="field-label" for="in-kiosk">Odkaz na kiosk</label>
+                        <input class="field-input" id="in-kiosk" type="url" inputmode="url" autocomplete="off" placeholder="https://…fusionsolar.huawei.com/…" value="${esc(st.kiosk)}">
+                        ${st.kiosk ? '' : `<p style="margin:8px 0 0"><button class="link-btn" data-act="kioskSample">Vložiť ukážkový odkaz</button><span class="mock-tag">len v návrhu</span></p>`}
+                        ${valid ? '<p class="msg" style="margin-top:12px">Vyzerá to ako kiosk FusionSolar. Po uložení overím, či odpovedá.</p>' : ''}
+                        ${bad ? '<p class="msg err" style="margin-top:12px">Toto nie je odkaz na kiosk FusionSolar. Skopíruj ho v appke FusionSolar pri zdieľaní cez kiosk.</p>' : ''}`
+                            : ''
+                    }`,
+                        foot: foot(yes ? 'Ďalej' : 'Preskočiť', !yes || valid),
+                    };
+                },
+
+                suhrn: () => summaryScreen(false),
+                'karta-hotovo': () => summaryScreen(true),
+            };
+
+            function summaryRows(act) {
+                const kwp = totalKwp();
+                const guess = '<span class="est">odhad · oprav, keď zistíš</span>';
+                const row = (key, ico, k, v, extra = '') =>
+                    `<button class="sum-row" data-act="${act}:${key}"><span class="sum-ico">${ico}</span><span class="t"><span class="k">${k}</span><span class="v">${v}</span>${extra}</span>${ICONS.chev}</button>`;
+                const svg = (p) => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+                let out = row('lokalita', svg(ICONS.pin), 'Poloha', esc(st.site ? st.site.name : '–'));
+                out += row(
+                    'panel',
+                    svg(ICONS.panel),
+                    'Panel',
+                    `${Math.round(wpEff())} Wp`,
+                    st.wpGuess
+                        ? guess
+                        : st.wpMode === 'kwp'
+                          ? `<span class="k" style="text-transform:none;letter-spacing:0">dopočítané z ${fmt(st.kwpTotal)} kWp</span>`
+                          : '',
+                );
+                st.strings.forEach((s, i) => {
+                    out += row(
+                        `roof${i}`,
+                        miniCompass(s.az, 'mini'),
+                        `Plocha ${i + 1}`,
+                        `${dirOf(s.az).name} · ${s.tilt}° · ${s.panels} panelov`,
+                        `<span class="k" style="text-transform:none;letter-spacing:0">${fmt(kwpOf(s))} kWp</span>`,
+                    );
+                });
+                out += row('menic', svg(ICONS.inverter), 'Menič', `${fmt(st.ac, st.ac % 1 ? 1 : 0)} kW`, st.acGuess ? guess : '');
+                out += row(
+                    'meranie',
+                    svg(ICONS.live),
+                    'Živé meranie',
+                    st.live === 'yes' && kioskOk(st.kiosk) ? 'FusionSolar kiosk' : 'bez merania, odhad z predpovede',
+                );
+                return { out, kwp };
+            }
+
+            function warnings() {
+                const w = [];
+                const kwp = totalKwp();
+                if (kwp > st.ac * 1.3) w.push(`Menič bude za jasných dní orezávať špičky na ${fmt(st.ac, 0)} kW.`);
+                if (lat() < 0 && st.strings.some((s) => Math.abs(s.az - 180) <= 45))
+                    w.push('Lokalita je na južnej pologuli, slnko je tam na severe. Plocha otočená na juh dostane málo svetla.');
+                return w.map((t) => `<p class="msg warn" style="margin-bottom:8px">${t}</p>`).join('');
+            }
+
+            function summaryScreen(saved) {
+                const { out, kwp } = summaryRows(saved ? 'fix' : 'edit');
+                const hero = `<div class="sum-hero"><div class="lbl">${esc(st.site ? st.site.name : '')}</div><div class="big">${fmt(kwp)} kWp</div>
+            <div class="sub">Dnes za jasnej oblohy by vyrobila približne ${Math.round(clearTodayKwh())} kWh</div></div>`;
+                if (saved)
+                    return {
+                        body: `<div class="section-head"><h2 class="section-title">Nastavenie</h2><div class="section-sub">Appka a jej nastavenia</div></div>
+                    <p class="note-ok">Uložené. Prepočítavam predpoveď.</p>
+                    <div class="lbl" style="margin:0 0 8px 4px">Moja elektráreň</div>
+                    ${hero}
+                    <div class="sum-list">${out}</div>
+                    ${warnings()}
+                    <button class="settings-item" data-act="go:odkaz"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS.link}</svg>
+                        <span class="txt"><b>Prevziať nastavenie z odkazu</b><span>Nahradí to, čo je uložené teraz</span></span>${ICONS.chev}</button>
+                    <p style="text-align:center;margin:4px 0 0"><button class="link-btn" data-act="restart">Nastaviť celé znova od začiatku</button></p>`,
+                        foot: '',
+                    };
+                return {
+                    body: `${head({ title: 'Skontroluj a ulož', lead: 'Ťuknutím na riadok ho opravíš a vrátiš sa sem.' })}${hero}<div class="sum-list">${out}</div>${warnings()}${wpOk() ? '' : derivedWpMsg()}`,
+                    foot: `<button class="btn-ghost" data-act="back">Späť</button><button class="btn-primary" data-act="save"${wpOk() ? '' : ' disabled'}>Uložiť a prepočítať</button>`,
+                };
+            }
+
+            // ---- Poradie krokov ------------------------------------------------------------
+            function next() {
+                const s = st.screen;
+                if (s === 'lokalita') return go('panel');
+                if (s === 'panel') return ((st.cur = 0), go('smer'));
+                if (s === 'smer') return go('sklon');
+                if (s === 'sklon') return go('pocet');
+                if (s === 'pocet') return go(st.cur < st.strings.length - 1 ? ((st.cur += 1), 'smer') : 'dalsia');
+                if (s === 'dalsia') return go('menic');
+                if (s === 'menic') return go('meranie');
+                if (s === 'meranie') {
+                    if (st.live === 'no') st.kiosk = '';
+                    return go('suhrn');
+                }
+            }
+            function back() {
+                const s = st.screen;
+                if (s === 'lokalita') return go('start');
+                if (s === 'panel') return go('lokalita');
+                if (s === 'smer') return st.cur === 0 ? go('panel') : ((st.cur -= 1), go('pocet'));
+                if (s === 'sklon') return go('smer');
+                if (s === 'pocet') return go('sklon');
+                if (s === 'dalsia') return ((st.cur = st.strings.length - 1), go('pocet'));
+                if (s === 'menic') return go('dalsia');
+                if (s === 'meranie') return go('menic');
+                if (s === 'suhrn') return go('meranie');
+            }
+            function go(screen) {
+                st.screen = screen;
+                render(true);
+            }
+
+            function openEdit(key, from) {
+                st.edit = from;
+                if (key.startsWith('roof')) {
+                    st.cur = Number(key.slice(4));
+                    return go('smer');
+                }
+                go(key);
+            }
+
+            function act(a) {
+                const [k, v] = a.split(':');
+                if (k === 'go') return ((st.edit = null), go(v));
+                if (k === 'next') return next();
+                if (k === 'back') return back();
+                if (k === 'close') return ((st.edit = null), go(st.saved ? 'karta-hotovo' : 'karta-demo'));
+                if (k === 'done') {
+                    const to = st.edit === 'suhrn' ? 'suhrn' : 'karta-hotovo';
+                    st.edit = null;
+                    return go(to);
+                }
+                if (k === 'edit') return openEdit(v, 'suhrn');
+                if (k === 'fix') return openEdit(v, 'karta');
+                if (k === 'tab') return go(v);
+                if (k === 'pick') {
+                    st.site = PLACES[Number(v)];
+                    st.query = st.site.name;
+                    if (st.site.lat < 0) st.strings.forEach((s) => s.az === 180 && (s.az = 0));
+                    return render();
+                }
+                if (k === 'clearSite') return ((st.query = ''), render(), document.getElementById('in-q')?.focus());
+                if (k === 'coords') return ((st.coords = !st.coords), render());
+                if (k === 'wp') return ((st.wp = Number(v)), (st.wpOther = false), (st.wpGuess = false), render());
+                if (k === 'wpMode') {
+                    // Prepnutie prenesie to, čo už je známe: súčet panelov do celkového výkonu a naopak.
+                    if (v === 'kwp' && st.wpMode === 'panel') st.kwpTotal = Number(totalKwp().toFixed(2));
+                    if (v === 'panel' && st.wpMode === 'kwp' && wpOk()) st.wp = Math.round(wpEff());
+                    st.wpMode = v;
+                    return render();
+                }
+                if (k === 'wpOther') return ((st.wpOther = true), (st.wpGuess = false), render());
+                if (k === 'wpGuess') return ((st.wp = 430), (st.wpGuess = true), (st.wpOther = false), render());
+                if (k === 'az') return ((st.strings[st.cur].az = Number(v)), render(), focusSector());
+                if (k === 'tilt') return ((st.strings[st.cur].tilt = Number(v)), render());
+                if (k === 'panels') {
+                    const s = st.strings[st.cur];
+                    s.panels = Math.max(1, Math.min(200, (Number.isInteger(s.panels) ? s.panels : 1) + Number(v)));
+                    return render();
+                }
+                if (k === 'addRoof') {
+                    st.strings.push({ az: lat() < 0 ? 0 : 180, tilt: 35, panels: 6 });
+                    st.cur = st.strings.length - 1;
+                    return go('smer');
+                }
+                if (k === 'delRoof') return (st.strings.splice(Number(v), 1), render());
+                if (k === 'editRoof') return ((st.cur = Number(v)), (st.edit = null), go('smer'));
+                if (k === 'ac') return ((st.ac = Number(v)), (st.acOther = false), (st.acGuess = false), render());
+                if (k === 'acOther') return ((st.acOther = true), (st.acGuess = false), render());
+                if (k === 'acGuess')
+                    return ((st.ac = Math.max(1, Math.round(totalKwp()))), (st.acGuess = true), (st.acOther = false), render());
+                if (k === 'live') return ((st.live = v), render());
+                if (k === 'kioskSample') return ((st.kiosk = SAMPLE_KIOSK), render());
+                if (k === 'linkSample') return ((st.link = SAMPLE_LINK), render());
+                if (k === 'linkAccept') {
+                    st.site = PLACES[0];
+                    st.query = st.site.name;
+                    st.wp = 435;
+                    st.strings = [
+                        { az: 180, tilt: 40, panels: 16 },
+                        { az: 90, tilt: 40, panels: 8 },
+                    ];
+                    st.ac = 10;
+                    st.wpGuess = st.acGuess = false;
+                    st.wpMode = 'panel';
+                    st.live = 'yes';
+                    st.kiosk = SAMPLE_KIOSK;
+                    st.link = '';
+                    st.edit = null;
+                    return go('suhrn');
+                }
+                if (k === 'save') return ((st.saved = true), (st.edit = null), go('karta-hotovo'));
+                if (k === 'restart') return ((st.edit = null), go('start'));
+            }
+
+            function focusSector() {
+                const el = document.querySelector('.compass .sec.on');
+                if (el) el.focus();
+            }
+
+            // ---- Vykreslenie ---------------------------------------------------------------
+            const scr = document.getElementById('scr');
+            const footEl = document.getElementById('foot');
+            const phone = document.getElementById('phone');
+
+            function render(top = false) {
+                const active = document.activeElement;
+                const id = active && phone.contains(active) && active.id ? active.id : null;
+                const sel = id && typeof active.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
+                const { body, foot: f } = SCREENS[st.screen]();
+                scr.innerHTML = body;
+                footEl.innerHTML = f;
+                if (top) scr.scrollTop = 0;
+                if (id) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.focus({ preventScroll: true });
+                        if (sel && el.setSelectionRange) el.setSelectionRange(sel[0], sel[1]);
+                    }
+                }
+                document.getElementById('pv-line').textContent = st.saved
+                    ? st.live === 'yes' && kioskOk(st.kiosk)
+                        ? 'meranie 13:00'
+                        : 'odhad z predpovede'
+                    : 'ukážka · nastav si elektráreň';
+                renderSteps();
+                renderNotes();
+            }
+
+            phone.addEventListener('click', (e) => {
+                const t = e.target.closest('[data-act]');
+                if (t && !t.disabled) act(t.dataset.act);
+            });
+            phone.addEventListener('keydown', (e) => {
+                const sec = e.target.closest && e.target.closest('.compass .sec');
+                if (sec && ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) {
+                    e.preventDefault();
+                    const s = st.strings[st.cur];
+                    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 45 : -45;
+                    s.az = (s.az + step + 360) % 360;
+                    render();
+                    focusSector();
+                } else if (sec && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    act(sec.dataset.act);
+                }
+            });
+            phone.addEventListener('input', (e) => {
+                const t = e.target;
+                const num = (x) => Number(String(x).trim().replace(',', '.'));
+                if (t.id === 'in-q') st.query = t.value;
+                else if (t.id === 'in-link') st.link = t.value;
+                else if (t.id === 'in-kiosk') st.kiosk = t.value;
+                else if (t.id === 'in-kwp') st.kwpTotal = num(t.value) || 0;
+                else if (t.id === 'in-wp') st.wp = num(t.value) || 0;
+                else if (t.id === 'in-ac') st.ac = num(t.value) || 0;
+                else if (t.id === 'in-panels') st.strings[st.cur].panels = Math.round(num(t.value)) || 0;
+                else if (t.id === 'in-tilt') st.strings[st.cur].tilt = Number(t.value);
+                else return;
+                render();
+            });
+
+            // ---- Zoznam obrazoviek a poznámky -----------------------------------------------
+            const STEP_GROUPS = [
+                {
+                    name: 'Vstup',
+                    items: [
+                        ['karta-demo', 'Karta bez elektrárne'],
+                        ['start', 'Úvod sprievodcu'],
+                        ['odkaz', 'Nastavenie z odkazu'],
+                    ],
+                },
+                {
+                    name: 'Sprievodca',
+                    items: [
+                        ['lokalita', '1 · Poloha'],
+                        ['panel', '2 · Výkon panelu'],
+                        ['smer', '3 · Smer plochy'],
+                        ['sklon', '3 · Sklon plochy'],
+                        ['pocet', '3 · Počet panelov'],
+                        ['dalsia', '3 · Ďalšia plocha?'],
+                        ['menic', '4 · Menič'],
+                        ['meranie', '5 · Živé meranie'],
+                        ['suhrn', '6 · Zhrnutie'],
+                    ],
+                },
+                {
+                    name: 'Po uložení',
+                    items: [
+                        ['karta-hotovo', 'Prehľad elektrárne'],
+                        ['uprava', 'Úprava jednej plochy'],
+                    ],
+                },
+            ];
+
+            function currentKey() {
+                if (st.edit === 'karta' && ['smer', 'sklon', 'pocet'].includes(st.screen)) return 'uprava';
+                return st.screen;
+            }
+
+            function renderSteps() {
+                const cur = currentKey();
+                document.getElementById('steps').innerHTML = STEP_GROUPS.map(
+                    (g) =>
+                        `<div class="steps-group"><span>${g.name}</span>${g.items
+                            .map(([k, l]) => `<button class="step-link" data-jump="${k}" aria-current="${k === cur}">${l}</button>`)
+                            .join('')}</div>`,
+                ).join('');
+            }
+            document.getElementById('steps').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-jump]');
+                if (!b) return;
+                const k = b.dataset.jump;
+                if (k === 'uprava') {
+                    st.saved = true;
+                    st.cur = 0;
+                    st.edit = 'karta';
+                    return go('smer');
+                }
+                st.edit = null;
+                if (k === 'karta-hotovo') st.saved = true;
+                if (k === 'karta-demo') st.saved = false;
+                if (['smer', 'sklon', 'pocet'].includes(k)) st.cur = 0;
+                go(k);
+            });
+
+            const NOTES = {
+                'karta-demo': {
+                    title: 'Karta Nastavenie, kým nie je nič uložené',
+                    why: [
+                        'Appka ukazuje ukážku Londýna. Hlavná akcia karty je preto jedno výrazné tlačidlo, nie formulár s dvadsiatimi poľami.',
+                        'Odkaz od niekoho iného je druhá, rovnocenná cesta. Kto ho má, nemusí nič vypĺňať.',
+                    ],
+                    impl: ['Stav už pozná <code>demo</code>; karta podľa neho ukáže výzvu alebo prehľad.'],
+                },
+                start: {
+                    title: 'Úvod',
+                    why: [
+                        'Povie, koľko to trvá a čo sa bude pýtať. Výkon panelu a meniča sú jediné údaje, ktoré človek nemusí vedieť naspamäť, preto je pri nich spomenutý štítok.',
+                        '„Začať“ je hneď po ruke, čítanie nie je povinné.',
+                    ],
+                    impl: [
+                        'Rozpracované nastavenie ostáva v <code>settingsDraft</code>. Kto medzitým odíde na inú kartu, po návrate pokračuje tam, kde skončil.',
+                    ],
+                },
+                odkaz: {
+                    title: 'Nastavenie z odkazu',
+                    why: [
+                        'Dnes je pole na odkaz úplne navrchu formulára a mätie toho, kto žiadny odkaz nemá. Tu je to samostatná cesta pre toho, kto ju hľadá.',
+                        'Pred prevzatím vidí, čo presne odkaz obsahuje. Prevzatie vedie na zhrnutie, nie rovno na uloženie.',
+                    ],
+                    impl: [
+                        'Kontrola odkazu ostáva <code>settingsFromLink</code>.',
+                        'Ponuka pri otvorení odkazu (<code>incoming</code>) môže viesť na to isté zhrnutie.',
+                    ],
+                },
+                lokalita: {
+                    title: 'Krok 1 · Poloha',
+                    why: [
+                        'Potvrdením nie sú súradnice, ale niečo, čo človek pozná: kedy u neho dnes vychádza a zapadá slnko. Obec s rovnakým menom v inom kraji sa tak prezradí hneď.',
+                        'Súradnice sú schované pod odkazom. Potrebuje ich máloktorý používateľ.',
+                        'Skús vyhľadať Sydney: kompas v ďalších krokoch otočí dráhu slnka na sever.',
+                    ],
+                    impl: [
+                        'Východ a západ spočíta <code>solarPosition</code> zo <code>shared/solar.js</code>; nový výpočet netreba.',
+                        'Vyhľadávanie ostáva Open-Meteo, výsledky rovnaké ako dnes. Polohu telefónu appka pýtať nebude.',
+                    ],
+                },
+                panel: {
+                    title: 'Krok 2 · Výkon panelu',
+                    why: [
+                        'Ide pred plochami, lebo je spoločný pre všetky. Vďaka nemu každá plocha hneď ukazuje svoje kWp.',
+                        'Kreslený štítok ukazuje, kde údaj hľadať (Pmax). „Neviem“ dosadí bežnú hodnotu a zhrnutie ju označí ako odhad.',
+                        'Kto pozná len celkový výkon zo zmluvy, prepne na „Celkový výkon“. Výkon panelu sa potom dopočíta z počtu panelov na všetkých plochách.',
+                    ],
+                    impl: [
+                        'Hodnoty tlačidiel aj rozsah poľa zo <code>SETTINGS_LIMITS</code> v <code>config.js</code>.',
+                        'Pri celkovom výkone sa <code>panelWp</code> dopočíta až pri uložení: celkový výkon / súčet panelov. Uložený formát sa nemení a dopočítaný výkon prejde tou istou kontrolou (100 až 800 Wp).',
+                    ],
+                },
+                smer: {
+                    title: 'Krok 3 · Smer plochy',
+                    why: [
+                        'Kompas nahrádza osem textových tlačidiel. Strecha v strede sa otáča s výberom a oranžový oblúk je dráha slnka, takže je vidno, prečo je juh najlepší.',
+                        'Pás pod kompasom hovorí, koľko energie smer dá oproti najlepšiemu. Čísla v návrhu sú orientačné.',
+                    ],
+                    impl: [
+                        'Osem smerov, výber ťuknutím na výsek. Ťahanie ručičky by bolo druhou menovanou výnimkou v <code>swipe.js</code> (dnes je jediná, jazdec ciferníka).',
+                        'Kompas je <code>radiogroup</code>, šípky otáčajú o 45°.',
+                        'Podiel oproti ideálu by v appke spočítal <code>clearSkyAcKw</code> pre konkrétnu lokalitu, nie tabuľka.',
+                    ],
+                },
+                sklon: {
+                    title: 'Krok 3 · Sklon plochy',
+                    why: [
+                        'Typ strechy človek pozná, stupne nie. Predvoľby sú preto hlavná cesta a posúvač len na doladenie.',
+                        'Nákres z boku ukáže uhol aj to, že slnko svieti na plochu panelov.',
+                    ],
+                    impl: [
+                        'Posúvač je vodorovné gesto uprostred karty. Treba overiť, či ho <code>swipe.js</code> nevyhodnotí ako listovanie kariet (týka sa aj dnešného formulára).',
+                    ],
+                },
+                pocet: {
+                    title: 'Krok 3 · Počet panelov',
+                    why: [
+                        'Panely sa kreslia ako mriežka, takže preklep 61 namiesto 16 je vidno hneď.',
+                        'kWp plochy sa ráta naživo z výkonu panelu z kroku 2.',
+                    ],
+                    impl: ['Súčet cez <code>installedKw</code>, jediné miesto, kde sa kWp počíta.'],
+                },
+                dalsia: {
+                    title: 'Krok 3 · Ďalšia plocha?',
+                    why: [
+                        'Ďalšia plocha sa pridáva odpoveďou na otázku, nie tlačidlom v dlhom formulári. Kto má jednu (väčšina), odpovie „Nie“ a ide ďalej.',
+                        'Hotové plochy sa dajú upraviť alebo odstrániť priamo tu.',
+                    ],
+                    impl: [
+                        'Najviac <code>SETTINGS_LIMITS.maxStrings</code> (3). Pri tretej sa otázka nepýta.',
+                        'Pri celkovom výkone tu prvýkrát vychádza výkon panelu. Keď je mimo 100 až 800 Wp, ďalej sa nedá - skús 3 panely pri 10,44 kWp.',
+                    ],
+                },
+                menic: {
+                    title: 'Krok 4 · Menič',
+                    why: [
+                        'Menič ide až po plochách. Vtedy appka pozná celkový výkon panelov a vie porovnanie ukázať obrázkom dvoch pásov.',
+                        'Varovanie o orezávaní špičiek je to isté, čo dnes píše <code>checkSettings</code>.',
+                    ],
+                    impl: ['„Neviem“ dosadí menič rovnako veľký ako panely, teda bez orezávania, a zhrnutie ho označí ako odhad.'],
+                },
+                meranie: {
+                    title: 'Krok 5 · Živé meranie',
+                    why: [
+                        'Kiosk je pre menej znalého človeka najstrašidelnejšia časť dnešného formulára. Tu je to nepovinný krok s dvoma rovnocennými odpoveďami a návod vidí len ten, kto FusionSolar má.',
+                        'Odkaz sa kontroluje hneď pri vložení.',
+                    ],
+                    impl: [
+                        'Kontrola cez <code>kioskApiUrl</code> zo <code>shared/kiosk.js</code>.',
+                        'Presný postup v appke FusionSolar treba overiť a doplniť.',
+                    ],
+                },
+                suhrn: {
+                    title: 'Krok 6 · Zhrnutie',
+                    why: [
+                        'Pred uložením je všetko na jednej obrazovke a každý riadok vedie na svoj krok. Po oprave sa človek vráti rovno sem.',
+                        'Výroba za jasného dneška dáva číslu kWp zmysel a sedí s tým, čo appka neskôr ukáže ako strop v karte 7 dní.',
+                    ],
+                    impl: [
+                        'Výroba za jasného dneška cez <code>clearSkyAcKw</code> (v návrhu ten istý model pri 25 °C, appka vezme teplotu z predpovede). Varovania z <code>checkSettings</code>.',
+                        'Uloženie ostáva <code>applySettings</code> ako dnes.',
+                    ],
+                },
+                'karta-hotovo': {
+                    title: 'Prehľad po uložení',
+                    why: [
+                        'Po uložení nie je karta formulár, ale prehľad. Kto chce zmeniť jednu vec, ťukne na jej riadok a sprievodcu nemusí prechádzať znova.',
+                        'Nastaviť všetko od začiatku sa dá odkazom dole.',
+                    ],
+                    impl: ['Úprava používa tie isté obrazovky ako sprievodca, len s inou hlavičkou a tlačidlom „Uložiť zmenu“.'],
+                },
+                uprava: {
+                    title: 'Úprava jednej plochy',
+                    why: ['Pri úprave sa človek nechce preklikávať v poradí. Prepínač Smer · Sklon · Panely ho pustí rovno tam, kam chce.'],
+                    impl: [
+                        'Tlačidlo Späť na telefóne vracia v sprievodcovi o krok a z úpravy na prehľad. Krok sprievodcu preto patrí do <code>NavStep</code> vo <code>web/history.js</code>.',
+                    ],
+                },
+            };
+
+            function renderNotes() {
+                const n = NOTES[currentKey()];
+                if (!n) return;
+                document.getElementById('notes').innerHTML = `<h3>${n.title}</h3>
+            <div><h4>Prečo takto</h4><ul>${n.why.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+            <div class="impl"><h4>Pri kódovaní</h4><ul>${n.impl.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+            <p class="notes-hint">Telefón sa dá preklikať celý. Údaje v ňom sú vzorové, elektráreň v Dvoranoch.</p>`;
+            }
+
+            // ---- Prehľad všetkých obrazoviek ------------------------------------------------
+            // Každá obrazovka sa vykreslí tou istou funkciou ako v klikacom telefóne, zo vzorového
+            // stavu a prípadne s úpravou (vyplnený odkaz, rozpísané vyhľadávanie, …).
+            const BASE = JSON.parse(JSON.stringify(st));
+            const reset = (to) => {
+                for (const k of Object.keys(st)) delete st[k];
+                Object.assign(st, JSON.parse(JSON.stringify(to)));
+            };
+            function withState(setup, fn) {
+                const saved = JSON.parse(JSON.stringify(st));
+                reset(BASE);
+                setup(st);
+                const out = fn();
+                reset(saved);
+                return out;
+            }
+            const pvText = () =>
+                st.saved
+                    ? st.live === 'yes' && kioskOk(st.kiosk)
+                        ? 'meranie 13:00'
+                        : 'odhad z predpovede'
+                    : 'ukážka · nastav si elektráreň';
+
+            const none = () => {};
+            const SHOTS = [
+                { group: 'Vstup' },
+                {
+                    k: 'karta-demo',
+                    num: 'Vstup',
+                    name: 'Karta bez elektrárne',
+                    desc: 'Kým nie je nič uložené, karta ponúka sprievodcu namiesto formulára.',
+                },
+                {
+                    k: 'start',
+                    num: 'Vstup',
+                    name: 'Úvod sprievodcu',
+                    desc: 'Na čo sa bude pýtať a koľko to trvá. Druhá cesta je odkaz s nastavením.',
+                },
+                {
+                    k: 'odkaz',
+                    num: 'Vstup',
+                    name: 'Nastavenie z odkazu',
+                    desc: 'Vložený odkaz a náhľad, čo obsahuje, ešte pred prevzatím.',
+                    setup: (x) => (x.link = SAMPLE_LINK),
+                },
+                { group: 'Sprievodca' },
+                {
+                    k: 'lokalita',
+                    num: 'Krok 1 · Poloha',
+                    name: 'Vyhľadanie obce',
+                    desc: 'Výsledky sa ukazujú počas písania.',
+                    setup: (x) => (x.query = 'Nov'),
+                },
+                {
+                    k: 'lokalita',
+                    num: 'Krok 1 · Poloha',
+                    name: 'Potvrdenie polohy',
+                    desc: 'Vybraná obec s dnešným východom a západom slnka.',
+                },
+                {
+                    k: 'panel',
+                    num: 'Krok 2 · Panely',
+                    name: 'Výkon panelu',
+                    desc: 'Štítok ukazuje, kde údaj hľadať. Bežné hodnoty a „Neviem“.',
+                },
+                {
+                    k: 'panel',
+                    num: 'Krok 2 · Panely',
+                    name: 'Celkový výkon',
+                    desc: 'Skratka pre toho, kto pozná len kWp zo zmluvy.',
+                    setup: (x) => (x.wpMode = 'kwp'),
+                },
+                { k: 'smer', num: 'Krok 3 · Strecha', name: 'Smer plochy', desc: 'Kompas s dráhou slnka, strecha sa otáča s výberom.' },
+                { k: 'sklon', num: 'Krok 3 · Strecha', name: 'Sklon plochy', desc: 'Typ strechy, nákres z boku a posúvač na doladenie.' },
+                { k: 'pocet', num: 'Krok 3 · Strecha', name: 'Počet panelov', desc: 'Mriežka panelov a kWp plochy.' },
+                { k: 'dalsia', num: 'Krok 3 · Strecha', name: 'Ďalšia plocha?', desc: 'Prehľad plôch a otázka, či pridať ďalšiu.' },
+                { k: 'menic', num: 'Krok 4 · Menič', name: 'Menič', desc: 'Porovnanie s panelmi a bežné veľkosti meniča.' },
+                {
+                    k: 'meranie',
+                    num: 'Krok 5 · Meranie',
+                    name: 'Živé meranie',
+                    desc: 'Nepovinné. Návod a kontrola odkazu len pre toho, kto má FusionSolar.',
+                    setup: (x) => ((x.live = 'yes'), (x.kiosk = SAMPLE_KIOSK)),
+                },
+                {
+                    k: 'suhrn',
+                    num: 'Krok 6 · Kontrola',
+                    name: 'Zhrnutie',
+                    desc: 'Všetko na jednej obrazovke, výroba za jasného dneška, uloženie.',
+                },
+                { group: 'Po uložení' },
+                {
+                    k: 'karta-hotovo',
+                    num: 'Po uložení',
+                    name: 'Prehľad elektrárne',
+                    desc: 'Karta je prehľad. Ťuknutie na riadok otvorí len jeho krok.',
+                    setup: (x) => ((x.saved = true), (x.live = 'yes'), (x.kiosk = SAMPLE_KIOSK)),
+                },
+                {
+                    k: 'smer',
+                    num: 'Po uložení',
+                    name: 'Úprava jednej plochy',
+                    desc: 'Prepínač Smer · Sklon · Panely, bez prechádzania sprievodcom.',
+                    setup: (x) => ((x.saved = true), (x.edit = 'karta')),
+                },
+            ];
+
+            function renderOverview() {
+                const nav = document.querySelector('#phone .bottomnav').outerHTML;
+                let n = 0;
+                document.getElementById('overview').innerHTML = SHOTS.map((sh, i) => {
+                    if (sh.group) return `<div class="overview-group">${sh.group}</div>`;
+                    n += 1;
+                    // Id a for sa v kópiách zahodia - patria klikaciemu telefónu, dvakrát v stránke byť nesmú.
+                    const phoneHtml = withState(sh.setup || none, () => {
+                        st.screen = sh.k;
+                        const { body, foot: f } = SCREENS[sh.k]();
+                        return `<div class="phone static" inert>
+                    <div class="appbar"><div class="appbar-top"><span class="appbar-label">RAY-MON <span class="appbar-by">Toilet Apps Ltd.</span></span>
+                    <span class="appbar-clock"><span class="live-dot"></span>13:00</span></div><div class="pv-line">${pvText()}</div></div>
+                    <div class="scr">${body}</div><div class="foot">${f}</div>${nav}</div>`;
+                    }).replace(/\s(id|for)="[^"]*"/g, '');
+                    return `<figure class="shot">${phoneHtml}
+                <figcaption><span class="num">${String(n).padStart(2, '0')} · ${sh.num}</span><b>${sh.name}</b><p>${sh.desc}</p>
+                <button type="button" class="try" data-shot="${i}">Vyskúšať v klikacom telefóne</button></figcaption></figure>`;
+                }).join('');
+            }
+
+            function setView(v) {
+                document.getElementById('overview').hidden = v !== 'all';
+                document.getElementById('stage').hidden = v !== 'click';
+                document.getElementById('view-all').setAttribute('aria-pressed', String(v === 'all'));
+                document.getElementById('view-click').setAttribute('aria-pressed', String(v === 'click'));
+            }
+            document.querySelector('.view-switch').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-view]');
+                if (b) setView(b.dataset.view);
+            });
+            document.getElementById('overview').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-shot]');
+                if (!b) return;
+                const sh = SHOTS[Number(b.dataset.shot)];
+                reset(BASE);
+                (sh.setup || none)(st);
+                setView('click');
+                go(sh.k);
+                document.getElementById('stage').scrollIntoView({ block: 'start' });
+            });
+
+            renderOverview();
+            render(true);
+        </script>
+    </body>
+</html>

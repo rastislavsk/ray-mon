@@ -2,6 +2,7 @@
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
 import { STALE_PV_MS } from '../shared/config.js';
+import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { seasonFor } from '../shared/tariff.js';
 import { PANELS } from './dom.js';
 
@@ -37,9 +38,18 @@ import { PANELS } from './dom.js';
  *   importNote: string,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
+ *   setupStep: SetupStep | null,
+ *   setupRoof: number,
+ *   setupReturn: 'suhrn' | 'prehlad' | null,
+ *   setupKwp: number | null,
+ *   setupPick: { wp: Pick, ac: Pick },
+ *   setupLive: boolean,
+ *   setupLink: string,
  * }} AppState
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {import('../shared/setup.js').SetupStep} SetupStep
+ * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -102,6 +112,22 @@ export function initialState(now, season, layout, { settings, demo, incoming = n
         // Čo pribaliť k zdieľanému odkazu na appku.
         shareSettings: false,
         shareKiosk: false,
+        // Sprievodca nastavením elektrárne v karte Nastavenie: otvorená obrazovka (null = karta
+        // ukazuje prehľad) a plocha panelov, ktorej sa týka. Oboje je krok navigácie, takže
+        // tlačidlo Späť na telefóne vracia o obrazovku sprievodcu.
+        setupStep: null,
+        setupRoof: 0,
+        // Úprava jedného kroku: kam sa po nej vrátiť - na zhrnutie sprievodcu, alebo na prehľad
+        // uloženej elektrárne (vtedy sa zmena rovno ukladá). null = sprievodca ide v poradí.
+        setupReturn: null,
+        // Kto pozná len celkový výkon elektrárne (kWp), zadá ten; výkon panelu sa dopočíta.
+        setupKwp: null,
+        // Ako bol zadaný výkon panelu a meniča - „Neviem“ zhrnutie označí ako odhad.
+        setupPick: { wp: 'chip', ac: 'chip' },
+        // Či človek chce živé meranie z kiosku. Rozhoduje, či sa kiosk pri uložení vôbec berie.
+        setupLive: !!settings.kiosk,
+        // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
+        setupLink: '',
     };
 }
 
@@ -195,18 +221,19 @@ export function panelChange(from, to) {
 }
 
 /**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta a či je otvorený detail dňa.
- * Zvyšok stavu (vybraný deň, stránka verdiktu, náhľad času) je nastavenie vnútri karty,
- * nie miesto v appke - tam sa Späť nevracia, rovnako ako v iných appkách.
+ * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
+ * a obrazovka sprievodcu nastavením aj s plochou panelov. Zvyšok stavu (vybraný deň, stránka
+ * verdiktu, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
+ * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
  */
 export function navStep(state) {
-    return { panel: state.panel, weekDetail: state.weekDetail };
+    return { panel: state.panel, weekDetail: state.weekDetail, setup: state.setupStep, roof: state.setupRoof };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.weekDetail === b.weekDetail;
+    return a.panel === b.panel && a.weekDetail === b.weekDetail && a.setup === b.setup && a.roof === b.roof;
 }
 
 /**
@@ -216,7 +243,15 @@ export function sameNavStep(a, b) {
  * @param {Panel} from @param {NavStep} step
  */
 export function navChange(from, step) {
-    return { ...panelChange(from, step.panel), weekDetail: step.weekDetail };
+    // Úprava jedného kroku končí zhrnutím alebo prehľadom - návrat na ne ju ukončí aj tu.
+    const endsEdit = step.setup === null || step.setup === 'suhrn';
+    return {
+        ...panelChange(from, step.panel),
+        weekDetail: step.weekDetail,
+        setupStep: step.setup,
+        setupRoof: step.roof,
+        ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
+    };
 }
 
 /**
@@ -226,10 +261,49 @@ export function navChange(from, step) {
  * @param {unknown} raw @returns {NavStep | null}
  */
 export function navStepFrom(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    const step = /** @type {{ step?: unknown }} */ (raw).step;
+    if (!raw || typeof raw !== 'object') return navStepIn(null);
+    return navStepIn(/** @type {{ step?: unknown }} */ (raw).step);
+}
+
+/**
+ * Krok navigácie z hodnoty v položke histórie. Položka zo staršej verzie appky sprievodcu
+ * nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty.
+ * @param {unknown} step @returns {NavStep | null}
+ */
+function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail } = /** @type {{ panel?: unknown, weekDetail?: unknown }} */ (step);
+    const { panel, weekDetail, setup = null, roof = 0 } = /** @type {Record<string, unknown>} */ (step);
     if (!(weekDetail === null || weekDetail === 'day' || weekDetail === 'week') || !PANELS.some((p) => p === panel)) return null;
-    return { panel: /** @type {Panel} */ (panel), weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail) };
+    if (!validSetupPlace(setup, roof)) return null;
+    return {
+        panel: /** @type {Panel} */ (panel),
+        weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
+        setup: /** @type {SetupStep | null} */ (setup),
+        roof: /** @type {number} */ (roof),
+    };
+}
+
+/** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */
+function validSetupPlace(setup, roof) {
+    return (setup === null || SETUP_STEPS.some((s) => s === setup)) && Number.isInteger(roof) && /** @type {number} */ (roof) >= 0;
+}
+
+/**
+ * Krok navigácie, z ktorého appka do tejto položky histórie prišla (`prev`, zapisuje ho
+ * initHistory). Podľa neho vie tlačidlo „Späť“ v sprievodcovi, či smie ísť cez históriu.
+ * @param {unknown} raw @returns {NavStep | null}
+ */
+export function navPrevFrom(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    return navStepIn(/** @type {{ prev?: unknown }} */ (raw).prev);
+}
+
+/**
+ * Rozpísané nastavenie tak, ako by sa uložilo: bez kiosku, keď človek živé meranie nechce,
+ * a s výkonom panelu dopočítaným z celkového výkonu, keď zadal ten.
+ * @param {AppState} state @returns {import('../shared/settings.js').Settings}
+ */
+export function setupDraft(state) {
+    const draft = state.setupLive ? state.settingsDraft : { ...state.settingsDraft, kiosk: '' };
+    return resolveDraft(draft, state.setupKwp);
 }

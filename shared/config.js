@@ -71,6 +71,23 @@ export const SETTINGS_LIMITS = {
     elevationM: { min: -500, max: 6000 },
     // Nad týmto pomerom výkonu panelov k meniču bude menič za jasných dní orezávať špičky.
     dcAcWarnRatio: 1.3,
+    // Celkový výkon elektrárne v kWp, keď ho človek zadá namiesto výkonu jedného panelu.
+    // Horná hranica je najväčšia zostava, akú rozsahy vyššie pripustia (3 × 200 × 800 Wp).
+    totalKwp: { min: 0.1, max: 480 },
+};
+
+/**
+ * Sprievodca nastavením elektrárne (karta Nastavenie). Tlačidlá s bežnými hodnotami,
+ * odhad pre „Neviem“ a to, s čím začína nová plocha panelov.
+ */
+export const SETUP = {
+    panelWpChoices: [400, 410, 435, 450, 500],
+    acChoices: [3, 5, 6, 8, 10, 12, 15, 20],
+    // „Neviem“ pri výkone panelu: bežný panel posledných rokov.
+    guessPanelWp: 430,
+    newRoof: { panels: 10, tiltDeg: 35 },
+    // Kompas má osem smerov po 45°.
+    compassStepDeg: 45,
 };
 
 // Vyhľadávanie lokality sa spustí, až keď človek toľkoto milisekúnd nepíše.

@@ -33,6 +33,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `config.js`      | Všetky konštanty: Dvorany a ukážka, rozsahy nastavenia, hranice výkonu, tarifné okná, spotrebiče, adresy. |
 | `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.   |
 | `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                          |
+| `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.       |
 | `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                    |
 | `tariff.js`      | Sezóna, tarifné okná, pásma výkonu, stav spotrebičov.                                                     |
 | `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                  |
@@ -54,11 +55,22 @@ susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovk
 neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
 najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
-Menovaný je jediný prvok – jazdec na dennom prstenci ciferníka, ktorý sa ťahá a neposúva.
-`settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Formulár v karte
-Nastavenie píše rozpísané nastavenie do stavu (`settingsDraft`); render z neho dopočíta
-súčty a hlásenia, ale hodnoty polí prepíše len pri zmene `settingsRev`, aby neprepisoval
-to, čo človek práve píše. Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
+Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: jazdec na dennom prstenci ciferníka
+a posúvač (`input[type=range]`, sklon strechy v sprievodcovi nastavením).
+`settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Kartu Nastavenie tvorí
+prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
+`render/nastavenie.js`). Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
+`setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
+`shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
+o ňu; „Späť“ v sprievodcovi ide cez `history.back()` (`backTo`), keď do aktuálnej položky
+histórie appka prišla práve z cieľovej obrazovky - položka si to pamätá v `prev`.
+Rozpísané nastavenie je v stave (`settingsDraft`); render z neho dopočíta súčty a hlásenia,
+ale hodnoty polí prepíše len pri zmene `settingsRev`, plochy alebo obrazovky, aby neprepisoval
+to, čo človek práve píše. Kto zadá celkový výkon namiesto výkonu panelu (`setupKwp`), tomu
+`resolveDraft` dopočíta výkon panelu z počtu panelov - uložený formát sa nemení. Kompas,
+nákres sklonu a mriežka panelov vznikajú ako modely v `chart-model.js` a SVG z nich skladá
+`svg.js`; podiel smeru oproti najlepšiemu (`orientationShare`), východ a západ slnka
+(`sunTimes`) aj výrobu za jasného dňa (`clearDayKwh`) počíta `solar.js`. Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
 nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
 `settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.

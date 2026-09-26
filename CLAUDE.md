@@ -62,6 +62,11 @@ cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`): zvislé
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
 
+Listovanie kariet ťahom (`web/swipe.js`) si gesto neberie tam, kde sa pod prstom ťahá niečo do
+strán. Rozhoduje pravidlo (vnútorný pás, ktorý sa má kam posunúť), menované sú len úchytky, ktoré
+sa ťahajú a neposúvajú: jazdec na dennom prstenci a posúvač `input[type=range]` (sklon strechy
+v sprievodcovi nastavením). Nový posúvač tak netreba nikam dopisovať.
+
 Kontrolujú to e2e testy v skupine „listovanie kariet prstom“: ťuknutie bez jediného pohybu prsta
 musí tooltip ukázať a nechať svietiť, zvislý ťah cez graf musí posunúť stránku a tooltip neukázať.
 

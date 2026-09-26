@@ -16,11 +16,12 @@ import { nextPanel, nextWeekDay, panelChange } from './state.js';
 /** @typedef {import('./dom.js').Dom} Dom */
 /** @typedef {{ x: number, y: number, t: number, room: { left: number, right: number, pager: boolean } | null, chart: boolean }} Zaciatok */
 
-/** Jazdec na dennom prstenci nie je posuvný pás, ale úchytka na ťahanie - pravidlo
- * o vnútorných pásoch nižšie ho nechytí a bez tejto výnimky by ťahanie jazdca prepínalo
- * kartu namiesto náhľadu iného času. Jediné menované miesto v celom module; inde
- * rozhoduje pravidlo. */
-const DRAG_HANDLE = '.dial-grip';
+/** Úchytky na ťahanie do strán, ktoré nie sú posuvným pásom - pravidlo o vnútorných pásoch
+ * nižšie ich nechytí a bez tejto výnimky by ťah prepol kartu. Jazdec na dennom prstenci
+ * (náhľad iného času) a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
+ * nastavením): ten ťahá prehliadač sám, gesto mu ale posiela aj touchend, ktorý by inak
+ * vyzeral ako švihnutie. Jediné menované miesta v celom module; inde rozhoduje pravidlo. */
+const DRAG_HANDLE = '.dial-grip, input[type="range"]';
 
 /** Nad grafom ide tooltip za prstom, takže pomalý ťah po krivke je prezeranie, nie
  * listovanie - kartu tam prepne len rýchle švihnutie (SWIPE.flickMs). */

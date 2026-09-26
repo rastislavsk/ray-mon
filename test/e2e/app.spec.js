@@ -17,11 +17,11 @@ import {
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
-import { fmt1, hourLabel, weekDayLong } from '../../shared/format.js';
+import { fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
-import { buildForecast } from '../../shared/solar.js';
+import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -1381,7 +1381,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0 },
     });
     expect(errors).toEqual([]);
 });
@@ -1424,7 +1424,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
         await ocakavajKartu(page, 'nastavenie');
-        await swipe(page, '#panel-nastavenie .settings-list', { dx: 120 });
+        await swipe(page, '#setup', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
@@ -1440,24 +1440,38 @@ test.describe('listovanie kariet prstom', () => {
     });
 
     /**
-     * Karta Nastavenie má zatiaľ jedinú položku, takže je oveľa kratšia než obrazovka. Kus
-     * plochy pod ňou pre prst ku karte patrí - a musí tam listovať rovnako ako nad obsahom.
-     * Kým poslucháče gesta sedeli na #page (tá je vysoká presne podľa obsahu karty), ťah
-     * v tomto mieste neurobil nič a karta sa dala prelistovať len nad jej hornou časťou.
+     * Karta Info má dve položky, takže je oveľa kratšia než obrazovka. Kus plochy pod ňou pre
+     * prst ku karte patrí - a musí tam listovať rovnako ako nad obsahom. Kým poslucháče gesta
+     * sedeli na #page (tá je vysoká presne podľa obsahu karty), ťah v tomto mieste neurobil
+     * nič a karta sa dala prelistovať len nad jej hornou časťou.
      */
     test('ťah v prázdnom mieste pod krátkou kartou listuje rovnako ako nad jej obsahom', async ({ page }) => {
         const errors = await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await ocakavajKartu(page, 'nastavenie');
+        await page.locator('#nav-info').click();
+        await ocakavajKartu(page, 'info');
 
-        const karta = await page.locator('#panel-nastavenie').boundingBox();
-        const prazdno = { x: 195, y: karta.y + karta.height + 120, dx: -120 };
+        const karta = await page.locator('#panel-info').boundingBox();
+        const prazdno = { x: 195, y: karta.y + karta.height + 60, dx: 120 };
         expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(844 - 120);
 
         await tahajVBode(page, prazdno);
-        await ocakavajKartu(page, 'info');
-        await tahajVBode(page, { ...prazdno, dx: 120 });
         await ocakavajKartu(page, 'nastavenie');
+        expect(errors).toEqual([]);
+    });
+
+    /** Posúvač (sklon strechy v sprievodcovi) sa ťahá do strán - ťah po ňom nesmie prepnúť
+     * kartu. Je to menovaná úchytka v swipe.js, rovnako ako jazdec na ciferníku. */
+    test('ťahanie posúvača sklonu neprepne kartu', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#setup-rows [data-setup-edit="roof:0"]').click();
+        await page.locator('[data-setup-tab="sklon"]').click();
+        // Posúvač je nízko na obrazovke - ťah musí začať naozaj na ňom, nie pod okrajom displeja
+        // ani pod tlačidlami sprievodcu, ktoré sa lepia k spodku. Človek ťahá posúvač, ktorý vidí.
+        await page.locator('#wz-tilt').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+        await swipe(page, '#wz-tilt', { dx: -120 });
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator('#wz-sklon')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -1865,6 +1879,36 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
 });
 
 test.describe('moja elektráreň', () => {
+    /** Otvorí sprievodcu z karty Nastavenie bez uloženej elektrárne. @param {import('@playwright/test').Page} page */
+    async function otvorSprievodcu(page) {
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#setup-cta [data-setup-go="start"]').click();
+        await expect(page.locator('#wz-start')).toBeVisible();
+    }
+    /** @param {import('@playwright/test').Page} page */
+    const dalej = (page) => page.locator('#wz-next').click();
+    /** @param {import('@playwright/test').Page} page @param {string} query @param {string} name */
+    async function vyberMiesto(page, query, name) {
+        await page.locator('#wz-place').fill(query);
+        await page.locator('.geo-pick', { hasText: name }).click();
+    }
+    /** Od úvodu po obrazovku merania: Sevilla, panel 435 Wp, jedna plocha, menič 5 kW. @param {import('@playwright/test').Page} page */
+    async function poMeranie(page) {
+        await dalej(page);
+        await vyberMiesto(page, 'Sev', 'Sevilla');
+        await dalej(page);
+        await page.locator('[data-setup-wp="435"]').click();
+        for (const step of ['panel', 'smer', 'sklon', 'pocet', 'dalsia']) {
+            await expect(page.locator(`#wz-${step}`)).toBeVisible();
+            await dalej(page);
+        }
+        await page.locator('[data-setup-ac="5"]').click();
+        await dalej(page);
+        await expect(page.locator('#wz-meranie')).toBeVisible();
+    }
+    /** @param {import('@playwright/test').Page} page */
+    const ulozene = (page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
+
     test('bez uloženého nastavenia je ukážka Londýna: čas, výkon aj predpoveď sú londýnske', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
@@ -1876,134 +1920,258 @@ test.describe('moja elektráreň', () => {
         // Ten istý výkon ako v Nastavení - kWp sa počíta aj píše na jednom mieste.
         await expect(page.locator('#week-sub')).toHaveText('Londýn · 5,22 kWp');
         await page.locator('#nav-nastavenie').click();
-        await expect(page.locator('#settings-demo')).toBeVisible();
-        await expect(page.locator('#set-hint')).toHaveText('Ukážka · Londýn · 5,22 kWp');
+        // Karta ponúka sprievodcu, starý formulár nie je vidno.
+        await expect(page.locator('#setup-demo')).toBeVisible();
+        await expect(page.locator('#setup-cta')).toBeVisible();
+        await expect(page.locator('#setup-overview')).toBeHidden();
+        await expect(page.locator('#settings-plant')).toBeHidden();
         expect(errors).toEqual([]);
     });
 
-    test('úprava zostavy: súčet sa ráta hneď, chyba zablokuje uloženie, zahodenie vráti pôvodné', async ({ page }) => {
-        const errors = await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await expect(page.locator('#settings-demo')).toBeHidden();
-        await page.locator('#settings-plant > summary').click();
-        await expect(page.locator('#set-hint')).toHaveText('Dvorany nad Nitrou · 10,44 kWp');
-        await expect(page.locator('#set-total-kwp')).toHaveText('10,44 kWp');
-        const save = page.locator('#set-save');
-        await expect(save).toBeDisabled();
+    test('sprievodca: prvé nastavenie od polohy po uloženie, prežije načítanie stránky', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await otvorSprievodcu(page);
+        await expect(page.locator('#wz-next')).toHaveText('Začať');
+        await dalej(page);
 
-        await page.locator('#set-roof-0 [data-step="1"]').click();
-        await expect(page.locator('#set-panels-0')).toHaveValue('17');
-        await expect(page.locator('#set-total-kwp')).toHaveText('10,88 kWp');
-        await expect(save).toBeEnabled();
+        // Poloha: kým nie je vybraná, ďalej sa nedá. Potvrdí ju dnešný východ a západ slnka.
+        await expect(page.locator('#wz-step')).toHaveText('Krok 1 z 6 · Poloha');
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await vyberMiesto(page, 'Sev', 'Sevilla');
+        const sevilla = GEOCODE.results[0];
+        const site = {
+            name: 'Sevilla',
+            lat: sevilla.latitude,
+            lon: sevilla.longitude,
+            elevationM: sevilla.elevation,
+            timezone: sevilla.timezone,
+        };
+        const sun = sunTimes(site, localDateKey(FIXED_NOW, site.timezone));
+        await expect(page.locator('#wz-place-card')).toContainText(minutesToTimeStr(/** @type {number} */ (sun.rise)));
+        await expect(page.locator('#wz-place-card')).toContainText(minutesToTimeStr(/** @type {number} */ (sun.set)));
+        await dalej(page);
 
-        await page.locator('#set-wp').fill('50');
-        await expect(page.locator('#set-msgs .err')).toContainText('Výkon panelu');
-        await expect(save).toBeDisabled();
+        // Výkon panelu: bez výberu sa ďalej nedá, „Neviem“ dosadí bežnú hodnotu.
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await page.locator('[data-setup-wp="guess"]').click();
+        await expect(page.locator('#wz-wp-guess')).toBeVisible();
+        await page.locator('[data-setup-wp="435"]').click();
+        await expect(page.locator('#wz-wp-guess')).toBeHidden();
+        await dalej(page);
 
-        await page.locator('#set-reset').click();
-        await expect(page.locator('#set-wp')).toHaveValue('435');
-        await expect(page.locator('#set-panels-0')).toHaveValue('16');
-        await expect(page.locator('#set-msgs')).toBeEmpty();
-        await expect(save).toBeDisabled();
-        expect(errors).toEqual([]);
-    });
+        // Smer, sklon a počet prvej plochy.
+        await expect(page.locator('#wz-sub')).toHaveText('Plocha 1');
+        await page.locator('[data-setup-az="135"]').click();
+        await expect(page.locator('[data-setup-az="135"]')).toHaveAttribute('aria-checked', 'true');
+        await expect(page.locator('#wz-dir-name')).toHaveText('Juhovýchod');
+        await dalej(page);
+        await page.locator('[data-setup-tilt="45"]').click();
+        await expect(page.locator('#wz-tilt')).toHaveValue('45');
+        await dalej(page);
+        await page.locator('[data-setup-step="1"]').click();
+        await expect(page.locator('#wz-panels')).toHaveValue('11');
+        await expect(page.locator('#wz-panel-grid rect.pv')).toHaveCount(11);
+        await dalej(page);
 
-    test('plochy: pridať do troch, odstrániť, orientácia a sklon', async ({ page }) => {
-        await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await expect(page.locator('#set-roof-2')).toBeHidden();
-        await page.locator('#set-roof-add').click();
-        await expect(page.locator('#set-roof-2')).toBeVisible();
-        await expect(page.locator('#set-roof-add')).toBeHidden();
-        await expect(page.locator('#set-roof-2 [data-az="180"]')).toHaveAttribute('aria-pressed', 'true');
-        await page.locator('#set-roof-2 [data-az="270"]').click();
-        await expect(page.locator('#set-roof-2 [data-az="270"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('#set-roof-2 [data-az="180"]')).toHaveAttribute('aria-pressed', 'false');
-        await page.locator('#set-tilt-2').fill('55');
-        await expect(page.locator('#set-tilt-out-2')).toHaveText('55°');
-        await expect(page.locator('#set-total-kwp')).toHaveText('13,05 kWp');
-        await page.locator('#set-roof-del-0').click();
-        await expect(page.locator('#set-roof-2')).toBeHidden();
-        // Po odstránení prvej sa zvyšné posunú: pôvodná druhá (8 panelov) je teraz prvá.
-        await expect(page.locator('#set-panels-0')).toHaveValue('8');
-        await expect(page.locator('#set-tilt-out-1')).toHaveText('55°');
-    });
+        // Jedna plocha stačí, menič, meranie preskočiť.
+        await expect(page.locator('#wz-next')).toHaveText('Nie, to je všetko');
+        await dalej(page);
+        await page.locator('[data-setup-ac="5"]').click();
+        await dalej(page);
+        await expect(page.locator('#wz-next')).toHaveText('Preskočiť');
+        await dalej(page);
 
-    test('nová lokalita: vyhľadanie, uloženie, predpoveď bez živého merania, prežije načítanie', async ({ page }) => {
-        const errors = await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await page.locator('#set-place').fill('Sev');
-        await page.locator('.geo-pick', { hasText: 'Sevilla' }).click();
-        await expect(page.locator('#set-place')).toHaveValue('Sevilla');
-        await expect(page.locator('#set-place-meta')).toHaveText('37,39° s. š. · 5,98° z. d. · 10 m n. m. · Europe/Madrid');
-        // Bez kiosku ukáže appka odhad z predpovede.
-        await page.locator('#set-kiosk').fill('');
-        await page.locator('#set-save').click();
-        await expect(page.locator('#set-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
-        await expect(page.locator('#set-hint')).toHaveText('Sevilla · 10,44 kWp');
+        // Zhrnutie: nič sa ešte neuložilo.
+        await expect(page.locator('#wz-step')).toHaveText('Krok 6 z 6 · Kontrola');
+        await expect(page.locator('#wz-summary .big')).toHaveText(kwpText((11 * 435) / 1000));
+        expect(await ulozene(page)).toBeNull();
+        await dalej(page);
+
+        await expect(page.locator('#setup-overview')).toBeVisible();
+        await expect(page.locator('#setup-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
-        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
+        const stored = await ulozene(page);
         expect(stored.site.name).toBe('Sevilla');
+        expect(stored.strings).toEqual([{ panels: 11, azimuthDeg: 135, tiltDeg: 45 }]);
+        expect(stored.acLimitKw).toBe(5);
+        expect(stored.kiosk).toBe('');
 
         await page.reload();
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
         await page.locator('#nav-7dni').click();
-        await expect(page.locator('#week-sub')).toHaveText('Sevilla · 10,44 kWp');
+        await expect(page.locator('#week-sub')).toHaveText(`Sevilla · ${kwpText((11 * 435) / 1000)}`);
         expect(errors).toEqual([]);
     });
 
-    /** Lokalita je pole formulára elektrárne, takže Enter v nej (na mobile kláves Hľadať)
-     * formulár odoslal. V ukážke, kde je Uložiť vždy povolené, sa tak Londýn uložil ako vlastná
-     * elektráreň - človek pritom len hľadal svoju obec. */
+    test('tlačidlo Späť na telefóne vracia o obrazovku sprievodcu, „Späť“ v sprievodcovi je ten istý krok', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await otvorSprievodcu(page);
+        await dalej(page);
+        await vyberMiesto(page, 'Sev', 'Sevilla');
+        await dalej(page);
+        await expect(page.locator('#wz-panel')).toBeVisible();
+
+        await page.goBack();
+        await expect(page.locator('#wz-lokalita')).toBeVisible();
+        // Tlačidlo „Späť“ ide cez históriu: ďalšie Späť na telefóne potom neotvorí to, odkiaľ sa prišlo.
+        await page.locator('#wz-back').click();
+        await expect(page.locator('#wz-start')).toBeVisible();
+        await page.goBack();
+        await expect(page.locator('#setup-cta')).toBeVisible();
+        await expect(page.locator('#wizard')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('celkový výkon namiesto panelu: výkon panelu sa dopočíta a nezmysel nepustí ďalej', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await otvorSprievodcu(page);
+        await dalej(page);
+        await vyberMiesto(page, 'Sev', 'Sevilla');
+        await dalej(page);
+        await page.locator('#wz-wpmode-kwp').click();
+        await expect(page.locator('#wz-title')).toHaveText('Aký výkon má celá elektráreň?');
+        await page.locator('#wz-kwp').fill('10,44');
+        await dalej(page);
+        await dalej(page);
+        await dalej(page);
+        await page.locator('#wz-panels').fill('24');
+        await expect(page.locator('#wz-panels-kwp')).toContainText('dopočítam');
+        await dalej(page);
+        await expect(page.locator('#wz-derived')).toHaveText('Spolu 24 panelov a 10,44 kWp, teda 435 Wp na panel.');
+        await expect(page.locator('#wz-next')).toBeEnabled();
+
+        // Tri panely na 10 kWp by mali po 3 480 Wp - taký panel neexistuje.
+        await page.locator('[data-setup-roof-edit="0"]').click();
+        await dalej(page);
+        await dalej(page);
+        await page.locator('#wz-panels').fill('3');
+        await dalej(page);
+        await expect(page.locator('#wz-derived .err')).toContainText('3480 Wp');
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        expect(errors).toEqual([]);
+    });
+
+    test('plochy: pridať do troch, odstrániť', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await otvorSprievodcu(page);
+        await dalej(page);
+        await vyberMiesto(page, 'Sev', 'Sevilla');
+        await dalej(page);
+        await page.locator('[data-setup-wp="435"]').click();
+        for (let i = 0; i < 4; i++) await dalej(page);
+        for (const roof of [2, 3]) {
+            await page.locator('#wz-roof-add').click();
+            await expect(page.locator('#wz-sub')).toHaveText(`Plocha ${roof} z ${roof}`);
+            for (let i = 0; i < 3; i++) await dalej(page);
+        }
+        await expect(page.locator('#wz-roofs .roof-row')).toHaveCount(3);
+        await expect(page.locator('#wz-roof-add')).toBeHidden();
+        await expect(page.locator('#wz-title')).toHaveText('Tri plochy sú maximum');
+        await page.locator('[data-setup-roof-del="0"]').click();
+        await expect(page.locator('#wz-roofs .roof-row')).toHaveCount(2);
+        await expect(page.locator('#wz-roof-add')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('južná pologuľa: nová plocha sa otočí na sever, uložená plocha na juh dostane varovanie', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await otvorSprievodcu(page);
+        await dalej(page);
+        await vyberMiesto(page, 'Syd', 'Sydney');
+        await dalej(page);
+        await page.locator('[data-setup-wp="435"]').click();
+        await dalej(page);
+        await expect(page.locator('[data-setup-az="0"]')).toHaveAttribute('aria-checked', 'true');
+
+        // Uložená elektráreň v Dvoranoch (plochy na juh a východ) presunutá do Sydney.
+        await page.goto('/');
+        await page.evaluate(([key, value]) => localStorage.setItem(key, value), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))]);
+        await page.reload();
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#setup-rows [data-setup-edit="lokalita"]').click();
+        await vyberMiesto(page, 'Syd', 'Sydney');
+        await dalej(page);
+        await expect(page.locator('#setup-warnings')).toContainText('južnej pologuli');
+        expect(errors).toEqual([]);
+    });
+
+    test('úprava z prehľadu: len jeden krok, uloží sa hneď; zrušenie nechá, ako bolo', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await expect(page.locator('#setup-hero .big')).toHaveText('10,44 kWp');
+
+        await page.locator('#setup-rows [data-setup-edit="roof:1"]').click();
+        await expect(page.locator('#wz-step')).toHaveText('Úprava · Strecha');
+        await expect(page.locator('#wz-roof-tabs')).toBeVisible();
+        await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await page.locator('[data-setup-az="180"]').click();
+        await page.locator('[data-setup-tab="sklon"]').click();
+        await page.locator('[data-setup-tilt="20"]').click();
+        await dalej(page);
+        await expect(page.locator('#setup-overview')).toBeVisible();
+        const stored = await ulozene(page);
+        expect(stored.strings[1]).toEqual({ panels: 8, azimuthDeg: 180, tiltDeg: 20 });
+
+        // × pri úprave zahodí zmenu.
+        await page.locator('#setup-rows [data-setup-edit="menic"]').click();
+        await page.locator('[data-setup-ac="5"]').click();
+        await page.locator('#wz-close').click();
+        await expect(page.locator('#setup-rows [data-setup-edit="menic"]')).toContainText('10 kW');
+        expect((await ulozene(page)).acLimitKw).toBe(10);
+        expect(errors).toEqual([]);
+    });
+
     test('Enter vo vyhľadávaní lokality nič neuloží, len hľadá', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await expect(page.locator('#set-save')).toBeEnabled();
-
-        await page.locator('#set-place').fill('Sev');
-        await page.locator('#set-place').press('Enter');
+        await otvorSprievodcu(page);
+        await dalej(page);
+        await page.locator('#wz-place').fill('Sev');
+        await page.locator('#wz-place').press('Enter');
         await expect(page.locator('.geo-pick', { hasText: 'Sevilla' })).toBeVisible();
-        await expect(page.locator('#set-note')).toBeEmpty();
-        await expect(page.locator('#settings-demo')).toBeVisible();
-        expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+        await expect(page.locator('#wz-lokalita')).toBeVisible();
+        expect(await ulozene(page)).toBeNull();
         expect(errors).toEqual([]);
     });
 
-    test('južná pologuľa: varovanie pri ploche na juh, nová plocha smeruje na sever', async ({ page }) => {
-        await openApp(page);
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await page.locator('#set-place').fill('Syd');
-        await page.locator('.geo-pick', { hasText: 'Sydney' }).click();
-        await expect(page.locator('#set-msgs')).toContainText('južnej pologuli');
-        await page.locator('#set-roof-add').click();
-        await expect(page.locator('#set-roof-2 [data-az="0"]')).toHaveAttribute('aria-pressed', 'true');
-    });
-
-    test('vlastný kiosk: cudzí odkaz nejde uložiť, kiosk FusionSolar dodá živé meranie aj mimo Dvorian', async ({ page }) => {
+    test('vlastný kiosk: cudzí odkaz nepustí ďalej, kiosk FusionSolar dodá živé meranie', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
         /** @type {string[]} */ const bodies = [];
         page.on('request', (r) => r.url() === WORKER_PV_URL && bodies.push(r.postData() || ''));
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await expect(page.locator('#set-kiosk-meta')).toHaveText('Bez odkazu ukážem len predpoveď.');
-        await page.locator('#set-kiosk').fill('https://example.com/?kk=Abc123xyz');
-        await expect(page.locator('#set-msgs .err')).toContainText('kiosk FusionSolar');
-        await expect(page.locator('#set-save')).toBeDisabled();
+        await otvorSprievodcu(page);
+        await poMeranie(page);
+        await page.locator('#wz-live-yes').click();
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await page.locator('#wz-kiosk').fill('https://example.com/?kk=Abc123xyz');
+        await expect(page.locator('#wz-kiosk-note')).toHaveClass(/err/);
+        await expect(page.locator('#wz-next')).toBeDisabled();
         const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-        await page.locator('#set-kiosk').fill(kiosk);
-        await expect(page.locator('#set-msgs')).toBeEmpty();
-        await expect(page.locator('#set-kiosk-meta')).toHaveText('Po uložení overím, či kiosk odpovedá.');
-        await page.locator('#set-save').click();
-        // Londýn, FIXED_NOW 11:00 UTC = 12:00 miestneho.
-        await expect(page.locator('#pv-updated')).toHaveText('meranie 12:00');
+        await page.locator('#wz-kiosk').fill(kiosk);
+        await expect(page.locator('#wz-kiosk-note')).toHaveText('Vyzerá to ako kiosk FusionSolar. Po uložení overím, či odpovedá.');
+        await dalej(page);
+        await expect(page.locator('#wz-summary')).toContainText('kiosk FusionSolar');
+        await dalej(page);
+        // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
+        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
         expect(bodies).toContain(kiosk);
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
         expect(errors).toEqual([]);
+    });
+
+    test('prístupnosť sprievodcu: kompas, zhrnutie a prehľad bez závažných nálezov axe', async ({ page }) => {
+        await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        const vazne = async () =>
+            (await new AxeBuilder({ page }).include('#panel-nastavenie').analyze()).violations
+                .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+                .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+        expect(await vazne()).toEqual([]);
+        await page.locator('#setup-rows [data-setup-edit="roof:0"]').click();
+        // Kompas z klávesnice: šípky otáčajú o 45°.
+        await page.locator('[data-setup-az="180"]').focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.locator('[data-setup-az="225"]')).toHaveAttribute('aria-checked', 'true');
+        await expect(page.locator('[data-setup-az="225"]')).toBeFocused();
+        expect(await vazne()).toEqual([]);
     });
 });
 
@@ -2061,34 +2229,34 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#share-options')).toBeHidden();
     });
 
-    /** Pole na odkaz je vo formulári elektrárne. Enter po vložení odkazu (na mobile kláves Choď)
-     * formulár odoslal a uložil rozpísané nastavenie - v ukážke Londýn -, nie to z odkazu. */
-    test('Enter v poli s odkazom neuloží formulár, len ponúkne prevziať', async ({ page }) => {
+    /** Odkaz vložený v sprievodcovi sa neuloží hneď - najprv ukáže, čo obsahuje, a zhrnutie. */
+    test('odkaz vložený v sprievodcovi: náhľad, zhrnutie a uloženie až po potvrdení', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
         await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-
-        await page.locator('#set-import').fill(LINK);
-        await page.locator('#set-import').press('Enter');
-        await expect(page.locator('#import-offer')).toBeVisible();
-        await expect(page.locator('#set-note')).toBeEmpty();
-        await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
+        await page.locator('#setup-cta [data-setup-go="odkaz"]').click();
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await page.locator('#wz-link').fill(LINK);
+        await page.locator('#wz-link').press('Enter');
+        await expect(page.locator('#wz-link-preview')).toContainText('Dvorany nad Nitrou');
+        await expect(page.locator('#wz-link-preview')).toContainText('so živým meraním');
         expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+        await page.locator('#wz-next').click();
+        await expect(page.locator('#wz-suhrn')).toBeVisible();
+        await expect(page.locator('#wz-summary .big')).toHaveText('10,44 kWp');
+        await page.locator('#wz-next').click();
+        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
+        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
+        expect(stored).toEqual(toUser(OWNER));
         expect(errors).toEqual([]);
     });
 
-    test('prilepený odkaz: nesprávny ohlási chybu, správny ponúkne prevziať', async ({ page }) => {
+    test('prilepený odkaz bez nastavenia ohlási chybu a nepustí ďalej', async ({ page }) => {
         await openApp(page, { settings: null });
         await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-plant > summary').click();
-        await page.locator('#set-import').fill('https://example.com/nieco');
-        await expect(page.locator('#set-import-note')).toHaveText('Tento odkaz neobsahuje platné nastavenie elektrárne.');
-        await expect(page.locator('#import-offer')).toBeHidden();
-        await page.locator('#set-import').fill(LINK);
-        await expect(page.locator('#import-offer')).toBeVisible();
-        await page.locator('#import-accept').click();
-        await expect(page.locator('#set-hint')).toHaveText('Dvorany nad Nitrou · 10,44 kWp');
-        await expect(page.locator('#set-kiosk')).toHaveValue(TEST_KIOSK);
-        await expect(page.locator('#set-import')).toHaveValue('');
+        await page.locator('#setup-cta [data-setup-go="odkaz"]').click();
+        await page.locator('#wz-link').fill('https://example.com/nieco');
+        await expect(page.locator('#wz-link-note')).toBeVisible();
+        await expect(page.locator('#wz-link-preview')).toBeHidden();
+        await expect(page.locator('#wz-next')).toBeDisabled();
     });
 });

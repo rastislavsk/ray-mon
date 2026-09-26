@@ -4,6 +4,9 @@ import { MINUTES_PER_DAY } from '../shared/config.js';
 import {
     chartDims,
     chartTooltipModel,
+    COMPASS,
+    compassModel,
+    compassPoint,
     fillDims,
     dayKwAt,
     dayRingModel,
@@ -12,11 +15,13 @@ import {
     interpolate,
     kwGridStep,
     minutesFromAngle,
+    panelGridModel,
     RING,
     ringGap,
     ringPercent,
     ringPoint,
     smoothPath,
+    tiltModel,
     usePct,
     WEEK_HOURS,
     weekBarsModel,
@@ -322,4 +327,41 @@ test('weekStatsModel', () => {
     assert.equal(weekStatsModel(forecast.days, { ...pv, dailyEnergyKwh: null }, false).progress, null);
     assert.equal(typeof s.trendPct, 'number');
     assert.equal(usePct({ ...forecast.days[0], clearKwhTotal: 0 }), null);
+});
+
+test('kompas: osem výsekov, zvolený svieti, slnko na poludnie na juhu (na južnej pologuli na severe)', () => {
+    const m = compassModel(135, false);
+    assert.equal(m.sectors.length, 8);
+    assert.deepEqual(
+        m.sectors.filter((s) => s.on).map((s) => s.az),
+        [135],
+    );
+    assert.ok(m.sun.y > COMPASS.viewBox / 2, 'na severnej pologuli je poludnie dole (juh)');
+    assert.ok(compassModel(0, true).sun.y < COMPASS.viewBox / 2, 'na južnej hore (sever)');
+    assert.equal(m.rotateDeg, -45, 'strecha nakreslená na juh sa otočí o rozdiel');
+    // Tlačidlá sedia v percentách obalu: sever hore v strede, východ vpravo.
+    const [sever, , vychod] = m.sectors;
+    assert.ok(Math.abs(sever.button.left - 50) < 1e-9 && sever.button.top < 50);
+    assert.ok(vychod.button.left > 50 && Math.abs(vychod.button.top - 50) < 1e-9);
+    assert.ok(Math.abs(compassPoint(90, 10, 0).x - 10) < 1e-9, 'azimut 90 je vpravo');
+});
+
+test('nákres sklonu: rovina stúpa doľava, pri plochej streche bez oblúka uhla', () => {
+    const plocha = tiltModel(0);
+    assert.equal(plocha.arc, null);
+    assert.ok(Math.abs(plocha.end.y - plocha.pivot.y) < 1e-9);
+    const strma = tiltModel(45);
+    assert.ok(strma.arc && strma.end.x < strma.pivot.x && strma.end.y < strma.pivot.y);
+    const stena = tiltModel(90);
+    assert.ok(Math.abs(stena.end.x - stena.pivot.x) < 1e-6, 'panel na stene stojí zvislo');
+});
+
+test('mriežka panelov: najviac 40 kresbou, zvyšok číslom, neplatný počet nič', () => {
+    assert.equal(panelGridModel(16).cells.length, 16);
+    assert.equal(panelGridModel(16).more, 0);
+    const vela = panelGridModel(55);
+    assert.equal(vela.cells.length, 40);
+    assert.equal(vela.more, 15);
+    assert.ok(vela.height > panelGridModel(10).height);
+    assert.equal(panelGridModel(NaN).cells.length, 0);
 });
