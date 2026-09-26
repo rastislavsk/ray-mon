@@ -2362,6 +2362,815 @@ b {
     color: var(--green);
 }
 
+/* ---- Moja elektráreň: prehľad a sprievodca nastavením ------------------------ */
+/* Starý formulár ostáva v index.html, kým sa appka nasadzuje po krokoch (viď CLAUDE.md,
+   „Nasadenie a cache"). Len čo render zapne sprievodcu, starý formulár zmizne. */
+#panel-nastavenie:has(#setup:not(.hidden)) > #settings-demo,
+#panel-nastavenie:has(#setup:not(.hidden)) > .settings-list {
+    display: none;
+}
+.setup {
+    max-width: 520px;
+    margin: 0 auto;
+}
+.setup-home,
+.setup-overview {
+    display: grid;
+    gap: var(--sp-3);
+}
+.setup-cta {
+    display: grid;
+    gap: var(--sp-3);
+    padding: 18px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    border: 1px solid rgba(var(--green-rgb), 0.35);
+}
+.setup-cta h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.setup-cta p {
+    margin: 0;
+    color: var(--ink-45);
+}
+.setup-cta .link-btn,
+.setup-overview > .link-btn {
+    justify-self: center;
+}
+.setup-house {
+    width: 100%;
+    height: 96px;
+}
+.setup-house .ground {
+    stroke: var(--ink-12);
+}
+.setup-house .sun {
+    fill: var(--amber);
+}
+.setup-house .rays {
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+.setup-house .wall {
+    fill: var(--card-bg);
+    stroke: var(--ink-20);
+}
+.setup-house .roof-top {
+    fill: var(--ink-05);
+    stroke: var(--ink-20);
+}
+.setup-house .pv {
+    fill: rgba(var(--amber-rgb), 0.35);
+    stroke: var(--amber);
+}
+.setup-house .door {
+    fill: var(--ink-08);
+}
+.setup-hero {
+    text-align: center;
+    padding: var(--sp-1) 0 var(--sp-2);
+}
+.setup-hero .big {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--green);
+}
+.setup-hero .sub {
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.sum-list {
+    display: grid;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--ink-12);
+    background: var(--card-bg);
+    overflow: hidden;
+}
+.sum-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ink-05);
+}
+.sum-row:last-child {
+    border-bottom: 0;
+}
+.sum-row .t {
+    flex: 1;
+    display: grid;
+    min-width: 0;
+}
+.sum-row .k {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+}
+.sum-row .k2,
+.sum-row .est {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-45);
+}
+.sum-row .est {
+    color: var(--amber);
+}
+.sum-ico {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--ink-05);
+}
+.sum-ico svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--ink-70);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.sum-ico .mini-compass {
+    width: 30px;
+    height: 30px;
+}
+.chev {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--ink-35);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mini-compass {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+}
+.mini-compass .ring {
+    fill: none;
+    stroke: var(--ink-20);
+}
+.mini-compass text {
+    font-family: var(--font-mono);
+    font-size: 6px;
+    text-anchor: middle;
+    fill: var(--ink-35);
+}
+.mini-compass .arrow {
+    stroke: var(--amber);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.mini-compass .hub {
+    fill: var(--amber);
+}
+
+.wizard {
+    display: grid;
+}
+.wz-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.wz-step {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.wz-close {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-12);
+    color: var(--ink-45);
+}
+.wz-close svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+}
+.wz-prog {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    margin: var(--sp-3) 0 var(--sp-4);
+}
+.wz-prog:empty {
+    margin: 0 0 var(--sp-3);
+}
+.wz-prog i {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ink-12);
+}
+.wz-prog i.done {
+    background: rgba(var(--green-rgb), 0.7);
+}
+.wz-prog i.now {
+    background: var(--ink);
+}
+.wz-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--amber);
+}
+.wz-title {
+    margin: 2px 0 6px;
+    font-size: 23px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+}
+.wz-lead {
+    margin: 0 0 var(--sp-4);
+    color: var(--ink-45);
+}
+.wz-screen {
+    display: grid;
+    gap: var(--sp-3);
+    align-content: start;
+}
+.seg {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--ink-05);
+}
+.seg3 {
+    margin-bottom: var(--sp-4);
+}
+.seg button {
+    padding: 8px 0;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.seg button[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--bg);
+}
+.checklist {
+    list-style: none;
+    margin: 0;
+    padding: 12px 14px;
+    display: grid;
+    gap: 6px;
+    border-radius: var(--radius-md);
+    background: var(--ink-05);
+    font-size: 13px;
+    color: var(--ink-70);
+}
+.checklist li {
+    display: flex;
+    gap: var(--sp-2);
+}
+.checklist li::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    margin-top: 7px;
+    border-radius: 50%;
+    background: var(--amber);
+}
+.choice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--ink-12);
+    background: var(--card-bg);
+}
+.choice[aria-pressed='true'] {
+    border-color: var(--amber);
+    background: rgba(var(--amber-rgb), 0.08);
+}
+.choice .dot {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--ink-20);
+}
+.choice[aria-pressed='true'] .dot {
+    border-color: var(--amber);
+    background: var(--amber);
+    box-shadow: inset 0 0 0 4px var(--card-bg);
+}
+.choice .t {
+    flex: 1;
+    display: grid;
+    gap: 1px;
+}
+.choice .t span {
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.place-card {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    border: 1px solid rgba(var(--green-rgb), 0.35);
+}
+.place-card .name {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.place-card .name b {
+    font-size: var(--fs-lg);
+}
+.place-card .meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-35);
+}
+.sunline {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+}
+.sunline > span {
+    display: grid;
+    font-size: 16px;
+    font-weight: 600;
+}
+.sunline > span.end {
+    text-align: right;
+}
+.sunline small {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-35);
+}
+.sunline svg {
+    width: 100%;
+    height: 38px;
+}
+.sunline .ground {
+    stroke: var(--ink-20);
+}
+.sunline .arc {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 4;
+}
+.sunline .sun {
+    fill: var(--amber);
+}
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chip {
+    padding: 8px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--ink-12);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-70);
+}
+.chip[aria-pressed='true'] {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--bg);
+    font-weight: 700;
+}
+.chip.soft {
+    border-style: dashed;
+    color: var(--ink-45);
+}
+.chip.soft[aria-pressed='true'] {
+    border-style: solid;
+    color: var(--bg);
+}
+.preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.chip-col {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+}
+.chip-col b {
+    color: inherit;
+}
+.chip-col small {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    opacity: 0.75;
+}
+.preset-grid .chip-col:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+.panel-label {
+    display: block;
+    width: 100%;
+    max-width: 240px;
+    margin: 0 auto;
+}
+.panel-label .label-bg {
+    fill: #e9e6de;
+}
+.panel-label text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    fill: #555;
+}
+.panel-label .mark {
+    fill: var(--amber);
+}
+.panel-label .pmax {
+    font-size: 13px;
+    font-weight: 700;
+    fill: #111;
+}
+/* Kompas: kresba je obrázok, vyberá sa tlačidlami nad ňou. Obal je štvorec a tlačidlá sedia
+   v percentách (compassModel), rovnako ako jazdec na ciferníku. */
+.dir-dial {
+    position: relative;
+    width: min(100%, 300px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+}
+.compass-art {
+    width: 100%;
+    height: 100%;
+}
+.compass-art .ring {
+    fill: none;
+    stroke: var(--ink-12);
+}
+.compass-art .sun-path {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-dasharray: 3 5;
+    stroke-linecap: round;
+    opacity: 0.8;
+}
+.compass-art .sun {
+    fill: var(--amber);
+}
+.compass-art .sector {
+    fill: transparent;
+    stroke: var(--ink-08);
+}
+.compass-art .sector.on {
+    fill: rgba(var(--amber-rgb), 0.2);
+    stroke: var(--amber);
+}
+.compass-art .roof-top {
+    fill: var(--card-bg);
+    stroke: var(--ink-20);
+}
+.compass-art .ridge {
+    stroke: var(--ink-35);
+    stroke-width: 1.5;
+}
+.compass-art .pv {
+    fill: rgba(var(--amber-rgb), 0.3);
+    stroke: var(--amber);
+}
+.compass-art .arrow {
+    stroke: var(--amber);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.compass-art .arrow-head {
+    fill: var(--amber);
+}
+.dir-btn {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.dir-btn.on {
+    color: var(--amber);
+    font-weight: 700;
+}
+.readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.readout b {
+    font-size: 20px;
+}
+.readout span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-45);
+}
+.quality {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+}
+.quality .row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.quality .row span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-45);
+}
+.quality .meter {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--ink-08);
+    overflow: hidden;
+}
+.quality .meter i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+}
+.quality .meter i.tier-green {
+    background: var(--green);
+}
+.quality .meter i.tier-amber {
+    background: var(--amber);
+}
+.quality .meter i.tier-red {
+    background: var(--red);
+}
+.tilt-art,
+.panel-grid,
+.wz-art {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.tilt-art .ground,
+.wz-art .ground {
+    stroke: var(--ink-12);
+}
+.tilt-art .wall {
+    fill: var(--card-bg);
+    stroke: var(--ink-20);
+}
+.tilt-art .wedge {
+    fill: var(--ink-05);
+    stroke: var(--ink-12);
+}
+.tilt-art .level {
+    stroke: var(--ink-20);
+    stroke-dasharray: 3 4;
+}
+.tilt-art .plane {
+    stroke: var(--amber);
+    stroke-width: 7;
+}
+.tilt-art .ray {
+    stroke: var(--amber);
+    stroke-dasharray: 2 5;
+    opacity: 0.6;
+}
+.tilt-art .sun {
+    fill: var(--amber);
+}
+.tilt-art .angle {
+    fill: none;
+    stroke: var(--ink-70);
+    stroke-width: 1.5;
+}
+.tilt-art text {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-anchor: middle;
+    fill: var(--ink);
+}
+.panel-grid .pv {
+    fill: rgba(var(--amber-rgb), 0.22);
+    stroke: var(--amber);
+}
+.panel-grid .pv-line {
+    stroke: rgba(var(--amber-rgb), 0.5);
+}
+.panel-grid text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--ink-45);
+}
+.wz-stepper {
+    grid-template-columns: 56px minmax(0, 1fr) 56px;
+}
+.wz-stepper .field-input {
+    font-size: 26px;
+    font-weight: 600;
+    padding: 8px;
+}
+.wz-kwp-line {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.wz-kwp-line b {
+    color: var(--green);
+}
+.roofs {
+    display: grid;
+    gap: var(--sp-2);
+}
+.roof-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+}
+.roof-row .t {
+    flex: 1;
+    display: grid;
+    min-width: 0;
+    font-size: 13px;
+}
+.roof-row .t span {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-45);
+}
+.mini-act {
+    padding: 6px 4px;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.compare-bars {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+}
+.cb {
+    display: grid;
+    grid-template-columns: 58px 1fr 80px;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+}
+.cb .track {
+    height: 12px;
+    border-radius: 3px;
+    background: var(--ink-05);
+    overflow: hidden;
+}
+.cb .track i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+}
+.cb .track i.pv {
+    background: rgba(var(--amber-rgb), 0.7);
+}
+.cb .track i.ac {
+    background: rgba(var(--green-rgb), 0.7);
+}
+.cb b {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    text-align: right;
+}
+.plant-msg.ok {
+    border-color: var(--green);
+}
+.howto {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: krok;
+    display: grid;
+    gap: var(--sp-2);
+    font-size: 13px;
+    color: var(--ink-70);
+}
+.howto li {
+    counter-increment: krok;
+    display: flex;
+    gap: 10px;
+}
+.howto li::before {
+    content: counter(krok);
+    flex: 0 0 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--ink-08);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.wz-kiosk {
+    display: grid;
+    gap: var(--sp-2);
+}
+.wz-art .forecast {
+    fill: none;
+    stroke: var(--ink-70);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+}
+.wz-art .real {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 2.5;
+}
+.wz-art .now {
+    fill: var(--green);
+}
+/* Tlačidlá sprievodcu ostávajú na dosah aj na dlhej obrazovke (kompas): lepia sa nad spodnú
+   navigáciu. Na desktope je navigácia hore, tam sa lepia k spodku karty. */
+.wz-foot {
+    position: sticky;
+    bottom: calc(var(--nav-h) - 8px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    display: flex;
+    gap: 10px;
+    margin-top: var(--sp-4);
+    padding: 12px 0;
+    background: var(--bg);
+    box-shadow: 0 -12px 16px -12px var(--bg);
+}
+.wz-foot .plant-save {
+    flex: 1;
+}
+.wz-back {
+    padding: 12px 18px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--ink-12);
+    color: var(--ink-70);
+}
+
 /* ---- Zdieľanie appky (položka karty Info) ---------------------------------- */
 .share-panel {
     display: flex;
@@ -2588,6 +3397,15 @@ b {
     .panel {
         min-height: 0;
         height: 100%;
+    }
+
+    /* Karta Nastavenie býva dlhšia než okno (sprievodca s kompasom) a body sa tu neposúva,
+       posúva sa preto karta sama. Tlačidlá sprievodcu sa lepia k jej spodku. */
+    #panel-nastavenie {
+        overflow-y: auto;
+    }
+    .wz-foot {
+        bottom: 0;
     }
 
     /* Karta 7 dní: hlavička, štatistiky a správa si vezmú svoje, mriežka grafov zvyšok.
