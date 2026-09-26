@@ -1,21 +1,41 @@
 // Sprievodca nastavením elektrárne: poradie krokov, kedy sa dá ísť ďalej a prázdne nastavenie
 // pre nového používateľa. Čisté funkcie - obrazovky kreslí web/render/nastavenie.js.
 
-import { PLANT, SETTINGS_LIMITS, SETUP, TARIFF } from './config.js';
+import { PLANT, SETTINGS_LIMITS, SETUP, TARIFF_TEMPLATES } from './config.js';
 import { kioskApiUrl } from './kiosk.js';
 import { checkSettings, isTimezone } from './settings.js';
+import { checkTariff } from './tariff.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
 /** @typedef {import('./config.js').PlantString} PlantString */
 /**
  * Obrazovky sprievodcu. `start` a `odkaz` stoja pred ním (úvod a prevzatie z odkazu), zvyšok
  * sú jeho kroky v poradí.
- * @typedef {'start' | 'odkaz' | 'lokalita' | 'panel' | 'smer' | 'sklon' | 'pocet' | 'dalsia' | 'menic' | 'meranie' | 'suhrn'} SetupStep
+ * @typedef {'start' | 'odkaz' | 'lokalita' | 'panel' | 'smer' | 'sklon' | 'pocet' | 'dalsia' | 'menic' | 'meranie'
+ *   | 'tarifa' | 'pasma' | 'rozvrh' | 'vynimky' | 'ceny' | 'suhrn'} SetupStep
  */
 /** @typedef {{ step: SetupStep, roof: number }} SetupPlace obrazovka a plocha panelov, ktorej sa týka */
+/** @typedef {'jedna' | 'dvoj' | 'viac'} TariffKind typ sadzby (tariffKind) - podľa neho sa vyberajú obrazovky tarify */
 
 /** @type {SetupStep[]} */
-export const SETUP_STEPS = ['start', 'odkaz', 'lokalita', 'panel', 'smer', 'sklon', 'pocet', 'dalsia', 'menic', 'meranie', 'suhrn'];
+export const SETUP_STEPS = [
+    'start',
+    'odkaz',
+    'lokalita',
+    'panel',
+    'smer',
+    'sklon',
+    'pocet',
+    'dalsia',
+    'menic',
+    'meranie',
+    'tarifa',
+    'pasma',
+    'rozvrh',
+    'vynimky',
+    'ceny',
+    'suhrn',
+];
 
 /** Časti sprievodcu, ako ich ukazuje ukazovateľ postupu. Plochy strechy sú jedna časť. */
 export const SETUP_SECTIONS = [
@@ -24,6 +44,7 @@ export const SETUP_SECTIONS = [
     { name: 'Strecha', steps: ['smer', 'sklon', 'pocet', 'dalsia'] },
     { name: 'Menič', steps: ['menic'] },
     { name: 'Meranie', steps: ['meranie'] },
+    { name: 'Tarifa', steps: ['tarifa', 'pasma', 'rozvrh', 'vynimky', 'ceny'] },
     { name: 'Kontrola', steps: ['suhrn'] },
 ];
 
@@ -35,6 +56,15 @@ export function setupSection(step) {
 /** Kroky jednej plochy panelov - tie sa opakujú pre každú plochu. */
 export const ROOF_STEPS = /** @type {const} */ (['smer', 'sklon', 'pocet']);
 
+/** Kroky tarify v poradí. Pásma má len sadzba s tromi a viac pásmami, jedna cena len typ a ceny. */
+export const TARIFF_STEPS = /** @type {const} */ (['tarifa', 'pasma', 'rozvrh', 'vynimky', 'ceny']);
+
+/** Kroky tarify, ktoré daný typ sadzby má. @param {TariffKind} kind @returns {SetupStep[]} */
+export function tariffSteps(kind) {
+    if (kind === 'jedna') return ['tarifa', 'ceny'];
+    return kind === 'viac' ? [...TARIFF_STEPS] : ['tarifa', 'rozvrh', 'vynimky', 'ceny'];
+}
+
 /** @type {Partial<Record<SetupStep, SetupStep>>} */
 const NEXT = {
     start: 'lokalita',
@@ -44,7 +74,8 @@ const NEXT = {
     sklon: 'pocet',
     dalsia: 'menic',
     menic: 'meranie',
-    meranie: 'suhrn',
+    meranie: 'tarifa',
+    ceny: 'suhrn',
 };
 /** @type {Partial<Record<SetupStep, SetupStep>>} */
 const PREV = {
@@ -55,15 +86,19 @@ const PREV = {
     pocet: 'sklon',
     menic: 'dalsia',
     meranie: 'menic',
-    suhrn: 'meranie',
+    tarifa: 'meranie',
+    suhrn: 'ceny',
 };
 
 /**
  * Nasledujúca obrazovka. Plochy idú po sebe: po počte panelov jednej plochy prichádza smer
- * ďalšej, po poslednej otázka na ďalšiu plochu. Za zhrnutím nie je nič (null).
- * @param {SetupPlace} at @param {number} roofCount @returns {SetupPlace | null}
+ * ďalšej, po poslednej otázka na ďalšiu plochu. Kroky tarify idú podľa typu sadzby. Za
+ * zhrnutím nie je nič (null).
+ * @param {SetupPlace} at @param {number} roofCount @param {TariffKind} [kind] @returns {SetupPlace | null}
  */
-export function nextSetupPlace({ step, roof }, roofCount) {
+export function nextSetupPlace({ step, roof }, roofCount, kind = 'dvoj') {
+    const t = tariffSteps(kind);
+    if (t.includes(step) && step !== 'ceny') return { step: t[t.indexOf(step) + 1], roof };
     if (step === 'panel') return { step: 'smer', roof: 0 };
     if (step === 'pocet') return roof < roofCount - 1 ? { step: 'smer', roof: roof + 1 } : { step: 'dalsia', roof };
     const next = NEXT[step];
@@ -72,9 +107,11 @@ export function nextSetupPlace({ step, roof }, roofCount) {
 
 /**
  * Predošlá obrazovka - opak nextSetupPlace. Pred úvodom nie je nič (null).
- * @param {SetupPlace} at @param {number} roofCount @returns {SetupPlace | null}
+ * @param {SetupPlace} at @param {number} roofCount @param {TariffKind} [kind] @returns {SetupPlace | null}
  */
-export function prevSetupPlace({ step, roof }, roofCount) {
+export function prevSetupPlace({ step, roof }, roofCount, kind = 'dvoj') {
+    const t = tariffSteps(kind);
+    if (t.includes(step) && step !== 'tarifa') return { step: t[t.indexOf(step) - 1], roof };
     if (step === 'smer') return roof > 0 ? { step: 'pocet', roof: roof - 1 } : { step: 'panel', roof: 0 };
     if (step === 'dalsia') return { step: 'pocet', roof: Math.max(0, roofCount - 1) };
     const prev = PREV[step];
@@ -89,14 +126,15 @@ export function newRoof(lat) {
 
 /**
  * Nastavenie, s ktorým začína nový používateľ: bez lokality a bez výkonov, aby sprievodca
- * nepredvyplnil nič vymyslené. Jedna plocha na juh, odborné parametre z config.js.
+ * nepredvyplnil nič vymyslené. Jedna plocha na juh, jedna cena celý deň (to isté ako „Neviem“
+ * pri tarife), odborné parametre z config.js.
  * @returns {Settings}
  */
 export function emptySettings() {
     return {
         site: { name: '', lat: NaN, lon: NaN, elevationM: 0, timezone: '' },
         plant: { ...PLANT, strings: [newRoof(0)], panelWp: NaN, acLimitKw: NaN },
-        tariff: TARIFF,
+        tariff: TARIFF_TEMPLATES.jedna,
         kiosk: '',
     };
 }
@@ -153,6 +191,10 @@ export function setupStepOk({ step, roof }, draft, { totalKwp, live }) {
         dalsia: () => inRange(draft.plant.panelWp, L.panelWp),
         menic: () => inRange(draft.plant.acLimitKw, L.acLimitKw),
         meranie: () => !live || !!kioskApiUrl(draft.kiosk),
+        pasma: () => checkTariff(draft.tariff).errors.length === 0,
+        rozvrh: () => checkTariff(draft.tariff).errors.length === 0,
+        vynimky: () => checkTariff(draft.tariff).errors.length === 0,
+        ceny: () => checkTariff(draft.tariff).errors.length === 0,
         suhrn: () => checkSettings(draft).errors.length === 0,
     };
     const check = checks[step];

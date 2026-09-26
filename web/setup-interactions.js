@@ -1,12 +1,35 @@
 // Karta Nastavenie: poslucháče prehľadu elektrárne a sprievodcu jej nastavením. Každý končí
 // volaním setState (alebo krokom v histórii cez backTo); kreslí web/render/nastavenie.js.
 
-import { installedKw, SEARCH_DEBOUNCE_MS, SETTINGS_LIMITS, SETUP } from '../shared/config.js';
+import { RING, minutesFromAngle } from '../shared/chart-model.js';
+import {
+    ALL_DAYS,
+    ALL_MONTHS,
+    installedKw,
+    PRICE_LEVELS,
+    SEARCH_DEBOUNCE_MS,
+    SETTINGS_LIMITS,
+    SETUP,
+    TARIFF,
+    TARIFF_LIMITS,
+    TARIFF_TEMPLATES,
+} from '../shared/config.js';
 import { checkSettings, demoSettings, sameSettings, settingsFromLink } from '../shared/settings.js';
 import { emptySettings, newRoof, nextSetupPlace, prevSetupPlace } from '../shared/setup.js';
+import {
+    autoLevels,
+    changesOf,
+    isSeasonSchedule,
+    isWeekendSchedule,
+    newBandId,
+    paintSlots,
+    scheduleRuns,
+    slotsOf,
+    tariffKind,
+} from '../shared/tariff.js';
 import { searchPlaces } from './data.js';
 import { backTo } from './history.js';
-import { setupReady } from './render/nastavenie.js';
+import { brushOf, setupReady } from './render/nastavenie.js';
 import { saveSettings } from './settings-store.js';
 import { savedSettings, setupDraft } from './state.js';
 
@@ -168,7 +191,11 @@ function goNext(store, refresh) {
     if (s.setupReturn === 'prehlad' || s.setupStep === 'suhrn')
         return applySettings(store, setupDraft(s), refresh, { setupStep: null, setupReturn: null, setupLink: '' });
     if (s.setupStep === 'odkaz') return acceptLink(store);
-    const place = nextSetupPlace({ step: s.setupStep, roof: s.setupRoof }, s.settingsDraft.plant.strings.length);
+    const place = nextSetupPlace(
+        { step: s.setupStep, roof: s.setupRoof },
+        s.settingsDraft.plant.strings.length,
+        tariffKind(s.settingsDraft.tariff),
+    );
     if (place) store.setState({ setupStep: place.step, setupRoof: place.roof });
 }
 
@@ -176,14 +203,18 @@ function goNext(store, refresh) {
 function goBack(store) {
     const s = store.get();
     if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start') return closeSetup(store);
-    const place = prevSetupPlace({ step: s.setupStep, roof: s.setupRoof }, s.settingsDraft.plant.strings.length);
+    const place = prevSetupPlace(
+        { step: s.setupStep, roof: s.setupRoof },
+        s.settingsDraft.plant.strings.length,
+        tariffKind(s.settingsDraft.tariff),
+    );
     if (place) backTo(store, { setupStep: place.step, setupRoof: place.roof });
 }
 
 /**
  * Úprava jedného kroku z riadku zhrnutia. Zo zhrnutia sprievodcu sa vracia naň, z prehľadu
  * uloženej elektrárne sa zmena rovno ukladá.
- * @param {Store} store @param {string} key `lokalita`, `panel`, `roof:1`, `menic`, `meranie`
+ * @param {Store} store @param {string} key `lokalita`, `panel`, `roof:1`, `menic`, `meranie`, `tarifa`
  */
 function editStep(store, key) {
     const s = store.get();
@@ -193,6 +224,8 @@ function editStep(store, key) {
         setupStep: /** @type {import('../shared/setup.js').SetupStep} */ (step),
         setupRoof: roof,
         setupReturn: fromHome ? 'prehlad' : 'suhrn',
+        setupSched: 0,
+        setupDunno: false,
         settingsNote: '',
         ...(fromHome ? { settingsDraft: savedSettings(s), settingsRev: s.settingsRev + 1, setupLive: !!s.kiosk } : {}),
     });
@@ -270,13 +303,216 @@ function deleteRoof(store, ops, i) {
     ops.setDraft({ ...d, plant: { ...d.plant, strings } }, true, { setupRoof: Math.min(store.get().setupRoof, strings.length - 1) });
 }
 
+// ---- Tarifa ------------------------------------------------------------------------
+
+/** @typedef {import('../shared/config.js').Tariff} Tariff */
+/** @typedef {import('../shared/config.js').PriceLevel} PriceLevel */
+
+/** Úprava tarify v rozpísanom nastavení. `rewrite` prepíše aj polia (mená pásiem, ceny).
+ * @param {ReturnType<typeof draftOps>} ops @param {(t: Tariff) => Tariff} fn @param {boolean} [rewrite] @param {Partial<AppState>} [extra] */
+function setTariff(ops, fn, rewrite = false, extra = {}) {
+    const d = ops.draft();
+    ops.setDraft({ ...d, tariff: fn(d.tariff) }, rewrite, extra);
+}
+
+/** Upravovaný rozvrh (po zmazaní výnimky môže index ukazovať mimo). @param {Store} store @param {Tariff} t */
+const schedAt = (store, t) => Math.max(0, Math.min(store.get().setupSched, t.schedules.length - 1));
+
+/** Nahradí jeden rozvrh tarify novými štvrťhodinami. @param {Tariff} t @param {number} i @param {string[]} slots @returns {Tariff} */
+function withSlots(t, i, slots) {
+    return { ...t, schedules: t.schedules.map((s, j) => (j === i ? { ...s, changes: changesOf(slots) } : s)) };
+}
+
+/** Úsek štvrťhodín od `from`, `count` za sebou, jedným pásmom - aj cez polnoc. @param {string[]} slots @param {number} from @param {number} count @param {string} band */
+function fillSlots(slots, from, count, band) {
+    const out = slots.slice();
+    for (let k = 0; k < count; k++) out[(from + k) % out.length] = band;
+    return out;
+}
+
+/** Typ sadzby. Ten istý typ nechá tarifu, ako je (aj s úpravami); iný ju nahradí šablónou.
+ * @param {Store} store @param {ReturnType<typeof draftOps>} ops @param {string} kind */
+function pickKind(store, ops, kind) {
+    const dunno = kind === 'dunno';
+    const k = /** @type {'jedna' | 'dvoj' | 'viac'} */ (dunno ? 'jedna' : kind);
+    if (!(k in TARIFF_TEMPLATES)) return;
+    const t = ops.draft().tariff;
+    if (tariffKind(t) === k) return store.setState({ setupDunno: dunno });
+    setTariff(ops, () => ({ ...TARIFF_TEMPLATES[k], currency: t.currency }), true, { setupDunno: dunno, setupSched: 0, setupBrush: null });
+}
+
+/** @param {ReturnType<typeof draftOps>} ops */
+function addBand(ops) {
+    setTariff(
+        ops,
+        (t) =>
+            t.bands.length >= TARIFF_LIMITS.maxBands
+                ? t
+                : { ...t, bands: [...t.bands, { id: newBandId(t), name: `Pásmo ${t.bands.length + 1}`, level: 'bezna', price: null }] },
+        true,
+    );
+}
+
+/** Zmazanie pásma: jeho úseky prevezme susedné pásmo. @param {Store} store @param {ReturnType<typeof draftOps>} ops @param {string} id */
+function deleteBand(store, ops, id) {
+    const t = ops.draft().tariff;
+    const i = t.bands.findIndex((b) => b.id === id);
+    if (i < 0 || t.bands.length <= 3) return;
+    const heir = t.bands[i === 0 ? 1 : i - 1].id;
+    const schedules = t.schedules.map((s) => ({ ...s, changes: changesOf(slotsOf(s).map((x) => (x === id ? heir : x))) }));
+    setTariff(ops, () => ({ ...t, bands: t.bands.filter((b) => b.id !== id), schedules }), true, {
+        setupBrush: store.get().setupBrush === id ? null : store.get().setupBrush,
+    });
+}
+
+/** Šablóna tvaru dňa pre upravovaný rozvrh. Pásma sa priradia podľa úrovne: najlacnejšie
+ * dostane lacné hodiny, najdrahšie drahé. @param {Store} store @param {ReturnType<typeof draftOps>} ops @param {string} tpl */
+function applyTemplate(store, ops, tpl) {
+    const t = ops.draft().tariff;
+    const sorted = [...t.bands].sort((a, b) => PRICE_LEVELS.indexOf(a.level) - PRICE_LEVELS.indexOf(b.level));
+    const cheap = sorted[0].id;
+    const dear = sorted[sorted.length - 1].id;
+    /** Tvar z dvojpásmovej tarify (nt = lacné, ostatné drahé). @param {Tariff} shape */
+    const from = (shape) => shape.schedules[0].changes.map((c) => ({ from: c.from, band: c.band === 'nt' ? cheap : dear }));
+    const changes = tpl === '20h' ? from(TARIFF) : tpl === 'noc8' ? from(TARIFF_TEMPLATES.dvoj) : [{ from: '00:00', band: cheap }];
+    const i = schedAt(store, t);
+    setTariff(ops, () => ({ ...t, schedules: t.schedules.map((s, j) => (j === i ? { ...s, changes } : s)) }));
+}
+
+/** Zmazanie úseku: prevezme ho predošlý úsek. @param {Store} store @param {ReturnType<typeof draftOps>} ops @param {number} j */
+function deleteRun(store, ops, j) {
+    const t = ops.draft().tariff;
+    const i = schedAt(store, t);
+    const runs = scheduleRuns(t, t.schedules[i]);
+    const run = runs[j];
+    if (!run || runs.length < 2) return;
+    const heir = runs[(j - 1 + runs.length) % runs.length].band.id;
+    const step = TARIFF_LIMITS.stepMin;
+    setTariff(ops, () => withSlots(t, i, fillSlots(slotsOf(t.schedules[i]), run.startMin / step, run.min / step, heir)));
+}
+
+/** Úsek z formulára pod zoznamom (cesta pre klávesnicu). „Do“ pred „Od“ znamená cez polnoc.
+ * @param {Store} store @param {Dom} dom @param {ReturnType<typeof draftOps>} ops */
+function setRun(store, dom, ops) {
+    const t = ops.draft().tariff;
+    const from = Number(dom.wzIvalFrom.value);
+    const to = Number(dom.wzIvalTo.value);
+    const band = dom.wzIvalBand.value;
+    if (!Number.isInteger(from) || !Number.isInteger(to) || !t.bands.some((b) => b.id === band)) return;
+    const slots = slotsOf(t.schedules[schedAt(store, t)]);
+    const count = (to - from + slots.length) % slots.length || slots.length;
+    setTariff(ops, () => withSlots(t, schedAt(store, t), fillSlots(slots, from, count, band)));
+}
+
+/** Výnimky: žiadne, alebo prepnúť víkend či časť roka. Nová výnimka začína kópiou základu.
+ * @param {Store} store @param {ReturnType<typeof draftOps>} ops @param {string} what */
+function toggleException(store, ops, what) {
+    const t = ops.draft().tariff;
+    const [base, ...rest] = t.schedules;
+    /** @param {(s: import('../shared/config.js').Schedule) => boolean} is @param {number[]} days @param {number[]} months */
+    const toggle = (is, days, months) => {
+        if (rest.some(is)) return [base, ...rest.filter((s) => !is(s))];
+        if (t.schedules.length >= TARIFF_LIMITS.maxSchedules) return t.schedules;
+        return [...t.schedules, { days, months, changes: base.changes }];
+    };
+    const schedules =
+        what === 'none'
+            ? [base]
+            : what === 'weekend'
+              ? toggle(isWeekendSchedule, [6, 7], ALL_MONTHS)
+              : toggle(isSeasonSchedule, ALL_DAYS, [6, 7, 8, 9]);
+    setTariff(ops, () => ({ ...t, schedules }), false, { setupSched: 0 });
+}
+
+/** Mesiac výnimky na časť roka; aspoň jeden musí ostať a všetky byť nesmú (to by bol základ).
+ * @param {ReturnType<typeof draftOps>} ops @param {number} m */
+function toggleMonth(ops, m) {
+    setTariff(ops, (t) => ({
+        ...t,
+        schedules: t.schedules.map((s, i) => {
+            if (i === 0 || !isSeasonSchedule(s)) return s;
+            const months = s.months.includes(m) ? s.months.filter((x) => x !== m) : [...s.months, m].sort((a, b) => a - b);
+            return months.length && months.length < 12 ? { ...s, months } : s;
+        }),
+    }));
+}
+
+/**
+ * Písanie mena pásma alebo ceny. Polia vznikajú v renderi, preto sa rozlišujú podľa data-
+ * atribútu, nie podľa prvku. Pole sa neprepisuje, kurzor ostáva, kde je.
+ * @param {ReturnType<typeof draftOps>} ops @param {HTMLInputElement} t
+ */
+function onTariffInput(ops, t) {
+    const name = t.dataset.setupBandName;
+    const priced = t.dataset.setupPrice;
+    if (name) setTariff(ops, (x) => ({ ...x, bands: x.bands.map((b) => (b.id === name ? { ...b, name: t.value.trim() } : b)) }));
+    if (priced) {
+        const n = numberOf(t);
+        const price = Number.isNaN(n) ? null : n;
+        setTariff(ops, (x) => ({ ...x, bands: x.bands.map((b) => (b.id === priced ? { ...b, price } : b)) }));
+    }
+}
+
+/** Úrovne podľa cien. @param {ReturnType<typeof draftOps>} ops */
+function applyAutoLevels(ops) {
+    setTariff(ops, (t) => {
+        const auto = autoLevels(t.bands);
+        return auto ? { ...t, bands: t.bands.map((b) => ({ ...b, level: auto[b.id] })) } : t;
+    });
+}
+
+/**
+ * Maľovanie po kruhu rozvrhu: prst (alebo myš) prechádza štvrťhodinami a každú prefarbí pásmom,
+ * ktorým sa maľuje. Pointer udalosti so zachytením, ako jazdec na ciferníku - samotné <svg>
+ * sa pri prekreslení nemení (render píše len do jeho <g>), takže zachytenie vydrží celý ťah.
+ * @param {Store} store @param {Dom} dom @param {ReturnType<typeof draftOps>} ops
+ */
+function initRingPaint(store, dom, ops) {
+    const ring = dom.wzTariffRing;
+    /** @type {number | null} */ let last = null;
+    /** Štvrťhodina pod prstom, alebo null mimo prstenca. @param {PointerEvent} e */
+    const slotAt = (e) => {
+        const box = ring.getBoundingClientRect();
+        const dx = e.clientX - (box.left + box.width / 2);
+        const dy = e.clientY - (box.top + box.height / 2);
+        const dist = (Math.hypot(dx, dy) * 264) / box.width;
+        if (dist < RING.rDay - 46 || dist > RING.rDay + 30) return null;
+        return Math.floor(minutesFromAngle(dx, dy) / TARIFF_LIMITS.stepMin);
+    };
+    /** @param {number} slot */
+    const paint = (slot) => {
+        const s = store.get();
+        const t = ops.draft().tariff;
+        const i = schedAt(store, t);
+        const brush = brushOf(s, t).id;
+        setTariff(ops, () => withSlots(t, i, paintSlots(slotsOf(t.schedules[i]), last ?? slot, slot, brush)));
+        last = slot;
+    };
+    ring.addEventListener('pointerdown', (e) => {
+        const slot = slotAt(e);
+        if (slot === null) return;
+        e.preventDefault();
+        ring.setPointerCapture(e.pointerId);
+        last = null;
+        paint(slot);
+    });
+    ring.addEventListener('pointermove', (e) => {
+        if (last === null) return;
+        const slot = slotAt(e);
+        if (slot !== null && slot !== last) paint(slot);
+    });
+    const end = () => (last = null);
+    ring.addEventListener('pointerup', end);
+    ring.addEventListener('pointercancel', end);
+}
+
 /**
  * Klik v karte Nastavenie. Tabuľka dvojíc (selektor, akcia) namiesto reťaze podmienok - prvý
  * zásah vyhrá. Tlačidlá v prekresľovaných častiach nesú data- atribúty, pevné majú id.
- * @param {Store} store @param {() => Promise<void>} refresh @param {ReturnType<typeof draftOps>} ops
+ * @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh @param {ReturnType<typeof draftOps>} ops
  * @returns {Array<[string, (el: HTMLElement) => void]>}
  */
-function clickActions(store, refresh, ops) {
+function clickActions(store, dom, refresh, ops) {
     const num = (/** @type {string | undefined} */ v) => Number(v);
     return [
         ['#wz-next', () => goNext(store, refresh)],
@@ -297,6 +533,29 @@ function clickActions(store, refresh, ops) {
         ['[data-setup-roof-del]', (el) => deleteRoof(store, ops, num(el.dataset.setupRoofDel))],
         ['#wz-roof-add', () => addRoof(store, ops)],
         ['[data-setup-live]', (el) => store.setState({ setupLive: el.dataset.setupLive === 'yes' })],
+        ['[data-setup-kind]', (el) => pickKind(store, ops, el.dataset.setupKind || '')],
+        [
+            '[data-setup-level]',
+            (el) =>
+                setTariff(ops, (t) => ({
+                    ...t,
+                    bands: t.bands.map((b) =>
+                        b.id === el.dataset.setupBand ? { ...b, level: /** @type {PriceLevel} */ (el.dataset.setupLevel) } : b,
+                    ),
+                })),
+        ],
+        ['[data-setup-band-del]', (el) => deleteBand(store, ops, el.dataset.setupBandDel || '')],
+        ['#wz-band-add', () => addBand(ops)],
+        ['[data-setup-sched-edit]', (el) => store.setState({ setupSched: num(el.dataset.setupSchedEdit), setupStep: 'rozvrh' })],
+        ['[data-setup-sched]', (el) => store.setState({ setupSched: num(el.dataset.setupSched) })],
+        ['[data-setup-brush]', (el) => store.setState({ setupBrush: el.dataset.setupBrush || null })],
+        ['[data-setup-tpl]', (el) => applyTemplate(store, ops, el.dataset.setupTpl || '')],
+        ['[data-setup-run-del]', (el) => deleteRun(store, ops, num(el.dataset.setupRunDel))],
+        ['#wz-ival-set', () => setRun(store, dom, ops)],
+        ['[data-setup-exc]', (el) => toggleException(store, ops, el.dataset.setupExc || '')],
+        ['[data-setup-month]', (el) => toggleMonth(ops, num(el.dataset.setupMonth))],
+        ['[data-setup-cur]', (el) => setTariff(ops, (t) => ({ ...t, currency: el.dataset.setupCur || t.currency }))],
+        ['[data-setup-autolevels]', () => applyAutoLevels(ops)],
     ];
 }
 
@@ -355,7 +614,7 @@ function onCompassKey(dom, ops, e) {
 /** Karta Nastavenie: prehľad a sprievodca. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
 export function initSetup(store, dom, refresh) {
     const ops = draftOps(store);
-    const clicks = clickActions(store, refresh, ops);
+    const clicks = clickActions(store, dom, refresh, ops);
     const inputs = inputActions(store, dom, ops, placeSearch(store));
     dom.setup.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
@@ -366,7 +625,9 @@ export function initSetup(store, dom, refresh) {
     });
     dom.setup.addEventListener('input', (e) => {
         const t = /** @type {HTMLInputElement} */ (e.target);
-        inputs.get(t)?.(t);
+        if (inputs.has(t)) return inputs.get(t)?.(t);
+        onTariffInput(ops, t);
     });
     dom.setup.addEventListener('keydown', (e) => onCompassKey(dom, ops, e));
+    initRingPaint(store, dom, ops);
 }

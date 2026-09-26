@@ -2,8 +2,9 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
+import { RING, ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
 import {
+    ALL_MONTHS,
     APP_URL,
     PLANT,
     powerThresholds,
@@ -1575,6 +1576,20 @@ test.describe('listovanie kariet prstom', () => {
         expect(errors).toEqual([]);
     });
 
+    /** Po kruhu rozvrhu tarify prst maľuje pásmo - ťah po ňom nesmie prepnúť kartu. Aj on je
+     * menovaná úchytka v swipe.js. */
+    test('ťah po kruhu rozvrhu tarify neprepne kartu', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
+        await page.locator('#wz-tariff-tabs [data-setup-tab="rozvrh"]').click();
+        await page.locator('#wz-tariff-ring').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+        await swipe(page, '#wz-tariff-ring', { dx: -120 });
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator('#wz-rozvrh')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
     test('pás odporúčaní si ťahanie necháva pre seba aj na krajnej stránke', async ({ page }) => {
         const errors = await openApp(page);
         const dots = page.locator('#verdict-dots .pager-dot');
@@ -2034,7 +2049,7 @@ test.describe('moja elektráreň', () => {
         await dalej(page);
 
         // Poloha: kým nie je vybraná, ďalej sa nedá. Potvrdí ju dnešný východ a západ slnka.
-        await expect(page.locator('#wz-step')).toHaveText('Krok 1 z 6 · Poloha');
+        await expect(page.locator('#wz-step')).toHaveText('Krok 1 z 7 · Poloha');
         await expect(page.locator('#wz-next')).toBeDisabled();
         await vyberMiesto(page, 'Sev', 'Sevilla');
         const sevilla = GEOCODE.results[0];
@@ -2080,8 +2095,18 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-next')).toHaveText('Preskočiť');
         await dalej(page);
 
+        // Tarifa: nový používateľ začína jednou cenou, takže po type sadzby idú rovno ceny.
+        await expect(page.locator('#wz-step')).toHaveText('Krok 6 z 7 · Tarifa');
+        await expect(page.locator('[data-setup-kind="jedna"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.locator('[data-setup-kind="dunno"]').click();
+        await expect(page.locator('#wz-tariff-dunno')).toBeVisible();
+        await dalej(page);
+        await expect(page.locator('#wz-ceny')).toBeVisible();
+        await dalej(page);
+
         // Zhrnutie: nič sa ešte neuložilo.
-        await expect(page.locator('#wz-step')).toHaveText('Krok 6 z 6 · Kontrola');
+        await expect(page.locator('#wz-step')).toHaveText('Krok 7 z 7 · Kontrola');
+        await expect(page.locator('#wz-summary [data-setup-edit="tarifa"]')).toContainText('Jedna cena celý deň');
         await expect(page.locator('#wz-summary .big')).toHaveText(kwpText((11 * 435) / 1000));
         expect(await ulozene(page)).toBeNull();
         await dalej(page);
@@ -2093,6 +2118,7 @@ test.describe('moja elektráreň', () => {
         expect(stored.site.name).toBe('Sevilla');
         expect(stored.strings).toEqual([{ panels: 11, azimuthDeg: 135, tiltDeg: 45 }]);
         expect(stored.acLimitKw).toBe(5);
+        expect(stored.tariff.bands).toEqual([{ id: 'j', name: 'Cena', level: 'bezna', price: null }]);
         expect(stored.kiosk).toBe('');
 
         await page.reload();
@@ -2249,11 +2275,110 @@ test.describe('moja elektráreň', () => {
         await page.locator('#wz-kiosk').fill(kiosk);
         await expect(page.locator('#wz-kiosk-note')).toHaveText('Vyzerá to ako kiosk FusionSolar. Po uložení overím, či odpovedá.');
         await dalej(page);
+        // Tarifa: jedna cena, typ a ceny.
+        await dalej(page);
+        await dalej(page);
         await expect(page.locator('#wz-summary')).toContainText('kiosk FusionSolar');
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
         await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
         expect(bodies).toContain(kiosk);
+        expect(errors).toEqual([]);
+    });
+
+    /** Bod na kruhu rozvrhu tarify pre minútu dňa: kruh má rovnakú geometriu ako ciferník
+     * (poludnie hore, polomer rDay), len iný viewBox (-12 … 252). @param {import('@playwright/test').Page} page @param {number} minutes */
+    async function bodNaKruhu(page, minutes) {
+        const box = await page.locator('#wz-tariff-ring').boundingBox();
+        if (!box) throw new Error('kruh rozvrhu nie je vidno');
+        const r = (RING.rDay / 264) * box.width;
+        const rad = ((minutes / 1440) * 2 + 0.5) * Math.PI;
+        return { x: box.x + box.width / 2 + r * Math.cos(rad), y: box.y + box.height / 2 + r * Math.sin(rad) };
+    }
+
+    test('úprava tarify z prehľadu: tri pásma, maľovanie po kruhu, víkend, ceny a uloženie', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await expect(page.locator('#setup-rows [data-setup-edit="tarifa"]')).toContainText('2 pásma · lacno 20 h');
+        await expect(page.locator('#setup-rows [data-setup-edit="tarifa"]')).toContainText('bez cien');
+        await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
+        await expect(page.locator('#wz-tarifa')).toBeVisible();
+        await expect(page.locator('#wz-step')).toHaveText('Úprava · Tarifa');
+        await expect(page.locator('[data-setup-kind="dvoj"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('[data-setup-kind="spot"]')).toBeDisabled();
+        await expect(page.locator('#wz-tariff-tabs button')).toHaveCount(4);
+
+        // Tri pásma: pribudne záložka Pásma, meno sa dá prepísať.
+        await page.locator('[data-setup-kind="viac"]').click();
+        await expect(page.locator('#wz-tariff-tabs button')).toHaveCount(5);
+        await page.locator('#wz-tariff-tabs [data-setup-tab="pasma"]').click();
+        await expect(page.locator('#wz-bands .band-row')).toHaveCount(3);
+        await page.locator('[data-setup-band-name="p3"]').fill('Noc');
+        await expect(page.locator('[data-setup-band="p3"][data-setup-level="lacna"]')).toHaveAttribute('aria-pressed', 'true');
+
+        // Rozvrh: šablóna má šesť úsekov, ťah po kruhu od 01:00 po 03:00 pridá špičku v noci.
+        await page.locator('#wz-tariff-tabs [data-setup-tab="rozvrh"]').click();
+        await expect(page.locator('#wz-ivals li')).toHaveCount(6);
+        await expect(page.locator('#wz-ivals li').first()).toContainText('Noc');
+        await page.locator('[data-setup-brush="p1"]').click();
+        await expect(page.locator('#wz-tariff-ring-g')).toContainText('Špička');
+        await page.locator('#wz-tariff-ring').scrollIntoViewIfNeeded();
+        const start = await bodNaKruhu(page, 60);
+        await page.mouse.move(start.x, start.y);
+        await page.mouse.down();
+        for (const m of [90, 120, 150, 180]) {
+            const p = await bodNaKruhu(page, m);
+            await page.mouse.move(p.x, p.y);
+        }
+        await page.mouse.up();
+        await expect(page.locator('#wz-ivals li')).toHaveCount(8);
+        await expect(page.locator('#wz-ivals li').nth(1)).toContainText('Špička');
+
+        // Formulár pod zoznamom (cesta pre klávesnicu): 05:30 – 06:00 bežné pásmo.
+        await page.locator('#wz-ival-from').selectOption('22');
+        await page.locator('#wz-ival-to').selectOption('24');
+        await page.locator('#wz-ival-band').selectOption('p2');
+        await page.locator('#wz-ival-set').click();
+        await expect(page.locator('#wz-ivals')).toContainText('05:30 – 06:00');
+
+        // Výnimka na víkend: kópia základu, v rozvrhu pribudne záložka.
+        await page.locator('#wz-tariff-tabs [data-setup-tab="vynimky"]').click();
+        await page.locator('[data-setup-exc="weekend"]').click();
+        await expect(page.locator('#wz-exc .roof-row')).toHaveCount(2);
+        await page.locator('[data-setup-sched-edit="1"]').click();
+        await expect(page.locator('#wz-rozvrh')).toBeVisible();
+        await expect(page.locator('#wz-sub')).toHaveText('Rozvrh · Víkend');
+        await page.locator('[data-setup-tpl="all"]').click();
+        await expect(page.locator('#wz-ivals li')).toHaveCount(1);
+
+        // Ceny: sedia s úrovňami, potom jedna naopak a appka navrhne opravu.
+        await page.locator('#wz-tariff-tabs [data-setup-tab="ceny"]').click();
+        await page.locator('[data-setup-cur="Kč"]').click();
+        await page.locator('[data-setup-price="p3"]').fill('3,1');
+        await page.locator('[data-setup-price="p2"]').fill('4,6');
+        await page.locator('[data-setup-price="p1"]').fill('6,2');
+        await expect(page.locator('#wz-price-check')).toContainText('Úrovne pásiem sedia s cenami.');
+        await page.locator('[data-setup-price="p2"]').fill('7');
+        await expect(page.locator('#wz-price-check')).toContainText('máš to inak');
+        await page.locator('[data-setup-autolevels]').click();
+        await expect(page.locator('#wz-price-check')).toContainText('sedia');
+
+        await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
+        await page.locator('#wz-next').click();
+        await expect(page.locator('#setup-overview')).toBeVisible();
+        const row = page.locator('#setup-rows [data-setup-edit="tarifa"]');
+        await expect(row).toContainText('3 pásma');
+        await expect(row).toContainText('víkend inak');
+        await expect(row).toContainText('Noc 3,10 · Bežné 7,00 · Špička 6,20 Kč/kWh');
+        const stored = await ulozene(page);
+        expect(stored.tariff.bands.map((/** @type {any} */ b) => [b.id, b.name, b.level, b.price])).toEqual([
+            ['p3', 'Noc', 'lacna', 3.1],
+            ['p2', 'Bežné', 'draha', 7],
+            ['p1', 'Špička', 'bezna', 6.2],
+        ]);
+        expect(stored.tariff.currency).toBe('Kč');
+        expect(stored.tariff.schedules).toHaveLength(2);
+        expect(stored.tariff.schedules[1]).toEqual({ days: [6, 7], months: ALL_MONTHS, changes: [{ from: '00:00', band: 'p3' }] });
         expect(errors).toEqual([]);
     });
 

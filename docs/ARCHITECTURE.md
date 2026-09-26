@@ -56,8 +56,9 @@ susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovk
 neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
 najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
-Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: jazdec na dennom prstenci ciferníka
-a posúvač (`input[type=range]`, sklon strechy v sprievodcovi nastavením).
+Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: jazdec na dennom prstenci ciferníka,
+kruh rozvrhu tarify v sprievodcovi a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
+nastavením).
 `settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Kartu Nastavenie tvorí
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`). Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
@@ -71,7 +72,14 @@ to, čo človek práve píše. Kto zadá celkový výkon namiesto výkonu panelu
 `resolveDraft` dopočíta výkon panelu z počtu panelov - uložený formát sa nemení. Kompas,
 nákres sklonu a mriežka panelov vznikajú ako modely v `chart-model.js` a SVG z nich skladá
 `svg.js`; podiel smeru oproti najlepšiemu (`orientationShare`), východ a západ slnka
-(`sunTimes`) aj výrobu za jasného dňa (`clearDayKwh`) počíta `solar.js`. Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
+(`sunTimes`) aj výrobu za jasného dňa (`clearDayKwh`) počíta `solar.js`. Časť Tarifa má
+obrazovky podľa typu sadzby (`tariffSteps`): jedna cena len typ a ceny, dve pásma aj rozvrh
+a výnimky, tri a viac pásiem navyše pásma. Rozvrh sa maľuje prstom po kruhu, ktorý má tú istú
+geometriu ako ciferník (`tariffRingModel`); `<svg>` kruhu ostáva v stránke a render píše len
+do jeho `<g>`, aby zachytenie prsta (pointer capture) vydržalo celý ťah. Upravovaný rozvrh
+a pásmo, ktorým sa maľuje (`setupSched`, `setupBrush`), sú nastavenie vnútri obrazovky, nie
+krok navigácie. Presná cesta aj pre klávesnicu je zoznam úsekov s formulárom pod kruhom.
+Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
 nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
 `settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.

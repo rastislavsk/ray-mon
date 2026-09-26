@@ -19,19 +19,21 @@ const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/as
 const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
 const ok = (/** @type {any} */ at, draft = DVORANY, opts = {}) => setupStepOk(at, draft, { totalKwp: null, live: false, ...opts });
 
-/** Prejde celého sprievodcu tlačidlom Ďalej a vráti poradie obrazoviek. @param {number} roofs */
-function walk(roofs) {
+/** Prejde celého sprievodcu tlačidlom Ďalej a vráti poradie obrazoviek.
+ * @param {number} roofs @param {import('../shared/setup.js').TariffKind} [kind] */
+function walk(roofs, kind = 'dvoj') {
     /** @type {string[]} */ const out = [];
     /** @type {import('../shared/setup.js').SetupPlace | null} */ let at = { step: 'start', roof: 0 };
     while (at) {
         out.push(`${at.step}${['smer', 'sklon', 'pocet'].includes(at.step) ? at.roof : ''}`);
-        at = nextSetupPlace(at, roofs);
+        at = nextSetupPlace(at, roofs, kind);
     }
     return out;
 }
 
 test('poradie obrazoviek: každá plocha má smer, sklon a počet, potom otázka na ďalšiu', () => {
-    assert.deepEqual(walk(1), ['start', 'lokalita', 'panel', 'smer0', 'sklon0', 'pocet0', 'dalsia', 'menic', 'meranie', 'suhrn']);
+    const tail = ['tarifa', 'rozvrh', 'vynimky', 'ceny', 'suhrn'];
+    assert.deepEqual(walk(1), ['start', 'lokalita', 'panel', 'smer0', 'sklon0', 'pocet0', 'dalsia', 'menic', 'meranie', ...tail]);
     assert.deepEqual(walk(2), [
         'start',
         'lokalita',
@@ -45,30 +47,36 @@ test('poradie obrazoviek: každá plocha má smer, sklon a počet, potom otázka
         'dalsia',
         'menic',
         'meranie',
-        'suhrn',
+        ...tail,
     ]);
+    // Tarifa podľa typu sadzby: jedna cena nemá rozvrh ani výnimky, tri a viac pásiem má aj pásma.
+    assert.deepEqual(walk(1, 'jedna').slice(-3), ['tarifa', 'ceny', 'suhrn']);
+    assert.deepEqual(walk(1, 'viac').slice(-6), ['tarifa', 'pasma', 'rozvrh', 'vynimky', 'ceny', 'suhrn']);
     // Odkaz vedie rovno na zhrnutie - uloží sa až tam, po pohľade na to, čo sa preberá.
     assert.deepEqual(nextSetupPlace({ step: 'odkaz', roof: 0 }, 1), { step: 'suhrn', roof: 0 });
 });
 
 test('Späť je presný opak Ďalej, aj cez hranicu plôch', () => {
-    for (const roofs of [1, 2, 3]) {
-        /** @type {import('../shared/setup.js').SetupPlace | null} */ let at = { step: 'start', roof: 0 };
-        while (at) {
-            const next = nextSetupPlace(at, roofs);
-            if (next) assert.deepEqual(prevSetupPlace(next, roofs), at, `${roofs} plochy: späť z ${next.step}${next.roof}`);
-            at = next;
+    for (const kind of /** @type {const} */ (['jedna', 'dvoj', 'viac']))
+        for (const roofs of [1, 2, 3]) {
+            /** @type {import('../shared/setup.js').SetupPlace | null} */ let at = { step: 'start', roof: 0 };
+            while (at) {
+                const next = nextSetupPlace(at, roofs, kind);
+                if (next)
+                    assert.deepEqual(prevSetupPlace(next, roofs, kind), at, `${kind}, ${roofs} plochy: späť z ${next.step}${next.roof}`);
+                at = next;
+            }
         }
-    }
     assert.equal(prevSetupPlace({ step: 'start', roof: 0 }, 1), null, 'pred úvodom nie je nič');
     assert.deepEqual(prevSetupPlace({ step: 'odkaz', roof: 0 }, 1), { step: 'start', roof: 0 });
 });
 
-test('ukazovateľ postupu: šesť častí, plochy sú jedna, úvod a odkaz nie sú ani jedna', () => {
-    assert.equal(SETUP_SECTIONS.length, 6);
+test('ukazovateľ postupu: sedem častí, plochy aj tarifa sú jedna, úvod a odkaz nie sú ani jedna', () => {
+    assert.equal(SETUP_SECTIONS.length, 7);
+    for (const step of /** @type {const} */ (['tarifa', 'pasma', 'rozvrh', 'vynimky', 'ceny'])) assert.equal(setupSection(step), 5);
     assert.equal(setupSection('lokalita'), 0);
     for (const step of /** @type {const} */ (['smer', 'sklon', 'pocet', 'dalsia'])) assert.equal(setupSection(step), 2);
-    assert.equal(setupSection('suhrn'), 5);
+    assert.equal(setupSection('suhrn'), 6);
     assert.equal(setupSection('start'), -1);
     assert.equal(setupSection('odkaz'), -1);
     const inSections = SETUP_SECTIONS.flatMap((s) => s.steps);
@@ -91,6 +99,19 @@ test('nový používateľ nezačína ničím vymysleným: bez lokality, bez výk
     assert.equal(ok({ step: 'menic', roof: 0 }, empty), false);
     // Smer, sklon a počet majú rozumné východisko - dá sa rovno pokračovať.
     for (const step of ['smer', 'sklon', 'pocet']) assert.equal(ok({ step, roof: 0 }, empty), true, step);
+    // Tarifa začína jednou cenou - to isté ako „Neviem“.
+    assert.equal(empty.tariff.bands.length, 1);
+    assert.equal(empty.tariff.bands[0].level, 'bezna');
+    for (const step of ['tarifa', 'ceny']) assert.equal(ok({ step, roof: 0 }, empty), true, step);
+});
+
+test('obrazovky tarify nepustia ďalej s chybnou tarifou, typ sadzby áno', () => {
+    const bad = { ...DVORANY, tariff: { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, name: '' })) } };
+    for (const step of ['pasma', 'rozvrh', 'vynimky', 'ceny']) {
+        assert.equal(ok({ step, roof: 0 }), true, step);
+        assert.equal(ok({ step, roof: 0 }, bad), false, step);
+    }
+    assert.equal(ok({ step: 'tarifa', roof: 0 }, bad), true);
 });
 
 test('nová plocha smeruje k rovníku', () => {
