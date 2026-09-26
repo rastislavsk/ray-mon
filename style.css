@@ -2078,10 +2078,6 @@ b {
     color: var(--amber);
     font-size: var(--fs-md);
 }
-.plant-form {
-    display: grid;
-    gap: 18px;
-}
 .field {
     display: grid;
     gap: 6px;
@@ -2204,25 +2200,6 @@ b {
     font-size: var(--fs-sm);
     color: var(--ink-45);
 }
-.roof {
-    display: grid;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--ink-08);
-    border-radius: var(--radius-md);
-    background: var(--ink-05);
-}
-.roof-head {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-}
-.roof-kwp {
-    flex: 1;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-}
 .stepper {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -2244,28 +2221,6 @@ b {
     text-align: center;
     background: transparent;
 }
-.compass {
-    display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 3px;
-}
-.compass-btn {
-    min-width: 0;
-    padding: 8px 0;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-    background: transparent;
-    border: 1px solid var(--ink-12);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-}
-.compass-btn[aria-pressed='true'] {
-    color: var(--bg);
-    background: var(--amber);
-    border-color: var(--amber);
-    font-weight: 700;
-}
 .range-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 48px;
@@ -2280,39 +2235,6 @@ b {
     font-family: var(--font-mono);
     font-size: var(--fs-md);
     text-align: right;
-}
-.add-roof {
-    font: inherit;
-    font-size: var(--fs-md);
-    color: var(--ink-70);
-    background: transparent;
-    border: 1px dashed var(--ink-20);
-    border-radius: var(--radius-md);
-    padding: 10px;
-    cursor: pointer;
-}
-.plant-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 14px;
-    border-radius: var(--radius-md);
-    background: rgba(var(--green-rgb), 0.08);
-    border: 1px solid rgba(var(--green-rgb), 0.3);
-}
-.plant-total-kwp {
-    font-family: var(--font-mono);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--green);
-    font-variant-numeric: tabular-nums;
-}
-.plant-total-meta {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
 }
 .plant-msgs {
     display: grid;
@@ -2331,13 +2253,6 @@ b {
 .plant-msg.err {
     color: var(--red);
     border-color: var(--red);
-}
-.plant-actions {
-    display: grid;
-    gap: 8px;
-}
-.plant-actions .link-btn {
-    justify-self: center;
 }
 .plant-save {
     font: inherit;
@@ -2363,12 +2278,6 @@ b {
 }
 
 /* ---- Moja elektráreň: prehľad a sprievodca nastavením ------------------------ */
-/* Starý formulár ostáva v index.html, kým sa appka nasadzuje po krokoch (viď CLAUDE.md,
-   „Nasadenie a cache"). Len čo render zapne sprievodcu, starý formulár zmizne. */
-#panel-nastavenie:has(#setup:not(.hidden)) > #settings-demo,
-#panel-nastavenie:has(#setup:not(.hidden)) > .settings-list {
-    display: none;
-}
 .setup {
     max-width: 520px;
     margin: 0 auto;
