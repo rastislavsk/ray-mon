@@ -7,21 +7,18 @@ import {
     PAGER_SETTLE_MS,
     PREVIEW,
     REFRESH,
-    SEARCH_DEBOUNCE_MS,
-    SETTINGS_LIMITS,
     SWIPE,
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
-import { checkSettings, settingsFromLink } from '../shared/settings.js';
 import { localMinutes } from '../shared/solar.js';
-import { loadData, searchPlaces } from './data.js';
+import { loadData } from './data.js';
 import { closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
-import { saveSettings } from './settings-store.js';
 import { clockPatch, nextPv, panelChange } from './state.js';
+import { applySettings, initSetup } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -460,144 +457,7 @@ export function isTall() {
     return (window.visualViewport ? window.visualViewport.height : window.innerHeight) >= WEEK_MSG_MIN_H;
 }
 
-/** Číslo z poľa formulára; prijme aj desatinnú čiarku. Prázdne pole je NaN. @param {HTMLInputElement} input */
-function numberOf(input) {
-    const text = input.value.trim().replace(',', '.');
-    return text === '' ? NaN : Number(text);
-}
-
-/** @typedef {import('../shared/settings.js').Settings} Settings */
-/** @typedef {import('../shared/config.js').PlantString} PlantString */
-
-/** Úpravy rozpísaného nastavenia. `rewrite` prepíše aj hodnoty polí formulára. @param {Store} store */
-function draftOps(store) {
-    const draft = () => store.get().settingsDraft;
-    /** @param {Settings} next @param {boolean} [rewrite] */
-    const setDraft = (next, rewrite = false) =>
-        store.setState({
-            settingsDraft: next,
-            settingsNote: '',
-            ...(rewrite ? { settingsRev: store.get().settingsRev + 1 } : {}),
-        });
-    /** @param {number} i @param {(x: PlantString) => PlantString} fn @param {boolean} [rewrite] */
-    const setString = (i, fn, rewrite = false) => {
-        const d = draft();
-        setDraft({ ...d, plant: { ...d.plant, strings: d.plant.strings.map((x, j) => (j === i ? fn(x) : x)) } }, rewrite);
-    };
-    /** @param {(xs: PlantString[]) => PlantString[]} fn */
-    const setStrings = (fn) => {
-        const d = draft();
-        setDraft({ ...d, plant: { ...d.plant, strings: fn(d.plant.strings) } }, true);
-    };
-    return { draft, setDraft, setString, setStrings };
-}
-
-/** Vyhľadávanie lokality: až keď človek chvíľu nepíše, a počíta sa len posledná odpoveď. @param {Store} store */
-function placeSearch(store) {
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let timer;
-    let lastId = 0;
-    return (/** @type {string} */ query) => {
-        clearTimeout(timer);
-        const id = ++lastId;
-        if (query.length < 2) return store.setState({ geo: { status: 'idle', results: [] } });
-        timer = setTimeout(async () => {
-            store.setState({ geo: { status: 'loading', results: [] } });
-            try {
-                const results = await searchPlaces(query);
-                if (id === lastId) store.setState({ geo: { status: 'done', results } });
-            } catch {
-                if (id === lastId) store.setState({ geo: { status: 'error', results: [] } });
-            }
-        }, SEARCH_DEBOUNCE_MS);
-    };
-}
-
-/** Písanie do polí formulára. @param {Dom} dom @param {ReturnType<typeof draftOps>} ops @param {(q: string) => void} search @param {Event} e */
-function onSettingsInput(dom, ops, search, e) {
-    const t = /** @type {HTMLInputElement} */ (e.target);
-    const d = ops.draft();
-    const field = t.dataset.field;
-    const i = Number(t.dataset.roof);
-    if (t === dom.setPlace) search(t.value.trim());
-    else if (field === 'lat' || field === 'lon') {
-        // Ručné súradnice berú časové pásmo telefónu - kto ich zadáva, je zvyčajne doma.
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const site = { name: 'Vlastné súradnice', lat: numberOf(dom.setLat), lon: numberOf(dom.setLon), elevationM: 0, timezone };
-        ops.setDraft({ ...d, site });
-    } else if (field === 'wp') ops.setDraft({ ...d, plant: { ...d.plant, panelWp: numberOf(t) } });
-    else if (field === 'ac') ops.setDraft({ ...d, plant: { ...d.plant, acLimitKw: numberOf(t) } });
-    else if (field === 'kiosk') ops.setDraft({ ...d, kiosk: t.value.trim() });
-    else if (field === 'panels') ops.setString(i, (x) => ({ ...x, panels: numberOf(t) }));
-    else if (field === 'tilt') ops.setString(i, (x) => ({ ...x, tiltDeg: Number(t.value) }));
-}
-
-/** Tlačidlá formulára. @param {Store} store @param {Dom} dom @param {ReturnType<typeof draftOps>} ops @param {HTMLElement} b */
-function onSettingsButton(store, dom, ops, b) {
-    const i = Number(b.dataset.roof);
-    const L = SETTINGS_LIMITS.panels;
-    if (b.dataset.geo !== undefined) {
-        const pick = store.get().geo.results[Number(b.dataset.geo)];
-        store.setState({ geo: { status: 'idle', results: [] } });
-        if (pick) ops.setDraft({ ...ops.draft(), site: pick.site }, true);
-    } else if (b.dataset.az !== undefined) ops.setString(i, (x) => ({ ...x, azimuthDeg: Number(b.dataset.az) }));
-    else if (b.dataset.step !== undefined) {
-        // Pri neplatnom čísle v poli začne krok od najmenšej povolenej hodnoty.
-        const next = (/** @type {number} */ n) => (Number.isInteger(n) ? n : L.min) + Number(b.dataset.step);
-        ops.setString(i, (x) => ({ ...x, panels: Math.max(L.min, Math.min(L.max, next(x.panels))) }), true);
-    } else if (b === dom.setRoofs[i]?.del) ops.setStrings((xs) => xs.filter((_, j) => j !== i));
-    else if (b === dom.setRoofAdd) {
-        // Nová plocha smeruje k rovníku: na severnej pologuli na juh, na južnej na sever.
-        const azimuthDeg = ops.draft().site.lat < 0 ? 0 : 180;
-        ops.setStrings((xs) => [...xs, { panels: 6, azimuthDeg, tiltDeg: 30 }]);
-    } else if (b === dom.setReset) {
-        const { site, plant, kiosk } = store.get();
-        store.setState({ geo: { status: 'idle', results: [] } });
-        ops.setDraft({ site, plant, kiosk }, true);
-    }
-}
-
-/**
- * Uloží nastavenie do prehliadača, prepne naň appku a stiahne predpoveď pre novú elektráreň.
- * @param {Store} store @param {Settings} next @param {() => Promise<void>} refresh @param {Partial<import('./state.js').AppState>} [extra]
- */
-function applySettings(store, next, refresh, extra = {}) {
-    if (checkSettings(next).errors.length) return;
-    if (!saveSettings(next)) {
-        store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
-        return;
-    }
-    // Dáta starej elektrárne sa zahodia hneď, aby sa ani na chvíľu nemiešali s novou.
-    store.setState({
-        site: next.site,
-        plant: next.plant,
-        kiosk: next.kiosk,
-        demo: false,
-        pv: null,
-        forecast: null,
-        loading: true,
-        // Nová lokalita môže mať iné pásmo, a na prelome mesiaca teda aj inú sezónu.
-        ...clockPatch(new Date(), next.site),
-        settingsDraft: next,
-        settingsNote: 'Uložené. Prepočítavam predpoveď.',
-        settingsRev: store.get().settingsRev + 1,
-        ...extra,
-    });
-    refresh();
-}
-
-/** Prilepený odkaz s nastavením: nájdené nastavenie appka ponúkne prevziať. @param {Store} store @param {string} text */
-function onImportInput(store, text) {
-    if (!text.trim()) return store.setState({ importNote: '' });
-    const found = settingsFromLink(text);
-    store.setState(
-        found
-            ? { incoming: found, importNote: 'Nastavenie som našiel. Potvrď ho v okne dole.' }
-            : { importNote: 'Tento odkaz neobsahuje platné nastavenie elektrárne.' },
-    );
-}
-
-/** Zdieľanie odkazu s nastavením a ponuka prevziať nastavenie z odkazu. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
+/** Zdieľanie odkazu s nastavením a ponuka prevziať nastavenie z otvoreného odkazu. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
 function initSharing(store, dom, refresh) {
     dom.shareWithSettings.addEventListener('change', () => store.setState({ shareSettings: dom.shareWithSettings.checked }));
     dom.shareWithKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.shareWithKiosk.checked }));
@@ -606,29 +466,6 @@ function initSharing(store, dom, refresh) {
         if (incoming) applySettings(store, incoming, refresh, { incoming: null, importNote: '' });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
-}
-
-/** Formulár „Moja elektráreň“ v karte Nastavenie. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
-function initSettings(store, dom, refresh) {
-    const ops = draftOps(store);
-    const search = placeSearch(store);
-    dom.setForm.addEventListener('input', (e) =>
-        e.target === dom.setImport ? onImportInput(store, dom.setImport.value) : onSettingsInput(dom, ops, search, e),
-    );
-    dom.setForm.addEventListener('click', (e) => {
-        const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
-        if (b) onSettingsButton(store, dom, ops, b);
-    });
-    // Lokalita a pole na odkaz sú vo formulári, no nie sú údajmi elektrárne: Enter v nich (na
-    // mobile kláves Hľadať či Choď) by formulár odoslal a uložil rozpísané nastavenie - v ukážke
-    // Londýn ako vlastnú elektráreň. V ostatných poliach Enter ukladá, ako sa od formulára čaká.
-    dom.setForm.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.isComposing && (e.target === dom.setPlace || e.target === dom.setImport)) e.preventDefault();
-    });
-    dom.setForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        applySettings(store, store.get().settingsDraft, refresh);
-    });
 }
 
 /**
@@ -696,7 +533,7 @@ export function initInteractions(store, dom, mq) {
     initDeviceChips(dom);
     initChartSizes(store, dom);
     const refresh = initTicks(store, mq);
-    initSettings(store, dom, refresh);
+    initSetup(store, dom, refresh);
     initSharing(store, dom, refresh);
     return refresh;
 }

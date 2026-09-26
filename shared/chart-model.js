@@ -469,3 +469,91 @@ export function weekListModel(days, selDay) {
 export function usePct(day) {
     return day.clearKwhTotal > 0 ? Math.round((100 * day.kwhTotal) / day.clearKwhTotal) : null;
 }
+
+// ---- Sprievodca nastavením: kompas, sklon strechy, mriežka panelov -----------------
+// Kompas sa číta ako mapa: sever hore, azimut v smere hodinových ručičiek (90 = východ vpravo).
+
+export const COMPASS = { viewBox: 300, rInner: 74, rOuter: 124, rLabel: 99, rSun: 138, sectorDeg: 45 };
+
+/** Bod na kružnici kompasu pre azimut, v jednotkách viewBoxu. @param {number} azDeg @param {number} r @param {number} [c] stred */
+export function compassPoint(azDeg, r, c = COMPASS.viewBox / 2) {
+    const rad = (azDeg * Math.PI) / 180;
+    return { x: c + r * Math.sin(rad), y: c - r * Math.cos(rad) };
+}
+
+/**
+ * Kompas smeru plochy: osem výsekov, dráha slnka a otočenie strechy v strede. Dráha ide cez
+ * deň z východu cez poludnie na západ - na severnej pologuli cez juh, na južnej cez sever.
+ * `buttons` sú polohy tlačidiel v percentách obalu, rovnako ako ringPercent pri ciferníku.
+ * @param {number} azDeg zvolený smer @param {boolean} south lokalita na južnej pologuli
+ */
+export function compassModel(azDeg, south) {
+    const { rInner, rOuter, rLabel, rSun, sectorDeg, viewBox } = COMPASS;
+    const half = sectorDeg / 2;
+    const sectors = Array.from({ length: 360 / sectorDeg }, (_, i) => {
+        const az = i * sectorDeg;
+        const label = compassPoint(az, rLabel);
+        return {
+            az,
+            on: az === azDeg,
+            outer: [compassPoint(az - half, rOuter), compassPoint(az + half, rOuter)],
+            inner: [compassPoint(az + half, rInner), compassPoint(az - half, rInner)],
+            button: { left: (label.x / viewBox) * 100, top: (label.y / viewBox) * 100 },
+        };
+    });
+    const noon = south ? 0 : 180;
+    return {
+        sectors,
+        rInner,
+        rOuter,
+        rSun,
+        // Oblúk slnka v dvoch polovičkách (východ - poludnie - západ): jeden oblúk cez 180° by
+        // nemal jednoznačný smer.
+        sunPath: [compassPoint(90, rSun), compassPoint(noon, rSun), compassPoint(270, rSun)],
+        // Na severnej pologuli ide oblúk v smere hodinových ručičiek (cez juh), na južnej proti.
+        sunSweep: south ? 0 : 1,
+        sun: compassPoint(noon, rSun),
+        // Strecha je nakreslená s panelmi na juh (dole); otočí sa o rozdiel oproti juhu.
+        rotateDeg: azDeg - 180,
+    };
+}
+
+/**
+ * Nákres strechy z boku pre daný sklon: odkvap vpravo, rovina panelov stúpa doľava, slnko
+ * vpravo hore svieti na ňu. Súradnice v jednotkách viewBoxu 320 × 190.
+ * @param {number} tiltDeg
+ */
+export function tiltModel(tiltDeg) {
+    const pivot = { x: 250, y: 112 };
+    const rad = (tiltDeg * Math.PI) / 180;
+    const at = (/** @type {number} */ r, /** @type {number} */ a = rad) => ({ x: pivot.x - r * Math.cos(a), y: pivot.y - r * Math.sin(a) });
+    const end = at(104);
+    return {
+        pivot,
+        end,
+        ground: 172,
+        wallLeft: 150,
+        mid: { x: (pivot.x + end.x) / 2, y: (pivot.y + end.y) / 2 },
+        arc: tiltDeg > 2 ? { from: at(40, 0), to: at(40), r: 40 } : null,
+        label: { ...at(60, rad / 2), y: at(60, rad / 2).y + 4 },
+        sun: { x: 296, y: 30 },
+    };
+}
+
+/**
+ * Mriežka panelov jednej plochy - obrázok namiesto čísla, aby bol preklep (61 namiesto 16)
+ * vidno hneď. Kreslí sa najviac 40 panelov, zvyšok je číslo.
+ * @param {number} count
+ */
+export function panelGridModel(count) {
+    const shown = Math.max(0, Math.min(Number.isFinite(count) ? count : 0, 40));
+    const cols = 10;
+    const size = { w: 24, h: 34, gap: 5 };
+    const cells = Array.from({ length: shown }, (_, i) => ({
+        x: (i % cols) * (size.w + size.gap) + 3,
+        y: Math.floor(i / cols) * (size.h + size.gap) + 3,
+    }));
+    const rows = Math.max(1, Math.ceil(shown / cols));
+    const more = Number.isFinite(count) && count > shown ? count - shown : 0;
+    return { cells, w: size.w, h: size.h, width: 296, height: rows * (size.h + size.gap) + 6 + (more ? 14 : 0), more };
+}
