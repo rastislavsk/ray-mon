@@ -5,7 +5,7 @@ import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/char
 import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
-import { localMinutes, sunUp } from '../../shared/solar.js';
+import { sunUp } from '../../shared/solar.js';
 import { DEVICE_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 import { dayRingSvg } from '../svg.js';
@@ -90,16 +90,12 @@ function renderDayRing(state, dom) {
 
 /** Jazdec na dennom prstenci. Je v stránke stále, aj keď náhľad nebeží - v pokoji je
  * značkou "teraz" a zároveň jedinou cestou, ako sa k náhľadu dostať z klávesnice. Počas
- * náhľadu sa mení na objímku a značku "teraz" preberie samostatná bodka.
+ * náhľadu sa mení na objímku a značka "teraz" na prstenci nie je - vracia ju tlačidlo
+ * "Teraz" pod číslom.
  * @param {import('../state.js').AppState} state @param {ReturnType<typeof heroModel>} hero @param {import('../dom.js').Dom} dom */
 function renderRingMarks(state, hero, dom) {
-    const nowMinutes = localMinutes(state.now, state.site.timezone);
     // Značka "teraz" je slnko od východu po západ a mesiac v noci (viď .sky-mark v style.css).
     const night = !sunUp(state.now, state.site);
-    placeOnRing(dom.dialNow, nowMinutes);
-    dom.dialNow.classList.toggle('hidden', !hero.preview);
-    dom.dialNow.classList.toggle('night', night);
-
     placeOnRing(dom.dialGrip, hero.minutes);
     dom.dialGrip.classList.toggle('at-now', !hero.preview);
     dom.dialGrip.classList.toggle('night', night);

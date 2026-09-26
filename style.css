@@ -692,8 +692,8 @@ b {
 
 /* ---- Terazky: jazdec na dennom prstenci ------------------------------------
    Vrstva nad ciferníkom. Jazdec je v nej stále: v pokoji je značkou "teraz" (.at-now),
-   počas náhľadu objímkou a značku "teraz" vtedy preberá samostatná bodka (.dial-now).
-   Obe sedia v percentách obalu, takže sa s ciferníkom samy zmenšujú. */
+   počas náhľadu objímkou a značka "teraz" vtedy na prstenci nie je. Sedí v percentách
+   obalu, takže sa s ciferníkom sám zmenšuje. */
 .dial-layer {
     position: absolute;
     inset: 0;

@@ -51,7 +51,6 @@ function terazkyDom() {
         dialWrap: byId('dial-wrap'),
         dayRing: byId('day-ring'),
         dialWhen: byId('dial-when'),
-        dialNow: byId('dial-now'),
         dialGrip: byId('dial-grip'),
     };
 }
