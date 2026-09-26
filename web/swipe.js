@@ -46,8 +46,8 @@ const SNAPS_X = /^(x|both)\b/;
  *
  * Druhá podmienka tu nie je navyše. Stačilo, aby obsah presiahol orezaný prvok o dva pixely,
  * a gesto dostal prvok, ktorý sa nikdy nepohne - listovanie tým celé zhaslo. Na karte Terazky
- * sa to dialo okolo 06:00: značka "teraz" vtedy stojí na pravom okraji prstenca a jej štvorec
- * presiahne kartu (overflow-x: hidden) o necelé dva pixely.
+ * sa to dialo, keď značka "teraz" stála na pravom okraji prstenca (dnes okolo 18:00) - jej
+ * štvorec vtedy presiahne kartu (overflow-x: hidden) o necelé dva pixely.
  * @param {EventTarget | null} target @param {HTMLElement} page
  */
 function innerScrollRoom(target, page) {

@@ -324,6 +324,33 @@ test('ťahanie jazdca: denný prstenec sa nemení, dotiahnutie na "teraz" náhľ
     expect(errors).toEqual([]);
 });
 
+test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ page }) => {
+    // Hranice počíta tá istá funkcia ako sprievodca nastavením; päť minút od nich stačí
+    // na to, aby test nezávisel od zaokrúhlenia na minútu.
+    const { rise, set } = sunTimes(SITE, '2026-09-05');
+    if (rise === null || set === null) throw new Error('5. 9. v Dvoranoch slnko vychádza aj zapadá');
+    const at = (/** @type {number} */ min) => new Date(Date.parse('2026-09-05T00:00:00+02:00') + min * 60000);
+    for (const [min, night] of /** @type {Array<[number, boolean]>} */ ([
+        [rise - 5, true],
+        [rise + 5, false],
+        [set - 5, false],
+        [set + 5, true],
+    ])) {
+        await openApp(page, { time: at(min) });
+        const grip = page.locator('#dial-grip');
+        await expect(grip, minutesToTimeStr(min)).toHaveClass(/at-now/);
+        if (night) await expect(grip, minutesToTimeStr(min)).toHaveClass(/night/);
+        else await expect(grip, minutesToTimeStr(min)).not.toHaveClass(/night/);
+    }
+
+    // Počas náhľadu nesie značku "teraz" samostatná bodka - aj tá je v noci mesiac.
+    const box = await page.locator('#dial-wrap').boundingBox();
+    if (!box) throw new Error('ciferník nemá rozmer');
+    await page.mouse.click(ringXY(box, 12 * 60).x, ringXY(box, 12 * 60).y);
+    await expect(page.locator('#dial-now')).toBeVisible();
+    await expect(page.locator('#dial-now')).toHaveClass(/night/);
+});
+
 test('náhľad času sa dá celý ovládať z klávesnice, nielen prstom', async ({ page }) => {
     await openApp(page);
     const grip = page.locator('#dial-grip');
@@ -1745,7 +1772,7 @@ test.describe('listovanie kariet prstom', () => {
         const grip = await page.locator('#dial-grip').boundingBox();
         if (!grip) throw new Error('jazdec nie je vidno');
 
-        // Ťah doľava cez vrchol ciferníka: z 05:00 smerom k 20:00 po ľavej strane.
+        // Ťah naprieč ciferníkom: z 05:00 vľavo dole k 20:00 vpravo hore.
         const ciel = ringXY(box, 20 * 60);
         const dx = ciel.x - (grip.x + grip.width / 2);
         expect(Math.abs(dx), 'ťah je kratší než hranica listovania, test by nič nekontroloval').toBeGreaterThan(SWIPE.minDistPx);

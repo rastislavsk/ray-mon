@@ -5,7 +5,7 @@ import { dayRingModel, RING, ringPercent, visibleHours } from '../../shared/char
 import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
-import { localMinutes } from '../../shared/solar.js';
+import { localMinutes, sunUp } from '../../shared/solar.js';
 import { DEVICE_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 import { dayRingSvg } from '../svg.js';
@@ -94,13 +94,19 @@ function renderDayRing(state, dom) {
  * @param {import('../state.js').AppState} state @param {ReturnType<typeof heroModel>} hero @param {import('../dom.js').Dom} dom */
 function renderRingMarks(state, hero, dom) {
     const nowMinutes = localMinutes(state.now, state.site.timezone);
+    // Značka "teraz" je slnko od východu po západ a mesiac v noci (viď .sky-mark v style.css).
+    const night = !sunUp(state.now, state.site);
     placeOnRing(dom.dialNow, nowMinutes);
     dom.dialNow.classList.toggle('hidden', !hero.preview);
+    dom.dialNow.classList.toggle('night', night);
 
     placeOnRing(dom.dialGrip, hero.minutes);
     dom.dialGrip.classList.toggle('at-now', !hero.preview);
-    // Otočenie o uhol času: dlhá os objímky tak leží po obvode prstenca.
-    dom.dialGrip.style.transform = `translate(-50%, -50%) rotate(${(hero.minutes / MINUTES_PER_DAY) * 360 + 180}deg)`;
+    dom.dialGrip.classList.toggle('night', night);
+    // Otočenie o uhol času: dlhá os objímky tak leží po obvode prstenca. Značka "teraz" sa
+    // neotáča - slnko ani mesiac nemajú ležať na boku.
+    const angle = hero.preview ? ` rotate(${(hero.minutes / MINUTES_PER_DAY) * 360 + 180}deg)` : '';
+    dom.dialGrip.style.transform = `translate(-50%, -50%)${angle}`;
     dom.dialGrip.setAttribute('aria-valuenow', String(hero.minutes));
     dom.dialGrip.setAttribute('aria-valuetext', `${hero.preview ? 'Náhľad' : 'Teraz'} ${minutesToTimeStr(hero.minutes)}`);
 }

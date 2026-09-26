@@ -619,7 +619,14 @@
                                         <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
                                         <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
                                         <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
-                                        <circle class="info-dial-now" cx="92.57" cy="222.39" r="5" />
+                                        <g class="info-dial-now" transform="translate(92.57 222.39) scale(1.3)">
+                                            <circle class="halo" r="10.5" />
+                                            <circle class="sun" r="3.4" />
+                                            <path
+                                                class="rays"
+                                                d="M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59"
+                                            />
+                                        </g>
                                     </g>
                                     <circle class="dial-track" cx="120" cy="120" r="78" />
                                     <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
@@ -642,11 +649,11 @@
                                         </div>
                                     </li>
                                     <li class="info-row">
-                                        <svg class="info-row-icon info-icon-now" viewBox="0 0 22 22" aria-hidden="true">
-                                            <circle class="ring" cx="11" cy="11" r="9" />
-                                            <circle class="dot" cx="11" cy="3" r="3" />
-                                        </svg>
-                                        <div><b>Biela bodka</b> — presný aktuálny čas („teraz“).</div>
+                                        <span class="info-row-icon sky-mark" aria-hidden="true"></span>
+                                        <div>
+                                            <b>Slnko alebo mesiac</b> — presný aktuálny čas („teraz“). Slnko svieti od východu po západ
+                                            slnka, v noci je tu mesiac.
+                                        </div>
                                     </li>
                                     <li class="info-row">
                                         <svg class="info-row-icon info-icon-power" viewBox="0 0 22 22" aria-hidden="true">
