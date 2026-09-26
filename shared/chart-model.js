@@ -3,7 +3,6 @@
 
 import { MINUTES_PER_DAY } from './config.js';
 import { fmt1, fmt2, formatGridKw, hourLabel, hourFloatToTimeStr, weekDateLabel, weekDayName, weekDayShort } from './format.js';
-import { stripSegments } from './tariff.js';
 
 /** @typedef {{ x: number, y: number }} Pt */
 /** @typedef {import('./solar.js').HourPoint} HourPoint */
@@ -167,7 +166,8 @@ export function chartTooltipModel(model, relX) {
 // ---- Denný prstenec (ciferník na karte Terazky) ----------------------------------
 // Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo, polnoc dole.
 // Deň ide v smere hodinových ručičiek, takže slnko prejde zľava cez vrch doprava.
-// Vonkajší prstenec je deň s tarifnými pásmami, vnútorný oblúk aktuálny výkon.
+// Vonkajší prstenec je plán dňa (cena z tarify a slnko z predpovede), vnútorný oblúk
+// aktuálny výkon.
 export const RING = { viewBox: 240, rDay: 106, dayWidth: 8, rPower: 78, powerWidth: 14 };
 
 /** Bod na kružnici pre minútu dňa, v jednotkách viewBoxu. @param {number} r @param {number} minutes */
@@ -199,12 +199,25 @@ export function ringGap(a, b) {
 }
 
 /**
- * Tarifné pásma dňa ako oblúky vonkajšieho prstenca. Krajné body a príznak dlhého oblúka
- * sú čísla, samotné "d" skladá web/svg.js.
- * @param {import('./config.js').Season} season
+ * Plán dňa ako oblúky vonkajšieho prstenca: susedné štvrťhodiny s rovnakou farbou sú jeden
+ * oblúk. Krajné body a príznak dlhého oblúka sú čísla, samotné "d" skladá web/svg.js.
+ * @param {Array<{ startMin: number, min: number, tier: import('./config.js').Tier | null }>} plan plán dňa (`dayPlan`)
  */
-export function dayRingModel(season) {
-    return stripSegments(season).map((s) => {
+export function dayRingModel(plan) {
+    /** @type {Array<{ startMin: number, min: number, cls: import('./config.js').Tier | null }>} */
+    const runs = [];
+    for (const s of plan) {
+        const last = runs[runs.length - 1];
+        if (last && last.cls === s.tier) last.min += s.min;
+        else runs.push({ startMin: s.startMin, min: s.min, cls: s.tier });
+    }
+    // Celý deň jednou farbou (jedna cena bez slnka) sú dva polkruhy: oblúk s takmer totožnými
+    // koncami by po zaokrúhlení súradníc mal konce rovnaké a nevykreslil by sa vôbec.
+    if (runs.length === 1 && runs[0].min === MINUTES_PER_DAY) {
+        const half = MINUTES_PER_DAY / 2;
+        runs.splice(0, 1, { startMin: 0, min: half, cls: runs[0].cls }, { startMin: half, min: half, cls: runs[0].cls });
+    }
+    return runs.map((s) => {
         const to = s.startMin + s.min;
         return {
             cls: s.cls,
@@ -213,6 +226,22 @@ export function dayRingModel(season) {
             large: s.min > MINUTES_PER_DAY / 2 ? 1 : 0,
         };
     });
+}
+
+/**
+ * Kruh rozvrhu v sprievodcovi: tie isté oblúky ako na ciferníku, k nim rezy medzi pásmami,
+ * ryska na každú hodinu a popis každej tretej. Poludnie hore, ako na ciferníku.
+ * @param {Array<{ startMin: number, min: number, tier: import('./config.js').Tier | null }>} segs rozvrh ako farby (`scheduleTiers`)
+ */
+export function tariffRingModel(segs) {
+    const r = RING.rDay;
+    const cut = (/** @type {number} */ m) => ({ a: ringPoint(r - 15, m), b: ringPoint(r + 15, m) });
+    return {
+        arcs: dayRingModel(segs),
+        cuts: segs.length > 1 ? segs.map((s) => cut(s.startMin)) : [],
+        ticks: Array.from({ length: 24 }, (_, h) => ({ a: ringPoint(r + 16, h * 60), b: ringPoint(h % 6 ? r + 20 : r + 24, h * 60) })),
+        hours: Array.from({ length: 8 }, (_, i) => ({ label: String(i * 3), at: ringPoint(r - 32, i * 180) })),
+    };
 }
 
 /**

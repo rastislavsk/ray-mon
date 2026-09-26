@@ -1,9 +1,12 @@
-// Jediný zdroj pravdy pre doménové konštanty appky (lokalita, elektráreň, tarify,
+// Jediný zdroj pravdy pre doménové konštanty appky (lokalita, elektráreň, tarifa,
 // hranice výkonu, spotrebiče). Používa ho prehliadač, Cloudflare Worker aj testy.
 // Žiadne z týchto čísel sa nesmie objaviť natvrdo inde v kóde.
 
-/** @typedef {'summer' | 'winter'} Season */
-/** @typedef {'red' | 'amber' | 'green'} Tier */
+/**
+ * Farba stavu: zelená = slnko pokryje veľké spotrebiče, inak cena zo siete - červená drahá,
+ * sivá bežná, oranžová lacná.
+ * @typedef {'red' | 'amber' | 'grey' | 'green'} Tier
+ */
 
 /**
  * Lokalita elektrárne. Časové pásmo určuje, ktorá hodina a ktorý deň je „miestny“.
@@ -99,7 +102,7 @@ export const SHARE_HASH_KEY = 'nastavenie';
 /** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
 export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 
-/** Minút v dni. Ciferník ich rozloží po obvode, tarifné okná ich delia na pásma. */
+/** Minút v dni. Ciferník ich rozloží po obvode, rozvrh tarify ich delí na pásma. */
 export const MINUTES_PER_DAY = 1440;
 
 /**
@@ -182,76 +185,174 @@ export function openMeteoUrl(site) {
 }
 
 /**
- * Tarifné okná dňa. Poradie je chronologické, nočné okno prechádza cez polnoc.
- * `seasons` hovorí, v ktorej sezóne okno platí; `devices` sú odporúčané spotrebiče
- * v jedinom zelenom okne. `night` označuje slot, kde text neprepisuje predpoveď.
- * @type {Array<{start: string, end: string, status: Tier, seasons: Season[], title: string, sub: string, devices?: string[], night?: boolean}>}
+ * Cenová úroveň pásma tarify. Na týchto troch úrovniach stoja farby, texty aj spotrebiče,
+ * nech má tarifa koľkokoľvek pásiem: lacné (NT, mimo špičky), bežné (jedna cena, stredné
+ * pásmo) a drahé (VT, špička).
+ * @typedef {'lacna' | 'bezna' | 'draha'} PriceLevel
  */
-export const TARIFF_WINDOWS = [
-    {
-        start: '23:30',
-        end: '07:30',
-        status: 'amber',
-        seasons: ['summer', 'winter'],
-        night: true,
-        title: 'Lacný nočný prúd',
-        sub: 'Slnko nesvieti, no sieť je lacná. Vhodné na bojler a nabíjanie auta.',
-    },
-    {
-        start: '07:30',
-        end: '08:30',
-        status: 'red',
-        seasons: ['summer', 'winter'],
-        title: 'Najdrahšia sieť',
-        sub: 'Nezapínať veľké spotrebiče',
-    },
-    { start: '08:30', end: '09:30', status: 'amber', seasons: ['summer', 'winter'], title: 'Menšie spotrebiče', sub: '' },
-    { start: '09:30', end: '10:30', status: 'red', seasons: ['summer', 'winter'], title: 'Najdrahšia sieť', sub: 'Ešte chvíľu vydržať' },
-    {
-        start: '10:30',
-        end: '17:30',
-        status: 'green',
-        seasons: ['summer'],
-        devices: ['Práčka', 'Sušička', 'Umývačka', 'Auto', 'Bojler'],
-        title: 'Ideálne okno',
-        sub: 'Silné slnko, plný výkon zadarmo. Zapni práčku, umývačku, čo potrebuješ.',
-    },
-    {
-        start: '10:30',
-        end: '14:30',
-        status: 'green',
-        seasons: ['winter'],
-        devices: ['Práčka', 'Auto', 'Bojler'],
-        title: 'Krátke okno',
-        sub: 'Opatrne — nepúšťať všetko naraz.',
-    },
-    {
-        start: '17:30',
-        end: '20:30',
-        status: 'amber',
-        seasons: ['summer'],
-        title: 'Bežná prevádzka',
-        sub: 'Slnko klesá, už iba malé spotrebiče',
-    },
-    { start: '14:30', end: '20:30', status: 'amber', seasons: ['winter'], title: 'Skorá tma', sub: 'Lacná sieť bez slnka' },
-    { start: '20:30', end: '21:30', status: 'red', seasons: ['summer', 'winter'], title: 'Najdrahšia sieť', sub: '' },
-    { start: '21:30', end: '22:30', status: 'amber', seasons: ['summer', 'winter'], title: 'OK (Lacná)', sub: '' },
-    { start: '22:30', end: '23:30', status: 'red', seasons: ['summer', 'winter'], title: 'Najdrahšia sieť', sub: '' },
-];
+/**
+ * Pásmo tarify. `id` je krátky kľúč, na ktorý odkazuje rozvrh, a pri premenovaní sa nemení.
+ * `price` je cena za kWh v mene tarify, null = človek ju nezadal.
+ * @typedef {{ id: string, name: string, level: PriceLevel, price: number | null }} Band
+ */
+/**
+ * Rozvrh dňa: zmeny pásma od polnoci (prvá je vždy 00:00), pásmo platí do ďalšej zmeny.
+ * `days` sú dni v týždni (1 = pondelok … 7 = nedeľa), `months` mesiace (1 – 12).
+ * @typedef {{ from: string, band: string }} TariffChange
+ * @typedef {{ days: number[], months: number[], changes: TariffChange[] }} Schedule
+ */
+/**
+ * Tarifa, ktorú si človek zadá v Nastavení. `schedules[0]` je základ a platí pre všetky dni
+ * aj mesiace; ďalšie rozvrhy sú výnimky (víkend, časť roka) a vyhráva posledná, ktorá na deň
+ * sedí. Kedy svieti slnko, tarifa nehovorí - to vie appka z predpovede.
+ * @typedef {{ currency: string, bands: Band[], schedules: Schedule[] }} Tariff
+ */
 
-// Leto = marec až október, zima = november až február.
-export const SUMMER_MONTHS = { from: 3, to: 10 };
+/** Úrovne od najlacnejšej. @type {PriceLevel[]} */
+export const PRICE_LEVELS = ['lacna', 'bezna', 'draha'];
 
-// Nočná NT sadzba pre auto bez ohľadu na výkon FV.
-export const AUTO_NIGHT_WINDOW = { start: '23:30', end: '06:00' };
+/** Farba úrovne, keď slnko nepokryje veľké spotrebiče (inak je zelená). @type {Record<PriceLevel, Tier>} */
+export const LEVEL_TIER = { lacna: 'amber', bezna: 'grey', draha: 'red' };
 
-/** Spotrebiče v pevnom poradí (riadky v karte nepreskakujú) s typickým príkonom v kW. */
+/** Povolené rozsahy tarify. */
+export const TARIFF_LIMITS = {
+    maxBands: 4,
+    maxSchedules: 4,
+    // Zmien za deň. Viac nemá žiadny bežný produkt a dlhší rozvrh by nafúkol zdieľaný odkaz.
+    maxChanges: 24,
+    // Zmena pásma len na celú štvrťhodinu; po štvrťhodinách sa počíta aj plán dňa.
+    stepMin: 15,
+    nameMax: 16,
+    currencyMax: 4,
+    priceMax: 10,
+};
+
+/** Všetky dni v týždni a všetky mesiace - rozsah základného rozvrhu. */
+export const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
+export const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+/**
+ * Tarifa v Dvoranoch: štyri hodiny VT, zvyšných dvadsať NT. Referenčná tarifa pre testy
+ * a zároveň tarifa každého nastavenia uloženého skôr, než appka poznala vlastné tarify -
+ * doterajším používateľom sa tak nič nezmení.
+ * @type {Tariff}
+ */
+export const TARIFF = {
+    currency: '€',
+    bands: [
+        { id: 'nt', name: 'NT', level: 'lacna', price: null },
+        { id: 'vt', name: 'VT', level: 'draha', price: null },
+    ],
+    schedules: [
+        {
+            days: ALL_DAYS,
+            months: ALL_MONTHS,
+            changes: [
+                { from: '00:00', band: 'nt' },
+                { from: '07:30', band: 'vt' },
+                { from: '08:30', band: 'nt' },
+                { from: '09:30', band: 'vt' },
+                { from: '10:30', band: 'nt' },
+                { from: '20:30', band: 'vt' },
+                { from: '21:30', band: 'nt' },
+                { from: '22:30', band: 'vt' },
+                { from: '23:30', band: 'nt' },
+            ],
+        },
+    ],
+};
+
+/**
+ * Ukážka pre nového používateľa (Londýn): sedem hodín lacno v noci, inak bežná cena.
+ * @type {Tariff}
+ */
+export const DEMO_TARIFF = {
+    currency: '£',
+    bands: [
+        { id: 'noc', name: 'Noc', level: 'lacna', price: null },
+        { id: 'den', name: 'Deň', level: 'bezna', price: null },
+    ],
+    schedules: [
+        {
+            days: ALL_DAYS,
+            months: ALL_MONTHS,
+            changes: [
+                { from: '00:00', band: 'den' },
+                { from: '00:30', band: 'noc' },
+                { from: '07:30', band: 'den' },
+            ],
+        },
+    ],
+};
+
+/**
+ * Šablóny tarify v sprievodcovi podľa typu sadzby. Sú to tvary dňa, nie produkty: časy NT
+ * určuje distribučka pre konkrétne odberné miesto, takže si ich človek aj tak opraví podľa
+ * faktúry. Ceny nie sú - tie sú nepovinné.
+ * @type {Record<'jedna' | 'dvoj' | 'viac', Tariff>}
+ */
+export const TARIFF_TEMPLATES = {
+    jedna: {
+        currency: '€',
+        bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: null }],
+        schedules: [{ days: ALL_DAYS, months: ALL_MONTHS, changes: [{ from: '00:00', band: 'j' }] }],
+    },
+    dvoj: {
+        currency: '€',
+        bands: [
+            { id: 'nt', name: 'NT', level: 'lacna', price: null },
+            { id: 'vt', name: 'VT', level: 'draha', price: null },
+        ],
+        schedules: [
+            {
+                days: ALL_DAYS,
+                months: ALL_MONTHS,
+                changes: [
+                    { from: '00:00', band: 'nt' },
+                    { from: '06:00', band: 'vt' },
+                    { from: '22:00', band: 'nt' },
+                ],
+            },
+        ],
+    },
+    viac: {
+        currency: '€',
+        bands: [
+            { id: 'p3', name: 'Mimo špičky', level: 'lacna', price: null },
+            { id: 'p2', name: 'Bežné', level: 'bezna', price: null },
+            { id: 'p1', name: 'Špička', level: 'draha', price: null },
+        ],
+        schedules: [
+            {
+                days: ALL_DAYS,
+                months: ALL_MONTHS,
+                changes: [
+                    { from: '00:00', band: 'p3' },
+                    { from: '08:00', band: 'p2' },
+                    { from: '10:00', band: 'p1' },
+                    { from: '14:00', band: 'p2' },
+                    { from: '18:00', band: 'p1' },
+                    { from: '22:00', band: 'p2' },
+                ],
+            },
+        ],
+    },
+};
+
+/** Meny na výber v sprievodcovi; appka nič neprepočítava, mena je len text pri cene. */
+export const CURRENCIES = ['€', 'Kč', '£', 'zł', 'Ft', '$'];
+
+/**
+ * Spotrebiče v pevnom poradí (riadky v karte nepreskakujú) s typickým príkonom v kW.
+ * `cheapGrid`: oplatí sa ho pustiť aj v lacnom pásme bez slnka (auto, bojler). `weakDay`:
+ * odporúča sa aj v slabý deň, keď slnko veľké spotrebiče nepokryje.
+ */
 export const DEVICES = [
-    { name: 'Práčka', powerKw: 2 },
-    { name: 'Sušička', powerKw: 1.5 },
-    { name: 'Umývačka', powerKw: 1.5 },
-    { name: 'Auto', powerKw: 11 },
-    { name: 'Bojler', powerKw: 2 },
+    { name: 'Práčka', powerKw: 2, cheapGrid: false, weakDay: true },
+    { name: 'Sušička', powerKw: 1.5, cheapGrid: false, weakDay: false },
+    { name: 'Umývačka', powerKw: 1.5, cheapGrid: false, weakDay: false },
+    { name: 'Auto', powerKw: 11, cheapGrid: true, weakDay: true },
+    { name: 'Bojler', powerKw: 2, cheapGrid: true, weakDay: true },
 ];
 
 // Kde appka beží a odkiaľ číta dáta.

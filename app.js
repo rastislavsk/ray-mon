@@ -1,7 +1,6 @@
 // Štart appky: DOM, stav, prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
 import { demoSettings, sameSettings, settingsFromLink } from './shared/settings.js';
-import { seasonFor } from './shared/tariff.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
 import { render } from './web/render/index.js';
@@ -21,7 +20,7 @@ const linked = settingsFromLink(location.hash);
 const incoming = linked && !(saved && sameSettings(linked, saved)) ? linked : null;
 const layout = { wide: mq.wide.matches, tall: isTall() };
 const settings = saved || demoSettings();
-const store = createStore(initialState(now, seasonFor(now, settings.site.timezone), layout, { settings, demo: !saved, incoming }));
+const store = createStore(initialState(now, layout, { settings, demo: !saved, incoming }));
 
 initUrlMirror(store);
 store.subscribe((state) => render(state, dom));

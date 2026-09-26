@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { STALE_PV_MS } from '../shared/config.js';
 import { demoSettings } from '../shared/settings.js';
 import {
-    clockPatch,
     createStore,
     initialState,
     navChange,
@@ -15,12 +14,13 @@ import {
     nextWeekDay,
     panelChange,
     sameNavStep,
+    savedSettings,
     setupDraft,
 } from '../web/state.js';
 
 test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
     const store = createStore(
-        initialState(new Date('2026-09-05T11:00:00Z'), 'summer', { wide: false, tall: false }, { settings: demoSettings(), demo: true }),
+        initialState(new Date('2026-09-05T11:00:00Z'), { wide: false, tall: false }, { settings: demoSettings(), demo: true }),
     );
     let calls = 0;
     store.subscribe(() => calls++);
@@ -28,7 +28,6 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
     assert.equal(calls, 1);
     assert.equal(store.get().panel, '7dni');
     assert.equal(store.get().weekSelDay, 3);
-    assert.equal(store.get().season, 'summer');
     assert.equal(store.get().verdictPage, 0, 'verdikt začína na prvej stránke');
     // Rozmery okna prichádzajú zvonku, stav si ich nedomýšľa.
     assert.equal(store.get().wide, false);
@@ -36,7 +35,7 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
 });
 
 test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
-    const store = createStore(initialState(new Date(), 'winter', { wide: true, tall: true }, { settings: demoSettings(), demo: true }));
+    const store = createStore(initialState(new Date(), { wide: true, tall: true }, { settings: demoSettings(), demo: true }));
     let calls = 0;
     const off = store.subscribe(() => calls++);
     store.setState({ panel: 'terazky', wide: true });
@@ -46,15 +45,11 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
     assert.equal(calls, 0);
 });
 
-test('posun hodín cez prelom októbra a novembra prepne sezónu bez načítania stránky', () => {
-    const site = demoSettings().site;
-    const store = createStore(
-        initialState(new Date('2026-10-31T12:00:00Z'), 'summer', { wide: false, tall: false }, { settings: demoSettings(), demo: true }),
-    );
-    store.setState(clockPatch(new Date('2026-10-31T23:59:00Z'), site));
-    assert.equal(store.get().season, 'summer', 'v Londýne je ešte 31. októbra');
-    store.setState(clockPatch(new Date('2026-11-01T00:01:00Z'), site));
-    assert.equal(store.get().season, 'winter');
+test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s elektrárňou', () => {
+    const settings = demoSettings();
+    const state = initialState(new Date(), { wide: false, tall: false }, { settings, demo: true });
+    assert.equal(state.tariff, settings.tariff);
+    assert.deepEqual(savedSettings(state), settings);
 });
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
@@ -83,7 +78,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
 });
 
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {
-    const state = initialState(new Date(), 'summer', { wide: false, tall: false }, { settings: demoSettings(), demo: true });
+    const state = initialState(new Date(), { wide: false, tall: false }, { settings: demoSettings(), demo: true });
     assert.deepEqual(navStep(state), { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null });
     // Vybraný deň ani stránka verdiktu nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, verdictPage: 2 })));
@@ -175,7 +170,7 @@ test('nextPv: pri výpadku kiosku ostáva posledné meranie, no nie staršie ne�
 test('setupDraft: bez živého merania sa kiosk neukladá, celkový výkon sa rozpočíta na panel', () => {
     const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
     const base = demoSettings();
-    const state = initialState(new Date(), 'summer', { wide: false, tall: false }, { settings: { ...base, kiosk }, demo: false });
+    const state = initialState(new Date(), { wide: false, tall: false }, { settings: { ...base, kiosk }, demo: false });
     assert.equal(state.setupLive, true, 'uložený kiosk znamená, že meranie človek chce');
     assert.equal(setupDraft(state).kiosk, kiosk);
     assert.equal(setupDraft({ ...state, setupLive: false }).kiosk, '');

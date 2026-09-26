@@ -8,7 +8,7 @@ import { searchPlaces } from './data.js';
 import { backTo } from './history.js';
 import { setupReady } from './render/nastavenie.js';
 import { saveSettings } from './settings-store.js';
-import { clockPatch, setupDraft } from './state.js';
+import { savedSettings, setupDraft } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./state.js').AppState} AppState */
@@ -21,9 +21,6 @@ function numberOf(input) {
     const text = input.value.trim().replace(',', '.');
     return text === '' ? NaN : Number(text);
 }
-
-/** Uložená elektráreň. @param {AppState} s @returns {Settings} */
-const savedOf = (s) => ({ site: s.site, plant: s.plant, kiosk: s.kiosk });
 
 /**
  * Uloží nastavenie do prehliadača, prepne naň appku a stiahne predpoveď pre novú elektráreň.
@@ -39,13 +36,13 @@ export function applySettings(store, next, refresh, extra = {}) {
     store.setState({
         site: next.site,
         plant: next.plant,
+        tariff: next.tariff,
         kiosk: next.kiosk,
         demo: false,
         pv: null,
         forecast: null,
         loading: true,
-        // Nová lokalita môže mať iné pásmo, a na prelome mesiaca teda aj inú sezónu.
-        ...clockPatch(new Date(), next.site),
+        now: new Date(),
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
@@ -122,7 +119,7 @@ function startSetup(store) {
 function restartSetup(store) {
     const s = store.get();
     store.setState({
-        settingsDraft: savedOf(s),
+        settingsDraft: savedSettings(s),
         settingsRev: s.settingsRev + 1,
         setupLive: !!s.kiosk,
         setupStep: 'start',
@@ -142,7 +139,7 @@ function openLink(store) {
 function closeSetup(store) {
     const s = store.get();
     if (s.setupReturn !== 'prehlad') return store.setState({ setupStep: null, setupReturn: null });
-    const saved = savedOf(s);
+    const saved = savedSettings(s);
     store.setState({ settingsDraft: saved, settingsRev: s.settingsRev + 1, setupLive: !!saved.kiosk, setupStep: null, setupReturn: null });
 }
 
@@ -197,7 +194,7 @@ function editStep(store, key) {
         setupRoof: roof,
         setupReturn: fromHome ? 'prehlad' : 'suhrn',
         settingsNote: '',
-        ...(fromHome ? { settingsDraft: savedOf(s), settingsRev: s.settingsRev + 1, setupLive: !!s.kiosk } : {}),
+        ...(fromHome ? { settingsDraft: savedSettings(s), settingsRev: s.settingsRev + 1, setupLive: !!s.kiosk } : {}),
     });
 }
 

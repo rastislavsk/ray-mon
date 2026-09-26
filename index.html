@@ -84,7 +84,7 @@
                 <div class="dial-hero card" id="dial-hero">
                     <!-- Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo,
                          polnoc dole - deň v smere hodinových ručičiek, slnko ide zľava doprava.
-                         Vonkajší prstenec je deň s tarifnými pásmami (dopĺňa ho JS, viď dayRingSvg),
+                         Vonkajší prstenec je plán dňa - cena z tarify, zelená pri slnku (dopĺňa ho JS, viď dayRingSvg),
                          vnútorný oblúk aktuálny výkon. Pás dňa pod kartou zanikol - jeho úlohu
                          (nastaviť náhľad iného času) prevzal jazdec na dennom prstenci. -->
                     <div class="dial-wrap" id="dial-wrap">
@@ -379,6 +379,7 @@
                             <button type="button" data-setup-tab="sklon">Sklon</button>
                             <button type="button" data-setup-tab="pocet">Panely</button>
                         </div>
+                        <div class="seg seg3 hidden" id="wz-tariff-tabs" role="group" aria-label="Čo na tarife upraviť"></div>
 
                         <section class="wz-screen" id="wz-start" aria-label="Úvod">
                             <svg class="setup-house" viewBox="0 0 320 96" aria-hidden="true">
@@ -563,6 +564,73 @@
                             </div>
                         </section>
 
+                        <!-- Tarifa: pásma, rozvrh dňa, výnimky a ceny. Obsah dopĺňa render, tu sú len
+                             nosiče. Do prvého prekreslenia sú skryté, aby sa neukázali pod inými
+                             obrazovkami sprievodcu. -->
+                        <section class="wz-screen hidden" id="wz-tarifa" aria-label="Typ sadzby">
+                            <div class="wz-kinds" id="wz-tariff-kinds" role="group" aria-label="Typ sadzby"></div>
+                            <button type="button" class="link-btn" data-setup-kind="dunno">Neviem</button>
+                            <p class="plant-msg hidden" id="wz-tariff-dunno">
+                                Appka bude počítať s jednou cenou a ciferník zafarbí len podľa slnka. Tarifu nájdeš na faktúre alebo v
+                                zmluve a doplníš ju kedykoľvek v Nastavení.
+                            </p>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-pasma" aria-label="Pásma tarify">
+                            <div class="bands" id="wz-bands"></div>
+                            <button type="button" class="choice" id="wz-band-add">
+                                <span class="plus" aria-hidden="true">+</span
+                                ><span class="t"><b>Pridať pásmo</b><span>Najviac štyri</span></span>
+                            </button>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-rozvrh" aria-label="Rozvrh dňa">
+                            <div class="seg hidden" id="wz-sched-tabs" role="group" aria-label="Rozvrh"></div>
+                            <div class="brushes" id="wz-brushes" role="radiogroup" aria-label="Pásmo, ktorým maľuješ"></div>
+                            <!-- Kruh je úchytka na ťahanie (touch-action: none): prst po ňom maľuje pásmo.
+                                 Presná cesta aj pre klávesnicu je zoznam úsekov a formulár pod ním. -->
+                            <svg class="tariff-ring" id="wz-tariff-ring" viewBox="-12 -12 264 264" aria-hidden="true">
+                                <g id="wz-tariff-ring-g"></g>
+                            </svg>
+                            <p class="wz-kwp-line" id="wz-ring-sum"></p>
+                            <div class="chips" id="wz-sched-tpls" role="group" aria-label="Šablóny tvaru dňa"></div>
+                            <div class="field-label">Úseky</div>
+                            <ul class="ivals" id="wz-ivals"></ul>
+                            <div class="ival-form">
+                                <label
+                                    >Od
+                                    <select class="field-input" id="wz-ival-from"></select></label
+                                ><label
+                                    >do
+                                    <select class="field-input" id="wz-ival-to"></select></label
+                                ><label
+                                    >pásmo
+                                    <select class="field-input" id="wz-ival-band"></select></label
+                                ><button type="button" class="chip" id="wz-ival-set">Nastaviť</button>
+                            </div>
+                            <details class="help">
+                                <summary>Kde nájdem časy?</summary>
+                                <p>
+                                    Na faktúre alebo na stránke distribučky pri časoch prepínania (HDO). Aj v rámci jednej distribučky sa
+                                    líšia podľa odberného miesta, preto šablóna dá len tvar dňa.
+                                </p>
+                            </details>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-vynimky" aria-label="Výnimky v rozvrhu">
+                            <div class="wz-stack" id="wz-exc"></div>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-ceny" aria-label="Ceny">
+                            <div class="field-label">Mena</div>
+                            <div class="chips" id="wz-currency" role="group" aria-label="Mena"></div>
+                            <div class="field-label">Cena za kWh</div>
+                            <div id="wz-prices"></div>
+                            <div id="wz-price-check"></div>
+                        </section>
+
+                        <div class="plant-msgs hidden" id="wz-tariff-msgs"></div>
+
                         <section class="wz-screen" id="wz-suhrn" aria-label="Zhrnutie">
                             <div id="wz-summary"></div>
                         </section>
@@ -637,11 +705,12 @@
                                             <path class="seg red" d="M2,11 A9,9 0 0 1 11,2" />
                                         </svg>
                                         <div>
-                                            <b>Vonkajší prstenec</b> — 24 hodín dňa, farba pásma:
+                                            <b>Vonkajší prstenec</b> — 24 hodín dňa podľa tvojej tarify a predpovede:
                                             <ul class="info-tiers">
-                                                <li><i class="sw green"></i>ideálne okno (svieti slnko)</li>
-                                                <li><i class="sw amber"></i>lacná sieť / nízka tarifa</li>
-                                                <li><i class="sw red"></i>najdrahšia sieť / vysoká tarifa</li>
+                                                <li><i class="sw green"></i>slnko pokryje veľké spotrebiče</li>
+                                                <li><i class="sw amber"></i>lacné pásmo (NT, mimo špičky)</li>
+                                                <li><i class="sw grey"></i>bežná cena</li>
+                                                <li><i class="sw red"></i>drahé pásmo (VT, špička)</li>
                                             </ul>
                                         </div>
                                     </li>

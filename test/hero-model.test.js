@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PLANT, SITE } from '../shared/config.js';
+import { ALL_DAYS, ALL_MONTHS, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -11,9 +11,9 @@ const at = (/** @type {string} */ hm) => {
     d.setHours(h, m, 0, 0);
     return d;
 };
-const base = { season: /** @type {const} */ ('summer'), pv, forecast, previewMinutes: null, site: SITE, plant: PLANT };
+const base = { tariff: TARIFF, pv, forecast, previewMinutes: null, site: SITE, plant: PLANT };
 
-test('13:00 v lete so 6,4 kW: zelené okno, všetky spotrebiče go, žiadne čakanie', () => {
+test('13:00 so 6,4 kW v lacnom pásme: zelená, všetky spotrebiče go, žiadne čakanie', () => {
     const m = heroModel({ ...base, now: at('13:00') });
     assert.equal(m.tier, 'green');
     assert.equal(m.accent, 'green');
@@ -33,27 +33,67 @@ test('číslo v ciferníku má najviac päť znakov, aj pri 100 kW', () => {
     assert.equal(vykon(99.996), '100.0', 'zaokrúhlenie na dve desatiny by dalo šesť znakov');
 });
 
-test('02:00 nočný slot: text z okna, auto oranžové', () => {
+test('02:00 v noci: text o lacnom nočnom prúde, auto a bojler go, ostatné čakajú', () => {
     const m = heroModel({ ...base, now: at('02:00'), pv: { ...pv, realTimePowerKw: 0 } });
     assert.ok(m.isNight);
+    assert.equal(m.tier, 'amber');
+    assert.equal(m.band.name, 'NT');
     assert.equal(m.message.headline, 'Lacný nočný prúd');
-    assert.equal(m.devices.find((d) => d.name === 'Auto')?.tier, 'amber');
+    const auto = m.devices.find((d) => d.name === 'Auto');
+    assert.equal(auto?.tier, 'amber');
+    assert.equal(auto?.state, 'go');
+    assert.equal(m.devices.find((d) => d.name === 'Práčka')?.state, 'wait');
     assert.equal(m.dial.tier, 'red');
 });
 
-test('08:00 drahý slot bez dát: farba podľa tarify, číslo pomlčka', () => {
-    const m = heroModel({ ...base, now: at('08:00'), pv: null, forecast: null });
+test('21:00 VT bez slnka: červená a text o drahej sieti v tme', () => {
+    const m = heroModel({ ...base, now: at('21:00'), pv: { ...pv, realTimePowerKw: 0 } });
+    assert.equal(m.tier, 'red');
     assert.equal(m.accent, 'red');
-    assert.equal(m.powerText, '–');
-    assert.equal(m.message.headline, 'Najdrahšia sieť');
+    assert.equal(m.message.headline, 'Drahá sieť a tma');
 });
 
-test('čakací chip len mimo zeleného okna, keď predpoveď hlási silnejšie slnko', () => {
+test('08:00 drahé pásmo bez dát: farba podľa ceny, číslo pomlčka', () => {
+    const m = heroModel({ ...base, now: at('08:00'), pv: null, forecast: null });
+    assert.equal(m.accent, 'red');
+    assert.equal(m.tier, 'red');
+    assert.equal(m.powerText, '–');
+    assert.equal(m.message.headline, 'Drahá elektrina');
+});
+
+test('jedna cena celý deň: bez slnka sivá, pri slnku zelená', () => {
+    /** @type {import('../shared/config.js').Tariff} */
+    const flat = {
+        currency: '€',
+        bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: null }],
+        schedules: [{ days: ALL_DAYS, months: ALL_MONTHS, changes: [{ from: '00:00', band: 'j' }] }],
+    };
+    const noc = heroModel({ ...base, tariff: flat, now: at('22:00'), pv: { ...pv, realTimePowerKw: 0 } });
+    assert.equal(noc.tier, 'grey');
+    assert.equal(noc.accent, 'grey');
+    assert.equal(noc.message.headline, 'Slnko nesvieti');
+    assert.ok(
+        noc.devices.every((d) => d.state === 'wait'),
+        'bez lacného pásma nejde nič',
+    );
+    assert.equal(heroModel({ ...base, tariff: flat, now: at('13:00') }).tier, 'green');
+});
+
+test('slabý deň: sušička a umývačka nie sú odporúčané vôbec', () => {
+    const weak = { ...forecast, days: [{ ...forecast.days[0], peakKw: 0.8 }, ...forecast.days.slice(1)] };
+    const m = heroModel({ ...base, now: at('13:00'), forecast: weak });
+    const states = Object.fromEntries(m.devices.map((d) => [d.name, d.state]));
+    assert.equal(states.Sušička, 'no');
+    assert.equal(states.Umývačka, 'no');
+    assert.equal(states.Práčka, 'go');
+});
+
+test('čakací chip len keď slnko ešte nepokrýva spotrebiče a predpoveď hlási silnejšie', () => {
     const f = { ...forecast, strongerWindowAhead: true, hoursAhead: 3, windowDaypart: 'poobede' };
-    const m = heroModel({ ...base, now: at('09:00'), forecast: f, pv: { ...pv, realTimePowerKw: 0.5 } });
-    assert.equal(m.waitTime, '12:00');
-    assert.equal(m.message.headline, 'Radšej počkaj na slnko', '08:30-09:30 je lacný slot, slabé slnko');
-    assert.equal(heroModel({ ...base, now: at('13:00'), forecast: f }).waitTime, null, 'v okne so spotrebičmi sa nečaká');
+    const m = heroModel({ ...base, now: at('07:00'), forecast: f, pv: { ...pv, realTimePowerKw: 0.5 } });
+    assert.equal(m.waitTime, '10:00');
+    assert.equal(m.message.headline, 'Radšej počkaj na slnko', 'pred 07:30 je lacné NT, slabé slnko');
+    assert.equal(heroModel({ ...base, now: at('13:00'), forecast: f }).waitTime, null, 'keď slnko svieti, nečaká sa');
 });
 
 test('náhľad iného času berie výkon z krivky: minulosť merané, budúcnosť odhad', () => {

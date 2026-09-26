@@ -12,7 +12,7 @@ import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, totalPanels } fr
 import { clearDayKwh, localDateKey, orientationShare, sunTimes } from '../../shared/solar.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
-import { setupDraft } from '../state.js';
+import { savedSettings, setupDraft } from '../state.js';
 import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tiltSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
@@ -173,7 +173,7 @@ function renderHome(state, dom) {
     dom.setupOverview.classList.toggle('hidden', state.demo);
     dom.setupNote.textContent = state.settingsNote;
     if (state.demo) return;
-    const saved = { site: state.site, plant: state.plant, kiosk: state.kiosk };
+    const saved = savedSettings(state);
     writeHtml(dom.setupHero, heroHtml(saved, state), 'setupHero');
     writeHtml(dom.setupRows, summaryRows(saved, state), 'setupRows');
     writeHtml(
@@ -489,7 +489,7 @@ function writeFields(state, roof, dom) {
  * @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {boolean} ok @param {Dom} dom */
 function renderFoot(state, draft, step, ok, dom) {
     const ret = state.setupReturn;
-    const saved = { site: state.site, plant: state.plant, kiosk: state.kiosk };
+    const saved = savedSettings(state);
     /** @type {Partial<Record<SetupStep, string>>} */
     const labels = {
         start: 'Začať',

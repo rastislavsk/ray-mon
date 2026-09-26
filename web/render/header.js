@@ -1,4 +1,4 @@
-// Hlavička: čas, stavová bodka (tarifa × výkon), riadok o aktuálnosti dát a farba tarify
+// Hlavička: čas, stavová bodka (cena × výkon), riadok o aktuálnosti dát a farba plánu dňa
 // pre pozadie celej stránky (vrátane náhľadu iného času).
 
 import { minutesToTimeStr } from '../../shared/format.js';
@@ -18,7 +18,7 @@ export function updatedLine(state) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
-    // Čas lokality, nie telefónu - k nemu sa vzťahujú tarifné okná aj predpoveď.
+    // Čas lokality, nie telefónu - k nemu sa vzťahuje rozvrh tarify aj predpoveď.
     dom.currentTimeDisplay.textContent = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     dom.pvUpdated.textContent = updatedLine(state);
     // Bodka je vždy o stave teraz, preto ju náhľad iného času nezaujíma. Pozadie naopak
@@ -30,7 +30,8 @@ export function renderHeader(state, dom) {
     // Farbu bodky (a s ňou aj podsvietenie ikony aktívnej karty v navigácii) drží data-accent
     // na <html> - mapovanie na konkrétnu farbu je v style.css pri --live-rgb.
     dom.root.dataset.accent = accent || '';
-    // Pozadie drží farbu tarifného okna (tier), nie "smart" farbu bodky (accent, tá počíta
-    // aj so slnkom) - hovorí teda to isté, čo segment pod bežcom na dennom prstenci.
+    // Pozadie drží farbu plánu dňa (tier: cena z tarify a výroba z krivky dňa), nie farbu bodky
+    // (accent, tá počíta so živým výkonom) - hovorí teda to isté, čo segment pod bežcom na
+    // dennom prstenci.
     dom.root.dataset.tier = shown.tier || '';
 }

@@ -35,7 +35,7 @@ export function forecastChartSvg(m) {
     return out;
 }
 
-/** Denný prstenec ciferníka: tarifné pásma dňa ako oblúky po obvode.
+/** Denný prstenec ciferníka: plán dňa ako oblúky po obvode.
  * @param {ReturnType<typeof import('../shared/chart-model.js').dayRingModel>} m */
 export function dayRingSvg(m) {
     const r = RING.rDay;
@@ -132,6 +132,31 @@ export function miniCompassSvg(azDeg) {
     return (
         `<svg class="mini-compass" viewBox="0 0 34 34" aria-hidden="true"><circle class="ring" cx="17" cy="17" r="15"/>` +
         `<text x="17" y="7">S</text><line class="arrow" x1="17" y1="17" x2="${n(tip.x)}" y2="${n(tip.y)}"/><circle class="hub" cx="17" cy="17" r="2.5"/></svg>`
+    );
+}
+
+/** Malý prstenec tarify (zhrnutie, typ sadzby, zoznam rozvrhov). @param {ReturnType<typeof import('../shared/chart-model.js').dayRingModel>} arcs */
+export function tariffMiniSvg(arcs) {
+    return `<svg class="tariff-mini" viewBox="-10 -10 260 260" aria-hidden="true">${dayRingSvg(arcs)}</svg>`;
+}
+
+/**
+ * Obsah kruhu rozvrhu v sprievodcovi (vnútro `<g>` - samotné `<svg>` ostáva v stránke, lebo drží
+ * zachytený prst počas ťahania). V strede pásmo, ktorým sa práve maľuje.
+ * @param {ReturnType<typeof import('../shared/chart-model.js').tariffRingModel>} m
+ * @param {{ name: string, level: string, tier: string }} brush
+ */
+export function tariffRingSvg(m, brush) {
+    const line = (/** @type {{ a: {x: number, y: number}, b: {x: number, y: number} }} */ l, /** @type {string} */ cls) =>
+        `<line class="${cls}" x1="${n(l.a.x)}" y1="${n(l.a.y)}" x2="${n(l.b.x)}" y2="${n(l.b.y)}"/>`;
+    return (
+        dayRingSvg(m.arcs) +
+        m.cuts.map((c) => line(c, 'cut')).join('') +
+        m.ticks.map((t) => line(t, 'tick')).join('') +
+        m.hours.map((h) => `<text class="hour" x="${n(h.at.x)}" y="${n(h.at.y)}">${h.label}</text>`).join('') +
+        `<text class="brush-lbl" x="120" y="104">MAĽUJEŠ</text>` +
+        `<text class="brush-name ${brush.tier}" x="120" y="126">${escapeHtml(brush.name)}</text>` +
+        `<text class="brush-lbl" x="120" y="144">${escapeHtml(brush.level)}</text>`
     );
 }
 

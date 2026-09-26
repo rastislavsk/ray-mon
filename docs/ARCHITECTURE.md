@@ -28,20 +28,21 @@ neukladá a nemá plánované behy.
 **`shared/` – doména bez vstupov a výstupov.** Nesmie sa dotknúť DOM, siete ani
 aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 
-| Modul            | Zodpovednosť                                                                                              |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `config.js`      | Všetky konštanty: Dvorany a ukážka, rozsahy nastavenia, hranice výkonu, tarifné okná, spotrebiče, adresy. |
-| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.   |
-| `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                          |
-| `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.       |
-| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                    |
-| `tariff.js`      | Sezóna, tarifné okná, pásma výkonu, stav spotrebičov.                                                     |
-| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                  |
-| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                         |
-| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                     |
-| `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                        |
-| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                               |
-| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                        |
+| Modul            | Zodpovednosť                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `config.js`      | Všetky konštanty: Dvorany a ukážka, rozsahy nastavenia, hranice výkonu, tarifa Dvorian, spotrebiče, adresy. |
+| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.     |
+| `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                            |
+| `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.         |
+| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                      |
+| `tariff.js`      | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.         |
+| `day-plan.js`    | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                 |
+| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                    |
+| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                           |
+| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
+| `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
+| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
+| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                          |
 
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
@@ -94,16 +95,17 @@ nič nereštartuje a JS o nej nevie. Posun je malý (24 px) a `.page` má `overf
 aby posunutá karta nešla poscrollovať do strany; stráži to e2e test, ktorý meria pretečenie
 počas celého prechodu, nie až po ňom.
 
-Rovnakou cestou ide aj farba pozadia. `renderHeader` zapíše tarifné okno, v ktorom sme
-práve teraz, ako `data-tier` na `<html>` a tým to preň končí; zvyšok je CSS, ktoré si podľa
+Rovnakou cestou ide aj farba pozadia. `renderHeader` zapíše farbu plánu dňa v tejto chvíli
+ako `data-tier` na `<html>` a tým to preň končí; zvyšok je CSS, ktoré si podľa
 toho prepne `--tint-rgb` a z neho poskladá `--bg-page`. Atribút sedí na `<html>`, nie na
 `<body>`, lebo `var()` vo vnútri custom property sa dosadzuje tam, kde je property zapísaná
-– `--bg-page` z `:root` by zmenu na `<body>` už nevidelo. Pozadie drží tarifu (`hero.tier`),
-nie „smart" farbu stavovej bodky (`hero.accent`, tá počíta aj so slnkom), takže hovorí to
-isté, čo segment pod bežcom na dennom prstenci: či je elektrina v tej hodine lacná. Pri
+– `--bg-page` z `:root` by zmenu na `<body>` už nevidelo. Pozadie drží farbu plánu dňa
+(`hero.tier`: cena z tarify a výkon z krivky dňa), nie farbu stavovej bodky (`hero.accent`,
+tá počíta so živým výkonom), takže hovorí to isté, čo segment pod bežcom na dennom
+prstenci. Pri
 náhľade iného času ide pozadie s bežcom, kým bodka ostáva o stave teraz – preto sa model
 ráta dvakrát, ale len keď náhľad naozaj beží. Že sa farba nerozíde s modelom, strážia e2e
-testy: štyri pevné časy pokryjú všetky tri farby a ťuknutie na prstenec overí, že sa farba
+testy: pevné časy pokryjú zelenú, oranžovú aj červenú, tarifa s jednou cenou sivú, a ťuknutie na prstenec overí, že sa farba
 mení aj s bežcom a po zrušení náhľadu sa vráti.
 
 Medzi vstupmi stavu je aj `chartSizes` – skutočné rozmery plátien grafov v pixeloch.
@@ -154,8 +156,38 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 - **Dáta sa nekomitujú do repozitára.** Pôvodná appka ukladala JSON do gitu každých päť
   minút cez GitHub Actions. Teraz sa neukladajú nikde: meranie ide z kiosku rovno do
   appky a predpoveď si appka počíta sama.
-- **Tarifné okná sú dáta, nie HTML.** Pôvodne boli v `data-` atribútoch skrytého zoznamu,
-  teraz v `config.js`, odkiaľ ich číta appka aj testy.
+- **Tarifa je nastavenie, nie konštanta.** Pôvodne boli tarifné okná v `data-` atribútoch
+  skrytého zoznamu, potom natvrdo v `config.js` – a miešali tri veci: cenu zo siete (VT a NT),
+  odhad slnka (zelené okno 10:30 – 17:30, v zime do 14:30, sezóny podľa severnej pologule)
+  a texty. Dnes je tarifa len cena: pásma s úrovňou lacné / bežné / drahé a rozvrh dňa, ktorý
+  si človek zadá sám (viď „Tarifa a plán dňa“ nižšie). Slnko berie appka z predpovede.
+
+## Tarifa a plán dňa
+
+Cena elektriny a slnko sú dve nezávislé veci a appka ich tak aj drží:
+
+- **Tarifa** (`Tariff` v `config.js`, časť nastavenia) hovorí len o cene zo siete. Má jedno až
+  štyri pásma, každé s úrovňou `lacna` / `bezna` / `draha`, menom a nepovinnou cenou. Rozvrh je
+  zoznam zmien pásma od polnoci, takže deň je pokrytý bez dier aj prekryvov už zo stavby.
+  Prvý rozvrh platí vždy, ďalšie sú výnimky pre vybrané dni v týždni alebo mesiace (víkend,
+  letná sadzba) a vyhráva posledná, ktorá na deň sedí (`scheduleFor`). Sviatky appka nepozná.
+- **Slnko** je výkon z krivky dňa: namerané, za hranicou merania predpoveď (`dayKwAt`).
+
+`dayPlan` v `shared/day-plan.js` ich spojí po štvrťhodinách: pásmo, výkon a farba. Farba
+je jedno pravidlo (`smartTier`): od dolnej hranice výkonu zelená – slnko pokryje veľké
+spotrebiče, cena nehrá rolu – inak farba úrovne (oranžová lacné, sivá bežné, červená drahé).
+Z plánu čítajú denný prstenec, pozadie stránky, texty aj spotrebiče, takže segment pod bežcom
+a farba pozadia sú vždy to isté číslo. Plán berie krivku dňa, nie živý výkon – stavová bodka
+počíta so živým výkonom a môže sa od neho na chvíľu líšiť.
+
+Texty sú mriežka úroveň × výroba (`SLOT_MESSAGES`), v noci (slnko pod obzorom) hovoria len
+o cene (`NIGHT_MESSAGES`) a bez dát ostáva len cena (`PRICE_MESSAGES`). Auto a bojler sú
+„go“ aj v lacnom pásme bez slnka, ostatné spotrebiče len pri slnku; v slabý deň (špička pod
+hranicou slabého dňa) nie sú sušička a umývačka odporúčané vôbec.
+
+Nastavenie uložené pred vlastnými tarifami tarifu nemá a dostane tú Dvorian (`TARIFF`), s ktorou
+appka dovtedy počítala. Tarifa ide aj do odkazu `#nastavenie=…`; rozvrh má najviac 24 zmien
+za deň, aby odkaz ostal rozumne krátky.
 
 ## Karta 7 dní na mobile
 

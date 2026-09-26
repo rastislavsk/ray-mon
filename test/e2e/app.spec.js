@@ -11,6 +11,7 @@ import {
     SETTINGS_STORAGE_KEY,
     SITE,
     SWIPE,
+    TARIFF,
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
@@ -30,7 +31,7 @@ const weather = fixture('open-meteo.json');
 /** Elektráreň v Dvoranoch - pre ňu sú fixtures aj očakávané texty. */
 /** Odkaz na kiosk v testoch; Worker na ňu odpovedá nameraným pv z fixtures. */
 const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
-const OWNER = { site: SITE, plant: PLANT, kiosk: TEST_KIOSK };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: TEST_KIOSK };
 /** Predpoveď tak, ako ju prehliadač postaví v danej chvíli. @param {Date} time */
 const forecastAt = (time) => buildForecast(weather, time, SITE, PLANT);
 /** Odpoveď vyhľadávania miest: jedno mesto na severe, jedno na juhu. */
@@ -104,8 +105,7 @@ function atTime(hm) {
 }
 
 /** Model hlavnej karty v danej chvíli, s predpoveďou postavenou v tej istej chvíli ako v appke. @param {Date} instant */
-const modelAt = (instant) =>
-    heroModel({ now: instant, season: 'summer', pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
+const modelAt = (instant) => heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
 
 const todayForecastMsg = forecastDayMessage(visibleHours(forecast.hourlyToday), true, powerThresholds(PLANT));
 
@@ -148,7 +148,7 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     // Správa o predpovedi dňa žije už len tu, v pageri.
     await expect(page.locator('#verdict-forecast-title')).toHaveText(todayForecastMsg.title);
     await expect(page.locator('#verdict-forecast-body')).toHaveText(todayForecastMsg.body);
-    // Zelené okno prefarbí pozadie celej stránky dozelena.
+    // Slnko v lacnom pásme prefarbí pozadie celej stránky dozelena.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
     expect(errors).toEqual([]);
 });
@@ -168,8 +168,9 @@ test('klik na spotrebič (mobil) ukáže tooltip s príkonom, nie je orezaný pa
 });
 
 test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpoveď dňa, kedy bude lepšie', async ({ page }) => {
-    const { instant } = atTime('09:00');
-    // O 09:00 má predpoveď pred sebou silnejšie okno (okolo poludnia), takže čakací čas vznikne.
+    const { instant } = atTime('07:00');
+    // O 07:00 slnko ešte nepokrýva veľké spotrebiče a predpoveď má pred sebou silnejšie okno
+    // (okolo poludnia), takže čakací čas vznikne.
     const errors = await openApp(page, { time: instant });
     const expected = modelAt(instant);
     expect(expected.waitTime).not.toBeNull();
@@ -227,8 +228,9 @@ test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpo
 });
 
 for (const [hm, label] of [
-    ['08:00', 'drahý slot'],
+    ['08:00', 'drahé pásmo ráno'],
     ['19:30', 'lacný podvečer'],
+    ['21:00', 'drahé pásmo večer'],
     ['02:00', 'noc'],
 ]) {
     test(`verdikt o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
@@ -236,8 +238,8 @@ for (const [hm, label] of [
         const errors = await openApp(page, { time: instant });
         const expected = modelAt(instant);
         await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
-        // Pozadie stránky drží farbu tarifného okna. Tieto tri časy pokryjú všetky tri
-        // farby (08:00 červená, 19:30 aj 02:00 oranžová), 13:00 zelenú v teste vyššie.
+        // Pozadie stránky drží farbu plánu dňa. Tieto časy pokryjú červenú (21:00, VT bez
+        // slnka) aj oranžovú (19:30 a 02:00, NT bez slnka), 13:00 zelenú v teste vyššie.
         await expect(page.locator('html')).toHaveAttribute('data-tier', expected.tier || '');
         expect(errors).toEqual([]);
     });
@@ -245,7 +247,7 @@ for (const [hm, label] of [
 
 for (const [hm, label] of [
     ['13:00', 'zelená'],
-    ['08:00', 'červená'],
+    ['21:00', 'červená'],
     ['02:00', 'oranžová'],
 ]) {
     test(`podsvietenie ikony aktívnej karty má rovnakú farbu ako stavová bodka (${hm}, ${label})`, async ({ page }) => {
@@ -258,6 +260,27 @@ for (const [hm, label] of [
         expect(glow).toBe(dot);
     });
 }
+
+test('jedna cena celý deň: v noci sivé pozadie, bodka aj prstenec bez oranžovej a červenej', async ({ page }) => {
+    /** @type {import('../../shared/config.js').Tariff} */
+    const flat = {
+        currency: '€',
+        bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: null }],
+        schedules: [
+            { days: [1, 2, 3, 4, 5, 6, 7], months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], changes: [{ from: '00:00', band: 'j' }] },
+        ],
+    };
+    const { instant } = atTime('22:00');
+    const errors = await openApp(page, { time: instant, settings: { ...OWNER, tariff: flat } });
+    const expected = heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER, tariff: flat });
+    await expect(page.locator('html')).toHaveAttribute('data-tier', 'grey');
+    // Bodka počíta so živým výkonom z kiosku - ten je v testovacích dátach celý deň rovnaký.
+    await expect(page.locator('html')).toHaveAttribute('data-accent', expected.accent || '');
+    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
+    await expect(page.locator('#day-ring .day-band.grey').first()).toBeAttached();
+    await expect(page.locator('#day-ring .day-band.amber, #day-ring .day-band.red')).toHaveCount(0);
+    expect(errors).toEqual([]);
+});
 
 /** Bod na dennom prstenci ciferníka pre danú minútu dňa - ten istý výpočet, aký appka
  * používa na umiestnenie jazdca. @param {{x: number, y: number, width: number, height: number}} box @param {number} minutes */
@@ -277,14 +300,14 @@ test('náhľad iného času ťuknutím na prstenec a návrat na teraz', async ({
     await expect(page.locator('#dial-when')).toHaveText(/^0[56]:\d{2}$/);
     await expect(page.locator('#pv-power-unit')).toContainText('kW (');
     await expect(page.locator('#preview-reset')).toBeVisible();
-    // Pozadie sleduje bežca: o 06:00 beží lacný nočný prúd, teda oranžová namiesto zelenej.
+    // Pozadie sleduje bežca: o 06:00 je lacné NT a slnko ešte nesvieti, teda oranžová namiesto zelenej.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'amber');
     await page.locator('#preview-reset').click();
     await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
     await expect(page.locator('#preview-reset')).toBeHidden();
     await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
     await expect(page.locator('#dial-when')).toHaveText(APP_NOW.hm);
-    // Zrušenie náhľadu vráti pozadie do farby okna, ktoré beží teraz.
+    // Zrušenie náhľadu vráti pozadie do farby plánu v tejto chvíli.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
 });
 
@@ -294,7 +317,7 @@ test('ťahanie jazdca: denný prstenec sa nemení, dotiahnutie na "teraz" náhľ
     if (!box) throw new Error('ciferník nemá rozmer');
     const ring = page.locator('#day-ring');
 
-    // Denný prstenec závisí len na sezóne - ťahanie jazdca ním nesmie pohnúť.
+    // Denný prstenec je plán dňa (tarifa a krivka výroby) - ťahanie jazdca ním nesmie pohnúť.
     await page.mouse.click(ringXY(box, 6 * 60).x, ringXY(box, 6 * 60).y);
     const beforeDrag = await ring.innerHTML();
 
@@ -789,8 +812,8 @@ test('info: položka Ako čítať ciferník vysvetľuje všetky štyri časti ci
     // Ilustračný ciferník aj štyri vysvetlivky: prstenec, bodka "teraz", oblúk výkonu, jazdec.
     await expect(page.locator('#panel-info .info-dial')).toBeVisible();
     await expect(page.locator('#panel-info .info-row')).toHaveCount(4);
-    // Tri tarifné pásma sú rozpísané po riadkoch, nie schované do jednej vety.
-    await expect(page.locator('#panel-info .info-tiers li')).toHaveCount(3);
+    // Štyri farby prstenca (slnko a tri cenové úrovne) sú rozpísané po riadkoch, nie schované do jednej vety.
+    await expect(page.locator('#panel-info .info-tiers li')).toHaveCount(4);
     expect(errors).toEqual([]);
 });
 

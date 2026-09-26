@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_PLANT, DEMO_SITE, installedKw, PLANT, SITE } from '../shared/config.js';
+import { DEMO_PLANT, DEMO_SITE, DEMO_TARIFF, installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
 import {
     checkSettings,
     demoSettings,
@@ -14,13 +14,14 @@ import {
     toUser,
 } from '../shared/settings.js';
 
-const DVORANY = { site: SITE, plant: PLANT, kiosk: '' };
+const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
 
 test('ukážka je Londýn s vlastnou zostavou a prejde kontrolou', () => {
     const demo = demoSettings();
     assert.equal(demo.site, DEMO_SITE);
     assert.equal(demo.plant, DEMO_PLANT);
+    assert.equal(demo.tariff, DEMO_TARIFF);
     const check = checkSettings(demo);
     assert.deepEqual(check.errors, []);
     assert.equal(check.kwp, 12 * 0.435);
@@ -46,6 +47,7 @@ test('chyby: rozsahy, celé čísla, časové pásmo, počet plôch', () => {
         ],
         panelWp: 50,
         acLimitKw: 0,
+        tariff: TARIFF,
     });
     const { errors, kwp } = checkSettings(bad);
     assert.equal(kwp, null);
@@ -207,4 +209,24 @@ test('zdieľanie: nezmysel, cudzí kiosk alebo poškodený odkaz nič neprevezme
         shareUrl('https://x.test/', { ...DVORANY, site: { ...DVORANY.site, elevationM: 1e6 } }, false),
     ])
         assert.equal(settingsFromLink(bad), null, bad);
+});
+
+test('tarifa: uloží sa aj s cenami, staré nastavenie bez nej dostane tarifu Dvorian, chybná zahodí všetko', async () => {
+    const { shareUrl, settingsFromLink } = await import('../shared/settings.js');
+    const priced = {
+        ...DVORANY,
+        tariff: { ...TARIFF, bands: TARIFF.bands.map((b, i) => ({ ...b, price: i ? 0.19 : 0.12 })) },
+    };
+    const back = parseStoredSettings(JSON.parse(JSON.stringify(toUser(priced))));
+    assert.deepEqual(back, priced);
+    assert.ok(!sameSettings(priced, DVORANY), 'iná cena je iné nastavenie');
+    assert.deepEqual(settingsFromLink(shareUrl('https://x.test/', priced, false)), priced);
+    // Nastavenie uložené pred vlastnými tarifami.
+    const old = /** @type {Partial<ReturnType<typeof toUser>>} */ (toUser(DVORANY));
+    delete old.tariff;
+    assert.equal(parseStoredSettings(old)?.tariff, TARIFF);
+    // Tarifa, ktorá tam je, no nesedí: nič z nastavenia sa nepoužije.
+    const bad = { ...toUser(DVORANY), tariff: { ...TARIFF, schedules: [] } };
+    assert.equal(parseStoredSettings(bad), null);
+    assert.ok(checkSettings({ ...DVORANY, tariff: { ...TARIFF, currency: '' } }).errors.some((e) => /Mena/.test(e)));
 });
