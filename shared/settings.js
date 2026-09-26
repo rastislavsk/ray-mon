@@ -210,14 +210,22 @@ function fromBase64Url(token) {
 }
 
 /**
+ * Časť adresy za mriežkou s nastavením (`#nastavenie=…`). Bez `settings` prázdny reťazec.
+ * @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ */
+export function shareHash(settings, withKiosk) {
+    if (!settings) return '';
+    const user = toUser(settings);
+    if (!withKiosk) user.kiosk = '';
+    return `#${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`;
+}
+
+/**
  * Odkaz na appku, voliteľne s nastavením elektrárne. Bez `settings` je to holý odkaz.
  * @param {string} appUrl @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
  */
 export function shareUrl(appUrl, settings, withKiosk) {
-    if (!settings) return appUrl;
-    const user = toUser(settings);
-    if (!withKiosk) user.kiosk = '';
-    return `${appUrl}#${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`;
+    return appUrl + shareHash(settings, withKiosk);
 }
 
 /**

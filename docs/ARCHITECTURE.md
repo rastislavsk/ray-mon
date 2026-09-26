@@ -74,7 +74,12 @@ nákres sklonu a mriežka panelov vznikajú ako modely v `chart-model.js` a SVG 
 nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
 `settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
-`app.js` ho z adresy hneď zmaže a appka ho len ponúkne prevziať (`incoming` v stave).
+Appka ho len ponúkne prevziať (`incoming` v stave). Adresa v prehliadači potom nesie vždy
+uložené nastavenie aj s kioskom (`initUrlMirror` v `web/settings-store.js`), pri ukážke je
+holá, a kým čaká ponuka, nesie odkaz. Dôvod je iPhone: appka pridaná na plochu má vlastné
+úložisko, Safari s ňou nezdieľa nič okrem adresy. Pri prvom spustení z plochy tak ponúkne
+nastavenie prevziať namiesto ukážky. Z toho istého dôvodu manifest nemá `start_url` – bez
+neho sa appka spúšťa z adresy, z ktorej ju človek pridal, aj s časťou za mriežkou.
 `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
 istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je

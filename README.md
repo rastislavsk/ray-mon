@@ -56,6 +56,8 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.
+  Nastavenie nesie aj adresa v prehliadači, takže appka pridaná na plochu iPhonu (ktorá
+  úložisko Safari nevidí) ho pri prvom spustení ponúkne prevziať tiež.
 
 Medzi kartami sa dá na dotykovej obrazovke prechádzať aj potiahnutím prsta do strán, v
 poradí spodnej navigácie – aj ponad grafy a prehľad dní. V detaile dňa listuje to isté

@@ -2184,6 +2184,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#setup-overview')).toBeVisible();
         const stored = await ulozene(page);
         expect(stored.strings[1]).toEqual({ panels: 8, azimuthDeg: 180, tiltDeg: 20 });
+        expect(toUser(/** @type {any} */ (settingsFromLink(page.url()))), 'adresa nesie nové nastavenie').toEqual(stored);
 
         // × pri úprave zahodí zmenu.
         await page.locator('#setup-rows [data-setup-edit="menic"]').click();
@@ -2251,19 +2252,32 @@ test.describe('zdieľanie nastavenia odkazom', () => {
     const LINK = shareUrl(APP_URL, OWNER, true);
     const HASH = `#${LINK.split('#')[1]}`;
 
-    test('odkaz s nastavením: ponuka, adresa bez nastavenia, po prevzatí Dvorany so živým meraním', async ({ page }) => {
+    // Na iPhone je toto prvé spustenie appky pridanej na plochu: prázdne úložisko, v adrese odkaz.
+    test('odkaz s nastavením: ponuka, odkaz ostáva v adrese, po prevzatí Dvorany so živým meraním', async ({ page }) => {
         const errors = await openApp(page, { settings: null, hash: HASH });
         const offer = page.locator('#import-offer');
         await expect(offer).toBeVisible();
         await expect(page.locator('#import-offer-text')).toHaveText('Dvorany nad Nitrou · 10,44 kWp · so živým meraním.');
-        expect(new URL(page.url()).hash).toBe('');
+        expect(new URL(page.url()).hash, 'pridanie na plochu pred rozhodnutím si odkaz prenesie').toBe(HASH);
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
         await page.locator('#import-accept').click();
         await expect(offer).toBeHidden();
         await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
+        expect(new URL(page.url()).hash).toBe(HASH);
         expect(errors).toEqual([]);
+    });
+
+    // Appka na ploche iPhonu nevidí úložisko Safari - prenesie si len adresu.
+    test('adresa nesie uložené nastavenie aj s kioskom', async ({ page }) => {
+        await openApp(page);
+        expect(settingsFromLink(page.url())).toEqual(OWNER);
+    });
+
+    test('ukážka má holú adresu', async ({ page }) => {
+        await openApp(page, { settings: null });
+        expect(new URL(page.url()).hash).toBe('');
     });
 
     test('odmietnutie nič neuloží, rovnaké nastavenie sa ani neponúkne', async ({ page }) => {
@@ -2272,6 +2286,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#import-offer')).toBeHidden();
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
         expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+        expect(new URL(page.url()).hash, 'odmietnutý odkaz v adrese neostane').toBe('');
     });
 
     test('rovnaké nastavenie, aké už je uložené, sa neponúka', async ({ page }) => {

@@ -172,9 +172,10 @@ test('kiosk: prázdny je bez merania, cudzí odkaz je chyba, uloží sa a staré
 });
 
 test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou a južnou pologuľou', async () => {
-    const { shareUrl, settingsFromLink } = await import('../shared/settings.js');
+    const { shareHash, shareUrl, settingsFromLink } = await import('../shared/settings.js');
     const app = 'https://example.test/appka/';
     assert.equal(shareUrl(app, null, true), app);
+    assert.equal(shareHash(null, true), '');
     const withKiosk = { ...DVORANY, kiosk: KIOSK };
     const url = shareUrl(app, withKiosk, true);
     assert.match(url, /^https:\/\/example\.test\/appka\/#nastavenie=[A-Za-z0-9_-]+$/);
@@ -183,6 +184,7 @@ test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou 
     assert.deepEqual(settingsFromLink(shareUrl(app, withKiosk, false)), DVORANY);
     // Samotná časť za mriežkou (location.hash) stačí rovnako.
     assert.deepEqual(settingsFromLink(`#${url.split('#')[1]}`), withKiosk);
+    assert.equal(shareHash(withKiosk, true), `#${url.split('#')[1]}`);
     const south = settingsFrom({
         ...toUser(DVORANY),
         site: { name: 'Žilina – Považský Chlmec', lat: -33.87, lon: 151.21, elevationM: 40, timezone: 'Australia/Sydney' },
