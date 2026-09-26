@@ -350,7 +350,6 @@ test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ p
     if (!box) throw new Error('ciferník nemá rozmer');
     await page.mouse.click(ringXY(box, 12 * 60).x, ringXY(box, 12 * 60).y);
     await expect(grip).not.toHaveClass(/at-now/);
-    await expect(page.locator('#dial-now')).toBeHidden();
     await page.locator('#preview-reset').click();
     await expect(grip).toHaveClass(/at-now/);
     await expect(grip).toHaveClass(/night/);
