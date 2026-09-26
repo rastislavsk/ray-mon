@@ -120,6 +120,11 @@ const SETUP_SCREENS = /** @type {const} */ ([
     'dalsia',
     'menic',
     'meranie',
+    'tarifa',
+    'pasma',
+    'rozvrh',
+    'vynimky',
+    'ceny',
     'suhrn',
 ]);
 
@@ -131,6 +136,7 @@ function setupDom() {
         ...setupHomeDom(),
         ...wizardDom(),
         ...wizardFieldsDom(),
+        ...wizardTariffDom(),
     };
 }
 
@@ -155,6 +161,7 @@ function setupHomeDom() {
         wzTitle: byId('wz-title'),
         wzLead: byId('wz-lead'),
         wzRoofTabs: byId('wz-roof-tabs'),
+        wzTariffTabs: byId('wz-tariff-tabs'),
     };
 }
 
@@ -216,6 +223,33 @@ function wizardFieldsDom() {
         wzSummary: byId('wz-summary'),
         wzBack: /** @type {HTMLButtonElement} */ (byId('wz-back')),
         wzNext: /** @type {HTMLButtonElement} */ (byId('wz-next')),
+    };
+}
+
+// Obrazovky tarify: typ sadzby, pásma, rozvrh dňa, výnimky a ceny.
+function wizardTariffDom() {
+    const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (byId(id));
+    return {
+        wzTariffKinds: byId('wz-tariff-kinds'),
+        wzTariffDunno: byId('wz-tariff-dunno'),
+        wzBands: byId('wz-bands'),
+        wzBandAdd: byId('wz-band-add'),
+        wzSchedTabs: byId('wz-sched-tabs'),
+        wzBrushes: byId('wz-brushes'),
+        wzTariffRing: byId('wz-tariff-ring'),
+        wzTariffRingG: byId('wz-tariff-ring-g'),
+        wzRingSum: byId('wz-ring-sum'),
+        wzSchedTpls: byId('wz-sched-tpls'),
+        wzIvals: byId('wz-ivals'),
+        wzIvalFrom: select('wz-ival-from'),
+        wzIvalTo: select('wz-ival-to'),
+        wzIvalBand: select('wz-ival-band'),
+        wzIvalSet: byId('wz-ival-set'),
+        wzExc: byId('wz-exc'),
+        wzCurrency: byId('wz-currency'),
+        wzPrices: byId('wz-prices'),
+        wzPriceCheck: byId('wz-price-check'),
+        wzTariffMsgs: byId('wz-tariff-msgs'),
     };
 }
 

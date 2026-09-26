@@ -41,13 +41,15 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
 - **Nastavenie** – moja elektráreň. Kým si ju človek neuloží, appka ukazuje ukážku
-  vymyslenej elektrárne v Londýne a karta ponúka **sprievodcu**: šesť krokov s jednou
+  vymyslenej elektrárne v Londýne a karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
   alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou
   slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne odkaz na
-  kiosk Huawei FusionSolar pre živé meranie a na koniec zhrnutie s výrobou za jasného
-  dneška. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je karta
+  kiosk Huawei FusionSolar pre živé meranie, tarifa a na koniec zhrnutie s výrobou za jasného
+  dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
+  po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
+  podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je karta
   prehľad elektrárne a ťuknutie na riadok otvorí len jeho krok. Tlačidlo Späť na telefóne
   vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
 - **Info** – zoznam položiek v rovnakom dizajne ako Nastavenie. **Ako čítať ciferník**:

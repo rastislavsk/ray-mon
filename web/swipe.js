@@ -18,10 +18,11 @@ import { nextPanel, nextWeekDay, panelChange } from './state.js';
 
 /** Úchytky na ťahanie do strán, ktoré nie sú posuvným pásom - pravidlo o vnútorných pásoch
  * nižšie ich nechytí a bez tejto výnimky by ťah prepol kartu. Jazdec na dennom prstenci
- * (náhľad iného času) a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
- * nastavením): ten ťahá prehliadač sám, gesto mu ale posiela aj touchend, ktorý by inak
- * vyzeral ako švihnutie. Jediné menované miesta v celom module; inde rozhoduje pravidlo. */
-const DRAG_HANDLE = '.dial-grip, input[type="range"]';
+ * (náhľad iného času), kruh rozvrhu tarify v sprievodcovi (prst po ňom maľuje pásmo) a posúvač
+ * (`input[type=range]`, sklon strechy v sprievodcovi nastavením): ten ťahá prehliadač sám,
+ * gesto mu ale posiela aj touchend, ktorý by inak vyzeral ako švihnutie. Jediné menované
+ * miesta v celom module; inde rozhoduje pravidlo. */
+const DRAG_HANDLE = '.dial-grip, .tariff-ring, input[type="range"]';
 
 /** Nad grafom ide tooltip za prstom, takže pomalý ťah po krivke je prezeranie, nie
  * listovanie - kartu tam prepne len rýchle švihnutie (SWIPE.flickMs). */

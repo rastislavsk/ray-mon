@@ -3,22 +3,47 @@
 // a dopĺňa. Hodnoty polí prepíše len pri zmene settingsRev, plochy alebo obrazovky - inak by
 // prepisoval to, čo človek práve píše.
 
-import { compassModel, panelGridModel, tiltModel } from '../../shared/chart-model.js';
-import { installedKw, PLANT, SETTINGS_LIMITS, SETUP } from '../../shared/config.js';
-import { escapeHtml, kwpText, minutesToTimeStr } from '../../shared/format.js';
+import { compassModel, dayRingModel, panelGridModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
+import {
+    ALL_MONTHS,
+    CURRENCIES,
+    installedKw,
+    LEVEL_TIER,
+    PLANT,
+    PRICE_LEVELS,
+    SETTINGS_LIMITS,
+    SETUP,
+    TARIFF_LIMITS,
+    TARIFF_TEMPLATES,
+} from '../../shared/config.js';
+import { escapeHtml, fmt2, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { checkSettings, sameSettings, settingsFromLink, settingsHint, siteMetaText } from '../../shared/settings.js';
-import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, totalPanels } from '../../shared/setup.js';
+import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, TARIFF_STEPS, tariffSteps, totalPanels } from '../../shared/setup.js';
 import { clearDayKwh, localDateKey, orientationShare, sunTimes } from '../../shared/solar.js';
+import {
+    autoLevels,
+    bandById,
+    checkTariff,
+    isSeasonSchedule,
+    isWeekendSchedule,
+    scheduleRuns,
+    scheduleTiers,
+    tariffHint,
+    tariffKind,
+    tariffPricesText,
+} from '../../shared/tariff.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { savedSettings, setupDraft } from '../state.js';
-import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tiltSvg } from '../svg.js';
+import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tariffMiniSvg, tariffRingSvg, tiltSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {import('../../shared/settings.js').Settings} Settings */
 /** @typedef {import('../../shared/setup.js').SetupStep} SetupStep */
+/** @typedef {import('../../shared/config.js').Tariff} Tariff */
+/** @typedef {import('../../shared/config.js').PriceLevel} PriceLevel */
 
 /** Smery kompasu po 45°. */
 const DIRS = [
@@ -45,7 +70,7 @@ const TILT_PRESETS = [
 const TEXTS = {
     start: {
         title: 'Nastavme tvoju elektráreň',
-        lead: 'Šesť krátkych otázok. Na čo nevieš odpoveď, preskočíš tlačidlom „Neviem“ a všetko sa dá neskôr zmeniť.',
+        lead: 'Sedem krátkych otázok. Na čo nevieš odpoveď, preskočíš tlačidlom „Neviem“ a všetko sa dá neskôr zmeniť.',
     },
     odkaz: {
         title: 'Vlož odkaz s nastavením',
@@ -73,6 +98,17 @@ const TEXTS = {
     meranie: {
         title: 'Chceš vidieť skutočný výkon?',
         lead: 'Bez merania appka ukazuje odhad z predpovede počasia. S meraním vidíš aj to, čo panely naozaj vyrábajú.',
+    },
+    tarifa: {
+        title: 'Ako platíš za elektrinu?',
+        lead: 'Podľa toho appka zafarbí ciferník a poradí, kedy zapínať spotrebiče. Nájdeš to na faktúre alebo v zmluve.',
+    },
+    pasma: { title: 'Aké pásma máš?', lead: 'Pomenuj ich ako na faktúre. Úroveň hovorí appke, akou farbou ich kresliť.' },
+    rozvrh: { title: 'Kedy platí ktoré pásmo?', lead: 'Vyber pásmo a prejdi prstom po kruhu. Krok je 15 minút.' },
+    vynimky: { title: 'Platí to každý deň rovnako?', lead: 'Niektoré tarify majú iný rozvrh cez víkend alebo v časti roka.' },
+    ceny: {
+        title: 'Koľko stojí kilowatthodina?',
+        lead: 'Nepovinné, stačí približne. S cenami appka sama určí, ktoré pásmo je lacné a ktoré drahé.',
     },
     suhrn: { title: 'Skontroluj a ulož', lead: 'Ťuknutím na riadok ho opravíš a vrátiš sa sem.' },
 };
@@ -145,7 +181,18 @@ function summaryRows(s, state) {
         Number.isFinite(s.plant.acLimitKw) ? kwText(s.plant.acLimitKw) : '–',
         state.setupPick.ac === 'guess' ? guess : '',
     );
-    return html + sumRow('meranie', SETUP_ICONS.meranie, 'Živé meranie', s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede');
+    html += sumRow('meranie', SETUP_ICONS.meranie, 'Živé meranie', s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede');
+    const prices = tariffPricesText(s.tariff);
+    return (
+        html +
+        sumRow(
+            'tarifa',
+            miniTariff(s.tariff),
+            'Tarifa',
+            escapeHtml(tariffHint(s.tariff)),
+            `<span class="k2">${escapeHtml(prices || 'bez cien')}</span>`,
+        )
+    );
 }
 
 /** Celkový výkon a výroba za jasného dneška. @param {Settings} s @param {AppState} state */
@@ -419,6 +466,293 @@ function renderSuhrn(state, draft, dom) {
     writeHtml(dom.wzSummary, html, 'wzSummary');
 }
 
+// ---- Obrazovky tarify -------------------------------------------------------------
+
+const MONTH_NAMES = ['január', 'február', 'marec', 'apríl', 'máj', 'jún', 'júl', 'august', 'september', 'október', 'november', 'december'];
+const MONTH_SHORT = ['jan', 'feb', 'mar', 'apr', 'máj', 'jún', 'júl', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const DAY_SHORT = ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'];
+/** Úroveň pásma slovom. @type {Record<PriceLevel, { name: string, label: string }>} */
+const LEVELS = {
+    lacna: { name: 'Lacné', label: 'lacné' },
+    bezna: { name: 'Bežné', label: 'bežné' },
+    draha: { name: 'Drahé', label: 'drahé' },
+};
+/** Popisky záložiek pri úprave tarify z prehľadu. @type {Record<string, string>} */
+const TARIFF_TABS = { tarifa: 'Typ', pasma: 'Pásma', rozvrh: 'Rozvrh', vynimky: 'Výnimky', ceny: 'Ceny' };
+
+const cap = (/** @type {string} */ s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Dni v týždni slovom. @param {number[]} days */
+function daysText(days) {
+    if (days.length === 7) return 'každý deň';
+    if (days.join() === '6,7') return 'So – Ne';
+    if (days.join() === '1,2,3,4,5') return 'Po – Pi';
+    return days.map((d) => DAY_SHORT[d - 1]).join(', ');
+}
+
+/** Mesiace slovom; súvislé ako rozsah. @param {number[]} months */
+function monthsText(months) {
+    if (months.length === 12) return 'celý rok';
+    const together = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
+    return together
+        ? `${MONTH_NAMES[months[0] - 1]} – ${MONTH_NAMES[months[months.length - 1] - 1]}`
+        : months.map((m) => MONTH_SHORT[m - 1]).join(', ');
+}
+
+/** Meno rozvrhu: základ sa volá podľa toho, aké výnimky má. @param {Tariff} t @param {number} i */
+function schedLabel(t, i) {
+    const s = t.schedules[i];
+    if (i > 0) return isWeekendSchedule(s) ? 'Víkend' : isSeasonSchedule(s) ? cap(monthsText(s.months)) : `Výnimka ${i}`;
+    if (t.schedules.length === 1) return 'Každý deň';
+    return t.schedules.some(isWeekendSchedule) ? 'Pracovné dni' : 'Zvyšok roka';
+}
+
+/** Kedy rozvrh platí. @param {Tariff} t @param {number} i */
+function schedDetail(t, i) {
+    const s = t.schedules[i];
+    if (i > 0) return `${daysText(s.days)} · ${monthsText(s.months)}`;
+    return t.schedules.length === 1 ? 'každý deň · celý rok' : 'keď neplatí výnimka';
+}
+
+/** Malý prstenec rozvrhu. @param {Tariff} t @param {number} [i] */
+const miniTariff = (t, i = 0) => tariffMiniSvg(dayRingModel(scheduleTiers(t, t.schedules[i])));
+
+/** Index upravovaného rozvrhu - po zmazaní výnimky môže ukazovať mimo. @param {AppState} state @param {Tariff} t */
+const schedIndex = (state, t) => Math.max(0, Math.min(state.setupSched, t.schedules.length - 1));
+
+/** Pásmo, ktorým sa maľuje: vybrané, inak najdrahšie (pri rovnakej úrovni posledné). @param {AppState} state @param {Tariff} t */
+export function brushOf(state, t) {
+    const picked = t.bands.find((b) => b.id === state.setupBrush);
+    if (picked) return picked;
+    return t.bands.reduce((a, b) => (PRICE_LEVELS.indexOf(b.level) >= PRICE_LEVELS.indexOf(a.level) ? b : a));
+}
+
+/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
+function renderTarifa(state, draft, dom) {
+    const kind = tariffKind(draft.tariff);
+    const choice = (/** @type {string} */ k, /** @type {string} */ title, /** @type {string} */ sub, /** @type {string} */ icon) =>
+        `<button type="button" class="choice" data-setup-kind="${k}" aria-pressed="${k === kind}"${k === 'spot' ? ' disabled' : ''}>` +
+        `<span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span>${icon}</button>`;
+    const icon = (/** @type {'jedna' | 'dvoj' | 'viac'} */ k) => miniTariff(k === kind ? draft.tariff : TARIFF_TEMPLATES[k]);
+    writeHtml(
+        dom.wzTariffKinds,
+        choice('jedna', 'Jedna cena celý deň', 'jednotarif', icon('jedna')) +
+            choice('dvoj', 'Lacnejšie a drahšie hodiny', 'dvojtarif · VT a NT · nočný prúd', icon('dvoj')) +
+            choice('viac', 'Tri a viac pásiem', 'špička · bežné · mimo špičky', icon('viac')) +
+            choice('spot', 'Cena sa mení každú hodinu', 'spot · dynamická cena · pripravujeme', ''),
+        'wzTariffKinds',
+    );
+    dom.wzTariffDunno.classList.toggle('hidden', !state.setupDunno);
+}
+
+/** @param {Settings} draft @param {Dom} dom @param {boolean} refill */
+function renderPasma(draft, dom, refill) {
+    const t = draft.tariff;
+    const rows = t.bands
+        .map(
+            (b, i) =>
+                `<div class="band-row"><div class="band-top"><i class="sw ${LEVEL_TIER[b.level]}"></i>` +
+                `<input class="field-input" type="text" maxlength="${TARIFF_LIMITS.nameMax}" autocomplete="off" aria-label="Meno pásma ${i + 1}" data-setup-band-name="${b.id}" />` +
+                (t.bands.length > 3 ? `<button type="button" class="mini-act" data-setup-band-del="${b.id}">Odstrániť</button>` : '') +
+                `</div><div class="seg lvl" role="group" aria-label="Úroveň pásma ${i + 1}">` +
+                PRICE_LEVELS.map(
+                    (l) =>
+                        `<button type="button" data-setup-band="${b.id}" data-setup-level="${l}" aria-pressed="${b.level === l}">${LEVELS[l].name}</button>`,
+                ).join('') +
+                `</div></div>`,
+        )
+        .join('');
+    const written = writeHtml(dom.wzBands, rows, 'wzBands');
+    if (written || refill)
+        for (const input of dom.wzBands.querySelectorAll('input[data-setup-band-name]')) {
+            const el = /** @type {HTMLInputElement} */ (input);
+            el.value = bandById(t, el.dataset.setupBandName || '').name;
+        }
+    dom.wzBandAdd.classList.toggle('hidden', t.bands.length >= TARIFF_LIMITS.maxBands);
+}
+
+/** Možnosti výberu času po štvrťhodinách; hodnota je číslo štvrťhodiny (0 = 00:00, 96 = 24:00). @param {number} from @param {number} to */
+function timeOptions(from, to) {
+    let html = '';
+    for (let i = from; i <= to; i++)
+        html += `<option value="${i}">${i === 96 ? '24:00' : minutesToTimeStr(i * TARIFF_LIMITS.stepMin)}</option>`;
+    return html;
+}
+
+/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
+function renderRozvrh(state, draft, dom) {
+    const t = draft.tariff;
+    const i = schedIndex(state, t);
+    const schedule = t.schedules[i];
+    dom.wzSchedTabs.classList.toggle('hidden', t.schedules.length < 2);
+    writeHtml(
+        dom.wzSchedTabs,
+        t.schedules
+            .map(
+                (_, j) =>
+                    `<button type="button" data-setup-sched="${j}" aria-pressed="${j === i}">${escapeHtml(schedLabel(t, j))}</button>`,
+            )
+            .join(''),
+        'wzSchedTabs',
+    );
+    const brush = brushOf(state, t);
+    writeHtml(dom.wzBrushes, brushesHtml(t, brush), 'wzBrushes');
+    writeHtml(
+        dom.wzTariffRingG,
+        tariffRingSvg(tariffRingModel(scheduleTiers(t, schedule)), {
+            name: brush.name,
+            level: LEVELS[brush.level].label,
+            tier: LEVEL_TIER[brush.level],
+        }),
+        'wzTariffRing',
+    );
+    const runs = scheduleRuns(t, schedule);
+    const hours = t.bands
+        .map((b) => ({ b, min: runs.filter((r) => r.band === b).reduce((sum, r) => sum + r.min, 0) }))
+        .filter((x) => x.min)
+        .map((x) => `${x.b.name} ${fieldText(Math.round((x.min / 60) * 100) / 100)} h`);
+    dom.wzRingSum.textContent = hours.join(' · ');
+    const tpls =
+        t.bands.length === 2
+            ? `<button type="button" class="chip" data-setup-tpl="20h">Lacno 20 h, 4 h drahé</button><button type="button" class="chip" data-setup-tpl="noc8">Lacno 8 h v noci</button><button type="button" class="chip soft" data-setup-tpl="all">Všetko lacné</button>`
+            : `<button type="button" class="chip soft" data-setup-tpl="all">Všetko najlacnejšie</button>`;
+    writeHtml(dom.wzSchedTpls, tpls, 'wzSchedTpls');
+    writeHtml(dom.wzIvals, runsHtml(runs), 'wzIvals');
+    renderRunForm(t, brush, dom);
+}
+
+/** Pásma na výber, ktorým sa maľuje. @param {Tariff} t @param {import('../../shared/config.js').Band} brush */
+function brushesHtml(t, brush) {
+    return t.bands
+        .map(
+            (b) =>
+                `<button type="button" class="brush" role="radio" aria-checked="${b.id === brush.id}" data-setup-brush="${b.id}">` +
+                `<i class="sw ${LEVEL_TIER[b.level]}"></i>${escapeHtml(b.name)}<small>${LEVELS[b.level].label}</small></button>`,
+        )
+        .join('');
+}
+
+/** Formulár úseku pod zoznamom - presná cesta aj pre klávesnicu. Možnosti sa zapíšu raz,
+ * výber pásma ostáva, kým sa pásma nezmenia. @param {Tariff} t @param {import('../../shared/config.js').Band} brush @param {Dom} dom */
+function renderRunForm(t, brush, dom) {
+    writeHtml(dom.wzIvalFrom, timeOptions(0, 95), 'wzIvalFrom');
+    writeHtml(dom.wzIvalTo, timeOptions(1, 96), 'wzIvalTo');
+    const bandOptions = t.bands.map((b) => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+    if (writeHtml(dom.wzIvalBand, bandOptions, 'wzIvalBand')) dom.wzIvalBand.value = brush.id;
+}
+
+/** Zoznam úsekov rozvrhu s krížikom na zmazanie. @param {ReturnType<typeof scheduleRuns>} runs */
+function runsHtml(runs) {
+    return runs
+        .map((r, j) => {
+            const to = minutesToTimeStr(r.startMin + r.min);
+            const del =
+                runs.length > 1
+                    ? `<button type="button" class="x" data-setup-run-del="${j}" aria-label="Zmazať úsek ${minutesToTimeStr(r.startMin)} až ${to}"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>`
+                    : '<span></span>';
+            return `<li><i class="sw ${LEVEL_TIER[r.band.level]}"></i><span>${escapeHtml(r.band.name)}</span><span class="tm">${minutesToTimeStr(r.startMin)} – ${to}<small>${fieldText(Math.round((r.min / 60) * 100) / 100)} h</small></span>${del}</li>`;
+        })
+        .join('');
+}
+
+/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
+function renderVynimky(state, draft, dom) {
+    const t = draft.tariff;
+    const exceptions = t.schedules.slice(1);
+    const season = exceptions.find(isSeasonSchedule);
+    const choice = (/** @type {string} */ k, /** @type {string} */ title, /** @type {string} */ sub, /** @type {boolean} */ on) =>
+        `<button type="button" class="choice" data-setup-exc="${k}" aria-pressed="${on}"><span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span></button>`;
+    const full = t.schedules.length >= TARIFF_LIMITS.maxSchedules;
+    const months = season
+        ? `<div class="field-label">Mesiace výnimky</div><div class="months" role="group" aria-label="Mesiace výnimky">` +
+          ALL_MONTHS.map(
+              (m) =>
+                  `<button type="button" class="chip" data-setup-month="${m}" aria-pressed="${season.months.includes(m)}">${MONTH_SHORT[m - 1]}</button>`,
+          ).join('') +
+          `</div>`
+        : '';
+    const list = t.schedules
+        .map(
+            (_, j) =>
+                `<div class="roof-row">${miniTariff(t, j)}<span class="t"><b>${escapeHtml(schedLabel(t, j))}</b><span>${escapeHtml(schedDetail(t, j))}</span></span>` +
+                `<button type="button" class="mini-act" data-setup-sched-edit="${j}">Upraviť</button></div>`,
+        )
+        .join('');
+    writeHtml(
+        dom.wzExc,
+        `<div class="wz-kinds">` +
+            choice('none', 'Áno, každý deň rovnako', 'jeden rozvrh na celý rok', !exceptions.length) +
+            choice('weekend', 'Cez víkend je to inak', 'sobota a nedeľa majú vlastný rozvrh', exceptions.some(isWeekendSchedule)) +
+            choice('season', 'V časti roka je to inak', 'napríklad letná a zimná sadzba', !!season) +
+            `</div>${months}<div class="field-label">Rozvrhy</div><div class="roofs">${list}</div>` +
+            (full ? `<p class="plant-msg">Rozvrhy sú štyri, viac výnimiek sa nedá.</p>` : ''),
+        'wzExc',
+    );
+    // Výnimku, ktorú už nemožno pridať, ani neponúkať (zmazať ju vždy ide).
+    for (const b of dom.wzExc.querySelectorAll('[data-setup-exc="weekend"], [data-setup-exc="season"]')) {
+        const on = b.getAttribute('aria-pressed') === 'true';
+        /** @type {HTMLButtonElement} */ (b).disabled = full && !on;
+    }
+}
+
+/** @param {Settings} draft @param {Dom} dom @param {boolean} refill */
+function renderCeny(draft, dom, refill) {
+    const t = draft.tariff;
+    writeHtml(
+        dom.wzCurrency,
+        CURRENCIES.map(
+            (c) =>
+                `<button type="button" class="chip" data-setup-cur="${escapeHtml(c)}" aria-pressed="${t.currency === c}">${escapeHtml(c)}</button>`,
+        ).join(''),
+        'wzCurrency',
+    );
+    const rows = t.bands
+        .map(
+            (b) =>
+                `<label class="price-row"><i class="sw ${LEVEL_TIER[b.level]}"></i><span>${escapeHtml(b.name)}</span>` +
+                `<input class="field-input num" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" data-setup-price="${b.id}" />` +
+                `<span class="cur">${escapeHtml(t.currency)}</span></label>`,
+        )
+        .join('');
+    if (writeHtml(dom.wzPrices, rows, 'wzPrices') || refill)
+        for (const input of dom.wzPrices.querySelectorAll('input[data-setup-price]')) {
+            const el = /** @type {HTMLInputElement} */ (input);
+            el.value = fieldText(bandById(t, el.dataset.setupPrice || '').price);
+        }
+    writeHtml(dom.wzPriceCheck, priceCheckHtml(t), 'wzPriceCheck');
+}
+
+/** Úrovne podľa cien a či sedia s tými, ktoré má človek pri pásmach. @param {Tariff} t */
+function priceCheckHtml(t) {
+    if (t.bands.length === 1) return '<p class="plant-msg">Pri jednej cene je pásmo vždy bežné, ciferník farbí len slnko.</p>';
+    const filled = t.bands.filter((b) => b.price !== null).length;
+    if (!filled) return '<p class="plant-msg">Bez cien appka použije úrovne, ktoré majú pásma teraz.</p>';
+    const auto = autoLevels(t.bands);
+    if (!auto) return '<p class="plant-msg">Doplň ceny všetkých pásiem a navrhnem, ktoré je lacné a ktoré drahé.</p>';
+    const list = t.bands
+        .map(
+            (b) =>
+                `<div><i class="sw ${LEVEL_TIER[auto[b.id]]}"></i>${escapeHtml(b.name)} · ${fmt2(/** @type {number} */ (b.price))} ${escapeHtml(t.currency)} → ${LEVELS[auto[b.id]].label}</div>`,
+        )
+        .join('');
+    const clash = t.bands.filter((b) => auto[b.id] !== b.level);
+    return (
+        `<div class="auto-levels">${list}</div>` +
+        (clash.length
+            ? `<p class="plant-msg">Podľa cien by ${clash.map((b) => `${escapeHtml(b.name)} bolo ${LEVELS[auto[b.id]].label}`).join(' a ')}, máš to inak.</p>` +
+              `<button type="button" class="link-btn" data-setup-autolevels>Použiť úrovne podľa cien</button>`
+            : '<p class="plant-msg ok">Úrovne pásiem sedia s cenami.</p>')
+    );
+}
+
+/** Chyby tarify pod obrazovkami tarify (okrem voľby typu, tá chybu mať nemôže). @param {Settings} draft @param {SetupStep} step @param {Dom} dom */
+function renderTariffMsgs(draft, step, dom) {
+    const show = /** @type {readonly string[]} */ (TARIFF_STEPS).includes(step) && step !== 'tarifa';
+    const errors = show ? checkTariff(draft.tariff).errors : [];
+    dom.wzTariffMsgs.classList.toggle('hidden', !errors.length);
+    writeHtml(dom.wzTariffMsgs, errors.map((e) => `<p class="plant-msg err">${escapeHtml(e)}</p>`).join(''), 'wzTariffMsgs');
+}
+
 // ---- Hlavička, polia a tlačidlá sprievodcu ---------------------------------------
 
 /** Titulok a úvodná veta obrazovky; niektoré závisia od toho, čo už človek zadal. @param {AppState} state @param {Settings} draft @param {SetupStep} step */
@@ -455,16 +789,39 @@ function renderHead(state, draft, step, roof, dom) {
             ? ''
             : SETUP_SECTIONS.map((_, i) => `<i class="${i < section ? 'done' : i === section ? 'now' : ''}"></i>`).join('');
     writeHtml(dom.wzProg, prog, 'wzProg');
-    const n = draft.plant.strings.length;
     const onRoof = /** @type {readonly string[]} */ (ROOF_STEPS).includes(step);
-    dom.wzSub.textContent = onRoof ? `Plocha ${roof + 1}${n > 1 ? ` z ${n}` : ''}` : '';
-    const t = textsFor(state, draft, step);
-    dom.wzTitle.textContent = t.title;
-    dom.wzLead.textContent = t.lead;
-    dom.wzLead.classList.toggle('hidden', !t.lead);
+    dom.wzSub.textContent = subText(state, draft, step, roof);
+    const texts = textsFor(state, draft, step);
+    dom.wzTitle.textContent = texts.title;
+    dom.wzLead.textContent = texts.lead;
+    dom.wzLead.classList.toggle('hidden', !texts.lead);
     dom.wzRoofTabs.classList.toggle('hidden', !edit || !onRoof);
     for (const b of dom.wzRoofTabs.children)
         b.setAttribute('aria-pressed', String(/** @type {HTMLElement} */ (b).dataset.setupTab === step));
+    renderTariffTabs(draft, step, edit, dom);
+}
+
+/** Riadok nad titulkom: ktorá plocha, alebo ktorý rozvrh tarify sa upravuje. @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {number} roof */
+function subText(state, draft, step, roof) {
+    const n = draft.plant.strings.length;
+    const t = draft.tariff;
+    if (/** @type {readonly string[]} */ (ROOF_STEPS).includes(step)) return `Plocha ${roof + 1}${n > 1 ? ` z ${n}` : ''}`;
+    if (step === 'rozvrh' && t.schedules.length > 1) return `Rozvrh · ${schedLabel(t, schedIndex(state, t))}`;
+    return '';
+}
+
+/** Úprava tarify z prehľadu: záložky na jej obrazovky, ako pri ploche strechy.
+ * @param {Settings} draft @param {SetupStep} step @param {boolean} edit @param {Dom} dom */
+function renderTariffTabs(draft, step, edit, dom) {
+    const onTariff = /** @type {readonly string[]} */ (TARIFF_STEPS).includes(step);
+    dom.wzTariffTabs.classList.toggle('hidden', !edit || !onTariff);
+    writeHtml(
+        dom.wzTariffTabs,
+        tariffSteps(tariffKind(draft.tariff))
+            .map((k) => `<button type="button" data-setup-tab="${k}" aria-pressed="${k === step}">${TARIFF_TABS[k]}</button>`)
+            .join(''),
+        'wzTariffTabs',
+    );
 }
 
 /** Hodnoty polí - len keď sa zmení to, k čomu patria, nie pri každom písmene. @param {AppState} state @param {number} roof @param {Dom} dom */
@@ -522,6 +879,9 @@ function renderWizard(state, dom) {
     renderHead(state, draft, step, roof, dom);
     for (const [key, el] of Object.entries(dom.wzScreens)) el.classList.toggle('hidden', key !== step);
     writeFields(state, roof, dom);
+    // Polia tarify (mená pásiem, ceny) sa plnia len pri načítaní a pri zmene obrazovky, nie pri
+    // každom písmene - rovnako ako ostatné polia (writeFields).
+    const refill = changedKeys('tariffFields', [state.settingsRev, step]);
     /** @type {Partial<Record<SetupStep, () => void>>} */
     const screens = {
         odkaz: () => renderOdkaz(state, dom),
@@ -533,9 +893,15 @@ function renderWizard(state, dom) {
         dalsia: () => renderDalsia(state, draft, dom),
         menic: () => renderMenic(state, draft, dom),
         meranie: () => renderMeranie(state, dom),
+        tarifa: () => renderTarifa(state, draft, dom),
+        pasma: () => renderPasma(draft, dom, refill),
+        rozvrh: () => renderRozvrh(state, draft, dom),
+        vynimky: () => renderVynimky(state, draft, dom),
+        ceny: () => renderCeny(draft, dom, refill),
         suhrn: () => renderSuhrn(state, draft, dom),
     };
     screens[step]?.();
+    renderTariffMsgs(draft, step, dom);
     renderFoot(state, draft, step, setupReady(state), dom);
 }
 
