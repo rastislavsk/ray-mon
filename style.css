@@ -1222,7 +1222,13 @@ b {
 /* Mobil, režim obrazovky: ciferník je jediné, čo sa vie prispôsobiť - odporúčanie pod ním
    zámerne neustupuje, aby text neskákal vo veľkosti. Preto dostane presne to, čo v karte
    zvýši: .dial-hero si vezme zvyšnú výšku (flex: 1 1 auto) a kruh v ňom je štvorec veľký
-   ako menší z rozmerov toho miesta (height: 100% + aspect-ratio: 1 + max-width: 100%).
+   ako menší z rozmerov toho miesta - min(100cqw, 100cqh), .dial-hero je na to kontajner.
+
+   Nie height: 100% + aspect-ratio: 1 + max-width: 100%, ako tu stálo predtým: keď bolo
+   miesto vyššie než široké (vysoké úzke telefóny, typicky Android 20:9), max-width zúžil
+   šírku, ale výška ostala a obal prestal byť štvorcom. Kruh v SVG sa pritom vystredil, kým
+   značka "teraz" sa polohuje v percentách obalu (ringPercent) - na 360 × 800 tak visela
+   18 px nad prstencom. Stráži to e2e test "mobil: karta Terazky sa ... zmestí".
 
    Zámerne bez zmeranej konštanty: predtým tu stál clamp so súčtom všetkého okolo kruhu
    (hlavička + paddingy + navigácia + karta odporúčania), ktorý bolo treba prepočítať pri
@@ -1244,12 +1250,10 @@ b {
         align-items: center;
         justify-content: center;
         margin-bottom: var(--sp-4);
+        container-type: size;
     }
     body:has(#page[data-panel='terazky']) .dial-wrap {
-        height: 100%;
-        width: auto;
-        max-width: 100%;
-        max-height: var(--dial-max);
+        width: min(100cqw, 100cqh, var(--dial-max));
         margin: 0;
     }
     body:has(#page[data-panel='terazky']) .verdict {
