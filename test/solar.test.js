@@ -20,6 +20,7 @@ import {
     poaIrradiance,
     solarPosition,
     sunTimes,
+    sunUp,
 } from '../shared/solar.js';
 import { FIXED_NOW, fixture } from './helpers.js';
 
@@ -284,6 +285,19 @@ test('sunTimes: východ a západ slnka v miestnom čase lokality', () => {
     // Polárny deň za polárnym kruhom: slnko nevychádza ani nezapadá.
     const tromso = { name: 'Tromsø', lat: 69.65, lon: 18.96, elevationM: 10, timezone: 'Europe/Oslo' };
     assert.deepEqual(sunTimes(tromso, '2026-06-21'), { rise: null, set: null });
+});
+
+test('sunUp: slnko je nad obzorom presne medzi východom a západom zo sunTimes', () => {
+    const { rise, set } = sunTimes(SITE, '2026-09-05');
+    if (rise === null || set === null) throw new Error('5. 9. v Dvoranoch slnko vychádza aj zapadá');
+    const at = (/** @type {number} */ min) => new Date(Date.parse('2026-09-05T00:00:00+02:00') + min * 60000);
+    assert.equal(sunUp(at(rise - 1), SITE), false, 'minútu pred východom je noc');
+    assert.equal(sunUp(at(rise), SITE), true, 'od východu je deň');
+    assert.equal(sunUp(at(set - 1), SITE), true, 'minútu pred západom je deň');
+    assert.equal(sunUp(at(set), SITE), false, 'od západu je noc');
+    // Polárny deň: slnko nezapadne, takže je deň aj o polnoci.
+    const tromso = { name: 'Tromsø', lat: 69.65, lon: 18.96, elevationM: 10, timezone: 'Europe/Oslo' };
+    assert.equal(sunUp(new Date('2026-06-21T00:00:00+02:00'), tromso), true);
 });
 
 test('clearDayKwh: výroba za jasného dňa - v lete viac než v zime, nikdy nad menič × 24 h', () => {

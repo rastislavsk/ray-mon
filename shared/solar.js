@@ -221,13 +221,23 @@ function localDayTimes(dateKey, timezone, stepMin) {
 const SUNRISE_ELEVATION_DEG = -0.833;
 
 /**
+ * Je slnko nad obzorom? To isté kritérium ako východ a západ v sunTimes, takže platí aj
+ * v polárny deň či noc, keď slnko nevyjde alebo nezapadne. Ciferník podľa toho ukazuje
+ * na značke „teraz“ slnko alebo mesiac.
+ * @param {Date} dateUtc @param {Site} site
+ */
+export function sunUp(dateUtc, site) {
+    return solarPosition(dateUtc, site.lat, site.lon).elevationDeg > SUNRISE_ELEVATION_DEG;
+}
+
+/**
  * Východ a západ slnka v daný miestny deň, ako minúta dňa v pásme lokality. Počas polárneho
  * dňa či noci niektorý z nich nie je (null). Slúži sprievodcovi nastavením ako potvrdenie
  * lokality, takže presnosť na minútu stačí.
  * @param {Site} site @param {string} dateKey @returns {{ rise: number | null, set: number | null }}
  */
 export function sunTimes(site, dateKey) {
-    const up = (/** @type {Date} */ t) => solarPosition(t, site.lat, site.lon).elevationDeg > SUNRISE_ELEVATION_DEG;
+    const up = (/** @type {Date} */ t) => sunUp(t, site);
     const times = localDayTimes(dateKey, site.timezone, 10);
     /** @type {{ rise: number | null, set: number | null }} */ const out = { rise: null, set: null };
     for (let i = 1; i < times.length; i++) {
