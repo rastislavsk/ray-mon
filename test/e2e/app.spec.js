@@ -1033,8 +1033,15 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
  * bez scrollovania a bez toho, aby čokoľvek zapadlo pod spodnú navigáciu. Čo sa deje pod 620px, hovorí test hneď za týmto.
  */
 test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollovania', async ({ page }) => {
-    for (const height of [844, 740, 667, 620]) {
-        await page.setViewportSize({ width: 390, height });
+    // 360 × 800 je bežný Android 20:9 - miesto na ciferník je tam vyššie než široké.
+    for (const [width, height] of [
+        [390, 844],
+        [390, 740],
+        [390, 667],
+        [390, 620],
+        [360, 800],
+    ]) {
+        await page.setViewportSize({ width, height });
         const errors = await openApp(page);
 
         const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
@@ -1051,6 +1058,16 @@ test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollov
         await expect(page.locator('.dial-svg'), `výška ${height}px`).toBeVisible();
         await expect(page.locator('#day-ring path').first(), `výška ${height}px`).toBeVisible();
         await expect(page.locator('#verdict-dots'), `výška ${height}px`).toBeVisible();
+
+        // Obal ciferníka musí ostať štvorcom: prstenec sa v SVG vystredí, no značka "teraz"
+        // sa polohuje v percentách obalu (ringPercent) - na nižšom či širšom obale by visela
+        // mimo prstenca.
+        const obal = await page.locator('#dial-wrap').boundingBox();
+        if (!obal) throw new Error('ciferník nemá rozmer');
+        expect(
+            Math.abs(obal.width - obal.height),
+            `${width}x${height}: obal ciferníka ${obal.width}x${obal.height} nie je štvorec`,
+        ).toBeLessThan(1);
         expect(errors).toEqual([]);
     }
 });
