@@ -8,12 +8,14 @@ const byId = (/** @type {string} */ id) => {
 };
 
 // Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", nastavenie = „Nastavenie",
-// info = „Info". Popiska je text pre používateľa a mení sa podľa chuti; kódový názov drží
+// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", nastavenie = „Nastavenie".
+// Popiska je text pre používateľa a mení sa podľa chuti; kódový názov drží
 // HTML id, CSS selektory aj stav, tak nech ho popiska nemusí naháňať.
-export const PANELS = /** @type {const} */ (['terazky', '7dni', 'nastavenie', 'info']);
+// Karta Info zanikla - jej položky sú v karte Nastavenie (sekcia Appka).
+export const PANELS = /** @type {const} */ (['terazky', '7dni', 'nastavenie']);
 
-// Položky karty Info (natívne <details>); id v HTML je `info-<položka>`.
+// Položky sekcie Appka v karte Nastavenie (natívne <details>): návod k ciferníku a zdieľanie.
+// Kedysi boli v karte Info - odtiaľ id v HTML `info-<položka>` aj názvy v kóde.
 export const INFO_ITEMS = /** @type {const} */ (['guide', 'share']);
 
 function headerDom() {
@@ -253,7 +255,7 @@ function wizardTariffDom() {
     };
 }
 
-// Karta Info a ponuka prevziať nastavenie z odkazu.
+// Sekcia Appka (návod a zdieľanie) a ponuka prevziať nastavenie z odkazu.
 function zdielanieDom() {
     return {
         infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (

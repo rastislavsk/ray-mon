@@ -14,13 +14,13 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 Spodná navigácia má len ikony bez textu – mená kariet nižšie slúžia len na orientáciu
 v tomto popise.
 
-|                Terazky                 |               7 dní               |               Info               |
-| :------------------------------------: | :-------------------------------: | :------------------------------: |
-| ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Info](docs/img/info.png) |
+|                Terazky                 |               7 dní               |                  Nastavenie                  |
+| :------------------------------------: | :-------------------------------: | :------------------------------------------: |
+| ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
-sú syntetické. Prekresliť ich vie `npm run screenshots`. Karta Nastavenie na obrázku nie je
-a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kreslí knižnica z CDN.
+sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
+v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
@@ -30,7 +30,7 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   tarify (oranžová lacné pásmo, sivá bežná cena, červená drahé) a zelená tam, kde predpoveď
   sľubuje dosť slnka na veľké spotrebiče. Značka „teraz“ na ňom je slnko, v noci mesiac. Potiahnutím jazdca po prstenci alebo ťuknutím
   naň si pozrieš, ako to bude vyzerať v inom čase. Čo prstence a farby znamenajú, vysvetľuje
-  karta Info.
+  položka Ako čítať ciferník v karte Nastavenie.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
   dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
@@ -53,9 +53,10 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
   po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je karta
-  prehľad elektrárne a ťuknutie na riadok otvorí len jeho krok. Tlačidlo Späť na telefóne
+  prehľad elektrárne: karta s menom, celkovým výkonom, zostavou a kompasom plôch a pod ňou
+  riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo Späť na telefóne
   vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
-- **Info** – zoznam položiek v rovnakom dizajne ako Nastavenie. **Ako čítať ciferník**:
+  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). **Ako čítať ciferník**:
   návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s cenou a slnkom, značka „teraz“, vnútorný oblúk výkonu,
   jazdec na prstenci). Obsah je statický, appka ho neprepočítava. **Zdieľať appku**: QR kód,

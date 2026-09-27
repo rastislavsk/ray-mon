@@ -413,3 +413,19 @@ test('dayBarsModel: stĺpec na hodinu produkčného okna, strop jasnej oblohy, p
     });
     assert.ok(bez && bez.clear === null && bez.bars.every((b) => b.tier === null) && bez.realLast !== null);
 });
+
+test('planesCompassModel: šípka na plochu v jej smere, dĺžka podľa panelov, hlavná je najväčšia', async () => {
+    const { planesCompassModel, PLANES_COMPASS } = await import('../shared/chart-model.js');
+    const c = PLANES_COMPASS.viewBox / 2;
+    const [juh, zapad] = planesCompassModel([
+        { panels: 16, azimuthDeg: 180 },
+        { panels: 8, azimuthDeg: 270 },
+    ]);
+    assert.ok(juh.main && !zapad.main);
+    assert.ok(Math.abs(juh.x - c) < 1e-9 && Math.abs(juh.y - (c + PLANES_COMPASS.rMax)) < 1e-9, 'juh je dole, plná dĺžka');
+    assert.ok(zapad.x < c && Math.abs(zapad.y - c) < 1e-9, 'západ je vľavo');
+    assert.ok(c - zapad.x < PLANES_COMPASS.rMax && c - zapad.x > PLANES_COMPASS.rMin, 'polovica panelov, kratšia šípka');
+    // Rozpísaná plocha bez počtu panelov má najkratšiu šípku.
+    const [bez] = planesCompassModel([{ panels: NaN, azimuthDeg: 90 }]);
+    assert.ok(Math.abs(bez.x - (c + PLANES_COMPASS.rMin)) < 1e-9);
+});

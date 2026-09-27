@@ -27,6 +27,9 @@ export function render(state, dom) {
     renderImportOffer(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
-    if (state.panel === 'nastavenie') renderNastavenie(state, dom);
-    if (state.panel === 'info') renderInfo(state, dom);
+    if (state.panel === 'nastavenie') {
+        renderNastavenie(state, dom);
+        // Návod a zdieľanie sú v karte Nastavenie (sekcia Appka), kedysi mali kartu Info.
+        renderInfo(state, dom);
+    }
 }

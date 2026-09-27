@@ -13,13 +13,13 @@ import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 const PORT = 8123;
 const SIRKA = 390;
 const VYSKA = 844;
-// Karta Nastavenie tu nie je. Na karte Info sa rozbalí len návod k ciferníku, inak by bol
-// na snímke iba zoznam položiek. Zdieľať appku ostáva zavreté: QR kód v ňom kreslí knižnica
-// z CDN, takže bez prístupu naň by z neho bol prázdny biely rámik.
+// Karta Nastavenie ukazuje prehľad elektrárne; položky sekcie Appka ostávajú zavreté -
+// Zdieľať appku preto, lebo QR kód v ňom kreslí knižnica z CDN a bez prístupu naň by
+// z neho bol prázdny biely rámik.
 const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
-    { subor: 'info.png', nav: 'nav-info', otvor: '#info-guide > summary' },
+    { subor: 'nastavenie.png', nav: 'nav-nastavenie' },
 ];
 
 /** Počká, kým server odpovie, aby sa prvý pokus o snímku netrafil do prázdna. */

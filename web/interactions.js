@@ -17,6 +17,7 @@ import { localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
+import { PANELS } from './dom.js';
 import { nextPv, panelChange } from './state.js';
 import { applySettings, initSetup } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
@@ -54,9 +55,11 @@ function initNavigation(store, dom) {
         const panelBtn = target.closest('button[data-panel]');
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
         // z tej istej strany ako pri ťahaní prstom.
-        if (panelBtn instanceof HTMLElement && panelBtn.dataset.panel) {
-            store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
-        }
+        //
+        // Len známa karta: stará stránka z cache (desať minút po nasadení, viď CLAUDE.md) ešte
+        // môže mať tlačidlo zrušenej karty Info a jej prepnutie by skrylo všetky karty naraz.
+        const panel = panelBtn instanceof HTMLElement ? PANELS.find((p) => p === panelBtn.dataset.panel) : undefined;
+        if (panel) store.setState(panelChange(store.get().panel, panel));
         const totalBtn = target.closest('[data-week-detail]');
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
         const weekBtn = target.closest('[data-day-index]');
@@ -459,7 +462,7 @@ export function isTall() {
 }
 
 /**
- * Položky karty Info sú natívne <details>: rozbalí ich prehliadač sám (ťuknutie, klávesnica,
+ * Položky sekcie Appka v karte Nastavenie sú natívne <details>: rozbalí ich prehliadač sám (ťuknutie, klávesnica,
  * hľadanie v stránke), appka to len prevezme do stavu. Zbalenie ťuknutím je ten istý krok ako
  * tlačidlo Späť, preto ide cez backTo - inak by položka ostala v histórii a Späť by ju znovu
  * rozbalilo. Keď sa `open` zhoduje so stavom, udalosť spôsobilo prekreslenie a netreba nič.

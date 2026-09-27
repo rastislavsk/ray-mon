@@ -1,7 +1,7 @@
 // Skladanie SVG reťazcov z modelov (shared/chart-model.js). Žiadne výpočty, iba zápis.
 // Farby idú cez CSS triedy (style.css), nie cez atribúty.
 
-import { compassPoint, RING, smoothPath } from '../shared/chart-model.js';
+import { compassPoint, PLANES_COMPASS, RING, smoothPath } from '../shared/chart-model.js';
 import { escapeHtml } from '../shared/format.js';
 
 /** @typedef {NonNullable<ReturnType<typeof import('../shared/chart-model.js').forecastChartModel>>} ChartModel */
@@ -141,6 +141,29 @@ export function compassSvg(m) {
         `<line class="ridge" x1="112" y1="150" x2="188" y2="150"/>${panels}` +
         `<line class="arrow" x1="150" y1="190" x2="150" y2="214"/><polygon class="arrow-head" points="150,222 144.5,212 155.5,212"/></g></svg>`
     );
+}
+
+/** Kompas plôch v karte elektrárne: svetové strany a šípka na každú plochu panelov.
+ * @param {ReturnType<typeof import('../shared/chart-model.js').planesCompassModel>} arrows @param {string} label */
+export function planesCompassSvg(arrows, label) {
+    const { viewBox, rRing, rLabel } = PLANES_COMPASS;
+    const c = viewBox / 2;
+    let out = `<svg class="planes-compass" viewBox="0 0 ${viewBox} ${viewBox}" role="img" aria-label="${escapeHtml(label)}">`;
+    out += `<circle class="ring" cx="${c}" cy="${c}" r="${rRing}"/>`;
+    // +3 posadí písmeno (9 px) opticky na stred bodu - text sa kreslí od účaria.
+    for (const [az, t] of /** @type {const} */ ([
+        [0, 'S'],
+        [90, 'V'],
+        [180, 'J'],
+        [270, 'Z'],
+    ])) {
+        const p = compassPoint(az, rLabel, c);
+        out += `<text x="${n(p.x)}" y="${n(p.y + 3)}">${t}</text>`;
+    }
+    // Hlavná plocha ide navrch, aby ju pri prekrytí nezakryla menšia.
+    for (const a of [...arrows].sort((p, q) => Number(p.main) - Number(q.main)))
+        out += `<line class="arrow${a.main ? ' main' : ''}" x1="${c}" y1="${c}" x2="${n(a.x)}" y2="${n(a.y)}"/>`;
+    return `${out}<circle class="hub" cx="${c}" cy="${c}" r="4"/></svg>`;
 }
 
 /** Malý kompas so šípkou - smer plochy v zhrnutí a v prehľade plôch. @param {number} azDeg */

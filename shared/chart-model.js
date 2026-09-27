@@ -562,6 +562,26 @@ export function compassPoint(azDeg, r, c = COMPASS.viewBox / 2) {
     return { x: c + r * Math.sin(rad), y: c - r * Math.cos(rad) };
 }
 
+/** Kompas plôch v karte elektrárne (prehľad v karte Nastavenie): viewBox a polomery. */
+// Svetové strany sú na polomere rLabel, šípky končia pred nimi (rMax), aby ich nezakryli.
+export const PLANES_COMPASS = { viewBox: 104, rRing: 48, rLabel: 38, rMin: 12, rMax: 28 };
+
+/**
+ * Plochy panelov na jednom kompase: šípka na plochu v smere, kam je otočená, dlhá podľa
+ * počtu panelov voči najväčšej ploche. Najväčšia plocha je hlavná (výraznejšia farba).
+ * @param {Array<{ panels: number, azimuthDeg: number }>} strings
+ * @returns {Array<{ x: number, y: number, main: boolean }>}
+ */
+export function planesCompassModel(strings) {
+    const { viewBox, rMin, rMax } = PLANES_COMPASS;
+    const max = Math.max(...strings.map((s) => (Number.isFinite(s.panels) ? s.panels : 0)), 0);
+    const mainIndex = strings.findIndex((s) => s.panels === max);
+    return strings.map((s, i) => {
+        const share = max > 0 && Number.isFinite(s.panels) ? s.panels / max : 0;
+        return { ...compassPoint(s.azimuthDeg, rMin + (rMax - rMin) * share, viewBox / 2), main: i === mainIndex };
+    });
+}
+
 /**
  * Kompas smeru plochy: osem výsekov, dráha slnka a otočenie strechy v strede. Dráha ide cez
  * deň z východu cez poludnie na západ - na severnej pologuli cez juh, na južnej cez sever.

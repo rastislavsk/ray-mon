@@ -82,7 +82,7 @@
                         </svg>
                         <span class="lbl">Nastavenie</span>
                     </button>
-                    <button id="nav-info" class="nav-item" type="button" data-panel="info">
+                    <button id="nav-info" class="nav-item hidden" type="button" data-panel="info">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="12" r="9" />
                             <path d="M12 11v5M12 7.5h.01" />
@@ -348,9 +348,9 @@
 
             <!-- PANEL: NASTAVENIE -->
             <section id="panel-nastavenie" class="panel hidden" aria-labelledby="settings-title">
-                <div class="section-head centered" id="settings-head">
+                <div class="section-head" id="settings-head">
                     <h2 class="section-title" id="settings-title">Nastavenie</h2>
-                    <div class="section-sub">Parametre fotovoltiky</div>
+                    <div class="section-sub">Elektráreň, tarifa a appka</div>
                 </div>
                 <!-- Moja elektráreň: prehľad a sprievodca nastavením. Obrazovky sprievodcu sú tu všetky
                      naraz, render ukáže jednu. Trieda .hidden drží kartu prázdnu, kým ju render
@@ -380,8 +380,8 @@
                             <button type="button" class="link-btn" data-setup-go="odkaz">Mám odkaz s nastavením</button>
                         </div>
                         <div class="setup-overview" id="setup-overview">
-                            <div class="lbl">Moja elektráreň</div>
                             <div class="setup-hero" id="setup-hero"></div>
+                            <div class="group-lbl">Elektráreň</div>
                             <div class="sum-list" id="setup-rows"></div>
                             <div class="plant-msgs" id="setup-warnings"></div>
                             <button type="button" class="choice" data-setup-go="odkaz">
@@ -390,6 +390,148 @@
                             <button type="button" class="link-btn" data-setup-restart>Nastaviť celé znova od začiatku</button>
                         </div>
                         <div class="plant-note" id="setup-note" role="status"></div>
+                        <!-- Appka: návod k ciferníku a zdieľanie (predtým karta Info). Sú v prehľade karty, takže
+                             sa skryjú spolu s ním, keď je otvorený sprievodca. Položky sú natívne <details>.
+                             Ciferník v návode je statická ilustrácia (pevne dané pásma a jedna ukážková
+                             hodnota výkonu), nie živé dáta - na vysvetlenie farieb to netreba prepočítavať. -->
+                        <section class="app-items" aria-labelledby="app-items-title">
+                            <div class="group-lbl" id="app-items-title">Appka</div>
+                            <ul class="settings-list">
+                                <li>
+                                    <details class="settings-item" id="info-guide">
+                                        <summary class="settings-summary">
+                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <circle cx="12" cy="12" r="9" />
+                                                <path d="M12 7v5l3 2" />
+                                            </svg>
+                                            <span class="settings-text">
+                                                <b>Ako čítať ciferník</b>
+                                                <span class="settings-hint">Farby a prstence v skratke</span>
+                                            </span>
+                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </summary>
+                                        <div class="settings-body info-panel">
+                                            <svg class="info-dial" viewBox="0 0 240 240" aria-hidden="true">
+                                                <!-- Pásma a bodka sú kreslené s polnocou hore; otočenie ich posadí ako na ciferníku
+                                                     v karte Terazky - poludnie hore. Oblúk výkonu nie je čas, ten sa neotáča. -->
+                                                <g transform="rotate(180 120 120)">
+                                                    <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
+                                                    <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
+                                                    <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
+                                                    <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
+                                                    <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
+                                                    <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
+                                                    <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
+                                                    <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
+                                                    <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
+                                                    <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
+                                                    <g class="info-dial-now" transform="translate(92.57 222.39) scale(1.3)">
+                                                        <circle class="halo" r="10.5" />
+                                                        <circle class="sun" r="3.4" />
+                                                        <path
+                                                            class="rays"
+                                                            d="M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59"
+                                                        />
+                                                    </g>
+                                                </g>
+                                                <circle class="dial-track" cx="120" cy="120" r="78" />
+                                                <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
+                                            </svg>
+
+                                            <ul class="info-rows">
+                                                <li class="info-row">
+                                                    <svg class="info-row-icon info-icon-tariff" viewBox="0 0 22 22" aria-hidden="true">
+                                                        <path class="seg green" d="M11,2 A9,9 0 0 1 16.29,18.28" />
+                                                        <path class="seg amber" d="M16.29,18.28 A9,9 0 0 1 2,11" />
+                                                        <path class="seg red" d="M2,11 A9,9 0 0 1 11,2" />
+                                                    </svg>
+                                                    <div>
+                                                        <b>Vonkajší prstenec</b> — 24 hodín dňa podľa tvojej tarify a predpovede:
+                                                        <ul class="info-tiers">
+                                                            <li><i class="sw green"></i>slnko pokryje veľké spotrebiče</li>
+                                                            <li><i class="sw amber"></i>lacné pásmo (NT, mimo špičky)</li>
+                                                            <li><i class="sw grey"></i>bežná cena</li>
+                                                            <li><i class="sw red"></i>drahé pásmo (VT, špička)</li>
+                                                        </ul>
+                                                    </div>
+                                                </li>
+                                                <li class="info-row">
+                                                    <span class="info-row-icon sky-mark" aria-hidden="true"></span>
+                                                    <div>
+                                                        <b>Slnko alebo mesiac</b> — presný aktuálny čas („teraz“). Slnko svieti od východu
+                                                        po západ slnka, v noci je tu mesiac.
+                                                    </div>
+                                                </li>
+                                                <li class="info-row">
+                                                    <svg class="info-row-icon info-icon-power" viewBox="0 0 22 22" aria-hidden="true">
+                                                        <circle class="track" cx="11" cy="11" r="8" />
+                                                        <circle class="arc" cx="11" cy="11" r="8" transform="rotate(-90 11 11)" />
+                                                    </svg>
+                                                    <div>
+                                                        <b>Vnútorný oblúk a číslo</b> — aktuálny výkon fotovoltiky. Dĺžka aj farba ukazujú,
+                                                        koľko dávajú panely (kW).
+                                                    </div>
+                                                </li>
+                                                <li class="info-row">
+                                                    <svg class="info-row-icon info-icon-drag" viewBox="0 0 22 22" aria-hidden="true">
+                                                        <circle cx="11" cy="11" r="9" />
+                                                        <path d="M7 8l-2.5 3L7 14M15 8l2.5 3L15 14" />
+                                                    </svg>
+                                                    <div>
+                                                        <b>Jazdec na prstenci</b> — potiahni ho (alebo naň ťukni) a pozri si, ako to bude
+                                                        vyzerať v inom čase.
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </details>
+                                </li>
+                                <li>
+                                    <details class="settings-item" id="info-share">
+                                        <summary class="settings-summary">
+                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <circle cx="18" cy="5" r="3" />
+                                                <circle cx="6" cy="12" r="3" />
+                                                <circle cx="18" cy="19" r="3" />
+                                                <path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8" />
+                                            </svg>
+                                            <span class="settings-text">
+                                                <b>Zdieľať appku</b>
+                                                <span class="settings-hint">QR kód a odkaz na iný telefón</span>
+                                            </span>
+                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </summary>
+                                        <div class="settings-body share-panel">
+                                            <div class="share-options" id="share-options">
+                                                <label class="check-row">
+                                                    <input type="checkbox" id="share-with-settings" />
+                                                    <span>Pridať moje nastavenie elektrárne</span>
+                                                </label>
+                                                <label class="check-row" id="share-kiosk-row">
+                                                    <input type="checkbox" id="share-with-kiosk" />
+                                                    <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                                                </label>
+                                            </div>
+                                            <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
+                                            <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path
+                                                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.001 2C6.478 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2.05 22l5.096-1.293A9.958 9.958 0 0012.001 22c5.523 0 10-4.477 10-10S17.524 2 12.001 2zm0 18.161c-1.635 0-3.146-.457-4.436-1.246l-.318-.19-3.3.837.882-3.222-.207-.331a8.117 8.117 0 01-1.24-4.328c0-4.5 3.66-8.161 8.16-8.161 4.502 0 8.161 3.66 8.161 8.161 0 4.502-3.66 8.161-8.161 8.161z"
+                                                    />
+                                                </svg>
+                                                Zdieľať cez WhatsApp
+                                            </a>
+                                        </div>
+                                    </details>
+                                </li>
+                            </ul>
+                            <p class="app-credit mono">Toilet Apps Ltd.</p>
+                            <p class="app-credit mono">Made by 2R &amp; Claude ¯\_(ツ)_/¯</p>
+                        </section>
                     </div>
 
                     <div class="wizard hidden" id="wizard">
@@ -672,151 +814,14 @@
                 </div>
             </section>
 
-            <!-- PANEL: INFO -->
-            <!-- Zoznam položiek v rovnakom dizajne ako karta Nastavenie (natívne <details>).
-                 Ciferník v položke Ako čítať ciferník je statická ilustrácia (pevne dané pásma
-                 a jedna ukážková hodnota výkonu), nie živé dáta - na vysvetlenie farieb
-                 a prstencov to netreba prepočítavať. -->
+            <!-- PANEL: INFO - zrušená. Jej položky sú v karte Nastavenie (sekcia Appka). Škrupina
+                 aj tlačidlo #nav-info ostávajú do ďalšieho nasadenia, aby ich stará verzia skriptu
+                 z cache ešte našla (pravidlo o cache v CLAUDE.md); nová ich nepoužíva. -->
             <section id="panel-info" class="panel hidden" aria-labelledby="info-title">
                 <div class="section-head centered">
                     <h2 class="section-title" id="info-title">Info</h2>
                     <div class="section-sub">Návod a zdieľanie</div>
                 </div>
-                <ul class="settings-list">
-                    <li>
-                        <details class="settings-item" id="info-guide">
-                            <summary class="settings-summary">
-                                <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <circle cx="12" cy="12" r="9" />
-                                    <path d="M12 7v5l3 2" />
-                                </svg>
-                                <span class="settings-text">
-                                    <b>Ako čítať ciferník</b>
-                                    <span class="settings-hint">Farby a prstence v skratke</span>
-                                </span>
-                                <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M9 5l7 7-7 7" />
-                                </svg>
-                            </summary>
-                            <div class="settings-body info-panel">
-                                <svg class="info-dial" viewBox="0 0 240 240" aria-hidden="true">
-                                    <!-- Pásma a bodka sú kreslené s polnocou hore; otočenie ich posadí ako na ciferníku
-                                         v karte Terazky - poludnie hore. Oblúk výkonu nie je čas, ten sa neotáča. -->
-                                    <g transform="rotate(180 120 120)">
-                                        <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
-                                        <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
-                                        <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
-                                        <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
-                                        <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
-                                        <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
-                                        <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
-                                        <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
-                                        <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
-                                        <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
-                                        <g class="info-dial-now" transform="translate(92.57 222.39) scale(1.3)">
-                                            <circle class="halo" r="10.5" />
-                                            <circle class="sun" r="3.4" />
-                                            <path
-                                                class="rays"
-                                                d="M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59"
-                                            />
-                                        </g>
-                                    </g>
-                                    <circle class="dial-track" cx="120" cy="120" r="78" />
-                                    <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
-                                </svg>
-
-                                <ul class="info-rows">
-                                    <li class="info-row">
-                                        <svg class="info-row-icon info-icon-tariff" viewBox="0 0 22 22" aria-hidden="true">
-                                            <path class="seg green" d="M11,2 A9,9 0 0 1 16.29,18.28" />
-                                            <path class="seg amber" d="M16.29,18.28 A9,9 0 0 1 2,11" />
-                                            <path class="seg red" d="M2,11 A9,9 0 0 1 11,2" />
-                                        </svg>
-                                        <div>
-                                            <b>Vonkajší prstenec</b> — 24 hodín dňa podľa tvojej tarify a predpovede:
-                                            <ul class="info-tiers">
-                                                <li><i class="sw green"></i>slnko pokryje veľké spotrebiče</li>
-                                                <li><i class="sw amber"></i>lacné pásmo (NT, mimo špičky)</li>
-                                                <li><i class="sw grey"></i>bežná cena</li>
-                                                <li><i class="sw red"></i>drahé pásmo (VT, špička)</li>
-                                            </ul>
-                                        </div>
-                                    </li>
-                                    <li class="info-row">
-                                        <span class="info-row-icon sky-mark" aria-hidden="true"></span>
-                                        <div>
-                                            <b>Slnko alebo mesiac</b> — presný aktuálny čas („teraz“). Slnko svieti od východu po západ
-                                            slnka, v noci je tu mesiac.
-                                        </div>
-                                    </li>
-                                    <li class="info-row">
-                                        <svg class="info-row-icon info-icon-power" viewBox="0 0 22 22" aria-hidden="true">
-                                            <circle class="track" cx="11" cy="11" r="8" />
-                                            <circle class="arc" cx="11" cy="11" r="8" transform="rotate(-90 11 11)" />
-                                        </svg>
-                                        <div>
-                                            <b>Vnútorný oblúk a číslo</b> — aktuálny výkon fotovoltiky. Dĺžka aj farba ukazujú, koľko dávajú
-                                            panely (kW).
-                                        </div>
-                                    </li>
-                                    <li class="info-row">
-                                        <svg class="info-row-icon info-icon-drag" viewBox="0 0 22 22" aria-hidden="true">
-                                            <circle cx="11" cy="11" r="9" />
-                                            <path d="M7 8l-2.5 3L7 14M15 8l2.5 3L15 14" />
-                                        </svg>
-                                        <div>
-                                            <b>Jazdec na prstenci</b> — potiahni ho (alebo naň ťukni) a pozri si, ako to bude vyzerať v inom
-                                            čase.
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </details>
-                    </li>
-                    <li>
-                        <details class="settings-item" id="info-share">
-                            <summary class="settings-summary">
-                                <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <circle cx="18" cy="5" r="3" />
-                                    <circle cx="6" cy="12" r="3" />
-                                    <circle cx="18" cy="19" r="3" />
-                                    <path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8" />
-                                </svg>
-                                <span class="settings-text">
-                                    <b>Zdieľať appku</b>
-                                    <span class="settings-hint">QR kód a odkaz na iný telefón</span>
-                                </span>
-                                <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M9 5l7 7-7 7" />
-                                </svg>
-                            </summary>
-                            <div class="settings-body share-panel">
-                                <div class="share-options" id="share-options">
-                                    <label class="check-row">
-                                        <input type="checkbox" id="share-with-settings" />
-                                        <span>Pridať moje nastavenie elektrárne</span>
-                                    </label>
-                                    <label class="check-row" id="share-kiosk-row">
-                                        <input type="checkbox" id="share-with-kiosk" />
-                                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
-                                    </label>
-                                </div>
-                                <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
-                                <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                        <path
-                                            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.001 2C6.478 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2.05 22l5.096-1.293A9.958 9.958 0 0012.001 22c5.523 0 10-4.477 10-10S17.524 2 12.001 2zm0 18.161c-1.635 0-3.146-.457-4.436-1.246l-.318-.19-3.3.837.882-3.222-.207-.331a8.117 8.117 0 01-1.24-4.328c0-4.5 3.66-8.161 8.16-8.161 4.502 0 8.161 3.66 8.161 8.161 0 4.502-3.66 8.161-8.161 8.161z"
-                                        />
-                                    </svg>
-                                    Zdieľať cez WhatsApp
-                                </a>
-                            </div>
-                        </details>
-                    </li>
-                </ul>
-                <p class="app-credit mono">Toilet Apps Ltd.</p>
-                <p class="app-credit mono">Made by 2R &amp; Claude ¯\_(ツ)_/¯</p>
             </section>
         </main>
 

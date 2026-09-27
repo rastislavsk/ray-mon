@@ -796,12 +796,13 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
     expect(errors).toEqual([]);
 });
 
-test('info: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }) => {
+test('nastavenie: položka Zdieľať appku v sekcii Appka sa otvorí až ťuknutím', async ({ page }) => {
     const errors = await openApp(page);
-    await page.locator('#nav-info').click();
-    await expect(page.locator('#nav-info .lbl')).toHaveText('Info');
-    // Zdieľanie sa presunulo z Nastavenia do Info - v Nastavení už nie je.
-    await expect(page.locator('#panel-nastavenie #info-share')).toHaveCount(0);
+    // Karta Info zanikla - jej tlačidlo v navigácii nie je vidno a zdieľanie je v Nastavení.
+    await expect(page.locator('#nav-info')).toBeHidden();
+    await page.locator('#nav-nastavenie').click();
+    await expect(page.locator('#app-items-title')).toHaveText('Appka');
+    await expect(page.locator('#panel-nastavenie #info-share')).toHaveCount(1);
 
     // Karta je zoznam položiek: položka je vidno, jej obsah až po ťuknutí na ňu.
     await expect(page.locator('#info-share summary')).toBeVisible();
@@ -817,19 +818,28 @@ test('info: položka Zdieľať appku sa otvorí až ťuknutím', async ({ page }
     expect(errors).toEqual([]);
 });
 
-test('info: položka Ako čítať ciferník vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
+test('nastavenie: položka Ako čítať ciferník vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
     const errors = await openApp(page);
-    await page.locator('#nav-info').click();
-    await expect(page.locator('#panel-info')).toBeVisible();
-    await expect(page.locator('#info-title')).toHaveText('Info');
-    // Karta je zoznam položiek ako Nastavenie: návod je vidno až po ťuknutí na položku.
-    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await page.locator('#nav-nastavenie').click();
+    // Sekcia Appka je zoznam položiek: návod je vidno až po ťuknutí na položku.
+    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
     await page.locator('#info-guide > summary').click();
     // Ilustračný ciferník aj štyri vysvetlivky: prstenec, bodka "teraz", oblúk výkonu, jazdec.
-    await expect(page.locator('#panel-info .info-dial')).toBeVisible();
-    await expect(page.locator('#panel-info .info-row')).toHaveCount(4);
+    await expect(page.locator('#panel-nastavenie .info-dial')).toBeVisible();
+    await expect(page.locator('#panel-nastavenie .info-row')).toHaveCount(4);
     // Štyri farby prstenca (slnko a tri cenové úrovne) sú rozpísané po riadkoch, nie schované do jednej vety.
-    await expect(page.locator('#panel-info .info-tiers li')).toHaveCount(4);
+    await expect(page.locator('#panel-nastavenie .info-tiers li')).toHaveCount(4);
+    expect(errors).toEqual([]);
+});
+
+/** Desať minút po nasadení vie prehliadač miešať novú a starú verziu súborov (viď CLAUDE.md).
+ * Stará stránka ešte ukazuje tlačidlo zrušenej karty Info - klik naň nesmie skryť všetky karty. */
+test('tlačidlo zrušenej karty Info zo starej stránky nič nerozbije', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-7dni').click();
+    await page.evaluate(() => document.getElementById('nav-info')?.classList.remove('hidden'));
+    await page.locator('#nav-info').click();
+    await expect(page.locator('#panel-7dni')).toBeVisible();
     expect(errors).toEqual([]);
 });
 
@@ -919,7 +929,7 @@ test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ p
 test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ page }) => {
     const errors = await openApp(page);
     // Karty sa vykresľujú až po otvorení, aby test videl aj ich obsah.
-    for (const nav of ['#nav-7dni', '#nav-nastavenie', '#nav-info', '#nav-terazky']) await page.locator(nav).click();
+    for (const nav of ['#nav-7dni', '#nav-nastavenie', '#nav-terazky']) await page.locator(nav).click();
 
     const broken = await page.evaluate(() => {
         const out = [];
@@ -955,7 +965,7 @@ const pockajNaPrechod = (page) =>
 
 test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({ page }) => {
     await openApp(page);
-    for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
+    for (const panel of ['terazky', '7dni', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         await pockajNaPrechod(page);
         const results = await new AxeBuilder({ page }).analyze();
@@ -1044,7 +1054,6 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
         ['#nav-terazky', '#panel-terazky'],
         ['#nav-7dni', '#panel-7dni'],
         ['#nav-nastavenie', '#panel-nastavenie'],
-        ['#nav-info', '#panel-info'],
     ]) {
         await page.locator(nav).click();
         await expect(page.locator(panel)).toBeVisible();
@@ -1165,7 +1174,7 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
  */
 test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     const errors = await openApp(page);
-    for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
+    for (const panel of ['terazky', '7dni', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         await expect(page.locator(`#panel-${panel}`)).toBeVisible();
         const zamknute = await page.evaluate(() =>
@@ -1495,18 +1504,18 @@ test('šípka späť z detailu dňa je krok späť: Späť potom detail znovu ne
     expect(errors).toEqual([]);
 });
 
-/** Rozbalená položka karty Info je krok navigácie: Späť na telefóne ju zbalí a ukáže zoznam,
+/** Rozbalená položka sekcie Appka je krok navigácie: Späť na telefóne ju zbalí a ukáže zoznam,
  * až ďalšie Späť prepne kartu. Zbalenie ťuknutím je ten istý krok - Späť ju potom znovu nerozbalí. */
-test('Späť v karte Info zbalí položku a vráti na zoznam, nie na predchádzajúcu kartu', async ({ page }) => {
+test('Späť v sekcii Appka zbalí položku a vráti na zoznam, nie na predchádzajúcu kartu', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
-    await page.locator('#nav-info').click();
+    await page.locator('#nav-nastavenie').click();
     await page.locator('#info-guide > summary').click();
-    await expect(page.locator('#panel-info .info-dial')).toBeVisible();
+    await expect(page.locator('#panel-nastavenie .info-dial')).toBeVisible();
 
     await page.goBack();
-    await ocakavajKartu(page, 'info');
-    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await ocakavajKartu(page, 'nastavenie');
+    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
     await expect(page.locator('#info-share > summary')).toBeVisible();
 
     // Zbalenie ťuknutím ide cez históriu: ďalšie Späť už prepne kartu, položku znovu nerozbalí.
@@ -1517,10 +1526,10 @@ test('Späť v karte Info zbalí položku a vráti na zoznam, nie na predchádza
     await page.goBack();
     await ocakavajKartu(page, '7dni');
 
-    // Po návrate na kartu Info je zoznam zbalený, nič neostalo rozbalené z minula.
-    await page.locator('#nav-info').click();
+    // Po návrate na kartu Nastavenie je zoznam zbalený, nič neostalo rozbalené z minula.
+    await page.locator('#nav-nastavenie').click();
     await expect(page.locator('#qrcode')).toBeHidden();
-    await expect(page.locator('#panel-info .info-dial')).toBeHidden();
+    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
     expect(errors).toEqual([]);
 });
 
@@ -1559,22 +1568,24 @@ test.describe('listovanie kariet prstom', () => {
     });
 
     /**
-     * Karta Info má dve položky, takže je oveľa kratšia než obrazovka. Kus plochy pod ňou pre
-     * prst ku karte patrí - a musí tam listovať rovnako ako nad obsahom. Kým poslucháče gesta
-     * sedeli na #page (tá je vysoká presne podľa obsahu karty), ťah v tomto mieste neurobil
-     * nič a karta sa dala prelistovať len nad jej hornou časťou.
+     * Na vysokom displeji je karta Nastavenie v ukážke (výzva k sprievodcovi a dve položky
+     * Appka) kratšia než obrazovka. Kus plochy pod ňou pre prst ku karte patrí - a musí tam
+     * listovať rovnako ako nad obsahom. Kým poslucháče gesta sedeli na #page (tá je vysoká
+     * presne podľa obsahu karty), ťah v tomto mieste neurobil nič a karta sa dala prelistovať
+     * len nad jej hornou časťou.
      */
     test('ťah v prázdnom mieste pod krátkou kartou listuje rovnako ako nad jej obsahom', async ({ page }) => {
-        const errors = await openApp(page);
-        await page.locator('#nav-info').click();
-        await ocakavajKartu(page, 'info');
+        await page.setViewportSize({ width: 390, height: 1200 });
+        const errors = await openApp(page, { settings: null });
+        await page.locator('#nav-nastavenie').click();
+        await ocakavajKartu(page, 'nastavenie');
 
-        const karta = await page.locator('#panel-info').boundingBox();
-        const prazdno = { x: 195, y: karta.y + karta.height + 60, dx: 120 };
-        expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(844 - 120);
+        const karta = await page.locator('#panel-nastavenie').boundingBox();
+        const prazdno = { x: 195, y: karta.y + karta.height + 40, dx: 120 };
+        expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(1200 - 120);
 
         await tahajVBode(page, prazdno);
-        await ocakavajKartu(page, 'nastavenie');
+        await ocakavajKartu(page, '7dni');
         expect(errors).toEqual([]);
     });
 
@@ -2084,7 +2095,7 @@ test.describe('moja elektráreň', () => {
 
     test('s uloženou elektrárňou výzva ukážky nie je na žiadnej karte', async ({ page }) => {
         await openApp(page);
-        for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
+        for (const panel of ['terazky', '7dni', 'nastavenie']) {
             await page.locator(`#nav-${panel}`).click();
             await expect(page.locator('#demo-bar'), panel).toBeHidden();
         }
@@ -2496,7 +2507,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
 
     test('zdieľanie: odkaz nesie nastavenie a kiosk len po zaškrtnutí', async ({ page }) => {
         await openApp(page);
-        await page.locator('#nav-info').click();
+        await page.locator('#nav-nastavenie').click();
         await page.locator('#info-share > summary').click();
         const wa = page.locator('#share-whatsapp');
         const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
@@ -2511,7 +2522,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
 
     test('ukážku sa zdieľať nedá, len holý odkaz', async ({ page }) => {
         await openApp(page, { settings: null });
-        await page.locator('#nav-info').click();
+        await page.locator('#nav-nastavenie').click();
         await page.locator('#info-share > summary').click();
         await expect(page.locator('#share-options')).toBeHidden();
     });
