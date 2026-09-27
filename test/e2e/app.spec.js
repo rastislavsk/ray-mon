@@ -798,8 +798,8 @@ test('7 dní na desktope: bubliny majú meta riadok so špičkou a využitím', 
 
 test('nastavenie: položka Zdieľať appku v sekcii Appka sa otvorí až ťuknutím', async ({ page }) => {
     const errors = await openApp(page);
-    // Karta Info zanikla - jej tlačidlo v navigácii nie je vidno a zdieľanie je v Nastavení.
-    await expect(page.locator('#nav-info')).toBeHidden();
+    // Zdieľanie je v Nastavení (kedysi karta Info).
+    await expect(page.locator('#nav-info')).toHaveCount(0);
     await page.locator('#nav-nastavenie').click();
     await expect(page.locator('#app-items-title')).toHaveText('Appka');
     await expect(page.locator('#panel-nastavenie #info-share')).toHaveCount(1);
@@ -829,17 +829,6 @@ test('nastavenie: položka Ako čítať ciferník vysvetľuje všetky štyri ča
     await expect(page.locator('#panel-nastavenie .info-row')).toHaveCount(4);
     // Štyri farby prstenca (slnko a tri cenové úrovne) sú rozpísané po riadkoch, nie schované do jednej vety.
     await expect(page.locator('#panel-nastavenie .info-tiers li')).toHaveCount(4);
-    expect(errors).toEqual([]);
-});
-
-/** Desať minút po nasadení vie prehliadač miešať novú a starú verziu súborov (viď CLAUDE.md).
- * Stará stránka ešte ukazuje tlačidlo zrušenej karty Info - klik naň nesmie skryť všetky karty. */
-test('tlačidlo zrušenej karty Info zo starej stránky nič nerozbije', async ({ page }) => {
-    const errors = await openApp(page);
-    await page.locator('#nav-7dni').click();
-    await page.evaluate(() => document.getElementById('nav-info')?.classList.remove('hidden'));
-    await page.locator('#nav-info').click();
-    await expect(page.locator('#panel-7dni')).toBeVisible();
     expect(errors).toEqual([]);
 });
 
