@@ -1062,15 +1062,18 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
  */
 test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollovania', async ({ page }) => {
     // 360 × 800 je bežný Android 20:9 - miesto na ciferník je tam vyššie než široké.
-    for (const [width, height] of [
+    for (const [width, height, settings] of /** @type {Array<[number, number, null?]>} */ ([
         [390, 844],
         [390, 740],
         [390, 667],
         [390, 620],
         [360, 800],
-    ]) {
+        // Ukážka má pod hlavičkou navyše červenú výzvu - ciferník musí ustúpiť aj jej.
+        [390, 620, null],
+        [360, 800, null],
+    ])) {
         await page.setViewportSize({ width, height });
-        const errors = await openApp(page);
+        const errors = await openApp(page, { settings: settings === undefined ? OWNER : settings });
 
         const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
         expect(scroll, `výška ${height}px: appka preteká o ${scroll} px`).toBeLessThanOrEqual(0);
@@ -2040,6 +2043,36 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#setup-cta')).toBeVisible();
         await expect(page.locator('#setup-overview')).toBeHidden();
         expect(errors).toEqual([]);
+    });
+
+    test('ukážka: červená výzva pod hlavičkou vedie na kartu Nastavenie, tam už nie je', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await expect(page.locator('#demo-bar')).toBeVisible();
+        await expect(page.locator('#demo-bar')).toContainText('Toto je ukážka');
+        // Výzva je v hlavičke, takže ju vidno na každej karte okrem Nastavenia.
+        await page.locator('#nav-7dni').click();
+        await expect(page.locator('#demo-bar')).toBeVisible();
+        const vazne = (await new AxeBuilder({ page }).include('#demo-bar').analyze()).violations
+            .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+            .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+        expect(vazne).toEqual([]);
+        await page.locator('#demo-bar-go').click();
+        await expect(page.locator('#panel-nastavenie')).toBeVisible();
+        await expect(page.locator('#setup-cta')).toBeVisible();
+        await expect(page.locator('#demo-bar')).toBeHidden();
+        // Tlačidlo je krok navigácie ako ikona v spodnej lište: Späť vráti na 7 dní aj s výzvou.
+        await page.goBack();
+        await expect(page.locator('#panel-7dni')).toBeVisible();
+        await expect(page.locator('#demo-bar')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('s uloženou elektrárňou výzva ukážky nie je na žiadnej karte', async ({ page }) => {
+        await openApp(page);
+        for (const panel of ['terazky', '7dni', 'nastavenie', 'info']) {
+            await page.locator(`#nav-${panel}`).click();
+            await expect(page.locator('#demo-bar'), panel).toBeHidden();
+        }
     });
 
     test('sprievodca: prvé nastavenie od polohy po uloženie, prežije načítanie stránky', async ({ page }) => {

@@ -21,6 +21,8 @@ export function renderHeader(state, dom) {
     // Čas lokality, nie telefónu - k nemu sa vzťahuje rozvrh tarify aj predpoveď.
     dom.currentTimeDisplay.textContent = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     dom.pvUpdated.textContent = updatedLine(state);
+    // Výzva v ukážke. Na karte Nastavenie ju netreba - tam je sprievodca, ku ktorému vedie.
+    dom.demoBar.classList.toggle('hidden', !state.demo || state.panel === 'nastavenie');
     // Bodka je vždy o stave teraz, preto ju náhľad iného času nezaujíma. Pozadie naopak
     // sleduje aj bežca na prstenci, takže pri jeho posúvaní vidno farbu okna, na ktoré sa
     // práve pozeráš. Bez náhľadu je to ten istý model, netreba ho rátať dvakrát.
