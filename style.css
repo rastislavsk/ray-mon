@@ -1568,6 +1568,47 @@ b {
     stroke: var(--bg);
     stroke-width: 2;
 }
+/* Detail dňa na mobile: stĺpec na hodinu vo farbe plánu dňa (tie isté farby ako denný
+   prstenec ciferníka), nad nimi strop jasnej oblohy a pod osou pás cien z tarify. */
+.hour-bar {
+    fill: var(--ink-20);
+}
+.hour-bar.tier-green,
+.price-strip.tier-green {
+    fill: var(--green);
+}
+.hour-bar.tier-amber,
+.price-strip.tier-amber {
+    fill: var(--amber);
+}
+.hour-bar.tier-red,
+.price-strip.tier-red {
+    fill: var(--red);
+}
+.hour-bar.tier-grey,
+.price-strip.tier-grey {
+    fill: var(--grey);
+}
+.price-strip {
+    fill: var(--ink-20);
+}
+/* Nameraná výroba nad stĺpcami: zelená by na zelených stĺpcoch zanikla, preto svetlá. */
+.line-real.on-bars {
+    stroke: var(--ink);
+}
+.dot-real.on-bars {
+    fill: var(--ink);
+}
+#panel-7dni.detail .leg-line-real {
+    border-color: var(--ink);
+}
+.line-clear {
+    fill: none;
+    stroke: var(--ink-45);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+}
 .heat-cell {
     fill: var(--ink);
     cursor: pointer;
@@ -1845,6 +1886,145 @@ b {
     font-size: var(--fs-lg);
     font-weight: 600;
     letter-spacing: -0.01em;
+}
+
+/* ---- 7 dní: detail dňa na mobile (návrh H1) ----------------------------------
+   .detail pridáva renderView len na mobile, takže nič z tohto sa desktopu nedotkne.
+   Šípka späť nesie aj slovo "7 dní" a stojí na vlastnom riadku, nadpis dňa je pod ňou
+   väčší. Len vzhľad - poradie v HTML aj poslucháče ostávajú. */
+.day-head {
+    flex-wrap: wrap;
+}
+.day-back-txt {
+    display: none;
+}
+#panel-7dni.detail .day-back {
+    width: auto;
+    height: 38px;
+    gap: 4px;
+    padding: 0 12px 0 6px;
+    color: var(--green);
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
+#panel-7dni.detail .day-back-txt {
+    display: inline;
+}
+#panel-7dni.detail .day-head-title {
+    flex-basis: 100%;
+    font-size: var(--fs-xl);
+    letter-spacing: -0.02em;
+}
+/* Tri čísla dňa ako dlaždice nad grafom (dayKpis vo web/render/sedemdni.js). */
+#panel-7dni.detail #week-curve-stat {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+    font-family: var(--font-body);
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+}
+.kpi b {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ink);
+}
+.kpi b small {
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    color: var(--ink-45);
+}
+.kpi-note {
+    grid-column: 1 / -1;
+}
+.kpi-note b {
+    color: var(--ink-70);
+}
+/* Legenda: krivka a stĺpce majú každá svoju (viď index.html), platí tá, ktorá sa kreslí. */
+#panel-7dni.detail .leg-curve,
+#panel-7dni:not(.detail) .leg-bars {
+    display: none;
+}
+.leg-bars .leg-sq {
+    background: var(--green);
+}
+/* Správa v detaile je odporúčanie - karta s nádychom zelenej a nadpisom nad sebou. */
+.msg-eyebrow {
+    display: none;
+}
+#panel-7dni.detail .msg-eyebrow {
+    display: block;
+    margin-bottom: var(--sp-1);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+}
+#panel-7dni.detail .msg-block {
+    background: color-mix(in srgb, var(--green) 6%, var(--card-bg));
+    border-color: rgba(var(--green-rgb), 0.24);
+}
+/* Susedné dni pod detailom (robí ich renderDaySteps): vľavo predchádzajúci, vpravo ďalší. */
+.day-steps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-2);
+    margin-top: var(--sp-5);
+}
+.day-step {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 52px;
+    padding: 8px 12px;
+    border: 1px solid var(--ink-08);
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    text-align: left;
+}
+.day-step.next {
+    grid-column: 2;
+    justify-content: flex-end;
+    text-align: right;
+}
+.day-step .t {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.day-step b {
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
+.day-step small {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-45);
+}
+.day-step svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--ink-45);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* Bodky pod hlavičkou detailu dňa: na ktorom dni týždňa stojíme a že sa dá listovať ďalej.

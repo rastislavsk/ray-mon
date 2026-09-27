@@ -144,9 +144,66 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
 }
 
 /**
+ * Model stĺpcov po hodinách (detail dňa na karte 7 dní na mobile): stĺpec na hodinu vo farbe
+ * plánu dňa (`tiers`, viď dayHourTiers v shared/day-plan.js), čiara jasnej oblohy, pod osou
+ * pás cien z tarify (`prices`) a pri dnešku nameraná výroba a značka "teraz".
+ *
+ * Mierka, mriežka aj produkčné okno sú tie isté ako pri krivke (forecastChartModel), takže
+ * tooltip nad grafom (chartTooltipModel) sedí na oba bez rozdielu.
+ * @param {{ pts: import('./solar.js').DayHourPoint[], tiers: Array<import('./config.js').Tier | null>,
+ *   prices?: Array<{ startMin: number, min: number, tier: import('./config.js').Tier | null }>,
+ *   realPts?: Array<{hour: number, kw: number}>, nowHour?: number | null, dims: Dims }} input
+ */
+export function dayBarsModel({ pts, tiers, prices = [], realPts = [], nowHour = null, dims }) {
+    const { min: hMin, max: hMax } = HOUR_RANGE;
+    const visible = pts.map((p, i) => ({ p, tier: tiers[i] ?? null })).filter(({ p }) => p.hour >= hMin && p.hour <= hMax);
+    if (!visible.length) return null;
+    const real = realPts.filter((p) => p.hour >= hMin && p.hour <= hMax);
+    const clearOk = visible.every(({ p }) => Number.isFinite(p.clearKw));
+    const maxKw = Math.max(...visible.map(({ p }) => Math.max(p.kw, clearOk ? p.clearKw : 0)), ...real.map((p) => p.kw), 0.5) * 1.1;
+    const scale = makeScale(dims, maxKw);
+    const { gridX, gridY } = buildGrid(dims, scale, maxKw);
+    const base = scale.y(0);
+    // Stĺpec zaberá väčšinu hodiny, medzera medzi stĺpcami ich oddelí aj pri rovnakej farbe.
+    const barW = ((dims.w - dims.padL - dims.padR) / (hMax - hMin)) * 0.72;
+    const left = dims.padL;
+    const right = dims.w - dims.padR;
+    const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
+    // Pás cien pod osou: len produkčné okno, rovnako ako os X.
+    const strip = prices
+        .map((s) => {
+            const a = Math.max(s.startMin / 60, hMin);
+            const b = Math.min((s.startMin + s.min) / 60, hMax);
+            return { x: scale.x(a), w: scale.x(b) - scale.x(a), tier: s.tier };
+        })
+        .filter((s) => s.w > 0);
+    return {
+        dims,
+        maxKw,
+        pts: visible.map(({ p }) => p),
+        cloud: null,
+        bars: visible.map(({ p, tier }) => {
+            const x = Math.max(left, scale.x(p.hour) - barW / 2);
+            const w = Math.min(right, scale.x(p.hour) + barW / 2) - x;
+            const y = scale.y(p.kw);
+            return { x, w, y, h: Math.max(0, base - y), tier };
+        }),
+        clear: clearOk ? visible.map(({ p }) => ({ x: scale.x(p.hour), y: scale.y(p.clearKw) })) : null,
+        real: realPoints,
+        realLast: realPoints.length ? realPoints[realPoints.length - 1] : null,
+        strip,
+        stripY: base + 3,
+        gridX,
+        gridY,
+        nowX: nowHour === null ? null : scale.x(Math.max(hMin, Math.min(hMax, nowHour))),
+    };
+}
+
+/**
  * Tooltip nad krivkou: pre relatívnu polohu kurzora (0-1 šírky plátna) vráti čas,
  * výkon, oblačnosť, prípadne bezoblačný strop a polohu bodu v % plátna.
- * @param {NonNullable<ReturnType<typeof forecastChartModel>>} model @param {number} relX
+ * @param {{ dims: Dims, maxKw: number, pts: HourPoint[], cloud: Pt[] | null }} model krivka aj stĺpce
+ * @param {number} relX
  */
 export function chartTooltipModel(model, relX) {
     const scale = makeScale(model.dims, model.maxKw);
@@ -319,16 +376,13 @@ export function weekDayTiers(days) {
  * na skutočný rozmer karty - vtedy sa riadky rozdelia o dostupnú výšku.
  * @param {ForecastDay[]} days @param {number} selDay @param {{ W: number, H: number } | null} [size]
  */
-export function weekHeatModel(days, selDay, size = null, jedenDen = false) {
-    // Miesto vľavo je na skratky dní. V detaile dňa deň pomenúva hlavička nad mapou, takže
-    // skratka odpadá a riadok sa roztiahne na celú šírku.
-    const padL = jedenDen ? 4 : 44;
+export function weekHeatModel(days, selDay, size = null) {
+    // Miesto vľavo je na skratky dní.
+    const padL = 44;
     const padT = 20;
     const padR = 4;
     const gap = 2;
-    // V detaile dňa sa kreslí jediný riadok, mierka farieb ale ostáva z celého týždňa -
-    // inak by aj najslabší deň vyzeral sám o sebe ako plný.
-    const riadky = jedenDen ? [selDay] : days.map((_, i) => i);
+    const riadky = days.map((_, i) => i);
     const W = size ? size.W : 440;
     const rh = size ? Math.max(gap + 1, (size.H - padT - 4) / riadky.length) : 24;
     const cw = (W - padL - padR) / WEEK_HOURS.length;
@@ -342,16 +396,14 @@ export function weekHeatModel(days, selDay, size = null, jedenDen = false) {
         y: padT - 8,
         label: String(h),
     }));
-    const dayLabels = jedenDen
-        ? []
-        : riadky.map((di, ri) => ({
-              x: padL - 8,
-              y: padT + ri * rh + rh / 2 + 3.5,
-              label: weekDayShort(days[di].date, di),
-              dayIndex: di,
-              today: di === 0,
-              sel: di === selDay,
-          }));
+    const dayLabels = riadky.map((di, ri) => ({
+        x: padL - 8,
+        y: padT + ri * rh + rh / 2 + 3.5,
+        label: weekDayShort(days[di].date, di),
+        dayIndex: di,
+        today: di === 0,
+        sel: di === selDay,
+    }));
     /** @type {Array<{ x: number, y: number, w: number, h: number, frac: number, tier: ReturnType<typeof heatBand> | null, dayIndex: number, tip: { title: string, text: string } | null }>} */
     const cells = [];
     riadky.forEach((di, ri) => {
@@ -371,8 +423,7 @@ export function weekHeatModel(days, selDay, size = null, jedenDen = false) {
             });
         });
     });
-    // Zvýraznenie riadka má zmysel len v mape celého týždňa - v jednom riadku niet čo odlíšiť.
-    const selRect = jedenDen ? null : { x: padL - 1, y: padT + selDay * rh, w: W - padL - padR + 2, h: rh - gap };
+    const selRect = { x: padL - 1, y: padT + selDay * rh, w: W - padL - padR + 2, h: rh - gap };
     const legend = Array.from({ length: 10 }, (_, i) => {
         const frac = i / 9;
         return { frac, tier: heatBand(frac) };
