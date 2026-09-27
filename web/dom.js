@@ -24,6 +24,7 @@ function headerDom() {
         page: byId('page'),
         currentTimeDisplay: byId('current-time-display'),
         pvUpdated: byId('pv-updated'),
+        demoBar: byId('demo-bar'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
             Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))
         ),

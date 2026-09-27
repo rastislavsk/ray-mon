@@ -397,8 +397,10 @@ b {
     min-width: 0;
     line-height: 1.3;
     font-size: var(--fs-sm);
-    color: #ffe3e6;
 }
+/* Aj nadpis musí byť výslovne biely: globálne `b` mu dáva --ink, ktoré má na tejto červenej
+   kontrast tesne pod 4,5:1 (axe). Podtitul je z toho istého dôvodu biely, nie svetloružový -
+   od nadpisu ho odlišuje veľkosť a hrúbka. */
 .demo-bar-txt b {
     font-size: var(--fs-md);
     color: #fff;
