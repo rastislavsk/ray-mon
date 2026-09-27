@@ -47,6 +47,21 @@
                 </div>
                 <div class="pv-updated-line"><span id="pv-updated">načítavam…</span></div>
             </div>
+            <!-- Výzva v ukážke: kým si človek neuloží elektráreň, appka počíta pre vymyslenú
+                 a to musí byť vidno na prvý pohľad. Render ju ukáže len v ukážke. -->
+            <div class="demo-bar hidden" id="demo-bar">
+                <div class="demo-bar-inner" role="status">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.5L2.5 20h19L12 3.5z" />
+                        <path d="M12 10v4.5M12 17.2v.3" />
+                    </svg>
+                    <span class="demo-bar-txt">
+                        <b>Toto je ukážka</b>
+                        <span>Čísla nie sú tvoje.</span>
+                    </span>
+                    <button class="demo-bar-go" id="demo-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
+                </div>
+            </div>
             <nav class="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
                     <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">

@@ -365,6 +365,58 @@ b {
     color: var(--ink-35);
     letter-spacing: 0.04em;
 }
+/* Výzva v ukážke. Zámerne krikľavá: kto ju prehliadne, číta čísla vymyslenej elektrárne ako
+   svoje. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
+.demo-bar {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: 0 20px 10px;
+}
+.demo-bar-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 14px;
+    border-radius: var(--radius-md);
+    background: #d7263d;
+    color: #fff;
+}
+.demo-bar svg {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.demo-bar-txt {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.3;
+    font-size: var(--fs-sm);
+    color: #ffe3e6;
+}
+.demo-bar-txt b {
+    font-size: var(--fs-md);
+    color: #fff;
+}
+.demo-bar-go {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: #fff;
+    color: #8f1223;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
 .live-dot {
     width: 6px;
     height: 6px;
