@@ -204,8 +204,8 @@ kým sa človek dostal k tomu, čo ho zaujímalo. Je preto rozdelená na dve obr
 
 - **Prehľad dní** – rebríček: bublina so súčtom za týždeň (so stĺpčekmi dní v malom) a pod
   ňou sedem riadkov s pásikmi a legenda ich farieb. Zmestí sa celý na jednu obrazovku.
-- **Detail dňa** – otvorí ho klik na riadok rebríčka: priebeh výroby toho dňa, čísla o ňom,
-  jeho jediný riadok z heatmapy a správa o tom dni.
+- **Detail dňa** – otvorí ho klik na riadok rebríčka: tri čísla dňa, stĺpce po hodinách,
+  odporúčanie (správa o tom dni) a tlačidlá na susedné dni.
 - **Detail týždňa** – otvorí ho klik na bublinu „Spolu za 7 dní“: denná výroba, heatmapa
   hodina × deň a správa „Najsilnejší deň“.
 
@@ -226,11 +226,20 @@ obsah, takže ukázanie správy výšku okna nezmení.
 
 Obe obrazovky majú hlavičku so šípkou späť. Rozhoduje o tom jediné pole v stave
 (`weekDetail`: `'day' | 'week' | null`), prepínajú sa len triedy `.hidden` – žiadny presun
-prvkov v DOM. Poradie na detaile robí jedno pravidlo `order` v CSS, lebo heatmapa je
-v HTML prvá, ale na oboch detailoch má ísť posledná.
+prvkov v DOM. Poradie v detaile týždňa robí jedno pravidlo `order` v CSS, lebo heatmapa je
+v HTML prvá, ale na detaile má ísť posledná.
 
-Heatmapa je v detaile dňa tá istá funkcia (`weekHeatModel`) s prepínačom „jeden deň“:
-mierka farieb ostáva z celého týždňa, inak by aj najslabší deň vyzeral sám o sebe ako plný.
+Stĺpce v detaile dňa (`dayBarsModel`) majú farbu plánu dňa – tú istú, akú by v ten deň
+a hodinu mal denný prstenec ciferníka: pásmo tarify toho dňa (aj s výnimkami rozvrhu) a výkon
+z predpovede (`dayHourTiers` v `shared/day-plan.js`). Pod osou je pás cien z tarify. Mierka
+a produkčné okno sú tie isté ako pri krivke, takže tooltip nad grafom sedí na oba. Riadok
+heatmapy pre jeden deň, ktorý tu bol predtým, zanikol: hovoril to isté, čo stĺpce. Na širokej
+obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
+
+Susedné dni pod detailom (tlačidlá „‹ Streda“ a „Piatok ›“) aj bodky pod hlavičkou si robí
+render, nie `index.html` – HTML a JS na sebe nezávisia a zmena ide von jedným nasadením
+(viď CLAUDE.md). Nesú `data-day-index` a prepínajú deň tým istým poslucháčom ako bodky,
+aj so smerom, z ktorého sa detail prisunie.
 
 Tie isté tri farby nesie aj výroba po dňoch – pásik a číslo v rebríčku, stĺpec a číslo nad
 ním v Dennej výrobe, číslo v stĺpci Výroba v tabuľke. Pásmo počíta jediná funkcia

@@ -58,3 +58,23 @@ test('dayRingModel: susedné štvrťhodiny s rovnakou farbou sú jeden oblúk', 
     assert.ok(flat.every((a) => a.cls === 'grey' && a.large === 0));
     assert.ok(Math.abs(flat[0].start.x - flat[0].end.x) < 1e-9 && Math.abs(flat[0].start.y - flat[0].end.y) > 200);
 });
+
+test('dayHourTiers: farba hodiny ľubovoľného dňa - pásmo toho dňa a výkon z predpovede', async () => {
+    const { dayHourTiers } = await import('../shared/day-plan.js');
+    const day = forecast.days[0];
+    const tiers = dayHourTiers(day, TARIFF, PLANT);
+    assert.equal(tiers.length, day.hourly.length, 'farba ku každej hodine');
+    const at = (/** @type {number} */ h) => tiers[day.hourly.findIndex((p) => p.hour === h)];
+    assert.equal(at(2), 'amber', 'noc v NT bez slnka');
+    assert.equal(at(13), 'green', 'slnečné poludnie');
+    assert.equal(at(21), 'red', 'VT večer bez slnka');
+    // Výnimka rozvrhu platí pre dátum toho dňa: 5. 9. 2026 je sobota a víkend je celý lacný.
+    const vikend = {
+        ...TARIFF,
+        schedules: [...TARIFF.schedules, { days: [6, 7], months: ALL_MONTHS, changes: [{ from: '00:00', band: 'nt' }] }],
+    };
+    assert.equal(dayHourTiers(day, vikend, PLANT)[day.hourly.findIndex((p) => p.hour === 21)], 'amber');
+    // Jedna cena celý deň: bez slnka sivá, so slnkom zelená.
+    const flat = dayHourTiers(day, FLAT, PLANT);
+    assert.ok(flat.every((t) => t === 'grey' || t === 'green'));
+});

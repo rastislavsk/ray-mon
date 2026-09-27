@@ -48,3 +48,17 @@ export function planAt(input, minutes) {
 export function dayPlan(input) {
     return Array.from({ length: MINUTES_PER_DAY / SLOT }, (_, i) => planAt(input, i * SLOT));
 }
+
+/**
+ * Farba každej hodiny ľubovoľného dňa predpovede - stĺpce v detaile dňa na karte 7 dní.
+ * Rovnaká logika ako plán dňa (smartTier): pásmo tarify v tej hodine toho dňa (aj s výnimkami
+ * rozvrhu, víkend či sezóna) a výkon z predpovede. Farba stĺpca o 13:00 je tak tá istá, akú by
+ * v ten deň o 13:00 mal ciferník.
+ * @param {import('./solar.js').ForecastDay} day @param {import('./config.js').Tariff} tariff
+ * @param {import('./config.js').Plant} plant @returns {Array<import('./config.js').Tier | null>} ako `day.hourly`
+ */
+export function dayHourTiers(day, tariff, plant) {
+    const schedule = scheduleFor(tariff, day.date);
+    const th = powerThresholds(plant);
+    return day.hourly.map((p) => smartTier(bandAt(tariff, schedule, Math.min(p.hour * 60, MINUTES_PER_DAY - 1)).level, p.kw, th));
+}

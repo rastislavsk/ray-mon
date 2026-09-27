@@ -8,7 +8,7 @@ import { escapeHtml } from '../shared/format.js';
 
 const n = (/** @type {number} */ v) => Number(v.toFixed(2));
 
-/** Mriežka a popisky osí. @param {ChartModel} m */
+/** Mriežka a popisky osí - krivky aj stĺpcov. @param {Pick<ChartModel, 'dims' | 'gridX' | 'gridY'>} m */
 function gridSvg(m) {
     const { dims } = m;
     let out = '';
@@ -32,6 +32,23 @@ export function forecastChartSvg(m) {
     if (m.real.length) out += `<path class="line-real" d="${smoothPath(m.real)}"/>`;
     if (m.nowX !== null) out += `<line class="now-line" x1="${n(m.nowX)}" y1="${dims.padT}" x2="${n(m.nowX)}" y2="${dims.h - dims.padB}"/>`;
     if (m.realLast) out += `<circle class="dot-real" cx="${n(m.realLast.x)}" cy="${n(m.realLast.y)}" r="4"/>`;
+    return out;
+}
+
+/** Stĺpce po hodinách v detaile dňa: mriežka, stĺpce vo farbe plánu dňa, strop jasnej oblohy,
+ * pás cien pod osou a pri dnešku nameraná výroba so značkou "teraz".
+ * @param {NonNullable<ReturnType<typeof import('../shared/chart-model.js').dayBarsModel>>} m */
+export function dayBarsSvg(m) {
+    const { dims } = m;
+    let out = gridSvg(m);
+    for (const b of m.bars)
+        out += `<rect class="hour-bar${b.tier ? ` tier-${b.tier}` : ''}" x="${n(b.x)}" y="${n(b.y)}" width="${n(b.w)}" height="${n(b.h)}" rx="2"/>`;
+    if (m.clear) out += `<path class="line-clear" d="${smoothPath(m.clear)}"/>`;
+    for (const s of m.strip)
+        out += `<rect class="price-strip${s.tier ? ` tier-${s.tier}` : ''}" x="${n(s.x)}" y="${n(m.stripY)}" width="${n(s.w)}" height="4"/>`;
+    if (m.real.length) out += `<path class="line-real on-bars" d="${smoothPath(m.real)}"/>`;
+    if (m.nowX !== null) out += `<line class="now-line" x1="${n(m.nowX)}" y1="${dims.padT}" x2="${n(m.nowX)}" y2="${dims.h - dims.padB}"/>`;
+    if (m.realLast) out += `<circle class="dot-real on-bars" cx="${n(m.realLast.x)}" cy="${n(m.realLast.y)}" r="4"/>`;
     return out;
 }
 

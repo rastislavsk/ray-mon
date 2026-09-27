@@ -18,6 +18,7 @@ import {
     WEEK_MSG_MIN_H,
     WORKER_PV_URL,
 } from '../../shared/config.js';
+import { dayHourTiers } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { useTier } from '../../web/render/sedemdni.js';
@@ -488,30 +489,36 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
         await expect(riadok.locator('.wday-kwh')).toHaveClass(tier ? `wday-kwh tier-${tier}` : 'wday-kwh');
     }
 
-    // Klik na deň otvorí jeho detail: priebeh toho dňa a jeho riadok z heatmapy.
+    // Klik na deň otvorí jeho detail: tri čísla dňa, stĺpce po hodinách a odporúčanie.
     await page.locator('#week-list [data-day-index="5"]').click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
     await expect(page.locator('#week-block-list')).toBeHidden();
     await expect(page.locator('#week-day-tabs')).toBeHidden();
-    expect(await viditelneBloky(page)).toEqual(['week-block-curve', 'week-block-heat']);
+    expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
 
-    // Oba ukazujú ten istý deň: jeho krivka a jediný riadok mapy, ktorý mu patrí, a pod nimi
-    // správa o tom dni - očakávanie sa počíta tou istou funkciou ako v appke.
+    // Všetko hovorí o tom istom dni - očakávania sa počítajú tými istými funkciami ako v appke.
     await expect(page.locator('#week-msg-title')).toHaveText(
         dayDetailMessage(visibleHours(forecast.days[5].hourly), powerThresholds(PLANT)).title,
     );
+    await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[5].kwhTotal)} kWh`);
-    // Jediný riadok mapy patrí vybranému dňu; skratka dňa v ňom nie je, deň hovorí hlavička.
-    await expect(page.locator('#week-heat .day-label')).toHaveCount(0);
-    await expect(page.locator('#week-heat .heat-cell:not([data-day-index="5"])')).toHaveCount(0);
-    await expect(page.locator('#week-heat .heat-cell')).toHaveCount(WEEK_HOURS.length);
+    // Stĺpec na každú hodinu grafu, vo farbe plánu toho dňa (tarifa × slnko).
+    const den5 = forecast.days[5];
+    const farby = dayHourTiers(den5, TARIFF, PLANT).filter((_, i) => WEEK_HOURS.includes(den5.hourly[i].hour));
+    const stlpce = page.locator('#week-curve .hour-bar');
+    await expect(stlpce).toHaveCount(WEEK_HOURS.length);
+    for (const [i, tier] of farby.entries()) await expect(stlpce.nth(i)).toHaveClass(tier ? `hour-bar tier-${tier}` : 'hour-bar');
+    // Pod detailom susedné dni: predchádzajúci aj ďalší.
+    await expect(page.locator('.day-steps .day-step')).toHaveCount(2);
+    await expect(page.locator('.day-steps .day-step.prev')).toHaveAttribute('data-day-index', '4');
+    await expect(page.locator('.day-steps .day-step.next')).toHaveAttribute('data-day-index', '6');
 
     // Z detailu vedie späť jedine šípka vľavo hore. Atribút data-panel nesie aj #page, takže
     // klik kdekoľvek v stránke sa kedysi tváril ako prepnutie karty a detail zavrel.
     await page.locator('#week-curve-stat').click();
-    await page.locator('#week-block-heat .chart-top').click();
+    await page.locator('#week-block-curve .chart-top').click();
     await expect(page.locator('#week-day-head')).toBeVisible();
-    expect(await viditelneBloky(page)).toEqual(['week-block-curve', 'week-block-heat']);
+    expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
 
     // Späť sa vraciame na prehľad, výber dňa v ňom ostáva.
     await page.locator('#week-day-back').click();
@@ -577,7 +584,14 @@ test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[4].date, 4));
     await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '4');
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[4].kwhTotal)} kWh`);
-    expect(await viditelneBloky(page)).toEqual(['week-block-curve', 'week-block-heat']);
+    expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
+
+    // Tlačidlo susedného dňa pod detailom robí to isté, čo bodka.
+    await page.locator('.day-steps .day-step.next').click();
+    await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
+    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '5');
+    await page.locator('.day-steps .day-step.prev').click();
+    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '4');
 
     // Výber sa prenáša do celej karty rovnako ako z ktoréhokoľvek iného miesta.
     await page.locator('#week-day-back').click();
@@ -587,6 +601,7 @@ test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async
     await page.locator('.week-list-hero').click();
     await expect(page.locator('#week-day-title')).toHaveText('Celý týždeň');
     await expect(page.locator('.day-dots')).toBeHidden();
+    await expect(page.locator('.day-steps')).toBeHidden();
     expect(errors).toEqual([]);
 });
 

@@ -233,6 +233,7 @@
                 <div class="day-head hidden" id="week-day-head">
                     <button type="button" class="day-back" id="week-day-back" aria-label="Späť na prehľad dní">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                        <span class="day-back-txt">7 dní</span>
                     </button>
                     <h2 class="day-head-title" id="week-day-title">Deň</h2>
                 </div>
@@ -286,7 +287,12 @@
                         </div>
                         <div class="chart-footer">
                             <div class="chart-legend">
-                                <span><i class="leg-line"></i>predpoveď</span><span><i class="leg-dash"></i>oblačnosť</span
+                                <!-- Krivka (desktop a prepínač dní) a stĺpce (detail dňa na mobile) majú
+                                     každá svoju legendu; ktorá platí, rozhoduje CSS podľa .detail. -->
+                                <span class="leg-curve"><i class="leg-line"></i>predpoveď</span
+                                ><span class="leg-curve"><i class="leg-dash"></i>oblačnosť</span
+                                ><span class="leg-bars"><i class="leg-sq"></i>predpoveď</span
+                                ><span class="leg-bars"><i class="leg-dash"></i>jasná obloha</span
                                 ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
                             </div>
                         </div>
@@ -333,6 +339,7 @@
                         </div>
                     </section>
                     <div class="msg-block" id="week-msg-block">
+                        <span class="msg-eyebrow">Odporúčanie</span>
                         <h3 id="week-msg-title">Načítavam…</h3>
                         <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
                     </div>
