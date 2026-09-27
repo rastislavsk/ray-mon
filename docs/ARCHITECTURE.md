@@ -202,8 +202,8 @@ za deň, aby odkaz ostal rozumne krátky.
 Na telefóne mala karta štyri grafy a tabuľku pod sebou – pätnásť obrazoviek scrollovania,
 kým sa človek dostal k tomu, čo ho zaujímalo. Je preto rozdelená na dve obrazovky:
 
-- **Prehľad dní** – rebríček: bublina so súčtom za týždeň a pod ňou sedem riadkov
-  s pásikmi. Zmestí sa celý na jednu obrazovku.
+- **Prehľad dní** – rebríček: bublina so súčtom za týždeň (so stĺpčekmi dní v malom) a pod
+  ňou sedem riadkov s pásikmi a legenda ich farieb. Zmestí sa celý na jednu obrazovku.
 - **Detail dňa** – otvorí ho klik na riadok rebríčka: priebeh výroby toho dňa, čísla o ňom,
   jeho jediný riadok z heatmapy a správa o tom dni.
 - **Detail týždňa** – otvorí ho klik na bublinu „Spolu za 7 dní“: denná výroba, heatmapa
@@ -215,9 +215,9 @@ hlavička nad ním, a inak by sa „zajtra“ ukázalo aj pri štvrtku.
 
 V **prehľade dní** je tá istá správa (`weekMessage`) navyše, a len vtedy, keď na ňu ostalo
 miesto: prehľad má byť jedna obrazovka bez scrollovania, takže správa je bonus, nie obsah.
-Rozhoduje pole `tall` v stave – viditeľná výška okna oproti `WEEK_MSG_MIN_H` (860 px).
-Namerané v Chromiu pri predvolenom písme: samotný prehľad sa zmestí od 710 px, so správou
-potrebuje 835 px a pri najdlhšej možnej správe na 320 px širokom displeji 854 px.
+Rozhoduje pole `tall` v stave – viditeľná výška okna oproti `WEEK_MSG_MIN_H` (885 px).
+Namerané v Chromiu pri predvolenom písme: samotný prehľad sa zmestí od 735 px, so správou
+potrebuje 860 px a pri najdlhšej možnej správe na 320 px širokom displeji 878 px.
 
 Výšku dáva `visualViewport`, nie `innerHeight` ani `@media (min-height: …)`: v mobilnom
 prehliadači ukrojí adresný riadok 60 – 90 px, ktoré tie dve o sebe nevedia, a správa by sa

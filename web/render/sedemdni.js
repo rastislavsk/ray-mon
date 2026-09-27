@@ -154,6 +154,26 @@ function renderTableAndTabs(days, sel, dom) {
 }
 
 /**
+ * Stĺpčeky dní v bubline so súčtom za týždeň. Robí si ich render, nie index.html - z toho
+ * istého dôvodu ako bodky pod hlavičkou detailu (viď dayDots nižšie): HTML a JS tak na sebe
+ * nezávisia a zmena ide von jedným nasadením. Sú len ozdoba súčtu, čítačka ich preskočí -
+ * tie isté čísla povie riadok každého dňa.
+ * @type {HTMLElement | null}
+ */
+let weekSpark = null;
+
+/** @param {import('../dom.js').Dom} dom */
+function weekSparkPas(dom) {
+    if (!weekSpark) {
+        weekSpark = document.createElement('span');
+        weekSpark.className = 'week-list-spark';
+        weekSpark.setAttribute('aria-hidden', 'true');
+        (dom.weekListTotal.closest('.week-list-hero') || dom.weekBlockList).append(weekSpark);
+    }
+    return weekSpark;
+}
+
+/**
  * Rebríček dní - prehľad karty na mobile. Hore bublina so súčtom za týždeň (je to tlačidlo
  * a otvára detail týždňa), pod ňou karta s riadkom na deň: meno s dátumom, obloha, pásik
  * a výroba. Riadok je tlačidlo, otvára detail toho dňa.
@@ -166,6 +186,12 @@ function renderTableAndTabs(days, sel, dom) {
 function renderList(s, rows, dom) {
     dom.weekListTotal.textContent = String(Math.round(s.totalKwh));
     dom.weekListAvg.textContent = `${fmt1(s.avgKwh)} kWh`;
+    // Týždeň v malom: stĺpček na deň, tá istá výška a farba ako pásik v riadku dňa.
+    writeHtml(
+        weekSparkPas(dom),
+        rows.map((r) => `<i class="${r.tier ? `tier-${r.tier}` : ''}" style="height:${Math.max(r.barPct, 4)}%"></i>`).join(''),
+        'weekSpark',
+    );
     const html = rows
         .map((r) => {
             // Pásmo dňa nesie pásik aj číslo vedľa neho - tá istá farba a tá istá mierka
@@ -353,6 +379,7 @@ function renderEmpty(dom) {
         [dom.weekDayTabs, 'weekDayTabs'],
         [dom.weekTbody, 'weekTbody'],
         [dom.weekList, 'weekList'],
+        [weekSparkPas(dom), 'weekSpark'],
     ]))
         writeHtml(el, '', name);
     for (const el of [dom.weekBarsStat, dom.weekCurveStat, dom.weekHeatScale]) el.innerHTML = '';
