@@ -61,7 +61,9 @@ kruh rozvrhu tarify v sprievodcovi a posúvač (`input[type=range]`, sklon strec
 nastavením).
 `settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Kartu Nastavenie tvorí
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
-`render/nastavenie.js`). Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
+`render/nastavenie.js`) a pod prehľadom sekcia Appka – návod k ciferníku a zdieľanie
+(`render/zdielat.js`). Tá bola kedysi samostatnou kartou Info; odtiaľ názvy `infoOpen`,
+`INFO_ITEMS` a id `info-guide`, `info-share`, ktoré ostali, aby sa nemenil stav ani HTML. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
 o ňu; „Späť“ v sprievodcovi ide cez `history.back()` (`backTo`), keď do aktuálnej položky

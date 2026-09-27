@@ -6,7 +6,7 @@ import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
- * @typedef {'terazky' | '7dni' | 'nastavenie' | 'info'} Panel
+ * @typedef {'terazky' | '7dni' | 'nastavenie'} Panel
  * @typedef {{
  *   now: Date,
  *   panel: Panel,
@@ -51,7 +51,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
- * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka karty Info
+ * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
@@ -138,7 +138,7 @@ export function initialState(now, layout, { settings, demo, incoming = null }) {
         setupBrush: null,
         // Človek pri tarife ťukol na „Neviem“ - obrazovka vysvetlí, s čím appka počíta.
         setupDunno: false,
-        // Rozbalená položka karty Info (null = zoznam). Je to krok navigácie, takže tlačidlo
+        // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
     };
@@ -211,7 +211,7 @@ export function nextWeekDay(sel, dir, count) {
 /**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
  * v navigácii, nie z toho, či sa ťahalo alebo klikalo - prechod tak vyzerá rovnako pri
- * oboch. Detail dňa aj rozbalená položka karty Info sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
+ * oboch. Detail dňa aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */
@@ -226,7 +226,7 @@ export function panelChange(from, to) {
 
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
- * obrazovka sprievodcu nastavením aj s plochou panelov a rozbalená položka karty Info. Zvyšok stavu (vybraný deň, stránka
+ * obrazovka sprievodcu nastavením aj s plochou panelov a rozbalená položka sekcie Appka. Zvyšok stavu (vybraný deň, stránka
  * verdiktu, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
@@ -272,8 +272,9 @@ export function navStepFrom(raw) {
 
 /**
  * Krok navigácie z hodnoty v položke histórie. Položka zo staršej verzie appky sprievodcu
- * ani položky karty Info nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
- * a chýbajúca položka Info tiež `null`, teda zoznam.
+ * ani položky sekcie Appka nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
+ * a chýbajúca položka tiež `null`, teda nič rozbalené. Položka zo staršej verzie so zrušenou
+ * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu.
  * @param {unknown} step @returns {NavStep | null}
  */
 function navStepIn(step) {
@@ -295,7 +296,7 @@ function validSetupPlace(setup, roof) {
     return (setup === null || SETUP_STEPS.some((s) => s === setup)) && Number.isInteger(roof) && /** @type {number} */ (roof) >= 0;
 }
 
-/** Položka karty Info z položky histórie. @param {unknown} info */
+/** Položka sekcie Appka z položky histórie. @param {unknown} info */
 function validInfoItem(info) {
     return info === null || INFO_ITEMS.some((i) => i === info);
 }

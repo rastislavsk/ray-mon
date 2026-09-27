@@ -55,8 +55,7 @@ test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
     assert.equal(nextPanel('terazky', 1), '7dni');
     assert.equal(nextPanel('7dni', 1), 'nastavenie');
-    assert.equal(nextPanel('nastavenie', 1), 'info');
-    assert.equal(nextPanel('info', 1), null, 'za poslednou kartou už nič nie je');
+    assert.equal(nextPanel('nastavenie', 1), null, 'za poslednou kartou už nič nie je');
     assert.equal(nextPanel('7dni', -1), 'terazky');
     assert.equal(nextPanel('terazky', -1), null, 'pred prvou kartou už nič nie je');
 });
@@ -89,8 +88,8 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
     // Obrazovka sprievodcu aj plocha, ktorej sa týka, sú krok - Späť na telefóne vracia o ne.
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, setupStep: 'smer' })));
     assert.ok(!sameNavStep(navStep({ ...state, setupStep: 'smer' }), navStep({ ...state, setupStep: 'smer', setupRoof: 1 })));
-    // Rozbalená položka karty Info je krok - Späť na telefóne ju zbalí a vráti na zoznam.
-    assert.ok(!sameNavStep(navStep({ ...state, panel: 'info' }), navStep({ ...state, panel: 'info', infoOpen: 'share' })));
+    // Rozbalená položka sekcie Appka je krok - Späť na telefóne ju zbalí a vráti na zoznam.
+    assert.ok(!sameNavStep(navStep({ ...state, panel: 'nastavenie' }), navStep({ ...state, panel: 'nastavenie', infoOpen: 'share' })));
     assert.ok(!sameNavStep(navStep({ ...state, infoOpen: 'guide' }), navStep({ ...state, infoOpen: 'share' })));
     // Rozpísané údaje v sprievodcovi krokom nie sú.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, setupLink: 'x', setupKwp: 5 })));
@@ -124,8 +123,8 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
     assert.equal('setupReturn' in smer, false);
     assert.equal(navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: 'suhrn', roof: 0, info: null }).setupReturn, null);
     // Späť v karte Info: položka sa nastaví na to, čo v kroku bolo (null = zoznam).
-    assert.equal(navChange('info', { panel: 'info', weekDetail: null, setup: null, roof: 0, info: 'guide' }).infoOpen, 'guide');
-    assert.equal(navChange('info', { panel: 'info', weekDetail: null, setup: null, roof: 0, info: null }).infoOpen, null);
+    assert.equal(navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: null, roof: 0, info: 'guide' }).infoOpen, 'guide');
+    assert.equal(navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: null, roof: 0, info: null }).infoOpen, null);
 });
 
 test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
@@ -136,8 +135,10 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         navStepFrom({ step: krok({ panel: 'nastavenie', setup: 'pocet', roof: 2 }) }),
         krok({ panel: 'nastavenie', setup: 'pocet', roof: 2 }),
     );
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'info', info: 'share' }) }), krok({ panel: 'info', info: 'share' }));
-    assert.equal(navStepFrom({ step: krok({ panel: 'info', info: 'neznama' }) }), null, 'položka Info, ktorá neexistuje');
+    assert.deepEqual(navStepFrom({ step: krok({ panel: 'nastavenie', info: 'share' }) }), krok({ panel: 'nastavenie', info: 'share' }));
+    assert.equal(navStepFrom({ step: krok({ panel: 'nastavenie', info: 'neznama' }) }), null, 'položka, ktorá neexistuje');
+    // Položka histórie zo staršej verzie so zrušenou kartou Info je cudzia - Späť odíde zo stránky.
+    assert.equal(navStepFrom({ step: krok({ panel: 'info', info: 'share' }) }), null, 'zrušená karta Info');
     // Položka zo staršej verzie appky sprievodcu ani položky Info nepozná - je to prehľad karty.
     assert.deepEqual(navStepFrom({ step: { panel: '7dni', weekDetail: null } }), krok({}));
     assert.equal(navStepFrom({ step: krok({ setup: 'neznamy' }) }), null, 'obrazovka, ktorá neexistuje');

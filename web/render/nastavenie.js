@@ -3,7 +3,7 @@
 // a dopĺňa. Hodnoty polí prepíše len pri zmene settingsRev, plochy alebo obrazovky - inak by
 // prepisoval to, čo človek práve píše.
 
-import { compassModel, dayRingModel, panelGridModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
+import { compassModel, dayRingModel, panelGridModel, planesCompassModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     CURRENCIES,
@@ -36,7 +36,16 @@ import {
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { savedSettings, setupDraft } from '../state.js';
-import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tariffMiniSvg, tariffRingSvg, tiltSvg } from '../svg.js';
+import {
+    compassSvg,
+    miniCompassSvg,
+    panelGridSvg,
+    panelLabelSvg,
+    planesCompassSvg,
+    tariffMiniSvg,
+    tariffRingSvg,
+    tiltSvg,
+} from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -195,13 +204,21 @@ function summaryRows(s, state) {
     );
 }
 
-/** Celkový výkon a výroba za jasného dneška. @param {Settings} s @param {AppState} state */
+/** Karta elektrárne nad riadkami: meno, celkový výkon, zostava, výroba za jasného dneška
+ * a vpravo kompas s plochami panelov. @param {Settings} s @param {AppState} state */
 function heroHtml(s, state) {
     const check = checkSettings(s);
-    if (check.kwp === null || !hasSite(s)) return `<div class="big">– kWp</div>`;
+    if (check.kwp === null || !hasSite(s)) return `<div class="hero-t"><div class="big">– kWp</div></div>`;
     const today = localDateKey(state.now, s.site.timezone);
     const kwh = Math.round(clearDayKwh(s.site, s.plant, today));
-    return `<div class="big">${kwpText(check.kwp)}</div><div class="sub">${escapeHtml(s.site.name)} · dnes za jasnej oblohy približne ${kwh} kWh</div>`;
+    const planes = s.plant.strings.map((x) => `${dirName(x.azimuthDeg).toLowerCase()} ${x.panels} panelov`).join(', ');
+    return (
+        `<div class="hero-t"><b class="name">${escapeHtml(s.site.name)}</b>` +
+        `<div class="big">${kwpText(check.kwp).replace(' kWp', '<small> kWp</small>')}</div>` +
+        `<div class="sub">${totalPanels(s)} panelov · menič ${kwText(s.plant.acLimitKw)}</div>` +
+        `<div class="sub">dnes za jasnej oblohy približne ${kwh} kWh</div></div>` +
+        planesCompassSvg(planesCompassModel(s.plant.strings), `Plochy panelov: ${planes}`)
+    );
 }
 
 /** Hlásenia pod zhrnutím: chyby blokujú uloženie, varovania nie. @param {Settings} s */

@@ -2113,12 +2113,14 @@ b {
 /* Na mobile ide riadok s elektrárňou nad nadpis - hovorí, o čom predpoveď je, skôr než čo
    to je. Len poradie zobrazenia; na širokej obrazovke ostáva hlavička, ako bola. */
 @media (max-width: 767px) {
-    #week-head {
+    #week-head,
+    #settings-head {
         display: flex;
         flex-direction: column-reverse;
         gap: var(--sp-1);
     }
-    #week-head .section-sub {
+    #week-head .section-sub,
+    #settings-head .section-sub {
         margin-top: 0;
     }
 }
@@ -2689,21 +2691,87 @@ b {
 .setup-house .door {
     fill: var(--ink-08);
 }
+/* Karta elektrárne (návrh H1): vľavo meno, výkon a zostava, vpravo kompas s plochami. */
 .setup-hero {
-    text-align: center;
-    padding: var(--sp-1) 0 var(--sp-2);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4) 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+    border-radius: var(--radius-lg);
+}
+.setup-hero .hero-t {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+.setup-hero .name {
+    font-size: var(--fs-lg);
+    font-weight: 600;
 }
 .setup-hero .big {
     font-family: var(--font-mono);
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.15;
     color: var(--green);
 }
+.setup-hero .big small {
+    font-size: var(--fs-md);
+    font-weight: 500;
+    color: var(--ink-45);
+}
 .setup-hero .sub {
     font-size: var(--fs-sm);
     color: var(--ink-45);
+}
+.planes-compass {
+    width: 96px;
+    height: 96px;
+}
+.planes-compass .ring {
+    fill: none;
+    stroke: var(--ink-12);
+    stroke-width: 1.5;
+}
+.planes-compass text {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-anchor: middle;
+    fill: var(--ink-35);
+}
+.planes-compass .arrow {
+    stroke: var(--amber);
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+.planes-compass .arrow.main {
+    stroke: var(--green);
+    stroke-width: 6;
+}
+.planes-compass .hub {
+    fill: var(--ink);
+}
+/* Popiska skupiny v karte Nastavenie (Elektráreň, Appka). */
+.group-lbl {
+    margin-top: var(--sp-2);
+    padding-left: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+/* Sekcia Appka: návod k ciferníku a zdieľanie (kedysi karta Info) a podpis. */
+.app-items {
+    display: grid;
+    gap: var(--sp-3);
+}
+.app-items .app-credit {
+    margin: 0;
 }
 .sum-list {
     display: grid;
