@@ -1930,6 +1930,18 @@ b {
 }
 
 /* ---- 7 dní: rebríček dní (prehľad na mobile) -------------------------------- */
+/* Na mobile ide riadok s elektrárňou nad nadpis - hovorí, o čom predpoveď je, skôr než čo
+   to je. Len poradie zobrazenia; na širokej obrazovke ostáva hlavička, ako bola. */
+@media (max-width: 767px) {
+    #week-head {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: var(--sp-1);
+    }
+    #week-head .section-sub {
+        margin-top: 0;
+    }
+}
 /* Osem kariet pod sebou: bublina so súčtom za týždeň a pod ňou sedem dní, každý vo vlastnom
    ráme. Súčet a deň tak vyzerajú ako to, čím sú - dve rovnocenné tlačidlá, jedno do detailu
    týždňa, druhé do detailu dňa - a dni sa od seba jasne oddelia. Dĺžka pásika je výroba dňa
@@ -1950,16 +1962,44 @@ b {
 }
 /* Rám, výplň a zaoblenie sú tie isté, aké má bublina .stat - je to ten istý útvar, len na
    inej karte. Poradie pravidiel rozhoduje: reset tlačidla vyššie musí ostať pred týmto. */
+/* Súčet vľavo; vpravo týždeň v malom (stĺpčeky robí render, viď weekSparkPas vo
+   web/render/sedemdni.js) a pod ním priemer. Pravý stĺpec nie je vyšší než súčet, takže
+   bublina nerastie - prehľad dní sa má zmestiť na jednu obrazovku (viď WEEK_MSG_MIN_H). */
 .week-list-hero {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--sp-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        'sum spark'
+        'sum avg';
+    align-items: end;
+    column-gap: var(--sp-3);
+    row-gap: 2px;
     margin-bottom: var(--sp-2);
-    padding: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
     background: var(--card-bg);
     border: 1px solid var(--ink-08);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
+}
+.week-list-spark {
+    grid-area: spark;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 34px;
+}
+.week-list-spark i {
+    width: 8px;
+    border-radius: 2px;
+    background: var(--ink-20);
+}
+.week-list-spark i.tier-green {
+    background: var(--green);
+}
+.week-list-spark i.tier-amber {
+    background: var(--amber);
+}
+.week-list-spark i.tier-red {
+    background: var(--red);
 }
 /* Šípka "›" hovorí, že bublina otvára detail týždňa. Nepotrebuje @media ako tá istá šípka
    pri bublinách vyššie - celý blok je na obrazovke len tam, kde detail existuje. */
@@ -1968,6 +2008,7 @@ b {
     color: var(--ink-35);
 }
 .week-list-sum {
+    grid-area: sum;
     display: block;
     min-width: 0;
 }
@@ -1985,35 +2026,63 @@ b {
     margin-left: 3px;
 }
 .week-list-avg {
-    font-family: var(--font-mono);
+    grid-area: avg;
     font-size: var(--fs-xs);
-    color: var(--ink-35);
+    color: var(--ink-45);
     text-align: right;
-    line-height: 1.6;
     white-space: nowrap;
 }
 .week-list-avg b {
-    display: block;
-    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--ink-70);
+}
+/* Legenda farieb pod rebríčkom - tie isté tri farby ako pásik a číslo v riadku dňa. */
+.week-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-4);
+    padding: var(--sp-2) 2px 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-45);
+}
+.week-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.week-legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+.week-legend i.tier-green {
+    background: var(--green);
+}
+.week-legend i.tier-amber {
+    background: var(--amber);
+}
+.week-legend i.tier-red {
+    background: var(--red);
 }
 .week-list {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
 }
-/* Meno dňa má pevný stĺpec, aby pásiky začínali pod sebou a dali sa porovnať; 70 px je
-   šírka najdlhšieho názvu ("Pondelok") pri tomto písme. Ikona oblohy je 12 px (.cloud-cell
+/* Meno dňa má pevný stĺpec, aby pásiky začínali pod sebou a dali sa porovnať; 76 px je
+   šírka najdlhšieho názvu ("Pondelok") pri 14,5 px. Ikona oblohy je 12 px (.cloud-cell
    nižšie), stĺpec má o niečo viac, nech sa nedotýka mena. Piaty stĺpec je šípka nižšie.
    Pásik je jediný pružný stĺpec (1fr), ostatné majú pevnú šírku - preto sa riadok zmestí
    aj na 280 px a nepretečie do strán (drží to e2e test). */
 .wday {
     display: grid;
-    grid-template-columns: 70px 16px 1fr auto 10px;
+    grid-template-columns: 76px 16px 1fr auto 10px;
     align-items: center;
     gap: var(--sp-2);
-    padding: 9px var(--sp-3);
+    padding: 8px var(--sp-3) 8px 14px;
     border: 1px solid var(--ink-08);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     background: var(--card-bg);
 }
 /* Šípka pri každom dni hovorí, že riadok je tlačidlo - predtým to bola veta pod zoznamom.
@@ -2034,7 +2103,7 @@ b {
 /* Dnešok sa nezvýrazňuje: v rebríčku stojí vždy prvý a volá sa "Dnes", takže by farba
    hovorila to, čo už povedalo poradie aj meno. */
 .wday-name {
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 600;
     line-height: 1.15;
     min-width: 0;
@@ -2042,37 +2111,38 @@ b {
 .wday-date {
     display: block;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--fs-xs);
     font-weight: 400;
     letter-spacing: 0.06em;
     color: var(--ink-35);
 }
 .wday-bar {
-    height: 22px;
-    border-radius: var(--radius-sm);
+    height: 10px;
+    border-radius: var(--radius-pill);
     background: var(--ink-05);
     overflow: hidden;
 }
 .wday-bar i {
     display: block;
     height: 100%;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: color-mix(in srgb, var(--green) 45%, transparent);
 }
 /* Pásmo dňa - tá istá mierka ako v heatmape. Sýtosť sa z heatmapy nepreberá: tam je
-   jediným nosičom veľkosti, tu je ňou dĺžka pásika a slabý deň by bol krátky aj vyblednutý. */
+   jediným nosičom veľkosti, tu je ňou dĺžka pásika a slabý deň by bol krátky aj vyblednutý.
+   Pásik je tenký (10 px), preto plná farba - priesvitná by na ňom zanikla. */
 .wday-bar i.tier-red {
-    background: color-mix(in srgb, var(--red) 55%, transparent);
+    background: var(--red);
 }
 .wday-bar i.tier-amber {
-    background: color-mix(in srgb, var(--amber) 55%, transparent);
+    background: var(--amber);
 }
 .wday-bar i.tier-green {
-    background: color-mix(in srgb, var(--green) 55%, transparent);
+    background: var(--green);
 }
 .wday-kwh {
     font-family: var(--font-mono);
-    font-size: var(--fs-md);
+    font-size: 16px;
     font-weight: 700;
     min-width: 40px;
     text-align: right;

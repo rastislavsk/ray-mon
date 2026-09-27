@@ -321,9 +321,16 @@
                                 <span class="lbl">Spolu za 7 dní</span>
                                 <span class="stat-num-row"><span class="num" id="week-list-total">–</span><span class="u">kWh</span></span>
                             </span>
-                            <span class="week-list-avg">ø na deň<b id="week-list-avg">–</b></span>
+                            <span class="week-list-avg">ø <b id="week-list-avg">–</b> / deň</span>
                         </button>
                         <div class="week-list" id="week-list"></div>
+                        <!-- Legenda farieb dňa: tá istá mierka ako v heatmape (weekDayTiers v
+                             shared/chart-model.js) - tretiny najsilnejšieho dňa týždňa. -->
+                        <div class="week-legend">
+                            <span><i class="tier-green"></i>silný deň</span>
+                            <span><i class="tier-amber"></i>priemerný</span>
+                            <span><i class="tier-red"></i>slabý</span>
+                        </div>
                     </section>
                     <div class="msg-block" id="week-msg-block">
                         <h3 id="week-msg-title">Načítavam…</h3>

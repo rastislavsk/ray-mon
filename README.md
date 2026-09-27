@@ -32,7 +32,8 @@ a položka Zdieľať appku na karte Info ostáva zavretá – QR kód v nej kres
   naň si pozrieš, ako to bude vyzerať v inom čase. Čo prstence a farby znamenajú, vysvetľuje
   karta Info.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
-  voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň; na širokej
+  voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
+  dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
   obrazovke bubliny (Dnes, Zajtra, 7 dní spolu) a tabuľka so všetkými stĺpcami. Klik otvorí
   detail: na deň jeho priebeh výroby s oblačnosťou, čísla dňa (špička, využitie, oblačnosť),
   jeho riadok z mapy výroby a hlášku o tom dni; pri dnešku je v grafe aj skutočná nameraná
