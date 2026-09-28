@@ -446,6 +446,28 @@ function laterItem(a) {
     };
 }
 
+/**
+ * Tlačidlo „Pustil/a som“ v rozbalení spotrebiča. Kým vec beží, hovorí, kedy sa zapísala,
+ * a že druhé ťuknutie zápis zruší. Keď appka radí počkať, je to „aj tak“ - zápis to tak berie.
+ * @param {string} tone @param {boolean} isAuto @param {{ m: number } | null} running
+ */
+export function mozemLogLabel(tone, isAuto, running) {
+    if (running) return `Zapísané o ${hm(running.m)}. Ťukni znova, ak nie.`;
+    const verb = isAuto ? 'Zapojil/a som' : 'Pustil/a som';
+    return tone === 'go' || tone === 'cheap' ? verb : `${verb} aj tak`;
+}
+
+/** Krátka odpoveď, kým spustená vec beží. @param {boolean} isAuto @param {number} until minúta dňa */
+export function mozemRunningShort(isAuto, until) {
+    return `${isAuto ? 'nabíja sa' : 'beží'} do ${hm(until)}`;
+}
+
+/** Riadok pod mriežkou: koľko toho tento mesiac človek pustil a koľko na slnku. @param {{ all: number, sun: number }} c */
+export function mozemCountText({ all, sun }) {
+    if (!all) return '';
+    return `Tento mesiac si pustil/a ${all}× niečo, z toho ${sun}× na slnku.`;
+}
+
 export const EMPTY_MESSAGES = {
     forecast: { title: 'Predpoveď sa pripravuje', body: 'Hodinové dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
     week: { title: 'Predpoveď sa pripravuje', body: 'Týždenné dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },

@@ -41,6 +41,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                           |
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
 | `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.         |
+| `launches.js`    | „Pustil/a som“: zápisy spustení spotrebičov, čo práve beží a súčty za mesiac.                               |
 | `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.          |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
@@ -246,6 +247,12 @@ a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 Texty vrátane hlášok sú v `messages.js`. Hláška sa mení s dňom a ťuknutím (`mozemQuip`),
 rozbalená vec je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie. Obsah
 karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
+
+„Pustil/a som“ zapisuje spustenia spotrebičov len v telefóne (`LAUNCH_STORAGE_KEY`, najviac
+`LAUNCH.limit` zápisov): dátum a minúta lokality, vec a či vtedy svietilo slnko. Logika je
+v `shared/launches.js`, model karty z nej dopočíta „beží do …“ a mesačný súčet. Je to na čestné
+slovo - kiosk vidí len výrobu, nie spotrebu, takže spustenie overiť nevie. Zápisy sú základ
+súhrnu na zdieľanie.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
 Môžem?, ten, kto elektráreň platí, ciferník. Ukladá sa preto pod vlastným kľúčom

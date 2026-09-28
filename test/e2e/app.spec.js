@@ -9,6 +9,7 @@ import {
     PLANT,
     powerThresholds,
     PREVIEW,
+    LAUNCH_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     START_STORAGE_KEY,
     SITE,
@@ -2612,6 +2613,30 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-quip q')).toHaveText(model(0).quip);
         await page.locator('.mozem-quip').click();
         await expect(page.locator('.mozem-quip q')).toHaveText(model(1).quip);
+        expect(errors).toEqual([]);
+    });
+
+    test('Pustil/a som: zapíše sa v telefóne, pri práčke beží, druhé ťuknutie zruší', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await page.locator('[data-mozem-item="pracka"]').click();
+        const log = page.locator('[data-mozem-log="pracka"]');
+        await expect(log).toHaveText('Pustil/a som');
+        await log.click();
+        await expect(log).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
+        await expect(page.locator('.mozem-count')).toHaveText('Tento mesiac si pustil/a 1× niečo, z toho 1× na slnku.');
+        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), LAUNCH_STORAGE_KEY);
+        expect(stored).toEqual([{ d: '2026-09-05', id: 'pracka', m: 13 * 60, sun: true }]);
+
+        // Zápis prežije znovuotvorenie appky; druhé ťuknutie počas behu ho zruší.
+        await page.reload();
+        await page.locator('#nav-mozem').click();
+        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
+        await page.locator('[data-mozem-item="pracka"]').click();
+        await page.locator('[data-mozem-log="pracka"]').click();
+        await expect(page.locator('.mozem-count')).toHaveCount(0);
+        expect(await page.evaluate((key) => localStorage.getItem(key), LAUNCH_STORAGE_KEY)).toBe('[]');
         expect(errors).toEqual([]);
     });
 

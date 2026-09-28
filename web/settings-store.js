@@ -2,7 +2,8 @@
 // localStorage môže chýbať alebo hádzať (súkromné okno, zakázané úložisko) - appka potom
 // ukáže ukážku a uloženie ohlási ako neúspešné.
 
-import { SETTINGS_STORAGE_KEY, START_PANELS, START_STORAGE_KEY } from '../shared/config.js';
+import { LAUNCH_STORAGE_KEY, SETTINGS_STORAGE_KEY, START_PANELS, START_STORAGE_KEY } from '../shared/config.js';
+import { parseLaunches } from '../shared/launches.js';
 import { parseStartPanel, parseStoredSettings, shareHash, startFromLink, toUser } from '../shared/settings.js';
 import { savedSettings } from './state.js';
 
@@ -60,6 +61,25 @@ export function loadStartPanel(hash) {
 export function saveStartPanel(panel) {
     try {
         localStorage.setItem(START_STORAGE_KEY, panel);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Zápisy „Pustil/a som“ z tohto telefónu; bez úložiska prázdny zoznam. @returns {import('../shared/launches.js').Launch[]} */
+export function loadLaunches() {
+    try {
+        return parseLaunches(JSON.parse(localStorage.getItem(LAUNCH_STORAGE_KEY) || '[]'));
+    } catch {
+        return [];
+    }
+}
+
+/** @param {import('../shared/launches.js').Launch[]} list @returns {boolean} podarilo sa? */
+export function saveLaunches(list) {
+    try {
+        localStorage.setItem(LAUNCH_STORAGE_KEY, JSON.stringify(list));
         return true;
     } catch {
         return false;

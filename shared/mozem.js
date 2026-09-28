@@ -7,7 +7,17 @@ import { DEVICES, EVERYDAY, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from '
 import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
-import { mozemHeroText, mozemItemText, mozemStripText, MOZEM_QUIPS, MOZEM_WORDS } from './messages.js';
+import { canLog, monthCount, runMinOf, runningLaunch } from './launches.js';
+import {
+    mozemCountText,
+    mozemHeroText,
+    mozemItemText,
+    mozemLogLabel,
+    mozemRunningShort,
+    mozemStripText,
+    MOZEM_QUIPS,
+    MOZEM_WORDS,
+} from './messages.js';
 import { localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
 
@@ -208,10 +218,41 @@ function emptyModel(input, turn) {
 const pick = (list, i) => list[((i % list.length) + list.length) % list.length];
 
 /**
- * Model karty Môžem?. `quipTurn` je koľkokrát človek ťukol na hlášku - pripočíta sa k číslu dňa.
+ * Model karty Môžem?. `quipTurn` je koľkokrát človek ťukol na hlášku - pripočíta sa k číslu dňa,
+ * `launches` zápisy „Pustil/a som“ z tohto telefónu.
  * @param {PlanInput & { loading: boolean }} input @param {number} [quipTurn]
+ * @param {import('./launches.js').Launch[]} [launches]
  */
-export function mozemModel(input, quipTurn = 0) {
+export function mozemModel(input, quipTurn = 0, launches = []) {
+    return withLaunches(baseModel(input, quipTurn), launches, input);
+}
+
+/**
+ * Zápisy spustení do modelu: pri spotrebiči tlačidlo „Pustil/a som“ (s tým, či svieti slnko),
+ * kým beží, krátka odpoveď „beží do …“, a mesačný súčet pod mriežkou.
+ * @param {ReturnType<typeof baseModel>} m @param {import('./launches.js').Launch[]} launches @param {PlanInput} input
+ */
+function withLaunches(m, launches, { now, site }) {
+    const today = localDateKey(now, site.timezone);
+    const nowMin = localMinutes(now, site.timezone);
+    return {
+        ...m,
+        items: m.items.map((it) => {
+            if (!canLog(it.id)) return { ...it, log: null };
+            const running = runningLaunch(launches, it.id, today, nowMin);
+            const isAuto = it.id === 'auto';
+            return {
+                ...it,
+                short: running ? mozemRunningShort(isAuto, running.m + runMinOf(it.id)) : it.short,
+                log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running) },
+            };
+        }),
+        count: mozemCountText(monthCount(launches, today.slice(0, 7))),
+    };
+}
+
+/** @param {PlanInput & { loading: boolean }} input @param {number} quipTurn */
+function baseModel(input, quipTurn) {
     if (!input.forecast) return emptyModel(input, quipTurn);
     const ctx = dayCtx(input);
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');

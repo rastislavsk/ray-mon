@@ -14,13 +14,14 @@ import {
 } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
-import { localMinutes } from '../shared/solar.js';
+import { toggleLaunch } from '../shared/launches.js';
+import { localDateKey, localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
-import { saveStartPanel } from './settings-store.js';
+import { saveLaunches, saveStartPanel } from './settings-store.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -528,6 +529,19 @@ function initStats(store, dom) {
 }
 
 /**
+ * „Pustil/a som“: zapíše spustenie v tomto telefóne (kým beží, druhé ťuknutie ho zruší).
+ * Čas a dátum sú lokality elektrárne, ako všetko ostatné v appke.
+ * @param {Store} store @param {string} id @param {boolean} sun
+ */
+function logLaunch(store, id, sun) {
+    const s = store.get();
+    const entry = { d: localDateKey(s.now, s.site.timezone), id, m: localMinutes(s.now, s.site.timezone), sun };
+    const launches = toggleLaunch(s.launches, entry);
+    saveLaunches(launches);
+    store.setState({ launches });
+}
+
+/**
  * Karta Môžem?: ťuknutie na vec ju rozbalí (druhé zbalí), ťuknutie na hlášku ukáže ďalšiu.
  * Oboje je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
  * @param {Store} store @param {Dom} dom
@@ -540,6 +554,8 @@ function initMozem(store, dom) {
             const id = item.dataset.mozemItem || null;
             return store.setState({ mozemOpen: store.get().mozemOpen === id ? null : id });
         }
+        const log = target.closest('[data-mozem-log]');
+        if (log instanceof HTMLElement) return logLaunch(store, log.dataset.mozemLog || '', log.dataset.sun === '1');
         if (target.closest('[data-mozem-quip]')) store.setState({ mozemQuip: store.get().mozemQuip + 1 });
     });
 }
