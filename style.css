@@ -598,7 +598,10 @@ b {
 /* ---- Terazky: náhľad času -------------------------------------------------
    Bublina s časom nad pásom dňa zanikla spolu s pásom. Čas je teraz vnútri ciferníka
    nad hodnotou (.dial-num .when) a návrat na "teraz" je tlačidlo pod jednotkou. Ani
-   jedno nestojí mimo kruhu, takže zobrazenie náhľadu nič v layoute neposunie. */
+   jedno nestojí mimo kruhu, takže zobrazenie náhľadu nič v layoute neposunie.
+   Tlačidlo je zámerne výrazné – biele s čiernym písmom a pulzuje: ciferník v náhľade
+   ukazuje iný čas než teraz a to sa nesmie prehliadnuť. Pulzuje len tieň okolo, rozmer
+   tlačidla sa nemení, takže nič v okolí neposúva. Útlm pohybu pulz vypne (viď hore). */
 .preview-reset {
     display: inline-flex;
     align-items: center;
@@ -606,17 +609,29 @@ b {
     margin-top: var(--sp-2);
     padding: 5px 12px;
     border-radius: var(--radius-pill);
-    border: 1px solid var(--ink-20);
-    background: var(--ink-05);
-    color: var(--ink-70);
+    border: 1px solid #fff;
+    background: #fff;
+    color: #000;
     font-family: var(--font-mono);
     font-size: var(--fs-xs);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
+    animation: preview-reset-pulse 1.6s ease-out infinite;
     /* Vnútro ciferníka inak kliky neberie (viď .dial-num), tomuto ich treba vrátiť. */
     pointer-events: auto;
+}
+@keyframes preview-reset-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
 }
 .preview-reset svg,
 .wait-chip svg {
