@@ -2837,6 +2837,18 @@ b {
 .sum-live.off {
     color: var(--red);
 }
+/* Na mobile stojí stav namiesto podnadpisu (kiosk FusionSolar), na desktope vpravo pred šípkou. */
+@media (max-width: 1023px) {
+    .sum-live.at-side,
+    .sum-row .v:has(+ .sum-live) {
+        display: none;
+    }
+}
+@media (min-width: 1024px) {
+    .sum-live.in-line {
+        display: none;
+    }
+}
 .sum-ico {
     flex: 0 0 auto;
     width: 34px;

@@ -189,8 +189,11 @@ function summaryRows(s, state, withLive = false) {
         extra: state.setupPick.ac === 'guess' ? guess : '',
     });
     const live = withLive ? liveStatus({ ...state, kiosk: s.kiosk }) : null;
+    // Stav dvakrát: na mobile namiesto podnadpisu, na desktope vpravo (viď .sum-live v style.css).
+    const status = (/** @type {string} */ where) => (live ? `<span class="sum-live ${where} ${live.tone}">${live.text}</span>` : '');
     html += sumRow('meranie', SETUP_ICONS.meranie, 'Živé meranie', s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede', {
-        side: live ? `<span class="sum-live ${live.tone}">${live.text}</span>` : '',
+        extra: status('in-line'),
+        side: status('at-side'),
     });
     const prices = tariffPricesText(s.tariff);
     return (
