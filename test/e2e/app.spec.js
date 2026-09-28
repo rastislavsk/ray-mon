@@ -2330,6 +2330,8 @@ test.describe('moja elektráreň', () => {
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
         await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
+        // Prehľad v Nastavení ukáže, že kiosk odpovedá, aj čas posledného merania.
+        await expect(page.locator('#setup-rows [data-setup-edit="meranie"] .sum-live.ok')).toHaveText('pripojené · 13:00');
         expect(bodies).toContain(kiosk);
         expect(errors).toEqual([]);
     });

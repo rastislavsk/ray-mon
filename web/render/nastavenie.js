@@ -17,6 +17,7 @@ import {
     TARIFF_TEMPLATES,
 } from '../../shared/config.js';
 import { escapeHtml, fmt2, kwpText, minutesToTimeStr } from '../../shared/format.js';
+import { liveStatus } from '../../shared/hero-model.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { checkSettings, sameSettings, settingsFromLink, settingsHint, siteMetaText } from '../../shared/settings.js';
 import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, TARIFF_STEPS, tariffSteps, totalPanels } from '../../shared/setup.js';
@@ -142,22 +143,27 @@ function effectivePick(pick, value, choices) {
 
 // ---- Prehľad uloženej elektrárne a zhrnutie sprievodcu -------------------------------
 
-/** Jeden riadok zhrnutia. Ťuknutie naň otvorí jeho krok (data-setup-edit). */
+/** Jeden riadok zhrnutia. Ťuknutie naň otvorí jeho krok (data-setup-edit). extra je druhý
+ * riadok pod hodnotou, side stav vpravo pred šípkou. */
 function sumRow(
     /** @type {string} */ key,
     /** @type {string} */ icon,
     /** @type {string} */ label,
     /** @type {string} */ value,
-    extra = '',
+    { extra = '', side = '' } = {},
 ) {
     return (
         `<button type="button" class="sum-row" data-setup-edit="${key}"><span class="sum-ico">${icon}</span>` +
-        `<span class="t"><span class="k">${label}</span><span class="v">${value}</span>${extra}</span>${SETUP_ICONS.chevron}</button>`
+        `<span class="t"><span class="k">${label}</span><span class="v">${value}</span>${extra}</span>${side}${SETUP_ICONS.chevron}</button>`
     );
 }
 
-/** Riadky zhrnutia: poloha, panel, plochy, menič, meranie. @param {Settings} s @param {AppState} state */
-function summaryRows(s, state) {
+/**
+ * Riadky zhrnutia: poloha, panel, plochy, menič, meranie. V prehľade uloženej elektrárne
+ * (withLive) má meranie vpravo aj stav pripojenia; rozpísaný kiosk v sprievodcu ešte neoveril nik.
+ * @param {Settings} s @param {AppState} state
+ */
+function summaryRows(s, state, withLive = false) {
     const guess = '<span class="est">odhad · oprav, keď zistíš</span>';
     const wpExtra =
         state.setupKwp !== null
@@ -166,13 +172,9 @@ function summaryRows(s, state) {
               ? guess
               : '';
     let html = sumRow('lokalita', SETUP_ICONS.poloha, 'Poloha', escapeHtml(s.site.name || '–'));
-    html += sumRow(
-        'panel',
-        SETUP_ICONS.panel,
-        'Panel',
-        Number.isFinite(s.plant.panelWp) ? `${Math.round(s.plant.panelWp)} Wp` : '–',
-        wpExtra,
-    );
+    html += sumRow('panel', SETUP_ICONS.panel, 'Panel', Number.isFinite(s.plant.panelWp) ? `${Math.round(s.plant.panelWp)} Wp` : '–', {
+        extra: wpExtra,
+    });
     s.plant.strings.forEach((x, i) => {
         const kwp = Number.isFinite(s.plant.panelWp) ? kwpText(installedKw({ ...s.plant, strings: [x] })) : '–';
         html += sumRow(
@@ -180,27 +182,22 @@ function summaryRows(s, state) {
             miniCompassSvg(x.azimuthDeg),
             `Plocha ${i + 1}`,
             `${dirName(x.azimuthDeg)} · ${x.tiltDeg}° · ${x.panels} panelov`,
-            `<span class="k2">${kwp}</span>`,
+            { extra: `<span class="k2">${kwp}</span>` },
         );
     });
-    html += sumRow(
-        'menic',
-        SETUP_ICONS.menic,
-        'Menič',
-        Number.isFinite(s.plant.acLimitKw) ? kwText(s.plant.acLimitKw) : '–',
-        state.setupPick.ac === 'guess' ? guess : '',
-    );
-    html += sumRow('meranie', SETUP_ICONS.meranie, 'Živé meranie', s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede');
+    html += sumRow('menic', SETUP_ICONS.menic, 'Menič', Number.isFinite(s.plant.acLimitKw) ? kwText(s.plant.acLimitKw) : '–', {
+        extra: state.setupPick.ac === 'guess' ? guess : '',
+    });
+    const live = withLive ? liveStatus({ ...state, kiosk: s.kiosk }) : null;
+    html += sumRow('meranie', SETUP_ICONS.meranie, 'Živé meranie', s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede', {
+        side: live ? `<span class="sum-live ${live.tone}">${live.text}</span>` : '',
+    });
     const prices = tariffPricesText(s.tariff);
     return (
         html +
-        sumRow(
-            'tarifa',
-            miniTariff(s.tariff),
-            'Tarifa',
-            escapeHtml(tariffHint(s.tariff)),
-            `<span class="k2">${escapeHtml(prices || 'bez cien')}</span>`,
-        )
+        sumRow('tarifa', miniTariff(s.tariff), 'Tarifa', escapeHtml(tariffHint(s.tariff)), {
+            extra: `<span class="k2">${escapeHtml(prices || 'bez cien')}</span>`,
+        })
     );
 }
 
@@ -239,7 +236,7 @@ function renderHome(state, dom) {
     if (state.demo) return;
     const saved = savedSettings(state);
     writeHtml(dom.setupHero, heroHtml(saved, state), 'setupHero');
-    writeHtml(dom.setupRows, summaryRows(saved, state), 'setupRows');
+    writeHtml(dom.setupRows, summaryRows(saved, state, true), 'setupRows');
     writeHtml(
         dom.setupWarnings,
         checkSettings(saved)
