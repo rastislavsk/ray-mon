@@ -5,9 +5,11 @@
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
 import { mozemModel } from '../../shared/mozem.js';
+import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
 import { MOZEM_ICONS, MOZEM_MARKS } from '../icons.js';
 import { writeHtml } from '../memo.js';
+import { summaryHtml, summaryLinkHtml } from './suhrn.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
 
@@ -72,7 +74,10 @@ export function mozemHtml(m, open, kick) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderMozem(state, dom) {
+    // Súhrn je obrazovka tej istej karty, v tom istom nosiči - ako detail dňa v karte 7 dní.
+    if (state.mozemSummary)
+        return writeHtml(dom.mozemBody, summaryHtml(summaryModel(state, state.summaryPeriod), state.summaryPeriod), 'mozemBody');
     const m = mozemModel(state, state.mozemQuip, state.launches);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, state.mozemOpen, kick), 'mozemBody');
+    writeHtml(dom.mozemBody, mozemHtml(m, state.mozemOpen, kick) + summaryLinkHtml(summaryModel(state, 'mesiac')), 'mozemBody');
 }

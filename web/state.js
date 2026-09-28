@@ -22,6 +22,9 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   mozemOpen: string | null,
  *   mozemQuip: number,
  *   launches: import('../shared/launches.js').Launch[],
+ *   dayLog: import('../shared/daylog.js').DayLog,
+ *   mozemSummary: boolean,
+ *   summaryPeriod: import('../shared/summary.js').SummaryPeriod,
  *   previewMinutes: number | null,
  *   isDragging: boolean,
  *   wide: boolean,
@@ -58,7 +61,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -100,6 +103,12 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         mozemQuip: 0,
         // Zápisy „Pustil/a som“ z tohto telefónu (web/settings-store.js). Načítajú sa pri štarte.
         launches: [],
+        // Denník výroby po dňoch pre súhrn (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
+        dayLog: {},
+        // Obrazovka súhrnu v karte Môžem? - je to krok navigácie, Späť ju zavrie. Obdobie je
+        // nastavenie vnútri nej.
+        mozemSummary: false,
+        summaryPeriod: /** @type {import('../shared/summary.js').SummaryPeriod} */ ('mesiac'),
         previewMinutes: null,
         isDragging: false,
         wide: layout.wide,
@@ -242,6 +251,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
+        mozemSummary: false,
     };
 }
 
@@ -253,12 +263,26 @@ export function panelChange(from, to) {
  * @param {AppState} state @returns {NavStep}
  */
 export function navStep(state) {
-    return { panel: state.panel, weekDetail: state.weekDetail, setup: state.setupStep, roof: state.setupRoof, info: state.infoOpen };
+    return {
+        panel: state.panel,
+        weekDetail: state.weekDetail,
+        setup: state.setupStep,
+        roof: state.setupRoof,
+        info: state.infoOpen,
+        summary: state.mozemSummary,
+    };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.weekDetail === b.weekDetail && a.setup === b.setup && a.roof === b.roof && a.info === b.info;
+    return (
+        a.panel === b.panel &&
+        a.weekDetail === b.weekDetail &&
+        a.setup === b.setup &&
+        a.roof === b.roof &&
+        a.info === b.info &&
+        a.summary === b.summary
+    );
 }
 
 /**
@@ -276,6 +300,7 @@ export function navChange(from, step) {
         setupStep: step.setup,
         setupRoof: step.roof,
         infoOpen: step.info,
+        mozemSummary: step.summary,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -300,16 +325,23 @@ export function navStepFrom(raw) {
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0, info = null } = /** @type {Record<string, unknown>} */ (step);
-    if (!(weekDetail === null || weekDetail === 'day' || weekDetail === 'week') || !PANELS.some((p) => p === panel)) return null;
-    if (!validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
+    const { panel, weekDetail, setup = null, roof = 0, info = null, summary = false } = /** @type {Record<string, unknown>} */ (step);
+    if (!validPanelPlace(panel, weekDetail, summary) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
         weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
         setup: /** @type {SetupStep | null} */ (setup),
         roof: /** @type {number} */ (roof),
         info: /** @type {InfoItem | null} */ (info),
+        summary: /** @type {boolean} */ (summary),
     };
+}
+
+/** Karta, detail dňa a súhrn z položky histórie. Položka zo staršej verzie súhrn nepozná - je `false`.
+ * @param {unknown} panel @param {unknown} weekDetail @param {unknown} summary */
+function validPanelPlace(panel, weekDetail, summary) {
+    const detailOk = weekDetail === null || weekDetail === 'day' || weekDetail === 'week';
+    return detailOk && PANELS.some((p) => p === panel) && typeof summary === 'boolean';
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

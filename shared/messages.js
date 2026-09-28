@@ -1,7 +1,7 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
 import { EVERYDAY } from './config.js';
-import { fmt1, fmt2, hourLabel, minutesToTimeStr, weekDayLabel } from './format.js';
+import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, minutesToTimeStr, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -466,6 +466,71 @@ export function mozemRunningShort(isAuto, until) {
 export function mozemCountText({ all, sun }) {
     if (!all) return '';
     return `Tento mesiac si pustil/a ${all}× niečo, z toho ${sun}× na slnku.`;
+}
+
+// ---- Súhrn na zdieľanie ------------------------------------------------------------
+
+/** Tvar podstatného mena podľa počtu: 1 rok, 2 roky, 5 rokov. @param {number} n @param {[string, string, string]} forms */
+export function plural(n, [one, few, many]) {
+    if (n === 1) return one;
+    return n >= 2 && n <= 4 ? few : many;
+}
+
+/**
+ * Trasy na porovnanie kilometrov, od najkratšej. Súhrn vyberie najdlhšiu, na ktorú to stačí.
+ * Vzdialenosti sú po ceste z Bratislavy, zaokrúhlené.
+ */
+export const SUMMARY_TRIPS = [
+    { km: 130, text: 'ako z Bratislavy do Trnavy a späť' },
+    { km: 330, text: 'ako z Bratislavy do Prahy' },
+    { km: 800, text: 'Bratislava – Košice a späť' },
+    { km: 1800, text: 'až do Barcelony' },
+    { km: 3600, text: 'do Barcelony a späť' },
+    { km: 7200, text: 'dvakrát do Barcelony a späť' },
+];
+
+/**
+ * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js.
+ * @param {{ period: 'tyzden' | 'mesiac', month: string, kwh: number, phones: number, km: number,
+ *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
+ *   launches: { all: number, sun: number }, missing: number }} d
+ */
+export function summaryTexts(d) {
+    const kick = d.period === 'tyzden' ? 'Posledných 7 dní na streche' : `${d.month.charAt(0).toUpperCase()}${d.month.slice(1)} na streche`;
+    /** @type {Array<{ t: string, s: string }>} */ const rows = [];
+    if (d.kwh > 0) {
+        rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
+        const trip = SUMMARY_TRIPS.filter((x) => x.km <= d.km).pop();
+        rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: trip ? trip.text : 'na elektrinu, zo strechy' });
+    }
+    if (d.best) rows.push({ t: `Najlepší deň: ${bestDay(d.best, d.period)}`, s: `${fmt1(d.best.kwh)} kWh za jediný deň` });
+    if (d.value !== null && d.kwh > 0) rows.push({ t: `Hodnota ~${fmtSum(d.value, 0)} ${d.currency}`, s: 'toľko by sme za to dali sieti' });
+    const { all, sun } = d.launches;
+    if (all)
+        rows.push({
+            t: `Na slnku si pustil/a ${sun}×`,
+            s: all > sun ? `z ${all} spustení, zvyšok išiel zo siete` : 'všetko išlo zo slnka',
+        });
+    const note = d.missing
+        ? `Za ${d.missing} ${plural(d.missing, ['deň', 'dni', 'dní'])} appka čísla nemá – vtedy ju nikto neotvoril.`
+        : '';
+    return { kick, rows, note };
+}
+
+/** Jeden mobil na koľko: „na 12 rokov“, „na 40 dní“ - pri nabíjaní raz denne. @param {number} phones */
+function phonesSub(phones) {
+    const years = Math.floor(phones / 365);
+    if (years >= 1) return `jeden mobil nabíjaný každý deň na ${years} ${plural(years, ['rok', 'roky', 'rokov'])}`;
+    const days = Math.max(1, Math.round(phones));
+    return `jeden mobil nabíjaný každý deň na ${days} ${plural(days, ['deň', 'dni', 'dní'])}`;
+}
+
+/** Najlepší deň: v týždni meno dňa, v mesiaci dátum. @param {{ date: string, today: boolean }} b @param {'tyzden' | 'mesiac'} period */
+function bestDay(b, period) {
+    if (b.today) return 'dnes';
+    if (period === 'tyzden') return dayNameLong(b.date).toLowerCase();
+    const { day, month } = dateParts(b.date);
+    return `${day}. ${month}.`;
 }
 
 export const EMPTY_MESSAGES = {

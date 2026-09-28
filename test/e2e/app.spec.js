@@ -9,6 +9,7 @@ import {
     PLANT,
     powerThresholds,
     PREVIEW,
+    DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     START_STORAGE_KEY,
@@ -22,12 +23,13 @@ import {
 } from '../../shared/config.js';
 import { dayHourTiers } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
-import { fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
+import { fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
 import { mozemModel } from '../../shared/mozem.js';
+import { summaryModel } from '../../shared/summary.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
@@ -1495,7 +1497,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false },
     });
     expect(errors).toEqual([]);
 });
@@ -2646,6 +2648,68 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
         await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
+        await expect(page.locator('.summary-link'), 'bez merania súhrn nie je').toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+
+    /** Súhrn tak, ako ho appka počíta v pevnom čase testov. @param {'tyzden' | 'mesiac'} period */
+    const suhrn = (period) =>
+        /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
+            summaryModel(
+                { ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW), launches: [], dayLog: {} },
+                period,
+            )
+        );
+
+    test('súhrn: otvorí sa z karty, prepína obdobie a Späť ho zavrie', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        const mesiac = suhrn('mesiac');
+        await expect(page.locator('.summary-link')).toContainText(`${mesiac.kick}: ${fmtSum(Math.round(mesiac.kwh), 0)} kWh`);
+        await page.locator('.summary-link').click();
+        await expect(page.locator('.summary-kick')).toHaveText(mesiac.kick);
+        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(mesiac.kwh), 0)} kWh`);
+        await expect(page.locator('.summary-row span')).toHaveCount(mesiac.rows.length);
+        await expect(page.locator('.summary-cal i')).toHaveCount(mesiac.days.length);
+
+        await page.locator('[data-summary-period="tyzden"]').click();
+        const tyzden = suhrn('tyzden');
+        await expect(page.locator('.summary-kick')).toHaveText(tyzden.kick);
+        await expect(page.locator('.summary-bars span')).toHaveCount(7);
+        await expect(page.locator('.summary-note')).toHaveText(tyzden.note);
+
+        // Súhrn je obrazovka karty: Späť na telefóne ho zavrie, ďalšie Späť už vedie preč z karty.
+        await page.goBack();
+        await expect(page.locator('.mozem-hero')).toBeVisible();
+        await ocakavajKartu(page, 'mozem');
+        await page.locator('.summary-link').click();
+        await page.locator('[data-summary-back]').click();
+        await expect(page.locator('.summary')).toHaveCount(0);
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('súhrn: denník si zapíše dnešok a zdieľanie pošle obrázok systému', async ({ page }) => {
+        await page.addInitScript(() => {
+            /** @type {any} */ const w = window;
+            w.zdielane = null;
+            navigator.canShare = () => true;
+            navigator.share = async (/** @type {any} */ data) => {
+                const f = data.files[0];
+                w.zdielane = { name: f.name, type: f.type, size: f.size };
+            };
+        });
+        const errors = await openApp(page);
+        const log = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), DAYLOG_STORAGE_KEY);
+        expect(log).toEqual({ '2026-09-05': pv.dailyEnergyKwh });
+        await page.locator('#nav-mozem').click();
+        await page.locator('.summary-link').click();
+        await page.locator('[data-summary-share]').click();
+        await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).zdielane?.name)).toBe('ray-mon-mesiac.png');
+        const shared = await page.evaluate(() => /** @type {any} */ (window).zdielane);
+        expect(shared.type).toBe('image/png');
+        expect(shared.size, 'obrázok nie je prázdny').toBeGreaterThan(10000);
         expect(errors).toEqual([]);
     });
 });

@@ -72,6 +72,16 @@ export function dateParts(dateStr) {
     return { day: d, month: m, dow };
 }
 
+/** Celé meno dňa v týždni pre dátum: "Štvrtok". @param {string} dateStr */
+export function dayNameLong(dateStr) {
+    return WEEK_DAYS_LONG[dateParts(dateStr).dow];
+}
+
+/** Skratka dňa v týždni pre dátum: "Št". @param {string} dateStr */
+export function dayNameShort(dateStr) {
+    return WEEK_DAYS_SHORT[dateParts(dateStr).dow];
+}
+
 /** "Dnes", "Zajtra", inak skratka dňa v týždni. @param {string} dateStr @param {number} index */
 export function weekDayShort(dateStr, index) {
     if (index === 0) return 'Dnes';

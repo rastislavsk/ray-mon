@@ -4261,6 +4261,188 @@ b {
     color: var(--ink-45);
 }
 
+/* ---- Môžem?: súhrn na zdieľanie ------------------------------------------------ */
+/* Plagát v prechode farieb stavu - ten istý, aký ide do obrázka pre story (web/share-image.js). */
+.summary {
+    display: grid;
+    gap: var(--sp-3);
+    padding: 14px 20px 22px;
+    border-radius: 28px;
+    color: #0b0b0b;
+    background: linear-gradient(165deg, var(--green) 0%, var(--amber) 58%, var(--red) 100%);
+}
+.summary b {
+    color: #0b0b0b;
+}
+.summary-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sp-2);
+}
+.summary-back {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.summary-back svg,
+.summary-link svg,
+.summary-share svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* Prepínač obdobia je .seg zo sprievodcu, len na svetlom plagáte. */
+.summary .seg {
+    background: rgba(0, 0, 0, 0.14);
+}
+.summary .seg button {
+    min-height: 36px;
+    padding: 0 14px;
+    color: #0b0b0b;
+}
+.summary .seg button[aria-pressed='true'] {
+    background: #0b0b0b;
+    color: var(--ink);
+}
+.summary-kick {
+    margin: 4px 0 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+.summary-big {
+    margin: 0;
+    font-size: min(96px, 26vw);
+    font-weight: 700;
+    letter-spacing: -0.06em;
+    line-height: 0.85;
+}
+.summary-big small {
+    font-size: 28px;
+    letter-spacing: -0.02em;
+}
+.summary-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 88px;
+}
+.summary-bars span {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+}
+.summary-bars i {
+    width: 100%;
+    border-radius: 6px 6px 2px 2px;
+    background: rgba(0, 0, 0, 0.55);
+}
+.summary-bars i.best {
+    background: #0b0b0b;
+}
+.summary-bars i.missing,
+.summary-cal i.missing {
+    background: transparent;
+    outline: 1.5px dashed rgba(0, 0, 0, 0.45);
+    outline-offset: -1.5px;
+}
+.summary-cal {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
+}
+.summary-cal i {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: #0b0b0b;
+}
+.summary-rows {
+    display: grid;
+}
+.summary-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 2px solid #0b0b0b;
+}
+.summary-row b {
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+.summary-row span {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+.summary-row small {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+.summary-note {
+    margin: 0;
+    font-size: var(--fs-sm);
+}
+.summary-share {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    border-radius: var(--radius-pill);
+    background: #0b0b0b;
+    color: var(--ink);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+}
+/* Odkaz na súhrn na konci karty - ten istý prechod farieb ako súhrn, kam vedie. */
+.summary-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 16px 18px;
+    border-radius: 22px;
+    background: linear-gradient(120deg, var(--green), var(--amber) 55%, var(--red));
+    color: #0b0b0b;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    text-align: left;
+}
+.summary-link small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
 /* ---- Širšie obrazovky ----------------------------------------------------- */
 @media (min-width: 768px) {
     :root {

@@ -388,6 +388,15 @@ export const MOZEM_ITEMS = [
 export const LAUNCH = { limit: 500, autoRunMin: 120 };
 export const LAUNCH_STORAGE_KEY = 'spustenia-v1';
 
+/**
+ * Denník výroby po dňoch pre súhrn na zdieľanie. Kiosk posiela len súčty (dnes, mesiac, rok),
+ * takže dni si appka odkladá sama pri každej obnove merania. `fromMin`: zapisuje sa až od 03:00
+ * miestneho času - tesne po polnoci môže kiosk ešte hlásiť včerajší súčet a ten by sa zapísal
+ * ako dnešný. `limit` je najviac dní (vyše roka).
+ */
+export const DAYLOG = { limit: 400, fromMin: 180 };
+export const DAYLOG_STORAGE_KEY = 'dni-v1';
+
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 

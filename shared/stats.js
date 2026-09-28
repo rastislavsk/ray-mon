@@ -18,7 +18,20 @@ import { bandAt, scheduleFor } from './tariff.js';
 export const STATS_PERIODS = ['dnes', 'mesiac', 'rok', 'spolu'];
 
 // Mesiac v nominatíve (riadok) a v lokáli (nadpis „Vyrobené v septembri“).
-const MONTHS = ['január', 'február', 'marec', 'apríl', 'máj', 'jún', 'júl', 'august', 'september', 'október', 'november', 'december'];
+export const MONTHS = [
+    'január',
+    'február',
+    'marec',
+    'apríl',
+    'máj',
+    'jún',
+    'júl',
+    'august',
+    'september',
+    'október',
+    'november',
+    'december',
+];
 const MONTHS_IN = [
     'januári',
     'februári',
@@ -101,6 +114,15 @@ function prices({ tariff, pv, forecast }, today) {
     const fromForecast = averagePrice(sumMaps(days.map((d) => energyByBand(d.hourly, tariff, d.date))), tariff);
     const fromCurve = averagePrice(energyByBand(pv ? pv.realCurveToday : [], tariff, today), tariff);
     return { today: fromCurve ?? fromForecast, long: fromForecast ?? fromCurve };
+}
+
+/**
+ * Priemerná cena kWh pre dlhšie obdobia (mesiac, rok) - tá istá, akou karta Štatistika oceňuje
+ * súčty z kiosku. Null, keď tarifa ceny nemá.
+ * @param {StatsInput} input
+ */
+export function longPrice(input) {
+    return prices(input, localDateKey(input.now, input.site.timezone)).long;
 }
 
 /**
