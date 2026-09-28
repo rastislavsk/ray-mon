@@ -15,6 +15,7 @@ import {
 import { fmt2 } from '../shared/format.js';
 import { localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
+import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
@@ -54,7 +55,11 @@ function initNavigation(store, dom) {
         const panelBtn = target.closest('button[data-panel]');
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
         // z tej istej strany ako pri ťahaní prstom.
-        if (panelBtn instanceof HTMLElement && panelBtn.dataset.panel) {
+        //
+        // Karta, ktorú tento skript nepozná, sa ignoruje. Nové tlačidlo v navigácii ide von
+        // skôr než skript, ktorý kartu zapojí (pravidlo o cache v CLAUDE.md), a nová stránka
+        // so starým skriptom z cache by po kliku naň skryla všetky karty naraz.
+        if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
             store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
         }
         const totalBtn = target.closest('[data-week-detail]');

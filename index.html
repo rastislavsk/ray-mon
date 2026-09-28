@@ -75,6 +75,11 @@
                         </svg>
                         <span class="lbl">7 dní</span>
                     </button>
+                    <!-- Skryté, kým kartu nezapojí JS (PANELS vo web/dom.js) - pravidlo o cache v CLAUDE.md. -->
+                    <button id="nav-statistika" class="nav-item hidden" type="button" data-panel="statistika">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7M9.5 20V8M15 20v-5M20.5 20V4M2 20h20" /></svg>
+                        <span class="lbl">Štatistika</span>
+                    </button>
                     <button id="nav-nastavenie" class="nav-item" type="button" data-panel="nastavenie">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M4 9h14l2 7H2z" />
@@ -337,6 +342,18 @@
                         <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
                     </div>
                 </div>
+            </section>
+
+            <!-- PANEL: ŠTATISTIKA -->
+            <!-- Výroba za dnes, mesiac, rok a celý čas a jej hodnota podľa tarify (návrh A v
+                 docs/navrhy/statistika-uspory.html). Obsah karty si celý skladá render do #stats-body,
+                 v HTML sú len tieto nosiče - nový prvok vo vnútri karty tak nepotrebuje dve nasadenia. -->
+            <section id="panel-statistika" class="panel hidden" aria-labelledby="stats-title">
+                <div class="section-head">
+                    <h2 class="section-title" id="stats-title">Štatistika</h2>
+                    <div class="section-sub" id="stats-sub"></div>
+                </div>
+                <div class="stats" id="stats-body"></div>
             </section>
 
             <!-- PANEL: NASTAVENIE -->
