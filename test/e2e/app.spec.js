@@ -21,9 +21,11 @@ import {
 import { dayHourTiers } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
+import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
+import { mozemModel } from '../../shared/mozem.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
@@ -920,7 +922,7 @@ test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ p
 test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ page }) => {
     const errors = await openApp(page);
     // Karty sa vykresľujú až po otvorení, aby test videl aj ich obsah.
-    for (const nav of ['#nav-7dni', '#nav-statistika', '#nav-nastavenie', '#nav-terazky']) await page.locator(nav).click();
+    for (const panel of [...PANELS.filter((p) => p !== 'terazky'), 'terazky']) await page.locator(`#nav-${panel}`).click();
 
     const broken = await page.evaluate(() => {
         const out = [];
@@ -959,7 +961,7 @@ test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({
     // sa to do základného limitu 30 s nezmestí (sám beží okolo 23 s).
     test.slow();
     await openApp(page);
-    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
+    for (const panel of PANELS) {
         await page.locator(`#nav-${panel}`).click();
         await pockajNaPrechod(page);
         const results = await new AxeBuilder({ page }).analyze();
@@ -1044,12 +1046,7 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
     await page.setViewportSize({ width: 1366, height: 768 });
     const errors = await openApp(page);
 
-    for (const [nav, panel] of [
-        ['#nav-terazky', '#panel-terazky'],
-        ['#nav-7dni', '#panel-7dni'],
-        ['#nav-statistika', '#panel-statistika'],
-        ['#nav-nastavenie', '#panel-nastavenie'],
-    ]) {
+    for (const [nav, panel] of PANELS.map((p) => [`#nav-${p}`, `#panel-${p}`])) {
         await page.locator(nav).click();
         await expect(page.locator(panel)).toBeVisible();
         const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
@@ -1169,7 +1166,7 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
  */
 test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     const errors = await openApp(page);
-    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
+    for (const panel of PANELS) {
         await page.locator(`#nav-${panel}`).click();
         await expect(page.locator(`#panel-${panel}`)).toBeVisible();
         const zamknute = await page.evaluate(() =>
@@ -1581,9 +1578,13 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
+        await swipe(page, '#dial-hero', { dx: 120 });
+        await ocakavajKartu(page, 'mozem');
 
         // Pred prvou kartou už nič nie je - listovanie sa nezacyklí.
-        await swipe(page, '#dial-hero', { dx: 120 });
+        await swipe(page, '#mozem-body', { dx: 120 });
+        await ocakavajKartu(page, 'mozem');
+        await swipe(page, '#mozem-body', { dx: -120 });
         await ocakavajKartu(page, 'terazky');
 
         // Šikmý ťah je posúvanie po stránke, nie listovanie.
@@ -1850,10 +1851,10 @@ test.describe('listovanie kariet prstom', () => {
         const errors = await openApp(page);
 
         // Ciferník je na mobile najväčšia plocha karty, listovať sa cez ňu dá. Ťuknutie naň
-        // ale nastavuje náhľad iného času - po geste ho preto appka potlačí, aj keď gesto
-        // narazí na kraj poradia.
+        // ale nastavuje náhľad iného času - po geste ho preto appka potlačí, v oboch smeroch.
         await swipe(page, '#dial-wrap', { dx: 120 });
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
+        await page.locator('#nav-terazky').click();
         await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
 
         await swipe(page, '#dial-wrap', { dx: -120 });
@@ -2033,7 +2034,7 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
     const errors = await openApp(page);
     await page.addStyleTag({ content: `:root { --safe-top: ${SAFE_TOP}px; }` });
 
-    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
+    for (const panel of PANELS) {
         await page.locator(`#nav-${panel}`).click();
         const vrch = await page.evaluate(() => document.querySelector('.appbar-inner').getBoundingClientRect().top);
         expect(vrch, `karta ${panel}: hlavička zasahuje do stavového riadku`).toBeGreaterThanOrEqual(SAFE_TOP);
@@ -2120,7 +2121,7 @@ test.describe('moja elektráreň', () => {
 
     test('s uloženou elektrárňou výzva ukážky nie je na žiadnej karte', async ({ page }) => {
         await openApp(page);
-        for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
+        for (const panel of PANELS) {
             await page.locator(`#nav-${panel}`).click();
             await expect(page.locator('#demo-bar'), panel).toBeHidden();
         }
@@ -2566,6 +2567,59 @@ test.describe('karta Štatistika', () => {
         await page.locator('[data-stats-go="nastavenie"]').click();
         await ocakavajKartu(page, 'nastavenie');
         await expect(page.locator('#setup-cta')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('karta Môžem?', () => {
+    /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {number} [quipTurn] */
+    const model = (quipTurn = 0) => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) }, quipTurn);
+
+    test('o 13:00 za jasna: veľké slovo, veta, pás dneška a veci podľa modelu', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await ocakavajKartu(page, 'mozem');
+        const m = model();
+        await expect(page.locator('.mozem-word')).toHaveText(m.word);
+        await expect(page.locator('.mozem-lead')).toHaveText(m.hero.lead);
+        await expect(page.locator('.mozem-fact')).toContainText(m.hero.factV);
+        await expect(page.locator('.mozem-strip-lbl')).toHaveText(m.strip?.text || '');
+        await expect(page.locator('.mozem-t b')).toHaveText(m.items.map((i) => i.name));
+        await expect(page.locator('.mozem-t span')).toHaveText(m.items.map((i) => i.short));
+        expect(errors).toEqual([]);
+    });
+
+    test('ťuknutie na vec ju rozbalí a druhé zbalí; nie je to krok navigácie', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        const pred = await page.evaluate(() => history.length);
+        const pracka = /** @type {ReturnType<typeof model>['items'][number]} */ (model().items.find((i) => i.id === 'pracka'));
+        const btn = page.locator('[data-mozem-item="pracka"]');
+        await btn.click();
+        await expect(btn).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('.mozem-more b')).toHaveText(pracka.head);
+        await expect(page.locator('.mozem-more .mozem-extra')).toHaveText(pracka.extra);
+        await btn.click();
+        await expect(page.locator('.mozem-more')).toHaveCount(0);
+        expect(await page.evaluate(() => history.length), 'rozbalenie nepridáva krok do histórie').toBe(pred);
+        expect(errors).toEqual([]);
+    });
+
+    test('ťuknutie na hlášku ukáže ďalšiu zo sady', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await expect(page.locator('.mozem-quip q')).toHaveText(model(0).quip);
+        await page.locator('.mozem-quip').click();
+        await expect(page.locator('.mozem-quip q')).toHaveText(model(1).quip);
+        expect(errors).toEqual([]);
+    });
+
+    test('bez dát: Neviem., bez pásu dneška', async ({ page }) => {
+        const errors = await openApp(page, { offline: true });
+        await page.locator('#nav-mozem').click();
+        await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
+        await expect(page.locator('.mozem-strip')).toHaveCount(0);
+        await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
         expect(errors).toEqual([]);
     });
 });

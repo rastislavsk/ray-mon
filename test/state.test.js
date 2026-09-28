@@ -59,7 +59,9 @@ test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
     assert.equal(nextPanel('nastavenie', 1), null, 'za poslednou kartou už nič nie je');
     assert.equal(nextPanel('nastavenie', -1), 'statistika');
     assert.equal(nextPanel('7dni', -1), 'terazky');
-    assert.equal(nextPanel('terazky', -1), null, 'pred prvou kartou už nič nie je');
+    assert.equal(nextPanel('terazky', -1), 'mozem', 'Môžem? je v navigácii pred Terazky');
+    assert.equal(nextPanel('mozem', -1), null, 'pred prvou kartou už nič nie je');
+    assert.equal(nextPanel('mozem', 1), 'terazky');
 });
 
 test('poradie dní v detaile dňa: na kraji týždňa sa nezacyklí', () => {

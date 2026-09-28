@@ -17,6 +17,27 @@ export const ICON_CLOUD =
 export const ICON_PARTLY =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="8" r="3"/><path d="M15 2v1.3M19.6 4.4l-.9.9M21 8h-1.3M9.4 4.4l.9.9"/><path d="M16.5 19H7a4 4 0 1 1 .5-7.97 5.5 5.5 0 0 1 9.7 2.02A4 4 0 0 1 16.5 19Z"/></svg>';
 
+/** Veci v karte Môžem? (kľúče sú id z MOZEM_ITEMS). Kreslené tak, aby sa spoznali aj bez popisu. */
+export const MOZEM_ICONS = {
+    pracka: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z"/></svg>',
+    umyvacka:
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7 11.5h10M8.5 11.5v6M12 11.5v6M15.5 11.5v6"/></svg>',
+    susicka:
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0"/></svg>',
+    auto: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18"/></svg>',
+    hranie: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6h-4A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM7.5 10.5v3M6 12h3M15.5 11.2h.01M17.5 13h.01"/></svg>',
+    fen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5a4.5 4.5 0 0 1 4.5-4.5H20v9H8.5A4.5 4.5 0 0 1 4 7.5zM9 12l1.5 8.5h3L12.5 12M20 5v5"/></svg>',
+};
+
+/** Značka odpovede pri veci: fajka áno, hodiny neskôr, krížik nie, otáznik nevie. */
+export const MOZEM_MARKS = {
+    go: 'M5 12.5l4.5 4.5L19 7.5',
+    cheap: 'M5 12.5l4.5 4.5L19 7.5',
+    wait: 'M12 6v6l3.5 2',
+    no: 'M6 6l12 12M18 6L6 18',
+    unk: 'M9.2 9a2.9 2.9 0 1 1 3.8 2.8c-.6.3-1 .9-1 1.6v.6M12 17.2v.3',
+};
+
 /** Ikony riadkov v prehľade elektrárne (karta Nastavenie). */
 export const SETUP_ICONS = {
     poloha: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0112 2.5a7 7 0 017 7C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
