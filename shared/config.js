@@ -355,6 +355,25 @@ export const DEVICES = [
     { name: 'Bojler', powerKw: 2, cheapGrid: true, weakDay: true },
 ];
 
+/**
+ * Karta Môžem?: veci, na ktoré sa rodina pýta. Spotrebič (`device`) berie z DEVICES príkon
+ * a pravidlá; `runMin` a `runKwh` sú typický program - podľa nich karta radí, dokedy ho pustiť,
+ * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania. Veci bez
+ * spotrebiča (`device: null`) sú od slnka nezávislé - berú málo alebo krátko.
+ * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null }>}
+ */
+export const MOZEM_ITEMS = [
+    { id: 'pracka', device: 'Práčka', runMin: 120, runKwh: 1 },
+    { id: 'umyvacka', device: 'Umývačka', runMin: 150, runKwh: 1.1 },
+    { id: 'susicka', device: 'Sušička', runMin: 90, runKwh: 2.2 },
+    { id: 'auto', device: 'Auto', runMin: null, runKwh: null },
+    { id: 'hranie', device: null, runMin: null, runKwh: null },
+    { id: 'fen', device: null, runMin: null, runKwh: null },
+];
+
+/** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
+export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
+
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';

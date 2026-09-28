@@ -1,6 +1,7 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
-import { fmt1, hourLabel, weekDayLabel } from './format.js';
+import { EVERYDAY } from './config.js';
+import { fmt1, fmt2, hourLabel, minutesToTimeStr, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -197,6 +198,252 @@ export function weekMessage(days) {
         body += ` Najslabšie bude ${weekDayLabel(worst.date, days.indexOf(worst)).toLowerCase()} (${fmt1(worst.kwhTotal)} kWh).`;
     }
     return { title: `Najsilnejší deň: ${bestLabel}`, body };
+}
+
+// ---- Karta Môžem? -----------------------------------------------------------------
+// Tón je zámerne suchý, nie roztomilý: čítajú ho najmä tínedžeri (návrh C
+// v docs/navrhy/karta-mozem.html). Veľké slovo, jedna veta, žiadne kW.
+
+/** Veľké slovo karty podľa stavu. */
+export const MOZEM_WORDS = {
+    go: 'Zapínaj.',
+    wait: 'Ešte nie.',
+    slabo: 'Slabý deň.',
+    none: 'Dnes už nie.',
+    offline: 'Neviem.',
+    loading: 'Moment.',
+};
+
+/** Hlášky pod mriežkou, striedajú sa ťuknutím. Sada podľa stavu karty. */
+export const MOZEM_QUIPS = {
+    go: [
+        'Slnko platí. Ty nie.',
+        'Strecha dnes robí viac ako ty.',
+        'Teraz je to zo strechy. Večer nie.',
+        'Svieti. Nerieš a zapni.',
+        'Najlepšie hodiny dňa. Nepremrhaj ich scrollovaním.',
+    ],
+    wait: [
+        'Daj si raňajky. Práčka počká.',
+        'Slnko sa ešte rozcvičuje. Ty môžeš tiež.',
+        'Počkať sa tu vypláca. Doslova.',
+        'Ešte chvíľu. Ako keď sa načítava hra.',
+    ],
+    none: [
+        'Slnko má padla. Zajtra zase v robote.',
+        'Noc je na spanie, nie na sušičku.',
+        'Mesiac bohužiaľ nevyrába.',
+        'Strecha spí. Nebuď ju.',
+    ],
+    slabo: ['Slnko je dnes na home office.', 'Mraky majú dnes prednosť.', 'Slabý deň. Stáva sa aj najlepším.'],
+    offline: ['Aj slnko má niekedy výpadok. Tentoraz my.', 'Bez dát len hádam. A hádať nebudem.', 'Spýtaj sa toho, kto platí elektrinu.'],
+    loading: ['Pozerám na oblohu.'],
+};
+
+/**
+ * Veci v karte Môžem?: meno, sloveso a zámeno do viet („Pusti ju o 10:30.“) a čo sa stane, keď
+ * sa zamračí. Kľúče sú id z MOZEM_ITEMS v config.js.
+ * @type {Record<string, { name: string, verb: string, pron: string, cloud: string }>}
+ */
+export const MOZEM_ITEM_TEXTS = {
+    pracka: { name: 'Práčka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie na začiatku pri ohreve vody.' },
+    umyvacka: { name: 'Umývačka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie pri ohreve vody.' },
+    susicka: { name: 'Sušička', verb: 'Pusti', pron: 'ju', cloud: 'Sušička berie prúd celý čas, zvyšok pôjde zo siete.' },
+    auto: { name: 'Auto', verb: 'Zapoj', pron: 'ho', cloud: 'Nabíja sa ďalej, len zo siete.' },
+    hranie: { name: 'Hranie', verb: '', pron: '', cloud: '' },
+    fen: { name: 'Fén', verb: '', pron: '', cloud: '' },
+};
+
+/** Veci, ktoré od slnka nezávisia: vždy OK, s vysvetlením. */
+export const MOZEM_ALWAYS = {
+    hranie: { head: 'Vždy OK.', text: 'Konzola aj PC berú menej ako chladnička. Hraj kedy chceš, to nie je otázka pre strechu.' },
+    fen: { head: 'Pokojne.', text: 'Fén berie veľa, ale len pár minút. To sú centy.' },
+};
+
+/** Bez dát o slnku nevie karta o spotrebiči nič povedať. */
+export const MOZEM_UNKNOWN = { short: 'neviem', head: 'Neviem.', text: 'Bez dát netuším, či svieti. Ak musíš, pusti to, nič sa nestane.' };
+
+/** @typedef {import('./mozem.js').DayCtx} DayCtx */
+/** @typedef {import('./mozem.js').LaterDay} LaterDay */
+/** @typedef {import('./mozem.js').Window} MozemWindow */
+
+const hm = minutesToTimeStr;
+
+/** Dĺžka programu slovami: „hodinu“, „hodinu a pol“, „2 hodiny“, „2 a pol hodiny“, „5 hodín“. @param {number} min */
+export function durationText(min) {
+    const h = Math.floor(min / 60);
+    const half = min % 60 >= 30;
+    if (h <= 1) return half && h === 1 ? 'hodinu a pol' : 'hodinu';
+    const noun = half || h < 5 ? 'hodiny' : 'hodín';
+    return half ? `${h} a pol ${noun}` : `${h} ${noun}`;
+}
+
+/** Odpočet: „2 h 20 min“, „45 min“, „3 h“. @param {number} min */
+export function countdownText(min) {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    if (!h) return `${m} min`;
+    return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** Peniaze: „0,19 €“. @param {number} value @param {string} currency */
+const money = (value, currency) => `${fmt2(value)} ${currency}`;
+
+/** Kedy iný deň: „Zajtra od 11:00“. @param {LaterDay} d */
+const laterWhen = (d) => `${d.name} od ${hm(d.start)}`;
+
+/**
+ * Veta a fakt pod veľkým slovom. Bez `data` (načítava sa, dáta nie sú) len stála veta.
+ * @param {import('./mozem.js').MozemState} state
+ * @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, live: boolean, kwNow: number,
+ *   todayKwh: number | null, tomorrowKwh: number | null } | null} data
+ * @returns {{ lead: string, factK: string, factV: string }}
+ */
+export function mozemHeroText(state, data) {
+    if (state === 'loading') return { lead: 'Pozerám na oblohu.', factK: '', factV: '' };
+    if (!data || state === 'offline')
+        return {
+            lead: 'Nemám predpoveď ani meranie. Skús o chvíľu, alebo sa spýtaj toho, kto platí elektrinu.',
+            factK: 'dáta',
+            factV: 'nedostupné',
+        };
+    if (state === 'go') return goHero(data);
+    if (state === 'wait') {
+        const { ctx, window } = data;
+        const start = window ? window.from : ctx.nowMin;
+        return {
+            lead: `Za ${countdownText(start - ctx.nowMin)} to pôjde zo strechy.${ctx.draha ? ' Teraz by si platil drahý prúd.' : ''}`,
+            factK: 'štart',
+            factV: hm(start),
+        };
+    }
+    return afterHero(state, data);
+}
+
+/**
+ * Hlavička, keď dnes slnko už nepríde: slabý deň, alebo po zmene.
+ * @param {import('./mozem.js').MozemState} state
+ * @param {{ ctx: DayCtx, nextDay: LaterDay | null, live: boolean, todayKwh: number | null, tomorrowKwh: number | null }} data
+ */
+function afterHero(state, { ctx, nextDay, live, todayKwh, tomorrowKwh }) {
+    const soon = nextDay && nextDay.index === 1 ? 'zajtra' : 'keď vyjde slnko';
+    const kwh = (/** @type {number | null} */ v) => (v === null ? '–' : `~${Math.round(v)} kWh`);
+    if (state === 'slabo')
+        return {
+            lead: `Mraky celý deň. Veľké veci radšej ${soon}.`,
+            factK: 'dnes len',
+            factV: kwh(todayKwh) + (tomorrowKwh === null ? '' : ` · zajtra ${kwh(tomorrowKwh)}`),
+        };
+    return {
+        lead: `Slnko skončilo zmenu.${ctx.cheap ? ` Auto na lacný prúd je OK, zvyšok ${soon}.` : ` Zvyšok ${soon}.`}`,
+        factK: live ? 'dnes strecha nahnala' : 'dnes podľa predpovede',
+        factV: todayKwh === null ? '–' : `${fmt1(todayKwh)} kWh`,
+    };
+}
+
+/** Hlavička, keď svieti: s meraním nabitia mobilu, bez neho priznaný odhad. @param {{ live: boolean, kwNow: number }} data */
+function goHero({ live, kwNow }) {
+    const lead = live ? 'Slnko to teraz platí za nás.' : 'Podľa predpovede teraz svieti naplno.';
+    const phones = Math.round(kwNow / EVERYDAY.phoneChargeKwh / 10) * 10;
+    return {
+        lead: `${lead} Práčka, sušička, auto, čo chceš.`,
+        factK: live ? 'strecha za hodinu nabije' : 'bez merania',
+        factV: live ? `~${phones} mobilov` : 'odhad z predpovede',
+    };
+}
+
+/**
+ * Veta pod pásom dňa.
+ * @param {import('./mozem.js').MozemState} state @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null }} data
+ */
+export function mozemStripText(state, { ctx, window, nextDay }) {
+    const next = nextDay ? ` ${laterWhen(nextDay)}.` : '';
+    if (state === 'go' && window) return `Slnko do ${hm(window.to)}. Ešte ${countdownText(window.to - ctx.nowMin)}.`;
+    if (state === 'wait' && window) return `Slnko ${hm(window.from)} – ${hm(window.to)}.${ctx.draha ? ' Teraz je drahý prúd.' : ''}`;
+    if (state === 'none' && window) return `Slnko skončilo o ${hm(window.to)}.${next}`;
+    return `Dnes slnko veľké spotrebiče neutiahne.${next}`;
+}
+
+/**
+ * Riadok veci v mriežke a jej rozbalenie: krátka odpoveď, veta, vysvetlenie a pri spotrebičoch
+ * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná.
+ * @param {{ id: string, runMin: number | null }} item @param {import('./mozem.js').Answer} a
+ * @param {{ ctx: DayCtx, cost: number | null } | null} env
+ * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string, extra: string }}
+ */
+export function mozemItemText(item, a, env) {
+    const t = MOZEM_ITEM_TEXTS[item.id];
+    const base = { name: t.name, extra: '' };
+    if (a.kind === 'always') return { ...base, tone: 'go', short: 'vždy OK', ...MOZEM_ALWAYS[/** @type {'hranie' | 'fen'} */ (item.id)] };
+    if (a.kind === 'unk' || !env) return { ...base, tone: 'unk', ...MOZEM_UNKNOWN };
+    const isAuto = item.runMin === null;
+    const cost = env.cost === null ? '' : `${isAuto ? 'Hodina nabíjania' : 'Stojí to'} ~${money(env.cost, env.ctx.currency)}.`;
+    if (a.kind === 'go')
+        return { ...base, tone: 'go', ...goItem(t, a, item.runMin, env.ctx), extra: `Mrak? ${t.cloud}${cost ? ` ${cost}` : ''}` };
+    const now = cost || 'Pôjde to zo siete.';
+    if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, isAuto, env.ctx.draha), extra: `Musíš hneď? ${now}` };
+    if (a.kind === 'cheap')
+        return {
+            ...base,
+            tone: 'cheap',
+            short: 'lacno',
+            head: `${t.verb} ${t.pron}, prúd je lacný.`,
+            text: 'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+            extra: a.next ? `${laterWhen(a.next)} by to išlo zo strechy.` : '',
+        };
+    return { ...base, ...laterItem(a), extra: `Nepočká to? ${now}` };
+}
+
+/** Slnko príde ešte dnes. @param {{ verb: string, pron: string }} t @param {number} start @param {boolean} isAuto @param {boolean} draha */
+function waitItem(t, start, isAuto, draha) {
+    return {
+        tone: /** @type {const} */ ('wait'),
+        short: `o ${hm(start)}`,
+        head: `${t.verb} ${t.pron} o ${hm(start)}.`,
+        text: isAuto
+            ? `Na auto treba silné slnko a to bude o ${hm(start)}.`
+            : `Teraz by to išlo zo siete${draha ? ' a tá je práve drahá' : ''}. O ${hm(start)} to utiahne strecha.`,
+    };
+}
+
+/** Rozbalenie, keď svieti. @param {{ verb: string, pron: string }} t
+ * @param {{ end: number, until: number, km: number | null }} a @param {number | null} runMin @param {DayCtx} ctx */
+function goItem(t, a, runMin, ctx) {
+    if (runMin === null)
+        return {
+            short: `do ${hm(a.end)}`,
+            head: `${t.verb} ${t.pron}.`,
+            text: a.km ? `Do ${hm(a.end)} chytí zo slnka asi ${a.km} km.` : 'Slnko ho aspoň trochu nabije.',
+        };
+    if (a.until > ctx.nowMin)
+        return {
+            short: `do ${hm(a.until)}`,
+            head: `${t.verb} ${t.pron} do ${hm(a.until)}.`,
+            text: `Program má ${durationText(runMin)}, takto dobehne celý na slnku.`,
+        };
+    return {
+        short: 'teraz',
+        head: `${t.verb} ${t.pron} hneď.`,
+        text: `Program má ${durationText(runMin)} a slnko vydrží do ${hm(a.end)}. Koniec pôjde zo siete.`,
+    };
+}
+
+/** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem.js').Answer} a */
+function laterItem(a) {
+    if (a.kind !== 'later')
+        return {
+            tone: /** @type {const} */ ('no'),
+            short: 'tento týždeň nie',
+            head: 'Tento týždeň nie.',
+            text: 'Slnko na to podľa predpovede tento týždeň nestačí.',
+        };
+    const { day } = a;
+    return {
+        tone: /** @type {'wait' | 'no'} */ (day.index === 1 ? 'wait' : 'no'),
+        short: day.index === 1 ? `zajtra ${hm(day.start)}` : day.name.toLowerCase(),
+        head: `${laterWhen(day)}.`,
+        text: `Dnes to už slnko neutiahne.${a.weakSkipped ? ' Kým nebude poriadne slnko, radšej počkaj.' : ''}`,
+    };
 }
 
 export const EMPTY_MESSAGES = {

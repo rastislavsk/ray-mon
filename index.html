@@ -64,6 +64,15 @@
             </div>
             <nav class="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
+                    <!-- Karta Môžem? (návrh C v docs/navrhy/karta-mozem.html). Kým ju skript nepozná,
+                         je tlačidlo skryté - pridáva sa v dvoch nasadeniach (viď CLAUDE.md). -->
+                    <button id="nav-mozem" class="nav-item hidden" type="button" data-panel="mozem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M7.8 12.4l2.9 2.9 5.5-5.8" />
+                        </svg>
+                        <span class="lbl">Môžem?</span>
+                    </button>
                     <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
                         <span class="lbl">Terazky</span>
@@ -91,6 +100,15 @@
         </header>
 
         <main class="page" id="page">
+            <!-- PANEL: MÔŽEM? -->
+            <!-- Jednoduchá odpoveď pre celú rodinu: môžem teraz zapnúť práčku, a keď nie, kedy
+                 (návrh C v docs/navrhy/karta-mozem.html). Obsah si celý skladá render do #mozem-body,
+                 v HTML je len nosič - ako pri karte Štatistika. -->
+            <section id="panel-mozem" class="panel hidden" aria-labelledby="mozem-title">
+                <h2 class="sr-only" id="mozem-title">Môžem?</h2>
+                <div class="mozem" id="mozem-body"></div>
+            </section>
+
             <!-- PANEL: TERAZKY -->
             <section id="panel-terazky" class="panel panel-terazky" aria-labelledby="verdict-headline">
                 <div class="dial-hero card" id="dial-hero">

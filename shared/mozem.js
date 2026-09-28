@@ -1,0 +1,250 @@
+// Karta Môžem?: jednoduchá odpoveď pre celú rodinu - môžem teraz zapnúť práčku, a keď nie,
+// tak kedy. Čisté funkcie bez DOM. Stojí na pláne dňa (shared/day-plan.js), takže „áno“ tu
+// je tá istá zelená ako na dennom prstenci ciferníka; ďalšie dni berie z predpovede.
+// Texty skladá shared/messages.js, tu sa len počíta.
+
+import { DEVICES, EVERYDAY, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { HOUR_RANGE } from './chart-model.js';
+import { dayPlan } from './day-plan.js';
+import { weekDayName } from './format.js';
+import { mozemHeroText, mozemItemText, mozemStripText, MOZEM_QUIPS, MOZEM_WORDS } from './messages.js';
+import { localDateKey, localMinutes, sunUp } from './solar.js';
+import { bandAt, scheduleFor } from './tariff.js';
+
+/** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
+/** @typedef {import('./day-plan.js').PlanInput} PlanInput */
+/** @typedef {{ from: number, to: number }} Window úsek dňa v minútach od polnoci, `to` je bez neho */
+/** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading'} MozemState */
+/**
+ * Najbližší iný deň, keď slnko stačí: meno pre text („Zajtra“, „Pondelok“), poradie v predpovedi
+ * (1 = zajtra) a kedy začína.
+ * @typedef {{ name: string, index: number, start: number }} LaterDay
+ */
+/**
+ * Odpoveď pre jednu vec. `cost` je cena behu zo siete teraz (pri aute hodina nabíjania), null
+ * bez ceny v tarife.
+ * @typedef {{ kind: 'go', end: number, until: number, km: number | null }
+ *   | { kind: 'wait', start: number }
+ *   | { kind: 'cheap', next: LaterDay | null }
+ *   | { kind: 'later', day: LaterDay, weakSkipped: boolean }
+ *   | { kind: 'none' } | { kind: 'unk' } | { kind: 'always' }} Answer
+ */
+/**
+ * Čo o dni vie celá karta - vstup pre texty.
+ * @typedef {{ nowMin: number, plan: PlanSlot[], th: import('./config.js').PowerThresholds, draha: boolean,
+ *   cheap: boolean, price: number | null, currency: string, weakToday: boolean,
+ *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }> }} DayCtx
+ */
+
+const SLOT_H = TARIFF_LIMITS.stepMin / 60;
+
+/**
+ * Súvislé úseky plánu dňa, v ktorých platí podmienka.
+ * @param {PlanSlot[]} plan @param {(s: PlanSlot) => boolean} ok @returns {Window[]}
+ */
+export function planWindows(plan, ok) {
+    /** @type {Window[]} */ const out = [];
+    for (const s of plan) {
+        if (!ok(s)) continue;
+        const last = out[out.length - 1];
+        if (last && last.to === s.startMin) last.to += s.min;
+        else out.push({ from: s.startMin, to: s.startMin + s.min });
+    }
+    return out;
+}
+
+/**
+ * Kedy iný deň slnko stačí: od prvej po poslednú hodinu predpovede nad hranicou výkonu.
+ * @param {import('./solar.js').ForecastDay} day @param {number} minKw @returns {Window | null}
+ */
+export function dayWindow(day, minKw) {
+    const hours = day.hourly.filter((p) => p.kw >= minKw).map((p) => p.hour);
+    return hours.length ? { from: Math.min(...hours) * 60, to: Math.max(...hours) * 60 } : null;
+}
+
+/** Spotrebič z DEVICES k veci karty. @param {string | null} name */
+const deviceOf = (name) => DEVICES.find((d) => d.name === name) || null;
+
+/**
+ * Najbližší iný deň, keď slnko spotrebič pokryje. Slabý deň preskočí spotrebiče, ktoré sa
+ * v slabý deň neodporúčajú (weakDay v DEVICES) - rovnako ako deviceStates.
+ * @param {DayCtx} ctx @param {number} minKw @param {boolean} weakOk
+ * @returns {{ day: LaterDay | null, weakSkipped: boolean }}
+ */
+function laterDay(ctx, minKw, weakOk) {
+    let weakSkipped = false;
+    for (const { day, index } of ctx.later) {
+        if (!weakOk && day.peakKw < ctx.th.weakPeakKw) {
+            weakSkipped = true;
+            continue;
+        }
+        const w = dayWindow(day, minKw);
+        if (w) return { day: { name: weekDayName(day.date, index), index, start: w.from }, weakSkipped };
+    }
+    return { day: null, weakSkipped };
+}
+
+/**
+ * Koľko km auto chytí zo slnka od teraz do konca okna: výkon plánu, najviac príkon nabíjačky.
+ * @param {DayCtx} ctx @param {number} end @param {number} powerKw
+ */
+function kmFromSun(ctx, end, powerKw) {
+    const kwh = ctx.plan
+        .filter((s) => s.startMin + s.min > ctx.nowMin && s.startMin < end && Number.isFinite(s.kw))
+        .reduce((sum, s) => sum + Math.min(s.kw, powerKw) * SLOT_H, 0);
+    return Math.floor((kwh * EVERYDAY.evKmPerKwh) / 10) * 10;
+}
+
+/**
+ * Odpoveď pre spotrebič: teraz áno, neskôr dnes, lacno zo siete, iný deň, alebo nie.
+ * Neskoršie slnko ešte dnes vyhrá nad lacnou sieťou - teraz by sa platilo, potom nie.
+ * @param {(typeof MOZEM_ITEMS)[number]} item @param {DayCtx} ctx @returns {Answer}
+ */
+export function itemAnswer(item, ctx) {
+    const device = deviceOf(item.device);
+    if (!device) return { kind: 'always' };
+    const minKw = item.runMin === null ? ctx.th.highKw : ctx.th.lowKw;
+    const usable = device.weakDay || !ctx.weakToday;
+    const today = usable ? todayAnswer(item, device.powerKw, minKw, ctx) : null;
+    if (today) return today;
+    const later = laterDay(ctx, minKw, device.weakDay);
+    if (device.cheapGrid && ctx.cheap) return { kind: 'cheap', next: later.day };
+    return later.day ? { kind: 'later', day: later.day, weakSkipped: later.weakSkipped || !usable } : { kind: 'none' };
+}
+
+/**
+ * Odpoveď z dnešného plánu: slnko stačí teraz, alebo príde ešte dnes. Inak null.
+ * @param {(typeof MOZEM_ITEMS)[number]} item @param {number} powerKw @param {number} minKw @param {DayCtx} ctx
+ * @returns {Answer | null}
+ */
+function todayAnswer(item, powerKw, minKw, ctx) {
+    const windows = planWindows(ctx.plan, (s) => Number.isFinite(s.kw) && s.kw >= minKw);
+    const cur = windows.find((w) => w.from <= ctx.nowMin && ctx.nowMin < w.to);
+    if (cur) {
+        if (item.runMin === null) return { kind: 'go', end: cur.to, until: cur.to, km: kmFromSun(ctx, cur.to, powerKw) };
+        return { kind: 'go', end: cur.to, until: cur.to - item.runMin, km: null };
+    }
+    const next = windows.find((w) => w.from > ctx.nowMin);
+    return next ? { kind: 'wait', start: next.from } : null;
+}
+
+/** Cena behu zo siete teraz, alebo null bez ceny. @param {(typeof MOZEM_ITEMS)[number]} item @param {DayCtx} ctx */
+export function itemCost(item, ctx) {
+    const device = deviceOf(item.device);
+    if (!device || ctx.price === null) return null;
+    return (item.runKwh ?? device.powerKw) * ctx.price;
+}
+
+/**
+ * Poloha úseku a značky „teraz“ na páse dňa v percentách jeho šírky. Pás je produkčné okno
+ * grafov (HOUR_RANGE), aby hovoril o tých istých hodinách ako karta 7 dní.
+ * @param {Window | null} w @param {number} nowMin
+ */
+export function stripGeometry(w, nowMin) {
+    const a = HOUR_RANGE.min * 60;
+    const b = HOUR_RANGE.max * 60;
+    const pct = (/** @type {number} */ m) => Math.round(Math.max(0, Math.min(1, (m - a) / (b - a))) * 1000) / 10;
+    return { left: w ? pct(w.from) : 0, width: w ? Math.round((pct(w.to) - pct(w.from)) * 10) / 10 : 0, now: pct(nowMin) };
+}
+
+/** Deň od epochy - hláška sa tak mení každý deň aj bez ťukania. @param {string} dateKey */
+const dayNumber = (dateKey) => Math.round(Date.parse(`${dateKey}T00:00:00Z`) / 86400000);
+
+/**
+ * Stav celej karty: zelená teraz, slnko príde ešte dnes, dnes vôbec (slabý deň), už nie.
+ * @param {Window[]} windows @param {number} nowMin @param {boolean} sun
+ * @returns {{ state: MozemState, window: Window | null }}
+ */
+function dayState(windows, nowMin, sun) {
+    const cur = windows.find((w) => w.from <= nowMin && nowMin < w.to);
+    if (cur) return { state: 'go', window: cur };
+    const next = windows.find((w) => w.from > nowMin);
+    if (next) return { state: 'wait', window: next };
+    const last = windows.filter((w) => w.to <= nowMin).pop() || null;
+    return { state: !last && sun ? 'slabo' : 'none', window: last };
+}
+
+/**
+ * Kontext dňa pre odpovede a texty.
+ * @param {PlanInput} input @returns {DayCtx}
+ */
+function dayCtx(input) {
+    const { now, site, tariff, forecast } = input;
+    const nowMin = localMinutes(now, site.timezone);
+    const today = localDateKey(now, site.timezone);
+    const band = bandAt(tariff, scheduleFor(tariff, today), nowMin);
+    const days = forecast ? forecast.days : [];
+    const th = powerThresholds(input.plant);
+    return {
+        nowMin,
+        plan: dayPlan(input),
+        th,
+        draha: band.level === 'draha',
+        cheap: band.level === 'lacna',
+        price: band.price,
+        currency: tariff.currency,
+        weakToday: !!days[0] && days[0].date === today && days[0].peakKw < th.weakPeakKw,
+        later: days.map((day, index) => ({ day, index })).filter((x) => x.day.date > today),
+    };
+}
+
+/** Karta bez predpovede: načítava sa, alebo dáta nie sú. @param {PlanInput & { loading: boolean }} input @param {number} turn */
+function emptyModel(input, turn) {
+    /** @type {MozemState} */ const state = input.loading ? 'loading' : 'offline';
+    return {
+        state,
+        word: MOZEM_WORDS[state],
+        hero: mozemHeroText(state, null),
+        strip: null,
+        items: MOZEM_ITEMS.map((item) => ({
+            id: item.id,
+            ...mozemItemText(item, deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' }, null),
+        })),
+        quip: pick(MOZEM_QUIPS[state], turn),
+    };
+}
+
+/** @template T @param {T[]} list @param {number} i */
+const pick = (list, i) => list[((i % list.length) + list.length) % list.length];
+
+/**
+ * Model karty Môžem?. `quipTurn` je koľkokrát človek ťukol na hlášku - pripočíta sa k číslu dňa.
+ * @param {PlanInput & { loading: boolean }} input @param {number} [quipTurn]
+ */
+export function mozemModel(input, quipTurn = 0) {
+    if (!input.forecast) return emptyModel(input, quipTurn);
+    const ctx = dayCtx(input);
+    const general = planWindows(ctx.plan, (s) => s.tier === 'green');
+    const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
+    const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
+    const facts = heroFacts(input, ctx);
+    return {
+        state,
+        word: MOZEM_WORDS[state],
+        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts }),
+        strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
+        items: MOZEM_ITEMS.map((item) => ({
+            id: item.id,
+            ...mozemItemText(item, itemAnswer(item, ctx), { ctx, cost: itemCost(item, ctx) }),
+        })),
+        quip: pick(MOZEM_QUIPS[state], dayNumber(localDateKey(input.now, input.site.timezone)) + quipTurn),
+    };
+}
+
+/**
+ * Čísla do hlavičky: výkon teraz (živý, inak z plánu), či je meranie, a výroba dnes a zajtra.
+ * @param {PlanInput} input @param {DayCtx} ctx
+ */
+function heroFacts(input, ctx) {
+    const { pv, forecast } = input;
+    const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
+    const live = pv && Number.isFinite(pv.realTimePowerKw) ? /** @type {number} */ (pv.realTimePowerKw) : null;
+    const days = forecast ? forecast.days : [];
+    const tomorrow = ctx.later.find((x) => x.index === 1);
+    return {
+        live: live !== null,
+        kwNow: live ?? (slot && Number.isFinite(slot.kw) ? slot.kw : 0),
+        todayKwh: pv && Number.isFinite(pv.dailyEnergyKwh) ? /** @type {number} */ (pv.dailyEnergyKwh) : (days[0]?.kwhTotal ?? null),
+        tomorrowKwh: tomorrow ? tomorrow.day.kwhTotal : null,
+    };
+}
