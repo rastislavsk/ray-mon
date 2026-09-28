@@ -97,8 +97,8 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
-        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna) a koľkokrát človek ťukol
-        // na hlášku. Obe sú nastavenie vnútri karty, nie krok navigácie.
+        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna) a stránka v páse hlášok
+        // (0 = hláška dňa). Obe sú nastavenie vnútri karty, nie krok navigácie.
         mozemOpen: /** @type {string | null} */ (null),
         mozemQuip: 0,
         // Zápisy „Pustil/a som“ z tohto telefónu (web/settings-store.js). Načítajú sa pri štarte.

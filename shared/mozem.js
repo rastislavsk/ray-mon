@@ -198,8 +198,8 @@ function dayCtx(input) {
     };
 }
 
-/** Karta bez predpovede: načítava sa, alebo dáta nie sú. @param {PlanInput & { loading: boolean }} input @param {number} turn */
-function emptyModel(input, turn) {
+/** Karta bez predpovede: načítava sa, alebo dáta nie sú. @param {PlanInput & { loading: boolean }} input @param {number} page */
+function emptyModel(input, page) {
     /** @type {MozemState} */ const state = input.loading ? 'loading' : 'offline';
     return {
         state,
@@ -210,7 +210,7 @@ function emptyModel(input, turn) {
             id: item.id,
             ...mozemItemText(item, deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' }, null),
         })),
-        quip: pick(MOZEM_QUIPS[state], turn),
+        ...quipsOf(state, 0, page),
     };
 }
 
@@ -218,13 +218,26 @@ function emptyModel(input, turn) {
 const pick = (list, i) => list[((i % list.length) + list.length) % list.length];
 
 /**
- * Model karty Môžem?. `quipTurn` je koľkokrát človek ťukol na hlášku - pripočíta sa k číslu dňa,
+ * Hlášky stavu ako pás na listovanie: sada otočená tak, že prvá je hláška dňa, a stránka, na
+ * ktorej človek stojí (`quipPage`), s jej textom (`quip`).
+ * @param {MozemState} state @param {number} day číslo dňa, podľa neho sa hlášky striedajú
+ * @param {number} page stránka zo stavu appky; mimo sady sa točí dokola
+ */
+function quipsOf(state, day, page) {
+    const set = MOZEM_QUIPS[state];
+    const quips = set.map((_, i) => pick(set, day + i));
+    const quipPage = ((page % quips.length) + quips.length) % quips.length;
+    return { quips, quipPage, quip: quips[quipPage] };
+}
+
+/**
+ * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
  * `launches` zápisy „Pustil/a som“ z tohto telefónu.
- * @param {PlanInput & { loading: boolean }} input @param {number} [quipTurn]
+ * @param {PlanInput & { loading: boolean }} input @param {number} [quipPage]
  * @param {import('./launches.js').Launch[]} [launches]
  */
-export function mozemModel(input, quipTurn = 0, launches = []) {
-    return withLaunches(baseModel(input, quipTurn), launches, input);
+export function mozemModel(input, quipPage = 0, launches = []) {
+    return withLaunches(baseModel(input, quipPage), launches, input);
 }
 
 /**
@@ -251,9 +264,9 @@ function withLaunches(m, launches, { now, site }) {
     };
 }
 
-/** @param {PlanInput & { loading: boolean }} input @param {number} quipTurn */
-function baseModel(input, quipTurn) {
-    if (!input.forecast) return emptyModel(input, quipTurn);
+/** @param {PlanInput & { loading: boolean }} input @param {number} quipPage */
+function baseModel(input, quipPage) {
+    if (!input.forecast) return emptyModel(input, quipPage);
     const ctx = dayCtx(input);
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
@@ -268,7 +281,7 @@ function baseModel(input, quipTurn) {
             id: item.id,
             ...mozemItemText(item, itemAnswer(item, ctx), { ctx, cost: itemCost(item, ctx) }),
         })),
-        quip: pick(MOZEM_QUIPS[state], dayNumber(localDateKey(input.now, input.site.timezone)) + quipTurn),
+        ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage),
     };
 }
 

@@ -35,7 +35,8 @@ const PANNABLE = /^(auto|scroll)$/;
 /** Pás, ktorý sa sám prichytáva po stránkach, je listovanie sám o sebe - gesto nad ním patrí
  * jemu aj vtedy, keď stojí na krajnej stránke a nemá kam ísť. Bez toho by ťah z poslednej
  * správy pod ciferníkom odišiel na susednú kartu. Nie je to menované miesto, ale pravidlo:
- * prichytávanie po stránkach má v štýloch jediný pás, kolotoč odporúčaní (.pager). */
+ * prichytávanie po stránkach má v štýloch len kolotoč (.pager) - odporúčania na karte Terazky
+ * a hlášky na karte Môžem?. */
 const SNAPS_X = /^(x|both)\b/;
 
 /**
