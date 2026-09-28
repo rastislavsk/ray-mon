@@ -41,6 +41,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                           |
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
 | `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.         |
+| `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.          |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                          |

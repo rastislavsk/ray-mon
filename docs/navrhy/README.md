@@ -22,6 +22,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)   |
 | `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup        |
 | `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)     |
+| `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)           |
 
 ## Prečo je to v repozitári
 

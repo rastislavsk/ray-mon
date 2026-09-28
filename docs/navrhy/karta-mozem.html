@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: karta Môžem?</title>
+        <!-- Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+     z appky, farby a rozmery sú tu vlastné. Písma berie z priečinka fonts/ v repozitári. -->
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-700-latin.woff2') format('woff2');
+                font-weight: 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            :root {
+                --bg: #0a0a0a;
+                --ink: #f2f0ea;
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --grey: #b9b6ac;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #111;
+                color: var(--ink);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.45;
+            }
+            .doc {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 40px 20px 80px;
+            }
+            .doc h1 {
+                font-size: 40px;
+                margin: 0 0 8px;
+                letter-spacing: -0.02em;
+            }
+            .doc h2 {
+                font-size: 24px;
+                margin: 48px 0 10px;
+            }
+            .doc p,
+            .doc li {
+                max-width: 760px;
+                color: rgba(242, 240, 234, 0.82);
+            }
+            .doc .app p {
+                color: inherit;
+                max-width: none;
+            }
+            .doc code {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 0.9em;
+            }
+            .variants {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 14px;
+                margin-top: 14px;
+            }
+            .variant {
+                padding: 16px;
+                border-radius: 14px;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+            }
+            .variant b {
+                display: block;
+                font-size: 17px;
+            }
+            .variant.chosen {
+                border-color: var(--green);
+            }
+            .variant span {
+                display: inline-block;
+                margin-top: 6px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 18px;
+            }
+            figure {
+                margin: 0;
+            }
+            figcaption {
+                margin-top: 10px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+                color: rgba(242, 240, 234, 0.7);
+                max-width: 390px;
+            }
+            /* ---- telefón ---- */
+            .app {
+                width: 390px;
+                height: 844px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                border-radius: 34px;
+                border: 6px solid #222;
+                background: var(--bg);
+                color: var(--ink);
+                line-height: 1.35;
+            }
+            .app button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+                text-align: left;
+            }
+            .app button:focus-visible {
+                outline: 2px solid #fff;
+                outline-offset: 2px;
+                border-radius: 10px;
+            }
+            .app svg {
+                display: block;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px 8px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+            }
+            .brand {
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                font-size: 14px;
+                color: #fff;
+            }
+            .scroll {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                padding: 6px 14px 24px;
+            }
+            .block {
+                border-radius: 28px;
+                padding: 20px 20px 18px;
+                color: #0b0b0b;
+            }
+            .kick {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                display: flex;
+                justify-content: space-between;
+            }
+            .word {
+                font-size: 82px;
+                font-weight: 700;
+                line-height: 0.86;
+                letter-spacing: -0.055em;
+                text-transform: uppercase;
+                margin: 18px 0 12px;
+            }
+            .word.long {
+                font-size: 64px;
+            }
+            .lead {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 500;
+                line-height: 1.3;
+                max-width: 320px;
+            }
+            .fact {
+                margin-top: 16px;
+                padding-top: 12px;
+                border-top: 2px solid rgba(0, 0, 0, 0.85);
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px;
+                font-weight: 600;
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .strip {
+                margin: 14px 6px 0;
+            }
+            .strip-top {
+                display: flex;
+                justify-content: space-between;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 11px;
+                color: rgba(242, 240, 234, 0.7);
+            }
+            .track {
+                position: relative;
+                height: 22px;
+                margin-top: 6px;
+                border-radius: 6px;
+                background: rgba(242, 240, 234, 0.08);
+                overflow: hidden;
+            }
+            .win {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 6px;
+            }
+            .past {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 4px, rgba(0, 0, 0, 0.2) 4px 8px);
+            }
+            .now {
+                position: absolute;
+                top: -2px;
+                bottom: -2px;
+                width: 3px;
+                margin-left: -1.5px;
+                background: #fff;
+            }
+            .strip-lbl {
+                margin-top: 6px;
+                font-size: 14px;
+                color: rgba(242, 240, 234, 0.86);
+            }
+            .lbl {
+                margin: 22px 6px 10px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: rgba(242, 240, 234, 0.6);
+                display: flex;
+                justify-content: space-between;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+            .chip {
+                display: grid;
+                grid-template-columns: 26px minmax(0, 1fr) 24px;
+                gap: 10px;
+                align-items: center;
+                min-height: 64px;
+                padding: 10px 12px !important;
+                border-radius: 18px;
+                background: #161616 !important;
+                border: 1.5px solid #262626 !important;
+            }
+            .chip.sel {
+                border-color: var(--ink) !important;
+                background: #1f1f1f !important;
+            }
+            .chip .ico svg {
+                width: 26px;
+                height: 26px;
+                stroke-width: 1.7;
+            }
+            .nm {
+                display: block;
+                font-size: 15px;
+                font-weight: 600;
+                line-height: 1.1;
+            }
+            .an {
+                display: block;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+                margin-top: 3px;
+            }
+            .mark {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #0b0b0b;
+            }
+            .mark svg {
+                width: 14px;
+                height: 14px;
+                stroke-width: 3;
+            }
+            .more {
+                grid-column: 1 / 3;
+                padding: 14px 16px;
+                border-radius: 18px;
+                background: var(--ink);
+                color: #0b0b0b;
+            }
+            .more b {
+                display: block;
+                font-size: 18px;
+                margin-bottom: 4px;
+            }
+            .more p {
+                margin: 0;
+                font-size: 15px;
+                line-height: 1.35;
+            }
+            .more .cloud {
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1.5px solid rgba(0, 0, 0, 0.2);
+                font-size: 13px;
+                font-family: 'IBM Plex Mono', monospace;
+            }
+            .did {
+                margin-top: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                min-height: 46px;
+                border-radius: 999px;
+                background: #0b0b0b !important;
+                color: var(--ink) !important;
+                font-weight: 700;
+                text-align: center !important;
+            }
+            .did.on {
+                background: transparent !important;
+                color: #0b0b0b !important;
+                border: 2px solid #0b0b0b !important;
+            }
+            .quip {
+                display: block;
+                width: 100%;
+                margin: 22px 0 0;
+                padding: 4px 6px !important;
+            }
+            .quip q {
+                display: block;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                quotes: none;
+            }
+            .quip small {
+                display: block;
+                margin-top: 6px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: rgba(242, 240, 234, 0.5);
+            }
+            .wrap {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                margin-top: 18px;
+                padding: 16px 18px !important;
+                border-radius: 22px;
+                background: linear-gradient(120deg, var(--green), var(--amber) 55%, var(--red)) !important;
+                color: #0b0b0b !important;
+                font-weight: 700;
+                font-size: 17px;
+            }
+            .wrap small {
+                display: block;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+            .nav {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                padding: 7px 0 14px;
+                border-top: 1px solid #1a1a1a;
+            }
+            .nav i {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 44px;
+                color: #878682;
+            }
+            .nav i.on {
+                color: var(--ink);
+            }
+            .nav svg {
+                width: 28px;
+                height: 28px;
+                stroke-width: 1.9;
+            }
+            /* ---- súhrn ---- */
+            .sum {
+                color: #0b0b0b;
+                background: linear-gradient(165deg, var(--green) 0%, var(--amber) 58%, var(--red) 100%);
+            }
+            .sum .top {
+                display: flex;
+                justify-content: flex-end;
+                padding: 14px 18px 0;
+            }
+            .seg {
+                display: flex;
+                gap: 4px;
+                padding: 3px;
+                border-radius: 999px;
+                background: rgba(0, 0, 0, 0.14);
+            }
+            .seg button {
+                min-height: 34px;
+                padding: 0 14px !important;
+                border-radius: 999px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .seg button.on {
+                background: #0b0b0b !important;
+                color: var(--ink) !important;
+            }
+            .sum .body {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                padding: 6px 22px 22px;
+            }
+            .big {
+                font-size: 110px;
+                font-weight: 700;
+                letter-spacing: -0.06em;
+                line-height: 0.85;
+                margin: 8px 0 0;
+            }
+            .big small {
+                font-size: 28px;
+                letter-spacing: -0.02em;
+            }
+            .viz {
+                margin-top: 14px;
+                height: 74px;
+                display: flex;
+                align-items: flex-end;
+                gap: 6px;
+            }
+            .viz span {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 10px;
+                font-weight: 700;
+            }
+            .viz i {
+                width: 100%;
+                border-radius: 6px 6px 2px 2px;
+                background: #0b0b0b;
+            }
+            .cal {
+                margin-top: 14px;
+                display: grid;
+                grid-template-columns: repeat(10, 1fr);
+                gap: 4px;
+            }
+            .cal i {
+                aspect-ratio: 1;
+                border-radius: 4px;
+                background: #0b0b0b;
+            }
+            .row {
+                display: grid;
+                grid-template-columns: 24px 1fr;
+                gap: 12px;
+                align-items: baseline;
+                padding: 10px 0;
+                border-top: 2px solid #0b0b0b;
+            }
+            .row b {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px;
+            }
+            .row span {
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+            }
+            .row small {
+                display: block;
+                font-size: 13px;
+                font-weight: 500;
+                letter-spacing: 0;
+            }
+            .share {
+                margin-top: auto;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 54px;
+                border-radius: 999px;
+                background: #0b0b0b !important;
+                color: var(--ink) !important;
+                font-weight: 700;
+                font-size: 17px;
+                text-align: center !important;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="doc">
+            <h1>Karta Môžem?</h1>
+            <p>
+                Appka je pre celú rodinu, no karta Terazky je písaná pre toho, kto sa vo fotovoltike vyzná. Ostatní potrebujú len vedieť, či
+                môžu teraz pustiť práčku, a keď nie, tak kedy. Bez appky sa pýtajú otca. Táto karta im odpovie jedným slovom.
+            </p>
+
+            <h2>Tri varianty</h2>
+            <div class="variants">
+                <div class="variant">
+                    <b>A · Odpovede so zoznamom spotrebičov</b>Veľké „Áno / Počkaj“, riadok na spotrebič, pás dňa na tri dni a rozbaľovacie
+                    otázky („čo keď sa zamračí“).<span>zamietnuté: príliš technické</span>
+                </div>
+                <div class="variant">
+                    <b>B · Stories s postavičkou slniečka</b>Príbehy ako na Instagrame, slniečko s náladou, body, séria dní, odznaky a
+                    rodinný rebríček.<span>zamietnuté: príliš detské</span>
+                </div>
+                <div class="variant chosen">
+                    <b>C · Plagát a suchý humor</b>Jedno obrie slovo na plnej farbe, veci v mriežke (aj hranie a fén), hlášky, ktoré sa
+                    striedajú, a súhrn na zdieľanie do story.<span>vybrané</span>
+                </div>
+            </div>
+
+            <h2>Varianta C – stavy dňa</h2>
+            <p>
+                Ťuknutím na vec sa otvorí vysvetlenie, ťuknutím na hlášku príde ďalšia. Čísla sú ilustračné (Dvorany, 10,44 kWp, ceny NT
+                0,14 € a VT 0,19 €). Kódovať sa má z plánu dňa v <code>shared/day-plan.js</code>, teda „áno“ je tá istá zelená ako na dennom
+                prstenci ciferníka.
+            </p>
+            <div class="phones" id="phones"></div>
+
+            <h2>Súhrn na zdieľanie</h2>
+            <p>
+                Týždeň alebo mesiac na streche v jednotkách, ktoré pozná každý: nabitia mobilu, kilometre autom, najlepší deň. „Na slnku si
+                pustil/a“ stojí na tlačidle „Pustil/a som“ v rozbalení spotrebiča. Históriu dní si musí appka ukladať sama, kiosk posiela
+                len súčty.
+            </p>
+            <div class="phones" id="sum"></div>
+        </main>
+        <script>
+            const COL = { go: '#9ef25b', wait: '#ffc24b', cheap: '#ffc24b', no: '#ff6b57', unk: '#8a8780' };
+            const GLYPH = {
+                go: 'M5 12.5l4.5 4.5L19 7.5',
+                cheap: 'M5 12.5l4.5 4.5L19 7.5',
+                wait: 'M12 6v6l3.5 2',
+                no: 'M6 6l12 12M18 6L6 18',
+                unk: 'M9.2 9a2.9 2.9 0 1 1 3.8 2.8c-.6.3-1 .9-1 1.6v.6M12 17.2v.3',
+            };
+            const ICON = {
+                pracka: 'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z',
+                umyvacka:
+                    'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7 11.5h10M8.5 11.5v6M12 11.5v6M15.5 11.5v6',
+                susicka:
+                    'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0',
+                auto: 'M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18',
+                hranie: 'M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6h-4A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM7.5 10.5v3M6 12h3M15.5 11.2h.01M17.5 13h.01',
+                fen: 'M4 7.5a4.5 4.5 0 0 1 4.5-4.5H20v9H8.5A4.5 4.5 0 0 1 4 7.5zM9 12l1.5 8.5h3L12.5 12M20 5v5',
+            };
+            const NAMES = { pracka: 'Práčka', umyvacka: 'Umývačka', susicka: 'Sušička', auto: 'Auto', hranie: 'Hranie', fen: 'Fén' };
+            const DID = { pracka: 'Pustil/a som', umyvacka: 'Pustil/a som', susicka: 'Pustil/a som', auto: 'Zapojil/a som' };
+            const HRANIE = [
+                'go',
+                'vždy OK',
+                'Vždy OK.',
+                'Konzola aj PC berú menej ako chladnička. Hraj kedy chceš, to nie je otázka pre strechu.',
+                '',
+            ];
+            const FEN = ['go', 'OK', 'Pokojne.', 'Fén berie veľa, ale len pár minút. To sú centy.', ''];
+            const QUIPS = {
+                go: [
+                    'Slnko platí. Ty nie.',
+                    'Strecha dnes robí viac ako ty.',
+                    'Teraz je to zo strechy. Večer nie.',
+                    'Svieti. Nerieš a zapni.',
+                    'Najlepšie hodiny dňa. Nepremrhaj ich scrollovaním.',
+                ],
+                wait: [
+                    'Daj si raňajky. Práčka počká.',
+                    'Slnko sa ešte rozcvičuje. Ty môžeš tiež.',
+                    'Počkať sa tu vypláca. Doslova.',
+                    'Ešte chvíľu. Ako keď sa načítava hra.',
+                ],
+                none: [
+                    'Slnko má padla. Zajtra zase v robote.',
+                    'Noc je na spanie, nie na sušičku.',
+                    'Mesiac bohužiaľ nevyrába.',
+                    'Strecha spí. Nebuď ju.',
+                ],
+                slabo: ['Slnko je dnes na home office.', 'Mraky majú dnes prednosť.', 'Slabý deň. Stáva sa aj najlepším.'],
+                offline: [
+                    'Aj slnko má niekedy výpadok. Tentoraz my.',
+                    'Bez dát len hádam. A hádať nebudem.',
+                    'Spýtaj sa toho, kto platí elektrinu.',
+                ],
+            };
+            const SCEN = [
+                {
+                    cap: '13:00, jasno – Zapínaj.',
+                    clock: '13:00',
+                    now: 780,
+                    win: [585, 990],
+                    winColor: '#9ef25b',
+                    quips: 'go',
+                    wrap: true,
+                    hero: {
+                        bg: '#9ef25b',
+                        word: 'Zapínaj.',
+                        lead: 'Slnko to teraz platí za nás. Práčka, sušička, auto, čo chceš.',
+                        factK: 'strecha za hodinu nabije',
+                        factV: '~430 mobilov',
+                    },
+                    strip: 'Slnko do 16:30. Ešte 3 h 30 min.',
+                    chips: {
+                        pracka: [
+                            'go',
+                            'do 14:30',
+                            'Pusti ju do 14:30.',
+                            'Program má 2 hodiny, takto dobehne celý na slnku.',
+                            'Mrak? Nevadí. Najviac berie na začiatku pri ohreve vody. Stojí to ~0,14 €.',
+                        ],
+                        umyvacka: [
+                            'go',
+                            'do 14:00',
+                            'Pusti ju do 14:00.',
+                            'Program má 2 a pol hodiny, takto dobehne celý na slnku.',
+                            'Mrak? Nevadí. Najviac berie pri ohreve vody. Stojí to ~0,15 €.',
+                        ],
+                        susicka: [
+                            'go',
+                            'do 15:00',
+                            'Pusti ju do 15:00.',
+                            'Program má hodinu a pol, takto dobehne celý na slnku.',
+                            'Mrak? Sušička berie prúd celý čas, zvyšok pôjde zo siete. Stojí to ~0,31 €.',
+                        ],
+                        auto: [
+                            'go',
+                            'do 15:30',
+                            'Zapoj ho.',
+                            'Do 15:30 chytí zo slnka asi 160 km.',
+                            'Mrak? Nabíja sa ďalej, len zo siete. Hodina nabíjania ~1,54 €.',
+                        ],
+                        hranie: HRANIE,
+                        fen: FEN,
+                    },
+                },
+                {
+                    cap: '8:10, slnko až o 10:30 – Ešte nie.',
+                    clock: '08:10',
+                    now: 490,
+                    win: [630, 960],
+                    winColor: '#ffc24b',
+                    quips: 'wait',
+                    wrap: true,
+                    hero: {
+                        bg: '#ffc24b',
+                        word: 'Ešte nie.',
+                        lead: 'Za 2 h 20 min to pôjde zo strechy. Teraz by si platil drahý prúd.',
+                        factK: 'štart',
+                        factV: '10:30',
+                    },
+                    strip: 'Slnko 10:30 – 16:00. Teraz je drahý prúd.',
+                    chips: {
+                        pracka: [
+                            'wait',
+                            'o 10:30',
+                            'Pusti ju o 10:30.',
+                            'Teraz by to išlo zo siete a tá je práve drahá. O 10:30 to utiahne strecha.',
+                            'Musíš hneď? Stojí to ~0,19 €.',
+                        ],
+                        umyvacka: [
+                            'wait',
+                            'o 10:30',
+                            'Pusti ju o 10:30.',
+                            'Teraz by to išlo zo siete a tá je práve drahá. O 10:30 to utiahne strecha.',
+                            'Musíš hneď? Stojí to ~0,21 €.',
+                        ],
+                        susicka: [
+                            'wait',
+                            'o 11:00',
+                            'Pusti ju o 11:00.',
+                            'Sušička potrebuje poriadne slnko a to bude až okolo jedenástej.',
+                            'Musíš hneď? Stojí to ~0,42 €.',
+                        ],
+                        auto: [
+                            'wait',
+                            'o 11:30',
+                            'Zapoj ho o 11:30.',
+                            'Na auto treba silné slnko a to bude o 11:30.',
+                            'Musíš hneď? Hodina nabíjania ~2,09 €.',
+                        ],
+                        hranie: HRANIE,
+                        fen: FEN,
+                    },
+                },
+                {
+                    cap: '19:40, po západe – Dnes už nie.',
+                    clock: '19:40',
+                    now: 1180,
+                    win: [585, 990],
+                    winColor: '#3a3a3a',
+                    quips: 'none',
+                    wrap: true,
+                    hero: {
+                        bg: '#ff6b57',
+                        word: 'Dnes už nie.',
+                        long: true,
+                        lead: 'Slnko skončilo zmenu. Auto na lacný prúd je OK, zvyšok zajtra.',
+                        factK: 'dnes strecha nahnala',
+                        factV: '38,0 kWh',
+                    },
+                    strip: 'Slnko skončilo o 16:30. Zajtra od 11:00.',
+                    chips: {
+                        pracka: [
+                            'wait',
+                            'zajtra 11:00',
+                            'Zajtra od 11:00.',
+                            'Dnes to už slnko neutiahne.',
+                            'Nepočká to? Stojí to ~0,14 €.',
+                        ],
+                        umyvacka: [
+                            'no',
+                            'pondelok',
+                            'Pondelok od 09:30.',
+                            'Dnes to už slnko neutiahne. Kým nebude poriadne slnko, radšej počkaj.',
+                            'Nepočká to? Stojí to ~0,15 €.',
+                        ],
+                        susicka: [
+                            'no',
+                            'pondelok',
+                            'Pondelok od 09:30.',
+                            'Dnes to už slnko neutiahne. Kým nebude poriadne slnko, radšej počkaj.',
+                            'Nepočká to? Stojí to ~0,31 €.',
+                        ],
+                        auto: [
+                            'cheap',
+                            'lacno',
+                            'Zapoj ho, prúd je lacný.',
+                            'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+                            'Pondelok od 10:30 by to išlo zo strechy.',
+                        ],
+                        hranie: HRANIE,
+                        fen: FEN,
+                    },
+                },
+                {
+                    cap: '12:00, mraky celý deň – Slabý deň.',
+                    clock: '12:00',
+                    now: 720,
+                    win: [0, 0],
+                    winColor: '#3a3a3a',
+                    quips: 'slabo',
+                    wrap: true,
+                    hero: {
+                        bg: '#b9b6ac',
+                        word: 'Slabý deň.',
+                        long: true,
+                        lead: 'Mraky celý deň. Veľké veci radšej zajtra.',
+                        factK: 'dnes len',
+                        factV: '~9 kWh · zajtra ~31 kWh',
+                    },
+                    strip: 'Dnes slnko veľké spotrebiče neutiahne. Zajtra od 09:30.',
+                    chips: {
+                        pracka: [
+                            'wait',
+                            'zajtra 09:30',
+                            'Zajtra od 09:30.',
+                            'Dnes to už slnko neutiahne.',
+                            'Nepočká to? Stojí to ~0,14 €.',
+                        ],
+                        umyvacka: [
+                            'wait',
+                            'zajtra 09:30',
+                            'Zajtra od 09:30.',
+                            'Dnes to už slnko neutiahne. Kým nebude poriadne slnko, radšej počkaj.',
+                            'Nepočká to? Stojí to ~0,15 €.',
+                        ],
+                        susicka: [
+                            'wait',
+                            'zajtra 10:00',
+                            'Zajtra od 10:00.',
+                            'Dnes to už slnko neutiahne. Kým nebude poriadne slnko, radšej počkaj.',
+                            'Nepočká to? Stojí to ~0,31 €.',
+                        ],
+                        auto: [
+                            'cheap',
+                            'lacno',
+                            'Zapoj ho, prúd je lacný.',
+                            'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+                            'Zajtra od 10:30 by to išlo zo strechy.',
+                        ],
+                        hranie: HRANIE,
+                        fen: FEN,
+                    },
+                },
+                {
+                    cap: 'Bez merania a bez cien – odhad, žiadne eurá.',
+                    clock: '13:00',
+                    now: 780,
+                    win: [585, 990],
+                    winColor: '#9ef25b',
+                    quips: 'go',
+                    wrap: false,
+                    hero: {
+                        bg: '#9ef25b',
+                        word: 'Zapínaj.',
+                        lead: 'Podľa predpovede teraz svieti naplno. Práčka, sušička, auto, čo chceš.',
+                        factK: 'bez merania',
+                        factV: 'odhad z predpovede',
+                    },
+                    strip: 'Slnko do 16:30. Ešte 3 h 30 min.',
+                    chips: {
+                        pracka: [
+                            'go',
+                            'do 14:30',
+                            'Pusti ju do 14:30.',
+                            'Program má 2 hodiny, takto dobehne celý na slnku.',
+                            'Mrak? Nevadí. Najviac berie na začiatku pri ohreve vody.',
+                        ],
+                        umyvacka: [
+                            'go',
+                            'do 14:00',
+                            'Pusti ju do 14:00.',
+                            'Program má 2 a pol hodiny, takto dobehne celý na slnku.',
+                            'Mrak? Nevadí. Najviac berie pri ohreve vody.',
+                        ],
+                        susicka: [
+                            'go',
+                            'do 15:00',
+                            'Pusti ju do 15:00.',
+                            'Program má hodinu a pol, takto dobehne celý na slnku.',
+                            'Mrak? Sušička berie prúd celý čas, zvyšok pôjde zo siete.',
+                        ],
+                        auto: [
+                            'go',
+                            'do 15:30',
+                            'Zapoj ho.',
+                            'Do 15:30 chytí zo slnka asi 160 km.',
+                            'Mrak? Nabíja sa ďalej, len zo siete.',
+                        ],
+                        hranie: HRANIE,
+                        fen: FEN,
+                    },
+                },
+                {
+                    cap: 'Bez dát – Neviem.',
+                    clock: '13:00',
+                    now: 780,
+                    win: null,
+                    quips: 'offline',
+                    wrap: false,
+                    hero: {
+                        bg: '#8a8780',
+                        word: 'Neviem.',
+                        lead: 'Nemám predpoveď ani meranie. Skús o chvíľu, alebo sa spýtaj toho, kto platí elektrinu.',
+                        factK: 'dáta',
+                        factV: 'nedostupné',
+                    },
+                    chips: Object.fromEntries(
+                        ['pracka', 'umyvacka', 'susicka', 'auto']
+                            .map((id) => [
+                                id,
+                                ['unk', 'neviem', 'Neviem.', 'Bez dát netuším, či svieti. Ak musíš, pusti to, nič sa nestane.', ''],
+                            ])
+                            .concat([
+                                ['hranie', HRANIE],
+                                ['fen', FEN],
+                            ]),
+                    ),
+                },
+            ];
+            const R0 = 300,
+                R1 = 1260; // produkčné okno appky, 5:00 – 21:00
+            const pct = (m) => Math.max(0, Math.min(100, ((m - R0) / (R1 - R0)) * 100));
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+            const NAV = `<nav class="nav" aria-hidden="true"><i class="on">${svg('M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18zM7.8 12.4l2.9 2.9 5.5-5.8')}</i><i>${svg('M13 2L3 14h7l-1 8 11-14h-7l1-6z')}</i><i>${svg('M5.5 4.5h13a2.5 2.5 0 0 1 2.5 2.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18V7a2.5 2.5 0 0 1 2.5-2.5zM3 9.5h18')}</i><i>${svg('M4 20v-7M9.5 20V8M15 20v-5M20.5 20V4M2 20h20')}</i><i>${svg('M4 9h14l2 7H2zM3 12.5h16M11 16v5M7.5 21h7')}</i></nav>`;
+
+            function phone(s, st) {
+                const chips = Object.entries(s.chips)
+                    .map(([id, c]) => {
+                        const open = st.sel === id,
+                            did = !!st.did[id];
+                        const more = !open
+                            ? ''
+                            : `<div class="more"><b>${esc(c[2])}</b><p>${esc(c[3])}</p>${c[4] ? `<p class="cloud">${esc(c[4])}</p>` : ''}` +
+                              (DID[id] && (c[0] === 'go' || c[0] === 'cheap')
+                                  ? `<button type="button" class="did${did ? ' on' : ''}" data-did="${id}">${did ? 'Zapísané. Ide do súhrnu.' : DID[id]}</button>`
+                                  : '') +
+                              '</div>';
+                        return (
+                            `<button type="button" class="chip${open ? ' sel' : ''}" data-sel="${id}" aria-expanded="${open}"><span class="ico">${svg(ICON[id])}</span>` +
+                            `<span><span class="nm">${NAMES[id]}</span><span class="an" style="color:${COL[c[0]]}">${did ? 'beží' : esc(c[1])}</span></span>` +
+                            `<span class="mark" style="background:${COL[c[0]]}">${svg(GLYPH[c[0]])}</span></button>${more}`
+                        );
+                    })
+                    .join('');
+                const strip = !s.strip
+                    ? ''
+                    : `<div class="strip"><div class="strip-top"><span>5:00</span><span>DNES</span><span>21:00</span></div><div class="track">` +
+                      (s.win && s.win[1] > s.win[0]
+                          ? `<i class="win" style="left:${pct(s.win[0])}%;width:${pct(s.win[1]) - pct(s.win[0])}%;background:${s.winColor}"></i>`
+                          : '') +
+                      `<i class="past" style="width:${pct(s.now)}%"></i><i class="now" style="left:${pct(s.now)}%"></i></div><div class="strip-lbl">${esc(s.strip)}</div></div>`;
+                const pool = QUIPS[s.quips];
+                return (
+                    `<div class="app"><header class="bar"><span class="brand">RAY-MON</span><span>${s.clock}</span></header><div class="scroll">` +
+                    `<section class="block" style="background:${s.hero.bg}"><div class="kick"><span>Teraz · ${s.clock}</span><span>Dvorany</span></div>` +
+                    `<div class="word${s.hero.long ? ' long' : ''}">${esc(s.hero.word)}</div><p class="lead">${esc(s.hero.lead)}</p>` +
+                    `<div class="fact"><span>${esc(s.hero.factK)}</span><span>${esc(s.hero.factV)}</span></div></section>${strip}` +
+                    `<div class="lbl"><span>Čo môžem</span><span>ťukni</span></div><div class="grid">${chips}</div>` +
+                    `<button type="button" class="quip" data-quip><q>${esc(pool[st.q % pool.length])}</q><small>ťukni pre ďalšiu</small></button>` +
+                    (s.wrap
+                        ? `<button type="button" class="wrap"><span><small>Tvoj september</small>692 kWh zo strechy. Pozri čísla.</span>${svg('M9 5l7 7-7 7')}</button>`
+                        : '') +
+                    `</div>${NAV}</div>`
+                );
+            }
+
+            const host = document.getElementById('phones');
+            SCEN.forEach((s) => {
+                const fig = document.createElement('figure');
+                const st = { sel: null, q: 0, did: {} };
+                const draw = () => {
+                    fig.innerHTML = phone(s, st) + `<figcaption>${esc(s.cap)}</figcaption>`;
+                };
+                fig.addEventListener('click', (e) => {
+                    const t = e.target.closest('[data-sel],[data-did],[data-quip]');
+                    if (!t) return;
+                    if (t.dataset.did) st.did[t.dataset.did] = !st.did[t.dataset.did];
+                    else if (t.dataset.sel) st.sel = st.sel === t.dataset.sel ? null : t.dataset.sel;
+                    else st.q++;
+                    draw();
+                });
+                draw();
+                host.append(fig);
+            });
+
+            const PER = {
+                tyzden: {
+                    kick: 'Tento týždeň na streche',
+                    kwh: '164',
+                    rows: [
+                        ['10 900 nabití mobilu', 'každý v triede by mal na mesiac'],
+                        ['980 km autom', 'Bratislava – Košice a späť'],
+                        ['Najlepší deň: štvrtok', '38 kWh za jediný deň'],
+                        ['Hodnota ~26 €', 'toľko by sme za to dali sieti'],
+                        ['Na slnku si pustil/a 5 vecí', 'Ocino 2. Len hovorím.'],
+                    ],
+                    viz: [31, 12, 22, 38, 27, 9, 25],
+                },
+                mesiac: {
+                    kick: 'September na streche',
+                    kwh: '692',
+                    rows: [
+                        ['46 100 nabití mobilu', 'celá škola na celý mesiac'],
+                        ['4 150 km autom', 'do Barcelony a späť, a ešte kúsok'],
+                        ['Najlepší deň: 10. 9.', '38 kWh, rekord mesiaca'],
+                        ['Hodnota ~111 €', 'toľko by sme za to dali sieti'],
+                        ['Na slnku si pustil/a 14 vecí', 'viac ako Ocino. Len hovorím.'],
+                    ],
+                    viz: [
+                        18, 24, 31, 29, 22, 9, 25, 30, 33, 38, 27, 14, 12, 26, 28, 31, 19, 8, 23, 29, 30, 25, 20, 17, 26, 28, 12, 21, 24,
+                        13,
+                    ],
+                },
+            };
+            const sumFig = document.createElement('figure');
+            let per = 'mesiac';
+            function drawSum() {
+                const p = PER[per];
+                const days = ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'];
+                const viz =
+                    per === 'tyzden'
+                        ? `<div class="viz">${p.viz.map((v, i) => `<span><i style="height:${Math.round((v / 38) * 58) + 2}px;opacity:${v === 38 ? 1 : 0.55}"></i>${days[i]}</span>`).join('')}</div>`
+                        : `<div class="cal">${p.viz.map((v) => `<i style="opacity:${(0.15 + (v / 38) * 0.85).toFixed(2)}"></i>`).join('')}</div>`;
+                sumFig.innerHTML =
+                    `<div class="app sum"><div class="top"><div class="seg">` +
+                    ['tyzden', 'mesiac']
+                        .map(
+                            (k) =>
+                                `<button type="button" data-per="${k}" class="${k === per ? 'on' : ''}" aria-pressed="${k === per}">${k === 'tyzden' ? 'Týždeň' : 'Mesiac'}</button>`,
+                        )
+                        .join('') +
+                    `</div></div><div class="body"><div class="kick">${p.kick}</div><div class="big">${p.kwh}<small> kWh</small></div>${viz}<div style="margin-top:14px">` +
+                    p.rows.map((r, i) => `<div class="row"><b>0${i + 1}</b><span>${r[0]}<small>${r[1]}</small></span></div>`).join('') +
+                    `</div><button type="button" class="share">Zdieľať do story</button></div></div><figcaption>Súhrn týždňa alebo mesiaca, obrázok ide cez systémové zdieľanie telefónu.</figcaption>`;
+            }
+            sumFig.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-per]');
+                if (b) {
+                    per = b.dataset.per;
+                    drawSum();
+                }
+            });
+            drawSum();
+            document.getElementById('sum').append(sumFig);
+        </script>
+    </body>
+</html>
