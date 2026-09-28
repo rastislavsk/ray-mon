@@ -32,7 +32,12 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   príde ďalšia. V rozbalení spotrebiča je tlačidlo „Pustil/a som“ (keď appka radí počkať,
   „Pustil/a som aj tak“): spustenie sa zapíše len v telefóne, pri spotrebiči sa ukáže „beží do …“
   a pod mriežkou koľko toho človek tento mesiac pustil a koľko z toho na slnku. Kým spotrebič
-  beží, druhé ťuknutie zápis zruší. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
+  beží, druhé ťuknutie zápis zruší. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
+  7 dní alebo mesiac na streche ako plagát – veľké číslo kWh, stĺpce dní (mesiac ako mriežka),
+  nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň, hodnota podľa tarify a koľko
+  toho človek pustil na slnku. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
+  systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si
+  appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
   prvá, appka sa ale otvára na karte Terazky – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa

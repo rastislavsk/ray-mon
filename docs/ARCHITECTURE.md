@@ -42,6 +42,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
 | `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.         |
 | `launches.js`    | „Pustil/a som“: zápisy spustení spotrebičov, čo práve beží a súčty za mesiac.                               |
+| `daylog.js`      | Denník výroby po dňoch pre súhrn: kontrola, zápis vyššieho súčtu, dni obdobia.                              |
+| `summary.js`     | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a spusteniach.            |
 | `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.          |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
@@ -253,6 +255,15 @@ karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 v `shared/launches.js`, model karty z nej dopočíta „beží do …“ a mesačný súčet. Je to na čestné
 slovo - kiosk vidí len výrobu, nie spotrebu, takže spustenie overiť nevie. Zápisy sú základ
 súhrnu na zdieľanie.
+
+Súhrn na zdieľanie (`shared/summary.js`) je obrazovka karty Môžem? a krok navigácie
+(`summary` v `NavStep`): Späť ho zavrie rovnako ako detail dňa. Mesačný súčet berie presne
+z kiosku, týždeň a stĺpce dní z denníka (`shared/daylog.js`), ktorý si appka vedie sama - kiosk
+dni neposiela. Denník sa dopĺňa pri každej obnove merania, vždy vyšším súčtom dňa, a až od 03:00
+miestneho času (`DAYLOG.fromMin`): tesne po polnoci môže kiosk ešte hlásiť včerajšok. Deň, keď
+appka nebola otvorená, chýba a súhrn to povie. Obrázok pre story kreslí `web/share-image.js`
+na plátno z toho istého modelu a posiela ho `navigator.share`; kde zdieľanie súborov nie je,
+obrázok sa stiahne. Nič z toho neodchádza na server.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
 Môžem?, ten, kto elektráreň platí, ciferník. Ukladá sa preto pod vlastným kľúčom

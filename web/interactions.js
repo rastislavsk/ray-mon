@@ -14,14 +14,17 @@ import {
 } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
+import { recordDay } from '../shared/daylog.js';
 import { toggleLaunch } from '../shared/launches.js';
+import { SUMMARY_PERIODS } from '../shared/summary.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
-import { saveLaunches, saveStartPanel } from './settings-store.js';
+import { saveDayLog, saveLaunches, saveStartPanel } from './settings-store.js';
+import { shareSummary } from './share-image.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -556,8 +559,25 @@ function initMozem(store, dom) {
         }
         const log = target.closest('[data-mozem-log]');
         if (log instanceof HTMLElement) return logLaunch(store, log.dataset.mozemLog || '', log.dataset.sun === '1');
-        if (target.closest('[data-mozem-quip]')) store.setState({ mozemQuip: store.get().mozemQuip + 1 });
+        if (target.closest('[data-mozem-quip]')) return store.setState({ mozemQuip: store.get().mozemQuip + 1 });
+        onSummaryClick(store, target);
     });
+}
+
+/**
+ * Súhrn na zdieľanie: otvorenie je krok navigácie, šípka späť ten istý krok ako tlačidlo Späť
+ * (backTo), obdobie je nastavenie vnútri obrazovky, zdieľanie pošle obrázok systému.
+ * @param {Store} store @param {HTMLElement} target
+ */
+function onSummaryClick(store, target) {
+    if (target.closest('[data-mozem-summary]')) return store.setState({ mozemSummary: true });
+    if (target.closest('[data-summary-back]')) return backTo(store, { mozemSummary: false });
+    const period = target.closest('[data-summary-period]');
+    if (period instanceof HTMLElement) {
+        const p = SUMMARY_PERIODS.find((x) => x === period.dataset.summaryPeriod);
+        return p && store.setState({ summaryPeriod: p });
+    }
+    if (target.closest('[data-summary-share]')) shareSummary(store.get());
 }
 
 /**
@@ -576,12 +596,14 @@ function createRefresh(store) {
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
         if (teraz.site !== site || teraz.plant !== plant || teraz.kiosk !== kiosk) return;
-        store.setState({
-            pv: nextPv(teraz.pv, result, new Date()),
-            forecast: result.forecast,
-            loading: false,
-            now: new Date(),
-        });
+        const now = new Date();
+        const pv = nextPv(teraz.pv, result, now);
+        // Denník dní pre súhrn: kiosk posiela len súčet dneška, dni si appka odkladá sama.
+        const dayLog = result.pv
+            ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
+            : teraz.dayLog;
+        if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
+        store.setState({ pv, forecast: result.forecast, loading: false, now, dayLog });
     };
     return () => {
         const { site, plant, kiosk } = store.get();

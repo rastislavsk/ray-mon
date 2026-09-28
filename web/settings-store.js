@@ -2,7 +2,8 @@
 // localStorage môže chýbať alebo hádzať (súkromné okno, zakázané úložisko) - appka potom
 // ukáže ukážku a uloženie ohlási ako neúspešné.
 
-import { LAUNCH_STORAGE_KEY, SETTINGS_STORAGE_KEY, START_PANELS, START_STORAGE_KEY } from '../shared/config.js';
+import { DAYLOG_STORAGE_KEY, LAUNCH_STORAGE_KEY, SETTINGS_STORAGE_KEY, START_PANELS, START_STORAGE_KEY } from '../shared/config.js';
+import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
 import { parseStartPanel, parseStoredSettings, shareHash, startFromLink, toUser } from '../shared/settings.js';
 import { savedSettings } from './state.js';
@@ -90,6 +91,25 @@ export function saveLaunches(list) {
 export function saveSettings(settings) {
     try {
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Denník výroby po dňoch pre súhrn; bez úložiska prázdny. @returns {import('../shared/daylog.js').DayLog} */
+export function loadDayLog() {
+    try {
+        return parseDayLog(JSON.parse(localStorage.getItem(DAYLOG_STORAGE_KEY) || '{}'));
+    } catch {
+        return {};
+    }
+}
+
+/** @param {import('../shared/daylog.js').DayLog} log @returns {boolean} podarilo sa? */
+export function saveDayLog(log) {
+    try {
+        localStorage.setItem(DAYLOG_STORAGE_KEY, JSON.stringify(log));
         return true;
     } catch {
         return false;
