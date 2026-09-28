@@ -13,12 +13,14 @@ import {
     WEEK_MSG_MIN_H,
 } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
+import { parseStartPanel } from '../shared/settings.js';
 import { localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
+import { saveStartPanel } from './settings-store.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -490,6 +492,19 @@ function initSharing(store, dom, refresh) {
         if (incoming) applySettings(store, incoming, refresh, { incoming: null, importNote: '' });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
+    // Zaškrtávatko „pre rodinu“ aj voľby prvej karty si robí render (render/zdielat.js), preto
+    // poslucháč sedí na nosiči a rozlišuje podľa data- atribútu.
+    dom.shareOptions.addEventListener('change', (e) => {
+        const t = e.target;
+        if (t instanceof HTMLInputElement && 'shareStart' in t.dataset) store.setState({ shareStart: t.checked });
+    });
+    dom.setup.addEventListener('click', (e) => {
+        const btn = /** @type {HTMLElement} */ (e.target).closest('[data-start-panel]');
+        const panel = btn instanceof HTMLElement ? parseStartPanel(btn.dataset.startPanel) : null;
+        if (!panel) return;
+        saveStartPanel(panel);
+        store.setState({ startPanel: panel });
+    });
 }
 
 /**

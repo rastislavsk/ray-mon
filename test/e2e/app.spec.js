@@ -10,6 +10,7 @@ import {
     powerThresholds,
     PREVIEW,
     SETTINGS_STORAGE_KEY,
+    START_STORAGE_KEY,
     SITE,
     SWIPE,
     TARIFF,
@@ -27,7 +28,7 @@ import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
-import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
+import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -1601,14 +1602,14 @@ test.describe('listovanie kariet prstom', () => {
      * len nad jej hornou časťou.
      */
     test('ťah v prázdnom mieste pod krátkou kartou listuje rovnako ako nad jej obsahom', async ({ page }) => {
-        await page.setViewportSize({ width: 390, height: 1200 });
+        await page.setViewportSize({ width: 390, height: 1400 });
         const errors = await openApp(page, { settings: null });
         await page.locator('#nav-nastavenie').click();
         await ocakavajKartu(page, 'nastavenie');
 
         const karta = await page.locator('#panel-nastavenie').boundingBox();
         const prazdno = { x: 195, y: karta.y + karta.height + 40, dx: 120 };
-        expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(1200 - 120);
+        expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(1400 - 120);
 
         await tahajVBode(page, prazdno);
         await ocakavajKartu(page, 'statistika');
@@ -2620,6 +2621,54 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
         await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('prvá karta tohto telefónu', () => {
+    test('voľba v Nastavení: po ďalšom otvorení appky je prvá Môžem?, adresa ju nesie', async ({ page }) => {
+        const errors = await openApp(page);
+        await ocakavajKartu(page, 'terazky');
+        await page.locator('#nav-nastavenie').click();
+        const mozem = page.locator('[data-start-panel="mozem"]');
+        await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
+        await mozem.click();
+        await expect(mozem).toHaveAttribute('aria-pressed', 'true');
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
+        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('mozem');
+
+        await page.reload();
+        await ocakavajKartu(page, 'mozem');
+        expect(await page.evaluate(() => history.state?.step?.panel)).toBe('mozem');
+        expect(errors).toEqual([]);
+    });
+
+    test('odkaz pre rodinu: telefón bez voľby sa otvorí na Môžem? a zapamätá si to', async ({ page }) => {
+        const errors = await openApp(page, { hash: '#prva=mozem' });
+        await ocakavajKartu(page, 'mozem');
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
+        expect(errors).toEqual([]);
+    });
+
+    test('odkaz pre rodinu neprepíše vlastnú voľbu telefónu', async ({ page }) => {
+        await page.addInitScript((key) => localStorage.setItem(key, 'terazky'), START_STORAGE_KEY);
+        const errors = await openApp(page, { hash: '#prva=mozem' });
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('zdieľanie: zaškrtnutie „pre rodinu“ pridá do odkazu prvú kartu', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#info-share > summary').click();
+        const wa = page.locator('#share-whatsapp');
+        const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
+        await page.locator('[data-share-start]').check();
+        expect(await shared()).toBe(shareUrl(APP_URL, null, false, 'mozem'));
+        await page.locator('#share-with-settings').check();
+        const url = await shared();
+        expect(startFromLink(url)).toBe('mozem');
+        expect(settingsFromLink(url)).toEqual({ ...OWNER, kiosk: '' });
         expect(errors).toEqual([]);
     });
 });

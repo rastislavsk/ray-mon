@@ -39,6 +39,8 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   importNote: string,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
+ *   shareStart: boolean,
+ *   startPanel: import('../shared/settings.js').StartPanel,
  *   setupStep: SetupStep | null,
  *   setupRoof: number,
  *   setupReturn: 'suhrn' | 'prehlad' | null,
@@ -61,14 +63,16 @@ import { INFO_ITEMS, PANELS } from './dom.js';
 /**
  * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
  * @param {{ settings: import('../shared/settings.js').Settings, demo: boolean,
- *   incoming?: import('../shared/settings.js').Settings | null }} start uložené nastavenie (alebo ukážka,
- *   vtedy `demo`) a nastavenie z odkazu, ktoré appka ponúkne prevziať
+ *   incoming?: import('../shared/settings.js').Settings | null,
+ *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie (alebo ukážka,
+ *   vtedy `demo`), nastavenie z odkazu, ktoré appka ponúkne prevziať, a karta, na ktorej sa
+ *   appka na tomto telefóne otvára
  * @returns {AppState}
  */
-export function initialState(now, layout, { settings, demo, incoming = null }) {
+export function initialState(now, layout, { settings, demo, incoming = null, startPanel = 'terazky' }) {
     return {
         now,
-        panel: 'terazky',
+        panel: startPanel,
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
         panelDir: 1,
@@ -126,6 +130,10 @@ export function initialState(now, layout, { settings, demo, incoming = null }) {
         // Čo pribaliť k zdieľanému odkazu na appku.
         shareSettings: false,
         shareKiosk: false,
+        // Pribaliť k odkazu aj to, že sa má appka otvárať na karte Môžem? (odkaz pre rodinu).
+        shareStart: false,
+        // Karta, na ktorej sa appka na tomto telefóne otvára (voľba v karte Nastavenie).
+        startPanel,
         // Sprievodca nastavením elektrárne v karte Nastavenie: otvorená obrazovka (null = karta
         // ukazuje prehľad) a plocha panelov, ktorej sa týka. Oboje je krok navigácie, takže
         // tlačidlo Späť na telefóne vracia o obrazovku sprievodcu.

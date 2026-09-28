@@ -30,7 +30,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   08:00“, „lacno“). Ťuknutie na vec ju rozbalí: čo robiť, prečo, a čo keď sa zamračí alebo to
   treba hneď – s cenou zo siete, keď ju tarifa pozná. Dole hláška so suchým humorom, ťuknutím
   príde ďalšia. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
-  prvá, appka sa ale otvára na karte Terazky.
+  prvá, appka sa ale otvára na karte Terazky – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
   a prípadne čas, kedy bude lepšie. Listuje sa potiahnutím do strán alebo klikom na bodky;
@@ -74,6 +74,9 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   prehľad elektrárne: karta s menom, celkovým výkonom, zostavou a kompasom plôch a pod ňou
   riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo Späť na telefóne
   vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
+  Blok **Tento telefón** určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to
+  voľba telefónu, nie elektrárne, a ukladá sa zvlášť. Pri zdieľaní appky sa dá zaškrtnúť „pre
+  rodinu“ – kto odkaz otvorí a vlastnú voľbu ešte nemá, tomu sa appka otvorí na karte Môžem?.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). **Ako čítať ciferník**:
   návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
   (vonkajší prstenec s cenou a slnkom, značka „teraz“, vnútorný oblúk výkonu,

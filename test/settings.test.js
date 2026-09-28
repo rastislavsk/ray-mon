@@ -230,3 +230,19 @@ test('tarifa: uloží sa aj s cenami, staré nastavenie bez nej dostane tarifu D
     assert.equal(parseStoredSettings(bad), null);
     assert.ok(checkSettings({ ...DVORANY, tariff: { ...TARIFF, currency: '' } }).errors.some((e) => /Mena/.test(e)));
 });
+
+test('prvá karta: v odkaze len keď nie je predvolená, s nastavením aj bez neho', async () => {
+    const { parseStartPanel, shareHash, shareUrl, settingsFromLink, startFromLink } = await import('../shared/settings.js');
+    assert.equal(shareHash(null, true, 'terazky'), '', 'predvolená karta sa do adresy nepíše');
+    assert.equal(shareHash(null, true, 'mozem'), '#prva=mozem');
+    const url = shareUrl('https://x.test/', DVORANY, true, 'mozem');
+    assert.match(url, /^https:\/\/x\.test\/#nastavenie=[\w-]+&prva=mozem$/);
+    assert.deepEqual(settingsFromLink(url), DVORANY, 'nastavenie sa z odkazu s prvou kartou prečíta rovnako');
+    assert.equal(startFromLink(url), 'mozem');
+    assert.equal(startFromLink('#prva=mozem'), 'mozem');
+    assert.equal(startFromLink('#nastavenie=abc'), null);
+    assert.equal(startFromLink('#prva=hacker'), null, 'neznáma karta sa ignoruje');
+    assert.equal(startFromLink(''), null);
+    assert.equal(parseStartPanel('terazky'), 'terazky');
+    assert.equal(parseStartPanel(null), null);
+});
