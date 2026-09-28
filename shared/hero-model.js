@@ -42,7 +42,7 @@ function powerFor(state, live, minutes, nowMinutes) {
  * Mlčanie krivky je chyba, len keď slnko svietilo celé okno STALE_PV_MS; inak je večer
  * a noc bez merania normálne. Bez bodu krivky zostáva čas stiahnutia.
  * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site }} state
- * @returns {{ label: string, stale: boolean }}
+ * @returns {{ label: string, time: string, stale: boolean }}
  */
 export function pvFreshness({ now, pv, site }) {
     const nowMinutes = localMinutes(now, site.timezone);
@@ -52,13 +52,25 @@ export function pvFreshness({ now, pv, site }) {
     const windowStart = new Date(now.getTime() - STALE_PV_MS);
     const sunUp = solarPosition(windowStart, site.lat, site.lon).elevationDeg > STALE_PV_SUN_DEG;
     const silent = sunUp && (measured === null || (nowMinutes - measured) * 60000 > STALE_PV_MS);
+    const time = minutesToTimeStr(measured === null ? localMinutes(updated, site.timezone) : measured);
     return {
-        label:
-            measured === null
-                ? `aktualizované ${minutesToTimeStr(localMinutes(updated, site.timezone))}`
-                : `meranie ${minutesToTimeStr(measured)}`,
+        label: measured === null ? `aktualizované ${time}` : `meranie ${time}`,
+        time,
         stale: fetchStale || silent,
     };
+}
+
+/**
+ * Stav živého merania do riadku v Nastavení: bodka (tone) a krátky text. Bez kiosku null -
+ * kto meranie nechce, tomu nič nechýba.
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, kiosk: string, loading: boolean }} state
+ * @returns {{ tone: 'ok' | 'stale' | 'off' | 'wait', text: string } | null}
+ */
+export function liveStatus({ now, pv, site, kiosk, loading }) {
+    if (!kiosk) return null;
+    if (!pv) return loading ? { tone: 'wait', text: 'pripájam…' } : { tone: 'off', text: 'nepripojené' };
+    const { time, stale } = pvFreshness({ now, pv, site });
+    return stale ? { tone: 'stale', text: `zastarané · ${time}` } : { tone: 'ok', text: `pripojené · ${time}` };
 }
 
 /** "Lepšie bude o HH:00" - len naživo, keď slnko ešte nepokrýva veľké spotrebiče a predpoveď hlási silnejšie. @param {HeroInput} state @param {boolean} sunny */

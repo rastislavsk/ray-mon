@@ -2810,6 +2810,33 @@ b {
 .sum-row .est {
     color: var(--amber);
 }
+/* Stav živého merania: bodka a čas posledného merania, farba podľa stavu. */
+.sum-live {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+    color: var(--ink-45);
+}
+.sum-live::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.sum-live.ok {
+    color: var(--green);
+}
+.sum-live.stale {
+    color: var(--amber);
+}
+.sum-live.off {
+    color: var(--red);
+}
 .sum-ico {
     flex: 0 0 auto;
     width: 34px;
