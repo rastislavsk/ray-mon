@@ -54,8 +54,10 @@ test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
     assert.equal(nextPanel('terazky', 1), '7dni');
-    assert.equal(nextPanel('7dni', 1), 'nastavenie');
+    assert.equal(nextPanel('7dni', 1), 'statistika');
+    assert.equal(nextPanel('statistika', 1), 'nastavenie');
     assert.equal(nextPanel('nastavenie', 1), null, 'za poslednou kartou už nič nie je');
+    assert.equal(nextPanel('nastavenie', -1), 'statistika');
     assert.equal(nextPanel('7dni', -1), 'terazky');
     assert.equal(nextPanel('terazky', -1), null, 'pred prvou kartou už nič nie je');
 });
@@ -74,6 +76,8 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
     assert.deepEqual(panelChange('nastavenie', '7dni'), { panel: '7dni', panelDir: -1, weekDetail: null, infoOpen: null });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
     assert.equal(panelChange('nastavenie', 'terazky').panelDir, -1);
+    assert.equal(panelChange('7dni', 'statistika').panelDir, 1);
+    assert.equal(panelChange('nastavenie', 'statistika').panelDir, -1);
 });
 
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {

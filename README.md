@@ -14,9 +14,9 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 Spodná navigácia má len ikony bez textu – mená kariet nižšie slúžia len na orientáciu
 v tomto popise.
 
-|                Terazky                 |               7 dní               |                  Nastavenie                  |
-| :------------------------------------: | :-------------------------------: | :------------------------------------------: |
-| ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
+|                Terazky                 |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
+| :------------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
+| ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
@@ -43,6 +43,15 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
+- **Štatistika** – koľko elektráreň vyrobila dnes, tento mesiac, tento rok a od spustenia
+  (prepínač obdobia, jedno veľké číslo a zvyšné obdobia v riadkoch pod ním) a akú hodnotu
+  má tá elektrina podľa tarify, teda koľko by za ňu človek zaplatil zo siete. Dnešok sa
+  oceňuje podľa pásiem z nameranej krivky, dlhšie obdobia (kiosk ich posiela len ako súčet)
+  priemernou cenou podľa toho, do ktorých pásiem padá výroba z predpovede. Koľko elektriny
+  domácnosť spotrebovala sama, appka nevie – kiosk hlási len výrobu – a karta to hovorí.
+  Súčty posiela len živé meranie; bez neho karta ukáže dnešok podľa predpovede a ponúkne
+  meranie pripojiť, bez cien ukáže len kWh a ponúkne ceny doplniť. Obe výzvy otvoria
+  rovno ten krok v Nastavení.
 - **Nastavenie** – moja elektráreň. Kým si ju človek neuloží, appka ukazuje ukážku
   vymyslenej elektrárne v Londýne a karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie

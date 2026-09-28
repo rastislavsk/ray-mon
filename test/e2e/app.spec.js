@@ -22,6 +22,8 @@ import { dayHourTiers } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { useTier } from '../../web/render/sedemdni.js';
+import { kwhText, moneyText } from '../../web/render/statistika.js';
+import { statsModel } from '../../shared/stats.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
@@ -918,7 +920,7 @@ test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ p
 test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ page }) => {
     const errors = await openApp(page);
     // Karty sa vykresľujú až po otvorení, aby test videl aj ich obsah.
-    for (const nav of ['#nav-7dni', '#nav-nastavenie', '#nav-terazky']) await page.locator(nav).click();
+    for (const nav of ['#nav-7dni', '#nav-statistika', '#nav-nastavenie', '#nav-terazky']) await page.locator(nav).click();
 
     const broken = await page.evaluate(() => {
         const out = [];
@@ -953,8 +955,11 @@ const pockajNaPrechod = (page) =>
     );
 
 test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({ page }) => {
+    // Axe prejde celú stránku raz za kartu a raz za detail dňa - pri súbežnom behu testov
+    // sa to do základného limitu 30 s nezmestí (sám beží okolo 23 s).
+    test.slow();
     await openApp(page);
-    for (const panel of ['terazky', '7dni', 'nastavenie']) {
+    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         await pockajNaPrechod(page);
         const results = await new AxeBuilder({ page }).analyze();
@@ -1042,6 +1047,7 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
     for (const [nav, panel] of [
         ['#nav-terazky', '#panel-terazky'],
         ['#nav-7dni', '#panel-7dni'],
+        ['#nav-statistika', '#panel-statistika'],
         ['#nav-nastavenie', '#panel-nastavenie'],
     ]) {
         await page.locator(nav).click();
@@ -1163,7 +1169,7 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
  */
 test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     const errors = await openApp(page);
-    for (const panel of ['terazky', '7dni', 'nastavenie']) {
+    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         await expect(page.locator(`#panel-${panel}`)).toBeVisible();
         const zamknute = await page.evaluate(() =>
@@ -1561,8 +1567,17 @@ test.describe('listovanie kariet prstom', () => {
         await swipe(page, '#dial-hero', { dx: -120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
+        await ocakavajKartu(page, 'statistika');
+        await swipe(page, '#stats-sub', { dx: -120 });
         await ocakavajKartu(page, 'nastavenie');
+
+        // Za poslednou kartou už nič nie je.
+        await swipe(page, '#setup', { dx: -120 });
+        await ocakavajKartu(page, 'nastavenie');
+
         await swipe(page, '#setup', { dx: 120 });
+        await ocakavajKartu(page, 'statistika');
+        await swipe(page, '#stats-sub', { dx: 120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
@@ -1595,7 +1610,7 @@ test.describe('listovanie kariet prstom', () => {
         expect(prazdno.y, 'prázdne miesto musí byť nad pásom navigácie').toBeLessThan(1200 - 120);
 
         await tahajVBode(page, prazdno);
-        await ocakavajKartu(page, '7dni');
+        await ocakavajKartu(page, 'statistika');
         expect(errors).toEqual([]);
     });
 
@@ -1784,7 +1799,7 @@ test.describe('listovanie kariet prstom', () => {
         // Rebríček sa nemá kam posúvať do strán, gesto teda patrí karte. Klik, ktorý by po
         // ťahu otvoril detail dňa, appka zruší.
         await swipe(page, '#week-list', { dx: -120 });
-        await ocakavajKartu(page, 'nastavenie');
+        await ocakavajKartu(page, 'statistika');
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#week-day-head')).toBeHidden();
         expect(errors).toEqual([]);
@@ -1812,7 +1827,7 @@ test.describe('listovanie kariet prstom', () => {
             expect(pretecenie, `šírka ${width}px: prehľad dní pretekal do strán`).toBeLessThanOrEqual(0);
 
             await swipe(page, '#week-list', { dx: -120 });
-            await ocakavajKartu(page, 'nastavenie');
+            await ocakavajKartu(page, 'statistika');
             expect(errors).toEqual([]);
         }
     });
@@ -2018,7 +2033,7 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
     const errors = await openApp(page);
     await page.addStyleTag({ content: `:root { --safe-top: ${SAFE_TOP}px; }` });
 
-    for (const panel of ['terazky', '7dni', 'nastavenie']) {
+    for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
         await page.locator(`#nav-${panel}`).click();
         const vrch = await page.evaluate(() => document.querySelector('.appbar-inner').getBoundingClientRect().top);
         expect(vrch, `karta ${panel}: hlavička zasahuje do stavového riadku`).toBeGreaterThanOrEqual(SAFE_TOP);
@@ -2105,7 +2120,7 @@ test.describe('moja elektráreň', () => {
 
     test('s uloženou elektrárňou výzva ukážky nie je na žiadnej karte', async ({ page }) => {
         await openApp(page);
-        for (const panel of ['terazky', '7dni', 'nastavenie']) {
+        for (const panel of ['terazky', '7dni', 'statistika', 'nastavenie']) {
             await page.locator(`#nav-${panel}`).click();
             await expect(page.locator('#demo-bar'), panel).toBeHidden();
         }
@@ -2473,6 +2488,85 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('[data-setup-az="225"]')).toHaveAttribute('aria-checked', 'true');
         await expect(page.locator('[data-setup-az="225"]')).toBeFocused();
         expect(await vazne()).toEqual([]);
+    });
+});
+
+test.describe('karta Štatistika', () => {
+    /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
+    const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
+    /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {typeof OWNER} settings @param {import('../../shared/stats.js').StatsPeriod} period */
+    const model = (settings, period) =>
+        statsModel(
+            { ...settings, now: FIXED_NOW, loading: false, pv: settings.kiosk ? pv : null, forecast: forecastAt(FIXED_NOW) },
+            period,
+        );
+
+    test('s meraním a cenami: počítadlo po obdobiach s hodnotou podľa tarify', async ({ page }) => {
+        const settings = { ...OWNER, tariff: PRICED };
+        const errors = await openApp(page, { settings });
+        await page.locator('#nav-statistika').click();
+        await ocakavajKartu(page, 'statistika');
+        await expect(page.locator('#stats-sub')).toHaveText(`${SITE.name} · ${kwpText(10.44)}`);
+
+        const dnes = model(settings, 'dnes');
+        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené dnes');
+        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(dnes.hero.kwh));
+        await expect(page.locator('.stats-eur')).toContainText(moneyText(/** @type {number} */ (dnes.hero.value), '€'));
+        await expect(page.locator('.stats-hero .progress-caption')).toContainText(`${dnes.progress?.pct} %`);
+        await expect(page.locator('.stats-row')).toHaveCount(3);
+        await expect(page.locator('.stats-go')).toHaveCount(0);
+
+        // Obdobie je nastavenie vnútri karty: prepne veľké číslo aj riadky pod ním.
+        const rok = model(settings, 'rok');
+        await page.locator('[data-stats-period="rok"]').click();
+        await expect(page.locator('[data-stats-period="rok"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené v roku 2026');
+        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(rok.hero.kwh));
+        await expect(page.locator('.stats-eur')).toContainText(moneyText(/** @type {number} */ (rok.hero.value), '€'));
+        await expect(page.locator('.stats-meta')).toContainText(`${fmt1(/** @type {number} */ (rok.hero.perDay))} kWh`);
+        await expect(page.locator('.stats-row .k')).toHaveText(['Dnes', 'September', 'Od spustenia']);
+        expect(errors).toEqual([]);
+    });
+
+    test('bez cien: len kWh a výzva, ktorá otvorí ceny v tarife; Späť vráti do Štatistiky', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(model(OWNER, 'dnes').hero.kwh));
+        await expect(page.locator('.stats-eur')).toHaveCount(0);
+
+        await page.locator('[data-stats-go="ceny"]').click();
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator('#wz-ceny')).toBeVisible();
+        await page.goBack();
+        await ocakavajKartu(page, 'statistika');
+        expect(errors).toEqual([]);
+    });
+
+    test('bez merania: dnešok podľa predpovede a výzva pripojiť meranie', async ({ page }) => {
+        const settings = { ...OWNER, tariff: PRICED, kiosk: '' };
+        const errors = await openApp(page, { settings });
+        await page.locator('#nav-statistika').click();
+        const m = model(settings, 'dnes');
+        await expect(page.locator('.stats-hero .lbl')).toHaveText('Dnes podľa predpovede');
+        await expect(page.locator('.stats-hero .num')).toHaveText(
+            fmt1(/** @type {NonNullable<typeof m.forecastToday>} */ (m.forecastToday).kwh),
+        );
+        await expect(page.locator('#stats-body .seg')).toHaveCount(0);
+
+        await page.locator('[data-stats-go="meranie"]').click();
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator('#wz-meranie')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('ukážka: jediná výzva vedie k sprievodcovi v Nastavení', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('.stats-go')).toHaveCount(1);
+        await page.locator('[data-stats-go="nastavenie"]').click();
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator('#setup-cta')).toBeVisible();
+        expect(errors).toEqual([]);
     });
 });
 
