@@ -48,10 +48,13 @@ const FOCUSABLE = 'button, a[href], input, [tabindex]';
  * istom mieste v poradí. Čítanie `activeElement` layout nepočíta, takže neplatí za neho
  * nič z toho, kvôli čomu tento modul existuje.
  * @param {Element} el @param {string} html @param {string} name
+ * @param {() => void} [beforeWrite] beží len pred naozajstným zápisom - čo treba zo starého obsahu
+ *   zachrániť (napr. posun pásu), sa tak číta len vtedy, keď sa obsah naozaj mení
  * @returns {boolean} zapísalo sa? Nové polia formulára potom treba naplniť.
  */
-export function writeHtml(el, html, name) {
+export function writeHtml(el, html, name, beforeWrite) {
     if (!changed(name, html)) return false;
+    if (beforeWrite) beforeWrite();
     const active = document.activeElement;
     const index = active && el.contains(active) ? Array.from(el.querySelectorAll(FOCUSABLE)).indexOf(active) : -1;
     el.innerHTML = html;

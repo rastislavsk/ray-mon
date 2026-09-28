@@ -8,7 +8,7 @@ import { mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
 import { MOZEM_ICONS, MOZEM_MARKS } from '../icons.js';
-import { writeHtml } from '../memo.js';
+import { changed, writeHtml } from '../memo.js';
 import { summaryHtml, summaryLinkHtml } from './suhrn.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
@@ -60,6 +60,9 @@ function itemHtml(it, open) {
  * Hlášky ako pás na listovanie - ten istý kolotoč (.pager), aký má karta Terazky pod ciferníkom.
  * Posúva a prichytáva prehliadač, ťuknutie na hlášku posunie pás na ďalšiu. Jediná hláška
  * (načítava sa) je bez bodiek a pás nemá kam ísť.
+ *
+ * Stránka v HTML nie je - ani aktívna bodka (tú prepína renderMozem triedou). Inak by každé
+ * listovanie prepísalo celý obsah karty a prepis uprostred plynulého posunu pás zastaví.
  * @param {MozemModel} m
  */
 function quipsHtml(m) {
@@ -74,7 +77,7 @@ function quipsHtml(m) {
             ? `<div class="pager-dots mozem-quip-dots">${m.quips
                   .map(
                       (_, i) =>
-                          `<button type="button" class="pager-dot${i === m.quipPage ? ' active' : ''}" data-mozem-quip-dot="${i}" aria-label="Hláška ${i + 1} z ${m.quips.length}"></button>`,
+                          `<button type="button" class="pager-dot" data-mozem-quip-dot="${i}" aria-label="Hláška ${i + 1} z ${m.quips.length}"></button>`,
                   )
                   .join('')}</div>`
             : '';
@@ -96,18 +99,30 @@ export function mozemHtml(m, open, kick) {
     );
 }
 
+/** Posun pásu hlášok v nosiči, null = pás tam nie je (súhrn, prvé vykreslenie). @param {HTMLElement} body */
+function quipScroll(body) {
+    const pager = body.querySelector('[data-mozem-quips]');
+    return pager ? pager.scrollLeft : null;
+}
+
 /**
  * Po prepísaní obsahu stojí nový pás hlášok na prvej stránke. Obsah sa prepisuje aj sám
  * od seba (hodiny v hlavičke každú minútu), takže bez tohto by hláška pod rukou odskočila
  * na hlášku dňa. Posun je okamžitý, nie plynulý - človek nemá vidieť, že sa pás vymenil.
- * @param {HTMLElement} body @param {number} page
+ *
+ * Pozíciu drží prehliadač, takže prednosť má posun starého pásu. Stránka zo stavu doň
+ * dobehne až po ustálení (PAGER_SETTLE_MS) - ťuknutie na vec hneď po listovaní by pás
+ * podľa nej vrátil späť. Stav platí len vtedy, keď starý pás nebol (návrat zo súhrnu).
+ * @param {HTMLElement} body @param {number | null} left posun starého pásu @param {number} page stránka zo stavu
  */
-function keepQuipPage(body, page) {
+function keepQuipPage(body, left, page) {
     const pager = body.querySelector('[data-mozem-quips]');
-    const pages = pager ? pager.querySelectorAll('.pager-page') : [];
+    if (!(pager instanceof HTMLElement)) return;
+    const pages = pager.querySelectorAll('.pager-page');
     const target = pages[page];
-    if (!(pager instanceof HTMLElement) || !(target instanceof HTMLElement) || !page) return;
-    pager.scrollTo({ left: target.offsetLeft - /** @type {HTMLElement} */ (pages[0]).offsetLeft, behavior: 'instant' });
+    const byState = target instanceof HTMLElement ? target.offsetLeft - /** @type {HTMLElement} */ (pages[0]).offsetLeft : 0;
+    const to = left ?? byState;
+    if (to) pager.scrollTo({ left: to, behavior: 'instant' });
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -118,5 +133,9 @@ export function renderMozem(state, dom) {
     const m = mozemModel(state, state.mozemQuip, state.launches);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     const html = mozemHtml(m, state.mozemOpen, kick) + summaryLinkHtml(summaryModel(state, 'mesiac'));
-    if (writeHtml(dom.mozemBody, html, 'mozemBody')) keepQuipPage(dom.mozemBody, m.quipPage);
+    /** @type {number | null} */ let left = null;
+    const wrote = writeHtml(dom.mozemBody, html, 'mozemBody', () => (left = quipScroll(dom.mozemBody)));
+    if (wrote) keepQuipPage(dom.mozemBody, left, m.quipPage);
+    if (wrote || changed('mozemQuipPage', m.quipPage))
+        dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]').forEach((dot, i) => dot.classList.toggle('active', i === m.quipPage));
 }
