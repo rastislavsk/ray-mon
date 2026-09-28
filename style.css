@@ -4236,10 +4236,14 @@ b {
     font-size: var(--fs-sm);
     color: var(--ink-70);
 }
+/* Hlášky sa listujú v tom istom kolotoči ako odporúčania na karte Terazky (.pager). */
+.mozem-quips {
+    margin-top: var(--sp-2);
+}
 .mozem-quip {
     display: block;
     width: 100%;
-    margin-top: var(--sp-2);
+    height: 100%;
     padding: 4px 6px;
     text-align: left;
 }
@@ -4251,14 +4255,8 @@ b {
     line-height: 1.15;
     quotes: none;
 }
-.mozem-quip small {
-    display: block;
-    margin-top: 6px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-45);
+.mozem-quip-dots {
+    margin: 4px 0 0;
 }
 
 /* ---- Môžem?: súhrn na zdieľanie ------------------------------------------------ */

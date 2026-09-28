@@ -171,11 +171,19 @@ test('bez dát: neviem, pri spotrebičoch otáznik, hranie ostáva OK', () => {
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true })).state, 'loading');
 });
 
-test('hláška sa mení ťuknutím aj s dňom a vždy je zo sady stavu', () => {
-    const a = mozemModel(input(FIXED_NOW), 0).quip;
-    const b = mozemModel(input(FIXED_NOW), 1).quip;
-    assert.notEqual(a, b);
-    assert.equal(mozemModel(input(FIXED_NOW), MOZEM_QUIPS.go.length).quip, a, 'sada sa točí dokola');
+test('hlášky: celá sada stavu, hláška dňa prvá, stránka mimo sady sa točí dokola', () => {
+    const m = mozemModel(input(FIXED_NOW), 0);
+    assert.deepEqual([...m.quips].sort(), [...MOZEM_QUIPS.go].sort(), 'každá hláška sady práve raz');
+    assert.equal(m.quipPage, 0);
+    assert.equal(m.quip, m.quips[0]);
+    const druha = mozemModel(input(FIXED_NOW), 1);
+    assert.equal(druha.quip, m.quips[1]);
+    assert.deepEqual(druha.quips, m.quips, 'poradie sa listovaním nemení');
+    assert.equal(mozemModel(input(FIXED_NOW), MOZEM_QUIPS.go.length).quipPage, 0, 'sada sa točí dokola');
+    assert.equal(mozemModel(input(FIXED_NOW), -1).quipPage, MOZEM_QUIPS.go.length - 1);
+    const nacitava = mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true }), 3);
+    assert.deepEqual(nacitava.quips, MOZEM_QUIPS.loading, 'jediná hláška, stránka vždy prvá');
+    assert.equal(nacitava.quipPage, 0);
 });
 
 test('itemAnswer a itemCost: veci bez spotrebiča sú vždy OK a nemajú cenu', () => {

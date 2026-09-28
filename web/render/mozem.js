@@ -57,6 +57,31 @@ function itemHtml(it, open) {
 }
 
 /**
+ * Hlášky ako pás na listovanie - ten istý kolotoč (.pager), aký má karta Terazky pod ciferníkom.
+ * Posúva a prichytáva prehliadač, ťuknutie na hlášku posunie pás na ďalšiu. Jediná hláška
+ * (načítava sa) je bez bodiek a pás nemá kam ísť.
+ * @param {MozemModel} m
+ */
+function quipsHtml(m) {
+    const pages = m.quips
+        .map(
+            (q) =>
+                `<div class="pager-page"><button type="button" class="mozem-quip" data-mozem-quip aria-label="Ďalšia hláška: ${escapeHtml(q)}"><q>${escapeHtml(q)}</q></button></div>`,
+        )
+        .join('');
+    const dots =
+        m.quips.length > 1
+            ? `<div class="pager-dots mozem-quip-dots">${m.quips
+                  .map(
+                      (_, i) =>
+                          `<button type="button" class="pager-dot${i === m.quipPage ? ' active' : ''}" data-mozem-quip-dot="${i}" aria-label="Hláška ${i + 1} z ${m.quips.length}"></button>`,
+                  )
+                  .join('')}</div>`
+            : '';
+    return `<div class="pager mozem-quips" data-mozem-quips role="group" aria-label="Hlášky, potiahni do strán" tabindex="0">${pages}</div>${dots}`;
+}
+
+/**
  * Obsah karty z modelu. `open` je rozbalená vec, `kick` riadok nad slovom („Teraz · 13:00 · Dvorany“).
  * @param {MozemModel} m @param {string | null} open @param {string} kick
  */
@@ -67,9 +92,22 @@ export function mozemHtml(m, open, kick) {
         stripHtml(m) +
         `<div class="mozem-lbl"><span>Čo môžem</span><span>ťukni</span></div><div class="mozem-grid">${items}</div>` +
         (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +
-        `<button type="button" class="mozem-quip" data-mozem-quip aria-label="Ďalšia hláška: ${escapeHtml(m.quip)}"><q>${escapeHtml(m.quip)}</q>` +
-        `<small aria-hidden="true">ťukni pre ďalšiu</small></button>`
+        quipsHtml(m)
     );
+}
+
+/**
+ * Po prepísaní obsahu stojí nový pás hlášok na prvej stránke. Obsah sa prepisuje aj sám
+ * od seba (hodiny v hlavičke každú minútu), takže bez tohto by hláška pod rukou odskočila
+ * na hlášku dňa. Posun je okamžitý, nie plynulý - človek nemá vidieť, že sa pás vymenil.
+ * @param {HTMLElement} body @param {number} page
+ */
+function keepQuipPage(body, page) {
+    const pager = body.querySelector('[data-mozem-quips]');
+    const pages = pager ? pager.querySelectorAll('.pager-page') : [];
+    const target = pages[page];
+    if (!(pager instanceof HTMLElement) || !(target instanceof HTMLElement) || !page) return;
+    pager.scrollTo({ left: target.offsetLeft - /** @type {HTMLElement} */ (pages[0]).offsetLeft, behavior: 'instant' });
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -79,5 +117,6 @@ export function renderMozem(state, dom) {
         return writeHtml(dom.mozemBody, summaryHtml(summaryModel(state, state.summaryPeriod), state.summaryPeriod), 'mozemBody');
     const m = mozemModel(state, state.mozemQuip, state.launches);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, state.mozemOpen, kick) + summaryLinkHtml(summaryModel(state, 'mesiac')), 'mozemBody');
+    const html = mozemHtml(m, state.mozemOpen, kick) + summaryLinkHtml(summaryModel(state, 'mesiac'));
+    if (writeHtml(dom.mozemBody, html, 'mozemBody')) keepQuipPage(dom.mozemBody, m.quipPage);
 }

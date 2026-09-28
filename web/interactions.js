@@ -544,12 +544,43 @@ function logLaunch(store, id, sun) {
     store.setState({ launches });
 }
 
+/** Posunie pás hlášok na stránku `index`; stránku do stavu zapíše až poslucháč posunu, ako pri
+ * prste. Za poslednou hláškou ide ťuknutie znova na prvú. @param {HTMLElement} body @param {number | null} index null = ďalšia */
+function scrollQuips(body, index) {
+    const pager = body.querySelector('[data-mozem-quips]');
+    if (!(pager instanceof HTMLElement)) return;
+    const pages = pager.querySelectorAll('.pager-page');
+    const page = pages[index ?? (currentPage(pager) + 1) % pages.length];
+    if (page instanceof HTMLElement) page.scrollIntoView({ inline: 'start', block: 'nearest' });
+}
+
+/** Pás hlášok listuje prehliadač; bodky idú za prstom hneď, do stavu ide až ustálená stránka -
+ * ako pri páse odporúčaní (initVerdictPager). Pás sa s obsahom karty prepisuje, preto poslucháč
+ * sedí na nosiči a posun (ten nebublá) chytá cestou dole. @param {Store} store @param {Dom} dom */
+function initQuipPager(store, dom) {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    dom.mozemBody.addEventListener(
+        'scroll',
+        (e) => {
+            const pager = e.target;
+            if (!(pager instanceof HTMLElement) || !pager.matches('[data-mozem-quips]')) return;
+            const index = currentPage(pager);
+            dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]').forEach((dot, i) => dot.classList.toggle('active', i === index));
+            clearTimeout(timer);
+            timer = setTimeout(() => store.setState({ mozemQuip: currentPage(pager) }), PAGER_SETTLE_MS);
+        },
+        { capture: true, passive: true },
+    );
+}
+
 /**
- * Karta Môžem?: ťuknutie na vec ju rozbalí (druhé zbalí), ťuknutie na hlášku ukáže ďalšiu.
+ * Karta Môžem?: ťuknutie na vec ju rozbalí (druhé zbalí), ťuknutie na hlášku posunie pás na ďalšiu.
  * Oboje je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
  * @param {Store} store @param {Dom} dom
  */
 function initMozem(store, dom) {
+    initQuipPager(store, dom);
     dom.mozemBody.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         const item = target.closest('[data-mozem-item]');
@@ -559,7 +590,9 @@ function initMozem(store, dom) {
         }
         const log = target.closest('[data-mozem-log]');
         if (log instanceof HTMLElement) return logLaunch(store, log.dataset.mozemLog || '', log.dataset.sun === '1');
-        if (target.closest('[data-mozem-quip]')) return store.setState({ mozemQuip: store.get().mozemQuip + 1 });
+        if (target.closest('[data-mozem-quip]')) return scrollQuips(dom.mozemBody, null);
+        const dot = target.closest('[data-mozem-quip-dot]');
+        if (dot instanceof HTMLElement) return scrollQuips(dom.mozemBody, Number(dot.dataset.mozemQuipDot));
         onSummaryClick(store, target);
     });
 }
