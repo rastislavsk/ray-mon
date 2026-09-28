@@ -6,7 +6,7 @@ import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
- * @typedef {'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
+ * @typedef {'mozem' | 'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
  * @typedef {{
  *   now: Date,
  *   panel: Panel,
@@ -19,6 +19,8 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   weekDetail: 'day' | 'week' | null,
  *   verdictPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
+ *   mozemOpen: string | null,
+ *   mozemQuip: number,
  *   previewMinutes: number | null,
  *   isDragging: boolean,
  *   wide: boolean,
@@ -87,6 +89,10 @@ export function initialState(now, layout, { settings, demo, incoming = null }) {
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
+        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna) a koľkokrát človek ťukol
+        // na hlášku. Obe sú nastavenie vnútri karty, nie krok navigácie.
+        mozemOpen: /** @type {string | null} */ (null),
+        mozemQuip: 0,
         previewMinutes: null,
         isDragging: false,
         wide: layout.wide,

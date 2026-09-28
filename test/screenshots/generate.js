@@ -17,6 +17,7 @@ const VYSKA = 844;
 // Zdieľať appku preto, lebo QR kód v ňom kreslí knižnica z CDN a bez prístupu naň by
 // z neho bol prázdny biely rámik.
 const KARTY = [
+    { subor: 'mozem.png', nav: 'nav-mozem' },
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
     { subor: 'statistika.png', nav: 'nav-statistika' },

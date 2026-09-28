@@ -8,11 +8,13 @@ const byId = (/** @type {string} */ id) => {
 };
 
 // Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: terazky = „Terazky", 7dni = „7 dní", statistika = „Štatistika",
-// nastavenie = „Nastavenie". Popiska je text pre používateľa a mení sa podľa chuti; kódový
-// názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí naháňať.
+// preto tu ostáva mapovanie: mozem = „Môžem?", terazky = „Terazky", 7dni = „7 dní",
+// statistika = „Štatistika", nastavenie = „Nastavenie". Popiska je text pre používateľa a mení
+// sa podľa chuti; kódový názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí
+// naháňať.
 // Karta Info zanikla - jej položky sú v karte Nastavenie (sekcia Appka).
-export const PANELS = /** @type {const} */ (['terazky', '7dni', 'statistika', 'nastavenie']);
+// Môžem? je v navigácii prvá, appka sa ale otvára na karte Terazky (initialState).
+export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statistika', 'nastavenie']);
 
 // Položky sekcie Appka v karte Nastavenie (natívne <details>): návod k ciferníku a zdieľanie.
 // Kedysi boli v karte Info - odtiaľ id v HTML `info-<položka>` aj názvy v kóde.
@@ -108,6 +110,11 @@ function sedemdniDom() {
         weekMsgTitle: byId('week-msg-title'),
         weekMsgBody: byId('week-msg-body'),
     };
+}
+
+// Karta Môžem?: len nosič, obsah si skladá render (web/render/mozem.js).
+function mozemDom() {
+    return { mozemBody: byId('mozem-body') };
 }
 
 // Karta Štatistika: len nosiče, obsah si skladá render (web/render/statistika.js).
@@ -283,7 +290,7 @@ function zdielanieDom() {
 }
 
 export function collectDom() {
-    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...statsDom(), ...setupDom(), ...zdielanieDom() };
+    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...mozemDom(), ...statsDom(), ...setupDom(), ...zdielanieDom() };
 }
 
 /** @typedef {ReturnType<typeof collectDom>} Dom */

@@ -14,14 +14,23 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 Spodná navigácia má len ikony bez textu – mená kariet nižšie slúžia len na orientáciu
 v tomto popise.
 
-|                Terazky                 |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
-| :------------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
-| ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
+|               Môžem?                |                Terazky                 |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
+| :---------------------------------: | :------------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
+| ![Karta Môžem?](docs/img/mozem.png) | ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
+- **Môžem?** – odpoveď pre celú rodinu, nielen pre toho, kto sa vo fotovoltike vyzná. Hore jedno
+  veľké slovo na plnej farbe (**Zapínaj.**, **Ešte nie.**, **Slabý deň.**, **Dnes už nie.**, **Neviem.**),
+  jedna veta a jeden fakt v jednotkách, ktoré pozná každý (koľko mobilov strecha nabije za hodinu).
+  Pod tým pás dneška s úsekom, keď slnko stačí na veľké spotrebiče, a mriežka vecí – práčka,
+  umývačka, sušička, auto, hranie a fén – s krátkou odpoveďou („do 15:30“, „o 10:30“, „zajtra
+  08:00“, „lacno“). Ťuknutie na vec ju rozbalí: čo robiť, prečo, a čo keď sa zamračí alebo to
+  treba hneď – s cenou zo siete, keď ju tarifa pozná. Dole hláška so suchým humorom, ťuknutím
+  príde ďalšia. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
+  prvá, appka sa ale otvára na karte Terazky.
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
   a prípadne čas, kedy bude lepšie. Listuje sa potiahnutím do strán alebo klikom na bodky;

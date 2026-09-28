@@ -513,6 +513,23 @@ function initStats(store, dom) {
 }
 
 /**
+ * Karta Môžem?: ťuknutie na vec ju rozbalí (druhé zbalí), ťuknutie na hlášku ukáže ďalšiu.
+ * Oboje je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
+ * @param {Store} store @param {Dom} dom
+ */
+function initMozem(store, dom) {
+    dom.mozemBody.addEventListener('click', (e) => {
+        const target = /** @type {HTMLElement} */ (e.target);
+        const item = target.closest('[data-mozem-item]');
+        if (item instanceof HTMLElement) {
+            const id = item.dataset.mozemItem || null;
+            return store.setState({ mozemOpen: store.get().mozemOpen === id ? null : id });
+        }
+        if (target.closest('[data-mozem-quip]')) store.setState({ mozemQuip: store.get().mozemQuip + 1 });
+    });
+}
+
+/**
  * Obnova dát pre elektráreň, ktorá je práve v stave. Beží najviac jedna naraz: kým sa
  * sťahuje, ďalšie volanie (minútový časovač, návrat z pozadia) dostane tú istú rozbehnutú -
  * inak by sa pri pomalej sieti požiadavky hromadili a staršia odpoveď mohla prepísať novšiu.
@@ -581,5 +598,6 @@ export function initInteractions(store, dom, mq) {
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);
     initStats(store, dom);
+    initMozem(store, dom);
     return refresh;
 }

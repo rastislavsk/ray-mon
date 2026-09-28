@@ -226,6 +226,27 @@ vnútri karty, nie krok navigácie. Výzvy „Doplň ceny“ a „Pripojiť živ
 Nastavenie a jedným `setState` rovno otvoria ten krok sprievodcu (`stepEdit`), takže tlačidlo
 Späť vráti do Štatistiky.
 
+## Karta Môžem?
+
+Karta Terazky je písaná pre toho, kto sa vo fotovoltike vyzná. Ostatní v rodine chcú vedieť len
+to, či môžu teraz pustiť práčku, a keď nie, kedy. Karta Môžem? im odpovie jedným slovom
+(návrh C v `docs/navrhy/karta-mozem.html`; varianty so zoznamom a so stories sú tam ako
+zamietnuté).
+
+Počíta `shared/mozem.js` z plánu dňa (`dayPlan`), takže „áno“ je tá istá zelená ako na dennom
+prstenci: výkon z krivky dňa od dolnej hranice výkonu. Stav karty je `go` (teraz je zelená),
+`wait` (zelená príde ešte dnes), `none` (dnešná zelená už bola), `slabo` (dnes cez deň
+nebude žiadna), `offline` (predpoveď nie je) a `loading`. Ďalšie dni berie z hodinovej
+predpovede. Pre spotrebiče platia pravidlá z `DEVICES`: v slabý deň sa umývačka a sušička
+neodporúčajú ako v `deviceStates`, auto potrebuje horný prah výkonu a lacné pásmo mu stačí, len
+keď dnes slnko už nepríde - neskoršie slnko vyhrá nad lacnou sieťou. Typický program
+spotrebiča (`MOZEM_ITEMS` v `config.js`) určuje, dokedy ho pustiť, aby dobehol na slnku,
+a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
+
+Texty vrátane hlášok sú v `messages.js`. Hláška sa mení s dňom a ťuknutím (`mozemQuip`),
+rozbalená vec je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie. Obsah
+karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
+
 ## Karta 7 dní na mobile
 
 Na telefóne mala karta štyri grafy a tabuľku pod sebou – pätnásť obrazoviek scrollovania,
@@ -351,15 +372,15 @@ e2e test, ktorý prejde všetky prvky vo všetkých kartách.
 
 ## Testovanie
 
-| Vrstva            | Čím                                                                       |
-| ----------------- | ------------------------------------------------------------------------- |
-| Doména            | `node --test`, pokrytie `shared/` aspoň 90 % riadkov                      |
-| Výstup predpovede | golden súbor `test/golden/forecast.json`                                  |
-| Kontrakt dát      | `schema.js` proti výstupu parsera a predpovede                            |
-| Worker            | endpoint `POST /pv` proti podvrhnutému `fetch`                            |
-| Appka             | Playwright: štyri karty, interakcie, chyby v konzole, prístupnosť cez axe |
-| Kaskáda CSS       | `.hidden` sa skúša na každom prvku vo všetkých kartách                    |
-| Rozloženie        | na 1366 × 768 nesmie žiadna karta pretekať a tabuľka ukáže všetkých 7 dní |
+| Vrstva            | Čím                                                                        |
+| ----------------- | -------------------------------------------------------------------------- |
+| Doména            | `node --test`, pokrytie `shared/` aspoň 90 % riadkov                       |
+| Výstup predpovede | golden súbor `test/golden/forecast.json`                                   |
+| Kontrakt dát      | `schema.js` proti výstupu parsera a predpovede                             |
+| Worker            | endpoint `POST /pv` proti podvrhnutému `fetch`                             |
+| Appka             | Playwright: všetky karty, interakcie, chyby v konzole, prístupnosť cez axe |
+| Kaskáda CSS       | `.hidden` sa skúša na každom prvku vo všetkých kartách                     |
+| Rozloženie        | na 1366 × 768 nesmie žiadna karta pretekať a tabuľka ukáže všetkých 7 dní  |
 
 E2E testy nepoužívajú vlastné očakávané reťazce – volajú tú istú funkciu ako appka a
 porovnávajú ju s DOM. Test tak nezlyhá pri zmene textu, ale zlyhá, keď sa appka rozíde
