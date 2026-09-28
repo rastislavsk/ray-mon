@@ -19,6 +19,7 @@ const VYSKA = 844;
 const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
+    { subor: 'statistika.png', nav: 'nav-statistika' },
     { subor: 'nastavenie.png', nav: 'nav-nastavenie' },
 ];
 

@@ -217,10 +217,19 @@ function goBack(store) {
  * @param {Store} store @param {string} key `lokalita`, `panel`, `roof:1`, `menic`, `meranie`, `tarifa`
  */
 function editStep(store, key) {
-    const s = store.get();
-    const fromHome = s.setupStep === null;
+    store.setState(stepEdit(store.get(), key, store.get().setupStep === null));
+}
+
+/**
+ * Zmena stavu, ktorá otvorí jeden krok na úpravu. `fromHome`: úprava uloženej elektrárne
+ * (zmena sa po „Ďalej“ rovno uloží), inak krok zo zhrnutia sprievodcu. Volá ju aj karta
+ * Štatistika - výzva „Doplň ceny“ otvorí krok cien uloženej elektrárne.
+ * @param {AppState} s @param {string} key @param {boolean} fromHome
+ * @returns {Partial<AppState>}
+ */
+export function stepEdit(s, key, fromHome) {
     const [step, roof] = key.startsWith('roof:') ? ['smer', Number(key.slice(5))] : [key, 0];
-    store.setState({
+    return {
         setupStep: /** @type {import('../shared/setup.js').SetupStep} */ (step),
         setupRoof: roof,
         setupReturn: fromHome ? 'prehlad' : 'suhrn',
@@ -228,7 +237,7 @@ function editStep(store, key) {
         setupDunno: false,
         settingsNote: '',
         ...(fromHome ? { settingsDraft: savedSettings(s), settingsRev: s.settingsRev + 1, setupLive: !!s.kiosk } : {}),
-    });
+    };
 }
 
 // ---- Tlačidlá na obrazovkách ------------------------------------------------------

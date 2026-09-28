@@ -40,6 +40,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                    |
 | `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                           |
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
+| `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.         |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                          |
@@ -199,6 +200,31 @@ Nastavenie uložené pred vlastnými tarifami tarifu nemá a dostane tú Dvorian
 appka dovtedy počítala. Tarifa ide aj do odkazu `#nastavenie=…`; rozvrh má najviac 24 zmien
 za deň, aby odkaz ostal rozumne krátky.
 
+## Karta Štatistika
+
+Karta ukazuje súčty výroby, ktoré kiosk posiela, no appka ich predtým nezobrazovala: dnes,
+mesiac, rok a od spustenia (`dailyEnergyKwh` … `cumulativeEnergyKwh`). K nim pridá **hodnotu**
+– koľko by za tú elektrinu človek zaplatil zo siete podľa svojej tarify.
+
+Úspora to nie je a karta to tak ani nenazýva: kiosk hlási len výrobu, nie spotrebu domácnosti
+ani pretok do siete, takže appka nevie, koľko elektriny si človek spotreboval sám. Hodnota je
+horná hranica a veta pod ňou to hovorí. Posúvač vlastnej spotreby (návrh B
+v `docs/navrhy/statistika-uspory.html`) je možný ďalší krok.
+
+Cenu počíta jedna funkcia pre všetky zdroje: `energyByBand` v `shared/stats.js` rozdelí krivku
+do pásiem tarify (lichobežník medzi bodmi, pásmo v strede úseku) a `averagePrice` z toho spraví
+priemernú cenu kWh. Dnešok sa oceňuje z nameranej krivky – ranná výroba v drahom pásme stojí
+viac než popoludňajšia v lacnom. Mesiac, rok a „spolu“ má kiosk len ako súčet, preto dostanú
+priemernú cenu podľa toho, do ktorých pásiem (aj s víkendovými a sezónnymi výnimkami) padá
+výroba z predpovede na najbližší týždeň. Kto nezadal ceny všetkých pásiem, eurá nevidí vôbec –
+polovičné ceny by dali polovičné eurá.
+
+Obsah karty skladá render celý do `#stats-body`, v `index.html` sú len nosiče – ďalší prvok
+v karte tak nepotrebuje dve nasadenia (viď CLAUDE.md). Obdobie (`statsPeriod`) je nastavenie
+vnútri karty, nie krok navigácie. Výzvy „Doplň ceny“ a „Pripojiť živé meranie“ prepnú na kartu
+Nastavenie a jedným `setState` rovno otvoria ten krok sprievodcu (`stepEdit`), takže tlačidlo
+Späť vráti do Štatistiky.
+
 ## Karta 7 dní na mobile
 
 Na telefóne mala karta štyri grafy a tabuľku pod sebou – pätnásť obrazoviek scrollovania,
@@ -330,7 +356,7 @@ e2e test, ktorý prejde všetky prvky vo všetkých kartách.
 | Výstup predpovede | golden súbor `test/golden/forecast.json`                                  |
 | Kontrakt dát      | `schema.js` proti výstupu parsera a predpovede                            |
 | Worker            | endpoint `POST /pv` proti podvrhnutému `fetch`                            |
-| Appka             | Playwright: tri karty, interakcie, chyby v konzole, prístupnosť cez axe   |
+| Appka             | Playwright: štyri karty, interakcie, chyby v konzole, prístupnosť cez axe |
 | Kaskáda CSS       | `.hidden` sa skúša na každom prvku vo všetkých kartách                    |
 | Rozloženie        | na 1366 × 768 nesmie žiadna karta pretekať a tabuľka ukáže všetkých 7 dní |
 

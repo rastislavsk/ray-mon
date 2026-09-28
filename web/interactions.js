@@ -19,7 +19,7 @@ import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
-import { applySettings, initSetup } from './setup-interactions.js';
+import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -493,6 +493,26 @@ function initSharing(store, dom, refresh) {
 }
 
 /**
+ * Karta Štatistika: prepínač obdobia a výzvy do Nastavenia. Výzva je jeden krok navigácie -
+ * prepne kartu a rovno otvorí krok sprievodcu (ceny, meranie), takže Späť vráti do Štatistiky.
+ * V ukážke nie je čo upravovať, výzva len prepne na Nastavenie, kde čaká sprievodca.
+ * @param {Store} store @param {Dom} dom
+ */
+function initStats(store, dom) {
+    dom.statsBody.addEventListener('click', (e) => {
+        const target = /** @type {HTMLElement} */ (e.target);
+        const period = target.closest('[data-stats-period]');
+        if (period instanceof HTMLElement)
+            return store.setState({ statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ (period.dataset.statsPeriod) });
+        const go = target.closest('[data-stats-go]');
+        if (!(go instanceof HTMLElement)) return;
+        const s = store.get();
+        const step = go.dataset.statsGo || 'nastavenie';
+        store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(s.demo || step === 'nastavenie' ? {} : stepEdit(s, step, true)) });
+    });
+}
+
+/**
  * Obnova dát pre elektráreň, ktorá je práve v stave. Beží najviac jedna naraz: kým sa
  * sťahuje, ďalšie volanie (minútový časovač, návrat z pozadia) dostane tú istú rozbehnutú -
  * inak by sa pri pomalej sieti požiadavky hromadili a staršia odpoveď mohla prepísať novšiu.
@@ -560,5 +580,6 @@ export function initInteractions(store, dom, mq) {
     initSetup(store, dom, refresh);
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);
+    initStats(store, dom);
     return refresh;
 }

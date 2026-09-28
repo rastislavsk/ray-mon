@@ -4,6 +4,7 @@ import { PANELS } from '../dom.js';
 import { renderHeader } from './header.js';
 import { renderImportOffer, renderNastavenie } from './nastavenie.js';
 import { renderSedemdni } from './sedemdni.js';
+import { renderStatistika } from './statistika.js';
 import { renderTerazky } from './terazky.js';
 import { renderInfo } from './zdielat.js';
 
@@ -27,6 +28,7 @@ export function render(state, dom) {
     renderImportOffer(state, dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
+    if (state.panel === 'statistika') renderStatistika(state, dom);
     if (state.panel === 'nastavenie') {
         renderNastavenie(state, dom);
         // Návod a zdieľanie sú v karte Nastavenie (sekcia Appka), kedysi mali kartu Info.

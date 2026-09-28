@@ -4,6 +4,7 @@ import {
     escapeHtml,
     fmt1,
     fmt2,
+    fmtSum,
     formatGridKw,
     hourFloatToTimeStr,
     kwpText,
@@ -30,6 +31,13 @@ test('čas', () => {
 test('čísla a popisky', () => {
     assert.equal(fmt1(3.14), '3,1');
     assert.equal(fmt2(48.48), '48,48');
+    // Súčty v štatistike: pod tisíc s desatinami, od tisíc celé a s oddelenými tisícmi.
+    assert.equal(fmtSum(31.66, 1), '31,7');
+    assert.equal(fmtSum(4.778, 2), '4,78');
+    assert.equal(fmtSum(999.4, 1), '999,4');
+    assert.equal(fmtSum(9112.4, 1), '9 112');
+    assert.equal(fmtSum(1296.7, 2), '1 297');
+    assert.equal(fmtSum(1234567, 0), '1 234 567');
     assert.equal(kwpText(10.44), '10,44 kWp');
     assert.equal(kwpText(5.2), '5,20 kWp');
     assert.equal(formatGridKw(2), '2');

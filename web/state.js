@@ -6,7 +6,7 @@ import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
- * @typedef {'terazky' | '7dni' | 'nastavenie'} Panel
+ * @typedef {'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
  * @typedef {{
  *   now: Date,
  *   panel: Panel,
@@ -18,6 +18,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   weekDayDir: 1 | -1,
  *   weekDetail: 'day' | 'week' | null,
  *   verdictPage: number,
+ *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   previewMinutes: number | null,
  *   isDragging: boolean,
  *   wide: boolean,
@@ -83,6 +84,9 @@ export function initialState(now, layout, { settings, demo, incoming = null }) {
         // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
         weekDetail: null,
         verdictPage: 0,
+        // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
+        // naň nevracia, rovnako ako na vybraný deň.
+        statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
         previewMinutes: null,
         isDragging: false,
         wide: layout.wide,

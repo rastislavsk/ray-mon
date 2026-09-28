@@ -3960,37 +3960,15 @@ b {
     min-width: 72px;
     color: var(--green);
 }
-.stats-row .sw {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 7px;
-    border-radius: 2px;
-}
-.stats-row .sw.amber {
-    background: var(--amber);
-}
-.stats-row .sw.grey {
-    background: var(--grey);
-}
-.stats-row .sw.red {
-    background: var(--red);
+/* Bez cien je stĺpec eur prázdny - nemá si držať miesto, kWh idú k pravému okraju. */
+.stats-row .e:empty {
+    min-width: 0;
 }
 .stats-note {
     margin: 0;
     padding: 0 4px;
     font-size: var(--fs-sm);
     color: var(--ink-35);
-}
-.stats-go .chev {
-    flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
-    fill: none;
-    stroke: var(--ink-35);
-    stroke-width: 2.2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
 }
 
 /* ---- Širšie obrazovky ----------------------------------------------------- */

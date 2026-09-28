@@ -43,6 +43,16 @@ export function fmt2(n) {
     return n.toFixed(2).replace('.', ',');
 }
 
+/**
+ * Súčet do štatistiky: pod tisíc s `decimals` desatinnými miestami, od tisíc celé číslo
+ * s tisícmi oddelenými nezlomiteľnou medzerou („9 112“) - desatiny pri tisícoch kWh či eur
+ * nič nehovoria a číslo by sa nezmestilo. @param {number} n @param {number} decimals
+ */
+export function fmtSum(n, decimals) {
+    if (Math.abs(n) < 1000) return n.toFixed(decimals).replace('.', ',');
+    return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 /** Výkon elektrárne pre text, napr. „10,44 kWp“ - všade rovnako, s dvomi desatinnými miestami,
  * ako sa výkon zostavy udáva (24 × 435 Wp = 10,44 kWp). @param {number} kwp */
 export function kwpText(kwp) {
