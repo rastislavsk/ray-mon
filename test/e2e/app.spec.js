@@ -1419,6 +1419,27 @@ test('prechod medzi kartami: smer podľa poradia a nič nepretečie do strán', 
 });
 
 /**
+ * Tlačidlo novej karty ide do stránky skôr než skript, ktorý ju zapojí (pravidlo o cache
+ * v CLAUDE.md). Nová stránka so starým skriptom z cache ho teda môže ukázať - a klik naň
+ * nesmie skryť všetky karty. Test ho odkryje a klikne naň ako na kartu, ktorú skript nepozná.
+ */
+test('klik na tlačidlo karty, ktorú skript nepozná, nezmení kartu', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.evaluate(() => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'nav-neznama';
+        btn.dataset.panel = 'neznama';
+        btn.textContent = 'Neznáma';
+        document.querySelector('.bottomnav-inner')?.append(btn);
+    });
+    await page.locator('#nav-neznama').click();
+    await expect(page.locator('#panel-terazky')).toBeVisible();
+    await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
+    expect(errors).toEqual([]);
+});
+
+/**
  * Tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) je jediná vec, ktorá sa
  * v appke dá „vrátiť": kroky navigácie - prepnutie karty a otvorenie detailu dňa.
  * Adresa sa pritom nemení, položky histórie nesú len krok navigácie.

@@ -1,0 +1,1509 @@
+<title>Karta Výroba a úspory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+/>
+
+<style>
+    /* ============================================================================
+       Návrh novej karty "Výroba a úspory" pre RAY-MON.
+       Farby, písma a rozmery sú prevzaté 1:1 zo style.css appky, mock je v mierke
+       telefónu 375 px. Appka je zámerne len tmavá, preto aj tento náhľad.
+       Čísla sú zmrazená vzorka pre Dvorany (5. 9. 2026, 13:00) s ukážkovými cenami
+       NT 0,14 € a VT 0,19 € za kWh - nie živé dáta.
+       ============================================================================ */
+    :root {
+        color-scheme: dark;
+        --bg: #0a0a0a;
+        --card-bg: #151614;
+        --ink: #f2f0ea;
+        --ink-70: rgba(242, 240, 234, 0.94);
+        --ink-45: rgba(242, 240, 234, 0.64);
+        --ink-35: rgba(242, 240, 234, 0.54);
+        --ink-20: rgba(242, 240, 234, 0.26);
+        --ink-12: rgba(242, 240, 234, 0.16);
+        --ink-08: rgba(242, 240, 234, 0.1);
+        --ink-05: rgba(242, 240, 234, 0.06);
+        --green: #9ef25b;
+        --amber: #ffc24b;
+        --red: #ff6b57;
+        --grey: #b9b6ac;
+        --green-rgb: 158, 242, 91;
+        --amber-rgb: 255, 194, 75;
+
+        --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+        --radius-sm: 6px;
+        --radius-md: 12px;
+        --radius-lg: 18px;
+        --radius-pill: 999px;
+
+        /* Chrome náhľadu - o chlp chladnejšia čierna než appka, aby bolo vidno,
+           kde končí stránka a kde začína mock. */
+        --page-bg: #0e0f11;
+        --page-panel: #131417;
+        --page-line: rgba(242, 240, 234, 0.11);
+
+        --mock-w: 375px;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+    body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--ink);
+        font-family: var(--font-body);
+        font-size: 15px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+    }
+    button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+    }
+    :focus-visible {
+        outline: 2px solid var(--amber);
+        outline-offset: 2px;
+        border-radius: var(--radius-sm);
+    }
+    .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding-inline: 20px;
+        padding-block: 40px 72px;
+    }
+
+    /* ---- Hlavička stránky ------------------------------------------------------- */
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        margin: 0 0 10px;
+    }
+    h1 {
+        font-size: clamp(26px, 4.4vw, 38px);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.12;
+        margin: 0 0 14px;
+        text-wrap: balance;
+    }
+    .lede {
+        max-width: 66ch;
+        color: var(--ink-45);
+        margin: 0 0 8px;
+    }
+    .lede b,
+    .panel b {
+        color: var(--ink-70);
+        font-weight: 600;
+    }
+    .panel {
+        margin: 26px 0 0;
+        padding: 18px 20px;
+        border: 1px solid var(--page-line);
+        border-radius: var(--radius-md);
+        background: var(--page-panel);
+    }
+    .panel h2 {
+        font-size: 13px;
+        font-family: var(--font-mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        font-weight: 600;
+        margin: 0 0 10px;
+    }
+    .panel ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-45);
+        font-size: 14px;
+        max-width: 72ch;
+    }
+    .panel li + li {
+        margin-top: 5px;
+    }
+    .panel p {
+        color: var(--ink-45);
+        font-size: 14px;
+        margin: 10px 0 0;
+        max-width: 72ch;
+    }
+
+    /* Tabuľky na stránke (zdroje dát, porovnanie). Na úzkom displeji sa posúvajú vo
+       vlastnom obale, stránka ostáva bez vodorovného posunu. */
+    .tbl-wrap {
+        overflow-x: auto;
+        margin-top: 4px;
+    }
+    table.tbl {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 620px;
+        font-size: 13.5px;
+    }
+    .tbl th {
+        text-align: left;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        font-weight: 600;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--page-line);
+    }
+    .tbl td {
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--ink-05);
+        color: var(--ink-45);
+        vertical-align: top;
+    }
+    .tbl td:first-child {
+        color: var(--ink-70);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .tbl code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--ink-70);
+    }
+    .ano {
+        color: var(--green);
+    }
+    .nie {
+        color: var(--red);
+    }
+    .ciast {
+        color: var(--amber);
+    }
+
+    /* ---- Sekcia jedného návrhu -------------------------------------------------- */
+    .navrh {
+        margin-top: 56px;
+        padding-top: 32px;
+        border-top: 1px solid var(--page-line);
+    }
+    .navrh-head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+    .navrh-znacka {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: var(--bg);
+        background: var(--ink-70);
+        border-radius: var(--radius-sm);
+        padding: 3px 8px;
+    }
+    .navrh h2 {
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        margin: 0;
+    }
+    .navrh-podnadpis {
+        color: var(--ink-35);
+        font-size: 14px;
+        margin: 0 0 24px;
+        max-width: 68ch;
+    }
+    .stlpce {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+    .poznamky {
+        flex: 1 1 340px;
+        min-width: 0;
+    }
+    .poznamky h3 {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        font-weight: 600;
+        margin: 0 0 8px;
+    }
+    .poznamky ul {
+        margin: 0 0 22px;
+        padding-left: 18px;
+        color: var(--ink-45);
+        font-size: 14px;
+    }
+    .poznamky li + li {
+        margin-top: 4px;
+    }
+    .poznamky b {
+        color: var(--ink-70);
+        font-weight: 600;
+    }
+    .vystraha {
+        border-left: 2px solid var(--amber);
+        padding-left: 12px;
+        color: var(--ink-45);
+        font-size: 13.5px;
+        margin: 0 0 22px;
+    }
+
+    /* ---- Rám telefónu a prepínač stavu ------------------------------------------ */
+    .telefon {
+        flex: 0 0 var(--mock-w);
+        width: min(var(--mock-w), 100%);
+    }
+    .stavy {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 0 0 10px;
+    }
+    .stavy button {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        padding: 5px 10px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--page-line);
+        color: var(--ink-45);
+    }
+    .stavy button[aria-pressed='true'] {
+        background: var(--ink-70);
+        border-color: var(--ink-70);
+        color: var(--bg);
+        font-weight: 600;
+    }
+    .ramik {
+        border: 1px solid var(--page-line);
+        border-radius: 26px;
+        padding: 8px;
+        background: #000;
+    }
+    .obrazovka {
+        border-radius: 19px;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 20% 0%, rgba(var(--amber-rgb), 0.14) 0%, rgba(var(--amber-rgb), 0) 42%),
+            radial-gradient(circle at 82% 5%, rgba(var(--amber-rgb), 0.13) 0%, rgba(var(--amber-rgb), 0) 46%), var(--bg);
+        padding: 14px 16px 0;
+        min-height: 700px;
+        display: flex;
+        flex-direction: column;
+    }
+    .obrazovka > .obsah {
+        flex: 1;
+    }
+    .telefon-popis {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        margin: 8px 0 0;
+        text-align: center;
+    }
+
+    /* ---- Prvky appky v mocku ---------------------------------------------------- */
+    .mock-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: #fff;
+    }
+    .mock-head small {
+        font-size: 0.72em;
+        font-weight: 500;
+        color: var(--ink-45);
+        letter-spacing: 0.1em;
+    }
+    .mock-head .cas {
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: var(--ink-70);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .mock-head .cas i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px rgba(var(--green-rgb), 0.55);
+    }
+    .mock-updated {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-35);
+        letter-spacing: 0.04em;
+        margin: 3px 0 16px;
+    }
+    .mock-title {
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+    .mock-sub {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+        margin: 4px 0 16px;
+    }
+    .karta {
+        background: var(--card-bg);
+        border: 1px solid var(--ink-08);
+        border-radius: var(--radius-lg);
+        padding: 14px;
+    }
+    .karta + .karta {
+        margin-top: 10px;
+    }
+    .lbl {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-35);
+    }
+    .num {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .u {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--ink-35);
+        margin-left: 4px;
+    }
+    .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-45);
+        margin-top: 8px;
+    }
+    .meta b {
+        color: var(--ink);
+        font-weight: 600;
+    }
+    .drah {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--ink-08);
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    .drah i {
+        display: block;
+        height: 100%;
+        background: var(--green);
+        border-radius: 3px;
+    }
+    .pozn {
+        font-size: 11.5px;
+        color: var(--ink-35);
+        line-height: 1.45;
+        margin: 10px 2px 0;
+    }
+    /* Výzva na doplnenie údaja (ceny, kiosk) - rovnaká ako „choice“ v sprievodcovi. */
+    .vyzva {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        text-align: left;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--ink-20);
+        color: var(--ink-70);
+        font-size: 12.5px;
+        line-height: 1.35;
+    }
+    .vyzva span:last-child {
+        color: var(--amber);
+        font-family: var(--font-mono);
+        flex: 0 0 auto;
+    }
+
+    /* Segmentový prepínač obdobia - tvar ako .seg v sprievodcovi nastavením. */
+    .seg {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        padding: 3px;
+        border-radius: var(--radius-pill);
+        background: var(--ink-05);
+        border: 1px solid var(--ink-08);
+        margin-bottom: 12px;
+    }
+    .seg button {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        padding: 6px 0;
+        border-radius: var(--radius-pill);
+        color: var(--ink-45);
+    }
+    .seg button[aria-pressed='true'] {
+        background: var(--ink-12);
+        color: var(--ink);
+        font-weight: 600;
+    }
+
+    /* Veľké číslo karty. */
+    .hero-num {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 2px 0;
+        margin-top: 6px;
+    }
+    .hero-num .num {
+        font-size: 44px;
+    }
+    .eur {
+        font-family: var(--font-mono);
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--green);
+        margin-top: 6px;
+    }
+    .eur small {
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--ink-35);
+        margin-left: 6px;
+    }
+
+    /* Riadky období a pásiem. */
+    .riadky {
+        display: grid;
+        gap: 0;
+    }
+    .riadok {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 12px;
+        align-items: baseline;
+        padding: 9px 0;
+        border-top: 1px solid var(--ink-05);
+        font-size: 13px;
+    }
+    .riadok:first-child {
+        border-top: 0;
+        padding-top: 2px;
+    }
+    .riadok .k {
+        color: var(--ink-45);
+    }
+    .riadok .v {
+        font-family: var(--font-mono);
+        color: var(--ink);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .riadok .e {
+        font-family: var(--font-mono);
+        color: var(--green);
+        text-align: right;
+        min-width: 72px;
+        font-variant-numeric: tabular-nums;
+    }
+    .sw {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 7px;
+        vertical-align: 0;
+    }
+    .sw.amber {
+        background: var(--amber);
+    }
+    .sw.red {
+        background: var(--red);
+    }
+    .sw.green {
+        background: var(--green);
+    }
+
+    /* Posúvače v návrhu B. */
+    .posuvac {
+        margin-top: 12px;
+    }
+    .posuvac label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+        color: var(--ink-45);
+    }
+    .posuvac output {
+        font-family: var(--font-mono);
+        color: var(--ink);
+    }
+    .posuvac input {
+        width: 100%;
+        accent-color: var(--green);
+        margin: 6px 0 0;
+    }
+
+    /* Graf hodín (B) a dní (C). */
+    .graf {
+        width: 100%;
+        height: auto;
+        display: block;
+        margin-top: 10px;
+    }
+    .graf text {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        fill: var(--ink-35);
+    }
+    .graf .val {
+        fill: var(--ink-70);
+        font-size: 9.5px;
+    }
+    .leg {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-45);
+        margin-top: 8px;
+    }
+    .leg i {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        margin-right: 5px;
+    }
+
+    /* Návratnosť (C). */
+    .splatene {
+        height: 10px;
+        border-radius: 5px;
+        background: var(--ink-08);
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    .splatene i {
+        display: block;
+        height: 100%;
+        width: 36%;
+        background: linear-gradient(90deg, rgba(var(--green-rgb), 0.55), var(--green));
+    }
+
+    /* Spodná navigácia v mocku: štyri ikony, nová karta je aktívna. */
+    .mock-nav {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        margin: 16px -16px 0;
+        background: rgba(10, 10, 10, 0.92);
+        border-top: 1px solid var(--ink-05);
+    }
+    .mock-nav span {
+        display: flex;
+        justify-content: center;
+        padding: 7px 0 8px;
+        color: #878682;
+        position: relative;
+    }
+    .mock-nav span.on {
+        color: var(--ink);
+    }
+    .mock-nav span.on::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 34px;
+        height: 34px;
+        margin: -17px 0 0 -17px;
+        border-radius: 50%;
+        background: var(--green);
+        opacity: 0.4;
+        filter: blur(8px);
+        z-index: 0;
+    }
+    .mock-nav svg {
+        width: 24px;
+        height: 24px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        position: relative;
+        z-index: 1;
+    }
+    .mock-nav span.nova {
+        outline: 1px dashed rgba(var(--green-rgb), 0.5);
+        outline-offset: -3px;
+        border-radius: 8px;
+    }
+
+    /* Poradie kariet - náčrt navigácie. */
+    .poradie {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .poradie span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--page-line);
+        font-size: 13px;
+        color: var(--ink-45);
+    }
+    .poradie span.nova {
+        border-color: rgba(var(--green-rgb), 0.6);
+        color: var(--ink);
+        background: rgba(var(--green-rgb), 0.08);
+    }
+    .poradie svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .odporucanie {
+        margin-top: 56px;
+        padding: 22px 24px;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(var(--green-rgb), 0.35);
+        background: rgba(var(--green-rgb), 0.05);
+    }
+    .odporucanie h2 {
+        font-size: 22px;
+        margin: 0 0 10px;
+        font-weight: 600;
+    }
+    .odporucanie p,
+    .odporucanie li {
+        color: var(--ink-45);
+        font-size: 14.5px;
+        max-width: 72ch;
+    }
+    .odporucanie b {
+        color: var(--ink-70);
+    }
+    .odporucanie ol {
+        padding-left: 20px;
+        margin: 8px 0 0;
+    }
+    .odporucanie li + li {
+        margin-top: 6px;
+    }
+
+    [hidden] {
+        display: none !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            transition: none !important;
+            animation: none !important;
+        }
+    }
+</style>
+
+<!-- Ikony navigácie: tri existujúce z index.html a nová (stĺpce). -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <symbol id="i-terazky" viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></symbol>
+    <symbol id="i-7dni" viewBox="0 0 24 24">
+        <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+        <path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2" />
+    </symbol>
+    <symbol id="i-uspory" viewBox="0 0 24 24"><path d="M4 20V13M9.5 20V8M15 20v-5M20.5 20V4M2 20h20" /></symbol>
+    <symbol id="i-nastavenie" viewBox="0 0 24 24">
+        <path d="M4 9h14l2 7H2z" />
+        <path d="M9.5 9l-.6 7M14 9l.6 7M3 12.5h16M11 16v5M7.5 21h7" />
+    </symbol>
+</svg>
+
+<div class="wrap">
+    <p class="eyebrow">Návrhy · nová karta</p>
+    <h1>Karta „Výroba a úspory“: koľko mi panely dali</h1>
+    <p class="lede">
+        Appka dnes odpovedá na otázku <b>„kedy zapnúť spotrebič“</b> a pozerá sa dopredu: teraz, dnes, týždeň. Chýba jej pohľad späť, teda
+        <b>koľko elektrárne už vyrobila a koľko to je v peniazoch</b>. Kiosk FusionSolar pritom súčty za mesiac, rok aj celú dobu posiela už
+        dnes, appka z nich ukazuje len dnešok. Ceny pásiem si človek vie zadať v tarife.
+    </p>
+    <p class="lede">
+        Tri návrhy nižšie z tých istých dát robia tri rôzne karty: jednoduché počítadlo (A), hodnotu dňa podľa tarify (B) a pohľad dopredu s
+        návratnosťou (C). Nad každým telefónom sa dá prepnúť, ako karta vyzerá <b>bez cien</b> a <b>bez živého merania</b>. Tieto dva stavy
+        má väčšina ľudí, nie výnimka.
+    </p>
+
+    <section class="panel" aria-labelledby="zdroje">
+        <h2 id="zdroje">Z čoho sa dá počítať</h2>
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Údaj</th>
+                        <th>Odkiaľ</th>
+                        <th>Kto ho má</th>
+                        <th>Čo z neho vznikne</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Výroba dnes, mesiac, rok, celkovo</td>
+                        <td>
+                            <code>dailyEnergyKwh</code>, <code>monthEnergyKwh</code>, <code>yearEnergyKwh</code>,
+                            <code>cumulativeEnergyKwh</code> z kiosku
+                        </td>
+                        <td class="ciast">len so živým meraním</td>
+                        <td>počítadlo kWh; appka ich už sťahuje, len ich nezobrazuje</td>
+                    </tr>
+                    <tr>
+                        <td>Dnešná krivka po 5 min</td>
+                        <td><code>realCurveToday</code> z kiosku</td>
+                        <td class="ciast">len so živým meraním</td>
+                        <td>dnešná výroba rozdelená do pásiem tarify (lacné / drahé)</td>
+                    </tr>
+                    <tr>
+                        <td>Predpoveď 7 dní po hodinách</td>
+                        <td>Open-Meteo → <code>buildForecast</code></td>
+                        <td class="ano">každý, aj ukážka</td>
+                        <td>očakávaná výroba a hodnota na týždeň dopredu</td>
+                    </tr>
+                    <tr>
+                        <td>Ceny pásiem</td>
+                        <td><code>Band.price</code> v tarife (nepovinné)</td>
+                        <td class="ciast">kto ich zadal</td>
+                        <td>eurá; bez nich ostávajú len kWh</td>
+                    </tr>
+                    <tr>
+                        <td>Vlastná spotreba, výkup</td>
+                        <td>nikde</td>
+                        <td class="nie">nikto</td>
+                        <td>kiosk hlási len výrobu, nie spotrebu ani pretok do siete</td>
+                    </tr>
+                    <tr>
+                        <td>Denná história výroby</td>
+                        <td>nikde</td>
+                        <td class="nie">nikto</td>
+                        <td>appka nemá server; graf „posledných 30 dní“ by sa musel zbierať v prehliadači</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>
+            <b>Z toho plynie hlavné rozhodnutie:</b> „úspora“ je vždy odhad. Appka vie, koľko elektriny panely vyrobili, a vie, za koľko by
+            si ju kúpil zo siete. Nevie však, koľko z nej si spotreboval sám a koľko odtieklo do siete, kde ti za ňu zaplatia málo alebo
+            nič. Karta preto hovorí o <b>hodnote vyrobenej elektriny</b> a otvorene píše, z čoho ju počíta.
+        </p>
+    </section>
+
+    <section class="panel" aria-labelledby="kriteria">
+        <h2 id="kriteria">Podľa čoho som návrhy meral</h2>
+        <ul>
+            <li><b>Pravda o čísle.</b> Každé euro na karte musí mať povedané, z čoho vzniklo. Radšej menšie číslo, ktorému sa dá veriť.</li>
+            <li><b>Karta nesmie byť prázdna.</b> Bez merania a bez cien musí stále niečo ukázať a ponúknuť jeden krok, ako to zlepšiť.</li>
+            <li><b>Jedna obrazovka na mobile.</b> Ako prehľad dní v karte 7 dní: bez scrollovania na 375 × 780 px.</li>
+            <li>
+                <b>Výpočet v <code>shared/</code>.</b> Všetko sú čisté funkcie z údajov, ktoré appka už má (kiosk, tarifa, predpoveď). Nový
+                zdroj dát ani server netreba.
+            </li>
+            <li><b>KISS.</b> Čo si vyžaduje nové nastavenie, je označené a dá sa odložiť.</li>
+        </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="miesto">
+        <h2 id="miesto">Miesto v navigácii</h2>
+        <p style="margin-top: 0">
+            Nová karta ide medzi 7 dní a Nastavenie: najprv teraz, potom dopredu, potom späť, nakoniec nastavenie. Ťah prstom tak ide v tom
+            istom poradí a Nastavenie ostáva na konci.
+        </p>
+        <div class="poradie" aria-label="Poradie kariet">
+            <span
+                ><svg aria-hidden="true"><use href="#i-terazky" /></svg>Terazky</span
+            >
+            <span
+                ><svg aria-hidden="true"><use href="#i-7dni" /></svg>7 dní</span
+            >
+            <span class="nova"
+                ><svg aria-hidden="true"><use href="#i-uspory" /></svg>Výroba a úspory</span
+            >
+            <span
+                ><svg aria-hidden="true"><use href="#i-nastavenie" /></svg>Nastavenie</span
+            >
+        </div>
+    </section>
+
+    <!-- ===================== NÁVRH A ===================== -->
+    <section class="navrh" aria-labelledby="navrh-a">
+        <div class="navrh-head">
+            <span class="navrh-znacka">A</span>
+            <h2 id="navrh-a">Počítadlo</h2>
+        </div>
+        <p class="navrh-podnadpis">
+            Prepínač Dnes / Mesiac / Rok / Spolu a jedno veľké číslo. Pod ním hodnota v eurách podľa tarify. Najjednoduchšia karta: ukazuje
+            presne to, čo kiosk posiela, a nič si nedomýšľa.
+        </p>
+        <div class="stlpce">
+            <div class="telefon" data-telefon="a">
+                <div class="stavy" role="group" aria-label="Stav appky v náhľade A">
+                    <button type="button" data-stav="plne" aria-pressed="true">Meranie + ceny</button>
+                    <button type="button" data-stav="bezcien" aria-pressed="false">Bez cien</button>
+                    <button type="button" data-stav="bezkiosku" aria-pressed="false">Bez merania</button>
+                </div>
+                <div class="ramik">
+                    <div class="obrazovka">
+                        <div class="obsah">
+                            <div class="mock-head">
+                                <span>RAY-MON <small>Toilet Apps Ltd.</small></span
+                                ><span class="cas"><i></i>13:00</span>
+                            </div>
+                            <p class="mock-updated" data-show="plne bezcien">meranie 13:00</p>
+                            <p class="mock-updated" data-show="bezkiosku" hidden>odhad z predpovede</p>
+                            <h2 class="mock-title">Výroba a úspory</h2>
+                            <p class="mock-sub">Dvorany nad Nitrou · 10,44 kWp</p>
+
+                            <div data-show="plne bezcien">
+                                <div class="seg" role="group" aria-label="Obdobie">
+                                    <button type="button" data-obdobie="dnes" aria-pressed="true">Dnes</button>
+                                    <button type="button" data-obdobie="mesiac" aria-pressed="false">Mesiac</button>
+                                    <button type="button" data-obdobie="rok" aria-pressed="false">Rok</button>
+                                    <button type="button" data-obdobie="spolu" aria-pressed="false">Spolu</button>
+                                </div>
+                                <div class="karta">
+                                    <span class="lbl" data-a="nadpis">Vyrobené dnes</span>
+                                    <div class="hero-num"><span class="num" data-a="kwh">31,7</span><span class="u">kWh</span></div>
+                                    <div class="eur" data-show="plne">
+                                        <span data-a="eur">4,78 €</span><small>hodnota podľa tarify</small>
+                                    </div>
+                                    <button type="button" class="vyzva" data-show="bezcien" hidden>
+                                        <span>Doplň ceny v tarife a uvidíš aj eurá</span><span>›</span>
+                                    </button>
+                                    <div data-a="dnes-extra">
+                                        <div class="drah"><i style="width: 52%"></i></div>
+                                        <div class="meta">
+                                            <span>z predpovede <b>61,4 kWh</b></span
+                                            ><span style="margin-left: auto"><b>52 %</b></span>
+                                        </div>
+                                    </div>
+                                    <div class="meta" data-a="meta" hidden></div>
+                                </div>
+                                <div class="karta">
+                                    <div class="riadky" data-a="riadky"></div>
+                                </div>
+                                <p class="pozn" data-show="plne">
+                                    Hodnota = koľko by si za túto elektrinu zaplatil zo siete, keby ju panely nevyrobili. Koľko z nej si
+                                    spotreboval sám, appka nevie.
+                                </p>
+                            </div>
+
+                            <div data-show="bezkiosku" hidden>
+                                <div class="karta">
+                                    <span class="lbl">Dnes podľa predpovede</span>
+                                    <div class="hero-num"><span class="num">61,4</span><span class="u">kWh</span></div>
+                                    <div class="eur">≈ 8,94 €<small>hodnota podľa tarify</small></div>
+                                </div>
+                                <div class="karta">
+                                    <span class="lbl">Súčty za mesiac a rok</span>
+                                    <p class="pozn" style="margin: 6px 0 0; font-size: 12.5px; color: var(--ink-45)">
+                                        Namerané súčty posiela len živé meranie z meniča Huawei. Bez neho appka vie len to, čo predpovedá.
+                                    </p>
+                                    <button type="button" class="vyzva"><span>Pripojiť živé meranie</span><span>›</span></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mock-nav" aria-hidden="true">
+                            <span
+                                ><svg><use href="#i-terazky" /></svg></span
+                            ><span
+                                ><svg><use href="#i-7dni" /></svg></span
+                            ><span class="on nova"
+                                ><svg><use href="#i-uspory" /></svg></span
+                            ><span
+                                ><svg><use href="#i-nastavenie" /></svg
+                            ></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="telefon-popis">375 × 780 px · klikni na obdobie</p>
+            </div>
+
+            <div class="poznamky">
+                <h3>Čo sa ukazuje</h3>
+                <ul>
+                    <li>
+                        <b>Jedno veľké číslo</b> za zvolené obdobie a pod ním eurá. Zvyšné tri obdobia sú ako riadky pod ním, nič sa
+                        neskrýva.
+                    </li>
+                    <li><b>Dnes</b> má navyše pásik „z predpovede 52 %“. Ten istý údaj je dnes v bubline Dnes v karte 7 dní.</li>
+                    <li><b>Mesiac a rok</b> dostanú priemer na deň, aby sa dali porovnať medzi sebou.</li>
+                </ul>
+                <h3>Čo treba doplniť v appke</h3>
+                <ul>
+                    <li>Nová čistá funkcia <code>savingsModel</code> v <code>shared/</code>: kWh × cena pásma.</li>
+                    <li>
+                        Mesiac, rok a „spolu“ má kiosk len ako súčet, nie po hodinách. Cenu pásma preto nepozná. Appka ich ocení
+                        <b>priemernou cenou</b>, ktorú vyráta z toho, do ktorých pásiem padá výroba podľa predpovede (v Dvoranoch 0,146 €).
+                    </li>
+                    <li>Žiadne nové nastavenie.</li>
+                </ul>
+                <h3>Riziká</h3>
+                <p class="vystraha">
+                    Eurá sú <b>horná hranica</b>: počítajú so všetkou výrobou, ako keby ju domácnosť spotrebovala. Pri bežnej vlastnej
+                    spotrebe 30 až 50 % je skutočná úspora menšia. Veta pod číslom to hovorí, ale veľké zelené číslo si ju ľahko prekričí.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== NÁVRH B ===================== -->
+    <section class="navrh" aria-labelledby="navrh-b">
+        <div class="navrh-head">
+            <span class="navrh-znacka">B</span>
+            <h2 id="navrh-b">Hodnota dňa podľa tarify</h2>
+        </div>
+        <p class="navrh-podnadpis">
+            Karta rozloží dnešnú výrobu po hodinách a zafarbí ju podľa pásma, v ktorom vznikla, rovnako ako pás cien v detaile dňa. Dvoma
+            posúvačmi si človek nastaví, koľko spotrebuje sám a koľko dostane za pretok, a eurá sa prepočítajú hneď.
+        </p>
+        <div class="stlpce">
+            <div class="telefon" data-telefon="b">
+                <div class="stavy" role="group" aria-label="Stav appky v náhľade B">
+                    <button type="button" data-stav="plne" aria-pressed="true">Meranie + ceny</button>
+                    <button type="button" data-stav="bezcien" aria-pressed="false">Bez cien</button>
+                    <button type="button" data-stav="bezkiosku" aria-pressed="false">Bez merania</button>
+                </div>
+                <div class="ramik">
+                    <div class="obrazovka">
+                        <div class="obsah">
+                            <div class="mock-head">
+                                <span>RAY-MON <small>Toilet Apps Ltd.</small></span
+                                ><span class="cas"><i></i>13:00</span>
+                            </div>
+                            <p class="mock-updated" data-show="plne bezcien">meranie 13:00</p>
+                            <p class="mock-updated" data-show="bezkiosku" hidden>odhad z predpovede</p>
+                            <h2 class="mock-title">Výroba a úspory</h2>
+                            <p class="mock-sub">Dvorany nad Nitrou · 10,44 kWp</p>
+
+                            <div class="karta">
+                                <span class="lbl" data-show="plne bezcien">Dnes doteraz</span>
+                                <span class="lbl" data-show="bezkiosku" hidden>Dnes podľa predpovede</span>
+                                <div class="hero-num" data-show="plne">
+                                    <span class="num" data-b="eur">1,91</span><span class="u">€ ušetrené</span>
+                                </div>
+                                <div class="hero-num" data-show="bezcien" hidden>
+                                    <span class="num">31,7</span><span class="u">kWh</span>
+                                </div>
+                                <div class="hero-num" data-show="bezkiosku" hidden>
+                                    <span class="num" data-b="eur-pred">3,58</span><span class="u">€ ušetríš</span>
+                                </div>
+                                <div class="meta" data-show="plne">
+                                    <span>z <b>31,7 kWh</b></span
+                                    ><span>celá výroba by stála <b>4,78 €</b></span>
+                                </div>
+                                <div class="meta" data-show="bezkiosku" hidden>
+                                    <span>z <b>61,4 kWh</b> podľa predpovede</span>
+                                </div>
+                                <svg
+                                    class="graf"
+                                    data-b="graf"
+                                    viewBox="0 0 320 128"
+                                    role="img"
+                                    aria-label="Výroba po hodinách podľa pásma tarify"
+                                ></svg>
+                                <div class="leg">
+                                    <span><i style="background: var(--amber)"></i>lacné pásmo NT</span
+                                    ><span><i style="background: var(--red)"></i>drahé VT</span
+                                    ><span><i style="background: var(--ink-12)"></i>predpoveď</span>
+                                </div>
+                            </div>
+
+                            <div class="karta" data-show="plne bezkiosku">
+                                <div class="posuvac">
+                                    <label for="b-vlastna">Spotrebuješ sám <output data-b="vlastna-out">40 %</output></label>
+                                    <input type="range" id="b-vlastna" min="0" max="100" step="5" value="40" />
+                                </div>
+                                <div class="posuvac">
+                                    <label for="b-vykup">Výkup prebytku <output data-b="vykup-out">0,00 €/kWh</output></label>
+                                    <input type="range" id="b-vykup" min="0" max="0.1" step="0.01" value="0" />
+                                </div>
+                            </div>
+                            <button type="button" class="vyzva" data-show="bezcien" hidden>
+                                <span>Doplň ceny v tarife a uvidíš, koľko si ušetril</span><span>›</span>
+                            </button>
+
+                            <div class="karta" data-show="plne bezcien">
+                                <div class="riadky" data-b="riadky"></div>
+                            </div>
+                        </div>
+                        <div class="mock-nav" aria-hidden="true">
+                            <span
+                                ><svg><use href="#i-terazky" /></svg></span
+                            ><span
+                                ><svg><use href="#i-7dni" /></svg></span
+                            ><span class="on nova"
+                                ><svg><use href="#i-uspory" /></svg></span
+                            ><span
+                                ><svg><use href="#i-nastavenie" /></svg
+                            ></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="telefon-popis">375 × 780 px · potiahni posúvače</p>
+            </div>
+
+            <div class="poznamky">
+                <h3>Čo sa ukazuje</h3>
+                <ul>
+                    <li>
+                        <b>Eurá, ktoré naozaj ostali v peňaženke:</b> vlastná spotreba × cena pásma + pretok × výkup. Číslo je menšie než v
+                        A, ale dá sa mu veriť.
+                    </li>
+                    <li>
+                        <b>Stĺpce po hodinách vo farbe pásma.</b> V Dvoranoch je väčšina slnka v lacnom NT, drahé VT je len ráno. Takú vec
+                        nikde inde v appke nevidno a pritom je to jej hlavná myšlienka: tarifa × slnko.
+                    </li>
+                    <li><b>Bez merania</b> ukáže to isté pre dnešok podľa predpovede, takže karta funguje aj v ukážke.</li>
+                </ul>
+                <h3>Čo treba doplniť v appke</h3>
+                <ul>
+                    <li>
+                        <b>Dve nové nastavenia:</b> podiel vlastnej spotreby a výkupná cena. Buď ako posúvače priamo v karte (ako tu), alebo
+                        ako krok sprievodcu v časti Tarifa. Obe sa dajú preskočiť cez „Neviem“ (40 % a 0 €).
+                    </li>
+                    <li>
+                        Rozdelenie dnešnej krivky do pásiem: <code>realCurveToday</code> × <code>bandAt</code>. Obe funkcie už existujú,
+                        pribudne len ich súčet.
+                    </li>
+                </ul>
+                <h3>Riziká</h3>
+                <p class="vystraha">
+                    Posúvač „spotrebuješ sám“ je <b>odhad človeka</b>, nie meranie. Kto ho nechá na 40 %, dostane číslo, ktoré môže byť aj o
+                    polovicu vedľa. Druhé riziko: posúvače v karte sú nastavenie mimo karty Nastavenie a do zdieľaného odkazu by sa
+                    nedostali.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== NÁVRH C ===================== -->
+    <section class="navrh" aria-labelledby="navrh-c">
+        <div class="navrh-head">
+            <span class="navrh-znacka">C</span>
+            <h2 id="navrh-c">Týždeň dopredu a návratnosť</h2>
+        </div>
+        <p class="navrh-podnadpis">
+            Karta sa pozerá na obe strany: hore koľko elektrina z panelov bude mať hodnotu najbližších 7 dní (z predpovede, teda pre
+            každého), dole koľko elektráreň vyrobila za celý čas a akú časť investície už splatila.
+        </p>
+        <div class="stlpce">
+            <div class="telefon" data-telefon="c">
+                <div class="stavy" role="group" aria-label="Stav appky v náhľade C">
+                    <button type="button" data-stav="plne" aria-pressed="true">Meranie + ceny</button>
+                    <button type="button" data-stav="bezcien" aria-pressed="false">Bez cien</button>
+                    <button type="button" data-stav="bezkiosku" aria-pressed="false">Bez merania</button>
+                </div>
+                <div class="ramik">
+                    <div class="obrazovka">
+                        <div class="obsah">
+                            <div class="mock-head">
+                                <span>RAY-MON <small>Toilet Apps Ltd.</small></span
+                                ><span class="cas"><i></i>13:00</span>
+                            </div>
+                            <p class="mock-updated" data-show="plne bezcien">meranie 13:00</p>
+                            <p class="mock-updated" data-show="bezkiosku" hidden>odhad z predpovede</p>
+                            <h2 class="mock-title">Výroba a úspory</h2>
+                            <p class="mock-sub">Dvorany nad Nitrou · 10,44 kWp</p>
+
+                            <div class="karta">
+                                <span class="lbl">Najbližších 7 dní</span>
+                                <div class="hero-num" data-show="plne bezkiosku">
+                                    <span class="num" style="font-size: 38px">47,57</span><span class="u">€ hodnota</span>
+                                </div>
+                                <div class="hero-num" data-show="bezcien" hidden>
+                                    <span class="num" style="font-size: 38px">327</span><span class="u">kWh</span>
+                                </div>
+                                <div class="meta">
+                                    <span>z <b>327 kWh</b> podľa predpovede</span><span>najlepší <b>Štvrtok</b></span>
+                                </div>
+                                <svg class="graf" data-c="graf" viewBox="0 0 320 120" role="img" aria-label="Hodnota výroby po dňoch"></svg>
+                            </div>
+
+                            <div class="karta" data-show="plne bezcien">
+                                <span class="lbl">Za celý čas</span>
+                                <div class="hero-num">
+                                    <span class="num" style="font-size: 30px">24 380</span><span class="u">kWh</span>
+                                </div>
+                                <div data-show="plne">
+                                    <div class="meta">
+                                        <span>hodnota <b>3 547 €</b></span
+                                        ><span>investícia <b>9 800 €</b></span>
+                                    </div>
+                                    <div class="splatene" role="img" aria-label="Splatené 36 percent"><i></i></div>
+                                    <div class="meta">
+                                        <span><b>36 %</b> splatené</span
+                                        ><span style="margin-left: auto">pri tomto tempe ešte <b>~4,8 roka</b></span>
+                                    </div>
+                                </div>
+                                <button type="button" class="vyzva" data-show="bezcien" hidden>
+                                    <span>Doplň ceny a sumu investície, uvidíš návratnosť</span><span>›</span>
+                                </button>
+                            </div>
+
+                            <div class="karta" data-show="bezkiosku" hidden>
+                                <span class="lbl">Za celý čas</span>
+                                <p class="pozn" style="margin: 6px 0 0; font-size: 12.5px; color: var(--ink-45)">
+                                    Koľko elektráreň vyrobila od spustenia, vie len jej menič. S živým meraním tu uvidíš aj návratnosť.
+                                </p>
+                                <button type="button" class="vyzva"><span>Pripojiť živé meranie</span><span>›</span></button>
+                            </div>
+                        </div>
+                        <div class="mock-nav" aria-hidden="true">
+                            <span
+                                ><svg><use href="#i-terazky" /></svg></span
+                            ><span
+                                ><svg><use href="#i-7dni" /></svg></span
+                            ><span class="on nova"
+                                ><svg><use href="#i-uspory" /></svg></span
+                            ><span
+                                ><svg><use href="#i-nastavenie" /></svg
+                            ></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="telefon-popis">375 × 780 px</p>
+            </div>
+
+            <div class="poznamky">
+                <h3>Čo sa ukazuje</h3>
+                <ul>
+                    <li>
+                        <b>Hodnota týždňa dopredu</b> je jediná časť, ktorú vie ukázať každý: z predpovede po hodinách × cena pásma v tej
+                        hodine. Stĺpce majú farby silného, priemerného a slabého dňa ako v rebríčku 7 dní.
+                    </li>
+                    <li><b>Návratnosť</b> je číslo, na ktoré sa majitelia elektrární pýtajú najčastejšie.</li>
+                </ul>
+                <h3>Čo treba doplniť v appke</h3>
+                <ul>
+                    <li>
+                        <b>Nové nastavenie: cena elektrárne.</b> Bez neho návratnosť nie je. Patrí do sprievodcu a do zdieľaného odkazu nie.
+                    </li>
+                    <li>„Za celý čas“ je <code>cumulativeEnergyKwh</code> × priemerná cena, rovnako ako mesiac a rok v návrhu A.</li>
+                </ul>
+                <h3>Riziká</h3>
+                <p class="vystraha">
+                    Týždeň dopredu v eurách <b>opakuje kartu 7 dní</b>, len v inej mene. Návratnosť je odhad na odhade (hodnota bez vlastnej
+                    spotreby, tempo z jedného roka) a tvári sa ako presné číslo. A cena elektrárne je citlivý údaj, ktorý by sa nesmel
+                    dostať do zdieľaného odkazu.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== POROVNANIE ===================== -->
+    <section class="navrh" aria-labelledby="porovnanie">
+        <div class="navrh-head"><h2 id="porovnanie">Porovnanie</h2></div>
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>A · Počítadlo</th>
+                        <th>B · Hodnota dňa</th>
+                        <th>C · Týždeň a návratnosť</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Pravda o čísle</td>
+                        <td class="ciast">horná hranica, povedané vetou</td>
+                        <td class="ano">vlastná spotreba aj výkup</td>
+                        <td class="nie">odhad na odhade</td>
+                    </tr>
+                    <tr>
+                        <td>Bez živého merania</td>
+                        <td class="ciast">dnešok z predpovede + výzva</td>
+                        <td class="ano">celá karta z predpovede</td>
+                        <td class="ano">týždeň dopredu ostáva</td>
+                    </tr>
+                    <tr>
+                        <td>Bez cien</td>
+                        <td class="ano">kWh ostávajú, výzva na ceny</td>
+                        <td class="ciast">karta stratí zmysel</td>
+                        <td class="ciast">kWh ostávajú, návratnosť nie</td>
+                    </tr>
+                    <tr>
+                        <td>Nové nastavenia</td>
+                        <td class="ano">žiadne</td>
+                        <td class="ciast">vlastná spotreba, výkup</td>
+                        <td class="nie">cena elektrárne (citlivé)</td>
+                    </tr>
+                    <tr>
+                        <td>Nové v appke</td>
+                        <td>počítadlo mesiac / rok / spolu</td>
+                        <td>výroba rozdelená do pásiem tarify</td>
+                        <td>návratnosť</td>
+                    </tr>
+                    <tr>
+                        <td>Rozsah práce</td>
+                        <td class="ano">1 model, 1 render, 2 PR (HTML → JS)</td>
+                        <td class="ciast">A + graf + 2 nastavenia</td>
+                        <td class="ciast">A + graf + nastavenie v sprievodcovi</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="odporucanie" aria-labelledby="odp">
+        <h2 id="odp">Odporúčanie: A teraz, B ako druhý krok</h2>
+        <p>
+            <b>A</b> prinesie všetko nové, čo appka vie povedať z dát, ktoré už má, a nepridá ani jedno nastavenie. Je to jeden model v
+            <code>shared/</code> a jedna render funkcia. Dve nasadenia sú potrebné len kvôli pravidlu o cache (najprv škrupina v HTML, potom
+            <code>PANELS</code>).
+        </p>
+        <p>
+            Z <b>B</b> by som hneď prevzal jednu vec: <b>dnešok oceniť podľa pásiem z nameranej krivky</b>, nie priemernou cenou. Stojí to
+            pár riadkov a číslo je presnejšie. Posúvače vlastnej spotreby sú dobrý druhý krok, keď sa ukáže, že horná hranica ľudí mýli.
+            <b>C</b> by som zatiaľ odložil: týždeň dopredu už ukazuje karta 7 dní a návratnosť potrebuje citlivý údaj.
+        </p>
+        <p><b>Na rozhodnutie:</b></p>
+        <ol>
+            <li>Ktorý návrh (alebo kombinácia)?</li>
+            <li>Meno karty: „Výroba a úspory“, „Úspory“, alebo „Štatistika“? Kódový názov by bol napríklad <code>uspory</code>.</li>
+            <li>Poradie: medzi 7 dní a Nastavenie, ako je v náhľade?</li>
+            <li>Ak B: posúvače priamo v karte, alebo krok v sprievodcovi (a teda aj v zdieľanom odkaze)?</li>
+        </ol>
+    </section>
+</div>
+
+<script>
+    // Zmrazená vzorka: Dvorany, 5. 9. 2026 13:00, ceny NT 0,14 € a VT 0,19 € za kWh.
+    const CENA = { nt: 0.14, vt: 0.19 };
+    const PRIEMER = 0.1455; // priemerná cena podľa pásiem, do ktorých padá výroba z predpovede
+    const nf = (d) => new Intl.NumberFormat('sk-SK', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const cislo = (n, d = 1) => nf(d).format(n);
+    const eur = (n) => `${cislo(n, n >= 1000 ? 0 : 2)} €`;
+
+    // Dnešok po pásmach (namerané do 13:00): VT 7:30–8:30 a 9:30–10:30, zvyšok NT.
+    const DNES = { vt: 6.8, nt: 24.9 };
+    const OBDOBIA = {
+        dnes: { nadpis: 'Vyrobené dnes', riadok: 'Dnes', kwh: 31.7, eur: DNES.vt * CENA.vt + DNES.nt * CENA.nt },
+        mesiac: { nadpis: 'Vyrobené v septembri', riadok: 'September', kwh: 236, meta: 'ø <b>52 kWh</b> za deň' },
+        rok: { nadpis: 'Vyrobené v roku 2026', riadok: 'Rok 2026', kwh: 8912, meta: 'ø <b>36 kWh</b> za deň' },
+        spolu: { nadpis: 'Vyrobené od spustenia', riadok: 'Od spustenia', kwh: 24380, meta: 'údaj z meniča, odkedy elektráreň beží' },
+    };
+    for (const o of Object.values(OBDOBIA)) o.eur ??= o.kwh * PRIEMER;
+
+    // ---- Prepínač stavu (všetky tri telefóny) ----
+    // HTML je v stave "plne" už od načítania; klik prepne viditeľné prvky a ohlási to
+    // udalosťou "stav", na ktorú si každý telefón prekreslí svoje čísla.
+    document.querySelectorAll('.telefon').forEach((tel) => {
+        tel.dataset.stav = 'plne';
+        const nastav = (stav) => {
+            tel.querySelectorAll('.stavy button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.stav === stav)));
+            tel.querySelectorAll('[data-show]').forEach((el) => (el.hidden = !el.dataset.show.split(' ').includes(stav)));
+            tel.dataset.stav = stav;
+            tel.dispatchEvent(new Event('stav'));
+        };
+        tel.querySelectorAll('.stavy button').forEach((b) => b.addEventListener('click', () => nastav(b.dataset.stav)));
+    });
+
+    // ---- A: počítadlo ----
+    const telA = document.querySelector('[data-telefon="a"]');
+    const a = (k) => telA.querySelector(`[data-a="${k}"]`);
+    function kresliA(kluc) {
+        const o = OBDOBIA[kluc];
+        telA.querySelectorAll('[data-obdobie]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.obdobie === kluc)));
+        a('nadpis').textContent = o.nadpis;
+        a('kwh').textContent = cislo(o.kwh, o.kwh >= 1000 ? 0 : 1);
+        a('eur').textContent = eur(o.eur);
+        a('dnes-extra').hidden = kluc !== 'dnes';
+        a('meta').hidden = kluc === 'dnes';
+        a('meta').innerHTML = o.meta ? `<span>${o.meta}</span>` : '';
+        const sCenami = telA.dataset.stav !== 'bezcien';
+        a('riadky').innerHTML = Object.entries(OBDOBIA)
+            .filter(([k]) => k !== kluc)
+            .map(
+                ([, r]) =>
+                    `<div class="riadok"><span class="k">${r.riadok}</span><span class="v">${cislo(r.kwh, r.kwh >= 1000 ? 0 : 1)} kWh</span>` +
+                    `<span class="e">${sCenami ? eur(r.eur) : ''}</span></div>`,
+            )
+            .join('');
+    }
+    telA.querySelectorAll('[data-obdobie]').forEach((b) => b.addEventListener('click', () => kresliA(b.dataset.obdobie)));
+    telA.addEventListener('stav', () => kresliA(telA.querySelector('[data-obdobie][aria-pressed="true"]').dataset.obdobie));
+    kresliA('dnes');
+
+    // ---- B: hodnota dňa ----
+    // Výkon o celej hodine (kW), namerané do 13:00, potom predpoveď. Pásmo o celej hodine
+    // podľa tarify Dvorian (VT 7:30–8:30, 9:30–10:30, 20:30–21:30).
+    const HODINY = [
+        [5, 0],
+        [6, 0.3],
+        [7, 1.1],
+        [8, 2.6],
+        [9, 4.2],
+        [10, 5.6],
+        [11, 6.8],
+        [12, 7.6],
+        [13, 7.9],
+        [14, 7.5],
+        [15, 6.6],
+        [16, 5.2],
+        [17, 3.6],
+        [18, 1.9],
+        [19, 0.6],
+        [20, 0.1],
+        [21, 0],
+    ];
+    const VT = [
+        [7.5, 8.5],
+        [9.5, 10.5],
+        [20.5, 21.5],
+    ];
+    const jeVT = (h) => VT.some(([od, po]) => h >= od && h < po);
+    const telB = document.querySelector('[data-telefon="b"]');
+    const b = (k) => telB.querySelector(`[data-b="${k}"]`);
+    const vlastna = document.getElementById('b-vlastna');
+    const vykup = document.getElementById('b-vykup');
+
+    function grafB(bezMerania) {
+        const W = 320,
+            padL = 8,
+            padR = 8,
+            top = 16,
+            base = 104,
+            maxKw = 8.6;
+        const x = (h) => padL + ((h - 5) / 16) * (W - padL - padR);
+        const y = (kw) => base - (kw / maxKw) * (base - top);
+        let s = '';
+        for (const [h, kw] of HODINY) {
+            if (kw <= 0) continue;
+            const meranie = !bezMerania && h <= 13;
+            const farba = meranie ? (jeVT(h) ? 'var(--red)' : 'var(--amber)') : 'var(--ink-12)';
+            s += `<rect x="${(x(h) - 6.5).toFixed(1)}" y="${y(kw).toFixed(1)}" width="13" height="${(base - y(kw)).toFixed(1)}" rx="2" fill="${farba}"/>`;
+        }
+        // Pás cien pod osou - ten istý ako v detaile dňa.
+        const useky = [
+            [5, 7.5, 'amber'],
+            [7.5, 8.5, 'red'],
+            [8.5, 9.5, 'amber'],
+            [9.5, 10.5, 'red'],
+            [10.5, 20.5, 'amber'],
+            [20.5, 21, 'red'],
+        ];
+        for (const [od, po, t] of useky)
+            s += `<rect x="${x(od).toFixed(1)}" y="${base + 3}" width="${(x(po) - x(od)).toFixed(1)}" height="4" fill="var(--${t})"/>`;
+        if (!bezMerania)
+            s += `<line x1="${x(13.5)}" y1="${top - 6}" x2="${x(13.5)}" y2="${base}" stroke="var(--ink-45)" stroke-dasharray="2 3"/><text x="${x(13.5) + 4}" y="${top - 1}">teraz</text>`;
+        for (const h of [6, 9, 12, 15, 18, 21]) s += `<text x="${x(h)}" y="${base + 20}" text-anchor="middle">${h}:00</text>`;
+        b('graf').innerHTML = s;
+    }
+
+    function kresliB() {
+        const stav = telB.dataset.stav || 'plne';
+        const s = Number(vlastna.value) / 100;
+        const v = Number(vykup.value);
+        b('vlastna-out').textContent = `${vlastna.value} %`;
+        b('vykup-out').textContent = `${cislo(v, 2)} €/kWh`;
+        const hodnota = (kwh, cena) => kwh * (s * cena + (1 - s) * v);
+        const dnes = hodnota(DNES.vt, CENA.vt) + hodnota(DNES.nt, CENA.nt);
+        b('eur').textContent = cislo(dnes, 2);
+        // Bez merania: celý deň z predpovede (VT ráno 6,8 kWh, zvyšok NT).
+        b('eur-pred').textContent = cislo(hodnota(6.8, CENA.vt) + hodnota(61.4 - 6.8, CENA.nt), 2);
+        grafB(stav === 'bezkiosku');
+        const sCenami = stav === 'plne';
+        const riadok = (k, kwh, e, sw) =>
+            `<div class="riadok"><span class="k">${sw ? `<i class="sw ${sw}"></i>` : ''}${k}</span><span class="v">${cislo(kwh, kwh >= 1000 ? 0 : 1)} kWh</span><span class="e">${sCenami ? eur(e) : ''}</span></div>`;
+        b('riadky').innerHTML =
+            riadok('Lacné pásmo NT', DNES.nt, hodnota(DNES.nt, CENA.nt), 'amber') +
+            riadok('Drahé pásmo VT', DNES.vt, hodnota(DNES.vt, CENA.vt), 'red') +
+            riadok('September', OBDOBIA.mesiac.kwh, hodnota(OBDOBIA.mesiac.kwh, PRIEMER)) +
+            riadok('Rok 2026', OBDOBIA.rok.kwh, hodnota(OBDOBIA.rok.kwh, PRIEMER));
+    }
+    telB.addEventListener('stav', kresliB);
+    vlastna.addEventListener('input', kresliB);
+    vykup.addEventListener('input', kresliB);
+    kresliB();
+
+    // ---- C: týždeň dopredu ----
+    // Farba dňa ako v rebríčku 7 dní: tretiny najsilnejšieho dňa týždňa.
+    const DNI = [
+        ['Dnes', 61.4, 8.94],
+        ['Zajtra', 48.5, 7.06],
+        ['Po', 27.4, 3.99],
+        ['Ut', 53.6, 7.8],
+        ['St', 41.2, 5.99],
+        ['Št', 62.5, 9.09],
+        ['Pi', 32.3, 4.7],
+    ];
+    (function grafC() {
+        const svg = document.querySelector('[data-c="graf"]');
+        const W = 320,
+            top = 18,
+            base = 96,
+            slot = W / DNI.length,
+            bw = slot * 0.52;
+        const max = Math.max(...DNI.map((d) => d[1]));
+        const tier = (kwh) => (kwh / max >= 2 / 3 ? 'green' : kwh / max >= 1 / 3 ? 'amber' : 'red');
+        let s = '';
+        DNI.forEach(([den, kwh, e], i) => {
+            const cx = slot * i + slot / 2;
+            const h = (kwh / max) * (base - top);
+            s += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(base - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--${tier(kwh)})" fill-opacity="0.85"/>`;
+            s += `<text class="val" x="${cx.toFixed(1)}" y="${(base - h - 5).toFixed(1)}" text-anchor="middle" data-c-hodnota="${cislo(e, 2)}" data-c-kwh="${Math.round(kwh)}">${cislo(e, 2)}</text>`;
+            s += `<text x="${cx.toFixed(1)}" y="${base + 14}" text-anchor="middle">${den}</text>`;
+        });
+        svg.innerHTML = s;
+        // Bez cien ukazujú stĺpce kWh namiesto eur.
+        const telC = document.querySelector('[data-telefon="c"]');
+        telC.addEventListener('stav', () =>
+            svg
+                .querySelectorAll('[data-c-hodnota]')
+                .forEach((t) => (t.textContent = telC.dataset.stav === 'bezcien' ? t.dataset.cKwh : t.dataset.cHodnota)),
+        );
+    })();
+</script>

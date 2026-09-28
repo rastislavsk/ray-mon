@@ -21,6 +21,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť) |
 | `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)   |
 | `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup        |
+| `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)     |
 
 ## Prečo je to v repozitári
 

@@ -3869,6 +3869,130 @@ b {
     justify-self: center;
 }
 
+/* ---- Štatistika ------------------------------------------------------------ */
+/* Výroba za obdobie a jej hodnota podľa tarify (návrh A v docs/navrhy/statistika-uspory.html).
+   Obsah skladá render do #stats-body; prepínač obdobia je .seg zo sprievodcu, výzvy sú .choice
+   a pásik dneška je ten istý .progress-* ako v bubline Dnes na karte 7 dní. */
+.stats {
+    display: grid;
+    gap: var(--sp-3);
+    max-width: 560px;
+}
+/* Veľké číslo obdobia - rám ako bublina so súčtom týždňa (.week-list-hero). */
+.stats-hero {
+    display: grid;
+    gap: 6px;
+    padding: var(--sp-4);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+    border-radius: var(--radius-lg);
+}
+.stats-num {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+.stats-num .num {
+    font-family: var(--font-mono);
+    font-size: var(--fs-num);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+.stats-num .u {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-35);
+    margin-left: 3px;
+}
+/* Eurá sú zelené: je to hodnota elektriny zo slnka, tá istá farba ako slnko na ciferníku. */
+.stats-eur {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--green);
+}
+.stats-eur small {
+    margin-left: 6px;
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--ink-35);
+}
+.stats-meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-45);
+}
+.stats-meta b {
+    color: var(--ink);
+}
+/* Ostatné obdobia pod veľkým číslom - rám ako zoznam v prehľade elektrárne (.sum-list). */
+.stats-rows {
+    display: grid;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--ink-12);
+    background: var(--card-bg);
+    overflow: hidden;
+}
+.stats-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--ink-05);
+    font-size: var(--fs-md);
+}
+.stats-row:last-child {
+    border-bottom: 0;
+}
+.stats-row .k {
+    color: var(--ink-45);
+}
+.stats-row .v,
+.stats-row .e {
+    font-family: var(--font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+.stats-row .e {
+    min-width: 72px;
+    color: var(--green);
+}
+.stats-row .sw {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-radius: 2px;
+}
+.stats-row .sw.amber {
+    background: var(--amber);
+}
+.stats-row .sw.grey {
+    background: var(--grey);
+}
+.stats-row .sw.red {
+    background: var(--red);
+}
+.stats-note {
+    margin: 0;
+    padding: 0 4px;
+    font-size: var(--fs-sm);
+    color: var(--ink-35);
+}
+.stats-go .chev {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--ink-35);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 /* ---- Širšie obrazovky ----------------------------------------------------- */
 @media (min-width: 768px) {
     :root {
@@ -4012,6 +4136,10 @@ b {
     /* Karta Nastavenie býva dlhšia než okno (sprievodca s kompasom) a body sa tu neposúva,
        posúva sa preto karta sama. Tlačidlá sprievodcu sa lepia k jej spodku. */
     #panel-nastavenie {
+        overflow-y: auto;
+    }
+    /* Štatistika sa na desktope zmestí, na nízkom okne sa radšej posunie, než oreže. */
+    #panel-statistika {
         overflow-y: auto;
     }
     .wz-foot {
