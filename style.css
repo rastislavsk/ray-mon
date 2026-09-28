@@ -4212,6 +4212,30 @@ b {
     font-family: var(--font-mono);
     font-size: 13px;
 }
+/* „Pustil/a som“: tmavé tlačidlo na svetlom rozbalení, zapísané je len obrys. */
+.mozem-log {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    margin-top: 12px;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    background: #0b0b0b;
+    color: var(--ink);
+    font-weight: 700;
+    text-align: center;
+}
+.mozem-log[aria-pressed='true'] {
+    border: 2px solid #0b0b0b;
+    background: transparent;
+    color: #0b0b0b;
+}
+.mozem-count {
+    margin: 0 6px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-70);
+}
 .mozem-quip {
     display: block;
     width: 100%;

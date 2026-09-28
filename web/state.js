@@ -21,6 +21,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   mozemOpen: string | null,
  *   mozemQuip: number,
+ *   launches: import('../shared/launches.js').Launch[],
  *   previewMinutes: number | null,
  *   isDragging: boolean,
  *   wide: boolean,
@@ -97,6 +98,8 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // na hlášku. Obe sú nastavenie vnútri karty, nie krok navigácie.
         mozemOpen: /** @type {string | null} */ (null),
         mozemQuip: 0,
+        // Zápisy „Pustil/a som“ z tohto telefónu (web/settings-store.js). Načítajú sa pri štarte.
+        launches: [],
         previewMinutes: null,
         isDragging: false,
         wide: layout.wide,

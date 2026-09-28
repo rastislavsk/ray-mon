@@ -29,7 +29,10 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   umývačka, sušička, auto, hranie a fén – s krátkou odpoveďou („do 15:30“, „o 10:30“, „zajtra
   08:00“, „lacno“). Ťuknutie na vec ju rozbalí: čo robiť, prečo, a čo keď sa zamračí alebo to
   treba hneď – s cenou zo siete, keď ju tarifa pozná. Dole hláška so suchým humorom, ťuknutím
-  príde ďalšia. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
+  príde ďalšia. V rozbalení spotrebiča je tlačidlo „Pustil/a som“ (keď appka radí počkať,
+  „Pustil/a som aj tak“): spustenie sa zapíše len v telefóne, pri spotrebiči sa ukáže „beží do …“
+  a pod mriežkou koľko toho človek tento mesiac pustil a koľko z toho na slnku. Kým spotrebič
+  beží, druhé ťuknutie zápis zruší. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
   prvá, appka sa ale otvára na karte Terazky – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa

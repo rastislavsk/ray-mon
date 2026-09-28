@@ -48,7 +48,10 @@ function itemHtml(it, open) {
         `<span class="mozem-mark tone-${it.tone}">${mark}</span></button>`;
     if (!open) return btn;
     const extra = it.extra ? `<p class="mozem-extra">${escapeHtml(it.extra)}</p>` : '';
-    return `${btn}<div class="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}</div>`;
+    const log = it.log
+        ? `<button type="button" class="mozem-log" data-mozem-log="${it.id}" data-sun="${it.log.sun ? 1 : 0}" aria-pressed="${it.log.pressed}">${escapeHtml(it.log.label)}</button>`
+        : '';
+    return `${btn}<div class="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}${log}</div>`;
 }
 
 /**
@@ -61,6 +64,7 @@ export function mozemHtml(m, open, kick) {
         heroHtml(m, kick) +
         stripHtml(m) +
         `<div class="mozem-lbl"><span>Čo môžem</span><span>ťukni</span></div><div class="mozem-grid">${items}</div>` +
+        (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +
         `<button type="button" class="mozem-quip" data-mozem-quip aria-label="Ďalšia hláška: ${escapeHtml(m.quip)}"><q>${escapeHtml(m.quip)}</q>` +
         `<small aria-hidden="true">ťukni pre ďalšiu</small></button>`
     );
@@ -68,7 +72,7 @@ export function mozemHtml(m, open, kick) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderMozem(state, dom) {
-    const m = mozemModel(state, state.mozemQuip);
+    const m = mozemModel(state, state.mozemQuip, state.launches);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     writeHtml(dom.mozemBody, mozemHtml(m, state.mozemOpen, kick), 'mozemBody');
 }

@@ -380,6 +380,14 @@ export const MOZEM_ITEMS = [
     { id: 'fen', device: null, runMin: null, runKwh: null },
 ];
 
+/**
+ * „Pustil/a som“ v karte Môžem?: zápisy sa držia len v telefóne. `limit` je najviac zápisov
+ * (zhruba rok bežnej rodiny), `autoRunMin` ako dlho sa auto po zapojení ráta za „nabíja sa“ -
+ * program ako práčka nemá.
+ */
+export const LAUNCH = { limit: 500, autoRunMin: 120 };
+export const LAUNCH_STORAGE_KEY = 'spustenia-v1';
+
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 
