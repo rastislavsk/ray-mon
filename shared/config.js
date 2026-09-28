@@ -102,6 +102,15 @@ export const SHARE_HASH_KEY = 'nastavenie';
 /** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
 export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 
+/**
+ * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
+ * ten, kto elektráreň platí, ciferník. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
+ * `&prva=…` za mriežkou. Prvá v zozname je predvolená.
+ */
+export const START_PANELS = /** @type {const} */ (['terazky', 'mozem']);
+export const START_STORAGE_KEY = 'prva-karta-v1';
+export const START_HASH_KEY = 'prva';
+
 /** Minút v dni. Ciferník ich rozloží po obvode, rozvrh tarify ich delí na pásma. */
 export const MINUTES_PER_DAY = 1440;
 

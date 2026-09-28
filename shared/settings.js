@@ -2,7 +2,18 @@
 // panelov. Kontrola vstupu, prevod na formát výpočtu a čítanie uloženej či nájdenej lokality.
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
-import { DEMO_PLANT, DEMO_SITE, DEMO_TARIFF, installedKw, PLANT, SETTINGS_LIMITS, SHARE_HASH_KEY, TARIFF } from './config.js';
+import {
+    DEMO_PLANT,
+    DEMO_SITE,
+    DEMO_TARIFF,
+    installedKw,
+    PLANT,
+    SETTINGS_LIMITS,
+    SHARE_HASH_KEY,
+    START_HASH_KEY,
+    START_PANELS,
+    TARIFF,
+} from './config.js';
 import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
 import { checkTariff, parseStoredTariff } from './tariff.js';
@@ -220,23 +231,49 @@ function fromBase64Url(token) {
     return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
+/** @typedef {(typeof START_PANELS)[number]} StartPanel karta, na ktorej sa appka otvára */
+
 /**
- * Časť adresy za mriežkou s nastavením (`#nastavenie=…`). Bez `settings` prázdny reťazec.
+ * Časť adresy za mriežkou s nastavením (`#nastavenie=…`) a s kartou, na ktorej sa má appka
+ * otvárať (`&prva=mozem`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
  * @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ * @param {StartPanel} [start]
  */
-export function shareHash(settings, withKiosk) {
-    if (!settings) return '';
-    const user = toUser(settings);
-    if (!withKiosk) user.kiosk = '';
-    return `#${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`;
+export function shareHash(settings, withKiosk, start = START_PANELS[0]) {
+    const parts = [];
+    if (settings) {
+        const user = toUser(settings);
+        if (!withKiosk) user.kiosk = '';
+        parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`);
+    }
+    if (start !== START_PANELS[0]) parts.push(`${START_HASH_KEY}=${start}`);
+    return parts.length ? `#${parts.join('&')}` : '';
 }
 
 /**
- * Odkaz na appku, voliteľne s nastavením elektrárne. Bez `settings` je to holý odkaz.
+ * Odkaz na appku, voliteľne s nastavením elektrárne a prvou kartou. Bez nich je to holý odkaz.
  * @param {string} appUrl @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ * @param {StartPanel} [start]
  */
-export function shareUrl(appUrl, settings, withKiosk) {
-    return appUrl + shareHash(settings, withKiosk);
+export function shareUrl(appUrl, settings, withKiosk, start) {
+    return appUrl + shareHash(settings, withKiosk, start);
+}
+
+/**
+ * Prvá karta z hodnoty z úložiska alebo z odkazu; čokoľvek iné je null.
+ * @param {unknown} raw @returns {StartPanel | null}
+ */
+export function parseStartPanel(raw) {
+    return START_PANELS.find((p) => p === raw) || null;
+}
+
+/**
+ * Prvá karta z časti adresy za mriežkou (`…&prva=mozem`), alebo null.
+ * @param {string} text @returns {StartPanel | null}
+ */
+export function startFromLink(text) {
+    const m = new RegExp(`[#&]${START_HASH_KEY}=([a-z0-9]{1,20})(?:&|$)`).exec(String(text || '').trim());
+    return m ? parseStartPanel(m[1]) : null;
 }
 
 /**

@@ -247,6 +247,16 @@ Texty vrátane hlášok sú v `messages.js`. Hláška sa mení s dňom a ťuknut
 rozbalená vec je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie. Obsah
 karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 
+Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
+Môžem?, ten, kto elektráreň platí, ciferník. Ukladá sa preto pod vlastným kľúčom
+(`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=mozem` za mriežkou.
+Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa uloží (`loadStartPanel`) -
+odkaz „pre rodinu“ tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše vlastnú voľbu.
+Adresa v prehliadači ju nesie tiež (`initUrlMirror`), z toho istého dôvodu ako nastavenie:
+appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Blok „Tento telefón“ aj
+zaškrtávatko pri zdieľaní si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
+nasadenia.
+
 ## Karta 7 dní na mobile
 
 Na telefóne mala karta štyri grafy a tabuľku pod sebou – pätnásť obrazoviek scrollovania,
