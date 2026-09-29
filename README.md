@@ -78,14 +78,14 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   kiosk Huawei FusionSolar pre živé meranie, tarifa a na koniec zhrnutie s výrobou za jasného
   dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
   po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
-  podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je karta
-  prehľad elektrárne: karta s menom, celkovým výkonom, zostavou a kompasom plôch a pod ňou
-  riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo Späť na telefóne
-  vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
-  Blok **Tento telefón** určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to
-  voľba telefónu, nie elektrárne, a ukladá sa zvlášť. Pri zdieľaní appky sa dá zaškrtnúť „pre
-  rodinu“ – kto odkaz otvorí a vlastnú voľbu ešte nemá, tomu sa appka otvorí na karte Môžem?.
-  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). **Zdieľať appku**: QR kód,
+  podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je
+  v karte rozbaľovacia položka **Elektráreň** s prehľadom: karta s menom, celkovým výkonom,
+  zostavou a kompasom plôch a pod ňou riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo
+  Späť na telefóne vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
+  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Položka **Úvodná karta**
+  určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to voľba telefónu, nie
+  elektrárne, a ukladá sa zvlášť. Pri zdieľaní appky sa dá zaškrtnúť „pre rodinu“ – kto odkaz
+  otvorí a vlastnú voľbu ešte nemá, tomu sa appka otvorí na karte Môžem?. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.

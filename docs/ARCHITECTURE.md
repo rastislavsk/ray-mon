@@ -272,7 +272,7 @@ Môžem?, ten, kto elektráreň platí, ciferník. Ukladá sa preto pod vlastný
 Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa uloží (`loadStartPanel`) -
 odkaz „pre rodinu“ tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše vlastnú voľbu.
 Adresa v prehliadači ju nesie tiež (`initUrlMirror`), z toho istého dôvodu ako nastavenie:
-appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Blok „Tento telefón“ aj
+appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Položka „Úvodná karta“ aj
 zaškrtávatko pri zdieľaní si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
 nasadenia.
 

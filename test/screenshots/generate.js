@@ -13,7 +13,7 @@ import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 const PORT = 8123;
 const SIRKA = 390;
 const VYSKA = 844;
-// Karta Nastavenie ukazuje prehľad elektrárne; položky sekcie Appka ostávajú zavreté -
+// Karta Nastavenie ukazuje rozbalený prehľad elektrárne; položky sekcie Appka ostávajú zavreté -
 // Zdieľať appku preto, lebo QR kód v ňom kreslí knižnica z CDN a bez prístupu naň by
 // z neho bol prázdny biely rámik.
 const KARTY = [
@@ -21,7 +21,7 @@ const KARTY = [
     { subor: 'terazky.png', nav: 'nav-terazky' },
     { subor: '7dni.png', nav: 'nav-7dni' },
     { subor: 'statistika.png', nav: 'nav-statistika' },
-    { subor: 'nastavenie.png', nav: 'nav-nastavenie' },
+    { subor: 'nastavenie.png', nav: 'nav-nastavenie', otvor: '#settings-plant > summary' },
 ];
 
 /** Počká, kým server odpovie, aby sa prvý pokus o snímku netrafil do prázdna. */
