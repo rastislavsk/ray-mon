@@ -307,6 +307,7 @@ b {
     background-attachment: fixed;
 }
 .appbar-inner {
+    position: relative;
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 18px 20px 12px;
@@ -880,11 +881,6 @@ b {
 
 /* ---- Terazky: ikonka a popup s vysvetlením ciferníka -----------------------
    Obsah popupu je statický, JS len ukazuje a skrýva prekrytie (.hidden). */
-.info-btn-row {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: var(--sp-2);
-}
 .info-btn {
     display: flex;
     align-items: center;
@@ -892,16 +888,35 @@ b {
     width: 28px;
     height: 28px;
     border-radius: var(--radius-pill);
-    border: 1px solid var(--ink-20);
-    background: var(--ink-05);
-    color: var(--ink-45);
+    border: 0;
+    background: #fff;
+    color: #000;
+}
+/* Ikonka visí pod hlavičkou, pod hodinami - je absolútna, takže hlavička nezväčšuje. Ukazuje sa
+   len na karte Terazky, ktorej ciferník vysvetľuje. */
+.appbar-info {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 20px;
+    display: none;
+}
+body:has(#page[data-panel='terazky']) .appbar-info {
+    display: flex;
+}
+/* Na širokej obrazovke je hlavička jeden riadok (.appbar-inner je tu flex) - ikonka je jeho
+   posledná položka, hneď za hodinami, nie pod nimi. */
+@media (min-width: 1024px) {
+    .appbar-info {
+        position: static;
+        flex: 0 0 auto;
+    }
 }
 .info-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
+    stroke-width: 2.6;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
