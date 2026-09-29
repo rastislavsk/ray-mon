@@ -46,7 +46,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Ciferník sa číta aj ako 24-hodinový: vonkajší prstenec je plán dňa – cena elektriny podľa
   tarify (oranžová lacné pásmo, sivá bežná cena, červená drahé) a zelená tam, kde predpoveď
   sľubuje dosť slnka na veľké spotrebiče. Značka „teraz“ na ňom je slnko, v noci mesiac. Potiahnutím jazdca po prstenci alebo ťuknutím
-  naň si pozrieš, ako to bude vyzerať v inom čase. Ikonka „i“ v pravom hornom rohu karty otvorí
+  naň si pozrieš, ako to bude vyzerať v inom čase. Ikonka „i“ pod aktuálnym časom v hlavičke (len na tejto karte) otvorí
   popup Ako čítať ciferník: čo prstence a farby na ciferníku znamenajú.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
