@@ -1,26 +1,29 @@
-// Hlavička: čas, stavová bodka (cena × výkon), riadok o aktuálnosti dát a farba plánu dňa
-// pre pozadie celej stránky (vrátane náhľadu iného času).
+// Hlavička: stavová bodka (cena × výkon) s časom poslednej aktualizácie dát, pod ním čo ten
+// čas znamená, a farba plánu dňa pre pozadie celej stránky (vrátane náhľadu iného času).
 
-import { minutesToTimeStr } from '../../shared/format.js';
 import { heroModel, pvFreshness } from '../../shared/hero-model.js';
-import { localMinutes } from '../../shared/solar.js';
 
-/** @param {import('../state.js').AppState} state */
+/**
+ * Pravý horný roh hlavičky: čas aktualizácie dát a pod ním text k nemu. Kde čas nie je, stojí
+ * tam „–:–“, aby riadok nemenil tvar.
+ * @param {import('../state.js').AppState} state @returns {{ time: string, text: string }}
+ */
 export function updatedLine(state) {
-    if (state.loading) return 'načítavam…';
-    if (!state.pv && !state.forecast) return 'dáta nedostupné';
-    if (state.demo) return 'ukážka · nastav si elektráreň';
+    const none = (/** @type {string} */ text) => ({ time: '–:–', text });
+    if (state.loading) return none('načítavam…');
+    if (!state.pv && !state.forecast) return none('dáta nedostupné');
+    if (state.demo) return none('ukážka · nastav si elektráreň');
     // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
-    if (!state.pv) return state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede';
-    const { label, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
-    return stale ? `${label} · zastarané` : label;
+    if (!state.pv) return none(state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede');
+    const { label, time, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
+    return { time, text: stale ? `${label} · zastarané` : label };
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
-    // Čas lokality, nie telefónu - k nemu sa vzťahuje rozvrh tarify aj predpoveď.
-    dom.currentTimeDisplay.textContent = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
-    dom.pvUpdated.textContent = updatedLine(state);
+    const updated = updatedLine(state);
+    dom.pvTime.textContent = updated.time;
+    dom.pvUpdated.textContent = updated.text;
     // Výzva v ukážke. Na karte Nastavenie ju netreba - tam je sprievodca, ku ktorému vedie.
     dom.demoBar.classList.toggle('hidden', !state.demo || state.panel === 'nastavenie');
     // Bodka je vždy o stave teraz, preto ju náhľad iného času nezaujíma. Pozadie naopak

@@ -134,14 +134,14 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
     // Stiahnuté práve teraz - sleduje sa len krivka, ktorá vo vzorke končí o 13:00.
     const fresh = (/** @type {Date} */ now, curve = pv.realCurveToday) =>
         pvFreshness({ now, site: SITE, pv: { ...pv, realCurveToday: curve, updatedAt: now.toISOString() } });
-    assert.deepEqual(fresh(at('13:00')), { label: 'meranie 13:00', time: '13:00', stale: false });
-    assert.deepEqual(fresh(at('13:15')), { label: 'meranie 13:00', time: '13:00', stale: false });
-    assert.deepEqual(fresh(at('13:30')), { label: 'meranie 13:00', time: '13:00', stale: true });
+    assert.deepEqual(fresh(at('13:00')), { label: 'meranie', time: '13:00', stale: false });
+    assert.deepEqual(fresh(at('13:15')), { label: 'meranie', time: '13:00', stale: false });
+    assert.deepEqual(fresh(at('13:30')), { label: 'meranie', time: '13:00', stale: true });
     // Večer a v noci menič nemeria a nie je to chyba.
     const evening = [...pv.realCurveToday, { hour: 18.75, kw: 0.1 }];
-    assert.deepEqual(fresh(at('21:00'), evening), { label: 'meranie 18:45', time: '18:45', stale: false });
+    assert.deepEqual(fresh(at('21:00'), evening), { label: 'meranie', time: '18:45', stale: false });
     // Ráno tesne po východe slnka krivka ešte nemusí mať ani bod; o desiatej už áno.
-    assert.deepEqual(fresh(at('07:00'), []), { label: 'aktualizované 07:00', time: '07:00', stale: false });
+    assert.deepEqual(fresh(at('07:00'), []), { label: 'aktualizované', time: '07:00', stale: false });
     assert.equal(fresh(at('10:00'), []).stale, true);
     // Staré stiahnutie je zastarané aj v noci.
     const old = pvFreshness({ now: at('22:00'), site: SITE, pv: { ...pv, updatedAt: at('21:00').toISOString() } });
