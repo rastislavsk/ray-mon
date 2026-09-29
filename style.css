@@ -2533,6 +2533,10 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .settings-body {
     padding: 0 16px 18px;
 }
+/* Položka Elektráreň nemá čo ukázať, kým je prehľad skrytý (ukážka): výzva k sprievodcovi je nad ňou. */
+.plant-list:has(#setup-overview.hidden) {
+    display: none;
+}
 
 /* ---- Moja elektráreň (položka nastavenia) ----------------------------------- */
 .demo-note {
@@ -4079,11 +4083,10 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     color: var(--ink-35);
 }
 
-/* Karta, na ktorej sa appka na tomto telefóne otvára (blok „Tento telefón“ v Nastavení). */
+/* Karta, na ktorej sa appka na tomto telefóne otvára (položka „Úvodná karta“ v Nastavení). */
 .start-pick {
     display: grid;
     gap: var(--sp-2);
-    margin-top: var(--sp-4);
 }
 .start-choices {
     display: grid;

@@ -1420,6 +1420,14 @@ async function ocakavajKartu(page, panel) {
     await expect(page.locator(`#nav-${panel}`)).toHaveAttribute('aria-current', 'page');
 }
 
+/** Položky v karte Nastavenie sú zbalené, kým na ne človek neťukne. Rozbalí ju, ak ešte nie je.
+ * @param {import('@playwright/test').Page} page @param {string} id */
+async function otvorPolozku(page, id) {
+    const item = page.locator(`#${id}`);
+    if ((await item.getAttribute('open')) === null) await item.locator('> summary').click();
+    await expect(item).toHaveAttribute('open', '');
+}
+
 /** Graf priebehu dňa je na mobile až v detaile vybraného dňa - otvára sa klikom na riadok
  * rebríčka. @param {import('@playwright/test').Page} page @param {number} [den] */
 async function otvorDetailDna(page, den = 0) {
@@ -1662,6 +1670,7 @@ test.describe('listovanie kariet prstom', () => {
     test('ťahanie posúvača sklonu neprepne kartu', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
         await page.locator('#setup-rows [data-setup-edit="roof:0"]').click();
         await page.locator('[data-setup-tab="sklon"]').click();
         // Posúvač je nízko na obrazovke - ťah musí začať naozaj na ňom, nie pod okrajom displeja
@@ -1678,6 +1687,7 @@ test.describe('listovanie kariet prstom', () => {
     test('ťah po kruhu rozvrhu tarify neprepne kartu', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
         await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
         await page.locator('#wz-tariff-tabs [data-setup-tab="rozvrh"]').click();
         await page.locator('#wz-tariff-ring').evaluate((el) => el.scrollIntoView({ block: 'center' }));
@@ -2254,6 +2264,7 @@ test.describe('moja elektráreň', () => {
         expect(await ulozene(page)).toBeNull();
         await dalej(page);
 
+        await otvorPolozku(page, 'settings-plant');
         await expect(page.locator('#setup-overview')).toBeVisible();
         await expect(page.locator('#setup-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
@@ -2356,6 +2367,7 @@ test.describe('moja elektráreň', () => {
         await page.evaluate(([key, value]) => localStorage.setItem(key, value), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))]);
         await page.reload();
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
         await page.locator('#setup-rows [data-setup-edit="lokalita"]').click();
         await vyberMiesto(page, 'Syd', 'Sydney');
         await dalej(page);
@@ -2366,6 +2378,7 @@ test.describe('moja elektráreň', () => {
     test('úprava z prehľadu: len jeden krok, uloží sa hneď; zrušenie nechá, ako bolo', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
         await expect(page.locator('#setup-hero .big')).toHaveText('10,44 kWp');
 
         await page.locator('#setup-rows [data-setup-edit="roof:1"]').click();
@@ -2427,6 +2440,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
         // Prehľad v Nastavení ukáže, že kiosk odpovedá, aj čas posledného merania - na mobile
         // namiesto podnadpisu, ten sa skryje.
+        await otvorPolozku(page, 'settings-plant');
         const meranie = page.locator('#setup-rows [data-setup-edit="meranie"]');
         await expect(meranie.locator('.sum-live.in-line.ok')).toHaveText('pripojené · 13:00');
         await expect(meranie.locator('.sum-live.in-line')).toBeVisible();
@@ -2449,6 +2463,7 @@ test.describe('moja elektráreň', () => {
     test('úprava tarify z prehľadu: tri pásma, maľovanie po kruhu, víkend, ceny a uloženie', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
         await expect(page.locator('#setup-rows [data-setup-edit="tarifa"]')).toContainText('2 pásma · lacno 20 h');
         await expect(page.locator('#setup-rows [data-setup-edit="tarifa"]')).toContainText('bez cien');
         await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
@@ -2540,6 +2555,7 @@ test.describe('moja elektráreň', () => {
                 .filter((v) => v.impact === 'serious' || v.impact === 'critical')
                 .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
         expect(await vazne()).toEqual([]);
+        await otvorPolozku(page, 'settings-plant');
         await page.locator('#setup-rows [data-setup-edit="roof:0"]').click();
         // Kompas z klávesnice: šípky otáčajú o 45°.
         await page.locator('[data-setup-az="180"]').focus();
@@ -2801,6 +2817,7 @@ test.describe('prvá karta tohto telefónu', () => {
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
         await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-start');
         const mozem = page.locator('[data-start-panel="mozem"]');
         await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
         await mozem.click();
