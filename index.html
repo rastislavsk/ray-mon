@@ -111,6 +111,16 @@
 
             <!-- PANEL: TERAZKY -->
             <section id="panel-terazky" class="panel panel-terazky" aria-labelledby="verdict-headline">
+                <!-- Ikonka vysvetlenia ciferníka: pravý horný roh karty, hneď pod hlavičkou appky. -->
+                <div class="info-btn-row">
+                    <button type="button" class="info-btn" data-info-open aria-label="Ako čítať ciferník">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" />
+                            <line x1="12" y1="11" x2="12" y2="16" />
+                            <circle class="dot" cx="12" cy="7.3" r="0.6" />
+                        </svg>
+                    </button>
+                </div>
                 <div class="dial-hero card" id="dial-hero">
                     <!-- Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo,
                          polnoc dole - deň v smere hodinových ručičiek, slnko ide zľava doprava.
@@ -208,6 +218,91 @@
                         <button class="pager-dot hidden" type="button" id="verdict-dot-wait" aria-label="Kedy bude lepšie"></button>
                     </div>
                     <div class="chip-tooltip" id="verdict-chip-tooltip" aria-hidden="true"></div>
+                </div>
+
+                <!-- Popup s vysvetlením ciferníka. Ciferník v ňom je statická ilustrácia (pevne dané
+                     pásma a jedna ukážková hodnota výkonu), nie živé dáta - na vysvetlenie farieb
+                     a prstencov to netreba prepočítavať. -->
+                <div class="info-overlay hidden" id="info-overlay">
+                    <div class="info-popup" role="dialog" aria-modal="true" aria-labelledby="info-title">
+                        <button type="button" class="info-close" data-info-close aria-label="Zavrieť">×</button>
+                        <h2 id="info-title">Ako čítať ciferník</h2>
+                        <p class="info-sub">Farby a prstence v skratke.</p>
+
+                        <svg class="info-dial" viewBox="0 0 240 240" aria-hidden="true">
+                            <!-- Pásma a bodka sú kreslené s polnocou hore; otočenie ich posadí ako na ciferníku
+                                 v karte Terazky - poludnie hore. Oblúk výkonu nie je čas, ten sa neotáča. -->
+                            <g transform="rotate(180 120 120)">
+                                <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
+                                <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
+                                <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
+                                <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
+                                <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
+                                <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
+                                <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
+                                <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
+                                <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
+                                <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
+                                <g class="info-dial-now" transform="translate(92.57 222.39) scale(1.3)">
+                                    <circle class="halo" r="10.5" />
+                                    <circle class="sun" r="3.4" />
+                                    <path
+                                        class="rays"
+                                        d="M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59"
+                                    />
+                                </g>
+                            </g>
+                            <circle class="dial-track" cx="120" cy="120" r="78" />
+                            <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
+                        </svg>
+
+                        <ul class="info-rows">
+                            <li class="info-row">
+                                <svg class="info-row-icon info-icon-tariff" viewBox="0 0 22 22" aria-hidden="true">
+                                    <path class="seg green" d="M11,2 A9,9 0 0 1 16.29,18.28" />
+                                    <path class="seg amber" d="M16.29,18.28 A9,9 0 0 1 2,11" />
+                                    <path class="seg red" d="M2,11 A9,9 0 0 1 11,2" />
+                                </svg>
+                                <div>
+                                    <b>Vonkajší prstenec</b> — 24 hodín dňa podľa tvojej tarify a predpovede:
+                                    <ul class="info-tiers">
+                                        <li><i class="sw green"></i>slnko pokryje veľké spotrebiče</li>
+                                        <li><i class="sw amber"></i>lacné pásmo (NT, mimo špičky)</li>
+                                        <li><i class="sw grey"></i>bežná cena</li>
+                                        <li><i class="sw red"></i>drahé pásmo (VT, špička)</li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="info-row">
+                                <span class="info-row-icon sky-mark" aria-hidden="true"></span>
+                                <div>
+                                    <b>Slnko alebo mesiac</b> — presný aktuálny čas („teraz“). Slnko svieti od východu po západ slnka, v
+                                    noci je tu mesiac.
+                                </div>
+                            </li>
+                            <li class="info-row">
+                                <svg class="info-row-icon info-icon-power" viewBox="0 0 22 22" aria-hidden="true">
+                                    <circle class="track" cx="11" cy="11" r="8" />
+                                    <circle class="arc" cx="11" cy="11" r="8" transform="rotate(-90 11 11)" />
+                                </svg>
+                                <div>
+                                    <b>Vnútorný oblúk a číslo</b> — aktuálny výkon fotovoltiky. Dĺžka aj farba ukazujú, koľko dávajú panely
+                                    (kW).
+                                </div>
+                            </li>
+                            <li class="info-row">
+                                <svg class="info-row-icon info-icon-drag" viewBox="0 0 22 22" aria-hidden="true">
+                                    <circle cx="11" cy="11" r="9" />
+                                    <path d="M7 8l-2.5 3L7 14M15 8l2.5 3L15 14" />
+                                </svg>
+                                <div>
+                                    <b>Jazdec na prstenci</b> — potiahni ho (alebo naň ťukni) a pozri si, ako to bude vyzerať v inom čase.
+                                </div>
+                            </li>
+                        </ul>
+
+                        <button type="button" class="info-ok" data-info-close>Rozumiem</button>
+                    </div>
                 </div>
             </section>
 
@@ -417,104 +512,11 @@
                             <button type="button" class="link-btn" data-setup-restart>Nastaviť celé znova od začiatku</button>
                         </div>
                         <div class="plant-note" id="setup-note" role="status"></div>
-                        <!-- Appka: návod k ciferníku a zdieľanie (predtým karta Info). Sú v prehľade karty, takže
-                             sa skryjú spolu s ním, keď je otvorený sprievodca. Položky sú natívne <details>.
-                             Ciferník v návode je statická ilustrácia (pevne dané pásma a jedna ukážková
-                             hodnota výkonu), nie živé dáta - na vysvetlenie farieb to netreba prepočítavať. -->
+                        <!-- Appka: zdieľanie (predtým karta Info). Je v prehľade karty, takže sa skryje spolu s ním,
+                             keď je otvorený sprievodca. Položka je natívne <details>. -->
                         <section class="app-items" aria-labelledby="app-items-title">
                             <div class="group-lbl" id="app-items-title">Appka</div>
                             <ul class="settings-list">
-                                <li>
-                                    <details class="settings-item" id="info-guide">
-                                        <summary class="settings-summary">
-                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                                <circle cx="12" cy="12" r="9" />
-                                                <path d="M12 7v5l3 2" />
-                                            </svg>
-                                            <span class="settings-text">
-                                                <b>Ako čítať ciferník</b>
-                                                <span class="settings-hint">Farby a prstence v skratke</span>
-                                            </span>
-                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </summary>
-                                        <div class="settings-body info-panel">
-                                            <svg class="info-dial" viewBox="0 0 240 240" aria-hidden="true">
-                                                <!-- Pásma a bodka sú kreslené s polnocou hore; otočenie ich posadí ako na ciferníku
-                                                     v karte Terazky - poludnie hore. Oblúk výkonu nie je čas, ten sa neotáča. -->
-                                                <g transform="rotate(180 120 120)">
-                                                    <path class="day-band amber" d="M120,14 A106,106 0 0 1 217.93,160.57" />
-                                                    <path class="day-band red" d="M217.93,160.57 A106,106 0 0 1 204.10,184.53" />
-                                                    <path class="day-band amber" d="M204.10,184.53 A106,106 0 0 1 184.53,204.10" />
-                                                    <path class="day-band red" d="M184.53,204.10 A106,106 0 0 1 160.57,217.93" />
-                                                    <path class="day-band green" d="M160.57,217.93 A106,106 0 0 1 14.91,133.83" />
-                                                    <path class="day-band amber" d="M14.91,133.83 A106,106 0 0 1 35.90,55.47" />
-                                                    <path class="day-band red" d="M35.90,55.47 A106,106 0 0 1 55.47,35.90" />
-                                                    <path class="day-band amber" d="M55.47,35.90 A106,106 0 0 1 79.43,22.07" />
-                                                    <path class="day-band red" d="M79.43,22.07 A106,106 0 0 1 106.17,14.91" />
-                                                    <path class="day-band amber" d="M106.17,14.91 A106,106 0 0 1 120,14" />
-                                                    <g class="info-dial-now" transform="translate(92.57 222.39) scale(1.3)">
-                                                        <circle class="halo" r="10.5" />
-                                                        <circle class="sun" r="3.4" />
-                                                        <path
-                                                            class="rays"
-                                                            d="M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59"
-                                                        />
-                                                    </g>
-                                                </g>
-                                                <circle class="dial-track" cx="120" cy="120" r="78" />
-                                                <circle class="info-dial-power" cx="120" cy="120" r="78" transform="rotate(-90 120 120)" />
-                                            </svg>
-
-                                            <ul class="info-rows">
-                                                <li class="info-row">
-                                                    <svg class="info-row-icon info-icon-tariff" viewBox="0 0 22 22" aria-hidden="true">
-                                                        <path class="seg green" d="M11,2 A9,9 0 0 1 16.29,18.28" />
-                                                        <path class="seg amber" d="M16.29,18.28 A9,9 0 0 1 2,11" />
-                                                        <path class="seg red" d="M2,11 A9,9 0 0 1 11,2" />
-                                                    </svg>
-                                                    <div>
-                                                        <b>Vonkajší prstenec</b> — 24 hodín dňa podľa tvojej tarify a predpovede:
-                                                        <ul class="info-tiers">
-                                                            <li><i class="sw green"></i>slnko pokryje veľké spotrebiče</li>
-                                                            <li><i class="sw amber"></i>lacné pásmo (NT, mimo špičky)</li>
-                                                            <li><i class="sw grey"></i>bežná cena</li>
-                                                            <li><i class="sw red"></i>drahé pásmo (VT, špička)</li>
-                                                        </ul>
-                                                    </div>
-                                                </li>
-                                                <li class="info-row">
-                                                    <span class="info-row-icon sky-mark" aria-hidden="true"></span>
-                                                    <div>
-                                                        <b>Slnko alebo mesiac</b> — presný aktuálny čas („teraz“). Slnko svieti od východu
-                                                        po západ slnka, v noci je tu mesiac.
-                                                    </div>
-                                                </li>
-                                                <li class="info-row">
-                                                    <svg class="info-row-icon info-icon-power" viewBox="0 0 22 22" aria-hidden="true">
-                                                        <circle class="track" cx="11" cy="11" r="8" />
-                                                        <circle class="arc" cx="11" cy="11" r="8" transform="rotate(-90 11 11)" />
-                                                    </svg>
-                                                    <div>
-                                                        <b>Vnútorný oblúk a číslo</b> — aktuálny výkon fotovoltiky. Dĺžka aj farba ukazujú,
-                                                        koľko dávajú panely (kW).
-                                                    </div>
-                                                </li>
-                                                <li class="info-row">
-                                                    <svg class="info-row-icon info-icon-drag" viewBox="0 0 22 22" aria-hidden="true">
-                                                        <circle cx="11" cy="11" r="9" />
-                                                        <path d="M7 8l-2.5 3L7 14M15 8l2.5 3L15 14" />
-                                                    </svg>
-                                                    <div>
-                                                        <b>Jazdec na prstenci</b> — potiahni ho (alebo naň ťukni) a pozri si, ako to bude
-                                                        vyzerať v inom čase.
-                                                    </div>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </details>
-                                </li>
                                 <li>
                                     <details class="settings-item" id="info-share">
                                         <summary class="settings-summary">

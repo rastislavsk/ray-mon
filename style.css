@@ -878,11 +878,100 @@ b {
     transition: background-color var(--dur);
 }
 
-/* ---- Karta Info: položka Ako čítať ciferník ---------------------------------
-   Obsah položky je statický (žiadna render funkcia), preto tu nie je nič, čo by JS
-   prepínal - len rozloženie. Rámik a pozadie dáva .settings-item, v ktorej leží. */
-.info-panel {
-    padding-top: var(--sp-1);
+/* ---- Terazky: ikonka a popup s vysvetlením ciferníka -----------------------
+   Obsah popupu je statický, JS len ukazuje a skrýva prekrytie (.hidden). */
+.info-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--sp-2);
+}
+.info-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--ink-20);
+    background: var(--ink-05);
+    color: var(--ink-45);
+}
+.info-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.info-btn svg .dot {
+    fill: currentColor;
+    stroke: none;
+}
+/* Prekrytie je position: fixed, nie súčasť .dial-hero - má sadnúť na celú obrazovku,
+   nie len na kartu. Popup je vyšší než malý displej, preto sa v ňom dá scrollovať. */
+.info-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 70px 20px 20px;
+    background: rgba(0, 0, 0, 0.62);
+    overflow-y: auto;
+}
+.info-popup {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    margin: auto 0;
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+    padding: 22px 20px 20px;
+    text-align: left;
+}
+.info-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--ink-20);
+    background: var(--ink-05);
+    color: var(--ink-45);
+    font-size: 15px;
+    line-height: 1;
+}
+.info-popup h2 {
+    margin: 0 0 4px;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.info-sub {
+    margin: 0 0 18px;
+    font-size: var(--fs-sm);
+    color: var(--ink-35);
+}
+.info-ok {
+    margin-top: 18px;
+    width: 100%;
+    padding: 11px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--ink-20);
+    background: var(--ink-05);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    text-align: center;
 }
 /* Ilustračný ciferník: pevné pásma aj ukážková hodnota výkonu, nie živé dáta - na
    vysvetlenie farieb a prstencov to netreba prepočítavať. Farby pásiem (.day-band)

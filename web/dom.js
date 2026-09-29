@@ -12,13 +12,13 @@ const byId = (/** @type {string} */ id) => {
 // statistika = „Štatistika", nastavenie = „Nastavenie". Popiska je text pre používateľa a mení
 // sa podľa chuti; kódový názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí
 // naháňať.
-// Karta Info zanikla - jej položky sú v karte Nastavenie (sekcia Appka).
+// Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka), návod k ciferníku v popupe karty Terazky.
 // Môžem? je v navigácii prvá, appka sa ale otvára na karte Terazky (initialState).
 export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statistika', 'nastavenie']);
 
-// Položky sekcie Appka v karte Nastavenie (natívne <details>): návod k ciferníku a zdieľanie.
+// Položky sekcie Appka v karte Nastavenie (natívne <details>): zatiaľ len zdieľanie.
 // Kedysi boli v karte Info - odtiaľ id v HTML `info-<položka>` aj názvy v kóde.
-export const INFO_ITEMS = /** @type {const} */ (['guide', 'share']);
+export const INFO_ITEMS = /** @type {const} */ (['share']);
 
 function headerDom() {
     return {
@@ -57,6 +57,7 @@ function terazkyDom() {
         dayRing: byId('day-ring'),
         dialWhen: byId('dial-when'),
         dialGrip: byId('dial-grip'),
+        infoOverlay: byId('info-overlay'),
     };
 }
 
@@ -270,7 +271,7 @@ function wizardTariffDom() {
     };
 }
 
-// Sekcia Appka (návod a zdieľanie) a ponuka prevziať nastavenie z odkazu.
+// Sekcia Appka (zdieľanie) a ponuka prevziať nastavenie z odkazu.
 function zdielanieDom() {
     return {
         infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (

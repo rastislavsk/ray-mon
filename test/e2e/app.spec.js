@@ -826,17 +826,50 @@ test('nastavenie: položka Zdieľať appku v sekcii Appka sa otvorí až ťuknut
     expect(errors).toEqual([]);
 });
 
-test('nastavenie: položka Ako čítať ciferník vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
+test('terazky: ikonka „i“ otvorí popup, ktorý vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
     const errors = await openApp(page);
-    await page.locator('#nav-nastavenie').click();
-    // Sekcia Appka je zoznam položiek: návod je vidno až po ťuknutí na položku.
-    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
-    await page.locator('#info-guide > summary').click();
-    // Ilustračný ciferník aj štyri vysvetlivky: prstenec, bodka "teraz", oblúk výkonu, jazdec.
-    await expect(page.locator('#panel-nastavenie .info-dial')).toBeVisible();
-    await expect(page.locator('#panel-nastavenie .info-row')).toHaveCount(4);
+    // Popup je vidno až po ťuknutí na ikonku v hlavičke karty.
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.locator('[data-info-open]').click();
+    await expect(page.locator('#info-title')).toHaveText('Ako čítať ciferník');
+    // Ilustračný ciferník aj štyri vysvetlivky: prstenec, značka "teraz", oblúk výkonu, jazdec.
+    await expect(page.locator('#info-overlay .info-dial')).toBeVisible();
+    await expect(page.locator('#info-overlay .info-row')).toHaveCount(4);
     // Štyri farby prstenca (slnko a tri cenové úrovne) sú rozpísané po riadkoch, nie schované do jednej vety.
-    await expect(page.locator('#panel-nastavenie .info-tiers li')).toHaveCount(4);
+    await expect(page.locator('#info-overlay .info-tiers li')).toHaveCount(4);
+
+    // Zatvára ho krížik, "Rozumiem", klik mimo popupu aj Esc; klik dovnútra ho nezavrie.
+    await page.locator('#info-overlay .info-row').first().click();
+    await expect(page.locator('#info-overlay')).toBeVisible();
+    await page.locator('.info-close').click();
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.locator('[data-info-open]').click();
+    await page.locator('.info-ok').click();
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.locator('[data-info-open]').click();
+    await page.locator('#info-overlay').click({ position: { x: 5, y: 5 } });
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.locator('[data-info-open]').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#info-overlay')).toBeHidden();
+
+    // Späť ho zatvorí ako prvé a ostane na karte Terazky; ďalšie Späť až potom prepne kartu.
+    await page.locator('#nav-7dni').click();
+    await page.locator('#nav-terazky').click();
+    await page.locator('[data-info-open]').click();
+    await expect(page.locator('#info-overlay')).toBeVisible();
+    await page.goBack();
+    await ocakavajKartu(page, 'terazky');
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.goBack();
+    await ocakavajKartu(page, '7dni');
+    await page.locator('#nav-terazky').click();
+
+    // Pri odchode z karty sa zatvorí, nech sa pri návrate sám od seba nezjaví.
+    await page.locator('[data-info-open]').click();
+    await page.evaluate(() => document.getElementById('nav-7dni')?.click());
+    await page.locator('#nav-terazky').click();
+    await expect(page.locator('#info-overlay')).toBeHidden();
     expect(errors).toEqual([]);
 });
 
@@ -1503,7 +1536,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, guide: false },
     });
     expect(errors).toEqual([]);
 });
@@ -1533,12 +1566,12 @@ test('Späť v sekcii Appka zbalí položku a vráti na zoznam, nie na predchád
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
     await page.locator('#nav-nastavenie').click();
-    await page.locator('#info-guide > summary').click();
-    await expect(page.locator('#panel-nastavenie .info-dial')).toBeVisible();
+    await page.locator('#info-share > summary').click();
+    await expect(page.locator('#qrcode')).toBeVisible();
 
     await page.goBack();
     await ocakavajKartu(page, 'nastavenie');
-    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
+    await expect(page.locator('#qrcode')).toBeHidden();
     await expect(page.locator('#info-share > summary')).toBeVisible();
 
     // Zbalenie ťuknutím ide cez históriu: ďalšie Späť už prepne kartu, položku znovu nerozbalí.
@@ -1552,7 +1585,6 @@ test('Späť v sekcii Appka zbalí položku a vráti na zoznam, nie na predchád
     // Po návrate na kartu Nastavenie je zoznam zbalený, nič neostalo rozbalené z minula.
     await page.locator('#nav-nastavenie').click();
     await expect(page.locator('#qrcode')).toBeHidden();
-    await expect(page.locator('#panel-nastavenie .info-dial')).toBeHidden();
     expect(errors).toEqual([]);
 });
 
