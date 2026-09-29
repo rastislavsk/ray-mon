@@ -42,7 +42,10 @@
                     <span class="appbar-label">Toilet Apps Ltd.</span>
                     <div class="appbar-clock">
                         <span class="live-dot"></span>
-                        <time id="current-time-display">00:00</time>
+                        <!-- Premenovanie id v dvoch nasadeniach (CLAUDE.md, cache): #current-time-display vnútri
+                             ostáva, kým ho hľadá dom.js. Ďalším nasadením prejde dom.js na #pv-time, potom sa
+                             vnútorný span zmaže. -->
+                        <time id="pv-time"><span id="current-time-display">00:00</span></time>
                     </div>
                 </div>
                 <div class="appbar-sub">
