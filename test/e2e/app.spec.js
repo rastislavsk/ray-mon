@@ -136,7 +136,7 @@ const APP_NOW = (() => {
 test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     const errors = await openApp(page);
     const expected = modelAt(atTime('13:00').instant);
-    await expect(page.locator('#current-time-display')).toHaveText('13:00');
+    await expect(page.locator('#pv-time')).toHaveText('13:00');
     await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
     await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
     await expect(page.locator('#pv-power')).toHaveText('6.41');
@@ -780,7 +780,7 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta ne
     await page.goto('/');
     // Čas v hlavičke prepíše až appka (v HTML je 00:00) - "načítavam…" potom nie je len text
     // zo statickej stránky, ale to, čo appka sama napísala.
-    await expect(page.locator('#current-time-display')).toHaveText('–:–');
+    await expect(page.locator('#pv-time')).toHaveText('–:–');
     await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
     pustit();
     await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
@@ -933,7 +933,7 @@ test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', a
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto('/');
     await page.waitForLoadState('load');
-    await expect(page.locator('#current-time-display')).not.toHaveText('00:00');
+    await expect(page.locator('#pv-time')).not.toHaveText('00:00');
     expect(await page.evaluate(() => /** @type {any} */ (window).podvrhnute)).toBeUndefined();
     await expect(page.locator('script[src*="qrcode"]')).toHaveAttribute('crossorigin', 'anonymous');
 });
