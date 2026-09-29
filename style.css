@@ -307,7 +307,6 @@ b {
     background-attachment: fixed;
 }
 .appbar-inner {
-    position: relative;
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 18px 20px 12px;
@@ -324,12 +323,20 @@ b {
     letter-spacing: 0.18em;
     color: #fff;
 }
-/* Podpis za názvom: menší (0,9 × 0,8 názvu), sivý a netučný, aby názov vynikol. V em, aby sa
-   zmenšoval spolu s názvom aj na úzkom displeji. */
-.appbar-by {
-    font-size: 0.72em;
-    font-weight: 500;
-    color: var(--ink-45);
+/* Druhý riadok hlavičky: vľavo podnadpis (názov appky), vpravo čo znamená čas nad ním. Oba
+   drobným sivým písmom, aby vynikol názov a čas. */
+.appbar-sub {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    margin-top: var(--sp-1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--ink-35);
+    letter-spacing: 0.04em;
+}
+.pv-updated-line {
+    text-align: right;
 }
 .appbar-clock {
     display: flex;
@@ -339,9 +346,9 @@ b {
     font-size: var(--fs-sm);
     color: var(--ink-70);
 }
-/* Na úzkych mobilných obrazovkách sa názov firmy s týmto letter-spacingom
-   nezmestí na jeden riadok vedľa hodín. Veľkosť škáluje s šírkou obrazovky
-   (clamp), hodiny majú flex-shrink: 0, aby pri nedostatku miesta ustupoval
+/* Na úzkych mobilných obrazovkách sa názov s týmto letter-spacingom
+   nezmestí na jeden riadok vedľa času. Veľkosť škáluje s šírkou obrazovky
+   (clamp), čas má flex-shrink: 0, aby pri nedostatku miesta ustupoval
    vždy iba text loga a nikdy nezasahoval do zobrazenia času. Desktop
    (od 768px) je nedotknutý. */
 @media (max-width: 767px) {
@@ -358,13 +365,6 @@ b {
     .appbar-clock {
         flex-shrink: 0;
     }
-}
-.pv-updated-line {
-    margin-top: var(--sp-1);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--ink-35);
-    letter-spacing: 0.04em;
 }
 /* Výzva v ukážke. Zámerne krikľavá: kto ju prehliadne, číta čísla vymyslenej elektrárne ako
    svoje. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
@@ -894,12 +894,15 @@ b {
     background: none;
     color: #fff;
 }
-/* Ikonka visí pod hlavičkou, pod hodinami - je absolútna, takže hlavička nezväčšuje. Ukazuje sa
-   len na karte Terazky, ktorej ciferník vysvetľuje. */
+/* Ikonka visí pod hlavičkou, pod časom - je absolútna, takže hlavičku nezväčšuje. Ukazuje sa
+   len na karte Terazky, ktorej ciferník vysvetľuje. Ukotvená je na celú .appbar (sticky je tiež
+   ukotvenie), nie na .appbar-inner: pod tou je v ukážke červená výzva a ikonka by padla na ňu.
+   Navigácia je tu fixed, takže do výšky .appbar nepatrí. .appbar je na celú šírku okna, preto
+   odsadenie sprava ráta s okrajom stredného stĺpca (--page-max). */
 .appbar-info {
     position: absolute;
     top: calc(100% - 6px);
-    right: 12px;
+    right: max(12px, (100% - var(--page-max)) / 2 + 12px);
     display: none;
 }
 body:has(#page[data-panel='terazky']) .appbar-info {
@@ -1379,9 +1382,11 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         display: flex;
         flex-direction: column;
     }
+    /* relative, nie sticky - v stĺpci na výšku obrazovky nie je čo lepiť. Pre tok je to to
+       isté ako static, no ostáva ukotvením pre ikonku „i“ (viď .appbar-info). */
     body:has(#page[data-panel='terazky']) .appbar {
         flex: 0 0 auto;
-        position: static;
+        position: relative;
     }
     body:has(#page[data-panel='terazky']) .page {
         /* width:100% - .page je teraz flex-item stĺpca (flex-direction:column na body vyššie)
@@ -4578,27 +4583,37 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     .page {
         padding-bottom: var(--sp-6);
     }
-    /* "Aktualizované" ide vedľa hodín namiesto pod ne - appbar-top si drží vlastné
-       rozostupy (label...hodiny), len už nie je sám na celú šírku appbar-inner. */
+    /* Hlavička je jeden riadok: názov, podnadpis ... bodka s časom, text k času, ikonka.
+       Obaly riadkov (display: contents) tu nehrajú rolu, ich deti sú položkami .appbar-inner;
+       poradie ich striedá, lebo podnadpis a text k času sú v HTML v tom istom riadku. */
     .appbar-inner {
         display: flex;
         align-items: center;
         gap: var(--sp-3);
         padding: 5px 20px;
     }
-    .appbar-top {
-        flex: 1;
-        min-width: 0;
+    .appbar-top,
+    .appbar-sub {
+        display: contents;
     }
     .appbar-label,
-    .appbar-clock {
+    .appbar-clock,
+    .appbar-sub {
         line-height: 1.2;
     }
+    .appbar-by {
+        order: 1;
+        margin-right: auto;
+    }
+    .appbar-clock {
+        order: 2;
+    }
     .pv-updated-line {
-        flex: 0 0 auto;
-        margin-top: 0;
-        line-height: 1.2;
+        order: 3;
         white-space: nowrap;
+    }
+    .appbar-info {
+        order: 4;
     }
     .bottomnav {
         position: sticky;

@@ -141,7 +141,7 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
     await expect(page.locator('#pv-power')).toHaveText('6.41');
     await expect(page.locator('#verdict-go-row .go-chip')).toHaveCount(5);
-    await expect(page.locator('#pv-updated')).toContainText('meranie 13:00');
+    await expect(page.locator('#pv-updated')).toHaveText('meranie');
     // Teraz, Spotrebiče a Predpoveď dňa sú tam vždy - bodky sú vidno, no štvrtá
     // (Lepšie bude) nie je.
     await expect(page.locator('#verdict-dots .pager-dot')).toHaveCount(4);
@@ -778,9 +778,9 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta ne
     await blokujCdn(page);
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto('/');
-    // Hodiny vykreslí až appka (v HTML je 00:00) - "načítavam…" potom nie je len text zo
-    // statickej stránky, ale to, čo appka sama napísala. Ukážka je Londýn, teda 12:00.
-    await expect(page.locator('#current-time-display')).toHaveText('12:00');
+    // Čas v hlavičke prepíše až appka (v HTML je 00:00) - "načítavam…" potom nie je len text
+    // zo statickej stránky, ale to, čo appka sama napísala.
+    await expect(page.locator('#current-time-display')).toHaveText('–:–');
     await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
     pustit();
     await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
@@ -933,7 +933,7 @@ test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', a
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto('/');
     await page.waitForLoadState('load');
-    await expect(page.locator('#current-time-display')).toHaveText('12:00');
+    await expect(page.locator('#current-time-display')).not.toHaveText('00:00');
     expect(await page.evaluate(() => /** @type {any} */ (window).podvrhnute)).toBeUndefined();
     await expect(page.locator('script[src*="qrcode"]')).toHaveAttribute('crossorigin', 'anonymous');
 });
@@ -2147,11 +2147,9 @@ test.describe('moja elektráreň', () => {
     /** @param {import('@playwright/test').Page} page */
     const ulozene = (page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
 
-    test('bez uloženého nastavenia je ukážka Londýna: čas, výkon aj predpoveď sú londýnske', async ({ page }) => {
+    test('bez uloženého nastavenia je ukážka Londýna: výkon aj predpoveď sú londýnske', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
-        // FIXED_NOW je 11:00 UTC, v Londýne (letný čas) 12:00.
-        await expect(page.locator('#current-time-display')).toHaveText('12:00');
         await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
         await expect(page.locator('#pv-power')).not.toHaveText('–');
         await page.locator('#nav-7dni').click();
@@ -2437,7 +2435,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-summary')).toContainText('kiosk FusionSolar');
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
-        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
         // Prehľad v Nastavení ukáže, že kiosk odpovedá, aj čas posledného merania - na mobile
         // namiesto podnadpisu, ten sa skryje.
         await otvorPolozku(page, 'settings-plant');
@@ -2875,7 +2873,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#pv-updated')).toHaveText('ukážka · nastav si elektráreň');
         await page.locator('#import-accept').click();
         await expect(offer).toBeHidden();
-        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
         expect(new URL(page.url()).hash).toBe(HASH);
@@ -2944,7 +2942,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#wz-suhrn')).toBeVisible();
         await expect(page.locator('#wz-summary .big')).toHaveText('10,44 kWp');
         await page.locator('#wz-next').click();
-        await expect(page.locator('#pv-updated')).toHaveText('meranie 13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
         expect(errors).toEqual([]);

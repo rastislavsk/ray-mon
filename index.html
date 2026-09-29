@@ -39,14 +39,17 @@
         <header class="appbar">
             <div class="appbar-inner">
                 <div class="appbar-top">
-                    <span class="appbar-label">RAY-MON <span class="appbar-by">Toilet Apps Ltd.</span></span>
+                    <span class="appbar-label">Toilet Apps Ltd.</span>
                     <div class="appbar-clock">
                         <span class="live-dot"></span>
                         <time id="current-time-display">00:00</time>
                     </div>
                 </div>
-                <div class="pv-updated-line"><span id="pv-updated">načítavam…</span></div>
-                <!-- Ikonka vysvetlenia ciferníka: pod aktuálnym časom. Patrí ku karte Terazky, preto ju CSS
+                <div class="appbar-sub">
+                    <span class="appbar-by">RAY-MON</span>
+                    <span class="pv-updated-line"><span id="pv-updated">načítavam…</span></span>
+                </div>
+                <!-- Ikonka vysvetlenia ciferníka: pod časom aktualizácie. Patrí ku karte Terazky, preto ju CSS
                      ukáže len tam (viď .appbar-info); popup samotný je v paneli Terazky. -->
                 <button type="button" class="info-btn appbar-info" data-info-open aria-label="Ako čítať ciferník">
                     <svg viewBox="0 0 24 24" aria-hidden="true">

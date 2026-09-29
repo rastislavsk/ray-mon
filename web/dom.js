@@ -26,7 +26,9 @@ function headerDom() {
         // z --tint-rgb a obe musia byť na tom istom prvku (viď :root v style.css).
         root: document.documentElement,
         page: byId('page'),
-        currentTimeDisplay: byId('current-time-display'),
+        // Čas aktualizácie dát. Id ostalo po hodinách, ktoré tu kedysi boli - premenovať by ho
+        // šlo len na dve nasadenia (viď CLAUDE.md, cache).
+        pvTime: byId('current-time-display'),
         pvUpdated: byId('pv-updated'),
         demoBar: byId('demo-bar'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
