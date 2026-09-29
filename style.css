@@ -885,19 +885,21 @@ b {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-pill);
+    /* Klikacia plocha 36 px, vidno je len obrys 20 px v jej strede - do ikonky sa dá trafiť
+       prstom a vzhľad ostáva malý. */
+    width: 36px;
+    height: 36px;
+    padding: 0;
     border: 0;
-    background: #fff;
-    color: #000;
+    background: none;
+    color: #fff;
 }
 /* Ikonka visí pod hlavičkou, pod hodinami - je absolútna, takže hlavička nezväčšuje. Ukazuje sa
    len na karte Terazky, ktorej ciferník vysvetľuje. */
 .appbar-info {
     position: absolute;
-    top: calc(100% + 2px);
-    right: 20px;
+    top: calc(100% - 6px);
+    right: 12px;
     display: none;
 }
 body:has(#page[data-panel='terazky']) .appbar-info {
@@ -909,14 +911,16 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     .appbar-info {
         position: static;
         flex: 0 0 auto;
+        /* Neviditeľný okraj klikacej plochy nesmie zväčšiť riadok hlavičky. */
+        margin: -8px;
     }
 }
 .info-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2.6;
+    stroke-width: 1.9;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
