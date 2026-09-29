@@ -307,7 +307,6 @@ b {
     background-attachment: fixed;
 }
 .appbar-inner {
-    position: relative;
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 18px 20px 12px;
@@ -895,12 +894,15 @@ b {
     background: none;
     color: #fff;
 }
-/* Ikonka visí pod hlavičkou, pod hodinami - je absolútna, takže hlavička nezväčšuje. Ukazuje sa
-   len na karte Terazky, ktorej ciferník vysvetľuje. */
+/* Ikonka visí pod hlavičkou, pod časom - je absolútna, takže hlavičku nezväčšuje. Ukazuje sa
+   len na karte Terazky, ktorej ciferník vysvetľuje. Ukotvená je na celú .appbar (sticky je tiež
+   ukotvenie), nie na .appbar-inner: pod tou je v ukážke červená výzva a ikonka by padla na ňu.
+   Navigácia je tu fixed, takže do výšky .appbar nepatrí. .appbar je na celú šírku okna, preto
+   odsadenie sprava ráta s okrajom stredného stĺpca (--page-max). */
 .appbar-info {
     position: absolute;
     top: calc(100% - 6px);
-    right: 12px;
+    right: max(12px, (100% - var(--page-max)) / 2 + 12px);
     display: none;
 }
 body:has(#page[data-panel='terazky']) .appbar-info {
@@ -1380,9 +1382,11 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         display: flex;
         flex-direction: column;
     }
+    /* relative, nie sticky - v stĺpci na výšku obrazovky nie je čo lepiť. Pre tok je to to
+       isté ako static, no ostáva ukotvením pre ikonku „i“ (viď .appbar-info). */
     body:has(#page[data-panel='terazky']) .appbar {
         flex: 0 0 auto;
-        position: static;
+        position: relative;
     }
     body:has(#page[data-panel='terazky']) .page {
         /* width:100% - .page je teraz flex-item stĺpca (flex-direction:column na body vyššie)
