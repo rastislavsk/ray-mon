@@ -62,7 +62,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, guide: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -172,7 +172,7 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
-        // Popup „Ako čítať ciferník“ na karte Terazky. Nie je krok navigácie: je to vec jedného pozretia.
+        // Popup „Ako čítať ciferník“ na karte Terazky. Je krok navigácie, takže Späť ho najprv zatvorí.
         dialGuideOpen: false,
     };
 }
@@ -274,6 +274,7 @@ export function navStep(state) {
         roof: state.setupRoof,
         info: state.infoOpen,
         summary: state.mozemSummary,
+        guide: state.dialGuideOpen,
     };
 }
 
@@ -285,7 +286,8 @@ export function sameNavStep(a, b) {
         a.setup === b.setup &&
         a.roof === b.roof &&
         a.info === b.info &&
-        a.summary === b.summary
+        a.summary === b.summary &&
+        a.guide === b.guide
     );
 }
 
@@ -305,6 +307,7 @@ export function navChange(from, step) {
         setupRoof: step.roof,
         infoOpen: step.info,
         mozemSummary: step.summary,
+        dialGuideOpen: step.guide,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -329,8 +332,17 @@ export function navStepFrom(raw) {
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0, info = null, summary = false } = /** @type {Record<string, unknown>} */ (step);
-    if (!validPanelPlace(panel, weekDetail, summary) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
+    const {
+        panel,
+        weekDetail,
+        setup = null,
+        roof = 0,
+        info = null,
+        summary = false,
+        guide = false,
+    } = /** @type {Record<string, unknown>} */ (step);
+    if (!validPanelPlace(panel, weekDetail, summary) || !validSetupPlace(setup, roof) || !validInfoItem(info) || typeof guide !== 'boolean')
+        return null;
     return {
         panel: /** @type {Panel} */ (panel),
         weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
@@ -338,6 +350,7 @@ function navStepIn(step) {
         roof: /** @type {number} */ (roof),
         info: /** @type {InfoItem | null} */ (info),
         summary: /** @type {boolean} */ (summary),
+        guide,
     };
 }
 

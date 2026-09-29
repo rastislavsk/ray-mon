@@ -68,8 +68,8 @@ nastavením).
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
 kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré ostali, aby sa
-nemenil stav ani HTML. Návod k ciferníku je popup karty Terazky (`dialGuideOpen`); nie je
-krok navigácie, pri odchode z karty sa zatvorí. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
+nemenil stav ani HTML. Návod k ciferníku je popup karty Terazky (`dialGuideOpen`); je krok
+navigácie, takže ho tlačidlo Späť najprv zatvorí, a pri odchode z karty sa zatvorí tiež. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
 o ňu; „Späť“ v sprievodcovi ide cez `history.back()` (`backTo`), keď do aktuálnej položky

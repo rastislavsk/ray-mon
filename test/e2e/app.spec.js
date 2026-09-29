@@ -853,6 +853,18 @@ test('terazky: ikonka „i“ otvorí popup, ktorý vysvetľuje všetky štyri �
     await page.keyboard.press('Escape');
     await expect(page.locator('#info-overlay')).toBeHidden();
 
+    // Späť ho zatvorí ako prvé a ostane na karte Terazky; ďalšie Späť až potom prepne kartu.
+    await page.locator('#nav-7dni').click();
+    await page.locator('#nav-terazky').click();
+    await page.locator('[data-info-open]').click();
+    await expect(page.locator('#info-overlay')).toBeVisible();
+    await page.goBack();
+    await ocakavajKartu(page, 'terazky');
+    await expect(page.locator('#info-overlay')).toBeHidden();
+    await page.goBack();
+    await ocakavajKartu(page, '7dni');
+    await page.locator('#nav-terazky').click();
+
     // Pri odchode z karty sa zatvorí, nech sa pri návrate sám od seba nezjaví.
     await page.locator('[data-info-open]').click();
     await page.evaluate(() => document.getElementById('nav-7dni')?.click());
@@ -1524,7 +1536,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, guide: false },
     });
     expect(errors).toEqual([]);
 });

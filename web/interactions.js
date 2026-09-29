@@ -57,7 +57,7 @@ function dayPick(store, dom, btn) {
 function handleGuideClick(target, store) {
     if (target.closest('[data-info-open]')) store.setState({ dialGuideOpen: true });
     if (target.closest('[data-info-close]') || (target.closest('#info-overlay') && !target.closest('.info-popup'))) {
-        store.setState({ dialGuideOpen: false });
+        backTo(store, { dialGuideOpen: false });
     }
 }
 
@@ -100,7 +100,7 @@ function initNavigation(store, dom) {
     dom.previewReset.addEventListener('click', () => store.setState({ previewMinutes: null, isDragging: false }));
     dom.weekDayBack.addEventListener('click', () => closeDetail(store));
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && store.get().dialGuideOpen) store.setState({ dialGuideOpen: false });
+        if (e.key === 'Escape' && store.get().dialGuideOpen) backTo(store, { dialGuideOpen: false });
     });
 }
 
