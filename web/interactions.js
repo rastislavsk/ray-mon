@@ -51,10 +51,21 @@ function dayPick(store, dom, btn) {
     return { weekSelDay, weekDayDir: weekSelDay < store.get().weekSelDay ? -1 : 1 };
 }
 
+/** Popup s vysvetlením ciferníka: otvára ho ikonka, zatvára krížik, tlačidlo "Rozumiem"
+ * aj klik na tmavé pozadie okolo neho - nie však klik dovnútra samotného popupu.
+ * @param {HTMLElement} target @param {Store} store */
+function handleGuideClick(target, store) {
+    if (target.closest('[data-info-open]')) store.setState({ dialGuideOpen: true });
+    if (target.closest('[data-info-close]') || (target.closest('#info-overlay') && !target.closest('.info-popup'))) {
+        store.setState({ dialGuideOpen: false });
+    }
+}
+
 /** @param {Store} store @param {Dom} dom */
 function initNavigation(store, dom) {
     document.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
+        handleGuideClick(target, store);
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
@@ -88,6 +99,9 @@ function initNavigation(store, dom) {
     });
     dom.previewReset.addEventListener('click', () => store.setState({ previewMinutes: null, isDragging: false }));
     dom.weekDayBack.addEventListener('click', () => closeDetail(store));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && store.get().dialGuideOpen) store.setState({ dialGuideOpen: false });
+    });
 }
 
 /** Uhol bodu voči stredu ciferníka -> minúta dňa. @param {Dom} dom @param {number} clientX @param {number} clientY */

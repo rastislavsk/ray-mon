@@ -74,12 +74,20 @@ test('poradie dní v detaile dňa: na kraji týždňa sa nezacyklí', () => {
 });
 
 test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa prepínalo', () => {
-    assert.deepEqual(panelChange('terazky', '7dni'), { panel: '7dni', panelDir: 1, weekDetail: null, infoOpen: null, mozemSummary: false });
+    assert.deepEqual(panelChange('terazky', '7dni'), {
+        panel: '7dni',
+        panelDir: 1,
+        weekDetail: null,
+        infoOpen: null,
+        dialGuideOpen: false,
+        mozemSummary: false,
+    });
     assert.deepEqual(panelChange('nastavenie', '7dni'), {
         panel: '7dni',
         panelDir: -1,
         weekDetail: null,
         infoOpen: null,
+        dialGuideOpen: false,
         mozemSummary: false,
     });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
@@ -104,7 +112,7 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
     assert.ok(!sameNavStep(navStep({ ...state, setupStep: 'smer' }), navStep({ ...state, setupStep: 'smer', setupRoof: 1 })));
     // Rozbalená položka sekcie Appka je krok - Späť na telefóne ju zbalí a vráti na zoznam.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'nastavenie' }), navStep({ ...state, panel: 'nastavenie', infoOpen: 'share' })));
-    assert.ok(!sameNavStep(navStep({ ...state, infoOpen: 'guide' }), navStep({ ...state, infoOpen: 'share' })));
+    assert.ok(!sameNavStep(navStep({ ...state, infoOpen: null }), navStep({ ...state, infoOpen: 'share' })));
     // Rozpísané údaje v sprievodcovi krokom nie sú.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, setupLink: 'x', setupKwp: 5 })));
 });
@@ -117,6 +125,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         setupStep: null,
         setupRoof: 0,
         infoOpen: null,
+        dialGuideOpen: false,
         mozemSummary: false,
         setupReturn: null,
     });
@@ -128,6 +137,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         setupStep: null,
         setupRoof: 0,
         infoOpen: null,
+        dialGuideOpen: false,
         mozemSummary: false,
         setupReturn: null,
     });
@@ -143,8 +153,8 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
     );
     // Späť v karte Info: položka sa nastaví na to, čo v kroku bolo (null = zoznam).
     assert.equal(
-        navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: null, roof: 0, info: 'guide', summary: false }).infoOpen,
-        'guide',
+        navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: null, roof: 0, info: 'share', summary: false }).infoOpen,
+        'share',
     );
     assert.equal(
         navChange('nastavenie', { panel: 'nastavenie', weekDetail: null, setup: null, roof: 0, info: null, summary: false }).infoOpen,

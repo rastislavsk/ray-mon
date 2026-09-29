@@ -46,8 +46,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Ciferník sa číta aj ako 24-hodinový: vonkajší prstenec je plán dňa – cena elektriny podľa
   tarify (oranžová lacné pásmo, sivá bežná cena, červená drahé) a zelená tam, kde predpoveď
   sľubuje dosť slnka na veľké spotrebiče. Značka „teraz“ na ňom je slnko, v noci mesiac. Potiahnutím jazdca po prstenci alebo ťuknutím
-  naň si pozrieš, ako to bude vyzerať v inom čase. Čo prstence a farby znamenajú, vysvetľuje
-  položka Ako čítať ciferník v karte Nastavenie.
+  naň si pozrieš, ako to bude vyzerať v inom čase. Ikonka „i“ v pravom hornom rohu karty otvorí
+  popup Ako čítať ciferník: čo prstence a farby na ciferníku znamenajú.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
   dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
@@ -85,10 +85,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Blok **Tento telefón** určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to
   voľba telefónu, nie elektrárne, a ukladá sa zvlášť. Pri zdieľaní appky sa dá zaškrtnúť „pre
   rodinu“ – kto odkaz otvorí a vlastnú voľbu ešte nemá, tomu sa appka otvorí na karte Môžem?.
-  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). **Ako čítať ciferník**:
-  návod k ciferníku z karty Terazky, teda ilustračný ciferník a štyri vysvetlivky
-  (vonkajší prstenec s cenou a slnkom, značka „teraz“, vnútorný oblúk výkonu,
-  jazdec na prstenci). Obsah je statický, appka ho neprepočítava. **Zdieľať appku**: QR kód,
+  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.

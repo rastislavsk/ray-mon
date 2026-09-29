@@ -56,6 +56,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   setupBrush: string | null,
  *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
+ *   dialGuideOpen: boolean,
  * }} AppState
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
@@ -171,6 +172,8 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
+        // Popup „Ako čítať ciferník“ na karte Terazky. Nie je krok navigácie: je to vec jedného pozretia.
+        dialGuideOpen: false,
     };
 }
 
@@ -241,7 +244,7 @@ export function nextWeekDay(sel, dir, count) {
 /**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
  * v navigácii, nie z toho, či sa ťahalo alebo klikalo - prechod tak vyzerá rovnako pri
- * oboch. Detail dňa aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
+ * oboch. Detail dňa, popup s návodom k ciferníku aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */
@@ -251,6 +254,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
+        dialGuideOpen: false,
         mozemSummary: false,
     };
 }
