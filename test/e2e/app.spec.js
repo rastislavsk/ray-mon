@@ -279,6 +279,17 @@ for (const [hm, label] of [
         const { instant } = atTime(hm);
         await openApp(page, { time: instant });
         await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(instant).accent || '');
+        // Appka štartuje zelenou a bodka aj podsvietenie sa do novej farby prelínajú. Uprostred
+        // prechodu sa ich farby o chlp líšia, preto sa číta až ustálená farba.
+        await page.evaluate(() =>
+            Promise.all(
+                document
+                    .getAnimations()
+                    .filter((a) => 'transitionProperty' in a && a.transitionProperty === 'background-color')
+                    // Prerušený prechod (nové prekreslenie) odmietne `finished` - aj tak je po ňom.
+                    .map((a) => a.finished.catch(() => {})),
+            ),
+        );
         const dot = await page.locator('.appbar-clock .live-dot').evaluate((el) => getComputedStyle(el).backgroundColor);
         const glow = await page.locator('.nav-item.active').evaluate((el) => getComputedStyle(el, '::after').backgroundColor);
         expect(dot).toMatch(/^rgb\(/);
