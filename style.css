@@ -801,6 +801,12 @@ b {
 }
 .dial-grip.at-now .grip-collar {
     background: var(--bg);
+    border: 0;
+    box-shadow: none;
+    gap: 0;
+}
+.dial-grip.at-now .grip-collar i {
+    display: none;
 }
 .dial-grip.at-now .grip-collar::before,
 .sky-mark::before {
@@ -851,14 +857,6 @@ b {
    naďalej prepína kartu, namiesto aby ho zožrala výnimka DRAG_HANDLE. */
 .dial-grip.at-now {
     pointer-events: none;
-}
-.dial-grip.at-now .grip-collar {
-    border: 0;
-    box-shadow: none;
-    gap: 0;
-}
-.dial-grip.at-now .grip-collar i {
-    display: none;
 }
 /* Objímka: korálik navlečený na prstenci. Dlhá os leží po obvode (otočenie robí JS,
    viď renderRingMarks), tri priečne ryhy sú úchop. */
@@ -1410,32 +1408,28 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         flex: 1 1 auto;
         min-height: 0;
         overflow: hidden;
-    }
-}
-
-/* Mobil, režim obrazovky: ciferník je jediné, čo sa vie prispôsobiť - odporúčanie pod ním
-   zámerne neustupuje, aby text neskákal vo veľkosti. Preto dostane presne to, čo v karte
-   zvýši: .dial-hero si vezme zvyšnú výšku (flex: 1 1 auto) a kruh v ňom je štvorec veľký
-   ako menší z rozmerov toho miesta - min(100cqw, 100cqh), .dial-hero je na to kontajner.
-
-   Nie height: 100% + aspect-ratio: 1 + max-width: 100%, ako tu stálo predtým: keď bolo
-   miesto vyššie než široké (vysoké úzke telefóny, typicky Android 20:9), max-width zúžil
-   šírku, ale výška ostala a obal prestal byť štvorcom. Kruh v SVG sa pritom vystredil, kým
-   značka "teraz" sa polohuje v percentách obalu (ringPercent) - na 360 × 800 tak visela
-   18 px nad prstencom. Stráži to e2e test "mobil: karta Terazky sa ... zmestí".
-
-   Zámerne bez zmeranej konštanty: predtým tu stál clamp so súčtom všetkého okolo kruhu
-   (hlavička + paddingy + navigácia + karta odporúčania), ktorý bolo treba prepočítať pri
-   každej zmene ktorejkoľvek z tých vecí. Toto číslo si dopočíta prehliadač sám a nemá ako
-   zostarnúť. Číslo v strede sa odvíja od kruhu cez cqmin (viď .dial-num .val). */
-@media (max-width: 1023px) and (min-height: 620px) {
-    body:has(#page[data-panel='terazky']) #panel-terazky {
         display: flex;
         flex-direction: column;
         /* Keď je miesta viac, než kruh unesie (--dial-max nižšie), nech zvyšok ostane nad
            a pod dvojicou kruh + odporúčanie, nie medzi nimi. */
         justify-content: center;
     }
+
+    /* Mobil, režim obrazovky: ciferník je jediné, čo sa vie prispôsobiť - odporúčanie pod ním
+       zámerne neustupuje, aby text neskákal vo veľkosti. Preto dostane presne to, čo v karte
+       zvýši: .dial-hero si vezme zvyšnú výšku (flex: 1 1 auto) a kruh v ňom je štvorec veľký
+       ako menší z rozmerov toho miesta - min(100cqw, 100cqh), .dial-hero je na to kontajner.
+
+       Nie height: 100% + aspect-ratio: 1 + max-width: 100%, ako tu stálo predtým: keď bolo
+       miesto vyššie než široké (vysoké úzke telefóny, typicky Android 20:9), max-width zúžil
+       šírku, ale výška ostala a obal prestal byť štvorcom. Kruh v SVG sa pritom vystredil, kým
+       značka "teraz" sa polohuje v percentách obalu (ringPercent) - na 360 × 800 tak visela
+       18 px nad prstencom. Stráži to e2e test "mobil: karta Terazky sa ... zmestí".
+
+       Zámerne bez zmeranej konštanty: predtým tu stál clamp so súčtom všetkého okolo kruhu
+       (hlavička + paddingy + navigácia + karta odporúčania), ktorý bolo treba prepočítať pri
+       každej zmene ktorejkoľvek z tých vecí. Toto číslo si dopočíta prehliadač sám a nemá ako
+       zostarnúť. Číslo v strede sa odvíja od kruhu cez cqmin (viď .dial-num .val). */
     body:has(#page[data-panel='terazky']) .dial-hero {
         flex: 1 1 auto;
         min-height: 0;
@@ -1984,6 +1978,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
    je karta v detaile (renderSedemdni jej inak pridá .hidden). */
 .day-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--sp-3);
     margin-bottom: var(--sp-4);
@@ -2022,9 +2017,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
    .detail pridáva renderView len na mobile, takže nič z tohto sa desktopu nedotkne.
    Šípka späť nesie aj slovo "7 dní" a stojí na vlastnom riadku, nadpis dňa je pod ňou
    väčší. Len vzhľad - poradie v HTML aj poslucháče ostávajú. */
-.day-head {
-    flex-wrap: wrap;
-}
 .day-back-txt {
     display: none;
 }
@@ -2324,14 +2316,17 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     display: block;
     min-width: 0;
 }
-.week-list-hero .num {
+/* Veľké číslo s jednotkou - rovnaké v prehľade 7 dní aj v Štatistike. */
+.week-list-hero .num,
+.stats-num .num {
     font-family: var(--font-mono);
     font-size: var(--fs-num);
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1;
 }
-.week-list-hero .u {
+.week-list-hero .u,
+.stats-num .u {
     font-family: var(--font-mono);
     font-size: var(--fs-sm);
     color: var(--ink-35);
@@ -2590,11 +2585,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .field-input.num {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-}
-.field-meta {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--ink-35);
 }
 .two {
     display: grid;
@@ -2907,7 +2897,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .app-items .app-credit {
     margin: 0;
 }
-.sum-list {
+/* Rám zoznamu: prehľad elektrárne v Nastavení a ostatné obdobia v Štatistike. */
+.sum-list,
+.stats-rows {
     display: grid;
     border-radius: var(--radius-lg);
     border: 1px solid var(--ink-12);
@@ -4015,19 +4007,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     flex-wrap: wrap;
     gap: 2px;
 }
-.stats-num .num {
-    font-family: var(--font-mono);
-    font-size: var(--fs-num);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1;
-}
-.stats-num .u {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-35);
-    margin-left: 3px;
-}
 /* Eurá sú zelené: je to hodnota elektriny zo slnka, tá istá farba ako slnko na ciferníku. */
 .stats-eur {
     font-family: var(--font-mono);
@@ -4049,14 +4028,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .stats-meta b {
     color: var(--ink);
 }
-/* Ostatné obdobia pod veľkým číslom - rám ako zoznam v prehľade elektrárne (.sum-list). */
-.stats-rows {
-    display: grid;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--ink-12);
-    background: var(--card-bg);
-    overflow: hidden;
-}
+/* Ostatné obdobia pod veľkým číslom majú rám zoznamu spolu s .sum-list. */
 .stats-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
@@ -4666,9 +4638,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     }
     :root {
         --page-max: 1120px;
-    }
-    .page {
-        padding-bottom: var(--sp-6);
     }
     /* Hlavička je jeden riadok: názov, podnadpis ... bodka s časom, text k času, ikonka.
        Obaly riadkov (display: contents) tu nehrajú rolu, ich deti sú položkami .appbar-inner;
