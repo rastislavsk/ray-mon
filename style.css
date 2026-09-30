@@ -1648,7 +1648,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 .day-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-xs);
     fill: var(--ink-45);
     cursor: pointer;
 }
@@ -1668,7 +1668,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 .line-cloud {
     fill: none;
-    stroke: rgba(242, 240, 234, 0.52);
+    stroke: var(--ink-35);
     stroke-width: 1.5;
     stroke-dasharray: 4 3;
     stroke-linecap: round;
@@ -3316,7 +3316,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 .panel-label text {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-xs);
     fill: #555;
 }
 .panel-label .mark {
@@ -4105,6 +4105,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .mozem-hero.st-none {
     background: var(--red);
 }
+/* Bez predpovede (dáta nie sú): tmavšia a stlmenejšia sivá než --grey pri „slabo“, aby výpadok
+   nevyzeral ako obyčajný deň. S #878682 v navigácii nesúvisí, podobnosť je náhoda. */
 .mozem-hero.st-offline {
     background: #8a8780;
 }
@@ -4526,7 +4528,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: 4px;
     height: 100%;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-xs);
     font-weight: 700;
 }
 .summary-bars i {
