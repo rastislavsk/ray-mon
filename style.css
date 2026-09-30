@@ -147,6 +147,11 @@
     --amber-rgb: 255, 194, 75;
     --red-rgb: 255, 107, 87;
     --grey-rgb: 185, 182, 172;
+    /* Tmavé písmo a čiary na plnej farbe (karta Môžem?, plagát súhrnu). Číta ho aj obrázok
+       pre story (web/share-image.js), rovnako ako farby vyššie. */
+    --ink-on-color: #0b0b0b;
+    /* Kde v plagáte súhrnu stojí oranžová medzi zelenou a červenou. Aj toto číta obrázok. */
+    --poster-mid: 58%;
 
     /* Farba tarify pre pozadie stránky. Oranžová platí do prvého prekreslenia (kým appka
        nevie, ktoré okno beží) - je to najčastejšie okno dňa aj pôvodná farba pozadia. */
@@ -4113,7 +4118,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     container-type: inline-size;
     padding: 20px 20px 18px;
     border-radius: 28px;
-    color: #0b0b0b;
+    color: var(--ink-on-color);
     background: var(--ink-20);
 }
 .mozem-hero.st-go {
@@ -4292,7 +4297,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     border-radius: 50%;
     background: var(--ink);
     fill: none;
-    stroke: #0b0b0b;
+    stroke: var(--ink-on-color);
     stroke-width: 2.4;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -4393,7 +4398,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     width: 14px;
     height: 14px;
     fill: none;
-    stroke: #0b0b0b;
+    stroke: var(--ink-on-color);
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -4403,14 +4408,14 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     padding: 14px 16px;
     border-radius: var(--radius-lg);
     background: var(--ink);
-    color: #0b0b0b;
+    color: var(--ink-on-color);
 }
 /* Globálne `b` dáva --ink, na svetlom rozbalení by nadpis zmizol. */
 .mozem-more b {
     display: block;
     margin-bottom: 4px;
     font-size: var(--fs-lg);
-    color: #0b0b0b;
+    color: var(--ink-on-color);
 }
 .mozem-more p {
     margin: 0;
@@ -4432,15 +4437,15 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     margin-top: 12px;
     padding: 8px 16px;
     border-radius: var(--radius-pill);
-    background: #0b0b0b;
+    background: var(--ink-on-color);
     color: var(--ink);
     font-weight: 700;
     text-align: center;
 }
 .mozem-log[aria-pressed='true'] {
-    border: 2px solid #0b0b0b;
+    border: 2px solid var(--ink-on-color);
     background: transparent;
-    color: #0b0b0b;
+    color: var(--ink-on-color);
 }
 .mozem-count {
     margin: 0 6px;
@@ -4478,11 +4483,11 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: var(--sp-3);
     padding: 14px 20px 22px;
     border-radius: 28px;
-    color: #0b0b0b;
-    background: linear-gradient(165deg, var(--green) 0%, var(--amber) 58%, var(--red) 100%);
+    color: var(--ink-on-color);
+    background: linear-gradient(165deg, var(--green) 0%, var(--amber) var(--poster-mid), var(--red) 100%);
 }
 .summary b {
-    color: #0b0b0b;
+    color: var(--ink-on-color);
 }
 .summary-top {
     display: flex;
@@ -4509,10 +4514,10 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .summary .seg button {
     min-height: 36px;
     padding: 0 14px;
-    color: #0b0b0b;
+    color: var(--ink-on-color);
 }
 .summary .seg button[aria-pressed='true'] {
-    background: #0b0b0b;
+    background: var(--ink-on-color);
     color: var(--ink);
 }
 .summary-kick {
@@ -4558,7 +4563,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     background: rgba(0, 0, 0, 0.55);
 }
 .summary-bars i.best {
-    background: #0b0b0b;
+    background: var(--ink-on-color);
 }
 .summary-bars i.missing,
 .summary-cal i.missing {
@@ -4574,7 +4579,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .summary-cal i {
     aspect-ratio: 1;
     border-radius: 4px;
-    background: #0b0b0b;
+    background: var(--ink-on-color);
 }
 .summary-rows {
     display: grid;
@@ -4585,7 +4590,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: 12px;
     align-items: baseline;
     padding: 10px 0;
-    border-top: 2px solid #0b0b0b;
+    border-top: 2px solid var(--ink-on-color);
 }
 .summary-row b {
     font-family: var(--font-mono);
@@ -4615,7 +4620,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: 10px;
     min-height: 54px;
     border-radius: var(--radius-pill);
-    background: #0b0b0b;
+    background: var(--ink-on-color);
     color: var(--ink);
     font-size: var(--fs-lg);
     font-weight: 700;
@@ -4629,7 +4634,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     padding: 16px 18px;
     border-radius: 22px;
     background: linear-gradient(120deg, var(--green), var(--amber) 55%, var(--red));
-    color: #0b0b0b;
+    color: var(--ink-on-color);
     font-size: var(--fs-lg);
     font-weight: 700;
     text-align: left;
