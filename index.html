@@ -349,6 +349,9 @@
                     </button>
                     <h2 class="day-head-title" id="week-day-title">Deň</h2>
                 </div>
+                <!-- Bodky dní pod hlavičkou detailu. Mimo prvkov, ktoré sa pri listovaní prisúvajú (viď
+                     renderDayAnim) - bodky majú stáť. Obsah skladá render (renderDayDots). -->
+                <div class="day-dots hidden" id="week-day-dots"></div>
                 <div class="week-grid" id="week-grid">
                     <section class="week-block" id="week-block-heat">
                         <div class="chart-top">
@@ -440,6 +443,8 @@
                                 <span class="stat-num-row"><span class="num" id="week-list-total">–</span><span class="u">kWh</span></span>
                             </span>
                             <span class="week-list-avg">ø <b id="week-list-avg">–</b> / deň</span>
+                            <!-- Týždeň v malom, ozdoba súčtu; čítačka ho preskočí - tie isté čísla povie riadok dňa. -->
+                            <span class="week-list-spark hidden" id="week-list-spark" aria-hidden="true"></span>
                         </button>
                         <div class="week-list" id="week-list"></div>
                         <!-- Legenda farieb dňa: tá istá mierka ako v heatmape (weekDayTiers v
@@ -456,6 +461,9 @@
                         <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
                     </div>
                 </div>
+                <!-- Susedné dni pod detailom dňa („‹ Streda 41 kWh“). Stoja mimo #week-grid, ktorý sa pri
+                     listovaní prisúva - majú stáť. Obsah skladá render (renderDaySteps). -->
+                <div class="day-steps hidden" id="week-day-steps"></div>
             </section>
 
             <!-- PANEL: ŠTATISTIKA -->
