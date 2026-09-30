@@ -86,7 +86,7 @@ test('durationText a countdownText po slovensky', () => {
 test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy', () => {
     const m = mozemModel(input(FIXED_NOW));
     assert.equal(m.state, 'go');
-    assert.equal(m.word, 'Zapínaj.');
+    assert.equal(m.word, 'ZAPNI TOOO');
     assert.match(m.hero.factV, /^~\d+ mobilov$/);
     assert.ok(m.strip && m.strip.width > 0 && m.strip.now > m.strip.left);
     const pracka = item(m, 'pracka');

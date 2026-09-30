@@ -23,7 +23,7 @@ sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appk
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
 - **Môžem?** – odpoveď pre celú rodinu, nielen pre toho, kto sa vo fotovoltike vyzná. Hore jedno
-  veľké slovo na plnej farbe (**Zapínaj.**, **Ešte nie.**, **Slabý deň.**, **Dnes už nie.**, **Neviem.**),
+  veľké slovo na plnej farbe (**ZAPNI TOOO**, **NO NO, NOT YET**, **NAHOVNO DEŇ**, **Dnes už ne e !**, **Neviem.**),
   jedna veta a jeden fakt v jednotkách, ktoré pozná každý (koľko mobilov strecha nabije za hodinu).
   Pod tým pás dneška s úsekom, keď slnko stačí na veľké spotrebiče, a mriežka vecí – práčka,
   umývačka, sušička, auto, hranie a fén – s krátkou odpoveďou („do 15:30“, „o 10:30“, „zajtra

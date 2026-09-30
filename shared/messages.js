@@ -206,12 +206,12 @@ export function weekMessage(days) {
 
 /** Veľké slovo karty podľa stavu. */
 export const MOZEM_WORDS = {
-    go: 'Zapínaj.',
-    wait: 'Ešte nie.',
-    slabo: 'Slabý deň.',
-    none: 'Dnes už nie.',
+    go: 'ZAPNI TOOO',
+    wait: 'NO NO, NOT YET',
+    slabo: 'NAHOVNO DEŇ',
+    none: 'Dnes už ne e !',
     offline: 'Neviem.',
-    loading: 'Moment.',
+    loading: 'Uno momento',
 };
 
 /** Hlášky pod mriežkou, striedajú sa ťuknutím. Sada podľa stavu karty. */

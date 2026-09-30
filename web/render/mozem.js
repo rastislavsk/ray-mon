@@ -13,7 +13,7 @@ import { summaryHtml, summaryLinkHtml } from './suhrn.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
 
-/** Veľké slovo pod 10 znakov sa zmestí vo veľkom písme, dlhšie („Dnes už nie.“) dostane menšie. */
+/** Veľké slovo pod 10 znakov sa zmestí vo veľkom písme, dlhšie („NO NO, NOT YET“) dostane menšie. */
 const LONG_WORD = 10;
 
 /** Hlavička: kedy, kde, veľké slovo, veta a fakt. @param {MozemModel} m @param {string} kick */
