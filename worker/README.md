@@ -12,7 +12,7 @@ Telo je text: odkaz na verejný kiosk FusionSolar, ktorý si používateľ zadal
 (`kioskApiUrl` v `shared/kiosk.js`) a vráti:
 
 ```json
-{ "pv": { "realTimePowerKw": 6.41, "...": "..." }, "servedAt": "2026-09-05T11:00:00.000Z" }
+{ "pv": { "realTimePowerKw": 6.41, "...": "...", "updatedAt": "2026-09-05T11:00:00.000Z" } }
 ```
 
 - Cudzí odkaz dostane **400** bez jediného sťahovania. Z Workera sa tak nedá spraviť proxy

@@ -97,7 +97,7 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await blokujCdn(page);
-    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv, servedAt: time.toISOString() } })));
+    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
     if (settings)
@@ -917,7 +917,7 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
     await page.route(WORKER_PV_URL, async (route) => {
         volania++;
         await zadrzane;
-        await route.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } });
+        await route.fulfill({ json: { pv } });
     });
     for (let i = 0; i < 3; i++) await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect.poll(() => volania).toBe(1);
