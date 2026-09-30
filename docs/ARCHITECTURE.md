@@ -49,6 +49,11 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                          |
 
+**`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
+`import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
+stiahne vlastné skripty znova mimo cache a raz obnoví stránku. Nič neimportuje staticky, aby sa
+spustil vždy. Podrobnosti v CLAUDE.md, sekcia o nasadení a cache.
+
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
 miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje všetky

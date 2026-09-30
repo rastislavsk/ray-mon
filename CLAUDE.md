@@ -91,33 +91,46 @@ z Playwrightu, takže by každá aktualizácia Chromia sčervenala PR, ktorý sa
 (Písma sú v repozitári, `fonts/`, takže od verzie na CDN už snímky nezávisia.) Na jednom stroji sú obrázky bajtovo rovnaké,
 takže rozdiel v `git status` znamená naozajstnú zmenu vzhľadu.
 
-## Nasadenie a cache: prvok v HTML a `byId` sa menia v dvoch krokoch
-
-**Pravidlo: v jednom nasadení nikdy nepribudne požiadavka na prvok, ktorý druhá strana ešte
-nemá.** Najprv ide von tá strana, ktorá prvok _poskytuje_, a až ďalším nasadením tá, ktorá ho
-_vyžaduje_.
+## Nasadenie a cache: `boot.js` zladí staré a nové súbory
 
 GitHub Pages posiela každý súbor s `cache-control: max-age=600` a bez revalidácie. Appka nemá
-build krok, takže `index.html` a moduly vo `web/` sú samostatné súbory s vlastnou platnosťou
-cache – prehliadač ich po nasadení vie desať minút miešať a načítať novú stránku so starým
-skriptom (alebo naopak). `byId` vo `web/dom.js` na chýbajúci prvok zámerne hodí výnimku, takže
-`collectDom()` spadne ešte pred prvým `render()` a v stránke ostane to, čo je v statickom HTML:
-`00:00`, „načítavam…" a prázdny ciferník. Appka je do vypršania cache mŕtva. Stalo sa to
-naozaj, keď jedno nasadenie odstránilo `#week-curve-now-badge` z HTML aj z `dom.js` naraz.
+build krok, takže `index.html` a každý modul vo `web/` a `shared/` je samostatný súbor
+s vlastnou platnosťou cache – prehliadač ich po nasadení vie desať minút miešať. CDN pred
+GitHub Pages (Fastly) sa pri nasadení čistí (hneď po ňom odpovedá `X-Cache: MISS`, `Age: 0`),
+starú verziu drží len prehliadač. Zmiešanie zabije appku ešte pred prvým `render()` a v stránke
+ostane statické HTML: `00:00`, „načítavam…" a prázdny ciferník. Vedú k tomu dve cesty:
 
-Prakticky:
+- **Export medzi modulmi.** Nasadenie pridá export do modulu A a zároveň ho začne importovať B.
+  Prehliadač so starým A v cache a novým B hodí pri linkovaní `SyntaxError` („does not provide
+  an export named …“) a nespustí nič z grafu modulov. To isté pri presune alebo premenovaní
+  exportu (#232, #233, #235). Úplne nový súbor nevadí, ten v cache ešte nie je.
+- **Prvok v HTML a `byId`.** `byId` vo `web/dom.js` na chýbajúci prvok zámerne hodí výnimku.
+  Stalo sa to naozaj, keď jedno nasadenie odstránilo `#week-curve-now-badge` z HTML aj
+  z `dom.js` naraz.
 
-- **Rušíš prvok**: 1. nasadenie zmaže referenciu v `dom.js` a jeho vykresľovanie (prvok
-  v HTML ostane, len ho nikto nezobrazí – navonok je zmena hotová hneď), 2. nasadenie zmaže
-  prvok z `index.html` a jeho pravidlá v `style.css`.
-- **Pridávaš prvok**: opačné poradie – 1. nasadenie pridá prvok do `index.html`, 2. nasadenie ho začne používať v `dom.js`.
-- Medzi krokmi stačí počkať, kým vyprší cache (`max-age=600`, teda desať minút od nasadenia).
+**Ochrana: `index.html` nespúšťa `app.js` priamo, ale cez `boot.js`.** Ten appku načíta
+dynamickým `import()` a keď sa to nepodarí (linkovanie aj výnimka pri štarte), stiahne všetky
+vlastné `.js` súbory stránky znova cez `fetch(…, { cache: 'reload' })` – tým prepíše cache –
+a raz obnoví stránku. Samotné obnovenie by nestačilo: prehliadač pri ňom overí len stránku,
+moduly vezme z cache. Druhé zlyhanie v tej istej karte už stránku neobnoví (príznak
+v `sessionStorage`), ale ukáže hlášku – chyba vtedy nie je v cache a slučka by nič nevyriešila.
 
-Netýka sa to zmien, kde sa HTML a JS navzájom nepotrebujú – text, farba, CSS, výpočet
-v `shared/`. Tie idú ako doteraz jedným nasadením.
+Zmeny preto netreba rozkladať na viac nasadení: export aj prvok v HTML môžu pribudnúť, zmiznúť
+či sa presunúť v tom istom nasadení, ktoré ich začne alebo prestane používať. Kto trafí zmiešanú
+cache, uvidí jedno obnovenie stránky navyše.
 
-CI toto nechytí: v rámci jedného commitu je repozitár vždy konzistentný, chyba vzniká až
-kombináciou dvoch nasadení v prehliadači. Drží to len toto pravidlo.
+Čo treba držať:
+
+- `boot.js` **nesmie nič importovať staticky** – musí sa spustiť, aj keď je zvyšok grafu
+  rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
+- `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`
+  a naopak. Stačí nemeniť meno `app.js` ani `#pv-updated`, kam píše hlášku.
+
+Kontrolujú to e2e testy v skupine „nasadenie a cache“: starý modul musí skončiť jedným
+obnovením a naštartovanou appkou, chyba, ktorú obnovenie nevyrieši, hláškou bez slučky. Testy
+starý modul podstrčia cez `page.route` (lokálny server cache nemá). So skutočnou HTTP cache
+prehliadača – server s `max-age=600`, bez `page.route` – to bolo overené ručne, pre export aj
+pre `byId`.
 
 ## Proces
 

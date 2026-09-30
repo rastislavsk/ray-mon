@@ -11,5 +11,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["app.js", "web/**/*.js", "shared/**/*.js", "worker/src/**/*.js"]
+  "include": ["app.js", "boot.js", "web/**/*.js", "shared/**/*.js", "worker/src/**/*.js"]
 }

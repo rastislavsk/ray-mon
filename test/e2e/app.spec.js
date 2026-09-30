@@ -3009,3 +3009,34 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#wz-next')).toBeDisabled();
     });
 });
+
+// Po nasadení vie prehliadač z cache miešať staré moduly s novými (viď boot.js). Lokálny server
+// cache nemá, preto starý modul hrá route: shared/config.js bez exportov, ktoré appka importuje.
+test.describe('nasadenie a cache', () => {
+    /** @param {import('@playwright/test').Page} page @param {number} times koľkokrát vrátiť starú verziu */
+    async function staryModul(page, times) {
+        let left = times;
+        await page.route('**/shared/config.js', (route) =>
+            left-- > 0 ? route.fulfill({ contentType: 'text/javascript', body: 'export {};' }) : route.continue(),
+        );
+        let loads = 0;
+        page.on('load', () => loads++);
+        return () => loads;
+    }
+
+    test('starý modul v cache: stránka sa raz obnoví a appka naštartuje', async ({ page }) => {
+        const loads = await staryModul(page, 1);
+        const errors = await openApp(page);
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
+        await expect.poll(loads).toBe(2);
+        expect(errors).toEqual([expect.stringContaining('does not provide an export named')]);
+        expect(await page.evaluate(() => sessionStorage.getItem('ray-mon-obnova'))).toBeNull();
+    });
+
+    test('chyba, ktorú obnovenie nevyrieši: jedno obnovenie, potom hláška namiesto slučky', async ({ page }) => {
+        const loads = await staryModul(page, Infinity);
+        await openApp(page);
+        await expect(page.locator('#pv-updated')).toHaveText('appka sa nenačítala, skús to o chvíľu');
+        expect(loads()).toBe(2);
+    });
+});
