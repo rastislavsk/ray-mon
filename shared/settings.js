@@ -17,6 +17,7 @@ import {
 import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
 import { checkTariff, parseStoredTariff } from './tariff.js';
+import { inRange, isObj } from './valid.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
@@ -76,10 +77,8 @@ export function isTimezone(tz) {
     }
 }
 
-const inRange = (/** @type {number} */ v, /** @type {{ min: number, max: number }} */ r) => Number.isFinite(v) && v >= r.min && v <= r.max;
-
-/** Chyby lokality. @param {Site} site @param {string[]} errors */
-function checkSite(site, errors) {
+/** Chyby lokality. Sprievodca podľa nich púšťa ďalej z výberu lokality. @param {Site} site @param {string[]} errors */
+export function checkSite(site, errors) {
     if (!Number.isFinite(site.lat) || Math.abs(site.lat) > 90) errors.push('Zemepisná šírka musí byť od −90 do 90.');
     if (!Number.isFinite(site.lon) || Math.abs(site.lon) > 180) errors.push('Zemepisná dĺžka musí byť od −180 do 180.');
     if (!isTimezone(site.timezone)) errors.push('Lokalite chýba časové pásmo. Vyber ju zo zoznamu.');
@@ -105,6 +104,11 @@ function checkPlant(plant, errors) {
     if (!inRange(plant.acLimitKw, L.acLimitKw)) errors.push(`Menič musí mať od ${L.acLimitKw.min} do ${L.acLimitKw.max} kW.`);
 }
 
+/** Počet panelov na všetkých plochách; neplatné pole sa ráta ako nula. @param {Settings} s */
+export function totalPanels(s) {
+    return s.plant.strings.reduce((sum, x) => sum + (Number.isFinite(x.panels) ? x.panels : 0), 0);
+}
+
 /**
  * Kontrola nastavenia pred uložením. Chyby uloženie zablokujú, varovania nie.
  * @param {Settings} s
@@ -123,7 +127,7 @@ export function checkSettings(s) {
         errors.push('Odkaz nie je kiosk FusionSolar. Skopíruj ho v aplikácii FusionSolar pri zdieľaní elektrárne cez kiosk.');
     // Panely sa rátajú aj pri chybách - súčet pod formulárom ich ukazuje stále. Výkon až keď
     // je zostava v poriadku, a potom ten istý, aký appka používa všade inde.
-    const panels = plant.strings.reduce((sum, x) => sum + (Number.isFinite(x.panels) ? x.panels : 0), 0);
+    const panels = totalPanels(s);
     const kwp = errors.length ? null : installedKw(plant);
     if (kwp !== null && kwp > plant.acLimitKw * SETTINGS_LIMITS.dcAcWarnRatio)
         warnings.push(`Panely majú spolu viac než menič zvládne. Za jasných dní bude menič orezávať špičky na ${plant.acLimitKw} kW.`);
@@ -133,9 +137,6 @@ export function checkSettings(s) {
         warnings.push('Lokalita je na južnej pologuli, slnko je tam na severe. Plocha otočená na juh dostane málo svetla.');
     return { errors, warnings, kwp, panels };
 }
-
-/** @param {unknown} v @returns {v is Record<string, any>} */
-const isObj = (v) => !!v && typeof v === 'object';
 
 /**
  * Nastavenie z localStorage. Dáta odtiaľ sú nedôveryhodné (iná verzia appky, ručný zásah),

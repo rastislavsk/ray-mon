@@ -124,10 +124,8 @@ export function heroModel(state) {
     // Slabý deň: dnešná špička nedosiahne ani jeho hranicu, slnko veľké spotrebiče nepokryje.
     const today = state.forecast ? state.forecast.days[0] : null;
     const weakDay = !!today && today.peakKw < th.weakPeakKw;
-    const measured = (() => {
-        const boundary = realCurveBoundary(state.pv ? state.pv.realCurveToday : null, nowMinutes);
-        return boundary !== null && minutes <= boundary;
-    })();
+    const boundary = realCurveBoundary(state.pv ? state.pv.realCurveToday : null, nowMinutes);
+    const measured = boundary !== null && minutes <= boundary;
 
     return {
         minutes,

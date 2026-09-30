@@ -19,8 +19,8 @@ import {
 import { escapeHtml, fmt2, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { liveStatus } from '../../shared/hero-model.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
-import { checkSettings, sameSettings, settingsFromLink, settingsHint, siteMetaText } from '../../shared/settings.js';
-import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, TARIFF_STEPS, tariffSteps, totalPanels } from '../../shared/setup.js';
+import { checkSettings, sameSettings, settingsFromLink, settingsHint, siteMetaText, totalPanels } from '../../shared/settings.js';
+import { ROOF_STEPS, SETUP_SECTIONS, setupSection, setupStepOk, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
 import { clearDayKwh, localDateKey, orientationShare, sunTimes } from '../../shared/solar.js';
 import {
     autoLevels,

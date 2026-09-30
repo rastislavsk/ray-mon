@@ -107,10 +107,30 @@ function buildGrid(dims, scale, maxKw) {
     return { gridX, gridY };
 }
 
+/** Hodina v produkčnom okne grafu (HOUR_RANGE). @param {number} hour */
+const inHours = (hour) => hour >= HOUR_RANGE.min && hour <= HOUR_RANGE.max;
+
 /** Body dňa v produkčnom okne grafu (HOUR_RANGE) - mimo neho sú len nulové nočné hodiny,
- * ktoré by skreslili špičku aj text správy dňa. @param {HourPoint[]} pts */
+ * ktoré by skreslili špičku aj text správy dňa. @template {{ hour: number }} T @param {T[]} pts */
 export function visibleHours(pts) {
-    return pts.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max);
+    return pts.filter((p) => inHours(p.hour));
+}
+
+/**
+ * Spoločný základ grafov po hodinách (krivka aj stĺpce): mierka, mriežka, namerané body
+ * a značka „teraz“. `real` už je orezané na produkčné okno.
+ * @param {Dims} dims @param {number} maxKw @param {Array<{ hour: number, kw: number }>} real @param {number | null} nowHour
+ */
+function hourFrame(dims, maxKw, real, nowHour) {
+    const scale = makeScale(dims, maxKw);
+    const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
+    return {
+        scale,
+        ...buildGrid(dims, scale, maxKw),
+        real: realPoints,
+        realLast: realPoints.length ? realPoints[realPoints.length - 1] : null,
+        nowX: nowHour === null ? null : scale.x(Math.max(HOUR_RANGE.min, Math.min(HOUR_RANGE.max, nowHour))),
+    };
 }
 
 /**
@@ -118,28 +138,19 @@ export function visibleHours(pts) {
  * @param {{ pts: HourPoint[], realPts?: Array<{hour: number, kw: number}>, nowHour?: number | null, dims: Dims }} input
  */
 export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) {
-    const { min: hMin, max: hMax } = HOUR_RANGE;
     const visible = visibleHours(pts);
     if (!visible.length) return null;
-    const real = realPts.filter((p) => p.hour >= hMin && p.hour <= hMax);
+    const real = visibleHours(realPts);
     const maxKw = Math.max(...visible.map((p) => p.kw), ...real.map((p) => p.kw), 0.5) * 1.15;
-    const scale = makeScale(dims, maxKw);
-    const { gridX, gridY } = buildGrid(dims, scale, maxKw);
-
+    const { scale, ...frame } = hourFrame(dims, maxKw, real, nowHour);
     const cloudAvailable = visible.every((p) => Number.isFinite(p.cloud));
-    const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
-
     return {
         dims,
         maxKw,
         pts: visible,
         line: visible.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) })),
         cloud: cloudAvailable ? visible.map((p) => ({ x: scale.x(p.hour), y: scale.yPct(/** @type {number} */ (p.cloud)) })) : null,
-        real: realPoints,
-        realLast: realPoints.length ? realPoints[realPoints.length - 1] : null,
-        gridX,
-        gridY,
-        nowX: nowHour === null ? null : scale.x(Math.max(hMin, Math.min(hMax, nowHour))),
+        ...frame,
     };
 }
 
@@ -156,19 +167,17 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
  */
 export function dayBarsModel({ pts, tiers, prices = [], realPts = [], nowHour = null, dims }) {
     const { min: hMin, max: hMax } = HOUR_RANGE;
-    const visible = pts.map((p, i) => ({ p, tier: tiers[i] ?? null })).filter(({ p }) => p.hour >= hMin && p.hour <= hMax);
+    const visible = pts.map((p, i) => ({ p, tier: tiers[i] ?? null })).filter(({ p }) => inHours(p.hour));
     if (!visible.length) return null;
-    const real = realPts.filter((p) => p.hour >= hMin && p.hour <= hMax);
+    const real = visibleHours(realPts);
     const clearOk = visible.every(({ p }) => Number.isFinite(p.clearKw));
     const maxKw = Math.max(...visible.map(({ p }) => Math.max(p.kw, clearOk ? p.clearKw : 0)), ...real.map((p) => p.kw), 0.5) * 1.1;
-    const scale = makeScale(dims, maxKw);
-    const { gridX, gridY } = buildGrid(dims, scale, maxKw);
+    const { scale, ...frame } = hourFrame(dims, maxKw, real, nowHour);
     const base = scale.y(0);
     // Stĺpec zaberá väčšinu hodiny, medzera medzi stĺpcami ich oddelí aj pri rovnakej farbe.
     const barW = ((dims.w - dims.padL - dims.padR) / (hMax - hMin)) * 0.72;
     const left = dims.padL;
     const right = dims.w - dims.padR;
-    const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
     // Pás cien pod osou: len produkčné okno, rovnako ako os X.
     const strip = prices
         .map((s) => {
@@ -189,13 +198,9 @@ export function dayBarsModel({ pts, tiers, prices = [], realPts = [], nowHour = 
             return { x, w, y, h: Math.max(0, base - y), tier };
         }),
         clear: clearOk ? visible.map(({ p }) => ({ x: scale.x(p.hour), y: scale.y(p.clearKw) })) : null,
-        real: realPoints,
-        realLast: realPoints.length ? realPoints[realPoints.length - 1] : null,
         strip,
         stripY: base + 3,
-        gridX,
-        gridY,
-        nowX: nowHour === null ? null : scale.x(Math.max(hMin, Math.min(hMax, nowHour))),
+        ...frame,
     };
 }
 
@@ -382,11 +387,10 @@ export function weekHeatModel(days, selDay, size = null) {
     const padT = 20;
     const padR = 4;
     const gap = 2;
-    const riadky = days.map((_, i) => i);
     const W = size ? size.W : 440;
-    const rh = size ? Math.max(gap + 1, (size.H - padT - 4) / riadky.length) : 24;
+    const rh = size ? Math.max(gap + 1, (size.H - padT - 4) / days.length) : 24;
     const cw = (W - padL - padR) / WEEK_HOURS.length;
-    const H = size ? size.H : padT + riadky.length * rh + 4;
+    const H = size ? size.H : padT + days.length * rh + 4;
     const maps = days.map(hourMap);
     let max = 0.4;
     maps.forEach((map) => WEEK_HOURS.forEach((h) => (max = Math.max(max, map[h] ? map[h].kw : 0))));
@@ -396,30 +400,30 @@ export function weekHeatModel(days, selDay, size = null) {
         y: padT - 8,
         label: String(h),
     }));
-    const dayLabels = riadky.map((di, ri) => ({
+    const dayLabels = days.map((d, di) => ({
         x: padL - 8,
-        y: padT + ri * rh + rh / 2 + 3.5,
-        label: weekDayShort(days[di].date, di),
+        y: padT + di * rh + rh / 2 + 3.5,
+        label: weekDayShort(d.date, di),
         dayIndex: di,
         today: di === 0,
         sel: di === selDay,
     }));
     /** @type {Array<{ x: number, y: number, w: number, h: number, frac: number, tier: ReturnType<typeof heatBand> | null, dayIndex: number, tip: { title: string, text: string } | null }>} */
     const cells = [];
-    riadky.forEach((di, ri) => {
+    days.forEach((d, di) => {
         WEEK_HOURS.forEach((h, ci) => {
             const cell = maps[di][h];
             const v = cell ? cell.kw : 0;
             const frac = v / max;
             cells.push({
                 x: padL + ci * cw + gap / 2,
-                y: padT + ri * rh + gap / 2,
+                y: padT + di * rh + gap / 2,
                 w: cw - gap,
                 h: rh - gap,
                 frac,
                 tier: frac <= 0.02 ? null : heatBand(frac),
                 dayIndex: di,
-                tip: v > 0.02 ? cellTip(days[di], di, h, maps[di]) : null,
+                tip: v > 0.02 ? cellTip(d, di, h, maps[di]) : null,
             });
         });
     });

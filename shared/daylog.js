@@ -3,10 +3,9 @@
 
 import { DAYLOG } from './config.js';
 import { addDays } from './solar.js';
+import { DATE_RE } from './valid.js';
 
 /** @typedef {Record<string, number>} DayLog miestny dátum `YYYY-MM-DD` → vyrobené kWh */
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Denník z úložiska. Čo nesedí (zlý dátum, záporné alebo nečíselné kWh), vypadne. Drží sa
