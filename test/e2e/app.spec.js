@@ -583,7 +583,7 @@ test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async
     await page.locator('#nav-7dni').click();
 
     // V prehľade dní nie je čo listovať - bodky patria k detailu dňa.
-    await expect(page.locator('.day-dots')).toBeHidden();
+    await expect(page.locator('.day-dots:visible')).toHaveCount(0);
 
     await page.locator('#week-list [data-day-index="2"]').click();
     const bodky = page.locator('.day-dots .pager-dot');
@@ -613,8 +613,8 @@ test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async
     // Detail týždňa je jediná obrazovka - tam by bodky sľubovali listovanie, ktoré nie je.
     await page.locator('.week-list-hero').click();
     await expect(page.locator('#week-day-title')).toHaveText('Celý týždeň');
-    await expect(page.locator('.day-dots')).toBeHidden();
-    await expect(page.locator('.day-steps')).toBeHidden();
+    await expect(page.locator('.day-dots:visible')).toHaveCount(0);
+    await expect(page.locator('.day-steps:visible')).toHaveCount(0);
     expect(errors).toEqual([]);
 });
 
