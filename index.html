@@ -555,6 +555,26 @@
                         <section class="app-items" aria-labelledby="app-items-title">
                             <div class="group-lbl" id="app-items-title">Appka</div>
                             <ul class="settings-list">
+                                <!-- Na ktorej karte sa appka na tomto telefóne otvára. O rozbalení appka nevie, voľby
+                                     do #start-pick skladá render (renderStartPick). -->
+                                <li>
+                                    <details class="settings-item" id="settings-start">
+                                        <summary class="settings-summary">
+                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <rect x="7" y="2" width="10" height="20" rx="2" />
+                                                <path d="M11 18h2" />
+                                            </svg>
+                                            <span class="settings-text">
+                                                <b>Úvodná karta</b>
+                                                <span class="settings-hint">Ktorá karta sa na tomto telefóne otvorí ako prvá</span>
+                                            </span>
+                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </summary>
+                                        <div class="settings-body start-pick" id="start-pick"></div>
+                                    </details>
+                                </li>
                                 <li>
                                     <details class="settings-item" id="info-share">
                                         <summary class="settings-summary">
@@ -581,6 +601,13 @@
                                                 <label class="check-row" id="share-kiosk-row">
                                                     <input type="checkbox" id="share-with-kiosk" />
                                                     <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                                                </label>
+                                                <label class="check-row">
+                                                    <input type="checkbox" id="share-start" />
+                                                    <span
+                                                        >Pre rodinu: otvárať kartu Môžem? – kto odkaz otvorí, uvidí najprv jednoduché
+                                                        odpovede</span
+                                                    >
                                                 </label>
                                             </div>
                                             <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>

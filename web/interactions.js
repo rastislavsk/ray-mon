@@ -474,12 +474,8 @@ function initSharing(store, dom, refresh) {
         if (incoming) applySettings(store, incoming, refresh, { incoming: null, importNote: '' });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
-    // Zaškrtávatko „pre rodinu“ aj voľby prvej karty si robí render (render/zdielat.js), preto
-    // poslucháč sedí na nosiči a rozlišuje podľa data- atribútu.
-    dom.shareOptions.addEventListener('change', (e) => {
-        const t = e.target;
-        if (t instanceof HTMLInputElement && 'shareStart' in t.dataset) store.setState({ shareStart: t.checked });
-    });
+    dom.shareStart.addEventListener('change', () => store.setState({ shareStart: dom.shareStart.checked }));
+    // Voľby prvej karty skladá render (render/zdielat.js), preto poslucháč sedí na karte.
     dom.setup.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (e.target).closest('[data-start-panel]');
         const panel = btn instanceof HTMLElement ? parseStartPanel(btn.dataset.startPanel) : null;
