@@ -3,8 +3,9 @@
 
 import { PLANT, SETTINGS_LIMITS, SETUP, TARIFF_TEMPLATES } from './config.js';
 import { kioskApiUrl } from './kiosk.js';
-import { checkSettings, isTimezone } from './settings.js';
+import { checkSettings, checkSite, totalPanels } from './settings.js';
 import { checkTariff } from './tariff.js';
+import { inRange } from './valid.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
 /** @typedef {import('./config.js').PlantString} PlantString */
@@ -139,11 +140,6 @@ export function emptySettings() {
     };
 }
 
-/** Počet panelov na všetkých plochách; neplatné pole sa ráta ako nula. @param {Settings} s */
-export function totalPanels(s) {
-    return s.plant.strings.reduce((sum, x) => sum + (Number.isFinite(x.panels) ? x.panels : 0), 0);
-}
-
 /**
  * Nastavenie tak, ako ho appka použije. Kto zadal celkový výkon namiesto výkonu panelu
  * (`totalKwp`), tomu sa výkon panelu dopočíta z počtu panelov na všetkých plochách - uložený
@@ -158,19 +154,11 @@ export function resolveDraft(draft, totalKwp) {
     return { ...draft, plant: { ...draft.plant, panelWp } };
 }
 
-const inRange = (/** @type {number} */ v, /** @type {{ min: number, max: number }} */ r) => Number.isFinite(v) && v >= r.min && v <= r.max;
-
-/** @param {Settings} s */
+/** Lokalita je vybraná a prejde tou istou kontrolou ako pri uložení (checkSite). @param {Settings} s */
 function siteOk(s) {
-    const { site } = s;
-    return (
-        !!site.name &&
-        Number.isFinite(site.lat) &&
-        Math.abs(site.lat) <= 90 &&
-        Number.isFinite(site.lon) &&
-        Math.abs(site.lon) <= 180 &&
-        isTimezone(site.timezone)
-    );
+    /** @type {string[]} */ const errors = [];
+    checkSite(s.site, errors);
+    return !!s.site.name && errors.length === 0;
 }
 
 /**

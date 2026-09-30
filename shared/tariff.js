@@ -4,6 +4,7 @@
 
 import { DEVICES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
 import { fmt2, minutesToTimeStr, timeStrToMinutes } from './format.js';
+import { isObj } from './valid.js';
 
 /** @typedef {import('./config.js').Tier} Tier */
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -317,9 +318,6 @@ export function checkTariff(tariff) {
     if (auto && tariff.bands.some((b) => auto[b.id] !== b.level)) warnings.push('Úrovne pásiem nesedia s ich cenami.');
     return { errors, warnings };
 }
-
-/** @param {unknown} v @returns {v is Record<string, any>} */
-const isObj = (v) => !!v && typeof v === 'object';
 
 /** Zmeny rozvrhu bez zbytočných: dve za sebou s rovnakým pásmom sú jedna. @param {Array<{ from: string, band: string }>} changes */
 export function mergeChanges(changes) {

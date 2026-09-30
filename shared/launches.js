@@ -3,13 +3,13 @@
 // Čisté funkcie - úložisko rieši web/settings-store.js.
 
 import { LAUNCH, MOZEM_ITEMS } from './config.js';
+import { DATE_RE } from './valid.js';
 
 /**
  * Jedno spustenie: miestny dátum, vec (id z MOZEM_ITEMS), minúta dňa a či svietilo slnko.
  * @typedef {{ d: string, id: string, m: number, sun: boolean }} Launch
  */
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /** Veci, ktoré sa dajú spustiť - spotrebiče, nie hranie či fén. */
 const LOGGABLE = new Set(MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id));
 

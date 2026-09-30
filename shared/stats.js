@@ -134,11 +134,10 @@ export function longPrice(input) {
 function entries(pv, today, price) {
     const [year, month, day] = today.split('-').map(Number);
     const dayOfYear = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 1)) / 86400000) + 1;
-    const kwh = (/** @type {number | null | undefined} */ v) => v ?? null;
-    const d = kwh(pv?.dailyEnergyKwh);
-    const m = kwh(pv?.monthEnergyKwh);
-    const y = kwh(pv?.yearEnergyKwh);
-    const all = kwh(pv?.cumulativeEnergyKwh);
+    const d = pv?.dailyEnergyKwh ?? null;
+    const m = pv?.monthEnergyKwh ?? null;
+    const y = pv?.yearEnergyKwh ?? null;
+    const all = pv?.cumulativeEnergyKwh ?? null;
     const monthName = MONTHS[month - 1];
     return {
         dnes: { period: 'dnes', label: 'Dnes', heading: 'Vyrobené dnes', kwh: d, value: valueOf(d, price.today), perDay: null },

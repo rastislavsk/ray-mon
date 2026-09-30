@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, SETTINGS_LIMITS, SITE, TARIFF } from '../shared/config.js';
-import { checkSettings } from '../shared/settings.js';
+import { checkSettings, totalPanels } from '../shared/settings.js';
 import {
     emptySettings,
     newRoof,
@@ -12,7 +12,6 @@ import {
     SETUP_STEPS,
     setupSection,
     setupStepOk,
-    totalPanels,
 } from '../shared/setup.js';
 
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
@@ -122,6 +121,11 @@ test('nová plocha smeruje k rovníku', () => {
 test('každá obrazovka kontroluje len to, na čo sa pýta', () => {
     assert.equal(ok({ step: 'lokalita', roof: 0 }), true);
     assert.equal(ok({ step: 'lokalita', roof: 0 }, { ...DVORANY, site: { ...SITE, timezone: 'Mars/Olympus' } }), false);
+    assert.equal(
+        ok({ step: 'lokalita', roof: 0 }, { ...DVORANY, site: { ...SITE, elevationM: NaN } }),
+        false,
+        'tá istá kontrola ako pri uložení',
+    );
     assert.equal(ok({ step: 'panel', roof: 0 }, { ...DVORANY, plant: { ...PLANT, panelWp: 50 } }), false);
     assert.equal(ok({ step: 'panel', roof: 0 }, DVORANY, { totalKwp: 10.44 }), true, 'celkový výkon namiesto panelu');
     assert.equal(ok({ step: 'panel', roof: 0 }, DVORANY, { totalKwp: 0 }), false);
