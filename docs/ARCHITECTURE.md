@@ -230,8 +230,7 @@ priemernú cenu podľa toho, do ktorých pásiem (aj s víkendovými a sezónnym
 výroba z predpovede na najbližší týždeň. Kto nezadal ceny všetkých pásiem, eurá nevidí vôbec –
 polovičné ceny by dali polovičné eurá.
 
-Obsah karty skladá render celý do `#stats-body`, v `index.html` sú len nosiče – ďalší prvok
-v karte tak nepotrebuje dve nasadenia (viď CLAUDE.md). Obdobie (`statsPeriod`) je nastavenie
+Obsah karty skladá render celý do `#stats-body`, v `index.html` sú len nosiče. Obdobie (`statsPeriod`) je nastavenie
 vnútri karty, nie krok navigácie. Výzvy „Doplň ceny“ a „Pripojiť živé meranie“ prepnú na kartu
 Nastavenie a jedným `setState` rovno otvoria ten krok sprievodcu (`stepEdit`), takže tlačidlo
 Späť vráti do Štatistiky.
@@ -326,9 +325,9 @@ a produkčné okno sú tie isté ako pri krivke, takže tooltip nad grafom sedí
 heatmapy pre jeden deň, ktorý tu bol predtým, zanikol: hovoril to isté, čo stĺpce. Na širokej
 obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
 
-Susedné dni pod detailom (tlačidlá „‹ Streda“ a „Piatok ›“) aj bodky pod hlavičkou si robí
-render, nie `index.html` – HTML a JS na sebe nezávisia a zmena ide von jedným nasadením
-(viď CLAUDE.md). Nesú `data-day-index` a prepínajú deň tým istým poslucháčom ako bodky,
+Susedné dni pod detailom (tlačidlá „‹ Streda“ a „Piatok ›“, `#week-day-steps`) aj bodky pod
+hlavičkou (`#week-day-dots`) stoja v `index.html` mimo prvkov, ktoré sa pri listovaní
+prisúvajú – majú stáť, nie cestovať s obsahom. Nesú `data-day-index` a prepínajú deň tým istým poslucháčom ako bodky,
 aj so smerom, z ktorého sa detail prisunie.
 
 Tie isté tri farby nesie aj výroba po dňoch – pásik a číslo v rebríčku, stĺpec a číslo nad

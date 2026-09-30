@@ -1,6 +1,6 @@
 // Karta Štatistika: výroba za dnes, mesiac, rok a celý čas a jej hodnota podľa tarify.
-// Celý obsah karty skladá render do #stats-body - v index.html sú len nosiče, takže ďalší
-// prvok v karte nepotrebuje dve nasadenia (viď CLAUDE.md). Počíta shared/stats.js.
+// Celý obsah karty skladá render do #stats-body, v index.html sú len nosiče. Počíta
+// shared/stats.js.
 
 import { installedKw } from '../../shared/config.js';
 import { escapeHtml, fmt1, fmtSum, kwpText } from '../../shared/format.js';
