@@ -32,59 +32,21 @@ const START_CHOICES = [
 
 /**
  * Položka „Úvodná karta“ v sekcii Appka (voľba karty, na ktorej sa appka na tomto telefóne
- * otvára) a zaškrtávatko „pre rodinu“ pri zdieľaní. Oboje si robí render, nie index.html -
- * HTML a JS na sebe nezávisia a zmena ide von jedným nasadením (viď CLAUDE.md), rovnako ako
- * bodky v detaile dňa. Vznikajú raz, pri prvom vykreslení karty. Položka je natívne <details>
- * ako ostatné v sekcii, o rozbalení appka nevie.
- * @type {{ pick: HTMLElement, family: HTMLInputElement } | null}
+ * otvára) a zaškrtávatko „pre rodinu“ pri zdieľaní.
+ * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
-let startEls = null;
-
-/** Hlavička položky: ikonka telefónu, názov, podnadpis a šípka (rovnaká stavba ako v index.html). */
-const START_SUMMARY =
-    '<svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></svg>' +
-    '<span class="settings-text"><b>Úvodná karta</b><span class="settings-hint">Ktorá karta sa na tomto telefóne otvorí ako prvá</span></span>' +
-    '<svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>';
-
-/** @param {import('../dom.js').Dom} dom */
-function startPas(dom) {
-    if (!startEls) {
-        const item = document.createElement('li');
-        const details = document.createElement('details');
-        details.className = 'settings-item';
-        details.id = 'settings-start';
-        const summary = document.createElement('summary');
-        summary.className = 'settings-summary';
-        summary.innerHTML = START_SUMMARY;
-        const pick = document.createElement('div');
-        pick.className = 'settings-body start-pick';
-        details.append(summary, pick);
-        item.append(details);
-        dom.infoItems.share.closest('li')?.before(item);
-        const row = document.createElement('label');
-        row.className = 'check-row';
-        const family = document.createElement('input');
-        family.type = 'checkbox';
-        family.dataset.shareStart = '';
-        const text = document.createElement('span');
-        text.textContent = 'Pre rodinu: otvárať kartu Môžem? – kto odkaz otvorí, uvidí najprv jednoduché odpovede';
-        row.append(family, text);
-        dom.shareOptions.append(row);
-        startEls = { pick, family };
-    }
-    return startEls;
-}
-
-/** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 function renderStartPick(state, dom) {
-    const { pick, family } = startPas(dom);
     const buttons = START_CHOICES.map(
         (c) =>
             `<button type="button" class="choice" data-start-panel="${c.panel}" aria-pressed="${c.panel === state.startPanel}">` +
             `<span class="dot"></span><span class="t"><b>${c.title}</b><span>${c.text}</span></span></button>`,
     ).join('');
-    writeHtml(pick, `<div class="start-choices" role="group" aria-label="Karta, na ktorej sa appka otvára">${buttons}</div>`, 'startPick');
-    family.checked = state.shareStart;
+    writeHtml(
+        dom.startPick,
+        `<div class="start-choices" role="group" aria-label="Karta, na ktorej sa appka otvára">${buttons}</div>`,
+        'startPick',
+    );
+    dom.shareStart.checked = state.shareStart;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

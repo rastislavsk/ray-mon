@@ -2897,7 +2897,7 @@ test.describe('prvá karta tohto telefónu', () => {
         await page.locator('#info-share > summary').click();
         const wa = page.locator('#share-whatsapp');
         const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
-        await page.locator('[data-share-start]').check();
+        await page.locator('#share-start').check();
         expect(await shared()).toBe(shareUrl(APP_URL, null, false, 'mozem'));
         await page.locator('#share-with-settings').check();
         const url = await shared();
