@@ -482,8 +482,8 @@ export function mozemGlanceText(items) {
     const go = items.filter((i) => i.tone === 'go').length;
     const rest = items.filter((i) => i.tone !== 'go');
     if (!rest.length) return { title: 'Všetko ide hneď', sub: 'Ťukni, dokedy.' };
-    // „zo“ pred slovom, ktoré začína na s/š/z/ž: zo šiestich, zo siedmich.
-    const title = go ? `${go} ${n === 6 || n === 7 ? 'zo' : 'z'} ${n} ide hneď` : 'Teraz nič';
+    // „zo“ pred číslom, ktoré sa číta so s/š na začiatku: zo štyroch, zo šiestich, zo siedmich.
+    const title = go ? `${go} ${[4, 6, 7].includes(n) ? 'zo' : 'z'} ${n} ide hneď` : 'Teraz nič';
     if (rest.every((i) => i.tone === 'unk')) return { title, sub: 'Pri spotrebičoch bez dát neviem.' };
     const named = rest.slice(0, GLANCE_NAMED).map((i) => `${i.name.toLowerCase()} ${i.short}`);
     const more = rest.length > GLANCE_NAMED ? ` +${rest.length - GLANCE_NAMED}` : '';

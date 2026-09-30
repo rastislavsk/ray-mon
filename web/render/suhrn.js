@@ -3,10 +3,19 @@
 
 import { dayNameShort, escapeHtml, fmtSum } from '../../shared/format.js';
 import { SUMMARY_PERIODS } from '../../shared/summary.js';
+import { ICON_BACK, ICON_NEXT } from '../icons.js';
 
 /** @typedef {NonNullable<ReturnType<typeof import('../../shared/summary.js').summaryModel>>} SummaryModel */
 
 const PERIOD_LABELS = { tyzden: 'Týždeň', mesiac: 'Mesiac' };
+
+/**
+ * Tlačidlo Späť na druhej obrazovke karty Môžem? (súhrn, zoznam vecí).
+ * @param {string} cls trieda tlačidla @param {string} attr dátový atribút, podľa ktorého ho nájde klik
+ */
+export function backButtonHtml(cls, attr) {
+    return `<button type="button" class="${cls}" ${attr}>${ICON_BACK}Späť</button>`;
+}
 
 /** Týždeň ako stĺpce, mesiac ako mriežka štvorčekov. Chýbajúci deň je len obrys. @param {SummaryModel} m */
 function vizHtml(m) {
@@ -35,8 +44,7 @@ export function summaryHtml(m, period) {
         (p) => `<button type="button" data-summary-period="${p}" aria-pressed="${p === period}">${PERIOD_LABELS[p]}</button>`,
     ).join('');
     const top =
-        `<div class="summary-top"><button type="button" class="summary-back" data-summary-back>` +
-        `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Späť</button>` +
+        `<div class="summary-top">${backButtonHtml('summary-back', 'data-summary-back')}` +
         `<div class="seg" role="group" aria-label="Obdobie">${seg}</div></div>`;
     if (!m)
         return `<section class="summary">${top}<p class="summary-note">Súhrn skladá čísla zo živého merania. Keď kiosk odpovie, ukáže sa.</p></section>`;
@@ -60,6 +68,6 @@ export function summaryLinkHtml(m) {
     return (
         `<button type="button" class="summary-link" data-mozem-summary><span><small>Súhrn na zdieľanie</small>` +
         `${escapeHtml(m.kick)}: ${fmtSum(Math.round(m.kwh), 0)} kWh. Pozri čísla.</span>` +
-        `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`
+        `${ICON_NEXT}</button>`
     );
 }

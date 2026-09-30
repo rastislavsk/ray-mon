@@ -185,6 +185,7 @@ test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () =
         sub: 'sušička zajtra 09:00, sušička zajtra 09:00 +2',
     });
     assert.equal(mozemGlanceText([go, no, no, no, no]).title, '1 z 5 ide hneď');
+    assert.equal(mozemGlanceText([go, no, no, no]).title, '1 zo 4 ide hneď');
     assert.equal(mozemGlanceText([go, it('Práčka', 'unk', 'neviem')]).sub, 'Pri spotrebičoch bez dát neviem.');
 
     // Model: riadok ráta s krátkymi odpoveďami veci, ktoré ukazuje aj zoznam.
