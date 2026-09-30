@@ -1,30 +1,20 @@
-// Všetky poslucháče udalostí. Každý končí volaním setState alebo lokálnou zmenou tooltipu;
+// Poslucháče udalostí (karta Môžem? a sprievodca majú vlastné súbory). Každý končí volaním setState alebo lokálnou zmenou tooltipu;
 // nikto tu nekreslí do DOM okrem tooltipov, ktoré nie sú súčasťou stavu.
 
 import { chartTooltipModel, minutesFromAngle, ringGap } from '../shared/chart-model.js';
-import {
-    MINUTES_PER_DAY,
-    PAGER_SETTLE_MS,
-    PREVIEW,
-    REFRESH,
-    SWIPE,
-    TOOLTIP_FADE_MS,
-    TOOLTIP_HOLD_MS,
-    WEEK_MSG_MIN_H,
-} from '../shared/config.js';
+import { MINUTES_PER_DAY, PREVIEW, REFRESH, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
 import { recordDay } from '../shared/daylog.js';
-import { toggleLaunch } from '../shared/launches.js';
-import { SUMMARY_PERIODS } from '../shared/summary.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { loadData } from './data.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
-import { saveDayLog, saveLaunches, saveStartPanel } from './settings-store.js';
-import { shareSummary } from './share-image.js';
+import { saveDayLog, saveStartPanel } from './settings-store.js';
+import { initMozem } from './mozem-interactions.js';
+import { pagerScroll } from './pager.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -89,7 +79,7 @@ function initNavigation(store, dom) {
         // pás o pár pixelov mimo prichytenia a cez okraj presvital kúsok susednej stránky. Bodku
         // hľadá poradie v zozname bodiek, nie atribút s číslom stránky: zoznam je ten istý, ktorý
         // bodky rozsvecuje, takže si obe strany nemajú ako rozísť. Skryté stránky do poradia
-        // nepatria - rovnako ako ich neráta currentPage.
+        // nepatria - rovnako ako ich neráta currentPage (web/pager.js).
         const dotBtn = target.closest('.pager-dot');
         const dotIndex = dotBtn instanceof HTMLElement ? dom.verdictDotButtons.indexOf(dotBtn) : -1;
         if (dotIndex >= 0) {
@@ -174,34 +164,6 @@ function initTimePreview(store, dom) {
         if (target.closest('#dial-grip, #preview-reset')) return;
         store.setState({ previewMinutes: minutesFromPoint(dom, e.clientX, e.clientY), isDragging: false });
     });
-}
-
-/** Index stránky pod prstom práve teraz, aj keď je pás ešte v pohybe. Skrytá stránka
- * (napr. "lepšie bude" bez času čakania) z toku vypadne, takže do poradia nepatrí - preto
- * sa počíta zo skutočne zobrazených stránok a nie z pevného čísla. @param {HTMLElement} pager */
-function currentPage(pager) {
-    const pages = pager.querySelectorAll('.pager-page:not(.hidden)').length;
-    const index = Math.round(pager.scrollLeft / (pager.clientWidth || 1));
-    return Math.min(Math.max(index, 0), pages - 1);
-}
-
-/**
- * Posun pásu, ktorý listuje a prichytáva prehliadač sám; JS len číta, kde pás stojí. Bodky idú
- * za prstom hneď (len kozmeticky prepnú triedu), do stavu ide až ustálená stránka - inak by
- * prekreslenie uprostred gesta prepisovalo bodky tam a späť. Vráti obsluhu udalosti scroll.
- * @param {() => Iterable<Element>} dots bodky pásu (pri prekresľovanom páse sa hľadajú nanovo)
- * @param {(page: number) => void} settle zápis ustálenej stránky do stavu
- */
-function pagerScroll(dots, settle) {
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let timer;
-    return (/** @type {HTMLElement} */ pager) => {
-        const index = currentPage(pager);
-        let i = 0;
-        for (const dot of dots()) dot.classList.toggle('active', i++ === index);
-        clearTimeout(timer);
-        timer = setTimeout(() => settle(currentPage(pager)), PAGER_SETTLE_MS);
-    };
 }
 
 /** Listovanie verdiktu. Poradie má konce: na poslednej správe sa dá ísť už len späť, na prvej
@@ -545,90 +507,6 @@ function initStats(store, dom) {
         const step = go.dataset.statsGo || 'nastavenie';
         store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(s.demo || step === 'nastavenie' ? {} : stepEdit(s, step, true)) });
     });
-}
-
-/**
- * „Pustil/a som“: zapíše spustenie v tomto telefóne (kým beží, druhé ťuknutie ho zruší).
- * Čas a dátum sú lokality elektrárne, ako všetko ostatné v appke.
- * @param {Store} store @param {string} id @param {boolean} sun
- */
-function logLaunch(store, id, sun) {
-    const s = store.get();
-    const entry = { d: localDateKey(s.now, s.site.timezone), id, m: localMinutes(s.now, s.site.timezone), sun };
-    const launches = toggleLaunch(s.launches, entry);
-    saveLaunches(launches);
-    store.setState({ launches });
-}
-
-/** Posunie pás hlášok na stránku `index`; stránku do stavu zapíše až poslucháč posunu, ako pri
- * prste. Za poslednou hláškou ide ťuknutie znova na prvú. @param {HTMLElement} body @param {number | null} index null = ďalšia */
-function scrollQuips(body, index) {
-    const pager = body.querySelector('[data-mozem-quips]');
-    if (!(pager instanceof HTMLElement)) return;
-    const pages = pager.querySelectorAll('.pager-page');
-    const page = pages[index ?? (currentPage(pager) + 1) % pages.length];
-    if (page instanceof HTMLElement) page.scrollIntoView({ inline: 'start', block: 'nearest' });
-}
-
-/** Pás hlášok listuje prehliadač, ako pás odporúčaní (initVerdictPager). Pás sa s obsahom karty
- * prepisuje, preto poslucháč sedí na nosiči a posun (ten nebublá) chytá cestou dole.
- * @param {Store} store @param {Dom} dom */
-function initQuipPager(store, dom) {
-    const onScroll = pagerScroll(
-        () => dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]'),
-        (page) => store.setState({ mozemQuip: page }),
-    );
-    dom.mozemBody.addEventListener(
-        'scroll',
-        (e) => {
-            if (e.target instanceof HTMLElement && e.target.matches('[data-mozem-quips]')) onScroll(e.target);
-        },
-        { capture: true, passive: true },
-    );
-}
-
-/**
- * Karta Môžem?: riadok „Čo môžem“ otvorí zoznam vecí, ťuknutie na vec v ňom ju rozbalí (druhé
- * zbalí), ťuknutie na hlášku posunie pás na ďalšiu. Rozbalenie a hláška sú nastavenie vnútri
- * karty, nie krok navigácie - Späť sa na ne nevracia.
- * @param {Store} store @param {Dom} dom
- */
-function initMozem(store, dom) {
-    initQuipPager(store, dom);
-    dom.mozemBody.addEventListener('click', (e) => {
-        const target = /** @type {HTMLElement} */ (e.target);
-        // Zoznam vecí je obrazovka karty ako súhrn: otvorenie je krok navigácie, šípka späť
-        // ten istý krok ako tlačidlo Späť. Otvára sa vždy zbalený.
-        if (target.closest('[data-mozem-list]')) return store.setState({ mozemList: true, mozemOpen: null });
-        if (target.closest('[data-mozem-list-back]')) return backTo(store, { mozemList: false });
-        const item = target.closest('[data-mozem-item]');
-        if (item instanceof HTMLElement) {
-            const id = item.dataset.mozemItem || null;
-            return store.setState({ mozemOpen: store.get().mozemOpen === id ? null : id });
-        }
-        const log = target.closest('[data-mozem-log]');
-        if (log instanceof HTMLElement) return logLaunch(store, log.dataset.mozemLog || '', log.dataset.sun === '1');
-        if (target.closest('[data-mozem-quip]')) return scrollQuips(dom.mozemBody, null);
-        const dot = target.closest('[data-mozem-quip-dot]');
-        if (dot instanceof HTMLElement) return scrollQuips(dom.mozemBody, Number(dot.dataset.mozemQuipDot));
-        onSummaryClick(store, target);
-    });
-}
-
-/**
- * Súhrn na zdieľanie: otvorenie je krok navigácie, šípka späť ten istý krok ako tlačidlo Späť
- * (backTo), obdobie je nastavenie vnútri obrazovky, zdieľanie pošle obrázok systému.
- * @param {Store} store @param {HTMLElement} target
- */
-function onSummaryClick(store, target) {
-    if (target.closest('[data-mozem-summary]')) return store.setState({ mozemSummary: true });
-    if (target.closest('[data-summary-back]')) return backTo(store, { mozemSummary: false });
-    const period = target.closest('[data-summary-period]');
-    if (period instanceof HTMLElement) {
-        const p = SUMMARY_PERIODS.find((x) => x === period.dataset.summaryPeriod);
-        return p && store.setState({ summaryPeriod: p });
-    }
-    if (target.closest('[data-summary-share]')) shareSummary(store.get());
 }
 
 /**

@@ -51,8 +51,9 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 
 **`web/` – prehliadač.** `state.js` drží jediný stavový objekt; `setState` zlúči zmenu a
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
-miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje všetky
-poslucháče a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
+miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje
+poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
+`setup-interactions.js`, pásy, ktoré listuje prehliadač, spoločné `pager.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
