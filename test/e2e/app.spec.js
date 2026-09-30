@@ -169,7 +169,7 @@ test('klik na spotrebič (mobil) ukáže tooltip s príkonom a časom z karty M�
     const chip = page.locator('#verdict-go-row .go-chip').first();
     const tooltip = page.locator('#verdict-chip-tooltip');
     // Prvý spotrebič je práčka; čas je tá istá krátka odpoveď, akú má karta Môžem?.
-    const when = deviceShorts(mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) }))['Práčka'];
+    const when = deviceShorts({ ...OWNER, now: FIXED_NOW, pv, forecast: forecastAt(FIXED_NOW) })['Práčka'];
     expect(when).toMatch(/^do \d\d:\d\d$/);
     await expect(tooltip).not.toHaveClass(/visible/);
     await chip.click();

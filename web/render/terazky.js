@@ -6,7 +6,7 @@ import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
-import { deviceShorts, mozemModel } from '../../shared/mozem.js';
+import { deviceShorts } from '../../shared/mozem.js';
 import { sunUp } from '../../shared/solar.js';
 import { DEVICE_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
@@ -71,7 +71,7 @@ function renderHero(state, m, dom) {
     dom.dialRing.classList.toggle('empty', !(m.dial.fraction > 0));
     dom.verdictHeadline.textContent = m.message.headline;
     dom.verdictBody.textContent = m.message.body;
-    writeHtml(dom.verdictGoRow, devicesHtml(m.devices, deviceShorts(mozemModel(state, 0, state.launches))), 'devices');
+    writeHtml(dom.verdictGoRow, devicesHtml(m.devices, deviceShorts(state, state.launches)), 'devices');
     renderForecastPage(state, dom);
     renderVerdictPager(state, m, dom);
 }

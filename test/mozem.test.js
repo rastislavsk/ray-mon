@@ -226,9 +226,11 @@ test('neskoro popoludní: program už celý na slnku nedobehne, karta to povie',
 
 test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky', () => {
     const m = mozemModel(input(FIXED_NOW));
-    const shorts = deviceShorts(m);
+    const shorts = deviceShorts(input(FIXED_NOW));
     assert.equal(shorts['Práčka'], item(m, 'pracka').short);
     assert.equal(shorts.Auto, item(m, 'auto').short);
     assert.equal(shorts.Bojler, undefined, 'bojler na karte Môžem? nie je');
     assert.deepEqual(Object.keys(shorts).sort(), ['Auto', 'Práčka', 'Sušička', 'Umývačka']);
+    const bez = input(FIXED_NOW, { pv: null, forecast: null });
+    assert.equal(deviceShorts(bez)['Práčka'], item(mozemModel(bez), 'pracka').short, 'bez predpovede tá istá odpoveď ako na karte');
 });
