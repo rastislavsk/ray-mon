@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { KIOSK } from '../shared/config.js';
 import { decodeEntities, extractRealCurveToday, kioskApiUrl, parseKiosk } from '../shared/kiosk.js';
 import { FIXED_NOW, fixture } from './helpers.js';
 
@@ -66,6 +67,7 @@ test('kioskApiUrl: iné servery, protokoly a kľúče neprejdú', () => {
         'https://region01eu5.fusionsolar.huawei.com/?kk=ab',
         'https://region01eu5.fusionsolar.huawei.com/?kk=abc%2F..%2Fx',
         'https://region01eu5.fusionsolar.huawei.com/?kiosk=abcd1234',
+        `https://region01eu5.fusionsolar.huawei.com/?kk=abcd1234&x=${'a'.repeat(KIOSK.maxLinkLength)}`,
     ])
         assert.equal(kioskApiUrl(bad), null, String(bad));
 });

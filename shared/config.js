@@ -412,11 +412,12 @@ export const WORKER_PV_URL = new URL(WORKER_PV_PATH, WORKER_URL).href;
 /**
  * Verejný kiosk Huawei FusionSolar. Worker sťahuje len z týchto serverov a len túto cestu,
  * odkaz od používateľa dodá iba server a kľúč kiosku - inak by z Workera bol proxy server
- * na čokoľvek.
+ * na čokoľvek. `maxLinkLength` je najdlhší odkaz v znakoch; skutočné odkazy majú okolo stovky.
  */
 export const KIOSK = {
     hostSuffix: 'fusionsolar.huawei.com',
     apiPath: '/rest/pvms/web/kiosk/v1/station-kiosk-file',
+    maxLinkLength: 2000,
 };
 
 // Ako často sa čo obnovuje (ms).

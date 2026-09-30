@@ -66,11 +66,12 @@ export function parseKiosk(outer, now) {
 /**
  * Adresa dát kiosku z odkazu, ktorý vložil používateľ. Prijme odkaz na stránku kiosku
  * (kľúč `kk` býva za mriežkou) aj priamo adresu dát. Vráti null, keď to nie je kiosk
- * FusionSolar - server musí byť FusionSolar a kľúč len z písmen, číslic a `-_`.
+ * FusionSolar - server musí byť FusionSolar, kľúč len z písmen, číslic a `-_` a odkaz
+ * nie dlhší než `KIOSK.maxLinkLength`.
  * @param {unknown} input @returns {string | null}
  */
 export function kioskApiUrl(input) {
-    if (typeof input !== 'string') return null;
+    if (typeof input !== 'string' || input.length > KIOSK.maxLinkLength) return null;
     /** @type {URL} */ let url;
     try {
         url = new URL(input.trim());

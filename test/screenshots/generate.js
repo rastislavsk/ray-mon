@@ -56,7 +56,7 @@ try {
     });
     // Živé zdroje sa nahradia fixtures, zvyšok (písma z fonts/, QR knižnica z CDN) sa načíta ako v appke.
     // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
-    await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv, servedAt: FIXED_NOW.toISOString() } }));
+    await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: fixture('open-meteo.json') }));
     await page.addInitScript(
         ([key, value]) => localStorage.setItem(key, value),

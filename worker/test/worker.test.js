@@ -6,18 +6,17 @@ import { handlePv, handleRequest } from '../src/index.js';
 const fixture = (/** @type {string} */ name) => readFileSync(new URL(`../../test/fixtures/${name}`, import.meta.url), 'utf8');
 const NOW = new Date('2026-09-05T11:00:00Z');
 
+/** Podvrhnutý fetch: stačí mu adresa, typ `fetch` mu dá toto jediné pretypovanie. @param {(url: string) => Promise<Response>} fn */
+const asFetch = (fn) => /** @type {typeof fetch} */ (/** @type {unknown} */ (fn));
+
 /** @param {Record<string, string | null>} routes */
 function fakeFetch(routes) {
-    return /** @type {typeof fetch} */ (
-        /** @type {unknown} */ (
-            async (/** @type {string} */ url) => {
-                const body = routes[url];
-                if (body === undefined) return new Response('not found', { status: 404 });
-                if (body === null) return new Response('boom', { status: 500 });
-                return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
-            }
-        )
-    );
+    return asFetch(async (url) => {
+        const body = routes[url];
+        if (body === undefined) return new Response('not found', { status: 404 });
+        if (body === null) return new Response('boom', { status: 500 });
+        return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+    });
 }
 
 const KIOSK_PAGE = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
@@ -27,7 +26,7 @@ const pvRequest = (/** @type {string} */ body) => new Request('https://w.test/pv
 test('POST /pv: odkaz na kiosk od používateľa vráti pv, Worker sťahuje len adresu dát kiosku', async () => {
     /** @type {string[]} */ const calls = [];
     const f = fakeFetch({ [KIOSK_API]: fixture('kiosk.json') });
-    const spy = /** @type {typeof fetch} */ (/** @type {unknown} */ (async (/** @type {string} */ url) => (calls.push(url), f(url))));
+    const spy = asFetch(async (url) => (calls.push(url), f(url)));
     const res = await handleRequest(pvRequest(KIOSK_PAGE), NOW, spy);
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('access-control-allow-origin'), '*');
@@ -40,7 +39,7 @@ test('POST /pv: odkaz na kiosk od používateľa vráti pv, Worker sťahuje len 
 
 test('POST /pv: cudzí odkaz 400 bez sťahovania, výpadok kiosku 502 bez odkazu v odpovedi', async () => {
     let called = false;
-    const never = /** @type {typeof fetch} */ (/** @type {unknown} */ (async () => ((called = true), new Response('{}'))));
+    const never = asFetch(async () => ((called = true), new Response('{}')));
     const bad = await handlePv(pvRequest('https://example.com/?kk=Abc123xyz'), NOW, never);
     assert.equal(bad.status, 400);
     assert.equal(called, false);
@@ -54,10 +53,7 @@ test('POST /pv: cudzí odkaz 400 bez sťahovania, výpadok kiosku 502 bez odkazu
 test('POST /pv: neplatný kľúč (kiosk vráti 404) sa neopakuje, výpadok servera áno', async () => {
     /** @type {string[]} */ const calls = [];
     /** @param {number} status */
-    const kiosk = (status) =>
-        /** @type {typeof fetch} */ (
-            /** @type {unknown} */ (async (/** @type {string} */ url) => (calls.push(url), new Response('x', { status })))
-        );
+    const kiosk = (status) => asFetch(async (url) => (calls.push(url), new Response('x', { status })));
     assert.equal((await handlePv(pvRequest(KIOSK_PAGE), NOW, kiosk(404))).status, 502);
     assert.equal(calls.length, 1, 'druhý pokus by dopadol rovnako');
     calls.length = 0;
