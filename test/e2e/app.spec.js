@@ -573,9 +573,6 @@ test('7 dní na mobile: riadky Dnes a Zajtra otvárajú detail toho dňa', async
  * V detaile dňa je ťah prstom jediná cesta k susednému dňu a nič ju neohlasovalo. Bodky pod
  * hlavičkou hovoria, koľko dní týždeň má a na ktorom z nich stojíme; sú to tlačidlá, takže
  * ten istý skok zvládne aj myš a klávesnica.
- *
- * Pás bodiek si vyrába render, nie index.html (viď dayDotsPas vo web/render/sedemdni.js),
- * preto ho test hľadá podľa triedy a nie podľa id.
  */
 test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async ({ page }) => {
     const errors = await openApp(page);
