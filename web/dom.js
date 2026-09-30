@@ -70,6 +70,8 @@ function sedemdniDom() {
         weekDayHead: byId('week-day-head'),
         weekDayBack: byId('week-day-back'),
         weekDayTitle: byId('week-day-title'),
+        weekDayDots: byId('week-day-dots'),
+        weekDaySteps: byId('week-day-steps'),
         weekGrid: byId('week-grid'),
         weekBlockHeat: byId('week-block-heat'),
         weekBlockBars: byId('week-block-bars'),
@@ -109,6 +111,7 @@ function sedemdniDom() {
         weekList: byId('week-list'),
         weekListTotal: byId('week-list-total'),
         weekListAvg: byId('week-list-avg'),
+        weekListSpark: byId('week-list-spark'),
         weekMsgTitle: byId('week-msg-title'),
         weekMsgBody: byId('week-msg-body'),
     };

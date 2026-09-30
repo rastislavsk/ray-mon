@@ -163,26 +163,6 @@ function renderTableAndTabs(days, sel, dom) {
 }
 
 /**
- * Stĺpčeky dní v bubline so súčtom za týždeň. Robí si ich render, nie index.html - z toho
- * istého dôvodu ako bodky pod hlavičkou detailu (viď dayDots nižšie): HTML a JS tak na sebe
- * nezávisia a zmena ide von jedným nasadením. Sú len ozdoba súčtu, čítačka ich preskočí -
- * tie isté čísla povie riadok každého dňa.
- * @type {HTMLElement | null}
- */
-let weekSpark = null;
-
-/** @param {import('../dom.js').Dom} dom */
-function weekSparkPas(dom) {
-    if (!weekSpark) {
-        weekSpark = document.createElement('span');
-        weekSpark.className = 'week-list-spark';
-        weekSpark.setAttribute('aria-hidden', 'true');
-        (dom.weekListTotal.closest('.week-list-hero') || dom.weekBlockList).append(weekSpark);
-    }
-    return weekSpark;
-}
-
-/**
  * Rebríček dní - prehľad karty na mobile. Hore bublina so súčtom za týždeň (je to tlačidlo
  * a otvára detail týždňa), pod ňou karta s riadkom na deň: meno s dátumom, obloha, pásik
  * a výroba. Riadok je tlačidlo, otvára detail toho dňa.
@@ -196,8 +176,9 @@ function renderList(s, rows, dom) {
     dom.weekListTotal.textContent = String(Math.round(s.totalKwh));
     dom.weekListAvg.textContent = `${fmt1(s.avgKwh)} kWh`;
     // Týždeň v malom: stĺpček na deň, tá istá výška a farba ako pásik v riadku dňa.
+    dom.weekListSpark.classList.toggle('hidden', !rows.length);
     writeHtml(
-        weekSparkPas(dom),
+        dom.weekListSpark,
         rows.map((r) => `<i class="${r.tier ? `tier-${r.tier}` : ''}" style="height:${Math.max(r.barPct, 4)}%"></i>`).join(''),
         'weekSpark',
     );
@@ -291,7 +272,7 @@ function renderView(detail, narrow, tall, dom) {
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
     dom.weekDayHead.classList.toggle('hidden', !detail);
     // Bodky patria k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
-    dayDotsPas(dom).classList.toggle('hidden', detail !== 'day');
+    dom.weekDayDots.classList.toggle('hidden', detail !== 'day');
     // Deň si používateľ vybral klikom v prehľade, prepínač dní nad krivkou je tu navyše.
     dom.weekDayTabs.classList.toggle('hidden', !!detail);
 }
@@ -300,28 +281,6 @@ function renderView(detail, narrow, tall, dom) {
  * @param {'day' | 'week' | null} detail @param {ForecastDay} day @param {number} sel @param {import('../dom.js').Dom} dom */
 function renderDayHead(detail, day, sel, dom) {
     dom.weekDayTitle.textContent = detail === 'week' ? 'Celý týždeň' : weekDayLong(day.date, sel);
-}
-
-/**
- * Pás bodiek pod hlavičkou detailu dňa. Robí si ho render, nie index.html: nový prvok
- * v statickom HTML by si vyžiadal dve nasadenia (byId vo web/dom.js na chýbajúci prvok
- * úmyselne hodí výnimku a stará stránka z cache ho desať minút nemá - viď CLAUDE.md),
- * takto na sebe HTML a JS nezávisia a zmena ide von naraz. Vzniká raz, pri prvom
- * vykreslení karty, a ostáva v stránke aj mimo detailu - skrytý, ako všetko ostatné.
- * @type {HTMLElement | null}
- */
-let dayDots = null;
-
-/** Pás stojí medzi hlavičkou a mriežkou, teda mimo oboch prvkov, ktoré sa pri prelistovaní
- * prisúvajú (viď renderDayAnim): bodky majú pri listovaní stáť, nie cestovať s obsahom.
- * @param {import('../dom.js').Dom} dom */
-function dayDotsPas(dom) {
-    if (!dayDots) {
-        dayDots = document.createElement('div');
-        dayDots.className = 'day-dots';
-        dom.weekDayHead.after(dayDots);
-    }
-    return dayDots;
 }
 
 /**
@@ -347,31 +306,17 @@ function renderDayDots(detail, days, sel, dom) {
             return `<button type="button" class="pager-dot${tu}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}></button>`;
         })
         .join('');
-    writeHtml(dayDotsPas(dom), html, 'dayDots');
+    writeHtml(dom.weekDayDots, html, 'dayDots');
 }
 
 /**
- * Susedné dni pod detailom dňa: tlačidlá „‹ Streda 41 kWh“ a „Piatok 32 kWh ›“. Robí si ich
- * render z toho istého dôvodu ako bodky (viď dayDots) a nesú data-day-index, takže deň prepne
- * ten istý poslucháč - aj so smerom, z ktorého sa detail prisunie (dayPick v interactions.js).
- * Stoja za mriežkou, teda mimo prvkov, ktoré sa pri listovaní prisúvajú.
- * @type {HTMLElement | null}
+ * Susedné dni pod detailom dňa: tlačidlá „‹ Streda 41 kWh“ a „Piatok 32 kWh ›“. Nesú
+ * data-day-index, takže deň prepne ten istý poslucháč - aj so smerom, z ktorého sa detail
+ * prisunie (dayPick v interactions.js).
+ * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom
  */
-let daySteps = null;
-
-/** @param {import('../dom.js').Dom} dom */
-function dayStepsPas(dom) {
-    if (!daySteps) {
-        daySteps = document.createElement('div');
-        daySteps.className = 'day-steps';
-        dom.weekGrid.after(daySteps);
-    }
-    return daySteps;
-}
-
-/** @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom */
 function renderDaySteps(detail, days, sel, dom) {
-    const pas = dayStepsPas(dom);
+    const pas = dom.weekDaySteps;
     pas.classList.toggle('hidden', detail !== 'day');
     if (detail !== 'day') return;
     const step = (/** @type {number} */ i, /** @type {'prev' | 'next'} */ kam) => {
@@ -441,14 +386,14 @@ function renderEmpty(dom) {
         [dom.weekDayTabs, 'weekDayTabs'],
         [dom.weekTbody, 'weekTbody'],
         [dom.weekList, 'weekList'],
-        [weekSparkPas(dom), 'weekSpark'],
+        [dom.weekListSpark, 'weekSpark'],
     ]))
         writeHtml(el, '', name);
     for (const el of [dom.weekBarsStat, dom.weekCurveStat, dom.weekHeatScale]) el.innerHTML = '';
     for (const el of [dom.weekToday, dom.weekTomorrow, dom.weekTotal, dom.weekListTotal, dom.weekListAvg]) el.textContent = '–';
     dom.weekCurveLiveLegend.classList.add('hidden');
     // Bez dát detail neexistuje (viď renderSedemdni), susedné dni pod ním teda tiež nie.
-    if (daySteps) daySteps.classList.add('hidden');
+    dom.weekDaySteps.classList.add('hidden');
     for (const el of [
         dom.weekTodayBadge,
         dom.weekTodayMeta,
