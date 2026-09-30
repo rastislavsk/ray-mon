@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LAUNCH, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { canLog, monthCount, parseLaunches, runMinOf, runningLaunch, toggleLaunch } from '../shared/launches.js';
-import { mozemModel } from '../shared/mozem.js';
+import { deviceShorts, mozemModel } from '../shared/mozem.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const DAY = '2026-09-05';
@@ -68,6 +68,7 @@ test('mozemModel so zápismi: beží, tlačidlo zapísané a mesačný riadok', 
     const bezi = s.items.find((i) => i.id === 'pracka');
     assert.equal(bezi?.short, 'beží do 14:50');
     assert.equal(bezi?.log?.pressed, true);
+    assert.equal(deviceShorts(input, [pracka(770)])['Práčka'], 'beží do 14:50', 'tooltip na Terazky vie, že beží');
     assert.match(bezi?.log?.label || '', /^Zapísané o 12:50/);
     assert.equal(s.count, 'Tento mesiac si pustil/a 2× niečo, z toho 1× na slnku.');
     const auto = mozemModel(input, 0, [{ d: DAY, id: 'auto', m: 770, sun: true }]).items.find((i) => i.id === 'auto');
