@@ -121,10 +121,10 @@ function minutesFromPoint(dom, clientX, clientY) {
  */
 function initTimePreview(store, dom) {
     const grip = dom.dialGrip;
+    const nowMinutes = () => localMinutes(store.get().now, store.get().site.timezone);
     const move = (/** @type {PointerEvent} */ e) => {
         const minutes = minutesFromPoint(dom, e.clientX, e.clientY);
-        const nowMinutes = localMinutes(store.get().now, store.get().site.timezone);
-        store.setState({ previewMinutes: ringGap(minutes, nowMinutes) <= PREVIEW.snapToNowMin ? null : minutes });
+        store.setState({ previewMinutes: ringGap(minutes, nowMinutes()) <= PREVIEW.snapToNowMin ? null : minutes });
     };
     grip.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -157,7 +157,7 @@ function initTimePreview(store, dom) {
                   : 0;
         if (!step) return;
         e.preventDefault();
-        const from = store.get().previewMinutes ?? localMinutes(store.get().now, store.get().site.timezone);
+        const from = store.get().previewMinutes ?? nowMinutes();
         store.setState({ previewMinutes: (((from + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY });
     });
     // Enter a medzerník na značke "teraz" otvoria náhľad na aktuálnom čase.
@@ -166,7 +166,7 @@ function initTimePreview(store, dom) {
     // ťahanie totiž na konci pošle aj klik.
     grip.addEventListener('click', (e) => {
         if (e.detail === 0 && store.get().previewMinutes === null) {
-            store.setState({ previewMinutes: localMinutes(store.get().now, store.get().site.timezone) });
+            store.setState({ previewMinutes: nowMinutes() });
         }
     });
     dom.dialWrap.addEventListener('click', (e) => {
@@ -185,32 +185,33 @@ function currentPage(pager) {
     return Math.min(Math.max(index, 0), pages - 1);
 }
 
-/** Bodka nech prstu/kolieskam sleduje plynulo, nie až po ustálení pásu - toto len kozmeticky
- * prepne triedu na dobu pohybu; naozajstný stav príde až z debounced časti.
- * @param {Dom} dom @param {number} index */
-function highlightDot(dom, index) {
-    dom.verdictDotButtons.forEach((dot, i) => dot.classList.toggle('active', i === index));
-}
-
-/** Listovanie verdiktu posúva a prichytáva prehliadač sám; JS len číta, na ktorej stránke sa
- * pás ustálil. Poradie má konce: na poslednej správe sa dá ísť už len späť, na prvej len ďalej.
- * Do stavu ide až ustálená stránka - inak by prekreslenie uprostred gesta prepisovalo bodky
- * tam a späť. @param {Store} store @param {Dom} dom */
-function initVerdictPager(store, dom) {
-    const pager = dom.verdictPager;
-
+/**
+ * Posun pásu, ktorý listuje a prichytáva prehliadač sám; JS len číta, kde pás stojí. Bodky idú
+ * za prstom hneď (len kozmeticky prepnú triedu), do stavu ide až ustálená stránka - inak by
+ * prekreslenie uprostred gesta prepisovalo bodky tam a späť. Vráti obsluhu udalosti scroll.
+ * @param {() => Iterable<Element>} dots bodky pásu (pri prekresľovanom páse sa hľadajú nanovo)
+ * @param {(page: number) => void} settle zápis ustálenej stránky do stavu
+ */
+function pagerScroll(dots, settle) {
     /** @type {ReturnType<typeof setTimeout> | undefined} */
     let timer;
-    pager.addEventListener(
-        'scroll',
-        () => {
-            highlightDot(dom, currentPage(pager));
+    return (/** @type {HTMLElement} */ pager) => {
+        const index = currentPage(pager);
+        let i = 0;
+        for (const dot of dots()) dot.classList.toggle('active', i++ === index);
+        clearTimeout(timer);
+        timer = setTimeout(() => settle(currentPage(pager)), PAGER_SETTLE_MS);
+    };
+}
 
-            clearTimeout(timer);
-            timer = setTimeout(() => store.setState({ verdictPage: currentPage(pager) }), PAGER_SETTLE_MS);
-        },
-        { passive: true },
+/** Listovanie verdiktu. Poradie má konce: na poslednej správe sa dá ísť už len späť, na prvej
+ * len ďalej. @param {Store} store @param {Dom} dom */
+function initVerdictPager(store, dom) {
+    const onScroll = pagerScroll(
+        () => dom.verdictDotButtons,
+        (page) => store.setState({ verdictPage: page }),
     );
+    dom.verdictPager.addEventListener('scroll', () => onScroll(dom.verdictPager), { passive: true });
 }
 
 /** @type {Array<{ wrap: HTMLElement, hide: () => void }>} */
@@ -569,21 +570,18 @@ function scrollQuips(body, index) {
     if (page instanceof HTMLElement) page.scrollIntoView({ inline: 'start', block: 'nearest' });
 }
 
-/** Pás hlášok listuje prehliadač; bodky idú za prstom hneď, do stavu ide až ustálená stránka -
- * ako pri páse odporúčaní (initVerdictPager). Pás sa s obsahom karty prepisuje, preto poslucháč
- * sedí na nosiči a posun (ten nebublá) chytá cestou dole. @param {Store} store @param {Dom} dom */
+/** Pás hlášok listuje prehliadač, ako pás odporúčaní (initVerdictPager). Pás sa s obsahom karty
+ * prepisuje, preto poslucháč sedí na nosiči a posun (ten nebublá) chytá cestou dole.
+ * @param {Store} store @param {Dom} dom */
 function initQuipPager(store, dom) {
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let timer;
+    const onScroll = pagerScroll(
+        () => dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]'),
+        (page) => store.setState({ mozemQuip: page }),
+    );
     dom.mozemBody.addEventListener(
         'scroll',
         (e) => {
-            const pager = e.target;
-            if (!(pager instanceof HTMLElement) || !pager.matches('[data-mozem-quips]')) return;
-            const index = currentPage(pager);
-            dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]').forEach((dot, i) => dot.classList.toggle('active', i === index));
-            clearTimeout(timer);
-            timer = setTimeout(() => store.setState({ mozemQuip: currentPage(pager) }), PAGER_SETTLE_MS);
+            if (e.target instanceof HTMLElement && e.target.matches('[data-mozem-quips]')) onScroll(e.target);
         },
         { capture: true, passive: true },
     );

@@ -17,6 +17,7 @@ import {
     SITE,
     SWIPE,
     TARIFF,
+    TARIFF_LIMITS,
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
@@ -2543,6 +2544,22 @@ test.describe('moja elektráreň', () => {
         expect(stored.tariff.currency).toBe('Kč');
         expect(stored.tariff.schedules).toHaveLength(2);
         expect(stored.tariff.schedules[1]).toEqual({ days: [6, 7], months: ALL_MONTHS, changes: [{ from: '00:00', band: 'p3' }] });
+        expect(errors).toEqual([]);
+    });
+
+    test('plná tarifa: výnimku, ktorá by rozvrh pridala, neponúka, a povie prečo', async ({ page }) => {
+        const base = TARIFF.schedules[0];
+        const season = (/** @type {number[]} */ months) => ({ days: [1, 2, 3, 4, 5, 6, 7], months, changes: base.changes });
+        const schedules = [base, season([1, 2, 12]), season([6, 7, 8]), season([3, 4])];
+        expect(schedules).toHaveLength(TARIFF_LIMITS.maxSchedules);
+        const errors = await openApp(page, { settings: { ...OWNER, tariff: { ...TARIFF, schedules } } });
+        await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-plant');
+        await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
+        await page.locator('#wz-tariff-tabs [data-setup-tab="vynimky"]').click();
+        await expect(page.locator('[data-setup-exc="weekend"]')).toBeDisabled();
+        await expect(page.locator('[data-setup-exc="season"]')).toBeEnabled();
+        await expect(page.locator('#wz-exc')).toContainText(`Rozvrhov je ${TARIFF_LIMITS.maxSchedules}, viac výnimiek sa nedá.`);
         expect(errors).toEqual([]);
     });
 
