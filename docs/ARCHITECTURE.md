@@ -247,9 +247,14 @@ keď dnes slnko už nepríde - neskoršie slnko vyhrá nad lacnou sieťou. Typic
 spotrebiča (`MOZEM_ITEMS` v `config.js`) určuje, dokedy ho pustiť, aby dobehol na slnku,
 a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 
+Veci s ikonami nie sú na hlavnej obrazovke karty, ale o ťuknutie ďalej (návrh A
+v `docs/navrhy/mozem-co-mozem.html`). Karta ich zhrnie do riadku „Čo môžem“ (`glance`
+v modeli): koľko ide hneď, bodka za každú vec a výnimky slovom. Zoznam vecí je druhá obrazovka
+karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie.
+
 Texty vrátane hlášok sú v `messages.js`. Hláška sa mení s dňom a ťuknutím (`mozemQuip`),
-rozbalená vec je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie. Obsah
-karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
+rozbalená vec v zozname je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie.
+Obsah karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 
 „Pustil/a som“ zapisuje spustenia spotrebičov len v telefóne (`LAUNCH_STORAGE_KEY`, najviac
 `LAUNCH.limit` zápisov): dátum a minúta lokality, vec a či vtedy svietilo slnko. Logika je

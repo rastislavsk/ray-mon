@@ -1,4 +1,5 @@
-// Karta Môžem?: jedno veľké slovo, pás dneška, veci v mriežke a hláška. Celý obsah skladá
+// Karta Môžem?: jedno veľké slovo, pás dneška, riadok „Čo môžem“ a hláška; veci s ikonami sú
+// o ťuknutie ďalej, na obrazovke so zoznamom. Celý obsah skladá
 // render do #mozem-body - v index.html je len nosič, takže zmena vnútri karty nepotrebuje dve
 // nasadenia (viď CLAUDE.md). Počíta shared/mozem.js, texty sú v shared/messages.js.
 
@@ -85,17 +86,40 @@ function quipsHtml(m) {
 }
 
 /**
- * Obsah karty z modelu. `open` je rozbalená vec, `kick` riadok nad slovom („Teraz · 13:00 · Dvorany“).
+ * Riadok, ktorý otvára zoznam vecí: koľko ide hneď, bodka za každú vec vo farbe jej odpovede
+ * a výnimky slovom. Ikony sú až v zozname, karta ostáva čistá.
+ * @param {MozemModel} m
+ */
+function glanceHtml(m) {
+    const pips = m.items.map((it) => `<i class="tone-${it.tone}"></i>`).join('');
+    return (
+        `<button type="button" class="mozem-glance" data-mozem-list><span class="mozem-glance-t"><small>Čo môžem</small>` +
+        `<b>${escapeHtml(m.glance.title)}</b><span class="mozem-glance-sub"><span class="mozem-pips" aria-hidden="true">${pips}</span>` +
+        `${escapeHtml(m.glance.sub)}</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`
+    );
+}
+
+/**
+ * Hlavná obrazovka karty z modelu. `kick` je riadok nad slovom („Teraz · 13:00 · Dvorany“).
+ * @param {MozemModel} m @param {string} kick
+ */
+export function mozemHtml(m, kick) {
+    return heroHtml(m, kick) + stripHtml(m) + glanceHtml(m) + quipsHtml(m);
+}
+
+/**
+ * Obrazovka so zoznamom vecí: šípka späť, nadpis a veci pod sebou. `open` je rozbalená vec.
  * @param {MozemModel} m @param {string | null} open @param {string} kick
  */
-export function mozemHtml(m, open, kick) {
+export function mozemListHtml(m, open, kick) {
     const items = m.items.map((it) => itemHtml(it, it.id === open)).join('');
     return (
-        heroHtml(m, kick) +
-        stripHtml(m) +
-        `<div class="mozem-lbl"><span>Čo môžem</span><span>ťukni</span></div><div class="mozem-grid">${items}</div>` +
+        `<section class="mozem-list"><button type="button" class="mozem-back" data-mozem-list-back>` +
+        `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Späť</button>` +
+        `<h3 class="mozem-list-title">Čo môžem</h3><p class="mozem-list-kick">${escapeHtml(kick)}</p>` +
+        `<div class="mozem-grid">${items}</div>` +
         (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +
-        quipsHtml(m)
+        `</section>`
     );
 }
 
@@ -132,7 +156,9 @@ export function renderMozem(state, dom) {
         return writeHtml(dom.mozemBody, summaryHtml(summaryModel(state, state.summaryPeriod), state.summaryPeriod), 'mozemBody');
     const m = mozemModel(state, state.mozemQuip, state.launches);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    const html = mozemHtml(m, state.mozemOpen, kick) + summaryLinkHtml(summaryModel(state, 'mesiac'));
+    // Zoznam vecí je druhá obrazovka karty v tom istom nosiči, rovnako ako súhrn.
+    if (state.mozemList) return writeHtml(dom.mozemBody, mozemListHtml(m, state.mozemOpen, kick), 'mozemBody');
+    const html = mozemHtml(m, kick) + summaryLinkHtml(summaryModel(state, 'mesiac'));
     /** @type {number | null} */ let left = null;
     const wrote = writeHtml(dom.mozemBody, html, 'mozemBody', () => (left = quipScroll(dom.mozemBody)));
     if (wrote) keepQuipPage(dom.mozemBody, left, m.quipPage);

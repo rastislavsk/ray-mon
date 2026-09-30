@@ -468,6 +468,28 @@ export function mozemCountText({ all, sun }) {
     return `Tento mesiac si pustil/a ${all}× niečo, z toho ${sun}× na slnku.`;
 }
 
+/** Koľko výnimiek riadok vstupu do zoznamu vymenuje; ďalšie zhrnie ako „+2“. */
+const GLANCE_NAMED = 2;
+
+/**
+ * Riadok, ktorým sa z karty Môžem? otvára zoznam vecí: koľko ide hneď a výnimky slovom
+ * („auto o 12:30“). Keď ide všetko, výnimky nie sú a riadok zavolá do zoznamu po časy.
+ * @param {Array<{ name: string, tone: string, short: string }>} items
+ * @returns {{ title: string, sub: string }}
+ */
+export function mozemGlanceText(items) {
+    const n = items.length;
+    const go = items.filter((i) => i.tone === 'go').length;
+    const rest = items.filter((i) => i.tone !== 'go');
+    if (!rest.length) return { title: 'Všetko ide hneď', sub: 'Ťukni, dokedy.' };
+    // „zo“ pred slovom, ktoré začína na s/š/z/ž: zo šiestich, zo siedmich.
+    const title = go ? `${go} ${n === 6 || n === 7 ? 'zo' : 'z'} ${n} ide hneď` : 'Teraz nič';
+    if (rest.every((i) => i.tone === 'unk')) return { title, sub: 'Pri spotrebičoch bez dát neviem.' };
+    const named = rest.slice(0, GLANCE_NAMED).map((i) => `${i.name.toLowerCase()} ${i.short}`);
+    const more = rest.length > GLANCE_NAMED ? ` +${rest.length - GLANCE_NAMED}` : '';
+    return { title, sub: named.join(', ') + more };
+}
+
 // ---- Súhrn na zdieľanie ------------------------------------------------------------
 
 /** Tvar podstatného mena podľa počtu: 1 rok, 2 roky, 5 rokov. @param {number} n @param {[string, string, string]} forms */

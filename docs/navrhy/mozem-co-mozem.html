@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Čo môžem o krok ďalej</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+       z appky, farby a rozmery sú tu vlastné. Písma berie z priečinka fonts/ v repozitári. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-700-latin.woff2') format('woff2');
+                font-weight: 700;
+            }
+            body {
+                margin: 0;
+            }
+            /* Rozloženie: dokument s porovnaním – vľavo dnešok, vedľa tri klikacie telefóny (A, B, C). Farby a písma z appky. */
+            :root {
+                --bg: #0e0e0d;
+                --phone: #050505;
+                --card: #171716;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.7);
+                --ink-45: rgba(242, 240, 234, 0.45);
+                --ink-12: rgba(242, 240, 234, 0.12);
+                --ink-08: rgba(242, 240, 234, 0.08);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --dark: #0b0b0b;
+                --sans: 'Space Grotesk', system-ui, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--sans);
+                line-height: 1.45;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+                text-align: left;
+            }
+            button:focus-visible {
+                outline: 2px solid var(--green);
+                outline-offset: 2px;
+            }
+            .doc {
+                max-width: 1320px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+            }
+            .doc h1 {
+                font-size: clamp(28px, 5vw, 40px);
+                margin: 0 0 8px;
+                letter-spacing: -0.02em;
+                text-wrap: balance;
+            }
+            .doc > p {
+                max-width: 68ch;
+                color: var(--ink-70);
+                margin: 0 0 12px;
+            }
+            .eyebrow {
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--green);
+                margin-bottom: 10px;
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 32px;
+                align-items: flex-start;
+            }
+            .col {
+                flex: 1 1 280px;
+                max-width: 320px;
+                min-width: 0;
+                display: grid;
+                gap: 14px;
+            }
+            .col h2 {
+                margin: 0;
+                font-size: 20px;
+                letter-spacing: -0.01em;
+            }
+            .col h2 small {
+                display: block;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .col h2 .pick {
+                color: var(--green);
+            }
+            .col p {
+                margin: 0;
+                font-size: 14px;
+                color: var(--ink-70);
+            }
+            .col ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 13.5px;
+                color: var(--ink-70);
+                display: grid;
+                gap: 4px;
+            }
+            .col li b {
+                color: var(--ink);
+                font-weight: 600;
+            }
+            .hint {
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--ink-45);
+                letter-spacing: 0.06em;
+            }
+
+            /* ---- telefón ---- */
+            .phone {
+                position: relative;
+                width: 100%;
+                max-width: 300px;
+                height: 600px;
+                border-radius: 34px;
+                border: 6px solid #222;
+                background: var(--phone);
+                overflow: hidden;
+            }
+            .scr {
+                position: absolute;
+                inset: 0;
+                padding: 14px 12px 70px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                overflow-y: auto;
+                scrollbar-width: none;
+                transition:
+                    transform 0.28s ease,
+                    opacity 0.28s ease;
+            }
+            .scr::-webkit-scrollbar {
+                display: none;
+            }
+            .scr.next {
+                transform: translateX(100%);
+            }
+            .phone.on .scr.main {
+                transform: translateX(-30%);
+                opacity: 0;
+                pointer-events: none;
+            }
+            .phone.on .scr.next {
+                transform: none;
+            }
+            .tabbar {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 52px;
+                background: #0d0d0c;
+                border-top: 1px solid var(--ink-08);
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                z-index: 5;
+            }
+            .tabbar i {
+                width: 18px;
+                height: 18px;
+                border-radius: 5px;
+                border: 2px solid var(--ink-45);
+            }
+            .tabbar i:first-child {
+                border-color: var(--green);
+                border-radius: 50%;
+            }
+
+            .top {
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+                font-size: 10px;
+                color: var(--ink-70);
+                padding: 0 4px;
+            }
+            .top b {
+                color: var(--ink);
+                font-size: 11px;
+            }
+            .hero {
+                border-radius: 22px;
+                padding: 14px 14px 12px;
+                background: var(--green);
+                color: var(--dark);
+                flex: none;
+            }
+            .kick {
+                font-family: var(--mono);
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+            .word {
+                margin: 10px 0 8px;
+                font-size: 44px;
+                font-weight: 700;
+                line-height: 0.86;
+                letter-spacing: -0.055em;
+                text-transform: uppercase;
+            }
+            .lead {
+                margin: 0;
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 1.3;
+            }
+            .fact {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 10px;
+                padding-top: 8px;
+                border-top: 2px solid rgba(0, 0, 0, 0.85);
+                font-family: var(--mono);
+                font-size: 10px;
+                font-weight: 600;
+            }
+            .strip {
+                margin: 0 4px;
+                flex: none;
+            }
+            .strip-top,
+            .lbl {
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+                font-size: 9px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .track {
+                position: relative;
+                height: 16px;
+                margin-top: 4px;
+                border-radius: 6px;
+                background: var(--ink-08);
+                overflow: hidden;
+            }
+            .track .win {
+                position: absolute;
+                inset: 0 22% 0 26%;
+                background: var(--green);
+                border-radius: 6px;
+            }
+            .track .past {
+                position: absolute;
+                inset: 0 auto 0 0;
+                width: 50%;
+                background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 4px, rgba(0, 0, 0, 0.2) 4px 8px);
+            }
+            .track .now {
+                position: absolute;
+                top: -2px;
+                bottom: -2px;
+                left: 50%;
+                width: 3px;
+                background: var(--ink);
+            }
+            .strip-lbl {
+                margin: 5px 0 0;
+                font-size: 11.5px;
+            }
+            .quip {
+                margin: 4px 4px 0;
+                font-size: 18px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                flex: none;
+            }
+            .dots {
+                display: flex;
+                gap: 6px;
+                justify-content: center;
+                flex: none;
+            }
+            .dots i {
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                background: var(--ink-45);
+            }
+            .dots i:first-child {
+                background: var(--ink);
+            }
+            .sumlink {
+                flex: none;
+                border-radius: 16px;
+                padding: 11px 13px;
+                background: linear-gradient(120deg, var(--green), var(--amber) 55%, var(--red));
+                color: var(--dark);
+                font-weight: 700;
+                font-size: 13px;
+            }
+            .sumlink small {
+                display: block;
+                font-family: var(--mono);
+                font-size: 8.5px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+
+            /* dnešná mriežka */
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                flex: none;
+            }
+            .it {
+                display: grid;
+                grid-template-columns: 18px 1fr 16px;
+                gap: 6px;
+                align-items: center;
+                min-height: 46px;
+                padding: 6px 8px;
+                border-radius: 12px;
+                border: 1.5px solid var(--ink-12);
+                background: var(--card);
+            }
+            .it svg {
+                width: 18px;
+                height: 18px;
+            }
+            .t {
+                display: grid;
+                line-height: 1.1;
+                min-width: 0;
+            }
+            .t b {
+                font-size: 11.5px;
+            }
+            .t span {
+                font-family: var(--mono);
+                font-size: 9px;
+                margin-top: 2px;
+            }
+            .go {
+                color: var(--green);
+            }
+            .wait {
+                color: var(--amber);
+            }
+            .no {
+                color: var(--red);
+            }
+            .mk {
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: currentColor;
+                display: grid;
+                place-items: center;
+            }
+            .mk::after {
+                content: '';
+                width: 6px;
+                height: 3px;
+                border: solid var(--dark);
+                border-width: 0 0 2px 2px;
+                transform: rotate(-45deg) translate(1px, -1px);
+            }
+            .ico {
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.7;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            /* A: riadok s bodkami */
+            .entry {
+                flex: none;
+                display: grid;
+                grid-template-columns: 1fr auto;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 14px;
+                border-radius: 16px;
+                border: 1.5px solid var(--ink-12);
+                background: var(--card);
+                width: 100%;
+            }
+            .entry small {
+                display: block;
+                font-family: var(--mono);
+                font-size: 9px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .entry b {
+                display: block;
+                font-size: 15px;
+                margin-top: 2px;
+            }
+            .entry .sub {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 6px;
+                font-family: var(--mono);
+                font-size: 10px;
+                color: var(--ink-70);
+            }
+            .pips {
+                display: flex;
+                gap: 3px;
+            }
+            .pips i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--green);
+            }
+            .pips i.w {
+                background: var(--amber);
+            }
+            .chev {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: var(--ink);
+                color: var(--dark);
+                display: grid;
+                place-items: center;
+                font-weight: 700;
+                font-size: 16px;
+            }
+
+            /* B: vysúvací panel */
+            .entry-b {
+                flex: none;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 10px 14px;
+                border-radius: 999px;
+                border: 1.5px solid var(--ink-12);
+                background: var(--card);
+                font-weight: 700;
+                font-size: 13px;
+                width: 100%;
+            }
+            .entry-b span {
+                font-family: var(--mono);
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--green);
+            }
+            .scrim {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s;
+                z-index: 6;
+            }
+            .sheet {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                max-height: 78%;
+                border-radius: 22px 22px 0 0;
+                background: #1b1b1a;
+                padding: 8px 12px 16px;
+                transform: translateY(100%);
+                transition: transform 0.28s ease;
+                z-index: 7;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                overflow-y: auto;
+            }
+            .grab {
+                width: 38px;
+                height: 4px;
+                border-radius: 4px;
+                background: var(--ink-45);
+                margin: 2px auto 4px;
+                flex: none;
+            }
+            .phone.sheet-on .scrim {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .phone.sheet-on .sheet {
+                transform: none;
+            }
+
+            /* C: tlačidlo v plagáte */
+            .hero-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 10px;
+                padding: 7px 12px;
+                border-radius: 999px;
+                background: var(--dark);
+                color: var(--green);
+                font-family: var(--mono);
+                font-size: 10.5px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+
+            /* ďalší krok – zoznam */
+            .back {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                min-height: 32px;
+                font-family: var(--mono);
+                font-size: 10.5px;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-70);
+                flex: none;
+            }
+            .ntitle {
+                flex: none;
+            }
+            .ntitle h3 {
+                margin: 0;
+                font-size: 26px;
+                letter-spacing: -0.03em;
+                line-height: 1;
+            }
+            .ntitle p {
+                margin: 6px 0 0;
+                font-size: 12px;
+                color: var(--ink-70);
+            }
+            .list {
+                display: grid;
+                gap: 6px;
+                flex: none;
+            }
+            .li {
+                display: grid;
+                grid-template-columns: 22px 1fr auto 16px;
+                gap: 10px;
+                align-items: center;
+                padding: 10px 12px;
+                border-radius: 14px;
+                background: var(--card);
+                border: 1.5px solid var(--ink-12);
+                width: 100%;
+            }
+            .li svg {
+                width: 22px;
+                height: 22px;
+            }
+            .li b {
+                font-size: 13.5px;
+            }
+            .li .tm {
+                font-family: var(--mono);
+                font-size: 10.5px;
+            }
+            .li[aria-expanded='true'] {
+                border-color: var(--ink);
+            }
+            .more {
+                display: none;
+                padding: 10px 12px;
+                border-radius: 14px;
+                background: var(--ink);
+                color: var(--dark);
+                font-size: 12px;
+                line-height: 1.35;
+            }
+            .more b {
+                display: block;
+                font-size: 13.5px;
+                margin-bottom: 2px;
+            }
+            .more .log {
+                display: block;
+                width: 100%;
+                margin-top: 8px;
+                padding: 8px;
+                border-radius: 999px;
+                background: var(--dark);
+                color: var(--ink);
+                font-weight: 700;
+                text-align: center;
+                font-size: 12px;
+            }
+            .li[aria-expanded='true'] + .more {
+                display: block;
+            }
+            .count {
+                font-family: var(--mono);
+                font-size: 10px;
+                color: var(--ink-70);
+                margin: 2px 4px 0;
+                flex: none;
+            }
+
+            .verdict {
+                margin-top: 48px;
+                max-width: 760px;
+                padding: 20px 22px;
+                border-radius: 22px;
+                background: var(--card);
+                border: 1.5px solid var(--ink-12);
+            }
+            .verdict h2 {
+                margin: 0 0 8px;
+                font-size: 22px;
+            }
+            .verdict p,
+            .verdict li {
+                color: var(--ink-70);
+                font-size: 14.5px;
+            }
+            .verdict ul {
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                margin: 8px 0 0;
+            }
+            .verdict b {
+                color: var(--ink);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .scr,
+                .sheet,
+                .scrim {
+                    transition: none;
+                }
+            }
+
+            /* Statická verzia: prepínanie bez skriptu – checkbox v telefóne a <details> v zozname. */
+            .tog {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+            label {
+                cursor: pointer;
+            }
+            .tog:checked ~ .scr.main {
+                transform: translateX(-30%);
+                opacity: 0;
+                pointer-events: none;
+            }
+            .tog:checked ~ .scr.next {
+                transform: none;
+            }
+            .tog:checked ~ .scrim {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .tog:checked ~ .sheet {
+                transform: none;
+            }
+            .tog:focus-visible ~ .scr .entry,
+            .tog:focus-visible ~ .scr .entry-b,
+            .tog:focus-visible ~ .scr .hero-btn {
+                outline: 2px solid var(--green);
+                outline-offset: 2px;
+            }
+            .row-d {
+                display: grid;
+                gap: 6px;
+            }
+            .row-d > summary {
+                list-style: none;
+                cursor: pointer;
+            }
+            .row-d > summary::-webkit-details-marker {
+                display: none;
+            }
+            .row-d[open] > summary {
+                border-color: var(--ink);
+            }
+            .row-d .more {
+                display: block;
+            }
+            .more .log {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="doc">
+            <div class="eyebrow">Návrh · karta Môžem?</div>
+            <h1>„Čo môžem“ o krok ďalej</h1>
+            <p>
+                Na hlavnej obrazovke ostane plagát s veľkým slovom, pás dneška a hláška. Šesť dlaždíc s ikonkami sa presunie o jedno
+                ťuknutie hlbšie. Hlavná obrazovka ich zhrnie do jedného riadku, ktorý povie to podstatné: koľko vecí ide a dokedy.
+            </p>
+            <p class="hint">Telefóny sú klikacie: ťukni na vstup do zoznamu, v zozname na vec, späť cez „‹ Späť“ alebo mimo panelu.</p>
+
+            <div class="row">
+                <div class="col">
+                    <h2><small class="">Dnes</small>Mriežka so šiestimi dlaždicami</h2>
+                    <div class="phone">
+                        <div class="scr main">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <section class="hero">
+                                <div class="kick">Teraz · 11:40 · Dvorany</div>
+                                <p class="word">Zapni tooo</p>
+                                <p class="lead">Slnko to teraz platí za nás. Práčka, sušička, čo chceš.</p>
+                                <div class="fact"><span>strecha za hodinu nabije</span><span>~430 mobilov</span></div>
+                            </section>
+                            <div class="strip">
+                                <div class="strip-top"><span>05:00</span><span>dnes</span><span>21:00</span></div>
+                                <div class="track"><i class="win"></i><i class="past"></i><i class="now"></i></div>
+                                <p class="strip-lbl">Slnko do 17:30. Ešte 5 h 50 min.</p>
+                            </div>
+                            <div class="lbl"><span>Čo môžem</span><span>ťukni</span></div>
+                            <div class="grid">
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico">
+                                        <rect x="4" y="3" width="16" height="18" rx="2" />
+                                        <circle cx="12" cy="13" r="4.5" />
+                                        <path d="M7 6.5h2" /></svg
+                                    ><span class="t"><b>Práčka</b><span class="go">do 15:30</span></span
+                                    ><span class="mk go"></span>
+                                </div>
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico">
+                                        <rect x="4" y="3" width="16" height="18" rx="2" />
+                                        <path d="M4 8h16M8 12v6M12 12v6M16 12v6" /></svg
+                                    ><span class="t"><b>Umývačka</b><span class="go">do 15:00</span></span
+                                    ><span class="mk go"></span>
+                                </div>
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico">
+                                        <rect x="4" y="3" width="16" height="18" rx="2" />
+                                        <circle cx="12" cy="13" r="4.5" />
+                                        <path d="M10 12c1-1 3 1 4 0" /></svg
+                                    ><span class="t"><b>Sušička</b><span class="go">do 16:00</span></span
+                                    ><span class="mk go"></span>
+                                </div>
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico">
+                                        <path d="M4 15l2-5h12l2 5v3H4z" />
+                                        <circle cx="8" cy="18" r="1.4" />
+                                        <circle cx="16" cy="18" r="1.4" /></svg
+                                    ><span class="t"><b>Auto</b><span class="wait">od 12:30</span></span
+                                    ><span class="mk wait"></span>
+                                </div>
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico">
+                                        <rect x="3" y="8" width="18" height="9" rx="4" />
+                                        <path d="M7 12.5h3M8.5 11v3" />
+                                        <circle cx="15.5" cy="12" r=".8" />
+                                        <circle cx="17.5" cy="13.5" r=".8" /></svg
+                                    ><span class="t"><b>Hranie</b><span class="go">vždy OK</span></span
+                                    ><span class="mk go"></span>
+                                </div>
+                                <div class="it">
+                                    <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h10a4 4 0 010 8H9l-1 6H6l1-6H4z" /></svg
+                                    ><span class="t"><b>Fén</b><span class="go">vždy OK</span></span
+                                    ><span class="mk go"></span>
+                                </div>
+                            </div>
+                            <p class="quip">Strecha dnes robí viac ako ty.</p>
+                            <div class="dots"><i></i><i></i><i></i><i></i></div>
+                            <div class="sumlink"><small>Súhrn na zdieľanie</small>September na streche: 165 kWh</div>
+                        </div>
+                        <div class="tabbar"><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <p>Každá vec má ikonu, čas a značku. Dlaždice zaberajú tretinu obrazovky a súperia s plagátom.</p>
+                </div>
+                <div class="col">
+                    <h2><small class="pick">Variant A · odporúčam</small>Riadok → nová obrazovka</h2>
+                    <div class="phone">
+                        <input type="checkbox" id="pA" class="tog" />
+                        <div class="scr main">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <section class="hero">
+                                <div class="kick">Teraz · 11:40 · Dvorany</div>
+                                <p class="word">Zapni tooo</p>
+                                <p class="lead">Slnko to teraz platí za nás. Práčka, sušička, čo chceš.</p>
+                                <div class="fact"><span>strecha za hodinu nabije</span><span>~430 mobilov</span></div>
+                            </section>
+                            <div class="strip">
+                                <div class="strip-top"><span>05:00</span><span>dnes</span><span>21:00</span></div>
+                                <div class="track"><i class="win"></i><i class="past"></i><i class="now"></i></div>
+                                <p class="strip-lbl">Slnko do 17:30. Ešte 5 h 50 min.</p>
+                            </div>
+                            <label class="entry" for="pA"
+                                ><span
+                                    ><small>Čo môžem</small><b>5 zo 6 ide hneď</b
+                                    ><span class="sub"
+                                        ><span class="pips"
+                                            ><i class=""></i><i class=""></i><i class=""></i><i class="w"></i><i class=""></i
+                                            ><i class=""></i></span
+                                        >auto od 12:30</span
+                                    ></span
+                                ><span class="chev">›</span></label
+                            >
+                            <p class="quip">Strecha dnes robí viac ako ty.</p>
+                            <div class="dots"><i></i><i></i><i></i><i></i></div>
+                            <div class="sumlink"><small>Súhrn na zdieľanie</small>September na streche: 165 kWh</div>
+                        </div>
+                        <div class="scr next">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <label class="back" for="pA">‹ Späť</label>
+                            <div class="ntitle">
+                                <h3>Čo môžem</h3>
+                                <p>Teraz 11:40 · slnko do 17:30</p>
+                            </div>
+                            <div class="list">
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M7 6.5h2" /></svg
+                                        ><b>Práčka</b><span class="tm go">do 15:30</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Program má zhruba 2 hodiny a 1 kWh. Slnko ju do 15:30 celú zaplatí.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <path d="M4 8h16M8 12v6M12 12v6M16 12v6" /></svg
+                                        ><b>Umývačka</b><span class="tm go">do 15:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Dve a pol hodiny, 1,1 kWh. Stihne sa, kým slnko neklesne.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M10 12c1-1 3 1 4 0" /></svg
+                                        ><b>Sušička</b><span class="tm go">do 16:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, ale radšej hneď.</b>2,2 kWh je najviac zo všetkého. Teraz je na ňu dosť slnka.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <path d="M4 15l2-5h12l2 5v3H4z" />
+                                            <circle cx="8" cy="18" r="1.4" />
+                                            <circle cx="16" cy="18" r="1.4" /></svg
+                                        ><b>Auto</b><span class="tm wait">od 12:30</span><span class="mk wait"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Počkaj hodinku.</b>Na nabíjanie auta ešte nie je dosť. Od 12:30 strecha stačí.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="3" y="8" width="18" height="9" rx="4" />
+                                            <path d="M7 12.5h3M8.5 11v3" />
+                                            <circle cx="15.5" cy="12" r=".8" />
+                                            <circle cx="17.5" cy="13.5" r=".8" /></svg
+                                        ><b>Hranie</b><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Hraj.</b>Konzola si vezme menej než rýchlovarná kanvica.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h10a4 4 0 010 8H9l-1 6H6l1-6H4z" /></svg><b>Fén</b
+                                        ><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Kľudne.</b>Pár minút fénu je zanedbateľných.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                            </div>
+                            <p class="count">Tento mesiac 12× na slnku · ušetrené ~4,80 €</p>
+                        </div>
+                        <div class="tabbar"><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <p>
+                        Jeden riadok: koľko vecí ide, farebné bodky namiesto ikon a výnimka slovom. Ťuk otvorí zoznam na celú obrazovku,
+                        späť cez „‹ Späť“, ako pri Súhrne.
+                    </p>
+                    <ul>
+                        <li><b>+</b> rovnaký vzor ako Súhrn</li>
+                        <li><b>+</b> zoznam má miesto na vysvetlenie aj „Pustil/a som“</li>
+                        <li><b>−</b> o jedno ťuknutie viac k detailu</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h2><small class="">Variant B</small>Tlačidlo → vysúvací panel</h2>
+                    <div class="phone">
+                        <input type="checkbox" id="pB" class="tog" />
+                        <div class="scr main">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <section class="hero">
+                                <div class="kick">Teraz · 11:40 · Dvorany</div>
+                                <p class="word">Zapni tooo</p>
+                                <p class="lead">Slnko to teraz platí za nás. Práčka, sušička, čo chceš.</p>
+                                <div class="fact"><span>strecha za hodinu nabije</span><span>~430 mobilov</span></div>
+                            </section>
+                            <div class="strip">
+                                <div class="strip-top"><span>05:00</span><span>dnes</span><span>21:00</span></div>
+                                <div class="track"><i class="win"></i><i class="past"></i><i class="now"></i></div>
+                                <p class="strip-lbl">Slnko do 17:30. Ešte 5 h 50 min.</p>
+                            </div>
+                            <label class="entry-b" for="pB">Čo môžem zapnúť? <span>5/6 ›</span></label>
+                            <p class="quip">Strecha dnes robí viac ako ty.</p>
+                            <div class="dots"><i></i><i></i><i></i><i></i></div>
+                            <div class="sumlink"><small>Súhrn na zdieľanie</small>September na streche: 165 kWh</div>
+                        </div>
+                        <label class="scrim" for="pB" aria-label="Zavrieť"></label>
+                        <div class="sheet">
+                            <i class="grab"></i>
+                            <div class="ntitle">
+                                <h3>Čo môžem</h3>
+                                <p>Teraz 11:40 · slnko do 17:30</p>
+                            </div>
+                            <div class="list">
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M7 6.5h2" /></svg
+                                        ><b>Práčka</b><span class="tm go">do 15:30</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Program má zhruba 2 hodiny a 1 kWh. Slnko ju do 15:30 celú zaplatí.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <path d="M4 8h16M8 12v6M12 12v6M16 12v6" /></svg
+                                        ><b>Umývačka</b><span class="tm go">do 15:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Dve a pol hodiny, 1,1 kWh. Stihne sa, kým slnko neklesne.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M10 12c1-1 3 1 4 0" /></svg
+                                        ><b>Sušička</b><span class="tm go">do 16:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, ale radšej hneď.</b>2,2 kWh je najviac zo všetkého. Teraz je na ňu dosť slnka.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <path d="M4 15l2-5h12l2 5v3H4z" />
+                                            <circle cx="8" cy="18" r="1.4" />
+                                            <circle cx="16" cy="18" r="1.4" /></svg
+                                        ><b>Auto</b><span class="tm wait">od 12:30</span><span class="mk wait"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Počkaj hodinku.</b>Na nabíjanie auta ešte nie je dosť. Od 12:30 strecha stačí.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="3" y="8" width="18" height="9" rx="4" />
+                                            <path d="M7 12.5h3M8.5 11v3" />
+                                            <circle cx="15.5" cy="12" r=".8" />
+                                            <circle cx="17.5" cy="13.5" r=".8" /></svg
+                                        ><b>Hranie</b><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Hraj.</b>Konzola si vezme menej než rýchlovarná kanvica.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h10a4 4 0 010 8H9l-1 6H6l1-6H4z" /></svg><b>Fén</b
+                                        ><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Kľudne.</b>Pár minút fénu je zanedbateľných.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                            </div>
+                            <p class="count">Tento mesiac 12× na slnku · ušetrené ~4,80 €</p>
+                        </div>
+                        <div class="tabbar"><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <p>Pilulka pod pásom dneška. Panel vyjde zdola a plagát ostane vidieť v pozadí.</p>
+                    <ul>
+                        <li><b>+</b> človek neopustí obrazovku</li>
+                        <li><b>−</b> nový vzor (prekrytie, fokus, ťah nadol)</li>
+                        <li><b>−</b> ťah sa bije s listovaním kariet</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h2><small class="">Variant C</small>Tlačidlo v plagáte → nová obrazovka</h2>
+                    <div class="phone">
+                        <input type="checkbox" id="pC" class="tog" />
+                        <div class="scr main">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <section class="hero">
+                                <div class="kick">Teraz · 11:40 · Dvorany</div>
+                                <p class="word">Zapni tooo</p>
+                                <p class="lead">Slnko to teraz platí za nás. Práčka, sušička, čo chceš.</p>
+                                <label class="hero-btn" for="pC">Čo všetko? 5 zo 6 ›</label>
+                            </section>
+                            <div class="strip">
+                                <div class="strip-top"><span>05:00</span><span>dnes</span><span>21:00</span></div>
+                                <div class="track"><i class="win"></i><i class="past"></i><i class="now"></i></div>
+                                <p class="strip-lbl">Slnko do 17:30. Ešte 5 h 50 min.</p>
+                            </div>
+                            <p class="quip">Strecha dnes robí viac ako ty.</p>
+                            <div class="dots"><i></i><i></i><i></i><i></i></div>
+                            <div class="sumlink"><small>Súhrn na zdieľanie</small>September na streche: 165 kWh</div>
+                        </div>
+                        <div class="scr next">
+                            <div class="top"><b>Toilet Apps Ltd.</b><span>● 11:40</span></div>
+                            <label class="back" for="pC">‹ Späť</label>
+                            <div class="ntitle">
+                                <h3>Čo môžem</h3>
+                                <p>Teraz 11:40 · slnko do 17:30</p>
+                            </div>
+                            <div class="list">
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M7 6.5h2" /></svg
+                                        ><b>Práčka</b><span class="tm go">do 15:30</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Program má zhruba 2 hodiny a 1 kWh. Slnko ju do 15:30 celú zaplatí.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <path d="M4 8h16M8 12v6M12 12v6M16 12v6" /></svg
+                                        ><b>Umývačka</b><span class="tm go">do 15:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, zapni teraz.</b>Dve a pol hodiny, 1,1 kWh. Stihne sa, kým slnko neklesne.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="4" y="3" width="16" height="18" rx="2" />
+                                            <circle cx="12" cy="13" r="4.5" />
+                                            <path d="M10 12c1-1 3 1 4 0" /></svg
+                                        ><b>Sušička</b><span class="tm go">do 16:00</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Áno, ale radšej hneď.</b>2,2 kWh je najviac zo všetkého. Teraz je na ňu dosť slnka.<span
+                                            class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <path d="M4 15l2-5h12l2 5v3H4z" />
+                                            <circle cx="8" cy="18" r="1.4" />
+                                            <circle cx="16" cy="18" r="1.4" /></svg
+                                        ><b>Auto</b><span class="tm wait">od 12:30</span><span class="mk wait"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Počkaj hodinku.</b>Na nabíjanie auta ešte nie je dosť. Od 12:30 strecha stačí.<span class="log"
+                                            >Pustil/a som</span
+                                        >
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico">
+                                            <rect x="3" y="8" width="18" height="9" rx="4" />
+                                            <path d="M7 12.5h3M8.5 11v3" />
+                                            <circle cx="15.5" cy="12" r=".8" />
+                                            <circle cx="17.5" cy="13.5" r=".8" /></svg
+                                        ><b>Hranie</b><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Hraj.</b>Konzola si vezme menej než rýchlovarná kanvica.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                                <details class="row-d">
+                                    <summary class="li">
+                                        <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h10a4 4 0 010 8H9l-1 6H6l1-6H4z" /></svg><b>Fén</b
+                                        ><span class="tm go">vždy OK</span><span class="mk go"></span>
+                                    </summary>
+                                    <div class="more">
+                                        <b>Kľudne.</b>Pár minút fénu je zanedbateľných.<span class="log">Pustil/a som</span>
+                                    </div>
+                                </details>
+                            </div>
+                            <p class="count">Tento mesiac 12× na slnku · ušetrené ~4,80 €</p>
+                        </div>
+                        <div class="tabbar"><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <p>Vstup je priamo v zelenom plagáte pod vetou. Mimo plagátu ostane len pás a hláška.</p>
+                    <ul>
+                        <li><b>+</b> najčistejšia obrazovka</li>
+                        <li><b>−</b> pri stave „nie“ alebo „slabo“ ťahá pozornosť od slova</li>
+                        <li><b>−</b> fakt „~430 mobilov“ by musel ustúpiť</li>
+                    </ul>
+                </div>
+            </div>
+
+            <section class="verdict">
+                <h2>Odporúčam A</h2>
+                <ul>
+                    <li>
+                        <b>Rovnaký vzor ako Súhrn.</b> Karta už má druhú obrazovku v tom istom nosiči (<code>mozemSummary</code> + „‹
+                        Späť“). Zoznam by bol ďalší stav, napríklad <code>mozemList</code>, s rovnakým správaním aj návratom.
+                    </li>
+                    <li>
+                        <b>Jedno nasadenie.</b> Všetko sa skladá v <code>#mozem-body</code>, v <code>index.html</code> ani
+                        <code>dom.js</code> nepribudne nič, takže pravidlo dvoch krokov sa netýka.
+                    </li>
+                    <li>
+                        <b>Bodky nesú informáciu.</b> Šesť farebných bodiek ukáže aj bez ikon, že niečo čaká (oranžová), a riadok pod nimi
+                        povie dokedy.
+                    </li>
+                    <li>
+                        <b>B</b> (vysúvací panel) je nový vzor: prekrytie, uzavretie fokusu, ťah nadol – a ten by sa bil s listovaním kariet
+                        vo <code>web/swipe.js</code>. <b>C</b> je čistejšie, ale pri stave „nie“ či „slabo“ by tlačidlo v plagáte ťahalo
+                        pozornosť od veľkého slova.
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>

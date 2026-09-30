@@ -591,14 +591,19 @@ function initQuipPager(store, dom) {
 }
 
 /**
- * Karta Môžem?: ťuknutie na vec ju rozbalí (druhé zbalí), ťuknutie na hlášku posunie pás na ďalšiu.
- * Oboje je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
+ * Karta Môžem?: riadok „Čo môžem“ otvorí zoznam vecí, ťuknutie na vec v ňom ju rozbalí (druhé
+ * zbalí), ťuknutie na hlášku posunie pás na ďalšiu. Rozbalenie a hláška sú nastavenie vnútri
+ * karty, nie krok navigácie - Späť sa na ne nevracia.
  * @param {Store} store @param {Dom} dom
  */
 function initMozem(store, dom) {
     initQuipPager(store, dom);
     dom.mozemBody.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
+        // Zoznam vecí je obrazovka karty ako súhrn: otvorenie je krok navigácie, šípka späť
+        // ten istý krok ako tlačidlo Späť. Otvára sa vždy zbalený.
+        if (target.closest('[data-mozem-list]')) return store.setState({ mozemList: true, mozemOpen: null });
+        if (target.closest('[data-mozem-list-back]')) return backTo(store, { mozemList: false });
         const item = target.closest('[data-mozem-item]');
         if (item instanceof HTMLElement) {
             const id = item.dataset.mozemItem || null;
