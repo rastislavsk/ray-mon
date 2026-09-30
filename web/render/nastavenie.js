@@ -16,7 +16,7 @@ import {
     TARIFF_LIMITS,
     TARIFF_TEMPLATES,
 } from '../../shared/config.js';
-import { escapeHtml, fmt2, kwpText, minutesToTimeStr } from '../../shared/format.js';
+import { escapeHtml, fmt2, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { liveStatus } from '../../shared/hero-model.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { checkSettings, sameSettings, settingsFromLink, settingsHint, siteMetaText, totalPanels } from '../../shared/settings.js';
@@ -627,7 +627,7 @@ function renderRozvrh(state, draft, dom) {
     const hours = t.bands
         .map((b) => ({ b, min: runs.filter((r) => r.band === b).reduce((sum, r) => sum + r.min, 0) }))
         .filter((x) => x.min)
-        .map((x) => `${x.b.name} ${fieldText(Math.round((x.min / 60) * 100) / 100)} h`);
+        .map((x) => `${x.b.name} ${hoursText(x.min)}`);
     dom.wzRingSum.textContent = hours.join(' · ');
     const tpls =
         t.bands.length === 2
@@ -667,7 +667,7 @@ function runsHtml(runs) {
                 runs.length > 1
                     ? `<button type="button" class="x" data-setup-run-del="${j}" aria-label="Zmazať úsek ${minutesToTimeStr(r.startMin)} až ${to}"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>`
                     : '<span></span>';
-            return `<li><i class="sw ${LEVEL_TIER[r.band.level]}"></i><span>${escapeHtml(r.band.name)}</span><span class="tm">${minutesToTimeStr(r.startMin)} – ${to}<small>${fieldText(Math.round((r.min / 60) * 100) / 100)} h</small></span>${del}</li>`;
+            return `<li><i class="sw ${LEVEL_TIER[r.band.level]}"></i><span>${escapeHtml(r.band.name)}</span><span class="tm">${minutesToTimeStr(r.startMin)} – ${to}<small>${hoursText(r.min)}</small></span>${del}</li>`;
         })
         .join('');
 }
@@ -677,9 +677,16 @@ function renderVynimky(state, draft, dom) {
     const t = draft.tariff;
     const exceptions = t.schedules.slice(1);
     const season = exceptions.find(isSeasonSchedule);
-    const choice = (/** @type {string} */ k, /** @type {string} */ title, /** @type {string} */ sub, /** @type {boolean} */ on) =>
-        `<button type="button" class="choice" data-setup-exc="${k}" aria-pressed="${on}"><span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span></button>`;
     const full = t.schedules.length >= TARIFF_LIMITS.maxSchedules;
+    // Výnimku, ktorú už nemožno pridať, ani neponúkať (zmazať ju vždy ide).
+    const choice = (
+        /** @type {string} */ k,
+        /** @type {string} */ title,
+        /** @type {string} */ sub,
+        /** @type {boolean} */ on,
+        canAdd = true,
+    ) =>
+        `<button type="button" class="choice" data-setup-exc="${k}" aria-pressed="${on}"${canAdd || on ? '' : ' disabled'}><span class="dot"></span><span class="t"><b>${title}</b><span>${sub}</span></span></button>`;
     const months = season
         ? `<div class="field-label">Mesiace výnimky</div><div class="months" role="group" aria-label="Mesiace výnimky">` +
           ALL_MONTHS.map(
@@ -699,17 +706,12 @@ function renderVynimky(state, draft, dom) {
         dom.wzExc,
         `<div class="wz-kinds">` +
             choice('none', 'Áno, každý deň rovnako', 'jeden rozvrh na celý rok', !exceptions.length) +
-            choice('weekend', 'Cez víkend je to inak', 'sobota a nedeľa majú vlastný rozvrh', exceptions.some(isWeekendSchedule)) +
-            choice('season', 'V časti roka je to inak', 'napríklad letná a zimná sadzba', !!season) +
+            choice('weekend', 'Cez víkend je to inak', 'sobota a nedeľa majú vlastný rozvrh', exceptions.some(isWeekendSchedule), !full) +
+            choice('season', 'V časti roka je to inak', 'napríklad letná a zimná sadzba', !!season, !full) +
             `</div>${months}<div class="field-label">Rozvrhy</div><div class="roofs">${list}</div>` +
-            (full ? `<p class="plant-msg">Rozvrhy sú štyri, viac výnimiek sa nedá.</p>` : ''),
+            (full ? `<p class="plant-msg">Rozvrhov je ${TARIFF_LIMITS.maxSchedules}, viac výnimiek sa nedá.</p>` : ''),
         'wzExc',
     );
-    // Výnimku, ktorú už nemožno pridať, ani neponúkať (zmazať ju vždy ide).
-    for (const b of dom.wzExc.querySelectorAll('[data-setup-exc="weekend"], [data-setup-exc="season"]')) {
-        const on = b.getAttribute('aria-pressed') === 'true';
-        /** @type {HTMLButtonElement} */ (b).disabled = full && !on;
-    }
 }
 
 /** @param {Settings} draft @param {Dom} dom @param {boolean} refill */

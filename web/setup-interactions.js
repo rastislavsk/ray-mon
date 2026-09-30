@@ -470,6 +470,10 @@ function applyAutoLevels(ops) {
     });
 }
 
+/** Kam až od stredu oblúka (RING.rDay) prst maľuje, v jednotkách viewBoxu: dovnútra cez popisy
+ * hodín, von cez rysky - prst netreba trafiť presne do tenkého oblúka. */
+const PAINT_REACH = { in: 46, out: 30 };
+
 /**
  * Maľovanie po kruhu rozvrhu: prst (alebo myš) prechádza štvrťhodinami a každú prefarbí pásmom,
  * ktorým sa maľuje. Pointer udalosti so zachytením, ako jazdec na ciferníku - samotné <svg>
@@ -478,14 +482,16 @@ function applyAutoLevels(ops) {
  */
 function initRingPaint(store, dom, ops) {
     const ring = dom.wzTariffRing;
+    // Šírka viewBoxu kruhu (index.html) - prevod pixelov na jednotky, v ktorých je RING.
+    const viewW = Number((ring.getAttribute('viewBox') || '').split(' ')[2]);
     /** @type {number | null} */ let last = null;
     /** Štvrťhodina pod prstom, alebo null mimo prstenca. @param {PointerEvent} e */
     const slotAt = (e) => {
         const box = ring.getBoundingClientRect();
         const dx = e.clientX - (box.left + box.width / 2);
         const dy = e.clientY - (box.top + box.height / 2);
-        const dist = (Math.hypot(dx, dy) * 264) / box.width;
-        if (dist < RING.rDay - 46 || dist > RING.rDay + 30) return null;
+        const dist = (Math.hypot(dx, dy) * viewW) / box.width;
+        if (dist < RING.rDay - PAINT_REACH.in || dist > RING.rDay + PAINT_REACH.out) return null;
         return Math.floor(minutesFromAngle(dx, dy) / TARIFF_LIMITS.stepMin);
     };
     /** @param {number} slot */
