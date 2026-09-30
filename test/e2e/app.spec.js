@@ -28,7 +28,7 @@ import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
-import { mozemModel } from '../../shared/mozem.js';
+import { deviceShorts, mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
@@ -163,14 +163,17 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     expect(errors).toEqual([]);
 });
 
-test('klik na spotrebič (mobil) ukáže tooltip s príkonom, nie je orezaný pagerom', async ({ page }) => {
+test('klik na spotrebič (mobil) ukáže tooltip s príkonom a časom z karty Môžem?, nie je orezaný pagerom', async ({ page }) => {
     await openApp(page);
     const chip = page.locator('#verdict-go-row .go-chip').first();
     const tooltip = page.locator('#verdict-chip-tooltip');
+    // Prvý spotrebič je práčka; čas je tá istá krátka odpoveď, akú má karta Môžem?.
+    const when = deviceShorts(mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) }))['Práčka'];
+    expect(when).toMatch(/^do \d\d:\d\d$/);
     await expect(tooltip).not.toHaveClass(/visible/);
     await chip.click();
     await expect(tooltip).toHaveClass(/visible/);
-    await expect(tooltip).toHaveText(await chip.getAttribute('data-power'));
+    await expect(tooltip).toHaveText(`${await chip.getAttribute('data-power')} · ${when}`);
     await expect(tooltip).toBeInViewport();
     // Druhý klik na ten istý chip tooltip zavrie.
     await chip.click();

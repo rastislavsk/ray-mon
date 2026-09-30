@@ -383,7 +383,9 @@ function initRectTooltip(wrap, tooltip) {
     });
 }
 
-/** Klik na spotrebič prepne tooltip s príkonom nad ním; zmizne sám alebo klikom inde.
+/** Klik na spotrebič prepne tooltip s príkonom a časom z karty Môžem? („2,0 kW · do 14:45“)
+ * nad ním; zmizne sám alebo klikom inde. Kým stránka s novým renderom nie je v cache, chýba
+ * data-when a tooltip ukáže len príkon.
  * Tooltip je jeden zdieľaný prvok mimo pageru (position: fixed), pozíciu dopočíta JS
  * podľa kliknutého chipu. @param {Dom} dom */
 function initDeviceChips(dom) {
@@ -400,7 +402,7 @@ function initDeviceChips(dom) {
         hide();
         if (chip instanceof HTMLElement && !wasOpen) {
             const rect = chip.getBoundingClientRect();
-            dom.verdictChipTooltip.textContent = chip.dataset.power || '';
+            dom.verdictChipTooltip.textContent = [chip.dataset.power, chip.dataset.when].filter(Boolean).join(' · ');
             dom.verdictChipTooltip.style.left = `${rect.left + rect.width / 2}px`;
             dom.verdictChipTooltip.style.top = `${rect.top}px`;
             dom.verdictChipTooltip.classList.add('visible');

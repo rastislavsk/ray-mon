@@ -6,6 +6,7 @@ import { escapeHtml, fmt1, minutesToTimeStr } from '../../shared/format.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { EMPTY_MESSAGES, forecastDayMessage } from '../../shared/messages.js';
+import { deviceShorts, mozemModel } from '../../shared/mozem.js';
 import { sunUp } from '../../shared/solar.js';
 import { DEVICE_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
@@ -16,14 +17,17 @@ const DIAL_CIRCUMFERENCE = 2 * Math.PI * RING.rPower;
 /** @param {import('../../shared/config.js').Tier | null} tier */
 export const tierVar = (tier) => (tier ? `var(--${tier})` : 'var(--ink-20)');
 
-/** @param {ReturnType<typeof heroModel>['devices']} devices */
-function devicesHtml(devices) {
+/** Spotrebiče pod ciferníkom. `when` je krátka odpoveď z karty Môžem? („do 14:45“) - tooltip
+ * ju ukáže vedľa príkonu (data-when, viď initDeviceChips vo web/interactions.js).
+ * @param {ReturnType<typeof heroModel>['devices']} devices @param {Record<string, string>} when */
+function devicesHtml(devices, when) {
     return (devices || [])
         .map((d) => {
             const power = `${fmt1(d.powerKw)} kW`;
+            const w = escapeHtml(when[d.name] || '');
             const tierCls = d.state !== 'no' && d.tier ? ` tier-${d.tier}` : '';
             return (
-                `<button type="button" class="go-chip state-${d.state}${tierCls}"${d.state === 'no' ? ' disabled' : ''} data-device="${escapeHtml(d.name)}" data-power="${power}" aria-label="${escapeHtml(d.name)}, ${power}">` +
+                `<button type="button" class="go-chip state-${d.state}${tierCls}"${d.state === 'no' ? ' disabled' : ''} data-device="${escapeHtml(d.name)}" data-power="${power}" data-when="${w}" aria-label="${escapeHtml(d.name)}, ${power}${w ? `, ${w}` : ''}">` +
                 (DEVICE_ICONS[d.name] || '') +
                 `<span class="go-name">${escapeHtml(d.name)}</span><span class="go-power">${power}</span></button>`
             );
@@ -67,7 +71,7 @@ function renderHero(state, m, dom) {
     dom.dialRing.classList.toggle('empty', !(m.dial.fraction > 0));
     dom.verdictHeadline.textContent = m.message.headline;
     dom.verdictBody.textContent = m.message.body;
-    writeHtml(dom.verdictGoRow, devicesHtml(m.devices), 'devices');
+    writeHtml(dom.verdictGoRow, devicesHtml(m.devices, deviceShorts(mozemModel(state, 0, state.launches))), 'devices');
     renderForecastPage(state, dom);
     renderVerdictPager(state, m, dom);
 }
