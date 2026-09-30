@@ -18,7 +18,7 @@ function podlaPlanu(plan) {
             }
         )
     );
-    return { fetchImpl, volania, sleep: async () => {} };
+    return { fetchImpl, volania, sleep: async () => {}, delayMs: 0, timeoutMs: 1000 };
 }
 
 test('fetchWithRetry: prechodná chyba (5xx, sieť) sa skúsi znova', async () => {
@@ -41,7 +41,7 @@ test('fetchWithRetry: po poslednom pokuse vráti poslednú chybu', async () => {
 
 test('fetchWithRetry: každý pokus má časový limit, zaseknuté spojenie sa preruší', async () => {
     const f = podlaPlanu([200]);
-    await fetchWithRetry('https://x.test/', { method: 'POST' }, { ...f, timeoutMs: 1000 });
+    await fetchWithRetry('https://x.test/', { method: 'POST' }, { ...f, attempts: 1 });
     assert.equal(f.volania[0].method, 'POST', 'vlastné nastavenia požiadavky ostanú');
     assert.ok(f.volania[0].signal instanceof AbortSignal);
 
@@ -55,7 +55,9 @@ test('fetchWithRetry: každý pokus má časový limit, zaseknuté spojenie sa p
     // Časovač AbortSignal.timeout Node nedrží nažive - bez tohto by test skončil skôr, než vyprší.
     const drz = setTimeout(() => {}, 5000);
     const zaciatok = Date.now();
-    await assert.rejects(fetchWithRetry('https://x.test/', {}, { fetchImpl: nikdy, attempts: 1, timeoutMs: 50 }), { name: 'TimeoutError' });
+    await assert.rejects(fetchWithRetry('https://x.test/', {}, { fetchImpl: nikdy, attempts: 1, delayMs: 0, timeoutMs: 50 }), {
+        name: 'TimeoutError',
+    });
     clearTimeout(drz);
     assert.ok(Date.now() - zaciatok < 2000);
 });
