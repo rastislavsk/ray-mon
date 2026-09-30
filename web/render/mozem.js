@@ -1,7 +1,6 @@
 // Karta Môžem?: jedno veľké slovo, pás dneška, riadok „Čo môžem“ a hláška; veci s ikonami sú
-// o ťuknutie ďalej, na obrazovke so zoznamom. Celý obsah skladá
-// render do #mozem-body - v index.html je len nosič, takže zmena vnútri karty nepotrebuje dve
-// nasadenia (viď CLAUDE.md). Počíta shared/mozem.js, texty sú v shared/messages.js.
+// o ťuknutie ďalej, na obrazovke so zoznamom. Celý obsah skladá render do #mozem-body,
+// v index.html je len nosič. Počíta shared/mozem.js, texty sú v shared/messages.js.
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
