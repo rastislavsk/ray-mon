@@ -17,6 +17,10 @@ export const ICON_CLOUD =
 export const ICON_PARTLY =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="8" r="3"/><path d="M15 2v1.3M19.6 4.4l-.9.9M21 8h-1.3M9.4 4.4l.9.9"/><path d="M16.5 19H7a4 4 0 1 1 .5-7.97 5.5 5.5 0 0 1 9.7 2.02A4 4 0 0 1 16.5 19Z"/></svg>';
 
+/** Šípky na tlačidlách Späť a Ďalej v obsahu kariet. */
+export const ICON_BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+export const ICON_NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+
 /** Veci v karte Môžem? (kľúče sú id z MOZEM_ITEMS). Kreslené tak, aby sa spoznali aj bez popisu. */
 export const MOZEM_ICONS = {
     pracka: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z"/></svg>',

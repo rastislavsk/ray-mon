@@ -26,7 +26,7 @@ import { escapeHtml, fmt1, hourLabel, kwpText, weekDateLabel, weekDayLong, weekD
 import { dayDetailMessage, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
 import { localMinutes } from '../../shared/solar.js';
 import { levelTier, priceSegments } from '../../shared/tariff.js';
-import { ICON_CLOUD, ICON_PARTLY, ICON_SUN } from '../icons.js';
+import { ICON_BACK, ICON_CLOUD, ICON_NEXT, ICON_PARTLY, ICON_SUN } from '../icons.js';
 import { changed, writeHtml } from '../memo.js';
 import { dayBarsSvg, forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
 
@@ -377,7 +377,7 @@ function renderDaySteps(detail, days, sel, dom) {
     const step = (/** @type {number} */ i, /** @type {'prev' | 'next'} */ kam) => {
         const d = days[i];
         if (!d) return '';
-        const sipka = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${kam === 'prev' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg>`;
+        const sipka = kam === 'prev' ? ICON_BACK : ICON_NEXT;
         const text = `<span class="t"><b>${escapeHtml(weekDayName(d.date, i))}</b><small>${Math.round(d.kwhTotal)} kWh</small></span>`;
         return `<button type="button" class="day-step ${kam}" data-day-index="${i}">${kam === 'prev' ? sipka + text : text + sipka}</button>`;
     };

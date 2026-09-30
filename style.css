@@ -4244,13 +4244,21 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: 3px;
     min-width: 0;
 }
+/* Mono štítok nad textom: „Čo môžem“, riadok pod nadpisom zoznamu, „Súhrn na zdieľanie“. */
 .mozem-glance small,
-.mozem-list-kick {
+.mozem-list-kick,
+.summary-link small {
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+}
+.mozem-glance small,
+.mozem-list-kick {
     color: var(--ink-45);
+}
+.mozem-list-kick {
+    margin: 0 0 var(--sp-2);
 }
 .mozem-glance b {
     font-size: var(--fs-lg);
@@ -4294,6 +4302,19 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     display: grid;
     gap: var(--sp-2);
 }
+/* Späť na druhých obrazovkách karty: zoznam vecí a súhrn (backButtonHtml v render/suhrn.js). */
+.summary-back,
+.mozem-back {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
 .mozem-back {
     justify-self: start;
     color: var(--ink-70);
@@ -4304,9 +4325,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-weight: 700;
     letter-spacing: -0.03em;
     line-height: 1;
-}
-.mozem-list-kick {
-    margin: 0 0 var(--sp-2);
 }
 .mozem-grid {
     display: grid;
@@ -4472,18 +4490,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     align-items: center;
     gap: var(--sp-2);
 }
-.summary-back,
-.mozem-back {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 44px;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
 .summary-back svg,
 .mozem-back svg,
 .summary-link svg,
@@ -4630,11 +4636,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 .summary-link small {
     display: block;
-    font-family: var(--font-mono);
-    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
 }
 
 /* ---- Širšie obrazovky ----------------------------------------------------- */

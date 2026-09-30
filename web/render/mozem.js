@@ -8,9 +8,9 @@ import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js'
 import { mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
-import { MOZEM_ICONS, MOZEM_MARKS } from '../icons.js';
+import { ICON_NEXT, MOZEM_ICONS, MOZEM_MARKS } from '../icons.js';
 import { changed, writeHtml } from '../memo.js';
-import { summaryHtml, summaryLinkHtml } from './suhrn.js';
+import { backButtonHtml, summaryHtml, summaryLinkHtml } from './suhrn.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
 
@@ -95,7 +95,7 @@ function glanceHtml(m) {
     return (
         `<button type="button" class="mozem-glance" data-mozem-list><span class="mozem-glance-t"><small>Čo môžem</small>` +
         `<b>${escapeHtml(m.glance.title)}</b><span class="mozem-glance-sub"><span class="mozem-pips" aria-hidden="true">${pips}</span>` +
-        `${escapeHtml(m.glance.sub)}</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`
+        `${escapeHtml(m.glance.sub)}</span></span>${ICON_NEXT}</button>`
     );
 }
 
@@ -114,8 +114,7 @@ export function mozemHtml(m, kick) {
 export function mozemListHtml(m, open, kick) {
     const items = m.items.map((it) => itemHtml(it, it.id === open)).join('');
     return (
-        `<section class="mozem-list"><button type="button" class="mozem-back" data-mozem-list-back>` +
-        `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Späť</button>` +
+        `<section class="mozem-list">${backButtonHtml('mozem-back', 'data-mozem-list-back')}` +
         `<h3 class="mozem-list-title">Čo môžem</h3><p class="mozem-list-kick">${escapeHtml(kick)}</p>` +
         `<div class="mozem-grid">${items}</div>` +
         (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +

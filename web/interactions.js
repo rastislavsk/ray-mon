@@ -384,8 +384,7 @@ function initRectTooltip(wrap, tooltip) {
 }
 
 /** Klik na spotrebič prepne tooltip s príkonom a časom z karty Môžem? („2,0 kW · do 14:45“)
- * nad ním; zmizne sám alebo klikom inde. Kým stránka s novým renderom nie je v cache, chýba
- * data-when a tooltip ukáže len príkon.
+ * nad ním; zmizne sám alebo klikom inde. Spotrebič bez času (bojler) ukáže len príkon.
  * Tooltip je jeden zdieľaný prvok mimo pageru (position: fixed), pozíciu dopočíta JS
  * podľa kliknutého chipu. @param {Dom} dom */
 function initDeviceChips(dom) {
