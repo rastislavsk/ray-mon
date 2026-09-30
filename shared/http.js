@@ -1,6 +1,5 @@
-// Spoločný retry pre sieťové volania (Worker). Jeden prechodný výpadok nemá zhodiť celý beh.
+// Retry pre sieťové volania Workera. Jeden prechodný výpadok kiosku nemá zhodiť živé meranie.
 
-const DEFAULTS = { attempts: 3, delayMs: 2000, timeoutMs: 10000 };
 const wait = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -10,11 +9,11 @@ const wait = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms))
  *
  * Každý pokus má vlastný časový limit - bez neho by zaseknuté spojenie čakalo donekonečna
  * a s ním aj ten, kto na odpoveď čaká.
- * @param {string} url @param {RequestInit} [options]
- * @param {{ attempts?: number, delayMs?: number, timeoutMs?: number, fetchImpl?: typeof fetch, sleep?: (ms: number) => Promise<unknown> }} [opts]
+ * @param {string} url @param {RequestInit} options
+ * @param {{ attempts: number, delayMs: number, timeoutMs: number, fetchImpl?: typeof fetch, sleep?: (ms: number) => Promise<unknown> }} opts
  */
-export async function fetchWithRetry(url, options = {}, opts = {}) {
-    const { attempts, delayMs, timeoutMs, fetchImpl = fetch, sleep = wait } = { ...DEFAULTS, ...opts };
+export async function fetchWithRetry(url, options, opts) {
+    const { attempts, delayMs, timeoutMs, fetchImpl = fetch, sleep = wait } = opts;
     /** @type {unknown} */ let lastErr;
     for (let i = 0; i < attempts; i++) {
         try {

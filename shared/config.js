@@ -404,8 +404,10 @@ export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
 // Živé meranie z kiosku, ktorý si používateľ zadal v Nastavení. Odkaz ide v tele POST
-// požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera.
-export const WORKER_PV_URL = `${WORKER_URL}pv`;
+// požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera. Cestu čítajú
+// appka aj Worker, aby sa nerozišli.
+export const WORKER_PV_PATH = '/pv';
+export const WORKER_PV_URL = new URL(WORKER_PV_PATH, WORKER_URL).href;
 
 /**
  * Verejný kiosk Huawei FusionSolar. Worker sťahuje len z týchto serverov a len túto cestu,
@@ -423,13 +425,18 @@ export const REFRESH = {
     dataMs: 60 * 1000,
 };
 
-// Najdlhšie čakanie na jednu sieťovú požiadavku (ms). Bez limitu by zaseknuté spojenie
-// čakalo donekonečna. Worker čaká na kiosk kratšie než appka na Worker, aby sa aj s jedným
-// opakovaním (2 × 5 s + 0,5 s) zmestil do jej limitu.
+// Najdlhšie čakanie appky na jednu sieťovú požiadavku (ms). Bez limitu by zaseknuté
+// spojenie čakalo donekonečna.
 export const TIMEOUT = {
     appMs: 15 * 1000,
-    kioskMs: 5 * 1000,
 };
+
+/**
+ * Ako Worker sťahuje kiosk: najviac dva pokusy s pauzou medzi nimi, každý s vlastným
+ * limitom (ms). Worker čaká na kiosk kratšie než appka na Worker, aby sa aj s opakovaním
+ * (2 × 5 s + 0,5 s) zmestil do jej limitu `TIMEOUT.appMs`.
+ */
+export const KIOSK_RETRY = { attempts: 2, delayMs: 500, timeoutMs: 5 * 1000 };
 
 // Od akej viditeľnej výšky okna (px) sa v prehľade dní na karte 7 dní ukáže aj správa
 // týždňa. Prehľad sám sa zmestí od 735 px; so správou potrebuje 860 px, a pri najdlhšej
