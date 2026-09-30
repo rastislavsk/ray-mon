@@ -302,3 +302,18 @@ function heroFacts(input, ctx) {
         tomorrowKwh: tomorrow ? tomorrow.day.kwhTotal : null,
     };
 }
+
+/**
+ * Krátke odpovede karty Môžem? („do 14:45“, „o 10:00“, „beží do …“) podľa názvu spotrebiča
+ * z DEVICES - pre tooltip spotrebiča na karte Terazky. Spotrebič, ktorý na karte Môžem? nie je
+ * (bojler), tu chýba.
+ * @param {ReturnType<typeof mozemModel>} m @returns {Record<string, string>}
+ */
+export function deviceShorts(m) {
+    /** @type {Record<string, string>} */ const out = {};
+    for (const { id, device } of MOZEM_ITEMS) {
+        const it = m.items.find((x) => x.id === id);
+        if (device && it) out[device] = it.short;
+    }
+    return out;
+}

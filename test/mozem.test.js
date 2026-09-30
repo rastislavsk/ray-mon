@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText, MOZEM_QUIPS } from '../shared/messages.js';
-import { dayWindow, itemAnswer, itemCost, mozemModel, planWindows, stripGeometry } from '../shared/mozem.js';
+import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, planWindows, stripGeometry } from '../shared/mozem.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
@@ -199,4 +199,13 @@ test('neskoro popoludní: program už celý na slnku nedobehne, karta to povie',
     const pracka = item(m, 'pracka');
     assert.equal(pracka.short, 'teraz');
     assert.match(pracka.text, /Koniec pôjde zo siete\.$/);
+});
+
+test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky', () => {
+    const m = mozemModel(input(FIXED_NOW));
+    const shorts = deviceShorts(m);
+    assert.equal(shorts['Práčka'], item(m, 'pracka').short);
+    assert.equal(shorts.Auto, item(m, 'auto').short);
+    assert.equal(shorts.Bojler, undefined, 'bojler na karte Môžem? nie je');
+    assert.deepEqual(Object.keys(shorts).sort(), ['Auto', 'Práčka', 'Sušička', 'Umývačka']);
 });
