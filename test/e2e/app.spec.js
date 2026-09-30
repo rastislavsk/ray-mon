@@ -11,6 +11,7 @@ import {
     PREVIEW,
     DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
+    PAGER_SETTLE_MS,
     SETTINGS_STORAGE_KEY,
     START_STORAGE_KEY,
     SITE,
@@ -1547,7 +1548,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, guide: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, list: false, guide: false },
     });
     expect(errors).toEqual([]);
 });
@@ -2650,7 +2651,7 @@ test.describe('karta Môžem?', () => {
     /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {number} [quipPage] */
     const model = (quipPage = 0) => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) }, quipPage);
 
-    test('o 13:00 za jasna: veľké slovo, veta, pás dneška a veci podľa modelu', async ({ page }) => {
+    test('o 13:00 za jasna: veľké slovo, veta, pás dneška a riadok Čo môžem podľa modelu', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
@@ -2659,14 +2660,39 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-lead')).toHaveText(m.hero.lead);
         await expect(page.locator('.mozem-fact')).toContainText(m.hero.factV);
         await expect(page.locator('.mozem-strip-lbl')).toHaveText(m.strip?.text || '');
+        await expect(page.locator('.mozem-glance b')).toHaveText(m.glance.title);
+        await expect(page.locator('.mozem-glance-sub')).toHaveText(m.glance.sub);
+        await expect(page.locator('.mozem-pips i')).toHaveCount(m.items.length);
+        await expect(page.locator('.mozem-item'), 'veci s ikonami sú až v zozname').toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+
+    test('zoznam vecí: otvorí sa z riadku, veci podľa modelu, Späť ho zavrie', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await ocakavajKartu(page, 'mozem');
+        const m = model();
+        await page.locator('[data-mozem-list]').click();
         await expect(page.locator('.mozem-t b')).toHaveText(m.items.map((i) => i.name));
         await expect(page.locator('.mozem-t span')).toHaveText(m.items.map((i) => i.short));
+        await expect(page.locator('.mozem-hero'), 'zoznam je samostatná obrazovka').toHaveCount(0);
+
+        // Zoznam je obrazovka karty: Späť na telefóne ho zavrie, ďalšie Späť už vedie preč z karty.
+        await page.goBack();
+        await expect(page.locator('.mozem-hero')).toBeVisible();
+        await ocakavajKartu(page, 'mozem');
+        await page.locator('[data-mozem-list]').click();
+        await page.locator('[data-mozem-list-back]').click();
+        await expect(page.locator('.mozem-list')).toHaveCount(0);
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
 
     test('ťuknutie na vec ju rozbalí a druhé zbalí; nie je to krok navigácie', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
+        await page.locator('[data-mozem-list]').click();
         const pred = await page.evaluate(() => history.length);
         const pracka = /** @type {ReturnType<typeof model>['items'][number]} */ (model().items.find((i) => i.id === 'pracka'));
         const btn = page.locator('[data-mozem-item="pracka"]');
@@ -2695,9 +2721,11 @@ test.describe('karta Môžem?', () => {
         await expect.poll(() => quipStrana(page)).toBe(1);
         await expect(dots.nth(1)).toHaveClass(/active/);
 
-        // Rozbalenie veci prepíše celý obsah karty - hláška pod rukou nesmie odskočiť na prvú.
-        await page.locator('[data-mozem-item="pracka"]').click();
-        await expect(page.locator('.mozem-more')).toHaveCount(1);
+        // Návrat zo zoznamu vecí skladá pás nanovo - stojí na hláške, na ktorej človek bol.
+        // Stránka ide do stavu až po ustálení posunu, preto sa naň počká.
+        await page.waitForTimeout(PAGER_SETTLE_MS * 3);
+        await page.locator('[data-mozem-list]').click();
+        await page.locator('[data-mozem-list-back]').click();
         await expect.poll(() => quipStrana(page)).toBe(1);
         await expect(dots.nth(1)).toHaveClass(/active/);
 
@@ -2720,6 +2748,7 @@ test.describe('karta Môžem?', () => {
     test('Pustil/a som: zapíše sa v telefóne, pri práčke beží, druhé ťuknutie zruší', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
+        await page.locator('[data-mozem-list]').click();
         await page.locator('[data-mozem-item="pracka"]').click();
         const log = page.locator('[data-mozem-log="pracka"]');
         await expect(log).toHaveText('Pustil/a som');
@@ -2733,6 +2762,7 @@ test.describe('karta Môžem?', () => {
         // Zápis prežije znovuotvorenie appky; druhé ťuknutie počas behu ho zruší.
         await page.reload();
         await page.locator('#nav-mozem').click();
+        await page.locator('[data-mozem-list]').click();
         await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
         await page.locator('[data-mozem-item="pracka"]').click();
         await page.locator('[data-mozem-log="pracka"]').click();
@@ -2746,8 +2776,9 @@ test.describe('karta Môžem?', () => {
         await page.locator('#nav-mozem').click();
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
-        await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
         await expect(page.locator('.summary-link'), 'bez merania súhrn nie je').toHaveCount(0);
+        await page.locator('[data-mozem-list]').click();
+        await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
         expect(errors).toEqual([]);
     });
 

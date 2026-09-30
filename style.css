@@ -4100,7 +4100,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 
 /* ---- Môžem? ---------------------------------------------------------------- */
 /* Odpoveď pre celú rodinu (návrh C v docs/navrhy/karta-mozem.html): jedno veľké slovo na plnej
-   farbe, pás dneška, veci v mriežke a hláška. Obsah skladá render do #mozem-body. */
+   farbe, pás dneška, riadok „Čo môžem“ a hláška. Veci s ikonami sú na obrazovke so zoznamom
+   (návrh A v docs/navrhy/mozem-co-mozem.html). Obsah skladá render do #mozem-body. */
 .mozem {
     display: grid;
     gap: var(--sp-3);
@@ -4174,8 +4175,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .mozem-strip {
     margin: 2px 6px 0;
 }
-.mozem-strip-top,
-.mozem-lbl {
+.mozem-strip-top {
     display: flex;
     justify-content: space-between;
     font-family: var(--font-mono);
@@ -4226,12 +4226,90 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-size: var(--fs-md);
     color: var(--ink-70);
 }
-.mozem-lbl {
-    margin: var(--sp-3) 6px 0;
+/* Vstup do zoznamu: koľko ide hneď, bodka za každú vec vo farbe jej odpovede a výnimky slovom. */
+.mozem-glance {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-top: var(--sp-2);
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid var(--ink-12);
+    background: var(--card-bg);
+    text-align: left;
+}
+.mozem-glance-t {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+.mozem-glance small,
+.mozem-list-kick {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.mozem-glance b {
+    font-size: var(--fs-lg);
+}
+.mozem-glance-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--ink-70);
+}
+.mozem-pips {
+    display: flex;
+    gap: 4px;
+}
+.mozem-pips i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: currentColor;
+}
+/* Šípka v kruhu ako pri súhrne, len svetlá na tmavej karte. */
+.mozem-glance > svg {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border-radius: 50%;
+    background: var(--ink);
+    fill: none;
+    stroke: #0b0b0b;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* Obrazovka so zoznamom vecí: šípka späť, nadpis a veci pod sebou. */
+.mozem-list {
+    display: grid;
+    gap: var(--sp-2);
+}
+.mozem-back {
+    justify-self: start;
+    color: var(--ink-70);
+}
+.mozem-list-title {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+.mozem-list-kick {
+    margin: 0 0 var(--sp-2);
 }
 .mozem-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--sp-2);
 }
 .mozem-item {
@@ -4394,7 +4472,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     align-items: center;
     gap: var(--sp-2);
 }
-.summary-back {
+.summary-back,
+.mozem-back {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -4406,6 +4485,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     text-transform: uppercase;
 }
 .summary-back svg,
+.mozem-back svg,
 .summary-link svg,
 .summary-share svg {
     width: 20px;

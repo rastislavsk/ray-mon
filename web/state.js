@@ -24,6 +24,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   launches: import('../shared/launches.js').Launch[],
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemSummary: boolean,
+ *   mozemList: boolean,
  *   summaryPeriod: import('../shared/summary.js').SummaryPeriod,
  *   previewMinutes: number | null,
  *   isDragging: boolean,
@@ -62,7 +63,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, guide: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, list: boolean, guide: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -109,6 +110,9 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Obrazovka súhrnu v karte Môžem? - je to krok navigácie, Späť ju zavrie. Obdobie je
         // nastavenie vnútri nej.
         mozemSummary: false,
+        // Zoznam vecí v karte Môžem? (čo môžem pustiť a dokedy) - druhá obrazovka karty ako súhrn,
+        // krok navigácie, Späť ju zavrie.
+        mozemList: false,
         summaryPeriod: /** @type {import('../shared/summary.js').SummaryPeriod} */ ('mesiac'),
         previewMinutes: null,
         isDragging: false,
@@ -256,6 +260,7 @@ export function panelChange(from, to) {
         infoOpen: /** @type {null} */ (null),
         dialGuideOpen: false,
         mozemSummary: false,
+        mozemList: false,
     };
 }
 
@@ -274,6 +279,7 @@ export function navStep(state) {
         roof: state.setupRoof,
         info: state.infoOpen,
         summary: state.mozemSummary,
+        list: state.mozemList,
         guide: state.dialGuideOpen,
     };
 }
@@ -287,6 +293,7 @@ export function sameNavStep(a, b) {
         a.roof === b.roof &&
         a.info === b.info &&
         a.summary === b.summary &&
+        a.list === b.list &&
         a.guide === b.guide
     );
 }
@@ -307,6 +314,7 @@ export function navChange(from, step) {
         setupRoof: step.roof,
         infoOpen: step.info,
         mozemSummary: step.summary,
+        mozemList: step.list,
         dialGuideOpen: step.guide,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
@@ -332,33 +340,33 @@ export function navStepFrom(raw) {
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const {
-        panel,
-        weekDetail,
-        setup = null,
-        roof = 0,
-        info = null,
-        summary = false,
-        guide = false,
-    } = /** @type {Record<string, unknown>} */ (step);
-    if (!validPanelPlace(panel, weekDetail, summary) || !validSetupPlace(setup, roof) || !validInfoItem(info) || typeof guide !== 'boolean')
-        return null;
+    const { panel, weekDetail, setup = null, roof = 0, info = null } = /** @type {Record<string, unknown>} */ (step);
+    const screens = screensIn(/** @type {Record<string, unknown>} */ (step));
+    if (!screens || !validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
         weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
         setup: /** @type {SetupStep | null} */ (setup),
         roof: /** @type {number} */ (roof),
         info: /** @type {InfoItem | null} */ (info),
-        summary: /** @type {boolean} */ (summary),
-        guide,
+        ...screens,
     };
 }
 
-/** Karta, detail dňa a súhrn z položky histórie. Položka zo staršej verzie súhrn nepozná - je `false`.
- * @param {unknown} panel @param {unknown} weekDetail @param {unknown} summary */
-function validPanelPlace(panel, weekDetail, summary) {
+/** Karta a detail dňa z položky histórie. @param {unknown} panel @param {unknown} weekDetail */
+function validPanelPlace(panel, weekDetail) {
     const detailOk = weekDetail === null || weekDetail === 'day' || weekDetail === 'week';
-    return detailOk && PANELS.some((p) => p === panel) && typeof summary === 'boolean';
+    return detailOk && PANELS.some((p) => p === panel);
+}
+
+/**
+ * Obrazovky, ktoré sú otvorené alebo nie: súhrn a zoznam vecí v karte Môžem?, popup s návodom
+ * k ciferníku. Položka zo staršej verzie appky ich nepozná - sú `false`.
+ * @param {Record<string, unknown>} step @returns {{ summary: boolean, list: boolean, guide: boolean } | null}
+ */
+function screensIn({ summary = false, list = false, guide = false }) {
+    if (typeof summary !== 'boolean' || typeof list !== 'boolean' || typeof guide !== 'boolean') return null;
+    return { summary, list, guide };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

@@ -23,6 +23,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup        |
 | `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)     |
 | `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)           |
+| `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)     |
 
 ## Prečo je to v repozitári
 

@@ -10,6 +10,7 @@ import { weekDayName } from './format.js';
 import { canLog, monthCount, runMinOf, runningLaunch } from './launches.js';
 import {
     mozemCountText,
+    mozemGlanceText,
     mozemHeroText,
     mozemItemText,
     mozemLogLabel,
@@ -242,26 +243,23 @@ export function mozemModel(input, quipPage = 0, launches = []) {
 
 /**
  * Zápisy spustení do modelu: pri spotrebiči tlačidlo „Pustil/a som“ (s tým, či svieti slnko),
- * kým beží, krátka odpoveď „beží do …“, a mesačný súčet pod mriežkou.
+ * kým beží, krátka odpoveď „beží do …“, riadok vstupu do zoznamu (koľko ide hneď) a mesačný súčet.
  * @param {ReturnType<typeof baseModel>} m @param {import('./launches.js').Launch[]} launches @param {PlanInput} input
  */
 function withLaunches(m, launches, { now, site }) {
     const today = localDateKey(now, site.timezone);
     const nowMin = localMinutes(now, site.timezone);
-    return {
-        ...m,
-        items: m.items.map((it) => {
-            if (!canLog(it.id)) return { ...it, log: null };
-            const running = runningLaunch(launches, it.id, today, nowMin);
-            const isAuto = it.id === 'auto';
-            return {
-                ...it,
-                short: running ? mozemRunningShort(isAuto, running.m + runMinOf(it.id)) : it.short,
-                log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running) },
-            };
-        }),
-        count: mozemCountText(monthCount(launches, today.slice(0, 7))),
-    };
+    const items = m.items.map((it) => {
+        if (!canLog(it.id)) return { ...it, log: null };
+        const running = runningLaunch(launches, it.id, today, nowMin);
+        const isAuto = it.id === 'auto';
+        return {
+            ...it,
+            short: running ? mozemRunningShort(isAuto, running.m + runMinOf(it.id)) : it.short,
+            log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running) },
+        };
+    });
+    return { ...m, items, glance: mozemGlanceText(items), count: mozemCountText(monthCount(launches, today.slice(0, 7))) };
 }
 
 /** @param {PlanInput & { loading: boolean }} input @param {number} quipPage */
