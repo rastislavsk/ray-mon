@@ -416,17 +416,41 @@ function between(a, b, t) {
  */
 export function buildForecast(data, now, site, plant) {
     const tz = site.timezone;
-    const { time, temperature_2m: tempArr, cloud_cover: cloudArr } = data.hourly;
-    const ghiArr = data.hourly[OPEN_METEO_RADIATION.ghi];
-    const dniArr = data.hourly[OPEN_METEO_RADIATION.dni];
-    const dhiArr = data.hourly[OPEN_METEO_RADIATION.dhi];
-
+    const hourly = forecastHours(data, site, plant);
     const todayKey = localDateKey(now, tz);
     // Začiatok aktuálnej miestnej hodiny. Záznamy predpovede stoja na celých miestnych hodinách
     // (alignToLocalHours), takže sa s ním dajú porovnať priamo. Pri pásme s celými hodinami je
     // to začiatok UTC hodiny.
     const nowHourStart = now.getTime() - (localMinutes(now, tz) % 60) * 60000 - (now.getTime() % 60000);
+    const th = powerThresholds(plant);
+    const hoursOf = (/** @type {string} */ key) => hourly.filter((h) => h.localDate === key);
+    const tomorrowEntries = hoursOf(addDays(todayKey, 1));
+    const tomorrowPeakKw = tomorrowEntries.reduce((max, h) => Math.max(max, h.acKw), 0);
+    return {
+        ...strongerWindowAhead(hourly, todayKey, nowHourStart, tz, th),
+        tomorrowSunny: tomorrowPeakKw >= th.highKw,
+        tomorrowPeakKw: round(tomorrowPeakKw, 2),
+        hourlyToday: hourlySeries(hoursOf(todayKey), tz),
+        hourlyTomorrow: hourlySeries(tomorrowEntries, tz),
+        days: Array.from({ length: FORECAST_DAYS_SHOWN }, (_, i) => {
+            const key = addDays(todayKey, i);
+            return buildDay(key, hoursOf(key), site, plant);
+        }),
+        updatedAt: now.toISOString(),
+    };
+}
 
+/**
+ * Hodiny predpovede z odpovede Open-Meteo: počasie zarovnané na celé miestne hodiny a k nemu
+ * výkon zostavy.
+ * @param {Parameters<typeof buildForecast>[0]} data @param {Site} site @param {Plant} plant
+ * @returns {HourEntry[]}
+ */
+function forecastHours(data, site, plant) {
+    const { time, temperature_2m: tempArr, cloud_cover: cloudArr } = data.hourly;
+    const ghiArr = data.hourly[OPEN_METEO_RADIATION.ghi];
+    const dniArr = data.hourly[OPEN_METEO_RADIATION.dni];
+    const dhiArr = data.hourly[OPEN_METEO_RADIATION.dhi];
     /** @type {WeatherHour[]} */
     const weather = time.map((t, i) => ({
         dateUtc: new Date(`${t}Z`),
@@ -434,46 +458,11 @@ export function buildForecast(data, now, site, plant) {
         tempC: tempArr[i],
         cloudPct: cloudArr ? cloudArr[i] : null,
     }));
-    /** @type {HourEntry[]} */
-    const hourly = alignToLocalHours(weather, tz).map((w) => ({
+    return alignToLocalHours(weather, site.timezone).map((w) => ({
         dateUtc: w.dateUtc,
         acKw: forecastAcKw(w.irr, w.tempC, w.dateUtc, site, plant),
-        localDate: localDateKey(w.dateUtc, tz),
+        localDate: localDateKey(w.dateUtc, site.timezone),
         cloudPct: w.cloudPct,
         tempC: w.tempC,
     }));
-
-    const th = powerThresholds(plant);
-    const ahead = strongerWindowAhead(hourly, todayKey, nowHourStart, tz, th);
-
-    const dayKeyOffset = (/** @type {number} */ days) => addDays(todayKey, days);
-    const tomorrowKey = dayKeyOffset(1);
-    const tomorrowEntries = hourly.filter((h) => h.localDate === tomorrowKey);
-    const tomorrowPeakKw = tomorrowEntries.reduce((max, h) => Math.max(max, h.acKw), 0);
-
-    const days = [];
-    for (let i = 0; i < FORECAST_DAYS_SHOWN; i++) {
-        const key = dayKeyOffset(i);
-        days.push(
-            buildDay(
-                key,
-                hourly.filter((h) => h.localDate === key),
-                site,
-                plant,
-            ),
-        );
-    }
-
-    return {
-        ...ahead,
-        tomorrowSunny: tomorrowPeakKw >= th.highKw,
-        tomorrowPeakKw: round(tomorrowPeakKw, 2),
-        hourlyToday: hourlySeries(
-            hourly.filter((h) => h.localDate === todayKey),
-            tz,
-        ),
-        hourlyTomorrow: hourlySeries(tomorrowEntries, tz),
-        days,
-        updatedAt: now.toISOString(),
-    };
 }
