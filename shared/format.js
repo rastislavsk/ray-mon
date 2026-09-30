@@ -28,6 +28,11 @@ export function hourFloatToTimeStr(hourFloat) {
     return minutesToTimeStr(hourFloat * 60);
 }
 
+/** Minúty ako hodiny s desatinnou čiarkou: 20 h, 7,5 h, 0,25 h. @param {number} min */
+export function hoursText(min) {
+    return `${String(Math.round((min / 60) * 100) / 100).replace('.', ',')} h`;
+}
+
 /** Celá hodina -> "HH:00". @param {number} hour */
 export function hourLabel(hour) {
     return `${pad2(hour)}:00`;

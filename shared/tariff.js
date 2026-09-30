@@ -3,7 +3,7 @@
 // Čisté funkcie bez DOM.
 
 import { DEVICES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
-import { fmt2, minutesToTimeStr, timeStrToMinutes } from './format.js';
+import { fmt2, hoursText, minutesToTimeStr, timeStrToMinutes } from './format.js';
 import { isObj } from './valid.js';
 
 /** @typedef {import('./config.js').Tier} Tier */
@@ -219,9 +219,6 @@ export function newBandId(tariff) {
     while (tariff.bands.some((b) => b.id === `b${n}`)) n++;
     return `b${n}`;
 }
-
-/** Hodiny s desatinnou čiarkou: 20 h, 7,5 h. @param {number} min */
-const hoursText = (min) => `${String(Math.round((min / 60) * 100) / 100).replace('.', ',')} h`;
 
 /**
  * Súhrn tarify v jednom riadku: „2 pásma · lacno 20 h · víkend inak“.
