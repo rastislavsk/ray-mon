@@ -107,8 +107,18 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
         );
     await page.clock.setFixedTime(time);
     await page.goto(`/${hash}`);
-    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+    await appReady(page);
     return errors;
+}
+
+/**
+ * Počká, kým appka naštartuje. Udalosť load na to nestačí: boot.js načíta appku dynamickým
+ * import(), ktorý sa môže dokončiť až po nej - klik hneď po page.reload() by potom trafil
+ * statické HTML bez poslucháčov. „načítavam…“ prepíše až appka.
+ * @param {import('@playwright/test').Page} page
+ */
+async function appReady(page) {
+    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
 }
 
 /** Presný okamih daného času 5. 9. 2026 v Bratislave (letný čas, UTC+2). @param {string} hm */
@@ -2366,6 +2376,7 @@ test.describe('moja elektráreň', () => {
         await page.goto('/');
         await page.evaluate(([key, value]) => localStorage.setItem(key, value), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))]);
         await page.reload();
+        await appReady(page);
         await page.locator('#nav-nastavenie').click();
         await otvorPolozku(page, 'settings-plant');
         await page.locator('#setup-rows [data-setup-edit="lokalita"]').click();
@@ -2775,6 +2786,7 @@ test.describe('karta Môžem?', () => {
 
         // Zápis prežije znovuotvorenie appky; druhé ťuknutie počas behu ho zruší.
         await page.reload();
+        await appReady(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
         await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
