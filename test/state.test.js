@@ -5,6 +5,7 @@ import { typicalSettings } from '../shared/settings.js';
 import {
     createStore,
     initialState,
+    isWelcome,
     navChange,
     navPrevFrom,
     navStep,
@@ -66,6 +67,9 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
     assert.equal(site.welcome, false);
     assert.equal(site.panel, 'mozem');
     assert.equal(site.setupStep, null);
+    assert.equal(isWelcome(welcome, welcome.setupStep), true);
+    assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');
+    assert.equal(isWelcome(site, 'lokalita'), false, 'zmena polohy už nie je prvé otvorenie');
 });
 
 test('powerState: bez zadaných panelov karty o výkone nevidia predpoveď typickej strechy', () => {

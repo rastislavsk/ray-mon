@@ -104,6 +104,15 @@ test('nový používateľ nezačína ničím vymysleným: bez lokality, bez výk
     for (const step of ['tarifa', 'ceny']) assert.equal(ok({ step, roof: 0 }, empty), true, step);
 });
 
+test('kto zadal len polohu, začína s ňou: lokalita je hotová, plocha mieri k rovníku, výkony nie sú', () => {
+    const site = { name: 'Sydney', lat: -33.87, lon: 151.21, elevationM: 20, timezone: 'Australia/Sydney' };
+    const empty = emptySettings(site);
+    assert.equal(empty.site, site);
+    assert.equal(empty.plant.strings[0].azimuthDeg, 0, 'na južnej pologuli na sever');
+    assert.equal(ok({ step: 'lokalita', roof: 0 }, empty), true);
+    assert.equal(ok({ step: 'panel', roof: 0 }, empty), false);
+});
+
 test('obrazovky tarify nepustia ďalej s chybnou tarifou, typ sadzby áno', () => {
     const bad = { ...DVORANY, tariff: { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, name: '' })) } };
     for (const step of ['pasma', 'rozvrh', 'vynimky', 'ceny']) {

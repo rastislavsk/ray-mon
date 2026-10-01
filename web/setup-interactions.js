@@ -31,7 +31,7 @@ import { searchPlaces } from './data.js';
 import { backTo } from './history.js';
 import { brushOf, setupReady } from './render/nastavenie.js';
 import { saveSettings, saveSite } from './settings-store.js';
-import { panelChange, savedSettings, setupDraft } from './state.js';
+import { isWelcome, panelChange, savedSettings, setupDraft } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./state.js').AppState} AppState */
@@ -46,6 +46,29 @@ function numberOf(input) {
 }
 
 /**
+ * Prepne appku na inú elektráreň a stiahne pre ňu predpoveď. Dáta starej elektrárne sa zahodia
+ * hneď, aby sa ani na chvíľu nemiešali s novou. `demo`: panely nie sú zadané (typická strecha).
+ * @param {Store} store @param {Settings} next @param {boolean} demo @param {() => Promise<void>} refresh
+ * @param {Partial<AppState>} extra
+ */
+function switchPlant(store, next, demo, refresh, extra) {
+    store.setState({
+        site: next.site,
+        plant: next.plant,
+        tariff: next.tariff,
+        kiosk: next.kiosk,
+        demo,
+        welcome: false,
+        pv: null,
+        forecast: null,
+        loading: true,
+        now: new Date(),
+        ...extra,
+    });
+    refresh();
+}
+
+/**
  * Uloží nastavenie do prehliadača, prepne naň appku a stiahne predpoveď pre novú elektráreň.
  * @param {Store} store @param {Settings} next @param {() => Promise<void>} refresh @param {Partial<AppState>} [extra]
  */
@@ -55,25 +78,13 @@ export function applySettings(store, next, refresh, extra = {}) {
         store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
         return;
     }
-    // Dáta starej elektrárne sa zahodia hneď, aby sa ani na chvíľu nemiešali s novou.
-    store.setState({
-        site: next.site,
-        plant: next.plant,
-        tariff: next.tariff,
-        kiosk: next.kiosk,
-        demo: false,
-        welcome: false,
-        pv: null,
-        forecast: null,
-        loading: true,
-        now: new Date(),
+    switchPlant(store, next, false, refresh, {
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
         setupLive: !!next.kiosk,
         ...extra,
     });
-    refresh();
 }
 
 /**
@@ -81,27 +92,11 @@ export function applySettings(store, next, refresh, extra = {}) {
  * v nej. Keď prehliadač ukladať nedovolí, appka pokračuje aj tak: polohu si pamätá do zatvorenia,
  * a nabudúce sa na ňu spýta znova.
  * @param {Store} store @param {import('../shared/config.js').Site} site @param {() => Promise<void>} refresh
- * @param {Partial<AppState>} [extra]
+ * @param {Partial<AppState>} extra
  */
-function applySite(store, site, refresh, extra = {}) {
+function applySite(store, site, refresh, extra) {
     saveSite(site);
-    const next = typicalSettings(site);
-    store.setState({
-        site,
-        plant: next.plant,
-        tariff: next.tariff,
-        kiosk: next.kiosk,
-        demo: true,
-        welcome: false,
-        pv: null,
-        forecast: null,
-        loading: true,
-        now: new Date(),
-        setupReturn: null,
-        settingsNote: '',
-        ...extra,
-    });
-    refresh();
+    switchPlant(store, typicalSettings(site), true, refresh, { setupReturn: null, settingsNote: '', ...extra });
 }
 
 /** „Teraz nie, ukáž predpoveď“ na otázke o polohe: uloží ju a otvorí kartu 7 dní. @param {Store} store @param {() => Promise<void>} refresh */
@@ -166,14 +161,12 @@ function placeSearch(store) {
 function startSetup(store) {
     const s = store.get();
     const fresh = sameSettings(s.settingsDraft, typicalSettings(s.site));
-    const empty = emptySettings();
-    const draft = { ...empty, site: s.site, plant: { ...empty.plant, strings: [newRoof(s.site.lat)] } };
     store.setState({
         setupStep: 'panel',
         setupRoof: 0,
         setupReturn: null,
         settingsNote: '',
-        ...(fresh ? { settingsDraft: draft, settingsRev: s.settingsRev + 1, setupLive: false, setupKwp: null } : {}),
+        ...(fresh ? { settingsDraft: emptySettings(s.site), settingsRev: s.settingsRev + 1, setupLive: false, setupKwp: null } : {}),
     });
 }
 
@@ -231,7 +224,7 @@ function goNext(store, refresh) {
     if (s.setupReturn === 'suhrn') return backTo(store, { setupStep: 'suhrn', setupReturn: null });
     // Bez zadaných panelov sa ukladá len poloha: pri prvom otvorení (a sprievodca pokračuje
     // panelmi) aj pri jej zmene z prehľadu karty.
-    if (s.welcome && s.setupStep === 'lokalita') return applySite(store, s.settingsDraft.site, refresh, { setupStep: 'panel' });
+    if (isWelcome(s, s.setupStep)) return applySite(store, s.settingsDraft.site, refresh, { setupStep: 'panel' });
     if (s.demo && s.setupReturn === 'prehlad') return applySite(store, s.settingsDraft.site, refresh, { setupStep: null });
     if (s.setupReturn === 'prehlad' || s.setupStep === 'suhrn')
         return applySettings(store, setupDraft(s), refresh, { setupStep: null, setupReturn: null, setupLink: '' });

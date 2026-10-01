@@ -36,7 +36,7 @@ import {
 } from '../../shared/tariff.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
-import { savedSettings, setupDraft } from '../state.js';
+import { isWelcome, savedSettings, setupDraft } from '../state.js';
 import {
     compassSvg,
     miniCompassSvg,
@@ -787,7 +787,7 @@ function renderTariffMsgs(draft, step, dom) {
 
 /** Titulok a úvodná veta obrazovky; niektoré závisia od toho, čo už človek zadal. @param {AppState} state @param {Settings} draft @param {SetupStep} step */
 function textsFor(state, draft, step) {
-    if (state.welcome && step === 'lokalita') return WELCOME;
+    if (isWelcome(state, step)) return WELCOME;
     if (step === 'panel' && state.setupKwp !== null)
         return {
             title: 'Aký výkon má celá elektráreň?',
@@ -801,13 +801,6 @@ function textsFor(state, draft, step) {
     }
     return TEXTS[step];
 }
-
-/**
- * Otázka na polohu pri prvom otvorení appky (welcome). Nie je to krok sprievodcu - za ňou
- * zatiaľ nie je nič, kam sa vrátiť, takže nemá krížik, Späť ani ukazovateľ postupu.
- * @param {AppState} state @param {SetupStep} step
- */
-const isWelcome = (state, step) => state.welcome && step === 'lokalita';
 
 /** Riadok nad ukazovateľom postupu. @param {SetupStep} step @param {number} section @param {boolean} edit */
 function stepLabel(step, section, edit) {

@@ -15,34 +15,53 @@ import { parseLaunches } from '../shared/launches.js';
 import { parseStartPanel, parseStoredSettings, parseStoredSite, shareHash, startFromLink, toUser } from '../shared/settings.js';
 import { savedSettings } from './state.js';
 
-/** @returns {import('../shared/settings.js').Settings | null} */
-export function loadSettings() {
+/** Hodnota z localStorage; keď nie je, alebo úložisko chýba či hádže, null. @param {string} key */
+function read(key) {
     try {
-        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-        return raw ? parseStoredSettings(JSON.parse(raw)) : null;
+        return localStorage.getItem(key);
     } catch {
         return null;
     }
 }
 
-/** Samotná poloha - kto ju zadal, no panely ešte nie. @returns {import('../shared/config.js').Site | null} */
-export function loadSite() {
+/** @param {string} key @param {string} value @returns {boolean} podarilo sa? */
+function write(key, value) {
     try {
-        const raw = localStorage.getItem(SITE_STORAGE_KEY);
-        return raw ? parseStoredSite(JSON.parse(raw)) : null;
-    } catch {
-        return null;
-    }
-}
-
-/** @param {import('../shared/config.js').Site} site @returns {boolean} podarilo sa? */
-export function saveSite(site) {
-    try {
-        localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(site));
+        localStorage.setItem(key, value);
         return true;
     } catch {
         return false;
     }
+}
+
+/**
+ * JSON z localStorage, skontrolovaný funkciou `parse`. Keď nie je alebo sa nedá prečítať,
+ * `fallback` - appka sa vtedy správa, akoby nič uložené nebolo.
+ * @template T @param {string} key @param {(raw: unknown) => T} parse @param {T} fallback @returns {T}
+ */
+function readJson(key, parse, fallback) {
+    const raw = read(key);
+    if (!raw) return fallback;
+    try {
+        return parse(JSON.parse(raw));
+    } catch {
+        return fallback;
+    }
+}
+
+/** @returns {import('../shared/settings.js').Settings | null} */
+export function loadSettings() {
+    return readJson(SETTINGS_STORAGE_KEY, parseStoredSettings, null);
+}
+
+/** Samotná poloha - kto ju zadal, no panely ešte nie. @returns {import('../shared/config.js').Site | null} */
+export function loadSite() {
+    return readJson(SITE_STORAGE_KEY, parseStoredSite, null);
+}
+
+/** @param {import('../shared/config.js').Site} site @returns {boolean} podarilo sa? */
+export function saveSite(site) {
+    return write(SITE_STORAGE_KEY, JSON.stringify(site));
 }
 
 /**
@@ -72,13 +91,8 @@ export function initUrlMirror(store) {
  * @param {string} hash časť adresy za mriežkou @returns {import('../shared/settings.js').StartPanel}
  */
 export function loadStartPanel(hash) {
-    /** @type {unknown} */ let raw = null;
-    try {
-        raw = localStorage.getItem(START_STORAGE_KEY);
-    } catch {
-        /* úložisko nie je - platí odkaz alebo predvolená karta */
-    }
-    const stored = parseStartPanel(raw);
+    // Bez úložiska platí odkaz alebo predvolená karta.
+    const stored = parseStartPanel(read(START_STORAGE_KEY));
     if (stored) return stored;
     const linked = startFromLink(hash);
     if (linked) saveStartPanel(linked);
@@ -87,58 +101,30 @@ export function loadStartPanel(hash) {
 
 /** @param {import('../shared/settings.js').StartPanel} panel @returns {boolean} podarilo sa? */
 export function saveStartPanel(panel) {
-    try {
-        localStorage.setItem(START_STORAGE_KEY, panel);
-        return true;
-    } catch {
-        return false;
-    }
+    return write(START_STORAGE_KEY, panel);
 }
 
 /** Zápisy „Pustil/a som“ z tohto telefónu; bez úložiska prázdny zoznam. @returns {import('../shared/launches.js').Launch[]} */
 export function loadLaunches() {
-    try {
-        return parseLaunches(JSON.parse(localStorage.getItem(LAUNCH_STORAGE_KEY) || '[]'));
-    } catch {
-        return [];
-    }
+    return readJson(LAUNCH_STORAGE_KEY, parseLaunches, []);
 }
 
 /** @param {import('../shared/launches.js').Launch[]} list @returns {boolean} podarilo sa? */
 export function saveLaunches(list) {
-    try {
-        localStorage.setItem(LAUNCH_STORAGE_KEY, JSON.stringify(list));
-        return true;
-    } catch {
-        return false;
-    }
+    return write(LAUNCH_STORAGE_KEY, JSON.stringify(list));
 }
 
 /** @param {import('../shared/settings.js').Settings} settings @returns {boolean} podarilo sa? */
 export function saveSettings(settings) {
-    try {
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
-        return true;
-    } catch {
-        return false;
-    }
+    return write(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
 }
 
 /** Denník výroby po dňoch pre súhrn; bez úložiska prázdny. @returns {import('../shared/daylog.js').DayLog} */
 export function loadDayLog() {
-    try {
-        return parseDayLog(JSON.parse(localStorage.getItem(DAYLOG_STORAGE_KEY) || '{}'));
-    } catch {
-        return {};
-    }
+    return readJson(DAYLOG_STORAGE_KEY, parseDayLog, {});
 }
 
 /** @param {import('../shared/daylog.js').DayLog} log @returns {boolean} podarilo sa? */
 export function saveDayLog(log) {
-    try {
-        localStorage.setItem(DAYLOG_STORAGE_KEY, JSON.stringify(log));
-        return true;
-    } catch {
-        return false;
-    }
+    return write(DAYLOG_STORAGE_KEY, JSON.stringify(log));
 }

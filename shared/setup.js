@@ -126,15 +126,16 @@ export function newRoof(lat) {
 }
 
 /**
- * Nastavenie, s ktorým začína nový používateľ: bez lokality a bez výkonov, aby sprievodca
- * nepredvyplnil nič vymyslené. Jedna plocha na juh, jedna cena celý deň (to isté ako „Neviem“
- * pri tarife), odborné parametre z config.js.
+ * Nastavenie, s ktorým začína nový používateľ: bez výkonov, aby sprievodca nepredvyplnil nič
+ * vymyslené, a bez lokality, kým ju appka nepozná. Jedna plocha smerom k rovníku (bez lokality
+ * na juh), jedna cena celý deň (to isté ako „Neviem“ pri tarife), odborné parametre z config.js.
+ * @param {import('./config.js').Site} [site] poloha, ak ju už človek zadal
  * @returns {Settings}
  */
-export function emptySettings() {
+export function emptySettings(site = { name: '', lat: NaN, lon: NaN, elevationM: 0, timezone: '' }) {
     return {
-        site: { name: '', lat: NaN, lon: NaN, elevationM: 0, timezone: '' },
-        plant: { ...PLANT, strings: [newRoof(0)], panelWp: NaN, acLimitKw: NaN },
+        site,
+        plant: { ...PLANT, strings: [newRoof(site.lat)], panelWp: NaN, acLimitKw: NaN },
         tariff: TARIFF_TEMPLATES.jedna,
         kiosk: '',
     };
