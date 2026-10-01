@@ -2,6 +2,7 @@
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
 import { STALE_PV_MS } from '../shared/config.js';
+import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
@@ -35,8 +36,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff,
  *   kiosk: string,
- *   demo: boolean,
- *   welcome: boolean,
+ *   known: import('../shared/settings.js').Known,
  *   settingsDraft: import('../shared/settings.js').Settings,
  *   settingsRev: number,
  *   settingsNote: string,
@@ -69,18 +69,19 @@ import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
  * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
- * @param {{ settings: import('../shared/settings.js').Settings | null, demo: boolean,
+ * @param {{ saved?: import('../shared/settings.js').Settings | null, site?: import('../shared/config.js').Site | null,
  *   incoming?: import('../shared/settings.js').Settings | null,
- *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie (alebo
- *   typická strecha v uloženej polohe, vtedy `demo`; null, kým appka polohu nepozná),
- *   nastavenie z odkazu, ktoré appka ponúkne prevziať, a karta, na ktorej sa appka na tomto
- *   telefóne otvára
+ *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie, bez neho
+ *   uložená poloha (appka počíta s typickou strechou v nej), nastavenie z odkazu, ktoré appka
+ *   ponúkne prevziať, a karta, na ktorej sa appka na tomto telefóne otvára
  * @returns {AppState}
  */
-export function initialState(now, layout, { settings, demo, incoming = null, startPanel = 'terazky' }) {
-    // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí (viď welcome).
-    const welcome = !settings;
-    const start = settings || emptySettings();
+export function initialState(now, layout, { saved = null, site = null, incoming = null, startPanel = 'terazky' }) {
+    /** @type {import('../shared/settings.js').Known} */
+    const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
+    // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí.
+    const welcome = known === 'nic';
+    const start = saved || (site ? typicalSettings(site) : emptySettings());
     return {
         now,
         panel: welcome ? 'nastavenie' : startPanel,
@@ -129,18 +130,17 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // kým sú prázdne, grafy sa kreslia na pevné plátno z chartDims.
         chartSizes: {},
         // Elektráreň, pre ktorú appka počíta: uložené nastavenie, kým si ho používateľ
-        // nezadá, typická strecha v jeho polohe (demo).
+        // nezadá, typická strecha v jeho polohe.
         site: start.site,
         plant: start.plant,
         // Tarifa: pásma, rozvrh a ceny. Kedy svieti slnko, v nej nie je - to je z predpovede.
         tariff: start.tariff,
         // Odkaz na kiosk pre živé meranie; prázdny = bez merania.
         kiosk: start.kiosk,
-        // Panely nie sú zadané: karty, ktoré o nich hovoria (Terazky, Môžem?), sú sivé a bez čísel.
-        demo,
-        // Appka ešte nepozná ani polohu. Ukazuje len otázku na ňu (krok lokalita sprievodcu) bez
-        // navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie.
-        welcome,
+        // Čo appka o elektrárni vie. `nic`: ukazuje len otázku na polohu (krok lokalita sprievodcu)
+        // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
+        // panely nie sú zadané, karty o výkone (Terazky, Môžem?) sú sivé a bez čísel.
+        known,
         // Rozpísaný formulár v karte Nastavenie. Hodnoty polí píše render len pri zmene
         // settingsRev (načítanie, výber lokality, pridanie plochy, zahodenie zmien), inak by
         // počas písania prepisoval to, čo človek práve píše.
@@ -399,12 +399,12 @@ export function navPrevFrom(raw) {
 }
 
 /**
- * Otázka na polohu pri prvom otvorení appky (welcome). Nie je to krok sprievodcu - za ňou
+ * Otázka na polohu pri prvom otvorení appky, kým appka nevie nič. Nie je to krok sprievodcu - za ňou
  * zatiaľ nie je nič, kam sa vrátiť, takže nemá krížik, Späť ani ukazovateľ postupu.
  * @param {AppState} state @param {SetupStep | null} step
  */
 export function isWelcome(state, step) {
-    return state.welcome && step === 'lokalita';
+    return state.known === 'nic' && step === 'lokalita';
 }
 
 /**
@@ -413,7 +413,7 @@ export function isWelcome(state, step) {
  * @param {AppState} state @returns {AppState}
  */
 export function powerState(state) {
-    return state.demo ? { ...state, pv: null, forecast: null } : state;
+    return state.known === 'elektraren' ? state : { ...state, pv: null, forecast: null };
 }
 
 /** Uložené nastavenie, pre ktoré appka práve počíta. @param {AppState} state @returns {import('../shared/settings.js').Settings} */

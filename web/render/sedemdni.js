@@ -411,7 +411,7 @@ function renderEmpty(dom) {
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderSedemdni(state, dom) {
     // Bez zadaných panelov počíta predpoveď s typickou strechou - a musí to povedať.
-    const roof = state.demo ? 'typická strecha ' : '';
+    const roof = state.known !== 'elektraren' ? 'typická strecha ' : '';
     dom.weekSub.textContent = `${state.site.name} · ${roof}${kwpText(installedKw(state.plant))}`;
     const days = state.forecast && Array.isArray(state.forecast.days) ? state.forecast.days : [];
     // Bez dát nie je čo otvárať - karta ostáva na prehľade so správou "Predpoveď sa pripravuje".

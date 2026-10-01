@@ -77,7 +77,7 @@ export function initUrlMirror(store) {
     const mirror = (s) => {
         if (s.incoming) return;
         // Aj prvá karta: appka pridaná na plochu iPhonu si ju inak z Safari neprenesie.
-        const hash = shareHash(s.demo ? null : savedSettings(s), true, s.startPanel);
+        const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, true, s.startPanel);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);
     };
     mirror(store.get());

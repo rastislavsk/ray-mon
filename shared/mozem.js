@@ -224,17 +224,19 @@ function quipsOf(state, day, page) {
 
 /**
  * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
- * `launches` zápisy „Pustil/a som“ z tohto telefónu. `demo`: panely nie sú zadané - karta
- * vtedy neodpovedá, aj keby predpoveď pre typickú strechu mala.
- * @param {PlanInput & { loading: boolean, demo?: boolean }} input @param {number} [quipPage]
+ * `launches` zápisy „Pustil/a som“ z tohto telefónu. `known`: čo appka o elektrárni vie
+ * (bez neho uložená elektráreň). Bez zadaných panelov karta neodpovedá, aj keby predpoveď pre
+ * typickú strechu mala.
+ * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
  * @param {import('./launches.js').Launch[]} [launches]
  */
 export function mozemModel(input, quipPage = 0, launches = []) {
-    const ctx = input.forecast && !input.demo ? dayCtx(input) : null;
+    const noPanels = (input.known || 'elektraren') !== 'elektraren';
+    const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, launches, ctx);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     return {
-        ...(ctx ? dayHead(input, ctx, quipPage) : emptyHead(input.loading, !!input.demo, quipPage)),
+        ...(ctx ? dayHead(input, ctx, quipPage) : emptyHead(input.loading, noPanels, quipPage)),
         items,
         glance: mozemGlanceText(items),
         count: mozemCountText(monthCount(launches, month)),

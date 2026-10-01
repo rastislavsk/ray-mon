@@ -239,12 +239,13 @@ function messagesHtml(s) {
 /** Prehľad karty: poloha a výzva dokončiť elektráreň (panely nie sú zadané), alebo zhrnutie
  * uloženej elektrárne. @param {AppState} state @param {Dom} dom */
 function renderHome(state, dom) {
-    dom.setupDemo.classList.toggle('hidden', !state.demo);
-    dom.setupDemoSite.textContent = state.site.name;
-    dom.setupCta.classList.toggle('hidden', !state.demo);
-    dom.setupOverview.classList.toggle('hidden', state.demo);
+    const noPanels = state.known !== 'elektraren';
+    dom.setupSite.classList.toggle('hidden', !noPanels);
+    dom.setupSiteName.textContent = state.site.name;
+    dom.setupCta.classList.toggle('hidden', !noPanels);
+    dom.setupOverview.classList.toggle('hidden', noPanels);
     dom.setupNote.textContent = state.settingsNote;
-    if (state.demo) return;
+    if (noPanels) return;
     const saved = savedSettings(state);
     writeHtml(dom.setupHero, heroHtml(saved, state), 'setupHero');
     writeHtml(dom.setupRows, summaryRows(saved, state, true), 'setupRows');
@@ -309,7 +310,7 @@ function placeCardHtml(s, state) {
 function renderLokalita(state, draft, dom) {
     writeHtml(dom.wzGeo, geoHtml(state.geo), 'wzGeo');
     writeHtml(dom.wzPlaceCard, placeCardHtml(draft, state), 'wzPlaceCard');
-    dom.wzWelcome.classList.toggle('hidden', !state.welcome);
+    dom.wzWelcome.classList.toggle('hidden', state.known !== 'nic');
     // Odložiť panely sa dá, až keď je poloha vybraná - bez nej nie je čo ukázať.
     dom.wzLater.classList.toggle('hidden', !setupReady(state));
 }
@@ -885,7 +886,7 @@ function renderFoot(state, draft, step, ok, dom) {
     const labels = {
         start: 'Začať',
         odkaz: 'Pozrieť a prevziať',
-        lokalita: state.welcome ? 'Nastaviť panely' : 'Ďalej',
+        lokalita: state.known === 'nic' ? 'Nastaviť panely' : 'Ďalej',
         dalsia: draft.plant.strings.length >= SETTINGS_LIMITS.maxStrings ? 'Ďalej' : 'Nie, to je všetko',
         meranie: state.setupLive ? 'Ďalej' : 'Preskočiť',
         suhrn: 'Uložiť a prepočítať',
@@ -962,6 +963,6 @@ export function renderImportOffer(state, dom) {
     dom.importOffer.classList.toggle('hidden', !s);
     if (!s) return;
     const live = s.kiosk ? ' · so živým meraním' : '';
-    const replaces = state.demo ? '' : ' Nahradí tvoje doterajšie nastavenie.';
+    const replaces = state.known !== 'elektraren' ? '' : ' Nahradí tvoje doterajšie nastavenie.';
     dom.importOfferText.textContent = `${settingsHint(s)}${live}.${replaces}`;
 }

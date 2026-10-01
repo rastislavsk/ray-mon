@@ -11,10 +11,10 @@ import { powerState } from '../state.js';
  */
 export function updatedLine(state) {
     const none = (/** @type {string} */ text) => ({ time: '–:–', text });
-    if (state.welcome) return none('vitaj');
+    if (state.known === 'nic') return none('vitaj');
     if (state.loading) return none('načítavam…');
     if (!state.pv && !state.forecast) return none('dáta nedostupné');
-    if (state.demo) return none('panely nie sú zadané');
+    if (state.known !== 'elektraren') return none('panely nie sú zadané');
     // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
     if (!state.pv) return none(state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede');
     const { label, time, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
@@ -28,10 +28,10 @@ export function renderHeader(state, dom) {
     dom.pvUpdated.textContent = updated.text;
     // Výzva bez zadaných panelov - len na kartách, ktoré bez nich nevedia odpovedať. Karta 7 dní
     // ukazuje predpoveď pre typickú strechu (hovorí to v podnadpise), Štatistika má vlastnú výzvu.
-    const grey = state.demo && !state.welcome && (state.panel === 'terazky' || state.panel === 'mozem');
-    dom.demoBar.classList.toggle('hidden', !grey);
+    const grey = state.known === 'poloha' && (state.panel === 'terazky' || state.panel === 'mozem');
+    dom.panelsBar.classList.toggle('hidden', !grey);
     // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
-    if (state.welcome) {
+    if (state.known === 'nic') {
         dom.root.dataset.accent = '';
         dom.root.dataset.tier = '';
         return;

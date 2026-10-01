@@ -475,7 +475,7 @@ function initSharing(store, dom, refresh) {
         // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na svojej
         // prvej karte (odkaz pre rodinu ju môže určiť).
         /** @type {Partial<import('./state.js').AppState>} */
-        const away = s.welcome ? { ...panelChange(s.panel, s.startPanel), setupStep: null } : {};
+        const away = s.known === 'nic' ? { ...panelChange(s.panel, s.startPanel), setupStep: null } : {};
         applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
@@ -506,7 +506,10 @@ function initStats(store, dom) {
         if (!(go instanceof HTMLElement)) return;
         const s = store.get();
         const step = go.dataset.statsGo || 'nastavenie';
-        store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(s.demo || step === 'nastavenie' ? {} : stepEdit(s, step, true)) });
+        store.setState({
+            ...panelChange(s.panel, 'nastavenie'),
+            ...(s.known !== 'elektraren' || step === 'nastavenie' ? {} : stepEdit(s, step, true)),
+        });
     });
 }
 
@@ -537,7 +540,7 @@ function createRefresh(store) {
     };
     return () => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.
-        if (store.get().welcome) return Promise.resolve();
+        if (store.get().known === 'nic') return Promise.resolve();
         const { site, plant, kiosk } = store.get();
         if (bezi && bezi.site === site && bezi.plant === plant && bezi.kiosk === kiosk) return bezi.promise;
         const promise = obnov({ site, plant, kiosk }).finally(() => {

@@ -29,7 +29,7 @@ function headerDom() {
         // Čas aktualizácie dát.
         pvTime: byId('pv-time'),
         pvUpdated: byId('pv-updated'),
-        demoBar: byId('demo-bar'),
+        panelsBar: byId('panels-bar'),
         bottomnav: byId('bottomnav'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
             Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))
@@ -169,8 +169,8 @@ function setupHomeDom() {
         settingsHead: byId('settings-head'),
         setup: byId('setup'),
         setupHome: byId('setup-home'),
-        setupDemo: byId('setup-demo'),
-        setupDemoSite: byId('setup-demo-site'),
+        setupSite: byId('setup-site'),
+        setupSiteName: byId('setup-site-name'),
         setupCta: byId('setup-cta'),
         setupOverview: byId('setup-overview'),
         setupHero: byId('setup-hero'),

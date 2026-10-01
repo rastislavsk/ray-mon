@@ -78,11 +78,11 @@ function forecastHtml(m) {
     );
 }
 
-/** Obsah karty podľa toho, čo appka o elektrárni vie. @param {StatsModel} m @param {boolean} demo */
-export function statsHtml(m, demo) {
+/** Obsah karty podľa toho, čo appka o elektrárni vie. @param {StatsModel} m @param {boolean} noPanels */
+export function statsHtml(m, noPanels) {
     if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
     // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
-    if (demo)
+    if (noPanels)
         return (
             forecastHtml(m) + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.')
         );
@@ -103,5 +103,5 @@ export function statsHtml(m, demo) {
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderStatistika(state, dom) {
     dom.statsSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
-    writeHtml(dom.statsBody, statsHtml(statsModel(state, state.statsPeriod), state.demo), 'statsBody');
+    writeHtml(dom.statsBody, statsHtml(statsModel(state, state.statsPeriod), state.known !== 'elektraren'), 'statsBody');
 }

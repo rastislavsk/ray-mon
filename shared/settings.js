@@ -32,6 +32,11 @@ import { inRange, isObj } from './valid.js';
  * dopĺňajú sa vždy z config.js - keby sa tam zmenili, prejaví sa to aj u uložených nastavení.
  * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, tariff: Tariff, kiosk: string }} UserSettings
  */
+/**
+ * Čo appka o elektrárni vie: `nic` ani polohu (pýta sa na ňu), `poloha` len polohu (počíta
+ * s typickou strechou, karty o výkone sú sivé), `elektraren` uložené nastavenie.
+ * @typedef {'nic' | 'poloha' | 'elektraren'} Known
+ */
 
 /**
  * Nastavenie, s ktorým appka počíta, kým človek pozná len polohu: typická strecha a jedna

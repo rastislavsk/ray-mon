@@ -16,10 +16,11 @@ function renderPanels(state, dom) {
     // Smer posledného prechodu; z neho si CSS vyberie, z ktorej strany kartu prisunie.
     dom.page.dataset.dir = state.panelDir > 0 ? 'next' : 'prev';
     // Otázka na polohu pri prvom otvorení je jediná obrazovka - ostatné karty ešte nič nevedia.
-    dom.bottomnav.classList.toggle('hidden', state.welcome);
-    // Bez zadaných panelov sú karty o výkone sivé (viď .no-plant v style.css).
-    dom.panels.terazky.classList.toggle('no-plant', state.demo);
-    dom.panels.mozem.classList.toggle('no-plant', state.demo);
+    dom.bottomnav.classList.toggle('hidden', state.known === 'nic');
+    // Bez zadaných panelov sú karty o výkone sivé (viď .no-panels v style.css).
+    const noPanels = state.known !== 'elektraren';
+    dom.panels.terazky.classList.toggle('no-panels', noPanels);
+    dom.panels.mozem.classList.toggle('no-panels', noPanels);
     for (const p of PANELS) {
         dom.panels[p].classList.toggle('hidden', p !== state.panel);
         dom.navs[p].classList.toggle('active', p === state.panel);
