@@ -471,10 +471,12 @@ function initSharing(store, dom, refresh) {
     dom.shareWithKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.shareWithKiosk.checked }));
     dom.importAccept.addEventListener('click', () => {
         const s = store.get();
+        if (!s.incoming) return;
         // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na svojej
         // prvej karte (odkaz pre rodinu ju môže určiť).
-        const away = s.welcome ? { ...panelChange(s.panel, s.startPanel), setupStep: /** @type {null} */ (null) } : {};
-        if (s.incoming) applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
+        /** @type {Partial<import('./state.js').AppState>} */
+        const away = s.welcome ? { ...panelChange(s.panel, s.startPanel), setupStep: null } : {};
+        applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
     dom.shareStart.addEventListener('change', () => store.setState({ shareStart: dom.shareStart.checked }));

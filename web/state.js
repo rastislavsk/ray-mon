@@ -399,6 +399,15 @@ export function navPrevFrom(raw) {
 }
 
 /**
+ * Otázka na polohu pri prvom otvorení appky (welcome). Nie je to krok sprievodcu - za ňou
+ * zatiaľ nie je nič, kam sa vrátiť, takže nemá krížik, Späť ani ukazovateľ postupu.
+ * @param {AppState} state @param {SetupStep | null} step
+ */
+export function isWelcome(state, step) {
+    return state.welcome && step === 'lokalita';
+}
+
+/**
  * Stav pre to, čo hovorí o výkone strechy (karta Terazky, farba hlavičky): bez zadaných panelov
  * bez predpovede - tá je pre typickú strechu, nie pre jeho, a výkon z nej by klamal.
  * @param {AppState} state @returns {AppState}
