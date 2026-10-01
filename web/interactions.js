@@ -14,7 +14,7 @@ import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
 import { saveDayLog, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
-import { pagerScroll } from './pager.js';
+import { pagerScroll, scrollPager } from './pager.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
@@ -73,19 +73,15 @@ function initNavigation(store, dom) {
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
         const weekBtn = target.closest('[data-day-index]');
         if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) store.setState(dayPick(store, dom, weekBtn));
-        // Bodka len posunie pás; stránka sa dopočíta z výslednej pozície ako pri prste. Cieľ je
-        // samotná stránka (scrollIntoView), nie index krát clientWidth - ten je celočíselný, kým
-        // skutočná šírka stránky býva desatinná, čo na desktope (klik na bodku, nie prstom) nechávalo
-        // pás o pár pixelov mimo prichytenia a cez okraj presvital kúsok susednej stránky. Bodku
-        // hľadá poradie v zozname bodiek, nie atribút s číslom stránky: zoznam je ten istý, ktorý
-        // bodky rozsvecuje, takže si obe strany nemajú ako rozísť. Skryté stránky do poradia
-        // nepatria - rovnako ako ich neráta currentPage (web/pager.js).
+        // Bodka posunie pás na svoju stránku, ťuknutie na odporúčanie na ďalšiu (za poslednou
+        // znova na prvú) - rovnako ako hlášky na karte Môžem?. Spotrebič má vlastný tooltip
+        // (initDeviceChips), ťuknutie naň pás nehýbe. Stránka sa dopočíta z výslednej pozície
+        // ako pri prste. Bodku hľadá poradie v zozname bodiek, nie atribút s číslom stránky:
+        // zoznam je ten istý, ktorý bodky rozsvecuje, takže si obe strany nemajú ako rozísť.
         const dotBtn = target.closest('.pager-dot');
         const dotIndex = dotBtn instanceof HTMLElement ? dom.verdictDotButtons.indexOf(dotBtn) : -1;
-        if (dotIndex >= 0) {
-            const pageEl = dom.verdictPager.querySelectorAll('.pager-page:not(.hidden)')[dotIndex];
-            if (pageEl instanceof HTMLElement) pageEl.scrollIntoView({ inline: 'start', block: 'nearest' });
-        }
+        if (dotIndex >= 0) scrollPager(dom.verdictPager, dotIndex);
+        else if (dom.verdictPager.contains(target) && !target.closest('.go-chip')) scrollPager(dom.verdictPager, null);
     });
     dom.previewReset.addEventListener('click', () => store.setState({ previewMinutes: null, isDragging: false }));
     dom.weekDayBack.addEventListener('click', () => closeDetail(store));

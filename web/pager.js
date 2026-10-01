@@ -12,6 +12,18 @@ export function currentPage(pager) {
     return Math.min(Math.max(index, 0), pages - 1);
 }
 
+/** Posunie pás na stránku `index` (null = ďalšia, za poslednou znova prvá); stránku do stavu
+ * zapíše až poslucháč posunu, ako pri prste. Cieľ je samotná stránka (scrollIntoView), nie index
+ * krát clientWidth - ten je celočíselný, kým skutočná šírka stránky býva desatinná, čo na
+ * desktope nechávalo pás o pár pixelov mimo prichytenia a cez okraj presvital kúsok susednej
+ * stránky. Skryté stránky do poradia nepatria, rovnako ako ich neráta currentPage.
+ * @param {HTMLElement} pager @param {number | null} index */
+export function scrollPager(pager, index) {
+    const pages = pager.querySelectorAll('.pager-page:not(.hidden)');
+    const page = pages[index ?? (currentPage(pager) + 1) % pages.length];
+    if (page instanceof HTMLElement) page.scrollIntoView({ inline: 'start', block: 'nearest' });
+}
+
 /**
  * Posun pásu, ktorý listuje a prichytáva prehliadač sám; JS len číta, kde pás stojí. Bodky idú
  * za prstom hneď (len kozmeticky prepnú triedu), do stavu ide až ustálená stránka - inak by

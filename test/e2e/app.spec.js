@@ -259,6 +259,21 @@ test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpo
     await expect(dots.nth(0)).toHaveClass(/active/);
     await expect(page.locator('#verdict-headline')).toBeInViewport();
 
+    // Ťuknutie na odporúčanie posunie pás na ďalšiu stránku, ako hlášky na karte Môžem?.
+    await page.locator('#verdict-headline').click();
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    await expect(page.locator('#verdict-go-row')).toBeInViewport();
+    // Ťuknutie na spotrebič ukáže jeho tooltip, pás nechá na mieste.
+    await page.locator('#verdict-go-row .go-chip').first().click();
+    await expect(page.locator('#verdict-chip-tooltip')).toHaveClass(/visible/);
+    await expect(dots.nth(1)).toHaveClass(/active/);
+    // Z poslednej stránky ide ťuknutie znova na prvú.
+    await dots.nth(3).click();
+    await expect(page.locator('#verdict-wait-chip')).toBeInViewport();
+    await page.locator('#verdict-wait-chip').click();
+    await expect(dots.nth(0)).toHaveClass(/active/);
+    await expect(page.locator('#verdict-headline')).toBeInViewport();
+
     // Posuvná oblasť bez prístupu z klávesnice je vážny nález axe - preto sa kontroluje tu.
     const results = await new AxeBuilder({ page }).include('#panel-terazky').analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
