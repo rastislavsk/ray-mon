@@ -15,6 +15,7 @@ import {
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_STORAGE_KEY,
+    STORAGE_KEYS,
     SITE,
     SWIPE,
     TARIFF,
@@ -24,6 +25,7 @@ import {
     WEEK_MSG_MIN_H,
     WORKER_PV_URL,
 } from '../../shared/config.js';
+import * as config from '../../shared/config.js';
 import { dayHourTiers } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
@@ -3044,6 +3046,53 @@ test.describe('prvá karta tohto telefónu', () => {
         const url = await shared();
         expect(startFromLink(url)).toBe('mozem');
         expect(settingsFromLink(url)).toEqual({ ...OWNER, kiosk: '' });
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('vymazanie údajov', () => {
+    test('zmaže všetky vlastné kľúče aj nastavenie v adrese, cudzie nechá; appka začne od polohy', async ({ page }) => {
+        // Nový kľúč v config.js, ktorý by v STORAGE_KEYS chýbal, by po vymazaní ostal v prehliadači.
+        const vsetky = Object.entries(config)
+            .filter(([name]) => name.endsWith('_STORAGE_KEY'))
+            .map(([, key]) => key);
+        expect([...STORAGE_KEYS].sort()).toEqual(vsetky.sort());
+
+        // Bez openApp(settings): jeho init skript by po obnovení stránky nastavenie uložil znova.
+        const errors = await openApp(page, { settings: null });
+        await page.evaluate(
+            ([keys, settingsKey, settings]) => {
+                for (const key of keys) localStorage.setItem(key, key === settingsKey ? settings : 'x');
+                localStorage.setItem('cudzia-appka', 'ostane');
+            },
+            [STORAGE_KEYS, SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))],
+        );
+        await page.reload();
+        await appReady(page);
+        expect(settingsFromLink(page.url()), 'adresa nesie uložené nastavenie').not.toBeNull();
+
+        await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-clear');
+        page.once('dialog', (d) => d.accept());
+        await page.locator('#clear-data').click();
+
+        await expect(page.locator('#wz-lokalita')).toBeVisible();
+        await appReady(page);
+        const ulozene = await page.evaluate(() => ({ ...localStorage }));
+        expect(ulozene).toEqual({ 'cudzia-appka': 'ostane' });
+        expect(settingsFromLink(page.url())).toBeNull();
+        await expect(page.locator('#import-offer')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('zrušenie otázky nič nezmaže', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-clear');
+        page.once('dialog', (d) => d.dismiss());
+        await page.locator('#clear-data').click();
+        expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).not.toBeNull();
+        await expect(page.locator('#settings-clear')).toBeVisible();
         expect(errors).toEqual([]);
     });
 });

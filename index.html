@@ -625,6 +625,31 @@
                                         </div>
                                     </details>
                                 </li>
+                                <!-- Zmaže všetko, čo appka v prehliadači uložila (web/interactions.js, initClearData).
+                                     Odinštalovanie appky to samo neurobí - údaje patria doméne, nie ikone. -->
+                                <li>
+                                    <details class="settings-item" id="settings-clear">
+                                        <summary class="settings-summary">
+                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                                            </svg>
+                                            <span class="settings-text">
+                                                <b>Vymazať údaje</b>
+                                                <span class="settings-hint">Všetko, čo si appka uložila v tomto prehliadači</span>
+                                            </span>
+                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </summary>
+                                        <div class="settings-body clear-data">
+                                            <p>
+                                                Zmaže elektráreň, polohu, úvodnú kartu, záznamy „Pustil/a som“ a denník výroby. Appka sa
+                                                potom otvorí ako prvýkrát. Odinštalovanie appky tieto údaje samo nezmaže.
+                                            </p>
+                                            <button type="button" class="danger-btn" id="clear-data">Vymazať údaje</button>
+                                        </div>
+                                    </details>
+                                </li>
                             </ul>
                             <p class="app-credit mono">Toilet Apps Ltd.</p>
                             <p class="app-credit mono">Made by 2R &amp; Claude ¯\_(ツ)_/¯</p>

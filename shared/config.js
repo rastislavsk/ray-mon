@@ -375,6 +375,12 @@ export const LAUNCH_STORAGE_KEY = 'spustenia-v1';
 export const DAYLOG = { limit: 400, fromMin: 180 };
 export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
+/**
+ * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
+ * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
+ */
+export const STORAGE_KEYS = [SETTINGS_STORAGE_KEY, SITE_STORAGE_KEY, START_STORAGE_KEY, LAUNCH_STORAGE_KEY, DAYLOG_STORAGE_KEY];
+
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 

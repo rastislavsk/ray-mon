@@ -9,6 +9,7 @@ import {
     SITE_STORAGE_KEY,
     START_PANELS,
     START_STORAGE_KEY,
+    STORAGE_KEYS,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
@@ -127,4 +128,18 @@ export function loadDayLog() {
 /** @param {import('../shared/daylog.js').DayLog} log @returns {boolean} podarilo sa? */
 export function saveDayLog(log) {
     return write(DAYLOG_STORAGE_KEY, JSON.stringify(log));
+}
+
+/**
+ * Zmaže všetko, čo appka v tomto prehliadači uložila. Len vlastné kľúče, nie celé úložisko:
+ * appky na GitHub Pages toho istého autora zdieľajú jednu doménu, a teda aj localStorage.
+ */
+export function clearStored() {
+    for (const key of STORAGE_KEYS) {
+        try {
+            localStorage.removeItem(key);
+        } catch {
+            // Bez úložiska nie je čo mazať.
+        }
+    }
 }

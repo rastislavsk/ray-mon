@@ -12,7 +12,7 @@ import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { nextPv, panelChange } from './state.js';
-import { saveDayLog, saveStartPanel } from './settings-store.js';
+import { clearStored, saveDayLog, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
 import { pagerScroll, scrollPager } from './pager.js';
 import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
@@ -487,6 +487,21 @@ function initSharing(store, dom, refresh) {
 }
 
 /**
+ * „Vymazať údaje“ v Nastavení. Po vymazaní sa stránka obnoví a appka naštartuje ako pri prvom
+ * otvorení - jednoduchšie a istejšie než skladať čistý stav ručne. Adresu treba vyčistiť tiež:
+ * nesie uložené nastavenie (initUrlMirror) a appka by ho po obnovení ponúkla prevziať.
+ * @param {Dom} dom
+ */
+function initClearData(dom) {
+    dom.clearData.addEventListener('click', () => {
+        if (!confirm('Vymazať všetky údaje appky z tohto prehliadača? Nedá sa to vrátiť.')) return;
+        clearStored();
+        history.replaceState(null, '', location.pathname + location.search);
+        location.reload();
+    });
+}
+
+/**
  * Karta Štatistika: prepínač obdobia a výzvy do Nastavenia. Výzva je jeden krok navigácie -
  * prepne kartu a rovno otvorí krok sprievodcu (ceny, meranie), takže Späť vráti do Štatistiky.
  * Bez zadaných panelov nie je čo upravovať, výzva len prepne na Nastavenie, kde čaká sprievodca.
@@ -581,6 +596,7 @@ export function initInteractions(store, dom, mq) {
     initSetup(store, dom, refresh);
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);
+    initClearData(dom);
     initStats(store, dom);
     initMozem(store, dom);
     return refresh;
