@@ -14,7 +14,7 @@
 
 Kľúčové rozhodnutie: **výpočet predpovede je jeden (`shared/solar.js`) a dostáva lokalitu
 a zostavu panelov ako parameter.** Appka ho volá v prehliadači pre elektráreň, ktorú si
-používateľ zadal v karte Nastavenie (kým nič nezadá, pre ukážku v Londýne). Tá istá funkcia
+používateľ zadal v karte Nastavenie (kým zadal len polohu, pre typickú strechu v nej). Tá istá funkcia
 sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliadača aj bez siete.
 
 Živé meranie: kto si v Nastavení vložil odkaz na kiosk FusionSolar, tomu ho appka pošle
@@ -28,26 +28,26 @@ neukladá a nemá plánované behy.
 **`shared/` – doména bez vstupov a výstupov.** Nesmie sa dotknúť DOM, siete ani
 aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 
-| Modul            | Zodpovednosť                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `config.js`      | Všetky konštanty: Dvorany a ukážka, rozsahy nastavenia, hranice výkonu, tarifa Dvorian, spotrebiče, adresy. |
-| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.     |
-| `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                            |
-| `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.         |
-| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                      |
-| `tariff.js`      | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.         |
-| `day-plan.js`    | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                 |
-| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                    |
-| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                           |
-| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                       |
-| `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.         |
-| `launches.js`    | „Pustil/a som“: zápisy spustení spotrebičov, čo práve beží a súčty za mesiac.                               |
-| `daylog.js`      | Denník výroby po dňoch pre súhrn: kontrola, zápis vyššieho súčtu, dni obdobia.                              |
-| `summary.js`     | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a spusteniach.            |
-| `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.          |
-| `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                          |
-| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                 |
-| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                          |
+| Modul            | Zodpovednosť                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `config.js`      | Všetky konštanty: Dvorany a typická strecha, rozsahy nastavenia, hranice výkonu, tarifa Dvorian, spotrebiče, adresy. |
+| `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.              |
+| `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                                     |
+| `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.                  |
+| `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                               |
+| `tariff.js`      | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.                  |
+| `day-plan.js`    | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                          |
+| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                             |
+| `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                    |
+| `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                |
+| `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                  |
+| `launches.js`    | „Pustil/a som“: zápisy spustení spotrebičov, čo práve beží a súčty za mesiac.                                        |
+| `daylog.js`      | Denník výroby po dňoch pre súhrn: kontrola, zápis vyššieho súčtu, dni obdobia.                                       |
+| `summary.js`     | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a spusteniach.                     |
+| `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                   |
+| `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
+| `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                          |
+| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -98,10 +98,10 @@ nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`share
 `settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
 Appka ho len ponúkne prevziať (`incoming` v stave). Adresa v prehliadači potom nesie vždy
-uložené nastavenie aj s kioskom (`initUrlMirror` v `web/settings-store.js`), pri ukážke je
-holá, a kým čaká ponuka, nesie odkaz. Dôvod je iPhone: appka pridaná na plochu má vlastné
+uložené nastavenie aj s kioskom (`initUrlMirror` v `web/settings-store.js`), bez zadaných panelov
+je holá, a kým čaká ponuka, nesie odkaz. Dôvod je iPhone: appka pridaná na plochu má vlastné
 úložisko, Safari s ňou nezdieľa nič okrem adresy. Pri prvom spustení z plochy tak ponúkne
-nastavenie prevziať namiesto ukážky. Z toho istého dôvodu manifest nemá `start_url` – bez
+nastavenie prevziať namiesto otázky na polohu. Z toho istého dôvodu manifest nemá `start_url` – bez
 neho sa appka spúšťa z adresy, z ktorej ju človek pridal, aj s časťou za mriežkou.
 `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou

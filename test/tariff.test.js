@@ -1,16 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-    ALL_DAYS,
-    ALL_MONTHS,
-    DEMO_PLANT,
-    DEMO_TARIFF,
-    PLANT,
-    powerThresholds,
-    TARIFF,
-    TARIFF_LIMITS,
-    TARIFF_TEMPLATES,
-} from '../shared/config.js';
+import { ALL_DAYS, ALL_MONTHS, PLANT, powerThresholds, TARIFF, TARIFF_LIMITS, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
 import {
     autoLevels,
     autoTier,
@@ -105,7 +95,7 @@ test('bandAt a priceSegments: Dvorany majú štyri hodiny VT a dvadsať NT', () 
 test('powerThresholds: Dvorany majú 2 / 4 / 1,5 / 1,2 kW, iná elektráreň v pomere najvyššieho výkonu', () => {
     assert.deepEqual(th, { lowKw: 2, highKw: 4, marginKw: 1.5, weakPeakKw: 1.2 });
     // Ukážka: 12 × 435 Wp = 5,2 kWp, menič 5 kW -> polovica Dvorian (10 kW).
-    assert.deepEqual(powerThresholds(DEMO_PLANT), { lowKw: 1, highKw: 2, marginKw: 0.75, weakPeakKw: 0.6 });
+    assert.deepEqual(powerThresholds(TYPICAL_PLANT), { lowKw: 1, highKw: 2, marginKw: 0.75, weakPeakKw: 0.6 });
     // Menič menší než panely: rozhoduje menič, inak by vysoká výroba nebola nikdy.
     const smallInverter = powerThresholds({ ...PLANT, acLimitKw: 3 });
     assert.ok(smallInverter.highKw < 3);
@@ -129,7 +119,7 @@ test('productionLevel a smartTier: od dolnej hranice zelená, pod ňou farba cen
     assert.equal(smartTier('bezna', 0.5, th), 'grey');
     assert.equal(smartTier('lacna', 0.5, th), 'amber');
     // Pri menšej elektrárni je rovnaký výkon „viac“.
-    assert.equal(productionLevel(2.5, powerThresholds(DEMO_PLANT)), 'vys');
+    assert.equal(productionLevel(2.5, powerThresholds(TYPICAL_PLANT)), 'vys');
 });
 
 test('autoTier: lacné pásmo bez slnka oranžové, inak bez slnka červené, silné slnko mimo drahého zelené', () => {
@@ -173,7 +163,7 @@ test('autoLevels: najlacnejšie lacné, najdrahšie drahé, ostatné bežné; be
 
 test('checkTariff: referenčné tarify sú v poriadku', () => {
     assert.deepEqual(checkTariff(TARIFF), { errors: [], warnings: [] });
-    assert.deepEqual(checkTariff(DEMO_TARIFF), { errors: [], warnings: [] });
+    assert.deepEqual(checkTariff(TARIFF_TEMPLATES.jedna), { errors: [], warnings: [] });
     assert.deepEqual(checkTariff(troj()), { errors: [], warnings: [] });
 });
 
@@ -273,7 +263,7 @@ test('typ sadzby, nové pásmo, výnimky a súhrn tarify', () => {
     assert.ok(isWeekendSchedule(t.schedules[1]) && !isSeasonSchedule(t.schedules[1]));
     assert.ok(isSeasonSchedule(t.schedules[2]) && !isWeekendSchedule(t.schedules[2]));
     assert.equal(tariffHint(TARIFF), '2 pásma · lacno 20 h');
-    assert.equal(tariffHint(DEMO_TARIFF), '2 pásma · lacno 7 h');
+    assert.equal(tariffHint(TARIFF_TEMPLATES.dvoj), '2 pásma · lacno 8 h');
     assert.equal(tariffHint(TARIFF_TEMPLATES.jedna), 'Jedna cena celý deň');
     assert.equal(tariffHint(t), '3 pásma · lacno 8 h · víkend inak · časť roka inak');
     assert.equal(tariffPricesText(TARIFF), null);

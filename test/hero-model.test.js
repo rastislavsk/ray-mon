@@ -105,6 +105,12 @@ test('náhľad iného času berie výkon z krivky: minulosť merané, budúcnos�
     assert.ok(Number.isFinite(future.power));
 });
 
+test('bez dát je v ciferníku pomlčka a jednotka netvrdí, že je to odhad', () => {
+    const m = heroModel({ ...base, now: at('13:00'), pv: null, forecast: null });
+    assert.equal(m.powerText, '–');
+    assert.equal(m.unitText, 'kW');
+});
+
 test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria voči vlastnej zostave', () => {
     const m = heroModel({ ...base, now: at('13:00'), pv: null });
     assert.ok(Number.isFinite(m.power) && m.power > 0, `odhad ${m.power}`);

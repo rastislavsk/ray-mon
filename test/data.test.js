@@ -1,8 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WORKER_PV_URL, DEMO_PLANT, DEMO_SITE, geocodeUrl, openMeteoUrl, PLANT, SITE, WEATHER_CACHE_MS } from '../shared/config.js';
+import { WORKER_PV_URL, geocodeUrl, openMeteoUrl, PLANT, SITE, TYPICAL_PLANT, WEATHER_CACHE_MS } from '../shared/config.js';
 import { loadData, searchPlaces } from '../web/data.js';
 import { FIXED_NOW, fixture, fixtureData } from './helpers.js';
+
+/** Iná elektráreň než Dvorany - na overenie, že sa sťahuje pre ňu. */
+const OTHER_SITE = { name: 'Sevilla', lat: 37.39, lon: -5.98, elevationM: 10, timezone: 'Europe/Madrid' };
 
 const weatherJson = fixture('open-meteo.json');
 const { pv } = fixtureData();
@@ -37,9 +40,9 @@ test('bez kiosku: Worker sa ani nevolá, predpoveď je počítaná v prehliadač
 
 test('iná lokalita: predpoveď je pre jej zostavu', async () => {
     const later = new Date(FIXED_NOW.getTime() + 2 * WEATHER_CACHE_MS);
-    const f = fakeFetch({ [openMeteoUrl(DEMO_SITE)]: weatherJson });
-    const r = await loadData({ site: DEMO_SITE, plant: DEMO_PLANT, kiosk: '' }, later, f.impl);
-    assert.deepEqual(f.calls, [openMeteoUrl(DEMO_SITE)]);
+    const f = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: weatherJson });
+    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk: '' }, later, f.impl);
+    assert.deepEqual(f.calls, [openMeteoUrl(OTHER_SITE)]);
     assert.equal(r.pv, null);
     assert.ok(r.forecast && r.forecast.days.length === 7);
     assert.notDeepEqual(r.forecast, fixtureData().forecast);
@@ -60,8 +63,12 @@ test('počasie sa drží v pamäti; pri výpadku ostáva staré, pri zlých dát
     assert.ok(down.calls.includes(openMeteoUrl(SITE)));
     assert.ok(stale.forecast);
     // Nezmyselná odpoveď: predpoveď nie je, appka nespadne.
-    const broken = fakeFetch({ [openMeteoUrl(DEMO_SITE)]: { hourly: { time: 'x' } } });
-    const r = await loadData({ site: DEMO_SITE, plant: DEMO_PLANT, kiosk: '' }, new Date(t0.getTime() + 5 * WEATHER_CACHE_MS), broken.impl);
+    const broken = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: { hourly: { time: 'x' } } });
+    const r = await loadData(
+        { site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk: '' },
+        new Date(t0.getTime() + 5 * WEATHER_CACHE_MS),
+        broken.impl,
+    );
     assert.equal(r.forecast, null);
 });
 
@@ -90,7 +97,7 @@ test('vlastný kiosk: odkaz ide Workeru v tele POST, cron Workera sa nepýta', a
             }
         )
     );
-    const r = await loadData({ site: DEMO_SITE, plant: DEMO_PLANT, kiosk }, FIXED_NOW, impl);
+    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk }, FIXED_NOW, impl);
     assert.deepEqual(r.pv, pv);
     const post = calls.find((c) => c.url === WORKER_PV_URL);
     assert.ok(post);
@@ -104,8 +111,8 @@ test('vlastný kiosk: odkaz ide Workeru v tele POST, cron Workera sa nepýta', a
     assert.equal(r.pvFailed, false);
     assert.ok(!calls.some((c) => c.url.includes('Abc123xyz')), 'odkaz nie je v žiadnej adrese');
 
-    const down = fakeFetch({ [openMeteoUrl(DEMO_SITE)]: weatherJson });
-    const failed = await loadData({ site: DEMO_SITE, plant: DEMO_PLANT, kiosk }, FIXED_NOW, down.impl);
+    const down = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: weatherJson });
+    const failed = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk }, FIXED_NOW, down.impl);
     assert.equal(failed.pv, null);
     assert.equal(failed.pvFailed, true, 'výpadok kiosku sa odlíši od chýbajúceho kiosku');
     assert.ok(failed.forecast, 'výpadok kiosku predpoveď nezhodí');

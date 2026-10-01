@@ -3,9 +3,6 @@
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
 import {
-    DEMO_PLANT,
-    DEMO_SITE,
-    DEMO_TARIFF,
     installedKw,
     PLANT,
     SETTINGS_LIMITS,
@@ -13,6 +10,8 @@ import {
     START_HASH_KEY,
     START_PANELS,
     TARIFF,
+    TARIFF_TEMPLATES,
+    TYPICAL_PLANT,
 } from './config.js';
 import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
@@ -34,9 +33,13 @@ import { inRange, isObj } from './valid.js';
  * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, tariff: Tariff, kiosk: string }} UserSettings
  */
 
-/** Ukážka pre nového používateľa. @returns {Settings} */
-export function demoSettings() {
-    return { site: DEMO_SITE, plant: DEMO_PLANT, tariff: DEMO_TARIFF, kiosk: '' };
+/**
+ * Nastavenie, s ktorým appka počíta, kým človek pozná len polohu: typická strecha a jedna
+ * cena celý deň (to isté ako „Neviem“ pri tarife).
+ * @param {Site} site @returns {Settings}
+ */
+export function typicalSettings(site) {
+    return { site, plant: TYPICAL_PLANT, tariff: TARIFF_TEMPLATES.jedna, kiosk: '' };
 }
 
 /** Doplní zadané údaje o odborné parametre zostavy. @param {UserSettings} user @returns {Settings} */
@@ -138,9 +141,20 @@ export function checkSettings(s) {
     return { errors, warnings, kwp, panels };
 }
 
+/** Lokalita z uloženého objektu; kontrolu robí volajúci. @param {Record<string, any>} o @returns {Site} */
+function siteFrom(o) {
+    return {
+        name: typeof o.name === 'string' ? o.name : '',
+        lat: Number(o.lat),
+        lon: Number(o.lon),
+        elevationM: Number.isFinite(o.elevationM) ? o.elevationM : 0,
+        timezone: o.timezone,
+    };
+}
+
 /**
  * Nastavenie z localStorage. Dáta odtiaľ sú nedôveryhodné (iná verzia appky, ručný zásah),
- * preto všetko, čo nie je presne v poriadku, vráti null a appka ukáže ukážku.
+ * preto všetko, čo nie je presne v poriadku, vráti null a appka sa správa, akoby nič uložené nebolo.
  * @param {unknown} raw @returns {Settings | null}
  */
 export function parseStoredSettings(raw) {
@@ -149,13 +163,7 @@ export function parseStoredSettings(raw) {
     if (!isObj(o.site) || !Array.isArray(o.strings)) return null;
     /** @type {UserSettings} */
     const user = {
-        site: {
-            name: typeof o.site.name === 'string' ? o.site.name : '',
-            lat: Number(o.site.lat),
-            lon: Number(o.site.lon),
-            elevationM: Number.isFinite(o.site.elevationM) ? o.site.elevationM : 0,
-            timezone: o.site.timezone,
-        },
+        site: siteFrom(o.site),
         strings: o.strings.map((/** @type {any} */ x) => ({
             panels: Number(x && x.panels),
             azimuthDeg: Number(x && x.azimuthDeg),
@@ -172,6 +180,19 @@ export function parseStoredSettings(raw) {
     if (!user.tariff) return null;
     const s = settingsFrom(user);
     return user.site.name && checkSettings(s).errors.length === 0 ? s : null;
+}
+
+/**
+ * Samotná poloha z localStorage - kto ju zadal, no panely ešte nie. Rovnako nedôveryhodná
+ * ako uložené nastavenie: čokoľvek nesedí, je null a appka sa na polohu spýta znova.
+ * @param {unknown} raw @returns {Site | null}
+ */
+export function parseStoredSite(raw) {
+    if (!isObj(raw)) return null;
+    const site = siteFrom(/** @type {Record<string, any>} */ (raw));
+    /** @type {string[]} */ const errors = [];
+    checkSite(site, errors);
+    return site.name && errors.length === 0 ? site : null;
 }
 
 /**
@@ -208,10 +229,9 @@ export function siteMetaText(site) {
     return `${fmt2(Math.abs(site.lat))}° ${ns} · ${fmt2(Math.abs(site.lon))}° ${ew} · ${Math.round(site.elevationM)} m n. m. · ${site.timezone}`;
 }
 
-/** Súhrn uloženej elektrárne v zatvorenej položke nastavenia. @param {Settings} s @param {boolean} demo */
-export function settingsHint(s, demo) {
-    const text = `${s.site.name} · ${kwpText(installedKw(s.plant))}`;
-    return demo ? `Ukážka · ${text}` : text;
+/** Elektráreň jedným riadkom: poloha a výkon. @param {Settings} s */
+export function settingsHint(s) {
+    return `${s.site.name} · ${kwpText(installedKw(s.plant))}`;
 }
 
 // ---- Zdieľanie nastavenia odkazom ------------------------------------------------------

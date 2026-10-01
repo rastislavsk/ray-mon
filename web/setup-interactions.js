@@ -14,7 +14,7 @@ import {
     TARIFF_LIMITS,
     TARIFF_TEMPLATES,
 } from '../shared/config.js';
-import { checkSettings, demoSettings, sameSettings, settingsFromLink } from '../shared/settings.js';
+import { checkSettings, sameSettings, settingsFromLink, typicalSettings } from '../shared/settings.js';
 import { emptySettings, newRoof, nextSetupPlace, prevSetupPlace } from '../shared/setup.js';
 import {
     autoLevels,
@@ -30,8 +30,8 @@ import {
 import { searchPlaces } from './data.js';
 import { backTo } from './history.js';
 import { brushOf, setupReady } from './render/nastavenie.js';
-import { saveSettings } from './settings-store.js';
-import { savedSettings, setupDraft } from './state.js';
+import { saveSettings, saveSite } from './settings-store.js';
+import { panelChange, savedSettings, setupDraft } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./state.js').AppState} AppState */
@@ -62,6 +62,7 @@ export function applySettings(store, next, refresh, extra = {}) {
         tariff: next.tariff,
         kiosk: next.kiosk,
         demo: false,
+        welcome: false,
         pv: null,
         forecast: null,
         loading: true,
@@ -73,6 +74,41 @@ export function applySettings(store, next, refresh, extra = {}) {
         ...extra,
     });
     refresh();
+}
+
+/**
+ * Uloží samotnú polohu - kto panely ešte nepozná, uvidí aspoň predpoveď pre typickú strechu
+ * v nej. Keď prehliadač ukladať nedovolí, appka pokračuje aj tak: polohu si pamätá do zatvorenia,
+ * a nabudúce sa na ňu spýta znova.
+ * @param {Store} store @param {import('../shared/config.js').Site} site @param {() => Promise<void>} refresh
+ * @param {Partial<AppState>} [extra]
+ */
+function applySite(store, site, refresh, extra = {}) {
+    saveSite(site);
+    const next = typicalSettings(site);
+    store.setState({
+        site,
+        plant: next.plant,
+        tariff: next.tariff,
+        kiosk: next.kiosk,
+        demo: true,
+        welcome: false,
+        pv: null,
+        forecast: null,
+        loading: true,
+        now: new Date(),
+        setupReturn: null,
+        settingsNote: '',
+        ...extra,
+    });
+    refresh();
+}
+
+/** „Teraz nie, ukáž predpoveď“ na otázke o polohe: uloží ju a otvorí kartu 7 dní. @param {Store} store @param {() => Promise<void>} refresh */
+function skipPanels(store, refresh) {
+    const s = store.get();
+    if (!s.welcome || !setupReady(s)) return;
+    applySite(store, s.settingsDraft.site, refresh, { ...panelChange(s.panel, '7dni'), setupStep: null });
 }
 
 /** Úpravy rozpísaného nastavenia. `rewrite` prepíše aj hodnoty polí. @param {Store} store */
@@ -122,19 +158,22 @@ function placeSearch(store) {
 // ---- Pohyb v sprievodcovi -------------------------------------------------------
 
 /**
- * Otvorí sprievodcu od úvodu. Kto ho už raz rozpísal a odišiel, pokračuje s tým, čo zadal.
- * Ukážka (Londýn) sa nepredvypĺňa - človek by si ju mohol omylom nechať ako svoju.
+ * Dokončenie elektrárne, ktorej appka pozná len polohu: sprievodca od panelov, poloha je hotová.
+ * Kto ho už raz rozpísal a odišiel, pokračuje s tým, čo zadal. Typická strecha sa nepredvypĺňa -
+ * človek by si ju mohol omylom nechať ako svoju.
  * @param {Store} store
  */
 function startSetup(store) {
     const s = store.get();
-    const fresh = s.demo && sameSettings(s.settingsDraft, demoSettings());
+    const fresh = sameSettings(s.settingsDraft, typicalSettings(s.site));
+    const empty = emptySettings();
+    const draft = { ...empty, site: s.site, plant: { ...empty.plant, strings: [newRoof(s.site.lat)] } };
     store.setState({
-        setupStep: 'start',
+        setupStep: 'panel',
         setupRoof: 0,
         setupReturn: null,
         settingsNote: '',
-        ...(fresh ? { settingsDraft: emptySettings(), settingsRev: s.settingsRev + 1, setupLive: false, setupKwp: null } : {}),
+        ...(fresh ? { settingsDraft: draft, settingsRev: s.settingsRev + 1, setupLive: false, setupKwp: null } : {}),
     });
 }
 
@@ -158,9 +197,11 @@ function openLink(store) {
 }
 
 /** Zavrie sprievodcu. Rozpísané ostáva - kto ho otvorí znova, pokračuje. Úprava uloženej
- * elektrárne sa naopak zahodí, lebo tam „zavrieť“ znamená „nechať, ako bolo“. @param {Store} store */
+ * elektrárne sa naopak zahodí, lebo tam „zavrieť“ znamená „nechať, ako bolo“. Kým appka
+ * nepozná polohu, za sprievodcom nie je nič - vracia sa na otázku o nej. @param {Store} store */
 function closeSetup(store) {
     const s = store.get();
+    if (s.welcome) return backTo(store, { setupStep: 'lokalita', setupReturn: null });
     if (s.setupReturn !== 'prehlad') return store.setState({ setupStep: null, setupReturn: null });
     const saved = savedSettings(s);
     store.setState({ settingsDraft: saved, settingsRev: s.settingsRev + 1, setupLive: !!saved.kiosk, setupStep: null, setupReturn: null });
@@ -188,6 +229,10 @@ function goNext(store, refresh) {
     const s = store.get();
     if (!setupReady(s) || !s.setupStep) return;
     if (s.setupReturn === 'suhrn') return backTo(store, { setupStep: 'suhrn', setupReturn: null });
+    // Bez zadaných panelov sa ukladá len poloha: pri prvom otvorení (a sprievodca pokračuje
+    // panelmi) aj pri jej zmene z prehľadu karty.
+    if (s.welcome && s.setupStep === 'lokalita') return applySite(store, s.settingsDraft.site, refresh, { setupStep: 'panel' });
+    if (s.demo && s.setupReturn === 'prehlad') return applySite(store, s.settingsDraft.site, refresh, { setupStep: null });
     if (s.setupReturn === 'prehlad' || s.setupStep === 'suhrn')
         return applySettings(store, setupDraft(s), refresh, { setupStep: null, setupReturn: null, setupLink: '' });
     if (s.setupStep === 'odkaz') return acceptLink(store);
@@ -202,7 +247,8 @@ function goNext(store, refresh) {
 /** „Späť“ - ten istý krok ako tlačidlo Späť na telefóne, pokiaľ sa dá (backTo). @param {Store} store */
 function goBack(store) {
     const s = store.get();
-    if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start') return closeSetup(store);
+    if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start' || (s.welcome && s.setupStep === 'odkaz'))
+        return closeSetup(store);
     const place = prevSetupPlace(
         { step: s.setupStep, roof: s.setupRoof },
         s.settingsDraft.plant.strings.length,
@@ -535,6 +581,7 @@ function clickActions(store, dom, refresh, ops) {
         ['#wz-close', () => closeSetup(store)],
         ['[data-setup-go]', (el) => (el.dataset.setupGo === 'odkaz' ? openLink(store) : startSetup(store))],
         ['[data-setup-restart]', () => restartSetup(store)],
+        ['[data-setup-later]', () => skipPanels(store, refresh)],
         ['[data-setup-edit]', (el) => editStep(store, el.dataset.setupEdit || '')],
         ['[data-setup-tab]', (el) => store.setState({ setupStep: /** @type {any} */ (el.dataset.setupTab) })],
         ['[data-geo]', (el) => pickPlace(store, ops, num(el.dataset.geo))],

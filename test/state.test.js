@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STALE_PV_MS } from '../shared/config.js';
-import { demoSettings } from '../shared/settings.js';
+import { SITE, STALE_PV_MS } from '../shared/config.js';
+import { typicalSettings } from '../shared/settings.js';
 import {
     createStore,
     initialState,
@@ -13,6 +13,7 @@ import {
     nextPv,
     nextWeekDay,
     panelChange,
+    powerState,
     sameNavStep,
     savedSettings,
     setupDraft,
@@ -20,7 +21,7 @@ import {
 
 test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
     const store = createStore(
-        initialState(new Date('2026-09-05T11:00:00Z'), { wide: false, tall: false }, { settings: demoSettings(), demo: true }),
+        initialState(new Date('2026-09-05T11:00:00Z'), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true }),
     );
     let calls = 0;
     store.subscribe(() => calls++);
@@ -35,7 +36,7 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
 });
 
 test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
-    const store = createStore(initialState(new Date(), { wide: true, tall: true }, { settings: demoSettings(), demo: true }));
+    const store = createStore(initialState(new Date(), { wide: true, tall: true }, { settings: typicalSettings(SITE), demo: true }));
     let calls = 0;
     const off = store.subscribe(() => calls++);
     store.setState({ panel: 'terazky', wide: true });
@@ -46,10 +47,33 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
 });
 
 test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s elektrárňou', () => {
-    const settings = demoSettings();
+    const settings = typicalSettings(SITE);
     const state = initialState(new Date(), { wide: false, tall: false }, { settings, demo: true });
     assert.equal(state.tariff, settings.tariff);
     assert.deepEqual(savedSettings(state), settings);
+});
+
+test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na svojej karte', () => {
+    const now = new Date();
+    const layout = { wide: false, tall: false };
+    const welcome = initialState(now, layout, { settings: null, demo: true, startPanel: 'mozem' });
+    assert.equal(welcome.welcome, true);
+    assert.equal(welcome.demo, true);
+    assert.equal(welcome.panel, 'nastavenie');
+    assert.equal(welcome.setupStep, 'lokalita');
+    assert.equal(welcome.site.name, '', 'poloha je prázdna, kým ju človek nevyberie');
+    const site = initialState(now, layout, { settings: typicalSettings(SITE), demo: true, startPanel: 'mozem' });
+    assert.equal(site.welcome, false);
+    assert.equal(site.panel, 'mozem');
+    assert.equal(site.setupStep, null);
+});
+
+test('powerState: bez zadaných panelov karty o výkone nevidia predpoveď typickej strechy', () => {
+    const state = initialState(new Date(), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true });
+    const forecast = /** @type {any} */ ({ days: [] });
+    assert.equal(powerState({ ...state, forecast }).forecast, null);
+    const own = { ...state, demo: false, forecast };
+    assert.equal(powerState(own), own, 's panelmi je to ten istý stav');
 });
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
@@ -99,7 +123,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
 });
 
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {
-    const state = initialState(new Date(), { wide: false, tall: false }, { settings: demoSettings(), demo: true });
+    const state = initialState(new Date(), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true });
     assert.deepEqual(navStep(state), {
         panel: 'terazky',
         weekDetail: null,
@@ -299,12 +323,12 @@ test('nextPv: pri výpadku kiosku ostáva posledné meranie, no nie staršie ne�
 
 test('setupDraft: bez živého merania sa kiosk neukladá, celkový výkon sa rozpočíta na panel', () => {
     const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-    const base = demoSettings();
+    const base = typicalSettings(SITE);
     const state = initialState(new Date(), { wide: false, tall: false }, { settings: { ...base, kiosk }, demo: false });
     assert.equal(state.setupLive, true, 'uložený kiosk znamená, že meranie človek chce');
     assert.equal(setupDraft(state).kiosk, kiosk);
     assert.equal(setupDraft({ ...state, setupLive: false }).kiosk, '');
-    // Ukážka má 12 panelov: 6 kWp je 500 Wp na panel.
+    // Typická strecha má 12 panelov: 6 kWp je 500 Wp na panel.
     assert.equal(setupDraft({ ...state, setupKwp: 6 }).plant.panelWp, 500);
     assert.equal(setupDraft(state).plant.panelWp, base.plant.panelWp, 'bez celkového výkonu ostáva zadaný výkon panelu');
 });

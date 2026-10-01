@@ -371,8 +371,8 @@ b {
         flex-shrink: 0;
     }
 }
-/* Výzva v ukážke. Zámerne krikľavá: kto ju prehliadne, číta čísla vymyslenej elektrárne ako
-   svoje. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
+/* Výzva bez zadaných panelov. Zámerne krikľavá: kto ju prehliadne, nevie, prečo sú karty
+   sivé a bez čísel. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
 .demo-bar {
     max-width: var(--page-max);
     margin: 0 auto;
@@ -899,7 +899,7 @@ b {
 }
 /* Ikonka visí pod hlavičkou, pod časom - je absolútna, takže hlavičku nezväčšuje. Ukazuje sa
    len na karte Terazky, ktorej ciferník vysvetľuje. Ukotvená je na celú .appbar (sticky je tiež
-   ukotvenie), nie na .appbar-inner: pod tou je v ukážke červená výzva a ikonka by padla na ňu.
+   ukotvenie), nie na .appbar-inner: pod tou je bez zadaných panelov červená výzva a ikonka by padla na ňu.
    Navigácia je tu fixed, takže do výšky .appbar nepatrí. .appbar je na celú šírku okna, preto
    odsadenie sprava ráta s okrajom stredného stĺpca (--page-max). */
 .appbar-info {
@@ -1111,6 +1111,14 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 
 /* ---- Terazky: verdikt a spotrebiče --------------------------------------- */
+/* Bez zadaných panelov sú karty o výkone sivé: čísla v nich nie sú (viď powerState vo
+   web/state.js) a farba by sľubovala odpoveď, ktorú appka nemá. Tooltip spotrebiča je
+   position: fixed - filter by mu zmenil, k čomu sa vzťahuje, preto ho obchádza. */
+.no-plant .dial-hero,
+.no-plant .verdict > :not(.chip-tooltip),
+.no-plant .mozem {
+    filter: grayscale(1);
+}
 .verdict {
     text-align: center;
     /* Container query jednotky (cqw) nižšie potrebujú predka s inline-size kontajnmentom -
@@ -2538,7 +2546,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .settings-body {
     padding: 0 16px 18px;
 }
-/* Položka Elektráreň nemá čo ukázať, kým je prehľad skrytý (ukážka): výzva k sprievodcovi je nad ňou. */
+/* Položka Elektráreň nemá čo ukázať, kým je prehľad skrytý (panely nie sú zadané): výzva k sprievodcovi je nad ňou. */
 .plant-list:has(#setup-overview.hidden) {
     display: none;
 }
@@ -3108,6 +3116,12 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     display: grid;
     gap: var(--sp-3);
     align-content: start;
+}
+/* Prvé otvorenie: pod otázkou na polohu odložiť panely a prevziať nastavenie z odkazu. */
+.wz-welcome {
+    display: grid;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
 }
 .seg {
     display: grid;
@@ -4107,7 +4121,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 /* Bez predpovede (dáta nie sú): tmavšia a stlmenejšia sivá než --grey pri „slabo“, aby výpadok
    nevyzeral ako obyčajný deň. S #878682 v navigácii nesúvisí, podobnosť je náhoda. */
-.mozem-hero.st-offline {
+.mozem-hero.st-offline,
+.mozem-hero.st-bezpanelov {
     background: #8a8780;
 }
 .mozem-hero.st-loading {

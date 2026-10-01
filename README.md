@@ -70,8 +70,10 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Súčty posiela len živé meranie; bez neho karta ukáže dnešok podľa predpovede a ponúkne
   meranie pripojiť, bez cien ukáže len kWh a ponúkne ceny doplniť. Obe výzvy otvoria
   rovno ten krok v Nastavení.
-- **Nastavenie** – moja elektráreň. Kým si ju človek neuloží, appka ukazuje ukážku
-  vymyslenej elektrárne v Londýne a karta ponúka **sprievodcu**: sedem krokov s jednou
+- **Nastavenie** – moja elektráreň. Pri prvom otvorení sa appka spýta len na polohu; panely
+  môže človek nastaviť hneď, alebo ich odložiť – vtedy karta 7 dní ukazuje predpoveď pre
+  typickú strechu v jeho polohe a karty Terazky a Môžem? sú sivé s výzvou panely nastaviť.
+  Karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
   alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou

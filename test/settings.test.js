@@ -1,31 +1,45 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_PLANT, DEMO_SITE, DEMO_TARIFF, installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
+import { installedKw, PLANT, SITE, TARIFF, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
 import {
     checkSettings,
-    demoSettings,
     isTimezone,
     parseGeocode,
     parseStoredSettings,
+    parseStoredSite,
     sameSettings,
     settingsFrom,
     settingsHint,
     siteMetaText,
     toUser,
+    typicalSettings,
 } from '../shared/settings.js';
 
 const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
 
-test('ukážka je Londýn s vlastnou zostavou a prejde kontrolou', () => {
-    const demo = demoSettings();
-    assert.equal(demo.site, DEMO_SITE);
-    assert.equal(demo.plant, DEMO_PLANT);
-    assert.equal(demo.tariff, DEMO_TARIFF);
-    const check = checkSettings(demo);
+const SEVILLA = { name: 'Sevilla', lat: 37.39, lon: -5.98, elevationM: 10, timezone: 'Europe/Madrid' };
+
+test('len poloha: typická strecha v nej a jedna cena, prejde kontrolou', () => {
+    const typical = typicalSettings(SEVILLA);
+    assert.equal(typical.site, SEVILLA);
+    assert.equal(typical.plant, TYPICAL_PLANT);
+    assert.equal(typical.tariff, TARIFF_TEMPLATES.jedna);
+    assert.equal(typical.kiosk, '');
+    const check = checkSettings(typical);
     assert.deepEqual(check.errors, []);
     assert.equal(check.kwp, 12 * 0.435);
     assert.equal(check.panels, 12);
+});
+
+test('uložená poloha: platná sa načíta, čokoľvek nesedí, je null', () => {
+    assert.deepEqual(parseStoredSite(JSON.parse(JSON.stringify(SEVILLA))), SEVILLA);
+    assert.deepEqual(parseStoredSite({ ...SEVILLA, elevationM: undefined }), { ...SEVILLA, elevationM: 0 });
+    assert.equal(parseStoredSite(null), null);
+    assert.equal(parseStoredSite('Sevilla'), null);
+    assert.equal(parseStoredSite({ ...SEVILLA, name: '' }), null);
+    assert.equal(parseStoredSite({ ...SEVILLA, lat: 95 }), null);
+    assert.equal(parseStoredSite({ ...SEVILLA, timezone: 'Mars/Olympus' }), null);
 });
 
 test('Dvorany prejdú kontrolou bez varovaní', () => {
@@ -90,7 +104,7 @@ test('uloženie a načítanie: odborné parametre sa dopĺňajú z config.js', (
     assert.ok(back);
     assert.deepEqual(back, DVORANY);
     assert.ok(sameSettings(back, DVORANY));
-    assert.ok(!sameSettings(back, demoSettings()));
+    assert.ok(!sameSettings(back, typicalSettings(SITE)));
 });
 
 test('uložené nastavenie, ktoré nesedí, sa zahodí', () => {
@@ -147,16 +161,16 @@ test('parseGeocode: lokalita s krajom a štátom, bez časového pásma sa vynec
     assert.deepEqual(parseGeocode(null), []);
 });
 
-test('texty: súradnice podľa pologule, súhrn s ukážkou', () => {
+test('texty: súradnice podľa pologule, súhrn jedným riadkom', () => {
     assert.equal(siteMetaText(SITE), '48,48° s. š. · 18,12° v. d. · 180 m n. m. · Europe/Bratislava');
-    assert.equal(siteMetaText(DEMO_SITE), '51,51° s. š. · 0,13° z. d. · 25 m n. m. · Europe/London');
+    assert.equal(siteMetaText(SEVILLA), '37,39° s. š. · 5,98° z. d. · 10 m n. m. · Europe/Madrid');
     assert.equal(
         siteMetaText({ name: 'Sydney', lat: -33.87, lon: 151.21, elevationM: 40, timezone: 'Australia/Sydney' }),
         '33,87° j. š. · 151,21° v. d. · 40 m n. m. · Australia/Sydney',
     );
     assert.equal(siteMetaText({ ...SITE, lat: NaN }), 'Súradnice nie sú zadané.');
-    assert.equal(settingsHint(DVORANY, false), 'Dvorany nad Nitrou · 10,44 kWp');
-    assert.equal(settingsHint(demoSettings(), true), 'Ukážka · Londýn · 5,22 kWp');
+    assert.equal(settingsHint(DVORANY), 'Dvorany nad Nitrou · 10,44 kWp');
+    assert.equal(settingsHint(typicalSettings(SEVILLA)), 'Sevilla · 5,22 kWp');
 });
 
 test('kiosk: prázdny je bez merania, cudzí odkaz je chyba, uloží sa a staré nastavenie bez neho platí', () => {

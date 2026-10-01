@@ -25,7 +25,7 @@ import { bandAt, scheduleFor } from './tariff.js';
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
 /** @typedef {{ from: number, to: number }} Window úsek dňa v minútach od polnoci, `to` je bez neho */
-/** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading'} MozemState */
+/** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading' | 'bezpanelov'} MozemState */
 /**
  * Najbližší iný deň, keď slnko stačí: meno pre text („Zajtra“, „Pondelok“), poradie v predpovedi
  * (1 = zajtra) a kedy začína.
@@ -199,9 +199,10 @@ function dayCtx(input) {
     };
 }
 
-/** Hlavička karty bez predpovede: načítava sa, alebo dáta nie sú. @param {boolean} loading @param {number} page */
-function emptyHead(loading, page) {
-    /** @type {MozemState} */ const state = loading ? 'loading' : 'offline';
+/** Hlavička karty bez predpovede: panely nie sú zadané, načítava sa, alebo dáta nie sú.
+ * @param {boolean} loading @param {boolean} noPanels @param {number} page */
+function emptyHead(loading, noPanels, page) {
+    /** @type {MozemState} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
     return { state, word: MOZEM_WORDS[state], hero: mozemHeroText(state, null), strip: null, ...quipsOf(state, 0, page) };
 }
 
@@ -223,16 +224,17 @@ function quipsOf(state, day, page) {
 
 /**
  * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
- * `launches` zápisy „Pustil/a som“ z tohto telefónu.
- * @param {PlanInput & { loading: boolean }} input @param {number} [quipPage]
+ * `launches` zápisy „Pustil/a som“ z tohto telefónu. `demo`: panely nie sú zadané - karta
+ * vtedy neodpovedá, aj keby predpoveď pre typickú strechu mala.
+ * @param {PlanInput & { loading: boolean, demo?: boolean }} input @param {number} [quipPage]
  * @param {import('./launches.js').Launch[]} [launches]
  */
 export function mozemModel(input, quipPage = 0, launches = []) {
-    const ctx = input.forecast ? dayCtx(input) : null;
+    const ctx = input.forecast && !input.demo ? dayCtx(input) : null;
     const items = mozemItems(input, launches, ctx);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     return {
-        ...(ctx ? dayHead(input, ctx, quipPage) : emptyHead(input.loading, quipPage)),
+        ...(ctx ? dayHead(input, ctx, quipPage) : emptyHead(input.loading, !!input.demo, quipPage)),
         items,
         glance: mozemGlanceText(items),
         count: mozemCountText(monthCount(launches, month)),
