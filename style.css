@@ -4089,6 +4089,29 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: var(--sp-2);
 }
 
+/* Vymazanie údajov (položka „Vymazať údaje“ v Nastavení). Tlačidlo len obrysom: je nevratné,
+   nemá lákať ako hlavná akcia. */
+.clear-data {
+    display: grid;
+    gap: var(--sp-3);
+}
+.clear-data p {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+.danger-btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: var(--fs-md);
+    color: var(--red);
+    background: none;
+    border: 1px solid var(--red);
+    border-radius: var(--radius-pill);
+    padding: 12px;
+    cursor: pointer;
+}
+
 /* ---- Môžem? ---------------------------------------------------------------- */
 /* Odpoveď pre celú rodinu (návrh C v docs/navrhy/karta-mozem.html): jedno veľké slovo na plnej
    farbe, pás dneška, riadok „Čo môžem“ a hláška. Veci s ikonami sú na obrazovke so zoznamom

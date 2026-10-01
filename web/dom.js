@@ -291,6 +291,7 @@ function zdielanieDom() {
         shareKioskRow: byId('share-kiosk-row'),
         shareStart: input('share-start'),
         startPick: byId('start-pick'),
+        clearData: byId('clear-data'),
         importOffer: byId('import-offer'),
         importOfferText: byId('import-offer-text'),
         importAccept: byId('import-accept'),
