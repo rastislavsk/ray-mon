@@ -2,7 +2,7 @@
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
 import { STALE_PV_MS } from '../shared/config.js';
-import { resolveDraft, SETUP_STEPS } from '../shared/setup.js';
+import { emptySettings, resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
@@ -36,6 +36,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   tariff: import('../shared/config.js').Tariff,
  *   kiosk: string,
  *   demo: boolean,
+ *   welcome: boolean,
  *   settingsDraft: import('../shared/settings.js').Settings,
  *   settingsRev: number,
  *   settingsNote: string,
@@ -68,17 +69,21 @@ import { INFO_ITEMS, PANELS } from './dom.js';
 
 /**
  * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
- * @param {{ settings: import('../shared/settings.js').Settings, demo: boolean,
+ * @param {{ settings: import('../shared/settings.js').Settings | null, demo: boolean,
  *   incoming?: import('../shared/settings.js').Settings | null,
- *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie (alebo ukážka,
- *   vtedy `demo`), nastavenie z odkazu, ktoré appka ponúkne prevziať, a karta, na ktorej sa
- *   appka na tomto telefóne otvára
+ *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie (alebo
+ *   typická strecha v uloženej polohe, vtedy `demo`; null, kým appka polohu nepozná),
+ *   nastavenie z odkazu, ktoré appka ponúkne prevziať, a karta, na ktorej sa appka na tomto
+ *   telefóne otvára
  * @returns {AppState}
  */
 export function initialState(now, layout, { settings, demo, incoming = null, startPanel = 'terazky' }) {
+    // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí (viď welcome).
+    const welcome = !settings;
+    const start = settings || emptySettings();
     return {
         now,
-        panel: startPanel,
+        panel: welcome ? 'nastavenie' : startPanel,
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
         panelDir: 1,
@@ -124,18 +129,22 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // kým sú prázdne, grafy sa kreslia na pevné plátno z chartDims.
         chartSizes: {},
         // Elektráreň, pre ktorú appka počíta: uložené nastavenie, kým si ho používateľ
-        // nezadá, ukážka (demo).
-        site: settings.site,
-        plant: settings.plant,
+        // nezadá, typická strecha v jeho polohe (demo).
+        site: start.site,
+        plant: start.plant,
         // Tarifa: pásma, rozvrh a ceny. Kedy svieti slnko, v nej nie je - to je z predpovede.
-        tariff: settings.tariff,
+        tariff: start.tariff,
         // Odkaz na kiosk pre živé meranie; prázdny = bez merania.
-        kiosk: settings.kiosk,
+        kiosk: start.kiosk,
+        // Panely nie sú zadané: karty, ktoré o nich hovoria (Terazky, Môžem?), sú sivé a bez čísel.
         demo,
+        // Appka ešte nepozná ani polohu. Ukazuje len otázku na ňu (krok lokalita sprievodcu) bez
+        // navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie.
+        welcome,
         // Rozpísaný formulár v karte Nastavenie. Hodnoty polí píše render len pri zmene
         // settingsRev (načítanie, výber lokality, pridanie plochy, zahodenie zmien), inak by
         // počas písania prepisoval to, čo človek práve píše.
-        settingsDraft: settings,
+        settingsDraft: start,
         settingsRev: 0,
         // Hlásenie pod tlačidlom Uložiť; pri ďalšej úprave zmizne.
         settingsNote: '',
@@ -154,7 +163,7 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Sprievodca nastavením elektrárne v karte Nastavenie: otvorená obrazovka (null = karta
         // ukazuje prehľad) a plocha panelov, ktorej sa týka. Oboje je krok navigácie, takže
         // tlačidlo Späť na telefóne vracia o obrazovku sprievodcu.
-        setupStep: null,
+        setupStep: welcome ? 'lokalita' : null,
         setupRoof: 0,
         // Úprava jedného kroku: kam sa po nej vrátiť - na zhrnutie sprievodcu, alebo na prehľad
         // uloženej elektrárne (vtedy sa zmena rovno ukladá). null = sprievodca ide v poradí.
@@ -164,7 +173,7 @@ export function initialState(now, layout, { settings, demo, incoming = null, sta
         // Ako bol zadaný výkon panelu a meniča - „Neviem“ zhrnutie označí ako odhad.
         setupPick: { wp: 'chip', ac: 'chip' },
         // Či človek chce živé meranie z kiosku. Rozhoduje, či sa kiosk pri uložení vôbec berie.
-        setupLive: !!settings.kiosk,
+        setupLive: !!start.kiosk,
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
         // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým
@@ -387,6 +396,15 @@ function validInfoItem(info) {
 export function navPrevFrom(raw) {
     if (!raw || typeof raw !== 'object') return null;
     return navStepIn(/** @type {{ prev?: unknown }} */ (raw).prev);
+}
+
+/**
+ * Stav pre to, čo hovorí o výkone strechy (karta Terazky, farba hlavičky): bez zadaných panelov
+ * bez predpovede - tá je pre typickú strechu, nie pre jeho, a výkon z nej by klamal.
+ * @param {AppState} state @returns {AppState}
+ */
+export function powerState(state) {
+    return state.demo ? { ...state, pv: null, forecast: null } : state;
 }
 
 /** Uložené nastavenie, pre ktoré appka práve počíta. @param {AppState} state @returns {import('../shared/settings.js').Settings} */

@@ -76,6 +76,12 @@ const TILT_PRESETS = [
     { deg: 90, name: 'Na stene', sub: 'fasáda, 90°' },
 ];
 
+/** Otázka na polohu pri prvom otvorení appky - jediné, čo appka bez nej chce vedieť. */
+const WELCOME = {
+    title: 'Kde máš elektráreň?',
+    lead: 'Podľa polohy appka stiahne predpoveď počasia a vie, kedy u teba svieti slnko. Panely a tarifu doplníš hneď potom, alebo kedykoľvek neskôr.',
+};
+
 /** @type {Record<SetupStep, { title: string, lead: string }>} */
 const TEXTS = {
     start: {
@@ -230,9 +236,11 @@ function messagesHtml(s) {
     );
 }
 
-/** Prehľad karty: výzva k sprievodcovi (ukážka), alebo zhrnutie uloženej elektrárne. @param {AppState} state @param {Dom} dom */
+/** Prehľad karty: poloha a výzva dokončiť elektráreň (panely nie sú zadané), alebo zhrnutie
+ * uloženej elektrárne. @param {AppState} state @param {Dom} dom */
 function renderHome(state, dom) {
     dom.setupDemo.classList.toggle('hidden', !state.demo);
+    dom.setupDemoSite.textContent = state.site.name;
     dom.setupCta.classList.toggle('hidden', !state.demo);
     dom.setupOverview.classList.toggle('hidden', state.demo);
     dom.setupNote.textContent = state.settingsNote;
@@ -301,6 +309,9 @@ function placeCardHtml(s, state) {
 function renderLokalita(state, draft, dom) {
     writeHtml(dom.wzGeo, geoHtml(state.geo), 'wzGeo');
     writeHtml(dom.wzPlaceCard, placeCardHtml(draft, state), 'wzPlaceCard');
+    dom.wzWelcome.classList.toggle('hidden', !state.welcome);
+    // Odložiť panely sa dá, až keď je poloha vybraná - bez nej nie je čo ukázať.
+    dom.wzLater.classList.toggle('hidden', !setupReady(state));
 }
 
 /** Tlačidlá s bežnými hodnotami, „Iný“ a „Neviem“. @param {number[]} choices @param {number} value @param {string} pick @param {string} attr @param {string} unit */
@@ -776,6 +787,7 @@ function renderTariffMsgs(draft, step, dom) {
 
 /** Titulok a úvodná veta obrazovky; niektoré závisia od toho, čo už človek zadal. @param {AppState} state @param {Settings} draft @param {SetupStep} step */
 function textsFor(state, draft, step) {
+    if (state.welcome && step === 'lokalita') return WELCOME;
     if (step === 'panel' && state.setupKwp !== null)
         return {
             title: 'Aký výkon má celá elektráreň?',
@@ -790,21 +802,31 @@ function textsFor(state, draft, step) {
     return TEXTS[step];
 }
 
+/**
+ * Otázka na polohu pri prvom otvorení appky (welcome). Nie je to krok sprievodcu - za ňou
+ * zatiaľ nie je nič, kam sa vrátiť, takže nemá krížik, Späť ani ukazovateľ postupu.
+ * @param {AppState} state @param {SetupStep} step
+ */
+const isWelcome = (state, step) => state.welcome && step === 'lokalita';
+
+/** Riadok nad ukazovateľom postupu. @param {SetupStep} step @param {number} section @param {boolean} edit */
+function stepLabel(step, section, edit) {
+    const name = section >= 0 ? SETUP_SECTIONS[section].name : '';
+    if (edit) return `Úprava · ${name}`;
+    if (section >= 0) return `Krok ${section + 1} z ${SETUP_SECTIONS.length} · ${name}`;
+    return step === 'odkaz' ? 'Nastavenie z odkazu' : 'Moja elektráreň';
+}
+
 /** @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {number} roof @param {Dom} dom */
 function renderHead(state, draft, step, roof, dom) {
     const section = setupSection(step);
     const edit = state.setupReturn !== null;
-    const name = section >= 0 ? SETUP_SECTIONS[section].name : '';
-    dom.wzStep.textContent = edit
-        ? `Úprava · ${name}`
-        : section >= 0
-          ? `Krok ${section + 1} z ${SETUP_SECTIONS.length} · ${name}`
-          : step === 'odkaz'
-            ? 'Nastavenie z odkazu'
-            : 'Moja elektráreň';
+    const welcome = isWelcome(state, step);
+    dom.wzClose.classList.toggle('hidden', welcome);
+    dom.wzStep.textContent = welcome ? 'Vitaj' : stepLabel(step, section, edit);
     dom.wzClose.setAttribute('aria-label', edit ? 'Zrušiť úpravu' : 'Zavrieť sprievodcu');
     const prog =
-        edit || section < 0
+        edit || section < 0 || welcome
             ? ''
             : SETUP_SECTIONS.map((_, i) => `<i class="${i < section ? 'done' : i === section ? 'now' : ''}"></i>`).join('');
     writeHtml(dom.wzProg, prog, 'wzProg');
@@ -870,15 +892,16 @@ function renderFoot(state, draft, step, ok, dom) {
     const labels = {
         start: 'Začať',
         odkaz: 'Pozrieť a prevziať',
+        lokalita: state.welcome ? 'Nastaviť panely' : 'Ďalej',
         dalsia: draft.plant.strings.length >= SETTINGS_LIMITS.maxStrings ? 'Ďalej' : 'Nie, to je všetko',
         meranie: state.setupLive ? 'Ďalej' : 'Preskočiť',
         suhrn: 'Uložiť a prepočítať',
     };
     const nextLabel = ret === 'suhrn' ? 'Späť na zhrnutie' : ret === 'prehlad' ? 'Uložiť zmenu' : labels[step] || 'Ďalej';
     dom.wzNext.textContent = nextLabel;
-    dom.wzNext.disabled = !ok || (ret === 'prehlad' && !state.demo && sameSettings(draft, saved));
+    dom.wzNext.disabled = !ok || (ret === 'prehlad' && sameSettings(draft, saved));
     dom.wzBack.textContent = ret === 'prehlad' ? 'Zrušiť' : step === 'start' ? 'Neskôr' : 'Späť';
-    dom.wzBack.classList.toggle('hidden', ret === 'suhrn');
+    dom.wzBack.classList.toggle('hidden', ret === 'suhrn' || isWelcome(state, step));
 }
 
 /** Je obrazovka hotová, dá sa z nej ísť ďalej? Zdieľa ju render aj interactions.js. @param {AppState} state */
@@ -947,5 +970,5 @@ export function renderImportOffer(state, dom) {
     if (!s) return;
     const live = s.kiosk ? ' · so živým meraním' : '';
     const replaces = state.demo ? '' : ' Nahradí tvoje doterajšie nastavenie.';
-    dom.importOfferText.textContent = `${settingsHint(s, false)}${live}.${replaces}`;
+    dom.importOfferText.textContent = `${settingsHint(s)}${live}.${replaces}`;
 }

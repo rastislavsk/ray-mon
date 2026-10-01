@@ -1,0 +1,1338 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Prvé otvorenie bez Londýna</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        />
+        <style>
+            /* Návrh prvého otvorenia appky bez ukážky Londýna. Farby, písma a rozmery sú prevzaté
+               zo style.css appky, telefón je v mierke 375 px. Appka je zámerne len tmavá, preto aj
+               tento návrh. Údaje v telefóne sú vzorové (Dvorany nad Nitrou). */
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-35: rgba(242, 240, 234, 0.54);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --alarm: #d7263d;
+                --green-rgb: 158, 242, 91;
+                --amber-rgb: 255, 194, 75;
+                --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+                --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+                --radius-sm: 6px;
+                --radius-md: 12px;
+                --radius-lg: 18px;
+                --radius-pill: 999px;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: radial-gradient(circle at 15% 0%, rgba(var(--amber-rgb), 0.1) 0%, rgba(var(--amber-rgb), 0) 40%), var(--bg);
+                background-attachment: fixed;
+                color: var(--ink);
+                font-family: var(--font-body);
+                font-size: 15px;
+                line-height: 1.5;
+                font-variant-numeric: tabular-nums;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+            }
+            code {
+                font-family: var(--font-mono);
+                font-size: 0.86em;
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                border-radius: 4px;
+                padding: 0 4px;
+            }
+            .mono {
+                font-family: var(--font-mono);
+            }
+
+            /* ---- Dokument okolo telefónov ------------------------------------------- */
+            .doc {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 64px;
+            }
+            .eyebrow {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--amber);
+            }
+            h1 {
+                font-size: clamp(28px, 4vw, 40px);
+                line-height: 1.1;
+                letter-spacing: -0.02em;
+                margin: 8px 0 12px;
+                text-wrap: balance;
+            }
+            h2.part {
+                font-size: 22px;
+                margin: 56px 0 6px;
+                letter-spacing: -0.01em;
+            }
+            .lead,
+            .part-lead {
+                max-width: 72ch;
+                color: var(--ink-45);
+                margin: 0;
+            }
+            .lead {
+                font-size: 16px;
+            }
+            .principles {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                gap: 12px;
+                margin-top: 24px;
+            }
+            .principle {
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                border-radius: var(--radius-md);
+                padding: 14px 16px;
+                font-size: 14px;
+                color: var(--ink-45);
+            }
+            .principle b {
+                display: block;
+                color: var(--ink);
+                margin-bottom: 2px;
+            }
+
+            /* Tok obrazoviek */
+            .flow {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-top: 20px;
+                font-size: 13px;
+            }
+            .flow .node {
+                border: 1px solid var(--ink-12);
+                border-radius: var(--radius-pill);
+                padding: 6px 12px;
+                background: var(--card-bg);
+            }
+            .flow .node.key {
+                border-color: rgba(var(--amber-rgb), 0.6);
+                color: var(--amber);
+            }
+            .flow .arr {
+                color: var(--ink-35);
+            }
+            .flow-branch {
+                display: grid;
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                margin-top: 24px;
+                align-items: flex-start;
+            }
+            .shot {
+                width: 375px;
+                max-width: 100%;
+            }
+            .shot-cap {
+                margin-top: 12px;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .shot-cap b {
+                display: block;
+                color: var(--ink);
+                font-size: 14px;
+            }
+            .tag {
+                display: inline-block;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: var(--radius-pill);
+                margin-bottom: 8px;
+            }
+            .tag.new {
+                background: rgba(var(--amber-rgb), 0.16);
+                color: var(--amber);
+            }
+            .tag.same {
+                background: var(--ink-08);
+                color: var(--ink-45);
+            }
+            .tag.chg {
+                background: rgba(var(--green-rgb), 0.14);
+                color: var(--green);
+            }
+
+            /* ---- Telefón ------------------------------------------------------------ */
+            .phone {
+                position: relative;
+                width: 375px;
+                max-width: 100%;
+                height: 760px;
+                border-radius: 36px;
+                border: 1px solid var(--ink-12);
+                background: radial-gradient(circle at 20% 0%, rgba(var(--amber-rgb), 0.12) 0%, rgba(var(--amber-rgb), 0) 45%), var(--bg);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .appbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 22px 20px 12px;
+            }
+            .brand b {
+                display: block;
+                font-family: var(--font-mono);
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                font-size: 14px;
+            }
+            .brand span,
+            .status span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--ink-35);
+            }
+            .status {
+                text-align: right;
+            }
+            .status b {
+                display: block;
+                font-family: var(--font-mono);
+                font-size: 13px;
+                font-weight: 500;
+            }
+            .screen {
+                flex: 1;
+                padding: 0 20px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            .bottomnav {
+                display: flex;
+                justify-content: space-around;
+                padding: 14px 8px 22px;
+                border-top: 1px solid var(--ink-05);
+            }
+            .bottomnav svg {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: var(--ink-35);
+                stroke-width: 1.7;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .bottomnav .on svg {
+                stroke: var(--green);
+                filter: drop-shadow(0 0 8px rgba(var(--green-rgb), 0.5));
+            }
+
+            /* Červená výzva - tá istá ako .demo-bar v appke, len iný text. */
+            .alarm {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px 10px 14px;
+                margin: 0 20px 10px;
+                border-radius: var(--radius-md);
+                background: var(--alarm);
+                color: #fff;
+            }
+            .alarm svg {
+                width: 22px;
+                height: 22px;
+                flex: none;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .alarm .t {
+                flex: 1;
+                display: grid;
+                line-height: 1.3;
+                font-size: 13px;
+            }
+            .alarm .t b {
+                font-size: 15px;
+            }
+            .alarm .go {
+                min-height: 36px;
+                padding: 0 14px;
+                border-radius: var(--radius-pill);
+                background: #fff;
+                color: #8f1223;
+                font-size: 13px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            /* Prvky sprievodcu */
+            .wz-step {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .wz-title {
+                font-size: 26px;
+                line-height: 1.15;
+                letter-spacing: -0.02em;
+                margin: 8px 0 8px;
+            }
+            .wz-lead {
+                color: var(--ink-45);
+                font-size: 14px;
+                margin: 0 0 18px;
+            }
+            .field {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                height: 50px;
+                padding: 0 14px;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--ink-20);
+                background: var(--card-bg);
+                color: var(--ink-35);
+            }
+            .field.filled {
+                color: var(--ink);
+                border-color: rgba(var(--amber-rgb), 0.7);
+            }
+            .field svg {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+            }
+            .geo-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+                font-size: 14px;
+                color: var(--amber);
+                font-weight: 600;
+            }
+            .geo-btn svg {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+            }
+            .suggest {
+                margin-top: 8px;
+                border: 1px solid var(--ink-08);
+                border-radius: var(--radius-md);
+                overflow: hidden;
+            }
+            .suggest div {
+                padding: 10px 14px;
+                border-top: 1px solid var(--ink-05);
+                font-size: 14px;
+            }
+            .suggest div:first-child {
+                border-top: 0;
+            }
+            .suggest small {
+                display: block;
+                color: var(--ink-35);
+                font-size: 12px;
+            }
+            .place-card {
+                margin-top: 14px;
+                padding: 14px 16px;
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid rgba(var(--green-rgb), 0.35);
+            }
+            .place-card b {
+                display: block;
+                font-size: 17px;
+            }
+            .place-card span {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-35);
+            }
+            .spacer {
+                flex: 1;
+            }
+            .primary {
+                display: block;
+                width: 100%;
+                min-height: 50px;
+                border-radius: var(--radius-pill);
+                background: var(--green);
+                color: #0a0a0a;
+                font-weight: 700;
+                font-size: 16px;
+            }
+            .primary small {
+                display: block;
+                font-weight: 500;
+                font-size: 12px;
+                opacity: 0.7;
+                margin-top: -2px;
+            }
+            .secondary {
+                display: block;
+                width: 100%;
+                min-height: 50px;
+                margin-top: 10px;
+                border-radius: var(--radius-pill);
+                border: 1px solid var(--ink-20);
+                font-weight: 600;
+            }
+            .link {
+                display: block;
+                margin: 14px auto 0;
+                color: var(--ink-45);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                font-size: 14px;
+            }
+            .foot {
+                padding-bottom: 26px;
+            }
+            .note-small {
+                text-align: center;
+                font-size: 12px;
+                color: var(--ink-35);
+                margin-top: 12px;
+            }
+            .house {
+                width: 100%;
+                height: 80px;
+                margin: 4px 0 12px;
+            }
+            .house * {
+                fill: none;
+                stroke: var(--ink-35);
+                stroke-width: 1.5;
+            }
+            .house .sun {
+                stroke: var(--amber);
+            }
+            .house .pv {
+                fill: var(--ink-12);
+                stroke: var(--ink-35);
+            }
+            .house .pin {
+                fill: var(--amber);
+                stroke: none;
+            }
+
+            /* Sivý stav - karty, ktoré bez elektrárne nevedia odpovedať */
+            .gray {
+                filter: grayscale(1);
+                opacity: 0.55;
+            }
+            .dial {
+                position: relative;
+                width: 290px;
+                height: 290px;
+                margin: 18px auto 0;
+            }
+            .dial svg {
+                width: 100%;
+                height: 100%;
+            }
+            .dial .center {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                place-content: center;
+                text-align: center;
+            }
+            .dial .center .time {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--ink-35);
+            }
+            .dial .center .big {
+                font-family: var(--font-mono);
+                font-size: 64px;
+                font-weight: 600;
+                line-height: 1;
+                color: var(--ink-35);
+            }
+            .dial .center .unit {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                color: var(--ink-35);
+            }
+            .verdict {
+                text-align: center;
+                margin-top: 22px;
+            }
+            .verdict b {
+                display: block;
+            }
+            .verdict span {
+                color: var(--ink-45);
+            }
+            .poster {
+                margin-top: 4px;
+                padding: 18px 18px 14px;
+                border-radius: var(--radius-lg);
+                background: #d9d6cd;
+                color: #0a0a0a;
+            }
+            .poster .ey {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .poster .head {
+                font-size: 44px;
+                font-weight: 700;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                margin: 10px 0 8px;
+            }
+            .poster p {
+                margin: 0 0 12px;
+                font-size: 15px;
+            }
+            .poster .ft {
+                border-top: 2px solid #0a0a0a;
+                padding-top: 8px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+            }
+            .day-strip {
+                margin-top: 14px;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-35);
+            }
+            .day-strip .bar {
+                height: 22px;
+                margin: 6px 0;
+                border-radius: 4px;
+                background: linear-gradient(90deg, var(--ink-08) 0 22%, var(--ink-20) 22% 78%, var(--ink-08) 78%);
+            }
+            .mini-card {
+                margin-top: 14px;
+                padding: 14px 16px;
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--ink-12);
+            }
+            .mini-card .ey {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                color: var(--ink-35);
+                text-transform: uppercase;
+            }
+
+            /* 7 dní */
+            .section-title {
+                font-size: 24px;
+                font-weight: 700;
+                margin: 4px 0 0;
+            }
+            .section-sub {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--ink-35);
+                margin-bottom: 14px;
+            }
+            .section-sub em {
+                font-style: normal;
+                color: var(--amber);
+            }
+            .week {
+                border-radius: var(--radius-lg);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                padding: 14px 16px;
+            }
+            .week .sum {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                padding-bottom: 10px;
+                border-bottom: 1px solid var(--ink-08);
+            }
+            .week .sum .num {
+                font-family: var(--font-mono);
+                font-size: 30px;
+                font-weight: 600;
+            }
+            .week .sum .num small {
+                font-size: 13px;
+                color: var(--ink-35);
+                margin-left: 4px;
+            }
+            .week .lbl {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+            }
+            .wd {
+                display: grid;
+                grid-template-columns: 72px 1fr 54px;
+                align-items: center;
+                gap: 10px;
+                padding: 7px 0;
+                font-size: 14px;
+            }
+            .wd .b {
+                height: 10px;
+                border-radius: 5px;
+            }
+            .wd .v {
+                font-family: var(--font-mono);
+                text-align: right;
+                font-size: 13px;
+            }
+            .t-g {
+                background: var(--green);
+            }
+            .t-a {
+                background: var(--amber);
+            }
+            .t-r {
+                background: var(--red);
+            }
+            .hint {
+                margin-top: 12px;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                border: 1px dashed rgba(var(--amber-rgb), 0.5);
+                font-size: 13px;
+                color: var(--ink-70);
+            }
+            .hint b {
+                color: var(--amber);
+            }
+
+            /* Nastavenie */
+            .loc-note {
+                border-radius: var(--radius-md);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                padding: 12px 14px;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .loc-note svg {
+                width: 22px;
+                height: 22px;
+                fill: none;
+                stroke: var(--amber);
+                stroke-width: 2;
+                flex: none;
+            }
+            .loc-note .t {
+                flex: 1;
+                font-size: 13px;
+                color: var(--ink-45);
+                line-height: 1.35;
+            }
+            .loc-note .t b {
+                display: block;
+                color: var(--ink);
+                font-size: 15px;
+            }
+            .loc-note .chg {
+                font-size: 13px;
+                color: var(--amber);
+                font-weight: 600;
+            }
+            .cta {
+                margin-top: 14px;
+                padding: 18px;
+                border-radius: var(--radius-lg);
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                text-align: center;
+            }
+            .cta h3 {
+                margin: 0 0 6px;
+                font-size: 19px;
+            }
+            .cta p {
+                margin: 0 0 14px;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .checks {
+                text-align: left;
+                margin: 0 0 14px;
+                padding: 0;
+                list-style: none;
+                font-size: 14px;
+            }
+            .checks li {
+                padding: 4px 0 4px 26px;
+                position: relative;
+            }
+            .checks li::before {
+                content: '';
+                position: absolute;
+                left: 2px;
+                top: 9px;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                border: 2px solid var(--ink-20);
+            }
+            .checks li.ok::before {
+                background: var(--green);
+                border-color: var(--green);
+            }
+            .checks li.ok {
+                color: var(--ink-45);
+            }
+
+            /* Rozhodnutia */
+            .qs {
+                display: grid;
+                gap: 12px;
+                margin-top: 20px;
+            }
+            .q {
+                background: var(--card-bg);
+                border: 1px solid var(--ink-08);
+                border-left: 3px solid var(--amber);
+                border-radius: var(--radius-md);
+                padding: 14px 16px;
+            }
+            .q b {
+                display: block;
+                margin-bottom: 4px;
+            }
+            .q p {
+                margin: 0;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .q .rec {
+                margin-top: 8px;
+                font-size: 13px;
+                color: var(--green);
+            }
+            table.diff {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                font-size: 14px;
+            }
+            .diff th,
+            .diff td {
+                text-align: left;
+                padding: 10px 12px;
+                border-bottom: 1px solid var(--ink-08);
+                vertical-align: top;
+            }
+            .diff th {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-35);
+                font-weight: 500;
+            }
+            .diff td:first-child {
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            .diff td {
+                color: var(--ink-70);
+            }
+            .table-wrap {
+                overflow-x: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="doc">
+            <div class="eyebrow">Návrh · Prvé otvorenie</div>
+            <h1>Namiesto Londýna sa appka najprv spýta, kde stojí dom</h1>
+            <p class="lead">
+                Polohu pozná každý, aj keď na štítok panelu ešte nevidel. Appka preto pri prvom otvorení chce len ju – a s ňou už ukáže
+                skutočné počasie a predpoveď pre túto strechu. Karty, ktoré bez panelov nevedia odpovedať (Terazky, Môžem?), ostanú sivé s
+                tou istou červenou výzvou ako dnes. Ukážka Londýna z appky zmizne celá.
+            </p>
+
+            <div class="principles">
+                <div class="principle">
+                    <b>Poloha je povinná, panely nie</b>Bez polohy nie je o čom kresliť, preto ju nejde preskočiť. Všetko ostatné áno.
+                </div>
+                <div class="principle">
+                    <b>Odkaz a kiosk ostávajú, ako sú</b>Kto príde s odkazom (#nastavenie=…), vidí dnešný náhľad „Prevziať nastavenie“ a
+                    polohu sa nepýta.
+                </div>
+                <div class="principle">
+                    <b>Žiadne vymyslené čísla</b>Nič, čo vyzerá ako výkon jeho strechy, kým ju nezadal. Predpoveď je výslovne „odhad pre
+                    typickú strechu“.
+                </div>
+            </div>
+
+            <h2 class="part">Tok</h2>
+            <p class="part-lead">Ktoré obrazovky človek uvidí podľa toho, ako appku otvoril.</p>
+            <div class="flow-branch">
+                <div class="flow">
+                    <span class="node">Prvé otvorenie, nič uložené</span><span class="arr">→</span>
+                    <span class="node key">① Kde máš elektráreň?</span><span class="arr">→</span>
+                    <span class="node key">② Poloha vybraná</span><span class="arr">→</span>
+                    <span class="node">„Nastaviť panely“ → zvyšok sprievodcu (od kroku Panel)</span>
+                </div>
+                <div class="flow">
+                    <span class="node" style="visibility: hidden">Prvé otvorenie, nič uložené</span
+                    ><span class="arr" style="visibility: hidden">→</span>
+                    <span class="node" style="visibility: hidden">① Kde máš elektráreň?</span><span class="arr">↘</span>
+                    <span class="node key">„Teraz nie“ → appka len s polohou ③ ④ ⑤ ⑥</span>
+                </div>
+                <div class="flow">
+                    <span class="node">Otvorenie z odkazu / QR / kiosku</span><span class="arr">→</span>
+                    <span class="node">Prevziať nastavenie (bez zmeny)</span><span class="arr">→</span>
+                    <span class="node">appka s elektrárňou</span>
+                </div>
+                <div class="flow">
+                    <span class="node">Odkaz v ① cez „Mám odkaz s nastavením“</span><span class="arr">→</span>
+                    <span class="node">dnešná obrazovka Vlož odkaz (bez zmeny)</span>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <h2 class="part">Prvé otvorenie</h2>
+            <p class="part-lead">
+                Celá obrazovka, bez spodnej navigácie a bez krížika – za ňou zatiaľ nie je nič, kam sa vrátiť. Je to ten istý krok Poloha zo
+                sprievodcu (<code>#wz-lokalita</code>), len s vlastným nadpisom a dvoma tlačidlami na konci.
+            </p>
+            <div class="row">
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                        </div>
+                        <div class="screen">
+                            <svg class="house" viewBox="0 0 320 80" aria-hidden="true">
+                                <line x1="10" y1="76" x2="310" y2="76" />
+                                <circle class="sun" cx="262" cy="20" r="10" />
+                                <rect x="110" y="46" width="100" height="30" />
+                                <polygon points="100,48 160,16 220,48" />
+                                <path class="pv" d="M170 21.7L182 28.5 184 25 172 18.2zM184 29.6L196 36.4 198 32.9 186 26.1z" />
+                                <path class="pin" d="M160 0c-5 0-9 4-9 9 0 7 9 15 9 15s9-8 9-15c0-5-4-9-9-9z" />
+                            </svg>
+                            <div class="wz-step">Vitaj</div>
+                            <h2 class="wz-title">Kde máš elektráreň?</h2>
+                            <p class="wz-lead">
+                                Podľa polohy appka stiahne predpoveď počasia a vie, kedy u teba svieti slnko. Panely a tarifu doplníš hneď
+                                potom, alebo kedykoľvek neskôr.
+                            </p>
+                            <div class="field">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M20 20l-4-4" />
+                                </svg>
+                                Obec alebo mesto
+                            </div>
+                            <button class="geo-btn" type="button">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                                    <circle cx="12" cy="12" r="8" />
+                                </svg>
+                                Použiť moju polohu
+                            </button>
+                            <div class="spacer"></div>
+                            <div class="foot">
+                                <button class="link" type="button">Mám odkaz s nastavením</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag new">nové</span>
+                        <b>① Kde máš elektráreň?</b>
+                        Jediná otázka. „Mám odkaz s nastavením“ vedie na dnešnú obrazovku Vlož odkaz. Ručné súradnice ostávajú schované pod
+                        hľadaním, ako dnes.
+                    </div>
+                </div>
+
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                        </div>
+                        <div class="screen">
+                            <div class="wz-step" style="margin-top: 96px">Vitaj</div>
+                            <h2 class="wz-title">Kde máš elektráreň?</h2>
+                            <p class="wz-lead">
+                                Podľa polohy appka stiahne predpoveď počasia a vie, kedy u teba svieti slnko. Panely a tarifu doplníš hneď
+                                potom, alebo kedykoľvek neskôr.
+                            </p>
+                            <div class="field filled">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M20 20l-4-4" />
+                                </svg>
+                                Dvorany
+                            </div>
+                            <div class="suggest">
+                                <div>Dvorany nad Nitrou<small>okres Topoľčany, Slovensko</small></div>
+                                <div>Dvorníky<small>okres Hlohovec, Slovensko</small></div>
+                                <div>Dvorníky-Včeláre<small>okres Košice-okolie, Slovensko</small></div>
+                            </div>
+                            <div class="spacer"></div>
+                            <div class="foot">
+                                <button class="link" type="button">Mám odkaz s nastavením</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag same">ako dnes</span>
+                        <b>① Hľadanie obce</b>
+                        Návrhy a výber sú dnešné z kroku Poloha, nič nové.
+                    </div>
+                </div>
+
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                        </div>
+                        <div class="screen">
+                            <div class="wz-step" style="margin-top: 96px">Vitaj</div>
+                            <h2 class="wz-title">Kde máš elektráreň?</h2>
+                            <p class="wz-lead">
+                                Podľa polohy appka stiahne predpoveď počasia a vie, kedy u teba svieti slnko. Panely a tarifu doplníš hneď
+                                potom, alebo kedykoľvek neskôr.
+                            </p>
+                            <div class="field filled">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M20 20l-4-4" />
+                                </svg>
+                                Dvorany nad Nitrou
+                            </div>
+                            <div class="place-card">
+                                <b>Dvorany nad Nitrou</b>
+                                <span>48,47° s. š. · 18,05° v. d. · 152 m n. m. · Europe/Bratislava</span>
+                            </div>
+                            <div class="spacer"></div>
+                            <div class="foot">
+                                <button class="primary" type="button">Nastaviť panely<small>asi 2 minúty</small></button>
+                                <button class="secondary" type="button">Teraz nie, ukáž predpoveď</button>
+                                <p class="note-small">Panely nastavíš kedykoľvek v karte Nastavenie.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag new">nové</span>
+                        <b>② Poloha vybraná – dve cesty</b>
+                        „Nastaviť panely“ pokračuje sprievodcom od kroku Panel (poloha je hotová). „Teraz nie“ uloží len polohu a otvorí
+                        appku na karte 7 dní, kde je predpoveď vidno hneď.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <h2 class="part">Appka len s polohou</h2>
+            <p class="part-lead">
+                Tam, kde dnes stojí ukážka. Rozdiel: počasie, slnko a predpoveď sú skutočné pre túto obec; to, čo závisí od panelov, je
+                sivé. Červená výzva je dnešný <code>.demo-bar</code> s novým textom.
+            </p>
+            <div class="row">
+                <!-- Terazky -->
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                            <div class="status"><b>13:00</b><span>Dvorany · bez panelov</span></div>
+                        </div>
+                        <div class="alarm">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 3.5L2.5 20h19L12 3.5z" />
+                                <path d="M12 10v4.5M12 17.2v.3" />
+                            </svg>
+                            <span class="t"><b>Chýbajú panely</b><span>Bez nich nepoznám výkon.</span></span>
+                            <button class="go" type="button">Nastaviť&nbsp;→</button>
+                        </div>
+                        <div class="screen">
+                            <div class="gray">
+                                <div class="dial">
+                                    <svg viewBox="0 0 290 290">
+                                        <circle cx="145" cy="145" r="132" fill="none" stroke="#6d6a62" stroke-width="10" />
+                                        <circle cx="145" cy="145" r="100" fill="none" stroke="#2a2a28" stroke-width="22" />
+                                    </svg>
+                                    <div class="center">
+                                        <span class="time">13:00</span>
+                                        <span class="big">–,––</span>
+                                        <span class="unit">KW · NEPOZNÁM</span>
+                                    </div>
+                                </div>
+                                <div class="verdict">
+                                    <b>Slnko svieti, výkon nepoznám</b>
+                                    <span>Jasno, 22 °C. Koľko z toho urobia panely, poviem, keď mi ich nastavíš.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <nav class="bottomnav">
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M8 12l3 3 5-6" /></svg
+                            ></span>
+                            <span class="on"
+                                ><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                                    <path d="M8 3v4M16 3v4M4 10h16" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16v-4M12 16V8M17 16v-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M3 18l3-10h12l3 10zM9 8l-1 10M15 8l1 10M4.5 13h15" /></svg
+                            ></span>
+                        </nav>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag chg">zmena textu</span>
+                        <b>③ Terazky – sivé</b>
+                        Ciferník bez výkonu a bez tarify (tarifa nie je zadaná). Počasie a čas sú skutočné. Výzva už nehovorí „Toto je
+                        ukážka“, ale čo konkrétne chýba.
+                    </div>
+                </div>
+
+                <!-- Môžem -->
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                            <div class="status"><b>13:00</b><span>Dvorany · bez panelov</span></div>
+                        </div>
+                        <div class="alarm">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 3.5L2.5 20h19L12 3.5z" />
+                                <path d="M12 10v4.5M12 17.2v.3" />
+                            </svg>
+                            <span class="t"><b>Chýbajú panely</b><span>Bez nich nepoznám výkon.</span></span>
+                            <button class="go" type="button">Nastaviť&nbsp;→</button>
+                        </div>
+                        <div class="screen">
+                            <div class="gray">
+                                <div class="poster">
+                                    <div class="ey">Teraz · 13:00 · Dvorany nad Nitrou</div>
+                                    <div class="head">NEVIEM.</div>
+                                    <p>Svieti, ale netuším, koľko toho strecha utiahne. Ak musíš, pusti to.</p>
+                                    <div class="ft">strecha za hodinu nabije · ? mobilov</div>
+                                </div>
+                                <div class="day-strip">
+                                    <div style="display: flex; justify-content: space-between">
+                                        <span>06:40</span><span>DNES</span><span>18:50</span>
+                                    </div>
+                                    <div class="bar"></div>
+                                    <span>Slnko do 18:50. Ešte 5 h 50 min.</span>
+                                </div>
+                                <div class="mini-card">
+                                    <div class="ey">Čo môžem</div>
+                                    <b>Bez panelov neporadím</b>
+                                </div>
+                            </div>
+                        </div>
+                        <nav class="bottomnav">
+                            <span class="on"
+                                ><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M8 12l3 3 5-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                                    <path d="M8 3v4M16 3v4M4 10h16" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16v-4M12 16V8M17 16v-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M3 18l3-10h12l3 10zM9 8l-1 10M15 8l1 10M4.5 13h15" /></svg
+                            ></span>
+                        </nav>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag chg">zmena textu</span>
+                        <b>④ Môžem? – sivé</b>
+                        Plagát v sivej s odpoveďou „Neviem.“ (dnešné <code>MOZEM_UNKNOWN</code>). Východ a západ slnka v obci sú skutočné.
+                    </div>
+                </div>
+
+                <!-- 7 dní -->
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                            <div class="status"><b>13:00</b><span>Dvorany · bez panelov</span></div>
+                        </div>
+                        <div class="screen">
+                            <h2 class="section-title">7 dní</h2>
+                            <div class="section-sub">Dvorany nad Nitrou · <em>typická strecha 5 kWp</em></div>
+                            <div class="week">
+                                <div class="sum">
+                                    <div>
+                                        <div class="lbl">Spolu za 7 dní</div>
+                                        <div class="num">142<small>kWh</small></div>
+                                    </div>
+                                    <div class="lbl">ø 20,3 / deň</div>
+                                </div>
+                                <div class="wd">
+                                    <span>Dnes</span><span class="b t-g" style="width: 92%"></span><span class="v">27</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Štvrtok</span><span class="b t-g" style="width: 100%"></span><span class="v">29</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Piatok</span><span class="b t-a" style="width: 62%"></span><span class="v">18</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Sobota</span><span class="b t-r" style="width: 21%"></span><span class="v">6</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Nedeľa</span><span class="b t-r" style="width: 31%"></span><span class="v">9</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Pondelok</span><span class="b t-a" style="width: 66%"></span><span class="v">19</span>
+                                </div>
+                                <div class="wd">
+                                    <span>Utorok</span><span class="b t-g" style="width: 83%"></span><span class="v">24</span>
+                                </div>
+                            </div>
+                            <div class="hint">
+                                <b>Odhad pre typickú strechu</b> – 5 kWp na juh, sklon 35°. Tvoje čísla uvidíš, keď <u>nastavíš panely</u>.
+                            </div>
+                        </div>
+                        <nav class="bottomnav">
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M8 12l3 3 5-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg
+                            ></span>
+                            <span class="on"
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                                    <path d="M8 3v4M16 3v4M4 10h16" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16v-4M12 16V8M17 16v-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M3 18l3-10h12l3 10zM9 8l-1 10M15 8l1 10M4.5 13h15" /></svg
+                            ></span>
+                        </nav>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag chg">farebná, bez výzvy</span>
+                        <b>⑤ 7 dní – predpoveď pre obec</b>
+                        Plná farba, lebo počasie je skutočné. Červený pruh tu nie je, namiesto neho pätka, z čoho sú kWh. Ktoré dni sú silné
+                        a ktoré slabé, platí pre každú strechu v obci.
+                    </div>
+                </div>
+
+                <!-- Nastavenie -->
+                <div class="shot">
+                    <div class="phone">
+                        <div class="appbar">
+                            <div class="brand"><b>Toilet Apps Ltd.</b><span>RAY-MON</span></div>
+                            <div class="status"><b>13:00</b><span>Dvorany · bez panelov</span></div>
+                        </div>
+                        <div class="screen">
+                            <h2 class="section-title">Nastavenie</h2>
+                            <div class="section-sub">Elektráreň, tarifa a appka</div>
+                            <div class="loc-note">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" />
+                                    <circle cx="12" cy="9" r="2.5" />
+                                </svg>
+                                <span class="t"><b>Dvorany nad Nitrou</b>Poloha je uložená, panely ešte nie.</span>
+                                <button class="chg" type="button">Zmeniť</button>
+                            </div>
+                            <div class="cta">
+                                <h3>Dokonči svoju elektráreň</h3>
+                                <p>Zostáva šesť krátkych otázok. Na čo nevieš odpoveď, preskočíš tlačidlom „Neviem“.</p>
+                                <ul class="checks">
+                                    <li class="ok">kde elektráreň stojí</li>
+                                    <li>ktorým smerom sú otočené panely a koľko ich je</li>
+                                    <li>výkon panelu a meniča (štítok alebo zmluva)</li>
+                                </ul>
+                                <button class="primary" type="button">Pokračovať</button>
+                                <button class="link" type="button">Mám odkaz s nastavením</button>
+                            </div>
+                        </div>
+                        <nav class="bottomnav">
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M8 12l3 3 5-6" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                                    <path d="M8 3v4M16 3v4M4 10h16" /></svg
+                            ></span>
+                            <span
+                                ><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16v-4M12 16V8M17 16v-6" /></svg
+                            ></span>
+                            <span class="on"
+                                ><svg viewBox="0 0 24 24"><path d="M3 18l3-10h12l3 10zM9 8l-1 10M15 8l1 10M4.5 13h15" /></svg
+                            ></span>
+                        </nav>
+                    </div>
+                    <div class="shot-cap">
+                        <span class="tag chg">zmena</span>
+                        <b>⑥ Nastavenie – rozpracovaná elektráreň</b>
+                        Namiesto „Ukážka: Londýn“ poloha s tlačidlom Zmeniť. „Pokračovať“ otvorí sprievodcu na kroku Panel, poloha je
+                        odškrtnutá.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <h2 class="part">Čo sa mení oproti dnešku</h2>
+            <div class="table-wrap">
+                <table class="diff">
+                    <thead>
+                        <tr>
+                            <th>Miesto</th>
+                            <th>Dnes</th>
+                            <th>Po zmene</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Prvé otvorenie</td>
+                            <td>Terazky s Londýnom a pruhom „Toto je ukážka“</td>
+                            <td>Celá obrazovka ① „Kde máš elektráreň?“</td>
+                        </tr>
+                        <tr>
+                            <td>Odkaz / QR / kiosk</td>
+                            <td>Ponuka prevziať nastavenie</td>
+                            <td>Bez zmeny; obrazovka ① sa nezobrazí</td>
+                        </tr>
+                        <tr>
+                            <td>Terazky, Môžem?</td>
+                            <td>Farebné, čísla Londýna</td>
+                            <td>Sivé, bez výkonu, červená výzva „Chýbajú panely“</td>
+                        </tr>
+                        <tr>
+                            <td>7 dní</td>
+                            <td>Londýn · 5,22 kWp</td>
+                            <td>Obec · typická strecha 5 kWp, bez červenej výzvy</td>
+                        </tr>
+                        <tr>
+                            <td>Štatistika</td>
+                            <td>„Nastav si svoju elektráreň“</td>
+                            <td>Bez zmeny (len text bez Londýna)</td>
+                        </tr>
+                        <tr>
+                            <td>Nastavenie</td>
+                            <td>„Ukážka: Londýn“ + Začať</td>
+                            <td>Uložená poloha + „Dokonči svoju elektráreň“</td>
+                        </tr>
+                        <tr>
+                            <td>Kód</td>
+                            <td><code>DEMO_SITE</code>, <code>demo: boolean</code></td>
+                            <td><code>DEMO_SITE</code> zmizne; stav má tri úrovne: nič / len poloha / celá elektráreň</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="part">Na rozhodnutie</h2>
+            <div class="qs">
+                <div class="q">
+                    <b>1. Čo ukáže 7 dní bez panelov?</b>
+                    <p>
+                        A) kWh pre typickú strechu 5 kWp na juh (v mockupe) – všetky grafy fungujú, pätka hovorí, že to nie sú jeho čísla.
+                        B) Bez kWh, len „slnečnosť“ v percentách jasnej oblohy – poctivejšie, ale karta by potrebovala druhú podobu grafov.
+                    </p>
+                    <div class="rec">Odporúčam A – je to dnešná ukážka, len s jeho počasím, a kód sa takmer nemení.</div>
+                </div>
+                <div class="q">
+                    <b>2. Ako nazvať tlačidlo „neviem parametre“?</b>
+                    <p>
+                        V mockupe „Teraz nie, ukáž predpoveď“. Alternatívy: „Neskôr“, „Nepoznám parametre“. Slovo „Neviem“ je v sprievodcu
+                        už obsadené pre jednotlivé otázky (odhad hodnoty).
+                    </p>
+                </div>
+                <div class="q">
+                    <b>3. Kam otvoriť appku po „Teraz nie“?</b>
+                    <p>Na kartu 7 dní (jediná farebná, hneď vidno zmysel) alebo na Terazky ako dnes (sivé, s výzvou).</p>
+                    <div class="rec">Odporúčam 7 dní – prvý dojem nemá byť sivá karta.</div>
+                </div>
+                <div class="q">
+                    <b>4. Čo s tým, kto už má uloženú ukážku?</b>
+                    <p>
+                        Ukážka sa dnes neukladá, takže kto si nič neuložil, po nasadení jednoducho uvidí obrazovku ①. Kto má uloženú
+                        elektráreň, nezmení sa mu nič.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </body>
+</html>

@@ -171,6 +171,16 @@ test('bez dát: neviem, pri spotrebičoch otáznik, hranie ostáva OK', () => {
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true })).state, 'loading');
 });
 
+test('bez zadaných panelov: neviem a prečo, aj keď predpoveď typickej strechy je', () => {
+    const m = mozemModel({ ...input(FIXED_NOW, { pv: null }), demo: true });
+    assert.equal(m.state, 'bezpanelov');
+    assert.equal(m.word, 'Neviem.');
+    assert.equal(m.strip, null);
+    assert.deepEqual([m.hero.factK, m.hero.factV], ['panely', 'nezadané']);
+    assert.equal(item(m, 'pracka').tone, 'unk');
+    assert.equal(mozemModel({ ...input(FIXED_NOW, { pv: null, loading: true }), demo: true }).state, 'bezpanelov');
+});
+
 test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () => {
     const it = (/** @type {string} */ name, /** @type {string} */ tone, /** @type {string} */ short) => ({ name, tone, short });
     const go = it('Hranie', 'go', 'vždy OK');

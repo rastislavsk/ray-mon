@@ -30,6 +30,7 @@ function headerDom() {
         pvTime: byId('pv-time'),
         pvUpdated: byId('pv-updated'),
         demoBar: byId('demo-bar'),
+        bottomnav: byId('bottomnav'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
             Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))
         ),
@@ -169,6 +170,7 @@ function setupHomeDom() {
         setup: byId('setup'),
         setupHome: byId('setup-home'),
         setupDemo: byId('setup-demo'),
+        setupDemoSite: byId('setup-demo-site'),
         setupCta: byId('setup-cta'),
         setupOverview: byId('setup-overview'),
         setupHero: byId('setup-hero'),
@@ -199,6 +201,8 @@ function wizardDom() {
         wzPlace: input('wz-place'),
         wzGeo: byId('wz-geo'),
         wzPlaceCard: byId('wz-place-card'),
+        wzWelcome: byId('wz-welcome'),
+        wzLater: byId('wz-later'),
         wzLat: input('wz-lat'),
         wzLon: input('wz-lon'),
         wzWpModePanel: byId('wz-wpmode-panel'),

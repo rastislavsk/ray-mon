@@ -138,7 +138,8 @@ export function initSwipe(store, dom, hideTooltips) {
         (e) => {
             const from = start;
             start = null;
-            if (!from || e.changedTouches.length !== 1) return;
+            // Otázka na polohu pri prvom otvorení nemá kam listovať - ostatné karty ešte nič nevedia.
+            if (!from || e.changedTouches.length !== 1 || store.get().welcome) return;
             const dx = e.changedTouches[0].clientX - from.x;
             const dy = e.changedTouches[0].clientY - from.y;
             if (!isSwipe(from, dx, dy, e.timeStamp - from.t) || pansInner(from, dx)) return;

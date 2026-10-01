@@ -59,8 +59,8 @@
                     </svg>
                 </button>
             </div>
-            <!-- Výzva v ukážke: kým si človek neuloží elektráreň, appka počíta pre vymyslenú
-                 a to musí byť vidno na prvý pohľad. Render ju ukáže len v ukážke. -->
+            <!-- Výzva bez zadaných panelov: karty Terazky a Môžem? sú vtedy sivé a bez čísel, a prečo,
+                 musí byť vidno na prvý pohľad. Render ju ukáže len na nich. -->
             <div class="demo-bar hidden" id="demo-bar">
                 <div class="demo-bar-inner" role="status">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -68,13 +68,13 @@
                         <path d="M12 10v4.5M12 17.2v.3" />
                     </svg>
                     <span class="demo-bar-txt">
-                        <b>Toto je ukážka</b>
-                        <span>Čísla nie sú tvoje.</span>
+                        <b>Chýbajú panely</b>
+                        <span>Bez nich nepoznám výkon.</span>
                     </span>
                     <button class="demo-bar-go" id="demo-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
                 </div>
             </div>
-            <nav class="bottomnav" aria-label="Hlavná navigácia">
+            <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
                     <!-- Karta Môžem? (návrh C v docs/navrhy/karta-mozem.html) je v navigácii prvá, appka
                          sa ale otvára na karte Terazky. -->
@@ -489,9 +489,11 @@
                      prvýkrát nevyplní. -->
                 <div class="setup hidden" id="setup">
                     <div class="setup-home" id="setup-home">
+                        <!-- Appka pozná polohu, panely ešte nie. Meno polohy píše render. -->
                         <div class="demo-note" id="setup-demo">
-                            <b>Ukážka: Londýn</b>
-                            <span>Appka zatiaľ počíta pre vymyslenú elektráreň.</span>
+                            <b id="setup-demo-site"></b>
+                            <span>Poloha je uložená, panely ešte nie.</span>
+                            <button type="button" class="link-btn" data-setup-edit="lokalita">Zmeniť polohu</button>
                         </div>
                         <div class="setup-cta" id="setup-cta">
                             <svg class="setup-house" viewBox="0 0 320 96" aria-hidden="true">
@@ -506,13 +508,13 @@
                                 <path class="pv" d="M170 29.7L182 36.5 184 33 172 26.2zM184 37.6L196 44.4 198 40.9 186 34.1z" />
                                 <rect class="door" x="148" y="68" width="14" height="20" />
                             </svg>
-                            <h3>Nastav si svoju elektráreň</h3>
-                            <p>Sprievodca sa spýta na polohu, strechu a panely. Trvá to asi dve minúty.</p>
-                            <button type="button" class="plant-save" data-setup-go="start">Začať</button>
+                            <h3>Dokonči svoju elektráreň</h3>
+                            <p>Sprievodca sa spýta na panely, strechu a tarifu. Na čo nevieš odpoveď, preskočíš tlačidlom „Neviem“.</p>
+                            <button type="button" class="plant-save" data-setup-go="start">Pokračovať</button>
                             <button type="button" class="link-btn" data-setup-go="odkaz">Mám odkaz s nastavením</button>
                         </div>
                         <!-- Elektráreň: prehľad uloženej elektrárne je v rozbaľovacej položke. Natívne <details>,
-                             appka o ňom nevie. V ukážke, kým prehľad nie je, sa položka skryje v style.css. -->
+                             appka o ňom nevie. Bez zadaných panelov, kým prehľad nie je, sa položka skryje v style.css. -->
                         <ul class="settings-list plant-list">
                             <li>
                                 <details class="settings-item" id="settings-plant">
@@ -708,6 +710,20 @@
                                     </label>
                                 </div>
                             </details>
+                            <!-- Len pri prvom otvorení (welcome): panely sa dajú odložiť a nastavenie prevziať z odkazu. -->
+                            <div class="wz-welcome hidden" id="wz-welcome">
+                                <button type="button" class="choice" id="wz-later" data-setup-later>
+                                    <span class="t"
+                                        ><b>Teraz nie, ukáž predpoveď</b><span>Panely nastavíš kedykoľvek v karte Nastavenie.</span></span
+                                    >
+                                </button>
+                                <button type="button" class="choice" data-setup-go="odkaz">
+                                    <span class="t"
+                                        ><b>Mám odkaz s nastavením</b
+                                        ><span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span></span
+                                    >
+                                </button>
+                            </div>
                         </section>
 
                         <section class="wz-screen" id="wz-panel" aria-label="Výkon panelov">

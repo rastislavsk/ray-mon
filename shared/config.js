@@ -52,14 +52,12 @@ export const PLANT = {
 };
 
 /**
- * Ukážka pre nového používateľa, kým si neuloží vlastnú elektráreň: vymyslená bežná strecha
- * v Londýne. Odborné parametre (účinnosť, teplotný koeficient, NOCT, albedo) sú tie isté ako
- * v Dvoranoch - používateľ ich nemení.
- * @type {Site}
+ * Typická strecha: s ňou appka počíta, kým človek pozná len polohu a panely ešte nezadal -
+ * karta 7 dní ukazuje predpoveď pre ňu. Odborné parametre (účinnosť, teplotný koeficient,
+ * NOCT, albedo) sú tie isté ako v Dvoranoch - používateľ ich nemení.
+ * @type {Plant}
  */
-export const DEMO_SITE = { name: 'Londýn', lat: 51.51, lon: -0.13, elevationM: 25, timezone: 'Europe/London' };
-/** @type {Plant} */
-export const DEMO_PLANT = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 35 }], acLimitKw: 5 };
+export const TYPICAL_PLANT = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 35 }], acLimitKw: 5 };
 
 /** Povolené rozsahy údajov, ktoré používateľ zadáva v Nastavení. */
 export const SETTINGS_LIMITS = {
@@ -101,6 +99,9 @@ export const SHARE_HASH_KEY = 'nastavenie';
 
 /** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
 export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
+
+/** Kľúč v localStorage pre samotnú polohu - kto ju zadal, no panely ešte nie. */
+export const SITE_STORAGE_KEY = 'poloha-v1';
 
 /**
  * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
@@ -266,29 +267,6 @@ export const TARIFF = {
                 { from: '21:30', band: 'nt' },
                 { from: '22:30', band: 'vt' },
                 { from: '23:30', band: 'nt' },
-            ],
-        },
-    ],
-};
-
-/**
- * Ukážka pre nového používateľa (Londýn): sedem hodín lacno v noci, inak bežná cena.
- * @type {Tariff}
- */
-export const DEMO_TARIFF = {
-    currency: '£',
-    bands: [
-        { id: 'noc', name: 'Noc', level: 'lacna', price: null },
-        { id: 'den', name: 'Deň', level: 'bezna', price: null },
-    ],
-    schedules: [
-        {
-            days: ALL_DAYS,
-            months: ALL_MONTHS,
-            changes: [
-                { from: '00:00', band: 'den' },
-                { from: '00:30', band: 'noc' },
-                { from: '07:30', band: 'den' },
             ],
         },
     ],

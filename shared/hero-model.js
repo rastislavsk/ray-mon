@@ -107,6 +107,16 @@ function dialFor(power, kwp, th) {
     };
 }
 
+/**
+ * Jednotka pod číslom v ciferníku: odkiaľ výkon je. Bez výkonu (žiadne dáta, panely nie sú
+ * zadané) stojí v ciferníku pomlčka - tá nie je odhad.
+ * @param {number} power @param {boolean} live @param {boolean} measured
+ */
+function unitFor(power, live, measured) {
+    if (!Number.isFinite(power)) return 'kW';
+    return live ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)';
+}
+
 /** @param {HeroInput} state */
 export function heroModel(state) {
     const nowMinutes = localMinutes(state.now, state.site.timezone);
@@ -143,7 +153,7 @@ export function heroModel(state) {
         waitTime: waitTimeFor(state, slot.tier === 'green'),
         dial: dialFor(power, installedKw(state.plant), th),
         powerText: Number.isFinite(power) ? dialText(power) : '–',
-        unitText: live !== null ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)',
+        unitText: unitFor(power, live !== null, measured),
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };
 }

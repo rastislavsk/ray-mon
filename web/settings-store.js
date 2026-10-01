@@ -1,11 +1,18 @@
 // Uloženie nastavenia elektrárne v prehliadači. Každý telefón má vlastné, žiadny server.
 // localStorage môže chýbať alebo hádzať (súkromné okno, zakázané úložisko) - appka potom
-// ukáže ukážku a uloženie ohlási ako neúspešné.
+// sa spýta na polohu ako pri prvom otvorení a uloženie ohlási ako neúspešné.
 
-import { DAYLOG_STORAGE_KEY, LAUNCH_STORAGE_KEY, SETTINGS_STORAGE_KEY, START_PANELS, START_STORAGE_KEY } from '../shared/config.js';
+import {
+    DAYLOG_STORAGE_KEY,
+    LAUNCH_STORAGE_KEY,
+    SETTINGS_STORAGE_KEY,
+    SITE_STORAGE_KEY,
+    START_PANELS,
+    START_STORAGE_KEY,
+} from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
-import { parseStartPanel, parseStoredSettings, shareHash, startFromLink, toUser } from '../shared/settings.js';
+import { parseStartPanel, parseStoredSettings, parseStoredSite, shareHash, startFromLink, toUser } from '../shared/settings.js';
 import { savedSettings } from './state.js';
 
 /** @returns {import('../shared/settings.js').Settings | null} */
@@ -18,11 +25,31 @@ export function loadSettings() {
     }
 }
 
+/** Samotná poloha - kto ju zadal, no panely ešte nie. @returns {import('../shared/config.js').Site | null} */
+export function loadSite() {
+    try {
+        const raw = localStorage.getItem(SITE_STORAGE_KEY);
+        return raw ? parseStoredSite(JSON.parse(raw)) : null;
+    } catch {
+        return null;
+    }
+}
+
+/** @param {import('../shared/config.js').Site} site @returns {boolean} podarilo sa? */
+export function saveSite(site) {
+    try {
+        localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(site));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
- * Adresa v prehliadači nesie vždy uložené nastavenie (`#nastavenie=…`, aj s kioskom), pri
- * ukážke je holá. Na iPhone totiž appka pridaná na plochu nevidí úložisko Safari - jediné,
+ * Adresa v prehliadači nesie vždy uložené nastavenie (`#nastavenie=…`, aj s kioskom), bez
+ * zadaných panelov je holá. Na iPhone totiž appka pridaná na plochu nevidí úložisko Safari - jediné,
  * čo si zo Safari prinesie, je adresa. Pri prvom spustení z plochy tak ponúkne nastavenie
- * prevziať, namiesto toho, aby ukázala ukážku. Kým čaká ponuka z otvoreného odkazu, adresa
+ * prevziať, namiesto toho, aby sa pýtala na polohu. Kým čaká ponuka z otvoreného odkazu, adresa
  * nesie ten odkaz, aby sa dal pridať na plochu aj pred rozhodnutím.
  * @param {import('./state.js').Store} store
  */

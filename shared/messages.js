@@ -212,6 +212,7 @@ export const MOZEM_WORDS = {
     none: 'Dnes už ne e !',
     offline: 'Neviem.',
     loading: 'Uno momento',
+    bezpanelov: 'Neviem.',
 };
 
 /** Hlášky pod mriežkou, striedajú sa ťuknutím. Sada podľa stavu karty. */
@@ -238,6 +239,7 @@ export const MOZEM_QUIPS = {
     slabo: ['Slnko je dnes na home office.', 'Mraky majú dnes prednosť.', 'Slabý deň. Stáva sa aj najlepším.'],
     offline: ['Aj slnko má niekedy výpadok. Tentoraz my.', 'Bez dát len hádam. A hádať nebudem.', 'Spýtaj sa toho, kto platí elektrinu.'],
     loading: ['Pozerám na oblohu.'],
+    bezpanelov: ['Bez panelov len hádam. A hádať nebudem.', 'Povedz mi, čo máš na streche, a poviem ti, čo môžeš.'],
 };
 
 /**
@@ -301,6 +303,12 @@ const laterWhen = (d) => `${d.name} od ${hm(d.start)}`;
  */
 export function mozemHeroText(state, data) {
     if (state === 'loading') return { lead: 'Pozerám na oblohu.', factK: '', factV: '' };
+    if (state === 'bezpanelov')
+        return {
+            lead: 'Nepoznám tvoje panely, takže netuším, koľko toho strecha utiahne. Ak musíš, pusti to.',
+            factK: 'panely',
+            factV: 'nezadané',
+        };
     if (!data || state === 'offline')
         return {
             lead: 'Nemám predpoveď ani meranie. Skús o chvíľu, alebo sa spýtaj toho, kto platí elektrinu.',

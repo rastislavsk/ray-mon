@@ -81,11 +81,10 @@ function forecastHtml(m) {
 /** Obsah karty podľa toho, čo appka o elektrárni vie. @param {StatsModel} m @param {boolean} demo */
 export function statsHtml(m, demo) {
     if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
-    // Ukážka: namiesto výziev na ceny a meranie jediná - nastaviť si vlastnú elektráreň.
+    // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
     if (demo)
         return (
-            forecastHtml(m) +
-            goHtml('nastavenie', 'Nastav si svoju elektráreň', 'Štatistika je o tvojej elektrárni, nie o ukážke v Londýne.')
+            forecastHtml(m) + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.')
         );
     const prices = m.priced ? '' : goHtml('ceny', 'Doplň ceny v tarife', 'Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.');
     if (m.status === 'live') {

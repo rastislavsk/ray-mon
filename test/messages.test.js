@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_PLANT, PLANT, powerThresholds } from '../shared/config.js';
+import { PLANT, powerThresholds, TYPICAL_PLANT } from '../shared/config.js';
 import { PRICE_LEVELS } from '../shared/config.js';
 import {
     dayDetailMessage,
@@ -83,7 +83,7 @@ test('slabý deň sa meria veľkosťou elektrárne, nie pevnými kilowattmi', ()
         { hour: 12, kw: 1 },
         { hour: 14, kw: 0.6 },
     ];
-    const mala = powerThresholds(DEMO_PLANT);
+    const mala = powerThresholds(TYPICAL_PLANT);
     assert.equal(dayDetailMessage(den, th).title, 'Slabý deň');
     assert.equal(dayDetailMessage(den, mala).title, 'Najsilnejšie slnko okolo 12:00');
     assert.equal(forecastDayMessage(den, true, th).title, 'Dnes bude slabo');

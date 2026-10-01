@@ -170,7 +170,7 @@ function entries(pv, today, price) {
 
 /**
  * Čo karta môže ukázať: `live` súčty z kiosku, `loading` prvé sťahovanie ešte beží, `offline`
- * kiosk je zadaný, ale neodpovedá, `none` bez kiosku (vrátane ukážky).
+ * kiosk je zadaný, ale neodpovedá, `none` bez kiosku (vrátane appky bez zadaných panelov).
  * @param {StatsInput} input @returns {'live' | 'loading' | 'offline' | 'none'}
  */
 function statusOf({ pv, loading, kiosk }) {

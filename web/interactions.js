@@ -470,8 +470,11 @@ function initSharing(store, dom, refresh) {
     dom.shareWithSettings.addEventListener('change', () => store.setState({ shareSettings: dom.shareWithSettings.checked }));
     dom.shareWithKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.shareWithKiosk.checked }));
     dom.importAccept.addEventListener('click', () => {
-        const incoming = store.get().incoming;
-        if (incoming) applySettings(store, incoming, refresh, { incoming: null, importNote: '' });
+        const s = store.get();
+        // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na svojej
+        // prvej karte (odkaz pre rodinu ju môže určiť).
+        const away = s.welcome ? { ...panelChange(s.panel, s.startPanel), setupStep: /** @type {null} */ (null) } : {};
+        if (s.incoming) applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
     dom.shareStart.addEventListener('change', () => store.setState({ shareStart: dom.shareStart.checked }));
@@ -488,7 +491,7 @@ function initSharing(store, dom, refresh) {
 /**
  * Karta Štatistika: prepínač obdobia a výzvy do Nastavenia. Výzva je jeden krok navigácie -
  * prepne kartu a rovno otvorí krok sprievodcu (ceny, meranie), takže Späť vráti do Štatistiky.
- * V ukážke nie je čo upravovať, výzva len prepne na Nastavenie, kde čaká sprievodca.
+ * Bez zadaných panelov nie je čo upravovať, výzva len prepne na Nastavenie, kde čaká sprievodca.
  * @param {Store} store @param {Dom} dom
  */
 function initStats(store, dom) {
@@ -531,6 +534,8 @@ function createRefresh(store) {
         store.setState({ pv, forecast: result.forecast, loading: false, now, dayLog });
     };
     return () => {
+        // Kým appka nepozná polohu, nie je pre čo sťahovať.
+        if (store.get().welcome) return Promise.resolve();
         const { site, plant, kiosk } = store.get();
         if (bezi && bezi.site === site && bezi.plant === plant && bezi.kiosk === kiosk) return bezi.promise;
         const promise = obnov({ site, plant, kiosk }).finally(() => {
