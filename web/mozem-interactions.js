@@ -6,7 +6,7 @@ import { toggleLaunch } from '../shared/launches.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { SUMMARY_PERIODS } from '../shared/summary.js';
 import { backTo } from './history.js';
-import { currentPage, pagerScroll } from './pager.js';
+import { pagerScroll, scrollPager } from './pager.js';
 import { saveLaunches } from './settings-store.js';
 import { shareSummary } from './share-image.js';
 
@@ -26,14 +26,11 @@ function logLaunch(store, id, sun) {
     store.setState({ launches });
 }
 
-/** Posunie pás hlášok na stránku `index`; stránku do stavu zapíše až poslucháč posunu, ako pri
- * prste. Za poslednou hláškou ide ťuknutie znova na prvú. @param {HTMLElement} body @param {number | null} index null = ďalšia */
+/** Posunie pás hlášok (prekresľuje sa s kartou, preto sa hľadá nanovo).
+ * @param {HTMLElement} body @param {number | null} index null = ďalšia */
 function scrollQuips(body, index) {
     const pager = body.querySelector('[data-mozem-quips]');
-    if (!(pager instanceof HTMLElement)) return;
-    const pages = pager.querySelectorAll('.pager-page');
-    const page = pages[index ?? (currentPage(pager) + 1) % pages.length];
-    if (page instanceof HTMLElement) page.scrollIntoView({ inline: 'start', block: 'nearest' });
+    if (pager instanceof HTMLElement) scrollPager(pager, index);
 }
 
 /** Pás hlášok listuje prehliadač, ako pás odporúčaní (initVerdictPager). Pás sa s obsahom karty
