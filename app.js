@@ -1,6 +1,6 @@
 // Štart appky: DOM, stav, prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
-import { sameSettings, settingsFromLink, typicalSettings } from './shared/settings.js';
+import { sameSettings, settingsFromLink } from './shared/settings.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
 import { render } from './web/render/index.js';
@@ -20,11 +20,10 @@ const site = saved ? null : loadSite();
 const linked = settingsFromLink(location.hash);
 const incoming = linked && !(saved && sameSettings(linked, saved)) ? linked : null;
 const layout = { wide: mq.wide.matches, tall: isTall() };
-const settings = saved || (site ? typicalSettings(site) : null);
 // Karta, na ktorej sa appka otvára: voľba tohto telefónu, inak z odkazu pre rodinu (&prva=…).
 const startPanel = loadStartPanel(location.hash);
 const store = createStore({
-    ...initialState(now, layout, { settings, demo: !saved, incoming, startPanel }),
+    ...initialState(now, layout, { saved, site, incoming, startPanel }),
     launches: loadLaunches(),
     dayLog: loadDayLog(),
 });

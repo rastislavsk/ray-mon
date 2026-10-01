@@ -172,13 +172,13 @@ test('bez dát: neviem, pri spotrebičoch otáznik, hranie ostáva OK', () => {
 });
 
 test('bez zadaných panelov: neviem a prečo, aj keď predpoveď typickej strechy je', () => {
-    const m = mozemModel({ ...input(FIXED_NOW, { pv: null }), demo: true });
+    const m = mozemModel({ ...input(FIXED_NOW, { pv: null }), known: 'poloha' });
     assert.equal(m.state, 'bezpanelov');
     assert.equal(m.word, 'Neviem.');
     assert.equal(m.strip, null);
     assert.deepEqual([m.hero.factK, m.hero.factV], ['panely', 'nezadané']);
     assert.equal(item(m, 'pracka').tone, 'unk');
-    assert.equal(mozemModel({ ...input(FIXED_NOW, { pv: null, loading: true }), demo: true }).state, 'bezpanelov');
+    assert.equal(mozemModel({ ...input(FIXED_NOW, { pv: null, loading: true }), known: 'poloha' }).state, 'bezpanelov');
 });
 
 test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () => {

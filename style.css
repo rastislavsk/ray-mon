@@ -373,12 +373,12 @@ b {
 }
 /* Výzva bez zadaných panelov. Zámerne krikľavá: kto ju prehliadne, nevie, prečo sú karty
    sivé a bez čísel. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
-.demo-bar {
+.panels-bar {
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 0 20px 10px;
 }
-.demo-bar-inner {
+.panels-bar-inner {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -387,7 +387,7 @@ b {
     background: #d7263d;
     color: #fff;
 }
-.demo-bar svg {
+.panels-bar svg {
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
@@ -397,7 +397,7 @@ b {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-.demo-bar-txt {
+.panels-bar-txt {
     display: grid;
     flex: 1;
     min-width: 0;
@@ -407,11 +407,11 @@ b {
 /* Aj nadpis musí byť výslovne biely: globálne `b` mu dáva --ink, ktoré má na tejto červenej
    kontrast tesne pod 4,5:1 (axe). Podtitul je z toho istého dôvodu biely, nie svetloružový -
    od nadpisu ho odlišuje veľkosť a hrúbka. */
-.demo-bar-txt b {
+.panels-bar-txt b {
     font-size: var(--fs-md);
     color: #fff;
 }
-.demo-bar-go {
+.panels-bar-go {
     flex: 0 0 auto;
     min-height: 36px;
     padding: 0 14px;
@@ -1114,9 +1114,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 /* Bez zadaných panelov sú karty o výkone sivé: čísla v nich nie sú (viď powerState vo
    web/state.js) a farba by sľubovala odpoveď, ktorú appka nemá. Tooltip spotrebiča je
    position: fixed - filter by mu zmenil, k čomu sa vzťahuje, preto ho obchádza. */
-.no-plant .dial-hero,
-.no-plant .verdict > :not(.chip-tooltip),
-.no-plant .mozem {
+.no-panels .dial-hero,
+.no-panels .verdict > :not(.chip-tooltip),
+.no-panels .mozem {
     filter: grayscale(1);
 }
 .verdict {
@@ -2552,7 +2552,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 
 /* ---- Moja elektráreň (položka nastavenia) ----------------------------------- */
-.demo-note {
+.site-note {
     display: grid;
     gap: 2px;
     margin-bottom: var(--sp-3);
@@ -2563,7 +2563,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-size: var(--fs-sm);
     color: var(--ink-45);
 }
-.demo-note b {
+.site-note b {
     color: var(--amber);
     font-size: var(--fs-md);
 }

@@ -61,17 +61,17 @@
             </div>
             <!-- Výzva bez zadaných panelov: karty Terazky a Môžem? sú vtedy sivé a bez čísel, a prečo,
                  musí byť vidno na prvý pohľad. Render ju ukáže len na nich. -->
-            <div class="demo-bar hidden" id="demo-bar">
-                <div class="demo-bar-inner" role="status">
+            <div class="panels-bar hidden" id="panels-bar">
+                <div class="panels-bar-inner" role="status">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M12 3.5L2.5 20h19L12 3.5z" />
                         <path d="M12 10v4.5M12 17.2v.3" />
                     </svg>
-                    <span class="demo-bar-txt">
+                    <span class="panels-bar-txt">
                         <b>Chýbajú panely</b>
                         <span>Bez nich nepoznám výkon.</span>
                     </span>
-                    <button class="demo-bar-go" id="demo-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
+                    <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
                 </div>
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
@@ -490,8 +490,8 @@
                 <div class="setup hidden" id="setup">
                     <div class="setup-home" id="setup-home">
                         <!-- Appka pozná polohu, panely ešte nie. Meno polohy píše render. -->
-                        <div class="demo-note" id="setup-demo">
-                            <b id="setup-demo-site"></b>
+                        <div class="site-note" id="setup-site">
+                            <b id="setup-site-name"></b>
                             <span>Poloha je uložená, panely ešte nie.</span>
                             <button type="button" class="link-btn" data-setup-edit="lokalita">Zmeniť polohu</button>
                         </div>

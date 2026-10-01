@@ -13,7 +13,7 @@ let qr = null;
 /** Odkaz, ktorý sa práve zdieľa. @param {import('../state.js').AppState} state */
 export function currentShareUrl(state) {
     // Typickú strechu nemá zmysel posielať ďalej - k odkazu sa pribaľuje len uložená elektráreň.
-    const settings = state.shareSettings && !state.demo ? savedSettings(state) : null;
+    const settings = state.shareSettings && state.known === 'elektraren' ? savedSettings(state) : null;
     return shareUrl(APP_URL, settings, state.shareKiosk, state.shareStart ? 'mozem' : undefined);
 }
 
@@ -51,7 +51,7 @@ function renderStartPick(state, dom) {
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 function renderZdielat(state, dom) {
-    dom.shareOptions.classList.toggle('hidden', state.demo);
+    dom.shareOptions.classList.toggle('hidden', state.known !== 'elektraren');
     dom.shareWithSettings.checked = state.shareSettings;
     dom.shareWithKiosk.checked = state.shareKiosk;
     dom.shareKioskRow.classList.toggle('hidden', !state.shareSettings || !state.kiosk);

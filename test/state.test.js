@@ -21,9 +21,7 @@ import {
 } from '../web/state.js';
 
 test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
-    const store = createStore(
-        initialState(new Date('2026-09-05T11:00:00Z'), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true }),
-    );
+    const store = createStore(initialState(new Date('2026-09-05T11:00:00Z'), { wide: false, tall: false }, { site: SITE }));
     let calls = 0;
     store.subscribe(() => calls++);
     store.setState({ panel: '7dni', weekSelDay: 3 });
@@ -37,7 +35,7 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
 });
 
 test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
-    const store = createStore(initialState(new Date(), { wide: true, tall: true }, { settings: typicalSettings(SITE), demo: true }));
+    const store = createStore(initialState(new Date(), { wide: true, tall: true }, { site: SITE }));
     let calls = 0;
     const off = store.subscribe(() => calls++);
     store.setState({ panel: 'terazky', wide: true });
@@ -49,7 +47,7 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
 
 test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s elektrárňou', () => {
     const settings = typicalSettings(SITE);
-    const state = initialState(new Date(), { wide: false, tall: false }, { settings, demo: true });
+    const state = initialState(new Date(), { wide: false, tall: false }, { saved: settings });
     assert.equal(state.tariff, settings.tariff);
     assert.deepEqual(savedSettings(state), settings);
 });
@@ -57,14 +55,15 @@ test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s
 test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na svojej karte', () => {
     const now = new Date();
     const layout = { wide: false, tall: false };
-    const welcome = initialState(now, layout, { settings: null, demo: true, startPanel: 'mozem' });
-    assert.equal(welcome.welcome, true);
-    assert.equal(welcome.demo, true);
+    const welcome = initialState(now, layout, { startPanel: 'mozem' });
+    assert.equal(welcome.known, 'nic');
     assert.equal(welcome.panel, 'nastavenie');
     assert.equal(welcome.setupStep, 'lokalita');
     assert.equal(welcome.site.name, '', 'poloha je prázdna, kým ju človek nevyberie');
-    const site = initialState(now, layout, { settings: typicalSettings(SITE), demo: true, startPanel: 'mozem' });
-    assert.equal(site.welcome, false);
+    const site = initialState(now, layout, { site: SITE, startPanel: 'mozem' });
+    assert.equal(site.known, 'poloha');
+    assert.equal(site.plant.strings.length, 1, 'typická strecha v uloženej polohe');
+    assert.equal(initialState(now, layout, { saved: typicalSettings(SITE), site: SITE }).known, 'elektraren', 'uložená elektráreň vyhrá');
     assert.equal(site.panel, 'mozem');
     assert.equal(site.setupStep, null);
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
@@ -73,10 +72,10 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
 });
 
 test('powerState: bez zadaných panelov karty o výkone nevidia predpoveď typickej strechy', () => {
-    const state = initialState(new Date(), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true });
+    const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
     const forecast = /** @type {any} */ ({ days: [] });
     assert.equal(powerState({ ...state, forecast }).forecast, null);
-    const own = { ...state, demo: false, forecast };
+    const own = { ...state, known: /** @type {const} */ ('elektraren'), forecast };
     assert.equal(powerState(own), own, 's panelmi je to ten istý stav');
 });
 
@@ -127,7 +126,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
 });
 
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {
-    const state = initialState(new Date(), { wide: false, tall: false }, { settings: typicalSettings(SITE), demo: true });
+    const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
     assert.deepEqual(navStep(state), {
         panel: 'terazky',
         weekDetail: null,
@@ -328,7 +327,7 @@ test('nextPv: pri výpadku kiosku ostáva posledné meranie, no nie staršie ne�
 test('setupDraft: bez živého merania sa kiosk neukladá, celkový výkon sa rozpočíta na panel', () => {
     const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
     const base = typicalSettings(SITE);
-    const state = initialState(new Date(), { wide: false, tall: false }, { settings: { ...base, kiosk }, demo: false });
+    const state = initialState(new Date(), { wide: false, tall: false }, { saved: { ...base, kiosk } });
     assert.equal(state.setupLive, true, 'uložený kiosk znamená, že meranie človek chce');
     assert.equal(setupDraft(state).kiosk, kiosk);
     assert.equal(setupDraft({ ...state, setupLive: false }).kiosk, '');

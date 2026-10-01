@@ -47,18 +47,18 @@ function numberOf(input) {
 
 /**
  * Prepne appku na inú elektráreň a stiahne pre ňu predpoveď. Dáta starej elektrárne sa zahodia
- * hneď, aby sa ani na chvíľu nemiešali s novou. `demo`: panely nie sú zadané (typická strecha).
- * @param {Store} store @param {Settings} next @param {boolean} demo @param {() => Promise<void>} refresh
+ * hneď, aby sa ani na chvíľu nemiešali s novou. `known`: uložená elektráreň, alebo len poloha
+ * (typická strecha).
+ * @param {Store} store @param {Settings} next @param {'poloha' | 'elektraren'} known @param {() => Promise<void>} refresh
  * @param {Partial<AppState>} extra
  */
-function switchPlant(store, next, demo, refresh, extra) {
+function switchPlant(store, next, known, refresh, extra) {
     store.setState({
         site: next.site,
         plant: next.plant,
         tariff: next.tariff,
         kiosk: next.kiosk,
-        demo,
-        welcome: false,
+        known,
         pv: null,
         forecast: null,
         loading: true,
@@ -78,7 +78,7 @@ export function applySettings(store, next, refresh, extra = {}) {
         store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
         return;
     }
-    switchPlant(store, next, false, refresh, {
+    switchPlant(store, next, 'elektraren', refresh, {
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
@@ -96,13 +96,13 @@ export function applySettings(store, next, refresh, extra = {}) {
  */
 function applySite(store, site, refresh, extra) {
     saveSite(site);
-    switchPlant(store, typicalSettings(site), true, refresh, { setupReturn: null, settingsNote: '', ...extra });
+    switchPlant(store, typicalSettings(site), 'poloha', refresh, { setupReturn: null, settingsNote: '', ...extra });
 }
 
 /** „Teraz nie, ukáž predpoveď“ na otázke o polohe: uloží ju a otvorí kartu 7 dní. @param {Store} store @param {() => Promise<void>} refresh */
 function skipPanels(store, refresh) {
     const s = store.get();
-    if (!s.welcome || !setupReady(s)) return;
+    if (s.known !== 'nic' || !setupReady(s)) return;
     applySite(store, s.settingsDraft.site, refresh, { ...panelChange(s.panel, '7dni'), setupStep: null });
 }
 
@@ -194,7 +194,7 @@ function openLink(store) {
  * nepozná polohu, za sprievodcom nie je nič - vracia sa na otázku o nej. @param {Store} store */
 function closeSetup(store) {
     const s = store.get();
-    if (s.welcome) return backTo(store, { setupStep: 'lokalita', setupReturn: null });
+    if (s.known === 'nic') return backTo(store, { setupStep: 'lokalita', setupReturn: null });
     if (s.setupReturn !== 'prehlad') return store.setState({ setupStep: null, setupReturn: null });
     const saved = savedSettings(s);
     store.setState({ settingsDraft: saved, settingsRev: s.settingsRev + 1, setupLive: !!saved.kiosk, setupStep: null, setupReturn: null });
@@ -225,7 +225,7 @@ function goNext(store, refresh) {
     // Bez zadaných panelov sa ukladá len poloha: pri prvom otvorení (a sprievodca pokračuje
     // panelmi) aj pri jej zmene z prehľadu karty.
     if (isWelcome(s, s.setupStep)) return applySite(store, s.settingsDraft.site, refresh, { setupStep: 'panel' });
-    if (s.demo && s.setupReturn === 'prehlad') return applySite(store, s.settingsDraft.site, refresh, { setupStep: null });
+    if (s.known === 'poloha' && s.setupReturn === 'prehlad') return applySite(store, s.settingsDraft.site, refresh, { setupStep: null });
     if (s.setupReturn === 'prehlad' || s.setupStep === 'suhrn')
         return applySettings(store, setupDraft(s), refresh, { setupStep: null, setupReturn: null, setupLink: '' });
     if (s.setupStep === 'odkaz') return acceptLink(store);
@@ -240,7 +240,7 @@ function goNext(store, refresh) {
 /** „Späť“ - ten istý krok ako tlačidlo Späť na telefóne, pokiaľ sa dá (backTo). @param {Store} store */
 function goBack(store) {
     const s = store.get();
-    if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start' || (s.welcome && s.setupStep === 'odkaz'))
+    if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start' || (s.known === 'nic' && s.setupStep === 'odkaz'))
         return closeSetup(store);
     const place = prevSetupPlace(
         { step: s.setupStep, roof: s.setupRoof },

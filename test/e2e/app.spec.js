@@ -2213,7 +2213,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-title')).toHaveText('Kde máš elektráreň?');
         await expect(page.locator('#pv-updated')).toHaveText('vitaj');
         await expect(page.locator('#bottomnav')).toBeHidden();
-        await expect(page.locator('#demo-bar')).toBeHidden();
+        await expect(page.locator('#panels-bar')).toBeHidden();
         // Za otázkou zatiaľ nie je nič, kam sa vrátiť.
         await expect(page.locator('#wz-close')).toBeHidden();
         await expect(page.locator('#wz-back')).toBeHidden();
@@ -2240,7 +2240,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#week-sub')).toHaveText(`Sevilla · typická strecha ${kwpText((12 * 435) / 1000)}`);
         await expect(page.locator('#week-today')).not.toHaveText('–');
         // Karta 7 dní je o počasí, výzvu nepotrebuje.
-        await expect(page.locator('#demo-bar')).toBeHidden();
+        await expect(page.locator('#panels-bar')).toBeHidden();
         expect(await ulozene(page)).toBeNull();
         expect((await ulozenaPoloha(page)).name).toBe('Sevilla');
 
@@ -2249,15 +2249,15 @@ test.describe('moja elektráreň', () => {
         await appReady(page);
         await ocakavajKartu(page, 'terazky');
         await expect(page.locator('#pv-updated')).toHaveText('panely nie sú zadané');
-        await expect(page.locator('#panel-terazky')).toHaveClass(/no-plant/);
+        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
         await expect(page.locator('#pv-power')).toHaveText('–');
         await expect(page.locator('#pv-power-unit')).toHaveText('kW');
-        await expect(page.locator('#demo-bar')).toBeVisible();
+        await expect(page.locator('#panels-bar')).toBeVisible();
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#panel-mozem')).toHaveClass(/no-plant/);
+        await expect(page.locator('#panel-mozem')).toHaveClass(/no-panels/);
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-fact')).toContainText('nezadané');
-        await expect(page.locator('#demo-bar')).toBeVisible();
+        await expect(page.locator('#panels-bar')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -2271,7 +2271,7 @@ test.describe('moja elektráreň', () => {
         expect((await ulozenaPoloha(page)).name).toBe('Sevilla');
         // Kto sprievodcu zavrie, má v Nastavení polohu a výzvu dokončiť elektráreň.
         await page.locator('#wz-close').click();
-        await expect(page.locator('#setup-demo')).toContainText('Sevilla');
+        await expect(page.locator('#setup-site')).toContainText('Sevilla');
         await expect(page.locator('#setup-cta')).toBeVisible();
         await expect(page.locator('#setup-overview')).toBeHidden();
         await page.locator('#setup-cta [data-setup-go="start"]').click();
@@ -2282,13 +2282,13 @@ test.describe('moja elektráreň', () => {
     test('len poloha: zmena polohy z Nastavenia uloží novú, panely ostávajú nezadané', async ({ page }) => {
         const errors = await openApp(page, { settings: null, site: SITE });
         await page.locator('#nav-nastavenie').click();
-        await expect(page.locator('#setup-demo-site')).toHaveText(SITE.name);
-        await page.locator('#setup-demo [data-setup-edit="lokalita"]').click();
+        await expect(page.locator('#setup-site-name')).toHaveText(SITE.name);
+        await page.locator('#setup-site [data-setup-edit="lokalita"]').click();
         await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
         await expect(page.locator('#wz-next')).toBeDisabled();
         await vyberMiesto(page, 'Syd', 'Sydney');
         await dalej(page);
-        await expect(page.locator('#setup-demo-site')).toHaveText('Sydney');
+        await expect(page.locator('#setup-site-name')).toHaveText('Sydney');
         expect((await ulozenaPoloha(page)).name).toBe('Sydney');
         expect(await ulozene(page)).toBeNull();
         expect(errors).toEqual([]);
@@ -2296,24 +2296,24 @@ test.describe('moja elektráreň', () => {
 
     test('bez panelov: červená výzva na Terazky a Môžem? vedie na kartu Nastavenie, tam už nie je', async ({ page }) => {
         const errors = await openApp(page, { settings: null, site: SITE });
-        await expect(page.locator('#demo-bar')).toBeVisible();
-        await expect(page.locator('#demo-bar')).toContainText('Chýbajú panely');
+        await expect(page.locator('#panels-bar')).toBeVisible();
+        await expect(page.locator('#panels-bar')).toContainText('Chýbajú panely');
         await page.locator('#nav-7dni').click();
-        await expect(page.locator('#demo-bar')).toBeHidden();
+        await expect(page.locator('#panels-bar')).toBeHidden();
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#demo-bar')).toBeVisible();
-        const vazne = (await new AxeBuilder({ page }).include('#demo-bar').analyze()).violations
+        await expect(page.locator('#panels-bar')).toBeVisible();
+        const vazne = (await new AxeBuilder({ page }).include('#panels-bar').analyze()).violations
             .filter((v) => v.impact === 'serious' || v.impact === 'critical')
             .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
         expect(vazne).toEqual([]);
-        await page.locator('#demo-bar-go').click();
+        await page.locator('#panels-bar-go').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
         await expect(page.locator('#setup-cta')).toBeVisible();
-        await expect(page.locator('#demo-bar')).toBeHidden();
+        await expect(page.locator('#panels-bar')).toBeHidden();
         // Tlačidlo je krok navigácie ako ikona v spodnej lište: Späť vráti na Môžem? aj s výzvou.
         await page.goBack();
         await expect(page.locator('#panel-mozem')).toBeVisible();
-        await expect(page.locator('#demo-bar')).toBeVisible();
+        await expect(page.locator('#panels-bar')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -2321,7 +2321,7 @@ test.describe('moja elektráreň', () => {
         await openApp(page);
         for (const panel of PANELS) {
             await page.locator(`#nav-${panel}`).click();
-            await expect(page.locator('#demo-bar'), panel).toBeHidden();
+            await expect(page.locator('#panels-bar'), panel).toBeHidden();
         }
     });
 
