@@ -1,0 +1,2977 @@
+<title>RAY-MON Živá obloha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wdth,wght@62..125,400..900&display=swap"
+/>
+<style>
+    /* Rozloženie: úvod; potom živý telefón s ovládaním času a počasia, vedľa poznámky ku karte; widgety; pravidlá smeru; otvorené otázky. */
+    :root {
+        --bg: #f2f4f7;
+        --fg: #171b22;
+        --muted: #596170;
+        --line: #d6dbe3;
+        --panel: #ffffff;
+        --accent: #1c6fd0;
+        --yes: #b9f28c;
+        --cheap: #7cc4ff;
+        --costly: #ff7a66;
+        --font-ui: 'Manrope', -apple-system, 'Segoe UI', Arial, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+        --font-sky: 'Archivo', 'Manrope', -apple-system, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+            --bg: #0e1117;
+            --fg: #e9edf3;
+            --muted: #9aa3b2;
+            --line: #262c36;
+            --panel: #161a22;
+            --accent: #7cc4ff;
+            color-scheme: dark;
+        }
+    }
+    :root[data-theme='dark'] {
+        --bg: #0e1117;
+        --fg: #e9edf3;
+        --muted: #9aa3b2;
+        --line: #262c36;
+        --panel: #161a22;
+        --accent: #7cc4ff;
+        color-scheme: dark;
+    }
+    * {
+        box-sizing: border-box;
+    }
+    body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-ui);
+        font-size: 16px;
+        line-height: 1.55;
+        margin: 0;
+    }
+    .wrap {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding-inline: 16px;
+        padding-block: 28px 64px;
+    }
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+        line-height: 1.15;
+        margin: 0;
+    }
+    h1 {
+        font-size: clamp(30px, 6vw, 46px);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    h2 {
+        font-size: clamp(23px, 4.2vw, 32px);
+        font-weight: 800;
+        letter-spacing: -0.015em;
+    }
+    h3 {
+        font-size: 17px;
+        font-weight: 800;
+    }
+    p {
+        margin: 0;
+    }
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .lead {
+        max-width: 64ch;
+        color: var(--muted);
+        font-size: 17px;
+    }
+    .tag {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 5px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        vertical-align: 1px;
+        white-space: nowrap;
+    }
+    section {
+        padding-block: 36px;
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        gap: 20px;
+    }
+    section:last-child {
+        border-bottom: 0;
+    }
+    .intro {
+        display: grid;
+        gap: 12px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .demo {
+        display: grid;
+        grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+        gap: 36px;
+        align-items: start;
+    }
+    @media (max-width: 780px) {
+        .demo {
+            grid-template-columns: 1fr;
+        }
+    }
+    .stage {
+        display: grid;
+        gap: 14px;
+        justify-items: center;
+        position: sticky;
+        top: 12px;
+    }
+    @media (max-width: 780px) {
+        .stage {
+            position: static;
+        }
+    }
+    .ctrl {
+        width: min(340px, 100%);
+        display: grid;
+        gap: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 12px 14px;
+    }
+    .ctrl label {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted);
+    }
+    .ctrl input[type='range'] {
+        width: 100%;
+        min-height: 32px;
+        accent-color: var(--accent);
+    }
+    .ctrl .r {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .seg {
+        display: flex;
+        gap: 3px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px;
+        flex-wrap: wrap;
+    }
+    .seg button {
+        font: 600 13.5px var(--font-ui);
+        border: 0;
+        background: transparent;
+        color: var(--fg);
+        padding: 7px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        min-height: 36px;
+    }
+    .seg button[aria-pressed='true'] {
+        background: var(--fg);
+        color: var(--bg);
+    }
+    .chk {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 14px;
+        color: var(--fg);
+        cursor: pointer;
+        min-height: 36px;
+    }
+    .chk input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+    }
+    button:focus-visible,
+    input:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    .notes {
+        display: grid;
+        gap: 16px;
+        min-width: 0;
+    }
+    .notes .box {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px 18px;
+        display: grid;
+        gap: 10px;
+    }
+    .notes ul {
+        margin: 0;
+        padding-left: 20px;
+        display: grid;
+        gap: 8px;
+    }
+    .notes .tabname {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .grid3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+    }
+    .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px 18px;
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+    }
+    .legend {
+        display: grid;
+        gap: 10px;
+    }
+    .legend div {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        font-size: 15px;
+    }
+    .sw {
+        width: 34px;
+        height: 14px;
+        border-radius: 99px;
+        flex: none;
+    }
+    .tone {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+    }
+    .tone table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 520px;
+        font-size: 15px;
+    }
+    .tone th,
+    .tone td {
+        text-align: left;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+    }
+    .tone tr:last-child td {
+        border-bottom: 0;
+    }
+    .tone th {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .tone td.w {
+        font-family: var(--font-sky);
+        font-weight: 900;
+        font-variation-settings: 'wdth' 120;
+        letter-spacing: -0.01em;
+    }
+
+    /* ===== Telefón ===== */
+    .phone {
+        width: min(340px, 100%);
+        aspect-ratio: 340/700;
+        border-radius: 42px;
+        padding: 10px;
+        background: #0b0c10;
+        box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.5);
+    }
+    .sky {
+        --s1: #1c6fd0;
+        --s2: #5fb0ea;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 32px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, var(--s1), var(--s2));
+        color: #fff;
+        font-family: var(--font-sky);
+        transition: background 0.7s;
+    }
+    .sky.calm {
+        transition: none;
+    }
+    .sky::after {
+        content: '';
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 45%;
+        background: linear-gradient(180deg, transparent, rgba(5, 10, 30, 0.28));
+        pointer-events: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .sky,
+        .sky * {
+            transition: none !important;
+            animation: none !important;
+        }
+    }
+    .body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: none;
+        position: relative;
+        z-index: 1;
+    }
+    .body::-webkit-scrollbar {
+        display: none;
+    }
+    .st {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px 2px;
+        font-size: 12.5px;
+        opacity: 0.88;
+        font-variation-settings: 'wdth' 100;
+    }
+    .st .live {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .st .live i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--yes);
+    }
+    .st .live.off i {
+        background: #c9cdd4;
+    }
+    .ttl {
+        padding: 8px 20px 0;
+        font-size: 30px;
+        font-weight: 800;
+        font-variation-settings: 'wdth' 112;
+        letter-spacing: -0.01em;
+        text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+    }
+    .sub {
+        padding: 2px 20px 0;
+        font-size: 13.5px;
+        opacity: 0.85;
+    }
+    .glass {
+        margin: 12px 14px 0;
+        background: rgba(8, 16, 40, 0.26);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 22px;
+        padding: 14px 16px;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        display: grid;
+        gap: 10px;
+    }
+    .glass h5 {
+        margin: 0;
+        font-size: 11.5px;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        opacity: 0.8;
+    }
+    .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .chip {
+        font-size: 11.5px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1.5px solid #fff;
+        font-variation-settings: 'wdth' 100;
+    }
+    .chip.yes {
+        background: var(--yes);
+        border-color: var(--yes);
+        color: #14300c;
+    }
+    .chip.cheap {
+        background: var(--cheap);
+        border-color: var(--cheap);
+        color: #06233d;
+    }
+    .chip.costly {
+        background: var(--costly);
+        border-color: var(--costly);
+        color: #3a0b04;
+    }
+    .arc {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+    .big {
+        padding: 0 20px;
+        display: grid;
+        gap: 8px;
+    }
+    .word {
+        font-weight: 900;
+        font-variation-settings: 'wdth' 125;
+        letter-spacing: -0.02em;
+        line-height: 0.92;
+        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+        text-wrap: balance;
+    }
+    .line {
+        font-size: 17.5px;
+        line-height: 1.3;
+        font-variation-settings: 'wdth' 95;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    }
+    .apps {
+        display: grid;
+        gap: 2px;
+    }
+    .app {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font: 500 15px var(--font-sky);
+        padding: 9px 2px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        cursor: pointer;
+        text-align: left;
+    }
+    .app:last-child {
+        border-bottom: 0;
+    }
+    .app b {
+        font-weight: 700;
+        font-size: 13.5px;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        white-space: nowrap;
+    }
+    .app b::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.45);
+    }
+    .app b.ok::before {
+        background: var(--yes);
+    }
+    .app b.cheap::before {
+        background: var(--cheap);
+    }
+    .app b.run::before {
+        background: #fff;
+    }
+    .quote {
+        margin: 12px 14px 16px;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font: 800 20px/1.2 var(--font-sky);
+        font-variation-settings: 'wdth' 105;
+        text-align: left;
+        padding: 6px;
+        cursor: pointer;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    }
+    .quote small {
+        display: block;
+        font: 500 11.5px var(--font-sky);
+        opacity: 0.7;
+        margin-top: 6px;
+        letter-spacing: 0.04em;
+    }
+    .pbtn {
+        justify-self: start;
+        border: 0;
+        border-radius: 14px;
+        padding: 11px 16px;
+        font: 800 15px var(--font-sky);
+        background: #fff;
+        color: #0b1430;
+        cursor: pointer;
+        min-height: 44px;
+    }
+    .pbtn.ghost {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+    }
+    .knum {
+        padding: 0 20px;
+        font-size: 76px;
+        font-weight: 900;
+        line-height: 0.95;
+        font-variation-settings: 'wdth' 118;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+    }
+    .knum small {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-left: 6px;
+    }
+    .daychart {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+    .strip {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 12px 14px 4px;
+        scrollbar-width: none;
+    }
+    .strip::-webkit-scrollbar {
+        display: none;
+    }
+    .strip .glass {
+        margin: 0;
+        flex: 0 0 86%;
+        scroll-snap-align: start;
+    }
+    .strip p {
+        font-size: 15px;
+        line-height: 1.35;
+    }
+    .strip b.h {
+        font-size: 19px;
+        line-height: 1.2;
+        font-variation-settings: 'wdth' 108;
+    }
+    .dots {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        padding: 6px 0 14px;
+    }
+    .dots i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+    }
+    .dots i.on {
+        background: #fff;
+    }
+    .days {
+        padding: 10px 14px 16px;
+        display: grid;
+        gap: 7px;
+    }
+    .day {
+        display: grid;
+        grid-template-columns: 52px 24px 1fr 58px;
+        gap: 8px;
+        align-items: center;
+        width: 100%;
+        background: rgba(8, 16, 40, 0.24);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        padding: 11px 12px;
+        font: 500 14.5px var(--font-sky);
+        color: #fff;
+        cursor: pointer;
+        text-align: left;
+    }
+    .day.best {
+        border-color: var(--yes);
+        border-width: 1.5px;
+    }
+    .rng {
+        height: 8px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.16);
+        position: relative;
+    }
+    .rng i {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        border-radius: 99px;
+        background: var(--yes);
+    }
+    .day em {
+        font-style: normal;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+    }
+    .back {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font: 700 14px var(--font-sky);
+        padding: 14px 16px 0;
+        cursor: pointer;
+        min-height: 44px;
+    }
+    .nums {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 12px 14px 0;
+    }
+    .nums div {
+        background: rgba(8, 16, 40, 0.24);
+        border-radius: 14px;
+        padding: 10px;
+        font-size: 11.5px;
+        opacity: 0.95;
+    }
+    .nums b {
+        display: block;
+        font-size: 20px;
+        font-variation-settings: 'wdth' 110;
+        font-variant-numeric: tabular-nums;
+    }
+    .per {
+        margin: 12px 14px 0;
+    }
+    .per .seg {
+        background: rgba(8, 16, 40, 0.26);
+        border-color: rgba(255, 255, 255, 0.18);
+        justify-content: space-between;
+    }
+    .per .seg button {
+        color: #fff;
+        font-family: var(--font-sky);
+        flex: 1;
+    }
+    .per .seg button[aria-pressed='true'] {
+        background: #fff;
+        color: #0b1430;
+    }
+    .eq {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .eq div {
+        font-size: 12.5px;
+        line-height: 1.3;
+        opacity: 0.95;
+    }
+    .eq b {
+        display: block;
+        font-size: 22px;
+        font-variation-settings: 'wdth' 112;
+        font-variant-numeric: tabular-nums;
+    }
+    .rows div {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 15px;
+    }
+    .rows div:last-child {
+        border-bottom: 0;
+    }
+    .rows b {
+        font-variant-numeric: tabular-nums;
+    }
+    .bar {
+        height: 6px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.18);
+        overflow: hidden;
+    }
+    .bar i {
+        display: block;
+        height: 100%;
+        background: var(--yes);
+    }
+    .set {
+        display: grid;
+        gap: 0;
+    }
+    .set .it {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 15px;
+        width: 100%;
+        background: transparent;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+        color: #fff;
+        font-family: var(--font-sky);
+        text-align: left;
+        cursor: pointer;
+        min-height: 44px;
+    }
+    .set .it:last-child {
+        border-bottom: 0;
+    }
+    .set .it span {
+        display: grid;
+    }
+    .set .it small {
+        font-size: 12px;
+        opacity: 0.75;
+    }
+    .tg {
+        width: 44px;
+        height: 26px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.25);
+        position: relative;
+        flex: none;
+        transition: background 0.2s;
+    }
+    .tg::after {
+        content: '';
+        position: absolute;
+        left: 3px;
+        top: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        transition: left 0.2s;
+    }
+    .tg.on {
+        background: var(--yes);
+    }
+    .tg.on::after {
+        left: 21px;
+    }
+    .mini {
+        display: flex;
+        gap: 3px;
+        background: rgba(8, 16, 40, 0.3);
+        border-radius: 99px;
+        padding: 3px;
+    }
+    .mini button {
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font: 700 12.5px var(--font-sky);
+        padding: 6px 10px;
+        border-radius: 99px;
+        cursor: pointer;
+    }
+    .mini button[aria-pressed='true'] {
+        background: #fff;
+        color: #0b1430;
+    }
+    .plant {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .plant b {
+        font-size: 34px;
+        font-weight: 900;
+        font-variation-settings: 'wdth' 118;
+        line-height: 1;
+    }
+    nav {
+        display: flex;
+        justify-content: space-around;
+        padding: 8px 2px 12px;
+        flex: none;
+        background: rgba(6, 10, 28, 0.42);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        position: relative;
+        z-index: 2;
+    }
+    nav button {
+        display: grid;
+        justify-items: center;
+        gap: 2px;
+        font: 600 10.5px var(--font-sky);
+        font-variation-settings: 'wdth' 92;
+        color: rgba(255, 255, 255, 0.68);
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        min-width: 0;
+        min-height: 44px;
+        padding: 2px 4px;
+    }
+    nav svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    nav button[aria-current='page'] {
+        color: #fff;
+    }
+    nav button[aria-current='page'] svg {
+        stroke: var(--yes);
+    }
+    .sheet {
+        position: absolute;
+        inset: auto 0 0 0;
+        z-index: 5;
+        background: rgba(10, 16, 38, 0.86);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border-radius: 26px 26px 0 0;
+        padding: 18px 18px 22px;
+        display: grid;
+        gap: 10px;
+        max-height: 82%;
+        overflow-y: auto;
+    }
+    .sheet h4 {
+        margin: 0;
+        padding-right: 44px;
+        font-size: 24px;
+        font-weight: 900;
+        font-variation-settings: 'wdth' 115;
+    }
+    .sheet .q {
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+    .sheet p {
+        font-size: 15px;
+        line-height: 1.4;
+    }
+    .sheet .x {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 0;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    .poster {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        background: rgba(5, 8, 20, 0.7);
+        display: grid;
+        align-content: center;
+        gap: 12px;
+        padding: 20px;
+    }
+    .poster .pc {
+        border-radius: 24px;
+        padding: 22px 20px;
+        background: linear-gradient(165deg, #ffd36e, #ff8a5c 55%, #6d55d6);
+        color: #1d1030;
+        display: grid;
+        gap: 10px;
+    }
+    .poster small {
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        font-weight: 800;
+    }
+    .poster .pn {
+        font-size: 62px;
+        line-height: 0.9;
+        font-weight: 900;
+        font-variation-settings: 'wdth' 125;
+    }
+    .poster .pg {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        font-size: 13px;
+        line-height: 1.25;
+    }
+    .poster .pg strong {
+        display: block;
+        font-size: 20px;
+    }
+    .poster .cols {
+        display: flex;
+        gap: 3px;
+        align-items: flex-end;
+        height: 44px;
+    }
+    .poster .cols i {
+        flex: 1;
+        background: rgba(29, 16, 48, 0.55);
+        border-radius: 2px;
+    }
+    .retry {
+        margin: 12px 20px 0;
+    }
+    .fact {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 20px 0;
+        font-size: 14.5px;
+        opacity: 0.95;
+        font-variation-settings: 'wdth' 95;
+    }
+    .fact svg {
+        flex: none;
+    }
+    .chartwrap {
+        touch-action: pan-y;
+        cursor: ew-resize;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .hint {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 18px 0;
+        font-size: 12.5px;
+        opacity: 0.85;
+    }
+    .hint button {
+        background: #fff;
+        color: #0b1430;
+        border: 0;
+        border-radius: 99px;
+        padding: 6px 12px;
+        font: 800 12.5px var(--font-sky);
+        cursor: pointer;
+        min-height: 32px;
+    }
+    .sumbtn {
+        display: inline-flex;
+        gap: 4px;
+        margin: 2px 20px 0;
+        padding: 6px 0;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font: 600 13.5px var(--font-sky);
+        opacity: 0.95;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        min-height: 36px;
+    }
+    .deskwrap {
+        width: 100%;
+        border-radius: 18px;
+        background: #0b0c10;
+        padding: 8px;
+        overflow: hidden;
+    }
+    .desk {
+        width: 1000px;
+        height: 600px;
+        transform-origin: top left;
+        border-radius: 12px;
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--s1), var(--s2));
+        color: #fff;
+        font-family: var(--font-sky);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        position: relative;
+    }
+    .desk .bar1 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        background: rgba(6, 10, 28, 0.35);
+    }
+    .desk .bar1 b {
+        font-size: 15px;
+        font-variation-settings: 'wdth' 110;
+    }
+    .desk .tabs {
+        display: flex;
+        gap: 4px;
+    }
+    .desk .tabs span {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 99px;
+        font-size: 13px;
+        opacity: 0.75;
+    }
+    .desk .tabs span.on {
+        background: rgba(255, 255, 255, 0.18);
+        opacity: 1;
+    }
+    .desk .tabs svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .desk .cols {
+        display: grid;
+        grid-template-columns: 300px 1fr 270px;
+        gap: 16px;
+        padding: 16px 20px;
+        min-height: 0;
+    }
+    .desk .col {
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        min-width: 0;
+    }
+    .desk .glass {
+        margin: 0;
+    }
+    .desk .lbl {
+        font-size: 11.5px;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        opacity: 0.8;
+    }
+    .desk .bub {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    .desk .bub div {
+        background: rgba(8, 16, 40, 0.26);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 14px;
+        padding: 8px;
+        font-size: 11.5px;
+    }
+    .desk .bub b {
+        display: block;
+        font-size: 20px;
+        font-variation-settings: 'wdth' 110;
+    }
+    .desk .drow {
+        display: grid;
+        grid-template-columns: 44px 22px 1fr 50px;
+        gap: 6px;
+        align-items: center;
+        font-size: 13px;
+        padding: 5px 8px;
+        border-radius: 10px;
+        background: rgba(8, 16, 40, 0.2);
+    }
+    .desk .drow.best {
+        outline: 1.5px solid var(--yes);
+    }
+    .desk .drow em {
+        font-style: normal;
+        text-align: right;
+        font-weight: 800;
+    }
+    .need {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        background: #fff;
+        color: #0b1430;
+        border: 0;
+        border-radius: 999px;
+        padding: 5px 11px;
+        font: 800 12px var(--font-sky);
+        cursor: pointer;
+        min-height: 32px;
+    }
+    .need::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #0b1430;
+    }
+    .cta {
+        margin: 12px 14px 0;
+        background: #fff;
+        color: #0b1430;
+        border-radius: 22px;
+        padding: 16px;
+        display: grid;
+        gap: 8px;
+    }
+    .cta b {
+        font-size: 19px;
+        line-height: 1.2;
+        font-variation-settings: 'wdth' 108;
+    }
+    .cta p {
+        font-size: 14.5px;
+        line-height: 1.35;
+        color: #2b3550;
+    }
+    .cta .pbtn {
+        background: #0b1430;
+        color: #fff;
+    }
+    .pulse {
+        animation: pulse 1.1s ease-in-out 3;
+    }
+    @keyframes pulse {
+        0%,
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
+        }
+        50% {
+            transform: scale(1.03);
+            box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+        }
+    }
+    .est {
+        font-style: italic;
+        opacity: 0.85;
+    }
+    .steps {
+        display: flex;
+        gap: 4px;
+    }
+    .steps i {
+        flex: 1;
+        height: 5px;
+        border-radius: 9px;
+        background: rgba(11, 20, 48, 0.18);
+    }
+    .steps i.on {
+        background: #0b1430;
+    }
+
+    /* Widgety */
+    .wg {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+        align-items: start;
+    }
+    .wg figure {
+        margin: 0;
+        display: grid;
+        gap: 8px;
+        justify-items: center;
+        text-align: center;
+    }
+    .wg figcaption {
+        font-size: 13px;
+        color: var(--muted);
+    }
+    .wsq {
+        width: 158px;
+        height: 158px;
+        border-radius: 26px;
+        padding: 14px;
+        color: #fff;
+        font-family: var(--font-sky);
+        display: grid;
+        align-content: space-between;
+        background: linear-gradient(180deg, var(--s1), var(--s2));
+        box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.5);
+    }
+    .wsq .w1 {
+        font-size: 26px;
+        font-weight: 900;
+        font-variation-settings: 'wdth' 125;
+        line-height: 0.92;
+        text-wrap: balance;
+    }
+    .wsq .w2 {
+        font-size: 12.5px;
+        opacity: 0.92;
+    }
+    .wlock {
+        width: min(300px, 100%);
+        border-radius: 22px;
+        padding: 16px;
+        background: #0d1020;
+        color: #fff;
+        font-family: var(--font-sky);
+        display: grid;
+        gap: 4px;
+        justify-items: center;
+    }
+    .wlock .clk {
+        font-size: 52px;
+        font-weight: 300;
+        font-variation-settings: 'wdth' 90;
+        line-height: 1;
+    }
+    .wlock .inl {
+        font-size: 13.5px;
+        opacity: 0.9;
+    }
+    .wnot {
+        width: min(320px, 100%);
+        border-radius: 18px;
+        padding: 12px 14px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--fg);
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 10px;
+        text-align: left;
+        font-size: 14px;
+        line-height: 1.35;
+    }
+    .wnot .ic {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        background: linear-gradient(180deg, #1c6fd0, #5fb0ea);
+    }
+    .wnot b {
+        font-size: 13px;
+    }
+</style>
+
+<div class="wrap">
+    <header class="intro">
+        <span class="eyebrow">RAY-MON · smer B do hĺbky · október 2026</span>
+        <h1>Živá obloha</h1>
+        <p class="lead">
+            Všetkých päť kariet v jednom klikateľnom telefóne. Celá appka stojí na oblohe, ktorá sa mení s časom aj počasím, a na drzom
+            tóne, ktorý už appka má. Peniaze tu zámerne nie sú, dorobíme ich nakoniec.
+        </p>
+        <p class="lead">
+            Pod telefónom posúvaš čas, meníš počasie, vypneš dáta alebo zaškrtneš „Panely nezadané“ (úloha #23). Všetky karty aj widgety
+            nižšie sa prepočítajú. Čísla sú vymyslené, ale počítajú sa z jednej krivky, takže sedia medzi sebou.
+        </p>
+    </header>
+
+    <section aria-labelledby="h-demo">
+        <h2 id="h-demo" class="eyebrow" style="font-size: 12px; font-weight: 500">Klikateľný návrh</h2>
+        <div class="demo">
+            <div class="stage">
+                <div class="phone">
+                    <div class="sky" id="sky">
+                        <div class="body" id="body"></div>
+                        <nav id="nav" aria-label="Karty appky"></nav>
+                    </div>
+                </div>
+                <div class="ctrl" aria-label="Ovládanie náhľadu">
+                    <label for="cT"
+                        >Čas: <b id="cTv" style="color: var(--fg)">12:00</b>
+                        <input type="range" id="cT" min="0" max="23.5" step="0.5" value="12" />
+                    </label>
+                    <div class="r">
+                        <div class="seg" role="group" aria-label="Počasie">
+                            <button type="button" data-w="jasno" aria-pressed="true">Jasno</button>
+                            <button type="button" data-w="polojasno" aria-pressed="false">Polojasno</button>
+                            <button type="button" data-w="dazd" aria-pressed="false">Dážď</button>
+                        </div>
+                        <label class="chk" for="cOff"><input type="checkbox" id="cOff" />Bez dát</label>
+                        <label class="chk" for="cPan"><input type="checkbox" id="cPan" />Panely nezadané</label>
+                    </div>
+                </div>
+            </div>
+            <div class="notes" id="notes" aria-live="polite"></div>
+        </div>
+    </section>
+
+    <section aria-labelledby="h-desk">
+        <span class="eyebrow">Tablet a desktop</span>
+        <h2 id="h-desk">Široká obrazovka</h2>
+        <p class="lead">
+            Tak ako dnes: na širokej obrazovke je vidno všetko naraz. Vľavo odpoveď Môžem? so spotrebičmi, v strede Teraz s grafom dňa,
+            vpravo bubliny Dnes, Zajtra, 7 dní a riadky týždňa. Navigácia je hore a meno karty je vedľa ikony. Reaguje na ovládanie pod
+            telefónom vyššie.
+        </p>
+        <div class="deskwrap" id="deskWrap"><div class="desk" id="desk"></div></div>
+        <p class="lead">
+            Tablet na šírku dostane to isté bez pravého stĺpca, 7 dní sa presunie pod Teraz. Tablet na výšku je telefón so širšími okrajmi a
+            väčším grafom. <span class="tag">odhad</span>, že to netreba kresliť zvlášť. Na telefóne je tento náhľad malý, lepšie ho pozrieť
+            na počítači.
+        </p>
+    </section>
+
+    <section aria-labelledby="h-wg">
+        <span class="eyebrow">Mimo appky</span>
+        <h2 id="h-wg">Widget a upozornenie</h2>
+        <p class="lead">
+            Tu sa rozhoduje o lojalite viac než v samotnej appke. Obloha z appky sa prenesie na plochu telefónu, takže človek vidí odpoveď
+            bez otvárania. Widget aj spoľahlivé upozornenia potrebujú natívnu appku, web ich nevie. <span class="tag">fakt</span>
+        </p>
+        <div class="wg">
+            <figure>
+                <div class="wsq" id="wSq"></div>
+                <figcaption>Widget na ploche, malý</figcaption>
+            </figure>
+            <figure>
+                <div class="wlock">
+                    <div class="clk" id="wClk">12:00</div>
+                    <div class="inl" id="wInl"></div>
+                </div>
+                <figcaption>Zamknutá obrazovka</figcaption>
+            </figure>
+            <figure>
+                <div class="wnot">
+                    <span class="ic" aria-hidden="true"></span>
+                    <div>
+                        <b>RAY-MON · teraz</b>
+                        <div id="wNot"></div>
+                    </div>
+                </div>
+                <figcaption>Upozornenie, keď sa otvorí okno</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section aria-labelledby="h-rules">
+        <span class="eyebrow">Pravidlá smeru</span>
+        <h2 id="h-rules">Aby to držalo pokope</h2>
+        <div class="grid3">
+            <div class="card">
+                <h3>Farba má jeden význam</h3>
+                <div class="legend">
+                    <div><span class="sw" style="background: var(--yes)"></span>Slnko stačí, môžeš</div>
+                    <div><span class="sw" style="background: var(--cheap)"></span>Lacná sieť</div>
+                    <div><span class="sw" style="background: var(--costly)"></span>Drahá sieť</div>
+                    <div>
+                        <span class="sw" style="background: linear-gradient(90deg, #1c6fd0, #ee8a5a)"></span>Obloha je len nálada, nikdy nie
+                        údaj
+                    </div>
+                </div>
+                <p style="font-size: 14px; color: var(--muted)">
+                    Oranžová už neznamená „lacné“ ani „priemerný deň“. Tým padá problém z auditu. Každý stav má aj slovo, nie iba farbu.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Písmo</h3>
+                <p
+                    style="
+                        font-family: var(--font-sky);
+                        font-weight: 900;
+                        font-variation-settings: 'wdth' 125;
+                        font-size: 34px;
+                        line-height: 0.95;
+                    "
+                >
+                    ZAPNI TOOO
+                </p>
+                <p style="font-size: 14px; color: var(--muted)">
+                    Jedno písmo, Archivo, s meniteľnou šírkou: široké a čierne na odpoveď, normálne na vety, úzke v navigácii. Licencia OFL,
+                    dá sa dať do repozitára rovnako ako dnešné písma. <span class="tag">fakt</span>
+                </p>
+            </div>
+            <div class="card">
+                <h3>Pohyb a pokojný režim</h3>
+                <p style="font-size: 15px">
+                    Obloha sa prelieva pomaly, nič nebliká. V Nastavení je prepínač „Živá obloha“. Kto ho vypne alebo má v telefóne útlm
+                    pohybu, dostane pokojnú tmavomodrú bez prechodov.
+                </p>
+                <p style="font-size: 14px; color: var(--muted)">
+                    Biely text na svetlej poludňajšej oblohe je najväčšie riziko čitateľnosti. Preto je spodok vždy stmavený a karty majú
+                    tmavé sklo. Pred kódom to treba zmerať. <span class="tag">odhad</span>
+                </p>
+            </div>
+        </div>
+        <h3 style="margin-top: 8px">Tón: drzý je predvolený, slušný je voľba</h3>
+        <div class="tone">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Situácia</th>
+                        <th>Drzý (predvolený)</th>
+                        <th>Slušný</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Slnko stačí</td>
+                        <td class="w">ZAPNI TOOO</td>
+                        <td class="w">ÁNO, TERAZ</td>
+                    </tr>
+                    <tr>
+                        <td>Okno príde neskôr</td>
+                        <td class="w">NO NO, NOT YET</td>
+                        <td class="w">EŠTE NIE</td>
+                    </tr>
+                    <tr>
+                        <td>Celý deň slabý</td>
+                        <td class="w">NAHOVNO DEŇ</td>
+                        <td class="w">SLABÝ DEŇ</td>
+                    </tr>
+                    <tr>
+                        <td>Okno už prešlo</td>
+                        <td class="w">Dnes už ne e!</td>
+                        <td class="w">DNES UŽ NIE</td>
+                    </tr>
+                    <tr>
+                        <td>Nie sú dáta</td>
+                        <td class="w">Neviem.</td>
+                        <td class="w">NEVIEM</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="lead">
+            Slová sú tvoje dnešné, len dostali vlastnú oblohu. Slušnú verziu by som dal ako voľbu v Nastavení, nie ako predvolenú. Pomôže
+            pri recenziách v obchode a u starších ľudí, a drzosť ostane značkou. <span class="tag">odhad</span>
+        </p>
+    </section>
+
+    <section aria-labelledby="h-23">
+        <span class="eyebrow">Úloha #23</span>
+        <h2 id="h-23">Výzva „panely nie sú zadané“</h2>
+        <p class="lead">Zaškrtni pod telefónom „Panely nezadané“ a prejdi všetky karty. Pravidlá sú tieto:</p>
+        <div class="grid3">
+            <div class="card">
+                <h3>Výzva je na každej karte</h3>
+                <p style="font-size: 15px">
+                    V hlavičke je biely štítok „Zadaj panely ›“ namiesto času, ťuknutím ide rovno do Nastavenia. Na kartách je biela karta s
+                    jednou vetou prečo a jedným tlačidlom. Biela je jediná nefarebná vec, ktorá na oblohe svieti viac než všetko ostatné.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Bez červenej, bez strachu</h3>
+                <p style="font-size: 15px">
+                    Červená je v smere B vyhradená drahej sieti. Výzva neznamená chybu, len chýbajúci krok. Tón je drzý, ale vecný: „Hádam
+                    podľa suseda“, „Prázdna strecha, prázdna štatistika“. <span class="tag">odhad</span>, že to zaberie lepšie ako varovanie
+                </p>
+            </div>
+            <div class="card">
+                <h3>Pulz len 3× a appka funguje ďalej</h3>
+                <p style="font-size: 15px">
+                    Na Štatistike a v Nastavení výzva pri vstupe trikrát zapulzuje a zastaví sa. Stále blikanie by ľudí otravovalo. Pri
+                    útlme pohybu nepulzuje vôbec. Môžem? aj 7 dní ďalej odpovedajú z typickej strechy 5 kWp, len to otvorene priznávajú
+                    kurzívou a slovom ODHAD.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section aria-labelledby="h-open">
+        <span class="eyebrow">Na rozhodnutie</span>
+        <h2 id="h-open">Čo ešte treba vyriešiť</h2>
+        <div class="grid3">
+            <div class="card">
+                <h3>Ciferník zmizne</h3>
+                <p style="font-size: 15px">
+                    Karta Teraz už nemá dvojitý ciferník. Nahradil ho graf dňa s pásom plánu pod ním, ktorý sa číta zľava doprava ako čas.
+                    Ak je ciferník pre teba srdcovka, dá sa nechať, ale v tomto štýle bude pôsobiť cudzo. <span class="tag">odhad</span>
+                </p>
+            </div>
+            <div class="card">
+                <h3>Počasie potrebuje ikonky</h3>
+                <p style="font-size: 15px">
+                    7 dní stojí na ikonách slnka a mrakov. Tu sú jednoduché kreslené. Do appky treba vlastnú sadu, inak budú na každom
+                    telefóne vyzerať inak. <span class="tag">fakt</span> pre emoji, ktoré sa kreslia podľa systému
+                </p>
+            </div>
+            <div class="card">
+                <h3>Peniaze</h3>
+                <p style="font-size: 15px">
+                    Podľa dohody odložené. Miesto na ne je pripravené na karte Štatistika (riadok pod veľkým číslom) a na plagáte. Netreba
+                    kvôli nim nič prerábať.
+                </p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        var BIG = 2.5,
+            RISE = 7,
+            SET = 18.5;
+        var PEAK = { jasno: 7.2, polojasno: 3.7, dazd: 1.2 };
+        var S = {
+            pv: null,
+            panels: true,
+            tab: 0,
+            t: 12,
+            w: 'jasno',
+            off: false,
+            calm: false,
+            polite: false,
+            day: null,
+            per: 0,
+            poster: false,
+            app: null,
+            ran: {},
+            q: 0,
+            notif: { okno: true, draha: true, rano: false },
+            start: 0,
+        };
+        var TABS = [
+            { n: 'Môžem?', i: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/>' },
+            { n: 'Teraz', i: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>' },
+            { n: '7 dní', i: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
+            { n: 'Štatistika', i: '<path d="M5 20V12M12 20V5M19 20v-9"/>' },
+            {
+                n: 'Nastavenie',
+                i: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+            },
+        ];
+        var APPS = [
+            { n: 'Práčka', kw: 2.0, d: 2, tip: 'Pusti normálny program, nie eko 3-hodinový. Teraz je energie dosť.' },
+            { n: 'Umývačka', kw: 1.8, d: 2, tip: 'Ideálne hneď po obede, keď je slnko najvyššie.' },
+            { n: 'Sušička', kw: 2.5, d: 1.5, tip: 'Najžravejšia vec v dome. Patrí len do stredu okna.' },
+            { n: 'Auto', kw: 3.7, d: 3, tip: 'Nabíjaj na 16 A, nech sa vojde pod výrobu strechy.' },
+            { n: 'Hranie', kw: 0.4, d: 2, tip: 'Konzola a televízor sú drobné. Hraj kedy chceš.' },
+            { n: 'Fén', kw: 1.6, d: 0.25, tip: 'Pár minút. Kedykoľvek, nikto si to nevšimne.' },
+        ];
+        var WEEK = [
+            { d: 'Dnes', w: null, m: 1 },
+            { d: 'Pi 3.', w: 'polojasno', m: 1 },
+            { d: 'So 4.', w: 'jasno', m: 1.06 },
+            { d: 'Ne 5.', w: 'dazd', m: 1 },
+            { d: 'Po 6.', w: 'polojasno', m: 0.9 },
+            { d: 'Ut 7.', w: 'jasno', m: 0.96 },
+            { d: 'St 8.', w: 'polojasno', m: 1.08 },
+        ];
+        var Q = {
+            drzy: [
+                'Strecha dnes robí viac ako ty.',
+                'Slnko nefakturuje.',
+                'Mraky. Klasika.',
+                'Práčka sa nepýta, kto platí. Ty áno.',
+                'Ešte raz ťukni a poviem ďalšiu.',
+            ],
+            slusny: [
+                'Strecha dnes pracuje za vás.',
+                'Slnečná energia je zadarmo.',
+                'Oblačnosť sa mení, sledujem ju.',
+                'Väčšie spotrebiče sa oplatí zladiť so slnkom.',
+                'Ťuknite pre ďalší tip.',
+            ],
+        };
+        var WORD = {
+            yes: ['ZAPNI TOOO', 'ÁNO, TERAZ'],
+            soon: ['NO NO, NOT YET', 'EŠTE NIE'],
+            bad: ['NAHOVNO DEŇ', 'SLABÝ DEŇ'],
+            over: ['Dnes už ne e!', 'DNES UŽ NIE'],
+            unk: ['Neviem.', 'NEVIEM'],
+        };
+
+        function prod(h, w, m) {
+            if (h < RISE || h > SET) return 0;
+            var s = Math.sin((Math.PI * (h - RISE)) / (SET - RISE));
+            var v = PEAK[w] * Math.pow(s, 1.35) * (m || 1) * (S.panels ? 1 : 0.48);
+            if (w === 'polojasno') v *= 0.78 + 0.22 * Math.sin(h * 2.6);
+            return Math.max(0, v);
+        }
+        function windowFor(kw, w, m) {
+            var a = null,
+                b = null;
+            for (var h = 0; h <= 24; h += 0.25) {
+                if (prod(h, w, m) >= kw) {
+                    if (a === null) a = h;
+                    b = h;
+                }
+            }
+            return a === null ? null : [a, b];
+        }
+        function total(w, m, upto) {
+            var s = 0,
+                e = upto == null ? 24 : upto;
+            for (var h = 0; h < e; h += 0.25) s += prod(h, w, m) * 0.25;
+            return s;
+        }
+        function tariff(h) {
+            return h >= 22 || h < 6 ? 'cheap' : h >= 17 && h < 20 ? 'costly' : 'normal';
+        }
+        function fmt(h) {
+            h = ((h % 24) + 24) % 24;
+            var H = Math.floor(h),
+                M = Math.round((h - H) * 60);
+            if (M === 60) {
+                H++;
+                M = 0;
+            }
+            return (H < 10 ? '0' : '') + H + ':' + (M < 10 ? '0' : '') + M;
+        }
+        function round15(h) {
+            return Math.round(h * 4) / 4;
+        }
+        function n1(x) {
+            return x.toFixed(1).replace('.', ',');
+        }
+        function n2(x) {
+            return x.toFixed(2).replace('.', ',');
+        }
+        function thou(x) {
+            return String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        }
+
+        function state() {
+            var t = S.t,
+                w = S.w;
+            if (S.off) return { k: 'unk', line: 'Nemám dáta zo strechy ani predpoveď. Skontroluj internet a skús znova.' };
+            var win = windowFor(BIG, w);
+            if (prod(t, w) >= BIG)
+                return { k: 'yes', line: 'Slnko ide naplno do ' + fmt(round15(win[1])) + '. Práčka, sušička, čo chceš.' };
+            if (!win) return { k: 'bad', line: 'Dnes slnko na veľké veci nestačí. Lacná sieť ide od 22:00, pusti to na noc.' };
+            if (t < win[0]) return { k: 'soon', line: 'Slnko to utiahne od ' + fmt(round15(win[0])) + '. Ešte ' + dur(win[0] - t) + '.' };
+            if (tariff(t) === 'cheap')
+                return { k: 'over', line: 'Slnko skončilo, ale sieť je teraz lacná. Čo nepočká do rána, pusti teraz.' };
+            if (tariff(t) === 'costly') return { k: 'over', line: 'Slnko odišlo a sieť je teraz drahá. Vydrž do 22:00.' };
+            return {
+                k: 'over',
+                line: 'Slnko skončilo. Lacná sieť ide od 22:00, zajtra slnko zas okolo ' + fmt(round15(windowFor(BIG, 'jasno')[0])) + '.',
+            };
+        }
+        function dur(x) {
+            var H = Math.floor(x),
+                M = Math.round(((x - H) * 60) / 5) * 5;
+            return (H ? H + ' h ' : '') + (M ? M + ' min' : '');
+        }
+        function appStatus(a) {
+            var t = S.t,
+                w = S.w;
+            if (S.off) return { c: '', txt: '?' };
+            if (S.ran[a.n] && S.ran[a.n] > t) return { c: 'run', txt: 'beží do ' + fmt(S.ran[a.n]) };
+            if (a.kw < 1) return { c: 'ok', txt: 'kedykoľvek' };
+            if (prod(t, w) >= a.kw) {
+                var wn = windowFor(a.kw, w);
+                return { c: 'ok', txt: 'do ' + fmt(round15(wn[1])) };
+            }
+            var wn2 = windowFor(a.kw, w);
+            if (wn2 && wn2[0] > t) return { c: '', txt: 'o ' + fmt(round15(wn2[0])) };
+            if (tariff(t) === 'cheap') return { c: 'cheap', txt: 'lacno teraz' };
+            return { c: '', txt: 'lacno od 22:00' };
+        }
+        // Obloha: farby podľa hodiny, potom primiešané počasie
+        var KEYS = [
+            [0, '#070b1f', '#141b3d'],
+            [5.5, '#0f1736', '#2b2f5c'],
+            [7, '#4b5aa6', '#f0a98a'],
+            [8.5, '#2f72c0', '#93c8ec'],
+            [12, '#1767c9', '#4fa3e2'],
+            [16, '#2864b4', '#cf9f6c'],
+            [18, '#463a8a', '#e3804f'],
+            [19.5, '#1d2257', '#5d437f'],
+            [21, '#0b1130', '#1d2550'],
+            [24, '#070b1f', '#141b3d'],
+        ];
+        function hx(c) {
+            return [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16)];
+        }
+        function mix(a, b, f) {
+            return a.map(function (v, i) {
+                return Math.round(v + (b[i] - v) * f);
+            });
+        }
+        function css(c) {
+            return 'rgb(' + c.join(',') + ')';
+        }
+        function skyAt(t, w, off, calm) {
+            if (off) return ['#4f555f', '#7f858e'];
+            if (calm) return ['#1a2740', '#2c3d5c'];
+            var i = 0;
+            while (KEYS[i + 1][0] < t) i++;
+            var A = KEYS[i],
+                B = KEYS[i + 1],
+                f = (t - A[0]) / (B[0] - A[0]);
+            var c1 = mix(hx(A[1]), hx(B[1]), f),
+                c2 = mix(hx(A[2]), hx(B[2]), f);
+            var day = Math.max(
+                0.25,
+                Math.min(1, t >= RISE - 1 && t <= SET + 1 ? Math.sin((Math.PI * (t - RISE + 1)) / (SET - RISE + 2)) : 0),
+            );
+            var cf = { jasno: 0, polojasno: 0.45, dazd: 0.78 }[w] * day;
+            var g1 = w === 'dazd' ? hx('#3f4855') : hx('#5b6b82'),
+                g2 = w === 'dazd' ? hx('#68717e') : hx('#98a5b5');
+            return [css(mix(c1, g1, cf)), css(mix(c2, g2, cf))];
+        }
+        function wIcon(w, s) {
+            s = s || 22;
+            var sun =
+                '<circle cx="12" cy="12" r="4.5" fill="#ffe27a"/><g stroke="#ffe27a" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5"/></g>';
+            var cloud = '<path d="M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 7 11.2 3.4 3.4 0 0 0 7 18z" fill="#eef3fa"/>';
+            var inner =
+                w === 'jasno'
+                    ? sun
+                    : w === 'polojasno'
+                      ? '<g transform="translate(-3 -3) scale(.85)">' +
+                        sun +
+                        '</g><g transform="translate(3 3) scale(.85)">' +
+                        cloud +
+                        '</g>'
+                      : cloud.replace('#eef3fa', '#c9d2de') +
+                        '<g stroke="#9fd0ff" stroke-width="1.8" stroke-linecap="round"><path d="M9 20l-1 2.5M13 20l-1 2.5M17 20l-1 2.5"/></g>';
+            return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
+        }
+        var WNAME = { jasno: 'jasno', polojasno: 'polojasno', dazd: 'dážď' };
+
+        function header() {
+            var r = S.panels
+                ? '<span class="live' + (S.off ? ' off' : '') + '"><i></i>' + (S.off ? 'bez dát' : fmt(S.t)) + '</span>'
+                : '<button type="button" class="need" data-act="setup">Zadaj panely ›</button>';
+            return '<div class="st"><span>Dvorany nad Nitrou</span>' + r + '</div>';
+        }
+        function ctaCard(title, text, btn, pulse) {
+            return (
+                '<div class="cta' +
+                (pulse ? ' pulse' : '') +
+                '"><b>' +
+                title +
+                '</b><p>' +
+                text +
+                '</p><button type="button" class="pbtn" data-act="setup">' +
+                (btn || 'Nastaviť panely, 2 minúty') +
+                '</button></div>'
+            );
+        }
+        function wordSize(s) {
+            return s.length <= 7 ? 66 : s.length <= 11 ? 50 : 42;
+        }
+
+        function tabMozem() {
+            var st = state(),
+                word = WORD[st.k][S.polite ? 1 : 0],
+                tf = tariff(S.t);
+            var chips = '';
+            if (st.k === 'yes') chips += '<span class="chip yes">ÁNO</span>';
+            else if (st.k === 'soon') chips += '<span class="chip">POČKAJ</span>';
+            else if (st.k === 'unk') chips += '<span class="chip">NEVIEM</span>';
+            else chips += '<span class="chip">DNES NIE</span>';
+            if (!S.off && tf === 'cheap') chips += '<span class="chip cheap">LACNÁ SIEŤ</span>';
+            if (!S.off && tf === 'costly') chips += '<span class="chip costly">DRAHÁ SIEŤ</span>';
+            // oblúk slnka
+            var f = (S.t - RISE) / (SET - RISE),
+                up = f >= 0 && f <= 1,
+                ang = Math.PI * (1 - Math.min(Math.max(f, 0), 1));
+            var x = 160 + 140 * Math.cos(ang),
+                y = 118 - 88 * Math.sin(ang);
+            var body = up
+                ? '<circle r="24" fill="rgba(255,240,190,.22)"/><circle r="13" fill="#fff4c4"/>'
+                : '<circle r="11" fill="#e8ecff"/><circle cx="6" cy="-4" r="9" fill="' + skyAt(S.t, S.w, S.off, S.calm)[0] + '"/>';
+            if (!up) {
+                x = 262;
+                y = 42;
+            }
+            if (S.off) body = '<circle r="12" fill="rgba(255,255,255,.35)"/>';
+            var win = windowFor(BIG, S.w),
+                wpath = '';
+            if (win && !S.off) {
+                var a1 = Math.PI * (1 - (win[0] - RISE) / (SET - RISE)),
+                    a2 = Math.PI * (1 - (win[1] - RISE) / (SET - RISE));
+                wpath =
+                    '<path d="M' +
+                    (160 + 140 * Math.cos(a1)).toFixed(1) +
+                    ' ' +
+                    (118 - 88 * Math.sin(a1)).toFixed(1) +
+                    ' A140 88 0 0 1 ' +
+                    (160 + 140 * Math.cos(a2)).toFixed(1) +
+                    ' ' +
+                    (118 - 88 * Math.sin(a2)).toFixed(1) +
+                    '" fill="none" stroke="#b9f28c" stroke-width="4" stroke-linecap="round" opacity=".9"/>';
+            }
+            var arc =
+                '<svg class="arc" viewBox="0 0 320 132" aria-hidden="true"><path d="M20 118 A140 88 0 0 1 300 118" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="3 6"/>' +
+                wpath +
+                '<line x1="0" y1="118" x2="320" y2="118" stroke="rgba(255,255,255,.3)"/><text x="20" y="130" fill="rgba(255,255,255,.75)" font-size="10" text-anchor="middle">' +
+                fmt(RISE) +
+                '</text><text x="300" y="130" fill="rgba(255,255,255,.75)" font-size="10" text-anchor="middle">' +
+                fmt(SET) +
+                '</text>' +
+                '<g transform="translate(' +
+                x.toFixed(1) +
+                ' ' +
+                y.toFixed(1) +
+                ')">' +
+                body +
+                '</g></svg>';
+            var h =
+                header() +
+                arc +
+                '<div class="big"><div class="chips">' +
+                chips +
+                '</div><div class="word" style="font-size:' +
+                wordSize(word) +
+                'px">' +
+                word +
+                '</div><p class="line">' +
+                st.line +
+                '</p></div>';
+            if (!S.off) {
+                var pk = prod(S.t, S.w),
+                    mob = Math.round(pk / 0.015 / 10) * 10;
+                h +=
+                    '<p class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>' +
+                    (mob > 0
+                        ? 'Strecha za hodinu nabije ' + (S.panels ? '' : 'asi ') + thou(mob) + ' mobilov'
+                        : 'Strecha teraz nenabije ani jeden mobil') +
+                    '</p>';
+            }
+            if (S.off) {
+                h += '<button type="button" class="pbtn retry" data-act="retry">Skúsiť znova</button>';
+            } else if (!S.panels) {
+                h += ctaCard(
+                    S.polite ? 'Toto je len odhad' : 'Hádam podľa suseda',
+                    'Počasie poznám, tvoju strechu nie. Rátam s typickou strechou 5 kWp. Zadaj panely a odpoveď bude naozaj tvoja.',
+                );
+            }
+            var ok = 0;
+            var rows = APPS.map(function (a, i) {
+                var s = appStatus(a);
+                if (s.c === 'ok' || s.c === 'cheap') ok++;
+                return (
+                    '<button type="button" class="app" data-act="app" data-i="' +
+                    i +
+                    '"><span>' +
+                    a.n +
+                    '</span><b class="' +
+                    s.c +
+                    '">' +
+                    s.txt +
+                    '</b></button>'
+                );
+            }).join('');
+            h +=
+                '<div class="glass' +
+                (S.panels ? '' : ' est') +
+                '"><h5>ČO MÔŽEM · ' +
+                (S.off ? '?' : ok) +
+                ' ZO 6 IDE HNEĎ' +
+                (S.panels ? '' : ' · ODHAD') +
+                '</h5><div class="apps">' +
+                rows +
+                '</div></div>';
+            var ran = Object.keys(S.ran).length;
+            if (ran)
+                h +=
+                    '<div class="glass" style="font-size:14px">Tento mesiac si pustil ' +
+                    (11 + ran) +
+                    ' vecí, z toho ' +
+                    (8 + ran) +
+                    ' na slnku.</div>';
+            var qs = Q[S.polite ? 'slusny' : 'drzy'];
+            h +=
+                '<button type="button" class="quote" data-act="quote">' +
+                qs[S.q % qs.length] +
+                '<small>ťukni, príde ďalšia</small></button>';
+            if (S.app !== null) h += sheetApp();
+            return h;
+        }
+        function sheetApp() {
+            var a = APPS[S.app],
+                s = appStatus(a),
+                running = S.ran[a.n] && S.ran[a.n] > S.t,
+                wn = windowFor(a.kw, S.w);
+            var why =
+                a.kw < 1
+                    ? 'Berie len ' + n1(a.kw) + ' kW. To strecha utiahne skoro vždy.'
+                    : 'Potrebuje asi ' + n1(a.kw) + ' kW. Strecha teraz dáva ' + n1(prod(S.t, S.w)) + ' kW.';
+            var cloud = wn
+                ? 'Ak sa zamračí, appka ti dá vedieť a ponúkne lacnú sieť od 22:00.'
+                : 'Dnes to zo slnka nepôjde. Najlacnejšie je od 22:00 do 6:00.';
+            var btn = running
+                ? '<button type="button" class="pbtn ghost" data-act="ran">Beží do ' + fmt(S.ran[a.n]) + ' · zrušiť</button>'
+                : '<button type="button" class="pbtn" data-act="ran">' +
+                  (s.c === 'ok' || s.c === 'cheap' ? 'Pustil/a som' : 'Pustil/a som aj tak') +
+                  '</button>';
+            return (
+                '<div class="sheet" role="dialog" aria-label="' +
+                a.n +
+                '"><button type="button" class="x" data-act="close" aria-label="Zavrieť">×</button><h4>' +
+                a.n +
+                ': ' +
+                s.txt +
+                '</h4>' +
+                '<div class="q">ČO ROBIŤ</div><p>' +
+                (s.c === 'ok' || s.c === 'run'
+                    ? a.tip
+                    : s.c === 'cheap'
+                      ? 'Teraz ide lacná sieť. Ak to nepočká do rána, pusti to teraz.'
+                      : 'Nastav odklad štartu na ' +
+                        (wn && wn[0] > S.t ? fmt(round15(wn[0])) : '22:00') +
+                        '. ' +
+                        (wn && wn[0] > S.t ? 'Vtedy to utiahne strecha.' : 'Vtedy začína lacná sieť.')) +
+                '</p><div class="q">PREČO</div><p>' +
+                why +
+                '</p><div class="q">A KEĎ SA ZAMRAČÍ?</div><p>' +
+                cloud +
+                '</p>' +
+                btn +
+                '</div>'
+            );
+        }
+        function planLabel(h, w, m) {
+            return prod(h, w, m) >= BIG
+                ? 'slnko stačí'
+                : tariff(h) === 'cheap'
+                  ? 'lacná sieť'
+                  : tariff(h) === 'costly'
+                    ? 'drahá sieť'
+                    : 'bežná cena';
+        }
+        function dayChart(w, m, showNow, prev) {
+            var X = function (h) {
+                    return 10 + (h / 24) * 300;
+                },
+                Y = function (k) {
+                    return 112 - (k / 8) * 92;
+                };
+            var d = 'M' + X(0) + ' ' + Y(0);
+            for (var h = 0; h <= 24; h += 0.25) d += ' L' + X(h).toFixed(1) + ' ' + Y(prod(h, w, m)).toFixed(1);
+            d += ' L' + X(24) + ' ' + Y(0) + 'Z';
+            var band = '';
+            for (var b = 0; b < 24; b += 0.5) {
+                var p = prod(b + 0.25, w, m),
+                    c =
+                        p >= BIG
+                            ? '#b9f28c'
+                            : tariff(b) === 'cheap'
+                              ? '#7cc4ff'
+                              : tariff(b) === 'costly'
+                                ? '#ff7a66'
+                                : 'rgba(255,255,255,.3)';
+                band +=
+                    '<rect x="' +
+                    X(b).toFixed(1) +
+                    '" y="120" width="' +
+                    (X(0.5) - X(0) - 0.8).toFixed(1) +
+                    '" height="9" rx="2" fill="' +
+                    c +
+                    '"/>';
+            }
+            var lim =
+                '<line x1="10" x2="310" y1="' +
+                Y(BIG) +
+                '" y2="' +
+                Y(BIG) +
+                '" stroke="rgba(185,242,140,.6)" stroke-dasharray="3 4"/><text x="308" y="' +
+                (Y(BIG) - 4) +
+                '" fill="rgba(255,255,255,.75)" font-size="9" text-anchor="end">veľké spotrebiče</text>';
+            var ticks = [0, 6, 12, 18, 24]
+                .map(function (h) {
+                    return (
+                        '<text x="' + X(h) + '" y="144" fill="rgba(255,255,255,.75)" font-size="10" text-anchor="middle">' + h + '</text>'
+                    );
+                })
+                .join('');
+            var now = '';
+            if (showNow) {
+                now =
+                    '<line x1="' +
+                    X(S.t) +
+                    '" x2="' +
+                    X(S.t) +
+                    '" y1="14" y2="130" stroke="#fff" stroke-width="1.5"/><circle cx="' +
+                    X(S.t) +
+                    '" cy="' +
+                    Y(prod(S.t, w, m)) +
+                    '" r="5" fill="#fff"/>';
+            }
+            if (prev && S.pv !== null) {
+                var px = X(S.pv),
+                    pp = prod(S.pv, w, m),
+                    txt = fmt(S.pv) + ' · ' + n1(pp) + ' kW · ' + planLabel(S.pv, w, m),
+                    bw = txt.length * 5.6 + 16,
+                    bx = Math.min(Math.max(px - bw / 2, 4), 316 - bw);
+                now +=
+                    '<line x1="' +
+                    px +
+                    '" x2="' +
+                    px +
+                    '" y1="22" y2="130" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="' +
+                    px +
+                    '" cy="' +
+                    Y(pp) +
+                    '" r="6" fill="#0b1430" stroke="#fff" stroke-width="2"/><rect x="' +
+                    bx.toFixed(1) +
+                    '" y="2" width="' +
+                    bw.toFixed(1) +
+                    '" height="18" rx="9" fill="#fff"/><text x="' +
+                    (bx + bw / 2).toFixed(1) +
+                    '" y="14.5" fill="#0b1430" font-size="10" font-weight="700" text-anchor="middle">' +
+                    txt +
+                    '</text>';
+            }
+            return (
+                '<svg class="daychart" viewBox="0 0 320 150" role="img" aria-label="Výroba počas dňa a plán: zelená slnko stačí, modrá lacná sieť, červená drahá sieť"><path d="' +
+                d +
+                '" fill="rgba(255,255,255,.22)" stroke="#fff" stroke-width="1.5"/>' +
+                lim +
+                band +
+                ticks +
+                now +
+                '</svg>'
+            );
+        }
+        function tabTeraz() {
+            var h = header() + '<div class="ttl">Teraz</div>';
+            if (S.off)
+                return (
+                    h +
+                    '<div class="knum">–<small>kW</small></div><p class="sub">Meranie neodpovedá. Posledné dáta mám z 11:42.</p><button type="button" class="pbtn retry" data-act="retry">Skúsiť znova</button>'
+                );
+            var p = prod(S.t, S.w),
+                clear = prod(S.t, 'jasno'),
+                use = clear > 0 ? Math.round((p / clear) * 100) : 0;
+            var done = total(S.w, 1, S.t),
+                all = total(S.w, 1),
+                st = state(),
+                win = windowFor(BIG, S.w);
+            if (!S.panels) {
+                h +=
+                    '<div class="knum est">~' +
+                    n1(p) +
+                    '<small>kW</small></div><p class="sub">typická strecha 5 kWp v tvojej obci, nie tvoja</p>' +
+                    ctaCard('Koľko dáva tvoja strecha?', 'Zadaj panely a tu uvidíš svoj výkon. S odkazom na kiosk aj naozaj nameraný.');
+            } else
+                h +=
+                    '<div class="knum">' +
+                    n2(p) +
+                    '<small>kW</small></div><p class="sub">' +
+                    (clear > 0 ? use + ' % z toho, čo by dala jasná obloha' : 'slnko je pod obzorom') +
+                    '</p>';
+            h += '<div class="glass chartwrap" style="padding:10px 8px 6px">' + dayChart(S.w, 1, true, true) + '</div>';
+            h +=
+                '<div class="hint">' +
+                (S.pv === null
+                    ? '<span>Ťahaj prstom po grafe a pozri si iný čas.</span>'
+                    : '<span>Pozeráš ' + fmt(S.pv) + '.</span><button type="button" data-act="pvreset">Späť na teraz</button>') +
+                '</div>';
+            var reco = {
+                yes: 'Najlepší čas dňa. Zapni všetko veľké.',
+                soon: 'Počkaj na slnko, príde o chvíľu.',
+                bad: 'Dnes to slnko neutiahne. Plánuj na lacnú noc.',
+                over: 'Slnko na dnes skončilo.',
+                unk: '',
+            }[st.k];
+            var cards = [
+                '<b class="h">' + reco + '</b><p>' + st.line + '</p>',
+                '<h5>SPOTREBIČE</h5><p>' +
+                    APPS.map(function (a) {
+                        var s = appStatus(a);
+                        return a.n + ' <b>' + s.txt + '</b>';
+                    }).join(' · ') +
+                    '</p>',
+                '<h5>DNEŠOK</h5><p>Predpoveď <b>' +
+                    n1(all) +
+                    ' kWh</b>, už nabehlo <b>' +
+                    n1(done) +
+                    ' kWh</b>.</p><div class="bar"><i style="width:' +
+                    Math.round((done / all) * 100) +
+                    '%"></i></div><p>' +
+                    (win
+                        ? 'Okno na veľké veci ' + fmt(round15(win[0])) + ' – ' + fmt(round15(win[1])) + '.'
+                        : 'Okno na veľké veci dnes nebude.') +
+                    '</p>',
+                '<h5>KEDY LEPŠIE</h5><p>' +
+                    (S.w === 'jasno' ? 'Dnes je top. Ďalší taký deň je sobota.' : 'Najbližší silný deň je sobota, okolo 36 kWh.') +
+                    '</p>',
+            ];
+            h +=
+                '<div class="strip" tabindex="0" aria-label="Odporúčania, posúvaj do strán">' +
+                cards
+                    .map(function (c) {
+                        return '<div class="glass">' + c + '</div>';
+                    })
+                    .join('') +
+                '</div><div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>';
+            return h;
+        }
+        function weekData() {
+            return WEEK.map(function (x) {
+                var w = x.w || S.w;
+                return { d: x.d, w: w, m: x.m, kwh: total(w, x.m), win: windowFor(BIG, w, x.m), peak: prod((RISE + SET) / 2, w, x.m) };
+            });
+        }
+        function tab7() {
+            var wk = weekData();
+            if (S.day === 'week') return weekDetail(wk);
+            if (S.day !== null) return dayDetail(wk[S.day]);
+            var best = 1;
+            wk.forEach(function (x, i) {
+                if (i > 0 && x.kwh > wk[best].kwh) best = i;
+            });
+            var names = {
+                'Pi 3.': 'Piatok',
+                'So 4.': 'Sobota',
+                'Ne 5.': 'Nedeľa',
+                'Po 6.': 'Pondelok',
+                'Ut 7.': 'Utorok',
+                'St 8.': 'Streda',
+            };
+            var sum = wk.reduce(function (s, x) {
+                return s + x.kwh;
+            }, 0);
+            var h =
+                header() +
+                '<div class="ttl">Veľké pranie? ' +
+                names[wk[best].d] +
+                '.</div><button type="button" class="sumbtn" data-act="week">Spolu 7 dní asi ' +
+                thou(sum) +
+                ' kWh' +
+                (S.off ? ' · posledná známa predpoveď' : '') +
+                (S.panels ? '' : ' · typická strecha') +
+                ' ›</button>';
+            if (!S.panels)
+                h += ctaCard(
+                    'Najlepší deň sedí, kWh nie',
+                    'Ktorý deň je najlepší, viem z počasia. Koľko kWh, záleží od tvojich panelov. Teraz ukazujem typickú strechu 5 kWp.',
+                    'Zadať moje panely',
+                );
+            h += '<div class="days' + (S.panels ? '' : ' est') + '">';
+            wk.forEach(function (x, i) {
+                var r = x.win
+                    ? '<i style="left:' +
+                      (((x.win[0] - 6) / 14) * 100).toFixed(0) +
+                      '%;right:' +
+                      (((20 - x.win[1]) / 14) * 100).toFixed(0) +
+                      '%"></i>'
+                    : '';
+                h +=
+                    '<button type="button" class="day' +
+                    (i === best ? ' best' : '') +
+                    '" data-act="day" data-i="' +
+                    i +
+                    '" aria-label="' +
+                    x.d +
+                    ', ' +
+                    WNAME[x.w] +
+                    ', ' +
+                    Math.round(x.kwh) +
+                    ' kWh"><span>' +
+                    x.d +
+                    '</span>' +
+                    wIcon(x.w) +
+                    '<span class="rng">' +
+                    r +
+                    '</span><em>' +
+                    Math.round(x.kwh) +
+                    ' kWh</em></button>';
+            });
+            h +=
+                '</div><p class="sub" style="padding-bottom:16px">Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťukni na deň.</p>';
+            return h;
+        }
+        function weekDetail(wk) {
+            var names = {
+                Dnes: 'Dnes',
+                'Pi 3.': 'Piatok',
+                'So 4.': 'Sobota',
+                'Ne 5.': 'Nedeľa',
+                'Po 6.': 'Pondelok',
+                'Ut 7.': 'Utorok',
+                'St 8.': 'Streda',
+            };
+            var sum = 0,
+                best = 0,
+                mx = 0;
+            wk.forEach(function (x, i) {
+                sum += x.kwh;
+                if (x.kwh > wk[best].kwh) best = i;
+                mx = Math.max(mx, x.peak);
+            });
+            var h =
+                '<button type="button" class="back" data-act="back">‹ 7 dní</button><div class="ttl">Týždeň</div><p class="sub">2. – 8. októbra' +
+                (S.panels ? '' : ' · typická strecha') +
+                '</p>';
+            h +=
+                '<div class="nums"><div><b>' +
+                thou(sum) +
+                '</b>kWh spolu</div><div><b>' +
+                thou(sum / 7) +
+                '</b>kWh na deň</div><div><b>' +
+                wk[best].d.replace(/ .*/, '') +
+                '</b>najlepší deň</div></div>';
+            var bw = 36,
+                gap = (300 - 7 * bw) / 6,
+                bars = wk
+                    .map(function (x, i) {
+                        var hh = (x.kwh / wk[best].kwh) * 80,
+                            xx = 10 + i * (bw + gap);
+                        return (
+                            '<rect x="' +
+                            xx.toFixed(1) +
+                            '" y="' +
+                            (100 - hh).toFixed(1) +
+                            '" width="' +
+                            bw +
+                            '" height="' +
+                            hh.toFixed(1) +
+                            '" rx="5" fill="' +
+                            (i === best ? '#b9f28c' : 'rgba(255,255,255,.45)') +
+                            '"/><text x="' +
+                            (xx + bw / 2).toFixed(1) +
+                            '" y="' +
+                            (94 - hh).toFixed(1) +
+                            '" fill="#fff" font-size="10" font-weight="700" text-anchor="middle">' +
+                            Math.round(x.kwh) +
+                            '</text><text x="' +
+                            (xx + bw / 2).toFixed(1) +
+                            '" y="116" fill="rgba(255,255,255,.8)" font-size="10" text-anchor="middle">' +
+                            x.d.replace(/ .*/, '') +
+                            '</text>'
+                        );
+                    })
+                    .join('');
+            h +=
+                '<div class="glass"><h5>VÝROBA PO DŇOCH · kWh</h5><svg viewBox="0 0 320 122" style="display:block;width:100%;height:auto" role="img" aria-label="Výroba po dňoch, najlepší ' +
+                names[wk[best].d] +
+                '">' +
+                bars +
+                '</svg></div>';
+            var cw = 18,
+                ch = 15,
+                map = '';
+            for (var hr = 6; hr < 20; hr++) {
+                if (hr % 3 === 0)
+                    map += '<text x="' + (44 + (hr - 6) * cw) + '" y="9" fill="rgba(255,255,255,.75)" font-size="9">' + hr + '</text>';
+            }
+            wk.forEach(function (x, r) {
+                map += '<text x="0" y="' + (24 + r * (ch + 2) + 10) + '" fill="#fff" font-size="10">' + x.d.replace(/ .*/, '') + '</text>';
+                for (var hr = 6; hr < 20; hr++) {
+                    var p = prod(hr + 0.5, x.w, x.m),
+                        f = mx ? p / mx : 0;
+                    map +=
+                        '<rect x="' +
+                        (44 + (hr - 6) * cw) +
+                        '" y="' +
+                        (24 + r * (ch + 2)) +
+                        '" width="' +
+                        (cw - 2) +
+                        '" height="' +
+                        ch +
+                        '" rx="3" fill="' +
+                        (p >= BIG
+                            ? 'rgba(185,242,140,' + (0.45 + 0.55 * f).toFixed(2) + ')'
+                            : 'rgba(255,255,255,' + (0.06 + 0.45 * f).toFixed(2) + ')') +
+                        '"/>';
+                }
+            });
+            h +=
+                '<div class="glass"><h5>HODINA × DEŇ</h5><svg viewBox="0 0 300 146" style="display:block;width:100%;height:auto" role="img" aria-label="Mapa výroby po hodinách a dňoch, zelené hodiny stačia na veľké spotrebiče">' +
+                map +
+                '</svg><p style="font-size:12.5px;opacity:.85">Zelené políčko = v tú hodinu slnko stačí na veľké spotrebiče.</p></div>';
+            h +=
+                '<div class="glass"><p style="font-size:16px;font-weight:700">' +
+                (S.polite
+                    ? 'Najsilnejší deň týždňa: ' + names[wk[best].d].toLowerCase() + ', asi ' + Math.round(wk[best].kwh) + ' kWh.'
+                    : names[wk[best].d] + ' bude makať za celý týždeň. ' + Math.round(wk[best].kwh) + ' kWh, nechaj si na ňu pranie.') +
+                '</p></div><p class="sub" style="padding:12px 20px 18px">Potiahni doprava a vrátiš sa na 7 dní.</p>';
+            return h;
+        }
+        function dayDetail(x) {
+            var q =
+                x.kwh > 40
+                    ? S.polite
+                        ? 'Výborný deň na veľké pranie aj sušičku.'
+                        : 'Deň na všetko. Práčka, sušička, auto, celé zaradom.'
+                    : x.kwh > 18
+                      ? S.polite
+                          ? 'Stačí na práčku okolo poludnia.'
+                          : 'Na práčku to stačí. Sušička nech radšej počká.'
+                      : S.polite
+                        ? 'Slabý deň. Veľké veci radšej na lacnú noc.'
+                        : 'NAHOVNO DEŇ. Veľké veci daj na lacnú noc.';
+            var h =
+                '<button type="button" class="back" data-act="back">‹ 7 dní</button><div class="ttl" style="display:flex;gap:10px;align-items:center">' +
+                x.d +
+                ' ' +
+                wIcon(x.w, 30) +
+                '</div><p class="sub">' +
+                WNAME[x.w] +
+                '</p>';
+            h +=
+                '<div class="nums"><div><b>' +
+                Math.round(x.kwh) +
+                '</b>kWh za deň</div><div><b>' +
+                n1(x.peak) +
+                '</b>kW špička</div><div><b>' +
+                (x.win ? fmt(round15(x.win[0])) : '–') +
+                '</b>' +
+                (x.win ? 'do ' + fmt(round15(x.win[1])) : 'bez okna') +
+                '</div></div>';
+            h +=
+                '<div class="glass" style="padding:10px 8px 6px">' +
+                dayChart(x.w, x.m, x.d === 'Dnes') +
+                '</div><div class="glass"><p style="font-size:16px;font-weight:700">' +
+                q +
+                '</p></div><p class="sub" style="padding:12px 20px 18px">Potiahni do strán na susedný deň.</p>';
+            return h;
+        }
+        function tabStat() {
+            var today = S.off ? 0 : total(S.w, 1, S.t),
+                P = [
+                    { n: 'Dnes', v: today, f: n1 },
+                    { n: 'September', v: 168.2, f: n1 },
+                    { n: 'Rok 2026', v: 9112, f: thou },
+                    { n: 'Od spustenia', v: 21505, f: thou },
+                ];
+            var cur = P[S.per];
+            if (!S.panels)
+                return (
+                    header() +
+                    '<div class="ttl">Štatistika</div><p class="sub">zatiaľ nemám čo počítať</p>' +
+                    ctaCard(
+                        S.polite ? 'Štatistika potrebuje vaše panely' : 'Prázdna strecha, prázdna štatistika',
+                        'Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne aj odkaz na kiosk pre naozaj namerané čísla.',
+                        'Nastaviť panely',
+                        true,
+                    ) +
+                    '<div class="glass est"><h5>KEĎ ICH ZADÁŠ, UVIDÍŠ</h5><p style="font-size:15px;line-height:1.4">Vyrobené dnes, za mesiac, rok aj od spustenia · koľko je to mobilov a kilometrov autom · najlepší deň · plagát na zdieľanie</p></div>'
+                );
+            var h = header() + '<div class="ttl">Štatistika</div><p class="sub">10,44 kWp · 24 panelov</p>';
+            h +=
+                '<div class="per"><div class="seg" role="group" aria-label="Obdobie">' +
+                ['Dnes', 'Mesiac', 'Rok', 'Spolu']
+                    .map(function (n, i) {
+                        return (
+                            '<button type="button" data-act="per" data-i="' +
+                            i +
+                            '" aria-pressed="' +
+                            (i === S.per) +
+                            '">' +
+                            n +
+                            '</button>'
+                        );
+                    })
+                    .join('') +
+                '</div></div>';
+            h +=
+                '<div class="knum" style="padding-top:14px">' +
+                cur.f(cur.v) +
+                '<small>kWh</small></div><p class="sub">vyrobené ' +
+                (S.per === 0 ? 'dnes do ' + fmt(S.t) : S.per === 1 ? 'v septembri' : S.per === 2 ? 'tento rok' : 'od spustenia') +
+                '</p>';
+            if (S.per === 0 && !S.off) {
+                var all = total(S.w, 1);
+                h +=
+                    '<div style="padding:10px 20px 0"><div class="bar"><i style="width:' +
+                    Math.round((today / all) * 100) +
+                    '%"></i></div><p class="sub" style="padding:4px 0 0">' +
+                    Math.round((today / all) * 100) +
+                    ' % z predpovede ' +
+                    n1(all) +
+                    ' kWh</p></div>';
+            }
+            h +=
+                '<div class="glass"><h5>TO JE AKO</h5><div class="eq"><div><b>' +
+                thou(cur.v / 0.015) +
+                '×</b>nabitý mobil</div><div><b>' +
+                thou(cur.v / 0.17) +
+                ' km</b>elektrickým autom</div></div></div>';
+            h +=
+                '<div class="glass rows">' +
+                P.filter(function (_, i) {
+                    return i !== S.per;
+                })
+                    .map(function (p) {
+                        return '<div><span>' + p.n + '</span><b>' + p.f(p.v) + ' kWh</b></div>';
+                    })
+                    .join('') +
+                '</div>';
+            h +=
+                '<div class="glass"><h5>NAJLEPŠÍ DEŇ SEPTEMBRA</h5><p style="font-size:16px"><b>Sobota 14.</b> · 61 kWh. ' +
+                (S.polite ? 'Výborný výkon.' : 'Strecha vtedy makala ako blázon.') +
+                '</p></div>';
+            h +=
+                '<div style="padding:14px 14px 18px"><button type="button" class="pbtn" data-act="poster">September na streche · zdieľať</button></div>';
+            if (S.poster) h += poster();
+            return h;
+        }
+        function poster() {
+            var cols = [
+                38, 52, 41, 12, 47, 55, 49, 30, 8, 44, 51, 58, 40, 61, 22, 35, 48, 53, 46, 19, 28, 50, 57, 45, 33, 14, 42, 49, 54, 47,
+            ]
+                .map(function (v) {
+                    return '<i style="height:' + Math.round((v / 61) * 100) + '%"></i>';
+                })
+                .join('');
+            return (
+                '<div class="poster" role="dialog" aria-label="Súhrn na zdieľanie"><div class="pc"><small>SEPTEMBER NA STRECHE · DVORANY</small><div class="pn">168 kWh</div><div class="cols" aria-hidden="true">' +
+                cols +
+                '</div><div class="pg"><div><strong>11 213×</strong>nabitý mobil</div><div><strong>989 km</strong>elektrickým autom</div><div><strong>so 14.</strong>najlepší deň, 61 kWh</div><div><strong>14×</strong>pranie zo slnka</div></div><small style="letter-spacing:.06em">' +
+                (S.polite ? 'RAY-MON' : 'RAY-MON · slnko nefakturuje') +
+                '</small></div><button type="button" class="pbtn" style="justify-self:stretch" data-act="noop">Zdieľať do story</button><button type="button" class="pbtn ghost" style="justify-self:stretch" data-act="poster">Zavrieť</button></div>'
+            );
+        }
+        function tabSet() {
+            var tg = function (on, act, lbl, sub) {
+                return (
+                    '<button type="button" class="it" data-act="' +
+                    act +
+                    '" role="switch" aria-checked="' +
+                    on +
+                    '"><span>' +
+                    lbl +
+                    (sub ? '<small>' + sub + '</small>' : '') +
+                    '</span><i class="tg' +
+                    (on ? ' on' : '') +
+                    '"></i></button>'
+                );
+            };
+            var h = header() + '<div class="ttl">Moja strecha</div>';
+            if (!S.panels)
+                h +=
+                    '<div class="cta pulse"><b>Ešte 6 krokov a appka bude tvoja</b><div class="steps" aria-label="Hotový 1 zo 7 krokov"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>Poloha je hotová. Ďalej panely, plochy strechy, menič, meranie a tarifa. Na čo nevieš odpoveď, preskočíš tlačidlom Neviem.</p><button type="button" class="pbtn" data-act="finish">Pokračovať: panely</button></div>';
+            else
+                h +=
+                    '<div class="glass"><div class="plant"><div><b>10,44</b> kWp<p style="font-size:13.5px;opacity:.85;margin-top:6px">24 panelov · juh a východ · menič 10 kW<br>za jasného dňa okolo 63 kWh</p></div>' +
+                    '<svg width="74" height="74" viewBox="-37 -37 74 74" aria-label="Kompas plôch: juh a východ"><circle r="34" fill="none" stroke="rgba(255,255,255,.35)"/><text y="-24" fill="#fff" font-size="9" text-anchor="middle">S</text><text y="31" fill="#fff" font-size="9" text-anchor="middle">J</text><text x="27" y="3" fill="#fff" font-size="9" text-anchor="middle">V</text><text x="-27" y="3" fill="#fff" font-size="9" text-anchor="middle">Z</text><line y2="20" stroke="#b9f28c" stroke-width="4" stroke-linecap="round"/><line x2="16" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle r="3" fill="#fff"/></svg></div></div>';
+            h +=
+                '<div class="glass set"><h5>ELEKTRÁREŇ</h5>' +
+                [
+                    'Poloha|Dvorany nad Nitrou',
+                    'Panely|' + (S.panels ? '2 plochy · 435 Wp' : 'nezadané'),
+                    'Živé meranie|' + (!S.panels ? 'nepripojené, nepovinné' : S.off ? 'neodpovedá' : 'pripojené'),
+                    'Tarifa|2 pásma · lacno 22:00 – 6:00',
+                ]
+                    .map(function (r) {
+                        var p = r.split('|');
+                        return (
+                            '<button type="button" class="it" data-act="noop"><span>' +
+                            p[0] +
+                            '<small>' +
+                            p[1] +
+                            '</small></span><span aria-hidden="true">›</span></button>'
+                        );
+                    })
+                    .join('') +
+                '</div>';
+            h +=
+                '<div class="glass set"><h5>UPOZORNENIA</h5>' +
+                tg(S.notif.okno, 'n-okno', 'Keď začne svietiť na práčku', 'raz za deň, nie viac') +
+                tg(S.notif.draha, 'n-draha', 'Keď ide drahá sieť', 'ak niečo beží') +
+                tg(S.notif.rano, 'n-rano', 'Ráno plán dňa', 'o 7:30') +
+                '</div>';
+            h +=
+                '<div class="glass set"><h5>VZHĽAD</h5>' +
+                tg(!S.calm, 'calm', 'Živá obloha', 'vypni pre pokojnú tmavú') +
+                '<div class="it" style="cursor:default"><span>Tón hlášok<small>skús prepnúť a pozri Môžem?</small></span><span class="mini" role="group" aria-label="Tón"><button type="button" data-act="tone" data-v="0" aria-pressed="' +
+                !S.polite +
+                '">Drzý</button><button type="button" data-act="tone" data-v="1" aria-pressed="' +
+                S.polite +
+                '">Slušný</button></span></div>' +
+                '<div class="it" style="cursor:default"><span>Úvodná karta</span><span class="mini" role="group" aria-label="Úvodná karta"><button type="button" data-act="start" data-v="0" aria-pressed="' +
+                (S.start === 0) +
+                '">Môžem?</button><button type="button" data-act="start" data-v="1" aria-pressed="' +
+                (S.start === 1) +
+                '">Teraz</button></span></div></div>';
+            h +=
+                '<div class="glass set" style="margin-bottom:16px"><h5>APPKA</h5><button type="button" class="it" data-act="noop"><span>Zdieľať appku<small>QR kód, WhatsApp, aj s mojím nastavením</small></span><span aria-hidden="true">›</span></button><button type="button" class="it" data-act="noop"><span>Nastaviť celé znova</span><span aria-hidden="true">›</span></button></div>';
+            return h;
+        }
+
+        var NOTES = [
+            {
+                t: 'Môžem?',
+                now: [
+                    'Hore oblúk slnka s dnešným oknom na zeleno a slnkom tam, kde práve je. Večer ho vystrieda mesiac.',
+                    'Obrovské slovo v tvojom tóne a pod ním jedna veta s časom. Štítky ÁNO, LACNÁ SIEŤ, DRAHÁ SIEŤ hovoria to isté slovom, nie iba farbou.',
+                    'Zoznam spotrebičov je rovno na karte, netreba ho rozbaľovať. Ťuknutie otvorí detail zospodu s tlačidlom „Pustil/a som“.',
+                    'Pod vetou ostáva fakt v mobiloch: koľko mobilov strecha nabije za hodinu, ako dnes.',
+                    'Hláška ostáva, ťuknutím príde ďalšia. Pri „Bez dát“ je tlačidlo Skúsiť znova (bod P7 z auditu).',
+                ],
+                why: [
+                    'Odpoveď je čitateľná do sekundy aj z diaľky. To je to, čo sa dá v obchode ukázať na prvej snímke. <span class="tag">odhad</span>',
+                    'Zoznam na očiach zvyšuje šancu, že človek niečo naozaj pustí. Zápis „pustil som“ je základ pre mesačný plagát. <span class="tag">domnienka</span>',
+                ],
+            },
+            {
+                t: 'Teraz',
+                now: [
+                    'Dvojitý ciferník je preč. Hore veľké kW a koľko percent to je z jasnej oblohy.',
+                    'Graf dňa: krivka výroby, čiarkovaná hranica pre veľké spotrebiče a pod ňou pás plánu (zelená slnko, modrá lacná sieť, červená drahá).',
+                    'Ťahaním prstom po grafe si pozrieš iný čas: výkon a čo vtedy platí. Nahrádza jazdec na prstenci ciferníka. „Späť na teraz“ ho vráti.',
+                    'Pás odporúčaní do strán ostáva, len v sklenených kartách.',
+                ],
+                why: [
+                    'Dnešný ciferník potrebuje vysvetľujúce okno. Graf, ktorý ide zľava doprava ako čas, pozná každý z počasia. <span class="tag">odhad</span>',
+                    'Pás plánu je ten istý ako v detaile dňa v 7 dňoch, takže sa ho človek naučí raz. <span class="tag">odhad</span>',
+                ],
+            },
+            {
+                t: '7 dní',
+                now: [
+                    'Nadpis rovno odpovedá na otázku týždňa: kedy veľké pranie.',
+                    'Každý deň vyzerá ako riadok predpovede počasia: ikona, zelený pás okna, kWh. Najlepší deň má zelený rámik.',
+                    'Ťuknutie otvorí detail dňa: tri čísla, graf s pásom plánu a jedna veta, čo robiť.',
+                    'Ťuknutie na „Spolu 7 dní“ otvorí detail týždňa: stĺpce dní, mapa hodina × deň a hláška o najsilnejšom dni.',
+                ],
+                why: [
+                    'Ľudia sa každý deň pozerajú na počasie. Keď 7 dní vyzerá ako počasie, nie je čo učiť sa. <span class="tag">odhad</span>',
+                    'Veta „Veľké pranie? Sobota.“ je dôvod otvoriť appku aj v pondelok, keď slnko nesvieti. <span class="tag">domnienka</span>',
+                ],
+            },
+            {
+                t: 'Štatistika',
+                now: [
+                    'Prepínač obdobia, jedno veľké číslo a pod ním „to je ako“: mobily a kilometre autom.',
+                    'Najlepší deň mesiaca s drzou poznámkou.',
+                    'Plagát na zdieľanie je tu, otvorí sa tlačidlom. Miesto pre peniaze je pripravené pod veľkým číslom.',
+                ],
+                why: [
+                    'kWh nikomu nič nehovorí, mobily a kilometre áno. <span class="tag">odhad</span>',
+                    'Plagát je bezplatná reklama: každé zdieľanie ukáže appku ľuďom, ktorí majú tiež strechu. <span class="tag">domnienka</span>',
+                ],
+            },
+            {
+                t: 'Nastavenie',
+                now: [
+                    'Hore karta strechy s kompasom plôch, pod ňou riadky elektrárne (sprievodca ostáva, len v novom kabáte).',
+                    'Nová sekcia Upozornenia: tri jasné prepínače s tým, ako často prídu.',
+                    'Vzhľad: Živá obloha (vypni, uvidíš pokojný režim) a Tón hlášok Drzý / Slušný. Oba fungujú, skús ich.',
+                ],
+                why: [
+                    'Keď človek vidí, ako často upozornenie príde, skôr ho zapne. Zapnuté upozornenia sú najsilnejší nástroj, aby sa vracal. <span class="tag">odhad</span>',
+                    'Prepínač tónu ti dovolí nechať drzosť ako predvolenú a nestratiť tých, ktorým vadí. <span class="tag">odhad</span>',
+                ],
+            },
+        ];
+
+        var N23 = [
+            [
+                'Odpoveď ostáva, lebo počasie appka pozná. Pod ňou je biela karta, ktorá povie prečo je to len odhad a vedie do Nastavenia.',
+                'Zoznam spotrebičov je kurzívou a v nadpise má ODHAD, aby nikto nebral čísla ako presné.',
+            ],
+            ['Výkon má vlnovku a kurzívu: je to typická strecha 5 kWp, nie tvoja. Hneď pod ním výzva.'],
+            ['Najlepší deň sa dá povedať aj bez panelov, kWh nie. Karta to povie jednou vetou, dni sú kurzívou.'],
+            [
+                'Štatistika bez panelov nemá z čoho počítať, takže namiesto prázdnych núl ukáže, čo človek dostane. Karta pri vstupe trikrát zapulzuje a prestane.',
+            ],
+            ['Hore postup sprievodcu: 1 zo 7 hotový a jedno tlačidlo Pokračovať. Tiež 3× zapulzuje. Ťukni naň a appka sa „dokončí“.'],
+        ];
+        var NOTE23_ALL = '';
+        var sky = document.getElementById('sky'),
+            bodyEl = document.getElementById('body'),
+            nav = document.getElementById('nav'),
+            notes = document.getElementById('notes');
+        function render() {
+            var c = skyAt(S.t, S.w, S.off, S.calm);
+            sky.style.setProperty('--s1', c[0]);
+            sky.style.setProperty('--s2', c[1]);
+            sky.classList.toggle('calm', S.calm);
+            var html = [tabMozem, tabTeraz, tab7, tabStat, tabSet][S.tab]();
+            bodyEl.innerHTML = html;
+            nav.innerHTML = TABS.map(function (t, i) {
+                return (
+                    '<button type="button" data-act="tab" data-i="' +
+                    i +
+                    '"' +
+                    (i === S.tab ? ' aria-current="page"' : '') +
+                    '><svg viewBox="0 0 24 24" aria-hidden="true">' +
+                    t.i +
+                    '</svg>' +
+                    t.n +
+                    '</button>'
+                );
+            }).join('');
+            var N = NOTES[S.tab];
+            notes.innerHTML =
+                '<span class="eyebrow">Karta ' +
+                (S.tab + 1) +
+                ' z 5</span><div class="tabname">' +
+                N.t +
+                '</div><div class="box"><h3>Čo je nové</h3><ul>' +
+                N.now
+                    .map(function (x) {
+                        return '<li>' + x + '</li>';
+                    })
+                    .join('') +
+                '</ul></div><div class="box"><h3>Prečo to pomôže</h3><ul>' +
+                N.why
+                    .map(function (x) {
+                        return '<li>' + x + '</li>';
+                    })
+                    .join('') +
+                '</ul></div>' +
+                (S.panels
+                    ? ''
+                    : '<div class="box"><h3>Panely nezadané (#23)</h3><ul>' +
+                      N23[S.tab]
+                          .map(function (x) {
+                              return '<li>' + x + '</li>';
+                          })
+                          .join('') +
+                      '</ul></div>');
+            document.getElementById('cTv').textContent = fmt(S.t);
+            deskRender(c);
+            // widgety
+            var st = state(),
+                word = WORD[st.k][S.polite ? 1 : 0],
+                win = windowFor(BIG, S.w),
+                sq = document.getElementById('wSq');
+            sq.style.setProperty('--s1', c[0]);
+            sq.style.setProperty('--s2', c[1]);
+            sq.innerHTML =
+                '<div class="w2">' +
+                (S.off ? 'bez dát' : fmt(S.t)) +
+                '</div><div class="w1">' +
+                word +
+                '</div><div class="w2">' +
+                (S.off
+                    ? 'Skontroluj internet'
+                    : st.k === 'yes'
+                      ? 'do ' + fmt(round15(win[1]))
+                      : st.k === 'soon'
+                        ? 'od ' + fmt(round15(win[0]))
+                        : 'lacno od 22:00') +
+                '</div>';
+            document.getElementById('wClk').textContent = fmt(S.t);
+            document.getElementById('wInl').textContent = S.off
+                ? 'RAY-MON · neviem'
+                : st.k === 'yes'
+                  ? '☀ ' + word + ' · do ' + fmt(round15(win[1]))
+                  : st.k === 'soon'
+                    ? '☀ o ' + fmt(round15(win[0])) + ' · ' + word
+                    : '☾ ' + word;
+            document.getElementById('wNot').textContent = win
+                ? S.polite
+                    ? 'Slnko stačí na veľké spotrebiče do ' +
+                      fmt(round15(win[1])) +
+                      '. Práčka teraz, auto o ' +
+                      fmt(round15((windowFor(3.7, S.w) || win)[0])) +
+                      '.'
+                    : 'Slnko ide. Práčka teraz, auto o ' +
+                      fmt(round15((windowFor(3.7, S.w) || win)[0])) +
+                      '. Do ' +
+                      fmt(round15(win[1])) +
+                      ' to máš zadarmo.'
+                : S.polite
+                  ? 'Dnes slnko nestačí. Lacná sieť od 22:00.'
+                  : 'NAHOVNO DEŇ. Dnes nič neposielam, lacno od 22:00.';
+        }
+        var deskEl = document.getElementById('desk'),
+            deskWrap = document.getElementById('deskWrap');
+        function fitDesk() {
+            var w = deskWrap.clientWidth - 16,
+                k = Math.min(1, w / 1000);
+            deskEl.style.transform = 'scale(' + k + ')';
+            deskWrap.style.height = 600 * k + 16 + 'px';
+        }
+        window.addEventListener('resize', fitDesk);
+        function deskRender(c) {
+            deskEl.style.setProperty('--s1', c[0]);
+            deskEl.style.setProperty('--s2', c[1]);
+            var st = state(),
+                word = WORD[st.k][S.polite ? 1 : 0],
+                tf = tariff(S.t),
+                wk = weekData();
+            var chips =
+                st.k === 'yes'
+                    ? '<span class="chip yes">ÁNO</span>'
+                    : st.k === 'soon'
+                      ? '<span class="chip">POČKAJ</span>'
+                      : st.k === 'unk'
+                        ? '<span class="chip">NEVIEM</span>'
+                        : '<span class="chip">DNES NIE</span>';
+            if (!S.off && tf === 'cheap') chips += '<span class="chip cheap">LACNÁ SIEŤ</span>';
+            if (!S.off && tf === 'costly') chips += '<span class="chip costly">DRAHÁ SIEŤ</span>';
+            var tabs = TABS.map(function (t, i) {
+                return (
+                    '<span' +
+                    (i === 0 ? ' class="on"' : '') +
+                    '><svg viewBox="0 0 24 24" aria-hidden="true">' +
+                    t.i +
+                    '</svg>' +
+                    t.n +
+                    '</span>'
+                );
+            }).join('');
+            var apps = APPS.map(function (a) {
+                var x = appStatus(a);
+                return '<div class="app" style="cursor:default"><span>' + a.n + '</span><b class="' + x.c + '">' + x.txt + '</b></div>';
+            }).join('');
+            var p = prod(S.t, S.w),
+                mob = Math.round(p / 0.015 / 10) * 10,
+                best = 1;
+            wk.forEach(function (x, i) {
+                if (i > 0 && x.kwh > wk[best].kwh) best = i;
+            });
+            var rows = wk
+                .map(function (x, i) {
+                    var r = x.win
+                        ? '<i style="left:' +
+                          (((x.win[0] - 6) / 14) * 100).toFixed(0) +
+                          '%;right:' +
+                          (((20 - x.win[1]) / 14) * 100).toFixed(0) +
+                          '%"></i>'
+                        : '';
+                    return (
+                        '<div class="drow' +
+                        (i === best ? ' best' : '') +
+                        '"><span>' +
+                        x.d +
+                        '</span>' +
+                        wIcon(x.w, 18) +
+                        '<span class="rng">' +
+                        r +
+                        '</span><em>' +
+                        Math.round(x.kwh) +
+                        '</em></div>'
+                    );
+                })
+                .join('');
+            var sum = wk.reduce(function (a, x) {
+                return a + x.kwh;
+            }, 0);
+            var col1 =
+                '<div class="col"><div class="chips">' +
+                chips +
+                '</div><div class="word" style="font-size:' +
+                (word.length <= 7 ? 60 : word.length <= 11 ? 46 : 38) +
+                'px">' +
+                word +
+                '</div><p class="line" style="font-size:16px">' +
+                st.line +
+                '</p>' +
+                (S.off ? '' : '<p style="font-size:13.5px;opacity:.9">Strecha za hodinu nabije ' + thou(mob) + ' mobilov</p>') +
+                '<div class="glass" style="gap:0;padding:6px 14px"><div class="apps">' +
+                apps +
+                '</div></div></div>';
+            var col2 =
+                '<div class="col"><span class="lbl">TERAZ</span><div style="font-size:56px;font-weight:900;line-height:.95;font-variation-settings:\'wdth\' 118">' +
+                (S.off ? '–' : n2(p)) +
+                '<small style="font-size:18px;margin-left:6px">kW</small></div><div class="glass" style="padding:10px 8px 6px">' +
+                dayChart(S.w, 1, true) +
+                '</div>' +
+                (S.off
+                    ? ''
+                    : '<div class="glass"><h5>DNEŠOK</h5><p style="font-size:15px">Predpoveď <b>' +
+                      n1(total(S.w, 1)) +
+                      ' kWh</b>, už nabehlo <b>' +
+                      n1(total(S.w, 1, S.t)) +
+                      ' kWh</b>. ' +
+                      (windowFor(BIG, S.w)
+                          ? 'Okno na veľké veci ' +
+                            fmt(round15(windowFor(BIG, S.w)[0])) +
+                            ' – ' +
+                            fmt(round15(windowFor(BIG, S.w)[1])) +
+                            '.'
+                          : 'Okno na veľké veci dnes nebude.') +
+                      '</p></div>') +
+                '<p style="font-size:19px;font-weight:800;font-variation-settings:\'wdth\' 105;padding:4px 2px">' +
+                Q[S.polite ? 'slusny' : 'drzy'][S.q % 5] +
+                '</p></div>';
+            var col3 =
+                '<div class="col"><div class="bub"><div><b>' +
+                Math.round(wk[0].kwh) +
+                '</b>Dnes kWh</div><div><b>' +
+                Math.round(wk[1].kwh) +
+                '</b>Zajtra kWh</div><div><b>' +
+                thou(sum) +
+                '</b>7 dní kWh</div></div><span class="lbl">VEĽKÉ PRANIE? ' +
+                { 'Pi 3.': 'PIATOK', 'So 4.': 'SOBOTA', 'Ne 5.': 'NEDEĽA', 'Po 6.': 'PONDELOK', 'Ut 7.': 'UTOROK', 'St 8.': 'STREDA' }[
+                    wk[best].d
+                ] +
+                '.</span>' +
+                rows +
+                '</div>';
+            deskEl.innerHTML =
+                '<div class="bar1"><b>RAY-MON · Dvorany nad Nitrou</b><div class="tabs">' +
+                tabs +
+                '</div><span style="font-size:13px">' +
+                (S.off ? 'bez dát' : fmt(S.t)) +
+                '</span></div><div class="cols">' +
+                col1 +
+                col2 +
+                col3 +
+                '</div>';
+            fitDesk();
+        }
+        var lastBody = null;
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-act]');
+            if (!b) return;
+            var a = b.dataset.act,
+                i = +b.dataset.i;
+            if (a === 'tab') {
+                S.tab = i;
+                S.pv = null;
+                S.day = null;
+                S.app = null;
+                S.poster = false;
+                bodyEl.scrollTop = 0;
+            } else if (a === 'app') {
+                S.app = i;
+            } else if (a === 'close') {
+                S.app = null;
+            } else if (a === 'ran') {
+                var ap = APPS[S.app];
+                if (S.ran[ap.n] && S.ran[ap.n] > S.t) delete S.ran[ap.n];
+                else S.ran[ap.n] = S.t + ap.d;
+            } else if (a === 'quote') {
+                S.q++;
+            } else if (a === 'setup') {
+                S.tab = 4;
+                S.day = null;
+                S.app = null;
+                S.poster = false;
+                bodyEl.scrollTop = 0;
+            } else if (a === 'finish') {
+                S.panels = true;
+                document.getElementById('cPan').checked = false;
+            } else if (a === 'retry') {
+                S.off = false;
+                document.getElementById('cOff').checked = false;
+            } else if (a === 'day') {
+                S.day = i;
+                bodyEl.scrollTop = 0;
+            } else if (a === 'back') {
+                S.day = null;
+            } else if (a === 'week') {
+                S.day = 'week';
+                bodyEl.scrollTop = 0;
+            } else if (a === 'pvreset') {
+                S.pv = null;
+            } else if (a === 'per') {
+                S.per = i;
+            } else if (a === 'poster') {
+                S.poster = !S.poster;
+            } else if (a === 'calm') {
+                S.calm = !S.calm;
+            } else if (a === 'tone') {
+                S.polite = b.dataset.v === '1';
+            } else if (a === 'start') {
+                S.start = +b.dataset.v;
+            } else if (a.indexOf('n-') === 0) {
+                var k = a.slice(2);
+                S.notif[k] = !S.notif[k];
+            } else return;
+            var top = bodyEl.scrollTop;
+            render();
+            if (a !== 'tab' && a !== 'day') bodyEl.scrollTop = top;
+        });
+        // listovanie dní v detaile prstom
+        var tx = null;
+        bodyEl.addEventListener(
+            'touchstart',
+            function (e) {
+                tx = e.touches[0].clientX;
+            },
+            { passive: true },
+        );
+        bodyEl.addEventListener('touchend', function (e) {
+            if (tx === null || S.tab !== 2 || S.day === null) return;
+            var dx = e.changedTouches[0].clientX - tx;
+            tx = null;
+            if (Math.abs(dx) < 50) return;
+            if (S.day === 'week') {
+                if (dx > 0) S.day = null;
+            } else if (dx < 0 && S.day < 6) S.day++;
+            else if (dx > 0) S.day = S.day > 0 ? S.day - 1 : null;
+            render();
+        });
+        // náhľad iného času: ťahanie po grafe na karte Teraz
+        var drag = false;
+        function pvFrom(e) {
+            var svg = bodyEl.querySelector('.chartwrap svg');
+            if (!svg) return;
+            var r = svg.getBoundingClientRect(),
+                vx = ((e.clientX - r.left) / r.width) * 320;
+            var h = Math.round(Math.min(Math.max(((vx - 10) / 300) * 24, 0), 23.75) * 4) / 4;
+            if (h !== S.pv) {
+                S.pv = h;
+                var top = bodyEl.scrollTop;
+                render();
+                bodyEl.scrollTop = top;
+            }
+        }
+        bodyEl.addEventListener('pointerdown', function (e) {
+            if (!e.target.closest('.chartwrap')) return;
+            drag = true;
+            pvFrom(e);
+        });
+        document.addEventListener('pointermove', function (e) {
+            if (drag) pvFrom(e);
+        });
+        ['pointerup', 'pointercancel'].forEach(function (t) {
+            document.addEventListener(t, function () {
+                drag = false;
+            });
+        });
+        document.querySelectorAll('.ctrl .seg button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                S.w = b.dataset.w;
+                document.querySelectorAll('.ctrl .seg button').forEach(function (x) {
+                    x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+                });
+                render();
+            });
+        });
+        var cT = document.getElementById('cT');
+        cT.addEventListener('input', function () {
+            S.t = +cT.value;
+            var top = bodyEl.scrollTop;
+            render();
+            bodyEl.scrollTop = top;
+        });
+        document.getElementById('cPan').addEventListener('change', function (e) {
+            S.panels = !e.target.checked;
+            render();
+        });
+        document.getElementById('cOff').addEventListener('change', function (e) {
+            S.off = e.target.checked;
+            render();
+        });
+        render();
+    })();
+</script>

@@ -12,19 +12,20 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 
 ## Čo je čo
 
-| Súbor                          | Téma                                                                                                      |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `nahlad-casu-umiestnenie.html` | Karta Spotrebiče — kam s bublinou náhľadu času: dnešný stav vs. tri umiestnenia                           |
-| `nahlad-casu-variant-b.html`   | Rozpracovanie zvoleného variantu B: prívesok, zárez, obežnica                                             |
-| `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                    |
-| `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                     |
-| `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť) |
-| `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)   |
-| `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup        |
-| `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)     |
-| `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)           |
-| `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)     |
-| `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami        |
+| Súbor                          | Téma                                                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `nahlad-casu-umiestnenie.html` | Karta Spotrebiče — kam s bublinou náhľadu času: dnešný stav vs. tri umiestnenia                                      |
+| `nahlad-casu-variant-b.html`   | Rozpracovanie zvoleného variantu B: prívesok, zárez, obežnica                                                        |
+| `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                               |
+| `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                                |
+| `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť)            |
+| `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)              |
+| `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup                   |
+| `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)                |
+| `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)                      |
+| `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)                |
+| `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami                   |
+| `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 
 ## Prečo je to v repozitári
 
