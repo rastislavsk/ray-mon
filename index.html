@@ -47,7 +47,11 @@
                 </div>
                 <div class="appbar-sub">
                     <span class="appbar-by">RAY-MON</span>
-                    <span class="pv-updated-line"><span id="pv-updated">načítavam…</span></span>
+                    <!-- Bez zadaných panelov render namiesto textu ukáže odkaz do sprievodcu. -->
+                    <span class="pv-updated-line">
+                        <span id="pv-updated">načítavam…</span>
+                        <button type="button" class="pv-setup-go hidden" id="pv-setup-go"></button>
+                    </span>
                 </div>
                 <!-- Ikonka vysvetlenia ciferníka: pod časom aktualizácie. Patrí ku karte Terazky, preto ju CSS
                      ukáže len tam (viď .appbar-info); popup samotný je v paneli Terazky. -->

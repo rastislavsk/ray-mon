@@ -343,6 +343,19 @@ b {
 .pv-updated-line {
     text-align: right;
 }
+/* Bez zadaných panelov namiesto textu odkaz do sprievodcu (viď updatedLine vo web/render/header.js).
+   Zelená ako ostatné akcie (.plant-save), na pozadí hlavičky má kontrast nad 7 : 1 aj pri
+   najsilnejšom zelenom podfarbení. Plocha na ťuknutie je väčšia než text, riadok nezväčší. */
+.pv-setup-go {
+    font: inherit;
+    font-weight: 700;
+    color: var(--green);
+    background: none;
+    border: 0;
+    padding: 8px 0;
+    margin: -8px 0;
+    cursor: pointer;
+}
 .appbar-clock {
     display: flex;
     align-items: center;
@@ -4075,6 +4088,27 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     padding: 0 4px;
     font-size: var(--fs-sm);
     color: var(--ink-35);
+}
+
+/* Bez zadaných panelov sa pri vstupe na kartu rozžiaria výzvy, ktoré k nim vedú: „Nastav si
+   svoje panely“ na Štatistike a „Pokračovať“ v Nastavení. Obe sú v stránke len vtedy, takže
+   stav netreba kontrolovať. Tri pulzy (spolu 4,8 s, WCAG 2.2.2 dovoľuje 5 s) a koniec - karta
+   je dovtedy skrytá (.hidden), takže pri ďalšom vstupe sa animácia spustí znova. Pulzuje len
+   tieň okolo, rozmer sa nemení a nič v okolí neposúva. Útlm pohybu ju vypne. */
+.stats-go[data-stats-go='nastavenie'],
+.setup-cta .plant-save {
+    animation: setup-pulse 1.6s ease-out 3;
+}
+@keyframes setup-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(var(--green-rgb), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0);
+    }
 }
 
 /* Karta, na ktorej sa appka na tomto telefóne otvára (položka „Úvodná karta“ v Nastavení). */

@@ -6,15 +6,18 @@ import { powerState } from '../state.js';
 
 /**
  * Pravý horný roh hlavičky: čas aktualizácie dát a pod ním text k nemu. Kde čas nie je, stojí
- * tam „–:–“, aby riadok nemenil tvar.
- * @param {import('../state.js').AppState} state @returns {{ time: string, text: string }}
+ * tam „–:–“, aby riadok nemenil tvar. Bez zadaných panelov je namiesto textu odkaz `go`, ktorý
+ * otvorí sprievodcu na kroku Panel - výzvu nemá každá karta, hlavičku vidno na všetkých. V Nastavení,
+ * kde človek už je, ostáva obyčajný text.
+ * @param {import('../state.js').AppState} state @returns {{ time: string, text: string, go?: boolean }}
  */
 export function updatedLine(state) {
     const none = (/** @type {string} */ text) => ({ time: '–:–', text });
     if (state.known === 'nic') return none('vitaj');
     if (state.loading) return none('načítavam…');
     if (!state.pv && !state.forecast) return none('dáta nedostupné');
-    if (state.known !== 'elektraren') return none('panely nie sú zadané');
+    if (state.known !== 'elektraren')
+        return state.panel === 'nastavenie' ? none('panely nie sú zadané') : { ...none('nastav panely ›'), go: true };
     // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
     if (!state.pv) return none(state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede');
     const { label, time, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
@@ -25,7 +28,11 @@ export function updatedLine(state) {
 export function renderHeader(state, dom) {
     const updated = updatedLine(state);
     dom.pvTime.textContent = updated.time;
-    dom.pvUpdated.textContent = updated.text;
+    const go = updated.go === true;
+    dom.pvUpdated.textContent = go ? '' : updated.text;
+    dom.pvSetupGo.textContent = go ? updated.text : '';
+    dom.pvUpdated.classList.toggle('hidden', go);
+    dom.pvSetupGo.classList.toggle('hidden', !go);
     // Výzva bez zadaných panelov - len na kartách, ktoré bez nich nevedia odpovedať. Karta 7 dní
     // ukazuje predpoveď pre typickú strechu (hovorí to v podnadpise), Štatistika má vlastnú výzvu.
     const grey = state.known === 'poloha' && (state.panel === 'terazky' || state.panel === 'mozem');

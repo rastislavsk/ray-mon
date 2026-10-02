@@ -846,7 +846,7 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta ne
     await expect(page.locator('#pv-time')).toHaveText('–:–');
     await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
     pustit();
-    await expect(page.locator('#pv-updated')).toHaveText('panely nie sú zadané');
+    await expect(page.locator('#pv-setup-go')).toHaveText('nastav panely ›');
 });
 
 /**
@@ -2328,7 +2328,7 @@ test.describe('moja elektráreň', () => {
         await page.reload();
         await appReady(page);
         await ocakavajKartu(page, 'mozem');
-        await expect(page.locator('#pv-updated')).toHaveText('panely nie sú zadané');
+        await expect(page.locator('#pv-setup-go')).toHaveText('nastav panely ›');
         await expect(page.locator('#panel-mozem')).toHaveClass(/no-panels/);
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-fact')).toContainText('nezadané');
@@ -2402,7 +2402,83 @@ test.describe('moja elektráreň', () => {
         for (const panel of PANELS) {
             await page.locator(`#nav-${panel}`).click();
             await expect(page.locator('#panels-bar'), panel).toBeHidden();
+            await expect(page.locator('#pv-setup-go'), panel).toBeHidden();
         }
+        // Výzvy, ktoré bez panelov pulzujú, tu nie sú - a nič iné v kartách nepulzuje.
+        await expect(page.locator('[data-stats-go="nastavenie"], #setup-cta:not(.hidden)')).toHaveCount(0);
+        const pulzy = await page.evaluate(
+            () => document.getAnimations().filter((a) => /** @type {CSSAnimation} */ (a).animationName === 'setup-pulse').length,
+        );
+        expect(pulzy).toBe(0);
+    });
+
+    /** Animácie bežiace na prvku (CSS animácie aj prechody). @param {import('@playwright/test').Locator} el */
+    const animacie = (el) =>
+        el.evaluate((e) =>
+            e
+                .getAnimations()
+                .map((a) => ({ name: /** @type {CSSAnimation} */ (a).animationName, end: a.effect?.getComputedTiming().endTime })),
+        );
+
+    test('bez panelov: odkaz „nastav panely ›“ v hlavičke otvorí sprievodcu na kroku Panely, v Nastavení je text', async ({ page }) => {
+        const errors = await openApp(page, { settings: null, site: SITE });
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('#pv-setup-go')).toHaveText('nastav panely ›');
+        await expect(page.locator('#pv-updated')).toBeHidden();
+        const vazne = (
+            await new AxeBuilder({ page }).include('.appbar').withRules(['color-contrast', 'button-name']).analyze()
+        ).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+        expect(vazne).toEqual([]);
+        await page.locator('#pv-setup-go').click();
+        await expect(page.locator('#panel-nastavenie')).toBeVisible();
+        await expect(page.locator('#wz-panel')).toBeVisible();
+        await expect(page.locator('#wz-step')).toHaveText('Krok 2 z 7 · Panely');
+        // V Nastavení, kde človek už je, ostáva obyčajný text.
+        await expect(page.locator('#pv-setup-go')).toBeHidden();
+        await expect(page.locator('#pv-updated')).toHaveText('panely nie sú zadané');
+        // Odkaz je jeden krok navigácie: Späť vráti na Štatistiku aj s odkazom.
+        await page.goBack();
+        await expect(page.locator('#panel-statistika')).toBeVisible();
+        await expect(page.locator('#pv-setup-go')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('bez panelov: výzvy na Štatistike a v Nastavení pulzujú pri každom vstupe na kartu najviac 5 s', async ({ page }) => {
+        const errors = await openApp(page, { settings: null, site: SITE });
+        const vyzvy = /** @type {const} */ ([
+            ['statistika', '[data-stats-go="nastavenie"]'],
+            ['nastavenie', '#setup-cta [data-setup-go="start"]'],
+        ]);
+        for (const [panel, selector] of vyzvy) {
+            await page.locator(`#nav-${panel}`).click();
+            const vyzva = page.locator(selector);
+            await expect(vyzva).toBeVisible();
+            const [pulz] = await animacie(vyzva);
+            expect(pulz.name, panel).toBe('setup-pulse');
+            expect(pulz.end, panel).toBeLessThanOrEqual(5000);
+            // Po pár pulzoch skončí ...
+            await expect.poll(() => animacie(vyzva), { timeout: 7000 }).toEqual([]);
+            // ... a pri ďalšom vstupe na kartu začne odznova.
+            await page.locator('#nav-7dni').click();
+            await page.locator(`#nav-${panel}`).click();
+            expect(
+                (await animacie(vyzva)).map((a) => a.name),
+                panel,
+            ).toEqual(['setup-pulse']);
+        }
+        expect(errors).toEqual([]);
+    });
+
+    test('bez panelov s útlmom pohybu výzvy nepulzujú', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        const errors = await openApp(page, { settings: null, site: SITE });
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('[data-stats-go="nastavenie"]')).toBeVisible();
+        expect(await animacie(page.locator('[data-stats-go="nastavenie"]'))).toEqual([]);
+        await page.locator('#nav-nastavenie').click();
+        await expect(page.locator('#setup-cta [data-setup-go="start"]')).toBeVisible();
+        expect(await animacie(page.locator('#setup-cta [data-setup-go="start"]'))).toEqual([]);
+        expect(errors).toEqual([]);
     });
 
     test('sprievodca: prvé nastavenie od polohy po uloženie, prežije načítanie stránky', async ({ page }) => {
