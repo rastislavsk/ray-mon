@@ -261,7 +261,7 @@ function fromBase64Url(token) {
 
 /**
  * Časť adresy za mriežkou s nastavením (`#nastavenie=…`) a s kartou, na ktorej sa má appka
- * otvárať (`&prva=mozem`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
+ * otvárať (`&prva=terazky`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
  * @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
  * @param {StartPanel} [start]
  */
@@ -294,7 +294,8 @@ export function parseStartPanel(raw) {
 }
 
 /**
- * Prvá karta z časti adresy za mriežkou (`…&prva=mozem`), alebo null.
+ * Prvá karta z časti adresy za mriežkou (`…&prva=terazky`), alebo null. Platí aj `prva=mozem`
+ * zo starších odkazov, keď Môžem? ešte nebola predvolená.
  * @param {string} text @returns {StartPanel | null}
  */
 export function startFromLink(text) {

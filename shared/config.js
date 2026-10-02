@@ -106,9 +106,10 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 /**
  * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
  * ten, kto elektráreň platí, ciferník. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
- * `&prva=…` za mriežkou. Prvá v zozname je predvolená.
+ * `&prva=…` za mriežkou. Prvá v zozname je predvolená - Môžem? je jednoduchá odpoveď pre celú
+ * rodinu, ciferník Terazky potrebuje vysvetlenie. Predvolená karta sa do odkazu nepíše.
  */
-export const START_PANELS = /** @type {const} */ (['terazky', 'mozem']);
+export const START_PANELS = /** @type {const} */ (['mozem', 'terazky']);
 export const START_STORAGE_KEY = 'prva-karta-v1';
 export const START_HASH_KEY = 'prva';
 

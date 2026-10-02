@@ -1,7 +1,7 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
 // setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
-import { STALE_PV_MS } from '../shared/config.js';
+import { STALE_PV_MS, START_PANELS } from '../shared/config.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
@@ -45,7 +45,6 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   importNote: string,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
- *   shareStart: boolean,
  *   startPanel: import('../shared/settings.js').StartPanel,
  *   setupStep: SetupStep | null,
  *   setupRoof: number,
@@ -76,7 +75,7 @@ import { INFO_ITEMS, PANELS } from './dom.js';
  *   ponúkne prevziať, a karta, na ktorej sa appka na tomto telefóne otvára
  * @returns {AppState}
  */
-export function initialState(now, layout, { saved = null, site = null, incoming = null, startPanel = 'terazky' }) {
+export function initialState(now, layout, { saved = null, site = null, incoming = null, startPanel = START_PANELS[0] }) {
     /** @type {import('../shared/settings.js').Known} */
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
     // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí.
@@ -156,8 +155,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Čo pribaliť k zdieľanému odkazu na appku.
         shareSettings: false,
         shareKiosk: false,
-        // Pribaliť k odkazu aj to, že sa má appka otvárať na karte Môžem? (odkaz pre rodinu).
-        shareStart: false,
         // Karta, na ktorej sa appka na tomto telefóne otvára (voľba v karte Nastavenie).
         startPanel,
         // Sprievodca nastavením elektrárne v karte Nastavenie: otvorená obrazovka (null = karta

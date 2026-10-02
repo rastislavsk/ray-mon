@@ -188,10 +188,10 @@
     --dial-max: 360px;
     /* Miesto, ktoré si stránka rezervuje pod obsahom pre fixnú spodnú navigáciu (platí len
        do 1023px, na desktope má .page vlastný padding-bottom). Nie je to presná výška pása
-       (tá je 51.5px, viď .nav-item nižšie) - rozdiel je zámerná rezerva. Keď sa mení výška
+       (tá je 52px, viď .nav-item nižšie) - rozdiel je zámerná rezerva. Keď sa mení výška
        pása, mení sa aj toto číslo o rovnaký počet pixelov, aby medzera medzi obsahom
        a pásom ostala rovnaká. */
-    --nav-h: 59px;
+    --nav-h: 68px;
     /* Výška systémového pásu nad stránkou (stavový riadok iPhonu s hodinami a batériou).
        Na displeji bez výrezu a na desktope je nula, takže sa nikde nič neposunie.
        Prehliadač ju vie len cez env(), ktoré sa v teste nedá nastaviť - preto ju appka
@@ -461,13 +461,13 @@ b {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Výška pása na mobile a tablete stojí na tomto paddingu a na veľkosti ikony. Popiska je
-       vizuálne skrytá (viď .nav-item .lbl nižšie) - ikona preto zaberá priestor, ktorý jej
-       predtým nechal text. Samotná malá ikona (18px, teda pás vysoký len 31px) na telefóne
-       s natrvalo zobrazenou navigačnou lištou pôsobila, akoby sa pod ňu schovávala - 30px
-       dáva pás vysoký 43px (7+30+6), čo je dostatočná rezerva nad safe-area zdola. Desktop
-       (od 1024px) má vlastný padding aj vlastnú veľkosť ikon, tieto riadky naň nedosiahnu. */
-    padding: 7px 0 6px;
+    /* Výška pása na mobile a tablete stojí na tomto paddingu, na veľkosti ikony a na riadku
+       popisky pod ňou: 6 + 24 (ikona) + 3 (medzera) + 14 (popiska) + 5 = 52px. Bez popisky
+       ľudia nevedeli, čo ktorá ikona znamená; 52px je aj s rezervou nad 44px, ktoré Apple
+       odporúča pre ťukací cieľ. Desktop (od 1024px) má vlastný padding aj vlastnú veľkosť
+       ikon, tieto riadky naň nedosiahnu. */
+    padding: 6px 0 5px;
+    gap: 3px;
     /* Plná sivá, nie priehľadná --ink-35: ikona je poskladaná z viacerých ťahov a kde sa
        priehľadné ťahy prekrývajú, priehľadnosť sa sčíta - ikona pôsobila rozmazane a mala
        svetlejšie fľaky. Táto sivá je --ink-35 zmiešaná s tmavým pásom, jas ostáva rovnaký. */
@@ -476,36 +476,34 @@ b {
     transition: color var(--dur);
 }
 .nav-item svg {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-/* Popiska ostáva v DOM kvôli čítačke obrazovky (button tak má prístupný názov), len sa
-   vizuálne neukazuje - ikony na páse stačia na rozoznanie karty. Toto je bežný vzor
-   "visually hidden": na rozdiel od display:none alebo aria-hidden ho čítačka aj axe
-   stále vidia, len sa nekreslí. */
+/* Popiska pod ikonou - zároveň prístupný názov tlačidla. Nie je to bežná .lbl (mono,
+   verzálky, rozostupy): „NASTAVENIE“ by tak na 320px širokom displeji (64px na položku)
+   pretiekla. Písmo tela bez verzálok sa zmestí na jeden riadok aj tam. Farbu dedí
+   z položky, takže aktívna karta má svetlú ikonu aj text. */
 .nav-item .lbl {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    font-family: var(--font-body);
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0;
+    text-transform: none;
     white-space: nowrap;
-    border: 0;
+    color: inherit;
 }
 .nav-item.active {
     color: var(--ink);
 }
-/* Podsvietenie ikony: rozmazaný farebný kruh za ňou. Stred sadá presne na ikonu - na mobile
-   je 7px horný padding a ikona 30px, teda 7 + 15 = 22px od vrchu položky. Kruh má rovnakú
-   12px rezervu okolo ikony ako predtým (30px kruh okolo 18px ikony), teraz teda 42px okolo
-   30px ikony. Kruh je plná farba stlmená cez opacity, nie priehľadná farba v gradiente:
+/* Podsvietenie ikony: rozmazaný farebný kruh za ňou. Stred sadá presne na ikonu, nie na
+   stred položky (pod ikonou je ešte popiska) - na mobile je 6px horný padding a ikona 24px,
+   teda 6 + 12 = 18px od vrchu položky. Kruh má 12px rezervu okolo ikony, teda 36px okolo
+   24px ikony. Kruh je plná farba stlmená cez opacity, nie priehľadná farba v gradiente:
    `background-color` tak ostáva presne tá istá hodnota ako má stavová bodka pri čase (e2e
    test ich porovnáva). `z-index: -1` ho posunie za ikonu aj popisku; pozadie pása to
    neprekryje, lebo .bottomnav je vlastný stacking context (má z-index) a záporná vrstva sa
@@ -513,11 +511,11 @@ b {
 .nav-item.active::after {
     content: '';
     position: absolute;
-    top: 22px;
+    top: 18px;
     left: 50%;
-    width: 42px;
-    height: 42px;
-    margin: -21px 0 0 -21px;
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
     border-radius: 50%;
     /* Tá istá farba ako stavová bodka pri čase - podsvietenie aj bodka hovoria o tom istom stave. */
     background: rgb(var(--live-rgb));
@@ -4729,15 +4727,18 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     }
     .nav-item {
         flex-direction: row;
+        gap: 6px;
         padding: 5px 0;
     }
     .nav-item svg {
         width: 16px;
         height: 16px;
     }
-    /* Na desktope je položka v riadku, ale keďže popiska je vizuálne skrytá, v riadku je
-       fakticky len ikona. Podsvietenie preto necentrujeme na šírku položky, ale na ikonu -
-       8px od ľavého okraja a na polovicu výšky. */
+    .nav-item .lbl {
+        font-size: var(--fs-sm);
+    }
+    /* Na desktope je popiska v riadku vedľa ikony. Podsvietenie preto necentrujeme na šírku
+       položky, ale na ikonu - 8px od ľavého okraja a na polovicu výšky. */
     .nav-item.active::after {
         top: 50%;
         left: 8px;

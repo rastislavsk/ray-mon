@@ -102,11 +102,14 @@ async function ulozPolohu(page, site) {
 /**
  * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil). So
- * `settings: null` a `site` pozná appka len polohu, bez oboch sa na ňu pýta.
+ * `settings: null` a `site` pozná appka len polohu, bez oboch sa na ňu pýta. Appka sa otvára
+ * na predvolenej karte Môžem?; `start: 'terazky'` je telefón, ktorý si v Nastavení vybral
+ * ciferník (tiež len ak voľbu ešte nemá) - pre testy, ktoré skúšajú ciferník.
  * @param {import('@playwright/test').Page} page
- * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string }} [opts]
+ * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string,
+ *   start?: 'mozem' | 'terazky' | null }} [opts]
  */
-async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '' } = {}) {
+async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '', start = null } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -121,6 +124,11 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
     if (site) await ulozPolohu(page, site);
+    if (start)
+        await page.addInitScript(
+            ([key, value]) => localStorage.getItem(key) || localStorage.setItem(key, value),
+            [START_STORAGE_KEY, start],
+        );
     await page.clock.setFixedTime(time);
     await page.goto(`/${hash}`);
     await appReady(page);
@@ -162,7 +170,7 @@ const APP_NOW = (() => {
 })();
 
 test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     const expected = modelAt(atTime('13:00').instant);
     await expect(page.locator('#pv-time')).toHaveText('13:00');
     await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
@@ -192,7 +200,7 @@ test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
 });
 
 test('klik na spotrebič (mobil) ukáže tooltip s príkonom a časom z karty Môžem?, nie je orezaný pagerom', async ({ page }) => {
-    await openApp(page);
+    await openApp(page, { start: 'terazky' });
     const chip = page.locator('#verdict-go-row .go-chip').first();
     const tooltip = page.locator('#verdict-chip-tooltip');
     // Prvý spotrebič je práčka; čas je tá istá krátka odpoveď, akú má karta Môžem?.
@@ -212,7 +220,7 @@ test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpo
     const { instant } = atTime('07:00');
     // O 07:00 slnko ešte nepokrýva veľké spotrebiče a predpoveď má pred sebou silnejšie okno
     // (okolo poludnia), takže čakací čas vznikne.
-    const errors = await openApp(page, { time: instant });
+    const errors = await openApp(page, { start: 'terazky', time: instant });
     const expected = modelAt(instant);
     expect(expected.waitTime).not.toBeNull();
 
@@ -291,7 +299,7 @@ for (const [hm, label] of [
 ]) {
     test(`verdikt o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
         const { instant } = atTime(hm);
-        const errors = await openApp(page, { time: instant });
+        const errors = await openApp(page, { start: 'terazky', time: instant });
         const expected = modelAt(instant);
         await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
         // Pozadie stránky drží farbu plánu dňa. Tieto časy pokryjú červenú (21:00, VT bez
@@ -338,7 +346,7 @@ test('jedna cena celý deň: v noci sivé pozadie, bodka aj prstenec bez oranžo
         ],
     };
     const { instant } = atTime('22:00');
-    const errors = await openApp(page, { time: instant, settings: { ...OWNER, tariff: flat } });
+    const errors = await openApp(page, { start: 'terazky', time: instant, settings: { ...OWNER, tariff: flat } });
     const expected = heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER, tariff: flat });
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'grey');
     // Bodka počíta so živým výkonom z kiosku - ten je v testovacích dátach celý deň rovnaký.
@@ -357,7 +365,7 @@ function ringXY(box, minutes) {
 }
 
 test('náhľad iného času ťuknutím na prstenec a návrat na teraz', async ({ page }) => {
-    await openApp(page);
+    await openApp(page, { start: 'terazky' });
     const box = await page.locator('#dial-wrap').boundingBox();
     if (!box) throw new Error('ciferník nemá rozmer');
     const six = ringXY(box, 6 * 60);
@@ -379,7 +387,7 @@ test('náhľad iného času ťuknutím na prstenec a návrat na teraz', async ({
 });
 
 test('ťahanie jazdca: denný prstenec sa nemení, dotiahnutie na "teraz" náhľad zruší', async ({ page }) => {
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     const box = await page.locator('#dial-wrap').boundingBox();
     if (!box) throw new Error('ciferník nemá rozmer');
     const ring = page.locator('#day-ring');
@@ -426,7 +434,7 @@ test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ p
         [set - 5, false],
         [set + 5, true],
     ])) {
-        await openApp(page, { time: at(min) });
+        await openApp(page, { start: 'terazky', time: at(min) });
         const grip = page.locator('#dial-grip');
         await expect(grip, minutesToTimeStr(min)).toHaveClass(/at-now/);
         if (night) await expect(grip, minutesToTimeStr(min)).toHaveClass(/night/);
@@ -446,7 +454,7 @@ test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ p
 });
 
 test('náhľad času sa dá celý ovládať z klávesnice, nielen prstom', async ({ page }) => {
-    await openApp(page);
+    await openApp(page, { start: 'terazky' });
     const grip = page.locator('#dial-grip');
 
     // V pokoji je jazdec značkou "teraz" - ale ostáva tlačidlom, takže sa naň dá prejsť
@@ -476,7 +484,7 @@ test('náhľad času sa dá celý ovládať z klávesnice, nielen prstom', async
 });
 
 test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
-    await openApp(page);
+    await openApp(page, { start: 'terazky' });
     const box = await page.locator('#dial-wrap').boundingBox();
     if (!box) throw new Error('ciferník nemá rozmer');
     const ring = page.locator('#dial-ring');
@@ -494,7 +502,7 @@ test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
 });
 
 test('popisok jednotky v ciferníku sedí pod číslom, nie pri okraji', async ({ page }) => {
-    await openApp(page);
+    await openApp(page, { start: 'terazky' });
     // Pravidlo .unit pre polia v Nastavení ho raz chytilo tiež a odsunulo cez hodinu 6.
     const val = await page.locator('#pv-power').boundingBox();
     const unit = await page.locator('#pv-power-unit').boundingBox();
@@ -882,7 +890,7 @@ test('nastavenie: položka Zdieľať appku v sekcii Appka sa otvorí až ťuknut
 });
 
 test('terazky: ikonka „i“ otvorí popup, ktorý vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     // Popup je vidno až po ťuknutí na ikonku v hlavičke karty.
     await expect(page.locator('#info-overlay')).toBeHidden();
     await page.locator('[data-info-open]').click();
@@ -994,7 +1002,7 @@ test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', a
 });
 
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
-    const errors = await openApp(page, { offline: true });
+    const errors = await openApp(page, { start: 'terazky', offline: true });
     await expect(page.locator('#pv-updated')).toHaveText('dáta nedostupné');
     await expect(page.locator('#pv-power')).toHaveText('–');
     await expect(page.locator('#verdict-headline')).not.toHaveText('Načítavam…');
@@ -1097,7 +1105,7 @@ test('prístupnosť: otázka na polohu a sivé karty bez panelov bez závažnýc
  */
 test('široká obrazovka: karta Terazky má celú šírku stránky', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     await expect(page.locator('#panel-terazky')).toBeVisible();
 
     const rozlozenie = await page.evaluate(() => {
@@ -1200,7 +1208,7 @@ test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollov
         [360, 800, null],
     ])) {
         await page.setViewportSize({ width, height });
-        const errors = await openApp(page, { settings: settings === undefined ? OWNER : settings });
+        const errors = await openApp(page, { start: 'terazky', settings: settings === undefined ? OWNER : settings });
 
         const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
         expect(scroll, `výška ${height}px: appka preteká o ${scroll} px`).toBeLessThanOrEqual(0);
@@ -1244,7 +1252,7 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
         { width: 740, height: 360 },
     ]) {
         await page.setViewportSize({ width, height });
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
         const rozmer = `${width}x${height}`;
 
         const zamknute = await page.evaluate(() =>
@@ -1266,6 +1274,56 @@ test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať',
         await expect(page.locator('.dial-svg'), rozmer).toBeVisible();
         expect(errors).toEqual([]);
     }
+});
+
+/**
+ * Spodná navigácia má pod ikonou meno karty - bez neho ľudia nevedeli, čo ktorá ikona znamená.
+ * Na 320px širokom displeji má položka len 64px, „Nastavenie“ sa tam musí zmestiť na jeden
+ * riadok bez orezania. Výška položky je ťukací cieľ, Apple odporúča aspoň 44px. Pás je vyšší
+ * než bez popisiek, preto sa skúša aj --nav-h: koniec každej karty musí ostať nad pásom.
+ */
+test('mobil: každá položka navigácie má viditeľný text na jeden riadok a výšku aspoň 44 px', async ({ page }) => {
+    const errors = await openApp(page);
+    for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: 700 });
+        for (const panel of PANELS) {
+            const item = page.locator(`#nav-${panel}`);
+            const lbl = item.locator('.lbl');
+            await expect(lbl, `${width}px: ${panel}`).toBeVisible();
+            await expect(lbl).not.toHaveText('');
+            const m = await item.evaluate((btn) => {
+                const l = /** @type {HTMLElement} */ (btn.querySelector('.lbl'));
+                const b = btn.getBoundingClientRect();
+                const r = l.getBoundingClientRect();
+                return {
+                    vyska: b.height,
+                    riadkov: Math.round(r.height / parseFloat(getComputedStyle(l).lineHeight)),
+                    orezana: l.scrollWidth > l.clientWidth + 0.5 || r.left < b.left - 0.5 || r.right > b.right + 0.5,
+                    pismo: parseFloat(getComputedStyle(l).fontSize),
+                };
+            });
+            const nazov = `${width}px, ${await lbl.textContent()}`;
+            expect(m.vyska, nazov).toBeGreaterThanOrEqual(44);
+            expect(m.riadkov, nazov).toBe(1);
+            expect(m.orezana, nazov).toBe(false);
+            expect(m.pismo, nazov).toBeGreaterThanOrEqual(11);
+        }
+        for (const panel of PANELS) {
+            if (panel === 'terazky') continue; // tá má vlastný test vyššie, na nízkej obrazovke sa nescrolluje
+            await page.locator(`#nav-${panel}`).click();
+            await ocakavajKartu(page, panel);
+            await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+            const g = await page.evaluate(
+                (id) => ({
+                    spodok: /** @type {HTMLElement} */ (document.getElementById(id)).getBoundingClientRect().bottom,
+                    navVrch: /** @type {HTMLElement} */ (document.querySelector('.bottomnav')).getBoundingClientRect().top,
+                }),
+                `panel-${panel}`,
+            );
+            expect(g.spodok, `${width}px: koniec karty ${panel} je schovaný pod navigáciou`).toBeLessThanOrEqual(g.navVrch);
+        }
+    }
+    expect(errors).toEqual([]);
 });
 
 /**
@@ -1562,8 +1620,7 @@ test('klik na tlačidlo karty, ktorú skript nepozná, nezmení kartu', async ({
         document.querySelector('.bottomnav-inner')?.append(btn);
     });
     await page.locator('#nav-neznama').click();
-    await expect(page.locator('#panel-terazky')).toBeVisible();
-    await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
+    await ocakavajKartu(page, 'mozem');
     expect(errors).toEqual([]);
 });
 
@@ -1589,7 +1646,7 @@ test('tlačidlo Späť vracia o krok v appke, dopredu ide zase tam', async ({ pa
     await page.goBack();
     await ocakavajKartu(page, 'nastavenie');
     await page.goBack();
-    await ocakavajKartu(page, 'terazky');
+    await ocakavajKartu(page, 'mozem');
 
     // Dopredu vedie tá istá cesta naspäť, vrátane otvoreného detailu dňa.
     await page.goForward();
@@ -1604,7 +1661,7 @@ test('tlačidlo Späť vracia o krok v appke, dopredu ide zase tam', async ({ pa
 /** Krokom navigácie je karta a detail dňa, nič iné. Listovanie odporúčaní či výber dňa sa
  * deje vnútri karty, takže Späť ich nepočíta - inak by sa z appky nedalo odísť. */
 test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appku', async ({ page }) => {
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     const zaciatok = await page.evaluate(() => history.length);
 
     // Prelistovanie odporúčaní na tretiu stránku je výber vnútri karty, nie krok navigácie.
@@ -1637,7 +1694,7 @@ test('šípka späť z detailu dňa je krok späť: Späť potom detail znovu ne
 
     // Ďalší krok späť vedie tam, odkiaľ sa na kartu 7 dní prišlo - nie do detailu.
     await page.goBack();
-    await ocakavajKartu(page, 'terazky');
+    await ocakavajKartu(page, 'mozem');
     await expect(page.locator('#week-day-head')).toBeHidden();
     expect(errors).toEqual([]);
 });
@@ -1682,9 +1739,15 @@ test.describe('listovanie kariet prstom', () => {
 
     test('ťah do strán prepína karty v poradí navigácie, na kraji sa zastaví', async ({ page }) => {
         const errors = await openApp(page);
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
+
+        // Pred prvou kartou nič nie je - listovanie sa nezacyklí.
+        await swipe(page, '#mozem-body', { dx: 120 });
+        await ocakavajKartu(page, 'mozem');
 
         // Doľava sa ide dopredu v poradí navigácie, doprava späť.
+        await swipe(page, '#mozem-body', { dx: -120 });
+        await ocakavajKartu(page, 'terazky');
         await swipe(page, '#dial-hero', { dx: -120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
@@ -1705,7 +1768,7 @@ test.describe('listovanie kariet prstom', () => {
         await swipe(page, '#dial-hero', { dx: 120 });
         await ocakavajKartu(page, 'mozem');
 
-        // Pred prvou kartou už nič nie je - listovanie sa nezacyklí.
+        // Na prvej karte znova ostane.
         await swipe(page, '#mozem-body', { dx: 120 });
         await ocakavajKartu(page, 'mozem');
         await swipe(page, '#mozem-body', { dx: -120 });
@@ -1772,7 +1835,7 @@ test.describe('listovanie kariet prstom', () => {
     });
 
     test('pás odporúčaní si ťahanie necháva pre seba aj na krajnej stránke', async ({ page }) => {
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
         const dots = page.locator('#verdict-dots .pager-dot');
 
         // Pás pod ciferníkom sa listuje sám, takže gesto nad ním patrí jemu a karta ostáva -
@@ -1930,7 +1993,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
 
         await page.goBack();
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#week-day-head')).toBeHidden();
         expect(errors).toEqual([]);
     });
@@ -1981,7 +2044,7 @@ test.describe('listovanie kariet prstom', () => {
      * a gesto mu odovzdal. Listovanie tak bolo v tú hodinu mŕtve. Test ide presne na ten čas;
      * hranicu (vnútorný pás sa musí dať naozaj posúvať) drží pravidlo, nie zoznam výnimiek. */
     test('ťah ponad ciferník prepne kartu aj o 06:00, keď značka "teraz" trčí cez okraj', async ({ page }) => {
-        const errors = await openApp(page, { time: atTime('06:00').instant });
+        const errors = await openApp(page, { start: 'terazky', time: atTime('06:00').instant });
         await ocakavajKartu(page, 'terazky');
 
         await swipe(page, '#dial-hero', { dx: -120 });
@@ -1990,7 +2053,7 @@ test.describe('listovanie kariet prstom', () => {
     });
 
     test('ťah ponad ciferník prepne kartu a nenastaví náhľad iného času', async ({ page }) => {
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
 
         // Ciferník je na mobile najväčšia plocha karty, listovať sa cez ňu dá. Ťuknutie naň
         // ale nastavuje náhľad iného času - po geste ho preto appka potlačí, v oboch smeroch.
@@ -2018,7 +2081,7 @@ test.describe('listovanie kariet prstom', () => {
      * a dosť ďaleko - kratší ťah než SWIPE.minDistPx by za listovanie neprešiel ani bez tej
      * výnimky a test by nekontroloval nič. */
     test('ťahanie jazdca prstom posúva náhľad času a kartu neprepne', async ({ page }) => {
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
         const box = await page.locator('#dial-wrap').boundingBox();
         if (!box) throw new Error('ciferník nemá rozmer');
 
@@ -2264,16 +2327,16 @@ test.describe('moja elektráreň', () => {
         // Po načítaní stránky sa appka otvára na svojej karte, už bez otázky na polohu.
         await page.reload();
         await appReady(page);
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#pv-updated')).toHaveText('panely nie sú zadané');
-        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
-        await expect(page.locator('#pv-power')).toHaveText('–');
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW');
-        await expect(page.locator('#panels-bar')).toBeVisible();
-        await page.locator('#nav-mozem').click();
         await expect(page.locator('#panel-mozem')).toHaveClass(/no-panels/);
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-fact')).toContainText('nezadané');
+        await expect(page.locator('#panels-bar')).toBeVisible();
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
+        await expect(page.locator('#pv-power')).toHaveText('–');
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW');
         await expect(page.locator('#panels-bar')).toBeVisible();
         expect(errors).toEqual([]);
     });
@@ -2824,7 +2887,7 @@ test.describe('karta Môžem?', () => {
     });
 
     test('zoznam vecí: otvorí sa z riadku, veci podľa modelu, Späť ho zavrie', async ({ page }) => {
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
         const m = model();
@@ -2949,7 +3012,7 @@ test.describe('karta Môžem?', () => {
         );
 
     test('súhrn: otvorí sa z karty, prepína obdobie a Späť ho zavrie', async ({ page }) => {
-        const errors = await openApp(page);
+        const errors = await openApp(page, { start: 'terazky' });
         await page.locator('#nav-mozem').click();
         const mesiac = suhrn('mesiac');
         await expect(page.locator('.summary-link')).toContainText(`${mesiac.kick}: ${fmtSum(Math.round(mesiac.kwh), 0)} kWh`);
@@ -3002,25 +3065,58 @@ test.describe('karta Môžem?', () => {
 });
 
 test.describe('prvá karta tohto telefónu', () => {
-    test('voľba v Nastavení: po ďalšom otvorení appky je prvá Môžem?, adresa ju nesie', async ({ page }) => {
+    test('bez uloženej voľby sa appka otvorí na Môžem? a nič neuloží ani nepridá do adresy', async ({ page }) => {
         const errors = await openApp(page);
-        await ocakavajKartu(page, 'terazky');
-        await page.locator('#nav-nastavenie').click();
-        await otvorPolozku(page, 'settings-start');
-        const mozem = page.locator('[data-start-panel="mozem"]');
-        await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
-        await mozem.click();
-        await expect(mozem).toHaveAttribute('aria-pressed', 'true');
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
-        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('mozem');
-
-        await page.reload();
         await ocakavajKartu(page, 'mozem');
+        await expect(page.locator('#nav-terazky')).not.toHaveAttribute('aria-current', 'page');
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBeNull();
+        expect(startFromLink(page.url()), 'predvolená karta sa do adresy nepíše').toBeNull();
         expect(await page.evaluate(() => history.state?.step?.panel)).toBe('mozem');
         expect(errors).toEqual([]);
     });
 
-    test('odkaz pre rodinu: telefón bez voľby sa otvorí na Môžem? a zapamätá si to', async ({ page }) => {
+    test('s uloženou voľbou Terazky sa appka otvorí na Terazky', async ({ page }) => {
+        await page.addInitScript((key) => localStorage.setItem(key, 'terazky'), START_STORAGE_KEY);
+        const errors = await openApp(page);
+        await ocakavajKartu(page, 'terazky');
+        await expect(page.locator('#nav-mozem')).not.toHaveAttribute('aria-current', 'page');
+        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('voľba v Nastavení: po ďalšom otvorení appky je prvá Terazky, adresa ju nesie', async ({ page }) => {
+        const errors = await openApp(page);
+        await ocakavajKartu(page, 'mozem');
+        await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-start');
+        const terazky = page.locator('[data-start-panel="terazky"]');
+        await expect(page.locator('[data-start-panel="mozem"]')).toHaveAttribute('aria-pressed', 'true');
+        await terazky.click();
+        await expect(terazky).toHaveAttribute('aria-pressed', 'true');
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('terazky');
+        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('terazky');
+
+        await page.reload();
+        await ocakavajKartu(page, 'terazky');
+        expect(await page.evaluate(() => history.state?.step?.panel)).toBe('terazky');
+
+        // Návrat k predvolenej: z adresy prvá karta zmizne.
+        await page.locator('#nav-nastavenie').click();
+        await otvorPolozku(page, 'settings-start');
+        await page.locator('[data-start-panel="mozem"]').click();
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
+        expect(startFromLink(page.url())).toBeNull();
+        expect(errors).toEqual([]);
+    });
+
+    test('odkaz s prvou kartou: telefón bez voľby sa otvorí na Terazky a zapamätá si to', async ({ page }) => {
+        const errors = await openApp(page, { hash: '#prva=terazky' });
+        await ocakavajKartu(page, 'terazky');
+        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('starší odkaz pre rodinu (prva=mozem) ďalej funguje: telefón bez voľby si Môžem? zapamätá', async ({ page }) => {
         const errors = await openApp(page, { hash: '#prva=mozem' });
         await ocakavajKartu(page, 'mozem');
         expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
@@ -3034,17 +3130,18 @@ test.describe('prvá karta tohto telefónu', () => {
         expect(errors).toEqual([]);
     });
 
-    test('zdieľanie: zaškrtnutie „pre rodinu“ pridá do odkazu prvú kartu', async ({ page }) => {
-        const errors = await openApp(page);
+    test('zdieľanie: odkaz prvú kartu nenesie, ani keď si telefón vybral Terazky', async ({ page }) => {
+        // Zaškrtávatko „pre rodinu“ pridávalo prva=mozem; Môžem? je teraz predvolená, takže zaniklo.
+        const errors = await openApp(page, { start: 'terazky' });
         await page.locator('#nav-nastavenie').click();
         await page.locator('#info-share > summary').click();
+        await expect(page.locator('#share-options input[type="checkbox"]')).toHaveCount(2);
         const wa = page.locator('#share-whatsapp');
         const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
-        await page.locator('#share-start').check();
-        expect(await shared()).toBe(shareUrl(APP_URL, null, false, 'mozem'));
+        expect(await shared()).toBe(shareUrl(APP_URL, null, false));
         await page.locator('#share-with-settings').check();
         const url = await shared();
-        expect(startFromLink(url)).toBe('mozem');
+        expect(startFromLink(url)).toBeNull();
         expect(settingsFromLink(url)).toEqual({ ...OWNER, kiosk: '' });
         expect(errors).toEqual([]);
     });
@@ -3112,7 +3209,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await page.locator('#import-accept').click();
         await expect(offer).toBeHidden();
         // Otázka na polohu už netreba - appka sa otvorí na svojej prvej karte.
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#bottomnav')).toBeVisible();
         await expect(page.locator('#pv-updated')).toHaveText('meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);

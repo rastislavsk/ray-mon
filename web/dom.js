@@ -289,7 +289,6 @@ function zdielanieDom() {
         shareWithSettings: input('share-with-settings'),
         shareWithKiosk: input('share-with-kiosk'),
         shareKioskRow: byId('share-kiosk-row'),
-        shareStart: input('share-start'),
         startPick: byId('start-pick'),
         clearData: byId('clear-data'),
         importOffer: byId('import-offer'),

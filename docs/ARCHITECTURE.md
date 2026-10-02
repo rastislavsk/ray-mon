@@ -277,13 +277,15 @@ na plátno z toho istého modelu a posiela ho `navigator.share`; kde zdieľanie 
 obrázok sa stiahne. Nič z toho neodchádza na server.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
-Môžem?, ten, kto elektráreň platí, ciferník. Ukladá sa preto pod vlastným kľúčom
-(`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=mozem` za mriežkou.
-Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa uloží (`loadStartPanel`) -
-odkaz „pre rodinu“ tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše vlastnú voľbu.
+Môžem?, ten, kto elektráreň platí, ciferník. Predvolená je Môžem? (`START_PANELS[0]`, jediné
+miesto, odkiaľ to berie aj `initialState` a `shareHash`). Ukladá sa pod vlastným kľúčom
+(`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=terazky` za mriežkou -
+predvolená karta sa nepíše. Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa
+uloží (`loadStartPanel`) - odkaz tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše
+vlastnú voľbu. Staršie odkazy „pre rodinu“ s `&prva=mozem` (z čias, keď bola predvolená
+Terazky a pri zdieľaní bolo na to zaškrtávatko) platia ďalej.
 Adresa v prehliadači ju nesie tiež (`initUrlMirror`), z toho istého dôvodu ako nastavenie:
-appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Položka „Úvodná karta“ aj
-zaškrtávatko pri zdieľaní si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
+appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Položku „Úvodná karta“ si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
 nasadenia.
 
 ## Karta 7 dní na mobile
