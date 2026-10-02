@@ -475,7 +475,6 @@ function initSharing(store, dom, refresh) {
         applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
-    dom.shareStart.addEventListener('change', () => store.setState({ shareStart: dom.shareStart.checked }));
     // Voľby prvej karty skladá render (render/zdielat.js), preto poslucháč sedí na karte.
     dom.setup.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (e.target).closest('[data-start-panel]');

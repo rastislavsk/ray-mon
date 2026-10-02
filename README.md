@@ -11,8 +11,7 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 
 ## Čo appka ukazuje
 
-Spodná navigácia má len ikony bez textu – mená kariet nižšie slúžia len na orientáciu
-v tomto popise.
+Spodná navigácia má pod každou ikonou meno karty (na desktope je meno vedľa ikony).
 
 |               Môžem?                |                Terazky                 |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
 | :---------------------------------: | :------------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
@@ -39,7 +38,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   toho človek pustil na slnku. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
   systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si
   appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
-  prvá, appka sa ale otvára na karte Terazky – každý telefón si to môže zmeniť v Nastavení.
+  prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
   odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
   a prípadne čas, kedy bude lepšie. Listuje sa potiahnutím do strán alebo klikom na bodky;
@@ -87,8 +86,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Späť na telefóne vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Položka **Úvodná karta**
   určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to voľba telefónu, nie
-  elektrárne, a ukladá sa zvlášť. Pri zdieľaní appky sa dá zaškrtnúť „pre rodinu“ – kto odkaz
-  otvorí a vlastnú voľbu ešte nemá, tomu sa appka otvorí na karte Môžem?. **Zdieľať appku**: QR kód,
+  elektrárne, a ukladá sa zvlášť. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.

@@ -76,16 +76,16 @@
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
-                    <!-- Karta Môžem? (návrh C v docs/navrhy/karta-mozem.html) je v navigácii prvá, appka
-                         sa ale otvára na karte Terazky. -->
-                    <button id="nav-mozem" class="nav-item" type="button" data-panel="mozem">
+                    <!-- Karta Môžem? (návrh C v docs/navrhy/karta-mozem.html) je v navigácii prvá a appka
+                         sa na nej aj otvára (START_PANELS v shared/config.js). -->
+                    <button id="nav-mozem" class="nav-item active" type="button" data-panel="mozem" aria-current="page">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="12" r="9" />
                             <path d="M7.8 12.4l2.9 2.9 5.5-5.8" />
                         </svg>
                         <span class="lbl">Môžem?</span>
                     </button>
-                    <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
+                    <button id="nav-terazky" class="nav-item" type="button" data-panel="terazky">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
                         <span class="lbl">Terazky</span>
                     </button>
@@ -102,8 +102,10 @@
                     </button>
                     <button id="nav-nastavenie" class="nav-item" type="button" data-panel="nastavenie">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M4 9h14l2 7H2z" />
-                            <path d="M9.5 9l-.6 7M14 9l.6 7M3 12.5h16M11 16v5M7.5 21h7" />
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            />
                         </svg>
                         <span class="lbl">Nastavenie</span>
                     </button>
@@ -604,13 +606,6 @@
                                                 <label class="check-row" id="share-kiosk-row">
                                                     <input type="checkbox" id="share-with-kiosk" />
                                                     <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
-                                                </label>
-                                                <label class="check-row">
-                                                    <input type="checkbox" id="share-start" />
-                                                    <span
-                                                        >Pre rodinu: otvárať kartu Môžem? – kto odkaz otvorí, uvidí najprv jednoduché
-                                                        odpovede</span
-                                                    >
                                                 </label>
                                             </div>
                                             <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>

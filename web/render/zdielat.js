@@ -14,7 +14,7 @@ let qr = null;
 export function currentShareUrl(state) {
     // Typickú strechu nemá zmysel posielať ďalej - k odkazu sa pribaľuje len uložená elektráreň.
     const settings = state.shareSettings && state.known === 'elektraren' ? savedSettings(state) : null;
-    return shareUrl(APP_URL, settings, state.shareKiosk, state.shareStart ? 'mozem' : undefined);
+    return shareUrl(APP_URL, settings, state.shareKiosk);
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -32,7 +32,7 @@ const START_CHOICES = [
 
 /**
  * Položka „Úvodná karta“ v sekcii Appka (voľba karty, na ktorej sa appka na tomto telefóne
- * otvára) a zaškrtávatko „pre rodinu“ pri zdieľaní.
+ * otvára).
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderStartPick(state, dom) {
@@ -46,7 +46,6 @@ function renderStartPick(state, dom) {
         `<div class="start-choices" role="group" aria-label="Karta, na ktorej sa appka otvára">${buttons}</div>`,
         'startPick',
     );
-    dom.shareStart.checked = state.shareStart;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

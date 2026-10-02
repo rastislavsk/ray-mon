@@ -38,7 +38,7 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
     const store = createStore(initialState(new Date(), { wide: true, tall: true }, { site: SITE }));
     let calls = 0;
     const off = store.subscribe(() => calls++);
-    store.setState({ panel: 'terazky', wide: true });
+    store.setState({ panel: 'mozem', wide: true });
     assert.equal(calls, 0);
     off();
     store.setState({ panel: 'nastavenie' });
@@ -60,11 +60,12 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
     assert.equal(welcome.panel, 'nastavenie');
     assert.equal(welcome.setupStep, 'lokalita');
     assert.equal(welcome.site.name, '', 'poloha je prázdna, kým ju človek nevyberie');
-    const site = initialState(now, layout, { site: SITE, startPanel: 'mozem' });
+    const site = initialState(now, layout, { site: SITE, startPanel: 'terazky' });
     assert.equal(site.known, 'poloha');
     assert.equal(site.plant.strings.length, 1, 'typická strecha v uloženej polohe');
     assert.equal(initialState(now, layout, { saved: typicalSettings(SITE), site: SITE }).known, 'elektraren', 'uložená elektráreň vyhrá');
-    assert.equal(site.panel, 'mozem');
+    assert.equal(site.panel, 'terazky');
+    assert.equal(initialState(now, layout, { site: SITE }).panel, 'mozem', 'bez voľby sa appka otvára na Môžem?');
     assert.equal(site.setupStep, null);
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
     assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');
@@ -128,7 +129,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {
     const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
     assert.deepEqual(navStep(state), {
-        panel: 'terazky',
+        panel: 'mozem',
         weekDetail: null,
         setup: null,
         roof: 0,
