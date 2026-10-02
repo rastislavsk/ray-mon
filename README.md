@@ -118,6 +118,20 @@ zatvorenie. Zatvorenie sa nikde nevynucuje dvojitým stlačením – to je zvyk 
 androidových appiek, nie webu, a stránka sa sama zavrieť ani nevie. Adresa sa pritom
 nemení, takže odkaz na appku ostáva jeden.
 
+## Nový dizajn „Živá obloha“ (vzniká)
+
+V priečinku `obloha/` vzniká po krokoch nová appka podľa návrhu
+[`docs/navrhy/smer-b-obloha.html`](docs/navrhy/smer-b-obloha.html) (smer B; otvor ho v prehliadači,
+je klikací). Vyskúšať sa dá na <https://rastislavsk.github.io/ray-mon/obloha/>. Zatiaľ má len kostru:
+pozadie je obloha podľa času dňa, skutočného východu a západu slnka v polohe elektrárne
+a oblačnosti z predpovede, hore miesto elektrárne a čas, dole navigácia medzi piatimi kartami,
+ktoré ešte nemajú obsah.
+
+Súčasná appka na hlavnej adrese beží ďalej bez zmeny. Obe appky počítajú tým istým kódom
+(`shared/`, časť `web/`), berú dáta z toho istého Workera a čítajú to isté uložené nastavenie –
+čo si človek nastaví v jednej, vidí aj v druhej. Na hlavnú adresu sa nová appka presunie
+v poslednom kroku.
+
 ## Ako to funguje
 
 ```
@@ -143,6 +157,7 @@ Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shared/`                                      | Doménová logika bez vstupov a výstupov: konštanty, fyzika slnka, parser kiosku, tarifa, texty, modely grafov. Beží v prehliadači, v Node aj vo Workeri. |
 | `web/`                                         | Stav appky, načítanie dát, vykresľovanie po kartách, poslucháče udalostí, skladanie SVG.                                                                |
+| `obloha/`                                      | Nová appka „Živá obloha“, ktorá vzniká vedľa súčasnej. Vlastná stránka a stav, výpočty a dáta zo `shared/` a `web/`.                                    |
 | `worker/`                                      | Cloudflare Worker: jeden endpoint, ktorý stiahne kiosk FusionSolar.                                                                                     |
 | `test/`                                        | Jednotkové testy, kontrakt dát a end-to-end testy v prehliadači.                                                                                        |
 | `index.html`, `style.css`, `boot.js`, `app.js` | Samotná stránka. Žiadny bundler, žiadny framework.                                                                                                      |

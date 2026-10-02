@@ -104,6 +104,13 @@ export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 export const SITE_STORAGE_KEY = 'poloha-v1';
 
 /**
+ * Karty v poradí navigácie - kódové názvy, ktoré drží HTML id, CSS selektory aj stav. Popisky
+ * sú v HTML a nemusia sa s nimi zhodovať (terazky je v novej appke „Teraz“). Rovnaké v oboch
+ * appkách, takže uložená úvodná karta (START_PANELS) platí v oboch.
+ */
+export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statistika', 'nastavenie']);
+
+/**
  * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
  * ten, kto elektráreň platí, ciferník. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
  * `&prva=…` za mriežkou. Prvá v zozname je predvolená - Môžem? je jednoduchá odpoveď pre celú
@@ -463,7 +470,7 @@ export const PREVIEW = {
     keyStepMin: 15,
 };
 
-// Prepínanie kariet potiahnutím prsta (web/swipe.js). Prah je kompromis: dosť veľký, aby
+// Prepínanie kariet potiahnutím prsta (web/gesture.js, v oboch appkách). Prah je kompromis: dosť veľký, aby
 // gesto nespustil ťuk roztrasenou rukou, dosť malý, aby stačil pohodlný pohyb palca.
 export const SWIPE = {
     minDistPx: 60, // koľko musí prst prejsť vodorovne
@@ -472,4 +479,38 @@ export const SWIPE = {
     // Nad grafom je vodorovný ťah zároveň prezeraním krivky (tooltip ide za prstom), takže
     // tam kartu prepne len rýchle švihnutie. Pokojné sledovanie krivky je pomalšie.
     flickMs: 300,
+};
+
+/**
+ * Živá obloha - pozadie novej appky (obloha/): prechod dvoch farieb podľa času dňa
+ * a oblačnosti. Farby a ich priebeh sú z návrhu `docs/navrhy/smer-b-obloha.html` (`KEYS`
+ * a `skyAt`). Hodiny v `keys` sú hodiny dňa z návrhu, v ktorom slnko vychádza o `riseH`
+ * a zapadá o `setH`; skutočný východ a západ v polohe elektrárne do nich premieta
+ * `skyColors` v shared/sky.js. Každý kľúč je [hodina, farba hore, farba dole].
+ */
+export const SKY = {
+    riseH: 7,
+    setH: 18.5,
+    keys: /** @type {Array<[number, string, string]>} */ ([
+        [0, '#070b1f', '#141b3d'],
+        [5.5, '#0f1736', '#2b2f5c'],
+        [7, '#4b5aa6', '#f0a98a'],
+        [8.5, '#2f72c0', '#93c8ec'],
+        [12, '#1767c9', '#4fa3e2'],
+        [16, '#2864b4', '#cf9f6c'],
+        [18, '#463a8a', '#e3804f'],
+        [19.5, '#1d2257', '#5d437f'],
+        [21, '#0b1130', '#1d2550'],
+        [24, '#070b1f', '#141b3d'],
+    ]),
+    // Oblačnosť z Open-Meteo (cloud_cover, %): pod `clearPct` jasno, pod `overcastPct`
+    // polojasno, inak zamračené.
+    clearPct: 30,
+    overcastPct: 70,
+    // Koľko sivej sa cez deň primieša do farieb neba. V noci je oblačnosť vidno menej
+    // (viď skyColors), dážď appka zatiaľ nepozná.
+    cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
+    cloud: ['#5b6b82', '#98a5b5'],
+    // Bez dát: sivá obloha, ktorá netvrdí nič o počasí.
+    offline: ['#4f555f', '#7f858e'],
 };

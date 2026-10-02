@@ -5,6 +5,15 @@
 Statická webová appka (GitHub Pages) pre domácnosť s fotovoltikou + Cloudflare Worker,
 ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 
+Appky sú teraz dve: súčasná (koreň, `web/`, `style.css`) a nový dizajn „Živá obloha“, ktorý
+vzniká po krokoch v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
+platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
+(`store.js`, `storage.js`, `data.js`, `refresh.js`, `gesture.js`, `nav-history.js`), takže
+**zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
+siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
+vytiahni do `shared/` alebo do neutrálneho modulu. Súčasnú appku počas prestavby nemeň, kým to
+nie je úlohou.
+
 ## Nemenné pravidlá
 
 - **Žiadny build krok, framework ani bundler.** Stránka sa servíruje tak, ako leží v repozitári.
@@ -62,7 +71,7 @@ cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`): zvislé
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
 
-Listovanie kariet ťahom (`web/swipe.js`) si gesto neberie tam, kde sa pod prstom ťahá niečo do
+Listovanie kariet ťahom (`web/gesture.js`, karty a dni súčasnej appky vyberá `web/swipe.js`) si gesto neberie tam, kde sa pod prstom ťahá niečo do
 strán. Rozhoduje pravidlo (vnútorný pás, ktorý sa má kam posunúť), menované sú len úchytky, ktoré
 sa ťahajú a neposúvajú: jazdec na dennom prstenci, kruh rozvrhu tarify (`.tariff-ring`, prst po
 ňom maľuje pásmo) a posúvač `input[type=range]` (sklon strechy v sprievodcovi nastavením). Nový posúvač tak netreba nikam dopisovať.
@@ -121,6 +130,8 @@ cache, uvidí jedno obnovenie stránky navyše.
 
 Čo treba držať:
 
+- To isté platí pre `obloha/boot.js`, ktorý chráni novú appku (hlášku píše do `#hdr-status`),
+  a jeho e2e testy v `test/e2e/obloha.spec.js`.
 - `boot.js` **nesmie nič importovať staticky** – musí sa spustiť, aj keď je zvyšok grafu
   rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
 - `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`

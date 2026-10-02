@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <!-- Testovacia verzia nového dizajnu „Živá obloha“, vyhľadávače ju nemajú ukazovať. -->
+        <meta name="robots" content="noindex" />
+        <meta name="theme-color" content="#0b1130" />
+        <meta name="description" content="RAY-MON v novom dizajne Živá obloha – testovacia verzia." />
+        <title>RAY-MON obloha</title>
+        <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+        <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+        <link rel="manifest" href="manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="RAY-MON obloha" />
+        <!-- Archivo je jediné písmo appky a na obrazovke je od prvej chvíle. crossorigin je pri
+             písmach povinný, inak by ho prehliadač stiahol dvakrát. -->
+        <link rel="preload" href="../fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="stylesheet" href="style.css" />
+        <!-- Appku spúšťa boot.js: keď sa po nasadení zmiešajú staré a nové moduly z cache,
+             stiahne ich znova a raz obnoví stránku. Žiadny iný modul appky sa tu nenačítava. -->
+        <script type="module" src="boot.js"></script>
+    </head>
+    <body>
+        <header class="st">
+            <span id="hdr-place" class="place">RAY-MON</span>
+            <span id="hdr-live" class="live" data-tone="off">
+                <i aria-hidden="true"></i>
+                <span id="hdr-status">načítavam…</span>
+                <span id="hdr-tone" class="sr"></span>
+            </span>
+            <button type="button" id="hdr-setup" class="need hidden">Zadaj panely ›</button>
+        </header>
+
+        <main id="page" class="page">
+            <section id="panel-mozem" class="panel" aria-labelledby="ttl-mozem">
+                <h1 id="ttl-mozem" class="ttl">Môžem?</h1>
+                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            </section>
+            <section id="panel-terazky" class="panel hidden" aria-labelledby="ttl-terazky">
+                <h1 id="ttl-terazky" class="ttl">Teraz</h1>
+                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            </section>
+            <section id="panel-7dni" class="panel hidden" aria-labelledby="ttl-7dni">
+                <h1 id="ttl-7dni" class="ttl">7 dní</h1>
+                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            </section>
+            <section id="panel-statistika" class="panel hidden" aria-labelledby="ttl-statistika">
+                <h1 id="ttl-statistika" class="ttl">Štatistika</h1>
+                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            </section>
+            <section id="panel-nastavenie" class="panel hidden" aria-labelledby="ttl-nastavenie">
+                <h1 id="ttl-nastavenie" class="ttl">Nastavenie</h1>
+                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            </section>
+        </main>
+
+        <nav class="tabs" aria-label="Karty appky">
+            <button type="button" id="nav-mozem" data-panel="mozem">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M8 12.5l2.8 2.8L16.5 9.5" />
+                </svg>
+                <span>Môžem?</span>
+            </button>
+            <button type="button" id="nav-terazky" data-panel="terazky">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
+                <span>Teraz</span>
+            </button>
+            <button type="button" id="nav-7dni" data-panel="7dni">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="3" />
+                    <path d="M3 10h18M8 3v4M16 3v4" />
+                </svg>
+                <span>7 dní</span>
+            </button>
+            <button type="button" id="nav-statistika" data-panel="statistika">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-9" /></svg>
+                <span>Štatistika</span>
+            </button>
+            <button type="button" id="nav-nastavenie" data-panel="nastavenie">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                    />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>Nastavenie</span>
+            </button>
+        </nav>
+    </body>
+</html>

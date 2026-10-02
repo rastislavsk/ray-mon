@@ -48,6 +48,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                          |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
+| `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -62,7 +63,7 @@ poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
-zmenilo (viď „Nezapisuj, čo sa nezmenilo“ nižšie). `swipe.js` prekladá ťahanie prstom na
+zmenilo (viď „Nezapisuj, čo sa nezmenilo“ nižšie). `swipe.js` prekladá ťahanie prstom (to, či ťah vôbec bol listovaním, rozhodne `gesture.js`) na
 susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovka karty a gesto ju
 neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
@@ -70,7 +71,7 @@ najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, pat
 Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: jazdec na dennom prstenci ciferníka,
 kruh rozvrhu tarify v sprievodcovi a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
 nastavením).
-`settings-store.js` ukladá nastavenie elektrárne do `localStorage`. Kartu Nastavenie tvorí
+`storage.js` ukladá nastavenie elektrárne do `localStorage` (`settings-store.js` ho znova vyváža a pridáva zrkadlenie do adresy). Kartu Nastavenie tvorí
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
 kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré ostali, aby sa
@@ -137,6 +138,46 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 čisté.
 
 **`worker/`** je tenký: over odkaz, stiahni kiosk, zavolaj `shared/`, vráť JSON.
+
+## Dve appky: súčasná a „Živá obloha“
+
+Nový dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vzniká po krokoch vedľa súčasnej appky,
+v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Súčasná appka sa medzitým nemení. Na konci
+sa nová presunie na hlavnú adresu.
+
+`obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
+`boot.js` s tou istou ochranou pred zmiešanou cache ako koreňový a vlastný stav, render a
+poslucháče v `obloha/web/`. Pravidlá sú tie isté: jeden stav, jedno prekreslenie, `.hidden`
+s `!important`, žiadne `:hover`. Čo appky zdieľajú, nie je skopírované – nová appka importuje
+ten istý súbor:
+
+- **`shared/`** celé. Zmena výpočtu sa prejaví v oboch appkách naraz. Zoznam kariet `PANELS` je
+  v `config.js`, kódové názvy sú v oboch rovnaké (karta Terazky sa v novej volá Teraz, kód
+  ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
+- **Worker** – ten istý endpoint, nová appka posiela kiosk rovnako (`web/data.js`).
+- **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
+  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`). Číta a zapisuje ho
+  ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť.
+- **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
+  (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
+  hodiny), `gesture.js` (rozpoznanie ťahu do strán) a `nav-history.js` (kroky navigácie
+  v histórii prehliadača). Vznikli vytiahnutím zo `state.js`, `settings-store.js`,
+  `interactions.js`, `swipe.js` a `history.js`; tie ich používajú ďalej a správanie súčasnej
+  appky sa nezmenilo. `state.js` a `settings-store.js` ich znova vyvážajú, aby sa nemuseli meniť
+  ich odberatelia.
+
+Nová appka nesmie importovať nič, čo siaha na DOM alebo stav súčasnej appky (`web/state.js`,
+`web/dom.js`, `web/render/`, …). Keď niečo také potrebuje, čistá časť sa vytiahne do `shared/`
+alebo do neutrálneho modulu ako vyššie.
+
+Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
+farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `style.css` zaregistrované
+cez `@property` ako farby, takže sa dajú plynulo prelínať; útlm pohybu prechod vypne tým istým
+pravidlom ako všetky animácie. Hodiny v tabuľke farieb (`SKY` v `config.js`) sú hodiny dňa
+z návrhu, kde slnko vychádza o 7:00 a zapadá o 18:30 – skutočný východ a západ (`sunTimes`) sa do
+nich premieta po úsekoch (noc, deň, večer). Počasie sú tri stavy z oblačnosti aktuálnej hodiny
+predpovede; dážď zatiaľ nie, appka zrážky nesťahuje. Bez dát je obloha sivá, kým sa prvé dáta
+sťahujú, ukazuje čas dňa bez počasia.
 
 ## Prečo takto
 
