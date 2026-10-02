@@ -49,6 +49,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                          |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
 | `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
+| `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, oblúk slnka, výzvy).        |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -178,6 +179,17 @@ z návrhu, kde slnko vychádza o 7:00 a zapadá o 18:30 – skutočný východ a
 nich premieta po úsekoch (noc, deň, večer). Počasie sú tri stavy z oblačnosti aktuálnej hodiny
 predpovede; dážď zatiaľ nie, appka zrážky nesťahuje. Bez dát je obloha sivá, kým sa prvé dáta
 sťahujú, ukazuje čas dňa bez počasia.
+
+Karta Môžem? novej appky odpovedá tým istým `mozemModel` ako súčasná – slovo, veta, časy aj
+odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
+vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
+len zo živého a čerstvého merania, inak s „asi“), nadpis zoznamu, oblúk slnka (`sunArc`: skutočný
+východ a západ, zelený úsek je okno z pása dneška) a vetu, prečo dáta nie sú. Pri známej polohe
+bez panelov odpovedá z typickej strechy (`mozemModel` s `guess`, predvolene vypnutým – súčasná
+appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad. Panel veci je `<dialog>` otvorený
+cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
+aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
+„Pustil/a som“ zapisuje cez `web/storage.js` do `spustenia-v1`, spustenie teda vidia obe appky.
 
 ## Prečo takto
 

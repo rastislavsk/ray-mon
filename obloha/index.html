@@ -35,9 +35,40 @@
         </header>
 
         <main id="page" class="page">
-            <section id="panel-mozem" class="panel" aria-labelledby="ttl-mozem">
-                <h1 id="ttl-mozem" class="ttl">Môžem?</h1>
-                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            <!-- Karta Môžem?: texty a stav skladá render (web/render/mozem.js) z shared/mozem-sky.js,
+                 tu sú len nosiče. Odpoveď je na oblohe pod oblúkom slnka, nadpis karty je len pre čítačku. -->
+            <section id="panel-mozem" class="panel mozem" aria-labelledby="ttl-mozem">
+                <h1 id="ttl-mozem" class="sr">Môžem?</h1>
+                <div id="mz-arc" class="arc" aria-hidden="true"></div>
+                <div id="mz-answer" class="big">
+                    <div id="mz-chips" class="chips"></div>
+                    <p id="mz-word" class="word"></p>
+                    <p id="mz-lead" class="line"></p>
+                </div>
+                <p id="mz-phones" class="fact">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+                        <path d="M10.5 18.5h3" />
+                    </svg>
+                    <span id="mz-phones-text"></span>
+                </p>
+                <button type="button" id="mz-retry" class="pbtn retry"></button>
+                <div id="mz-guess" class="cta">
+                    <b id="mz-guess-title"></b>
+                    <p id="mz-guess-text"></p>
+                    <button type="button" id="mz-guess-btn" class="pbtn"></button>
+                </div>
+                <div id="mz-ask" class="cta">
+                    <b id="mz-ask-title"></b>
+                    <p id="mz-ask-text"></p>
+                    <button type="button" id="mz-ask-btn" class="pbtn"></button>
+                </div>
+                <section id="mz-list" class="glass" aria-labelledby="mz-list-title">
+                    <h2 id="mz-list-title" class="glass-ttl"></h2>
+                    <div id="mz-items" class="apps"></div>
+                </section>
+                <p id="mz-count" class="glass count"></p>
+                <button type="button" id="mz-quip" class="quote"><q id="mz-quip-text"></q><small id="mz-quip-hint"></small></button>
             </section>
             <section id="panel-terazky" class="panel hidden" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
@@ -90,5 +121,21 @@
                 <span>Nastavenie</span>
             </button>
         </nav>
+
+        <!-- Panel veci karty Môžem? zospodu. Otvára sa ako modálny dialóg: čítačka ho ohlási,
+             fokus ostane v ňom a Escape ho zatvorí. -->
+        <dialog id="mz-sheet" class="sheet" aria-labelledby="mz-sheet-title">
+            <div class="sheet-in">
+                <button type="button" id="mz-sheet-x" class="x"><span aria-hidden="true">×</span></button>
+                <h2 id="mz-sheet-title"></h2>
+                <h3 id="mz-sheet-do-q" class="q"></h3>
+                <p id="mz-sheet-do"></p>
+                <h3 id="mz-sheet-why-q" class="q"></h3>
+                <p id="mz-sheet-why"></p>
+                <h3 id="mz-sheet-more-q" class="q"></h3>
+                <p id="mz-sheet-more"></p>
+                <button type="button" id="mz-sheet-log" class="pbtn"></button>
+            </div>
+        </dialog>
     </body>
 </html>

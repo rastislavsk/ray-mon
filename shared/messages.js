@@ -1,7 +1,7 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
 import { EVERYDAY } from './config.js';
-import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, minutesToTimeStr, weekDayLabel } from './format.js';
+import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -349,10 +349,15 @@ function afterHero(state, { ctx, nextDay, live, todayKwh, tomorrowKwh }) {
     };
 }
 
+/** Koľko mobilov nabije strecha za hodinu pri danom výkone, zaokrúhlené na desiatky. @param {number} kw */
+export function phonesPerHour(kw) {
+    return Math.round(kw / EVERYDAY.phoneChargeKwh / 10) * 10;
+}
+
 /** Hlavička, keď svieti: s meraním nabitia mobilu, bez neho priznaný odhad. @param {{ live: boolean, kwNow: number }} data */
 function goHero({ live, kwNow }) {
     const lead = live ? 'Slnko to teraz platí za nás.' : 'Podľa predpovede teraz svieti naplno.';
-    const phones = Math.round(kwNow / EVERYDAY.phoneChargeKwh / 10) * 10;
+    const phones = phonesPerHour(kwNow);
     return {
         lead: `${lead} Práčka, sušička, auto, čo chceš.`,
         factK: live ? 'strecha za hodinu nabije' : 'bez merania',
@@ -374,33 +379,52 @@ export function mozemStripText(state, { ctx, window, nextDay }) {
 
 /**
  * Riadok veci v mriežke a jej rozbalenie: krátka odpoveď, veta, vysvetlenie a pri spotrebičoch
- * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná.
+ * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná. `extra` je to posledné jednou
+ * vetou (súčasná appka), `more` to isté ako otázka a odpoveď pod vlastným nadpisom (panel veci
+ * v novej appke); bez vysvetlenia je `more` null.
  * @param {{ id: string, runMin: number | null }} item @param {import('./mozem.js').Answer} a
  * @param {{ ctx: DayCtx, cost: number | null } | null} env
- * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string, extra: string }}
+ * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string, extra: string,
+ *   more: { q: string, a: string } | null }}
  */
 export function mozemItemText(item, a, env) {
     const t = MOZEM_ITEM_TEXTS[item.id];
-    const base = { name: t.name, extra: '' };
+    const base = { name: t.name, extra: '', more: null };
     if (a.kind === 'always') return { ...base, tone: 'go', short: 'vždy OK', ...MOZEM_ALWAYS[/** @type {'hranie' | 'fen'} */ (item.id)] };
     if (a.kind === 'unk' || !env) return { ...base, tone: 'unk', ...MOZEM_UNKNOWN };
     const isAuto = item.runMin === null;
     const cost = env.cost === null ? '' : `${isAuto ? 'Hodina nabíjania' : 'Stojí to'} ~${money(env.cost, env.ctx.currency)}.`;
-    if (a.kind === 'go')
-        return { ...base, tone: 'go', ...goItem(t, a, item.runMin, env.ctx), extra: `Mrak? ${t.cloud}${cost ? ` ${cost}` : ''}` };
-    const now = cost || 'Pôjde to zo siete.';
-    if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, isAuto, env.ctx.draha), extra: `Musíš hneď? ${now}` };
-    if (a.kind === 'cheap')
+    if (a.kind === 'go') {
+        const cloud = `${t.cloud}${cost ? ` ${cost}` : ''}`;
         return {
             ...base,
-            tone: 'cheap',
-            short: 'lacno',
-            head: `${t.verb} ${t.pron}, prúd je lacný.`,
-            text: 'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
-            extra: a.next ? `${laterWhen(a.next)} by to išlo zo strechy.` : '',
+            tone: 'go',
+            ...goItem(t, a, item.runMin, env.ctx),
+            extra: `Mrak? ${cloud}`,
+            more: { q: 'A keď sa zamračí?', a: cloud },
         };
-    return { ...base, ...laterItem(a), extra: `Nepočká to? ${now}` };
+    }
+    const now = cost || 'Pôjde to zo siete.';
+    if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, isAuto, env.ctx.draha), ...ask('Musíš hneď?', now) };
+    if (a.kind === 'cheap') return { ...base, ...cheapItem(t, a.next) };
+    return { ...base, ...laterItem(a), ...ask('Nepočká to?', now) };
 }
+
+/** Slnko dnes nie, ale sieť je lacná. @param {{ verb: string, pron: string }} t @param {LaterDay | null} next */
+function cheapItem(t, next) {
+    const sun = next ? `${laterWhen(next)} by to išlo zo strechy.` : '';
+    return {
+        tone: /** @type {const} */ ('cheap'),
+        short: 'lacno',
+        head: `${t.verb} ${t.pron}, prúd je lacný.`,
+        text: 'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+        extra: sun,
+        more: sun ? { q: 'A zo slnka?', a: sun } : null,
+    };
+}
+
+/** Vysvetlenie ako otázka s odpoveďou: jednou vetou aj zvlášť. @param {string} q @param {string} a */
+const ask = (q, a) => ({ extra: `${q} ${a}`, more: { q, a } });
 
 /** Slnko príde ešte dnes. @param {{ verb: string, pron: string }} t @param {number} start @param {boolean} isAuto @param {boolean} draha */
 function waitItem(t, start, isAuto, draha) {
@@ -476,6 +500,9 @@ export function mozemCountText({ all, sun }) {
     return `Tento mesiac si pustil/a ${all}× niečo, z toho ${sun}× na slnku.`;
 }
 
+/** „zo“ pred číslom, ktoré sa číta so s/š na začiatku: zo štyroch, zo šiestich, zo siedmich. @param {number} n */
+const zFrom = (n) => ([4, 6, 7].includes(n) ? 'zo' : 'z');
+
 /** Koľko výnimiek riadok vstupu do zoznamu vymenuje; ďalšie zhrnie ako „+2“. */
 const GLANCE_NAMED = 2;
 
@@ -490,12 +517,90 @@ export function mozemGlanceText(items) {
     const go = items.filter((i) => i.tone === 'go').length;
     const rest = items.filter((i) => i.tone !== 'go');
     if (!rest.length) return { title: 'Všetko ide hneď', sub: 'Ťukni, dokedy.' };
-    // „zo“ pred číslom, ktoré sa číta so s/š na začiatku: zo štyroch, zo šiestich, zo siedmich.
-    const title = go ? `${go} ${[4, 6, 7].includes(n) ? 'zo' : 'z'} ${n} ide hneď` : 'Teraz nič';
+    const title = go ? `${go} ${zFrom(n)} ${n} ide hneď` : 'Teraz nič';
     if (rest.every((i) => i.tone === 'unk')) return { title, sub: 'Pri spotrebičoch bez dát neviem.' };
     const named = rest.slice(0, GLANCE_NAMED).map((i) => `${i.name.toLowerCase()} ${i.short}`);
     const more = rest.length > GLANCE_NAMED ? ` +${rest.length - GLANCE_NAMED}` : '';
     return { title, sub: named.join(', ') + more };
+}
+
+// ---- Karta Môžem? v novej appke „Živá obloha“ (obloha/) ----------------------------
+// Odpovede, časy a vety sú tie isté ako vyššie, tu sú len texty, ktoré nový vzhľad pridáva.
+// Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka ich tak nehláskuje.
+
+/**
+ * Štítky nad veľkým slovom: odpoveď slovom podľa stavu karty a cena siete teraz (bežná cena
+ * štítok nemá). Kým sa načítava, štítok nie je - pokojný stav nemá čo tvrdiť.
+ * @type {Record<import('./mozem.js').MozemState | 'lacna' | 'draha', string>}
+ */
+export const MOZEM_CHIPS = {
+    go: 'Áno',
+    wait: 'Počkaj',
+    slabo: 'Dnes nie',
+    none: 'Dnes nie',
+    offline: 'Neviem',
+    bezpanelov: 'Neviem',
+    loading: '',
+    lacna: 'Lacná sieť',
+    draha: 'Drahá sieť',
+};
+
+/** Pevné texty karty: nadpisy panelu veci, tlačidlá a výzvy. */
+export const MOZEM_SKY_TEXTS = {
+    retry: 'Skúsiť znova',
+    quipHint: 'ťukni, príde ďalšia',
+    sheetDo: 'Čo robiť',
+    sheetWhy: 'Prečo',
+    close: 'Zavrieť',
+    guessTitle: 'Hádam podľa suseda',
+    guessBtn: 'Zadaj panely',
+    askTitle: 'Kde máš strechu?',
+    askText: 'Bez polohy neviem, kedy u teba svieti slnko. Zadaj ju v Nastavení a poviem ti, čo môžeš.',
+    askBtn: 'Zadaj polohu',
+};
+
+/** Výzva pri odpovedi z typickej strechy: s čím appka počíta. @param {number} kwp výkon typickej strechy */
+export function mozemGuessText(kwp) {
+    return `Počasie poznám, tvoju strechu nie. Rátam s typickou strechou ${kwpText(kwp)}. Zadaj panely a odpoveď bude naozaj tvoja.`;
+}
+
+/**
+ * Nadpis zoznamu vecí: koľko ide hneď. Bez dát počet netvrdí („?“), pri typickej streche
+ * priznáva odhad.
+ * @param {Array<{ tone: string }>} items @param {{ unknown: boolean, estimate: boolean }} opts
+ */
+export function mozemListTitle(items, { unknown, estimate }) {
+    const n = items.length;
+    const go = unknown ? '?' : String(items.filter((i) => i.tone === 'go').length);
+    return `Čo môžem · ${go} ${zFrom(n)} ${n} ide hneď${estimate ? ' · odhad' : ''}`;
+}
+
+/**
+ * Fakt v mobiloch: koľko ich strecha nabije za hodinu. Zo živého merania naisto, z predpovede
+ * (alebo z typickej strechy) s „asi“.
+ * @param {number} kw výkon teraz @param {boolean} sure je to živé meranie z vlastnej strechy?
+ */
+export function mozemPhonesText(kw, sure) {
+    const phones = phonesPerHour(kw);
+    if (phones <= 0) return 'Strecha teraz nenabije ani jeden mobil';
+    return `Strecha za hodinu nabije ${sure ? '' : 'asi '}${fmtSum(phones, 0)} mobilov`;
+}
+
+/**
+ * Veta namiesto odpovede, keď appka nemá predpoveď: prečo. Bez internetu nemá nič; s ním
+ * neprišla predpoveď a pri vlastnom meraní aj to, či a odkedy mlčí meranie.
+ * @param {{ online: boolean, kiosk: boolean, pvOk: boolean, pvSince: string | null }} why `pvOk`: meranie
+ *   ide, `pvSince`: čas posledného merania, keď je staré (null = meranie vôbec neprišlo)
+ */
+export function mozemOfflineText({ online, kiosk, pvOk, pvSince }) {
+    if (!online) return 'Nie je internet, takže nemám predpoveď ani meranie. Pripoj sa a skús to znova.';
+    const pv = !kiosk || pvOk ? '' : pvSince ? ` Meranie zo strechy neodpovedá od ${pvSince}.` : ' Ani meranie zo strechy neodpovedá.';
+    return `Predpoveď počasia neprišla, bez nej neviem, kedy bude slnko.${pv} Skús to o chvíľu znova.`;
+}
+
+/** Tlačidlo v paneli veci, kým beží: dokedy a že ťuknutie zápis zruší. @param {boolean} isAuto @param {number} until minúta dňa */
+export function mozemLogCancel(isAuto, until) {
+    return `${isAuto ? 'Nabíja sa' : 'Beží'} do ${hm(until)} · zrušiť`;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------
