@@ -1,10 +1,16 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
-// setState zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
+// setState (web/store.js) zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
-import { STALE_PV_MS, START_PANELS } from '../shared/config.js';
+import { START_PANELS } from '../shared/config.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, resolveDraft, SETUP_STEPS } from '../shared/setup.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
+import { createStore } from './store.js';
+
+// Úložisko stavu a meranie po obnove dát sú v neutrálnych moduloch, ktoré používa aj nová
+// appka (obloha/). Tu sú znova vyvezené, aby sa ich odberatelia nemuseli meniť.
+export { createStore };
+export { nextPv } from './refresh.js';
 
 /**
  * @typedef {'mozem' | 'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
@@ -187,46 +193,7 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
     };
 }
 
-/**
- * @template T
- * @param {T} initial
- */
-export function createStore(initial) {
-    let state = initial;
-    /** @type {Array<(state: T, prev: T) => void>} */
-    const listeners = [];
-    return {
-        get: () => state,
-        /** @param {Partial<T>} patch */
-        setState(patch) {
-            const keys = /** @type {Array<keyof T>} */ (Object.keys(patch));
-            if (!keys.some((k) => patch[k] !== state[k])) return;
-            const prev = state;
-            state = { ...state, ...patch };
-            listeners.forEach((fn) => fn(state, prev));
-        },
-        /** @param {(state: T, prev: T) => void} fn */
-        subscribe(fn) {
-            listeners.push(fn);
-            return () => listeners.splice(listeners.indexOf(fn), 1);
-        },
-    };
-}
-
 /** @typedef {ReturnType<typeof createStore<AppState>>} Store */
-
-/**
- * Meranie po obnove dát. Keď kiosk raz neodpovie, ostáva posledné meranie - appka inak na
- * minútu preskočila na odhad, z grafu zmizla nameraná krivka a o minútu sa všetko vrátilo.
- * Najviac však STALE_PV_MS od stiahnutia: staršie meranie by sa tvárilo ako výkon "teraz".
- * Bez kiosku (`pvFailed` je false) sa nemá čo nechávať.
- * @param {import('../shared/kiosk.js').PvData | null} prev
- * @param {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean }} result @param {Date} now
- */
-export function nextPv(prev, result, now) {
-    if (result.pv || !result.pvFailed || !prev) return result.pv;
-    return now.getTime() - Date.parse(prev.updatedAt) <= STALE_PV_MS ? prev : null;
-}
 
 /**
  * Susedná karta v poradí navigácie, alebo null na kraji - listovanie sa nezacyklí.

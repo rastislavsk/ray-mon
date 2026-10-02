@@ -15,7 +15,7 @@ const rules = {
 export default [
     { ignores: ['node_modules/**', 'worker/node_modules/**', 'worker/dist/**', 'playwright-report/**', 'test-results/**'] },
     {
-        files: ['app.js', 'boot.js', 'web/**/*.js'],
+        files: ['app.js', 'boot.js', 'web/**/*.js', 'obloha/**/*.js'],
         languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.browser },
         rules,
     },

@@ -2,17 +2,16 @@
 // nikto tu nekreslí do DOM okrem tooltipov, ktoré nie sú súčasťou stavu.
 
 import { chartTooltipModel, minutesFromAngle, ringGap } from '../shared/chart-model.js';
-import { MINUTES_PER_DAY, PREVIEW, REFRESH, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
+import { MINUTES_PER_DAY, PREVIEW, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
-import { recordDay } from '../shared/daylog.js';
-import { localDateKey, localMinutes } from '../shared/solar.js';
-import { loadData } from './data.js';
+import { localMinutes } from '../shared/solar.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
-import { nextPv, panelChange } from './state.js';
-import { clearStored, saveDayLog, saveStartPanel } from './settings-store.js';
+import { createRefresh, startTicks } from './refresh.js';
+import { panelChange } from './state.js';
+import { clearStored, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
 import { pagerScroll, scrollPager } from './pager.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
@@ -528,50 +527,10 @@ function initStats(store, dom) {
     });
 }
 
-/**
- * Obnova dát pre elektráreň, ktorá je práve v stave. Beží najviac jedna naraz: kým sa
- * sťahuje, ďalšie volanie (minútový časovač, návrat z pozadia) dostane tú istú rozbehnutú -
- * inak by sa pri pomalej sieti požiadavky hromadili a staršia odpoveď mohla prepísať novšiu.
- * Nová elektráreň (uložené nastavenie) čakať nemusí, jej obnova sa rozbehne hneď.
- * @param {Store} store @returns {() => Promise<void>}
- */
-function createRefresh(store) {
-    /** @type {{ site: object, plant: object, kiosk: string, promise: Promise<void> } | null} */
-    let bezi = null;
-    /** @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'kiosk'>} s */
-    const obnov = async ({ site, plant, kiosk }) => {
-        const result = await loadData({ site, plant, kiosk }, new Date());
-        // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
-        const teraz = store.get();
-        if (teraz.site !== site || teraz.plant !== plant || teraz.kiosk !== kiosk) return;
-        const now = new Date();
-        const pv = nextPv(teraz.pv, result, now);
-        // Denník dní pre súhrn: kiosk posiela len súčet dneška, dni si appka odkladá sama.
-        const dayLog = result.pv
-            ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
-            : teraz.dayLog;
-        if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
-        store.setState({ pv, forecast: result.forecast, loading: false, now, dayLog });
-    };
-    return () => {
-        // Kým appka nepozná polohu, nie je pre čo sťahovať.
-        if (store.get().known === 'nic') return Promise.resolve();
-        const { site, plant, kiosk } = store.get();
-        if (bezi && bezi.site === site && bezi.plant === plant && bezi.kiosk === kiosk) return bezi.promise;
-        const promise = obnov({ site, plant, kiosk }).finally(() => {
-            if (bezi && bezi.promise === promise) bezi = null;
-        });
-        bezi = { site, plant, kiosk, promise };
-        return promise;
-    };
-}
-
 /** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
 function initTicks(store, mq) {
     const refresh = createRefresh(store);
-    setInterval(() => !document.hidden && store.setState({ now: new Date() }), REFRESH.clockMs);
-    setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
-    document.addEventListener('visibilitychange', () => !document.hidden && refresh());
+    startTicks(store, refresh);
     mq.wide.addEventListener('change', (e) => store.setState({ wide: e.matches }));
     // Viditeľná výška sa mení aj bez otočenia displeja - ukrytím adresného riadka pri
     // scrollovaní, klávesnicou, priblížením. setState zahodí rovnakú hodnotu, takže

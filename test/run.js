@@ -8,6 +8,7 @@ const args = [
     '--experimental-test-coverage',
     '--test-coverage-include=shared/**',
     '--test-coverage-include=web/state.js',
+    '--test-coverage-include=web/store.js',
     '--test-coverage-lines=90',
     'test/*.test.js',
     'worker/test/*.test.js',

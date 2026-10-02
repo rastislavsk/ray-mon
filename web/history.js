@@ -12,6 +12,7 @@
 // však narovnako - keď sa Späť vyčerpajú kroky v appke, ďalší stlačok ju opustí, čo je
 // v nainštalovanej appke (PWA) jej zatvorenie.
 
+import { trackHistory } from './nav-history.js';
 import { navChange, navPrevFrom, navStep, navStepFrom, sameNavStep } from './state.js';
 
 /**
@@ -49,23 +50,12 @@ export function backTo(store, patch) {
 
 /** @param {import('./state.js').Store} store */
 export function initHistory(store) {
-    // Kým sa appka vracia späť, nesmie ten istý krok zapísať do histórie znovu - inak by
-    // sa Späť zacyklilo na dvoch položkách a z appky by sa nedalo odísť.
-    let vraciaSa = false;
-
-    history.replaceState({ step: navStep(store.get()) }, '');
-    store.subscribe((state, prev) => {
-        if (vraciaSa || sameNavStep(navStep(state), navStep(prev))) return;
-        // `prev` hovorí, odkiaľ sa sem prišlo - podľa neho backTo vie, či smie ísť cez históriu.
-        history.pushState({ step: navStep(state), prev: navStep(prev) }, '');
-    });
-
-    window.addEventListener('popstate', (e) => {
-        const step = navStepFrom(e.state);
-        if (!step) return;
-        vraciaSa = true;
-        // Rovnaká cesta ako pri kliku na navigáciu: jediný setState, jediné prekreslenie.
-        store.setState(navChange(store.get().panel, step));
-        vraciaSa = false;
+    // Zápis do histórie je spoločný s novou appkou (web/nav-history.js); `prev` v položke
+    // potrebuje backTo vyššie.
+    trackHistory(store, {
+        step: navStep,
+        same: sameNavStep,
+        parse: navStepFrom,
+        change: (state, step) => navChange(state.panel, step),
     });
 }

@@ -1,6 +1,8 @@
 // Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
 // Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
+import { PANELS } from '../shared/config.js';
+
 const byId = (/** @type {string} */ id) => {
     const el = document.getElementById(id);
     if (!el) throw new Error(`Chýba element #${id}`);
@@ -14,7 +16,8 @@ const byId = (/** @type {string} */ id) => {
 // naháňať.
 // Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka), návod k ciferníku v popupe karty Terazky.
 // Môžem? je v navigácii prvá, appka sa ale otvára na karte Terazky (initialState).
-export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statistika', 'nastavenie']);
+// Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
+export { PANELS };
 
 // Položky sekcie Appka v karte Nastavenie (natívne <details>): zatiaľ len zdieľanie.
 // Kedysi boli v karte Info - odtiaľ id v HTML `info-<položka>` aj názvy v kóde.
