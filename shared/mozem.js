@@ -226,17 +226,25 @@ function quipsOf(state, day, page) {
  * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
  * `launches` zápisy „Pustil/a som“ z tohto telefónu. `known`: čo appka o elektrárni vie
  * (bez neho uložená elektráreň). Bez zadaných panelov karta neodpovedá, aj keby predpoveď pre
- * typickú strechu mala.
+ * typickú strechu mala - to je správanie súčasnej appky. Nová appka (obloha/) s `guess`
+ * odpovedá pri známej polohe z typickej strechy, ktorú má vo vstupe (typicalSettings), a model
+ * to priznáva v `estimate`.
+ *
+ * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
+ * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches]
+ * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean }} [opts]
  */
-export function mozemModel(input, quipPage = 0, launches = []) {
-    const noPanels = (input.known || 'elektraren') !== 'elektraren';
+export function mozemModel(input, quipPage = 0, launches = [], { guess = false } = {}) {
+    const known = input.known || 'elektraren';
+    const estimate = guess && known === 'poloha';
+    const noPanels = known !== 'elektraren' && !estimate;
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, launches, ctx);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     return {
-        ...(ctx ? dayHead(input, ctx, quipPage) : emptyHead(input.loading, noPanels, quipPage)),
+        ...(ctx ? dayHead(input, ctx, quipPage) : { ...emptyHead(input.loading, noPanels, quipPage), facts: null }),
+        estimate,
         items,
         glance: mozemGlanceText(items),
         count: mozemCountText(monthCount(launches, month)),
@@ -271,12 +279,20 @@ function dayHead(input, ctx, quipPage) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
     const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
+    const facts = heroFacts(input, ctx);
+    const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
     return {
         state,
         word: MOZEM_WORDS[state],
-        hero: mozemHeroText(state, { ctx, window, nextDay, ...heroFacts(input, ctx) }),
+        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts }),
         strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
         ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage),
+        facts: {
+            level: slot.level,
+            window,
+            liveKw: facts.live ? facts.kwNow : null,
+            planKw: Number.isFinite(slot.kw) ? slot.kw : 0,
+        },
     };
 }
 

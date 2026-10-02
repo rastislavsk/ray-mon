@@ -42,7 +42,11 @@
 :root {
     --s1: #4f555f;
     --s2: #7f858e;
+    /* Farba má jeden význam: zelená = slnko stačí, modrá = lacná sieť, červená = drahá sieť.
+       Obloha údaj nenesie, len náladu. */
     --yes: #b9f28c;
+    --cheap: #7cc4ff;
+    --costly: #ff7a66;
     --ink: #0b1430;
     --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
     color-scheme: dark;
@@ -182,6 +186,352 @@ button:focus-visible {
     font-size: 15px;
     color: rgba(255, 255, 255, 0.9);
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== Karta Môžem? ===== */
+.mozem p,
+.mozem h2 {
+    margin: 0;
+}
+.arc {
+    padding: 4px 0 0;
+}
+.arc svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    /* Žiara slnka pri východe a západe siaha za okraj oblúka. */
+    overflow: visible;
+}
+.arc-path {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 2;
+    stroke-dasharray: 3 6;
+}
+.arc-win {
+    fill: none;
+    stroke: var(--yes);
+    stroke-width: 4;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+.arc-ground {
+    stroke: rgba(255, 255, 255, 0.3);
+}
+.arc-t {
+    fill: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+    text-anchor: middle;
+}
+.arc-glow {
+    fill: rgba(255, 240, 190, 0.22);
+}
+.arc-sun {
+    fill: #fff4c4;
+}
+.arc-moon {
+    fill: #e8ecff;
+}
+/* Kosák: kruh vo farbe oblohy zakryje časť mesiaca. */
+.arc-moon-cut {
+    fill: var(--s1);
+}
+.arc-off {
+    fill: rgba(255, 255, 255, 0.35);
+}
+
+.big {
+    display: grid;
+    gap: 8px;
+    padding: 0 20px;
+}
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chip {
+    padding: 4px 10px;
+    border: 1.5px solid #fff;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 100;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.chip[data-tone='go'] {
+    background: var(--yes);
+    border-color: var(--yes);
+    color: #14300c;
+}
+.chip[data-tone='cheap'] {
+    background: var(--cheap);
+    border-color: var(--cheap);
+    color: #06233d;
+}
+.chip[data-tone='costly'] {
+    background: var(--costly);
+    border-color: var(--costly);
+    color: #3a0b04;
+}
+/* Veľké slovo: veľkosť podľa dĺžky ako v návrhu (--word), na úzkom displeji ešte menšia podľa
+   najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak
+   takmer 1 em (NAHOVNO 0,96 em), preto delenie počtom znakov bez rezervy navyše. */
+.word {
+    font-size: min(var(--word, 50px), calc((min(100vw, 640px) - 40px) / var(--word-len, 10)));
+    font-weight: 900;
+    font-variation-settings: 'wdth' 125;
+    letter-spacing: -0.02em;
+    line-height: 0.92;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+    text-wrap: balance;
+}
+.line {
+    font-size: 17.5px;
+    line-height: 1.3;
+    font-variation-settings: 'wdth' 95;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.fact {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 20px 0;
+    font-size: 14.5px;
+    font-variation-settings: 'wdth' 95;
+}
+.fact svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.pbtn {
+    justify-self: start;
+    min-height: 44px;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.pbtn.ghost {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+.retry {
+    display: block;
+    margin: 14px 20px 0;
+}
+/* Výzva: biela, nie červená - nie je to chyba, len chýbajúci krok. */
+.cta {
+    display: grid;
+    gap: 8px;
+    margin: 14px 14px 0;
+    padding: 16px;
+    border-radius: 22px;
+    background: #fff;
+    color: var(--ink);
+}
+.cta b {
+    font-size: 19px;
+    line-height: 1.2;
+    font-variation-settings: 'wdth' 108;
+}
+.cta p {
+    font-size: 14.5px;
+    line-height: 1.35;
+    color: #2b3550;
+}
+.cta .pbtn {
+    background: var(--ink);
+    color: #fff;
+}
+.cta .pbtn:focus-visible {
+    outline-color: var(--ink);
+}
+
+/* Tmavé sklo: biely text sa dá čítať aj na svetlej poludňajšej oblohe. */
+.glass {
+    display: grid;
+    gap: 10px;
+    margin: 12px 14px 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 22px;
+    background: rgba(8, 16, 40, 0.3);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.glass-ttl {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+}
+/* Odpoveď z typickej strechy priznáva odhad aj písmom. */
+.glass.est .apps {
+    font-style: italic;
+}
+.count {
+    font-size: 14px;
+}
+.apps {
+    display: grid;
+}
+.app {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 2px;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    font-size: 15px;
+    font-weight: 500;
+    font-style: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app:last-child {
+    border-bottom: 0;
+}
+.app b {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-align: right;
+}
+.app b::before {
+    content: '';
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+}
+.app b[data-tone='go'] {
+    color: var(--yes);
+}
+.app b[data-tone='go']::before {
+    background: var(--yes);
+}
+.app b[data-tone='cheap'] {
+    color: var(--cheap);
+}
+.app b[data-tone='cheap']::before {
+    background: var(--cheap);
+}
+.app b[data-tone='run']::before {
+    background: #fff;
+}
+.app b[data-tone='no'],
+.app b[data-tone='unk'] {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.quote {
+    display: block;
+    width: calc(100% - 28px);
+    margin: 12px 14px 16px;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 20px;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 105;
+    line-height: 1.2;
+    text-align: left;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+.quote q {
+    quotes: none;
+}
+.quote small {
+    display: block;
+    margin-top: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu
+   (na stmavenú stránku) tak trafí dialóg a zatvorí ho. */
+.sheet {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: 100%;
+    max-width: 640px;
+    max-height: 82%;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 26px 26px 0 0;
+    background: rgba(10, 16, 38, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    color: #fff;
+    overflow-y: auto;
+}
+.sheet::backdrop {
+    background: rgba(5, 8, 20, 0.45);
+}
+.sheet-in {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    padding: 18px 18px max(22px, env(safe-area-inset-bottom));
+}
+.sheet h2 {
+    margin: 0;
+    padding-right: 48px;
+    font-size: 24px;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 115;
+    line-height: 1.15;
+}
+.sheet .q {
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+}
+.sheet p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+}
+.sheet .x {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 22px;
+    cursor: pointer;
 }
 
 /* ===== Spodná navigácia ===== */

@@ -3,6 +3,7 @@
 import { PANELS } from '../../../shared/config.js';
 import { skyNow } from '../../../shared/sky.js';
 import { renderHeader } from './header.js';
+import { renderMozem } from './mozem.js';
 
 /**
  * Obloha je pozadie celej stránky. Render zapíše len dve farby a počasie na <html>; prechod
@@ -33,4 +34,5 @@ export function render(state, dom) {
     renderSky(state, dom);
     renderHeader(state, dom);
     renderPanels(state, dom);
+    renderMozem(state, dom);
 }
