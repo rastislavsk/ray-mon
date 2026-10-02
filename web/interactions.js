@@ -15,7 +15,7 @@ import { nextPv, panelChange } from './state.js';
 import { clearStored, saveDayLog, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
 import { pagerScroll, scrollPager } from './pager.js';
-import { applySettings, initSetup, stepEdit } from './setup-interactions.js';
+import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -68,6 +68,11 @@ function initNavigation(store, dom) {
         // so starým skriptom z cache by po kliku naň skryla všetky karty naraz.
         if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
             store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
+        }
+        // Odkaz „nastav panely“ v hlavičke: jeden krok navigácie rovno na krok Panel sprievodcu.
+        if (target.closest('#pv-setup-go')) {
+            const s = store.get();
+            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...setupStart(s) });
         }
         const totalBtn = target.closest('[data-week-detail]');
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });

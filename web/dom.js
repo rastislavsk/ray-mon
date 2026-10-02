@@ -29,6 +29,8 @@ function headerDom() {
         // Čas aktualizácie dát.
         pvTime: byId('pv-time'),
         pvUpdated: byId('pv-updated'),
+        // Bez zadaných panelov namiesto textu pod časom odkaz do sprievodcu.
+        pvSetupGo: byId('pv-setup-go'),
         panelsBar: byId('panels-bar'),
         bottomnav: byId('bottomnav'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (

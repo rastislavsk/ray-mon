@@ -155,19 +155,19 @@ function placeSearch(store) {
 /**
  * Dokončenie elektrárne, ktorej appka pozná len polohu: sprievodca od panelov, poloha je hotová.
  * Kto ho už raz rozpísal a odišiel, pokračuje s tým, čo zadal. Typická strecha sa nepredvypĺňa -
- * človek by si ju mohol omylom nechať ako svoju.
- * @param {Store} store
+ * človek by si ju mohol omylom nechať ako svoju. Zmena stavu bez prepnutia karty - spúšťa ho aj
+ * odkaz v hlavičke z inej karty (viď initNavigation vo web/interactions.js).
+ * @param {AppState} s
  */
-function startSetup(store) {
-    const s = store.get();
+export function setupStart(s) {
     const fresh = sameSettings(s.settingsDraft, typicalSettings(s.site));
-    store.setState({
-        setupStep: 'panel',
+    return {
+        setupStep: /** @type {const} */ ('panel'),
         setupRoof: 0,
         setupReturn: null,
         settingsNote: '',
         ...(fresh ? { settingsDraft: emptySettings(s.site), settingsRev: s.settingsRev + 1, setupLive: false, setupKwp: null } : {}),
-    });
+    };
 }
 
 /** Nastaviť celé znova: sprievodca od úvodu, predvyplnený uloženou elektrárňou. @param {Store} store */
@@ -572,7 +572,7 @@ function clickActions(store, dom, refresh, ops) {
         ['#wz-next', () => goNext(store, refresh)],
         ['#wz-back', () => goBack(store)],
         ['#wz-close', () => closeSetup(store)],
-        ['[data-setup-go]', (el) => (el.dataset.setupGo === 'odkaz' ? openLink(store) : startSetup(store))],
+        ['[data-setup-go]', (el) => (el.dataset.setupGo === 'odkaz' ? openLink(store) : store.setState(setupStart(store.get())))],
         ['[data-setup-restart]', () => restartSetup(store)],
         ['[data-setup-later]', () => skipPanels(store, refresh)],
         ['[data-setup-edit]', (el) => editStep(store, el.dataset.setupEdit || '')],
