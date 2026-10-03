@@ -7,6 +7,7 @@
 
 import { fmtSum } from '../shared/format.js';
 import { summaryModel } from '../shared/summary.js';
+import { shareFile } from './share-file.js';
 
 const W = 1080;
 const H = 1920;
@@ -122,14 +123,5 @@ export async function summaryImage(state) {
  */
 export async function shareSummary(state) {
     const file = await summaryImage(state);
-    if (!file) return;
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'RAY-MON' }).catch(() => undefined);
-        return;
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(file);
-    a.download = file.name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    if (file) await shareFile(file);
 }

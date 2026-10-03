@@ -4,7 +4,9 @@ import { PANELS } from '../../../shared/config.js';
 import { skyNow } from '../../../shared/sky.js';
 import { renderHeader } from './header.js';
 import { renderMozem } from './mozem.js';
+import { renderPoster } from './poster.js';
 import { renderSedem } from './sedem.js';
+import { renderStatistika } from './statistika.js';
 import { renderTeraz } from './teraz.js';
 
 /**
@@ -39,4 +41,6 @@ export function render(state, dom) {
     renderMozem(state, dom);
     renderTeraz(state, dom);
     renderSedem(state, dom);
+    renderStatistika(state, dom);
+    renderPoster(state, dom);
 }

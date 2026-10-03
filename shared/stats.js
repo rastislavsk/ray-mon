@@ -32,7 +32,7 @@ export const MONTHS = [
     'november',
     'december',
 ];
-const MONTHS_IN = [
+export const MONTHS_IN = [
     'januári',
     'februári',
     'marci',

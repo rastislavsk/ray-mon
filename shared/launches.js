@@ -79,3 +79,11 @@ export function monthCount(list, month) {
     const inMonth = list.filter((x) => x.d.startsWith(`${month}-`));
     return { all: inMonth.length, sun: inMonth.filter((x) => x.sun).length };
 }
+
+/**
+ * Koľkokrát bola vec spustená na slnku v dňoch od `from` po `to` (vrátane, `YYYY-MM-DD`).
+ * @param {Launch[]} list @param {string} id @param {string} from @param {string} to
+ */
+export function sunRuns(list, id, from, to) {
+    return list.filter((x) => x.id === id && x.sun && x.d >= from && x.d <= to).length;
+}

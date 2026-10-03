@@ -7,7 +7,7 @@
 
 import { EVERYDAY } from './config.js';
 import { lastDays, monthDays } from './daylog.js';
-import { monthCount } from './launches.js';
+import { monthCount, sunRuns } from './launches.js';
 import { summaryTexts } from './messages.js';
 import { addDays, localDateKey } from './solar.js';
 import { longPrice, MONTHS } from './stats.js';
@@ -33,13 +33,24 @@ function weekCount(list, today) {
  * rána, viď DAYLOG).
  * @param {import('./daylog.js').DayLog} dayLog @param {number | null} live @param {string} today @param {boolean} week
  */
-function periodDays(dayLog, live, today, week) {
+export function periodDays(dayLog, live, today, week) {
     const log = live === null ? dayLog : { ...dayLog, [today]: Math.max(live, dayLog[today] ?? 0) };
     return week ? lastDays(log, today, 7) : monthDays(log, today);
 }
 
 /**
- * Model súhrnu, alebo null bez živého merania - súčty posiela len kiosk.
+ * Najlepší deň zo zoznamu dní (deň bez čísla sa nepočíta), alebo null. Pri rovnakej výrobe skorší.
+ * @param {Array<{ date: string, kwh: number | null }>} days @returns {{ date: string, kwh: number } | null}
+ */
+export function bestOf(days) {
+    /** @type {{ date: string, kwh: number } | null} */ let best = null;
+    for (const d of days) if (d.kwh !== null && (!best || d.kwh > best.kwh)) best = { date: d.date, kwh: d.kwh };
+    return best;
+}
+
+/**
+ * Model súhrnu, alebo null bez živého merania - súčty posiela len kiosk. `facts` sú čísla, z ktorých
+ * sú poskladané riadky (summaryTexts) - plagát novej appky (shared/statistika.js) ich ukazuje inak.
  * @param {SummaryInput} input @param {SummaryPeriod} period
  */
 export function summaryModel(input, period) {
@@ -52,10 +63,23 @@ export function summaryModel(input, period) {
     const knownSum = known.reduce((s, d) => s + d.kwh, 0);
     // Mesiac má kiosk presne; týždeň len denník, v ktorom môže deň chýbať.
     const kwh = week ? knownSum : (pv.monthEnergyKwh ?? knownSum);
-    const best = known.reduce((b, d) => (!b || d.kwh > b.kwh ? d : b), /** @type {{ date: string, kwh: number } | null} */ (null));
+    const best = bestOf(known);
     const max = best ? best.kwh : 0;
     const price = longPrice(input);
-    const month = MONTHS[Number(today.slice(5, 7)) - 1];
+    const facts = {
+        period,
+        month: MONTHS[Number(today.slice(5, 7)) - 1],
+        kwh,
+        phones: kwh / EVERYDAY.phoneChargeKwh,
+        km: kwh * EVERYDAY.evKmPerKwh,
+        best: best && max > 0 ? { date: best.date, kwh: max, today: best.date === today } : null,
+        value: price === null ? null : kwh * price,
+        currency: input.tariff.currency,
+        launches: week ? weekCount(input.launches, today) : monthCount(input.launches, today.slice(0, 7)),
+        // Prania zo slnka - zápisy „Pustil/a som“ práčky v dňoch obdobia.
+        washes: sunRuns(input.launches, 'pracka', days[0].date, today),
+        missing: days.length - known.length,
+    };
     return {
         period,
         kwh,
@@ -64,17 +88,7 @@ export function summaryModel(input, period) {
             frac: d.kwh === null || max <= 0 ? null : d.kwh / max,
             best: !!best && d.date === best.date,
         })),
-        ...summaryTexts({
-            period,
-            month,
-            kwh,
-            phones: kwh / EVERYDAY.phoneChargeKwh,
-            km: kwh * EVERYDAY.evKmPerKwh,
-            best: best && max > 0 ? { date: best.date, kwh: max, today: best.date === today } : null,
-            value: price === null ? null : kwh * price,
-            currency: input.tariff.currency,
-            launches: week ? weekCount(input.launches, today) : monthCount(input.launches, today.slice(0, 7)),
-            missing: days.length - known.length,
-        }),
+        facts,
+        ...summaryTexts(facts),
     };
 }

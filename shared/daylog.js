@@ -50,3 +50,14 @@ export function lastDays(log, today, count) {
 export function monthDays(log, today) {
     return lastDays(log, today, Number(today.slice(8, 10)));
 }
+
+/**
+ * Súčet zapísaných dní, ktorých dátum začína `prefix` (`YYYY-MM-` mesiac, `YYYY-` rok, prázdny
+ * celý denník), a koľko ich je. Bez zapísaného dňa je súčet null - nula by tvrdila, že strecha
+ * nevyrobila nič.
+ * @param {DayLog} log @param {string} prefix @returns {{ kwh: number | null, days: number }}
+ */
+export function logSum(log, prefix) {
+    const kwh = Object.entries(log).filter(([d]) => d.startsWith(prefix));
+    return { kwh: kwh.length ? kwh.reduce((s, [, v]) => s + v, 0) : null, days: kwh.length };
+}

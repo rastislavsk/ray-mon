@@ -6,6 +6,7 @@ import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
 import { initMozem } from './mozem-interactions.js';
 import { closeDetail, initSedem } from './sedem-interactions.js';
+import { initStatistika } from './statistika-interactions.js';
 import { initTeraz } from './teraz-interactions.js';
 import { navChange, navStep, navStepFrom, panelChange, sameNavStep, swipeTarget } from './state.js';
 
@@ -19,11 +20,12 @@ import { navChange, navStep, navStepFrom, panelChange, sameNavStep, swipeTarget 
 function initNavigation(store, dom) {
     const go = (/** @type {import('./state.js').Panel} */ to) => store.setState(panelChange(store.get().panel, to));
     for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
-    for (const btn of [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.sdGuessBtn, dom.sdAskBtn])
-        btn.addEventListener('click', () => go('nastavenie'));
+    const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.sdGuessBtn, dom.sdAskBtn];
+    toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn);
+    for (const btn of toSetup) btn.addEventListener('click', () => go('nastavenie'));
     initSwipeGesture(dom.page, {
-        // Kým je otvorený panel veci, ťah nad ním kartu neprepína.
-        enabled: () => !store.get().mozemItem,
+        // Kým je otvorený panel veci alebo plagát, ťah nad nimi kartu neprepína.
+        enabled: () => !store.get().mozemItem && !store.get().poster,
         onSwipe: (dx) => {
             const to = swipeTarget(store.get(), dx);
             if (to === 'back') closeDetail(store);
@@ -45,6 +47,7 @@ export function initInteractions(store, dom) {
     initMozem(store, dom, refresh);
     initTeraz(store, dom, refresh);
     initSedem(store, dom, refresh);
+    initStatistika(store, dom, refresh);
     startTicks(store, refresh);
     // Bez internetu karty povedia, prečo nemajú dáta; keď sa vráti, dáta sa hneď obnovia.
     window.addEventListener('offline', () => store.setState({ online: false }));
