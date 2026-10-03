@@ -22,6 +22,7 @@ function mozemDom() {
         mzChips: byId('mz-chips'),
         mzWord: byId('mz-word'),
         mzLead: byId('mz-lead'),
+        mzLive: byId('mz-live'),
         mzPhones: byId('mz-phones'),
         mzPhonesText: byId('mz-phones-text'),
         mzRetry: byId('mz-retry'),

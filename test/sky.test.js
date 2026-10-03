@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE, SKY } from '../shared/config.js';
-import { skyColors, skyNow, skyWeather } from '../shared/sky.js';
+import { skyColors, skyNow, skyShade, skyWeather } from '../shared/sky.js';
 import { sunTimes } from '../shared/solar.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -91,7 +91,9 @@ test('skyColors: v noci mení oblačnosť oblohu menej než cez deň', () => {
 });
 
 test('skyColors: bez dát je obloha sivá', () => {
-    assert.deepEqual(skyColors(hm(13), SUN, null), { weather: null, top: SKY.offline[0], bottom: SKY.offline[1] });
+    const { shade, ...farby } = skyColors(hm(13), SUN, null);
+    assert.deepEqual(farby, { weather: null, top: SKY.offline[0], bottom: SKY.offline[1] });
+    assert.equal(shade, skyShade(...SKY.offline));
 });
 
 test('skyColors: bez východu a západu (polárna noc či deň) ide obloha podľa hodín', () => {

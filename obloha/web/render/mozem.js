@@ -101,6 +101,24 @@ function renderCard(m, dom, voice) {
     setText(dom.mzQuipHint, MOZEM_SKY_TEXTS.quipHint);
 }
 
+/**
+ * Ohlásenie pre čítačku (role="status"): len keď sa odpoveď zmení sama - časom alebo novým
+ * meraním, napr. z POČKAJ na ÁNO. Nie každú minútu, nie pri načítaní ani pri návrate na kartu,
+ * vtedy čítačka prečíta kartu aj tak. Predchádzajúcu odpoveď si pamätá prvok ohlásenia.
+ * @param {Model | null} m null = karta nie je vidieť @param {Dom} dom
+ */
+function renderAnnounce(m, dom) {
+    if (!m) {
+        delete dom.mzLive.dataset.state;
+        setText(dom.mzLive, '');
+        return;
+    }
+    if (m.state === 'loading' || m.ask) return;
+    const before = dom.mzLive.dataset.state;
+    dom.mzLive.dataset.state = m.state;
+    if (before && before !== m.state) setText(dom.mzLive, `${m.word}. ${m.lead}`);
+}
+
 /** Vec, ktorej panel je práve otvorený - po zatvorení sa fokus vráti na jej riadok. @type {string | null} */
 let shown = null;
 
@@ -141,8 +159,12 @@ function renderSheet(it, dom, voice) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
     // Panel veci patrí karte Môžem?; na inej karte je vždy zatvorený.
-    if (state.panel !== 'mozem') return renderSheet(null, dom);
+    if (state.panel !== 'mozem') {
+        renderAnnounce(null, dom);
+        return renderSheet(null, dom);
+    }
     const m = mozemSkyModel(state, { quip: state.mozemQuip, launches: state.launches, online: state.online, voice: state.voice });
     renderCard(m, dom, state.voice);
+    renderAnnounce(m, dom);
     renderSheet(m.items.find((it) => it.id === state.mozemItem) || null, dom, state.voice);
 }
