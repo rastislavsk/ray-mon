@@ -218,9 +218,9 @@ function chartOf(input, day, plan, nowMin) {
             nowMin,
             nowKw,
             limitKw: powerThresholds(input.plant).lowKw,
+            limitText: voiceTexts().TERAZ_TEXTS.limit,
             preview: null,
         }),
-        limitText: voiceTexts().TERAZ_TEXTS.limit,
         legend: planLegend(planCells(plan)),
         desc: dayChartText({
             now: nowMin === null ? null : { min: nowMin, kwText: Number.isFinite(nowKw) ? fmt1(nowKw) : '–', tone: tone(nowMin) },

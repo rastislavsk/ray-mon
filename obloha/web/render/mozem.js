@@ -3,7 +3,7 @@
 // shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
-import { voiceTexts } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages-core.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';

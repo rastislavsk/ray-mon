@@ -6,7 +6,7 @@
 // a hero-model.js - tu sa nič nepočíta inak, len kreslí.
 
 import { MINUTES_PER_DAY, PREVIEW } from './config.js';
-import { TERAZ_TONES } from './messages.js';
+import { TERAZ_TONES } from './messages-core.js';
 
 /** Čo platí v danej štvrťhodine plánu: slnko stačí, lacná sieť, drahá sieť, inak bežná cena. @typedef {'sun' | 'cheap' | 'costly' | 'plain'} Tone */
 /** @typedef {{ from: number, to: number, tone: Tone }} Cell bunka pásu plánu, minúty dňa */
@@ -15,7 +15,37 @@ import { TERAZ_TONES } from './messages.js';
  * Rozmery grafu: vodorovne od `left` po `right` je celý deň, zvislo od `top` (najvyšší výkon
  * stupnice) po `base` (nula). Pod nulou pás plánu a popisky hodín, nad `top` štítok náhľadu.
  */
-export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 112, bandY: 120, bandH: 9, tickY: 144, cellMin: 30 };
+export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 112, bandY: 120, bandH: 9, cellMin: 30 };
+
+/**
+ * Popisky grafu - hodiny, nápis hranice veľkých spotrebičov a štítok náhľadu - majú na každej šírke
+ * tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie. Kreslia sa preto ako
+ * HTML nad SVG (obloha/web/render/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
+ * (.dc-t, .dc-limit-t, .dc-pill-t) a musí sedieť s číslami tu: `limitPx` a `pillPx` veľkosť písma,
+ * `charEm` a `pillCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
+ * od čiary, `pillPadPx` okraje štítku. `minScale` je najmenšia mierka grafu (px na jednotku
+ * viewBoxu): graf široký 274 px na displeji 320 px - tam zaberá nápis v jednotkách grafu najviac.
+ * `wideScale` je mierka, od ktorej má nápis vlastnú polohu (graf aspoň 448 px - container query
+ * v style.css musí sedieť): na širokom grafe je nápis v pomere ku grafu malý a zmestí sa aj tam,
+ * kde by na telefóne prekryl krivku.
+ */
+export const DAY_CHART_LABELS = {
+    limitPx: 13,
+    pillPx: 15,
+    charEm: 0.5,
+    pillCharEm: 0.56,
+    lineEm: 1.25,
+    gapPx: 2,
+    pillPadPx: 18,
+    minScale: 0.85,
+    wideScale: 1.4,
+};
+
+/** Polomer, v ktorom nápis nesmie zasiahnuť značku „teraz“ (čiara a bodka s polomerom 5). */
+const NOW_R = 6;
+
+/** Rezerva okolo krivky (hrúbka čiary). */
+const LINE_PAD = 1.5;
 
 /** Hodiny, ktoré majú pod grafom popisok. */
 const TICK_HOURS = [0, 6, 12, 18, 24];
@@ -82,12 +112,12 @@ export function chartMinutes(rel) {
  * Geometria grafu dňa.
  * @param {{ plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number }>,
  *   real: Array<{ hour: number, kw: number }>, boundary: number | null, nowMin: number | null, nowKw: number,
- *   limitKw: number, preview: { min: number, kw: number, text: string } | null }} d `hourly` predpoveď
- *   dňa, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `nowMin` značka
- *   „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov,
- *   `preview` náhľad iného času so štítkom
+ *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null }} d `hourly`
+ *   predpoveď dňa, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `nowMin`
+ *   značka „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov
+ *   a `limitText` nápis pri nej, `preview` náhľad iného času so štítkom
  */
-export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, preview }) {
+export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview }) {
     const C = DAY_CHART;
     const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary);
     const kws = [limitKw, ...hourly.map((p) => p.kw), ...measured.map((p) => p.kw), nowMin === null ? 0 : nowKw, preview ? preview.kw : 0];
@@ -95,30 +125,138 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
     const max = Math.max(...kws.filter(Number.isFinite)) * 1.1 || 1;
     const y = (/** @type {number} */ kw) => r1(C.base - (Math.max(0, kw) / max) * (C.base - C.top));
     const x = (/** @type {number} */ min) => r1(chartX(min));
-    const pts = (/** @type {Array<{ hour: number, kw: number }>} */ list) => list.map((p) => `${x(p.hour * 60)} ${y(p.kw)}`).join(' L');
+    const toPt = (/** @type {{ hour: number, kw: number }} */ p) => ({ x: x(p.hour * 60), y: y(p.kw) });
+    const path = (/** @type {Pt[]} */ list) => `M${list.map((p) => `${p.x} ${p.y}`).join(' L')}`;
     const last = hourly[hourly.length - 1];
-    const area = hourly.length
-        ? `M${x(0)} ${C.base} L${pts(hourly)} L${x(MINUTES_PER_DAY)} ${y(last.kw)} L${x(MINUTES_PER_DAY)} ${C.base}Z`
-        : '';
+    // Obrys plochy predpovede: od nuly cez hodiny po koniec dňa a späť na nulu.
+    const edge = hourly.length
+        ? [{ x: x(0), y: C.base }, ...hourly.map(toPt), { x: x(MINUTES_PER_DAY), y: y(last.kw) }, { x: x(MINUTES_PER_DAY), y: C.base }]
+        : [];
+    const curve = measured.length > 1 ? measured.map(toPt) : [];
     const cellW = r1(chartX(C.cellMin) - chartX(0) - 0.8);
     const at = (/** @type {number} */ min, /** @type {number} */ kw) => ({ x: x(min), y: Number.isFinite(kw) ? y(kw) : null });
     return {
-        area,
-        real: measured.length > 1 ? `M${pts(measured)}` : '',
+        area: edge.length ? `${path(edge)}Z` : '',
+        real: curve.length ? path(curve) : '',
         limitY: y(limitKw),
+        limitText,
+        // Nápis hranice nesmie prekryť krivky ani značku „teraz“.
+        limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], nowMin === null ? null : x(nowMin)),
         cells: planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW })),
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
         now: nowMin === null ? null : at(nowMin, nowKw),
-        preview: preview ? { ...at(preview.min, preview.kw), pill: pillAt(chartX(preview.min), preview.text) } : null,
+        preview: preview ? { ...at(preview.min, preview.kw), pill: pillOf(preview.text) } : null,
     };
 }
 
 /**
- * Štítok náhľadu nad grafom: vystredený nad časom, no celý v grafe. Šírka z počtu znakov
- * (písmo 14 jednotiek, aby malo aj na úzkom displeji 12 px - ~7,8 jednotky na znak).
- * @param {number} cx @param {string} text
+ * Poloha nápisu hranice na úzkom grafe (telefón) a na širokom (od DAY_CHART_LABELS.wideScale).
+ * @param {number} limitY @param {string} text @param {Pt[][]} lines @param {number | null} nowX
  */
-function pillAt(cx, text) {
-    const w = text.length * 7.8 + 18;
-    return { x: r1(Math.min(Math.max(cx - w / 2, 4), DAY_CHART.w - 4 - w)), w: r1(w), text };
+function limitPlaces(limitY, text, lines, nowX) {
+    return { narrow: limitSpot(limitY, text, lines, nowX), wide: limitSpot(limitY, text, lines, nowX, DAY_CHART_LABELS.wideScale) };
+}
+
+/**
+ * Štítok náhľadu nad grafom: šírka v px z počtu znakov. Vystredí ho nad časom a udrží celý v grafe
+ * render (CSS clamp) - šírka grafu v px je známa až v prehliadači.
+ * @param {string} text
+ */
+function pillOf(text) {
+    const L = DAY_CHART_LABELS;
+    return { w: Math.round(text.length * L.pillCharEm * L.pillPx + L.pillPadPx), text };
+}
+
+/** @typedef {{ x: number, y: number }} Pt bod v jednotkách grafu */
+/** @typedef {{ x0: number, x1: number, y0: number, y1: number }} Box obdĺžnik v jednotkách grafu (y rastie nadol) */
+/**
+ * Kde nápis stojí: `x` bod, ku ktorému je zarovnaný koncom (`end`) alebo začiatkom, a `y` jeho
+ * spodok - čiara hranice, alebo vyššie, keď je nápis nad krivkou.
+ * @typedef {{ x: number, end: boolean, y: number }} Spot
+ */
+
+/**
+ * Najvyšší a najnižší bod lomenej čiary nad úsekom [x0, x1]. Čiara ide zľava doprava; kde nad
+ * úsekom nie je, vráti null.
+ * @param {Pt[]} line @param {number} x0 @param {number} x1 @returns {[number, number] | null}
+ */
+function spanY(line, x0, x1) {
+    /** @type {number[]} */
+    const ys = [];
+    for (let i = 1; i < line.length; i++) {
+        const a = line[i - 1];
+        const b = line[i];
+        if (b.x < x0 || a.x > x1) continue;
+        const yAt = (/** @type {number} */ x) => (b.x === a.x ? a.y : a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x));
+        ys.push(yAt(Math.max(a.x, x0)), yAt(Math.min(b.x, x1)), ...(b.x === a.x ? [b.y] : []));
+    }
+    return ys.length ? [Math.min(...ys), Math.max(...ys)] : null;
+}
+
+/** Prekrýva obdĺžnik lomenú čiaru (aj s jej hrúbkou)? @param {Box} box @param {Pt[]} line */
+export function boxHitsLine(box, line) {
+    const span = spanY(line, box.x0 - LINE_PAD, box.x1 + LINE_PAD);
+    return !!span && span[0] <= box.y1 + LINE_PAD && span[1] >= box.y0 - LINE_PAD;
+}
+
+/**
+ * Obdĺžnik, ktorý nápis hranice zaberie na každom grafe s mierkou aspoň `scale`. Nápis má pevnú
+ * veľkosť v px, takže v jednotkách grafu je najväčší na najužšom z nich a na širšom sa zmenší smerom
+ * k bodu, ku ktorému je zarovnaný, a k svojmu spodku. Obdĺžnik siaha od spodku (aj s medzerou
+ * gapPx) po vrch nápisu na najužšom grafe - na širšom je nápis celý v ňom.
+ * @param {string} text @param {Spot} spot @param {number} [scale] najmenšia mierka grafu (px na jednotku) @returns {Box}
+ */
+export function limitBox(text, { x, end, y }, scale = DAY_CHART_LABELS.minScale) {
+    const L = DAY_CHART_LABELS;
+    const w = (text.length * L.charEm * L.limitPx) / scale;
+    const h = (L.limitPx * L.lineEm + L.gapPx) / scale;
+    return { x0: end ? x - w : x, x1: end ? x : x + w, y0: y - h, y1: y };
+}
+
+/** Krok, o ktorý sa nápis posúva po čiare, keď kraje nie sú voľné. */
+const SPOT_STEP = 10;
+
+/**
+ * Body, ku ktorým sa nápis skúša zarovnať: koniec čiary (kde bol vždy), jej začiatok, potom po
+ * krokoch sprava doľava.
+ * @returns {Array<{ x: number, end: boolean }>}
+ */
+function limitAnchors() {
+    const end = DAY_CHART.right - 2;
+    const start = DAY_CHART.left + 2;
+    const anchors = [
+        { x: end, end: true },
+        { x: start, end: false },
+    ];
+    for (let x = end - SPOT_STEP; x > start; x -= SPOT_STEP) anchors.push({ x, end: true });
+    return anchors;
+}
+
+/**
+ * Kde stojí nápis hranice veľkých spotrebičov. Na žiadnom grafe s mierkou aspoň `scale` nesmie
+ * prekryť krivku predpovede, nameranú krivku ani značku „teraz“ a musí ostať v grafe. Skúša sa: tesne nad čiarou
+ * na konci, na začiatku; potom na konci a na začiatku nad krivkou (nápis sa zdvihne na voľné miesto
+ * nad ňou); potom to isté po krokoch pozdĺž čiary. Keď nič z toho nejde, ostane nad čiarou na konci.
+ * @param {number} limitY @param {string} text @param {Pt[][]} lines krivky v grafe
+ * @param {number | null} nowX značka „teraz“ (null = nie je)
+ * @param {number} [scale] najmenšia mierka grafu, pre ktorú poloha platí (px na jednotku) @returns {Spot}
+ */
+export function limitSpot(limitY, text, lines, nowX, scale = DAY_CHART_LABELS.minScale) {
+    const free = (/** @type {Spot} */ spot) => {
+        const b = limitBox(text, spot, scale);
+        if (b.y0 < 0) return false;
+        if (nowX !== null && nowX + NOW_R >= b.x0 && nowX - NOW_R <= b.x1) return false;
+        return !lines.some((line) => boxHitsLine(b, line));
+    };
+    /** Nad krivkou: spodok nápisu tesne nad jej najvyšším bodom pod ním (no nie pod čiarou). @param {{ x: number, end: boolean }} a */
+    const raised = (a) => {
+        const b = limitBox(text, { ...a, y: limitY }, scale);
+        const tops = lines.map((line) => spanY(line, b.x0 - LINE_PAD, b.x1 + LINE_PAD)?.[0] ?? Infinity);
+        return { ...a, y: Math.min(limitY, Math.min(...tops) - 2 * LINE_PAD) };
+    };
+    const anchors = limitAnchors();
+    /** @type {Spot[]} */
+    const tries = [...anchors.slice(0, 2).map((a) => ({ ...a, y: limitY })), ...anchors.slice(0, 2).map(raised)];
+    for (const a of anchors.slice(2)) tries.push({ ...a, y: limitY }, raised(a));
+    return tries.find(free) ?? { ...anchors[0], y: limitY };
 }

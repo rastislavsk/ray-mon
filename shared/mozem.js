@@ -17,7 +17,7 @@ import {
     mozemRunningShort,
     mozemStripText,
     voiceTexts,
-} from './messages.js';
+} from './messages-core.js';
 import { localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
 

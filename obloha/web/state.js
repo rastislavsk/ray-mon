@@ -2,11 +2,10 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
+import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_ITEMS, PANELS, SUMMARY_PERIODS } from '../../shared/config.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
-import { SUMMARY_PERIODS } from '../../shared/summary.js';
 
 /**
  * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny), `mozemQuip`
@@ -21,6 +20,7 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj kiosk. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
+ * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo.
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'day' | 'week'} WeekDetail
@@ -48,6 +48,7 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  *   appSheet: AppSheet | null,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
+ *   parts: Partial<Record<Part, PartState>>,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
@@ -117,6 +118,8 @@ export function initialState(
         appSheet: null,
         shareSettings: false,
         shareKiosk: false,
+        // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
+        parts: {},
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
         ...setupInit(start, known),
@@ -175,6 +178,41 @@ export const dashboard = (state) => state.layout !== 'narrow' && isColumn(state.
  * @param {Pick<AppState, 'layout' | 'panel'>} state @param {Panel} panel
  */
 export const shows = (state, panel) => panel === state.panel || (dashboard(state) && isColumn(panel));
+
+/**
+ * Časti appky, ktorých kód sa nesťahuje pri štarte, ale až keď ich treba, alebo keď je prehliadač po
+ * prvom vykreslení voľný (web/parts.js): karta 7 dní, Štatistika s plagátom a Nastavenie so
+ * sprievodcom a ponukou prevziať nastavenie z odkazu. Úvodná karta, hlavička, navigácia a obloha
+ * sú v jadre - prvé zobrazenie na ne nečaká.
+ */
+export const PARTS = /** @type {const} */ (['sedem', 'statistika', 'nastavenie']);
+
+/**
+ * @typedef {(typeof PARTS)[number]} Part
+ * @typedef {'ok' | 'chyba' | 'koniec'} PartState načítaná; nenačítala sa (dá sa stiahnuť znova a
+ *   obnoviť stránku); nenačítala sa ani po obnovení v tejto karte prehliadača
+ */
+
+/** Časť appky, ktorej kód karta potrebuje (null = karta je v jadre). @param {Panel} panel @returns {Part | null} */
+export const partOf = (panel) => (panel === '7dni' ? 'sedem' : panel === 'statistika' || panel === 'nastavenie' ? panel : null);
+
+/** Je kód karty načítaný? Kým nie je, karta sa neukáže prázdna - namiesto nej je hláška. @param {Pick<AppState, 'parts'>} state @param {Panel} panel */
+export function ready(state, panel) {
+    const part = partOf(panel);
+    return !part || state.parts[part] === 'ok';
+}
+
+/**
+ * Časti, ktoré obrazovka práve potrebuje: karty na obrazovke, otvorený plagát (dialóg Štatistiky,
+ * otvára sa aj z karty Môžem?) a ponuka prevziať nastavenie z odkazu (patrí Nastaveniu).
+ * @param {AppState} state @returns {Part[]}
+ */
+export function neededParts(state) {
+    const shown = PANELS.filter((p) => shows(state, p)).map(partOf);
+    return PARTS.filter(
+        (part) => shown.includes(part) || (part === 'statistika' && !!state.poster) || (part === 'nastavenie' && !!state.incoming),
+    );
+}
 
 /** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {

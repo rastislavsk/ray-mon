@@ -7,6 +7,7 @@ import { createStore } from '../web/store.js';
 import { loadDayLog, loadLaunches, loadLook, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
+import { initParts, preloadParts } from './web/parts.js';
 import { render } from './web/render/index.js';
 import { initialState, layoutOf } from './web/state.js';
 
@@ -42,6 +43,10 @@ initUrlMirror(store);
 // skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
 // pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.
 const refresh = initInteractions(store, dom);
+// Karty 7 dní, Štatistika a Nastavenie sa sťahujú až keď treba (web/parts.js). Prvé vykreslenie
+// počká len na tie, ktoré úvodná obrazovka ukazuje - na telefóne na žiadnu.
+await initParts(store, dom, refresh);
 store.subscribe((state) => render(state, dom));
 render(store.get(), dom);
 refresh();
+preloadParts(store, dom, refresh);

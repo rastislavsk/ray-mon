@@ -1,7 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installedKw, MINUTES_PER_DAY, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
-import { cellAt, chartMinutes, chartX, DAY_CHART, dayChartModel, planCells, slotTone } from '../shared/day-chart.js';
+import {
+    boxHitsLine,
+    cellAt,
+    chartMinutes,
+    chartX,
+    DAY_CHART,
+    DAY_CHART_LABELS,
+    dayChartModel,
+    limitBox,
+    limitSpot,
+    planCells,
+    slotTone,
+} from '../shared/day-chart.js';
 import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
@@ -124,7 +136,16 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
     const forecast = /** @type {import('../shared/solar.js').Forecast} */ (i.forecast);
     const pv = /** @type {import('../shared/kiosk.js').PvData} */ (i.pv);
     const limitKw = powerThresholds(PLANT).lowKw;
-    const base = { plan, hourly: forecast.hourlyToday, real: pv.realCurveToday, boundary: hm(11), nowMin: hm(13), nowKw: 6.4, limitKw };
+    const base = {
+        plan,
+        hourly: forecast.hourlyToday,
+        real: pv.realCurveToday,
+        boundary: hm(11),
+        nowMin: hm(13),
+        nowKw: 6.4,
+        limitKw,
+        limitText: 'veľké spotrebiče',
+    };
     const m = dayChartModel({ ...base, preview: null });
     assert.match(m.area, new RegExp(`^M${DAY_CHART.left} ${DAY_CHART.base} L`));
     assert.match(m.area, /Z$/);
@@ -144,17 +165,98 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
     assert.ok(m.now.y !== null && m.now.y < DAY_CHART.base);
     assert.equal(m.preview, null);
 
-    // Štítok náhľadu na kraji dňa ostane celý v grafe.
-    for (const min of [0, hm(12), hm(23, 45)]) {
-        const p = dayChartModel({ ...base, preview: { min, kw: 1, text: terazPillText(min, 1, 'plain') } }).preview;
-        assert.ok(p);
-        assert.ok(p.pill.x >= 4 && p.pill.x + p.pill.w <= DAY_CHART.w - 4 + 0.1, `štítok o ${min} trčí z grafu`);
-    }
+    // Štítok náhľadu: nad časom, šírka v px z počtu znakov (v grafe ho udrží CSS v rendri).
+    const text = terazPillText(hm(15, 30), 4.9, 'sun');
+    const p = dayChartModel({ ...base, preview: { min: hm(15, 30), kw: 4.9, text } }).preview;
+    assert.ok(p);
+    assert.equal(p.x, Math.round(chartX(hm(15, 30)) * 10) / 10);
+    assert.equal(p.pill.text, text);
+    assert.equal(p.pill.w, Math.round(text.length * DAY_CHART_LABELS.pillCharEm * DAY_CHART_LABELS.pillPx + DAY_CHART_LABELS.pillPadPx));
     // Bez výkonu bodka nie je, bez predpovede ani plocha; prázdna krivka sa nekreslí.
     const empty = dayChartModel({ ...base, hourly: [], real: [], boundary: null, nowKw: NaN, preview: null });
     assert.equal(empty.area, '');
     assert.equal(empty.real, '');
     assert.equal(empty.now.y, null);
+});
+
+/** Krivka v jednotkách grafu: výška (0 až 1 stupnice) v každej celej hodine. @param {(hour: number) => number} h */
+const curve = (h) =>
+    Array.from({ length: 25 }, (_, hour) => ({ x: chartX(hour * 60), y: DAY_CHART.base - h(hour) * (DAY_CHART.base - DAY_CHART.top) }));
+
+/** Výroba od `from` do `to` hodín s vrcholom (1) v strede, inak nula. @param {number} from @param {number} to */
+const hump = (from, to) => (/** @type {number} */ hour) =>
+    hour > from && hour < to ? Math.sin(((hour - from) / (to - from)) * Math.PI) : 0;
+
+/** Bežný slnečný deň: nula v noci, vrchol na obed. */
+const sunny = hump(6, 20);
+
+test('limitSpot: nápis hranice je nad čiarou na konci, kým tam neprekryje krivku ani „teraz“', () => {
+    const text = 'veľké spotrebiče';
+    const limitY = DAY_CHART.base - 0.4 * (DAY_CHART.base - DAY_CHART.top);
+    // Večer je krivka pod čiarou: nápis ostane na konci nad ňou, ako vždy.
+    const end = { x: DAY_CHART.right - 2, end: true, y: limitY };
+    const start = { x: DAY_CHART.left + 2, end: false, y: limitY };
+    // Krivka je pod čiarou už od 14:00: nápis ostane na konci nad ňou, ako vždy.
+    const early = hump(8, 14);
+    assert.deepEqual(limitSpot(limitY, text, [curve(early)], null), end);
+    // „Teraz“ večer: nápis prejde na začiatok čiary - ráno je krivka nad čiarou, takže nad krivku.
+    const evening = limitSpot(limitY, text, [curve(early)], chartX(hm(21)));
+    assert.equal(evening.x, start.x);
+    assert.equal(evening.end, false);
+    assert.ok(!boxHitsLine(limitBox(text, evening), curve(early)));
+    // Krivka v noci aj ráno nízko: na začiatku tesne nad čiarou.
+    const late = hump(12, 18);
+    assert.deepEqual(limitSpot(limitY, text, [curve(late)], chartX(hm(21))), start);
+    // Krivka nad čiarou až do večera: tesne nad čiarou nie je miesto, nápis sa zdvihne nad krivku na konci.
+    const spot = limitSpot(limitY, text, [curve(sunny)], chartX(hm(13)));
+    assert.equal(spot.x, end.x);
+    assert.ok(spot.y < limitY);
+    const box = limitBox(text, spot);
+    assert.ok(!boxHitsLine(box, curve(sunny)), 'nápis prekrýva krivku');
+    assert.ok(box.y0 >= 0, 'nápis trčí z grafu');
+});
+
+test('limitSpot: v žiadnom čase dňa nápis neprekryje krivku ani „teraz“, ostane v grafe a nad čiarou', () => {
+    const text = 'veľké spotrebiče';
+    for (const level of [0.15, 0.4, 0.7, 0.95])
+        for (let min = 0; min < MINUTES_PER_DAY; min += 30) {
+            const limitY = DAY_CHART.base - level * (DAY_CHART.base - DAY_CHART.top);
+            const nowX = chartX(min);
+            const spot = limitSpot(limitY, text, [curve(sunny)], nowX);
+            const box = limitBox(text, spot);
+            const where = `hranica ${level}, ${min} min`;
+            assert.ok(!boxHitsLine(box, curve(sunny)), `${where}: prekrýva krivku`);
+            assert.ok(nowX < box.x0 - 5 || nowX > box.x1 + 5, `${where}: prekrýva „teraz“`);
+            assert.ok(box.y0 >= 0 && spot.y <= limitY, `${where}: mimo grafu alebo pod čiarou`);
+        }
+});
+
+test('dayChartModel: nápis hranice má polohu pre úzky aj široký graf, každá voľná pre svoj rozsah šírok', () => {
+    const lines = [curve(sunny)];
+    const limitY = DAY_CHART.base - 0.25 * (DAY_CHART.base - DAY_CHART.top);
+    const L = DAY_CHART_LABELS;
+    const nowX = chartX(hm(15, 30));
+    const narrow = limitSpot(limitY, 'veľké spotrebiče', lines, nowX);
+    const wide = limitSpot(limitY, 'veľké spotrebiče', lines, nowX, L.wideScale);
+    // Na širokom grafe sa nápis zmestí tesne nad čiaru, na úzkom nie.
+    assert.equal(wide.y, limitY);
+    assert.ok(narrow.y < limitY);
+    assert.ok(!boxHitsLine(limitBox('veľké spotrebiče', wide, L.wideScale), lines[0]));
+    assert.ok(boxHitsLine(limitBox('veľké spotrebiče', wide), lines[0]), 'široká poloha na úzkom grafe prekryje krivku');
+});
+
+test('limitBox: na najužšom grafe je nápis v jednotkách grafu najväčší, na širšom je celý v tom istom obdĺžniku', () => {
+    const L = DAY_CHART_LABELS;
+    const text = 'veľké spotrebiče';
+    const box = limitBox(text, { x: DAY_CHART.right - 2, end: true, y: 80 });
+    for (const scale of [L.minScale, 1.075, 1.9]) {
+        const w = (text.length * L.charEm * L.limitPx) / scale;
+        const h = (L.limitPx * L.lineEm + L.gapPx) / scale;
+        assert.ok(DAY_CHART.right - 2 - w >= box.x0 - 1e-9 && 80 - h >= box.y0 - 1e-9, `mierka ${scale}`);
+    }
+    // Obdĺžnik siaha až po čiaru - medzera medzi nápisom a čiarou je tiež jeho.
+    assert.equal(box.y1, 80);
+    assert.equal(limitBox(text, { x: DAY_CHART.left + 2, end: false, y: 80 }).x0, DAY_CHART.left + 2);
 });
 
 test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky (heroModel, deviceShorts)', () => {

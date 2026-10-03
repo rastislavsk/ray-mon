@@ -30,7 +30,7 @@ export default [
         rules,
     },
     {
-        files: ['test/**/*.js', 'playwright.config.js', 'eslint.config.js'],
+        files: ['test/**/*.js', 'scripts/**/*.js', 'playwright.config.js', 'eslint.config.js'],
         languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
         rules: { ...rules, 'max-lines-per-function': 'off' },
     },

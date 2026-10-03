@@ -118,6 +118,14 @@ export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statis
  */
 export const START_PANELS = /** @type {const} */ (['mozem', 'terazky']);
 export const START_STORAGE_KEY = 'prva-karta-v1';
+
+/** @typedef {'tyzden' | 'mesiac'} SummaryPeriod */
+/**
+ * Obdobia súhrnu na zdieľanie (plagátu novej appky) v poradí prepínača. Výpočet je v summary.js;
+ * konštanta je tu, aby ju nová appka mohla overiť pri štarte bez textov a výpočtu súhrnu.
+ * @type {SummaryPeriod[]}
+ */
+export const SUMMARY_PERIODS = ['tyzden', 'mesiac'];
 export const START_HASH_KEY = 'prva';
 
 /**

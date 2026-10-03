@@ -386,6 +386,13 @@ export function collectDom() {
         titles: perPanel('ttl'),
         dashTitle: byId('ttl-prehlad'),
         navs: perPanel('nav'),
+        // Hláška namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js).
+        wait: byId('cakam'),
+        waitLoading: byId('ck-loading'),
+        waitFail: byId('ck-fail'),
+        waitAgain: byId('ck-again'),
+        waitLater: byId('ck-later'),
+        waitRetry: byId('ck-retry'),
     };
 }
 

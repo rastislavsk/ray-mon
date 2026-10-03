@@ -16,3 +16,8 @@ export function stepBack(store, patch) {
     if (here && prev && sameNavStep(here, navStep(state)) && sameNavStep(prev, navStep({ ...state, ...patch }))) history.back();
     else store.setState(patch);
 }
+
+/** Návrat z detailu karty 7 dní do prehľadu dní - ten istý krok ako tlačidlo Späť. @param {import('./state.js').Store} store */
+export function closeDetail(store) {
+    stepBack(store, { weekDetail: null });
+}

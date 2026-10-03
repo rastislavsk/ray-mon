@@ -17,7 +17,7 @@
         <meta name="apple-mobile-web-app-title" content="RAY-MON obloha" />
         <!-- Archivo je jediné písmo appky a na obrazovke je od prvej chvíle. crossorigin je pri
              písmach povinný, inak by ho prehliadač stiahol dvakrát. -->
-        <link rel="preload" href="../fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="preload" href="../fonts/archivo-obloha.woff2" as="font" type="font/woff2" crossorigin />
         <link rel="stylesheet" href="style.css" />
         <!-- Appku spúšťa boot.js: keď sa po nasadení zmiešajú staré a nové moduly z cache,
              stiahne ich znova a raz obnoví stránku. Žiadny iný modul appky sa tu nenačítava. -->
@@ -83,8 +83,9 @@
                 </section>
                 <p id="mz-count" class="glass count"></p>
                 <button type="button" id="mz-quip" class="quote"><q id="mz-quip-text"></q><small id="mz-quip-hint"></small></button>
-                <!-- Nenápadný odkaz na plagát na zdieľanie (ten istý dialóg ako z karty Štatistika). -->
-                <button type="button" id="mz-summary" class="lnk" aria-haspopup="dialog">
+                <!-- Nenápadný odkaz na plagát na zdieľanie (ten istý dialóg ako z karty Štatistika). Ukáže ho
+                     až kód plagátu, ktorý sa načíta po prvom vykreslení (web/parts.js). -->
+                <button type="button" id="mz-summary" class="lnk hidden" aria-haspopup="dialog">
                     <span id="mz-summary-text"></span><span aria-hidden="true"> ›</span>
                 </button>
             </section>
@@ -606,6 +607,17 @@
                             <button type="button" id="wz-next" class="pbtn">Ďalej</button>
                         </div>
                     </div>
+                </div>
+            </section>
+            <!-- Namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js,
+                 render/index.js). Texty sú pevné - hláška musí fungovať aj bez zvyšku appky. -->
+            <section id="cakam" class="cakam hidden" aria-live="polite">
+                <p id="ck-loading" class="sub">načítavam…</p>
+                <div id="ck-fail" class="cta">
+                    <b>Táto časť appky sa nenačítala.</b>
+                    <p id="ck-again">Stiahnem ju znova a obnovím stránku.</p>
+                    <p id="ck-later">Skús to o chvíľu.</p>
+                    <button type="button" id="ck-retry" class="pbtn">Načítať znova</button>
                 </div>
             </section>
         </main>

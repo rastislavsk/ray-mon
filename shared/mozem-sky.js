@@ -7,7 +7,7 @@ import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
 import { runMinOf, runningLaunch } from './launches.js';
-import { mozemGuessText, mozemListTitle, mozemLogCancel, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages.js';
+import { mozemGuessText, mozemListTitle, mozemLogCancel, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages-core.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
