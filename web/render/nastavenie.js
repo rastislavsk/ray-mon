@@ -18,7 +18,7 @@ import {
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { liveStatus } from '../../shared/hero-model.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
-import { checkSettings, settingsFromLink, settingsHint } from '../../shared/settings.js';
+import { checkSettings, settingsFromLink } from '../../shared/settings.js';
 import { ROOF_STEPS, SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
 import { brushOf, schedIndex, setupReady } from '../../shared/setup-flow.js';
 import {
@@ -34,6 +34,7 @@ import {
     geoNote,
     GUESS_MARK,
     hasSite,
+    importOfferText,
     kioskNote,
     LEVELS,
     linkPreview,
@@ -712,7 +713,5 @@ export function renderImportOffer(state, dom) {
     const s = state.incoming;
     dom.importOffer.classList.toggle('hidden', !s);
     if (!s) return;
-    const live = s.kiosk ? ' · so živým meraním' : '';
-    const replaces = state.known !== 'elektraren' ? '' : ' Nahradí tvoje doterajšie nastavenie.';
-    dom.importOfferText.textContent = `${settingsHint(s)}${live}.${replaces}`;
+    dom.importOfferText.textContent = importOfferText(s, state.known);
 }

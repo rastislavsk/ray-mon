@@ -4,7 +4,9 @@ import { PANELS } from '../../shared/config.js';
 import { initSwipeGesture } from '../../web/gesture.js';
 import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
+import { setupStart } from '../../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
+import { initNastavenie } from './nastavenie-interactions.js';
 import { closeDetail, initSedem } from './sedem-interactions.js';
 import { initStatistika } from './statistika-interactions.js';
 import { initTeraz } from './teraz-interactions.js';
@@ -22,7 +24,13 @@ function initNavigation(store, dom) {
     for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
     const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.sdGuessBtn, dom.sdAskBtn];
     toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn);
-    for (const btn of toSetup) btn.addEventListener('click', () => go('nastavenie'));
+    // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi. Sú to dva kroky navigácie -
+    // Späť z panelov vráti do prehľadu Nastavenia, ako keby ich otvoril odtiaľ.
+    const toPanels = () => {
+        if (store.get().panel !== 'nastavenie') go('nastavenie');
+        if (store.get().known === 'poloha') store.setState(setupStart(store.get()));
+    };
+    for (const btn of toSetup) btn.addEventListener('click', toPanels);
     initSwipeGesture(dom.page, {
         // Kým je otvorený panel veci alebo plagát, ťah nad nimi kartu neprepína.
         enabled: () => !store.get().mozemItem && !store.get().poster,
@@ -48,6 +56,7 @@ export function initInteractions(store, dom) {
     initTeraz(store, dom, refresh);
     initSedem(store, dom, refresh);
     initStatistika(store, dom, refresh);
+    initNastavenie(store, dom, refresh);
     startTicks(store, refresh);
     // Bez internetu karty povedia, prečo nemajú dáta; keď sa vráti, dáta sa hneď obnovia.
     window.addEventListener('offline', () => store.setState({ online: false }));

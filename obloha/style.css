@@ -1225,6 +1225,938 @@ button:focus-visible {
     cursor: pointer;
 }
 
+/* ===== Karta Nastavenie ===== */
+.nast p,
+.nast h2,
+.nast h3,
+.nast ul,
+.nast ol {
+    margin: 0;
+}
+/* Výzva bez panelov: postup sprievodcu a jedno tlačidlo. Biela, nie červená - chýba krok, nie je
+   to chyba. Pri vstupe na kartu trikrát zapulzuje a zastaví sa (útlm pohybu ju vypne celú). */
+.steps {
+    display: flex;
+    gap: 4px;
+}
+.steps i {
+    flex: 1;
+    height: 5px;
+    border-radius: 9px;
+    background: rgba(11, 20, 48, 0.18);
+}
+.steps i.on {
+    background: var(--ink);
+}
+.pulse-card {
+    animation: pulse-card 1.1s ease-in-out 3;
+}
+@keyframes pulse-card {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+}
+/* Karta strechy: veľké kWp, zostava a vpravo kompas plôch. */
+.plant {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.plant p {
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.88);
+}
+.plant .kwp {
+    font-size: 15px;
+    color: #fff;
+}
+.plant .kwp b {
+    font-size: 34px;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 118;
+    line-height: 1;
+}
+.planes-compass {
+    flex: none;
+    width: 76px;
+    height: 76px;
+}
+.planes-compass .ring {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.35);
+}
+.planes-compass text {
+    font-size: 9px;
+    text-anchor: middle;
+    fill: #fff;
+}
+.planes-compass .arrow {
+    stroke: #fff;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+.planes-compass .arrow.main {
+    stroke-width: 4;
+}
+.planes-compass .hub {
+    fill: #fff;
+}
+/* Riadky, ktoré otvárajú krok sprievodcu (prehľad aj zhrnutie). */
+.set {
+    gap: 0;
+}
+.set .it {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 0;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+}
+.set .it:last-child {
+    border-bottom: 0;
+}
+.set .it > span:first-of-type {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+}
+.set .it b {
+    font-weight: 600;
+}
+.set .it small {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.82);
+    overflow-wrap: anywhere;
+}
+.set .it small.est {
+    font-style: italic;
+}
+.nast .note {
+    padding-top: 10px;
+}
+
+/* ===== Sprievodca ===== */
+.wz {
+    display: grid;
+    gap: 12px;
+    padding: 8px 14px 20px;
+}
+.wz-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+}
+.wz-step {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+}
+.wz .x {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    cursor: pointer;
+}
+.wz .x svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+/* Ukazovateľ postupu: sedem častí, hotové a súčasná biele. */
+.wz-prog {
+    display: flex;
+    gap: 4px;
+}
+.wz-prog i {
+    flex: 1;
+    height: 5px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.25);
+}
+.wz-prog i.on {
+    background: #fff;
+}
+.wz-sub {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+}
+.wz-title {
+    font-size: 27px;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 110;
+    line-height: 1.15;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+}
+.wz-lead,
+.wz-line {
+    font-size: 15px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.wz .seg {
+    margin: 0;
+    flex-wrap: wrap;
+    border-radius: 22px;
+}
+.wz .seg button {
+    flex-basis: 0;
+    border-radius: 18px;
+}
+.wz-screen,
+.wz-stack {
+    display: grid;
+    gap: 12px;
+}
+.wz .glass {
+    margin: 0;
+}
+/* Voľba s nadpisom a popisom: sklenená, zvolená biela. */
+.opt {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    min-height: 56px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 18px;
+    background: rgba(8, 16, 40, 0.3);
+    text-align: left;
+    cursor: pointer;
+}
+.opt b {
+    font-size: 16px;
+}
+.opt span {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.82);
+}
+.opt.ico {
+    grid-template-columns: 1fr auto;
+}
+.opt.ico .tariff-mini {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+}
+.opt[aria-pressed='true'] {
+    border-color: #fff;
+    background: #fff;
+    color: var(--ink);
+}
+.opt[aria-pressed='true'] span {
+    color: #2b3550;
+}
+.opt[aria-pressed='true']:focus-visible {
+    outline-offset: 3px;
+}
+.opt:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+/* Tlačidlá s hodnotami (výkon, menič, mena, mesiace, pásma na maľovanie). */
+.pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    background: rgba(8, 16, 40, 0.3);
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.pill small {
+    font-weight: 500;
+    font-size: 12px;
+    opacity: 0.85;
+}
+.pill[aria-pressed='true'],
+.pill[aria-checked='true'] {
+    border-color: #fff;
+    background: #fff;
+    color: var(--ink);
+}
+.pill[aria-pressed='true']:focus-visible,
+.pill[aria-checked='true']:focus-visible {
+    outline-offset: 3px;
+}
+.presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+}
+.pill.col {
+    display: grid;
+    justify-items: start;
+    gap: 0;
+    border-radius: 16px;
+    text-align: left;
+}
+.months .pill {
+    flex: 1 0 60px;
+    justify-content: center;
+    padding: 8px;
+}
+.mini {
+    flex: none;
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+/* Polia formulára: biele, tmavé písmo - dobre čitateľné na každej oblohe. */
+.flbl {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+}
+.fld {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+}
+.fld:focus-visible {
+    outline: 3px solid var(--cheap);
+    outline-offset: 1px;
+}
+.unit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+}
+.two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 10px;
+}
+.more summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.more p {
+    font-size: 14px;
+    line-height: 1.4;
+}
+/* Hlásenie pod poľom: sklo s farebným okrajom. Červený okraj nepustí ďalej, zelený je v poriadku. */
+.wz-msg {
+    margin: 0;
+    padding: 10px 14px;
+    border-left: 4px solid rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    background: rgba(8, 16, 40, 0.38);
+    font-size: 14px;
+    line-height: 1.4;
+}
+.wz-msg.err {
+    border-left-color: var(--costly);
+}
+.wz-msg.ok {
+    border-left-color: var(--yes);
+}
+.geo-list {
+    list-style: none;
+    padding: 4px 16px;
+    gap: 0;
+}
+.geo-pick {
+    display: grid;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+.geo-list li:last-child .geo-pick {
+    border-bottom: 0;
+}
+.geo-pick small {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.8);
+}
+.place small,
+.place .meta {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.82);
+}
+.sunline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sunline span {
+    display: grid;
+    font-size: 17px;
+    font-weight: 700;
+    text-align: center;
+}
+.sunline small {
+    font-size: 11px;
+    font-weight: 500;
+}
+.sunline svg {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+}
+.sunline .ground {
+    stroke: rgba(255, 255, 255, 0.4);
+}
+.sunline .arc {
+    fill: none;
+    stroke: #fff;
+    stroke-dasharray: 3 4;
+}
+.sunline .sun {
+    fill: #ffd36e;
+}
+.checklist,
+.howto {
+    gap: 6px;
+    padding-left: 34px;
+    font-size: 15px;
+}
+
+/* Obrázky sprievodcu: biele čiary na skle. */
+.art svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.label-art svg {
+    max-width: 240px;
+    margin: 0 auto;
+}
+.panel-label .label-bg {
+    fill: #f2efe7;
+}
+.panel-label text {
+    font-size: 10px;
+    fill: #555;
+}
+.panel-label .mark {
+    fill: #ffd36e;
+}
+.panel-label .pmax {
+    font-size: 13px;
+    font-weight: 800;
+    fill: #111;
+}
+.dial-box {
+    padding: 8px;
+}
+.dir-dial {
+    position: relative;
+    width: min(100%, 300px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+}
+.compass-art {
+    width: 100%;
+    height: 100%;
+}
+.compass-art .ring {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.3);
+}
+.compass-art .sun-path {
+    fill: none;
+    stroke: #ffd36e;
+    stroke-width: 2;
+    stroke-dasharray: 3 5;
+    stroke-linecap: round;
+}
+.compass-art .sun {
+    fill: #ffd36e;
+}
+.compass-art .sector {
+    fill: transparent;
+    stroke: rgba(255, 255, 255, 0.14);
+}
+.compass-art .sector.on {
+    fill: rgba(255, 255, 255, 0.22);
+    stroke: #fff;
+}
+.compass-art .roof-top {
+    fill: rgba(8, 16, 40, 0.4);
+    stroke: rgba(255, 255, 255, 0.5);
+}
+.compass-art .ridge {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 1.5;
+}
+.compass-art .pv {
+    fill: rgba(255, 255, 255, 0.3);
+    stroke: #fff;
+}
+.compass-art .arrow {
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.compass-art .arrow-head {
+    fill: #fff;
+}
+.dir-btn {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82);
+    cursor: pointer;
+}
+.dir-btn.on {
+    background: #fff;
+    color: var(--ink);
+}
+.dir-btn.on:focus-visible {
+    outline-offset: 3px;
+}
+.readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.readout b {
+    font-size: 22px;
+    font-weight: 800;
+}
+.quality p {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+}
+.quality .bar i.tier-green {
+    background: var(--yes);
+}
+.quality .bar i.tier-amber {
+    background: #ffd36e;
+}
+.quality .bar i.tier-red {
+    background: var(--costly);
+}
+.tilt-art .ground {
+    stroke: rgba(255, 255, 255, 0.4);
+}
+.tilt-art .wall {
+    fill: rgba(8, 16, 40, 0.4);
+    stroke: rgba(255, 255, 255, 0.5);
+}
+.tilt-art .wedge {
+    fill: rgba(255, 255, 255, 0.1);
+    stroke: rgba(255, 255, 255, 0.3);
+}
+.tilt-art .level {
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-dasharray: 3 4;
+}
+.tilt-art .plane {
+    stroke: #fff;
+    stroke-width: 7;
+}
+.tilt-art .ray {
+    stroke: #ffd36e;
+    stroke-dasharray: 2 5;
+}
+.tilt-art .sun {
+    fill: #ffd36e;
+}
+.tilt-art .angle {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+.tilt-art text {
+    font-size: 14px;
+    font-weight: 700;
+    text-anchor: middle;
+    fill: #fff;
+}
+/* Posúvač sklonu ťahá prehliadač sám; gesto listovania ho nechá (web/gesture.js). */
+.range {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.range input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    accent-color: #fff;
+}
+.range output {
+    min-width: 3ch;
+    font-size: 18px;
+    font-weight: 800;
+}
+.stepper {
+    display: flex;
+    gap: 8px;
+}
+.stepper button {
+    flex: none;
+    width: 52px;
+    min-height: 48px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 24px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.stepper .fld {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 800;
+}
+.panel-grid .pv {
+    fill: rgba(255, 255, 255, 0.22);
+    stroke: #fff;
+}
+.panel-grid .pv-line {
+    stroke: rgba(255, 255, 255, 0.5);
+}
+.panel-grid text {
+    font-size: 12px;
+    fill: #fff;
+}
+.wz-rows {
+    gap: 0;
+    padding: 4px 16px;
+}
+.wz-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.wz-row:last-child {
+    border-bottom: 0;
+}
+.wz-row p,
+.set .it > span:first-of-type {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    font-size: 14.5px;
+}
+.wz-row small {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.82);
+}
+.mini-compass {
+    flex: none;
+    width: 34px;
+    height: 34px;
+}
+.mini-compass .ring {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.4);
+}
+.mini-compass text {
+    font-size: 7px;
+    text-anchor: middle;
+    fill: #fff;
+}
+.mini-compass .arrow {
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.mini-compass .hub {
+    fill: #fff;
+}
+/* Menič oproti panelom: dva pásy. */
+.bars .cb {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+.bars .cb .bar {
+    margin: 0;
+}
+.bars i.pv {
+    background: #fff;
+}
+.bars i.ac {
+    background: rgba(255, 255, 255, 0.55);
+}
+
+/* Tarifa. Farba má jeden význam: modrá lacná sieť, červená drahá, biela bežná. Tarifa nevie o slnku -
+   zelenú tu nekreslí nič. */
+.sw {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+}
+.sw.amber {
+    background: var(--cheap);
+}
+.sw.red {
+    background: var(--costly);
+}
+.day-band {
+    fill: none;
+    stroke-width: 8;
+    stroke: rgba(255, 255, 255, 0.7);
+}
+.day-band.amber {
+    stroke: var(--cheap);
+}
+.day-band.red {
+    stroke: var(--costly);
+}
+.day-band.green {
+    stroke: var(--yes);
+}
+.tariff-mini {
+    flex: none;
+    width: 30px;
+    height: 30px;
+}
+.tariff-mini .day-band {
+    stroke-width: 44;
+}
+.ring-box {
+    padding: 12px;
+}
+/* Kruh rozvrhu dňa. touch-action: none - je to úchytka na ťahanie, prst po ňom maľuje pásmo
+   a prehliadač si z gesta nesmie nič vziať (viď CLAUDE.md, Dotyk a kurzor). */
+.tariff-ring {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+    touch-action: none;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.tariff-ring .day-band {
+    stroke-width: 28;
+}
+.tariff-ring .cut {
+    stroke: rgba(8, 16, 40, 0.6);
+    stroke-width: 1.5;
+}
+.tariff-ring .tick {
+    stroke: rgba(255, 255, 255, 0.45);
+}
+.tariff-ring .hour {
+    fill: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+.tariff-ring .brush-lbl {
+    fill: rgba(255, 255, 255, 0.8);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-anchor: middle;
+}
+.tariff-ring .brush-name {
+    fill: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    text-anchor: middle;
+}
+.tariff-ring .brush-name.amber {
+    fill: var(--cheap);
+}
+.tariff-ring .brush-name.red {
+    fill: var(--costly);
+}
+.ring-box .wz-line {
+    text-align: center;
+    font-size: 13.5px;
+}
+.band {
+    gap: 10px;
+}
+.band-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ivals {
+    list-style: none;
+    gap: 0;
+    padding: 4px 16px;
+}
+.ivals li {
+    display: grid;
+    grid-template-columns: auto 1fr auto 44px;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 14.5px;
+}
+.ivals li:last-child {
+    border-bottom: 0;
+}
+.ivals .tm {
+    display: grid;
+    justify-items: end;
+    font-variant-numeric: tabular-nums;
+}
+.ivals small {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.8);
+}
+.ivals .x {
+    width: 44px;
+    height: 44px;
+}
+.ival-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.ival-form label {
+    display: grid;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.ival-form label:nth-child(3) {
+    grid-column: 1 / -1;
+}
+.ival-form .pbtn {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+}
+.prices {
+    gap: 8px;
+}
+.price {
+    display: grid;
+    grid-template-columns: auto 1fr minmax(0, 110px) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+}
+.auto {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+/* Tlačidlá dole: Späť priesvitné, ďalej biele. */
+.wz-foot {
+    display: flex;
+    gap: 10px;
+    padding-top: 6px;
+}
+.wz-foot .pbtn {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-self: stretch;
+}
+.wz .pbtn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.wz .pbtn.ghost {
+    justify-self: start;
+}
+
+/* Ponuka prevziať nastavenie z otvoreného odkazu: nad spodnou navigáciou na každej karte. */
+.offer {
+    position: fixed;
+    inset: auto 0 calc(76px + env(safe-area-inset-bottom)) 0;
+    z-index: 3;
+    max-width: 612px;
+    margin: 0 auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+.offer p {
+    margin: 0;
+}
+.offer-act {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.offer .pbtn.ghost {
+    background: rgba(11, 20, 48, 0.08);
+    color: var(--ink);
+}
+
 /* ===== Spodná navigácia ===== */
 .tabs {
     position: fixed;

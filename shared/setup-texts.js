@@ -4,7 +4,7 @@
 
 import { installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
 import { fmt2, hoursText, kwpText, minutesToTimeStr } from './format.js';
-import { checkSettings, sameSettings, siteMetaText, totalPanels } from './settings.js';
+import { checkSettings, sameSettings, settingsHint, siteMetaText, totalPanels } from './settings.js';
 import { SETUP_SECTIONS, setupSection } from './setup.js';
 import { isWelcome, savedSettings, schedIndex } from './setup-flow.js';
 import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
@@ -504,3 +504,13 @@ export function summaryRows(s, state) {
 
 /** Označenie odhadu z „Neviem“ v zhrnutí. */
 export const GUESS_MARK = 'odhad · oprav, keď zistíš';
+
+/**
+ * Ponuka prevziať nastavenie z otvoreného odkazu: čo v ňom je, a či nahradí uložené.
+ * @param {Settings} s nastavenie z odkazu @param {import('./settings.js').Known} known
+ */
+export function importOfferText(s, known) {
+    const live = s.kiosk ? ' · so živým meraním' : '';
+    const replaces = known !== 'elektraren' ? '' : ' Nahradí tvoje doterajšie nastavenie.';
+    return `${settingsHint(s)}${live}.${replaces}`;
+}

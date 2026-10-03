@@ -267,11 +267,311 @@
                     <div id="st-posters" class="posters"></div>
                 </div>
             </section>
-            <section id="panel-nastavenie" class="panel hidden" aria-labelledby="ttl-nastavenie">
-                <h1 id="ttl-nastavenie" class="ttl">Nastavenie</h1>
-                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            <!-- Karta Nastavenie: prehľad elektrárne a sprievodca jej nastavením. Prehľad skladá render
+                 (web/render/nastavenie.js), sprievodca má obrazovky tu všetky naraz a render ukáže jednu
+                 (web/render/sprievodca.js). Id a data- atribúty sprievodcu sú tie isté ako v súčasnej
+                 appke - obsluhuje ich ten istý kód (web/setup-wiring.js). -->
+            <section id="panel-nastavenie" class="panel nast hidden" aria-labelledby="ttl-nastavenie">
+                <h1 id="ttl-nastavenie" class="sr">Nastavenie</h1>
+                <div id="setup">
+                    <div id="ns-home">
+                        <h2 class="ttl">Moja strecha</h2>
+                        <div id="ns-cta" class="cta pulse-card">
+                            <b id="ns-cta-title"></b>
+                            <div id="ns-cta-steps" class="steps" role="img"></div>
+                            <p id="ns-cta-text"></p>
+                            <button type="button" id="ns-cta-btn" class="pbtn" data-setup-go="start"></button>
+                        </div>
+                        <div id="ns-hero" class="glass plant"></div>
+                        <section class="glass set" aria-labelledby="ns-rows-title">
+                            <h3 id="ns-rows-title" class="glass-ttl">Elektráreň</h3>
+                            <div id="ns-rows"></div>
+                        </section>
+                        <div id="ns-warn" class="wz-stack"></div>
+                        <p id="ns-note" class="sub note" role="status"></p>
+                        <button type="button" id="ns-link" class="lnk" data-setup-go="odkaz">
+                            Prevziať nastavenie z odkazu<span aria-hidden="true"> ›</span>
+                        </button>
+                    </div>
+
+                    <div id="wizard" class="wz hidden">
+                        <div class="wz-head">
+                            <span id="wz-step" class="wz-step"></span>
+                            <button type="button" id="wz-close" class="x" aria-label="Zavrieť sprievodcu">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                            </button>
+                        </div>
+                        <div id="wz-prog" class="wz-prog" aria-hidden="true"></div>
+                        <p id="wz-sub" class="wz-sub"></p>
+                        <h2 id="wz-title" class="wz-title"></h2>
+                        <p id="wz-lead" class="wz-lead"></p>
+                        <!-- Úprava z prehľadu: záložky na kroky panelov, plochy a tarify. Skladá ich render. -->
+                        <div id="wz-group-tabs" class="seg hidden" role="group" aria-label="Čo na paneloch upraviť"></div>
+                        <div id="wz-roof-tabs" class="seg hidden" role="group" aria-label="Čo na ploche upraviť">
+                            <button type="button" data-setup-tab="smer">Smer</button>
+                            <button type="button" data-setup-tab="sklon">Sklon</button>
+                            <button type="button" data-setup-tab="pocet">Panely</button>
+                        </div>
+                        <div id="wz-tariff-tabs" class="seg hidden" role="group" aria-label="Čo na tarife upraviť"></div>
+
+                        <section id="wz-start" class="wz-screen hidden" aria-label="Úvod">
+                            <ul class="glass checklist">
+                                <li>kde elektráreň stojí</li>
+                                <li>ktorým smerom sú otočené panely a koľko ich je</li>
+                                <li>výkon panelu a meniča (štítok alebo zmluva)</li>
+                            </ul>
+                            <button type="button" class="opt" data-setup-go="odkaz">
+                                <b>Mám odkaz s nastavením</b>
+                                <span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span>
+                            </button>
+                        </section>
+
+                        <section id="wz-odkaz" class="wz-screen hidden" aria-label="Nastavenie z odkazu">
+                            <label class="flbl" for="wz-link">Odkaz s nastavením</label>
+                            <input
+                                id="wz-link"
+                                class="fld"
+                                type="url"
+                                inputmode="url"
+                                autocomplete="off"
+                                placeholder="Vlož odkaz, ktorý ti niekto poslal"
+                            />
+                            <p id="wz-link-note" class="wz-msg err hidden">
+                                Tento odkaz neobsahuje nastavenie elektrárne. Skontroluj, či si skopíroval celý.
+                            </p>
+                            <div id="wz-link-preview" class="glass place hidden"></div>
+                        </section>
+
+                        <section id="wz-lokalita" class="wz-screen hidden" aria-label="Poloha">
+                            <label class="sr" for="wz-place">Obec alebo mesto</label>
+                            <input id="wz-place" class="fld" type="search" autocomplete="off" placeholder="Obec alebo mesto" />
+                            <div id="wz-geo" class="geo" aria-live="polite"></div>
+                            <div id="wz-place-card"></div>
+                            <details class="more">
+                                <summary>Zadať súradnice ručne</summary>
+                                <div class="two">
+                                    <label class="unit">
+                                        <span class="sr">Zemepisná šírka</span>
+                                        <input id="wz-lat" class="fld" inputmode="decimal" autocomplete="off" />
+                                        <span aria-hidden="true">° š.</span>
+                                    </label>
+                                    <label class="unit">
+                                        <span class="sr">Zemepisná dĺžka</span>
+                                        <input id="wz-lon" class="fld" inputmode="decimal" autocomplete="off" />
+                                        <span aria-hidden="true">° d.</span>
+                                    </label>
+                                </div>
+                            </details>
+                            <!-- Len pri prvom otvorení: panely sa dajú odložiť a nastavenie prevziať z odkazu. -->
+                            <div id="wz-welcome" class="wz-stack hidden">
+                                <button type="button" id="wz-later" class="opt" data-setup-later>
+                                    <b>Teraz nie, ukáž predpoveď</b>
+                                    <span>Panely nastavíš kedykoľvek v karte Nastavenie.</span>
+                                </button>
+                                <button type="button" class="opt" data-setup-go="odkaz">
+                                    <b>Mám odkaz s nastavením</b>
+                                    <span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section id="wz-panel" class="wz-screen hidden" aria-label="Výkon panelov">
+                            <div class="seg" role="group" aria-label="Čo o výkone vieš">
+                                <button type="button" id="wz-wpmode-panel" data-setup-wpmode="panel">Výkon panelu</button>
+                                <button type="button" id="wz-wpmode-kwp" data-setup-wpmode="kwp">Celkový výkon</button>
+                            </div>
+                            <div id="wz-wp-panel" class="wz-stack">
+                                <div id="wz-wp-label" class="art label-art"></div>
+                                <div id="wz-wp-chips" class="pills" role="group" aria-label="Výkon panelu"></div>
+                                <div id="wz-wp-other" class="hidden">
+                                    <label class="flbl" for="wz-wp">Výkon panelu</label>
+                                    <div class="unit">
+                                        <input id="wz-wp" class="fld" inputmode="numeric" autocomplete="off" />
+                                        <span aria-hidden="true">Wp</span>
+                                    </div>
+                                </div>
+                                <p id="wz-wp-guess" class="wz-msg hidden"></p>
+                            </div>
+                            <div id="wz-wp-total">
+                                <label class="flbl" for="wz-kwp">Celkový výkon panelov</label>
+                                <div class="unit">
+                                    <input id="wz-kwp" class="fld" inputmode="decimal" autocomplete="off" />
+                                    <span aria-hidden="true">kWp</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="wz-smer" class="wz-screen hidden" aria-label="Smer plochy">
+                            <div id="wz-compass" class="glass dial-box"></div>
+                            <p class="readout"><b id="wz-dir-name"></b><span id="wz-dir-deg"></span></p>
+                            <div id="wz-dir-quality"></div>
+                            <details class="more">
+                                <summary>Ako zistím, kam smerujú?</summary>
+                                <p>Nájdi dom na satelitnej mape, sever je hore. Panely smerujú tam, kam strecha klesá, teda k odkvapu.</p>
+                            </details>
+                        </section>
+
+                        <section id="wz-sklon" class="wz-screen hidden" aria-label="Sklon plochy">
+                            <div id="wz-tilt-art" class="glass art"></div>
+                            <div id="wz-tilt-presets" class="presets" role="group" aria-label="Typ strechy"></div>
+                            <label class="flbl" for="wz-tilt">Presný sklon</label>
+                            <div class="range">
+                                <input type="range" id="wz-tilt" min="0" max="90" step="5" />
+                                <output id="wz-tilt-out" for="wz-tilt"></output>
+                            </div>
+                            <div id="wz-tilt-quality"></div>
+                        </section>
+
+                        <section id="wz-pocet" class="wz-screen hidden" aria-label="Počet panelov">
+                            <div class="stepper">
+                                <button type="button" data-setup-step="-1" aria-label="O panel menej">−</button>
+                                <label class="sr" for="wz-panels">Počet panelov</label>
+                                <input id="wz-panels" class="fld" inputmode="numeric" autocomplete="off" />
+                                <button type="button" data-setup-step="1" aria-label="O panel viac">+</button>
+                            </div>
+                            <div id="wz-panel-grid" class="glass art"></div>
+                            <p id="wz-panels-kwp" class="wz-line"></p>
+                        </section>
+
+                        <section id="wz-dalsia" class="wz-screen hidden" aria-label="Plochy panelov">
+                            <div id="wz-roofs" class="glass wz-rows"></div>
+                            <div id="wz-derived"></div>
+                            <button type="button" id="wz-roof-add" class="opt">
+                                <b>Áno, pridať ďalšiu plochu</b>
+                                <span>Opýtam sa na smer, sklon a počet panelov.</span>
+                            </button>
+                        </section>
+
+                        <section id="wz-menic" class="wz-screen hidden" aria-label="Menič">
+                            <div id="wz-ac-bars" class="glass bars"></div>
+                            <div id="wz-ac-chips" class="pills" role="group" aria-label="Výkon meniča"></div>
+                            <div id="wz-ac-other" class="hidden">
+                                <label class="flbl" for="wz-ac">Výkon meniča</label>
+                                <div class="unit">
+                                    <input id="wz-ac" class="fld" inputmode="decimal" autocomplete="off" />
+                                    <span aria-hidden="true">kW</span>
+                                </div>
+                            </div>
+                            <p id="wz-ac-guess" class="wz-msg hidden"></p>
+                        </section>
+
+                        <section id="wz-meranie" class="wz-screen hidden" aria-label="Živé meranie">
+                            <button type="button" id="wz-live-yes" class="opt" data-setup-live="yes">
+                                <b>Áno, mám menič Huawei s appkou FusionSolar</b>
+                                <span>Vložíš odkaz na kiosk elektrárne.</span>
+                            </button>
+                            <button type="button" id="wz-live-no" class="opt" data-setup-live="no">
+                                <b>Nie, stačí mi odhad</b>
+                                <span>Meranie sa dá pridať neskôr.</span>
+                            </button>
+                            <div id="wz-kiosk-block" class="wz-stack hidden">
+                                <ol class="glass howto">
+                                    <li>V appke FusionSolar otvor svoju elektráreň.</li>
+                                    <li>Zvoľ zdieľanie cez kiosk a skopíruj odkaz.</li>
+                                    <li>Vlož ho sem.</li>
+                                </ol>
+                                <label class="flbl" for="wz-kiosk">Odkaz na kiosk</label>
+                                <input
+                                    id="wz-kiosk"
+                                    class="fld"
+                                    type="url"
+                                    inputmode="url"
+                                    autocomplete="off"
+                                    placeholder="Odkaz na kiosk FusionSolar"
+                                />
+                                <p id="wz-kiosk-note" class="wz-msg"></p>
+                            </div>
+                        </section>
+
+                        <section id="wz-tarifa" class="wz-screen hidden" aria-label="Typ sadzby">
+                            <div id="wz-tariff-kinds" class="wz-stack" role="group" aria-label="Typ sadzby"></div>
+                            <button type="button" class="pbtn ghost" data-setup-kind="dunno">Neviem</button>
+                            <p id="wz-tariff-dunno" class="wz-msg hidden"></p>
+                        </section>
+
+                        <section id="wz-pasma" class="wz-screen hidden" aria-label="Pásma tarify">
+                            <div id="wz-bands" class="wz-stack"></div>
+                            <button type="button" id="wz-band-add" class="opt">
+                                <b>Pridať pásmo</b>
+                                <span>Najviac štyri</span>
+                            </button>
+                        </section>
+
+                        <section id="wz-rozvrh" class="wz-screen hidden" aria-label="Rozvrh dňa">
+                            <div id="wz-sched-tabs" class="seg hidden" role="group" aria-label="Rozvrh"></div>
+                            <div id="wz-brushes" class="pills" role="radiogroup" aria-label="Pásmo, ktorým maľuješ"></div>
+                            <!-- Kruh je úchytka na ťahanie (touch-action: none): prst po ňom maľuje pásmo.
+                                 Presná cesta aj pre klávesnicu je zoznam úsekov a formulár pod ním. -->
+                            <div class="glass ring-box">
+                                <svg id="wz-tariff-ring" class="tariff-ring" viewBox="-12 -12 264 264" aria-hidden="true">
+                                    <g id="wz-tariff-ring-g"></g>
+                                </svg>
+                                <p id="wz-ring-sum" class="wz-line"></p>
+                            </div>
+                            <div id="wz-sched-tpls" class="pills" role="group" aria-label="Šablóny tvaru dňa"></div>
+                            <h3 class="flbl">Úseky</h3>
+                            <ul id="wz-ivals" class="glass ivals"></ul>
+                            <div class="ival-form">
+                                <label
+                                    >Od
+                                    <select id="wz-ival-from" class="fld"></select
+                                ></label>
+                                <label
+                                    >do
+                                    <select id="wz-ival-to" class="fld"></select
+                                ></label>
+                                <label
+                                    >pásmo
+                                    <select id="wz-ival-band" class="fld"></select
+                                ></label>
+                                <button type="button" id="wz-ival-set" class="pbtn">Nastaviť</button>
+                            </div>
+                            <details class="more">
+                                <summary>Kde nájdem časy?</summary>
+                                <p>
+                                    Na faktúre alebo na stránke distribučky pri časoch prepínania (HDO). Aj v rámci jednej distribučky sa
+                                    líšia podľa odberného miesta, preto šablóna dá len tvar dňa.
+                                </p>
+                            </details>
+                        </section>
+
+                        <section id="wz-vynimky" class="wz-screen hidden" aria-label="Výnimky v rozvrhu">
+                            <div id="wz-exc" class="wz-stack"></div>
+                        </section>
+
+                        <section id="wz-ceny" class="wz-screen hidden" aria-label="Ceny">
+                            <h3 class="flbl">Mena</h3>
+                            <div id="wz-currency" class="pills" role="group" aria-label="Mena"></div>
+                            <h3 class="flbl">Cena za kWh</h3>
+                            <div id="wz-prices" class="glass prices"></div>
+                            <div id="wz-price-check" class="wz-stack"></div>
+                        </section>
+
+                        <div id="wz-tariff-msgs" class="wz-stack hidden"></div>
+
+                        <section id="wz-suhrn" class="wz-screen hidden" aria-label="Zhrnutie">
+                            <div id="wz-summary" class="wz-stack"></div>
+                        </section>
+
+                        <div class="wz-foot">
+                            <button type="button" id="wz-back" class="pbtn ghost">Späť</button>
+                            <button type="button" id="wz-next" class="pbtn">Ďalej</button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
+
+        <!-- Ponuka prevziať nastavenie z otvoreného odkazu (#nastavenie=…). Pevne nad navigáciou,
+             aby bola vidieť na ktorejkoľvek karte. Odkaz môže poslať ktokoľvek, preto sa sám neuloží. -->
+        <section id="import-offer" class="cta offer hidden" aria-live="polite" aria-labelledby="import-offer-title">
+            <b id="import-offer-title">Prevziať nastavenie?</b>
+            <p id="import-offer-text"></p>
+            <div class="offer-act">
+                <button type="button" id="import-accept" class="pbtn">Prevziať</button>
+                <button type="button" id="import-decline" class="pbtn ghost">Nie, ďakujem</button>
+            </div>
+        </section>
 
         <nav class="tabs" aria-label="Karty appky">
             <button type="button" id="nav-mozem" data-panel="mozem">
