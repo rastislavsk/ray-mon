@@ -54,11 +54,11 @@ async function main() {
     if (sha256(source) !== SOURCE_SHA256) throw new Error('Zdroj má iný hash, než aký skript čaká.');
     const woff2 = await subsetFont(source, CHARS, {
         targetFormat: 'woff2',
+        // Tabuľky prep a gasp (hinty glyfov pôvodné písmo nemá) ostávajú ako v súboroch Google Fonts:
+        // FreeType na Linuxe podľa nich vykresľuje a bez nich mu vychádzali iné šírky textu.
         // Len vlastnosti, ktoré appka potrebuje (kerning, ligatúry, diakritika, tabuľkové číslice pre
         // font-variant-numeric). Ostatné (kapitálky, alternatívne tvary) by pribalili glyfy navyše.
         keepFeatures: ['kern', 'liga', 'calt', 'ccmp', 'locl', 'mark', 'mkmk', 'tnum', 'case', 'rlig', 'rvrn'],
-        // Hinty na vysokom rozlíšení telefónov nepomôžu, len pridajú bajty.
-        noHinting: true,
     });
     await writeFile(TARGET, woff2);
     console.log(`${TARGET}: ${woff2.length} B, sha256 ${sha256(woff2)}`);
