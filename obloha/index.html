@@ -70,9 +70,65 @@
                 <p id="mz-count" class="glass count"></p>
                 <button type="button" id="mz-quip" class="quote"><q id="mz-quip-text"></q><small id="mz-quip-hint"></small></button>
             </section>
-            <section id="panel-terazky" class="panel hidden" aria-labelledby="ttl-terazky">
+            <!-- Karta Teraz: texty, graf aj pás odporúčaní skladá render (web/render/teraz.js)
+                 z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
+                 aj šípky na ňom ukážu iný čas (náhľad). -->
+            <section id="panel-terazky" class="panel teraz hidden" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
-                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+                <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
+                <p id="tz-src" class="src"></p>
+                <p id="tz-sub" class="sub"></p>
+                <button type="button" id="tz-retry" class="pbtn retry"></button>
+                <div id="tz-guess" class="cta">
+                    <b id="tz-guess-title"></b>
+                    <p id="tz-guess-text"></p>
+                    <button type="button" id="tz-guess-btn" class="pbtn"></button>
+                </div>
+                <div id="tz-ask" class="cta">
+                    <b id="tz-ask-title"></b>
+                    <p id="tz-ask-text"></p>
+                    <button type="button" id="tz-ask-btn" class="pbtn"></button>
+                </div>
+                <div id="tz-plot">
+                    <div
+                        id="tz-chart"
+                        class="glass day-scrub"
+                        role="slider"
+                        tabindex="0"
+                        aria-valuemin="0"
+                        aria-valuemax="1425"
+                        aria-describedby="tz-chart-desc"
+                    ></div>
+                    <p id="tz-chart-desc" class="sr"></p>
+                    <p id="tz-legend" class="legend"></p>
+                    <div class="hint">
+                        <span id="tz-hint"></span>
+                        <button type="button" id="tz-reset" class="hint-btn"></button>
+                    </div>
+                </div>
+                <div id="tz-recs">
+                    <div id="tz-strip" class="strip" role="group" tabindex="0">
+                        <div class="glass rec">
+                            <b id="tz-now-head" class="h"></b>
+                            <p id="tz-now-body"></p>
+                        </div>
+                        <div class="glass rec">
+                            <h2 id="tz-devices-title" class="glass-ttl"></h2>
+                            <p id="tz-devices"></p>
+                        </div>
+                        <div class="glass rec">
+                            <h2 id="tz-today-title" class="glass-ttl"></h2>
+                            <p id="tz-today"></p>
+                            <div class="bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
+                            <p id="tz-window"></p>
+                        </div>
+                        <div class="glass rec">
+                            <h2 id="tz-later-title" class="glass-ttl"></h2>
+                            <p id="tz-later"></p>
+                        </div>
+                    </div>
+                    <div id="tz-dots" class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                </div>
             </section>
             <section id="panel-7dni" class="panel hidden" aria-labelledby="ttl-7dni">
                 <h1 id="ttl-7dni" class="ttl">7 dní</h1>

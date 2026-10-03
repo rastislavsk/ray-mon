@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installedKw, MOZEM_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
-import { kwpText } from '../shared/format.js';
+import { kwpRoughText } from '../shared/format.js';
 import {
     MOZEM_CHIPS,
     mozemGuessText,
@@ -129,7 +129,7 @@ test('texty novej karty: nadpis zoznamu, mobily, výzvy, zrušenie behu', () => 
 
     assert.equal(mozemLogCancel(false, 14 * 60 + 50), 'Beží do 14:50 · zrušiť');
     assert.equal(mozemLogCancel(true, 15 * 60), 'Nabíja sa do 15:00 · zrušiť');
-    assert.match(mozemGuessText(5.22), /typickou strechou 5,22 kWp/);
+    assert.match(mozemGuessText(5.22), /typickou strechou asi 5 kWp./);
 });
 
 test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k tomu štítky a mobily', () => {
@@ -198,7 +198,7 @@ test('mozemSkyModel: poloha bez panelov odpovedá z typickej strechy a priznáva
     const m = mozemSkyModel(guessInput(FIXED_NOW));
     assert.equal(m.state, 'go');
     assert.equal(m.guess, mozemGuessText(installedKw(TYPICAL_PLANT)));
-    assert.ok(m.guess.includes(kwpText(installedKw(TYPICAL_PLANT))));
+    assert.ok(m.guess.includes(kwpRoughText(installedKw(TYPICAL_PLANT))));
     assert.match(m.list?.title || '', / · odhad$/);
     assert.equal(m.list?.estimate, true);
     assert.match(m.phones, /asi/);

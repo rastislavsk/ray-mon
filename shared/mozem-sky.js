@@ -42,7 +42,7 @@ export function sunArc(now, site, window) {
  * Meranie zo strechy: ide, alebo odkedy mlčí. Bez kiosku nie je čo merať.
  * @param {import('./day-plan.js').PlanInput & { kiosk: string }} input
  */
-function pvStatus({ now, site, pv, kiosk }) {
+export function pvStatus({ now, site, pv, kiosk }) {
     if (!kiosk || !pv) return { ok: false, since: null };
     const fresh = pvFreshness({ now, pv, site });
     return { ok: !fresh.stale, since: fresh.stale ? fresh.time : null };
@@ -100,7 +100,7 @@ function phonesOf(input, f, estimate) {
 }
 
 /** Veta bez dát: prečo ich appka nemá. @param {Parameters<typeof pvStatus>[0]} input @param {boolean} online */
-function offlineLead(input, online) {
+export function offlineLead(input, online) {
     const pv = pvStatus(input);
     return mozemOfflineText({ online, kiosk: !!input.kiosk, pvOk: pv.ok, pvSince: pv.since });
 }

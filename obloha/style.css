@@ -193,8 +193,10 @@ button:focus-visible {
 .mozem h2 {
     margin: 0;
 }
+/* Oblúk má po bokoch ten istý odstup ako ostatný obsah karty - časy východu a západu pod
+   jeho koncami tak nestoja na okraji displeja. */
 .arc {
-    padding: 4px 0 0;
+    padding: 4px 20px 0;
 }
 .arc svg {
     display: block;
@@ -471,6 +473,245 @@ button:focus-visible {
     font-weight: 500;
     letter-spacing: 0.04em;
     color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== Karta Teraz ===== */
+.teraz p,
+.teraz h2 {
+    margin: 0;
+}
+/* Veľké číslo: na úzkom displeji sa zmenší s jeho šírkou, aby sa „~10.25 kW“ nezalomilo. */
+.knum {
+    padding: 2px 20px 0;
+    font-size: min(76px, 19vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 118;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    white-space: nowrap;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+}
+.knum small {
+    margin-left: 6px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+/* Číslo z typickej strechy priznáva odhad aj písmom. */
+.knum.est {
+    font-style: italic;
+}
+.src {
+    padding: 8px 20px 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
+   ten obsluhuje JS (teraz-interactions.js). */
+.day-scrub {
+    margin-top: 14px;
+    padding: 10px 8px 6px;
+    touch-action: pan-y;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.day-scrub:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+/* Prst aj kurzor trafia vždy rámček grafu, nie SVG v ňom: render SVG pri každom posune náhľadu
+   vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove by k
+   rámčeku nedošli a náhľad by zamrzol po prvom pohybe. */
+.day-scrub svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+}
+.dc-area {
+    fill: rgba(255, 255, 255, 0.2);
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+/* Nameraná krivka dneška: plná biela cez predpoveď. */
+.dc-real {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.dc-limit {
+    stroke: rgba(185, 242, 140, 0.8);
+    stroke-dasharray: 3 4;
+}
+.dc-limit-t {
+    fill: rgba(255, 255, 255, 0.85);
+    font-size: 9px;
+    text-anchor: end;
+}
+.dc-t {
+    fill: rgba(255, 255, 255, 0.85);
+    font-size: 10px;
+    text-anchor: middle;
+}
+.dc-now {
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+.dc-now-dot {
+    fill: #fff;
+}
+.dc-prev {
+    stroke: #fff;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+}
+.dc-prev-dot {
+    fill: var(--ink);
+    stroke: #fff;
+    stroke-width: 2;
+}
+.dc-pill {
+    fill: #fff;
+}
+.dc-pill-t {
+    fill: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+/* Farby pásu plánu aj legendy pod ním: tie isté tri významy ako všade v appke. */
+.day-scrub [data-tone='plain'] {
+    fill: rgba(255, 255, 255, 0.3);
+}
+.day-scrub [data-tone='sun'] {
+    fill: var(--yes);
+}
+.day-scrub [data-tone='cheap'] {
+    fill: var(--cheap);
+}
+.day-scrub [data-tone='costly'] {
+    fill: var(--costly);
+}
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 8px 20px 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.92);
+}
+.legend span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+.legend span::before {
+    content: '';
+    width: 12px;
+    height: 7px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+.legend [data-tone='sun']::before {
+    background: var(--yes);
+}
+.legend [data-tone='cheap']::before {
+    background: var(--cheap);
+}
+.legend [data-tone='costly']::before {
+    background: var(--costly);
+}
+.hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 4px 16px 0 20px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+}
+.hint-btn {
+    flex: none;
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+/* Pás odporúčaní listuje prehliadač; karty sú užšie než pás, aby bolo vidno, že ďalej niečo je. */
+.strip {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 14px;
+    scrollbar-width: none;
+}
+.strip::-webkit-scrollbar {
+    display: none;
+}
+.strip:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+}
+.rec {
+    flex: 0 0 86%;
+    align-content: start;
+    margin: 0;
+    scroll-snap-align: start;
+}
+.rec p {
+    font-size: 15px;
+    line-height: 1.35;
+}
+.rec .h {
+    font-size: 19px;
+    line-height: 1.2;
+    font-variation-settings: 'wdth' 108;
+}
+.bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+}
+.bar i {
+    display: block;
+    height: 100%;
+    background: var(--yes);
+}
+.dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    padding: 6px 0 14px;
+}
+.dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+}
+.dots i.on {
+    background: #fff;
 }
 
 /* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu

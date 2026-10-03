@@ -117,6 +117,16 @@ function unitFor(power, live, measured) {
     return live ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)';
 }
 
+/**
+ * Odkiaľ výkon je - to isté ako `unitFor`, len ako hodnota (karta Teraz novej appky ho píše
+ * vlastnými slovami). @param {number} power @param {boolean} live @param {boolean} measured
+ * @returns {'live' | 'measured' | 'forecast' | null}
+ */
+function sourceFor(power, live, measured) {
+    if (!Number.isFinite(power)) return null;
+    return live ? 'live' : measured ? 'measured' : 'forecast';
+}
+
 /** @param {HeroInput} state */
 export function heroModel(state) {
     const nowMinutes = localMinutes(state.now, state.site.timezone);
@@ -154,6 +164,7 @@ export function heroModel(state) {
         dial: dialFor(power, installedKw(state.plant), th),
         powerText: Number.isFinite(power) ? dialText(power) : '–',
         unitText: unitFor(power, live !== null, measured),
+        source: sourceFor(power, live !== null, measured),
         previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };
 }
