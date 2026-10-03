@@ -132,16 +132,27 @@
         return null;
     }
 
-    /** Stránka širšia než okno a navigácia vyššia než miesto, ktoré jej stránka necháva dole. */
+    /**
+     * Stránka širšia než okno a navigácia, ktorá zakryje obsah: dole (telefón) vyššia než miesto,
+     * ktoré jej stránka necháva na konci, hore (širšia obrazovka) vyššia než odstup, s ktorým
+     * prehliadač posúva k prvku s fokusom (scroll-padding-top).
+     */
     function celaStranka() {
         const out = [];
         const W = document.documentElement.clientWidth;
         if (document.documentElement.scrollWidth > W + 0.5)
             out.push(`stránka je širšia než okno (${document.documentElement.scrollWidth} > ${W})`);
-        const nav = document.querySelector('.tabs')?.getBoundingClientRect();
+        const tabs = document.querySelector('.tabs');
+        const nav = tabs?.getBoundingClientRect();
+        if (!tabs || !nav) return out;
+        if (getComputedStyle(tabs).position === 'sticky') {
+            const pad = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+            if (nav.height > pad + 0.5) out.push(`navigácia hore (${nav.height} px) zakryje prvok s fokusom (odstup ${pad} px)`);
+            return out;
+        }
         const page = document.getElementById('page');
         const pad = page ? parseFloat(getComputedStyle(page).paddingBottom) : 0;
-        if (nav && nav.height > pad + 0.5) out.push(`navigácia (${nav.height} px) zakryje koniec stránky (miesto ${pad} px)`);
+        if (nav.height > pad + 0.5) out.push(`navigácia (${nav.height} px) zakryje koniec stránky (miesto ${pad} px)`);
         return out;
     }
 
@@ -183,10 +194,15 @@
         '[tabindex]:not([tabindex="-1"])',
     ].join(', ');
 
-    /** Najvzdialenejší pevne umiestnený predok (navigácia, ponuka) - iná vrstva než stránka. @param {Element} el */
+    /**
+     * Najvzdialenejší pevne umiestnený či prilepený predok (navigácia, ponuka) - iná vrstva než
+     * stránka. Na širšej obrazovke je navigácia hore prilepená (sticky) a obsah pod ňu odchádza.
+     * @param {Element} el
+     */
     function vrstva(el) {
         let layer = null;
-        for (let a = /** @type {Element | null} */ (el); a; a = a.parentElement) if (getComputedStyle(a).position === 'fixed') layer = a;
+        for (let a = /** @type {Element | null} */ (el); a; a = a.parentElement)
+            if (/^(fixed|sticky)$/.test(getComputedStyle(a).position)) layer = a;
         return layer;
     }
 
@@ -239,6 +255,9 @@
         return [...out];
     }
 
+    /** Úroveň nadpisu pre čítačku: aria-level má prednosť pred značkou (prehľad so stĺpcami). @param {Element} h */
+    const uroven = (h) => Number(h.getAttribute('aria-level') ?? h.tagName[1]);
+
     /**
      * Nadpisy v poradí: prázdny nadpis a preskočená úroveň (po h2 hneď h4).
      * @param {Element[]} hs @param {string} kde
@@ -247,7 +266,7 @@
         const out = [];
         let prev = 0;
         for (const h of hs) {
-            const level = Number(h.tagName[1]);
+            const level = uroven(h);
             const text = (h.textContent ?? '').trim();
             if (!text) out.push(`${kde}: prázdny ${meno(h)}`);
             if (prev && level > prev + 1) out.push(`${kde}: po h${prev} hneď h${level} „${text}“`);
@@ -274,7 +293,8 @@
     /**
      * Štruktúra pre čítačku: hlavička, navigácia a obsah práve raz; mimo dialógu práve jeden
      * nadpis úrovne 1, ten je prvý a úrovne pod ním idú bez preskakovania. Nadpisy len pre
-     * čítačku (.sr) sa rátajú, skryté (display: none) nie.
+     * čítačku (.sr) sa rátajú, skryté (display: none) nie. Úroveň je tá, ktorú počuje čítačka
+     * (aria-level, inak značka) - v prehľade so stĺpcami sú nadpisy kariet o úroveň nižšie.
      */
     function struktura() {
         const out = [];
@@ -286,9 +306,9 @@
             if (document.querySelectorAll(sel).length !== 1) out.push(`${n} (${sel}) nie je práve raz`);
         const all = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => h.checkVisibility());
         const page = all.filter((h) => !h.closest('dialog'));
-        const h1 = page.filter((h) => h.tagName === 'H1');
-        if (h1.length !== 1) out.push(`nadpisov h1 je ${h1.length}: ${h1.map((h) => h.textContent).join(', ')}`);
-        if (page[0] && page[0].tagName !== 'H1') out.push(`prvý nadpis je ${meno(page[0])} „${page[0].textContent}“`);
+        const h1 = page.filter((h) => uroven(h) === 1);
+        if (h1.length !== 1) out.push(`nadpisov úrovne 1 je ${h1.length}: ${h1.map((h) => h.textContent).join(', ')}`);
+        if (page[0] && uroven(page[0]) !== 1) out.push(`prvý nadpis je ${meno(page[0])} „${page[0].textContent}“`);
         return [...out, ...poradie(page, 'stránka'), ...dialog(all)];
     }
 

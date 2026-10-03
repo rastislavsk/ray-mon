@@ -8,6 +8,7 @@ import { voiceTexts } from '../../../shared/messages.js';
 import { sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
 import { dayChartSvg, legendHtml } from './day-chart.js';
 import { weatherIcon } from './icons.js';
+import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -147,14 +148,16 @@ let opened = null;
 
 /**
  * Otvorenie a zatvorenie detailu: detail začína hore s fokusom na „‹ 7 dní“, prehľad sa po
- * návrate vráti na svoje miesto.
+ * návrate vráti na svoje miesto. V prehľade so stĺpcami je detail len v stĺpci 7 dní - stránka sa
+ * posunie len toľko, aby bol jeho začiatok vidieť.
  * @param {AppState} state @param {'day' | 'week' | null} detail @param {Dom} dom
  */
 function moveFocus(state, detail, dom) {
     if (detail && !opened) {
         opened = { from: detail === 'week' ? 'week' : state.weekDay, y: window.scrollY };
-        window.scrollTo(0, 0);
-        (detail === 'week' ? dom.sdWeekBack : dom.sdDayBack).focus({ preventScroll: true });
+        const dash = dashboard(state);
+        if (!dash) window.scrollTo(0, 0);
+        (detail === 'week' ? dom.sdWeekBack : dom.sdDayBack).focus({ preventScroll: !dash });
     } else if (!detail && opened) {
         const { from, y } = opened;
         opened = null;
@@ -167,7 +170,7 @@ function moveFocus(state, detail, dom) {
 /** @param {AppState} state @param {Dom} dom */
 export function renderSedem(state, dom) {
     // Detail patrí karte 7 dní; s inou kartou sa zatvára a návrat na pôvodné miesto prepadá.
-    if (state.panel !== '7dni') return void (opened = null);
+    if (!shows(state, '7dni')) return void (opened = null);
     const m = sedemModel(state, { online: state.online, voice: state.voice });
     // Detail má zmysel len s predpoveďou; bez nej ostáva prehľad so stavom karty.
     const data = m.kind === 'ok' ? /** @type {SedemData} */ (state) : null;

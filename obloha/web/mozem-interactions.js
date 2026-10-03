@@ -35,7 +35,8 @@ function logLaunch(store, sun) {
 export function initMozem(store, dom, refresh) {
     dom.mzItems.addEventListener('click', (e) => {
         const row = e.target instanceof Element ? e.target.closest('[data-item]') : null;
-        if (row instanceof HTMLElement && row.dataset.item) store.setState({ mozemItem: row.dataset.item });
+        // Panel veci robí z Môžem? aktívny stĺpec prehľadu (na telefóne je Môžem? aktívna karta).
+        if (row instanceof HTMLElement && row.dataset.item) store.setState({ mozemItem: row.dataset.item, panel: 'mozem' });
     });
     dom.mzSheetX.addEventListener('click', () => closeSheet(store));
     // Ťuknutie vedľa panelu (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.

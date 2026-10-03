@@ -7,6 +7,7 @@ import { MINUTES_PER_DAY, PREVIEW, SWIPE } from '../../shared/config.js';
 import { chartMinutes } from '../../shared/day-chart.js';
 import { localMinutes } from '../../shared/solar.js';
 import { stepBack } from './nav-back.js';
+import { shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -17,8 +18,8 @@ const AXIS_PX = 8;
 /** Posledná štvrťhodina dňa - najďalej, kam náhľad siaha. */
 const LAST = MINUTES_PER_DAY - PREVIEW.keyStepMin;
 
-/** Je na karte graf? Bez predpovede (a bez polohy) náhľad nie je čoho. @param {import('./state.js').AppState} s */
-const hasChart = (s) => s.panel === 'terazky' && s.known !== 'nic' && !!s.forecast;
+/** Je na obrazovke graf? Bez predpovede (a bez polohy) náhľad nie je čoho. @param {import('./state.js').AppState} s */
+const hasChart = (s) => shows(s, 'terazky') && s.known !== 'nic' && !!s.forecast;
 
 /**
  * Náhľad v čase pod prstom či kurzorom. Čas sa počíta z polohy v SVG grafu (nie v jeho rámčeku
@@ -30,7 +31,8 @@ function previewAt(store, dom, clientX) {
     const svg = dom.tzChart.querySelector('svg');
     const box = (svg || dom.tzChart).getBoundingClientRect();
     const min = chartMinutes((clientX - box.left) / (box.width || 1));
-    if (store.get().terazPreview !== min) store.setState({ terazPreview: min });
+    // Náhľad robí z Teraz aktívny stĺpec prehľadu (na telefóne Teraz aktívna je).
+    if (store.get().terazPreview !== min) store.setState({ terazPreview: min, panel: 'terazky' });
 }
 
 /**
@@ -114,7 +116,7 @@ function bindKeys(store, dom) {
         const to = { ArrowLeft: from - step, ArrowDown: from - step, ArrowRight: from + step, ArrowUp: from + step, Home: 0, End: LAST };
         if (!(e.key in to)) return;
         e.preventDefault();
-        store.setState({ terazPreview: Math.max(0, Math.min(LAST, to[e.key])) });
+        store.setState({ terazPreview: Math.max(0, Math.min(LAST, to[e.key])), panel: 'terazky' });
     });
 }
 

@@ -4,6 +4,7 @@
 // swipeTarget v state.js, tlačidlo Späť v telefóne trackHistory - detail je krok navigácie.
 
 import { stepBack } from './nav-back.js';
+import { shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -19,14 +20,17 @@ export function closeDetail(store) {
 export function initSedem(store, dom, refresh) {
     dom.sdDays.addEventListener('click', (e) => {
         const row = e.target instanceof Element ? e.target.closest('[data-day]') : null;
-        if (row instanceof HTMLElement) store.setState({ weekDetail: 'day', weekDay: Number(row.dataset.day) });
+        // Detail robí zo 7 dní aktívny stĺpec prehľadu (na telefóne je 7 dní aktívna karta).
+        if (row instanceof HTMLElement) store.setState({ weekDetail: 'day', weekDay: Number(row.dataset.day), panel: '7dni' });
     });
-    dom.sdSum.addEventListener('click', () => store.setState({ weekDetail: 'week' }));
+    dom.sdSum.addEventListener('click', () => store.setState({ weekDetail: 'week', panel: '7dni' }));
     for (const btn of [dom.sdDayBack, dom.sdWeekBack]) btn.addEventListener('click', () => closeDetail(store));
-    // Escape v detaile robí to isté ako „‹ 7 dní“. Na iných kartách si Escape berú ich prvky.
+    // Escape v detaile robí to isté ako „‹ 7 dní“. Na iných kartách si Escape berú ich prvky - v
+    // prehľade so stĺpcami aj graf karty Teraz (náhľad) a otvorený dialóg, ktorý zavrie najprv seba.
     document.addEventListener('keydown', (e) => {
         const s = store.get();
-        if (e.key !== 'Escape' || s.panel !== '7dni' || !s.weekDetail) return;
+        if (e.key !== 'Escape' || e.defaultPrevented || !shows(s, '7dni') || !s.weekDetail) return;
+        if (s.mozemItem || s.poster || s.appSheet) return;
         e.preventDefault();
         closeDetail(store);
     });

@@ -2,6 +2,7 @@
 
 import { PANELS } from '../../../shared/config.js';
 import { skyNow } from '../../../shared/sky.js';
+import { dashboard, isColumn, shows } from '../state.js';
 import { renderHeader } from './header.js';
 import { renderMozem } from './mozem.js';
 import { renderImportOffer, renderNastavenie } from './nastavenie.js';
@@ -26,12 +27,28 @@ function renderSky(state, dom) {
     dom.root.toggleAttribute('data-calm', !state.liveSky);
 }
 
-/** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
+/**
+ * Viditeľné karty. Rozloženie podľa šírky okna (`data-layout`) a prehľad so stĺpcami (`data-dash`)
+ * sú na <html> - style.css podľa nich skladá stĺpce, hlavičku aj navigáciu, žiadna šírka v ňom nie
+ * je natvrdo. V prehľade sú nadpisy kariet o úroveň nižšie pod spoločným nadpisom (čítačka) a
+ * aktívny stĺpec je zvýraznený; navigácia naň vie presunúť fokus.
+ * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
+ */
 function renderPanels(state, dom) {
+    const dash = dashboard(state);
+    dom.root.dataset.layout = state.layout;
+    dom.root.toggleAttribute('data-dash', dash);
     dom.page.dataset.panel = state.panel;
     dom.page.dataset.dir = state.panelDir > 0 ? 'next' : 'prev';
+    dom.dashTitle.classList.toggle('hidden', !dash);
     for (const p of PANELS) {
-        dom.panels[p].classList.toggle('hidden', p !== state.panel);
+        const column = dash && isColumn(p);
+        dom.panels[p].classList.toggle('hidden', !shows(state, p));
+        dom.panels[p].toggleAttribute('data-on', column && p === state.panel);
+        if (column) dom.panels[p].tabIndex = -1;
+        else dom.panels[p].removeAttribute('tabindex');
+        if (column) dom.titles[p].setAttribute('aria-level', '2');
+        else dom.titles[p].removeAttribute('aria-level');
         if (p === state.panel) dom.navs[p].setAttribute('aria-current', 'page');
         else dom.navs[p].removeAttribute('aria-current');
     }

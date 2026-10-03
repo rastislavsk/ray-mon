@@ -2,7 +2,7 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
+import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
@@ -20,14 +20,16 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj kiosk. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
- * a mení ich ten istý kód (shared/setup-flow.js).
+ * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
  * @typedef {(typeof PANELS)[number]} Panel
+ * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
  * @typedef {import('../../shared/summary.js').SummaryPeriod} PosterPeriod
  * @typedef {import('../../web/refresh.js').RefreshState & import('../../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
  *   panelDir: 1 | -1,
+ *   layout: Layout,
  *   tariff: import('../../shared/config.js').Tariff,
  *   launches: import('../../shared/launches.js').Launch[],
  *   mozemItem: string | null,
@@ -56,9 +58,11 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Otvorený plagát je tiež krok - Späť ho zavrie. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
- * Appka (`sheet`) rovnako - Späť ho zavrie.
+ * Appka (`sheet`) rovnako - Späť ho zavrie. `dash` hovorí, že krok patrí prehľadu so stĺpcami
+ * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail ani plagát v ňom nepatria len
+ * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
  * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null, poster: PosterPeriod | null,
- *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null }} NavStep
+ *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, dash?: true }} NavStep
  */
 
 /**
@@ -66,13 +70,17 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
  *   launches: import('../../shared/launches.js').Launch[], online: boolean,
- *   incoming?: import('../../shared/settings.js').Settings | null, look?: import('../../shared/settings.js').Look }} start
+ *   incoming?: import('../../shared/settings.js').Settings | null, look?: import('../../shared/settings.js').Look,
+ *   layout?: Layout }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
- *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet a nastavenie
- *   z odkazu, ktoré appka ponúkne prevziať, a vzhľad (tón hlášok, živá obloha)
+ *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet, nastavenie
+ *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha) a rozloženie
  * @returns {AppState}
  */
-export function initialState(now, { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK }) {
+export function initialState(
+    now,
+    { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK, layout = 'narrow' },
+) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
@@ -81,6 +89,7 @@ export function initialState(now, { saved, site, startPanel, dayLog, launches, o
         panel: startPanel,
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         panelDir: 1,
+        layout,
         known,
         site: start.site,
         plant: start.plant,
@@ -139,6 +148,34 @@ export function nextPanel(panel, dir) {
     return PANELS[PANELS.indexOf(panel) + dir] ?? null;
 }
 
+/**
+ * Rozloženie podľa šírky okna (LAYOUT_PX): telefón a tablet na výšku, tablet na šírku, počítač.
+ * @param {number} width šírka okna v px @returns {Layout}
+ */
+export function layoutOf(width) {
+    return width >= LAYOUT_PX.wide ? 'wide' : width >= LAYOUT_PX.medium ? 'medium' : 'narrow';
+}
+
+/** Karty, ktoré široká obrazovka ukazuje naraz ako stĺpce prehľadu, zľava doprava. */
+export const COLUMNS = /** @type {const} */ (['mozem', 'terazky', '7dni']);
+
+/** Je karta stĺpcom prehľadu? @param {Panel} panel */
+export const isColumn = (panel) => COLUMNS.some((c) => c === panel);
+
+/**
+ * Ukazuje appka prehľad so stĺpcami? Len na širšej obrazovke a len na kartách Môžem?, Teraz a
+ * 7 dní - Štatistika a Nastavenie sú aj tam samostatná stránka. `panel` je potom aktívny stĺpec:
+ * ten, ktorý vybrala navigácia alebo v ktorom človek naposledy niečo otvoril.
+ * @param {Pick<AppState, 'layout' | 'panel'>} state
+ */
+export const dashboard = (state) => state.layout !== 'narrow' && isColumn(state.panel);
+
+/**
+ * Je karta na obrazovke? Na telefóne len vybraná, v prehľade všetky jeho stĺpce.
+ * @param {Pick<AppState, 'layout' | 'panel'>} state @param {Panel} panel
+ */
+export const shows = (state, panel) => panel === state.panel || (dashboard(state) && isColumn(panel));
+
 /** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {
     return {
@@ -150,13 +187,17 @@ export function navStep(state) {
         setup: state.setupStep,
         roof: state.setupRoof,
         sheet: state.appSheet,
+        ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
     };
 }
 
-/** @param {NavStep} a @param {NavStep} b */
+/**
+ * Rovnaký krok? V prehľade sú všetky stĺpce jedna obrazovka - prepnutie stĺpca nový krok nepridá.
+ * @param {NavStep} a @param {NavStep} b
+ */
 export function sameNavStep(a, b) {
     return (
-        a.panel === b.panel &&
+        (a.panel === b.panel || (!!a.dash && !!b.dash)) &&
         a.item === b.item &&
         (a.preview === null) === (b.preview === null) &&
         a.detail === b.detail &&
@@ -168,18 +209,19 @@ export function sameNavStep(a, b) {
 }
 
 /**
- * Detail z položky histórie. Patrí len karte 7 dní; položka zo skoršej verzie ho nemá.
- * @param {Panel} panel @param {unknown} detail @returns {WeekDetail | null}
+ * Detail z položky histórie. Patrí len karte 7 dní (v prehľade ktorémukoľvek stĺpcu - 7 dní je
+ * vidieť vždy); položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {boolean} dash @param {unknown} detail @returns {WeekDetail | null}
  */
-const weekDetailOf = (panel, detail) => (panel === '7dni' && (detail === 'day' || detail === 'week') ? detail : null);
+const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (detail === 'day' || detail === 'week') ? detail : null);
 
 /**
- * Plagát z položky histórie. Otvára sa len na karte Môžem? a Štatistika; položka zo skoršej
- * verzie ho nemá.
- * @param {Panel} panel @param {unknown} poster @returns {PosterPeriod | null}
+ * Plagát z položky histórie. Otvára sa len na karte Môžem? a Štatistika (v prehľade z ktoréhokoľvek
+ * stĺpca); položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {boolean} dash @param {unknown} poster @returns {PosterPeriod | null}
  */
-const posterOf = (panel, poster) =>
-    (panel === 'mozem' || panel === 'statistika') && SUMMARY_PERIODS.some((p) => p === poster)
+const posterOf = (panel, dash, poster) =>
+    (panel === 'mozem' || panel === 'statistika' || dash) && SUMMARY_PERIODS.some((p) => p === poster)
         ? /** @type {PosterPeriod} */ (poster)
         : null;
 
@@ -202,6 +244,12 @@ function setupPlaceOf(setup = null, roof = 0) {
 }
 
 /**
+ * Prehľad so stĺpcami z položky histórie. Poznajú ho len jeho karty; položka zo skoršej verzie ho nemá.
+ * Vracia časť kroku: `{ dash: true }`, inak nič. @param {Panel} panel @param {unknown} dash @returns {{ dash?: true }}
+ */
+const dashOf = (panel, dash) => (dash === true && isColumn(panel) ? { dash: true } : {});
+
+/**
  * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
  * pri nej správa ako predtým - odíde zo stránky.
  * @param {unknown} raw @returns {NavStep | null}
@@ -210,22 +258,25 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item, preview, detail, poster, setup, roof, sheet } =
+    const { panel, item, preview, detail, poster, setup, roof, sheet, dash } =
         /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown, poster?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown }} */ (raw);
+         *   sheet?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
+    const d = dashOf(p, dash);
+    const inDash = !!d.dash;
     // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
     const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
     const step = {
         panel: p,
         item: null,
         preview: at ? /** @type {number} */ (preview) : null,
-        detail: weekDetailOf(p, detail),
-        poster: posterOf(p, poster),
+        detail: weekDetailOf(p, inDash, detail),
+        poster: posterOf(p, inDash, poster),
         ...place,
         sheet: appSheetOf(p, sheet),
+        ...d,
     };
     if (item === null || item === undefined) return step;
     return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
@@ -241,13 +292,15 @@ export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
  * Návrat na krok z histórie (tlačidlo Späť): karta, panel veci, náhľad aj detail tak, ako boli.
  * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
  * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
+ * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
  * @param {AppState} state @param {NavStep} step
  */
 export function navChange(state, step) {
     const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
     const endsEdit = step.setup === null || step.setup === 'suhrn';
+    const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
     return {
-        ...panelChange(state.panel, step.panel),
+        ...panelChange(state.panel, panel),
         mozemItem: step.item,
         terazPreview: preview,
         weekDetail: step.detail,
@@ -265,19 +318,29 @@ export function navChange(state, step) {
  * Detail je podobrazovka karty a ťah ju neopúšťa: v detaile dňa listuje dni, ako súčasná appka
  * (web/swipe.js). Ťah doprava je všade krok späť, takže keď už listovať nie je kam (dnešok, alebo
  * detail týždňa), vedie do prehľadu dní - `'back'`, krok v histórii. Doľava z posledného dňa
- * nevedie nikam.
+ * nevedie nikam. V prehľade so stĺpcami sú karty vedľa seba a listovať ich nemá zmysel; ťah tam
+ * listuje len dni v detaile, a to len ťah v stĺpci 7 dní (`where`).
  * @param {AppState} state @param {number} dx záporné = ťah doľava
+ * @param {Panel | null} [where] karta, v ktorej ťah začal (null = mimo kariet)
  * @returns {Partial<AppState> | 'back' | null}
  */
-export function swipeTarget(state, dx) {
-    const dir = dx < 0 ? 1 : -1;
+export function swipeTarget(state, dx, where = null) {
+    const dash = dashboard(state);
     if (state.panel === 'nastavenie' && state.setupStep) return null;
-    if (state.panel === '7dni' && state.weekDetail && state.forecast) {
-        const back = dx > 0 ? /** @type {const} */ ('back') : null;
-        if (state.weekDetail === 'week') return back;
-        const day = state.weekDay + dir;
-        return day >= 0 && day < state.forecast.days.length ? { weekDay: day } : back;
-    }
-    const to = nextPanel(state.panel, dir);
+    if ((dash ? where === '7dni' : state.panel === '7dni') && state.weekDetail && state.forecast)
+        return swipeDetail(state.weekDetail, state.weekDay, state.forecast.days.length, dx);
+    const to = dash ? null : nextPanel(state.panel, dx < 0 ? 1 : -1);
     return to ? panelChange(state.panel, to) : null;
+}
+
+/**
+ * Ťah v detaile karty 7 dní: v detaile dňa susedný deň, inak (a na kraji doprava) späť do prehľadu.
+ * @param {WeekDetail} detail @param {number} day @param {number} days počet dní v predpovedi @param {number} dx
+ * @returns {{ weekDay: number } | 'back' | null}
+ */
+function swipeDetail(detail, day, days, dx) {
+    const back = dx > 0 ? /** @type {const} */ ('back') : null;
+    if (detail === 'week') return back;
+    const to = day + (dx < 0 ? 1 : -1);
+    return to >= 0 && to < days ? { weekDay: to } : back;
 }

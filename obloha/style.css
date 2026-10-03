@@ -2358,6 +2358,136 @@ button:focus-visible {
     stroke: var(--yes);
 }
 
+/* ===== Tablet na šírku a počítač =====
+   Rozloženie zapisuje render na <html> (data-layout podľa šírky okna, hranice v LAYOUT_PX
+   v shared/config.js), takže tu nie je ani jedna šírka natvrdo v @media. Od strednej šírky je
+   navigácia hore a meno karty je vedľa ikony. Je to pás nad stránkou, nie nad obsahom: telo je
+   stĺpec, navigácia ide v ňom prvá (order) a lepí sa k hornému okraju. V kóde ostáva za obsahom,
+   takže Tab ide najprv stĺpcami zľava doprava ako na telefóne. Výška pásu tak rastie s písmom
+   a nič neprekryje. */
+:root:is([data-layout='medium'], [data-layout='wide']) {
+    /* Fokus a posun k stĺpcu nesmú skončiť pod pásom navigácie. Pás rastie s písmom v systéme
+       (a pri veľkom sa zalomí na dva riadky), preto odstup v rem. */
+    scroll-padding-top: 5.5rem;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) body {
+    display: flex;
+    flex-direction: column;
+}
+/* V stĺpci tela by stredenie okrajmi zúžilo hlavičku aj stránku na obsah. */
+:root:is([data-layout='medium'], [data-layout='wide']) :is(.st, .page) {
+    width: 100%;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .st {
+    padding-top: 10px;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .page {
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .tabs {
+    order: -1;
+    position: sticky;
+    inset: 0 auto auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: max(8px, env(safe-area-inset-top)) 16px 8px;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .tabs button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .tabs button[aria-current='page'] {
+    background: rgba(255, 255, 255, 0.16);
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .tabs svg {
+    width: 18px;
+    height: 18px;
+}
+/* Ponuka prevziať nastavenie: dole už navigácia nie je. */
+:root:is([data-layout='medium'], [data-layout='wide']) .offer {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+}
+/* Panel veci a okná sekcie Appka sú dialóg v strede, nie panel zospodu. */
+:root:is([data-layout='medium'], [data-layout='wide']) .sheet {
+    inset: 0;
+    max-width: 520px;
+    height: fit-content;
+    max-height: 86%;
+    margin: auto;
+    border-radius: 26px;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .sheet-in {
+    padding-bottom: 22px;
+}
+
+/* Prehľad: Môžem?, Teraz a 7 dní naraz ako stĺpce (data-dash). Obsah je ten istý ako na
+   telefóne, len vedľa seba. Na tablete na šírku dva stĺpce - vľavo Môžem?, vpravo Teraz a pod
+   ním 7 dní; na počítači tri. Štatistika a Nastavenie ostávajú samostatnou stránkou v strede. */
+:root[data-dash] .st {
+    max-width: 1520px;
+    padding-inline: 36px;
+}
+:root[data-dash] .page {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    /* Kratší stĺpec Môžem? nesmie roztiahnuť riadok s Teraz - voľné miesto patrí poslednému. */
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 8px 20px;
+    max-width: 1520px;
+    padding-inline: 16px;
+}
+:root[data-dash][data-layout='wide'] .page {
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr) minmax(0, 380px);
+    grid-template-rows: auto;
+}
+:root[data-dash] #panel-mozem {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+:root[data-dash] #panel-terazky {
+    grid-column: 2;
+    grid-row: 1;
+}
+:root[data-dash] #panel-7dni {
+    grid-column: 2;
+    grid-row: 2;
+}
+:root[data-dash][data-layout='wide'] :is(#panel-mozem, #panel-7dni) {
+    grid-row: 1;
+}
+:root[data-dash][data-layout='wide'] #panel-7dni {
+    grid-column: 3;
+}
+/* Stĺpec je kontajner: veľké slovo sa zmenší podľa šírky stĺpca, nie okna. */
+:root[data-dash] .panel {
+    container-type: inline-size;
+    padding-bottom: 6px;
+    border-radius: 28px;
+}
+:root[data-dash] .word {
+    font-size: min(var(--word, 50px), calc((100cqi - 40px) / var(--word-len, 10)));
+}
+/* Aktívny stĺpec (vybraný v navigácii, alebo v ňom človek naposledy niečo otvoril) má jemný
+   rámik - ten istý, ktorý svieti v navigácii. Fokus z klávesnice je výrazný ako všade. */
+:root[data-dash] .panel[data-on] {
+    outline: 1.5px solid rgba(255, 255, 255, 0.45);
+    outline-offset: -1px;
+}
+.panel:focus {
+    outline: none;
+}
+:root[data-dash] .panel:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -2px;
+}
+
 /* Text len pre čítačku obrazovky. */
 .sr {
     position: absolute;

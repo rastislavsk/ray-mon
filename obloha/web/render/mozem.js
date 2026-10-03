@@ -5,6 +5,7 @@
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
+import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/mozem-sky.js').MozemSkyModel} Model */
@@ -158,8 +159,8 @@ function renderSheet(it, dom, voice) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
-    // Panel veci patrí karte Môžem?; na inej karte je vždy zatvorený.
-    if (state.panel !== 'mozem') {
+    // Panel veci patrí karte Môžem?; keď nie je na obrazovke, je vždy zatvorený.
+    if (!shows(state, 'mozem')) {
         renderAnnounce(null, dom);
         return renderSheet(null, dom);
     }

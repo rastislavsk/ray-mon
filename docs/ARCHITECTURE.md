@@ -237,6 +237,20 @@ krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); počas sp
 kartu neprepne (`swipeTarget`) a Escape je jeho „Späť“. Úprava panelov z prehľadu má navyše
 záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa všetko o streche.
 
+Na širšej obrazovke nová appka mení rozloženie podľa šírky okna, nie podľa druhu zariadenia.
+Hranice sú `LAYOUT_PX` v `shared/config.js` (stredná šírka je tá istá, od ktorej súčasná appka
+kreslí desktop); `layoutOf` v `obloha/web/state.js` z nich urobí `layout` v stave a render ho
+zapíše na `<html>` ako `data-layout` – `style.css` tak nemá v `@media` ani jednu šírku natvrdo.
+Pod strednou šírkou (telefón, tablet na výšku) je appka taká, ako bola. Od nej sú karty Môžem?,
+Teraz a 7 dní **prehľad so stĺpcami** (`dashboard`): na tablete na šírku dva, na počítači tri,
+navigácia je hore. Stĺpce sú tie isté karty, ktoré vidno naraz (`shows`), nie druhá verzia –
+render každej karty sa len pýta, či je na obrazovke. `panel` je v prehľade aktívny stĺpec: vyberie
+ho navigácia (presunie naň fokus, krokom v histórii to nie je – `sameNavStep` berie stĺpce prehľadu
+ako jednu obrazovku) alebo to, čo v ňom človek otvorí (panel veci, náhľad, detail). Pri zmene okna
+sa preto ukáže práve ten stĺpec aj s tým, čo je v ňom otvorené. Štatistika a Nastavenie sú aj na
+širokej obrazovke samostatná stránka. Ťah do strán v prehľade karty nelistuje, len dni v detaile
+dňa – a len ťah v stĺpci 7 dní (`swipeTarget`; prvok, na ktorom ťah začal, dodá `web/gesture.js`).
+
 ## Prečo takto
 
 - **Jednosmerný tok.** V pôvodnej appke volalo prekreslenie hlavnej karty šesť rôznych

@@ -207,6 +207,19 @@ async function kazdaObrazovka(page, check) {
     await check('sprievodca › zhrnutie');
 }
 
+/**
+ * Širšie obrazovky (krok 8): tablet na výšku má rozloženie telefónu so širšími okrajmi, tablet na
+ * šírku dva stĺpce, počítač tri a navigáciu hore. Každá kontrola beží aj na nich.
+ * @type {Array<{ width: number, height: number, name: string }>}
+ */
+const SIROKE = [
+    { width: 820, height: 1180, name: 'tablet na výšku' },
+    { width: 1180, height: 820, name: 'tablet na šírku' },
+    { width: 1440, height: 900, name: 'počítač' },
+];
+/** Telefón v predvolenej veľkosti testov a širšie obrazovky. */
+const VSETKY = [{ width: 390, height: 844, name: 'telefón' }, ...SIROKE];
+
 /** Výšky obrazovky, v ktorých sa meria text, ktorý sa posúva so stránkou. */
 const HEIGHTS = Array.from({ length: 21 }, (_, i) => i / 20);
 
@@ -272,17 +285,41 @@ test.describe('kontrast textu na oblohe a na skle', () => {
         }
     });
 
-    test('sprievodca: každý text na každej obrazovke má dosť kontrastu (poludnie)', async ({ page }) => {
-        test.slow();
-        const errors = await openObloha(page, { settings: null, site: SITE });
-        /** @type {string[]} */
-        const zle = [];
-        await kazdaObrazovka(page, async (name) => {
-            for (const z of slabyKontrast(await page.evaluate(() => window.kontrola.farby()))) zle.push(`${name}: ${z}`);
+    for (const { width, height, name } of SIROKE) {
+        for (const time of ['13:00', '19:30']) {
+            test(`${name} (${width} × ${height}) o ${time}: každý text na každej karte, v detailoch a dialógoch má dosť kontrastu`, async ({
+                page,
+            }) => {
+                test.slow();
+                await page.setViewportSize({ width, height });
+                const errors = await openObloha(page, { time: at(time) });
+                /** @type {string[]} */
+                const zle = [];
+                await kazdaKarta(page, async (miesto) => {
+                    for (const z of slabyKontrast(await page.evaluate(() => window.kontrola.farby()))) zle.push(`${miesto}: ${z}`);
+                });
+                expect(zle).toEqual([]);
+                expect(errors).toEqual([]);
+            });
+        }
+    }
+
+    for (const { width, height, name } of VSETKY) {
+        test(`sprievodca, ${name} (${width} × ${height}): každý text na každej obrazovke má dosť kontrastu (poludnie)`, async ({
+            page,
+        }) => {
+            test.slow();
+            await page.setViewportSize({ width, height });
+            const errors = await openObloha(page, { settings: null, site: SITE });
+            /** @type {string[]} */
+            const zle = [];
+            await kazdaObrazovka(page, async (miesto) => {
+                for (const z of slabyKontrast(await page.evaluate(() => window.kontrola.farby()))) zle.push(`${miesto}: ${z}`);
+            });
+            expect(zle).toEqual([]);
+            expect(errors).toEqual([]);
         });
-        expect(zle).toEqual([]);
-        expect(errors).toEqual([]);
-    });
+    }
 });
 
 // Popisky osí grafov (čas pod grafom, dni pod stĺpcami, hodiny mapy a kruhu tarify, východ
@@ -301,12 +338,15 @@ const PRECHADZKY = [
     { name: 'sprievodca', opts: { settings: null, site: SITE }, walk: kazdaObrazovka },
 ];
 
+/** Telefóny pre veľkosť písma a dotykové plochy (najužší a bežný) a širšie obrazovky. */
+const SIRKY = [{ width: 320, height: 800 }, { width: 390, height: 800 }, ...SIROKE];
+
 test.describe('veľkosť písma', () => {
-    for (const width of [320, 390]) {
+    for (const { width, height } of SIRKY) {
         for (const { name, opts, walk } of PRECHADZKY) {
             test(`šírka ${width} px, ${name}: žiadny text pod 12 px, popisky osí v grafoch nie pod 10 px`, async ({ page }) => {
                 test.slow();
-                await page.setViewportSize({ width, height: 800 });
+                await page.setViewportSize({ width, height });
                 const errors = await openObloha(page, opts);
                 /** @type {string[]} */
                 const zle = [];
@@ -325,32 +365,34 @@ test.describe('veľkosť písma', () => {
 });
 
 test.describe('väčšie písmo v systéme (200 %)', () => {
-    for (const { name, opts, walk } of PRECHADZKY) {
-        test(`šírka 320 px, ${name}: písmo rastie, nič sa neoreže ani nevytŕča, dá sa posúvať`, async ({ page }) => {
-            test.slow();
-            await page.setViewportSize({ width: 320, height: 640 });
-            // To isté ako Väčší text v nastavení prehliadača: predvolené písmo 32 px namiesto 16 px.
-            const cdp = await page.context().newCDPSession(page);
-            await cdp.send('Page.setFontSizes', { fontSizes: { standard: 32 } });
-            const errors = await openObloha(page, opts);
-            expect(await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize))).toBe(32);
-            /** @type {string[]} */
-            const zle = [];
-            await walk(page, async (where) => {
-                for (const z of await page.evaluate(() => window.kontrola.orezane())) zle.push(`${where}: ${z}`);
+    for (const { width, height } of [{ width: 320, height: 640 }, ...SIROKE]) {
+        for (const { name, opts, walk } of PRECHADZKY) {
+            test(`šírka ${width} px, ${name}: písmo rastie, nič sa neoreže ani nevytŕča, dá sa posúvať`, async ({ page }) => {
+                test.slow();
+                await page.setViewportSize({ width, height });
+                // To isté ako Väčší text v nastavení prehliadača: predvolené písmo 32 px namiesto 16 px.
+                const cdp = await page.context().newCDPSession(page);
+                await cdp.send('Page.setFontSizes', { fontSizes: { standard: 32 } });
+                const errors = await openObloha(page, opts);
+                expect(await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize))).toBe(32);
+                /** @type {string[]} */
+                const zle = [];
+                await walk(page, async (where) => {
+                    for (const z of await page.evaluate(() => window.kontrola.orezane())) zle.push(`${where}: ${z}`);
+                });
+                expect(zle).toEqual([]);
+                expect(errors).toEqual([]);
             });
-            expect(zle).toEqual([]);
-            expect(errors).toEqual([]);
-        });
+        }
     }
 });
 
 test.describe('dotykové plochy', () => {
-    for (const width of [320, 390]) {
+    for (const { width, height } of SIRKY) {
         for (const { name, opts, walk } of PRECHADZKY) {
             test(`šírka ${width} px, ${name}: každý ovládací prvok aspoň 44 × 44 px a od suseda aspoň 8 px`, async ({ page }) => {
                 test.slow();
-                await page.setViewportSize({ width, height: 800 });
+                await page.setViewportSize({ width, height });
                 const errors = await openObloha(page, opts);
                 /** @type {string[]} */
                 const zle = [];
@@ -365,18 +407,23 @@ test.describe('dotykové plochy', () => {
 });
 
 test.describe('čítačka obrazovky', () => {
-    for (const { name, opts, walk } of PRECHADZKY) {
-        test(`${name}: oblasti, jeden nadpis úrovne 1 a nadpisy bez preskakovania úrovní`, async ({ page }) => {
-            test.slow();
-            const errors = await openObloha(page, opts);
-            /** @type {string[]} */
-            const zle = [];
-            await walk(page, async (where) => {
-                for (const z of await page.evaluate(() => window.kontrola.struktura())) zle.push(`${where}: ${z}`);
+    for (const { width, height, name: kde } of VSETKY) {
+        for (const { name, opts, walk } of PRECHADZKY) {
+            test(`${kde} (${width} × ${height}), ${name}: oblasti, jeden nadpis úrovne 1 a nadpisy bez preskakovania úrovní`, async ({
+                page,
+            }) => {
+                test.slow();
+                await page.setViewportSize({ width, height });
+                const errors = await openObloha(page, opts);
+                /** @type {string[]} */
+                const zle = [];
+                await walk(page, async (where) => {
+                    for (const z of await page.evaluate(() => window.kontrola.struktura())) zle.push(`${where}: ${z}`);
+                });
+                expect(zle).toEqual([]);
+                expect(errors).toEqual([]);
             });
-            expect(zle).toEqual([]);
-            expect(errors).toEqual([]);
-        });
+        }
     }
 
     test('Môžem? ohlási len zmenu odpovede, nie každú minútu ani pri načítaní', async ({ page }) => {
@@ -442,19 +489,22 @@ const modelMozem = (now) =>
         known: 'elektraren',
     });
 
-for (const { name, opts, walk } of PRECHADZKY) {
-    test(`prístupnosť, ${name}: žiadne vážne nálezy axe nikde`, async ({ page }) => {
-        test.slow();
-        await openObloha(page, opts);
-        /** @type {string[]} */
-        const zle = [];
-        await walk(page, async (where) => {
-            const r = await new AxeBuilder({ page }).analyze();
-            for (const v of r.violations.filter((x) => x.impact === 'serious' || x.impact === 'critical'))
-                zle.push(`${where}: ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+for (const { width, height, name: kde } of VSETKY) {
+    for (const { name, opts, walk } of PRECHADZKY) {
+        test(`prístupnosť, ${kde} (${width} × ${height}), ${name}: žiadne vážne nálezy axe nikde`, async ({ page }) => {
+            test.slow();
+            await page.setViewportSize({ width, height });
+            await openObloha(page, opts);
+            /** @type {string[]} */
+            const zle = [];
+            await walk(page, async (where) => {
+                const r = await new AxeBuilder({ page }).analyze();
+                for (const v of r.violations.filter((x) => x.impact === 'serious' || x.impact === 'critical'))
+                    zle.push(`${where}: ${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+            });
+            expect(zle).toEqual([]);
         });
-        expect(zle).toEqual([]);
-    });
+    }
 }
 
 test('plagát: popisky čísel na obrázku 1080 × 1920 sú každý v jednom riadku, aj „najlepší deň, 52,1 kWh“', async ({ page }) => {
