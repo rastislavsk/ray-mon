@@ -4,9 +4,9 @@
 // zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
-import { voiceTexts } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
-import { dayChartSvg, legendHtml } from './day-chart.js';
+import { dayChartHtml, legendHtml } from './day-chart.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -19,7 +19,7 @@ function renderChart(m, dom, TERAZ_TEXTS) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
-    setHtml(dom.tzChart, dayChartSvg(c));
+    setHtml(dom.tzChart, dayChartHtml(c));
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);

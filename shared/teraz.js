@@ -22,7 +22,7 @@ import {
     terazTypicalText,
     terazWindowText,
     voiceTexts,
-} from './messages.js';
+} from './messages-core.js';
 import { deviceShorts, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { localDateKey } from './solar.js';
@@ -145,6 +145,7 @@ function chartOf(input, plan, hero, now) {
         nowMin: now.minutes,
         nowKw: now.power,
         limitKw: powerThresholds(input.plant).lowKw,
+        limitText: voiceTexts().TERAZ_TEXTS.limit,
         preview: hero.preview
             ? { min: hero.minutes, kw: hero.power, text: terazPillText(hero.minutes, hero.power, tone(hero.minutes)) }
             : null,
@@ -152,7 +153,6 @@ function chartOf(input, plan, hero, now) {
     const windows = (/** @type {Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
     return {
         ...geo,
-        limitText: voiceTexts().TERAZ_TEXTS.limit,
         desc: terazChartText({
             nowMin: now.minutes,
             kwText: now.powerText,

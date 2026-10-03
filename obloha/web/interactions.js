@@ -6,9 +6,7 @@ import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
 import { setupStart } from '../../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
-import { initNastavenie } from './nastavenie-interactions.js';
-import { closeDetail, initSedem } from './sedem-interactions.js';
-import { initStatistika } from './statistika-interactions.js';
+import { closeDetail } from './nav-back.js';
 import { initTeraz } from './teraz-interactions.js';
 import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep, swipeTarget } from './state.js';
 
@@ -78,16 +76,17 @@ function initLayout(store) {
     for (const px of Object.values(LAYOUT_PX)) window.matchMedia(`(min-width: ${px}px)`).addEventListener('change', update);
 }
 
-/** @param {Store} store @param {Dom} dom @returns {() => Promise<void>} obnova dát */
+/**
+ * Poslucháče jadra appky. Karty 7 dní, Štatistika a Nastavenie majú vlastné, prihlási ich
+ * web/parts.js, keď sa ich kód načíta.
+ * @param {Store} store @param {Dom} dom @returns {() => Promise<void>} obnova dát
+ */
 export function initInteractions(store, dom) {
     initNavigation(store, dom);
     initLayout(store);
     const refresh = createRefresh(store);
     initMozem(store, dom, refresh);
     initTeraz(store, dom, refresh);
-    initSedem(store, dom, refresh);
-    initStatistika(store, dom, refresh);
-    initNastavenie(store, dom, refresh);
     startTicks(store, refresh);
     // Bez internetu karty povedia, prečo nemajú dáta; keď sa vráti, dáta sa hneď obnovia.
     window.addEventListener('offline', () => store.setState({ online: false }));

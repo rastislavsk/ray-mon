@@ -12,9 +12,9 @@ import { summaryTexts } from './messages.js';
 import { addDays, localDateKey } from './solar.js';
 import { longPrice, MONTHS } from './stats.js';
 
-/** @typedef {'tyzden' | 'mesiac'} SummaryPeriod */
-/** Obdobia v poradí prepínača. @type {SummaryPeriod[]} */
-export const SUMMARY_PERIODS = ['tyzden', 'mesiac'];
+/** @typedef {import('./config.js').SummaryPeriod} SummaryPeriod */
+// Obdobia v poradí prepínača - jedno miesto pravdy je config.js.
+export { SUMMARY_PERIODS } from './config.js';
 
 /**
  * @typedef {import('./stats.js').StatsInput & { launches: import('./launches.js').Launch[],

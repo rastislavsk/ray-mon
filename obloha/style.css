@@ -360,6 +360,10 @@ button:focus-visible {
     display: block;
     margin: 14px 20px 0;
 }
+/* Hláška namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js). */
+.cakam {
+    padding-top: 12px;
+}
 /* Výzva: biela, nie červená - nie je to chyba, len chýbajúci krok. */
 .cta {
     display: grid;
@@ -551,14 +555,16 @@ button:focus-visible {
     outline: 3px solid #fff;
     outline-offset: 2px;
 }
-/* Prst aj kurzor trafia vždy rámček grafu, nie SVG v ňom: render SVG pri každom posune náhľadu
-   vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove by k
-   rámčeku nedošli a náhľad by zamrzol po prvom pohybe. */
+/* Prst aj kurzor trafia vždy rámček grafu, nie graf v ňom (SVG s popiskami): render ho pri každom
+   posune náhľadu vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove
+   by k rámčeku nedošli a náhľad by zamrzol po prvom pohybe. */
+.day-scrub .dc-box {
+    pointer-events: none;
+}
 .day-scrub svg {
     display: block;
     width: 100%;
     height: auto;
-    pointer-events: none;
 }
 .dc-area {
     fill: rgba(255, 255, 255, 0.2);
@@ -578,15 +584,41 @@ button:focus-visible {
     stroke: rgba(185, 242, 140, 0.8);
     stroke-dasharray: 3 4;
 }
-.dc-limit-t {
-    fill: var(--dim);
-    font-size: 12px;
-    text-anchor: end;
+/* Popisky grafu sú HTML nad SVG: graf sa s oknom zväčšuje, písmo nie - na každej šírke má tú istú
+   veľkosť ako na telefóne. Poloha je v % grafu (render/day-chart.js), veľkosti musia sedieť
+   s DAY_CHART_LABELS v shared/day-chart.js - podľa nich model kladie nápis hranice mimo kriviek. */
+.dc-box {
+    position: relative;
+    container-type: inline-size;
 }
+.dc-box > span {
+    position: absolute;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+/* Hodiny pod pásom plánu, vystredené na svojom čase. */
 .dc-t {
-    fill: var(--dim);
-    font-size: 12px;
-    text-anchor: middle;
+    color: var(--dim);
+    font-size: 13px;
+    transform: translate(-50%, 2px);
+}
+/* Nápis hranice: spodkom tesne nad svojím miestom (čiara, alebo voľné miesto nad krivkou),
+   zarovnaný k nemu začiatkom alebo koncom. Na grafe širokom aspoň 448 px (wideScale 1,4 v
+   shared/day-chart.js) má vlastnú polohu - je tam v pomere ku grafu menší. */
+.dc-limit-t {
+    left: var(--nx);
+    top: var(--ny);
+    color: var(--dim);
+    font-size: 13px;
+    transform: translate(var(--na), calc(-100% - 2px));
+}
+@container (min-width: 448px) {
+    .dc-limit-t {
+        left: var(--wx);
+        top: var(--wy);
+        transform: translate(var(--wa), calc(-100% - 2px));
+    }
 }
 .dc-now {
     stroke: #fff;
@@ -605,14 +637,17 @@ button:focus-visible {
     stroke: #fff;
     stroke-width: 2;
 }
-.dc-pill {
-    fill: #fff;
-}
+/* Štítok náhľadu nad grafom: šírku z počtu znakov a polohu dáva render. */
 .dc-pill-t {
-    fill: var(--ink);
-    font-size: 14px;
+    top: 0;
+    height: 24px;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 15px;
     font-weight: 700;
-    text-anchor: middle;
+    line-height: 24px;
+    text-align: center;
 }
 /* Farby pásu plánu aj legendy pod ním: tie isté tri významy ako všade v appke. */
 .dc [data-tone='plain'] {
@@ -2442,14 +2477,15 @@ button:focus-visible {
     grid-column: 2;
     grid-row: 1;
 }
-:root[data-dash] #panel-7dni {
+/* Hláška namiesto stĺpca 7 dní, kým sa jeho kód sťahuje, stojí na jeho mieste. */
+:root[data-dash] :is(#panel-7dni, #cakam) {
     grid-column: 2;
     grid-row: 2;
 }
-:root[data-dash][data-layout='wide'] :is(#panel-mozem, #panel-7dni) {
+:root[data-dash][data-layout='wide'] :is(#panel-mozem, #panel-7dni, #cakam) {
     grid-row: 1;
 }
-:root[data-dash][data-layout='wide'] #panel-7dni {
+:root[data-dash][data-layout='wide'] :is(#panel-7dni, #cakam) {
     grid-column: 3;
 }
 /* Stĺpec je kontajner: veľké slovo sa zmenší podľa šírky stĺpca, nie okna. */

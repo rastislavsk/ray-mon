@@ -3,7 +3,7 @@
 
 import { pvFreshness } from '../../../shared/hero-model.js';
 import { minutesToTimeStr } from '../../../shared/format.js';
-import { voiceTexts } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages-core.js';
 import { localMinutes } from '../../../shared/solar.js';
 
 /**

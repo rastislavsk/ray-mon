@@ -6,7 +6,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
 import { sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
-import { dayChartSvg, legendHtml } from './day-chart.js';
+import { dayChartHtml, legendHtml } from './day-chart.js';
 import { weatherIcon } from './icons.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
@@ -74,7 +74,7 @@ function renderDay(data, index, dom, voice) {
     setText(dom.sdDaySub, d.sub);
     dom.sdDayNums.classList.toggle('est', data.known === 'poloha');
     setHtml(dom.sdDayNums, numsHtml(d.nums));
-    setHtml(dom.sdDayChart, dayChartSvg(d.chart));
+    setHtml(dom.sdDayChart, dayChartHtml(d.chart));
     dom.sdDayChart.setAttribute('aria-label', d.chart.desc);
     setHtml(dom.sdDayLegend, legendHtml(d.chart.legend));
     for (const [el, text] of /** @type {const} */ ([

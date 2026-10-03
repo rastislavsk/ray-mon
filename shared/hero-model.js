@@ -6,7 +6,7 @@ import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
 import { planAt } from './day-plan.js';
-import { getSlotMessage, voiceTexts } from './messages.js';
+import { getSlotMessage, voiceTexts } from './messages-core.js';
 import { autoTier, deviceStates, productionLevel, smartTier } from './tariff.js';
 
 /**

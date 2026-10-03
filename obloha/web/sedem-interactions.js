@@ -3,16 +3,11 @@
 // kreslí render/sedem.js. Ťah do strán v detaile (susedný deň, späť do prehľadu) rozhoduje
 // swipeTarget v state.js, tlačidlo Späť v telefóne trackHistory - detail je krok navigácie.
 
-import { stepBack } from './nav-back.js';
+import { closeDetail } from './nav-back.js';
 import { shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
-
-/** Návrat z detailu do prehľadu dní - ten istý krok ako tlačidlo Späť. @param {Store} store */
-export function closeDetail(store) {
-    stepBack(store, { weekDetail: null });
-}
 
 /**
  * @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh obnova dát, tá istá ako pri štarte

@@ -37,7 +37,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                               |
 | `tariff.js`      | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.                  |
 | `day-plan.js`    | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                          |
-| `messages.js`    | Všetky texty odporúčaní pre používateľa.                                                                             |
+| `messages.js`    | Všetky texty pre používateľa – spoločný vstup do `messages-core.js`, `messages-sedem.js` a `messages-statistika.js`. |
 | `chart-model.js` | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                    |
 | `hero-model.js`  | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                |
 | `stats.js`       | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                  |
@@ -178,6 +178,32 @@ Nová appka nesmie importovať nič, čo siaha na DOM alebo stav súčasnej appk
 `web/dom.js`, `web/render/`, …). Keď niečo také potrebuje, čistá časť sa vytiahne do `shared/`
 alebo do neutrálneho modulu ako vyššie.
 
+**Rýchly štart novej appky (úloha #29).** Build krok nie je, takže každý modul je samostatný súbor
+a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov. Preto:
+
+- **Neskoré časti.** Pri štarte sa sťahuje len jadro: úvodná karta (Môžem? alebo Teraz), hlavička,
+  navigácia a obloha. Karty 7 dní, Štatistika s plagátom a Nastavenie so sprievodcom sú tri časti
+  (`PARTS` v `obloha/web/state.js`, vstupy `obloha/web/part-*.js`), ktoré `obloha/web/parts.js`
+  načíta dynamickým `import()` – keď ich obrazovka potrebuje (`neededParts`), inak sekundu po
+  prvom vykreslení, keď je prehliadač voľný. Prvé vykreslenie čaká len na časti, ktoré úvodná
+  obrazovka ukazuje (na telefóne žiadnu; na širokej obrazovke stĺpec 7 dní). Stav `parts` hovorí,
+  čo je načítané; kým karta nie je, render ju neukáže prázdnu, ale ukáže hlášku `#cakam`.
+- **Zmiešaná cache pri neskorej časti.** `boot.js` chráni len štart. Keď neskorý `import()`
+  zlyhá, hláška ponúkne tlačidlo, ktoré stiahne vlastné skripty znova (`cache: 'reload'`) a obnoví
+  stránku – v jednej karte prehliadača najviac raz (`sessionStorage`), potom už len „skús to
+  o chvíľu“. Záznam sa zmaže, keď sa načítajú všetky časti.
+- **Texty po kartách.** `shared/messages.js` je spoločný vstup pre súčasnú appku a testy; texty sú
+  v `messages-core.js` (hlášky, Môžem?, Teraz, hlavička), `messages-sedem.js` a
+  `messages-statistika.js`. Jadro novej appky a moduly `shared/`, ktoré potrebuje, importujú
+  len `messages-core.js`.
+- **Jedno písmo.** Archivo je jeden súbor `fonts/archivo-obloha.woff2` len so znakmi, ktoré appka
+  píše (namiesto podmnožín latin a latin-ext Google Fonts). Vyrába ho `scripts/font-subset.js`
+  z pôvodného súboru google/fonts; `test/font-subset.test.js` ohlási znak v textoch, ktorý
+  v ňom chýba. Cudzí znak (meno obce) vykreslí záložné písmo.
+
+Rýchlosť sa meria `npm run lighthouse:obloha` (Lighthouse, emulácia pomalého mobilu, medián z 3);
+vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením.
+
 Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
 farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `style.css` zaregistrované
 cez `@property` ako farby, takže sa dajú plynulo prelínať; útlm pohybu prechod vypne tým istým
@@ -220,7 +246,12 @@ z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú
 s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
 sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
-(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Detail je krok
+(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Krivky sú v SVG,
+ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, štítok náhľadu) sú
+HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerastú. Nápis hranice kladie
+`limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky ani značku „teraz“:
+tesne nad čiaru na konci alebo na začiatku, inak nad krivku. Polohy sú dve – pre úzky graf a pre
+graf široký aspoň 448 px – a vyberá ich container query v `style.css`. Detail je krok
 navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu, posun
 prehľadu aj fokus na riadok si pamätá render. Listovanie dní v detaile nový krok nepridá; ťah
 do strán rozhoduje `swipeTarget` v `obloha/web/state.js` – v detaile dňa susedný deň, inak ako

@@ -358,6 +358,7 @@ test('dayChartModel: bez „teraz“ (iný deň) značka chýba a stupnica ide l
         nowMin: null,
         nowKw: 99,
         limitKw: 2,
+        limitText: 'veľké spotrebiče',
         preview: null,
     });
     assert.equal(geo.now, null);

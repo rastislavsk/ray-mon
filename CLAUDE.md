@@ -21,8 +21,9 @@ nie je úlohou.
 - **Žiadne runtime závislosti.** Jediná externá knižnica je QR kód z CDN, načítaný s `defer`
   a nepovinný. Má v `index.html` hash v `integrity` – pri zmene verzie treba zmeniť aj ten
   (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Písma sú v repozitári
-  (`fonts/`, licencia OFL), nie z Google Fonts. Vývojové závislosti (lint, testy) sú
-  v poriadku.
+  (`fonts/`, licencia OFL), nie z Google Fonts. Písmo novej appky je podmnožina len so znakmi
+  appky – keď texty dostanú nový znak, vyrob ju znova podľa `scripts/font-subset.js` (ohlási to
+  `test/font-subset.test.js`). Vývojové závislosti (lint, testy) sú v poriadku.
 - **Typy cez JSDoc a `tsc --checkJs`**, nie cez `.ts` súbory.
 - **Doménová logika patrí do `shared/`** a nesmie sa dotýkať DOM, siete ani `Date.now()`.
   Čas a dáta do nej vstupujú ako parametre, aby sa dala testovať.
@@ -136,6 +137,10 @@ cache, uvidí jedno obnovenie stránky navyše.
 
 - To isté platí pre `obloha/boot.js`, ktorý chráni novú appku (hlášku píše do `#hdr-status`),
   a jeho e2e testy v `test/e2e/obloha.spec.js`.
+- Nová appka sťahuje karty 7 dní, Štatistika a Nastavenie až po štarte (`obloha/web/parts.js`) –
+  tie `boot.js` nechráni. Keď ich `import()` zlyhá, appka namiesto karty ukáže hlášku s tlačidlom,
+  ktoré stiahne súbory znova a obnoví stránku (najviac raz). Kontroluje to e2e skupina „nasadenie
+  a cache: karty načítané neskôr“. Nový modul pre tieto karty patrí do ich časti, nie do jadra.
 - `boot.js` **nesmie nič importovať staticky** – musí sa spustiť, aj keď je zvyšok grafu
   rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
 - `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`

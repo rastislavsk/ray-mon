@@ -365,6 +365,74 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
     });
 });
 
+// Karty 7 dní, Štatistika a Nastavenie sa sťahujú až po štarte (obloha/web/parts.js) - boot.js ich
+// nechráni. Starý modul z cache tu hrá shared/statistika.js bez exportov: kód karty Štatistika sa
+// nezlinkuje, zvyšok appky beží.
+test.describe('nasadenie a cache: karty načítané neskôr (obloha/web/parts.js)', () => {
+    /** @param {import('@playwright/test').Page} page @param {number} times koľkokrát vrátiť starú verziu */
+    async function staraStatistika(page, times) {
+        let left = times;
+        await page.route('**/shared/statistika.js', (route) =>
+            left-- > 0 ? route.fulfill({ contentType: 'text/javascript', body: 'export {};' }) : route.continue(),
+        );
+        let loads = 0;
+        page.on('load', () => loads++);
+        return () => loads;
+    }
+
+    test('pri štarte sa sťahuje len úvodná karta, ostatné karty až po prvom vykreslení', async ({ page }) => {
+        /** @type {string[]} */
+        const urls = [];
+        page.on('request', (r) => urls.push(new URL(r.url()).pathname));
+        const errors = await openObloha(page);
+        const neskore = (/** @type {string} */ u) =>
+            /\/obloha\/web\/part-|\/render\/(sedem|statistika|nastavenie|sprievodca)\.js|\/shared\/messages\.js/.test(u);
+        expect(urls.filter(neskore)).toEqual([]);
+        // Keď je prehliadač voľný, stiahnu sa aj ostatné - karta je potom pri prvom otvorení hneď hotová.
+        await expect.poll(() => urls.filter((u) => u.includes('/obloha/web/part-')).length).toBe(3);
+        await page.locator('#nav-statistika').click();
+        await ocakavajKartu(page, 'statistika');
+        await expect(page.locator('#cakam')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('starý modul karty: hláška namiesto prázdnej karty, tlačidlo stiahne súbory znova a raz obnoví stránku', async ({ page }) => {
+        const loads = await staraStatistika(page, 1);
+        const errors = await openObloha(page);
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('#cakam')).toBeVisible();
+        await expect(page.locator('#panel-statistika')).toBeHidden();
+        await expect(page.locator('#ck-fail')).toBeVisible();
+        await expect(page.locator('#ck-later')).toBeHidden();
+        await expect(page.locator('.tabs')).toBeVisible();
+        expect(errors).toEqual([expect.stringContaining('does not provide an export named')]);
+        await page.locator('#ck-retry').click();
+        await expect.poll(loads).toBe(2);
+        await appReady(page);
+        await page.locator('#nav-statistika').click();
+        await ocakavajKartu(page, 'statistika');
+        await expect(page.locator('#cakam')).toBeHidden();
+        // Keď sa načítali všetky karty, záznam o obnove zmizne - ďalšie nasadenie sa dá obnoviť znova.
+        await expect.poll(() => page.evaluate(() => sessionStorage.getItem('ray-mon-obloha-obnova-casti'))).toBeNull();
+    });
+
+    test('chyba, ktorú obnovenie nevyrieši: jedno obnovenie, potom hláška bez tlačidla namiesto slučky', async ({ page }) => {
+        const loads = await staraStatistika(page, Infinity);
+        await openObloha(page);
+        await page.locator('#nav-statistika').click();
+        await page.locator('#ck-retry').click();
+        await expect.poll(loads).toBe(2);
+        await appReady(page);
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('#ck-later')).toBeVisible();
+        await expect(page.locator('#ck-retry')).toBeHidden();
+        // Ostatné karty fungujú ďalej.
+        await page.locator('#nav-terazky').click();
+        await ocakavajKartu(page, 'terazky');
+        expect(loads()).toBe(2);
+    });
+});
+
 // ---- Karta Môžem? (krok 2) ---------------------------------------------------------
 // Očakávané texty počíta tá istá funkcia ako appka (shared/mozem-sky.js, a pod ňou mozemModel
 // súčasnej appky) z tých istých dát, takže test odhalí rozdiel medzi modelom a stránkou.
