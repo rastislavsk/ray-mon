@@ -122,10 +122,10 @@ nemení, takže odkaz na appku ostáva jeden.
 
 V priečinku `obloha/` vzniká po krokoch nová appka podľa návrhu
 [`docs/navrhy/smer-b-obloha.html`](docs/navrhy/smer-b-obloha.html) (smer B; otvor ho v prehliadači,
-je klikací). Vyskúšať sa dá na <https://rastislavsk.github.io/ray-mon/obloha/>. Zatiaľ má len kostru:
-pozadie je obloha podľa času dňa, skutočného východu a západu slnka v polohe elektrárne
-a oblačnosti z predpovede, hore miesto elektrárne a čas, dole navigácia medzi piatimi kartami,
-ktoré ešte nemajú obsah.
+je klikací). Vyskúšať sa dá na <https://rastislavsk.github.io/ray-mon/obloha/>. Pozadie je obloha
+podľa času dňa, skutočného východu a západu slnka v polohe elektrárne a oblačnosti z predpovede.
+Hotové sú karty Môžem?, Teraz a 7 dní (dni ako predpoveď počasia so zeleným oknom na veľké
+spotrebiče, detail dňa a týždňa); Štatistika a Nastavenie ešte obsah nemajú.
 
 Súčasná appka na hlavnej adrese beží ďalej bez zmeny. Obe appky počítajú tým istým kódom
 (`shared/`, časť `web/`), berú dáta z toho istého Workera a čítajú to isté uložené nastavenie –

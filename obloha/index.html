@@ -130,9 +130,74 @@
                     <div id="tz-dots" class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
                 </div>
             </section>
-            <section id="panel-7dni" class="panel hidden" aria-labelledby="ttl-7dni">
-                <h1 id="ttl-7dni" class="ttl">7 dní</h1>
-                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+            <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
+                 aj grafy skladá render (web/render/sedem.js) z shared/sedem-dni.js, tu sú len nosiče.
+                 Nadpis karty je len pre čítačku, na oblohe je otázka s najlepším dňom. -->
+            <section id="panel-7dni" class="panel sedem hidden" aria-labelledby="ttl-7dni">
+                <h1 id="ttl-7dni" class="sr">7 dní</h1>
+                <div id="sd-list">
+                    <h2 id="sd-title" class="ttl"></h2>
+                    <button type="button" id="sd-sum" class="sumbtn">
+                        <span id="sd-sum-text"></span>
+                        <span aria-hidden="true">›</span>
+                    </button>
+                    <p id="sd-sub" class="sub"></p>
+                    <button type="button" id="sd-retry" class="pbtn retry"></button>
+                    <div id="sd-ask" class="cta">
+                        <b id="sd-ask-title"></b>
+                        <p id="sd-ask-text"></p>
+                        <button type="button" id="sd-ask-btn" class="pbtn"></button>
+                    </div>
+                    <div id="sd-guess" class="cta">
+                        <b id="sd-guess-title"></b>
+                        <p id="sd-guess-text"></p>
+                        <button type="button" id="sd-guess-btn" class="pbtn"></button>
+                    </div>
+                    <div id="sd-days" class="days"></div>
+                    <p id="sd-hint" class="sub note"></p>
+                </div>
+                <div id="sd-day" class="hidden">
+                    <button type="button" id="sd-day-back" class="back">
+                        <span aria-hidden="true">‹</span><span class="sr">Späť na </span><span id="sd-day-back-text"></span>
+                    </button>
+                    <h2 class="ttl dttl"><span id="sd-day-title"></span><span id="sd-day-icon"></span></h2>
+                    <p id="sd-day-sub" class="sub"></p>
+                    <div id="sd-day-nums" class="nums"></div>
+                    <div id="sd-day-chart" class="glass dchart" role="img"></div>
+                    <p id="sd-day-legend" class="legend"></p>
+                    <div id="sd-day-facts" class="glass facts">
+                        <p id="sd-day-done"></p>
+                        <p id="sd-day-clear"></p>
+                        <p id="sd-day-price"></p>
+                    </div>
+                    <div class="glass msg">
+                        <h3 id="sd-day-msg-title"></h3>
+                        <p id="sd-day-msg-body"></p>
+                    </div>
+                    <p id="sd-day-hint" class="sub note"></p>
+                </div>
+                <div id="sd-week" class="hidden">
+                    <button type="button" id="sd-week-back" class="back">
+                        <span aria-hidden="true">‹</span><span class="sr">Späť na </span><span id="sd-week-back-text"></span>
+                    </button>
+                    <h2 id="sd-week-title" class="ttl"></h2>
+                    <p id="sd-week-range" class="sub"></p>
+                    <div id="sd-week-nums" class="nums"></div>
+                    <section class="glass" aria-labelledby="sd-bars-title">
+                        <h3 id="sd-bars-title" class="glass-ttl"></h3>
+                        <div id="sd-bars" class="chartbox" role="img"></div>
+                    </section>
+                    <section class="glass" aria-labelledby="sd-heat-title">
+                        <h3 id="sd-heat-title" class="glass-ttl"></h3>
+                        <div id="sd-heat" class="chartbox" role="img"></div>
+                        <p id="sd-heat-note" class="note"></p>
+                    </section>
+                    <div class="glass msg">
+                        <h3 id="sd-week-msg-title"></h3>
+                        <p id="sd-week-msg-body"></p>
+                    </div>
+                    <p id="sd-week-hint" class="sub note"></p>
+                </div>
             </section>
             <section id="panel-statistika" class="panel hidden" aria-labelledby="ttl-statistika">
                 <h1 id="ttl-statistika" class="ttl">Štatistika</h1>

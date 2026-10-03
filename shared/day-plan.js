@@ -3,7 +3,7 @@
 // bežcom na prstenci a farba pozadia sú tak vždy to isté číslo. Čisté funkcie bez DOM.
 
 import { MINUTES_PER_DAY, powerThresholds, TARIFF_LIMITS } from './config.js';
-import { dayKwAt } from './chart-model.js';
+import { dayKwAt, interpolate } from './chart-model.js';
 import { localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor, smartTier } from './tariff.js';
 
@@ -47,6 +47,34 @@ export function planAt(input, minutes) {
 /** Celý dnešný deň po štvrťhodinách, od 00:00. @param {PlanInput} input @returns {PlanSlot[]} */
 export function dayPlan(input) {
     return Array.from({ length: MINUTES_PER_DAY / SLOT }, (_, i) => planAt(input, i * SLOT));
+}
+
+/**
+ * Plán ľubovoľného dňa predpovede po štvrťhodinách - riadok a detail dňa na karte 7 dní novej
+ * appky. Dnešok je presne dayPlan (aj s nameranou krivkou), takže okno v riadku Dnes je to isté
+ * ako na kartách Môžem? a Teraz. Iný deň počíta to isté z predpovede toho dňa: pásmo tarify
+ * v ten deň (aj s výnimkami rozvrhu) a výkon v strede štvrťhodiny.
+ * @param {PlanInput & { forecast: import('./solar.js').Forecast }} input @param {number} index deň v `forecast.days`
+ * @returns {PlanSlot[]}
+ */
+export function forecastDayPlan(input, index) {
+    const { now, tariff, site, forecast } = input;
+    const day = forecast.days[index];
+    const todayKey = localDateKey(now, site.timezone);
+    if (day.date === todayKey) return dayPlan(input);
+    const schedule = scheduleFor(tariff, day.date);
+    const th = powerThresholds(input.plant);
+    const nowMinutes = localMinutes(now, site.timezone);
+    // O koľko dní je deň ďalej než dnešok: oba dátumy ako polnoc UTC, rozdiel je celý počet dní.
+    const offset = Math.round((Date.parse(day.date) - Date.parse(todayKey)) / 86400000);
+    return Array.from({ length: MINUTES_PER_DAY / SLOT }, (_, i) => {
+        const startMin = i * SLOT;
+        const band = bandAt(tariff, schedule, startMin);
+        const mid = startMin + SLOT / 2;
+        const kw = interpolate(day.hourly, mid / 60, 'kw');
+        const at = new Date(now.getTime() + (offset * MINUTES_PER_DAY + mid - nowMinutes) * 60000);
+        return { startMin, min: SLOT, band, level: band.level, kw, tier: smartTier(band.level, kw, th), night: !sunUp(at, site) };
+    });
 }
 
 /**

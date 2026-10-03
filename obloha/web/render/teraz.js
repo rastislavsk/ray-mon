@@ -5,63 +5,24 @@
 
 import { escapeHtml } from '../../../shared/format.js';
 import { TERAZ_TEXTS } from '../../../shared/messages.js';
-import { DAY_CHART } from '../../../shared/day-chart.js';
 import { terazModel } from '../../../shared/teraz.js';
+import { dayChartSvg, legendHtml } from './day-chart.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
-/** @typedef {NonNullable<Model['chart']>} Chart */
 /** @typedef {import('../dom.js').Dom} Dom */
-
-/**
- * Graf dňa ako SVG: predpoveď (plocha), nameraná krivka (biela čiara), hranica veľkých
- * spotrebičov, pás plánu, hodiny, „teraz“ a náhľad so štítkom. Farby pásu sú v style.css podľa
- * `data-tone`; `data-from` nesie začiatok bunky (minúta dňa).
- * @param {Chart} c
- */
-function chartSvg(c) {
-    const C = DAY_CHART;
-    const cells = c.cells
-        .map(
-            (b) =>
-                `<rect x="${b.x}" y="${C.bandY}" width="${b.w}" height="${C.bandH}" rx="2" data-tone="${b.tone}" data-from="${b.from}"/>`,
-        )
-        .join('');
-    const ticks = c.ticks.map((t) => `<text x="${t.x}" y="${C.tickY}" class="dc-t">${t.label}</text>`).join('');
-    const dot = (/** @type {number | null} */ y, /** @type {number} */ x, /** @type {number} */ r, /** @type {string} */ cls) =>
-        y === null ? '' : `<circle cx="${x}" cy="${y}" r="${r}" class="${cls}"/>`;
-    const now = `<line x1="${c.now.x}" x2="${c.now.x}" y1="14" y2="130" class="dc-now"/>${dot(c.now.y, c.now.x, 5, 'dc-now-dot')}`;
-    const p = c.preview;
-    const preview = p
-        ? `<line x1="${p.x}" x2="${p.x}" y1="${C.top - 2}" y2="130" class="dc-prev"/>${dot(p.y, p.x, 6, 'dc-prev-dot')}` +
-          `<rect x="${p.pill.x}" y="2" width="${p.pill.w}" height="18" rx="9" class="dc-pill"/>` +
-          `<text x="${p.pill.x + p.pill.w / 2}" y="14.5" class="dc-pill-t">${escapeHtml(p.pill.text)}</text>`
-        : '';
-    return (
-        `<svg viewBox="0 0 ${C.w} ${C.h}" aria-hidden="true">` +
-        (c.area ? `<path d="${c.area}" class="dc-area"/>` : '') +
-        (c.real ? `<path d="${c.real}" class="dc-real"/>` : '') +
-        `<line x1="${C.left}" x2="${C.right}" y1="${c.limitY}" y2="${c.limitY}" class="dc-limit"/>` +
-        `<text x="${C.right - 2}" y="${c.limitY - 4}" class="dc-limit-t">${escapeHtml(c.limitText)}</text>` +
-        cells +
-        ticks +
-        now +
-        preview +
-        '</svg>'
-    );
-}
 
 /** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom */
 function renderChart(m, dom) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
-    setHtml(dom.tzChart, chartSvg(c));
+    setHtml(dom.tzChart, dayChartSvg(c));
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);
     setText(dom.tzChartDesc, c.desc);
-    setHtml(dom.tzLegend, c.legend.map((l) => `<span data-tone="${l.tone}">${escapeHtml(l.text)}</span>`).join(''));
+    setHtml(dom.tzLegend, legendHtml(c.legend));
     setText(dom.tzHint, m.hint.text);
     show(dom.tzReset, m.hint.reset);
     setText(dom.tzReset, TERAZ_TEXTS.reset);

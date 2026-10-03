@@ -590,16 +590,16 @@ button:focus-visible {
     text-anchor: middle;
 }
 /* Farby pásu plánu aj legendy pod ním: tie isté tri významy ako všade v appke. */
-.day-scrub [data-tone='plain'] {
+.dc [data-tone='plain'] {
     fill: rgba(255, 255, 255, 0.3);
 }
-.day-scrub [data-tone='sun'] {
+.dc [data-tone='sun'] {
     fill: var(--yes);
 }
-.day-scrub [data-tone='cheap'] {
+.dc [data-tone='cheap'] {
     fill: var(--cheap);
 }
-.day-scrub [data-tone='costly'] {
+.dc [data-tone='costly'] {
     fill: var(--costly);
 }
 .legend {
@@ -712,6 +712,212 @@ button:focus-visible {
 }
 .dots i.on {
     background: #fff;
+}
+
+/* ===== Karta 7 dní ===== */
+.sedem p,
+.sedem h2,
+.sedem h3 {
+    margin: 0;
+}
+.sedem .note {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+.sub.note {
+    padding: 12px 20px 16px;
+}
+/* Súčet týždňa je odkaz na detail týždňa: podčiarknutý text, nie tlačidlo na pozadí. */
+.sumbtn {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    min-height: 44px;
+    margin: 2px 14px 0;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+/* Riadky dní ako predpoveď počasia: deň, ikona, pás okna, kWh. */
+.days {
+    display: grid;
+    gap: 7px;
+    padding: 10px 14px 0;
+}
+.day {
+    display: grid;
+    grid-template-columns: 3.6em 24px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    background: rgba(8, 16, 40, 0.3);
+    font-size: 14.5px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+.day.best {
+    border-color: var(--yes);
+    box-shadow: inset 0 0 0 0.5px var(--yes);
+}
+.dn {
+    white-space: nowrap;
+}
+.day em {
+    min-width: 4.4em;
+    font-style: normal;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+/* Kilowatthodiny typickej strechy sú odhad - priznáva to aj písmo. */
+.days.est .day em,
+.nums.est b {
+    font-style: italic;
+}
+.rng {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    overflow: hidden;
+}
+.rng i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: var(--yes);
+}
+/* Ikony počasia (web/render/icons.js). */
+.wi {
+    display: block;
+    width: 24px;
+    height: 24px;
+}
+.wi-sun {
+    fill: #ffe27a;
+}
+.wi-rays {
+    fill: none;
+    stroke: #ffe27a;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+.wi-cloud {
+    fill: #eef3fa;
+}
+.wi-cloud.wi-dark {
+    fill: #c9d2de;
+}
+
+/* Detail dňa a týždňa. */
+.back {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    min-height: 44px;
+    margin: 4px 8px 0;
+    padding: 8px 12px;
+    border: 0;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.dttl {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.dttl .wi {
+    flex: none;
+    width: 30px;
+    height: 30px;
+}
+.nums {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px 14px 0;
+}
+.nums div {
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(8, 16, 40, 0.3);
+    font-size: 12px;
+    line-height: 1.3;
+}
+.nums b {
+    display: block;
+    font-size: 20px;
+    font-variation-settings: 'wdth' 108;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.dchart {
+    padding: 10px 8px 6px;
+}
+.dc,
+.chartbox svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.facts p,
+.msg p {
+    font-size: 15px;
+    line-height: 1.35;
+}
+.msg h3 {
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+/* Stĺpce dní: najlepší zelený, ostatné biele priesvitné. */
+.wb {
+    fill: rgba(255, 255, 255, 0.45);
+}
+.wb.best {
+    fill: var(--yes);
+}
+.wb-v {
+    fill: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+.wb-n {
+    fill: rgba(255, 255, 255, 0.85);
+    font-size: 10px;
+    text-anchor: middle;
+}
+/* Mapa hodina × deň: zelené políčko slnko stačí, inak biele; sýtosť nesie fill-opacity z modelu. */
+.hm-t {
+    fill: rgba(255, 255, 255, 0.85);
+    font-size: 9px;
+}
+.hm-d {
+    fill: #fff;
+    font-size: 10px;
+}
+.hc {
+    fill: #fff;
+}
+.hc.sun {
+    fill: var(--yes);
 }
 
 /* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu

@@ -1,7 +1,18 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
 import { EVERYDAY, MINUTES_PER_DAY } from './config.js';
-import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDayLabel } from './format.js';
+import {
+    dateParts,
+    dayNameLong,
+    fmt1,
+    fmt2,
+    fmtSum,
+    hourLabel,
+    kwpRoughText,
+    minutesToTimeStr,
+    weekDateLabel,
+    weekDayLabel,
+} from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -132,6 +143,9 @@ function peakWindow(pts) {
     return { peak, rangeStart: Math.min(...strongHours), rangeEnd: Math.max(...strongHours) + 1 };
 }
 
+/** Správa o slabom dni v detaile dňa. */
+const weakDayMessage = () => ({ title: 'Slabý deň', body: 'Výroba bude celý deň nízka. Veľké spotrebiče si radšej naplánuj na iný deň.' });
+
 /**
  * Správa v detaile dňa. O ktorý deň ide, hovorí hlavička nad ňou, takže text sám deň
  * nepomenúva - inak by sa pre stredu musel prekladať do "v stredu" a pre štvrtok do
@@ -141,9 +155,7 @@ function peakWindow(pts) {
  */
 export function dayDetailMessage(pts, th) {
     const { peak, rangeStart, rangeEnd } = peakWindow(pts);
-    if (peak.kw < th.weakPeakKw) {
-        return { title: 'Slabý deň', body: 'Výroba bude celý deň nízka. Veľké spotrebiče si radšej naplánuj na iný deň.' };
-    }
+    if (peak.kw < th.weakPeakKw) return weakDayMessage();
     const peakLabel = hourLabel(peak.hour);
     return {
         title: `Najsilnejšie slnko okolo ${peakLabel}`,
@@ -697,9 +709,20 @@ export function terazWindowText(w, past) {
  *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
  */
 export function terazChartText({ nowMin, kwText, tone, sun, cheap, costly }) {
+    return dayChartText({ now: { min: nowMin, kwText, tone }, sun, cheap, costly });
+}
+
+/**
+ * Textový popis grafu dňa pre čítačku: pri dnešku teraz, potom okno na veľké veci, lacná a drahá
+ * sieť. Graf v detaile iného dňa než dnešok značku „teraz“ nemá (`now` je null).
+ * @param {{ now: { min: number, kwText: string, tone: import('./day-chart.js').Tone } | null,
+ *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
+ */
+export function dayChartText({ now, sun, cheap, costly }) {
     const list = (/** @type {Array<{ from: number, to: number }>} */ ws) => ws.map(spanText).join(', ');
-    const parts = [`Výroba počas dňa. Teraz ${hm(nowMin)}: ${kwText} kW, ${TERAZ_TONES[tone]}.`];
-    parts.push(sun.length ? `Okno na veľké veci ${list(sun)}.` : 'Okno na veľké veci dnes nebude.');
+    const parts = ['Výroba počas dňa.'];
+    if (now) parts.push(`Teraz ${hm(now.min)}: ${now.kwText} kW, ${TERAZ_TONES[now.tone]}.`);
+    parts.push(sun.length ? `Okno na veľké veci ${list(sun)}.` : `Okno na veľké veci ${now ? 'dnes ' : ''}nebude.`);
     if (cheap.length) parts.push(`Lacná sieť ${list(cheap)}.`);
     if (costly.length) parts.push(`Drahá sieť ${list(costly)}.`);
     return parts.join(' ');
@@ -729,6 +752,146 @@ export function terazLaterText({ wait, todayStrong, next }) {
           ? 'Dnes je silný deň. Ďalší taký v predpovedi nie je.'
           : 'Silný deň v predpovedi na týždeň nie je.';
     return wait ? `Lepšie bude o ${wait}. ${day}` : day;
+}
+
+// ---- Karta 7 dní v novej appke -----------------------------------------------------
+// Predpoveď, okno na veľké veci aj najlepší deň počíta to isté ako kartu 7 dní súčasnej appky
+// (weekStatsModel, weekListModel, plán dňa); tu sú len texty nového vzhľadu (shared/sedem-dni.js).
+
+/** Počasie dňa slovom - ikona v riadku je len ozdoba, význam nesie toto slovo. @type {Record<import('./sky.js').SkyWeather, string>} */
+export const SKY_WORDS = { jasno: 'jasno', polojasno: 'polojasno', zamracene: 'zamračené' };
+
+/** Pevné texty karty: nadpisy, popisky čísel, tlačidlá a výzvy. */
+export const SEDEM_TEXTS = {
+    question: 'Veľké pranie?',
+    hint: 'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťukni na deň.',
+    back: '7 dní',
+    dayHint: 'Potiahni do strán na susedný deň.',
+    weekTitle: 'Týždeň',
+    weekHint: 'Potiahni doprava a vrátiš sa na 7 dní.',
+    bars: 'Výroba po dňoch · kWh',
+    heat: 'Hodina × deň',
+    heatNote: 'Zelené políčko = v tú hodinu slnko stačí na veľké spotrebiče.',
+    kwhDay: 'kWh za deň',
+    kwPeak: 'kW špička',
+    noWindow: 'bez okna',
+    kwhSum: 'kWh spolu',
+    kwhAvg: 'kWh na deň',
+    best: 'najlepší deň',
+    typical: 'typická strecha',
+    lastKnown: 'posledná známa predpoveď',
+    loading: TERAZ_TEXTS.loading,
+    retry: MOZEM_SKY_TEXTS.retry,
+    guessTitle: 'Najlepší deň sedí, kWh nie',
+    guessBtn: 'Zadať moje panely',
+    askTitle: 'Kde máš strechu?',
+    askText: 'Bez polohy neviem, kedy u teba bude svietiť. Zadaj ju v Nastavení a poviem ti, ktorý deň je na veľké pranie.',
+    askBtn: 'Zadaj polohu',
+};
+
+/**
+ * Nadpis karty: najlepší deň na veľké pranie (deň s najväčšou výrobou). Keď slnko na veľké
+ * spotrebiče nestačí ani v jeden deň týždňa, nadpis to povie namiesto mena dňa.
+ * @param {string | null} name „Dnes“, „Zajtra“, „Štvrtok“; null = okno nemá žiadny deň
+ */
+export function sedemTitle(name) {
+    return `${SEDEM_TEXTS.question} ${name === null ? 'Tento týždeň slnko nestačí.' : `${name}.`}`;
+}
+
+/**
+ * Tlačidlo so súčtom týždňa (otvára detail týždňa). Bez internetu ukazuje poslednú známu
+ * predpoveď a povie to, pri typickej streche tiež.
+ * @param {{ totalKwh: number, lastKnown: boolean, estimate: boolean }} d
+ */
+export function sedemSumText({ totalKwh, lastKnown, estimate }) {
+    const notes = [lastKnown ? SEDEM_TEXTS.lastKnown : '', estimate ? SEDEM_TEXTS.typical : ''].filter(Boolean);
+    return [`Spolu 7 dní asi ${fmtSum(Math.round(totalKwh), 0)} kWh`, ...notes].join(' · ');
+}
+
+/** Výzva pri typickej streche: deň platí, kWh nie. Výkon zhruba ako na karte Môžem?. @param {number} kwp */
+export function sedemGuessText(kwp) {
+    return `Ktorý deň je najlepší, viem z počasia. Koľko kWh, záleží od tvojich panelov. Teraz ukazujem typickú strechu ${kwpRoughText(kwp)}.`;
+}
+
+/** Okná dňa slovom: „10:15 až 14:30“, viac okien spojí „a“, bez okna „bez okna“. @param {Array<{ from: number, to: number }>} windows */
+export function sedemWindowsText(windows) {
+    if (!windows.length) return SEDEM_TEXTS.noWindow;
+    return `okno ${windows.map((w) => `${hm(w.from)} až ${endHm(w.to)}`).join(' a ')}`;
+}
+
+/**
+ * Celé znenie riadku dňa pre čítačku obrazovky: deň, počasie, kWh, okno - a či je to najlepší
+ * deň a odhad pre typickú strechu.
+ * @param {{ name: string, word: string | null, kwh: number, windows: Array<{ from: number, to: number }>, best: boolean, estimate: boolean }} d
+ */
+export function sedemRowText({ name, word, kwh, windows, best, estimate }) {
+    const parts = [
+        name,
+        word,
+        `${kwh} kWh`,
+        sedemWindowsText(windows),
+        best ? SEDEM_TEXTS.best : '',
+        estimate ? 'odhad pre typickú strechu' : '',
+    ];
+    return parts.filter(Boolean).join(', ');
+}
+
+/** Tretie číslo detailu dňa: odkedy (veľké číslo) a dokedy (popisok) trvá hlavné okno. @param {{ from: number, to: number } | null} w */
+export function sedemWindowTile(w) {
+    return w ? { value: hm(w.from), label: `do ${endHm(w.to)}` } : { value: '–', label: SEDEM_TEXTS.noWindow };
+}
+
+/** Strop jasnej oblohy v detaile dňa: koľko by dala, a koľko z toho je predpoveď. @param {number} clearKwh @param {number | null} pct */
+export function sedemClearText(clearKwh, pct) {
+    if (!(clearKwh > 0) || pct === null) return '';
+    return `Jasná obloha by dala ${fmt1(clearKwh)} kWh, predpoveď je ${pct} % z toho.`;
+}
+
+/**
+ * Cena zo siete v ten deň podľa pásiem tarify, keď sú ceny zadané (inak null - nič sa
+ * nevymýšľa).
+ * @param {Array<{ startMin: number, min: number, band: import('./config.js').Band }>} segments pásma dňa (priceSegments)
+ * @param {string} currency
+ */
+export function sedemPriceText(segments, currency) {
+    if (segments.some((s) => s.band.price === null)) return null;
+    const price = (/** @type {import('./config.js').Band} */ b) => fmt2(/** @type {number} */ (b.price));
+    if (segments.length === 1) return `Cena zo siete celý deň ${price(segments[0].band)} ${currency}/kWh.`;
+    const list = segments.map((s) => `${spanText({ from: s.startMin, to: s.startMin + s.min })} ${s.band.name} ${price(s.band)}`);
+    return `Cena zo siete: ${list.join(' · ')} ${currency}/kWh.`;
+}
+
+/**
+ * Hláška v detaile dňa: tá istá ako v detaile dňa súčasnej appky (dayDetailMessage). Deň bez
+ * okna je pre veľké spotrebiče slabý, aj keď špička prekročí hranicu slabého dňa - hláška
+ * nesmie radiť, kedy ich pustiť, keď detail hovorí „bez okna“.
+ * @param {Array<{hour: number, kw: number}>} pts @param {import('./config.js').PowerThresholds} th @param {boolean} hasWindow
+ */
+export function sedemDayMessage(pts, th, hasWindow) {
+    return hasWindow ? dayDetailMessage(pts, th) : weakDayMessage();
+}
+
+/** Rozsah dátumov týždňa: „5.9. – 11.9.“. @param {string} first @param {string} last */
+export function sedemRangeText(first, last) {
+    return `${weekDateLabel(first)} – ${weekDateLabel(last)}`;
+}
+
+/**
+ * Popis stĺpcov týždňa pre čítačku: výroba každého dňa a najlepší deň.
+ * @param {Array<{ name: string, kwh: number }>} days @param {string} bestName
+ */
+export function sedemBarsText(days, bestName) {
+    return `Výroba po dňoch: ${days.map((d) => `${d.name} ${d.kwh} kWh`).join(', ')}. Najlepší deň: ${bestName.toLowerCase()}.`;
+}
+
+/**
+ * Popis mapy hodina × deň pre čítačku: v ktorých hodinách slnko stačí na veľké spotrebiče.
+ * @param {Array<{ name: string, hours: number[] }>} days zelené hodiny každého dňa
+ */
+export function sedemHeatText(days) {
+    const day = (/** @type {{ name: string, hours: number[] }} */ d) =>
+        d.hours.length ? `${d.name} od ${Math.min(...d.hours)} do ${Math.max(...d.hours) + 1} h` : `${d.name} vôbec`;
+    return `Hodiny, keď slnko stačí na veľké spotrebiče: ${days.map(day).join(', ')}.`;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------
