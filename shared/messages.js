@@ -4,6 +4,7 @@ import { EVERYDAY, MINUTES_PER_DAY } from './config.js';
 import {
     dateParts,
     dayNameLong,
+    dayNameShort,
     fmt1,
     fmt2,
     fmtSum,
@@ -892,6 +893,113 @@ export function sedemHeatText(days) {
     const day = (/** @type {{ name: string, hours: number[] }} */ d) =>
         d.hours.length ? `${d.name} od ${Math.min(...d.hours)} do ${Math.max(...d.hours) + 1} h` : `${d.name} vôbec`;
     return `Hodiny, keď slnko stačí na veľké spotrebiče: ${days.map(day).join(', ')}.`;
+}
+
+// ---- Karta Štatistika a plagát v novej appke ---------------------------------------
+// Súčty, hodnotu podľa tarify aj súhrn počíta to isté ako súčasná appka (statsModel,
+// summaryModel); tu sú len texty nového vzhľadu (shared/statistika.js).
+
+/** Mesiac v genitíve: „Najlepší deň októbra“. */
+const MONTHS_OF = [
+    'januára',
+    'februára',
+    'marca',
+    'apríla',
+    'mája',
+    'júna',
+    'júla',
+    'augusta',
+    'septembra',
+    'októbra',
+    'novembra',
+    'decembra',
+];
+
+/** Pevné texty karty a plagátu: prepínač, popisky, výzvy a tlačidlá. */
+export const STATISTIKA_TEXTS = {
+    title: 'Štatistika',
+    periods: { dnes: 'Dnes', mesiac: 'Mesiac', rok: 'Rok', spolu: 'Spolu' },
+    periodsLabel: 'Obdobie',
+    equiv: 'To je ako',
+    phones: 'nabitý mobil',
+    km: 'elektrickým autom',
+    loading: TERAZ_TEXTS.loading,
+    retry: MOZEM_SKY_TEXTS.retry,
+    forecastSub: 'odhad z predpovede na celý dnešok',
+    note: 'Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.',
+    pricesTitle: 'Doplň ceny v tarife',
+    pricesText: 'Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.',
+    pricesBtn: 'Doplniť ceny',
+    measureTitle: 'Pripoj živé meranie',
+    measureText:
+        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar - zadaj odkaz naň v Nastavení.',
+    measureBtn: 'Pripojiť meranie',
+    measureOff:
+        'Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa kiosk ozve.',
+    setupSub: 'zatiaľ nemám čo počítať',
+    setupTitle: 'Prázdna strecha, prázdna štatistika',
+    setupText:
+        'Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne aj odkaz na kiosk pre naozaj namerané čísla.',
+    setupBtn: 'Nastaviť panely',
+    laterTitle: 'Keď ich zadáš, uvidíš',
+    laterText:
+        'Vyrobené dnes, za mesiac, rok aj od spustenia · koľko je to mobilov a kilometrov autom · najlepší deň · plagát na zdieľanie',
+    askTitle: 'Kde máš strechu?',
+    askText: 'Bez polohy neviem, kde tvoja strecha je, nieto koľko vyrobila. Zadaj ju v Nastavení a začnem počítať.',
+    askBtn: 'Zadaj polohu',
+    posterLabel: 'Súhrn na zdieľanie',
+    posterShare: 'Zdieľať do story',
+    posterClose: 'Zavrieť',
+    posterFoot: 'RAY-MON · slnko nefakturuje',
+    posterPhones: 'nabitý mobil',
+    posterKm: 'elektrickým autom',
+    posterWashes: 'pranie zo slnka',
+    posterValue: 'hodnota podľa tarify',
+};
+
+/**
+ * Odkiaľ je veľké číslo zo živého merania: „vyrobené dnes do 13:00“, „vyrobené v októbri“.
+ * @param {import('./stats.js').StatsPeriod} period
+ * @param {{ time: string, month: string }} d `time` čas merania, `month` mesiac v lokáli („októbri“)
+ */
+export function statsHeroSub(period, { time, month }) {
+    return `vyrobené ${{ dnes: `dnes do ${time}`, mesiac: `v ${month}`, rok: 'tento rok', spolu: 'od spustenia' }[period]}`;
+}
+
+/** Hodnota podľa tarify: „Hodnota podľa tarify 4,78 €“, odhad s „≈“. @param {number} value @param {string} currency @param {boolean} estimate */
+export function statsValueText(value, currency, estimate) {
+    return `Hodnota podľa tarify ${estimate ? '≈ ' : ''}${fmtSum(value, 2)} ${currency}`;
+}
+
+/** Pás pod dneškom: koľko z predpovede už strecha vyrobila. @param {number} pct @param {number} forecastKwh */
+export function statsProgressText(pct, forecastKwh) {
+    return `${pct} % z predpovede ${fmt1(forecastKwh)} kWh`;
+}
+
+/**
+ * Najlepší deň mesiaca: nadpis a veta. Dnešok je ešte rozbehnutý, preto iná veta.
+ * @param {{ date: string, kwh: number, today: boolean }} best
+ */
+export function statsBestText(best) {
+    const { day, month } = dateParts(best.date);
+    return {
+        title: `Najlepší deň ${MONTHS_OF[month - 1]}`,
+        text: best.today
+            ? `Dnes · ${fmt1(best.kwh)} kWh. Strecha dnes maká ako blázon.`
+            : `${dayNameLong(best.date)} ${day}. · ${fmt1(best.kwh)} kWh. Strecha vtedy makala ako blázon.`,
+    };
+}
+
+/** Tlačidlo plagátu: „Október na streche · zdieľať“. @param {string} kick nadpis súhrnu (summaryTexts) */
+export const posterButtonText = (kick) => `${kick} · zdieľať`;
+
+/** Odkaz na plagát na karte Môžem?: „Október na streche: 168 kWh · súhrn“. @param {string} kick @param {number} kwh */
+export const posterLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh), 0)} kWh · súhrn na zdieľanie`;
+
+/** Najlepší deň na plagáte nakrátko: „so 14.“, „dnes“. @param {{ date: string, today: boolean }} best */
+export function posterBestDay(best) {
+    if (best.today) return 'dnes';
+    return `${dayNameShort(best.date).toLowerCase()} ${dateParts(best.date).day}.`;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------

@@ -68,6 +68,18 @@ async function appReady(page) {
 }
 
 /**
+ * Otvorí súčasnú appku a počká, kým naštartuje. Udalosť load na to nestačí: boot.js načíta appku
+ * dynamickým import(), ktorý sa môže dokončiť až po nej - klik hneď po page.goto by trafil statické
+ * HTML bez poslucháčov a stratil sa. „načítavam…“ v hlavičke prepíše až appka (rovnako čaká
+ * appReady v app.spec.js).
+ * @param {import('@playwright/test').Page} page
+ */
+async function otvorSucasnuAppku(page) {
+    await page.goto('/');
+    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+}
+
+/**
  * Otvorí novú appku s pevným časom. Bez `settings: null` má uložené Dvorany s kioskom.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
@@ -108,9 +120,8 @@ for (const width of [390, 320]) {
         for (const panel of [...PANELS].reverse()) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
-            // Karty Môžem? (krok 2), Teraz (krok 3) a 7 dní (krok 4) už majú obsah, ostatné ešte čakajú.
-            if (panel === 'statistika' || panel === 'nastavenie')
-                await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
+            // Karty Môžem? (krok 2), Teraz (krok 3), 7 dní (krok 4) a Štatistika (krok 5) už majú obsah, Nastavenie ešte čaká.
+            if (panel === 'nastavenie') await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
         }
         const polozky = await page.locator('.tabs button').evaluateAll((buttons) =>
             buttons.map((b) => {
@@ -190,8 +201,7 @@ test('nastavenie uložené súčasnou appkou nová appka vidí a nič v ňom nem
     const errors = await pripravSiet(page, { settings: chata });
     await page.clock.setFixedTime(FIXED_NOW);
     // Súčasná appka: úvodnú kartu Terazky si človek vyberie v jej Nastavení.
-    await page.goto('/');
-    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+    await otvorSucasnuAppku(page);
     await page.locator('#nav-nastavenie').click();
     const polozka = page.locator('#settings-start');
     if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
@@ -519,7 +529,9 @@ test.describe('karta Môžem?', () => {
         await expect(panel).toBeHidden();
         await expect(riadok).toBeFocused();
         // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
-        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null, preview: null, detail: null } });
+        expect(await page.evaluate(() => history.state)).toEqual({
+            step: { panel: 'mozem', item: null, preview: null, detail: null, poster: null },
+        });
         expect(errors).toEqual([]);
     });
 
@@ -547,8 +559,7 @@ test.describe('karta Môžem?', () => {
     test('spustenie zapísané súčasnou appkou nová appka ukáže ako bežiace a naopak', async ({ page }) => {
         const errors = await pripravSiet(page);
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/');
-        await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+        await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
         await page.locator('[data-mozem-item="susicka"]').click();
@@ -562,7 +573,7 @@ test.describe('karta Môžem?', () => {
         await page.locator('#mz-sheet-log').click();
         await expect(page.locator('[data-item="pracka"] b')).toHaveText('beží do 15:00');
 
-        await page.goto('/');
+        await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
         await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
@@ -624,7 +635,7 @@ test.describe('karta Môžem?', () => {
         await ocakavajKartu(page, 'nastavenie');
 
         // Súčasná appka v tom istom stave odpovedá ako doteraz: bez panelov neodpovedá.
-        await page.goto('/');
+        await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#mozem-body .mozem-word')).toHaveText(MOZEM_WORDS.bezpanelov);
         expect(errors).toEqual([]);
@@ -777,8 +788,7 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-dots i')).toHaveCount(4);
 
             // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon a odporúčanie.
-            await page.goto('/');
-            await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+            await otvorSucasnuAppku(page);
             await page.locator('#nav-terazky').click();
             await expect(page.locator('#pv-power')).toHaveText(m.num);
             await expect(page.locator('#verdict-headline')).toHaveText(m.cards?.now.head ?? '');
@@ -912,7 +922,7 @@ test.describe('karta Teraz', () => {
         await ocakavajKartu(page, 'nastavenie');
 
         // Súčasná appka v tom istom stave: karta Terazky bez výkonu, ako doteraz.
-        await page.goto('/');
+        await otvorSucasnuAppku(page);
         await page.locator('#nav-terazky').click();
         await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
         await expect(page.locator('#pv-power')).toHaveText('–');
@@ -1479,7 +1489,7 @@ test.describe('karta 7 dní: stavy', () => {
         await ocakavajKartu(page, 'nastavenie');
 
         // Súčasná appka v tom istom stave: karta 7 dní ako doteraz, s typickou strechou v podnadpise.
-        await page.goto('/');
+        await otvorSucasnuAppku(page);
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#week-sub')).toHaveText(/typická strecha/);
         expect(errors).toEqual([]);

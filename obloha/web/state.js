@@ -5,15 +5,19 @@
 import { MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
 import { typicalSettings } from '../../shared/settings.js';
 import { emptySettings } from '../../shared/setup.js';
+import { SUMMARY_PERIODS } from '../../shared/summary.js';
 
 /**
  * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny), `mozemQuip`
  * stránka hlášok, `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
  * `terazPage` stránka pásu odporúčaní pod ním, `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
- * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
+ * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
+ * `poster` otvorený plagát na zdieľanie (obdobie súhrnu, null = zatvorený; otvára ho Štatistika aj
+ * odkaz na karte Môžem?), `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
  * a `online`, či má telefón internet - podľa toho karta bez dát povie prečo.
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {'day' | 'week'} WeekDetail
+ * @typedef {import('../../shared/summary.js').SummaryPeriod} PosterPeriod
  * @typedef {import('../../web/refresh.js').RefreshState & {
  *   panel: Panel,
  *   panelDir: 1 | -1,
@@ -25,6 +29,8 @@ import { emptySettings } from '../../shared/setup.js';
  *   terazPage: number,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
+ *   statsPeriod: import('../../shared/stats.js').StatsPeriod,
+ *   poster: PosterPeriod | null,
  *   online: boolean,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
@@ -34,8 +40,8 @@ import { emptySettings } from '../../shared/setup.js';
  * iného času na grafe karty Teraz a detail karty 7 dní. Pri náhľade je krokom to, že beží - posun
  * po grafe nový krok nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň
  * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
- * dňa vráti do prehľadu.
- * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null }} NavStep
+ * dňa vráti do prehľadu. Otvorený plagát je tiež krok - Späť ho zavrie.
+ * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null, poster: PosterPeriod | null }} NavStep
  */
 
 /**
@@ -71,13 +77,15 @@ export function initialState(now, { saved, site, startPanel, dayLog, launches, o
         terazPage: 0,
         weekDetail: null,
         weekDay: 0,
+        statsPeriod: /** @type {import('../../shared/stats.js').StatsPeriod} */ ('dnes'),
+        poster: null,
         online,
     };
 }
 
 /**
  * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem?, náhľad
- * karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
+ * karte Teraz, detail karte 7 dní a plagát karte, z ktorej sa otvoril - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
@@ -87,6 +95,7 @@ export function panelChange(from, to) {
         mozemItem: /** @type {string | null} */ (null),
         terazPreview: /** @type {number | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
+        poster: /** @type {PosterPeriod | null} */ (null),
     };
 }
 
@@ -100,12 +109,18 @@ export function nextPanel(panel, dir) {
 
 /** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {
-    return { panel: state.panel, item: state.mozemItem, preview: state.terazPreview, detail: state.weekDetail };
+    return { panel: state.panel, item: state.mozemItem, preview: state.terazPreview, detail: state.weekDetail, poster: state.poster };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.item === b.item && (a.preview === null) === (b.preview === null) && a.detail === b.detail;
+    return (
+        a.panel === b.panel &&
+        a.item === b.item &&
+        (a.preview === null) === (b.preview === null) &&
+        a.detail === b.detail &&
+        a.poster === b.poster
+    );
 }
 
 /**
@@ -113,6 +128,16 @@ export function sameNavStep(a, b) {
  * @param {Panel} panel @param {unknown} detail @returns {WeekDetail | null}
  */
 const weekDetailOf = (panel, detail) => (panel === '7dni' && (detail === 'day' || detail === 'week') ? detail : null);
+
+/**
+ * Plagát z položky histórie. Otvára sa len na karte Môžem? a Štatistika; položka zo skoršej
+ * verzie ho nemá.
+ * @param {Panel} panel @param {unknown} poster @returns {PosterPeriod | null}
+ */
+const posterOf = (panel, poster) =>
+    (panel === 'mozem' || panel === 'statistika') && SUMMARY_PERIODS.some((p) => p === poster)
+        ? /** @type {PosterPeriod} */ (poster)
+        : null;
 
 /**
  * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
@@ -123,12 +148,19 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item, preview, detail } = /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown }} */ (raw);
+    const { panel, item, preview, detail, poster } =
+        /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown, poster?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     if (!p) return null;
     // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
     const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
-    const step = { panel: p, item: null, preview: at ? /** @type {number} */ (preview) : null, detail: weekDetailOf(p, detail) };
+    const step = {
+        panel: p,
+        item: null,
+        preview: at ? /** @type {number} */ (preview) : null,
+        detail: weekDetailOf(p, detail),
+        poster: posterOf(p, poster),
+    };
     if (item === null || item === undefined) return step;
     return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
 }
@@ -147,7 +179,13 @@ export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
  */
 export function navChange(state, step) {
     const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
-    return { ...panelChange(state.panel, step.panel), mozemItem: step.item, terazPreview: preview, weekDetail: step.detail };
+    return {
+        ...panelChange(state.panel, step.panel),
+        mozemItem: step.item,
+        terazPreview: preview,
+        weekDetail: step.detail,
+        poster: step.poster,
+    };
 }
 
 /**

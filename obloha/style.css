@@ -48,6 +48,13 @@
     --cheap: #7cc4ff;
     --costly: #ff7a66;
     --ink: #0b1430;
+    /* Plagát na zdieľanie: obloha pri západe slnka a tmavé písmo na nej. Tie isté tokeny číta
+       obrázok do story (web/poster-image.js), dialóg a obrázok tak majú jednu paletu. */
+    --poster-1: #ffd36e;
+    --poster-2: #ff8a5c;
+    --poster-3: #6d55d6;
+    --poster-angle: 165deg;
+    --poster-ink: #1d1030;
     --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
     color-scheme: dark;
     background: #4f555f;
@@ -920,6 +927,243 @@ button:focus-visible {
     fill: var(--yes);
 }
 
+/* Odkaz na plagát na karte Môžem?: nenápadný podčiarknutý text pod hláškou, nie tlačidlo. */
+.lnk {
+    display: block;
+    min-height: 44px;
+    margin: -8px 14px 12px;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+/* ===== Karta Štatistika ===== */
+.stat p,
+.stat h2 {
+    margin: 0;
+}
+/* Prepínač obdobia: štyri rovnako široké tlačidlá, každé aspoň 44 px vysoké. */
+.seg {
+    display: flex;
+    gap: 3px;
+    margin: 14px 14px 0;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(8, 16, 40, 0.26);
+}
+.seg button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.seg button[aria-pressed='true'] {
+    background: #fff;
+    color: var(--ink);
+}
+.seg button[aria-pressed='true']:focus-visible {
+    outline-offset: 3px;
+}
+.stat .knum {
+    padding-top: 16px;
+}
+.progress {
+    display: grid;
+    gap: 6px;
+    padding: 12px 20px 0;
+}
+.progress .sub {
+    padding: 0;
+}
+/* Pás dneška voči predpovedi je biely - zelená patrí len oknu, keď slnko stačí. */
+.progress .bar i {
+    background: #fff;
+}
+.eq {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.stat .eq p {
+    font-size: 13px;
+    line-height: 1.3;
+}
+.eq b {
+    display: block;
+    font-size: 24px;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+}
+/* Čísla z odhadu (predpoveď, denník appky) priznávajú odhad písmom. */
+.glass.est .eq b,
+.rows .est b {
+    font-style: italic;
+}
+.rows {
+    gap: 0;
+}
+.rows p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 15px;
+}
+.rows p:last-child {
+    border-bottom: 0;
+}
+.rows b {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.stat .glass p {
+    font-size: 15.5px;
+    line-height: 1.4;
+}
+.stat .sub.note {
+    padding-bottom: 0;
+    font-size: 13.5px;
+}
+.posters {
+    display: grid;
+    gap: 10px;
+    padding: 16px 14px 18px;
+}
+.posters .pbtn {
+    justify-self: stretch;
+}
+/* Výzva bez panelov: tlačidlo pri vstupe na kartu trikrát zapulzuje a zastaví sa. Animácia sa
+   spustí vždy, keď sa prvok ukáže (karta či výzva bola skrytá). Útlm pohybu ju vypne celú. */
+.pulse {
+    animation: pulse 1.1s ease-in-out 3;
+}
+@keyframes pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(11, 20, 48, 0.45);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(11, 20, 48, 0);
+    }
+}
+.glass.est p {
+    font-style: italic;
+}
+
+/* Plagát na zdieľanie. Dialóg je stmavený rám cez celú obrazovku, obsah v strede - ťuknutie
+   mimo obsahu trafí dialóg a zatvorí ho. Karta .pc je to, čo kreslí aj obrázok do story. */
+.poster {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    border: 0;
+    background: transparent;
+    color: #fff;
+    overflow-y: auto;
+}
+.poster::backdrop {
+    background: rgba(5, 8, 20, 0.96);
+}
+.poster-in {
+    display: grid;
+    align-content: center;
+    gap: 12px;
+    max-width: 420px;
+    min-height: 100%;
+    margin: 0 auto;
+}
+.pc {
+    display: grid;
+    gap: 12px;
+    padding: 22px 20px;
+    border-radius: 24px;
+    background: linear-gradient(var(--poster-angle), var(--poster-1), var(--poster-2) 50%, var(--poster-3));
+    color: var(--poster-ink);
+}
+.pc h2,
+.pc p {
+    margin: 0;
+}
+.pc h2,
+.pc .foot {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.pn {
+    font-size: min(62px, 15vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 125;
+    line-height: 0.95;
+    white-space: nowrap;
+}
+.cols {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 52px;
+}
+.cols i {
+    flex: 1;
+    border-radius: 2px;
+    background: var(--poster-ink);
+    opacity: 0.55;
+}
+.cols i.best {
+    opacity: 0.9;
+}
+/* Deň, ktorý v denníku chýba: len obrys, aby bolo vidno, že číslo nie je. */
+.cols i.missing {
+    height: 30%;
+    border: 1.5px solid var(--poster-ink);
+    background: transparent;
+    opacity: 0.45;
+}
+.pg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.25;
+}
+.pg strong {
+    display: block;
+    font-size: 21px;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 110;
+}
+.poster .note {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.4;
+}
+.poster .pbtn {
+    justify-self: stretch;
+}
+
 /* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu
    (na stmavenú stránku) tak trafí dialóg a zatvorí ho. */
 .sheet {
@@ -990,7 +1234,8 @@ button:focus-visible {
     justify-content: space-around;
     /* Na širokej obrazovke ostanú položky v šírke obsahu, pás pod nimi ide cez celú šírku. */
     padding: 8px max(2px, calc((100% - 640px) / 2)) max(12px, env(safe-area-inset-bottom));
-    background: rgba(6, 10, 28, 0.5);
+    /* Dosť tmavý pás, aby popisky mali kontrast aj nad bielou výzvou, ktorá pod ním prechádza. */
+    background: rgba(6, 10, 28, 0.72);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }

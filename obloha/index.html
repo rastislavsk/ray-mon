@@ -69,6 +69,10 @@
                 </section>
                 <p id="mz-count" class="glass count"></p>
                 <button type="button" id="mz-quip" class="quote"><q id="mz-quip-text"></q><small id="mz-quip-hint"></small></button>
+                <!-- Nenápadný odkaz na plagát na zdieľanie (ten istý dialóg ako z karty Štatistika). -->
+                <button type="button" id="mz-summary" class="lnk" aria-haspopup="dialog">
+                    <span id="mz-summary-text"></span><span aria-hidden="true"> ›</span>
+                </button>
             </section>
             <!-- Karta Teraz: texty, graf aj pás odporúčaní skladá render (web/render/teraz.js)
                  z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
@@ -199,9 +203,69 @@
                     <p id="sd-week-hint" class="sub note"></p>
                 </div>
             </section>
-            <section id="panel-statistika" class="panel hidden" aria-labelledby="ttl-statistika">
+            <!-- Karta Štatistika: súčty za obdobia, „to je ako“, najlepší deň mesiaca a tlačidlá plagátu.
+                 Texty aj stavy skladá render (web/render/statistika.js) z shared/statistika.js, tu sú
+                 len nosiče. -->
+            <section id="panel-statistika" class="panel stat hidden" aria-labelledby="ttl-statistika">
                 <h1 id="ttl-statistika" class="ttl">Štatistika</h1>
-                <p class="sub">Táto karta príde v ďalšom kroku.</p>
+                <p id="st-sub" class="sub"></p>
+                <button type="button" id="st-retry" class="pbtn retry"></button>
+                <div id="st-ask" class="cta">
+                    <b id="st-ask-title"></b>
+                    <p id="st-ask-text"></p>
+                    <button type="button" id="st-ask-btn" class="pbtn"></button>
+                </div>
+                <div id="st-setup">
+                    <div class="cta">
+                        <b id="st-setup-title"></b>
+                        <p id="st-setup-text"></p>
+                        <button type="button" id="st-setup-btn" class="pbtn pulse"></button>
+                    </div>
+                    <section class="glass est" aria-labelledby="st-later-title">
+                        <h2 id="st-later-title" class="glass-ttl"></h2>
+                        <p id="st-later-text"></p>
+                    </section>
+                </div>
+                <div id="st-body">
+                    <div id="st-seg" class="seg per" role="group">
+                        <button type="button" data-period="dnes"></button>
+                        <button type="button" data-period="mesiac"></button>
+                        <button type="button" data-period="rok"></button>
+                        <button type="button" data-period="spolu"></button>
+                    </div>
+                    <p id="st-num" class="knum"><span id="st-num-val"></span><small>kWh</small></p>
+                    <p id="st-src" class="sub"></p>
+                    <p id="st-value" class="sub"></p>
+                    <div id="st-progress" class="progress">
+                        <div class="bar" aria-hidden="true"><i id="st-bar"></i></div>
+                        <p id="st-progress-text" class="sub"></p>
+                    </div>
+                    <section id="st-equiv" class="glass" aria-labelledby="st-equiv-title">
+                        <h2 id="st-equiv-title" class="glass-ttl"></h2>
+                        <div class="eq">
+                            <p><b id="st-phones"></b><span id="st-phones-label"></span></p>
+                            <p><b id="st-km"></b><span id="st-km-label"></span></p>
+                        </div>
+                    </section>
+                    <div id="st-rows" class="glass rows"></div>
+                    <section id="st-best" class="glass" aria-labelledby="st-best-title">
+                        <h2 id="st-best-title" class="glass-ttl"></h2>
+                        <p id="st-best-text"></p>
+                    </section>
+                    <p id="st-note" class="sub note"></p>
+                    <p id="st-measure-off" class="sub note"></p>
+                    <div id="st-measure" class="cta">
+                        <b id="st-measure-title"></b>
+                        <p id="st-measure-text"></p>
+                        <button type="button" id="st-measure-btn" class="pbtn"></button>
+                    </div>
+                    <div id="st-prices" class="cta">
+                        <b id="st-prices-title"></b>
+                        <p id="st-prices-text"></p>
+                        <button type="button" id="st-prices-btn" class="pbtn"></button>
+                    </div>
+                    <div id="st-posters" class="posters"></div>
+                </div>
             </section>
             <section id="panel-nastavenie" class="panel hidden" aria-labelledby="ttl-nastavenie">
                 <h1 id="ttl-nastavenie" class="ttl">Nastavenie</h1>
@@ -256,6 +320,24 @@
                 <h3 id="mz-sheet-more-q" class="q"></h3>
                 <p id="mz-sheet-more"></p>
                 <button type="button" id="mz-sheet-log" class="pbtn"></button>
+            </div>
+        </dialog>
+
+        <!-- Plagát na zdieľanie: súhrn mesiaca alebo týždňa. Otvára ho karta Štatistika aj odkaz
+             na karte Môžem?. Modálny dialóg: fokus ostane v ňom, Escape aj Späť ho zatvoria. Obrázok
+             na zdieľanie (obloha/web/poster-image.js) kreslí tú istú kartu .pc. -->
+        <dialog id="poster" class="poster" aria-labelledby="poster-title">
+            <div class="poster-in">
+                <div class="pc">
+                    <h2 id="poster-title"></h2>
+                    <p id="poster-kwh" class="pn"></p>
+                    <div id="poster-cols" class="cols" aria-hidden="true"></div>
+                    <div id="poster-tiles" class="pg"></div>
+                    <p id="poster-foot" class="foot"></p>
+                </div>
+                <p id="poster-note" class="note"></p>
+                <button type="button" id="poster-share" class="pbtn"></button>
+                <button type="button" id="poster-close" class="pbtn ghost"></button>
             </div>
         </dialog>
     </body>
