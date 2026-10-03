@@ -84,7 +84,16 @@ async function measure() {
     // LH_REPORT=cesta.json uloží celú správu posledného merania (čo poskakuje, čo brzdí).
     if (process.env.LH_REPORT) await writeFile(process.env.LH_REPORT, JSON.stringify(lhr));
     const audit = (/** @type {string} */ id) => lhr.audits[id].numericValue;
+    // Čo prehliadač stiahol pred prvým zobrazením obsahu (pozorované LCP, nie simulované): všetko, čo
+    // začal sťahovať dovtedy. Neskoré moduly a dáta po vykreslení sa nerátajú.
+    const lcpAt = lhr.audits.metrics.details.items[0].observedLargestContentfulPaint;
+    /** @type {{ networkRequestTime: number, transferSize: number }[]} */
+    const requests = lhr.audits['network-requests'].details.items.filter(
+        (/** @type {{ networkRequestTime: number }} */ r) => r.networkRequestTime <= lcpAt,
+    );
     return {
+        files: requests.length,
+        kb: requests.reduce((sum, r) => sum + r.transferSize, 0) / 1024,
         lcp: audit('largest-contentful-paint'),
         cls: audit('cumulative-layout-shift'),
         tbt: audit('total-blocking-time'),
@@ -110,3 +119,4 @@ console.log(`CLS  ${pick('cls').toFixed(3)}    (cieľ pod 0,1)`);
 console.log(`TBT  ${Math.round(pick('tbt'))} ms   (náhrada INP v laboratóriu)`);
 console.log(`FCP  ${(pick('fcp') / 1000).toFixed(2)} s`);
 console.log(`Výkon ${pick('perf')} / 100, prístupnosť ${pick('a11y')} / 100`);
+console.log(`Pred prvým zobrazením ${pick('files')} súborov, ${Math.round(pick('kb'))} kB`);
