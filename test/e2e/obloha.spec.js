@@ -17,10 +17,14 @@ import {
 } from '../../shared/config.js';
 import { MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
+import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
+import { dayPlan } from '../../shared/day-plan.js';
+import { heroModel } from '../../shared/hero-model.js';
+import { terazModel } from '../../shared/teraz.js';
 import { toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
+import { FIXED_NOW, fixture, fixtureData, pvAt } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -36,15 +40,16 @@ const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
  * Siete a úložisko ako pri súčasnej appke: Worker a Open-Meteo odpovedajú z fixtures (alebo
  * vôbec, `offline`), nastavenie sa uloží len vtedy, keď tam ešte nič nie je.
  * @param {import('@playwright/test').Page} page
- * @param {{ offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null }} [opts]
+ * @param {{ offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
+ *   `pvData` meranie, ktoré pošle Worker (predvolene snímka z fixtures o 13:00)
  */
-async function pripravSiet(page, { offline = false, settings = OWNER, site = null } = {}) {
+async function pripravSiet(page, { offline = false, settings = OWNER, site = null, pvData = pv } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
-    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
+    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvData } })));
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     /** @param {string} key @param {string} value */
     const uloz = (key, value) => page.addInitScript(([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v), [key, value]);
@@ -64,7 +69,7 @@ async function appReady(page) {
 /**
  * Otvorí novú appku s pevným časom. Bez `settings: null` má uložené Dvorany s kioskom.
  * @param {import('@playwright/test').Page} page
- * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null }} [opts]
+ * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
  */
 async function openObloha(page, { time = FIXED_NOW, ...opts } = {}) {
     const errors = await pripravSiet(page, opts);
@@ -102,8 +107,9 @@ for (const width of [390, 320]) {
         for (const panel of [...PANELS].reverse()) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
-            // Karta Môžem? už má obsah (krok 2), ostatné ešte čakajú.
-            if (panel !== 'mozem') await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
+            // Karty Môžem? (krok 2) a Teraz (krok 3) už majú obsah, ostatné ešte čakajú.
+            if (panel !== 'mozem' && panel !== 'terazky')
+                await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
         }
         const polozky = await page.locator('.tabs button').evaluateAll((buttons) =>
             buttons.map((b) => {
@@ -246,9 +252,11 @@ test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ pag
 test.describe('listovanie kariet prstom a tlačidlo Späť', () => {
     test.use({ hasTouch: true });
 
-    /** Ťah prstom po stránke. @param {import('@playwright/test').Page} page @param {number} dx @param {number} [dy] */
+    /** Ťah prstom po stránke - začína nad veľkým číslom či slovom, nie nad grafom karty Teraz,
+     * kde ťah do strán ukazuje náhľad a kartu neprelistuje (to skúša skupina „karta Teraz prstom“).
+     * @param {import('@playwright/test').Page} page @param {number} dx @param {number} [dy] */
     async function tah(page, dx, dy = 0) {
-        const start = { x: 200, y: 400 };
+        const start = { x: 200, y: 180 };
         await page.evaluate(
             ([s, d]) => {
                 const target = /** @type {Element} */ (document.elementFromPoint(s.x, s.y));
@@ -510,7 +518,7 @@ test.describe('karta Môžem?', () => {
         await expect(panel).toBeHidden();
         await expect(riadok).toBeFocused();
         // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
-        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null } });
+        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null, preview: null } });
         expect(errors).toEqual([]);
     });
 
@@ -678,3 +686,393 @@ test.describe('karta Môžem? prstom', () => {
         expect(errors).toEqual([]);
     });
 });
+
+// ---- Karta Teraz (krok 3) ----------------------------------------------------------
+// Očakávané texty počíta tá istá funkcia ako appka (shared/teraz.js nad heroModel a dayPlan
+// súčasnej appky) z tých istých dát. Meranie je pvAt - snímka kiosku taká, aká by prišla
+// v danej chvíli (ráno nie poludňajší výkon).
+
+/**
+ * Vstup karty Teraz pre dáta z fixtures v danej chvíli, tak ako ho skladá appka.
+ * @param {Date} time @param {object} [extra] @returns {import('../../shared/teraz.js').TerazInput}
+ */
+const vstupTeraz = (time, extra = {}) => ({
+    ...OWNER,
+    now: time,
+    loading: false,
+    known: 'elektraren',
+    pv: pvAt(time),
+    forecast: buildForecast(weather, time, SITE, PLANT),
+    previewMinutes: null,
+    ...extra,
+});
+
+/**
+ * Otvorí novú appku na karte Teraz s meraním, aké by prišlo v danej chvíli.
+ * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1]} [opts]
+ */
+async function openTeraz(page, opts = {}) {
+    const time = opts.time ?? FIXED_NOW;
+    const errors = await openObloha(page, { pvData: pvAt(time), ...opts, time });
+    await page.locator('#nav-terazky').click();
+    await ocakavajKartu(page, 'terazky');
+    return errors;
+}
+
+/** Čo karta ukazuje: číslo, riadky pod ním, nápis pod grafom a odporúčanie. @param {import('@playwright/test').Page} page */
+const terazVStranke = (page) =>
+    page.evaluate(() => {
+        const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
+        return {
+            num: text('#tz-num-val'),
+            source: text('#tz-src'),
+            sub: text('#tz-sub'),
+            hint: text('#tz-hint'),
+            head: text('#tz-now-head'),
+        };
+    });
+
+/** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
+const terazZModelu = (m) => ({ num: m.num, source: m.source, sub: m.sub, hint: m.hint.text, head: m.cards?.now.head ?? '' });
+
+/** Minúta dňa pre čas „HH:MM“. @param {string} hm */
+const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
+
+/** Bod na grafe pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
+async function bodGrafu(page, min) {
+    const box = await page.locator('#tz-chart svg').boundingBox();
+    if (!box) throw new Error('graf nie je vidno');
+    return { x: box.x + (chartX(min) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
+}
+
+/** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
+const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`).getAttribute('data-tone');
+
+test.describe('karta Teraz', () => {
+    // Napoludnie slnko, podvečer lacná sieť, večerná špička drahá sieť, v noci lacná sieť;
+    // ráno živé meranie ešte slabé, plán dňa už počíta so slnkom.
+    /** @type {Record<string, string | null>} */
+    const pasma = { '13:00': 'sun', '19:30': 'cheap', '20:45': 'costly', '02:00': 'cheap', '08:00': null };
+    for (const [hm, tone] of Object.entries(pasma)) {
+        test(`o ${hm} ukazuje ten istý výkon, vetu a odporúčanie ako model aj karta Terazky súčasnej appky`, async ({ page }) => {
+            const time = at(hm);
+            const errors = await openTeraz(page, { time });
+            const vstup = vstupTeraz(time);
+            const m = terazModel(vstup);
+            const hero = heroModel(vstup);
+            await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
+            // Pri čerstvom meraní je to presne heroModel - to isté, čo počíta karta Terazky.
+            expect(m.num).toBe(hero.powerText);
+            expect(m.cards?.now.head).toBe(hero.message.headline);
+            await expect(page.locator('#tz-now-body')).toHaveText(hero.message.body);
+            // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa.
+            const ocakavana = cellAt(planCells(dayPlan(vstup)), minuta(hm)).tone;
+            if (tone) expect(ocakavana).toBe(tone);
+            expect(await farbaPasu(page, minuta(hm))).toBe(ocakavana);
+            await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart?.valueText ?? '');
+            await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart?.desc ?? '');
+            await expect(page.locator('#tz-retry')).toBeHidden();
+            await expect(page.locator('#tz-guess')).toBeHidden();
+            await expect(page.locator('#tz-dots i')).toHaveCount(4);
+
+            // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon a odporúčanie.
+            await page.goto('/');
+            await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
+            await page.locator('#nav-terazky').click();
+            await expect(page.locator('#pv-power')).toHaveText(m.num);
+            await expect(page.locator('#verdict-headline')).toHaveText(m.cards?.now.head ?? '');
+            expect(errors).toEqual([]);
+        });
+    }
+
+    test('nameraná krivka dneška je biela čiara cez predpoveď, hranica veľkých spotrebičov s popiskom', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('13:00') });
+        await expect(page.locator('#tz-chart .dc-area')).toHaveCount(1);
+        await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
+        await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
+        await expect(page.locator('#tz-chart rect[data-tone]')).toHaveCount(48);
+        await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
+        await expect(page.locator('#tz-legend span')).toHaveText(['slnko stačí', 'lacná sieť', 'drahá sieť']);
+        expect(errors).toEqual([]);
+    });
+
+    test('kurzorom: ťahanie po grafe ukáže náhľad, „Späť na teraz“ aj tlačidlo Späť ho zrušia', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const teraz = terazZModelu(terazModel(vstupTeraz(at('13:00'))));
+        const nahlad = terazZModelu(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('15:30') })));
+        const z = await bodGrafu(page, minuta('10:00'));
+        const na = await bodGrafu(page, minuta('15:30'));
+        await page.mouse.move(z.x, z.y);
+        await page.mouse.down();
+        await page.mouse.move(na.x, na.y, { steps: 8 });
+        await page.mouse.up();
+        await expect.poll(() => terazVStranke(page)).toEqual(nahlad);
+        expect(nahlad.hint).toBe('Pozeráš 15:30.');
+        await expect(page.locator('#tz-chart .dc-pill-t')).toHaveText(/^15:30 · /);
+        const spat = page.getByRole('button', { name: 'Späť na teraz' });
+        await spat.click();
+        await expect.poll(() => terazVStranke(page)).toEqual(teraz);
+        await expect(spat).toBeHidden();
+        await expect(page.locator('#tz-chart')).toBeFocused();
+
+        // Tlačidlo Späť v telefóne: najprv vráti teraz, ďalšie sa správa ako doteraz (predošlá karta).
+        await page.mouse.click(na.x, na.y);
+        await expect.poll(() => terazVStranke(page)).toEqual(nahlad);
+        await page.goBack();
+        await expect.poll(() => terazVStranke(page)).toEqual(teraz);
+        await ocakavajKartu(page, 'terazky');
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        expect(errors).toEqual([]);
+    });
+
+    test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kraje dňa, Escape vráti teraz', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const graf = page.getByRole('slider', { name: 'Graf dňa, šípkami si pozrieš iný čas' });
+        const hodnota = (/** @type {string} */ hm) =>
+            terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta(hm) })).chart?.valueText ?? '';
+        await graf.focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(graf).toHaveAttribute('aria-valuetext', hodnota('13:15'));
+        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 13:15.');
+        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('ArrowLeft');
+        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
+        await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('12:45') })).num);
+        await page.keyboard.press('End');
+        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('23:45')));
+        await page.keyboard.press('Home');
+        await expect(graf).toHaveAttribute('aria-valuenow', '0');
+        await page.keyboard.press('Escape');
+        await expect(graf).toHaveAttribute('aria-valuetext', terazModel(vstupTeraz(at('13:00'))).chart?.valueText ?? '');
+        await expect(page.locator('#tz-reset')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('meranie neodpovedá: číslo je odhad a povie, kedy prišlo posledné meranie', async ({ page }) => {
+        const stare = pvAt(at('11:40'));
+        const errors = await openObloha(page, { time: at('13:00'), pvData: stare });
+        await page.locator('#nav-terazky').click();
+        const m = terazModel(vstupTeraz(at('13:00'), { pv: stare }));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
+        await expect(page.locator('#tz-src')).toHaveText(/^odhad z predpovede · meranie neodpovedá od \d\d:\d\d$/);
+        await expect(page.locator('#tz-chart')).toBeVisible();
+        await expect(page.locator('#tz-strip')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('bez dát: pomlčka, veta s príčinou, Skúsiť znova a po ňom s dátami karta odpovie', async ({ page }) => {
+        let offline = true;
+        const errors = await pripravSiet(page);
+        await page.unrouteAll();
+        await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
+        await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvAt(FIXED_NOW) } })));
+        await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/obloha/');
+        await appReady(page);
+        await page.locator('#nav-terazky').click();
+
+        const bez = terazModel(vstupTeraz(FIXED_NOW, { pv: null, forecast: null }));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(bez));
+        await expect(page.locator('#tz-num-val')).toHaveText('–');
+        await expect(page.locator('#tz-sub')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
+        // Žiadne vymyslené čísla: graf ani odporúčania sa neukážu.
+        await expect(page.locator('#tz-plot')).toBeHidden();
+        await expect(page.locator('#tz-recs')).toBeHidden();
+        const znova = page.locator('#tz-retry');
+        await expect(znova).toHaveText('Skúsiť znova');
+        await expect(znova).toBeVisible();
+
+        offline = false;
+        await znova.click();
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(terazModel(vstupTeraz(FIXED_NOW))));
+        await expect(znova).toBeHidden();
+        await expect(page.locator('#tz-plot')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('poloha bez panelov: „~“, typická strecha a výzva do Nastavenia; súčasná appka ostáva bez výkonu', async ({ page }) => {
+        const errors = await openTeraz(page, { settings: null, site: SITE });
+        const typical = typicalSettings(SITE);
+        const m = terazModel({
+            ...vstupTeraz(FIXED_NOW),
+            ...typical,
+            known: 'poloha',
+            pv: null,
+            forecast: buildForecast(weather, FIXED_NOW, SITE, typical.plant),
+        });
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
+        await expect(page.locator('#tz-num-val')).toHaveText(/^~\d/);
+        await expect(page.locator('#tz-sub')).toHaveText('typická strecha asi 5 kWp v tvojej obci, nie tvoja');
+        await expect(page.locator('#tz-guess-title')).toHaveText('Koľko dáva tvoja strecha?');
+        expect(await page.locator('#tz-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
+        await page.locator('#tz-guess-btn').click();
+        await ocakavajKartu(page, 'nastavenie');
+
+        // Súčasná appka v tom istom stave: karta Terazky bez výkonu, ako doteraz.
+        await page.goto('/');
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
+        await expect(page.locator('#pv-power')).toHaveText('–');
+        expect(errors).toEqual([]);
+    });
+
+    test('bez polohy: len výzva zadať polohu, bez grafu a odporúčaní', async ({ page }) => {
+        const errors = await openTeraz(page, { settings: null });
+        await expect(page.locator('#tz-ask')).toBeVisible();
+        await expect(page.locator('#tz-plot')).toBeHidden();
+        await expect(page.locator('#tz-recs')).toBeHidden();
+        await expect(page.locator('#tz-num')).toBeHidden();
+        await page.locator('#tz-ask-btn').click();
+        await ocakavajKartu(page, 'nastavenie');
+        expect(errors).toEqual([]);
+    });
+
+    test('načítavanie: pokojný stav bez chybovej hlášky a bez tlačidla Skúsiť znova', async ({ page }) => {
+        /** @type {() => void} */
+        let pusti = () => {};
+        const brana = new Promise((r) => (pusti = () => r(undefined)));
+        await pripravSiet(page);
+        await page.route(/api\.open-meteo\.com/, async (route) => {
+            await brana;
+            await route.fulfill({ json: weather });
+        });
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/obloha/');
+        await appReady(page);
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#tz-sub')).toHaveText('Načítavam…');
+        await expect(page.locator('#tz-retry')).toBeHidden();
+        await expect(page.locator('#tz-num')).toBeHidden();
+        pusti();
+        await expect(page.locator('#tz-plot')).toBeVisible();
+    });
+
+    test('prístupnosť: žiadne závažné nálezy axe počas náhľadu ani bez dát', async ({ page }) => {
+        await openTeraz(page, { time: at('13:00') });
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.locator('#tz-reset')).toBeVisible();
+        expect(await vazneNalezy(page)).toEqual([]);
+        await openTeraz(page, { offline: true });
+        expect(await vazneNalezy(page)).toEqual([]);
+    });
+});
+
+/** Ťah prstom cez CDP po krokoch, ako naozajstný prst - prehliadač pri ňom posúva stránku aj pás sám.
+ * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dx?: number, dy?: number, krokMs?: number }} gesto */
+async function prstTah(page, { x, y, dx = 0, dy = 0, krokMs = 40 }) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (const t of [0.2, 0.4, 0.6, 0.8, 1]) {
+        await page.waitForTimeout(krokMs);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * t, y: y + dy * t }] });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+}
+
+test.describe('karta Teraz prstom', () => {
+    test.use({ hasTouch: true });
+
+    test('ťuknutie bez pohybu ukáže náhľad a nechá ho svietiť', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const bod = await bodGrafu(page, minuta('16:00'));
+        await prst(page, bod);
+        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 16:00.');
+        await page.waitForTimeout(2000);
+        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 16:00.');
+        await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('16:00') })).num);
+        expect(errors).toEqual([]);
+    });
+
+    test('zvislý ťah cez graf posunie stránku a náhľad neukáže', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const bod = await bodGrafu(page, minuta('12:00'));
+        await prst(page, { ...bod, dy: -160 });
+        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(0);
+        await page.waitForTimeout(300);
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
+        await expect(page.locator('#tz-reset')).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('rýchly vodorovný ťah po grafe ukazuje náhľad a kartu neprelistuje', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const bod = await bodGrafu(page, minuta('16:00'));
+        const ciel = await bodGrafu(page, minuta('09:00'));
+        // Švihnutie doľava ako pri listovaní kariet: rýchle a ďaleko.
+        await prstTah(page, { ...bod, dx: ciel.x - bod.x, krokMs: 20 });
+        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 09:00.');
+        await page.waitForTimeout(300);
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('pás odporúčaní sa posúva prstom do strán a listovanie kariet ho nepreberie', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const pas = page.locator('#tz-strip');
+        await pas.scrollIntoViewIfNeeded();
+        const box = await pas.boundingBox();
+        if (!box) throw new Error('pás odporúčaní nie je vidno');
+        await prstTah(page, { x: box.x + box.width * 0.8, y: box.y + box.height / 2, dx: -220 });
+        await expect.poll(() => pas.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        await page.waitForTimeout(400);
+        await ocakavajKartu(page, 'terazky');
+        await expect(page.locator('#tz-dots i.on')).toHaveCount(1);
+        await expect(page.locator('#tz-dots i').first()).not.toHaveClass('on');
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('karta Môžem? po kontrole kroku 2', () => {
+    for (const width of [390, 320]) {
+        test(`šírka ${width} px: časy východu a západu pod oblúkom sú celé a odsadené od okraja ako ostatný obsah`, async ({ page }) => {
+            await page.setViewportSize({ width, height: 800 });
+            const errors = await openObloha(page);
+            const casy = await page.locator('#mz-arc .arc-t').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+            expect(casy).toHaveLength(2);
+            // Odstup obsahu karty: odsadenie vety pod slovom.
+            const odstup = await page.locator('#mz-answer').evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+            const sirka = await page.evaluate(() => innerWidth);
+            for (const t of casy) {
+                expect(t.left, 'čas pod oblúkom je pri ľavom okraji').toBeGreaterThanOrEqual(odstup - 0.5);
+                expect(sirka - t.right, 'čas pod oblúkom je pri pravom okraji').toBeGreaterThanOrEqual(odstup - 0.5);
+            }
+            expect(errors).toEqual([]);
+        });
+    }
+
+    test('výzva bez panelov píše výkon typickej strechy zaokrúhlene', async ({ page }) => {
+        const errors = await openObloha(page, { settings: null, site: SITE });
+        await expect(page.locator('#mz-guess-text')).toHaveText(/Rátam s typickou strechou asi 5 kWp\./);
+        await expect(page.locator('#mz-guess-text')).not.toHaveText(/5,22/);
+        expect(errors).toEqual([]);
+    });
+});
+
+for (const width of [390, 320]) {
+    test(`karta Teraz na šírke ${width} px: nič nepretečie, číslo aj legenda sú celé, tlačidlá aspoň 44 px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 800 });
+        const errors = await openTeraz(page, { time: at('13:00') });
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.locator('#tz-reset')).toBeVisible();
+        const mimo = await page.evaluate(() =>
+            ['#tz-num', '#tz-src', '#tz-sub', '#tz-chart', '#tz-legend', '.hint', '#tz-reset']
+                .map((sel) => ({ sel, box: /** @type {Element} */ (document.querySelector(sel)).getBoundingClientRect() }))
+                .filter(({ box }) => box.left < 0 || box.right > innerWidth + 0.5)
+                .map(({ sel }) => sel),
+        );
+        expect(mimo, 'tieto prvky trčia z obrazovky').toEqual([]);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
+        expect((await page.locator('#tz-reset').boundingBox())?.height).toBeGreaterThanOrEqual(44);
+        expect(errors).toEqual([]);
+    });
+}

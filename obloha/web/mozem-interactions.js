@@ -4,24 +4,14 @@
 import { toggleLaunch } from '../../shared/launches.js';
 import { localDateKey, localMinutes } from '../../shared/solar.js';
 import { saveLaunches } from '../../web/storage.js';
-import { navPrevFrom, navStep, navStepFrom, sameNavStep } from './state.js';
+import { stepBack } from './nav-back.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
 
-/**
- * Zatvorenie panelu veci (krížik, Escape, ťuknutie vedľa). Otvorenie panelu bolo krokom
- * navigácie, takže zatvorenie je ten istý krok ako tlačidlo Späť a ide cez `history.back()` -
- * keby sa zapísal nový krok, Späť na telefóne by panel znovu otvorilo. Keď aktuálna položka
- * histórie nesedí (cudzia, iný krok), zmena ide priamo cez setState.
- * @param {Store} store
- */
-export function closeSheet(store) {
-    const state = store.get();
-    const here = navStepFrom(history.state);
-    const prev = navPrevFrom(history.state);
-    if (here && prev && sameNavStep(here, navStep(state)) && sameNavStep(prev, { panel: state.panel, item: null })) history.back();
-    else store.setState({ mozemItem: null });
+/** Zatvorenie panelu veci (krížik, Escape, ťuknutie vedľa) - ten istý krok ako tlačidlo Späť. @param {Store} store */
+function closeSheet(store) {
+    stepBack(store, { mozemItem: null });
 }
 
 /**

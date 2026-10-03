@@ -53,9 +53,48 @@ function mozemDom() {
     };
 }
 
+/** Karta Teraz. */
+function terazDom() {
+    return {
+        tzNum: byId('tz-num'),
+        tzNumVal: byId('tz-num-val'),
+        tzSrc: byId('tz-src'),
+        tzSub: byId('tz-sub'),
+        tzRetry: byId('tz-retry'),
+        tzGuess: byId('tz-guess'),
+        tzGuessTitle: byId('tz-guess-title'),
+        tzGuessText: byId('tz-guess-text'),
+        tzGuessBtn: byId('tz-guess-btn'),
+        tzAsk: byId('tz-ask'),
+        tzAskTitle: byId('tz-ask-title'),
+        tzAskText: byId('tz-ask-text'),
+        tzAskBtn: byId('tz-ask-btn'),
+        tzPlot: byId('tz-plot'),
+        tzChart: byId('tz-chart'),
+        tzChartDesc: byId('tz-chart-desc'),
+        tzLegend: byId('tz-legend'),
+        tzHint: byId('tz-hint'),
+        tzReset: byId('tz-reset'),
+        tzRecs: byId('tz-recs'),
+        tzStrip: byId('tz-strip'),
+        tzNowHead: byId('tz-now-head'),
+        tzNowBody: byId('tz-now-body'),
+        tzDevicesTitle: byId('tz-devices-title'),
+        tzDevices: byId('tz-devices'),
+        tzTodayTitle: byId('tz-today-title'),
+        tzToday: byId('tz-today'),
+        tzTodayBar: byId('tz-today-bar'),
+        tzWindow: byId('tz-window'),
+        tzLaterTitle: byId('tz-later-title'),
+        tzLater: byId('tz-later'),
+        tzDots: byId('tz-dots'),
+    };
+}
+
 export function collectDom() {
     return {
         ...mozemDom(),
+        ...terazDom(),
         // <html> nesie farby oblohy (--s1, --s2) a počasie (data-sky).
         root: document.documentElement,
         page: byId('page'),

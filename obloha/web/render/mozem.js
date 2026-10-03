@@ -5,6 +5,7 @@
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
 import { MOZEM_SKY_TEXTS } from '../../../shared/messages.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
+import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/mozem-sky.js').MozemSkyModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -17,24 +18,6 @@ import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 export function wordSize(word) {
     return word.length <= 7 ? 66 : word.length <= 11 ? 50 : 42;
 }
-
-/** Zapíše text, len keď sa líši - nezmenený zápis by prvok zbytočne označil na prepočet. @param {HTMLElement} el @param {string} text */
-function setText(el, text) {
-    if (el.textContent !== text) el.textContent = text;
-}
-
-/** @type {WeakMap<Element, string>} */
-const written = new WeakMap();
-
-/** innerHTML len pri zmene: nezmenený obsah tak nezhodí fokus ani posun. @param {Element} el @param {string} html */
-function setHtml(el, html) {
-    if (written.get(el) === html) return;
-    written.set(el, html);
-    el.innerHTML = html;
-}
-
-/** @param {HTMLElement} el @param {boolean} on */
-const show = (el, on) => el.classList.toggle('hidden', !on);
 
 // Oblúk v súradniciach návrhu: polovica elipsy nad obzorom, východ vľavo, západ vpravo.
 const ARC = { cx: 160, cy: 118, rx: 140, ry: 88 };

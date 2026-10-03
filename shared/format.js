@@ -64,6 +64,12 @@ export function kwpText(kwp) {
     return `${fmt2(kwp)} kWp`;
 }
 
+/** Výkon strechy zhruba, pre človeka: „asi 5 kWp“ - na celé kWp, najmenej 1. Presné číslo
+ * (kwpText) patrí tam, kde sa strecha zadáva; zaokrúhľuje sa len text, výpočet ostáva. @param {number} kwp */
+export function kwpRoughText(kwp) {
+    return `asi ${Math.max(1, Math.round(kwp))} kWp`;
+}
+
 /** Popisok mriežky v kW: celé číslo bez desatín, inak max. dve desatiny bez koncovej nuly. @param {number} kw */
 export function formatGridKw(kw) {
     if (Number.isInteger(kw)) return String(kw);

@@ -1,7 +1,7 @@
 // Všetky texty odporúčaní pre používateľa na jednom mieste. Čisté funkcie bez DOM.
 
-import { EVERYDAY } from './config.js';
-import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLabel } from './format.js';
+import { EVERYDAY, MINUTES_PER_DAY } from './config.js';
+import { dateParts, dayNameLong, fmt1, fmt2, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDayLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -559,9 +559,10 @@ export const MOZEM_SKY_TEXTS = {
     askBtn: 'Zadaj polohu',
 };
 
-/** Výzva pri odpovedi z typickej strechy: s čím appka počíta. @param {number} kwp výkon typickej strechy */
+/** Výzva pri odpovedi z typickej strechy: s čím appka počíta. Výkon zhruba („asi 5 kWp“) -
+ * desatiny by tvrdili presnosť, ktorú typická strecha nemá. @param {number} kwp výkon typickej strechy */
 export function mozemGuessText(kwp) {
-    return `Počasie poznám, tvoju strechu nie. Rátam s typickou strechou ${kwpText(kwp)}. Zadaj panely a odpoveď bude naozaj tvoja.`;
+    return `Počasie poznám, tvoju strechu nie. Rátam s typickou strechou ${kwpRoughText(kwp)}. Zadaj panely a odpoveď bude naozaj tvoja.`;
 }
 
 /**
@@ -601,6 +602,133 @@ export function mozemOfflineText({ online, kiosk, pvOk, pvSince }) {
 /** Tlačidlo v paneli veci, kým beží: dokedy a že ťuknutie zápis zruší. @param {boolean} isAuto @param {number} until minúta dňa */
 export function mozemLogCancel(isAuto, until) {
     return `${isAuto ? 'Nabíja sa' : 'Beží'} do ${hm(until)} · zrušiť`;
+}
+
+// ---- Karta Teraz v novej appke -----------------------------------------------------
+// Výkon, odporúčanie a plán dňa počíta to isté ako kartu Terazky súčasnej appky (heroModel,
+// dayPlan); tu sú len texty nového vzhľadu (shared/teraz.js).
+
+/**
+ * Čo znamená farba pásu plánu pod grafom: zelená slnko stačí, modrá lacná sieť, červená drahá
+ * sieť, inak bežná cena. Legenda pod pásom ich píše slovom, aby farba nebola jediný nosič významu.
+ * @type {Record<import('./day-chart.js').Tone, string>}
+ */
+export const TERAZ_TONES = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
+
+/** Pevné texty karty: popisky, tlačidlá a výzvy. */
+export const TERAZ_TEXTS = {
+    retry: MOZEM_SKY_TEXTS.retry,
+    hint: 'Ťahaj prstom po grafe a pozri si iný čas.',
+    reset: 'Späť na teraz',
+    limit: 'veľké spotrebiče',
+    night: 'slnko je pod obzorom',
+    loading: 'Načítavam…',
+    slider: 'Graf dňa, šípkami si pozrieš iný čas',
+    strip: 'Odporúčania, posúvaj do strán',
+    devices: 'Spotrebiče',
+    today: 'Dnešok',
+    later: 'Kedy lepšie',
+    guessTitle: 'Koľko dáva tvoja strecha?',
+    guessText: 'Zadaj panely a tu uvidíš svoj výkon. S odkazom na kiosk aj naozaj nameraný.',
+    guessBtn: 'Zadaj panely',
+    askTitle: 'Kde máš strechu?',
+    askText: 'Bez polohy neviem, kedy u teba svieti. Zadaj ju v Nastavení a ukážem ti výkon aj plán dňa.',
+    askBtn: 'Zadaj polohu',
+};
+
+/** Koniec úseku dňa: polnoc na konci dňa je „24:00“, nie „00:00“. @param {number} min */
+const endHm = (min) => (min >= MINUTES_PER_DAY ? '24:00' : hm(min));
+
+/** Úsek dňa „09:15 – 16:45“. @param {{ from: number, to: number }} w */
+const spanText = (w) => `${hm(w.from)} – ${endHm(w.to)}`;
+
+/**
+ * Riadok pod číslom: odkiaľ výkon je. Živé meranie, namerané (krivka dneška), alebo odhad
+ * z predpovede - a keď meranie mlčí, aj odkedy.
+ * @param {'live' | 'measured' | 'forecast' | null} source
+ * @param {{ silent: boolean, since: string | null }} pv `silent`: vlastné meranie mlčí, `since`: čas
+ *   posledného merania (null, keď neprišlo vôbec)
+ */
+export function terazSourceText(source, { silent, since }) {
+    if (source === 'live') return 'živé meranie';
+    if (source === 'measured') return 'namerané';
+    if (!silent) return 'odhad z predpovede';
+    return `odhad z predpovede · meranie neodpovedá${since ? ` od ${since}` : ''}`;
+}
+
+/** Veta pod číslom: koľko z jasnej oblohy. @param {number} pct */
+export function terazClearText(pct) {
+    return `${pct} % z toho, čo by dala jasná obloha`;
+}
+
+/** Veta pod číslom pri typickej streche: priznáva, že nejde o vlastnú strechu. @param {number} kwp */
+export function terazTypicalText(kwp) {
+    return `typická strecha ${kwpRoughText(kwp)} v tvojej obci, nie tvoja`;
+}
+
+/** Nápis pod grafom počas náhľadu. @param {number} min */
+export function terazPreviewText(min) {
+    return `Pozeráš ${hm(min)}.`;
+}
+
+/** Štítok nad grafom počas náhľadu: čas, výkon a čo vtedy platí. @param {number} min @param {number} kw @param {import('./day-chart.js').Tone} tone */
+export function terazPillText(min, kw, tone) {
+    return `${hm(min)} · ${fmt1(kw)} kW · ${TERAZ_TONES[tone]}`;
+}
+
+/**
+ * Hodnota grafu pre čítačku (posúvač): čas, výkon a čo vtedy platí.
+ * @param {number} min @param {boolean} preview @param {string} kwText @param {import('./day-chart.js').Tone} tone
+ */
+export function terazSliderText(min, preview, kwText, tone) {
+    return `${preview ? 'Náhľad' : 'Teraz'} ${hm(min)}, ${kwText} kW, ${TERAZ_TONES[tone]}`;
+}
+
+/** Okno na veľké veci dnes: prebieha či príde, už bolo, alebo nebude. @param {{ from: number, to: number } | null} w @param {boolean} past */
+export function terazWindowText(w, past) {
+    if (!w) return 'Okno na veľké veci dnes nebude.';
+    return `Okno na veľké veci ${past ? 'bolo ' : ''}${spanText(w)}.`;
+}
+
+/**
+ * Textový popis grafu pre čítačku obrazovky: teraz, okno na veľké veci, kedy je lacná a kedy
+ * drahá sieť - to, čo inak nesie farba pásu.
+ * @param {{ nowMin: number, kwText: string, tone: import('./day-chart.js').Tone,
+ *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
+ */
+export function terazChartText({ nowMin, kwText, tone, sun, cheap, costly }) {
+    const list = (/** @type {Array<{ from: number, to: number }>} */ ws) => ws.map(spanText).join(', ');
+    const parts = [`Výroba počas dňa. Teraz ${hm(nowMin)}: ${kwText} kW, ${TERAZ_TONES[tone]}.`];
+    parts.push(sun.length ? `Okno na veľké veci ${list(sun)}.` : 'Okno na veľké veci dnes nebude.');
+    if (cheap.length) parts.push(`Lacná sieť ${list(cheap)}.`);
+    if (costly.length) parts.push(`Drahá sieť ${list(costly)}.`);
+    return parts.join(' ');
+}
+
+/**
+ * Karta Dnešok: predpoveď dňa a koľko už nabehlo - z merania naisto, bez neho podľa predpovede.
+ * @param {{ forecastKwh: number, doneKwh: number, measured: boolean }} d
+ */
+export function terazTodayText({ forecastKwh, doneKwh, measured }) {
+    return measured
+        ? `Predpoveď ${fmt1(forecastKwh)} kWh, už nabehlo ${fmt1(doneKwh)} kWh.`
+        : `Predpoveď ${fmt1(forecastKwh)} kWh, podľa nej už asi ${fmt1(doneKwh)} kWh.`;
+}
+
+/**
+ * Karta Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel, ten istý ako „Lepšie bude o“
+ * v súčasnej appke) a najbližší silný deň z predpovede.
+ * @param {{ wait: string | null, todayStrong: boolean, next: { name: string, kwh: number } | null }} d
+ */
+export function terazLaterText({ wait, todayStrong, next }) {
+    const day = next
+        ? todayStrong
+            ? `Dnes je silný deň. Ďalší taký: ${next.name.toLowerCase()}, okolo ${Math.round(next.kwh)} kWh.`
+            : `Najbližší silný deň: ${next.name.toLowerCase()}, okolo ${Math.round(next.kwh)} kWh.`
+        : todayStrong
+          ? 'Dnes je silný deň. Ďalší taký v predpovedi nie je.'
+          : 'Silný deň v predpovedi na týždeň nie je.';
+    return wait ? `Lepšie bude o ${wait}. ${day}` : day;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------

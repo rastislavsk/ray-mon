@@ -2,13 +2,14 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { MOZEM_ITEMS, PANELS } from '../../shared/config.js';
+import { MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
 import { typicalSettings } from '../../shared/settings.js';
 import { emptySettings } from '../../shared/setup.js';
 
 /**
  * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny), `mozemQuip`
- * stránka hlášok, `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
+ * stránka hlášok, `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
+ * `terazPage` stránka pásu odporúčaní pod ním, `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
  * a `online`, či má telefón internet - podľa toho karta bez dát povie prečo.
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {import('../../web/refresh.js').RefreshState & {
@@ -18,13 +19,17 @@ import { emptySettings } from '../../shared/setup.js';
  *   launches: import('../../shared/launches.js').Launch[],
  *   mozemItem: string | null,
  *   mozemQuip: number,
+ *   terazPreview: number | null,
+ *   terazPage: number,
  *   online: boolean,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
 /**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta a otvorený panel veci.
- * @typedef {{ panel: Panel, item: string | null }} NavStep
+ * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci a náhľad
+ * iného času na grafe karty Teraz. Pri náhľade je krokom to, že beží - posun po grafe nový krok
+ * nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň vstúpilo.
+ * @typedef {{ panel: Panel, item: string | null, preview: number | null }} NavStep
  */
 
 /**
@@ -56,12 +61,15 @@ export function initialState(now, { saved, site, startPanel, dayLog, launches, o
         launches,
         mozemItem: null,
         mozemQuip: 0,
+        terazPreview: null,
+        terazPage: 0,
         online,
     };
 }
 
 /**
- * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem?, s ňou sa zatvorí.
+ * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem? a náhľad
+ * karte Teraz - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
@@ -69,6 +77,7 @@ export function panelChange(from, to) {
         panel: to,
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         mozemItem: /** @type {string | null} */ (null),
+        terazPreview: /** @type {number | null} */ (null),
     };
 }
 
@@ -82,12 +91,12 @@ export function nextPanel(panel, dir) {
 
 /** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {
-    return { panel: state.panel, item: state.mozemItem };
+    return { panel: state.panel, item: state.mozemItem, preview: state.terazPreview };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.item === b.item;
+    return a.panel === b.panel && a.item === b.item && (a.preview === null) === (b.preview === null);
 }
 
 /**
@@ -99,11 +108,14 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item } = /** @type {{ panel?: unknown, item?: unknown }} */ (raw);
+    const { panel, item, preview } = /** @type {{ panel?: unknown, item?: unknown, preview?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     if (!p) return null;
-    if (item === null || item === undefined) return { panel: p, item: null };
-    return MOZEM_ITEMS.some((i) => i.id === item) ? { panel: p, item: /** @type {string} */ (item) } : null;
+    // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
+    const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
+    const step = { panel: p, item: null, preview: at ? /** @type {number} */ (preview) : null };
+    if (item === null || item === undefined) return step;
+    return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
 }
 
 /** Krok, na ktorom položka histórie stojí. @param {unknown} raw */
@@ -112,7 +124,12 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 /** Krok, z ktorého sa do položky histórie prišlo. @param {unknown} raw */
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
-/** Návrat na krok z histórie (tlačidlo Späť): karta aj panel veci tak, ako boli. @param {Panel} from @param {NavStep} step */
-export function navChange(from, step) {
-    return { ...panelChange(from, step.panel), mozemItem: step.item };
+/**
+ * Návrat na krok z histórie (tlačidlo Späť): karta, panel veci aj náhľad tak, ako boli. Náhľad,
+ * ktorý už beží, ostane na čase, kde ho prst nechal.
+ * @param {AppState} state @param {NavStep} step
+ */
+export function navChange(state, step) {
+    const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
+    return { ...panelChange(state.panel, step.panel), mozemItem: step.item, terazPreview: preview };
 }

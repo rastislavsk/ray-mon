@@ -50,6 +50,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
 | `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 | `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, oblúk slnka, výzvy).        |
+| `teraz.js`       | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
+| `day-chart.js`   | Graf dňa karty Teraz: geometria krivky, hranice, „teraz“ a náhľadu, pás plánu po polhodinách a jeho farby.           |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -190,6 +192,20 @@ appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad. Panel veci je
 cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
 aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
 „Pustil/a som“ zapisuje cez `web/storage.js` do `spustenia-v1`, spustenie teda vidia obe appky.
+
+Karta Teraz nahrádza kartu Terazky. Ciferník a denný prstenec v novom dizajne nie sú, ich úlohu
+preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
+(aj náhľad iného času cez `previewMinutes`), plán z `dayPlan` a krátke odpovede spotrebičov
+z `deviceShorts` – pri čerstvom meraní ukazuje presne to, čo karta Terazky. Jediný rozdiel je
+meranie, ktoré mlčí (`pvFreshness`): to už nie je výkon „teraz“, karta vtedy počíta z krivky dňa
+(`terazInput`) a povie, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
+`shared/day-chart.js`: predpoveď ako plochu, nameranú krivku po posledný bod ako bielu čiaru,
+hranicu veľkých spotrebičov (`lowKw` z `powerThresholds`, od nej je plán zelený) a pod grafom pás
+plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom strede. Graf je zároveň posúvač času
+(`role="slider"`): prst, kurzor aj šípky ukážu náhľad. Náhľad je krok navigácie (`preview`
+v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. Listovanie kariet
+nad grafom nebeží (`.day-scrub` je úchytka vo `web/gesture.js`, ako jazdec na prstenci súčasnej
+appky). Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
 
 ## Prečo takto
 
