@@ -11,7 +11,6 @@ import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { heroModel, pvFreshness } from './hero-model.js';
 import {
-    TERAZ_TEXTS,
     terazChartText,
     terazClearText,
     terazLaterText,
@@ -22,6 +21,7 @@ import {
     terazTodayText,
     terazTypicalText,
     terazWindowText,
+    voiceTexts,
 } from './messages.js';
 import { deviceShorts, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
@@ -51,23 +51,24 @@ export function terazInput(input) {
  * `offline` (bez predpovede), `ok`. Pri známej polohe bez panelov (`known: 'poloha'`) karta
  * počíta s typickou strechou, ktorú má vo vstupe (typicalSettings), a priznáva to (`estimate`).
  * @param {TerazInput} input
- * @param {{ launches?: import('./launches.js').Launch[], online?: boolean }} [opts] zápisy „Pustil/a som“
- *   (krátke odpovede spotrebičov) a či má telefón internet (veta bez dát)
+ * @param {{ launches?: import('./launches.js').Launch[], online?: boolean, voice?: import('./messages.js').Voice }} [opts]
+ *   zápisy „Pustil/a som“ (krátke odpovede spotrebičov), či má telefón internet (veta bez dát) a tón hlášok
  */
-export function terazModel(input, { launches = [], online = true } = {}) {
+export function terazModel(input, { launches = [], online = true, voice = 'drzy' } = {}) {
+    const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
     const estimate = input.known === 'poloha';
     if (input.known === 'nic') return { ...empty('ask', estimate), ask: true };
     if (!input.forecast) {
         if (input.loading) return { ...empty('loading', estimate), sub: TERAZ_TEXTS.loading };
-        return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online), retry: true };
+        return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
     const base = terazInput(input);
-    const hero = heroModel(base);
-    const now = base.previewMinutes === null ? hero : heroModel({ ...base, previewMinutes: null });
+    const hero = heroModel(base, voice);
+    const now = base.previewMinutes === null ? hero : heroModel({ ...base, previewMinutes: null }, voice);
     const plan = dayPlan(base);
     return {
         ...empty('ok', estimate),
-        ...headOf(input, base, hero, estimate),
+        ...headOf(input, base, hero, estimate, voice),
         guess: estimate,
         chart: chartOf(base, plan, hero, now),
         hint: hero.preview ? { text: terazPreviewText(hero.minutes), reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
@@ -79,12 +80,12 @@ export function terazModel(input, { launches = [], online = true } = {}) {
  * Číslo a dva riadky pod ním: odkiaľ výkon je (a odkedy mlčí meranie) a koľko z jasnej oblohy.
  * Pri typickej streche „~“ a veta, že to nie je vlastná strecha.
  * @param {TerazInput} input pôvodný vstup @param {TerazInput} base vstup pre výpočty (terazInput)
- * @param {ReturnType<typeof heroModel>} hero @param {boolean} estimate
+ * @param {ReturnType<typeof heroModel>} hero @param {boolean} estimate @param {import('./messages.js').Voice} voice
  */
-function headOf(input, base, hero, estimate) {
+function headOf(input, base, hero, estimate, voice) {
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
-        return { num, source: '', sub: terazTypicalText(installedKw(input.plant)) };
+        return { num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
     const pv = pvStatus(input);
     const silent = !hero.preview && !!input.kiosk && !pv.ok;
@@ -117,7 +118,7 @@ function empty(kind, estimate) {
 function clearSub(input, hero) {
     const today = todayOf(input);
     const clear = today ? interpolate(today.hourly, hero.minutes / 60, 'clearKw') : 0;
-    if (hero.isNight || !(clear > 0)) return TERAZ_TEXTS.night;
+    if (hero.isNight || !(clear > 0)) return voiceTexts().TERAZ_TEXTS.night;
     if (!Number.isFinite(hero.power)) return '';
     return terazClearText(Math.min(100, Math.round((100 * hero.power) / clear)));
 }
@@ -151,7 +152,7 @@ function chartOf(input, plan, hero, now) {
     const windows = (/** @type {Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
     return {
         ...geo,
-        limitText: TERAZ_TEXTS.limit,
+        limitText: voiceTexts().TERAZ_TEXTS.limit,
         desc: terazChartText({
             nowMin: now.minutes,
             kwText: now.powerText,

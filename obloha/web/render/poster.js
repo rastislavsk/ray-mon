@@ -3,7 +3,7 @@
 // v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
-import { posterLinkText, STATISTIKA_TEXTS as T } from '../../../shared/messages.js';
+import { posterLinkText, voiceTexts } from '../../../shared/messages.js';
 import { posterModel } from '../../../shared/statistika.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -29,11 +29,11 @@ function opener(from, dom) {
 /** @param {AppState} state @param {Dom} dom */
 export function renderPoster(state, dom) {
     // Odkaz na karte Môžem?: mesiac na streche, ako súhrn v súčasnej appke. Bez merania nie je.
-    const link = state.panel === 'mozem' ? posterModel(state, 'mesiac') : null;
+    const link = state.panel === 'mozem' ? posterModel(state, 'mesiac', state.voice) : null;
     show(dom.mzSummary, !!link);
     setText(dom.mzSummaryText, link ? posterLinkText(link.kick, link.total) : '');
 
-    const m = state.poster ? posterModel(state, state.poster) : null;
+    const m = state.poster ? posterModel(state, state.poster, state.voice) : null;
     if (!m) {
         if (dom.poster.open) dom.poster.close();
         const back = shown && shown.panel === state.panel ? opener(shown, dom) : null;
@@ -48,6 +48,7 @@ export function renderPoster(state, dom) {
     setText(dom.posterFoot, m.foot);
     show(dom.posterNote, m.note !== '');
     setText(dom.posterNote, m.note);
+    const T = voiceTexts(state.voice).STATISTIKA_TEXTS;
     setText(dom.posterShare, T.posterShare);
     setText(dom.posterClose, T.posterClose);
     if (!dom.poster.open) dom.poster.showModal();

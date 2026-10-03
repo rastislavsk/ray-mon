@@ -12,6 +12,7 @@ import {
     TARIFF,
     TARIFF_TEMPLATES,
     TYPICAL_PLANT,
+    VOICES,
 } from './config.js';
 import { fmt2, kwpText } from './format.js';
 import { kioskApiUrl } from './kiosk.js';
@@ -318,3 +319,29 @@ export function settingsFromLink(text) {
         return null;
     }
 }
+
+// ---- Vzhľad novej appky ------------------------------------------------------------
+
+/**
+ * Vzhľad novej appky (obloha/): tón hlášok a živá obloha. Uložený je pod LOOK_STORAGE_KEY ako
+ * { ton, obloha } - kľúč aj formát má len nová appka.
+ * @typedef {{ voice: import('./messages.js').Voice, liveSky: boolean }} Look
+ */
+
+/** Predvolený vzhľad: drzý tón a živá obloha. @type {Look} */
+export const DEFAULT_LOOK = { voice: VOICES[0], liveSky: true };
+
+/**
+ * Vzhľad z úložiska. Čo chýba alebo nesedí, je predvolené - každá voľba zvlášť.
+ * @param {unknown} raw @returns {Look}
+ */
+export function parseLook(raw) {
+    const o = isObj(raw) ? raw : {};
+    return {
+        voice: VOICES.find((v) => v === o.ton) ?? DEFAULT_LOOK.voice,
+        liveSky: typeof o.obloha === 'boolean' ? o.obloha : DEFAULT_LOOK.liveSky,
+    };
+}
+
+/** Vzhľad v tvare na uloženie. @param {Look} look */
+export const lookToStored = (look) => ({ ton: look.voice, obloha: look.liveSky });

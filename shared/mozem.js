@@ -16,14 +16,14 @@ import {
     mozemLogLabel,
     mozemRunningShort,
     mozemStripText,
-    MOZEM_QUIPS,
-    MOZEM_WORDS,
+    voiceTexts,
 } from './messages.js';
 import { localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
 
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
+/** @typedef {import('./messages.js').Voice} Voice */
 /** @typedef {{ from: number, to: number }} Window úsek dňa v minútach od polnoci, `to` je bez neho */
 /** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading' | 'bezpanelov'} MozemState */
 /**
@@ -200,10 +200,16 @@ function dayCtx(input) {
 }
 
 /** Hlavička karty bez predpovede: panely nie sú zadané, načítava sa, alebo dáta nie sú.
- * @param {boolean} loading @param {boolean} noPanels @param {number} page */
-function emptyHead(loading, noPanels, page) {
+ * @param {boolean} loading @param {boolean} noPanels @param {number} page @param {Voice} voice */
+function emptyHead(loading, noPanels, page, voice) {
     /** @type {MozemState} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
-    return { state, word: MOZEM_WORDS[state], hero: mozemHeroText(state, null), strip: null, ...quipsOf(state, 0, page) };
+    return {
+        state,
+        word: voiceTexts(voice).MOZEM_WORDS[state],
+        hero: mozemHeroText(state, null, voice),
+        strip: null,
+        ...quipsOf(state, 0, page, voice),
+    };
 }
 
 /** @template T @param {T[]} list @param {number} i */
@@ -214,9 +220,10 @@ const pick = (list, i) => list[((i % list.length) + list.length) % list.length];
  * ktorej človek stojí (`quipPage`), s jej textom (`quip`).
  * @param {MozemState} state @param {number} day číslo dňa, podľa neho sa hlášky striedajú
  * @param {number} page stránka zo stavu appky; mimo sady sa točí dokola
+ * @param {Voice} voice
  */
-function quipsOf(state, day, page) {
-    const set = MOZEM_QUIPS[state];
+function quipsOf(state, day, page, voice) {
+    const set = voiceTexts(voice).MOZEM_QUIPS[state];
     const quips = set.map((_, i) => pick(set, day + i));
     const quipPage = ((page % quips.length) + quips.length) % quips.length;
     return { quips, quipPage, quip: quips[quipPage] };
@@ -233,21 +240,21 @@ function quipsOf(state, day, page) {
  * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
  * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean }} [opts]
+ * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice }} [opts] `voice` tón hlášok
  */
-export function mozemModel(input, quipPage = 0, launches = [], { guess = false } = {}) {
+export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy' } = {}) {
     const known = input.known || 'elektraren';
     const estimate = guess && known === 'poloha';
     const noPanels = known !== 'elektraren' && !estimate;
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
-    const items = mozemItems(input, launches, ctx);
+    const items = mozemItems(input, launches, ctx, voice);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     return {
-        ...(ctx ? dayHead(input, ctx, quipPage) : { ...emptyHead(input.loading, noPanels, quipPage), facts: null }),
+        ...(ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null }),
         estimate,
         items,
         glance: mozemGlanceText(items),
-        count: mozemCountText(monthCount(launches, month)),
+        count: mozemCountText(monthCount(launches, month), voice),
     };
 }
 
@@ -255,27 +262,27 @@ export function mozemModel(input, quipPage = 0, launches = [], { guess = false }
  * Veci karty s odpoveďou a zápismi spustení: pri spotrebiči tlačidlo „Pustil/a som“ (s tým, či
  * svieti slnko) a kým beží, krátka odpoveď „beží do …“. Bez predpovede (`ctx` null) spotrebič
  * nevie a ostatné idú vždy.
- * @param {PlanInput} input @param {import('./launches.js').Launch[]} launches @param {DayCtx | null} ctx
+ * @param {PlanInput} input @param {import('./launches.js').Launch[]} launches @param {DayCtx | null} ctx @param {Voice} [voice]
  */
-function mozemItems(input, launches, ctx) {
+function mozemItems(input, launches, ctx, voice = 'drzy') {
     const today = localDateKey(input.now, input.site.timezone);
     const nowMin = localMinutes(input.now, input.site.timezone);
     return MOZEM_ITEMS.map((item) => {
         /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
-        const it = { id: item.id, ...mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }) };
+        const it = { id: item.id, ...mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice) };
         if (!canLog(it.id)) return { ...it, log: null };
         const running = runningLaunch(launches, it.id, today, nowMin);
         const isAuto = it.id === 'auto';
         return {
             ...it,
             short: running ? mozemRunningShort(isAuto, running.m + runMinOf(it.id)) : it.short,
-            log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running) },
+            log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running, voice) },
         };
     });
 }
 
-/** Hlavička karty z plánu dňa: stav, veľké slovo, veta, pás dneška a hlášky. @param {PlanInput} input @param {DayCtx} ctx @param {number} quipPage */
-function dayHead(input, ctx, quipPage) {
+/** Hlavička karty z plánu dňa: stav, veľké slovo, veta, pás dneška a hlášky. @param {PlanInput} input @param {DayCtx} ctx @param {number} quipPage @param {Voice} voice */
+function dayHead(input, ctx, quipPage, voice) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
     const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
@@ -283,10 +290,10 @@ function dayHead(input, ctx, quipPage) {
     const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
     return {
         state,
-        word: MOZEM_WORDS[state],
-        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts }),
+        word: voiceTexts(voice).MOZEM_WORDS[state],
+        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts }, voice),
         strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
-        ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage),
+        ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage, voice),
         facts: {
             level: slot.level,
             window,

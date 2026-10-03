@@ -32,8 +32,8 @@ function initNavigation(store, dom) {
     };
     for (const btn of toSetup) btn.addEventListener('click', toPanels);
     initSwipeGesture(dom.page, {
-        // Kým je otvorený panel veci alebo plagát, ťah nad nimi kartu neprepína.
-        enabled: () => !store.get().mozemItem && !store.get().poster,
+        // Kým je otvorený panel veci, plagát alebo okno sekcie Appka, ťah nad nimi kartu neprepína.
+        enabled: () => !store.get().mozemItem && !store.get().poster && !store.get().appSheet,
         onSwipe: (dx) => {
             const to = swipeTarget(store.get(), dx);
             if (to === 'back') closeDetail(store);

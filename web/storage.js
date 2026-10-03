@@ -7,6 +7,7 @@
 import {
     DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
+    LOOK_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_PANELS,
@@ -15,7 +16,16 @@ import {
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
-import { parseStartPanel, parseStoredSettings, parseStoredSite, startFromLink, toUser } from '../shared/settings.js';
+import {
+    DEFAULT_LOOK,
+    lookToStored,
+    parseLook,
+    parseStartPanel,
+    parseStoredSettings,
+    parseStoredSite,
+    startFromLink,
+    toUser,
+} from '../shared/settings.js';
 
 /** Hodnota z localStorage; keď nie je, alebo úložisko chýba či hádže, null. @param {string} key */
 function read(key) {
@@ -123,4 +133,14 @@ export function clearStored() {
             // Bez úložiska nie je čo mazať.
         }
     }
+}
+
+/** Vzhľad novej appky (tón hlášok, živá obloha); bez úložiska predvolený. @returns {import('../shared/settings.js').Look} */
+export function loadLook() {
+    return readJson(LOOK_STORAGE_KEY, parseLook, DEFAULT_LOOK);
+}
+
+/** @param {import('../shared/settings.js').Look} look @returns {boolean} podarilo sa? */
+export function saveLook(look) {
+    return write(LOOK_STORAGE_KEY, JSON.stringify(lookToStored(look)));
 }

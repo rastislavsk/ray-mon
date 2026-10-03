@@ -384,16 +384,37 @@ export const DAYLOG = { limit: 400, fromMin: 180 };
 export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /**
+ * Tón hlášok novej appky (obloha/): drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká
+ * a je vecný. Súčasná appka hovorí len drzo. Prvý v zozname je predvolený.
+ */
+export const VOICES = /** @type {const} */ (['drzy', 'slusny']);
+
+/**
+ * Vzhľad novej appky - tón hlášok a živá obloha (vypnutá = pokojná tmavá). Sú to voľby len
+ * novej appky, preto majú vlastný kľúč; súčasná appka ho nečíta. Formát: { ton, obloha }.
+ */
+export const LOOK_STORAGE_KEY = 'vzhlad-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
-export const STORAGE_KEYS = [SETTINGS_STORAGE_KEY, SITE_STORAGE_KEY, START_STORAGE_KEY, LAUNCH_STORAGE_KEY, DAYLOG_STORAGE_KEY];
+export const STORAGE_KEYS = [
+    SETTINGS_STORAGE_KEY,
+    SITE_STORAGE_KEY,
+    START_STORAGE_KEY,
+    LAUNCH_STORAGE_KEY,
+    DAYLOG_STORAGE_KEY,
+    LOOK_STORAGE_KEY,
+];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
+// Nová appka „Živá obloha“, kým je testovacia verzia - na ňu vedie jej Zdieľať appku.
+export const OBLOHA_URL = `${APP_URL}obloha/`;
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
 // Živé meranie z kiosku, ktorý si používateľ zadal v Nastavení. Odkaz ide v tele POST
 // požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera. Cestu čítajú
@@ -513,4 +534,6 @@ export const SKY = {
     cloud: ['#5b6b82', '#98a5b5'],
     // Bez dát: sivá obloha, ktorá netvrdí nič o počasí.
     offline: ['#4f555f', '#7f858e'],
+    // Vypnutá živá obloha (Nastavenie › Vzhľad): pokojná tmavá, nemení sa s časom ani počasím.
+    calm: ['#1a2740', '#2c3d5c'],
 };

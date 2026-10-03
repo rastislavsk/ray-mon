@@ -4,16 +4,17 @@
 // zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
-import { TERAZ_TEXTS } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { terazModel } from '../../../shared/teraz.js';
 import { dayChartSvg, legendHtml } from './day-chart.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
+/** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 
-/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom */
-function renderChart(m, dom) {
+/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS */
+function renderChart(m, dom, TERAZ_TEXTS) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
@@ -28,8 +29,9 @@ function renderChart(m, dom) {
     setText(dom.tzReset, TERAZ_TEXTS.reset);
 }
 
-/** Pás odporúčaní a bodky pod ním. Pás listuje prehliadač, bodka ukazuje stránku zo stavu. @param {Model} m @param {number} page @param {Dom} dom */
-function renderCards(m, page, dom) {
+/** Pás odporúčaní a bodky pod ním. Pás listuje prehliadač, bodka ukazuje stránku zo stavu. @param {Model} m @param {number} page @param {Dom} dom
+ * @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS */
+function renderCards(m, page, dom, TERAZ_TEXTS) {
     show(dom.tzRecs, !!m.cards);
     if (!m.cards) return;
     const k = m.cards;
@@ -51,7 +53,11 @@ function renderCards(m, page, dom) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTeraz(state, dom) {
     if (state.panel !== 'terazky') return;
-    const m = terazModel({ ...state, previewMinutes: state.terazPreview }, { launches: state.launches, online: state.online });
+    const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
+    const m = terazModel(
+        { ...state, previewMinutes: state.terazPreview },
+        { launches: state.launches, online: state.online, voice: state.voice },
+    );
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
@@ -69,6 +75,6 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskTitle, TERAZ_TEXTS.askTitle);
     setText(dom.tzAskText, TERAZ_TEXTS.askText);
     setText(dom.tzAskBtn, TERAZ_TEXTS.askBtn);
-    renderChart(m, dom);
-    renderCards(m, state.terazPage, dom);
+    renderChart(m, dom, TERAZ_TEXTS);
+    renderCards(m, state.terazPage, dom, TERAZ_TEXTS);
 }

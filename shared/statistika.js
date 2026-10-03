@@ -7,15 +7,7 @@
 import { EVERYDAY, installedKw } from './config.js';
 import { fmtSum, kwpText } from './format.js';
 import { pvFreshness } from './hero-model.js';
-import {
-    posterBestDay,
-    posterButtonText,
-    statsBestText,
-    statsHeroSub,
-    statsProgressText,
-    statsValueText,
-    STATISTIKA_TEXTS,
-} from './messages.js';
+import { posterBestDay, posterButtonText, statsBestText, statsHeroSub, statsProgressText, statsValueText, voiceTexts } from './messages.js';
 import { offlineLead } from './mozem-sky.js';
 import { localDateKey } from './solar.js';
 import { MONTHS_IN, STATS_PERIODS, statsModel } from './stats.js';
@@ -60,7 +52,7 @@ function forecastEntry(s) {
         period: 'dnes',
         name: 'Dnes',
         kwh: f ? f.kwh : null,
-        sub: STATISTIKA_TEXTS.forecastSub,
+        sub: voiceTexts().STATISTIKA_TEXTS.forecastSub,
         estimate: true,
         value: f ? f.value : null,
     };
@@ -102,17 +94,19 @@ function equivOf(kwh) {
  * panelov - štatistika je o vlastnej elektrárni, nie o typickej streche), `loading` (prvé
  * načítanie), `offline` (nie je meranie ani predpoveď), `ok`. Pri `ok` bez živého merania
  * `measure` hovorí, či ide výzva pripojiť meranie (`ask`), alebo veta, že neodpovedá (`off`).
- * @param {StatistikaInput} input @param {StatsPeriod} period @param {{ online?: boolean }} [opts] či má telefón internet
+ * @param {StatistikaInput} input @param {StatsPeriod} period
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts] či má telefón internet a tón hlášok
  */
-export function statistikaModel(input, period, { online = true } = {}) {
+export function statistikaModel(input, period, { online = true, voice = 'drzy' } = {}) {
+    const STATISTIKA_TEXTS = voiceTexts(voice).STATISTIKA_TEXTS;
     const base = emptyModel();
     if (input.known === 'nic') return { ...base, kind: /** @type {const} */ ('ask') };
     if (input.known === 'poloha') return { ...base, kind: /** @type {const} */ ('setup'), sub: STATISTIKA_TEXTS.setupSub };
     const s = statsModel(input, period);
     if (s.status === 'loading') return { ...base, kind: /** @type {const} */ ('loading'), sub: STATISTIKA_TEXTS.loading };
     if (!input.pv && !input.forecast)
-        return { ...base, kind: /** @type {const} */ ('offline'), sub: offlineLead(input, online), retry: true };
-    return { ...base, ...numbersOf(input, s, period) };
+        return { ...base, kind: /** @type {const} */ ('offline'), sub: offlineLead(input, online, voice), retry: true };
+    return { ...base, ...numbersOf(input, s, period, voice) };
 }
 
 /** Model bez čísel - z neho vychádza každý stav karty. */
@@ -138,8 +132,10 @@ function emptyModel() {
 /**
  * Čísla karty, keď je z čoho počítať (meranie alebo aspoň predpoveď).
  * @param {StatistikaInput} input @param {ReturnType<typeof statsModel>} s @param {StatsPeriod} period
+ * @param {import('./messages.js').Voice} voice
  */
-function numbersOf(input, s, period) {
+function numbersOf(input, s, period, voice) {
+    const STATISTIKA_TEXTS = voiceTexts(voice).STATISTIKA_TEXTS;
     const common = { sub: kwpText(installedKw(input.plant)), prices: !s.priced };
     if (s.status !== 'live' || !input.pv) {
         const hero = forecastEntry(s);
@@ -158,7 +154,7 @@ function numbersOf(input, s, period) {
         progress: progressOf(s),
         equiv: equivOf(hero.kwh),
         rows: STATS_PERIODS.filter((p) => p !== period).map((p) => all[p]),
-        best: best && statsBestText(best),
+        best: best && statsBestText(best, voice),
         note: s.priced ? STATISTIKA_TEXTS.note : '',
         posters: posterButtons(input),
     };
@@ -185,13 +181,13 @@ function posterButtons(input) {
  * Plagát na zdieľanie: nadpis s miestom, veľké kWh, stĺpce dní, štyri čísla (a hodnota podľa
  * tarify, keď sú ceny) a poznámka o dňoch, ktoré v denníku chýbajú. Čísla sú tie isté ako
  * v súhrne súčasnej appky (summaryModel). Bez živého merania null.
- * @param {import('./summary.js').SummaryInput} input @param {SummaryPeriod} period
+ * @param {import('./summary.js').SummaryInput} input @param {SummaryPeriod} period @param {import('./messages.js').Voice} [voice]
  */
-export function posterModel(input, period) {
-    const m = summaryModel(input, period);
+export function posterModel(input, period, voice = 'drzy') {
+    const m = summaryModel(input, period, voice);
     if (!m) return null;
     const f = m.facts;
-    const T = STATISTIKA_TEXTS;
+    const T = voiceTexts(voice).STATISTIKA_TEXTS;
     /** @type {Array<{ value: string, label: string }>} */ const tiles = [];
     if (f.kwh > 0) {
         tiles.push({ value: `${fmtSum(Math.round(f.phones), 0)}×`, label: T.posterPhones });

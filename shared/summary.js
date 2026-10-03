@@ -51,9 +51,9 @@ export function bestOf(days) {
 /**
  * Model súhrnu, alebo null bez živého merania - súčty posiela len kiosk. `facts` sú čísla, z ktorých
  * sú poskladané riadky (summaryTexts) - plagát novej appky (shared/statistika.js) ich ukazuje inak.
- * @param {SummaryInput} input @param {SummaryPeriod} period
+ * @param {SummaryInput} input @param {SummaryPeriod} period @param {import('./messages.js').Voice} [voice] tón riadkov
  */
-export function summaryModel(input, period) {
+export function summaryModel(input, period, voice = 'drzy') {
     const { pv } = input;
     if (!pv) return null;
     const today = localDateKey(input.now, input.site.timezone);
@@ -89,6 +89,6 @@ export function summaryModel(input, period) {
             best: !!best && d.date === best.date,
         })),
         facts,
-        ...summaryTexts(facts),
+        ...summaryTexts(facts, voice),
     };
 }

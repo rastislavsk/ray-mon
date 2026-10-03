@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PLANT, SITE, TARIFF, TARIFF_TEMPLATES } from '../shared/config.js';
 import { editTabs, listText, nastavenieModel, nastavenieRows, setupCta } from '../shared/nastavenie.js';
 import { typicalSettings } from '../shared/settings.js';
-import { emptySettings } from '../shared/setup.js';
+import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
 import * as T from '../shared/setup-texts.js';
 import { fixtureData, FIXED_NOW } from './helpers.js';
@@ -238,4 +238,22 @@ test('záložky pri úprave z prehľadu: panely, plocha a tarifa', () => {
     // Zo zhrnutia sprievodcu len kroky plochy, bez skupiny panelov.
     assert.equal(editTabs(state({ setupReturn: 'suhrn' }), OWNER, 'smer').group, null);
     assert.deepEqual(editTabs(state(), OWNER, 'smer'), { group: null, roof: false, tariff: null });
+});
+
+test('sprievodca v novej appke nespomína ciferník ani prstenec, v súčasnej pri tarife áno', () => {
+    const s = state();
+    const draft = s.settingsDraft;
+    const dial = /ciferník|prstenec|prstenc/i;
+    for (const step of SETUP_STEPS) {
+        const t = T.textsFor(s, draft, step, false);
+        assert.doesNotMatch(`${t.title} ${t.lead}`, dial, step);
+    }
+    assert.doesNotMatch(T.TARIFF_DUNNO_PLAN, dial);
+    const one = { ...TARIFF, bands: [TARIFF.bands[0]] };
+    assert.doesNotMatch(T.priceCheck(one, false).text, dial);
+    assert.match(T.textsFor(s, draft, 'tarifa', false).lead, /pás plánu dňa/);
+    // Súčasná appka ostáva pri ciferníku.
+    assert.match(T.textsFor(s, draft, 'tarifa').lead, /zafarbí ciferník/);
+    assert.match(T.TARIFF_DUNNO, /ciferník/);
+    assert.match(T.priceCheck(one).text, /ciferník/);
 });

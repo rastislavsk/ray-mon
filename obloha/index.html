@@ -22,6 +22,15 @@
         <!-- Appku spúšťa boot.js: keď sa po nasadení zmiešajú staré a nové moduly z cache,
              stiahne ich znova a raz obnoví stránku. Žiadny iný modul appky sa tu nenačítava. -->
         <script type="module" src="boot.js"></script>
+        <!-- QR kód v Zdieľať appku (Nastavenie). Tá istá knižnica a verzia ako v súčasnej appke, s hashom
+             v integrity. Je nepovinná - bez nej okno ukáže len odkaz. -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+            defer
+        ></script>
     </head>
     <body>
         <header class="st">
@@ -31,7 +40,7 @@
                 <span id="hdr-status">načítavam…</span>
                 <span id="hdr-tone" class="sr"></span>
             </span>
-            <button type="button" id="hdr-setup" class="need hidden">Zadaj panely ›</button>
+            <button type="button" id="hdr-setup" class="need hidden"></button>
         </header>
 
         <main id="page" class="page">
@@ -292,6 +301,40 @@
                         <button type="button" id="ns-link" class="lnk" data-setup-go="odkaz">
                             Prevziať nastavenie z odkazu<span aria-hidden="true"> ›</span>
                         </button>
+                        <!-- Vzhľad: voľby telefónu, nie elektrárne. Tón a živá obloha sú len novej appky
+                             (vzhlad-v1), úvodná karta je spoločná so súčasnou appkou (prva-karta-v1). -->
+                        <section class="glass set" aria-labelledby="ns-look-title">
+                            <h3 id="ns-look-title" class="glass-ttl">Vzhľad</h3>
+                            <button type="button" id="ns-live-sky" class="it" role="switch" aria-checked="true">
+                                <span><b>Živá obloha</b><small>vypni pre pokojnú tmavú</small></span>
+                                <i class="tg" aria-hidden="true"></i>
+                            </button>
+                            <div class="it pick">
+                                <span><b id="ns-voice-label">Tón hlášok</b><small>skús prepnúť a pozri Môžem?</small></span>
+                                <span id="ns-voice" class="minis" role="group" aria-labelledby="ns-voice-label">
+                                    <button type="button" class="mini" data-voice="drzy" aria-pressed="true">Drzý</button>
+                                    <button type="button" class="mini" data-voice="slusny" aria-pressed="false">Slušný</button>
+                                </span>
+                            </div>
+                            <div class="it pick">
+                                <span><b id="ns-start-label">Úvodná karta</b><small>platí aj v súčasnej appke</small></span>
+                                <span id="ns-start" class="minis" role="group" aria-labelledby="ns-start-label">
+                                    <button type="button" class="mini" data-start="mozem" aria-pressed="true">Môžem?</button>
+                                    <button type="button" class="mini" data-start="terazky" aria-pressed="false">Teraz</button>
+                                </span>
+                            </div>
+                        </section>
+                        <section class="glass set" aria-labelledby="ns-app-title">
+                            <h3 id="ns-app-title" class="glass-ttl">Appka</h3>
+                            <button type="button" id="ns-share" class="it" aria-haspopup="dialog">
+                                <span><b>Zdieľať appku</b><small>QR kód, WhatsApp, aj s mojím nastavením</small></span>
+                                <span aria-hidden="true">›</span>
+                            </button>
+                            <button type="button" id="ns-reset" class="it" aria-haspopup="dialog">
+                                <span><b>Nastaviť celé znova</b><small>vymaže všetko, čo appka uložila v tomto prehliadači</small></span>
+                                <span aria-hidden="true">›</span>
+                            </button>
+                        </section>
                     </div>
 
                     <div id="wizard" class="wz hidden">
@@ -638,6 +681,41 @@
                 <p id="poster-note" class="note"></p>
                 <button type="button" id="poster-share" class="pbtn"></button>
                 <button type="button" id="poster-close" class="pbtn ghost"></button>
+            </div>
+        </dialog>
+        <!-- Zdieľať appku: odkaz na novú appku, voliteľne s nastavením a kioskom, QR kód a WhatsApp.
+             Skladá render/nastavenie.js; bez QR knižnice ostane len odkaz. -->
+        <dialog id="ns-share-sheet" class="sheet" aria-labelledby="ns-share-title">
+            <div class="sheet-in">
+                <button type="button" id="ns-share-x" class="x" aria-label="Zavrieť"><span aria-hidden="true">×</span></button>
+                <h2 id="ns-share-title">Zdieľať appku</h2>
+                <p>Druhý telefón naskenuje QR kód, alebo mu pošli odkaz.</p>
+                <div id="ns-share-opts" class="chks">
+                    <label class="chk">
+                        <input type="checkbox" id="ns-share-settings" />
+                        <span>Pridať moje nastavenie elektrárne</span>
+                    </label>
+                    <label class="chk" id="ns-share-kiosk-row">
+                        <input type="checkbox" id="ns-share-kiosk" />
+                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                    </label>
+                </div>
+                <div id="ns-qr" class="qr hidden" role="img" aria-label="QR kód s odkazom na appku"></div>
+                <a id="ns-share-link" class="share-link" href="./"></a>
+                <a id="ns-share-wa" class="pbtn" href="#" target="_blank" rel="noopener">Poslať cez WhatsApp</a>
+            </div>
+        </dialog>
+
+        <!-- Potvrdenie pred vymazaním všetkého uloženého. Nie je to krok, ktorý sa dá vrátiť. -->
+        <dialog id="ns-reset-sheet" class="sheet" aria-labelledby="ns-reset-title" aria-describedby="ns-reset-text">
+            <div class="sheet-in">
+                <h2 id="ns-reset-title">Nastaviť celé znova?</h2>
+                <p id="ns-reset-text">
+                    Vymaže sa nastavenie elektrárne, poloha, zápisy „Pustil/a som“ aj vzhľad v tomto prehliadači – v novej aj v súčasnej
+                    appke, lebo majú spoločné úložisko.
+                </p>
+                <button type="button" id="ns-reset-ok" class="pbtn">Vymazať a začať odznova</button>
+                <button type="button" id="ns-reset-cancel" class="pbtn ghost">Nechať tak</button>
             </div>
         </dialog>
     </body>

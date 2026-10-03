@@ -4,7 +4,7 @@
 import { sameSettings, settingsFromLink } from '../shared/settings.js';
 import { initUrlMirror } from '../web/settings-store.js';
 import { createStore } from '../web/store.js';
-import { loadDayLog, loadLaunches, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
+import { loadDayLog, loadLaunches, loadLook, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { render } from './web/render/index.js';
@@ -29,6 +29,8 @@ const store = createStore(
         dayLog: loadDayLog(),
         launches: loadLaunches(),
         online: navigator.onLine,
+        // Tón hlášok a živá obloha sú voľby len novej appky (vzhlad-v1).
+        look: loadLook(),
     }),
 );
 

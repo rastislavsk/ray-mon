@@ -71,17 +71,20 @@ export function skyColors(minute, sun, weather) {
  * Obloha pre stav appky v tejto chvíli. Kým appka nepozná polohu, alebo dáta nie sú (a už sa
  * ani nesťahujú), je sivá. Kým sa prvé dáta sťahujú, ukazuje čas dňa bez počasia - sivé
  * bliknutie pri každom otvorení by klamalo, že dáta chýbajú. Oblačnosť je z hodiny predpovede,
- * v ktorej teraz sme; bez nej ostáva len čas dňa.
+ * v ktorej teraz sme; bez nej ostáva len čas dňa. Vypnutá živá obloha (live = false) stojí
+ * v pokojných tmavých farbách (SKY.calm) a nemení sa s časom ani počasím - bez dát je ale sivá ako vždy.
  * @param {{ now: Date, known: import('./settings.js').Known, site: import('./config.js').Site,
  *   forecast: import('./solar.js').Forecast | null, loading: boolean }} state
+ * @param {boolean} [live] živá obloha (Nastavenie › Vzhľad)
  * @returns {Sky}
  */
-export function skyNow({ now, known, site, forecast, loading }) {
+export function skyNow({ now, known, site, forecast, loading }, live = true) {
     const offline = { rise: null, set: null };
     if (known === 'nic' || (!forecast && !loading)) return skyColors(0, offline, null);
     const minute = localMinutes(now, site.timezone);
-    const sun = sunTimes(site, localDateKey(now, site.timezone));
     const hour = Math.floor(minute / 60);
     const cloud = forecast?.hourlyToday.find((h) => h.hour === hour)?.cloud ?? null;
-    return skyColors(minute, sun, cloud === null ? 'jasno' : skyWeather(cloud));
+    const weather = cloud === null ? 'jasno' : skyWeather(cloud);
+    if (!live) return { weather, top: SKY.calm[0], bottom: SKY.calm[1] };
+    return skyColors(minute, sunTimes(site, localDateKey(now, site.timezone)), weather);
 }

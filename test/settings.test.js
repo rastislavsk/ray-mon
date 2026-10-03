@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installedKw, PLANT, SITE, TARIFF, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
 import {
+    DEFAULT_LOOK,
+    lookToStored,
+    parseLook,
     checkSettings,
     isTimezone,
     parseGeocode,
@@ -260,4 +263,17 @@ test('prvá karta: v odkaze len keď nie je predvolená, s nastavením aj bez ne
     assert.equal(startFromLink(''), null);
     assert.equal(parseStartPanel('terazky'), 'terazky');
     assert.equal(parseStartPanel(null), null);
+});
+
+test('parseLook: chýbajúci či neplatný vzhľad je predvolený, každá voľba zvlášť', () => {
+    assert.deepEqual(DEFAULT_LOOK, { voice: 'drzy', liveSky: true });
+    for (const raw of [null, undefined, 'slusny', 42, [], {}]) assert.deepEqual(parseLook(raw), DEFAULT_LOOK, String(raw));
+    assert.deepEqual(parseLook({ ton: 'slusny', obloha: false }), { voice: 'slusny', liveSky: false });
+    assert.deepEqual(parseLook({ ton: 'drzy', obloha: true }), { voice: 'drzy', liveSky: true });
+    assert.deepEqual(parseLook({ ton: 'vulgarny', obloha: false }), { voice: 'drzy', liveSky: false });
+    assert.deepEqual(parseLook({ ton: 'slusny', obloha: 'nie' }), { voice: 'slusny', liveSky: true });
+    // Uložený tvar sa prečíta späť ten istý.
+    const look = { voice: /** @type {const} */ ('slusny'), liveSky: false };
+    assert.deepEqual(lookToStored(look), { ton: 'slusny', obloha: false });
+    assert.deepEqual(parseLook(JSON.parse(JSON.stringify(lookToStored(look)))), look);
 });

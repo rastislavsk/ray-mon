@@ -244,6 +244,23 @@ function nastavenieDom() {
         importOfferText: byId('import-offer-text'),
         importAccept: byId('import-accept'),
         importDecline: byId('import-decline'),
+        nsLiveSky: byId('ns-live-sky'),
+        nsVoice: byId('ns-voice'),
+        nsStart: byId('ns-start'),
+        nsShare: byId('ns-share'),
+        nsReset: byId('ns-reset'),
+        nsShareSheet: /** @type {HTMLDialogElement} */ (byId('ns-share-sheet')),
+        nsShareX: byId('ns-share-x'),
+        nsShareOpts: byId('ns-share-opts'),
+        nsShareSettings: input('ns-share-settings'),
+        nsShareKiosk: input('ns-share-kiosk'),
+        nsShareKioskRow: byId('ns-share-kiosk-row'),
+        nsQr: byId('ns-qr'),
+        nsShareLink: /** @type {HTMLAnchorElement} */ (byId('ns-share-link')),
+        nsShareWa: /** @type {HTMLAnchorElement} */ (byId('ns-share-wa')),
+        nsResetSheet: /** @type {HTMLDialogElement} */ (byId('ns-reset-sheet')),
+        nsResetOk: byId('ns-reset-ok'),
+        nsResetCancel: byId('ns-reset-cancel'),
     };
 }
 
