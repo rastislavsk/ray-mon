@@ -536,4 +536,10 @@ export const SKY = {
     offline: ['#4f555f', '#7f858e'],
     // Vypnutá živá obloha (Nastavenie › Vzhľad): pokojná tmavá, nemení sa s časom ani počasím.
     calm: ['#1a2740', '#2c3d5c'],
+    // Stmavený spodok: prechod od priehľadnej hore k tejto farbe dole, cez celú výšku obrazovky.
+    // Koľko je dole sýty, počíta skyShade v shared/sky.js - práve toľko, aby biely text mal
+    // v každej výške kontrast aspoň `shadeContrast`: WCAG pre bežný text chce 4,5, desatina
+    // navyše je rezerva na zaokrúhlenie farieb v prehliadači a výšky medzi meranými bodmi.
+    shade: '#050a1e',
+    shadeContrast: 4.6,
 };

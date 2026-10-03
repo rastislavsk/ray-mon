@@ -2,13 +2,56 @@
 // v polohe elektrárne a oblačnosti z predpovede. Čas aj dáta dostáva parametrom.
 
 import { SKY } from './config.js';
+import { over, parseColor, textContrast } from './contrast.js';
 import { localDateKey, localMinutes, sunTimes } from './solar.js';
 
 /**
  * Počasie na oblohe. Dážď zatiaľ nie je - appka zrážky nesťahuje.
  * @typedef {'jasno' | 'polojasno' | 'zamracene'} SkyWeather
- * @typedef {{ weather: SkyWeather | null, top: string, bottom: string }} Sky `weather` null = bez dát
+ * @typedef {{ weather: SkyWeather | null, top: string, bottom: string, shade: string }} Sky `weather` null = bez dát,
+ *   `shade` farba stmaveného spodku (skyShade)
  */
+
+// Výšky, v ktorých sa meria kontrast textu na oblohe: od vrchu (0) po spodok obrazovky (1).
+const HEIGHTS = Array.from({ length: 51 }, (_, i) => i / 50);
+const WHITE = parseColor('#fff');
+
+/**
+ * Farba pozadia vo výške `t` obrazovky (0 hore, 1 dole): prechod oblohy a cez neho stmavený
+ * spodok. Text, ktorý leží priamo na oblohe, má pod sebou práve toto.
+ * @param {{ top: string, bottom: string, shade: string }} sky @param {number} t
+ * @returns {import('./contrast.js').Rgb}
+ */
+export function skyAt({ top, bottom, shade }, t) {
+    const [a, b, s] = [top, bottom, shade].map(parseColor);
+    const sky = /** @type {import('./contrast.js').Rgb} */ ([0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t));
+    return over([s[0], s[1], s[2], s[3] * t], sky);
+}
+
+/**
+ * Stmavený spodok pre oblohu s farbami `top` a `bottom`: farba SKY.shade s najmenšou
+ * priehľadnosťou (po stotinách), pri ktorej má biely text kontrast aspoň SKY.shadeContrast
+ * v každej výške obrazovky. Tmavá obloha (noc, pokojná) ju nepotrebuje vôbec, svetlý obzor
+ * ráno najviac. Spodok sa tak stmaví len toľko, koľko treba, a nálada oblohy ostane.
+ * @param {string} top @param {string} bottom @returns {string} farba `rgba(…)` pre CSS
+ */
+export function skyShade(top, bottom) {
+    const [r, g, b] = parseColor(SKY.shade);
+    const shade = (/** @type {number} */ a) => `rgba(${r}, ${g}, ${b}, ${a / 100})`;
+    const enough = (/** @type {number} */ a) =>
+        HEIGHTS.every((t) => textContrast(WHITE, skyAt({ top, bottom, shade: shade(a) }, t)) >= SKY.shadeContrast);
+    // Čím sýtejší spodok, tým väčší kontrast bieleho textu - stačí pol delenia.
+    let [lo, hi] = [0, 100];
+    while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (enough(mid)) hi = mid;
+        else lo = mid + 1;
+    }
+    return shade(lo);
+}
+
+/** Obloha s farbami `top` a `bottom` aj so stmaveným spodkom. @param {SkyWeather | null} weather @param {string} top @param {string} bottom @returns {Sky} */
+const sky = (weather, top, bottom) => ({ weather, top, bottom, shade: skyShade(top, bottom) });
 
 /** Počasie z oblačnosti v %. @param {number} cloudPct @returns {SkyWeather} */
 export function skyWeather(cloudPct) {
@@ -52,7 +95,7 @@ function designHour(minute, sun) {
  * @returns {Sky}
  */
 export function skyColors(minute, sun, weather) {
-    if (!weather) return { weather, top: SKY.offline[0], bottom: SKY.offline[1] };
+    if (!weather) return sky(weather, SKY.offline[0], SKY.offline[1]);
     const t = designHour(minute, sun);
     let i = 0;
     while (SKY.keys[i + 1][0] < t) i++;
@@ -64,7 +107,7 @@ export function skyColors(minute, sun, weather) {
     const { riseH, setH } = SKY;
     const day = t >= riseH - 1 && t <= setH + 1 ? Math.sin((Math.PI * (t - riseH + 1)) / (setH - riseH + 2)) : 0;
     const cf = SKY.cloudMix[weather] * Math.max(0.25, Math.min(1, day));
-    return { weather, top: css(mix(top, rgb(SKY.cloud[0]), cf)), bottom: css(mix(bottom, rgb(SKY.cloud[1]), cf)) };
+    return sky(weather, css(mix(top, rgb(SKY.cloud[0]), cf)), css(mix(bottom, rgb(SKY.cloud[1]), cf)));
 }
 
 /**
@@ -85,6 +128,6 @@ export function skyNow({ now, known, site, forecast, loading }, live = true) {
     const hour = Math.floor(minute / 60);
     const cloud = forecast?.hourlyToday.find((h) => h.hour === hour)?.cloud ?? null;
     const weather = cloud === null ? 'jasno' : skyWeather(cloud);
-    if (!live) return { weather, top: SKY.calm[0], bottom: SKY.calm[1] };
+    if (!live) return sky(weather, SKY.calm[0], SKY.calm[1]);
     return skyColors(minute, sunTimes(site, localDateKey(now, site.timezone)), weather);
 }

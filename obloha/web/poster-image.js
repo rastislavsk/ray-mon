@@ -13,7 +13,7 @@ const PAD = 90;
  * @typedef {{ stops: string[], angle: number, ink: string, font: string }} Look
  * @returns {Look}
  */
-function look() {
+export function look() {
     const css = getComputedStyle(document.documentElement);
     const token = (/** @type {string} */ name) => css.getPropertyValue(name).trim();
     return {
@@ -90,6 +90,23 @@ function columns(ctx, cols, y, h) {
 /** Výška stĺpcov dní na obrázku. */
 const COLS_H = 420;
 
+/** Šírka stĺpca čísel na obrázku. */
+const COL_W = (W - 2 * PAD - 60) / 2;
+
+/**
+ * Popisky čísel: všetky jednou veľkosťou, najväčšou od 42 px dole po 32 px, pri ktorej sa každý
+ * zmestí do jedného riadku stĺpca („najlepší deň, 52,1 kWh“ by sa pri 42 px zalomil). Dlhší
+ * popisok, ktorý sa nezmestí ani pri 32 px, sa zalomí.
+ * @param {CanvasRenderingContext2D} ctx @param {import('../../shared/statistika.js').PosterModel['tiles']} tiles @param {Look} t
+ * @returns {{ size: number, lines: string[][] }}
+ */
+export function tileLabels(ctx, tiles, t) {
+    let size = 42;
+    font(ctx, t, 500, size);
+    while (size > 32 && tiles.some((tile) => ctx.measureText(tile.label).width > COL_W)) font(ctx, t, 500, (size -= 2));
+    return { size, lines: tiles.map((tile) => wrap(ctx, tile.label, COL_W)) };
+}
+
 /**
  * Čísla plagátu v dvoch stĺpcoch: veľké číslo a popisok pod ním. Vracia výšku, ktorú zaberú;
  * s `draw: false` len meria.
@@ -97,16 +114,16 @@ const COLS_H = 420;
  * @param {Look} t @param {number} y @param {boolean} draw
  */
 function tiles(ctx, tiles, t, y, draw) {
-    const colW = (W - 2 * PAD - 60) / 2;
+    const labels = tileLabels(ctx, tiles, t);
     let h = 0;
     for (let i = 0; i < tiles.length; i += 2) {
         let rowH = 0;
         for (const [j, tile] of tiles.slice(i, i + 2).entries()) {
-            const x = PAD + j * (colW + 60);
+            const x = PAD + j * (COL_W + 60);
             font(ctx, t, 900, 84, 'semi-expanded');
             if (draw) ctx.fillText(tile.value, x, y + h + 84);
-            font(ctx, t, 500, 42);
-            const lines = wrap(ctx, tile.label, colW);
+            font(ctx, t, 500, labels.size);
+            const lines = labels.lines[i + j];
             if (draw) lines.forEach((l, k) => ctx.fillText(l, x, y + h + 84 + 60 + k * 50));
             rowH = Math.max(rowH, 84 + 60 + (lines.length - 1) * 50);
         }

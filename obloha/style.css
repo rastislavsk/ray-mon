@@ -38,16 +38,34 @@
     inherits: true;
     initial-value: #7f858e;
 }
+/* Stmavený spodok (skyShade v shared/sky.js): render ho počíta s oblohou, aby biely text mal
+   kontrast v každej výške obrazovky. Prvá hodnota patrí sivej oblohe bez dát. */
+@property --s3 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgba(5, 10, 30, 0.13);
+}
 
 :root {
     --s1: #4f555f;
     --s2: #7f858e;
+    --s3: rgba(5, 10, 30, 0.13);
     /* Farba má jeden význam: zelená = slnko stačí, modrá = lacná sieť, červená = drahá sieť.
        Obloha údaj nenesie, len náladu. */
     --yes: #b9f28c;
     --cheap: #7cc4ff;
     --costly: #ff7a66;
     --ink: #0b1430;
+    /* Čitateľnosť (WCAG, aspoň 4,5 : 1 pri každej oblohe - test/contrast.test.js ich prejde
+       všetky). Text priamo na oblohe je vždy biely: stmavený spodok (--s3) je spočítaný práve
+       naň. Tlmený text (--dim) a farebné texty patria na tmavé sklo (--glass) či pás navigácie
+       (--bar). Farebný text má svetlejší odtieň tej istej farby - plná modrá a červená by na
+       skle nad svetlou oblohou nebola čitateľná. */
+    --glass: rgba(8, 16, 40, 0.3);
+    --bar: rgba(6, 10, 28, 0.72);
+    --dim: rgba(255, 255, 255, 0.82);
+    --cheap-text: #b0dbff;
+    --costly-text: #ffc4ba;
     /* Plagát na zdieľanie: obloha pri západe slnka a tmavé písmo na nej. Tie isté tokeny číta
        obrázok do story (web/poster-image.js), dialóg a obrázok tak majú jednu paletu. */
     --poster-1: #ffd36e;
@@ -60,7 +78,8 @@
     background: #4f555f;
     transition:
         --s1 0.7s,
-        --s2 0.7s;
+        --s2 0.7s,
+        --s3 0.7s;
 }
 
 * {
@@ -73,13 +92,14 @@ body {
     min-height: 100dvh;
     color: #fff;
     font-family: var(--font);
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.45;
     -webkit-text-size-adjust: 100%;
 }
 
-/* Obloha cez celú obrazovku a pod ňou stmavený spodok, aby sa dal čítať biely text. Obe vrstvy
-   stoja na mieste, keď sa obsah posúva. */
+/* Obloha cez celú obrazovku a cez ňu stmavený spodok, aby sa dal čítať biely text: prechod od
+   priehľadnej hore k --s3 dole. Obe vrstvy stoja na mieste, keď sa obsah posúva - text tak má
+   v danej výške obrazovky pod sebou vždy to, čo počíta skyAt v shared/sky.js. */
 body::before,
 body::after {
     content: '';
@@ -92,9 +112,8 @@ body::before {
     background: linear-gradient(180deg, var(--s1), var(--s2));
 }
 body::after {
-    inset: auto 0 0 0;
-    height: 45%;
-    background: linear-gradient(180deg, transparent, rgba(5, 10, 30, 0.28));
+    inset: 0;
+    background: linear-gradient(180deg, transparent, var(--s3));
 }
 
 button {
@@ -115,23 +134,22 @@ button:focus-visible {
     max-width: 640px;
     margin: 0 auto;
     padding: max(16px, env(safe-area-inset-top)) 20px 2px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-variation-settings: 'wdth' 100;
     min-height: 52px;
 }
-.place {
+/* Dlhé meno miesta sa radšej zalomí, než by sa orezalo (aj pri väčšom písme v systéme). */
+.st .place {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: rgba(255, 255, 255, 0.92);
+    overflow-wrap: anywhere;
+    color: #fff;
 }
 .live {
     display: inline-flex;
     flex: none;
     gap: 6px;
     align-items: center;
-    color: rgba(255, 255, 255, 0.92);
+    color: #fff;
 }
 .live i {
     width: 7px;
@@ -146,20 +164,23 @@ button:focus-visible {
     background: transparent;
     box-shadow: inset 0 0 0 1.5px #fff;
 }
+/* Štítok je na oko malý (32 px), plocha na ťuknutie má 44 px: priehľadný okraj, pozadie len pod obsahom. */
 .need {
     display: inline-flex;
     flex: none;
     gap: 6px;
     align-items: center;
     background: #fff;
+    background-clip: padding-box;
     color: var(--ink);
-    border: 0;
+    border: 6px solid transparent;
     border-radius: 999px;
     padding: 5px 11px;
-    font-size: 12px;
+    margin: -6px -6px -2px;
+    font-size: 0.75rem;
     font-weight: 800;
     cursor: pointer;
-    min-height: 32px;
+    min-height: 44px;
 }
 .need::before {
     content: '';
@@ -177,10 +198,18 @@ button:focus-visible {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
     overflow-x: clip;
 }
+/* Kým appka kartu prvý raz nevykreslí (render zapíše data-panel), sú v stránke len prázdne
+   nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
+   zaberajú ďalej, len ich nevidno. Hlášku boot.js nesie hlavička, tá je vidieť stále. */
+.page:not([data-panel]) {
+    visibility: hidden;
+}
+/* Nadpis rastie s písmom v systéme, no najviac tak, aby sa slovo ako „Štatistika“ zmestilo na úzky displej. */
 .ttl {
     margin: 0;
     padding: 8px 20px 0;
-    font-size: 30px;
+    font-size: min(1.875rem, 13vw);
+    overflow-wrap: anywhere;
     font-weight: 800;
     font-variation-settings: 'wdth' 112;
     letter-spacing: -0.01em;
@@ -190,8 +219,8 @@ button:focus-visible {
 .sub {
     margin: 0;
     padding: 4px 20px 0;
-    font-size: 15px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9375rem;
+    color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 
@@ -230,8 +259,8 @@ button:focus-visible {
     stroke: rgba(255, 255, 255, 0.3);
 }
 .arc-t {
-    fill: rgba(255, 255, 255, 0.8);
-    font-size: 10px;
+    fill: #fff;
+    font-size: 12px;
     text-anchor: middle;
 }
 .arc-glow {
@@ -265,7 +294,7 @@ button:focus-visible {
     padding: 4px 10px;
     border: 1.5px solid #fff;
     border-radius: 999px;
-    font-size: 11.5px;
+    font-size: 0.75rem;
     font-weight: 800;
     font-variation-settings: 'wdth' 100;
     letter-spacing: 0.1em;
@@ -299,7 +328,7 @@ button:focus-visible {
     text-wrap: balance;
 }
 .line {
-    font-size: 17.5px;
+    font-size: 1.0938rem;
     line-height: 1.3;
     font-variation-settings: 'wdth' 95;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
@@ -309,7 +338,7 @@ button:focus-visible {
     gap: 8px;
     align-items: center;
     padding: 10px 20px 0;
-    font-size: 14.5px;
+    font-size: 0.9375rem;
     font-variation-settings: 'wdth' 95;
 }
 .fact svg {
@@ -330,12 +359,14 @@ button:focus-visible {
     border-radius: 14px;
     background: #fff;
     color: var(--ink);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 800;
     cursor: pointer;
 }
+/* Vedľajšie tlačidlo je tmavé sklo s obrysom - svetlé priesvitné by biely text na svetlej oblohe zjedlo. */
 .pbtn.ghost {
-    background: rgba(255, 255, 255, 0.16);
+    background: var(--glass);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
     color: #fff;
 }
 .retry {
@@ -353,12 +384,12 @@ button:focus-visible {
     color: var(--ink);
 }
 .cta b {
-    font-size: 19px;
+    font-size: 1.1875rem;
     line-height: 1.2;
     font-variation-settings: 'wdth' 108;
 }
 .cta p {
-    font-size: 14.5px;
+    font-size: 0.9375rem;
     line-height: 1.35;
     color: #2b3550;
 }
@@ -378,23 +409,23 @@ button:focus-visible {
     padding: 14px 16px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 22px;
-    background: rgba(8, 16, 40, 0.3);
+    background: var(--glass);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
 }
 .glass-ttl {
-    font-size: 11.5px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--dim);
 }
 /* Odpoveď z typickej strechy priznáva odhad aj písmom. */
 .glass.est .apps {
     font-style: italic;
 }
 .count {
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 .apps {
     display: grid;
@@ -410,7 +441,7 @@ button:focus-visible {
     border: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
     background: transparent;
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 500;
     font-style: inherit;
     text-align: left;
@@ -423,7 +454,7 @@ button:focus-visible {
     display: inline-flex;
     gap: 6px;
     align-items: center;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 700;
     text-align: right;
 }
@@ -442,7 +473,7 @@ button:focus-visible {
     background: var(--yes);
 }
 .app b[data-tone='cheap'] {
-    color: var(--cheap);
+    color: var(--cheap-text);
 }
 .app b[data-tone='cheap']::before {
     background: var(--cheap);
@@ -452,7 +483,7 @@ button:focus-visible {
 }
 .app b[data-tone='no'],
 .app b[data-tone='unk'] {
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--dim);
 }
 
 .quote {
@@ -462,7 +493,7 @@ button:focus-visible {
     padding: 6px;
     border: 0;
     background: transparent;
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 800;
     font-variation-settings: 'wdth' 105;
     line-height: 1.2;
@@ -476,10 +507,10 @@ button:focus-visible {
 .quote small {
     display: block;
     margin-top: 6px;
-    font-size: 11.5px;
+    font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.8);
+    color: #fff;
 }
 
 /* ===== Karta Teraz ===== */
@@ -511,11 +542,11 @@ button:focus-visible {
 }
 .src {
     padding: 8px 20px 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.88);
+    color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 
@@ -561,13 +592,13 @@ button:focus-visible {
     stroke-dasharray: 3 4;
 }
 .dc-limit-t {
-    fill: rgba(255, 255, 255, 0.85);
-    font-size: 9px;
+    fill: var(--dim);
+    font-size: 12px;
     text-anchor: end;
 }
 .dc-t {
-    fill: rgba(255, 255, 255, 0.85);
-    font-size: 10px;
+    fill: var(--dim);
+    font-size: 12px;
     text-anchor: middle;
 }
 .dc-now {
@@ -592,7 +623,7 @@ button:focus-visible {
 }
 .dc-pill-t {
     fill: var(--ink);
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 700;
     text-anchor: middle;
 }
@@ -614,8 +645,8 @@ button:focus-visible {
     flex-wrap: wrap;
     gap: 4px 14px;
     padding: 8px 20px 0;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.8125rem;
+    color: #fff;
 }
 .legend span {
     display: inline-flex;
@@ -645,8 +676,8 @@ button:focus-visible {
     gap: 8px;
     min-height: 44px;
     padding: 4px 16px 0 20px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8125rem;
+    color: #fff;
 }
 .hint-btn {
     flex: none;
@@ -656,7 +687,7 @@ button:focus-visible {
     border-radius: 999px;
     background: #fff;
     color: var(--ink);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 800;
     cursor: pointer;
 }
@@ -686,11 +717,11 @@ button:focus-visible {
     scroll-snap-align: start;
 }
 .rec p {
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.35;
 }
 .rec .h {
-    font-size: 19px;
+    font-size: 1.1875rem;
     line-height: 1.2;
     font-variation-settings: 'wdth' 108;
 }
@@ -728,8 +759,8 @@ button:focus-visible {
     margin: 0;
 }
 .sedem .note {
-    font-size: 13.5px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8438rem;
+    color: #fff;
 }
 .sub.note {
     padding: 12px 20px 16px;
@@ -744,7 +775,7 @@ button:focus-visible {
     padding: 6px;
     border: 0;
     background: transparent;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     text-align: left;
     text-decoration: underline;
@@ -755,7 +786,7 @@ button:focus-visible {
 /* Riadky dní ako predpoveď počasia: deň, ikona, pás okna, kWh. */
 .days {
     display: grid;
-    gap: 7px;
+    gap: 8px;
     padding: 10px 14px 0;
 }
 .day {
@@ -768,8 +799,8 @@ button:focus-visible {
     padding: 10px 12px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 16px;
-    background: rgba(8, 16, 40, 0.3);
-    font-size: 14.5px;
+    background: var(--glass);
+    font-size: 0.9063rem;
     font-weight: 500;
     text-align: left;
     cursor: pointer;
@@ -840,7 +871,7 @@ button:focus-visible {
     padding: 8px 12px;
     border: 0;
     background: transparent;
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 700;
     cursor: pointer;
 }
@@ -854,22 +885,23 @@ button:focus-visible {
     width: 30px;
     height: 30px;
 }
+/* Tri čísla vedľa seba; pri väčšom písme v systéme pod seba, aby sa číslo neorezalo. */
 .nums {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
     gap: 8px;
     padding: 12px 14px 0;
 }
 .nums div {
     padding: 10px;
     border-radius: 14px;
-    background: rgba(8, 16, 40, 0.3);
-    font-size: 12px;
+    background: var(--glass);
+    font-size: 0.75rem;
     line-height: 1.3;
 }
 .nums b {
     display: block;
-    font-size: 20px;
+    font-size: 1.25rem;
     font-variation-settings: 'wdth' 108;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -885,11 +917,11 @@ button:focus-visible {
 }
 .facts p,
 .msg p {
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.35;
 }
 .msg h3 {
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 800;
     line-height: 1.25;
 }
@@ -902,23 +934,29 @@ button:focus-visible {
 }
 .wb-v {
     fill: #fff;
-    font-size: 10px;
+    font-size: 15px;
     font-weight: 700;
     text-anchor: middle;
 }
 .wb-n {
-    fill: rgba(255, 255, 255, 0.85);
-    font-size: 10px;
+    fill: var(--dim);
+    font-size: 13px;
     text-anchor: middle;
 }
 /* Mapa hodina × deň: zelené políčko slnko stačí, inak biele; sýtosť nesie fill-opacity z modelu. */
 .hm-t {
-    fill: rgba(255, 255, 255, 0.85);
-    font-size: 9px;
+    fill: var(--dim);
+    font-size: 13px;
 }
 .hm-d {
     fill: #fff;
-    font-size: 10px;
+    font-size: 13px;
+}
+/* Mená dní a hodiny užším rezom, aby sa pri čitateľnej veľkosti zmestili vedľa seba. */
+.wb-n,
+.hm-t,
+.hm-d {
+    font-variation-settings: 'wdth' 80;
 }
 .hc {
     fill: #fff;
@@ -935,12 +973,12 @@ button:focus-visible {
     padding: 6px;
     border: 0;
     background: transparent;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     text-align: left;
     text-decoration: underline;
     text-underline-offset: 3px;
-    color: rgba(255, 255, 255, 0.92);
+    color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
     cursor: pointer;
 }
@@ -958,7 +996,7 @@ button:focus-visible {
     padding: 3px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 999px;
-    background: rgba(8, 16, 40, 0.26);
+    background: var(--glass);
 }
 .seg button {
     flex: 1 1 0;
@@ -968,7 +1006,7 @@ button:focus-visible {
     border: 0;
     border-radius: 999px;
     background: transparent;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
     cursor: pointer;
 }
@@ -996,16 +1034,16 @@ button:focus-visible {
 }
 .eq {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
     gap: 8px;
 }
 .stat .eq p {
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.3;
 }
 .eq b {
     display: block;
-    font-size: 24px;
+    font-size: 1.5rem;
     font-weight: 800;
     font-variation-settings: 'wdth' 112;
     font-variant-numeric: tabular-nums;
@@ -1020,11 +1058,12 @@ button:focus-visible {
 }
 .rows p {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
     padding: 9px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 .rows p:last-child {
     border-bottom: 0;
@@ -1034,12 +1073,12 @@ button:focus-visible {
     white-space: nowrap;
 }
 .stat .glass p {
-    font-size: 15.5px;
+    font-size: 0.9688rem;
     line-height: 1.4;
 }
 .stat .sub.note {
     padding-bottom: 0;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
 }
 .posters {
     display: grid;
@@ -1108,7 +1147,7 @@ button:focus-visible {
 }
 .pc h2,
 .pc .foot {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1144,24 +1183,28 @@ button:focus-visible {
 }
 .pg {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
     gap: 10px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.25;
 }
 .pg strong {
     display: block;
-    font-size: 21px;
+    font-size: 1.3125rem;
     font-weight: 900;
     font-variation-settings: 'wdth' 110;
 }
 .poster .note {
     margin: 0;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     line-height: 1.4;
 }
 .poster .pbtn {
     justify-self: stretch;
+}
+/* Na takmer čiernom podklade plagátu je vedľajšie tlačidlo plné - priesvitné by nemalo pod sebou nič stáleho. */
+.poster .pbtn.ghost {
+    background: #1d2233;
 }
 
 /* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu
@@ -1194,22 +1237,22 @@ button:focus-visible {
 .sheet h2 {
     margin: 0;
     padding-right: 48px;
-    font-size: 24px;
+    font-size: 1.5rem;
     font-weight: 900;
     font-variation-settings: 'wdth' 115;
     line-height: 1.15;
 }
 .sheet .q {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--dim);
 }
 .sheet p {
     margin: 0;
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.4;
 }
 .sheet .x {
@@ -1221,7 +1264,7 @@ button:focus-visible {
     border: 0;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.14);
-    font-size: 22px;
+    font-size: 1.375rem;
     cursor: pointer;
 }
 
@@ -1265,36 +1308,37 @@ button:focus-visible {
 /* Karta strechy: veľké kWp, zostava a vpravo kompas plôch. */
 .plant {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
 }
 .plant p {
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.88);
+    color: var(--dim);
 }
 .plant .kwp {
-    font-size: 15px;
+    font-size: 0.9375rem;
     color: #fff;
 }
 .plant .kwp b {
-    font-size: 34px;
+    font-size: 2.125rem;
     font-weight: 900;
     font-variation-settings: 'wdth' 118;
     line-height: 1;
 }
 .planes-compass {
     flex: none;
-    width: 76px;
-    height: 76px;
+    width: 88px;
+    height: 88px;
 }
 .planes-compass .ring {
     fill: none;
     stroke: rgba(255, 255, 255, 0.35);
 }
 .planes-compass text {
-    font-size: 9px;
+    font-size: 12px;
     text-anchor: middle;
     fill: #fff;
 }
@@ -1324,7 +1368,7 @@ button:focus-visible {
     border: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
     background: transparent;
-    font-size: 15px;
+    font-size: 0.9375rem;
     text-align: left;
     cursor: pointer;
 }
@@ -1340,8 +1384,8 @@ button:focus-visible {
     font-weight: 600;
 }
 .set .it small {
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.7813rem;
+    color: var(--dim);
     overflow-wrap: anywhere;
 }
 .set .it small.est {
@@ -1349,6 +1393,10 @@ button:focus-visible {
 }
 .nast .note {
     padding-top: 10px;
+}
+/* Odkaz pod riadkami elektrárne nesmie k nim priliehať (na Môžem? sa ťahá k hláške). */
+.nast .lnk {
+    margin-top: 4px;
 }
 /* Vzhľad a Appka: riadok s voľbou má vpravo prepínač alebo dvojicu tlačidiel. Na úzkom displeji
    sa tlačidlá zalomia pod popis, nič sa neoreže. */
@@ -1358,7 +1406,7 @@ button:focus-visible {
 }
 .minis {
     display: flex;
-    gap: 6px;
+    gap: 8px;
 }
 .mini[aria-pressed='true'] {
     border-color: #fff;
@@ -1402,14 +1450,14 @@ button:focus-visible {
 /* Zdieľať appku: voľby, QR kód na bielom (čítačka kódu potrebuje kontrast) a odkaz. */
 .chks {
     display: grid;
-    gap: 4px;
+    gap: 8px;
 }
 .chk {
     display: flex;
     gap: 10px;
     align-items: center;
     min-height: 44px;
-    font-size: 14.5px;
+    font-size: 0.9063rem;
     line-height: 1.3;
     cursor: pointer;
 }
@@ -1437,8 +1485,8 @@ button:focus-visible {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
     overflow: hidden;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8125rem;
+    color: var(--dim);
     overflow-wrap: anywhere;
     text-underline-offset: 3px;
 }
@@ -1464,11 +1512,11 @@ button:focus-visible {
     min-height: 44px;
 }
 .wz-step {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.88);
+    color: #fff;
 }
 .wz .x {
     flex: none;
@@ -1504,12 +1552,13 @@ button:focus-visible {
     background: #fff;
 }
 .wz-sub {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
+    color: #fff;
 }
 .wz-title {
-    font-size: 27px;
+    font-size: min(1.6875rem, 10vw);
+    overflow-wrap: anywhere;
     font-weight: 800;
     font-variation-settings: 'wdth' 110;
     line-height: 1.15;
@@ -1517,9 +1566,9 @@ button:focus-visible {
 }
 .wz-lead,
 .wz-line {
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.92);
+    color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 .wz .seg {
@@ -1550,16 +1599,16 @@ button:focus-visible {
     padding: 12px 16px;
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 18px;
-    background: rgba(8, 16, 40, 0.3);
+    background: var(--glass);
     text-align: left;
     cursor: pointer;
 }
 .opt b {
-    font-size: 16px;
+    font-size: 1rem;
 }
 .opt span {
-    font-size: 13.5px;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.8438rem;
+    color: var(--dim);
 }
 .opt.ico {
     grid-template-columns: 1fr auto;
@@ -1599,14 +1648,14 @@ button:focus-visible {
     padding: 8px 14px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 999px;
-    background: rgba(8, 16, 40, 0.3);
-    font-size: 14.5px;
+    background: var(--glass);
+    font-size: 0.9063rem;
     font-weight: 700;
     cursor: pointer;
 }
 .pill small {
     font-weight: 500;
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.85;
 }
 .pill[aria-pressed='true'],
@@ -1643,17 +1692,17 @@ button:focus-visible {
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
     background: transparent;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
     cursor: pointer;
 }
 /* Polia formulára: biele, tmavé písmo - dobre čitateľné na každej oblohe. */
 .flbl {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.88);
+    color: #fff;
 }
 .fld {
     width: 100%;
@@ -1665,7 +1714,7 @@ button:focus-visible {
     background: #fff;
     color: var(--ink);
     font: inherit;
-    font-size: 16px;
+    font-size: 1rem;
 }
 .fld:focus-visible {
     outline: 3px solid var(--cheap);
@@ -1687,14 +1736,14 @@ button:focus-visible {
     display: flex;
     align-items: center;
     min-height: 44px;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
 }
 .more p {
-    font-size: 14px;
+    font-size: 0.9375rem;
     line-height: 1.4;
 }
 /* Hlásenie pod poľom: sklo s farebným okrajom. Červený okraj nepustí ďalej, zelený je v poriadku. */
@@ -1704,7 +1753,7 @@ button:focus-visible {
     border-left: 4px solid rgba(255, 255, 255, 0.6);
     border-radius: 12px;
     background: rgba(8, 16, 40, 0.38);
-    font-size: 14px;
+    font-size: 0.9375rem;
     line-height: 1.4;
 }
 .wz-msg.err {
@@ -1733,13 +1782,13 @@ button:focus-visible {
     border-bottom: 0;
 }
 .geo-pick small {
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.7813rem;
+    color: var(--dim);
 }
 .place small,
 .place .meta {
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.7813rem;
+    color: var(--dim);
 }
 .sunline {
     display: flex;
@@ -1748,12 +1797,12 @@ button:focus-visible {
 }
 .sunline span {
     display: grid;
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 700;
     text-align: center;
 }
 .sunline small {
-    font-size: 11px;
+    font-size: 0.75rem;
     font-weight: 500;
 }
 .sunline svg {
@@ -1776,7 +1825,7 @@ button:focus-visible {
 .howto {
     gap: 6px;
     padding-left: 34px;
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 /* Obrázky sprievodcu: biele čiary na skle. */
@@ -1793,14 +1842,14 @@ button:focus-visible {
     fill: #f2efe7;
 }
 .panel-label text {
-    font-size: 10px;
+    font-size: 12px;
     fill: #555;
 }
 .panel-label .mark {
     fill: #ffd36e;
 }
 .panel-label .pmax {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 800;
     fill: #111;
 }
@@ -1867,9 +1916,9 @@ button:focus-visible {
     border: 0;
     border-radius: 50%;
     background: transparent;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--dim);
     cursor: pointer;
 }
 .dir-btn.on {
@@ -1886,14 +1935,14 @@ button:focus-visible {
     gap: 8px;
 }
 .readout b {
-    font-size: 22px;
+    font-size: 1.375rem;
     font-weight: 800;
 }
 .quality p {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 /* Pás kvality je biely: zelená patrí len oknu, keď slnko stačí, a červená drahej sieti. Hodnotenie
    povie slovo nad pásom. */
@@ -1932,7 +1981,7 @@ button:focus-visible {
     stroke-width: 1.5;
 }
 .tilt-art text {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     text-anchor: middle;
     fill: #fff;
@@ -1951,7 +2000,7 @@ button:focus-visible {
 }
 .range output {
     min-width: 3ch;
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 800;
 }
 .stepper {
@@ -1966,13 +2015,13 @@ button:focus-visible {
     border-radius: 14px;
     background: #fff;
     color: var(--ink);
-    font-size: 24px;
+    font-size: 1.5rem;
     font-weight: 800;
     cursor: pointer;
 }
 .stepper .fld {
     text-align: center;
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 800;
 }
 .panel-grid .pv {
@@ -2005,11 +2054,11 @@ button:focus-visible {
     display: grid;
     flex: 1;
     min-width: 0;
-    font-size: 14.5px;
+    font-size: 0.9063rem;
 }
 .wz-row small {
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.7813rem;
+    color: var(--dim);
 }
 .mini-compass {
     flex: none;
@@ -2021,7 +2070,7 @@ button:focus-visible {
     stroke: rgba(255, 255, 255, 0.4);
 }
 .mini-compass text {
-    font-size: 7px;
+    font-size: 10px;
     text-anchor: middle;
     fill: #fff;
 }
@@ -2039,7 +2088,7 @@ button:focus-visible {
     grid-template-columns: 60px 1fr auto;
     align-items: center;
     gap: 10px;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 .bars .cb .bar {
     margin: 0;
@@ -2114,14 +2163,14 @@ button:focus-visible {
     stroke: rgba(255, 255, 255, 0.45);
 }
 .tariff-ring .hour {
-    fill: rgba(255, 255, 255, 0.85);
+    fill: var(--dim);
     font-size: 11px;
     text-anchor: middle;
     dominant-baseline: middle;
 }
 .tariff-ring .brush-lbl {
-    fill: rgba(255, 255, 255, 0.8);
-    font-size: 9px;
+    fill: var(--dim);
+    font-size: 12px;
     letter-spacing: 1px;
     text-anchor: middle;
 }
@@ -2132,14 +2181,14 @@ button:focus-visible {
     text-anchor: middle;
 }
 .tariff-ring .brush-name.amber {
-    fill: var(--cheap);
+    fill: var(--cheap-text);
 }
 .tariff-ring .brush-name.red {
-    fill: var(--costly);
+    fill: var(--costly-text);
 }
 .ring-box .wz-line {
     text-align: center;
-    font-size: 13.5px;
+    font-size: 0.8438rem;
 }
 .band {
     gap: 10px;
@@ -2159,9 +2208,10 @@ button:focus-visible {
     grid-template-columns: auto 1fr auto 44px;
     align-items: center;
     gap: 8px;
-    min-height: 48px;
+    /* 52 px: krížiky v susedných riadkoch majú medzi sebou 8 px. */
+    min-height: 52px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 14.5px;
+    font-size: 0.9063rem;
 }
 .ivals li:last-child {
     border-bottom: 0;
@@ -2172,8 +2222,8 @@ button:focus-visible {
     font-variant-numeric: tabular-nums;
 }
 .ivals small {
-    font-size: 11.5px;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    color: var(--dim);
 }
 .ivals .x {
     width: 44px;
@@ -2187,7 +2237,7 @@ button:focus-visible {
 .ival-form label {
     display: grid;
     gap: 4px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
 }
 .ival-form label:nth-child(3) {
@@ -2205,23 +2255,25 @@ button:focus-visible {
     grid-template-columns: auto 1fr minmax(0, 110px) auto;
     align-items: center;
     gap: 10px;
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 .auto {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 /* Tlačidlá dole: Späť priesvitné, ďalej biele. */
+/* Späť a Ďalej vedľa seba; keď sa dlhšie slovo pri väčšom písme nezmestí, pod seba. */
 .wz-foot {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     padding-top: 6px;
 }
 .wz-foot .pbtn {
     flex: 1 1 0;
-    min-width: 0;
+    min-width: min(100%, min-content);
     justify-self: stretch;
 }
 .wz .pbtn:disabled {
@@ -2264,7 +2316,7 @@ button:focus-visible {
     /* Na širokej obrazovke ostanú položky v šírke obsahu, pás pod nimi ide cez celú šírku. */
     padding: 8px max(2px, calc((100% - 640px) / 2)) max(12px, env(safe-area-inset-bottom));
     /* Dosť tmavý pás, aby popisky mali kontrast aj nad bielou výzvou, ktorá pod ním prechádza. */
-    background: rgba(6, 10, 28, 0.72);
+    background: var(--bar);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
@@ -2279,8 +2331,9 @@ button:focus-visible {
     padding: 2px;
     background: transparent;
     border: 0;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 11px;
+    color: var(--dim);
+    /* Päť popisiek vedľa seba: písmo rastie so systémom len dokiaľ sa „Nastavenie“ zmestí do pätiny šírky. */
+    font-size: min(0.75rem, 3.75vw);
     font-weight: 600;
     font-variation-settings: 'wdth' 92;
     line-height: 1.2;

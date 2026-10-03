@@ -11,7 +11,7 @@ import { renderStatistika } from './statistika.js';
 import { renderTeraz } from './teraz.js';
 
 /**
- * Obloha je pozadie celej stránky. Render zapíše len dve farby a počasie na <html>; prechod
+ * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok a počasie na <html>; prechod
  * medzi farbami robí CSS (zaregistrované --s1 a --s2 v style.css), takže pri útlme pohybu ho
  * vypne to isté pravidlo ako všetky ostatné prechody.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
@@ -20,6 +20,7 @@ function renderSky(state, dom) {
     const sky = skyNow(state, state.liveSky);
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
+    dom.root.style.setProperty('--s3', sky.shade);
     dom.root.dataset.sky = sky.weather ?? 'offline';
     // Pokojná obloha stojí: zapnutie ani vypnutie nemá prechod.
     dom.root.toggleAttribute('data-calm', !state.liveSky);

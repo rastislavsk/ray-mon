@@ -30,8 +30,8 @@ export function dayChartSvg(c) {
     const p = c.preview;
     const preview = p
         ? `<line x1="${p.x}" x2="${p.x}" y1="${C.top - 2}" y2="130" class="dc-prev"/>${dot(p.y, p.x, 6, 'dc-prev-dot')}` +
-          `<rect x="${p.pill.x}" y="2" width="${p.pill.w}" height="18" rx="9" class="dc-pill"/>` +
-          `<text x="${p.pill.x + p.pill.w / 2}" y="14.5" class="dc-pill-t">${escapeHtml(p.pill.text)}</text>`
+          `<rect x="${p.pill.x}" y="1" width="${p.pill.w}" height="22" rx="11" class="dc-pill"/>` +
+          `<text x="${p.pill.x + p.pill.w / 2}" y="17" class="dc-pill-t">${escapeHtml(p.pill.text)}</text>`
         : '';
     return (
         `<svg class="dc" viewBox="0 0 ${C.w} ${C.h}" aria-hidden="true">` +

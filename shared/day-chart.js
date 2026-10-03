@@ -115,10 +115,10 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
 
 /**
  * Štítok náhľadu nad grafom: vystredený nad časom, no celý v grafe. Šírka z počtu znakov
- * (písmo 10 px, ~5,6 jednotky na znak ako v návrhu).
+ * (písmo 14 jednotiek, aby malo aj na úzkom displeji 12 px - ~7,8 jednotky na znak).
  * @param {number} cx @param {string} text
  */
 function pillAt(cx, text) {
-    const w = text.length * 5.6 + 16;
+    const w = text.length * 7.8 + 18;
     return { x: r1(Math.min(Math.max(cx - w / 2, 4), DAY_CHART.w - 4 - w)), w: r1(w), text };
 }
