@@ -382,6 +382,9 @@ export function collectDom() {
         tone: byId('hdr-tone'),
         setup: byId('hdr-setup'),
         panels: perPanel('panel'),
+        // Nadpisy kariet a spoločný nadpis prehľadu so stĺpcami na širokej obrazovke.
+        titles: perPanel('ttl'),
+        dashTitle: byId('ttl-prehlad'),
         navs: perPanel('nav'),
     };
 }

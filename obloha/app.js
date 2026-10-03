@@ -8,7 +8,7 @@ import { loadDayLog, loadLaunches, loadLook, loadSettings, loadSite, loadStartPa
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { render } from './web/render/index.js';
-import { initialState } from './web/state.js';
+import { initialState, layoutOf } from './web/state.js';
 
 const dom = collectDom();
 // Uložená elektráreň; bez nej aspoň poloha (typická strecha).
@@ -31,6 +31,8 @@ const store = createStore(
         online: navigator.onLine,
         // Tón hlášok a živá obloha sú voľby len novej appky (vzhlad-v1).
         look: loadLook(),
+        // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
+        layout: layoutOf(window.innerWidth),
     }),
 );
 

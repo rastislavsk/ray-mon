@@ -120,6 +120,15 @@ export const START_PANELS = /** @type {const} */ (['mozem', 'terazky']);
 export const START_STORAGE_KEY = 'prva-karta-v1';
 export const START_HASH_KEY = 'prva';
 
+/**
+ * Šírky okna (px), od ktorých nová appka mení rozloženie. Pod `medium` je telefón aj tablet na
+ * výšku: jedna karta a navigácia dole. Od `medium` (tablet na šírku) sú Môžem?, Teraz a 7 dní
+ * v dvoch stĺpcoch, od `wide` (počítač) v troch, navigácia je hore. `medium` je tá istá šírka,
+ * od ktorej súčasná appka kreslí desktop (style.css, `min-width: 1024px`), takže sa obe appky
+ * prepínajú naraz. Rozhoduje šírka okna, nie druh zariadenia.
+ */
+export const LAYOUT_PX = { medium: 1024, wide: 1280 };
+
 /** Minút v dni. Ciferník ich rozloží po obvode, rozvrh tarify ich delí na pásma. */
 export const MINUTES_PER_DAY = 1440;
 

@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
 import { terazModel } from '../../../shared/teraz.js';
 import { dayChartSvg, legendHtml } from './day-chart.js';
+import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
@@ -52,7 +53,7 @@ function renderCards(m, page, dom, TERAZ_TEXTS) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTeraz(state, dom) {
-    if (state.panel !== 'terazky') return;
+    if (!shows(state, 'terazky')) return;
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
     const m = terazModel(
         { ...state, previewMinutes: state.terazPreview },

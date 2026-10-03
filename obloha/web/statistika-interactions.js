@@ -41,7 +41,8 @@ export function initStatistika(store, dom, refresh) {
         if (period) store.setState({ poster: period });
     });
     // Odkaz na karte Môžem? otvára mesiac, ako súhrn v súčasnej appke.
-    dom.mzSummary.addEventListener('click', () => store.setState({ poster: 'mesiac' }));
+    // Plagát patrí karte, z ktorej sa otvoril - v prehľade so stĺpcami tým je Môžem? aktívny stĺpec.
+    dom.mzSummary.addEventListener('click', () => store.setState({ poster: 'mesiac', panel: 'mozem' }));
     dom.posterClose.addEventListener('click', () => closePoster(store));
     // Ťuknutie vedľa karty (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
     dom.poster.addEventListener('click', (e) => e.target === dom.poster && closePoster(store));

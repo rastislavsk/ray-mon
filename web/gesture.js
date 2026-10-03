@@ -8,7 +8,8 @@
 
 import { SWIPE } from '../shared/config.js';
 
-/** @typedef {{ x: number, y: number, t: number, room: { left: number, right: number, pager: boolean } | null, chart: boolean }} Zaciatok */
+/** @typedef {{ x: number, y: number, t: number, room: { left: number, right: number, pager: boolean } | null, chart: boolean,
+ *   target: EventTarget | null }} Zaciatok */
 
 /** Úchytky na ťahanie do strán, ktoré nie sú posuvným pásom - pravidlo o vnútorných pásoch
  * nižšie ich nechytí a bez tejto výnimky by ťah prepol kartu. Jazdec na dennom prstenci
@@ -71,11 +72,12 @@ function pansInner(from, dx) {
 }
 
 /**
- * Pošle každý ťah do strán, ktorý je listovaním, volajúcemu: `onSwipe(dx)`, záporné dx je ťah
- * doľava. Volá sa až po zrušení kliku, ktorý by po geste prišiel - aj ťah, ktorý nikam nevedie,
- * je gesto, nie ťuknutie.
+ * Pošle každý ťah do strán, ktorý je listovaním, volajúcemu: `onSwipe(dx, target)`, záporné dx je
+ * ťah doľava, `target` prvok, na ktorom ťah začal (nová appka podľa neho pozná stĺpec na širokej
+ * obrazovke). Volá sa až po zrušení kliku, ktorý by po geste prišiel - aj ťah, ktorý nikam
+ * nevedie, je gesto, nie ťuknutie.
  * @param {HTMLElement} page hranica pri hľadaní vnútorných pásov
- * @param {{ enabled: () => boolean, onSwipe: (dx: number) => void }} handlers
+ * @param {{ enabled: () => boolean, onSwipe: (dx: number, target: EventTarget | null) => void }} handlers
  */
 export function initSwipeGesture(page, { enabled, onSwipe }) {
     /** @type {Zaciatok | null} */
@@ -99,6 +101,7 @@ export function initSwipeGesture(page, { enabled, onSwipe }) {
                 // môže po prepnutí karty zmiznúť, takže na konci by sa už nedali zistiť.
                 room: innerScrollRoom(target, page),
                 chart: target instanceof Element && !!target.closest(CHART),
+                target,
             };
         },
         { passive: true },
@@ -127,7 +130,7 @@ export function initSwipeGesture(page, { enabled, onSwipe }) {
             // Klik v tom prípade nepošle ani tak (posúvanie si ho ruší samo), no volanie
             // preventDefault by len napísalo chybu do konzoly.
             if (e.cancelable) e.preventDefault();
-            onSwipe(dx);
+            onSwipe(dx, from.target);
         },
         { passive: false },
     );

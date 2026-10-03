@@ -5,6 +5,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { posterLinkText, voiceTexts } from '../../../shared/messages.js';
 import { posterModel } from '../../../shared/statistika.js';
+import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -29,7 +30,7 @@ function opener(from, dom) {
 /** @param {AppState} state @param {Dom} dom */
 export function renderPoster(state, dom) {
     // Odkaz na karte Môžem?: mesiac na streche, ako súhrn v súčasnej appke. Bez merania nie je.
-    const link = state.panel === 'mozem' ? posterModel(state, 'mesiac', state.voice) : null;
+    const link = shows(state, 'mozem') ? posterModel(state, 'mesiac', state.voice) : null;
     show(dom.mzSummary, !!link);
     setText(dom.mzSummaryText, link ? posterLinkText(link.kick, link.total) : '');
 

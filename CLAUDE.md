@@ -77,6 +77,8 @@ strán. Rozhoduje pravidlo (vnútorný pás, ktorý sa má kam posunúť), menov
 sa ťahajú a neposúvajú: jazdec na dennom prstenci, graf dňa novej appky (`.day-scrub`, ťah po ňom je
 náhľad iného času), kruh rozvrhu tarify (`.tariff-ring`, prst po
 ňom maľuje pásmo) a posúvač `input[type=range]` (sklon strechy v sprievodcovi nastavením). Nový posúvač tak netreba nikam dopisovať.
+Nová appka na širšej obrazovke (prehľad so stĺpcami, `dashboard` v `obloha/web/state.js`) karty ťahom
+nelistuje vôbec – sú vedľa seba; listuje len dni v detaile dňa, a to ťahom v stĺpci 7 dní.
 
 Kontrolujú to e2e testy v skupine „listovanie kariet prstom“: ťuknutie bez jediného pohybu prsta
 musí tooltip ukázať a nechať svietiť, zvislý ťah cez graf musí posunúť stránku a tooltip neukázať.
