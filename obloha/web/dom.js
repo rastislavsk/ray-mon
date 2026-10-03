@@ -202,12 +202,159 @@ function statistikaDom() {
     };
 }
 
+/** Obrazovky sprievodcu v poradí krokov (id `wz-<krok>`). */
+const SETUP_SCREENS = /** @type {const} */ ([
+    'start',
+    'odkaz',
+    'lokalita',
+    'panel',
+    'smer',
+    'sklon',
+    'pocet',
+    'dalsia',
+    'menic',
+    'meranie',
+    'tarifa',
+    'pasma',
+    'rozvrh',
+    'vynimky',
+    'ceny',
+    'suhrn',
+]);
+
+const input = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (byId(id));
+const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (byId(id));
+
+/** Karta Nastavenie: prehľad elektrárne a ponuka prevziať nastavenie z odkazu. */
+function nastavenieDom() {
+    return {
+        setupRoot: byId('setup'),
+        nsHome: byId('ns-home'),
+        nsCta: byId('ns-cta'),
+        nsCtaTitle: byId('ns-cta-title'),
+        nsCtaSteps: byId('ns-cta-steps'),
+        nsCtaText: byId('ns-cta-text'),
+        nsCtaBtn: byId('ns-cta-btn'),
+        nsHero: byId('ns-hero'),
+        nsRows: byId('ns-rows'),
+        nsWarn: byId('ns-warn'),
+        nsNote: byId('ns-note'),
+        nsLink: byId('ns-link'),
+        importOffer: byId('import-offer'),
+        importOfferText: byId('import-offer-text'),
+        importAccept: byId('import-accept'),
+        importDecline: byId('import-decline'),
+    };
+}
+
+/** Sprievodca: hlavička, záložky, tlačidlá a polia, ktoré obsluhuje web/setup-wiring.js. */
+function wizardDom() {
+    return {
+        wizard: byId('wizard'),
+        wzScreens: /** @type {Record<(typeof SETUP_SCREENS)[number], HTMLElement>} */ (
+            Object.fromEntries(SETUP_SCREENS.map((x) => [x, byId(`wz-${x}`)]))
+        ),
+        wzStep: byId('wz-step'),
+        wzClose: byId('wz-close'),
+        wzProg: byId('wz-prog'),
+        wzSub: byId('wz-sub'),
+        wzTitle: byId('wz-title'),
+        wzLead: byId('wz-lead'),
+        wzGroupTabs: byId('wz-group-tabs'),
+        wzRoofTabs: byId('wz-roof-tabs'),
+        wzTariffTabs: byId('wz-tariff-tabs'),
+        wzTariffMsgs: byId('wz-tariff-msgs'),
+        wzBack: /** @type {HTMLButtonElement} */ (byId('wz-back')),
+        wzNext: /** @type {HTMLButtonElement} */ (byId('wz-next')),
+        wzLink: input('wz-link'),
+        wzLinkNote: byId('wz-link-note'),
+        wzLinkPreview: byId('wz-link-preview'),
+        wzPlace: input('wz-place'),
+        wzGeo: byId('wz-geo'),
+        wzPlaceCard: byId('wz-place-card'),
+        wzLat: input('wz-lat'),
+        wzLon: input('wz-lon'),
+        wzWelcome: byId('wz-welcome'),
+        wzLater: byId('wz-later'),
+        wzWpModePanel: byId('wz-wpmode-panel'),
+        wzWpModeKwp: byId('wz-wpmode-kwp'),
+        wzWpPanel: byId('wz-wp-panel'),
+        wzWpLabel: byId('wz-wp-label'),
+        wzWpChips: byId('wz-wp-chips'),
+        wzWpOther: byId('wz-wp-other'),
+        wzWp: input('wz-wp'),
+        wzWpGuess: byId('wz-wp-guess'),
+        wzWpTotal: byId('wz-wp-total'),
+        wzKwp: input('wz-kwp'),
+    };
+}
+
+/** Obrazovky plôch, meniča, merania a zhrnutia. */
+function wizardFieldsDom() {
+    return {
+        wzCompass: byId('wz-compass'),
+        wzDirName: byId('wz-dir-name'),
+        wzDirDeg: byId('wz-dir-deg'),
+        wzDirQuality: byId('wz-dir-quality'),
+        wzTiltArt: byId('wz-tilt-art'),
+        wzTiltPresets: byId('wz-tilt-presets'),
+        wzTilt: input('wz-tilt'),
+        wzTiltOut: byId('wz-tilt-out'),
+        wzTiltQuality: byId('wz-tilt-quality'),
+        wzPanels: input('wz-panels'),
+        wzPanelGrid: byId('wz-panel-grid'),
+        wzPanelsKwp: byId('wz-panels-kwp'),
+        wzRoofs: byId('wz-roofs'),
+        wzDerived: byId('wz-derived'),
+        wzRoofAdd: byId('wz-roof-add'),
+        wzAcBars: byId('wz-ac-bars'),
+        wzAcChips: byId('wz-ac-chips'),
+        wzAcOther: byId('wz-ac-other'),
+        wzAc: input('wz-ac'),
+        wzAcGuess: byId('wz-ac-guess'),
+        wzLiveYes: byId('wz-live-yes'),
+        wzLiveNo: byId('wz-live-no'),
+        wzKioskBlock: byId('wz-kiosk-block'),
+        wzKiosk: input('wz-kiosk'),
+        wzKioskNote: byId('wz-kiosk-note'),
+        wzSummary: byId('wz-summary'),
+    };
+}
+
+/** Obrazovky tarify: typ sadzby, pásma, rozvrh dňa, výnimky a ceny. */
+function wizardTariffDom() {
+    return {
+        wzTariffKinds: byId('wz-tariff-kinds'),
+        wzTariffDunno: byId('wz-tariff-dunno'),
+        wzBands: byId('wz-bands'),
+        wzBandAdd: byId('wz-band-add'),
+        wzSchedTabs: byId('wz-sched-tabs'),
+        wzBrushes: byId('wz-brushes'),
+        wzTariffRing: byId('wz-tariff-ring'),
+        wzTariffRingG: byId('wz-tariff-ring-g'),
+        wzRingSum: byId('wz-ring-sum'),
+        wzSchedTpls: byId('wz-sched-tpls'),
+        wzIvals: byId('wz-ivals'),
+        wzIvalFrom: select('wz-ival-from'),
+        wzIvalTo: select('wz-ival-to'),
+        wzIvalBand: select('wz-ival-band'),
+        wzExc: byId('wz-exc'),
+        wzCurrency: byId('wz-currency'),
+        wzPrices: byId('wz-prices'),
+        wzPriceCheck: byId('wz-price-check'),
+    };
+}
+
 export function collectDom() {
     return {
         ...mozemDom(),
         ...terazDom(),
         ...sedemDom(),
         ...statistikaDom(),
+        ...nastavenieDom(),
+        ...wizardDom(),
+        ...wizardFieldsDom(),
+        ...wizardTariffDom(),
         // <html> nesie farby oblohy (--s1, --s2) a počasie (data-sky).
         root: document.documentElement,
         page: byId('page'),

@@ -3,7 +3,8 @@
 
 import { START_PANELS } from '../shared/config.js';
 import { typicalSettings } from '../shared/settings.js';
-import { emptySettings, resolveDraft, SETUP_STEPS } from '../shared/setup.js';
+import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
+import { setupInit } from '../shared/setup-flow.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
 import { createStore } from './store.js';
 
@@ -11,6 +12,8 @@ import { createStore } from './store.js';
 // appka (obloha/). Tu sú znova vyvezené, aby sa ich odberatelia nemuseli meniť.
 export { createStore };
 export { nextPv } from './refresh.js';
+// Sprievodca nastavením je spoločný s novou appkou (shared/setup-flow.js).
+export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
 
 /**
  * @typedef {'mozem' | 'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
@@ -65,9 +68,9 @@ export { nextPv } from './refresh.js';
  *   infoOpen: InfoItem | null,
  *   dialGuideOpen: boolean,
  * }} AppState
- * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('../shared/config.js').Site, detail: string }> }} GeoSearch
+ * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
- * @typedef {'chip' | 'other' | 'guess'} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
+ * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, list: boolean, guide: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
@@ -146,14 +149,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
         // panely nie sú zadané, karty o výkone (Terazky, Môžem?) sú sivé a bez čísel.
         known,
-        // Rozpísaný formulár v karte Nastavenie. Hodnoty polí píše render len pri zmene
-        // settingsRev (načítanie, výber lokality, pridanie plochy, zahodenie zmien), inak by
-        // počas písania prepisoval to, čo človek práve píše.
-        settingsDraft: start,
-        settingsRev: 0,
-        // Hlásenie pod tlačidlom Uložiť; pri ďalšej úprave zmizne.
-        settingsNote: '',
-        geo: { status: 'idle', results: [] },
+        // Sprievodca nastavením a rozpísané nastavenie - to isté ako v novej appke (shared/setup-flow.js).
+        ...setupInit(start, known),
         // Nastavenie z odkazu (otvoreného alebo prilepeného), ktoré čaká na potvrdenie.
         // Odkaz môže poslať ktokoľvek, preto ho appka sama neuloží.
         incoming,
@@ -163,28 +160,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         shareKiosk: false,
         // Karta, na ktorej sa appka na tomto telefóne otvára (voľba v karte Nastavenie).
         startPanel,
-        // Sprievodca nastavením elektrárne v karte Nastavenie: otvorená obrazovka (null = karta
-        // ukazuje prehľad) a plocha panelov, ktorej sa týka. Oboje je krok navigácie, takže
-        // tlačidlo Späť na telefóne vracia o obrazovku sprievodcu.
-        setupStep: welcome ? 'lokalita' : null,
-        setupRoof: 0,
-        // Úprava jedného kroku: kam sa po nej vrátiť - na zhrnutie sprievodcu, alebo na prehľad
-        // uloženej elektrárne (vtedy sa zmena rovno ukladá). null = sprievodca ide v poradí.
-        setupReturn: null,
-        // Kto pozná len celkový výkon elektrárne (kWp), zadá ten; výkon panelu sa dopočíta.
-        setupKwp: null,
-        // Ako bol zadaný výkon panelu a meniča - „Neviem“ zhrnutie označí ako odhad.
-        setupPick: { wp: 'chip', ac: 'chip' },
-        // Či človek chce živé meranie z kiosku. Rozhoduje, či sa kiosk pri uložení vôbec berie.
-        setupLive: !!start.kiosk,
-        // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
-        setupLink: '',
-        // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým
-        // sa maľuje po kruhu (null = najdrahšie). Nastavenie vnútri obrazovky, nie krok navigácie.
-        setupSched: 0,
-        setupBrush: null,
-        // Človek pri tarife ťukol na „Neviem“ - obrazovka vysvetlí, s čím appka počíta.
-        setupDunno: false,
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
@@ -363,34 +338,10 @@ export function navPrevFrom(raw) {
 }
 
 /**
- * Otázka na polohu pri prvom otvorení appky, kým appka nevie nič. Nie je to krok sprievodcu - za ňou
- * zatiaľ nie je nič, kam sa vrátiť, takže nemá krížik, Späť ani ukazovateľ postupu.
- * @param {AppState} state @param {SetupStep | null} step
- */
-export function isWelcome(state, step) {
-    return state.known === 'nic' && step === 'lokalita';
-}
-
-/**
  * Stav pre to, čo hovorí o výkone strechy (karta Terazky, farba hlavičky): bez zadaných panelov
  * bez predpovede - tá je pre typickú strechu, nie pre jeho, a výkon z nej by klamal.
  * @param {AppState} state @returns {AppState}
  */
 export function powerState(state) {
     return state.known === 'elektraren' ? state : { ...state, pv: null, forecast: null };
-}
-
-/** Uložené nastavenie, pre ktoré appka práve počíta. @param {AppState} state @returns {import('../shared/settings.js').Settings} */
-export function savedSettings(state) {
-    return { site: state.site, plant: state.plant, tariff: state.tariff, kiosk: state.kiosk };
-}
-
-/**
- * Rozpísané nastavenie tak, ako by sa uložilo: bez kiosku, keď človek živé meranie nechce,
- * a s výkonom panelu dopočítaným z celkového výkonu, keď zadal ten.
- * @param {AppState} state @returns {import('../shared/settings.js').Settings}
- */
-export function setupDraft(state) {
-    const draft = state.setupLive ? state.settingsDraft : { ...state.settingsDraft, kiosk: '' };
-    return resolveDraft(draft, state.setupKwp);
 }
