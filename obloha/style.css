@@ -1352,8 +1352,10 @@ button:focus-visible {
 }
 
 /* ===== Sprievodca ===== */
+/* Jeden stĺpec, ktorý nikdy nepretečie okno - dlhé slovo či pole sa zalomí alebo zúži. */
 .wz {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     padding: 8px 14px 20px;
 }
@@ -1435,9 +1437,11 @@ button:focus-visible {
 .wz-screen,
 .wz-stack {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 .wz .glass {
+    grid-template-columns: minmax(0, 1fr);
     margin: 0;
 }
 /* Voľba s nadpisom a popisom: sklenená, zvolená biela. */
@@ -1578,7 +1582,7 @@ button:focus-visible {
 }
 .two {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 8px;
     padding-top: 10px;
 }
@@ -1794,14 +1798,10 @@ button:focus-visible {
     gap: 8px;
     font-size: 14px;
 }
-.quality .bar i.tier-green {
-    background: var(--yes);
-}
-.quality .bar i.tier-amber {
-    background: #ffd36e;
-}
-.quality .bar i.tier-red {
-    background: var(--costly);
+/* Pás kvality je biely: zelená patrí len oknu, keď slnko stačí, a červená drahej sieti. Hodnotenie
+   povie slovo nad pásom. */
+.quality .bar i {
+    background: #fff;
 }
 .tilt-art .ground {
     stroke: rgba(255, 255, 255, 0.4);

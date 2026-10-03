@@ -52,6 +52,9 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, oblúk slnka, výzvy).        |
 | `teraz.js`       | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
 | `day-chart.js`   | Graf dňa novej appky (Teraz, detail dňa): geometria krivky, hranice, „teraz“, náhľadu a pás plánu po polhodinách.    |
+| `setup-flow.js`  | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
+| `setup-texts.js` | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.             |
+| `nastavenie.js`  | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                 |
 | `sedem-dni.js`   | Karta 7 dní novej appky: riadky dní s oknom a počasím, detail dňa a týždňa z modelov karty 7 dní súčasnej appky.     |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
@@ -63,7 +66,7 @@ spustil vždy. Podrobnosti v CLAUDE.md, sekcia o nasadení a cache.
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
 miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje
 poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
-`setup-interactions.js`, pásy, ktoré listuje prehliadač, spoločné `pager.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
+`setup-interactions.js` nad spoločným `setup-wiring.js`, pásy, ktoré listuje prehliadač, spoločné `pager.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
@@ -164,8 +167,9 @@ ten istý súbor:
   ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť.
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
-  hodiny), `gesture.js` (rozpoznanie ťahu do strán) a `nav-history.js` (kroky navigácie
-  v histórii prehliadača). Vznikli vytiahnutím zo `state.js`, `settings-store.js`,
+  hodiny), `gesture.js` (rozpoznanie ťahu do strán), `nav-history.js` (kroky navigácie
+  v histórii prehliadača), `setup-wiring.js` (poslucháče sprievodcu nastavením a uloženie),
+  `settings-store.js` (zrkadlenie nastavenia do adresy) a `svg.js` (SVG z modelov). Vznikli vytiahnutím zo `state.js`, `settings-store.js`,
   `interactions.js`, `swipe.js` a `history.js`; tie ich používajú ďalej a správanie súčasnej
   appky sa nezmenilo. `state.js` a `settings-store.js` ich znova vyvážajú, aby sa nemuseli meniť
   ich odberatelia.
@@ -221,6 +225,17 @@ navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrá
 prehľadu aj fokus na riadok si pamätá render. Listovanie dní v detaile nový krok nepridá; ťah
 do strán rozhoduje `swipeTarget` v `obloha/web/state.js` – v detaile dňa susedný deň, inak ako
 súčasná appka (`web/swipe.js`).
+
+Karta Nastavenie novej appky má prehľad podľa návrhu (karta strechy s kompasom plôch, riadky
+ELEKTRÁREŇ; čísla skladá `shared/nastavenie.js`) a sprievodcu, ktorý je **ten istý ako v súčasnej
+appke**, len v novom kabáte. Čo urobí ktoré tlačidlo, je v `shared/setup-flow.js` (čisté funkcie
+stav → zmena), texty v `shared/setup-texts.js`, poslucháče vo `web/setup-wiring.js` – obrazovky
+sprievodcu majú v oboch appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód
+a ukladá tým istým `web/storage.js`. Každá appka si len kreslí svoje (`web/render/nastavenie.js`,
+`obloha/web/render/sprievodca.js`) a dodá krok späť cez svoju históriu. Obrazovka sprievodcu je
+krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); počas sprievodcu ťah do strán
+kartu neprepne (`swipeTarget`) a Escape je jeho „Späť“. Úprava panelov z prehľadu má navyše
+záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa všetko o streche.
 
 ## Prečo takto
 
