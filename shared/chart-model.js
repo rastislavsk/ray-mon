@@ -483,6 +483,15 @@ export function weekBarsModel(days, selDay, size = { W: 440, H: 190 }, showCeili
 }
 
 /**
+ * Najlepší deň týždňa: najviac kWh, pri zhode skorší. Ten istý deň menuje súhrn karty 7 dní
+ * súčasnej appky (weekStatsModel) aj nadpis karty 7 dní novej (shared/sedem-dni.js).
+ * @param {Array<{ kwhTotal: number }>} days
+ */
+export function bestDayIndex(days) {
+    return days.reduce((best, d, i) => (d.kwhTotal > days[best].kwhTotal ? i : best), 0);
+}
+
+/**
  * Súhrnné čísla karty 7 dní (Dnes/Zajtra/spolu, trend, priebeh dnešnej výroby).
  * @param {ForecastDay[]} days @param {import('./kiosk.js').PvData | null | undefined} pv @param {boolean} tomorrowSunny
  */
@@ -490,14 +499,8 @@ export function weekStatsModel(days, pv, tomorrowSunny) {
     const today = days[0];
     const tomorrow = days[1] || null;
     const total = days.reduce((s, d) => s + d.kwhTotal, 0);
-    let best = days[0];
-    let bestIndex = 0;
-    days.forEach((d, i) => {
-        if (d.kwhTotal > best.kwhTotal) {
-            best = d;
-            bestIndex = i;
-        }
-    });
+    const bestIndex = bestDayIndex(days);
+    const best = days[bestIndex];
     // Dnešná nabehnutá výroba proti predpovedi. Iné dni namerané nie sú, takže progress
     // patrí vždy k dnešku. Kiosk, ktorý dennú výrobu neposlal, má null - Number(null) by
     // z neho spravil nameraných 0 kWh.

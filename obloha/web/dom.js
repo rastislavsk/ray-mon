@@ -91,10 +91,63 @@ function terazDom() {
     };
 }
 
+/** Karta 7 dní: prehľad dní, detail dňa a detail týždňa. */
+function sedemDom() {
+    return {
+        sdList: byId('sd-list'),
+        sdTitle: byId('sd-title'),
+        sdSum: byId('sd-sum'),
+        sdSumText: byId('sd-sum-text'),
+        sdSub: byId('sd-sub'),
+        sdRetry: byId('sd-retry'),
+        sdAsk: byId('sd-ask'),
+        sdAskTitle: byId('sd-ask-title'),
+        sdAskText: byId('sd-ask-text'),
+        sdAskBtn: byId('sd-ask-btn'),
+        sdGuess: byId('sd-guess'),
+        sdGuessTitle: byId('sd-guess-title'),
+        sdGuessText: byId('sd-guess-text'),
+        sdGuessBtn: byId('sd-guess-btn'),
+        sdDays: byId('sd-days'),
+        sdHint: byId('sd-hint'),
+        sdDay: byId('sd-day'),
+        sdDayBack: byId('sd-day-back'),
+        sdDayBackText: byId('sd-day-back-text'),
+        sdDayTitle: byId('sd-day-title'),
+        sdDayIcon: byId('sd-day-icon'),
+        sdDaySub: byId('sd-day-sub'),
+        sdDayNums: byId('sd-day-nums'),
+        sdDayChart: byId('sd-day-chart'),
+        sdDayLegend: byId('sd-day-legend'),
+        sdDayFacts: byId('sd-day-facts'),
+        sdDayDone: byId('sd-day-done'),
+        sdDayClear: byId('sd-day-clear'),
+        sdDayPrice: byId('sd-day-price'),
+        sdDayMsgTitle: byId('sd-day-msg-title'),
+        sdDayMsgBody: byId('sd-day-msg-body'),
+        sdDayHint: byId('sd-day-hint'),
+        sdWeek: byId('sd-week'),
+        sdWeekBack: byId('sd-week-back'),
+        sdWeekBackText: byId('sd-week-back-text'),
+        sdWeekTitle: byId('sd-week-title'),
+        sdWeekRange: byId('sd-week-range'),
+        sdWeekNums: byId('sd-week-nums'),
+        sdBarsTitle: byId('sd-bars-title'),
+        sdBars: byId('sd-bars'),
+        sdHeatTitle: byId('sd-heat-title'),
+        sdHeat: byId('sd-heat'),
+        sdHeatNote: byId('sd-heat-note'),
+        sdWeekMsgTitle: byId('sd-week-msg-title'),
+        sdWeekMsgBody: byId('sd-week-msg-body'),
+        sdWeekHint: byId('sd-week-hint'),
+    };
+}
+
 export function collectDom() {
     return {
         ...mozemDom(),
         ...terazDom(),
+        ...sedemDom(),
         // <html> nesie farby oblohy (--s1, --s2) a počasie (data-sky).
         root: document.documentElement,
         page: byId('page'),

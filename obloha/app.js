@@ -25,7 +25,10 @@ const store = createStore(
     }),
 );
 
-store.subscribe((state) => render(state, dom));
+// Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
+// skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
+// pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.
 const refresh = initInteractions(store, dom);
+store.subscribe((state) => render(state, dom));
 render(store.get(), dom);
 refresh();

@@ -1,10 +1,12 @@
-// Graf dňa na karte Teraz novej appky (obloha/): krivka výroby od polnoci do polnoci, hranica
-// veľkých spotrebičov, značka „teraz“ a náhľad iného času, pod grafom pás plánu po polhodinách.
+// Graf dňa novej appky (obloha/) na karte Teraz aj v detaile dňa na karte 7 dní: krivka výroby
+// od polnoci do polnoci, hranica veľkých spotrebičov, značka „teraz“ a náhľad iného času, pod
+// grafom pás plánu po polhodinách.
 // Čistá geometria v súradniciach SVG (viewBox DAY_CHART.w × DAY_CHART.h) podľa návrhu
 // (docs/navrhy/smer-b-obloha.html, `dayChart`). Plán aj výkon prichádzajú hotové z day-plan.js
 // a hero-model.js - tu sa nič nepočíta inak, len kreslí.
 
 import { MINUTES_PER_DAY, PREVIEW } from './config.js';
+import { TERAZ_TONES } from './messages.js';
 
 /** Čo platí v danej štvrťhodine plánu: slnko stačí, lacná sieť, drahá sieť, inak bežná cena. @typedef {'sun' | 'cheap' | 'costly' | 'plain'} Tone */
 /** @typedef {{ from: number, to: number, tone: Tone }} Cell bunka pásu plánu, minúty dňa */
@@ -47,6 +49,15 @@ export function planCells(plan) {
     });
 }
 
+/**
+ * Legenda pod pásom plánu: farby, ktoré v páse naozaj sú, slovom a v pevnom poradí - aby farba
+ * nebola jediný nosič významu. @param {Array<{ tone: Tone }>} cells
+ */
+export function planLegend(cells) {
+    const order = /** @type {Tone[]} */ (['sun', 'cheap', 'costly', 'plain']);
+    return order.filter((t) => cells.some((c) => c.tone === t)).map((tone) => ({ tone, text: TERAZ_TONES[tone] }));
+}
+
 /** Bunka pásu, do ktorej padne minúta dňa. @param {Cell[]} cells @param {number} min */
 export function cellAt(cells, min) {
     return cells[Math.min(cells.length - 1, Math.max(0, Math.floor(min / DAY_CHART.cellMin)))];
@@ -70,15 +81,16 @@ export function chartMinutes(rel) {
 /**
  * Geometria grafu dňa.
  * @param {{ plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number }>,
- *   real: Array<{ hour: number, kw: number }>, boundary: number | null, nowMin: number, nowKw: number,
+ *   real: Array<{ hour: number, kw: number }>, boundary: number | null, nowMin: number | null, nowKw: number,
  *   limitKw: number, preview: { min: number, kw: number, text: string } | null }} d `hourly` predpoveď
- *   dneška, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `limitKw` hranica
- *   veľkých spotrebičov, `preview` náhľad iného času so štítkom
+ *   dňa, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `nowMin` značka
+ *   „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov,
+ *   `preview` náhľad iného času so štítkom
  */
 export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, preview }) {
     const C = DAY_CHART;
     const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary);
-    const kws = [limitKw, ...hourly.map((p) => p.kw), ...measured.map((p) => p.kw), nowKw, preview ? preview.kw : 0];
+    const kws = [limitKw, ...hourly.map((p) => p.kw), ...measured.map((p) => p.kw), nowMin === null ? 0 : nowKw, preview ? preview.kw : 0];
     // Stupnica s rezervou nad najvyšším bodom, aby krivka nenarážala na štítok náhľadu.
     const max = Math.max(...kws.filter(Number.isFinite)) * 1.1 || 1;
     const y = (/** @type {number} */ kw) => r1(C.base - (Math.max(0, kw) / max) * (C.base - C.top));
@@ -96,7 +108,7 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
         limitY: y(limitKw),
         cells: planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW })),
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
-        now: at(nowMin, nowKw),
+        now: nowMin === null ? null : at(nowMin, nowKw),
         preview: preview ? { ...at(preview.min, preview.kw), pill: pillAt(chartX(preview.min), preview.text) } : null,
     };
 }

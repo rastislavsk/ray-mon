@@ -6,13 +6,12 @@
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, MOZEM_ITEMS, powerThresholds } from './config.js';
-import { dayChartModel, planCells, slotTone } from './day-chart.js';
+import { dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { heroModel, pvFreshness } from './hero-model.js';
 import {
     TERAZ_TEXTS,
-    TERAZ_TONES,
     terazChartText,
     terazClearText,
     terazLaterText,
@@ -123,8 +122,8 @@ function clearSub(input, hero) {
     return terazClearText(Math.min(100, Math.round((100 * hero.power) / clear)));
 }
 
-/** Dnešok v predpovedi, alebo null, keď predpoveď začína iným dňom (po polnoci pred obnovou). @param {TerazInput} input */
-function todayOf(input) {
+/** Dnešok v predpovedi, alebo null, keď predpoveď začína iným dňom (po polnoci pred obnovou). @param {import('./day-plan.js').PlanInput} input */
+export function todayOf(input) {
     const day = input.forecast ? input.forecast.days[0] : null;
     return day && day.date === localDateKey(input.now, input.site.timezone) ? day : null;
 }
@@ -163,14 +162,8 @@ function chartOf(input, plan, hero, now) {
         }),
         value: hero.minutes,
         valueText: terazSliderText(hero.minutes, hero.preview, hero.powerText, tone(hero.minutes)),
-        legend: legendOf(planCells(plan)),
+        legend: planLegend(planCells(plan)),
     };
-}
-
-/** Legenda pod pásom: farby, ktoré dnes v páse sú, slovom a v pevnom poradí. @param {Array<{ tone: Tone }>} cells */
-function legendOf(cells) {
-    const order = /** @type {Tone[]} */ (['sun', 'cheap', 'costly', 'plain']);
-    return order.filter((t) => cells.some((c) => c.tone === t)).map((tone) => ({ tone, text: TERAZ_TONES[tone] }));
 }
 
 /**
@@ -196,10 +189,11 @@ function cardsOf(input, plan, hero, now, launches) {
 /**
  * Karta Dnešok: predpoveď dňa, koľko už nabehlo (z kiosku, bez neho podľa predpovede) a okno
  * na veľké veci - zelený úsek plánu, ten istý ako na páse a na karte Môžem? (prebieha, príde,
- * alebo posledný, ktorý už bol).
- * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan @param {number} nowMin
+ * alebo posledný, ktorý už bol). Riadok o predpovedi a o tom, čo už nabehlo, ukazuje aj detail
+ * dneška na karte 7 dní.
+ * @param {import('./day-plan.js').PlanInput} input @param {import('./day-plan.js').PlanSlot[]} plan @param {number} nowMin
  */
-function todayCard(input, plan, nowMin) {
+export function todayCard(input, plan, nowMin) {
     const windows = planWindows(plan, (s) => s.tier === 'green');
     const ahead = windows.find((w) => w.to > nowMin) || null;
     const window = ahead || windows[windows.length - 1] || null;

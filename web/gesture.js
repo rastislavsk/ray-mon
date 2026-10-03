@@ -1,6 +1,6 @@
 // Rozpoznanie ťahu prstom do strán: bolo to listovanie, alebo posúvanie niečoho vo vnútri?
-// Čo sa po geste stane, rozhoduje volajúci - súčasná appka listuje karty aj dni (web/swipe.js),
-// nová (obloha/) zatiaľ len karty. Pravidlá sú v CLAUDE.md, časť Dotyk a kurzor.
+// Čo sa po geste stane, rozhoduje volajúci - obe appky listujú karty aj dni v detaile dňa karty
+// 7 dní (súčasná vo web/swipe.js, nová v swipeTarget v obloha/web/state.js). Pravidlá sú v CLAUDE.md, časť Dotyk a kurzor.
 //
 // Poslucháče sedia na dokumente, nie na stránke s kartami. Tá je vysoká presne toľko, koľko má
 // karta obsahu - krátka karta tak nechá pod sebou kus obrazovky, ktorý do nej nepatrí, a ťah

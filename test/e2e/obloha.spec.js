@@ -21,6 +21,7 @@ import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js'
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { terazModel } from '../../shared/teraz.js';
+import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
@@ -107,8 +108,8 @@ for (const width of [390, 320]) {
         for (const panel of [...PANELS].reverse()) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
-            // Karty Môžem? (krok 2) a Teraz (krok 3) už majú obsah, ostatné ešte čakajú.
-            if (panel !== 'mozem' && panel !== 'terazky')
+            // Karty Môžem? (krok 2), Teraz (krok 3) a 7 dní (krok 4) už majú obsah, ostatné ešte čakajú.
+            if (panel === 'statistika' || panel === 'nastavenie')
                 await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
         }
         const polozky = await page.locator('.tabs button').evaluateAll((buttons) =>
@@ -518,7 +519,7 @@ test.describe('karta Môžem?', () => {
         await expect(panel).toBeHidden();
         await expect(riadok).toBeFocused();
         // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
-        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null, preview: null } });
+        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null, preview: null, detail: null } });
         expect(errors).toEqual([]);
     });
 
@@ -1076,3 +1077,436 @@ for (const width of [390, 320]) {
         expect(errors).toEqual([]);
     });
 }
+
+// ---- Karta 7 dní (krok 4) ----------------------------------------------------------
+// Očakávané texty počíta tá istá funkcia ako appka (shared/sedem-dni.js nad weekStatsModel,
+// weekListModel a plánom dňa súčasnej appky) z tých istých dát.
+
+/**
+ * Vstup karty 7 dní pre dáta z fixtures, tak ako ho skladá appka: Dvorany s kioskom, meranie
+ * z fixtures (openObloha ho posiela predvolene) a pevný čas.
+ * @param {object} [extra] @returns {import('../../shared/sedem-dni.js').SedemData}
+ */
+const vstupSedem = (extra = {}) => ({
+    ...OWNER,
+    now: FIXED_NOW,
+    loading: false,
+    known: 'elektraren',
+    pv,
+    forecast: buildForecast(weather, FIXED_NOW, SITE, PLANT),
+    ...extra,
+});
+
+/** Počasie, v ktorom má streda 9. 9. žiarenie stiahnuté na zlomok - deň bez okna. */
+const slabyTyzden = (() => {
+    const w = structuredClone(weather);
+    const keys = ['shortwave_radiation_instant', 'direct_normal_irradiance_instant', 'diffuse_radiation_instant'];
+    for (const [i, t] of w.hourly.time.entries()) if (t.startsWith('2026-09-09')) for (const k of keys) w.hourly[k][i] *= 0.15;
+    return w;
+})();
+
+/**
+ * Otvorí novú appku na karte 7 dní.
+ * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1]} [opts]
+ */
+async function openSedem(page, opts = {}) {
+    const errors = await openObloha(page, opts);
+    await page.locator('#nav-7dni').click();
+    await ocakavajKartu(page, '7dni');
+    return errors;
+}
+
+/** Čo ukazuje prehľad: nadpis, súčet a riadky (meno, kWh, počasie, znenie pre čítačku, najlepší, pás). @param {import('@playwright/test').Page} page */
+const prehladVStranke = (page) =>
+    page.evaluate(() => ({
+        title: document.querySelector('#sd-title')?.textContent ?? '',
+        sum: document.querySelector('#sd-sum-text')?.textContent ?? '',
+        rows: [...document.querySelectorAll('#sd-days .day')].map((r) => ({
+            name: r.querySelector('.dn')?.textContent ?? '',
+            kwh: r.querySelector('em')?.textContent ?? '',
+            weather: r.querySelector('svg.wi')?.getAttribute('data-w') ?? null,
+            label: r.getAttribute('aria-label'),
+            best: r.classList.contains('best'),
+            band: [...r.querySelectorAll('.rng i')].map((i) => ({
+                left: parseFloat(/** @type {HTMLElement} */ (i).style.left),
+                width: parseFloat(/** @type {HTMLElement} */ (i).style.width),
+            })),
+        })),
+    }));
+
+/** To isté z modelu. @param {ReturnType<typeof sedemModel>} m */
+const prehladZModelu = (m) => ({
+    title: m.title,
+    sum: m.sum,
+    rows: m.rows.map((r) => ({ name: r.name, kwh: r.kwh, weather: r.weather, label: r.label, best: r.best, band: r.band })),
+});
+
+/** Čo ukazuje detail dňa: nadpis, slovo počasia, tri čísla a hláška. @param {import('@playwright/test').Page} page */
+const denVStranke = (page) =>
+    page.evaluate(() => ({
+        title: document.querySelector('#sd-day-title')?.textContent ?? '',
+        sub: document.querySelector('#sd-day-sub')?.textContent ?? '',
+        nums: [...document.querySelectorAll('#sd-day-nums > div')].map((n) => n.textContent),
+        msg: `${document.querySelector('#sd-day-msg-title')?.textContent} | ${document.querySelector('#sd-day-msg-body')?.textContent}`,
+    }));
+
+/** To isté z modelu. @param {ReturnType<typeof sedemDayModel>} d */
+const denZModelu = (d) => ({
+    title: d.title,
+    sub: d.sub,
+    nums: d.nums.map((n) => `${n.value}${n.label}`),
+    msg: `${d.message.title} | ${d.message.body}`,
+});
+
+/** Ťah prstom do strán nad prvkom (cez CDP, ako naozajstný prst). @param {import('@playwright/test').Page} page @param {string} sel @param {number} dx */
+async function tahNad(page, sel, dx) {
+    const box = await page.locator(sel).boundingBox();
+    if (!box) throw new Error(`${sel} nie je vidno`);
+    await prstTah(page, { x: box.x + box.width / 2, y: box.y + box.height / 2, dx, krokMs: 25 });
+}
+
+test.describe('karta 7 dní', () => {
+    for (const width of [390, 320]) {
+        test(`šírka ${width} px: nadpis, súčet a 7 riadkov ako model, riadky aspoň 44 px a nič sa neoreže`, async ({ page }) => {
+            await page.setViewportSize({ width, height: 800 });
+            const errors = await openSedem(page);
+            const m = sedemModel(vstupSedem());
+            await expect.poll(() => prehladVStranke(page)).toEqual(prehladZModelu(m));
+            // Najlepší deň menuje nadpis aj súhrn karty 7 dní súčasnej appky.
+            expect(m.title).toBe('Veľké pranie? Štvrtok.');
+            await expect(page.locator('#sd-days .day')).toHaveCount(7);
+            await expect(page.locator('#sd-days .day.best')).toHaveCount(1);
+            await expect(page.locator('#sd-hint')).toHaveText(
+                'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťukni na deň.',
+            );
+            const riadky = await page.locator('#sd-days .day, #sd-sum').evaluateAll((els) =>
+                els.map((el) => {
+                    const box = el.getBoundingClientRect();
+                    const vnutri = [...el.querySelectorAll('span, em, svg')].every((c) => {
+                        const b = c.getBoundingClientRect();
+                        return b.left >= box.left - 0.5 && b.right <= box.right + 0.5;
+                    });
+                    const em = el.querySelector('em');
+                    return {
+                        id: el.getAttribute('data-day') ?? el.id,
+                        height: box.height,
+                        ok: vnutri && box.left >= 0 && box.right <= innerWidth + 0.5 && (!em || em.scrollWidth <= em.clientWidth + 0.5),
+                    };
+                }),
+            );
+            for (const r of riadky) {
+                expect(r.height, r.id).toBeGreaterThanOrEqual(44);
+                expect(r.ok, `${r.id} je orezaný`).toBe(true);
+            }
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
+            expect(errors).toEqual([]);
+        });
+    }
+
+    test('ikony počasia: každý z troch stavov má svoju ikonu, zamračené bez kvapiek', async ({ page }) => {
+        const errors = await openSedem(page);
+        const ikony = await page
+            .locator('#sd-days svg.wi')
+            .evaluateAll((svgs) =>
+                svgs.map((s) => ({ w: s.getAttribute('data-w'), html: s.innerHTML, hidden: s.getAttribute('aria-hidden') })),
+            );
+        const podlaStavu = Object.fromEntries(ikony.map((i) => [i.w, i]));
+        expect(Object.keys(podlaStavu).sort()).toEqual(['jasno', 'polojasno', 'zamracene']);
+        expect(new Set(Object.values(podlaStavu).map((i) => i.html)).size, 'tri rôzne ikony').toBe(3);
+        expect(
+            ikony.every((i) => i.hidden === 'true'),
+            'ikona je ozdoba',
+        ).toBe(true);
+        // Zamračené je len oblak: jeden tvar, žiadne čiary kvapiek ani slnko.
+        const zamracene = page.locator('#sd-days svg.wi[data-w="zamracene"]').first();
+        expect(await zamracene.evaluate((s) => [...s.children].map((c) => `${c.tagName}.${c.getAttribute('class')}`))).toEqual([
+            'path.wi-cloud wi-dark',
+        ]);
+        // Slovo počasia je v znení riadku pre čítačku.
+        await expect(page.locator('#sd-days .day').nth(2)).toHaveAttribute('aria-label', /^Pondelok, zamračené, /);
+        expect(errors).toEqual([]);
+    });
+
+    test('detail dneška: tri čísla, hláška a „teraz“ ako model; iný deň bez „teraz“', async ({ page }) => {
+        const errors = await openSedem(page);
+        await page.locator('#sd-days [data-day="0"]').click();
+        await expect(page.locator('#sd-day')).toBeVisible();
+        await expect(page.locator('#sd-list')).toBeHidden();
+        const d = sedemDayModel(vstupSedem(), 0);
+        await expect.poll(() => denVStranke(page)).toEqual(denZModelu(d));
+        await expect(page.locator('#sd-day-chart .dc-now')).toHaveCount(1);
+        await expect(page.locator('#sd-day-chart .dc-real')).toHaveCount(1);
+        await expect(page.locator('#sd-day-chart')).toHaveAttribute('aria-label', d.chart.desc);
+        await expect(page.locator('#sd-day-done')).toHaveText(d.done);
+        await expect(page.locator('#sd-day-clear')).toHaveText(d.clear);
+        await expect(page.locator('#sd-day-legend span')).toHaveText(d.chart.legend.map((l) => l.text));
+        await expect(page.locator('#sd-day-hint')).toHaveText('Potiahni do strán na susedný deň.');
+        await expect(page.locator('#sd-day-back')).toBeFocused();
+
+        await page.locator('#sd-day-back').click();
+        await page.locator('#sd-days [data-day="4"]').click();
+        await expect.poll(() => denVStranke(page)).toEqual(denZModelu(sedemDayModel(vstupSedem(), 4)));
+        await expect(page.locator('#sd-day-chart .dc-now')).toHaveCount(0);
+        await expect(page.locator('#sd-day-done')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('deň bez okna: prázdny pás v riadku, v detaile „bez okna“ a hláška pre slabý deň', async ({ page }) => {
+        const errors = await pripravSiet(page);
+        await page.unroute(/api\.open-meteo\.com/);
+        await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: slabyTyzden }));
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/obloha/');
+        await appReady(page);
+        await page.locator('#nav-7dni').click();
+        const vstup = vstupSedem({ forecast: buildForecast(slabyTyzden, FIXED_NOW, SITE, PLANT) });
+        await expect.poll(() => prehladVStranke(page)).toEqual(prehladZModelu(sedemModel(vstup)));
+        await expect(page.locator('#sd-days [data-day="4"] .rng i')).toHaveCount(0);
+        await expect(page.locator('#sd-days [data-day="4"]')).toHaveAttribute('aria-label', /, bez okna$/);
+        await page.locator('#sd-days [data-day="4"]').click();
+        await expect.poll(() => denVStranke(page)).toEqual(denZModelu(sedemDayModel(vstup, 4)));
+        await expect(page.locator('#sd-day-nums > div').nth(2)).toHaveText('–bez okna');
+        await expect(page.locator('#sd-day-msg-title')).toHaveText('Slabý deň');
+        expect(errors).toEqual([]);
+    });
+
+    test('detail týždňa: tri čísla, 7 stĺpcov, mapa 7 × hodiny a hláška z weekMessage', async ({ page }) => {
+        const errors = await openSedem(page);
+        await page.locator('#sd-sum').click();
+        await expect(page.locator('#sd-week')).toBeVisible();
+        const w = sedemWeekModel(vstupSedem());
+        await expect(page.locator('#sd-week-title')).toHaveText('Týždeň');
+        await expect(page.locator('#sd-week-range')).toHaveText(w.range);
+        await expect(page.locator('#sd-week-nums > div')).toHaveText(w.nums.map((n) => `${n.value}${n.label}`));
+        await expect(page.locator('#sd-bars rect.wb')).toHaveCount(7);
+        await expect(page.locator('#sd-bars rect.wb.best')).toHaveCount(1);
+        await expect(page.locator('#sd-bars text.wb-v')).toHaveText(w.bars.map((b) => b.value));
+        await expect(page.locator('#sd-heat rect.hc')).toHaveCount(7 * 17);
+        await expect(page.locator('#sd-heat rect.hc.sun')).toHaveCount(w.heat.cells.filter((c) => c.sun).length);
+        await expect(page.locator('#sd-heat-note')).toHaveText('Zelené políčko = v tú hodinu slnko stačí na veľké spotrebiče.');
+        await expect(page.locator('#sd-bars')).toHaveAttribute('aria-label', w.barsText);
+        await expect(page.locator('#sd-heat')).toHaveAttribute('aria-label', w.heatText);
+        await expect(page.locator('#sd-week-msg-title')).toHaveText(w.message.title);
+        await expect(page.locator('#sd-week-msg-body')).toHaveText(w.message.body);
+        expect(errors).toEqual([]);
+    });
+
+    test('tlačidlo Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu na to isté miesto a fokus na riadok', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 560 });
+        const errors = await openSedem(page);
+        await page.evaluate(() => window.scrollTo(0, 160));
+        const y = await page.evaluate(() => window.scrollY);
+        expect(y).toBeGreaterThan(100);
+        await page.locator('#sd-days [data-day="5"]').click();
+        await expect(page.locator('#sd-day')).toBeVisible();
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+        await page.goBack();
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await expect(page.locator('#sd-days [data-day="5"]')).toBeFocused();
+        expect(await page.evaluate(() => window.scrollY)).toBe(y);
+        // Ďalšie Späť sa správa ako doteraz: predošlá karta.
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        await page.locator('#nav-7dni').click();
+
+        await page.locator('#sd-sum').click();
+        await expect(page.locator('#sd-week')).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await expect(page.locator('#sd-sum')).toBeFocused();
+
+        await page.locator('#sd-days [data-day="2"]').click();
+        await page.locator('#sd-day-back').click();
+        await expect(page.locator('#sd-days [data-day="2"]')).toBeFocused();
+        // Šípka ide krokom v histórii: Späť potom detail znovu neotvorí, ale vráti predošlú kartu.
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('karta 7 dní prstom', () => {
+    test.use({ hasTouch: true });
+
+    test('v detaile dňa ťah doľava ide na ďalší deň, doprava späť, z dneška doprava do prehľadu', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openSedem(page);
+        await page.locator('#sd-days [data-day="0"]').click();
+        await expect(page.locator('#sd-day-title')).toHaveText('Dnes 5.9.');
+        await tahNad(page, '#sd-day-sub', -160);
+        await expect(page.locator('#sd-day-title')).toHaveText('Zajtra 6.9.');
+        // Aj ťah cez graf listuje dni - graf v detaile nie je posúvač času.
+        await tahNad(page, '#sd-day-chart', -160);
+        await expect(page.locator('#sd-day-title')).toHaveText('Pondelok 7.9.');
+        await tahNad(page, '#sd-day-sub', 160);
+        await expect(page.locator('#sd-day-title')).toHaveText('Zajtra 6.9.');
+        await tahNad(page, '#sd-day-sub', 160);
+        await expect(page.locator('#sd-day-title')).toHaveText('Dnes 5.9.');
+        await tahNad(page, '#sd-day-sub', 160);
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await ocakavajKartu(page, '7dni');
+        // Listovanie dní nebolo krokom navigácie: Späť z prehľadu ide na predošlú kartu.
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        expect(errors).toEqual([]);
+    });
+
+    test('v detaile týždňa ťah doprava vráti do prehľadu, mimo detailu ťah listuje karty', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openSedem(page);
+        await page.locator('#sd-sum').click();
+        await expect(page.locator('#sd-week')).toBeVisible();
+        await tahNad(page, '#sd-week-range', -160);
+        await expect(page.locator('#sd-week')).toBeVisible();
+        await tahNad(page, '#sd-week-range', 160);
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await tahNad(page, '#sd-title', 160);
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('zvislý ťah cez riadky aj cez graf posunie stránku a nič neotvorí ani neprelistuje', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 560 });
+        const errors = await openSedem(page);
+        const riadok = await page.locator('#sd-days [data-day="3"]').boundingBox();
+        if (!riadok) throw new Error('riadok nie je vidno');
+        await prst(page, { x: riadok.x + riadok.width / 2, y: riadok.y + riadok.height / 2, dy: -160 });
+        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez riadky neposunula').toBeGreaterThan(0);
+        await page.waitForTimeout(300);
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await expect(page.locator('#sd-day')).toBeHidden();
+        await ocakavajKartu(page, '7dni');
+
+        await page.locator('#sd-days [data-day="1"]').click();
+        await expect(page.locator('#sd-day-title')).toHaveText('Zajtra 6.9.');
+        const graf = await page.locator('#sd-day-chart').boundingBox();
+        if (!graf) throw new Error('graf nie je vidno');
+        await prst(page, { x: graf.x + graf.width / 2, y: graf.y + graf.height / 2, dy: -160 });
+        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(0);
+        await page.waitForTimeout(300);
+        await expect(page.locator('#sd-day-title')).toHaveText('Zajtra 6.9.');
+        expect(errors).toEqual([]);
+    });
+
+    test('ťuknutie prstom na riadok otvorí detail toho dňa', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const errors = await openSedem(page);
+        const riadok = await page.locator('#sd-days [data-day="5"]').boundingBox();
+        if (!riadok) throw new Error('riadok nie je vidno');
+        await prst(page, { x: riadok.x + 40, y: riadok.y + riadok.height / 2 });
+        await expect(page.locator('#sd-day-title')).toHaveText('Štvrtok 10.9.');
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('karta 7 dní: stavy', () => {
+    test('bez dát: veta s príčinou, Skúsiť znova a po ňom s dátami karta ukáže dni', async ({ page }) => {
+        let offline = true;
+        const errors = await pripravSiet(page);
+        await page.unrouteAll();
+        await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
+        await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
+        await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/obloha/');
+        await appReady(page);
+        await page.locator('#nav-7dni').click();
+        const bez = sedemModel(vstupSedem({ pv: null, forecast: null }));
+        await expect(page.locator('#sd-sub')).toHaveText(bez.sub);
+        await expect(page.locator('#sd-sub')).toHaveText(/^Predpoveď počasia neprišla/);
+        // Žiadne vymyslené čísla: ani súčet, ani riadky.
+        await expect(page.locator('#sd-days')).toBeHidden();
+        await expect(page.locator('#sd-sum')).toBeHidden();
+        const znova = page.locator('#sd-retry');
+        await expect(znova).toHaveText('Skúsiť znova');
+        offline = false;
+        await znova.click();
+        await expect.poll(() => prehladVStranke(page)).toEqual(prehladZModelu(sedemModel(vstupSedem())));
+        await expect(znova).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('bez internetu s predpoveďou: posledná známa predpoveď', async ({ page }) => {
+        await openSedem(page);
+        await page.context().setOffline(true);
+        await expect(page.locator('#sd-sum-text')).toHaveText(/ · posledná známa predpoveď$/);
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+        await page.context().setOffline(false);
+        await expect(page.locator('#sd-sum-text')).not.toHaveText(/posledná známa/);
+    });
+
+    test('načítavanie: pokojný stav bez chybovej hlášky a bez tlačidla Skúsiť znova', async ({ page }) => {
+        /** @type {() => void} */
+        let pusti = () => {};
+        const brana = new Promise((r) => (pusti = () => r(undefined)));
+        await pripravSiet(page);
+        await page.route(/api\.open-meteo\.com/, async (route) => {
+            await brana;
+            await route.fulfill({ json: weather });
+        });
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/obloha/');
+        await appReady(page);
+        await page.locator('#nav-7dni').click();
+        await expect(page.locator('#sd-sub')).toHaveText('Načítavam…');
+        await expect(page.locator('#sd-retry')).toBeHidden();
+        await expect(page.locator('#sd-days')).toBeHidden();
+        pusti();
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+    });
+
+    test('poloha bez panelov: typická strecha, odhad v riadkoch a výzva do Nastavenia; súčasná appka ostáva', async ({ page }) => {
+        const errors = await openSedem(page, { settings: null, site: SITE });
+        const typical = typicalSettings(SITE);
+        const forecast = buildForecast(weather, FIXED_NOW, SITE, typical.plant);
+        const m = sedemModel(vstupSedem({ ...typical, known: 'poloha', pv: null, forecast }));
+        await expect.poll(() => prehladVStranke(page)).toEqual(prehladZModelu(m));
+        await expect(page.locator('#sd-sum-text')).toHaveText(/ · typická strecha$/);
+        await expect(page.locator('#sd-days')).toHaveClass(/\best\b/);
+        expect(
+            await page
+                .locator('#sd-days .day em')
+                .first()
+                .evaluate((el) => getComputedStyle(el).fontStyle),
+        ).toBe('italic');
+        await expect(page.locator('#sd-guess-title')).toHaveText('Najlepší deň sedí, kWh nie');
+        await expect(page.locator('#sd-guess-text')).toHaveText(
+            'Ktorý deň je najlepší, viem z počasia. Koľko kWh, záleží od tvojich panelov. Teraz ukazujem typickú strechu asi 5 kWp.',
+        );
+        expect(await page.locator('#sd-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
+        await page.locator('#sd-guess-btn').click();
+        await ocakavajKartu(page, 'nastavenie');
+
+        // Súčasná appka v tom istom stave: karta 7 dní ako doteraz, s typickou strechou v podnadpise.
+        await page.goto('/');
+        await page.locator('#nav-7dni').click();
+        await expect(page.locator('#week-sub')).toHaveText(/typická strecha/);
+        expect(errors).toEqual([]);
+    });
+
+    test('bez polohy: len výzva zadať polohu', async ({ page }) => {
+        const errors = await openSedem(page, { settings: null });
+        await expect(page.locator('#sd-ask')).toBeVisible();
+        await expect(page.locator('#sd-ask-title')).toHaveText('Kde máš strechu?');
+        await expect(page.locator('#sd-days')).toBeHidden();
+        await expect(page.locator('#sd-sum')).toBeHidden();
+        await page.locator('#sd-ask-btn').click();
+        await ocakavajKartu(page, 'nastavenie');
+        expect(errors).toEqual([]);
+    });
+
+    test('prístupnosť: žiadne závažné nálezy axe v prehľade ani v oboch detailoch', async ({ page }) => {
+        await openSedem(page);
+        expect(await vazneNalezy(page), 'prehľad').toEqual([]);
+        await page.locator('#sd-days [data-day="0"]').click();
+        await expect(page.locator('#sd-day')).toBeVisible();
+        expect(await vazneNalezy(page), 'detail dňa').toEqual([]);
+        await page.keyboard.press('Escape');
+        await page.locator('#sd-sum').click();
+        await expect(page.locator('#sd-week')).toBeVisible();
+        expect(await vazneNalezy(page), 'detail týždňa').toEqual([]);
+        await openSedem(page, { settings: null, site: SITE });
+        expect(await vazneNalezy(page), 'bez panelov').toEqual([]);
+    });
+});

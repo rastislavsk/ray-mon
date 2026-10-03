@@ -9,9 +9,11 @@ import { emptySettings } from '../../shared/setup.js';
 /**
  * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny), `mozemQuip`
  * stránka hlášok, `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
- * `terazPage` stránka pásu odporúčaní pod ním, `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
+ * `terazPage` stránka pásu odporúčaní pod ním, `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
+ * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
  * a `online`, či má telefón internet - podľa toho karta bez dát povie prečo.
  * @typedef {(typeof PANELS)[number]} Panel
+ * @typedef {'day' | 'week'} WeekDetail
  * @typedef {import('../../web/refresh.js').RefreshState & {
  *   panel: Panel,
  *   panelDir: 1 | -1,
@@ -21,15 +23,19 @@ import { emptySettings } from '../../shared/setup.js';
  *   mozemQuip: number,
  *   terazPreview: number | null,
  *   terazPage: number,
+ *   weekDetail: WeekDetail | null,
+ *   weekDay: number,
  *   online: boolean,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
 /**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci a náhľad
- * iného času na grafe karty Teraz. Pri náhľade je krokom to, že beží - posun po grafe nový krok
- * nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň vstúpilo.
- * @typedef {{ panel: Panel, item: string | null, preview: number | null }} NavStep
+ * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci, náhľad
+ * iného času na grafe karty Teraz a detail karty 7 dní. Pri náhľade je krokom to, že beží - posun
+ * po grafe nový krok nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň
+ * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
+ * dňa vráti do prehľadu.
+ * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null }} NavStep
  */
 
 /**
@@ -63,13 +69,15 @@ export function initialState(now, { saved, site, startPanel, dayLog, launches, o
         mozemQuip: 0,
         terazPreview: null,
         terazPage: 0,
+        weekDetail: null,
+        weekDay: 0,
         online,
     };
 }
 
 /**
- * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem? a náhľad
- * karte Teraz - s kartou sa zatvoria.
+ * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem?, náhľad
+ * karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
@@ -78,6 +86,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         mozemItem: /** @type {string | null} */ (null),
         terazPreview: /** @type {number | null} */ (null),
+        weekDetail: /** @type {WeekDetail | null} */ (null),
     };
 }
 
@@ -91,13 +100,19 @@ export function nextPanel(panel, dir) {
 
 /** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {
-    return { panel: state.panel, item: state.mozemItem, preview: state.terazPreview };
+    return { panel: state.panel, item: state.mozemItem, preview: state.terazPreview, detail: state.weekDetail };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return a.panel === b.panel && a.item === b.item && (a.preview === null) === (b.preview === null);
+    return a.panel === b.panel && a.item === b.item && (a.preview === null) === (b.preview === null) && a.detail === b.detail;
 }
+
+/**
+ * Detail z položky histórie. Patrí len karte 7 dní; položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {unknown} detail @returns {WeekDetail | null}
+ */
+const weekDetailOf = (panel, detail) => (panel === '7dni' && (detail === 'day' || detail === 'week') ? detail : null);
 
 /**
  * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
@@ -108,12 +123,12 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item, preview } = /** @type {{ panel?: unknown, item?: unknown, preview?: unknown }} */ (raw);
+    const { panel, item, preview, detail } = /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     if (!p) return null;
     // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
     const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
-    const step = { panel: p, item: null, preview: at ? /** @type {number} */ (preview) : null };
+    const step = { panel: p, item: null, preview: at ? /** @type {number} */ (preview) : null, detail: weekDetailOf(p, detail) };
     if (item === null || item === undefined) return step;
     return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
 }
@@ -125,11 +140,33 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
 /**
- * Návrat na krok z histórie (tlačidlo Späť): karta, panel veci aj náhľad tak, ako boli. Náhľad,
- * ktorý už beží, ostane na čase, kde ho prst nechal.
+ * Návrat na krok z histórie (tlačidlo Späť): karta, panel veci, náhľad aj detail tak, ako boli.
+ * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
+ * stálo.
  * @param {AppState} state @param {NavStep} step
  */
 export function navChange(state, step) {
     const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
-    return { ...panelChange(state.panel, step.panel), mozemItem: step.item, terazPreview: preview };
+    return { ...panelChange(state.panel, step.panel), mozemItem: step.item, terazPreview: preview, weekDetail: step.detail };
+}
+
+/**
+ * Kam vedie ťah prstom do strán. Mimo detailu karty 7 dní listuje karty (na kraji nikam).
+ * Detail je podobrazovka karty a ťah ju neopúšťa: v detaile dňa listuje dni, ako súčasná appka
+ * (web/swipe.js). Ťah doprava je všade krok späť, takže keď už listovať nie je kam (dnešok, alebo
+ * detail týždňa), vedie do prehľadu dní - `'back'`, krok v histórii. Doľava z posledného dňa
+ * nevedie nikam.
+ * @param {AppState} state @param {number} dx záporné = ťah doľava
+ * @returns {Partial<AppState> | 'back' | null}
+ */
+export function swipeTarget(state, dx) {
+    const dir = dx < 0 ? 1 : -1;
+    if (state.panel === '7dni' && state.weekDetail && state.forecast) {
+        const back = dx > 0 ? /** @type {const} */ ('back') : null;
+        if (state.weekDetail === 'week') return back;
+        const day = state.weekDay + dir;
+        return day >= 0 && day < state.forecast.days.length ? { weekDay: day } : back;
+    }
+    const to = nextPanel(state.panel, dir);
+    return to ? panelChange(state.panel, to) : null;
 }

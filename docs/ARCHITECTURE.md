@@ -51,7 +51,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 | `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, oblúk slnka, výzvy).        |
 | `teraz.js`       | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
-| `day-chart.js`   | Graf dňa karty Teraz: geometria krivky, hranice, „teraz“ a náhľadu, pás plánu po polhodinách a jeho farby.           |
+| `day-chart.js`   | Graf dňa novej appky (Teraz, detail dňa): geometria krivky, hranice, „teraz“, náhľadu a pás plánu po polhodinách.    |
+| `sedem-dni.js`   | Karta 7 dní novej appky: riadky dní s oknom a počasím, detail dňa a týždňa z modelov karty 7 dní súčasnej appky.     |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -206,6 +207,20 @@ plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom strede. Graf 
 v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. Listovanie kariet
 nad grafom nebeží (`.day-scrub` je úchytka vo `web/gesture.js`, ako jazdec na prstenci súčasnej
 appky). Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
+
+Karta 7 dní ukazuje dni ako predpoveď počasia. `shared/sedem-dni.js` berie súčty a najlepší deň
+z `weekStatsModel` (deň vyberá `bestDayIndex`, ten istý v oboch appkách), celé kWh riadkov
+z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú tie isté ako na karte
+7 dní súčasnej appky. Zelený pás v riadku je okno na veľké veci: zelené úseky plánu dňa po
+štvrťhodinách (`forecastDayPlan` v `day-plan.js`; dnešok je presne `dayPlan`, takže okno sedí
+s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
+z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
+sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
+(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Detail je krok
+navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu, posun
+prehľadu aj fokus na riadok si pamätá render. Listovanie dní v detaile nový krok nepridá; ťah
+do strán rozhoduje `swipeTarget` v `obloha/web/state.js` – v detaile dňa susedný deň, inak ako
+súčasná appka (`web/swipe.js`).
 
 ## Prečo takto
 
