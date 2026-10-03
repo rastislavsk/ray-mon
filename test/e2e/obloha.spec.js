@@ -120,9 +120,8 @@ for (const width of [390, 320]) {
         for (const panel of [...PANELS].reverse()) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
-            // Karty Môžem? (krok 2), Teraz (krok 3) a 7 dní (krok 4) už majú obsah, ostatné ešte čakajú.
-            if (panel === 'statistika' || panel === 'nastavenie')
-                await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
+            // Karty Môžem? (krok 2), Teraz (krok 3), 7 dní (krok 4) a Štatistika (krok 5) už majú obsah, Nastavenie ešte čaká.
+            if (panel === 'nastavenie') await expect(page.locator(`#panel-${panel} .sub`)).toHaveText('Táto karta príde v ďalšom kroku.');
         }
         const polozky = await page.locator('.tabs button').evaluateAll((buttons) =>
             buttons.map((b) => {
@@ -530,7 +529,9 @@ test.describe('karta Môžem?', () => {
         await expect(panel).toBeHidden();
         await expect(riadok).toBeFocused();
         // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
-        expect(await page.evaluate(() => history.state)).toEqual({ step: { panel: 'mozem', item: null, preview: null, detail: null } });
+        expect(await page.evaluate(() => history.state)).toEqual({
+            step: { panel: 'mozem', item: null, preview: null, detail: null, poster: null },
+        });
         expect(errors).toEqual([]);
     });
 

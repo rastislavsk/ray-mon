@@ -87,8 +87,37 @@ function columns(ctx, cols, y, h) {
     ctx.globalAlpha = 1;
 }
 
+/** Výška stĺpcov dní na obrázku. */
+const COLS_H = 420;
+
 /**
- * Nakreslí plagát na plátno.
+ * Čísla plagátu v dvoch stĺpcoch: veľké číslo a popisok pod ním. Vracia výšku, ktorú zaberú;
+ * s `draw: false` len meria.
+ * @param {CanvasRenderingContext2D} ctx @param {import('../../shared/statistika.js').PosterModel['tiles']} tiles
+ * @param {Look} t @param {number} y @param {boolean} draw
+ */
+function tiles(ctx, tiles, t, y, draw) {
+    const colW = (W - 2 * PAD - 60) / 2;
+    let h = 0;
+    for (let i = 0; i < tiles.length; i += 2) {
+        let rowH = 0;
+        for (const [j, tile] of tiles.slice(i, i + 2).entries()) {
+            const x = PAD + j * (colW + 60);
+            font(ctx, t, 900, 84, 'semi-expanded');
+            if (draw) ctx.fillText(tile.value, x, y + h + 84);
+            font(ctx, t, 500, 42);
+            const lines = wrap(ctx, tile.label, colW);
+            if (draw) lines.forEach((l, k) => ctx.fillText(l, x, y + h + 84 + 60 + k * 50));
+            rowH = Math.max(rowH, 84 + 60 + (lines.length - 1) * 50);
+        }
+        h += rowH + (i + 2 < tiles.length ? 80 : 0);
+    }
+    return h;
+}
+
+/**
+ * Nakreslí plagát na plátno. Obsah (nadpis až čísla) stojí vo zvislom strede nad pätičkou, aby
+ * pri kratšom plagáte neostal dole prázdny pás.
  * @param {CanvasRenderingContext2D} ctx @param {import('../../shared/statistika.js').PosterModel} m @param {Look} t
  */
 function draw(ctx, m, t) {
@@ -97,38 +126,34 @@ function draw(ctx, m, t) {
     ctx.strokeStyle = t.ink;
     ctx.textBaseline = 'alphabetic';
     ctx.letterSpacing = '5px';
-    font(ctx, t, 800, 40);
+    font(ctx, t, 800, 44);
     const title = wrap(ctx, m.title.toUpperCase(), W - 2 * PAD);
-    title.forEach((l, i) => ctx.fillText(l, PAD, 220 + i * 54));
     ctx.letterSpacing = '0px';
     // Veľké číslo čo najväčšie, ale celé v šírke plagátu.
-    let size = 260;
+    let size = 280;
     font(ctx, t, 900, size, 'expanded');
     while (size > 100 && ctx.measureText(m.kwh).width > W - 2 * PAD) {
         size -= 10;
         font(ctx, t, 900, size, 'expanded');
     }
-    const numY = 220 + title.length * 54 + size * 0.85;
-    ctx.fillText(m.kwh, PAD - 6, numY);
-    columns(ctx, m.cols, numY + 80, 300);
-    let y = numY + 80 + 300 + 110;
-    const colW = (W - 2 * PAD - 50) / 2;
-    for (let i = 0; i < m.tiles.length; i += 2) {
-        let rowH = 0;
-        for (const [j, tile] of m.tiles.slice(i, i + 2).entries()) {
-            const x = PAD + j * (colW + 50);
-            font(ctx, t, 900, 70, 'semi-expanded');
-            ctx.fillText(tile.value, x, y);
-            font(ctx, t, 500, 38);
-            const lines = wrap(ctx, tile.label, colW);
-            lines.forEach((l, k) => ctx.fillText(l, x, y + 56 + k * 46));
-            rowH = Math.max(rowH, 56 + lines.length * 46);
-        }
-        y += rowH + 60;
-    }
+    const titleH = title.length * 60;
+    const height = titleH + 60 + size * 0.8 + 90 + COLS_H + 120 + tiles(ctx, m.tiles, t, 0, false);
+    const foot = H - 130;
+    let y = Math.max(160, (foot - 80 - height) / 2);
+    ctx.letterSpacing = '5px';
+    font(ctx, t, 800, 44);
+    title.forEach((l, i) => ctx.fillText(l, PAD, y + 44 + i * 60));
+    ctx.letterSpacing = '0px';
+    y += titleH + 60 + size * 0.8;
+    font(ctx, t, 900, size, 'expanded');
+    ctx.fillText(m.kwh, PAD - 6, y);
+    y += 90;
+    columns(ctx, m.cols, y, COLS_H);
+    y += COLS_H + 120;
+    tiles(ctx, m.tiles, t, y - 84, true);
     ctx.letterSpacing = '4px';
-    font(ctx, t, 800, 34);
-    ctx.fillText(m.foot.toUpperCase(), PAD, H - 120);
+    font(ctx, t, 800, 36);
+    ctx.fillText(m.foot.toUpperCase(), PAD, foot);
     ctx.letterSpacing = '0px';
 }
 

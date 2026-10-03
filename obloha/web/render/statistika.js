@@ -48,6 +48,7 @@ function renderStates(m, dom) {
 
 /** Čísla zvoleného obdobia. @param {Model} m @param {NonNullable<Model['hero']>} hero @param {import('../state.js').AppState} state @param {Dom} dom */
 function renderNumbers(m, hero, state, dom) {
+    show(dom.stSeg, m.periods);
     dom.stSeg.setAttribute('aria-label', T.periodsLabel);
     for (const btn of dom.stSeg.querySelectorAll('button')) {
         const p = /** @type {import('../../../shared/stats.js').StatsPeriod} */ (btn.dataset.period);
@@ -71,6 +72,7 @@ function renderNumbers(m, hero, state, dom) {
     setText(dom.stPhonesLabel, T.phones);
     setText(dom.stKm, m.equiv ? m.equiv.km : '');
     setText(dom.stKmLabel, T.km);
+    show(dom.stRows, m.rows.length > 0);
     setHtml(dom.stRows, rowsHtml(m.rows));
 }
 

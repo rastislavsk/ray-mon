@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EVERYDAY, installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { logSum } from '../shared/daylog.js';
 import { fmt1, fmtSum, kwpText } from '../shared/format.js';
 import { sunRuns } from '../shared/launches.js';
 import {
@@ -39,14 +38,6 @@ const BASE = {
 };
 /** Bez kiosku: meranie nie je, dnešok z predpovede, ostatné z denníka. */
 const NO_KIOSK = { ...BASE, kiosk: '', pv: null };
-
-test('logSum: súčet zapísaných dní podľa začiatku dátumu, bez dňa null', () => {
-    assert.deepEqual(logSum(LOG, '2026-09-'), { kwh: 67.5, days: 3 });
-    assert.deepEqual(logSum(LOG, '2026-'), { kwh: 107.5, days: 4 });
-    assert.deepEqual(logSum(LOG, ''), { kwh: 109.5, days: 5 });
-    assert.deepEqual(logSum(LOG, '2026-10-'), { kwh: null, days: 0 });
-    assert.deepEqual(logSum({}, ''), { kwh: null, days: 0 });
-});
 
 test('sunRuns: len daná vec, len na slnku, len v dňoch obdobia', () => {
     const list = [
@@ -102,16 +93,11 @@ test('monthBest: najlepší deň mesiaca z denníka aj s dneškom z merania; z j
 });
 
 test('texty: odkiaľ je číslo, hodnota, pás, najlepší deň a tlačidlá plagátu', () => {
-    const d = { time: '13:00', month: 'septembri', days: 0 };
-    assert.equal(statsHeroSub('dnes', { ...d, source: 'live' }), 'vyrobené dnes do 13:00');
-    assert.equal(statsHeroSub('mesiac', { ...d, source: 'live' }), 'vyrobené v septembri');
-    assert.equal(statsHeroSub('rok', { ...d, source: 'live' }), 'vyrobené tento rok');
-    assert.equal(statsHeroSub('spolu', { ...d, source: 'live' }), 'vyrobené od spustenia');
-    assert.equal(statsHeroSub('dnes', { ...d, source: 'forecast' }), 'odhad z predpovede na celý dnešok');
-    assert.equal(statsHeroSub('mesiac', { ...d, source: 'log', days: 3 }), '3 dni v septembri v denníku appky');
-    assert.equal(statsHeroSub('rok', { ...d, source: 'log', days: 1 }), '1 deň tento rok v denníku appky');
-    assert.equal(statsHeroSub('spolu', { ...d, source: 'log', days: 12 }), '12 dní v denníku appky');
-    assert.equal(statsHeroSub('rok', { ...d, source: 'log', days: 0 }), 'appka zatiaľ nemá zapísaný ani jeden deň');
+    const d = { time: '13:00', month: 'septembri' };
+    assert.equal(statsHeroSub('dnes', d), 'vyrobené dnes do 13:00');
+    assert.equal(statsHeroSub('mesiac', d), 'vyrobené v septembri');
+    assert.equal(statsHeroSub('rok', d), 'vyrobené tento rok');
+    assert.equal(statsHeroSub('spolu', d), 'vyrobené od spustenia');
     assert.equal(statsValueText(4.784, '€', false), 'Hodnota podľa tarify 4,78 €');
     assert.equal(statsValueText(1297.2, '€', true), `Hodnota podľa tarify ≈ ${fmtSum(1297.2, 2)} €`);
     assert.equal(statsProgressText(62, 51.04), '62 % z predpovede 51,0 kWh');
@@ -137,6 +123,7 @@ test('statistikaModel: so živým meraním čísla zo statsModel pre každé obd
         assert.equal(m.sub, kwpText(installedKw(PLANT)));
         assert.equal(m.hero?.kwh, s.hero.kwh, period);
         assert.equal(m.hero?.estimate, false);
+        assert.equal(m.periods, true);
         assert.deepEqual(
             m.rows.map((r) => [r.period, r.name, r.kwh]),
             s.rows.map((r) => [r.period, r.label, r.kwh]),
@@ -177,38 +164,30 @@ test('statistikaModel: bez cien len kWh a výzva doplniť ceny, bez vety o spotr
     assert.equal(m.hero?.kwh, pv.monthEnergyKwh);
 });
 
-test('statistikaModel: bez kiosku dnešok z predpovede ako odhad, ostatné z denníka a výzva na meranie', () => {
-    const dnes = statistikaModel(NO_KIOSK, 'dnes');
+test('statistikaModel: bez kiosku len dnešok z predpovede ako odhad a výzva na meranie, nič z denníka', () => {
     const s = statsModel(NO_KIOSK, 'dnes');
-    assert.equal(dnes.kind, 'ok');
-    assert.equal(dnes.hero?.kwh, s.forecastToday?.kwh);
-    assert.equal(dnes.hero?.estimate, true);
-    assert.equal(dnes.hero?.sub, 'odhad z predpovede na celý dnešok');
-    assert.equal(dnes.value, statsValueText(/** @type {number} */ (s.forecastToday?.value), '€', true));
-    assert.equal(dnes.progress, null);
-    assert.equal(dnes.measure, 'ask');
-    assert.equal(dnes.note, '');
-    assert.deepEqual(dnes.posters, [], 'plagát bez merania nie je');
-    assert.deepEqual(
-        dnes.rows.map((r) => [r.name, r.kwh, r.estimate]),
-        [
-            ['September', 67.5, true],
-            ['Rok 2026', 107.5, true],
-            [STATISTIKA_TEXTS.logAll, 109.5, true],
-        ],
-    );
-    const mesiac = statistikaModel(NO_KIOSK, 'mesiac');
-    assert.equal(mesiac.hero?.kwh, 67.5);
-    assert.equal(mesiac.hero?.sub, '3 dni v septembri v denníku appky');
-    assert.equal(mesiac.value, null, 'súčet z denníka sa neoceňuje');
-    assert.equal(mesiac.rows[0].kwh, s.forecastToday?.kwh);
-    // Prázdny denník: pomlčka a „to je ako“ nie je.
-    const empty = statistikaModel({ ...NO_KIOSK, dayLog: {} }, 'rok');
+    for (const period of STATS_PERIODS) {
+        const m = statistikaModel(NO_KIOSK, period);
+        assert.equal(m.kind, 'ok');
+        assert.equal(m.periods, false, 'prepínač obdobia bez súčtov z kiosku nie je');
+        assert.equal(m.hero?.period, 'dnes');
+        assert.equal(m.hero?.kwh, s.forecastToday?.kwh);
+        assert.equal(m.hero?.estimate, true);
+        assert.equal(m.hero?.sub, STATISTIKA_TEXTS.forecastSub);
+        assert.deepEqual(m.rows, [], 'mesiac, rok ani spolu si appka nedoskladá');
+        assert.equal(m.best, null);
+        assert.equal(m.value, statsValueText(/** @type {number} */ (s.forecastToday?.value), '€', true));
+        assert.equal(m.progress, null);
+        assert.equal(m.measure, 'ask');
+        assert.equal(m.note, '');
+        assert.deepEqual(m.posters, [], 'plagát bez merania nie je');
+    }
+    // Kiosk zadaný, ale neodpovedá: veta namiesto výzvy.
+    assert.equal(statistikaModel({ ...BASE, pv: null }, 'mesiac').measure, 'off');
+    // Bez dnešku v predpovedi: pomlčka a „to je ako“ nie je.
+    const empty = statistikaModel({ ...NO_KIOSK, forecast: { ...forecast, days: [] } }, 'dnes');
     assert.equal(empty.hero?.kwh, null);
     assert.equal(empty.equiv, null);
-    assert.equal(empty.best, null);
-    // Kiosk zadaný, ale neodpovedá: veta namiesto výzvy.
-    assert.equal(statistikaModel({ ...BASE, pv: null }, 'dnes').measure, 'off');
 });
 
 test('statistikaModel: stavy bez čísel - bez polohy, bez panelov, načítavanie, bez dát', () => {

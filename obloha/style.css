@@ -1084,7 +1084,7 @@ button:focus-visible {
     overflow-y: auto;
 }
 .poster::backdrop {
-    background: rgba(5, 8, 20, 0.72);
+    background: rgba(5, 8, 20, 0.88);
 }
 .poster-in {
     display: grid;
@@ -1234,7 +1234,8 @@ button:focus-visible {
     justify-content: space-around;
     /* Na širokej obrazovke ostanú položky v šírke obsahu, pás pod nimi ide cez celú šírku. */
     padding: 8px max(2px, calc((100% - 640px) / 2)) max(12px, env(safe-area-inset-bottom));
-    background: rgba(6, 10, 28, 0.5);
+    /* Dosť tmavý pás, aby popisky mali kontrast aj nad bielou výzvou, ktorá pod ním prechádza. */
+    background: rgba(6, 10, 28, 0.72);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }

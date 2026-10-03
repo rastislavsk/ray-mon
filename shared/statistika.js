@@ -1,11 +1,10 @@
 // Karta Štatistika a plagát v novej appke „Živá obloha“ (obloha/). Počíta to isté ako karta
 // Štatistika a súhrn súčasnej appky: súčty, hodnotu podľa tarify a dnešok voči predpovedi
 // statsModel, plagát summaryModel, prepočty na mobily a kilometre EVERYDAY. Tu sa to len skladá
-// pre nový vzhľad. Navyše: bez živého merania obdobia z denníka výroby (logSum) a najlepší deň
-// mesiaca. Čisté funkcie, čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
+// pre nový vzhľad. Navyše najlepší deň mesiaca. Súčty za mesiac, rok a celý čas posiela len kiosk -
+// bez neho karta ukáže dnešok z predpovede a výzvu pripojiť meranie, nič si nedoskladá. Čisté funkcie, čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { EVERYDAY, installedKw } from './config.js';
-import { logSum } from './daylog.js';
 import { fmtSum, kwpText } from './format.js';
 import { pvFreshness } from './hero-model.js';
 import {
@@ -34,35 +33,37 @@ import { bestOf, periodDays, SUMMARY_PERIODS, summaryModel } from './summary.js'
 export const kwhText = (kwh) => (kwh === null ? '–' : fmtSum(kwh, 1));
 
 /**
- * Obdobia karty. So živým meraním súčty z kiosku (statsModel). Bez neho dnešok z predpovede
- * (odhad) a mesiac, rok a „spolu“ ako súčet dní, ktoré si appka zapísala do denníka výroby.
- * @param {StatistikaInput} input @param {ReturnType<typeof statsModel>} s @param {string} today
+ * Obdobia karty zo živého merania (súčty z kiosku, statsModel).
+ * @param {import('./kiosk.js').PvData} pv @param {StatistikaInput} input @param {ReturnType<typeof statsModel>} s @param {string} today
  * @returns {Record<StatsPeriod, Entry>}
  */
-function entriesOf(input, s, today) {
-    const live = s.status === 'live';
-    const time = input.pv ? pvFreshness({ now: input.now, pv: input.pv, site: input.site }).time : '';
+function liveEntries(pv, input, s, today) {
+    const time = pvFreshness({ now: input.now, pv, site: input.site }).time;
     const month = MONTHS_IN[Number(today.slice(5, 7)) - 1];
     const byPeriod = Object.fromEntries([s.hero, ...s.rows].map((e) => [e.period, e]));
-    const prefix = { dnes: today, mesiac: today.slice(0, 8), rok: today.slice(0, 5), spolu: '' };
     /** @param {StatsPeriod} period @returns {Entry} */
     const entry = (period) => {
         const e = byPeriod[period];
-        if (live) {
-            const sub = statsHeroSub(period, { source: 'live', time, month, days: 0 });
-            return { period, name: e.label, kwh: e.kwh, sub, estimate: false, value: e.value };
-        }
-        if (period === 'dnes') {
-            const f = s.forecastToday;
-            const sub = statsHeroSub(period, { source: 'forecast', time, month, days: 0 });
-            return { period, name: e.label, kwh: f ? f.kwh : null, sub, estimate: true, value: f ? f.value : null };
-        }
-        const log = logSum(input.dayLog, prefix[period]);
-        const name = period === 'spolu' ? STATISTIKA_TEXTS.logAll : e.label;
-        const sub = statsHeroSub(period, { source: 'log', time, month, days: log.days });
-        return { period, name, kwh: log.kwh, sub, estimate: true, value: null };
+        return { period, name: e.label, kwh: e.kwh, sub: statsHeroSub(period, { time, month }), estimate: false, value: e.value };
     };
     return { dnes: entry('dnes'), mesiac: entry('mesiac'), rok: entry('rok'), spolu: entry('spolu') };
+}
+
+/**
+ * Bez živého merania len dnešok z predpovede (odhad) - súčty za mesiac, rok a celý čas posiela
+ * len kiosk a appka si ich nedoskladá.
+ * @param {ReturnType<typeof statsModel>} s @returns {Entry}
+ */
+function forecastEntry(s) {
+    const f = s.forecastToday;
+    return {
+        period: 'dnes',
+        name: 'Dnes',
+        kwh: f ? f.kwh : null,
+        sub: STATISTIKA_TEXTS.forecastSub,
+        estimate: true,
+        value: f ? f.value : null,
+    };
 }
 
 /**
@@ -97,7 +98,7 @@ function equivOf(kwh) {
 }
 
 /**
- * Model karty pre zvolené obdobie. `kind`: `ask` (appka nepozná polohu), `setup` (poloha bez
+ * Model karty pre zvolené obdobie. Prepínač obdobia (`periods`) je len so živým meraním. `kind`: `ask` (appka nepozná polohu), `setup` (poloha bez
  * panelov - štatistika je o vlastnej elektrárni, nie o typickej streche), `loading` (prvé
  * načítanie), `offline` (nie je meranie ani predpoveď), `ok`. Pri `ok` bez živého merania
  * `measure` hovorí, či ide výzva pripojiť meranie (`ask`), alebo veta, že neodpovedá (`off`).
@@ -124,6 +125,7 @@ function emptyModel() {
         value: /** @type {string | null} */ (null),
         progress: /** @type {{ pct: number, text: string } | null} */ (null),
         equiv: /** @type {{ phones: string, km: string } | null} */ (null),
+        periods: false,
         rows: /** @type {Entry[]} */ ([]),
         best: /** @type {{ title: string, text: string } | null} */ (null),
         note: '',
@@ -138,25 +140,32 @@ function emptyModel() {
  * @param {StatistikaInput} input @param {ReturnType<typeof statsModel>} s @param {StatsPeriod} period
  */
 function numbersOf(input, s, period) {
+    const common = { sub: kwpText(installedKw(input.plant)), prices: !s.priced };
+    if (s.status !== 'live' || !input.pv) {
+        const hero = forecastEntry(s);
+        const measure = /** @type {'ask' | 'off'} */ (s.status === 'offline' ? 'off' : 'ask');
+        return { ...common, hero, value: heroValue(hero, s.currency), equiv: equivOf(hero.kwh), measure };
+    }
     const today = localDateKey(input.now, input.site.timezone);
-    const all = entriesOf(input, s, today);
+    const all = liveEntries(input.pv, input, s, today);
     const hero = all[period];
-    const live = s.status === 'live';
     const best = monthBest(input, today);
     return {
-        sub: kwpText(installedKw(input.plant)),
+        ...common,
+        periods: true,
         hero,
-        value: hero.value === null ? null : statsValueText(hero.value, s.currency, hero.estimate),
+        value: heroValue(hero, s.currency),
         progress: progressOf(s),
         equiv: equivOf(hero.kwh),
         rows: STATS_PERIODS.filter((p) => p !== period).map((p) => all[p]),
         best: best && statsBestText(best),
-        note: live && s.priced ? STATISTIKA_TEXTS.note : '',
-        measure: /** @type {'ask' | 'off' | null} */ (live ? null : s.status === 'offline' ? 'off' : 'ask'),
-        prices: !s.priced,
-        posters: live ? posterButtons(input) : [],
+        note: s.priced ? STATISTIKA_TEXTS.note : '',
+        posters: posterButtons(input),
     };
 }
+
+/** Hodnota veľkého čísla podľa tarify, alebo null bez cien. @param {Entry} hero @param {string} currency */
+const heroValue = (hero, currency) => (hero.value === null ? null : statsValueText(hero.value, currency, hero.estimate));
 
 /** @typedef {ReturnType<typeof statistikaModel>} StatistikaModel */
 

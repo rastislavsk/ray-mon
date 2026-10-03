@@ -925,17 +925,17 @@ export const STATISTIKA_TEXTS = {
     km: 'elektrickým autom',
     loading: TERAZ_TEXTS.loading,
     retry: MOZEM_SKY_TEXTS.retry,
-    logAll: 'Spolu v appke',
+    forecastSub: 'odhad z predpovede na celý dnešok',
     note: 'Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.',
     pricesTitle: 'Doplň ceny v tarife',
     pricesText: 'Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.',
     pricesBtn: 'Doplniť ceny',
     measureTitle: 'Pripoj živé meranie',
     measureText:
-        'Dnešok teraz odhadujem z predpovede a ostatné obdobia skladám z dní, keď bola appka otvorená. Presné súčty za mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar.',
+        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar - zadaj odkaz naň v Nastavení.',
     measureBtn: 'Pripojiť meranie',
     measureOff:
-        'Živé meranie teraz neodpovedá. Dnešok odhadujem z predpovede, ostatné obdobia skladám z dní, keď bola appka otvorená. Presné súčty sa ukážu, keď sa spojenie obnoví.',
+        'Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa kiosk ozve.',
     setupSub: 'zatiaľ nemám čo počítať',
     setupTitle: 'Prázdna strecha, prázdna štatistika',
     setupText:
@@ -958,19 +958,12 @@ export const STATISTIKA_TEXTS = {
 };
 
 /**
- * Odkiaľ je veľké číslo karty. Zo živého merania „vyrobené …“, bez neho dnešok z predpovede
- * a ostatné obdobia z denníka appky - aj s tým, koľko dní v ňom je.
+ * Odkiaľ je veľké číslo zo živého merania: „vyrobené dnes do 13:00“, „vyrobené v októbri“.
  * @param {import('./stats.js').StatsPeriod} period
- * @param {{ source: 'live' | 'forecast' | 'log', time: string, month: string, days: number }} d
- *   `time` čas merania (pri dnešku), `month` mesiac v lokáli („októbri“), `days` zapísané dni
+ * @param {{ time: string, month: string }} d `time` čas merania, `month` mesiac v lokáli („októbri“)
  */
-export function statsHeroSub(period, { source, time, month, days }) {
-    const when = { dnes: `dnes do ${time}`, mesiac: `v ${month}`, rok: 'tento rok', spolu: 'od spustenia' }[period];
-    if (source === 'live') return `vyrobené ${when}`;
-    if (source === 'forecast') return 'odhad z predpovede na celý dnešok';
-    if (!days) return 'appka zatiaľ nemá zapísaný ani jeden deň';
-    const where = period === 'spolu' ? 'v denníku appky' : `${when} v denníku appky`;
-    return `${days} ${plural(days, ['deň', 'dni', 'dní'])} ${where}`;
+export function statsHeroSub(period, { time, month }) {
+    return `vyrobené ${{ dnes: `dnes do ${time}`, mesiac: `v ${month}`, rok: 'tento rok', spolu: 'od spustenia' }[period]}`;
 }
 
 /** Hodnota podľa tarify: „Hodnota podľa tarify 4,78 €“, odhad s „≈“. @param {number} value @param {string} currency @param {boolean} estimate */
