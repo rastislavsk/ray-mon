@@ -124,3 +124,20 @@ test('skyNow: bez dát sivá, počas prvého načítania čas dňa bez počasia'
     assert.equal(nacitava.weather, 'jasno');
     assert.notEqual(nacitava.top, SKY.offline[0]);
 });
+
+test('skyNow: vypnutá živá obloha stojí v pokojných tmavých farbách, bez dát ostáva sivá', () => {
+    const { forecast } = fixtureData();
+    const base = { known: /** @type {const} */ ('elektraren'), site: SITE, loading: false, forecast };
+    const at = (/** @type {string} */ hm) => new Date(`2026-09-05T${hm}:00+02:00`);
+    const poludnie = skyNow({ ...base, now: at('13:00') }, false);
+    const vecer = skyNow({ ...base, now: at('21:00') }, false);
+    assert.deepEqual([poludnie.top, poludnie.bottom], SKY.calm);
+    assert.deepEqual([vecer.top, vecer.bottom], SKY.calm);
+    // Počasie ostáva známe, mení sa len farba.
+    assert.equal(poludnie.weather, skyNow({ ...base, now: at('13:00') }).weather);
+    // Zapnutá živá obloha je to isté ako bez parametra a cez deň iná.
+    assert.deepEqual(skyNow({ ...base, now: at('13:00') }, true), skyNow({ ...base, now: at('13:00') }));
+    assert.notEqual(skyNow({ ...base, now: at('13:00') }).top, SKY.calm[0]);
+    const bezDat = skyNow({ ...base, forecast: null, now: at('13:00') }, false);
+    assert.deepEqual([bezDat.top, bezDat.bottom, bezDat.weather], [...SKY.offline, null]);
+});

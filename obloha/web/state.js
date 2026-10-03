@@ -3,7 +3,7 @@
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
 import { MINUTES_PER_DAY, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
-import { typicalSettings } from '../../shared/settings.js';
+import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
 import { SUMMARY_PERIODS } from '../../shared/summary.js';
@@ -17,10 +17,13 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * odkaz na karte Môžem?), `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
  * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
- * potvrdenie. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
+ * potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
+ * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
+ * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj kiosk. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js).
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {'day' | 'week'} WeekDetail
+ * @typedef {'share' | 'reset'} AppSheet
  * @typedef {import('../../shared/summary.js').SummaryPeriod} PosterPeriod
  * @typedef {import('../../web/refresh.js').RefreshState & import('../../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
@@ -38,6 +41,11 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  *   online: boolean,
  *   startPanel: import('../../shared/settings.js').StartPanel,
  *   incoming: import('../../shared/settings.js').Settings | null,
+ *   voice: import('../../shared/messages.js').Voice,
+ *   liveSky: boolean,
+ *   appSheet: AppSheet | null,
+ *   shareSettings: boolean,
+ *   shareKiosk: boolean,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
@@ -47,9 +55,10 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * po grafe nový krok nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň
  * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Otvorený plagát je tiež krok - Späť ho zavrie. Obrazovka sprievodcu
- * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu.
+ * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
+ * Appka (`sheet`) rovnako - Späť ho zavrie.
  * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null, poster: PosterPeriod | null,
- *   setup: import('../../shared/setup.js').SetupStep | null, roof: number }} NavStep
+ *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null }} NavStep
  */
 
 /**
@@ -57,13 +66,13 @@ import { SUMMARY_PERIODS } from '../../shared/summary.js';
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
  *   launches: import('../../shared/launches.js').Launch[], online: boolean,
- *   incoming?: import('../../shared/settings.js').Settings | null }} start
+ *   incoming?: import('../../shared/settings.js').Settings | null, look?: import('../../shared/settings.js').Look }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
  *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet a nastavenie
- *   z odkazu, ktoré appka ponúkne prevziať
+ *   z odkazu, ktoré appka ponúkne prevziať, a vzhľad (tón hlášok, živá obloha)
  * @returns {AppState}
  */
-export function initialState(now, { saved, site, startPanel, dayLog, launches, online, incoming = null }) {
+export function initialState(now, { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK }) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
@@ -94,6 +103,11 @@ export function initialState(now, { saved, site, startPanel, dayLog, launches, o
         online,
         startPanel,
         incoming,
+        voice: look.voice,
+        liveSky: look.liveSky,
+        appSheet: null,
+        shareSettings: false,
+        shareKiosk: false,
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
         ...setupInit(start, known),
@@ -113,6 +127,7 @@ export function panelChange(from, to) {
         terazPreview: /** @type {number | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
         poster: /** @type {PosterPeriod | null} */ (null),
+        appSheet: /** @type {AppSheet | null} */ (null),
     };
 }
 
@@ -134,6 +149,7 @@ export function navStep(state) {
         poster: state.poster,
         setup: state.setupStep,
         roof: state.setupRoof,
+        sheet: state.appSheet,
     };
 }
 
@@ -146,7 +162,8 @@ export function sameNavStep(a, b) {
         a.detail === b.detail &&
         a.poster === b.poster &&
         a.setup === b.setup &&
-        a.roof === b.roof
+        a.roof === b.roof &&
+        a.sheet === b.sheet
     );
 }
 
@@ -165,6 +182,12 @@ const posterOf = (panel, poster) =>
     (panel === 'mozem' || panel === 'statistika') && SUMMARY_PERIODS.some((p) => p === poster)
         ? /** @type {PosterPeriod} */ (poster)
         : null;
+
+/**
+ * Okno sekcie Appka z položky histórie. Patrí len karte Nastavenie; položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {unknown} sheet @returns {AppSheet | null}
+ */
+const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
 
 /**
  * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
@@ -187,10 +210,9 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item, preview, detail, poster, setup, roof } =
-        /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown, poster?: unknown, setup?: unknown, roof?: unknown }} */ (
-            raw
-        );
+    const { panel, item, preview, detail, poster, setup, roof, sheet } =
+        /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown, poster?: unknown, setup?: unknown, roof?: unknown,
+         *   sheet?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
@@ -203,6 +225,7 @@ export function navStepOf(raw) {
         detail: weekDetailOf(p, detail),
         poster: posterOf(p, poster),
         ...place,
+        sheet: appSheetOf(p, sheet),
     };
     if (item === null || item === undefined) return step;
     return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
@@ -231,6 +254,7 @@ export function navChange(state, step) {
         poster: step.poster,
         setupStep: step.setup,
         setupRoof: step.roof,
+        appSheet: step.sheet,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }

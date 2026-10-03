@@ -91,6 +91,12 @@ const TEXTS = {
     suhrn: { title: 'Skontroluj a ulož', lead: 'Ťuknutím na riadok ho opravíš a vrátiš sa sem.' },
 };
 
+/** Úvod kroku tarifa v novej appke: tá ciferník nemá, tarifu ukazuje pás plánu dňa. */
+const TARIFF_TEXT_PLAN = {
+    title: TEXTS.tarifa.title,
+    lead: 'Podľa toho appka zafarbí pás plánu dňa a poradí, kedy zapínať spotrebiče. Nájdeš to na faktúre alebo v zmluve.',
+};
+
 /** Typy sadzby na výber. Spot appka zatiaľ nevie, ponúka sa vypnutý. */
 export const TARIFF_KINDS = /** @type {const} */ ([
     { kind: 'jedna', title: 'Jedna cena celý deň', sub: 'jednotarif' },
@@ -102,6 +108,10 @@ export const TARIFF_KINDS = /** @type {const} */ ([
 /** Čo appka urobí, keď človek pri tarife nevie. */
 export const TARIFF_DUNNO =
     'Appka bude počítať s jednou cenou a ciferník zafarbí len podľa slnka. Tarifu nájdeš na faktúre alebo v zmluve a doplníš ju kedykoľvek v Nastavení.';
+
+/** To isté v novej appke, ktorá ciferník nemá. */
+export const TARIFF_DUNNO_PLAN =
+    'Appka bude počítať s jednou cenou a pás plánu dňa zafarbí len podľa slnka. Tarifu nájdeš na faktúre alebo v zmluve a doplníš ju kedykoľvek v Nastavení.';
 
 /** Úroveň pásma slovom. @type {Record<PriceLevel, { name: string, label: string }>} */
 export const LEVELS = {
@@ -154,8 +164,9 @@ const roofKwp = (s, x) => (Number.isFinite(s.plant.panelWp) ? kwpText(installedK
 // ---- Hlavička a tlačidlá sprievodcu ----------------------------------------------------
 
 /** Titulok a úvodná veta obrazovky; niektoré závisia od toho, čo už človek zadal.
- * @param {SetupState} state @param {Settings} draft @param {SetupStep} step */
-export function textsFor(state, draft, step) {
+ * `dial`: appka má ciferník (súčasná); nová appka (obloha/) má namiesto neho pás plánu dňa pod grafom.
+ * @param {SetupState} state @param {Settings} draft @param {SetupStep} step @param {boolean} [dial] */
+export function textsFor(state, draft, step, dial = true) {
     if (isWelcome(state, step)) return WELCOME;
     if (step === 'panel' && state.setupKwp !== null)
         return {
@@ -168,6 +179,7 @@ export function textsFor(state, draft, step) {
         const kwp = Number.isFinite(draft.plant.panelWp) ? `Panely majú spolu ${kwpText(installedKw(draft.plant))}. ` : '';
         return { title: TEXTS.menic.title, lead: `${kwp}Výkon meniča je na jeho štítku alebo v zmluve, napríklad SUN2000-10KTL je 10 kW.` };
     }
+    if (step === 'tarifa' && !dial) return TARIFF_TEXT_PLAN;
     return TEXTS[step];
 }
 
@@ -406,12 +418,13 @@ export const EXCEPTIONS = /** @type {const} */ ([
 /**
  * Úrovne podľa cien a či sedia s tými, ktoré má človek pri pásmach. `auto` sú pásma s úrovňou
  * podľa ceny (null, keď ceny nie sú všetky), `text` veta pod nimi, `fix` či ponúknuť opravu.
- * @param {Tariff} t
+ * `dial`: appka má ciferník (súčasná); nová appka hovorí o páse plánu dňa.
+ * @param {Tariff} t @param {boolean} [dial]
  */
-export function priceCheck(t) {
+export function priceCheck(t, dial = true) {
     /** @param {string} text @param {boolean} [ok] */
     const only = (text, ok = false) => ({ auto: null, text, ok, fix: false });
-    if (t.bands.length === 1) return only('Pri jednej cene je pásmo vždy bežné, ciferník farbí len slnko.');
+    if (t.bands.length === 1) return only(`Pri jednej cene je pásmo vždy bežné, ${dial ? 'ciferník' : 'pás plánu dňa'} farbí len slnko.`);
     if (!t.bands.some((b) => b.price !== null)) return only('Bez cien appka použije úrovne, ktoré majú pásma teraz.');
     const auto = autoLevels(t.bands);
     if (!auto) return only('Doplň ceny všetkých pásiem a navrhnem, ktoré je lacné a ktoré drahé.');

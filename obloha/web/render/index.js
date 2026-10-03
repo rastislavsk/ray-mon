@@ -17,10 +17,12 @@ import { renderTeraz } from './teraz.js';
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    const sky = skyNow(state);
+    const sky = skyNow(state, state.liveSky);
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
     dom.root.dataset.sky = sky.weather ?? 'offline';
+    // Pokojná obloha stojí: zapnutie ani vypnutie nemá prechod.
+    dom.root.toggleAttribute('data-calm', !state.liveSky);
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

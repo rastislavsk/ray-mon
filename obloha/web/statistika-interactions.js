@@ -21,7 +21,7 @@ function closePoster(store) {
 /** Obrázok plagátu do systémového zdieľania, na počítači stiahnutie. @param {Store} store */
 async function sharePoster(store) {
     const s = store.get();
-    const m = s.poster && posterModel(s, s.poster);
+    const m = s.poster && posterModel(s, s.poster, s.voice);
     const file = m && (await posterImage(m));
     if (file) await shareFile(file);
 }

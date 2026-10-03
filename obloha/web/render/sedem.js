@@ -4,13 +4,14 @@
 // súčasnej appky) a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
-import { SEDEM_TEXTS } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
 import { dayChartSvg, legendHtml } from './day-chart.js';
 import { weatherIcon } from './icons.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../dom.js').Dom} Dom */
+/** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../../../shared/sedem-dni.js').SedemData} SedemData */
 
@@ -35,8 +36,8 @@ function rowsHtml(rows) {
 /** Tri čísla v detaile: veľké číslo a popisok pod ním. @param {Array<{ value: string, label: string }>} nums */
 const numsHtml = (nums) => nums.map((n) => `<div><b>${escapeHtml(n.value)}</b>${escapeHtml(n.label)}</div>`).join('');
 
-/** Prehľad dní, výzvy a stavy bez dát. @param {ReturnType<typeof sedemModel>} m @param {Dom} dom */
-function renderList(m, dom) {
+/** Prehľad dní, výzvy a stavy bez dát. @param {ReturnType<typeof sedemModel>} m @param {Dom} dom @param {Texts['SEDEM_TEXTS']} SEDEM_TEXTS */
+function renderList(m, dom, SEDEM_TEXTS) {
     const ok = m.kind === 'ok';
     show(dom.sdTitle, m.kind !== 'ask');
     setText(dom.sdTitle, m.title);
@@ -61,9 +62,10 @@ function renderList(m, dom) {
     setText(dom.sdHint, SEDEM_TEXTS.hint);
 }
 
-/** Detail dňa. @param {SedemData} data @param {number} index @param {Dom} dom */
-function renderDay(data, index, dom) {
-    const d = sedemDayModel(data, index);
+/** Detail dňa. @param {SedemData} data @param {number} index @param {Dom} dom @param {AppState['voice']} voice */
+function renderDay(data, index, dom, voice) {
+    const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
+    const d = sedemDayModel(data, index, voice);
     setText(dom.sdDayBackText, SEDEM_TEXTS.back);
     setText(dom.sdDayTitle, d.title);
     setHtml(dom.sdDayIcon, d.weather ? weatherIcon(d.weather) : '');
@@ -115,9 +117,10 @@ function heatSvg(h) {
     return `<svg viewBox="0 0 ${WEEK_HEAT.w} ${h.h}" aria-hidden="true">${hours}${days}${cells}</svg>`;
 }
 
-/** Detail týždňa. @param {SedemData} data @param {Dom} dom */
-function renderWeek(data, dom) {
-    const w = sedemWeekModel(data);
+/** Detail týždňa. @param {SedemData} data @param {Dom} dom @param {AppState['voice']} voice */
+function renderWeek(data, dom, voice) {
+    const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
+    const w = sedemWeekModel(data, voice);
     setText(dom.sdWeekBackText, SEDEM_TEXTS.back);
     setText(dom.sdWeekTitle, SEDEM_TEXTS.weekTitle);
     setText(dom.sdWeekRange, w.range);
@@ -165,15 +168,15 @@ function moveFocus(state, detail, dom) {
 export function renderSedem(state, dom) {
     // Detail patrí karte 7 dní; s inou kartou sa zatvára a návrat na pôvodné miesto prepadá.
     if (state.panel !== '7dni') return void (opened = null);
-    const m = sedemModel(state, { online: state.online });
+    const m = sedemModel(state, { online: state.online, voice: state.voice });
     // Detail má zmysel len s predpoveďou; bez nej ostáva prehľad so stavom karty.
     const data = m.kind === 'ok' ? /** @type {SedemData} */ (state) : null;
     const detail = data ? state.weekDetail : null;
     show(dom.sdList, !detail);
     show(dom.sdDay, detail === 'day');
     show(dom.sdWeek, detail === 'week');
-    renderList(m, dom);
-    if (data && detail === 'day') renderDay(data, Math.min(state.weekDay, data.forecast.days.length - 1), dom);
-    if (data && detail === 'week') renderWeek(data, dom);
+    renderList(m, dom, voiceTexts(state.voice).SEDEM_TEXTS);
+    if (data && detail === 'day') renderDay(data, Math.min(state.weekDay, data.forecast.days.length - 1), dom, state.voice);
+    if (data && detail === 'week') renderWeek(data, dom, state.voice);
     moveFocus(state, detail, dom);
 }

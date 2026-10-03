@@ -3,6 +3,7 @@
 
 import { pvFreshness } from '../../../shared/hero-model.js';
 import { minutesToTimeStr } from '../../../shared/format.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { localMinutes } from '../../../shared/solar.js';
 
 /**
@@ -34,4 +35,5 @@ export function renderHeader(state, dom) {
     dom.live.dataset.tone = m.tone;
     dom.live.classList.toggle('hidden', m.setup);
     dom.setup.classList.toggle('hidden', !m.setup);
+    dom.setup.textContent = voiceTexts(state.voice).HEADER_TEXTS.setup;
 }

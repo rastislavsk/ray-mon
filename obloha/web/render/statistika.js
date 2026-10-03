@@ -4,11 +4,13 @@
 // tu sa len zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
-import { STATISTIKA_TEXTS as T } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { kwhText, statistikaModel } from '../../../shared/statistika.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../dom.js').Dom} Dom */
+/** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
+/** @typedef {Texts['STATISTIKA_TEXTS']} T */
 /** @typedef {import('../../../shared/statistika.js').StatistikaModel} Model */
 
 /** Ostatné obdobia: meno a kWh, odhad kurzívou ako inde v appke. @param {Model['rows']} rows */
@@ -26,8 +28,8 @@ const postersHtml = (posters) =>
         )
         .join('');
 
-/** Výzvy a stavy bez čísel: bez polohy, bez panelov, načítavanie, bez dát. @param {Model} m @param {Dom} dom */
-function renderStates(m, dom) {
+/** Výzvy a stavy bez čísel: bez polohy, bez panelov, načítavanie, bez dát. @param {Model} m @param {Dom} dom @param {T} T */
+function renderStates(m, dom, T) {
     show(dom.stSub, m.sub !== '');
     setText(dom.stSub, m.sub);
     show(dom.stRetry, m.retry);
@@ -48,6 +50,7 @@ function renderStates(m, dom) {
 
 /** Čísla zvoleného obdobia. @param {Model} m @param {NonNullable<Model['hero']>} hero @param {import('../state.js').AppState} state @param {Dom} dom */
 function renderNumbers(m, hero, state, dom) {
+    const T = voiceTexts(state.voice).STATISTIKA_TEXTS;
     show(dom.stSeg, m.periods);
     dom.stSeg.setAttribute('aria-label', T.periodsLabel);
     for (const btn of dom.stSeg.querySelectorAll('button')) {
@@ -76,8 +79,8 @@ function renderNumbers(m, hero, state, dom) {
     setHtml(dom.stRows, rowsHtml(m.rows));
 }
 
-/** Riadky pod číslami: najlepší deň, veta o spotrebe, meranie, ceny a plagát. @param {Model} m @param {Dom} dom */
-function renderExtras(m, dom) {
+/** Riadky pod číslami: najlepší deň, veta o spotrebe, meranie, ceny a plagát. @param {Model} m @param {Dom} dom @param {T} T */
+function renderExtras(m, dom, T) {
     show(dom.stBest, !!m.best);
     setText(dom.stBestTitle, m.best ? m.best.title : '');
     setText(dom.stBestText, m.best ? m.best.text : '');
@@ -100,10 +103,11 @@ function renderExtras(m, dom) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderStatistika(state, dom) {
     if (state.panel !== 'statistika') return;
-    const m = statistikaModel(state, state.statsPeriod, { online: state.online });
-    renderStates(m, dom);
+    const T = voiceTexts(state.voice).STATISTIKA_TEXTS;
+    const m = statistikaModel(state, state.statsPeriod, { online: state.online, voice: state.voice });
+    renderStates(m, dom, T);
     show(dom.stBody, !!m.hero);
     if (!m.hero) return;
     renderNumbers(m, m.hero, state, dom);
-    renderExtras(m, dom);
+    renderExtras(m, dom, T);
 }

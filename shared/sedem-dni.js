@@ -22,7 +22,6 @@ import { dayHourTiers, forecastDayPlan } from './day-plan.js';
 import { dateParts, dayNameShort, fmt1, fmtSum, weekDayLong, weekDayName, weekDayShort } from './format.js';
 import {
     dayChartText,
-    SEDEM_TEXTS,
     sedemBarsText,
     sedemClearText,
     sedemDayMessage,
@@ -35,7 +34,7 @@ import {
     sedemTitle,
     sedemWindowTile,
     SKY_WORDS,
-    TERAZ_TEXTS,
+    voiceTexts,
     weekMessage,
 } from './messages.js';
 import { planWindows } from './mozem.js';
@@ -104,9 +103,11 @@ const isToday = (input, day) => day.date === localDateKey(input.now, input.site.
  * (bez predpovede), `ok`. Pri známej polohe bez panelov (`known: 'poloha'`) karta počíta
  * s typickou strechou, ktorú má vo vstupe, a priznáva to (`estimate`). Bez internetu ukazuje
  * poslednú známu predpoveď, ak nejakú má (`lastKnown`).
- * @param {SedemInput} input @param {{ online?: boolean }} [opts] či má telefón internet
+ * @param {SedemInput} input @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts] či má telefón
+ *   internet a tón hlášok
  */
-export function sedemModel(input, { online = true } = {}) {
+export function sedemModel(input, { online = true, voice = 'drzy' } = {}) {
+    const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
     const estimate = input.known === 'poloha';
     const base = {
         kind: /** @type {'ask' | 'loading' | 'offline' | 'ok'} */ ('ok'),
@@ -122,7 +123,7 @@ export function sedemModel(input, { online = true } = {}) {
     if (input.known === 'nic') return { ...base, kind: /** @type {const} */ ('ask'), ask: true };
     if (!input.forecast || !input.forecast.days.length) {
         if (input.loading) return { ...base, kind: /** @type {const} */ ('loading'), sub: SEDEM_TEXTS.loading };
-        return { ...base, kind: /** @type {const} */ ('offline'), sub: offlineLead(input, online), retry: true };
+        return { ...base, kind: /** @type {const} */ ('offline'), sub: offlineLead(input, online, voice), retry: true };
     }
     const data = /** @type {SedemData} */ (input);
     const days = data.forecast.days;
@@ -134,7 +135,7 @@ export function sedemModel(input, { online = true } = {}) {
         ...base,
         title: sedemTitle(windows.some((w) => w.length) ? list[best].name : null),
         sum: sedemSumText({ totalKwh: stats.totalKwh, lastKnown: !online, estimate }),
-        guess: estimate ? sedemGuessText(installedKw(data.plant)) : null,
+        guess: estimate ? sedemGuessText(installedKw(data.plant), voice) : null,
         rows: rowsOf(days, list, windows, best, estimate),
     };
 }
@@ -165,9 +166,10 @@ function rowsOf(days, list, windows, best, estimate) {
  * Detail dňa: nadpis s počasím, tri čísla (kWh, špička, okno), graf dňa s pásom plánu (pri
  * dnešku so značkou „teraz“ a nameranou krivkou), čo už nabehlo, strop jasnej oblohy, cena zo
  * siete a hláška. Čísla sú tie isté ako v detaile dňa súčasnej appky (kWh a špička na desatinu).
- * @param {SedemData} input @param {number} index deň v `forecast.days`
+ * @param {SedemData} input @param {number} index deň v `forecast.days` @param {import('./messages.js').Voice} [voice] tón hlášky
  */
-export function sedemDayModel(input, index) {
+export function sedemDayModel(input, index, voice = 'drzy') {
+    const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
     const days = input.forecast.days;
     const day = days[index];
     const th = powerThresholds(input.plant);
@@ -192,7 +194,7 @@ export function sedemDayModel(input, index) {
         done: nowMin === null ? '' : todayCard(input, plan, nowMin).line,
         clear: sedemClearText(day.clearKwhTotal, usePct(day)),
         price: sedemPriceText(priceSegments(input.tariff, day.date), input.tariff.currency),
-        message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0),
+        message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0, voice),
     };
 }
 
@@ -218,7 +220,7 @@ function chartOf(input, day, plan, nowMin) {
             limitKw: powerThresholds(input.plant).lowKw,
             preview: null,
         }),
-        limitText: TERAZ_TEXTS.limit,
+        limitText: voiceTexts().TERAZ_TEXTS.limit,
         legend: planLegend(planCells(plan)),
         desc: dayChartText({
             now: nowMin === null ? null : { min: nowMin, kwText: Number.isFinite(nowKw) ? fmt1(nowKw) : '–', tone: tone(nowMin) },
@@ -239,9 +241,10 @@ export const WEEK_HEAT = { w: 320, padL: 46, top: 18, rowH: 15, gap: 2 };
  * Detail týždňa: rozsah dátumov, tri čísla (kWh spolu, na deň, najlepší deň - tie isté ako
  * súhrn karty 7 dní súčasnej appky), stĺpce dní, mapa hodina × deň, popisy pre čítačku
  * a hláška o najsilnejšom dni (weekMessage).
- * @param {SedemData} input
+ * @param {SedemData} input @param {import('./messages.js').Voice} [voice]
  */
-export function sedemWeekModel(input) {
+export function sedemWeekModel(input, voice = 'drzy') {
+    const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
     const days = input.forecast.days;
     const stats = weekStatsModel(days, input.pv, input.forecast.tomorrowSunny);
     const best = bestDayIndex(days);

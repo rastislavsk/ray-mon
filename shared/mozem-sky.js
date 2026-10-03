@@ -7,7 +7,7 @@ import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
 import { runMinOf, runningLaunch } from './launches.js';
-import { MOZEM_CHIPS, mozemGuessText, mozemListTitle, mozemLogCancel, mozemOfflineText, mozemPhonesText } from './messages.js';
+import { mozemGuessText, mozemListTitle, mozemLogCancel, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
@@ -53,12 +53,12 @@ export function pvStatus({ now, site, pv, kiosk }) {
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { kiosk: string, loading: boolean, known: import('./settings.js').Known }} input
- * @param {{ quip?: number, launches?: import('./launches.js').Launch[], online?: boolean }} [opts] stránka hlášok,
- *   zápisy „Pustil/a som“ a či má telefón internet
+ * @param {{ quip?: number, launches?: import('./launches.js').Launch[], online?: boolean,
+ *   voice?: import('./messages.js').Voice }} [opts] stránka hlášok, zápisy „Pustil/a som“, či má telefón internet a tón hlášok
  */
-export function mozemSkyModel(input, { quip = 0, launches = [], online = true } = {}) {
+export function mozemSkyModel(input, { quip = 0, launches = [], online = true, voice = 'drzy' } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, quip, launches, { guess: true });
+    const m = mozemModel(input, quip, launches, { guess: true, voice });
     const f = m.facts;
     const offline = m.state === 'offline';
     // Kým sa načítava, karta nič netvrdí - ani „neviem“ pri veciach, ani hlášku navyše k vete.
@@ -67,12 +67,12 @@ export function mozemSkyModel(input, { quip = 0, launches = [], online = true } 
         ask: false,
         state: m.state,
         word: m.word,
-        lead: offline ? offlineLead(input, online) : m.hero.lead,
-        chips: chipsOf(m),
+        lead: offline ? offlineLead(input, online, voice) : m.hero.lead,
+        chips: chipsOf(m, voice),
         phones: f ? phonesOf(input, f, m.estimate) : '',
         retry: offline,
-        guess: m.estimate ? mozemGuessText(installedKw(TYPICAL_PLANT)) : '',
-        list: loading ? null : { title: mozemListTitle(m.items, { unknown: !f, estimate: m.estimate }), estimate: m.estimate },
+        guess: m.estimate ? mozemGuessText(installedKw(TYPICAL_PLANT), voice) : '',
+        list: listOf(m, loading),
         items: m.items.map((it) => sheetItem(it, runningUntil(input, launches, it.id))),
         count: m.count,
         quip: loading ? '' : m.quip,
@@ -80,8 +80,16 @@ export function mozemSkyModel(input, { quip = 0, launches = [], online = true } 
     };
 }
 
-/** Štítky nad slovom: odpoveď a lacná či drahá sieť teraz. @param {ReturnType<typeof mozemModel>} m @returns {Chip[]} */
-function chipsOf(m) {
+/**
+ * Nadpis zoznamu vecí: koľko ide hneď, bez dát „?“, pri typickej streche odhad. Kým sa načítava, zoznam nie je.
+ * @param {ReturnType<typeof mozemModel>} m @param {boolean} loading
+ */
+const listOf = (m, loading) =>
+    loading ? null : { title: mozemListTitle(m.items, { unknown: !m.facts, estimate: m.estimate }), estimate: m.estimate };
+
+/** Štítky nad slovom: odpoveď a lacná či drahá sieť teraz. @param {ReturnType<typeof mozemModel>} m @param {import('./messages.js').Voice} voice @returns {Chip[]} */
+function chipsOf(m, voice) {
+    const MOZEM_CHIPS = voiceTexts(voice).MOZEM_CHIPS;
     /** @type {Chip[]} */ const chips = [];
     if (MOZEM_CHIPS[m.state]) chips.push({ text: MOZEM_CHIPS[m.state], tone: m.state === 'go' ? 'go' : 'plain' });
     const level = m.facts?.level;
@@ -99,10 +107,13 @@ function phonesOf(input, f, estimate) {
     return mozemPhonesText(sure ? /** @type {number} */ (f.liveKw) : f.planKw, sure);
 }
 
-/** Veta bez dát: prečo ich appka nemá. @param {Parameters<typeof pvStatus>[0]} input @param {boolean} online */
-export function offlineLead(input, online) {
+/**
+ * Veta bez dát: prečo ich appka nemá.
+ * @param {Parameters<typeof pvStatus>[0]} input @param {boolean} online @param {import('./messages.js').Voice} [voice]
+ */
+export function offlineLead(input, online, voice = 'drzy') {
     const pv = pvStatus(input);
-    return mozemOfflineText({ online, kiosk: !!input.kiosk, pvOk: pv.ok, pvSince: pv.since });
+    return mozemOfflineText({ online, kiosk: !!input.kiosk, pvOk: pv.ok, pvSince: pv.since }, voice);
 }
 
 /**

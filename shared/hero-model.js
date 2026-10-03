@@ -6,7 +6,7 @@ import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
 import { planAt } from './day-plan.js';
-import { getSlotMessage, NIGHT_MESSAGES, PRICE_MESSAGES } from './messages.js';
+import { getSlotMessage, voiceTexts } from './messages.js';
 import { autoTier, deviceStates, productionLevel, smartTier } from './tariff.js';
 
 /**
@@ -127,8 +127,8 @@ function sourceFor(power, live, measured) {
     return live ? 'live' : measured ? 'measured' : 'forecast';
 }
 
-/** @param {HeroInput} state */
-export function heroModel(state) {
+/** @param {HeroInput} state @param {import('./messages.js').Voice} [voice] tón odporúčania */
+export function heroModel(state, voice = 'drzy') {
     const nowMinutes = localMinutes(state.now, state.site.timezone);
     const preview = state.previewMinutes !== null;
     const minutes = preview ? /** @type {number} */ (state.previewMinutes) : nowMinutes;
@@ -139,7 +139,10 @@ export function heroModel(state) {
     // so segmentom pod bežcom na prstenci; bodka (accent) počíta so živým výkonom.
     const slot = planAt(state, minutes);
     const level = slot.level;
-    const message = slot.night ? NIGHT_MESSAGES[level] : getSlotMessage(level, power, state.forecast, th) || PRICE_MESSAGES[level];
+    const T = voiceTexts(voice);
+    const message = slot.night
+        ? T.NIGHT_MESSAGES[level]
+        : getSlotMessage(level, power, state.forecast, th, voice) || T.PRICE_MESSAGES[level];
     const deviceTier = smartTier(level, power, th, null);
     // Slabý deň: dnešná špička nedosiahne ani jeho hranicu, slnko veľké spotrebiče nepokryje.
     const today = state.forecast ? state.forecast.days[0] : null;

@@ -3,7 +3,7 @@
 // shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
-import { MOZEM_SKY_TEXTS } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -66,8 +66,9 @@ function itemsHtml(items) {
         .join('');
 }
 
-/** Hlavná časť karty. @param {Model} m @param {Dom} dom */
-function renderCard(m, dom) {
+/** Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice */
+function renderCard(m, dom, voice) {
+    const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
     show(dom.mzArc, !!m.arc);
     if (m.arc) setHtml(dom.mzArc, arcSvg(m.arc, m.state === 'offline'));
     show(dom.mzAnswer, !m.ask);
@@ -106,9 +107,10 @@ let shown = null;
 /**
  * Panel veci: texty a otvorenie či zatvorenie dialógu podľa stavu. Po zatvorení (krížik,
  * Escape, Späť) sa fokus vráti na riadok, z ktorého sa panel otvoril.
- * @param {Model['items'][number] | null} it @param {Dom} dom
+ * @param {Model['items'][number] | null} it @param {Dom} dom @param {import('../../../shared/messages.js').Voice} [voice]
  */
-function renderSheet(it, dom) {
+function renderSheet(it, dom, voice) {
+    const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
     if (!it) {
         if (dom.mzSheet.open) dom.mzSheet.close();
         const row = shown && dom.mzItems.querySelector(`[data-item="${shown}"]`);
@@ -140,7 +142,7 @@ function renderSheet(it, dom) {
 export function renderMozem(state, dom) {
     // Panel veci patrí karte Môžem?; na inej karte je vždy zatvorený.
     if (state.panel !== 'mozem') return renderSheet(null, dom);
-    const m = mozemSkyModel(state, { quip: state.mozemQuip, launches: state.launches, online: state.online });
-    renderCard(m, dom);
-    renderSheet(m.items.find((it) => it.id === state.mozemItem) || null, dom);
+    const m = mozemSkyModel(state, { quip: state.mozemQuip, launches: state.launches, online: state.online, voice: state.voice });
+    renderCard(m, dom, state.voice);
+    renderSheet(m.items.find((it) => it.id === state.mozemItem) || null, dom, state.voice);
 }
