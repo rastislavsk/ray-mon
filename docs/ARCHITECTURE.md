@@ -262,7 +262,7 @@ s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa).
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
 sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
 (`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Krivky sú v SVG,
-ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, štítok náhľadu) sú
+ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, čas náhľadu) sú
 HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerastú. Nápis hranice kladie
 `limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky ani značku „teraz“:
 tesne nad čiaru na konci alebo na začiatku, inak nad krivku. Polohy sú dve – pre úzky graf a pre

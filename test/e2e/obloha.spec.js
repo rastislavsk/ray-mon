@@ -918,8 +918,10 @@ test.describe('karta Teraz', () => {
         await page.mouse.move(na.x, na.y, { steps: 8 });
         await page.mouse.up();
         await expect.poll(() => terazVStranke(page)).toEqual(nahlad);
-        expect(nahlad.hint).toBe('Pozeráš 15:30.');
-        await expect(page.locator('#tz-chart .dc-pill-t')).toHaveText(/^15:30 · /);
+        // Čas je v grafe pri čiare, výkon hore v čísle a tón vo zvýraznenej bunke pásu - pod grafom nič.
+        expect(nahlad.hint).toBe('');
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('15:30');
+        await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('15:30'))) ?? '');
         const spat = page.getByRole('button', { name: 'Späť na teraz' });
         await spat.click();
         await expect.poll(() => terazVStranke(page)).toEqual(teraz);
@@ -945,7 +947,7 @@ test.describe('karta Teraz', () => {
         await graf.focus();
         await page.keyboard.press('ArrowRight');
         await expect(graf).toHaveAttribute('aria-valuetext', hodnota('13:15'));
-        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 13:15.');
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('13:15');
         await page.keyboard.press('ArrowLeft');
         await page.keyboard.press('ArrowLeft');
         await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
@@ -1092,9 +1094,9 @@ test.describe('karta Teraz prstom', () => {
         const errors = await openTeraz(page, { time: at('13:00') });
         const bod = await bodGrafu(page, minuta('16:00'));
         await prst(page, bod);
-        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 16:00.');
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('16:00');
         await page.waitForTimeout(2000);
-        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 16:00.');
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('16:00');
         await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('16:00') })).num);
         expect(errors).toEqual([]);
     });
@@ -1119,7 +1121,7 @@ test.describe('karta Teraz prstom', () => {
         const ciel = await bodGrafu(page, minuta('09:00'));
         // Švihnutie doľava ako pri listovaní kariet: rýchle a ďaleko.
         await prstTah(page, { ...bod, dx: ciel.x - bod.x, krokMs: 20 });
-        await expect(page.locator('#tz-hint')).toHaveText('Pozeráš 09:00.');
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('09:00');
         await page.waitForTimeout(300);
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);

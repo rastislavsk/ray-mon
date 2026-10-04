@@ -25,8 +25,7 @@ import {
     terazChartText,
     terazClearText,
     terazLaterText,
-    terazPillText,
-    terazPreviewText,
+    terazPreviewTime,
     terazSliderText,
     terazSourceText,
     terazTodayText,
@@ -130,7 +129,7 @@ test('chartX a chartMinutes: celý deň medzi okrajmi grafu, náhľad po štvrť
     assert.equal(chartMinutes(1), MINUTES_PER_DAY - 15);
 });
 
-test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, pás, teraz a štítok náhľadu v grafe', () => {
+test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, pás, teraz a čas náhľadu v grafe', () => {
     const i = input(at('13:00'));
     const plan = dayPlan(i);
     const forecast = /** @type {import('../shared/solar.js').Forecast} */ (i.forecast);
@@ -165,13 +164,16 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
     assert.ok(m.now.y !== null && m.now.y < DAY_CHART.base);
     assert.equal(m.preview, null);
 
-    // Štítok náhľadu: nad časom, šírka v px z počtu znakov (v grafe ho udrží CSS v rendri).
-    const text = terazPillText(hm(15, 30), 4.9, 'sun');
-    const p = dayChartModel({ ...base, preview: { min: hm(15, 30), kw: 4.9, text } }).preview;
+    // Čas náhľadu: nad čiarou, šírka v px z počtu znakov (v grafe ho udrží CSS v rendri), a bunka
+    // pásu pod čiarou na zvýraznenie.
+    const text = terazPreviewTime(hm(15, 30));
+    const withPreview = dayChartModel({ ...base, preview: { min: hm(15, 30), kw: 4.9, text } });
+    const p = withPreview.preview;
     assert.ok(p);
     assert.equal(p.x, Math.round(chartX(hm(15, 30)) * 10) / 10);
-    assert.equal(p.pill.text, text);
-    assert.equal(p.pill.w, Math.round(text.length * DAY_CHART_LABELS.pillCharEm * DAY_CHART_LABELS.pillPx + DAY_CHART_LABELS.pillPadPx));
+    assert.equal(p.label.text, '15:30');
+    assert.equal(p.label.w, Math.round(text.length * DAY_CHART_LABELS.timeCharEm * DAY_CHART_LABELS.timePx));
+    assert.equal(p.cell, withPreview.cells[31]);
     // Bez výkonu bodka nie je, bez predpovede ani plocha; prázdna krivka sa nekreslí.
     const empty = dayChartModel({ ...base, hourly: [], real: [], boundary: null, nowKw: NaN, preview: null });
     assert.equal(empty.area, '');
@@ -298,12 +300,13 @@ test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „
     const hero = heroModel(i);
     assert.equal(m.num, hero.powerText);
     assert.equal(m.source, 'odhad z predpovede');
-    assert.deepEqual(m.hint, { text: terazPreviewText(hm(15, 30)), reset: true });
-    assert.equal(m.hint.text, 'Pozeráš 15:30.');
+    // Čas je v grafe pri čiare, pod grafom ostáva len „Späť na teraz“.
+    assert.deepEqual(m.hint, { text: '', reset: true });
     assert.equal(m.cards?.now.head, hero.message.headline);
     const now = terazModel(input(at('13:00')));
     assert.equal(m.chart?.now.x, now.chart?.now.x);
-    assert.equal(m.chart?.preview?.pill.text, terazPillText(hm(15, 30), hero.power, 'sun'));
+    assert.equal(m.chart?.preview?.label.text, '15:30');
+    assert.equal(m.chart?.preview?.cell.tone, 'sun');
     assert.equal(m.chart?.value, hm(15, 30));
     assert.match(m.chart?.valueText ?? '', /^Náhľad 15:30, /);
 });
@@ -391,7 +394,7 @@ test('texty karty Teraz', () => {
     assert.equal(terazSourceText('forecast', { silent: false, since: null }), 'odhad z predpovede');
     assert.equal(terazSourceText(null, { silent: true, since: '11:40' }), 'odhad z predpovede · meranie neodpovedá od 11:40');
     assert.equal(terazClearText(72), '72 % z toho, čo by dala jasná obloha');
-    assert.equal(terazPillText(hm(15, 30), 4.89, 'sun'), '15:30 · 4,9 kW · slnko stačí');
+    assert.equal(terazPreviewTime(hm(15, 30)), '15:30');
     assert.equal(terazSliderText(hm(8), true, '1.20', 'costly'), 'Náhľad 08:00, 1.20 kW, drahá sieť');
     assert.equal(terazWindowText({ from: hm(9, 15), to: hm(16, 45) }, false), 'Okno na veľké veci 09:15 – 16:45.');
     assert.equal(terazWindowText({ from: hm(9), to: hm(17) }, true), 'Okno na veľké veci bolo 09:00 – 17:00.');

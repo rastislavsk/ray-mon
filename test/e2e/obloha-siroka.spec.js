@@ -213,13 +213,13 @@ test.describe('zmena šírky okna nič nestratí', () => {
         const errors = await openObloha(page, POCITAC);
         await page.locator('#tz-chart').focus();
         for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
-        const hint = await page.locator('#tz-hint').textContent();
+        const cas = await page.locator('#tz-chart .dc-at-t').textContent();
         const num = await page.locator('#tz-num-val').textContent();
-        expect(hint).toMatch(/^Pozeráš /);
+        expect(cas).toMatch(/^\d\d:\d\d$/);
         for (const size of [TELEFON, TABLET_SIRKA, TABLET_VYSKA, POCITAC]) {
             await page.setViewportSize(size);
             await expect(page.locator('#tz-chart')).toBeVisible();
-            await expect(page.locator('#tz-hint')).toHaveText(hint ?? '');
+            await expect(page.locator('#tz-chart .dc-at-t')).toHaveText(cas ?? '');
             await expect(page.locator('#tz-num-val')).toHaveText(num ?? '');
             await expect(page.locator('#tz-reset')).toBeVisible();
         }
@@ -499,7 +499,7 @@ test.describe('klávesnica na počítači', () => {
         await page.mouse.down();
         await page.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2);
         await page.mouse.up();
-        await expect(page.locator('#tz-hint')).toHaveText(/^Pozeráš /);
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText(/^\d\d:\d\d$/);
         await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
         expect(errors).toEqual([]);
     });
@@ -535,7 +535,7 @@ const popiskyGrafu = (page, sel) =>
         return {
             ticks: px('.dc-t'),
             limit: lim.height,
-            pill: px('.dc-pill-t'),
+            time: px('.dc-at-t'),
             graf: svg.getBoundingClientRect().width,
             hits: [...new Set(hits)],
         };
@@ -545,16 +545,16 @@ test.describe('graf dňa na každej šírke', () => {
     const SIRKY = [TELEFON, TABLET_VYSKA, TABLET_SIRKA, POCITAC];
     const CASY = ['07:30', '13:00', '15:30', '18:00', '21:00'];
 
-    test('popisky hodín, nápis hranice aj štítok náhľadu majú rovnakú vykreslenú veľkosť (±1 px), graf rastie', async ({ page }) => {
+    test('popisky hodín, nápis hranice aj čas náhľadu majú rovnakú vykreslenú veľkosť (±1 px), graf rastie', async ({ page }) => {
         /** @type {Array<Awaited<ReturnType<typeof popiskyGrafu>>>} */
         const merania = [];
         for (const size of SIRKY) {
             await openObloha(page, size);
             if (size === TELEFON || size === TABLET_VYSKA) await page.locator('#nav-terazky').click();
             await page.locator('#tz-chart').focus();
-            // Šípka na grafe zapne náhľad (štítok nad grafom).
+            // Šípka na grafe zapne náhľad (čas nad čiarou).
             await page.keyboard.press('ArrowRight');
-            await expect(page.locator('#tz-chart .dc-pill-t')).toBeVisible();
+            await expect(page.locator('#tz-chart .dc-at-t')).toBeVisible();
             merania.push(await popiskyGrafu(page, '#tz-chart'));
         }
         const [telefon] = merania;
@@ -562,7 +562,7 @@ test.describe('graf dňa na každej šírke', () => {
         for (const m of merania) {
             for (const t of m.ticks) expect(Math.abs(t - telefon.ticks[0])).toBeLessThanOrEqual(1);
             expect(Math.abs(m.limit - telefon.limit)).toBeLessThanOrEqual(1);
-            expect(Math.abs(m.pill[0] - telefon.pill[0])).toBeLessThanOrEqual(1);
+            expect(Math.abs(m.time[0] - telefon.time[0])).toBeLessThanOrEqual(1);
         }
         expect(Math.max(...merania.map((m) => m.graf))).toBeGreaterThan(telefon.graf * 1.5);
     });

@@ -13,17 +13,17 @@ import { TERAZ_TONES } from './messages-core.js';
 
 /**
  * Rozmery grafu: vodorovne od `left` po `right` je celý deň, zvislo od `top` (najvyšší výkon
- * stupnice) po `base` (nula). Pod nulou pás plánu a popisky hodín, nad `top` štítok náhľadu.
+ * stupnice) po `base` (nula). Pod nulou pás plánu a popisky hodín, nad `top` čas náhľadu.
  */
 export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 112, bandY: 120, bandH: 9, cellMin: 30 };
 
 /**
- * Popisky grafu - hodiny, nápis hranice veľkých spotrebičov a štítok náhľadu - majú na každej šírke
+ * Popisky grafu - hodiny, nápis hranice veľkých spotrebičov a čas náhľadu - majú na každej šírke
  * tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie. Kreslia sa preto ako
  * HTML nad SVG (obloha/web/render/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
- * (.dc-t, .dc-limit-t, .dc-pill-t) a musí sedieť s číslami tu: `limitPx` a `pillPx` veľkosť písma,
- * `charEm` a `pillCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
- * od čiary, `pillPadPx` okraje štítku. `minScale` je najmenšia mierka grafu (px na jednotku
+ * (.dc-t, .dc-limit-t, .dc-at-t) a musí sedieť s číslami tu: `limitPx` a `timePx` veľkosť písma,
+ * `charEm` a `timeCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
+ * od čiary. `minScale` je najmenšia mierka grafu (px na jednotku
  * viewBoxu): graf široký 274 px na displeji 320 px - tam zaberá nápis v jednotkách grafu najviac.
  * `wideScale` je mierka, od ktorej má nápis vlastnú polohu (graf aspoň 448 px - container query
  * v style.css musí sedieť): na širokom grafe je nápis v pomere ku grafu malý a zmestí sa aj tam,
@@ -31,12 +31,11 @@ export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 
  */
 export const DAY_CHART_LABELS = {
     limitPx: 13,
-    pillPx: 15,
+    timePx: 15,
     charEm: 0.5,
-    pillCharEm: 0.56,
+    timeCharEm: 0.56,
     lineEm: 1.25,
     gapPx: 2,
-    pillPadPx: 18,
     minScale: 0.85,
     wideScale: 1.4,
 };
@@ -88,7 +87,7 @@ export function planLegend(cells) {
     return order.filter((t) => cells.some((c) => c.tone === t)).map((tone) => ({ tone, text: TERAZ_TONES[tone] }));
 }
 
-/** Bunka pásu, do ktorej padne minúta dňa. @param {Cell[]} cells @param {number} min */
+/** Bunka pásu, do ktorej padne minúta dňa. @template {Cell} T @param {T[]} cells @param {number} min */
 export function cellAt(cells, min) {
     return cells[Math.min(cells.length - 1, Math.max(0, Math.floor(min / DAY_CHART.cellMin)))];
 }
@@ -115,13 +114,13 @@ export function chartMinutes(rel) {
  *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null }} d `hourly`
  *   predpoveď dňa, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `nowMin`
  *   značka „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov
- *   a `limitText` nápis pri nej, `preview` náhľad iného času so štítkom
+ *   a `limitText` nápis pri nej, `preview` náhľad iného času s popiskom (čas)
  */
 export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview }) {
     const C = DAY_CHART;
     const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary);
     const kws = [limitKw, ...hourly.map((p) => p.kw), ...measured.map((p) => p.kw), nowMin === null ? 0 : nowKw, preview ? preview.kw : 0];
-    // Stupnica s rezervou nad najvyšším bodom, aby krivka nenarážala na štítok náhľadu.
+    // Stupnica s rezervou nad najvyšším bodom, aby krivka nenarážala na čas náhľadu.
     const max = Math.max(...kws.filter(Number.isFinite)) * 1.1 || 1;
     const y = (/** @type {number} */ kw) => r1(C.base - (Math.max(0, kw) / max) * (C.base - C.top));
     const x = (/** @type {number} */ min) => r1(chartX(min));
@@ -135,6 +134,7 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
     const curve = measured.length > 1 ? measured.map(toPt) : [];
     const cellW = r1(chartX(C.cellMin) - chartX(0) - 0.8);
     const at = (/** @type {number} */ min, /** @type {number} */ kw) => ({ x: x(min), y: Number.isFinite(kw) ? y(kw) : null });
+    const cells = planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW }));
     return {
         area: edge.length ? `${path(edge)}Z` : '',
         real: curve.length ? path(curve) : '',
@@ -142,10 +142,11 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
         limitText,
         // Nápis hranice nesmie prekryť krivky ani značku „teraz“.
         limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], nowMin === null ? null : x(nowMin)),
-        cells: planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW })),
+        cells,
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
         now: nowMin === null ? null : at(nowMin, nowKw),
-        preview: preview ? { ...at(preview.min, preview.kw), pill: pillOf(preview.text) } : null,
+        // Náhľad: čas pri čiare a zvýraznená bunka pásu pod ňou - jej farba povie, čo vtedy platí.
+        preview: preview ? { ...at(preview.min, preview.kw), label: labelOf(preview.text), cell: cellAt(cells, preview.min) } : null,
     };
 }
 
@@ -158,13 +159,13 @@ function limitPlaces(limitY, text, lines, nowX) {
 }
 
 /**
- * Štítok náhľadu nad grafom: šírka v px z počtu znakov. Vystredí ho nad časom a udrží celý v grafe
+ * Čas náhľadu nad čiarou: šírka v px z počtu znakov. Vystredí ho nad čiarou a udrží celý v grafe
  * render (CSS clamp) - šírka grafu v px je známa až v prehliadači.
  * @param {string} text
  */
-function pillOf(text) {
+function labelOf(text) {
     const L = DAY_CHART_LABELS;
-    return { w: Math.round(text.length * L.pillCharEm * L.pillPx + L.pillPadPx), text };
+    return { w: Math.round(text.length * L.timeCharEm * L.timePx), text };
 }
 
 /** @typedef {{ x: number, y: number }} Pt bod v jednotkách grafu */
