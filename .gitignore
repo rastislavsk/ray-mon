@@ -5,3 +5,5 @@ worker/.wrangler/
 playwright-report/
 test-results/
 .DS_Store
+# Lokálne nastavenia Claude Code (povolenia a pod.) – patria len danému počítaču
+.claude/
