@@ -10,6 +10,43 @@ import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
 import { render } from './web/render/index.js';
 import { initialState, layoutOf } from './web/state.js';
+// Ostatné moduly jadra: app.js ich nevolá, ale importuje priamo, aby ich prehliadač začal sťahovať
+// naraz s ostatnými - inak by o každej úrovni importov zistil až po stiahnutí tej predchádzajúcej
+// (bez build kroku je to otáčka siete na úroveň). Poradie vyhodnotenia sa nemení: všetky už
+// importujú moduly vyššie. Zoznam drží zhodný so stromom importov test/obloha-imports.test.js.
+import '../shared/chart-model.js';
+import '../shared/config.js';
+import '../shared/contrast.js';
+import '../shared/day-chart.js';
+import '../shared/day-plan.js';
+import '../shared/daylog.js';
+import '../shared/format.js';
+import '../shared/hero-model.js';
+import '../shared/kiosk.js';
+import '../shared/launches.js';
+import '../shared/messages-core.js';
+import '../shared/mozem-sky.js';
+import '../shared/mozem.js';
+import '../shared/schema.js';
+import '../shared/setup-flow.js';
+import '../shared/setup.js';
+import '../shared/sky.js';
+import '../shared/solar.js';
+import '../shared/tariff.js';
+import '../shared/teraz.js';
+import '../shared/valid.js';
+import '../web/data.js';
+import '../web/gesture.js';
+import '../web/nav-history.js';
+import '../web/refresh.js';
+import './web/mozem-interactions.js';
+import './web/nav-back.js';
+import './web/render/day-chart.js';
+import './web/render/header.js';
+import './web/render/mozem.js';
+import './web/render/teraz.js';
+import './web/render/write.js';
+import './web/teraz-interactions.js';
 
 const dom = collectDom();
 // Uložená elektráreň; bez nej aspoň poloha (typická strecha).
