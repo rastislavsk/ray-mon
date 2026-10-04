@@ -204,7 +204,12 @@ a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov.
   v ňom chýba. Cudzí znak (meno obce) vykreslí záložné písmo.
 
 Rýchlosť sa meria `npm run lighthouse:obloha` (Lighthouse, emulácia pomalého mobilu, medián z 3);
-vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením.
+vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením. Lokálny server hovorí HTTP/2
+ako GitHub Pages (certifikát si vyrobí `openssl`, bez neho meria cez HTTP/1.1 a povie to) – pri
+HTTP/1.1 Lighthouse počíta so 6 spojeniami a appka s mnohými malými modulmi by vyšla asi o pol
+sekundy pomalšia, než naozaj je. Rozhoduje však meranie nasadenej appky (PageSpeed alebo
+`npm run lighthouse:obloha -- https://rastislavsk.github.io/ray-mon/obloha/`): zlepšenie, ktoré
+lokálne vyzerá ako 0,1 s, sa na Pages nemusí prejaviť.
 
 Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
 farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `style.css` zaregistrované
