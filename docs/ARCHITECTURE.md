@@ -202,9 +202,14 @@ a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov.
   píše (namiesto podmnožín latin a latin-ext Google Fonts). Vyrába ho `scripts/font-subset.js`
   z pôvodného súboru google/fonts; `test/font-subset.test.js` ohlási znak v textoch, ktorý
   v ňom chýba. Cudzí znak (meno obce) vykreslí záložné písmo.
+- **Jadro v jednej vlne.** `obloha/app.js` importuje priamo každý modul jadra, aj ten, ktorý sám
+  nevolá (holé `import '…'`). Prehliadač tak všetky začne sťahovať hneď po `app.js` – inak by
+  o každej úrovni importov zistil až po stiahnutí predchádzajúcej. `test/obloha-imports.test.js`
+  drží zoznam zhodný so stromom importov a chýbajúci či nadbytočný riadok vypíše.
 
 Rýchlosť sa meria `npm run lighthouse:obloha` (Lighthouse, emulácia pomalého mobilu, medián z 3);
-vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením.
+vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením. Lokálny server hovorí HTTP/2
+ako GitHub Pages (certifikát si vyrobí `openssl`, bez neho meria cez HTTP/1.1).
 
 Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
 farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `style.css` zaregistrované

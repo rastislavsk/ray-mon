@@ -4,9 +4,16 @@
 //
 //   npm run lighthouse:obloha                        lokálne (spustí vlastný server)
 //   npm run lighthouse:obloha -- https://…/obloha/   nasadená verzia
-import { spawn } from 'node:child_process';
+//
+// Lokálny server hovorí HTTP/2 ako GitHub Pages. Pri HTTP/1.1 Lighthouse počíta najviac so 6
+// spojeniami na server, čo appku bez bundlera (veľa malých modulov) trestá viac než skutočnosť.
+// Certifikát si vyrobí openssl pri behu; bez neho meria cez HTTP/1.1 a povie to.
+import { execFileSync, spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { createSecureServer } from 'node:http2';
+import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
@@ -15,7 +22,6 @@ const LIGHTHOUSE = 'lighthouse@13.5.0';
 const RUNS = Number(process.env.LH_RUNS) || 3;
 const PORT = 8093;
 
-const url = process.argv[2] ?? `http://127.0.0.1:${PORT}/obloha/`;
 const TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
@@ -31,8 +37,23 @@ const TYPES = {
  * Lokálny server ako GitHub Pages: text posiela skomprimovaný (gzip). Bez toho by meranie
  * počítalo s niekoľkonásobne väčšími súbormi, než aké telefón naozaj sťahuje.
  */
-function serve() {
-    return createServer(async (req, res) => {
+/** Samopodpísaný certifikát na jeden deň; bez openssl null. */
+function certificate() {
+    try {
+        const dir = mkdtempSync(join(tmpdir(), 'ray-mon-lh-'));
+        const [key, cert] = [join(dir, 'key.pem'), join(dir, 'cert.pem')];
+        const args = ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=127.0.0.1'];
+        execFileSync('openssl', [...args, '-keyout', key, '-out', cert], { stdio: 'ignore' });
+        return { key: readFileSync(key), cert: readFileSync(cert) };
+    } catch {
+        return null;
+    }
+}
+
+/** @param {{ key: Buffer, cert: Buffer } | null} tls */
+function serve(tls) {
+    /** @param {import('node:http').IncomingMessage | import('node:http2').Http2ServerRequest} req @param {any} res */
+    const handler = async (req, res) => {
         const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
         const path = normalize(pathname.endsWith('/') ? `${pathname}index.html` : pathname);
         try {
@@ -44,10 +65,14 @@ function serve() {
         } catch {
             res.writeHead(404).end();
         }
-    });
+    };
+    return tls ? createSecureServer({ ...tls, allowHTTP1: true }, handler) : createServer(handler);
 }
 
-const server = process.argv[2] ? null : serve();
+const tls = process.argv[2] ? null : certificate();
+if (!process.argv[2] && !tls) console.log('openssl chýba - meria sa cez HTTP/1.1 (Pages hovorí HTTP/2)');
+const url = process.argv[2] ?? `${tls ? 'https' : 'http'}://127.0.0.1:${PORT}/obloha/`;
+const server = process.argv[2] ? null : serve(tls);
 if (server) await new Promise((done) => server.listen(PORT, '127.0.0.1', () => done(undefined)));
 
 /**
@@ -78,7 +103,8 @@ async function measure() {
             '--output-path=stdout',
             '--quiet',
             `--chrome-path="${chromium.executablePath()}"`,
-            '--chrome-flags=--headless=new',
+            // Samopodpísaný certifikát lokálneho servera prehliadač inak odmietne.
+            '--chrome-flags="--headless=new --ignore-certificate-errors"',
         ]),
     );
     // LH_REPORT=cesta.json uloží celú správu posledného merania (čo poskakuje, čo brzdí).
