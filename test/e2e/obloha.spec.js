@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { wordSize } from '../../obloha/web/render/mozem.js';
 import {
     LAUNCH_STORAGE_KEY,
+    LOOK_STORAGE_KEY,
     PANELS,
     PLANT,
     SETTINGS_STORAGE_KEY,
@@ -22,7 +23,7 @@ import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
-import { toUser, typicalSettings } from '../../shared/settings.js';
+import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData, pvAt } from '../helpers.js';
@@ -1402,6 +1403,45 @@ test.describe('karta 7 dní', () => {
         await ocakavajKartu(page, 'mozem');
         expect(errors).toEqual([]);
     });
+});
+
+test.describe('karta 7 dní: detail dňa bez cien zo siete', () => {
+    // Zoznam cien po úsekoch v detaile nie je: lacnú a drahú sieť ukazuje farebný pás plánu
+    // s legendou. Pod grafom ostáva len to, čo už nabehlo, a čo by dala jasná obloha.
+    const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
+    for (const size of [
+        { width: 390, height: 844 },
+        { width: 1440, height: 900 },
+    ])
+        for (const [tarifa, tariff] of /** @type {const} */ ([
+            ['s cenami', PRICED],
+            ['bez cien', TARIFF],
+        ]))
+            for (const voice of /** @type {const} */ (['drzy', 'slusny']))
+                test(`šírka ${size.width} px, tarifa ${tarifa}, tón ${voice}: dnes aj iný deň bez „Cena zo siete“`, async ({ page }) => {
+                    await page.setViewportSize(size);
+                    const look = JSON.stringify(lookToStored({ voice, liveSky: true }));
+                    await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [LOOK_STORAGE_KEY, look]);
+                    const errors = await openObloha(page, { settings: { ...OWNER, tariff } });
+                    if (size.width === 390) await page.locator('#nav-7dni').click();
+                    for (const index of [0, 4]) {
+                        await page.locator(`#sd-days [data-day="${index}"]`).click();
+                        await expect(page.locator('#sd-day')).toBeVisible();
+                        const d = sedemDayModel(vstupSedem({ tariff }), index, voice);
+                        await expect(page.locator('#sd-day-title')).toHaveText(d.title);
+                        await expect(page.locator('#sd-day-msg-title')).toHaveText(d.message.title);
+                        await expect(page.locator('#sd-day')).not.toContainText('Cena zo siete');
+                        await expect(page.locator('#sd-day-facts > *')).toHaveCount(2);
+                        const riadky = [d.done, d.clear].filter(Boolean);
+                        await expect(page.locator('#sd-day-facts > :visible')).toHaveText(riadky);
+                        await expect(page.locator('#sd-day-facts')).toBeVisible({ visible: riadky.length > 0 });
+                        await expect(page.locator('#sd-day-chart rect[data-tone]')).toHaveCount(d.chart.cells.length);
+                        await expect(page.locator('#sd-day-legend span')).toHaveText(d.chart.legend.map((l) => l.text));
+                        await page.locator('#sd-day-back').click();
+                        await expect(page.locator('#sd-list')).toBeVisible();
+                    }
+                    expect(errors).toEqual([]);
+                });
 });
 
 test.describe('karta 7 dní prstom', () => {

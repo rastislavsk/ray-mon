@@ -2,8 +2,8 @@
 // Nová appka ich sťahuje až s kartou 7 dní (obloha/web/parts.js); spoločný vstup do všetkých
 // textov je messages.js. Čisté funkcie bez DOM.
 
-import { fmt1, fmt2, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDateLabel, weekDayLabel } from './format.js';
-import { endHm, MOZEM_SKY_TEXTS, polite, spanText, TERAZ_TEXTS } from './messages-core.js';
+import { fmt1, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDateLabel, weekDayLabel } from './format.js';
+import { endHm, MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
 
@@ -195,20 +195,6 @@ export function sedemWindowTile(w) {
 export function sedemClearText(clearKwh, pct) {
     if (!(clearKwh > 0) || pct === null) return '';
     return `Jasná obloha by dala ${fmt1(clearKwh)} kWh, predpoveď je ${pct} % z toho.`;
-}
-
-/**
- * Cena zo siete v ten deň podľa pásiem tarify, keď sú ceny zadané (inak null - nič sa
- * nevymýšľa).
- * @param {Array<{ startMin: number, min: number, band: import('./config.js').Band }>} segments pásma dňa (priceSegments)
- * @param {string} currency
- */
-export function sedemPriceText(segments, currency) {
-    if (segments.some((s) => s.band.price === null)) return null;
-    const price = (/** @type {import('./config.js').Band} */ b) => fmt2(/** @type {number} */ (b.price));
-    if (segments.length === 1) return `Cena zo siete celý deň ${price(segments[0].band)} ${currency}/kWh.`;
-    const list = segments.map((s) => `${spanText({ from: s.startMin, to: s.startMin + s.min })} ${s.band.name} ${price(s.band)}`);
-    return `Cena zo siete: ${list.join(' · ')} ${currency}/kWh.`;
 }
 
 /**

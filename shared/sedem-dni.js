@@ -27,7 +27,6 @@ import {
     sedemDayMessage,
     sedemGuessText,
     sedemHeatText,
-    sedemPriceText,
     sedemRangeText,
     sedemRowText,
     sedemSumText,
@@ -41,7 +40,6 @@ import { planWindows } from './mozem.js';
 import { offlineLead } from './mozem-sky.js';
 import { skyWeather } from './sky.js';
 import { localDateKey, localMinutes } from './solar.js';
-import { priceSegments } from './tariff.js';
 import { todayCard } from './teraz.js';
 
 /**
@@ -193,7 +191,6 @@ export function sedemDayModel(input, index, voice = 'drzy') {
         chart: chartOf(input, day, plan, nowMin),
         done: nowMin === null ? '' : todayCard(input, plan, nowMin).line,
         clear: sedemClearText(day.clearKwhTotal, usePct(day)),
-        price: sedemPriceText(priceSegments(input.tariff, day.date), input.tariff.currency),
         message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0, voice),
     };
 }

@@ -125,7 +125,6 @@ function sedemDom() {
         sdDayFacts: byId('sd-day-facts'),
         sdDayDone: byId('sd-day-done'),
         sdDayClear: byId('sd-day-clear'),
-        sdDayPrice: byId('sd-day-price'),
         sdDayMsgTitle: byId('sd-day-msg-title'),
         sdDayMsgBody: byId('sd-day-msg-body'),
         sdDayHint: byId('sd-day-hint'),
