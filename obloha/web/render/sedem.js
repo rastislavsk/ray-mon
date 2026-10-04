@@ -80,12 +80,11 @@ function renderDay(data, index, dom, voice) {
     for (const [el, text] of /** @type {const} */ ([
         [dom.sdDayDone, d.done],
         [dom.sdDayClear, d.clear],
-        [dom.sdDayPrice, d.price ?? ''],
     ])) {
         show(el, text !== '');
         setText(el, text);
     }
-    show(dom.sdDayFacts, !!(d.done || d.clear || d.price));
+    show(dom.sdDayFacts, !!(d.done || d.clear));
     setText(dom.sdDayMsgTitle, d.message.title);
     setText(dom.sdDayMsgBody, d.message.body);
     setText(dom.sdDayHint, SEDEM_TEXTS.dayHint);

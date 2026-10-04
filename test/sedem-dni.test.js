@@ -16,7 +16,6 @@ import {
     sedemDayMessage,
     sedemGuessText,
     sedemHeatText,
-    sedemPriceText,
     sedemRowText,
     sedemSumText,
     sedemTitle,
@@ -38,7 +37,6 @@ import {
     windowBand,
 } from '../shared/sedem-dni.js';
 import { typicalSettings } from '../shared/settings.js';
-import { priceSegments } from '../shared/tariff.js';
 import { FIXED_NOW, fixtureData, pvAt } from './helpers.js';
 
 const { forecast } = fixtureData();
@@ -204,7 +202,6 @@ test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, n
     assert.ok(d.chart.real, 'a nameraná krivka');
     assert.match(d.done, /^Predpoveď 61,4 kWh, už nabehlo/);
     assert.equal(d.clear, sedemClearText(day.clearKwhTotal, usePct(day)));
-    assert.equal(d.price, null, 'ceny tarify nie sú zadané');
     assert.deepEqual(d.message, dayDetailMessage(visibleHours(day.hourly), powerThresholds(PLANT)));
     assert.match(d.chart.desc, /^Výroba počas dňa\. Teraz 13:00: /);
     assert.deepEqual(d.chart.legend, planLegend(planCells(dayPlan(input))));
@@ -225,13 +222,6 @@ test('sedemDayModel: iný deň bez „teraz“ a bez merania; deň bez okna „b
     assert.match(weak.chart.desc, /Okno na veľké veci nebude\./);
     // Typická strecha to povie aj v detaile.
     assert.equal(sedemDayModel({ ...input, known: 'poloha' }, 2).sub, 'zamračené · typická strecha');
-});
-
-test('sedemDayModel: cena zo siete, keď sú ceny pásiem zadané', () => {
-    const tariff = { ...TARIFF, bands: TARIFF.bands.map((b, i) => ({ ...b, price: i ? 0.2 : 0.1 })) };
-    const d = sedemDayModel({ ...input, tariff }, 3);
-    assert.equal(d.price, sedemPriceText(priceSegments(tariff, forecast.days[3].date), '€'));
-    assert.match(/** @type {string} */ (d.price), /^Cena zo siete: 00:00 – /);
 });
 
 test('sedemWeekModel: čísla zo súhrnu súčasnej appky, 7 stĺpcov, mapa 7 × hodiny, hláška weekMessage', () => {
@@ -300,9 +290,6 @@ test('texty karty 7 dní', () => {
     assert.deepEqual(sedemWindowTile(null), { value: '–', label: 'bez okna' });
     assert.equal(sedemClearText(65, 94), 'Jasná obloha by dala 65,0 kWh, predpoveď je 94 % z toho.');
     assert.equal(sedemClearText(0, null), '');
-    const band = (/** @type {number | null} */ price) => ({ id: 'j', name: 'Cena', level: /** @type {const} */ ('bezna'), price });
-    assert.equal(sedemPriceText([{ startMin: 0, min: 1440, band: band(0.15) }], '€'), 'Cena zo siete celý deň 0,15 €/kWh.');
-    assert.equal(sedemPriceText([{ startMin: 0, min: 1440, band: band(null) }], '€'), null);
     assert.equal(
         sedemBarsText(
             [
