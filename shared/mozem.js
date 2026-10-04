@@ -240,14 +240,15 @@ function quipsOf(state, day, page, voice) {
  * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
  * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice }} [opts] `voice` tón hlášok
+ * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice, list?: typeof MOZEM_ITEMS }} [opts]
+ *   `voice` tón hlášok, `list` veci karty (nová appka má aj bojler, MOZEM_SKY_ITEMS)
  */
-export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy' } = {}) {
+export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy', list } = {}) {
     const known = input.known || 'elektraren';
     const estimate = guess && known === 'poloha';
     const noPanels = known !== 'elektraren' && !estimate;
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
-    const items = mozemItems(input, launches, ctx, voice);
+    const items = mozemItems(input, launches, ctx, voice, list);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     return {
         ...(ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null }),
@@ -261,15 +262,18 @@ export function mozemModel(input, quipPage = 0, launches = [], { guess = false, 
 /**
  * Veci karty s odpoveďou a zápismi spustení: pri spotrebiči tlačidlo „Pustil/a som“ (s tým, či
  * svieti slnko) a kým beží, krátka odpoveď „beží do …“. Bez predpovede (`ctx` null) spotrebič
- * nevie a ostatné idú vždy.
+ * nevie a ostatné idú vždy. Pri veci ostáva aj odpoveď (`answer`) a krátka odpoveď bez behu
+ * (`base`) - z nich nová appka skladá dlaždice skupín.
  * @param {PlanInput} input @param {import('./launches.js').Launch[]} launches @param {DayCtx | null} ctx @param {Voice} [voice]
+ * @param {typeof MOZEM_ITEMS} [list] veci karty
  */
-function mozemItems(input, launches, ctx, voice = 'drzy') {
+function mozemItems(input, launches, ctx, voice = 'drzy', list = MOZEM_ITEMS) {
     const today = localDateKey(input.now, input.site.timezone);
     const nowMin = localMinutes(input.now, input.site.timezone);
-    return MOZEM_ITEMS.map((item) => {
+    return list.map((item) => {
         /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
-        const it = { id: item.id, ...mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice) };
+        const text = mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice);
+        const it = { id: item.id, ...text, answer, base: text.short };
         if (!canLog(it.id)) return { ...it, log: null };
         const running = runningLaunch(launches, it.id, today, nowMin);
         const isAuto = it.id === 'auto';

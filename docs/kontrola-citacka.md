@@ -52,10 +52,12 @@ Presné slová sa menia s časom a počasím, nižšie je príklad zo slnečnéh
 
 **Môžem?** Nadpis karty je „Môžem?“ (na displeji ho nevidno, čítačka áno). Potom prečíta
 štítky „Áno“ a „Lacná sieť“, veľké slovo „ZAPNI TOOO“ a vetu „Slnko to teraz platí za nás…“,
-potom „Strecha za hodinu nabije … mobilov“. Nasleduje nadpis „Čo môžem · 6 zo 6 ide hneď“ a
-šesť tlačidiel, napríklad „Práčka, do 15:30“. Dvojťuk na Práčku otvorí panel – čítačka ohlási
-okno „Práčka: do 15:30“ a dá sa v ňom čítať „Čo robiť“ a „Prečo“; gesto Späť ho zavrie a
-čítačka sa vráti na riadok Práčka. Oblúk slnka hore čítačka vynechá, to je len obrázok.
+potom „Strecha za hodinu nabije … mobilov“. Nasleduje nadpis „Čo môžem“ a štyri tlačidlá
+(dlaždice), napríklad „Veľké spotrebiče do 16:30“ či „Auto do 15:00 asi 60 km zo slnka“.
+Dvojťuk na Veľké spotrebiče otvorí panel – čítačka ohlási okno „Veľké spotrebiče: do 16:30“
+a dá sa v ňom čítať práčka, umývačka a sušička, každá so svojím časom a tlačidlom
+„Pustil/a som“; gesto Späť ho zavrie a čítačka sa vráti na dlaždicu. Dvojťuk na Bojler otvorí
+panel „Bojler: …“ s „Čo robiť“ a „Prečo“. Oblúk slnka hore čítačka vynechá, to je len obrázok.
 
 **Teraz.** Nadpis „Teraz“, veľké číslo v kW a odkiaľ je (meranie alebo odhad). Potom „Graf
 dňa, šípkami si pozrieš iný čas“ – posúvač: švih hore alebo dole na ňom by mal posunúť čas

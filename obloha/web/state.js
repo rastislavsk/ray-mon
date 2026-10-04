@@ -2,7 +2,7 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_ITEMS, PANELS, SUMMARY_PERIODS } from '../../shared/config.js';
+import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_GROUPS, MOZEM_SKY_ITEMS, PANELS, SUMMARY_PERIODS } from '../../shared/config.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
@@ -287,6 +287,9 @@ function setupPlaceOf(setup = null, roof = 0) {
  */
 const dashOf = (panel, dash) => (dash === true && isColumn(panel) ? { dash: true } : {});
 
+/** Panely karty Môžem?, ktoré môže otvoriť krok histórie: vec alebo skupina vecí. */
+const SHEETS = new Set([...MOZEM_SKY_ITEMS.map((i) => i.id), ...MOZEM_GROUPS.map((g) => g.id)]);
+
 /**
  * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
  * pri nej správa ako predtým - odíde zo stránky.
@@ -317,7 +320,7 @@ export function navStepOf(raw) {
         ...d,
     };
     if (item === null || item === undefined) return step;
-    return MOZEM_ITEMS.some((i) => i.id === item) ? { ...step, item: /** @type {string} */ (item) } : null;
+    return SHEETS.has(/** @type {string} */ (item)) ? { ...step, item: /** @type {string} */ (item) } : null;
 }
 
 /** Krok, na ktorom položka histórie stojí. @param {unknown} raw */

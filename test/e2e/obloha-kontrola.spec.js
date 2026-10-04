@@ -100,7 +100,12 @@ const obrazovka = (page, step) => expect(page.locator(`#wz-${step}`)).toBeVisibl
 async function kazdaKarta(page, check) {
     await karta(page, 'mozem');
     await check('Môžem?');
-    await page.locator('[data-item="pracka"]').click();
+    await page.locator('[data-item="velke"]').click();
+    await expect(page.locator('#mz-sheet')).toBeVisible();
+    await check('Môžem? › panel skupiny');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#mz-sheet')).toBeHidden();
+    await page.locator('[data-item="bojler"]').click();
     await expect(page.locator('#mz-sheet')).toBeVisible();
     await check('Môžem? › panel veci');
     await page.keyboard.press('Escape');

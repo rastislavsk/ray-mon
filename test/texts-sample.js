@@ -4,7 +4,7 @@
 // test/golden/texty-drzy.json (texts.test.js) - dôkaz, že drzé texty sa nezmenili ani o písmeno.
 // Zo slušnej sa skladá tabuľka do popisu pull requestu.
 
-import { MOZEM_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
+import { MOZEM_SKY_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
 import { heroModel } from '../shared/hero-model.js';
 import * as M from '../shared/messages.js';
 import { mozemModel } from '../shared/mozem.js';
@@ -154,14 +154,19 @@ function directItems(out, v) {
         ['unk', { kind: 'unk' }],
         ['always', { kind: 'always' }],
     ];
-    for (const item of MOZEM_ITEMS)
+    for (const item of MOZEM_SKY_ITEMS)
         for (const [k, a] of answers)
             for (const draha of [true, false])
                 for (const cost of [null, 0.19]) {
                     const ctx = /** @type {any} */ ({ nowMin: 750, draha, currency: '€' });
                     strings(M.mozemItemText(item, a, { ctx, cost }, v), `item.${item.id}.${k}.${draha}.${cost}`, out);
                 }
-    strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
+    for (const [k, a] of answers) {
+        out[`tile.${k}`] = M.mozemTileValue(a, 'krátka');
+        out[`tileNote.${k}`] = M.mozemTileNote(a) || '(prázdne)';
+    }
+    out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
+    strings(M.mozemItemText(MOZEM_SKY_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
     for (const tone of ['go', 'wait', 'cheap', 'no'])
         for (const isAuto of [true, false]) {
             out[`log.${tone}.${isAuto}`] = M.mozemLogLabel(tone, isAuto, null, v);
@@ -182,6 +187,10 @@ function directMisc(out, v) {
             }))
                 out[`offline.${online}.${kiosk}.${pk}`] = M.mozemOfflineText({ online, kiosk, ...pv }, v);
     out['guess'] = M.mozemGuessText(5, v);
+    out['list'] = M.mozemListTitle(false);
+    out['listOdhad'] = M.mozemListTitle(true);
+    strings(M.MOZEM_GROUP_NAMES, 'group', out);
+    out['groupAlways'] = M.MOZEM_GROUP_ALWAYS;
     out['teraz.typical'] = M.terazTypicalText(5, v);
     out['sedem.guess'] = M.sedemGuessText(5, v);
     strings(M.statsBestText({ date: '2026-09-05', kwh: 31.2, today: true }, v), 'best.dnes', out);

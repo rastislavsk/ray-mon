@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Môžem? – skupiny</title>
+        <style>
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --cheap-text: #b0dbff;
+                --dim: rgba(255, 255, 255, 0.82);
+                --glass: rgba(8, 16, 40, 0.3);
+                --ink: #0b1430;
+                --page: #10131c;
+                --page-2: #181c28;
+                --page-ink: #e9ecf4;
+                --page-dim: #9aa3b8;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--page-ink);
+                font-family: var(--font);
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 28px 16px 60px;
+            }
+            h1 {
+                margin: 0 0 6px;
+                font-size: 1.6rem;
+                font-variation-settings: 'wdth' 112;
+            }
+            .lede {
+                margin: 0 0 18px;
+                max-width: 760px;
+                color: var(--page-dim);
+            }
+            .lede b {
+                color: var(--page-ink);
+            }
+
+            .switch {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0 0 22px;
+            }
+            .switch button {
+                min-height: 40px;
+                padding: 8px 14px;
+                border: 1px solid #343b4f;
+                border-radius: 999px;
+                background: var(--page-2);
+                color: var(--page-ink);
+                font: inherit;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            .switch button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--ink);
+                border-color: #fff;
+            }
+
+            .cols {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 22px;
+                align-items: start;
+            }
+            .col h2 {
+                margin: 0 0 2px;
+                font-size: 1.05rem;
+            }
+            .col > p {
+                margin: 0 0 10px;
+                font-size: 0.875rem;
+                color: var(--page-dim);
+                min-height: 2.6em;
+            }
+            .tag {
+                display: inline-block;
+                padding: 1px 8px;
+                margin-right: 6px;
+                border-radius: 6px;
+                background: #2a3045;
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+
+            /* ===== Telefón ===== */
+            .phone {
+                position: relative;
+                width: 100%;
+                max-width: 375px;
+                margin: 0 auto;
+                border-radius: 34px;
+                overflow: hidden;
+                color: #fff;
+                background: linear-gradient(180deg, var(--s1), var(--s2));
+                box-shadow:
+                    0 0 0 8px #05070c,
+                    0 20px 50px rgba(0, 0, 0, 0.5);
+            }
+            .phone::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background: linear-gradient(180deg, transparent 30%, rgba(5, 10, 30, 0.28));
+            }
+            .scr {
+                position: relative;
+                z-index: 1;
+                padding: 14px 0 0;
+            }
+            .arc {
+                padding: 2px 20px 0;
+            }
+            .arc svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .big {
+                display: grid;
+                gap: 6px;
+                padding: 0 20px;
+            }
+            .chips {
+                display: flex;
+                gap: 6px;
+            }
+            .chip {
+                padding: 3px 10px;
+                border: 1.5px solid #fff;
+                border-radius: 999px;
+                font-size: 0.6875rem;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+            .chip[data-tone='go'] {
+                background: var(--yes);
+                border-color: var(--yes);
+                color: #14300c;
+            }
+            .chip[data-tone='cheap'] {
+                background: var(--cheap);
+                border-color: var(--cheap);
+                color: #06233d;
+            }
+            .chip[data-tone='costly'] {
+                background: var(--costly);
+                border-color: var(--costly);
+                color: #3a0b04;
+            }
+            .word {
+                margin: 0;
+                font-size: 52px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 125;
+                letter-spacing: -0.02em;
+                line-height: 0.92;
+                text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+            }
+            .line {
+                margin: 0;
+                font-size: 1rem;
+                line-height: 1.3;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+            }
+
+            .glass {
+                display: grid;
+                gap: 10px;
+                margin: 12px 14px 0;
+                padding: 14px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+            }
+            .glass-ttl {
+                margin: 0;
+                font-size: 0.6875rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .nav {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 16px;
+                padding: 10px 8px 14px;
+                background: rgba(6, 10, 28, 0.72);
+                font-size: 0.6875rem;
+                color: var(--dim);
+            }
+            .nav b {
+                color: #fff;
+            }
+
+            svg.ic {
+                width: 22px;
+                height: 22px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.7;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                flex: none;
+            }
+            .dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.45);
+                flex: none;
+            }
+            [data-tone='go'] .dot,
+            .dot[data-tone='go'] {
+                background: var(--yes);
+            }
+            [data-tone='wait'] .dot,
+            .dot[data-tone='wait'] {
+                background: #fff;
+            }
+            [data-tone='cheap'] .dot,
+            .dot[data-tone='cheap'] {
+                background: var(--cheap);
+            }
+            .t[data-tone='go'] {
+                color: var(--yes);
+            }
+            .t[data-tone='cheap'] {
+                color: var(--cheap-text);
+            }
+            .t[data-tone='wait'] {
+                color: #fff;
+            }
+            .t[data-tone='no'] {
+                color: var(--dim);
+            }
+
+            /* ===== Dnes: zoznam šiestich riadkov ===== */
+            .app {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                min-height: 40px;
+                padding: 7px 2px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+                font-size: 0.9375rem;
+            }
+            .app:last-child {
+                border-bottom: 0;
+            }
+            .app b {
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                font-size: 0.8438rem;
+            }
+
+            /* ===== A: dlaždice ===== */
+            .tiles {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin: 12px 14px 0;
+            }
+            .tile {
+                display: grid;
+                gap: 4px;
+                align-content: start;
+                padding: 12px 14px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                text-align: left;
+            }
+            .tile.wide {
+                grid-column: 1 / -1;
+            }
+            .tile .hd {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .tile .hd span {
+                margin-left: 4px;
+                font-size: 0.6875rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .tile .val {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 4px;
+                font-size: 1.375rem;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 110;
+                line-height: 1.1;
+            }
+            .tile .val .dot {
+                width: 10px;
+                height: 10px;
+            }
+            .tile small {
+                font-size: 0.8125rem;
+                color: var(--dim);
+            }
+            .tile.wide .val {
+                font-size: 1.75rem;
+            }
+            .bar {
+                position: relative;
+                height: 8px;
+                margin-top: 8px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .bar i {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 4px;
+            }
+            .bar i.sun {
+                background: var(--yes);
+            }
+            .bar i.cheap {
+                background: var(--cheap);
+            }
+            .bar i.past {
+                opacity: 0.35;
+            }
+            .bar .now {
+                position: absolute;
+                top: -4px;
+                bottom: -4px;
+                width: 2px;
+                margin-left: -1px;
+                background: #fff;
+                border-radius: 1px;
+                box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.5);
+            }
+            .bar-t {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 3px;
+                font-size: 0.6875rem;
+                color: var(--dim);
+            }
+            .tile.slim {
+                grid-column: 1 / -1;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 14px;
+            }
+            .tile.slim .lbl {
+                flex: 1;
+                font-size: 0.9375rem;
+            }
+            .tile.slim b {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 0.875rem;
+            }
+
+            /* ===== B: časová os ===== */
+            .lanes {
+                display: grid;
+                gap: 0;
+            }
+            .axis,
+            .lane {
+                display: grid;
+                grid-template-columns: 108px 1fr;
+                gap: 10px;
+                align-items: center;
+            }
+            .axis {
+                margin-bottom: 2px;
+            }
+            .axis .ticks {
+                position: relative;
+                height: 16px;
+                font-size: 0.625rem;
+                color: var(--dim);
+            }
+            .axis .ticks span {
+                position: absolute;
+                transform: translateX(-50%);
+            }
+            .axis .ticks span:first-child {
+                transform: none;
+            }
+            .axis .ticks span:last-child {
+                transform: translateX(-100%);
+            }
+            .lane {
+                min-height: 52px;
+                padding: 6px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+            }
+            .lane .who {
+                display: grid;
+                gap: 1px;
+            }
+            .lane .icons {
+                display: flex;
+                gap: 2px;
+            }
+            .lane .icons svg.ic {
+                width: 18px;
+                height: 18px;
+            }
+            .lane .who b {
+                font-size: 0.8125rem;
+                font-weight: 800;
+            }
+            .track {
+                position: relative;
+                height: 22px;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.08);
+                overflow: hidden;
+            }
+            .track i {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+            }
+            .track i.sun {
+                background: var(--yes);
+            }
+            .track i.cheap {
+                background: var(--cheap);
+            }
+            .track i.past {
+                opacity: 0.3;
+            }
+            .track i.any {
+                background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 6px, rgba(255, 255, 255, 0.14) 6px 12px);
+            }
+            .lanes-wrap {
+                position: relative;
+            }
+            .nowline {
+                position: absolute;
+                top: 14px;
+                bottom: 0;
+                width: 2px;
+                margin-left: -1px;
+                background: #fff;
+                box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.45);
+                pointer-events: none;
+            }
+            .nowlbl {
+                position: absolute;
+                top: -2px;
+                transform: translateX(-50%);
+                font-size: 0.625rem;
+                font-weight: 800;
+                background: #fff;
+                color: var(--ink);
+                padding: 0 5px;
+                border-radius: 4px;
+            }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                font-size: 0.6875rem;
+                color: var(--dim);
+            }
+            .legend span {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .legend i {
+                width: 14px;
+                height: 8px;
+                border-radius: 2px;
+                display: inline-block;
+            }
+
+            /* ===== Panel po ťuknutí ===== */
+            .sheetbox {
+                margin-top: 34px;
+                display: grid;
+                grid-template-columns: minmax(300px, 375px) 1fr;
+                gap: 26px;
+                align-items: start;
+            }
+            .sheet {
+                max-width: 375px;
+                border-radius: 26px 26px 0 0;
+                background: #f5f6fa;
+                color: var(--ink);
+                padding: 18px 18px 22px;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            }
+            .sheet .grab {
+                width: 40px;
+                height: 4px;
+                margin: -6px auto 12px;
+                border-radius: 2px;
+                background: #c8cdd9;
+            }
+            .sheet h3 {
+                margin: 0 0 4px;
+                font-size: 1.25rem;
+                font-variation-settings: 'wdth' 108;
+            }
+            .sheet > p {
+                margin: 0 0 12px;
+                font-size: 0.9375rem;
+                color: #3a4460;
+            }
+            .sheet .row {
+                display: grid;
+                grid-template-columns: 26px 1fr auto;
+                gap: 10px;
+                align-items: center;
+                padding: 10px 0;
+                border-top: 1px solid #dfe3ec;
+            }
+            .sheet .row svg.ic {
+                stroke: var(--ink);
+            }
+            .sheet .row small {
+                display: block;
+                color: #5b6582;
+                font-size: 0.8125rem;
+            }
+            .sheet .row b {
+                font-size: 0.9375rem;
+            }
+            .sheet .pbtn {
+                margin-top: 6px;
+                min-height: 40px;
+                padding: 8px 14px;
+                border: 0;
+                border-radius: 12px;
+                background: var(--ink);
+                color: #fff;
+                font: inherit;
+                font-size: 0.875rem;
+                font-weight: 800;
+            }
+
+            .notes {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 18px;
+                margin-top: 34px;
+            }
+            .note {
+                padding: 16px 18px;
+                border-radius: 16px;
+                background: var(--page-2);
+                border: 1px solid #262c3d;
+            }
+            .note h3 {
+                margin: 0 0 8px;
+                font-size: 1rem;
+            }
+            .note ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+                color: #c9cfdd;
+            }
+            .note li {
+                margin: 4px 0;
+            }
+            .note .plus {
+                color: #b9f28c;
+            }
+            .note .minus {
+                color: #ffb4a6;
+            }
+
+            @media (max-width: 720px) {
+                .sheetbox {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Môžem? – „Čo môžem“ v skupinách</h1>
+            <p class="lede">
+                Dnes má každý spotrebič vlastný riadok s vlastným časom. Návrh ich zlúči do štyroch polí:
+                <b>veľké spotrebiče</b> (práčka, umývačka, sušička), <b>auto</b>, <b>bojler</b> a <b>drobnosti</b>
+                (hranie, fén). Len nová appka „Živá obloha“. Prepínačom zmeníš čas dňa.
+            </p>
+
+            <div class="switch" role="group" aria-label="Situácia">
+                <button type="button" data-s="svieti" aria-pressed="true">☀ 11:20 – svieti</button>
+                <button type="button" data-s="cakaj" aria-pressed="false">🌅 8:15 – slnko príde</button>
+                <button type="button" data-s="vecer" aria-pressed="false">🌙 20:40 – večer, lacný prúd</button>
+            </div>
+
+            <div class="cols">
+                <section class="col">
+                    <h2><span class="tag">DNES</span>Šesť riadkov</h2>
+                    <p>Každá vec svoj čas. Bojler v zozname nie je.</p>
+                    <div class="phone" id="p-dnes"></div>
+                </section>
+                <section class="col">
+                    <h2><span class="tag">A</span>Dlaždice</h2>
+                    <p>Jedna veľká odpoveď pre veľké spotrebiče, auto a bojler vedľa seba, drobnosti tenkým pásom.</p>
+                    <div class="phone" id="p-a"></div>
+                </section>
+                <section class="col">
+                    <h2><span class="tag">B</span>Časová os</h2>
+                    <p>Štyri pásy na spoločnej osi dňa. Kedy to ide, vidno farbou, text je len jeden čas.</p>
+                    <div class="phone" id="p-b"></div>
+                </section>
+            </div>
+
+            <div class="sheetbox">
+                <div class="sheet" id="sheet"></div>
+                <div class="note">
+                    <h3>Po ťuknutí na pole veľkých spotrebičov (A aj B)</h3>
+                    <ul>
+                        <li>
+                            Spoločný čas na karte je <b>koniec slnka</b> („do 16:00“). Dnešné časy pri práčke, umývačke a sušičke sú v
+                            skutočnosti <b>najneskorší štart</b> – koniec slnka mínus dĺžka programu – preto sa líšia o pol hodiny.
+                        </li>
+                        <li>
+                            Tie rozdiely nezmiznú, len sa presunú do panelu: jeden riadok na spotrebič s dĺžkou programu a časom, dokedy ho
+                            pustiť, aby dobehol na slnku.
+                        </li>
+                        <li>Tlačidlo „Pustil/a som“ ostáva pri konkrétnom spotrebiči – zápis potrebuje vedieť, čo bežalo.</li>
+                        <li>Auto, bojler a drobnosti majú panel ako dnes (jedna vec, jedna odpoveď).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="notes">
+                <div class="note">
+                    <h3>A – Dlaždice</h3>
+                    <ul>
+                        <li class="plus">Najrýchlejšie čítanie: jedno veľké slovo pre to, na čo sa rodina pýta najčastejšie.</li>
+                        <li class="plus">Pás pod veľkými spotrebičmi ukáže okno slnka a „teraz“ bez vety.</li>
+                        <li class="plus">Auto a bojler majú miesto na jeden údaj navyše (km, „zo slnka“).</li>
+                        <li class="minus">Štyri polia sú vyššie ako jedno sklo – karta je o ~40 px dlhšia ako dnes.</li>
+                    </ul>
+                </div>
+                <div class="note">
+                    <h3>B – Časová os</h3>
+                    <ul>
+                        <li class="plus">Najmenej textu: jeden čas na skupinu, zvyšok povie farba (zelená slnko, modrá lacná sieť).</li>
+                        <li class="plus">Vidno aj to, čo príde neskôr – auto chce silnejšie slnko, preto má kratší pás.</li>
+                        <li class="plus">Rovnaká výška ako dnešný zoznam.</li>
+                        <li class="minus">Os treba prečítať – pre deti a babku menej priame ako „áno“.</li>
+                    </ul>
+                </div>
+                <div class="note">
+                    <h3>Čo to bude chcieť v kóde</h3>
+                    <ul>
+                        <li>Bojler ako novú vec v <code>MOZEM_ITEMS</code> (spotrebič v <code>DEVICES</code> už je, lacnú sieť berie).</li>
+                        <li>Skupiny ako údaj v <code>shared/config.js</code>, nie natvrdo v rendri.</li>
+                        <li>
+                            Odpoveď skupiny = odpoveď jej členov; keď sa líšia (napr. slabý deň: práčka áno, sušička nie), pole ukáže
+                            najlepšiu a panel rozdiel.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <script>
+            // Ikony: jednoduché obrysy 24 × 24.
+            const IC = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M4 8h16M8 12.5h8M8 16h8"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M10 12c1-1 3 1 4 0M10 14.5c1-1 3 1 4 0"/>',
+                auto: '<path d="M4 16.5V12.5l2.2-5h11.6l2.2 5v4z"/><path d="M4 12.5h16"/><circle cx="8" cy="16.5" r="1.8"/><circle cx="16" cy="16.5" r="1.8"/>',
+                bojler: '<rect x="7" y="2.5" width="10" height="17" rx="5"/><path d="M12 8c-1.7 2.2-2.2 3.2-2.2 4.3a2.2 2.2 0 0 0 4.4 0c0-1.1-.5-2.1-2.2-4.3z"/><path d="M10 19.5v2M14 19.5v2"/>',
+                hranie: '<path d="M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3 3 0 0 1-5.3 1.9L14.5 14h-5l-1.2 1.4A3 3 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8z"/><path d="M8 10v3.5M6.25 11.75h3.5"/><path d="M16 11h.01M17.5 12.5h.01"/>',
+                fen: '<circle cx="9" cy="9" r="5"/><circle cx="9" cy="9" r="1.6"/><path d="M14 6.5h6v5h-6M11 13.8l-1.2 6.7h3L14 12"/>',
+            };
+            const ic = (k) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+            const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+
+            // Os dňa v B a pás v A: 6:00 - 24:00.
+            const AX = [6 * 60, 24 * 60];
+            const pct = (m) => (Math.max(0, Math.min(1, (m - AX[0]) / (AX[1] - AX[0]))) * 100).toFixed(1);
+
+            const S = {
+                svieti: {
+                    sky: ['#2f74d0', '#9cc9f2'],
+                    now: 11 * 60 + 20,
+                    chips: [['slnko stačí', 'go']],
+                    word: 'ÁNO',
+                    lead: 'Slnko ťahá. Pusti, čo treba.',
+                    arc: { sun: 0.36, win: [0.22, 0.79] },
+                    rise: '6:52',
+                    set: '18:31',
+                    old: [
+                        ['Práčka', 'go', 'do 14:00'],
+                        ['Umývačka', 'go', 'do 13:30'],
+                        ['Sušička', 'go', 'do 14:30'],
+                        ['Auto', 'go', 'do 15:10'],
+                        ['Hranie', 'go', 'vždy OK'],
+                        ['Fén', 'go', 'vždy OK'],
+                    ],
+                    velke: { tone: 'go', val: 'Áno, do 16:00', short: 'do 16:00', sun: [[9 * 60 + 40, 16 * 60]], cheap: [] },
+                    auto: {
+                        tone: 'go',
+                        val: 'do 15:10',
+                        sub: '≈ 60 km zo slnka',
+                        short: 'do 15:10',
+                        sun: [[11 * 60, 15 * 60 + 10]],
+                        cheap: [],
+                    },
+                    bojler: {
+                        tone: 'go',
+                        val: 'do 16:00',
+                        sub: 'ohreje sa zo slnka',
+                        short: 'do 16:00',
+                        sun: [[9 * 60 + 40, 16 * 60]],
+                        cheap: [],
+                    },
+                    sheet: {
+                        lead: 'Slnko vydrží do 16:00. Aby program dobehol celý na slnku, pusti ho:',
+                        rows: [
+                            ['pracka', 'Práčka', '2 h', 'do 14:00'],
+                            ['umyvacka', 'Umývačka', '2 h 30 min', 'do 13:30'],
+                            ['susicka', 'Sušička', '1 h 30 min', 'do 14:30'],
+                        ],
+                        tone: 'go',
+                    },
+                },
+                cakaj: {
+                    sky: ['#d98f6a', '#8fb0dc'],
+                    now: 8 * 60 + 15,
+                    chips: [['drahý prúd', 'costly']],
+                    word: 'POČKAJ',
+                    lead: 'Slnko príde o 10:30.',
+                    arc: { sun: 0.11, win: [0.3, 0.79] },
+                    rise: '6:52',
+                    set: '18:31',
+                    old: [
+                        ['Práčka', 'wait', 'o 10:30'],
+                        ['Umývačka', 'wait', 'o 10:30'],
+                        ['Sušička', 'wait', 'o 10:30'],
+                        ['Auto', 'wait', 'o 11:30'],
+                        ['Hranie', 'go', 'vždy OK'],
+                        ['Fén', 'go', 'vždy OK'],
+                    ],
+                    velke: { tone: 'wait', val: 'o 10:30', short: 'o 10:30', sun: [[10 * 60 + 30, 16 * 60]], cheap: [] },
+                    auto: {
+                        tone: 'wait',
+                        val: 'o 11:30',
+                        sub: 'chce silné slnko',
+                        short: 'o 11:30',
+                        sun: [[11 * 60 + 30, 15 * 60]],
+                        cheap: [],
+                    },
+                    bojler: {
+                        tone: 'wait',
+                        val: 'o 10:30',
+                        sub: 'teraz by išiel zo siete',
+                        short: 'o 10:30',
+                        sun: [[10 * 60 + 30, 16 * 60]],
+                        cheap: [],
+                    },
+                    sheet: {
+                        lead: 'Slnko bude 10:30 – 16:00. Teraz by to išlo zo siete a tá je drahá.',
+                        rows: [
+                            ['pracka', 'Práčka', '2 h', 'o 10:30'],
+                            ['umyvacka', 'Umývačka', '2 h 30 min', 'o 10:30'],
+                            ['susicka', 'Sušička', '1 h 30 min', 'o 10:30'],
+                        ],
+                        tone: 'wait',
+                    },
+                },
+                vecer: {
+                    sky: ['#141a42', '#3a3474'],
+                    now: 20 * 60 + 40,
+                    chips: [['lacný prúd', 'cheap']],
+                    word: 'ZAJTRA',
+                    lead: 'Slnko skončilo o 16:10. Zajtra od 9:40.',
+                    arc: { sun: null, win: null },
+                    rise: '6:52',
+                    set: '18:31',
+                    old: [
+                        ['Práčka', 'wait', 'zajtra 9:40'],
+                        ['Umývačka', 'wait', 'zajtra 9:40'],
+                        ['Sušička', 'wait', 'zajtra 9:40'],
+                        ['Auto', 'cheap', 'lacno'],
+                        ['Hranie', 'go', 'vždy OK'],
+                        ['Fén', 'go', 'vždy OK'],
+                    ],
+                    velke: { tone: 'wait', val: 'zajtra 9:40', short: 'zajtra 9:40', sun: [[9 * 60 + 40, 16 * 60 + 10]], cheap: [] },
+                    auto: {
+                        tone: 'cheap',
+                        val: 'lacno',
+                        sub: 'sieť do 6:00',
+                        short: 'lacno',
+                        sun: [[11 * 60, 15 * 60]],
+                        cheap: [[20 * 60, 24 * 60]],
+                    },
+                    bojler: {
+                        tone: 'cheap',
+                        val: 'lacno',
+                        sub: 'sieť do 6:00',
+                        short: 'lacno',
+                        sun: [[9 * 60 + 40, 16 * 60 + 10]],
+                        cheap: [[20 * 60, 24 * 60]],
+                    },
+                    sheet: {
+                        lead: 'Dnes to slnko už neutiahne. Zajtra je slnko 9:40 – 16:10.',
+                        rows: [
+                            ['pracka', 'Práčka', '2 h', 'zajtra 9:40'],
+                            ['umyvacka', 'Umývačka', '2 h 30 min', 'zajtra 9:40'],
+                            ['susicka', 'Sušička', '1 h 30 min', 'zajtra 9:40'],
+                        ],
+                        tone: 'wait',
+                    },
+                },
+            };
+
+            // Oblúk slnka ako v appke (obloha/web/render/mozem.js), len menší.
+            function arcSvg(s) {
+                const cx = 160,
+                    cy = 118,
+                    rx = 140,
+                    ry = 88;
+                const pt = (f) => {
+                    const a = Math.PI * (1 - f);
+                    return `${(cx + rx * Math.cos(a)).toFixed(1)} ${(cy - ry * Math.sin(a)).toFixed(1)}`;
+                };
+                const win = s.arc.win
+                    ? `<path d="M${pt(s.arc.win[0])} A${rx} ${ry} 0 0 1 ${pt(s.arc.win[1])}" fill="none" stroke="#b9f28c" stroke-width="4" stroke-linecap="round" opacity=".9"/>`
+                    : '';
+                const body =
+                    s.arc.sun === null
+                        ? `<g transform="translate(262 42)"><circle r="11" fill="#e8ecff"/><circle cx="6" cy="-4" r="9" fill="${s.sky[0]}"/></g>`
+                        : `<g transform="translate(${pt(s.arc.sun)})"><circle r="24" fill="rgba(255,240,190,.22)"/><circle r="13" fill="#fff4c4"/></g>`;
+                return (
+                    `<div class="arc"><svg viewBox="0 0 320 132"><path d="M${cx - rx} ${cy} A${rx} ${ry} 0 0 1 ${cx + rx} ${cy}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="3 6"/>${win}` +
+                    `<line x1="0" y1="${cy}" x2="320" y2="${cy}" stroke="rgba(255,255,255,.3)"/>` +
+                    `<text x="20" y="130" fill="#fff" font-size="12" text-anchor="middle">${s.rise}</text><text x="300" y="130" fill="#fff" font-size="12" text-anchor="middle">${s.set}</text>${body}</svg></div>`
+                );
+            }
+
+            function head(s) {
+                return (
+                    arcSvg(s) +
+                    `<div class="big"><div class="chips">${s.chips.map(([t, tone]) => `<span class="chip" data-tone="${tone}">${t}</span>`).join('')}</div>` +
+                    `<p class="word">${s.word}</p><p class="line">${s.lead}</p></div>`
+                );
+            }
+            const nav =
+                '<div class="nav"><b>Môžem?</b><span>Teraz</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span></div>';
+
+            function phone(el, s, body) {
+                el.style.setProperty('--s1', s.sky[0]);
+                el.style.setProperty('--s2', s.sky[1]);
+                el.innerHTML = `<div class="scr">${head(s)}${body}${nav}</div>`;
+            }
+
+            function dnes(s) {
+                const rows = s.old
+                    .map(
+                        ([n, tone, t]) =>
+                            `<div class="app"><span>${n}</span><b class="t" data-tone="${tone}"><span class="dot" data-tone="${tone}"></span>${t}</b></div>`,
+                    )
+                    .join('');
+                return `<section class="glass"><h2 class="glass-ttl">Čo môžem</h2><div>${rows}</div></section>`;
+            }
+
+            // Pás dňa v dlaždici: zelené slnko, modrá lacná sieť, minulosť stlmená, biela čiarka teraz.
+            function bar(g, now) {
+                const seg =
+                    (cls) =>
+                    ([a, b]) => {
+                        const parts = [];
+                        if (a < now)
+                            parts.push(`<i class="${cls} past" style="left:${pct(a)}%;width:${pct(Math.min(b, now)) - pct(a)}%"></i>`);
+                        if (b > now)
+                            parts.push(
+                                `<i class="${cls}" style="left:${pct(Math.max(a, now))}%;width:${pct(b) - pct(Math.max(a, now))}%"></i>`,
+                            );
+                        return parts.join('');
+                    };
+                return (
+                    `<div class="bar">${g.sun.map(seg('sun')).join('')}${g.cheap.map(seg('cheap')).join('')}<span class="now" style="left:${pct(now)}%"></span></div>` +
+                    '<div class="bar-t"><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>'
+                );
+            }
+
+            function navrhA(s) {
+                const v = s.velke,
+                    a = s.auto,
+                    b = s.bojler;
+                return (
+                    '<div class="tiles">' +
+                    `<div class="tile wide" data-tone="${v.tone}"><div class="hd">${ic('pracka')}${ic('umyvacka')}${ic('susicka')}<span>Veľké spotrebiče</span></div>` +
+                    `<div class="val t" data-tone="${v.tone}"><span class="dot"></span>${v.val}</div>${bar(v, s.now)}</div>` +
+                    `<div class="tile" data-tone="${a.tone}"><div class="hd">${ic('auto')}<span>Auto</span></div><div class="val t" data-tone="${a.tone}"><span class="dot"></span>${a.val}</div><small>${a.sub}</small></div>` +
+                    `<div class="tile" data-tone="${b.tone}"><div class="hd">${ic('bojler')}<span>Bojler</span></div><div class="val t" data-tone="${b.tone}"><span class="dot"></span>${b.val}</div><small>${b.sub}</small></div>` +
+                    `<div class="tile slim">${ic('hranie')}${ic('fen')}<span class="lbl">Hranie, fén a drobnosti</span><b class="t" data-tone="go"><span class="dot" data-tone="go"></span>kedykoľvek</b></div>` +
+                    '</div>'
+                );
+            }
+
+            function navrhB(s) {
+                const now = s.now;
+                const seg =
+                    (cls) =>
+                    ([a, b]) => {
+                        const parts = [];
+                        if (a < now)
+                            parts.push(`<i class="${cls} past" style="left:${pct(a)}%;width:${pct(Math.min(b, now)) - pct(a)}%"></i>`);
+                        if (b > now)
+                            parts.push(
+                                `<i class="${cls}" style="left:${pct(Math.max(a, now))}%;width:${pct(b) - pct(Math.max(a, now))}%"></i>`,
+                            );
+                        return parts.join('');
+                    };
+                const lane = (icons, name, g) =>
+                    `<div class="lane"><div class="who"><div class="icons">${icons.map(ic).join('')}</div><b class="t" data-tone="${g.tone}">${g.short}</b></div>` +
+                    `<div class="track" title="${name}">${g.any ? '<i class="any" style="left:0;width:100%"></i>' : ''}${g.sun.map(seg('sun')).join('')}${g.cheap.map(seg('cheap')).join('')}</div></div>`;
+                const ticks = [6, 9, 12, 15, 18, 21, 24].map((h) => `<span style="left:${pct(h * 60)}%">${h}</span>`).join('');
+                // Čiara „teraz“ ide cez všetky pásy: stĺpec s menami má 108 px + 10 px medzera.
+                const x = `calc(118px + (100% - 118px) * ${pct(now) / 100})`;
+                return (
+                    '<section class="glass"><h2 class="glass-ttl">Čo môžem dnes</h2><div class="lanes-wrap">' +
+                    `<div class="axis"><span></span><div class="ticks">${ticks}</div></div>` +
+                    '<div class="lanes">' +
+                    lane(['pracka', 'umyvacka', 'susicka'], 'Veľké spotrebiče', s.velke) +
+                    lane(['auto'], 'Auto', s.auto) +
+                    lane(['bojler'], 'Bojler', s.bojler) +
+                    lane(['hranie', 'fen'], 'Drobnosti', { tone: 'go', short: 'kedykoľvek', any: true, sun: [], cheap: [] }) +
+                    `</div><div class="nowline" style="left:${x}"><span class="nowlbl">${hm(now)}</span></div></div>` +
+                    '<div class="legend"><span><i style="background:var(--yes)"></i>slnko stačí</span><span><i style="background:var(--cheap)"></i>lacná sieť</span><span><i style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 4px,rgba(255,255,255,.15) 4px 8px)"></i>kedykoľvek</span></div>' +
+                    '</section>'
+                );
+            }
+
+            function sheet(s) {
+                const sh = s.sheet;
+                const tone = sh.tone === 'go' ? '#2f7a12' : '#0b1430';
+                return (
+                    '<div class="grab"></div><h3>Veľké spotrebiče</h3>' +
+                    `<p>${sh.lead}</p>` +
+                    sh.rows
+                        .map(
+                            ([k, n, len, t]) =>
+                                `<div class="row">${ic(k)}<div><b>${n}</b><small>program ${len}</small></div><b style="color:${tone}">${t}</b></div>`,
+                        )
+                        .join('') +
+                    '<button type="button" class="pbtn">Pustil/a som…</button>'
+                );
+            }
+
+            function show(key) {
+                const s = S[key];
+                phone(document.getElementById('p-dnes'), s, dnes(s));
+                phone(document.getElementById('p-a'), s, navrhA(s));
+                phone(document.getElementById('p-b'), s, navrhB(s));
+                document.getElementById('sheet').innerHTML = sheet(s);
+                document.querySelectorAll('.switch button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === key)));
+            }
+            document.querySelectorAll('.switch button').forEach((b) => b.addEventListener('click', () => show(b.dataset.s)));
+            show('svieti');
+        </script>
+    </body>
+</html>

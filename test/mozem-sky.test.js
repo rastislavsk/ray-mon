@@ -1,15 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { installedKw, MOZEM_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
+import { installedKw, MOZEM_GROUPS, MOZEM_ITEMS, MOZEM_SKY_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
 import { kwpRoughText } from '../shared/format.js';
 import {
     MOZEM_CHIPS,
+    MOZEM_GROUP_ALWAYS,
+    MOZEM_GROUP_NAMES,
     mozemGuessText,
     mozemItemText,
     mozemListTitle,
     mozemLogCancel,
     mozemOfflineText,
     mozemPhonesText,
+    mozemTileNote,
+    mozemTileValue,
     phonesPerHour,
 } from '../shared/messages.js';
 import { itemAnswer, mozemModel } from '../shared/mozem.js';
@@ -104,11 +108,20 @@ test('mozemItemText: `more` je to isté ako `extra`, len rozdelené na otázku a
     assert.equal(lacno.extra, '');
 });
 
-test('texty novej karty: nadpis zoznamu, mobily, výzvy, zrušenie behu', () => {
-    const items = [{ tone: 'go' }, { tone: 'go' }, { tone: 'wait' }, { tone: 'no' }, { tone: 'unk' }, { tone: 'go' }];
-    assert.equal(mozemListTitle(items, { unknown: false, estimate: false }), 'Čo môžem · 3 zo 6 ide hneď');
-    assert.equal(mozemListTitle(items, { unknown: true, estimate: false }), 'Čo môžem · ? zo 6 ide hneď', 'bez dát počet netvrdí');
-    assert.equal(mozemListTitle(items.slice(0, 5), { unknown: false, estimate: true }), 'Čo môžem · 2 z 5 ide hneď · odhad');
+test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, zrušenie behu', () => {
+    assert.equal(mozemListTitle(false), 'Čo môžem');
+    assert.equal(mozemListTitle(true), 'Čo môžem · odhad');
+    assert.equal(
+        mozemTileValue({ kind: 'go', end: 16 * 60, until: 14 * 60, km: null }, 'do 14:00'),
+        'do 16:00',
+        'koniec slnka, nie štart programu',
+    );
+    assert.equal(mozemTileValue({ kind: 'always' }, 'vždy OK'), 'kedykoľvek');
+    assert.equal(mozemTileValue({ kind: 'wait', start: 630 }, 'o 10:30'), 'o 10:30');
+    assert.equal(mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 }), 'asi 60 km zo slnka');
+    assert.equal(mozemTileNote({ kind: 'go', end: 900, until: 840, km: null }), 'zo slnka');
+    assert.equal(mozemTileNote({ kind: 'cheap', next: null }), 'lacná sieť');
+    assert.equal(mozemTileNote({ kind: 'wait', start: 630 }), '');
 
     assert.equal(phonesPerHour(6.45), 430);
     assert.equal(mozemPhonesText(6.45, true), 'Strecha za hodinu nabije 430 mobilov');
@@ -135,7 +148,7 @@ test('texty novej karty: nadpis zoznamu, mobily, výzvy, zrušenie behu', () => 
 test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k tomu štítky a mobily', () => {
     const i = input(FIXED_NOW);
     const m = mozemSkyModel(i);
-    const base = mozemModel(i);
+    const base = mozemModel(i, 0, [], { list: MOZEM_SKY_ITEMS });
     assert.equal(m.state, 'go');
     assert.equal(m.word, base.word);
     assert.equal(m.lead, base.hero.lead);
@@ -148,7 +161,7 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k t
         { text: MOZEM_CHIPS.lacna, tone: 'cheap' },
     ]);
     assert.equal(m.phones, mozemPhonesText(fixtureData(FIXED_NOW).pv.realTimePowerKw, true), 'živé meranie naisto');
-    assert.equal(m.list?.title, mozemListTitle(base.items, { unknown: false, estimate: false }));
+    assert.equal(m.list?.title, 'Čo môžem');
     assert.equal(m.retry, false);
     assert.equal(m.guess, '');
     assert.equal(m.quip, base.quip);
@@ -172,7 +185,18 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
     assert.equal(m.state, 'offline');
     assert.equal(m.retry, true);
     assert.match(m.lead, /Predpoveď počasia neprišla.*Ani meranie/);
-    assert.equal(m.list?.title, 'Čo môžem · ? zo 6 ide hneď');
+    assert.equal(m.list?.title, 'Čo môžem');
+    assert.deepEqual(
+        m.groups.map((g) => [g.id, g.value, g.tone]),
+        [
+            ['velke', 'neviem', 'unk'],
+            ['auto', 'neviem', 'unk'],
+            ['bojler', 'neviem', 'unk'],
+            ['drobne', 'kedykoľvek', 'go'],
+        ],
+    );
+    assert.equal(m.groups[0].bar, null, 'bez okna slnka pás nie je');
+    assert.equal(m.groups[0].sheet?.lead, '');
     assert.equal(m.items.find((x) => x.id === 'pracka')?.short, 'neviem');
     assert.equal(m.phones, '');
     assert.equal(m.arc?.win, null);
@@ -242,4 +266,77 @@ test('sunArc: slnko medzi skutočným východom a západom, v noci mesiac, okno 
     assert.equal(dec.rise, null);
     assert.equal(dec.sun, null);
     assert.deepEqual(dec.win, { from: 0, to: 1 });
+});
+
+test('skupiny: o 13:00 jedna odpoveď za skupinu, koniec slnka a pás dňa, panel s vecami', () => {
+    const m = mozemSkyModel(input(FIXED_NOW));
+    assert.deepEqual(
+        m.groups.map((g) => [g.id, g.key, g.size, g.name]),
+        MOZEM_GROUPS.map((g) => [
+            g.id,
+            g.items.length > 1 ? g.id : g.items[0],
+            g.size,
+            MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)],
+        ]),
+    );
+});
+
+test('skupiny: veľké spotrebiče o 13:00 - koniec slnka, pás dňa a panel s vecami', () => {
+    const m = mozemSkyModel(input(FIXED_NOW));
+    const velke = m.groups[0];
+    const { sheet, bar } = velke;
+    if (!sheet || !bar) throw new Error('veľké spotrebiče nemajú panel alebo pás');
+    assert.equal(velke.tone, 'go');
+    assert.match(velke.value, /^do \d{2}:\d{2}$/);
+    assert.notEqual(velke.value, m.items[0].short, 'dlaždica hovorí koniec slnka, práčka štart programu');
+    assert.equal(velke.note, '', 'všetky odpovedajú rovnako');
+    assert.ok(bar.width > 0 && bar.now > bar.left);
+    assert.deepEqual(bar.ticks, ['5:00', '13:00', '21:00']);
+    assert.deepEqual(
+        sheet.rows.map((r) => r.id),
+        ['pracka', 'umyvacka', 'susicka'],
+    );
+    assert.equal(sheet.title, `Veľké spotrebiče: ${velke.value}`);
+    assert.match(sheet.lead, /^Slnko do /);
+});
+
+test('skupiny: auto, bojler a drobnosti o 13:00', () => {
+    const m = mozemSkyModel(input(FIXED_NOW));
+    const [velke, auto, bojler, drobne] = m.groups;
+    assert.equal(bojler.key, 'bojler');
+    assert.equal(bojler.sheet, null, 'jedna vec: ťuknutie otvorí jej panel');
+    assert.equal(bojler.value, velke.value, 'bojler aj veľké spotrebiče: ten istý koniec slnka');
+    assert.equal(bojler.note, 'zo slnka');
+    assert.match(auto.note, /km zo slnka$/);
+    assert.equal(drobne.value, 'kedykoľvek');
+    assert.equal(drobne.sheet?.lead, MOZEM_GROUP_ALWAYS);
+    assert.equal(m.items[6].text, 'Ohrev trvá asi hodinu, takto dobehne celý na slnku.');
+});
+
+test('skupiny: bežiaca vec - pri jednej veci je odpoveďou, pri skupine ju vymenuje riadok pod ňou', () => {
+    const launches = [
+        { d: '2026-09-05', id: 'susicka', m: 12 * 60 + 30, sun: true },
+        { d: '2026-09-05', id: 'bojler', m: 12 * 60 + 30, sun: true },
+    ];
+    const m = mozemSkyModel(input(FIXED_NOW), { launches });
+    const velke = m.groups[0];
+    assert.equal(velke.tone, 'go');
+    assert.equal(velke.note, 'Sušička beží do 14:00');
+    const bojler = m.groups.find((g) => g.id === 'bojler');
+    assert.equal(bojler?.value, 'beží do 13:30');
+    assert.equal(bojler?.tone, 'run');
+    assert.equal(bojler?.note, '');
+});
+
+test('skupiny: veci skupiny odpovedajú rôzne - dlaždica ukáže najlepšiu, ostatné vymenuje', () => {
+    // Slabý deň: práčka sa odporúča, sušička a umývačka nie.
+    const i = input(FIXED_NOW);
+    const forecast = i.forecast && {
+        ...i.forecast,
+        days: i.forecast.days.map((d, n) => (n === 0 ? { ...d, peakKw: 0.1 } : d)),
+    };
+    const m = mozemSkyModel({ ...i, forecast });
+    const velke = m.groups[0];
+    assert.equal(velke.tone, 'go', 'práčka ide');
+    assert.equal(velke.note, 'Umývačka zajtra 08:00 · Sušička zajtra 08:00');
 });

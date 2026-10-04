@@ -6,6 +6,7 @@ import { wordSize } from '../../obloha/web/render/mozem.js';
 import {
     LAUNCH_STORAGE_KEY,
     LOOK_STORAGE_KEY,
+    MOZEM_GROUPS,
     PANELS,
     PLANT,
     SETTINGS_STORAGE_KEY,
@@ -456,7 +457,7 @@ const modelKarty = (time, extra = {}, opts = {}) =>
         opts,
     );
 
-/** Čo karta ukazuje: slovo, veta, štítky, fakt, nadpis zoznamu, krátke odpovede a hláška. @param {import('@playwright/test').Page} page */
+/** Čo karta ukazuje: slovo, veta, štítky, fakt, nadpis dlaždíc, odpovede dlaždíc a hláška. @param {import('@playwright/test').Page} page */
 const kartaVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
@@ -467,7 +468,8 @@ const kartaVStranke = (page) =>
             chips: all('#mz-chips .chip'),
             phones: text('#mz-phones-text'),
             title: text('#mz-list-title'),
-            shorts: all('#mz-items .app b'),
+            shorts: all('#mz-items .tile b'),
+            notes: all('#mz-items .tile small'),
             quip: text('#mz-quip-text'),
         };
     });
@@ -479,7 +481,8 @@ const kartaZModelu = (m) => ({
     chips: m.chips.map((c) => c.text),
     phones: m.phones,
     title: m.list?.title ?? '',
-    shorts: m.list ? m.items.map((it) => it.short) : [],
+    shorts: m.list ? m.groups.map((g) => g.value) : [],
+    notes: m.list ? m.groups.map((g) => g.note).filter(Boolean) : [],
     quip: m.quip,
 });
 
@@ -504,7 +507,7 @@ test.describe('karta Môžem?', () => {
             const errors = await openObloha(page, { time: at(hm) });
             const m = modelKarty(at(hm));
             await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
-            await expect(page.locator('#mz-items .app')).toHaveCount(6);
+            await expect(page.locator('#mz-items .tile')).toHaveCount(MOZEM_GROUPS.length);
             await expect(page.locator('#mz-retry')).toBeHidden();
             await expect(page.locator('#mz-guess')).toBeHidden();
             // Zelený úsek oblúka je dnešné okno so slnkom; v noci je na oblúku mesiac.
@@ -515,11 +518,11 @@ test.describe('karta Môžem?', () => {
     }
 
     for (const width of [390, 320]) {
-        test(`šírka ${width} px: 6 riadkov aspoň 44 px, nič sa neoreže, žiadne veľké slovo nepretečie`, async ({ page }) => {
+        test(`šírka ${width} px: dlaždice aspoň 44 px, nič sa neoreže, žiadne veľké slovo nepretečie`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
-            await expect(page.locator('#mz-items .app')).toHaveCount(6);
-            const riadky = await page.locator('#mz-items .app').evaluateAll((rows) =>
+            await expect(page.locator('#mz-items .tile')).toHaveCount(MOZEM_GROUPS.length);
+            const riadky = await page.locator('#mz-items .tile').evaluateAll((rows) =>
                 rows.map((row) => {
                     const box = row.getBoundingClientRect();
                     const parts = [...row.children].map((c) => c.getBoundingClientRect());
@@ -567,11 +570,11 @@ test.describe('karta Môžem?', () => {
         });
     }
 
-    test('ťuknutie na vec otvorí panel; Escape, Späť aj krížik ho zavrú a fokus sa vráti na riadok', async ({ page }) => {
+    test('ťuknutie na dlaždicu jednej veci otvorí jej panel; Escape, Späť aj krížik ho zavrú a fokus sa vráti', async ({ page }) => {
         const errors = await openObloha(page);
-        const pr = modelKarty(FIXED_NOW).items.find((it) => it.id === 'pracka');
-        if (!pr) throw new Error('práčka v modeli chýba');
-        const riadok = page.locator('[data-item="pracka"]');
+        const pr = modelKarty(FIXED_NOW).items.find((it) => it.id === 'bojler');
+        if (!pr) throw new Error('bojler v modeli chýba');
+        const riadok = page.locator('[data-item="bojler"]');
         const panel = page.getByRole('dialog', { name: pr.title });
 
         await riadok.click();
@@ -581,6 +584,7 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('#mz-sheet-more-q')).toHaveText(pr.more?.q ?? '');
         await expect(page.locator('#mz-sheet-more')).toHaveText(pr.more?.a ?? '');
         await expect(page.locator('#mz-sheet-log')).toHaveText(pr.log?.label ?? '');
+        await expect(page.locator('#mz-sheet-rows')).toBeHidden();
         await page.keyboard.press('Escape');
         await expect(panel).toBeHidden();
         await expect(riadok).toBeFocused();
@@ -604,15 +608,25 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('Pustil/a som: zapíše spustenie, riadok beží, druhé ťuknutie ho zruší', async ({ page }) => {
+    test('panel skupiny: veci s vlastným časom, Pustil/a som zapíše, dlaždica ukáže beh, druhé ťuknutie ho zruší', async ({ page }) => {
         const errors = await openObloha(page);
-        const riadok = page.locator('[data-item="pracka"]');
-        await riadok.click();
-        const log = page.locator('#mz-sheet-log');
+        const sheet = modelKarty(FIXED_NOW).groups[0].sheet;
+        if (!sheet) throw new Error('veľké spotrebiče nemajú panel');
+        const dlazdica = page.locator('[data-item="velke"]');
+        await dlazdica.click();
+        await expect(page.getByRole('dialog', { name: sheet.title })).toBeVisible();
+        await expect(page.locator('#mz-sheet-lead')).toHaveText(sheet.lead);
+        await expect(page.locator('#mz-sheet-rows h3')).toHaveText(['Práčka', 'Umývačka', 'Sušička']);
+        await expect(page.locator('#mz-sheet-rows .row-t')).toHaveText(sheet.rows.map((r) => r.short));
+        await expect(page.locator('#mz-sheet-do')).toBeHidden();
+        await expect(page.locator('#mz-sheet-log')).toBeHidden();
+        const log = page.locator('#mz-sheet-rows [data-log="pracka"]');
         await expect(log).toHaveText('Pustil/a som');
         await log.click();
         await expect(log).toHaveText('Beží do 15:00 · zrušiť');
-        await expect(riadok.locator('b')).toHaveText('beží do 15:00');
+        await expect(log).toBeFocused();
+        await expect(page.locator('#mz-sheet-rows .row-t').first()).toHaveText('beží do 15:00');
+        await expect(dlazdica.locator('small')).toHaveText('Práčka beží do 15:00');
         await expect(page.locator('#mz-count')).toHaveText('Tento mesiac si pustil/a 1× niečo, z toho 1× na slnku.');
         // Ten istý kľúč a formát ako v súčasnej appke.
         expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), LAUNCH_STORAGE_KEY)).toEqual([
@@ -620,7 +634,15 @@ test.describe('karta Môžem?', () => {
         ]);
         await log.click();
         await expect(log).toHaveText('Pustil/a som');
+        await expect(dlazdica.locator('small')).toHaveCount(0);
         await expect(page.locator('#mz-count')).toBeHidden();
+        // Zatvorenie panelu skupiny je krok späť v histórii a fokus sa vráti na dlaždicu.
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#mz-sheet')).toBeHidden();
+        await expect(dlazdica).toBeFocused();
+        expect(await page.evaluate(() => history.state)).toEqual({
+            step: { panel: 'mozem', item: null, preview: null, detail: null, poster: null, setup: null, roof: 0, sheet: null },
+        });
         expect(await page.evaluate((key) => localStorage.getItem(key), LAUNCH_STORAGE_KEY)).toBe('[]');
         expect(errors).toEqual([]);
     });
@@ -637,10 +659,11 @@ test.describe('karta Môžem?', () => {
 
         await page.goto('/obloha/');
         await appReady(page);
-        await expect(page.locator('[data-item="susicka"] b')).toHaveText('beží do 14:30');
-        await page.locator('[data-item="pracka"]').click();
-        await page.locator('#mz-sheet-log').click();
-        await expect(page.locator('[data-item="pracka"] b')).toHaveText('beží do 15:00');
+        const velke = page.locator('[data-item="velke"] small');
+        await expect(velke).toHaveText('Sušička beží do 14:30');
+        await page.locator('[data-item="velke"]').click();
+        await page.locator('[data-log="pracka"]').click();
+        await expect(velke).toHaveText('Práčka beží do 15:00 · Sušička beží do 14:30');
 
         await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
@@ -663,8 +686,9 @@ test.describe('karta Môžem?', () => {
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW, { pv: null, forecast: null })));
         await expect(page.locator('#mz-word')).toHaveText(MOZEM_WORDS.offline);
         await expect(page.locator('#mz-lead')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
-        await expect(page.locator('#mz-list-title')).toHaveText('Čo môžem · ? zo 6 ide hneď');
-        await expect(page.locator('[data-item="pracka"] b')).toHaveText('neviem');
+        await expect(page.locator('#mz-list-title')).toHaveText('Čo môžem');
+        await expect(page.locator('[data-item="velke"] b')).toHaveText('neviem');
+        await expect(page.locator('[data-item="drobne"] b')).toHaveText('kedykoľvek');
         await expect(page.locator('#mz-phones')).toBeHidden();
         const znova = page.getByRole('button', { name: 'Skúsiť znova' });
         await expect(znova).toBeVisible();
@@ -739,6 +763,13 @@ test.describe('karta Môžem?', () => {
         expect(await vazneNalezy(page)).toEqual([]);
     });
 
+    test('prístupnosť: žiadne závažné nálezy axe s otvoreným panelom skupiny', async ({ page }) => {
+        await openObloha(page);
+        await page.locator('[data-item="velke"]').click();
+        await expect(page.locator('#mz-sheet-rows')).toBeVisible();
+        expect(await vazneNalezy(page)).toEqual([]);
+    });
+
     test('prístupnosť: bez polohy žiadne závažné nálezy axe', async ({ page }) => {
         await openObloha(page, { settings: null });
         expect(await vazneNalezy(page)).toEqual([]);
@@ -748,7 +779,7 @@ test.describe('karta Môžem?', () => {
 test.describe('karta Môžem? prstom', () => {
     test.use({ hasTouch: true });
 
-    test('ťuknutie prstom na riadok otvorí panel, zvislý ťah cez zoznam posunie stránku bez panelu', async ({ page }) => {
+    test('ťuknutie prstom na dlaždicu otvorí panel, zvislý ťah cez dlaždice posunie stránku bez panelu', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         const errors = await openObloha(page);
         const zoznam = await page.locator('#mz-items').boundingBox();
@@ -759,11 +790,11 @@ test.describe('karta Môžem? prstom', () => {
         await expect(page.locator('#mz-sheet')).toBeHidden();
         await ocakavajKartu(page, 'mozem');
 
-        const riadok = await page.locator('[data-item="umyvacka"]').boundingBox();
-        if (!riadok) throw new Error('riadok nie je vidno');
+        const riadok = await page.locator('[data-item="velke"]').boundingBox();
+        if (!riadok) throw new Error('dlaždicu nie je vidno');
         await prst(page, { x: riadok.x + 40, y: riadok.y + riadok.height / 2 });
         await expect(page.locator('#mz-sheet')).toBeVisible();
-        await expect(page.locator('#mz-sheet-title')).toHaveText(/^Umývačka: /);
+        await expect(page.locator('#mz-sheet-title')).toHaveText(/^Veľké spotrebiče: /);
         expect(errors).toEqual([]);
     });
 });

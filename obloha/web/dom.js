@@ -46,6 +46,8 @@ function mozemDom() {
         mzSheet: /** @type {HTMLDialogElement} */ (byId('mz-sheet')),
         mzSheetX: byId('mz-sheet-x'),
         mzSheetTitle: byId('mz-sheet-title'),
+        mzSheetLead: byId('mz-sheet-lead'),
+        mzSheetRows: byId('mz-sheet-rows'),
         mzSheetDoQ: byId('mz-sheet-do-q'),
         mzSheetDo: byId('mz-sheet-do'),
         mzSheetWhyQ: byId('mz-sheet-why-q'),

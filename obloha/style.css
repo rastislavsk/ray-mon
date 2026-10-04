@@ -412,69 +412,213 @@ button:focus-visible {
     color: var(--dim);
 }
 /* Odpoveď z typickej strechy priznáva odhad aj písmom. */
-.glass.est .apps {
+.tiles-box.est .tiles {
     font-style: italic;
 }
 .count {
     font-size: 0.875rem;
 }
-.apps {
+
+/* Dlaždice vecí v skupinách: tmavé sklo ako .glass, aby biely text bol čitateľný na každej
+   oblohe. Široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. */
+.tiles-box {
     display: grid;
-}
-.app {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     gap: 8px;
-    width: 100%;
+    margin: 12px 14px 0;
+}
+/* Nadpis stojí priamo na oblohe, nie na skle - preto biely, ako každý text na oblohe. */
+.tiles-box .glass-ttl {
+    margin: 0 4px;
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.tiles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+}
+.tile {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    min-width: 0;
     min-height: 44px;
-    padding: 8px 2px;
-    border: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    background: transparent;
-    font-size: 0.9375rem;
-    font-weight: 500;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     font-style: inherit;
     text-align: left;
     cursor: pointer;
 }
-.app:last-child {
-    border-bottom: 0;
+.tile[data-size='wide'],
+.tile[data-size='slim'] {
+    grid-column: 1 / -1;
 }
-.app b {
-    display: inline-flex;
-    gap: 6px;
+.tile-hd {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    font-size: 0.8438rem;
-    font-weight: 700;
-    text-align: right;
+    gap: 4px 6px;
 }
-.app b::before {
+.tile svg.ic {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.tile-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.tile b {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: 1.375rem;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 110;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+.tile[data-size='wide'] b {
+    font-size: 1.75rem;
+}
+.tile b::before {
     content: '';
     flex: none;
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.45);
 }
-.app b[data-tone='go'] {
+.tile small {
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+/* Tenký pás: ikony, meno a odpoveď v jednom riadku. */
+.tile[data-size='slim'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 10px 14px;
+}
+.tile[data-size='slim'] .tile-name {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #fff;
+}
+.tile[data-size='slim'] b {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+.tile[data-size='slim'] b::before {
+    width: 8px;
+    height: 8px;
+}
+/* Farba odpovede: tie isté významy ako všade - zelená slnko, modrá lacná sieť. */
+.tile[data-tone='go'] > b,
+.row-t[data-tone='go'] {
     color: var(--yes);
 }
-.app b[data-tone='go']::before {
+.tile[data-tone='go'] > b::before {
     background: var(--yes);
 }
-.app b[data-tone='cheap'] {
+.tile[data-tone='cheap'] > b,
+.row-t[data-tone='cheap'] {
     color: var(--cheap-text);
 }
-.app b[data-tone='cheap']::before {
+.tile[data-tone='cheap'] > b::before {
     background: var(--cheap);
 }
-.app b[data-tone='run']::before {
+.tile[data-tone='run'] > b::before {
     background: #fff;
 }
-.app b[data-tone='no'],
-.app b[data-tone='unk'] {
+.tile[data-tone='no'] > b,
+.tile[data-tone='unk'] > b,
+.row-t[data-tone='no'],
+.row-t[data-tone='unk'] {
     color: var(--dim);
+}
+/* Pás dňa: okno slnka, jeho uplynulá časť stlmená, biela čiarka je teraz. */
+.tile-bar {
+    position: relative;
+    height: 8px;
+    margin-top: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+}
+.tile-bar i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px;
+    background: var(--yes);
+}
+.tile-bar i.past {
+    opacity: 0.35;
+}
+.tile-bar span {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.5);
+}
+.tile-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+
+/* Panel skupiny: veci pod sebou, každá s časom a zápisom „Pustil/a som“. */
+.sheet-rows {
+    display: grid;
+}
+/* Meno a čas v riadku, keď sa zmestia; pri veľkom písme sa čas zalomí pod meno. */
+.sheet-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    align-items: baseline;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.sheet-row h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+}
+.sheet-row .row-t {
+    font-size: 1rem;
+    font-weight: 800;
+}
+.sheet-row p {
+    flex-basis: 100%;
+    color: var(--dim);
+}
+.sheet .sheet-row .pbtn {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.875rem;
 }
 
 .quote {
@@ -1253,12 +1397,15 @@ button:focus-visible {
 .sheet-in {
     position: relative;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     padding: 18px 18px max(22px, env(safe-area-inset-bottom));
 }
+/* Dlhé slovo (Veľké spotrebiče pri veľkom písme) sa radšej zalomí, než by vytŕčalo z okna. */
 .sheet h2 {
     margin: 0;
     padding-right: 48px;
+    overflow-wrap: break-word;
     font-size: 1.5rem;
     font-weight: 900;
     font-variation-settings: 'wdth' 115;
