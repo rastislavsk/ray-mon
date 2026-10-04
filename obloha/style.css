@@ -781,17 +781,19 @@ button:focus-visible {
     stroke: #fff;
     stroke-width: 2;
 }
-/* Štítok náhľadu nad grafom: šírku z počtu znakov a polohu dáva render. */
-.dc-pill-t {
-    top: 0;
-    height: 24px;
-    border-radius: 12px;
-    background: #fff;
-    color: var(--ink);
+/* Čas náhľadu: popisok na vrchu čiary bez pozadia, v reči ostatných popiskov grafu - len biely
+   a tučný. Spodkom tesne nad čiarou, vystredený na nej; polohu dáva render. */
+.dc-at-t {
+    color: #fff;
     font-size: 15px;
-    font-weight: 700;
-    line-height: 24px;
-    text-align: center;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    transform: translate(-50%, calc(-100% - 2px));
+}
+/* Bunka pásu pod čiarou náhľadu: väčšia a s okrajom, jej farba povie, čo vtedy platí. */
+.dc-cell-on {
+    stroke: #fff;
+    stroke-width: 1.5;
 }
 /* Farby pásu plánu aj legendy pod ním: tie isté tri významy ako všade v appke. */
 .dc [data-tone='plain'] {

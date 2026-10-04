@@ -865,14 +865,12 @@ export function terazTypicalText(kwp, voice = 'drzy') {
     return `typická strecha ${kwpRoughText(kwp)} v tvojej obci, nie tvoja`;
 }
 
-/** Nápis pod grafom počas náhľadu. @param {number} min */
-export function terazPreviewText(min) {
-    return `Pozeráš ${hm(min)}.`;
-}
-
-/** Štítok nad grafom počas náhľadu: čas, výkon a čo vtedy platí. @param {number} min @param {number} kw @param {import('./day-chart.js').Tone} tone */
-export function terazPillText(min, kw, tone) {
-    return `${hm(min)} · ${fmt1(kw)} kW · ${TERAZ_TONES[tone]}`;
+/**
+ * Popisok čiary náhľadu v grafe: len čas. Výkon ukazuje veľké číslo nad grafom a čo vtedy platí
+ * farba pásu plánu pod krivkou - v grafe by sa opakovali. @param {number} min
+ */
+export function terazPreviewTime(min) {
+    return hm(min);
 }
 
 /**

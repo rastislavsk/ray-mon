@@ -14,8 +14,7 @@ import {
     terazChartText,
     terazClearText,
     terazLaterText,
-    terazPillText,
-    terazPreviewText,
+    terazPreviewTime,
     terazSliderText,
     terazSourceText,
     terazTodayText,
@@ -71,7 +70,8 @@ export function terazModel(input, { launches = [], online = true, voice = 'drzy'
         ...headOf(input, base, hero, estimate, voice),
         guess: estimate,
         chart: chartOf(base, plan, hero, now),
-        hint: hero.preview ? { text: terazPreviewText(hero.minutes), reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
+        // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
+        hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
         cards: cardsOf(base, plan, hero, now, launches),
     };
 }
@@ -146,9 +146,7 @@ function chartOf(input, plan, hero, now) {
         nowKw: now.power,
         limitKw: powerThresholds(input.plant).lowKw,
         limitText: voiceTexts().TERAZ_TEXTS.limit,
-        preview: hero.preview
-            ? { min: hero.minutes, kw: hero.power, text: terazPillText(hero.minutes, hero.power, tone(hero.minutes)) }
-            : null,
+        preview: hero.preview ? { min: hero.minutes, kw: hero.power, text: terazPreviewTime(hero.minutes) } : null,
     });
     const windows = (/** @type {Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
     return {
