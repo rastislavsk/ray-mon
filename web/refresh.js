@@ -5,7 +5,7 @@
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
-import { loadData } from './data.js';
+import { keptForecast, loadData } from './data.js';
 import { saveDayLog } from './storage.js';
 
 /**
@@ -49,6 +49,12 @@ export function createRefresh(store) {
     let bezi = null;
     /** @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'kiosk'>} s */
     const obnov = async ({ site, plant, kiosk }) => {
+        // Kým sa sťahuje, appka ukáže predpoveď z počasia, ktoré už má (po otvorení z prehliadača) -
+        // inak by odpoveď čakala na sieť. Meranie z kiosku sa neodkladá, to príde až so sieťou.
+        if (!store.get().forecast) {
+            const forecast = keptForecast({ site, plant }, new Date());
+            if (forecast) store.setState({ forecast });
+        }
         const result = await loadData({ site, plant, kiosk }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();

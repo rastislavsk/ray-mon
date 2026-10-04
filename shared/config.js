@@ -190,6 +190,9 @@ export const FORECAST_DAYS_SHOWN = 7;
 // Počasie z Open-Meteo sa sťahuje nanovo najskôr po tomto čase; predpoveď sa z neho medzitým
 // len prepočítava pre aktuálny čas. Open-Meteo ju aj tak obnovuje raz za hodinu.
 export const WEATHER_CACHE_MS = 55 * 60 * 1000;
+// Posledné počasie sa odkladá aj v prehliadači (WEATHER_STORAGE_KEY): appka z neho po otvorení hneď
+// ukáže predpoveď a nové počasie dotiahne popri tom. Staršie než toto sa nepoužije - ani pri výpadku.
+export const WEATHER_KEEP_MS = 12 * 60 * 60 * 1000;
 
 /** Vyhľadávanie miest Open-Meteo (celý svet, názvy po slovensky, kde ich poznajú). @param {string} query */
 export function geocodeUrl(query) {
@@ -413,6 +416,12 @@ export const VOICES = /** @type {const} */ (['drzy', 'slusny']);
 export const LOOK_STORAGE_KEY = 'vzhlad-v1';
 
 /**
+ * Posledné počasie z Open-Meteo, spoločné pre obe appky (WEATHER_KEEP_MS). Formát: { url, at, json },
+ * `url` je adresa, z ktorej prišlo (určuje lokalitu), `at` čas stiahnutia v ms.
+ */
+export const WEATHER_STORAGE_KEY = 'pocasie-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -423,6 +432,7 @@ export const STORAGE_KEYS = [
     LAUNCH_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
+    WEATHER_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

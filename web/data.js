@@ -2,10 +2,11 @@
 // z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal; bez kiosku
 // meranie nie je. Neplatné dáta sa správajú ako chýbajúce.
 
-import { geocodeUrl, openMeteoUrl, TIMEOUT, WEATHER_CACHE_MS, WORKER_PV_URL } from '../shared/config.js';
+import { geocodeUrl, openMeteoUrl, TIMEOUT, WEATHER_CACHE_MS, WEATHER_KEEP_MS, WORKER_PV_URL } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
+import { loadStoredWeather, saveStoredWeather } from './storage.js';
 
 /** @typedef {import('../shared/settings.js').Settings} Settings */
 /**
@@ -43,22 +44,36 @@ async function loadKioskPv(kiosk, fetchImpl) {
 }
 
 // Posledné stiahnuté počasie. Predpoveď sa z neho prepočítava pri každej obnove (mení sa „teraz“),
-// nové sa sťahuje až po WEATHER_CACHE_MS alebo pre inú lokalitu. Pri výpadku ostáva staré.
-/** @type {{ url: string, at: number, json: unknown } | null} */
-let weather = null;
+// nové sa sťahuje až po WEATHER_CACHE_MS alebo pre inú lokalitu. Pri výpadku ostáva staré. Odkladá
+// sa aj v prehliadači, takže appka po otvorení nezačína od nuly; staršie než WEATHER_KEEP_MS sa
+// nepoužije vôbec - ani pri výpadku by sa už nemalo tváriť ako predpoveď.
+/** @type {import('../shared/schema.js').StoredWeather | null | undefined} undefined = z prehliadača ešte nečítané */
+let weather;
+
+/**
+ * Počasie z tejto adresy, ak nie je staršie než WEATHER_KEEP_MS. Prvý raz ho vezme z prehliadača.
+ * Záporný vek znamená, že sa hodiny telefónu posunuli dozadu - také sa nepoužije.
+ * @param {string} url @param {Date} now
+ */
+function keptWeather(url, now) {
+    if (weather === undefined) weather = loadStoredWeather();
+    if (!weather || weather.url !== url) return null;
+    const age = now.getTime() - weather.at;
+    return age >= 0 && age < WEATHER_KEEP_MS ? weather : null;
+}
 
 /** @param {import('../shared/config.js').Site} site @param {Date} now @param {typeof fetch} fetchImpl */
 async function loadWeather(site, now, fetchImpl) {
     const url = openMeteoUrl(site);
-    const cached = weather && weather.url === url ? weather : null;
-    // Záporný vek znamená, že sa hodiny telefónu posunuli dozadu - vtedy sa stiahne nanovo.
-    const age = cached ? now.getTime() - cached.at : Infinity;
-    if (cached && age >= 0 && age < WEATHER_CACHE_MS) return cached.json;
+    const kept = keptWeather(url, now);
+    if (kept && now.getTime() - kept.at < WEATHER_CACHE_MS) return kept.json;
     try {
-        weather = { url, at: now.getTime(), json: await getJson(url, fetchImpl) };
-        return weather.json;
+        const json = await getJson(url, fetchImpl);
+        weather = { url, at: now.getTime(), json };
+        saveStoredWeather(weather);
+        return json;
     } catch (err) {
-        if (cached) return cached.json;
+        if (kept) return kept.json;
         throw err;
     }
 }
@@ -86,6 +101,18 @@ export async function loadData(settings, now, fetchImpl = fetch) {
     const pv = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
     return { pv, pvFailed: pvRes.status === 'rejected', forecast };
+}
+
+/**
+ * Predpoveď z počasia, ktoré už appka má (aj odložené v prehliadači), bez siete. Appka ju ukáže
+ * hneď po otvorení, kým loadData stiahne čerstvé dáta. null, keď pre lokalitu nič nemá alebo je
+ * staršie než WEATHER_KEEP_MS.
+ * @param {Pick<Settings, 'site' | 'plant'>} settings @param {Date} now
+ * @returns {import('../shared/solar.js').Forecast | null}
+ */
+export function keptForecast(settings, now) {
+    const kept = keptWeather(openMeteoUrl(settings.site), now);
+    return kept ? forecastFrom(kept.json, now, settings) : null;
 }
 
 /**

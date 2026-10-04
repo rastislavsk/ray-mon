@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateForecast, validatePv } from '../shared/schema.js';
+import { parseStoredWeather, validateForecast, validatePv } from '../shared/schema.js';
 import { fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -18,4 +18,12 @@ test('validátor odhalí chýbajúce a zle typované polia', () => {
     assert.ok(validateForecast({ ...forecast, days: 'x' }).some((e) => e.includes('days')));
     assert.ok(validateForecast({ ...forecast, days: [{ ...forecast.days[0], date: '5.9.' }] }).some((e) => e.includes('date')));
     assert.ok(validateForecast({ ...forecast, tomorrowSunny: 'yes' }).some((e) => e.includes('tomorrowSunny')));
+});
+
+test('parseStoredWeather: odložené počasie s adresou, časom a dátami, inak null', () => {
+    const ok = { url: 'https://api.open-meteo.com/v1/forecast?x', at: 1, json: { hourly: {} } };
+    assert.deepEqual(parseStoredWeather(ok), ok);
+    for (const bad of [null, 'x', { ...ok, url: 1 }, { ...ok, at: 'x' }, { ...ok, at: NaN }, { ...ok, json: null }, { ...ok, json: 'x' }]) {
+        assert.equal(parseStoredWeather(bad), null, JSON.stringify(bad));
+    }
 });
