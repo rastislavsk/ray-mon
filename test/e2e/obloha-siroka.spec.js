@@ -505,13 +505,14 @@ test.describe('klávesnica na počítači', () => {
     });
 });
 
-// Graf dňa (krok 8, úloha z kontroly): popisky - hodiny, nápis hranice veľkých spotrebičov a štítok
+// Graf dňa (krok 8, úloha z kontroly): popisky - hodiny, nápis hranice veľkých spotrebičov a čas
 // náhľadu - majú na každej šírke tú istú vykreslenú veľkosť ako na telefóne, graf sa zväčšuje sám.
-// Nápis hranice neprekrýva krivky ani značku „teraz“ v žiadnom čase (polohu počíta shared/day-chart.js).
+// Nápis hranice neprekrýva krivky, značku „teraz“ ani čiaru náhľadu s časom v žiadnom čase (polohu
+// počíta shared/day-chart.js).
 
 /**
- * Vykreslené popisky grafu a čo nápis hranice prekrýva: body kriviek (predpoveď, nameraná) a
- * značku „teraz“ v jeho obdĺžniku.
+ * Vykreslené popisky grafu a čo nápis hranice prekrýva: body kriviek (predpoveď, nameraná),
+ * značku „teraz“, čiaru náhľadu a čas nad ňou v jeho obdĺžniku.
  * @param {import('@playwright/test').Page} page @param {string} sel graf (#tz-chart, #sd-day-chart)
  */
 const popiskyGrafu = (page, sel) =>
@@ -529,8 +530,13 @@ const popiskyGrafu = (page, sel) =>
             for (let i = 0; i <= len; i += 0.5)
                 if (inside(curve.getPointAtLength(i).matrixTransform(ctm))) hits.push(curve.getAttribute('class') ?? '');
         }
-        const now = chart.querySelector('.dc-now')?.getBoundingClientRect();
-        if (now && now.right >= lim.left && now.left <= lim.right) hits.push('teraz');
+        const across = (/** @type {string} */ s) => {
+            const r = chart.querySelector(s)?.getBoundingClientRect();
+            return !!r && r.right >= lim.left && r.left <= lim.right && r.bottom >= lim.top && r.top <= lim.bottom;
+        };
+        if (across('.dc-now')) hits.push('teraz');
+        if (across('.dc-prev')) hits.push('náhľad');
+        if (across('.dc-at-t')) hits.push('čas náhľadu');
         const px = (/** @type {string} */ s) => [...chart.querySelectorAll(s)].map((e) => e.getBoundingClientRect().height);
         return {
             ticks: px('.dc-t'),
@@ -591,5 +597,28 @@ test.describe('graf dňa na každej šírke', () => {
                 expect(errors).toEqual([]);
             }
             expect(zle).toEqual([]);
+        });
+
+    for (const size of SIRKY)
+        test(`šírka ${size.width} px: nápis „veľké spotrebiče“ neprekrýva čiaru náhľadu ani čas nad ňou v žiadnom čase dňa`, async ({
+            page,
+        }) => {
+            test.slow();
+            const errors = await openObloha(page, size, { time: at('13:00') });
+            if (size === TELEFON || size === TABLET_VYSKA) await page.locator('#nav-terazky').click();
+            const graf = page.locator('#tz-chart');
+            await graf.focus();
+            await page.keyboard.press('Home');
+            /** @type {string[]} */
+            const zle = [];
+            // Po polhodinách celý deň: šípka posúva náhľad o štvrťhodinu.
+            for (let i = 0; i < 48; i++) {
+                const cas = (await page.locator('#tz-chart .dc-at-t').textContent()) ?? '';
+                for (const h of (await popiskyGrafu(page, '#tz-chart')).hits) zle.push(`náhľad ${cas}: ${h}`);
+                await page.keyboard.press('ArrowRight');
+                await page.keyboard.press('ArrowRight');
+            }
+            expect(zle).toEqual([]);
+            expect(errors).toEqual([]);
         });
 });

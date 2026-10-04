@@ -40,8 +40,11 @@ export const DAY_CHART_LABELS = {
     wideScale: 1.4,
 };
 
-/** Polomer, v ktorom nápis nesmie zasiahnuť značku „teraz“ (čiara a bodka s polomerom 5). */
-const NOW_R = 6;
+/**
+ * Polomer, v ktorom nápis nesmie zasiahnuť zvislú čiaru „teraz“ či náhľadu (čiara a bodka
+ * s polomerom 5, pri náhľade 6 s okrajom).
+ */
+const MARK_R = 7;
 
 /** Rezerva okolo krivky (hrúbka čiary). */
 const LINE_PAD = 1.5;
@@ -140,8 +143,8 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
         real: curve.length ? path(curve) : '',
         limitY: y(limitKw),
         limitText,
-        // Nápis hranice nesmie prekryť krivky ani značku „teraz“.
-        limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], nowMin === null ? null : x(nowMin)),
+        // Nápis hranice nesmie prekryť krivky ani zvislé čiary „teraz“ a náhľadu.
+        limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], marksOf(nowMin, preview)),
         cells,
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
         now: nowMin === null ? null : at(nowMin, nowKw),
@@ -151,11 +154,23 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
 }
 
 /**
- * Poloha nápisu hranice na úzkom grafe (telefón) a na širokom (od DAY_CHART_LABELS.wideScale).
- * @param {number} limitY @param {string} text @param {Pt[][]} lines @param {number | null} nowX
+ * Zvislé čiary, ktorým sa nápis hranice vyhne: „teraz“ a náhľad s časom nad ním.
+ * @param {number | null} nowMin @param {{ min: number, text: string } | null} preview @returns {Mark[]}
  */
-function limitPlaces(limitY, text, lines, nowX) {
-    return { narrow: limitSpot(limitY, text, lines, nowX), wide: limitSpot(limitY, text, lines, nowX, DAY_CHART_LABELS.wideScale) };
+function marksOf(nowMin, preview) {
+    /** @type {Mark[]} */
+    const marks = [];
+    if (nowMin !== null) marks.push({ x: r1(chartX(nowMin)), halfPx: 0 });
+    if (preview) marks.push({ x: r1(chartX(preview.min)), halfPx: labelOf(preview.text).w / 2 });
+    return marks;
+}
+
+/**
+ * Poloha nápisu hranice na úzkom grafe (telefón) a na širokom (od DAY_CHART_LABELS.wideScale).
+ * @param {number} limitY @param {string} text @param {Pt[][]} lines @param {Mark[]} marks
+ */
+function limitPlaces(limitY, text, lines, marks) {
+    return { narrow: limitSpot(limitY, text, lines, marks), wide: limitSpot(limitY, text, lines, marks, DAY_CHART_LABELS.wideScale) };
 }
 
 /**
@@ -169,6 +184,11 @@ function labelOf(text) {
 }
 
 /** @typedef {{ x: number, y: number }} Pt bod v jednotkách grafu */
+/**
+ * Zvislá čiara v grafe: `x` v jednotkách grafu, `halfPx` polovica šírky toho, čo na nej v px stojí
+ * (čas náhľadu; pri „teraz“ 0 - stačí rezerva na čiaru a bodku).
+ * @typedef {{ x: number, halfPx: number }} Mark
+ */
 /** @typedef {{ x0: number, x1: number, y0: number, y1: number }} Box obdĺžnik v jednotkách grafu (y rastie nadol) */
 /**
  * Kde nápis stojí: `x` bod, ku ktorému je zarovnaný koncom (`end`) alebo začiatkom, a `y` jeho
@@ -235,18 +255,24 @@ function limitAnchors() {
 
 /**
  * Kde stojí nápis hranice veľkých spotrebičov. Na žiadnom grafe s mierkou aspoň `scale` nesmie
- * prekryť krivku predpovede, nameranú krivku ani značku „teraz“ a musí ostať v grafe. Skúša sa: tesne nad čiarou
- * na konci, na začiatku; potom na konci a na začiatku nad krivkou (nápis sa zdvihne na voľné miesto
- * nad ňou); potom to isté po krokoch pozdĺž čiary. Keď nič z toho nejde, ostane nad čiarou na konci.
+ * prekryť krivku predpovede, nameranú krivku ani zvislé čiary („teraz“, náhľad) a musí ostať v grafe.
+ * Skúša sa: tesne nad čiarou na konci, na začiatku; potom na konci a na začiatku nad krivkou (nápis sa
+ * zdvihne na voľné miesto nad ňou); potom to isté po krokoch pozdĺž čiary. Keď nič z toho nejde,
+ * ostane nad čiarou na konci. Zvislá čiara ide cez celý graf aj s časom náhľadu nad ňou, takže
+ * stačí, že je mimo nápisu vodorovne.
  * @param {number} limitY @param {string} text @param {Pt[][]} lines krivky v grafe
- * @param {number | null} nowX značka „teraz“ (null = nie je)
+ * @param {Mark[]} marks zvislé čiary „teraz“ a náhľadu (tie, ktoré v grafe sú)
  * @param {number} [scale] najmenšia mierka grafu, pre ktorú poloha platí (px na jednotku) @returns {Spot}
  */
-export function limitSpot(limitY, text, lines, nowX, scale = DAY_CHART_LABELS.minScale) {
+export function limitSpot(limitY, text, lines, marks, scale = DAY_CHART_LABELS.minScale) {
     const free = (/** @type {Spot} */ spot) => {
         const b = limitBox(text, spot, scale);
         if (b.y0 < 0) return false;
-        if (nowX !== null && nowX + NOW_R >= b.x0 && nowX - NOW_R <= b.x1) return false;
+        const hit = (/** @type {Mark} */ m) => {
+            const r = Math.max(MARK_R, m.halfPx / scale + LINE_PAD);
+            return m.x + r >= b.x0 && m.x - r <= b.x1;
+        };
+        if (marks.some(hit)) return false;
         return !lines.some((line) => boxHitsLine(b, line));
     };
     /** Nad krivkou: spodok nápisu tesne nad jej najvyšším bodom pod ním (no nie pod čiarou). @param {{ x: number, end: boolean }} a */
