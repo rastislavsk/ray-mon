@@ -264,8 +264,9 @@ sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý gra
 (`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Krivky sú v SVG,
 ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, čas náhľadu) sú
 HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerastú. Nápis hranice kladie
-`limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky ani značku „teraz“:
-tesne nad čiaru na konci alebo na začiatku, inak nad krivku. Polohy sú dve – pre úzky graf a pre
+`limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky ani zvislé čiary
+„teraz“ a náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad
+krivku. Keď prst pri náhľade prejde ponad nápis, nápis preskočí na voľné miesto. Polohy sú dve – pre úzky graf a pre
 graf široký aspoň 448 px – a vyberá ich container query v `style.css`. Detail je krok
 navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu, posun
 prehľadu aj fokus na riadok si pamätá render. Listovanie dní v detaile nový krok nepridá; ťah
