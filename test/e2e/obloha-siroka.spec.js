@@ -179,7 +179,7 @@ async function expectTextyKariet(page) {
     const mozem = mozemSkyModel(v);
     await expect(page.locator('#mz-word')).toHaveText(mozem.word);
     await expect(page.locator('#mz-lead')).toHaveText(mozem.lead);
-    await expect(page.locator('#mz-items .app span')).toHaveText(mozem.items.map((i) => i.name));
+    await expect(page.locator('#mz-items .tile-name')).toHaveText(mozem.groups.map((g) => g.name));
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
     await expect(page.locator('#tz-now-head')).toHaveText(teraz.cards?.now.head ?? '');
@@ -246,7 +246,7 @@ test.describe('zmena šírky okna nič nestratí', () => {
 
     test('otvorený panel veci: z panelu zospodu je dialóg v strede a naopak, ostane otvorený', async ({ page }) => {
         const errors = await openObloha(page, TELEFON);
-        await page.locator('[data-item="pracka"]').click();
+        await page.locator('[data-item="velke"]').click();
         await expect(page.locator('#mz-sheet')).toBeVisible();
         const zospodu = /** @type {{ y: number, height: number }} */ (await page.locator('#mz-sheet').boundingBox());
         expect(Math.round(zospodu.y + zospodu.height)).toBe(TELEFON.height);
@@ -316,7 +316,7 @@ test.describe('navigácia na počítači', () => {
 test.describe('dialógy na počítači', () => {
     test('panel veci je dialóg v strede; Escape aj Späť ho zavrú a fokus sa vráti na riadok', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
-        const riadok = page.locator('[data-item="pracka"]');
+        const riadok = page.locator('[data-item="velke"]');
         await riadok.click();
         await expect(page.locator('#mz-sheet')).toBeVisible();
         await vStrede(page, '#mz-sheet');

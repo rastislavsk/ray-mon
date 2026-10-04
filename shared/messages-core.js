@@ -313,8 +313,9 @@ const MOZEM_QUIPS_SLUSNE = {
 
 /**
  * Veci v karte Môžem?: meno, sloveso a zámeno do viet („Pusti ju o 10:30.“) a čo sa stane, keď
- * sa zamračí. Kľúče sú id z MOZEM_ITEMS v config.js.
- * @type {Record<string, { name: string, verb: string, pron: string, cloud: string }>}
+ * sa zamračí. Kľúče sú id z MOZEM_SKY_ITEMS v config.js. `run` začína vetu o dĺžke behu
+ * (bez neho „Program má“).
+ * @type {Record<string, { name: string, verb: string, pron: string, cloud: string, run?: string }>}
  */
 export const MOZEM_ITEM_TEXTS = {
     pracka: { name: 'Práčka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie na začiatku pri ohreve vody.' },
@@ -323,6 +324,7 @@ export const MOZEM_ITEM_TEXTS = {
     auto: { name: 'Auto', verb: 'Zapoj', pron: 'ho', cloud: 'Nabíja sa ďalej, len zo siete.' },
     hranie: { name: 'Hranie', verb: '', pron: '', cloud: '' },
     fen: { name: 'Fén', verb: '', pron: '', cloud: '' },
+    bojler: { name: 'Bojler', verb: 'Zapni', pron: 'ho', cloud: 'Vodu dohreje sieť.', run: 'Ohrev trvá asi' },
 };
 
 /** Veci, ktoré od slnka nezávisia: vždy OK, s vysvetlením. */
@@ -341,6 +343,7 @@ const MOZEM_ITEM_TEXTS_SLUSNE = {
     umyvacka: { ...MOZEM_ITEM_TEXTS.umyvacka, verb: 'Pustite' },
     susicka: { ...MOZEM_ITEM_TEXTS.susicka, verb: 'Pustite' },
     auto: { ...MOZEM_ITEM_TEXTS.auto, verb: 'Zapojte' },
+    bojler: { ...MOZEM_ITEM_TEXTS.bojler, verb: 'Zapnite' },
 };
 
 /** @type {typeof MOZEM_ALWAYS} */
@@ -561,7 +564,7 @@ function waitItem(t, start, isAuto, draha) {
     };
 }
 
-/** Rozbalenie, keď svieti. @param {{ verb: string, pron: string }} t
+/** Rozbalenie, keď svieti. @param {{ verb: string, pron: string, run?: string }} t
  * @param {{ end: number, until: number, km: number | null }} a @param {number | null} runMin @param {DayCtx} ctx */
 function goItem(t, a, runMin, ctx) {
     if (runMin === null)
@@ -574,12 +577,12 @@ function goItem(t, a, runMin, ctx) {
         return {
             short: `do ${hm(a.until)}`,
             head: `${t.verb} ${t.pron} do ${hm(a.until)}.`,
-            text: `Program má ${durationText(runMin)}, takto dobehne celý na slnku.`,
+            text: `${t.run ?? 'Program má'} ${durationText(runMin)}, takto dobehne celý na slnku.`,
         };
     return {
         short: 'teraz',
         head: `${t.verb} ${t.pron} hneď.`,
-        text: `Program má ${durationText(runMin)} a slnko vydrží do ${hm(a.end)}. Koniec pôjde zo siete.`,
+        text: `${t.run ?? 'Program má'} ${durationText(runMin)} a slnko vydrží do ${hm(a.end)}. Koniec pôjde zo siete.`,
     };
 }
 
@@ -717,15 +720,39 @@ export function mozemGuessText(kwp, voice = 'drzy') {
     return `Počasie poznám, tvoju strechu nie. Rátam s typickou strechou ${kwpRoughText(kwp)}. Zadaj panely a odpoveď bude naozaj tvoja.`;
 }
 
+/** Nadpis dlaždíc vecí; pri typickej streche priznáva odhad. @param {boolean} estimate */
+export const mozemListTitle = (estimate) => `Čo môžem${estimate ? ' · odhad' : ''}`;
+
+/** Mená skupín vecí (dlaždíc) - kľúče sú id z MOZEM_GROUPS v config.js. */
+export const MOZEM_GROUP_NAMES = {
+    velke: 'Veľké spotrebiče',
+    auto: 'Auto',
+    bojler: 'Bojler',
+    drobne: 'Hranie, fén a drobnosti',
+};
+
+/** Veta v paneli skupiny, ktorej veci od slnka nezávisia. */
+export const MOZEM_GROUP_ALWAYS = 'Berú málo alebo krátko, slnko na ne netreba.';
+
 /**
- * Nadpis zoznamu vecí: koľko ide hneď. Bez dát počet netvrdí („?“), pri typickej streche
- * priznáva odhad.
- * @param {Array<{ tone: string }>} items @param {{ unknown: boolean, estimate: boolean }} opts
+ * Krátka odpoveď dlaždice: keď svieti, koniec slnka - ten je pre všetky veci skupiny rovnaký,
+ * dokedy pustiť ktorý program, povie panel. Inak krátka odpoveď veci.
+ * @param {import('./mozem.js').Answer} a @param {string} short krátka odpoveď veci
  */
-export function mozemListTitle(items, { unknown, estimate }) {
-    const n = items.length;
-    const go = unknown ? '?' : String(items.filter((i) => i.tone === 'go').length);
-    return `Čo môžem · ${go} ${zFrom(n)} ${n} ide hneď${estimate ? ' · odhad' : ''}`;
+export function mozemTileValue(a, short) {
+    if (a.kind === 'always') return 'kedykoľvek';
+    if (a.kind === 'go') return `do ${hm(a.end)}`;
+    return short;
+}
+
+/**
+ * Riadok pod odpoveďou dlaždice s jednou vecou: odkiaľ pôjde prúd, pri aute koľko km chytí.
+ * @param {import('./mozem.js').Answer} a
+ */
+export function mozemTileNote(a) {
+    if (a.kind === 'go') return a.km ? `asi ${a.km} km zo slnka` : 'zo slnka';
+    if (a.kind === 'cheap') return 'lacná sieť';
+    return '';
 }
 
 /**

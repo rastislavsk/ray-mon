@@ -77,9 +77,10 @@
                     <p id="mz-ask-text"></p>
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
-                <section id="mz-list" class="glass" aria-labelledby="mz-list-title">
+                <!-- Veci v skupinách: jedna dlaždica, jedna odpoveď (MOZEM_GROUPS v shared/config.js). -->
+                <section id="mz-list" class="tiles-box" aria-labelledby="mz-list-title">
                     <h2 id="mz-list-title" class="glass-ttl"></h2>
-                    <div id="mz-items" class="apps"></div>
+                    <div id="mz-items" class="tiles"></div>
                 </section>
                 <p id="mz-count" class="glass count"></p>
                 <button type="button" id="mz-quip" class="quote"><q id="mz-quip-text"></q><small id="mz-quip-hint"></small></button>
@@ -672,6 +673,9 @@
             <div class="sheet-in">
                 <button type="button" id="mz-sheet-x" class="x"><span aria-hidden="true">×</span></button>
                 <h2 id="mz-sheet-title"></h2>
+                <!-- Panel skupiny: veta o slnku a veci skupiny, každá so svojím časom a zápisom. -->
+                <p id="mz-sheet-lead"></p>
+                <div id="mz-sheet-rows" class="sheet-rows"></div>
                 <h3 id="mz-sheet-do-q" class="q"></h3>
                 <p id="mz-sheet-do"></p>
                 <h3 id="mz-sheet-why-q" class="q"></h3>

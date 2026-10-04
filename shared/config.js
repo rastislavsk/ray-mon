@@ -387,6 +387,25 @@ export const MOZEM_ITEMS = [
 ];
 
 /**
+ * Veci karty Môžem? v novej appke: tie isté a navyše bojler (súčasná appka ho na karte nemá).
+ * `runMin` bojlera je typický ohrev nádrže.
+ * @type {typeof MOZEM_ITEMS}
+ */
+export const MOZEM_SKY_ITEMS = [...MOZEM_ITEMS, { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2 }];
+
+/**
+ * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
+ * (`wide` cez celú šírku s pásom dňa, `half` polovica, `slim` tenký pás). Mená sú v messages.
+ * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' | 'slim' }>}
+ */
+export const MOZEM_GROUPS = [
+    { id: 'velke', items: ['pracka', 'umyvacka', 'susicka'], size: 'wide' },
+    { id: 'auto', items: ['auto'], size: 'half' },
+    { id: 'bojler', items: ['bojler'], size: 'half' },
+    { id: 'drobne', items: ['hranie', 'fen'], size: 'slim' },
+];
+
+/**
  * „Pustil/a som“ v karte Môžem?: zápisy sa držia len v telefóne. `limit` je najviac zápisov
  * (zhruba rok bežnej rodiny), `autoRunMin` ako dlho sa auto po zapojení ráta za „nabíja sa“ -
  * program ako práčka nemá.

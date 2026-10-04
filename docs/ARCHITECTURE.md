@@ -49,7 +49,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                          |
 | `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
 | `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
-| `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, oblúk slnka, výzvy).        |
+| `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, dlaždice, oblúk, výzvy).    |
 | `teraz.js`       | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
 | `day-chart.js`   | Graf dňa novej appky (Teraz, detail dňa): geometria krivky, hranice, „teraz“, náhľadu a pás plánu po polhodinách.    |
 | `setup-flow.js`  | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
@@ -223,10 +223,18 @@ sťahujú, ukazuje čas dňa bez počasia.
 Karta Môžem? novej appky odpovedá tým istým `mozemModel` ako súčasná – slovo, veta, časy aj
 odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
-len zo živého a čerstvého merania, inak s „asi“), nadpis zoznamu, oblúk slnka (`sunArc`: skutočný
+len zo živého a čerstvého merania, inak s „asi“), dlaždice skupín vecí, oblúk slnka (`sunArc`: skutočný
 východ a západ, zelený úsek je okno z pása dneška) a vetu, prečo dáta nie sú. Pri známej polohe
 bez panelov odpovedá z typickej strechy (`mozemModel` s `guess`, predvolene vypnutým – súčasná
-appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad. Panel veci je `<dialog>` otvorený
+appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad.
+
+Veci sú v skupinách (`MOZEM_GROUPS` v `config.js`, návrh A v `docs/navrhy/mozem-skupiny.html`):
+veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Bojler má len nová appka – jej veci sú
+`MOZEM_SKY_ITEMS`, súčasná ďalej počíta s `MOZEM_ITEMS`. Dlaždica ukáže jednu odpoveď skupiny:
+najlepšiu z jej vecí, a keď svieti, koniec slnka (spoločný pre všetky), nie štart programu.
+Dokedy pustiť ktorý program, povie panel skupiny – veci pod sebou, každá so svojím časom
+a vlastným „Pustil/a som“. Veci, ktoré bežia alebo odpovedajú inak, vymenuje riadok pod
+odpoveďou dlaždice. Dlaždica s jednou vecou otvorí rovno jej panel. Panel veci či skupiny je `<dialog>` otvorený
 cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
 aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
 „Pustil/a som“ zapisuje cez `web/storage.js` do `spustenia-v1`, spustenie teda vidia obe appky.

@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem? novej appky: panel veci, „Pustil/a som“, hláška a „Skúsiť znova“.
+// Poslucháče karty Môžem? novej appky: panel veci či skupiny, „Pustil/a som“, hláška a „Skúsiť znova“.
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
 
 import { toggleLaunch } from '../../shared/launches.js';
@@ -17,13 +17,15 @@ function closeSheet(store) {
 /**
  * „Pustil/a som“: zapíše spustenie v tomto telefóne do toho istého úložiska a v tom istom
  * formáte ako súčasná appka (kým vec beží, druhé ťuknutie zápis zruší). Čas a dátum sú
- * lokality elektrárne.
- * @param {Store} store @param {boolean} sun svietilo slnko?
+ * lokality elektrárne. Tlačidlo nesie vec (`data-log`) aj to, či svieti (`data-sun`) - v paneli
+ * skupiny ich je viac.
+ * @param {Store} store @param {HTMLElement} btn
  */
-function logLaunch(store, sun) {
+function logLaunch(store, btn) {
     const s = store.get();
-    if (!s.mozemItem) return;
-    const entry = { d: localDateKey(s.now, s.site.timezone), id: s.mozemItem, m: localMinutes(s.now, s.site.timezone), sun };
+    const id = btn.dataset.log;
+    if (!id) return;
+    const entry = { d: localDateKey(s.now, s.site.timezone), id, m: localMinutes(s.now, s.site.timezone), sun: btn.dataset.sun === '1' };
     const launches = toggleLaunch(s.launches, entry);
     saveLaunches(launches);
     store.setState({ launches });
@@ -35,7 +37,7 @@ function logLaunch(store, sun) {
 export function initMozem(store, dom, refresh) {
     dom.mzItems.addEventListener('click', (e) => {
         const row = e.target instanceof Element ? e.target.closest('[data-item]') : null;
-        // Panel veci robí z Môžem? aktívny stĺpec prehľadu (na telefóne je Môžem? aktívna karta).
+        // Panel robí z Môžem? aktívny stĺpec prehľadu (na telefóne je Môžem? aktívna karta).
         if (row instanceof HTMLElement && row.dataset.item) store.setState({ mozemItem: row.dataset.item, panel: 'mozem' });
     });
     dom.mzSheetX.addEventListener('click', () => closeSheet(store));
@@ -46,7 +48,11 @@ export function initMozem(store, dom, refresh) {
         e.preventDefault();
         closeSheet(store);
     });
-    dom.mzSheetLog.addEventListener('click', () => logLaunch(store, dom.mzSheetLog.dataset.sun === '1'));
+    dom.mzSheetLog.addEventListener('click', () => logLaunch(store, dom.mzSheetLog));
+    dom.mzSheetRows.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-log]') : null;
+        if (btn instanceof HTMLElement) logLaunch(store, btn);
+    });
     dom.mzQuip.addEventListener('click', () => store.setState({ mozemQuip: store.get().mozemQuip + 1 }));
     // Skúsiť znova je to isté načítanie ako pri štarte; kým beží, karta pokojne čaká.
     dom.mzRetry.addEventListener('click', () => {
