@@ -163,8 +163,10 @@ ten istý súbor:
   ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
 - **Worker** – ten istý endpoint, nová appka posiela kiosk rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
-  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`). Číta a zapisuje ho
-  ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť.
+  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`, `pocasie-v1`). Číta a zapisuje ho
+  ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
+  z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
+  (najviac `WEATHER_KEEP_MS` staré, meranie z kiosku sa neodkladá).
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
   hodiny), `gesture.js` (rozpoznanie ťahu do strán), `nav-history.js` (kroky navigácie

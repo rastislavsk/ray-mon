@@ -13,9 +13,11 @@ import {
     START_PANELS,
     START_STORAGE_KEY,
     STORAGE_KEYS,
+    WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
+import { parseStoredWeather } from '../shared/schema.js';
 import {
     DEFAULT_LOOK,
     lookToStored,
@@ -143,4 +145,14 @@ export function loadLook() {
 /** @param {import('../shared/settings.js').Look} look @returns {boolean} podarilo sa? */
 export function saveLook(look) {
     return write(LOOK_STORAGE_KEY, JSON.stringify(lookToStored(look)));
+}
+
+/** Posledné stiahnuté počasie; bez úložiska null. @returns {import('../shared/schema.js').StoredWeather | null} */
+export function loadStoredWeather() {
+    return readJson(WEATHER_STORAGE_KEY, parseStoredWeather, null);
+}
+
+/** @param {import('../shared/schema.js').StoredWeather} weather @returns {boolean} podarilo sa? */
+export function saveStoredWeather(weather) {
+    return write(WEATHER_STORAGE_KEY, JSON.stringify(weather));
 }

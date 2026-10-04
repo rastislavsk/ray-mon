@@ -57,3 +57,17 @@ export function validateForecast(forecast) {
     if (!isIso(o.updatedAt)) errors.push('forecast.updatedAt: ISO dátum');
     return errors;
 }
+
+/** @typedef {{ url: string, at: number, json: object }} StoredWeather */
+
+/**
+ * Počasie odložené v prehliadači (shared/config.js, WEATHER_STORAGE_KEY). Obsah `json` tu
+ * kontrolovaný nie je - predpoveď z neho prejde tou istou kontrolou ako z čerstvej odpovede.
+ * @param {unknown} raw @returns {StoredWeather | null} null pri inom tvare
+ */
+export function parseStoredWeather(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const o = /** @type {Record<string, unknown>} */ (raw);
+    if (typeof o.url !== 'string' || !isNum(o.at) || !o.json || typeof o.json !== 'object') return null;
+    return { url: o.url, at: /** @type {number} */ (o.at), json: o.json };
+}

@@ -849,6 +849,32 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "dáta ne
     await expect(page.locator('#pv-setup-go')).toHaveText('nastav panely ›');
 });
 
+test('rýchly štart: počasie z minulého otvorenia ukáže predpoveď hneď, kým sa sťahuje nové', async ({ page }) => {
+    const errors = await openApp(page);
+    /** @type {() => void} */
+    let pustit = () => {};
+    const zadrzane = new Promise((r) => (pustit = () => r(undefined)));
+    await page.route(/api\.open-meteo\.com/, async (route) => {
+        await zadrzane;
+        await route.fulfill({ json: weather });
+    });
+    await page.route(WORKER_PV_URL, async (route) => {
+        await zadrzane;
+        await route.fulfill({ json: { pv } });
+    });
+    // O dve hodiny: počasie treba stiahnuť znova, no predpoveď je tu z odloženého.
+    await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 2 * 3_600_000));
+    await page.reload();
+    // data-panel zapíše až prvý render - poslucháči sú vtedy prihlásení a klik sa nestratí.
+    await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
+    await page.locator('#nav-7dni').click();
+    await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
+    await expect(page.locator('#week-day-tabs [data-day-index]')).toHaveCount(7);
+    pustit();
+    await appReady(page);
+    expect(errors).toEqual([]);
+});
+
 /**
  * Bubliny sú od zavedenia rebríčka len na širokej obrazovke, kde majú všetky tri meta riadok
  * so špičkou a využitím. Na mobile to, čo v ňom stálo, hovorí detail dňa.

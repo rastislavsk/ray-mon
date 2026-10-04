@@ -1534,6 +1534,45 @@ test.describe('karta 7 dní: stavy', () => {
         await expect(page.locator('#sd-days .day')).toHaveCount(7);
     });
 
+    test('rýchly štart: počasie z minulého otvorenia ukáže dni hneď, staršie než 12 hodín nie', async ({ page }) => {
+        const errors = await openSedem(page);
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+        // Ďalšie otvorenia s pomalou sieťou: Open-Meteo ani Worker neodpovedia, kým ich test nepustí.
+        /** @type {() => void} */
+        let pusti = () => {};
+        let brana = new Promise((r) => (pusti = () => r(undefined)));
+        await page.route(/api\.open-meteo\.com/, async (route) => {
+            await brana;
+            await route.fulfill({ json: weather });
+        });
+        await page.route(WORKER_PV_URL, async (route) => {
+            await brana;
+            await route.fulfill({ json: { pv } });
+        });
+        /** @param {number} hodin */
+        const otvorNeskor = async (hodin) => {
+            await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + hodin * 3_600_000));
+            await page.reload();
+            await appReady(page);
+            await page.locator('#nav-7dni').click();
+        };
+        // O dve hodiny: počasie treba stiahnuť znova, no dni sú tu z odloženého, kým appka ešte načítava.
+        await otvorNeskor(2);
+        await expect(page.locator('#hdr-status')).toHaveText('načítavam…');
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+        pusti();
+        await expect(page.locator('#hdr-status')).not.toHaveText('načítavam…');
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+        // O 15 hodín je aj posledné stiahnuté počasie (o 2 hodiny) priveľmi staré: len načítavanie.
+        brana = new Promise((r) => (pusti = () => r(undefined)));
+        await otvorNeskor(15);
+        await expect(page.locator('#sd-sub')).toHaveText('Načítavam…');
+        await expect(page.locator('#sd-days')).toBeHidden();
+        pusti();
+        await expect(page.locator('#sd-days .day')).toHaveCount(7);
+        expect(errors).toEqual([]);
+    });
+
     test('poloha bez panelov: typická strecha, odhad v riadkoch a výzva do Nastavenia; súčasná appka ostáva', async ({ page }) => {
         const errors = await openSedem(page, { settings: null, site: SITE });
         const typical = typicalSettings(SITE);
