@@ -15,6 +15,7 @@ import {
     terazClearText,
     terazLaterText,
     terazPreviewTime,
+    terazPreviewTitle,
     terazSliderText,
     terazSourceText,
     terazTodayText,
@@ -77,19 +78,27 @@ export function terazModel(input, { launches = [], online = true, voice = 'drzy'
 }
 
 /**
- * Číslo a dva riadky pod ním: odkiaľ výkon je (a odkedy mlčí meranie) a koľko z jasnej oblohy.
- * Pri typickej streche „~“ a veta, že to nie je vlastná strecha.
+ * Nadpis, číslo a dva riadky pod ním: odkiaľ výkon je (a odkedy mlčí meranie) a koľko z jasnej
+ * oblohy. Pri typickej streche „~“ a veta, že to nie je vlastná strecha. Počas náhľadu nadpis
+ * namiesto „Teraz“ povie čas, ku ktorému číslo patrí - text sa mení, riadok ostáva, aby sa graf
+ * pod prstom nepohol.
  * @param {TerazInput} input pôvodný vstup @param {TerazInput} base vstup pre výpočty (terazInput)
  * @param {ReturnType<typeof heroModel>} hero @param {boolean} estimate @param {import('./messages.js').Voice} voice
  */
 function headOf(input, base, hero, estimate, voice) {
+    const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
-        return { num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
+        return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
     const pv = pvStatus(input);
     const silent = !hero.preview && !!input.kiosk && !pv.ok;
-    return { num: hero.powerText, source: terazSourceText(hero.source, { silent, since: pv.since }), sub: clearSub(base, hero) };
+    return {
+        title,
+        num: hero.powerText,
+        source: terazSourceText(hero.source, { silent, since: pv.since }),
+        sub: clearSub(base, hero),
+    };
 }
 
 /** Karta bez grafu a odporúčaní. @param {'ask' | 'loading' | 'offline' | 'ok'} kind @param {boolean} estimate */
@@ -98,6 +107,7 @@ function empty(kind, estimate) {
         kind,
         estimate,
         ask: false,
+        title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
         source: '',
         sub: '',

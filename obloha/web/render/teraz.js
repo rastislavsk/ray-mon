@@ -59,6 +59,7 @@ export function renderTeraz(state, dom) {
         { ...state, previewMinutes: state.terazPreview },
         { launches: state.launches, online: state.online, voice: state.voice },
     );
+    setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);

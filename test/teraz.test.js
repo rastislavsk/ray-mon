@@ -358,6 +358,10 @@ test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „
     const hero = heroModel(i);
     assert.equal(m.num, hero.powerText);
     assert.equal(m.source, 'odhad z predpovede');
+    // Nadpis povie, ku ktorému času číslo patrí; bez náhľadu je „Teraz“.
+    assert.equal(m.title, 'O 15:30');
+    assert.equal(terazModel(input(at('13:00'))).title, 'Teraz');
+    assert.equal(terazModel(input(at('13:00'), { previewMinutes: hm(9) }), { voice: 'slusny' }).title, 'O 09:00');
     // Čas je v grafe pri čiare, pod grafom ostáva len „Späť na teraz“.
     assert.deepEqual(m.hint, { text: '', reset: true });
     assert.equal(m.cards?.now.head, hero.message.headline);
