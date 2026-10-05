@@ -261,11 +261,13 @@ z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú
 s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
 sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
-(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. Krivky sú v SVG,
+(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. „Teraz“ nie je
+zvislá čiara, ale bod na konci nameranej krivky a stlmené bunky pásu plánu, ktoré už prešli –
+hranica stlmeného a plného pásu ukazuje „teraz“ aj v noci, keď bod leží na nule. Krivky sú v SVG,
 ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, čas náhľadu) sú
 HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerastú. Nápis hranice kladie
-`limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky ani zvislé čiary
-„teraz“ a náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad
+`limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky, bod
+„teraz“ ani čiaru náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad
 krivku. Keď prst pri náhľade prejde ponad nápis, nápis preskočí na voľné miesto. Polohy sú dve – pre úzky graf a pre
 graf široký aspoň 448 px – a vyberá ich container query v `style.css`. Detail je krok
 navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu, posun

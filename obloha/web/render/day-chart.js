@@ -46,8 +46,8 @@ function labelsHtml(c) {
 
 /**
  * Predpoveď (plocha), nameraná krivka (biela čiara), hranica veľkých spotrebičov, pás plánu,
- * „teraz“ (len pri dnešku) a náhľad, nad tým popisky. Farby pásu sú v style.css podľa
- * `data-tone`; `data-from` nesie začiatok bunky (minúta dňa).
+ * „teraz“ (len pri dnešku: bod na krivke a stlmené bunky pásu, ktoré už prešli) a náhľad, nad tým
+ * popisky. Farby pásu sú v style.css podľa `data-tone`; `data-from` nesie začiatok bunky (minúta dňa).
  * @param {Chart} c
  */
 export function dayChartHtml(c) {
@@ -55,13 +55,15 @@ export function dayChartHtml(c) {
     const cells = c.cells
         .map(
             (b) =>
-                `<rect x="${b.x}" y="${C.bandY}" width="${b.w}" height="${C.bandH}" rx="2" data-tone="${b.tone}" data-from="${b.from}"/>`,
+                `<rect x="${b.x}" y="${C.bandY}" width="${b.w}" height="${C.bandH}" rx="2" data-tone="${b.tone}" data-from="${b.from}"` +
+                `${b.past ? ' class="dc-past"' : ''}/>`,
         )
         .join('');
     const dot = (/** @type {number | null} */ y, /** @type {number} */ x, /** @type {number} */ r, /** @type {string} */ cls) =>
         y === null ? '' : `<circle cx="${x}" cy="${y}" r="${r}" class="${cls}"/>`;
     const n = c.now;
-    const now = n ? `<line x1="${n.x}" x2="${n.x}" y1="14" y2="130" class="dc-now"/>${dot(n.y, n.x, 5, 'dc-now-dot')}` : '';
+    // „Teraz“ je len bod na krivke - nameraná krivka v ňom končí, v páse ho ukazujú stlmené bunky.
+    const now = n ? dot(n.y, n.x, 5, 'dc-now-dot') : '';
     const p = c.preview;
     // Čiara náhľadu od času nad ňou po pás plánu; bunka pásu pod ňou je zvýraznená (väčšia, s okrajom).
     const preview = p

@@ -1346,7 +1346,12 @@ test.describe('karta 7 dní', () => {
         await expect(page.locator('#sd-list')).toBeHidden();
         const d = sedemDayModel(vstupSedem(), 0);
         await expect.poll(() => denVStranke(page)).toEqual(denZModelu(d));
-        await expect(page.locator('#sd-day-chart .dc-now')).toHaveCount(1);
+        // „Teraz“ je bod na krivke a stlmené bunky pásu, ktoré už prešli - zvislá čiara nie je.
+        await expect(page.locator('#sd-day-chart .dc-now-dot')).toHaveCount(1);
+        const prešlo = d.chart.cells.filter((c) => c.past).length;
+        expect(prešlo).toBeGreaterThan(0);
+        await expect(page.locator('#sd-day-chart .dc-past')).toHaveCount(prešlo);
+        await expect(page.locator('#sd-day-chart line')).toHaveCount(1);
         await expect(page.locator('#sd-day-chart .dc-real')).toHaveCount(1);
         await expect(page.locator('#sd-day-chart')).toHaveAttribute('aria-label', d.chart.desc);
         await expect(page.locator('#sd-day-done')).toHaveText(d.done);
@@ -1358,7 +1363,8 @@ test.describe('karta 7 dní', () => {
         await page.locator('#sd-day-back').click();
         await page.locator('#sd-days [data-day="4"]').click();
         await expect.poll(() => denVStranke(page)).toEqual(denZModelu(sedemDayModel(vstupSedem(), 4)));
-        await expect(page.locator('#sd-day-chart .dc-now')).toHaveCount(0);
+        await expect(page.locator('#sd-day-chart .dc-now-dot')).toHaveCount(0);
+        await expect(page.locator('#sd-day-chart .dc-past')).toHaveCount(0);
         await expect(page.locator('#sd-day-done')).toBeHidden();
         expect(errors).toEqual([]);
     });

@@ -764,10 +764,6 @@ button:focus-visible {
         transform: translate(var(--wa), calc(-100% - 2px));
     }
 }
-.dc-now {
-    stroke: #fff;
-    stroke-width: 1.5;
-}
 .dc-now-dot {
     fill: #fff;
 }
@@ -807,6 +803,10 @@ button:focus-visible {
 }
 .dc [data-tone='costly'] {
     fill: var(--costly);
+}
+/* Bunky pásu, ktoré dnes už prešli: stlmené, hranica s plným pásom je „teraz“. */
+.dc .dc-past {
+    fill-opacity: 0.35;
 }
 .legend {
     display: flex;
