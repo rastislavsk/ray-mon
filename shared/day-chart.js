@@ -41,8 +41,8 @@ export const DAY_CHART_LABELS = {
 };
 
 /**
- * Polomer, v ktorom nápis nesmie zasiahnuť zvislú čiaru „teraz“ či náhľadu (čiara a bodka
- * s polomerom 5, pri náhľade 6 s okrajom).
+ * Polomer, v ktorom nápis nesmie zasiahnuť značku „teraz“ (bodka s polomerom 5) či čiaru náhľadu
+ * (bodka 6 s okrajom).
  */
 const MARK_R = 7;
 
@@ -137,13 +137,15 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
     const curve = measured.length > 1 ? measured.map(toPt) : [];
     const cellW = r1(chartX(C.cellMin) - chartX(0) - 0.8);
     const at = (/** @type {number} */ min, /** @type {number} */ kw) => ({ x: x(min), y: Number.isFinite(kw) ? y(kw) : null });
-    const cells = planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW }));
+    // Bunky, ktoré dnes už prešli, sú stlmené: hranica medzi nimi a plným pásom ukazuje „teraz“ aj
+    // v páse (zvislá čiara „teraz“ nie je, len bod). Bunka, v ktorej „teraz“ je, ešte platí.
+    const cells = planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW, past: nowMin !== null && c.to <= nowMin }));
     return {
         area: edge.length ? `${path(edge)}Z` : '',
         real: curve.length ? path(curve) : '',
         limitY: y(limitKw),
         limitText,
-        // Nápis hranice nesmie prekryť krivky ani zvislé čiary „teraz“ a náhľadu.
+        // Nápis hranice nesmie prekryť krivky, bod „teraz“ ani čiaru náhľadu.
         limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], marksOf(nowMin, preview)),
         cells,
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
@@ -154,7 +156,7 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
 }
 
 /**
- * Zvislé čiary, ktorým sa nápis hranice vyhne: „teraz“ a náhľad s časom nad ním.
+ * Značky, ktorým sa nápis hranice vyhne: bod „teraz“ a čiara náhľadu s časom nad ňou.
  * @param {number | null} nowMin @param {{ min: number, text: string } | null} preview @returns {Mark[]}
  */
 function marksOf(nowMin, preview) {
@@ -185,8 +187,8 @@ function labelOf(text) {
 
 /** @typedef {{ x: number, y: number }} Pt bod v jednotkách grafu */
 /**
- * Zvislá čiara v grafe: `x` v jednotkách grafu, `halfPx` polovica šírky toho, čo na nej v px stojí
- * (čas náhľadu; pri „teraz“ 0 - stačí rezerva na čiaru a bodku).
+ * Značka v grafe (bod „teraz“, čiara náhľadu): `x` v jednotkách grafu, `halfPx` polovica šírky toho,
+ * čo na nej v px stojí (čas náhľadu; pri „teraz“ 0 - stačí rezerva na bodku).
  * @typedef {{ x: number, halfPx: number }} Mark
  */
 /** @typedef {{ x0: number, x1: number, y0: number, y1: number }} Box obdĺžnik v jednotkách grafu (y rastie nadol) */
@@ -255,13 +257,13 @@ function limitAnchors() {
 
 /**
  * Kde stojí nápis hranice veľkých spotrebičov. Na žiadnom grafe s mierkou aspoň `scale` nesmie
- * prekryť krivku predpovede, nameranú krivku ani zvislé čiary („teraz“, náhľad) a musí ostať v grafe.
+ * prekryť krivku predpovede, nameranú krivku ani značky („teraz“, náhľad) a musí ostať v grafe.
  * Skúša sa: tesne nad čiarou na konci, na začiatku; potom na konci a na začiatku nad krivkou (nápis sa
  * zdvihne na voľné miesto nad ňou); potom to isté po krokoch pozdĺž čiary. Keď nič z toho nejde,
- * ostane nad čiarou na konci. Zvislá čiara ide cez celý graf aj s časom náhľadu nad ňou, takže
- * stačí, že je mimo nápisu vodorovne.
+ * ostane nad čiarou na konci. Od značky sa nápis drží vodorovne v celej výške grafu: čiara náhľadu
+ * ide cez celý graf aj s časom nad ňou, pri bode „teraz“ je to jednoduchšie pravidlo s rezervou.
  * @param {number} limitY @param {string} text @param {Pt[][]} lines krivky v grafe
- * @param {Mark[]} marks zvislé čiary „teraz“ a náhľadu (tie, ktoré v grafe sú)
+ * @param {Mark[]} marks bod „teraz“ a čiara náhľadu (tie, ktoré v grafe sú)
  * @param {number} [scale] najmenšia mierka grafu, pre ktorú poloha platí (px na jednotku) @returns {Spot}
  */
 export function limitSpot(limitY, text, lines, marks, scale = DAY_CHART_LABELS.minScale) {

@@ -156,6 +156,13 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
     assert.equal(Math.max(...realXs), Math.round(chartX(hm(11)) * 10) / 10);
     assert.ok(m.limitY > DAY_CHART.top && m.limitY < DAY_CHART.base);
     assert.equal(m.cells.length, 48);
+    // Teraz je 13:00: bunky do 13:00 prešli a sú stlmené, bunka od 13:00 ešte platí.
+    assert.deepEqual(
+        m.cells.map((c) => c.past),
+        m.cells.map((_, i) => i < 26),
+    );
+    // Iný deň než dnešok „teraz“ nemá, nestlmí sa nič.
+    assert.ok(dayChartModel({ ...base, nowMin: null, preview: null }).cells.every((c) => !c.past));
     assert.deepEqual(
         m.ticks.map((t) => t.label),
         ['0', '6', '12', '18', '24'],

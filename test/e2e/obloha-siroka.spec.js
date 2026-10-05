@@ -534,7 +534,7 @@ const popiskyGrafu = (page, sel) =>
             const r = chart.querySelector(s)?.getBoundingClientRect();
             return !!r && r.right >= lim.left && r.left <= lim.right && r.bottom >= lim.top && r.top <= lim.bottom;
         };
-        if (across('.dc-now')) hits.push('teraz');
+        if (across('.dc-now-dot')) hits.push('teraz');
         if (across('.dc-prev')) hits.push('náhľad');
         if (across('.dc-at-t')) hits.push('čas náhľadu');
         const px = (/** @type {string} */ s) => [...chart.querySelectorAll(s)].map((e) => e.getBoundingClientRect().height);
