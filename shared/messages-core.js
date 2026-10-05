@@ -801,6 +801,7 @@ export const TERAZ_TONES = { sun: 'slnko stačí', cheap: 'lacná sieť', costly
 
 /** Pevné texty karty: popisky, tlačidlá a výzvy. */
 export const TERAZ_TEXTS = {
+    title: 'Teraz',
     retry: MOZEM_SKY_TEXTS.retry,
     hint: 'Ťahaj prstom po grafe a pozri si iný čas.',
     reset: 'Späť na teraz',
@@ -863,6 +864,14 @@ export function terazClearText(pct) {
 export function terazTypicalText(kwp, voice = 'drzy') {
     if (polite(voice)) return `typická strecha ${kwpRoughText(kwp)} vo vašej obci, nie vaša`;
     return `typická strecha ${kwpRoughText(kwp)} v tvojej obci, nie tvoja`;
+}
+
+/**
+ * Nadpis karty počas náhľadu: číslo pod ním je výkon v tom čase, nie teraz. Spolu s ním sa číta
+ * ako veta („O 15:30 · 4,89 kW“). @param {number} min
+ */
+export function terazPreviewTitle(min) {
+    return `O ${hm(min)}`;
 }
 
 /**

@@ -108,7 +108,9 @@ const ocakavanaObloha = (time) =>
 /** @param {import('@playwright/test').Page} page @param {(typeof PANELS)[number]} panel */
 async function ocakavajKartu(page, panel) {
     await expect(page.locator(`#panel-${panel}`)).toBeVisible();
-    await expect(page.locator(`#panel-${panel} h1`)).toHaveText(TITLES[panel]);
+    // Karta Teraz má počas náhľadu v nadpise čas („O 09:00“), ku ktorému patrí číslo pod ním.
+    const title = panel === 'terazky' ? new RegExp(`^(${TITLES[panel]}|O \\d\\d:\\d\\d)$`) : TITLES[panel];
+    await expect(page.locator(`#panel-${panel} h1`)).toHaveText(title);
     await expect(page.locator(`#nav-${panel}`)).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.panel:not(.hidden)')).toHaveCount(1);
     await expect(page.locator('.tabs [aria-current]')).toHaveCount(1);
@@ -831,11 +833,12 @@ async function openTeraz(page, opts = {}) {
     return errors;
 }
 
-/** Čo karta ukazuje: číslo, riadky pod ním, nápis pod grafom a odporúčanie. @param {import('@playwright/test').Page} page */
+/** Čo karta ukazuje: nadpis, číslo, riadky pod ním, nápis pod grafom a odporúčanie. @param {import('@playwright/test').Page} page */
 const terazVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
         return {
+            title: text('#ttl-terazky'),
             num: text('#tz-num-val'),
             source: text('#tz-src'),
             sub: text('#tz-sub'),
@@ -845,7 +848,14 @@ const terazVStranke = (page) =>
     });
 
 /** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
-const terazZModelu = (m) => ({ num: m.num, source: m.source, sub: m.sub, hint: m.hint.text, head: m.cards?.now.head ?? '' });
+const terazZModelu = (m) => ({
+    title: m.title,
+    num: m.num,
+    source: m.source,
+    sub: m.sub,
+    hint: m.hint.text,
+    head: m.cards?.now.head ?? '',
+});
 
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
 const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
@@ -918,6 +928,10 @@ test.describe('karta Teraz', () => {
         await page.mouse.move(na.x, na.y, { steps: 8 });
         await page.mouse.up();
         await expect.poll(() => terazVStranke(page)).toEqual(nahlad);
+        // Nadpis povie, ku ktorému času číslo patrí, a graf pod kurzorom sa nepohne.
+        expect(teraz.title).toBe('Teraz');
+        expect(nahlad.title).toBe('O 15:30');
+        expect((await bodGrafu(page, minuta('15:30'))).y).toBe(na.y);
         // Čas je v grafe pri čiare, výkon hore v čísle a tón vo zvýraznenej bunke pásu - pod grafom nič.
         expect(nahlad.hint).toBe('');
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('15:30');
