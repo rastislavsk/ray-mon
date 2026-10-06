@@ -267,10 +267,11 @@ button:focus-visible {
     fill: rgba(255, 255, 255, 0.35);
 }
 
+/* Odstup zhora: štítky nesmú priliehať k časom východu a západu pod oblúkom. */
 .big {
     display: grid;
     gap: 8px;
-    padding: 0 20px;
+    padding: 16px 20px 0;
 }
 .chips {
     display: flex;
@@ -415,7 +416,10 @@ button:focus-visible {
 .tiles-box.est .tiles {
     font-style: italic;
 }
-.count {
+/* `.mozem p` nuluje okraje odsekov karty a prebilo by okraj skla - riadok by bol cez celú šírku
+   a prilepený k dlaždiciam. Odstup zhora je ten istý ako medzi dlaždicami (.tiles). */
+.mozem .count {
+    margin: 10px 14px 0;
     font-size: 0.875rem;
 }
 
