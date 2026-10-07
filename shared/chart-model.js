@@ -156,8 +156,10 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
 
 /**
  * Model stĺpcov po hodinách (detail dňa na karte 7 dní na mobile): stĺpec na hodinu vo farbe
- * plánu dňa (`tiers`, viď dayHourTiers v shared/day-plan.js), čiara jasnej oblohy, pod osou
- * pás cien z tarify (`prices`) a pri dnešku nameraná výroba a značka "teraz".
+ * plánu dňa (`tiers`, viď dayHourTiers v shared/day-plan.js), krivka oblačnosti (0-100 %
+ * výšky grafu, ako pri krivke), pod osou pás cien z tarify (`prices`) a pri dnešku nameraná
+ * výroba a značka "teraz". Jasnú oblohu nekreslí - je každý deň týždňa skoro rovnaká, kým
+ * oblačnosť hovorí, čím sa deň od ostatných líši.
  *
  * Mierka, mriežka aj produkčné okno sú tie isté ako pri krivke (forecastChartModel), takže
  * tooltip nad grafom (chartTooltipModel) sedí na oba bez rozdielu.
@@ -170,8 +172,8 @@ export function dayBarsModel({ pts, tiers, prices = [], realPts = [], nowHour = 
     const visible = pts.map((p, i) => ({ p, tier: tiers[i] ?? null })).filter(({ p }) => inHours(p.hour));
     if (!visible.length) return null;
     const real = visibleHours(realPts);
-    const clearOk = visible.every(({ p }) => Number.isFinite(p.clearKw));
-    const maxKw = Math.max(...visible.map(({ p }) => Math.max(p.kw, clearOk ? p.clearKw : 0)), ...real.map((p) => p.kw), 0.5) * 1.1;
+    const cloudOk = visible.every(({ p }) => Number.isFinite(p.cloud));
+    const maxKw = Math.max(...visible.map(({ p }) => p.kw), ...real.map((p) => p.kw), 0.5) * 1.1;
     const { scale, ...frame } = hourFrame(dims, maxKw, real, nowHour);
     const base = scale.y(0);
     // Stĺpec zaberá väčšinu hodiny, medzera medzi stĺpcami ich oddelí aj pri rovnakej farbe.
@@ -190,14 +192,13 @@ export function dayBarsModel({ pts, tiers, prices = [], realPts = [], nowHour = 
         dims,
         maxKw,
         pts: visible.map(({ p }) => p),
-        cloud: null,
+        cloud: cloudOk ? visible.map(({ p }) => ({ x: scale.x(p.hour), y: scale.yPct(/** @type {number} */ (p.cloud)) })) : null,
         bars: visible.map(({ p, tier }) => {
             const x = Math.max(left, scale.x(p.hour) - barW / 2);
             const w = Math.min(right, scale.x(p.hour) + barW / 2) - x;
             const y = scale.y(p.kw);
             return { x, w, y, h: Math.max(0, base - y), tier };
         }),
-        clear: clearOk ? visible.map(({ p }) => ({ x: scale.x(p.hour), y: scale.y(p.clearKw) })) : null,
         strip,
         stripY: base + 3,
         ...frame,

@@ -1712,7 +1712,7 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     stroke-width: 2;
 }
 /* Detail dňa na mobile: stĺpec na hodinu vo farbe plánu dňa (tie isté farby ako denný
-   prstenec ciferníka), nad nimi strop jasnej oblohy a pod osou pás cien z tarify. */
+   prstenec ciferníka), cez ne oblačnosť a pod osou pás cien z tarify. */
 .hour-bar {
     fill: var(--ink-20);
 }
@@ -1745,12 +1745,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 #panel-7dni.detail .leg-line-real {
     border-color: var(--ink);
 }
-.line-clear {
-    fill: none;
+/* Oblačnosť cez farebné stĺpce: o stupeň výraznejšia než nad prázdnym grafom krivky. */
+.line-cloud.on-bars {
     stroke: var(--ink-45);
-    stroke-width: 1.5;
-    stroke-dasharray: 4 4;
-    vector-effect: non-scaling-stroke;
 }
 .heat-cell {
     fill: var(--ink);

@@ -367,7 +367,7 @@ test('mriežka panelov: najviac 40 kresbou, zvyšok číslom, neplatný počet n
     assert.equal(panelGridModel(NaN).cells.length, 0);
 });
 
-test('dayBarsModel: stĺpec na hodinu produkčného okna, strop jasnej oblohy, pás cien v okne grafu', async () => {
+test('dayBarsModel: stĺpec na hodinu produkčného okna, oblačnosť, pás cien v okne grafu', async () => {
     const { dayBarsModel } = await import('../shared/chart-model.js');
     const day = forecast.days[0];
     const dims = chartDims(false);
@@ -392,8 +392,12 @@ test('dayBarsModel: stĺpec na hodinu produkčného okna, strop jasnej oblohy, p
         assert.ok(b.x >= dims.padL - 1e-9 && b.x + b.w <= dims.w - dims.padR + 1e-9, 'stĺpec neprečnieva z plátna');
         assert.ok(Math.abs(b.y + b.h - base) < 1e-9, 'stĺpec stojí na osi');
     }
-    assert.ok(m.clear && m.clear.length === visible.length, 'strop jasnej oblohy');
-    assert.ok(m.maxKw >= Math.max(...visible.map((p) => p.clearKw)), 'strop sa zmestí do grafu');
+    assert.ok(m.cloud && m.cloud.length === visible.length, 'krivka oblačnosti');
+    assert.ok(
+        m.cloud.every((c) => c.y >= dims.padT - 1e-9 && c.y <= base + 1e-9),
+        'oblačnosť sa zmestí do grafu',
+    );
+    assert.ok(m.maxKw >= Math.max(...visible.map((p) => p.kw)), 'stĺpce sa zmestia do grafu');
     // Pás cien je orezaný na produkčné okno a ide za sebou bez medzier.
     assert.equal(m.strip.length, 2);
     assert.equal(m.strip[0].x, dims.padL);
@@ -402,16 +406,15 @@ test('dayBarsModel: stĺpec na hodinu produkčného okna, strop jasnej oblohy, p
     assert.ok(m.nowX !== null);
     // Tooltip nad stĺpcami je ten istý ako nad krivkou.
     const tip = chartTooltipModel(m, 0.5);
-    assert.equal(tip.cloud, null);
-    assert.ok(tip.clearKw !== null && tip.kw >= 0);
-    // Bez stropu a so skutočnou výrobou.
+    assert.ok(tip.cloud !== null && tip.kw >= 0);
+    // Bez oblačnosti a so skutočnou výrobou.
     const bez = dayBarsModel({
-        pts: visible.map((p) => ({ hour: p.hour, kw: p.kw, cloud: 0, clearKw: NaN })),
+        pts: visible.map((p) => ({ hour: p.hour, kw: p.kw, cloud: NaN, clearKw: p.clearKw })),
         tiers: [],
         realPts: pv.realCurveToday,
         dims,
     });
-    assert.ok(bez && bez.clear === null && bez.bars.every((b) => b.tier === null) && bez.realLast !== null);
+    assert.ok(bez && bez.cloud === null && bez.bars.every((b) => b.tier === null) && bez.realLast !== null);
 });
 
 test('planesCompassModel: šípka na plochu v jej smere, dĺžka podľa panelov, hlavná je najväčšia', async () => {

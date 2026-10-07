@@ -215,20 +215,20 @@ function dayInfo(day, progress) {
 }
 
 /**
- * Tri čísla dňa v detaile dňa na mobile - výroba, špička a podiel z jasnej oblohy - a pri
+ * Tri čísla dňa v detaile dňa na mobile - výroba, špička a priemerná oblačnosť - a pri
  * dnešku riadok o tom, koľko už nabehlo. To isté, čo hovorí dayInfo, len ako dlaždice.
  * @param {ForecastDay} day @param {ReturnType<typeof weekStatsModel>['progress']} progress len pri dnešku
  */
 function dayKpis(day, progress) {
     const kpi = (/** @type {string} */ v, /** @type {string} */ u, /** @type {string} */ label) =>
         `<span class="kpi"><b>${v}<small>${u}</small></b><span>${label}</span></span>`;
-    const pct = usePct(day);
+    const cloud = day.cloudAvgPct;
     let html = kpi(fmt1(day.kwhTotal), ' kWh', 'výroba za deň');
     html +=
         Number.isFinite(day.peakKw) && day.peakHour != null
             ? kpi(fmt1(day.peakKw), ' kW', `špička o ${hourLabel(day.peakHour)}`)
             : kpi('–', '', 'špička');
-    html += kpi(pct == null ? '–' : String(pct), pct == null ? '' : ' %', 'jasnej oblohy');
+    html += kpi(cloud == null ? '–' : String(Math.round(cloud)), cloud == null ? '' : ' %', 'oblačnosť');
     if (progress) html += `<span class="kpi-note">Doteraz <b>${fmt1(progress.realKwh)} kWh</b> · ${progress.pct} % z predpovede</span>`;
     return html;
 }
