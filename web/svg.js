@@ -35,7 +35,7 @@ export function forecastChartSvg(m) {
     return out;
 }
 
-/** Stĺpce po hodinách v detaile dňa: mriežka, stĺpce vo farbe plánu dňa, strop jasnej oblohy,
+/** Stĺpce po hodinách v detaile dňa: mriežka, stĺpce vo farbe plánu dňa, oblačnosť,
  * pás cien pod osou a pri dnešku nameraná výroba so značkou "teraz".
  * @param {NonNullable<ReturnType<typeof import('../shared/chart-model.js').dayBarsModel>>} m */
 export function dayBarsSvg(m) {
@@ -43,7 +43,7 @@ export function dayBarsSvg(m) {
     let out = gridSvg(m);
     for (const b of m.bars)
         out += `<rect class="hour-bar${b.tier ? ` tier-${b.tier}` : ''}" x="${n(b.x)}" y="${n(b.y)}" width="${n(b.w)}" height="${n(b.h)}" rx="2"/>`;
-    if (m.clear) out += `<path class="line-clear" d="${smoothPath(m.clear)}"/>`;
+    if (m.cloud) out += `<path class="line-cloud on-bars" d="${smoothPath(m.cloud)}"/>`;
     for (const s of m.strip)
         out += `<rect class="price-strip${s.tier ? ` tier-${s.tier}` : ''}" x="${n(s.x)}" y="${n(m.stripY)}" width="${n(s.w)}" height="4"/>`;
     if (m.real.length) out += `<path class="line-real on-bars" d="${smoothPath(m.real)}"/>`;

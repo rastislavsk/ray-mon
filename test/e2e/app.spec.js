@@ -575,8 +575,11 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     );
     await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[5].kwhTotal)} kWh`);
-    // Stĺpec na každú hodinu grafu, vo farbe plánu toho dňa (tarifa × slnko).
     const den5 = forecast.days[5];
+    // Tretie číslo je oblačnosť dňa, nie podiel z jasnej oblohy - tá je každý deň skoro rovnaká.
+    await expect(page.locator('#week-curve-stat .kpi').nth(2)).toHaveText(`${Math.round(Number(den5.cloudAvgPct))} %oblačnosť`);
+    await expect(page.locator('#week-curve path.line-cloud')).toHaveCount(1);
+    // Stĺpec na každú hodinu grafu, vo farbe plánu toho dňa (tarifa × slnko).
     const farby = dayHourTiers(den5, TARIFF, PLANT).filter((_, i) => WEEK_HOURS.includes(den5.hourly[i].hour));
     const stlpce = page.locator('#week-curve .hour-bar');
     await expect(stlpce).toHaveCount(WEEK_HOURS.length);
