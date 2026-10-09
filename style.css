@@ -1735,15 +1735,28 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .price-strip {
     fill: var(--ink-20);
 }
-/* Nameraná výroba nad stĺpcami: zelená by na zelených stĺpcoch zanikla, preto svetlá. */
+/* Nameraná výroba nad stĺpcami: zelená by na zelených stĺpcoch zanikla, preto svetlá -
+   a hrubšia, s lemom vo farbe pozadia (tá istá čiara pod ňou, len širšia), aby sa oddelila
+   od stĺpcov každej farby aj od tenkej sivej oblačnosti. */
 .line-real.on-bars {
     stroke: var(--ink);
+    stroke-width: 2.5;
+}
+.line-real-halo {
+    fill: none;
+    stroke: var(--bg);
+    stroke-width: 5.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 .dot-real.on-bars {
     fill: var(--ink);
+    stroke-width: 2.5;
 }
 #panel-7dni.detail .leg-line-real {
     border-color: var(--ink);
+    border-top-width: 2.5px;
 }
 /* Oblačnosť cez farebné stĺpce: o stupeň výraznejšia než nad prázdnym grafom krivky. */
 .line-cloud.on-bars {
