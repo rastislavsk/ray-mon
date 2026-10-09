@@ -171,8 +171,8 @@ function renderTableAndTabs(days, sel, dom) {
  *
  * Farby sú tie isté ako v karte 7 dní novej appky (shared/sedem-dni.js): pás ide cez produkčné
  * okno dňa a zelené sú v ňom úseky, kedy je ideálne pustiť veľké spotrebiče (zelené štvrťhodiny
- * plánu dňa - slnko aj tarifa). Deň bez okna má pás prázdny. Stĺpček dňa v súčte týždňa je
- * zelený, keď deň nejaké okno má. Najlepší deň týždňa (najviac kWh, bestDayIndex) má zelený rám.
+ * plánu dňa - slnko aj tarifa). Deň bez okna má pás prázdny. Stĺpčeky v súčte týždňa sú
+ * zmenšené stĺpce z detailu týždňa: výška aj farba je pásmo dňa (weekDayTiers). Najlepší deň týždňa (najviac kWh, bestDayIndex) má zelený rám.
  *
  * Dnešok tu nemá vlastnú triedu: v rebríčku stojí vždy prvý a volá sa "Dnes", takže niet
  * čo zvýrazňovať. Príznak `r.today` z modelu ostáva, značí sa ním prepínač dní a tabuľka.
@@ -184,11 +184,11 @@ function renderTableAndTabs(days, sel, dom) {
 function renderList(s, rows, bands, best, dom) {
     dom.weekListTotal.textContent = String(Math.round(s.totalKwh));
     dom.weekListAvg.textContent = `${fmt1(s.avgKwh)} kWh`;
-    // Týždeň v malom: stĺpček na deň, výška je výroba, zelený je deň s oknom.
+    // Týždeň v malom: tie isté stĺpce ako v detaile týždňa - výška je výroba, farba pásmo dňa.
     dom.weekListSpark.classList.toggle('hidden', !rows.length);
     writeHtml(
         dom.weekListSpark,
-        rows.map((r, i) => `<i class="${bands[i].length ? 'win' : ''}" style="height:${Math.max(r.barPct, 4)}%"></i>`).join(''),
+        rows.map((r) => `<i class="${r.tier ? `tier-${r.tier}` : ''}" style="height:${Math.max(r.barPct, 4)}%"></i>`).join(''),
         'weekSpark',
     );
     const html = rows
