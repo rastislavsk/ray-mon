@@ -2320,13 +2320,20 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     gap: 4px;
     height: 34px;
 }
+/* Farby sú tie isté ako stĺpce v detaile týždňa (.bar): pásmo dňa, bez výroby sivý. */
 .week-list-spark i {
     width: 8px;
     border-radius: 2px;
-    background: var(--ink-20);
+    background: var(--ink-45);
 }
-.week-list-spark i.win {
+.week-list-spark i.tier-green {
     background: var(--green);
+}
+.week-list-spark i.tier-amber {
+    background: var(--amber);
+}
+.week-list-spark i.tier-red {
+    background: var(--red);
 }
 /* Šípka "›" hovorí, že bublina otvára detail týždňa. Nepotrebuje @media ako tá istá šípka
    pri bublinách vyššie - celý blok je na obrazovke len tam, kde detail existuje. */

@@ -564,6 +564,9 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
         await expect(riadok.locator('.wday-kwh')).toHaveClass('wday-kwh');
     }
     expect(await page.locator('#week-list .wday-bar i').count()).toBeGreaterThan(0);
+    // Mini-graf v súčte týždňa má farby stĺpcov z detailu týždňa - pásmo dňa.
+    for (const [i, tier] of weekDayTiers(forecast.days).entries())
+        await expect(page.locator('#week-list-spark i').nth(i)).toHaveClass(tier ? `tier-${tier}` : '');
     // Najlepší deň má zelený rám - práve jeden, ten s najviac kWh.
     await expect(page.locator('#week-list .wday.best')).toHaveCount(1);
     await expect(page.locator('#week-list .wday.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
