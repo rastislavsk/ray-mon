@@ -712,6 +712,11 @@ test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page 
     await page.locator('#nav-7dni').click();
     await page.locator('#week-list [data-day-index="0"]').click();
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(1);
+    // Lem pod krivkou je tá istá čiara, len širšia a vo farbe pozadia - a leží pod ňou.
+    const lem = page.locator('#week-curve path.line-real-halo');
+    await expect(lem).toHaveCount(1);
+    expect(await lem.getAttribute('d')).toBe(await page.locator('#week-curve path.line-real').getAttribute('d'));
+    expect(await page.locator('#week-curve path.line-real-halo + path.line-real').count()).toBe(1);
     await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(1);
     await expect(page.locator('#week-curve-live-legend')).toBeVisible();
     // Koľko už z predpovede nabehlo, patrí tiež len dnešku.
@@ -720,6 +725,7 @@ test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page 
     await page.locator('#week-day-back').click();
     await page.locator('#week-list [data-day-index="3"]').click();
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
+    await expect(page.locator('#week-curve path.line-real-halo')).toHaveCount(0);
     await expect(page.locator('#week-curve-live-legend')).toBeHidden();
     await expect(page.locator('#week-curve-stat')).not.toContainText('Doteraz');
     expect(errors).toEqual([]);

@@ -46,7 +46,10 @@ export function dayBarsSvg(m) {
     if (m.cloud) out += `<path class="line-cloud on-bars" d="${smoothPath(m.cloud)}"/>`;
     for (const s of m.strip)
         out += `<rect class="price-strip${s.tier ? ` tier-${s.tier}` : ''}" x="${n(s.x)}" y="${n(m.stripY)}" width="${n(s.w)}" height="4"/>`;
-    if (m.real.length) out += `<path class="line-real on-bars" d="${smoothPath(m.real)}"/>`;
+    if (m.real.length) {
+        const d = smoothPath(m.real);
+        out += `<path class="line-real-halo" d="${d}"/><path class="line-real on-bars" d="${d}"/>`;
+    }
     if (m.nowX !== null) out += `<line class="now-line" x1="${n(m.nowX)}" y1="${dims.padT}" x2="${n(m.nowX)}" y2="${dims.h - dims.padB}"/>`;
     if (m.realLast) out += `<circle class="dot-real on-bars" cx="${n(m.realLast.x)}" cy="${n(m.realLast.y)}" r="4"/>`;
     return out;
