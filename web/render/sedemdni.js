@@ -8,6 +8,7 @@
 // oblačnosť v percentách), ostávajú o ťuknutie ďalej v detaile dňa.
 
 import {
+    bestDayIndex,
     chartDims,
     dayBarsModel,
     fillDims,
@@ -171,15 +172,16 @@ function renderTableAndTabs(days, sel, dom) {
  * Farby sú tie isté ako v karte 7 dní novej appky (shared/sedem-dni.js): pás ide cez produkčné
  * okno dňa a zelené sú v ňom úseky, kedy je ideálne pustiť veľké spotrebiče (zelené štvrťhodiny
  * plánu dňa - slnko aj tarifa). Deň bez okna má pás prázdny. Stĺpček dňa v súčte týždňa je
- * zelený, keď deň nejaké okno má.
+ * zelený, keď deň nejaké okno má. Najlepší deň týždňa (najviac kWh, bestDayIndex) má zelený rám.
  *
  * Dnešok tu nemá vlastnú triedu: v rebríčku stojí vždy prvý a volá sa "Dnes", takže niet
  * čo zvýrazňovať. Príznak `r.today` z modelu ostáva, značí sa ním prepínač dní a tabuľka.
  * @param {ReturnType<typeof weekStatsModel>} s @param {ReturnType<typeof weekListModel>} rows
  * @param {Array<Array<{ left: number, width: number }>>} bands zelené úseky pásu pre každý deň
+ * @param {number} best index najlepšieho dňa
  * @param {import('../dom.js').Dom} dom
  */
-function renderList(s, rows, bands, dom) {
+function renderList(s, rows, bands, best, dom) {
     dom.weekListTotal.textContent = String(Math.round(s.totalKwh));
     dom.weekListAvg.textContent = `${fmt1(s.avgKwh)} kWh`;
     // Týždeň v malom: stĺpček na deň, výška je výroba, zelený je deň s oknom.
@@ -192,7 +194,7 @@ function renderList(s, rows, bands, dom) {
     const html = rows
         .map(
             (r, i) =>
-                `<button type="button" class="wday${r.sel ? ' sel' : ''}" data-day-index="${r.dayIndex}">` +
+                `<button type="button" class="wday${r.sel ? ' sel' : ''}${i === best ? ' best' : ''}" data-day-index="${r.dayIndex}">` +
                 `<span class="wday-name">${escapeHtml(r.name)}<span class="wday-date">${escapeHtml(r.dateLabel)}</span></span>` +
                 skyCell(r.cloudAvgPct) +
                 `<span class="wday-bar">${bands[i].map((b) => `<i style="left:${b.left}%;width:${b.width}%"></i>`).join('')}</span>` +
@@ -436,7 +438,7 @@ export function renderSedemdni(state, dom) {
     renderStats(stats, dom, !!detail);
     const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);
     const bands = days.map((_, i) => windowBand(sunWindows(forecastDayPlan({ ...state, forecast }, i))));
-    renderList(stats, weekListModel(days, sel), bands, dom);
+    renderList(stats, weekListModel(days, sel), bands, bestDayIndex(days), dom);
 
     // Mapa a stĺpce dostanú skutočný rozmer karty len na širokej obrazovke; na mobile si
     // plátno určia samy, aby rozloženie ostalo také, aké bolo.
