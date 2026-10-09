@@ -2277,9 +2277,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 /* Osem kariet pod sebou: bublina so súčtom za týždeň a pod ňou sedem dní, každý vo vlastnom
    ráme. Súčet a deň tak vyzerajú ako to, čím sú - dve rovnocenné tlačidlá, jedno do detailu
-   týždňa, druhé do detailu dňa - a dni sa od seba jasne oddelia. Dĺžka pásika je výroba dňa
-   voči najsilnejšiemu dňu v týždni, takže sa dni dajú porovnať očami, bez čítania čísel -
-   preto tu nie sú stĺpce Využitie a Špička, tie ostávajú v detaile dňa.
+   týždňa, druhé do detailu dňa - a dni sa od seba jasne oddelia. Pásik ukazuje, kedy v ten
+   deň pustiť veľké spotrebiče (zelené okná), takže sa dobrý deň dá nájsť očami, bez čítania
+   čísel - preto tu nie sú stĺpce Využitie a Špička, tie ostávajú v detaile dňa.
    Blok je vidno len pod 768 px; na širokej obrazovke mu renderView nechá .hidden, lebo
    tam je na prehľad miesta dosť na bubliny aj tabuľku. */
 /* Bublina so súčtom aj riadky dní sú tlačidlá, takže potrebujú späť zarovnanie a šírku,
@@ -2325,14 +2325,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     border-radius: 2px;
     background: var(--ink-20);
 }
-.week-list-spark i.tier-green {
+.week-list-spark i.win {
     background: var(--green);
-}
-.week-list-spark i.tier-amber {
-    background: var(--amber);
-}
-.week-list-spark i.tier-red {
-    background: var(--red);
 }
 /* Šípka "›" hovorí, že bublina otvára detail týždňa. Nepotrebuje @media ako tá istá šípka
    pri bublinách vyššie - celý blok je na obrazovke len tam, kde detail existuje. */
@@ -2395,12 +2389,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .week-legend i.tier-green {
     background: var(--green);
 }
-.week-legend i.tier-amber {
-    background: var(--amber);
-}
-.week-legend i.tier-red {
-    background: var(--red);
-}
 .week-list {
     display: flex;
     flex-direction: column;
@@ -2452,28 +2440,20 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     letter-spacing: 0.06em;
     color: var(--ink-35);
 }
+/* Pás ide cez produkčné okno dňa (HOUR_RANGE) a zelené úseky v ňom sú okná na veľké
+   spotrebiče - to isté ako .rng v novej appke. Pásik je tenký (10 px), preto plná farba. */
 .wday-bar {
+    position: relative;
     height: 10px;
     border-radius: var(--radius-pill);
-    background: var(--ink-05);
+    background: var(--ink-08);
     overflow: hidden;
 }
 .wday-bar i {
-    display: block;
-    height: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
     border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--green) 45%, transparent);
-}
-/* Pásmo dňa - tá istá mierka ako v heatmape. Sýtosť sa z heatmapy nepreberá: tam je
-   jediným nosičom veľkosti, tu je ňou dĺžka pásika a slabý deň by bol krátky aj vyblednutý.
-   Pásik je tenký (10 px), preto plná farba - priesvitná by na ňom zanikla. */
-.wday-bar i.tier-red {
-    background: var(--red);
-}
-.wday-bar i.tier-amber {
-    background: var(--amber);
-}
-.wday-bar i.tier-green {
     background: var(--green);
 }
 .wday-kwh {
@@ -2483,15 +2463,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     min-width: 40px;
     text-align: right;
     white-space: nowrap;
-}
-.wday-kwh.tier-red {
-    color: var(--red);
-}
-.wday-kwh.tier-amber {
-    color: var(--amber);
-}
-.wday-kwh.tier-green {
-    color: var(--green);
 }
 .wday-kwh .u {
     font-family: var(--font-mono);

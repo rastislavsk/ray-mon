@@ -2,7 +2,7 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { RING, ringPercent, usePct, visibleHours, weekDayTiers, weekListModel, WEEK_HOURS } from '../../shared/chart-model.js';
+import { RING, ringPercent, usePct, visibleHours, weekDayTiers, WEEK_HOURS } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     APP_URL,
@@ -26,7 +26,8 @@ import {
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
-import { dayHourTiers } from '../../shared/day-plan.js';
+import { dayHourTiers, forecastDayPlan } from '../../shared/day-plan.js';
+import { sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
@@ -546,21 +547,23 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-day-head')).toBeHidden();
     expect(await viditelneBloky(page)).toEqual(['week-block-list']);
 
-    // Dĺžka pásika je výroba dňa voči najsilnejšiemu dňu - očakávanie sa počíta tou istou
-    // funkciou ako v appke, takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
-    for (const r of weekListModel(forecast.days, 0))
-        await expect(page.locator(`#week-list [data-day-index="${r.dayIndex}"] .wday-bar i`)).toHaveAttribute(
-            'style',
-            `width:${r.barPct}%`,
-        );
-
-    // Pásmo dňa (farba heatmapy) nesie pásik aj číslo. Očakávanie sa počíta tou istou
-    // funkciou ako v appke, takže test chytí rozdiel medzi mierkou modelu a farbou v DOM.
-    for (const [i, tier] of weekDayTiers(forecast.days).entries()) {
+    // Pás dňa ukazuje okná na veľké spotrebiče - tie isté zelené úseky ako v novej appke.
+    // Očakávanie sa počíta tou istou funkciou ako v appke, takže test chytí rozdiel medzi
+    // modelom a tým, čo je v DOM. Číslo kWh už farbu nenesie.
+    const vstup = { ...OWNER, now: FIXED_NOW, pv, forecast: forecastAt(FIXED_NOW) };
+    for (let i = 0; i < 7; i++) {
         const riadok = page.locator(`#week-list [data-day-index="${i}"]`);
-        await expect(riadok.locator('.wday-bar i')).toHaveClass(tier ? `tier-${tier}` : '');
-        await expect(riadok.locator('.wday-kwh')).toHaveClass(tier ? `wday-kwh tier-${tier}` : 'wday-kwh');
+        const band = windowBand(sunWindows(forecastDayPlan(vstup, i)));
+        const vStranke = await riadok.locator('.wday-bar i').evaluateAll((els) =>
+            els.map((el) => ({
+                left: parseFloat(/** @type {HTMLElement} */ (el).style.left),
+                width: parseFloat(/** @type {HTMLElement} */ (el).style.width),
+            })),
+        );
+        expect(vStranke).toEqual(band);
+        await expect(riadok.locator('.wday-kwh')).toHaveClass('wday-kwh');
     }
+    expect(await page.locator('#week-list .wday-bar i').count()).toBeGreaterThan(0);
 
     // Klik na deň otvorí jeho detail: tri čísla dňa, stĺpce po hodinách a odporúčanie.
     await page.locator('#week-list [data-day-index="5"]').click();
