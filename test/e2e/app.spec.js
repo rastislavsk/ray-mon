@@ -2,7 +2,7 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { RING, ringPercent, usePct, visibleHours, weekDayTiers, WEEK_HOURS } from '../../shared/chart-model.js';
+import { bestDayIndex, RING, ringPercent, usePct, visibleHours, weekDayTiers, WEEK_HOURS } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     APP_URL,
@@ -564,6 +564,9 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
         await expect(riadok.locator('.wday-kwh')).toHaveClass('wday-kwh');
     }
     expect(await page.locator('#week-list .wday-bar i').count()).toBeGreaterThan(0);
+    // Najlepší deň má zelený rám - práve jeden, ten s najviac kWh.
+    await expect(page.locator('#week-list .wday.best')).toHaveCount(1);
+    await expect(page.locator('#week-list .wday.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
 
     // Klik na deň otvorí jeho detail: tri čísla dňa, stĺpce po hodinách a odporúčanie.
     await page.locator('#week-list [data-day-index="5"]').click();
