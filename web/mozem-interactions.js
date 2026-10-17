@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem?: zoznam vecí, rozbalenie veci, „Pustil/a som“, pás hlášok a súhrn na
+// Poslucháče karty Môžem?: zoznam vecí, rozbalenie veci, „Pustil/a som“ a súhrn na
 // zdieľanie. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
 // web/render/mozem.js.
 
@@ -6,7 +6,6 @@ import { toggleLaunch } from '../shared/launches.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { SUMMARY_PERIODS } from '../shared/summary.js';
 import { backTo } from './history.js';
-import { pagerScroll, scrollPager } from './pager.js';
 import { saveLaunches } from './settings-store.js';
 import { shareSummary } from './share-image.js';
 
@@ -26,38 +25,12 @@ function logLaunch(store, id, sun) {
     store.setState({ launches });
 }
 
-/** Posunie pás hlášok (prekresľuje sa s kartou, preto sa hľadá nanovo).
- * @param {HTMLElement} body @param {number | null} index null = ďalšia */
-function scrollQuips(body, index) {
-    const pager = body.querySelector('[data-mozem-quips]');
-    if (pager instanceof HTMLElement) scrollPager(pager, index);
-}
-
-/** Pás hlášok listuje prehliadač, ako pás odporúčaní (initVerdictPager). Pás sa s obsahom karty
- * prepisuje, preto poslucháč sedí na nosiči a posun (ten nebublá) chytá cestou dole.
- * @param {Store} store @param {Dom} dom */
-function initQuipPager(store, dom) {
-    const onScroll = pagerScroll(
-        () => dom.mozemBody.querySelectorAll('[data-mozem-quip-dot]'),
-        (page) => store.setState({ mozemQuip: page }),
-    );
-    dom.mozemBody.addEventListener(
-        'scroll',
-        (e) => {
-            if (e.target instanceof HTMLElement && e.target.matches('[data-mozem-quips]')) onScroll(e.target);
-        },
-        { capture: true, passive: true },
-    );
-}
-
 /**
  * Karta Môžem?: riadok „Čo môžem“ otvorí zoznam vecí, ťuknutie na vec v ňom ju rozbalí (druhé
- * zbalí), ťuknutie na hlášku posunie pás na ďalšiu. Rozbalenie a hláška sú nastavenie vnútri
- * karty, nie krok navigácie - Späť sa na ne nevracia.
+ * zbalí). Rozbalenie je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
  * @param {Store} store @param {Dom} dom
  */
 export function initMozem(store, dom) {
-    initQuipPager(store, dom);
     dom.mozemBody.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         // Zoznam vecí je obrazovka karty ako súhrn: otvorenie je krok navigácie, šípka späť
@@ -71,9 +44,6 @@ export function initMozem(store, dom) {
         }
         const log = target.closest('[data-mozem-log]');
         if (log instanceof HTMLElement) return logLaunch(store, log.dataset.mozemLog || '', log.dataset.sun === '1');
-        if (target.closest('[data-mozem-quip]')) return scrollQuips(dom.mozemBody, null);
-        const dot = target.closest('[data-mozem-quip-dot]');
-        if (dot instanceof HTMLElement) return scrollQuips(dom.mozemBody, Number(dot.dataset.mozemQuipDot));
         onSummaryClick(store, target);
     });
 }
