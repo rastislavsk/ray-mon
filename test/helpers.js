@@ -25,3 +25,33 @@ export function pvAt(now) {
     const last = curve[curve.length - 1];
     return { ...pv, realCurveToday: curve, realTimePowerKw: last && hours - last.hour <= 0.25 ? last.kw : 0 };
 }
+
+/**
+ * Podvrhne QR knižnicu z CDN (v testoch sa nenačíta): kód kreslí ako prvok s `data-qr` a odkaz
+ * dlhší než `maxLen` odmietne výnimkou ako skutočná knižnica pri prekročení kapacity kódu.
+ * Úroveň opravy chýb, s ktorou appka kód vytvorila, zapíše do `globalThis.qrLevels`.
+ * @param {import('@playwright/test').Page} page @param {number} maxLen
+ */
+export async function podvrhniQr(page, maxLen) {
+    await page.addInitScript((max) => {
+        /** @type {number[]} */ const levels = [];
+        const g = /** @type {any} */ (globalThis);
+        g.qrLevels = levels;
+        g.QRCode = class {
+            /** @param {HTMLElement} el @param {{ text?: string, correctLevel: number }} o */
+            constructor(el, o) {
+                this.el = el;
+                levels.push(o.correctLevel);
+                if (o.text) this.makeCode(o.text);
+            }
+            /** @param {string} text */
+            makeCode(text) {
+                if (text.length > max) throw new Error('code length overflow');
+                const d = document.createElement('div');
+                d.dataset.qr = text;
+                this.el.replaceChildren(d);
+            }
+        };
+        g.QRCode.CorrectLevel = { L: 1, M: 0, Q: 3, H: 2 };
+    }, maxLen);
+}

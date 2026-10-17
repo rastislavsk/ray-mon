@@ -39,7 +39,7 @@ import { summaryModel } from '../../shared/summary.js';
 import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
-import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
+import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
@@ -1740,6 +1740,29 @@ test('šípka späť z detailu dňa je krok späť: Späť potom detail znovu ne
     await page.goBack();
     await ocakavajKartu(page, 'mozem');
     await expect(page.locator('#week-day-head')).toBeHidden();
+    expect(errors).toEqual([]);
+});
+
+test('Zdieľať appku: odkaz, ktorý sa do QR kódu nezmestí, ostane len na tlačidle WhatsApp', async ({ page }) => {
+    // Kód unesie odkaz bez nastavenia, s nastavením elektrárne už nie.
+    await podvrhniQr(page, APP_URL.length + 20);
+    const errors = await openApp(page);
+    await page.locator('#nav-nastavenie').click();
+    await page.locator('#info-share > summary').click();
+    await expect(page.locator('#qrcode [data-qr]')).toHaveAttribute('data-qr', APP_URL);
+    await expect(page.locator('#qrcode')).toBeVisible();
+    expect(await page.evaluate(() => /** @type {any} */ (globalThis).qrLevels)).toEqual([0]);
+
+    await page.locator('#share-with-settings').check();
+    await expect(page.locator('#qrcode')).toBeHidden();
+    const dlhy = shareUrl(APP_URL, OWNER, false);
+    await expect(page.locator('#share-whatsapp')).toBeVisible();
+    await expect(page.locator('#share-whatsapp')).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(dlhy)}`);
+
+    // Kratší odkaz sa do kódu zase zmestí.
+    await page.locator('#share-with-settings').uncheck();
+    await expect(page.locator('#qrcode')).toBeVisible();
+    await expect(page.locator('#qrcode [data-qr]')).toHaveAttribute('data-qr', APP_URL);
     expect(errors).toEqual([]);
 });
 
