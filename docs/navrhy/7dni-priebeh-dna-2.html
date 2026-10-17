@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Priebeh dňa – návrhy D a E</title>
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            :root {
+                --bg: #0a0a0a;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --body: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: #222;
+                color: var(--ink);
+                font-family: var(--body);
+                padding: 24px;
+            }
+            .wall {
+                display: flex;
+                gap: 32px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .phone {
+                width: 390px;
+                height: 844px;
+                position: relative;
+                overflow: hidden;
+                background: radial-gradient(120% 60% at 50% 0%, #1d2a12 0%, #0d110a 45%, var(--bg) 75%);
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 18px 20px 0;
+            }
+            .hdr .brand {
+                font-family: var(--mono);
+                font-weight: 600;
+                font-size: 14px;
+                letter-spacing: 0.04em;
+            }
+            .hdr .sub {
+                font-family: var(--mono);
+                font-size: 10px;
+                color: var(--ink-45);
+                margin-top: 6px;
+                letter-spacing: 0.06em;
+            }
+            .hdr .time {
+                font-family: var(--mono);
+                font-size: 14px;
+                text-align: right;
+            }
+            .hdr .time::before {
+                content: '';
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--green);
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            .content {
+                padding: 0 20px;
+            }
+            .back {
+                display: inline-flex;
+                align-items: center;
+                margin-top: 22px;
+                padding: 9px 14px;
+                border-radius: 12px;
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                color: var(--green);
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .title {
+                font-size: 26px;
+                font-weight: 600;
+                margin-top: 14px;
+            }
+            .subt {
+                color: var(--ink-45);
+                font-size: 13.5px;
+                margin-top: 2px;
+            }
+            .subt b {
+                color: var(--ink);
+                font-family: var(--mono);
+                font-weight: 600;
+            }
+            .lbl {
+                font-family: var(--mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 68px;
+                background: rgba(10, 10, 10, 0.92);
+                border-top: 1px solid var(--ink-08);
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .nav span {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+            }
+            .nav span i {
+                width: 20px;
+                height: 20px;
+                border: 1.6px solid currentColor;
+                border-radius: 6px;
+            }
+            .nav span.on {
+                color: var(--ink);
+                font-weight: 600;
+            }
+            .nav span.on i {
+                border-color: var(--green);
+                box-shadow: 0 0 14px rgba(158, 242, 91, 0.5);
+            }
+            .leg {
+                display: flex;
+                gap: 12px;
+                font-size: 11.5px;
+                color: var(--ink-45);
+                flex-wrap: wrap;
+            }
+            .leg i {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: -1px;
+            }
+
+            /* ---- D: panoráma oblohy ---- */
+            .sky {
+                position: relative;
+                margin-top: 18px;
+                border-radius: 18px 18px 0 0;
+                overflow: hidden;
+                height: 150px;
+            }
+            .sky svg {
+                display: block;
+            }
+            .fit {
+                display: flex;
+                height: 40px;
+                border-radius: 0 0 18px 18px;
+                overflow: hidden;
+            }
+            .fit span {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 600;
+                color: #0b0b0b;
+                border-right: 1px solid rgba(0, 0, 0, 0.35);
+                white-space: nowrap;
+            }
+            .fit span:last-child {
+                border-right: 0;
+            }
+            .hours {
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+                font-size: 10.5px;
+                color: var(--ink-45);
+                margin-top: 6px;
+                padding: 0 2px;
+            }
+            .reco {
+                margin-top: 16px;
+                border-radius: 18px;
+                padding: 16px;
+                background: rgba(158, 242, 91, 0.12);
+                border: 1px solid rgba(158, 242, 91, 0.4);
+            }
+            .reco .h {
+                font-size: 19px;
+                font-weight: 600;
+                color: var(--green);
+            }
+            .reco .p {
+                font-size: 13.5px;
+                color: var(--ink-70);
+                margin-top: 4px;
+                line-height: 1.4;
+            }
+            .prod {
+                margin-top: 12px;
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 14px;
+                border-radius: 14px;
+                background: rgba(21, 22, 20, 0.85);
+                border: 1px solid var(--ink-08);
+                font-size: 12.5px;
+                color: var(--ink-45);
+            }
+            .prod b {
+                color: var(--ink);
+                font-family: var(--mono);
+                font-size: 15px;
+                display: block;
+                margin-top: 3px;
+            }
+
+            /* ---- E: deň ako kalendár ---- */
+            .cal {
+                position: relative;
+                margin-top: 14px;
+            }
+            .cal-head {
+                display: grid;
+                grid-template-columns: 40px 1fr 1fr;
+                gap: 8px;
+                margin-bottom: 6px;
+            }
+            .cal-body {
+                position: relative;
+                display: grid;
+                grid-template-columns: 40px 1fr 1fr;
+                gap: 8px;
+            }
+            .tcol {
+                position: relative;
+            }
+            .tcol span {
+                position: absolute;
+                left: 0;
+                font-family: var(--mono);
+                font-size: 10.5px;
+                color: var(--ink-45);
+                transform: translateY(-50%);
+            }
+            .lane {
+                position: relative;
+            }
+            .blk {
+                position: absolute;
+                left: 0;
+                right: 0;
+                border-radius: 10px;
+                padding: 7px 9px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 1px;
+            }
+            .blk .a {
+                font-size: 13px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .blk .b {
+                font-size: 10.5px;
+                font-family: var(--mono);
+                opacity: 0.8;
+            }
+            .grid-line {
+                position: absolute;
+                left: 48px;
+                right: 0;
+                height: 1px;
+                background: var(--ink-05);
+            }
+            .now {
+                position: absolute;
+                left: 40px;
+                right: 0;
+                height: 2px;
+                background: var(--ink);
+                z-index: 3;
+            }
+            .now::before {
+                content: '';
+                position: absolute;
+                left: -5px;
+                top: -4px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--ink);
+            }
+            .now b {
+                position: absolute;
+                left: -44px;
+                top: -9px;
+                font-family: var(--mono);
+                font-size: 10px;
+                background: var(--ink);
+                color: #0b0b0b;
+                padding: 1px 6px;
+                border-radius: 6px;
+            }
+            .past {
+                position: absolute;
+                left: 48px;
+                right: 0;
+                top: 0;
+                background: rgba(10, 10, 10, 0.45);
+                z-index: 2;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wall" id="wall"></div>
+        <script>
+            // Premenlivý deň (tie isté čísla ako ?den=premenlivy v 7dni-priebeh-dna.html): Dnes 5. 9., 13:00.
+            const H = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+            const FC = [0.3, 1.2, 2.6, 3.5, 3.8, 5.1, 4.3, 4.9, 5.8, 4.3, 2.8, 2.4, 1.6, 0.7, 0.2];
+            const CL = [15, 10, 20, 45, 70, 55, 80, 65, 40, 60, 75, 50, 30, 25, 20];
+            const NOW = 13;
+            const T0 = 6,
+                T1 = 21;
+            const fmt = (n) => n.toLocaleString('sk-SK', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            // Pásma vhodnosti na veľké spotrebiče (zelená = slnko stačí, jantárová = čiastočne zo siete, červená = zo siete).
+            const FIT = [
+                { od: 6, do: 8, t: 'red', txt: 'zo siete' },
+                { od: 8, do: 11, t: 'amber', txt: 'len menšie' },
+                { od: 11, do: 16, t: 'green', txt: 'zapni 11–16' },
+                { od: 16, do: 18, t: 'amber', txt: 'len menšie' },
+                { od: 18, do: 21, t: 'red', txt: 'zo siete' },
+            ];
+            const COL = { green: '#9ef25b', amber: '#ffc24b', red: '#ff6b57' };
+            const SKY = [
+                { od: 6, do: 9, txt: 'Jasno', cl: 15 },
+                { od: 9, do: 11, txt: 'Zaťahuje sa', cl: 58 },
+                { od: 11, do: 13, txt: 'Zamračené', cl: 68 },
+                { od: 13, do: 15, txt: 'Slnko vykukne', cl: 40 },
+                { od: 15, do: 17, txt: 'Zamračené', cl: 68 },
+                { od: 17, do: 21, txt: 'Vyjasňuje sa', cl: 25 },
+            ];
+            const sum = (od, d) => H.reduce((a, h, i) => (h >= od && h < d ? a + FC[i] : a), 0);
+            const SPOLU = sum(0, 24);
+
+            function ico(cloud, size = 18) {
+                const sun = `<g stroke="#ffc24b" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="4.2" fill="#ffc24b"/>${[
+                    0, 45, 90, 135, 180, 225, 270, 315,
+                ]
+                    .map((a) => {
+                        const r = (a * Math.PI) / 180;
+                        return `<line x1="${11 + Math.cos(r) * 6.6}" y1="${11 + Math.sin(r) * 6.6}" x2="${11 + Math.cos(r) * 8.8}" y2="${11 + Math.sin(r) * 8.8}"/>`;
+                    })
+                    .join('')}</g>`;
+                const c = (x, y, s) =>
+                    `<path transform="translate(${x} ${y}) scale(${s})" d="M6 16h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6 1.6A3.3 3.3 0 0 0 6 16z" fill="#3a3d38" stroke="rgba(242,240,234,.9)" stroke-width="1.3"/>`;
+                const inner =
+                    cloud < 20 ? sun : cloud < 60 ? `<g transform="translate(-2 -3) scale(.85)">${sun}</g>` + c(1, 3, 0.95) : c(0, 0, 1.05);
+                return `<svg width="${size}" height="${size}" viewBox="0 0 22 22">${inner}</svg>`;
+            }
+
+            const frame = (inner) => `
+  <div class="hdr"><div><div class="brand">Toilet Apps Ltd.</div><div class="sub">RAY-MON</div></div>
+    <div><div class="time">13:00</div><div class="sub" style="text-align:right">meranie</div></div></div>
+  <div class="content">
+    <span class="back">‹ 7 dní</span>
+    <div class="title">Dnes 5.9.</div>
+    <div class="subt">Premenlivo · predpoveď <b>${fmt(SPOLU)} kWh</b> · zatiaľ <b>18,8</b></div>
+    ${inner}
+  </div>
+  <div class="nav"><span><i></i>Môžem?</span><span><i></i>Terazky</span><span class="on"><i></i>7 dní</span><span><i></i>Štatistika</span><span><i></i>Nastavenie</span></div>`;
+
+            // ---------- D: panoráma oblohy nad pásom „kedy zapnúť“ ----------
+            function navrhD() {
+                const W = 350,
+                    Hh = 150,
+                    x = (t) => ((t - T0) / (T1 - T0)) * W;
+                // Farba oblohy po hodinách: jasno = modrá, zamračené = sivá.
+                const mix = (cl) => {
+                    const a = [58, 128, 214],
+                        b = [92, 98, 108],
+                        k = Math.min(1, cl / 85);
+                    return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * k)).join(',')})`;
+                };
+                const stops = H.map(
+                    (h, i) => `<stop offset="${((h + 0.5 - T0) / (T1 - T0)).toFixed(3)}" stop-color="${mix(CL[i])}"/>`,
+                ).join('');
+                let svg = `<defs><linearGradient id="sk" x1="0" x2="1">${stops}</linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs>
+    <rect width="${W}" height="${Hh}" fill="url(#sk)"/><rect width="${W}" height="${Hh}" fill="url(#fade)"/>`;
+                // Dráha slnka a slnko teraz.
+                const sy = (t) => Hh - 22 - Math.sin((Math.PI * (t - 6.4)) / 13) * 92;
+                const [sx, syy] = [x(NOW), sy(NOW)];
+                svg += `<circle cx="${sx}" cy="${syy}" r="24" fill="rgba(255,214,120,.35)"/><circle cx="${sx}" cy="${syy}" r="13" fill="#ffd36b"/>`;
+                // Oblaky: hustota podľa % oblakov v hodine (deterministicky rozložené).
+                const cloud = (cx, cy, s, o) =>
+                    `<g transform="translate(${cx} ${cy}) scale(${s})" opacity="${o}"><ellipse cx="0" cy="0" rx="18" ry="9" fill="#eef0f2"/><ellipse cx="-9" cy="-5" rx="9" ry="8" fill="#eef0f2"/><ellipse cx="6" cy="-8" rx="11" ry="10" fill="#eef0f2"/></g>`;
+                H.forEach((h, i) => {
+                    const n = Math.round(CL[i] / 22);
+                    for (let k = 0; k < n; k++) {
+                        const cx = x(h) + ((k * 37 + h * 13) % 24) + 2;
+                        const cy = 26 + ((k * 53 + h * 29) % 70);
+                        svg += cloud(cx, cy, 0.55 + ((k + h) % 3) * 0.18, 0.55 + CL[i] / 250);
+                    }
+                });
+                // Popisy úsekov oblohy.
+                [
+                    { od: 6, do: 9, txt: 'Jasno' },
+                    { od: 9, do: 12, txt: 'Oblačno' },
+                    { od: 12, do: 15, txt: 'Striedavo' },
+                    { od: 15, do: 18, txt: 'Oblačno' },
+                    { od: 18, do: 21, txt: 'Jasno' },
+                ].forEach((s) => {
+                    svg += `<text x="${x((s.od + s.do) / 2)}" y="${Hh - 10}" text-anchor="middle" font-size="11" font-weight="600" fill="#fff" font-family="Space Grotesk" style="paint-order:stroke" stroke="rgba(0,0,0,.35)" stroke-width="3">${s.txt}</text>`;
+                });
+                svg += `<text x="10" y="18" font-size="10" fill="rgba(255,255,255,.85)" font-family="IBM Plex Mono" letter-spacing="1">OBLOHA</text>`;
+                // Minulosť stlmená, čiara teraz.
+                svg += `<rect width="${x(NOW)}" height="${Hh}" fill="rgba(0,0,0,.18)"/><line x1="${sx}" x2="${sx}" y1="${syy + 14}" y2="${Hh}" stroke="#fff" stroke-width="2" stroke-dasharray="3 3"/>`;
+
+                const fit = FIT.map(
+                    (f) =>
+                        `<span style="width:${((f.do - f.od) / (T1 - T0)) * 100}%;background:${COL[f.t]}">${f.do - f.od >= 3 ? f.txt : ''}</span>`,
+                ).join('');
+                return frame(`
+    <div class="sky" style="overflow:visible"><svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" style="border-radius:18px 18px 0 0">${svg}</svg></div>
+    <div class="fit" style="position:relative">${fit}</div>
+    <div style="position:relative;height:0"><span style="position:absolute;left:${x(NOW) - 22}px;top:4px;font-family:var(--mono);font-size:10px;background:#fff;color:#0b0b0b;padding:1px 6px;border-radius:6px">teraz</span></div>
+    <div class="hours" style="margin-top:24px"><span>6</span><span>9</span><span>12</span><span>15</span><span>18</span><span>21</span></div>
+    <div class="leg" style="margin-top:10px"><span><i style="background:var(--green)"></i>slnko stačí</span><span><i style="background:var(--amber)"></i>len menšie spotrebiče</span><span><i style="background:var(--red)"></i>zo siete</span></div>
+    <div class="reco">
+      <div class="h">Teraz je dobrý čas · do 16:00</div>
+      <div class="p">Aj cez oblaky ide dosť slnka na práčku či bojler. Najsilnejšie okolo 14:00, keď sa na chvíľu vyjasní.</div>
+    </div>
+    <div class="prod">
+      <span>predpoveď<b>${fmt(SPOLU)} kWh</b></span><span>zatiaľ<b>18,8 kWh</b></span><span>špička<b>5,8 kW</b></span><span>oblaky<b>47 %</b></span>
+    </div>`);
+            }
+
+            // ---------- E: deň ako kalendár ----------
+            function navrhE() {
+                const PX = 31,
+                    y = (t) => (t - T0) * PX,
+                    HT = (T1 - T0) * PX;
+                const skyCol = (cl) =>
+                    cl < 30
+                        ? ['rgba(84,150,230,.30)', 'rgba(120,180,255,.55)']
+                        : cl < 55
+                          ? ['rgba(130,150,175,.26)', 'rgba(170,185,205,.5)']
+                          : ['rgba(150,152,158,.22)', 'rgba(190,192,198,.45)'];
+                const sky = SKY.map((s) => {
+                    const [bg, bd] = skyCol(s.cl);
+                    return `<div class="blk" style="top:${y(s.od) + 2}px;height:${(s.do - s.od) * PX - 4}px;background:${bg};border:1px solid ${bd}">
+      <span class="a">${ico(s.cl)}${s.txt}</span><span class="b">${s.od}–${s.do} · ${s.cl} %</span></div>`;
+                }).join('');
+                const lab = { red: 'Zo siete', amber: 'Len menšie', green: 'Zapni veľké' };
+                const fit = FIT.map((f) => {
+                    const c = COL[f.t];
+                    return `<div class="blk" style="top:${y(f.od) + 2}px;height:${(f.do - f.od) * PX - 4}px;background:${c}${f.t === 'green' ? '' : '2e'};border:1px solid ${c};color:${f.t === 'green' ? '#0b0b0b' : c}">
+      <span class="a">${f.t === 'green' ? '✓ ' : ''}${lab[f.t]}</span><span class="b">${f.od}–${f.do} · ${fmt(sum(f.od, f.do))} kWh</span>
+      ${f.t === 'green' ? `<span class="b" style="margin-top:auto;opacity:1;font-family:var(--body);font-size:12px;line-height:1.35">práčka, sušička, bojler, umývačka</span>` : ''}</div>`;
+                }).join('');
+                const ticks = [6, 8, 10, 12, 14, 16, 18, 20].map((t) => `<span style="top:${y(t)}px">${t}:00</span>`).join('');
+                const lines = [6, 8, 10, 12, 14, 16, 18, 20, 21].map((t) => `<i class="grid-line" style="top:${y(t)}px"></i>`).join('');
+                return frame(`
+    <div class="cal">
+      <div class="cal-head"><span></span><span class="lbl">Obloha</span><span class="lbl">Spotrebiče</span></div>
+      <div class="cal-body" style="height:${HT}px">
+        ${lines}
+        <div class="tcol">${ticks}</div>
+        <div class="lane">${sky}</div>
+        <div class="lane">${fit}</div>
+        <div class="past" style="height:${y(NOW)}px"></div>
+        <div class="now" style="top:${y(NOW)}px"><b>13:00</b></div>
+      </div>
+    </div>`);
+            }
+
+            document.getElementById('wall').innerHTML =
+                `<div class="phone" id="navrh-d">${navrhD()}</div><div class="phone" id="navrh-e">${navrhE()}</div>`;
+        </script>
+    </body>
+</html>

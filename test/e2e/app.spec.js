@@ -2,7 +2,17 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { bestDayIndex, RING, ringPercent, usePct, visibleHours, weekDayTiers, WEEK_HOURS } from '../../shared/chart-model.js';
+import {
+    bestDayIndex,
+    cloudStep,
+    dayTimelineModel,
+    RING,
+    ringPercent,
+    usePct,
+    visibleHours,
+    weekDayTiers,
+    WEEK_HOURS,
+} from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     APP_URL,
@@ -26,8 +36,8 @@ import {
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
-import { dayHourTiers, forecastDayPlan } from '../../shared/day-plan.js';
-import { sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
+import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
@@ -36,9 +46,9 @@ import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
 import { deviceShorts, mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
-import { dayDetailMessage, forecastDayMessage, weekMessage } from '../../shared/messages.js';
+import { dayWindowCard, fitLabel, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
-import { buildForecast, localDateKey, sunTimes } from '../../shared/solar.js';
+import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -571,7 +581,7 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-list .wday.best')).toHaveCount(1);
     await expect(page.locator('#week-list .wday.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
 
-    // Klik na deň otvorí jeho detail: tri čísla dňa, stĺpce po hodinách a odporúčanie.
+    // Klik na deň otvorí jeho detail: okno na veľké spotrebiče, časovú os dňa a tri čísla.
     await page.locator('#week-list [data-day-index="5"]').click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
     await expect(page.locator('#week-block-list')).toBeHidden();
@@ -579,20 +589,32 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
 
     // Všetko hovorí o tom istom dni - očakávania sa počítajú tými istými funkciami ako v appke.
-    await expect(page.locator('#week-msg-title')).toHaveText(
-        dayDetailMessage(visibleHours(forecast.days[5].hourly), powerThresholds(PLANT)).title,
-    );
-    await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
-    await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[5].kwhTotal)} kWh`);
     const den5 = forecast.days[5];
-    // Tretie číslo je oblačnosť dňa, nie podiel z jasnej oblohy - tá je každý deň skoro rovnaká.
-    await expect(page.locator('#week-curve-stat .kpi').nth(2)).toHaveText(`${Math.round(Number(den5.cloudAvgPct))} %oblačnosť`);
-    await expect(page.locator('#week-curve path.line-cloud')).toHaveCount(1);
-    // Stĺpec na každú hodinu grafu, vo farbe plánu toho dňa (tarifa × slnko).
-    const farby = dayHourTiers(den5, TARIFF, PLANT).filter((_, i) => WEEK_HOURS.includes(den5.hourly[i].hour));
-    const stlpce = page.locator('#week-curve .hour-bar');
-    await expect(stlpce).toHaveCount(WEEK_HOURS.length);
-    for (const [i, tier] of farby.entries()) await expect(stlpce.nth(i)).toHaveClass(tier ? `hour-bar tier-${tier}` : 'hour-bar');
+    const plan5 = forecastDayPlan(vstup, 5);
+    // Hore okno na veľké spotrebiče - to isté zelené ako pás v rebríčku. Správu nahrádza.
+    const okno = dayWindowCard(mainWindow(sunWindows(plan5)), null, den5.peakHour);
+    await expect(page.locator('#week-day-window .dw-val')).toHaveText(okno.value);
+    await expect(page.locator('#week-day-window .dw-state')).toHaveText(okno.state);
+    await expect(page.locator('#week-msg-block')).toBeHidden();
+    // Pod grafom tri čísla; iný deň než dnešok má v strede oblačnosť dňa.
+    await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
+    await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(den5.kwhTotal)} kWh`);
+    await expect(page.locator('#week-curve-stat .kpi').nth(1)).toHaveText(`Oblačnosť${Math.round(Number(den5.cloudAvgPct))} %priemer dňa`);
+    // Časová os: bunka oblačnosti na každú hodinu grafu v stupni podľa percent a pás
+    // spotrebičov z plánu dňa s popismi - očakávanie ráta ten istý model ako appka.
+    const bunky = page.locator('#week-curve .tl-cloud');
+    await expect(bunky).toHaveCount(WEEK_HOURS.length);
+    const hodiny5 = den5.hourly.filter((p) => WEEK_HOURS.includes(p.hour));
+    for (const [i, p] of hodiny5.entries()) await expect(bunky.nth(i)).toHaveClass(`tl-cloud c${cloudStep(Number(p.cloud))}`);
+    const os = dayTimelineModel({ pts: den5.hourly, segments: fitSegments(plan5, powerThresholds(PLANT)), label: fitLabel });
+    if (!os) throw new Error('časová os bez modelu');
+    expect(await page.locator('#week-curve .tl-fit').evaluateAll((els) => els.map((el) => el.getAttribute('class')))).toEqual(
+        os.fit.map((f) => `tl-fit ${f.level}`),
+    );
+    expect(await page.locator('#week-curve .tl-fit-label').allTextContents()).toEqual(os.fit.map((f) => f.label).filter(Boolean));
+    await expect(page.locator('#week-curve .tl-wash')).toHaveCount(os.wash.length);
+    // Iný deň než dnešok nemá „teraz“.
+    await expect(page.locator('#week-curve .tl-now')).toHaveCount(0);
     // Pod detailom susedné dni: predchádzajúci aj ďalší.
     await expect(page.locator('.day-steps .day-step')).toHaveCount(2);
     await expect(page.locator('.day-steps .day-step.prev')).toHaveAttribute('data-day-index', '4');
@@ -721,22 +743,26 @@ test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page 
     await page.locator('#nav-7dni').click();
     await page.locator('#week-list [data-day-index="0"]').click();
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(1);
-    // Lem pod krivkou je tá istá čiara, len širšia a vo farbe pozadia - a leží pod ňou.
-    const lem = page.locator('#week-curve path.line-real-halo');
-    await expect(lem).toHaveCount(1);
-    expect(await lem.getAttribute('d')).toBe(await page.locator('#week-curve path.line-real').getAttribute('d'));
-    expect(await page.locator('#week-curve path.line-real-halo + path.line-real').count()).toBe(1);
     await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(1);
     await expect(page.locator('#week-curve-live-legend')).toBeVisible();
+    // Dnešok má „teraz“ s časom a karta okna počíta s ním.
+    await expect(page.locator('#week-curve .tl-now')).toHaveCount(1);
+    await expect(page.locator('#week-curve .tl-now-text')).toHaveText(minutesToTimeStr(localMinutes(FIXED_NOW, SITE.timezone)));
+    const vstup0 = { ...OWNER, now: FIXED_NOW, pv, forecast: forecastAt(FIXED_NOW) };
+    const okno0 = dayWindowCard(
+        mainWindow(sunWindows(forecastDayPlan(vstup0, 0))),
+        localMinutes(FIXED_NOW, SITE.timezone),
+        forecast.days[0].peakHour,
+    );
+    await expect(page.locator('#week-day-window .dw-state')).toHaveText(okno0.state);
     // Koľko už z predpovede nabehlo, patrí tiež len dnešku.
-    await expect(page.locator('#week-curve-stat')).toContainText(`Doteraz ${fmt1(pv.dailyEnergyKwh)} kWh`);
+    await expect(page.locator('#week-curve-stat')).toContainText(`Zatiaľ${fmt1(pv.dailyEnergyKwh)} kWh`);
 
     await page.locator('#week-day-back').click();
     await page.locator('#week-list [data-day-index="3"]').click();
     await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
-    await expect(page.locator('#week-curve path.line-real-halo')).toHaveCount(0);
     await expect(page.locator('#week-curve-live-legend')).toBeHidden();
-    await expect(page.locator('#week-curve-stat')).not.toContainText('Doteraz');
+    await expect(page.locator('#week-curve-stat')).not.toContainText('Zatiaľ');
     expect(errors).toEqual([]);
 });
 
@@ -765,8 +791,13 @@ test.describe('správa týždňa v prehľade dní', () => {
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#week-msg-block')).toBeHidden();
         expect(await scrollujeSa(page)).toBe(false);
-        // V detaile dňa správa patrí k obsahu, nie k miestu - tam je aj na nízkom okne.
+        // V detaile dňa správu nahrádza karta okna na veľké spotrebiče - tá patrí k obsahu,
+        // nie k miestu, takže je aj na nízkom okne. V detaile týždňa správa ostáva.
         await page.locator('#week-list [data-day-index="2"]').click();
+        await expect(page.locator('#week-msg-block')).toBeHidden();
+        await expect(page.locator('#week-day-window')).toBeVisible();
+        await page.locator('#week-day-back').click();
+        await page.locator('.week-list-hero').click();
         await expect(page.locator('#week-msg-block')).toBeVisible();
         expect(errors).toEqual([]);
     });

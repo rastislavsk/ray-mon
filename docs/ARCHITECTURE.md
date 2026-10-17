@@ -456,14 +456,13 @@ kým sa človek dostal k tomu, čo ho zaujímalo. Je preto rozdelená na dve obr
 
 - **Prehľad dní** – rebríček: bublina so súčtom za týždeň (so stĺpčekmi dní v malom) a pod
   ňou sedem riadkov s pásikmi a legenda ich farieb. Zmestí sa celý na jednu obrazovku.
-- **Detail dňa** – otvorí ho klik na riadok rebríčka: tri čísla dňa, stĺpce po hodinách,
-  odporúčanie (správa o tom dni) a tlačidlá na susedné dni.
+- **Detail dňa** – otvorí ho klik na riadok rebríčka: okno na veľké spotrebiče, časová os
+  dňa, tri čísla dňa a tlačidlá na susedné dni.
 - **Detail týždňa** – otvorí ho klik na bublinu „Spolu za 7 dní“: denná výroba, heatmapa
   hodina × deň a správa „Najsilnejší deň“.
 
-Správa je jeden prvok pre obe obrazovky: v detaile dňa v ňom stojí `dayDetailMessage`,
-v detaile týždňa `weekMessage`. Text v detaile dňa deň naschvál nepomenúva – hovorí to
-hlavička nad ním, a inak by sa „zajtra“ ukázalo aj pri štvrtku.
+Správa (`weekMessage`) patrí detailu týždňa. V detaile dňa ju nahrádza karta okna na veľké
+spotrebiče nad grafom (`dayWindowCard` v `shared/messages-sedem.js`) – hovorila by to isté.
 
 V **prehľade dní** je tá istá správa (`weekMessage`) navyše, a len vtedy, keď na ňu ostalo
 miesto: prehľad má byť jedna obrazovka bez scrollovania, takže správa je bonus, nie obsah.
@@ -481,12 +480,16 @@ Obe obrazovky majú hlavičku so šípkou späť. Rozhoduje o tom jediné pole v
 prvkov v DOM. Poradie v detaile týždňa robí jedno pravidlo `order` v CSS, lebo heatmapa je
 v HTML prvá, ale na detaile má ísť posledná.
 
-Stĺpce v detaile dňa (`dayBarsModel`) majú farbu plánu dňa – tú istú, akú by v ten deň
-a hodinu mal denný prstenec ciferníka: pásmo tarify toho dňa (aj s výnimkami rozvrhu) a výkon
-z predpovede (`dayHourTiers` v `shared/day-plan.js`). Pod osou je pás cien z tarify. Mierka
-a produkčné okno sú tie isté ako pri krivke, takže tooltip nad grafom sedí na oba. Riadok
-heatmapy pre jeden deň, ktorý tu bol predtým, zanikol: hovoril to isté, čo stĺpce. Na širokej
-obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
+Graf v detaile dňa je časová os (`dayTimelineModel`, návrh D3 v `docs/navrhy/`): hore pás
+oblačnosti po hodinách v štyroch stupňoch sivej (`CLOUD_STEPS`), v strede výroba (plocha
+predpovede, pri dnešku nameraná krivka a „teraz“), dole pás spotrebičov z plánu dňa po
+štvrťhodinách (`fitSegments` v `shared/day-plan.js`): _zapni veľké_ je tá istá zelená ako na
+dennom prstenci, _čiastočne_ je slnko aspoň na úrovni špičky slabého dňa, zvyšok _zo siete_.
+Tarifa do pásu nevstupuje – hovorí len o slnku. Zelené okno je navyše jemná plocha cez celý
+graf. Farby sú jeden odtieň zelenej v troch stupňoch jasu a sivá v štyroch, overené na
+farbosleposť (pozri komentár pri tokenoch v `style.css`). Výroba zaberá presne plochu medzi
+`padT` a `h - padB`, takže tooltip (`chartTooltipModel`) je ten istý ako nad krivkou. Na
+širokej obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
 
 Susedné dni pod detailom (tlačidlá „‹ Streda“ a „Piatok ›“, `#week-day-steps`) aj bodky pod
 hlavičkou (`#week-day-dots`) stoja v `index.html` mimo prvkov, ktoré sa pri listovaní

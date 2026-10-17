@@ -19,6 +19,10 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                               |
 | `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                                |
 | `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť)            |
+| `7dni-priebeh-dna.html`        | Detail dňa (súčasná appka) – namiesto grafu: hodiny (A), časti dňa (B), oblúk slnka (C); `?den=premenlivy`           |
+| `7dni-priebeh-dna-2.html`      | Detail dňa – oblačnosť a kedy zapnúť spotrebiče: panoráma oblohy (D), deň ako kalendár (E)                           |
+| `7dni-priebeh-dna-3.html`      | Detail dňa – D2: panoráma so značkami ✓ ◐ ✕, „teraz“ a bublinou (zamietnuté ako príliš detské)                       |
+| `7dni-priebeh-dna-4.html`      | Detail dňa – D3 (vybraný): okno na spotrebiče, časová os oblačnosť / výroba / pás spotrebičov                        |
 | `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)              |
 | `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup                   |
 | `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)                |

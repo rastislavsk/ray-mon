@@ -78,3 +78,27 @@ test('dayHourTiers: farba hodiny ľubovoľného dňa - pásmo toho dňa a výkon
     const flat = dayHourTiers(day, FLAT, PLANT);
     assert.ok(flat.every((t) => t === 'grey' || t === 'green'));
 });
+
+test('fitLevel a fitSegments: slnko stačí, čiastočne, zo siete - po úsekoch dňa', async () => {
+    const { fitLevel, fitSegments } = await import('../shared/day-plan.js');
+    const { powerThresholds } = await import('../shared/config.js');
+    const th = powerThresholds(PLANT);
+    const slot = (/** @type {Partial<import('../shared/day-plan.js').PlanSlot>} */ o) =>
+        /** @type {import('../shared/day-plan.js').PlanSlot} */ ({ startMin: 0, min: 15, tier: 'amber', kw: 0, night: false, ...o });
+    assert.equal(fitLevel(slot({ tier: 'green', kw: th.lowKw }), th), 'go');
+    assert.equal(fitLevel(slot({ kw: th.weakPeakKw }), th), 'part');
+    assert.equal(fitLevel(slot({ kw: th.weakPeakKw - 0.01 }), th), 'grid');
+    assert.equal(fitLevel(slot({ kw: th.weakPeakKw, night: true }), th), 'grid', 'v noci zo siete');
+    // Celý deň: úseky idú za sebou bez dier od polnoci po polnoc, susedné sa líšia.
+    const seg = fitSegments(dayPlan(input), th);
+    assert.equal(seg[0].from, 0);
+    assert.equal(seg[seg.length - 1].to, 24 * 60);
+    for (let i = 1; i < seg.length; i++) {
+        assert.equal(seg[i].from, seg[i - 1].to);
+        assert.notEqual(seg[i].level, seg[i - 1].level);
+    }
+    assert.ok(
+        seg.some((s) => s.level === 'go'),
+        'v slnečný deň fixtures je okno',
+    );
+});

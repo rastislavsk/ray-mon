@@ -147,6 +147,17 @@
     --amber-rgb: 255, 194, 75;
     --red-rgb: 255, 107, 87;
     --grey-rgb: 185, 182, 172;
+    /* Časová os detailu dňa. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu,
+       oblačnosť štyri stupne sivej (viac oblakov = svetlejšia). Oba rady prešli kontrolou
+       farbosleposti a kontrastu voči --card-bg (lightness monotónna, krok >= 0,06, svetlý
+       koniec >= 2:1) - pri zmene ich treba overiť znova. */
+    --fit-grid: #4a4e47;
+    --fit-part: #6f9a4c;
+    --fit-go: var(--green);
+    --cl-0: #454a50;
+    --cl-1: #646b73;
+    --cl-2: #878f98;
+    --cl-3: #aeb5be;
     /* Tmavé písmo a čiary na plnej farbe (karta Môžem?, plagát súhrnu). Číta ho aj obrázok
        pre story (web/share-image.js), rovnako ako farby vyššie. */
     --ink-on-color: #0b0b0b;
@@ -1711,56 +1722,78 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     stroke: var(--bg);
     stroke-width: 2;
 }
-/* Detail dňa na mobile: stĺpec na hodinu vo farbe plánu dňa (tie isté farby ako denný
-   prstenec ciferníka), cez ne oblačnosť a pod osou pás cien z tarify. */
-.hour-bar {
-    fill: var(--ink-20);
+/* Detail dňa na mobile: časová os dňa (dayTimelineSvg vo web/svg.js). Odhora pás oblačnosti,
+   výroba, pás spotrebičov a os; zelené okno je jemná plocha cez všetky pásy. Výraznú farbu
+   má len okno a nameraná výroba, zvyšok sú stupne sivej a vlasové čiary. */
+.tl-wash {
+    fill: rgba(var(--green-rgb), 0.07);
 }
-.hour-bar.tier-green,
-.price-strip.tier-green {
-    fill: var(--green);
+.tl-cloud {
+    fill: var(--cl-0);
 }
-.hour-bar.tier-amber,
-.price-strip.tier-amber {
-    fill: var(--amber);
+.tl-cloud.c1 {
+    fill: var(--cl-1);
 }
-.hour-bar.tier-red,
-.price-strip.tier-red {
-    fill: var(--red);
+.tl-cloud.c2 {
+    fill: var(--cl-2);
 }
-.hour-bar.tier-grey,
-.price-strip.tier-grey {
-    fill: var(--grey);
+.tl-cloud.c3 {
+    fill: var(--cl-3);
 }
-.price-strip {
-    fill: var(--ink-20);
+.tl-area {
+    fill: rgba(var(--grey-rgb), 0.08);
 }
-/* Nameraná výroba nad stĺpcami: zelená by na zelených stĺpcoch zanikla, preto svetlá -
-   a hrubšia, s lemom vo farbe pozadia (tá istá čiara pod ňou, len širšia), aby sa oddelila
-   od stĺpcov každej farby aj od tenkej sivej oblačnosti. */
-.line-real.on-bars {
-    stroke: var(--ink);
-    stroke-width: 2.5;
-}
-.line-real-halo {
+.tl-forecast {
     fill: none;
-    stroke: var(--bg);
-    stroke-width: 5.5;
+    stroke: var(--ink-45);
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
-    vector-effect: non-scaling-stroke;
 }
-.dot-real.on-bars {
+.line-real.on-tl {
+    stroke: var(--ink);
+    stroke-linejoin: round;
+}
+.dot-real.on-tl {
     fill: var(--ink);
-    stroke-width: 2.5;
+    stroke: var(--card-bg);
+}
+.tl-fit {
+    fill: var(--fit-grid);
+}
+.tl-fit.part {
+    fill: var(--fit-part);
+}
+.tl-fit.go {
+    fill: var(--fit-go);
+}
+.tl-fit-label {
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    fill: var(--ink-45);
+}
+.tl-fit-label.go {
+    fill: var(--ink);
+    font-weight: 600;
+}
+.tl-now {
+    stroke: var(--ink);
+    stroke-width: 1;
+}
+.tl-now-pill {
+    fill: var(--ink);
+}
+.tl-now-text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    fill: var(--ink-on-color);
+}
+#week-block-curve .axis-label {
+    font-size: 10px;
 }
 #panel-7dni.detail .leg-line-real {
     border-color: var(--ink);
-    border-top-width: 2.5px;
-}
-/* Oblačnosť cez farebné stĺpce: o stupeň výraznejšia než nad prázdnym grafom krivky. */
-.line-cloud.on-bars {
-    stroke: var(--ink-45);
 }
 .heat-cell {
     fill: var(--ink);
@@ -2066,12 +2099,18 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-size: var(--fs-xl);
     letter-spacing: -0.02em;
 }
-/* Tri čísla dňa ako dlaždice nad grafom (dayKpis vo web/render/sedemdni.js). */
+/* Tri čísla dňa ako dlaždice pod grafom (dayKpis vo web/render/sedemdni.js). V HTML stoja nad
+   grafom, kde ich má desktop ako riadok; detail ich poradím (order) posunie pod legendu. */
+#panel-7dni.detail #week-block-curve {
+    display: flex;
+    flex-direction: column;
+}
 #panel-7dni.detail #week-curve-stat {
+    order: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sp-2);
-    margin-bottom: var(--sp-3);
+    margin: var(--sp-3) 0 0;
     font-family: var(--font-body);
     font-size: var(--fs-sm);
     color: var(--ink-45);
@@ -2086,9 +2125,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     border: 1px solid var(--ink-08);
 }
 .kpi b {
-    font-family: var(--font-mono);
-    font-size: 22px;
-    font-weight: 700;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.1;
     color: var(--ink);
@@ -2098,19 +2137,111 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-weight: 500;
     color: var(--ink-45);
 }
-.kpi-note {
-    grid-column: 1 / -1;
-}
-.kpi-note b {
-    color: var(--ink-70);
-}
-/* Legenda: krivka a stĺpce majú každá svoju (viď index.html), platí tá, ktorá sa kreslí. */
+/* Legenda: krivka a časová os majú každá svoju (viď index.html), platí tá, ktorá sa kreslí.
+   Stupnica oblačnosti v hlavičke patrí len časovej osi. */
 #panel-7dni.detail .leg-curve,
-#panel-7dni:not(.detail) .leg-bars {
+#panel-7dni:not(.detail) .leg-tl,
+#panel-7dni:not(.detail) .tl-ramp {
     display: none;
 }
-.leg-bars .leg-sq {
+.leg-line-fc {
+    width: 14px;
+    height: 0;
+    border-top: 2px solid var(--ink-45);
+    display: inline-block;
+}
+.leg-fit {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+    background: var(--fit-grid);
+}
+.leg-fit.part {
+    background: var(--fit-part);
+}
+.leg-fit.go {
+    background: var(--fit-go);
+}
+.tl-ramp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-45);
+}
+.tl-ramp b {
+    display: inline-flex;
+    gap: 2px;
+}
+.tl-ramp i {
+    width: 10px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--cl-0);
+}
+.tl-ramp i.c1 {
+    background: var(--cl-1);
+}
+.tl-ramp i.c2 {
+    background: var(--cl-2);
+}
+.tl-ramp i.c3 {
+    background: var(--cl-3);
+}
+#panel-7dni.detail .chart-top {
+    margin-bottom: var(--sp-2);
+}
+#panel-7dni.detail .chart-legend {
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    color: var(--ink-70);
+}
+/* Okno na veľké spotrebiče nad grafom (renderDayWindow vo web/render/sedemdni.js). */
+.day-window {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: var(--sp-4);
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-08);
+}
+.dw-lbl {
+    font-size: 12.5px;
+    color: var(--ink-45);
+}
+.dw-val {
+    font-size: 38px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+.dw-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: var(--fs-md);
+}
+.dw-state::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-35);
+}
+.dw-state.live::before {
     background: var(--green);
+    box-shadow:
+        0 0 0 2px var(--card-bg),
+        0 0 0 3px rgba(var(--green-rgb), 0.45);
+}
+.dw-note {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--ink-45);
 }
 /* Správa v detaile je odporúčanie - karta s nádychom zelenej a nadpisom nad sebou. */
 .msg-eyebrow {
