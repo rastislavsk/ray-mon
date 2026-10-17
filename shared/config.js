@@ -70,6 +70,9 @@ export const SETTINGS_LIMITS = {
     // odkaz s nastavením, ktorý mohol ktokoľvek upraviť. Mimo neho by bezoblačný model dal
     // nezmyselný strop (od ~7 km mu vychádza záporný útlm atmosféry).
     elevationM: { min: -500, max: 6000 },
+    // Názov lokality. Dáva ho vyhľadávanie, no z odkazu s nastavením môže prísť čokoľvek
+    // a dlhý názov by nafúkol odkaz aj rozbil hlavičku appky.
+    siteNameMax: 100,
     // Nad týmto pomerom výkonu panelov k meniču bude menič za jasných dní orezávať špičky.
     dcAcWarnRatio: 1.3,
     // Celkový výkon elektrárne v kWp, keď ho človek zadá namiesto výkonu jedného panelu.
@@ -261,7 +264,6 @@ export const TARIFF_LIMITS = {
     // Zmena pásma len na celú štvrťhodinu; po štvrťhodinách sa počíta aj plán dňa.
     stepMin: 15,
     nameMax: 16,
-    currencyMax: 4,
     priceMax: 10,
 };
 

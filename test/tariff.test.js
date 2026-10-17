@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_DAYS, ALL_MONTHS, PLANT, powerThresholds, TARIFF, TARIFF_LIMITS, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
+import {
+    ALL_DAYS,
+    ALL_MONTHS,
+    CURRENCIES,
+    PLANT,
+    powerThresholds,
+    TARIFF,
+    TARIFF_LIMITS,
+    TARIFF_TEMPLATES,
+    TYPICAL_PLANT,
+} from '../shared/config.js';
 import {
     autoLevels,
     autoTier,
@@ -269,4 +279,15 @@ test('typ sadzby, nové pásmo, výnimky a súhrn tarify', () => {
     assert.equal(tariffPricesText(TARIFF), null);
     assert.equal(tariffPricesText(t), 'Mimo špičky 0,11 · Bežné 0,17 · Špička 0,25 €/kWh');
     for (const tpl of Object.values(TARIFF_TEMPLATES)) assert.deepEqual(checkTariff(tpl), { errors: [], warnings: [] });
+});
+
+test('mena: len jedna z CURRENCIES, uložená sa oreže', () => {
+    for (const c of CURRENCIES) assert.deepEqual(checkTariff({ ...TARIFF, currency: c }).errors, []);
+    assert.deepEqual(checkTariff({ ...TARIFF, currency: ' Kč ' }).errors, [], 'medzery okolo meny nevadia');
+    for (const c of ['', 'USD', '<b>€</b>', '€€'])
+        assert.ok(
+            checkTariff({ ...TARIFF, currency: c }).errors.some((e) => /Mena/.test(e)),
+            `mena „${c}“ neprejde`,
+        );
+    assert.equal(parseStoredTariff({ ...JSON.parse(JSON.stringify(TARIFF)), currency: ' € ' })?.currency, '€');
 });

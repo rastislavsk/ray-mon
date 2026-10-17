@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { installedKw, PLANT, SITE, TARIFF, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
+import { installedKw, PLANT, SETTINGS_LIMITS, SITE, TARIFF, TARIFF_TEMPLATES, TYPICAL_PLANT } from '../shared/config.js';
 import {
     DEFAULT_LOOK,
     lookToStored,
@@ -276,4 +276,12 @@ test('parseLook: chýbajúci či neplatný vzhľad je predvolený, každá voľb
     const look = { voice: /** @type {const} */ ('slusny'), liveSky: false };
     assert.deepEqual(lookToStored(look), { ton: 'slusny', obloha: false });
     assert.deepEqual(parseLook(JSON.parse(JSON.stringify(lookToStored(look)))), look);
+});
+
+test('názov lokality: dlhší než SETTINGS_LIMITS.siteNameMax je chyba aj v uloženej polohe', () => {
+    const N = SETTINGS_LIMITS.siteNameMax;
+    const named = (/** @type {string} */ name) => checkSettings({ ...DVORANY, site: { ...SITE, name } }).errors;
+    assert.deepEqual(named('x'.repeat(N)), []);
+    assert.ok(named('x'.repeat(N + 1)).some((e) => /Názov lokality/.test(e)));
+    assert.equal(parseStoredSite({ ...SEVILLA, name: 'x'.repeat(N + 1) }), null);
 });
