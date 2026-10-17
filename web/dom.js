@@ -76,7 +76,7 @@ function sedemdniDom() {
         weekDayHead: byId('week-day-head'),
         weekDayBack: byId('week-day-back'),
         weekDayTitle: byId('week-day-title'),
-        weekDayDots: byId('week-day-dots'),
+        weekDayStrip: byId('week-day-strip'),
         weekDaySteps: byId('week-day-steps'),
         weekGrid: byId('week-grid'),
         weekBlockHeat: byId('week-block-heat'),

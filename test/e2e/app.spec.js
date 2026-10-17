@@ -39,7 +39,7 @@ import * as config from '../../shared/config.js';
 import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
 import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel } from '../../shared/hero-model.js';
-import { fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
+import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
@@ -665,46 +665,50 @@ test('7 dní na mobile: riadky Dnes a Zajtra otvárajú detail toho dňa', async
 });
 
 /**
- * V detaile dňa je ťah prstom jediná cesta k susednému dňu a nič ju neohlasovalo. Bodky pod
- * hlavičkou hovoria, koľko dní týždeň má a na ktorom z nich stojíme; sú to tlačidlá, takže
+ * V detaile dňa je ťah prstom jediná cesta k susednému dňu a nič ju neohlasovalo. Pás dní pod
+ * hlavičkou hovorí, koľko dní týždeň má a na ktorom z nich stojíme; čipy sú tlačidlá, takže
  * ten istý skok zvládne aj myš a klávesnica.
  */
-test('7 dní na mobile: bodky pod hlavičkou ukazujú a prepínajú deň', async ({ page }) => {
+test('7 dní na mobile: pás dní pod hlavičkou ukazuje a prepína deň', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
 
-    // V prehľade dní nie je čo listovať - bodky patria k detailu dňa.
-    await expect(page.locator('.day-dots:visible')).toHaveCount(0);
+    // V prehľade dní nie je čo listovať - pás patrí k detailu dňa.
+    await expect(page.locator('.day-strip:visible')).toHaveCount(0);
 
     await page.locator('#week-list [data-day-index="2"]').click();
-    const bodky = page.locator('.day-dots .pager-dot');
-    await expect(bodky).toHaveCount(forecast.days.length);
-    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '2');
-    // Popiska bodky je ten istý názov dňa, aký nesie hlavička - počíta ho tá istá funkcia ako appka.
-    await expect(bodky.nth(4)).toHaveAttribute('aria-label', weekDayLong(forecast.days[4].date, 4));
+    const cipy = page.locator('.day-strip .day-chip');
+    await expect(cipy).toHaveCount(forecast.days.length);
+    await expect(page.locator('.day-strip .day-chip.sel')).toHaveAttribute('data-day-index', '2');
+    // Popiska čipu je ten istý názov dňa, aký nesie hlavička, na čipe je skratka dňa v týždni
+    // aj pri dnešku - počíta ich tá istá funkcia ako appka.
+    await expect(cipy.nth(4)).toHaveAttribute('aria-label', weekDayLong(forecast.days[4].date, 4));
+    await expect(cipy.nth(0)).toHaveText(dayNameShort(forecast.days[0].date));
+    // Najlepší deň má linku ako v prehľade.
+    await expect(page.locator('.day-strip .day-chip.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
 
-    // Klik na bodku prepne deň a ostane v detaile: hlavička, graf aj plná bodka idú za ním.
-    await bodky.nth(4).click();
+    // Klik na čip prepne deň a ostane v detaile: hlavička, graf aj plný čip idú za ním.
+    await cipy.nth(4).click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[4].date, 4));
-    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '4');
+    await expect(page.locator('.day-strip .day-chip.sel')).toHaveAttribute('data-day-index', '4');
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(forecast.days[4].kwhTotal)} kWh`);
     expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
 
-    // Tlačidlo susedného dňa pod detailom robí to isté, čo bodka.
+    // Tlačidlo susedného dňa pod detailom robí to isté, čo čip.
     await page.locator('.day-steps .day-step.next').click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
-    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '5');
+    await expect(page.locator('.day-strip .day-chip.sel')).toHaveAttribute('data-day-index', '5');
     await page.locator('.day-steps .day-step.prev').click();
-    await expect(page.locator('.day-dots .pager-dot.active')).toHaveAttribute('data-day-index', '4');
+    await expect(page.locator('.day-strip .day-chip.sel')).toHaveAttribute('data-day-index', '4');
 
     // Výber sa prenáša do celej karty rovnako ako z ktoréhokoľvek iného miesta.
     await page.locator('#week-day-back').click();
     await expect(page.locator('#week-list .wday.sel')).toHaveAttribute('data-day-index', '4');
 
-    // Detail týždňa je jediná obrazovka - tam by bodky sľubovali listovanie, ktoré nie je.
+    // Detail týždňa je jediná obrazovka - tam by pás dní sľuboval listovanie, ktoré nie je.
     await page.locator('.week-list-hero').click();
     await expect(page.locator('#week-day-title')).toHaveText('Celý týždeň');
-    await expect(page.locator('.day-dots:visible')).toHaveCount(0);
+    await expect(page.locator('.day-strip:visible')).toHaveCount(0);
     await expect(page.locator('.day-steps:visible')).toHaveCount(0);
     expect(errors).toEqual([]);
 });
