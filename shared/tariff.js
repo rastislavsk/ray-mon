@@ -48,21 +48,6 @@ export function bandAt(tariff, schedule, minutes) {
     return bandById(tariff, id);
 }
 
-/**
- * Pásma dňa od 00:00 do 24:00: {startMin, min, band, level}. Rozvrh je zoznam zmien, takže
- * pásma idú za sebou bez dier aj prekryvov.
- * @param {Tariff} tariff @param {string} dateKey
- */
-export function priceSegments(tariff, dateKey) {
-    const { changes } = scheduleFor(tariff, dateKey);
-    return changes.map((c, i) => {
-        const startMin = timeStrToMinutes(c.from);
-        const end = i + 1 < changes.length ? timeStrToMinutes(changes[i + 1].from) : MINUTES_PER_DAY;
-        const band = bandById(tariff, c.band);
-        return { startMin, min: end - startMin, band, level: band.level };
-    });
-}
-
 /** Farba úrovne bez slnka. @param {PriceLevel | null} level @returns {Tier | null} */
 export function levelTier(level) {
     return level ? LEVEL_TIER[level] : null;
