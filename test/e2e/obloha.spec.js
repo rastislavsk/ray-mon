@@ -1303,7 +1303,7 @@ test.describe('karta 7 dní', () => {
             await expect(page.locator('#sd-days .day')).toHaveCount(7);
             await expect(page.locator('#sd-days .day.best')).toHaveCount(1);
             await expect(page.locator('#sd-hint')).toHaveText(
-                'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťukni na deň.',
+                'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče, zelená linka pod číslom najlepší deň týždňa. Ťukni na deň.',
             );
             const riadky = await page.locator('#sd-days .day, #sd-sum').evaluateAll((els) =>
                 els.map((el) => {

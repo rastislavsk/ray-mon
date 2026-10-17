@@ -99,7 +99,7 @@ export const SKY_WORDS = { jasno: 'jasno', polojasno: 'polojasno', zamracene: 'z
 /** Pevné texty karty: nadpisy, popisky čísel, tlačidlá a výzvy. */
 export const SEDEM_TEXTS = {
     question: 'Veľké pranie?',
-    hint: 'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťukni na deň.',
+    hint: 'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče, zelená linka pod číslom najlepší deň týždňa. Ťukni na deň.',
     back: '7 dní',
     dayHint: 'Potiahni do strán na susedný deň.',
     weekTitle: 'Týždeň',
@@ -127,7 +127,7 @@ export const SEDEM_TEXTS = {
 /** @type {typeof SEDEM_TEXTS} */
 const SEDEM_TEXTS_SLUSNE = {
     ...SEDEM_TEXTS,
-    hint: 'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče. Ťuknite na deň.',
+    hint: 'Zelený pás ukazuje, odkedy dokedy slnko stačí na veľké spotrebiče, zelená linka pod číslom najlepší deň týždňa. Ťuknite na deň.',
     dayHint: 'Potiahnite do strán na susedný deň.',
     weekHint: 'Potiahnite doprava a vrátite sa na 7 dní.',
     guessTitle: 'Najlepší deň platí, kWh sú len odhad',

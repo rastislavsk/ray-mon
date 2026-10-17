@@ -977,9 +977,11 @@ button:focus-visible {
     text-align: left;
     cursor: pointer;
 }
-.day.best {
-    border-color: var(--yes);
-    box-shadow: inset 0 0 0 0.5px var(--yes);
+/* Najlepší deň: výkon podčiarknutý zelenou linkou. Rám nie - zvýraznený rám vyzerá ako
+   vybraná položka. Linku vysvetľuje text pod zoznamom (SEDEM_TEXTS.hint). */
+.day.best em {
+    padding-bottom: 3px;
+    border-bottom: 2px solid var(--yes);
 }
 .dn {
     white-space: nowrap;
