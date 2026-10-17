@@ -2396,6 +2396,13 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .week-legend i.tier-green {
     background: var(--green);
 }
+/* Linka najlepšieho dňa - tá istá, ktorá podčiarkuje jeho výkon (.wday.best .wday-kwh). */
+.week-legend i.best-line {
+    width: 16px;
+    height: 2px;
+    border-radius: 0;
+    background: var(--green);
+}
 .week-list {
     display: flex;
     flex-direction: column;
@@ -2431,11 +2438,14 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     border-color: var(--ink-20);
     background-image: linear-gradient(var(--ink-05), var(--ink-05));
 }
-/* Najlepší deň týždňa má zelený rám ako v novej appke (.day.best). Stojí za .sel, takže
-   vybraný najlepší deň si rám nechá a od .sel preberie len svetlejšiu výplň. */
-.wday.best {
-    border-color: var(--green);
-    box-shadow: inset 0 0 0 0.5px var(--green);
+/* Najlepší deň týždňa má výkon podčiarknutý zelenou linkou ako v novej appke (.day.best em).
+   Rám nie - zvýraznený rám vyzerá ako vybraná položka. Linku vysvetľuje legenda pod zoznamom. */
+.wday.best .wday-kwh {
+    padding-bottom: 3px;
+    border-bottom: 2px solid var(--green);
+}
+.wday.best .wday-kwh .u {
+    color: inherit;
 }
 /* Dnešok sa nezvýrazňuje: v rebríčku stojí vždy prvý a volá sa "Dnes", takže by farba
    hovorila to, čo už povedalo poradie aj meno. */

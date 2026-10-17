@@ -172,7 +172,7 @@ function renderTableAndTabs(days, sel, dom) {
  * Farby sú tie isté ako v karte 7 dní novej appky (shared/sedem-dni.js): pás ide cez produkčné
  * okno dňa a zelené sú v ňom úseky, kedy je ideálne pustiť veľké spotrebiče (zelené štvrťhodiny
  * plánu dňa - slnko aj tarifa). Deň bez okna má pás prázdny. Stĺpčeky v súčte týždňa sú
- * zmenšené stĺpce z detailu týždňa: výška aj farba je pásmo dňa (weekDayTiers). Najlepší deň týždňa (najviac kWh, bestDayIndex) má zelený rám.
+ * zmenšené stĺpce z detailu týždňa: výška aj farba je pásmo dňa (weekDayTiers). Najlepší deň týždňa (najviac kWh, bestDayIndex) má výkon podčiarknutý zelenou linkou.
  *
  * Dnešok tu nemá vlastnú triedu: v rebríčku stojí vždy prvý a volá sa "Dnes", takže niet
  * čo zvýrazňovať. Príznak `r.today` z modelu ostáva, značí sa ním prepínač dní a tabuľka.
