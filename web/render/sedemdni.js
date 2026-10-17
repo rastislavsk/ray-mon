@@ -13,9 +13,11 @@ import {
     dayTimelineModel,
     fillDims,
     forecastChartModel,
+    HEAT_LEGEND,
     usePct,
     weekBarsModel,
     weekDayTiers,
+    weekHeatMax,
     weekHeatModel,
     weekListModel,
     weekStatsModel,
@@ -55,25 +57,24 @@ function dimsFor(state, key) {
     return size ? fillDims(size.w, size.h) : chartDims(state.wide);
 }
 
-/** Vstup grafu priebehu vybraného dňa - zdieľaný s tooltipom. Dnešok tu ukazuje aj nameranú
- * krivku; ostatné dni zatiaľ merané nemajú.
+/** Vstup grafu priebehu vybraného dňa - zdieľaný s tooltipom.
  *
- * V detaile dňa na mobile je to časová os dňa (oblačnosť, výroba a pás spotrebičov z plánu dňa),
- * inde krivka. Výroba má v oboch tú istú mierku a produkčné okno, takže tooltip sedí na oba.
+ * V detaile dňa na mobile je to časová os dňa (riadok heatmapy, krivka oblačnosti a pás
+ * spotrebičov z plánu dňa), inde krivka výroby. Nameranú výrobu ukazuje len krivka - časová os
+ * je predpoveď dňa. Obe majú to isté produkčné okno, takže tooltip sedí na oba.
  * @param {import('../state.js').AppState} state */
 export function weekCurveModel(state) {
     const days = state.forecast ? state.forecast.days : [];
     const day = days[state.weekSelDay];
     if (!day) return null;
     const isToday = state.weekSelDay === 0;
-    const input = {
-        pts: day.hourly,
-        realPts: isToday && state.pv ? state.pv.realCurveToday : [],
-        nowHour: isToday ? localMinutes(state.now, state.site.timezone) / 60 : null,
-    };
-    if (state.wide || state.weekDetail !== 'day') return forecastChartModel({ ...input, dims: dimsFor(state, 'weekCurve') });
+    const nowHour = isToday ? localMinutes(state.now, state.site.timezone) / 60 : null;
+    if (state.wide || state.weekDetail !== 'day') {
+        const realPts = isToday && state.pv ? state.pv.realCurveToday : [];
+        return forecastChartModel({ pts: day.hourly, realPts, nowHour, dims: dimsFor(state, 'weekCurve') });
+    }
     const segments = fitSegments(dayPlanOf(state), powerThresholds(state.plant));
-    return dayTimelineModel({ ...input, segments, label: fitLabel });
+    return dayTimelineModel({ pts: day.hourly, nowHour, heatMax: weekHeatMax(days), segments, label: fitLabel });
 }
 
 /** Plán vybraného dňa po štvrťhodinách (dnešok presne dayPlan, ako ciferník). @param {import('../state.js').AppState} state */
@@ -271,10 +272,12 @@ function renderDayWindow(state, day, dom) {
  * @param {import('../dom.js').Dom} dom */
 function renderCurve(state, day, progress, detail, dom) {
     const m = weekCurveModel(state);
-    writeHtml(dom.weekCurve, !m ? '' : 'fit' in m ? dayTimelineSvg(m) : forecastChartSvg(m), 'weekCurve');
+    writeHtml(dom.weekCurve, !m ? '' : m.kind === 'timeline' ? dayTimelineSvg(m) : forecastChartSvg(m), 'weekCurve');
     if (m) dom.weekCurve.setAttribute('viewBox', `0 0 ${m.dims.w} ${m.dims.h}`);
     // Časová os má iný pomer strán než krivka - pomer krivky je v CSS, os si ho nesie sama.
-    dom.weekCurve.style.aspectRatio = m && 'fit' in m ? `${m.dims.w} / ${m.dims.h}` : '';
+    dom.weekCurve.style.aspectRatio = m && m.kind === 'timeline' ? `${m.dims.w} / ${m.dims.h}` : '';
+    // Stupnica riadku heatmapy nad časovou osou - tá istá ako pod heatmapou týždňa.
+    dom.weekCurveScale.innerHTML = m && m.kind === 'timeline' ? heatScaleHtml(m.heatMax) : '';
     dom.weekDayWindow.classList.toggle('hidden', !detail);
     if (detail) renderDayWindow(state, day, dom);
     // Položka legendy patrí ku krivke - keď sa krivka nekreslí, legenda by ohlasovala
@@ -304,7 +307,7 @@ function renderView(detail, narrow, tall, dom) {
     // a ostalo na ňu miesto (`tall`, viď WEEK_MSG_MIN_H) - prehľad sa nemá kvôli nej rozscrollovať.
     // V detaile dňa správu nahrádza karta okna na veľké spotrebiče nad grafom.
     dom.weekMsgBlock.classList.toggle('hidden', (narrow && !detail && !tall) || detail === 'day');
-    // Detail dňa má len stĺpce po hodinách: jeho riadok heatmapy by hovoril to isté, čo ony.
+    // Detail dňa má svoj riadok heatmapy na časovej osi - celá heatmapa by hovorila to isté.
     const vidno = detail === 'day' ? ['weekBlockCurve'] : detail === 'week' ? ['weekBlockBars', 'weekBlockHeat'] : [];
     for (const key of /** @type {const} */ (['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve']))
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
@@ -398,7 +401,7 @@ function renderDayAnim(detail, sel, dir, dom) {
 }
 
 /** Heatmapa celého týždňa: na širokej obrazovke a v detaile týždňa. Detail dňa ju nemá -
- * to isté tam hovoria stĺpce po hodinách.
+ * jeho riadok je hore na časovej osi dňa (dayTimelineModel), s tou istou mierkou.
  * @param {import('../state.js').AppState} state @param {ForecastDay[]} days @param {number} sel
  * @param {import('../dom.js').Dom} dom */
 function renderHeat(state, days, sel, dom) {
@@ -408,7 +411,13 @@ function renderHeat(state, days, sel, dom) {
     dom.weekHeat.setAttribute('viewBox', `0 0 ${heat.W} ${heat.H}`);
     dom.weekHeat.setAttribute('height', String(heat.H));
     writeHtml(dom.weekHeat, weekHeatSvg(heat), 'weekHeat');
-    dom.weekHeatScale.innerHTML = `<span>0 kW</span><span class="sw">${heat.legend.map((l) => `<i class="tier-${l.tier}" style="opacity:${(0.12 + l.frac * 0.8).toFixed(2)}"></i>`).join('')}</span><span>${fmt1(heat.max)} kW</span>`;
+    dom.weekHeatScale.innerHTML = heatScaleHtml(heat.max);
+}
+
+/** Stupnica heatmapy od nuly po maximum - pod heatmapou týždňa aj nad časovou osou dňa. @param {number} max */
+function heatScaleHtml(max) {
+    const sw = HEAT_LEGEND.map((l) => `<i class="tier-${l.tier}" style="opacity:${(0.12 + l.frac * 0.8).toFixed(2)}"></i>`).join('');
+    return `<span>0 kW</span><span class="sw">${sw}</span><span>${fmt1(max)} kW</span>`;
 }
 
 /** @param {import('../dom.js').Dom} dom */
@@ -425,7 +434,7 @@ function renderEmpty(dom) {
         [dom.weekListSpark, 'weekSpark'],
     ]))
         writeHtml(el, '', name);
-    for (const el of [dom.weekBarsStat, dom.weekCurveStat, dom.weekHeatScale]) el.innerHTML = '';
+    for (const el of [dom.weekBarsStat, dom.weekCurveStat, dom.weekHeatScale, dom.weekCurveScale]) el.innerHTML = '';
     for (const el of [dom.weekToday, dom.weekTomorrow, dom.weekTotal, dom.weekListTotal, dom.weekListAvg]) el.textContent = '–';
     dom.weekCurveLiveLegend.classList.add('hidden');
     // Bez dát detail neexistuje (viď renderSedemdni), susedné dni pod ním teda tiež nie.

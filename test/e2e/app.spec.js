@@ -4,14 +4,14 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
     bestDayIndex,
-    cloudStep,
     dayTimelineModel,
     RING,
     ringPercent,
     usePct,
     visibleHours,
     weekDayTiers,
-    WEEK_HOURS,
+    weekHeatMax,
+    weekHeatModel,
 } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
@@ -600,14 +600,19 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(den5.kwhTotal)} kWh`);
     await expect(page.locator('#week-curve-stat .kpi').nth(1)).toHaveText(`Oblačnosť${Math.round(Number(den5.cloudAvgPct))} %priemer dňa`);
-    // Časová os: bunka oblačnosti na každú hodinu grafu v stupni podľa percent a pás
-    // spotrebičov z plánu dňa s popismi - očakávanie ráta ten istý model ako appka.
-    const bunky = page.locator('#week-curve .tl-cloud');
-    await expect(bunky).toHaveCount(WEEK_HOURS.length);
-    const hodiny5 = den5.hourly.filter((p) => WEEK_HOURS.includes(p.hour));
-    for (const [i, p] of hodiny5.entries()) await expect(bunky.nth(i)).toHaveClass(`tl-cloud c${cloudStep(Number(p.cloud))}`);
-    const os = dayTimelineModel({ pts: den5.hourly, segments: fitSegments(plan5, powerThresholds(PLANT)), label: fitLabel });
+    // Časová os: hore riadok heatmapy dňa - tie isté farby ako riadok dňa v heatmape týždňa -,
+    // pod ním krivka oblačnosti a pás spotrebičov z plánu dňa s popismi. Očakávanie ráta ten
+    // istý model ako appka.
+    const heatMax = weekHeatMax(forecast.days);
+    const os = dayTimelineModel({ pts: den5.hourly, heatMax, segments: fitSegments(plan5, powerThresholds(PLANT)), label: fitLabel });
     if (!os) throw new Error('časová os bez modelu');
+    const riadok5 = weekHeatModel(forecast.days, 5).cells.filter((c) => c.dayIndex === 5);
+    expect(await page.locator('#week-curve .heat-cell').evaluateAll((els) => els.map((el) => el.getAttribute('class')))).toEqual(
+        riadok5.map((c) => `heat-cell${c.tier ? ` tier-${c.tier}` : ''}`),
+    );
+    await expect(page.locator('#week-curve path.tl-cloud')).toHaveCount(1);
+    await expect(page.locator('#week-curve-scale')).toBeVisible();
+    await expect(page.locator('#week-curve-scale')).toContainText(`${fmt1(heatMax)} kW`);
     expect(await page.locator('#week-curve .tl-fit').evaluateAll((els) => els.map((el) => el.getAttribute('class')))).toEqual(
         os.fit.map((f) => `tl-fit ${f.level}`),
     );
@@ -736,17 +741,17 @@ test('7 dní na mobile: bublina so súčtom otvára detail týždňa', async ({ 
 });
 
 /**
- * Priebeh výroby na karte 7 dní ukazuje pri dnešku aj nameranú výrobu: krivku a položku
- * v legende. Iný deň nameraný nie je, takže z neho musí
- * zmiznúť aj krivka, aj legenda.
+ * Detail dňa na mobile je predpoveď: nameranú výrobu nekreslí ani pri dnešku. Dnešok má navyše
+ * len „teraz“ na časovej osi a v číslach pod ňou, koľko už nabehlo.
  */
-test('7 dní: priebeh dnešného dňa ukazuje nameranú výrobu', async ({ page }) => {
+test('7 dní: detail dnešného dňa má „teraz“, nameranú výrobu len v číslach', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
     await page.locator('#week-list [data-day-index="0"]').click();
-    await expect(page.locator('#week-curve path.line-real')).toHaveCount(1);
-    await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(1);
-    await expect(page.locator('#week-curve-live-legend')).toBeVisible();
+    // Časová os je predpoveď dňa - nameraná krivka v nej nie je, a tak ani v legende.
+    await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
+    await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(0);
+    await expect(page.locator('#week-curve-live-legend')).toBeHidden();
     // Dnešok má „teraz“ s časom a karta okna počíta s ním.
     await expect(page.locator('#week-curve .tl-now')).toHaveCount(1);
     await expect(page.locator('#week-curve .tl-now-text')).toHaveText(minutesToTimeStr(localMinutes(FIXED_NOW, SITE.timezone)));

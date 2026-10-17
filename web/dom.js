@@ -111,6 +111,7 @@ function sedemdniDom() {
         weekDayWindow: byId('week-day-window'),
         weekCurveLiveLegend: byId('week-curve-live-legend'),
         weekCurveStat: byId('week-curve-stat'),
+        weekCurveScale: byId('week-curve-scale'),
         weekCurveWrap: byId('week-curve-wrap'),
         weekCurve: byId('week-curve'),
         weekCurveTooltip: byId('week-curve-tooltip'),

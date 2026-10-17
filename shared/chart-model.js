@@ -146,6 +146,8 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
     const cloudAvailable = visible.every((p) => Number.isFinite(p.cloud));
     return {
         dims,
+        // Krivka a časová os dňa majú skoro tie isté polia - kind ich rozlíši aj pre typy.
+        kind: /** @type {const} */ ('curve'),
         maxKw,
         pts: visible,
         line: visible.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) })),
@@ -155,58 +157,51 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
 }
 
 /**
- * Plátno časovej osi dňa (detail dňa na karte 7 dní na mobile). Odhora: štítok „teraz“, pás
- * oblačnosti po hodinách, výroba (plocha predpovede a nameraná krivka), pás spotrebičov, jeho
- * popisy a časová os. Výroba zaberá presne plochu medzi `padT` a `h - padB`, takže mierka aj
- * tooltip (chartTooltipModel) sú tie isté ako pri krivke.
+ * Plátno časovej osi dňa (detail dňa na karte 7 dní na mobile). Odhora: štítok „teraz“, riadok
+ * heatmapy dňa (výroba po hodinách), krivka oblačnosti, pás spotrebičov, jeho popisy a časová
+ * os. Oblačnosť zaberá presne plochu medzi `padT` a `h - padB` (0 až 100 %), takže tooltip
+ * (chartTooltipModel) počíta hodinu tou istou mierkou ako pri krivke.
  */
 export const TIMELINE = {
     dims: { w: 320, h: 206, padL: 2, padR: 24, padT: 50, padB: 64, hourStep: 3, xLabelGap: 0, yAxis: false },
-    cloudY: 20,
-    cloudH: 18,
+    heatY: 20,
+    heatH: 18,
     fitGap: 8,
     fitH: 10,
-    labelGap: 26,
     gap: 2,
 };
 
-/** Hranice oblačnosti v % pre štyri stupne sivej pásu oblačnosti (v CSS --cl-0 až --cl-3). */
-export const CLOUD_STEPS = [25, 50, 75];
-
-/** Stupeň oblačnosti 0-3. @param {number} pct */
-export const cloudStep = (pct) => CLOUD_STEPS.filter((t) => pct >= t).length;
-
 /**
- * Model časovej osi dňa: bunka oblačnosti na hodinu, predpoveď ako plocha s čiarou, pri dnešku
- * nameraná krivka a „teraz“, pod tým pás spotrebičov z plánu dňa (`segments`, fitSegments
+ * Model časovej osi dňa: bunka heatmapy na hodinu (tá istá farba a mierka ako riadok dňa
+ * v heatmape týždňa, `heatMax` je jej maximum - weekHeatMax), oblačnosť ako plocha s čiarou,
+ * pri dnešku „teraz“, pod tým pás spotrebičov z plánu dňa (`segments`, fitSegments
  * v shared/day-plan.js) a zelené okno ako jemná plocha cez všetky pásy. Popis úseku pásu
  * dodá `label` (fitLabel v shared/messages-sedem.js) podľa šírky úseku.
- * @param {{ pts: import('./solar.js').DayHourPoint[], realPts?: Array<{hour: number, kw: number}>, nowHour?: number | null,
+ * @param {{ pts: import('./solar.js').DayHourPoint[], nowHour?: number | null, heatMax: number,
  *   segments: Array<{ from: number, to: number, level: import('./day-plan.js').FitLevel }>,
  *   label: (seg: { from: number, to: number, level: import('./day-plan.js').FitLevel }, widthPx: number) => string }} input
  */
-export function dayTimelineModel({ pts, realPts = [], nowHour = null, segments, label }) {
+export function dayTimelineModel({ pts, nowHour = null, heatMax, segments, label }) {
     const T = TIMELINE;
     const dims = T.dims;
     const { min: hMin, max: hMax } = HOUR_RANGE;
     const visible = visibleHours(pts);
     if (!visible.length) return null;
-    const real = visibleHours(realPts);
-    const maxKw = Math.max(...visible.map((p) => p.kw), ...real.map((p) => p.kw), 0.5) * 1.1;
-    const { scale, ...frame } = hourFrame(dims, maxKw, real, nowHour);
+    const maxKw = Math.max(...visible.map((p) => p.kw), 0.5);
+    const { scale, ...frame } = hourFrame(dims, maxKw, [], nowHour);
     /** Úsek v hodinách orezaný na produkčné okno, s medzerou T.gap medzi susedmi. @param {number} a @param {number} b */
     const span = (a, b) => {
         const x = scale.x(Math.max(a, hMin));
         const w = scale.x(Math.min(b, hMax)) - x;
         return { x: x + T.gap / 2, w: w - T.gap };
     };
-    const cloudOk = visible.every((p) => Number.isFinite(p.cloud));
-    const cells = cloudOk
-        ? visible
-              .map((p) => ({ ...span(p.hour - 0.5, p.hour + 0.5), step: cloudStep(/** @type {number} */ (p.cloud)) }))
-              .filter((c) => c.w > 0)
-        : [];
-    const base = scale.y(0);
+    const cells = visible
+        .map((p) => {
+            const frac = p.kw / heatMax;
+            return { ...span(p.hour - 0.5, p.hour + 0.5), frac, tier: frac <= 0.02 ? null : heatBand(frac) };
+        })
+        .filter((c) => c.w > 0);
+    const base = scale.yPct(0);
     const fitY = base + T.fitGap;
     const fit = segments
         .map((seg) => {
@@ -214,24 +209,24 @@ export function dayTimelineModel({ pts, realPts = [], nowHour = null, segments, 
             return { ...g, level: seg.level, label: g.w > 0 ? label(seg, g.w) : '' };
         })
         .filter((s) => s.w > 0);
-    const line = visible.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
-    const step = kwGridStep(maxKw, 3);
-    const gridY = [];
-    for (let i = 0; i * step <= maxKw; i++) gridY.push({ y: scale.y(i * step), label: formatGridKw(i * step) });
-    const top = T.cloudY - 4;
+    const cloudOk = visible.every((p) => Number.isFinite(p.cloud));
+    const line = cloudOk ? visible.map((p) => ({ x: scale.x(p.hour), y: scale.yPct(/** @type {number} */ (p.cloud)) })) : [];
+    const top = T.heatY - 4;
     return {
         ...frame,
+        kind: /** @type {const} */ ('timeline'),
         dims,
         maxKw,
         pts: visible,
-        // Tooltip sa pýta len, či oblačnosť je (chartTooltipModel), hodnotu si dopočíta z bodov.
-        cloud: cloudOk ? cells : null,
+        // Tooltip sa pýta, či oblačnosť je, a bod kreslí na nej (chartTooltipModel).
+        cloud: cloudOk ? line : null,
         cells,
-        cloudY: T.cloudY,
-        cloudH: T.cloudH,
+        heatMax,
+        heatY: T.heatY,
+        heatH: T.heatH,
         line,
         area: line.length ? { base, first: line[0].x, last: line[line.length - 1].x } : null,
-        gridY,
+        gridY: [0, 50, 100].map((pct) => ({ y: scale.yPct(pct), label: String(pct) })),
         fit,
         fitY,
         fitH: T.fitH,
@@ -245,7 +240,7 @@ export function dayTimelineModel({ pts, realPts = [], nowHour = null, segments, 
 /**
  * Tooltip nad krivkou: pre relatívnu polohu kurzora (0-1 šírky plátna) vráti čas,
  * výkon, oblačnosť, prípadne bezoblačný strop a polohu bodu v % plátna.
- * @param {{ dims: Dims, maxKw: number, pts: HourPoint[], cloud: unknown[] | null }} model krivka aj časová os dňa
+ * @param {{ kind: 'curve' | 'timeline', dims: Dims, maxKw: number, pts: HourPoint[], cloud: unknown[] | null }} model krivka aj časová os dňa
  * @param {number} relX
  */
 export function chartTooltipModel(model, relX) {
@@ -259,7 +254,8 @@ export function chartTooltipModel(model, relX) {
         kw,
         cloud: hasCloud ? Math.round(interpolate(model.pts, hour, 'cloud')) : null,
         clearKw: hasClear ? interpolate(model.pts, hour, 'clearKw') : null,
-        yFrac: scale.y(kw) / model.dims.h,
+        // Časová os dňa kreslí oblačnosť, krivka výrobu - bod tooltipu sedí na tom, čo vidno.
+        yFrac: (model.kind === 'timeline' && hasCloud ? scale.yPct(interpolate(model.pts, hour, 'cloud')) : scale.y(kw)) / model.dims.h,
     };
 }
 
@@ -414,6 +410,18 @@ export function weekDayTiers(days) {
     });
 }
 
+/** Maximum heatmapy: najsilnejšia hodina týždňa, aspoň 0,4 kW (tichý týždeň nemá vyjsť celý zelený).
+ * Z neho počíta farbu heatmapa týždňa aj riadok dňa v časovej osi, aby hovorili tou istou mierkou.
+ * @param {ForecastDay[]} days */
+export function weekHeatMax(days) {
+    let max = 0.4;
+    for (const d of days) for (const p of visibleHours(d.hourly)) max = Math.max(max, p.kw);
+    return max;
+}
+
+/** Stupnica pod heatmapou: desať políčok od nuly po maximum. */
+export const HEAT_LEGEND = Array.from({ length: 10 }, (_, i) => ({ frac: i / 9, tier: heatBand(i / 9) }));
+
 /**
  * Mapa výroby hodina × deň. Bez `size` si plátno určí sama (mobil), s ním sa roztiahne
  * na skutočný rozmer karty - vtedy sa riadky rozdelia o dostupnú výšku.
@@ -430,8 +438,7 @@ export function weekHeatModel(days, selDay, size = null) {
     const cw = (W - padL - padR) / WEEK_HOURS.length;
     const H = size ? size.H : padT + days.length * rh + 4;
     const maps = days.map(hourMap);
-    let max = 0.4;
-    maps.forEach((map) => WEEK_HOURS.forEach((h) => (max = Math.max(max, map[h] ? map[h].kw : 0))));
+    const max = weekHeatMax(days);
 
     const hourLabels = WEEK_HOURS.filter((h) => h % 4 === 0).map((h) => ({
         x: padL + (h - WEEK_HOURS[0]) * cw + cw / 2,
@@ -466,11 +473,7 @@ export function weekHeatModel(days, selDay, size = null) {
         });
     });
     const selRect = { x: padL - 1, y: padT + selDay * rh, w: W - padL - padR + 2, h: rh - gap };
-    const legend = Array.from({ length: 10 }, (_, i) => {
-        const frac = i / 9;
-        return { frac, tier: heatBand(frac) };
-    });
-    return { W, H, cells, hourLabels, dayLabels, selRect, max, legend };
+    return { W, H, cells, hourLabels, dayLabels, selRect, max, legend: HEAT_LEGEND };
 }
 
 /** Denná výroba v kWh, voliteľne so stropom jasnej oblohy. @param {ForecastDay[]} days @param {number} selDay @param {{ W: number, H: number }} [size] @param {boolean} [showCeiling] */
