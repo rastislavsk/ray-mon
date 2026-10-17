@@ -21,7 +21,6 @@ import {
     PREVIEW,
     DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
-    PAGER_SETTLE_MS,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_STORAGE_KEY,
@@ -280,7 +279,7 @@ test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpo
     await expect(dots.nth(0)).toHaveClass(/active/);
     await expect(page.locator('#verdict-headline')).toBeInViewport();
 
-    // Ťuknutie na odporúčanie posunie pás na ďalšiu stránku, ako hlášky na karte Môžem?.
+    // Ťuknutie na odporúčanie posunie pás na ďalšiu stránku.
     await page.locator('#verdict-headline').click();
     await expect(dots.nth(1)).toHaveClass(/active/);
     await expect(page.locator('#verdict-go-row')).toBeInViewport();
@@ -1519,12 +1518,6 @@ async function swipe(page, sel, { dx, dy = 0, ms = 0 }) {
     await cdp.detach();
 }
 
-/** Na ktorej stránke stojí pás hlášok v karte Môžem? - podľa posunu, nie podľa bodiek.
- * @param {import('@playwright/test').Page} page */
-function quipStrana(page) {
-    return page.locator('[data-mozem-quips]').evaluate((el) => Math.round(el.scrollLeft / el.clientWidth));
-}
-
 /** Ťah prstom v danom mieste obrazovky. Prázdne miesto pod krátkou kartou nie je prvok,
  * takže sa nedá zamerať selektorom ako pri `swipe`.
  * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dx: number }} opts */
@@ -1950,22 +1943,6 @@ test.describe('listovanie kariet prstom', () => {
         await expect(dots.nth(2)).toHaveClass(/active/);
         await swipe(page, '#verdict-pager', { dx: -120 });
         await ocakavajKartu(page, 'terazky');
-        expect(errors).toEqual([]);
-    });
-
-    test('ťah po hláške na karte Môžem? listuje hlášky, nie karty', async ({ page }) => {
-        const errors = await openApp(page);
-        await page.locator('#nav-mozem').click();
-        await ocakavajKartu(page, 'mozem');
-        await page.locator('[data-mozem-quips]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
-
-        // Pás sa listuje sám, gesto nad ním patrí jemu - aj na prvej hláške, kam späť nie je kam.
-        // Posúvanie samotné robí prehliadač a dotyk cez CDP ho v teste nespustí (ani pri páse
-        // odporúčaní); pohyb pásu overuje koliesko v teste karty Môžem?.
-        await swipe(page, '[data-mozem-quips]', { dx: -120 });
-        await ocakavajKartu(page, 'mozem');
-        await swipe(page, '[data-mozem-quips]', { dx: 120 });
-        await ocakavajKartu(page, 'mozem');
         expect(errors).toEqual([]);
     });
 
@@ -3043,8 +3020,8 @@ test.describe('karta Štatistika', () => {
 });
 
 test.describe('karta Môžem?', () => {
-    /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {number} [quipPage] */
-    const model = (quipPage = 0) => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) }, quipPage);
+    /** Model karty tak, ako ho appka počíta v pevnom čase testov. */
+    const model = () => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
 
     test('o 13:00 za jasna: veľké slovo, veta, pás dneška a riadok Čo môžem podľa modelu', async ({ page }) => {
         const errors = await openApp(page);
@@ -3098,45 +3075,6 @@ test.describe('karta Môžem?', () => {
         await btn.click();
         await expect(page.locator('.mozem-more')).toHaveCount(0);
         expect(await page.evaluate(() => history.length), 'rozbalenie nepridáva krok do histórie').toBe(pred);
-        expect(errors).toEqual([]);
-    });
-
-    test('hlášky sú pás: ťuknutie a bodka posunú na inú, prekreslenie ju nechá na mieste', async ({ page }) => {
-        const errors = await openApp(page);
-        await page.locator('#nav-mozem').click();
-        const m = model();
-        const hlaska = (/** @type {number} */ i) => page.locator('.mozem-quip q').nth(i);
-        const dots = page.locator('[data-mozem-quip-dot]');
-        await expect(page.locator('.mozem-quip q')).toHaveText(m.quips);
-        await expect(dots).toHaveCount(m.quips.length);
-        await expect(hlaska(0)).toHaveText(model(0).quip);
-        await expect.poll(() => quipStrana(page)).toBe(0);
-
-        await hlaska(0).click();
-        await expect.poll(() => quipStrana(page)).toBe(1);
-        await expect(dots.nth(1)).toHaveClass(/active/);
-
-        // Návrat zo zoznamu vecí skladá pás nanovo - stojí na hláške, na ktorej človek bol.
-        // Stránka ide do stavu až po ustálení posunu, preto sa naň počká.
-        await page.waitForTimeout(PAGER_SETTLE_MS * 3);
-        await page.locator('[data-mozem-list]').click();
-        await page.locator('[data-mozem-list-back]').click();
-        await expect.poll(() => quipStrana(page)).toBe(1);
-        await expect(dots.nth(1)).toHaveClass(/active/);
-
-        // Bodka skočí na ľubovoľnú; ťuknutie na poslednú ide znova na prvú.
-        const posledna = m.quips.length - 1;
-        await dots.nth(posledna).click();
-        await expect.poll(() => quipStrana(page)).toBe(posledna);
-        await hlaska(posledna).click();
-        await expect.poll(() => quipStrana(page)).toBe(0);
-        await expect(dots.nth(0)).toHaveClass(/active/);
-
-        // Posun do strán nad pásom je to isté gesto ako prst - stránku dopočíta scroll-snap.
-        await page.locator('[data-mozem-quips]').hover();
-        await page.mouse.wheel(400, 0);
-        await expect.poll(() => quipStrana(page)).toBe(1);
-        await expect(dots.nth(1)).toHaveClass(/active/);
         expect(errors).toEqual([]);
     });
 

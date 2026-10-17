@@ -418,8 +418,8 @@ v `docs/navrhy/mozem-co-mozem.html`). Karta ich zhrnie do riadku „Čo môžem�
 v modeli): koľko ide hneď, bodka za každú vec a výnimky slovom. Zoznam vecí je druhá obrazovka
 karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie.
 
-Texty vrátane hlášok sú v `messages.js`. Hláška sa mení s dňom a ťuknutím (`mozemQuip`),
-rozbalená vec v zozname je `mozemOpen` - oboje je nastavenie vnútri karty, nie krok navigácie.
+Texty sú v `messages.js`. Rozbalená vec v zozname je `mozemOpen` - nastavenie vnútri karty,
+nie krok navigácie. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
 Obsah karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 
 „Pustil/a som“ zapisuje spustenia spotrebičov len v telefóne (`LAUNCH_STORAGE_KEY`, najviac

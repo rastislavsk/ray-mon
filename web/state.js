@@ -30,7 +30,6 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   verdictPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   mozemOpen: string | null,
- *   mozemQuip: number,
  *   launches: import('../shared/launches.js').Launch[],
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemSummary: boolean,
@@ -113,10 +112,9 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
-        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna) a stránka v páse hlášok
-        // (0 = hláška dňa). Obe sú nastavenie vnútri karty, nie krok navigácie.
+        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna). Je to nastavenie vnútri
+        // karty, nie krok navigácie.
         mozemOpen: /** @type {string | null} */ (null),
-        mozemQuip: 0,
         // Zápisy „Pustil/a som“ z tohto telefónu (web/settings-store.js). Načítajú sa pri štarte.
         launches: [],
         // Denník výroby po dňoch pre súhrn (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
