@@ -367,25 +367,33 @@ test('mriežka panelov: najviac 40 kresbou, zvyšok číslom, neplatný počet n
     assert.equal(panelGridModel(NaN).cells.length, 0);
 });
 
-test('dayTimelineModel: bunka oblačnosti na hodinu, plocha výroby, pás spotrebičov a okno', async () => {
-    const { dayTimelineModel, TIMELINE, cloudStep } = await import('../shared/chart-model.js');
+test('dayTimelineModel: riadok heatmapy na hodinu, krivka oblačnosti, pás spotrebičov a okno', async () => {
+    const { dayTimelineModel, TIMELINE, weekHeatMax, weekHeatModel } = await import('../shared/chart-model.js');
     const day = forecast.days[0];
+    const heatMax = weekHeatMax(forecast.days);
     const label = (/** @type {any} */ seg, /** @type {number} */ w) => `${seg.level}:${Math.round(w)}`;
-    assert.equal(dayTimelineModel({ pts: [{ hour: 2, kw: 1, cloud: 0, clearKw: 1 }], segments: [], label }), null, 'mimo 05-21 nič');
+    assert.equal(
+        dayTimelineModel({ pts: [{ hour: 2, kw: 1, cloud: 0, clearKw: 1 }], heatMax, segments: [], label }),
+        null,
+        'mimo 05-21 nič',
+    );
     const segments = [
         { from: 0, to: 8 * 60, level: /** @type {const} */ ('grid') },
         { from: 8 * 60, to: 11 * 60 + 15, level: /** @type {const} */ ('part') },
         { from: 11 * 60 + 15, to: 16 * 60, level: /** @type {const} */ ('go') },
         { from: 16 * 60, to: 24 * 60, level: /** @type {const} */ ('grid') },
     ];
-    const m = dayTimelineModel({ pts: day.hourly, realPts: pv.realCurveToday, nowHour: 13, segments, label });
+    const m = dayTimelineModel({ pts: day.hourly, nowHour: 13, heatMax, segments, label });
     assert.ok(m);
     const { dims } = TIMELINE;
     const visible = day.hourly.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max);
     assert.equal(m.cells.length, visible.length, 'bunka na každú hodinu');
+    // Farba a sýtosť bunky sú tie isté ako v riadku dňa heatmapy týždňa.
+    const riadok = weekHeatModel(forecast.days, 0).cells.filter((c) => c.dayIndex === 0);
+    assert.equal(weekHeatModel(forecast.days, 0).max, heatMax);
     assert.deepEqual(
-        m.cells.map((c) => c.step),
-        visible.map((p) => cloudStep(Number(p.cloud))),
+        m.cells.map((c) => [c.tier, c.frac]),
+        riadok.map((c) => [c.tier, c.frac]),
     );
     for (const c of [...m.cells, ...m.fit]) assert.ok(c.x >= dims.padL && c.x + c.w <= dims.w - dims.padR + 1e-9, 'neprečnieva z plátna');
     // Pás je orezaný na produkčné okno, úseky idú za sebou s medzerou 2 px.
@@ -398,29 +406,53 @@ test('dayTimelineModel: bunka oblačnosti na hodinu, plocha výroby, pás spotre
     // Okno je plocha cez všetky pásy, len nad zeleným úsekom.
     assert.equal(m.wash.length, 1);
     assert.equal(m.wash[0].x, m.fit[2].x);
-    assert.ok(m.wash[0].y < m.cloudY && m.wash[0].y + m.wash[0].h > m.fitY + m.fitH);
-    // Výroba zaberá plochu medzi padT a h - padB, pás spotrebičov je pod ňou.
+    assert.ok(m.wash[0].y < m.heatY && m.wash[0].y + m.wash[0].h > m.fitY + m.fitH);
+    // Oblačnosť 0-100 % zaberá plochu medzi padT a h - padB, pás spotrebičov je pod ňou.
+    assert.equal(m.line.length, visible.length);
     assert.ok(m.line.every((p) => p.y >= dims.padT - 1e-9 && p.y <= dims.h - dims.padB + 1e-9));
+    const zamracene = visible.reduce((a, p) => (Number(p.cloud) > Number(a.cloud) ? p : a));
+    assert.equal(Math.min(...m.line.map((p) => p.y)), m.line[visible.indexOf(zamracene)].y, 'viac oblakov je vyššie');
     assert.ok(m.fitY > dims.h - dims.padB && m.labelY < m.axisY);
-    assert.ok(m.gridY.length >= 2 && m.gridY[0].label === '0');
-    assert.ok(m.nowX !== null && m.nowText === '13:00' && m.realLast !== null);
-    // Tooltip je ten istý ako nad krivkou.
+    assert.deepEqual(
+        m.gridY.map((g) => g.label),
+        ['0', '50', '100'],
+    );
+    assert.equal(m.gridY[2].y, dims.padT);
+    // Nameranú výrobu časová os nekreslí - je to predpoveď dňa.
+    assert.ok(m.nowX !== null && m.nowText === '13:00' && m.real.length === 0 && m.realLast === null);
+    // Tooltip je ten istý ako nad krivkou, bod sedí na krivke oblačnosti.
     const tip = chartTooltipModel(m, 0.5);
     assert.ok(tip.cloud !== null && tip.kw >= 0);
+    const bodVPolovici = m.line.find((p) => Math.abs(p.x - dims.w / 2) < 1e-6);
+    if (bodVPolovici) assert.ok(Math.abs(tip.yFrac * dims.h - bodVPolovici.y) < 1e-6);
 });
 
-test('dayTimelineModel: bez oblačnosti v dátach buniek niet a tooltip oblačnosť nehlási', async () => {
-    const { dayTimelineModel, cloudStep } = await import('../shared/chart-model.js');
+test('dayTimelineModel: bez oblačnosti v dátach niet krivky a tooltip oblačnosť nehlási', async () => {
+    const { dayTimelineModel, weekHeatMax } = await import('../shared/chart-model.js');
     const label = () => '';
     const visible = forecast.days[0].hourly.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max);
-    const bez = dayTimelineModel({ pts: visible.map((p) => ({ ...p, cloud: NaN })), segments: [], label });
+    const bez = dayTimelineModel({
+        pts: visible.map((p) => ({ ...p, cloud: NaN })),
+        heatMax: weekHeatMax(forecast.days),
+        segments: [],
+        label,
+    });
     assert.ok(bez);
-    assert.equal(bez.cells.length, 0);
+    assert.equal(bez.cells.length, visible.length, 'heatmapa oblačnosť nepotrebuje');
+    assert.equal(bez.line.length, 0);
+    assert.equal(bez.area, null);
     assert.equal(bez.cloud, null);
     assert.equal(bez.nowX, null);
     assert.equal(bez.nowText, '');
     assert.equal(chartTooltipModel(bez, 0.5).cloud, null);
-    assert.deepEqual([0, 24.9, 25, 50, 75, 100].map(cloudStep), [0, 0, 1, 2, 3, 3]);
+});
+
+test('weekHeatMax: najsilnejšia hodina týždňa, aspoň 0,4 kW', async () => {
+    const { weekHeatMax } = await import('../shared/chart-model.js');
+    const peak = Math.max(...forecast.days.flatMap((d) => d.hourly.map((p) => p.kw)));
+    assert.equal(weekHeatMax(forecast.days), Math.max(peak, 0.4));
+    const tichy = forecast.days.map((d) => ({ ...d, hourly: d.hourly.map((p) => ({ ...p, kw: p.kw / 1000 })) }));
+    assert.equal(weekHeatMax(tichy), 0.4);
 });
 
 test('planesCompassModel: šípka na plochu v jej smere, dĺžka podľa panelov, hlavná je najväčšia', async () => {

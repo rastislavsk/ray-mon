@@ -398,9 +398,7 @@
                         <div class="day-window hidden" id="week-day-window"></div>
                         <div class="chart-top">
                             <span class="lbl">Priebeh výroby</span
-                            ><span class="tl-ramp" aria-hidden="true"
-                                >jasno<b><i class="c0"></i><i class="c1"></i><i class="c2"></i><i class="c3"></i></b>zamračené</span
-                            >
+                            ><span class="heat-scale mono" id="week-curve-scale" aria-hidden="true"></span>
                         </div>
                         <div class="utabs" id="week-day-tabs" role="tablist"></div>
                         <div class="stat-line" id="week-curve-stat"></div>
@@ -419,7 +417,7 @@
                                      každá svoju legendu; ktorá platí, rozhoduje CSS podľa .detail. -->
                                 <span class="leg-curve"><i class="leg-line"></i>predpoveď</span
                                 ><span class="leg-curve"><i class="leg-dash"></i>oblačnosť</span
-                                ><span class="leg-tl"><i class="leg-line-fc"></i>predpoveď</span
+                                ><span class="leg-tl"><i class="leg-line-fc"></i>oblačnosť</span
                                 ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span
                                 ><span class="leg-tl"><i class="leg-fit go"></i>slnko stačí</span
                                 ><span class="leg-tl"><i class="leg-fit part"></i>čiastočne</span

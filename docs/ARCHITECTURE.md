@@ -480,15 +480,18 @@ Obe obrazovky majú hlavičku so šípkou späť. Rozhoduje o tom jediné pole v
 prvkov v DOM. Poradie v detaile týždňa robí jedno pravidlo `order` v CSS, lebo heatmapa je
 v HTML prvá, ale na detaile má ísť posledná.
 
-Graf v detaile dňa je časová os (`dayTimelineModel`, návrh D3 v `docs/navrhy/`): hore pás
-oblačnosti po hodinách v štyroch stupňoch sivej (`CLOUD_STEPS`), v strede výroba (plocha
-predpovede, pri dnešku nameraná krivka a „teraz“), dole pás spotrebičov z plánu dňa po
+Graf v detaile dňa je časová os (`dayTimelineModel`, návrh D3 v `docs/navrhy/`): hore riadok
+heatmapy dňa – výroba po hodinách v tých istých farbách a s tou istou mierkou ako riadok dňa
+v heatmape týždňa (`weekHeatMax`, stupnica nad grafom), v strede krivka oblačnosti 0–100 %
+(pri dnešku „teraz“; nameranú výrobu časová os nekreslí, je to predpoveď dňa), dole pás
+spotrebičov z plánu dňa po
 štvrťhodinách (`fitSegments` v `shared/day-plan.js`): _zapni veľké_ je tá istá zelená ako na
 dennom prstenci, _čiastočne_ je slnko aspoň na úrovni špičky slabého dňa, zvyšok _zo siete_.
 Tarifa do pásu nevstupuje – hovorí len o slnku. Zelené okno je navyše jemná plocha cez celý
-graf. Farby sú jeden odtieň zelenej v troch stupňoch jasu a sivá v štyroch, overené na
-farbosleposť (pozri komentár pri tokenoch v `style.css`). Výroba zaberá presne plochu medzi
-`padT` a `h - padB`, takže tooltip (`chartTooltipModel`) je ten istý ako nad krivkou. Na
+graf. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu, overený na farbosleposť
+(pozri komentár pri tokenoch v `style.css`). Oblačnosť zaberá presne plochu medzi `padT`
+a `h - padB`, takže tooltip (`chartTooltipModel`) je ten istý ako nad krivkou, len bod kreslí
+na oblačnosti. Na
 širokej obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
 
 Susedné dni pod detailom (tlačidlá „‹ Streda“ a „Piatok ›“, `#week-day-steps`) aj bodky pod
