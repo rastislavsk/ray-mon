@@ -22,7 +22,17 @@ import {
 } from '../../shared/chart-model.js';
 import { installedKw, powerThresholds } from '../../shared/config.js';
 import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
-import { escapeHtml, fmt1, hourLabel, kwpText, weekDateLabel, weekDayLong, weekDayName, weekDayShort } from '../../shared/format.js';
+import {
+    dayNameShort,
+    escapeHtml,
+    fmt1,
+    hourLabel,
+    kwpText,
+    weekDateLabel,
+    weekDayLong,
+    weekDayName,
+    weekDayShort,
+} from '../../shared/format.js';
 import { dayWindowCard, EMPTY_MESSAGES, fitLabel, weekMessage } from '../../shared/messages.js';
 import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { localMinutes } from '../../shared/solar.js';
@@ -299,8 +309,8 @@ function renderView(detail, narrow, tall, dom) {
     for (const key of /** @type {const} */ (['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve']))
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
     dom.weekDayHead.classList.toggle('hidden', !detail);
-    // Bodky patria k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
-    dom.weekDayDots.classList.toggle('hidden', detail !== 'day');
+    // Pás dní patrí k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
+    dom.weekDayStrip.classList.toggle('hidden', detail !== 'day');
     // Deň si používateľ vybral klikom v prehľade, prepínač dní nad krivkou je tu navyše.
     dom.weekDayTabs.classList.toggle('hidden', !!detail);
 }
@@ -312,29 +322,27 @@ function renderDayHead(detail, day, sel, dom) {
 }
 
 /**
- * Bodky pod hlavičkou: koľko dní týždeň má, na ktorom stojíme a že sa dá listovať ďalej.
- * Ťah prstom sa sám neohlási, takže dovtedy nič nenaznačovalo, že susedný deň je o gesto
- * vedľa.
+ * Pás dní pod hlavičkou: koľko dní týždeň má, na ktorom stojíme a že sa dá listovať ďalej.
+ * Ťah prstom sa sám neohlási, takže bez neho nič nenaznačovalo, že susedný deň je o gesto
+ * vedľa. Čip nesie skratku dňa v týždni aj pri dnešku a zajtrajšku - "Dnes" a "Zajtra" stojí
+ * v nadpise nad ním. Najlepší deň týždňa má tú istú zelenú linku ako v prehľade.
  *
- * Bodka je tlačidlo s data-day-index, takže deň prepne ten istý poslucháč ako riadok
- * rebríčka (viď web/interactions.js) - a s ním aj myš a klávesnica. Tvar má spoločný
- * s bodkami pageru na karte Terazky; ten ich poslucháč hľadá v zozname verdictDotButtons,
- * kde tieto nie sú, takže mu prejdú popod ruky.
+ * Čip je tlačidlo s data-day-index, takže deň prepne ten istý poslucháč ako riadok
+ * rebríčka (viď web/interactions.js) - a s ním aj myš a klávesnica.
  * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel
- * @param {import('../dom.js').Dom} dom
+ * @param {number} best index najlepšieho dňa @param {import('../dom.js').Dom} dom
  */
-function renderDayDots(detail, days, sel, dom) {
+function renderDayStrip(detail, days, sel, best, dom) {
     if (detail !== 'day') return;
     const html = days
         .map((d, i) => {
-            // aria-current hovorí čítačke to, čo oku hovorí plná bodka - bez neho je to
-            // sedem rovnakých tlačidiel.
-            const tu = i === sel ? ' active' : '';
+            // aria-current hovorí čítačke to, čo oku hovorí plný čip.
+            const cls = `day-chip${i === sel ? ' sel' : ''}${i === best ? ' best' : ''}`;
             const teraz = i === sel ? ' aria-current="true"' : '';
-            return `<button type="button" class="pager-dot${tu}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}></button>`;
+            return `<button type="button" class="${cls}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}>${escapeHtml(dayNameShort(d.date))}</button>`;
         })
         .join('');
-    writeHtml(dom.weekDayDots, html, 'dayDots');
+    writeHtml(dom.weekDayStrip, html, 'dayStrip');
 }
 
 /**
@@ -455,13 +463,14 @@ export function renderSedemdni(state, dom) {
     const sel = Math.min(state.weekSelDay, days.length - 1);
 
     renderDayHead(detail, days[sel], sel, dom);
-    renderDayDots(detail, days, sel, dom);
+    const best = bestDayIndex(days);
+    renderDayStrip(detail, days, sel, best, dom);
     renderDayAnim(detail, sel, state.weekDayDir, dom);
     const stats = weekStatsModel(days, state.pv, state.forecast ? state.forecast.tomorrowSunny : false);
     renderStats(stats, dom, !!detail);
     const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);
     const bands = days.map((_, i) => windowBand(sunWindows(forecastDayPlan({ ...state, forecast }, i))));
-    renderList(stats, weekListModel(days, sel), bands, bestDayIndex(days), dom);
+    renderList(stats, weekListModel(days, sel), bands, best, dom);
 
     // Mapa a stĺpce dostanú skutočný rozmer karty len na širokej obrazovke; na mobile si
     // plátno určia samy, aby rozloženie ostalo také, aké bolo.

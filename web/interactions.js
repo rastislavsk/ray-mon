@@ -23,11 +23,11 @@ import { initSwipe } from './swipe.js';
 
 /**
  * Čo spraví klik na deň. Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra,
- * v prepínači dní, v bodkách pod hlavičkou detailu aj priamo v grafoch. Prehľad dní - v oboch
+ * v prepínači dní, v páse dní pod hlavičkou detailu aj priamo v grafoch. Prehľad dní - v oboch
  * podobách - navyše otvorí detail dňa (na mobile; na širokej obrazovke sa stav neprejaví),
  * kým výber v grafoch a v prepínači len prepína, čo je na nich vidno.
  *
- * Bodka a tlačidlo susedného dňa pod detailom deň tiež len prepínajú, ale nesú aj smer skoku:
+ * Čip v páse dní a tlačidlo susedného dňa pod detailom deň tiež len prepínajú, ale nesú aj smer skoku:
  * detail sa potom prisunie z tej strany, ktorou sa skočilo - to isté, čo pri ťahu prstom
  * dopočíta targetFor vo web/swipe.js.
  * @param {Store} store @param {Dom} dom @param {Element} btn
@@ -36,7 +36,7 @@ import { initSwipe } from './swipe.js';
 function dayPick(store, dom, btn) {
     const weekSelDay = Number(btn.getAttribute('data-day-index'));
     if (dom.weekList.contains(btn) || dom.weekTbody.contains(btn) || dom.weekTrio.contains(btn)) return { weekSelDay, weekDetail: 'day' };
-    if (!btn.closest('.day-dots, .day-steps')) return { weekSelDay };
+    if (!btn.closest('.day-strip, .day-steps')) return { weekSelDay };
     return { weekSelDay, weekDayDir: weekSelDay < store.get().weekSelDay ? -1 : 1 };
 }
 
