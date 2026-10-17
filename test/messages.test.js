@@ -101,3 +101,33 @@ test('weekMessage: najsilnejší a najslabší deň', () => {
     assert.match(msg.body, /Najslabšie bude po 7\.9\./);
     assert.doesNotMatch(weekMessage([days[0]]).body, /Najslabšie/);
 });
+
+test('dayWindowCard: okno dňa, stav podľa času pri dnešku, deň bez okna', async () => {
+    const { dayWindowCard } = await import('../shared/messages.js');
+    const w = { from: 11 * 60, to: 16 * 60 };
+    assert.equal(dayWindowCard(w, null, 14).value, '11:00 – 16:00');
+    assert.equal(dayWindowCard(w, null, 14).state, '5 h slnka na veľké spotrebiče');
+    assert.equal(dayWindowCard(w, null, 14).note, 'Práčka, sušička, bojler · najviac slnka okolo 14:00');
+    assert.equal(dayWindowCard(w, 9 * 60 + 45, 14).state, 'Začne o 1 h 15 min');
+    const teraz = dayWindowCard(w, 13 * 60, 14);
+    assert.equal(teraz.state, 'Práve prebieha · ešte 3 h');
+    assert.ok(teraz.live);
+    assert.equal(dayWindowCard(w, 16 * 60, 14).state, 'Na dnes už skončilo');
+    assert.ok(!dayWindowCard(w, 16 * 60, 14).live);
+    const bez = dayWindowCard(null, null, 12);
+    assert.equal(bez.value, '–');
+    assert.equal(bez.note, 'Aj tak najviac slnka okolo 12:00.');
+    assert.equal(dayWindowCard(null, null, null).note, '');
+    assert.equal(dayWindowCard(w, null, null).note, 'Práčka, sušička, bojler');
+});
+
+test('fitLabel: zelený úsek s časom, keď sa zmestí, inak slovo, inak nič', async () => {
+    const { fitLabel } = await import('../shared/messages.js');
+    const go = { from: 11 * 60, to: 16 * 60, level: /** @type {const} */ ('go') };
+    assert.equal(fitLabel(go, 200), 'Zapni veľké · 11–16');
+    assert.equal(fitLabel({ ...go, from: 11 * 60 + 15 }, 200), 'Zapni veľké · 11:15–16');
+    assert.equal(fitLabel(go, 90), 'Zapni veľké');
+    assert.equal(fitLabel(go, 30), '');
+    assert.equal(fitLabel({ from: 0, to: 60, level: 'part' }, 80), 'čiastočne');
+    assert.equal(fitLabel({ from: 0, to: 60, level: 'grid' }, 80), 'zo siete');
+});

@@ -52,10 +52,11 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
   dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
   obrazovke bubliny (Dnes, Zajtra, 7 dní spolu) a tabuľka so všetkými stĺpcami. Klik otvorí
-  detail: na deň tri čísla (výroba, špička, podiel z jasnej oblohy), stĺpce po hodinách vo
-  farbe plánu dňa (tarifa × slnko, ako ciferník) so stropom jasnej oblohy a pásom cien,
-  odporúčanie a tlačidlá na susedné dni; pri dnešku je v grafe aj skutočná nameraná
-  krivka so značkou „teraz“ a koľko už z predpovede nabehlo. Na širokej obrazovke ostáva
+  detail: na deň okno na veľké spotrebiče (odkedy dokedy slnko stačí a pri dnešku, či už
+  beží), časová os dňa – oblačnosť po hodinách v stupňoch sivej, výroba a pod ňou pás
+  „zapni veľké / čiastočne / zo siete“ z plánu dňa – tri čísla (predpoveď, oblačnosť alebo
+  koľko už nabehlo, špička) a tlačidlá na susedné dni; pri dnešku je v grafe aj skutočná
+  nameraná krivka so značkou „teraz“. Na širokej obrazovke ostáva
   priebeh výroby krivkou s oblačnosťou. Klik na bublinu „Spolu za 7 dní“
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko

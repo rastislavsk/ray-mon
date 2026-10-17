@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Priebeh dňa – návrh D3</title>
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            :root {
+                --bg: #0a0a0a;
+                --surface: #151614;
+                --ink: #f2f0ea;
+                --ink-2: rgba(242, 240, 234, 0.72);
+                --ink-3: rgba(242, 240, 234, 0.56);
+                --hair: rgba(242, 240, 234, 0.09);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                /* Vhodnosť: jeden odtieň v troch stupňoch jasu (overené validátorom, ordinal, tmavý povrch). */
+                --fit-0: #4a4e47;
+                --fit-1: #6f9a4c;
+                --fit-2: #9ef25b;
+                /* Oblačnosť: sivá v štyroch stupňoch, viac oblakov = svetlejšia. */
+                --cl-0: #454a50;
+                --cl-1: #646b73;
+                --cl-2: #878f98;
+                --cl-3: #aeb5be;
+                --body: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: #222;
+                color: var(--ink);
+                font-family: var(--body);
+                padding: 24px;
+            }
+            .wall {
+                display: flex;
+                gap: 32px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .cap {
+                color: #ddd;
+                font-size: 15px;
+                font-weight: 600;
+                margin-bottom: 10px;
+            }
+            .phone {
+                width: 390px;
+                height: 844px;
+                position: relative;
+                overflow: hidden;
+                background: var(--bg);
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 18px 20px 0;
+            }
+            .hdr .brand {
+                font-family: var(--mono);
+                font-weight: 600;
+                font-size: 14px;
+                letter-spacing: 0.04em;
+            }
+            .hdr .sub {
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--ink-3);
+                margin-top: 6px;
+                letter-spacing: 0.06em;
+            }
+            .hdr .time {
+                font-family: var(--mono);
+                font-size: 14px;
+                text-align: right;
+            }
+            .hdr .time::before {
+                content: '';
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--green);
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            .content {
+                padding: 0 20px;
+            }
+            .back {
+                display: inline-flex;
+                margin-top: 20px;
+                color: var(--ink-2);
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .title {
+                font-size: 24px;
+                font-weight: 600;
+                margin-top: 10px;
+                letter-spacing: -0.01em;
+            }
+            .subt {
+                color: var(--ink-3);
+                font-size: 13.5px;
+                margin-top: 2px;
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 68px;
+                background: rgba(10, 10, 10, 0.92);
+                border-top: 1px solid var(--hair);
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 11px;
+                color: var(--ink-3);
+            }
+            .nav span {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+            }
+            .nav span i {
+                width: 20px;
+                height: 20px;
+                border: 1.6px solid currentColor;
+                border-radius: 6px;
+            }
+            .nav span.on {
+                color: var(--ink);
+                font-weight: 600;
+            }
+            .nav span.on i {
+                border-color: var(--green);
+            }
+
+            .card {
+                background: var(--surface);
+                border-radius: 16px;
+                padding: 14px 16px;
+                margin-top: 12px;
+            }
+            .lbl {
+                font-size: 12.5px;
+                color: var(--ink-3);
+            }
+            .hero {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+            }
+            .hero .v {
+                font-size: 40px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+                line-height: 1.05;
+                margin-top: 4px;
+            }
+            .state {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 13px;
+                color: var(--ink);
+                margin-top: 8px;
+            }
+            .state i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--green);
+                box-shadow:
+                    0 0 0 2px var(--surface),
+                    0 0 0 3px rgba(158, 242, 91, 0.45);
+            }
+            .row-h {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }
+            .ramp {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                color: var(--ink-3);
+            }
+            .ramp b {
+                display: inline-flex;
+                gap: 2px;
+            }
+            .ramp b i {
+                width: 10px;
+                height: 8px;
+                border-radius: 2px;
+            }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 14px;
+                font-size: 11.5px;
+                color: var(--ink-2);
+                margin-top: 12px;
+            }
+            .legend span {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .k-line {
+                width: 14px;
+                height: 2px;
+                border-radius: 1px;
+            }
+            .k-sw {
+                width: 12px;
+                height: 8px;
+                border-radius: 2px;
+            }
+            .tiles {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .tile {
+                background: var(--surface);
+                border-radius: 14px;
+                padding: 12px;
+            }
+            .tile .v {
+                font-size: 19px;
+                font-weight: 600;
+                margin-top: 4px;
+                letter-spacing: -0.01em;
+            }
+            .tile .v small {
+                font-size: 12px;
+                font-weight: 400;
+                color: var(--ink-3);
+                margin-left: 2px;
+            }
+            .tile .d {
+                font-size: 11.5px;
+                color: var(--ink-3);
+                margin-top: 2px;
+            }
+            .tile .d.dn::before {
+                content: '▼ ';
+                color: var(--amber);
+                font-size: 9px;
+            }
+            .tile .d.up::before {
+                content: '▲ ';
+                color: var(--green);
+                font-size: 9px;
+            }
+            .note {
+                font-size: 13.5px;
+                line-height: 1.5;
+                color: var(--ink-2);
+                margin-top: 14px;
+            }
+            .note b {
+                color: var(--ink);
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wall" id="wall"></div>
+        <script>
+            const H = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+            const T0 = 6,
+                T1 = 21,
+                NOW = 13,
+                W = 318;
+            const x = (t) => ((t - T0) / (T1 - T0)) * W;
+
+            const DNI = [
+                {
+                    id: 'slnecny',
+                    cap: 'D3 · slnečný deň',
+                    sub: 'Slnečno · 12 % oblakov',
+                    FC: [0.2, 1.0, 2.5, 4.2, 6.1, 7.2, 7.9, 7.7, 7.5, 6.5, 4.6, 3.2, 1.8, 0.8, 0.2],
+                    AC: [0.3, 1.2, 2.9, 4.6, 6.4, 7.6, 8.1],
+                    CL: [30, 28, 22, 12, 6, 4, 5, 6, 8, 10, 14, 20, 32, 38, 40],
+                    fit: [
+                        [0, 6, 8],
+                        [1, 8, 9],
+                        [2, 9, 16],
+                        [1, 16, 18],
+                        [0, 18, 21],
+                    ],
+                    tiles: [
+                        ['Predpoveď', '61,4', 'kWh', 'na celý deň', ''],
+                        ['Zatiaľ', '31,7', 'kWh', 'o 9 % viac', 'up'],
+                        ['Špička', '7,9', 'kW', 'okolo 12:00', ''],
+                    ],
+                    note: 'Práčka, sušička, bojler – slnka je dosť aj na viac naraz.',
+                },
+                {
+                    id: 'premenlivy',
+                    cap: 'D3 · premenlivý deň',
+                    sub: 'Premenlivo · 47 % oblakov',
+                    FC: [0.3, 1.2, 2.6, 3.5, 3.8, 5.1, 4.3, 4.9, 5.8, 4.3, 2.8, 2.4, 1.6, 0.7, 0.2],
+                    AC: [0.3, 1.3, 2.8, 2.6, 4.4, 3.9, 3.1],
+                    CL: [15, 10, 20, 45, 70, 55, 80, 65, 40, 60, 75, 50, 30, 25, 20],
+                    fit: [
+                        [0, 6, 8],
+                        [1, 8, 11],
+                        [2, 11, 16],
+                        [1, 16, 18],
+                        [0, 18, 21],
+                    ],
+                    tiles: [
+                        ['Predpoveď', '43,5', 'kWh', 'na celý deň', ''],
+                        ['Zatiaľ', '18,8', 'kWh', 'o 10 % menej', 'dn'],
+                        ['Špička', '5,8', 'kW', 'okolo 14:00', ''],
+                    ],
+                    note: 'Práčka, sušička, bojler – najviac slnka čakaj okolo 14:00.',
+                },
+            ];
+            const FIT_COL = ['var(--fit-0)', 'var(--fit-1)', 'var(--fit-2)'];
+            const FIT_TXT = ['zo siete', 'čiastočne', 'zapni veľké'];
+            const clBin = (c) => (c < 25 ? 0 : c < 50 ? 1 : c < 75 ? 2 : 3);
+
+            function chart(d) {
+                // Pásy grafu pod sebou na jednej časovej osi.
+                const yCl = 22,
+                    hCl = 20; // oblačnosť
+                const yA = 58,
+                    hA = 92,
+                    kMax = 9; // výroba (kW)
+                const yF = yA + hA + 14,
+                    hF = 10; // vhodnosť
+                const yAx = yF + hF + 34; // osi
+                const ky = (k) => yA + hA - (k / kMax) * hA;
+                const win = d.fit.find((f) => f[0] === 2);
+                let s = '';
+                // Okno na spotrebiče: jemná zelená plocha cez celý graf.
+                s += `<rect x="${x(win[1])}" y="${yCl - 4}" width="${x(win[2]) - x(win[1])}" height="${yF + hF + 4 - yCl + 4}" rx="6" fill="rgba(158,242,91,.07)"/>`;
+                // Oblačnosť: bunky po hodinách, 2px medzera.
+                H.forEach((h, i) => {
+                    s += `<rect x="${x(h) + 1}" y="${yCl}" width="${x(h + 1) - x(h) - 2}" height="${hCl}" rx="3" fill="var(--cl-${clBin(d.CL[i])})"/>`;
+                });
+                // Mriežka výroby: vlasové čiary, plné.
+                [0, 4, 8].forEach((k) => {
+                    s += `<line x1="0" x2="${W}" y1="${ky(k)}" y2="${ky(k)}" stroke="rgba(242,240,234,.09)" stroke-width="1"/>`;
+                    s += `<text x="${W + 6}" y="${ky(k) + 3.5}" font-size="10" fill="rgba(242,240,234,.56)" font-family="IBM Plex Mono">${k}</text>`;
+                });
+                s += `<text x="${W + 6}" y="${ky(9) + 2}" font-size="10" fill="rgba(242,240,234,.56)" font-family="IBM Plex Mono">kW</text>`;
+                // Predpoveď: plocha 10 % + 2px čiara, neutrálna.
+                const pts = (arr) => arr.map((v, i) => [x(H[i] + 0.5), ky(v)]);
+                const smooth = (p) =>
+                    p
+                        .map(([px, py], i) => {
+                            if (i === 0) return `M${px} ${py}`;
+                            const [qx, qy] = p[i - 1];
+                            const mx = (qx + px) / 2;
+                            return `C${mx} ${qy} ${mx} ${py} ${px} ${py}`;
+                        })
+                        .join(' ');
+                const pf = pts(d.FC);
+                const fcPath = smooth(pf);
+                s += `<path d="${fcPath} L${pf[pf.length - 1][0]} ${ky(0)} L${pf[0][0]} ${ky(0)} Z" fill="rgba(242,240,234,.08)"/>`;
+                s += `<path d="${fcPath}" fill="none" stroke="rgba(242,240,234,.45)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+                // Skutočnosť do teraz: 2px čiara, koncový bod s prstencom.
+                const pa = pts(d.AC);
+                s += `<path d="${smooth(pa)}" fill="none" stroke="#f2f0ea" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+                const [ex, ey] = pa[pa.length - 1];
+                // Vhodnosť: segmenty s 2px medzerou.
+                d.fit.forEach(([t, a, b]) => {
+                    s += `<rect x="${x(a) + 1}" y="${yF}" width="${x(b) - x(a) - 2}" height="${hF}" rx="4" fill="${FIT_COL[t]}"/>`;
+                    const w = x(b) - x(a);
+                    if (w >= 60)
+                        s += `<text x="${x((a + b) / 2)}" y="${yF + hF + 15}" text-anchor="middle" font-size="11.5" font-weight="${t === 2 ? 600 : 400}" fill="${t === 2 ? '#f2f0ea' : 'rgba(242,240,234,.56)'}" font-family="Space Grotesk">${t === 2 ? `Zapni veľké · ${a}–${b}` : FIT_TXT[t]}</text>`;
+                });
+                // Teraz: vlasová čiara cez všetky pásy.
+                s += `<line x1="${x(NOW)}" x2="${x(NOW)}" y1="${yCl - 2}" y2="${yF + hF + 2}" stroke="#f2f0ea" stroke-width="1"/>`;
+                s += `<circle cx="${ex}" cy="${ey}" r="4.5" fill="#f2f0ea" stroke="var(--surface)" stroke-width="2"/>`;
+                s += `<rect x="${x(NOW) - 19}" y="${yCl - 20}" width="38" height="15" rx="4" fill="#f2f0ea"/><text x="${x(NOW)}" y="${yCl - 9}" text-anchor="middle" font-size="10" font-weight="600" fill="#0b0b0b" font-family="IBM Plex Mono">13:00</text>`;
+                // Časová os.
+                [6, 9, 12, 15, 18, 21].forEach((t) => {
+                    s += `<text x="${x(t)}" y="${yAx}" text-anchor="${t === 6 ? 'start' : t === 21 ? 'end' : 'middle'}" font-size="10.5" fill="rgba(242,240,234,.56)" font-family="IBM Plex Mono">${t}:00</text>`;
+                });
+                return `<svg width="${W + 24}" height="${yAx + 4}" viewBox="0 0 ${W + 24} ${yAx + 4}" style="display:block;overflow:visible;margin-top:26px">${s}</svg>`;
+            }
+
+            function phone(d) {
+                const win = d.fit.find((f) => f[0] === 2);
+                return `<div><div class="cap">${d.cap}</div><div class="phone" id="d3-${d.id}">
+  <div class="hdr"><div><div class="brand">Toilet Apps Ltd.</div><div class="sub">RAY-MON</div></div>
+    <div><div class="time">13:00</div><div class="sub" style="text-align:right">meranie</div></div></div>
+  <div class="content">
+    <span class="back">‹ 7 dní</span>
+    <div class="title">Dnes, 5. september</div>
+    <div class="subt">${d.sub}</div>
+
+    <div class="card">
+      <div class="lbl">Okno na veľké spotrebiče</div>
+      <div class="hero"><div class="v">${win[1]}:00 – ${win[2]}:00</div></div>
+      <div class="state"><i></i>Práve prebieha · ešte ${win[2] - NOW} h</div>
+      <div class="note" style="margin-top:6px;font-size:13px;color:var(--ink-3)">${d.note}</div>
+    </div>
+
+    <div class="card">
+      <div class="row-h"><span style="font-size:14px;font-weight:600">Priebeh dňa</span>
+        <span class="ramp">jasno <b><i style="background:var(--cl-0)"></i><i style="background:var(--cl-1)"></i><i style="background:var(--cl-2)"></i><i style="background:var(--cl-3)"></i></b> zamračené</span></div>
+      ${chart(d)}
+      <div class="legend">
+        <span><i class="k-line" style="background:rgba(242,240,234,.45)"></i>predpoveď</span>
+        <span><i class="k-line" style="background:#f2f0ea"></i>skutočnosť</span>
+        <span><i class="k-sw" style="background:var(--fit-2)"></i>slnko stačí</span>
+        <span><i class="k-sw" style="background:var(--fit-1)"></i>čiastočne</span>
+        <span><i class="k-sw" style="background:var(--fit-0)"></i>zo siete</span>
+      </div>
+    </div>
+
+    <div class="tiles">${d.tiles.map(([l, v, u, dd, dir]) => `<div class="tile"><div class="lbl">${l}</div><div class="v">${v}<small>${u}</small></div><div class="d ${dir}">${dd}</div></div>`).join('')}</div>
+  </div>
+  <div class="nav"><span><i></i>Môžem?</span><span><i></i>Terazky</span><span class="on"><i></i>7 dní</span><span><i></i>Štatistika</span><span><i></i>Nastavenie</span></div>
+  </div></div>`;
+            }
+            document.getElementById('wall').innerHTML = DNI.map(phone).join('');
+        </script>
+    </body>
+</html>

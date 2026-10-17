@@ -367,54 +367,60 @@ test('mriežka panelov: najviac 40 kresbou, zvyšok číslom, neplatný počet n
     assert.equal(panelGridModel(NaN).cells.length, 0);
 });
 
-test('dayBarsModel: stĺpec na hodinu produkčného okna, oblačnosť, pás cien v okne grafu', async () => {
-    const { dayBarsModel } = await import('../shared/chart-model.js');
+test('dayTimelineModel: bunka oblačnosti na hodinu, plocha výroby, pás spotrebičov a okno', async () => {
+    const { dayTimelineModel, TIMELINE, cloudStep } = await import('../shared/chart-model.js');
     const day = forecast.days[0];
-    const dims = chartDims(false);
-    assert.equal(dayBarsModel({ pts: [{ hour: 2, kw: 1, cloud: 0, clearKw: 1 }], tiers: ['amber'], dims }), null, 'mimo 05-21 nič');
-    const tiers = day.hourly.map((p) => (p.hour === 13 ? 'green' : 'amber'));
-    const m = dayBarsModel({
-        pts: day.hourly,
-        tiers,
-        prices: [
-            { startMin: 0, min: 630, tier: 'amber' },
-            { startMin: 630, min: 810, tier: 'red' },
-        ],
-        nowHour: 13,
-        dims,
-    });
+    const label = (/** @type {any} */ seg, /** @type {number} */ w) => `${seg.level}:${Math.round(w)}`;
+    assert.equal(dayTimelineModel({ pts: [{ hour: 2, kw: 1, cloud: 0, clearKw: 1 }], segments: [], label }), null, 'mimo 05-21 nič');
+    const segments = [
+        { from: 0, to: 8 * 60, level: /** @type {const} */ ('grid') },
+        { from: 8 * 60, to: 11 * 60 + 15, level: /** @type {const} */ ('part') },
+        { from: 11 * 60 + 15, to: 16 * 60, level: /** @type {const} */ ('go') },
+        { from: 16 * 60, to: 24 * 60, level: /** @type {const} */ ('grid') },
+    ];
+    const m = dayTimelineModel({ pts: day.hourly, realPts: pv.realCurveToday, nowHour: 13, segments, label });
     assert.ok(m);
+    const { dims } = TIMELINE;
     const visible = day.hourly.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max);
-    assert.equal(m.bars.length, visible.length);
-    assert.equal(m.bars[visible.findIndex((p) => p.hour === 13)].tier, 'green', 'farba patrí svojej hodine');
-    const base = dims.h - dims.padB;
-    for (const b of m.bars) {
-        assert.ok(b.x >= dims.padL - 1e-9 && b.x + b.w <= dims.w - dims.padR + 1e-9, 'stĺpec neprečnieva z plátna');
-        assert.ok(Math.abs(b.y + b.h - base) < 1e-9, 'stĺpec stojí na osi');
-    }
-    assert.ok(m.cloud && m.cloud.length === visible.length, 'krivka oblačnosti');
-    assert.ok(
-        m.cloud.every((c) => c.y >= dims.padT - 1e-9 && c.y <= base + 1e-9),
-        'oblačnosť sa zmestí do grafu',
+    assert.equal(m.cells.length, visible.length, 'bunka na každú hodinu');
+    assert.deepEqual(
+        m.cells.map((c) => c.step),
+        visible.map((p) => cloudStep(Number(p.cloud))),
     );
-    assert.ok(m.maxKw >= Math.max(...visible.map((p) => p.kw)), 'stĺpce sa zmestia do grafu');
-    // Pás cien je orezaný na produkčné okno a ide za sebou bez medzier.
-    assert.equal(m.strip.length, 2);
-    assert.equal(m.strip[0].x, dims.padL);
-    assert.ok(Math.abs(m.strip[1].x + m.strip[1].w - (dims.w - dims.padR)) < 1e-9);
-    assert.ok(Math.abs(m.strip[0].x + m.strip[0].w - m.strip[1].x) < 1e-9);
-    assert.ok(m.nowX !== null);
-    // Tooltip nad stĺpcami je ten istý ako nad krivkou.
+    for (const c of [...m.cells, ...m.fit]) assert.ok(c.x >= dims.padL && c.x + c.w <= dims.w - dims.padR + 1e-9, 'neprečnieva z plátna');
+    // Pás je orezaný na produkčné okno, úseky idú za sebou s medzerou 2 px.
+    assert.deepEqual(
+        m.fit.map((f) => f.level),
+        ['grid', 'part', 'go', 'grid'],
+    );
+    for (let i = 1; i < m.fit.length; i++) assert.ok(Math.abs(m.fit[i].x - (m.fit[i - 1].x + m.fit[i - 1].w) - TIMELINE.gap) < 1e-9);
+    assert.equal(m.fit[2].label, `go:${Math.round(m.fit[2].w)}`, 'popis dostane šírku úseku');
+    // Okno je plocha cez všetky pásy, len nad zeleným úsekom.
+    assert.equal(m.wash.length, 1);
+    assert.equal(m.wash[0].x, m.fit[2].x);
+    assert.ok(m.wash[0].y < m.cloudY && m.wash[0].y + m.wash[0].h > m.fitY + m.fitH);
+    // Výroba zaberá plochu medzi padT a h - padB, pás spotrebičov je pod ňou.
+    assert.ok(m.line.every((p) => p.y >= dims.padT - 1e-9 && p.y <= dims.h - dims.padB + 1e-9));
+    assert.ok(m.fitY > dims.h - dims.padB && m.labelY < m.axisY);
+    assert.ok(m.gridY.length >= 2 && m.gridY[0].label === '0');
+    assert.ok(m.nowX !== null && m.nowText === '13:00' && m.realLast !== null);
+    // Tooltip je ten istý ako nad krivkou.
     const tip = chartTooltipModel(m, 0.5);
     assert.ok(tip.cloud !== null && tip.kw >= 0);
-    // Bez oblačnosti a so skutočnou výrobou.
-    const bez = dayBarsModel({
-        pts: visible.map((p) => ({ hour: p.hour, kw: p.kw, cloud: NaN, clearKw: p.clearKw })),
-        tiers: [],
-        realPts: pv.realCurveToday,
-        dims,
-    });
-    assert.ok(bez && bez.cloud === null && bez.bars.every((b) => b.tier === null) && bez.realLast !== null);
+});
+
+test('dayTimelineModel: bez oblačnosti v dátach buniek niet a tooltip oblačnosť nehlási', async () => {
+    const { dayTimelineModel, cloudStep } = await import('../shared/chart-model.js');
+    const label = () => '';
+    const visible = forecast.days[0].hourly.filter((p) => p.hour >= HOUR_RANGE.min && p.hour <= HOUR_RANGE.max);
+    const bez = dayTimelineModel({ pts: visible.map((p) => ({ ...p, cloud: NaN })), segments: [], label });
+    assert.ok(bez);
+    assert.equal(bez.cells.length, 0);
+    assert.equal(bez.cloud, null);
+    assert.equal(bez.nowX, null);
+    assert.equal(bez.nowText, '');
+    assert.equal(chartTooltipModel(bez, 0.5).cloud, null);
+    assert.deepEqual([0, 24.9, 25, 50, 75, 100].map(cloudStep), [0, 0, 1, 2, 3, 3]);
 });
 
 test('planesCompassModel: šípka na plochu v jej smere, dĺžka podľa panelov, hlavná je najväčšia', async () => {

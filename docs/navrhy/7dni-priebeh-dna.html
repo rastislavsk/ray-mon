@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Priebeh dňa – návrhy</title>
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            :root {
+                --bg: #0a0a0a;
+                --card: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-35: rgba(242, 240, 234, 0.54);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --body: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: #222;
+                color: var(--ink);
+                font-family: var(--body);
+                padding: 24px;
+            }
+            .wall {
+                display: flex;
+                gap: 32px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .cap {
+                max-width: 390px;
+                margin-bottom: 10px;
+                color: #ddd;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            .cap b {
+                color: #fff;
+                font-size: 17px;
+                display: block;
+                margin-bottom: 2px;
+            }
+            .phone {
+                width: 390px;
+                height: 844px;
+                position: relative;
+                overflow: hidden;
+                background: radial-gradient(120% 60% at 50% 0%, #1d2a12 0%, #0d110a 45%, var(--bg) 75%);
+                border-radius: 0;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 18px 20px 0;
+            }
+            .hdr .brand {
+                font-family: var(--mono);
+                font-weight: 600;
+                font-size: 14px;
+                letter-spacing: 0.04em;
+            }
+            .hdr .sub {
+                font-family: var(--mono);
+                font-size: 10px;
+                color: var(--ink-45);
+                margin-top: 6px;
+                letter-spacing: 0.06em;
+            }
+            .hdr .time {
+                font-family: var(--mono);
+                font-size: 14px;
+                text-align: right;
+            }
+            .hdr .time::before {
+                content: '';
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--green);
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            .content {
+                padding: 0 20px;
+            }
+            .back {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 26px;
+                padding: 10px 14px;
+                border-radius: 12px;
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                color: var(--green);
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .title {
+                font-size: 26px;
+                font-weight: 600;
+                margin-top: 18px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .dots {
+                display: flex;
+                gap: 14px;
+                justify-content: center;
+                margin: 14px 0 18px;
+            }
+            .dots i {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--ink-20);
+            }
+            .dots i:first-child {
+                background: var(--ink-45);
+            }
+            .lbl {
+                font-family: var(--mono);
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .card {
+                background: rgba(21, 22, 20, 0.85);
+                border: 1px solid var(--ink-08);
+                border-radius: 18px;
+                padding: 16px;
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 68px;
+                background: rgba(10, 10, 10, 0.92);
+                border-top: 1px solid var(--ink-08);
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .nav span {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+            }
+            .nav span i {
+                width: 20px;
+                height: 20px;
+                border: 1.6px solid currentColor;
+                border-radius: 6px;
+            }
+            .nav span.on {
+                color: var(--ink);
+                font-weight: 600;
+            }
+            .nav span.on i {
+                border-color: var(--green);
+                box-shadow: 0 0 14px rgba(158, 242, 91, 0.5);
+            }
+            .mono {
+                font-family: var(--mono);
+            }
+            .g {
+                color: var(--green);
+            }
+            .muted {
+                color: var(--ink-45);
+            }
+            .chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 9px;
+                border-radius: 999px;
+                font-size: 11.5px;
+                background: var(--ink-05);
+                border: 1px solid var(--ink-08);
+                color: var(--ink-70);
+                white-space: nowrap;
+            }
+            .chip.go {
+                background: rgba(158, 242, 91, 0.12);
+                border-color: rgba(158, 242, 91, 0.35);
+                color: var(--green);
+            }
+
+            /* ---- A: hodina po hodine ---- */
+            .hero-a .big {
+                font-size: 20px;
+                font-weight: 600;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .hero-a .sub {
+                color: var(--ink-45);
+                font-size: 13.5px;
+                margin-top: 4px;
+            }
+            .prog {
+                position: relative;
+                height: 12px;
+                border-radius: 999px;
+                background: var(--ink-08);
+                margin: 16px 0 8px;
+            }
+            .prog .fill {
+                position: absolute;
+                inset: 0 auto 0 0;
+                border-radius: 999px;
+                background: var(--ink);
+            }
+            .prog .exp {
+                position: absolute;
+                top: -5px;
+                bottom: -5px;
+                width: 2px;
+                background: var(--green);
+                border-radius: 2px;
+            }
+            .prog-txt {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12.5px;
+                color: var(--ink-45);
+            }
+            .prog-txt b {
+                color: var(--ink);
+                font-family: var(--mono);
+            }
+            .strip {
+                display: flex;
+                gap: 6px;
+                overflow: hidden;
+                margin: 14px -20px 0;
+                padding: 0 20px;
+            }
+            .hcol {
+                flex: 0 0 44px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 0 8px;
+                border-radius: 14px;
+            }
+            .hcol .t {
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .hcol .bar {
+                position: relative;
+                width: 16px;
+                height: 86px;
+                border-radius: 8px;
+                background: var(--ink-05);
+                overflow: hidden;
+            }
+            .hcol .bar .fc {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(158, 242, 91, 0.35);
+                border-radius: 8px;
+            }
+            .hcol .bar .ac {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--green);
+                border-radius: 8px;
+            }
+            .hcol .kw {
+                font-family: var(--mono);
+                font-size: 11px;
+            }
+            .hcol.now {
+                background: var(--ink-08);
+                outline: 1px solid var(--ink-20);
+            }
+            .hcol.now .t {
+                color: var(--ink);
+                font-weight: 600;
+            }
+            .hcol.win {
+                box-shadow: inset 0 -3px 0 var(--green);
+            }
+            .leg {
+                display: flex;
+                gap: 14px;
+                font-size: 11.5px;
+                color: var(--ink-45);
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            .leg i {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: -1px;
+            }
+
+            /* ---- B: časti dňa ---- */
+            .sum-b {
+                font-size: 15px;
+                line-height: 1.45;
+                color: var(--ink-70);
+                margin-bottom: 14px;
+            }
+            .sum-b b {
+                color: var(--ink);
+            }
+            .part {
+                display: grid;
+                grid-template-columns: 34px 1fr auto;
+                gap: 3px 12px;
+                align-items: center;
+                padding: 11px 14px;
+                border-radius: 16px;
+                background: rgba(21, 22, 20, 0.85);
+                border: 1px solid var(--ink-08);
+                margin-bottom: 8px;
+            }
+            .part .ico {
+                grid-row: span 2;
+            }
+            .part .nm {
+                font-weight: 600;
+                font-size: 15.5px;
+                white-space: nowrap;
+            }
+            .part .nm small {
+                font-family: var(--mono);
+                font-weight: 400;
+                font-size: 11px;
+                color: var(--ink-45);
+                margin-left: 6px;
+            }
+            .part .val {
+                font-family: var(--mono);
+                font-size: 18px;
+                font-weight: 600;
+                text-align: right;
+            }
+            .part .val small {
+                font-size: 10px;
+                color: var(--ink-45);
+                font-weight: 400;
+            }
+            .part .desc {
+                font-size: 12.5px;
+                color: var(--ink-45);
+            }
+            .part .st {
+                font-size: 11.5px;
+                text-align: right;
+                white-space: nowrap;
+            }
+            .part .pbar {
+                grid-column: 2 / 4;
+                height: 6px;
+                border-radius: 999px;
+                background: var(--ink-08);
+                position: relative;
+                margin-top: 6px;
+            }
+            .part .pbar .fc {
+                position: absolute;
+                inset: 0 auto 0 0;
+                border-radius: 999px;
+                background: rgba(158, 242, 91, 0.35);
+            }
+            .part .pbar .ac {
+                position: absolute;
+                inset: 0 auto 0 0;
+                border-radius: 999px;
+                background: var(--green);
+            }
+            .part .row3 {
+                grid-column: 2 / 4;
+                display: flex;
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .part.now {
+                border-color: rgba(242, 240, 234, 0.35);
+                background: rgba(40, 44, 36, 0.9);
+            }
+            .part.past {
+                opacity: 0.78;
+            }
+            .part.win {
+                border-left: 3px solid var(--green);
+            }
+
+            /* ---- C: oblúk slnka ---- */
+            .arc-wrap {
+                position: relative;
+                margin-top: 4px;
+            }
+            .arc-center {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 112px;
+                text-align: center;
+            }
+            .arc-center .n {
+                font-family: var(--mono);
+                font-size: 40px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+            .arc-center .n small {
+                font-size: 14px;
+                color: var(--ink-45);
+                font-weight: 400;
+                margin-left: 4px;
+            }
+            .arc-center .of {
+                font-size: 13px;
+                color: var(--ink-45);
+                margin-top: 2px;
+            }
+            .arc-center .ok {
+                display: inline-block;
+                margin-top: 10px;
+            }
+            .facts {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .fact {
+                background: rgba(21, 22, 20, 0.85);
+                border: 1px solid var(--ink-08);
+                border-radius: 14px;
+                padding: 10px 10px 11px;
+            }
+            .fact .v {
+                font-family: var(--mono);
+                font-size: 16px;
+                font-weight: 600;
+                margin-top: 6px;
+                display: flex;
+                gap: 6px;
+                align-items: center;
+            }
+            .fact .d {
+                font-size: 11.5px;
+                color: var(--ink-45);
+                margin-top: 2px;
+            }
+            .say {
+                margin-top: 12px;
+                font-size: 14px;
+                line-height: 1.45;
+                color: var(--ink-70);
+            }
+            .say b {
+                color: var(--ink);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wall" id="wall"></div>
+
+        <script>
+            // Rovnaké čísla ako fixtures v testoch: Dnes 5. 9., 13:00, predpoveď 61,4 kWh, špička 7,9 kW o 12:00,
+            // oblačnosť 12 %, doteraz 31,7 kWh, veľké spotrebiče 9:00–16:00.
+            const H = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+            const FC = [0.2, 1.0, 2.5, 4.2, 6.1, 7.2, 7.9, 7.7, 7.5, 6.5, 4.6, 3.2, 1.8, 0.8, 0.2];
+            const AC = [0.3, 1.2, 2.9, 4.6, 6.4, 7.6, 8.1, 0.6]; // 13:00 je rozbehnutá hodina
+            const CL = [30, 28, 22, 12, 6, 4, 5, 6, 8, 10, 14, 20, 32, 38, 40]; // % oblakov
+            const NOW = 13;
+            // Texty dňa. ?den=premenlivy prepne na deň, keď sa oblaky striedajú so slnkom a výroba ide pod plán.
+            let S = {
+                cloud: 12,
+                cloudTxt: 'takmer jasno',
+                peak: '7,9',
+                peakAt: '12:00',
+                win: [9, 16],
+                head: 'Slnečný deň',
+                sub: 'Oblaky len ráno a večer, cez deň takmer jasno.',
+                parts: [
+                    { nm: 'Ráno', od: 6, do: 9, desc: 'Ľahký opar', cloud: 26 },
+                    { nm: 'Dopoludnie', od: 9, do: 12, desc: 'Jasno', cloud: 7, go: true },
+                    { nm: 'Popoludnie', od: 12, do: 16, desc: 'Jasno, špička 7,9 kW', cloud: 7, go: true },
+                    { nm: 'Večer', od: 16, do: 21, desc: 'Pribúdajú oblaky', cloud: 30 },
+                ],
+                say: 'Slnko je za zenitom. <b>Veľké spotrebiče pusťte do 16:00</b>, potom už výroba klesá a večer pribudnú oblaky.',
+            };
+            if (new URLSearchParams(location.search).get('den') === 'premenlivy') {
+                FC.splice(0, FC.length, 0.3, 1.2, 2.6, 3.5, 3.8, 5.1, 4.3, 4.9, 5.8, 4.3, 2.8, 2.4, 1.6, 0.7, 0.2);
+                AC.splice(0, AC.length, 0.3, 1.3, 2.8, 2.6, 4.4, 3.9, 3.1, 0.4);
+                CL.splice(0, CL.length, 15, 10, 20, 45, 70, 55, 80, 65, 40, 60, 75, 50, 30, 25, 20);
+                S = {
+                    cloud: 47,
+                    cloudTxt: 'premenlivo',
+                    peak: '5,8',
+                    peakAt: '14:00',
+                    win: [11, 16],
+                    head: 'Premenlivý deň',
+                    sub: 'Oblaky prichádzajú a odchádzajú, najviac slnka okolo 14:00.',
+                    parts: [
+                        { nm: 'Ráno', od: 6, do: 9, desc: 'Jasno', cloud: 10 },
+                        { nm: 'Dopoludnie', od: 9, do: 12, desc: 'Oblaky sa zaťahujú', cloud: 57 },
+                        { nm: 'Popoludnie', od: 12, do: 16, desc: 'Striedavo, špička 5,8 kW', cloud: 61, go: true },
+                        { nm: 'Večer', od: 16, do: 21, desc: 'Vyjasňuje sa', cloud: 31 },
+                    ],
+                    say: 'Oblaky sa striedajú so slnkom, zatiaľ je výroba pod plánom. <b>Veľké spotrebiče skúste medzi 11:00 a 16:00</b>, najviac slnka sa čaká okolo 14:00.',
+                };
+            }
+            const fmt = (n, d = 1) => n.toLocaleString('sk-SK', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+            // Ikony počasia z oblačnosti – rovnaká trojica ako ikony dní v zozname.
+            function ico(cloud, size = 22) {
+                const sun = `<g stroke="#ffc24b" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="4.2" fill="#ffc24b"/>${[
+                    0, 45, 90, 135, 180, 225, 270, 315,
+                ]
+                    .map((a) => {
+                        const r = (a * Math.PI) / 180;
+                        return `<line x1="${11 + Math.cos(r) * 6.6}" y1="${11 + Math.sin(r) * 6.6}" x2="${11 + Math.cos(r) * 8.8}" y2="${11 + Math.sin(r) * 8.8}"/>`;
+                    })
+                    .join('')}</g>`;
+                const cloudP = (x, y, s, fill) =>
+                    `<path transform="translate(${x} ${y}) scale(${s})" d="M6 16h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6 1.6A3.3 3.3 0 0 0 6 16z" fill="${fill}" stroke="rgba(242,240,234,.85)" stroke-width="1.3"/>`;
+                let inner;
+                if (cloud < 15) inner = sun;
+                else if (cloud < 65) inner = `<g transform="translate(-2 -3) scale(.85)">${sun}</g>` + cloudP(1, 3, 0.95, '#2a2c27');
+                else inner = cloudP(0, 0, 1.05, '#2a2c27');
+                return `<svg width="${size}" height="${size}" viewBox="0 0 22 22" aria-hidden="true">${inner}</svg>`;
+            }
+
+            const frame = (inner) => `
+  <div class="hdr"><div><div class="brand">Toilet Apps Ltd.</div><div class="sub">RAY-MON</div></div>
+    <div><div class="time">13:00</div><div class="sub" style="text-align:right">meranie</div></div></div>
+  <div class="content">
+    <span class="back">‹ 7 dní</span>
+    <div class="title">Dnes 5.9. ${ico(S.cloud, 24)}</div>
+    <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    ${inner}
+  </div>
+  <div class="nav"><span><i></i>Môžem?</span><span><i></i>Terazky</span><span class="on"><i></i>7 dní</span><span><i></i>Štatistika</span><span><i></i>Nastavenie</span></div>`;
+
+            const doteraz = AC.reduce((a, b) => a + b, 0); // 31,7
+            const ocak = FC.slice(0, H.indexOf(NOW)).reduce((a, b) => a + b, 0); // čo sa čakalo do 13:00
+            const nad = Math.round((doteraz / ocak - 1) * 100);
+            const lepsie = nad >= 0;
+            const rozdiel = `o ${Math.abs(nad)} % ${lepsie ? 'viac' : 'menej'}, než sa čakalo`;
+            const farba = lepsie ? 'var(--green)' : 'var(--amber)';
+            const W0 = `${S.win[0]}:00`,
+                W1 = `${S.win[1]}:00`;
+            const SPOLU = FC.reduce((a, b) => a + b, 0);
+
+            // ---------- A: hodina po hodine (ako aplikácia počasia) ----------
+            function navrhA() {
+                const max = Math.max(...FC, ...AC);
+                const cols = H.map((h, i) => {
+                    const past = i < AC.length;
+                    const isNow = h === NOW;
+                    const win = h >= S.win[0] && h < S.win[1];
+                    const fcH = (FC[i] / max) * 100,
+                        acH = past ? ((isNow ? AC[i] : AC[i]) / max) * 100 : 0;
+                    const kw = isNow ? `<span class="g">teraz</span>` : past ? fmt(AC[i]) : fmt(FC[i]);
+                    return `<div class="hcol${isNow ? ' now' : ''}${win ? ' win' : ''}">
+      <span class="t">${h}:00</span>${ico(CL[i])}
+      <span class="bar"><span class="fc" style="height:${fcH}%"></span>${past ? `<span class="ac" style="height:${acH}%"></span>` : ''}</span>
+      <span class="kw${past && !isNow ? '' : ' muted'}">${kw}</span></div>`;
+                }).join('');
+                return frame(`
+    <div class="card hero-a">
+      <div class="big">${S.head}, čaká sa ${fmt(SPOLU)} kWh</div>
+      <div class="sub">${S.sub}</div>
+      <div class="prog"><span class="fill" style="width:${(doteraz / SPOLU) * 100}%"></span><span class="exp" style="left:${(ocak / SPOLU) * 100}%"></span></div>
+      <div class="prog-txt"><span>Doteraz <b>${fmt(doteraz)} kWh</b></span><span style="color:${farba}">${rozdiel}</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:20px">
+      <span class="lbl">Hodina po hodine</span><span class="muted" style="font-size:11.5px">potiahni ‹ ›</span></div>
+    <div class="strip" id="strip-a">${cols}</div>
+    <div class="leg"><span><i style="background:var(--green)"></i>vyrobené</span><span><i style="background:rgba(158,242,91,.35)"></i>predpoveď</span><span><i style="background:none;border-bottom:3px solid var(--green);border-radius:0;height:6px"></i>pustiť spotrebiče</span></div>
+    <div class="card" style="margin-top:16px;display:flex;gap:12px;align-items:center">
+      <span class="chip go" style="padding:8px">●</span>
+      <div><div style="font-weight:600;font-size:15px">Práčku a sušičku medzi ${W0} a ${W1}</div>
+      <div class="muted" style="font-size:12.5px;margin-top:2px">Najviac slnka okolo ${S.peakAt} – až ${S.peak} kW.</div></div>
+    </div>`);
+            }
+
+            // ---------- B: deň v štyroch častiach ----------
+            function navrhB() {
+                const parts = S.parts.map((p) => {
+                    const ix = H.map((h, i) => (h >= p.od && h < p.do ? i : -1)).filter((i) => i >= 0);
+                    const fc = ix.reduce((a, i) => a + FC[i], 0);
+                    const ac = ix.reduce((a, i) => a + (AC[i] ?? 0), 0);
+                    const state = p.do <= NOW ? 'past' : p.od <= NOW ? 'now' : 'next';
+                    return { ...p, fc, ac, state };
+                });
+                const maxP = Math.max(...parts.map((p) => p.fc));
+                const cards = parts
+                    .map((p) => {
+                        let st, val;
+                        if (p.state === 'past') {
+                            st = `<span style="color:${p.ac >= p.fc ? 'var(--green)' : 'var(--amber)'}">${p.ac >= p.fc ? '✓' : '▼'} vyrobené · plán ${fmt(p.fc)}</span>`;
+                            val = fmt(p.ac);
+                        } else if (p.state === 'now') {
+                            st = `<span style="color:var(--ink)">● teraz · zatiaľ ${fmt(p.ac)}</span>`;
+                            val = fmt(p.fc);
+                        } else {
+                            st = `<span class="muted">predpoveď</span>`;
+                            val = fmt(p.fc);
+                        }
+                        return `<div class="part ${p.state}${p.go ? ' win' : ''}">
+      <span class="ico">${ico(p.cloud, 30)}</span>
+      <span class="nm">${p.nm}<small>${p.od}–${p.do} h</small></span>
+      <span class="val">${val}<small> kWh</small></span>
+      <span class="desc">${p.desc}</span>
+      <span class="st">${st}</span>
+      <span class="pbar"><span class="fc" style="width:${(p.fc / maxP) * 100}%"></span>${p.state !== 'next' ? `<span class="ac" style="width:${(p.ac / maxP) * 100}%"></span>` : ''}</span>
+    </div>`;
+                    })
+                    .join('');
+                return frame(`
+    <div class="sum-b"><b>${S.head}, čaká sa ${fmt(SPOLU)} kWh.</b> Zatiaľ máte ${fmt(doteraz)} kWh – ${rozdiel.replace('čakalo', 'do teraz čakalo')}.</div>
+    ${cards}
+    <div class="leg" style="margin-top:4px"><span><i style="background:var(--green)"></i>vyrobené</span><span><i style="background:rgba(158,242,91,.35)"></i>predpoveď</span><span><i style="background:var(--green);width:3px"></i>vhodné na veľké spotrebiče</span></div>`);
+            }
+
+            // ---------- C: oblúk slnka ----------
+            function navrhC() {
+                const W = 350,
+                    cx = W / 2,
+                    cy = 196,
+                    R = 150;
+                const t0 = 6.4,
+                    t1 = 19.4; // východ 6:24, západ 19:24
+                const ang = (t) => Math.PI * (1 - (t - t0) / (t1 - t0));
+                const pt = (t, r = R) => [cx + Math.cos(ang(t)) * r, cy - Math.sin(ang(t)) * r];
+                const seg = (a, b, r) => {
+                    const [x1, y1] = pt(a, r),
+                        [x2, y2] = pt(b, r);
+                    return `M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+                };
+                const max = Math.max(...FC, ...AC) + 0.3;
+                let svg = `<path d="${seg(t0, t1, R)}" fill="none" stroke="rgba(242,240,234,.12)" stroke-width="1.5" stroke-dasharray="2 5"/>`;
+                H.forEach((h, i) => {
+                    const a = Math.max(h, t0),
+                        b = Math.min(h + 1, t1);
+                    if (b <= a) return;
+                    const wf = 4 + (FC[i] / max) * 22;
+                    svg += `<path d="${seg(a + 0.04, b - 0.04, R)}" fill="none" stroke="rgba(158,242,91,.30)" stroke-width="${wf}" stroke-linecap="butt"/>`;
+                    if (i < AC.length) {
+                        const bb = h === NOW ? a + 0.08 : b;
+                        const wa = 4 + (AC[i] / max) * 22;
+                        if (h !== NOW)
+                            svg += `<path d="${seg(a + 0.04, bb - 0.04, R)}" fill="none" stroke="#9ef25b" stroke-width="${Math.min(wa, 26)}" stroke-linecap="butt"/>`;
+                    }
+                });
+                // okno na spotrebiče
+                svg += `<path d="${seg(S.win[0], S.win[1], R + 18)}" fill="none" stroke="#9ef25b" stroke-width="2" stroke-linecap="round" opacity=".8"/>`;
+                const [lx, ly] = pt(9, R + 22);
+                const [mx, my] = pt((S.win[0] + S.win[1]) / 2, R - 26);
+                svg += `<text x="${mx}" y="${my}" text-anchor="middle" font-size="10.5" fill="#9ef25b" font-family="IBM Plex Mono">spotrebiče ${S.win[0]}–${S.win[1]}</text>`;
+                // oblaky nad hodinami, kde ich je viac
+                H.forEach((h, i) => {
+                    if (CL[i] < 20 || h + 0.5 < t0 || h + 0.5 > t1) return;
+                    const [x, y] = pt(h + 0.5, R + 36);
+                    const s = 0.55 + CL[i] / 140;
+                    svg += `<g transform="translate(${x - 10 * s} ${y - 9 * s}) scale(${s})"><path d="M6 16h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6 1.6A3.3 3.3 0 0 0 6 16z" fill="#2a2c27" stroke="rgba(242,240,234,.7)" stroke-width="1.2"/></g>`;
+                });
+                // slnko = teraz
+                const [sx, sy] = pt(NOW + 0.08);
+                svg += `<circle cx="${sx}" cy="${sy}" r="26" fill="rgba(255,194,75,.18)"/><circle cx="${sx}" cy="${sy}" r="12" fill="#ffc24b" stroke="#0a0a0a" stroke-width="3"/>`;
+                // východ / západ
+                const [ax, ay] = pt(t0),
+                    [bx, by] = pt(t1);
+                svg += `<text x="${ax}" y="${ay + 18}" text-anchor="middle" font-size="10.5" fill="rgba(242,240,234,.64)" font-family="IBM Plex Mono">↑ 6:24</text>`;
+                svg += `<text x="${bx}" y="${by + 18}" text-anchor="middle" font-size="10.5" fill="rgba(242,240,234,.64)" font-family="IBM Plex Mono">19:24 ↓</text>`;
+                const [px, py] = pt(12.5, R + 2);
+
+                return frame(`
+    <div class="arc-wrap">
+      <svg width="${W}" height="222" viewBox="0 0 ${W} 222" style="display:block;overflow:visible">${svg}</svg>
+      <div class="arc-center">
+        <div class="n">${fmt(doteraz)}<small>kWh</small></div>
+        <div class="of">vyrobené z ${fmt(SPOLU)} kWh predpovede</div>
+        <span class="chip ok" style="color:${farba};border-color:${farba};background:${lepsie ? 'rgba(158,242,91,.12)' : 'rgba(255,194,75,.12)'}">${lepsie ? '▲' : '▼'} ${rozdiel}</span>
+      </div>
+    </div>
+    <div class="leg" style="justify-content:center;margin-top:6px"><span><i style="background:var(--green)"></i>vyrobené</span><span><i style="background:rgba(158,242,91,.35)"></i>ešte príde</span><span>hrúbka = sila slnka</span></div>
+    <div class="facts" style="margin-top:16px">
+      <div class="fact"><span class="lbl">Obloha</span><div class="v">${ico(S.cloud, 18)}${S.cloud} %</div><div class="d">${S.cloudTxt}</div></div>
+      <div class="fact"><span class="lbl">Špička</span><div class="v">${S.peak} kW</div><div class="d">okolo ${S.peakAt}</div></div>
+      <div class="fact"><span class="lbl">Ešte príde</span><div class="v">${fmt(SPOLU - doteraz)}</div><div class="d">kWh do západu</div></div>
+    </div>
+    <div class="say">${S.say}</div>`);
+            }
+
+            const N = [
+                [
+                    'A',
+                    'Hodina po hodine',
+                    'Ako aplikácia počasia: vodorovný pás hodín s ikonou oblohy, výrobou a zvýraznenou hodinou „teraz“. Hore jedna veta a pokrok dňa.',
+                    navrhA,
+                ],
+                [
+                    'B',
+                    'Deň v štyroch častiach',
+                    'Bez grafu: ráno, dopoludnie, popoludnie, večer. Každá časť má počasie slovom, kWh a stav (vyrobené / práve teraz / príde).',
+                    navrhB,
+                ],
+                [
+                    'C',
+                    'Oblúk slnka',
+                    'Dráha slnka od východu po západ. Hrúbka oblúka je sila výroby, oblaky sedia priamo na oblúku, slnko ukazuje „teraz“.',
+                    navrhC,
+                ],
+            ];
+            document.getElementById('wall').innerHTML = N.map(
+                ([k, t, d, f]) =>
+                    `<div><div class="cap"><b>${k} · ${t}</b>${d}</div><div class="phone" id="navrh-${k.toLowerCase()}">${f()}</div></div>`,
+            ).join('');
+            const st = document.getElementById('strip-a');
+            if (st) st.scrollLeft = 2 * 50;
+        </script>
+    </body>
+</html>

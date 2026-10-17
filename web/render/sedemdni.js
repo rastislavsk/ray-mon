@@ -10,11 +10,10 @@
 import {
     bestDayIndex,
     chartDims,
-    dayBarsModel,
+    dayTimelineModel,
     fillDims,
     forecastChartModel,
     usePct,
-    visibleHours,
     weekBarsModel,
     weekDayTiers,
     weekHeatModel,
@@ -22,15 +21,14 @@ import {
     weekStatsModel,
 } from '../../shared/chart-model.js';
 import { installedKw, powerThresholds } from '../../shared/config.js';
-import { dayHourTiers, forecastDayPlan } from '../../shared/day-plan.js';
+import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
 import { escapeHtml, fmt1, hourLabel, kwpText, weekDateLabel, weekDayLong, weekDayName, weekDayShort } from '../../shared/format.js';
-import { dayDetailMessage, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
-import { sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { dayWindowCard, EMPTY_MESSAGES, fitLabel, weekMessage } from '../../shared/messages.js';
+import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { localMinutes } from '../../shared/solar.js';
-import { levelTier, priceSegments } from '../../shared/tariff.js';
 import { ICON_BACK, ICON_CLOUD, ICON_NEXT, ICON_PARTLY, ICON_SUN } from '../icons.js';
 import { changed, writeHtml } from '../memo.js';
-import { dayBarsSvg, forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
+import { dayTimelineSvg, forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
 
 /** @typedef {import('../../shared/solar.js').ForecastDay} ForecastDay */
 
@@ -50,8 +48,8 @@ function dimsFor(state, key) {
 /** Vstup grafu priebehu vybraného dňa - zdieľaný s tooltipom. Dnešok tu ukazuje aj nameranú
  * krivku; ostatné dni zatiaľ merané nemajú.
  *
- * V detaile dňa na mobile sú to stĺpce po hodinách vo farbe plánu dňa (tarifa × slnko), inde
- * krivka. Oba modely majú tú istú mierku a produkčné okno, takže tooltip sedí na oba.
+ * V detaile dňa na mobile je to časová os dňa (oblačnosť, výroba a pás spotrebičov z plánu dňa),
+ * inde krivka. Výroba má v oboch tú istú mierku a produkčné okno, takže tooltip sedí na oba.
  * @param {import('../state.js').AppState} state */
 export function weekCurveModel(state) {
     const days = state.forecast ? state.forecast.days : [];
@@ -62,11 +60,16 @@ export function weekCurveModel(state) {
         pts: day.hourly,
         realPts: isToday && state.pv ? state.pv.realCurveToday : [],
         nowHour: isToday ? localMinutes(state.now, state.site.timezone) / 60 : null,
-        dims: dimsFor(state, 'weekCurve'),
     };
-    if (state.wide || state.weekDetail !== 'day') return forecastChartModel(input);
-    const prices = priceSegments(state.tariff, day.date).map((s) => ({ startMin: s.startMin, min: s.min, tier: levelTier(s.level) }));
-    return dayBarsModel({ ...input, tiers: dayHourTiers(day, state.tariff, state.plant), prices });
+    if (state.wide || state.weekDetail !== 'day') return forecastChartModel({ ...input, dims: dimsFor(state, 'weekCurve') });
+    const segments = fitSegments(dayPlanOf(state), powerThresholds(state.plant));
+    return dayTimelineModel({ ...input, segments, label: fitLabel });
+}
+
+/** Plán vybraného dňa po štvrťhodinách (dnešok presne dayPlan, ako ciferník). @param {import('../state.js').AppState} state */
+function dayPlanOf(state) {
+    const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);
+    return forecastDayPlan({ ...state, forecast }, state.weekSelDay);
 }
 
 /** @param {boolean} sunny @param {number | null} cloudPct */
@@ -220,22 +223,37 @@ function dayInfo(day, progress) {
 }
 
 /**
- * Tri čísla dňa v detaile dňa na mobile - výroba, špička a priemerná oblačnosť - a pri
- * dnešku riadok o tom, koľko už nabehlo. To isté, čo hovorí dayInfo, len ako dlaždice.
+ * Tri čísla dňa pod grafom v detaile dňa na mobile: predpoveď, pri dnešku koľko už nabehlo
+ * (iný deň priemerná oblačnosť) a špička.
  * @param {ForecastDay} day @param {ReturnType<typeof weekStatsModel>['progress']} progress len pri dnešku
  */
 function dayKpis(day, progress) {
-    const kpi = (/** @type {string} */ v, /** @type {string} */ u, /** @type {string} */ label) =>
-        `<span class="kpi"><b>${v}<small>${u}</small></b><span>${label}</span></span>`;
+    const kpi = (/** @type {string} */ label, /** @type {string} */ v, /** @type {string} */ u, /** @type {string} */ note) =>
+        `<span class="kpi"><span>${label}</span><b>${v}<small>${u}</small></b><span>${note}</span></span>`;
     const cloud = day.cloudAvgPct;
-    let html = kpi(fmt1(day.kwhTotal), ' kWh', 'výroba za deň');
+    let html = kpi('Predpoveď', fmt1(day.kwhTotal), ' kWh', 'na celý deň');
+    html += progress
+        ? kpi('Zatiaľ', fmt1(progress.realKwh), ' kWh', `${progress.pct} % plánu`)
+        : kpi('Oblačnosť', cloud == null ? '–' : String(Math.round(cloud)), cloud == null ? '' : ' %', 'priemer dňa');
     html +=
         Number.isFinite(day.peakKw) && day.peakHour != null
-            ? kpi(fmt1(day.peakKw), ' kW', `špička o ${hourLabel(day.peakHour)}`)
-            : kpi('–', '', 'špička');
-    html += kpi(cloud == null ? '–' : String(Math.round(cloud)), cloud == null ? '' : ' %', 'oblačnosť');
-    if (progress) html += `<span class="kpi-note">Doteraz <b>${fmt1(progress.realKwh)} kWh</b> · ${progress.pct} % z predpovede</span>`;
+            ? kpi('Špička', fmt1(day.peakKw), ' kW', `okolo ${hourLabel(day.peakHour)}`)
+            : kpi('Špička', '–', '', '');
     return html;
+}
+
+/**
+ * Karta okna na veľké spotrebiče nad grafom detailu dňa: hlavné okno plánu dňa (to isté ako
+ * zelený pás v rebríčku), stav a riadok so spotrebičmi.
+ * @param {import('../state.js').AppState} state @param {ForecastDay} day @param {import('../dom.js').Dom} dom
+ */
+function renderDayWindow(state, day, dom) {
+    const nowMin = state.weekSelDay === 0 ? localMinutes(state.now, state.site.timezone) : null;
+    const c = dayWindowCard(mainWindow(sunWindows(dayPlanOf(state))), nowMin, day.peakHour ?? null);
+    dom.weekDayWindow.innerHTML =
+        `<span class="dw-lbl">Okno na veľké spotrebiče</span><span class="dw-val">${escapeHtml(c.value)}</span>` +
+        `<span class="dw-state${c.live ? ' live' : ''}">${escapeHtml(c.state)}</span>` +
+        (c.note ? `<span class="dw-note">${escapeHtml(c.note)}</span>` : '');
 }
 
 /** @param {import('../state.js').AppState} state @param {ForecastDay} day
@@ -243,8 +261,12 @@ function dayKpis(day, progress) {
  * @param {import('../dom.js').Dom} dom */
 function renderCurve(state, day, progress, detail, dom) {
     const m = weekCurveModel(state);
-    writeHtml(dom.weekCurve, !m ? '' : 'bars' in m ? dayBarsSvg(m) : forecastChartSvg(m), 'weekCurve');
+    writeHtml(dom.weekCurve, !m ? '' : 'fit' in m ? dayTimelineSvg(m) : forecastChartSvg(m), 'weekCurve');
     if (m) dom.weekCurve.setAttribute('viewBox', `0 0 ${m.dims.w} ${m.dims.h}`);
+    // Časová os má iný pomer strán než krivka - pomer krivky je v CSS, os si ho nesie sama.
+    dom.weekCurve.style.aspectRatio = m && 'fit' in m ? `${m.dims.w} / ${m.dims.h}` : '';
+    dom.weekDayWindow.classList.toggle('hidden', !detail);
+    if (detail) renderDayWindow(state, day, dom);
     // Položka legendy patrí ku krivke - keď sa krivka nekreslí, legenda by ohlasovala
     // niečo, čo v grafe nie je.
     dom.weekCurveLiveLegend.classList.toggle('hidden', !m || !m.real.length);
@@ -270,7 +292,8 @@ function renderView(detail, narrow, tall, dom) {
     // Správa patrí k tomu, čo je otvorené: v detaile dňa hovorí o tom dni, inde o najsilnejšom
     // dni týždňa. V prehľade dní na mobile je len vtedy, keď sa zvyšok zmestil na obrazovku
     // a ostalo na ňu miesto (`tall`, viď WEEK_MSG_MIN_H) - prehľad sa nemá kvôli nej rozscrollovať.
-    dom.weekMsgBlock.classList.toggle('hidden', narrow && !detail && !tall);
+    // V detaile dňa správu nahrádza karta okna na veľké spotrebiče nad grafom.
+    dom.weekMsgBlock.classList.toggle('hidden', (narrow && !detail && !tall) || detail === 'day');
     // Detail dňa má len stĺpce po hodinách: jeho riadok heatmapy by hovoril to isté, čo ony.
     const vidno = detail === 'day' ? ['weekBlockCurve'] : detail === 'week' ? ['weekBlockBars', 'weekBlockHeat'] : [];
     for (const key of /** @type {const} */ (['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve']))
@@ -456,7 +479,7 @@ export function renderSedemdni(state, dom) {
     renderTableAndTabs(days, sel, dom);
     renderCurve(state, days[sel], stats.progress, detail === 'day', dom);
     renderDaySteps(detail, days, sel, dom);
-    const msg = detail === 'day' ? dayDetailMessage(visibleHours(days[sel].hourly), powerThresholds(state.plant)) : weekMessage(days);
+    const msg = weekMessage(days);
     dom.weekMsgTitle.textContent = msg.title;
     dom.weekMsgBody.textContent = msg.body;
 }

@@ -3,7 +3,7 @@
 // textov je messages.js. Čisté funkcie bez DOM.
 
 import { fmt1, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDateLabel, weekDayLabel } from './format.js';
-import { endHm, MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
+import { countdownText, endHm, MOZEM_SKY_TEXTS, polite, spanText, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
 
@@ -234,4 +234,43 @@ export function sedemHeatText(days) {
 /** Pevné texty karty v danom tóne. @param {Voice} [voice] */
 export function sedemTexts(voice = 'drzy') {
     return polite(voice) ? SEDEM_TEXTS_SLUSNE : SEDEM_TEXTS;
+}
+
+/**
+ * Karta okna na veľké spotrebiče nad grafom detailu dňa súčasnej appky: veľký čas hlavného
+ * okna, stav a riadok so spotrebičmi. Pri dnešku stav počíta s časom (`nowMin`), iný deň
+ * hovorí, koľko slnka na veľké spotrebiče bude. `live` = okno práve beží.
+ * @param {{ from: number, to: number } | null} w hlavné okno (mainWindow) @param {number | null} nowMin len pri dnešku
+ * @param {number | null} peakHour hodina špičky dňa
+ * @returns {{ value: string, state: string, live: boolean, note: string }}
+ */
+export function dayWindowCard(w, nowMin, peakHour) {
+    const peak = peakHour === null ? '' : `najviac slnka okolo ${hourLabel(peakHour)}`;
+    if (!w) return { value: '–', state: 'Slnko na veľké spotrebiče nestačí', live: false, note: peak ? `Aj tak ${peak}.` : '' };
+    const note = ['Práčka, sušička, bojler', peak].filter(Boolean).join(' · ');
+    const card = (/** @type {string} */ state, live = false) => ({ value: spanText(w), state, live, note });
+    if (nowMin === null) return card(`${countdownText(w.to - w.from)} slnka na veľké spotrebiče`);
+    if (nowMin < w.from) return card(`Začne o ${countdownText(w.from - nowMin)}`);
+    if (nowMin < w.to) return card(`Práve prebieha · ešte ${countdownText(w.to - nowMin)}`, true);
+    return card('Na dnes už skončilo');
+}
+
+/** Slová pásu spotrebičov pod grafom detailu dňa (úrovne fitLevel z day-plan.js). */
+export const FIT_WORDS = { go: 'Zapni veľké', part: 'čiastočne', grid: 'zo siete' };
+
+/** Približná šírka znaku popisu pásu (11,5 px Space Grotesk) - na odhad, či sa popis zmestí. */
+const FIT_CHAR_PX = 6.4;
+
+/**
+ * Popis úseku pásu spotrebičov: pri zelenom aj s časom („Zapni veľké · 11–16“), keď sa zmestí,
+ * inak len slovo, a keď ani to, nič - úsek potom nesie farba, legenda a tooltip.
+ * @param {{ from: number, to: number, level: import('./day-plan.js').FitLevel }} seg @param {number} widthPx
+ */
+export function fitLabel(seg, widthPx) {
+    const fits = (/** @type {string} */ t) => t.length * FIT_CHAR_PX + 8 <= widthPx;
+    const short = (/** @type {number} */ min) => (min % 60 ? endHm(min) : String(min / 60));
+    const word = FIT_WORDS[seg.level];
+    const full = `${word} · ${short(seg.from)}–${short(seg.to)}`;
+    if (seg.level === 'go' && fits(full)) return full;
+    return fits(word) ? word : '';
 }
