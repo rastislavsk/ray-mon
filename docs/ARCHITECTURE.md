@@ -47,7 +47,6 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `mozem.js`       | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                   |
 | `schema.js`      | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
 | `format.js`      | Formátovanie času a čísel pre slovenské UI.                                                                          |
-| `http.js`        | Retry Workera s časovým limitom; opakuje len prechodné chyby (sieť, 5xx), 4xx nie.                                   |
 | `sky.js`         | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 | `mozem-sky.js`   | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, dlaždice, oblúk, výzvy).    |
 | `teraz.js`       | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
@@ -144,7 +143,7 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 (udalosť → `setState` → `render`), takže render funkcie nemusia nič merať a ostávajú
 čisté.
 
-**`worker/`** je tenký: over odkaz, stiahni kiosk, zavolaj `shared/`, vráť JSON.
+**`worker/`** je tenký: over odkaz, stiahni kiosk (s opakovaním pri prechodnej chybe, `worker/src/http.js`), zavolaj `shared/`, vráť JSON.
 
 ## Dve appky: súčasná a „Živá obloha“
 

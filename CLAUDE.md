@@ -9,11 +9,12 @@ Appky sú teraz dve: súčasná (koreň, `web/`, `style.css`) a nový dizajn „
 vzniká po krokoch v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `gesture.js`, `nav-history.js`,
-`setup-wiring.js`, `settings-store.js`, `svg.js`), takže
+`setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
-vytiahni do `shared/` alebo do neutrálneho modulu. Súčasnú appku počas prestavby nemeň, kým to
-nie je úlohou.
+vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
+v `eslint.config.js` (zoznam `NEUTRAL_WEB` – nový neutrálny modul treba dopísať tam aj sem).
+Súčasnú appku počas prestavby nemeň, kým to nie je úlohou.
 
 ## Nemenné pravidlá
 

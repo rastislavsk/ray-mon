@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchWithRetry } from '../shared/http.js';
+import { fetchWithRetry } from '../src/http.js';
 
 /**
  * Falošný fetch, ktorý postupne vráti zadané odpovede: číslo = HTTP status, 'siet' = chyba siete.

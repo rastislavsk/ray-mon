@@ -3,7 +3,7 @@
 // by sa na kiosk priamo nedostal. Worker nič neukladá - nemá úložisko ani plánované behy.
 
 import { KIOSK_RETRY, WORKER_PV_PATH } from '../../shared/config.js';
-import { fetchWithRetry } from '../../shared/http.js';
+import { fetchWithRetry } from './http.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 
 const HEADERS = {
