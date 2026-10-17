@@ -168,7 +168,9 @@ test('buildForecast: 7 dní, dnes = miestny dátum, zajtra má 24 hodín, golden
 
     const goldenPath = new URL('./golden/forecast.json', import.meta.url);
     // Odsadenie ako v uloženom súbore, aby zmena golden bola v diffe len tým, čo sa naozaj zmenilo.
-    if (!existsSync(goldenPath) || process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify(forecast, null, 2) + '\n');
+    // Chýbajúci súbor je chyba, nie pozvánka ho vytvoriť - inak by test so zmazaným golden vždy prešiel.
+    if (process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify(forecast, null, 2) + '\n');
+    assert.ok(existsSync(goldenPath), 'chýba test/golden/forecast.json - vytvor ho cez UPDATE_GOLDEN=1 npm test');
     assert.deepEqual(
         forecast,
         JSON.parse(readFileSync(goldenPath, 'utf8')),

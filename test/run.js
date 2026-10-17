@@ -9,7 +9,12 @@ const args = [
     '--test-coverage-include=shared/**',
     '--test-coverage-include=web/state.js',
     '--test-coverage-include=web/store.js',
+    '--test-coverage-include=web/data.js',
+    '--test-coverage-include=web/memo.js',
+    '--test-coverage-include=web/refresh.js',
+    '--test-coverage-include=obloha/web/state.js',
     '--test-coverage-lines=90',
+    '--test-coverage-branches=90',
     'test/*.test.js',
     'worker/test/*.test.js',
 ];

@@ -17,8 +17,9 @@ const hashOf = (t) =>
 test('drzé texty sa nezmenili ani o písmeno (test/golden/texty-drzy.json)', () => {
     const t = sampleTexts();
     const texts = [...new Set(Object.values(t))].sort();
-    if (!existsSync(goldenPath) || process.env.UPDATE_GOLDEN)
-        writeFileSync(goldenPath, JSON.stringify({ hash: hashOf(t), texts }, null, 2) + '\n');
+    // Chýbajúci súbor je chyba, nie pozvánka ho vytvoriť - inak by test so zmazaným golden vždy prešiel.
+    if (process.env.UPDATE_GOLDEN) writeFileSync(goldenPath, JSON.stringify({ hash: hashOf(t), texts }, null, 2) + '\n');
+    assert.ok(existsSync(goldenPath), 'chýba test/golden/texty-drzy.json - vytvor ho cez UPDATE_GOLDEN=1 npm test');
     const golden = JSON.parse(readFileSync(goldenPath, 'utf8'));
     assert.deepEqual(texts, golden.texts, 'zmena drzých textov - ak je zámerná, spusti UPDATE_GOLDEN=1 npm test');
     assert.equal(hashOf(t), golden.hash, 'texty sú tie isté, no inde - zmenilo sa, kde ktorý text appka ukazuje');
