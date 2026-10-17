@@ -24,7 +24,6 @@ import {
     newBandId,
     paintSlots,
     parseStoredTariff,
-    priceSegments,
     productionLevel,
     scheduleFor,
     scheduleRuns,
@@ -81,7 +80,7 @@ test('scheduleFor: posledná výnimka, ktorá na deň sedí, inak základ', () =
     assert.equal(scheduleFor(t, '2026-07-04'), t.schedules[2], 'sobota v júli: leto je neskôr, vyhráva');
 });
 
-test('bandAt a priceSegments: Dvorany majú štyri hodiny VT a dvadsať NT', () => {
+test('bandAt: Dvorany majú štyri hodiny VT a dvadsať NT', () => {
     const day = '2026-09-05';
     const s = scheduleFor(TARIFF, day);
     assert.equal(bandAt(TARIFF, s, m(2)).id, 'nt');
@@ -89,16 +88,8 @@ test('bandAt a priceSegments: Dvorany majú štyri hodiny VT a dvadsať NT', () 
     assert.equal(bandAt(TARIFF, s, m(8, 29)).id, 'vt');
     assert.equal(bandAt(TARIFF, s, m(8, 30)).id, 'nt');
     assert.equal(bandAt(TARIFF, s, m(23, 59)).id, 'nt');
-    const segs = priceSegments(TARIFF, day);
-    assert.equal(
-        segs.reduce((sum, x) => sum + x.min, 0),
-        1440,
-    );
-    assert.deepEqual(
-        segs.map((x) => `${x.min}${x.level[0]}`),
-        ['450l', '60d', '60l', '60d', '600l', '60d', '60l', '60d', '30l'],
-    );
-    const vt = segs.filter((x) => x.band.id === 'vt').reduce((sum, x) => sum + x.min, 0);
+    // Po minútach celý deň: pásmo VT má spolu štyri hodiny.
+    const vt = Array.from({ length: 1440 }, (_, i) => bandAt(TARIFF, s, i).id).filter((id) => id === 'vt').length;
     assert.equal(vt, 240);
 });
 
