@@ -11,6 +11,7 @@ import { savedSettings } from '../../../shared/setup-flow.js';
 import { escapeHtml } from '../../../shared/format.js';
 import { nastavenieModel } from '../../../shared/nastavenie.js';
 import { importOfferText } from '../../../shared/setup-texts.js';
+import { qrPainter } from '../../../web/qr.js';
 import { planesCompassSvg } from '../../../web/svg.js';
 import { renderWizard } from './sprievodca.js';
 import { setHtml, setText, show } from './write.js';
@@ -73,31 +74,16 @@ export function currentShareUrl(state) {
     return shareUrl(OBLOHA_URL, settings, state.shareKiosk);
 }
 
-/** QR kód z knižnice; vytvorí sa pri prvom otvorení okna. @type {any} */
-let qr = null;
-/** Odkaz, ktorý QR kód práve nesie. */
-let qrUrl = '';
+/** QR kód z knižnice; vytvorí sa pri prvom otvorení okna. */
+const paintQr = qrPainter();
 
 /**
- * QR kód s odkazom. Knižnica z CDN je nepovinná: kým nie je (pomalá sieť, zablokovaná), okno ukáže
- * len odkaz a skúsi to znova pri ďalšom prekreslení.
+ * QR kód s odkazom. Kým knižnica z CDN nie je (pomalá sieť, zablokovaná) alebo keď sa odkaz do
+ * kódu nezmestí, okno ukáže len odkaz.
  * @param {string} url @param {Dom} dom
  */
 function renderQr(url, dom) {
-    const QRCode = /** @type {any} */ (globalThis).QRCode;
-    show(dom.nsQr, typeof QRCode !== 'undefined');
-    if (typeof QRCode === 'undefined' || url === qrUrl) return;
-    if (qr) qr.makeCode(url);
-    else
-        qr = new QRCode(dom.nsQr, {
-            text: url,
-            width: 256,
-            height: 256,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H,
-        });
-    qrUrl = url;
+    show(dom.nsQr, paintQr(dom.nsQr, url) === true);
 }
 
 /** Okno sekcie Appka, ktoré je práve otvorené - po zatvorení sa fokus vráti na jeho riadok. @type {HTMLElement | null} */

@@ -18,7 +18,7 @@ const PERIOD_LABELS = { dnes: 'Dnes', mesiac: 'Mesiac', rok: 'Rok', spolu: 'Spol
 export const kwhText = (kwh) => (kwh === null ? '–' : fmtSum(kwh, 1));
 
 /** Peniaze do textu: „4,78 €“, od tisíc „1 297 €“. @param {number} value @param {string} currency */
-export const moneyText = (value, currency) => `${fmtSum(value, 2)} ${currency}`;
+export const moneyText = (value, currency) => `${fmtSum(value, 2)} ${escapeHtml(currency)}`;
 
 /** Výzva, ktorá vedie do Nastavenia (data-stats-go, viď initStats vo web/interactions.js).
  * @param {string} go krok sprievodcu, alebo `nastavenie` pre samotnú kartu @param {string} title @param {string} text */

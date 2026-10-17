@@ -2,7 +2,7 @@
 // rozvrh na deň, pásmo v danej minúte, farebné "tiery", kontrola a čítanie uloženej tarify.
 // Čisté funkcie bez DOM.
 
-import { DEVICES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
+import { CURRENCIES, DEVICES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
 import { fmt2, hoursText, minutesToTimeStr, timeStrToMinutes } from './format.js';
 import { isObj } from './valid.js';
 
@@ -303,8 +303,8 @@ export function checkTariff(tariff) {
     /** @type {string[]} */ const warnings = [];
     const L = TARIFF_LIMITS;
     checkBands(tariff.bands, errors);
-    const c = tariff.currency.trim();
-    if (!c || c.length > L.currencyMax) errors.push(`Mena musí mať 1 až ${L.currencyMax} znaky.`);
+    // Mena ide do HTML aj do zdieľaného odkazu - povolená je len jedna z ponuky.
+    if (!CURRENCIES.includes(tariff.currency.trim())) errors.push(`Mena musí byť jedna z: ${CURRENCIES.join(', ')}.`);
     if (tariff.schedules.length < 1 || tariff.schedules.length > L.maxSchedules) errors.push(`Rozvrhov môže byť 1 až ${L.maxSchedules}.`);
     const ids = new Set(tariff.bands.map((b) => b.id));
     tariff.schedules.forEach((s, i) => checkSchedule(s, i, ids, errors));
@@ -332,7 +332,7 @@ export function parseStoredTariff(raw) {
     const nums = (/** @type {unknown} */ v) => (Array.isArray(v) ? v.map(Number) : []);
     /** @type {Tariff} */
     const tariff = {
-        currency: str(raw.currency),
+        currency: str(raw.currency).trim(),
         bands: raw.bands.map((/** @type {any} */ b) => ({
             id: str(b && b.id),
             name: str(b && b.name),

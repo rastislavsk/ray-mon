@@ -93,6 +93,8 @@ export function checkSite(site, errors) {
     if (!isTimezone(site.timezone)) errors.push('Lokalite chýba časové pásmo. Vyber ju zo zoznamu.');
     const E = SETTINGS_LIMITS.elevationM;
     if (!inRange(site.elevationM, E)) errors.push(`Nadmorská výška musí byť od ${E.min} do ${E.max} m.`);
+    const N = SETTINGS_LIMITS.siteNameMax;
+    if (site.name.length > N) errors.push(`Názov lokality môže mať najviac ${N} znakov.`);
 }
 
 /** Chyby jednej plochy panelov. @param {PlantString} x @param {number} i @param {string[]} errors */

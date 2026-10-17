@@ -21,7 +21,7 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
+import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -245,6 +245,32 @@ test.describe('úvodná karta', () => {
 });
 
 test.describe('Zdieľať appku', () => {
+    test('odkaz, ktorý sa do QR kódu nezmestí: okno sa otvorí a ukáže len odkaz', async ({ page }) => {
+        // Kód unesie odkaz bez nastavenia, s nastavením elektrárne už nie.
+        await podvrhniQr(page, OBLOHA_URL.length + 20);
+        const errors = await openObloha(page);
+        await karta(page, 'nastavenie');
+        await page.locator('#ns-share').click();
+        await expect(page.locator('#ns-share-sheet')).toBeVisible();
+        await expect(page.locator('#ns-qr [data-qr]')).toHaveAttribute('data-qr', OBLOHA_URL);
+        await expect(page.locator('#ns-qr')).toBeVisible();
+        expect(await page.evaluate(() => /** @type {any} */ (globalThis).qrLevels)).toEqual([0]);
+
+        await page.locator('#ns-share-settings').check();
+        const dlhy = shareUrl(OBLOHA_URL, OWNER, false);
+        await expect(page.locator('#ns-share-link')).toHaveText(dlhy);
+        await expect(page.locator('#ns-qr')).toBeHidden();
+
+        // Zatvorené okno sa s odkazom, ktorý sa nezmestí, otvorí znova - výnimka neprekazí showModal.
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#ns-share-sheet')).toBeHidden();
+        await page.locator('#ns-share').click();
+        await expect(page.locator('#ns-share-sheet')).toBeVisible();
+        await expect(page.locator('#ns-share-link')).toHaveText(dlhy);
+        await expect(page.locator('#ns-qr')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
     test('odkaz vedie na novú appku, s nastavením ho nová appka prevezme; bez QR knižnice len odkaz', async ({ page, browser }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
