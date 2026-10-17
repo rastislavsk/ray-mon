@@ -148,16 +148,17 @@
     --red-rgb: 255, 107, 87;
     --grey-rgb: 185, 182, 172;
     /* Časová os detailu dňa. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu,
-       oblačnosť štyri stupne sivej (viac oblakov = svetlejšia). Oba rady prešli kontrolou
+       oblačnosť štyri stupne sivej (jasno = svetlá, zamračené = tmavá - najvýraznejšie sú
+       hodiny, keď svieti). Oba rady prešli kontrolou
        farbosleposti a kontrastu voči --card-bg (lightness monotónna, krok >= 0,06, svetlý
        koniec >= 2:1) - pri zmene ich treba overiť znova. */
     --fit-grid: #4a4e47;
     --fit-part: #6f9a4c;
     --fit-go: var(--green);
-    --cl-0: #454a50;
-    --cl-1: #646b73;
-    --cl-2: #878f98;
-    --cl-3: #aeb5be;
+    --cl-0: #aeb5be;
+    --cl-1: #878f98;
+    --cl-2: #646b73;
+    --cl-3: #454a50;
     /* Tmavé písmo a čiary na plnej farbe (karta Môžem?, plagát súhrnu). Číta ho aj obrázok
        pre story (web/share-image.js), rovnako ako farby vyššie. */
     --ink-on-color: #0b0b0b;
