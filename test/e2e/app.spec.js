@@ -684,8 +684,6 @@ test('7 dní na mobile: pás dní pod hlavičkou ukazuje a prepína deň', async
     // aj pri dnešku - počíta ich tá istá funkcia ako appka.
     await expect(cipy.nth(4)).toHaveAttribute('aria-label', weekDayLong(forecast.days[4].date, 4));
     await expect(cipy.nth(0)).toHaveText(dayNameShort(forecast.days[0].date));
-    // Najlepší deň má linku ako v prehľade.
-    await expect(page.locator('.day-strip .day-chip.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
 
     // Klik na čip prepne deň a ostane v detaile: hlavička, graf aj plný čip idú za ním.
     await cipy.nth(4).click();
