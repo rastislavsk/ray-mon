@@ -4448,28 +4448,126 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     letter-spacing: -0.03em;
     line-height: 1;
 }
+/* Pás dneška nad dlaždicami (variant C v docs/navrhy/mozem-co-mozem-c.html): na plnej farbe
+   stavu ako hlavička karty, tmavé písmo. Okno so slnkom je tmavé, prešlý čas šrafovaný cez farbu
+   pásu, takže okno začína tam, kde je teraz. */
+.mozem-band {
+    --band-bg: var(--ink-20);
+    margin-top: var(--sp-2);
+    padding: 16px;
+    border-radius: 22px;
+    color: var(--ink-on-color);
+    background: var(--band-bg);
+}
+.mozem-band.st-go {
+    --band-bg: var(--green);
+}
+.mozem-band.st-wait {
+    --band-bg: var(--amber);
+}
+.mozem-band.st-slabo {
+    --band-bg: var(--grey);
+}
+.mozem-band.st-none {
+    --band-bg: var(--red);
+}
+.mozem-band p {
+    margin: 0;
+}
+.mozem-band-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+/* Globálne `b` dáva --ink, na plnej farbe by nadpis zmizol. */
+.mozem-band-top b {
+    color: var(--ink-on-color);
+}
+.mozem-band-track {
+    position: relative;
+    height: 12px;
+    margin-top: 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+.mozem-band-win {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--ink-on-color);
+}
+.mozem-band-past {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background:
+        repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.28) 0 4px, transparent 4px 8px),
+        linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), var(--band-bg);
+}
+.mozem-band-ticks {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+}
+.mozem-band .mozem-band-text {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1.5px solid rgba(0, 0, 0, 0.2);
+    font-size: 15px;
+    font-weight: 500;
+}
+/* Dlaždice spotrebičov po dvoch. Čo ide hneď, je na plnej zelenej ako hlavička karty; inak tmavá
+   dlaždica s rámikom vo farbe odpovede. Rozbalenie ide cez celú šírku za riadok. */
 .mozem-grid {
     display: grid;
-    gap: var(--sp-2);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
 }
 .mozem-item {
     display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) 24px;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    align-content: start;
     align-items: center;
-    min-height: 64px;
-    padding: 10px 12px;
-    border-radius: var(--radius-lg);
+    min-width: 0;
+    min-height: 132px;
+    padding: 14px;
+    border-radius: 20px;
     border: 1.5px solid var(--ink-12);
     background: var(--card-bg);
     text-align: left;
 }
+.mozem-item[data-tone='go'] {
+    border-color: var(--green);
+    color: var(--ink-on-color);
+    background: var(--green);
+}
+.mozem-item[data-tone='wait'],
+.mozem-item[data-tone='cheap'] {
+    border-color: var(--amber);
+}
+.mozem-item[data-tone='no'] {
+    border-color: var(--red);
+}
+/* Za farbami odpovede: rozbalená dlaždica má svetlý rámik pri každej z nich. */
 .mozem-item.open {
     border-color: var(--ink);
 }
 .mozem-ico svg {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.7;
@@ -4478,16 +4576,32 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 .mozem-t {
     display: grid;
+    grid-column: 1 / -1;
+    gap: 6px;
     min-width: 0;
+    margin-top: 6px;
     line-height: 1.15;
 }
 .mozem-t b {
     font-size: 15px;
 }
 .mozem-t span {
-    margin-top: 3px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    overflow-wrap: anywhere;
+}
+.mozem-t small {
     font-family: var(--font-mono);
-    font-size: var(--fs-sm);
+    font-size: 11px;
+    color: var(--ink-70);
+}
+/* Na zelenej je všetko tmavé, aj meno (globálne `b` dáva --ink) a odpoveď (.tone-go je zelená). */
+.mozem-item[data-tone='go'] .mozem-t b,
+.mozem-item[data-tone='go'] .mozem-t span,
+.mozem-item[data-tone='go'] .mozem-t small {
+    color: var(--ink-on-color);
 }
 .tone-go {
     color: var(--green);
@@ -4519,6 +4633,55 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+/* Na zelenej dlaždici je značka naopak: tmavý kruh so zelenou fajkou. */
+.mozem-item[data-tone='go'] .mozem-mark {
+    color: var(--ink-on-color);
+}
+.mozem-item[data-tone='go'] .mozem-mark svg {
+    stroke: var(--green);
+}
+/* Kedykoľvek: bežné veci, na ktoré slnko netreba - prerušovaný obrys, nič na ťuknutie. */
+.mozem-anytime {
+    padding: 12px 16px;
+    border-radius: 22px;
+    border: 1.5px dashed var(--ink-20);
+}
+.mozem-anytime-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+}
+.mozem-anytime h4 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.mozem-anytime span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 500;
+}
+.mozem-anytime svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mozem-anytime p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--ink-45);
 }
 .mozem-more {
     grid-column: 1 / -1;

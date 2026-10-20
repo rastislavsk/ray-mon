@@ -1,9 +1,10 @@
-// Karta Môžem?: jedno veľké slovo, pás dneška a riadok „Čo môžem“; veci s ikonami sú
-// o ťuknutie ďalej, na obrazovke so zoznamom. Celý obsah skladá render do #mozem-body,
+// Karta Môžem?: jedno veľké slovo, pás dneška a riadok „Čo môžem“; spotrebiče v dlaždiciach
+// sú o ťuknutie ďalej, na obrazovke so zoznamom. Celý obsah skladá render do #mozem-body,
 // v index.html je len nosič. Počíta shared/mozem.js, texty sú v shared/messages.js.
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
+import { MOZEM_ANYTIME, mozemTileNote } from '../../shared/messages.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
@@ -40,21 +41,76 @@ function stripHtml(m) {
     );
 }
 
-/** Vec v mriežke; rozbalená má pod sebou vysvetlenie cez celú šírku. @param {MozemModel['items'][number]} it @param {boolean} open */
-function itemHtml(it, open) {
+/** @param {string} id */
+const iconOf = (id) => MOZEM_ICONS[/** @type {keyof typeof MOZEM_ICONS} */ (id)] || '';
+
+/**
+ * Dlaždica spotrebiča: ikona, značka odpovede, meno, veľká odpoveď a pod ňou odkiaľ pôjde prúd
+ * (kým vec beží, nič - odpoveď to povie sama). Farbu dlaždice dáva `data-tone`.
+ * @param {MozemModel['items'][number]} it @param {boolean} open
+ */
+function tileHtml(it, open) {
     const mark = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MOZEM_MARKS[it.tone]}"/></svg>`;
-    const btn =
-        `<button type="button" class="mozem-item${open ? ' open' : ''}" data-mozem-item="${it.id}" aria-expanded="${open}">` +
-        `<span class="mozem-ico">${MOZEM_ICONS[/** @type {keyof typeof MOZEM_ICONS} */ (it.id)] || ''}</span>` +
-        `<span class="mozem-t"><b>${escapeHtml(it.name)}</b><span class="tone-${it.tone}">${escapeHtml(it.short)}</span></span>` +
-        `<span class="mozem-mark tone-${it.tone}">${mark}</span></button>`;
-    if (!open) return btn;
+    const note = it.log?.pressed ? '' : mozemTileNote(it.answer);
+    return (
+        `<button type="button" class="mozem-item${open ? ' open' : ''}" data-mozem-item="${it.id}" data-tone="${it.tone}" aria-expanded="${open}"` +
+        `${open ? ' aria-controls="mozem-more"' : ''}><span class="mozem-ico">${iconOf(it.id)}</span>` +
+        `<span class="mozem-mark tone-${it.tone}">${mark}</span>` +
+        `<span class="mozem-t"><b>${escapeHtml(it.name)}</b><span class="tone-${it.tone}">${escapeHtml(it.short)}</span>` +
+        `${note ? `<small>${escapeHtml(note)}</small>` : ''}</span></button>`
+    );
+}
+
+/** Rozbalenie veci cez celú šírku: čo robiť, prečo, vysvetlenie a zápis. @param {MozemModel['items'][number]} it */
+function moreHtml(it) {
     const extra = it.extra ? `<p class="mozem-extra">${escapeHtml(it.extra)}</p>` : '';
     const log = it.log
         ? `<button type="button" class="mozem-log" data-mozem-log="${it.id}" data-sun="${it.log.sun ? 1 : 0}" aria-pressed="${it.log.pressed}">${escapeHtml(it.log.label)}</button>`
         : '';
-    return `${btn}<div class="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}${log}</div>`;
+    return `<div class="mozem-more" id="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}${log}</div>`;
 }
+
+/**
+ * Mriežka dlaždíc po dvoch. Rozbalenie ide za riadok, v ktorom je otvorená dlaždica - za ňu
+ * samu by rozdelilo dvojicu a druhú dlaždicu odsunulo pod seba.
+ * @param {MozemModel['items']} devices @param {string | null} open
+ */
+function tilesHtml(devices, open) {
+    const at = devices.findIndex((it) => it.id === open);
+    const after = at < 0 ? -1 : Math.min(at | 1, devices.length - 1);
+    return devices.map((it, i) => tileHtml(it, i === at) + (i === after ? moreHtml(devices[at]) : '')).join('');
+}
+
+/**
+ * Pás dneška nad dlaždicami na plnej farbe stavu: čo platí a dokedy, okno so slnkom, prešlý čas
+ * šrafovaný, odpočet a veta, koľko spotrebičov ide hneď. Bez pásu dneška (bez dát) nie je.
+ * @param {MozemModel} m
+ */
+function bandHtml(m) {
+    const b = m.band;
+    const s = m.strip;
+    if (!b || !s) return '';
+    const win = s.width > 0 ? `<i class="mozem-band-win" style="left:${s.left}%;width:${s.width}%"></i>` : '';
+    return (
+        `<div class="mozem-band st-${m.state}"><p class="mozem-band-top"><b>${escapeHtml(b.label)}</b>` +
+        `${b.value ? `<span>${escapeHtml(b.value)}</span>` : ''}</p>` +
+        `<div class="mozem-band-track" aria-hidden="true">${win}<i class="mozem-band-past" style="width:${s.now}%"></i></div>` +
+        `<p class="mozem-band-ticks"><span aria-hidden="true">${hourLabel(HOUR_RANGE.min)}</span><span>${escapeHtml(b.mid)}</span>` +
+        `<span aria-hidden="true">${hourLabel(HOUR_RANGE.max)}</span></p><p class="mozem-band-text">${escapeHtml(b.text)}</p></div>`
+    );
+}
+
+/** Blok Kedykoľvek: bežné veci, na ktoré slnko netreba, s prerušovaným obrysom. @param {MozemModel} m */
+function anytimeHtml(m) {
+    const things = m.anytime.map((a) => `<span>${iconOf(a.id)}${escapeHtml(a.name)}</span>`).join('');
+    return (
+        `<div class="mozem-anytime"><div class="mozem-anytime-row"><h4>${escapeHtml(MOZEM_ANYTIME.title)}</h4>${things}</div>` +
+        `<p>${escapeHtml(MOZEM_ANYTIME.text)}</p></div>`
+    );
+}
+
+/** Spotrebiče - dlaždice zoznamu; veci, na ktoré slnko netreba, sú v bloku Kedykoľvek. @param {MozemModel} m */
+const devicesOf = (m) => m.items.filter((it) => it.answer.kind !== 'always');
 
 /**
  * Riadok, ktorý otvára zoznam vecí: koľko ide hneď, bodka za každú vec vo farbe jej odpovede
@@ -62,7 +118,9 @@ function itemHtml(it, open) {
  * @param {MozemModel} m
  */
 function glanceHtml(m) {
-    const pips = m.items.map((it) => `<i class="tone-${it.tone}"></i>`).join('');
+    const pips = devicesOf(m)
+        .map((it) => `<i class="tone-${it.tone}"></i>`)
+        .join('');
     return (
         `<button type="button" class="mozem-glance" data-mozem-list><span class="mozem-glance-t"><small>Čo môžem</small>` +
         `<b>${escapeHtml(m.glance.title)}</b><span class="mozem-glance-sub"><span class="mozem-pips" aria-hidden="true">${pips}</span>` +
@@ -79,15 +137,15 @@ export function mozemHtml(m, kick) {
 }
 
 /**
- * Obrazovka so zoznamom vecí: šípka späť, nadpis a veci pod sebou. `open` je rozbalená vec.
+ * Obrazovka so zoznamom vecí (variant C v docs/navrhy/mozem-co-mozem-c.html): šípka späť,
+ * nadpis, pás dneška, dlaždice spotrebičov, blok Kedykoľvek a zápisy. `open` je rozbalená vec.
  * @param {MozemModel} m @param {string | null} open @param {string} kick
  */
 export function mozemListHtml(m, open, kick) {
-    const items = m.items.map((it) => itemHtml(it, it.id === open)).join('');
     return (
         `<section class="mozem-list">${backButtonHtml('mozem-back', 'data-mozem-list-back')}` +
         `<h3 class="mozem-list-title">Čo môžem</h3><p class="mozem-list-kick">${escapeHtml(kick)}</p>` +
-        `<div class="mozem-grid">${items}</div>` +
+        `${bandHtml(m)}<div class="mozem-grid">${tilesHtml(devicesOf(m), open)}</div>${anytimeHtml(m)}` +
         (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +
         `</section>`
     );

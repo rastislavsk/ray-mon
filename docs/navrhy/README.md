@@ -28,6 +28,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)                |
 | `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)                      |
 | `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)                |
+| `mozem-co-mozem-c.html`        | Obrazovka „Čo môžem“ (súčasná appka) – skupiny podľa času (A), dlaždice (B), pás dneška a dlaždice (C, vybraný)      |
 | `mozem-skupiny.html`           | Karta Môžem? (nová appka) – „Čo môžem“ v štyroch skupinách: dlaždice (A), časová os (B)                              |
 | `nahlad-casu-graf.html`        | Graf dňa (nová appka) – čo ukázať pri náhľade času: len čas v štítku (A), čas pri čiare (B, vybraný), v nadpise (C)  |
 | `teraz-v-grafe.html`           | Graf dňa (nová appka) – „teraz“ bez zvislej čiary: len bod (A), bod a stlmená minulosť pásu (B, vybraný)             |

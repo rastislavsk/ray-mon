@@ -657,6 +657,45 @@ export function mozemGlanceText(items) {
     return { title, sub: named.join(', ') + more };
 }
 
+/**
+ * Blok „Kedykoľvek“ pod dlaždicami v zozname vecí (súčasná appka): bežné spotrebiče, na ktoré
+ * slnko netreba. TV na karte ako vec nie je, v bloku je, aby bolo jasné, že ide o bežné veci.
+ */
+export const MOZEM_ANYTIME = {
+    title: 'Kedykoľvek',
+    tv: 'TV',
+    text: 'Bežné spotrebiče berú málo alebo krátko, to nie je otázka pre strechu.',
+};
+
+/**
+ * Pás dneška nad dlaždicami v zozname vecí (súčasná appka): čo teraz platí a dokedy, odpočet
+ * pod pásom a veta, koľko spotrebičov ide hneď. Keď hneď nejde nič alebo slnko dnes už nie je,
+ * veta je tá istá ako pod pásom na karte (`stripText`).
+ * @param {import('./mozem.js').MozemState} state @param {number} nowMin @param {MozemWindow | null} window
+ * @param {Array<{ tone: string }>} devices spotrebiče v dlaždiciach @param {string} stripText
+ * @returns {{ label: string, value: string, mid: string, text: string }}
+ */
+export function mozemBandText(state, nowMin, window, devices, stripText) {
+    const n = devices.length;
+    const go = devices.filter((d) => d.tone === 'go').length;
+    const text = !go ? stripText : go === n ? 'Všetko môžeš pustiť hneď.' : `${go} ${zFrom(n)} ${n} vecí môžeš pustiť hneď.`;
+    if (state === 'go' && window)
+        return {
+            label: 'Ide hneď · zo slnka',
+            value: `do ${hm(window.to)}`,
+            mid: `teraz · ešte ${countdownText(window.to - nowMin)}`,
+            text,
+        };
+    if (state === 'wait' && window)
+        return {
+            label: 'Slnko príde',
+            value: `o ${hm(window.from)}`,
+            mid: `teraz · slnko za ${countdownText(window.from - nowMin)}`,
+            text,
+        };
+    return { label: state === 'slabo' ? 'Dnes slnko nestačí' : 'Dnes už nie', value: '', mid: 'teraz', text: stripText };
+}
+
 // ---- Karta Môžem? v novej appke „Živá obloha“ (obloha/) ----------------------------
 // Odpovede, časy a vety sú tie isté ako vyššie, tu sú len texty, ktoré nový vzhľad pridáva.
 // Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka ich tak nehláskuje.
