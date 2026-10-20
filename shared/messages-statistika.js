@@ -67,6 +67,9 @@ export const STATISTIKA_TEXTS = {
     posterKm: 'elektrickým autom',
     posterWashes: 'pranie zo slnka',
     posterValue: 'hodnota podľa tarify',
+    posterCo2: 'CO2eq menej ako zo siete',
+    posterPayback: 'uhlíka panelov splatené',
+    posterPaid: 'uhlík panelov splatený',
 };
 
 /** @type {typeof STATISTIKA_TEXTS} */
@@ -139,6 +142,29 @@ export const posterLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh),
 export function posterBestDay(best) {
     if (best.today) return 'dnes';
     return `${dayNameShort(best.date).toLowerCase()} ${dateParts(best.date).day}.`;
+}
+
+/** Úspora CO2eq na plagáte: do 10 kg s desatinou („~2,4 kg“), inak celé („~38 kg“). @param {number} kg */
+export const posterCo2Value = (kg) => `~${kg < 10 ? fmt1(kg) : fmtSum(Math.round(kg), 0)} kg`;
+
+/**
+ * Splatený uhlík panelov v percentách, nadol - 100 % až keď je naozaj splatený.
+ * @param {number} share podiel (carbonPayback) @returns {{ pct: number, paid: boolean }}
+ */
+export function posterPayback(share) {
+    const pct = Math.min(100, Math.floor(share * 100));
+    return { pct, paid: pct >= 100 };
+}
+
+/**
+ * Poznámka pod plagátom: s akými faktormi CO2eq počíta, aby sa číslo dalo overiť.
+ * @param {{ gridG: number, pvG: number, source: string, debtT: number | null, lifeYears: number }} c
+ */
+export function posterCarbonNote({ gridG, pvG, source, debtT, lifeYears }) {
+    const base = `CO2eq za celý životný cyklus podľa ${source}: kWh zo siete SR ${gridG} g, zo slnka ${pvG} g.`;
+    return debtT === null
+        ? base
+        : `${base} Výroba týchto panelov stála asi ${fmt1(debtT)} t CO2eq, rozpočítaná na ${lifeYears} rokov prevádzky.`;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------
