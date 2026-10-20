@@ -80,8 +80,8 @@ const TYKANIE =
 
 test('slušný tón vyká: v textoch novej appky nie je tykanie', () => {
     const p = sampleTexts('slusny');
-    // Riadok „glance“ a veta pod pásom dňa sú len v súčasnej appke, predpoveď dňa tiež.
-    const own = Object.entries(p).filter(([k]) => !/\.glance|\.strip\.|^forecastDay|^empty/.test(k));
+    // Riadok „glance“, veta pod pásom dňa a pás nad dlaždicami sú len v súčasnej appke, predpoveď dňa tiež.
+    const own = Object.entries(p).filter(([k]) => !/\.glance|\.strip\.|\.band\.|^forecastDay|^empty/.test(k));
     const bad = own.filter(([, v]) => TYKANIE.test(v));
     assert.deepEqual(bad, []);
     // A drzý tón naozaj tyká - inak by test nič nekontroloval.

@@ -9,6 +9,8 @@ import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { canLog, monthCount, runMinOf, runningLaunch } from './launches.js';
 import {
+    MOZEM_ANYTIME,
+    mozemBandText,
     mozemCountText,
     mozemGlanceText,
     mozemHeroText,
@@ -239,6 +241,8 @@ function quipsOf(state, day, page, voice) {
  *
  * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
  * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
+ * `band` je pás nad dlaždicami zoznamu vecí (null bez pásu dneška), `anytime` veci bloku
+ * Kedykoľvek - obe len pre súčasnú appku.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
  * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice, list?: typeof MOZEM_ITEMS }} [opts]
  *   `voice` tón hlášok, `list` veci karty (nová appka má aj bojler, MOZEM_SKY_ITEMS)
@@ -250,12 +254,31 @@ export function mozemModel(input, quipPage = 0, launches = [], { guess = false, 
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, launches, ctx, voice, list);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
+    const head = ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
     return {
-        ...(ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null }),
+        ...head,
         estimate,
         items,
-        glance: mozemGlanceText(items),
+        ...listParts(head, ctx, items),
         count: mozemCountText(monthCount(launches, month), voice),
+    };
+}
+
+/**
+ * Časti zoznamu vecí v súčasnej appke: riadok, ktorým sa otvára, pás nad dlaždicami a blok
+ * Kedykoľvek. Spotrebiče sú dlaždice; veci, na ktoré slnko netreba, sú v bloku spolu s TV.
+ * @param {{ state: MozemState, strip: { text: string } | null, facts: { window: Window | null } | null }} head
+ * @param {DayCtx | null} ctx @param {ReturnType<typeof mozemItems>} items
+ */
+function listParts(head, ctx, items) {
+    const devices = items.filter((it) => it.answer.kind !== 'always');
+    return {
+        glance: mozemGlanceText(devices),
+        band: ctx && head.strip ? mozemBandText(head.state, ctx.nowMin, head.facts?.window ?? null, devices, head.strip.text) : null,
+        anytime: [
+            { id: 'tv', name: MOZEM_ANYTIME.tv },
+            ...items.filter((it) => it.answer.kind === 'always').map((it) => ({ id: it.id, name: it.name })),
+        ],
     };
 }
 

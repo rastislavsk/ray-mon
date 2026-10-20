@@ -3027,6 +3027,8 @@ test.describe('karta Štatistika', () => {
 test.describe('karta Môžem?', () => {
     /** Model karty tak, ako ho appka počíta v pevnom čase testov. */
     const model = () => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
+    /** Spotrebiče - dlaždice zoznamu, hranie a fén sú v bloku Kedykoľvek. @param {ReturnType<typeof model>} m */
+    const devices = (m) => m.items.filter((i) => i.answer.kind !== 'always');
 
     test('o 13:00 za jasna: veľké slovo, veta, pás dneška a riadok Čo môžem podľa modelu', async ({ page }) => {
         const errors = await openApp(page);
@@ -3039,19 +3041,24 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-strip-lbl')).toHaveText(m.strip?.text || '');
         await expect(page.locator('.mozem-glance b')).toHaveText(m.glance.title);
         await expect(page.locator('.mozem-glance-sub')).toHaveText(m.glance.sub);
-        await expect(page.locator('.mozem-pips i')).toHaveCount(m.items.length);
+        await expect(page.locator('.mozem-pips i'), 'bodka za každý spotrebič').toHaveCount(devices(m).length);
         await expect(page.locator('.mozem-item'), 'veci s ikonami sú až v zozname').toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
-    test('zoznam vecí: otvorí sa z riadku, veci podľa modelu, Späť ho zavrie', async ({ page }) => {
+    test('zoznam vecí: otvorí sa z riadku, pás, dlaždice a Kedykoľvek podľa modelu, Späť ho zavrie', async ({ page }) => {
         const errors = await openApp(page, { start: 'terazky' });
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
         const m = model();
+        const band = /** @type {NonNullable<typeof m.band>} */ (m.band);
         await page.locator('[data-mozem-list]').click();
-        await expect(page.locator('.mozem-t b')).toHaveText(m.items.map((i) => i.name));
-        await expect(page.locator('.mozem-t span')).toHaveText(m.items.map((i) => i.short));
+        await expect(page.locator('.mozem-band-top')).toHaveText(band.label + band.value);
+        await expect(page.locator('.mozem-band-ticks')).toContainText(band.mid);
+        await expect(page.locator('.mozem-band-text')).toHaveText(band.text);
+        await expect(page.locator('.mozem-t b')).toHaveText(devices(m).map((i) => i.name));
+        await expect(page.locator('.mozem-t span')).toHaveText(devices(m).map((i) => i.short));
+        await expect(page.locator('.mozem-anytime span')).toHaveText(m.anytime.map((a) => a.name));
         await expect(page.locator('.mozem-hero'), 'zoznam je samostatná obrazovka').toHaveCount(0);
 
         // Zoznam je obrazovka karty: Späť na telefóne ho zavrie, ďalšie Späť už vedie preč z karty.
@@ -3075,6 +3082,8 @@ test.describe('karta Môžem?', () => {
         const btn = page.locator('[data-mozem-item="pracka"]');
         await btn.click();
         await expect(btn).toHaveAttribute('aria-expanded', 'true');
+        // Rozbalenie ide za riadok dlaždíc, nie medzi práčku a umývačku vedľa nej.
+        await expect(page.locator('[data-mozem-item="umyvacka"] + .mozem-more')).toHaveCount(1);
         await expect(page.locator('.mozem-more b')).toHaveText(pracka.head);
         await expect(page.locator('.mozem-more .mozem-extra')).toHaveText(pracka.extra);
         await btn.click();
@@ -3117,7 +3126,9 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
         await expect(page.locator('.summary-link'), 'bez merania súhrn nie je').toHaveCount(0);
         await page.locator('[data-mozem-list]').click();
-        await expect(page.locator('[data-mozem-item="hranie"] .mozem-t span')).toHaveText('vždy OK');
+        await expect(page.locator('.mozem-band'), 'bez pásu dneška nie je ani pás nad dlaždicami').toHaveCount(0);
+        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('neviem');
+        await expect(page.locator('.mozem-anytime')).toContainText('Hranie');
         expect(errors).toEqual([]);
     });
 
