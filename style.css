@@ -2344,16 +2344,14 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 
 /* ---- 7 dní: rebríček dní (prehľad na mobile) -------------------------------- */
-/* Na mobile ide riadok s elektrárňou nad nadpis - hovorí, o čom predpoveď je, skôr než čo
-   to je. Len poradie zobrazenia; na širokej obrazovke ostáva hlavička, ako bola. */
+/* Na mobile ide riadok pod nadpisom Nastavenia nad nadpis. Len poradie zobrazenia; na širokej
+   obrazovke ostáva hlavička, ako bola. Karta 7 dní ho má pod nadpisom ako Štatistika. */
 @media (max-width: 767px) {
-    #week-head,
     #settings-head {
         display: flex;
         flex-direction: column-reverse;
         gap: var(--sp-1);
     }
-    #week-head .section-sub,
     #settings-head .section-sub {
         margin-top: 0;
     }
