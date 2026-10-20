@@ -2344,18 +2344,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 
 /* ---- 7 dní: rebríček dní (prehľad na mobile) -------------------------------- */
-/* Na mobile ide riadok pod nadpisom Nastavenia nad nadpis. Len poradie zobrazenia; na širokej
-   obrazovke ostáva hlavička, ako bola. Karta 7 dní ho má pod nadpisom ako Štatistika. */
-@media (max-width: 767px) {
-    #settings-head {
-        display: flex;
-        flex-direction: column-reverse;
-        gap: var(--sp-1);
-    }
-    #settings-head .section-sub {
-        margin-top: 0;
-    }
-}
 /* Osem kariet pod sebou: bublina so súčtom za týždeň a pod ňou sedem dní, každý vo vlastnom
    ráme. Súčet a deň tak vyzerajú ako to, čím sú - dve rovnocenné tlačidlá, jedno do detailu
    týždňa, druhé do detailu dňa - a dni sa od seba jasne oddelia. Pásik ukazuje, kedy v ten
