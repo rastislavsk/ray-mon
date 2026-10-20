@@ -459,6 +459,16 @@ export const STORAGE_KEYS = [
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 
+/**
+ * Uhlík elektriny v g CO2eq na kWh za celý životný cyklus (stavba elektrárne, palivo, prevádzka)
+ * podľa Ember, Yearly electricity data, Slovensko 2025: `gridG` je priemer výroby v SR, `pvG`
+ * solár. Priemer, nie „uhlie, ktoré strecha nahradila“ - ten by úsporu nafúkol a nedá sa overiť.
+ * Uhlíkový dlh panelov je `pvG` krát výroba za celý ich život: `lifeYears` rokov po
+ * `yieldKwhPerKwp` kWh z kWp ročne (PVGIS pre juh SR, 35°, okolo 1 150 - 1 200 kWh/kWp).
+ * Pri novom ročníku Ember zmeň čísla aj `source`.
+ */
+export const CARBON = { gridG: 95, pvG: 47, source: 'Ember 2025', lifeYears: 30, yieldKwhPerKwp: 1150 };
+
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
 // Nová appka „Živá obloha“, kým je testovacia verzia - na ňu vedie jej Zdieľať appku.

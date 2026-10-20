@@ -1,12 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { carbonPayback, co2SavedKg } from '../shared/carbon.js';
 import { EVERYDAY, installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { fmt1, fmtSum, kwpText } from '../shared/format.js';
 import { sunRuns } from '../shared/launches.js';
 import {
     posterBestDay,
     posterButtonText,
+    posterCo2Value,
     posterLinkText,
+    posterPayback,
     statsBestText,
     statsHeroSub,
     statsProgressText,
@@ -227,9 +230,24 @@ test('posterModel: čísla zo summaryModel, stĺpce dní a chýbajúce dni', () 
         { value: posterBestDay(/** @type {NonNullable<typeof s.facts.best>} */ (s.facts.best)), label: `najlepší deň, ${fmt1(35.5)} kWh` },
         { value: '1×', label: 'pranie zo slnka' },
         { value: `~${fmtSum(/** @type {number} */ (s.facts.value), 0)} €`, label: 'hodnota podľa tarify' },
+        { value: posterCo2Value(co2SavedKg(s.kwh)), label: 'CO2eq menej ako zo siete' },
+        {
+            value: `${posterPayback(/** @type {number} */ (carbonPayback(pv.cumulativeEnergyKwh, PLANT))).pct} %`,
+            label: 'uhlíka panelov splatené',
+        },
     ]);
-    assert.equal(m.note, s.note);
+    assert.ok(m.note.startsWith(s.note), 'najprv chýbajúce dni');
     assert.match(m.note, /Za 1 deň appka čísla nemá/);
+    assert.match(m.note, /podľa Ember 2025: kWh zo siete SR 95 g, zo slnka 47 g. Výroba týchto panelov stála asi 16,9 t CO2eq/);
+    // Bez súčtu od spustenia nie je splatenie ani dlh panelov, úspora za obdobie ostáva.
+    const noTotal = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (
+        posterModel({ ...input, pv: { ...pv, cumulativeEnergyKwh: null } }, 'mesiac')
+    );
+    assert.ok(!noTotal.tiles.some((t) => t.label.startsWith('uhlík')));
+    assert.ok(noTotal.tiles.some((t) => t.label === 'CO2eq menej ako zo siete'));
+    assert.doesNotMatch(noTotal.note, /Výroba týchto panelov/);
+    const paid = posterModel({ ...input, pv: { ...pv, cumulativeEnergyKwh: 1e6 } }, 'mesiac');
+    assert.deepEqual(paid?.tiles.at(-1), { value: '100 %', label: 'uhlík panelov splatený' });
     assert.equal(m.foot, 'RAY-MON · slnko nefakturuje');
     const week = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (
         posterModel({ ...BASE, tariff: TARIFF, dayLog: {} }, 'tyzden')
