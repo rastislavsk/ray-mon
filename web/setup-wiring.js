@@ -79,6 +79,7 @@ export function applySettings(store, next, refresh, extra = {}) {
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
         setupLive: !!next.zdroj,
+        pv: flow.pripojenePv(store.get(), next.zdroj),
         ...extra,
     });
 }

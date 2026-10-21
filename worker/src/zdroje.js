@@ -4,6 +4,17 @@
 
 import { VYROBCA_RETRY } from '../../shared/config.js';
 import { FOXESS, foxHeaders, FoxChyba, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
+import {
+    checkNbLogin,
+    NB,
+    NbChyba,
+    nbPv,
+    nbServer,
+    parseNbDevices,
+    parseNbDevReal,
+    parseNbStationReal,
+    parseNbStations,
+} from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
@@ -83,9 +94,19 @@ function prevod(fn) {
         return fn();
     } catch (err) {
         if (err instanceof ZdrojChyba) throw err;
-        // Fox ESS pri príliš častých dopytoch nič nezamietol, len pribrzdil.
-        throw new ZdrojChyba(err instanceof FoxChyba && err.errno === FOXESS.tooFrequent ? 'vyrobca' : 'udaje');
+        throw new ZdrojChyba(zleUdaje(err) ? 'udaje' : 'vyrobca');
     }
+}
+
+/**
+ * Zamietol výrobca údaje? Fox ESS a Huawei pri príliš častých dopytoch nič nezamietli, len
+ * pribrzdili; Huawei hlási zlé prihlásenie vlastnými kódmi, ostatné jeho chyby sú výpadok.
+ * @param {unknown} err
+ */
+function zleUdaje(err) {
+    if (err instanceof FoxChyba) return err.errno !== FOXESS.tooFrequent;
+    if (err instanceof NbChyba) return NB.badLogin.includes(err.failCode);
+    return true;
 }
 
 /** Požiadavka na Fox ESS podpísaná kľúčom. @param {string} path @param {string} kluc @param {Ctx} ctx @param {unknown} [body] @param {string} [query] */
@@ -121,6 +142,82 @@ async function solaxPv(token, sn, ctx) {
     return prevod(() => parseSolax(json, ctx.now));
 }
 
+// ---- Huawei Northbound ---------------------------------------------------------------
+
+/**
+ * Elektráreň Northbound: id, meno a meniče po typoch (`{ 1: [id…] }`), ako ich vrátil zoznam
+ * zariadení pri pripojení. @typedef {{ plant: string, nazov: string, devs: Record<string, number[]> }} NbPlant
+ */
+
+/**
+ * Prihlásenie: token je v hlavičke `xsrf-token` odpovede. Huawei dovolí 5 prihlásení za 10 minút,
+ * preto ho Worker drží v pečati a nový si pýta, až keď starý vyprší.
+ * @param {string} server @param {string} meno @param {string} heslo @param {Ctx} ctx
+ */
+async function nbLogin(server, meno, heslo, ctx) {
+    /** @type {Response} */ let res;
+    try {
+        const init = {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ userName: meno, systemCode: heslo }),
+        };
+        res = await fetchWithRetry(`https://${server}${NB.login}`, init, { ...VYROBCA_RETRY, fetchImpl: ctx.fetchImpl });
+    } catch {
+        throw new ZdrojChyba('vyrobca');
+    }
+    const json = await res.json().catch(() => null);
+    prevod(() => checkNbLogin(json));
+    const token = res.headers.get('xsrf-token');
+    if (!token) throw new ZdrojChyba('vyrobca');
+    return token;
+}
+
+/** Požiadavka s tokenom; neúspech (aj 305 „nie si prihlásený“) ostáva NbChyba pre volajúceho.
+ * @param {string} server @param {string} path @param {string} token @param {unknown} body @param {Ctx} ctx */
+function nbPost(server, path, token, body, ctx) {
+    const init = { method: 'POST', headers: { 'content-type': 'application/json', 'xsrf-token': token }, body: JSON.stringify(body) };
+    return getJson(`https://${server}${path}`, init, ctx);
+}
+
+/**
+ * Meranie elektrární naraz: jeden dopyt na súčty všetkých elektrární a jeden na typ meniča -
+ * Huawei dovolí každý len raz za 5 minút, nech elektrární je koľko chce (do 100).
+ * @param {string} server @param {string} token @param {NbPlant[]} plants @param {Ctx} ctx
+ * @returns {Promise<Map<string, import('../../shared/kiosk.js').PvData>>}
+ */
+async function nbMeraj(server, token, plants, ctx) {
+    const types = [...new Set(plants.flatMap((p) => Object.keys(p.devs)))];
+    const [station, ...devs] = await Promise.all([
+        nbPost(server, NB.stationReal, token, { stationCodes: plants.map((p) => p.plant).join(',') }, ctx),
+        ...types.map((t) =>
+            nbPost(server, NB.devReal, token, { devIds: plants.flatMap((p) => p.devs[t] ?? []).join(','), devTypeId: Number(t) }, ctx),
+        ),
+    ]);
+    return new Map(
+        plants.map((p) => [
+            p.plant,
+            nbPv(parseNbDevReal(devs, Object.values(p.devs).flat()), parseNbStationReal(station, p.plant), p.nazov, ctx.now),
+        ]),
+    );
+}
+
+/** Chyba výrobcu ako ZdrojChyba (ostatné prepustí). @param {unknown} err */
+const prevodChyba = (err) => (err instanceof ZdrojChyba ? err : new ZdrojChyba(zleUdaje(err) ? 'udaje' : 'vyrobca'));
+
+/** Prístup Northbound zo zapečateného objektu. @param {Record<string, unknown>} p */
+function nbPristup(p) {
+    const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
+    return {
+        server: nbServer(p.server),
+        meno: str(p.meno),
+        heslo: str(p.heslo),
+        token: str(p.token),
+        tokenAt: Number(p.tokenAt) || 0,
+        plant: { plant: str(p.plant), nazov: str(p.nazov), devs },
+    };
+}
+
 /** @type {Record<string, Zdroj>} */
 export const ZDROJE = {
     'huawei-kiosk': {
@@ -134,6 +231,51 @@ export const ZDROJE = {
             const url = kioskApiUrl(pristup.odkaz);
             if (!url) throw new ZdrojChyba('udaje');
             return { pv: await kiosk(url, ctx) };
+        },
+    },
+    'huawei-northbound': {
+        async pripoj(udaje, ctx) {
+            const server = nbServer(udaje.server);
+            if (!server || !udaje.meno || !udaje.heslo) throw new ZdrojChyba('udaje');
+            const token = await nbLogin(server, udaje.meno, udaje.heslo, ctx);
+            const tokenAt = ctx.now.getTime();
+            const stationsJson = await nbPost(server, NB.stations, token, { pageNo: 1 }, ctx);
+            const stanice = prevod(() => parseNbStations(stationsJson)).slice(0, MAX_STANIC);
+            if (!stanice.length) return [];
+            const devJson = await nbPost(server, NB.devList, token, { stationCodes: stanice.map((st) => st.plant).join(',') }, ctx);
+            const devs = prevod(() => parseNbDevices(devJson));
+            const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {} }));
+            const pv = await nbMeraj(server, token, plants, ctx).catch(() => null);
+            return plants.map((p) => ({
+                nazov: p.nazov,
+                pristup: { server, meno: udaje.meno, heslo: udaje.heslo, token, tokenAt, ...p },
+                pv: pv?.get(p.plant) ?? null,
+            }));
+        },
+        async meraj(pristup, ctx) {
+            const p = nbPristup(pristup);
+            if (!p.server || !p.meno || !p.heslo || !p.plant.plant) throw new ZdrojChyba('udaje');
+            const server = p.server;
+            let { token, tokenAt } = p;
+            let novy = false;
+            const prihlas = async () => {
+                token = await nbLogin(server, p.meno, p.heslo, ctx);
+                tokenAt = ctx.now.getTime();
+                novy = true;
+            };
+            if (!token || ctx.now.getTime() - tokenAt > NB.tokenMs) await prihlas();
+            /** @returns {Promise<import('../../shared/kiosk.js').PvData>} */
+            const meraj = async () => /** @type {any} */ ((await nbMeraj(server, token, [p.plant], ctx)).get(p.plant.plant));
+            /** @type {import('../../shared/kiosk.js').PvData} */ let pv;
+            try {
+                pv = await meraj();
+            } catch (err) {
+                // Token mohol vypršať skôr (Huawei odhlásil reláciu): raz sa prihlási znova.
+                if (!(err instanceof NbChyba && err.failCode === NB.notLoggedIn) || novy) throw prevodChyba(err);
+                await prihlas();
+                pv = await meraj().catch((e) => Promise.reject(prevodChyba(e)));
+            }
+            return novy ? { pv, pristup: { ...pristup, token, tokenAt } } : { pv };
         },
     },
     'foxess-kluc': {

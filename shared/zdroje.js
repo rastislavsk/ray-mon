@@ -5,6 +5,7 @@
 // od inštalatéra či podpory výrobcu - nič, čo by vyžadovalo registráciu appky u výrobcu.
 
 import { REFRESH } from './config.js';
+import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
 import { solaxUrl } from './solax.js';
 import { isObj } from './valid.js';
@@ -37,11 +38,32 @@ import { isObj } from './valid.js';
 /** @type {Sposob[]} */
 export const SPOSOBY = [
     {
+        id: 'huawei-northbound',
+        znacka: 'huawei',
+        nazov: 'API účet od inštalatéra',
+        pod: 'Súkromný účet len na čítanie. Zriadi ti ho inštalatér, ty ho len vložíš.',
+        tagy: ['inštalatér', 'pár dní', 'najbezpečnejšie'],
+        kroky: [
+            'Pošli inštalatérovi správu nižšie. Takýto účet vie zriadiť len firma, ktorá elektráreň spravuje vo FusionSolar.',
+            'Keď ti pošle meno, heslo a adresu servera, vráť sa sem a vlož ich.',
+        ],
+        sprava: 'Dobrý deň,\nprosím o zriadenie Northbound API účtu vo FusionSolar pre moju elektráreň (Northbound Management). Stačí prístup len na čítanie údajov o výrobe. Pošlite mi prosím meno a heslo účtu a adresu servera FusionSolar (napríklad eu5.fusionsolar.huawei.com).\nĎakujem',
+        pola: [
+            { id: 'meno', lbl: 'Meno API účtu', ph: 'meno' },
+            { id: 'heslo', lbl: 'Heslo API účtu', ph: 'heslo', tajne: true },
+            { id: 'server', lbl: 'Server FusionSolar', ph: 'eu5.fusionsolar.huawei.com', typ: 'url' },
+        ],
+        pozn: 'Huawei dovolí meranie len raz za 5 minút, appka sa pýta rovnako často.',
+        zrusenie: 'Účet zruší inštalatér vo FusionSolar (Northbound Management).',
+        // Dáta v reálnom čase raz za 5 minút na používateľa (getDevRealKpi, getStationRealKpi).
+        intervalMs: 5 * 60 * 1000,
+    },
+    {
         id: 'huawei-kiosk',
         znacka: 'huawei',
         nazov: 'Odkaz na kiosk',
         pod: 'Verejný odkaz na výrobu z appky FusionSolar. Kto ho má, vidí tvoju výrobu.',
-        tagy: ['ty', '2 minúty'],
+        tagy: ['ty', '2 minúty', 'hneď'],
         kroky: ['V appke FusionSolar otvor svoju elektráreň.', 'Zvoľ zdieľanie cez kiosk a skopíruj odkaz.', 'Vlož ho sem.'],
         pola: [{ id: 'odkaz', lbl: 'Odkaz na kiosk', ph: 'Odkaz na kiosk FusionSolar', typ: 'url' }],
         zrusenie: 'Kiosk vypneš v appke FusionSolar pri zdieľaní elektrárne.',
@@ -100,7 +122,7 @@ export const SPOSOBY = [
 
 /** @type {Znacka[]} */
 export const ZNACKY = [
-    { id: 'huawei', meno: 'Huawei', sposoby: ['huawei-kiosk'] },
+    { id: 'huawei', meno: 'Huawei', sposoby: ['huawei-northbound', 'huawei-kiosk'] },
     { id: 'foxess', meno: 'Fox ESS', sposoby: ['foxess-kluc'] },
     { id: 'solax', meno: 'SolaX', sposoby: ['solax-token'] },
     { id: 'victron', meno: 'Victron', sposoby: ['victron-token'] },
@@ -172,6 +194,7 @@ export function udajeOk(sposob, udaje) {
     if (!s || !s.pola.every((p) => !!udaje[p.id])) return false;
     if (sposob === 'huawei-kiosk') return !!kioskApiUrl(udaje.odkaz);
     if (sposob === 'solax-token') return !!solaxUrl(udaje.token, udaje.sn);
+    if (sposob === 'huawei-northbound') return !!nbServer(udaje.server);
     return true;
 }
 

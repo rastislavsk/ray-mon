@@ -208,6 +208,13 @@ async function kazdaObrazovka(page, check) {
     await check('sprievodca › značka sa nedá');
     await page.locator('#wz-back').click();
     await page.locator('[data-setup-znacka="huawei"]').click();
+    await obrazovka(page, 'sposob');
+    await check('sprievodca › spôsob');
+    await page.locator('[data-setup-sposob="huawei-northbound"]').click();
+    await obrazovka(page, 'pripoj');
+    await check('sprievodca › účet od inštalatéra');
+    await page.locator('#wz-back').click();
+    await page.locator('[data-setup-sposob="huawei-kiosk"]').click();
     await obrazovka(page, 'pripoj');
     await page.locator('[data-setup-pole="odkaz"]').fill(TEST_KIOSK);
     await check('sprievodca › pripojenie');

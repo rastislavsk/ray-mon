@@ -317,6 +317,51 @@ test('pripojenie kľúčom (Fox ESS) z prehľadu: návod, skryté pole, pripojen
     expect(errors).toEqual([]);
 });
 
+test('Huawei API účet od inštalatéra: správa na skopírovanie, server len FusionSolar, po uložení bez druhého merania', async ({ page }) => {
+    const errors = await openObloha(page);
+    /** @type {string[]} */ const pripoj = [];
+    let merania = 0;
+    page.on('request', (r) => {
+        if (r.url() === WORKER_PRIPOJ_URL) pripoj.push(r.postData() || '');
+        if (r.url() === WORKER_PV_URL) merania++;
+    });
+    await nastavenie(page);
+    await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
+    await page.locator('[data-setup-zmen]').click();
+    await page.locator('[data-setup-znacka="huawei"]').click();
+    await obrazovka(page, 'sposob');
+    await expect(page.locator('[data-setup-sposob="huawei-northbound"] .tag.top')).toHaveText('najbezpečnejšie');
+    await page.locator('[data-setup-sposob="huawei-northbound"]').click();
+    await obrazovka(page, 'pripoj');
+    await expect(page.locator('#wz-sprava')).toBeVisible();
+    await expect(page.locator('#wz-sprava-text')).toContainText('Northbound API účtu');
+    await expect(page.locator('#wz-sprava-copy')).toHaveAttribute('data-setup-copy', /Northbound Management/);
+    await page.locator('[data-setup-pole="meno"]').fill('api-dvorany');
+    await page.locator('[data-setup-pole="heslo"]').fill('tajne-heslo');
+    await expect(page.locator('[data-setup-pole="heslo"]')).toHaveAttribute('type', 'password');
+    await page.locator('[data-setup-pole="server"]').fill('example.com');
+    await expect(page.locator('#wz-pripoj-note')).toHaveClass(/err/);
+    await expect(page.locator('#wz-pripojit')).toBeDisabled();
+    await page.locator('[data-setup-pole="server"]').fill('eu5.fusionsolar.huawei.com');
+    await expect(page.locator('#wz-pripojit')).toBeEnabled();
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(JSON.parse(pripoj[0])).toEqual({
+        sposob: 'huawei-northbound',
+        udaje: { meno: 'api-dvorany', heslo: 'tajne-heslo', server: 'eu5.fusionsolar.huawei.com' },
+    });
+    const predUlozenim = merania;
+    await dalej(page);
+    await expect(page.locator('#ns-rows')).toContainText('Huawei · pripojené');
+    // Meranie z pripojenia stačí - Huawei by druhé do 5 minút odmietol.
+    await page.waitForTimeout(500);
+    expect(merania, 'po uložení sa appka hneď znova nepýta').toBe(predUlozenim);
+    const stored = await ulozene(page);
+    expect(stored.zdroj.sposob).toBe('huawei-northbound');
+    expect(JSON.stringify(stored)).not.toContain('tajne-heslo');
+    expect(errors).toEqual([]);
+});
+
 test('„Neviem“: bežný panel, menič ako panely a jedna cena, v zhrnutí označené ako odhad', async ({ page }) => {
     const errors = await openObloha(page, { settings: null, site: SITE });
     await nastavenie(page);
@@ -582,6 +627,7 @@ async function kazdaObrazovka(page, check) {
     await obrazovka(page, 'znacka');
     await check('znacka');
     await page.locator('[data-setup-znacka="huawei"]').click();
+    await page.locator('[data-setup-sposob="huawei-kiosk"]').click();
     await obrazovka(page, 'pripoj');
     await page.locator('[data-setup-pole="odkaz"]').fill(TEST_KIOSK);
     await check('pripoj');

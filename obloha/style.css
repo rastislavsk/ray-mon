@@ -1846,6 +1846,8 @@ button:focus-visible {
     background: rgba(255, 255, 255, 0.1);
     font-size: 0.875rem;
     white-space: pre-wrap;
+    /* Adresa servera je jedno dlhé slovo - na úzkom displeji s väčším písmom sa musí zalomiť. */
+    overflow-wrap: anywhere;
 }
 .wz .lnk {
     justify-self: start;

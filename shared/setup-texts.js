@@ -9,6 +9,7 @@ import { SETUP_SECTIONS, setupSection } from './setup.js';
 import { isWelcome, savedSettings, schedIndex } from './setup-flow.js';
 import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
 import { autoLevels, isSeasonSchedule, isWeekendSchedule, scheduleRuns, tariffHint, tariffPricesText } from './tariff.js';
+import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
 import { menoZnacky, sposobOf, znackaOf } from './zdroje.js';
 
@@ -378,6 +379,8 @@ export function kioskNote(kiosk, ok) {
 /** Hlásenie pod poľami formulára, kým sa nepripája: zatiaľ len odkaz na kiosk. null, keď nie je čo povedať.
  * @param {string} sposob @param {Record<string, string>} udaje @returns {Note | null} */
 export function udajeNote(sposob, udaje) {
+    if (sposob === 'huawei-northbound' && udaje.server && !nbServer(udaje.server))
+        return { text: 'Toto nie je server FusionSolar. Adresu ti povie inštalatér, napríklad eu5.fusionsolar.huawei.com.', err: true };
     return sposob === 'huawei-kiosk' && udaje.odkaz ? kioskNote(udaje.odkaz, !!kioskApiUrl(udaje.odkaz)) : null;
 }
 
