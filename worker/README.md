@@ -11,6 +11,16 @@ požiadavky na `www.foxesscloud.com`), token SolaX (`www.solaxcloud.com`) a toke
 `victron.js`), sieť vo `src/zdroje.js`. Ako často sa appka pýta, určuje `intervalMs` spôsobu
 podľa limitov výrobcu (Fox ESS 1 440 dopytov denne na menič → každé 3 minúty).
 
+**Solis** (`shared/solis.js`): kľúč od podpory Solis (API ID a API Secret), požiadavky na
+`www.soliscloud.com:13333` podpísané HmacSHA1 podľa dokumentácie SolisCloud API V2.0 (Content-MD5,
+Date, Authorization). Jeden dopyt `userStationList` vráti výkon aj súčty s jednotkami. Port 13333
+Worker smie, lebo od dátumu kompatibility 2024-09-02 platí `allow_custom_ports`.
+
+**Deye** (`shared/deye.js`): vlastná aplikácia majiteľa (AppId, AppSecret) a e-mail s heslom do
+Deye Cloud. Heslo ide Deye len ako SHA-256 a len pri pripojení; v pečati je token (platí 60 dní),
+nie heslo - po 60 dňoch treba Deye pripojiť znova. Jednotky výkonu špecifikácia neuvádza: hodnota
+vyššia než dvojnásobok inštalovaného výkonu sa berie vo wattoch.
+
 **Huawei Northbound** (`shared/huawei-nb.js`) je účet len na čítanie, ktorý zriaďuje inštalatér. Postavené
 podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6 (cloudová
 verzia SmartPVMS 25.x je na webe Huawei momentálne nedostupná). Server zadá človek (napr.

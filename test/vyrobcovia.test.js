@@ -157,3 +157,104 @@ test('pvDue: meranie sa pýta až po intervale spôsobu, bez merania hneď', () 
     assert.equal(pvDue({ ...fox, sposob: 'neznamy' }, pv, at(1)), true);
     for (const s of SPOSOBY) assert.ok(s.intervalMs >= 60 * 1000, s.id);
 });
+
+test('Solis: Content-MD5 podľa príkladu z dokumentácie, dátum a text na podpis', async () => {
+    const { md5Base64, solisDate, solisRequest, SOLIS } = await import('../shared/solis.js');
+    // Príklad z kapitoly 2.4 dokumentácie SolisCloud API V2.0.
+    assert.equal(md5Base64('{"pageNo":1,"pageSize":10}'), 'kxdxk7rbAsrzSIWgEwhH4w==');
+    assert.equal(solisDate(new Date('2019-07-26T06:00:46Z')), 'Fri, 26 Jul 2019 06:00:46 GMT');
+    assert.equal(solisDate(new Date('2026-09-05T11:00:00Z')), 'Sat, 5 Sep 2026 11:00:00 GMT', 'deň bez nuly (EEE, d MMM)');
+    const req = solisRequest(SOLIS.stations, '{"pageNo":1,"pageSize":10}', new Date('2019-07-26T06:00:46Z'));
+    assert.equal(req.toSign, 'POST\nkxdxk7rbAsrzSIWgEwhH4w==\napplication/json\nFri, 26 Jul 2019 06:00:46 GMT\n/v1/api/userStationList');
+    assert.deepEqual(req.headers, {
+        'content-md5': 'kxdxk7rbAsrzSIWgEwhH4w==',
+        'content-type': 'application/json',
+        date: 'Fri, 26 Jul 2019 06:00:46 GMT',
+    });
+});
+
+test('Solis: elektrárne s meraním prevedeným na kW a kWh, chyba s kódom', async () => {
+    const { parseSolisStations, SolisChyba } = await import('../shared/solis.js');
+    const json = {
+        code: '0',
+        msg: 'success',
+        data: {
+            page: {
+                records: [
+                    {
+                        id: 1308675217944611083,
+                        stationName: 'Dvorany',
+                        power: 5.772,
+                        powerStr: 'kW',
+                        dayEnergy: 31.3,
+                        dayEnergyStr: 'kWh',
+                        monthEnergy: 839,
+                        monthEnergyStr: 'kWh',
+                        yearEnergy: 5.603,
+                        yearEnergyStr: 'MWh',
+                        allEnergy: 36.393,
+                        allEnergyStr: 'MWh',
+                    },
+                    {
+                        id: 7,
+                        stationName: 'Chata',
+                        power: 800,
+                        powerStr: 'W',
+                        dayEnergy: 2,
+                        dayEnergyStr: 'kWh',
+                        allEnergy: 1,
+                        allEnergyStr: 'GWh',
+                    },
+                    { stationName: 'bez id' },
+                ],
+            },
+        },
+    };
+    const [a, b] = parseSolisStations(json, NOW);
+    assert.equal(a.id, String(1308675217944611083));
+    assert.deepEqual(validatePv(a.pv), []);
+    assert.deepEqual(
+        [a.pv.realTimePowerKw, a.pv.dailyEnergyKwh, a.pv.monthEnergyKwh, a.pv.yearEnergyKwh, a.pv.cumulativeEnergyKwh],
+        [5.772, 31.3, 839, 5603, 36393],
+    );
+    assert.deepEqual([b.pv.realTimePowerKw, b.pv.monthEnergyKwh, b.pv.cumulativeEnergyKwh], [0.8, null, 1e6]);
+    assert.equal(parseSolisStations(json, NOW).length, 2);
+    assert.throws(
+        () => parseSolisStations({ code: 'I0012', msg: 'Incorrect account or password' }, NOW),
+        (e) => e instanceof SolisChyba && e.code === 'I0012',
+    );
+    assert.throws(() => parseSolisStations(null, NOW), SolisChyba);
+});
+
+test('Deye: token, elektrárne, výkon vo W či kW podľa inštalovaného výkonu, dnešok v pásme elektrárne', async () => {
+    const D = await import('../shared/deye.js');
+    assert.equal(D.parseDeyeToken({ code: '1000000', msg: 'success', success: true, accessToken: 'eyJ', expiresIn: '5183999' }), 'eyJ');
+    assert.throws(
+        () => D.parseDeyeToken({ code: '2101006', msg: 'wrong', success: false }),
+        (e) => e instanceof D.DeyeChyba && e.code === '2101006',
+    );
+    assert.throws(() => D.parseDeyeToken({ success: true }), D.DeyeChyba);
+    const stations = {
+        code: '1000000',
+        success: true,
+        stationList: [
+            { id: 10, name: 'Deye Staion38', regionTimezone: 'Europe/Helsinki', installedCapacity: 50.0, generationPower: 0.0 },
+            { id: 'x', name: 'zlé id' },
+        ],
+    };
+    assert.deepEqual(D.parseDeyeStations(stations), [{ id: 10, nazov: 'Deye Staion38', kwp: 50, tz: 'Europe/Helsinki', power: 0 }]);
+    assert.equal(D.parseDeyeLatest({ success: true, code: '1000000', generationPower: 3400 }), 3400);
+    assert.equal(D.parseDeyeDay({ success: true, stationDataItems: [{ generationValue: 182.6 }] }), 182.6);
+    assert.equal(D.parseDeyeDay({ success: true, stationDataItems: [] }), null);
+    // Jednotka výkonu: viac než dvojnásobok kWp sú watty.
+    assert.equal(D.deyeKw(3400, 10), 3.4);
+    assert.equal(D.deyeKw(3.4, 10), 3.4);
+    assert.equal(D.deyeKw(0, 10), 0);
+    assert.equal(D.deyeKw(3400, null), null);
+    assert.equal(D.deyeKw(null, 10), null);
+    assert.deepEqual(D.deyeToday(new Date('2026-09-05T22:30:00Z'), 'Europe/Bratislava'), { startAt: '2026-09-06', endAt: '2026-09-07' });
+    assert.deepEqual(D.deyeToday(new Date('2026-09-05T22:30:00Z'), 'UTC'), { startAt: '2026-09-05', endAt: '2026-09-06' });
+    const pv = D.deyePv(3.4, 18.2, 'Chata', NOW);
+    assert.deepEqual(validatePv(pv), []);
+    assert.deepEqual([pv.realTimePowerKw, pv.dailyEnergyKwh, pv.cumulativeEnergyKwh, pv.stationName], [3.4, 18.2, null, 'Chata']);
+});
