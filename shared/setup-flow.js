@@ -360,6 +360,17 @@ export function pickStanica(s, i) {
     return draftPatch(s, { ...s.settingsDraft, zdroj: { sposob: s.setupSposob, pecat: st.pecat, nazov: st.nazov } });
 }
 
+/**
+ * Meranie, ktoré Worker vrátil pri pripojení práve ukladaného merania, alebo null. Appka ho
+ * po uložení ukáže hneď a ďalšie pýta až po intervale spôsobu - pri prísnych limitoch
+ * (Huawei Northbound raz za 5 minút) by sa inak hneď po uložení pýtala druhýkrát a narazila.
+ * @param {Pick<SetupState, 'setupPripoj'>} s @param {Zdroj | null} zdroj
+ */
+export function pripojenePv(s, zdroj) {
+    const st = zdroj && s.setupPripoj.stanice.find((x) => x.pecat === zdroj.pecat);
+    return st ? st.pv : null;
+}
+
 /** Pripájanie začalo. @returns {SetupPatch} */
 export const pripojStart = () => ({ setupPripoj: /** @type {Pripoj} */ ({ status: 'loading', chyba: '', stanice: [] }) });
 

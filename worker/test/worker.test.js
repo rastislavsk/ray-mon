@@ -262,3 +262,129 @@ test('Victron: token nájde inštalácie, výkon z diagnostiky, zlý token 400',
     const zly = vyrobca([[`${B}/users/me`, 401, { success: false, errors: 'Not logged in', error_code: 'not_logged_in' }]]);
     assert.equal((await pripojAMeraj({ sposob: 'victron-token', udaje: { token: 'zly' } }, zly.impl)).status, 400);
 });
+
+// ---- Huawei Northbound --------------------------------------------------------------------
+
+const NB_HOST = 'https://eu5.fusionsolar.huawei.com';
+
+/**
+ * Podvrhnutý server Northbound. Prihlásenie vráti token v hlavičke `xsrf-token`, dáta len
+ * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
+ * @param {{ heslo?: string, tokeny?: string[], platne?: string[], realFail?: number }} [opts]
+ */
+function northbound({ heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail } = {}) {
+    /** @type {Array<{ path: string, body: any, token: string | null }>} */ const calls = [];
+    let prihlasenia = 0;
+    const valid = new Set(platne ?? tokeny);
+    const ok = (/** @type {unknown} */ data) => Response.json({ success: true, failCode: 0, data });
+    const fail = (/** @type {number} */ failCode) => Response.json({ success: false, failCode, data: null });
+    /** Odpovede dátových ciest (s platným tokenom). @type {Record<string, () => Response>} */
+    const data = {
+        '/thirdData/stations': () => ok({ list: [{ plantCode: 'NE=1', plantName: 'Dvorany' }] }),
+        '/thirdData/getDevList': () => ok([{ id: 11, stationCode: 'NE=1', devTypeId: 38 }]),
+        '/thirdData/getDevRealKpi': () =>
+            realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
+        '/thirdData/getStationRealKpi': () =>
+            ok([{ stationCode: 'NE=1', dataItemMap: { day_power: 21.5, month_power: 400, total_power: 5100 } }]),
+    };
+    /** @param {any} body */
+    const login = (body) =>
+        body.systemCode !== heslo
+            ? fail(20400)
+            : new Response(JSON.stringify({ success: true, failCode: 0, data: null }), {
+                  headers: { 'xsrf-token': tokeny[prihlasenia++] ?? 'tX', 'content-type': 'application/json' },
+              });
+    const impl = /** @type {typeof fetch} */ (
+        /** @type {unknown} */ (
+            async (/** @type {string} */ url, /** @type {any} */ init) => {
+                const path = url.replace(NB_HOST, '');
+                const body = init.body ? JSON.parse(init.body) : null;
+                const token = init.headers?.['xsrf-token'] ?? null;
+                calls.push({ path, body, token });
+                if (!url.startsWith(NB_HOST)) return new Response('x', { status: 404 });
+                if (path === '/thirdData/login') return login(body);
+                if (!valid.has(token)) return fail(305);
+                return data[path] ? data[path]() : fail(20004);
+            }
+        )
+    );
+    return { impl, calls, prihlasenia: () => prihlasenia };
+}
+
+const NB_UDAJE = { meno: 'api-dvorany', heslo: 'tajne', server: 'eu5.fusionsolar.huawei.com' };
+
+test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným dopytom na druh', async () => {
+    const s = northbound();
+    const res = await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl);
+    assert.equal(res.status, 200);
+    const { stanice } = await res.json();
+    assert.equal(stanice.length, 1);
+    assert.equal(stanice[0].nazov, 'Dvorany');
+    assert.deepEqual([stanice[0].pv.realTimePowerKw, stanice[0].pv.dailyEnergyKwh, stanice[0].pv.monthEnergyKwh], [4.2, 21.5, 400]);
+    assert.ok(!stanice[0].pecat.includes('tajne'));
+    assert.deepEqual(
+        s.calls.map((c) => c.path),
+        ['/thirdData/login', '/thirdData/stations', '/thirdData/getDevList', '/thirdData/getStationRealKpi', '/thirdData/getDevRealKpi'],
+    );
+    assert.ok(
+        s.calls.slice(1).every((c) => c.token === 't1'),
+        'dáta s tokenom z hlavičky prihlásenia',
+    );
+    assert.deepEqual(s.calls.find((c) => c.path === '/thirdData/getDevRealKpi')?.body, { devIds: '11', devTypeId: 38 });
+    // Meranie hneď potom: token z pečate, žiadne ďalšie prihlásenie, pečať sa nemení.
+    const meranie = await (await handlePv(pvRequest(stanice[0].pecat), ENV, NOW, s.impl)).json();
+    assert.equal(meranie.pv.realTimePowerKw, 4.2);
+    assert.equal(meranie.pecat, undefined);
+    assert.equal(s.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: vypršaný token aj odhlásenie (305) znamenajú jedno nové prihlásenie a novú pečať', async () => {
+    const s = northbound();
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    // O pol hodiny neskôr: token je starší než 25 minút, Worker sa prihlási vopred.
+    const neskor = new Date(NOW.getTime() + 30 * 60 * 1000);
+    const po = await (await handlePv(pvRequest(stanice[0].pecat), ENV, neskor, s.impl)).json();
+    assert.equal(po.pv.realTimePowerKw, 4.2);
+    assert.match(po.pecat, /^v1\./);
+    assert.equal(s.prihlasenia(), 2);
+    // Huawei reláciu zrušil skôr (305): prihlási sa raz znova a meria.
+    const zrusena = northbound({ platne: ['t1'] });
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const pecat = await zapecat(key, {
+        sposob: 'huawei-northbound',
+        pristup: { ...NB_UDAJE, token: 'stary', tokenAt: NOW.getTime(), plant: 'NE=1', nazov: 'Dvorany', devs: { 38: [11] } },
+    });
+    const res = await (await handlePv(pvRequest(pecat), ENV, NOW, zrusena.impl)).json();
+    assert.equal(res.pv.realTimePowerKw, 4.2);
+    assert.ok(res.pecat, 'nový token v novej pečati');
+    assert.equal(zrusena.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: zlé heslo a cudzí server 400, limit 407 je výpadok (502)', async () => {
+    const zle = await handlePripoj(
+        pripojRequest({ sposob: 'huawei-northbound', udaje: { ...NB_UDAJE, heslo: 'zle' } }),
+        ENV,
+        NOW,
+        northbound().impl,
+    );
+    assert.equal(zle.status, 400);
+    const never = northbound();
+    for (const server of ['example.com', 'eu5.fusionsolar.huawei.com.example.com']) {
+        const res = await handlePripoj(
+            pripojRequest({ sposob: 'huawei-northbound', udaje: { ...NB_UDAJE, server } }),
+            ENV,
+            NOW,
+            never.impl,
+        );
+        assert.equal(res.status, 400);
+    }
+    assert.equal(never.calls.length, 0);
+    const limit = northbound({ realFail: 407 });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, limit.impl)
+    ).json();
+    assert.equal(stanice[0].pv, null, 'pripojenie prejde, meranie príde neskôr');
+    assert.equal((await handlePv(pvRequest(stanice[0].pecat), ENV, NOW, limit.impl)).status, 502);
+});

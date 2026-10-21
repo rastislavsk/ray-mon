@@ -11,6 +11,17 @@ požiadavky na `www.foxesscloud.com`), token SolaX (`www.solaxcloud.com`) a toke
 `victron.js`), sieť vo `src/zdroje.js`. Ako často sa appka pýta, určuje `intervalMs` spôsobu
 podľa limitov výrobcu (Fox ESS 1 440 dopytov denne na menič → každé 3 minúty).
 
+**Huawei Northbound** (`shared/huawei-nb.js`) je účet len na čítanie, ktorý zriaďuje inštalatér. Postavené
+podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6 (cloudová
+verzia SmartPVMS 25.x je na webe Huawei momentálne nedostupná). Server zadá človek (napr.
+`eu5.fusionsolar.huawei.com`) a Worker prijme len servery `*.fusionsolar.huawei.com`. Huawei dovolí
+prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom čase raz za 5 minút, preto:
+
+- token je v pečati a Worker ho mení až po 25 minútach alebo pri kóde 305 („nie si prihlásený“),
+  novú pečať vráti appke,
+- meria sa raz za 5 minút a súčty všetkých elektrární či výkon všetkých meničov idú jedným dopytom,
+- meranie z pripojenia appka po uložení rovno použije (`pripojenePv`), druhé by Huawei odmietol.
+
 ## Zapečatený prístup a kľúč `PECAT_KLUC`
 
 Pri pripojení Worker prevezme údaje z formulára (odkaz, kľúč, heslo), overí ich u výrobcu

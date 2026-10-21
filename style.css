@@ -3987,6 +3987,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     background: var(--ink-05);
     font-size: var(--fs-sm);
     white-space: pre-wrap;
+    /* Adresa servera je jedno dlhé slovo - na úzkom displeji s väčším písmom sa musí zalomiť. */
+    overflow-wrap: anywhere;
 }
 .wz-art .forecast {
     fill: none;

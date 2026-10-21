@@ -2831,8 +2831,11 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-title')).toHaveText('Fronius zatiaľ pripojiť nevieme');
         await expect(page.locator('#wz-nie')).toBeVisible();
         await page.locator('#wz-back').click();
-        // Huawei má jediný spôsob - rovno formulár.
+        // Huawei má dva spôsoby: API účet od inštalatéra je prvý, kiosk druhý.
         await page.locator('[data-setup-znacka="huawei"]').click();
+        await expect(page.locator('#wz-title')).toHaveText('Ako pripojíš Huawei?');
+        await expect(page.locator('#wz-sposoby [data-setup-sposob]').first()).toHaveAttribute('data-setup-sposob', 'huawei-northbound');
+        await page.locator('[data-setup-sposob="huawei-kiosk"]').click();
         await expect(page.locator('#wz-pripoj')).toBeVisible();
         await expect(page.locator('#wz-title')).toHaveText('Odkaz na kiosk');
         await expect(page.locator('#wz-next')).toBeDisabled();
@@ -2866,8 +2869,9 @@ test.describe('moja elektráreň', () => {
         await expect(meranie.locator('.sum-live.in-line')).toBeVisible();
         await expect(meranie.locator('.sum-live.at-side')).toBeHidden();
         await expect(meranie.locator('.v')).toBeHidden();
-        // Meria sa zapečateným prístupom; odkaz nie je v úložisku ani v adrese.
-        expect(bodies.pv).toContain(TEST_ZDROJ.pecat);
+        // Meranie z pripojenia stačí, appka sa hneď po uložení znova nepýta (pripojenePv). Odkaz
+        // nie je v úložisku ani v adrese.
+        expect(bodies.pv).toEqual([]);
         expect((await ulozene(page)).zdroj).toEqual(TEST_ZDROJ);
         expect(JSON.stringify(await ulozene(page))).not.toContain('Abc123xyz');
         expect(page.url()).not.toContain(TEST_ZDROJ.pecat);

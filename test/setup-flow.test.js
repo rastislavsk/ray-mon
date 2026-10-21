@@ -144,14 +144,18 @@ test('meranie: Ďalej z otázky vedie na značku, aj pri úprave z prehľadu; pr
 
 test('meranie: značka s jedným spôsobom rovno formulár, nedostupná vysvetlenie, Späť v rámci merania', () => {
     const s = state({ setupStep: 'znacka', setupReturn: 'prehlad' });
-    const huawei = flow.pickZnacka(s, 'huawei');
-    assert.equal(huawei?.setupStep, 'pripoj');
-    assert.equal(huawei?.setupSposob, 'huawei-kiosk');
-    assert.equal(huawei?.settingsDraft?.zdroj, null, 'staré meranie z rozpísaného zmizne, Ďalej sa nedá');
-    assert.deepEqual(huawei?.setupUdaje, {});
-    const form = apply(s, huawei);
+    const victron = flow.pickZnacka(s, 'victron');
+    assert.equal(victron?.setupStep, 'pripoj');
+    assert.equal(victron?.setupSposob, 'victron-token');
+    assert.equal(victron?.settingsDraft?.zdroj, null, 'staré meranie z rozpísaného zmizne, Ďalej sa nedá');
+    assert.deepEqual(victron?.setupUdaje, {});
+    const form = apply(s, victron);
     assert.equal(flow.setupReady(form), false);
     assert.deepEqual(flow.backAction(form), { type: 'back', patch: { setupStep: 'znacka' } });
+    // Huawei má dva spôsoby: najprv výber, z formulára sa Späť vracia naň.
+    assert.deepEqual(flow.pickZnacka(s, 'huawei'), { setupZnacka: 'huawei', setupStep: 'sposob' });
+    const kiosk = apply(apply(s, { setupZnacka: 'huawei' }), flow.pickSposob(apply(s, { setupZnacka: 'huawei' }), 'huawei-kiosk'));
+    assert.deepEqual(flow.backAction(kiosk), { type: 'back', patch: { setupStep: 'sposob' } });
     assert.deepEqual(flow.backAction(apply(form, { setupStep: 'znacka' })), { type: 'back', patch: { setupStep: 'meranie' } });
     assert.deepEqual(flow.pickZnacka(s, 'fronius'), { setupZnacka: 'fronius', setupStep: 'sposob' });
     assert.deepEqual(flow.backAction(apply(s, { setupStep: 'sposob' })), { type: 'back', patch: { setupStep: 'znacka' } });
@@ -161,7 +165,8 @@ test('meranie: značka s jedným spôsobom rovno formulár, nedostupná vysvetle
 });
 
 test('meranie: polia, pripájanie, jedna elektráreň rovno pripojená, z viacerých výber', () => {
-    const form = apply(state(), flow.pickZnacka(state({ setupStep: 'znacka' }), 'huawei'));
+    const huawei = state({ setupStep: 'sposob', setupZnacka: 'huawei' });
+    const form = apply(huawei, flow.pickSposob(huawei, 'huawei-kiosk'));
     assert.equal(flow.udajeReady(form), false);
     assert.equal(flow.udajeReady(apply(form, flow.setPole(form, 'odkaz', 'https://example.com/?kk=Abc123xyz'))), false);
     const vyplnene = apply(form, flow.setPole(form, 'odkaz', `  ${KIOSK} `));
@@ -371,4 +376,12 @@ test('skipAction: len pri prvom otvorení s vybranou polohou', () => {
     const s = state({ known: 'nic', setupStep: 'lokalita', settingsDraft: emptySettings(SITE) });
     assert.deepEqual(flow.skipAction(s), { type: 'site', site: SITE, extra: { setupStep: null } });
     assert.equal(flow.skipAction(state({ setupStep: 'lokalita' })), null);
+});
+
+test('pripojenePv: meranie z pripojenia patrí len práve pripojenej elektrárni', () => {
+    const pv = /** @type {any} */ ({ realTimePowerKw: 1, updatedAt: NOW.toISOString() });
+    const s = state({ setupPripoj: { status: 'done', chyba: '', stanice: [{ nazov: 'Dvorany', pecat: ZDROJ.pecat, pv }] } });
+    assert.equal(flow.pripojenePv(s, ZDROJ), pv);
+    assert.equal(flow.pripojenePv(s, { ...ZDROJ, pecat: 'v1.ina-pecat-0123456789abc' }), null);
+    assert.equal(flow.pripojenePv(s, null), null);
 });
