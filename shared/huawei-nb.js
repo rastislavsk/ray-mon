@@ -15,6 +15,8 @@ import { isObj } from './valid.js';
 export const NB = {
     login: '/thirdData/login',
     stations: '/thirdData/stations',
+    // Starší zoznam elektrární (kapitola Historical Interfaces) - záloha, keď nový účet nemá povolený.
+    stationsOld: '/thirdData/getStationList',
     devList: '/thirdData/getDevList',
     devReal: '/thirdData/getDevRealKpi',
     stationReal: '/thirdData/getStationRealKpi',
@@ -72,13 +74,24 @@ export function checkNbLogin(json) {
     data(json);
 }
 
-/** Elektrárne na účte: id a meno. @param {unknown} json @returns {Array<{ plant: string, nazov: string }>} */
+/**
+ * Elektrárne na účte: id a meno. Nové rozhranie (stations) ich má v `data.list` ako `plantCode`
+ * a `plantName`; staršie (getStationList) v `data` (bez stránkovania) alebo `data.list` ako
+ * `stationCode` a `stationName`.
+ * @param {unknown} json @returns {Array<{ plant: string, nazov: string }>}
+ */
 export function parseNbStations(json) {
     const d = data(json);
-    const list = isObj(d) && Array.isArray(/** @type {any} */ (d).list) ? /** @type {any[]} */ (/** @type {any} */ (d).list) : [];
+    const list = Array.isArray(d)
+        ? d
+        : isObj(d) && Array.isArray(/** @type {any} */ (d).list)
+          ? /** @type {any[]} */ (/** @type {any} */ (d).list)
+          : [];
     return list
-        .filter((p) => isObj(p) && typeof p.plantCode === 'string' && p.plantCode)
-        .map((p) => ({ plant: p.plantCode, nazov: typeof p.plantName === 'string' ? p.plantName : '' }));
+        .filter(isObj)
+        .map((p) => ({ plant: p.plantCode ?? p.stationCode, nazov: p.plantName ?? p.stationName }))
+        .filter((p) => typeof p.plant === 'string' && p.plant)
+        .map((p) => ({ plant: p.plant, nazov: typeof p.nazov === 'string' ? p.nazov : '' }));
 }
 
 /**

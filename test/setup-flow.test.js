@@ -192,6 +192,7 @@ test('meranie: polia, pripájanie, jedna elektráreň rovno pripojená, z viacer
     assert.deepEqual(flow.pripojDone(bezi, 'huawei-kiosk', { chyba: 'udaje' })?.setupPripoj, {
         status: 'error',
         chyba: 'udaje',
+        kod: '',
         stanice: [],
     });
     assert.equal(flow.pripojDone(bezi, 'huawei-kiosk', { stanice: [] })?.setupPripoj?.chyba, 'vyrobca');

@@ -362,6 +362,24 @@ test('Huawei API účet od inštalatéra: správa na skopírovanie, server len F
     expect(errors).toEqual([]);
 });
 
+test('Huawei API účet: odmietnuté prihlásenie ukáže kód a možnú príčinu (relácia v Shelly)', async ({ page }) => {
+    const errors = await openObloha(page);
+    await page.route(WORKER_PRIPOJ_URL, (route) => route.fulfill({ status: 400, json: { chyba: 'udaje', kod: 'prihlasenie:20400' } }));
+    await nastavenie(page);
+    await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
+    await page.locator('[data-setup-zmen]').click();
+    await page.locator('[data-setup-znacka="huawei"]').click();
+    await page.locator('[data-setup-sposob="huawei-northbound"]').click();
+    await page.locator('[data-setup-pole="meno"]').fill('api-dvorany');
+    await page.locator('[data-setup-pole="heslo"]').fill('tajne-heslo');
+    await page.locator('[data-setup-pole="server"]').fill('eu5.fusionsolar.huawei.com');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-pripoj-note')).toHaveClass(/err/);
+    await expect(page.locator('#wz-pripoj-note')).toContainText('kód 20400');
+    await expect(page.locator('#wz-pripoj-note')).toContainText('Shelly');
+    expect(errors).toEqual([]);
+});
+
 test('„Neviem“: bežný panel, menič ako panely a jedna cena, v zhrnutí označené ako odhad', async ({ page }) => {
     const errors = await openObloha(page, { settings: null, site: SITE });
     await nastavenie(page);

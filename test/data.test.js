@@ -217,9 +217,15 @@ test('pripojZdroj: údaje idú Workeru v tele, odpoveď sa preverí, chyby majú
     assert.equal(ok.calls[0].url, WORKER_PRIPOJ_URL);
     assert.equal(ok.calls[0].init.method, 'POST');
     assert.deepEqual(JSON.parse(ok.calls[0].init.body), { sposob: 'huawei-kiosk', udaje: { odkaz: 'https://k' } });
-    assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje' }).impl), { chyba: 'udaje' });
-    assert.deepEqual(await pripojZdroj('x', {}, worker(502, { chyba: 'vyrobca' }).impl), { chyba: 'vyrobca' });
-    assert.deepEqual(await pripojZdroj('x', {}, worker(503, { chyba: 'server' }).impl), { chyba: 'server' });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje' }).impl), { chyba: 'udaje', kod: '' });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(502, { chyba: 'vyrobca' }).impl), { chyba: 'vyrobca', kod: '' });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(503, { chyba: 'server' }).impl), { chyba: 'server', kod: '' });
+    // Kód chyby od výrobcu prejde, len ak má očakávaný tvar.
+    assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje', kod: 'prihlasenie:20400' }).impl), {
+        chyba: 'udaje',
+        kod: 'prihlasenie:20400',
+    });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje', kod: '<script>' }).impl), { chyba: 'udaje', kod: '' });
     const padne = /** @type {typeof fetch} */ (/** @type {unknown} */ (async () => Promise.reject(new TypeError('siet'))));
     assert.deepEqual(await pripojZdroj('x', {}, padne), { chyba: 'server' });
 });

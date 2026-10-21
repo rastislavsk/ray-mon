@@ -29,11 +29,15 @@ const json = (status, body) => new Response(JSON.stringify(body), { status, head
 
 /**
  * Chyba ako odpoveď. Bez podrobností - tie by mohli obsahovať odkaz či kľúč, a ten do odpovedí
- * ani logov nepatrí. @param {unknown} err
+ * ani logov nepatrí. Výnimkou je `kod`: krok a kód chyby od výrobcu (napr. `prihlasenie:20400`),
+ * podľa ktorého appka povie, čo presne výrobca odmietol. Ten ide aj do logu Workera.
+ * @param {unknown} err
  */
 function chyba(err) {
-    if (err instanceof ZdrojChyba && err.druh === 'udaje') return json(400, { chyba: 'udaje' });
-    return json(502, { chyba: 'vyrobca' });
+    const kod = err instanceof ZdrojChyba ? err.kod : '';
+    const druh = err instanceof ZdrojChyba && err.druh === 'udaje' ? 'udaje' : 'vyrobca';
+    console.log(`zdroj: ${druh}${kod ? ` (${kod})` : ''}`);
+    return json(druh === 'udaje' ? 400 : 502, kod ? { chyba: druh, kod } : { chyba: druh });
 }
 
 /** Telo požiadavky ako text, najviac MAX_BODY znakov; dlhšie je null. @param {Request} request */
