@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { handlePripoj, handlePv, handleRequest } from '../src/index.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
@@ -387,4 +388,75 @@ test('Huawei Northbound: zlé heslo a cudzí server 400, limit 407 je výpadok (
     ).json();
     assert.equal(stanice[0].pv, null, 'pripojenie prejde, meranie príde neskôr');
     assert.equal((await handlePv(pvRequest(stanice[0].pecat), ENV, NOW, limit.impl)).status, 502);
+});
+
+// ---- Solis a Deye -------------------------------------------------------------------------
+
+const SOLIS_OK = {
+    code: '0',
+    msg: 'success',
+    data: {
+        page: {
+            records: [
+                { id: 1308675217944611083, stationName: 'Dvorany', power: 5.772, powerStr: 'kW', dayEnergy: 31.3, dayEnergyStr: 'kWh' },
+            ],
+        },
+    },
+};
+
+test('Solis: podpísaná požiadavka na port 13333, elektráreň podľa id, zlý kľúč 400', async () => {
+    const f = vyrobca([['https://www.soliscloud.com:13333/v1/api/userStationList', 200, SOLIS_OK]]);
+    const r = await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: '1300386381676565707', secret: 'tajne' } }, f.impl);
+    assert.equal(r.status, 200);
+    assert.equal(r.json.stanice[0].nazov, 'Dvorany');
+    assert.deepEqual([r.meranie.pv.realTimePowerKw, r.meranie.pv.dailyEnergyKwh], [5.772, 31.3]);
+    const h = f.calls[0].init.headers;
+    assert.match(h.authorization, /^API 1300386381676565707:[A-Za-z0-9+/]{27}=$/, 'HmacSHA1 v base64');
+    assert.match(h['content-md5'], /^[A-Za-z0-9+/]{22}==$/);
+    assert.match(h.date, /^[A-Z][a-z]{2}, \d{1,2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/);
+    assert.equal(f.calls[0].init.method, 'POST');
+    const zly = vyrobca([['https://www.soliscloud.com:13333/', 200, { code: 'R0000', msg: 'No authority' }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: 'x', secret: 'y' } }, zly.impl)).status, 400);
+    assert.equal((await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: '', secret: 'y' } }, zly.impl)).status, 400);
+});
+
+test('Deye: heslo ide len ako SHA-256 a do pečate nie, meria výkon a dnešok tokenom', async () => {
+    const B = 'https://eu1-developer.deyecloud.com';
+    const f = vyrobca([
+        [`${B}/v1.0/account/token?appId=202406270000000`, 200, { success: true, code: '1000000', accessToken: 'deye-token' }],
+        [
+            `${B}/v1.0/station/list`,
+            200,
+            {
+                success: true,
+                code: '1000000',
+                stationList: [{ id: 10, name: 'Chata', installedCapacity: 10, regionTimezone: 'Europe/Bratislava' }],
+            },
+        ],
+        [`${B}/v1.0/station/latest`, 200, { success: true, code: '1000000', generationPower: 3400 }],
+        [`${B}/v1.0/station/history`, 200, { success: true, code: '1000000', stationDataItems: [{ generationValue: 18.2 }] }],
+    ]);
+    const udaje = { appId: '202406270000000', appSecret: 'app-tajne', email: 'a@b.sk', heslo: 'moje-heslo' };
+    const r = await pripojAMeraj({ sposob: 'deye-aplikacia', udaje }, f.impl);
+    assert.equal(r.status, 200);
+    assert.deepEqual(
+        [r.json.stanice[0].nazov, r.json.stanice[0].pv.realTimePowerKw, r.json.stanice[0].pv.dailyEnergyKwh],
+        ['Chata', 3.4, 18.2],
+    );
+    const login = JSON.parse(f.calls[0].init.body);
+    assert.equal(login.password, createHash('sha256').update('moje-heslo').digest('hex'));
+    assert.ok(!JSON.stringify(f.calls).includes('moje-heslo'), 'heslo nikam neodišlo v čitateľnej podobe');
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = await otvor(key, r.json.stanice[0].pecat);
+    assert.ok(
+        obsah && !JSON.stringify(obsah).includes('moje-heslo') && !JSON.stringify(obsah).includes(login.password),
+        'v pečati nie je heslo ani jeho hash',
+    );
+    assert.equal(obsah?.pristup.token, 'deye-token');
+    assert.equal(r.meranie.pv.realTimePowerKw, 3.4);
+    const history = f.calls.filter((c) => c.url.endsWith('/v1.0/station/history')).at(-1);
+    assert.equal(JSON.parse(history?.init.body).granularity, 2);
+    assert.equal(history?.init.headers.authorization, 'Bearer deye-token');
+    const zly = vyrobca([[`${B}/v1.0/account/token`, 200, { success: false, code: '2101019', msg: 'auth failed' }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'deye-aplikacia', udaje }, zly.impl)).status, 400);
 });

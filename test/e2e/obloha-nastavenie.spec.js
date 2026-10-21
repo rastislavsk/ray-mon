@@ -362,6 +362,39 @@ test('Huawei API účet od inštalatéra: správa na skopírovanie, server len F
     expect(errors).toEqual([]);
 });
 
+test('Solis a Deye: správa pre podporu, štyri polia Deye, pripojenie bez uloženia hesla', async ({ page }) => {
+    const errors = await openObloha(page);
+    /** @type {string[]} */ const pripoj = [];
+    page.on('request', (r) => r.url() === WORKER_PRIPOJ_URL && pripoj.push(r.postData() || ''));
+    await nastavenie(page);
+    await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
+    await page.locator('[data-setup-zmen]').click();
+    // Solis: kľúč od podpory, hotová správa.
+    await page.locator('[data-setup-znacka="solis"]').click();
+    await obrazovka(page, 'pripoj');
+    await expect(page.locator('#wz-title')).toHaveText('Kľúč od podpory Solis');
+    await expect(page.locator('#wz-sprava-text')).toContainText('API prístupu');
+    await page.locator('#wz-back').click();
+    // Deye: vlastná aplikácia, e-mail a heslo.
+    await page.locator('[data-setup-znacka="deye"]').click();
+    await obrazovka(page, 'pripoj');
+    await expect(page.locator('#wz-pola input')).toHaveCount(4);
+    await expect(page.locator('[data-setup-pole="email"]')).toHaveAttribute('type', 'email');
+    await expect(page.locator('[data-setup-pole="heslo"]')).toHaveAttribute('type', 'password');
+    await page.locator('[data-setup-pole="appId"]').fill('202406270000000');
+    await page.locator('[data-setup-pole="appSecret"]').fill('app-tajne');
+    await page.locator('[data-setup-pole="email"]').fill('a@b.sk');
+    await expect(page.locator('#wz-pripojit')).toBeDisabled();
+    await page.locator('[data-setup-pole="heslo"]').fill('moje-heslo');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(JSON.parse(pripoj[0]).sposob).toBe('deye-aplikacia');
+    await dalej(page);
+    await expect(page.locator('#ns-rows')).toContainText('Deye · pripojené');
+    expect(JSON.stringify(await ulozene(page))).not.toContain('moje-heslo');
+    expect(errors).toEqual([]);
+});
+
 test('„Neviem“: bežný panel, menič ako panely a jedna cena, v zhrnutí označené ako odhad', async ({ page }) => {
     const errors = await openObloha(page, { settings: null, site: SITE });
     await nastavenie(page);

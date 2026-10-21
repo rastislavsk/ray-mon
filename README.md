@@ -77,7 +77,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
   alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou
   slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne živé meranie
-  (výber značky meniča a spôsobu pripojenia: kiosk alebo API účet od inštalatéra pri Huawei FusionSolar, kľúč Fox ESS, token SolaX či Victron), tarifa a na koniec zhrnutie s výrobou za jasného
+  (výber značky meniča a spôsobu pripojenia: kiosk alebo API účet od inštalatéra pri Huawei FusionSolar, kľúč Fox ESS či Solis, token SolaX či Victron, aplikácia Deye), tarifa a na koniec zhrnutie s výrobou za jasného
   dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
   po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je

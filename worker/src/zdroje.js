@@ -3,6 +3,7 @@
 // aby sa dal testovať. Worker sa pýta len serverov výrobcu, nikdy adresy od používateľa.
 
 import { VYROBCA_RETRY } from '../../shared/config.js';
+import { DEYE, deyeKw, deyePv, deyeToday, parseDeyeDay, parseDeyeLatest, parseDeyeStations, parseDeyeToken } from '../../shared/deye.js';
 import { FOXESS, foxHeaders, FoxChyba, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
 import {
     checkNbLogin,
@@ -17,6 +18,7 @@ import {
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
+import { parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
 import { fetchWithRetry } from './http.js';
 
@@ -218,6 +220,71 @@ function nbPristup(p) {
     };
 }
 
+// ---- Solis ----------------------------------------------------------------------------
+
+/** base64 bajtov. @param {ArrayBuffer} buf */
+const base64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+
+/**
+ * Zoznam elektrární SolisCloud s meraním. Požiadavka je podpísaná HmacSHA1 kľúčom API Secret
+ * podľa dokumentácie (Authorization: API {apiId}:{sign}).
+ * @param {string} keyId @param {string} secret @param {Ctx} ctx
+ */
+async function solisStations(keyId, secret, ctx) {
+    if (!keyId || !secret) throw new ZdrojChyba('udaje');
+    const body = JSON.stringify({ pageNo: 1, pageSize: 100 });
+    const req = solisRequest(SOLIS.stations, body, ctx.now);
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const sign = base64(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(req.toSign)));
+    const json = await getJson(
+        `${SOLIS.base}${SOLIS.stations}`,
+        { method: 'POST', headers: { ...req.headers, authorization: `API ${keyId}:${sign}` }, body },
+        ctx,
+    );
+    return prevod(() => parseSolisStations(json, ctx.now));
+}
+
+// ---- Deye ------------------------------------------------------------------------------
+
+/** SHA-256 hesla ako malé šestnástkové znaky - DeyeCloud ho tak vyžaduje. @param {string} heslo */
+async function sha256Hex(heslo) {
+    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(heslo)));
+    return Array.from(hash, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Požiadavka DeyeCloud s tokenom. @param {string} path @param {string} token @param {unknown} body @param {Ctx} ctx */
+function deye(path, token, body, ctx) {
+    const init = {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+    };
+    return getJson(`${DEYE.base}${path}`, init, ctx);
+}
+
+/**
+ * Meranie elektrárne Deye: výkon a dnešná výroba naraz. Elektráreň: id, meno, inštalovaný výkon
+ * (na jednotku výkonu) a časové pásmo (na „dnes“).
+ * @param {string} token @param {{ id: number, nazov: string, kwp: number | null, tz: string }} st @param {Ctx} ctx
+ */
+async function deyeMeraj(token, st, ctx) {
+    const [latest, history] = await Promise.all([
+        deye(DEYE.latest, token, { stationId: st.id }, ctx),
+        deye(DEYE.history, token, { stationId: st.id, granularity: 2, ...deyeToday(ctx.now, st.tz) }, ctx),
+    ]);
+    return prevod(() => deyePv(deyeKw(parseDeyeLatest(latest), st.kwp), parseDeyeDay(history), st.nazov, ctx.now));
+}
+
+/** Časové pásmo elektrárne, ktoré Intl pozná; inak stredoeurópske. @param {unknown} tz */
+function pasmo(tz) {
+    try {
+        if (typeof tz === 'string' && tz) return new Intl.DateTimeFormat('en', { timeZone: tz }).resolvedOptions().timeZone;
+    } catch {
+        // neznáme pásmo
+    }
+    return 'Europe/Bratislava';
+}
+
 /** @type {Record<string, Zdroj>} */
 export const ZDROJE = {
     'huawei-kiosk': {
@@ -276,6 +343,53 @@ export const ZDROJE = {
                 pv = await meraj().catch((e) => Promise.reject(prevodChyba(e)));
             }
             return novy ? { pv, pristup: { ...pristup, token, tokenAt } } : { pv };
+        },
+    },
+    'solis-kluc': {
+        async pripoj(udaje, ctx) {
+            const stanice = await solisStations(str(udaje.keyId), str(udaje.secret), ctx);
+            return stanice.slice(0, MAX_STANIC).map((st) => ({
+                nazov: st.nazov,
+                pristup: { keyId: udaje.keyId, secret: udaje.secret, id: st.id },
+                pv: st.pv,
+            }));
+        },
+        async meraj(pristup, ctx) {
+            const st = (await solisStations(str(pristup.keyId), str(pristup.secret), ctx)).find((x) => x.id === str(pristup.id));
+            if (!st) throw new ZdrojChyba('udaje');
+            return { pv: st.pv };
+        },
+    },
+    'deye-aplikacia': {
+        async pripoj(udaje, ctx) {
+            const [appId, appSecret, email, heslo] = [str(udaje.appId), str(udaje.appSecret), str(udaje.email), str(udaje.heslo)];
+            if (!appId || !appSecret || !email || !heslo) throw new ZdrojChyba('udaje');
+            const init = {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ appSecret, email, password: await sha256Hex(heslo) }),
+            };
+            const tokenJson = await getJson(`${DEYE.base}${DEYE.token(appId)}`, init, ctx);
+            const token = prevod(() => parseDeyeToken(tokenJson));
+            const stationsJson = await deye(DEYE.stations, token, { page: 1, size: MAX_STANIC }, ctx);
+            const list = prevod(() => parseDeyeStations(stationsJson));
+            return Promise.all(
+                list.slice(0, MAX_STANIC).map(async (st) => {
+                    const stanica = { id: st.id, nazov: st.nazov, kwp: st.kwp, tz: pasmo(st.tz) };
+                    return {
+                        nazov: st.nazov,
+                        // Heslo sa neukladá - v pečati je len token (60 dní) a čo treba o elektrárni.
+                        pristup: { token, ...stanica },
+                        pv: await deyeMeraj(token, stanica, ctx).catch(() => null),
+                    };
+                }),
+            );
+        },
+        async meraj(pristup, ctx) {
+            const id = Number(pristup.id);
+            if (!str(pristup.token) || !Number.isSafeInteger(id)) throw new ZdrojChyba('udaje');
+            const kwp = typeof pristup.kwp === 'number' ? pristup.kwp : null;
+            return { pv: await deyeMeraj(str(pristup.token), { id, nazov: str(pristup.nazov), kwp, tz: pasmo(pristup.tz) }, ctx) };
         },
     },
     'foxess-kluc': {
