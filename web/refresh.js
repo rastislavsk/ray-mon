@@ -5,6 +5,7 @@
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
+import { pvDue } from '../shared/zdroje.js';
 import { keptForecast, loadData } from './data.js';
 import { saveDayLog, saveSettings } from './storage.js';
 
@@ -69,12 +70,15 @@ export function createRefresh(store) {
             const forecast = keptForecast({ site, plant }, new Date());
             if (forecast) store.setState({ forecast });
         }
-        const result = await loadData({ site, plant, zdroj }, new Date());
+        // Výrobca obmedzuje dopyty a jeho cloud dáta obnovuje po svojom: kým meranie nie je staršie
+        // než interval spôsobu (shared/zdroje.js), ostáva posledné a Worker sa nepýta.
+        const due = !zdroj || pvDue(zdroj, store.get().pv, new Date());
+        const result = await loadData({ site, plant, zdroj: due ? zdroj : null }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
         if (teraz.site !== site || teraz.plant !== plant || teraz.zdroj !== zdroj) return;
         const now = new Date();
-        const pv = nextPv(teraz.pv, result, now);
+        const pv = due ? nextPv(teraz.pv, result, now) : teraz.pv;
         // Denník dní pre súhrn: menič posiela len súčet dneška, dni si appka odkladá sama.
         const dayLog = result.pv
             ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
