@@ -460,14 +460,24 @@ export const STORAGE_KEYS = [
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
 
 /**
- * Uhlík elektriny v g CO2eq na kWh za celý životný cyklus (stavba elektrárne, palivo, prevádzka)
- * podľa Ember, Yearly electricity data, Slovensko 2025: `gridG` je priemer výroby v SR, `pvG`
- * solár. Priemer, nie „uhlie, ktoré strecha nahradila“ - ten by úsporu nafúkol a nedá sa overiť.
- * Uhlíkový dlh panelov je `pvG` krát výroba za celý ich život: `lifeYears` rokov po
- * `yieldKwhPerKwp` kWh z kWp ročne (PVGIS pre juh SR, 35°, okolo 1 150 - 1 200 kWh/kWp).
- * Pri novom ročníku Ember zmeň čísla aj `source`.
+ * Uhlík elektriny za celý životný cyklus (stavba, palivo, prevádzka, likvidácia), v CO2eq.
+ * - `gridG`: g na kWh zo siete SR - priemer výroby podľa Ember, Yearly electricity data, SR 2025.
+ *   Priemer, nie „uhlie, ktoré strecha nahradila“ - ten by úsporu nafúkol a nedá sa overiť.
+ * - `debtKgPerKwp`: kg na kWp strešnej elektrárne vrátane meniča (dva za 30 rokov), konštrukcie,
+ *   montáže a likvidácie - IEA PVPS Task 12, aktualizácia 2023, mono-Si: 35,8 g/kWh pri
+ *   976 kWh/kWp ročne a 30 rokoch. Solárny faktor Ember (IPCC 2014, globálny) je starší a vyšší.
+ * - Slnečný faktor pre SR (shared/carbon.js) je tento dlh rozpočítaný na výrobu v SR: `lifeYears`
+ *   rokov po `yieldKwhPerKwp` kWh z kWp (PVGIS pre juh SR, 35°, okolo 1 150 - 1 200 kWh/kWp).
+ * Pri novom ročníku zdroja zmeň čísla aj jeho meno.
  */
-export const CARBON = { gridG: 95, pvG: 47, source: 'Ember 2025', lifeYears: 30, yieldKwhPerKwp: 1150 };
+export const CARBON = {
+    gridG: 95,
+    gridSource: 'Ember 2025',
+    debtKgPerKwp: 1050,
+    pvSource: 'IEA PVPS 2023',
+    lifeYears: 30,
+    yieldKwhPerKwp: 1150,
+};
 
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
