@@ -192,7 +192,8 @@ export const SUMMARY_TRIPS = [
  * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js.
  * @param {{ period: 'tyzden' | 'mesiac', month: string, kwh: number, phones: number, km: number,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
- *   launches: { all: number, sun: number }, missing: number }} d
+ *   launches: { all: number, sun: number }, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
+ *   carbon: { gridG: number, pvG: number, source: string, lifeYears: number } }} d
  * @param {Voice} [voice]
  */
 export function summaryTexts(d, voice = 'drzy') {
@@ -211,10 +212,39 @@ export function summaryTexts(d, voice = 'drzy') {
             t: polite(voice) ? `Na slnku ste pustili ${sun}×` : `Na slnku si pustil/a ${sun}×`,
             s: all > sun ? `z ${all} spustení, zvyšok išiel zo siete` : 'všetko išlo zo slnka',
         });
-    const note = d.missing
+    rows.push(...carbonRows(d));
+    return { kick, rows, note: summaryNote(d) };
+}
+
+/**
+ * Poznámka pod súhrnom: dni, ktoré v denníku chýbajú, a s akými faktormi sa počíta CO2eq.
+ * @param {Parameters<typeof summaryTexts>[0]} d
+ */
+function summaryNote(d) {
+    const missing = d.missing
         ? `Za ${d.missing} ${plural(d.missing, ['deň', 'dni', 'dní'])} appka čísla nemá – vtedy ju nikto neotvoril.`
         : '';
-    return { kick, rows, note };
+    const carbon = d.kwh > 0 || d.payback !== null ? posterCarbonNote({ ...d.carbon, debtT: d.debtT }) : '';
+    return [missing, carbon].filter(Boolean).join(' ');
+}
+
+/**
+ * Riadok uhlíka v súhrne - jeden, aby sa súhrn s cenami a spusteniami zmestil do obrázka do story:
+ * úspora CO2eq za obdobie a pod ňou koľko z uhlíka výroby panelov je splatené. Bez výroby za
+ * obdobie len návratnosť, bez súčtu od spustenia len úspora.
+ * @param {{ kwh: number, co2Kg: number, payback: number | null, debtT: number | null }} d
+ */
+function carbonRows(d) {
+    const p = d.payback === null ? null : posterPayback(d.payback);
+    const paid = p && (p.paid ? 'uhlík z výroby panelov už je splatený' : `panely splatili ${p.pct} % uhlíka zo svojej výroby`);
+    if (d.kwh > 0) return [{ t: `${posterCo2Value(d.co2Kg)} CO2eq menej`, s: paid || 'než zo siete SR, aj s uhlíkom z výroby panelov' }];
+    if (!p || d.debtT === null) return [];
+    return [
+        {
+            t: p.paid ? 'Uhlík z výroby panelov splatený' : `Panely splatili ${p.pct} % uhlíka`,
+            s: `z ~${fmt1(d.debtT)} t CO2eq, ktoré stála ich výroba`,
+        },
+    ];
 }
 
 /** Jeden mobil na koľko: „na 12 rokov“, „na 40 dní“ - pri nabíjaní raz denne. @param {number} phones */

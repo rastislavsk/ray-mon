@@ -19,7 +19,7 @@ const PAD = 90;
  * @typedef {{ green: string, amber: string, red: string, mid: number, ink: string, sans: string, mono: string }} Look
  * @returns {Look}
  */
-function look() {
+export function look() {
     const css = getComputedStyle(document.documentElement);
     const token = (/** @type {string} */ name) => css.getPropertyValue(name).trim();
     return {
@@ -78,21 +78,49 @@ function draw(ctx, m, site, t) {
     const numW = ctx.measureText(num).width;
     ctx.font = `700 80px ${t.sans}`;
     ctx.fillText('kWh', PAD + numW + 10, 480);
-    let y = 600;
-    for (const [i, r] of m.rows.entries()) {
-        ctx.fillRect(PAD, y, W - 2 * PAD, 5);
-        ctx.font = `700 40px ${t.mono}`;
-        ctx.fillText(`0${i + 1}`, PAD, y + 80);
-        ctx.font = `700 60px ${t.sans}`;
-        const lines = wrap(ctx, r.t, W - 2 * PAD - 110);
-        lines.forEach((l, j) => ctx.fillText(l, PAD + 110, y + 80 + j * 68));
-        ctx.font = `500 40px ${t.sans}`;
-        const sub = wrap(ctx, r.s, W - 2 * PAD - 110);
-        sub.forEach((l, j) => ctx.fillText(l, PAD + 110, y + 80 + lines.length * 68 + 4 + j * 48));
-        y += 102 + lines.length * 68 + sub.length * 48;
-    }
+    rows(ctx, m.rows, t, true, rowsScale(ctx, m.rows, t));
     ctx.font = `700 36px ${t.mono}`;
-    ctx.fillText(`RAY-MON · ${site}`.toUpperCase(), PAD, H - 110);
+    ctx.fillText(`RAY-MON · ${site}`.toUpperCase(), PAD, FOOT_Y);
+}
+
+/** Kde začínajú riadky súhrnu, kde musia skončiť a kde je pätička (36 px písmo, s odstupom nad ňou). */
+export const ROWS_Y = 600;
+export const FOOT_Y = H - 110;
+export const ROWS_END = FOOT_Y - 60;
+
+/**
+ * Riadky súhrnu pod sebou: číslo, veľký text a menší pod ním, všetko v mierke `k`. Vracia, kde
+ * skončili; s `draw: false` len meria.
+ * @param {CanvasRenderingContext2D} ctx @param {Array<{ t: string, s: string }>} list @param {Look} t @param {boolean} draw
+ * @param {number} [k] mierka písma a medzier
+ */
+export function rows(ctx, list, t, draw, k = 1) {
+    const px = (/** @type {number} */ n) => Math.round(n * k);
+    let y = ROWS_Y;
+    for (const [i, r] of list.entries()) {
+        if (draw) ctx.fillRect(PAD, y, W - 2 * PAD, 5);
+        ctx.font = `700 ${px(40)}px ${t.mono}`;
+        if (draw) ctx.fillText(`0${i + 1}`, PAD, y + px(80));
+        ctx.font = `700 ${px(60)}px ${t.sans}`;
+        const lines = wrap(ctx, r.t, W - 2 * PAD - 110);
+        if (draw) lines.forEach((l, j) => ctx.fillText(l, PAD + 110, y + px(80) + j * px(68)));
+        ctx.font = `500 ${px(40)}px ${t.sans}`;
+        const sub = wrap(ctx, r.s, W - 2 * PAD - 110);
+        if (draw) sub.forEach((l, j) => ctx.fillText(l, PAD + 110, y + px(80) + lines.length * px(68) + px(4) + j * px(48)));
+        y += px(102) + lines.length * px(68) + sub.length * px(48);
+    }
+    return y;
+}
+
+/**
+ * Mierka riadkov: plná, kým sa zmestia nad pätičku; pri veľa riadkoch (ceny, spustenia aj uhlík)
+ * po 5 % menšia, najmenej 70 %.
+ * @param {CanvasRenderingContext2D} ctx @param {Array<{ t: string, s: string }>} list @param {Look} t
+ */
+export function rowsScale(ctx, list, t) {
+    let k = 1;
+    while (k > 0.7 && rows(ctx, list, t, false, k) > ROWS_END) k = Math.round((k - 0.05) * 100) / 100;
+    return k;
 }
 
 /**

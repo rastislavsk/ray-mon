@@ -1,16 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DAYLOG, EVERYDAY, SITE, TARIFF } from '../shared/config.js';
+import { DAYLOG, EVERYDAY, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { lastDays, monthDays, parseDayLog, recordDay } from '../shared/daylog.js';
 import { fmtSum } from '../shared/format.js';
-import { plural, SUMMARY_TRIPS } from '../shared/messages.js';
+import { carbonFacts } from '../shared/carbon.js';
+import { plural, posterCo2Value, posterPayback, SUMMARY_TRIPS } from '../shared/messages.js';
 import { summaryModel } from '../shared/summary.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-const BASE = { now: FIXED_NOW, site: SITE, tariff: PRICED, kiosk: 'kiosk', loading: false, pv, forecast, launches: [], dayLog: {} };
+const BASE = {
+    now: FIXED_NOW,
+    site: SITE,
+    plant: PLANT,
+    tariff: PRICED,
+    kiosk: 'kiosk',
+    loading: false,
+    pv,
+    forecast,
+    launches: [],
+    dayLog: {},
+};
 
 test('parseDayLog: len platné dni, zoradené, najviac DAYLOG.limit', () => {
     assert.deepEqual(parseDayLog({ '2026-09-02': 20, '2026-09-01': 12.5, '1.9.2026': 3, '2026-09-03': -1, '2026-09-04': 'x' }), {
@@ -74,7 +86,20 @@ test('summaryModel mesiac: súčet z kiosku, prepočty, hodnota a chýbajúce dn
     assert.equal(m.rows[1].t, `${fmtSum(Math.round(kwh * EVERYDAY.evKmPerKwh), 0)} km autom`);
     assert.ok(m.rows.some((r) => r.t.startsWith('Hodnota ~') && r.t.endsWith(' €')));
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: dnes');
-    assert.equal(m.note, 'Za 4 dni appka čísla nemá – vtedy ju nikto neotvoril.');
+    assert.match(m.note, /^Za 4 dni appka čísla nemá – vtedy ju nikto neotvoril\. CO2eq za celý životný cyklus podľa Ember 2025/);
+    // Uhlík v jednom riadku: úspora za mesiac a pod ňou splatený podiel dlhu panelov - z toho istého
+    // výpočtu ako plagát.
+    const f = carbonFacts(kwh, pv.cumulativeEnergyKwh, PLANT);
+    const co2 = `${posterCo2Value(f.co2Kg)} CO2eq menej`;
+    assert.deepEqual(m.rows.at(-1), {
+        t: co2,
+        s: `panely splatili ${posterPayback(/** @type {number} */ (f.payback)).pct} % uhlíka zo svojej výroby`,
+    });
+    const splatene = summaryModel({ ...BASE, pv: { ...pv, cumulativeEnergyKwh: 1e6 } }, 'mesiac');
+    assert.deepEqual(splatene?.rows.at(-1), { t: co2, s: 'uhlík z výroby panelov už je splatený' });
+    const bezSuctu = summaryModel({ ...BASE, pv: { ...pv, cumulativeEnergyKwh: null } }, 'mesiac');
+    assert.deepEqual(bezSuctu?.rows.at(-1), { t: co2, s: 'než zo siete SR, aj s uhlíkom z výroby panelov' }, 'bez súčtu len úspora');
+    assert.doesNotMatch(bezSuctu?.note ?? '', /Výroba týchto panelov/);
 });
 
 test('summaryModel týždeň: súčet denníka s dneškom, najlepší deň menom a spustenia', () => {
@@ -89,7 +114,7 @@ test('summaryModel týždeň: súčet denníka s dneškom, najlepší deň menom
     assert.equal(m.kick, 'Posledných 7 dní na streche');
     assert.equal(m.kwh, 20 + 25 + 40 + 10 + 30 + 5 + today);
     assert.equal(m.days.length, 7);
-    assert.equal(m.note, '');
+    assert.doesNotMatch(m.note, /appka čísla nemá/, 'v týždni nechýba žiadny deň');
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: utorok', '1. 9. 2026 je utorok');
     const spustenia = m.rows.find((r) => r.t.startsWith('Na slnku'));
     assert.deepEqual(spustenia, { t: 'Na slnku si pustil/a 1×', s: 'z 2 spustení, zvyšok išiel zo siete' });
@@ -99,5 +124,9 @@ test('summaryModel: bez cien bez hodnoty, bez výroby bez prepočtov', () => {
     const m = summaryModel({ ...BASE, tariff: TARIFF }, 'mesiac');
     assert.ok(m && !m.rows.some((r) => r.t.startsWith('Hodnota')));
     const nula = summaryModel({ ...BASE, pv: { ...pv, dailyEnergyKwh: 0, monthEnergyKwh: 0 } }, 'mesiac');
-    assert.deepEqual(nula?.rows, []);
+    assert.deepEqual(
+        nula?.rows.map((r) => r.t),
+        ['Panely splatili 12 % uhlíka'],
+        'bez výroby obdobia ostáva len návratnosť od spustenia',
+    );
 });

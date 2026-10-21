@@ -24,3 +24,13 @@ export function carbonPayback(cumulativeKwh, plant) {
     if (cumulativeKwh === null || debt <= 0) return null;
     return (cumulativeKwh * CARBON.gridG) / 1000 / debt;
 }
+
+/**
+ * Uhlík do súhrnu: úspora CO2eq za obdobie, podiel splateného dlhu panelov a dlh v tonách (oba
+ * null bez súčtu od spustenia) a faktory, s ktorými sa počíta - pre poznámku pod súhrnom.
+ * @param {number} kwh výroba obdobia @param {number | null} cumulativeKwh @param {import('./config.js').Plant} plant
+ */
+export function carbonFacts(kwh, cumulativeKwh, plant) {
+    const payback = carbonPayback(cumulativeKwh, plant);
+    return { co2Kg: co2SavedKg(kwh), payback, debtT: payback === null ? null : panelDebtKg(plant) / 1000, carbon: CARBON };
+}
