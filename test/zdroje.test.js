@@ -103,3 +103,22 @@ test('sprievodca pri pripájaní: titulky podľa značky a spôsobu, Späť aj p
     }
     assert.equal(T.footModel(st({ setupReturn: 'suhrn' }), owner, 'znacka', false).backShown, true);
 });
+
+test('hláška pripojenia podľa kódu od Huawei: relácia v Shelly, oprávnenie, limit, inak kód pri všeobecnej', () => {
+    /** @param {'udaje' | 'vyrobca'} chyba @param {string} kod */
+    const note = (chyba, kod) => T.pripojNote({ status: 'error', chyba, kod, stanice: [] }, 'huawei-northbound')?.text ?? '';
+    assert.match(note('udaje', 'prihlasenie:20400'), /kód 20400.*Shelly/);
+    assert.match(note('udaje', 'prihlasenie:20403'), /kód 20403\)\. Ozvi sa inštalatérovi/);
+    assert.match(note('vyrobca', 'prihlasenie:407'), /5-krát za 10 minút \(kód 407\)/);
+    assert.match(note('udaje', 'zoznam:401'), /^Účet nemá povolené rozhranie \(zoznam elektrární, kód 401\)\. Inštalatér/);
+    assert.equal(
+        note('vyrobca', 'meranie:HTTP 403'),
+        'Huawei teraz neodpovedá alebo nič nenašiel. Skús to o chvíľu znova (meranie, kód HTTP 403).',
+    );
+    assert.equal(
+        note('udaje', 'zariadenia:20009'),
+        'Huawei údaje neprijal. Skontroluj, či si skopíroval všetko celé (zoznam zariadení, kód 20009).',
+    );
+    assert.equal(note('vyrobca', 'prihlasenie'), 'Huawei teraz neodpovedá alebo nič nenašiel. Skús to o chvíľu znova (prihlásenie).');
+    assert.equal(note('udaje', ''), 'Huawei údaje neprijal. Skontroluj, či si skopíroval všetko celé.');
+});

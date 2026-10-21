@@ -42,8 +42,9 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
  */
 /**
  * Pripájanie živého merania: `loading` čaká na Workera, `done` má nájdené elektrárne, `error`
- * nesie druh chyby (`udaje` výrobca údaje neprijal, `vyrobca` neodpovedá, `server` appka).
- * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', chyba: 'udaje' | 'vyrobca' | 'server' | '', stanice: Stanica[] }} Pripoj
+ * nesie druh chyby (`udaje` výrobca údaje neprijal, `vyrobca` neodpovedá, `server` appka) a `kod`
+ * krok a kód chyby od výrobcu (`prihlasenie:20400`), keď ho Worker poslal.
+ * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', chyba: 'udaje' | 'vyrobca' | 'server' | '', kod?: string, stanice: Stanica[] }} Pripoj
  */
 /** @typedef {'chip' | 'other' | 'guess'} ValuePick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“ */
 /**
@@ -378,11 +379,11 @@ export const pripojStart = () => ({ setupPripoj: /** @type {Pripoj} */ ({ status
  * Výsledok pripojenia. Jediná nájdená elektráreň je rovno pripojená; z viacerých si človek
  * vyberie. Keď medzitým zmenil spôsob, výsledok patrí inému formuláru a zahodí sa (null).
  * @param {SetupState} s @param {string} sposob pre ktorý spôsob pripájanie bežalo
- * @param {{ stanice: Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server' }} res @returns {SetupPatch | null}
+ * @param {{ stanice: Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server', kod?: string }} res @returns {SetupPatch | null}
  */
 export function pripojDone(s, sposob, res) {
     if (s.setupSposob !== sposob || s.setupPripoj.status !== 'loading') return null;
-    if ('chyba' in res) return { setupPripoj: { status: 'error', chyba: res.chyba, stanice: [] } };
+    if ('chyba' in res) return { setupPripoj: { status: 'error', chyba: res.chyba, kod: res.kod ?? '', stanice: [] } };
     if (!res.stanice.length) return { setupPripoj: { status: 'error', chyba: 'vyrobca', stanice: [] } };
     /** @type {Pripoj} */ const setupPripoj = { status: 'done', chyba: '', stanice: res.stanice };
     return {

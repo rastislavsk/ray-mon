@@ -273,15 +273,20 @@ const NB_HOST = 'https://eu5.fusionsolar.huawei.com';
  * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
  * @param {{ heslo?: string, tokeny?: string[], platne?: string[], realFail?: number }} [opts]
  */
-function northbound({ heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail } = {}) {
-    /** @type {Array<{ path: string, body: any, token: string | null }>} */ const calls = [];
+function northbound(
+    { heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail, loginFail, stationsFail, stareFail } = /** @type {any} */ ({}),
+) {
+    /** @type {Array<{ path: string, body: any, token: string | null, cookie: string | null }>} */ const calls = [];
     let prihlasenia = 0;
     const valid = new Set(platne ?? tokeny);
     const ok = (/** @type {unknown} */ data) => Response.json({ success: true, failCode: 0, data });
     const fail = (/** @type {number} */ failCode) => Response.json({ success: false, failCode, data: null });
     /** Odpovede dátových ciest (s platným tokenom). @type {Record<string, () => Response>} */
     const data = {
-        '/thirdData/stations': () => ok({ list: [{ plantCode: 'NE=1', plantName: 'Dvorany' }] }),
+        '/thirdData/stations': () => (stationsFail ? fail(stationsFail) : ok({ list: [{ plantCode: 'NE=1', plantName: 'Dvorany' }] })),
+        // Starší zoznam (Historical Interfaces): bez stránkovania, stationCode a stationName.
+        '/thirdData/getStationList': () =>
+            stareFail ? fail(stareFail) : ok([{ stationCode: 'NE=1', stationName: 'Dvorany', capacity: 0.01 }]),
         '/thirdData/getDevList': () => ok([{ id: 11, stationCode: 'NE=1', devTypeId: 38 }]),
         '/thirdData/getDevRealKpi': () =>
             realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
@@ -289,19 +294,22 @@ function northbound({ heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail }
             ok([{ stationCode: 'NE=1', dataItemMap: { day_power: 21.5, month_power: 400, total_power: 5100 } }]),
     };
     /** @param {any} body */
-    const login = (body) =>
-        body.systemCode !== heslo
-            ? fail(20400)
-            : new Response(JSON.stringify({ success: true, failCode: 0, data: null }), {
-                  headers: { 'xsrf-token': tokeny[prihlasenia++] ?? 'tX', 'content-type': 'application/json' },
-              });
+    const login = (body) => {
+        if (loginFail) return fail(loginFail);
+        if (body.systemCode !== heslo) return fail(20400);
+        const headers = new Headers({ 'xsrf-token': tokeny[prihlasenia++] ?? 'tX', 'content-type': 'application/json' });
+        // Huawei CloudWAF a relácia nastavujú cookies, ako pri skutočnom serveri.
+        headers.append('set-cookie', 'HWWAFSESID=waf1; path=/');
+        headers.append('set-cookie', 'XSRF-TOKEN=xc; Path=/; Secure; HttpOnly');
+        return new Response(JSON.stringify({ success: true, failCode: 0, data: null }), { headers });
+    };
     const impl = /** @type {typeof fetch} */ (
         /** @type {unknown} */ (
             async (/** @type {string} */ url, /** @type {any} */ init) => {
                 const path = url.replace(NB_HOST, '');
                 const body = init.body ? JSON.parse(init.body) : null;
                 const token = init.headers?.['xsrf-token'] ?? null;
-                calls.push({ path, body, token });
+                calls.push({ path, body, token, cookie: init.headers?.cookie ?? null });
                 if (!url.startsWith(NB_HOST)) return new Response('x', { status: 404 });
                 if (path === '/thirdData/login') return login(body);
                 if (!valid.has(token)) return fail(305);
@@ -388,6 +396,39 @@ test('Huawei Northbound: zlé heslo a cudzí server 400, limit 407 je výpadok (
     ).json();
     assert.equal(stanice[0].pv, null, 'pripojenie prejde, meranie príde neskôr');
     assert.equal((await handlePv(pvRequest(stanice[0].pecat), ENV, NOW, limit.impl)).status, 502);
+});
+
+test('Huawei Northbound: cookies z prihlásenia idú s každým dopytom, aj zapečatené na meranie', async () => {
+    const s = northbound();
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    assert.ok(s.calls.slice(1).every((c) => c.cookie === 'HWWAFSESID=waf1; XSRF-TOKEN=xc'));
+    s.calls.length = 0;
+    await handlePv(pvRequest(stanice[0].pecat), ENV, NOW, s.impl);
+    assert.ok(s.calls.length > 0 && s.calls.every((c) => c.cookie === 'HWWAFSESID=waf1; XSRF-TOKEN=xc'));
+});
+
+test('Huawei Northbound: chyba nesie krok a kód od Huawei (nič tajné), staršie rozhranie zoznamu ako záloha', async () => {
+    const pripoj = async (/** @type {any} */ opts) => {
+        const res = await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, northbound(opts).impl);
+        return { status: res.status, body: await res.json() };
+    };
+    assert.deepEqual(await pripoj({ loginFail: 20400 }), { status: 400, body: { chyba: 'udaje', kod: 'prihlasenie:20400' } });
+    assert.deepEqual(await pripoj({ loginFail: 407 }), { status: 502, body: { chyba: 'vyrobca', kod: 'prihlasenie:407' } });
+    // Nový zoznam účet nemá povolený: staršie getStationList elektráreň nájde.
+    const zaloha = northbound({ stationsFail: 401 });
+    const res = await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, zaloha.impl);
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).stanice[0].nazov, 'Dvorany');
+    assert.deepEqual(zaloha.calls.map((c) => c.path).slice(0, 3), ['/thirdData/login', '/thirdData/stations', '/thirdData/getStationList']);
+    // Nevyjde ani staršie: kód nového rozhrania.
+    assert.deepEqual(await pripoj({ stationsFail: 401, stareFail: 401 }), { status: 400, body: { chyba: 'udaje', kod: 'zoznam:401' } });
+    // Priveľa dopytov: staršie sa neskúša, dopadlo by rovnako.
+    const casto = northbound({ stationsFail: 407 });
+    const r407 = await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, casto.impl);
+    assert.deepEqual([r407.status, await r407.json()], [502, { chyba: 'vyrobca', kod: 'zoznam:407' }]);
+    assert.ok(!casto.calls.some((c) => c.path === '/thirdData/getStationList'));
 });
 
 // ---- Solis a Deye -------------------------------------------------------------------------

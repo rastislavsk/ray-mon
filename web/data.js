@@ -63,14 +63,16 @@ async function loadPv(zdroj, fetchImpl) {
  * Pripojenie merania zo sprievodcu: údaje z formulára ide overiť Worker. Nikdy nehádže - vráti
  * nájdené elektrárne, alebo druh chyby, ktorý sprievodca ukáže.
  * @param {string} sposob id spôsobu (shared/zdroje.js) @param {Record<string, string>} udaje @param {typeof fetch} [fetchImpl]
- * @returns {Promise<{ stanice: import('../shared/setup-flow.js').Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server' }>}
+ * @returns {Promise<{ stanice: import('../shared/setup-flow.js').Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server', kod?: string }>}
  */
 export async function pripojZdroj(sposob, udaje, fetchImpl = fetch) {
     try {
         const res = await postWorker(WORKER_PRIPOJ_URL, JSON.stringify({ sposob, udaje }), fetchImpl);
         const body = await res.json().catch(() => ({}));
-        if (res.status === 400) return { chyba: 'udaje' };
-        if (!res.ok) return { chyba: res.status === 502 ? 'vyrobca' : 'server' };
+        // Krok a kód chyby od výrobcu (napr. `prihlasenie:20400`); len krátky text bez tajomstiev.
+        const kod = typeof body.kod === 'string' && /^[a-z]+(:[A-Za-z0-9 ]{1,20})?$/.test(body.kod) ? body.kod : '';
+        if (res.status === 400) return { chyba: 'udaje', kod };
+        if (!res.ok) return { chyba: res.status === 502 ? 'vyrobca' : 'server', kod };
         const stanice = Array.isArray(body.stanice) ? body.stanice : [];
         return {
             stanice: stanice

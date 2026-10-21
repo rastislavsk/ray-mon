@@ -30,7 +30,16 @@ prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom č
 - token je v pečati a Worker ho mení až po 25 minútach alebo pri kóde 305 („nie si prihlásený“),
   novú pečať vráti appke,
 - meria sa raz za 5 minút a súčty všetkých elektrární či výkon všetkých meničov idú jedným dopytom,
-- meranie z pripojenia appka po uložení rovno použije (`pripojenePv`), druhé by Huawei odmietol.
+- meranie z pripojenia appka po uložení rovno použije (`pripojenePv`), druhé by Huawei odmietol,
+- cookies, ktoré server pri prihlásení nastaví (Huawei CloudWAF a relácia), idú s každým ďalším
+  dopytom ako pri bežnom HTTP klientovi,
+- zoznam elektrární skúša nové `/thirdData/stations` a keď ho účet nemá povolené, staršie
+  `/thirdData/getStationList` (kapitola Historical Interfaces) - niektoré integrácie, napr. Shelly,
+  používajú to.
+
+Referencia priamo pre FusionSolar (cloud) je **SmartPVMS V600R024C10 Northbound Interface
+Reference-V6 (FusionSolar SmartPVMS)**, [EDOC1100316813](https://support.huawei.com/enterprise/en/doc/EDOC1100316813):
+prihlásenie `https://{doména}/thirdData/login`, ostatné ako vo verzii pre lokálnu inštaláciu.
 
 ## Zapečatený prístup a kľúč `PECAT_KLUC`
 
@@ -65,6 +74,9 @@ Telo je JSON ako text: `{ "sposob": "huawei-kiosk", "udaje": { "odkaz": "https:/
 - Neznámy spôsob alebo údaje, ktoré výrobca neprijal: **400** `{ "chyba": "udaje" }`. Cudzí
   odkaz na kiosk dostane 400 bez jediného sťahovania.
 - Výrobca neodpovedá: **502** `{ "chyba": "vyrobca" }`. Bez kľúča Workera: **503** `{ "chyba": "server" }`.
+- Kde výrobca chybu označil kódom, odpoveď nesie aj `kod`: krok a kód, napr.
+  `{ "chyba": "udaje", "kod": "prihlasenie:20400" }`. Nič tajné - appka podľa neho povie, čo presne
+  výrobca odmietol, a ten istý riadok ide do logu Workera (Observability), kde sa dá dohľadať aj spätne.
 
 ## Endpoint `POST /pv`
 

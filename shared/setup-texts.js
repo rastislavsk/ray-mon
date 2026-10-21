@@ -399,13 +399,42 @@ export function pripojNote(p, sposob) {
     const meno = menoZnacky(sposob);
     if (p.status === 'loading') return { text: `Pýtam sa ${meno}… Zvyčajne to trvá pár sekúnd.`, err: false };
     if (p.status !== 'error') return null;
+    const presne = p.kod ? kodNote(p.kod) : null;
+    if (presne) return { text: presne, err: true };
     /** @type {Record<string, string>} */
     const texts = {
         udaje: `${meno} údaje neprijal. Skontroluj, či si skopíroval všetko celé.`,
         vyrobca: `${meno} teraz neodpovedá alebo nič nenašiel. Skús to o chvíľu znova.`,
         server: 'Server appky teraz nevie merania pripájať. Skús to neskôr.',
     };
-    return { text: texts[p.chyba] || texts.vyrobca, err: true };
+    const kod = p.kod
+        ? ` (${KROKY[p.kod.split(':')[0]] ?? p.kod.split(':')[0]}${p.kod.includes(':') ? `, kód ${p.kod.split(':')[1]}` : ''})`
+        : '';
+    return { text: (texts[p.chyba] || texts.vyrobca).replace(/\.$/, `${kod}.`), err: true };
+}
+
+/** Kroky pripojenia, ako ich Worker pomenuje v kóde chyby. */
+const KROKY = /** @type {Record<string, string>} */ ({
+    prihlasenie: 'prihlásenie',
+    zoznam: 'zoznam elektrární',
+    zariadenia: 'zoznam zariadení',
+    meranie: 'meranie',
+});
+
+/**
+ * Presná hláška pre kód chyby, ktorý výrobca vysvetľuje v dokumentácii (Huawei Northbound,
+ * Error Code List); pre ostatné null - vtedy stačí všeobecná hláška s kódom.
+ * @param {string} kod napr. `prihlasenie:20400`
+ */
+function kodNote(kod) {
+    const [krok, cislo] = kod.split(':');
+    if (krok === 'prihlasenie' && cislo === '20400')
+        return 'Huawei prihlásenie odmietol (kód 20400). Okrem zlého mena či hesla to Huawei hlási aj pri zablokovanom účte a vtedy, keď je účet prihlásený inde – napríklad v Shelly – a nemá voľnú reláciu. Odhlás ho tam alebo počkaj 30 minút.';
+    if (krok === 'prihlasenie' && cislo === '20403') return 'Huawei prihlásenie tohto účtu obmedzil (kód 20403). Ozvi sa inštalatérovi.';
+    if (cislo === '407') return 'Huawei dovolí prihlásenie len 5-krát za 10 minút (kód 407). Skús to o 10 minút.';
+    if (cislo === '401')
+        return `Účet nemá povolené rozhranie (${KROKY[krok] ?? krok}, kód 401). Inštalatér ho povolí vo FusionSolar v Northbound Management.`;
+    return null;
 }
 
 /** Nadpis nad nájdenými elektrárňami. @param {number} n @param {string} sposob */
