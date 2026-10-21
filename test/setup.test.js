@@ -14,8 +14,7 @@ import {
     setupStepOk,
 } from '../shared/setup.js';
 
-const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
+const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: null };
 const ok = (/** @type {any} */ at, draft = DVORANY, opts = {}) => setupStepOk(at, draft, { totalKwp: null, live: false, ...opts });
 
 /** Prejde celého sprievodcu tlačidlom Ďalej a vráti poradie obrazoviek.
@@ -144,10 +143,19 @@ test('každá obrazovka kontroluje len to, na čo sa pýta', () => {
     assert.equal(ok({ step: 'pocet', roof: 0 }, strmy), false, 'počet panelov je celé číslo');
     assert.equal(ok({ step: 'pocet', roof: 5 }), false, 'plocha, ktorá neexistuje');
     assert.equal(ok({ step: 'menic', roof: 0 }, { ...DVORANY, plant: { ...PLANT, acLimitKw: 0 } }), false);
-    // Meranie: bez neho je jedno, čo je v poli; s ním musí byť odkaz kiosk FusionSolar.
-    assert.equal(ok({ step: 'meranie', roof: 0 }, { ...DVORANY, kiosk: 'nezmysel' }), true);
-    assert.equal(ok({ step: 'meranie', roof: 0 }, { ...DVORANY, kiosk: 'nezmysel' }, { live: true }), false);
-    assert.equal(ok({ step: 'meranie', roof: 0 }, { ...DVORANY, kiosk: KIOSK }, { live: true }), true);
+    // Meranie: otázka pustí ďalej vždy (kam, rozhodne nextAction). Značku a spôsob človek vyberá
+    // ťuknutím, pripojenie je hotové s pripojeným meraním.
+    assert.equal(ok({ step: 'meranie', roof: 0 }), true);
+    assert.equal(ok({ step: 'znacka', roof: 0 }), false);
+    assert.equal(ok({ step: 'sposob', roof: 0 }), false);
+    assert.equal(ok({ step: 'pripoj', roof: 0 }), false);
+    assert.equal(
+        ok(
+            { step: 'pripoj', roof: 0 },
+            { ...DVORANY, zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' } },
+        ),
+        true,
+    );
     assert.equal(ok({ step: 'suhrn', roof: 0 }), true);
     assert.equal(ok({ step: 'suhrn', roof: 0 }, emptySettings()), false);
 });

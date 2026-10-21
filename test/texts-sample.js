@@ -44,12 +44,31 @@ function inputs(now) {
     const base = { now, site: SITE, plant: PLANT, tariff: PRICED, loading: false, previewMinutes: null, launches: LAUNCHES, dayLog: LOG };
     const typical = typicalSettings(SITE);
     return {
-        kiosk: { ...base, kiosk: 'kiosk', known: 'elektraren', pv: pvAt(now), forecast },
-        bezKiosku: { ...base, tariff: TARIFF, kiosk: '', known: 'elektraren', pv: null, forecast },
+        kiosk: {
+            ...base,
+            zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+            known: 'elektraren',
+            pv: pvAt(now),
+            forecast,
+        },
+        bezKiosku: { ...base, tariff: TARIFF, zdroj: null, known: 'elektraren', pv: null, forecast },
         typicka: { ...base, ...typical, known: 'poloha', pv: null, forecast },
-        nic: { ...base, kiosk: '', known: 'nic', pv: null, forecast: null },
-        nacitava: { ...base, kiosk: 'kiosk', known: 'elektraren', pv: null, forecast: null, loading: true },
-        bezDat: { ...base, kiosk: 'kiosk', known: 'elektraren', pv: null, forecast: null },
+        nic: { ...base, zdroj: null, known: 'nic', pv: null, forecast: null },
+        nacitava: {
+            ...base,
+            zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+            known: 'elektraren',
+            pv: null,
+            forecast: null,
+            loading: true,
+        },
+        bezDat: {
+            ...base,
+            zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+            known: 'elektraren',
+            pv: null,
+            forecast: null,
+        },
     };
 }
 
@@ -186,7 +205,7 @@ function directMisc(out, v) {
                 od: { pvOk: false, pvSince: '11:20' },
                 nikdy: { pvOk: false, pvSince: null },
             }))
-                out[`offline.${online}.${kiosk}.${pk}`] = M.mozemOfflineText({ online, kiosk, ...pv }, v);
+                out[`offline.${online}.${kiosk}.${pk}`] = M.mozemOfflineText({ online, zdroj: kiosk, ...pv }, v);
     out['guess'] = M.mozemGuessText(5, v);
     out['list'] = M.mozemListTitle(false);
     out['listOdhad'] = M.mozemListTitle(true);

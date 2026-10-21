@@ -69,7 +69,7 @@ export function summaryHtml(m, period) {
         `<div class="summary-top">${backButtonHtml('summary-back', 'data-summary-back')}` +
         `<div class="seg" role="group" aria-label="Obdobie">${seg}</div></div>`;
     if (!m)
-        return `<section class="summary">${top}<p class="summary-note">Súhrn skladá čísla zo živého merania. Keď kiosk odpovie, ukáže sa.</p></section>`;
+        return `<section class="summary">${top}<p class="summary-note">Súhrn skladá čísla zo živého merania. Keď menič odpovie, ukáže sa.</p></section>`;
     const rows = m.rows
         .map((r, i) => `<div class="summary-row"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></div>`)
         .join('');

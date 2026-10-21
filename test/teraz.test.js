@@ -51,7 +51,7 @@ function input(now, extra = {}) {
         site: SITE,
         plant: PLANT,
         tariff: TARIFF,
-        kiosk: 'kiosk',
+        zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
         loading: false,
         known: 'elektraren',
         pv: pvAt(now),
@@ -390,7 +390,7 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     // Kiosk nastavený, meranie vôbec neprišlo.
     assert.equal(terazModel(input(at('13:00'), { pv: null })).source, 'odhad z predpovede · meranie neodpovedá');
     // Bez kiosku nemá čo mlčať.
-    assert.equal(terazModel(input(at('13:00'), { pv: null, kiosk: '' })).source, 'odhad z predpovede');
+    assert.equal(terazModel(input(at('13:00'), { pv: null, zdroj: null })).source, 'odhad z predpovede');
 });
 
 test('terazModel: noc - výkon 0, veta o obzore, okno, ktoré už bolo, a lacná sieť', () => {
@@ -416,12 +416,12 @@ test('terazModel: načítavanie, bez dát, bez polohy', () => {
     assert.equal(off.kind, 'offline');
     assert.equal(off.num, '–');
     assert.equal(off.retry, true);
-    assert.equal(off.sub, mozemOfflineText({ online: true, kiosk: true, pvOk: false, pvSince: null }));
+    assert.equal(off.sub, mozemOfflineText({ online: true, zdroj: true, pvOk: false, pvSince: null }));
     assert.equal(off.chart, null);
     assert.equal(off.cards, null);
     assert.equal(
         terazModel(input(at('13:00'), { pv: null, forecast: null }), { online: false }).sub,
-        mozemOfflineText({ online: false, kiosk: true, pvOk: false, pvSince: null }),
+        mozemOfflineText({ online: false, zdroj: true, pvOk: false, pvSince: null }),
     );
 
     const ask = terazModel(input(at('13:00'), { known: 'nic' }));
@@ -444,7 +444,7 @@ test('terazModel: poloha bez panelov - typická strecha s „~“ a výzva, výp
 
 test('terazModel: predpoveď z iného dňa (po polnoci pred obnovou) netvrdí dnešok ani jasnú oblohu', () => {
     const i = input(at('13:00'));
-    const m = terazModel({ ...i, now: new Date(at('13:00').getTime() + 86400000), pv: null, kiosk: '' });
+    const m = terazModel({ ...i, now: new Date(at('13:00').getTime() + 86400000), pv: null, zdroj: null });
     assert.equal(m.cards?.today.line, '');
     assert.equal(m.cards?.today.pct, null);
     assert.equal(m.sub, TERAZ_TEXTS.night);

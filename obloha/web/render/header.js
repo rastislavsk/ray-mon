@@ -7,8 +7,8 @@ import { voiceTexts } from '../../../shared/messages-core.js';
 import { localMinutes } from '../../../shared/solar.js';
 
 /**
- * Čo hlavička ukazuje. `tone` je farba bodky: `live` čerstvé meranie z kiosku, `odhad` len
- * predpoveď (bez kiosku, alebo meranie chýba či je staré), `off` žiadne dáta. `toneText` je to
+ * Čo hlavička ukazuje. `tone` je farba bodky: `live` čerstvé meranie z meniča, `odhad` len
+ * predpoveď (bez merania, alebo meranie chýba či je staré), `off` žiadne dáta. `toneText` je to
  * isté slovom pre čítačku obrazovky.
  * @param {import('../state.js').AppState} state
  * @returns {{ place: string, setup: boolean, status: string, tone: 'live' | 'odhad' | 'off', toneText: string }}
@@ -22,7 +22,7 @@ export function headerModel(state) {
     const status = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     if (state.pv && !pvFreshness({ now: state.now, pv: state.pv, site: state.site }).stale)
         return { place, setup: false, status, tone: 'live', toneText: 'živé meranie' };
-    const toneText = state.pv ? 'meranie zastarané' : state.kiosk ? 'živé meranie nedostupné' : 'odhad z predpovede';
+    const toneText = state.pv ? 'meranie zastarané' : state.zdroj ? 'živé meranie nedostupné' : 'odhad z predpovede';
     return { place, setup: false, status, tone: 'odhad', toneText };
 }
 

@@ -28,7 +28,7 @@ import { offlineLead, pvStatus } from './mozem-sky.js';
 import { localDateKey } from './solar.js';
 
 /**
- * @typedef {import('./day-plan.js').PlanInput & { kiosk: string, loading: boolean,
+ * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known, previewMinutes: number | null }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
@@ -92,7 +92,7 @@ function headOf(input, base, hero, estimate, voice) {
         return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
     const pv = pvStatus(input);
-    const silent = !hero.preview && !!input.kiosk && !pv.ok;
+    const silent = !hero.preview && !!input.zdroj && !pv.ok;
     return {
         title,
         num: hero.powerText,

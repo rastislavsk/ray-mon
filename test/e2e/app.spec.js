@@ -32,6 +32,7 @@ import {
     TOOLTIP_FADE_MS,
     TOOLTIP_HOLD_MS,
     WEEK_MSG_MIN_H,
+    WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
@@ -53,10 +54,10 @@ import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
 const weather = fixture('open-meteo.json');
+/** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
+const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
 /** Elektráreň v Dvoranoch - pre ňu sú fixtures aj očakávané texty. */
-/** Odkaz na kiosk v testoch; Worker na ňu odpovedá nameraným pv z fixtures. */
-const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
-const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: TEST_KIOSK };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: TEST_ZDROJ };
 /** Predpoveď tak, ako ju prehliadač postaví v danej chvíli. @param {Date} time */
 const forecastAt = (time) => buildForecast(weather, time, SITE, PLANT);
 /** Odpoveď vyhľadávania miest: jedno mesto na severe, jedno na juhu. */
@@ -126,6 +127,10 @@ async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWN
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await blokujCdn(page);
     await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
+    // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
+    await page.route(WORKER_PRIPOJ_URL, (route) =>
+        route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
+    );
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
     if (settings)
@@ -514,11 +519,17 @@ test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
 test('popisok jednotky v ciferníku sedí pod číslom, nie pri okraji', async ({ page }) => {
     await openApp(page, { start: 'terazky' });
     // Pravidlo .unit pre polia v Nastavení ho raz chytilo tiež a odsunulo cez hodinu 6.
-    const val = await page.locator('#pv-power').boundingBox();
-    const unit = await page.locator('#pv-power-unit').boundingBox();
-    if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
-    expect(unit.y).toBeGreaterThanOrEqual(val.y + val.height - 1);
-    expect(Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2))).toBeLessThan(4);
+    // Meria sa až po načítaní písiem a opakovane: šírka čísla sa so záložným písmom líši
+    // a v CI sa rozloženie neraz ustáli až chvíľu po prvom vykreslení.
+    await page.evaluate(() => document.fonts.ready);
+    const poloha = async () => {
+        const val = await page.locator('#pv-power').boundingBox();
+        const unit = await page.locator('#pv-power-unit').boundingBox();
+        if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
+        return { pod: unit.y >= val.y + val.height - 1, odStredu: Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2)) };
+    };
+    await expect.poll(async () => (await poloha()).pod).toBe(true);
+    await expect.poll(async () => (await poloha()).odStredu).toBeLessThan(4);
 });
 
 /** Poradie viditeľných blokov karty 7 dní zhora nadol - tak, ako ich vidí používateľ
@@ -2652,7 +2663,7 @@ test.describe('moja elektráreň', () => {
         expect(stored.strings).toEqual([{ panels: 11, azimuthDeg: 135, tiltDeg: 45 }]);
         expect(stored.acLimitKw).toBe(5);
         expect(stored.tariff.bands).toEqual([{ id: 'j', name: 'Cena', level: 'bezna', price: null }]);
-        expect(stored.kiosk).toBe('');
+        expect(stored.zdroj).toBe(null);
 
         await page.reload();
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
@@ -2771,7 +2782,10 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#setup-overview')).toBeVisible();
         const stored = await ulozene(page);
         expect(stored.strings[1]).toEqual({ panels: 8, azimuthDeg: 180, tiltDeg: 20 });
-        expect(toUser(/** @type {any} */ (settingsFromLink(page.url()))), 'adresa nesie nové nastavenie').toEqual(stored);
+        expect(toUser(/** @type {any} */ (settingsFromLink(page.url()))), 'adresa nesie nové nastavenie').toEqual({
+            ...stored,
+            zdroj: null,
+        });
 
         // × pri úprave zahodí zmenu.
         await page.locator('#setup-rows [data-setup-edit="menic"]').click();
@@ -2793,25 +2807,49 @@ test.describe('moja elektráreň', () => {
         expect(errors).toEqual([]);
     });
 
-    test('vlastný kiosk: cudzí odkaz nepustí ďalej, kiosk FusionSolar dodá živé meranie', async ({ page }) => {
+    test('pripojenie merania: značka, cudzí odkaz nepustí, kiosk sa pripojí a uloží len zapečatený', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
-        /** @type {string[]} */ const bodies = [];
-        page.on('request', (r) => r.url() === WORKER_PV_URL && bodies.push(r.postData() || ''));
+        /** @type {Record<string, string[]>} */ const bodies = { pv: [], pripoj: [] };
+        page.on('request', (r) => {
+            if (r.url() === WORKER_PV_URL) bodies.pv.push(r.postData() || '');
+            if (r.url() === WORKER_PRIPOJ_URL) bodies.pripoj.push(r.postData() || '');
+        });
         await otvorSprievodcu(page);
         await poMeranie(page);
         await page.locator('#wz-live-yes').click();
+        await dalej(page);
+        await expect(page.locator('#wz-znacka')).toBeVisible();
+        await expect(page.locator('#wz-title')).toHaveText('Akú značku má tvoj menič?');
         await expect(page.locator('#wz-next')).toBeDisabled();
-        await page.locator('#wz-kiosk').fill('https://example.com/?kk=Abc123xyz');
-        await expect(page.locator('#wz-kiosk-note')).toHaveClass(/err/);
+        // Značka, ktorá sa nedá: povie prečo a ponúkne odhad.
+        await page.locator('[data-setup-znacka="fronius"]').click();
+        await expect(page.locator('#wz-title')).toHaveText('Fronius zatiaľ pripojiť nevieme');
+        await expect(page.locator('#wz-nie')).toBeVisible();
+        await page.locator('#wz-back').click();
+        // Huawei má jediný spôsob - rovno formulár.
+        await page.locator('[data-setup-znacka="huawei"]').click();
+        await expect(page.locator('#wz-pripoj')).toBeVisible();
+        await expect(page.locator('#wz-title')).toHaveText('Odkaz na kiosk');
         await expect(page.locator('#wz-next')).toBeDisabled();
+        const pole = page.locator('[data-setup-pole="odkaz"]');
+        await pole.fill('https://example.com/?kk=Abc123xyz');
+        await expect(page.locator('#wz-pripoj-note')).toHaveClass(/err/);
+        await expect(page.locator('#wz-pripojit')).toBeDisabled();
         const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-        await page.locator('#wz-kiosk').fill(kiosk);
-        await expect(page.locator('#wz-kiosk-note')).toHaveText('Vyzerá to ako kiosk FusionSolar. Po uložení overím, či odpovedá.');
+        await pole.fill(kiosk);
+        await expect(page.locator('#wz-pripoj-note')).toHaveText('Vyzerá to ako kiosk FusionSolar.');
+        await page.locator('#wz-pripojit').click();
+        // Jedna nájdená elektráreň je rovno pripojená a ukáže, čo práve namerala.
+        await expect(page.locator('#wz-stanice')).toContainText('Pripojené');
+        await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toContainText('Dvorany');
+        await expect(page.locator('#wz-pripojit')).toBeHidden();
+        expect(JSON.parse(bodies.pripoj[0])).toEqual({ sposob: 'huawei-kiosk', udaje: { odkaz: kiosk } });
         await dalej(page);
         // Tarifa: jedna cena, typ a ceny.
         await dalej(page);
         await dalej(page);
-        await expect(page.locator('#wz-summary')).toContainText('kiosk FusionSolar');
+        await expect(page.locator('#wz-summary')).toContainText('Huawei · Dvorany');
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
         await expect(page.locator('#pv-updated')).toHaveText('meranie');
@@ -2823,7 +2861,11 @@ test.describe('moja elektráreň', () => {
         await expect(meranie.locator('.sum-live.in-line')).toBeVisible();
         await expect(meranie.locator('.sum-live.at-side')).toBeHidden();
         await expect(meranie.locator('.v')).toBeHidden();
-        expect(bodies).toContain(kiosk);
+        // Meria sa zapečateným prístupom; odkaz nie je v úložisku ani v adrese.
+        expect(bodies.pv).toContain(TEST_ZDROJ.pecat);
+        expect((await ulozene(page)).zdroj).toEqual(TEST_ZDROJ);
+        expect(JSON.stringify(await ulozene(page))).not.toContain('Abc123xyz');
+        expect(page.url()).not.toContain(TEST_ZDROJ.pecat);
         expect(errors).toEqual([]);
     });
 
@@ -2965,7 +3007,7 @@ test.describe('karta Štatistika', () => {
     /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {typeof OWNER} settings @param {import('../../shared/stats.js').StatsPeriod} period */
     const model = (settings, period) =>
         statsModel(
-            { ...settings, now: FIXED_NOW, loading: false, pv: settings.kiosk ? pv : null, forecast: forecastAt(FIXED_NOW) },
+            { ...settings, now: FIXED_NOW, loading: false, pv: settings.zdroj ? pv : null, forecast: forecastAt(FIXED_NOW) },
             period,
         );
 
@@ -3011,7 +3053,7 @@ test.describe('karta Štatistika', () => {
     });
 
     test('bez merania: dnešok podľa predpovede a výzva pripojiť meranie', async ({ page }) => {
-        const settings = { ...OWNER, tariff: PRICED, kiosk: '' };
+        const settings = { ...OWNER, tariff: PRICED, zdroj: null };
         const errors = await openApp(page, { settings });
         await page.locator('#nav-statistika').click();
         const m = model(settings, 'dnes');
@@ -3340,7 +3382,7 @@ test.describe('prvá karta tohto telefónu', () => {
         await page.locator('#share-with-settings').check();
         const url = await shared();
         expect(startFromLink(url)).toBeNull();
-        expect(settingsFromLink(url)).toEqual({ ...OWNER, kiosk: '' });
+        expect(settingsFromLink(url)).toEqual({ ...OWNER, zdroj: null });
         expect(errors).toEqual([]);
     });
 });
@@ -3412,14 +3454,17 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#pv-updated')).toHaveText('meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
-        expect(new URL(page.url()).hash).toBe(HASH);
+        expect(settingsFromLink(page.url()), 'adresa nesie nastavenie, prístup k meraniu nie').toEqual({ ...OWNER, zdroj: null });
         expect(errors).toEqual([]);
     });
 
     // Appka na ploche iPhonu nevidí úložisko Safari - prenesie si len adresu.
-    test('adresa nesie uložené nastavenie aj s kioskom', async ({ page }) => {
+    test('adresa nesie uložené nastavenie, prístup k meraniu nikdy; po obnovení sa neponúka prevziať', async ({ page }) => {
         await openApp(page);
-        expect(settingsFromLink(page.url())).toEqual(OWNER);
+        expect(settingsFromLink(page.url())).toEqual({ ...OWNER, zdroj: null });
+        await page.reload();
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
+        await expect(page.locator('#import-offer')).toBeHidden();
     });
 
     test('bez zadaných panelov je adresa holá', async ({ page }) => {
@@ -3441,7 +3486,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#import-offer')).toBeHidden();
     });
 
-    test('zdieľanie: odkaz nesie nastavenie a kiosk len po zaškrtnutí', async ({ page }) => {
+    test('zdieľanie: odkaz nesie nastavenie a meranie len po zaškrtnutí', async ({ page }) => {
         await openApp(page);
         await page.locator('#nav-nastavenie').click();
         await page.locator('#info-share > summary').click();
@@ -3450,7 +3495,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         expect(await shared()).toBe(APP_URL);
         await expect(page.locator('#share-kiosk-row')).toBeHidden();
         await page.locator('#share-with-settings').check();
-        expect(settingsFromLink(await shared())).toEqual({ ...OWNER, kiosk: '' });
+        expect(settingsFromLink(await shared())).toEqual({ ...OWNER, zdroj: null });
         await expect(page.locator('#share-kiosk-row')).toBeVisible();
         await page.locator('#share-with-kiosk').check();
         expect(settingsFromLink(await shared())).toEqual(OWNER);

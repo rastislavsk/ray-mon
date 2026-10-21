@@ -25,8 +25,9 @@ import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
-const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
-const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: TEST_KIOSK };
+/** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
+const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: TEST_ZDROJ };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 const SLUSNY = voiceTexts('slusny');
 
@@ -290,7 +291,7 @@ test.describe('Zdieľať appku', () => {
         const sNastavenim = shareUrl(OBLOHA_URL, OWNER, false);
         await expect(odkaz).toHaveText(sNastavenim);
         await expect(odkaz).toHaveAttribute('href', sNastavenim);
-        expect(settingsFromLink(sNastavenim)?.kiosk).toBe('');
+        expect(settingsFromLink(sNastavenim)?.zdroj).toBe(null);
         await page.locator('#ns-share-kiosk').check();
         await expect(odkaz).toHaveText(shareUrl(OBLOHA_URL, OWNER, true));
         await page.locator('#ns-share-kiosk').uncheck();
@@ -315,7 +316,7 @@ test.describe('Zdieľať appku', () => {
         await expect(druhy.locator('#import-offer')).toBeVisible();
         await druhy.locator('#import-accept').click();
         await expect(druhy.locator('#import-offer')).toBeHidden();
-        expect(JSON.parse((await ulozene(druhy, SETTINGS_STORAGE_KEY)) || 'null')).toEqual(toUser({ ...OWNER, kiosk: '' }));
+        expect(JSON.parse((await ulozene(druhy, SETTINGS_STORAGE_KEY)) || 'null')).toEqual(toUser({ ...OWNER, zdroj: null }));
         await druhyKontext.close();
         expect(errors).toEqual([]);
         expect(errors2).toEqual([]);

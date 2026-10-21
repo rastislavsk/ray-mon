@@ -7,7 +7,8 @@ import * as flow from '../shared/setup-flow.js';
 import { scheduleRuns, slotsOf } from '../shared/tariff.js';
 
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: KIOSK };
+const ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: ZDROJ };
 const NOW = new Date('2026-09-05T11:00:00Z');
 
 /** Stav sprievodcu pre test: uložená elektráreň (alebo iné `known`) a zmeny navrch.
@@ -21,16 +22,16 @@ function state(patch = {}) {
 /** Použije zmenu na stav, ako setState. @param {import('../shared/setup-flow.js').SetupState} s @param {any} patch */
 const apply = (s, patch) => ({ ...s, ...patch });
 
-test('setupInit: bez polohy začína otázkou na ňu, inak prehľad; kiosk zapne meranie', () => {
+test('setupInit: bez polohy začína otázkou na ňu, inak prehľad; pripojené meranie ho zapne', () => {
     assert.equal(flow.setupInit(emptySettings(), 'nic').setupStep, 'lokalita');
     assert.equal(flow.setupInit(OWNER, 'elektraren').setupStep, null);
     assert.equal(flow.setupInit(OWNER, 'elektraren').setupLive, true);
-    assert.equal(flow.setupInit({ ...OWNER, kiosk: '' }, 'elektraren').setupLive, false);
+    assert.equal(flow.setupInit({ ...OWNER, zdroj: null }, 'elektraren').setupLive, false);
 });
 
-test('setupDraft: bez merania bez kiosku, s celkovým výkonom dopočíta výkon panelu', () => {
+test('setupDraft: bez merania bez pripojenia, s celkovým výkonom dopočíta výkon panelu', () => {
     const s = state({ setupLive: false });
-    assert.equal(flow.setupDraft(s).kiosk, '');
+    assert.equal(flow.setupDraft(s).zdroj, null);
     const kwp = flow.setupDraft(state({ setupKwp: 12 }));
     assert.equal(kwp.plant.panelWp, 500);
     assert.deepEqual(flow.savedSettings(s), OWNER);
@@ -125,8 +126,82 @@ test('pridanie a odstránenie plochy, najviac tri a aspoň jedna', () => {
     assert.equal(flow.deleteRoof(apply(s, del), 0), null);
 });
 
-test('kiosk sa uloží bez medzier', () => {
-    assert.equal(flow.setKiosk(state(), `  ${KIOSK} `).settingsDraft?.kiosk, KIOSK);
+test('meranie: Ďalej z otázky vedie na značku, aj pri úprave z prehľadu; pripojené ide ďalej', () => {
+    const bez = state({ ...flow.setupInit({ ...OWNER, zdroj: null }, 'elektraren'), settingsDraft: { ...OWNER, zdroj: null } });
+    const chce = apply(bez, { setupStep: 'meranie', setupLive: true });
+    assert.deepEqual(flow.nextAction(chce), { type: 'patch', patch: { setupStep: 'znacka' } });
+    assert.deepEqual(flow.nextAction(apply(chce, { setupReturn: 'prehlad' })), { type: 'patch', patch: { setupStep: 'znacka' } });
+    // Bez merania ďalej na tarifu.
+    assert.deepEqual(flow.nextAction(apply(chce, { setupLive: false })), { type: 'patch', patch: { setupStep: 'tarifa', setupRoof: 0 } });
+    // Už pripojené meranie: ďalej, ako keby otázka bola jediná.
+    const ma = state({ setupStep: 'meranie' });
+    assert.deepEqual(flow.nextAction(ma), { type: 'patch', patch: { setupStep: 'tarifa', setupRoof: 0 } });
+    assert.deepEqual(flow.changeZdroj(), { setupStep: 'znacka', setupLive: true });
+    assert.deepEqual(flow.noZdroj(), { setupStep: 'meranie', setupLive: false });
+    // Značku a spôsob človek vyberá ťuknutím, Ďalej tam nie je.
+    assert.equal(flow.nextAction(apply(chce, { setupStep: 'znacka' })), null);
+});
+
+test('meranie: značka s jedným spôsobom rovno formulár, nedostupná vysvetlenie, Späť v rámci merania', () => {
+    const s = state({ setupStep: 'znacka', setupReturn: 'prehlad' });
+    const huawei = flow.pickZnacka(s, 'huawei');
+    assert.equal(huawei?.setupStep, 'pripoj');
+    assert.equal(huawei?.setupSposob, 'huawei-kiosk');
+    assert.equal(huawei?.settingsDraft?.zdroj, null, 'staré meranie z rozpísaného zmizne, Ďalej sa nedá');
+    assert.deepEqual(huawei?.setupUdaje, {});
+    const form = apply(s, huawei);
+    assert.equal(flow.setupReady(form), false);
+    assert.deepEqual(flow.backAction(form), { type: 'back', patch: { setupStep: 'znacka' } });
+    assert.deepEqual(flow.backAction(apply(form, { setupStep: 'znacka' })), { type: 'back', patch: { setupStep: 'meranie' } });
+    assert.deepEqual(flow.pickZnacka(s, 'fronius'), { setupZnacka: 'fronius', setupStep: 'sposob' });
+    assert.deepEqual(flow.backAction(apply(s, { setupStep: 'sposob' })), { type: 'back', patch: { setupStep: 'znacka' } });
+    assert.equal(flow.pickZnacka(s, 'neznama'), null);
+    assert.equal(flow.pickSposob(apply(s, { setupZnacka: 'fronius' }), 'huawei-kiosk'), null, 'spôsob inej značky');
+    assert.equal(flow.pickSposob(apply(s, { setupZnacka: 'huawei' }), 'huawei-kiosk')?.setupStep, 'pripoj');
+});
+
+test('meranie: polia, pripájanie, jedna elektráreň rovno pripojená, z viacerých výber', () => {
+    const form = apply(state(), flow.pickZnacka(state({ setupStep: 'znacka' }), 'huawei'));
+    assert.equal(flow.udajeReady(form), false);
+    assert.equal(flow.udajeReady(apply(form, flow.setPole(form, 'odkaz', 'https://example.com/?kk=Abc123xyz'))), false);
+    const vyplnene = apply(form, flow.setPole(form, 'odkaz', `  ${KIOSK} `));
+    assert.equal(vyplnene.setupUdaje.odkaz, KIOSK, 'bez medzier');
+    assert.equal(flow.udajeReady(vyplnene), true);
+    const bezi = apply(vyplnene, flow.pripojStart());
+    assert.equal(bezi.setupPripoj.status, 'loading');
+    const st = { nazov: 'Dvorany', pecat: ZDROJ.pecat, pv: null };
+    const jedna = apply(bezi, flow.pripojDone(bezi, 'huawei-kiosk', { stanice: [st] }));
+    assert.equal(jedna.setupPripoj.status, 'done');
+    assert.deepEqual(jedna.setupUdaje, {}, 'kľúče a heslá z formulára sa zahodia');
+    assert.deepEqual(jedna.settingsDraft.zdroj, { sposob: 'huawei-kiosk', pecat: ZDROJ.pecat, nazov: 'Dvorany' });
+    assert.equal(flow.setupReady(jedna), true);
+    // Viac elektrární: pripojená je až zvolená.
+    const dve = apply(
+        bezi,
+        flow.pripojDone(bezi, 'huawei-kiosk', { stanice: [st, { ...st, nazov: 'Garáž', pecat: 'v1.ina-pecat-0123456789abc' }] }),
+    );
+    assert.equal(dve.settingsDraft.zdroj, null);
+    assert.equal(apply(dve, flow.pickStanica(dve, 1)).settingsDraft.zdroj?.nazov, 'Garáž');
+    assert.equal(flow.pickStanica(dve, 5), null);
+    // Chyby, prázdny výsledok a výsledok pre iný formulár.
+    assert.deepEqual(flow.pripojDone(bezi, 'huawei-kiosk', { chyba: 'udaje' })?.setupPripoj, {
+        status: 'error',
+        chyba: 'udaje',
+        stanice: [],
+    });
+    assert.equal(flow.pripojDone(bezi, 'huawei-kiosk', { stanice: [] })?.setupPripoj?.chyba, 'vyrobca');
+    assert.equal(flow.pripojDone(bezi, 'iny-sposob', { stanice: [st] }), null);
+    assert.equal(flow.pripojDone(vyplnene, 'huawei-kiosk', { stanice: [st] }), null, 'nič nebežalo');
+    // Iné údaje po pripojení: pripojenie treba spustiť znova.
+    const zmena = apply(jedna, flow.setPole(jedna, 'odkaz', KIOSK + 'x'));
+    assert.equal(zmena.setupPripoj.status, 'idle');
+    assert.equal(zmena.settingsDraft.zdroj, null);
+    // Po pripojení Ďalej: pri úprave z prehľadu uloží, v sprievodcovi na tarifu.
+    assert.equal(flow.nextAction(apply(jedna, { setupStep: 'pripoj', setupReturn: 'prehlad' }))?.type, 'save');
+    assert.deepEqual(flow.nextAction(apply(jedna, { setupStep: 'pripoj', setupReturn: null })), {
+        type: 'patch',
+        patch: { setupStep: 'tarifa', setupRoof: 0 },
+    });
 });
 
 test('typ sadzby: iný typ dá šablónu so starou menou, ten istý nechá úpravy, Neviem je jedna cena', () => {

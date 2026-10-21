@@ -3,10 +3,10 @@
 ## Prehľad
 
 ```
-   Open-Meteo (žiarenie, teplota, oblačnosť)      Huawei FusionSolar kiosk
+   Open-Meteo (žiarenie, teplota, oblačnosť)      výrobca meniča (napr. kiosk FusionSolar)
             │ pre lokalitu z Nastavenia                   │
-            │                                  Cloudflare Worker: POST /pv
-            │                                  shared/kiosk.js → pv
+            │                                  Cloudflare Worker: POST /pripoj, /pv
+            │                                  worker/src/zdroje.js → shared/ → pv
             └──────────────┬──────────────────────────────┘
                            ▼
    Appka: web/data.js (shared/solar.js počíta predpoveď) → setState → render → DOM
@@ -17,11 +17,20 @@ a zostavu panelov ako parameter.** Appka ho volá v prehliadači pre elektráre�
 používateľ zadal v karte Nastavenie (kým zadal len polohu, pre typickú strechu v nej). Tá istá funkcia
 sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliadača aj bez siete.
 
-Živé meranie: kto si v Nastavení vložil odkaz na kiosk FusionSolar, tomu ho appka pošle
-Workeru (`POST /pv`, odkaz v tele) a Worker kiosk stiahne a prevedie na `pv`. Z odkazu
-berie len server a kľúč kiosku (`kioskApiUrl`) a adresu dát si zloží sám, takže nesťahuje
-nič iné než kiosk FusionSolar. Bez odkazu je aj „teraz“ odhad z predpovede. Worker nič
-neukladá a nemá plánované behy.
+Živé meranie: človek v sprievodcovi vyberie značku meniča a spôsob pripojenia
+(`shared/zdroje.js` – dnes kiosk FusionSolar) a vyplní, čo spôsob chce. Appka to pošle Workeru
+(`POST /pripoj`), ten údaje overí u výrobcu a vráti nájdené elektrárne, každú so **zapečateným
+prístupom** (`worker/src/pecat.js`, AES-GCM tajným kľúčom Workera). Appka si uloží len pečať;
+pri meraní ju pošle Workeru (`POST /pv`) a ten ju otvorí, opýta sa výrobcu a vráti `pv`. Telefón
+tak heslo, kľúč ani odkaz na kiosk nedrží v čitateľnej podobe. Worker sa pýta len serverov výrobcu
+(z odkazu na kiosk berie len server a kľúč, `kioskApiUrl`), nič neukladá a nemá plánované behy.
+Bez pripojeného merania je aj „teraz“ odhad z predpovede. Návrh a prečo práve tieto značky:
+`docs/navrhy/meranie-cez-api.html`.
+
+Prístup k meraniu nie je nikdy v adrese (`initUrlMirror`) – adresa končí v histórii, synchronizácii
+prehliadača aj na snímkach. Do zdieľaného odkazu ide len na výslovné zaškrtnutie, a aj vtedy
+zapečatený. Nastavenia spred zapečatenia majú v `pecat` holý odkaz na kiosk; Worker ho pri prvom
+meraní zapečatí a `refresh.js` si novú pečať uloží.
 
 ## Vrstvy
 
@@ -34,6 +43,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `solar.js`       | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.              |
 | `settings.js`    | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                                     |
 | `setup.js`       | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.                  |
+| `zdroje.js`      | Značky meničov a spôsoby pripojenia merania (dáta pre sprievodcu), tvar pripojeného merania v nastavení.             |
 | `kiosk.js`       | Parser odpovede kiosku na formát `pv`.                                                                               |
 | `tariff.js`      | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.                  |
 | `day-plan.js`    | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                          |
@@ -105,10 +115,12 @@ nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`share
 `settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
 Appka ho len ponúkne prevziať (`incoming` v stave). Adresa v prehliadači potom nesie vždy
-uložené nastavenie aj s kioskom (`initUrlMirror` v `web/settings-store.js`), bez zadaných panelov
+uložené nastavenie (`initUrlMirror` v `web/settings-store.js`), bez zadaných panelov
 je holá, a kým čaká ponuka, nesie odkaz. Dôvod je iPhone: appka pridaná na plochu má vlastné
 úložisko, Safari s ňou nezdieľa nič okrem adresy. Pri prvom spustení z plochy tak ponúkne
-nastavenie prevziať namiesto otázky na polohu. Z toho istého dôvodu manifest nemá `start_url` – bez
+nastavenie prevziať namiesto otázky na polohu. Prístup k živému meraniu adresa nenesie, takže
+appka z plochy ho pripojí ešte raz; odkaz bez merania sa pritom s uloženým nastavením porovnáva
+bez neho (`incomingSettings`), inak by appka po každom otvorení ponúkala prevziať samú seba. Z toho istého dôvodu manifest nemá `start_url` – bez
 neho sa appka spúšťa z adresy, z ktorej ju človek pridal, aj s časťou za mriežkou.
 `history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
@@ -143,7 +155,7 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 (udalosť → `setState` → `render`), takže render funkcie nemusia nič merať a ostávajú
 čisté.
 
-**`worker/`** je tenký: over odkaz, stiahni kiosk (s opakovaním pri prechodnej chybe, `worker/src/http.js`), zavolaj `shared/`, vráť JSON.
+**`worker/`** je tenký: otvor pečať (`pecat.js`), opýtaj sa výrobcu (`zdroje.js`, s opakovaním pri prechodnej chybe, `http.js`), zavolaj `shared/`, vráť JSON.
 
 ## Dve appky: súčasná a „Živá obloha“
 
@@ -160,12 +172,12 @@ ten istý súbor:
 - **`shared/`** celé. Zmena výpočtu sa prejaví v oboch appkách naraz. Zoznam kariet `PANELS` je
   v `config.js`, kódové názvy sú v oboch rovnaké (karta Terazky sa v novej volá Teraz, kód
   ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
-- **Worker** – ten istý endpoint, nová appka posiela kiosk rovnako (`web/data.js`).
+- **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
   (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`, `pocasie-v1`). Číta a zapisuje ho
   ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
   z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
-  (najviac `WEATHER_KEEP_MS` staré, meranie z kiosku sa neodkladá).
+  (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
   hodiny), `gesture.js` (rozpoznanie ťahu do strán), `nav-history.js` (kroky navigácie

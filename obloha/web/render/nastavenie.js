@@ -100,7 +100,7 @@ function renderAppSheets(state, dom) {
         show(dom.nsShareOpts, state.known === 'elektraren');
         dom.nsShareSettings.checked = state.shareSettings;
         dom.nsShareKiosk.checked = state.shareKiosk;
-        show(dom.nsShareKioskRow, state.shareSettings && !!state.kiosk);
+        show(dom.nsShareKioskRow, state.shareSettings && !!state.zdroj);
         const url = currentShareUrl(state);
         dom.nsShareLink.href = url;
         setText(dom.nsShareLink, url);

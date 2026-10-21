@@ -57,7 +57,7 @@ test('monthCount: všetky v mesiaci a z nich na slnku', () => {
 
 test('mozemModel so zápismi: beží, tlačidlo zapísané a mesačný riadok', () => {
     const { pv, forecast } = fixtureData(FIXED_NOW);
-    const input = { now: FIXED_NOW, site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '', loading: false, pv, forecast };
+    const input = { now: FIXED_NOW, site: SITE, plant: PLANT, tariff: TARIFF, zdroj: null, loading: false, pv, forecast };
     const bez = mozemModel(input);
     const pr = bez.items.find((i) => i.id === 'pracka');
     assert.deepEqual(pr?.log, { sun: true, pressed: false, label: 'Pustil/a som' });
@@ -78,7 +78,7 @@ test('mozemModel so zápismi: beží, tlačidlo zapísané a mesačný riadok', 
 test('mozemModel: keď appka radí počkať, tlačidlo je „aj tak“ a nie na slnku', () => {
     const now = new Date('2026-09-05T05:30:00+02:00');
     const { pv, forecast } = fixtureData(now);
-    const m = mozemModel({ now, site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '', loading: false, pv, forecast });
+    const m = mozemModel({ now, site: SITE, plant: PLANT, tariff: TARIFF, zdroj: null, loading: false, pv, forecast });
     const pr = m.items.find((i) => i.id === 'pracka');
     assert.deepEqual(pr?.log, { sun: false, pressed: false, label: 'Pustil/a som aj tak' });
     assert.equal(m.items.find((i) => i.id === 'auto')?.log?.label, 'Zapojil/a som aj tak');

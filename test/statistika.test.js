@@ -31,7 +31,7 @@ const BASE = {
     site: SITE,
     plant: PLANT,
     tariff: PRICED,
-    kiosk: 'kiosk',
+    zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
     known: /** @type {import('../shared/settings.js').Known} */ ('elektraren'),
     loading: false,
     pv,
@@ -40,7 +40,7 @@ const BASE = {
     dayLog: LOG,
 };
 /** Bez kiosku: meranie nie je, dnešok z predpovede, ostatné z denníka. */
-const NO_KIOSK = { ...BASE, kiosk: '', pv: null };
+const NO_KIOSK = { ...BASE, zdroj: null, pv: null };
 
 test('sunRuns: len daná vec, len na slnku, len v dňoch obdobia', () => {
     const list = [

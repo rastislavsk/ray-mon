@@ -18,8 +18,8 @@ export function updatedLine(state) {
     if (!state.pv && !state.forecast) return none('dáta nedostupné');
     if (state.known !== 'elektraren')
         return state.panel === 'nastavenie' ? none('panely nie sú zadané') : { ...none('nastav panely ›'), go: true };
-    // Kto si zadal kiosk, tomu meranie chýba; ostatní ho ani nečakajú a vidia odhad.
-    if (!state.pv) return none(state.kiosk ? 'živý výkon nedostupný' : 'odhad z predpovede');
+    // Kto si pripojil meranie, tomu chýba; ostatní ho ani nečakajú a vidia odhad.
+    if (!state.pv) return none(state.zdroj ? 'živý výkon nedostupný' : 'odhad z predpovede');
     const { label, time, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
     return { time, text: stale ? `${label} · zastarané` : label };
 }

@@ -53,7 +53,7 @@ function renderZdielat(state, dom) {
     dom.shareOptions.classList.toggle('hidden', state.known !== 'elektraren');
     dom.shareWithSettings.checked = state.shareSettings;
     dom.shareWithKiosk.checked = state.shareKiosk;
-    dom.shareKioskRow.classList.toggle('hidden', !state.shareSettings || !state.kiosk);
+    dom.shareKioskRow.classList.toggle('hidden', !state.shareSettings || !state.zdroj);
 
     const url = currentShareUrl(state);
     dom.shareWhatsapp.href = `https://wa.me/?text=${encodeURIComponent(url)}`;

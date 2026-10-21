@@ -1,7 +1,7 @@
 // Poslucháče sprievodcu nastavením, spoločné pre obe appky. Obrazovky sprievodcu majú v oboch
 // appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód; čo tlačidlo urobí,
 // je v shared/setup-flow.js. Tu je len to, čo čistá funkcia nevie: pole formulára, prst na
-// kruhu tarify, vyhľadávanie polohy a uloženie do prehliadača.
+// kruhu tarify, vyhľadávanie polohy, pripojenie merania a uloženie do prehliadača.
 //
 // Modul je neutrálny (pravidlo v CLAUDE.md): nesiaha na stav ani DOM žiadnej z appiek, všetko
 // dostane od volajúceho - súčasná appka vo web/setup-interactions.js, nová v obloha/web/.
@@ -10,7 +10,7 @@ import { RING, minutesFromAngle } from '../shared/chart-model.js';
 import { SEARCH_DEBOUNCE_MS, TARIFF_LIMITS } from '../shared/config.js';
 import { checkSettings, typicalSettings } from '../shared/settings.js';
 import * as flow from '../shared/setup-flow.js';
-import { searchPlaces } from './data.js';
+import { pripojZdroj, searchPlaces } from './data.js';
 import { saveSettings, saveSite } from './storage.js';
 
 /** @typedef {import('../shared/setup-flow.js').SetupState} SetupState */
@@ -28,7 +28,7 @@ import { saveSettings, saveSite } from './storage.js';
  * nemení (render píše len do jeho `<g>`), takže drží zachytený prst celý ťah.
  * @typedef {{ root: HTMLElement, wzLink: HTMLInputElement, wzPlace: HTMLInputElement, wzLat: HTMLInputElement,
  *   wzLon: HTMLInputElement, wzWp: HTMLInputElement, wzKwp: HTMLInputElement, wzTilt: HTMLInputElement,
- *   wzPanels: HTMLInputElement, wzAc: HTMLInputElement, wzKiosk: HTMLInputElement, wzIvalFrom: HTMLSelectElement,
+ *   wzPanels: HTMLInputElement, wzAc: HTMLInputElement, wzIvalFrom: HTMLSelectElement,
  *   wzIvalTo: HTMLSelectElement, wzIvalBand: HTMLSelectElement, wzCompass: HTMLElement, wzTariffRing: Element }} SetupFields
  */
 
@@ -50,7 +50,7 @@ function switchPlant(store, next, known, refresh, extra) {
         site: next.site,
         plant: next.plant,
         tariff: next.tariff,
-        kiosk: next.kiosk,
+        zdroj: next.zdroj,
         known,
         pv: null,
         forecast: null,
@@ -78,7 +78,7 @@ export function applySettings(store, next, refresh, extra = {}) {
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
-        setupLive: !!next.kiosk,
+        setupLive: !!next.zdroj,
         ...extra,
     });
 }
@@ -124,6 +124,38 @@ function placeSearch(store) {
         }, SEARCH_DEBOUNCE_MS);
     };
 }
+
+/**
+ * Pripojenie merania: údaje z formulára overí Worker. Výsledok patrí spôsobu, pre ktorý
+ * pripájanie bežalo - keď človek medzitým zmenil spôsob, pripojDone ho zahodí.
+ * @param {SetupStore} store
+ */
+async function pripoj(store) {
+    const s = store.get();
+    if (s.setupPripoj.status === 'loading' || !flow.udajeReady(s)) return;
+    const sposob = s.setupSposob;
+    store.setState(flow.pripojStart());
+    const res = await pripojZdroj(sposob, s.setupUdaje);
+    const patch = flow.pripojDone(store.get(), sposob, res);
+    if (patch) store.setState(patch);
+}
+
+/** Správa pre inštalatéra či podporu do schránky; tlačidlo na chvíľu povie, že sa podarilo.
+ * @param {HTMLElement} btn */
+function copyMessage(btn) {
+    const text = btn.dataset.setupCopy || '';
+    const label = btn.textContent;
+    navigator.clipboard
+        ?.writeText(text)
+        .then(() => {
+            btn.textContent = 'Skopírované';
+            setTimeout(() => (btn.textContent = label), COPY_DONE_MS);
+        })
+        .catch(() => {});
+}
+
+/** Ako dlho tlačidlo po skopírovaní hovorí „Skopírované“ (ms). */
+const COPY_DONE_MS = 2000;
 
 /** Kam až od stredu oblúka (RING.rDay) prst maľuje, v jednotkách viewBoxu: dovnútra cez popisy
  * hodín, von cez rysky - prst netreba trafiť presne do tenkého oblúka. */
@@ -208,6 +240,13 @@ function clickActions(store, app, f) {
         ['[data-setup-roof-del]', (el, s) => flow.deleteRoof(s, num(el.dataset.setupRoofDel))],
         ['#wz-roof-add', (_, s) => flow.addRoof(s)],
         ['[data-setup-live]', (el) => ({ setupLive: el.dataset.setupLive === 'yes' })],
+        ['[data-setup-znacka]', (el, s) => flow.pickZnacka(s, el.dataset.setupZnacka || '')],
+        ['[data-setup-sposob]', (el, s) => flow.pickSposob(s, el.dataset.setupSposob || '')],
+        ['[data-setup-stanica]', (el, s) => flow.pickStanica(s, num(el.dataset.setupStanica))],
+        ['[data-setup-zmen]', () => flow.changeZdroj()],
+        ['[data-setup-odhad]', () => flow.noZdroj()],
+        ['[data-setup-copy]', (el) => copyMessage(el)],
+        ['#wz-pripojit', () => void pripoj(store)],
         ['[data-setup-kind]', (el, s) => flow.pickKind(s, el.dataset.setupKind || '')],
         [
             '[data-setup-level]',
@@ -254,16 +293,16 @@ function inputActions(f, search) {
         [f.wzTilt, (t, s) => flow.setTilt(s, Number(t.value), false)],
         [f.wzPanels, (t, s) => flow.setPanels(s, numberOf(t))],
         [f.wzAc, (t, s) => flow.typeAc(s, numberOf(t))],
-        [f.wzKiosk, (t, s) => flow.setKiosk(s, t.value)],
     ];
     return new Map(pairs);
 }
 
 /**
- * Písanie mena pásma alebo ceny. Polia vznikajú v renderi, preto sa rozlišujú podľa data-
- * atribútu, nie podľa prvku. @param {HTMLInputElement} t @param {SetupState} s @returns {SetupPatch | null}
+ * Písanie mena pásma, ceny, alebo do poľa pripojenia merania. Polia vznikajú v renderi, preto sa
+ * rozlišujú podľa data- atribútu, nie podľa prvku. @param {HTMLInputElement} t @param {SetupState} s @returns {SetupPatch | null}
  */
 function tariffInput(t, s) {
+    if (t.dataset.setupPole) return flow.setPole(s, t.dataset.setupPole, t.value);
     if (t.dataset.setupBandName) return flow.setBandName(s, t.dataset.setupBandName, t.value);
     if (t.dataset.setupPrice) return flow.setBandPrice(s, t.dataset.setupPrice, numberOf(t));
     return null;

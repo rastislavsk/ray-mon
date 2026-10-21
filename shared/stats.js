@@ -94,7 +94,7 @@ function sumMaps(maps) {
 }
 
 /**
- * @typedef {{ now: Date, site: import('./config.js').Site, tariff: Tariff, kiosk: string, loading: boolean,
+ * @typedef {{ now: Date, site: import('./config.js').Site, tariff: Tariff, zdroj: unknown, loading: boolean,
  *   pv: import('./kiosk.js').PvData | null, forecast: import('./solar.js').Forecast | null }} StatsInput
  * @typedef {{ period: StatsPeriod, label: string, heading: string, kwh: number | null, value: number | null, perDay: number | null }} StatsEntry
  */
@@ -170,13 +170,13 @@ function entries(pv, today, price) {
 
 /**
  * Čo karta môže ukázať: `live` súčty z kiosku, `loading` prvé sťahovanie ešte beží, `offline`
- * kiosk je zadaný, ale neodpovedá, `none` bez kiosku (vrátane appky bez zadaných panelov).
+ * meranie je pripojené, ale neodpovedá, `none` bez merania (vrátane appky bez zadaných panelov).
  * @param {StatsInput} input @returns {'live' | 'loading' | 'offline' | 'none'}
  */
-function statusOf({ pv, loading, kiosk }) {
+function statusOf({ pv, loading, zdroj }) {
     if (pv) return 'live';
     if (loading) return 'loading';
-    return kiosk ? 'offline' : 'none';
+    return zdroj ? 'offline' : 'none';
 }
 
 /**

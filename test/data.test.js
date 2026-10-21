@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     geocodeUrl,
     openMeteoUrl,
@@ -11,7 +12,7 @@ import {
     WEATHER_KEEP_MS,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
-import { loadData, searchPlaces } from '../web/data.js';
+import { loadData, pripojZdroj, searchPlaces } from '../web/data.js';
 import { FIXED_NOW, fixture, fixtureData } from './helpers.js';
 
 /** Iná elektráreň než Dvorany - na overenie, že sa sťahuje pre ňu. */
@@ -39,19 +40,19 @@ function fakeFetch(routes) {
     return { impl, calls };
 }
 
-test('bez kiosku: Worker sa ani nevolá, predpoveď je počítaná v prehliadači', async () => {
+test('bez merania: Worker sa ani nevolá, predpoveď je počítaná v prehliadači', async () => {
     const f = fakeFetch({ [openMeteoUrl(SITE)]: weatherJson });
-    const r = await loadData({ site: SITE, plant: PLANT, kiosk: '' }, FIXED_NOW, f.impl);
+    const r = await loadData({ site: SITE, plant: PLANT, zdroj: null }, FIXED_NOW, f.impl);
     assert.deepEqual(f.calls, [openMeteoUrl(SITE)]);
     assert.equal(r.pv, null);
-    assert.equal(r.pvFailed, false, 'bez kiosku meranie nie je, ale nezlyhalo');
+    assert.equal(r.pvFailed, false, 'bez pripojenia meranie nie je, ale nezlyhalo');
     assert.deepEqual(r.forecast, fixtureData().forecast);
 });
 
 test('iná lokalita: predpoveď je pre jej zostavu', async () => {
     const later = new Date(FIXED_NOW.getTime() + 2 * WEATHER_CACHE_MS);
     const f = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: weatherJson });
-    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk: '' }, later, f.impl);
+    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, zdroj: null }, later, f.impl);
     assert.deepEqual(f.calls, [openMeteoUrl(OTHER_SITE)]);
     assert.equal(r.pv, null);
     assert.ok(r.forecast && r.forecast.days.length === 7);
@@ -60,7 +61,7 @@ test('iná lokalita: predpoveď je pre jej zostavu', async () => {
 
 test('počasie sa drží v pamäti; pri výpadku ostáva staré, pri zlých dátach predpoveď nie je', async () => {
     const t0 = new Date(FIXED_NOW.getTime() + 10 * WEATHER_CACHE_MS);
-    const settings = { site: SITE, plant: PLANT, kiosk: '' };
+    const settings = { site: SITE, plant: PLANT, zdroj: null };
     const first = fakeFetch({ [openMeteoUrl(SITE)]: weatherJson });
     await loadData(settings, t0, first.impl);
     const again = fakeFetch({});
@@ -75,7 +76,7 @@ test('počasie sa drží v pamäti; pri výpadku ostáva staré, pri zlých dát
     // Nezmyselná odpoveď: predpoveď nie je, appka nespadne.
     const broken = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: { hourly: { time: 'x' } } });
     const r = await loadData(
-        { site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk: '' },
+        { site: OTHER_SITE, plant: TYPICAL_PLANT, zdroj: null },
         new Date(t0.getTime() + 5 * WEATHER_CACHE_MS),
         broken.impl,
     );
@@ -97,7 +98,7 @@ test('počasie sa odkladá v prehliadači: po otvorení je predpoveď hneď, bez
         removeItem: (/** @type {string} */ k) => saved.delete(k),
     };
     try {
-        const settings = { site: SITE, plant: PLANT, kiosk: '' };
+        const settings = { site: SITE, plant: PLANT, zdroj: null };
         const prve = await openApp('prve');
         assert.equal(prve.keptForecast(settings, FIXED_NOW), null, 'prvé otvorenie nemá nič odložené');
         await prve.loadData(settings, FIXED_NOW, fakeFetch({ [openMeteoUrl(SITE)]: weatherJson }).impl);
@@ -144,43 +145,81 @@ test('searchPlaces vráti lokality, pri chybe hádže', async () => {
     await assert.rejects(searchPlaces('Nitra', fakeFetch({}).impl));
 });
 
-test('vlastný kiosk: odkaz ide Workeru v tele POST, cron Workera sa nepýta', async () => {
+test('pripojené meranie: zapečatený prístup ide Workeru v tele POST, nová pečať sa vráti', async () => {
+    const zdroj = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
     const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+    const nova = 'v1.NovaPecatOdWorkera0123456789';
     /** @type {Array<{ url: string, init: any }>} */ const calls = [];
     const impl = /** @type {typeof fetch} */ (
         /** @type {unknown} */ (
             async (/** @type {string} */ url, /** @type {any} */ init) => {
                 calls.push({ url, init });
-                if (url === WORKER_PV_URL) return { ok: true, status: 200, json: async () => ({ pv }) };
+                if (url === WORKER_PV_URL) return { ok: true, status: 200, json: async () => ({ pv, pecat: nova }) };
                 return { ok: true, status: 200, json: async () => weatherJson };
             }
         )
     );
-    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk }, FIXED_NOW, impl);
+    const r = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, zdroj }, FIXED_NOW, impl);
     assert.deepEqual(r.pv, pv);
+    assert.equal(r.pecat, nova);
     const post = calls.find((c) => c.url === WORKER_PV_URL);
     assert.ok(post);
     assert.equal(post.init.method, 'POST');
-    assert.equal(post.init.body, kiosk);
+    assert.equal(post.init.body, zdroj.pecat);
+    // Nastavenie spred zapečatenia: holý odkaz na kiosk ide tou istou cestou.
+    calls.length = 0;
+    await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, zdroj: { ...zdroj, pecat: kiosk } }, FIXED_NOW, impl);
+    assert.equal(calls.find((c) => c.url === WORKER_PV_URL)?.init.body, kiosk);
+    assert.ok(!calls.some((c) => c.url.includes('Abc123xyz')), 'odkaz nie je v žiadnej adrese');
     // Každá požiadavka má časový limit - zaseknuté spojenie nesmie čakať donekonečna.
     assert.ok(
         calls.every((c) => c.init.signal instanceof AbortSignal),
         'požiadavka bez časového limitu',
     );
     assert.equal(r.pvFailed, false);
-    assert.ok(!calls.some((c) => c.url.includes('Abc123xyz')), 'odkaz nie je v žiadnej adrese');
 
     const down = fakeFetch({ [openMeteoUrl(OTHER_SITE)]: weatherJson });
-    const failed = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, kiosk }, FIXED_NOW, down.impl);
+    const failed = await loadData({ site: OTHER_SITE, plant: TYPICAL_PLANT, zdroj }, FIXED_NOW, down.impl);
     assert.equal(failed.pv, null);
-    assert.equal(failed.pvFailed, true, 'výpadok kiosku sa odlíši od chýbajúceho kiosku');
-    assert.ok(failed.forecast, 'výpadok kiosku predpoveď nezhodí');
+    assert.equal(failed.pecat, null);
+    assert.equal(failed.pvFailed, true, 'výpadok merania sa odlíši od chýbajúceho merania');
+    assert.ok(failed.forecast, 'výpadok merania predpoveď nezhodí');
 });
 
-test('kiosk vráti nezmysel: meranie nie je, predpoveď áno', async () => {
-    const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+test('meranie vráti nezmysel: meranie nie je, predpoveď áno; nezmyselná pečať sa zahodí', async () => {
+    const zdroj = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
     const f = fakeFetch({ [WORKER_PV_URL]: { pv: { nezmysel: 1 } }, [openMeteoUrl(SITE)]: weatherJson });
-    const r = await loadData({ site: SITE, plant: PLANT, kiosk }, FIXED_NOW, f.impl);
+    const r = await loadData({ site: SITE, plant: PLANT, zdroj }, FIXED_NOW, f.impl);
     assert.equal(r.pv, null);
     assert.ok(r.forecast);
+    const g = fakeFetch({ [WORKER_PV_URL]: { pv, pecat: 'https://example.com' }, [openMeteoUrl(SITE)]: weatherJson });
+    assert.equal((await loadData({ site: SITE, plant: PLANT, zdroj }, FIXED_NOW, g.impl)).pecat, null);
+});
+
+test('pripojZdroj: údaje idú Workeru v tele, odpoveď sa preverí, chyby majú druh', async () => {
+    /** @param {number} status @param {unknown} body */
+    const worker = (status, body) => {
+        /** @type {any[]} */ const calls = [];
+        const impl = /** @type {typeof fetch} */ (
+            /** @type {unknown} */ (
+                async (/** @type {string} */ url, /** @type {any} */ init) => {
+                    calls.push({ url, init });
+                    return { ok: status < 300, status, json: async () => body };
+                }
+            )
+        );
+        return { impl, calls };
+    };
+    const st = { nazov: 'Dvorany', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', pv };
+    const ok = worker(200, { stanice: [st, { nazov: 1, pecat: 'zla' }, { nazov: 'Bez merania', pecat: st.pecat, pv: { x: 1 } }] });
+    const r = await pripojZdroj('huawei-kiosk', { odkaz: 'https://k' }, ok.impl);
+    assert.deepEqual(r, { stanice: [st, { nazov: 'Bez merania', pecat: st.pecat, pv: null }] });
+    assert.equal(ok.calls[0].url, WORKER_PRIPOJ_URL);
+    assert.equal(ok.calls[0].init.method, 'POST');
+    assert.deepEqual(JSON.parse(ok.calls[0].init.body), { sposob: 'huawei-kiosk', udaje: { odkaz: 'https://k' } });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje' }).impl), { chyba: 'udaje' });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(502, { chyba: 'vyrobca' }).impl), { chyba: 'vyrobca' });
+    assert.deepEqual(await pripojZdroj('x', {}, worker(503, { chyba: 'server' }).impl), { chyba: 'server' });
+    const padne = /** @type {typeof fetch} */ (/** @type {unknown} */ (async () => Promise.reject(new TypeError('siet'))));
+    assert.deepEqual(await pripojZdroj('x', {}, padne), { chyba: 'server' });
 });

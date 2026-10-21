@@ -9,7 +9,8 @@ import * as T from '../shared/setup-texts.js';
 import { fixtureData, FIXED_NOW } from './helpers.js';
 
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
-const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: KIOSK };
+const ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: ZDROJ };
 
 /** @param {any} [patch] @returns {any} */
 function state(patch = {}) {
@@ -104,9 +105,9 @@ test('poloha a odkaz: východ a západ slnka, čo je v odkaze, ponuka prevziať'
         kwp: '10,44 kWp',
         meta: '2 plochy (juh, východ) · 24 panelov · menič 10 kW · so živým meraním',
     });
-    assert.match(T.linkPreview({ ...OWNER, kiosk: '', plant: { ...PLANT, strings: [PLANT.strings[0]] } }).meta, /^1 plocha \(juh\)/);
+    assert.match(T.linkPreview({ ...OWNER, zdroj: null, plant: { ...PLANT, strings: [PLANT.strings[0]] } }).meta, /^1 plocha \(juh\)/);
     assert.equal(T.importOfferText(OWNER, 'nic'), 'Dvorany nad Nitrou · 10,44 kWp · so živým meraním.');
-    assert.match(T.importOfferText({ ...OWNER, kiosk: '' }, 'elektraren'), /kWp\. Nahradí tvoje doterajšie nastavenie\.$/);
+    assert.match(T.importOfferText({ ...OWNER, zdroj: null }, 'elektraren'), /kWp\. Nahradí tvoje doterajšie nastavenie\.$/);
 });
 
 test('tarifa: mená rozvrhov, hodiny pásiem, šablóny a kontrola cien', () => {
@@ -172,7 +173,7 @@ test('karta elektrárne a riadky zhrnutia', () => {
     assert.equal(rows[1].guess, true);
     assert.equal(rows[4].guess, true);
     assert.equal(rows[6].extra, 'bez cien');
-    const kwp = T.summaryRows({ ...emptySettings(), kiosk: '' }, state({ setupKwp: 5 }));
+    const kwp = T.summaryRows({ ...emptySettings(), zdroj: null }, state({ setupKwp: 5 }));
     assert.deepEqual([kwp[1].extra, kwp[1].guess, kwp[1].value, kwp[2].extra], ['dopočítané z 5,00 kWp', false, '–', '–']);
     assert.equal(kwp[0].value, '–');
 });
@@ -195,11 +196,11 @@ test('prehľad novej appky: výzva len bez panelov, riadky a karta strechy', () 
         [
             ['Poloha', SITE.name, 'lokalita', false],
             ['Panely', '2 plochy · 435 Wp', 'panel', false],
-            ['Živé meranie', 'pripojené · 13:00', 'meranie', false],
+            ['Živé meranie', 'Huawei · pripojené · 13:00', 'meranie', false],
             ['Tarifa', '2 pásma · lacno 20 h', 'tarifa', false],
         ],
     );
-    assert.equal(nastavenieRows(state({ kiosk: '' }))[2].value, 'bez merania, odhad z predpovede');
+    assert.equal(nastavenieRows(state({ zdroj: null }))[2].value, 'bez merania, odhad z predpovede');
     const poloha = nastavenieModel(state({ known: 'poloha' }));
     assert.equal(poloha.hero, null);
     assert.deepEqual(

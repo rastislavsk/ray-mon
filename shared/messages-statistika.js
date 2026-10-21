@@ -44,14 +44,14 @@ export const STATISTIKA_TEXTS = {
     pricesBtn: 'Doplniť ceny',
     measureTitle: 'Pripoj živé meranie',
     measureText:
-        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar - zadaj odkaz naň v Nastavení.',
+        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič, keď ho pripojíš v Nastavení.',
     measureBtn: 'Pripojiť meranie',
     measureOff:
-        'Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa kiosk ozve.',
+        'Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa menič ozve.',
     setupSub: 'zatiaľ nemám čo počítať',
     setupTitle: 'Prázdna strecha, prázdna štatistika',
     setupText:
-        'Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne aj odkaz na kiosk pre naozaj namerané čísla.',
+        'Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne pripoj aj menič pre naozaj namerané čísla.',
     setupBtn: 'Nastaviť panely',
     laterTitle: 'Keď ich zadáš, uvidíš',
     laterText:
@@ -80,10 +80,10 @@ const STATISTIKA_TEXTS_SLUSNE = {
     pricesText: 'Uvidíte, akú hodnotu má vyrobená elektrina v peniazoch.',
     measureTitle: 'Pripojte živé meranie',
     measureText:
-        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar - zadajte odkaz naň v Nastavení.',
+        'Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič, keď ho pripojíte v Nastavení.',
     setupTitle: 'Štatistika potrebuje vaše panely',
     setupText:
-        'Bez panelov neviem, koľko ste vyrobili za deň, mesiac ani rok. Zadajte ich a prípadne aj odkaz na kiosk pre naozaj namerané čísla.',
+        'Bez panelov neviem, koľko ste vyrobili za deň, mesiac ani rok. Zadajte ich a prípadne pripojte aj menič pre naozaj namerané čísla.',
     laterTitle: 'Keď ich zadáte, uvidíte',
     askTitle: 'Kde máte strechu?',
     askText: 'Bez polohy neviem, kde je vaša strecha, ani koľko vyrobila. Zadajte ju v Nastavení a začnem počítať.',

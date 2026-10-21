@@ -1815,6 +1815,45 @@ button:focus-visible {
 .opt[aria-pressed='true']:focus-visible {
     outline-offset: 3px;
 }
+/* Značka, ktorá sa pripojiť nedá: tlmená, ťuknutie povie prečo. */
+.opt[data-off] b {
+    color: var(--dim);
+}
+/* Štítky pri spôsobe pripojenia: kto ho urobí, ako dlho; zelený hovorí, prečo je prvý. */
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.opt .tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.opt .tag.top {
+    background: var(--yes);
+    color: var(--ink);
+}
+/* Správa pre inštalatéra či podporu: text tak, ako sa skopíruje. */
+.wz-letter {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+}
+.wz .lnk {
+    justify-self: start;
+    margin: 0;
+}
+.wz-note {
+    margin: 0;
+}
 .opt:disabled {
     opacity: 0.5;
     cursor: default;

@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Meranie cez API</title>
+        <style>
+            /* Návrh: živé meranie z ktoréhokoľvek spôsobu, ktorý výrobca meniča ponúka (kiosk, kľúč,
+               prihlásenie, účet od inštalatéra, …). Klikací telefón v štýle novej appky
+               (obloha/style.css, mierka 375 px), vedľa neho rozhodnutia. Údaje sú vzorové. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --yes: #b9f28c;
+                --cheap-text: #b0dbff;
+                --costly-text: #ffc4ba;
+                --ink: #0b1430;
+                --glass: rgba(8, 16, 40, 0.3);
+                --bar: rgba(6, 10, 28, 0.72);
+                --dim: rgba(255, 255, 255, 0.82);
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #0d1530;
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.45;
+            }
+            button,
+            input,
+            textarea {
+                font: inherit;
+                color: inherit;
+            }
+            .page {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 40px;
+                justify-content: center;
+                align-items: flex-start;
+                padding: 32px 16px 64px;
+            }
+            .phone {
+                position: relative;
+                flex: 0 0 375px;
+                max-width: 100%;
+                height: 812px;
+                border-radius: 44px;
+                border: 10px solid #000;
+                overflow: hidden;
+                background: linear-gradient(180deg, #2f6fd0 0%, #4f8fe0 55%, #3a6cc0 100%);
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            }
+            .scr {
+                position: absolute;
+                inset: 0 0 64px;
+                overflow-y: auto;
+                padding: 0 0 24px;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 14px 20px 0;
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+            .crumb {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 14px 20px 0;
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .x {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 0;
+                background: rgba(255, 255, 255, 0.18);
+                font-size: 1.1rem;
+                cursor: pointer;
+            }
+            h1 {
+                margin: 14px 20px 8px;
+                font-size: 2.05rem;
+                font-weight: 800;
+                font-stretch: 112%;
+                line-height: 1.08;
+            }
+            .lead {
+                margin: 0 20px 16px;
+                font-size: 0.9375rem;
+            }
+            .stack {
+                display: grid;
+                gap: 10px;
+                margin: 0 14px;
+            }
+            .opt {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 2px 10px;
+                width: 100%;
+                min-height: 56px;
+                padding: 12px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 18px;
+                background: var(--glass);
+                text-align: left;
+                cursor: pointer;
+            }
+            .opt b {
+                font-size: 1rem;
+            }
+            .opt span {
+                grid-column: 1;
+                font-size: 0.8438rem;
+                color: var(--dim);
+            }
+            .opt i {
+                grid-column: 2;
+                grid-row: 1 / 4;
+                align-self: center;
+                font-style: normal;
+                font-size: 1.2rem;
+                opacity: 0.7;
+            }
+            .opt.off b {
+                color: var(--dim);
+            }
+            .opt[aria-pressed='true'] {
+                background: #fff;
+                border-color: #fff;
+                color: var(--ink);
+            }
+            .opt[aria-pressed='true'] span {
+                color: #2b3550;
+            }
+            .tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .tag {
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.14);
+                font-size: 0.75rem;
+                font-weight: 700;
+            }
+            .tag.top {
+                background: var(--yes);
+                color: var(--ink);
+            }
+            .glass {
+                display: grid;
+                gap: 8px;
+                padding: 14px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+                font-size: 0.9063rem;
+            }
+            .glass-ttl {
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .howto {
+                margin: 0;
+                padding: 14px 16px 14px 34px;
+            }
+            .howto li + li {
+                margin-top: 4px;
+            }
+            .flbl {
+                margin: 6px 4px -4px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+            }
+            .fld {
+                width: 100%;
+                min-height: 48px;
+                padding: 12px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.12);
+            }
+            .letter {
+                white-space: pre-wrap;
+                font-size: 0.875rem;
+                padding: 12px 14px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .msg {
+                margin: 0 4px;
+                font-size: 0.8438rem;
+                color: var(--dim);
+            }
+            .msg.err {
+                color: var(--costly-text);
+                font-weight: 600;
+            }
+            .row {
+                display: flex;
+                gap: 10px;
+                margin: 18px 14px 0;
+            }
+            .pbtn {
+                flex: 1;
+                min-height: 48px;
+                padding: 11px 16px;
+                border: 0;
+                border-radius: 14px;
+                background: #fff;
+                color: var(--ink);
+                font-weight: 800;
+                cursor: pointer;
+            }
+            .pbtn.ghost {
+                background: var(--glass);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+                color: #fff;
+            }
+            .pbtn.small {
+                flex: none;
+                justify-self: start;
+                min-height: 40px;
+                font-size: 0.875rem;
+            }
+            .linkbtn {
+                margin: 14px 20px 0;
+                padding: 0;
+                border: 0;
+                background: none;
+                font-weight: 700;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                cursor: pointer;
+                text-align: left;
+            }
+            .ok {
+                border-color: rgba(185, 242, 140, 0.6);
+            }
+            .ok .big {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            .ok .big::before {
+                content: '';
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--yes);
+                flex: none;
+                transform: translateY(-1px);
+            }
+            .kv {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.9375rem;
+            }
+            .kv b {
+                font-size: 1.1rem;
+            }
+            .spin {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255, 255, 255, 0.4);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: s 0.8s linear infinite;
+                vertical-align: -2px;
+                margin-right: 6px;
+            }
+            @keyframes s {
+                to {
+                    transform: rotate(1turn);
+                }
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 64px;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                background: var(--bar);
+                font-size: 0.7rem;
+                font-weight: 700;
+            }
+            .nav .on {
+                color: var(--yes);
+            }
+            .sumrow {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+            }
+            .sumrow:first-of-type {
+                border-top: 0;
+            }
+            .sumrow small {
+                display: block;
+                color: var(--dim);
+                font-size: 0.8438rem;
+            }
+            /* Text vedľa telefónu */
+            .doc {
+                flex: 1 1 460px;
+                max-width: 720px;
+                font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+                font-size: 15px;
+                color: #dfe6f5;
+            }
+            .doc h2 {
+                margin: 32px 0 8px;
+                font-family: var(--font);
+                font-size: 1.3rem;
+                color: #fff;
+            }
+            .doc h2:first-child {
+                margin-top: 0;
+            }
+            .doc h3 {
+                margin: 18px 0 4px;
+                font-size: 1rem;
+                color: #fff;
+            }
+            .doc p,
+            .doc li {
+                margin: 6px 0;
+            }
+            .doc table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13.5px;
+            }
+            .doc th,
+            .doc td {
+                padding: 6px 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                text-align: left;
+                vertical-align: top;
+            }
+            .doc th {
+                color: #9fb0d6;
+                font-weight: 600;
+            }
+            .doc code {
+                font-size: 13px;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            .doc a {
+                color: var(--cheap-text);
+            }
+            .no {
+                color: var(--costly-text);
+            }
+            .f2 {
+                color: var(--cheap-text);
+            }
+            .pick {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin: 8px 0 0;
+            }
+            .pick button {
+                padding: 6px 10px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: transparent;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .pick button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--ink);
+            }
+            .q {
+                padding: 10px 14px;
+                border-left: 3px solid var(--yes);
+                background: rgba(185, 242, 140, 0.07);
+                border-radius: 0 8px 8px 0;
+            }
+            /* Telefón ostáva na očiach len vtedy, keď je text vedľa neho, nie pod ním. */
+            @media (min-width: 920px) {
+                .phone {
+                    position: sticky;
+                    top: 16px;
+                }
+            }
+            @media (max-width: 420px) {
+                .phone {
+                    flex-basis: 100%;
+                    border-width: 0;
+                    border-radius: 0;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <div class="phone">
+                <div class="scr" id="scr"></div>
+                <nav class="nav" aria-hidden="true">
+                    <span>Môžem?</span><span>Teraz</span><span>7 dní</span><span>Štatistika</span><span class="on">Nastavenie</span>
+                </nav>
+            </div>
+
+            <div class="doc">
+                <h2>Čo sa zmenilo</h2>
+                <ul>
+                    <li>
+                        <b>Bez registrácie appky u výrobcov.</b> V zozname sú len spôsoby, ktoré má človek k dispozícii sám, alebo si ich
+                        vypýta od inštalatéra či podpory výrobcu. Prihlásenie u výrobcu (OAuth) vypadlo.
+                    </li>
+                    <li>
+                        Tok ostáva <b>značka → spôsob → návod</b>. Pri každom spôsobe appka povie, kto ho urobí, ako dlho to trvá a čo kto
+                        uvidí. Keď treba niečo vypýtať, dá hotovú správu na skopírovanie.
+                    </li>
+                    <li>
+                        Appka je zatiaľ pre teba, ale všetko je stavané tak, aby ju neskôr mohol použiť ktokoľvek (časť
+                        <a href="#neskor">Pripravené na neskôr</a>).
+                    </li>
+                </ul>
+                <p>Klikaj v telefóne, alebo prepni obrazovku tu:</p>
+                <div class="pick" id="pick"></div>
+
+                <h2>Spôsoby pripojenia</h2>
+                <table>
+                    <tr>
+                        <th>Spôsob</th>
+                        <th>Kto ho urobí</th>
+                        <th>Čo appka drží</th>
+                    </tr>
+                    <tr>
+                        <td><b>Verejný odkaz</b> (kiosk)</td>
+                        <td>ty, 2 minúty</td>
+                        <td>odkaz – kto ho má, vidí výrobu</td>
+                    </tr>
+                    <tr>
+                        <td><b>Kľúč z portálu výrobcu</b></td>
+                        <td>ty, 3 – 5 minút – vygeneruješ a skopíruješ</td>
+                        <td>zapečatený kľúč</td>
+                    </tr>
+                    <tr>
+                        <td><b>Kľúč od podpory výrobcu</b></td>
+                        <td>požiadaš podporu, čakáš pár dní</td>
+                        <td>zapečatený kľúč</td>
+                    </tr>
+                    <tr>
+                        <td><b>API účet od inštalatéra</b></td>
+                        <td>napíšeš inštalatérovi, čakáš</td>
+                        <td>zapečatené meno a heslo účtu, ktorý vie len čítať</td>
+                    </tr>
+                </table>
+
+                <h2>Značky</h2>
+                <table>
+                    <tr>
+                        <th>Značka</th>
+                        <th>Spôsoby</th>
+                        <th>Poznámka (z oficiálnej dokumentácie)</th>
+                    </tr>
+                    <tr>
+                        <td>Huawei</td>
+                        <td>API účet od inštalatéra · kiosk</td>
+                        <td>
+                            Northbound účet zriaďuje firma, ktorá elektráreň spravuje. Je súkromný a len na čítanie, preto je prvý. Huawei
+                            prísne obmedzuje prihlásenia → meranie každých 5 min. Kiosk funguje hneď.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Fox ESS</td>
+                        <td>kľúč z portálu</td>
+                        <td>1 440 dopytov denne na menič → appka sa pýta každé 2 min.</td>
+                    </tr>
+                    <tr>
+                        <td>SolaX</td>
+                        <td>kľúč z portálu (token + reg. číslo modulu)</td>
+                        <td>Najviac 10 dopytov za minútu a 10 000 denne, cloud obnovuje raz za 5 min.</td>
+                    </tr>
+                    <tr>
+                        <td>Victron</td>
+                        <td>kľúč z portálu (prístupový token)</td>
+                        <td>Token stačí na zoznam inštalácií aj dáta. Limit ~3 dopyty za sekundu.</td>
+                    </tr>
+                    <tr>
+                        <td>Solis</td>
+                        <td>kľúč od podpory (KeyID + KeySecret)</td>
+                        <td>Majiteľ požiada podporu Solis, potom kľúč nájde v SolisCloud.</td>
+                    </tr>
+                    <tr>
+                        <td>Deye</td>
+                        <td>kľúč z portálu (vlastná aplikácia v Deye) + e-mail a heslo</td>
+                        <td>
+                            Človek si sám a zadarmo vytvorí aplikáciu na portáli Deye a dostane AppId a AppSecret. Heslo appka raz vymení za
+                            prístupový kľúč (platí 60 dní, obnovuje sa) a zahodí ho. Štyri polia – najzložitejší spôsob v zozname.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="no">SolarEdge</td>
+                        <td class="no">zatiaľ nie</td>
+                        <td>Kľúč z portálu (API v1) končí 1. 11. 2026. Nové API v2 ide len cez registráciu vývojára.</td>
+                    </tr>
+                    <tr>
+                        <td class="no">Enphase, Sungrow</td>
+                        <td class="no">zatiaľ nie</td>
+                        <td>Len cez registráciu vývojára a prihlásenie u výrobcu.</td>
+                    </tr>
+                    <tr>
+                        <td class="no">Fronius, SMA</td>
+                        <td class="no">nie</td>
+                        <td>Platené a len pre firmy.</td>
+                    </tr>
+                    <tr>
+                        <td class="no">GoodWe</td>
+                        <td class="no">nie</td>
+                        <td>Oficiálne API len pre organizácie a dodávateľov s licenciou.</td>
+                    </tr>
+                    <tr>
+                        <td class="no">Growatt</td>
+                        <td class="no">zatiaľ nie</td>
+                        <td>Verejnú oficiálnu dokumentáciu API som nenašiel.</td>
+                    </tr>
+                </table>
+
+                <h2>Bezpečnosť</h2>
+                <h3>Zapečatenie</h3>
+                <p>
+                    Worker dostane jeden tajný kľúč (<code>wrangler secret</code>, nie v repozitári). Pri pripojení prevezme heslo či kľúč,
+                    overí ho u výrobcu a vráti appke <b>zapečatený balíček</b> (šifrovanie AES-GCM). Telefón drží len balíček a otvoriť ho
+                    vie iba náš Worker:
+                </p>
+                <ul>
+                    <li>z úložiska telefónu (vírus, cudzie rozšírenie, záloha) heslo ani kľúč nikto nezíska,</li>
+                    <li>heslo (Deye) sa hneď vymení za prístupový kľúč a nikde neostane,</li>
+                    <li>daň: Worker má jedno tajomstvo. Keď ho vymeníme, každý sa musí pripojiť znova.</li>
+                </ul>
+                <h3>Čo platí vždy</h3>
+                <ul>
+                    <li>Prístup nikdy v adrese, zdieľanom odkaze ani QR. Zdieľaný odkaz nesie len značku a spôsob.</li>
+                    <li>Kiosk sa tiež prestane zapisovať do adresy; do zdieľaného odkazu ide len na výslovné zaškrtnutie.</li>
+                    <li>Worker nič neukladá a telo požiadaviek nepíše do logov.</li>
+                    <li>Worker volá len servery daného výrobcu, nie je to otvorená proxy.</li>
+                    <li>Návody žiadajú účet či kľúč len na čítanie, kde ho výrobca ponúka.</li>
+                    <li><b>Odpojiť</b> vymaže prístup z telefónu a povie, kde ho zrušiť aj u výrobcu.</li>
+                    <li>iPhone s appkou na ploche má vlastné úložisko, preto sa pripojí ešte raz.</li>
+                </ul>
+
+                <h2 id="neskor">Pripravené na neskôr</h2>
+                <p>Robíme len to, čo treba teraz, ale tak, aby rozšírenie neznamenalo prerábku:</p>
+                <ul>
+                    <li>
+                        <b>Zoznam značiek a spôsobov sú dáta</b> v <code>shared/</code> (návody, polia, limity, texty). Nová značka = jeden
+                        súbor so zdrojom a riadok v zozname. Keď výrobca zmení podmienky (napr. Growatt zverejní API), pribudne riadok, nie
+                        nová obrazovka.
+                    </li>
+                    <li>
+                        <b>Druh spôsobu je otvorený.</b> Ak raz bude appka pre viac ľudí a oplatí sa registrácia u výrobcov, prihlásenie u
+                        výrobcu (OAuth) bude ďalší druh spôsobu v tom istom toku – obrazovky ani karty sa nemenia.
+                    </li>
+                    <li>
+                        <b>Limity sú na človeka, nie na appku.</b> Každý má vlastný kľúč, takže limity výrobcov (Fox ESS, SolaX, Victron)
+                        rastú s počtom ľudí. Jediný spoločný limit je denná kvóta Workera (100 000 požiadaviek, viď
+                        <code>worker/README.md</code>); intervaly podľa značky ju šetria.
+                    </li>
+                    <li>
+                        <b>Zapečatenie je od prvého dňa</b>, hoci appku zatiaľ používaš len ty. Dodatočne meniť spôsob ukladania by
+                        znamenalo, že sa všetci musia pripojiť znova.
+                    </li>
+                    <li>
+                        <b>Overenie bez vlastného meniča.</b> Ty máš Huawei, ostatné značky naživo neoveríme. Parsery budú testované proti
+                        vzorovým odpovediam z oficiálnych dokumentácií a appka pri prvom pripojení ukáže, čo namerala (obrazovka Pripojené)
+                        – zlé čísla sa prejavia hneď, nie až v grafe.
+                    </li>
+                </ul>
+
+                <h2>Na rozhodnutie</h2>
+                <div class="q">
+                    <ol>
+                        <li>Zapečatenie cez tajný kľúč Workera – súhlas?</li>
+                        <li>Kiosk prestane ísť do adresy – súhlas? (iPhone z plochy sa naň opýta znova.)</li>
+                        <li>Deye so štyrmi poľami (vlastná aplikácia v Deye) – zaradiť, alebo vynechať?</li>
+                        <li>Pri Huawei je prvý API účet od inštalatéra (súkromný), kiosk druhý – súhlas?</li>
+                        <li>Sedia texty v telefóne? Stačí napísať, ktorú obrazovku chceš inak.</li>
+                    </ol>
+                </div>
+
+                <h2>Zdroje (oficiálne dokumentácie)</h2>
+                <ul>
+                    <li><a href="https://www.foxesscloud.com/public/i18n/en/OpenApiDocument.html">Fox ESS Open API</a></li>
+                    <li>
+                        <a href="https://www.solaxcloud.com/user_api/SolaxCloud_User_Monitoring_API_V6.1.pdf"
+                            >SolaX Cloud User Monitoring API V6.1</a
+                        >
+                    </li>
+                    <li><a href="https://vrm-api-docs.victronenergy.com/">Victron VRM API</a></li>
+                    <li>
+                        <a href="https://doc.soliscloud.com/en/20.API%20documentation/01.SolisCloud%20Platform%20API%20Document.html"
+                            >SolisCloud Platform API</a
+                        >
+                    </li>
+                    <li><a href="https://developer.deyecloud.com/start">DeyeCloud OpenAPI – Quick Start</a></li>
+                    <li>
+                        <a
+                            href="https://support.huawei.com/enterprise/en/doc/EDOC1100358266/872e9abc/integrating-oauth-20-to-third-party-apps"
+                            >Huawei SmartPVMS Northbound API Reference</a
+                        >
+                    </li>
+                    <li><a href="https://api-docs.solaredge.com/">SolarEdge API (v1 končí 1. 11. 2026)</a></li>
+                    <li><a href="https://developer-v4.enphase.com/docs/quickstart.html">Enphase API v4</a></li>
+                    <li><a href="https://developer-api.isolarcloud.com/">Sungrow Developer Portal</a></li>
+                    <li><a href="https://www.fronius.com/en/solarweb-query-api">Fronius Solar.web Query API</a></li>
+                    <li><a href="https://developer.sma.de/api-plans">SMA API Plans</a></li>
+                    <li>
+                        <a href="https://community.goodwe.com/static/images/2024-08-20597794.pdf">GoodWe API – technický dokument</a>
+                    </li>
+                </ul>
+                <p>
+                    Neoverené z oficiálneho zdroja: presné cesty v menu pri Victron (VRM manuál ich neuvádza, len API) a Huawei Northbound
+                    (stránka návodu u Huawei vypršala). Pred kódovaním ich overím priamo v portáloch.
+                </p>
+            </div>
+        </div>
+
+        <script>
+            // Značky a ich spôsoby pripojenia. `tagy` sú štítky pri voľbe spôsobu (kto, ako dlho,
+            // prípadne prednosť), `kroky` návod, `pola` polia formulára, `sprava` hotová správa pre
+            // inštalatéra či podporu. Prvý spôsob je odporúčaný. Texty sú návrh na schválenie.
+            const ZNACKY = [
+                {
+                    id: 'huawei',
+                    meno: 'Huawei',
+                    sposoby: [
+                        {
+                            id: 'northbound',
+                            nazov: 'API účet od inštalatéra',
+                            pod: 'Súkromný účet len na čítanie. Zriadi ti ho inštalatér, ty ho len vložíš.',
+                            tagy: ['inštalatér', 'pár dní', 'najbezpečnejšie'],
+                            kroky: [
+                                'Pošli inštalatérovi správu nižšie. Takýto účet vie zriadiť len firma, ktorá elektráreň spravuje vo FusionSolar.',
+                                'Keď ti pošle meno a heslo, vráť sa sem a vlož ich.',
+                            ],
+                            sprava: 'Dobrý deň,\nprosím o zriadenie Northbound API účtu vo FusionSolar pre moju elektráreň (Northbound Management). Stačí prístup len na čítanie údajov o výrobe. Pošlite mi prosím meno a heslo účtu.\nĎakujem',
+                            pola: [
+                                { lbl: 'Meno API účtu', ph: 'meno' },
+                                { lbl: 'Heslo API účtu', ph: '••••••••', pass: true },
+                            ],
+                            pozn: 'Huawei dovolí málo prihlásení, appka sa preto pýta každých 5 minút.',
+                        },
+                        {
+                            id: 'kiosk',
+                            nazov: 'Odkaz na kiosk',
+                            pod: 'Verejný odkaz na výrobu z appky FusionSolar. Kto ho má, vidí tvoju výrobu.',
+                            tagy: ['ty', '2 minúty', 'hneď'],
+                            kroky: [
+                                'V appke FusionSolar otvor svoju elektráreň.',
+                                'Zvoľ zdieľanie cez kiosk a skopíruj odkaz.',
+                                'Vlož ho sem.',
+                            ],
+                            pola: [{ lbl: 'Odkaz na kiosk', ph: 'https://…fusionsolar.huawei.com/…' }],
+                        },
+                    ],
+                },
+                {
+                    id: 'foxess',
+                    meno: 'Fox ESS',
+                    sposoby: [
+                        {
+                            id: 'kluc',
+                            nazov: 'Kľúč z FoxESS Cloud',
+                            pod: 'Kľúč si vygeneruješ sám na webe FoxESS Cloud.',
+                            tagy: ['ty', '3 minúty'],
+                            kroky: [
+                                'Prihlás sa na foxesscloud.com.',
+                                'Ikona vpravo hore → User Profile → API Management.',
+                                'Vygeneruj kľúč. Ukáže sa len raz, hneď ho skopíruj a vlož sem.',
+                            ],
+                            pola: [{ lbl: 'API kľúč', ph: 'kľúč' }],
+                            pozn: 'Fox ESS dovolí 1 440 dopytov denne, appka sa preto pýta každé 2 minúty.',
+                        },
+                    ],
+                },
+                {
+                    id: 'solax',
+                    meno: 'SolaX',
+                    sposoby: [
+                        {
+                            id: 'kluc',
+                            nazov: 'Token zo SolaX Cloud',
+                            pod: 'Token si skopíruješ sám, k nemu číslo Wi-Fi modulu.',
+                            tagy: ['ty', '3 minúty'],
+                            kroky: [
+                                'Prihlás sa na solaxcloud.com a otvor Service → API.',
+                                'Skopíruj tokenID.',
+                                'Registračné číslo je na štítku Wi-Fi modulu v meniči (Registration No.).',
+                            ],
+                            pola: [
+                                { lbl: 'Token', ph: 'tokenID' },
+                                { lbl: 'Registračné číslo modulu', ph: '10 znakov' },
+                            ],
+                            pozn: 'SolaX obnovuje dáta raz za 5 minút, appka sa pýta rovnako často.',
+                        },
+                    ],
+                },
+                {
+                    id: 'victron',
+                    meno: 'Victron',
+                    sposoby: [
+                        {
+                            id: 'kluc',
+                            nazov: 'Prístupový token z VRM',
+                            pod: 'Token si vytvoríš sám v portáli VRM.',
+                            tagy: ['ty', '3 minúty'],
+                            kroky: [
+                                'Prihlás sa na vrm.victronenergy.com.',
+                                'Preferences → Integrations → Access tokens → Add.',
+                                'Token skopíruj a vlož sem.',
+                            ],
+                            pola: [{ lbl: 'Prístupový token', ph: 'token' }],
+                        },
+                    ],
+                },
+                {
+                    id: 'solis',
+                    meno: 'Solis',
+                    sposoby: [
+                        {
+                            id: 'kluc-podpora',
+                            nazov: 'Kľúč od podpory Solis',
+                            pod: 'O kľúč požiadaš podporu Solis, potom ho skopíruješ zo SolisCloud.',
+                            tagy: ['podpora Solis', 'pár dní'],
+                            kroky: [
+                                'Pošli podpore Solis správu nižšie (servisný ticket, typ API Access Request).',
+                                'Keď prístup zapnú, otvor SolisCloud → Service → API Management.',
+                                'Skopíruj KeyID a KeySecret a vlož ich sem.',
+                            ],
+                            sprava: 'Dobrý deň,\nprosím o zapnutie API prístupu (API Access Request) pre môj účet SolisCloud: [e-mail účtu]. Prístup potrebujem len na čítanie údajov o výrobe mojej elektrárne.\nĎakujem',
+                            pola: [
+                                { lbl: 'KeyID', ph: 'KeyID' },
+                                { lbl: 'KeySecret', ph: '••••••••', pass: true },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'deye',
+                    meno: 'Deye',
+                    sposoby: [
+                        {
+                            id: 'aplikacia',
+                            nazov: 'Vlastná aplikácia v Deye Cloud',
+                            pod: 'Na portáli Deye si sám vytvoríš aplikáciu a k nej zadáš prihlásenie do Deye Cloud.',
+                            tagy: ['ty', '5 minút'],
+                            kroky: [
+                                'Otvor developer.deyecloud.com a prihlás sa účtom Deye Cloud.',
+                                'Application → vytvor novú aplikáciu (stačí meno, napr. RAY-MON).',
+                                'Skopíruj AppId a AppSecret a vlož ich sem. K nim e-mail a heslo do Deye Cloud.',
+                            ],
+                            pola: [
+                                { lbl: 'AppId', ph: 'AppId' },
+                                { lbl: 'AppSecret', ph: '••••••••', pass: true },
+                                { lbl: 'E-mail Deye Cloud', ph: 'meno@example.sk' },
+                                { lbl: 'Heslo Deye Cloud', ph: '••••••••', pass: true },
+                            ],
+                            pozn: 'Heslo appka pošle Deye len raz, vymení ho za prístupový kľúč a neuloží ho.',
+                        },
+                    ],
+                },
+                {
+                    id: 'solaredge',
+                    meno: 'SolarEdge',
+                    nie: 'Doterajší kľúč z portálu SolarEdge končí 1. 11. 2026 a nový spôsob je len pre vývojárov.',
+                },
+                { id: 'enphase', meno: 'Enphase', nie: 'Enphase dáva údaje len aplikáciám registrovaným u nich.' },
+                { id: 'sungrow', meno: 'Sungrow', nie: 'Sungrow dáva údaje len aplikáciám registrovaným a schváleným u nich.' },
+                { id: 'fronius', meno: 'Fronius', nie: 'Fronius dáva údaje cez internet len firmám, za poplatok.' },
+                { id: 'sma', meno: 'SMA', nie: 'SMA dáva údaje len firmám so zmluvou, za mesačný poplatok.' },
+                { id: 'goodwe', meno: 'GoodWe', nie: 'GoodWe dáva údaje len firmám a dodávateľom s licenciou.' },
+                { id: 'growatt', meno: 'Growatt', nie: 'Growatt zatiaľ nezverejnil, ako sa k údajom dostať.' },
+            ];
+
+            const OBRAZOVKY = [
+                ['otazka', 'Otázka'],
+                ['znacky', 'Značka'],
+                ['sposob', 'Spôsob (Huawei)'],
+                ['northbound', 'Od inštalatéra'],
+                ['form', 'Kiosk'],
+                ['solis', 'Od podpory'],
+                ['deye', 'Deye'],
+                ['overujem', 'Overujem'],
+                ['vyber', 'Viac elektrární'],
+                ['hotovo', 'Pripojené'],
+                ['chyba', 'Chyba'],
+                ['nie', 'Značka sa nedá'],
+                ['zhrnutie', 'Nastavenie'],
+            ];
+
+            const zn = (id) => ZNACKY.find((x) => x.id === id);
+            const HUAWEI = zn('huawei');
+            // Obrazovky, ktoré výber nad telefónom otvorí priamo: [značka, spôsob].
+            const PEVNE = {
+                sposob: [HUAWEI, null],
+                northbound: [HUAWEI, HUAWEI.sposoby[0]],
+                form: [HUAWEI, HUAWEI.sposoby[1]],
+                solis: [zn('solis'), zn('solis').sposoby[0]],
+                deye: [zn('deye'), zn('deye').sposoby[0]],
+                chyba: [zn('foxess'), zn('foxess').sposoby[0]],
+                nie: [zn('solaredge'), null],
+            };
+            let stav = { scr: 'otazka', z: HUAWEI, s: HUAWEI.sposoby[0] };
+            const $ = (q) => document.querySelector(q);
+            const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+            const hlava = () =>
+                `<div class="hdr"><span>Dvorany nad Nitrou</span><span>○ 10:15</span></div>
+                 <div class="crumb"><span>Úprava · meranie</span><button class="x" data-go="zhrnutie">✕</button></div>`;
+            const tagy = (s) =>
+                `<span class="tags">${s.tagy.map((t, i) => `<span class="tag ${i === 2 ? 'top' : ''}">${esc(t)}</span>`).join('')}</span>`;
+            const podZnackou = (z) =>
+                z.nie ? 'Zatiaľ sa nedá pripojiť' : z.sposoby.length > 1 ? `${z.sposoby.length} spôsoby pripojenia` : z.sposoby[0].nazov;
+            const spat = (z) => (z.sposoby.length > 1 ? 'sposob' : 'znacky');
+
+            function form(z, s, chyba) {
+                return `${hlava()}<h1>${esc(s.nazov)}</h1>
+                <p class="lead">${esc(s.pod)}</p>
+                <div class="stack">
+                    <ol class="glass howto">${s.kroky.map((k) => `<li>${esc(k)}</li>`).join('')}</ol>
+                    ${
+                        s.sprava
+                            ? `<div class="glass"><span class="glass-ttl">Správa na skopírovanie</span><div class="letter">${esc(s.sprava)}</div>
+                               <button class="pbtn small">Skopírovať správu</button></div>
+                               <p class="msg">Nastavenie si zapamätám. Keď údaje dostaneš, otvor Nastavenie → Živé meranie.</p>`
+                            : ''
+                    }
+                    ${s.pola
+                        .map(
+                            (p) =>
+                                `<label class="flbl">${esc(p.lbl)}</label><input class="fld" ${p.pass ? 'type="password"' : ''} placeholder="${esc(p.ph)}">`,
+                        )
+                        .join('')}
+                    ${
+                        chyba
+                            ? `<p class="msg err">Fox ESS kľúč neprijal. Skontroluj, či si skopíroval celý – a či si medzitým nevygeneroval nový, ten starý zruší.</p>`
+                            : `<p class="msg">${s.pozn ? esc(s.pozn) + ' ' : ''}Údaje sa uložia v tomto telefóne zapečatené – prečítať ich vie len server appky, a ten si ich nikam neukladá.</p>`
+                    }
+                </div>
+                <div class="row"><button class="pbtn ghost" data-go="${spat(z)}">Späť</button><button class="pbtn" data-go="overujem">Pripojiť</button></div>`;
+            }
+
+            const R = {
+                otazka: () => `${hlava()}<h1>Chceš vidieť skutočný výkon?</h1>
+                    <p class="lead">Bez merania appka ukazuje odhad z predpovede počasia. S meraním vidíš aj to, čo panely naozaj vyrábajú.</p>
+                    <div class="stack">
+                        <button class="opt" data-go="znacky"><b>Áno, pripojím menič</b><span>Vyberieš značku a spôsob pripojenia.</span><i>›</i></button>
+                        <button class="opt" aria-pressed="true"><b>Nie, stačí mi odhad</b><span>Meranie sa dá pridať neskôr.</span></button>
+                    </div>
+                    <div class="row"><button class="pbtn ghost">Zrušiť</button><button class="pbtn" disabled style="opacity:.5">Uložiť zmenu</button></div>`,
+                znacky: () => `${hlava()}<h1>Akú značku má tvoj menič?</h1>
+                    <p class="lead">Nájdeš ju na meniči alebo v appke, v ktorej sleduješ výrobu.</p>
+                    <div class="stack">
+                        ${ZNACKY.map(
+                            (z) =>
+                                `<button class="opt ${z.nie ? 'off' : ''}" data-z="${z.id}"><b>${esc(z.meno)}</b><span>${esc(podZnackou(z))}</span><i>›</i></button>`,
+                        ).join('')}
+                    </div>
+                    <button class="linkbtn" data-z="ina">Moju značku tu nevidím ›</button>`,
+                sposob: () => `${hlava()}<h1>Ako pripojíš ${esc(stav.z.meno)}?</h1>
+                    <p class="lead">Oba spôsoby ukážu to isté. Líšia sa tým, kto ich urobí a kto okrem teba uvidí výrobu.</p>
+                    <div class="stack">
+                        ${stav.z.sposoby
+                            .map(
+                                (s, i) =>
+                                    `<button class="opt" data-s="${i}"><b>${esc(s.nazov)}</b><span>${esc(s.pod)}</span>${tagy(s)}<i>›</i></button>`,
+                            )
+                            .join('')}
+                    </div>`,
+                form: () => form(stav.z, stav.s, false),
+                northbound: () => form(stav.z, stav.s, false),
+                solis: () => form(stav.z, stav.s, false),
+                deye: () => form(stav.z, stav.s, false),
+                chyba: () => form(stav.z, stav.s, true),
+                overujem: () => `${hlava()}<h1>Pripájam ${esc(stav.z.meno)}</h1>
+                    <p class="lead">Overujem prístup a hľadám tvoju elektráreň.</p>
+                    <div class="stack"><div class="glass"><span><span class="spin"></span>Pýtam sa ${esc(stav.z.meno)}…</span>
+                    <span class="msg" style="margin:0">Zvyčajne to trvá pár sekúnd.</span></div></div>
+                    <div class="row"><button class="pbtn ghost" data-go="${spat(stav.z)}">Zrušiť</button><button class="pbtn" data-go="vyber">(ďalej)</button></div>`,
+                vyber: () => `${hlava()}<h1>Ktorá elektráreň je tvoja?</h1>
+                    <p class="lead">Na účte ${esc(stav.z.meno)} sú dve. Vyber tú, ktorú má appka sledovať.</p>
+                    <div class="stack">
+                        <button class="opt" data-go="hotovo"><b>Dvorany – dom</b><span>teraz 3,4 kW · dnes 18,2 kWh</span><i>›</i></button>
+                        <button class="opt" data-go="hotovo"><b>Dvorany – garáž</b><span>teraz 0,9 kW · dnes 4,1 kWh</span><i>›</i></button>
+                    </div>`,
+                hotovo: () => `${hlava()}<h1>Pripojené</h1>
+                    <p class="lead">Skontroluj, či čísla sedia s appkou výrobcu. Odteraz ich appka ukazuje namiesto odhadu.</p>
+                    <div class="stack"><div class="glass ok">
+                        <span class="big">Dvorany – dom</span>
+                        <span class="msg" style="margin:0">${esc(stav.z.meno)} · ${esc(stav.s?.nazov ?? '')} · meranie o 10:14</span>
+                        <div class="kv"><span>Teraz</span><b>3,4 kW</b></div>
+                        <div class="kv"><span>Dnes</span><b>18,2 kWh</b></div>
+                    </div></div>
+                    <div class="row"><button class="pbtn ghost" data-go="zhrnutie">Zrušiť</button><button class="pbtn" data-go="zhrnutie">Uložiť zmenu</button></div>`,
+                nie: () => `${hlava()}<h1>${esc(stav.z.meno)} zatiaľ pripojiť nevieme</h1>
+                    <p class="lead">${esc(stav.z.nie)} Pre domácnosť cesta zatiaľ nie je.</p>
+                    <div class="stack"><div class="glass">Appka bude ukazovať odhad z predpovede počasia. Plán dňa, tarifa aj štatistika fungujú rovnako.</div></div>
+                    <div class="row"><button class="pbtn ghost" data-go="znacky">Späť</button><button class="pbtn" data-go="zhrnutie">Stačí mi odhad</button></div>`,
+                ina: () => `${hlava()}<h1>Tvoju značku nepoznáme</h1>
+                    <p class="lead">Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
+                    <div class="row"><button class="pbtn ghost" data-go="znacky">Späť</button><button class="pbtn" data-go="zhrnutie">Stačí mi odhad</button></div>`,
+                zhrnutie: () => `<div class="hdr"><span>Dvorany nad Nitrou</span><span>○ 10:15</span></div>
+                    <h1 style="margin-top:20px">Moja strecha</h1>
+                    <div class="stack"><div class="glass" style="gap:0">
+                        <span class="glass-ttl">Elektráreň</span>
+                        <div class="sumrow"><div><b>Poloha</b><small>Dvorany nad Nitrou</small></div>›</div>
+                        <div class="sumrow"><div><b>Panely</b><small>2 plochy · 435 Wp</small></div>›</div>
+                        <div class="sumrow" data-go="znacky" style="cursor:pointer"><div><b>Živé meranie</b><small>${esc(stav.z.meno)} · pripojené · 10:14</small></div>›</div>
+                        <div class="sumrow"><div><b>Tarifa</b><small>2 pásma · lacno 20 h</small></div>›</div>
+                    </div></div>`,
+            };
+
+            function kresli() {
+                const scr = $('#scr');
+                scr.innerHTML = R[stav.scr]();
+                scr.scrollTop = 0;
+                $('#pick').innerHTML = OBRAZOVKY.map(
+                    ([id, t]) => `<button data-go="${id}" ${id === stav.scr ? 'aria-pressed="true"' : ''}>${t}</button>`,
+                ).join('');
+            }
+
+            document.addEventListener('click', (e) => {
+                const zb = e.target.closest('[data-z]');
+                const sb = e.target.closest('[data-s]');
+                const go = e.target.closest('[data-go]');
+                if (zb) {
+                    const z = zn(zb.dataset.z);
+                    if (!z) stav = { ...stav, scr: 'ina' };
+                    else if (z.nie) stav = { z, s: null, scr: 'nie' };
+                    else if (z.sposoby.length > 1) stav = { z, s: null, scr: 'sposob' };
+                    else stav = { z, s: z.sposoby[0], scr: 'form' };
+                } else if (sb) {
+                    stav = { ...stav, s: stav.z.sposoby[Number(sb.dataset.s)], scr: 'form' };
+                } else if (go) {
+                    const scr = go.dataset.go;
+                    const pevne = e.target.closest('#pick') && PEVNE[scr];
+                    stav = pevne ? { z: pevne[0], s: pevne[1], scr } : { ...stav, scr };
+                } else return;
+                kresli();
+            });
+            kresli();
+        </script>
+    </body>
+</html>

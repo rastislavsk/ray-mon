@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { RING } from '../../shared/chart-model.js';
-import { PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
+import { PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PRIPOJ_URL, WORKER_PV_URL } from '../../shared/config.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFrom, settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
@@ -14,7 +14,9 @@ import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
 const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
-const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: TEST_KIOSK };
+/** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
+const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
+const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: TEST_ZDROJ };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 /** Vyhľadávanie miest: Dvorany (pre ne sú fixtures počasia) a jedno mesto navyše. */
 const GEOCODE = {
@@ -51,6 +53,10 @@ async function openObloha(page, { settings = OWNER, site = null, hash = '' } = {
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv } }));
+    // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
+    await page.route(WORKER_PRIPOJ_URL, (route) =>
+        route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
+    );
     await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
     // Neskôr pridaná trasa má prednosť - vyhľadávanie miest je tiež na api.open-meteo.com.
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
@@ -191,7 +197,7 @@ test.describe('sprievodca od nuly', () => {
             { panels: 16, azimuthDeg: 180, tiltDeg: 35 },
             { panels: 8, azimuthDeg: 90, tiltDeg: 20 },
         ]);
-        expect([stored.panelWp, stored.acLimitKw, stored.kiosk]).toEqual([435, 10, '']);
+        expect([stored.panelWp, stored.acLimitKw, stored.zdroj]).toEqual([435, 10, null]);
         expect(stored.tariff.schedules[0].changes).toEqual([
             { from: '00:00', band: 'nt' },
             { from: '06:00', band: 'vt' },
@@ -352,7 +358,7 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         await expect(page.locator('#import-offer')).toBeHidden();
         expect(await ulozene(page)).toEqual(toUser(OWNER));
         await expect(page.locator('#hdr-status')).toHaveText('13:00');
-        expect(settingsFromLink(page.url())).toEqual(OWNER);
+        expect(settingsFromLink(page.url()), 'adresa nesie nastavenie, prístup k meraniu nie').toEqual({ ...OWNER, zdroj: null });
         expect(errors).toEqual([]);
     });
 
@@ -543,8 +549,17 @@ async function kazdaObrazovka(page, check) {
     await page.locator('#wz-ac').fill('5');
     await dalej(page);
     await page.locator('#wz-live-yes').click();
-    await page.locator('#wz-kiosk').fill(TEST_KIOSK);
     await check('meranie');
+    await dalej(page);
+    await obrazovka(page, 'znacka');
+    await check('znacka');
+    await page.locator('[data-setup-znacka="huawei"]').click();
+    await obrazovka(page, 'pripoj');
+    await page.locator('[data-setup-pole="odkaz"]').fill(TEST_KIOSK);
+    await check('pripoj');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice')).toBeVisible();
+    await check('pripojene');
     await dalej(page);
     await page.locator('[data-setup-kind="viac"]').click();
     await check('tarifa');

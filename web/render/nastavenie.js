@@ -17,10 +17,9 @@ import {
 } from '../../shared/config.js';
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { liveStatus } from '../../shared/hero-model.js';
-import { kioskApiUrl } from '../../shared/kiosk.js';
 import { checkSettings, settingsFromLink } from '../../shared/settings.js';
 import { ROOF_STEPS, SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
-import { brushOf, schedIndex, setupReady } from '../../shared/setup-flow.js';
+import { brushOf, schedIndex, setupReady, udajeReady } from '../../shared/setup-flow.js';
 import {
     AC_GUESS,
     bandHoursText,
@@ -35,12 +34,13 @@ import {
     GUESS_MARK,
     hasSite,
     importOfferText,
-    kioskNote,
     LEVELS,
     linkPreview,
     menicModel,
     MONTH_SHORT,
     panelsLine,
+    PECAT_NOTE,
+    pripojNote,
     placeCard,
     plantHero,
     priceCheck,
@@ -50,6 +50,10 @@ import {
     schedDetail,
     schedLabel,
     scheduleTemplates,
+    SPRAVA_NOTE,
+    STANICA_CHECK,
+    stanicaMeta,
+    staniceTitle,
     stepLabel,
     subText,
     summaryRows as summaryData,
@@ -58,6 +62,8 @@ import {
     TARIFF_TABS,
     textsFor,
     TILT_PRESETS,
+    udajeNote,
+    zdrojText,
     WP_GUESS,
 } from '../../shared/setup-texts.js';
 import { orientationShare } from '../../shared/solar.js';
@@ -70,6 +76,7 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../shared/tariff.js';
+import { sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { savedSettings, setupDraft } from '../state.js';
@@ -109,11 +116,11 @@ function sumRow(
 
 /**
  * Riadky zhrnutia: poloha, panel, plochy, menič, meranie, tarifa. V prehľade uloženej elektrárne
- * (withLive) má meranie vpravo aj stav pripojenia; rozpísaný kiosk v sprievodcu ešte neoveril nik.
+ * (withLive) má meranie vpravo aj stav pripojenia.
  * @param {Settings} s @param {AppState} state
  */
 function summaryRows(s, state, withLive = false) {
-    const live = withLive ? liveStatus({ ...state, kiosk: s.kiosk }) : null;
+    const live = withLive ? liveStatus({ ...state, zdroj: s.zdroj }) : null;
     // Stav dvakrát: na mobile namiesto podnadpisu, na desktope vpravo (viď .sum-live v style.css).
     const status = (/** @type {string} */ where) => (live ? `<span class="sum-live ${where} ${live.tone}">${live.text}</span>` : '');
     return summaryData(s, state)
@@ -362,14 +369,99 @@ function renderMenic(state, draft, dom) {
 
 /** @param {AppState} state @param {Dom} dom */
 function renderMeranie(state, dom) {
+    const zdroj = state.settingsDraft.zdroj;
     dom.wzLiveYes.setAttribute('aria-pressed', String(state.setupLive));
     dom.wzLiveNo.setAttribute('aria-pressed', String(!state.setupLive));
-    dom.wzKioskBlock.classList.toggle('hidden', !state.setupLive);
-    const kiosk = state.settingsDraft.kiosk;
-    const note = kioskNote(kiosk, !!kioskApiUrl(kiosk));
-    dom.wzKioskNote.classList.toggle('err', !!note?.err);
-    dom.wzKioskNote.classList.toggle('hidden', !note);
-    if (note) dom.wzKioskNote.textContent = note.text;
+    dom.wzLiveYesSub.textContent = zdroj ? `Pripojené: ${zdrojText(zdroj)}` : 'Vyberieš značku a spôsob pripojenia.';
+    const sposob = zdroj && sposobOf(zdroj.sposob);
+    dom.wzLiveNoSub.textContent = sposob ? `Appka zabudne prístup. ${sposob.zrusenie}` : 'Meranie sa dá pridať neskôr.';
+    dom.wzLiveZmen.classList.toggle('hidden', !zdroj || !state.setupLive);
+}
+
+/** Voľba s bodkou, nadpisom a popisom. @param {string} attrs @param {string} title @param {string} sub @param {boolean} on @param {string} [extra] */
+const choiceHtml = (attrs, title, sub, on, extra = '') =>
+    `<button type="button" class="choice" ${attrs} aria-pressed="${on}"><span class="dot"></span>` +
+    `<span class="t"><b>${escapeHtml(title)}</b><span>${escapeHtml(sub)}</span>${extra}</span></button>`;
+
+/** Štítky spôsobu: kto ho urobí, ako dlho; tretí (prečo je prvý) zvýraznený. @param {string[]} tagy */
+const tagsHtml = (tagy) =>
+    `<span class="tags">${tagy.map((t, i) => `<i class="tag${i === 2 ? ' top' : ''}">${escapeHtml(t)}</i>`).join('')}</span>`;
+
+/** @param {AppState} state @param {Dom} dom */
+function renderZnacka(state, dom) {
+    const html = ZNACKY.map((z) => {
+        const sposoby = sposobyOf(z);
+        const sub = 'nie' in z ? 'Zatiaľ sa nedá pripojiť' : sposoby.length > 1 ? `${sposoby.length} spôsoby pripojenia` : sposoby[0].nazov;
+        return choiceHtml(`data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}`, z.meno, sub, z.id === state.setupZnacka);
+    }).join('');
+    writeHtml(dom.wzZnacky, html, 'wzZnacky');
+}
+
+/** @param {AppState} state @param {Dom} dom */
+function renderSposob(state, dom) {
+    const z = znackaOf(state.setupZnacka);
+    const sposoby = z ? sposobyOf(z) : [];
+    const html = sposoby
+        .map((x) => choiceHtml(`data-setup-sposob="${x.id}"`, x.nazov, x.pod, x.id === state.setupSposob, tagsHtml(x.tagy)))
+        .join('');
+    writeHtml(dom.wzSposoby, html, 'wzSposoby');
+    dom.wzSposoby.classList.toggle('hidden', !sposoby.length);
+    dom.wzNie.classList.toggle('hidden', !z || !('nie' in z));
+}
+
+/** Pole formulára spôsobu; heslá skryje. @param {import('../../shared/zdroje.js').Pole} p */
+function poleHtml(p) {
+    const type = p.tajne ? 'password' : p.typ === 'url' ? 'url' : p.typ === 'email' ? 'email' : 'text';
+    const mode = p.typ === 'url' ? ' inputmode="url"' : p.typ === 'email' ? ' inputmode="email"' : '';
+    return (
+        `<label class="field-label" for="wz-pole-${p.id}">${escapeHtml(p.lbl)}</label>` +
+        `<input class="field-input" id="wz-pole-${p.id}" type="${type}"${mode} autocomplete="off" autocapitalize="off" spellcheck="false" ` +
+        `data-setup-pole="${p.id}" placeholder="${escapeHtml(p.ph)}" />`
+    );
+}
+
+/** @param {AppState} state @param {Dom} dom */
+function renderPripoj(state, dom) {
+    const sposob = sposobOf(state.setupSposob);
+    if (!sposob) return;
+    const p = state.setupPripoj;
+    const kroky = sposob.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join('');
+    writeHtml(dom.wzKroky, kroky, 'wzKroky');
+    dom.wzSprava.classList.toggle('hidden', !sposob.sprava);
+    dom.wzSpravaText.textContent = sposob.sprava ?? '';
+    dom.wzSpravaCopy.dataset.setupCopy = sposob.sprava ?? '';
+    dom.wzSpravaNote.textContent = SPRAVA_NOTE;
+    // Polia sa kreslia nanovo len pri otvorení formulára (settingsRev) - inak by zmizlo, čo človek píše.
+    const pola = `<div class="wz-zdroj" data-rev="${state.settingsRev}">${sposob.pola.map(poleHtml).join('')}</div>`;
+    writeHtml(dom.wzPola, pola, 'wzPola');
+    const note = pripojNote(p, sposob.id) ?? udajeNote(sposob.id, state.setupUdaje);
+    dom.wzPripojNote.classList.toggle('hidden', !note);
+    dom.wzPripojNote.classList.toggle('err', !!note?.err);
+    if (note) dom.wzPripojNote.textContent = note.text;
+    dom.wzPripojit.classList.toggle('hidden', p.status === 'done');
+    dom.wzPripojit.disabled = p.status === 'loading' || !udajeReady(state);
+    dom.wzPripojit.textContent = p.status === 'loading' ? 'Pripájam…' : 'Pripojiť';
+    renderStanice(state, sposob, dom);
+    dom.wzPecatNote.textContent = PECAT_NOTE;
+}
+
+/** Elektrárne nájdené pri pripojení; zvolená je pripojená.
+ * @param {AppState} state @param {import('../../shared/zdroje.js').Sposob} sposob @param {Dom} dom */
+function renderStanice(state, sposob, dom) {
+    const p = state.setupPripoj;
+    const zdroj = state.settingsDraft.zdroj;
+    dom.wzStanice.classList.toggle('hidden', p.status !== 'done');
+    const html =
+        p.status !== 'done'
+            ? ''
+            : `<p class="plant-msg ok">${escapeHtml(staniceTitle(p.stanice.length, sposob.id))}</p>` +
+              p.stanice
+                  .map((st, i) =>
+                      choiceHtml(`data-setup-stanica="${i}"`, st.nazov || sposob.nazov, stanicaMeta(st), zdroj?.pecat === st.pecat),
+                  )
+                  .join('') +
+              (zdroj ? `<p class="plant-msg">${escapeHtml(STANICA_CHECK)}</p>` : '');
+    writeHtml(dom.wzStanice, html, 'wzStanice');
 }
 
 /** @param {AppState} state @param {Settings} draft @param {Dom} dom */
@@ -633,7 +725,7 @@ function renderTariffTabs(draft, step, edit, dom) {
 /** Hodnoty polí - len keď sa zmení to, k čomu patria, nie pri každom písmene. @param {AppState} state @param {number} roof @param {Dom} dom */
 function writeFields(state, roof, dom) {
     if (!changedKeys('setupFields', [state.settingsRev, roof, state.setupStep])) return;
-    const { site, plant, kiosk } = state.settingsDraft;
+    const { site, plant } = state.settingsDraft;
     const x = plant.strings[roof];
     dom.wzLink.value = state.setupLink;
     dom.wzPlace.value = site.name;
@@ -642,7 +734,6 @@ function writeFields(state, roof, dom) {
     dom.wzWp.value = fieldText(plant.panelWp);
     dom.wzKwp.value = fieldText(state.setupKwp);
     dom.wzAc.value = fieldText(plant.acLimitKw);
-    dom.wzKiosk.value = kiosk;
     if (!x) return;
     dom.wzTilt.value = String(x.tiltDeg);
     dom.wzPanels.value = fieldText(x.panels);
@@ -680,6 +771,9 @@ function renderWizard(state, dom) {
         dalsia: () => renderDalsia(state, draft, dom),
         menic: () => renderMenic(state, draft, dom),
         meranie: () => renderMeranie(state, dom),
+        znacka: () => renderZnacka(state, dom),
+        sposob: () => renderSposob(state, dom),
+        pripoj: () => renderPripoj(state, dom),
         tarifa: () => renderTarifa(state, draft, dom),
         pasma: () => renderPasma(draft, dom, refill),
         rozvrh: () => renderRozvrh(state, draft, dom),

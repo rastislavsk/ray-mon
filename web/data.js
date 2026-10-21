@@ -1,18 +1,30 @@
 // Načítanie dát. Predpoveď sa počíta tu v prehliadači z počasia Open-Meteo pre lokalitu
-// z nastavenia. Živé meranie stiahne Worker z kiosku, ktorý si používateľ zadal; bez kiosku
-// meranie nie je. Neplatné dáta sa správajú ako chýbajúce.
+// z nastavenia. Živé meranie stiahne Worker od výrobcu meniča, ktorý si používateľ pripojil;
+// bez pripojeného merania meranie nie je. Neplatné dáta sa správajú ako chýbajúce.
 
-import { geocodeUrl, openMeteoUrl, TIMEOUT, WEATHER_CACHE_MS, WEATHER_KEEP_MS, WORKER_PV_URL } from '../shared/config.js';
+import {
+    geocodeUrl,
+    openMeteoUrl,
+    TIMEOUT,
+    WEATHER_CACHE_MS,
+    WEATHER_KEEP_MS,
+    WORKER_PRIPOJ_URL,
+    WORKER_PV_URL,
+} from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
+import { isPecat } from '../shared/zdroje.js';
 import { loadStoredWeather, saveStoredWeather } from './storage.js';
 
 /** @typedef {import('../shared/settings.js').Settings} Settings */
 /**
- * `pvFailed` odlišuje "meranie sa nepodarilo" od "meranie nie je" (bez kiosku) - pri prvom si
- * appka na chvíľu nechá posledné meranie, pri druhom nemá čo nechávať.
- * @typedef {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean, forecast: import('../shared/solar.js').Forecast | null }} DataResult
+ * `pvFailed` odlišuje "meranie sa nepodarilo" od "meranie nie je" (bez pripojeného merania) - pri
+ * prvom si appka na chvíľu nechá posledné meranie, pri druhom nemá čo nechávať. `pecat` je nový
+ * zapečatený prístup, keď ho Worker pri meraní vydal (obnovený token, alebo zapečatený holý odkaz
+ * na kiosk z nastavení spred zapečatenia) - appka si ho uloží namiesto starého.
+ * @typedef {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean, pecat: string | null,
+ *   forecast: import('../shared/solar.js').Forecast | null }} DataResult
  */
 
 /** @param {string} url @param {typeof fetch} fetchImpl */
@@ -26,21 +38,52 @@ async function getJson(url, fetchImpl) {
 const validPv = (pv) => (pv && validatePv(pv).length === 0 ? /** @type {import('../shared/kiosk.js').PvData} */ (pv) : null);
 
 /**
- * Živé meranie z vlastného kiosku. Odkaz ide v tele ako text - taká požiadavka nepotrebuje
- * predbežnú CORS kontrolu a odkaz sa nedostane do adresy, ktorá končí v logoch.
- * @param {string} kiosk @param {typeof fetch} fetchImpl
+ * POST na Workera s textom v tele - taká požiadavka nepotrebuje predbežnú CORS kontrolu a prístup
+ * sa nedostane do adresy, ktorá končí v logoch.
+ * @param {string} url @param {string} body @param {typeof fetch} fetchImpl
  */
-async function loadKioskPv(kiosk, fetchImpl) {
-    const res = await fetchImpl(WORKER_PV_URL, {
-        method: 'POST',
-        body: kiosk,
-        cache: 'no-store',
-        signal: AbortSignal.timeout(TIMEOUT.appMs),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} kiosk`);
-    const pv = validPv((await res.json()).pv);
-    if (!pv) throw new Error('Kiosk nevrátil platné dáta');
-    return pv;
+function postWorker(url, body, fetchImpl) {
+    return fetchImpl(url, { method: 'POST', body, cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT.appMs) });
+}
+
+/**
+ * Živé meranie z pripojeného meniča. Telo je zapečatený prístup (alebo holý odkaz na kiosk).
+ * @param {import('../shared/zdroje.js').Zdroj} zdroj @param {typeof fetch} fetchImpl
+ */
+async function loadPv(zdroj, fetchImpl) {
+    const res = await postWorker(WORKER_PV_URL, zdroj.pecat, fetchImpl);
+    if (!res.ok) throw new Error(`HTTP ${res.status} meranie`);
+    const body = await res.json();
+    const pv = validPv(body.pv);
+    if (!pv) throw new Error('Meranie neprišlo v platnom tvare');
+    return { pv, pecat: typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null };
+}
+
+/**
+ * Pripojenie merania zo sprievodcu: údaje z formulára ide overiť Worker. Nikdy nehádže - vráti
+ * nájdené elektrárne, alebo druh chyby, ktorý sprievodca ukáže.
+ * @param {string} sposob id spôsobu (shared/zdroje.js) @param {Record<string, string>} udaje @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ stanice: import('../shared/setup-flow.js').Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server' }>}
+ */
+export async function pripojZdroj(sposob, udaje, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_PRIPOJ_URL, JSON.stringify({ sposob, udaje }), fetchImpl);
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 400) return { chyba: 'udaje' };
+        if (!res.ok) return { chyba: res.status === 502 ? 'vyrobca' : 'server' };
+        const stanice = Array.isArray(body.stanice) ? body.stanice : [];
+        return {
+            stanice: stanice
+                .filter((/** @type {any} */ x) => x && typeof x.pecat === 'string' && isPecat(x.pecat))
+                .map((/** @type {any} */ x) => ({
+                    nazov: typeof x.nazov === 'string' ? x.nazov.slice(0, 80) : '',
+                    pecat: x.pecat,
+                    pv: validPv(x.pv),
+                })),
+        };
+    } catch {
+        return { chyba: 'server' };
+    }
 }
 
 // Posledné stiahnuté počasie. Predpoveď sa z neho prepočítava pri každej obnove (mení sa „teraz“),
@@ -91,16 +134,16 @@ function forecastFrom(json, now, s) {
 /**
  * Dáta pre dané nastavenie. Nikdy nehádže - čo chýba, je null a appka to ukáže. Tarifa
  * dáta nemení (predpoveď ani meranie od nej nezávisia), preto ju netreba.
- * @param {Pick<Settings, 'site' | 'plant' | 'kiosk'>} settings @param {Date} now @param {typeof fetch} [fetchImpl] @returns {Promise<DataResult>}
+ * @param {Pick<Settings, 'site' | 'plant' | 'zdroj'>} settings @param {Date} now @param {typeof fetch} [fetchImpl] @returns {Promise<DataResult>}
  */
 export async function loadData(settings, now, fetchImpl = fetch) {
     const [pvRes, weatherRes] = await Promise.allSettled([
-        settings.kiosk ? loadKioskPv(settings.kiosk, fetchImpl) : Promise.resolve(null),
+        settings.zdroj ? loadPv(settings.zdroj, fetchImpl) : Promise.resolve(null),
         loadWeather(settings.site, now, fetchImpl),
     ]);
-    const pv = pvRes.status === 'fulfilled' ? pvRes.value : null;
+    const live = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
-    return { pv, pvFailed: pvRes.status === 'rejected', forecast };
+    return { pv: live && live.pv, pvFailed: pvRes.status === 'rejected', pecat: live && live.pecat, forecast };
 }
 
 /**

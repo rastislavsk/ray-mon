@@ -24,11 +24,12 @@ import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
-const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
+/** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
+const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, kiosk: TEST_KIOSK };
+const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
 /** Denník výroby: tri dni septembra (3. chýba) a jeden augustový. */
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
 /** Zápisy „Pustil/a som“: dve prania na slnku, jedno večer, umývačka. */
@@ -171,8 +172,8 @@ test.describe('karta Štatistika', () => {
     });
 
     test('bez merania (kiosk nie je): dnešok z predpovede ako odhad, bez prepínača a výzva pripojiť meranie', async ({ page }) => {
-        const errors = await openStat(page, { settings: { ...OWNER, kiosk: '' } });
-        const m = statistikaModel(vstup({ kiosk: '', pv: null }), 'dnes');
+        const errors = await openStat(page, { settings: { ...OWNER, zdroj: null } });
+        const m = statistikaModel(vstup({ zdroj: null, pv: null }), 'dnes');
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
         await expect(page.locator('#st-src')).toHaveText('odhad z predpovede na celý dnešok');
         await expect(page.locator('#st-num')).toHaveClass(/\best\b/);
@@ -350,7 +351,7 @@ test.describe('plagát na zdieľanie', () => {
     });
 
     test('bez merania odkaz na Môžem? ani tlačidlá plagátu nie sú', async ({ page }) => {
-        await openStat(page, { settings: { ...OWNER, kiosk: '' }, panel: 'mozem' });
+        await openStat(page, { settings: { ...OWNER, zdroj: null }, panel: 'mozem' });
         await expect(page.locator('#mz-word')).not.toHaveText('');
         await expect(page.locator('#mz-summary')).toBeHidden();
     });
@@ -402,7 +403,7 @@ test.describe('plagát na zdieľanie', () => {
         await page.locator('[data-poster="mesiac"]').click();
         await expect(page.locator('#poster')).toBeVisible();
         expect(await vazneNalezy(page), 'plagát').toEqual([]);
-        await openStat(page, { settings: { ...OWNER, kiosk: '', tariff: TARIFF } });
+        await openStat(page, { settings: { ...OWNER, zdroj: null, tariff: TARIFF } });
         expect(await vazneNalezy(page), 'bez merania a bez cien').toEqual([]);
         await openStat(page, { settings: null, site: SITE });
         expect(await vazneNalezy(page), 'bez panelov').toEqual([]);

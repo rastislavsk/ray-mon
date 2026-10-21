@@ -2,7 +2,6 @@
 // pre nového používateľa. Čisté funkcie - obrazovky kreslí web/render/nastavenie.js.
 
 import { PLANT, SETTINGS_LIMITS, SETUP, TARIFF_TEMPLATES } from './config.js';
-import { kioskApiUrl } from './kiosk.js';
 import { checkSettings, checkSite, totalPanels } from './settings.js';
 import { checkTariff } from './tariff.js';
 import { inRange } from './valid.js';
@@ -11,9 +10,10 @@ import { inRange } from './valid.js';
 /** @typedef {import('./config.js').PlantString} PlantString */
 /**
  * Obrazovky sprievodcu. `start` a `odkaz` stoja pred ním (úvod a prevzatie z odkazu), zvyšok
- * sú jeho kroky v poradí.
+ * sú jeho kroky v poradí. `znacka`, `sposob` a `pripoj` sú pripojenie živého merania - prídu len
+ * vtedy, keď ho človek chce a ešte nie je pripojené (pohyb medzi nimi rieši shared/setup-flow.js).
  * @typedef {'start' | 'odkaz' | 'lokalita' | 'panel' | 'smer' | 'sklon' | 'pocet' | 'dalsia' | 'menic' | 'meranie'
- *   | 'tarifa' | 'pasma' | 'rozvrh' | 'vynimky' | 'ceny' | 'suhrn'} SetupStep
+ *   | 'znacka' | 'sposob' | 'pripoj' | 'tarifa' | 'pasma' | 'rozvrh' | 'vynimky' | 'ceny' | 'suhrn'} SetupStep
  */
 /** @typedef {{ step: SetupStep, roof: number }} SetupPlace obrazovka a plocha panelov, ktorej sa týka */
 /** @typedef {'jedna' | 'dvoj' | 'viac'} TariffKind typ sadzby (tariffKind) - podľa neho sa vyberajú obrazovky tarify */
@@ -30,6 +30,9 @@ export const SETUP_STEPS = [
     'dalsia',
     'menic',
     'meranie',
+    'znacka',
+    'sposob',
+    'pripoj',
     'tarifa',
     'pasma',
     'rozvrh',
@@ -44,7 +47,7 @@ export const SETUP_SECTIONS = [
     { name: 'Panely', steps: ['panel'] },
     { name: 'Strecha', steps: ['smer', 'sklon', 'pocet', 'dalsia'] },
     { name: 'Menič', steps: ['menic'] },
-    { name: 'Meranie', steps: ['meranie'] },
+    { name: 'Meranie', steps: ['meranie', 'znacka', 'sposob', 'pripoj'] },
     { name: 'Tarifa', steps: ['tarifa', 'pasma', 'rozvrh', 'vynimky', 'ceny'] },
     { name: 'Kontrola', steps: ['suhrn'] },
 ];
@@ -76,6 +79,7 @@ const NEXT = {
     dalsia: 'menic',
     menic: 'meranie',
     meranie: 'tarifa',
+    pripoj: 'tarifa',
     ceny: 'suhrn',
 };
 /** @type {Partial<Record<SetupStep, SetupStep>>} */
@@ -87,6 +91,8 @@ const PREV = {
     pocet: 'sklon',
     menic: 'dalsia',
     meranie: 'menic',
+    znacka: 'meranie',
+    sposob: 'znacka',
     tarifa: 'meranie',
     suhrn: 'ceny',
 };
@@ -137,7 +143,7 @@ export function emptySettings(site = { name: '', lat: NaN, lon: NaN, elevationM:
         site,
         plant: { ...PLANT, strings: [newRoof(site.lat)], panelWp: NaN, acLimitKw: NaN },
         tariff: TARIFF_TEMPLATES.jedna,
-        kiosk: '',
+        zdroj: null,
     };
 }
 
@@ -166,9 +172,9 @@ function siteOk(s) {
  * Dá sa z tejto obrazovky ísť ďalej? Každá kontroluje len to, na čo sa pýta; celé nastavenie
  * preverí zhrnutie tou istou funkciou ako uloženie (checkSettings).
  * @param {SetupPlace} at @param {Settings} draft už s dopočítaným výkonom panelu (resolveDraft)
- * @param {{ totalKwp: number | null, live: boolean }} opts
+ * @param {{ totalKwp: number | null }} opts
  */
-export function setupStepOk({ step, roof }, draft, { totalKwp, live }) {
+export function setupStepOk({ step, roof }, draft, { totalKwp }) {
     const L = SETTINGS_LIMITS;
     const x = draft.plant.strings[roof];
     /** @type {Partial<Record<SetupStep, () => boolean>>} */
@@ -179,7 +185,11 @@ export function setupStepOk({ step, roof }, draft, { totalKwp, live }) {
         pocet: () => !!x && Number.isInteger(x.panels) && inRange(x.panels, L.panels),
         dalsia: () => inRange(draft.plant.panelWp, L.panelWp),
         menic: () => inRange(draft.plant.acLimitKw, L.acLimitKw),
-        meranie: () => !live || !!kioskApiUrl(draft.kiosk),
+        // Značku a spôsob človek vyberá ťuknutím, „Ďalej“ tam nie je čo. Pripojenie je hotové,
+        // keď je v rozpísanom nastavení pripojené meranie.
+        znacka: () => false,
+        sposob: () => false,
+        pripoj: () => !!draft.zdroj,
         pasma: () => checkTariff(draft.tariff).errors.length === 0,
         rozvrh: () => checkTariff(draft.tariff).errors.length === 0,
         vynimky: () => checkTariff(draft.tariff).errors.length === 0,

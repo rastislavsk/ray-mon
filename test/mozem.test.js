@@ -19,7 +19,17 @@ const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 /** Vstup karty v danej chvíli s fixtures. @param {Date} now @param {object} [extra] */
 function input(now, extra = {}) {
     const { pv, forecast } = fixtureData(now);
-    return { now, site: SITE, plant: PLANT, tariff: PRICED, kiosk: 'kiosk', loading: false, pv, forecast, ...extra };
+    return {
+        now,
+        site: SITE,
+        plant: PLANT,
+        tariff: PRICED,
+        zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+        loading: false,
+        pv,
+        forecast,
+        ...extra,
+    };
 }
 const item = (/** @type {ReturnType<typeof mozemModel>} */ m, /** @type {string} */ id) =>
     /** @type {NonNullable<ReturnType<typeof mozemModel>['items'][number]>} */ (m.items.find((i) => i.id === id));
@@ -99,7 +109,7 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
 });
 
 test('bez merania: priznaný odhad a bez cien žiadne eurá', () => {
-    const m = mozemModel(input(FIXED_NOW, { pv: null, kiosk: '', tariff: FLAT }));
+    const m = mozemModel(input(FIXED_NOW, { pv: null, zdroj: null, tariff: FLAT }));
     assert.equal(m.state, 'go');
     assert.equal(m.hero.factV, 'odhad z predpovede');
     assert.ok(m.items.every((i) => !i.extra.includes('€')));

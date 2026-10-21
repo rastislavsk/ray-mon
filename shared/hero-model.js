@@ -62,13 +62,13 @@ export function pvFreshness({ now, pv, site }) {
 }
 
 /**
- * Stav živého merania do riadku v Nastavení: bodka (tone) a krátky text. Bez kiosku null -
+ * Stav živého merania do riadku v Nastavení: bodka (tone) a krátky text. Bez merania null -
  * kto meranie nechce, tomu nič nechýba.
- * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, kiosk: string, loading: boolean }} state
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, zdroj: unknown, loading: boolean }} state
  * @returns {{ tone: 'ok' | 'stale' | 'off' | 'wait', text: string } | null}
  */
-export function liveStatus({ now, pv, site, kiosk, loading }) {
-    if (!kiosk) return null;
+export function liveStatus({ now, pv, site, zdroj, loading }) {
+    if (!zdroj) return null;
     if (!pv) return loading ? { tone: 'wait', text: 'pripájam…' } : { tone: 'off', text: 'nepripojené' };
     const { time, stale } = pvFreshness({ now, pv, site });
     return stale ? { tone: 'stale', text: `zastarané · ${time}` } : { tone: 'ok', text: `pripojené · ${time}` };
