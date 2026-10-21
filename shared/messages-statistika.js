@@ -68,7 +68,7 @@ export const STATISTIKA_TEXTS = {
     posterWashes: 'pranie zo slnka',
     posterValue: 'hodnota podľa tarify',
     posterCo2: 'CO2eq menej ako zo siete',
-    posterPayback: 'uhlíka panelov splatené',
+    posterPayback: 'uhlíka panelov od spustenia',
     posterPaid: 'uhlík panelov splatený',
 };
 
@@ -236,12 +236,13 @@ function summaryNote(d) {
  */
 function carbonRows(d) {
     const p = d.payback === null ? null : posterPayback(d.payback);
-    const paid = p && (p.paid ? 'uhlík z výroby panelov už je splatený' : `panely splatili ${p.pct} % uhlíka zo svojej výroby`);
+    const paid =
+        p && (p.paid ? 'uhlík z výroby panelov už je splatený' : `od spustenia panely splatili ${p.pct} % uhlíka zo svojej výroby`);
     if (d.kwh > 0) return [{ t: `${posterCo2Value(d.co2Kg)} CO2eq menej`, s: paid || 'než zo siete SR, aj s uhlíkom z výroby panelov' }];
     if (!p || d.debtT === null) return [];
     return [
         {
-            t: p.paid ? 'Uhlík z výroby panelov splatený' : `Panely splatili ${p.pct} % uhlíka`,
+            t: p.paid ? 'Uhlík z výroby panelov splatený' : `Od spustenia panely splatili ${p.pct} % uhlíka`,
             s: `z ~${fmt1(d.debtT)} t CO2eq, ktoré stála ich výroba`,
         },
     ];

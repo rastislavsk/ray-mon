@@ -93,7 +93,7 @@ test('summaryModel mesiac: súčet z kiosku, prepočty, hodnota a chýbajúce dn
     const co2 = `${posterCo2Value(f.co2Kg)} CO2eq menej`;
     assert.deepEqual(m.rows.at(-1), {
         t: co2,
-        s: `panely splatili ${posterPayback(/** @type {number} */ (f.payback)).pct} % uhlíka zo svojej výroby`,
+        s: `od spustenia panely splatili ${posterPayback(/** @type {number} */ (f.payback)).pct} % uhlíka zo svojej výroby`,
     });
     const splatene = summaryModel({ ...BASE, pv: { ...pv, cumulativeEnergyKwh: 1e6 } }, 'mesiac');
     assert.deepEqual(splatene?.rows.at(-1), { t: co2, s: 'uhlík z výroby panelov už je splatený' });
@@ -126,7 +126,7 @@ test('summaryModel: bez cien bez hodnoty, bez výroby bez prepočtov', () => {
     const nula = summaryModel({ ...BASE, pv: { ...pv, dailyEnergyKwh: 0, monthEnergyKwh: 0 } }, 'mesiac');
     assert.deepEqual(
         nula?.rows.map((r) => r.t),
-        ['Panely splatili 12 % uhlíka'],
+        ['Od spustenia panely splatili 12 % uhlíka'],
         'bez výroby obdobia ostáva len návratnosť od spustenia',
     );
 });
