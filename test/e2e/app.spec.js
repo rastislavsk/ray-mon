@@ -1503,35 +1503,46 @@ test('7 dní - správa "Najsilnejší deň": na desktope pod tabuľkou, na mobil
     expect(errors).toEqual([]);
 });
 
-/** Potiahnutie prstom naprieč prvkom. Dotyk ide cez CDP, teda ako naozajstný prst - test tak
- * vidí aj to, čo po geste urobí prehliadač sám (kompatibilný klik tam, kde prst skončil).
+/** Ťah prstom z bodu (x, y) o (dx, dy) za `ms` milisekúnd. Dotyk ide cez CDP, teda ako
+ * naozajstný prst - test tak vidí aj to, čo po geste urobí prehliadač sám (kompatibilný klik
+ * tam, kde prst skončil).
+ *
+ * Trvanie gesta neurčujú skutočné hodiny, ale časové pečiatky udalostí: z `timestamp` v CDP
+ * prehliadač berie `event.timeStamp`, ktorým appka meria rýchlosť ťahu. Pod záťažou celej sady
+ * sa totiž aj štyri správy CDP natiahli nad SWIPE.flickMs a rýchle švihnutie ponad graf vyšlo
+ * ako pomalé sledovanie krivky. Čakanie medzi krokmi ostáva, aby veci v appke na časovačoch
+ * bežali rovnako ako pod skutočným prstom - o gestách už ale nerozhoduje.
+ * @param {import('@playwright/test').Page} page
+ * @param {{ x: number, y: number, dx: number, dy?: number, ms?: number }} gesto */
+async function tah(page, { x, y, dx, dy = 0, ms = 0 }) {
+    const kroky = [0.5, 1];
+    const t0 = Date.now() / 1000;
+    const cdp = await page.context().newCDPSession(page);
+    /** @param {'touchStart' | 'touchMove' | 'touchEnd'} type @param {{ x: number, y: number }[]} touchPoints @param {number} t podiel trvania */
+    const posli = (type, touchPoints, t) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints, timestamp: t0 + (ms * t) / 1000 });
+    await posli('touchStart', [{ x, y }], 0);
+    for (const t of kroky) {
+        if (ms) await page.waitForTimeout(ms / kroky.length);
+        await posli('touchMove', [{ x: x + dx * t, y: y + dy * t }], t);
+    }
+    await posli('touchEnd', [], 1);
+    await cdp.detach();
+}
+
+/** Potiahnutie prstom naprieč prvkom, stred ťahu je v strede prvku.
  * @param {import('@playwright/test').Page} page @param {string} sel prvok, ponad ktorý sa ťahá
  * @param {{ dx: number, dy?: number, ms?: number }} gesto posun prsta v pixeloch a jeho trvanie */
 async function swipe(page, sel, { dx, dy = 0, ms = 0 }) {
     const box = await page.locator(sel).boundingBox();
     if (!box) throw new Error(`Prvok ${sel} nie je vidno`);
-    const x = box.x + box.width / 2 - dx / 2;
-    const y = box.y + box.height / 2 - dy / 2;
-    const kroky = [0.5, 1];
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-    for (const t of kroky) {
-        if (ms) await page.waitForTimeout(ms / kroky.length);
-        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * t, y: y + dy * t }] });
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await cdp.detach();
+    await tah(page, { x: box.x + box.width / 2 - dx / 2, y: box.y + box.height / 2 - dy / 2, dx, dy, ms });
 }
 
 /** Ťah prstom v danom mieste obrazovky. Prázdne miesto pod krátkou kartou nie je prvok,
  * takže sa nedá zamerať selektorom ako pri `swipe`.
  * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dx: number }} opts */
-async function tahajVBode(page, { x, y, dx }) {
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-    for (const t of [0.5, 1]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * t, y }] });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await cdp.detach();
+function tahajVBode(page, opts) {
+    return tah(page, opts);
 }
 
 /** Ťahanie prstom od stredu prvku, nie ponad neho: gesto musí začať presne na ňom. Jazdec na
@@ -1956,9 +1967,12 @@ test.describe('listovanie kariet prstom', () => {
         await otvorDetailDna(page);
 
         // Ťahaním po krivke sa graf prezerá (tooltip ide za prstom) - to nie je listovanie.
+        // Tooltip sa sám zatvára po TOOLTIP_HOLD_MS, takže sa pozerá na sledovanú triedu, nie
+        // na stav po kontrole karty - na zaťaženom stroji by sa trafila až za ten čas.
+        await sledujTooltip(page, 'week-curve-tooltip');
         await swipe(page, '#week-curve-wrap', { dx: -120, ms: 500 });
+        expect(await boloVidno(page), 'pomalý ťah po krivke neukázal tooltip').toBe(true);
         await ocakavajDetailDna(page, 0);
-        await expect(page.locator('#week-curve-tooltip')).toHaveClass(/visible/);
 
         // Rýchle švihnutie ponad ten istý graf prelistuje na ďalší deň a tooltip po sebe
         // upratá - hodnota pod prstom už patrí inej krivke.
