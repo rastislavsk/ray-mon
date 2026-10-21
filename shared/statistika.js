@@ -4,14 +4,12 @@
 // pre nový vzhľad. Navyše najlepší deň mesiaca. Súčty za mesiac, rok a celý čas posiela len kiosk -
 // bez neho karta ukáže dnešok z predpovede a výzvu pripojiť meranie, nič si nedoskladá. Čisté funkcie, čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
-import { carbonPayback, co2SavedKg, panelDebtKg } from './carbon.js';
-import { CARBON, EVERYDAY, installedKw } from './config.js';
+import { EVERYDAY, installedKw } from './config.js';
 import { fmtSum, kwpText } from './format.js';
 import { pvFreshness } from './hero-model.js';
 import {
     posterBestDay,
     posterButtonText,
-    posterCarbonNote,
     posterCo2Value,
     posterPayback,
     statsBestText,
@@ -190,28 +188,25 @@ function posterButtons(input) {
 }
 
 /**
- * Uhlík na plagáte: úspora CO2eq za obdobie, koľko z uhlíka výroby panelov splatila výroba od
- * spustenia (len keď ju kiosk posiela) a poznámka, s akými faktormi sa počíta.
- * @param {StatistikaInput} input @param {number} kwh výroba obdobia
- * @param {ReturnType<typeof voiceTexts>['STATISTIKA_TEXTS']} T
+ * Uhlík na plagáte: úspora CO2eq za obdobie a koľko z uhlíka výroby panelov je splatené (len keď
+ * kiosk posiela súčet od spustenia). Čísla aj poznámku s faktormi skladá summaryModel.
+ * @param {import('./summary.js').SummaryFacts} f @param {ReturnType<typeof voiceTexts>['STATISTIKA_TEXTS']} T
  */
-function posterCarbon(input, kwh, T) {
+function posterCarbon(f, T) {
     /** @type {Array<{ value: string, label: string }>} */ const tiles = [];
-    if (kwh > 0) tiles.push({ value: posterCo2Value(co2SavedKg(kwh)), label: T.posterCo2 });
-    const share = carbonPayback(input.pv?.cumulativeEnergyKwh ?? null, input.plant);
-    if (share !== null) {
-        const p = posterPayback(share);
+    if (f.kwh > 0) tiles.push({ value: posterCo2Value(f.co2Kg), label: T.posterCo2 });
+    if (f.payback !== null) {
+        const p = posterPayback(f.payback);
         tiles.push({ value: `${p.pct} %`, label: p.paid ? T.posterPaid : T.posterPayback });
     }
-    const debtT = share === null ? null : panelDebtKg(input.plant) / 1000;
-    return { tiles, note: tiles.length ? posterCarbonNote({ ...CARBON, debtT }) : '' };
+    return tiles;
 }
 
 /**
  * Plagát na zdieľanie: nadpis s miestom, veľké kWh, stĺpce dní, čísla (hodnota podľa tarify, keď
  * sú ceny, úspora CO2eq a koľko uhlíka z výroby panelov je splatené, keď kiosk posiela súčet od
- * spustenia) a poznámka o dňoch, ktoré v denníku chýbajú, a o faktoroch CO2eq. Čísla sú tie isté
- * ako v súhrne súčasnej appky (summaryModel), uhlík počíta shared/carbon.js. Bez živého merania null.
+ * spustenia) a poznámka o dňoch, ktoré v denníku chýbajú, a o faktoroch CO2eq. Čísla aj poznámka
+ * sú tie isté ako v súhrne súčasnej appky (summaryModel). Bez živého merania null.
  * @param {StatistikaInput} input @param {SummaryPeriod} period @param {import('./messages.js').Voice} [voice]
  */
 export function posterModel(input, period, voice = 'drzy') {
@@ -227,8 +222,7 @@ export function posterModel(input, period, voice = 'drzy') {
     if (f.best) tiles.push({ value: posterBestDay(f.best), label: `najlepší deň, ${kwhText(f.best.kwh)} kWh` });
     if (f.washes) tiles.push({ value: `${f.washes}×`, label: T.posterWashes });
     if (f.value !== null && f.kwh > 0) tiles.push({ value: `~${fmtSum(f.value, 0)} ${f.currency}`, label: T.posterValue });
-    const carbon = posterCarbon(input, f.kwh, T);
-    tiles.push(...carbon.tiles);
+    tiles.push(...posterCarbon(f, T));
     return {
         period,
         kick: m.kick,
@@ -238,7 +232,7 @@ export function posterModel(input, period, voice = 'drzy') {
         // Výška stĺpca v % najlepšieho dňa, deň bez čísla null (kreslí sa len obrys).
         cols: m.days.map((d) => ({ date: d.date, h: d.frac === null ? null : Math.max(4, Math.round(d.frac * 100)), best: d.best })),
         tiles,
-        note: [m.note, carbon.note].filter(Boolean).join(' '),
+        note: m.note,
         foot: T.posterFoot,
     };
 }

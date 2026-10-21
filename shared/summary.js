@@ -1,10 +1,11 @@
 // Súhrn na zdieľanie v karte Môžem?: týždeň alebo mesiac na streche v jednotkách, ktoré pozná
-// každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify a koľko toho človek
-// pustil na slnku. Čisté funkcie; texty skladá shared/messages.js.
+// každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify, koľko toho človek
+// pustil na slnku a úspora CO2eq s uhlíkovou návratnosťou panelov (shared/carbon.js). Čisté funkcie; texty skladá shared/messages.js.
 //
 // Mesačný súčet je presný z kiosku. Týždeň a stĺpce dní stoja na denníku (shared/daylog.js),
 // ktorý si appka vedie sama - deň, keď nebola otvorená, v ňom chýba a súhrn to povie.
 
+import { carbonFacts } from './carbon.js';
 import { EVERYDAY } from './config.js';
 import { lastDays, monthDays } from './daylog.js';
 import { monthCount, sunRuns } from './launches.js';
@@ -18,7 +19,7 @@ export { SUMMARY_PERIODS } from './config.js';
 
 /**
  * @typedef {import('./stats.js').StatsInput & { launches: import('./launches.js').Launch[],
- *   dayLog: import('./daylog.js').DayLog }} SummaryInput
+ *   dayLog: import('./daylog.js').DayLog, plant: import('./config.js').Plant }} SummaryInput
  */
 
 /** Spustenia v posledných 7 dňoch. @param {import('./launches.js').Launch[]} list @param {string} today */
@@ -79,6 +80,7 @@ export function summaryModel(input, period, voice = 'drzy') {
         // Prania zo slnka - zápisy „Pustil/a som“ práčky v dňoch obdobia.
         washes: sunRuns(input.launches, 'pracka', days[0].date, today),
         missing: days.length - known.length,
+        ...carbonFacts(kwh, pv.cumulativeEnergyKwh ?? null, input.plant),
     };
     return {
         period,
@@ -92,3 +94,5 @@ export function summaryModel(input, period, voice = 'drzy') {
         ...summaryTexts(facts, voice),
     };
 }
+
+/** @typedef {NonNullable<ReturnType<typeof summaryModel>>['facts']} SummaryFacts */

@@ -44,7 +44,7 @@ import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
 import { deviceShorts, mozemModel } from '../../shared/mozem.js';
-import { summaryModel } from '../../shared/summary.js';
+import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
 import { dayWindowCard, fitLabel, forecastDayMessage, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
@@ -3168,6 +3168,47 @@ test.describe('karta Môžem?', () => {
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
+    });
+
+    test('súhrn do story: aj s cenami, spusteniami a uhlíkom sa všetky riadky zmestia nad pätičku', async ({ page }) => {
+        // Najviac riadkov: prepočty, najlepší deň, hodnota (tarifa s cenami), spustenia a uhlík - úspora
+        // CO2eq s návratnosťou v jednom riadku (kiosk posiela súčet od spustenia).
+        const priced = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
+        const launches = [
+            { d: '2026-09-02', id: 'pracka', m: 600, sun: true },
+            { d: '2026-09-04', id: 'susicka', m: 1200, sun: false },
+        ];
+        const zoznamy = SUMMARY_PERIODS.map(
+            (period) =>
+                /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
+                    summaryModel(
+                        {
+                            ...OWNER,
+                            tariff: priced,
+                            now: FIXED_NOW,
+                            loading: false,
+                            pv,
+                            forecast: forecastAt(FIXED_NOW),
+                            launches,
+                            dayLog: {},
+                        },
+                        period,
+                    )
+                ).rows,
+        );
+        expect(zoznamy.map((r) => r.length)).toEqual([6, 6]);
+        await openApp(page);
+        const vysledok = await page.evaluate(async (zoznamy) => {
+            const { look, rows, rowsScale, ROWS_END } = await import('/web/share-image.js');
+            const t = look();
+            await Promise.all([document.fonts.load(`700 100px ${t.sans}`), document.fonts.load(`700 40px ${t.mono}`)]);
+            const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
+            const mierky = zoznamy.map((list) => rowsScale(ctx, list, t));
+            return { mierky, konce: zoznamy.map((list, i) => rows(ctx, list, t, false, mierky[i])), ROWS_END };
+        }, zoznamy);
+        for (const koniec of vysledok.konce) expect(koniec).toBeLessThanOrEqual(vysledok.ROWS_END);
+        // Zmenšené len mierne - pod 70 % by sa text v story ťažko čítal a rowsScale by ho pustil cez pätičku.
+        for (const k of vysledok.mierky) expect(k).toBeGreaterThan(0.7);
     });
 
     test('súhrn: denník si zapíše dnešok a zdieľanie pošle obrázok systému', async ({ page }) => {

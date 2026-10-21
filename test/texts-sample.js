@@ -4,7 +4,7 @@
 // test/golden/texty-drzy.json (texts.test.js) - dôkaz, že drzé texty sa nezmenili ani o písmeno.
 // Zo slušnej sa skladá tabuľka do popisu pull requestu.
 
-import { MOZEM_SKY_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
+import { CARBON, MOZEM_SKY_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
 import { heroModel } from '../shared/hero-model.js';
 import * as M from '../shared/messages.js';
 import { mozemModel } from '../shared/mozem.js';
@@ -210,6 +210,14 @@ function directMisc(out, v) {
                         currency: '€',
                         launches,
                         missing,
+                        // Uhlík: rozpracovaný, splatený aj bez súčtu od spustenia.
+                        co2Kg: 14.4,
+                        ...{
+                            vsetko: { payback: 0.129, debtT: 16.9 },
+                            cast: { payback: 1.2, debtT: 16.9 },
+                            nic: { payback: null, debtT: null },
+                        }[k],
+                        carbon: CARBON,
                     },
                     v,
                 ),
