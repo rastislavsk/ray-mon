@@ -107,6 +107,48 @@ export const SPOSOBY = [
         intervalMs: 5 * 60 * 1000,
     },
     {
+        id: 'solis-kluc',
+        znacka: 'solis',
+        nazov: 'Kľúč od podpory Solis',
+        pod: 'O kľúč požiadaš podporu Solis, potom ho skopíruješ zo SolisCloud.',
+        tagy: ['podpora Solis', 'pár dní'],
+        kroky: [
+            'Pošli podpore Solis správu nižšie. API prístup zapína technická podpora Solis.',
+            'Keď ho zapnú, otvor na soliscloud.com Account → Basic Settings → API Management.',
+            'Skopíruj API ID a API Secret a vlož ich sem.',
+        ],
+        sprava: 'Dobrý deň,\nprosím o zapnutie API prístupu pre môj účet SolisCloud: [e-mail účtu]. Prístup potrebujem len na čítanie údajov o výrobe mojej elektrárne.\nĎakujem',
+        pola: [
+            { id: 'keyId', lbl: 'API ID', ph: 'API ID' },
+            { id: 'secret', lbl: 'API Secret', ph: 'API Secret', tajne: true },
+        ],
+        pozn: 'Solis obnovuje dáta raz za 5 minút, appka sa pýta rovnako často.',
+        zrusenie: 'Kľúč spravuješ na soliscloud.com v časti API Management.',
+        intervalMs: 5 * 60 * 1000,
+    },
+    {
+        id: 'deye-aplikacia',
+        znacka: 'deye',
+        nazov: 'Vlastná aplikácia v Deye Cloud',
+        pod: 'Na portáli Deye si sám vytvoríš aplikáciu a k nej zadáš prihlásenie do Deye Cloud.',
+        tagy: ['ty', '5 minút'],
+        kroky: [
+            'Otvor developer.deyecloud.com a prihlás sa účtom Deye Cloud.',
+            'Application → vytvor novú aplikáciu (stačí meno, napr. RAY-MON).',
+            'Skopíruj AppId a AppSecret a vlož ich sem. K nim e-mail a heslo do Deye Cloud.',
+        ],
+        pola: [
+            { id: 'appId', lbl: 'AppId', ph: 'AppId' },
+            { id: 'appSecret', lbl: 'AppSecret', ph: 'AppSecret', tajne: true },
+            { id: 'email', lbl: 'E-mail Deye Cloud', ph: 'meno@example.sk', typ: 'email' },
+            { id: 'heslo', lbl: 'Heslo Deye Cloud', ph: 'heslo', tajne: true },
+        ],
+        pozn: 'Heslo appka pošle Deye len raz a neuloží ho. Prístup od Deye platí 60 dní, potom Deye pripoj znova.',
+        zrusenie: 'Aplikáciu zmažeš na developer.deyecloud.com, prístup tým zanikne.',
+        // Deye odporúča pýtať sa raz za 1-2 minúty (Best Practices).
+        intervalMs: 2 * 60 * 1000,
+    },
+    {
         id: 'victron-token',
         znacka: 'victron',
         nazov: 'Prístupový token z VRM',
@@ -126,6 +168,8 @@ export const ZNACKY = [
     { id: 'foxess', meno: 'Fox ESS', sposoby: ['foxess-kluc'] },
     { id: 'solax', meno: 'SolaX', sposoby: ['solax-token'] },
     { id: 'victron', meno: 'Victron', sposoby: ['victron-token'] },
+    { id: 'solis', meno: 'Solis', sposoby: ['solis-kluc'] },
+    { id: 'deye', meno: 'Deye', sposoby: ['deye-aplikacia'] },
     {
         id: 'solaredge',
         meno: 'SolarEdge',
