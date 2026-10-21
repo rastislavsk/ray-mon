@@ -4,6 +4,7 @@ import { MINUTES_PER_DAY } from './config.js';
 
 const WEEK_DAYS_SHORT = ['Ne', 'Po', 'Ut', 'St', 'Št', 'Pi', 'So'];
 const WEEK_DAYS_LONG = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'máj', 'jún', 'júl', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
 /** @param {number} n */
 export function pad2(n) {
@@ -91,6 +92,11 @@ export function dayNameLong(dateStr) {
 /** Skratka dňa v týždni pre dátum: "Št". @param {string} dateStr */
 export function dayNameShort(dateStr) {
     return WEEK_DAYS_SHORT[dateParts(dateStr).dow];
+}
+
+/** Skratka mesiaca pod stĺpcom roka: "sep". @param {string} month `YYYY-MM` */
+export function monthNameShort(month) {
+    return MONTHS_SHORT[Number(month.slice(5, 7)) - 1];
 }
 
 /** "Dnes", "Zajtra", inak skratka dňa v týždni. @param {string} dateStr @param {number} index */

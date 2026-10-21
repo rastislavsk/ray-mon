@@ -1308,6 +1308,8 @@ button:focus-visible {
     margin: 0 auto;
 }
 .pc {
+    /* Veľké číslo .pn sa zmenšuje podľa šírky karty (cqi). */
+    container-type: inline-size;
     display: grid;
     gap: 12px;
     padding: 22px 20px;
@@ -1326,8 +1328,10 @@ button:focus-visible {
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
+/* Ročné „9 112 kWh“ je dlhšie než mesačné - --n je počet znakov (render/poster.js), aby sa číslo
+   zmestilo do karty v jednom riadku. */
 .pn {
-    font-size: min(62px, 15vw);
+    font-size: min(62px, 15vw, 100cqi / var(--n, 7) * 1.3);
     font-weight: 900;
     font-variation-settings: 'wdth' 125;
     line-height: 0.95;
@@ -1347,6 +1351,11 @@ button:focus-visible {
 }
 .cols i.best {
     opacity: 0.9;
+}
+/* Mesiac roka, v ktorom niektorý deň v denníku chýba: stĺpec je nižší, než mesiac naozaj bol. */
+.cols i.partial {
+    outline: 1.5px dashed var(--poster-ink);
+    outline-offset: 1.5px;
 }
 /* Deň, ktorý v denníku chýba: len obrys, aby bolo vidno, že číslo nie je. */
 .cols i.missing {

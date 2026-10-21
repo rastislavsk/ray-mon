@@ -11,9 +11,18 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {import('../state.js').AppState} AppState */
 
-/** Stĺpce dní: výška v % najlepšieho dňa, chýbajúci deň len obrys. @param {import('../../../shared/statistika.js').PosterModel['cols']} cols */
+/**
+ * Stĺpce dní (pri roku mesiacov): výška v % najlepšieho, chýbajúci len obrys, mesiac s chýbajúcimi
+ * dňami s prerušovaným obrysom. @param {import('../../../shared/statistika.js').PosterModel['cols']} cols
+ */
 const colsHtml = (cols) =>
-    cols.map((c) => (c.h === null ? '<i class="missing"></i>' : `<i${c.best ? ' class="best"' : ''} style="height:${c.h}%"></i>`)).join('');
+    cols
+        .map((c) => {
+            if (c.h === null) return '<i class="missing"></i>';
+            const cls = [c.best ? 'best' : '', c.partial ? 'partial' : ''].join(' ').trim();
+            return `<i${cls ? ` class="${cls}"` : ''} style="height:${c.h}%"></i>`;
+        })
+        .join('');
 
 /** Čísla plagátu: veľké číslo a popisok pod ním. @param {import('../../../shared/statistika.js').PosterModel['tiles']} tiles */
 const tilesHtml = (tiles) => tiles.map((t) => `<p><strong>${escapeHtml(t.value)}</strong>${escapeHtml(t.label)}</p>`).join('');
@@ -44,6 +53,7 @@ export function renderPoster(state, dom) {
     }
     setText(dom.posterTitle, m.title);
     setText(dom.posterKwh, m.kwh);
+    dom.posterKwh.style.setProperty('--n', String(m.kwh.length));
     setHtml(dom.posterCols, colsHtml(m.cols));
     setHtml(dom.posterTiles, tilesHtml(m.tiles));
     setText(dom.posterFoot, m.foot);

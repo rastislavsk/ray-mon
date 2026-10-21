@@ -75,7 +75,7 @@ function forecastEntry(s) {
  * @returns {{ date: string, kwh: number, today: boolean } | null}
  */
 export function monthBest(input, today) {
-    const days = periodDays(input.dayLog, input.pv?.dailyEnergyKwh ?? null, today, false);
+    const days = periodDays(input.dayLog, input.pv?.dailyEnergyKwh ?? null, today, 'mesiac');
     const best = bestOf(days);
     if (!best || best.kwh <= 0 || days.filter((d) => d.kwh !== null).length < 2) return null;
     return { ...best, today: best.date === today };
@@ -176,15 +176,30 @@ const heroValue = (hero, currency) => (hero.value === null ? null : statsValueTe
 /** @typedef {ReturnType<typeof statistikaModel>} StatistikaModel */
 
 /**
- * Tlačidlá plagátu: obe obdobia súhrnu, mesiac prvý ako v návrhu. Plagát skladá čísla zo
- * živého merania - bez neho nie je čo zdieľať a tlačidlá nie sú.
+ * Tlačidlá plagátu: všetky obdobia súhrnu, mesiac prvý ako v návrhu, ostatné v poradí prepínača
+ * (týždeň, rok). Plagát skladá čísla zo živého merania - bez neho nie je čo zdieľať a tlačidlá nie sú.
  * @param {import('./summary.js').SummaryInput} input
  */
 function posterButtons(input) {
-    return [...SUMMARY_PERIODS].reverse().flatMap((period) => {
+    const order = ['mesiac', ...SUMMARY_PERIODS.filter((p) => p !== 'mesiac')];
+    return /** @type {import('./summary.js').SummaryPeriod[]} */ (order).flatMap((period) => {
         const m = summaryModel(input, period);
         return m ? [{ period, label: posterButtonText(m.kick) }] : [];
     });
+}
+
+/**
+ * Stĺpce plagátu: výška v % najlepšieho dňa, deň bez čísla null (kreslí sa len obrys). Rok má
+ * stĺpce mesiacov po tento - budúce mesiace plagát vynechá - a `partial` pre mesiac, v ktorom
+ * niektorý deň v denníku chýba.
+ * @param {NonNullable<ReturnType<typeof summaryModel>>} m
+ * @returns {Array<{ date: string, h: number | null, best: boolean, partial: boolean }>}
+ */
+function posterCols(m) {
+    const height = (/** @type {number | null} */ frac) => (frac === null ? null : Math.max(4, Math.round(frac * 100)));
+    if (m.months)
+        return m.months.filter((x) => !x.future).map((x) => ({ date: x.month, h: height(x.frac), best: x.best, partial: x.partial }));
+    return m.days.map((d) => ({ date: d.date, h: height(d.frac), best: d.best, partial: false }));
 }
 
 /**
@@ -219,7 +234,7 @@ export function posterModel(input, period, voice = 'drzy') {
         tiles.push({ value: `${fmtSum(Math.round(f.phones), 0)}×`, label: T.posterPhones });
         tiles.push({ value: `${fmtSum(Math.round(f.km), 0)} km`, label: T.posterKm });
     }
-    if (f.best) tiles.push({ value: posterBestDay(f.best), label: `najlepší deň, ${kwhText(f.best.kwh)} kWh` });
+    if (f.best) tiles.push({ value: posterBestDay(f.best, period), label: `najlepší deň, ${kwhText(f.best.kwh)} kWh` });
     if (f.washes) tiles.push({ value: `${f.washes}×`, label: T.posterWashes });
     if (f.value !== null && f.kwh > 0) tiles.push({ value: `~${fmtSum(f.value, 0)} ${f.currency}`, label: T.posterValue });
     tiles.push(...posterCarbon(f, T));
@@ -229,8 +244,7 @@ export function posterModel(input, period, voice = 'drzy') {
         title: input.site.name ? `${m.kick} · ${input.site.name}` : m.kick,
         total: m.kwh,
         kwh: `${fmtSum(Math.round(m.kwh), 0)} kWh`,
-        // Výška stĺpca v % najlepšieho dňa, deň bez čísla null (kreslí sa len obrys).
-        cols: m.days.map((d) => ({ date: d.date, h: d.frac === null ? null : Math.max(4, Math.round(d.frac * 100)), best: d.best })),
+        cols: posterCols(m),
         tiles,
         note: m.note,
         foot: T.posterFoot,

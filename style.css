@@ -4822,6 +4822,15 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .summary-bars i.best {
     background: var(--ink-on-color);
 }
+/* Rok: 12 mesiacov sa na úzky displej zmestí len s užšími medzerami. */
+.summary-bars.year {
+    gap: 3px;
+}
+/* Mesiac, v ktorom niektorý deň chýba v denníku: stĺpec je nižší, než mesiac naozaj bol. */
+.summary-bars i.partial {
+    outline: 1.5px dashed rgba(0, 0, 0, 0.45);
+    outline-offset: 1.5px;
+}
 .summary-bars i.missing,
 .summary-cal i.missing {
     background: transparent;

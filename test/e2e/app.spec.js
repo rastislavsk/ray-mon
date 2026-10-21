@@ -3172,6 +3172,19 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.summary-bars span')).toHaveCount(7);
         await expect(page.locator('.summary-note')).toHaveText(tyzden.note);
 
+        // Rok: súčet z kiosku a 12 mesiacov - denník pozná len dnešok, takže september je neúplný,
+        // január až august bez čísla a október až december ešte len prídu.
+        await page.locator('[data-summary-period="rok"]').click();
+        const rok = suhrn('rok');
+        await expect(page.locator('.summary-kick')).toHaveText(rok.kick);
+        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(rok.kwh), 0)} kWh`);
+        await expect(page.locator('.summary-bars.year span')).toHaveCount(12);
+        await expect(page.locator('.summary-bars.year i.missing')).toHaveCount(8);
+        await expect(page.locator('.summary-bars.year i.partial')).toHaveCount(1);
+        await expect(page.locator('.summary-bars.year i.future')).toHaveCount(3);
+        await expect(page.locator('.summary-row span')).toHaveCount(rok.rows.length);
+        await expect(page.locator('.summary-note')).toHaveText(rok.note);
+
         // Súhrn je obrazovka karty: Späť na telefóne ho zavrie, ďalšie Späť už vedie preč z karty.
         await page.goBack();
         await expect(page.locator('.mozem-hero')).toBeVisible();
@@ -3210,7 +3223,7 @@ test.describe('karta Môžem?', () => {
                     )
                 ).rows,
         );
-        expect(zoznamy.map((r) => r.length)).toEqual([6, 6]);
+        expect(zoznamy.map((r) => r.length)).toEqual([6, 6, 6]);
         await openApp(page);
         const vysledok = await page.evaluate(async (zoznamy) => {
             const { look, rows, rowsScale, ROWS_END } = await import('/web/share-image.js');

@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DAYLOG, EVERYDAY, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { lastDays, monthDays, parseDayLog, recordDay } from '../shared/daylog.js';
+import { lastDays, monthDays, parseDayLog, recordDay, yearDays } from '../shared/daylog.js';
 import { fmtSum } from '../shared/format.js';
 import { carbonFacts } from '../shared/carbon.js';
 import { plural, posterCo2Value, posterPayback, SUMMARY_TRIPS } from '../shared/messages.js';
-import { summaryModel } from '../shared/summary.js';
+import { summaryModel, yearMonths } from '../shared/summary.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -59,6 +59,27 @@ test('lastDays a monthDays: dni až po dnešok, chýbajúce sú null', () => {
     const month = monthDays(log, '2026-09-05');
     assert.equal(month.length, 5);
     assert.equal(month[0].date, '2026-09-01');
+    const year = yearDays(log, '2026-09-05');
+    assert.equal(year.length, 248, '1. 1. až 5. 9. 2026');
+    assert.equal(year[0].date, '2026-01-01');
+    assert.equal(year.at(-1)?.date, '2026-09-05');
+    assert.equal(yearDays({}, '2028-12-31').length, 366, 'priestupný rok');
+});
+
+test('yearMonths: súčet známych dní, neúplný, prázdny a budúci mesiac, najlepší', () => {
+    const days = yearDays({ '2026-01-01': 2, '2026-02-10': 5, '2026-07-31': 9 }, '2026-09-05').map((d) =>
+        // Celý júl v denníku, okrem neho len pár dní.
+        d.date.startsWith('2026-07') ? { ...d, kwh: 10 } : d,
+    );
+    const m = yearMonths(days, '2026-09-05');
+    assert.equal(m.length, 12);
+    assert.deepEqual(m[0], { month: '2026-01', kwh: 2, partial: true, future: false, frac: 2 / 310, best: false });
+    assert.equal(m[6].kwh, 310);
+    assert.equal(m[6].partial, false, 'júl je celý');
+    assert.equal(m[6].best, true);
+    assert.deepEqual([m[2].kwh, m[2].frac, m[2].partial], [null, null, false], 'marec bez jediného dňa');
+    assert.deepEqual([m[8].future, m[9].future], [false, true], 'september beží, október ešte len príde');
+    assert.ok(yearMonths(yearDays({}, '2026-09-05'), '2026-09-05').every((x) => x.frac === null && !x.best));
 });
 
 test('plural a trasy', () => {
@@ -73,6 +94,31 @@ test('plural a trasy', () => {
 
 test('summaryModel: bez merania nie je', () => {
     assert.equal(summaryModel({ ...BASE, pv: null }, 'mesiac'), null);
+});
+
+test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň roka, spustenia a trasa okolo Zeme', () => {
+    const dayLog = { '2026-06-14': 63.2, '2026-07-02': 50, '2025-12-31': 99 };
+    const launches = [
+        { d: '2026-03-01', id: 'pracka', m: 700, sun: true },
+        { d: '2026-09-04', id: 'susicka', m: 1200, sun: false },
+        { d: '2025-12-30', id: 'pracka', m: 700, sun: true },
+    ];
+    const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, dayLog, launches }, 'rok'));
+    assert.equal(m.kick, 'Rok 2026 na streche');
+    assert.equal(m.kwh, pv.yearEnergyKwh);
+    assert.equal(m.days.length, 248);
+    assert.equal(m.months?.length, 12);
+    assert.equal(m.months?.find((x) => x.best)?.month, '2026-06', 'jún má najviac zo známych dní');
+    assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: 14. 6.', 'minulý rok sa nepočíta');
+    assert.equal(m.rows.find((r) => r.t.endsWith('km autom'))?.s, 'raz okolo Zeme');
+    assert.deepEqual(
+        m.rows.find((r) => r.t.startsWith('Na slnku')),
+        { t: 'Na slnku si pustil/a 1×', s: 'z 2 spustení, zvyšok išiel zo siete' },
+    );
+    assert.match(m.note, /^Za 245 dní appka čísla nemá/);
+    assert.equal(summaryModel(BASE, 'mesiac')?.months, null, 'mesiace má len rok');
+    const bezRoka = summaryModel({ ...BASE, dayLog, pv: { ...pv, yearEnergyKwh: null } }, 'rok');
+    assert.equal(bezRoka?.kwh, 63.2 + 50 + /** @type {number} */ (pv.dailyEnergyKwh), 'bez súčtu z kiosku súčet denníka');
 });
 
 test('summaryModel mesiac: súčet z kiosku, prepočty, hodnota a chýbajúce dni', () => {

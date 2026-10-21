@@ -1,13 +1,13 @@
-// Súhrn na zdieľanie v karte Môžem?: týždeň alebo mesiac na streche ako plagát. Obsah skladá
+// Súhrn na zdieľanie v karte Môžem?: týždeň, mesiac alebo rok na streche ako plagát. Obsah skladá
 // render karty (render/mozem.js) do toho istého nosiča #mozem-body. Počíta shared/summary.js.
 
-import { dayNameShort, escapeHtml, fmtSum } from '../../shared/format.js';
+import { dayNameShort, escapeHtml, fmtSum, monthNameShort } from '../../shared/format.js';
 import { SUMMARY_PERIODS } from '../../shared/summary.js';
 import { ICON_BACK, ICON_NEXT } from '../icons.js';
 
 /** @typedef {NonNullable<ReturnType<typeof import('../../shared/summary.js').summaryModel>>} SummaryModel */
 
-const PERIOD_LABELS = { tyzden: 'Týždeň', mesiac: 'Mesiac' };
+const PERIOD_LABELS = { tyzden: 'Týždeň', mesiac: 'Mesiac', rok: 'Rok' };
 
 /**
  * Tlačidlo Späť na druhej obrazovke karty Môžem? (súhrn, zoznam vecí).
@@ -17,8 +17,30 @@ export function backButtonHtml(cls, attr) {
     return `<button type="button" class="${cls}" ${attr}>${ICON_BACK}Späť</button>`;
 }
 
-/** Týždeň ako stĺpce, mesiac ako mriežka štvorčekov. Chýbajúci deň je len obrys. @param {SummaryModel} m */
+/**
+ * Rok ako 12 stĺpcov mesiacov. Mesiac bez jediného dňa v denníku je len obrys, mesiac, v ktorom
+ * niektorý deň chýba, má stĺpec s prerušovaným obrysom (je nižší, než mesiac naozaj bol), mesiac,
+ * ktorý ešte len príde, stĺpec nemá.
+ * @param {NonNullable<SummaryModel['months']>} months
+ */
+function yearHtml(months) {
+    const bars = months
+        .map((m) => {
+            const cls = m.future
+                ? 'future'
+                : m.frac === null
+                  ? 'missing'
+                  : [m.best ? 'best' : '', m.partial ? 'partial' : ''].join(' ').trim();
+            const h = m.future ? 0 : m.frac === null ? 30 : Math.max(4, Math.round(m.frac * 100));
+            return `<span><i class="${cls}" style="height:${h}%"></i>${escapeHtml(monthNameShort(m.month))}</span>`;
+        })
+        .join('');
+    return `<div class="summary-bars year" aria-hidden="true">${bars}</div>`;
+}
+
+/** Týždeň ako stĺpce, mesiac ako mriežka štvorčekov, rok ako stĺpce mesiacov. Chýbajúci deň je len obrys. @param {SummaryModel} m */
 function vizHtml(m) {
+    if (m.months) return yearHtml(m.months);
     if (m.period === 'tyzden') {
         const bars = m.days
             .map((d) => {

@@ -112,6 +112,7 @@ test('texty: odkiaľ je číslo, hodnota, pás, najlepší deň a tlačidlá pla
     assert.equal(statsBestText({ date: '2026-10-05', kwh: 40.2, today: true }).text, 'Dnes · 40,2 kWh. Strecha dnes maká ako blázon.');
     assert.equal(posterBestDay({ date: '2026-09-12', today: false }), 'so 12.');
     assert.equal(posterBestDay({ date: '2026-09-12', today: true }), 'dnes');
+    assert.equal(posterBestDay({ date: '2026-06-14', today: false }, 'rok'), '14. 6.', 'v roku s mesiacom');
     assert.equal(posterButtonText('September na streche'), 'September na streche · zdieľať');
     assert.equal(posterLinkText('September na streche', 168.2), 'September na streche: 168 kWh · súhrn na zdieľanie');
     assert.equal(kwhText(null), '–');
@@ -142,7 +143,7 @@ test('statistikaModel: so živým meraním čísla zo statsModel pre každé obd
         assert.equal(m.prices, false);
         assert.deepEqual(
             m.posters.map((p) => p.period),
-            ['mesiac', 'tyzden'],
+            ['mesiac', 'tyzden', 'rok'],
         );
     }
     const dnes = statistikaModel(BASE, 'dnes');
@@ -156,6 +157,7 @@ test('statistikaModel: so živým meraním čísla zo statsModel pre každé obd
     assert.equal(statistikaModel(BASE, 'mesiac').hero?.sub, 'vyrobené v septembri');
     assert.equal(dnes.posters[0].label, 'September na streche · zdieľať');
     assert.equal(dnes.posters[1].label, 'Posledných 7 dní na streche · zdieľať');
+    assert.equal(dnes.posters[2].label, 'Rok 2026 na streche · zdieľať');
     assert.deepEqual(dnes.best, statsBestText({ date: '2026-09-03', kwh: 35.5, today: false }));
 });
 
