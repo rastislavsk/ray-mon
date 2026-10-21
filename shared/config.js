@@ -517,11 +517,12 @@ export const TIMEOUT = {
 };
 
 /**
- * Ako Worker sťahuje kiosk: najviac dva pokusy s pauzou medzi nimi, každý s vlastným
- * limitom (ms). Worker čaká na kiosk kratšie než appka na Worker, aby sa aj s opakovaním
- * (2 × 5 s + 0,5 s) zmestil do jej limitu `TIMEOUT.appMs`.
+ * Ako sa Worker pýta servera výrobcu: najviac dva pokusy s pauzou medzi nimi, každý s vlastným
+ * limitom (ms). Worker čaká na výrobcu kratšie než appka na Worker, aby sa jedna požiadavka aj
+ * s opakovaním (2 × 5 s + 0,5 s) zmestila do jej limitu `TIMEOUT.appMs`. Kde meranie potrebuje
+ * dve požiadavky, idú naraz, nie po sebe.
  */
-export const KIOSK_RETRY = { attempts: 2, delayMs: 500, timeoutMs: 5 * 1000 };
+export const VYROBCA_RETRY = { attempts: 2, delayMs: 500, timeoutMs: 5 * 1000 };
 
 // Od akej viditeľnej výšky okna (px) sa v prehľade dní na karte 7 dní ukáže aj správa
 // týždňa. Prehľad sám sa zmestí od 735 px; so správou potrebuje 860 px, a pri najdlhšej

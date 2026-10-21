@@ -1032,6 +1032,9 @@ test('terazky: ikonka „i“ otvorí popup, ktorý vysvetľuje všetky štyri �
 const dveSnimky = (page) =>
     page.evaluate(() => new Promise((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo(undefined)))));
 
+/** O minútu neskôr - meranie je zas na rade (kiosk sa pýta raz za minútu, shared/zdroje.js). @param {import('@playwright/test').Page} page */
+const poMinute = (page) => page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 60 * 1000));
+
 /** Jedna nevydarená obnova nemá prepnúť živý výkon na odhad - o minútu by sa vrátil späť
  * a nameraná krivka by medzitým z grafu zmizla. */
 test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', async ({ page }) => {
@@ -1039,6 +1042,7 @@ test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', as
     await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
 
     await page.route(WORKER_PV_URL, (route) => route.abort());
+    await poMinute(page);
     const zlyhala = page.waitForEvent('requestfailed', (r) => r.url() === WORKER_PV_URL);
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await zlyhala;
@@ -1062,6 +1066,7 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
         await zadrzane;
         await route.fulfill({ json: { pv } });
     });
+    await poMinute(page);
     for (let i = 0; i < 3; i++) await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect.poll(() => volania).toBe(1);
     // Chvíľa na to, aby prípadné ďalšie požiadavky stihli prísť.

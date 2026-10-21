@@ -77,7 +77,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
   alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou
   slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne živé meranie
-  (výber značky meniča a spôsobu pripojenia, dnes kiosk Huawei FusionSolar), tarifa a na koniec zhrnutie s výrobou za jasného
+  (výber značky meniča a spôsobu pripojenia: kiosk Huawei FusionSolar, kľúč Fox ESS, token SolaX či Victron), tarifa a na koniec zhrnutie s výrobou za jasného
   dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
   po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je
@@ -144,8 +144,9 @@ a oblačnosť a sama z nich dopočíta predpoveď výroby: polohu slnka, žiaren
 panelov, teplotný odber a limit meniča. Tá istá funkcia počíta aj strop pri úplne jasnej
 oblohe, z ktorého vychádza údaj „využitie“. Počasie sa sťahuje najviac raz za hodinu.
 
-Živé meranie je nepovinné. Kto si v Nastavení pripojí menič (vyberie značku a spôsob, dnes odkaz
-na verejný kiosk Huawei FusionSolar), tomu appka každú minútu stiahne meranie cez Worker
+Živé meranie je nepovinné. Kto si v Nastavení pripojí menič (vyberie značku a spôsob – odkaz na kiosk
+Huawei FusionSolar, kľúč z Fox ESS, token zo SolaX alebo Victron), tomu appka stiahne meranie cez Worker
+(každú minútu, pri značkách s prísnejšími limitmi či pomalším cloudom zriedkavejšie)
 (prehliadač sa k výrobcovi priamo nedostane). Telefón drží prístup len zapečatený – otvoriť ho
 vie iba Worker, a ten si nič neukladá. Bez merania appka ukazuje odhad z predpovede.
 

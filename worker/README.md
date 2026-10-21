@@ -5,7 +5,11 @@ ich za neho pýta tento Worker. Nič neukladá: nemá úložisko ani plánované
 tajomstvo – kľúč na zapečatenie prístupu. Predpoveď si appka počíta sama v prehliadači.
 
 Spôsoby pripojenia sú v `shared/zdroje.js` (čo vidí človek) a vo `src/zdroje.js` (ako sa
-Worker pripojí a meria). Dnes je to kiosk Huawei FusionSolar.
+Worker pripojí a meria). Dnes kiosk Huawei FusionSolar, kľúč Fox ESS (Open API, podpísané
+požiadavky na `www.foxesscloud.com`), token SolaX (`www.solaxcloud.com`) a token Victron VRM
+(`vrmapi.victronenergy.com`). Prevod odpovedí je v `shared/` (`foxess.js`, `solax.js`,
+`victron.js`), sieť vo `src/zdroje.js`. Ako často sa appka pýta, určuje `intervalMs` spôsobu
+podľa limitov výrobcu (Fox ESS 1 440 dopytov denne na menič → každé 3 minúty).
 
 ## Zapečatený prístup a kľúč `PECAT_KLUC`
 
@@ -56,7 +60,7 @@ pribalí jeho pečať a appka si ju uloží namiesto odkazu.
 - Cudzia alebo poškodená pečať, cudzí odkaz: **400** bez jediného sťahovania. Z Workera sa tak
   nedá spraviť proxy na čokoľvek iné než servery výrobcov zo `src/zdroje.js`.
 - Nedostupný výrobca: **502**. Odpoveď neobsahuje odkaz, kľúč ani podrobnosti.
-  Na kiosk čaká Worker najviac 5 s a pri výpadku alebo 5xx to skúsi ešte raz (`KIOSK_RETRY`
+  Na kiosk čaká Worker najviac 5 s a pri výpadku alebo 5xx to skúsi ešte raz (`VYROBCA_RETRY`
   v `shared/config.js`). Odpoveď 4xx (napr. neplatný kľúč) sa neopakuje – druhý pokus by
   dopadol rovnako.
 

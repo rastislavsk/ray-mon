@@ -143,3 +143,122 @@ test('iné cesty 404, iné metódy 405, OPTIONS 204', async () => {
     assert.equal(options.status, 204);
     assert.equal(options.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
 });
+
+/**
+ * Podvrhnutý server výrobcu: odpoveď podľa začiatku adresy, zapamätá si volania.
+ * @param {Array<[string, number, unknown]>} routes [začiatok adresy, status, JSON]
+ */
+function vyrobca(routes) {
+    /** @type {Array<{ url: string, init: any }>} */ const calls = [];
+    const impl = /** @type {typeof fetch} */ (
+        /** @type {unknown} */ (
+            async (/** @type {string} */ url, /** @type {any} */ init) => {
+                calls.push({ url, init });
+                const r = routes.find(([prefix]) => url.startsWith(prefix));
+                if (!r) return new Response('not found', { status: 404 });
+                return new Response(JSON.stringify(r[2]), { status: r[1], headers: { 'content-type': 'application/json' } });
+            }
+        )
+    );
+    return { impl, calls };
+}
+
+/** Pripojí a hneď zmeria prvú nájdenú elektráreň. @param {unknown} body @param {typeof fetch} impl */
+async function pripojAMeraj(body, impl) {
+    const res = await handlePripoj(pripojRequest(body), ENV, NOW, impl);
+    const json = await res.json();
+    if (res.status !== 200) return { status: res.status, json };
+    const meranie = await handlePv(pvRequest(json.stanice[0].pecat), ENV, NOW, impl);
+    return { status: 200, json, meranie: await meranie.json() };
+}
+
+const FOX_LIST = { errno: 0, result: { data: [{ deviceSN: '60BH1234', stationName: 'Dvorany' }] } };
+const FOX_REAL = { errno: 0, result: [{ deviceSN: '60BH1234', datas: [{ variable: 'pvPower', unit: 'kW', value: 3.4 }] }] };
+const FOX_GEN = { errno: 0, result: { today: 18.2, month: 410.5, cumulative: 9876.4 } };
+
+test('Fox ESS: kľúč nájde menič, meria podpísanými požiadavkami len na foxesscloud.com', async () => {
+    const f = vyrobca([
+        ['https://www.foxesscloud.com/op/v0/device/list', 200, FOX_LIST],
+        ['https://www.foxesscloud.com/op/v1/device/real/query', 200, FOX_REAL],
+        ['https://www.foxesscloud.com/op/v0/device/generation?sn=60BH1234', 200, FOX_GEN],
+    ]);
+    const r = await pripojAMeraj({ sposob: 'foxess-kluc', udaje: { kluc: 'tajny-kluc' } }, f.impl);
+    assert.equal(r.status, 200);
+    assert.equal(r.json.stanice[0].nazov, 'Dvorany');
+    assert.equal(r.json.stanice[0].pv.realTimePowerKw, 3.4);
+    assert.ok(!r.json.stanice[0].pecat.includes('tajny'), 'kľúč nie je v pečati čitateľný');
+    assert.deepEqual([r.meranie.pv.realTimePowerKw, r.meranie.pv.dailyEnergyKwh, r.meranie.pv.cumulativeEnergyKwh], [3.4, 18.2, 9876.4]);
+    assert.ok(f.calls.every((c) => c.url.startsWith('https://www.foxesscloud.com/op/')));
+    assert.ok(f.calls.every((c) => c.init.headers.token === 'tajny-kluc' && /^[0-9a-f]{32}$/.test(c.init.headers.signature)));
+    const real = f.calls.find((c) => c.url.endsWith('/real/query'));
+    assert.deepEqual(JSON.parse(real?.init.body), { sns: ['60BH1234'], variables: ['pvPower'] });
+});
+
+test('Fox ESS: zlý kľúč 400, priveľa dopytov a výpadok 502', async () => {
+    const zly = vyrobca([['https://www.foxesscloud.com/', 200, { errno: 41809, msg: 'illegal token' }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'foxess-kluc', udaje: { kluc: 'x' } }, zly.impl)).status, 400);
+    const casto = vyrobca([['https://www.foxesscloud.com/', 200, { errno: 40400 }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'foxess-kluc', udaje: { kluc: 'x' } }, casto.impl)).status, 502);
+    const dole = vyrobca([['https://www.foxesscloud.com/', 503, {}]]);
+    assert.equal((await pripojAMeraj({ sposob: 'foxess-kluc', udaje: { kluc: 'x' } }, dole.impl)).status, 502);
+    assert.equal((await pripojAMeraj({ sposob: 'foxess-kluc', udaje: { kluc: '' } }, dole.impl)).status, 400);
+});
+
+const SOLAX_OK = {
+    success: true,
+    exception: 'Query success!',
+    result: { acpower: 3100, yieldtoday: 13.6, yieldtotal: 31120.6, powerdc1: 3300 },
+};
+
+test('SolaX: token a číslo modulu, adresa sa skladá len zo servera SolaX', async () => {
+    const f = vyrobca([['https://www.solaxcloud.com/proxyApp/proxy/api/getRealtimeInfo.do?tokenId=', 200, SOLAX_OK]]);
+    const udaje = { token: '20200722185111234567890', sn: 'SXABCDEFGH' };
+    const r = await pripojAMeraj({ sposob: 'solax-token', udaje }, f.impl);
+    assert.equal(r.status, 200);
+    assert.deepEqual([r.meranie.pv.realTimePowerKw, r.meranie.pv.dailyEnergyKwh], [3.3, 13.6]);
+    assert.equal(
+        f.calls[0].url,
+        'https://www.solaxcloud.com/proxyApp/proxy/api/getRealtimeInfo.do?tokenId=20200722185111234567890&sn=SXABCDEFGH',
+    );
+    const zly = vyrobca([['https://www.solaxcloud.com/', 200, { success: false, exception: 'tokenId error', result: null }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'solax-token', udaje }, zly.impl)).status, 400);
+    // Údaje, z ktorých by sa dala poskladať iná adresa, sa ani nepošlú.
+    const never = vyrobca([]);
+    assert.equal((await pripojAMeraj({ sposob: 'solax-token', udaje: { ...udaje, sn: 'x&y=1' } }, never.impl)).status, 400);
+    assert.equal(never.calls.length, 0);
+});
+
+test('Victron: token nájde inštalácie, výkon z diagnostiky, zlý token 400', async () => {
+    const B = 'https://vrmapi.victronenergy.com/v2';
+    const diag = { success: true, records: [{ dbusServiceType: 'solarcharger', dbusPath: '/Yield/Power', rawValue: 2400 }] };
+    const f = vyrobca([
+        [`${B}/users/me`, 200, { success: true, user: { id: 22 } }],
+        [
+            `${B}/users/22/installations`,
+            200,
+            {
+                success: true,
+                records: [
+                    { idSite: 7, name: 'Chata' },
+                    { idSite: 8, name: 'Dom' },
+                ],
+            },
+        ],
+        [`${B}/installations/7/diagnostics`, 200, diag],
+        [`${B}/installations/8/diagnostics`, 503, {}],
+    ]);
+    const r = await pripojAMeraj({ sposob: 'victron-token', udaje: { token: 'vrm-token' } }, f.impl);
+    assert.equal(r.status, 200);
+    assert.deepEqual(
+        r.json.stanice.map((/** @type {any} */ s) => [s.nazov, s.pv && s.pv.realTimePowerKw]),
+        [
+            ['Chata', 2.4],
+            ['Dom', null],
+        ],
+        'elektráreň, ktorá práve neodpovedá, sa ukáže bez merania',
+    );
+    assert.equal(r.meranie.pv.realTimePowerKw, 2.4);
+    assert.ok(f.calls.every((c) => c.url.startsWith(B) && c.init.headers['x-authorization'] === 'Token vrm-token'));
+    const zly = vyrobca([[`${B}/users/me`, 401, { success: false, errors: 'Not logged in', error_code: 'not_logged_in' }]]);
+    assert.equal((await pripojAMeraj({ sposob: 'victron-token', udaje: { token: 'zly' } }, zly.impl)).status, 400);
+});

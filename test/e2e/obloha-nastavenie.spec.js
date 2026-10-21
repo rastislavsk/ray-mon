@@ -289,6 +289,34 @@ test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, kt
     expect(errors).toEqual([]);
 });
 
+test('pripojenie kľúčom (Fox ESS) z prehľadu: návod, skryté pole, pripojenie a uloženie len pečate', async ({ page }) => {
+    const errors = await openObloha(page);
+    /** @type {string[]} */ const bodies = [];
+    page.on('request', (r) => r.url() === WORKER_PRIPOJ_URL && bodies.push(r.postData() || ''));
+    await nastavenie(page);
+    await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
+    await page.locator('[data-setup-zmen]').click();
+    await obrazovka(page, 'znacka');
+    await page.locator('[data-setup-znacka="foxess"]').click();
+    await obrazovka(page, 'pripoj');
+    await expect(page.locator('#wz-title')).toHaveText('Kľúč z FoxESS Cloud');
+    await expect(page.locator('#wz-kroky li')).toHaveCount(3);
+    const pole = page.locator('[data-setup-pole="kluc"]');
+    await expect(pole).toHaveAttribute('type', 'password');
+    await expect(page.locator('#wz-pripojit')).toBeDisabled();
+    await pole.fill('tajny-kluc-fox');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(JSON.parse(bodies[0])).toEqual({ sposob: 'foxess-kluc', udaje: { kluc: 'tajny-kluc-fox' } });
+    await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
+    await dalej(page);
+    await expect(page.locator('#ns-rows')).toContainText('Fox ESS · pripojené');
+    const stored = await ulozene(page);
+    expect(stored.zdroj).toEqual({ sposob: 'foxess-kluc', pecat: TEST_ZDROJ.pecat, nazov: 'Dvorany' });
+    expect(JSON.stringify(stored)).not.toContain('tajny-kluc-fox');
+    expect(errors).toEqual([]);
+});
+
 test('„Neviem“: bežný panel, menič ako panely a jedna cena, v zhrnutí označené ako odhad', async ({ page }) => {
     const errors = await openObloha(page, { settings: null, site: SITE });
     await nastavenie(page);
