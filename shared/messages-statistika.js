@@ -138,10 +138,15 @@ export const posterButtonText = (kick) => `${kick} · zdieľať`;
 /** Odkaz na plagát na karte Môžem?: „Október na streche: 168 kWh · súhrn“. @param {string} kick @param {number} kwh */
 export const posterLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh), 0)} kWh · súhrn na zdieľanie`;
 
-/** Najlepší deň na plagáte nakrátko: „so 14.“, „dnes“. @param {{ date: string, today: boolean }} best */
-export function posterBestDay(best) {
+/**
+ * Najlepší deň na plagáte nakrátko: „so 14.“, „dnes“; v roku s mesiacom, „14. 6.“ - deň bez
+ * mesiaca by tam nebol jednoznačný.
+ * @param {{ date: string, today: boolean }} best @param {import('./config.js').SummaryPeriod} [period]
+ */
+export function posterBestDay(best, period) {
     if (best.today) return 'dnes';
-    return `${dayNameShort(best.date).toLowerCase()} ${dateParts(best.date).day}.`;
+    const { day, month } = dateParts(best.date);
+    return period === 'rok' ? `${day}. ${month}.` : `${dayNameShort(best.date).toLowerCase()} ${day}.`;
 }
 
 /** Úspora CO2eq na plagáte: do 10 kg s desatinou („~2,4 kg“), inak celé („~38 kg“). @param {number} kg */
@@ -184,7 +189,7 @@ export function plural(n, [one, few, many]) {
 
 /**
  * Trasy na porovnanie kilometrov, od najkratšej. Súhrn vyberie najdlhšiu, na ktorú to stačí.
- * Vzdialenosti sú po ceste z Bratislavy, zaokrúhlené.
+ * Vzdialenosti sú po ceste z Bratislavy, zaokrúhlené; rok na streche dá aj obvod Zeme (40 075 km).
  */
 export const SUMMARY_TRIPS = [
     { km: 130, text: 'ako z Bratislavy do Trnavy a späť' },
@@ -193,18 +198,29 @@ export const SUMMARY_TRIPS = [
     { km: 1800, text: 'až do Barcelony' },
     { km: 3600, text: 'do Barcelony a späť' },
     { km: 7200, text: 'dvakrát do Barcelony a späť' },
+    { km: 40000, text: 'raz okolo Zeme' },
 ];
 
 /**
+ * Nadpis súhrnu: „Posledných 7 dní na streche“, „September na streche“, „Rok 2026 na streche“.
+ * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string }} d
+ */
+function summaryKick(d) {
+    if (d.period === 'tyzden') return 'Posledných 7 dní na streche';
+    if (d.period === 'rok') return `Rok ${d.year} na streche`;
+    return `${d.month.charAt(0).toUpperCase()}${d.month.slice(1)} na streche`;
+}
+
+/**
  * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js.
- * @param {{ period: 'tyzden' | 'mesiac', month: string, kwh: number, phones: number, km: number,
+ * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string, kwh: number, phones: number, km: number,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
  *   launches: { all: number, sun: number }, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
  *   carbon: CarbonFactors }} d
  * @param {Voice} [voice]
  */
 export function summaryTexts(d, voice = 'drzy') {
-    const kick = d.period === 'tyzden' ? 'Posledných 7 dní na streche' : `${d.month.charAt(0).toUpperCase()}${d.month.slice(1)} na streche`;
+    const kick = summaryKick(d);
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
         rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
@@ -258,12 +274,12 @@ function carbonRows(d) {
 /** Jeden mobil na koľko: „na 12 rokov“, „na 40 dní“ - pri nabíjaní raz denne. @param {number} phones */
 function phonesSub(phones) {
     const years = Math.floor(phones / 365);
-    if (years >= 1) return `jeden mobil nabíjaný každý deň na ${years} ${plural(years, ['rok', 'roky', 'rokov'])}`;
+    if (years >= 1) return `jeden mobil nabíjaný každý deň na ${fmtSum(years, 0)} ${plural(years, ['rok', 'roky', 'rokov'])}`;
     const days = Math.max(1, Math.round(phones));
     return `jeden mobil nabíjaný každý deň na ${days} ${plural(days, ['deň', 'dni', 'dní'])}`;
 }
 
-/** Najlepší deň: v týždni meno dňa, v mesiaci dátum. @param {{ date: string, today: boolean }} b @param {'tyzden' | 'mesiac'} period */
+/** Najlepší deň: v týždni meno dňa, v mesiaci a roku dátum. @param {{ date: string, today: boolean }} b @param {import('./config.js').SummaryPeriod} period */
 function bestDay(b, period) {
     if (b.today) return 'dnes';
     if (period === 'tyzden') return dayNameLong(b.date).toLowerCase();

@@ -73,8 +73,8 @@ export function toggleLaunch(list, entry) {
 }
 
 /**
- * Spustenia v mesiaci: všetky a z nich na slnku.
- * @param {Launch[]} list @param {string} month `YYYY-MM`
+ * Spustenia v mesiaci (`YYYY-MM`) alebo v roku (`YYYY`): všetky a z nich na slnku.
+ * @param {Launch[]} list @param {string} month `YYYY-MM` alebo `YYYY`
  */
 export function monthCount(list, month) {
     const inMonth = list.filter((x) => x.d.startsWith(`${month}-`));

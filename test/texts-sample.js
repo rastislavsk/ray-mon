@@ -203,6 +203,7 @@ function directMisc(out, v) {
                     {
                         period: 'mesiac',
                         month: 'september',
+                        year: '2026',
                         kwh: 300,
                         phones: 20000,
                         km: 1800,

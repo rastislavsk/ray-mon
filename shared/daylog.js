@@ -50,3 +50,12 @@ export function lastDays(log, today, count) {
 export function monthDays(log, today) {
     return lastDays(log, today, Number(today.slice(8, 10)));
 }
+
+/**
+ * Dni roka od 1. januára po dnešok - denník ich drží viac (DAYLOG.limit), než má rok.
+ * @param {DayLog} log @param {string} today @returns {Array<{ date: string, kwh: number | null }>}
+ */
+export function yearDays(log, today) {
+    const [y, m, d] = today.split('-').map(Number);
+    return lastDays(log, today, Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 86400000) + 1);
+}

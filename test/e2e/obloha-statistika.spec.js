@@ -278,9 +278,9 @@ test.describe('karta Štatistika', () => {
 });
 
 test.describe('plagát na zdieľanie', () => {
-    test('mesiac aj týždeň: čísla ako posterModel, chýbajúce dni povedané', async ({ page }) => {
+    test('mesiac, týždeň aj rok: čísla ako posterModel, chýbajúce dni povedané, všetko sa zmestí', async ({ page }) => {
         const errors = await openStat(page);
-        for (const period of /** @type {const} */ (['mesiac', 'tyzden'])) {
+        for (const period of /** @type {const} */ (['mesiac', 'tyzden', 'rok'])) {
             await page.locator(`[data-poster="${period}"]`).click();
             await expect(page.locator('#poster')).toBeVisible();
             const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(vstup(), period));
@@ -288,11 +288,32 @@ test.describe('plagát na zdieľanie', () => {
             expect(m.note, 'v denníku chýbajú dni - plagát to musí povedať').not.toBe('');
             await expect(page.locator('#poster-foot')).toHaveText('RAY-MON · slnko nefakturuje');
             expect(m.tiles.map((t) => t.label)).toContain('pranie zo slnka');
+            // Veľké číslo v jednom riadku v karte (ročné „9 112 kWh“ je dlhšie) a obrázok do story
+            // s číslami nad pätičkou a každým číslom celým v stĺpci.
+            const miesto = await page.evaluate(async (m) => {
+                const pn = /** @type {HTMLElement} */ (document.getElementById('poster-kwh'));
+                const pc = /** @type {HTMLElement} */ (pn.closest('.pc'));
+                const { look, layout, tileValueSize } = await import('/obloha/web/poster-image.js');
+                const t = look();
+                await Promise.all([500, 800, 900].map((w) => document.fonts.load(`${w} 100px ${t.font}`)));
+                const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
+                const l = layout(ctx, m, t);
+                return {
+                    preteka: pn.scrollWidth > pn.clientWidth || pc.getBoundingClientRect().right > innerWidth,
+                    koniec: l.bottom,
+                    paticka: l.foot,
+                    cisla: tileValueSize(ctx, m.tiles, t),
+                };
+            }, m);
+            expect(miesto.preteka, `${period}: veľké číslo pretečie kartu`).toBe(false);
+            expect(miesto.koniec, `${period}: čísla zasahujú do pätičky obrázka`).toBeLessThanOrEqual(miesto.paticka - 60);
+            expect(miesto.cisla, `${period}: čísla sú zmenšené pod 60 px`).toBeGreaterThanOrEqual(60);
             await page.locator('#poster-close').click();
             await expect(page.locator('#poster')).toBeHidden();
             await expect(page.locator(`[data-poster="${period}"]`)).toBeFocused();
         }
         expect(await plagatZModelu(/** @type {any} */ (posterModel(vstup(), 'tyzden'))).cols).toHaveLength(7);
+        expect(plagatZModelu(/** @type {any} */ (posterModel(vstup(), 'rok'))).cols, 'január až september').toHaveLength(9);
         expect(errors).toEqual([]);
     });
 
