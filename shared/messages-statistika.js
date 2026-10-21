@@ -157,14 +157,21 @@ export function posterPayback(share) {
 }
 
 /**
- * Poznámka pod plagátom: s akými faktormi CO2eq počíta, aby sa číslo dalo overiť.
- * @param {{ gridG: number, pvG: number, source: string, debtT: number | null, lifeYears: number }} c
+ * Faktory CO2eq a ich zdroje (shared/carbon.js, carbonFacts).
+ * @typedef {{ gridG: number, gridSource: string, pvG: number, pvSource: string, lifeYears: number }} CarbonFactors
  */
-export function posterCarbonNote({ gridG, pvG, source, debtT, lifeYears }) {
-    const base = `CO2eq za celý životný cyklus podľa ${source}: kWh zo siete SR ${gridG} g, zo slnka ${pvG} g.`;
+
+/**
+ * Poznámka pod plagátom aj súhrnom: s akými faktormi a odkiaľ CO2eq počíta, aby sa číslo dalo overiť.
+ * @param {CarbonFactors & { debtT: number | null }} c
+ */
+export function posterCarbonNote({ gridG, gridSource, pvG, pvSource, debtT, lifeYears }) {
+    const base =
+        `CO2eq za celý životný cyklus: kWh zo siete SR ${gridG} g (${gridSource}), ` +
+        `zo slnka ${pvG} g (${pvSource}, prepočítané na výrobu v SR).`;
     return debtT === null
         ? base
-        : `${base} Výroba týchto panelov stála asi ${fmt1(debtT)} t CO2eq, rozpočítaná na ${lifeYears} rokov prevádzky.`;
+        : `${base} Výroba týchto panelov aj s meničom stála asi ${fmt1(debtT)} t CO2eq, rozpočítaná na ${lifeYears} rokov prevádzky.`;
 }
 
 // ---- Súhrn na zdieľanie ------------------------------------------------------------
@@ -193,7 +200,7 @@ export const SUMMARY_TRIPS = [
  * @param {{ period: 'tyzden' | 'mesiac', month: string, kwh: number, phones: number, km: number,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
  *   launches: { all: number, sun: number }, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
- *   carbon: { gridG: number, pvG: number, source: string, lifeYears: number } }} d
+ *   carbon: CarbonFactors }} d
  * @param {Voice} [voice]
  */
 export function summaryTexts(d, voice = 'drzy') {
@@ -243,7 +250,7 @@ function carbonRows(d) {
     return [
         {
             t: p.paid ? 'Uhlík z výroby panelov splatený' : `Od spustenia panely splatili ${p.pct} % uhlíka`,
-            s: `z ~${fmt1(d.debtT)} t CO2eq, ktoré stála ich výroba`,
+            s: `z ~${fmt1(d.debtT)} t CO2eq, ktoré stála výroba panelov aj meniča`,
         },
     ];
 }

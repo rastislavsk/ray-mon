@@ -86,7 +86,12 @@ test('summaryModel mesiac: súčet z kiosku, prepočty, hodnota a chýbajúce dn
     assert.equal(m.rows[1].t, `${fmtSum(Math.round(kwh * EVERYDAY.evKmPerKwh), 0)} km autom`);
     assert.ok(m.rows.some((r) => r.t.startsWith('Hodnota ~') && r.t.endsWith(' €')));
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: dnes');
-    assert.match(m.note, /^Za 4 dni appka čísla nemá – vtedy ju nikto neotvoril\. CO2eq za celý životný cyklus podľa Ember 2025/);
+    assert.ok(
+        m.note.startsWith(
+            'Za 4 dni appka čísla nemá – vtedy ju nikto neotvoril. CO2eq za celý životný cyklus: kWh zo siete SR 95 g (Ember 2025)',
+        ),
+        m.note,
+    );
     // Uhlík v jednom riadku: úspora za mesiac a pod ňou splatený podiel dlhu panelov - z toho istého
     // výpočtu ako plagát.
     const f = carbonFacts(kwh, pv.cumulativeEnergyKwh, PLANT);
@@ -126,7 +131,7 @@ test('summaryModel: bez cien bez hodnoty, bez výroby bez prepočtov', () => {
     const nula = summaryModel({ ...BASE, pv: { ...pv, dailyEnergyKwh: 0, monthEnergyKwh: 0 } }, 'mesiac');
     assert.deepEqual(
         nula?.rows.map((r) => r.t),
-        ['Od spustenia panely splatili 12 % uhlíka'],
+        ['Od spustenia panely splatili 18 % uhlíka'],
         'bez výroby obdobia ostáva len návratnosť od spustenia',
     );
 });

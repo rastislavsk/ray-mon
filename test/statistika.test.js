@@ -238,7 +238,13 @@ test('posterModel: čísla zo summaryModel, stĺpce dní a chýbajúce dni', () 
     ]);
     assert.ok(m.note.startsWith(s.note), 'najprv chýbajúce dni');
     assert.match(m.note, /Za 1 deň appka čísla nemá/);
-    assert.match(m.note, /podľa Ember 2025: kWh zo siete SR 95 g, zo slnka 47 g. Výroba týchto panelov stála asi 16,9 t CO2eq/);
+    assert.ok(
+        m.note.endsWith(
+            'kWh zo siete SR 95 g (Ember 2025), zo slnka 30 g (IEA PVPS 2023, prepočítané na výrobu v SR). ' +
+                'Výroba týchto panelov aj s meničom stála asi 11,0 t CO2eq, rozpočítaná na 30 rokov prevádzky.',
+        ),
+        m.note,
+    );
     // Bez súčtu od spustenia nie je splatenie ani dlh panelov, úspora za obdobie ostáva.
     const noTotal = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (
         posterModel({ ...input, pv: { ...pv, cumulativeEnergyKwh: null } }, 'mesiac')

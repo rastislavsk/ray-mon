@@ -4,14 +4,20 @@
 import { CARBON, installedKw } from './config.js';
 
 /**
+ * Slnečný faktor v g CO2eq na kWh vyrobenú v SR: dlh kWp rozpočítaný na jeho výrobu za celý život.
+ * Na severe je vyšší než na juhu - rovnaké panely tam vyrobia menej.
+ */
+export const solarG = () => (CARBON.debtKgPerKwp * 1000) / (CARBON.yieldKwhPerKwp * CARBON.lifeYears);
+
+/**
  * Čistá úspora v kg CO2eq: kWh zo siete SR mínus kWh zo slnka, obe za celý životný cyklus -
  * panely nie sú zadarmo, ich výrobu tu každá kWh spláca svojím dielom.
  * @param {number} kwh
  */
-export const co2SavedKg = (kwh) => (kwh * (CARBON.gridG - CARBON.pvG)) / 1000;
+export const co2SavedKg = (kwh) => (kwh * (CARBON.gridG - solarG())) / 1000;
 
-/** Uhlíkový dlh panelov v kg CO2eq: solárny faktor × výroba za celý život elektrárne. @param {import('./config.js').Plant} plant */
-export const panelDebtKg = (plant) => (CARBON.pvG * CARBON.yieldKwhPerKwp * CARBON.lifeYears * installedKw(plant)) / 1000;
+/** Uhlíkový dlh elektrárne v kg CO2eq: panely, menič a montáž, úmerne kWp. @param {import('./config.js').Plant} plant */
+export const panelDebtKg = (plant) => CARBON.debtKgPerKwp * installedKw(plant);
 
 /**
  * Koľko z dlhu panelov už výroba od spustenia splatila (1 = celý), alebo null bez súčtu z kiosku.
@@ -32,5 +38,11 @@ export function carbonPayback(cumulativeKwh, plant) {
  */
 export function carbonFacts(kwh, cumulativeKwh, plant) {
     const payback = carbonPayback(cumulativeKwh, plant);
-    return { co2Kg: co2SavedKg(kwh), payback, debtT: payback === null ? null : panelDebtKg(plant) / 1000, carbon: CARBON };
+    const { gridG, gridSource, pvSource, lifeYears } = CARBON;
+    return {
+        co2Kg: co2SavedKg(kwh),
+        payback,
+        debtT: payback === null ? null : panelDebtKg(plant) / 1000,
+        carbon: { gridG, gridSource, pvG: Math.round(solarG()), pvSource, lifeYears },
+    };
 }
