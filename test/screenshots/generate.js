@@ -62,7 +62,9 @@ try {
         ([key, value]) => localStorage.setItem(key, value),
         [
             SETTINGS_STORAGE_KEY,
-            JSON.stringify(toUser({ site: SITE, plant: PLANT, kiosk: 'https://fusionsolar.huawei.com/?kk=Screenshot' })),
+            JSON.stringify(
+                toUser({ site: SITE, plant: PLANT, zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.Screenshot0123456789abcdef', nazov: '' } }),
+            ),
         ],
     );
     await page.clock.setFixedTime(FIXED_NOW);

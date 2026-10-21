@@ -484,11 +484,14 @@ export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
 // Nová appka „Živá obloha“, kým je testovacia verzia - na ňu vedie jej Zdieľať appku.
 export const OBLOHA_URL = `${APP_URL}obloha/`;
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
-// Živé meranie z kiosku, ktorý si používateľ zadal v Nastavení. Odkaz ide v tele POST
-// požiadavky, nie v adrese - adresy požiadaviek končia v logoch Workera. Cestu čítajú
-// appka aj Worker, aby sa nerozišli.
+// Živé meranie z meniča, ktorý si používateľ pripojil v Nastavení (`/pv`), a pripojenie samo
+// (`/pripoj`). Zapečatený prístup aj údaje z formulára idú v tele POST požiadavky, nie
+// v adrese - adresy požiadaviek končia v logoch Workera. Cesty čítajú appka aj Worker, aby sa
+// nerozišli.
 export const WORKER_PV_PATH = '/pv';
 export const WORKER_PV_URL = new URL(WORKER_PV_PATH, WORKER_URL).href;
+export const WORKER_PRIPOJ_PATH = '/pripoj';
+export const WORKER_PRIPOJ_URL = new URL(WORKER_PRIPOJ_PATH, WORKER_URL).href;
 
 /**
  * Verejný kiosk Huawei FusionSolar. Worker sťahuje len z týchto serverov a len túto cestu,

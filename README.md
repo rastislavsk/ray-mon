@@ -76,8 +76,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku
   alebo len celkový výkon zo zmluvy, jedna až tri plochy panelov (smer na kompase s dráhou
-  slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne odkaz na
-  kiosk Huawei FusionSolar pre živé meranie, tarifa a na koniec zhrnutie s výrobou za jasného
+  slnka, sklon podľa typu strechy, počet panelov ako mriežka), menič, nepovinne živé meranie
+  (výber značky meniča a spôsobu pripojenia, dnes kiosk Huawei FusionSolar), tarifa a na koniec zhrnutie s výrobou za jasného
   dneška. Tarifa: jedna cena, dve pásma (VT/NT) alebo tri a viac; rozvrh dňa sa maľuje prstom
   po kruhu (alebo zadá po úsekoch), s výnimkou pre víkend či časť roka a nepovinne s cenami,
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je
@@ -88,7 +88,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to voľba telefónu, nie
   elektrárne, a ukladá sa zvlášť. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
-  nastavenie elektrárne, voliteľne aj s kiosk odkazom. Kto taký odkaz otvorí (alebo ho
+  nastavenie elektrárne, voliteľne aj so živým meraním. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.
   Nastavenie nesie aj adresa v prehliadači, takže appka pridaná na plochu iPhonu (ktorá
   úložisko Safari nevidí) ho pri prvom spustení ponúkne prevziať tiež.
@@ -136,7 +136,7 @@ v poslednom kroku.
 
 ```
 Open-Meteo (žiarenie) ──────────────────────────────→ appka počíta predpoveď
-Huawei FusionSolar kiosk ─→ Cloudflare Worker ─────→ appka (živé meranie)
+výrobca meniča (kiosk) ──→ Cloudflare Worker ─────→ appka (živé meranie)
 ```
 
 Appka si pre lokalitu z karty Nastavenie stiahne z Open-Meteo hodinové žiarenie, teplotu
@@ -144,10 +144,10 @@ a oblačnosť a sama z nich dopočíta predpoveď výroby: polohu slnka, žiaren
 panelov, teplotný odber a limit meniča. Tá istá funkcia počíta aj strop pri úplne jasnej
 oblohe, z ktorého vychádza údaj „využitie“. Počasie sa sťahuje najviac raz za hodinu.
 
-Živé meranie je nepovinné. Kto si v Nastavení vloží odkaz na verejný kiosk svojej
-elektrárne z Huawei FusionSolar, tomu ho appka každú minútu stiahne cez Worker (prehliadač
-sa na kiosk priamo nedostane). Odkaz ostáva uložený len v prehliadači a Worker si ho nikam
-neukladá. Bez odkazu appka ukazuje odhad z predpovede.
+Živé meranie je nepovinné. Kto si v Nastavení pripojí menič (vyberie značku a spôsob, dnes odkaz
+na verejný kiosk Huawei FusionSolar), tomu appka každú minútu stiahne meranie cez Worker
+(prehliadač sa k výrobcovi priamo nedostane). Telefón drží prístup len zapečatený – otvoriť ho
+vie iba Worker, a ten si nič neukladá. Bez merania appka ukazuje odhad z predpovede.
 
 Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 

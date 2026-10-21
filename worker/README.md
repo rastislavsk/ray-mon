@@ -1,28 +1,71 @@
 # Worker `ray-mon`
 
-Živé meranie pre appku. Prehliadač sa na kiosk Huawei FusionSolar priamo nedostane, preto
-ho za neho stiahne tento Worker. Nič neukladá: nemá úložisko, tajomstvá ani plánované behy.
-Predpoveď si appka počíta sama v prehliadači.
+Živé meranie pre appku. Prehliadač sa na servery výrobcov meničov priamo nedostane, preto sa
+ich za neho pýta tento Worker. Nič neukladá: nemá úložisko ani plánované behy. Má jediné
+tajomstvo – kľúč na zapečatenie prístupu. Predpoveď si appka počíta sama v prehliadači.
+
+Spôsoby pripojenia sú v `shared/zdroje.js` (čo vidí človek) a vo `src/zdroje.js` (ako sa
+Worker pripojí a meria). Dnes je to kiosk Huawei FusionSolar.
+
+## Zapečatený prístup a kľúč `PECAT_KLUC`
+
+Pri pripojení Worker prevezme údaje z formulára (odkaz, kľúč, heslo), overí ich u výrobcu
+a appke vráti len **pečať**: údaje potrebné na meranie zašifrované AES-GCM (`src/pecat.js`).
+Telefón tak drží balíček, ktorý vie otvoriť iba tento Worker – kto vytiahne úložisko telefónu,
+k účtu výrobcu sa nedostane.
+
+Kľúč je v nastavení Workera, nie v repozitári. Raz ho treba vytvoriť (32 náhodných bajtov
+v base64) a uložiť:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+```bash
+cd worker && npx wrangler secret put PECAT_KLUC
+```
+
+Bez kľúča Worker meria ďalej zo starých holých odkazov na kiosk, ale pripájať nevie (`/pripoj`
+vráti 503). **Výmena kľúča** zneplatní všetky pečate – každý sa musí v Nastavení pripojiť znova.
+
+## Endpoint `POST /pripoj`
+
+Telo je JSON ako text: `{ "sposob": "huawei-kiosk", "udaje": { "odkaz": "https://…" } }`. Worker
+údaje overí u výrobcu a vráti nájdené elektrárne:
+
+```json
+{ "stanice": [{ "nazov": "Dvorany", "pecat": "v1.…", "pv": { "realTimePowerKw": 6.41, "...": "..." } }] }
+```
+
+- Neznámy spôsob alebo údaje, ktoré výrobca neprijal: **400** `{ "chyba": "udaje" }`. Cudzí
+  odkaz na kiosk dostane 400 bez jediného sťahovania.
+- Výrobca neodpovedá: **502** `{ "chyba": "vyrobca" }`. Bez kľúča Workera: **503** `{ "chyba": "server" }`.
 
 ## Endpoint `POST /pv`
 
-Telo je text: odkaz na verejný kiosk FusionSolar, ktorý si používateľ zadal v Nastavení
-(stránka kiosku alebo priamo adresa dát). Worker z neho vezme len server
-(`*.fusionsolar.huawei.com`, https) a kľúč `kk`, adresu dát si zloží sám
-(`kioskApiUrl` v `shared/kiosk.js`) a vráti:
+Telo je text: pečať z `/pripoj`. Worker ju otvorí, opýta sa výrobcu a vráti:
 
 ```json
 { "pv": { "realTimePowerKw": 6.41, "...": "...", "updatedAt": "2026-09-05T11:00:00.000Z" } }
 ```
 
-- Cudzí odkaz dostane **400** bez jediného sťahovania. Z Workera sa tak nedá spraviť proxy
-  na čokoľvek iné než kiosk FusionSolar.
-- Nedostupný alebo nezmyselný kiosk dostane **502**. Odpoveď neobsahuje odkaz ani podrobnosti.
+Keď sa pri meraní prístup obnovil (nový token), odpoveď nesie aj novú `pecat` a appka si ju
+uloží. Prijme aj **holý odkaz na kiosk**, ktorý posielali appky spred zapečatenia: vtedy k meraniu
+pribalí jeho pečať a appka si ju uloží namiesto odkazu.
+
+- Cudzia alebo poškodená pečať, cudzí odkaz: **400** bez jediného sťahovania. Z Workera sa tak
+  nedá spraviť proxy na čokoľvek iné než servery výrobcov zo `src/zdroje.js`.
+- Nedostupný výrobca: **502**. Odpoveď neobsahuje odkaz, kľúč ani podrobnosti.
   Na kiosk čaká Worker najviac 5 s a pri výpadku alebo 5xx to skúsi ešte raz (`KIOSK_RETRY`
   v `shared/config.js`). Odpoveď 4xx (napr. neplatný kľúč) sa neopakuje – druhý pokus by
   dopadol rovnako.
-- Odkaz je v tele, nie v adrese, aby neskončil v logoch. Worker si ho nikam neukladá.
-- Telo je `text/plain`, takže prehliadač nerobí predbežnú CORS požiadavku.
+
+## Spoločné pre oba endpointy
+
+- Údaje a pečať sú v tele, nie v adrese, aby neskončili v logoch. Worker si ich nikam neukladá
+  a telo nezapisuje do logov.
+- Telo je `text/plain` (aj JSON pri `/pripoj`), takže prehliadač nerobí predbežnú CORS požiadavku.
+- Telo dlhšie než 10 000 znakov dostane 400.
 - Iné cesty vracajú 404, iné metódy 405, `OPTIONS` dostane 204. Odpovede sa necachujú.
 
 ## Denný limit a obmedzenie počtu požiadaviek
@@ -69,7 +112,7 @@ command beží z koreňa repozitára.
 ## Overenie
 
 ```bash
-npm --prefix worker test                                   # endpoint proti fixtures
+npm --prefix worker test                                   # endpointy proti fixtures
 cd worker && npx wrangler deploy --dry-run --outdir dist   # zbalí sa aj shared/
 ```
 

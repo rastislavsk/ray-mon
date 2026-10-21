@@ -808,17 +808,17 @@ export function mozemPhonesText(kw, sure) {
 /**
  * Veta namiesto odpovede, keď appka nemá predpoveď: prečo. Bez internetu nemá nič; s ním
  * neprišla predpoveď a pri vlastnom meraní aj to, či a odkedy mlčí meranie.
- * @param {{ online: boolean, kiosk: boolean, pvOk: boolean, pvSince: string | null }} why `pvOk`: meranie
+ * @param {{ online: boolean, zdroj: boolean, pvOk: boolean, pvSince: string | null }} why `pvOk`: meranie
  *   ide, `pvSince`: čas posledného merania, keď je staré (null = meranie vôbec neprišlo)
  * @param {Voice} [voice]
  */
-export function mozemOfflineText({ online, kiosk, pvOk, pvSince }, voice = 'drzy') {
+export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy') {
     const p = polite(voice);
     if (!online)
         return p
             ? 'Nie je internet, takže nemám predpoveď ani meranie. Pripojte sa a skúste to znova.'
             : 'Nie je internet, takže nemám predpoveď ani meranie. Pripoj sa a skús to znova.';
-    const pv = !kiosk || pvOk ? '' : pvSince ? ` Meranie zo strechy neodpovedá od ${pvSince}.` : ' Ani meranie zo strechy neodpovedá.';
+    const pv = !zdroj || pvOk ? '' : pvSince ? ` Meranie zo strechy neodpovedá od ${pvSince}.` : ' Ani meranie zo strechy neodpovedá.';
     return `Predpoveď počasia neprišla, bez nej neviem, kedy bude slnko.${pv} ${p ? 'Skúste' : 'Skús'} to o chvíľu znova.`;
 }
 
@@ -853,7 +853,7 @@ export const TERAZ_TEXTS = {
     today: 'Dnešok',
     later: 'Kedy lepšie',
     guessTitle: 'Koľko dáva tvoja strecha?',
-    guessText: 'Zadaj panely a tu uvidíš svoj výkon. S odkazom na kiosk aj naozaj nameraný.',
+    guessText: 'Zadaj panely a tu uvidíš svoj výkon. S pripojeným meničom aj naozaj nameraný.',
     guessBtn: 'Zadaj panely',
     askTitle: 'Kde máš strechu?',
     askText: 'Bez polohy neviem, kedy u teba svieti. Zadaj ju v Nastavení a ukážem ti výkon aj plán dňa.',
@@ -867,7 +867,7 @@ const TERAZ_TEXTS_SLUSNE = {
     slider: 'Graf dňa, šípkami si pozriete iný čas',
     strip: 'Odporúčania, posúvajte do strán',
     guessTitle: 'Koľko dáva vaša strecha?',
-    guessText: 'Zadajte panely a uvidíte tu svoj výkon. S odkazom na kiosk aj naozaj nameraný.',
+    guessText: 'Zadajte panely a uvidíte tu svoj výkon. S pripojeným meničom aj naozaj nameraný.',
     guessBtn: 'Zadajte panely',
     askTitle: 'Kde máte strechu?',
     askText: 'Bez polohy neviem, kedy u vás svieti. Zadajte ju v Nastavení a ukážem vám výkon aj plán dňa.',

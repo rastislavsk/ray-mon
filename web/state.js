@@ -43,7 +43,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   site: import('../shared/config.js').Site,
  *   plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff,
- *   kiosk: string,
+ *   zdroj: import('../shared/zdroje.js').Zdroj | null,
  *   known: import('../shared/settings.js').Known,
  *   settingsDraft: import('../shared/settings.js').Settings,
  *   settingsRev: number,
@@ -60,6 +60,10 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupKwp: number | null,
  *   setupPick: { wp: Pick, ac: Pick },
  *   setupLive: boolean,
+ *   setupZnacka: string,
+ *   setupSposob: string,
+ *   setupUdaje: Record<string, string>,
+ *   setupPripoj: import('../shared/setup-flow.js').Pripoj,
  *   setupLink: string,
  *   setupSched: number,
  *   setupBrush: string | null,
@@ -141,8 +145,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         plant: start.plant,
         // Tarifa: pásma, rozvrh a ceny. Kedy svieti slnko, v nej nie je - to je z predpovede.
         tariff: start.tariff,
-        // Odkaz na kiosk pre živé meranie; prázdny = bez merania.
-        kiosk: start.kiosk,
+        // Pripojené živé meranie (shared/zdroje.js); null = bez merania.
+        zdroj: start.zdroj,
         // Čo appka o elektrárni vie. `nic`: ukazuje len otázku na polohu (krok lokalita sprievodcu)
         // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
         // panely nie sú zadané, karty o výkone (Terazky, Môžem?) sú sivé a bez čísel.

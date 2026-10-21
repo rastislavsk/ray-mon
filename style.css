@@ -3952,9 +3952,41 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-family: var(--font-mono);
     font-size: 11px;
 }
-.wz-kiosk {
+/* Pripojenie merania: polia, správa na skopírovanie a vysvetlenie pri značke, ktorá sa nedá. */
+.wz-zdroj {
     display: grid;
     gap: var(--sp-2);
+}
+.choice[data-off] b {
+    color: var(--ink-45);
+}
+/* Štítky pri spôsobe pripojenia: kto ho urobí, ako dlho; zelený hovorí, prečo je prvý. */
+.choice .t .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.tag {
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--ink-08);
+    color: var(--ink-70);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+}
+.tag.top {
+    background: rgba(var(--green-rgb), 0.18);
+    color: var(--green);
+}
+.wz-letter {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--ink-05);
+    font-size: var(--fs-sm);
+    white-space: pre-wrap;
 }
 .wz-art .forecast {
     fill: none;

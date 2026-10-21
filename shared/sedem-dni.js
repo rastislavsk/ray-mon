@@ -43,7 +43,7 @@ import { localDateKey, localMinutes } from './solar.js';
 import { todayCard } from './teraz.js';
 
 /**
- * @typedef {import('./day-plan.js').PlanInput & { kiosk: string, loading: boolean,
+ * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known }} SedemInput
  * @typedef {SedemInput & { forecast: import('./solar.js').Forecast }} SedemData vstup s predpoveďou
  * @typedef {import('./solar.js').ForecastDay} ForecastDay

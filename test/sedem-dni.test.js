@@ -46,7 +46,7 @@ const input = {
     site: SITE,
     plant: PLANT,
     tariff: TARIFF,
-    kiosk: 'kiosk',
+    zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
     loading: false,
     known: 'elektraren',
     pv: pvAt(FIXED_NOW),

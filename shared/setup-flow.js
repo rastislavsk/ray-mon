@@ -27,12 +27,24 @@ import {
     slotsOf,
     tariffKind,
 } from './tariff.js';
+import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
 /** @typedef {import('./config.js').PlantString} PlantString */
 /** @typedef {import('./config.js').Tariff} Tariff */
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
 /** @typedef {import('./setup.js').SetupStep} SetupStep */
+/** @typedef {import('./zdroje.js').Zdroj} Zdroj */
+/**
+ * Elektráreň, ktorú Worker našiel pri pripojení: meno u výrobcu, zapečatený prístup práve k nej
+ * a čo práve nameral (na kontrolu, že čísla sedia).
+ * @typedef {{ nazov: string, pecat: string, pv: import('./kiosk.js').PvData | null }} Stanica
+ */
+/**
+ * Pripájanie živého merania: `loading` čaká na Workera, `done` má nájdené elektrárne, `error`
+ * nesie druh chyby (`udaje` výrobca údaje neprijal, `vyrobca` neodpovedá, `server` appka).
+ * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', chyba: 'udaje' | 'vyrobca' | 'server' | '', stanice: Stanica[] }} Pripoj
+ */
 /** @typedef {'chip' | 'other' | 'guess'} ValuePick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“ */
 /**
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('./config.js').Site, detail: string }> }} GeoSearch
@@ -45,7 +57,7 @@ import {
  *   site: import('./config.js').Site,
  *   plant: import('./config.js').Plant,
  *   tariff: Tariff,
- *   kiosk: string,
+ *   zdroj: Zdroj | null,
  *   settingsDraft: Settings,
  *   settingsRev: number,
  *   settingsNote: string,
@@ -56,6 +68,10 @@ import {
  *   setupKwp: number | null,
  *   setupPick: { wp: ValuePick, ac: ValuePick },
  *   setupLive: boolean,
+ *   setupZnacka: string,
+ *   setupSposob: string,
+ *   setupUdaje: Record<string, string>,
+ *   setupPripoj: Pripoj,
  *   setupLink: string,
  *   setupSched: number,
  *   setupBrush: string | null,
@@ -99,8 +115,15 @@ export function setupInit(start, known) {
         setupKwp: /** @type {number | null} */ (null),
         // Ako bol zadaný výkon panelu a meniča - „Neviem“ zhrnutie označí ako odhad.
         setupPick: /** @type {{ wp: ValuePick, ac: ValuePick }} */ ({ wp: 'chip', ac: 'chip' }),
-        // Či človek chce živé meranie z kiosku. Rozhoduje, či sa kiosk pri uložení vôbec berie.
-        setupLive: !!start.kiosk,
+        // Či človek chce živé meranie. Rozhoduje, či sa pripojené meranie pri uložení vôbec berie.
+        setupLive: !!start.zdroj,
+        // Pripájanie merania: zvolená značka a spôsob, čo človek napísal do polí a výsledok
+        // pripojenia. Polia (heslá, kľúče) sa nikam neukladajú - po pripojení ostane len
+        // zapečatený prístup v rozpísanom nastavení.
+        setupZnacka: '',
+        setupSposob: '',
+        setupUdaje: /** @type {Record<string, string>} */ ({}),
+        setupPripoj: /** @type {Pripoj} */ ({ status: 'idle', chyba: '', stanice: [] }),
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
         // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým sa
@@ -112,18 +135,18 @@ export function setupInit(start, known) {
     };
 }
 
-/** Uložené nastavenie, pre ktoré appka práve počíta. @param {Pick<SetupState, 'site' | 'plant' | 'tariff' | 'kiosk'>} s @returns {Settings} */
+/** Uložené nastavenie, pre ktoré appka práve počíta. @param {Pick<SetupState, 'site' | 'plant' | 'tariff' | 'zdroj'>} s @returns {Settings} */
 export function savedSettings(s) {
-    return { site: s.site, plant: s.plant, tariff: s.tariff, kiosk: s.kiosk };
+    return { site: s.site, plant: s.plant, tariff: s.tariff, zdroj: s.zdroj };
 }
 
 /**
- * Rozpísané nastavenie tak, ako by sa uložilo: bez kiosku, keď človek živé meranie nechce,
+ * Rozpísané nastavenie tak, ako by sa uložilo: bez merania, keď ho človek nechce,
  * a s výkonom panelu dopočítaným z celkového výkonu, keď zadal ten.
  * @param {Pick<SetupState, 'settingsDraft' | 'setupLive' | 'setupKwp'>} s @returns {Settings}
  */
 export function setupDraft(s) {
-    const draft = s.setupLive ? s.settingsDraft : { ...s.settingsDraft, kiosk: '' };
+    const draft = s.setupLive ? s.settingsDraft : { ...s.settingsDraft, zdroj: null };
     return resolveDraft(draft, s.setupKwp);
 }
 
@@ -142,7 +165,7 @@ export function setupReady(s) {
     if (!step) return false;
     if (step === 'odkaz') return !!settingsFromLink(s.setupLink);
     const roof = Math.min(s.setupRoof, s.settingsDraft.plant.strings.length - 1);
-    return setupStepOk({ step, roof }, setupDraft(s), { totalKwp: s.setupKwp, live: s.setupLive });
+    return setupStepOk({ step, roof }, setupDraft(s), { totalKwp: s.setupKwp });
 }
 
 // ---- Úpravy rozpísaného nastavenia ----------------------------------------------------
@@ -276,8 +299,88 @@ export function deleteRoof(s, i) {
     return draftPatch(s, { ...d, plant: { ...d.plant, strings } }, true, { setupRoof: Math.min(s.setupRoof, strings.length - 1) });
 }
 
-/** Odkaz na kiosk napísaný do poľa. @param {SetupState} s @param {string} kiosk */
-export const setKiosk = (s, kiosk) => draftPatch(s, { ...s.settingsDraft, kiosk: kiosk.trim() });
+// ---- Živé meranie ---------------------------------------------------------------------
+
+/** Pripájanie od začiatku: nič nájdené, žiadna chyba. */
+const PRIPOJ_IDLE = /** @type {Pripoj} */ ({ status: 'idle', chyba: '', stanice: [] });
+
+/**
+ * Formulár spôsobu s prázdnymi poľami. Doteraz pripojené meranie z rozpísaného nastavenia
+ * zmizne - „Ďalej“ sa tak nedá, kým sa nepripojí nové.
+ * @param {SetupState} s @param {string} sposob @returns {SetupPatch}
+ */
+function openForm(s, sposob) {
+    return draftPatch(s, { ...s.settingsDraft, zdroj: null }, true, {
+        setupSposob: sposob,
+        setupUdaje: {},
+        setupPripoj: PRIPOJ_IDLE,
+        setupStep: 'pripoj',
+    });
+}
+
+/** Ťuknutie na značku: s jediným spôsobom rovno jeho formulár, inak výber spôsobu (aj
+ * vysvetlenie, prečo sa značka nedá). @param {SetupState} s @param {string} id @returns {SetupPatch | null} */
+export function pickZnacka(s, id) {
+    const z = znackaOf(id);
+    if (!z) return null;
+    const sposoby = sposobyOf(z);
+    if (sposoby.length === 1) return { ...openForm(s, sposoby[0].id), setupZnacka: id };
+    return { setupZnacka: id, setupStep: 'sposob' };
+}
+
+/** Ťuknutie na spôsob pripojenia. @param {SetupState} s @param {string} id @returns {SetupPatch | null} */
+export function pickSposob(s, id) {
+    const sposob = sposobOf(id);
+    return sposob && sposob.znacka === s.setupZnacka ? openForm(s, id) : null;
+}
+
+/** Pripojiť meranie inak; už pripojené ostáva, kým sa nepripojí nové. @returns {SetupPatch} */
+export const changeZdroj = () => ({ setupStep: /** @type {SetupStep} */ ('znacka'), setupLive: true });
+
+/** Značka, ktorá sa pripojiť nedá: človeku stačí odhad. @returns {SetupPatch} */
+export const noZdroj = () => ({ setupStep: /** @type {SetupStep} */ ('meranie'), setupLive: false });
+
+/** Text napísaný do poľa formulára. Pripojenie s inými údajmi treba spustiť znova.
+ * @param {SetupState} s @param {string} id @param {string} value @returns {SetupPatch} */
+export function setPole(s, id, value) {
+    const done = s.setupPripoj.status === 'done' || s.setupPripoj.status === 'error';
+    return {
+        setupUdaje: { ...s.setupUdaje, [id]: value.trim() },
+        ...(done ? { setupPripoj: PRIPOJ_IDLE, settingsDraft: { ...s.settingsDraft, zdroj: null } } : {}),
+    };
+}
+
+/** Dá sa pripájať - polia sú vyplnené a na pohľad v poriadku? @param {Pick<SetupState, 'setupSposob' | 'setupUdaje'>} s */
+export const udajeReady = (s) => udajeOk(s.setupSposob, s.setupUdaje);
+
+/** Zvolená elektráreň z nájdených: z nej je pripojené meranie. @param {SetupState} s @param {number} i @returns {SetupPatch | null} */
+export function pickStanica(s, i) {
+    const st = s.setupPripoj.stanice[i];
+    if (!st) return null;
+    return draftPatch(s, { ...s.settingsDraft, zdroj: { sposob: s.setupSposob, pecat: st.pecat, nazov: st.nazov } });
+}
+
+/** Pripájanie začalo. @returns {SetupPatch} */
+export const pripojStart = () => ({ setupPripoj: /** @type {Pripoj} */ ({ status: 'loading', chyba: '', stanice: [] }) });
+
+/**
+ * Výsledok pripojenia. Jediná nájdená elektráreň je rovno pripojená; z viacerých si človek
+ * vyberie. Keď medzitým zmenil spôsob, výsledok patrí inému formuláru a zahodí sa (null).
+ * @param {SetupState} s @param {string} sposob pre ktorý spôsob pripájanie bežalo
+ * @param {{ stanice: Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server' }} res @returns {SetupPatch | null}
+ */
+export function pripojDone(s, sposob, res) {
+    if (s.setupSposob !== sposob || s.setupPripoj.status !== 'loading') return null;
+    if ('chyba' in res) return { setupPripoj: { status: 'error', chyba: res.chyba, stanice: [] } };
+    if (!res.stanice.length) return { setupPripoj: { status: 'error', chyba: 'vyrobca', stanice: [] } };
+    /** @type {Pripoj} */ const setupPripoj = { status: 'done', chyba: '', stanice: res.stanice };
+    return {
+        setupPripoj,
+        // Polia s heslom či kľúčom už netreba - zapečatený prístup je v nájdených elektrárňach.
+        setupUdaje: {},
+        ...(res.stanice.length === 1 ? pickStanica({ ...s, setupPripoj }, 0) : {}),
+    };
+}
 
 // ---- Tarifa ---------------------------------------------------------------------------
 
@@ -469,7 +572,7 @@ export function restartSetup(s) {
     return {
         settingsDraft: savedSettings(s),
         settingsRev: s.settingsRev + 1,
-        setupLive: !!s.kiosk,
+        setupLive: !!s.zdroj,
         setupStep: 'start',
         setupRoof: 0,
         setupReturn: null,
@@ -491,7 +594,7 @@ function acceptLink(s) {
         settingsRev: s.settingsRev + 1,
         setupKwp: null,
         setupPick: { wp: 'chip', ac: 'chip' },
-        setupLive: !!found.kiosk,
+        setupLive: !!found.zdroj,
         setupStep: 'suhrn',
         setupRoof: 0,
         setupReturn: null,
@@ -514,7 +617,7 @@ export function stepEdit(s, key, fromHome) {
         setupSched: 0,
         setupDunno: false,
         settingsNote: '',
-        ...(fromHome ? { settingsDraft: savedSettings(s), settingsRev: s.settingsRev + 1, setupLive: !!s.kiosk } : {}),
+        ...(fromHome ? { settingsDraft: savedSettings(s), settingsRev: s.settingsRev + 1, setupLive: !!s.zdroj } : {}),
     };
 }
 
@@ -527,12 +630,23 @@ export function closeAction(s) {
     const saved = savedSettings(s);
     return {
         type: 'patch',
-        patch: { settingsDraft: saved, settingsRev: s.settingsRev + 1, setupLive: !!saved.kiosk, setupStep: null, setupReturn: null },
+        patch: { settingsDraft: saved, settingsRev: s.settingsRev + 1, setupLive: !!saved.zdroj, setupStep: null, setupReturn: null },
     };
 }
 
-/** „Ďalej“ a jeho varianty: prevziať odkaz, vrátiť sa na zhrnutie, uložiť. Nedá sa - null. @param {SetupState} s @returns {SetupAction | null} */
+/**
+ * „Ďalej“ a jeho varianty: prevziať odkaz, vrátiť sa na zhrnutie, uložiť. Nedá sa - null.
+ * Meranie, ktoré človek chce a ešte nie je pripojené, pokračuje výberom značky - aj pri úprave
+ * jedného kroku, uložiť zatiaľ nie je čo.
+ * @param {SetupState} s @returns {SetupAction | null}
+ */
 export function nextAction(s) {
+    const toZnacka = s.setupStep === 'meranie' && s.setupLive && !s.settingsDraft.zdroj;
+    return toZnacka ? { type: 'patch', patch: { setupStep: 'znacka' } } : stepAction(s);
+}
+
+/** „Ďalej“ podľa obrazovky a toho, odkiaľ sa na ňu prišlo (nextAction). @param {SetupState} s @returns {SetupAction | null} */
+function stepAction(s) {
     if (!setupReady(s) || !s.setupStep) return null;
     if (s.setupReturn === 'suhrn') return { type: 'back', patch: { setupStep: 'suhrn', setupReturn: null } };
     // Bez zadaných panelov sa ukladá len poloha: pri prvom otvorení (a sprievodca pokračuje
@@ -554,8 +668,24 @@ export function nextAction(s) {
     return place && { type: 'patch', patch: { setupStep: place.step, setupRoof: place.roof } };
 }
 
+/**
+ * Späť z obrazoviek pripájania merania - v rámci nich aj pri úprave jedného kroku. Z formulára
+ * na výber spôsobu, keď ich značka má viac, inak na značky.
+ * @type {Record<string, (s: SetupState) => SetupStep>}
+ */
+const MERANIE_BACK = {
+    znacka: () => 'meranie',
+    sposob: () => 'znacka',
+    pripoj: (s) => {
+        const z = znackaOf(s.setupZnacka);
+        return z && sposobyOf(z).length > 1 ? 'sposob' : 'znacka';
+    },
+};
+
 /** „Späť“ v sprievodcovi - o obrazovku späť, z prvej ho zavrie (closeAction). @param {SetupState} s @returns {SetupAction | null} */
 export function backAction(s) {
+    const meranie = MERANIE_BACK[/** @type {string} */ (s.setupStep)];
+    if (meranie) return { type: 'back', patch: { setupStep: meranie(s) } };
     if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start' || (s.known === 'nic' && s.setupStep === 'odkaz'))
         return closeAction(s);
     const place = prevSetupPlace(

@@ -14,6 +14,7 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     TARIFF,
+    WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { contrastTarget, parseColor, textContrast, over } from '../../shared/contrast.js';
@@ -28,10 +29,12 @@ const { pv } = fixtureData();
 const MERANIA = fileURLToPath(new URL('./obloha-kontrola-stranka.js', import.meta.url));
 const weather = fixture('open-meteo.json');
 const TEST_KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Test1234';
+/** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
+const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 /** Tarifa Dvorian s cenami, aby Štatistika ukázala aj peniaze. */
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, kiosk: TEST_KIOSK };
+const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
 /** Denník výroby (plagát potrebuje dni mesiaca) a zápisy „Pustil/a som“. */
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
 const LAUNCHES = [{ d: '2026-09-04', id: 'pracka', m: 720, sun: true }];
@@ -65,6 +68,10 @@ async function openObloha(page, { time = at('13:00'), settings = OWNER, site = n
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.addInitScript({ path: MERANIA });
     await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv } }));
+    // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
+    await page.route(WORKER_PRIPOJ_URL, (route) =>
+        route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
+    );
     await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: GEOCODE }));
     /** @param {string} key @param {string} value */
@@ -192,8 +199,21 @@ async function kazdaObrazovka(page, check) {
     await page.locator('#wz-ac').fill('5');
     await dalej(page);
     await page.locator('#wz-live-yes').click();
-    await page.locator('#wz-kiosk').fill(TEST_KIOSK);
     await check('sprievodca › meranie');
+    await dalej(page);
+    await obrazovka(page, 'znacka');
+    await check('sprievodca › značka');
+    await page.locator('[data-setup-znacka="fronius"]').click();
+    await obrazovka(page, 'sposob');
+    await check('sprievodca › značka sa nedá');
+    await page.locator('#wz-back').click();
+    await page.locator('[data-setup-znacka="huawei"]').click();
+    await obrazovka(page, 'pripoj');
+    await page.locator('[data-setup-pole="odkaz"]').fill(TEST_KIOSK);
+    await check('sprievodca › pripojenie');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice')).toBeVisible();
+    await check('sprievodca › pripojené');
     await dalej(page);
     await page.locator('[data-setup-kind="viac"]').click();
     await check('sprievodca › tarifa');

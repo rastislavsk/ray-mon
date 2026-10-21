@@ -1,6 +1,6 @@
 // Štart appky: DOM, stav, prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
-import { sameSettings, settingsFromLink } from './shared/settings.js';
+import { incomingSettings, settingsFromLink } from './shared/settings.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
 import { render } from './web/render/index.js';
@@ -18,7 +18,7 @@ const site = saved ? null : loadSite();
 // Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží. V adrese
 // ostáva, kým sa človek nerozhodne (viď initUrlMirror); to isté, čo je už uložené, sa neponúka.
 const linked = settingsFromLink(location.hash);
-const incoming = linked && !(saved && sameSettings(linked, saved)) ? linked : null;
+const incoming = incomingSettings(linked, saved);
 const layout = { wide: mq.wide.matches, tall: isTall() };
 // Karta, na ktorej sa appka otvára: voľba tohto telefónu, inak z odkazu pre rodinu (&prva=…).
 const startPanel = loadStartPanel(location.hash);

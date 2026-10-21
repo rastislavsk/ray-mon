@@ -16,11 +16,10 @@ import {
     TARIFF_TEMPLATES,
 } from '../../../shared/config.js';
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../../shared/format.js';
-import { kioskApiUrl } from '../../../shared/kiosk.js';
 import { editTabs } from '../../../shared/nastavenie.js';
 import { checkSettings, settingsFromLink } from '../../../shared/settings.js';
 import { SETUP_SECTIONS, TARIFF_STEPS } from '../../../shared/setup.js';
-import { brushOf, schedIndex, setupDraft, setupReady } from '../../../shared/setup-flow.js';
+import { brushOf, schedIndex, setupDraft, setupReady, udajeReady } from '../../../shared/setup-flow.js';
 import * as T from '../../../shared/setup-texts.js';
 import { orientationShare } from '../../../shared/solar.js';
 import {
@@ -32,6 +31,7 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../../shared/tariff.js';
+import { sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
 import {
     compassSvg,
     miniCompassSvg,
@@ -246,16 +246,93 @@ function renderMenic(state, draft, dom) {
     setText(dom.wzAcGuess, T.AC_GUESS);
 }
 
-/** @param {AppState} state @param {Dom} dom */
+/** Otázka na meranie. Pripojené meranie povie, odkiaľ je, a dá sa pripojiť inak.
+ * @param {AppState} state @param {Dom} dom */
 function renderMeranie(state, dom) {
+    const zdroj = state.settingsDraft.zdroj;
     dom.wzLiveYes.setAttribute('aria-pressed', String(state.setupLive));
     dom.wzLiveNo.setAttribute('aria-pressed', String(!state.setupLive));
-    show(dom.wzKioskBlock, state.setupLive);
-    const kiosk = state.settingsDraft.kiosk;
-    const note = T.kioskNote(kiosk, !!kioskApiUrl(kiosk));
-    dom.wzKioskNote.classList.toggle('err', !!note?.err);
-    show(dom.wzKioskNote, !!note);
-    if (note) setText(dom.wzKioskNote, note.text);
+    setText(dom.wzLiveYesSub, zdroj ? `Pripojené: ${T.zdrojText(zdroj)}` : 'Vyberieš značku a spôsob pripojenia.');
+    const sposob = zdroj && sposobOf(zdroj.sposob);
+    setText(dom.wzLiveNoSub, sposob ? `Appka zabudne prístup. ${sposob.zrusenie}` : 'Meranie sa dá pridať neskôr.');
+    show(dom.wzLiveZmen, !!zdroj && state.setupLive);
+}
+
+/** Štítky spôsobu: kto ho urobí, ako dlho; tretí (prečo je prvý) zvýraznený. @param {string[]} tagy */
+const tagsHtml = (tagy) =>
+    `<span class="tags">${tagy.map((t, i) => `<span class="tag${i === 2 ? ' top' : ''}">${escapeHtml(t)}</span>`).join('')}</span>`;
+
+/** Značky meničov; tie, ktoré sa pripojiť nedajú, sú tlmené a povedia prečo. @param {AppState} state @param {Dom} dom */
+function renderZnacka(state, dom) {
+    setHtml(
+        dom.wzZnacky,
+        ZNACKY.map((z) => {
+            const sposoby = sposobyOf(z);
+            const sub =
+                'nie' in z ? 'Zatiaľ sa nedá pripojiť' : sposoby.length > 1 ? `${sposoby.length} spôsoby pripojenia` : sposoby[0].nazov;
+            return optHtml(`data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}`, z.meno, sub, z.id === state.setupZnacka);
+        }).join(''),
+    );
+}
+
+/** Spôsoby pripojenia značky, alebo vysvetlenie, prečo sa nedá. @param {AppState} state @param {Dom} dom */
+function renderSposob(state, dom) {
+    const z = znackaOf(state.setupZnacka);
+    const sposoby = z ? sposobyOf(z) : [];
+    setHtml(
+        dom.wzSposoby,
+        sposoby.map((x) => optHtml(`data-setup-sposob="${x.id}"`, x.nazov, x.pod, x.id === state.setupSposob, tagsHtml(x.tagy))).join(''),
+    );
+    show(dom.wzSposoby, sposoby.length > 0);
+    show(dom.wzNie, !!z && 'nie' in z);
+}
+
+/** Pole formulára spôsobu. Telefón ho nemá čím vyplniť sám (autocomplete off), heslá skryje.
+ * @param {import('../../../shared/zdroje.js').Pole} p */
+function poleHtml(p) {
+    const type = p.tajne ? 'password' : p.typ === 'url' ? 'url' : p.typ === 'email' ? 'email' : 'text';
+    const mode = p.typ === 'url' ? ' inputmode="url"' : p.typ === 'email' ? ' inputmode="email"' : '';
+    return (
+        `<label class="flbl" for="wz-pole-${p.id}">${escapeHtml(p.lbl)}</label>` +
+        `<input id="wz-pole-${p.id}" class="fld" type="${type}"${mode} autocomplete="off" autocapitalize="off" spellcheck="false" ` +
+        `data-setup-pole="${p.id}" placeholder="${escapeHtml(p.ph)}" />`
+    );
+}
+
+/** Formulár spôsobu, pripájanie a nájdené elektrárne. @param {AppState} state @param {Dom} dom */
+function renderPripoj(state, dom) {
+    const sposob = sposobOf(state.setupSposob);
+    if (!sposob) return;
+    const p = state.setupPripoj;
+    setHtml(dom.wzKroky, sposob.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join(''));
+    show(dom.wzSprava, !!sposob.sprava);
+    setText(dom.wzSpravaText, sposob.sprava ?? '');
+    dom.wzSpravaCopy.dataset.setupCopy = sposob.sprava ?? '';
+    setText(dom.wzSpravaNote, T.SPRAVA_NOTE);
+    // Polia sa kreslia nanovo len pri otvorení formulára (settingsRev) - inak by zmizlo, čo človek píše.
+    setHtml(dom.wzPola, `<div class="wz-stack" data-rev="${state.settingsRev}">${sposob.pola.map(poleHtml).join('')}</div>`);
+    const note = T.pripojNote(p, sposob.id) ?? T.udajeNote(sposob.id, state.setupUdaje);
+    show(dom.wzPripojNote, !!note);
+    dom.wzPripojNote.classList.toggle('err', !!note?.err);
+    if (note) setText(dom.wzPripojNote, note.text);
+    show(dom.wzPripojit, p.status !== 'done');
+    dom.wzPripojit.disabled = p.status === 'loading' || !udajeReady(state);
+    setText(dom.wzPripojit, p.status === 'loading' ? 'Pripájam…' : 'Pripojiť');
+    show(dom.wzStanice, p.status === 'done');
+    const zdroj = state.settingsDraft.zdroj;
+    setHtml(
+        dom.wzStanice,
+        p.status !== 'done'
+            ? ''
+            : `<p class="wz-msg ok">${escapeHtml(T.staniceTitle(p.stanice.length, sposob.id))}</p>` +
+                  p.stanice
+                      .map((st, i) =>
+                          optHtml(`data-setup-stanica="${i}"`, st.nazov || sposob.nazov, T.stanicaMeta(st), zdroj?.pecat === st.pecat),
+                      )
+                      .join('') +
+                  (zdroj ? `<p class="wz-msg">${escapeHtml(T.STANICA_CHECK)}</p>` : ''),
+    );
+    setText(dom.wzPecatNote, T.PECAT_NOTE);
 }
 
 // ---- Tarifa ---------------------------------------------------------------------------
@@ -488,7 +565,7 @@ function writeFields(state, roof, dom) {
     const key = `${state.settingsRev}|${roof}|${state.setupStep}`;
     if (key === last.fields) return;
     last.fields = key;
-    const { site, plant, kiosk } = state.settingsDraft;
+    const { site, plant } = state.settingsDraft;
     const x = plant.strings[roof];
     dom.wzLink.value = state.setupLink;
     dom.wzPlace.value = site.name;
@@ -497,7 +574,6 @@ function writeFields(state, roof, dom) {
     dom.wzWp.value = T.fieldText(plant.panelWp);
     dom.wzKwp.value = T.fieldText(state.setupKwp);
     dom.wzAc.value = T.fieldText(plant.acLimitKw);
-    dom.wzKiosk.value = kiosk;
     if (!x) return;
     dom.wzTilt.value = String(x.tiltDeg);
     dom.wzPanels.value = T.fieldText(x.panels);
@@ -526,6 +602,9 @@ export function renderWizard(state, dom) {
         dalsia: () => renderDalsia(state, draft, dom),
         menic: () => renderMenic(state, draft, dom),
         meranie: () => renderMeranie(state, dom),
+        znacka: () => renderZnacka(state, dom),
+        sposob: () => renderSposob(state, dom),
+        pripoj: () => renderPripoj(state, dom),
         tarifa: () => renderTarifa(state, draft, dom),
         pasma: () => renderPasma(draft, dom, refill),
         rozvrh: () => renderRozvrh(state, draft, dom),

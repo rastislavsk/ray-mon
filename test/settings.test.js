@@ -18,8 +18,10 @@ import {
     typicalSettings,
 } from '../shared/settings.js';
 
-const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, kiosk: '' };
+const DVORANY = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: null };
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+// Pripojené meranie so zapečateným prístupom (tvar ako od Workera, obsah nikto okrem neho nečíta).
+const ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
 
 const SEVILLA = { name: 'Sevilla', lat: 37.39, lon: -5.98, elevationM: 10, timezone: 'Europe/Madrid' };
 
@@ -28,7 +30,7 @@ test('len poloha: typická strecha v nej a jedna cena, prejde kontrolou', () => 
     assert.equal(typical.site, SEVILLA);
     assert.equal(typical.plant, TYPICAL_PLANT);
     assert.equal(typical.tariff, TARIFF_TEMPLATES.jedna);
-    assert.equal(typical.kiosk, '');
+    assert.equal(typical.zdroj, null);
     const check = checkSettings(typical);
     assert.deepEqual(check.errors, []);
     assert.equal(check.kwp, 12 * 0.435);
@@ -176,18 +178,21 @@ test('texty: súradnice podľa pologule, súhrn jedným riadkom', () => {
     assert.equal(settingsHint(typicalSettings(SEVILLA)), 'Sevilla · 5,22 kWp');
 });
 
-test('kiosk: prázdny je bez merania, cudzí odkaz je chyba, uloží sa a staré nastavenie bez neho platí', () => {
-    assert.deepEqual(checkSettings({ ...DVORANY, kiosk: KIOSK }).errors, []);
-    assert.ok(checkSettings({ ...DVORANY, kiosk: 'https://example.com/?kk=Abc123xyz' }).errors.some((e) => e.includes('kiosk')));
-    const withKiosk = parseStoredSettings(toUser({ ...DVORANY, kiosk: KIOSK }));
-    assert.equal(withKiosk && withKiosk.kiosk, KIOSK);
-    assert.ok(!sameSettings({ ...DVORANY, kiosk: KIOSK }, DVORANY));
-    // Nastavenie uložené pred pridaním kiosku.
-    const old = /** @type {Partial<ReturnType<typeof toUser>>} */ (toUser(DVORANY));
-    delete old.kiosk;
-    const back = parseStoredSettings(old);
-    assert.equal(back && back.kiosk, '');
-    assert.equal(parseStoredSettings({ ...toUser(DVORANY), kiosk: 'https://example.com/?kk=Abc123xyz' }), null);
+test('meranie: bez neho null, pripojené sa uloží, staré nastavenia s holým kiosk odkazom platia ďalej', () => {
+    assert.deepEqual(checkSettings({ ...DVORANY, zdroj: ZDROJ }).errors, []);
+    const bad = { ...DVORANY, zdroj: { ...ZDROJ, pecat: 'https://example.com/?kk=Abc123xyz' } };
+    assert.ok(checkSettings(bad).errors.some((e) => e.includes('meranie')));
+    assert.deepEqual(parseStoredSettings(toUser({ ...DVORANY, zdroj: ZDROJ }))?.zdroj, ZDROJ);
+    assert.ok(!sameSettings({ ...DVORANY, zdroj: ZDROJ }, DVORANY));
+    // Nastavenie spred zapečatenia: holý odkaz na kiosk sa prečíta ako spôsob huawei-kiosk.
+    const stare = /** @type {Partial<ReturnType<typeof toUser>>} */ (toUser(DVORANY));
+    delete stare.zdroj;
+    assert.deepEqual(parseStoredSettings({ ...stare, kiosk: KIOSK })?.zdroj, { sposob: 'huawei-kiosk', pecat: KIOSK, nazov: '' });
+    // Spred pridania kiosku, alebo so zlým meraním: bez merania, ostatné platí.
+    assert.equal(parseStoredSettings(stare)?.zdroj, null);
+    assert.equal(parseStoredSettings({ ...stare, kiosk: 'https://example.com/?kk=Abc123xyz' })?.zdroj, null);
+    assert.equal(parseStoredSettings(toUser(bad))?.zdroj, null);
+    assert.equal(parseStoredSettings({ ...stare, zdroj: { ...ZDROJ, sposob: 'neznamy' } })?.zdroj, null);
 });
 
 test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou a južnou pologuľou', async () => {
@@ -195,11 +200,11 @@ test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou 
     const app = 'https://example.test/appka/';
     assert.equal(shareUrl(app, null, true), app);
     assert.equal(shareHash(null, true), '');
-    const withKiosk = { ...DVORANY, kiosk: KIOSK };
+    const withKiosk = { ...DVORANY, zdroj: ZDROJ };
     const url = shareUrl(app, withKiosk, true);
     assert.match(url, /^https:\/\/example\.test\/appka\/#nastavenie=[A-Za-z0-9_-]+$/);
     assert.deepEqual(settingsFromLink(url), withKiosk);
-    // Bez kiosku ostane všetko ostatné.
+    // Bez merania ostane všetko ostatné.
     assert.deepEqual(settingsFromLink(shareUrl(app, withKiosk, false)), DVORANY);
     // Samotná časť za mriežkou (location.hash) stačí rovnako.
     assert.deepEqual(settingsFromLink(`#${url.split('#')[1]}`), withKiosk);
@@ -211,7 +216,7 @@ test('zdieľanie: odkaz s nastavením sa rozbalí na to isté, aj s diakritikou 
     assert.deepEqual(settingsFromLink(shareUrl(app, south, true)), south);
 });
 
-test('zdieľanie: nezmysel, cudzí kiosk alebo poškodený odkaz nič neprevezme', async () => {
+test('zdieľanie: nezmysel alebo poškodený odkaz nič neprevezme, cudzí kiosk len bez merania', async () => {
     const { shareUrl, settingsFromLink } = await import('../shared/settings.js');
     const url = shareUrl('https://x.test/', DVORANY, true);
     for (const bad of [
@@ -221,11 +226,12 @@ test('zdieľanie: nezmysel, cudzí kiosk alebo poškodený odkaz nič neprevezme
         'https://x.test/#nastavenie=@@@',
         'https://x.test/#nastavenie=bm9uLWpzb24',
         url.slice(0, -10),
-        shareUrl('https://x.test/', { ...DVORANY, kiosk: 'https://example.com/?kk=Abc123xyz' }, true),
         // Výška mimo rozsahu by bezoblačnému modelu dala nezmyselný strop.
         shareUrl('https://x.test/', { ...DVORANY, site: { ...DVORANY.site, elevationM: 1e6 } }, false),
     ])
         assert.equal(settingsFromLink(bad), null, bad);
+    const cudzi = shareUrl('https://x.test/', { ...DVORANY, zdroj: { ...ZDROJ, pecat: 'https://example.com/?kk=Abc123xyz' } }, true);
+    assert.deepEqual(settingsFromLink(cudzi), DVORANY);
 });
 
 test('tarifa: uloží sa aj s cenami, staré nastavenie bez nej dostane tarifu Dvorian, chybná zahodí všetko', async () => {
@@ -284,4 +290,17 @@ test('názov lokality: dlhší než SETTINGS_LIMITS.siteNameMax je chyba aj v ul
     assert.deepEqual(named('x'.repeat(N)), []);
     assert.ok(named('x'.repeat(N + 1)).some((e) => /Názov lokality/.test(e)));
     assert.equal(parseStoredSite({ ...SEVILLA, name: 'x'.repeat(N + 1) }), null);
+});
+
+test('incomingSettings: to isté sa neponúka, ani keď odkaz nenesie meranie a uložené ho má', async () => {
+    const { incomingSettings } = await import('../shared/settings.js');
+    const ulozene = { ...DVORANY, zdroj: ZDROJ };
+    assert.equal(incomingSettings(null, ulozene), null);
+    assert.equal(incomingSettings(DVORANY, null), DVORANY, 'bez uloženého sa ponúkne');
+    assert.equal(incomingSettings(DVORANY, ulozene), null, 'adresa nesie nastavenie bez merania');
+    assert.equal(incomingSettings(ulozene, ulozene), null);
+    const ine = { ...DVORANY, plant: { ...DVORANY.plant, acLimitKw: 8 } };
+    assert.equal(incomingSettings(ine, ulozene), ine);
+    const inyZdroj = { ...ulozene, zdroj: { ...ZDROJ, nazov: 'Iná' } };
+    assert.equal(incomingSettings(inyZdroj, ulozene), inyZdroj, 'iné meranie v odkaze sa ponúkne');
 });

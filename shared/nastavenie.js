@@ -10,6 +10,7 @@ import { SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from './setup.js';
 import { savedSettings } from './setup-flow.js';
 import { plantHero, TARIFF_TABS } from './setup-texts.js';
 import { tariffHint, tariffKind } from './tariff.js';
+import { menoZnacky } from './zdroje.js';
 
 /** @typedef {import('./setup-flow.js').SetupState} SetupState */
 /** @typedef {import('./setup.js').SetupStep} SetupStep */
@@ -56,11 +57,13 @@ export function setupCta(state) {
     };
 }
 
-/** Riadok živého merania: stav pripojenia, bez kiosku či bez panelov nepovinné. @param {NastavenieState} state */
+/** Riadok živého merania: stav pripojenia, bez merania či bez panelov nepovinné. @param {NastavenieState} state */
 function liveValue(state) {
     if (state.known !== 'elektraren') return 'nepripojené, nepovinné';
     const live = liveStatus(state);
-    return live ? live.text : 'bez merania, odhad z predpovede';
+    if (!live || !state.zdroj) return 'bez merania, odhad z predpovede';
+    const znacka = menoZnacky(state.zdroj.sposob);
+    return znacka ? `${znacka} · ${live.text}` : live.text;
 }
 
 /**

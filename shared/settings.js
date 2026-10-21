@@ -15,23 +15,24 @@ import {
     VOICES,
 } from './config.js';
 import { fmt2, kwpText } from './format.js';
-import { kioskApiUrl } from './kiosk.js';
 import { checkTariff, parseStoredTariff } from './tariff.js';
 import { inRange, isObj } from './valid.js';
+import { parseZdroj } from './zdroje.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
 /** @typedef {import('./config.js').PlantString} PlantString */
 /** @typedef {import('./config.js').Tariff} Tariff */
+/** @typedef {import('./zdroje.js').Zdroj} Zdroj */
 /**
- * Nastavenie tak, ako ho používa appka. `tariff` sú pásma a rozvrh ceny elektriny. `kiosk` je
- * odkaz na verejný kiosk elektrárne pre živé meranie, prázdny reťazec znamená „bez merania“.
- * @typedef {{ site: Site, plant: Plant, tariff: Tariff, kiosk: string }} Settings
+ * Nastavenie tak, ako ho používa appka. `tariff` sú pásma a rozvrh ceny elektriny. `zdroj` je
+ * pripojené živé meranie (shared/zdroje.js), null znamená „bez merania“.
+ * @typedef {{ site: Site, plant: Plant, tariff: Tariff, zdroj: Zdroj | null }} Settings
  */
 /**
  * To, čo používateľ naozaj zadáva a čo sa ukladá. Odborné parametre zostavy sa neukladajú,
  * dopĺňajú sa vždy z config.js - keby sa tam zmenili, prejaví sa to aj u uložených nastavení.
- * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, tariff: Tariff, kiosk: string }} UserSettings
+ * @typedef {{ site: Site, strings: PlantString[], panelWp: number, acLimitKw: number, tariff: Tariff, zdroj: Zdroj | null }} UserSettings
  */
 /**
  * Čo appka o elektrárni vie: `nic` ani polohu (pýta sa na ňu), `poloha` len polohu (počíta
@@ -45,7 +46,7 @@ import { inRange, isObj } from './valid.js';
  * @param {Site} site @returns {Settings}
  */
 export function typicalSettings(site) {
-    return { site, plant: TYPICAL_PLANT, tariff: TARIFF_TEMPLATES.jedna, kiosk: '' };
+    return { site, plant: TYPICAL_PLANT, tariff: TARIFF_TEMPLATES.jedna, zdroj: null };
 }
 
 /** Doplní zadané údaje o odborné parametre zostavy. @param {UserSettings} user @returns {Settings} */
@@ -54,7 +55,7 @@ export function settingsFrom(user) {
         site: user.site,
         plant: { ...PLANT, strings: user.strings, panelWp: user.panelWp, acLimitKw: user.acLimitKw },
         tariff: user.tariff,
-        kiosk: user.kiosk,
+        zdroj: user.zdroj,
     };
 }
 
@@ -66,7 +67,7 @@ export function toUser(s) {
         panelWp: s.plant.panelWp,
         acLimitKw: s.plant.acLimitKw,
         tariff: s.tariff,
-        kiosk: s.kiosk,
+        zdroj: s.zdroj && { ...s.zdroj },
     };
 }
 
@@ -134,8 +135,7 @@ export function checkSettings(s) {
     const tariff = checkTariff(s.tariff);
     errors.push(...tariff.errors);
     warnings.push(...tariff.warnings);
-    if (s.kiosk && !kioskApiUrl(s.kiosk))
-        errors.push('Odkaz nie je kiosk FusionSolar. Skopíruj ho v aplikácii FusionSolar pri zdieľaní elektrárne cez kiosk.');
+    if (s.zdroj && !parseZdroj(s.zdroj)) errors.push('Živé meranie nie je pripojené správne. Pripoj ho v Nastavení znova.');
     // Panely sa rátajú aj pri chybách - súčet pod formulárom ich ukazuje stále. Výkon až keď
     // je zostava v poriadku, a potom ten istý, aký appka používa všade inde.
     const panels = totalPanels(s);
@@ -179,8 +179,9 @@ export function parseStoredSettings(raw) {
         })),
         panelWp: Number(o.panelWp),
         acLimitKw: Number(o.acLimitKw),
-        // Nastavenia uložené pred pridaním kiosku ho nemajú - to je „bez merania“.
-        kiosk: typeof o.kiosk === 'string' ? o.kiosk : '',
+        // Nastavenia uložené pred pridaním kiosku ho nemajú - to je „bez merania“. Tie spred
+        // výberu značky majú namiesto `zdroj` holý odkaz `kiosk`.
+        zdroj: parseZdroj(o.zdroj, o.kiosk),
         // Nastavenia uložené pred vlastnými tarifami ju nemajú - dostanú tarifu Dvorian, s ktorou
         // appka dovtedy počítala. Tarifa, ktorá tam je, no nesedí, zahodí všetko.
         tariff: 'tariff' in o ? /** @type {Tariff} */ (parseStoredTariff(o.tariff)) : TARIFF,
@@ -244,7 +245,7 @@ export function settingsHint(s) {
 
 // ---- Zdieľanie nastavenia odkazom ------------------------------------------------------
 // Nastavenie sa zbalí do časti adresy za mriežkou. Tú prehliadač neposiela na server, takže
-// lokalita ani kiosk odkaz nekončia v logoch webového servera.
+// lokalita ani prístup k meraniu nekončia v logoch webového servera.
 
 /** Text -> base64url (bez `+`, `/` a `=`, aby sa nemusel v adrese kódovať). @param {string} text */
 function toBase64Url(text) {
@@ -265,14 +266,14 @@ function fromBase64Url(token) {
 /**
  * Časť adresy za mriežkou s nastavením (`#nastavenie=…`) a s kartou, na ktorej sa má appka
  * otvárať (`&prva=terazky`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
- * @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ * @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
  * @param {StartPanel} [start]
  */
-export function shareHash(settings, withKiosk, start = START_PANELS[0]) {
+export function shareHash(settings, withZdroj, start = START_PANELS[0]) {
     const parts = [];
     if (settings) {
         const user = toUser(settings);
-        if (!withKiosk) user.kiosk = '';
+        if (!withZdroj) user.zdroj = null;
         parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`);
     }
     if (start !== START_PANELS[0]) parts.push(`${START_HASH_KEY}=${start}`);
@@ -281,11 +282,11 @@ export function shareHash(settings, withKiosk, start = START_PANELS[0]) {
 
 /**
  * Odkaz na appku, voliteľne s nastavením elektrárne a prvou kartou. Bez nich je to holý odkaz.
- * @param {string} appUrl @param {Settings | null} settings @param {boolean} withKiosk pribaliť aj kiosk odkaz
+ * @param {string} appUrl @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
  * @param {StartPanel} [start]
  */
-export function shareUrl(appUrl, settings, withKiosk, start) {
-    return appUrl + shareHash(settings, withKiosk, start);
+export function shareUrl(appUrl, settings, withZdroj, start) {
+    return appUrl + shareHash(settings, withZdroj, start);
 }
 
 /**
@@ -320,6 +321,18 @@ export function settingsFromLink(text) {
     } catch {
         return null;
     }
+}
+
+/**
+ * Nastavenie z odkazu, ktoré treba ponúknuť prevziať, alebo null. To isté, čo je už uložené, sa
+ * neponúka - ani keď odkaz nenesie živé meranie a uložené ho má. Adresa ho totiž nenesie nikdy
+ * (initUrlMirror vo web/settings-store.js), inak by appka po každom otvorení ponúkala prevziať
+ * samú seba a prevzatím by meranie zmizlo.
+ * @param {Settings | null} linked @param {Settings | null} saved @returns {Settings | null}
+ */
+export function incomingSettings(linked, saved) {
+    if (!linked || !saved) return linked;
+    return sameSettings(linked.zdroj ? linked : { ...linked, zdroj: saved.zdroj }, saved) ? null : linked;
 }
 
 // ---- Vzhľad novej appky ------------------------------------------------------------

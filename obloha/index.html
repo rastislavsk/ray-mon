@@ -506,30 +506,44 @@
 
                         <section id="wz-meranie" class="wz-screen hidden" aria-label="Živé meranie">
                             <button type="button" id="wz-live-yes" class="opt" data-setup-live="yes">
-                                <b>Áno, mám menič Huawei s appkou FusionSolar</b>
-                                <span>Vložíš odkaz na kiosk elektrárne.</span>
+                                <b>Áno, pripojím menič</b>
+                                <span id="wz-live-yes-sub">Vyberieš značku a spôsob pripojenia.</span>
                             </button>
                             <button type="button" id="wz-live-no" class="opt" data-setup-live="no">
                                 <b>Nie, stačí mi odhad</b>
-                                <span>Meranie sa dá pridať neskôr.</span>
+                                <span id="wz-live-no-sub">Meranie sa dá pridať neskôr.</span>
                             </button>
-                            <div id="wz-kiosk-block" class="wz-stack hidden">
-                                <ol class="glass howto">
-                                    <li>V appke FusionSolar otvor svoju elektráreň.</li>
-                                    <li>Zvoľ zdieľanie cez kiosk a skopíruj odkaz.</li>
-                                    <li>Vlož ho sem.</li>
-                                </ol>
-                                <label class="flbl" for="wz-kiosk">Odkaz na kiosk</label>
-                                <input
-                                    id="wz-kiosk"
-                                    class="fld"
-                                    type="url"
-                                    inputmode="url"
-                                    autocomplete="off"
-                                    placeholder="Odkaz na kiosk FusionSolar"
-                                />
-                                <p id="wz-kiosk-note" class="wz-msg"></p>
+                            <button type="button" id="wz-live-zmen" class="lnk hidden" data-setup-zmen>Pripojiť inak</button>
+                        </section>
+
+                        <section id="wz-znacka" class="wz-screen hidden" aria-label="Značka meniča">
+                            <div id="wz-znacky" class="wz-stack" role="group" aria-label="Značka meniča"></div>
+                            <p class="wz-msg">Svoju značku tu nevidíš? Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
+                        </section>
+
+                        <section id="wz-sposob" class="wz-screen hidden" aria-label="Spôsob pripojenia">
+                            <div id="wz-sposoby" class="wz-stack" role="group" aria-label="Spôsob pripojenia"></div>
+                            <div id="wz-nie" class="wz-stack hidden">
+                                <p class="glass wz-note">
+                                    Appka bude ukazovať odhad z predpovede počasia. Plán dňa, tarifa aj štatistika fungujú rovnako.
+                                </p>
+                                <button type="button" class="pbtn" data-setup-odhad>Stačí mi odhad</button>
                             </div>
+                        </section>
+
+                        <section id="wz-pripoj" class="wz-screen hidden" aria-label="Pripojenie merania">
+                            <ol id="wz-kroky" class="glass howto"></ol>
+                            <div id="wz-sprava" class="glass hidden">
+                                <span class="glass-ttl">Správa na skopírovanie</span>
+                                <p id="wz-sprava-text" class="wz-letter"></p>
+                                <button type="button" id="wz-sprava-copy" class="pbtn" data-setup-copy="">Skopírovať správu</button>
+                                <p id="wz-sprava-note" class="wz-msg"></p>
+                            </div>
+                            <div id="wz-pola" class="wz-stack"></div>
+                            <button type="button" id="wz-pripojit" class="pbtn">Pripojiť</button>
+                            <p id="wz-pripoj-note" class="wz-msg hidden" role="status"></p>
+                            <div id="wz-stanice" class="wz-stack hidden"></div>
+                            <p id="wz-pecat-note" class="wz-msg"></p>
                         </section>
 
                         <section id="wz-tarifa" class="wz-screen hidden" aria-label="Typ sadzby">
@@ -717,7 +731,7 @@
                     </label>
                     <label class="chk" id="ns-share-kiosk-row">
                         <input type="checkbox" id="ns-share-kiosk" />
-                        <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                        <span>aj živé meranie – kto odkaz dostane, uvidí tvoju výrobu</span>
                     </label>
                 </div>
                 <div id="ns-qr" class="qr hidden" role="img" aria-label="QR kód s odkazom na appku"></div>

@@ -18,7 +18,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
  * potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
- * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj kiosk. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
+ * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
  * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo.
  * @typedef {(typeof PANELS)[number]} Panel
@@ -95,7 +95,7 @@ export function initialState(
         site: start.site,
         plant: start.plant,
         tariff: start.tariff,
-        kiosk: start.kiosk,
+        zdroj: start.zdroj,
         pv: null,
         forecast: null,
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.

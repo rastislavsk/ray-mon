@@ -50,11 +50,11 @@ export function sunArc(now, site, window) {
 }
 
 /**
- * Meranie zo strechy: ide, alebo odkedy mlčí. Bez kiosku nie je čo merať.
- * @param {import('./day-plan.js').PlanInput & { kiosk: string }} input
+ * Meranie zo strechy: ide, alebo odkedy mlčí. Bez pripojeného merania nie je čo merať.
+ * @param {import('./day-plan.js').PlanInput & { zdroj: unknown }} input
  */
-export function pvStatus({ now, site, pv, kiosk }) {
-    if (!kiosk || !pv) return { ok: false, since: null };
+export function pvStatus({ now, site, pv, zdroj }) {
+    if (!zdroj || !pv) return { ok: false, since: null };
     const fresh = pvFreshness({ now, pv, site });
     return { ok: !fresh.stale, since: fresh.stale ? fresh.time : null };
 }
@@ -63,7 +63,7 @@ export function pvStatus({ now, site, pv, kiosk }) {
  * Model karty Môžem? novej appky. `known: 'nic'` (appka nepozná ani polohu) je len výzva zadať
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
- * @param {import('./day-plan.js').PlanInput & { kiosk: string, loading: boolean, known: import('./settings.js').Known }} input
+ * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input
  * @param {{ quip?: number, launches?: import('./launches.js').Launch[], online?: boolean,
  *   voice?: import('./messages.js').Voice }} [opts] stránka hlášok, zápisy „Pustil/a som“, či má telefón internet a tón hlášok
  */
@@ -183,7 +183,7 @@ function phonesOf(input, f, estimate) {
  */
 export function offlineLead(input, online, voice = 'drzy') {
     const pv = pvStatus(input);
-    return mozemOfflineText({ online, kiosk: !!input.kiosk, pvOk: pv.ok, pvSince: pv.since }, voice);
+    return mozemOfflineText({ online, zdroj: !!input.zdroj, pvOk: pv.ok, pvSince: pv.since }, voice);
 }
 
 /**

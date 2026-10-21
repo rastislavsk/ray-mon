@@ -7,7 +7,15 @@ import { FIXED_NOW, fixtureData } from './helpers.js';
 const { pv, forecast } = fixtureData();
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-const OWNER = { now: FIXED_NOW, site: SITE, tariff: PRICED, kiosk: 'kiosk', loading: false, pv, forecast };
+const OWNER = {
+    now: FIXED_NOW,
+    site: SITE,
+    tariff: PRICED,
+    zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+    loading: false,
+    pv,
+    forecast,
+};
 
 test('energyByBand: lichobežník po úsekoch, pásmo v strede úseku', () => {
     // 07:30 - 08:30 je VT, 12:00 - 13:00 NT.
@@ -109,14 +117,14 @@ test('statsModel: bez cien sú len kWh', () => {
 test('statsModel: stav podľa merania a načítania', () => {
     assert.equal(statsModel({ ...OWNER, pv: null }, 'dnes').status, 'offline');
     assert.equal(statsModel({ ...OWNER, pv: null, loading: true }, 'dnes').status, 'loading');
-    assert.equal(statsModel({ ...OWNER, pv: null, kiosk: '' }, 'dnes').status, 'none');
-    const bez = statsModel({ ...OWNER, pv: null, kiosk: '' }, 'dnes');
+    assert.equal(statsModel({ ...OWNER, pv: null, zdroj: null }, 'dnes').status, 'none');
+    const bez = statsModel({ ...OWNER, pv: null, zdroj: null }, 'dnes');
     assert.equal(bez.hero.kwh, null);
     assert.equal(bez.progress, null);
 });
 
 test('statsModel: bez merania ostáva dnešok podľa predpovede, ocenený po hodinách', () => {
-    const m = statsModel({ ...OWNER, pv: null, kiosk: '' }, 'dnes');
+    const m = statsModel({ ...OWNER, pv: null, zdroj: null }, 'dnes');
     const today = forecast.days[0];
     const price = averagePrice(energyByBand(today.hourly, PRICED, today.date), PRICED);
     assert.deepEqual(m.forecastToday, { kwh: today.kwhTotal, value: today.kwhTotal * /** @type {number} */ (price) });

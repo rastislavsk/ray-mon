@@ -155,9 +155,14 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
 });
 
 test('liveStatus: stav živého merania pre riadok v Nastavení', () => {
-    const base = { now: at('13:00'), site: SITE, kiosk: 'https://kiosk', loading: false };
+    const base = {
+        now: at('13:00'),
+        site: SITE,
+        zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+        loading: false,
+    };
     const cerstve = { ...pv, updatedAt: at('13:00').toISOString() };
-    assert.equal(liveStatus({ ...base, kiosk: '', pv: cerstve }), null);
+    assert.equal(liveStatus({ ...base, zdroj: null, pv: cerstve }), null);
     assert.deepEqual(liveStatus({ ...base, pv: cerstve }), { tone: 'ok', text: 'pripojené · 13:00' });
     assert.deepEqual(liveStatus({ ...base, now: at('13:30'), pv: { ...cerstve, updatedAt: at('13:30').toISOString() } }), {
         tone: 'stale',

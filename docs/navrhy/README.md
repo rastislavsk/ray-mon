@@ -33,6 +33,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `nahlad-casu-graf.html`        | Graf dňa (nová appka) – čo ukázať pri náhľade času: len čas v štítku (A), čas pri čiare (B, vybraný), v nadpise (C)  |
 | `teraz-v-grafe.html`           | Graf dňa (nová appka) – „teraz“ bez zvislej čiary: len bod (A), bod a stlmená minulosť pásu (B, vybraný)             |
 | `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami                   |
+| `meranie-cez-api.html`         | Živé meranie aj cez API výrobcu meniča – výber značky, prihlásenie, overenie hneď, zoznam značiek a bezpečnosť       |
 | `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 
 ## Prečo je to v repozitári

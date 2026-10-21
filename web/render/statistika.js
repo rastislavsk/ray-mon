@@ -96,7 +96,7 @@ export function statsHtml(m, noPanels) {
     const live =
         m.status === 'offline'
             ? `<p class="stats-note">Živé meranie teraz neodpovedá. Súčty za mesiac, rok a celý čas sa ukážu, keď sa spojenie obnoví.</p>`
-            : goHtml('meranie', 'Pripojiť živé meranie', 'Súčty za mesiac, rok a celý čas posiela menič Huawei cez kiosk FusionSolar.');
+            : goHtml('meranie', 'Pripojiť živé meranie', 'Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.');
     return forecastHtml(m) + live + prices;
 }
 

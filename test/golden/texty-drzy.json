@@ -1,5 +1,5 @@
 {
-  "hash": "7b4a70b0d2a3a645b468e481ff9dc224eac1ed66ebe151e5facd1d38150fedfc",
+  "hash": "c1000b2a59349f4d8a7bd61baa1b03f712d36b4ceb063877b134b208c8b0700a",
   "texts": [
     "  o 12:00.",
     " , prúd je lacný.",
@@ -64,7 +64,7 @@
     "Bez dát len hádam. A hádať nebudem.",
     "Bez dát netuším, či svieti. Ak musíš, pusti to, nič sa nestane.",
     "Bez panelov len hádam. A hádať nebudem.",
-    "Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne aj odkaz na kiosk pre naozaj namerané čísla.",
+    "Bez panelov neviem, koľko si vyrobil za deň, mesiac ani rok. Zadaj ich a prípadne pripoj aj menič pre naozaj namerané čísla.",
     "Bez polohy neviem, kde tvoja strecha je, nieto koľko vyrobila. Zadaj ju v Nastavení a začnem počítať.",
     "Bez polohy neviem, kedy u teba bude svietiť. Zadaj ju v Nastavení a poviem ti, ktorý deň je na veľké pranie.",
     "Bez polohy neviem, kedy u teba svieti slnko. Zadaj ju v Nastavení a poviem ti, čo môžeš.",
@@ -102,7 +102,7 @@
     "Dnes, jasno, 61 kWh, okno 08:00 až 17:30",
     "Dnes, jasno, 61 kWh, okno 09:00 až 17:30",
     "Dnešok",
-    "Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič Huawei cez kiosk FusionSolar - zadaj odkaz naň v Nastavení.",
+    "Dnešok teraz len odhadujem z predpovede. Naozaj vyrobené kWh za dnes, mesiac, rok aj celý čas posiela menič, keď ho pripojíš v Nastavení.",
     "Do 15:00 chytí zo slnka asi 40 km.",
     "Do 16:00 chytí zo slnka asi 110 km.",
     "Do 16:00 chytí zo slnka asi 240 km.",
@@ -576,7 +576,7 @@
     "Za 3 dni appka čísla nemá – vtedy ju nikto neotvoril. CO2eq za celý životný cyklus: kWh zo siete SR 95 g (Ember 2025), zo slnka 30 g (IEA PVPS 2023, prepočítané na výrobu v SR).",
     "Za 3 dni appka čísla nemá – vtedy ju nikto neotvoril. CO2eq za celý životný cyklus: kWh zo siete SR 95 g (Ember 2025), zo slnka 30 g (IEA PVPS 2023, prepočítané na výrobu v SR). Výroba týchto panelov aj s meničom stála asi 11,0 t CO2eq, rozpočítaná na 30 rokov prevádzky.",
     "Zadaj panely",
-    "Zadaj panely a tu uvidíš svoj výkon. S odkazom na kiosk aj naozaj nameraný.",
+    "Zadaj panely a tu uvidíš svoj výkon. S pripojeným meničom aj naozaj nameraný.",
     "Zadaj polohu",
     "Zadať moje panely",
     "Zajtra",
@@ -837,7 +837,7 @@
     "Ťahaj prstom po grafe a pozri si iný čas.",
     "Ťukni, dokedy.",
     "ťukni, príde ďalšia",
-    "Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa kiosk ozve.",
+    "Živé meranie teraz neodpovedá, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu, keď sa menič ozve.",
     "živé meranie"
   ]
 }

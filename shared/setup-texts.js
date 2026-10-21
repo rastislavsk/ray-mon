@@ -9,6 +9,8 @@ import { SETUP_SECTIONS, setupSection } from './setup.js';
 import { isWelcome, savedSettings, schedIndex } from './setup-flow.js';
 import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
 import { autoLevels, isSeasonSchedule, isWeekendSchedule, scheduleRuns, tariffHint, tariffPricesText } from './tariff.js';
+import { kioskApiUrl } from './kiosk.js';
+import { menoZnacky, sposobOf, znackaOf } from './zdroje.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
 /** @typedef {import('./setup.js').SetupStep} SetupStep */
@@ -77,6 +79,9 @@ const TEXTS = {
         title: 'Chceš vidieť skutočný výkon?',
         lead: 'Bez merania appka ukazuje odhad z predpovede počasia. S meraním vidíš aj to, čo panely naozaj vyrábajú.',
     },
+    znacka: { title: 'Akú značku má tvoj menič?', lead: 'Nájdeš ju na meniči alebo v appke, v ktorej sleduješ výrobu.' },
+    sposob: { title: 'Ako pripojíš menič?', lead: 'Spôsoby ukážu to isté. Líšia sa tým, kto ich urobí a kto okrem teba uvidí výrobu.' },
+    pripoj: { title: 'Pripoj menič', lead: '' },
     tarifa: {
         title: 'Ako platíš za elektrinu?',
         lead: 'Podľa toho appka zafarbí ciferník a poradí, kedy zapínať spotrebiče. Nájdeš to na faktúre alebo v zmluve.',
@@ -180,8 +185,27 @@ export function textsFor(state, draft, step, dial = true) {
         return { title: TEXTS.menic.title, lead: `${kwp}Výkon meniča je na jeho štítku alebo v zmluve, napríklad SUN2000-10KTL je 10 kW.` };
     }
     if (step === 'tarifa' && !dial) return TARIFF_TEXT_PLAN;
-    return TEXTS[step];
+    const zdroj = ZDROJ_TEXTS[step];
+    return zdroj ? zdroj(state) : TEXTS[step];
 }
+
+/**
+ * Titulky pripájania merania podľa zvolenej značky a spôsobu; bez nich všeobecný.
+ * @type {Partial<Record<SetupStep, (state: SetupState) => { title: string, lead: string }>>}
+ */
+const ZDROJ_TEXTS = {
+    sposob: (state) => {
+        const z = znackaOf(state.setupZnacka);
+        if (!z) return TEXTS.sposob;
+        return 'nie' in z
+            ? { title: `${z.meno} zatiaľ pripojiť nevieme`, lead: `${z.nie} Pre domácnosť cesta zatiaľ nie je.` }
+            : { title: `Ako pripojíš ${z.meno}?`, lead: TEXTS.sposob.lead };
+    },
+    pripoj: (state) => {
+        const sposob = sposobOf(state.setupSposob);
+        return sposob ? { title: sposob.nazov, lead: sposob.pod } : TEXTS.pripoj;
+    },
+};
 
 /** Riadok nad ukazovateľom postupu. @param {SetupState} state @param {SetupStep} step */
 export function stepLabel(state, step) {
@@ -199,8 +223,12 @@ export function progressSection(state, step) {
     return state.setupReturn !== null || isWelcome(state, step) ? -1 : setupSection(step);
 }
 
+/** Vedie „Ďalej“ z otázky na meranie na výber značky (nextAction)? @param {SetupState} state @param {Settings} draft @param {SetupStep} step */
+const toZnacka = (state, draft, step) => step === 'meranie' && state.setupLive && !draft.zdroj;
+
 /** Nápis na „Ďalej“. @param {SetupState} state @param {Settings} draft @param {SetupStep} step */
 function nextLabel(state, draft, step) {
+    if (toZnacka(state, draft, step)) return 'Ďalej';
     if (state.setupReturn === 'suhrn') return 'Späť na zhrnutie';
     if (state.setupReturn === 'prehlad') return 'Uložiť zmenu';
     /** @type {Partial<Record<SetupStep, string>>} */
@@ -210,6 +238,7 @@ function nextLabel(state, draft, step) {
         lokalita: state.known === 'nic' ? 'Nastaviť panely' : 'Ďalej',
         dalsia: draft.plant.strings.length >= SETTINGS_LIMITS.maxStrings ? 'Ďalej' : 'Nie, to je všetko',
         meranie: state.setupLive ? 'Ďalej' : 'Preskočiť',
+        pripoj: 'Ďalej',
         suhrn: 'Uložiť a prepočítať',
     };
     return labels[step] || 'Ďalej';
@@ -222,11 +251,14 @@ function nextLabel(state, draft, step) {
  */
 export function footModel(state, draft, step, ready) {
     const ret = state.setupReturn;
+    // Obrazovky pripájania merania majú Späť vždy - aj pri úprave jedného kroku sa po nich ide späť.
+    const sub = step === 'znacka' || step === 'sposob' || step === 'pripoj';
     return {
         next: nextLabel(state, draft, step),
-        nextOff: !ready || (ret === 'prehlad' && sameSettings(draft, savedSettings(state))),
-        back: ret === 'prehlad' ? 'Zrušiť' : step === 'start' ? 'Neskôr' : 'Späť',
-        backShown: ret !== 'suhrn' && !isWelcome(state, step),
+        // Meranie, ktoré sa ešte len bude pripájať, nič nemení - a „Ďalej“ vedie na výber značky.
+        nextOff: !ready || (ret === 'prehlad' && !toZnacka(state, draft, step) && sameSettings(draft, savedSettings(state))),
+        back: ret === 'prehlad' && !sub ? 'Zrušiť' : step === 'start' ? 'Neskôr' : 'Späť',
+        backShown: sub || (ret !== 'suhrn' && !isWelcome(state, step)),
         close: ret !== null ? 'Zrušiť úpravu' : 'Zavrieť sprievodcu',
         closeShown: !isWelcome(state, step),
     };
@@ -337,8 +369,63 @@ export function menicModel(draft, ac) {
 export function kioskNote(kiosk, ok) {
     if (!kiosk) return null;
     return ok
-        ? { text: 'Vyzerá to ako kiosk FusionSolar. Po uložení overím, či odpovedá.', err: false }
+        ? { text: 'Vyzerá to ako kiosk FusionSolar.', err: false }
         : { text: 'Toto nie je odkaz na kiosk FusionSolar. Skopíruj ho v appke FusionSolar pri zdieľaní elektrárne cez kiosk.', err: true };
+}
+
+// ---- Živé meranie ---------------------------------------------------------------------
+
+/** Hlásenie pod poľami formulára, kým sa nepripája: zatiaľ len odkaz na kiosk. null, keď nie je čo povedať.
+ * @param {string} sposob @param {Record<string, string>} udaje @returns {Note | null} */
+export function udajeNote(sposob, udaje) {
+    return sposob === 'huawei-kiosk' && udaje.odkaz ? kioskNote(udaje.odkaz, !!kioskApiUrl(udaje.odkaz)) : null;
+}
+
+/** Veta pod formulárom pripojenia: kde údaje skončia. */
+export const PECAT_NOTE = 'Údaje sa uložia v tomto telefóne zapečatené – prečítať ich vie len server appky, a ten si ich nikam neukladá.';
+
+/** Pod správou na skopírovanie: appka počká, kým človek údaje dostane. */
+export const SPRAVA_NOTE = 'Nastavenie si zapamätám. Keď údaje dostaneš, otvor Nastavenie → Živé meranie.';
+
+/**
+ * Stav pripájania pod tlačidlom „Pripojiť“: čo sa deje, alebo prečo to nevyšlo. null, kým
+ * človek nič nespustil, a po úspechu (vtedy hovorí karta s nameranými číslami).
+ * @param {import('./setup-flow.js').Pripoj} p @param {string} sposob id spôsobu @returns {Note | null}
+ */
+export function pripojNote(p, sposob) {
+    const meno = menoZnacky(sposob);
+    if (p.status === 'loading') return { text: `Pýtam sa ${meno}… Zvyčajne to trvá pár sekúnd.`, err: false };
+    if (p.status !== 'error') return null;
+    /** @type {Record<string, string>} */
+    const texts = {
+        udaje: `${meno} údaje neprijal. Skontroluj, či si skopíroval všetko celé.`,
+        vyrobca: `${meno} teraz neodpovedá alebo nič nenašiel. Skús to o chvíľu znova.`,
+        server: 'Server appky teraz nevie merania pripájať. Skús to neskôr.',
+    };
+    return { text: texts[p.chyba] || texts.vyrobca, err: true };
+}
+
+/** Nadpis nad nájdenými elektrárňami. @param {number} n @param {string} sposob */
+export function staniceTitle(n, sposob) {
+    return n > 1 ? `Na účte ${menoZnacky(sposob)} sú ${n}. Vyber tú, ktorú má appka sledovať.` : 'Pripojené';
+}
+
+/** Riadok elektrárne s tým, čo práve namerala. @param {import('./setup-flow.js').Stanica} st */
+export function stanicaMeta(st) {
+    const pv = st.pv;
+    if (!pv) return 'meranie zatiaľ neprišlo';
+    const kw = pv.realTimePowerKw === null ? '' : `teraz ${kwText(pv.realTimePowerKw)}`;
+    const kwh = pv.dailyEnergyKwh === null ? '' : `dnes ${fieldText(Math.round(pv.dailyEnergyKwh * 10) / 10)} kWh`;
+    return [kw, kwh].filter(Boolean).join(' · ') || 'meranie zatiaľ neprišlo';
+}
+
+/** Veta pod pripojenou elektrárňou: nech ju človek porovná s appkou výrobcu. */
+export const STANICA_CHECK = 'Skontroluj, či čísla sedia s appkou výrobcu. Odteraz ich appka ukazuje namiesto odhadu.';
+
+/** Pripojené meranie jedným riadkom, napr. „Huawei · Dvorany“. @param {import('./zdroje.js').Zdroj} z */
+export function zdrojText(z) {
+    const sposob = sposobOf(z.sposob);
+    return [menoZnacky(z.sposob), z.nazov || (sposob ? sposob.nazov.toLowerCase() : '')].filter(Boolean).join(' · ');
 }
 
 /** Čo je v odkaze s nastavením. @param {Settings} found */
@@ -348,7 +435,7 @@ export function linkPreview(found) {
     return {
         name: found.site.name,
         kwp: kwpText(installedKw(found.plant)),
-        meta: `${n === 1 ? '1 plocha' : `${n} plochy`} (${dirs}) · ${totalPanels(found)} panelov · menič ${kwText(found.plant.acLimitKw)}${found.kiosk ? ' · so živým meraním' : ''}`,
+        meta: `${n === 1 ? '1 plocha' : `${n} plochy`} (${dirs}) · ${totalPanels(found)} panelov · menič ${kwText(found.plant.acLimitKw)}${found.zdroj ? ' · so živým meraním' : ''}`,
     };
 }
 
@@ -507,7 +594,7 @@ export function summaryRows(s, state) {
             icon: 'meranie',
             az: null,
             label: 'Živé meranie',
-            value: s.kiosk ? 'kiosk FusionSolar' : 'bez merania, odhad z predpovede',
+            value: s.zdroj ? zdrojText(s.zdroj) : 'bez merania, odhad z predpovede',
             extra: '',
             guess: false,
         },
@@ -523,7 +610,7 @@ export const GUESS_MARK = 'odhad · oprav, keď zistíš';
  * @param {Settings} s nastavenie z odkazu @param {import('./settings.js').Known} known
  */
 export function importOfferText(s, known) {
-    const live = s.kiosk ? ' · so živým meraním' : '';
+    const live = s.zdroj ? ' · so živým meraním' : '';
     const replaces = known !== 'elektraren' ? '' : ' Nahradí tvoje doterajšie nastavenie.';
     return `${settingsHint(s)}${live}.${replaces}`;
 }

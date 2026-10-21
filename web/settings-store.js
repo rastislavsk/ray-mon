@@ -10,15 +10,16 @@ export * from './storage.js';
 /**
  * Časť stavu, ktorú adresa nesie: uložené nastavenie, či ho appka pozná, nastavenie z odkazu
  * čakajúce na rozhodnutie a prvá karta tohto telefónu.
- * @typedef {Pick<import('../shared/setup-flow.js').SetupState, 'site' | 'plant' | 'tariff' | 'kiosk' | 'known'> & {
+ * @typedef {Pick<import('../shared/setup-flow.js').SetupState, 'site' | 'plant' | 'tariff' | 'zdroj' | 'known'> & {
  *   incoming: import('../shared/settings.js').Settings | null,
  *   startPanel: import('../shared/settings.js').StartPanel,
  * }} MirrorState
  */
 
 /**
- * Adresa v prehliadači nesie vždy uložené nastavenie (`#nastavenie=…`, aj s kioskom), bez
- * zadaných panelov je holá. Na iPhone totiž appka pridaná na plochu nevidí úložisko Safari - jediné,
+ * Adresa v prehliadači nesie vždy uložené nastavenie (`#nastavenie=…`), bez zadaných panelov je
+ * holá. Prístup k živému meraniu v nej nie je nikdy - adresa končí v histórii, v synchronizácii
+ * prehliadača aj na snímkach obrazovky. Na iPhone totiž appka pridaná na plochu nevidí úložisko Safari - jediné,
  * čo si zo Safari prinesie, je adresa. Pri prvom spustení z plochy tak ponúkne nastavenie
  * prevziať, namiesto toho, aby sa pýtala na polohu. Kým čaká ponuka z otvoreného odkazu, adresa
  * nesie ten odkaz, aby sa dal pridať na plochu aj pred rozhodnutím.
@@ -29,7 +30,7 @@ export function initUrlMirror(store) {
     const mirror = (s) => {
         if (s.incoming) return;
         // Aj prvá karta: appka pridaná na plochu iPhonu si ju inak z Safari neprenesie.
-        const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, true, s.startPanel);
+        const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, false, s.startPanel);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);
     };
     mirror(store.get());

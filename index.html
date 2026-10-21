@@ -615,7 +615,7 @@
                                                 </label>
                                                 <label class="check-row" id="share-kiosk-row">
                                                     <input type="checkbox" id="share-with-kiosk" />
-                                                    <span>aj živé meranie (kiosk) – kto odkaz dostane, uvidí tvoju výrobu</span>
+                                                    <span>aj živé meranie – kto odkaz dostane, uvidí tvoju výrobu</span>
                                                 </label>
                                             </div>
                                             <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
@@ -850,30 +850,46 @@
                             <button type="button" class="choice" id="wz-live-yes" data-setup-live="yes">
                                 <span class="dot"></span
                                 ><span class="t"
-                                    ><b>Áno, mám menič Huawei s appkou FusionSolar</b><span>Vložíš odkaz na kiosk elektrárne.</span></span
+                                    ><b>Áno, pripojím menič</b><span id="wz-live-yes-sub">Vyberieš značku a spôsob pripojenia.</span></span
                                 >
                             </button>
                             <button type="button" class="choice" id="wz-live-no" data-setup-live="no">
                                 <span class="dot"></span
-                                ><span class="t"><b>Nie, stačí mi odhad</b><span>Meranie sa dá pridať neskôr.</span></span>
+                                ><span class="t"
+                                    ><b>Nie, stačí mi odhad</b><span id="wz-live-no-sub">Meranie sa dá pridať neskôr.</span></span
+                                >
                             </button>
-                            <div class="wz-kiosk hidden" id="wz-kiosk-block">
-                                <ol class="howto">
-                                    <li>V appke FusionSolar otvor svoju elektráreň.</li>
-                                    <li>Zvoľ zdieľanie cez kiosk a skopíruj odkaz.</li>
-                                    <li>Vlož ho sem.</li>
-                                </ol>
-                                <label class="field-label" for="wz-kiosk">Odkaz na kiosk</label>
-                                <input
-                                    class="field-input"
-                                    id="wz-kiosk"
-                                    type="url"
-                                    inputmode="url"
-                                    autocomplete="off"
-                                    placeholder="Odkaz na kiosk FusionSolar"
-                                />
-                                <p class="plant-msg" id="wz-kiosk-note"></p>
+                            <button type="button" class="link-btn hidden" id="wz-live-zmen" data-setup-zmen>Pripojiť inak</button>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-znacka" aria-label="Značka meniča">
+                            <div class="wz-kinds" id="wz-znacky" role="group" aria-label="Značka meniča"></div>
+                            <p class="plant-msg">Svoju značku tu nevidíš? Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-sposob" aria-label="Spôsob pripojenia">
+                            <div class="wz-kinds" id="wz-sposoby" role="group" aria-label="Spôsob pripojenia"></div>
+                            <div class="wz-zdroj hidden" id="wz-nie">
+                                <p class="plant-msg">
+                                    Appka bude ukazovať odhad z predpovede počasia. Plán dňa, tarifa aj štatistika fungujú rovnako.
+                                </p>
+                                <button type="button" class="plant-save" data-setup-odhad>Stačí mi odhad</button>
                             </div>
+                        </section>
+
+                        <section class="wz-screen hidden" id="wz-pripoj" aria-label="Pripojenie merania">
+                            <ol class="howto" id="wz-kroky"></ol>
+                            <div class="wz-zdroj wz-sprava hidden" id="wz-sprava">
+                                <div class="field-label">Správa na skopírovanie</div>
+                                <p class="wz-letter" id="wz-sprava-text"></p>
+                                <button type="button" class="link-btn" id="wz-sprava-copy" data-setup-copy="">Skopírovať správu</button>
+                                <p class="plant-msg" id="wz-sprava-note"></p>
+                            </div>
+                            <div class="wz-zdroj" id="wz-pola"></div>
+                            <button type="button" class="plant-save" id="wz-pripojit">Pripojiť</button>
+                            <p class="plant-msg hidden" id="wz-pripoj-note" role="status"></p>
+                            <div class="wz-kinds hidden" id="wz-stanice"></div>
+                            <p class="plant-msg" id="wz-pecat-note"></p>
                         </section>
 
                         <!-- Tarifa: pásma, rozvrh dňa, výnimky a ceny. Obsah dopĺňa render, tu sú len

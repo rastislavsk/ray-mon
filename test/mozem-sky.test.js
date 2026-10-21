@@ -32,7 +32,18 @@ const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
  */
 function input(now, extra = {}) {
     const { pv, forecast } = fixtureData(now);
-    return { now, site: SITE, plant: PLANT, tariff: TARIFF, kiosk: 'kiosk', loading: false, known: 'elektraren', pv, forecast, ...extra };
+    return {
+        now,
+        site: SITE,
+        plant: PLANT,
+        tariff: TARIFF,
+        zdroj: { sposob: 'huawei-kiosk', pecat: 'v1.test-pecat-0123456789', nazov: '' },
+        loading: false,
+        known: 'elektraren',
+        pv,
+        forecast,
+        ...extra,
+    };
 }
 
 /** Vstup pri známej polohe bez panelov: typická strecha, ako ho skladá appka. @param {Date} now */
@@ -129,16 +140,16 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
     assert.equal(mozemPhonesText(30, true), 'Strecha za hodinu nabije 2\u00a0000 mobilov');
     assert.equal(mozemPhonesText(0.05, false), 'Strecha teraz nenabije ani jeden mobil');
 
-    assert.match(mozemOfflineText({ online: false, kiosk: true, pvOk: false, pvSince: null }), /^Nie je internet/);
-    const bezPredpovede = mozemOfflineText({ online: true, kiosk: false, pvOk: false, pvSince: null });
+    assert.match(mozemOfflineText({ online: false, zdroj: true, pvOk: false, pvSince: null }), /^Nie je internet/);
+    const bezPredpovede = mozemOfflineText({ online: true, zdroj: false, pvOk: false, pvSince: null });
     assert.match(bezPredpovede, /^Predpoveď počasia neprišla/);
     assert.doesNotMatch(bezPredpovede, /Meranie/, 'bez kiosku o meraní nehovorí');
-    assert.match(mozemOfflineText({ online: true, kiosk: true, pvOk: false, pvSince: null }), /Ani meranie zo strechy neodpovedá\./);
+    assert.match(mozemOfflineText({ online: true, zdroj: true, pvOk: false, pvSince: null }), /Ani meranie zo strechy neodpovedá\./);
     assert.match(
-        mozemOfflineText({ online: true, kiosk: true, pvOk: false, pvSince: '12:40' }),
+        mozemOfflineText({ online: true, zdroj: true, pvOk: false, pvSince: '12:40' }),
         /Meranie zo strechy neodpovedá od 12:40\./,
     );
-    assert.doesNotMatch(mozemOfflineText({ online: true, kiosk: true, pvOk: true, pvSince: null }), /Meranie/);
+    assert.doesNotMatch(mozemOfflineText({ online: true, zdroj: true, pvOk: true, pvSince: null }), /Meranie/);
 
     assert.equal(mozemLogCancel(false, 14 * 60 + 50), 'Beží do 14:50 · zrušiť');
     assert.equal(mozemLogCancel(true, 15 * 60), 'Nabíja sa do 15:00 · zrušiť');
@@ -171,7 +182,7 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k t
 test('mozemSkyModel: staré meranie, večer drahá sieť a bez kiosku je fakt v mobiloch „asi“', () => {
     // O 17:00 meranie z fixtures stojí od 13:00 - je staré, takže výkon ide z plánu dňa.
     assert.match(mozemSkyModel(input(at('17:00'))).phones, /asi/);
-    assert.match(mozemSkyModel(input(FIXED_NOW, { kiosk: '' })).phones, /asi/);
+    assert.match(mozemSkyModel(input(FIXED_NOW, { zdroj: null })).phones, /asi/);
     const vecer = mozemSkyModel(input(at('21:00')));
     assert.equal(vecer.state, 'none');
     assert.deepEqual(

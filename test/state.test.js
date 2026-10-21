@@ -325,13 +325,13 @@ test('nextPv: pri výpadku kiosku ostáva posledné meranie, no nie staršie ne�
     assert.equal(nextPv(null, { pv: null, pvFailed: true }, o(60_000)), null);
 });
 
-test('setupDraft: bez živého merania sa kiosk neukladá, celkový výkon sa rozpočíta na panel', () => {
-    const kiosk = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
+test('setupDraft: bez živého merania sa pripojenie neukladá, celkový výkon sa rozpočíta na panel', () => {
+    const zdroj = { sposob: 'huawei-kiosk', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
     const base = typicalSettings(SITE);
-    const state = initialState(new Date(), { wide: false, tall: false }, { saved: { ...base, kiosk } });
-    assert.equal(state.setupLive, true, 'uložený kiosk znamená, že meranie človek chce');
-    assert.equal(setupDraft(state).kiosk, kiosk);
-    assert.equal(setupDraft({ ...state, setupLive: false }).kiosk, '');
+    const state = initialState(new Date(), { wide: false, tall: false }, { saved: { ...base, zdroj } });
+    assert.equal(state.setupLive, true, 'pripojené meranie znamená, že ho človek chce');
+    assert.deepEqual(setupDraft(state).zdroj, zdroj);
+    assert.equal(setupDraft({ ...state, setupLive: false }).zdroj, null);
     // Typická strecha má 12 panelov: 6 kWp je 500 Wp na panel.
     assert.equal(setupDraft({ ...state, setupKwp: 6 }).plant.panelWp, 500);
     assert.equal(setupDraft(state).plant.panelWp, base.plant.panelWp, 'bez celkového výkonu ostáva zadaný výkon panelu');
