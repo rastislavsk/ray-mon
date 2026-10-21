@@ -519,11 +519,17 @@ test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
 test('popisok jednotky v ciferníku sedí pod číslom, nie pri okraji', async ({ page }) => {
     await openApp(page, { start: 'terazky' });
     // Pravidlo .unit pre polia v Nastavení ho raz chytilo tiež a odsunulo cez hodinu 6.
-    const val = await page.locator('#pv-power').boundingBox();
-    const unit = await page.locator('#pv-power-unit').boundingBox();
-    if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
-    expect(unit.y).toBeGreaterThanOrEqual(val.y + val.height - 1);
-    expect(Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2))).toBeLessThan(4);
+    // Meria sa až po načítaní písiem a opakovane: šírka čísla sa so záložným písmom líši
+    // a v CI sa rozloženie neraz ustáli až chvíľu po prvom vykreslení.
+    await page.evaluate(() => document.fonts.ready);
+    const poloha = async () => {
+        const val = await page.locator('#pv-power').boundingBox();
+        const unit = await page.locator('#pv-power-unit').boundingBox();
+        if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
+        return { pod: unit.y >= val.y + val.height - 1, odStredu: Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2)) };
+    };
+    await expect.poll(async () => (await poloha()).pod).toBe(true);
+    await expect.poll(async () => (await poloha()).odStredu).toBeLessThan(4);
 });
 
 /** Poradie viditeľných blokov karty 7 dní zhora nadol - tak, ako ich vidí používateľ
