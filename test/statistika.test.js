@@ -233,7 +233,7 @@ test('posterModel: čísla zo summaryModel, stĺpce dní a chýbajúce dni', () 
         { value: posterCo2Value(co2SavedKg(s.kwh)), label: 'CO2eq menej ako zo siete' },
         {
             value: `${posterPayback(/** @type {number} */ (carbonPayback(pv.cumulativeEnergyKwh, PLANT))).pct} %`,
-            label: 'uhlíka panelov splatené',
+            label: 'uhlíka panelov od spustenia',
         },
     ]);
     assert.ok(m.note.startsWith(s.note), 'najprv chýbajúce dni');
