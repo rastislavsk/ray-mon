@@ -313,7 +313,7 @@ const MOZEM_QUIPS_SLUSNE = {
 
 /**
  * Veci v karte Môžem?: meno, sloveso a zámeno do viet („Pusti ju o 10:30.“) a čo sa stane, keď
- * sa zamračí. Kľúče sú id z MOZEM_SKY_ITEMS v config.js. `run` začína vetu o dĺžke behu
+ * sa zamračí. Kľúče sú id z MOZEM_ITEMS v config.js. `run` začína vetu o dĺžke behu
  * (bez neho „Program má“).
  * @type {Record<string, { name: string, verb: string, pron: string, cloud: string, run?: string }>}
  */

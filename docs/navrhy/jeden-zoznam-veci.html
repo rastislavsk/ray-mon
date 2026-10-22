@@ -1,0 +1,740 @@
+<title>Jeden zoznam vecí</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Návrh: jeden zoznam vecí s bojlerom pre obe appky. Krok 3 návrhu jedno-jadro-dva-kabaty.html.
+       Telefóny v štýle súčasnej appky (style.css, mierka 375 px), farby, písma a ikony prevzaté
+       odtiaľ a z web/icons.js. Údaje sú z fixtures testov (5. 9. 2026, Dvorany). */
+    /* Rozloženie: tri telefóny so zoznamom vecí (dnes, návrh na obed, návrh večer), pod nimi
+       rozbalený bojler, ostatné miesta, kde sa bojler objaví, texty a čo sa zmení v kóde. */
+    @font-face {
+        font-family: 'Space Grotesk';
+        font-weight: 300 700;
+        src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'IBM Plex Mono';
+        font-weight: 500;
+        src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0a0a0a;
+        --card-bg: #151614;
+        --ink: #f2f0ea;
+        --ink-70: rgba(242, 240, 234, 0.94);
+        --ink-45: rgba(242, 240, 234, 0.64);
+        --ink-20: rgba(242, 240, 234, 0.26);
+        --ink-12: rgba(242, 240, 234, 0.16);
+        --ink-08: rgba(242, 240, 234, 0.1);
+        --ink-on-color: #0b0b0b;
+        --paper: #f2f0ea;
+        --green: #9ef25b;
+        --amber: #ffc24b;
+        --red: #ff6b57;
+        --sky: #5f9be0;
+        --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    }
+    body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding-block: 40px 80px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 44px;
+    }
+    section {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    h1,
+    h2,
+    h3 {
+        margin: 0;
+        line-height: 1.2;
+        text-wrap: balance;
+    }
+    h1 {
+        font-size: clamp(28px, 5.5vw, 40px);
+    }
+    h2 {
+        font-size: 21px;
+    }
+    h3 {
+        font-size: 16px;
+    }
+    p,
+    ul {
+        margin: 0;
+        max-width: 70ch;
+    }
+    ul {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 6px;
+    }
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+    }
+    .lead {
+        color: var(--ink-45);
+        font-size: 17px;
+    }
+    .dim {
+        color: var(--ink-45);
+    }
+    code {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        background: var(--ink-08);
+        padding: 1px 5px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+    }
+
+    /* Telefóny */
+    .phones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        justify-content: center;
+        align-items: flex-start;
+    }
+    .col {
+        display: grid;
+        gap: 10px;
+        justify-items: center;
+        flex: 0 1 340px;
+        min-width: 0;
+    }
+    .col-label {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .col-label.now {
+        color: var(--red);
+    }
+    .col-label.new {
+        color: var(--green);
+    }
+    .phone {
+        width: 100%;
+        max-width: 340px;
+        border: 8px solid #000;
+        border-radius: 38px;
+        background: radial-gradient(120% 50% at 50% 0%, #1c2a12 0%, var(--bg) 60%);
+        padding: 16px 14px 20px;
+        display: grid;
+        gap: 10px;
+        box-shadow: 0 0 0 1px var(--ink-12);
+    }
+    .back {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+    }
+    .title {
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    .kick {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: var(--ink-45);
+        text-transform: uppercase;
+    }
+    .band {
+        border-radius: 18px;
+        padding: 12px 14px;
+        color: var(--ink-on-color);
+        display: grid;
+        gap: 6px;
+    }
+    .band.go {
+        background: var(--green);
+    }
+    .band.none {
+        background: var(--red);
+    }
+    .band-top {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .track {
+        height: 10px;
+        border-radius: 5px;
+        background: rgba(0, 0, 0, 0.22);
+        position: relative;
+        overflow: hidden;
+    }
+    .track i {
+        position: absolute;
+        inset-block: 0;
+    }
+    .band-text {
+        border-top: 1.5px solid rgba(0, 0, 0, 0.2);
+        padding-top: 8px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4px;
+        align-content: start;
+        align-items: center;
+        min-width: 0;
+        min-height: 112px;
+        padding: 12px;
+        border-radius: 18px;
+        border: 1.5px solid var(--ink-12);
+        background: var(--card-bg);
+    }
+    .item.go {
+        background: var(--green);
+        border-color: var(--green);
+        color: var(--ink-on-color);
+    }
+    .item.wait,
+    .item.cheap {
+        border-color: var(--amber);
+    }
+    .item.new {
+        outline: 2px dashed var(--sky);
+        outline-offset: 3px;
+    }
+    /* Návrh: posledná nepárna dlaždica ide cez celú šírku a leží - ikona, meno a odpoveď v riadku. */
+    .item.wide {
+        grid-column: 1 / -1;
+        min-height: 0;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 12px;
+    }
+    .item svg.ico {
+        width: 24px;
+        height: 24px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: currentColor;
+    }
+    .item.go .mark {
+        color: var(--ink-on-color);
+    }
+    .item.wait .mark,
+    .item.cheap .mark {
+        color: var(--amber);
+    }
+    .mark svg {
+        width: 13px;
+        height: 13px;
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke: var(--ink-on-color);
+    }
+    .item.go .mark svg {
+        stroke: var(--green);
+    }
+    .t {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 4px;
+        margin-top: 4px;
+        line-height: 1.15;
+        min-width: 0;
+    }
+    .item.wide .t {
+        grid-column: auto;
+        margin-top: 0;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 10px;
+    }
+    .t b {
+        font-size: 14px;
+    }
+    .t span {
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+    .item.wide .t span {
+        grid-row: span 2;
+        align-self: center;
+    }
+    .t small {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-70);
+    }
+    .item.go .t small {
+        color: var(--ink-on-color);
+    }
+    .item:not(.go) .t span {
+        color: var(--amber);
+    }
+    .anytime {
+        border: 1.5px dashed var(--ink-20);
+        border-radius: 18px;
+        padding: 10px 14px;
+        font-size: 13px;
+        display: grid;
+        gap: 4px;
+    }
+    .anytime b {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: var(--ink-45);
+    }
+    .note {
+        font-size: 13.5px;
+        color: var(--ink-45);
+        max-width: 330px;
+        text-align: center;
+    }
+
+    /* Rozbalený bojler */
+    .more {
+        background: var(--paper);
+        color: var(--ink-on-color);
+        border-radius: 18px;
+        padding: 16px;
+        display: grid;
+        gap: 8px;
+        max-width: 340px;
+        width: 100%;
+    }
+    .more p {
+        margin: 0;
+    }
+    .more .x {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        border-top: 1px solid rgba(0, 0, 0, 0.18);
+        padding-top: 8px;
+    }
+    .more .log {
+        background: var(--ink-on-color);
+        color: var(--paper);
+        border-radius: 999px;
+        padding: 10px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    /* Ostatné miesta */
+    .pair {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+    }
+    .box {
+        border: 1px solid var(--ink-12);
+        border-radius: 14px;
+        padding: 14px 16px;
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        min-width: 0;
+    }
+    .row {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        font-size: 14px;
+    }
+    .row > span:first-child {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .chip {
+        border: 1px solid var(--green);
+        color: var(--green);
+        border-radius: 10px;
+        padding: 6px 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+    }
+    .tip {
+        background: var(--paper);
+        color: var(--ink-on-color);
+        border-radius: 8px;
+        padding: 4px 9px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+    }
+    .line {
+        background: rgba(95, 155, 224, 0.18);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    .line b {
+        font-weight: 700;
+    }
+    ins {
+        text-decoration: none;
+        background: rgba(158, 242, 91, 0.2);
+        border-radius: 3px;
+        padding: 0 2px;
+    }
+
+    /* Tabuľky */
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--ink-12);
+        border-radius: 10px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 600px;
+        font-size: 14px;
+    }
+    th,
+    td {
+        text-align: left;
+        vertical-align: top;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--ink-08);
+    }
+    th {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+        font-weight: 500;
+    }
+    tr:last-child td {
+        border-bottom: 0;
+    }
+    .yes {
+        color: var(--green);
+    }
+    .no {
+        color: var(--red);
+    }
+    .half {
+        color: var(--amber);
+    }
+</style>
+
+<main>
+    <header style="display: grid; gap: 12px">
+        <span class="eyebrow">Návrh · krok 3 z jedno-jadro-dva-kabaty · 22. 10. 2026</span>
+        <h1>Jeden zoznam vecí</h1>
+        <p class="lead">
+            Bojler dnes pozná len karta Môžem? v Oblohe. Návrh: jadro má jeden zoznam vecí s bojlerom a obe appky ho ukážu všade, kde
+            ukazujú ostatné spotrebiče. Odpovede a texty bojlera už v jadre sú. Nový text netreba, pribudne len miesto na obrazovke.
+        </p>
+    </header>
+
+    <section>
+        <h2>Kde je bojler dnes</h2>
+        <div class="scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Miesto</th>
+                        <th>Dnes</th>
+                        <th>Návrh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Obloha · Môžem?, dlaždica a panel</td>
+                        <td class="yes">je</td>
+                        <td>bez zmeny</td>
+                    </tr>
+                    <tr>
+                        <td>Obloha · Teraz, karta Spotrebiče v páse odporúčaní</td>
+                        <td class="no">chýba</td>
+                        <td>„· Bojler do 16:30“ na konci riadku</td>
+                    </tr>
+                    <tr>
+                        <td>Súčasná · Môžem?, zoznam vecí</td>
+                        <td class="no">chýba</td>
+                        <td>piata dlaždica cez celú šírku</td>
+                    </tr>
+                    <tr>
+                        <td>Súčasná · Môžem?, riadok „Čo môžem“ na karte</td>
+                        <td class="no">4 bodky</td>
+                        <td>5 bodiek</td>
+                    </tr>
+                    <tr>
+                        <td>Súčasná · Terazky, čip pod ciferníkom</td>
+                        <td class="half">je, bublinka len „2,0 kW“</td>
+                        <td>bublinka „2,0 kW · do 16:30“ ako ostatné</td>
+                    </tr>
+                    <tr>
+                        <td>Zápis „Pustil/a som“ pre bojler</td>
+                        <td class="half">obe ho uložia, súčasná ho neukáže</td>
+                        <td>obe ho ukážu</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <h2>Súčasná appka · zoznam vecí</h2>
+        <p>
+            Dlaždice sú po dvoch. S bojlerom je ich päť, takže posledná by ostala sama v riadku. Preto sa posledná nepárna dlaždica
+            roztiahne cez celú šírku a leží: ikona, meno a odpoveď v jednom riadku. Je to všeobecné pravidlo, nie výnimka pre bojler. Keby
+            pribudla šiesta vec, mriežka bude znova po dvoch.
+        </p>
+        <p class="dim">Modrý prerušovaný rámik len v mockupe označuje, čo pribudne. V appke nebude.</p>
+        <div class="phones">
+            <div class="col">
+                <span class="col-label now">Dnes · 13:00</span>
+                <div class="phone" data-phone="dnes"></div>
+            </div>
+            <div class="col">
+                <span class="col-label new">Návrh · 13:00</span>
+                <div class="phone" data-phone="obed"></div>
+                <p class="note">Bojler ide zo slnka do 16:30. Hodina ohrevu dobehne celá pred koncom slnka o 17:30.</p>
+            </div>
+            <div class="col">
+                <span class="col-label new">Návrh · 18:30</span>
+                <div class="phone" data-phone="vecer"></div>
+                <p class="note">Večer je bojler ako auto: oplatí sa aj z lacnej siete, takže „lacno“ v jantárovom rámiku.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Rozbalený bojler · 13:00</h2>
+        <p>Ťuknutie na dlaždicu otvorí pod ňou to isté ako pri ostatných veciach. Texty sú tie, ktoré už ukazuje Obloha.</p>
+        <div class="phones">
+            <div class="more">
+                <b>Zapni ho do 16:30.</b>
+                <p>Ohrev trvá asi hodinu, takto dobehne celý na slnku.</p>
+                <p class="x">Mrak? Vodu dohreje sieť.</p>
+                <div class="log">Pustil/a som</div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Ostatné miesta</h2>
+        <div class="pair">
+            <div class="box">
+                <h3>Súčasná · Terazky, bublinka nad čipom Bojler</h3>
+                <div class="row">
+                    <span class="no">Dnes</span>
+                    <div class="chips"><span class="tip">2,0 kW</span></div>
+                </div>
+                <div class="row">
+                    <span class="yes">Návrh</span>
+                    <div class="chips">
+                        <span class="tip">2,0 kW · <ins>do 16:30</ins></span>
+                    </div>
+                </div>
+                <p class="dim">Čipy aj ich farby sú bez zmeny, bojler medzi nimi už je. Pribudne len odpoveď v bublinke.</p>
+            </div>
+            <div class="box">
+                <h3>Obloha · Teraz, karta Spotrebiče</h3>
+                <div class="row">
+                    <span class="no">Dnes</span>
+                    <div class="line">
+                        Práčka <b>do 15:30</b> · Umývačka <b>do 15:00</b> · Sušička <b>do 16:00</b> · Auto <b>do 16:00</b>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="yes">Návrh</span>
+                    <div class="line">
+                        Práčka <b>do 15:30</b> · Umývačka <b>do 15:00</b> · Sušička <b>do 16:00</b> · Auto <b>do 16:00</b>
+                        <ins>· Bojler <b>do 16:30</b></ins>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Texty</h2>
+        <p>Všetky už sú v jadre (<code>MOZEM_ITEM_TEXTS.bojler</code>) a Obloha ich ukazuje. Pre prehľad, čo povie bojler:</p>
+        <div class="scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kedy</th>
+                        <th>Dlaždica</th>
+                        <th>Rozbalené</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Svieti</td>
+                        <td>do 16:30 · zo slnka</td>
+                        <td>Zapni ho do 16:30. · Ohrev trvá asi hodinu, takto dobehne celý na slnku. · Mrak? Vodu dohreje sieť.</td>
+                    </tr>
+                    <tr>
+                        <td>Večer, lacná sieť</td>
+                        <td>lacno · lacná sieť</td>
+                        <td>
+                            Zapni ho, prúd je lacný. · Slnko to dnes už neutiahne, ale sieť je teraz lacná. · Zajtra od 08:00 by to išlo zo
+                            strechy.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Slušný tón (Obloha)</td>
+                        <td colspan="2">„Zapnite ho…“, inak to isté</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <h2>Čo sa zmení v kóde</h2>
+        <div class="pair">
+            <div class="box">
+                <h3>Jadro, raz pre obe</h3>
+                <ul>
+                    <li>
+                        <code>MOZEM_ITEMS</code> dostane bojler, <code>MOZEM_SKY_ITEMS</code> zanikne. Zanikne aj voľba <code>list</code> v
+                        <code>mozemModel</code>, takže rozdiel sa nedá vrátiť omylom.
+                    </li>
+                    <li><code>deviceShorts</code> vráti odpoveď aj pre bojler (bublinka na Terazky, karta Spotrebiče v Oblohe).</li>
+                    <li>Zápisy „Pustil/a som“ berú zoznam z <code>MOZEM_ITEMS</code>.</li>
+                </ul>
+            </div>
+            <div class="box">
+                <h3>Súčasná appka</h3>
+                <ul>
+                    <li>Ikona bojlera do <code>MOZEM_ICONS</code>, tá istá kvapka ako na čipe.</li>
+                    <li>V <code>style.css</code> pravidlo pre poslednú nepárnu dlaždicu cez celú šírku.</li>
+                    <li>
+                        E2E: 5 dlaždíc a bodiek, bojler v zozname, bublinka s odpoveďou. Nová snímka do README sa netýka, ukazuje hlavnú
+                        kartu.
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <p class="dim">
+            Obloha sa vizuálne mení len v karte Spotrebiče. Skupiny vecí (<code>MOZEM_GROUPS</code>) ostávajú, sú kabátom Oblohy.
+        </p>
+    </section>
+</main>
+
+<script>
+    // Kreslí zoznam vecí do troch telefónov. Ikony a značky sú z web/icons.js, údaje z fixtures.
+    const ICONS = {
+        pracka: 'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z',
+        umyvacka:
+            'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7 11.5h10M8.5 11.5v6M12 11.5v6M15.5 11.5v6',
+        susicka:
+            'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0',
+        auto: 'M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18',
+        bojler: 'M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z',
+    };
+    const MARKS = { go: 'M5 12.5l4.5 4.5L19 7.5', cheap: 'M5 12.5l4.5 4.5L19 7.5', wait: 'M12 6v6l3.5 2' };
+    const NAMES = { pracka: 'Práčka', umyvacka: 'Umývačka', susicka: 'Sušička', auto: 'Auto', bojler: 'Bojler' };
+    const OBED = [
+        ['pracka', 'go', 'do 15:30', 'zo slnka'],
+        ['umyvacka', 'go', 'do 15:00', 'zo slnka'],
+        ['susicka', 'go', 'do 16:00', 'zo slnka'],
+        ['auto', 'go', 'do 16:00', 'asi 110 km zo slnka'],
+    ];
+    const VECER = [
+        ['pracka', 'wait', 'zajtra 08:00', ''],
+        ['umyvacka', 'wait', 'zajtra 08:00', ''],
+        ['susicka', 'wait', 'zajtra 08:00', ''],
+        ['auto', 'cheap', 'lacno', 'lacná sieť'],
+        ['bojler', 'cheap', 'lacno', 'lacná sieť'],
+    ];
+    const PHONES = {
+        dnes: { kick: 'Teraz · 13:00 · Dvorany nad Nitrou', band: 'obed', items: OBED },
+        obed: {
+            kick: 'Teraz · 13:00 · Dvorany nad Nitrou',
+            band: 'obed',
+            items: [...OBED, ['bojler', 'go', 'do 16:30', 'zo slnka', true]],
+        },
+        vecer: {
+            kick: 'Teraz · 18:30 · Dvorany nad Nitrou',
+            band: 'vecer',
+            items: VECER.map((x) => (x[0] === 'bojler' ? [...x, true] : x)),
+        },
+    };
+    const svg = (cls, d) => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+    // Pás dneška: 05:00 – 21:00, slnko 08:00 – 17:30.
+    const pct = (h) => ((h - 5) / 16) * 100;
+    const BANDS = {
+        obed: `<div class="band go"><div class="band-top"><span>Ide hneď · zo slnka</span><span>do 17:30</span></div>
+            <div class="track"><i style="left:${pct(8)}%;width:${pct(17.5) - pct(8)}%;background:rgba(0,0,0,.35)"></i><i style="left:0;width:${pct(13)}%;background:repeating-linear-gradient(135deg,rgba(0,0,0,.35) 0 3px,transparent 3px 6px)"></i></div>
+            <div class="band-top" style="text-transform:none;letter-spacing:.04em"><span>05:00</span><span>teraz · ešte 4 h 30 min</span><span>21:00</span></div>
+            <div class="band-text">Všetko môžeš pustiť hneď.</div></div>`,
+        vecer: `<div class="band none"><div class="band-top"><span>Dnes už nie</span><span></span></div>
+            <div class="track"><i style="left:${pct(8)}%;width:${pct(17.5) - pct(8)}%;background:rgba(0,0,0,.35)"></i><i style="left:0;width:${pct(18.5)}%;background:repeating-linear-gradient(135deg,rgba(0,0,0,.35) 0 3px,transparent 3px 6px)"></i></div>
+            <div class="band-top" style="text-transform:none;letter-spacing:.04em"><span>05:00</span><span>teraz</span><span>21:00</span></div>
+            <div class="band-text">Slnko skončilo o 17:30. Zajtra od 08:00.</div></div>`,
+    };
+    for (const el of document.querySelectorAll('[data-phone]')) {
+        const p = PHONES[el.dataset.phone];
+        const n = p.items.length;
+        const tiles = p.items
+            .map(([id, tone, short, note, isNew], i) => {
+                const wide = n % 2 === 1 && i === n - 1;
+                const t = `<span class="t"><b>${NAMES[id]}</b><span>${short}</span>${note ? `<small>${note}</small>` : ''}</span>`;
+                const mark = `<span class="mark">${svg('', MARKS[tone])}</span>`;
+                // Stojatá dlaždica: ikona a značka hore, text pod nimi. Ležatá: všetko v riadku.
+                return `<div class="item ${tone}${wide ? ' wide' : ''}${isNew ? ' new' : ''}">${svg('ico', ICONS[id])}${wide ? t + mark : mark + t}</div>`;
+            })
+            .join('');
+        el.innerHTML = `<span class="back">‹ SPÄŤ</span><span class="title">Čo môžem</span><span class="kick">${p.kick}</span>${BANDS[p.band]}<div class="grid">${tiles}</div>
+            <div class="anytime"><b>KEDYKOĽVEK</b><span>TV · Hranie · Fén</span></div>`;
+    }
+</script>

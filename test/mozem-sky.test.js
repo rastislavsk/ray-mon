@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { installedKw, MOZEM_GROUPS, MOZEM_ITEMS, MOZEM_SKY_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
+import { installedKw, MOZEM_GROUPS, MOZEM_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
 import { kwpRoughText } from '../shared/format.js';
 import {
     MOZEM_CHIPS,
@@ -159,7 +159,7 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
 test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k tomu štítky a mobily', () => {
     const i = input(FIXED_NOW);
     const m = mozemSkyModel(i);
-    const base = mozemModel(i, 0, [], { list: MOZEM_SKY_ITEMS });
+    const base = mozemModel(i, 0, []);
     assert.equal(m.state, 'go');
     assert.equal(m.word, base.word);
     assert.equal(m.lead, base.hero.lead);
@@ -321,7 +321,7 @@ test('skupiny: auto, bojler a drobnosti o 13:00', () => {
     assert.match(auto.note, /km zo slnka$/);
     assert.equal(drobne.value, 'kedykoľvek');
     assert.equal(drobne.sheet?.lead, MOZEM_GROUP_ALWAYS);
-    assert.equal(m.items[6].text, 'Ohrev trvá asi hodinu, takto dobehne celý na slnku.');
+    assert.equal(m.items.find((i) => i.id === 'bojler')?.text, 'Ohrev trvá asi hodinu, takto dobehne celý na slnku.');
 });
 
 test('skupiny: bežiaca vec - pri jednej veci je odpoveďou, pri skupine ju vymenuje riadok pod ňou', () => {

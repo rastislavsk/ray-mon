@@ -48,13 +48,14 @@ const iconOf = (id) => MOZEM_ICONS[/** @type {keyof typeof MOZEM_ICONS} */ (id)]
 /**
  * Dlaždica spotrebiča: ikona, značka odpovede, meno, veľká odpoveď a pod ňou odkiaľ pôjde prúd
  * (kým vec beží, nič - odpoveď to povie sama). Farbu dlaždice dáva `data-tone`.
- * @param {MozemModel['items'][number]} it @param {boolean} open
+ * Ležatá (`wide`) ide cez celú šírku - posledná nepárna, aby neostala v riadku sama.
+ * @param {MozemModel['items'][number]} it @param {boolean} open @param {boolean} wide
  */
-function tileHtml(it, open) {
+function tileHtml(it, open, wide) {
     const mark = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MOZEM_MARKS[it.tone]}"/></svg>`;
     const note = it.log?.pressed ? '' : mozemTileNote(it.answer);
     return (
-        `<button type="button" class="mozem-item${open ? ' open' : ''}" data-mozem-item="${it.id}" data-tone="${it.tone}" aria-expanded="${open}"` +
+        `<button type="button" class="mozem-item${open ? ' open' : ''}${wide ? ' wide' : ''}" data-mozem-item="${it.id}" data-tone="${it.tone}" aria-expanded="${open}"` +
         `${open ? ' aria-controls="mozem-more"' : ''}><span class="mozem-ico">${iconOf(it.id)}</span>` +
         `<span class="mozem-mark tone-${it.tone}">${mark}</span>` +
         `<span class="mozem-t"><b>${escapeHtml(it.name)}</b><span class="tone-${it.tone}">${escapeHtml(it.short)}</span>` +
@@ -73,13 +74,15 @@ function moreHtml(it) {
 
 /**
  * Mriežka dlaždíc po dvoch. Rozbalenie ide za riadok, v ktorom je otvorená dlaždica - za ňu
- * samu by rozdelilo dvojicu a druhú dlaždicu odsunulo pod seba.
+ * samu by rozdelilo dvojicu a druhú dlaždicu odsunulo pod seba. Pri nepárnom počte je posledná
+ * dlaždica ležatá cez celú šírku.
  * @param {MozemModel['items']} devices @param {string | null} open
  */
 function tilesHtml(devices, open) {
     const at = devices.findIndex((it) => it.id === open);
     const after = at < 0 ? -1 : Math.min(at | 1, devices.length - 1);
-    return devices.map((it, i) => tileHtml(it, i === at) + (i === after ? moreHtml(devices[at]) : '')).join('');
+    const last = devices.length % 2 === 1 ? devices.length - 1 : -1;
+    return devices.map((it, i) => tileHtml(it, i === at, i === last) + (i === after ? moreHtml(devices[at]) : '')).join('');
 }
 
 /**
