@@ -320,6 +320,7 @@ function zdielanieDom() {
         startPick: byId('start-pick'),
         clearData: byId('clear-data'),
         importOffer: byId('import-offer'),
+        importOfferTitle: byId('import-offer-title'),
         importOfferText: byId('import-offer-text'),
         importAccept: byId('import-accept'),
         importDecline: byId('import-decline'),

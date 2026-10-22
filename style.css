@@ -4115,6 +4115,12 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     border: 1px solid rgba(var(--green-rgb), 0.45);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
+.import-offer[data-err='poskodeny'] {
+    border-color: rgba(var(--red-rgb), 0.6);
+}
+.import-offer[data-err='novsi'] {
+    border-color: rgba(var(--amber-rgb), 0.6);
+}
 .import-offer-text {
     font-size: var(--fs-sm);
     color: var(--ink-45);

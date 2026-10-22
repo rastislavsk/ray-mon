@@ -1,0 +1,57 @@
+{
+  "verzia": 2,
+  "polia": [
+    ".acLimitKw",
+    ".panelWp",
+    ".site",
+    ".site.elevationM",
+    ".site.lat",
+    ".site.lon",
+    ".site.name",
+    ".site.timezone",
+    ".strings",
+    ".strings[].azimuthDeg",
+    ".strings[].panels",
+    ".strings[].tiltDeg",
+    ".tariff",
+    ".tariff.bands",
+    ".tariff.bands[].id",
+    ".tariff.bands[].level",
+    ".tariff.bands[].name",
+    ".tariff.bands[].price",
+    ".tariff.currency",
+    ".tariff.schedules",
+    ".tariff.schedules[].changes",
+    ".tariff.schedules[].changes[].band",
+    ".tariff.schedules[].changes[].from",
+    ".tariff.schedules[].days",
+    ".tariff.schedules[].months",
+    ".zdroj",
+    ".zdroj.nazov",
+    ".zdroj.pecat",
+    ".zdroj.platiDo",
+    ".zdroj.sposob"
+  ],
+  "sposoby": [
+    "deye-aplikacia",
+    "foxess-kluc",
+    "huawei-kiosk",
+    "huawei-northbound",
+    "solax-token",
+    "solis-kluc",
+    "victron-token"
+  ],
+  "urovne": [
+    "lacna",
+    "bezna",
+    "draha"
+  ],
+  "meny": [
+    "€",
+    "Kč",
+    "£",
+    "zł",
+    "Ft",
+    "$"
+  ]
+}

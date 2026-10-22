@@ -481,7 +481,7 @@ function initSharing(store, dom, refresh) {
         const away = s.known === 'nic' ? { ...panelChange(s.panel, s.startPanel), setupStep: null } : {};
         applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
-    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, importNote: '' }));
+    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null, importNote: '' }));
     // Voľby prvej karty skladá render (render/zdielat.js), preto poslucháč sedí na karte.
     dom.setup.addEventListener('click', (e) => {
         const btn = /** @type {HTMLElement} */ (e.target).closest('[data-start-panel]');

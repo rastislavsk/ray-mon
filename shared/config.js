@@ -100,6 +100,14 @@ export const SEARCH_DEBOUNCE_MS = 350;
 /** Kľúč za mriežkou v odkaze, ktorý nesie nastavenie elektrárne: `…/#nastavenie=…`. */
 export const SHARE_HASH_KEY = 'nastavenie';
 
+/**
+ * Verzia formátu nastavenia v odkaze (pole `v`). Zvýš ju, keď pribudne čokoľvek, čo staršia appka
+ * z odkazu nevie prečítať - značka meniča, spôsob pripojenia, druh tarify, nové pole. Staršia appka
+ * potom povie „aktualizuj“, namiesto toho, aby časť nastavenia potichu zahodila. Odkazy bez `v`
+ * sú verzia 1. Stráži to test/golden/odkaz.json (test/odkaz.test.js).
+ */
+export const SHARE_LINK_VERSION = 2;
+
 /** Kľúč v localStorage, pod ktorým je uložené nastavenie elektrárne. */
 export const SETTINGS_STORAGE_KEY = 'elektraren-v1';
 

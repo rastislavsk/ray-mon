@@ -35,6 +35,8 @@ import {
     WEEK_MSG_MIN_H,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    SHARE_HASH_KEY,
+    SHARE_LINK_VERSION,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
 import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
@@ -60,6 +62,7 @@ import {
 } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
+import { LINK_ERRORS } from '../../shared/setup-texts.js';
 import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -3659,6 +3662,44 @@ test.describe('vymazanie údajov', () => {
 test.describe('zdieľanie nastavenia odkazom', () => {
     const LINK = shareUrl(APP_URL, OWNER, true);
     const HASH = `#${LINK.split('#')[1]}`;
+
+    /** Odkazy, ktoré appka nevie prevziať: neúplný a z novšej verzie appky. */
+    const NOVSI = `#${SHARE_HASH_KEY}=${Buffer.from(JSON.stringify({ v: SHARE_LINK_VERSION + 1, ...toUser(OWNER) })).toString('base64url')}`;
+    const ZLE = /** @type {const} */ ([
+        ['poskodeny', HASH.slice(0, -12)],
+        ['novsi', NOVSI],
+    ]);
+
+    for (const [druh, hash] of ZLE) {
+        test(`odkaz, ktorý appka nevie prevziať (${druh}): povie prečo, Zavrieť ho zmaže z adresy`, async ({ page }) => {
+            const errors = await openApp(page, { settings: null, hash });
+            const offer = page.locator('#import-offer');
+            await expect(offer).toBeVisible();
+            await expect(offer).toHaveAttribute('data-err', druh);
+            await expect(page.locator('#import-offer-title')).toHaveText(LINK_ERRORS[druh].title);
+            await expect(page.locator('#import-offer-text')).toHaveText(LINK_ERRORS[druh].text);
+            await expect(page.locator('#import-accept')).toBeHidden();
+            await expect(page.locator('#import-decline')).toHaveText('Zavrieť');
+            expect(new URL(page.url()).hash, 'kým hlášku nezavrie, odkaz ostáva v adrese').toBe(hash);
+            await page.locator('#import-decline').click();
+            await expect(offer).toBeHidden();
+            expect(new URL(page.url()).hash).toBe('');
+            expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).toBeNull();
+            await expect(page.locator('#wz-lokalita')).toBeVisible();
+            expect(errors).toEqual([]);
+        });
+    }
+
+    test('vložený odkaz, ktorý appka nevie prevziať, povie prečo; dobrá ponuka má späť svoje texty', async ({ page }) => {
+        const errors = await openApp(page, { settings: null });
+        await page.locator('#wz-welcome [data-setup-go="odkaz"]').click();
+        await page.locator('#wz-link').fill(APP_URL + NOVSI);
+        await expect(page.locator('#wz-link-note')).toHaveText(LINK_ERRORS.novsi.paste);
+        await expect(page.locator('#wz-next')).toBeDisabled();
+        await page.locator('#wz-link').fill(APP_URL + HASH.slice(0, -12));
+        await expect(page.locator('#wz-link-note')).toHaveText(LINK_ERRORS.poskodeny.paste);
+        expect(errors).toEqual([]);
+    });
 
     // Na iPhone je toto prvé spustenie appky pridanej na plochu: prázdne úložisko, v adrese odkaz.
     test('odkaz s nastavením: ponuka, odkaz ostáva v adrese, po prevzatí Dvorany so živým meraním', async ({ page }) => {

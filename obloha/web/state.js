@@ -43,6 +43,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   online: boolean,
  *   startPanel: import('../../shared/settings.js').StartPanel,
  *   incoming: import('../../shared/settings.js').Settings | null,
+ *   linkError: import('../../shared/settings.js').LinkError | null,
  *   voice: import('../../shared/messages.js').Voice,
  *   liveSky: boolean,
  *   appSheet: AppSheet | null,
@@ -72,7 +73,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
  *   launches: import('../../shared/launches.js').Launch[], online: boolean,
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
- *   incoming?: import('../../shared/settings.js').Settings | null, look?: import('../../shared/settings.js').Look,
+ *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
  *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet, nastavenie
@@ -82,7 +83,19 @@ import { setupInit } from '../../shared/setup-flow.js';
  */
 export function initialState(
     now,
-    { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK, layout = 'narrow', pristup = null },
+    {
+        saved,
+        site,
+        startPanel,
+        dayLog,
+        launches,
+        online,
+        incoming = null,
+        linkError = null,
+        look = DEFAULT_LOOK,
+        layout = 'narrow',
+        pristup = null,
+    },
 ) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
@@ -116,6 +129,7 @@ export function initialState(
         online,
         startPanel,
         incoming,
+        linkError,
         voice: look.voice,
         liveSky: look.liveSky,
         appSheet: null,
@@ -213,7 +227,10 @@ export function ready(state, panel) {
 export function neededParts(state) {
     const shown = PANELS.filter((p) => shows(state, p)).map(partOf);
     return PARTS.filter(
-        (part) => shown.includes(part) || (part === 'statistika' && !!state.poster) || (part === 'nastavenie' && !!state.incoming),
+        (part) =>
+            shown.includes(part) ||
+            (part === 'statistika' && !!state.poster) ||
+            (part === 'nastavenie' && (!!state.incoming || !!state.linkError)),
     );
 }
 

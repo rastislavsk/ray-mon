@@ -17,7 +17,7 @@ import {
 } from '../../../shared/config.js';
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../../shared/format.js';
 import { editTabs } from '../../../shared/nastavenie.js';
-import { checkSettings, settingsFromLink } from '../../../shared/settings.js';
+import { checkSettings, readLink } from '../../../shared/settings.js';
 import { SETUP_SECTIONS, TARIFF_STEPS } from '../../../shared/setup.js';
 import { brushOf, schedIndex, setupDraft, setupReady, udajeReady, znovaModel } from '../../../shared/setup-flow.js';
 import * as T from '../../../shared/setup-texts.js';
@@ -95,8 +95,11 @@ function summaryHtml(state, draft) {
 
 /** @param {AppState} state @param {Dom} dom */
 function renderOdkaz(state, dom) {
-    const found = settingsFromLink(state.setupLink);
+    const link = readLink(state.setupLink);
+    const found = link?.settings ?? null;
     show(dom.wzLinkNote, !!state.setupLink.trim() && !found);
+    // Prečo odkaz nejde: poškodený (aj text bez odkazu), alebo z novšej verzie appky.
+    setText(dom.wzLinkNote, T.LINK_ERRORS[link?.error ?? 'poskodeny'].paste);
     show(dom.wzLinkPreview, !!found);
     if (!found) return;
     const p = T.linkPreview(found);
