@@ -164,7 +164,7 @@ Druhý dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľ
 v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Pôvodne mal súčasnú appku nahradiť; od 22. 10. 2026 ostávajú obe natrvalo ako **jedno jadro, dva kabáty** (návrh
 `docs/navrhy/jedno-jadro-dva-kabaty.html`, pravidlá v `CLAUDE.md`). Jadro dáva obom tie isté
 odpovede, kabát smie mať vlastné obrazovky a funkcie. Rozdiely, ktoré dnes menia odpoveď
-(poloha bez panelov, meranie, ktoré mlčí, a dva zoznamy vecí s bojlerom a bez neho), sa
+(poloha bez panelov a dva zoznamy vecí s bojlerom a bez neho), sa
 zjednocujú po krokoch; kým to nie je hotové, opisujú ich odseky nižšie tak, ako sú.
 
 `obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
