@@ -3,22 +3,11 @@
 // aby sa dal testovať. Worker sa pýta len serverov výrobcu, nikdy adresy od používateľa.
 
 import { VYROBCA_RETRY } from '../../shared/config.js';
-import {
-    DEYE,
-    DeyeChyba,
-    deyeKw,
-    deyePv,
-    deyeToday,
-    parseDeyeDay,
-    parseDeyeLatest,
-    parseDeyeStations,
-    parseDeyeToken,
-} from '../../shared/deye.js';
-import { FOXESS, foxHeaders, FoxChyba, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
+import { DEYE, deyeKw, deyePv, deyeToday, parseDeyeDay, parseDeyeLatest, parseDeyeStations, parseDeyeToken } from '../../shared/deye.js';
+import { FOXESS, foxHeaders, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
 import {
     checkNbLogin,
     NB,
-    NbChyba,
     nbPv,
     nbServer,
     parseNbDevices,
@@ -28,7 +17,8 @@ import {
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
-import { parseSolisStations, SOLIS, SolisChyba, solisRequest } from '../../shared/solis.js';
+import { parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
+import { VyrobcaChyba } from '../../shared/vyrobca.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
 import { fetchWithRetry } from './http.js';
 
@@ -64,14 +54,6 @@ export class ZdrojChyba extends Error {
         this.druh = druh;
         this.kod = kod;
     }
-}
-
-/** Kód chyby výrobcu z výnimky (Fox ESS errno, Huawei failCode, SolisCloud/DeyeCloud code). @param {unknown} err */
-function kodOf(err) {
-    if (err instanceof FoxChyba) return String(err.errno);
-    if (err instanceof NbChyba) return String(err.failCode);
-    if (err instanceof SolisChyba || err instanceof DeyeChyba) return err.code;
-    return '';
 }
 
 /** Kiosk FusionSolar z odkazu: stiahne a prevedie ho. @param {string} url adresa dát (kioskApiUrl) @param {Ctx} ctx */
@@ -128,19 +110,10 @@ function prevod(fn, krok = '') {
 /** Chyba výrobcu ako ZdrojChyba s krokom a kódom (ZdrojChyba prepustí). @param {unknown} err @param {string} [krok] */
 function prevodChyba(err, krok = '') {
     if (err instanceof ZdrojChyba) return err;
-    const kod = kodOf(err);
-    return new ZdrojChyba(zleUdaje(err) ? 'udaje' : 'vyrobca', krok && kod ? `${krok}:${kod}` : krok);
-}
-
-/**
- * Zamietol výrobca údaje? Fox ESS a Huawei pri príliš častých dopytoch nič nezamietli, len
- * pribrzdili; Huawei hlási zlé prihlásenie vlastnými kódmi, ostatné jeho chyby sú výpadok.
- * @param {unknown} err
- */
-function zleUdaje(err) {
-    if (err instanceof FoxChyba) return err.errno !== FOXESS.tooFrequent;
-    if (err instanceof NbChyba) return NB.badLogin.includes(err.failCode);
-    return true;
+    // Či výrobca údaje zamietol, alebo len pribrzdil či vypadol, vie jeho chyba (shared/vyrobca.js).
+    const vyrobca = err instanceof VyrobcaChyba ? err : null;
+    const druh = !vyrobca || vyrobca.zamietol ? 'udaje' : 'vyrobca';
+    return new ZdrojChyba(druh, krok && vyrobca?.kod ? `${krok}:${vyrobca.kod}` : krok);
 }
 
 /** Požiadavka na Fox ESS podpísaná kľúčom. @param {string} path @param {string} kluc @param {Ctx} ctx @param {unknown} [body] @param {string} [query] */
@@ -226,7 +199,7 @@ async function nbLogin(server, meno, heslo, ctx) {
 
 /** Spojenie so serverom Northbound: server, relácia a kontext. @typedef {{ server: string, rel: NbRelacia, ctx: Ctx }} NbSpoj */
 
-/** Požiadavka s reláciou; neúspech (aj 305 „nie si prihlásený“) ostáva NbChyba pre volajúceho.
+/** Požiadavka s reláciou; neúspech (aj 305 „nie si prihlásený“) ostáva VyrobcaChyba pre volajúceho.
  * @param {NbSpoj} sp @param {string} path @param {unknown} body @param {string} krok */
 function nbPost(sp, path, body, krok) {
     /** @type {Record<string, string>} */
@@ -416,7 +389,7 @@ export const ZDROJE = {
                 pv = await meraj();
             } catch (err) {
                 // Token mohol vypršať skôr (Huawei odhlásil reláciu): raz sa prihlási znova.
-                if (!(err instanceof NbChyba && err.failCode === NB.notLoggedIn) || novy) throw prevodChyba(err, 'meranie');
+                if (!(err instanceof VyrobcaChyba && err.kod === String(NB.notLoggedIn)) || novy) throw prevodChyba(err, 'meranie');
                 await prihlas();
                 pv = await meraj().catch((e) => Promise.reject(prevodChyba(e, 'meranie')));
             }

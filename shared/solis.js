@@ -6,6 +6,7 @@
 
 import { md5 } from './md5.js';
 import { isObj } from './valid.js';
+import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
@@ -42,15 +43,6 @@ export function solisRequest(path, body, now) {
     };
 }
 
-/** Chyba SolisCloud s kódom (`code` v odpovedi, napr. I0012 zlý účet). */
-export class SolisChyba extends Error {
-    /** @param {string} code */
-    constructor(code) {
-        super(`SolisCloud ${code}`);
-        this.code = code;
-    }
-}
-
 /** Násobok na kW či kWh podľa jednotky z odpovede (`powerStr`, `dayEnergyStr` …). */
 const NA_KILO = { W: 0.001, kW: 1, MW: 1000, GW: 1e6, Wh: 0.001, kWh: 1, MWh: 1000, GWh: 1e6 };
 
@@ -68,7 +60,8 @@ function kilo(v, unit) {
 export function parseSolisStations(json, now) {
     // Úspech je `code: "0"`; príklad v dokumentácii pole `success` nemá, preto rozhoduje kód.
     if (!isObj(json) || String(/** @type {any} */ (json).code) !== '0')
-        throw new SolisChyba(isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
+        // Kód chyby je `code` v odpovedi, napr. I0012 zlý účet.
+        throw new VyrobcaChyba('SolisCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
     const page = /** @type {any} */ (json).data?.page;
     const records = Array.isArray(page?.records) ? /** @type {any[]} */ (page.records) : [];
     return records

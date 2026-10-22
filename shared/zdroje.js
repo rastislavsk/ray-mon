@@ -21,10 +21,11 @@ import { isObj } from './valid.js';
  * sa appka pýta na meranie - podľa limitov výrobcu a toho, ako často jeho cloud dáta obnovuje.
  * `neplati` povie, prečo výrobca prístup mohol prestať prijímať (shared/pristup.js), `vyprsal` to
  * isté, keď prístup dáva len na čas a ten uplynul. `obnova` je obnova takého prístupu: ktoré polia
- * treba zadať znova (ostatné doplní Worker zo starej pečate) a veta na pripomenutie.
+ * treba zadať znova (ostatné doplní Worker zo starej pečate) a veta na pripomenutie. `over` je
+ * kontrola vyplnených údajov nad rámec toho, že nie sú prázdne (napr. odkaz naozaj na kiosk).
  * @typedef {{ id: string, znacka: string, nazov: string, pod: string, tagy: string[], kroky: string[], pola: Pole[],
  *   sprava?: string, pozn?: string, zrusenie: string, intervalMs: number, neplati: string, vyprsal?: string,
- *   obnova?: { pola: string[], text: string } }} Sposob
+ *   obnova?: { pola: string[], text: string }, over?: (udaje: Record<string, string>) => boolean }} Sposob
  */
 /**
  * Značka meniča: buď so spôsobmi pripojenia (prvý je odporúčaný), alebo s vysvetlením, prečo
@@ -63,6 +64,7 @@ export const SPOSOBY = [
         neplati: 'Huawei prestal prijímať meno a heslo API účtu. Inštalatér mohol heslo zmeniť alebo účet zrušiť.',
         // Dáta v reálnom čase raz za 5 minút na používateľa (getDevRealKpi, getStationRealKpi).
         intervalMs: 5 * 60 * 1000,
+        over: (u) => !!nbServer(u.server),
     },
     {
         id: 'huawei-kiosk',
@@ -75,6 +77,7 @@ export const SPOSOBY = [
         zrusenie: 'Kiosk vypneš v appke FusionSolar pri zdieľaní elektrárne.',
         neplati: 'Odkaz na kiosk prestal fungovať. Kiosk mohol byť vo FusionSolar vypnutý alebo vytvorený nanovo, vtedy má nový odkaz.',
         intervalMs: REFRESH.dataMs,
+        over: (u) => !!kioskApiUrl(u.odkaz),
     },
     {
         id: 'foxess-kluc',
@@ -114,6 +117,7 @@ export const SPOSOBY = [
         zrusenie: 'Token spravuješ v SolaX Cloud v časti Service → API.',
         neplati: 'SolaX prestal prijímať token. Mohol sa zmeniť v SolaX Cloud (Service → API).',
         intervalMs: 5 * 60 * 1000,
+        over: (u) => !!solaxUrl(u.token, u.sn),
     },
     {
         id: 'solis-kluc',
@@ -261,10 +265,7 @@ export const polaOf = (s, obnova = false) => (obnova && s.obnova ? s.pola.filter
 export function udajeOk(sposob, udaje, obnova = false) {
     const s = sposobOf(sposob);
     if (!s || !polaOf(s, obnova).every((p) => !!udaje[p.id])) return false;
-    if (sposob === 'huawei-kiosk') return !!kioskApiUrl(udaje.odkaz);
-    if (sposob === 'solax-token') return !!solaxUrl(udaje.token, udaje.sn);
-    if (sposob === 'huawei-northbound') return !!nbServer(udaje.server);
-    return true;
+    return s.over ? s.over(udaje) : true;
 }
 
 // Rezerva pri porovnaní s intervalom: čas merania je čas Workera a obnova appky beží na minútu,

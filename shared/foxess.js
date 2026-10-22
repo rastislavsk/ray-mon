@@ -3,6 +3,7 @@
 
 import { md5 } from './md5.js';
 import { isObj } from './valid.js';
+import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
@@ -32,20 +33,14 @@ export function foxHeaders(path, token, timestamp) {
     };
 }
 
-/** Chyba Fox ESS s číslom `errno`. */
-export class FoxChyba extends Error {
-    /** @param {number} errno */
-    constructor(errno) {
-        super(`Fox ESS errno ${errno}`);
-        this.errno = errno;
-    }
-}
+/** Chyba Fox ESS s číslom `errno`; „priveľa dopytov“ údaje nezamietlo, len pribrzdilo. @param {number} errno */
+const chyba = (errno) => new VyrobcaChyba('Fox ESS errno', errno, errno !== FOXESS.tooFrequent);
 
 /** `result` z obálky odpovede; nenulové `errno` hádže. @param {unknown} json */
 function result(json) {
-    if (!isObj(json)) throw new FoxChyba(-1);
+    if (!isObj(json)) throw chyba(-1);
     const o = /** @type {Record<string, unknown>} */ (json);
-    if (o.errno !== 0) throw new FoxChyba(typeof o.errno === 'number' ? o.errno : -1);
+    if (o.errno !== 0) throw chyba(typeof o.errno === 'number' ? o.errno : -1);
     return o.result;
 }
 

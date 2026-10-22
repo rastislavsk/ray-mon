@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import {
     checkNbLogin,
     NB,
-    NbChyba,
     nbPv,
     nbServer,
     parseNbDevices,
@@ -15,6 +14,7 @@ import {
 } from '../shared/huawei-nb.js';
 import { validatePv } from '../shared/schema.js';
 import { udajeNote } from '../shared/setup-texts.js';
+import { VyrobcaChyba } from '../shared/vyrobca.js';
 import { udajeOk } from '../shared/zdroje.js';
 
 const NOW = new Date('2026-09-05T11:00:00Z');
@@ -43,9 +43,9 @@ test('prihlásenie: úspech prejde, zlé údaje hádžu s kódom', () => {
     checkNbLogin({ success: true, data: null, failCode: 0, params: null, message: null });
     assert.throws(
         () => checkNbLogin({ data: null, failCode: 20400, message: '', params: { currentTime: 1593777870514 }, success: false }),
-        (e) => e instanceof NbChyba && e.failCode === 20400 && NB.badLogin.includes(e.failCode),
+        (e) => e instanceof VyrobcaChyba && e.kod === '20400' && e.zamietol,
     );
-    assert.throws(() => checkNbLogin('nie json'), NbChyba);
+    assert.throws(() => checkNbLogin('nie json'), VyrobcaChyba);
 });
 
 test('zoznam elektrární a meničov podľa príkladov z referencie', () => {
@@ -85,7 +85,7 @@ test('zoznam elektrární a meničov podľa príkladov z referencie', () => {
     });
     assert.throws(
         () => parseNbDevices({ success: false, data: null, failCode: 20009 }),
-        (e) => e instanceof NbChyba && e.failCode === 20009,
+        (e) => e instanceof VyrobcaChyba && e.kod === '20009' && !e.zamietol,
     );
 });
 
@@ -124,6 +124,6 @@ test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z menič
     assert.deepEqual([bez.dailyEnergyKwh, bez.monthEnergyKwh, bez.cumulativeEnergyKwh, bez.stationName], [14, null, 1000, null]);
     assert.throws(
         () => parseNbDevReal([{ success: false, failCode: 407 }], [1]),
-        (e) => e instanceof NbChyba && e.failCode === NB.tooFrequent,
+        (e) => e instanceof VyrobcaChyba && e.kod === String(NB.tooFrequent) && !e.zamietol,
     );
 });
