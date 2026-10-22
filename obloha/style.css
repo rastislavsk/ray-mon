@@ -1262,6 +1262,11 @@ button:focus-visible {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+/* „od 21. 10.“ pri súčte, ktorý appka ráta až od prvého merania (shared/sucty.js). */
+.rows .od {
+    font-size: inherit;
+    color: var(--dim);
+}
 .stat .glass p {
     font-size: 0.9688rem;
     line-height: 1.4;

@@ -461,6 +461,12 @@ export const PRISTUP_STORAGE_KEY = 'pristup-v1';
 export const MERANIE_STORAGE_KEY = 'meranie-v1';
 
 /**
+ * Kotvy súčtov, ktoré výrobca neposiela (shared/sucty.js): celková výroba na začiatku roka, mesiaca
+ * a dňa. Spoločné pre obe appky. Formát: { zdroj, posledne: { den, cas, cum }, rok, mesiac, den }.
+ */
+export const SUCTY_STORAGE_KEY = 'sucty-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -474,6 +480,7 @@ export const STORAGE_KEYS = [
     WEATHER_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
+    SUCTY_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

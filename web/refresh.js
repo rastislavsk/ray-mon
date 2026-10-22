@@ -4,11 +4,23 @@
 
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
+import { minutesToTimeStr } from '../shared/format.js';
 import { neplati, odmietnute, znovaDue } from '../shared/pristup.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
+import { doplnSucty, suctyZdroj } from '../shared/sucty.js';
 import { dalsiRytmus, pvDue, rytmusOf } from '../shared/zdroje.js';
 import { keptForecast, loadData } from './data.js';
-import { loadOdmietnutie, loadRytmus, loadSettings, saveDayLog, saveOdmietnutie, saveRytmus, saveSettings } from './storage.js';
+import {
+    loadOdmietnutie,
+    loadRytmus,
+    loadSettings,
+    loadSucty,
+    saveDayLog,
+    saveOdmietnutie,
+    saveRytmus,
+    saveSettings,
+    saveSucty,
+} from './storage.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -39,6 +51,22 @@ import { loadOdmietnutie, loadRytmus, loadSettings, saveDayLog, saveOdmietnutie,
 export function nextPv(prev, result, now) {
     if (result.pv || !result.pvFailed || !prev) return result.pv;
     return now.getTime() - Date.parse(prev.updatedAt) <= STALE_PV_MS ? prev : null;
+}
+
+/**
+ * Meranie od Workera so súčtami, ktoré výrobca neposlal (rok, mesiac, pri Victrone dnešok),
+ * dopočítanými z celkovej výroby (shared/sucty.js). Čas merania, nie obnovy: meranie od druhej
+ * appky mohlo prísť skôr. Kotvy sú spoločné pre obe appky, zapíšu sa hneď.
+ * @param {import('../shared/kiosk.js').PvData | null} pv @param {import('../shared/zdroje.js').Zdroj | null} zdroj
+ * @param {import('../shared/config.js').Site} site
+ */
+function sSuctami(pv, zdroj, site) {
+    if (!pv || !zdroj) return pv;
+    const at = new Date(pv.updatedAt);
+    const cas = minutesToTimeStr(localMinutes(at, site.timezone));
+    const { pv: plne, sucty } = doplnSucty(loadSucty(), suctyZdroj(zdroj), pv, localDateKey(at, site.timezone), cas);
+    if (sucty) saveSucty(sucty);
+    return plne;
 }
 
 /**
@@ -122,7 +150,8 @@ function zUloziska(s) {
 function bezDopytu(teraz, rytmus) {
     const ine = rytmus?.pv;
     if (!ine || neplati(teraz.pristup, teraz.zdroj)) return { pv: teraz.pv };
-    return { pv: !teraz.pv || Date.parse(ine.updatedAt) > Date.parse(teraz.pv.updatedAt) ? ine : teraz.pv };
+    const novsie = !teraz.pv || Date.parse(ine.updatedAt) > Date.parse(teraz.pv.updatedAt);
+    return { pv: novsie ? sSuctami(ine, teraz.zdroj, teraz.site) : teraz.pv };
 }
 
 /**
@@ -159,13 +188,16 @@ export function createRefresh(store) {
             const forecast = keptForecast({ site, plant }, new Date());
             if (forecast) store.setState({ forecast });
         }
-        const { due, rytmus, result } = await stiahni(store.get(), { site, plant, zdroj }, skus);
+        const stiahnute = await stiahni(store.get(), { site, plant, zdroj }, skus);
+        const { due, rytmus } = stiahnute;
+        const result = { ...stiahnute.result, pv: sSuctami(stiahnute.result.pv, zdroj, site) };
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
         if (teraz.site !== site || teraz.plant !== plant || teraz.zdroj !== zdroj) return;
         const now = new Date();
         const meranie = due ? nextMeranie(teraz, result, now, skus) : bezDopytu(teraz, rytmus);
-        // Denník dní pre súhrn: menič posiela len súčet dneška, dni si appka odkladá sama.
+        // Denník dní pre súhrn: menič posiela len súčet dneška, dni si appka odkladá sama (Victron
+        // dnešok neposiela - je dopočítaný z celkovej výroby, sSuctami).
         const dayLog = result.pv
             ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
             : teraz.dayLog;

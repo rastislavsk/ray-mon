@@ -28,7 +28,9 @@ import { bestOf, periodDays, SUMMARY_PERIODS, summaryModel } from './summary.js'
  *   plant: import('./config.js').Plant }} StatistikaInput
  * @typedef {import('./stats.js').StatsPeriod} StatsPeriod
  * @typedef {import('./summary.js').SummaryPeriod} SummaryPeriod
- * @typedef {{ period: StatsPeriod, name: string, kwh: number | null, sub: string, estimate: boolean, value: number | null }} Entry
+ * `od` je pri súčte dopočítanom od prvého merania (shared/sucty.js), odkiaľ je: „od 21. 10.“.
+ * @typedef {{ period: StatsPeriod, name: string, kwh: number | null, sub: string, estimate: boolean, value: number | null,
+ *   od?: string | null }} Entry
  */
 
 /** kWh do textu ako v súčasnej appke: „31,7“, od tisíc „9 112“; bez údaja pomlčka. @param {number | null} kwh */
@@ -46,7 +48,8 @@ function liveEntries(pv, input, s, today) {
     /** @param {StatsPeriod} period @returns {Entry} */
     const entry = (period) => {
         const e = byPeriod[period];
-        return { period, name: e.label, kwh: e.kwh, sub: statsHeroSub(period, { time, month }), estimate: false, value: e.value };
+        const sub = statsHeroSub(period, { time, month, od: e.od });
+        return { period, name: e.label, kwh: e.kwh, sub, estimate: false, value: e.value, od: e.od };
     };
     return { dnes: entry('dnes'), mesiac: entry('mesiac'), rok: entry('rok'), spolu: entry('spolu') };
 }
@@ -133,6 +136,7 @@ function emptyModel() {
         rows: /** @type {Entry[]} */ ([]),
         best: /** @type {{ title: string, text: string } | null} */ (null),
         note: '',
+        odNote: '',
         measure: /** @type {'ask' | 'off' | null} */ (null),
         prices: false,
         posters: /** @type {Array<{ period: SummaryPeriod, label: string }>} */ ([]),
@@ -166,6 +170,7 @@ function numbersOf(input, s, period, voice) {
         rows: STATS_PERIODS.filter((p) => p !== period).map((p) => all[p]),
         best: best && statsBestText(best, voice),
         note: s.priced ? STATISTIKA_TEXTS.note : '',
+        odNote: s.odNote,
         posters: posterButtons(input),
     };
 }
@@ -241,7 +246,7 @@ export function posterModel(input, period, voice = 'drzy') {
     return {
         period,
         kick: m.kick,
-        title: input.site.name ? `${m.kick} · ${input.site.name}` : m.kick,
+        title: input.site.name ? `${m.heading} · ${input.site.name}` : m.heading,
         total: m.kwh,
         kwh: `${fmtSum(Math.round(m.kwh), 0)} kWh`,
         cols: posterCols(m),

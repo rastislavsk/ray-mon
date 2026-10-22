@@ -22,6 +22,11 @@ export const NB = {
     devList: '/thirdData/getDevList',
     devReal: '/thirdData/getDevRealKpi',
     stationReal: '/thirdData/getStationRealKpi',
+    // Ročné dáta elektrární (SmartPVMS 26.2.0, Report): každý rok od postavenia, aj tento. Reálne
+    // dáta rok nemajú. Limit je 25 dopytov denne na účet, preto sa Worker pýta najviac raz za rokMs
+    // a medzitým appka rok dorátava z celkovej výroby (shared/sucty.js).
+    stationYear: '/thirdData/getKpiStationYear',
+    rokMs: 6 * 60 * 60 * 1000,
     // Typy zariadení, ktoré sú meniče: string inverter, residential inverter a menič s batériou
     // (PV&ESS, od SmartPVMS 26.2.0). Všetky posielajú active_power, day_cap a total_cap.
     inverterTypes: [1, 38, 23093],
@@ -148,6 +153,28 @@ export function parseNbStationReal(json, plant) {
     const row = (Array.isArray(d) ? d : []).find((x) => isObj(x) && x.stationCode === plant);
     const m = row && isObj(row.dataItemMap) ? row.dataItemMap : {};
     return { day: num(m.day_power), month: num(m.month_power), total: num(m.total_power) };
+}
+
+/**
+ * Tohtoročná výroba elektrárne z getKpiStationYear (kWh), alebo null, keď ju Huawei neposlal.
+ * Výroba panelov je `PVYield`; staršie `inverter_power` referencia volá nejednoznačným, berie sa
+ * len bez neho. Rok je ten, ktorého začiatok (`collectTime`, polnoc 1. 1. v pásme elektrárne) je
+ * najneskôr pred `now` - deň rezervy pokryje časové pásmo.
+ * @param {unknown} json @param {string} plant @param {Date} now @returns {number | null}
+ */
+export function parseNbStationYear(json, plant, now) {
+    const d = data(json);
+    const rok = now.getUTCFullYear();
+    const row = (Array.isArray(d) ? d : []).find(
+        (x) =>
+            isObj(x) &&
+            x.stationCode === plant &&
+            Number.isFinite(x.collectTime) &&
+            new Date(x.collectTime + 24 * 60 * 60 * 1000).getUTCFullYear() === rok &&
+            isObj(x.dataItemMap),
+    );
+    if (!row) return null;
+    return num(row.dataItemMap.PVYield) ?? num(row.dataItemMap.inverter_power);
 }
 
 /**

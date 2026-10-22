@@ -4180,6 +4180,10 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .stats-row .k {
     color: var(--ink-45);
 }
+/* „od 21. 10.“ pri súčte, ktorý appka ráta až od prvého merania (shared/sucty.js). */
+.stats-row .k .od {
+    color: var(--ink-35);
+}
 .stats-row .v,
 .stats-row .e {
     font-family: var(--font-mono);

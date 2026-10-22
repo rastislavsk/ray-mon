@@ -33,6 +33,9 @@ prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom č
 - token je v pečati a Worker ho mení až po 25 minútach alebo pri kóde 305 („nie si prihlásený“),
   novú pečať vráti appke,
 - meria sa raz za 5 minút a súčty všetkých elektrární či výkon všetkých meničov idú jedným dopytom,
+- reálne dáta rok nemajú; tohtoročnú výrobu (`PVYield`) Worker vypýta z `getKpiStationYear` pri
+  pripojení a potom najviac raz za 6 hodín (`rokAt` v pečati) - rozhranie má limit 25 dopytov denne.
+  Medzitým a bez povoleného rozhrania rok dorátava appka z celkovej výroby (`shared/sucty.js`),
 - meranie z pripojenia appka po uložení rovno použije (`pripojenePv`), druhé by Huawei odmietol,
 - cookies, ktoré server pri prihlásení nastaví (Huawei CloudWAF a relácia), idú s každým ďalším
   dopytom ako pri bežnom HTTP klientovi,

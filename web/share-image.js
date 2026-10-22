@@ -65,7 +65,7 @@ function draw(ctx, m, site, t) {
     ctx.fillStyle = t.ink;
     ctx.textBaseline = 'alphabetic';
     ctx.font = `700 44px ${t.mono}`;
-    ctx.fillText(m.kick.toUpperCase(), PAD, 200);
+    ctx.fillText(m.heading.toUpperCase(), PAD, 200);
     const num = fmtSum(Math.round(m.kwh), 0);
     // Štvorciferné číslo s „kWh“ by sa pri plnej veľkosti nezmestilo - písmo sa zmenší.
     let size = 300;

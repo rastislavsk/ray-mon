@@ -9,7 +9,9 @@
 import { MINUTES_PER_DAY } from './config.js';
 import { localDateKey } from './solar.js';
 import { weekStatsModel } from './chart-model.js';
+import { odText, suctyOdNote } from './messages-statistika.js';
 import { bandAt, scheduleFor } from './tariff.js';
+import { menoZnacky } from './zdroje.js';
 
 /** @typedef {'dnes' | 'mesiac' | 'rok' | 'spolu'} StatsPeriod */
 /** @typedef {import('./config.js').Tariff} Tariff */
@@ -94,9 +96,11 @@ function sumMaps(maps) {
 }
 
 /**
- * @typedef {{ now: Date, site: import('./config.js').Site, tariff: Tariff, zdroj: unknown, loading: boolean,
+ * @typedef {{ now: Date, site: import('./config.js').Site, tariff: Tariff, zdroj: import('./zdroje.js').Zdroj | null, loading: boolean,
  *   pv: import('./kiosk.js').PvData | null, forecast: import('./solar.js').Forecast | null }} StatsInput
- * @typedef {{ period: StatsPeriod, label: string, heading: string, kwh: number | null, value: number | null, perDay: number | null }} StatsEntry
+ * `od` je pri súčte, ktorý nesiaha na začiatok obdobia (shared/sucty.js), odkiaľ je: „od 21. 10.“.
+ * @typedef {{ period: StatsPeriod, label: string, heading: string, kwh: number | null, value: number | null, perDay: number | null,
+ *   od: string | null }} StatsEntry
  */
 
 /** kWh × cena, alebo null, keď jedno z nich chýba. @param {number | null} kwh @param {number | null} price */
@@ -126,8 +130,21 @@ export function longPrice(input) {
 }
 
 /**
- * Súčty z kiosku po obdobiach, s hodnotou a pri mesiaci a roku priemerom na deň (dnešok sa
- * ráta celý, hoci ešte beží).
+ * Priemer na deň: za dni od `od` (YYYY-MM-DD) po dnešok vrátane, bez `od` za celé obdobie po
+ * dnešok (`dni`). Bez súčtu null.
+ * @param {number | null} kwh @param {string | undefined} od @param {string} today @param {number} dni
+ */
+function perDayOf(kwh, od, today, dni) {
+    if (kwh === null) return null;
+    return kwh / (od ? Math.round((Date.parse(today) - Date.parse(od)) / 86400000) + 1 : dni);
+}
+
+/** Nadpis a „od“ súčtu, ktorý nesiaha na začiatok obdobia: „Vyrobené v roku 2026 od 21. 10.“. @param {string} heading @param {string | undefined} od */
+const sOd = (heading, od) => ({ heading: od ? `${heading} ${odText(od)}` : heading, od: od ? odText(od) : null });
+
+/**
+ * Súčty z merania po obdobiach, s hodnotou a pri mesiaci a roku priemerom na deň (dnešok sa
+ * ráta celý, hoci ešte beží). Súčet dopočítaný od prvého merania (pv.od) má priemer len za dni od neho.
  * @param {import('./kiosk.js').PvData | null} pv @param {string} today @param {{ today: number | null, long: number | null }} price
  * @returns {Record<StatsPeriod, StatsEntry>}
  */
@@ -138,24 +155,25 @@ function entries(pv, today, price) {
     const m = pv?.monthEnergyKwh ?? null;
     const y = pv?.yearEnergyKwh ?? null;
     const all = pv?.cumulativeEnergyKwh ?? null;
+    const od = pv?.od ?? {};
     const monthName = MONTHS[month - 1];
     return {
-        dnes: { period: 'dnes', label: 'Dnes', heading: 'Vyrobené dnes', kwh: d, value: valueOf(d, price.today), perDay: null },
+        dnes: { period: 'dnes', label: 'Dnes', ...sOd('Vyrobené dnes', od.den), kwh: d, value: valueOf(d, price.today), perDay: null },
         mesiac: {
             period: 'mesiac',
             label: monthName.charAt(0).toUpperCase() + monthName.slice(1),
-            heading: `Vyrobené v ${MONTHS_IN[month - 1]}`,
+            ...sOd(`Vyrobené v ${MONTHS_IN[month - 1]}`, od.mesiac),
             kwh: m,
             value: valueOf(m, price.long),
-            perDay: m === null ? null : m / day,
+            perDay: perDayOf(m, od.mesiac, today, day),
         },
         rok: {
             period: 'rok',
             label: `Rok ${year}`,
-            heading: `Vyrobené v roku ${year}`,
+            ...sOd(`Vyrobené v roku ${year}`, od.rok),
             kwh: y,
             value: valueOf(y, price.long),
-            perDay: y === null ? null : y / dayOfYear,
+            perDay: perDayOf(y, od.rok, today, dayOfYear),
         },
         spolu: {
             period: 'spolu',
@@ -164,6 +182,7 @@ function entries(pv, today, price) {
             kwh: all,
             value: valueOf(all, price.long),
             perDay: null,
+            od: null,
         },
     };
 }
@@ -194,6 +213,8 @@ export function statsModel(input, period) {
         priced: !tariff.bands.some((b) => b.price === null),
         currency: tariff.currency,
         hero: all[period],
+        // Veta, keď je niektorý súčet len od prvého merania (shared/sucty.js).
+        odNote: pv && input.zdroj ? suctyOdNote(menoZnacky(input.zdroj.sposob), pv.od) : '',
         rows: STATS_PERIODS.filter((p) => p !== period).map((p) => all[p]),
         // Dnešok voči predpovedi - ten istý výpočet ako bublina Dnes na karte 7 dní.
         // Počíta s dneškom na prvom mieste predpovede, preto len vtedy, keď tam naozaj je.

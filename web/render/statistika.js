@@ -60,7 +60,8 @@ function rowsHtml(m) {
     const rows = m.rows
         .map(
             (r) =>
-                `<div class="stats-row"><span class="k">${escapeHtml(r.label)}</span><span class="v">${kwhText(r.kwh)} kWh</span>` +
+                `<div class="stats-row"><span class="k">${escapeHtml(r.label)}${r.od ? ` <span class="od">${escapeHtml(r.od)}</span>` : ''}</span>` +
+                `<span class="v">${kwhText(r.kwh)} kWh</span>` +
                 `<span class="e">${r.value === null ? '' : moneyText(r.value, m.currency)}</span></div>`,
         )
         .join('');
@@ -94,7 +95,8 @@ export function statsHtml(m, noPanels, neplati = null) {
         const note = m.priced
             ? `<p class="stats-note">Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.</p>`
             : '';
-        return segHtml(m.hero.period) + heroHtml(m) + rowsHtml(m) + note + prices;
+        const od = m.odNote ? `<p class="stats-note">${escapeHtml(m.odNote)}</p>` : '';
+        return segHtml(m.hero.period) + heroHtml(m) + rowsHtml(m) + od + note + prices;
     }
     const live =
         m.status === 'offline'

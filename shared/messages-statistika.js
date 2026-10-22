@@ -3,6 +3,7 @@
 // Čisté funkcie bez DOM.
 
 import { dateParts, dayNameLong, dayNameShort, fmt1, fmtSum } from './format.js';
+import { DATE_RE } from './valid.js';
 import { MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
@@ -92,12 +93,50 @@ const STATISTIKA_TEXTS_SLUSNE = {
 };
 
 /**
- * Odkiaľ je veľké číslo zo živého merania: „vyrobené dnes do 13:00“, „vyrobené v októbri“.
+ * Odkiaľ je veľké číslo zo živého merania: „vyrobené dnes do 13:00“, „vyrobené v októbri“. Súčet,
+ * ktorý nesiaha na začiatok obdobia (shared/sucty.js), povie odkiaľ: „vyrobené tento rok od 21. 10.“,
+ * „vyrobené dnes od 09:12 do 13:00“.
  * @param {import('./stats.js').StatsPeriod} period
- * @param {{ time: string, month: string }} d `time` čas merania, `month` mesiac v lokáli („októbri“)
+ * @param {{ time: string, month: string, od?: string | null }} d `time` čas merania, `month` mesiac v lokáli („októbri“), `od` odText
  */
-export function statsHeroSub(period, { time, month }) {
-    return `vyrobené ${{ dnes: `dnes do ${time}`, mesiac: `v ${month}`, rok: 'tento rok', spolu: 'od spustenia' }[period]}`;
+export function statsHeroSub(period, { time, month, od = null }) {
+    const s = od ? ` ${od}` : '';
+    return `vyrobené ${{ dnes: `dnes${s} do ${time}`, mesiac: `v ${month}${s}`, rok: `tento rok${s}`, spolu: 'od spustenia' }[period]}`;
+}
+
+// ---- Súčty dopočítané z celkovej výroby (shared/sucty.js) ---------------------------
+
+/**
+ * Odkiaľ je súčet: „od 21. 10.“ (deň), „od 09:12“ (čas dneška).
+ * @param {string} od deň `YYYY-MM-DD` či čas `HH:MM` z pv.od
+ */
+export function odText(od) {
+    if (!DATE_RE.test(od)) return `od ${od}`;
+    const { day, month } = dateParts(od);
+    return `od ${day}. ${month}.`;
+}
+
+/** Obdobia pv.od v poradí vety a ich mená. */
+const OD_OBDOBIA = /** @type {const} */ ([
+    ['den', 'dnešok'],
+    ['mesiac', 'mesiac'],
+    ['rok', 'rok'],
+]);
+
+/**
+ * Poznámka Štatistiky, keď je niektorý súčet len od prvého merania: „Fox ESS neposiela súčet za rok.
+ * Rátam ho sám z celkovej výroby, zatiaľ od 21. 10. – skôr som meranie nemal.“ Inak prázdna.
+ * @param {string} znacka meno značky (menoZnacky) @param {import('./kiosk.js').PvData['od']} od
+ */
+export function suctyOdNote(znacka, od) {
+    const obd = OD_OBDOBIA.filter(([k]) => od?.[k]);
+    if (!od || !obd.length) return '';
+    const mena = obd.map(([, m]) => m);
+    const zoznam = mena.length === 1 ? mena[0] : `${mena.slice(0, -1).join(', ')} ani ${mena[mena.length - 1]}`;
+    const ody = [...new Set(obd.map(([k]) => /** @type {string} */ (od[k])))];
+    const kedy =
+        ody.length === 1 ? `zatiaľ ${odText(ody[0])}` : obd.map(([k, m]) => `${m} ${odText(/** @type {string} */ (od[k]))}`).join(', ');
+    return `${znacka || 'Výrobca'} neposiela súčet za ${zoznam}. Rátam ${mena.length === 1 ? 'ho' : 'ich'} sám z celkovej výroby, ${kedy} – skôr som meranie nemal.`;
 }
 
 /** Hodnota podľa tarify: „Hodnota podľa tarify 4,78 €“, odhad s „≈“. @param {number} value @param {string} currency @param {boolean} estimate */
@@ -212,15 +251,18 @@ function summaryKick(d) {
 }
 
 /**
- * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js.
+ * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js. `kick` je
+ * nadpis obdobia (aj na tlačidle a v odkaze), `heading` nadpis súhrnu a plagátu - pri súčte, ktorý
+ * nesiaha na začiatok obdobia, s „od 21. 10.“.
  * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string, kwh: number, phones: number, km: number,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
  *   launches: { all: number, sun: number }, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
- *   carbon: CarbonFactors }} d
+ *   carbon: CarbonFactors, od: string | null, znacka: string }} d
  * @param {Voice} [voice]
  */
 export function summaryTexts(d, voice = 'drzy') {
     const kick = summaryKick(d);
+    const heading = d.od ? `${kick} ${odText(d.od)}` : kick;
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
         rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
@@ -236,7 +278,7 @@ export function summaryTexts(d, voice = 'drzy') {
             s: all > sun ? `z ${all} spustení, zvyšok išiel zo siete` : 'všetko išlo zo slnka',
         });
     rows.push(...carbonRows(d));
-    return { kick, rows, note: summaryNote(d) };
+    return { kick, heading, rows, note: summaryNote(d) };
 }
 
 /**
@@ -244,11 +286,14 @@ export function summaryTexts(d, voice = 'drzy') {
  * @param {Parameters<typeof summaryTexts>[0]} d
  */
 function summaryNote(d) {
+    const od = d.od
+        ? `Súčet ${d.period === 'rok' ? 'roka' : 'mesiaca'} je ${odText(d.od)} – skôr appka meranie z ${d.znacka || 'meniča'} nemala.`
+        : '';
     const missing = d.missing
         ? `Za ${d.missing} ${plural(d.missing, ['deň', 'dni', 'dní'])} appka čísla nemá – vtedy ju nikto neotvoril.`
         : '';
     const carbon = d.kwh > 0 || d.payback !== null ? posterCarbonNote({ ...d.carbon, debtT: d.debtT }) : '';
-    return [missing, carbon].filter(Boolean).join(' ');
+    return [od, missing, carbon].filter(Boolean).join(' ');
 }
 
 /**

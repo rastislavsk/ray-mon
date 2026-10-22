@@ -183,6 +183,7 @@ function statistikaDom() {
         stBest: byId('st-best'),
         stBestTitle: byId('st-best-title'),
         stBestText: byId('st-best-text'),
+        stOd: byId('st-od'),
         stNote: byId('st-note'),
         stMeasureOff: byId('st-measure-off'),
         stMeasure: byId('st-measure'),
