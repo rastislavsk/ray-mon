@@ -4,7 +4,7 @@ import { incomingSettings, settingsFromLink } from './shared/settings.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
 import { render } from './web/render/index.js';
-import { initUrlMirror, loadDayLog, loadLaunches, loadSettings, loadSite, loadStartPanel } from './web/settings-store.js';
+import { initUrlMirror, loadDayLog, loadLaunches, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from './web/settings-store.js';
 import { createStore, initialState } from './web/state.js';
 
 // Jediná šírka, o ktorej appka vie: od 768 px kreslí grafy na skutočný rozmer karty.
@@ -26,6 +26,7 @@ const store = createStore({
     ...initialState(now, layout, { saved, site, incoming, startPanel }),
     launches: loadLaunches(),
     dayLog: loadDayLog(),
+    pristup: loadOdmietnutie(),
 });
 
 initUrlMirror(store);

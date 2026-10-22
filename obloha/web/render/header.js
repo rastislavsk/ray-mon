@@ -4,6 +4,7 @@
 import { pvFreshness } from '../../../shared/hero-model.js';
 import { minutesToTimeStr } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
+import { neplatiOf } from '../../../shared/pristup.js';
 import { localMinutes } from '../../../shared/solar.js';
 
 /**
@@ -22,7 +23,14 @@ export function headerModel(state) {
     const status = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     if (state.pv && !pvFreshness({ now: state.now, pv: state.pv, site: state.site }).stale)
         return { place, setup: false, status, tone: 'live', toneText: 'živé meranie' };
-    const toneText = state.pv ? 'meranie zastarané' : state.zdroj ? 'živé meranie nedostupné' : 'odhad z predpovede';
+    const neplati = state.pv ? null : neplatiOf(state);
+    const toneText = state.pv
+        ? 'meranie zastarané'
+        : neplati
+          ? neplati.tone
+          : state.zdroj
+            ? 'živé meranie nedostupné'
+            : 'odhad z predpovede';
     return { place, setup: false, status, tone: 'odhad', toneText };
 }
 

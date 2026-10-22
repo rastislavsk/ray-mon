@@ -14,7 +14,7 @@ import {
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
-import { isPecat } from '../shared/zdroje.js';
+import { isIso, isPecat } from '../shared/zdroje.js';
 import { loadStoredWeather, saveStoredWeather } from './storage.js';
 
 /** @typedef {import('../shared/settings.js').Settings} Settings */
@@ -22,10 +22,24 @@ import { loadStoredWeather, saveStoredWeather } from './storage.js';
  * `pvFailed` odlišuje "meranie sa nepodarilo" od "meranie nie je" (bez pripojeného merania) - pri
  * prvom si appka na chvíľu nechá posledné meranie, pri druhom nemá čo nechávať. `pecat` je nový
  * zapečatený prístup, keď ho Worker pri meraní vydal (obnovený token, alebo zapečatený holý odkaz
- * na kiosk z nastavení spred zapečatenia) - appka si ho uloží namiesto starého.
+ * na kiosk z nastavení spred zapečatenia) - appka si ho uloží namiesto starého. `odmietnute` je
+ * krok a kód chyby (aj prázdny), keď výrobca prístup odmietol - nie výpadok, ale zlý či neplatný
+ * prístup (shared/pristup.js); inak null.
  * @typedef {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean, pecat: string | null,
- *   forecast: import('../shared/solar.js').Forecast | null }} DataResult
+ *   odmietnute: string | null, forecast: import('../shared/solar.js').Forecast | null }} DataResult
  */
+
+/** Krok a kód chyby od výrobcu z odpovede Workera (napr. `prihlasenie:20400`); len krátky text bez tajomstiev. @param {any} body */
+const kodOf = (body) => (body && typeof body.kod === 'string' && /^[a-z]+(:[A-Za-z0-9 ]{1,20})?$/.test(body.kod) ? body.kod : '');
+
+/** Výrobca prístup odmietol (Worker odpovedal 400); `kod` je krok a kód chyby od neho. */
+class Odmietnute extends Error {
+    /** @param {string} kod */
+    constructor(kod) {
+        super('výrobca prístup odmietol');
+        this.kod = kod;
+    }
+}
 
 /** @param {string} url @param {typeof fetch} fetchImpl */
 async function getJson(url, fetchImpl) {
@@ -52,6 +66,7 @@ function postWorker(url, body, fetchImpl) {
  */
 async function loadPv(zdroj, fetchImpl) {
     const res = await postWorker(WORKER_PV_URL, zdroj.pecat, fetchImpl);
+    if (res.status === 400) throw new Odmietnute(kodOf(await res.json().catch(() => null)));
     if (!res.ok) throw new Error(`HTTP ${res.status} meranie`);
     const body = await res.json();
     const pv = validPv(body.pv);
@@ -62,15 +77,16 @@ async function loadPv(zdroj, fetchImpl) {
 /**
  * Pripojenie merania zo sprievodcu: údaje z formulára ide overiť Worker. Nikdy nehádže - vráti
  * nájdené elektrárne, alebo druh chyby, ktorý sprievodca ukáže.
+ * Pri obnove prístupu ide aj stará pečať (`pecat`) - Worker z nej doplní, čo človek nezadáva znova.
  * @param {string} sposob id spôsobu (shared/zdroje.js) @param {Record<string, string>} udaje @param {typeof fetch} [fetchImpl]
+ * @param {string} [pecat]
  * @returns {Promise<{ stanice: import('../shared/setup-flow.js').Stanica[] } | { chyba: 'udaje' | 'vyrobca' | 'server', kod?: string }>}
  */
-export async function pripojZdroj(sposob, udaje, fetchImpl = fetch) {
+export async function pripojZdroj(sposob, udaje, fetchImpl = fetch, pecat = '') {
     try {
-        const res = await postWorker(WORKER_PRIPOJ_URL, JSON.stringify({ sposob, udaje }), fetchImpl);
+        const res = await postWorker(WORKER_PRIPOJ_URL, JSON.stringify(pecat ? { sposob, udaje, pecat } : { sposob, udaje }), fetchImpl);
         const body = await res.json().catch(() => ({}));
-        // Krok a kód chyby od výrobcu (napr. `prihlasenie:20400`); len krátky text bez tajomstiev.
-        const kod = typeof body.kod === 'string' && /^[a-z]+(:[A-Za-z0-9 ]{1,20})?$/.test(body.kod) ? body.kod : '';
+        const kod = kodOf(body);
         if (res.status === 400) return { chyba: 'udaje', kod };
         if (!res.ok) return { chyba: res.status === 502 ? 'vyrobca' : 'server', kod };
         const stanice = Array.isArray(body.stanice) ? body.stanice : [];
@@ -81,6 +97,7 @@ export async function pripojZdroj(sposob, udaje, fetchImpl = fetch) {
                     nazov: typeof x.nazov === 'string' ? x.nazov.slice(0, 80) : '',
                     pecat: x.pecat,
                     pv: validPv(x.pv),
+                    ...(isIso(x.platiDo) ? { platiDo: x.platiDo } : {}),
                 })),
         };
     } catch {
@@ -145,7 +162,8 @@ export async function loadData(settings, now, fetchImpl = fetch) {
     ]);
     const live = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
-    return { pv: live && live.pv, pvFailed: pvRes.status === 'rejected', pecat: live && live.pecat, forecast };
+    const odmietnute = pvRes.status === 'rejected' && pvRes.reason instanceof Odmietnute ? pvRes.reason.kod : null;
+    return { pv: live && live.pv, pvFailed: pvRes.status === 'rejected', pecat: live && live.pecat, odmietnute, forecast };
 }
 
 /**

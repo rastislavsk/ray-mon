@@ -97,6 +97,8 @@
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
                 <p id="tz-src" class="src"></p>
+                <!-- Výrobca prístup k meraniu odmietol (shared/pristup.js): vedie do Nastavenia, kde je dôvod. -->
+                <button type="button" id="tz-znova" class="src-go hidden">Pripojiť znova ›</button>
                 <p id="tz-sub" class="sub"></p>
                 <button type="button" id="tz-retry" class="pbtn retry"></button>
                 <div id="tz-guess" class="cta">
@@ -297,6 +299,8 @@
                             <p id="ns-cta-text"></p>
                             <button type="button" id="ns-cta-btn" class="pbtn" data-setup-go="start"></button>
                         </div>
+                        <!-- Prístup k meraniu neplatí či čoskoro vyprší (shared/pristup.js): dôvod a tlačidlá. -->
+                        <div id="ns-pristup" class="glass pristup hidden" role="status"></div>
                         <div id="ns-hero" class="glass plant"></div>
                         <section class="glass set" aria-labelledby="ns-rows-title">
                             <h3 id="ns-rows-title" class="glass-ttl">Elektráreň</h3>

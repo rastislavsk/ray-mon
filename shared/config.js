@@ -443,6 +443,18 @@ export const LOOK_STORAGE_KEY = 'vzhlad-v1';
 export const WEATHER_STORAGE_KEY = 'pocasie-v1';
 
 /**
+ * Prístup k meraniu, ktorý výrobca odmietol (shared/pristup.js). Appka si ho pamätá aj po zatvorení,
+ * inak by každé otvorenie znova skúšalo zlé heslo. Formát: { pecat, n, at, kod, skusene }.
+ * - `odmietnutia`: po koľkých odmietnutiach za sebou appka povie, že treba pripojiť znova. Jedno
+ *   nestačí - Huawei občas odmietne aj správne heslo, keď je účet chvíľu prihlásený inde.
+ * - `skusMs`: potom sa pýta len raz za hodinu. Huawei po piatich zlých prihláseniach zablokuje účet
+ *   na 30 minút a Fox ESS či SolaX si každý dopyt počítajú do denného limitu.
+ * - `pripomenutMs`: prístup, ktorý výrobca dáva len na čas (Deye 60 dní), pripomenie týždeň vopred.
+ */
+export const PRISTUP = { odmietnutia: 2, skusMs: 60 * 60 * 1000, pripomenutMs: 7 * 24 * 60 * 60 * 1000 };
+export const PRISTUP_STORAGE_KEY = 'pristup-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -454,6 +466,7 @@ export const STORAGE_KEYS = [
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
+    PRISTUP_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

@@ -4,10 +4,11 @@
 
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
+import { neplati, odmietnute, znovaDue } from '../shared/pristup.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { pvDue } from '../shared/zdroje.js';
 import { keptForecast, loadData } from './data.js';
-import { saveDayLog, saveSettings } from './storage.js';
+import { saveDayLog, saveOdmietnutie, saveSettings } from './storage.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -18,6 +19,7 @@ import { saveDayLog, saveSettings } from './storage.js';
  *   plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff,
  *   zdroj: import('../shared/zdroje.js').Zdroj | null,
+ *   pristup: import('../shared/pristup.js').Odmietnutie | null,
  *   pv: import('../shared/kiosk.js').PvData | null,
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
@@ -53,46 +55,89 @@ function newPecat(teraz, pecat) {
 }
 
 /**
+ * Odmietnutý prístup po obnove: ďalšie odmietnutie sa pripočíta, úspešné meranie ho zmaže,
+ * výpadok (ani jedno) ho nechá. Zapíše sa aj do úložiska, aby appka po otvorení neskúšala zlé
+ * heslo hneď znova. Bez merania, ktoré sa pýtalo, nie je čo meniť (undefined).
+ * @param {RefreshState} teraz @param {import('./data.js').DataResult} result @param {Date} now @param {boolean} skus
+ * @returns {Partial<RefreshState>}
+ */
+function nextPristup(teraz, result, now, skus) {
+    if (!teraz.zdroj) return {};
+    if (result.odmietnute !== null) {
+        const pristup = odmietnute(teraz.pristup, teraz.zdroj, now, result.odmietnute, skus);
+        saveOdmietnutie(pristup);
+        return { pristup };
+    }
+    if (!result.pv || !teraz.pristup) return {};
+    saveOdmietnutie(null);
+    return { pristup: null };
+}
+
+/**
+ * Meranie a odmietnutý prístup po obnove, ktorá sa na meranie pýtala. Keď prístup neplatí,
+ * posledné meranie sa už nevráti - nenechá sa tváriť ako „teraz“.
+ * @param {RefreshState} teraz @param {import('./data.js').DataResult} result @param {Date} now @param {boolean} skus
+ * @returns {Partial<RefreshState>}
+ */
+function nextMeranie(teraz, result, now, skus) {
+    const pristup = nextPristup(teraz, result, now, skus);
+    const zamietnute = !!pristup.pristup && neplati(pristup.pristup, teraz.zdroj);
+    return { pv: zamietnute ? null : nextPv(teraz.pv, result, now), ...pristup };
+}
+
+/**
+ * Pýtať sa teraz na meranie? Výrobca obmedzuje dopyty a jeho cloud dáta obnovuje po svojom: kým
+ * meranie nie je staršie než interval spôsobu (shared/zdroje.js), ostáva posledné a Worker sa
+ * nepýta. Po odmietnutom prístupe rozhoduje, kedy to skúsiť znova (shared/pristup.js), a „Skúsiť
+ * znova“ (`skus`) sa pýta hneď.
+ * @param {RefreshState} s @param {import('../shared/zdroje.js').Zdroj | null} zdroj @param {boolean} skus
+ */
+function pvNow(s, zdroj, skus) {
+    if (!zdroj || skus) return true;
+    const at = new Date();
+    return znovaDue(s.pristup, zdroj, at) ?? pvDue(zdroj, s.pv, at);
+}
+
+/**
  * Obnova dát pre elektráreň, ktorá je práve v stave. Beží najviac jedna naraz: kým sa
  * sťahuje, ďalšie volanie (minútový časovač, návrat z pozadia) dostane tú istú rozbehnutú -
  * inak by sa pri pomalej sieti požiadavky hromadili a staršia odpoveď mohla prepísať novšiu.
- * Nová elektráreň (uložené nastavenie) čakať nemusí, jej obnova sa rozbehne hneď.
- * @param {RefreshStore} store @returns {() => Promise<void>}
+ * Nová elektráreň (uložené nastavenie) čakať nemusí, jej obnova sa rozbehne hneď. `skus` je
+ * „Skúsiť znova“: na meranie sa opýta hneď, aj keď by inak po odmietnutí čakala.
+ * @param {RefreshStore} store @returns {(opts?: { skus?: boolean }) => Promise<void>}
  */
 export function createRefresh(store) {
     /** @type {{ site: object, plant: object, zdroj: object | null, promise: Promise<void> } | null} */
     let bezi = null;
-    /** @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'zdroj'>} s */
-    const obnov = async ({ site, plant, zdroj }) => {
+    /** @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'zdroj'>} s @param {boolean} skus */
+    const obnov = async ({ site, plant, zdroj }, skus) => {
         // Kým sa sťahuje, appka ukáže predpoveď z počasia, ktoré už má (po otvorení z prehliadača) -
         // inak by odpoveď čakala na sieť. Meranie sa neodkladá, to príde až so sieťou.
         if (!store.get().forecast) {
             const forecast = keptForecast({ site, plant }, new Date());
             if (forecast) store.setState({ forecast });
         }
-        // Výrobca obmedzuje dopyty a jeho cloud dáta obnovuje po svojom: kým meranie nie je staršie
-        // než interval spôsobu (shared/zdroje.js), ostáva posledné a Worker sa nepýta.
-        const due = !zdroj || pvDue(zdroj, store.get().pv, new Date());
+        const due = pvNow(store.get(), zdroj, skus);
         const result = await loadData({ site, plant, zdroj: due ? zdroj : null }, new Date());
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
         if (teraz.site !== site || teraz.plant !== plant || teraz.zdroj !== zdroj) return;
         const now = new Date();
-        const pv = due ? nextPv(teraz.pv, result, now) : teraz.pv;
+        const meranie = due ? nextMeranie(teraz, result, now, skus) : { pv: teraz.pv };
         // Denník dní pre súhrn: menič posiela len súčet dneška, dni si appka odkladá sama.
         const dayLog = result.pv
             ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
             : teraz.dayLog;
         if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
-        store.setState({ pv, forecast: result.forecast, loading: false, now, dayLog, ...pecat });
+        store.setState({ forecast: result.forecast, loading: false, now, dayLog, ...pecat, ...meranie });
     };
-    return () => {
+    return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.
         if (store.get().known === 'nic') return Promise.resolve();
         const { site, plant, zdroj } = store.get();
         if (bezi && bezi.site === site && bezi.plant === plant && bezi.zdroj === zdroj) return bezi.promise;
-        const promise = obnov({ site, plant, zdroj }).finally(() => {
+        const promise = obnov({ site, plant, zdroj }, skus).finally(() => {
             if (bezi && bezi.promise === promise) bezi = null;
         });
         bezi = { site, plant, zdroj, promise };

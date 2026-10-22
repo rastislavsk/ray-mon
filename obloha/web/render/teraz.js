@@ -64,7 +64,8 @@ export function renderTeraz(state, dom) {
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
     show(dom.tzSrc, m.source !== '');
-    setText(dom.tzSrc, m.source);
+    setHtml(dom.tzSrc, escapeHtml(m.source) + (m.znova ? ` · <b>${escapeHtml(m.znova)}</b>` : ''));
+    show(dom.tzZnova, m.znova !== '');
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
     show(dom.tzRetry, m.retry);

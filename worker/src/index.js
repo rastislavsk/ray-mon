@@ -3,6 +3,7 @@
 // Prístup k meraniu drží appka zapečatený (worker/src/pecat.js), Worker ho pri každom meraní otvorí.
 //
 // POST /pripoj: údaje z formulára sprievodcu -> nájdené elektrárne, každá so zapečateným prístupom.
+// Pri obnove prístupu príde aj stará pečať - z nej sa doplní, čo človek nemusí zadávať znova.
 // POST /pv: zapečatený prístup -> meranie vo formáte `pv`. Prijme aj holý odkaz na kiosk, ktorý
 // posielali appky spred zapečatenia - vtedy k meraniu pribalí aj zapečatený prístup, appka si ho
 // uloží namiesto odkazu.
@@ -77,9 +78,10 @@ export async function handlePv(request, env, now, fetchImpl) {
 }
 
 /**
- * Požiadavka na pripojenie z tela: známy spôsob a údaje ako texty. Čokoľvek iné je null.
+ * Požiadavka na pripojenie z tela: známy spôsob, údaje ako texty a nepovinne stará pečať.
+ * Čokoľvek iné je null.
  * @param {string | null} body
- * @returns {{ sposob: string, zdroj: import('./zdroje.js').Zdroj, udaje: Record<string, string> } | null}
+ * @returns {{ sposob: string, zdroj: import('./zdroje.js').Zdroj, udaje: Record<string, string>, pecat: string } | null}
  */
 function pripojReq(body) {
     /** @type {any} */ let req;
@@ -91,12 +93,24 @@ function pripojReq(body) {
     const zdroj = req && typeof req.sposob === 'string' ? ZDROJE[req.sposob] : undefined;
     const udaje = req && req.udaje && typeof req.udaje === 'object' ? req.udaje : null;
     if (!zdroj || !udaje || !Object.values(udaje).every((v) => typeof v === 'string')) return null;
-    return { sposob: req.sposob, zdroj, udaje };
+    return { sposob: req.sposob, zdroj, udaje, pecat: typeof req.pecat === 'string' ? req.pecat : '' };
 }
 
 /**
- * POST /pripoj: `{ sposob, udaje }` v tele (JSON ako text). Overí údaje u výrobcu a vráti
- * nájdené elektrárne - meno, zapečatený prístup a čo práve namerala.
+ * Údaje formulára doplnené zo starej pečate toho istého spôsobu (obnova prístupu: Deye pýta len
+ * heslo). Čo človek zadal, má prednosť; cudzia či neplatná pečať nič nedoplní.
+ * @param {NonNullable<ReturnType<typeof pripojReq>>} req @param {Promise<CryptoKey>} key
+ */
+async function sPecatou(req, key) {
+    const stara = req.pecat && req.zdroj.zPecate ? await otvor(key, req.pecat) : null;
+    if (!stara || stara.sposob !== req.sposob || !req.zdroj.zPecate) return req.udaje;
+    const z = Object.entries(req.zdroj.zPecate(stara.pristup)).filter(([, v]) => v);
+    return { ...Object.fromEntries(z), ...req.udaje };
+}
+
+/**
+ * POST /pripoj: `{ sposob, udaje, pecat? }` v tele (JSON ako text). Overí údaje u výrobcu a vráti
+ * nájdené elektrárne - meno, zapečatený prístup, čo práve namerala a dokedy prístup platí.
  * @param {Request} request @param {Env} env @param {Date} now @param {typeof fetch} fetchImpl
  */
 export async function handlePripoj(request, env, now, fetchImpl) {
@@ -105,12 +119,13 @@ export async function handlePripoj(request, env, now, fetchImpl) {
     const req = pripojReq(await telo(request));
     if (!req) return json(400, { chyba: 'udaje' });
     try {
-        const najdene = await req.zdroj.pripoj(req.udaje, { now, fetchImpl });
+        const najdene = await req.zdroj.pripoj(await sPecatou(req, key), { now, fetchImpl });
         const stanice = await Promise.all(
             najdene.map(async (n) => ({
                 nazov: n.nazov,
                 pecat: await zapecat(key, { sposob: req.sposob, pristup: n.pristup }),
                 pv: n.pv,
+                platiDo: n.platiDo,
             })),
         );
         return json(200, { stanice });

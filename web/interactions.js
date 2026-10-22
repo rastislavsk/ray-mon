@@ -58,6 +58,9 @@ function initNavigation(store, dom) {
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
+        // Pás „Meranie treba pripojiť znova“: v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom.
+        // Pred prepnutím karty - to pás prekreslí a značku z tlačidla zoberie.
+        if (target.closest('[data-pristup-go]')) dom.settingsPlant.open = true;
         const panelBtn = target.closest('button[data-panel]');
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
         // z tej istej strany ako pri ťahaní prstom.

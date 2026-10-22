@@ -64,7 +64,8 @@
                 </button>
             </div>
             <!-- Výzva bez zadaných panelov: karty Terazky a Môžem? sú vtedy sivé a bez čísel, a prečo,
-                 musí byť vidno na prvý pohľad. Render ju ukáže len na nich. -->
+                 musí byť vidno na prvý pohľad. Render ju ukáže len na nich. Ten istý pás povie aj to,
+                 že výrobca prestal prijímať prístup k meraniu (shared/pristup.js) - texty vtedy píše render. -->
             <div class="panels-bar hidden" id="panels-bar">
                 <div class="panels-bar-inner" role="status">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -72,8 +73,8 @@
                         <path d="M12 10v4.5M12 17.2v.3" />
                     </svg>
                     <span class="panels-bar-txt">
-                        <b>Chýbajú panely</b>
-                        <span>Bez nich nepoznám výkon.</span>
+                        <b id="panels-bar-title">Chýbajú panely</b>
+                        <span id="panels-bar-text">Bez nich nepoznám výkon.</span>
                     </span>
                     <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
                 </div>
@@ -540,7 +541,9 @@
                                         </svg>
                                         <span class="settings-text">
                                             <b>Elektráreň</b>
-                                            <span class="settings-hint">Poloha, panely, menič, meranie a tarifa</span>
+                                            <span class="settings-hint" id="settings-plant-hint"
+                                                >Poloha, panely, menič, meranie a tarifa</span
+                                            >
                                         </span>
                                         <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
                                             <path d="M9 5l7 7-7 7" />

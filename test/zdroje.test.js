@@ -1,7 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../shared/setup-texts.js';
-import { isPecat, menoZnacky, parseZdroj, SPOSOBY, sposobOf, sposobyOf, udajeOk, ZNACKY, znackaOf } from '../shared/zdroje.js';
+import {
+    isIso,
+    isPecat,
+    menoZnacky,
+    parseZdroj,
+    polaOf,
+    SPOSOBY,
+    sposobOf,
+    sposobyOf,
+    udajeOk,
+    ZNACKY,
+    znackaOf,
+} from '../shared/zdroje.js';
 
 const KIOSK = 'https://region01eu5.fusionsolar.huawei.com/pvmswebsite/nologin/assets/build/index.html#/kiosk?kk=Abc123xyz';
 const PECAT = 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345';
@@ -42,6 +54,23 @@ test('parseZdroj: zapečatený prístup, holý kiosk zo starých nastavení, ina
     assert.equal(parseZdroj(undefined, 'https://example.com/?kk=Abc123xyz'), null);
     assert.equal(isPecat(PECAT), true);
     assert.equal(isPecat(KIOSK), false);
+});
+
+test('platiDo a obnova: dátum platnosti sa drží len ako čas, obnova pýta len svoje polia', () => {
+    const z = { sposob: 'deye-aplikacia', pecat: PECAT, nazov: 'Chata' };
+    const platiDo = '2026-12-20T12:00:00.000Z';
+    assert.deepEqual(parseZdroj({ ...z, platiDo }), { ...z, platiDo });
+    for (const bad of ['zajtra', '2026-12-20', 5, 'x'.repeat(40)]) assert.deepEqual(parseZdroj({ ...z, platiDo: bad }), z, String(bad));
+    assert.equal(isIso(platiDo), true);
+    const deye = /** @type {import('../shared/zdroje.js').Sposob} */ (sposobOf('deye-aplikacia'));
+    assert.deepEqual(
+        polaOf(deye, true).map((p) => p.id),
+        ['heslo'],
+    );
+    assert.equal(polaOf(deye).length, 4);
+    assert.equal(polaOf(/** @type {any} */ (sposobOf('foxess-kluc')), true).length, 1, 'bez obnovy celý formulár');
+    assert.equal(udajeOk('deye-aplikacia', { heslo: 'h' }, true), true);
+    assert.equal(udajeOk('deye-aplikacia', { heslo: 'h' }), false);
 });
 
 test('udajeOk: všetky polia vyplnené, odkaz naozaj na kiosk', () => {

@@ -19,7 +19,7 @@ import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../../share
 import { editTabs } from '../../../shared/nastavenie.js';
 import { checkSettings, settingsFromLink } from '../../../shared/settings.js';
 import { SETUP_SECTIONS, TARIFF_STEPS } from '../../../shared/setup.js';
-import { brushOf, schedIndex, setupDraft, setupReady, udajeReady } from '../../../shared/setup-flow.js';
+import { brushOf, schedIndex, setupDraft, setupReady, udajeReady, znovaModel } from '../../../shared/setup-flow.js';
 import * as T from '../../../shared/setup-texts.js';
 import { orientationShare } from '../../../shared/solar.js';
 import {
@@ -31,7 +31,7 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../../shared/tariff.js';
-import { sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
+import { polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
 import {
     compassSvg,
     miniCompassSvg,
@@ -304,13 +304,19 @@ function renderPripoj(state, dom) {
     const sposob = sposobOf(state.setupSposob);
     if (!sposob) return;
     const p = state.setupPripoj;
+    // Pripájanie znova: dôvod je v úvode, návod a správa pre nové pripojenie ustúpia poliam.
+    const znova = !!znovaModel(state);
     setHtml(dom.wzKroky, sposob.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join(''));
-    show(dom.wzSprava, !!sposob.sprava);
+    show(dom.wzKroky, !znova);
+    show(dom.wzSprava, !!sposob.sprava && !znova);
     setText(dom.wzSpravaText, sposob.sprava ?? '');
     dom.wzSpravaCopy.dataset.setupCopy = sposob.sprava ?? '';
     setText(dom.wzSpravaNote, T.SPRAVA_NOTE);
     // Polia sa kreslia nanovo len pri otvorení formulára (settingsRev) - inak by zmizlo, čo človek píše.
-    setHtml(dom.wzPola, `<div class="wz-stack" data-rev="${state.settingsRev}">${sposob.pola.map(poleHtml).join('')}</div>`);
+    setHtml(
+        dom.wzPola,
+        `<div class="wz-stack" data-rev="${state.settingsRev}">${polaOf(sposob, state.setupObnova).map(poleHtml).join('')}</div>`,
+    );
     const note = T.pripojNote(p, sposob.id) ?? T.udajeNote(sposob.id, state.setupUdaje);
     show(dom.wzPripojNote, !!note);
     dom.wzPripojNote.classList.toggle('err', !!note?.err);

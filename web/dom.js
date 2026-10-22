@@ -35,6 +35,9 @@ function headerDom() {
         // Bez zadaných panelov namiesto textu pod časom odkaz do sprievodcu.
         pvSetupGo: byId('pv-setup-go'),
         panelsBar: byId('panels-bar'),
+        panelsBarTitle: byId('panels-bar-title'),
+        panelsBarText: byId('panels-bar-text'),
+        panelsBarGo: byId('panels-bar-go'),
         bottomnav: byId('bottomnav'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
             Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))
@@ -186,6 +189,8 @@ function setupHomeDom() {
         setupHero: byId('setup-hero'),
         setupRows: byId('setup-rows'),
         setupWarnings: byId('setup-warnings'),
+        settingsPlant: /** @type {HTMLDetailsElement} */ (byId('settings-plant')),
+        settingsPlantHint: byId('settings-plant-hint'),
         setupNote: byId('setup-note'),
         wizard: byId('wizard'),
         wzStep: byId('wz-step'),

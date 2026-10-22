@@ -25,11 +25,13 @@ import {
 } from './messages-core.js';
 import { deviceShorts, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
+import { pristupModel } from './pristup.js';
 import { localDateKey } from './solar.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
- *   known: import('./settings.js').Known, previewMinutes: number | null }} TerazInput
+ *   known: import('./settings.js').Known, previewMinutes: number | null,
+ *   pristup?: import('./pristup.js').Odmietnutie | null }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
 
@@ -89,14 +91,21 @@ function headOf(input, base, hero, estimate, voice) {
     const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
-        return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
+        return { title, num, source: '', znova: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
     const pv = pvStatus(input);
     const silent = !hero.preview && !!input.zdroj && !pv.ok;
+    // Výrobca prístup odmietol: nie „meranie neodpovedá“, ale prečo a cesta k oprave (shared/pristup.js).
+    const zdroj = /** @type {import('./zdroje.js').Zdroj | null} */ (input.zdroj);
+    const p = hero.preview ? null : pristupModel({ zdroj, pristup: input.pristup ?? null, now: input.now, timezone: input.site.timezone });
+    const znova = p && p.druh === 'neplati' ? p.riadok : '';
     return {
         title,
         num: hero.powerText,
-        source: terazSourceText(hero.source, { silent, since: pv.since }),
+        source: znova
+            ? terazSourceText(hero.source, { silent: false, since: null })
+            : terazSourceText(hero.source, { silent, since: pv.since }),
+        znova,
         sub: clearSub(base, hero),
     };
 }
@@ -110,6 +119,7 @@ function empty(kind, estimate) {
         title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
         source: '',
+        znova: '',
         sub: '',
         retry: false,
         guess: false,

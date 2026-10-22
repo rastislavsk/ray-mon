@@ -21,7 +21,8 @@ import { saveSettings, saveSite } from './storage.js';
  * Čo sprievodca potrebuje od appky. `back` je krok späť (cez históriu, ak sa dá), `refresh`
  * stiahne dáta pre novú elektráreň, `skip` je zmena stavu pri odložení panelov („Teraz nie,
  * ukáž predpoveď“ - kam appka prejde).
- * @typedef {{ back: (patch: SetupPatch) => void, refresh: () => Promise<void>, skip: () => object }} SetupApp
+ * „Skúsiť znova“ pri odmietnutom prístupe je `refresh({ skus: true })` - na meranie sa opýta hneď.
+ * @typedef {{ back: (patch: SetupPatch) => void, refresh: (opts?: { skus?: boolean }) => Promise<void>, skip: () => object }} SetupApp
  */
 /**
  * Polia sprievodcu, ktoré appka v stránke má. Kruh tarify je `<svg>`, ktoré sa pri prekreslení
@@ -136,7 +137,8 @@ async function pripoj(store) {
     if (s.setupPripoj.status === 'loading' || !flow.udajeReady(s)) return;
     const sposob = s.setupSposob;
     store.setState(flow.pripojStart());
-    const res = await pripojZdroj(sposob, s.setupUdaje);
+    // Pri obnove prístupu ide aj stará pečať, Worker z nej doplní, čo človek nezadáva znova.
+    const res = await pripojZdroj(sposob, s.setupUdaje, undefined, s.setupObnova && s.zdroj ? s.zdroj.pecat : '');
     const patch = flow.pripojDone(store.get(), sposob, res);
     if (patch) store.setState(patch);
 }
@@ -206,6 +208,19 @@ function initRingPaint(store, ring) {
 }
 
 /**
+ * Pripojené meranie: pripojiť inak, stačí odhad, a z hlásenia o prístupe v prehľade
+ * (shared/pristup.js) „Pripojiť znova“ - formulár pripojeného spôsobu - a „Skúsiť znova“, ktoré
+ * sa na meranie opýta hneď.
+ * @param {SetupApp} app @returns {Array<[string, (el: HTMLElement, s: SetupState) => SetupPatch | null | void]>}
+ */
+const zdrojActions = (app) => [
+    ['[data-setup-zmen]', () => flow.changeZdroj()],
+    ['[data-setup-odhad]', () => flow.noZdroj()],
+    ['[data-setup-znova]', (_, s) => flow.zdrojZnova(s)],
+    ['[data-pristup-skus]', () => void app.refresh({ skus: true })],
+];
+
+/**
  * Klik v sprievodcovi. Tabuľka dvojíc (selektor, akcia) namiesto reťaze podmienok - prvý zásah
  * vyhrá. Tlačidlá v prekresľovaných častiach nesú data- atribúty, pevné majú id. Akcia vráti
  * zmenu stavu (alebo null, keď nie je čo meniť) - okrem pohybu, ten ide cez runSetupAction.
@@ -244,8 +259,7 @@ function clickActions(store, app, f) {
         ['[data-setup-znacka]', (el, s) => flow.pickZnacka(s, el.dataset.setupZnacka || '')],
         ['[data-setup-sposob]', (el, s) => flow.pickSposob(s, el.dataset.setupSposob || '')],
         ['[data-setup-stanica]', (el, s) => flow.pickStanica(s, num(el.dataset.setupStanica))],
-        ['[data-setup-zmen]', () => flow.changeZdroj()],
-        ['[data-setup-odhad]', () => flow.noZdroj()],
+        ...zdrojActions(app),
         ['[data-setup-copy]', (el) => copyMessage(el)],
         ['#wz-pripojit', () => void pripoj(store)],
         ['[data-setup-kind]', (el, s) => flow.pickKind(s, el.dataset.setupKind || '')],

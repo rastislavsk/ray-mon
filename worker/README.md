@@ -17,9 +17,11 @@ Date, Authorization). Jeden dopyt `userStationList` vráti výkon aj súčty s j
 Worker smie, lebo od dátumu kompatibility 2024-09-02 platí `allow_custom_ports`.
 
 **Deye** (`shared/deye.js`): vlastná aplikácia majiteľa (AppId, AppSecret) a e-mail s heslom do
-Deye Cloud. Heslo ide Deye len ako SHA-256 a len pri pripojení; v pečati je token (platí 60 dní),
-nie heslo - po 60 dňoch treba Deye pripojiť znova. Jednotky výkonu špecifikácia neuvádza: hodnota
-vyššia než dvojnásobok inštalovaného výkonu sa berie vo wattoch.
+Deye Cloud. Heslo ide Deye len ako SHA-256 a len pri pripojení; v pečati je token (platí 60 dní)
+a údaje aplikácie s e-mailom, nie heslo. Pripojenie vráti aj `platiDo` - appka týždeň vopred
+pripomenie obnovu a tá pýta len heslo: `/pripoj` dostane starú pečať a zvyšok doplní z nej
+(`zPecate` v `src/zdroje.js`). Jednotky výkonu špecifikácia neuvádza: hodnota vyššia než dvojnásobok
+inštalovaného výkonu sa berie vo wattoch.
 
 **Huawei Northbound** (`shared/huawei-nb.js`) je účet len na čítanie, ktorý zriaďuje inštalatér. Postavené
 podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6 (cloudová
@@ -71,10 +73,14 @@ Telo je JSON ako text: `{ "sposob": "huawei-kiosk", "udaje": { "odkaz": "https:/
 { "stanice": [{ "nazov": "Dvorany", "pecat": "v1.…", "pv": { "realTimePowerKw": 6.41, "...": "..." } }] }
 ```
 
+Stanica nesie aj `platiDo` (ISO čas), keď výrobca dáva prístup len na čas (Deye). Pri obnove
+takého prístupu ide v tele aj stará `pecat`: Worker z nej doplní údaje, ktoré človek nezadáva
+znova; cudzia, poškodená či iným spôsobom zapečatená pečať nedoplní nič.
+
 - Neznámy spôsob alebo údaje, ktoré výrobca neprijal: **400** `{ "chyba": "udaje" }`. Cudzí
   odkaz na kiosk dostane 400 bez jediného sťahovania.
 - Výrobca neodpovedá: **502** `{ "chyba": "vyrobca" }`. Bez kľúča Workera: **503** `{ "chyba": "server" }`.
-- Kde výrobca chybu označil kódom, odpoveď nesie aj `kod`: krok a kód, napr.
+- Kde výrobca chybu označil kódom (Huawei, Fox ESS, Solis, Deye), odpoveď nesie aj `kod`: krok a kód, napr.
   `{ "chyba": "udaje", "kod": "prihlasenie:20400" }`. Nič tajné - appka podľa neho povie, čo presne
   výrobca odmietol, a ten istý riadok ide do logu Workera (Observability), kde sa dá dohľadať aj spätne.
 

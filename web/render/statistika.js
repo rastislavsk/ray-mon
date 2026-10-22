@@ -5,6 +5,7 @@
 import { installedKw } from '../../shared/config.js';
 import { escapeHtml, fmt1, fmtSum, kwpText } from '../../shared/format.js';
 import { EMPTY_MESSAGES } from '../../shared/messages.js';
+import { neplatiOf } from '../../shared/pristup.js';
 import { STATS_PERIODS, statsModel } from '../../shared/stats.js';
 import { SETUP_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
@@ -78,8 +79,10 @@ function forecastHtml(m) {
     );
 }
 
-/** Obsah karty podľa toho, čo appka o elektrárni vie. @param {StatsModel} m @param {boolean} noPanels */
-export function statsHtml(m, noPanels) {
+/** Obsah karty podľa toho, čo appka o elektrárni vie. `neplati` je veta namiesto „meranie
+ * neodpovedá“, keď výrobca prístup odmietol (shared/pristup.js).
+ * @param {StatsModel} m @param {boolean} noPanels @param {string | null} [neplati] */
+export function statsHtml(m, noPanels, neplati = null) {
     if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
     // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
     if (noPanels)
@@ -95,7 +98,7 @@ export function statsHtml(m, noPanels) {
     }
     const live =
         m.status === 'offline'
-            ? `<p class="stats-note">Živé meranie teraz neodpovedá. Súčty za mesiac, rok a celý čas sa ukážu, keď sa spojenie obnoví.</p>`
+            ? `<p class="stats-note">${escapeHtml(neplati ?? 'Živé meranie teraz neodpovedá. Súčty za mesiac, rok a celý čas sa ukážu, keď sa spojenie obnoví.')}</p>`
             : goHtml('meranie', 'Pripojiť živé meranie', 'Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.');
     return forecastHtml(m) + live + prices;
 }
@@ -103,5 +106,6 @@ export function statsHtml(m, noPanels) {
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderStatistika(state, dom) {
     dom.statsSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
-    writeHtml(dom.statsBody, statsHtml(statsModel(state, state.statsPeriod), state.known !== 'elektraren'), 'statsBody');
+    const neplati = neplatiOf(state)?.statistika ?? null;
+    writeHtml(dom.statsBody, statsHtml(statsModel(state, state.statsPeriod), state.known !== 'elektraren', neplati), 'statsBody');
 }

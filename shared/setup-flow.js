@@ -27,6 +27,7 @@ import {
     slotsOf,
     tariffKind,
 } from './tariff.js';
+import { pristupModel } from './pristup.js';
 import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
@@ -37,8 +38,8 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
 /** @typedef {import('./zdroje.js').Zdroj} Zdroj */
 /**
  * Elektráreň, ktorú Worker našiel pri pripojení: meno u výrobcu, zapečatený prístup práve k nej
- * a čo práve nameral (na kontrolu, že čísla sedia).
- * @typedef {{ nazov: string, pecat: string, pv: import('./kiosk.js').PvData | null }} Stanica
+ * a čo práve nameral (na kontrolu, že čísla sedia); `platiDo`, keď výrobca dáva prístup len na čas.
+ * @typedef {{ nazov: string, pecat: string, pv: import('./kiosk.js').PvData | null, platiDo?: string }} Stanica
  */
 /**
  * Pripájanie živého merania: `loading` čaká na Workera, `done` má nájdené elektrárne, `error`
@@ -59,6 +60,7 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
  *   plant: import('./config.js').Plant,
  *   tariff: Tariff,
  *   zdroj: Zdroj | null,
+ *   pristup: import('./pristup.js').Odmietnutie | null,
  *   settingsDraft: Settings,
  *   settingsRev: number,
  *   settingsNote: string,
@@ -73,6 +75,7 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
  *   setupSposob: string,
  *   setupUdaje: Record<string, string>,
  *   setupPripoj: Pripoj,
+ *   setupObnova: boolean,
  *   setupLink: string,
  *   setupSched: number,
  *   setupBrush: string | null,
@@ -125,6 +128,9 @@ export function setupInit(start, known) {
         setupSposob: '',
         setupUdaje: /** @type {Record<string, string>} */ ({}),
         setupPripoj: /** @type {Pripoj} */ ({ status: 'idle', chyba: '', stanice: [] }),
+        // Obnova prístupu na čas (Deye): formulár pýta len to, čo treba zadať znova, zvyšok
+        // doplní Worker zo starej pečate (Sposob.obnova v shared/zdroje.js).
+        setupObnova: false,
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
         // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým sa
@@ -315,8 +321,38 @@ function openForm(s, sposob) {
         setupSposob: sposob,
         setupUdaje: {},
         setupPripoj: PRIPOJ_IDLE,
+        setupObnova: false,
         setupStep: 'pripoj',
     });
+}
+
+/**
+ * „Pripojiť znova“ či „Obnoviť prístup“ v Nastavení (shared/pristup.js): úprava uloženej elektrárne
+ * rovno na formulári pripojeného spôsobu. Prístup na čas sa obnoví len tým, čo treba zadať znova -
+ * keď ho pripojenie zapečatilo aj s dátumom (staršie pečate Deye údaje aplikácie nemajú).
+ * @param {SetupState} s @returns {SetupPatch | null}
+ */
+export function zdrojZnova(s) {
+    const sposob = s.zdroj && sposobOf(s.zdroj.sposob);
+    if (!s.zdroj || !sposob) return null;
+    const edit = stepEdit(s, 'meranie', true);
+    return {
+        ...edit,
+        ...openForm({ ...s, ...edit }, sposob.id),
+        setupZnacka: sposob.znacka,
+        setupObnova: !!(sposob.obnova && s.zdroj.platiDo),
+    };
+}
+
+/**
+ * Hovorí formulár o pripájaní znova? Áno pri obnove prístupu a keď výrobca prístup pripojeného
+ * spôsobu odmietol - vtedy má nadpis a úvod z pristupModel a návod pre nové pripojenie ustúpi.
+ * @param {SetupState} s
+ */
+export function znovaModel(s) {
+    if (!s.zdroj || s.zdroj.sposob !== s.setupSposob || s.setupReturn !== 'prehlad') return null;
+    const m = pristupModel({ zdroj: s.zdroj, pristup: s.pristup, now: s.now, timezone: s.site.timezone });
+    return m && (s.setupObnova || m.druh === 'neplati') ? m : null;
 }
 
 /** Ťuknutie na značku: s jediným spôsobom rovno jeho formulár, inak výber spôsobu (aj
@@ -351,14 +387,15 @@ export function setPole(s, id, value) {
     };
 }
 
-/** Dá sa pripájať - polia sú vyplnené a na pohľad v poriadku? @param {Pick<SetupState, 'setupSposob' | 'setupUdaje'>} s */
-export const udajeReady = (s) => udajeOk(s.setupSposob, s.setupUdaje);
+/** Dá sa pripájať - polia sú vyplnené a na pohľad v poriadku? @param {Pick<SetupState, 'setupSposob' | 'setupUdaje' | 'setupObnova'>} s */
+export const udajeReady = (s) => udajeOk(s.setupSposob, s.setupUdaje, s.setupObnova);
 
 /** Zvolená elektráreň z nájdených: z nej je pripojené meranie. @param {SetupState} s @param {number} i @returns {SetupPatch | null} */
 export function pickStanica(s, i) {
     const st = s.setupPripoj.stanice[i];
     if (!st) return null;
-    return draftPatch(s, { ...s.settingsDraft, zdroj: { sposob: s.setupSposob, pecat: st.pecat, nazov: st.nazov } });
+    const zdroj = { sposob: s.setupSposob, pecat: st.pecat, nazov: st.nazov, ...(st.platiDo ? { platiDo: st.platiDo } : {}) };
+    return draftPatch(s, { ...s.settingsDraft, zdroj });
 }
 
 /**

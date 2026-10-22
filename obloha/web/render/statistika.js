@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
+import { neplatiOf } from '../../../shared/pristup.js';
 import { kwhText, statistikaModel } from '../../../shared/statistika.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -79,15 +80,17 @@ function renderNumbers(m, hero, state, dom) {
     setHtml(dom.stRows, rowsHtml(m.rows));
 }
 
-/** Riadky pod číslami: najlepší deň, veta o spotrebe, meranie, ceny a plagát. @param {Model} m @param {Dom} dom @param {T} T */
-function renderExtras(m, dom, T) {
+/** Riadky pod číslami: najlepší deň, veta o spotrebe, meranie, ceny a plagát. `neplati` je veta
+ * namiesto „meranie neodpovedá“, keď výrobca prístup odmietol (shared/pristup.js).
+ * @param {Model} m @param {Dom} dom @param {T} T @param {string | null} neplati */
+function renderExtras(m, dom, T, neplati) {
     show(dom.stBest, !!m.best);
     setText(dom.stBestTitle, m.best ? m.best.title : '');
     setText(dom.stBestText, m.best ? m.best.text : '');
     show(dom.stNote, m.note !== '');
     setText(dom.stNote, m.note);
     show(dom.stMeasureOff, m.measure === 'off');
-    setText(dom.stMeasureOff, T.measureOff);
+    setText(dom.stMeasureOff, neplati ?? T.measureOff);
     show(dom.stMeasure, m.measure === 'ask');
     setText(dom.stMeasureTitle, T.measureTitle);
     setText(dom.stMeasureText, T.measureText);
@@ -109,5 +112,5 @@ export function renderStatistika(state, dom) {
     show(dom.stBody, !!m.hero);
     if (!m.hero) return;
     renderNumbers(m, m.hero, state, dom);
-    renderExtras(m, dom, T);
+    renderExtras(m, dom, T, neplatiOf(state)?.statistika ?? null);
 }

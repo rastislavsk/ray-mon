@@ -228,4 +228,35 @@ test('pripojZdroj: údaje idú Workeru v tele, odpoveď sa preverí, chyby majú
     assert.deepEqual(await pripojZdroj('x', {}, worker(400, { chyba: 'udaje', kod: '<script>' }).impl), { chyba: 'udaje', kod: '' });
     const padne = /** @type {typeof fetch} */ (/** @type {unknown} */ (async () => Promise.reject(new TypeError('siet'))));
     assert.deepEqual(await pripojZdroj('x', {}, padne), { chyba: 'server' });
+    // Obnova prístupu: stará pečať ide s údajmi; dátum platnosti prejde, len keď je to čas.
+    const obnova = worker(200, {
+        stanice: [
+            { ...st, platiDo: '2026-12-20T12:00:00.000Z' },
+            { ...st, platiDo: 'zajtra' },
+        ],
+    });
+    const ro = await pripojZdroj('deye-aplikacia', { heslo: 'h' }, obnova.impl, st.pecat);
+    assert.deepEqual(JSON.parse(obnova.calls[0].init.body), { sposob: 'deye-aplikacia', udaje: { heslo: 'h' }, pecat: st.pecat });
+    assert.deepEqual(ro, { stanice: [{ ...st, platiDo: '2026-12-20T12:00:00.000Z' }, st] });
+});
+
+test('výrobca prístup odmietol (400): odlíši sa od výpadku a nesie kód chyby', async () => {
+    const zdroj = { sposob: 'huawei-northbound', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
+    /** @param {number} status @param {unknown} body */
+    const worker = (status, body) =>
+        /** @type {typeof fetch} */ (
+            /** @type {unknown} */ (
+                async (/** @type {string} */ url) =>
+                    url === WORKER_PV_URL
+                        ? { ok: false, status, json: async () => body }
+                        : { ok: true, status: 200, json: async () => weatherJson }
+            )
+        );
+    const s = { site: SITE, plant: PLANT, zdroj };
+    const odm = await loadData(s, FIXED_NOW, worker(400, { chyba: 'udaje', kod: 'meranie:20400' }));
+    assert.deepEqual([odm.pv, odm.pvFailed, odm.odmietnute], [null, true, 'meranie:20400']);
+    assert.ok(odm.forecast);
+    assert.equal((await loadData(s, FIXED_NOW, worker(400, { chyba: 'udaje', kod: '<x>' }))).odmietnute, '', 'nezmyselný kód sa zahodí');
+    assert.equal((await loadData(s, FIXED_NOW, worker(502, { chyba: 'vyrobca' }))).odmietnute, null, 'výpadok nie je odmietnutie');
+    assert.equal((await loadData({ ...s, zdroj: null }, FIXED_NOW, worker(400, {}))).odmietnute, null);
 });

@@ -4,7 +4,7 @@
 import { incomingSettings, settingsFromLink } from '../shared/settings.js';
 import { initUrlMirror } from '../web/settings-store.js';
 import { createStore } from '../web/store.js';
-import { loadDayLog, loadLaunches, loadLook, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
+import { loadDayLog, loadLaunches, loadLook, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -30,6 +30,8 @@ const store = createStore(
         dayLog: loadDayLog(),
         launches: loadLaunches(),
         online: navigator.onLine,
+        // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
+        pristup: loadOdmietnutie(),
         // Tón hlášok a živá obloha sú voľby len novej appky (vzhlad-v1).
         look: loadLook(),
         // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
