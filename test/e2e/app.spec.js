@@ -1116,6 +1116,50 @@ test('prístup k meraniu neplatí: pás, hlásenie v Nastavení, Skúsiť znova 
     expect(errors).toEqual([]);
 });
 
+/** Limit Huawei (dáta raz za 5 minút) je na účet, nie na appku: obe appky v tom istom prehliadači
+ * idú jedným rytmom (meranie-v1) a tou istou pečaťou, bez merania sa nepýtajú každú minútu. */
+test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie každú minútu', async ({ page }) => {
+    const nb = { sposob: 'huawei-northbound', pecat: 'v1.NbPecat0123456789abcdefghij', nazov: 'Dvorany' };
+    const pvTeraz = { ...pv, updatedAt: FIXED_NOW.toISOString() };
+    // Druhá appka práve namerala: táto sa po otvorení nepýta a ukáže jej meranie.
+    await page.addInitScript(
+        ([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v),
+        [config.MERANIE_STORAGE_KEY, JSON.stringify({ sposob: nb.sposob, nazov: nb.nazov, at: FIXED_NOW.getTime(), pv: pvTeraz })],
+    );
+    const errors = await openApp(page, { settings: { ...OWNER, zdroj: nb }, start: 'terazky' });
+    /** @type {string[]} */ const telo = [];
+    let odpoved = /** @type {number} */ (502);
+    await page.route(WORKER_PV_URL, (route) => {
+        telo.push(route.request().postData() || '');
+        return route.fulfill({ status: odpoved, json: odpoved === 200 ? { pv } : { chyba: 'vyrobca', kod: 'meranie:407' } });
+    });
+    const obnov = async (/** @type {number} */ minut) => {
+        await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + minut * 60 * 1000));
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await dveSnimky(page);
+    };
+    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+    expect(telo, 'meranie z druhej appky, žiadny dopyt').toEqual([]);
+    // Po 5 minútach je na rade. Huawei odmietne (limit): ďalší pokus až po ďalších 5 minútach.
+    await obnov(5);
+    await expect.poll(() => telo.length).toBe(1);
+    await obnov(6);
+    await obnov(7);
+    await page.waitForTimeout(300);
+    expect(telo.length, 'nevydarený dopyt sa ráta - nie každú minútu').toBe(1);
+    // Druhá appka medzitým obnovila prístup: ďalší dopyt ide s jej pečaťou.
+    const nova = 'v1.NovaNbPecat0123456789abcdefgh';
+    await page.evaluate(
+        ([k, v]) => localStorage.setItem(k, v),
+        [SETTINGS_STORAGE_KEY, JSON.stringify(toUser({ ...OWNER, zdroj: { ...nb, pecat: nova } }))],
+    );
+    odpoved = 200;
+    await obnov(10);
+    await expect.poll(() => telo.length).toBe(2);
+    expect(telo[1]).toBe(nova);
+    expect(errors).toEqual([]);
+});
+
 /** Pri pomalej sieti by každý minútový časovač a návrat z pozadia pridal ďalšiu požiadavku
  * a staršia odpoveď mohla prepísať novšiu. */
 test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbehnutej', async ({ page }) => {

@@ -255,6 +255,27 @@ async function nbMeraj(sp, plants) {
     );
 }
 
+/**
+ * Elektrárne na účte Northbound s reláciou z prihlásenia: zoznam, meniče a čo práve namerali.
+ * @param {string} server @param {NbRelacia} rel @param {Record<string, string>} udaje @param {Ctx} ctx
+ * @returns {Promise<Najdena[]>}
+ */
+async function nbNajdi(server, rel, udaje, ctx) {
+    const tokenAt = ctx.now.getTime();
+    const sp = { server, rel, ctx };
+    const stanice = (await nbStanice(sp)).slice(0, MAX_STANIC);
+    if (!stanice.length) return [];
+    const devJson = await nbPost(sp, NB.devList, { stationCodes: stanice.map((st) => st.plant).join(',') }, 'zariadenia');
+    const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
+    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {} }));
+    const pv = await nbMeraj(sp, plants).catch(() => null);
+    return plants.map((p) => ({
+        nazov: p.nazov,
+        pristup: { server, meno: udaje.meno, heslo: udaje.heslo, ...rel, tokenAt, ...p },
+        pv: pv?.get(p.plant) ?? null,
+    }));
+}
+
 /** Prístup Northbound zo zapečateného objektu. @param {Record<string, unknown>} p */
 function nbPristup(p) {
     const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
@@ -354,20 +375,15 @@ export const ZDROJE = {
         async pripoj(udaje, ctx) {
             const server = nbServer(udaje.server);
             if (!server || !udaje.meno || !udaje.heslo) throw new ZdrojChyba('udaje');
-            const rel = await nbLogin(server, udaje.meno, udaje.heslo, ctx);
-            const tokenAt = ctx.now.getTime();
-            const sp = { server, rel, ctx };
-            const stanice = (await nbStanice(sp)).slice(0, MAX_STANIC);
-            if (!stanice.length) return [];
-            const devJson = await nbPost(sp, NB.devList, { stationCodes: stanice.map((st) => st.plant).join(',') }, 'zariadenia');
-            const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
-            const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {} }));
-            const pv = await nbMeraj(sp, plants).catch(() => null);
-            return plants.map((p) => ({
-                nazov: p.nazov,
-                pristup: { server, meno: udaje.meno, heslo: udaje.heslo, ...rel, tokenAt, ...p },
-                pv: pv?.get(p.plant) ?? null,
-            }));
+            const prihlas = () => nbLogin(server, udaje.meno, udaje.heslo, ctx);
+            try {
+                return await nbNajdi(server, await prihlas(), udaje, ctx);
+            } catch (err) {
+                // Huawei prihlásenie medzitým zrušil (305) - ten istý účet sa prihlásil aj inde, napr.
+                // meranie v druhej appke. Raz sa prihlási znova; nové prihlásenie zruší to druhé.
+                if (!(err instanceof ZdrojChyba && /:305$/.test(err.kod))) throw err;
+                return nbNajdi(server, await prihlas(), udaje, ctx);
+            }
         },
         async meraj(pristup, ctx) {
             const p = nbPristup(pristup);

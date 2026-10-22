@@ -32,7 +32,7 @@ function logLaunch(store, btn) {
 }
 
 /**
- * @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh obnova dát, tá istá ako pri štarte
+ * @param {Store} store @param {Dom} dom @param {(opts?: { skus?: boolean }) => Promise<void>} refresh obnova dát, tá istá ako pri štarte
  */
 export function initMozem(store, dom, refresh) {
     dom.mzItems.addEventListener('click', (e) => {
@@ -57,6 +57,7 @@ export function initMozem(store, dom, refresh) {
     // Skúsiť znova je to isté načítanie ako pri štarte; kým beží, karta pokojne čaká.
     dom.mzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
-        refresh();
+        // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
+        refresh({ skus: true });
     });
 }

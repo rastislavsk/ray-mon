@@ -434,6 +434,8 @@ function kodNote(kod) {
         return 'Huawei prihlásenie odmietol (kód 20400). Okrem zlého mena či hesla to Huawei hlási aj pri zablokovanom účte a vtedy, keď je účet prihlásený inde – napríklad v Shelly – a nemá voľnú reláciu. Odhlás ho tam alebo počkaj 30 minút.';
     if (krok === 'prihlasenie' && cislo === '20403') return 'Huawei prihlásenie tohto účtu obmedzil (kód 20403). Ozvi sa inštalatérovi.';
     if (cislo === '407') return 'Huawei dovolí prihlásenie len 5-krát za 10 minút (kód 407). Skús to o 10 minút.';
+    if (cislo === '305')
+        return 'Huawei prihlásenie hneď zrušil (kód 305). Účet je prihlásený aj inde – napríklad v druhej appke, na inom zariadení alebo v Shelly. Skús to o chvíľu znova.';
     if (cislo === '401')
         return `Účet nemá povolené rozhranie (${KROKY[krok] ?? krok}, kód 401). Inštalatér ho povolí vo FusionSolar v Northbound Management.`;
     return null;

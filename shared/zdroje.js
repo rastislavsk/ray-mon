@@ -7,6 +7,7 @@
 import { REFRESH } from './config.js';
 import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
+import { validatePv } from './schema.js';
 import { solaxUrl } from './solax.js';
 import { isObj } from './valid.js';
 
@@ -273,12 +274,43 @@ export function udajeOk(sposob, udaje, obnova = false) {
 const DUE_SLACK_MS = 10 * 1000;
 
 /**
- * Je čas sa znova opýtať na meranie? Áno, keď ešte nijaké nie je alebo je staršie než interval
- * spôsobu (`intervalMs`) - inak by appka míňala dopyty, ktoré výrobca obmedzuje.
- * @param {Zdroj} zdroj @param {{ updatedAt: string } | null} pv @param {Date} now
+ * Je čas sa znova opýtať na meranie? Áno, keď sa ešte nikto nepýtal, alebo od posledného merania
+ * aj posledného dopytu (`lastAt`, ms - aj nevydareného, aj z druhej appky) uplynul interval spôsobu
+ * (`intervalMs`). Inak by appka míňala dopyty, ktoré výrobca obmedzuje - Huawei dá dáta raz za
+ * 5 minút na účet, nie na appku.
+ * @param {Zdroj} zdroj @param {{ updatedAt: string } | null} pv @param {Date} now @param {number} [lastAt]
  */
-export function pvDue(zdroj, pv, now) {
+export function pvDue(zdroj, pv, now, lastAt = 0) {
     const s = sposobOf(zdroj.sposob);
-    if (!pv || !s) return true;
-    return now.getTime() - Date.parse(pv.updatedAt) >= s.intervalMs - DUE_SLACK_MS;
+    const posledne = Math.max(pv ? Date.parse(pv.updatedAt) || 0 : 0, lastAt);
+    if (!posledne || !s) return true;
+    return now.getTime() - posledne >= s.intervalMs - DUE_SLACK_MS;
+}
+
+/**
+ * Posledný dopyt na meranie v tomto prehliadači, spoločný pre obe appky (MERANIE_STORAGE_KEY):
+ * ku ktorému meraniu patrí (spôsob a meno elektrárne - pečať sa pri obnove tokenu mení), kedy
+ * sa niektorá z nich naposledy pýtala (`at`, ms) a čo naposledy namerala (`pv`). Druhá appka podľa
+ * neho čaká na interval a ukáže meranie, ktoré prvá už má.
+ * @typedef {{ sposob: string, nazov: string, at: number, pv: import('./kiosk.js').PvData | null }} Rytmus
+ */
+
+/** Rytmus z úložiska; čokoľvek iné je null. @param {unknown} raw @returns {Rytmus | null} */
+export function parseRytmus(raw) {
+    if (!isObj(raw)) return null;
+    const o = /** @type {Record<string, unknown>} */ (raw);
+    if (typeof o.sposob !== 'string' || typeof o.nazov !== 'string' || !Number.isFinite(o.at)) return null;
+    const pv = o.pv && validatePv(o.pv).length === 0 ? /** @type {import('./kiosk.js').PvData} */ (o.pv) : null;
+    return { sposob: o.sposob, nazov: o.nazov, at: /** @type {number} */ (o.at), pv };
+}
+
+/** Rytmus, ak patrí k tomuto meraniu, inak null. @param {Rytmus | null} r @param {Zdroj | null} zdroj */
+export const rytmusOf = (r, zdroj) => (r && zdroj && r.sposob === zdroj.sposob && r.nazov === zdroj.nazov ? r : null);
+
+/**
+ * Rytmus po dopyte (alebo pripájaní): teraz sa pýtalo; nové meranie, inak to, ktoré už bolo.
+ * @param {Rytmus | null} prev @param {Zdroj} zdroj @param {Date} now @param {import('./kiosk.js').PvData | null} pv @returns {Rytmus}
+ */
+export function dalsiRytmus(prev, zdroj, now, pv) {
+    return { sposob: zdroj.sposob, nazov: zdroj.nazov, at: now.getTime(), pv: pv ?? rytmusOf(prev, zdroj)?.pv ?? null };
 }

@@ -431,6 +431,22 @@ test('Huawei Northbound: chyba nesie krok a kód od Huawei (nič tajné), starš
     assert.ok(!casto.calls.some((c) => c.path === '/thirdData/getStationList'));
 });
 
+test('Huawei Northbound: pripojenie po 305 (účet sa prihlásil aj inde) sa raz prihlási znova', async () => {
+    const pripoj = (/** @type {typeof fetch} */ impl) =>
+        handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, impl);
+    // Prvý token Huawei hneď zrušil, druhý platí.
+    const raz = northbound({ platne: ['t2'] });
+    const res = await pripoj(raz.impl);
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).stanice[0].nazov, 'Dvorany');
+    assert.equal(raz.prihlasenia(), 2);
+    // Zruší aj druhý: len jedno opakovanie, potom kód 305 pre appku.
+    const stale = northbound({ platne: [] });
+    const r2 = await pripoj(stale.impl);
+    assert.deepEqual([r2.status, await r2.json()], [502, { chyba: 'vyrobca', kod: 'zoznam:305' }]);
+    assert.equal(stale.prihlasenia(), 2);
+});
+
 // ---- Solis a Deye -------------------------------------------------------------------------
 
 const SOLIS_OK = {

@@ -139,6 +139,7 @@ test('hláška pripojenia podľa kódu od Huawei: relácia v Shelly, oprávnenie
     assert.match(note('udaje', 'prihlasenie:20400'), /kód 20400.*Shelly/);
     assert.match(note('udaje', 'prihlasenie:20403'), /kód 20403\)\. Ozvi sa inštalatérovi/);
     assert.match(note('vyrobca', 'prihlasenie:407'), /5-krát za 10 minút \(kód 407\)/);
+    assert.match(note('vyrobca', 'zariadenia:305'), /^Huawei prihlásenie hneď zrušil \(kód 305\)\. .*druhej appke/);
     assert.match(note('udaje', 'zoznam:401'), /^Účet nemá povolené rozhranie \(zoznam elektrární, kód 401\)\. Inštalatér/);
     assert.equal(
         note('vyrobca', 'meranie:HTTP 403'),

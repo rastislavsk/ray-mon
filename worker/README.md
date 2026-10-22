@@ -37,7 +37,13 @@ prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom č
   dopytom ako pri bežnom HTTP klientovi,
 - zoznam elektrární skúša nové `/thirdData/stations` a keď ho účet nemá povolené, staršie
   `/thirdData/getStationList` (kapitola Historical Interfaces) - niektoré integrácie, napr. Shelly,
-  používajú to.
+  používajú to,
+- keď Huawei počas pripájania prihlásenie zruší (305 - ten istý účet sa prihlásil aj inde, napr.
+  meranie v druhej appke), Worker sa raz prihlási znova a pokračuje.
+
+Limity sú na **účet**, nie na appku: dve appky či zariadenia s tým istým účtom sa o ne delia
+a nové prihlásenie jedného zruší prihlásenie druhého. Appky v tom istom prehliadači preto idú
+jedným rytmom (`meranie-v1` v `web/refresh.js`).
 
 Referencia priamo pre FusionSolar (cloud) je **SmartPVMS V600R024C10 Northbound Interface
 Reference-V6 (FusionSolar SmartPVMS)**, [EDOC1100316813](https://support.huawei.com/enterprise/en/doc/EDOC1100316813):
