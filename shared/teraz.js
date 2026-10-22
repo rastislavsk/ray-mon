@@ -9,7 +9,7 @@ import { installedKw, MOZEM_ITEMS, powerThresholds } from './config.js';
 import { dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
-import { heroModel, pvFreshness } from './hero-model.js';
+import { heroModel } from './hero-model.js';
 import {
     terazChartText,
     terazClearText,
@@ -36,19 +36,6 @@ import { localDateKey } from './solar.js';
  */
 
 /**
- * Vstup pre výpočty karty. Meranie, ktoré mlčí (pvFreshness), už nie je výkon „teraz“: karta
- * vtedy ráta z krivky dňa (nameraná časť, potom predpoveď) a povie, že je to odhad. Plán dňa
- * aj odporúčania tak stoja na predpovedi, nie na čísle spred hodiny. Pri čerstvom meraní je
- * vstup nezmenený - karta ukazuje presne to, čo karta Terazky súčasnej appky.
- * @param {TerazInput} input
- */
-export function terazInput(input) {
-    const pv = input.pv;
-    if (!pv || !pvFreshness({ now: input.now, pv, site: input.site }).stale) return input;
-    return { ...input, pv: { ...pv, realTimePowerKw: null } };
-}
-
-/**
  * Model karty Teraz. `kind`: `ask` (appka nepozná polohu), `loading` (prvé načítanie),
  * `offline` (bez predpovede), `ok`. Pri známej polohe bez panelov (`known: 'poloha'`) karta
  * počíta s typickou strechou, ktorú má vo vstupe (typicalSettings), a priznáva to (`estimate`).
@@ -64,18 +51,19 @@ export function terazModel(input, { launches = [], online = true, voice = 'drzy'
         if (input.loading) return { ...empty('loading', estimate), sub: TERAZ_TEXTS.loading };
         return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
-    const base = terazInput(input);
-    const hero = heroModel(base, voice);
-    const now = base.previewMinutes === null ? hero : heroModel({ ...base, previewMinutes: null }, voice);
-    const plan = dayPlan(base);
+    // Meranie, ktoré mlčí, heroModel za výkon „teraz“ nepovažuje (freshPowerKw) - číslo je vtedy
+    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí.
+    const hero = heroModel(input, voice);
+    const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
+    const plan = dayPlan(input);
     return {
         ...empty('ok', estimate),
-        ...headOf(input, base, hero, estimate, voice),
+        ...headOf(input, hero, estimate, voice),
         guess: estimate,
-        chart: chartOf(base, plan, hero, now),
+        chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        cards: cardsOf(base, plan, hero, now, launches),
+        cards: cardsOf(input, plan, hero, now, launches),
     };
 }
 
@@ -84,10 +72,10 @@ export function terazModel(input, { launches = [], online = true, voice = 'drzy'
  * oblohy. Pri typickej streche „~“ a veta, že to nie je vlastná strecha. Počas náhľadu nadpis
  * namiesto „Teraz“ povie čas, ku ktorému číslo patrí - text sa mení, riadok ostáva, aby sa graf
  * pod prstom nepohol.
- * @param {TerazInput} input pôvodný vstup @param {TerazInput} base vstup pre výpočty (terazInput)
+ * @param {TerazInput} input
  * @param {ReturnType<typeof heroModel>} hero @param {boolean} estimate @param {import('./messages.js').Voice} voice
  */
-function headOf(input, base, hero, estimate, voice) {
+function headOf(input, hero, estimate, voice) {
     const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
@@ -106,7 +94,7 @@ function headOf(input, base, hero, estimate, voice) {
             ? terazSourceText(hero.source, { silent: false, since: null })
             : terazSourceText(hero.source, { silent, since: pv.since }),
         znova,
-        sub: clearSub(base, hero),
+        sub: clearSub(input, hero),
     };
 }
 

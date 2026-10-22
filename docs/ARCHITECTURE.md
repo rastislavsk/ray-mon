@@ -164,7 +164,7 @@ Druhý dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľ
 v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Pôvodne mal súčasnú appku nahradiť; od 22. 10. 2026 ostávajú obe natrvalo ako **jedno jadro, dva kabáty** (návrh
 `docs/navrhy/jedno-jadro-dva-kabaty.html`, pravidlá v `CLAUDE.md`). Jadro dáva obom tie isté
 odpovede, kabát smie mať vlastné obrazovky a funkcie. Rozdiely, ktoré dnes menia odpoveď
-(poloha bez panelov, meranie, ktoré mlčí, a dva zoznamy vecí s bojlerom a bez neho), sa
+(poloha bez panelov a dva zoznamy vecí s bojlerom a bez neho), sa
 zjednocujú po krokoch; kým to nie je hotové, opisujú ich odseky nižšie tak, ako sú.
 
 `obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
@@ -279,9 +279,9 @@ aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile
 Karta Teraz nahrádza kartu Terazky. Ciferník a denný prstenec v novom dizajne nie sú, ich úlohu
 preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
 (aj náhľad iného času cez `previewMinutes`), plán z `dayPlan` a krátke odpovede spotrebičov
-z `deviceShorts` – pri čerstvom meraní ukazuje presne to, čo karta Terazky. Jediný rozdiel je
-meranie, ktoré mlčí (`pvFreshness`): to už nie je výkon „teraz“, karta vtedy počíta z krivky dňa
-(`terazInput`) a povie, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
+z `deviceShorts` – ukazuje presne to, čo karta Terazky. Meranie, ktoré mlčí (`pvFreshness`), už nie
+je výkon „teraz“ v žiadnej appke (`freshPowerKw` v `shared/hero-model.js`): ciferník, graf aj veta
+karty Môžem? vtedy počítajú z krivky dňa a povedia, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
 `shared/day-chart.js`: predpoveď ako plochu, nameranú krivku po posledný bod ako bielu čiaru,
 hranicu veľkých spotrebičov (`lowKw` z `powerThresholds`, od nej je plán zelený) a pod grafom pás
 plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom strede. Graf je zároveň posúvač času

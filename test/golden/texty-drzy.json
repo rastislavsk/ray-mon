@@ -1,5 +1,5 @@
 {
-  "hash": "9f3d71bf72bdda616778db22b43288342d12d491456da3cc770f0fd95d6eb9de",
+  "hash": "1bc370b1ba7e862f5f6021c4ddbfff66303814aabe6e69ea8b441c658f26c54b",
   "texts": [
     "  o 12:00.",
     " , prúd je lacný.",
@@ -711,6 +711,7 @@
     "live",
     "loading",
     "measured",
+    "meranie neodpovedá od 13:00",
     "mesiac",
     "nabitý mobil",
     "nabíja sa do 14:50",
@@ -809,7 +810,6 @@
     "zamračené · typická strecha",
     "zatiaľ nemám čo počítať",
     "zo slnka",
-    "~0 mobilov",
     "~11 kg",
     "~11 kg CO2eq menej",
     "~14 kg CO2eq menej",

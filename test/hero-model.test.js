@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { heroModel, liveStatus, pvFreshness } from '../shared/hero-model.js';
+import { freshPowerKw, heroModel, liveStatus, pvFreshness } from '../shared/hero-model.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -134,6 +134,24 @@ test('kiosk bez živého výkonu: nie nameraná nula, ale posledné meranie z kr
     const neskor = heroModel({ ...base, now: at('13:30'), pv: bezVykonu });
     assert.ok(neskor.power > 0, `odhad ${neskor.power}`);
     assert.equal(neskor.unitText, 'kW (odhad)');
+});
+
+test('meranie, ktoré mlčí: číslo spred hodiny nie je výkon teraz, ciferník aj odporúčanie idú z odhadu', () => {
+    // Krivka v ukážke končí o 13:00. O 14:30 za slnka meranie mlčí - kiosk ešte drží 13:00.
+    const now = at('14:30');
+    const stale = { ...pv, updatedAt: now.toISOString() };
+    assert.equal(pvFreshness({ now, pv: stale, site: SITE }).stale, true);
+    assert.equal(freshPowerKw({ now, pv: stale, site: SITE }), null);
+    const m = heroModel({ ...base, now, pv: stale });
+    assert.equal(m.unitText, 'kW (odhad)');
+    assert.notEqual(m.power, pv.realTimePowerKw);
+    // To isté ako bez merania: odporúčanie stojí na krivke dňa, nie na starom čísle.
+    const bez = heroModel({ ...base, now, pv: { ...stale, realTimePowerKw: null } });
+    assert.equal(m.power, bez.power);
+    assert.deepEqual(m.message, bez.message);
+    // Čerstvé meranie je výkon teraz.
+    assert.equal(freshPowerKw({ now: at('13:00'), pv, site: SITE }), pv.realTimePowerKw);
+    assert.equal(freshPowerKw({ now, pv: null, site: SITE }), null);
 });
 
 test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je zastarané', () => {

@@ -35,6 +35,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami                   |
 | `meranie-cez-api.html`         | Živé meranie aj cez API výrobcu meniča – výber značky, prihlásenie, overenie hneď, zoznam značiek a bezpečnosť       |
 | `meranie-pristup-neplati.html` | Keď výrobca prístup k meraniu prestane prijímať: hláška s dôvodom podľa značky, pripojiť znova, Deye pred vypršaním  |
+| `meranie-mlci.html`            | Krok 2: meranie, ktoré mlčí – ciferník a Môžem? počítajú z krivky dňa, nie zo starého čísla                          |
 | `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 | `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)               |
 

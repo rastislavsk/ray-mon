@@ -6,6 +6,7 @@
 import { DEVICES, EVERYDAY, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
+import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { weekDayName } from './format.js';
 import { canLog, monthCount, runMinOf, runningLaunch } from './launches.js';
 import {
@@ -331,21 +332,35 @@ function dayHead(input, ctx, quipPage, voice) {
 }
 
 /**
- * Čísla do hlavičky: výkon teraz (živý, inak z plánu), či je meranie, a výroba dnes a zajtra.
+ * Čísla do hlavičky: výkon teraz (živý len z čerstvého merania, inak z plánu), odkedy meranie
+ * mlčí (null, keď nemlčí alebo nie je), či je dnešok nameraný, a výroba dnes a zajtra.
  * @param {PlanInput} input @param {DayCtx} ctx
  */
 function heroFacts(input, ctx) {
-    const { pv, forecast } = input;
     const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
-    const live = pv && Number.isFinite(pv.realTimePowerKw) ? /** @type {number} */ (pv.realTimePowerKw) : null;
-    const days = forecast ? forecast.days : [];
+    const live = freshPowerKw(input);
     const tomorrow = ctx.later.find((x) => x.index === 1);
     return {
         live: live !== null,
+        silentSince: silentSince(input),
+        ...todayFacts(input),
         kwNow: live ?? (slot && Number.isFinite(slot.kw) ? slot.kw : 0),
-        todayKwh: pv && Number.isFinite(pv.dailyEnergyKwh) ? /** @type {number} */ (pv.dailyEnergyKwh) : (days[0]?.kwhTotal ?? null),
         tomorrowKwh: tomorrow ? tomorrow.day.kwhTotal : null,
     };
+}
+
+/** Odkedy meranie mlčí (čas posledného merania), alebo null, keď nemlčí alebo nie je. @param {PlanInput} input */
+function silentSince({ now, pv, site }) {
+    if (!pv) return null;
+    const fresh = pvFreshness({ now, pv, site });
+    return fresh.stale ? fresh.time : null;
+}
+
+/** Výroba dnes: z merania, inak z predpovede - a ktoré to je. @param {PlanInput} input */
+function todayFacts({ pv, forecast }) {
+    const kwh = pv ? pv.dailyEnergyKwh : null;
+    if (Number.isFinite(kwh)) return { measured: true, todayKwh: /** @type {number} */ (kwh) };
+    return { measured: false, todayKwh: forecast?.days[0]?.kwhTotal ?? null };
 }
 
 /**
