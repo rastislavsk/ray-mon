@@ -1,0 +1,551 @@
+<title>Jedno jadro, dva kabáty</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Návrh: obe appky natrvalo, rozdiely len v kabáte. Dokument na rozhodnutie, nie obrazovka
+       appky. Zámerne jedna tmavá téma v duchu novej appky (obloha/style.css). */
+    /* Rozloženie: jeden stĺpec na čítanie, tabuľky v rolovacích obaloch, rozhodnutia ako karty volieb. */
+    @font-face {
+        font-family: 'Archivo';
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+        src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0d1530;
+        --panel: #141e3f;
+        --line: rgba(255, 255, 255, 0.12);
+        --fg: #f2f4fb;
+        --dim: rgba(242, 244, 251, 0.72);
+        --yes: #b9f28c;
+        --wait: #ffd27a;
+        --no: #ffb4a6;
+        --cheap: #b0dbff;
+        --font: 'Archivo', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    }
+    body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.55;
+    }
+    main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding-block: 40px 80px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 48px;
+    }
+    section {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+        margin: 0;
+        line-height: 1.2;
+    }
+    h1 {
+        font-size: clamp(30px, 6vw, 44px);
+        font-weight: 800;
+        font-stretch: 112%;
+    }
+    h2 {
+        font-size: 22px;
+        font-weight: 700;
+        font-stretch: 108%;
+    }
+    h3 {
+        font-size: 17px;
+        font-weight: 700;
+    }
+    p,
+    ul,
+    ol {
+        margin: 0;
+        max-width: 65ch;
+    }
+    ul,
+    ol {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 6px;
+    }
+    .lead {
+        font-size: 18px;
+        color: var(--dim);
+    }
+    .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--cheap);
+        font-weight: 600;
+    }
+    code {
+        font-family: var(--mono);
+        font-size: 0.88em;
+        background: rgba(255, 255, 255, 0.07);
+        padding: 1px 5px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+    }
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 560px;
+        font-size: 14.5px;
+    }
+    th,
+    td {
+        text-align: left;
+        vertical-align: top;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+    }
+    th {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dim);
+        font-weight: 600;
+    }
+    tr:last-child td {
+        border-bottom: 0;
+    }
+    .tag {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .tag.fix {
+        background: rgba(255, 180, 166, 0.16);
+        color: var(--no);
+    }
+    .tag.ok {
+        background: rgba(185, 242, 140, 0.14);
+        color: var(--yes);
+    }
+    .rule {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 20px;
+        display: grid;
+        gap: 10px;
+    }
+    .rule p,
+    .rule li {
+        max-width: none;
+    }
+    .split {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+    }
+    .box {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        min-width: 0;
+    }
+    .box.in {
+        border-color: rgba(185, 242, 140, 0.45);
+    }
+    .box.out {
+        border-color: rgba(255, 180, 166, 0.45);
+    }
+    .item {
+        display: grid;
+        gap: 10px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+    }
+    .item-head {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+    }
+    .options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+    }
+    .opt {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: grid;
+        gap: 4px;
+        align-content: start;
+    }
+    .opt.pick {
+        border-color: var(--yes);
+        background: rgba(185, 242, 140, 0.06);
+    }
+    .opt b {
+        font-size: 15px;
+    }
+    .opt small {
+        color: var(--dim);
+        font-size: 13.5px;
+    }
+    .pick-label {
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--yes);
+        font-weight: 700;
+    }
+    .dim {
+        color: var(--dim);
+    }
+    .steps {
+        counter-reset: s;
+        list-style: none;
+        padding: 0;
+        gap: 12px;
+    }
+    .steps li {
+        counter-increment: s;
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 4px 10px;
+    }
+    .steps li::before {
+        content: counter(s);
+        grid-row: span 2;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+    }
+    .steps small {
+        color: var(--dim);
+    }
+    blockquote {
+        margin: 0;
+        padding: 14px 18px;
+        border-left: 3px solid var(--cheap);
+        background: rgba(176, 219, 255, 0.06);
+        border-radius: 0 10px 10px 0;
+        display: grid;
+        gap: 8px;
+    }
+    blockquote p {
+        max-width: none;
+    }
+</style>
+
+<main>
+    <header style="display: grid; gap: 14px">
+        <span class="eyebrow">Návrh · 22. 10. 2026 · bez kódu</span>
+        <h1>Jedno jadro, dva kabáty</h1>
+        <p class="lead">
+            Obe appky ostávajú natrvalo. Výpočty, dáta a odpovede sú jedny pre obe, každá appka ich len inak ukáže. Obloha už nie je
+            prestavba, ktorá raz nahradí súčasnú appku.
+        </p>
+    </header>
+
+    <section>
+        <h2>Pravidlo</h2>
+        <div class="split">
+            <div class="box in">
+                <h3>Jadro: raz, pre obe</h3>
+                <ul>
+                    <li>výpočty a modely (<code>shared/</code>)</li>
+                    <li>meranie, Worker, výrobcovia</li>
+                    <li>úložisko a jeho formát</li>
+                    <li>odpovede: či, kedy, koľko, prečo</li>
+                    <li>texty hlášok</li>
+                </ul>
+            </div>
+            <div class="box out">
+                <h3>Kabát: smie sa líšiť</h3>
+                <ul>
+                    <li>obrazovky, rozloženie, navigácia</li>
+                    <li>čo karta ukáže a čo vynechá</li>
+                    <li>vlastné ovládanie (ciferník, graf, dlaždice)</li>
+                    <li>voľby vzhľadu (tón, živá obloha)</li>
+                    <li>funkcia len v jednej appke</li>
+                </ul>
+            </div>
+        </div>
+        <p>
+            Skúška: <b>Keby som sa na tú istú otázku opýtal oboch appiek, dostal by som inú odpoveď?</b> Ak áno, rozdiel je v jadre a treba
+            ho zjednotiť. Ak sa líši len to, ako odpoveď vyzerá, alebo či ju appka vôbec ukazuje, je to kabát a je to v poriadku.
+        </p>
+        <p>
+            Nová funkcia nemusí byť v oboch appkách. Dáva zmysel len v Oblohe? Bude len v Oblohe. Potrebuje nový výpočet? Ten pôjde do jadra
+            a druhá appka ho môže začať ukazovať kedykoľvek neskôr, bez ďalšej práce na výpočte.
+        </p>
+    </section>
+
+    <section>
+        <h2>Čo som našiel v jadre</h2>
+        <p>
+            Prešiel som celé <code>shared/</code> a neutrálne moduly vo <code>web/</code>. Rozdielov medzi appkami je deväť. Šesť z nich je
+            kabát a pravidlu vyhovujú. Tri menia odpoveď a treba ich zjednotiť.
+        </p>
+        <div class="scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rozdiel</th>
+                        <th>Súčasná</th>
+                        <th>Obloha</th>
+                        <th>Verdikt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Poloha bez zadaných panelov</td>
+                        <td>sivé karty, Môžem? „Neviem.“</td>
+                        <td>odpovedá z typickej strechy a povie, že je to odhad</td>
+                        <td><span class="tag fix">ZJEDNOTIŤ</span></td>
+                    </tr>
+                    <tr>
+                        <td>Meranie, ktoré mlčí</td>
+                        <td>počíta s posledným číslom, v hlavičke „zastarané“</td>
+                        <td>počíta z krivky dňa a povie, že je to odhad</td>
+                        <td><span class="tag fix">ZJEDNOTIŤ</span></td>
+                    </tr>
+                    <tr>
+                        <td>Zoznam vecí</td>
+                        <td>bez bojlera</td>
+                        <td>s bojlerom, no karta Teraz ho nepozná</td>
+                        <td><span class="tag fix">ZJEDNOTIŤ</span></td>
+                    </tr>
+                    <tr>
+                        <td>Prvé otvorenie bez polohy</td>
+                        <td>rovno sprievodca</td>
+                        <td>úvodná karta s výzvou</td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Tón hlášok</td>
+                        <td>len drzý</td>
+                        <td>drzý alebo slušný</td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Zdieľať appku</td>
+                        <td>odkaz na seba</td>
+                        <td>odkaz na seba</td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Texty sprievodcu o ciferníku</td>
+                        <td>hovoria o ciferníku</td>
+                        <td>hovoria o páse plánu dňa</td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Hláška, že prístup neplatí</td>
+                        <td>červený pás pod hlavičkou</td>
+                        <td>riadok pod číslom na karte Teraz</td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                    <tr>
+                        <td>Modely kariet len pre jednu appku</td>
+                        <td colspan="2">
+                            <code>teraz.js</code>, <code>sedem-dni.js</code>, <code>mozem-sky.js</code>, <code>day-chart.js</code>,
+                            <code>sky.js</code>… skladajú spoločné výpočty pre obrazovky Oblohy
+                        </td>
+                        <td><span class="tag ok">KABÁT</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="dim">
+            Tón je kabát, lebo je to parameter textovej funkcie a jadro nemusí vedieť, ktorá appka sa pýta. Modely kariet smú byť v
+            <code>shared/</code> kvôli testom, ale nesmú si nič rozhodnúť samy. Stavajú len na spoločných výpočtoch.
+        </p>
+    </section>
+
+    <section>
+        <h2>Tri zjednotenia</h2>
+        <p>
+            Pri každom je jedno rozhodnutie pre teba. Moje odporúčanie je zelené. Všetky tri menia, čo vidno v súčasnej appke, takže ku
+            každému pripravím mockup a texty, až keď si vyberieš.
+        </p>
+
+        <div class="item">
+            <div class="item-head">
+                <h3>1. Poloha bez zadaných panelov</h3>
+                <span class="tag fix">JADRO</span>
+            </div>
+            <p>
+                Dnes o tom rozhoduje prepínač <code>guess</code> v <code>mozemModel</code>. Obloha ho zapína, súčasná appka nie. Na rovnakú
+                otázku „Môžem pustiť práčku?“ tak jedna appka povie „Neviem.“ a druhá „Áno, asi do 15:30“.
+            </p>
+            <div class="options">
+                <div class="opt pick">
+                    <span class="pick-label">Odporúčam</span>
+                    <b>A. Odhad v oboch</b>
+                    <small
+                        >Súčasná appka odpovie z typickej strechy a povie, že je to odhad (texty už sú). Sivé karty zmiznú. Kto ešte nezadal
+                        panely, vidí aspoň niečo užitočné.</small
+                    >
+                </div>
+                <div class="opt">
+                    <b>B. „Neviem“ v oboch</b>
+                    <small
+                        >Obloha prestane hádať. Jednoduchšie, ale človek bez panelov uvidí v oboch appkách len výzvu na nastavenie.</small
+                    >
+                </div>
+            </div>
+            <p class="dim">Po zjednotení prepínač <code>guess</code> z modelu zmizne. Rozdiel sa tak už nedá vrátiť omylom.</p>
+        </div>
+
+        <div class="item">
+            <div class="item-head">
+                <h3>2. Meranie, ktoré mlčí</h3>
+                <span class="tag fix">JADRO</span>
+            </div>
+            <p>
+                Menič hodinu nič nepošle a cez deň svieti slnko. Karta Terazky súčasnej appky berie posledné číslo spred hodiny ako výkon
+                „teraz“ a podľa neho volí aj odporúčanie pod ciferníkom (<code>heroModel</code>). Karta Teraz v Oblohe počíta z krivky dňa
+                (<code>terazInput</code>) a povie, že je to odhad. Tu nejde o vkus, odporúčanie môže stáť na slnku, ktoré už nesvieti.
+                Odpovede karty Môžem? to nepostihuje, tie stoja na pláne dňa z krivky. Staré číslo však ukazujú obe appky v riadku „teraz“
+                (Obloha s „asi“).
+            </p>
+            <div class="options">
+                <div class="opt pick">
+                    <span class="pick-label">Odporúčam</span>
+                    <b>A. Ako Obloha, v oboch</b>
+                    <small
+                        ><code>terazInput</code> ide do spoločného vstupu výpočtov. Ciferník súčasnej appky ukáže číslo z krivky dňa so
+                        značkou odhadu, hlavička ostane „zastarané · 13:05“.</small
+                    >
+                </div>
+                <div class="opt">
+                    <b>B. Nechať</b>
+                    <small>Súčasná appka ďalej počíta so starým číslom. Neodporúčam, odporúčania potom nesedia so skutočnosťou.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="item">
+            <div class="item-head">
+                <h3>3. Zoznam vecí a bojler</h3>
+                <span class="tag fix">JADRO</span>
+            </div>
+            <p>
+                Zoznamy vecí sú dva: <code>MOZEM_ITEMS</code> a <code>MOZEM_SKY_ITEMS</code>, ktorý má navyše bojler. Zápis „Pustil/a som“
+                pre bojler súčasná appka uchová, ale nikde ho neukáže. Ani karta Teraz v Oblohe bojler nepozná, lebo berie krátky zoznam.
+            </p>
+            <div class="options">
+                <div class="opt pick">
+                    <span class="pick-label">Odporúčam</span>
+                    <b>A. Jeden zoznam s bojlerom</b>
+                    <small
+                        >Jadro ho počíta vždy. Súčasná appka ho ukáže v zozname vecí karty Môžem? ako dlaždicu. Karta Teraz ho dostane v
+                        pásme odporúčaní.</small
+                    >
+                </div>
+                <div class="opt">
+                    <b>B. Jeden zoznam, súčasná bojler nekreslí</b>
+                    <small
+                        >Jadro je jednotné, súčasná appka bojler zámerne vynechá. Podľa pravidla je to v poriadku, menej práce. Človek však
+                        v súčasnej appke nevidí, čo pustil v Oblohe.</small
+                    >
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Čo sa zapíše do pravidiel</h2>
+        <p>
+            Nahradí vetu „Súčasnú appku počas prestavby nemeň, kým to nie je úlohou“ v <code>CLAUDE.md</code>. Podľa toho sa budem riadiť aj
+            v ďalších sedeniach:
+        </p>
+        <blockquote>
+            <p>
+                <b>Dve appky natrvalo: jedno jadro, dva kabáty.</b> Súčasná appka aj Obloha ostávajú. Jadro (<code>shared/</code>, neutrálne
+                moduly vo <code>web/</code>, Worker, úložisko) dáva obom tie isté odpovede. Kabát (HTML, CSS, render, poslucháče, navigácia)
+                smie mať vlastné obrazovky a funkcie.
+            </p>
+            <p>
+                V jadre nie je nič, čo by vedelo, pre ktorú appku počíta: žiadny prepínač ako <code>guess</code>, žiadne dva zoznamy tej
+                istej veci. Ak by appky na tú istú otázku odpovedali inak, rozdiel patrí do jadra a zjednotí sa.
+            </p>
+            <p>
+                Nová viditeľná funkcia nemusí byť v oboch appkách. Urob ju tam, kde ju úloha chce, a druhú appku nemeň, kým to nie je
+                úlohou. Jej výpočet patrí do jadra, aby ju druhá appka mohla prevziať bez ďalšej práce.
+            </p>
+        </blockquote>
+        <p class="dim">
+            Spolu s tým: <code>ARCHITECTURE.md</code> prestane hovoriť, že sa Obloha „na konci presunie na hlavnú adresu“, a manifest Oblohy
+            prestane byť „Testovacia verzia“.
+        </p>
+    </section>
+
+    <section>
+        <h2>Postup</h2>
+        <ol class="steps">
+            <li>
+                <b>Pravidlo a dokumentácia</b>
+                <small>CLAUDE.md, ARCHITECTURE.md, popis Oblohy v manifeste. Bez zmeny správania, jeden malý PR.</small>
+            </li>
+            <li>
+                <b>Meranie, ktoré mlčí</b>
+                <small>Najprv mockup ciferníka s odhadom. Najväčší prínos, lebo opravuje zlé odporúčania. Jeden PR.</small>
+            </li>
+            <li>
+                <b>Jeden zoznam vecí</b>
+                <small>Mockup dlaždice bojlera v súčasnej appke (pri voľbe A). Jeden PR.</small>
+            </li>
+            <li>
+                <b>Poloha bez panelov</b>
+                <small>Mockup kariet súčasnej appky s odhadom (pri voľbe A). Dotkne sa troch kariet, je najväčší. Jeden PR.</small>
+            </li>
+        </ol>
+        <p>
+            Každý krok je samostatný a dá sa kedykoľvek zastaviť. Po štvrtom kroku v jadre neostane nič, čo by rozlišovalo appky. Ďalšia
+            práca sa robí len raz, okrem toho, čo sa naozaj má ukázať v oboch.
+        </p>
+    </section>
+
+    <section>
+        <h2>Čo tento návrh nerieši</h2>
+        <ul>
+            <li>
+                <b>Prepínač vzhľadu v Nastaveniach.</b> Ostávajú dve adresy a dve ikony. Dá sa doplniť neskôr, nič z tohto návrhu ho
+                nezablokuje.
+            </li>
+            <li>
+                <b>Huawei a limit na účet.</b> Appka na ploche a prehliadač vo WhatsAppe majú každá vlastné úložisko a o limit sa delia
+                ďalej. Pomohla by len cache merania vo Workeri, a tá by porušila zásadu, že Worker nič neukladá. To je samostatné
+                rozhodnutie.
+            </li>
+        </ul>
+    </section>
+</main>

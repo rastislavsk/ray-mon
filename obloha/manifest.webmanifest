@@ -1,7 +1,7 @@
 {
     "name": "RAY-MON obloha",
     "short_name": "RAY-MON obloha",
-    "description": "Testovacia verzia nového dizajnu Živá obloha.",
+    "description": "Kedy zapínať spotrebiče: živý výkon fotovoltiky, predpoveď výroby a odporúčania podľa tarify – vo vzhľade Živá obloha.",
     "lang": "sk",
     "id": "/ray-mon/obloha/",
     "start_url": "./",

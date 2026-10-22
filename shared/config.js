@@ -508,7 +508,7 @@ export const CARBON = {
 
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
-// Nová appka „Živá obloha“, kým je testovacia verzia - na ňu vedie jej Zdieľať appku.
+// Druhá appka „Živá obloha“ - na ňu vedie jej Zdieľať appku.
 export const OBLOHA_URL = `${APP_URL}obloha/`;
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
 // Živé meranie z meniča, ktorý si používateľ pripojil v Nastavení (`/pv`), a pripojenie samo
