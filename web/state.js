@@ -44,6 +44,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff,
  *   zdroj: import('../shared/zdroje.js').Zdroj | null,
+ *   pristup: import('../shared/pristup.js').Odmietnutie | null,
  *   known: import('../shared/settings.js').Known,
  *   settingsDraft: import('../shared/settings.js').Settings,
  *   settingsRev: number,
@@ -64,6 +65,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupSposob: string,
  *   setupUdaje: Record<string, string>,
  *   setupPripoj: import('../shared/setup-flow.js').Pripoj,
+ *   setupObnova: boolean,
  *   setupLink: string,
  *   setupSched: number,
  *   setupBrush: string | null,
@@ -147,6 +149,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         tariff: start.tariff,
         // Pripojené živé meranie (shared/zdroje.js); null = bez merania.
         zdroj: start.zdroj,
+        // Prístup k meraniu, ktorý výrobca odmietol (shared/pristup.js). Uložený načíta app.js.
+        pristup: null,
         // Čo appka o elektrárni vie. `nic`: ukazuje len otázku na polohu (krok lokalita sprievodcu)
         // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
         // panely nie sú zadané, karty o výkone (Terazky, Môžem?) sú sivé a bez čísel.

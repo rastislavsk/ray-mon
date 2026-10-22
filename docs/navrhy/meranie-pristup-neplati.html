@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Prístup k meraniu neplatí</title>
+        <style>
+            /* Návrh: čo appka ukáže, keď výrobca prístup k meraniu prestane prijímať. Štyri telefóny
+               v štýle novej appky (obloha/style.css, mierka 375 px), pod nimi texty a rozhodnutia.
+               Štýly telefónu sú prevzaté z meranie-cez-api.html. Údaje sú vzorové. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --yes: #b9f28c;
+                --cheap-text: #b0dbff;
+                --costly-text: #ffc4ba;
+                --ink: #0b1430;
+                --glass: rgba(8, 16, 40, 0.3);
+                --bar: rgba(6, 10, 28, 0.72);
+                --dim: rgba(255, 255, 255, 0.82);
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #0d1530;
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.45;
+            }
+            button,
+            input,
+            textarea {
+                font: inherit;
+                color: inherit;
+            }
+            .page {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 40px;
+                justify-content: center;
+                align-items: flex-start;
+                padding: 32px 16px 64px;
+            }
+            .phone {
+                position: relative;
+                flex: 0 0 375px;
+                max-width: 100%;
+                height: 812px;
+                border-radius: 44px;
+                border: 10px solid #000;
+                overflow: hidden;
+                background: linear-gradient(180deg, #2f6fd0 0%, #4f8fe0 55%, #3a6cc0 100%);
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            }
+            .scr {
+                position: absolute;
+                inset: 0 0 64px;
+                overflow-y: auto;
+                padding: 0 0 24px;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 14px 20px 0;
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+            .crumb {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 14px 20px 0;
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .x {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 0;
+                background: rgba(255, 255, 255, 0.18);
+                font-size: 1.1rem;
+                cursor: pointer;
+            }
+            h1 {
+                margin: 14px 20px 8px;
+                font-size: 2.05rem;
+                font-weight: 800;
+                font-stretch: 112%;
+                line-height: 1.08;
+            }
+            .lead {
+                margin: 0 20px 16px;
+                font-size: 0.9375rem;
+            }
+            .stack {
+                display: grid;
+                gap: 10px;
+                margin: 0 14px;
+            }
+            .opt {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 2px 10px;
+                width: 100%;
+                min-height: 56px;
+                padding: 12px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 18px;
+                background: var(--glass);
+                text-align: left;
+                cursor: pointer;
+            }
+            .opt b {
+                font-size: 1rem;
+            }
+            .opt span {
+                grid-column: 1;
+                font-size: 0.8438rem;
+                color: var(--dim);
+            }
+            .opt i {
+                grid-column: 2;
+                grid-row: 1 / 4;
+                align-self: center;
+                font-style: normal;
+                font-size: 1.2rem;
+                opacity: 0.7;
+            }
+            .opt.off b {
+                color: var(--dim);
+            }
+            .opt[aria-pressed='true'] {
+                background: #fff;
+                border-color: #fff;
+                color: var(--ink);
+            }
+            .opt[aria-pressed='true'] span {
+                color: #2b3550;
+            }
+            .tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .tag {
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.14);
+                font-size: 0.75rem;
+                font-weight: 700;
+            }
+            .tag.top {
+                background: var(--yes);
+                color: var(--ink);
+            }
+            .glass {
+                display: grid;
+                gap: 8px;
+                padding: 14px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+                font-size: 0.9063rem;
+            }
+            .glass-ttl {
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .howto {
+                margin: 0;
+                padding: 14px 16px 14px 34px;
+            }
+            .howto li + li {
+                margin-top: 4px;
+            }
+            .flbl {
+                margin: 6px 4px -4px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+            }
+            .fld {
+                width: 100%;
+                min-height: 48px;
+                padding: 12px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.12);
+            }
+            .letter {
+                white-space: pre-wrap;
+                font-size: 0.875rem;
+                padding: 12px 14px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .msg {
+                margin: 0 4px;
+                font-size: 0.8438rem;
+                color: var(--dim);
+            }
+            .msg.err {
+                color: var(--costly-text);
+                font-weight: 600;
+            }
+            .row {
+                display: flex;
+                gap: 10px;
+                margin: 18px 14px 0;
+            }
+            .pbtn {
+                flex: 1;
+                min-height: 48px;
+                padding: 11px 16px;
+                border: 0;
+                border-radius: 14px;
+                background: #fff;
+                color: var(--ink);
+                font-weight: 800;
+                cursor: pointer;
+            }
+            .pbtn.ghost {
+                background: var(--glass);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+                color: #fff;
+            }
+            .pbtn.small {
+                flex: none;
+                justify-self: start;
+                min-height: 40px;
+                font-size: 0.875rem;
+            }
+            .linkbtn {
+                margin: 14px 20px 0;
+                padding: 0;
+                border: 0;
+                background: none;
+                font-weight: 700;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                cursor: pointer;
+                text-align: left;
+            }
+            .ok {
+                border-color: rgba(185, 242, 140, 0.6);
+            }
+            .ok .big {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            .ok .big::before {
+                content: '';
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--yes);
+                flex: none;
+                transform: translateY(-1px);
+            }
+            .kv {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.9375rem;
+            }
+            .kv b {
+                font-size: 1.1rem;
+            }
+            .spin {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255, 255, 255, 0.4);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: s 0.8s linear infinite;
+                vertical-align: -2px;
+                margin-right: 6px;
+            }
+            @keyframes s {
+                to {
+                    transform: rotate(1turn);
+                }
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 64px;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                background: var(--bar);
+                font-size: 0.7rem;
+                font-weight: 700;
+            }
+            .nav .on {
+                color: var(--yes);
+            }
+            .sumrow {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+            }
+            .sumrow:first-of-type {
+                border-top: 0;
+            }
+            .sumrow small {
+                display: block;
+                color: var(--dim);
+                font-size: 0.8438rem;
+            }
+            /* Text vedľa telefónu */
+            .doc {
+                flex: 1 1 460px;
+                max-width: 720px;
+                font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+                font-size: 15px;
+                color: #dfe6f5;
+            }
+            .doc h2 {
+                margin: 32px 0 8px;
+                font-family: var(--font);
+                font-size: 1.3rem;
+                color: #fff;
+            }
+            .doc h2:first-child {
+                margin-top: 0;
+            }
+            .doc h3 {
+                margin: 18px 0 4px;
+                font-size: 1rem;
+                color: #fff;
+            }
+            .doc p,
+            .doc li {
+                margin: 6px 0;
+            }
+            .doc table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13.5px;
+            }
+            .doc th,
+            .doc td {
+                padding: 6px 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                text-align: left;
+                vertical-align: top;
+            }
+            .doc th {
+                color: #9fb0d6;
+                font-weight: 600;
+            }
+            .doc code {
+                font-size: 13px;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+            .doc a {
+                color: var(--cheap-text);
+            }
+            .no {
+                color: var(--costly-text);
+            }
+            .f2 {
+                color: var(--cheap-text);
+            }
+            .pick {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin: 8px 0 0;
+            }
+            .pick button {
+                padding: 6px 10px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: transparent;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            .pick button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--ink);
+            }
+            .q {
+                padding: 10px 14px;
+                border-left: 3px solid var(--yes);
+                background: rgba(185, 242, 140, 0.07);
+                border-radius: 0 8px 8px 0;
+            }
+            /* Telefón ostáva na očiach len vtedy, keď je text vedľa neho, nie pod ním. */
+            @media (min-width: 920px) {
+                .phone {
+                    position: sticky;
+                    top: 16px;
+                }
+            }
+            @media (max-width: 420px) {
+                .phone {
+                    flex-basis: 100%;
+                    border-width: 0;
+                    border-radius: 0;
+                }
+            }
+            /* ---- Doplnky tohto návrhu: štyri telefóny vedľa seba, text pod nimi. ---- */
+            .page {
+                display: block;
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                justify-content: center;
+            }
+            figure {
+                margin: 0;
+                flex: 0 0 375px;
+                max-width: 100%;
+            }
+            .phone {
+                height: 720px;
+            }
+            @media (min-width: 920px) {
+                .phone {
+                    position: relative;
+                    top: auto;
+                }
+            }
+            figcaption {
+                margin-top: 10px;
+                text-align: center;
+                font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+                font-size: 13.5px;
+                color: #9fb0d6;
+            }
+            .doc {
+                margin: 48px auto 0;
+            }
+            .hdr .tone {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .dot {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                background: #ffd28a;
+            }
+            .dot.live {
+                background: var(--yes);
+            }
+            .hero {
+                margin: 96px 20px 0;
+                text-align: center;
+            }
+            .hero .num {
+                font-size: 4.6rem;
+                font-weight: 800;
+                font-stretch: 112%;
+                line-height: 1;
+            }
+            .hero .unit {
+                margin-top: 6px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .src {
+                margin: 14px 24px 0;
+                font-size: 0.875rem;
+                color: var(--dim);
+            }
+            .src b {
+                color: var(--costly-text);
+            }
+            .chip {
+                display: inline-block;
+                margin-top: 12px;
+                padding: 7px 14px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.18);
+                font-size: 0.875rem;
+                font-weight: 700;
+            }
+            .verdict {
+                margin: 64px 14px 0;
+            }
+            .warn {
+                border-color: rgba(255, 196, 186, 0.7);
+            }
+            .warn .big,
+            .soon .big {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            .warn .big::before,
+            .soon .big::before {
+                content: '';
+                flex: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--costly-text);
+                transform: translateY(-1px);
+            }
+            .soon .big::before {
+                background: #ffd28a;
+            }
+            .btns {
+                display: flex;
+                gap: 8px;
+                margin-top: 4px;
+            }
+            .btns .pbtn {
+                min-height: 42px;
+                font-size: 0.9063rem;
+            }
+            .rows {
+                margin: 14px 14px 0;
+                padding: 4px 16px;
+            }
+            .sumrow .no {
+                color: var(--costly-text);
+            }
+            .sumrow .soontxt {
+                color: #ffd28a;
+            }
+            .doc .t-src {
+                color: var(--costly-text);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <div class="phones">
+                <!-- 1. Teraz: riadok pod číslom povie, čo sa stalo, a vedie do Nastavenia. -->
+                <figure>
+                    <div class="phone">
+                        <div class="scr">
+                            <div class="hdr">
+                                <span>Dvorany nad Nitrou</span>
+                                <span class="tone"><i class="dot" aria-hidden="true"></i>14:05</span>
+                            </div>
+                            <div class="hero">
+                                <div class="num">3,1</div>
+                                <div class="unit">kW teraz</div>
+                                <p class="src">odhad z predpovede · <b>Huawei prestal prijímať prístup</b></p>
+                                <span class="chip">Pripojiť znova ›</span>
+                            </div>
+                            <div class="glass verdict">
+                                <div class="glass-ttl">Môžem?</div>
+                                <div>Práčka áno – slnko teraz pokryje väčšinu.</div>
+                            </div>
+                        </div>
+                        <nav class="nav" aria-hidden="true">
+                            <span>Môžem?</span><span class="on">Teraz</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                        </nav>
+                    </div>
+                    <figcaption>1 · Teraz: číslo je odhad, riadok pod ním povie prečo</figcaption>
+                </figure>
+
+                <!-- 2. Nastavenie: karta s dôvodom a dvoma tlačidlami, riadok Živé meranie. -->
+                <figure>
+                    <div class="phone">
+                        <div class="scr">
+                            <div class="hdr">
+                                <span>Dvorany nad Nitrou</span>
+                                <span class="tone"><i class="dot" aria-hidden="true"></i>14:05</span>
+                            </div>
+                            <h1>Nastavenie</h1>
+                            <div class="stack">
+                                <div class="glass warn">
+                                    <div class="big">Meranie treba pripojiť znova</div>
+                                    <div>
+                                        Huawei prestal prijímať meno a heslo API účtu. Inštalatér mohol heslo zmeniť alebo účet zrušiť. Kým
+                                        meranie nepripojíš, appka ukazuje odhad z predpovede.
+                                    </div>
+                                    <div class="btns">
+                                        <button class="pbtn" type="button">Pripojiť znova</button>
+                                        <button class="pbtn ghost" type="button">Skúsiť znova</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="glass rows">
+                                <div class="sumrow"><span>Poloha</span><small>Dvorany nad Nitrou</small></div>
+                                <div class="sumrow"><span>Panely</span><small>2 plochy · 9 800 Wp</small></div>
+                                <div class="sumrow"><span>Živé meranie</span><small class="no">Huawei · prístup neplatí</small></div>
+                                <div class="sumrow"><span>Tarifa</span><small>D2 · dve pásma</small></div>
+                            </div>
+                        </div>
+                        <nav class="nav" aria-hidden="true">
+                            <span>Môžem?</span><span>Teraz</span><span>7 dní</span><span>Štatistika</span><span class="on">Nastavenie</span>
+                        </nav>
+                    </div>
+                    <figcaption>2 · Nastavenie: dôvod a čo s tým</figcaption>
+                </figure>
+
+                <!-- 3. Pripojiť znova: sprievodca rovno na značke a spôsobe, s dôvodom navrchu. -->
+                <figure>
+                    <div class="phone">
+                        <div class="scr">
+                            <div class="crumb">
+                                <span>Živé meranie</span><button class="x" type="button" aria-label="Zavrieť">✕</button>
+                            </div>
+                            <h1>Pripoj Huawei znova</h1>
+                            <p class="lead">
+                                Huawei prestal prijímať meno a heslo API účtu (kód 20400). Ak je účet prihlásený aj inde, napríklad v
+                                Shelly, odhlás ho tam. Inak si od inštalatéra vypýtaj nové heslo.
+                            </p>
+                            <div class="stack">
+                                <div class="flbl">Meno API účtu</div>
+                                <input class="fld" placeholder="meno" />
+                                <div class="flbl">Heslo API účtu</div>
+                                <input class="fld" type="password" placeholder="heslo" />
+                                <div class="flbl">Server FusionSolar</div>
+                                <input class="fld" placeholder="eu5.fusionsolar.huawei.com" />
+                                <p class="msg">Údaje z telefónu nevieme prečítať ani my, preto ich treba zadať celé.</p>
+                            </div>
+                            <button class="linkbtn" type="button">Správa pre inštalatéra ›</button>
+                            <button class="linkbtn" type="button">Pripojiť inak (kiosk) ›</button>
+                            <div class="row"><button class="pbtn" type="button">Pripojiť</button></div>
+                        </div>
+                        <nav class="nav" aria-hidden="true">
+                            <span>Môžem?</span><span>Teraz</span><span>7 dní</span><span>Štatistika</span><span class="on">Nastavenie</span>
+                        </nav>
+                    </div>
+                    <figcaption>3 · Pripojiť znova: rovno značka a spôsob, dôvod navrchu</figcaption>
+                </figure>
+
+                <!-- 4. Deye: upozornenie pred vypršaním a obnova jedným poľom. Na rozhodnutie. -->
+                <figure>
+                    <div class="phone">
+                        <div class="scr">
+                            <div class="hdr">
+                                <span>Dvorany nad Nitrou</span>
+                                <span class="tone"><i class="dot live" aria-hidden="true"></i>14:05</span>
+                            </div>
+                            <h1>Nastavenie</h1>
+                            <div class="stack">
+                                <div class="glass soon">
+                                    <div class="big">Prístup od Deye vyprší o 5 dní</div>
+                                    <div>Deye dáva prístup na 60 dní. Obnovíš ho heslom do Deye Cloud, ostatné údaje appka má.</div>
+                                    <div class="flbl">Heslo Deye Cloud</div>
+                                    <input class="fld" type="password" placeholder="heslo" />
+                                    <div class="btns"><button class="pbtn" type="button">Obnoviť prístup</button></div>
+                                </div>
+                            </div>
+                            <div class="glass rows">
+                                <div class="sumrow"><span>Poloha</span><small>Dvorany nad Nitrou</small></div>
+                                <div class="sumrow"><span>Panely</span><small>2 plochy · 9 800 Wp</small></div>
+                                <div class="sumrow"><span>Živé meranie</span><small class="soontxt">Deye · platí do 26. 10.</small></div>
+                                <div class="sumrow"><span>Tarifa</span><small>D2 · dve pásma</small></div>
+                            </div>
+                        </div>
+                        <nav class="nav" aria-hidden="true">
+                            <span>Môžem?</span><span>Teraz</span><span>7 dní</span><span>Štatistika</span><span class="on">Nastavenie</span>
+                        </nav>
+                    </div>
+                    <figcaption>4 · Deye: pripomenutie týždeň vopred (na rozhodnutie)</figcaption>
+                </figure>
+            </div>
+
+            <div class="doc">
+                <h2>Čo rieši</h2>
+                <p>
+                    Keď výrobca prístup prestane prijímať (vypršal, bol zrušený, zmenilo sa heslo), appka dnes potichu prejde na odhad z
+                    predpovede. Hlavička ukáže „živé meranie nedostupné“, rovnako ako pri bežnom výpadku, a nikde nepovie, že treba niečo
+                    urobiť. Pri Deye na to narazí každý najneskôr po 60 dňoch.
+                </p>
+                <p>
+                    Návrh odlišuje dve situácie. <b>Výpadok</b> (výrobca neodpovedá, nie je sieť) ostáva ako dnes: „meranie neodpovedá od
+                    14:05“ a appka skúša ďalej. <b>Odmietnutý prístup</b> (Worker vráti „výrobca údaje neprijal“) dostane vlastnú hlášku s
+                    dôvodom podľa značky a cestu, ako ho opraviť. Obrazovky sú v štýle novej appky, súčasná dostane tie isté texty vo svojom
+                    vzhľade.
+                </p>
+
+                <h2>Ako sa appka správa</h2>
+                <ul>
+                    <li>
+                        <b>Nie po prvom odmietnutí, ale po dvoch za sebou.</b> Huawei občas odmietne prihlásenie aj so správnym heslom,
+                        napríklad keď je účet chvíľu prihlásený inde.
+                    </li>
+                    <li>
+                        <b>Potom sa pýta len raz za hodinu.</b> Huawei po piatich zlých prihláseniach zablokuje účet na 30 minút a ďalšie
+                        pokusy by blokádu len predlžovali. Fox ESS a SolaX si každý dopyt počítajú do denného limitu. <b>Skúsiť znova</b> sa
+                        opýta hneď.
+                    </li>
+                    <li><b>Stav sa pamätá aj po zatvorení appky.</b> Inak by každé otvorenie znova skúšalo zlé heslo.</li>
+                    <li><b>Keď meranie znova prejde</b> (hodinový pokus, Skúsiť znova alebo nové pripojenie), hláška sama zmizne.</li>
+                    <li>
+                        <b>Pripojiť znova</b> otvorí sprievodcu rovno na značke a spôsobe, s dôvodom navrchu. Polia sú prázdne: pečať vie
+                        otvoriť len Worker, telefón z nej meno ani server neprečíta.
+                    </li>
+                </ul>
+
+                <h2>Texty</h2>
+                <h3>Spoločné (obe appky, {Značka} = Huawei, Fox ESS, …)</h3>
+                <table>
+                    <tr>
+                        <th>Miesto</th>
+                        <th>Text</th>
+                    </tr>
+                    <tr>
+                        <td>Teraz, riadok pod číslom</td>
+                        <td>
+                            odhad z predpovede · <span class="t-src">{Značka} prestal prijímať prístup</span> + odkaz „Pripojiť znova ›“
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Hlavička súčasnej appky (pod časom)</td>
+                        <td>meranie treba pripojiť znova <small>(dnes „živý výkon nedostupný“)</small></td>
+                    </tr>
+                    <tr>
+                        <td>Hlavička novej appky (čítačka obrazovky)</td>
+                        <td>prístup k meraniu neplatí <small>(dnes „živé meranie nedostupné“)</small></td>
+                    </tr>
+                    <tr>
+                        <td>Nastavenie, riadok Živé meranie</td>
+                        <td>{Značka} · prístup neplatí</td>
+                    </tr>
+                    <tr>
+                        <td>Nastavenie, karta</td>
+                        <td>
+                            <b>Meranie treba pripojiť znova</b><br />{dôvod} Kým meranie nepripojíš, appka ukazuje odhad z predpovede.<br />[Pripojiť
+                            znova] [Skúsiť znova]
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Skúsiť znova, keď to neprejde</td>
+                        <td>{Značka} prístup stále neprijíma. Skús to znova o hodinu, alebo meranie pripoj znova.</td>
+                    </tr>
+                    <tr>
+                        <td>Štatistika</td>
+                        <td>
+                            {Značka} prestal prijímať prístup, dnešok len odhadujem z predpovede. Súčty za mesiac, rok aj celý čas sa ukážu,
+                            keď meranie pripojíš znova v Nastavení.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Sprievodca, nadpis</td>
+                        <td>Pripoj {Značka} znova</td>
+                    </tr>
+                </table>
+
+                <h3>Dôvod podľa spôsobu</h3>
+                <table>
+                    <tr>
+                        <th>Spôsob</th>
+                        <th>Dôvod (karta v Nastavení aj navrchu sprievodcu)</th>
+                    </tr>
+                    <tr>
+                        <td>Huawei, API účet</td>
+                        <td>
+                            Huawei prestal prijímať meno a heslo API účtu. Inštalatér mohol heslo zmeniť alebo účet zrušiť.<br /><small
+                                >Pri kóde 20400 v sprievodcovi navyše: Ak je účet prihlásený aj inde, napríklad v Shelly, odhlás ho
+                                tam.</small
+                            >
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Huawei, kiosk</td>
+                        <td>
+                            Odkaz na kiosk prestal fungovať. Kiosk mohol byť vo FusionSolar vypnutý alebo vytvorený nanovo, vtedy má nový
+                            odkaz.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Fox ESS</td>
+                        <td>Fox ESS prestal prijímať kľúč. Keď na foxesscloud.com vygeneruješ nový kľúč, starý prestane platiť.</td>
+                    </tr>
+                    <tr>
+                        <td>SolaX</td>
+                        <td>SolaX prestal prijímať token. Mohol sa zmeniť v SolaX Cloud (Service → API).</td>
+                    </tr>
+                    <tr>
+                        <td>Victron</td>
+                        <td>Victron prestal prijímať token. Mohol byť vo VRM zmazaný.</td>
+                    </tr>
+                    <tr>
+                        <td>Solis</td>
+                        <td>Solis prestal prijímať kľúč. Mohol byť v SolisCloud zmenený, alebo ho podpora vypla.</td>
+                    </tr>
+                    <tr>
+                        <td>Deye</td>
+                        <td>
+                            Prístup od Deye vypršal. Deye ho dáva na 60 dní, potom treba zadať heslo znova.<br /><small
+                                >Ak ešte nemal vypršať: Deye prestal prijímať prístup. Aplikácia na developer.deyecloud.com mohla byť
+                                zmazaná.</small
+                            >
+                        </td>
+                    </tr>
+                </table>
+
+                <h2>Na rozhodnutie</h2>
+                <div class="q">
+                    <ol>
+                        <li>
+                            <b>Teraz:</b> riadok pod číslom aj s odkazom „Pripojiť znova ›“ (obrazovka 1), alebo len text bez odkazu a
+                            všetko ostatné v Nastavení?
+                        </li>
+                        <li><b>Kedy:</b> hláška po dvoch odmietnutiach za sebou a potom pokus raz za hodinu. Súhlas?</li>
+                        <li>
+                            <b>Deye vopred (obrazovka 4):</b> appka si pri pripojení uloží dátum, kedy prístup vyprší (nie je tajný), a
+                            týždeň vopred pripomenie obnovu. Áno, alebo stačí hláška až po vypršaní?
+                        </li>
+                        <li>
+                            <b>Deye jedným poľom:</b> Worker by zapečatil aj AppId, AppSecret a e-mail, takže na obnovu stačí heslo.
+                            AppSecret je kľúč ako každý iný v pečati, heslo sa ďalej neukladá. Áno, alebo pri obnove zadať všetky štyri
+                            polia?
+                        </li>
+                        <li>
+                            <b>Druhá medzera z kontroly PR:</b> kódy chýb od Solis a Deye v hláške (ako pri Huawei). Pridať do toho istého
+                            PR?
+                        </li>
+                        <li>Sedia texty? Stačí napísať, ktorý chceš inak.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

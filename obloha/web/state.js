@@ -71,16 +71,18 @@ import { setupInit } from '../../shared/setup-flow.js';
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
  *   launches: import('../../shared/launches.js').Launch[], online: boolean,
+ *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
  *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet, nastavenie
- *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha) a rozloženie
+ *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
+ *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
  * @returns {AppState}
  */
 export function initialState(
     now,
-    { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK, layout = 'narrow' },
+    { saved, site, startPanel, dayLog, launches, online, incoming = null, look = DEFAULT_LOOK, layout = 'narrow', pristup = null },
 ) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
@@ -96,6 +98,7 @@ export function initialState(
         plant: start.plant,
         tariff: start.tariff,
         zdroj: start.zdroj,
+        pristup,
         pv: null,
         forecast: null,
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.

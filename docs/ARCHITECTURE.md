@@ -175,10 +175,17 @@ ten istý súbor:
   ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
 - **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
-  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`, `pocasie-v1`). Číta a zapisuje ho
+  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`, `pocasie-v1`, `pristup-v1`). Číta a zapisuje ho
   ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
   z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
   (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
+- **Prístup k meraniu neplatí** (`shared/pristup.js`, návrh `docs/navrhy/meranie-pristup-neplati.html`).
+  Keď Worker na `/pv` odpovie 400, výrobca prístup odmietol - nie je to výpadok. `refresh.js` odmietnutia
+  počíta za sebou (`pristup-v1`, aby appka po otvorení neskúšala zlé heslo hneď znova); po dvoch appka povie
+  prečo (nová: riadok pod číslom na karte Teraz a karta v Nastavení, súčasná: červený pás na Terazky
+  a Môžem? a hlásenie v rozbalenej Elektrárni), zahodí posledné meranie a pýta sa už len raz za hodinu.
+  „Pripojiť znova“ otvorí formulár pripojeného spôsobu (`zdrojZnova`), „Skúsiť znova“ sa opýta hneď.
+  Prístup na čas (Deye, `platiDo`) appka týždeň vopred pripomenie a obnoví len heslom.
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
   hodiny), `gesture.js` (rozpoznanie ťahu do strán), `nav-history.js` (kroky navigácie

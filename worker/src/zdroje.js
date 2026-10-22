@@ -3,7 +3,17 @@
 // aby sa dal testovať. Worker sa pýta len serverov výrobcu, nikdy adresy od používateľa.
 
 import { VYROBCA_RETRY } from '../../shared/config.js';
-import { DEYE, deyeKw, deyePv, deyeToday, parseDeyeDay, parseDeyeLatest, parseDeyeStations, parseDeyeToken } from '../../shared/deye.js';
+import {
+    DEYE,
+    DeyeChyba,
+    deyeKw,
+    deyePv,
+    deyeToday,
+    parseDeyeDay,
+    parseDeyeLatest,
+    parseDeyeStations,
+    parseDeyeToken,
+} from '../../shared/deye.js';
 import { FOXESS, foxHeaders, FoxChyba, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
 import {
     checkNbLogin,
@@ -18,23 +28,26 @@ import {
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
-import { parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
+import { parseSolisStations, SOLIS, SolisChyba, solisRequest } from '../../shared/solis.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
 import { fetchWithRetry } from './http.js';
 
 /** @typedef {import('../../shared/kiosk.js').PvData} PvData */
 /** @typedef {{ now: Date, fetchImpl: typeof fetch }} Ctx */
 /**
- * Elektráreň nájdená pri pripojení: meno u výrobcu, čo treba na meranie (to sa zapečatí) a čo
- * práve namerala.
- * @typedef {{ nazov: string, pristup: Record<string, unknown>, pv: PvData | null }} Najdena
+ * Elektráreň nájdená pri pripojení: meno u výrobcu, čo treba na meranie (to sa zapečatí), čo
+ * práve namerala a dokedy prístup platí (ISO čas), keď ho výrobca dáva len na čas.
+ * @typedef {{ nazov: string, pristup: Record<string, unknown>, pv: PvData | null, platiDo?: string }} Najdena
  */
 /**
  * Spôsob pripojenia vo Workeri. `pripoj` overí údaje z formulára a nájde elektrárne, `meraj`
  * vráti meranie; ak sa pri ňom prístup obnovil (nový token), aj nový `pristup` na zapečatenie.
+ * `zPecate` vytiahne zo starého prístupu údaje formulára, ktoré pri obnove netreba zadávať znova
+ * (Deye: všetko okrem hesla).
  * @typedef {{
  *   pripoj: (udaje: Record<string, string>, ctx: Ctx) => Promise<Najdena[]>,
  *   meraj: (pristup: Record<string, unknown>, ctx: Ctx) => Promise<{ pv: PvData, pristup?: Record<string, unknown> }>,
+ *   zPecate?: (pristup: Record<string, unknown>) => Record<string, string>,
  * }} Zdroj
  */
 
@@ -57,6 +70,7 @@ export class ZdrojChyba extends Error {
 function kodOf(err) {
     if (err instanceof FoxChyba) return String(err.errno);
     if (err instanceof NbChyba) return String(err.failCode);
+    if (err instanceof SolisChyba || err instanceof DeyeChyba) return err.code;
     return '';
 }
 
@@ -302,8 +316,9 @@ async function solisStations(keyId, secret, ctx) {
         `${SOLIS.base}${SOLIS.stations}`,
         { method: 'POST', headers: { ...req.headers, authorization: `API ${keyId}:${sign}` }, body },
         ctx,
+        'zoznam',
     );
-    return prevod(() => parseSolisStations(json, ctx.now));
+    return prevod(() => parseSolisStations(json, ctx.now), 'zoznam');
 }
 
 // ---- Deye ------------------------------------------------------------------------------
@@ -314,14 +329,14 @@ async function sha256Hex(heslo) {
     return Array.from(hash, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Požiadavka DeyeCloud s tokenom. @param {string} path @param {string} token @param {unknown} body @param {Ctx} ctx */
-function deye(path, token, body, ctx) {
+/** Požiadavka DeyeCloud s tokenom. @param {string} path @param {string} token @param {unknown} body @param {Ctx} ctx @param {string} krok */
+function deye(path, token, body, ctx, krok) {
     const init = {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
     };
-    return getJson(`${DEYE.base}${path}`, init, ctx);
+    return getJson(`${DEYE.base}${path}`, init, ctx, krok);
 }
 
 /**
@@ -331,10 +346,10 @@ function deye(path, token, body, ctx) {
  */
 async function deyeMeraj(token, st, ctx) {
     const [latest, history] = await Promise.all([
-        deye(DEYE.latest, token, { stationId: st.id }, ctx),
-        deye(DEYE.history, token, { stationId: st.id, granularity: 2, ...deyeToday(ctx.now, st.tz) }, ctx),
+        deye(DEYE.latest, token, { stationId: st.id }, ctx, 'meranie'),
+        deye(DEYE.history, token, { stationId: st.id, granularity: 2, ...deyeToday(ctx.now, st.tz) }, ctx, 'meranie'),
     ]);
-    return prevod(() => deyePv(deyeKw(parseDeyeLatest(latest), st.kwp), parseDeyeDay(history), st.nazov, ctx.now));
+    return prevod(() => deyePv(deyeKw(parseDeyeLatest(latest), st.kwp), parseDeyeDay(history), st.nazov, ctx.now), 'meranie');
 }
 
 /** Časové pásmo elektrárne, ktoré Intl pozná; inak stredoeurópske. @param {unknown} tz */
@@ -432,22 +447,26 @@ export const ZDROJE = {
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ appSecret, email, password: await sha256Hex(heslo) }),
             };
-            const tokenJson = await getJson(`${DEYE.base}${DEYE.token(appId)}`, init, ctx);
-            const token = prevod(() => parseDeyeToken(tokenJson));
-            const stationsJson = await deye(DEYE.stations, token, { page: 1, size: MAX_STANIC }, ctx);
-            const list = prevod(() => parseDeyeStations(stationsJson));
+            const tokenJson = await getJson(`${DEYE.base}${DEYE.token(appId)}`, init, ctx, 'prihlasenie');
+            const token = prevod(() => parseDeyeToken(tokenJson), 'prihlasenie');
+            const platiDo = new Date(ctx.now.getTime() + DEYE.tokenMs).toISOString();
+            const stationsJson = await deye(DEYE.stations, token, { page: 1, size: MAX_STANIC }, ctx, 'zoznam');
+            const list = prevod(() => parseDeyeStations(stationsJson), 'zoznam');
             return Promise.all(
                 list.slice(0, MAX_STANIC).map(async (st) => {
                     const stanica = { id: st.id, nazov: st.nazov, kwp: st.kwp, tz: pasmo(st.tz) };
                     return {
                         nazov: st.nazov,
-                        // Heslo sa neukladá - v pečati je len token (60 dní) a čo treba o elektrárni.
-                        pristup: { token, ...stanica },
+                        // Heslo sa neukladá - v pečati je token (60 dní), čo treba o elektrárni a údaje
+                        // aplikácie s e-mailom, aby na obnovu tokenu stačilo zadať heslo.
+                        pristup: { token, appId, appSecret, email, ...stanica },
                         pv: await deyeMeraj(token, stanica, ctx).catch(() => null),
+                        platiDo,
                     };
                 }),
             );
         },
+        zPecate: (p) => ({ appId: str(p.appId), appSecret: str(p.appSecret), email: str(p.email) }),
         async meraj(pristup, ctx) {
             const id = Number(pristup.id);
             if (!str(pristup.token) || !Number.isSafeInteger(id)) throw new ZdrojChyba('udaje');

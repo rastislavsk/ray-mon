@@ -37,6 +37,7 @@ import {
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
 import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
+import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
@@ -1050,6 +1051,68 @@ test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', as
     // Jedno čítanie, nie čakanie: stav hneď po nevydarenej obnove.
     expect(await page.locator('#pv-power-unit').textContent()).toBe('kW teraz');
     expect(await page.locator('#pv-updated').textContent()).not.toBe('živý výkon nedostupný');
+    expect(errors).toEqual([]);
+});
+
+/** Výrobca prístup odmietol (vypršal, zrušený, iné heslo): nie „meranie neodpovedá“, ale prečo
+ * a cesta k oprave - a appka ho prestane zaťažovať (shared/pristup.js). */
+test('prístup k meraniu neplatí: pás, hlásenie v Nastavení, Skúsiť znova a Pripojiť znova', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky' });
+    let odmieta = true;
+    let volania = 0;
+    await page.route(WORKER_PV_URL, (route) => {
+        volania++;
+        return odmieta ? route.fulfill({ status: 400, json: { chyba: 'udaje' } }) : route.fulfill({ json: { pv } });
+    });
+    const obnov = async (/** @type {number} */ minut) => {
+        await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + minut * 60 * 1000));
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await dveSnimky(page);
+    };
+    const bar = page.locator('#panels-bar');
+    // Jedno odmietnutie ešte nič neznamená.
+    await obnov(1);
+    await expect.poll(() => volania).toBe(1);
+    await expect(bar).toBeHidden();
+    await obnov(2);
+    await expect.poll(() => volania).toBe(2);
+    const zaDve = odmietnute(odmietnute(null, TEST_ZDROJ, FIXED_NOW, '', false), TEST_ZDROJ, FIXED_NOW, '', false);
+    const m = /** @type {any} */ (pristupModel({ zdroj: TEST_ZDROJ, pristup: zaDve, now: FIXED_NOW, timezone: SITE.timezone }));
+    await expect(bar).toBeVisible();
+    await expect(page.locator('#panels-bar-title')).toHaveText(m.pas.nadpis);
+    await expect(page.locator('#panels-bar-text')).toHaveText(m.pas.text);
+    await expect(page.locator('#pv-updated')).toHaveText(m.hlavicka);
+    // Potom sa pýta len raz za hodinu - ani nové otvorenie appky neskúša zlý prístup hneď.
+    await obnov(10);
+    await page.reload();
+    await appReady(page);
+    await page.waitForTimeout(300);
+    expect(volania, 'po usúdení, že prístup neplatí, sa nepýta každú minútu').toBe(2);
+    await expect(bar).toBeVisible();
+
+    // Pás vedie do Nastavenia, Elektráreň je rozbalená a hlásenie povie prečo.
+    await page.locator('#panels-bar-go').click();
+    await expect(page.locator('#settings-plant')).toHaveAttribute('open', '');
+    await expect(page.locator('#settings-plant-hint')).toHaveText(m.karta.nadpis);
+    await expect(page.locator('#setup-warnings .plant-msg').first()).toContainText(m.karta.text);
+    await expect(page.locator('[data-setup-edit="meranie"] .sum-live.in-line')).toHaveText(m.stavKratko);
+    // Skúsiť znova sa opýta hneď; keď to nepomôže, povie to.
+    await page.locator('[data-pristup-skus]').click();
+    await expect.poll(() => volania).toBe(3);
+    await expect(page.locator('#setup-warnings')).toContainText('Huawei prístup stále neprijíma.');
+    // Pripojiť znova: rovno formulár kiosku, dôvod navrchu, návod pre nové pripojenie skrytý.
+    await page.locator('[data-setup-znova]').click();
+    await expect(page.locator('#wz-title')).toHaveText(m.sprievodca.nadpis);
+    await expect(page.locator('#wz-lead')).toHaveText(m.sprievodca.uvod);
+    await expect(page.locator('#wz-kroky')).toBeHidden();
+    await expect(page.locator('[data-setup-pole="odkaz"]')).toBeVisible();
+    await page.locator('#wz-close').click();
+    // Výrobca prístup znova prijíma: hlásenie zmizne aj z úložiska.
+    odmieta = false;
+    await page.locator('[data-pristup-skus]').click();
+    await expect(page.locator('#setup-warnings')).not.toContainText(m.karta.nadpis);
+    await expect(page.locator('#settings-plant-hint')).toHaveText('Poloha, panely, menič, meranie a tarifa');
+    expect(await page.evaluate((k) => localStorage.getItem(k), config.PRISTUP_STORAGE_KEY)).toBe(null);
     expect(errors).toEqual([]);
 });
 

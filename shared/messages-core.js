@@ -470,6 +470,9 @@ function afterHero(state, { ctx, nextDay, live, todayKwh, tomorrowKwh }, say) {
     };
 }
 
+/** Fakt v hlavičke karty Môžem?, keď svieti a živé meranie nie je (goHero). */
+export const NO_LIVE_FACT = 'bez merania';
+
 /** Koľko mobilov nabije strecha za hodinu pri danom výkone, zaokrúhlené na desiatky. @param {number} kw */
 export function phonesPerHour(kw) {
     return Math.round(kw / EVERYDAY.phoneChargeKwh / 10) * 10;
@@ -484,7 +487,7 @@ function goHero({ live, kwNow }, say) {
     const phones = phonesPerHour(kwNow);
     return {
         lead: `${lead}${say.go}`,
-        factK: live ? 'strecha za hodinu nabije' : 'bez merania',
+        factK: live ? 'strecha za hodinu nabije' : NO_LIVE_FACT,
         factV: live ? `~${phones} mobilov` : 'odhad z predpovede',
     };
 }

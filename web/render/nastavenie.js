@@ -19,7 +19,7 @@ import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/f
 import { liveStatus } from '../../shared/hero-model.js';
 import { checkSettings, settingsFromLink } from '../../shared/settings.js';
 import { ROOF_STEPS, SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
-import { brushOf, schedIndex, setupReady, udajeReady } from '../../shared/setup-flow.js';
+import { brushOf, schedIndex, setupReady, udajeReady, znovaModel } from '../../shared/setup-flow.js';
 import {
     AC_GUESS,
     bandHoursText,
@@ -76,7 +76,8 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../shared/tariff.js';
-import { sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
+import { pristupModel } from '../../shared/pristup.js';
+import { polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { savedSettings, setupDraft } from '../state.js';
@@ -120,7 +121,13 @@ function sumRow(
  * @param {Settings} s @param {AppState} state
  */
 function summaryRows(s, state, withLive = false) {
-    const live = withLive ? liveStatus({ ...state, zdroj: s.zdroj }) : null;
+    const p = withLive ? pristupModel({ zdroj: s.zdroj, pristup: state.pristup, now: state.now, timezone: state.site.timezone }) : null;
+    // Prístup neplatí či čoskoro vyprší (shared/pristup.js): stav je z neho.
+    const live = p
+        ? { tone: p.druh === 'neplati' ? 'off' : 'stale', text: p.stavKratko }
+        : withLive
+          ? liveStatus({ ...state, zdroj: s.zdroj })
+          : null;
     // Stav dvakrát: na mobile namiesto podnadpisu, na desktope vpravo (viď .sum-live v style.css).
     const status = (/** @type {string} */ where) => (live ? `<span class="sum-live ${where} ${live.tone}">${live.text}</span>` : '');
     return summaryData(s, state)
@@ -154,6 +161,25 @@ function heroHtml(s, state) {
     );
 }
 
+/** Podnadpis položky Elektráreň v Nastavení (index.html), keď nie je hlásenie o meraní. */
+const PLANT_HINT = 'Poloha, panely, menič, meranie a tarifa';
+
+/**
+ * Hlásenie, že prístup k meraniu neplatí či čoskoro vyprší (shared/pristup.js), s tlačidlami
+ * „Pripojiť znova“ (či „Obnoviť prístup“) a „Skúsiť znova“. Obsluhuje ich web/setup-wiring.js.
+ * @param {ReturnType<typeof pristupModel>} p
+ */
+function pristupHtml(p) {
+    if (!p) return '';
+    const err = p.druh === 'neplati' ? ' err' : '';
+    return (
+        `<p class="plant-msg${err}"><b>${escapeHtml(p.karta.nadpis)}.</b> ${escapeHtml(p.karta.text)}</p>` +
+        (p.karta.skus ? `<p class="plant-msg err">${escapeHtml(p.karta.skus)}</p>` : '') +
+        `<button type="button" class="plant-save" data-setup-znova>${escapeHtml(p.karta.tlacidlo)}</button>` +
+        (p.druh === 'neplati' ? '<button type="button" class="link-btn" data-pristup-skus>Skúsiť znova</button>' : '')
+    );
+}
+
 /** Hlásenia pod zhrnutím: chyby blokujú uloženie, varovania nie. @param {Settings} s */
 function messagesHtml(s) {
     const { errors, warnings } = checkSettings(s);
@@ -174,15 +200,20 @@ function renderHome(state, dom) {
     dom.setupNote.textContent = state.settingsNote;
     if (noPanels) return;
     const saved = savedSettings(state);
+    const pristup = pristupModel({ zdroj: state.zdroj, pristup: state.pristup, now: state.now, timezone: state.site.timezone });
     writeHtml(dom.setupHero, heroHtml(saved, state), 'setupHero');
     writeHtml(dom.setupRows, summaryRows(saved, state, true), 'setupRows');
     writeHtml(
         dom.setupWarnings,
-        checkSettings(saved)
-            .warnings.map((w) => `<p class="plant-msg">${escapeHtml(w)}</p>`)
-            .join(''),
+        pristupHtml(pristup) +
+            checkSettings(saved)
+                .warnings.map((w) => `<p class="plant-msg">${escapeHtml(w)}</p>`)
+                .join(''),
         'setupWarnings',
     );
+    // Zbalená Elektráreň povie, že vnútri čaká hlásenie o meraní.
+    dom.settingsPlantHint.textContent = pristup ? pristup.karta.nadpis : PLANT_HINT;
+    dom.settingsPlantHint.classList.toggle('err', pristup?.druh === 'neplati');
 }
 
 // ---- Obrazovky sprievodcu ---------------------------------------------------------
@@ -425,14 +456,17 @@ function renderPripoj(state, dom) {
     const sposob = sposobOf(state.setupSposob);
     if (!sposob) return;
     const p = state.setupPripoj;
+    // Pripájanie znova: dôvod je v úvode, návod a správa pre nové pripojenie ustúpia poliam.
+    const znova = !!znovaModel(state);
     const kroky = sposob.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join('');
     writeHtml(dom.wzKroky, kroky, 'wzKroky');
-    dom.wzSprava.classList.toggle('hidden', !sposob.sprava);
+    dom.wzKroky.classList.toggle('hidden', znova);
+    dom.wzSprava.classList.toggle('hidden', !sposob.sprava || znova);
     dom.wzSpravaText.textContent = sposob.sprava ?? '';
     dom.wzSpravaCopy.dataset.setupCopy = sposob.sprava ?? '';
     dom.wzSpravaNote.textContent = SPRAVA_NOTE;
     // Polia sa kreslia nanovo len pri otvorení formulára (settingsRev) - inak by zmizlo, čo človek píše.
-    const pola = `<div class="wz-zdroj" data-rev="${state.settingsRev}">${sposob.pola.map(poleHtml).join('')}</div>`;
+    const pola = `<div class="wz-zdroj" data-rev="${state.settingsRev}">${polaOf(sposob, state.setupObnova).map(poleHtml).join('')}</div>`;
     writeHtml(dom.wzPola, pola, 'wzPola');
     const note = pripojNote(p, sposob.id) ?? udajeNote(sposob.id, state.setupUdaje);
     dom.wzPripojNote.classList.toggle('hidden', !note);

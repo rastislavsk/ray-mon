@@ -2613,6 +2613,10 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-size: var(--fs-sm);
     color: var(--ink-35);
 }
+/* Vnútri Elektrárne čaká hlásenie, že prístup k meraniu neplatí (shared/pristup.js). */
+.settings-hint.err {
+    color: var(--red);
+}
 .settings-chevron {
     flex: 0 0 auto;
     width: 18px;

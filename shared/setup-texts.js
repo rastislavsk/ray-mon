@@ -6,7 +6,7 @@ import { installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
 import { fmt2, hoursText, kwpText, minutesToTimeStr } from './format.js';
 import { checkSettings, sameSettings, settingsHint, siteMetaText, totalPanels } from './settings.js';
 import { SETUP_SECTIONS, setupSection } from './setup.js';
-import { isWelcome, savedSettings, schedIndex } from './setup-flow.js';
+import { isWelcome, savedSettings, schedIndex, znovaModel } from './setup-flow.js';
 import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
 import { autoLevels, isSeasonSchedule, isWeekendSchedule, scheduleRuns, tariffHint, tariffPricesText } from './tariff.js';
 import { nbServer } from './huawei-nb.js';
@@ -203,6 +203,8 @@ const ZDROJ_TEXTS = {
             : { title: `Ako pripojíš ${z.meno}?`, lead: TEXTS.sposob.lead };
     },
     pripoj: (state) => {
+        const znova = znovaModel(state);
+        if (znova) return { title: znova.sprievodca.nadpis, lead: znova.sprievodca.uvod };
         const sposob = sposobOf(state.setupSposob);
         return sposob ? { title: sposob.nazov, lead: sposob.pod } : TEXTS.pripoj;
     },

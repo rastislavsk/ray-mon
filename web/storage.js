@@ -8,6 +8,7 @@ import {
     DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
     LOOK_STORAGE_KEY,
+    PRISTUP_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_PANELS,
@@ -17,6 +18,7 @@ import {
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
+import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseStoredWeather } from '../shared/schema.js';
 import {
     DEFAULT_LOOK,
@@ -145,6 +147,22 @@ export function loadLook() {
 /** @param {import('../shared/settings.js').Look} look @returns {boolean} podarilo sa? */
 export function saveLook(look) {
     return write(LOOK_STORAGE_KEY, JSON.stringify(lookToStored(look)));
+}
+
+/** Prístup k meraniu, ktorý výrobca odmietol (shared/pristup.js); bez úložiska null. @returns {import('../shared/pristup.js').Odmietnutie | null} */
+export function loadOdmietnutie() {
+    return readJson(PRISTUP_STORAGE_KEY, parseOdmietnutie, null);
+}
+
+/** Zapíše odmietnutie, null ho zmaže. @param {import('../shared/pristup.js').Odmietnutie | null} o @returns {boolean} podarilo sa? */
+export function saveOdmietnutie(o) {
+    if (o) return write(PRISTUP_STORAGE_KEY, JSON.stringify(o));
+    try {
+        localStorage.removeItem(PRISTUP_STORAGE_KEY);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /** Posledné stiahnuté počasie; bez úložiska null. @returns {import('../shared/schema.js').StoredWeather | null} */

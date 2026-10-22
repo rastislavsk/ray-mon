@@ -210,6 +210,44 @@ test('meranie: polia, pripájanie, jedna elektráreň rovno pripojená, z viacer
     });
 });
 
+test('pripojiť znova: rovno formulár pripojeného spôsobu, s dôvodom; Deye obnoví len heslom', () => {
+    const nb = { sposob: 'huawei-northbound', pecat: ZDROJ.pecat, nazov: 'Dvorany' };
+    const odm = { pecat: nb.pecat, n: 2, at: NOW.getTime(), kod: 'prihlasenie:20400', skusene: false };
+    const s = state({ zdroj: nb, pristup: odm });
+    const znova = apply(s, flow.zdrojZnova(s));
+    assert.deepEqual(
+        [znova.setupStep, znova.setupReturn, znova.setupZnacka, znova.setupSposob],
+        ['pripoj', 'prehlad', 'huawei', nb.sposob],
+    );
+    assert.equal(znova.setupObnova, false, 'Huawei sa pripája celý');
+    assert.equal(znova.settingsDraft.zdroj, null, 'kým sa nepripojí nové, uložiť nie je čo');
+    assert.equal(flow.znovaModel(znova)?.sprievodca.nadpis, 'Pripoj Huawei znova');
+    assert.equal(flow.znovaModel({ ...znova, pristup: null }), null, 'bez odmietnutia bežná úprava');
+    assert.equal(flow.zdrojZnova(state({ zdroj: null })), null);
+    // Deye s dátumom: stačí heslo, ostatné doplní Worker zo starej pečate.
+    const deye = {
+        sposob: 'deye-aplikacia',
+        pecat: ZDROJ.pecat,
+        nazov: 'Chata',
+        platiDo: new Date(NOW.getTime() + 3 * 864e5).toISOString(),
+    };
+    const d = state({ zdroj: deye, pristup: null });
+    const obnova = apply(d, flow.zdrojZnova(d));
+    assert.equal(obnova.setupObnova, true);
+    assert.equal(flow.znovaModel(obnova)?.sprievodca.nadpis, 'Obnov prístup Deye');
+    assert.equal(flow.udajeReady(obnova), false);
+    assert.equal(flow.udajeReady(apply(obnova, flow.setPole(obnova, 'heslo', 'tajne'))), true);
+    // Iný spôsob či značka obnovu zrušia - nový prístup sa pripája celý.
+    assert.equal(apply(obnova, flow.pickZnacka(obnova, 'deye')).setupObnova, false);
+    // Staršia pečať Deye (bez dátumu) údaje aplikácie nemá: formulár celý.
+    const stara = state({ zdroj: { ...deye, platiDo: undefined }, pristup: null });
+    assert.equal(apply(stara, flow.zdrojZnova(stara)).setupObnova, false);
+    // Dátum platnosti z pripojenia ide do pripojeného merania.
+    const bezi = apply(obnova, flow.pripojStart());
+    const st = { nazov: 'Chata', pecat: 'v1.nova-pecat-0123456789abcdef', pv: null, platiDo: '2026-12-20T12:00:00.000Z' };
+    assert.equal(apply(bezi, flow.pripojDone(bezi, 'deye-aplikacia', { stanice: [st] })).settingsDraft.zdroj?.platiDo, st.platiDo);
+});
+
 test('typ sadzby: iný typ dá šablónu so starou menou, ten istý nechá úpravy, Neviem je jedna cena', () => {
     const s = state();
     const viac = flow.pickKind(s, 'viac');

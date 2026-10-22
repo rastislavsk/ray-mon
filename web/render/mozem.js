@@ -4,8 +4,9 @@
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
-import { MOZEM_ANYTIME, mozemTileNote } from '../../shared/messages.js';
+import { MOZEM_ANYTIME, mozemTileNote, NO_LIVE_FACT } from '../../shared/messages.js';
 import { mozemModel } from '../../shared/mozem.js';
+import { neplatiOf } from '../../shared/pristup.js';
 import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_NEXT, MOZEM_ICONS, MOZEM_MARKS } from '../icons.js';
@@ -156,7 +157,10 @@ export function renderMozem(state, dom) {
     // Súhrn je obrazovka tej istej karty, v tom istom nosiči - ako detail dňa v karte 7 dní.
     if (state.mozemSummary)
         return writeHtml(dom.mozemBody, summaryHtml(summaryModel(state, state.summaryPeriod), state.summaryPeriod), 'mozemBody');
-    const m = mozemModel(state, 0, state.launches);
+    const model = mozemModel(state, 0, state.launches);
+    // Meranie je pripojené, len výrobca prestal prijímať prístup - nie „bez merania“ (shared/pristup.js).
+    const neplati = model.hero.factK === NO_LIVE_FACT && !!neplatiOf(state);
+    const m = neplati ? { ...model, hero: { ...model.hero, factK: 'meranie neplatí' } } : model;
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     // Zoznam vecí je druhá obrazovka karty v tom istom nosiči, rovnako ako súhrn.
     if (state.mozemList) return writeHtml(dom.mozemBody, mozemListHtml(m, state.mozemOpen, kick), 'mozemBody');

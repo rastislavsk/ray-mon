@@ -688,6 +688,22 @@ button:focus-visible {
     color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
+/* Prístup k meraniu neplatí (shared/pristup.js): dôvod v riadku a odkaz do Nastavenia pod ním. */
+.src b {
+    color: var(--costly-text);
+}
+.src-go {
+    display: block;
+    margin: 10px 20px 0;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+}
 
 /* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
    ten obsluhuje JS (teraz-interactions.js). */
@@ -1491,6 +1507,41 @@ button:focus-visible {
         box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
     }
 }
+/* Prístup k meraniu neplatí (červená bodka) či čoskoro vyprší (žltá) - shared/pristup.js. */
+.pristup[data-druh='neplati'] {
+    border-color: rgba(255, 196, 186, 0.7);
+}
+.pristup .big {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+.pristup .big::before {
+    content: '';
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffd28a;
+    transform: translateY(-1px);
+}
+.pristup[data-druh='neplati'] .big::before {
+    background: var(--costly-text);
+}
+.pristup p {
+    font-size: 0.9063rem;
+    line-height: 1.4;
+}
+.pristup .btns {
+    display: flex;
+    gap: 8px;
+}
+.pristup .pbtn {
+    flex: 1;
+}
+
 /* Karta strechy: veľké kWp, zostava a vpravo kompas plôch. */
 .plant {
     display: flex;

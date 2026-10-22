@@ -31,6 +31,20 @@ const rowsHtml = (rows) =>
         })
         .join('');
 
+/**
+ * Hlásenie o prístupe k meraniu: dôvod, „Pripojiť znova“ (či „Obnoviť prístup“) a pri odmietnutom
+ * prístupe aj „Skúsiť znova“. Tlačidlá obsluhuje web/setup-wiring.js.
+ * @param {NonNullable<ReturnType<typeof nastavenieModel>['pristup']>} p
+ */
+function pristupHtml(p) {
+    const skus = p.druh === 'neplati' ? '<button type="button" class="pbtn ghost" data-pristup-skus>Skúsiť znova</button>' : '';
+    return (
+        `<b class="big">${escapeHtml(p.karta.nadpis)}</b><p>${escapeHtml(p.karta.text)}</p>` +
+        (p.karta.skus ? `<p class="wz-msg err">${escapeHtml(p.karta.skus)}</p>` : '') +
+        `<div class="btns"><button type="button" class="pbtn" data-setup-znova>${escapeHtml(p.karta.tlacidlo)}</button>${skus}</div>`
+    );
+}
+
 /** @param {AppState} state @param {Dom} dom */
 function renderHome(state, dom) {
     const m = nastavenieModel(state);
@@ -41,6 +55,11 @@ function renderHome(state, dom) {
         dom.nsCtaSteps.setAttribute('aria-label', m.cta.stepsLabel);
         setText(dom.nsCtaText, m.cta.text);
         setText(dom.nsCtaBtn, m.cta.button);
+    }
+    show(dom.nsPristup, !!m.pristup);
+    if (m.pristup) {
+        dom.nsPristup.dataset.druh = m.pristup.druh;
+        setHtml(dom.nsPristup, pristupHtml(m.pristup));
     }
     show(dom.nsHero, !!m.hero);
     if (m.hero)

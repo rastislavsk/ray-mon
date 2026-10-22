@@ -5,6 +5,7 @@
 
 import { kwpText } from './format.js';
 import { liveStatus } from './hero-model.js';
+import { pristupModel } from './pristup.js';
 import { checkSettings } from './settings.js';
 import { SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from './setup.js';
 import { savedSettings } from './setup-flow.js';
@@ -60,6 +61,8 @@ export function setupCta(state) {
 /** Riadok živého merania: stav pripojenia, bez merania či bez panelov nepovinné. @param {NastavenieState} state */
 function liveValue(state) {
     if (state.known !== 'elektraren') return 'nepripojené, nepovinné';
+    const p = pristupOf(state);
+    if (p) return p.stav;
     const live = liveStatus(state);
     if (!live || !state.zdroj) return 'bez merania, odhad z predpovede';
     const znacka = menoZnacky(state.zdroj.sposob);
@@ -89,9 +92,13 @@ export function nastavenieRows(state) {
     ];
 }
 
+/** Prístup k meraniu, ktorý neplatí či čoskoro vyprší (shared/pristup.js). @param {NastavenieState} state */
+const pristupOf = (state) => pristupModel({ zdroj: state.zdroj, pristup: state.pristup, now: state.now, timezone: state.site.timezone });
+
 /**
  * Prehľad karty Nastavenie. `hero` je karta strechy (len pri zadaných paneloch), `cta` výzva
  * dokončiť nastavenie, `warnings` varovania k uloženej elektrárni a `note` hlásenie po uložení.
+ * `pristup` je hlásenie, že prístup k meraniu neplatí alebo čoskoro vyprší (`druh`), s tlačidlami.
  * @param {NastavenieState} state
  */
 export function nastavenieModel(state) {
@@ -107,6 +114,7 @@ export function nastavenieModel(state) {
             label: `Plochy panelov: ${h.planes}`,
         },
         rows: nastavenieRows(state),
+        pristup: done ? pristupOf(state) : null,
         warnings: done ? checkSettings(saved).warnings : [],
         note: state.settingsNote,
     };

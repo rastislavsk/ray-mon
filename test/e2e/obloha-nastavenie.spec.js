@@ -4,9 +4,19 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { RING } from '../../shared/chart-model.js';
-import { PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PRIPOJ_URL, WORKER_PV_URL } from '../../shared/config.js';
+import {
+    PLANT,
+    PRISTUP_STORAGE_KEY,
+    SETTINGS_STORAGE_KEY,
+    SITE,
+    SITE_STORAGE_KEY,
+    TARIFF,
+    WORKER_PRIPOJ_URL,
+    WORKER_PV_URL,
+} from '../../shared/config.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
+import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { settingsFrom, settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { buildForecast } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
@@ -411,6 +421,77 @@ test('Solis a Deye: správa pre podporu, štyri polia Deye, pripojenie bez ulož
     await expect(page.locator('#ns-rows')).toContainText('Deye · pripojené');
     expect(JSON.stringify(await ulozene(page))).not.toContain('moje-heslo');
     expect(errors).toEqual([]);
+});
+
+test.describe('prístup k meraniu neplatí či vyprší', () => {
+    /** Odmietnutie, ktoré appka po otvorení nájde v úložisku: dve za sebou, práve teraz. */
+    const zaDve = odmietnute(odmietnute(null, TEST_ZDROJ, FIXED_NOW, '', false), TEST_ZDROJ, FIXED_NOW, '', false);
+    const m = /** @type {any} */ (pristupModel({ zdroj: TEST_ZDROJ, pristup: zaDve, now: FIXED_NOW, timezone: SITE.timezone }));
+
+    test('Teraz povie prečo a vedie do Nastavenia; Skúsiť znova a Pripojiť znova', async ({ page }) => {
+        await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [PRISTUP_STORAGE_KEY, JSON.stringify(zaDve)]);
+        const errors = await openObloha(page);
+        let volania = 0;
+        await page.route(WORKER_PV_URL, (route) => {
+            volania++;
+            return route.fulfill({ status: 400, json: { chyba: 'udaje' } });
+        });
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#tz-src')).toContainText(m.riadok);
+        await page.locator('#tz-znova').click();
+        await expect(page.locator('#ns-pristup')).toBeVisible();
+        await expect(page.locator('#ns-pristup')).toContainText(m.karta.text);
+        await expect(page.locator('#ns-rows')).toContainText(m.stav);
+        expect(volania, 'odmietnutý prístup sa po otvorení neskúša hneď znova').toBe(0);
+        // Skúsiť znova sa opýta hneď; keď to nepomôže, povie to.
+        await page.locator('#ns-pristup [data-pristup-skus]').click();
+        await expect(page.locator('#ns-pristup')).toContainText('Huawei prístup stále neprijíma.');
+        expect(volania).toBe(1);
+        // Pripojiť znova: formulár kiosku s dôvodom navrchu.
+        await page.locator('#ns-pristup [data-setup-znova]').click();
+        await obrazovka(page, 'pripoj');
+        await expect(page.locator('#wz-title')).toHaveText(m.sprievodca.nadpis);
+        await expect(page.locator('#wz-kroky')).toBeHidden();
+        // Každé pripojenie vydá novú pečať (náhodný vektor šifry), aj s tým istým odkazom.
+        await page.route(WORKER_PRIPOJ_URL, (route) =>
+            route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: 'v1.NovaPecat0123456789abcdefgh', pv }] } }),
+        );
+        await page.locator('[data-setup-pole="odkaz"]').fill(TEST_KIOSK);
+        await page.locator('#wz-pripojit').click();
+        await dalej(page);
+        // Nové pripojenie: hlásenie zmizne.
+        await expect(page.locator('#ns-pristup')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('Deye: týždeň vopred pripomenie obnovu, tá pýta len heslo', async ({ page }) => {
+        const platiDo = new Date(FIXED_NOW.getTime() + 5 * 864e5 - 60_000).toISOString();
+        const deye = { sposob: 'deye-aplikacia', pecat: TEST_ZDROJ.pecat, nazov: 'Chata', platiDo };
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: deye } });
+        /** @type {string[]} */ const pripoj = [];
+        const nova = new Date(FIXED_NOW.getTime() + 60 * 864e5).toISOString();
+        await page.route(WORKER_PRIPOJ_URL, (route) => {
+            pripoj.push(route.request().postData() || '');
+            return route.fulfill({ json: { stanice: [{ nazov: 'Chata', pecat: 'v1.NovaPecat0123456789abcdefgh', pv, platiDo: nova }] } });
+        });
+        const v = /** @type {any} */ (pristupModel({ zdroj: deye, pristup: null, now: FIXED_NOW, timezone: SITE.timezone }));
+        await nastavenie(page);
+        await expect(page.locator('#ns-pristup')).toContainText(v.karta.nadpis);
+        await expect(page.locator('#ns-rows')).toContainText(v.stav);
+        await page.locator('#ns-pristup [data-setup-znova]').click();
+        await obrazovka(page, 'pripoj');
+        await expect(page.locator('#wz-title')).toHaveText(v.sprievodca.nadpis);
+        await expect(page.locator('#wz-pola input')).toHaveCount(1);
+        await page.locator('[data-setup-pole="heslo"]').fill('nove-heslo');
+        await page.locator('#wz-pripojit').click();
+        await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+        expect(JSON.parse(pripoj[0])).toEqual({ sposob: 'deye-aplikacia', udaje: { heslo: 'nove-heslo' }, pecat: deye.pecat });
+        await dalej(page);
+        await expect(page.locator('#ns-pristup')).toBeHidden();
+        expect((await ulozene(page)).zdroj.platiDo).toBe(nova);
+        expect(JSON.stringify(await ulozene(page))).not.toContain('nove-heslo');
+        expect(errors).toEqual([]);
+    });
 });
 
 test('„Neviem“: bežný panel, menič ako panely a jedna cena, v zhrnutí označené ako odhad', async ({ page }) => {

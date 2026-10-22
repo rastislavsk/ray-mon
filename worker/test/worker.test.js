@@ -457,7 +457,8 @@ test('Solis: podpísaná požiadavka na port 13333, elektráreň podľa id, zlý
     assert.match(h.date, /^[A-Z][a-z]{2}, \d{1,2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/);
     assert.equal(f.calls[0].init.method, 'POST');
     const zly = vyrobca([['https://www.soliscloud.com:13333/', 200, { code: 'R0000', msg: 'No authority' }]]);
-    assert.equal((await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: 'x', secret: 'y' } }, zly.impl)).status, 400);
+    const zle = await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: 'x', secret: 'y' } }, zly.impl);
+    assert.deepEqual([zle.status, zle.json], [400, { chyba: 'udaje', kod: 'zoznam:R0000' }], 'kód od Solis ide do appky');
     assert.equal((await pripojAMeraj({ sposob: 'solis-kluc', udaje: { keyId: '', secret: 'y' } }, zly.impl)).status, 400);
 });
 
@@ -498,6 +499,46 @@ test('Deye: heslo ide len ako SHA-256 a do pečate nie, meria výkon a dnešok t
     const history = f.calls.filter((c) => c.url.endsWith('/v1.0/station/history')).at(-1);
     assert.equal(JSON.parse(history?.init.body).granularity, 2);
     assert.equal(history?.init.headers.authorization, 'Bearer deye-token');
+    assert.equal(r.json.stanice[0].platiDo, new Date(NOW.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString(), 'token platí 60 dní');
     const zly = vyrobca([[`${B}/v1.0/account/token`, 200, { success: false, code: '2101019', msg: 'auth failed' }]]);
-    assert.equal((await pripojAMeraj({ sposob: 'deye-aplikacia', udaje }, zly.impl)).status, 400);
+    const zle = await pripojAMeraj({ sposob: 'deye-aplikacia', udaje }, zly.impl);
+    assert.deepEqual([zle.status, zle.json], [400, { chyba: 'udaje', kod: 'prihlasenie:2101019' }], 'kód od Deye ide do appky');
+});
+
+test('Deye: obnova prístupu len heslom, aplikáciu a e-mail Worker doplní zo starej pečate', async () => {
+    const B = 'https://eu1-developer.deyecloud.com';
+    const f = vyrobca([
+        [`${B}/v1.0/account/token`, 200, { success: true, code: '1000000', accessToken: 'deye-token' }],
+        [
+            `${B}/v1.0/station/list`,
+            200,
+            { success: true, code: '1000000', stationList: [{ id: 10, name: 'Chata', installedCapacity: 10 }] },
+        ],
+        [`${B}/v1.0/station/`, 200, { success: true, code: '1000000' }],
+    ]);
+    const udaje = { appId: '202406270000000', appSecret: 'app-tajne', email: 'a@b.sk', heslo: 'moje-heslo' };
+    const r = { json: await (await handlePripoj(pripojRequest({ sposob: 'deye-aplikacia', udaje }), ENV, NOW, f.impl)).json() };
+    f.calls.length = 0;
+    const obnova = await handlePripoj(
+        pripojRequest({ sposob: 'deye-aplikacia', udaje: { heslo: 'nove-heslo' }, pecat: r.json.stanice[0].pecat }),
+        ENV,
+        NOW,
+        f.impl,
+    );
+    assert.equal(obnova.status, 200);
+    assert.equal(f.calls[0].url, `${B}/v1.0/account/token?appId=202406270000000`);
+    assert.deepEqual(JSON.parse(f.calls[0].init.body), {
+        appSecret: 'app-tajne',
+        email: 'a@b.sk',
+        password: createHash('sha256').update('nove-heslo').digest('hex'),
+    });
+    // Bez pečate, s pečaťou iného spôsobu či iného Workera nič nedoplní.
+    const kiosk = await zapecat(/** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC)), {
+        sposob: 'huawei-kiosk',
+        pristup: { appId: 'x' },
+    });
+    for (const pecat of ['', kiosk, r.json.stanice[0].pecat.slice(0, -4) + 'AAAA']) {
+        const res = await handlePripoj(pripojRequest({ sposob: 'deye-aplikacia', udaje: { heslo: 'h' }, pecat }), ENV, NOW, f.impl);
+        assert.equal(res.status, 400);
+    }
 });

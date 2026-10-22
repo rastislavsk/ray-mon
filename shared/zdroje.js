@@ -19,8 +19,12 @@ import { isObj } from './valid.js';
  * prvý), `kroky` návod, kde údaje nájde, `sprava` hotová správa pre inštalatéra či podporu,
  * `pozn` veta pod formulárom, `zrusenie` kde prístup zrušiť aj u výrobcu. `intervalMs` je, ako často
  * sa appka pýta na meranie - podľa limitov výrobcu a toho, ako často jeho cloud dáta obnovuje.
+ * `neplati` povie, prečo výrobca prístup mohol prestať prijímať (shared/pristup.js), `vyprsal` to
+ * isté, keď prístup dáva len na čas a ten uplynul. `obnova` je obnova takého prístupu: ktoré polia
+ * treba zadať znova (ostatné doplní Worker zo starej pečate) a veta na pripomenutie.
  * @typedef {{ id: string, znacka: string, nazov: string, pod: string, tagy: string[], kroky: string[], pola: Pole[],
- *   sprava?: string, pozn?: string, zrusenie: string, intervalMs: number }} Sposob
+ *   sprava?: string, pozn?: string, zrusenie: string, intervalMs: number, neplati: string, vyprsal?: string,
+ *   obnova?: { pola: string[], text: string } }} Sposob
  */
 /**
  * Značka meniča: buď so spôsobmi pripojenia (prvý je odporúčaný), alebo s vysvetlením, prečo
@@ -31,8 +35,9 @@ import { isObj } from './valid.js';
  * Pripojené meranie tak, ako ho appka drží v nastavení. `pecat` je zapečatený prístup - otvoriť
  * ho vie len Worker, telefón v ňom heslo ani kľúč neprečíta. Nastavenia spred zapečatenia majú
  * v `pecat` holý odkaz na kiosk; Worker ho pri prvom meraní zapečatí. `nazov` je meno elektrárne
- * u výrobcu (prázdne, keď ho výrobca nepovie).
- * @typedef {{ sposob: string, pecat: string, nazov: string }} Zdroj
+ * u výrobcu (prázdne, keď ho výrobca nepovie). `platiDo` (ISO čas) má prístup, ktorý výrobca dáva
+ * len na čas - appka podľa neho pripomenie obnovu.
+ * @typedef {{ sposob: string, pecat: string, nazov: string, platiDo?: string }} Zdroj
  */
 
 /** @type {Sposob[]} */
@@ -55,6 +60,7 @@ export const SPOSOBY = [
         ],
         pozn: 'Huawei dovolí meranie len raz za 5 minút, appka sa pýta rovnako často.',
         zrusenie: 'Účet zruší inštalatér vo FusionSolar (Northbound Management).',
+        neplati: 'Huawei prestal prijímať meno a heslo API účtu. Inštalatér mohol heslo zmeniť alebo účet zrušiť.',
         // Dáta v reálnom čase raz za 5 minút na používateľa (getDevRealKpi, getStationRealKpi).
         intervalMs: 5 * 60 * 1000,
     },
@@ -67,6 +73,7 @@ export const SPOSOBY = [
         kroky: ['V appke FusionSolar otvor svoju elektráreň.', 'Zvoľ zdieľanie cez kiosk a skopíruj odkaz.', 'Vlož ho sem.'],
         pola: [{ id: 'odkaz', lbl: 'Odkaz na kiosk', ph: 'Odkaz na kiosk FusionSolar', typ: 'url' }],
         zrusenie: 'Kiosk vypneš v appke FusionSolar pri zdieľaní elektrárne.',
+        neplati: 'Odkaz na kiosk prestal fungovať. Kiosk mohol byť vo FusionSolar vypnutý alebo vytvorený nanovo, vtedy má nový odkaz.',
         intervalMs: REFRESH.dataMs,
     },
     {
@@ -83,6 +90,7 @@ export const SPOSOBY = [
         pola: [{ id: 'kluc', lbl: 'API kľúč', ph: 'kľúč', tajne: true }],
         pozn: 'Fox ESS dovolí 1 440 dopytov denne, appka sa preto pýta každé 3 minúty.',
         zrusenie: 'Kľúč zrušíš na foxesscloud.com vygenerovaním nového (User Profile → API Management).',
+        neplati: 'Fox ESS prestal prijímať kľúč. Keď na foxesscloud.com vygeneruješ nový kľúč, starý prestane platiť.',
         // 1 440 dopytov denne na menič, meranie stojí dva: každé 3 minúty je to 960 a ostáva rezerva
         // na druhé zariadenie s otvorenou appkou.
         intervalMs: 3 * 60 * 1000,
@@ -104,6 +112,7 @@ export const SPOSOBY = [
         ],
         pozn: 'SolaX obnovuje dáta raz za 5 minút, appka sa pýta rovnako často.',
         zrusenie: 'Token spravuješ v SolaX Cloud v časti Service → API.',
+        neplati: 'SolaX prestal prijímať token. Mohol sa zmeniť v SolaX Cloud (Service → API).',
         intervalMs: 5 * 60 * 1000,
     },
     {
@@ -124,6 +133,7 @@ export const SPOSOBY = [
         ],
         pozn: 'Solis obnovuje dáta raz za 5 minút, appka sa pýta rovnako často.',
         zrusenie: 'Kľúč spravuješ na soliscloud.com v časti API Management.',
+        neplati: 'Solis prestal prijímať kľúč. Mohol byť v SolisCloud zmenený, alebo ho podpora vypla.',
         intervalMs: 5 * 60 * 1000,
     },
     {
@@ -145,6 +155,9 @@ export const SPOSOBY = [
         ],
         pozn: 'Heslo appka pošle Deye len raz a neuloží ho. Prístup od Deye platí 60 dní, potom Deye pripoj znova.',
         zrusenie: 'Aplikáciu zmažeš na developer.deyecloud.com, prístup tým zanikne.',
+        neplati: 'Deye prestal prijímať prístup. Aplikácia na developer.deyecloud.com mohla byť zmazaná.',
+        vyprsal: 'Prístup od Deye vypršal. Deye ho dáva na 60 dní, potom treba zadať heslo znova.',
+        obnova: { pola: ['heslo'], text: 'Deye dáva prístup na 60 dní. Obnovíš ho heslom do Deye Cloud, ostatné údaje appka má.' },
         // Deye odporúča pýtať sa raz za 1-2 minúty (Best Practices).
         intervalMs: 2 * 60 * 1000,
     },
@@ -158,6 +171,7 @@ export const SPOSOBY = [
         pola: [{ id: 'token', lbl: 'Prístupový token', ph: 'token', tajne: true }],
         pozn: 'Victron posiela výkon a celkovú výrobu, dnešnú výrobu appka dopočítať nevie.',
         zrusenie: 'Token zrušíš v portáli VRM tam, kde si ho vytvoril (Access tokens).',
+        neplati: 'Victron prestal prijímať token. Mohol byť vo VRM zmazaný.',
         intervalMs: REFRESH.dataMs,
     },
 ];
@@ -221,21 +235,32 @@ export function parseZdroj(raw, legacyKiosk) {
         const pecat = typeof o.pecat === 'string' ? o.pecat : '';
         const nazov = typeof o.nazov === 'string' ? o.nazov.slice(0, 80) : '';
         if (!sposobOf(sposob)) return null;
-        if (isPecat(pecat) || (sposob === 'huawei-kiosk' && kioskApiUrl(pecat))) return { sposob, pecat, nazov };
+        if (isPecat(pecat)) return isIso(o.platiDo) ? { sposob, pecat, nazov, platiDo: o.platiDo } : { sposob, pecat, nazov };
+        if (sposob === 'huawei-kiosk' && kioskApiUrl(pecat)) return { sposob, pecat, nazov };
         return null;
     }
     if (typeof legacyKiosk === 'string' && kioskApiUrl(legacyKiosk)) return { sposob: 'huawei-kiosk', pecat: legacyKiosk, nazov: '' };
     return null;
 }
 
+/** Čas vo formáte ISO (`platiDo`)? @param {unknown} v @returns {v is string} */
+export const isIso = (v) => typeof v === 'string' && v.length <= 30 && /^\d{4}-\d{2}-\d{2}T/.test(v) && Number.isFinite(Date.parse(v));
+
+/**
+ * Polia formulára spôsobu. Pri obnove prístupu (`obnova`) len tie, ktoré treba zadať znova -
+ * ostatné Worker doplní zo starej pečate.
+ * @param {Sposob} s @param {boolean} [obnova]
+ */
+export const polaOf = (s, obnova = false) => (obnova && s.obnova ? s.pola.filter((p) => s.obnova?.pola.includes(p.id)) : s.pola);
+
 /**
  * Sú údaje z formulára úplné a na pohľad v poriadku? Všetky polia vyplnené, odkaz na kiosk
  * naozaj na kiosk FusionSolar. Či ich výrobca prijme, overí až Worker.
- * @param {string} sposob @param {Record<string, string>} udaje
+ * @param {string} sposob @param {Record<string, string>} udaje @param {boolean} [obnova] obnova prístupu (polaOf)
  */
-export function udajeOk(sposob, udaje) {
+export function udajeOk(sposob, udaje, obnova = false) {
     const s = sposobOf(sposob);
-    if (!s || !s.pola.every((p) => !!udaje[p.id])) return false;
+    if (!s || !polaOf(s, obnova).every((p) => !!udaje[p.id])) return false;
     if (sposob === 'huawei-kiosk') return !!kioskApiUrl(udaje.odkaz);
     if (sposob === 'solax-token') return !!solaxUrl(udaje.token, udaje.sn);
     if (sposob === 'huawei-northbound') return !!nbServer(udaje.server);
