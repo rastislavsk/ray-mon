@@ -276,6 +276,48 @@ async function nbNajdi(server, rel, udaje, ctx) {
     }));
 }
 
+/**
+ * Meniče elektrárne, ktorá ich v pečati nemá - pripojenej skôr, než appka poznala menič s batériou
+ * (23093). Zoznam zariadení má limit 25 denne, preto sa pýta raz: volajúci zapečatí čas pokusu, aj
+ * keď zoznam nevyjde. Bez neho sa meria ďalej len zo súčtov elektrárne, ako doteraz.
+ * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<NbPlant>}
+ */
+async function nbDoplnDevs(sp, plant) {
+    try {
+        const json = await nbPost(sp, NB.devList, { stationCodes: plant.plant }, 'zariadenia');
+        return { ...plant, devs: parseNbDevices(json)[plant.plant] ?? {} };
+    } catch {
+        return plant;
+    }
+}
+
+/**
+ * Dopyt s reláciou zo zapečateného prístupu. Token starší než NB.tokenMs vymení vopred; keď ho
+ * Huawei zrušil skôr (305), prihlási sa raz znova a dopyt zopakuje. `relacia` je nový token
+ * s časom prihlásenia na zapečatenie, alebo null, keď sa neprihlasoval.
+ * @template T
+ * @param {ReturnType<typeof nbPristup>} p prístup s overeným serverom @param {Ctx} ctx @param {(sp: NbSpoj) => Promise<T>} fn
+ * @returns {Promise<{ vysledok: T, relacia: (NbRelacia & { tokenAt: number }) | null }>}
+ */
+async function nbSRelaciou(p, ctx, fn) {
+    const server = /** @type {string} */ (p.server);
+    /** @type {(NbRelacia & { tokenAt: number }) | null} */ let relacia = null;
+    let rel = { token: p.token, cookie: p.cookie };
+    const prihlas = async () => {
+        rel = await nbLogin(server, p.meno, p.heslo, ctx);
+        relacia = { ...rel, tokenAt: ctx.now.getTime() };
+    };
+    if (!rel.token || ctx.now.getTime() - p.tokenAt > NB.tokenMs) await prihlas();
+    try {
+        return { vysledok: await fn({ server, rel, ctx }), relacia };
+    } catch (err) {
+        if (!(err instanceof VyrobcaChyba && err.kod === String(NB.notLoggedIn)) || relacia) throw prevodChyba(err, 'meranie');
+        await prihlas();
+        const vysledok = await fn({ server, rel, ctx }).catch((e) => Promise.reject(prevodChyba(e, 'meranie')));
+        return { vysledok, relacia };
+    }
+}
+
 /** Prístup Northbound zo zapečateného objektu. @param {Record<string, unknown>} p */
 function nbPristup(p) {
     const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
@@ -388,28 +430,15 @@ export const ZDROJE = {
         async meraj(pristup, ctx) {
             const p = nbPristup(pristup);
             if (!p.server || !p.meno || !p.heslo || !p.plant.plant) throw new ZdrojChyba('udaje');
-            const server = p.server;
-            let rel = { token: p.token, cookie: p.cookie };
-            let tokenAt = p.tokenAt;
-            let novy = false;
-            const prihlas = async () => {
-                rel = await nbLogin(server, p.meno, p.heslo, ctx);
-                tokenAt = ctx.now.getTime();
-                novy = true;
-            };
-            if (!rel.token || ctx.now.getTime() - tokenAt > NB.tokenMs) await prihlas();
-            /** @returns {Promise<import('../../shared/kiosk.js').PvData>} */
-            const meraj = async () => /** @type {any} */ ((await nbMeraj({ server, rel, ctx }, [p.plant])).get(p.plant.plant));
-            /** @type {import('../../shared/kiosk.js').PvData} */ let pv;
-            try {
-                pv = await meraj();
-            } catch (err) {
-                // Token mohol vypršať skôr (Huawei odhlásil reláciu): raz sa prihlási znova.
-                if (!(err instanceof VyrobcaChyba && err.kod === String(NB.notLoggedIn)) || novy) throw prevodChyba(err, 'meranie');
-                await prihlas();
-                pv = await meraj().catch((e) => Promise.reject(prevodChyba(e, 'meranie')));
-            }
-            return novy ? { pv, pristup: { ...pristup, ...rel, tokenAt } } : { pv };
+            // Bez meniča v pečati sa zoznam zariadení vypýta raz (nbDoplnDevs); čas pokusu sa zapečatí.
+            let plant = p.plant;
+            const devsAt = Object.keys(plant.devs).length || Number(pristup.devsAt) ? 0 : ctx.now.getTime();
+            const { vysledok: pv, relacia } = await nbSRelaciou(p, ctx, async (sp) => {
+                if (devsAt && plant === p.plant) plant = await nbDoplnDevs(sp, plant);
+                return /** @type {import('../../shared/kiosk.js').PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
+            });
+            if (!relacia && !devsAt) return { pv };
+            return { pv, pristup: { ...pristup, ...relacia, ...(devsAt ? { devs: plant.devs, devsAt } : {}) } };
         },
     },
     'solis-kluc': {

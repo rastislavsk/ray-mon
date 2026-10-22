@@ -24,8 +24,9 @@ pripomenie obnovu a tá pýta len heslo: `/pripoj` dostane starú pečať a zvy�
 inštalovaného výkonu sa berie vo wattoch.
 
 **Huawei Northbound** (`shared/huawei-nb.js`) je účet len na čítanie, ktorý zriaďuje inštalatér. Postavené
-podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6 (cloudová
-verzia SmartPVMS 25.x je na webe Huawei momentálne nedostupná). Server zadá človek (napr.
+podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6 a overené
+proti najnovšej cloudovej **SmartPVMS 26.2.0 Northbound API Reference**
+([EDOC1100589815](https://support.huawei.com/enterprise/en/doc/EDOC1100589815)). Server zadá človek (napr.
 `eu5.fusionsolar.huawei.com`) a Worker prijme len servery `*.fusionsolar.huawei.com`. Huawei dovolí
 prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom čase raz za 5 minút, preto:
 
@@ -38,6 +39,9 @@ prihlásenie 5-krát za 10 minút (token platí 30 minút) a dáta v reálnom č
 - zoznam elektrární skúša nové `/thirdData/stations` a keď ho účet nemá povolené, staršie
   `/thirdData/getStationList` (kapitola Historical Interfaces) - niektoré integrácie, napr. Shelly,
   používajú to,
+- za menič sa berú typy zariadení 1 (string inverter), 38 (residential inverter) a 23093 (menič
+  s batériou, PV&ESS, pribudol v 26.2.0); elektrárni, ktorá v pečati nemá ani jeden menič (pripojená
+  skôr, než appka poznala 23093), Worker zoznam zariadení vypýta raz pri meraní a zapečatí (`devsAt`),
 - keď Huawei počas pripájania prihlásenie zruší (305 - ten istý účet sa prihlásil aj inde, napr.
   meranie v druhej appke), Worker sa raz prihlási znova a pokračuje.
 
@@ -45,9 +49,11 @@ Limity sú na **účet**, nie na appku: dve appky či zariadenia s tým istým �
 a nové prihlásenie jedného zruší prihlásenie druhého. Appky v tom istom prehliadači preto idú
 jedným rytmom (`meranie-v1` v `web/refresh.js`).
 
-Referencia priamo pre FusionSolar (cloud) je **SmartPVMS V600R024C10 Northbound Interface
-Reference-V6 (FusionSolar SmartPVMS)**, [EDOC1100316813](https://support.huawei.com/enterprise/en/doc/EDOC1100316813):
-prihlásenie `https://{doména}/thirdData/login`, ostatné ako vo verzii pre lokálnu inštaláciu.
+Najnovšia referencia pre FusionSolar (cloud) je **SmartPVMS 26.2.0 Northbound API Reference**,
+[EDOC1100589815](https://support.huawei.com/enterprise/en/doc/EDOC1100589815) - na support.huawei.com cez
+produkt SmartPVMS → Reference Guides (vyhľadávanie stránky hlási „content expired“). Staršia
+[EDOC1100316813](https://support.huawei.com/enterprise/en/doc/EDOC1100316813) (V600R024C10): prihlásenie
+`https://{doména}/thirdData/login`, ostatné ako vo verzii pre lokálnu inštaláciu.
 
 ## Zapečatený prístup a kľúč `PECAT_KLUC`
 

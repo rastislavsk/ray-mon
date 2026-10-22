@@ -76,12 +76,15 @@ test('zoznam elektrární a meničov podľa príkladov z referencie', () => {
             { id: -214091680973855, devName: '6fbfk11', stationCode: 'NE=12345678', devTypeId: 1 },
             { id: 5, devName: 'meter', stationCode: 'NE=12345678', devTypeId: 17 },
             { id: 7, devName: 'dom', stationCode: 'NE=23456789', devTypeId: 38 },
+            // Menič s batériou (PV&ESS) od SmartPVMS 26.2.0.
+            { id: 8, devName: 'garaz', stationCode: 'NE=23456789', devTypeId: 23093 },
+            { id: 9, devName: 'bateria', stationCode: 'NE=23456789', devTypeId: 39 },
         ],
         failCode: 0,
     };
     assert.deepEqual(parseNbDevices(devices), {
         'NE=12345678': { 1: [-214543629611879, -214091680973855] },
-        'NE=23456789': { 38: [7] },
+        'NE=23456789': { 38: [7], 23093: [8] },
     });
     assert.throws(
         () => parseNbDevices({ success: false, data: null, failCode: 20009 }),

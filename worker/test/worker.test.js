@@ -274,7 +274,7 @@ const NB_HOST = 'https://eu5.fusionsolar.huawei.com';
  * @param {{ heslo?: string, tokeny?: string[], platne?: string[], realFail?: number }} [opts]
  */
 function northbound(
-    { heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail, loginFail, stationsFail, stareFail } = /** @type {any} */ ({}),
+    { heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail, loginFail, stationsFail, stareFail, devTyp = 38 } = /** @type {any} */ ({}),
 ) {
     /** @type {Array<{ path: string, body: any, token: string | null, cookie: string | null }>} */ const calls = [];
     let prihlasenia = 0;
@@ -287,7 +287,7 @@ function northbound(
         // Starší zoznam (Historical Interfaces): bez stránkovania, stationCode a stationName.
         '/thirdData/getStationList': () =>
             stareFail ? fail(stareFail) : ok([{ stationCode: 'NE=1', stationName: 'Dvorany', capacity: 0.01 }]),
-        '/thirdData/getDevList': () => ok([{ id: 11, stationCode: 'NE=1', devTypeId: 38 }]),
+        '/thirdData/getDevList': () => ok([{ id: 11, stationCode: 'NE=1', devTypeId: devTyp }]),
         '/thirdData/getDevRealKpi': () =>
             realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
         '/thirdData/getStationRealKpi': () =>
@@ -369,6 +369,34 @@ test('Huawei Northbound: vypršaný token aj odhlásenie (305) znamenajú jedno 
     assert.equal(res.pv.realTimePowerKw, 4.2);
     assert.ok(res.pecat, 'nový token v novej pečati');
     assert.equal(zrusena.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: menič s batériou (23093) - pripojenie ho nájde, staršej pečati sa doplní raz', async () => {
+    const s = northbound({ devTyp: 23093 });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    assert.equal(stanice[0].pv.realTimePowerKw, 4.2);
+    assert.deepEqual(s.calls.find((c) => c.path === '/thirdData/getDevRealKpi')?.body, { devIds: '11', devTypeId: 23093 });
+    // Pečať spred opravy: elektráreň bez meničov. Prvé meranie si zoznam vypýta a zapečatí.
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const stara = await zapecat(key, {
+        sposob: 'huawei-northbound',
+        pristup: { ...NB_UDAJE, token: 't1', tokenAt: NOW.getTime(), plant: 'NE=1', nazov: 'Dvorany', devs: {} },
+    });
+    const m = northbound({ devTyp: 23093, platne: ['t1'] });
+    const prve = await (await handlePv(pvRequest(stara), ENV, NOW, m.impl)).json();
+    assert.equal(prve.pv.realTimePowerKw, 4.2);
+    assert.equal((await otvor(await key, prve.pecat))?.pristup.devs['23093'][0], 11);
+    const druhe = await (await handlePv(pvRequest(prve.pecat), ENV, NOW, m.impl)).json();
+    assert.equal(druhe.pv.realTimePowerKw, 4.2);
+    assert.equal(m.calls.filter((c) => c.path === '/thirdData/getDevList').length, 1, 'zoznam zariadení len raz');
+    // Elektráreň naozaj bez meniča: zoznam sa vypýta raz a potom už nie.
+    const bez = northbound({ devTyp: 17, platne: ['t1'] });
+    const r1 = await (await handlePv(pvRequest(stara), ENV, NOW, bez.impl)).json();
+    assert.equal(r1.pv.realTimePowerKw, null);
+    await handlePv(pvRequest(r1.pecat), ENV, NOW, bez.impl);
+    assert.equal(bez.calls.filter((c) => c.path === '/thirdData/getDevList').length, 1);
 });
 
 test('Huawei Northbound: zlé heslo a cudzí server 400, limit 407 je výpadok (502)', async () => {

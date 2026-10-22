@@ -1,7 +1,8 @@
 // Huawei FusionSolar, Northbound API (verzia V6): účet len na čítanie, ktorý zriaďuje inštalatér.
 // Podľa oficiálnej referencie SmartPVMS Plant V600R024C10 Northbound Interface Reference-V6
-// (https://support.huawei.com/enterprise/en/doc/EDOC1100316809): adresy, prevod odpovedí na
-// formát `pv` a chybové kódy. Sieť je vo Workeri (worker/src/zdroje.js).
+// (https://support.huawei.com/enterprise/en/doc/EDOC1100316809), overené proti najnovšej SmartPVMS
+// 26.2.0 Northbound API Reference (EDOC1100589815): adresy, prevod odpovedí na formát `pv`
+// a chybové kódy. Sieť je vo Workeri (worker/src/zdroje.js).
 //
 // Huawei prísne obmedzuje dopyty: prihlásenie 5-krát za 10 minút (token platí 30 minút), dáta
 // v reálnom čase raz za 5 minút. Worker preto token drží v pečati a meria raz za 5 minút.
@@ -21,8 +22,9 @@ export const NB = {
     devList: '/thirdData/getDevList',
     devReal: '/thirdData/getDevRealKpi',
     stationReal: '/thirdData/getStationRealKpi',
-    // Typy zariadení, ktoré sú meniče: string inverter a residential inverter.
-    inverterTypes: [1, 38],
+    // Typy zariadení, ktoré sú meniče: string inverter, residential inverter a menič s batériou
+    // (PV&ESS, od SmartPVMS 26.2.0). Všetky posielajú active_power, day_cap a total_cap.
+    inverterTypes: [1, 38, 23093],
     // Token je platný 30 minút; Worker ho vymení o niečo skôr, nech nevyprší počas merania.
     tokenMs: 25 * 60 * 1000,
     notLoggedIn: 305,
