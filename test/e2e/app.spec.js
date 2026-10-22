@@ -45,6 +45,7 @@ import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
+import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { deviceShorts, mozemModel } from '../../shared/mozem.js';
 import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
 import { dayWindowCard, fitLabel, forecastDayMessage, weekMessage } from '../../shared/messages.js';
@@ -119,15 +120,18 @@ async function ulozPolohu(page, site) {
  * ciferník (tiež len ak voľbu ešte nemá) - pre testy, ktoré skúšajú ciferník.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string,
- *   start?: 'mozem' | 'terazky' | null }} [opts]
+ *   start?: 'mozem' | 'terazky' | null, pvData?: typeof pv }} [opts] `pvData` odpovie Worker namiesto merania z fixtures
  */
-async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '', start = null } = {}) {
+async function openApp(
+    page,
+    { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '', start = null, pvData = pv } = {},
+) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await blokujCdn(page);
-    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
+    await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvData } })));
     // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
     await page.route(WORKER_PRIPOJ_URL, (route) =>
         route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
@@ -3352,6 +3356,38 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.summary')).toHaveCount(0);
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('súčty, ktoré výrobca neposiela (Fox ESS): rok od prvého merania v Štatistike aj v súhrne', async ({ page }) => {
+        const FOX = { ...TEST_ZDROJ, sposob: 'foxess-kluc' };
+        const surove = { ...pv, yearEnergyKwh: null };
+        const errors = await openApp(page, { settings: { ...OWNER, zdroj: FOX }, pvData: surove });
+        // Appka rok dopočíta z celkovej výroby: od začiatku dneška, prvého dňa merania.
+        const doplnene = doplnSucty(null, suctyZdroj(FOX), surove, '2026-09-05', '13:00').pv;
+        expect(doplnene.od).toEqual({ rok: '2026-09-05' });
+        const vstup = { ...OWNER, zdroj: FOX, now: FIXED_NOW, loading: false, pv: doplnene, forecast: forecastAt(FIXED_NOW) };
+        const s = statsModel(vstup, 'dnes');
+        const rok = /** @type {NonNullable<typeof s.rows[number]>} */ (s.rows.find((r) => r.period === 'rok'));
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('.stats-row', { hasText: 'Rok' }).locator('.k')).toHaveText(`${rok.label} ${rok.od}`);
+        await expect(page.locator('.stats-row', { hasText: 'Rok' }).locator('.v')).toHaveText(`${kwhText(rok.kwh)} kWh`);
+        await expect(page.locator('.stats-note').first()).toHaveText(s.odNote);
+        expect(s.odNote).toContain('Fox ESS neposiela súčet za rok');
+        await page.locator('[data-stats-period="rok"]').click();
+        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené v roku 2026 od 5. 9.');
+
+        await page.locator('#nav-mozem').click();
+        await page.locator('.summary-link').click();
+        await page.locator('[data-summary-period="rok"]').click();
+        const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
+            summaryModel({ ...vstup, launches: [], dayLog: { '2026-09-05': /** @type {number} */ (pv.dailyEnergyKwh) } }, 'rok')
+        );
+        await expect(page.locator('.summary-kick')).toHaveText(m.heading);
+        expect(m.heading).toBe('Rok 2026 na streche od 5. 9.');
+        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(m.kwh), 0)} kWh`);
+        await expect(page.locator('.summary-note')).toHaveText(m.note);
+        expect(m.note).toMatch(/^Súčet roka je od 5. 9. – skôr appka meranie z Fox ESS nemala./);
         expect(errors).toEqual([]);
     });
 

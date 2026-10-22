@@ -14,10 +14,13 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {Texts['STATISTIKA_TEXTS']} T */
 /** @typedef {import('../../../shared/statistika.js').StatistikaModel} Model */
 
-/** Ostatné obdobia: meno a kWh, odhad kurzívou ako inde v appke. @param {Model['rows']} rows */
+/** Ostatné obdobia: meno a kWh, odhad kurzívou ako inde v appke; súčet od prvého merania s „od 21. 10.“. @param {Model['rows']} rows */
 const rowsHtml = (rows) =>
     rows
-        .map((r) => `<p${r.estimate ? ' class="est"' : ''}><span>${escapeHtml(r.name)}</span><b>${escapeHtml(kwhText(r.kwh))} kWh</b></p>`)
+        .map((r) => {
+            const od = r.od ? ` <small class="od">${escapeHtml(r.od)}</small>` : '';
+            return `<p${r.estimate ? ' class="est"' : ''}><span>${escapeHtml(r.name)}${od}</span><b>${escapeHtml(kwhText(r.kwh))} kWh</b></p>`;
+        })
         .join('');
 
 /** Tlačidlá plagátu: prvé plné, ďalšie priesvitné. @param {Model['posters']} posters */
@@ -87,6 +90,8 @@ function renderExtras(m, dom, T, neplati) {
     show(dom.stBest, !!m.best);
     setText(dom.stBestTitle, m.best ? m.best.title : '');
     setText(dom.stBestText, m.best ? m.best.text : '');
+    show(dom.stOd, m.odNote !== '');
+    setText(dom.stOd, m.odNote);
     show(dom.stNote, m.note !== '');
     setText(dom.stNote, m.note);
     show(dom.stMeasureOff, m.measure === 'off');

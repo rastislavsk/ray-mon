@@ -19,6 +19,7 @@ import { posterLinkText, STATISTIKA_TEXTS } from '../../shared/messages.js';
 import { toUser } from '../../shared/settings.js';
 import { buildForecast, localMinutes } from '../../shared/solar.js';
 import { STATS_PERIODS } from '../../shared/stats.js';
+import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { kwhText, posterModel, statistikaModel } from '../../shared/statistika.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -110,7 +111,7 @@ const kartaZModelu = (m) => ({
     value: m.value,
     progress: m.progress?.text ?? null,
     equiv: m.equiv && [m.equiv.phones, m.equiv.km],
-    rows: m.rows.map((r) => `${r.name}${kwhText(r.kwh)} kWh`),
+    rows: m.rows.map((r) => `${r.name}${r.od ? ` ${r.od}` : ''}${kwhText(r.kwh)} kWh`),
     best: m.best?.text ?? null,
     posters: m.posters.map((p) => p.label),
 });
@@ -275,6 +276,44 @@ test.describe('karta Štatistika', () => {
         await expect(page.locator('#st-setup')).toBeHidden();
         await page.locator('#st-ask-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
+    });
+});
+
+test.describe('súčty, ktoré výrobca neposiela', () => {
+    test('Fox ESS bez roka: rok od prvého merania na karte, veta pod ňou aj plagát', async ({ page }) => {
+        const FOX = { ...TEST_ZDROJ, sposob: 'foxess-kluc' };
+        const surove = { ...pv, yearEnergyKwh: null };
+        const errors = await openStat(page, {
+            settings: { ...OWNER, zdroj: FOX },
+            onPv: (route) => route.fulfill({ json: { pv: surove } }),
+        });
+        const doplnene = doplnSucty(null, suctyZdroj(FOX), surove, '2026-09-05', '13:00').pv;
+        const v = vstup({ zdroj: FOX, pv: doplnene });
+        for (const period of STATS_PERIODS) {
+            await page.locator(`#st-seg [data-period="${period}"]`).click();
+            await expect.poll(() => kartaVStranke(page), period).toEqual(kartaZModelu(statistikaModel(v, period)));
+        }
+        await expect(page.locator('#st-src')).toHaveText('vyrobené od spustenia');
+        await page.locator('#st-seg [data-period="rok"]').click();
+        await expect(page.locator('#st-src')).toHaveText('vyrobené tento rok od 5. 9.');
+        const odNote = statistikaModel(v, 'rok').odNote;
+        expect(odNote).toBe('Fox ESS neposiela súčet za rok. Rátam ho sám z celkovej výroby, zatiaľ od 5. 9. – skôr som meranie nemal.');
+        await expect(page.locator('#st-od')).toHaveText(odNote);
+        await page.locator('[data-poster="rok"]').click();
+        await expect(page.locator('#poster')).toBeVisible();
+        const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(v, 'rok'));
+        expect(await plagatVStranke(page)).toEqual(plagatZModelu(m));
+        expect(m.title).toBe('Rok 2026 na streche od 5. 9. · Dvorany nad Nitrou');
+        expect(m.note).toMatch(/^Súčet roka je od 5. 9./);
+        expect(errors).toEqual([]);
+    });
+
+    test('kiosk so všetkými súčtami: žiadne „od“ ani veta', async ({ page }) => {
+        await openStat(page);
+        await page.locator('#st-seg [data-period="rok"]').click();
+        await expect(page.locator('#st-src')).toHaveText('vyrobené tento rok');
+        await expect(page.locator('#st-od')).toBeHidden();
+        await expect(page.locator('#st-rows .od')).toHaveCount(0);
     });
 });
 

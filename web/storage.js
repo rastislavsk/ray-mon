@@ -15,6 +15,7 @@ import {
     START_PANELS,
     START_STORAGE_KEY,
     STORAGE_KEYS,
+    SUCTY_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
@@ -22,6 +23,7 @@ import { parseLaunches } from '../shared/launches.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
+import { parseSucty } from '../shared/sucty.js';
 import {
     DEFAULT_LOOK,
     lookToStored,
@@ -175,6 +177,16 @@ export function loadRytmus() {
 /** @param {import('../shared/zdroje.js').Rytmus} r @returns {boolean} podarilo sa? */
 export function saveRytmus(r) {
     return write(MERANIE_STORAGE_KEY, JSON.stringify(r));
+}
+
+/** Kotvy súčtov, ktoré výrobca neposiela (shared/sucty.js); bez úložiska null. @returns {import('../shared/sucty.js').Sucty | null} */
+export function loadSucty() {
+    return readJson(SUCTY_STORAGE_KEY, parseSucty, null);
+}
+
+/** @param {import('../shared/sucty.js').Sucty} s @returns {boolean} podarilo sa? */
+export function saveSucty(s) {
+    return write(SUCTY_STORAGE_KEY, JSON.stringify(s));
 }
 
 /** Posledné stiahnuté počasie; bez úložiska null. @returns {import('../shared/schema.js').StoredWeather | null} */

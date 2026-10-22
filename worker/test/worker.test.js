@@ -268,13 +268,29 @@ test('Victron: token nájde inštalácie, výkon z diagnostiky, zlý token 400',
 
 const NB_HOST = 'https://eu5.fusionsolar.huawei.com';
 
+/** Ročné dáta elektrárne: každý rok od postavenia; collectTime je polnoc 1. 1. v pásme elektrárne (SEČ). */
+const NB_ROKY = [
+    { stationCode: 'NE=1', collectTime: Date.UTC(2025, 0, 1) - 3600000, dataItemMap: { PVYield: 9100, inverter_power: 9050 } },
+    { stationCode: 'NE=1', collectTime: Date.UTC(2026, 0, 1) - 3600000, dataItemMap: { PVYield: 4321.5 } },
+];
+
 /**
  * Podvrhnutý server Northbound. Prihlásenie vráti token v hlavičke `xsrf-token`, dáta len
  * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
  * @param {{ heslo?: string, tokeny?: string[], platne?: string[], realFail?: number }} [opts]
  */
 function northbound(
-    { heslo = 'tajne', tokeny = ['t1', 't2'], platne, realFail, loginFail, stationsFail, stareFail, devTyp = 38 } = /** @type {any} */ ({}),
+    {
+        heslo = 'tajne',
+        tokeny = ['t1', 't2'],
+        platne,
+        realFail,
+        loginFail,
+        stationsFail,
+        stareFail,
+        devTyp = 38,
+        rokFail,
+    } = /** @type {any} */ ({}),
 ) {
     /** @type {Array<{ path: string, body: any, token: string | null, cookie: string | null }>} */ const calls = [];
     let prihlasenia = 0;
@@ -292,6 +308,7 @@ function northbound(
             realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
         '/thirdData/getStationRealKpi': () =>
             ok([{ stationCode: 'NE=1', dataItemMap: { day_power: 21.5, month_power: 400, total_power: 5100 } }]),
+        '/thirdData/getKpiStationYear': () => (rokFail ? fail(rokFail) : ok(NB_ROKY)),
     };
     /** @param {any} body */
     const login = (body) => {
@@ -333,8 +350,16 @@ test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným do
     assert.ok(!stanice[0].pecat.includes('tajne'));
     assert.deepEqual(
         s.calls.map((c) => c.path),
-        ['/thirdData/login', '/thirdData/stations', '/thirdData/getDevList', '/thirdData/getStationRealKpi', '/thirdData/getDevRealKpi'],
+        [
+            '/thirdData/login',
+            '/thirdData/stations',
+            '/thirdData/getDevList',
+            '/thirdData/getStationRealKpi',
+            '/thirdData/getDevRealKpi',
+            '/thirdData/getKpiStationYear',
+        ],
     );
+    assert.equal(stanice[0].pv.yearEnergyKwh, 4321.5, 'tohtoročné PVYield');
     assert.ok(
         s.calls.slice(1).every((c) => c.token === 't1'),
         'dáta s tokenom z hlavičky prihlásenia',
@@ -345,6 +370,33 @@ test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným do
     assert.equal(meranie.pv.realTimePowerKw, 4.2);
     assert.equal(meranie.pecat, undefined);
     assert.equal(s.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: rok z getKpiStationYear najviac raz za 6 hodín, bez neho meria ďalej', async () => {
+    const s = northbound({ platne: ['t1'] });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    const roky = () => s.calls.filter((c) => c.path === '/thirdData/getKpiStationYear').length;
+    const o = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60 * 1000);
+    // Do 6 hodín od pripojenia sa na rok nepýta (token 25 minút - po ňom by sa prihlasoval, preto
+    // v tomto teste platí stále ten istý).
+    const skoro = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(10), s.impl)).json();
+    assert.equal(skoro.pv.yearEnergyKwh, null);
+    assert.equal(roky(), 1);
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const pristup = (await otvor(await key, stanice[0].pecat))?.pristup;
+    assert.equal(pristup?.rokAt, NOW.getTime());
+    const pecat = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...pristup, tokenAt: o(6 * 60).getTime() } });
+    const potom = await (await handlePv(pvRequest(pecat), ENV, o(6 * 60), s.impl)).json();
+    assert.equal(potom.pv.yearEnergyKwh, 4321.5);
+    assert.equal(roky(), 2);
+    assert.equal((await otvor(await key, potom.pecat))?.pristup.rokAt, o(6 * 60).getTime());
+    // Účet bez povoleného rozhrania: meranie prejde, rok ostane prázdny a ďalší pokus až o 6 hodín.
+    const bez = northbound({ rokFail: 401 });
+    const r = await (await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, bez.impl)).json();
+    assert.equal(r.stanice[0].pv.realTimePowerKw, 4.2);
+    assert.equal(r.stanice[0].pv.yearEnergyKwh, null);
 });
 
 test('Huawei Northbound: vypršaný token aj odhlásenie (305) znamenajú jedno nové prihlásenie a novú pečať', async () => {

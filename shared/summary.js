@@ -2,7 +2,8 @@
 // každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify, koľko toho človek
 // pustil na slnku a úspora CO2eq s uhlíkovou návratnosťou panelov (shared/carbon.js). Čisté funkcie; texty skladá shared/messages.js.
 //
-// Mesačný a ročný súčet je presný z kiosku. Týždeň, stĺpce dní a mesiacov stoja na denníku
+// Mesačný a ročný súčet je z merania - od výrobcu, alebo dopočítaný z celkovej výroby
+// (shared/sucty.js), vtedy možno len od prvého merania (`od`). Týždeň, stĺpce dní a mesiacov stoja na denníku
 // (shared/daylog.js), ktorý si appka vedie sama - deň, keď nebola otvorená, v ňom chýba a súhrn to povie.
 
 import { carbonFacts } from './carbon.js';
@@ -12,6 +13,7 @@ import { monthCount, sunRuns } from './launches.js';
 import { summaryTexts } from './messages.js';
 import { addDays, localDateKey } from './solar.js';
 import { longPrice, MONTHS } from './stats.js';
+import { menoZnacky } from './zdroje.js';
 
 /** @typedef {import('./config.js').SummaryPeriod} SummaryPeriod */
 // Obdobia v poradí prepínača - jedno miesto pravdy je config.js.
@@ -86,6 +88,20 @@ function periodKwh(pv, period, knownSum) {
 }
 
 /**
+ * Chýbajúce dni a súčet, ktorý nesiaha na začiatok obdobia (shared/sucty.js): taký je len od prvého
+ * merania (`od`) a dni pred ním v denníku nechýbajú - appka vtedy meranie nemala. `znacka` do vety.
+ * @param {SummaryInput} input @param {SummaryPeriod} period @param {Array<{ date: string, kwh: number | null }>} days
+ */
+function odFacts(input, period, days) {
+    const od = period === 'tyzden' ? null : (input.pv?.od?.[period] ?? null);
+    return {
+        missing: days.filter((d) => d.kwh === null && (!od || d.date >= od)).length,
+        od,
+        znacka: input.zdroj ? menoZnacky(input.zdroj.sposob) : '',
+    };
+}
+
+/**
  * Spustenia v období: posledných 7 dní, tento mesiac alebo tento rok.
  * @param {import('./launches.js').Launch[]} list @param {SummaryPeriod} period @param {string} today
  */
@@ -127,7 +143,7 @@ export function summaryModel(input, period, voice = 'drzy') {
         launches: periodLaunches(input.launches, period, today),
         // Prania zo slnka - zápisy „Pustil/a som“ práčky v dňoch obdobia.
         washes: sunRuns(input.launches, 'pracka', days[0].date, today),
-        missing: days.length - known.length,
+        ...odFacts(input, period, days),
         ...carbonFacts(kwh, pv.cumulativeEnergyKwh ?? null, input.plant),
     };
     return {

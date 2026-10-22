@@ -11,6 +11,7 @@ import {
     parseNbDevReal,
     parseNbStationReal,
     parseNbStations,
+    parseNbStationYear,
 } from '../shared/huawei-nb.js';
 import { validatePv } from '../shared/schema.js';
 import { udajeNote } from '../shared/setup-texts.js';
@@ -132,4 +133,22 @@ test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z menič
         () => parseNbDevReal([{ success: false, failCode: 407 }], [1]),
         (e) => e instanceof VyrobcaChyba && e.kod === String(NB.tooFrequent) && !e.zamietol,
     );
+});
+
+test('rok: tohtoročné PVYield (inak inverter_power), minuloročné nie', () => {
+    const json = {
+        success: true,
+        failCode: 0,
+        data: [
+            { stationCode: 'NE=1', collectTime: Date.UTC(2025, 0, 1) - 3600000, dataItemMap: { PVYield: 9100 } },
+            { stationCode: 'NE=1', collectTime: Date.UTC(2026, 0, 1) - 3600000, dataItemMap: { PVYield: '4321.5', inverter_power: 4300 } },
+            { stationCode: 'NE=2', collectTime: Date.UTC(2026, 0, 1) - 3600000, dataItemMap: { inverter_power: 288760 } },
+            { stationCode: 'NE=3', collectTime: Date.UTC(2025, 0, 1) - 3600000, dataItemMap: { PVYield: 50 } },
+        ],
+    };
+    const now = new Date('2026-10-22T11:00:00Z');
+    assert.equal(parseNbStationYear(json, 'NE=1', now), 4321.5);
+    assert.equal(parseNbStationYear(json, 'NE=2', now), 288760);
+    assert.equal(parseNbStationYear(json, 'NE=3', now), null, 'tento rok ešte nič');
+    assert.throws(() => parseNbStationYear({ success: false, failCode: 401, data: null }, 'NE=1', now), VyrobcaChyba);
 });

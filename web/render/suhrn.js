@@ -74,7 +74,7 @@ export function summaryHtml(m, period) {
         .map((r, i) => `<div class="summary-row"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></div>`)
         .join('');
     return (
-        `<section class="summary">${top}<h2 class="summary-kick">${escapeHtml(m.kick)}</h2>` +
+        `<section class="summary">${top}<h2 class="summary-kick">${escapeHtml(m.heading)}</h2>` +
         `<p class="summary-big">${fmtSum(Math.round(m.kwh), 0)}<small> kWh</small></p>${vizHtml(m)}` +
         `<div class="summary-rows">${rows}</div>` +
         (m.note ? `<p class="summary-note">${escapeHtml(m.note)}</p>` : '') +

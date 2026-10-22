@@ -14,6 +14,7 @@ import {
     parseNbDevReal,
     parseNbStationReal,
     parseNbStations,
+    parseNbStationYear,
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
@@ -269,11 +270,32 @@ async function nbNajdi(server, rel, udaje, ctx) {
     const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
     const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {} }));
     const pv = await nbMeraj(sp, plants).catch(() => null);
-    return plants.map((p) => ({
-        nazov: p.nazov,
-        pristup: { server, meno: udaje.meno, heslo: udaje.heslo, ...rel, tokenAt, ...p },
-        pv: pv?.get(p.plant) ?? null,
-    }));
+    const rok = await nbRok(sp, plants);
+    return plants.map((p) => {
+        const zmerane = pv?.get(p.plant);
+        return {
+            nazov: p.nazov,
+            pristup: { server, meno: udaje.meno, heslo: udaje.heslo, ...rel, tokenAt, rokAt: tokenAt, ...p },
+            pv: zmerane ? { ...zmerane, yearEnergyKwh: rok.get(p.plant) ?? null } : null,
+        };
+    });
+}
+
+/**
+ * Tohtoročná výroba elektrární z getKpiStationYear, jedným dopytom. Reálne dáta rok nemajú a toto
+ * rozhranie má limit 25 dopytov denne - pýta sa pri pripojení a potom najviac raz za NB.rokMs
+ * (`rokAt` v pečati). Zlyhanie meranie nezastaví (účet napr. nemá rozhranie povolené): rok potom
+ * appka dorátava z celkovej výroby (shared/sucty.js).
+ * @param {NbSpoj} sp @param {NbPlant[]} plants @returns {Promise<Map<string, number | null>>}
+ */
+async function nbRok(sp, plants) {
+    try {
+        const body = { stationCodes: plants.map((p) => p.plant).join(','), collectTime: sp.ctx.now.getTime() };
+        const json = await nbPost(sp, NB.stationYear, body, 'rok');
+        return new Map(plants.map((p) => [p.plant, parseNbStationYear(json, p.plant, sp.ctx.now)]));
+    } catch {
+        return new Map();
+    }
 }
 
 /**
@@ -433,12 +455,15 @@ export const ZDROJE = {
             // Bez meniča v pečati sa zoznam zariadení vypýta raz (nbDoplnDevs); čas pokusu sa zapečatí.
             let plant = p.plant;
             const devsAt = Object.keys(plant.devs).length || Number(pristup.devsAt) ? 0 : ctx.now.getTime();
+            // Rok najviac raz za NB.rokMs (nbRok); čas dopytu sa zapečatí.
+            const rokAt = ctx.now.getTime() - (Number(pristup.rokAt) || 0) >= NB.rokMs ? ctx.now.getTime() : 0;
             const { vysledok: pv, relacia } = await nbSRelaciou(p, ctx, async (sp) => {
                 if (devsAt && plant === p.plant) plant = await nbDoplnDevs(sp, plant);
-                return /** @type {import('../../shared/kiosk.js').PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
+                const zmerane = /** @type {import('../../shared/kiosk.js').PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
+                return rokAt ? { ...zmerane, yearEnergyKwh: (await nbRok(sp, [plant])).get(plant.plant) ?? null } : zmerane;
             });
-            if (!relacia && !devsAt) return { pv };
-            return { pv, pristup: { ...pristup, ...relacia, ...(devsAt ? { devs: plant.devs, devsAt } : {}) } };
+            const zmeny = { ...relacia, ...(devsAt ? { devs: plant.devs, devsAt } : {}), ...(rokAt ? { rokAt } : {}) };
+            return Object.keys(zmeny).length ? { pv, pristup: { ...pristup, ...zmeny } } : { pv };
         },
     },
     'solis-kluc': {

@@ -239,12 +239,54 @@ function directMisc(out, v) {
                             nic: { payback: null, debtT: null },
                         }[k],
                         carbon: carbonFacts(300, null, PLANT).carbon,
+                        od: null,
+                        znacka: 'Huawei',
                     },
                     v,
                 ),
                 `summary.${k}.${missing}`,
                 out,
             );
+    directSucty(out, v);
+}
+
+/** Súčty len od prvého merania (shared/sucty.js): veta Štatistiky, podnadpis a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
+function directSucty(out, v) {
+    for (const [k, od] of Object.entries({
+        rok: { rok: '2026-10-21' },
+        mesiacRok: { mesiac: '2026-10-21', rok: '2026-10-21' },
+        victron: { den: '09:12', mesiac: '2026-10-22', rok: '2026-10-22' },
+    }))
+        out[`sucty.${k}`] = M.suctyOdNote('Fox ESS', od);
+    out['sucty.sub.rok'] = M.statsHeroSub('rok', { time: '13:00', month: 'októbri', od: M.odText('2026-10-21') });
+    out['sucty.sub.dnes'] = M.statsHeroSub('dnes', { time: '13:00', month: 'októbri', od: M.odText('09:12') });
+    for (const period of /** @type {const} */ (['mesiac', 'rok']))
+        strings(
+            M.summaryTexts(
+                {
+                    period,
+                    month: 'október',
+                    year: '2026',
+                    kwh: 46.2,
+                    phones: 3080,
+                    km: 277,
+                    best: { date: '2026-10-21', kwh: 24.8, today: false },
+                    value: null,
+                    currency: '€',
+                    launches: { all: 0, sun: 0 },
+                    missing: 0,
+                    co2Kg: 3,
+                    payback: null,
+                    debtT: null,
+                    carbon: carbonFacts(46.2, null, PLANT).carbon,
+                    od: '2026-10-21',
+                    znacka: 'Fox ESS',
+                },
+                v,
+            ),
+            `sucty.summary.${period}`,
+            out,
+        );
 }
 
 /** Pevné texty. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
