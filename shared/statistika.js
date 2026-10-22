@@ -230,7 +230,7 @@ function posterCarbon(f, T) {
  * @param {StatistikaInput} input @param {SummaryPeriod} period @param {import('./messages.js').Voice} [voice]
  */
 export function posterModel(input, period, voice = 'drzy') {
-    const m = summaryModel(input, period, voice);
+    const m = summaryModel(input, period);
     if (!m) return null;
     const f = m.facts;
     const T = voiceTexts(voice).STATISTIKA_TEXTS;
@@ -240,7 +240,6 @@ export function posterModel(input, period, voice = 'drzy') {
         tiles.push({ value: `${fmtSum(Math.round(f.km), 0)} km`, label: T.posterKm });
     }
     if (f.best) tiles.push({ value: posterBestDay(f.best, period), label: `najlepší deň, ${kwhText(f.best.kwh)} kWh` });
-    if (f.washes) tiles.push({ value: `${f.washes}×`, label: T.posterWashes });
     if (f.value !== null && f.kwh > 0) tiles.push({ value: `~${fmtSum(f.value, 0)} ${f.currency}`, label: T.posterValue });
     tiles.push(...posterCarbon(f, T));
     return {

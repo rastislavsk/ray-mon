@@ -28,13 +28,9 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   vecí ide hneď, farebná bodka za každú a výnimky slovom („5 zo 6 ide hneď · auto o 12:30“).
   Ťuknutie naň otvorí zoznam vecí – práčka, umývačka, sušička, auto, hranie a fén – s krátkou
   odpoveďou („do 15:30“, „o 10:30“, „zajtra 08:00“, „lacno“). Ťuknutie na vec ju rozbalí: čo robiť, prečo, a čo keď sa zamračí alebo to
-  treba hneď – s cenou zo siete, keď ju tarifa pozná. V rozbalení spotrebiča je tlačidlo „Pustil/a som“ (keď appka radí počkať,
-  „Pustil/a som aj tak“): spustenie sa zapíše len v telefóne, pri spotrebiči sa ukáže „beží do …“
-  a pod zoznamom koľko toho človek tento mesiac pustil a koľko z toho na slnku. Kým spotrebič
-  beží, druhé ťuknutie zápis zruší. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
+  treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
   7 dní alebo mesiac na streche ako plagát – veľké číslo kWh, stĺpce dní (mesiac ako mriežka),
-  nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň, hodnota podľa tarify a koľko
-  toho človek pustil na slnku. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
+  nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň a hodnota podľa tarify. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
   systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si
   appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
   prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.

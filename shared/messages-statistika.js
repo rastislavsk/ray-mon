@@ -66,7 +66,6 @@ export const STATISTIKA_TEXTS = {
     posterFoot: 'RAY-MON · slnko nefakturuje',
     posterPhones: 'nabitý mobil',
     posterKm: 'elektrickým autom',
-    posterWashes: 'pranie zo slnka',
     posterValue: 'hodnota podľa tarify',
     posterCo2: 'CO2eq menej ako zo siete',
     posterPayback: 'uhlíka panelov od spustenia',
@@ -256,11 +255,11 @@ function summaryKick(d) {
  * nesiaha na začiatok obdobia, s „od 21. 10.“.
  * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string, kwh: number, phones: number, km: number,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
- *   launches: { all: number, sun: number }, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
+ *   missing: number, co2Kg: number, payback: number | null, debtT: number | null,
  *   carbon: CarbonFactors, od: string | null, znacka: string }} d
- * @param {Voice} [voice]
+
  */
-export function summaryTexts(d, voice = 'drzy') {
+export function summaryTexts(d) {
     const kick = summaryKick(d);
     const heading = d.od ? `${kick} ${odText(d.od)}` : kick;
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
@@ -271,12 +270,6 @@ export function summaryTexts(d, voice = 'drzy') {
     }
     if (d.best) rows.push({ t: `Najlepší deň: ${bestDay(d.best, d.period)}`, s: `${fmt1(d.best.kwh)} kWh za jediný deň` });
     if (d.value !== null && d.kwh > 0) rows.push({ t: `Hodnota ~${fmtSum(d.value, 0)} ${d.currency}`, s: 'toľko by sme za to dali sieti' });
-    const { all, sun } = d.launches;
-    if (all)
-        rows.push({
-            t: polite(voice) ? `Na slnku ste pustili ${sun}×` : `Na slnku si pustil/a ${sun}×`,
-            s: all > sun ? `z ${all} spustení, zvyšok išiel zo siete` : 'všetko išlo zo slnka',
-        });
     rows.push(...carbonRows(d));
     return { kick, heading, rows, note: summaryNote(d) };
 }
@@ -297,7 +290,7 @@ function summaryNote(d) {
 }
 
 /**
- * Riadok uhlíka v súhrne - jeden, aby sa súhrn s cenami a spusteniami zmestil do obrázka do story:
+ * Riadok uhlíka v súhrne - jeden, aby sa súhrn s cenami zmestil do obrázka do story:
  * úspora CO2eq za obdobie a pod ňou koľko z uhlíka výroby panelov je splatené. Bez výroby za
  * obdobie len návratnosť, bez súčtu od spustenia len úspora.
  * @param {{ kwh: number, co2Kg: number, payback: number | null, debtT: number | null }} d

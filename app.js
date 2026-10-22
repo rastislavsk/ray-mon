@@ -4,7 +4,7 @@ import { incomingSettings, readLink } from './shared/settings.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions, isTall } from './web/interactions.js';
 import { render } from './web/render/index.js';
-import { initUrlMirror, loadDayLog, loadLaunches, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from './web/settings-store.js';
+import { dropOldStored, initUrlMirror, loadDayLog, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from './web/settings-store.js';
 import { createStore, initialState } from './web/state.js';
 
 // Jediná šírka, o ktorej appka vie: od 768 px kreslí grafy na skutočný rozmer karty.
@@ -12,6 +12,8 @@ import { createStore, initialState } from './web/state.js';
 const mq = { wide: window.matchMedia('(min-width: 768px)') };
 const dom = collectDom();
 const now = new Date();
+// Dáta, ktoré appka už nepoužíva (zápisy „Pustil/a som“), v telefóne nenechávame.
+dropOldStored();
 // Uložená elektráreň; bez nej aspoň poloha (typická strecha), bez nej appka začne otázkou na polohu.
 const saved = loadSettings();
 const site = saved ? null : loadSite();
@@ -26,7 +28,6 @@ const layout = { wide: mq.wide.matches, tall: isTall() };
 const startPanel = loadStartPanel(location.hash);
 const store = createStore({
     ...initialState(now, layout, { saved, site, incoming, startPanel }),
-    launches: loadLaunches(),
     dayLog: loadDayLog(),
     pristup: loadOdmietnutie(),
     linkError: link?.error ?? null,

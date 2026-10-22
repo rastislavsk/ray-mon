@@ -7,7 +7,6 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
     DAYLOG_STORAGE_KEY,
-    LAUNCH_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     PLANT,
     SETTINGS_STORAGE_KEY,
@@ -35,9 +34,8 @@ const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
 /** Tarifa Dvorian s cenami, aby Štatistika ukázala aj peniaze. */
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
 const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
-/** Denník výroby (plagát potrebuje dni mesiaca) a zápisy „Pustil/a som“. */
+/** Denník výroby (plagát potrebuje dni mesiaca). */
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
-const LAUNCHES = [{ d: '2026-09-04', id: 'pracka', m: 720, sun: true }];
 const GEOCODE = {
     results: [
         {
@@ -79,7 +77,6 @@ async function openObloha(page, { time = at('13:00'), settings = OWNER, site = n
     if (settings) await uloz(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
     if (site) await uloz(SITE_STORAGE_KEY, JSON.stringify(site));
     await uloz(DAYLOG_STORAGE_KEY, JSON.stringify(LOG));
-    await uloz(LAUNCH_STORAGE_KEY, JSON.stringify(LAUNCHES));
     if (!liveSky) await uloz(LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ voice: 'drzy', liveSky: false })));
     await page.clock.setFixedTime(time);
     await page.goto('/obloha/');

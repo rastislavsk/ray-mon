@@ -40,10 +40,10 @@ import { localDateKey } from './solar.js';
  * `offline` (bez predpovede), `ok`. Pri známej polohe bez panelov (`known: 'poloha'`) karta
  * počíta s typickou strechou, ktorú má vo vstupe (typicalSettings), a priznáva to (`estimate`).
  * @param {TerazInput} input
- * @param {{ launches?: import('./launches.js').Launch[], online?: boolean, voice?: import('./messages.js').Voice }} [opts]
- *   zápisy „Pustil/a som“ (krátke odpovede spotrebičov), či má telefón internet (veta bez dát) a tón hlášok
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts]
+ *   či má telefón internet (veta bez dát) a tón hlášok
  */
-export function terazModel(input, { launches = [], online = true, voice = 'drzy' } = {}) {
+export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
     const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
     const estimate = input.known === 'poloha';
     if (input.known === 'nic') return { ...empty('ask', estimate), ask: true };
@@ -63,7 +63,7 @@ export function terazModel(input, { launches = [], online = true, voice = 'drzy'
         chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        cards: cardsOf(input, plan, hero, now, launches),
+        cards: cardsOf(input, plan, hero, now),
     };
 }
 
@@ -178,10 +178,9 @@ function chartOf(input, plan, hero, now) {
  * čas, spotrebiče s krátkymi odpoveďami karty Môžem?, dnešok a kedy bude lepšie.
  * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {ReturnType<typeof heroModel>} hero @param {ReturnType<typeof heroModel>} now
- * @param {import('./launches.js').Launch[]} launches
  */
-function cardsOf(input, plan, hero, now, launches) {
-    const shorts = deviceShorts(input, launches);
+function cardsOf(input, plan, hero, now) {
+    const shorts = deviceShorts(input);
     return {
         now: { head: hero.message.headline, body: hero.message.body },
         devices: MOZEM_ITEMS.filter((it) => it.device && shorts[it.device]).map((it) => ({

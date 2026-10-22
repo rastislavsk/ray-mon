@@ -23,11 +23,6 @@ const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 const TIMES = ['05:30', '08:00', '10:00', '13:00', '16:30', '19:00', '22:30'];
 const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
 const LOG = { '2026-08-20': 40, '2026-09-01': 20, '2026-09-03': 35.5, '2026-09-04': 12 };
-const LAUNCHES = [
-    { d: '2026-09-05', id: 'pracka', m: 600, sun: true },
-    { d: '2026-09-05', id: 'auto', m: 770, sun: true },
-    { d: '2026-09-03', id: 'umyvacka', m: 1200, sun: false },
-];
 
 /** Len texty z modelu: reťazce s písmenom, bez geometrie grafov (cesty SVG). @param {unknown} v @param {string} path @param {Record<string, string>} out */
 function strings(v, path, out) {
@@ -41,7 +36,7 @@ function strings(v, path, out) {
 /** Vstupy kariet v danej chvíli. @param {Date} now */
 function inputs(now) {
     const { forecast } = fixtureData(now);
-    const base = { now, site: SITE, plant: PLANT, tariff: PRICED, loading: false, previewMinutes: null, launches: LAUNCHES, dayLog: LOG };
+    const base = { now, site: SITE, plant: PLANT, tariff: PRICED, loading: false, previewMinutes: null, dayLog: LOG };
     const typical = typicalSettings(SITE);
     return {
         kiosk: {
@@ -85,12 +80,12 @@ export function sampleTexts(voice) {
             const p = `${hm}.${name}`;
             const i = /** @type {any} */ (input);
             for (const quip of [0, 1, 2, 3, 4]) {
-                strings(mozemModel(i, quip, LAUNCHES, { voice: v }), `${p}.mozem.q${quip}`, out);
+                strings(mozemModel(i, quip, { voice: v }), `${p}.mozem.q${quip}`, out);
             }
             for (const online of [true, false]) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;
-                strings(mozemSkyModel(i, { quip: 1, launches: LAUNCHES, online, voice: v }), `${o}.mozemSky`, out);
-                strings(terazModel(i, { launches: LAUNCHES, online, voice: v }), `${o}.teraz`, out);
+                strings(mozemSkyModel(i, { quip: 1, online, voice: v }), `${o}.mozemSky`, out);
+                strings(terazModel(i, { online, voice: v }), `${o}.teraz`, out);
                 strings(sedemModel(i, { online, voice: v }), `${o}.sedem`, out);
                 for (const period of STATS_PERIODS) strings(statistikaModel(i, period, { online, voice: v }), `${o}.stats.${period}`, out);
             }
@@ -104,7 +99,7 @@ export function sampleTexts(voice) {
                 strings(sedemWeekModel(i, v), `${p}.week`, out);
             }
             for (const period of SUMMARY_PERIODS) {
-                strings(summaryModel(i, period, v), `${p}.summary.${period}`, out);
+                strings(summaryModel(i, period), `${p}.summary.${period}`, out);
                 strings(posterModel(i, period, v), `${p}.poster.${period}`, out);
             }
         }
@@ -186,17 +181,10 @@ function directItems(out, v) {
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
     strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
-    for (const tone of ['go', 'wait', 'cheap', 'no'])
-        for (const isAuto of [true, false]) {
-            out[`log.${tone}.${isAuto}`] = M.mozemLogLabel(tone, isAuto, null, v);
-            out[`log.running.${isAuto}`] = M.mozemLogLabel(tone, isAuto, { m: 600 }, v);
-        }
 }
 
-/** Počet, výzvy, veta bez dát, najlepší deň a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
+/** Výzvy, veta bez dát, najlepší deň a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
 function directMisc(out, v) {
-    out['count'] = M.mozemCountText({ all: 5, sun: 3 }, v);
-    out['countPrazdny'] = M.mozemCountText({ all: 0, sun: 0 }, v) || '(prázdne)';
     for (const online of [true, false])
         for (const kiosk of [true, false])
             for (const [pk, pv] of Object.entries({
@@ -214,43 +202,39 @@ function directMisc(out, v) {
     out['sedem.guess'] = M.sedemGuessText(5, v);
     strings(M.statsBestText({ date: '2026-09-05', kwh: 31.2, today: true }, v), 'best.dnes', out);
     strings(M.statsBestText({ date: '2026-09-03', kwh: 35.5, today: false }, v), 'best.inyDen', out);
-    for (const [k, launches] of Object.entries({ vsetko: { all: 3, sun: 3 }, cast: { all: 5, sun: 2 }, nic: { all: 0, sun: 0 } }))
+    for (const k of /** @type {const} */ (['vsetko', 'cast', 'nic']))
         for (const missing of [0, 1, 3])
             strings(
-                M.summaryTexts(
-                    {
-                        period: 'mesiac',
-                        month: 'september',
-                        year: '2026',
-                        kwh: 300,
-                        phones: 20000,
-                        km: 1800,
-                        best: { date: '2026-09-03', kwh: 35.5, today: false },
-                        value: 50,
-                        currency: '€',
-                        launches,
-                        missing,
-                        // Uhlík: rozpracovaný, splatený aj bez súčtu od spustenia.
-                        co2Kg: 14.4,
-                        ...{
-                            vsetko: { payback: 0.129, debtT: 11 },
-                            cast: { payback: 1.2, debtT: 11 },
-                            nic: { payback: null, debtT: null },
-                        }[k],
-                        carbon: carbonFacts(300, null, PLANT).carbon,
-                        od: null,
-                        znacka: 'Huawei',
-                    },
-                    v,
-                ),
+                M.summaryTexts({
+                    period: 'mesiac',
+                    month: 'september',
+                    year: '2026',
+                    kwh: 300,
+                    phones: 20000,
+                    km: 1800,
+                    best: { date: '2026-09-03', kwh: 35.5, today: false },
+                    value: 50,
+                    currency: '€',
+                    missing,
+                    // Uhlík: rozpracovaný, splatený aj bez súčtu od spustenia.
+                    co2Kg: 14.4,
+                    ...{
+                        vsetko: { payback: 0.129, debtT: 11 },
+                        cast: { payback: 1.2, debtT: 11 },
+                        nic: { payback: null, debtT: null },
+                    }[k],
+                    carbon: carbonFacts(300, null, PLANT).carbon,
+                    od: null,
+                    znacka: 'Huawei',
+                }),
                 `summary.${k}.${missing}`,
                 out,
             );
-    directSucty(out, v);
+    directSucty(out);
 }
 
-/** Súčty len od prvého merania (shared/sucty.js): veta Štatistiky, podnadpis a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
-function directSucty(out, v) {
+/** Súčty len od prvého merania (shared/sucty.js): veta Štatistiky, podnadpis a súhrn. @param {Record<string, string>} out */
+function directSucty(out) {
     for (const [k, od] of Object.entries({
         rok: { rok: '2026-10-21' },
         mesiacRok: { mesiac: '2026-10-21', rok: '2026-10-21' },
@@ -261,28 +245,24 @@ function directSucty(out, v) {
     out['sucty.sub.dnes'] = M.statsHeroSub('dnes', { time: '13:00', month: 'októbri', od: M.odText('09:12') });
     for (const period of /** @type {const} */ (['mesiac', 'rok']))
         strings(
-            M.summaryTexts(
-                {
-                    period,
-                    month: 'október',
-                    year: '2026',
-                    kwh: 46.2,
-                    phones: 3080,
-                    km: 277,
-                    best: { date: '2026-10-21', kwh: 24.8, today: false },
-                    value: null,
-                    currency: '€',
-                    launches: { all: 0, sun: 0 },
-                    missing: 0,
-                    co2Kg: 3,
-                    payback: null,
-                    debtT: null,
-                    carbon: carbonFacts(46.2, null, PLANT).carbon,
-                    od: '2026-10-21',
-                    znacka: 'Fox ESS',
-                },
-                v,
-            ),
+            M.summaryTexts({
+                period,
+                month: 'október',
+                year: '2026',
+                kwh: 46.2,
+                phones: 3080,
+                km: 277,
+                best: { date: '2026-10-21', kwh: 24.8, today: false },
+                value: null,
+                currency: '€',
+                missing: 0,
+                co2Kg: 3,
+                payback: null,
+                debtT: null,
+                carbon: carbonFacts(46.2, null, PLANT).carbon,
+                od: '2026-10-21',
+                znacka: 'Fox ESS',
+            }),
             `sucty.summary.${period}`,
             out,
         );

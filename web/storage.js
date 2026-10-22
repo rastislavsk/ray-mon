@@ -6,9 +6,9 @@
 
 import {
     DAYLOG_STORAGE_KEY,
-    LAUNCH_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
+    OLD_STORAGE_KEYS,
     PRISTUP_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
@@ -19,7 +19,6 @@ import {
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
-import { parseLaunches } from '../shared/launches.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
@@ -104,16 +103,6 @@ export function saveStartPanel(panel) {
     return write(START_STORAGE_KEY, panel);
 }
 
-/** Zápisy „Pustil/a som“ z tohto telefónu; bez úložiska prázdny zoznam. @returns {import('../shared/launches.js').Launch[]} */
-export function loadLaunches() {
-    return readJson(LAUNCH_STORAGE_KEY, parseLaunches, []);
-}
-
-/** @param {import('../shared/launches.js').Launch[]} list @returns {boolean} podarilo sa? */
-export function saveLaunches(list) {
-    return write(LAUNCH_STORAGE_KEY, JSON.stringify(list));
-}
-
 /** @param {import('../shared/settings.js').Settings} settings @returns {boolean} podarilo sa? */
 export function saveSettings(settings) {
     return write(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
@@ -134,7 +123,17 @@ export function saveDayLog(log) {
  * appky na GitHub Pages toho istého autora zdieľajú jednu doménu, a teda aj localStorage.
  */
 export function clearStored() {
-    for (const key of STORAGE_KEYS) {
+    removeAll(STORAGE_KEYS);
+}
+
+/** Zmaže kľúče, ktoré appka už nepoužíva (OLD_STORAGE_KEYS). Volajú ho obe appky pri štarte. */
+export function dropOldStored() {
+    removeAll(OLD_STORAGE_KEYS);
+}
+
+/** @param {readonly string[]} keys */
+function removeAll(keys) {
+    for (const key of keys) {
         try {
             localStorage.removeItem(key);
         } catch {

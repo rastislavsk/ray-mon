@@ -1,6 +1,5 @@
 // Súhrn na zdieľanie v karte Môžem?: týždeň, mesiac alebo rok na streche v jednotkách, ktoré pozná
-// každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify, koľko toho človek
-// pustil na slnku a úspora CO2eq s uhlíkovou návratnosťou panelov (shared/carbon.js). Čisté funkcie; texty skladá shared/messages.js.
+// každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify a úspora CO2eq s uhlíkovou návratnosťou panelov (shared/carbon.js). Čisté funkcie; texty skladá shared/messages.js.
 //
 // Mesačný a ročný súčet je z merania - od výrobcu, alebo dopočítaný z celkovej výroby
 // (shared/sucty.js), vtedy možno len od prvého merania (`od`). Týždeň, stĺpce dní a mesiacov stoja na denníku
@@ -9,9 +8,8 @@
 import { carbonFacts } from './carbon.js';
 import { EVERYDAY } from './config.js';
 import { lastDays, monthDays, yearDays } from './daylog.js';
-import { monthCount, sunRuns } from './launches.js';
 import { summaryTexts } from './messages.js';
-import { addDays, localDateKey } from './solar.js';
+import { localDateKey } from './solar.js';
 import { longPrice, MONTHS } from './stats.js';
 import { menoZnacky } from './zdroje.js';
 
@@ -20,16 +18,9 @@ import { menoZnacky } from './zdroje.js';
 export { SUMMARY_PERIODS } from './config.js';
 
 /**
- * @typedef {import('./stats.js').StatsInput & { launches: import('./launches.js').Launch[],
+ * @typedef {import('./stats.js').StatsInput & {
  *   dayLog: import('./daylog.js').DayLog, plant: import('./config.js').Plant }} SummaryInput
  */
-
-/** Spustenia v posledných 7 dňoch. @param {import('./launches.js').Launch[]} list @param {string} today */
-function weekCount(list, today) {
-    const from = addDays(today, -6);
-    const inWeek = list.filter((x) => x.d >= from && x.d <= today);
-    return { all: inWeek.length, sun: inWeek.filter((x) => x.sun).length };
-}
 
 /**
  * Dni obdobia z denníka. Dnešok berie z kiosku, aj keď ho denník ešte nemá (zapisuje sa až od
@@ -102,21 +93,12 @@ function odFacts(input, period, days) {
 }
 
 /**
- * Spustenia v období: posledných 7 dní, tento mesiac alebo tento rok.
- * @param {import('./launches.js').Launch[]} list @param {SummaryPeriod} period @param {string} today
- */
-function periodLaunches(list, period, today) {
-    if (period === 'tyzden') return weekCount(list, today);
-    return monthCount(list, today.slice(0, period === 'rok' ? 4 : 7));
-}
-
-/**
  * Model súhrnu, alebo null bez živého merania - súčty posiela len kiosk. `facts` sú čísla, z ktorých
  * sú poskladané riadky (summaryTexts) - plagát novej appky (shared/statistika.js) ich ukazuje inak.
  * Rok má navyše `months` - stĺpce mesiacov namiesto dní.
- * @param {SummaryInput} input @param {SummaryPeriod} period @param {import('./messages.js').Voice} [voice] tón riadkov
+ * @param {SummaryInput} input @param {SummaryPeriod} period
  */
-export function summaryModel(input, period, voice = 'drzy') {
+export function summaryModel(input, period) {
     const { pv } = input;
     if (!pv) return null;
     const today = localDateKey(input.now, input.site.timezone);
@@ -140,9 +122,6 @@ export function summaryModel(input, period, voice = 'drzy') {
         best: best && max > 0 ? { date: best.date, kwh: max, today: best.date === today } : null,
         value: price === null ? null : kwh * price,
         currency: input.tariff.currency,
-        launches: periodLaunches(input.launches, period, today),
-        // Prania zo slnka - zápisy „Pustil/a som“ práčky v dňoch obdobia.
-        washes: sunRuns(input.launches, 'pracka', days[0].date, today),
         ...odFacts(input, period, days),
         ...carbonFacts(kwh, pv.cumulativeEnergyKwh ?? null, input.plant),
     };
@@ -156,7 +135,7 @@ export function summaryModel(input, period, voice = 'drzy') {
         })),
         months: period === 'rok' ? yearMonths(days, today) : null,
         facts,
-        ...summaryTexts(facts, voice),
+        ...summaryTexts(facts),
     };
 }
 

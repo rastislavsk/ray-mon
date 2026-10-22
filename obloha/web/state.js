@@ -13,8 +13,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * `terazPage` stránka pásu odporúčaní pod ním, `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `poster` otvorený plagát na zdieľanie (obdobie súhrnu, null = zatvorený; otvára ho Štatistika aj
- * odkaz na karte Môžem?), `launches` zápisy „Pustil/a som“ (to isté úložisko ako v súčasnej appke)
- * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
+ * odkaz na karte Môžem?), `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
  * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
  * potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
@@ -31,7 +30,6 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   panelDir: 1 | -1,
  *   layout: Layout,
  *   tariff: import('../../shared/config.js').Tariff,
- *   launches: import('../../shared/launches.js').Launch[],
  *   mozemItem: string | null,
  *   mozemQuip: number,
  *   terazPreview: number | null,
@@ -71,31 +69,19 @@ import { setupInit } from '../../shared/setup-flow.js';
  * @param {Date} now
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
- *   launches: import('../../shared/launches.js').Launch[], online: boolean,
+ *   online: boolean,
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
- *   na ktorej sa appka na tomto telefóne otvára, denník výroby, zápisy spustení, internet, nastavenie
+ *   na ktorej sa appka na tomto telefóne otvára, denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
  * @returns {AppState}
  */
 export function initialState(
     now,
-    {
-        saved,
-        site,
-        startPanel,
-        dayLog,
-        launches,
-        online,
-        incoming = null,
-        linkError = null,
-        look = DEFAULT_LOOK,
-        layout = 'narrow',
-        pristup = null,
-    },
+    { saved, site, startPanel, dayLog, online, incoming = null, linkError = null, look = DEFAULT_LOOK, layout = 'narrow', pristup = null },
 ) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
@@ -117,7 +103,6 @@ export function initialState(
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.
         loading: true,
         dayLog,
-        launches,
         mozemItem: null,
         mozemQuip: 0,
         terazPreview: null,

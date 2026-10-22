@@ -623,29 +623,6 @@ function laterItem(a, voice) {
     };
 }
 
-/**
- * Tlačidlo „Pustil/a som“ v rozbalení spotrebiča. Kým vec beží, hovorí, kedy sa zapísala,
- * a že druhé ťuknutie zápis zruší. Keď appka radí počkať, je to „aj tak“ - zápis to tak berie.
- * @param {string} tone @param {boolean} isAuto @param {{ m: number } | null} running @param {Voice} [voice]
- */
-export function mozemLogLabel(tone, isAuto, running, voice = 'drzy') {
-    if (running) return `Zapísané o ${hm(running.m)}. ${polite(voice) ? 'Ťuknite' : 'Ťukni'} znova, ak nie.`;
-    const verb = isAuto ? 'Zapojil/a som' : 'Pustil/a som';
-    return tone === 'go' || tone === 'cheap' ? verb : `${verb} aj tak`;
-}
-
-/** Krátka odpoveď, kým spustená vec beží. @param {boolean} isAuto @param {number} until minúta dňa */
-export function mozemRunningShort(isAuto, until) {
-    return `${isAuto ? 'nabíja sa' : 'beží'} do ${hm(until)}`;
-}
-
-/** Riadok pod mriežkou: koľko toho tento mesiac človek pustil a koľko na slnku. @param {{ all: number, sun: number }} c @param {Voice} [voice] */
-export function mozemCountText({ all, sun }, voice = 'drzy') {
-    if (!all) return '';
-    if (polite(voice)) return `Tento mesiac ste niečo pustili ${all}×, z toho ${sun}× na slnku.`;
-    return `Tento mesiac si pustil/a ${all}× niečo, z toho ${sun}× na slnku.`;
-}
-
 /** „zo“ pred číslom, ktoré sa číta so s/š na začiatku: zo štyroch, zo šiestich, zo siedmich. @param {number} n */
 const zFrom = (n) => ([4, 6, 7].includes(n) ? 'zo' : 'z');
 
@@ -833,11 +810,6 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
             : 'Nie je internet, takže nemám predpoveď ani meranie. Pripoj sa a skús to znova.';
     const pv = !zdroj || pvOk ? '' : pvSince ? ` Meranie zo strechy neodpovedá od ${pvSince}.` : ' Ani meranie zo strechy neodpovedá.';
     return `Predpoveď počasia neprišla, bez nej neviem, kedy bude slnko.${pv} ${p ? 'Skúste' : 'Skús'} to o chvíľu znova.`;
-}
-
-/** Tlačidlo v paneli veci, kým beží: dokedy a že ťuknutie zápis zruší. @param {boolean} isAuto @param {number} until minúta dňa */
-export function mozemLogCancel(isAuto, until) {
-    return `${isAuto ? 'Nabíja sa' : 'Beží'} do ${hm(until)} · zrušiť`;
 }
 
 // ---- Karta Teraz v novej appke -----------------------------------------------------

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { carbonPayback, co2SavedKg } from '../shared/carbon.js';
 import { EVERYDAY, installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { fmt1, fmtSum, kwpText } from '../shared/format.js';
-import { sunRuns } from '../shared/launches.js';
 import {
     posterBestDay,
     posterButtonText,
@@ -36,25 +35,10 @@ const BASE = {
     loading: false,
     pv,
     forecast,
-    launches: /** @type {import('../shared/launches.js').Launch[]} */ ([]),
     dayLog: LOG,
 };
 /** Bez kiosku: meranie nie je, dnešok z predpovede, ostatné z denníka. */
 const NO_KIOSK = { ...BASE, zdroj: null, pv: null };
-
-test('sunRuns: len daná vec, len na slnku, len v dňoch obdobia', () => {
-    const list = [
-        { d: '2026-08-31', id: 'pracka', m: 600, sun: true },
-        { d: '2026-09-01', id: 'pracka', m: 600, sun: true },
-        { d: '2026-09-02', id: 'pracka', m: 1300, sun: false },
-        { d: '2026-09-03', id: 'susicka', m: 700, sun: true },
-        { d: '2026-09-05', id: 'pracka', m: 700, sun: true },
-    ];
-    assert.equal(sunRuns(list, 'pracka', '2026-09-01', '2026-09-05'), 2);
-    assert.equal(sunRuns(list, 'pracka', '2026-08-30', '2026-09-05'), 3);
-    assert.equal(sunRuns(list, 'susicka', '2026-09-01', '2026-09-05'), 1);
-    assert.equal(sunRuns([], 'pracka', '2026-09-01', '2026-09-05'), 0);
-});
 
 test('bestOf: najvyšší deň, deň bez čísla sa nepočíta, pri rovnosti skorší', () => {
     assert.deepEqual(
@@ -69,21 +53,11 @@ test('bestOf: najvyšší deň, deň bez čísla sa nepočíta, pri rovnosti sko
     assert.equal(bestOf([{ date: '2026-09-01', kwh: null }]), null);
 });
 
-test('summaryModel: facts sú čísla riadkov, prania zo slnka v dňoch obdobia', () => {
-    const launches = [
-        { d: '2026-08-31', id: 'pracka', m: 600, sun: true },
-        { d: '2026-09-02', id: 'pracka', m: 600, sun: true },
-        { d: '2026-09-04', id: 'pracka', m: 1300, sun: false },
-        { d: '2026-09-05', id: 'umyvacka', m: 700, sun: true },
-    ];
-    const month = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, launches }, 'mesiac'));
+test('summaryModel: facts sú čísla riadkov', () => {
+    const month = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel(BASE, 'mesiac'));
     assert.equal(month.facts.kwh, pv.monthEnergyKwh);
     assert.equal(month.facts.phones, pv.monthEnergyKwh / EVERYDAY.phoneChargeKwh);
     assert.equal(month.facts.km, pv.monthEnergyKwh * EVERYDAY.evKmPerKwh);
-    assert.equal(month.facts.washes, 1, 'augustové pranie do septembra nepatrí, nočné nie je zo slnka');
-    assert.deepEqual(month.facts.launches, { all: 3, sun: 2 });
-    const week = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, launches }, 'tyzden'));
-    assert.equal(week.facts.washes, 2, 'posledných 7 dní siaha do augusta');
 });
 
 test('monthBest: najlepší deň mesiaca z denníka aj s dneškom z merania; z jedného dňa nič', () => {
@@ -213,8 +187,7 @@ test('statistikaModel: stavy bez čísel - bez polohy, bez panelov, načítavani
 });
 
 test('posterModel: čísla zo summaryModel, stĺpce dní a chýbajúce dni', () => {
-    const launches = [{ d: '2026-09-02', id: 'pracka', m: 600, sun: true }];
-    const input = { ...BASE, launches };
+    const input = BASE;
     const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(input, 'mesiac'));
     const s = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel(input, 'mesiac'));
     assert.equal(m.title, `September na streche · ${SITE.name}`);
@@ -230,7 +203,6 @@ test('posterModel: čísla zo summaryModel, stĺpce dní a chýbajúce dni', () 
         { value: `${fmtSum(Math.round(s.facts.phones), 0)}×`, label: 'nabitý mobil' },
         { value: `${fmtSum(Math.round(s.facts.km), 0)} km`, label: 'elektrickým autom' },
         { value: posterBestDay(/** @type {NonNullable<typeof s.facts.best>} */ (s.facts.best)), label: `najlepší deň, ${fmt1(35.5)} kWh` },
-        { value: '1×', label: 'pranie zo slnka' },
         { value: `~${fmtSum(/** @type {number} */ (s.facts.value), 0)} €`, label: 'hodnota podľa tarify' },
         { value: posterCo2Value(co2SavedKg(s.kwh)), label: 'CO2eq menej ako zo siete' },
         {

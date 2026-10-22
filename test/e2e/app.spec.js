@@ -21,7 +21,7 @@ import {
     powerThresholds,
     PREVIEW,
     DAYLOG_STORAGE_KEY,
-    LAUNCH_STORAGE_KEY,
+    OLD_STORAGE_KEYS,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_STORAGE_KEY,
@@ -3341,30 +3341,23 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('Pustil/a som: zapíše sa v telefóne, pri práčke beží, druhé ťuknutie zruší', async ({ page }) => {
+    test('staré zápisy „Pustil/a som“ appka pri štarte zmaže a rozbalená vec nemá čo zapisovať', async ({ page }) => {
         const errors = await openApp(page);
-        await page.locator('#nav-mozem').click();
-        await page.locator('[data-mozem-list]').click();
-        await page.locator('[data-mozem-item="pracka"]').click();
-        const log = page.locator('[data-mozem-log="pracka"]');
-        await expect(log).toHaveText('Pustil/a som');
-        await log.click();
-        await expect(log).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
-        await expect(page.locator('.mozem-count')).toHaveText('Tento mesiac si pustil/a 1× niečo, z toho 1× na slnku.');
-        const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), LAUNCH_STORAGE_KEY);
-        expect(stored).toEqual([{ d: '2026-09-05', id: 'pracka', m: 13 * 60, sun: true }]);
-
-        // Zápis prežije znovuotvorenie appky; druhé ťuknutie počas behu ho zruší.
+        const stare = JSON.stringify([{ d: '2026-09-05', id: 'pracka', m: 12 * 60, sun: true }]);
+        await page.evaluate(
+            ([keys, v]) => keys.forEach((k) => localStorage.setItem(k, v)),
+            /** @type {const} */ ([OLD_STORAGE_KEYS, stare]),
+        );
         await page.reload();
         await appReady(page);
+        expect(await page.evaluate((keys) => keys.map((k) => localStorage.getItem(k)), OLD_STORAGE_KEYS)).toEqual(
+            OLD_STORAGE_KEYS.map(() => null),
+        );
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
-        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('beží do 15:00');
         await page.locator('[data-mozem-item="pracka"]').click();
-        await page.locator('[data-mozem-log="pracka"]').click();
-        await expect(page.locator('.mozem-count')).toHaveCount(0);
-        expect(await page.evaluate((key) => localStorage.getItem(key), LAUNCH_STORAGE_KEY)).toBe('[]');
+        await expect(page.locator('#mozem-more')).toBeVisible();
+        await expect(page.locator('#mozem-more button')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
@@ -3384,10 +3377,7 @@ test.describe('karta Môžem?', () => {
     /** Súhrn tak, ako ho appka počíta v pevnom čase testov. @param {'tyzden' | 'mesiac'} period */
     const suhrn = (period) =>
         /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
-            summaryModel(
-                { ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW), launches: [], dayLog: {} },
-                period,
-            )
+            summaryModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW), dayLog: {} }, period)
         );
 
     test('súhrn: otvorí sa z karty, prepína obdobie a Späť ho zavrie', async ({ page }) => {
@@ -3454,7 +3444,7 @@ test.describe('karta Môžem?', () => {
         await page.locator('.summary-link').click();
         await page.locator('[data-summary-period="rok"]').click();
         const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
-            summaryModel({ ...vstup, launches: [], dayLog: { '2026-09-05': /** @type {number} */ (pv.dailyEnergyKwh) } }, 'rok')
+            summaryModel({ ...vstup, dayLog: { '2026-09-05': /** @type {number} */ (pv.dailyEnergyKwh) } }, 'rok')
         );
         await expect(page.locator('.summary-kick')).toHaveText(m.heading);
         expect(m.heading).toBe('Rok 2026 na streche od 5. 9.');
@@ -3464,14 +3454,10 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('súhrn do story: aj s cenami, spusteniami a uhlíkom sa všetky riadky zmestia nad pätičku', async ({ page }) => {
-        // Najviac riadkov: prepočty, najlepší deň, hodnota (tarifa s cenami), spustenia a uhlík - úspora
+    test('súhrn do story: aj s cenami a uhlíkom sa všetky riadky zmestia nad pätičku', async ({ page }) => {
+        // Najviac riadkov: prepočty, najlepší deň, hodnota (tarifa s cenami) a uhlík - úspora
         // CO2eq s návratnosťou v jednom riadku (kiosk posiela súčet od spustenia).
         const priced = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-        const launches = [
-            { d: '2026-09-02', id: 'pracka', m: 600, sun: true },
-            { d: '2026-09-04', id: 'susicka', m: 1200, sun: false },
-        ];
         const zoznamy = SUMMARY_PERIODS.map(
             (period) =>
                 /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
@@ -3483,14 +3469,13 @@ test.describe('karta Môžem?', () => {
                             loading: false,
                             pv,
                             forecast: forecastAt(FIXED_NOW),
-                            launches,
                             dayLog: {},
                         },
                         period,
                     )
                 ).rows,
         );
-        expect(zoznamy.map((r) => r.length)).toEqual([6, 6, 6]);
+        expect(zoznamy.map((r) => r.length)).toEqual([5, 5, 5]);
         await openApp(page);
         const vysledok = await page.evaluate(async (zoznamy) => {
             const { look, rows, rowsScale, ROWS_END } = await import('/web/share-image.js');

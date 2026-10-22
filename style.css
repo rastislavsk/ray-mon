@@ -4790,30 +4790,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     font-family: var(--font-mono);
     font-size: 13px;
 }
-/* „Pustil/a som“: tmavé tlačidlo na svetlom rozbalení, zapísané je len obrys. */
-.mozem-log {
-    display: block;
-    width: 100%;
-    min-height: 46px;
-    margin-top: 12px;
-    padding: 8px 16px;
-    border-radius: var(--radius-pill);
-    background: var(--ink-on-color);
-    color: var(--ink);
-    font-weight: 700;
-    text-align: center;
-}
-.mozem-log[aria-pressed='true'] {
-    border: 2px solid var(--ink-on-color);
-    background: transparent;
-    color: var(--ink-on-color);
-}
-.mozem-count {
-    margin: 0 6px;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-70);
-}
 /* ---- Môžem?: súhrn na zdieľanie ------------------------------------------------ */
 /* Plagát v prechode farieb stavu - ten istý, aký ide do obrázka pre story (web/share-image.js). */
 .summary {

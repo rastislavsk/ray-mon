@@ -71,7 +71,7 @@ function renderHero(state, m, dom) {
     dom.dialRing.classList.toggle('empty', !(m.dial.fraction > 0));
     dom.verdictHeadline.textContent = m.message.headline;
     dom.verdictBody.textContent = m.message.body;
-    writeHtml(dom.verdictGoRow, devicesHtml(m.devices, deviceShorts(state, state.launches)), 'devices');
+    writeHtml(dom.verdictGoRow, devicesHtml(m.devices, deviceShorts(state)), 'devices');
     renderForecastPage(state, dom);
     renderVerdictPager(state, m, dom);
 }

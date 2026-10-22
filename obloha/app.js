@@ -4,7 +4,7 @@
 import { incomingSettings, readLink } from '../shared/settings.js';
 import { initUrlMirror } from '../web/settings-store.js';
 import { createStore } from '../web/store.js';
-import { loadDayLog, loadLaunches, loadLook, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
+import { dropOldStored, loadDayLog, loadLook, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -21,8 +21,9 @@ const site = saved ? null : loadSite();
 const link = readLink(location.hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
-// Úvodná karta je voľba telefónu, spoločná so súčasnou appkou (prva-karta-v1), rovnako ako
-// zápisy „Pustil/a som“ (spustenia-v1).
+// Dáta, ktoré appky už nepoužívajú (zápisy „Pustil/a som“), v telefóne nenechávame.
+dropOldStored();
+// Úvodná karta je voľba telefónu, spoločná so súčasnou appkou (prva-karta-v1).
 const store = createStore(
     initialState(new Date(), {
         saved,
@@ -31,7 +32,6 @@ const store = createStore(
         linkError: link?.error ?? null,
         startPanel: loadStartPanel(location.hash),
         dayLog: loadDayLog(),
-        launches: loadLaunches(),
         online: navigator.onLine,
         // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
         pristup: loadOdmietnutie(),

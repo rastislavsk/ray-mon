@@ -53,3 +53,4 @@ Dnešné dve bubliny stoja pás dňa **40 px** výšky: 24 px je nafúknutie kor
 vidno (pravidlá `:has()` v `style.css`), zvyšok je trvalá rezerva v `margin-bottom` karty
 `.verdict`. Pás dňa tak dostane 45 px namiesto 85 px. Všetky tri umiestnenia tých 40 px vracajú
 v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
+| `bez-pustil-som.html` | Karta Môžem? bez „Pustil/a som“ – čo zmizne v oboch appkách (beží do, súčet, riadok súhrnu, plagát) a čo s dátami |

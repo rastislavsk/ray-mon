@@ -3,16 +3,7 @@
 // volá appka - test tak odhalí rozdiel medzi modelom a tým, čo je naozaj v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import {
-    DAYLOG_STORAGE_KEY,
-    LAUNCH_STORAGE_KEY,
-    PLANT,
-    SETTINGS_STORAGE_KEY,
-    SITE,
-    SITE_STORAGE_KEY,
-    TARIFF,
-    WORKER_PV_URL,
-} from '../../shared/config.js';
+import { DAYLOG_STORAGE_KEY, PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
 import { recordDay } from '../../shared/daylog.js';
 import { kwpText } from '../../shared/format.js';
 import { posterLinkText, STATISTIKA_TEXTS } from '../../shared/messages.js';
@@ -33,16 +24,9 @@ const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id 
 const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
 /** Denník výroby: tri dni septembra (3. chýba) a jeden augustový. */
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
-/** Zápisy „Pustil/a som“: dve prania na slnku, jedno večer, umývačka. */
-const LAUNCHES = [
-    { d: '2026-09-01', id: 'pracka', m: 660, sun: true },
-    { d: '2026-09-02', id: 'pracka', m: 1260, sun: false },
-    { d: '2026-09-04', id: 'pracka', m: 720, sun: true },
-    { d: '2026-09-04', id: 'umyvacka', m: 760, sun: true },
-];
 
 /**
- * Otvorí novú appku s pevným časom, uloženým nastavením, denníkom a zápismi spustení. `net.off`
+ * Otvorí novú appku s pevným časom, uloženým nastavením a denníkom. `net.off`
  * zhodí Worker aj Open-Meteo, kým ho test neprepne späť. `onPv` odpovedá namiesto Workera.
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, net?: { off: boolean }, panel?: string,
@@ -61,7 +45,6 @@ async function openStat(page, { settings = OWNER, site = null, net = { off: fals
     if (settings) await uloz(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
     if (site) await uloz(SITE_STORAGE_KEY, JSON.stringify(site));
     await uloz(DAYLOG_STORAGE_KEY, JSON.stringify(LOG));
-    await uloz(LAUNCH_STORAGE_KEY, JSON.stringify(LAUNCHES));
     await page.clock.setFixedTime(FIXED_NOW);
     await page.goto('/obloha/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
@@ -83,7 +66,6 @@ const vstup = (extra = {}) => ({
     pv,
     forecast: buildForecast(weather, FIXED_NOW, SITE, PLANT),
     dayLog: recordDay(LOG, '2026-09-05', localMinutes(FIXED_NOW, SITE.timezone), pv.dailyEnergyKwh),
-    launches: LAUNCHES,
     ...extra,
 });
 
@@ -327,7 +309,7 @@ test.describe('plagát na zdieľanie', () => {
             expect(await plagatVStranke(page)).toEqual(plagatZModelu(m));
             expect(m.note, 'v denníku chýbajú dni - plagát to musí povedať').not.toBe('');
             await expect(page.locator('#poster-foot')).toHaveText('RAY-MON · slnko nefakturuje');
-            expect(m.tiles.map((t) => t.label)).toContain('pranie zo slnka');
+            expect(m.tiles.map((t) => t.label)).not.toContain('pranie zo slnka');
             // Veľké číslo v jednom riadku v karte (ročné „9 112 kWh“ je dlhšie) a obrázok do story
             // s číslami nad pätičkou a každým číslom celým v stĺpci.
             const miesto = await page.evaluate(async (m) => {

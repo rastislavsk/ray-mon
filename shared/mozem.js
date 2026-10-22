@@ -8,16 +8,12 @@ import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { weekDayName } from './format.js';
-import { canLog, monthCount, runMinOf, runningLaunch } from './launches.js';
 import {
     MOZEM_ANYTIME,
     mozemBandText,
-    mozemCountText,
     mozemGlanceText,
     mozemHeroText,
     mozemItemText,
-    mozemLogLabel,
-    mozemRunningShort,
     mozemStripText,
     voiceTexts,
 } from './messages-core.js';
@@ -233,8 +229,7 @@ function quipsOf(state, day, page, voice) {
 }
 
 /**
- * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
- * `launches` zápisy „Pustil/a som“ z tohto telefónu. `known`: čo appka o elektrárni vie
+ * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa). `known`: čo appka o elektrárni vie
  * (bez neho uložená elektráreň). Pri známej polohe bez panelov (`poloha`) karta odpovedá
  * z typickej strechy, ktorú má vo vstupe (typicalSettings), a model to priznáva v `estimate` -
  * v oboch appkách. Bez polohy (`nic`) neodpovedá.
@@ -244,15 +239,14 @@ function quipsOf(state, day, page, voice) {
  * `band` je pás nad dlaždicami zoznamu vecí (null bez pásu dneška), `anytime` veci bloku
  * Kedykoľvek - obe len pre súčasnú appku.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches] @param {{ voice?: Voice }} [opts] `voice` tón hlášok
+ * @param {{ voice?: Voice }} [opts] `voice` tón hlášok
  */
-export function mozemModel(input, quipPage = 0, launches = [], { voice = 'drzy' } = {}) {
+export function mozemModel(input, quipPage = 0, { voice = 'drzy' } = {}) {
     const known = input.known || 'elektraren';
     const estimate = known === 'poloha';
     const noPanels = known === 'nic';
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
-    const items = mozemItems(input, launches, ctx, voice);
-    const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
+    const items = mozemItems(input, ctx, voice);
     const head = ctx
         ? dayHead(input, ctx, quipPage, voice, estimate ? installedKw(input.plant) : null)
         : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
@@ -261,7 +255,6 @@ export function mozemModel(input, quipPage = 0, launches = [], { voice = 'drzy' 
         estimate,
         items,
         ...listParts(head, ctx, items),
-        count: mozemCountText(monthCount(launches, month), voice),
     };
 }
 
@@ -284,27 +277,15 @@ function listParts(head, ctx, items) {
 }
 
 /**
- * Veci karty s odpoveďou a zápismi spustení: pri spotrebiči tlačidlo „Pustil/a som“ (s tým, či
- * svieti slnko) a kým beží, krátka odpoveď „beží do …“. Bez predpovede (`ctx` null) spotrebič
- * nevie a ostatné idú vždy. Pri veci ostáva aj odpoveď (`answer`) a krátka odpoveď bez behu
- * (`base`) - z nich nová appka skladá dlaždice skupín.
- * @param {PlanInput} input @param {import('./launches.js').Launch[]} launches @param {DayCtx | null} ctx @param {Voice} [voice]
+ * Veci karty s odpoveďou. Bez predpovede (`ctx` null) spotrebič nevie a ostatné idú vždy. Pri
+ * veci ostáva aj odpoveď (`answer`) - z nej nová appka skladá dlaždice skupín.
+ * @param {PlanInput} input @param {DayCtx | null} ctx @param {Voice} [voice]
  */
-function mozemItems(input, launches, ctx, voice = 'drzy') {
-    const today = localDateKey(input.now, input.site.timezone);
-    const nowMin = localMinutes(input.now, input.site.timezone);
+function mozemItems(input, ctx, voice = 'drzy') {
     return MOZEM_ITEMS.map((item) => {
         /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
         const text = mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice);
-        const it = { id: item.id, ...text, answer, base: text.short };
-        if (!canLog(it.id)) return { ...it, log: null };
-        const running = runningLaunch(launches, it.id, today, nowMin);
-        const isAuto = it.id === 'auto';
-        return {
-            ...it,
-            short: running ? mozemRunningShort(isAuto, running.m + runMinOf(it.id)) : it.short,
-            log: { sun: it.tone === 'go', pressed: !!running, label: mozemLogLabel(it.tone, isAuto, running, voice) },
-        };
+        return { id: item.id, ...text, answer };
     });
 }
 
@@ -367,13 +348,13 @@ function todayFacts({ pv, forecast }) {
 }
 
 /**
- * Krátke odpovede karty Môžem? („do 14:45“, „o 10:00“, „beží do …“) podľa názvu spotrebiča
+ * Krátke odpovede karty Môžem? („do 14:45“, „o 10:00“) podľa názvu spotrebiča
  * z DEVICES - pre tooltip spotrebiča na karte Terazky a kartu Spotrebiče v Oblohe. Počíta len
  * veci, nie celú kartu.
- * @param {PlanInput} input @param {import('./launches.js').Launch[]} [launches] @returns {Record<string, string>}
+ * @param {PlanInput} input @returns {Record<string, string>}
  */
-export function deviceShorts(input, launches = []) {
-    const items = mozemItems(input, launches, input.forecast ? dayCtx(input) : null);
+export function deviceShorts(input) {
+    const items = mozemItems(input, input.forecast ? dayCtx(input) : null);
     /** @type {Record<string, string>} */ const out = {};
     for (const { id, device } of MOZEM_ITEMS) {
         const it = items.find((x) => x.id === id);

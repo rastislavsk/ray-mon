@@ -37,7 +37,6 @@ function mozemDom() {
         mzList: byId('mz-list'),
         mzListTitle: byId('mz-list-title'),
         mzItems: byId('mz-items'),
-        mzCount: byId('mz-count'),
         mzQuip: byId('mz-quip'),
         mzQuipText: byId('mz-quip-text'),
         mzQuipHint: byId('mz-quip-hint'),
@@ -54,7 +53,6 @@ function mozemDom() {
         mzSheetWhy: byId('mz-sheet-why'),
         mzSheetMoreQ: byId('mz-sheet-more-q'),
         mzSheetMore: byId('mz-sheet-more'),
-        mzSheetLog: byId('mz-sheet-log'),
     };
 }
 
