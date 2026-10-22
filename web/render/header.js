@@ -1,9 +1,10 @@
 // Hlavička: stavová bodka (cena × výkon) s časom poslednej aktualizácie dát, pod ním čo ten
 // čas znamená, a farba plánu dňa pre pozadie celej stránky (vrátane náhľadu iného času).
 
+import { installedKw } from '../../shared/config.js';
 import { heroModel, pvFreshness } from '../../shared/hero-model.js';
+import { MOZEM_SKY_TEXTS, terazTypicalText } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
-import { powerState } from '../state.js';
 
 /**
  * Pravý horný roh hlavičky: čas aktualizácie dát a pod ním text k nemu. Kde čas nie je, stojí
@@ -27,25 +28,46 @@ export function updatedLine(state) {
     return { time, text: stale ? `${label} · zastarané` : label };
 }
 
-/** Pás pod hlavičkou bez zadaných panelov - texty z index.html, render ich vracia po hlásení o prístupe. */
-const PANELS_BAR = { nadpis: 'Chýbajú panely', text: 'Bez nich nepoznám výkon.', tlacidlo: 'Nastaviť' };
+/**
+ * Pás bez zadaných panelov: karty odpovedajú z typickej strechy a pás povie s čím - texty Oblohy
+ * (výzva na karte Môžem? a veta pod číslom karty Teraz). @param {number} kwp výkon typickej strechy
+ */
+function guessBar(kwp) {
+    const typical = terazTypicalText(kwp);
+    return {
+        nadpis: MOZEM_SKY_TEXTS.guessTitle,
+        text: `${typical[0].toUpperCase()}${typical.slice(1)}.`,
+        tlacidlo: MOZEM_SKY_TEXTS.guessBtn,
+    };
+}
 
 /**
- * Pás pod hlavičkou na kartách Terazky a Môžem?: chýbajúce panely, alebo prístup k meraniu, ktorý
- * výrobca prestal prijímať (shared/pristup.js). Tlačidlo vedie do Nastavenia; pri prístupe
- * `data-pristup-go` povie, že tam má rozbaliť Elektráreň s hlásením (web/interactions.js).
+ * Pás pod hlavičkou na kartách Terazky a Môžem?: odhad z typickej strechy (jantárový, `odhad`),
+ * alebo prístup k meraniu, ktorý výrobca prestal prijímať (shared/pristup.js, červený). Tlačidlo
+ * vedie do Nastavenia; pri prístupe `data-pristup-go` povie, že tam má rozbaliť Elektráreň
+ * s hlásením (web/interactions.js).
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderPanelsBar(state, dom) {
-    const onCard = state.panel === 'terazky' || state.panel === 'mozem';
-    const grey = state.known === 'poloha' && onCard;
-    const pas = !grey && onCard && state.known === 'elektraren' ? (neplatiOf(state)?.pas ?? null) : null;
-    dom.panelsBar.classList.toggle('hidden', !grey && !pas);
-    const t = pas ?? PANELS_BAR;
-    dom.panelsBarTitle.textContent = t.nadpis;
-    dom.panelsBarText.textContent = t.text;
-    dom.panelsBarGo.textContent = `${t.tlacidlo} →`;
-    dom.panelsBarGo.toggleAttribute('data-pristup-go', !!pas);
+    const bar = barOf(state);
+    dom.panelsBar.classList.toggle('hidden', !bar);
+    dom.panelsBar.classList.toggle('odhad', !!bar?.odhad);
+    if (!bar) return;
+    dom.panelsBarTitle.textContent = bar.t.nadpis;
+    dom.panelsBarText.textContent = bar.t.text;
+    dom.panelsBarGo.textContent = bar.odhad ? bar.t.tlacidlo : `${bar.t.tlacidlo} →`;
+    dom.panelsBarGo.toggleAttribute('data-pristup-go', !bar.odhad);
+}
+
+/**
+ * Ktorý pás a s akými textami, alebo null, keď žiadny. @param {import('../state.js').AppState} state
+ * @returns {{ odhad: boolean, t: { nadpis: string, text: string, tlacidlo: string } } | null}
+ */
+function barOf(state) {
+    if (state.panel !== 'terazky' && state.panel !== 'mozem') return null;
+    if (state.known === 'poloha') return { odhad: true, t: guessBar(installedKw(state.plant)) };
+    const pas = state.known === 'elektraren' ? (neplatiOf(state)?.pas ?? null) : null;
+    return pas ? { odhad: false, t: pas } : null;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -57,8 +79,8 @@ export function renderHeader(state, dom) {
     dom.pvSetupGo.textContent = go ? updated.text : '';
     dom.pvUpdated.classList.toggle('hidden', go);
     dom.pvSetupGo.classList.toggle('hidden', !go);
-    // Výzva bez zadaných panelov - len na kartách, ktoré bez nich nevedia odpovedať. Karta 7 dní
-    // ukazuje predpoveď pre typickú strechu (hovorí to v podnadpise), Štatistika má vlastnú výzvu.
+    // Pás o odhade z typickej strechy - len na kartách, ktoré z nej odpovedajú bez slova o nej. Karta
+    // 7 dní to hovorí v podnadpise, Štatistika má vlastnú výzvu.
     renderPanelsBar(state, dom);
     // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
     if (state.known === 'nic') {
@@ -69,9 +91,8 @@ export function renderHeader(state, dom) {
     // Bodka je vždy o stave teraz, preto ju náhľad iného času nezaujíma. Pozadie naopak
     // sleduje aj bežca na prstenci, takže pri jeho posúvaní vidno farbu okna, na ktoré sa
     // práve pozeráš. Bez náhľadu je to ten istý model, netreba ho rátať dvakrát.
-    const power = powerState(state);
-    const live = heroModel({ ...power, previewMinutes: null });
-    const shown = power.previewMinutes === null ? live : heroModel(power);
+    const live = heroModel({ ...state, previewMinutes: null });
+    const shown = state.previewMinutes === null ? live : heroModel(state);
     const accent = live.accent;
     // Farbu bodky (a s ňou aj podsvietenie ikony aktívnej karty v navigácii) drží data-accent
     // na <html> - mapovanie na konkrétnu farbu je v style.css pri --live-rgb.

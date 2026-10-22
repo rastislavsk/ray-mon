@@ -709,7 +709,7 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('#mz-lead')).toHaveText(/^Nie je internet/);
     });
 
-    test('poloha bez panelov: odpoveď z typickej strechy s ODHAD a výzva, súčasná appka ostáva pri „Neviem.“', async ({ page }) => {
+    test('poloha bez panelov: odpoveď z typickej strechy s ODHAD a výzva, súčasná appka odpovedá to isté', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
         const typical = typicalSettings(SITE);
         const m = mozemSkyModel({
@@ -730,10 +730,10 @@ test.describe('karta Môžem?', () => {
         await page.getByRole('button', { name: 'Zadaj panely', exact: true }).click();
         await ocakavajKartu(page, 'nastavenie');
 
-        // Súčasná appka v tom istom stave odpovedá ako doteraz: bez panelov neodpovedá.
+        // Súčasná appka v tom istom stave odpovedá to isté slovo (jedno jadro, dva kabáty).
         await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(MOZEM_WORDS.bezpanelov);
+        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(MOZEM_WORDS[m.state]);
         expect(errors).toEqual([]);
     });
 
@@ -1048,11 +1048,11 @@ test.describe('karta Teraz', () => {
         await page.locator('#tz-guess-btn').click();
         await ocakavajKartu(page, 'nastavenie');
 
-        // Súčasná appka v tom istom stave: karta Terazky bez výkonu, ako doteraz.
+        // Súčasná appka v tom istom stave: ten istý odhad z typickej strechy (jedno jadro, dva kabáty).
         await otvorSucasnuAppku(page);
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
-        await expect(page.locator('#pv-power')).toHaveText('–');
+        await expect(page.locator('#pv-power')).toHaveText(m.num.replace(/^~/, ''));
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
         expect(errors).toEqual([]);
     });
 

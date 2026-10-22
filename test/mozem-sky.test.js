@@ -53,14 +53,9 @@ function guessInput(now) {
     return { now, ...typical, loading: false, known: /** @type {const} */ ('poloha'), pv: null, forecast };
 }
 
-test('mozemModel: bez guess ostáva pri polohe bez panelov „bezpanelov“, s guess odpovedá z typickej strechy', () => {
+test('mozemModel: pri polohe bez panelov odpovedá z typickej strechy v oboch appkách, bez polohy nie', () => {
     const g = guessInput(FIXED_NOW);
-    const dnes = mozemModel(g);
-    assert.equal(dnes.state, 'bezpanelov');
-    assert.equal(dnes.estimate, false);
-    assert.equal(dnes.facts, null);
-
-    const odhad = mozemModel(g, 0, [], { guess: true });
+    const odhad = mozemModel(g);
     const elektraren = mozemModel({ ...g, known: 'elektraren' });
     assert.equal(odhad.estimate, true);
     assert.equal(odhad.state, elektraren.state, 'odpoveď je tá istá, akú by dala uložená typická strecha');
@@ -68,8 +63,11 @@ test('mozemModel: bez guess ostáva pri polohe bez panelov „bezpanelov“, s g
         odhad.items.map((i) => i.short),
         elektraren.items.map((i) => i.short),
     );
-    // Bez polohy sa nedá odpovedať ani s guess.
-    assert.equal(mozemModel({ ...g, known: 'nic' }, 0, [], { guess: true }).state, 'bezpanelov');
+    assert.equal(elektraren.estimate, false);
+    // Bez polohy sa odpovedať nedá.
+    const nic = mozemModel({ ...g, known: 'nic' });
+    assert.equal(nic.state, 'bezpanelov');
+    assert.equal(nic.facts, null);
 });
 
 test('mozemModel: facts nesú cenu siete, okno pása dneška, živý výkon a výkon z plánu', () => {

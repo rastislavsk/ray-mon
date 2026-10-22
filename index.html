@@ -63,20 +63,23 @@
                     </svg>
                 </button>
             </div>
-            <!-- Výzva bez zadaných panelov: karty Terazky a Môžem? sú vtedy sivé a bez čísel, a prečo,
-                 musí byť vidno na prvý pohľad. Render ju ukáže len na nich. Ten istý pás povie aj to,
-                 že výrobca prestal prijímať prístup k meraniu (shared/pristup.js) - texty vtedy píše render. -->
+            <!-- Pás pod hlavičkou na kartách Terazky a Môžem?: bez zadaných panelov jantárový (trieda odhad,
+                 karty odpovedajú z typickej strechy a pás povie s čím), keď výrobca prestal prijímať prístup
+                 k meraniu (shared/pristup.js), červený. Texty píše render. -->
             <div class="panels-bar hidden" id="panels-bar">
                 <div class="panels-bar-inner" role="status">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <svg class="panels-bar-alarm" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M12 3.5L2.5 20h19L12 3.5z" />
                         <path d="M12 10v4.5M12 17.2v.3" />
                     </svg>
+                    <svg class="panels-bar-house" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 11l9-7 9 7M5 9.5V20h14V9.5" />
+                    </svg>
                     <span class="panels-bar-txt">
-                        <b id="panels-bar-title">Chýbajú panely</b>
-                        <span id="panels-bar-text">Bez nich nepoznám výkon.</span>
+                        <b id="panels-bar-title"></b>
+                        <span id="panels-bar-text"></span>
                     </span>
-                    <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie">Nastaviť&nbsp;→</button>
+                    <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie"></button>
                 </div>
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">

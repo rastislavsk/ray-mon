@@ -426,7 +426,8 @@ const HERO_SAY = {
  * Veta a fakt pod veľkým slovom. Bez `data` (načítava sa, dáta nie sú) len stála veta.
  * @param {import('./mozem.js').MozemState} state
  * @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, live: boolean, silentSince: string | null,
- *   measured: boolean, kwNow: number, todayKwh: number | null, tomorrowKwh: number | null } | null} data
+ *   measured: boolean, kwNow: number, todayKwh: number | null, tomorrowKwh: number | null, typicalKwp?: number | null } | null} data
+ *   `typicalKwp`: výkon typickej strechy, keď appka panely nepozná
  * @param {Voice} [voice]
  * @returns {{ lead: string, factK: string, factV: string }}
  */
@@ -486,12 +487,13 @@ export function phonesPerHour(kw) {
 export const silentFact = (since) => `meranie neodpovedá od ${since}`;
 
 /**
- * Hlavička, keď svieti: s čerstvým meraním nabitia mobilu, bez neho priznaný odhad - a keď
- * meranie mlčí, aj odkedy.
- * @param {{ live: boolean, silentSince: string | null, kwNow: number }} data @param {HeroSay} say vety v tóne
+ * Hlavička, keď svieti: s čerstvým meraním nabitia mobilu, bez neho priznaný odhad - pri typickej
+ * streche s čím appka počíta, a keď meranie mlčí, odkedy.
+ * @param {{ live: boolean, silentSince: string | null, kwNow: number, typicalKwp?: number | null }} data @param {HeroSay} say vety v tóne
  */
-function goHero({ live, silentSince, kwNow }, say) {
+function goHero({ live, silentSince, kwNow, typicalKwp = null }, say) {
     const lead = live ? say.live : 'Podľa predpovede teraz svieti naplno.';
+    if (!live && typicalKwp !== null) return { lead: `${lead}${say.go}`, factK: 'typická strecha', factV: kwpRoughText(typicalKwp) };
     const phones = phonesPerHour(kwNow);
     return {
         lead: `${lead}${say.go}`,

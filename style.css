@@ -390,8 +390,9 @@ b {
         flex-shrink: 0;
     }
 }
-/* Výzva bez zadaných panelov. Zámerne krikľavá: kto ju prehliadne, nevie, prečo sú karty
-   sivé a bez čísel. Červená je tmavšia než --red, lebo biele písmo na --red nie je čitateľné. */
+/* Pás pod hlavičkou: červený, keď výrobca prestal prijímať prístup k meraniu - to je chyba. Červená je
+   tmavšia než --red, lebo biele písmo na --red nie je čitateľné. Bez zadaných panelov (.odhad) je
+   jantárový: appka funguje, len odpovedá z typickej strechy - upozornenie, nie chyba. */
 .panels-bar {
     max-width: var(--page-max);
     margin: 0 auto;
@@ -443,6 +444,22 @@ b {
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
+}
+.panels-bar.odhad .panels-bar-inner {
+    background: var(--amber);
+    color: var(--ink-on-color);
+}
+.panels-bar.odhad .panels-bar-txt b {
+    color: var(--ink-on-color);
+}
+.panels-bar.odhad .panels-bar-go {
+    background: var(--ink-on-color);
+    color: var(--amber);
+}
+/* Ikona podľa druhu pásu: trojuholník pri chybe, domček pri odhade z typickej strechy. */
+.panels-bar.odhad .panels-bar-alarm,
+.panels-bar:not(.odhad) .panels-bar-house {
+    display: none;
 }
 .live-dot {
     width: 6px;
@@ -1128,14 +1145,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 }
 
 /* ---- Terazky: verdikt a spotrebiče --------------------------------------- */
-/* Bez zadaných panelov sú karty o výkone sivé: čísla v nich nie sú (viď powerState vo
-   web/state.js) a farba by sľubovala odpoveď, ktorú appka nemá. Tooltip spotrebiča je
-   position: fixed - filter by mu zmenil, k čomu sa vzťahuje, preto ho obchádza. */
-.no-panels .dial-hero,
-.no-panels .verdict > :not(.chip-tooltip),
-.no-panels .mozem {
-    filter: grayscale(1);
-}
 .verdict {
     text-align: center;
     /* Container query jednotky (cqw) nižšie potrebujú predka s inline-size kontajnmentom -
