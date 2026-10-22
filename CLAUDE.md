@@ -5,8 +5,8 @@
 Statická webová appka (GitHub Pages) pre domácnosť s fotovoltikou + Cloudflare Worker,
 ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 
-Appky sú teraz dve: súčasná (koreň, `web/`, `style.css`) a nový dizajn „Živá obloha“, ktorý
-vzniká po krokoch v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
+Appky sú dve a ostávajú natrvalo: súčasná (koreň, `web/`, `style.css`) a „Živá obloha“
+v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `gesture.js`, `nav-history.js`,
 `setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`), takže
@@ -14,7 +14,23 @@ platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutráln
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
 vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
 v `eslint.config.js` (zoznam `NEUTRAL_WEB` – nový neutrálny modul treba dopísať tam aj sem).
-Súčasnú appku počas prestavby nemeň, kým to nie je úlohou.
+
+## Jedno jadro, dva kabáty
+
+Návrh a prečo: `docs/navrhy/jedno-jadro-dva-kabaty.html`.
+
+- **Jadro** (`shared/`, neutrálne moduly vo `web/`, Worker, úložisko) dáva obom appkám tie isté
+  odpovede: či, kedy, koľko a prečo. **Kabát** (HTML, CSS, render, poslucháče, navigácia) smie mať
+  vlastné obrazovky, ovládanie, voľby vzhľadu aj funkcie, ktoré druhá appka nemá.
+- V jadre nie je nič, čo by vedelo, pre ktorú appku počíta: žiadny prepínač správania pre jednu
+  appku, žiadne dva zoznamy tej istej veci. Skúška: keby sa človek opýtal oboch appiek to isté
+  a dostal inú odpoveď, rozdiel patrí do jadra a zjednotí sa. Parameter, ktorý mení len podobu
+  (tón hlášok, text o ciferníku či páse plánu), je v poriadku.
+- Modely obrazoviek jednej appky (`shared/teraz.js`, `shared/mozem-sky.js`, …) smú byť
+  v `shared/` kvôli testom, ale nesmú nič rozhodnúť samy – len skladajú spoločné výpočty.
+- Nová viditeľná funkcia nemusí byť v oboch appkách. Urob ju tam, kde ju úloha chce, a druhú
+  appku nemeň, kým to nie je úlohou. Jej výpočet patrí do jadra, aby ju druhá appka mohla
+  prevziať bez ďalšej práce.
 
 ## Nemenné pravidlá
 
