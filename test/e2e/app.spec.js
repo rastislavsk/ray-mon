@@ -16,6 +16,7 @@ import {
 import {
     ALL_MONTHS,
     APP_URL,
+    installedKw,
     PLANT,
     powerThresholds,
     PREVIEW,
@@ -48,8 +49,16 @@ import { statsModel } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { deviceShorts, mozemModel } from '../../shared/mozem.js';
 import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
-import { dayWindowCard, fitLabel, forecastDayMessage, weekMessage } from '../../shared/messages.js';
-import { settingsFromLink, shareUrl, startFromLink, toUser } from '../../shared/settings.js';
+import {
+    dayWindowCard,
+    fitLabel,
+    forecastDayMessage,
+    MOZEM_SKY_TEXTS,
+    mozemListTitle,
+    terazTypicalText,
+    weekMessage,
+} from '../../shared/messages.js';
+import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
@@ -2569,14 +2578,14 @@ test.describe('moja elektráreň', () => {
         await appReady(page);
         await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#pv-setup-go')).toHaveText('nastav panely ›');
-        await expect(page.locator('#panel-mozem')).toHaveClass(/no-panels/);
-        await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
-        await expect(page.locator('.mozem-fact')).toContainText('nezadané');
+        // Bez panelov odpovedá z typickej strechy, ako Obloha, a pás povie, s čím počíta.
+        await expect(page.locator('.mozem-word')).not.toHaveText('Neviem.');
+        await expect(page.locator('.mozem-fact')).toContainText('typická strecha');
         await expect(page.locator('#panels-bar')).toBeVisible();
+        await expect(page.locator('#panels-bar')).toHaveClass(/\bodhad\b/);
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#panel-terazky')).toHaveClass(/no-panels/);
-        await expect(page.locator('#pv-power')).toHaveText('–');
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW');
+        await expect(page.locator('#pv-power')).not.toHaveText('–');
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
         await expect(page.locator('#panels-bar')).toBeVisible();
         expect(errors).toEqual([]);
     });
@@ -2614,12 +2623,34 @@ test.describe('moja elektráreň', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez panelov: červená výzva na Terazky a Môžem? vedie na kartu Nastavenie, tam už nie je', async ({ page }) => {
+    test('bez panelov: karty odpovedajú z typickej strechy ako Obloha, jantárový pás vedie do Nastavenia', async ({ page }) => {
         const errors = await openApp(page, { settings: null, site: SITE });
+        const typical = typicalSettings(SITE);
+        const vstup = { ...typical, known: /** @type {const} */ ('poloha'), now: FIXED_NOW, loading: false, pv: null };
+        const forecast = buildForecast(weather, FIXED_NOW, SITE, typical.plant);
+        const m = mozemModel({ ...vstup, forecast });
+        const hero = heroModel({ ...vstup, forecast, previewMinutes: null });
+        const kwp = installedKw(typical.plant);
+        await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#panels-bar')).toBeVisible();
-        await expect(page.locator('#panels-bar')).toContainText('Chýbajú panely');
+        await expect(page.locator('#panels-bar')).toHaveClass(/\bodhad\b/);
+        await expect(page.locator('#panels-bar-title')).toHaveText(MOZEM_SKY_TEXTS.guessTitle);
+        const typicka = terazTypicalText(kwp);
+        await expect(page.locator('#panels-bar-text')).toHaveText(`${typicka[0].toUpperCase()}${typicka.slice(1)}.`);
+        await expect(page.locator('#panels-bar-go')).toHaveText(MOZEM_SKY_TEXTS.guessBtn);
+        await expect(page.locator('.mozem-word')).toHaveText(m.word);
+        await expect(page.locator('.mozem-fact')).toHaveText(m.hero.factK + m.hero.factV);
+        expect(m.hero.factK).toBe('typická strecha');
+        await expect(page.locator('.mozem-glance small')).toHaveText(mozemListTitle(true));
+        await page.locator('[data-mozem-list]').click();
+        await expect(page.locator('.mozem-list-kick')).toHaveText(new RegExp(' · odhad$'));
+        await expect(page.locator('.mozem-t span')).toHaveText(m.items.filter((i) => i.answer.kind !== 'always').map((i) => i.short));
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#panels-bar')).toBeHidden();
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#pv-power')).toHaveText(hero.powerText);
+        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
+        await expect(page.locator('#verdict-headline')).toHaveText(hero.message.headline);
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#panels-bar')).toBeVisible();
         const vazne = (await new AxeBuilder({ page }).include('#panels-bar').analyze()).violations
@@ -2630,7 +2661,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
         await expect(page.locator('#setup-cta')).toBeVisible();
         await expect(page.locator('#panels-bar')).toBeHidden();
-        // Tlačidlo je krok navigácie ako ikona v spodnej lište: Späť vráti na Môžem? aj s výzvou.
+        // Tlačidlo je krok navigácie ako ikona v spodnej lište: Späť vráti na Môžem? aj s pásom.
         await page.goBack();
         await expect(page.locator('#panel-mozem')).toBeVisible();
         await expect(page.locator('#panels-bar')).toBeVisible();

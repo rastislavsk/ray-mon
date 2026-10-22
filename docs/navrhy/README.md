@@ -37,6 +37,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `meranie-pristup-neplati.html` | Keď výrobca prístup k meraniu prestane prijímať: hláška s dôvodom podľa značky, pripojiť znova, Deye pred vypršaním  |
 | `meranie-mlci.html`            | Krok 2: meranie, ktoré mlčí – ciferník a Môžem? počítajú z krivky dňa, nie zo starého čísla                          |
 | `jeden-zoznam-veci.html`       | Krok 3: jeden zoznam vecí s bojlerom – piata dlaždica cez celú šírku, bublinka na Terazky, Spotrebiče v Oblohe       |
+| `poloha-bez-panelov.html`      | Krok 4: poloha bez panelov – súčasná appka odpovedá z typickej strechy, jantárový pás „Hádam podľa suseda“ (A)       |
 | `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 | `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)               |
 

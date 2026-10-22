@@ -86,7 +86,6 @@ export function sampleTexts(voice) {
             const i = /** @type {any} */ (input);
             for (const quip of [0, 1, 2, 3, 4]) {
                 strings(mozemModel(i, quip, LAUNCHES, { voice: v }), `${p}.mozem.q${quip}`, out);
-                strings(mozemModel(i, quip, LAUNCHES, { guess: true, voice: v }), `${p}.mozemGuess.q${quip}`, out);
             }
             for (const online of [true, false]) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;

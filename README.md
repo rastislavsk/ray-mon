@@ -71,7 +71,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   rovno ten krok v Nastavení.
 - **Nastavenie** – moja elektráreň. Pri prvom otvorení sa appka spýta len na polohu; panely
   môže človek nastaviť hneď, alebo ich odložiť – vtedy karta 7 dní ukazuje predpoveď pre
-  typickú strechu v jeho polohe a karty Terazky a Môžem? sú sivé s výzvou panely nastaviť.
+  typickú strechu v jeho polohe a karty Terazky a Môžem? z nej odpovedajú, s jantárovým pásom,
+  že je to odhad, a tlačidlom panely zadať.
   Karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
   alebo ručné súradnice, potvrdí ju dnešný východ a západ slnka), výkon panelu podľa štítku

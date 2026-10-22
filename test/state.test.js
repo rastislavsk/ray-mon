@@ -14,7 +14,6 @@ import {
     nextPv,
     nextWeekDay,
     panelChange,
-    powerState,
     sameNavStep,
     savedSettings,
     setupDraft,
@@ -70,14 +69,6 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
     assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');
     assert.equal(isWelcome(site, 'lokalita'), false, 'zmena polohy už nie je prvé otvorenie');
-});
-
-test('powerState: bez zadaných panelov karty o výkone nevidia predpoveď typickej strechy', () => {
-    const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
-    const forecast = /** @type {any} */ ({ days: [] });
-    assert.equal(powerState({ ...state, forecast }).forecast, null);
-    const own = { ...state, known: /** @type {const} */ ('elektraren'), forecast };
-    assert.equal(powerState(own), own, 's panelmi je to ten istý stav');
 });
 
 test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {

@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_DAYS, ALL_MONTHS, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
+import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText, mozemBandText, mozemGlanceText, MOZEM_QUIPS } from '../shared/messages.js';
 import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, planWindows, stripGeometry } from '../shared/mozem.js';
+import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
@@ -196,14 +197,19 @@ test('bez dát: neviem, pri spotrebičoch otáznik, hranie ostáva OK', () => {
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true })).state, 'loading');
 });
 
-test('bez zadaných panelov: neviem a prečo, aj keď predpoveď typickej strechy je', () => {
-    const m = mozemModel({ ...input(FIXED_NOW, { pv: null }), known: 'poloha' });
-    assert.equal(m.state, 'bezpanelov');
-    assert.equal(m.word, 'Neviem.');
-    assert.equal(m.strip, null);
-    assert.deepEqual([m.hero.factK, m.hero.factV], ['panely', 'nezadané']);
-    assert.equal(item(m, 'pracka').tone, 'unk');
-    assert.equal(mozemModel({ ...input(FIXED_NOW, { pv: null, loading: true }), known: 'poloha' }).state, 'bezpanelov');
+test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou', () => {
+    const m = mozemModel({ ...input(FIXED_NOW, { pv: null, zdroj: null }), known: 'poloha' });
+    assert.equal(m.state, 'go');
+    assert.equal(m.estimate, true);
+    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti naplno\./);
+    assert.deepEqual([m.hero.factK, m.hero.factV], ['typická strecha', kwpRoughText(installedKw(PLANT))]);
+    assert.equal(item(m, 'pracka').tone, 'go');
+    // Bez polohy appka nevie nič - neviem a prečo.
+    const nic = mozemModel({ ...input(FIXED_NOW, { pv: null }), known: 'nic' });
+    assert.equal(nic.state, 'bezpanelov');
+    assert.equal(nic.word, 'Neviem.');
+    assert.equal(nic.strip, null);
+    assert.deepEqual([nic.hero.factK, nic.hero.factV], ['panely', 'nezadané']);
 });
 
 test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () => {

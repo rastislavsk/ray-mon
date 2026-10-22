@@ -342,12 +342,3 @@ export function navPrevFrom(raw) {
     if (!raw || typeof raw !== 'object') return null;
     return navStepIn(/** @type {{ prev?: unknown }} */ (raw).prev);
 }
-
-/**
- * Stav pre to, čo hovorí o výkone strechy (karta Terazky, farba hlavičky): bez zadaných panelov
- * bez predpovede - tá je pre typickú strechu, nie pre jeho, a výkon z nej by klamal.
- * @param {AppState} state @returns {AppState}
- */
-export function powerState(state) {
-    return state.known === 'elektraren' ? state : { ...state, pv: null, forecast: null };
-}

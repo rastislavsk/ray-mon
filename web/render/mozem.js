@@ -4,7 +4,7 @@
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
-import { MOZEM_ANYTIME, mozemTileNote, NO_LIVE_FACT } from '../../shared/messages.js';
+import { MOZEM_ANYTIME, mozemListTitle, mozemTileNote, NO_LIVE_FACT } from '../../shared/messages.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { summaryModel } from '../../shared/summary.js';
@@ -126,7 +126,7 @@ function glanceHtml(m) {
         .map((it) => `<i class="tone-${it.tone}"></i>`)
         .join('');
     return (
-        `<button type="button" class="mozem-glance" data-mozem-list><span class="mozem-glance-t"><small>Čo môžem</small>` +
+        `<button type="button" class="mozem-glance" data-mozem-list><span class="mozem-glance-t"><small>${escapeHtml(mozemListTitle(m.estimate))}</small>` +
         `<b>${escapeHtml(m.glance.title)}</b><span class="mozem-glance-sub"><span class="mozem-pips" aria-hidden="true">${pips}</span>` +
         `${escapeHtml(m.glance.sub)}</span></span>${ICON_NEXT}</button>`
     );
@@ -166,6 +166,8 @@ export function renderMozem(state, dom) {
     const m = neplati ? { ...model, hero: { ...model.hero, factK: 'meranie neplatí' } } : model;
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     // Zoznam vecí je druhá obrazovka karty v tom istom nosiči, rovnako ako súhrn.
-    if (state.mozemList) return writeHtml(dom.mozemBody, mozemListHtml(m, state.mozemOpen, kick), 'mozemBody');
+    // Odpoveď z typickej strechy (bez zadaných panelov) zoznam priznáva aj pod nadpisom.
+    if (state.mozemList)
+        return writeHtml(dom.mozemBody, mozemListHtml(m, state.mozemOpen, m.estimate ? `${kick} · odhad` : kick), 'mozemBody');
     writeHtml(dom.mozemBody, mozemHtml(m, kick) + summaryLinkHtml(summaryModel(state, 'mesiac')), 'mozemBody');
 }

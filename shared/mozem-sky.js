@@ -69,7 +69,7 @@ export function pvStatus({ now, site, pv, zdroj }) {
  */
 export function mozemSkyModel(input, { quip = 0, launches = [], online = true, voice = 'drzy' } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, quip, launches, { guess: true, voice });
+    const m = mozemModel(input, quip, launches, { voice });
     const f = m.facts;
     const offline = m.state === 'offline';
     // Kým sa načítava, karta nič netvrdí - ani „neviem“ pri veciach, ani hlášku navyše k vete.

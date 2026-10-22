@@ -3,7 +3,7 @@
 // je tá istá zelená ako na dennom prstenci ciferníka; ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
-import { DEVICES, EVERYDAY, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { DEVICES, EVERYDAY, installedKw, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
@@ -235,26 +235,27 @@ function quipsOf(state, day, page, voice) {
 /**
  * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa),
  * `launches` zápisy „Pustil/a som“ z tohto telefónu. `known`: čo appka o elektrárni vie
- * (bez neho uložená elektráreň). Bez zadaných panelov karta neodpovedá, aj keby predpoveď pre
- * typickú strechu mala - to je správanie súčasnej appky. Nová appka (obloha/) s `guess`
- * odpovedá pri známej polohe z typickej strechy, ktorú má vo vstupe (typicalSettings), a model
- * to priznáva v `estimate`.
+ * (bez neho uložená elektráreň). Pri známej polohe bez panelov (`poloha`) karta odpovedá
+ * z typickej strechy, ktorú má vo vstupe (typicalSettings), a model to priznáva v `estimate` -
+ * v oboch appkách. Bez polohy (`nic`) neodpovedá.
  *
  * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
  * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
  * `band` je pás nad dlaždicami zoznamu vecí (null bez pásu dneška), `anytime` veci bloku
  * Kedykoľvek - obe len pre súčasnú appku.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice }} [opts] `voice` tón hlášok
+ * @param {import('./launches.js').Launch[]} [launches] @param {{ voice?: Voice }} [opts] `voice` tón hlášok
  */
-export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy' } = {}) {
+export function mozemModel(input, quipPage = 0, launches = [], { voice = 'drzy' } = {}) {
     const known = input.known || 'elektraren';
-    const estimate = guess && known === 'poloha';
-    const noPanels = known !== 'elektraren' && !estimate;
+    const estimate = known === 'poloha';
+    const noPanels = known === 'nic';
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, launches, ctx, voice);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
-    const head = ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
+    const head = ctx
+        ? dayHead(input, ctx, quipPage, voice, estimate ? installedKw(input.plant) : null)
+        : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
     return {
         ...head,
         estimate,
@@ -307,8 +308,12 @@ function mozemItems(input, launches, ctx, voice = 'drzy') {
     });
 }
 
-/** Hlavička karty z plánu dňa: stav, veľké slovo, veta, pás dneška a hlášky. @param {PlanInput} input @param {DayCtx} ctx @param {number} quipPage @param {Voice} voice */
-function dayHead(input, ctx, quipPage, voice) {
+/**
+ * Hlavička karty z plánu dňa: stav, veľké slovo, veta, pás dneška a hlášky. `typicalKwp` je výkon
+ * typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
+ * @param {PlanInput} input @param {DayCtx} ctx @param {number} quipPage @param {Voice} voice @param {number | null} typicalKwp
+ */
+function dayHead(input, ctx, quipPage, voice, typicalKwp) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
     const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
@@ -317,7 +322,7 @@ function dayHead(input, ctx, quipPage, voice) {
     return {
         state,
         word: voiceTexts(voice).MOZEM_WORDS[state],
-        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts }, voice),
+        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp }, voice),
         strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
         ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage, voice),
         facts: {

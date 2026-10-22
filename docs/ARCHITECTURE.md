@@ -163,9 +163,10 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 Druhý dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľa súčasnej appky,
 v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Pôvodne mal súčasnú appku nahradiť; od 22. 10. 2026 ostávajú obe natrvalo ako **jedno jadro, dva kabáty** (návrh
 `docs/navrhy/jedno-jadro-dva-kabaty.html`, pravidlá v `CLAUDE.md`). Jadro dáva obom tie isté
-odpovede, kabát smie mať vlastné obrazovky a funkcie. Rozdiely, ktoré dnes menia odpoveď
-(poloha bez panelov), sa
-zjednocujú po krokoch; kým to nie je hotové, opisujú ich odseky nižšie tak, ako sú.
+odpovede, kabát smie mať vlastné obrazovky a funkcie. Štyri rozdiely, ktoré menili odpoveď
+(meranie, ktoré mlčí, dva zoznamy vecí, poloha bez panelov), sú zjednotené (návrhy
+`meranie-mlci.html`, `jeden-zoznam-veci.html`, `poloha-bez-panelov.html`) a jadro už nevie, pre ktorú
+appku počíta.
 
 `obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
 `boot.js` s tou istou ochranou pred zmiešanou cache ako koreňový a vlastný stav, render a
@@ -262,8 +263,8 @@ odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len po
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
 len zo živého a čerstvého merania, inak s „asi“), dlaždice skupín vecí, oblúk slnka (`sunArc`: skutočný
 východ a západ, zelený úsek je okno z pása dneška) a vetu, prečo dáta nie sú. Pri známej polohe
-bez panelov odpovedá z typickej strechy (`mozemModel` s `guess`, predvolene vypnutým – súčasná
-appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad.
+bez panelov odpovedá z typickej strechy (`estimate` v `mozemModel`) a priznáva odhad - rovnako ako
+súčasná appka, ktorá to hovorí jantárovým pásom pod hlavičkou a riadkom „typická strecha“.
 
 Veci sú v skupinách (`MOZEM_GROUPS` v `config.js`, návrh A v `docs/navrhy/mozem-skupiny.html`):
 veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Zoznam vecí (`MOZEM_ITEMS`) je jeden pre
