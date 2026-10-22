@@ -6,13 +6,11 @@
 import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, MOZEM_GROUPS, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
-import { runMinOf, runningLaunch } from './launches.js';
 import {
     MOZEM_GROUP_ALWAYS,
     MOZEM_GROUP_NAMES,
     mozemGuessText,
     mozemListTitle,
-    mozemLogCancel,
     mozemOfflineText,
     mozemPhonesText,
     mozemTileNote,
@@ -64,17 +62,17 @@ export function pvStatus({ now, site, pv, zdroj }) {
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input
- * @param {{ quip?: number, launches?: import('./launches.js').Launch[], online?: boolean,
- *   voice?: import('./messages.js').Voice }} [opts] stránka hlášok, zápisy „Pustil/a som“, či má telefón internet a tón hlášok
+ * @param {{ quip?: number, online?: boolean, voice?: import('./messages.js').Voice }} [opts]
+ *   stránka hlášok, či má telefón internet a tón hlášok
  */
-export function mozemSkyModel(input, { quip = 0, launches = [], online = true, voice = 'drzy' } = {}) {
+export function mozemSkyModel(input, { quip = 0, online = true, voice = 'drzy' } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, quip, launches, { voice });
+    const m = mozemModel(input, quip, { voice });
     const f = m.facts;
     const offline = m.state === 'offline';
     // Kým sa načítava, karta nič netvrdí - ani „neviem“ pri veciach, ani hlášku navyše k vete.
     const loading = m.state === 'loading';
-    const items = m.items.map((it) => sheetItem(it, runningUntil(input, launches, it.id)));
+    const items = m.items.map(sheetItem);
     return {
         ask: false,
         state: m.state,
@@ -87,7 +85,6 @@ export function mozemSkyModel(input, { quip = 0, launches = [], online = true, v
         list: listOf(m.estimate, loading),
         items,
         groups: groupsOf(m, items),
-        count: m.count,
         quip: loading ? '' : m.quip,
         arc: sunArc(input.now, input.site, f ? f.window : null),
     };
@@ -102,7 +99,7 @@ const RANK = { always: 0, go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
 /**
  * Dlaždice skupín (MOZEM_GROUPS): jedna odpoveď za skupinu. `key` je to, čo ťuknutie otvorí -
  * pri jednej veci jej panel, pri viacerých panel skupiny so zoznamom vecí. Pri viacerých veciach
- * riadok pod odpoveďou vymenuje tie, ktoré bežia alebo odpovedajú inak; pri jednej veci povie,
+ * riadok pod odpoveďou vymenuje tie, ktoré odpovedajú inak; pri jednej veci povie,
  * odkiaľ pôjde prúd. Široká dlaždica má pás dňa s oknom slnka.
  * @param {ReturnType<typeof mozemModel>} m @param {ReturnType<typeof sheetItem>[]} items
  */
@@ -111,22 +108,13 @@ function groupsOf(m, items) {
         const own = m.items.filter((it) => g.items.includes(it.id));
         const best = own.reduce((a, b) => (RANK[b.answer.kind] < RANK[a.answer.kind] ? b : a));
         const name = MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)];
-        const value = mozemTileValue(best.answer, best.base);
+        const value = mozemTileValue(best.answer, best.short);
         const base = { id: g.id, size: g.size, name, items: g.items };
         if (own.length === 1) {
-            const running = !!best.log?.pressed;
-            return {
-                ...base,
-                key: best.id,
-                value: running ? best.short : value,
-                tone: running ? 'run' : best.tone,
-                note: running ? '' : mozemTileNote(best.answer),
-                bar: null,
-                sheet: null,
-            };
+            return { ...base, key: best.id, value, tone: best.tone, note: mozemTileNote(best.answer), bar: null, sheet: null };
         }
         const note = own
-            .filter((it) => it.log?.pressed || it.tone !== best.tone)
+            .filter((it) => it.tone !== best.tone)
             .map((it) => `${it.name} ${it.short}`)
             .join(' · ');
         const always = own.every((it) => it.answer.kind === 'always');
@@ -188,36 +176,20 @@ export function offlineLead(input, online, voice = 'drzy') {
 
 /**
  * Vec v zozname a v jej paneli: riadok (meno, krátka odpoveď, farba), nadpis panelu, „čo robiť“,
- * „prečo“, otázka s odpoveďou a tlačidlo zápisu. Kým vec beží, tlačidlo hovorí dokedy a zruší ju.
- * @param {ReturnType<typeof mozemModel>['items'][number]} it @param {number | null} until dokedy vec beží (minúta dňa)
+ * „prečo“ a otázka s odpoveďou.
+ * @param {ReturnType<typeof mozemModel>['items'][number]} it
  */
-function sheetItem(it, until) {
-    const log = it.log && {
-        sun: it.log.sun,
-        pressed: it.log.pressed,
-        label: until === null ? it.log.label : mozemLogCancel(it.id === 'auto', until),
-    };
+function sheetItem(it) {
     return {
         id: it.id,
         name: it.name,
         short: it.short,
         tone: it.tone,
-        running: !!(it.log && it.log.pressed),
         title: `${it.name}: ${it.short}`,
         head: it.head,
         text: it.text,
         more: it.more,
-        log,
     };
-}
-
-/**
- * Dokedy spustená vec beží (minúta dňa), alebo null - to isté, z čoho mozemModel skladá „beží do …“.
- * @param {import('./day-plan.js').PlanInput} input @param {import('./launches.js').Launch[]} launches @param {string} id
- */
-function runningUntil({ now, site }, launches, id) {
-    const running = runningLaunch(launches, id, localDateKey(now, site.timezone), localMinutes(now, site.timezone));
-    return running ? running.m + runMinOf(id) : null;
 }
 
 /** Karta bez odpovede (appka nepozná polohu). */
@@ -233,7 +205,6 @@ function emptyCard() {
         list: null,
         items: /** @type {ReturnType<typeof sheetItem>[]} */ ([]),
         groups: /** @type {ReturnType<typeof groupsOf>} */ ([]),
-        count: '',
         quip: '',
     };
 }

@@ -101,19 +101,14 @@ function tilesHtml(groups) {
         .join('');
 }
 
-/** Riadky panelu skupiny: meno, krátka odpoveď, prečo a pri spotrebiči zápis. @param {Model['items']} rows */
+/** Riadky panelu skupiny: meno, krátka odpoveď a prečo. @param {Model['items']} rows */
 function rowsHtml(rows) {
     return rows
         .map(
             (it) =>
                 `<div class="sheet-row"><h3>${escapeHtml(it.name)}</h3>` +
-                `<span class="row-t" data-tone="${it.running ? 'run' : it.tone}">${escapeHtml(it.short)}</span>` +
-                `<p>${escapeHtml(it.text)}</p>` +
-                (it.log
-                    ? `<button type="button" class="pbtn${it.log.pressed ? ' ghost' : ''}" data-log="${it.id}" data-sun="${it.log.sun ? '1' : '0'}">` +
-                      `${escapeHtml(it.log.label)}</button>`
-                    : '') +
-                '</div>',
+                `<span class="row-t" data-tone="${it.tone}">${escapeHtml(it.short)}</span>` +
+                `<p>${escapeHtml(it.text)}</p></div>`,
         )
         .join('');
 }
@@ -146,8 +141,6 @@ function renderCard(m, dom, voice) {
     dom.mzList.classList.toggle('est', !!m.list?.estimate);
     setText(dom.mzListTitle, m.list ? m.list.title : '');
     setHtml(dom.mzItems, m.list ? tilesHtml(m.groups) : '');
-    show(dom.mzCount, !!m.count);
-    setText(dom.mzCount, m.count);
     show(dom.mzQuip, !!m.quip);
     setText(dom.mzQuipText, m.quip);
     setText(dom.mzQuipHint, MOZEM_SKY_TEXTS.quipHint);
@@ -211,11 +204,10 @@ function groupSheet(group, dom) {
     setHtml(dom.mzSheetRows, rowsHtml(group.rows));
     show(dom.mzSheetMoreQ, false);
     show(dom.mzSheetMore, false);
-    show(dom.mzSheetLog, false);
 }
 
 /**
- * Panel veci: čo robiť, prečo, otázka s odpoveďou a zápis.
+ * Panel veci: čo robiť, prečo a otázka s odpoveďou.
  * @param {Model['items'][number]} it @param {Dom} dom @param {ReturnType<typeof voiceTexts>['MOZEM_SKY_TEXTS']} T
  */
 function itemSheet(it, dom, T) {
@@ -229,12 +221,6 @@ function itemSheet(it, dom, T) {
     show(dom.mzSheetMore, !!it.more);
     setText(dom.mzSheetMoreQ, it.more ? it.more.q : '');
     setText(dom.mzSheetMore, it.more ? it.more.a : '');
-    show(dom.mzSheetLog, !!it.log);
-    if (!it.log) return;
-    setText(dom.mzSheetLog, it.log.label);
-    dom.mzSheetLog.classList.toggle('ghost', it.log.pressed);
-    dom.mzSheetLog.dataset.log = it.id;
-    dom.mzSheetLog.dataset.sun = it.log.sun ? '1' : '0';
 }
 
 /**
@@ -257,7 +243,7 @@ export function renderMozem(state, dom) {
         renderAnnounce(null, dom);
         return renderSheet(null, dom);
     }
-    const m = mozemSkyModel(state, { quip: state.mozemQuip, launches: state.launches, online: state.online, voice: state.voice });
+    const m = mozemSkyModel(state, { quip: state.mozemQuip, online: state.online, voice: state.voice });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
     renderSheet(openOf(m, state.mozemItem), dom, state.voice);

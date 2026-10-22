@@ -47,13 +47,13 @@ const iconOf = (id) => MOZEM_ICONS[/** @type {keyof typeof MOZEM_ICONS} */ (id)]
 
 /**
  * Dlaždica spotrebiča: ikona, značka odpovede, meno, veľká odpoveď a pod ňou odkiaľ pôjde prúd
- * (kým vec beží, nič - odpoveď to povie sama). Farbu dlaždice dáva `data-tone`.
+ * Farbu dlaždice dáva `data-tone`.
  * Ležatá (`wide`) ide cez celú šírku - posledná nepárna, aby neostala v riadku sama.
  * @param {MozemModel['items'][number]} it @param {boolean} open @param {boolean} wide
  */
 function tileHtml(it, open, wide) {
     const mark = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MOZEM_MARKS[it.tone]}"/></svg>`;
-    const note = it.log?.pressed ? '' : mozemTileNote(it.answer);
+    const note = mozemTileNote(it.answer);
     return (
         `<button type="button" class="mozem-item${open ? ' open' : ''}${wide ? ' wide' : ''}" data-mozem-item="${it.id}" data-tone="${it.tone}" aria-expanded="${open}"` +
         `${open ? ' aria-controls="mozem-more"' : ''}><span class="mozem-ico">${iconOf(it.id)}</span>` +
@@ -63,13 +63,10 @@ function tileHtml(it, open, wide) {
     );
 }
 
-/** Rozbalenie veci cez celú šírku: čo robiť, prečo, vysvetlenie a zápis. @param {MozemModel['items'][number]} it */
+/** Rozbalenie veci cez celú šírku: čo robiť, prečo a vysvetlenie. @param {MozemModel['items'][number]} it */
 function moreHtml(it) {
     const extra = it.extra ? `<p class="mozem-extra">${escapeHtml(it.extra)}</p>` : '';
-    const log = it.log
-        ? `<button type="button" class="mozem-log" data-mozem-log="${it.id}" data-sun="${it.log.sun ? 1 : 0}" aria-pressed="${it.log.pressed}">${escapeHtml(it.log.label)}</button>`
-        : '';
-    return `<div class="mozem-more" id="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}${log}</div>`;
+    return `<div class="mozem-more" id="mozem-more" role="region" aria-label="${escapeHtml(it.name)}"><b>${escapeHtml(it.head)}</b><p>${escapeHtml(it.text)}</p>${extra}</div>`;
 }
 
 /**
@@ -142,16 +139,14 @@ export function mozemHtml(m, kick) {
 
 /**
  * Obrazovka so zoznamom vecí (variant C v docs/navrhy/mozem-co-mozem-c.html): šípka späť,
- * nadpis, pás dneška, dlaždice spotrebičov, blok Kedykoľvek a zápisy. `open` je rozbalená vec.
+ * nadpis, pás dneška, dlaždice spotrebičov a blok Kedykoľvek. `open` je rozbalená vec.
  * @param {MozemModel} m @param {string | null} open @param {string} kick
  */
 export function mozemListHtml(m, open, kick) {
     return (
         `<section class="mozem-list">${backButtonHtml('mozem-back', 'data-mozem-list-back')}` +
         `<h3 class="mozem-list-title">Čo môžem</h3><p class="mozem-list-kick">${escapeHtml(kick)}</p>` +
-        `${bandHtml(m)}<div class="mozem-grid">${tilesHtml(devicesOf(m), open)}</div>${anytimeHtml(m)}` +
-        (m.count ? `<p class="mozem-count">${escapeHtml(m.count)}</p>` : '') +
-        `</section>`
+        `${bandHtml(m)}<div class="mozem-grid">${tilesHtml(devicesOf(m), open)}</div>${anytimeHtml(m)}</section>`
     );
 }
 
@@ -160,7 +155,7 @@ export function renderMozem(state, dom) {
     // Súhrn je obrazovka tej istej karty, v tom istom nosiči - ako detail dňa v karte 7 dní.
     if (state.mozemSummary)
         return writeHtml(dom.mozemBody, summaryHtml(summaryModel(state, state.summaryPeriod), state.summaryPeriod), 'mozemBody');
-    const model = mozemModel(state, 0, state.launches);
+    const model = mozemModel(state, 0);
     // Meranie je pripojené, len výrobca prestal prijímať prístup - nie „bez merania“ (shared/pristup.js).
     const neplati = model.hero.factK === NO_LIVE_FACT && !!neplatiOf(state);
     const m = neplati ? { ...model, hero: { ...model.hero, factK: 'meranie neplatí' } } : model;

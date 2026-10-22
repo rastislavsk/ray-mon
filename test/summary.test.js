@@ -20,7 +20,6 @@ const BASE = {
     loading: false,
     pv,
     forecast,
-    launches: [],
     dayLog: {},
 };
 
@@ -96,14 +95,9 @@ test('summaryModel: bez merania nie je', () => {
     assert.equal(summaryModel({ ...BASE, pv: null }, 'mesiac'), null);
 });
 
-test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň roka, spustenia a trasa okolo Zeme', () => {
+test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň roka a trasa okolo Zeme', () => {
     const dayLog = { '2026-06-14': 63.2, '2026-07-02': 50, '2025-12-31': 99 };
-    const launches = [
-        { d: '2026-03-01', id: 'pracka', m: 700, sun: true },
-        { d: '2026-09-04', id: 'susicka', m: 1200, sun: false },
-        { d: '2025-12-30', id: 'pracka', m: 700, sun: true },
-    ];
-    const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, dayLog, launches }, 'rok'));
+    const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, dayLog }, 'rok'));
     assert.equal(m.kick, 'Rok 2026 na streche');
     assert.equal(m.kwh, pv.yearEnergyKwh);
     assert.equal(m.days.length, 248);
@@ -111,10 +105,6 @@ test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň ro
     assert.equal(m.months?.find((x) => x.best)?.month, '2026-06', 'jún má najviac zo známych dní');
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: 14. 6.', 'minulý rok sa nepočíta');
     assert.equal(m.rows.find((r) => r.t.endsWith('km autom'))?.s, 'raz okolo Zeme');
-    assert.deepEqual(
-        m.rows.find((r) => r.t.startsWith('Na slnku')),
-        { t: 'Na slnku si pustil/a 1×', s: 'z 2 spustení, zvyšok išiel zo siete' },
-    );
     assert.match(m.note, /^Za 245 dní appka čísla nemá/);
     assert.equal(summaryModel(BASE, 'mesiac')?.months, null, 'mesiace má len rok');
     const bezRoka = summaryModel({ ...BASE, dayLog, pv: { ...pv, yearEnergyKwh: null } }, 'rok');
@@ -153,22 +143,15 @@ test('summaryModel mesiac: súčet z kiosku, prepočty, hodnota a chýbajúce dn
     assert.doesNotMatch(bezSuctu?.note ?? '', /Výroba týchto panelov/);
 });
 
-test('summaryModel týždeň: súčet denníka s dneškom, najlepší deň menom a spustenia', () => {
+test('summaryModel týždeň: súčet denníka s dneškom a najlepší deň menom', () => {
     const dayLog = { '2026-08-30': 20, '2026-08-31': 25, '2026-09-01': 40, '2026-09-02': 10, '2026-09-03': 30, '2026-09-04': 5 };
-    const launches = [
-        { d: '2026-09-01', id: 'pracka', m: 700, sun: true },
-        { d: '2026-09-04', id: 'susicka', m: 1200, sun: false },
-        { d: '2026-08-20', id: 'pracka', m: 700, sun: true },
-    ];
-    const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, dayLog, launches }, 'tyzden'));
+    const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (summaryModel({ ...BASE, dayLog }, 'tyzden'));
     const today = /** @type {number} */ (pv.dailyEnergyKwh);
     assert.equal(m.kick, 'Posledných 7 dní na streche');
     assert.equal(m.kwh, 20 + 25 + 40 + 10 + 30 + 5 + today);
     assert.equal(m.days.length, 7);
     assert.doesNotMatch(m.note, /appka čísla nemá/, 'v týždni nechýba žiadny deň');
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: utorok', '1. 9. 2026 je utorok');
-    const spustenia = m.rows.find((r) => r.t.startsWith('Na slnku'));
-    assert.deepEqual(spustenia, { t: 'Na slnku si pustil/a 1×', s: 'z 2 spustení, zvyšok išiel zo siete' });
 });
 
 test('summaryModel: bez cien bez hodnoty, bez výroby bez prepočtov', () => {

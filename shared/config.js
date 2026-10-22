@@ -411,12 +411,11 @@ export const MOZEM_GROUPS = [
 ];
 
 /**
- * „Pustil/a som“ v karte Môžem?: zápisy sa držia len v telefóne. `limit` je najviac zápisov
- * (zhruba rok bežnej rodiny), `autoRunMin` ako dlho sa auto po zapojení ráta za „nabíja sa“ -
- * program ako práčka nemá.
+ * Kľúče, ktoré appka už nepoužíva a pri štarte ich zmaže. Mená sa nesmú použiť znova na niečo
+ * iné - v starších telefónoch pod nimi môžu ležať staré dáta. `spustenia-v1` boli zápisy
+ * „Pustil/a som“ z karty Môžem?.
  */
-export const LAUNCH = { limit: 500, autoRunMin: 120 };
-export const LAUNCH_STORAGE_KEY = 'spustenia-v1';
+export const OLD_STORAGE_KEYS = ['spustenia-v1'];
 
 /**
  * Denník výroby po dňoch pre súhrn na zdieľanie. Kiosk posiela len súčty (dnes, mesiac, rok),
@@ -477,7 +476,6 @@ export const STORAGE_KEYS = [
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_STORAGE_KEY,
-    LAUNCH_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     WEATHER_STORAGE_KEY,

@@ -52,9 +52,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `chart-model.js`                                                             | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                    |
 | `hero-model.js`                                                              | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                |
 | `stats.js`                                                                   | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                  |
-| `launches.js`                                                                | „Pustil/a som“: zápisy spustení spotrebičov, čo práve beží a súčty za mesiac.                                        |
 | `daylog.js`                                                                  | Denník výroby po dňoch pre súhrn: kontrola, zápis vyššieho súčtu, dni obdobia.                                       |
-| `summary.js`                                                                 | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a spusteniach.                     |
+| `summary.js`                                                                 | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a uhlíku.                          |
 | `mozem.js`                                                                   | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                   |
 | `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
 | `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                          |
@@ -181,7 +180,7 @@ ten istý súbor:
   ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
 - **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
-  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `spustenia-v1`, `prva-karta-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
+  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `prva-karta-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
   ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
   z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
   (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
@@ -273,11 +272,10 @@ veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Zoznam vecí (`MOZ
 obe appky, skupiny sú kabát Oblohy. Dlaždica ukáže jednu odpoveď skupiny:
 najlepšiu z jej vecí, a keď svieti, koniec slnka (spoločný pre všetky), nie štart programu.
 Dokedy pustiť ktorý program, povie panel skupiny – veci pod sebou, každá so svojím časom
-a vlastným „Pustil/a som“. Veci, ktoré bežia alebo odpovedajú inak, vymenuje riadok pod
+a vysvetlením. Veci, ktoré odpovedajú inak, vymenuje riadok pod
 odpoveďou dlaždice. Dlaždica s jednou vecou otvorí rovno jej panel. Panel veci či skupiny je `<dialog>` otvorený
 cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
 aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
-„Pustil/a som“ zapisuje cez `web/storage.js` do `spustenia-v1`, spustenie teda vidia obe appky.
 
 Karta Teraz nahrádza kartu Terazky. Ciferník a denný prstenec v novom dizajne nie sú, ich úlohu
 preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
@@ -465,11 +463,10 @@ Texty sú v `messages.js`. Rozbalená vec v zozname je `mozemOpen` - nastavenie 
 nie krok navigácie. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
 Obsah karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 
-„Pustil/a som“ zapisuje spustenia spotrebičov len v telefóne (`LAUNCH_STORAGE_KEY`, najviac
-`LAUNCH.limit` zápisov): dátum a minúta lokality, vec a či vtedy svietilo slnko. Logika je
-v `shared/launches.js`, model karty z nej dopočíta „beží do …“ a mesačný súčet. Je to na čestné
-slovo - kiosk vidí len výrobu, nie spotrebu, takže spustenie overiť nevie. Zápisy sú základ
-súhrnu na zdieľanie.
+Karta kedysi vedela zapísať „Pustil/a som“ - spustenie spotrebiča na čestné slovo, z ktorého
+ukazovala „beží do …“ a súčty v súhrne. Kiosk vidí len výrobu, nie spotrebu, takže to overiť
+nevedela a nikto to nepoužíval; od `docs/navrhy/bez-pustil-som.html` to nie je v žiadnej appke.
+Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS`, `dropOldStored`).
 
 Súhrn na zdieľanie (`shared/summary.js`) je obrazovka karty Môžem? a krok navigácie
 (`summary` v `NavStep`): Späť ho zavrie rovnako ako detail dňa. Mesačný súčet berie presne

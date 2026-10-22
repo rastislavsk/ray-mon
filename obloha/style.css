@@ -416,13 +416,6 @@ button:focus-visible {
 .tiles-box.est .tiles {
     font-style: italic;
 }
-/* `.mozem p` nuluje okraje odsekov karty a prebilo by okraj skla - riadok by bol cez celú šírku
-   a prilepený k dlaždiciam. Odstup zhora je ten istý ako medzi dlaždicami (.tiles). */
-.mozem .count {
-    margin: 10px 14px 0;
-    font-size: 0.875rem;
-}
-
 /* Dlaždice vecí v skupinách: tmavé sklo ako .glass, aby biely text bol čitateľný na každej
    oblohe. Široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. */
 .tiles-box {
@@ -549,9 +542,6 @@ button:focus-visible {
 .tile[data-tone='cheap'] > b::before {
     background: var(--cheap);
 }
-.tile[data-tone='run'] > b::before {
-    background: #fff;
-}
 .tile[data-tone='no'] > b,
 .tile[data-tone='unk'] > b,
 .row-t[data-tone='no'],
@@ -618,11 +608,6 @@ button:focus-visible {
 .sheet-row p {
     flex-basis: 100%;
     color: var(--dim);
-}
-.sheet .sheet-row .pbtn {
-    min-height: 44px;
-    padding: 8px 14px;
-    font-size: 0.875rem;
 }
 
 .quote {

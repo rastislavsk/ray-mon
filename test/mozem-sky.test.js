@@ -9,7 +9,6 @@ import {
     mozemGuessText,
     mozemItemText,
     mozemListTitle,
-    mozemLogCancel,
     mozemOfflineText,
     mozemPhonesText,
     mozemTileNote,
@@ -149,15 +148,13 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
     );
     assert.doesNotMatch(mozemOfflineText({ online: true, zdroj: true, pvOk: true, pvSince: null }), /Meranie/);
 
-    assert.equal(mozemLogCancel(false, 14 * 60 + 50), 'Beží do 14:50 · zrušiť');
-    assert.equal(mozemLogCancel(true, 15 * 60), 'Nabíja sa do 15:00 · zrušiť');
     assert.match(mozemGuessText(5.22), /typickou strechou asi 5 kWp./);
 });
 
 test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k tomu štítky a mobily', () => {
     const i = input(FIXED_NOW);
     const m = mozemSkyModel(i);
-    const base = mozemModel(i, 0, []);
+    const base = mozemModel(i);
     assert.equal(m.state, 'go');
     assert.equal(m.word, base.word);
     assert.equal(m.lead, base.hero.lead);
@@ -245,21 +242,6 @@ test('mozemSkyModel: bez polohy len výzva, žiadne odpovede', () => {
     assert.deepEqual(m.items, []);
 });
 
-test('mozemSkyModel: bežiaca vec má riadok „beží do“ a tlačidlo na zrušenie', () => {
-    const launches = [{ d: '2026-09-05', id: 'pracka', m: 770, sun: true }];
-    const m = mozemSkyModel(input(FIXED_NOW), { launches });
-    const pr = m.items.find((x) => x.id === 'pracka');
-    assert.equal(pr?.running, true);
-    assert.equal(pr?.short, 'beží do 14:50');
-    assert.equal(pr?.log?.label, 'Beží do 14:50 · zrušiť');
-    assert.equal(pr?.log?.pressed, true);
-    const auto = mozemSkyModel(input(FIXED_NOW), { launches: [{ d: '2026-09-05', id: 'auto', m: 770, sun: true }] }).items.find(
-        (x) => x.id === 'auto',
-    );
-    assert.match(auto?.log?.label || '', /^Nabíja sa do .* · zrušiť$/);
-    assert.equal(m.items.find((x) => x.id === 'hranie')?.log, null);
-});
-
 test('sunArc: slnko medzi skutočným východom a západom, v noci mesiac, okno tým istým meradlom', () => {
     const sun = sunTimes(SITE, '2026-09-05');
     const noon = sunArc(FIXED_NOW, SITE, { from: /** @type {number} */ (sun.rise), to: /** @type {number} */ (sun.set) });
@@ -320,21 +302,6 @@ test('skupiny: auto, bojler a drobnosti o 13:00', () => {
     assert.equal(drobne.value, 'kedykoľvek');
     assert.equal(drobne.sheet?.lead, MOZEM_GROUP_ALWAYS);
     assert.equal(m.items.find((i) => i.id === 'bojler')?.text, 'Ohrev trvá asi hodinu, takto dobehne celý na slnku.');
-});
-
-test('skupiny: bežiaca vec - pri jednej veci je odpoveďou, pri skupine ju vymenuje riadok pod ňou', () => {
-    const launches = [
-        { d: '2026-09-05', id: 'susicka', m: 12 * 60 + 30, sun: true },
-        { d: '2026-09-05', id: 'bojler', m: 12 * 60 + 30, sun: true },
-    ];
-    const m = mozemSkyModel(input(FIXED_NOW), { launches });
-    const velke = m.groups[0];
-    assert.equal(velke.tone, 'go');
-    assert.equal(velke.note, 'Sušička beží do 14:00');
-    const bojler = m.groups.find((g) => g.id === 'bojler');
-    assert.equal(bojler?.value, 'beží do 13:30');
-    assert.equal(bojler?.tone, 'run');
-    assert.equal(bojler?.note, '');
 });
 
 test('skupiny: veci skupiny odpovedajú rôzne - dlaždica ukáže najlepšiu, ostatné vymenuje', () => {
