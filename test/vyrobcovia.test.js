@@ -2,7 +2,8 @@
 // oficiálnej dokumentácii (Fox ESS Open API, SolaX Cloud User API V6.1, Victron VRM API v2).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FOXESS, foxHeaders, FoxChyba, parseFoxList, parseFoxPv } from '../shared/foxess.js';
+import { FOXESS, foxHeaders, parseFoxList, parseFoxPv } from '../shared/foxess.js';
+import { VyrobcaChyba } from '../shared/vyrobca.js';
 import { md5 } from '../shared/md5.js';
 import { validatePv } from '../shared/schema.js';
 import { parseSolax, solaxUrl } from '../shared/solax.js';
@@ -48,9 +49,9 @@ test('Fox ESS: zoznam meničov a meranie z real/query a generation', () => {
     assert.deepEqual(parseFoxList(list), [{ sn: '60BH1234', nazov: 'Dvorany' }]);
     assert.throws(
         () => parseFoxList({ errno: 41809, msg: 'token invalid' }),
-        (e) => e instanceof FoxChyba && e.errno === 41809,
+        (e) => e instanceof VyrobcaChyba && e.kod === '41809' && e.zamietol,
     );
-    assert.throws(() => parseFoxList(null), FoxChyba);
+    assert.throws(() => parseFoxList(null), VyrobcaChyba);
     const real = {
         errno: 0,
         result: [
@@ -73,7 +74,7 @@ test('Fox ESS: zoznam meničov a meranie z real/query a generation', () => {
     assert.deepEqual([bezVykonu.realTimePowerKw, bezVykonu.dailyEnergyKwh, bezVykonu.stationName], [null, null, null]);
     assert.throws(
         () => parseFoxPv({ errno: FOXESS.tooFrequent }, gen, '', NOW),
-        (e) => e instanceof FoxChyba && e.errno === 40400,
+        (e) => e instanceof VyrobcaChyba && e.kod === '40400' && !e.zamietol,
     );
 });
 
@@ -174,7 +175,7 @@ test('Solis: Content-MD5 podľa príkladu z dokumentácie, dátum a text na podp
 });
 
 test('Solis: elektrárne s meraním prevedeným na kW a kWh, chyba s kódom', async () => {
-    const { parseSolisStations, SolisChyba } = await import('../shared/solis.js');
+    const { parseSolisStations } = await import('../shared/solis.js');
     const json = {
         code: '0',
         msg: 'success',
@@ -221,9 +222,9 @@ test('Solis: elektrárne s meraním prevedeným na kW a kWh, chyba s kódom', as
     assert.equal(parseSolisStations(json, NOW).length, 2);
     assert.throws(
         () => parseSolisStations({ code: 'I0012', msg: 'Incorrect account or password' }, NOW),
-        (e) => e instanceof SolisChyba && e.code === 'I0012',
+        (e) => e instanceof VyrobcaChyba && e.kod === 'I0012' && e.zamietol,
     );
-    assert.throws(() => parseSolisStations(null, NOW), SolisChyba);
+    assert.throws(() => parseSolisStations(null, NOW), VyrobcaChyba);
 });
 
 test('Deye: token, elektrárne, výkon vo W či kW podľa inštalovaného výkonu, dnešok v pásme elektrárne', async () => {
@@ -231,9 +232,9 @@ test('Deye: token, elektrárne, výkon vo W či kW podľa inštalovaného výkon
     assert.equal(D.parseDeyeToken({ code: '1000000', msg: 'success', success: true, accessToken: 'eyJ', expiresIn: '5183999' }), 'eyJ');
     assert.throws(
         () => D.parseDeyeToken({ code: '2101006', msg: 'wrong', success: false }),
-        (e) => e instanceof D.DeyeChyba && e.code === '2101006',
+        (e) => e instanceof VyrobcaChyba && e.kod === '2101006',
     );
-    assert.throws(() => D.parseDeyeToken({ success: true }), D.DeyeChyba);
+    assert.throws(() => D.parseDeyeToken({ success: true }), VyrobcaChyba);
     const stations = {
         code: '1000000',
         success: true,

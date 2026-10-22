@@ -8,6 +8,7 @@
 
 import { KIOSK } from './config.js';
 import { isObj } from './valid.js';
+import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
@@ -31,14 +32,8 @@ export const NB = {
     badLogin: [401, 20001, 20002, 20003, 20400, 20403],
 };
 
-/** Chyba rozhrania s kódom `failCode`. */
-export class NbChyba extends Error {
-    /** @param {number} failCode */
-    constructor(failCode) {
-        super(`Huawei Northbound failCode ${failCode}`);
-        this.failCode = failCode;
-    }
-}
+/** Chyba rozhrania s kódom `failCode`; údaje zamietajú len kódy prihlásenia, ostatné sú výpadok. @param {number} failCode */
+const chyba = (failCode) => new VyrobcaChyba('Huawei Northbound failCode', failCode, NB.badLogin.includes(failCode));
 
 /**
  * Server FusionSolar z toho, čo človek zadal (adresa alebo len meno servera, napr.
@@ -63,9 +58,9 @@ export function nbServer(input) {
 
 /** `data` z obálky odpovede; neúspech hádže s kódom chyby. @param {unknown} json */
 function data(json) {
-    if (!isObj(json)) throw new NbChyba(-1);
+    if (!isObj(json)) throw chyba(-1);
     const o = /** @type {Record<string, unknown>} */ (json);
-    if (o.success !== true) throw new NbChyba(typeof o.failCode === 'number' ? o.failCode : -1);
+    if (o.success !== true) throw chyba(typeof o.failCode === 'number' ? o.failCode : -1);
     return o.data;
 }
 

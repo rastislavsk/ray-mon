@@ -11,6 +11,7 @@
 // nemôže byť v kW, je vo wattoch.
 
 import { isObj } from './valid.js';
+import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
@@ -26,26 +27,17 @@ export const DEYE = {
     tokenMs: 60 * 24 * 60 * 60 * 1000,
 };
 
-/** Chyba DeyeCloud s kódom z odpovede. */
-export class DeyeChyba extends Error {
-    /** @param {string} code */
-    constructor(code) {
-        super(`DeyeCloud ${code}`);
-        this.code = code;
-    }
-}
-
 /** Overí obálku odpovede (`success: true`); inak hádže s kódom. @param {unknown} json */
 function ok(json) {
     if (!isObj(json) || /** @type {any} */ (json).success !== true)
-        throw new DeyeChyba(isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
+        throw new VyrobcaChyba('DeyeCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
     return /** @type {Record<string, any>} */ (json);
 }
 
 /** Token z odpovede /account/token. @param {unknown} json */
 export function parseDeyeToken(json) {
     const t = ok(json).accessToken;
-    if (typeof t !== 'string' || !t) throw new DeyeChyba('token');
+    if (typeof t !== 'string' || !t) throw new VyrobcaChyba('DeyeCloud', 'token');
     return t;
 }
 
