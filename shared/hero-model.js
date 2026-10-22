@@ -16,14 +16,22 @@ import { autoTier, deviceStates, productionLevel, smartTier } from './tariff.js'
  */
 
 /**
- * Živý výkon z kiosku, alebo null, keď ho niet: v náhľade iného času, bez kiosku, aj keď kiosk
- * výkon neposlal. Posledný prípad treba strážiť zvlášť - kontrakt `pv` null povoľuje
- * a Number(null) je 0, takže chýbajúci údaj by sa tváril ako nameraná nula.
- * @param {HeroInput} state @returns {number | null}
+ * Výkon „teraz“ z merania, alebo null, keď ho niet: bez merania, keď výrobca výkon neposlal,
+ * aj keď meranie mlčí (pvFreshness). Číslo spred hodiny už nie je výkon teraz - appka vtedy
+ * počíta z krivky dňa a povie, že je to odhad. Jedno miesto pre obe appky a všetky karty.
+ * Chýbajúci údaj treba strážiť zvlášť - kontrakt `pv` null povoľuje a Number(null) je 0,
+ * takže by sa tváril ako nameraná nula.
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site }} state
+ * @returns {number | null}
  */
+export function freshPowerKw({ now, pv, site }) {
+    if (!pv || !Number.isFinite(pv.realTimePowerKw)) return null;
+    return pvFreshness({ now, pv, site }).stale ? null : /** @type {number} */ (pv.realTimePowerKw);
+}
+
+/** Živý výkon pre ciferník: v náhľade iného času žiadny. @param {HeroInput} state @returns {number | null} */
 function livePower(state) {
-    const kw = state.previewMinutes === null && state.pv ? state.pv.realTimePowerKw : null;
-    return Number.isFinite(kw) ? kw : null;
+    return state.previewMinutes === null ? freshPowerKw(state) : null;
 }
 
 /**

@@ -34,7 +34,7 @@ import {
 } from '../shared/messages.js';
 import { deviceShorts } from '../shared/mozem.js';
 import { typicalSettings } from '../shared/settings.js';
-import { terazInput, terazModel } from '../shared/teraz.js';
+import { terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
@@ -323,7 +323,6 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
     const i = input(at('13:00'));
     const m = terazModel(i);
     const hero = heroModel(i);
-    assert.equal(terazInput(i), i, 'pri čerstvom meraní je vstup ten istý ako pre Terazky');
     assert.equal(m.kind, 'ok');
     assert.equal(m.num, hero.powerText);
     assert.equal(m.source, 'živé meranie');
@@ -377,13 +376,14 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     // Posledné meranie o 11:40, teraz je 13:00.
     const stale = { ...pvAt(at('11:40')) };
     const i = input(at('13:00'), { pv: stale });
-    const base = terazInput(i);
-    assert.notEqual(base, i);
-    assert.equal(base.pv?.realTimePowerKw, null);
     const m = terazModel(i);
-    const hero = heroModel(base);
+    const hero = heroModel(i);
+    // Karta Terazky súčasnej appky ráta to isté (heroModel): staré číslo z kiosku sa netvári ako výkon teraz.
     assert.equal(m.num, hero.powerText);
-    assert.notEqual(m.num, heroModel(i).powerText, 'staré číslo z kiosku sa netvári ako výkon teraz');
+    assert.equal(hero.source, 'forecast');
+    assert.equal(hero.unitText, 'kW (odhad)');
+    assert.ok(Number.isFinite(stale.realTimePowerKw));
+    assert.notEqual(Number(m.num), stale.realTimePowerKw);
     // Čas je posledný bod krivky, ten istý, aký ukazuje hlavička.
     assert.equal(m.source, `odhad z predpovede · meranie neodpovedá od ${pvFreshness({ now: at('13:00'), pv: stale, site: SITE }).time}`);
     assert.equal(m.cards?.now.head, hero.message.headline);

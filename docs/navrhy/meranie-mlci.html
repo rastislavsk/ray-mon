@@ -1,0 +1,585 @@
+<title>Meranie, ktoré mlčí</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Návrh: čo ukáže súčasná appka, keď menič prestane posielať meranie, kým svieti slnko.
+       Krok 2 návrhu jedno-jadro-dva-kabaty.html. Telefóny v štýle súčasnej appky (style.css,
+       mierka 375 px), farby a písma prevzaté odtiaľ. Údaje sú vzorové. */
+    /* Rozloženie: dva telefóny vedľa seba (dnes / návrh), pod nimi Môžem?, texty a čo sa zmení v kóde. */
+    @font-face {
+        font-family: 'Space Grotesk';
+        font-weight: 300 700;
+        src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'IBM Plex Mono';
+        font-weight: 500;
+        src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0a0a0a;
+        --card-bg: #151614;
+        --ink: #f2f0ea;
+        --ink-70: rgba(242, 240, 234, 0.94);
+        --ink-45: rgba(242, 240, 234, 0.64);
+        --ink-20: rgba(242, 240, 234, 0.26);
+        --ink-12: rgba(242, 240, 234, 0.16);
+        --ink-08: rgba(242, 240, 234, 0.1);
+        --green: #9ef25b;
+        --amber: #ffc24b;
+        --red: #ff6b57;
+        --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    }
+    body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding-block: 40px 80px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 44px;
+    }
+    section {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    h1,
+    h2,
+    h3 {
+        margin: 0;
+        line-height: 1.2;
+        text-wrap: balance;
+    }
+    h1 {
+        font-size: clamp(28px, 5.5vw, 40px);
+    }
+    h2 {
+        font-size: 21px;
+    }
+    h3 {
+        font-size: 16px;
+    }
+    p,
+    ul {
+        margin: 0;
+        max-width: 68ch;
+    }
+    ul {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 6px;
+    }
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+    }
+    .lead {
+        color: var(--ink-45);
+        font-size: 17px;
+    }
+    code {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        background: var(--ink-08);
+        padding: 1px 5px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+    }
+    .dim {
+        color: var(--ink-45);
+    }
+
+    /* Telefóny */
+    .phones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        justify-content: center;
+    }
+    .col {
+        display: grid;
+        gap: 10px;
+        justify-items: center;
+        flex: 0 1 340px;
+        min-width: 0;
+    }
+    .col-label {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .col-label.now {
+        color: var(--red);
+    }
+    .col-label.new {
+        color: var(--green);
+    }
+    .phone {
+        width: 100%;
+        max-width: 340px;
+        border: 8px solid #000;
+        border-radius: 38px;
+        background: radial-gradient(120% 60% at 50% 0%, #1c2a12 0%, var(--bg) 60%);
+        padding: 18px 16px 22px;
+        display: grid;
+        gap: 14px;
+        box-shadow: 0 0 0 1px var(--ink-12);
+    }
+    .hdr {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .hdr .name {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+    }
+    .hdr .brand {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-45);
+        letter-spacing: 0.08em;
+    }
+    .hdr .upd {
+        text-align: right;
+        font-family: var(--font-mono);
+        font-size: 13px;
+    }
+    .hdr .upd small {
+        display: block;
+        font-size: 10px;
+        color: var(--ink-45);
+    }
+    .dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--amber);
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+    .dial {
+        position: relative;
+        width: 100%;
+        max-width: 280px;
+        aspect-ratio: 1;
+        justify-self: center;
+    }
+    .dial svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    .dial-num {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 2px;
+    }
+    .dial-num .when {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-45);
+    }
+    .dial-num .val {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        font-size: 50px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .dial-num .unit {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+    }
+    .verdict {
+        text-align: center;
+        display: grid;
+        gap: 6px;
+        padding-inline: 4px;
+    }
+    .verdict b {
+        font-size: 15px;
+    }
+    .verdict p {
+        color: var(--ink-45);
+        font-size: 14.5px;
+        line-height: 1.45;
+    }
+    .note {
+        font-size: 13.5px;
+        color: var(--ink-45);
+        max-width: 330px;
+        text-align: center;
+    }
+    .note b {
+        color: var(--ink);
+    }
+
+    /* Môžem? */
+    .pair {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+    }
+    .mozem {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 18px;
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--ink-08);
+        align-content: start;
+    }
+    .mozem .tag {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .mozem .word {
+        font-size: 34px;
+        font-weight: 700;
+        color: var(--green);
+        line-height: 1;
+    }
+    .mozem .lead-t {
+        font-size: 15px;
+    }
+    .fact {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid var(--ink-12);
+        padding-top: 10px;
+        font-size: 13.5px;
+    }
+    .fact span:first-child {
+        color: var(--ink-45);
+    }
+    .fact span:last-child {
+        font-family: var(--font-mono);
+        text-align: right;
+    }
+    .mark {
+        background: rgba(255, 194, 75, 0.18);
+        border-radius: 3px;
+        padding: 0 3px;
+    }
+
+    /* Tabuľky */
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--ink-12);
+        border-radius: 10px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 560px;
+        font-size: 14px;
+    }
+    th,
+    td {
+        text-align: left;
+        vertical-align: top;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--ink-08);
+    }
+    th {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+        font-weight: 500;
+    }
+    tr:last-child td {
+        border-bottom: 0;
+    }
+    td.old {
+        color: var(--ink-45);
+        text-decoration: line-through;
+        text-decoration-color: var(--red);
+    }
+    .split {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+    }
+    .box {
+        border: 1px solid var(--ink-12);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        min-width: 0;
+    }
+</style>
+
+<main>
+    <header style="display: grid; gap: 12px">
+        <span class="eyebrow">Návrh · krok 2 z jedno-jadro-dva-kabaty · 22. 10. 2026</span>
+        <h1>Meranie, ktoré mlčí</h1>
+        <p class="lead">
+            Menič naposledy poslal meranie o 13:05, teraz je 16:40 a slnko ešte svieti. Súčasná appka berie číslo spred troch a pol hodiny
+            ako výkon „teraz“ a podľa neho volí aj odporúčanie. Návrh: výkon „teraz“ je len z čerstvého merania. Keď mlčí, appka počíta z
+            krivky dňa a povie, že je to odhad. Rovnako to už robí karta Teraz v Oblohe.
+        </p>
+    </header>
+
+    <section>
+        <h2>Karta Terazky</h2>
+        <div class="phones">
+            <div class="col">
+                <span class="col-label now">Dnes</span>
+                <div class="phone">
+                    <div class="hdr">
+                        <div>
+                            <div class="name">Dvorany</div>
+                            <div class="brand">RAY-MON</div>
+                        </div>
+                        <div class="upd"><span class="dot"></span>13:05<small>meranie · zastarané</small></div>
+                    </div>
+                    <div class="dial">
+                        <svg viewBox="0 0 240 240" aria-hidden="true" data-power="6.41" data-tier="green"></svg>
+                        <div class="dial-num">
+                            <span class="when">16:40</span>
+                            <span class="val" style="color: var(--green)">6.41</span>
+                            <span class="unit">kW teraz</span>
+                        </div>
+                    </div>
+                    <div class="verdict">
+                        <b>Výborný čas na spotrebiče</b>
+                        <p>Vysoká výroba pokryje aj veľké spotrebiče vrátane nabíjania auta.</p>
+                    </div>
+                </div>
+                <p class="note">Číslo je spred 3,5 hodiny, no tvári sa ako „teraz“. Odporúčanie stojí na slnku z obeda.</p>
+            </div>
+
+            <div class="col">
+                <span class="col-label new">Návrh</span>
+                <div class="phone">
+                    <div class="hdr">
+                        <div>
+                            <div class="name">Dvorany</div>
+                            <div class="brand">RAY-MON</div>
+                        </div>
+                        <div class="upd"><span class="dot"></span>13:05<small>meranie · zastarané</small></div>
+                    </div>
+                    <div class="dial">
+                        <svg viewBox="0 0 240 240" aria-hidden="true" data-power="1.92" data-tier="amber"></svg>
+                        <div class="dial-num">
+                            <span class="when">16:40</span>
+                            <span class="val" style="color: var(--amber)">1.92</span>
+                            <span class="unit">kW (odhad)</span>
+                        </div>
+                    </div>
+                    <div class="verdict">
+                        <b>Dobrý čas, využi ho</b>
+                        <p>Slnko slušne svieti. Zapni práčku, umývačku, čo potrebuješ.</p>
+                    </div>
+                </div>
+                <p class="note">
+                    <b>Nový text netreba.</b> „kW (odhad)“ appka už dnes píše každému, kto meranie nemá. Hlavička ostáva, ako je.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Karta Môžem?</h2>
+        <p>
+            Odpoveď (ÁNO, POČKAJ…) sa nemení, tá stojí na pláne dňa z krivky. Mení sa veta a riadok pod ňou, ktoré dnes tiež berú staré
+            číslo za živé. Ten istý kód kreslí vetu aj v Oblohe, takže zmena platí v oboch appkách.
+        </p>
+        <div class="pair">
+            <div class="mozem">
+                <span class="tag" style="color: var(--red)">Dnes</span>
+                <span class="word">ÁNO</span>
+                <span class="lead-t">Slnko to teraz platí za nás. Práčka, sušička, auto, čo chceš.</span>
+                <div class="fact"><span>strecha za hodinu nabije</span><span>~430 mobilov</span></div>
+            </div>
+            <div class="mozem">
+                <span class="tag" style="color: var(--green)">Návrh</span>
+                <span class="word">ÁNO</span>
+                <span class="lead-t">Podľa predpovede teraz svieti naplno. Práčka, sušička, auto, čo chceš.</span>
+                <div class="fact"><span class="mark">meranie neodpovedá od 13:05</span><span>odhad z predpovede</span></div>
+            </div>
+        </div>
+        <p class="dim">
+            Kto meranie nepripojil, vidí ďalej „bez merania · odhad z predpovede“. Kto ho má a mlčí, dozvie sa odkedy. Je to tá istá veta
+            ako pod číslom karty Teraz v Oblohe („odhad z predpovede · meranie neodpovedá od 13:05“).
+        </p>
+    </section>
+
+    <section>
+        <h2>Texty</h2>
+        <div class="scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kde</th>
+                        <th>Dnes pri mlčiacom meraní</th>
+                        <th>Návrh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ciferník, jednotka</td>
+                        <td class="old">kW teraz</td>
+                        <td>kW (odhad) <span class="dim">· existujúci text</span></td>
+                    </tr>
+                    <tr>
+                        <td>Odporúčanie pod ciferníkom</td>
+                        <td class="old">podľa čísla z 13:05</td>
+                        <td>podľa krivky dňa <span class="dim">· tie isté vety</span></td>
+                    </tr>
+                    <tr>
+                        <td>Môžem?, veta</td>
+                        <td class="old">Slnko to teraz platí za nás.</td>
+                        <td>Podľa predpovede teraz svieti naplno. <span class="dim">· existujúci text</span></td>
+                    </tr>
+                    <tr>
+                        <td>Môžem?, riadok pod vetou</td>
+                        <td class="old">strecha za hodinu nabije · ~430 mobilov</td>
+                        <td>meranie neodpovedá od 13:05 · odhad z predpovede <span class="dim">· nový ľavý text</span></td>
+                    </tr>
+                    <tr>
+                        <td>Hlavička</td>
+                        <td>13:05 · meranie · zastarané</td>
+                        <td>bez zmeny</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="dim">Nový je len ľavý text riadku v Môžem?. V slušnom tóne znie rovnako, nemá v sebe tykanie ani vykanie.</p>
+    </section>
+
+    <section>
+        <h2>Čo sa zmení v kóde</h2>
+        <div class="split">
+            <div class="box">
+                <h3>Jadro, raz pre obe</h3>
+                <ul>
+                    <li>
+                        Jedna definícia živého výkonu: len z čerstvého merania (<code>pvFreshness</code>). Použije ju
+                        <code>heroModel</code> aj fakty karty Môžem? v <code>shared/mozem.js</code>.
+                    </li>
+                    <li><code>terazInput</code> v <code>shared/teraz.js</code> zanikne, jadro to už urobí samo.</li>
+                    <li>Nový text riadku v Môžem? v <code>messages-core.js</code>.</li>
+                </ul>
+            </div>
+            <div class="box">
+                <h3>Kabáty</h3>
+                <ul>
+                    <li>Súčasná appka: nič nové v kreslení, len iné čísla a vety z jadra.</li>
+                    <li>Obloha: karta Teraz vyzerá rovnako ako dnes. Veta karty Môžem? sa zmení rovnako ako v súčasnej.</li>
+                    <li>
+                        Testy: jednotkové pre mlčiace meranie v <code>heroModel</code> a Môžem?, e2e v súčasnej appke (ciferník s odhadom).
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <p class="dim">
+            Predpoveď sa nemení, <code>test/golden/forecast.json</code> ostáva. Ostatné karty (7 dní, Štatistika) živý výkon nepoužívajú.
+        </p>
+    </section>
+</main>
+
+<script>
+    // Ciferník ako v súčasnej appke: vonkajší prstenec je plán dňa (24 h, poludnie hore,
+    // polnoc dole), vnútorný oblúk podiel výkonu z 8 kWp. Vzorový plán, nie výpočet appky.
+    const KWP = 8;
+    const PLAN = [
+        [0, 6, 'amber'],
+        [6, 7, 'red'],
+        [7, 9, 'amber'],
+        [9, 17.25, 'green'],
+        [17.25, 20, 'red'],
+        [20, 24, 'amber'],
+    ];
+    const NOW = 16 + 40 / 60;
+    const ns = 'http://www.w3.org/2000/svg';
+    const pt = (h, r) => {
+        const t = (h / 24) * 2 * Math.PI;
+        return [120 - r * Math.sin(t), 120 + r * Math.cos(t)];
+    };
+    const arc = (h1, h2, r) => {
+        const [x1, y1] = pt(h1, r);
+        const [x2, y2] = pt(h2, r);
+        const large = h2 - h1 > 12 ? 1 : 0;
+        return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    };
+    const el = (name, attrs) => {
+        const e = document.createElementNS(ns, name);
+        for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+        return e;
+    };
+    document.querySelectorAll('.dial svg').forEach((svg) => {
+        for (const [a, b, tier] of PLAN) {
+            svg.append(
+                el('path', { d: arc(a + 0.04, b - 0.04, 106), fill: 'none', stroke: `var(--${tier})`, 'stroke-width': 8, opacity: 0.55 }),
+            );
+        }
+        [
+            ['12', 120, 27],
+            ['18', 213, 124],
+            ['0', 120, 217],
+            ['6', 27, 124],
+        ].forEach(([t, x, y]) => {
+            const e = el('text', {
+                x,
+                y,
+                'text-anchor': 'middle',
+                fill: 'var(--ink-45)',
+                'font-size': 11,
+                'font-family': 'IBM Plex Mono, monospace',
+            });
+            e.textContent = t;
+            svg.append(e);
+        });
+        svg.append(el('circle', { cx: 120, cy: 120, r: 78, fill: 'none', stroke: 'var(--ink-08)', 'stroke-width': 14 }));
+        const frac = Math.min(1, Number(svg.dataset.power) / KWP);
+        const c = 2 * Math.PI * 78;
+        svg.append(
+            el('circle', {
+                cx: 120,
+                cy: 120,
+                r: 78,
+                fill: 'none',
+                stroke: `var(--${svg.dataset.tier})`,
+                'stroke-width': 14,
+                'stroke-linecap': 'round',
+                'stroke-dasharray': `${(c * frac).toFixed(1)} ${c.toFixed(1)}`,
+                transform: 'rotate(-90 120 120)',
+            }),
+        );
+        const [sx, sy] = pt(NOW, 106);
+        svg.append(el('circle', { cx: sx, cy: sy, r: 9, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 2 }));
+        svg.append(el('circle', { cx: sx, cy: sy, r: 3.5, fill: 'var(--ink)' }));
+    });
+</script>

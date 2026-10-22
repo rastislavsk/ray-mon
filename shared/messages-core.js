@@ -425,8 +425,8 @@ const HERO_SAY = {
 /**
  * Veta a fakt pod veľkým slovom. Bez `data` (načítava sa, dáta nie sú) len stála veta.
  * @param {import('./mozem.js').MozemState} state
- * @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, live: boolean, kwNow: number,
- *   todayKwh: number | null, tomorrowKwh: number | null } | null} data
+ * @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, live: boolean, silentSince: string | null,
+ *   measured: boolean, kwNow: number, todayKwh: number | null, tomorrowKwh: number | null } | null} data
  * @param {Voice} [voice]
  * @returns {{ lead: string, factK: string, factV: string }}
  */
@@ -451,10 +451,11 @@ export function mozemHeroText(state, data, voice = 'drzy') {
 /**
  * Hlavička, keď dnes slnko už nepríde: slabý deň, alebo po zmene.
  * @param {import('./mozem.js').MozemState} state
- * @param {{ ctx: DayCtx, nextDay: LaterDay | null, live: boolean, todayKwh: number | null, tomorrowKwh: number | null }} data
+ * @param {{ ctx: DayCtx, nextDay: LaterDay | null, measured: boolean, todayKwh: number | null, tomorrowKwh: number | null }} data
+ *   `measured`: dnešok je z merania, nie z predpovede
  * @param {HeroSay} say vety v tóne
  */
-function afterHero(state, { ctx, nextDay, live, todayKwh, tomorrowKwh }, say) {
+function afterHero(state, { ctx, nextDay, measured, todayKwh, tomorrowKwh }, say) {
     const soon = nextDay && nextDay.index === 1 ? 'zajtra' : 'keď vyjde slnko';
     const kwh = (/** @type {number | null} */ v) => (v === null ? '–' : `~${Math.round(v)} kWh`);
     if (state === 'slabo')
@@ -465,7 +466,7 @@ function afterHero(state, { ctx, nextDay, live, todayKwh, tomorrowKwh }, say) {
         };
     return {
         lead: `${say.done}${ctx.cheap ? say.cheap(soon) : say.rest(soon)}`,
-        factK: live ? say.made : 'dnes podľa predpovede',
+        factK: measured ? say.made : 'dnes podľa predpovede',
         factV: todayKwh === null ? '–' : `${fmt1(todayKwh)} kWh`,
     };
 }
@@ -479,15 +480,22 @@ export function phonesPerHour(kw) {
 }
 
 /**
- * Hlavička, keď svieti: s meraním nabitia mobilu, bez neho priznaný odhad.
- * @param {{ live: boolean, kwNow: number }} data @param {HeroSay} say vety v tóne
+ * Fakt v hlavičke karty Môžem?, keď svieti a meranie mlčí - povie odkedy, ako riadok pod číslom
+ * karty Teraz (terazSourceText). @param {string} since čas posledného merania
  */
-function goHero({ live, kwNow }, say) {
+export const silentFact = (since) => `meranie neodpovedá od ${since}`;
+
+/**
+ * Hlavička, keď svieti: s čerstvým meraním nabitia mobilu, bez neho priznaný odhad - a keď
+ * meranie mlčí, aj odkedy.
+ * @param {{ live: boolean, silentSince: string | null, kwNow: number }} data @param {HeroSay} say vety v tóne
+ */
+function goHero({ live, silentSince, kwNow }, say) {
     const lead = live ? say.live : 'Podľa predpovede teraz svieti naplno.';
     const phones = phonesPerHour(kwNow);
     return {
         lead: `${lead}${say.go}`,
-        factK: live ? 'strecha za hodinu nabije' : NO_LIVE_FACT,
+        factK: live ? 'strecha za hodinu nabije' : silentSince ? silentFact(silentSince) : NO_LIVE_FACT,
         factV: live ? `~${phones} mobilov` : 'odhad z predpovede',
     };
 }
@@ -894,7 +902,7 @@ export function terazSourceText(source, { silent, since }) {
     if (source === 'live') return 'živé meranie';
     if (source === 'measured') return 'namerané';
     if (!silent) return 'odhad z predpovede';
-    return `odhad z predpovede · meranie neodpovedá${since ? ` od ${since}` : ''}`;
+    return `odhad z predpovede · ${since ? silentFact(since) : 'meranie neodpovedá'}`;
 }
 
 /** Veta pod číslom: koľko z jasnej oblohy. @param {number} pct */

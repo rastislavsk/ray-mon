@@ -108,6 +108,21 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     assert.ok(MOZEM_QUIPS.go.includes(m.quip));
 });
 
+test('meranie mlčí: nie „Slnko to teraz platí za nás“ zo starého čísla, ale odhad a odkedy mlčí', () => {
+    // Krivka vo vzorke končí o 13:00; o 14:30 za slnka kiosk drží stále to isté meranie.
+    const now = at('14:30');
+    const fresh = input(FIXED_NOW);
+    const m = mozemModel({
+        ...input(now),
+        pv: { .../** @type {import('../shared/kiosk.js').PvData} */ (fresh.pv), updatedAt: now.toISOString() },
+    });
+    assert.equal(m.state, 'go');
+    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti naplno\./);
+    assert.equal(m.hero.factK, 'meranie neodpovedá od 13:00');
+    assert.equal(m.hero.factV, 'odhad z predpovede');
+    assert.equal(m.facts?.liveKw, null);
+});
+
 test('bez merania: priznaný odhad a bez cien žiadne eurá', () => {
     const m = mozemModel(input(FIXED_NOW, { pv: null, zdroj: null, tariff: FLAT }));
     assert.equal(m.state, 'go');

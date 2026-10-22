@@ -189,6 +189,23 @@ const APP_NOW = (() => {
     return { hm, minutes: h * 60 + m };
 })();
 
+test('meranie mlčí: ciferník neukáže číslo spred hodiny ako výkon teraz, Môžem? povie odkedy', async ({ page }) => {
+    // Krivka z fixtures končí o 13:00, o 14:30 za slnka ju Worker posiela stále rovnakú.
+    const { instant } = atTime('14:30');
+    const pvData = { ...pv, updatedAt: instant.toISOString() };
+    const errors = await openApp(page, { start: 'terazky', time: instant, pvData });
+    const expected = heroModel({ now: instant, pv: pvData, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
+    await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
+    await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
+    await expect(page.locator('#pv-power')).toHaveText(expected.powerText);
+    await expect(page.locator('#pv-power')).not.toHaveText(String(pv.realTimePowerKw));
+    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
+    await page.locator('#nav-mozem').click();
+    await expect(page.locator('.mozem-fact')).toContainText('meranie neodpovedá od 13:00');
+    await expect(page.locator('.mozem-fact')).toContainText('odhad z predpovede');
+    expect(errors).toEqual([]);
+});
+
 test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
     const errors = await openApp(page, { start: 'terazky' });
     const expected = modelAt(atTime('13:00').instant);
