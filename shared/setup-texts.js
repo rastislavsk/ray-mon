@@ -641,6 +641,27 @@ export function summaryRows(s, state) {
 /** Označenie odhadu z „Neviem“ v zhrnutí. */
 export const GUESS_MARK = 'odhad · oprav, keď zistíš';
 
+/** Ponuka prevziať nastavenie z otvoreného odkazu: nadpis a tlačidlá. */
+export const IMPORT_OFFER = { title: 'Prevziať nastavenie?', accept: 'Prevziať', decline: 'Nie, ďakujem', close: 'Zavrieť' };
+
+/**
+ * Odkaz, ktorý appka nevie prevziať (readLink v settings.js): nadpis a veta ponuky po otvorení
+ * odkazu a veta pod vloženým odkazom v sprievodcovi.
+ * @type {Record<import('./settings.js').LinkError, { title: string, text: string, paste: string }>}
+ */
+export const LINK_ERRORS = {
+    poskodeny: {
+        title: 'Tento odkaz neviem prevziať',
+        text: 'Je neúplný alebo poškodený. Skontroluj, či si skopíroval celý, alebo si vypýtaj nový.',
+        paste: 'Tento odkaz neobsahuje nastavenie elektrárne. Skontroluj, či si skopíroval celý.',
+    },
+    novsi: {
+        title: 'Odkaz je z novšej verzie appky',
+        text: 'Aktualizuj appku a otvor odkaz znova. Nastavenie v ňom je v poriadku.',
+        paste: 'Odkaz je z novšej verzie appky. Aktualizuj ju a vlož ho znova.',
+    },
+};
+
 /**
  * Ponuka prevziať nastavenie z otvoreného odkazu: čo v ňom je, a či nahradí uložené.
  * @param {Settings} s nastavenie z odkazu @param {import('./settings.js').Known} known

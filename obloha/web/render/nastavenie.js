@@ -10,7 +10,7 @@ import { shareUrl } from '../../../shared/settings.js';
 import { savedSettings } from '../../../shared/setup-flow.js';
 import { escapeHtml } from '../../../shared/format.js';
 import { nastavenieModel } from '../../../shared/nastavenie.js';
-import { importOfferText } from '../../../shared/setup-texts.js';
+import { IMPORT_OFFER, importOfferText, LINK_ERRORS } from '../../../shared/setup-texts.js';
 import { qrPainter } from '../../../web/qr.js';
 import { planesCompassSvg } from '../../../web/svg.js';
 import { renderWizard } from './sprievodca.js';
@@ -157,7 +157,15 @@ export function renderNastavenie(state, dom) {
 /** Ponuka prevziať nastavenie z otvoreného odkazu - na ktorejkoľvek karte. @param {AppState} state @param {Dom} dom */
 export function renderImportOffer(state, dom) {
     const s = state.incoming;
-    show(dom.importOffer, !!s);
-    if (!s) return;
-    setText(dom.importOfferText, importOfferText(s, state.known));
+    const err = s ? null : state.linkError;
+    show(dom.importOffer, !!s || !!err);
+    if (!s && !err) return;
+    // Odkaz, ktorý appka nevie prevziať: prečo, a len Zavrieť.
+    setText(dom.importOfferTitle, err ? LINK_ERRORS[err].title : IMPORT_OFFER.title);
+    setText(
+        dom.importOfferText,
+        err ? LINK_ERRORS[err].text : importOfferText(/** @type {import('../../../shared/settings.js').Settings} */ (s), state.known),
+    );
+    show(dom.importAccept, !err);
+    setText(dom.importDecline, err ? IMPORT_OFFER.close : IMPORT_OFFER.decline);
 }

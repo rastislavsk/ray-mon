@@ -17,7 +17,7 @@ import {
 } from '../../shared/config.js';
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { liveStatus } from '../../shared/hero-model.js';
-import { checkSettings, settingsFromLink } from '../../shared/settings.js';
+import { checkSettings, readLink } from '../../shared/settings.js';
 import { ROOF_STEPS, SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
 import { brushOf, schedIndex, setupReady, udajeReady, znovaModel } from '../../shared/setup-flow.js';
 import {
@@ -33,7 +33,9 @@ import {
     geoNote,
     GUESS_MARK,
     hasSite,
+    IMPORT_OFFER,
     importOfferText,
+    LINK_ERRORS,
     LEVELS,
     linkPreview,
     menicModel,
@@ -220,8 +222,11 @@ function renderHome(state, dom) {
 
 /** @param {AppState} state @param {Dom} dom */
 function renderOdkaz(state, dom) {
-    const found = settingsFromLink(state.setupLink);
+    const link = readLink(state.setupLink);
+    const found = link?.settings ?? null;
     dom.wzLinkNote.classList.toggle('hidden', !state.setupLink.trim() || !!found);
+    // Prečo odkaz nejde: poškodený (aj text bez odkazu), alebo z novšej verzie appky.
+    dom.wzLinkNote.textContent = LINK_ERRORS[link?.error ?? 'poskodeny'].paste;
     dom.wzLinkPreview.classList.toggle('hidden', !found);
     if (!found) return;
     const p = linkPreview(found);
@@ -834,12 +839,18 @@ export function renderNastavenie(state, dom) {
 
 /**
  * Ponuka prevziať nastavenie z odkazu. Je mimo kariet, aby ju bolo vidno hneď po otvorení
- * odkazu, nech je appka na ktorejkoľvek karte.
+ * odkazu, nech je appka na ktorejkoľvek karte. Odkaz, ktorý appka nevie prevziať, povie prečo
+ * a ponúkne len Zavrieť.
  * @param {AppState} state @param {Dom} dom
  */
 export function renderImportOffer(state, dom) {
     const s = state.incoming;
-    dom.importOffer.classList.toggle('hidden', !s);
-    if (!s) return;
-    dom.importOfferText.textContent = importOfferText(s, state.known);
+    const err = s ? null : state.linkError;
+    dom.importOffer.classList.toggle('hidden', !s && !err);
+    if (!s && !err) return;
+    dom.importOffer.dataset.err = err ?? '';
+    dom.importOfferTitle.textContent = err ? LINK_ERRORS[err].title : IMPORT_OFFER.title;
+    dom.importOfferText.textContent = err ? LINK_ERRORS[err].text : importOfferText(/** @type {Settings} */ (s), state.known);
+    dom.importAccept.classList.toggle('hidden', !!err);
+    dom.importDecline.textContent = err ? IMPORT_OFFER.close : IMPORT_OFFER.decline;
 }

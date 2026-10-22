@@ -39,7 +39,7 @@ export function initNastavenie(store, dom, refresh) {
         // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje.
         applySettings(store, s.incoming, refresh, { incoming: null, ...(s.known === 'nic' ? { setupStep: null } : {}) });
     });
-    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null }));
+    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null }));
     initLook(store, dom);
     initAppSheets(store, dom);
 }

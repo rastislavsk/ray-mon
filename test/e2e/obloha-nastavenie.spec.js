@@ -13,12 +13,15 @@ import {
     TARIFF,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    SHARE_HASH_KEY,
+    SHARE_LINK_VERSION,
 } from '../../shared/config.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { settingsFrom, settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { buildForecast } from '../../shared/solar.js';
+import { LINK_ERRORS } from '../../shared/setup-texts.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv } = fixtureData();
@@ -564,6 +567,29 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         expect(await ulozene(page)).toEqual(toUser(OWNER));
         await expect(page.locator('#hdr-status')).toHaveText('13:00');
         expect(settingsFromLink(page.url()), 'adresa nesie nastavenie, prístup k meraniu nie').toEqual({ ...OWNER, zdroj: null });
+        expect(errors).toEqual([]);
+    });
+
+    test('odkaz, ktorý appka nevie prevziať: povie prečo a len Zavrieť; vložený v sprievodcovi tiež', async ({ page }) => {
+        const novsi = `#${SHARE_HASH_KEY}=${Buffer.from(JSON.stringify({ v: SHARE_LINK_VERSION + 1, ...toUser(OWNER) })).toString('base64url')}`;
+        const errors = await openObloha(page, { settings: null, hash: novsi });
+        await expect(page.locator('#import-offer')).toBeVisible();
+        await expect(page.locator('#import-offer-title')).toHaveText(LINK_ERRORS.novsi.title);
+        await expect(page.locator('#import-offer-text')).toHaveText(LINK_ERRORS.novsi.text);
+        await expect(page.locator('#import-accept')).toBeHidden();
+        await expect(page.locator('#import-decline')).toHaveText('Zavrieť');
+        await page.locator('#import-decline').click();
+        await expect(page.locator('#import-offer')).toBeHidden();
+        expect(new URL(page.url()).hash).toBe('');
+        expect(await ulozene(page)).toBeNull();
+
+        await nastavenie(page);
+        await page.locator('#wz-welcome [data-setup-go="odkaz"]').click();
+        await obrazovka(page, 'odkaz');
+        await page.locator('#wz-link').fill(`https://rastislavsk.github.io/ray-mon/${novsi}`);
+        await expect(page.locator('#wz-link-note')).toHaveText(LINK_ERRORS.novsi.paste);
+        await page.locator('#wz-link').fill(LINK.slice(0, -12));
+        await expect(page.locator('#wz-link-note')).toHaveText(LINK_ERRORS.poskodeny.paste);
         expect(errors).toEqual([]);
     });
 

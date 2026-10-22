@@ -12,6 +12,7 @@ export * from './storage.js';
  * čakajúce na rozhodnutie a prvá karta tohto telefónu.
  * @typedef {Pick<import('../shared/setup-flow.js').SetupState, 'site' | 'plant' | 'tariff' | 'zdroj' | 'known'> & {
  *   incoming: import('../shared/settings.js').Settings | null,
+ *   linkError: import('../shared/settings.js').LinkError | null,
  *   startPanel: import('../shared/settings.js').StartPanel,
  * }} MirrorState
  */
@@ -22,13 +23,14 @@ export * from './storage.js';
  * prehliadača aj na snímkach obrazovky. Na iPhone totiž appka pridaná na plochu nevidí úložisko Safari - jediné,
  * čo si zo Safari prinesie, je adresa. Pri prvom spustení z plochy tak ponúkne nastavenie
  * prevziať, namiesto toho, aby sa pýtala na polohu. Kým čaká ponuka z otvoreného odkazu, adresa
- * nesie ten odkaz, aby sa dal pridať na plochu aj pred rozhodnutím.
+ * nesie ten odkaz, aby sa dal pridať na plochu aj pred rozhodnutím; odkaz, ktorý appka nevie
+ * prevziať, ostáva v adrese, kým človek hlášku nezavrie.
  * @param {{ get: () => MirrorState, subscribe: (fn: (state: MirrorState) => void) => unknown }} store
  */
 export function initUrlMirror(store) {
     /** @param {MirrorState} s */
     const mirror = (s) => {
-        if (s.incoming) return;
+        if (s.incoming || s.linkError) return;
         // Aj prvá karta: appka pridaná na plochu iPhonu si ju inak z Safari neprenesie.
         const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, false, s.startPanel);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);

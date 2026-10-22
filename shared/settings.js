@@ -7,6 +7,7 @@ import {
     PLANT,
     SETTINGS_LIMITS,
     SHARE_HASH_KEY,
+    SHARE_LINK_VERSION,
     START_HASH_KEY,
     START_PANELS,
     TARIFF,
@@ -274,7 +275,7 @@ export function shareHash(settings, withZdroj, start = START_PANELS[0]) {
     if (settings) {
         const user = toUser(settings);
         if (!withZdroj) user.zdroj = null;
-        parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify(user))}`);
+        parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify({ v: SHARE_LINK_VERSION, ...user }))}`);
     }
     if (start !== START_PANELS[0]) parts.push(`${START_HASH_KEY}=${start}`);
     return parts.length ? `#${parts.join('&')}` : '';
@@ -308,20 +309,34 @@ export function startFromLink(text) {
 }
 
 /**
+ * @typedef {'poskodeny' | 'novsi'} LinkError prečo appka nastavenie z odkazu neprevezme:
+ *   neúplný alebo poškodený odkaz, alebo odkaz z novšej verzie appky (vyššie `v` než SHARE_LINK_VERSION)
+ */
+
+/**
  * Nastavenie z odkazu - z časti za mriežkou pri otvorení appky, alebo z celého odkazu, ktorý
  * človek prilepil. Odkaz môže prísť od kohokoľvek, preto prejde tou istou kontrolou ako
- * nastavenie z úložiska; čokoľvek nesedí, vráti null.
- * @param {string} text @returns {Settings | null}
+ * nastavenie z úložiska. Keď ho appka nevie prevziať, povie prečo (`error`) - nikdy nič
+ * nezahodí potichu. Bez nastavenia v texte null.
+ * @param {string} text @returns {{ settings: Settings, error: null } | { settings: null, error: LinkError } | null}
  */
-export function settingsFromLink(text) {
-    const m = new RegExp(`[#&]${SHARE_HASH_KEY}=([A-Za-z0-9_-]{1,8000})`).exec(String(text || '').trim());
+export function readLink(text) {
+    const m = new RegExp(`[#&]${SHARE_HASH_KEY}=([A-Za-z0-9_-]*)`).exec(String(text || '').trim());
     if (!m) return null;
+    /** @type {unknown} */ let raw;
     try {
-        return parseStoredSettings(JSON.parse(fromBase64Url(m[1])));
+        raw = m[1].length <= 8000 ? JSON.parse(fromBase64Url(m[1])) : null;
     } catch {
-        return null;
+        raw = null;
     }
+    const v = isObj(raw) ? /** @type {Record<string, unknown>} */ (raw).v : undefined;
+    if (typeof v === 'number' && v > SHARE_LINK_VERSION) return { settings: null, error: 'novsi' };
+    const settings = parseStoredSettings(raw);
+    return settings ? { settings, error: null } : { settings: null, error: 'poskodeny' };
 }
+
+/** Nastavenie z odkazu, alebo null - pre miesta, ktoré dôvod nepotrebujú. @param {string} text @returns {Settings | null} */
+export const settingsFromLink = (text) => readLink(text)?.settings ?? null;
 
 /**
  * Nastavenie z odkazu, ktoré treba ponúknuť prevziať, alebo null. To isté, čo je už uložené, sa

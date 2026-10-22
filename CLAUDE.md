@@ -32,6 +32,16 @@ Návrh a prečo: `docs/navrhy/jedno-jadro-dva-kabaty.html`.
   appku nemeň, kým to nie je úlohou. Jej výpočet patrí do jadra, aby ju druhá appka mohla
   prevziať bez ďalšej práce.
 
+## Verzia odkazu s nastavením
+
+Odkaz `#nastavenie=…` nesie verziu formátu (`v`, `SHARE_LINK_VERSION` v `shared/config.js`).
+Appka z obchodu bude často staršia ako web, z ktorého niekto odkaz poslal, a nesmie z neho nič
+zahodiť potichu. **Keď pribudne čokoľvek, čo staršia appka z odkazu nevie prečítať** (značka
+meniča či spôsob pripojenia, úroveň ceny, mena, nové pole), **zvýš `SHARE_LINK_VERSION`** a spusti
+`UPDATE_GOLDEN=1 npm test`. Staršia appka potom povie „Odkaz je z novšej verzie appky“. Stráži to
+`test/golden/odkaz.json`: zmena formátu bez novej verzie zhodí test, aj pri prepise golden súboru.
+Návrh: `docs/navrhy/odkaz-verzia.html`.
+
 ## Nemenné pravidlá
 
 - **Žiadny build krok, framework ani bundler.** Stránka sa servíruje tak, ako leží v repozitári.

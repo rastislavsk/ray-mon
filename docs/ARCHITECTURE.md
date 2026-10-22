@@ -113,9 +113,11 @@ a pásmo, ktorým sa maľuje (`setupSched`, `setupBrush`), sú nastavenie vnútr
 krok navigácie. Presná cesta aj pre klávesnicu je zoznam úsekov s formulárom pod kruhom.
 Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
 nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
-`settingsFromLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
+`readLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
-Appka ho len ponúkne prevziať (`incoming` v stave). Adresa v prehliadači potom nesie vždy
+Appka ho len ponúkne prevziať (`incoming` v stave). Odkaz nesie verziu formátu (`v`,
+`SHARE_LINK_VERSION`, pravidlo v `CLAUDE.md`); keď ho appka nevie prevziať - je poškodený,
+alebo je z novšej verzie appky -, ponuka povie prečo (`linkError`) a ponúkne len Zavrieť. Adresa v prehliadači potom nesie vždy
 uložené nastavenie (`initUrlMirror` v `web/settings-store.js`), bez zadaných panelov
 je holá, a kým čaká ponuka, nesie odkaz. Dôvod je iPhone: appka pridaná na plochu má vlastné
 úložisko, Safari s ňou nezdieľa nič okrem adresy. Pri prvom spustení z plochy tak ponúkne

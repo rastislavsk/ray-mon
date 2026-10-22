@@ -51,6 +51,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   settingsNote: string,
  *   geo: GeoSearch,
  *   incoming: import('../shared/settings.js').Settings | null,
+ *   linkError: import('../shared/settings.js').LinkError | null,
  *   importNote: string,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
@@ -153,13 +154,15 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         pristup: null,
         // Čo appka o elektrárni vie. `nic`: ukazuje len otázku na polohu (krok lokalita sprievodcu)
         // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
-        // panely nie sú zadané, karty o výkone (Terazky, Môžem?) sú sivé a bez čísel.
+        // panely nie sú zadané, karty odpovedajú z typickej strechy a jantárový pás to povie.
         known,
         // Sprievodca nastavením a rozpísané nastavenie - to isté ako v novej appke (shared/setup-flow.js).
         ...setupInit(start, known),
         // Nastavenie z odkazu (otvoreného alebo prilepeného), ktoré čaká na potvrdenie.
         // Odkaz môže poslať ktokoľvek, preto ho appka sama neuloží.
         incoming,
+        // Odkaz, ktorý appka nevie prevziať (readLink), a prečo - ponuka to povie namiesto mlčania.
+        linkError: null,
         importNote: '',
         // Čo pribaliť k zdieľanému odkazu na appku.
         shareSettings: false,

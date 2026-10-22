@@ -1,7 +1,7 @@
 // Štart novej appky: DOM, stav z uloženého nastavenia (to isté, čo číta súčasná appka),
 // prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
-import { incomingSettings, settingsFromLink } from '../shared/settings.js';
+import { incomingSettings, readLink } from '../shared/settings.js';
 import { initUrlMirror } from '../web/settings-store.js';
 import { createStore } from '../web/store.js';
 import { loadDayLog, loadLaunches, loadLook, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
@@ -17,7 +17,9 @@ const saved = loadSettings();
 const site = saved ? null : loadSite();
 // Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží - ako súčasná
 // appka. To isté, čo je už uložené, sa neponúka.
-const linked = settingsFromLink(location.hash);
+// Odkaz, ktorý appka nevie prevziať, nezmizne potichu - ponuka povie prečo (linkError).
+const link = readLink(location.hash);
+const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
 // Úvodná karta je voľba telefónu, spoločná so súčasnou appkou (prva-karta-v1), rovnako ako
 // zápisy „Pustil/a som“ (spustenia-v1).
@@ -26,6 +28,7 @@ const store = createStore(
         saved,
         site,
         incoming,
+        linkError: link?.error ?? null,
         startPanel: loadStartPanel(location.hash),
         dayLog: loadDayLog(),
         launches: loadLaunches(),

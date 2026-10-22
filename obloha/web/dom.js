@@ -250,6 +250,7 @@ function nastavenieDom() {
         nsNote: byId('ns-note'),
         nsLink: byId('ns-link'),
         importOffer: byId('import-offer'),
+        importOfferTitle: byId('import-offer-title'),
         importOfferText: byId('import-offer-text'),
         importAccept: byId('import-accept'),
         importDecline: byId('import-decline'),
