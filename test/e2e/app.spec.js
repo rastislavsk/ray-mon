@@ -3285,6 +3285,28 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
+    test('bojler: piata dlaždica leží cez celú šírku, rozbalí sa pod ňou; na Terazky má odpoveď v bublinke', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await page.locator('[data-mozem-list]').click();
+        const bojler = /** @type {ReturnType<typeof model>['items'][number]} */ (model().items.find((i) => i.id === 'bojler'));
+        await expect(page.locator('.mozem-item')).toHaveCount(5);
+        await expect(page.locator('.mozem-item.wide')).toHaveCount(1);
+        const tile = page.locator('[data-mozem-item="bojler"]');
+        await expect(tile).toHaveClass(/\bwide\b/);
+        const [grid, box] = await Promise.all([page.locator('.mozem-grid').boundingBox(), tile.boundingBox()]);
+        expect(Math.abs((box?.width ?? 0) - (grid?.width ?? 0)), 'ležatá dlaždica ide cez celú šírku').toBeLessThan(1);
+        await tile.click();
+        await expect(page.locator('[data-mozem-item="bojler"] + .mozem-more b')).toHaveText(bojler.head);
+        await expect(page.locator('.mozem-item.wide'), 'ležatá ostáva, aj keď za ňou je rozbalenie').toHaveCount(1);
+
+        await page.locator('#nav-terazky').click();
+        await page.locator('#verdict-dots button').nth(1).click();
+        await page.locator('#verdict-go-row [data-device="Bojler"]').click();
+        await expect(page.locator('#verdict-chip-tooltip')).toHaveText(`2,0 kW · ${bojler.short}`);
+        expect(errors).toEqual([]);
+    });
+
     test('Pustil/a som: zapíše sa v telefóne, pri práčke beží, druhé ťuknutie zruší', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();

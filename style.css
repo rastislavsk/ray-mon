@@ -4603,6 +4603,30 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .mozem-item[data-tone='no'] {
     border-color: var(--red);
 }
+/* Posledná nepárna dlaždica ide cez celú šírku a leží: ikona, meno s poznámkou, odpoveď, značka. */
+.mozem-item.wide {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 0;
+}
+.mozem-item.wide .mozem-mark {
+    grid-column: 3;
+    grid-row: 1;
+}
+.mozem-item.wide .mozem-t {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 10px;
+    row-gap: 4px;
+    align-items: center;
+    margin-top: 0;
+}
+.mozem-item.wide .mozem-t span {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
 /* Za farbami odpovede: rozbalená dlaždica má svetlý rámik pri každej z nich. */
 .mozem-item.open {
     border-color: var(--ink);

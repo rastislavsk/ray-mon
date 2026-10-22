@@ -56,7 +56,7 @@ function arcSvg(arc, off) {
     );
 }
 
-/** Obrysové ikony vecí (24 × 24), kľúče sú id z MOZEM_SKY_ITEMS. @type {Record<string, string>} */
+/** Obrysové ikony vecí (24 × 24), kľúče sú id z MOZEM_ITEMS. @type {Record<string, string>} */
 const ICONS = {
     pracka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/>',
     umyvacka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M4 8h16M8 12.5h8M8 16h8"/>',

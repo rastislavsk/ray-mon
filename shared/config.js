@@ -375,7 +375,8 @@ export const DEVICES = [
 /**
  * Karta Môžem?: veci, na ktoré sa rodina pýta. Spotrebič (`device`) berie z DEVICES príkon
  * a pravidlá; `runMin` a `runKwh` sú typický program - podľa nich karta radí, dokedy ho pustiť,
- * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania. Veci bez
+ * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania; `runMin` bojlera
+ * je typický ohrev nádrže. Zoznam je jeden pre obe appky. Veci bez
  * spotrebiča (`device: null`) sú od slnka nezávislé - berú málo alebo krátko.
  * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null }>}
  */
@@ -384,16 +385,10 @@ export const MOZEM_ITEMS = [
     { id: 'umyvacka', device: 'Umývačka', runMin: 150, runKwh: 1.1 },
     { id: 'susicka', device: 'Sušička', runMin: 90, runKwh: 2.2 },
     { id: 'auto', device: 'Auto', runMin: null, runKwh: null },
+    { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2 },
     { id: 'hranie', device: null, runMin: null, runKwh: null },
     { id: 'fen', device: null, runMin: null, runKwh: null },
 ];
-
-/**
- * Veci karty Môžem? v novej appke: tie isté a navyše bojler (súčasná appka ho na karte nemá).
- * `runMin` bojlera je typický ohrev nádrže.
- * @type {typeof MOZEM_ITEMS}
- */
-export const MOZEM_SKY_ITEMS = [...MOZEM_ITEMS, { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2 }];
 
 /**
  * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto

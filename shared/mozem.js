@@ -245,15 +245,14 @@ function quipsOf(state, day, page, voice) {
  * `band` je pás nad dlaždicami zoznamu vecí (null bez pásu dneška), `anytime` veci bloku
  * Kedykoľvek - obe len pre súčasnú appku.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice, list?: typeof MOZEM_ITEMS }} [opts]
- *   `voice` tón hlášok, `list` veci karty (nová appka má aj bojler, MOZEM_SKY_ITEMS)
+ * @param {import('./launches.js').Launch[]} [launches] @param {{ guess?: boolean, voice?: Voice }} [opts] `voice` tón hlášok
  */
-export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy', list } = {}) {
+export function mozemModel(input, quipPage = 0, launches = [], { guess = false, voice = 'drzy' } = {}) {
     const known = input.known || 'elektraren';
     const estimate = guess && known === 'poloha';
     const noPanels = known !== 'elektraren' && !estimate;
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
-    const items = mozemItems(input, launches, ctx, voice, list);
+    const items = mozemItems(input, launches, ctx, voice);
     const month = localDateKey(input.now, input.site.timezone).slice(0, 7);
     const head = ctx ? dayHead(input, ctx, quipPage, voice) : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
     return {
@@ -289,12 +288,11 @@ function listParts(head, ctx, items) {
  * nevie a ostatné idú vždy. Pri veci ostáva aj odpoveď (`answer`) a krátka odpoveď bez behu
  * (`base`) - z nich nová appka skladá dlaždice skupín.
  * @param {PlanInput} input @param {import('./launches.js').Launch[]} launches @param {DayCtx | null} ctx @param {Voice} [voice]
- * @param {typeof MOZEM_ITEMS} [list] veci karty
  */
-function mozemItems(input, launches, ctx, voice = 'drzy', list = MOZEM_ITEMS) {
+function mozemItems(input, launches, ctx, voice = 'drzy') {
     const today = localDateKey(input.now, input.site.timezone);
     const nowMin = localMinutes(input.now, input.site.timezone);
-    return list.map((item) => {
+    return MOZEM_ITEMS.map((item) => {
         /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
         const text = mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice);
         const it = { id: item.id, ...text, answer, base: text.short };
@@ -365,8 +363,8 @@ function todayFacts({ pv, forecast }) {
 
 /**
  * Krátke odpovede karty Môžem? („do 14:45“, „o 10:00“, „beží do …“) podľa názvu spotrebiča
- * z DEVICES - pre tooltip spotrebiča na karte Terazky. Počíta len veci, nie celú kartu.
- * Spotrebič, ktorý na karte Môžem? nie je (bojler), tu chýba.
+ * z DEVICES - pre tooltip spotrebiča na karte Terazky a kartu Spotrebiče v Oblohe. Počíta len
+ * veci, nie celú kartu.
  * @param {PlanInput} input @param {import('./launches.js').Launch[]} [launches] @returns {Record<string, string>}
  */
 export function deviceShorts(input, launches = []) {

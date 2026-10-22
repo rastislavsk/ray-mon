@@ -907,6 +907,16 @@ test.describe('karta Teraz', () => {
         });
     }
 
+    test('karta Spotrebiče: tie isté veci ako zoznam v súčasnej appke, aj bojler', async ({ page }) => {
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        const m = terazModel(vstupTeraz(time));
+        const devices = m.cards?.devices ?? [];
+        expect(devices.map((d) => d.name)).toEqual(['Práčka', 'Umývačka', 'Sušička', 'Auto', 'Bojler']);
+        await expect(page.locator('#tz-devices')).toHaveText(devices.map((d) => `${d.name} ${d.short}`).join(' · '));
+        expect(errors).toEqual([]);
+    });
+
     test('nameraná krivka dneška je biela čiara cez predpoveď, hranica veľkých spotrebičov s popiskom', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
         await expect(page.locator('#tz-chart .dc-area')).toHaveCount(1);

@@ -226,7 +226,7 @@ test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () =
     // Model: riadok ráta so spotrebičmi, ktoré sú v zozname dlaždice - hranie a fén v ňom nie sú.
     const rano = mozemModel(input(at('07:30')));
     assert.deepEqual(rano.glance, mozemGlanceText(rano.items.filter((i) => i.answer.kind !== 'always')));
-    assert.equal(rano.glance.title, '3 zo 4 ide hneď');
+    assert.equal(rano.glance.title, '4 z 5 ide hneď');
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).glance.sub, 'Pri spotrebičoch bez dát neviem.');
 });
 
@@ -237,7 +237,7 @@ test('pás nad dlaždicami: čo platí a dokedy, odpočet a koľko spotrebičov 
         mid: 'teraz · ešte 4 h 30 min',
         text: 'Všetko môžeš pustiť hneď.',
     });
-    assert.equal(mozemModel(input(at('07:30'))).band?.text, '3 zo 4 vecí môžeš pustiť hneď.');
+    assert.equal(mozemModel(input(at('07:30'))).band?.text, '4 z 5 vecí môžeš pustiť hneď.');
     // Po západe veta spod pásu na karte, ktorá povie aj ďalší deň.
     const vecer = mozemModel(input(at('19:00')));
     assert.deepEqual(vecer.band, { label: 'Dnes už nie', value: '', mid: 'teraz', text: vecer.strip?.text });
@@ -296,13 +296,13 @@ test('neskoro popoludní: program už celý na slnku nedobehne, karta to povie',
     assert.match(pracka.text, /Koniec pôjde zo siete\.$/);
 });
 
-test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky', () => {
+test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky, aj bojler', () => {
     const m = mozemModel(input(FIXED_NOW));
     const shorts = deviceShorts(input(FIXED_NOW));
     assert.equal(shorts['Práčka'], item(m, 'pracka').short);
     assert.equal(shorts.Auto, item(m, 'auto').short);
-    assert.equal(shorts.Bojler, undefined, 'bojler na karte Môžem? nie je');
-    assert.deepEqual(Object.keys(shorts).sort(), ['Auto', 'Práčka', 'Sušička', 'Umývačka']);
+    assert.equal(shorts.Bojler, item(m, 'bojler').short, 'bojler je v jednom zozname vecí pre obe appky');
+    assert.deepEqual(Object.keys(shorts).sort(), ['Auto', 'Bojler', 'Práčka', 'Sušička', 'Umývačka']);
     const bez = input(FIXED_NOW, { pv: null, forecast: null });
     assert.equal(deviceShorts(bez)['Práčka'], item(mozemModel(bez), 'pracka').short, 'bez predpovede tá istá odpoveď ako na karte');
 });

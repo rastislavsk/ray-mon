@@ -5,7 +5,7 @@
 // Zo slušnej sa skladá tabuľka do popisu pull requestu.
 
 import { carbonFacts } from '../shared/carbon.js';
-import { MOZEM_SKY_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
+import { MOZEM_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
 import { heroModel } from '../shared/hero-model.js';
 import * as M from '../shared/messages.js';
 import { mozemModel } from '../shared/mozem.js';
@@ -174,7 +174,7 @@ function directItems(out, v) {
         ['unk', { kind: 'unk' }],
         ['always', { kind: 'always' }],
     ];
-    for (const item of MOZEM_SKY_ITEMS)
+    for (const item of MOZEM_ITEMS)
         for (const [k, a] of answers)
             for (const draha of [true, false])
                 for (const cost of [null, 0.19]) {
@@ -186,7 +186,7 @@ function directItems(out, v) {
         out[`tileNote.${k}`] = M.mozemTileNote(a) || '(prázdne)';
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
-    strings(M.mozemItemText(MOZEM_SKY_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
+    strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
     for (const tone of ['go', 'wait', 'cheap', 'no'])
         for (const isAuto of [true, false]) {
             out[`log.${tone}.${isAuto}`] = M.mozemLogLabel(tone, isAuto, null, v);

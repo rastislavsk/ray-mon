@@ -4,7 +4,7 @@
 // aj to, či je internet, prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { HOUR_RANGE } from './chart-model.js';
-import { installedKw, MOZEM_GROUPS, MOZEM_SKY_ITEMS, TYPICAL_PLANT } from './config.js';
+import { installedKw, MOZEM_GROUPS, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
 import { runMinOf, runningLaunch } from './launches.js';
 import {
@@ -69,7 +69,7 @@ export function pvStatus({ now, site, pv, zdroj }) {
  */
 export function mozemSkyModel(input, { quip = 0, launches = [], online = true, voice = 'drzy' } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, quip, launches, { guess: true, voice, list: MOZEM_SKY_ITEMS });
+    const m = mozemModel(input, quip, launches, { guess: true, voice });
     const f = m.facts;
     const offline = m.state === 'offline';
     // Kým sa načítava, karta nič netvrdí - ani „neviem“ pri veciach, ani hlášku navyše k vete.

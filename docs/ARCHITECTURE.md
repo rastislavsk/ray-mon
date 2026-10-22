@@ -164,7 +164,7 @@ Druhý dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľ
 v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Pôvodne mal súčasnú appku nahradiť; od 22. 10. 2026 ostávajú obe natrvalo ako **jedno jadro, dva kabáty** (návrh
 `docs/navrhy/jedno-jadro-dva-kabaty.html`, pravidlá v `CLAUDE.md`). Jadro dáva obom tie isté
 odpovede, kabát smie mať vlastné obrazovky a funkcie. Rozdiely, ktoré dnes menia odpoveď
-(poloha bez panelov a dva zoznamy vecí s bojlerom a bez neho), sa
+(poloha bez panelov), sa
 zjednocujú po krokoch; kým to nie je hotové, opisujú ich odseky nižšie tak, ako sú.
 
 `obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
@@ -266,8 +266,8 @@ bez panelov odpovedá z typickej strechy (`mozemModel` s `guess`, predvolene vyp
 appka v tom stave ďalej ukazuje „Neviem.“) a priznáva odhad.
 
 Veci sú v skupinách (`MOZEM_GROUPS` v `config.js`, návrh A v `docs/navrhy/mozem-skupiny.html`):
-veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Bojler má len nová appka – jej veci sú
-`MOZEM_SKY_ITEMS`, súčasná ďalej počíta s `MOZEM_ITEMS`. Dlaždica ukáže jednu odpoveď skupiny:
+veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Zoznam vecí (`MOZEM_ITEMS`) je jeden pre
+obe appky, skupiny sú kabát Oblohy. Dlaždica ukáže jednu odpoveď skupiny:
 najlepšiu z jej vecí, a keď svieti, koniec slnka (spoločný pre všetky), nie štart programu.
 Dokedy pustiť ktorý program, povie panel skupiny – veci pod sebou, každá so svojím časom
 a vlastným „Pustil/a som“. Veci, ktoré bežia alebo odpovedajú inak, vymenuje riadok pod
@@ -454,7 +454,9 @@ a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 Veci s ikonami nie sú na hlavnej obrazovke karty, ale o ťuknutie ďalej (návrh A
 v `docs/navrhy/mozem-co-mozem.html`). Karta ich zhrnie do riadku „Čo môžem“ (`glance`
 v modeli): koľko ide hneď, bodka za každú vec a výnimky slovom. Zoznam vecí je druhá obrazovka
-karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie.
+karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie. Dlaždice sú po
+dvoch; pri nepárnom počte leží posledná cez celú šírku (`wide`), aby neostala v riadku sama (návrh
+`docs/navrhy/jeden-zoznam-veci.html`).
 
 Texty sú v `messages.js`. Rozbalená vec v zozname je `mozemOpen` - nastavenie vnútri karty,
 nie krok navigácie. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
