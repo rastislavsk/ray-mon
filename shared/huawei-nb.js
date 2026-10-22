@@ -107,7 +107,16 @@ export function parseNbDevices(json) {
     return out;
 }
 
-const num = (/** @type {unknown} */ v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+/**
+ * Číslo z hodnoty dátovej položky. Huawei ich podľa typu v referencii posiela ako čísla, no
+ * v príkladoch reálnych dát elektrárne ako text (`"day_power":"10000"`) - prijme sa oboje.
+ * Prázdny text a `N/A` (neplatná hodnota) sú null.
+ * @param {unknown} v @returns {number | null}
+ */
+function num(v) {
+    const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    return typeof n === 'number' && Number.isFinite(n) ? n : null;
+}
 
 /**
  * Výkon meničov (`active_power`, kW) a ich dnešná a celková výroba (`day_cap`, `total_cap`,

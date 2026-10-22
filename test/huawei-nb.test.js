@@ -112,10 +112,13 @@ test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z menič
         data: [
             { stationCode: 'NE=1', dataItemMap: { day_power: 18.2, month_power: 410.5, total_power: 9876.4, real_health_state: 3 } },
             { stationCode: 'NE=2', dataItemMap: { day_power: 1 } },
+            // Tak ako v príklade referencie 26.2.0: čísla ako text, N/A je neplatná hodnota.
+            { stationCode: 'NE=4', dataItemMap: { day_power: '16770.0', month_power: '35100.0', total_power: 'N/A' } },
         ],
     };
     const station = parseNbStationReal(stationReal, 'NE=1');
     assert.deepEqual(station, { day: 18.2, month: 410.5, total: 9876.4 });
+    assert.deepEqual(parseNbStationReal(stationReal, 'NE=4'), { day: 16770, month: 35100, total: null });
     const pv = nbPv(sum, station, 'Dvorany', NOW);
     assert.deepEqual(validatePv(pv), []);
     assert.deepEqual(
