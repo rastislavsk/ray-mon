@@ -76,12 +76,15 @@ test('zoznam elektrární a meničov podľa príkladov z referencie', () => {
             { id: -214091680973855, devName: '6fbfk11', stationCode: 'NE=12345678', devTypeId: 1 },
             { id: 5, devName: 'meter', stationCode: 'NE=12345678', devTypeId: 17 },
             { id: 7, devName: 'dom', stationCode: 'NE=23456789', devTypeId: 38 },
+            // Menič s batériou (PV&ESS) od SmartPVMS 26.2.0.
+            { id: 8, devName: 'garaz', stationCode: 'NE=23456789', devTypeId: 23093 },
+            { id: 9, devName: 'bateria', stationCode: 'NE=23456789', devTypeId: 39 },
         ],
         failCode: 0,
     };
     assert.deepEqual(parseNbDevices(devices), {
         'NE=12345678': { 1: [-214543629611879, -214091680973855] },
-        'NE=23456789': { 38: [7] },
+        'NE=23456789': { 38: [7], 23093: [8] },
     });
     assert.throws(
         () => parseNbDevices({ success: false, data: null, failCode: 20009 }),
@@ -109,10 +112,13 @@ test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z menič
         data: [
             { stationCode: 'NE=1', dataItemMap: { day_power: 18.2, month_power: 410.5, total_power: 9876.4, real_health_state: 3 } },
             { stationCode: 'NE=2', dataItemMap: { day_power: 1 } },
+            // Tak ako v príklade referencie 26.2.0: čísla ako text, N/A je neplatná hodnota.
+            { stationCode: 'NE=4', dataItemMap: { day_power: '16770.0', month_power: '35100.0', total_power: 'N/A' } },
         ],
     };
     const station = parseNbStationReal(stationReal, 'NE=1');
     assert.deepEqual(station, { day: 18.2, month: 410.5, total: 9876.4 });
+    assert.deepEqual(parseNbStationReal(stationReal, 'NE=4'), { day: 16770, month: 35100, total: null });
     const pv = nbPv(sum, station, 'Dvorany', NOW);
     assert.deepEqual(validatePv(pv), []);
     assert.deepEqual(
