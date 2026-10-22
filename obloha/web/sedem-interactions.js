@@ -10,7 +10,7 @@ import { shows } from './state.js';
 /** @typedef {import('./dom.js').Dom} Dom */
 
 /**
- * @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh obnova dát, tá istá ako pri štarte
+ * @param {Store} store @param {Dom} dom @param {(opts?: { skus?: boolean }) => Promise<void>} refresh obnova dát, tá istá ako pri štarte
  */
 export function initSedem(store, dom, refresh) {
     dom.sdDays.addEventListener('click', (e) => {
@@ -31,6 +31,7 @@ export function initSedem(store, dom, refresh) {
     });
     dom.sdRetry.addEventListener('click', () => {
         store.setState({ loading: true });
-        refresh();
+        // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
+        refresh({ skus: true });
     });
 }

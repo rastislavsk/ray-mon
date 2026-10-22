@@ -455,6 +455,12 @@ export const PRISTUP = { odmietnutia: 2, skusMs: 60 * 60 * 1000, pripomenutMs: 7
 export const PRISTUP_STORAGE_KEY = 'pristup-v1';
 
 /**
+ * Posledný dopyt na meranie v tomto prehliadači, spoločný pre obe appky (Rytmus v shared/zdroje.js).
+ * Limity výrobcu sú na účet, nie na appku - Huawei dá dáta raz za 5 minút. Formát: { sposob, nazov, at, pv }.
+ */
+export const MERANIE_STORAGE_KEY = 'meranie-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -467,6 +473,7 @@ export const STORAGE_KEYS = [
     LOOK_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
+    MERANIE_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

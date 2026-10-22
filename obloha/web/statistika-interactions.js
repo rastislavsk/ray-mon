@@ -27,7 +27,7 @@ async function sharePoster(store) {
 }
 
 /**
- * @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh obnova dát, tá istá ako pri štarte
+ * @param {Store} store @param {Dom} dom @param {(opts?: { skus?: boolean }) => Promise<void>} refresh obnova dát, tá istá ako pri štarte
  */
 export function initStatistika(store, dom, refresh) {
     dom.stSeg.addEventListener('click', (e) => {
@@ -54,6 +54,7 @@ export function initStatistika(store, dom, refresh) {
     dom.posterShare.addEventListener('click', () => sharePoster(store));
     dom.stRetry.addEventListener('click', () => {
         store.setState({ loading: true });
-        refresh();
+        // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
+        refresh({ skus: true });
     });
 }

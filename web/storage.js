@@ -8,6 +8,7 @@ import {
     DAYLOG_STORAGE_KEY,
     LAUNCH_STORAGE_KEY,
     LOOK_STORAGE_KEY,
+    MERANIE_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
@@ -19,6 +20,7 @@ import {
 import { parseDayLog } from '../shared/daylog.js';
 import { parseLaunches } from '../shared/launches.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
+import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
 import {
     DEFAULT_LOOK,
@@ -163,6 +165,16 @@ export function saveOdmietnutie(o) {
     } catch {
         return false;
     }
+}
+
+/** Posledný dopyt na meranie, spoločný pre obe appky (Rytmus v shared/zdroje.js); bez úložiska null. @returns {import('../shared/zdroje.js').Rytmus | null} */
+export function loadRytmus() {
+    return readJson(MERANIE_STORAGE_KEY, parseRytmus, null);
+}
+
+/** @param {import('../shared/zdroje.js').Rytmus} r @returns {boolean} podarilo sa? */
+export function saveRytmus(r) {
+    return write(MERANIE_STORAGE_KEY, JSON.stringify(r));
 }
 
 /** Posledné stiahnuté počasie; bez úložiska null. @returns {import('../shared/schema.js').StoredWeather | null} */

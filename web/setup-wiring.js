@@ -11,7 +11,8 @@ import { SEARCH_DEBOUNCE_MS, TARIFF_LIMITS } from '../shared/config.js';
 import { checkSettings, typicalSettings } from '../shared/settings.js';
 import * as flow from '../shared/setup-flow.js';
 import { pripojZdroj, searchPlaces } from './data.js';
-import { saveSettings, saveSite } from './storage.js';
+import { dalsiRytmus } from '../shared/zdroje.js';
+import { loadRytmus, saveRytmus, saveSettings, saveSite } from './storage.js';
 
 /** @typedef {import('../shared/setup-flow.js').SetupState} SetupState */
 /** @typedef {import('../shared/setup-flow.js').SetupPatch} SetupPatch */
@@ -137,6 +138,9 @@ async function pripoj(store) {
     if (s.setupPripoj.status === 'loading' || !flow.udajeReady(s)) return;
     const sposob = s.setupSposob;
     store.setState(flow.pripojStart());
+    // Pripájanie je tiež dopyt: obnova merania (aj v druhej appke) počká interval. Inak by sa
+    // tým istým účtom Huawei prihlásila popri pripájaní a zrušila mu prihlásenie (kód 305).
+    if (s.zdroj) saveRytmus(dalsiRytmus(loadRytmus(), s.zdroj, new Date(), null));
     // Pri obnove prístupu ide aj stará pečať, Worker z nej doplní, čo človek nezadáva znova.
     const res = await pripojZdroj(sposob, s.setupUdaje, undefined, s.setupObnova && s.zdroj ? s.zdroj.pecat : '');
     const patch = flow.pripojDone(store.get(), sposob, res);

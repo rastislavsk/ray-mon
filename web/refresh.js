@@ -6,9 +6,9 @@ import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
 import { neplati, odmietnute, znovaDue } from '../shared/pristup.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
-import { pvDue } from '../shared/zdroje.js';
+import { dalsiRytmus, pvDue, rytmusOf } from '../shared/zdroje.js';
 import { keptForecast, loadData } from './data.js';
-import { saveDayLog, saveOdmietnutie, saveSettings } from './storage.js';
+import { loadOdmietnutie, loadRytmus, loadSettings, saveDayLog, saveOdmietnutie, saveRytmus, saveSettings } from './storage.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -90,12 +90,54 @@ function nextMeranie(teraz, result, now, skus) {
  * meranie nie je staršie než interval spôsobu (shared/zdroje.js), ostáva posledné a Worker sa
  * nepýta. Po odmietnutom prístupe rozhoduje, kedy to skúsiť znova (shared/pristup.js), a „Skúsiť
  * znova“ (`skus`) sa pýta hneď.
- * @param {RefreshState} s @param {import('../shared/zdroje.js').Zdroj | null} zdroj @param {boolean} skus
+ * `lastAt` je posledný dopyt v tomto prehliadači - aj z druhej appky (Rytmus v shared/zdroje.js).
+ * @param {RefreshState} s @param {import('../shared/zdroje.js').Zdroj | null} zdroj @param {boolean} skus @param {number} lastAt
  */
-function pvNow(s, zdroj, skus) {
+function pvNow(s, zdroj, skus, lastAt) {
     if (!zdroj || skus) return true;
     const at = new Date();
-    return znovaDue(s.pristup, zdroj, at) ?? pvDue(zdroj, s.pv, at);
+    return znovaDue(s.pristup, zdroj, at) ?? pvDue(zdroj, s.pv, at, lastAt);
+}
+
+/**
+ * Čo medzitým zapísala druhá appka v tom istom prehliadači: obnovený prístup (nová pečať
+ * v uloženom nastavení toho istého merania) a odmietnutie. Appka ich prevezme pred dopytom -
+ * so starým tokenom by sa Huawei prihlásila znova a druhej appke by prihlásenie zrušila.
+ * @param {RefreshState} s @returns {Partial<RefreshState>}
+ */
+function zUloziska(s) {
+    const ulozeny = s.known === 'elektraren' && s.zdroj ? loadSettings()?.zdroj : null;
+    const ten = ulozeny && s.zdroj && ulozeny.sposob === s.zdroj.sposob && ulozeny.nazov === s.zdroj.nazov;
+    const zdroj = ten && ulozeny.pecat !== s.zdroj?.pecat ? { zdroj: ulozeny } : {};
+    const odm = loadOdmietnutie();
+    const pristup = odm && JSON.stringify(odm) !== JSON.stringify(s.pristup) ? { pristup: odm } : {};
+    return { ...zdroj, ...pristup };
+}
+
+/**
+ * Meranie, keď sa appka nepýtala: novšie z toho, čo má, a čo medzitým namerala druhá appka.
+ * Keď prístup neplatí, nič.
+ * @param {RefreshState} teraz @param {import('../shared/zdroje.js').Rytmus | null} rytmus
+ */
+function bezDopytu(teraz, rytmus) {
+    const ine = rytmus?.pv;
+    if (!ine || neplati(teraz.pristup, teraz.zdroj)) return { pv: teraz.pv };
+    return { pv: !teraz.pv || Date.parse(ine.updatedAt) > Date.parse(teraz.pv.updatedAt) ? ine : teraz.pv };
+}
+
+/**
+ * Dáta pre elektráreň; meranie len vtedy, keď je naň čas (pvNow). Dopyt sa do spoločného rytmu
+ * zapíše hneď, nie až s odpoveďou - druhá appka sa tak medzitým nepýta tiež.
+ * @param {RefreshState} s @param {Pick<import('../shared/settings.js').Settings, 'site' | 'plant' | 'zdroj'>} settings @param {boolean} skus
+ */
+async function stiahni(s, settings, skus) {
+    const { zdroj } = settings;
+    const rytmus = rytmusOf(loadRytmus(), zdroj);
+    const due = pvNow(s, zdroj, skus, rytmus?.at ?? 0);
+    if (due && zdroj) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), null));
+    const result = await loadData({ ...settings, zdroj: due ? zdroj : null }, new Date());
+    if (due && zdroj && result.pv) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), result.pv));
+    return { due, rytmus, result };
 }
 
 /**
@@ -117,13 +159,12 @@ export function createRefresh(store) {
             const forecast = keptForecast({ site, plant }, new Date());
             if (forecast) store.setState({ forecast });
         }
-        const due = pvNow(store.get(), zdroj, skus);
-        const result = await loadData({ site, plant, zdroj: due ? zdroj : null }, new Date());
+        const { due, rytmus, result } = await stiahni(store.get(), { site, plant, zdroj }, skus);
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
         if (teraz.site !== site || teraz.plant !== plant || teraz.zdroj !== zdroj) return;
         const now = new Date();
-        const meranie = due ? nextMeranie(teraz, result, now, skus) : { pv: teraz.pv };
+        const meranie = due ? nextMeranie(teraz, result, now, skus) : bezDopytu(teraz, rytmus);
         // Denník dní pre súhrn: menič posiela len súčet dneška, dni si appka odkladá sama.
         const dayLog = result.pv
             ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
@@ -135,6 +176,8 @@ export function createRefresh(store) {
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.
         if (store.get().known === 'nic') return Promise.resolve();
+        const prevzate = zUloziska(store.get());
+        if (Object.keys(prevzate).length) store.setState(prevzate);
         const { site, plant, zdroj } = store.get();
         if (bezi && bezi.site === site && bezi.plant === plant && bezi.zdroj === zdroj) return bezi.promise;
         const promise = obnov({ site, plant, zdroj }, skus).finally(() => {

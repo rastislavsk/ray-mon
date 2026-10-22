@@ -8,7 +8,8 @@ import { md5 } from '../shared/md5.js';
 import { validatePv } from '../shared/schema.js';
 import { parseSolax, solaxUrl } from '../shared/solax.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../shared/victron.js';
-import { pvDue, SPOSOBY, udajeOk } from '../shared/zdroje.js';
+import { dalsiRytmus, parseRytmus, pvDue, rytmusOf, SPOSOBY, udajeOk } from '../shared/zdroje.js';
+import { fixtureData } from './helpers.js';
 
 const NOW = new Date('2026-09-05T11:00:00Z');
 
@@ -157,6 +158,25 @@ test('pvDue: meranie sa pýta až po intervale spôsobu, bez merania hneď', () 
     assert.equal(pvDue(kiosk, pv, at(55)), true);
     assert.equal(pvDue({ ...fox, sposob: 'neznamy' }, pv, at(1)), true);
     for (const s of SPOSOBY) assert.ok(s.intervalMs >= 60 * 1000, s.id);
+    // Posledný dopyt (aj nevydarený, aj z druhej appky) sa ráta ako meranie: bez merania nie každú minútu.
+    assert.equal(pvDue(fox, null, at(60), NOW.getTime()), false);
+    assert.equal(pvDue(fox, null, at(175), NOW.getTime()), true);
+    assert.equal(pvDue(fox, pv, at(175), at(120).getTime()), false, 'dopyt po meraní posúva ďalší');
+});
+
+test('rytmus: spoločný pre obe appky, patrí k meraniu podľa spôsobu a mena, nechá posledné meranie', () => {
+    const z = { sposob: 'huawei-northbound', pecat: 'v1.x', nazov: 'Dvorany' };
+    const pv = /** @type {any} */ (fixtureData().pv);
+    const r = dalsiRytmus(null, z, NOW, pv);
+    assert.deepEqual(r, { sposob: z.sposob, nazov: 'Dvorany', at: NOW.getTime(), pv });
+    assert.deepEqual(parseRytmus(JSON.parse(JSON.stringify(r))), r);
+    const dalsi = dalsiRytmus(r, { ...z, pecat: 'v1.nova' }, new Date(NOW.getTime() + 1000), null);
+    assert.equal(dalsi.pv, pv, 'nevydarený dopyt nechá posledné meranie; pečať sa pri obnove tokenu mení');
+    assert.equal(dalsiRytmus(r, { ...z, nazov: 'Chata' }, NOW, null).pv, null, 'iná elektráreň');
+    assert.equal(rytmusOf(r, { ...z, sposob: 'huawei-kiosk' }), null);
+    assert.equal(rytmusOf(r, null), null);
+    assert.equal(parseRytmus({ ...r, pv: { x: 1 } })?.pv, null, 'nezmyselné meranie sa zahodí');
+    for (const bad of [null, 'x', { ...r, at: 'x' }, { ...r, sposob: 1 }]) assert.equal(parseRytmus(bad), null);
 });
 
 test('Solis: Content-MD5 podľa príkladu z dokumentácie, dátum a text na podpis', async () => {
