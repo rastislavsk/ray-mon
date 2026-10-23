@@ -36,14 +36,17 @@
         ></script>
     </head>
     <body>
+        <!-- Ťuknutie kamkoľvek mimo bubliny stavu merania ju zavrie a nič pod ňou nespustí. -->
+        <div class="pv-tip-bg hidden" id="pv-tip-bg"></div>
         <header class="appbar">
             <div class="appbar-inner">
                 <div class="appbar-top">
                     <span class="appbar-label">Toilet Apps Ltd.</span>
-                    <div class="appbar-clock">
+                    <!-- Bodka s časom otvorí bublinu s vysvetlením stavu merania (render/header.js). -->
+                    <button type="button" class="appbar-clock" id="pv-clock" aria-expanded="false" aria-controls="pv-tip" disabled>
                         <span class="live-dot"></span>
                         <time id="pv-time">00:00</time>
-                    </div>
+                    </button>
                 </div>
                 <div class="appbar-sub">
                     <span class="appbar-by">RAY-MON</span>
@@ -52,6 +55,11 @@
                         <span id="pv-updated">načítavam…</span>
                         <button type="button" class="pv-setup-go hidden" id="pv-setup-go"></button>
                     </span>
+                </div>
+                <div class="pv-tip hidden" id="pv-tip" role="region" aria-labelledby="pv-tip-title">
+                    <b id="pv-tip-title"></b>
+                    <p id="pv-tip-text"></p>
+                    <button type="button" class="pv-tip-btn hidden" id="pv-tip-btn"></button>
                 </div>
             </div>
             <!-- Pás pod hlavičkou na kartách Terazky a Môžem?: bez zadaných panelov jantárový (trieda odhad,

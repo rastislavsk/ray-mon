@@ -32,6 +32,12 @@ function headerDom() {
         // Čas aktualizácie dát.
         pvTime: byId('pv-time'),
         pvUpdated: byId('pv-updated'),
+        pvClock: /** @type {HTMLButtonElement} */ (byId('pv-clock')),
+        pvTip: byId('pv-tip'),
+        pvTipBg: byId('pv-tip-bg'),
+        pvTipTitle: byId('pv-tip-title'),
+        pvTipText: byId('pv-tip-text'),
+        pvTipBtn: byId('pv-tip-btn'),
         // Bez zadaných panelov namiesto textu pod časom odkaz do sprievodcu.
         pvSetupGo: byId('pv-setup-go'),
         panelsBar: byId('panels-bar'),

@@ -62,9 +62,11 @@ function initNavigation(store, dom) {
         }
         // Pás odhadu na karte Terazky: jeden krok navigácie do Nastavenia, bez merania rovno na krok
         // Meranie sprievodcu (ako výzva v Štatistike), pri odmietnutom prístupe na hlásenie vyššie.
-        if (target.closest('#tz-note-btn')) {
+        // To isté robí tlačidlo v bubline stavu merania v hlavičke.
+        const noteBtn = target.closest('#tz-note-btn, #pv-tip-btn');
+        if (noteBtn) {
             const s = store.get();
-            const znova = dom.tzNoteBtn.hasAttribute('data-pristup-go');
+            const znova = noteBtn.hasAttribute('data-pristup-go');
             store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? {} : stepEdit(s, 'meranie', true)) });
         }
         // Odkaz „nastav panely“ v hlavičke: jeden krok navigácie rovno na krok Panel sprievodcu.
@@ -417,10 +419,30 @@ function initTicks(store, mq) {
     return refresh;
 }
 
+/**
+ * Bublina s vysvetlením stavu merania: bodka s časom ju otvorí aj zavrie, rovnako ťuknutie na text
+ * pod časom (pre klávesnicu stačí jedno tlačidlo). Ťuknutie kamkoľvek mimo nej (priehľadná vrstva,
+ * aby nič pod bublinou nespustilo) a Escape ju zavrú. Tlačidlo v nej mení kartu (initNavigation),
+ * a tým ju zavrie tiež (panelChange).
+ * @param {Store} store @param {Dom} dom
+ */
+function initStavTip(store, dom) {
+    const toggle = () => !dom.pvClock.disabled && store.setState({ stavTip: !store.get().stavTip });
+    dom.pvClock.addEventListener('click', toggle);
+    dom.pvUpdated.addEventListener('click', toggle);
+    dom.pvTipBg.addEventListener('click', () => store.setState({ stavTip: false }));
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !store.get().stavTip) return;
+        store.setState({ stavTip: false });
+        dom.pvClock.focus();
+    });
+}
+
 /** @param {Store} store @param {Dom} dom @param {{ wide: MediaQueryList }} mq */
 export function initInteractions(store, dom, mq) {
     initViewportZoomRealign();
     initNavigation(store, dom);
+    initStavTip(store, dom);
     initHistory(store);
     initSwipe(store, dom, hideChartTooltips);
     initTapTooltipClosing();

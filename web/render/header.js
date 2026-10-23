@@ -2,7 +2,8 @@
 // čas znamená, a farba plánu dňa pre pozadie celej stránky (vrátane náhľadu iného času).
 
 import { installedKw } from '../../shared/config.js';
-import { heroModel, pvFreshness } from '../../shared/hero-model.js';
+import { heroModel, pvFreshness, stavMerania } from '../../shared/hero-model.js';
+import { stavMeraniaText } from '../../shared/messages-core.js';
 import { MOZEM_SKY_TEXTS, terazTypicalText } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
 
@@ -70,6 +71,33 @@ function barOf(state) {
     return pas ? { odhad: false, t: pas } : null;
 }
 
+/**
+ * Vysvetlenie stavu merania do bubliny pod bodkou a časom - to isté jadro a texty ako v Oblohe.
+ * Null, kým appka stav merania nepozná (vitaj, načítavam…, bez panelov, bez dát) - vtedy sa bodka
+ * a čas neťukajú. `znova`: tlačidlo vedie na hlásenie o neplatnom prístupe v Nastavení.
+ * @param {import('../state.js').AppState} state
+ */
+export function stavTipOf(state) {
+    if (state.known !== 'elektraren' || state.loading || (!state.pv && !state.forecast)) return null;
+    const stav = stavMerania(state);
+    return { ...stavMeraniaText(stav), znova: stav.druh === 'znova' };
+}
+
+/** Bublina stavu merania: obsah, a či je otvorená. @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
+function renderStavTip(state, dom) {
+    const tip = stavTipOf(state);
+    const open = state.stavTip && !!tip;
+    dom.pvClock.disabled = !tip;
+    dom.pvClock.setAttribute('aria-expanded', String(open));
+    dom.pvTip.classList.toggle('hidden', !open);
+    dom.pvTipBg.classList.toggle('hidden', !open);
+    dom.pvTipTitle.textContent = tip?.nadpis ?? '';
+    dom.pvTipText.textContent = tip?.text ?? '';
+    dom.pvTipBtn.textContent = tip?.tlacidlo ?? '';
+    dom.pvTipBtn.classList.toggle('hidden', !tip?.tlacidlo);
+    dom.pvTipBtn.toggleAttribute('data-pristup-go', !!tip?.znova);
+}
+
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
     const updated = updatedLine(state);
@@ -79,6 +107,7 @@ export function renderHeader(state, dom) {
     dom.pvSetupGo.textContent = go ? updated.text : '';
     dom.pvUpdated.classList.toggle('hidden', go);
     dom.pvSetupGo.classList.toggle('hidden', !go);
+    renderStavTip(state, dom);
     // Pás o odhade z typickej strechy - len na kartách, ktoré z nej odpovedajú bez slova o nej. Karta
     // 7 dní to hovorí v podnadpise, Štatistika má vlastnú výzvu.
     renderPanelsBar(state, dom);

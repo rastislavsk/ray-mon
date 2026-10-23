@@ -69,6 +69,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupBrush: string | null,
  *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
+ *   stavTip: boolean,
  * }} AppState
  * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
@@ -163,6 +164,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
+        // Bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
+        stavTip: false,
     };
 }
 
@@ -206,6 +209,7 @@ export function panelChange(from, to) {
         infoOpen: /** @type {null} */ (null),
         mozemSummary: false,
         mozemList: false,
+        stavTip: false,
     };
 }
 

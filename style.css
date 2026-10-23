@@ -306,15 +306,17 @@ b {
    s názvom firmy schoval za stavový riadok a bolo ho vidieť len na okamih, kým ťahanie
    prstom nadol (obnova ťahom) posunulo stránku nižšie. Odsadenie je vnútri .appbar,
    takže pozadie hlavičky siaha až pod stavový riadok a prechod zostáva plynulý. */
+/* z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
 .appbar {
     position: sticky;
     top: 0;
-    z-index: 30;
+    z-index: 32;
     padding-top: var(--safe-top);
     background: var(--bg-page);
     background-attachment: fixed;
 }
 .appbar-inner {
+    position: relative;
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 18px 20px 12px;
@@ -359,6 +361,8 @@ b {
     margin: -8px 0;
     cursor: pointer;
 }
+/* Bodka s časom je tlačidlo, ktoré otvorí bublinu so stavom merania: vyzerá ako text, plocha na
+   ťuknutie je väčšia, riadok nezväčší. Text pod časom robí to isté. */
 .appbar-clock {
     display: flex;
     align-items: center;
@@ -366,6 +370,78 @@ b {
     font-family: var(--font-mono);
     font-size: var(--fs-sm);
     color: var(--ink-70);
+    background: none;
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 12px 8px;
+    margin: -12px -8px;
+    cursor: pointer;
+}
+.appbar-clock:disabled {
+    cursor: default;
+}
+.appbar-clock[aria-expanded='true'] {
+    background: var(--ink-12);
+}
+#pv-updated {
+    cursor: pointer;
+}
+/* Vrstva pod hlavičkou: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam (aj na navigáciu). */
+.pv-tip-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 31;
+    background: rgba(0, 0, 0, 0.35);
+}
+/* Bublina pod časom, šípka ukazuje hore naň. Navigácia je vnútri hlavičky (z-index 30) - bublina je nad ňou. */
+.pv-tip {
+    position: absolute;
+    z-index: 31;
+    top: calc(100% - 4px);
+    right: 12px;
+    width: min(300px, calc(100% - 24px));
+    padding: 14px 16px 16px;
+    border: 1px solid var(--ink-12);
+    border-radius: 16px;
+    background: var(--card-bg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    font-size: var(--fs-md);
+    line-height: 1.45;
+    color: var(--ink);
+}
+.pv-tip::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    right: 26px;
+    width: 12px;
+    height: 12px;
+    border-top: 1px solid var(--ink-12);
+    border-left: 1px solid var(--ink-12);
+    border-radius: 2px 0 0 0;
+    background: var(--card-bg);
+    transform: rotate(45deg);
+}
+.pv-tip b {
+    display: block;
+    margin-bottom: 6px;
+    font-size: var(--fs-lg);
+}
+.pv-tip p {
+    margin: 0;
+    color: var(--ink-45);
+}
+.pv-tip-btn {
+    margin-top: 12px;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--green);
+    color: var(--bg);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
 }
 /* Na úzkych mobilných obrazovkách sa názov s týmto letter-spacingom
    nezmestí na jeden riadok vedľa času. Veľkosť škáluje s šírkou obrazovky
@@ -4653,7 +4729,7 @@ b {
         flex-direction: column;
     }
     .appbar {
-        position: static;
+        position: relative;
         flex: 0 0 auto;
     }
     .page {
