@@ -527,7 +527,7 @@ const popiskyGrafu = (page, sel) =>
             p.x >= lim.left && p.x <= lim.right && p.y >= lim.top && p.y <= lim.bottom;
         /** @type {string[]} */
         const hits = [];
-        for (const path of chart.querySelectorAll('.dc-area, .dc-real')) {
+        for (const path of chart.querySelectorAll('.dc-fc, .dc-real')) {
             const curve = /** @type {SVGPathElement} */ (path);
             const len = curve.getTotalLength();
             for (let i = 0; i <= len; i += 0.5)

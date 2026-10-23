@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bestDayIndex, usePct, visibleHours, weekListModel, weekStatsModel } from '../shared/chart-model.js';
 import { ALL_DAYS, ALL_MONTHS, installedKw, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
-import { dayChartModel, planCells, planLegend } from '../shared/day-chart.js';
+import { chartLegend, DAY_CHART, dayChartModel, planCells, planLegend } from '../shared/day-chart.js';
 import { dayHourTiers, dayPlan, forecastDayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import {
@@ -204,7 +204,7 @@ test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, n
     assert.equal(d.clear, sedemClearText(day.clearKwhTotal, usePct(day)));
     assert.deepEqual(d.message, dayDetailMessage(visibleHours(day.hourly), powerThresholds(PLANT)));
     assert.match(d.chart.desc, /^Výroba počas dňa\. Teraz 13:00: /);
-    assert.deepEqual(d.chart.legend, planLegend(planCells(dayPlan(input))));
+    assert.deepEqual(d.chart.legend, chartLegend(planCells(dayPlan(input))));
     assert.equal(d.first, true);
     assert.equal(d.last, false);
 });
@@ -351,7 +351,7 @@ test('dayChartModel: bez „teraz“ (iný deň) značka chýba a stupnica ide l
     assert.equal(geo.now, null);
     assert.equal(geo.real, '');
     // Výkon „teraz“ (99 kW) do stupnice nevstúpi, keď značka nie je.
-    assert.ok(geo.limitY < 100);
+    assert.ok(geo.limitY < DAY_CHART.base - 12);
     assert.deepEqual(
         planLegend(planCells(plan)).map((l) => l.tone),
         ['sun', 'plain'],

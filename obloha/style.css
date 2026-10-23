@@ -802,19 +802,45 @@ button.live[aria-expanded='true'] {
     width: 100%;
     height: auto;
 }
-.dc-area {
-    fill: rgba(255, 255, 255, 0.2);
-    stroke: rgba(255, 255, 255, 0.7);
-    stroke-width: 1.5;
+/* Oblačnosť po hodinách nad krivkou: sýtosť bunky (fill-opacity) je oblačnosť, bunka pod čiarou
+   náhľadu má okraj. */
+.dc-cloud {
+    fill: #fff;
+}
+.dc-cloud-on {
+    stroke: #fff;
+    stroke-width: 1.3;
+}
+.dc-grid {
+    stroke: rgba(255, 255, 255, 0.16);
+}
+/* Plocha pod krivkou dňa: sýta nad hranicou veľkých spotrebičov (slnko navyše na ne), jemná pod ňou. */
+.dc-over {
+    fill: rgba(185, 242, 140, 0.5);
+}
+.dc-under {
+    fill: rgba(185, 242, 140, 0.12);
+}
+/* Predpoveď prerušovaná, nameraná krivka dneška plná - obe zelené: zelená v grafe je len slnko. */
+.dc-fc {
+    fill: none;
+    stroke: rgba(185, 242, 140, 0.6);
+    stroke-width: 1.3;
+    stroke-dasharray: 4 3;
     stroke-linejoin: round;
 }
-/* Nameraná krivka dneška: plná biela cez predpoveď. */
 .dc-real {
     fill: none;
-    stroke: #fff;
-    stroke-width: 2.2;
+    stroke: var(--yes);
+    stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
+}
+/* Zátvorka okna na veľké spotrebiče pod pásom plánu. */
+.dc-win {
+    fill: none;
+    stroke: var(--yes);
+    stroke-width: 1.5;
 }
 .dc-limit {
     stroke: rgba(185, 242, 140, 0.8);
@@ -839,6 +865,23 @@ button.live[aria-expanded='true'] {
     font-size: 13px;
     transform: translate(-50%, 2px);
 }
+/* Čísla osi kW vľavo od grafu, zarovnané koncom a vystredené na čiare mriežky. */
+.dc-y {
+    color: var(--dim);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    transform: translate(-100%, -50%);
+}
+.dc-unit {
+    font-size: 10px;
+}
+/* Nápis okna pod zátvorkou, vystredený na nej; polohu dáva render. */
+.dc-win-t {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    transform: translateX(-50%);
+}
 /* Nápis hranice: spodkom tesne nad svojím miestom (čiara, alebo voľné miesto nad krivkou),
    zarovnaný k nemu začiatkom alebo koncom. Na grafe širokom aspoň 448 px (wideScale 1,4 v
    shared/day-chart.js) má vlastnú polohu - je tam v pomere ku grafu menší. */
@@ -846,7 +889,7 @@ button.live[aria-expanded='true'] {
     left: var(--nx);
     top: var(--ny);
     color: var(--dim);
-    font-size: 13px;
+    font-size: 12px;
     transform: translate(var(--na), calc(-100% - 2px));
 }
 @container (min-width: 448px) {
@@ -857,7 +900,7 @@ button.live[aria-expanded='true'] {
     }
 }
 .dc-now-dot {
-    fill: #fff;
+    fill: var(--yes);
 }
 .dc-prev {
     stroke: #fff;
@@ -928,6 +971,21 @@ button.live[aria-expanded='true'] {
 }
 .legend [data-tone='costly']::before {
     background: var(--costly);
+}
+/* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, hranica bodkovane, oblačnosť od jasna po zamračené. */
+.legend [data-tone='power']::before {
+    height: 2.5px;
+    background: var(--yes);
+}
+.legend [data-tone='limit']::before {
+    height: 0;
+    border-top: 2px dotted rgba(185, 242, 140, 0.85);
+    border-radius: 0;
+    background: none;
+}
+.legend [data-tone='cloud']::before {
+    width: 22px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), #fff);
 }
 .hint {
     display: flex;

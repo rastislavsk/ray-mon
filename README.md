@@ -35,9 +35,10 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na páse plánu dňa na karte Terazky. Karta je v navigácii
   prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
-  výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, pod ním graf dňa – krivka
-  predpovede, nameraná krivka, hranica veľkých spotrebičov a pás plánu po polhodinách (zelená
-  slnko stačí, oranžová lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené).
+  výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, pod ním graf dňa – hore oblačnosť
+  po hodinách, krivka predpovede a nameraná krivka s osou kW, hranica veľkých spotrebičov s plochou
+  nad ňou (slnko navyše na veľké spotrebiče), pás plánu po polhodinách (zelená slnko stačí, oranžová
+  lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené) a pod ním okno „Zapni veľké“.
   Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas, „Späť na teraz“ ho vráti.
   Pod grafom je pás štyroch kariet do strán: čo robiť teraz, spotrebiče s krátkou odpoveďou
   z karty Môžem?, dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy bude lepšie.

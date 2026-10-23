@@ -353,7 +353,7 @@ test.describe('kontrast textu na oblohe a na skle', () => {
 
 // Popisky osí grafov (čas pod grafom, dni pod stĺpcami, hodiny mapy a kruhu tarify, východ
 // a západ pod oblúkom, svetové strany na kompasoch): smú byť menšie než ostatný text, nie však pod 10 px.
-const OSI = '.dc-t, .dc-limit-t, .wb-n, .hm-t, .hm-d, .tariff-ring .hour, .arc-t, .planes-compass text, .mini-compass text';
+const OSI = '.dc-t, .dc-y, .dc-limit-t, .wb-n, .hm-t, .hm-d, .tariff-ring .hour, .arc-t, .planes-compass text, .mini-compass text';
 const MIN_PX = 12;
 const MIN_OS_PX = 10;
 

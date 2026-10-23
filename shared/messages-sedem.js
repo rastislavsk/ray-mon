@@ -225,23 +225,3 @@ export function dayWindowCard(w, nowMin, peakHour) {
     if (nowMin < w.to) return card(`Práve prebieha · ešte ${countdownText(w.to - nowMin)}`, true);
     return card('Na dnes už skončilo');
 }
-
-/** Slová pásu spotrebičov pod grafom detailu dňa (úrovne fitLevel z day-plan.js). */
-export const FIT_WORDS = { go: 'Zapni veľké', part: 'čiastočne', grid: 'zo siete' };
-
-/** Približná šírka znaku popisu pásu (11,5 px Space Grotesk) - na odhad, či sa popis zmestí. */
-const FIT_CHAR_PX = 6.4;
-
-/**
- * Popis úseku pásu spotrebičov: pri zelenom aj s časom („Zapni veľké · 11–16“), keď sa zmestí,
- * inak len slovo, a keď ani to, nič - úsek potom nesie farba, legenda a tooltip.
- * @param {{ from: number, to: number, level: import('./day-plan.js').FitLevel }} seg @param {number} widthPx
- */
-export function fitLabel(seg, widthPx) {
-    const fits = (/** @type {string} */ t) => t.length * FIT_CHAR_PX + 8 <= widthPx;
-    const short = (/** @type {number} */ min) => (min % 60 ? endHm(min) : String(min / 60));
-    const word = FIT_WORDS[seg.level];
-    const full = `${word} · ${short(seg.from)}–${short(seg.to)}`;
-    if (seg.level === 'go' && fits(full)) return full;
-    return fits(word) ? word : '';
-}

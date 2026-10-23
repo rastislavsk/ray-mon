@@ -866,19 +866,45 @@ b {
     width: 100%;
     height: auto;
 }
-.dc-area {
-    fill: var(--ink-08);
-    stroke: var(--ink-45);
-    stroke-width: 1.5;
+/* Oblačnosť po hodinách nad krivkou: sýtosť bunky (fill-opacity) je oblačnosť, bunka pod čiarou
+   náhľadu má okraj. */
+.dc-cloud {
+    fill: var(--grey);
+}
+.dc-cloud-on {
+    stroke: var(--ink);
+    stroke-width: 1.3;
+}
+.dc-grid {
+    stroke: var(--ink-08);
+}
+/* Plocha pod krivkou dňa: sýta nad hranicou veľkých spotrebičov (slnko navyše na ne), jemná pod ňou. */
+.dc-over {
+    fill: rgba(var(--green-rgb), 0.4);
+}
+.dc-under {
+    fill: rgba(var(--green-rgb), 0.1);
+}
+/* Predpoveď prerušovaná, nameraná krivka dneška plná - obe zelené: zelená v grafe je len slnko. */
+.dc-fc {
+    fill: none;
+    stroke: rgba(var(--green-rgb), 0.55);
+    stroke-width: 1.3;
+    stroke-dasharray: 4 3;
     stroke-linejoin: round;
 }
-/* Nameraná krivka dneška: plná biela cez predpoveď. */
 .dc-real {
     fill: none;
-    stroke: var(--ink);
-    stroke-width: 2.2;
+    stroke: var(--green);
+    stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
+}
+/* Zátvorka okna na veľké spotrebiče pod pásom plánu. */
+.dc-win {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 1.5;
 }
 .dc-limit {
     stroke: rgba(var(--green-rgb), 0.7);
@@ -903,6 +929,23 @@ b {
     font-size: 12px;
     transform: translate(-50%, 2px);
 }
+/* Čísla osi kW vľavo od grafu, zarovnané koncom a vystredené na čiare mriežky. */
+.dc-y {
+    color: var(--ink-45);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    transform: translate(-100%, -50%);
+}
+.dc-unit {
+    font-size: 10px;
+}
+/* Nápis okna pod zátvorkou, vystredený na nej; polohu dáva render. */
+.dc-win-t {
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    transform: translateX(-50%);
+}
 /* Nápis hranice: spodkom tesne nad svojím miestom, zarovnaný k nemu začiatkom alebo koncom. Na
    grafe širokom aspoň 448 px (wideScale v shared/day-chart.js) má vlastnú polohu. */
 .dc-limit-t {
@@ -920,7 +963,7 @@ b {
     }
 }
 .dc-now-dot {
-    fill: var(--ink);
+    fill: var(--green);
 }
 .dc-prev {
     stroke: var(--ink-70);
@@ -989,6 +1032,21 @@ b {
 }
 .tz-legend [data-tone='costly']::before {
     background: var(--red);
+}
+/* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, hranica bodkovane, oblačnosť od jasna po zamračené. */
+.tz-legend [data-tone='power']::before {
+    height: 2.5px;
+    background: var(--green);
+}
+.tz-legend [data-tone='limit']::before {
+    height: 0;
+    border-top: 2px dotted rgba(var(--green-rgb), 0.7);
+    border-radius: 0;
+    background: none;
+}
+.tz-legend [data-tone='cloud']::before {
+    width: 22px;
+    background: linear-gradient(90deg, rgba(var(--grey-rgb), 0.15), var(--grey));
 }
 .tz-hint {
     display: flex;

@@ -176,7 +176,7 @@ export const TIMELINE = {
  * v heatmape týždňa, `heatMax` je jej maximum - weekHeatMax), oblačnosť ako plocha s čiarou,
  * pri dnešku „teraz“, pod tým pás spotrebičov z plánu dňa (`segments`, fitSegments
  * v shared/day-plan.js) a zelené okno ako jemná plocha cez všetky pásy. Popis úseku pásu
- * dodá `label` (fitLabel v shared/messages-sedem.js) podľa šírky úseku.
+ * dodá `label` (fitLabel v shared/messages-core.js) podľa šírky úseku.
  * @param {{ pts: import('./solar.js').DayHourPoint[], nowHour?: number | null, heatMax: number,
  *   segments: Array<{ from: number, to: number, level: import('./day-plan.js').FitLevel }>,
  *   label: (seg: { from: number, to: number, level: import('./day-plan.js').FitLevel }, widthPx: number) => string }} input

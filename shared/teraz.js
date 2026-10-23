@@ -6,7 +6,7 @@
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, MOZEM_ITEMS, powerThresholds } from './config.js';
-import { dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
+import { chartLegend, dayChartModel, planCells, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { heroModel } from './hero-model.js';
@@ -63,7 +63,7 @@ export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
         ...headOf(input, hero, { estimate, note, voice }),
         note,
         guess: estimate,
-        chart: chartOf(input, plan, hero, now),
+        chart: chartOf(input, plan, hero, now, voice),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
         cards: cardsOf(input, plan, hero, now),
@@ -151,8 +151,9 @@ export function todayOf(input) {
  * Graf dňa: geometria, popis pre čítačku a hodnota posúvača (čas, výkon, čo vtedy platí).
  * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {ReturnType<typeof heroModel>} hero zvolený čas (náhľad, inak teraz) @param {ReturnType<typeof heroModel>} now teraz
+ * @param {import('./messages.js').Voice} voice
  */
-function chartOf(input, plan, hero, now) {
+function chartOf(input, plan, hero, now, voice) {
     const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
     const curve = input.pv ? input.pv.realCurveToday : [];
     const geo = dayChartModel({
@@ -165,6 +166,7 @@ function chartOf(input, plan, hero, now) {
         limitKw: powerThresholds(input.plant).lowKw,
         limitText: voiceTexts().TERAZ_TEXTS.limit,
         preview: hero.preview ? { min: hero.minutes, kw: hero.power, text: terazPreviewTime(hero.minutes) } : null,
+        voice,
     });
     const windows = (/** @type {Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
     return {
@@ -179,7 +181,7 @@ function chartOf(input, plan, hero, now) {
         }),
         value: hero.minutes,
         valueText: terazSliderText(hero.minutes, hero.preview, hero.powerText, tone(hero.minutes)),
-        legend: planLegend(planCells(plan)),
+        legend: chartLegend(planCells(plan)),
     };
 }
 
