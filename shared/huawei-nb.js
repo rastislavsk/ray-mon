@@ -192,6 +192,7 @@ export function nbPv(dev, station, nazov, now) {
         cumulativeEnergyKwh: station.total ?? dev.total,
         stationName: nazov || null,
         realCurveToday: [],
+        measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
 }

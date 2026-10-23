@@ -5,9 +5,11 @@ import { KIOSK } from './config.js';
 /**
  * Meranie. `od` doplní appka (shared/sucty.js), keď súčet obdobia dopočítala z celkovej výroby
  * a nesiaha na jeho začiatok: deň (`rok`, `mesiac`, `YYYY-MM-DD`) či čas (`den`, `HH:MM`), odkiaľ je.
+ * `measuredAt` je čas merania od zdroja, ktorý krivku dňa nemá (výrobcovia cez API); kiosk ho
+ * neposiela - čas merania je u neho posledný bod krivky.
  * @typedef {{ realTimePowerKw: number | null, dailyEnergyKwh: number | null, monthEnergyKwh: number | null,
  *   yearEnergyKwh: number | null, cumulativeEnergyKwh: number | null, stationName: string | null,
- *   realCurveToday: Array<{ hour: number, kw: number }>, updatedAt: string,
+ *   realCurveToday: Array<{ hour: number, kw: number }>, measuredAt?: string, updatedAt: string,
  *   od?: { rok?: string, mesiac?: string, den?: string } }} PvData
  */
 

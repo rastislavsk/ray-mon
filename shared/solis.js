@@ -79,6 +79,7 @@ export function parseSolisStations(json, now) {
                     cumulativeEnergyKwh: kilo(r.allEnergy, r.allEnergyStr),
                     stationName: nazov || null,
                     realCurveToday: [],
+                    measuredAt: now.toISOString(),
                     updatedAt: now.toISOString(),
                 },
             };

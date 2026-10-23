@@ -78,6 +78,7 @@ export function parseFoxPv(realJson, genJson, nazov, now) {
         cumulativeEnergyKwh: num(gen.cumulative),
         stationName: nazov || null,
         realCurveToday: [],
+        measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
 }

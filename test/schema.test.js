@@ -15,6 +15,8 @@ test('validátor odhalí chýbajúce a zle typované polia', () => {
     assert.ok(validatePv({ ...pv, realTimePowerKw: 'x' }).some((e) => e.includes('realTimePowerKw')));
     assert.ok(validatePv({ ...pv, realCurveToday: [{ hour: 'a' }] }).some((e) => e.includes('realCurveToday[0]')));
     assert.ok(validatePv({ ...pv, updatedAt: 'nie dátum' }).some((e) => e.includes('updatedAt')));
+    assert.deepEqual(validatePv({ ...pv, measuredAt: pv.updatedAt }), []);
+    assert.ok(validatePv({ ...pv, measuredAt: null }).some((e) => e.includes('measuredAt')));
     assert.ok(validateForecast({ ...forecast, days: 'x' }).some((e) => e.includes('days')));
     assert.ok(validateForecast({ ...forecast, days: [{ ...forecast.days[0], date: '5.9.' }] }).some((e) => e.includes('date')));
     assert.ok(validateForecast({ ...forecast, tomorrowSunny: 'yes' }).some((e) => e.includes('tomorrowSunny')));
