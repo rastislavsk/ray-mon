@@ -197,7 +197,20 @@ const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
 
 /** Bod na grafe dňa pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
 async function bodGrafu(page, min) {
-    const box = await page.locator('#tz-chart svg').boundingBox();
+    // Kým nie je karta celá (pás odporúčaní, písma), stránka ešte rastie - keď sa pritom objaví
+    // posuvník (Linux v CI), graf sa zúži a bod zmeraný skôr by trafil iný čas. Meria sa preto
+    // až po ustálení: ten istý rozmer v dvoch snímkach za sebou.
+    await expect(page.locator('#tz-recs')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator('#tz-chart').scrollIntoViewIfNeeded();
+    const rozmer = () => page.locator('#tz-chart svg').boundingBox();
+    let box = await rozmer();
+    for (let i = 0; i < 20; i++) {
+        await dveSnimky(page);
+        const dalsi = await rozmer();
+        if (box && dalsi && box.x === dalsi.x && box.y === dalsi.y && box.width === dalsi.width) break;
+        box = dalsi;
+    }
     if (!box) throw new Error('graf nie je vidno');
     return { x: box.x + (chartX(min) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
 }
