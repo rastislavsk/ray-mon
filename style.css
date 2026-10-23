@@ -345,7 +345,9 @@ b {
     color: var(--ink-35);
     letter-spacing: 0.04em;
 }
+/* Text pod časom je nad okrajom plochy tlačidla času, ktorá siaha až k nemu - ťuknutie naň trafí jeho. */
 .pv-updated-line {
+    position: relative;
     text-align: right;
 }
 /* Bez zadaných panelov namiesto textu odkaz do sprievodcu (viď updatedLine vo web/render/header.js).
@@ -364,6 +366,7 @@ b {
 /* Bodka s časom je tlačidlo, ktoré otvorí bublinu so stavom merania: vyzerá ako text, plocha na
    ťuknutie je väčšia, riadok nezväčší. Text pod časom robí to isté. */
 .appbar-clock {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -380,11 +383,26 @@ b {
 .appbar-clock:disabled {
     cursor: default;
 }
-.appbar-clock[aria-expanded='true'] {
-    background: var(--ink-12);
+/* Jemná pilulka hovorí, že sa na bodku s časom dá ťuknúť. Je nižšia než plocha na ťuknutie, aby
+   nezasahovala do riadku pod ňou; kreslí ju vrstva pod obsahom hlavičky (nad jej pozadím). */
+.appbar-clock:enabled::before {
+    content: '';
+    position: absolute;
+    inset: 6px 0;
+    z-index: -1;
+    border-radius: var(--radius-pill);
+    background: var(--ink-08);
 }
+.appbar-clock[aria-expanded='true']::before {
+    background: var(--ink-20);
+}
+/* Keď meranie nie je živé, pribudne za textom pod časom „›“ - vtedy má človek dôvod sa pýtať prečo.
+   Čítačka ho nečíta (alternatívny text je prázdny). */
 #pv-updated {
     cursor: pointer;
+}
+#pv-updated[data-viac]::after {
+    content: ' ›' / '';
 }
 /* Vrstva pod hlavičkou: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam (aj na navigáciu). */
 .pv-tip-bg {

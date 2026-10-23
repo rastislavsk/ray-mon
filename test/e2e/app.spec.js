@@ -246,6 +246,10 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     const errors = await openApp(page, { start: 'terazky', time: instant, pvData });
     const m = terazAt(instant, { pv: pvData });
     await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
+    // Za textom pod časom je „›“ (len v CSS, čítačka ho nečíta): bublina povie prečo zastarané.
+    expect(
+        await page.evaluate(() => getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-updated')), '::after').content),
+    ).toContain('›');
     await expect(page.locator('#tz-num-val')).toHaveText(m.num);
     await expect(page.locator('#tz-num-val')).not.toHaveText(String(pv.realTimePowerKw));
     // Odhad povie jantárový pás pod číslom, riadok odhadu ho neopakuje; tlačidlo nie je - meranie je nastavené.
@@ -1051,6 +1055,15 @@ test('bublina stavu merania: ťuknutie na čas vysvetlí stav, ťuknutie mimo a 
     const clock = page.locator('#pv-clock');
     const tip = page.locator('#pv-tip');
     await expect(page.locator('#pv-updated')).toHaveText('meranie');
+    // Pilulka okolo bodky s časom hovorí, že sa dá ťuknúť; pri živom meraní bez „›“.
+    const naznak = () =>
+        page.evaluate(() => [
+            getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-clock')), '::before').backgroundColor,
+            getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-updated')), '::after').content,
+        ]);
+    const [pilulka, za] = await naznak();
+    expect(pilulka).not.toBe('rgba(0, 0, 0, 0)');
+    expect(za).toBe('none');
     await expect(tip).toBeHidden();
     await clock.click();
     await expect(tip).toBeVisible();

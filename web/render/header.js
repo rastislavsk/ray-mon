@@ -74,13 +74,14 @@ function barOf(state) {
 /**
  * Vysvetlenie stavu merania do bubliny pod bodkou a časom - to isté jadro a texty ako v Oblohe.
  * Null, kým appka stav merania nepozná (vitaj, načítavam…, bez panelov, bez dát) - vtedy sa bodka
- * a čas neťukajú. `znova`: tlačidlo vedie na hlásenie o neplatnom prístupe v Nastavení.
+ * a čas neťukajú. `znova`: tlačidlo vedie na hlásenie o neplatnom prístupe v Nastavení; `zive`: meranie
+ * je živé (bez „›“ za textom pod časom).
  * @param {import('../state.js').AppState} state
  */
 export function stavTipOf(state) {
     if (state.known !== 'elektraren' || state.loading || (!state.pv && !state.forecast)) return null;
     const stav = stavMerania(state);
-    return { ...stavMeraniaText(stav), znova: stav.druh === 'znova' };
+    return { ...stavMeraniaText(stav), znova: stav.druh === 'znova', zive: stav.druh === 'zive' };
 }
 
 /** Bublina stavu merania: obsah, a či je otvorená. @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -96,6 +97,8 @@ function renderStavTip(state, dom) {
     dom.pvTipBtn.textContent = tip?.tlacidlo ?? '';
     dom.pvTipBtn.classList.toggle('hidden', !tip?.tlacidlo);
     dom.pvTipBtn.toggleAttribute('data-pristup-go', !!tip?.znova);
+    // „›“ za textom pod časom (style.css), keď meranie nie je živé.
+    dom.pvUpdated.toggleAttribute('data-viac', !!tip && !tip.zive);
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
