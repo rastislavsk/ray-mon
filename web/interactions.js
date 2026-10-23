@@ -1,11 +1,10 @@
 // Poslucháče udalostí (karta Môžem? a sprievodca majú vlastné súbory). Každý končí volaním setState alebo lokálnou zmenou tooltipu;
 // nikto tu nekreslí do DOM okrem tooltipov, ktoré nie sú súčasťou stavu.
 
-import { chartTooltipModel, minutesFromAngle, ringGap } from '../shared/chart-model.js';
-import { MINUTES_PER_DAY, PREVIEW, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
+import { chartTooltipModel } from '../shared/chart-model.js';
+import { SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
-import { localMinutes } from '../shared/solar.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
 import { weekCurveModel } from './render/sedemdni.js';
@@ -13,9 +12,9 @@ import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
 import { clearStored, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
-import { pagerScroll, scrollPager } from './pager.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
 import { initSwipe } from './swipe.js';
+import { initTerazky } from './terazky-interactions.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -40,21 +39,10 @@ function dayPick(store, dom, btn) {
     return { weekSelDay, weekDayDir: weekSelDay < store.get().weekSelDay ? -1 : 1 };
 }
 
-/** Popup s vysvetlením ciferníka: otvára ho ikonka, zatvára krížik, tlačidlo "Rozumiem"
- * aj klik na tmavé pozadie okolo neho - nie však klik dovnútra samotného popupu.
- * @param {HTMLElement} target @param {Store} store */
-function handleGuideClick(target, store) {
-    if (target.closest('[data-info-open]')) store.setState({ dialGuideOpen: true });
-    if (target.closest('[data-info-close]') || (target.closest('#info-overlay') && !target.closest('.info-popup'))) {
-        backTo(store, { dialGuideOpen: false });
-    }
-}
-
 /** @param {Store} store @param {Dom} dom */
 function initNavigation(store, dom) {
     document.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
-        handleGuideClick(target, store);
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
@@ -80,103 +68,8 @@ function initNavigation(store, dom) {
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
         const weekBtn = target.closest('[data-day-index]');
         if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) store.setState(dayPick(store, dom, weekBtn));
-        // Bodka posunie pás na svoju stránku, ťuknutie na odporúčanie na ďalšiu (za poslednou
-        // znova na prvú) - rovnako ako hlášky na karte Môžem?. Spotrebič má vlastný tooltip
-        // (initDeviceChips), ťuknutie naň pás nehýbe. Stránka sa dopočíta z výslednej pozície
-        // ako pri prste. Bodku hľadá poradie v zozname bodiek, nie atribút s číslom stránky:
-        // zoznam je ten istý, ktorý bodky rozsvecuje, takže si obe strany nemajú ako rozísť.
-        const dotBtn = target.closest('.pager-dot');
-        const dotIndex = dotBtn instanceof HTMLElement ? dom.verdictDotButtons.indexOf(dotBtn) : -1;
-        if (dotIndex >= 0) scrollPager(dom.verdictPager, dotIndex);
-        else if (dom.verdictPager.contains(target) && !target.closest('.go-chip')) scrollPager(dom.verdictPager, null);
     });
-    dom.previewReset.addEventListener('click', () => store.setState({ previewMinutes: null, isDragging: false }));
     dom.weekDayBack.addEventListener('click', () => closeDetail(store));
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && store.get().dialGuideOpen) backTo(store, { dialGuideOpen: false });
-    });
-}
-
-/** Uhol bodu voči stredu ciferníka -> minúta dňa. @param {Dom} dom @param {number} clientX @param {number} clientY */
-function minutesFromPoint(dom, clientX, clientY) {
-    const box = dom.dialWrap.getBoundingClientRect();
-    return minutesFromAngle(clientX - (box.left + box.width / 2), clientY - (box.top + box.height / 2));
-}
-
-/**
- * Náhľad iného času: jazdec na dennom prstenci. Ťahať sa dá len samotný jazdec, nie celý
- * ciferník - ten reaguje na ťuknutie. Klik a ťah sa tak nebijú a ťah do strán ponad ciferník
- * naďalej prepína kartu (jazdec je v swipe.js menovanou výnimkou).
- *
- * Dotiahnutie jazdca na značku "teraz" náhľad zruší. Je to skratka, nie náhrada tlačidla:
- * hlavnou cestou späť ostáva "Teraz" pod číslom.
- * @param {Store} store @param {Dom} dom
- */
-function initTimePreview(store, dom) {
-    const grip = dom.dialGrip;
-    const nowMinutes = () => localMinutes(store.get().now, store.get().site.timezone);
-    const move = (/** @type {PointerEvent} */ e) => {
-        const minutes = minutesFromPoint(dom, e.clientX, e.clientY);
-        store.setState({ previewMinutes: ringGap(minutes, nowMinutes()) <= PREVIEW.snapToNowMin ? null : minutes });
-    };
-    grip.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        grip.setPointerCapture(e.pointerId);
-        store.setState({ isDragging: true });
-    });
-    grip.addEventListener('pointermove', (e) => {
-        if (store.get().isDragging) move(e);
-    });
-    const end = () => {
-        if (store.get().isDragging) store.setState({ isDragging: false });
-    };
-    grip.addEventListener('pointerup', end);
-    grip.addEventListener('pointercancel', end);
-    // Jazdec je jediná cesta k náhľadu času, preto musí celý fungovať aj z klávesnice:
-    // šípky ho posúvajú a keď náhľad nebeží, rovno ho otvoria od aktuálneho času; Esc sa
-    // vráti do živého stavu. Otvoriť náhľad inak než ťuknutím sa dá len takto - v pokoji
-    // je jazdec značkou "teraz" bez pointer-events (viď .dial-grip.at-now v style.css),
-    // takže myš ani prst sa naň nedostanú a ťuknutie prepadne na ciferník pod ním.
-    grip.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            return store.setState({ previewMinutes: null, isDragging: false });
-        }
-        const step =
-            e.key === 'ArrowLeft' || e.key === 'ArrowDown'
-                ? -PREVIEW.keyStepMin
-                : e.key === 'ArrowRight' || e.key === 'ArrowUp'
-                  ? PREVIEW.keyStepMin
-                  : 0;
-        if (!step) return;
-        e.preventDefault();
-        const from = store.get().previewMinutes ?? nowMinutes();
-        store.setState({ previewMinutes: (((from + step) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY });
-    });
-    // Enter a medzerník na značke "teraz" otvoria náhľad na aktuálnom čase.
-    // detail === 0 je klik z klávesnice; myš a prst posielajú aspoň 1. Bez tej podmienky by
-    // sa náhľad znovu otvoril hneď po tom, ako ho dotiahnutie jazdca na "teraz" zrušilo -
-    // ťahanie totiž na konci pošle aj klik.
-    grip.addEventListener('click', (e) => {
-        if (e.detail === 0 && store.get().previewMinutes === null) {
-            store.setState({ previewMinutes: nowMinutes() });
-        }
-    });
-    dom.dialWrap.addEventListener('click', (e) => {
-        const target = /** @type {HTMLElement} */ (e.target);
-        if (target.closest('#dial-grip, #preview-reset')) return;
-        store.setState({ previewMinutes: minutesFromPoint(dom, e.clientX, e.clientY), isDragging: false });
-    });
-}
-
-/** Listovanie verdiktu. Poradie má konce: na poslednej správe sa dá ísť už len späť, na prvej
- * len ďalej. @param {Store} store @param {Dom} dom */
-function initVerdictPager(store, dom) {
-    const onScroll = pagerScroll(
-        () => dom.verdictDotButtons,
-        (page) => store.setState({ verdictPage: page }),
-    );
-    dom.verdictPager.addEventListener('scroll', () => onScroll(dom.verdictPager), { passive: true });
 }
 
 /** @type {Array<{ wrap: HTMLElement, hide: () => void }>} */
@@ -346,34 +239,6 @@ function initRectTooltip(wrap, tooltip) {
             top: cell.top - wrapRect.top,
             maxWidth: wrapRect.width,
         });
-    });
-}
-
-/** Klik na spotrebič prepne tooltip s príkonom a časom z karty Môžem? („2,0 kW · do 14:45“)
- * nad ním; zmizne sám alebo klikom inde. Spotrebič bez času (bojler) ukáže len príkon.
- * Tooltip je jeden zdieľaný prvok mimo pageru (position: fixed), pozíciu dopočíta JS
- * podľa kliknutého chipu. @param {Dom} dom */
-function initDeviceChips(dom) {
-    /** @type {ReturnType<typeof setTimeout> | undefined} */ let timer;
-    /** @type {HTMLElement | null} */ let openChip = null;
-    const hide = () => {
-        dom.verdictChipTooltip.classList.remove('visible');
-        openChip = null;
-    };
-    document.addEventListener('click', (e) => {
-        const chip = /** @type {HTMLElement} */ (e.target).closest('.go-chip');
-        const wasOpen = chip === openChip;
-        clearTimeout(timer);
-        hide();
-        if (chip instanceof HTMLElement && !wasOpen) {
-            const rect = chip.getBoundingClientRect();
-            dom.verdictChipTooltip.textContent = [chip.dataset.power, chip.dataset.when].filter(Boolean).join(' · ');
-            dom.verdictChipTooltip.style.left = `${rect.left + rect.width / 2}px`;
-            dom.verdictChipTooltip.style.top = `${rect.top}px`;
-            dom.verdictChipTooltip.classList.add('visible');
-            openChip = chip;
-            timer = setTimeout(hide, TOOLTIP_HOLD_MS);
-        }
     });
 }
 
@@ -550,15 +415,13 @@ export function initInteractions(store, dom, mq) {
     initNavigation(store, dom);
     initHistory(store);
     initSwipe(store, dom, hideChartTooltips);
-    initTimePreview(store, dom);
-    initVerdictPager(store, dom);
     initTapTooltipClosing();
     initCurveTooltip(store, dom.weekCurveWrap, dom.weekCurve, dom.weekCurveTooltip, weekCurveModel);
     initRectTooltip(dom.weekHeatWrap, dom.weekHeatTooltip);
     initRectTooltip(dom.weekBarsWrap, dom.weekBarsTooltip);
-    initDeviceChips(dom);
     initChartSizes(store, dom);
     const refresh = initTicks(store, mq);
+    initTerazky(store, dom, refresh);
     initSetup(store, dom, refresh);
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);

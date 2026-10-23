@@ -873,8 +873,9 @@ test.describe('karta Teraz', () => {
             // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon a odporúčanie.
             await otvorSucasnuAppku(page);
             await page.locator('#nav-terazky').click();
-            await expect(page.locator('#pv-power')).toHaveText(m.num);
-            await expect(page.locator('#verdict-headline')).toHaveText(m.cards?.now.head ?? '');
+            await expect(page.locator('#tz-num-val')).toHaveText(m.num);
+            await expect(page.locator('#tz-now-head')).toHaveText(m.cards?.now.head ?? '');
+            await expect(page.locator('#tz-devices')).toHaveText((m.cards?.devices ?? []).map((d) => `${d.name} ${d.short}`).join(' · '));
             expect(errors).toEqual([]);
         });
     }
@@ -1002,7 +1003,7 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('poloha bez panelov: „~“, typická strecha a výzva do Nastavenia; súčasná appka ostáva bez výkonu', async ({ page }) => {
+    test('poloha bez panelov: „~“, typická strecha a výzva do Nastavenia; súčasná appka povie to isté', async ({ page }) => {
         const errors = await openTeraz(page, { settings: null, site: SITE });
         const typical = typicalSettings(SITE);
         const m = terazModel({
@@ -1023,8 +1024,8 @@ test.describe('karta Teraz', () => {
         // Súčasná appka v tom istom stave: ten istý odhad z typickej strechy (jedno jadro, dva kabáty).
         await otvorSucasnuAppku(page);
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#pv-power')).toHaveText(m.num.replace(/^~/, ''));
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
+        await expect(page.locator('#tz-num-val')).toHaveText(m.num);
+        await expect(page.locator('#tz-sub')).toHaveText(m.sub);
         expect(errors).toEqual([]);
     });
 

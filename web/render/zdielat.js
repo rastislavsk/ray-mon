@@ -27,7 +27,7 @@ export function renderInfo(state, dom) {
 /** Voľby prvej karty: čo sa na tomto telefóne otvorí po spustení. */
 const START_CHOICES = [
     { panel: 'mozem', title: 'Otvárať kartu Môžem?', text: 'Jednoduché odpovede pre celú rodinu: môžem zapnúť práčku, kedy nabiť auto.' },
-    { panel: 'terazky', title: 'Otvárať kartu Terazky', text: 'Ciferník s výkonom, tarifou a podrobnosťami.' },
+    { panel: 'terazky', title: 'Otvárať kartu Terazky', text: 'Výkon, graf dňa s tarifou a odporúčania.' },
 ];
 
 /**

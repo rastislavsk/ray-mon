@@ -581,12 +581,8 @@ export const STALE_PV_MS = 20 * 60 * 1000;
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;
 
-// Náhľad iného času jazdcom na dennom prstenci (web/interactions.js).
+// Náhľad iného času na grafe dňa (web/teraz-gestures.js, v oboch appkách).
 export const PREVIEW = {
-    // Ako blízko musí jazdec prísť k značke "teraz", aby sa naň prichytil a náhľad sa zrušil.
-    // 25 minút je na ciferníku ~6 stupňov - dosť na to, aby sa to podarilo palcom, a málo na
-    // to, aby sa človek nevedel pozrieť na čas tesne pred aktuálnym.
-    snapToNowMin: 25,
     // O koľko posunie náhľad jedno ťuknutie šípkou na klávesnici.
     keyStepMin: 15,
 };

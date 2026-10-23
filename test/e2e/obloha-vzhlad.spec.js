@@ -363,7 +363,7 @@ test.describe('Nastaviť celé znova', () => {
     });
 });
 
-test('sprievodca pri tarife v novej appke nespomína ciferník, v súčasnej áno', async ({ page }) => {
+test('sprievodca pri tarife nespomína ciferník v žiadnej appke, obe hovoria o páse plánu dňa', async ({ page }) => {
     const errors = await openObloha(page);
     await karta(page, 'nastavenie');
     await page.locator('#ns-rows [data-setup-edit="tarifa"]').click();
@@ -378,7 +378,8 @@ test('sprievodca pri tarife v novej appke nespomína ciferník, v súčasnej án
     const polozka = page.locator('#settings-plant');
     if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
     await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
-    await expect(page.locator('#wz-lead')).toContainText('zafarbí ciferník');
+    await expect(page.locator('#wz-lead')).toContainText('pás plánu dňa');
+    await expect(page.locator('#wz-lead')).not.toContainText(/ciferník|prstenec/);
     expect(errors).toEqual([]);
 });
 

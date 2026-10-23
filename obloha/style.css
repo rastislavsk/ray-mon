@@ -734,7 +734,7 @@ button:focus-visible {
     stroke-dasharray: 3 4;
 }
 /* Popisky grafu sú HTML nad SVG: graf sa s oknom zväčšuje, písmo nie - na každej šírke má tú istú
-   veľkosť ako na telefóne. Poloha je v % grafu (render/day-chart.js), veľkosti musia sedieť
+   veľkosť ako na telefóne. Poloha je v % grafu (web/day-chart.js), veľkosti musia sedieť
    s DAY_CHART_LABELS v shared/day-chart.js - podľa nich model kladie nápis hranice mimo kriviek. */
 .dc-box {
     position: relative;

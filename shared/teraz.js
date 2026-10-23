@@ -1,7 +1,7 @@
-// Karta Teraz v novej appke „Živá obloha“ (obloha/). Nahrádza kartu Terazky súčasnej appky
-// a počíta to isté: výkon, pásmo a odporúčanie z heroModel (aj náhľad iného času cez
-// `previewMinutes`), plán dňa z dayPlan, krátke odpovede spotrebičov z deviceShorts. Tu sa to
-// len skladá pre nový vzhľad - číslo, graf dňa s pásom plánu a pás odporúčaní. Čisté funkcie,
+// Karta Teraz v novej appke „Živá obloha“ (obloha/) a karta Terazky súčasnej appky - obe majú to
+// isté rozloženie, každá vo vlastných farbách. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
+// iného času cez `previewMinutes`), plán dňa z dayPlan, krátke odpovede spotrebičov z deviceShorts.
+// Tu sa to len skladá - číslo, graf dňa s pásom plánu a pás odporúčaní. Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
@@ -174,8 +174,7 @@ function chartOf(input, plan, hero, now) {
 }
 
 /**
- * Pás odporúčaní: to isté, čo pás pod ciferníkom v súčasnej appke - odporúčanie pre zvolený
- * čas, spotrebiče s krátkymi odpoveďami karty Môžem?, dnešok a kedy bude lepšie.
+ * Pás odporúčaní: odporúčanie pre zvolený čas, spotrebiče s krátkymi odpoveďami karty Môžem?, dnešok a kedy bude lepšie.
  * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {ReturnType<typeof heroModel>} hero @param {ReturnType<typeof heroModel>} now
  */

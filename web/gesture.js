@@ -12,13 +12,12 @@ import { SWIPE } from '../shared/config.js';
  *   target: EventTarget | null }} Zaciatok */
 
 /** Úchytky na ťahanie do strán, ktoré nie sú posuvným pásom - pravidlo o vnútorných pásoch
- * nižšie ich nechytí a bez tejto výnimky by ťah prepol kartu. Jazdec na dennom prstenci
- * (náhľad iného času), graf dňa na karte Teraz novej appky (ťah po ňom je náhľad iného času
- * namiesto jazdca), kruh rozvrhu tarify v sprievodcovi (prst po ňom maľuje pásmo) a posúvač
+ * nižšie ich nechytí a bez tejto výnimky by ťah prepol kartu. Graf dňa na karte
+ * Terazky (v novej appke Teraz, ťah po ňom je náhľad iného času), kruh rozvrhu tarify v sprievodcovi (prst po ňom maľuje pásmo) a posúvač
  * (`input[type=range]`, sklon strechy v sprievodcovi nastavením): ten ťahá prehliadač sám,
  * gesto mu ale posiela aj touchend, ktorý by inak vyzeral ako švihnutie. Jediné menované
  * miesta v celom module; inde rozhoduje pravidlo. */
-const DRAG_HANDLE = '.dial-grip, .day-scrub, .tariff-ring, input[type="range"]';
+const DRAG_HANDLE = '.day-scrub, .tariff-ring, input[type="range"]';
 
 /** Nad grafom ide tooltip za prstom, takže pomalý ťah po krivke je prezeranie, nie
  * listovanie - kartu tam prepne len rýchle švihnutie (SWIPE.flickMs). */
@@ -30,9 +29,8 @@ const PANNABLE = /^(auto|scroll)$/;
 
 /** Pás, ktorý sa sám prichytáva po stránkach, je listovanie sám o sebe - gesto nad ním patrí
  * jemu aj vtedy, keď stojí na krajnej stránke a nemá kam ísť. Bez toho by ťah z poslednej
- * správy pod ciferníkom odišiel na susednú kartu. Nie je to menované miesto, ale pravidlo:
- * prichytávanie po stránkach má v štýloch len kolotoč (.pager) - odporúčania na karte Terazky
- * a hlášky na karte Môžem?. */
+ * karty odporúčaní odišiel na susednú kartu appky. Nie je to menované miesto, ale pravidlo:
+ * prichytávanie po stránkach má v štýloch len pás odporúčaní na karte Terazky (Teraz). */
 const SNAPS_X = /^(x|both)\b/;
 
 /**
@@ -44,8 +42,8 @@ const SNAPS_X = /^(x|both)\b/;
  *
  * Druhá podmienka tu nie je navyše. Stačilo, aby obsah presiahol orezaný prvok o dva pixely,
  * a gesto dostal prvok, ktorý sa nikdy nepohne - listovanie tým celé zhaslo. Na karte Terazky
- * sa to dialo, keď značka "teraz" stála na pravom okraji prstenca (dnes okolo 18:00) - jej
- * štvorec vtedy presiahne kartu (overflow-x: hidden) o necelé dva pixely.
+ * sa to dialo, keď značka "teraz" stála na pravom okraji vtedajšieho ciferníka (okolo 18:00) -
+ * jej štvorec vtedy presiahol kartu (overflow-x: hidden) o necelé dva pixely.
  * @param {EventTarget | null} target @param {HTMLElement} page
  */
 function innerScrollRoom(target, page) {
@@ -120,8 +118,7 @@ export function initSwipeGesture(page, { enabled, onSwipe }) {
             const dy = e.changedTouches[0].clientY - from.y;
             if (!isSwipe(from, dx, dy, e.timeStamp - from.t) || pansInner(from, dx)) return;
             // Po geste prehliadač ešte posiela klik na miesto, kde prst skončil - ťah ponad
-            // ciferník by tak nastavil náhľad iného času, ťah ponad rebríček dní otvoril
-            // detail dňa. preventDefault na touchend ten klik zruší. Je tu pred rozhodnutím
+            // rebríček dní by tak otvoril detail dňa. preventDefault na touchend ten klik zruší. Je tu pred rozhodnutím
             // o karte zámerne: aj ťah, ktorý narazil na kraj poradia a nikam nevedie, je
             // gesto, nie ťuknutie.
             //

@@ -6,7 +6,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
-import { dayChartHtml, legendHtml } from './day-chart.js';
+import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 

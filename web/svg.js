@@ -70,7 +70,7 @@ export function dayTimelineSvg(m) {
     return out;
 }
 
-/** Denný prstenec ciferníka: plán dňa ako oblúky po obvode.
+/** Denný prstenec: plán dňa (alebo rozvrh tarify) ako oblúky po obvode.
  * @param {ReturnType<typeof import('../shared/chart-model.js').dayRingModel>} m */
 export function dayRingSvg(m) {
     const r = RING.rDay;

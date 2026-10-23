@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Terazky ako Teraz v Oblohe</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky, farby a rozmery sú tu vlastné. Texty sú skutočné odpovede jadra (terazModel
+               v shared/teraz.js) pre Dvorany nad Nitrou 23. 10. 2026 o 08:13 a náhľad o 12:15. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-700-latin-ext.woff2') format('woff2');
+                font-weight: 700;
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-35: rgba(242, 240, 234, 0.54);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --ink-on-color: #0b0b0b;
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --grey: #b9b6ac;
+                --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+            }
+            body {
+                margin: 0;
+                background: #050505;
+                color: var(--ink);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 32px 16px 80px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            .intro p {
+                max-width: 760px;
+                color: var(--ink-45);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+            }
+            figcaption {
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+
+            /* ---------- telefón ---------- */
+            .phone {
+                width: 375px;
+                max-width: calc(100vw - 32px);
+                height: 812px;
+                border-radius: 36px;
+                border: 1px solid var(--ink-12);
+                overflow: hidden;
+                position: relative;
+                background: radial-gradient(120% 45% at 50% 0%, rgba(var(--tint), 0.16), transparent 70%), var(--bg);
+                --tint: 255, 107, 87;
+                display: flex;
+                flex-direction: column;
+            }
+            .phone.green {
+                --tint: 158, 242, 91;
+            }
+            .hdr {
+                padding: 22px 20px 0;
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+            }
+            .hdr b {
+                font-size: 15px;
+                letter-spacing: 0.12em;
+            }
+            .hdr small {
+                display: block;
+                font-size: 11px;
+                color: var(--ink-45);
+                margin-top: 6px;
+                letter-spacing: 0.05em;
+            }
+            .hdr .r {
+                text-align: right;
+                font-size: 12px;
+            }
+            .hdr .dot {
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--red);
+                margin-right: 6px;
+            }
+            .scr {
+                flex: 1;
+                overflow: hidden;
+                padding: 18px 16px 0;
+            }
+            .nav {
+                height: 68px;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 11px;
+                color: var(--ink-45);
+                border-top: 1px solid var(--ink-08);
+            }
+            .nav span {
+                display: grid;
+                justify-items: center;
+                gap: 4px;
+            }
+            .nav i {
+                width: 22px;
+                height: 22px;
+                border-radius: 6px;
+                border: 2px solid currentColor;
+                display: block;
+                opacity: 0.8;
+            }
+            .nav .on {
+                color: var(--ink);
+            }
+            .nav .on i {
+                border-color: var(--red);
+                box-shadow: 0 0 18px rgba(255, 107, 87, 0.5);
+            }
+
+            /* ---------- návrh: hlava ---------- */
+            .eyebrow {
+                font-family: var(--mono);
+                font-weight: 700;
+                font-size: 12px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                margin: 0;
+            }
+            .num {
+                margin: 2px 0 0;
+                font-weight: 700;
+                font-size: 92px;
+                line-height: 0.95;
+                letter-spacing: -0.04em;
+                color: rgb(var(--tint));
+                display: flex;
+                align-items: baseline;
+                gap: 6px;
+            }
+            .num small {
+                font-family: var(--mono);
+                font-size: 18px;
+                letter-spacing: 0.04em;
+                color: var(--ink-45);
+                font-weight: 500;
+            }
+            .src {
+                margin: 10px 0 0;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .sub {
+                margin: 2px 0 0;
+                font-size: 15px;
+                color: var(--ink-70);
+            }
+
+            /* ---------- návrh: graf ---------- */
+            .card {
+                background: var(--card-bg);
+                border: 1px solid var(--ink-12);
+                border-radius: 18px;
+            }
+            .chart {
+                margin-top: 16px;
+                padding: 14px 14px 10px;
+            }
+            .chart svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .legend {
+                display: flex;
+                gap: 14px;
+                margin: 10px 2px 0;
+                font-size: 13px;
+                color: var(--ink-70);
+            }
+            .legend i {
+                display: inline-block;
+                width: 12px;
+                height: 6px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            .hint {
+                margin: 10px 2px 0;
+                font-size: 13px;
+                color: var(--ink-45);
+                min-height: 34px;
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+            }
+            .hint span {
+                flex: 1;
+            }
+            .reset {
+                font: inherit;
+                font-family: var(--mono);
+                font-weight: 700;
+                font-size: 12px;
+                letter-spacing: 0.06em;
+                background: var(--ink);
+                color: var(--ink-on-color);
+                border: 0;
+                border-radius: 999px;
+                padding: 8px 14px;
+            }
+
+            /* ---------- návrh: pás odporúčaní ---------- */
+            .strip {
+                margin-top: 12px;
+                display: flex;
+                gap: 10px;
+                margin-right: -16px;
+            }
+            .rec {
+                flex: 0 0 82%;
+                padding: 16px 18px 18px;
+                box-sizing: border-box;
+                min-height: 142px;
+            }
+            .rec h4 {
+                margin: 0 0 6px;
+                font-size: 19px;
+                line-height: 1.2;
+            }
+            .rec p {
+                margin: 0;
+                font-size: 15px;
+                color: var(--ink-70);
+            }
+            .rec p + p {
+                margin-top: 8px;
+            }
+            .rec .eyebrow {
+                margin-bottom: 8px;
+            }
+            .bar {
+                height: 6px;
+                border-radius: 3px;
+                background: var(--ink-08);
+                margin: 10px 0 8px;
+                overflow: hidden;
+            }
+            .bar b {
+                display: block;
+                height: 100%;
+                background: var(--green);
+                border-radius: 3px;
+            }
+            .dots {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .dots i {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--ink-20);
+            }
+            .dots i.on {
+                background: var(--ink);
+            }
+            .pages {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 14px;
+                max-width: 1000px;
+            }
+            .pages .rec {
+                min-height: 0;
+            }
+            .pages .tag {
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--ink-35);
+                margin-top: 10px;
+            }
+
+            /* ---------- dnes: ciferník ---------- */
+            .dial {
+                display: block;
+                margin: 40px auto 0;
+                width: 300px;
+            }
+            .verdict {
+                text-align: center;
+                margin-top: 28px;
+                padding: 0 12px;
+            }
+            .verdict b {
+                font-size: 17px;
+            }
+            .verdict p {
+                margin: 6px 0 0;
+                color: var(--ink-45);
+                font-size: 16px;
+            }
+
+            /* ---------- texty ---------- */
+            .notes {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 14px;
+            }
+            .notes .card {
+                padding: 18px 20px;
+            }
+            .notes h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            .notes ul {
+                margin: 0;
+                padding-left: 18px;
+                color: var(--ink-70);
+                font-size: 14px;
+            }
+            .notes li + li {
+                margin-top: 6px;
+            }
+            .q h3 {
+                color: var(--amber);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section class="intro">
+                <h1>Terazky v kabáte Oblohy</h1>
+                <p>
+                    Dva varianty. B: ciferník ostáva, z Oblohy sa preberá len pás štyroch odporúčaní do strán. A: karta Terazky preberá celé
+                    rozloženie karty Teraz z Oblohy – veľké číslo kW, graf dňa s pásom plánu (ťahom po ňom náhľad iného času) a pás
+                    odporúčaní. Farby, písma a karty ostávajú zo súčasnej appky – tmavé pozadie s nádychom podľa stavu, mono štítky, zelená
+                    = slnko stačí, jantárová = lacná sieť, červená = drahá sieť. Texty aj výpočty už počíta jadro
+                    (<code>shared/teraz.js</code>), takže obe appky povedia to isté.
+                </p>
+            </section>
+
+            <section>
+                <h2 style="margin-bottom: 6px">Variant B · ciferník ostáva, mení sa len časť so swipovaním</h2>
+                <p style="margin: 0 0 18px; color: var(--ink-45); max-width: 760px">
+                    Ciferník, jazdec na prstenci aj (i) ostávajú presne ako dnes. Stránky pod ním (centrovaný text a bodky) nahradí pás
+                    kariet z Oblohy: každá stránka je karta, vidno okraj ďalšej, nadpis karty je mono štítok a obsah je rovnaký ako v
+                    Oblohe.
+                </p>
+                <div class="row">
+                    <figure>
+                        <figcaption><b>Dnes</b></figcaption>
+                        <div class="phone">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <svg class="dial" viewBox="0 0 240 240"></svg>
+                                <div class="verdict">
+                                    <b>Počkaj na slnko</b>
+                                    <p>
+                                        Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde poobede — veľké spotrebiče si
+                                        nechaj na vtedy.
+                                    </p>
+                                </div>
+                                <div class="dots" style="margin-top: 24px"><i class="on"></i><i></i><i></i><i></i></div>
+                            </div>
+                            <div class="nav">
+                                <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                                ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Variant B</b> · prvá stránka</figcaption>
+                        <div class="phone">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <svg class="dial" viewBox="0 0 240 240"></svg>
+                                <div class="strip" style="margin-top: 28px">
+                                    <div class="card rec">
+                                        <h4>Počkaj na slnko</h4>
+                                        <p>
+                                            Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde poobede — veľké
+                                            spotrebiče si nechaj na vtedy.
+                                        </p>
+                                    </div>
+                                    <div class="card rec">
+                                        <p class="eyebrow">Spotrebiče</p>
+                                        <p>Práčka <b>o 08:45</b> · Umývačka <b>o 08:45</b></p>
+                                    </div>
+                                </div>
+                                <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+                            </div>
+                            <div class="nav">
+                                <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                                ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Variant B</b> · po swipe na Dnešok</figcaption>
+                        <div class="phone">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <svg class="dial" viewBox="0 0 240 240"></svg>
+                                <div class="strip" style="margin-top: 28px; margin-left: -16px; margin-right: -16px">
+                                    <div
+                                        class="card rec"
+                                        style="flex-basis: 8%; padding: 0; border-left: 0; border-radius: 0 18px 18px 0"
+                                    ></div>
+                                    <div class="card rec">
+                                        <p class="eyebrow">Dnešok</p>
+                                        <p>Predpoveď 34,2 kWh, podľa nej už asi 0,5 kWh.</p>
+                                        <div class="bar"><b style="width: 2%"></b></div>
+                                        <p>Okno na veľké veci 08:45 – 15:30.</p>
+                                    </div>
+                                    <div class="card rec" style="flex-basis: 10%"></div>
+                                </div>
+                                <div class="dots"><i></i><i></i><i class="on"></i><i></i></div>
+                            </div>
+                            <div class="nav">
+                                <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                                ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+            </section>
+
+            <h2 style="margin-bottom: -22px">Variant A · celá karta ako v Oblohe</h2>
+            <section class="row">
+                <figure>
+                    <figcaption><b>Dnes</b> · ciferník a stránky pod ním</figcaption>
+                    <div class="phone">
+                        <div class="hdr">
+                            <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                            <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                        </div>
+                        <div class="scr">
+                            <svg class="dial" viewBox="0 0 240 240"></svg>
+                            <div class="verdict">
+                                <b>Počkaj na slnko</b>
+                                <p>
+                                    Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde poobede — veľké spotrebiče si
+                                    nechaj na vtedy.
+                                </p>
+                            </div>
+                            <div class="dots" style="margin-top: 24px"><i class="on"></i><i></i><i></i><i></i></div>
+                        </div>
+                        <div class="nav">
+                            <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                            ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                        </div>
+                    </div>
+                </figure>
+
+                <figure>
+                    <figcaption><b>Návrh</b> · teraz 08:13</figcaption>
+                    <div class="phone">
+                        <div class="hdr">
+                            <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                            <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                        </div>
+                        <div class="scr">
+                            <p class="eyebrow">Teraz · 08:13 · Dvorany nad Nitrou</p>
+                            <p class="num">1.13<small>kW</small></p>
+                            <p class="src">Odhad z predpovede</p>
+                            <p class="sub">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="card chart"><svg data-chart="now"></svg></div>
+                            <div class="legend">
+                                <span><i style="background: var(--green)"></i>slnko stačí</span>
+                                <span><i style="background: var(--amber)"></i>lacná sieť</span>
+                                <span><i style="background: var(--red)"></i>drahá sieť</span>
+                            </div>
+                            <div class="hint"><span>Ťahaj prstom po grafe a pozri si iný čas.</span></div>
+                            <div class="strip">
+                                <div class="card rec">
+                                    <h4>Počkaj na slnko</h4>
+                                    <p>
+                                        Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde poobede — veľké spotrebiče si
+                                        nechaj na vtedy.
+                                    </p>
+                                </div>
+                                <div class="card rec">
+                                    <p class="eyebrow">Spotrebiče</p>
+                                    <p>Práčka <b>o 08:45</b> · Umývačka <b>o 08:45</b></p>
+                                </div>
+                            </div>
+                            <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+                        </div>
+                        <div class="nav">
+                            <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                            ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                        </div>
+                    </div>
+                </figure>
+
+                <figure>
+                    <figcaption><b>Návrh</b> · náhľad 12:15 (prst na grafe)</figcaption>
+                    <div class="phone green">
+                        <div class="hdr">
+                            <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                            <div class="r"><span class="dot"></span>–:–<small>odhad z predpovede</small></div>
+                        </div>
+                        <div class="scr">
+                            <p class="eyebrow">O 12:15 · Dvorany nad Nitrou</p>
+                            <p class="num">5.81<small>kW</small></p>
+                            <p class="src">Odhad z predpovede</p>
+                            <p class="sub">85 % z toho, čo by dala jasná obloha</p>
+                            <div class="card chart"><svg data-chart="preview"></svg></div>
+                            <div class="legend">
+                                <span><i style="background: var(--green)"></i>slnko stačí</span>
+                                <span><i style="background: var(--amber)"></i>lacná sieť</span>
+                                <span><i style="background: var(--red)"></i>drahá sieť</span>
+                            </div>
+                            <div class="hint"><button class="reset" type="button">Späť na teraz</button></div>
+                            <div class="strip">
+                                <div class="card rec">
+                                    <h4>Najlepší čas dňa — zapni všetko</h4>
+                                    <p>Plný výkon a k tomu lacná sieť. Ideálny moment na práčku, sušičku aj nabíjanie auta.</p>
+                                </div>
+                                <div class="card rec">
+                                    <p class="eyebrow">Spotrebiče</p>
+                                    <p>Práčka <b>teraz</b> · Umývačka <b>teraz</b></p>
+                                </div>
+                            </div>
+                            <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+                        </div>
+                        <div class="nav">
+                            <span><i></i>Môžem?</span><span class="on"><i></i>Terazky</span><span><i></i>7 dní</span
+                            ><span><i></i>Štatistika</span><span><i></i>Nastavenie</span>
+                        </div>
+                    </div>
+                </figure>
+            </section>
+
+            <section>
+                <h2 style="margin-bottom: 14px">Štyri stránky pásu (teraz 08:13)</h2>
+                <div class="pages">
+                    <div>
+                        <div class="card rec">
+                            <h4>Počkaj na slnko</h4>
+                            <p>
+                                Elektrina je teraz drahá a slnko ešte nepridáva. Silnejšie slnko príde poobede — veľké spotrebiče si nechaj
+                                na vtedy.
+                            </p>
+                        </div>
+                        <p class="tag">1 · čo robiť teraz (dnes prvá stránka)</p>
+                    </div>
+                    <div>
+                        <div class="card rec">
+                            <p class="eyebrow">Spotrebiče</p>
+                            <p>
+                                Práčka <b>o 08:45</b> · Umývačka <b>o 08:45</b> · Sušička <b>o 08:45</b> · Auto <b>o 09:45</b> · Bojler
+                                <b>o 08:45</b>
+                            </p>
+                        </div>
+                        <p class="tag">2 · namiesto farebných čipov s legendou</p>
+                    </div>
+                    <div>
+                        <div class="card rec">
+                            <p class="eyebrow">Dnešok</p>
+                            <p>Predpoveď 34,2 kWh, podľa nej už asi 0,5 kWh.</p>
+                            <div class="bar"><b style="width: 2%"></b></div>
+                            <p>Okno na veľké veci 08:45 – 15:30.</p>
+                        </div>
+                        <p class="tag">3 · namiesto „Najsilnejšie slnko okolo 12:00“</p>
+                    </div>
+                    <div>
+                        <div class="card rec">
+                            <p class="eyebrow">Kedy lepšie</p>
+                            <p>Lepšie bude o 12:00. Dnes je silný deň. Ďalší taký: pondelok, okolo 33 kWh.</p>
+                        </div>
+                        <p class="tag">4 · namiesto čipu „Lepšie bude o 12:00“</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="notes">
+                <div class="card">
+                    <h3>Čo sa zmení</h3>
+                    <ul>
+                        <li>
+                            Ciferník zmizne, jeho úlohu prevezme graf dňa: krivka výroby, čiarkovaná hranica „veľké spotrebiče“, bod teraz a
+                            pás plánu po 15 minútach.
+                        </li>
+                        <li>
+                            Pás plánu má farby súčasnej appky: zelená slnko stačí, jantárová lacná sieť, červená drahá, sivá bežná cena.
+                            Minulosť je stlmená.
+                        </li>
+                        <li>
+                            Náhľad iného času: ťah prstom po grafe (dnes jazdec na prstenci). Nadpis sa zmení na „O 12:15“, pribudne
+                            tlačidlo Späť na teraz.
+                        </li>
+                        <li>Stránky pod grafom sú karty vedľa seba – vidno okraj ďalšej, takže je jasné, že sa dá listovať.</li>
+                        <li>Popup „Ako čítať ciferník“ (i) odpadne, nahradí ho legenda pod grafom.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Čo ostane zo súčasnej appky</h3>
+                    <ul>
+                        <li>Hlavička, spodná navigácia a meno karty Terazky.</li>
+                        <li>Tmavé pozadie s nádychom podľa stavu (teraz červený, v náhľade 12:15 zelený) a číslo kW v tej istej farbe.</li>
+                        <li>Space Grotesk na text, IBM Plex Mono na štítky veľkými písmenami.</li>
+                        <li>Tón hlášok („drzý“ alebo slušný) sa berie z nastavenia ako dnes.</li>
+                    </ul>
+                </div>
+                <div class="card q">
+                    <h3>Na rozhodnutie</h3>
+                    <ul>
+                        <li>Číslo kW farebne podľa stavu (návrh), alebo biele ako v Oblohe?</li>
+                        <li>Stránka Spotrebiče: text ako v Oblohe (návrh), alebo nechať dnešné farebné čipy?</li>
+                        <li>Na širokej obrazovke (desktop) graf vľavo a pás odporúčaní vpravo, alebo pod sebou ako na mobile?</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+        <script>
+            // Ukážkový deň: krivka výroby (zvon okolo 12:15) a plán po 15 minútach podľa tarify
+            // z obrazoviek vyššie. Nie je to výpočet appky, len kresba.
+            const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+            const kw = (h) => (h < 6.6 || h > 17.6 ? 0 : 6.9 * Math.exp(-((h - 12.2) ** 2) / (2 * 2.35 ** 2)));
+            const tier = (h) => {
+                if (h >= 8.75 && h < 15.5) return 'green';
+                if ((h >= 7.5 && h < 8.5) || (h >= 20.5 && h < 21.5) || (h >= 22.5 && h < 23.5)) return 'red';
+                return 'amber';
+            };
+            const W = 311,
+                T = 22,
+                base = 112,
+                max = 7.4,
+                y = (v) => base - (v / max) * (base - T),
+                x = (h) => (h / 24) * W;
+            function chart(svg, now, at) {
+                let line = '';
+                for (let i = 0; i <= 96; i++) line += `${i ? 'L' : 'M'}${x(i / 4).toFixed(1)},${y(kw(i / 4)).toFixed(1)}`;
+                const area = `${line}L${W},${base}L0,${base}Z`;
+                let band = '';
+                const sw = W / 96;
+                for (let i = 0; i < 96; i++) {
+                    const h = i / 4;
+                    const past = h + 0.25 <= now;
+                    band += `<rect x="${(i * sw + 0.6).toFixed(1)}" y="${base + 8}" width="${(sw - 1.2).toFixed(1)}" height="9" rx="2" fill="${css('--' + tier(h))}" opacity="${past ? 0.3 : 1}"/>`;
+                }
+                const thr = y(2.1);
+                const ax = [0, 6, 12, 18, 24]
+                    .map(
+                        (h) =>
+                            `<text x="${x(h)}" y="${base + 34}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">${h}</text>`,
+                    )
+                    .join('');
+                const p = at ?? now;
+                const dot = `<circle cx="${x(p)}" cy="${y(kw(p))}" r="5.5" fill="${css('--ink')}" stroke="${css('--card-bg')}" stroke-width="2"/>`;
+                const nowDot = at != null ? `<circle cx="${x(now)}" cy="${y(kw(now))}" r="3.5" fill="${css('--ink-45')}"/>` : '';
+                const pv =
+                    at != null
+                        ? `<line x1="${x(at)}" x2="${x(at)}" y1="${T - 6}" y2="${base + 18}" stroke="${css('--ink-45')}" stroke-dasharray="3 3"/>
+                           <text x="${x(at)}" y="${T - 10}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="700" font-size="12" fill="${css('--ink')}">12:15</text>`
+                        : '';
+                svg.setAttribute('viewBox', `0 0 ${W} ${base + 40}`);
+                svg.innerHTML = `
+                    <path d="${area}" fill="${css('--ink-08')}"/>
+                    <path d="${line}" fill="none" stroke="${css('--ink-70')}" stroke-width="1.6"/>
+                    <line x1="0" x2="${W}" y1="${thr}" y2="${thr}" stroke="${css('--green')}" stroke-opacity=".7" stroke-dasharray="4 4"/>
+                    <text x="${W}" y="${thr - 7}" text-anchor="end" font-size="12" fill="${css('--ink-45')}">veľké spotrebiče</text>
+                    ${pv}${band}${ax}${nowDot}${dot}`;
+            }
+            chart(document.querySelector('[data-chart=now]'), 8.22);
+            chart(document.querySelector('[data-chart=preview]'), 8.22, 12.25);
+
+            // Dnešný ciferník: vonkajší prstenec plánu (poludnie hore), oblúk výkonu, číslo.
+            const pt = (h, r) => {
+                const a = ((h / 24) * 360 + 180) * (Math.PI / 180);
+                return [120 + r * Math.sin(a), 120 - r * Math.cos(a)];
+            };
+            const muted = { green: '#6f9a4c', amber: '#9b7a2e', red: '#9a3f33' };
+            let ring = '';
+            for (let i = 0; i < 96; i++) {
+                const [x1, y1] = pt(i / 4, 106),
+                    [x2, y2] = pt((i + 1) / 4, 106);
+                ring += `<path d="M${x1},${y1} A106,106 0 0 1 ${x2},${y2}" stroke="${muted[tier(i / 4)]}" stroke-width="7" fill="none"/>`;
+            }
+            const [sx, sy] = pt(8.22, 106);
+            for (const dial of document.querySelectorAll('.dial'))
+                dial.innerHTML = `${ring}
+                <circle cx="120" cy="120" r="78" fill="none" stroke="#2a2b29" stroke-width="14"/>
+                <circle cx="120" cy="120" r="78" fill="none" stroke="${css('--red')}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${2 * Math.PI * 78 * 0.16} 999" transform="rotate(-90 120 120)"/>
+                <circle cx="${sx}" cy="${sy}" r="9" fill="#111" stroke="${css('--ink')}" stroke-width="1.5"/>
+                <circle cx="${sx}" cy="${sy}" r="3.5" fill="${css('--ink')}"/>
+                <text x="120" y="27" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">12</text>
+                <text x="213" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">18</text>
+                <text x="120" y="217" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">0</text>
+                <text x="27" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">6</text>
+                <text x="120" y="103" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="11" fill="${css('--ink-45')}">08:13</text>
+                <text x="120" y="140" text-anchor="middle" font-weight="700" font-size="44" fill="${css('--red')}">1.13</text>
+                <text x="120" y="160" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="500" font-size="10" letter-spacing="1" fill="${css('--ink-45')}">KW (ODHAD)</text>`;
+        </script>
+    </body>
+</html>

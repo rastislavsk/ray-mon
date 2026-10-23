@@ -20,7 +20,7 @@ export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 
 /**
  * Popisky grafu - hodiny, nápis hranice veľkých spotrebičov a čas náhľadu - majú na každej šírke
  * tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie. Kreslia sa preto ako
- * HTML nad SVG (obloha/web/render/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
+ * HTML nad SVG (web/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
  * (.dc-t, .dc-limit-t, .dc-at-t) a musí sedieť s číslami tu: `limitPx` a `timePx` veľkosť písma,
  * `charEm` a `timeCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
  * od čiary. `minScale` je najmenšia mierka grafu (px na jednotku

@@ -20,6 +20,8 @@ const NEUTRAL_WEB = [
     'svg',
     'share-file',
     'qr',
+    'day-chart',
+    'teraz-gestures',
 ];
 
 /**

@@ -6,7 +6,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
 import { sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
-import { dayChartHtml, legendHtml } from './day-chart.js';
+import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
 import { weatherIcon } from './icons.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
