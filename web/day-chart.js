@@ -1,11 +1,12 @@
-// Graf dňa - ten istý na karte Teraz aj v detaile dňa na karte 7 dní. Geometriu aj polohu popiskov
-// počíta shared/day-chart.js, tu sa len skladá značkovanie: krivky a pás v SVG, ktoré sa s grafom
-// zväčšuje, a popisky ako HTML nad ním - tie majú na každej šírke tú istú veľkosť v px.
+// Graf dňa - ten istý na karte Teraz (Terazky) v oboch appkách aj v detaile dňa na karte 7 dní novej
+// appky. Geometriu aj polohu popiskov počíta shared/day-chart.js, tu sa len skladá značkovanie: krivky
+// a pás v SVG, ktoré sa s grafom zväčšuje, a popisky ako HTML nad ním - tie majú na každej šírke tú
+// istú veľkosť v px. Čistý reťazec bez DOM, preto neutrálny modul (CLAUDE.md); farby dáva style.css appky.
 
-import { escapeHtml } from '../../../shared/format.js';
-import { DAY_CHART } from '../../../shared/day-chart.js';
+import { escapeHtml } from '../shared/format.js';
+import { DAY_CHART } from '../shared/day-chart.js';
 
-/** @typedef {ReturnType<typeof import('../../../shared/day-chart.js').dayChartModel>} Chart */
+/** @typedef {ReturnType<typeof import('../shared/day-chart.js').dayChartModel>} Chart */
 
 /** Zaokrúhlenie percent na stotiny - kratší zápis. @param {number} v */
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -19,7 +20,7 @@ const pctY = (y) => `${r2((y / DAY_CHART.h) * 100)}%`;
 /** Vrch čiary náhľadu: tesne pod `top`, nad ním je miesto na čas (aj na najužšom grafe). */
 const PREVIEW_TOP = DAY_CHART.top + 2;
 
-/** Poloha nápisu hranice ako premenné pre style.css. @param {string} key @param {import('../../../shared/day-chart.js').Spot} s */
+/** Poloha nápisu hranice ako premenné pre style.css. @param {string} key @param {import('../shared/day-chart.js').Spot} s */
 const spotVars = (key, s) => `--${key}x:${pctX(s.x)};--${key}y:${pctY(s.y)};--${key}a:${s.end ? '-100%' : '0%'}`;
 
 /**

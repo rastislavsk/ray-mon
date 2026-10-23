@@ -14,7 +14,7 @@ const byId = (/** @type {string} */ id) => {
 // statistika = „Štatistika", nastavenie = „Nastavenie". Popiska je text pre používateľa a mení
 // sa podľa chuti; kódový názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí
 // naháňať.
-// Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka), návod k ciferníku v popupe karty Terazky.
+// Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka).
 // Môžem? je v navigácii prvá, appka sa ale otvára na karte Terazky (initialState).
 // Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
 export { PANELS };
@@ -46,28 +46,34 @@ function headerDom() {
     };
 }
 
+/** Karta Terazky: nosiče, do ktorých píše render/terazky.js (rovnaké ako karta Teraz novej appky). */
 function terazkyDom() {
     return {
-        previewReset: byId('preview-reset'),
-        verdictForecastTitle: byId('verdict-forecast-title'),
-        verdictForecastBody: byId('verdict-forecast-body'),
-        dialRing: byId('dial-ring'),
-        pvPower: byId('pv-power'),
-        pvPowerUnit: byId('pv-power-unit'),
-        verdictHeadline: byId('verdict-headline'),
-        verdictBody: byId('verdict-body'),
-        verdictGoRow: byId('verdict-go-row'),
-        verdictPager: byId('verdict-pager'),
-        verdictPageWait: byId('verdict-page-wait'),
-        verdictDotButtons: /** @type {HTMLElement[]} */ (Array.from(byId('verdict-dots').querySelectorAll('.pager-dot'))),
-        verdictDotWait: byId('verdict-dot-wait'),
-        verdictChipTooltip: byId('verdict-chip-tooltip'),
-        verdictWaitTime: byId('verdict-wait-time'),
-        dialWrap: byId('dial-wrap'),
-        dayRing: byId('day-ring'),
-        dialWhen: byId('dial-when'),
-        dialGrip: byId('dial-grip'),
-        infoOverlay: byId('info-overlay'),
+        tzTitle: byId('tz-title'),
+        tzNum: byId('tz-num'),
+        tzNumVal: byId('tz-num-val'),
+        tzSrc: byId('tz-src'),
+        tzSub: byId('tz-sub'),
+        tzRetry: byId('tz-retry'),
+        tzPlot: byId('tz-plot'),
+        tzChart: byId('tz-chart'),
+        tzChartDesc: byId('tz-chart-desc'),
+        tzLegend: byId('tz-legend'),
+        tzHint: byId('tz-hint'),
+        tzReset: byId('tz-reset'),
+        tzRecs: byId('tz-recs'),
+        tzStrip: byId('tz-strip'),
+        tzNowHead: byId('tz-now-head'),
+        tzNowBody: byId('tz-now-body'),
+        tzDevicesTitle: byId('tz-devices-title'),
+        tzDevices: byId('tz-devices'),
+        tzTodayTitle: byId('tz-today-title'),
+        tzToday: byId('tz-today'),
+        tzTodayBar: byId('tz-today-bar'),
+        tzWindow: byId('tz-window'),
+        tzLaterTitle: byId('tz-later-title'),
+        tzLater: byId('tz-later'),
+        tzDots: byId('tz-dots'),
     };
 }
 

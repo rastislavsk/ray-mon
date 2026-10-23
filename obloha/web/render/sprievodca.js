@@ -360,7 +360,7 @@ function renderTarifa(state, draft, dom) {
         ).join(''),
     );
     show(dom.wzTariffDunno, state.setupDunno);
-    setText(dom.wzTariffDunno, T.TARIFF_DUNNO_PLAN);
+    setText(dom.wzTariffDunno, T.TARIFF_DUNNO);
 }
 
 /** Farebná značka pásma: modrá lacná, červená drahá sieť. @param {import('../../../shared/config.js').PriceLevel} level */
@@ -519,7 +519,7 @@ function renderCeny(draft, dom, refill) {
             const el = /** @type {HTMLInputElement} */ (input);
             el.value = T.fieldText(bandById(t, el.dataset.setupPrice || '').price);
         }
-    const c = T.priceCheck(t, false);
+    const c = T.priceCheck(t);
     const list = c.auto
         ? `<div class="glass">${c.auto.map((x) => `<p class="auto">${sw(x.level)}${escapeHtml(x.text)}</p>`).join('')}</div>`
         : '';
@@ -550,7 +550,7 @@ function renderHead(state, draft, step, roof, dom) {
     const sub = T.subText(state, draft, step, roof);
     show(dom.wzSub, !!sub);
     setText(dom.wzSub, sub);
-    const texts = T.textsFor(state, draft, step, false);
+    const texts = T.textsFor(state, draft, step);
     setText(dom.wzTitle, texts.title);
     setText(dom.wzLead, texts.lead);
     show(dom.wzLead, !!texts.lead);

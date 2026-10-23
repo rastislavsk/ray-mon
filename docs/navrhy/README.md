@@ -42,6 +42,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 | `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)               |
 | `mozem-zoznam.html`            | Čo môžem (súčasná appka) ako zoznam s hláškami jadra namiesto dlaždíc: tmavé riadky (A), zelené riadky (B)           |
+| `terazky-ako-obloha.html`      | Terazky podľa Teraz z Oblohy: len pás odporúčaní pod ciferníkom (B), celá karta s grafom dňa (A); farby súčasnej     |
 
 ## Prečo je to v repozitári
 

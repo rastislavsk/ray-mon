@@ -27,14 +27,13 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   weekSelDay: number,
  *   weekDayDir: 1 | -1,
  *   weekDetail: 'day' | 'week' | null,
- *   verdictPage: number,
+ *   terazPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemSummary: boolean,
  *   mozemList: boolean,
  *   summaryPeriod: import('../shared/summary.js').SummaryPeriod,
  *   previewMinutes: number | null,
- *   isDragging: boolean,
  *   wide: boolean,
  *   tall: boolean,
  *   chartSizes: Record<string, { w: number, h: number }>,
@@ -70,13 +69,12 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupBrush: string | null,
  *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
- *   dialGuideOpen: boolean,
  * }} AppState
  * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, list: boolean, guide: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, list: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -113,7 +111,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Karta 7 dní má na mobile dve obrazovky: prehľad dní a detail vybraného dňa.
         // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
         weekDetail: null,
-        verdictPage: 0,
+        // Stránka pásu odporúčaní na karte Terazky (nastavenie vnútri karty, nie krok navigácie).
+        terazPage: 0,
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
@@ -127,7 +126,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         mozemList: false,
         summaryPeriod: /** @type {import('../shared/summary.js').SummaryPeriod} */ ('mesiac'),
         previewMinutes: null,
-        isDragging: false,
         wide: layout.wide,
         // Či je okno dosť vysoké na to, aby sa do prehľadu dní zmestila aj správa týždňa
         // (WEEK_MSG_MIN_H). Keď nie je, správa sa nekreslí - prehľad ostáva bez scrollovania.
@@ -165,8 +163,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,
-        // Popup „Ako čítať ciferník“ na karte Terazky. Je krok navigácie, takže Späť ho najprv zatvorí.
-        dialGuideOpen: false,
     };
 }
 
@@ -198,7 +194,7 @@ export function nextWeekDay(sel, dir, count) {
 /**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
  * v navigácii, nie z toho, či sa ťahalo alebo klikalo - prechod tak vyzerá rovnako pri
- * oboch. Detail dňa, popup s návodom k ciferníku aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
+ * oboch. Detail dňa aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */
@@ -208,7 +204,6 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
-        dialGuideOpen: false,
         mozemSummary: false,
         mozemList: false,
     };
@@ -217,7 +212,7 @@ export function panelChange(from, to) {
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
  * obrazovka sprievodcu nastavením aj s plochou panelov a rozbalená položka sekcie Appka. Zvyšok stavu (vybraný deň, stránka
- * verdiktu, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
+ * pásu odporúčaní, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
  */
@@ -230,7 +225,6 @@ export function navStep(state) {
         info: state.infoOpen,
         summary: state.mozemSummary,
         list: state.mozemList,
-        guide: state.dialGuideOpen,
     };
 }
 
@@ -243,8 +237,7 @@ export function sameNavStep(a, b) {
         a.roof === b.roof &&
         a.info === b.info &&
         a.summary === b.summary &&
-        a.list === b.list &&
-        a.guide === b.guide
+        a.list === b.list
     );
 }
 
@@ -265,7 +258,6 @@ export function navChange(from, step) {
         infoOpen: step.info,
         mozemSummary: step.summary,
         mozemList: step.list,
-        dialGuideOpen: step.guide,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -310,13 +302,14 @@ function validPanelPlace(panel, weekDetail) {
 }
 
 /**
- * Obrazovky, ktoré sú otvorené alebo nie: súhrn a zoznam vecí v karte Môžem?, popup s návodom
- * k ciferníku. Položka zo staršej verzie appky ich nepozná - sú `false`.
- * @param {Record<string, unknown>} step @returns {{ summary: boolean, list: boolean, guide: boolean } | null}
+ * Obrazovky, ktoré sú otvorené alebo nie: súhrn a zoznam vecí v karte Môžem?. Položka zo staršej
+ * verzie appky ich nepozná - sú `false`. Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom;
+ * položka zo staršej verzie, ktorá ho ešte nesie, sa vráti na kartu bez neho.
+ * @param {Record<string, unknown>} step @returns {{ summary: boolean, list: boolean } | null}
  */
-function screensIn({ summary = false, list = false, guide = false }) {
-    if (typeof summary !== 'boolean' || typeof list !== 'boolean' || typeof guide !== 'boolean') return null;
-    return { summary, list, guide };
+function screensIn({ summary = false, list = false }) {
+    if (typeof summary !== 'boolean' || typeof list !== 'boolean') return null;
+    return { summary, list };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

@@ -9,7 +9,8 @@ Appky sú dve a ostávajú natrvalo: súčasná (koreň, `web/`, `style.css`) a 
 v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `gesture.js`, `nav-history.js`,
-`setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`), takže
+`setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`, `day-chart.js`,
+`teraz-gestures.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
 vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
@@ -25,8 +26,8 @@ Návrh a prečo: `docs/navrhy/jedno-jadro-dva-kabaty.html`.
 - V jadre nie je nič, čo by vedelo, pre ktorú appku počíta: žiadny prepínač správania pre jednu
   appku, žiadne dva zoznamy tej istej veci. Skúška: keby sa človek opýtal oboch appiek to isté
   a dostal inú odpoveď, rozdiel patrí do jadra a zjednotí sa. Parameter, ktorý mení len podobu
-  (tón hlášok, text o ciferníku či páse plánu), je v poriadku.
-- Modely obrazoviek jednej appky (`shared/teraz.js`, `shared/mozem-sky.js`, …) smú byť
+  (tón hlášok), je v poriadku.
+- Modely obrazoviek jednej appky (`shared/mozem-sky.js`, …) smú byť
   v `shared/` kvôli testom, ale nesmú nič rozhodnúť samy – len skladajú spoločné výpočty.
 - Nová viditeľná funkcia nemusí byť v oboch appkách. Urob ju tam, kde ju úloha chce, a druhú
   appku nemeň, kým to nie je úlohou. Jej výpočet patrí do jadra, aby ju druhá appka mohla
@@ -95,14 +96,14 @@ s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `style.css` 
 `:hover` – na dotyku by ostávalo visieť po ťuknutí.
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
-posunúť stránku – patrí len úchytkám na ťahanie (jazdec na dennom prstenci ciferníka, kruh rozvrhu tarify v sprievodcovi). Plochy,
-cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, v novej appke graf dňa `.day-scrub`): zvislé posúvanie si necháva
+posunúť stránku – patrí len úchytkám na ťahanie (kruh rozvrhu tarify v sprievodcovi). Plochy,
+cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Terazky / Teraz): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
 
 Listovanie kariet ťahom (`web/gesture.js`, karty a dni vyberá v súčasnej appke `web/swipe.js`, v novej `swipeTarget` v `obloha/web/state.js`) si gesto neberie tam, kde sa pod prstom ťahá niečo do
 strán. Rozhoduje pravidlo (vnútorný pás, ktorý sa má kam posunúť), menované sú len úchytky, ktoré
-sa ťahajú a neposúvajú: jazdec na dennom prstenci, graf dňa novej appky (`.day-scrub`, ťah po ňom je
+sa ťahajú a neposúvajú: graf dňa na karte Terazky / Teraz (`.day-scrub`, ťah po ňom je
 náhľad iného času), kruh rozvrhu tarify (`.tariff-ring`, prst po
 ňom maľuje pásmo) a posúvač `input[type=range]` (sklon strechy v sprievodcovi nastavením). Nový posúvač tak netreba nikam dopisovať.
 Nová appka na širšej obrazovke (prehľad so stĺpcami, `dashboard` v `obloha/web/state.js`) karty ťahom
@@ -139,7 +140,7 @@ build krok, takže `index.html` a každý modul vo `web/` a `shared/` je samosta
 s vlastnou platnosťou cache – prehliadač ich po nasadení vie desať minút miešať. CDN pred
 GitHub Pages (Fastly) sa pri nasadení čistí (hneď po ňom odpovedá `X-Cache: MISS`, `Age: 0`),
 starú verziu drží len prehliadač. Zmiešanie zabije appku ešte pred prvým `render()` a v stránke
-ostane statické HTML: `00:00`, „načítavam…" a prázdny ciferník. Vedú k tomu dve cesty:
+ostane statické HTML: `00:00`, „načítavam…" a prázdna karta. Vedú k tomu dve cesty:
 
 - **Export medzi modulmi.** Nasadenie pridá export do modulu A a zároveň ho začne importovať B.
   Prehliadač so starým A v cache a novým B hodí pri linkovaní `SyntaxError` („does not provide

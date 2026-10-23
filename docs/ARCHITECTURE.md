@@ -75,7 +75,7 @@ spustil vždy. Podrobnosti v CLAUDE.md, sekcia o nasadení a cache.
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
 miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje
 poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
-`setup-interactions.js` nad spoločným `setup-wiring.js`, pásy, ktoré listuje prehliadač, spoločné `pager.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
+`setup-interactions.js` nad spoločným `setup-wiring.js`, karta Terazky `terazky-interactions.js` nad spoločným `teraz-gestures.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
@@ -84,15 +84,15 @@ susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovk
 neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
 navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
 najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
-Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: jazdec na dennom prstenci ciferníka,
+Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: graf dňa na karte Terazky (`.day-scrub`),
 kruh rozvrhu tarify v sprievodcovi a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
 nastavením).
 `storage.js` ukladá nastavenie elektrárne do `localStorage` (`settings-store.js` ho znova vyváža a pridáva zrkadlenie do adresy). Kartu Nastavenie tvorí
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
 kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré ostali, aby sa
-nemenil stav ani HTML. Návod k ciferníku je popup karty Terazky (`dialGuideOpen`); je krok
-navigácie, takže ho tlačidlo Späť najprv zatvorí, a pri odchode z karty sa zatvorí tiež. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
+nemenil stav ani HTML. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
+ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
 o ňu; „Späť“ v sprievodcovi ide cez `history.back()` (`backTo`), keď do aktuálnej položky
@@ -144,12 +144,12 @@ toho prepne `--tint-rgb` a z neho poskladá `--bg-page`. Atribút sedí na `<htm
 `<body>`, lebo `var()` vo vnútri custom property sa dosadzuje tam, kde je property zapísaná
 – `--bg-page` z `:root` by zmenu na `<body>` už nevidelo. Pozadie drží farbu plánu dňa
 (`hero.tier`: cena z tarify a výkon z krivky dňa), nie farbu stavovej bodky (`hero.accent`,
-tá počíta so živým výkonom), takže hovorí to isté, čo segment pod bežcom na dennom
-prstenci. Pri
-náhľade iného času ide pozadie s bežcom, kým bodka ostáva o stave teraz – preto sa model
+tá počíta so živým výkonom), takže hovorí to isté, čo bunka pásu plánu pod čiarou náhľadu
+na grafe dňa. Pri
+náhľade iného času ide pozadie s náhľadom, kým bodka ostáva o stave teraz – preto sa model
 ráta dvakrát, ale len keď náhľad naozaj beží. Že sa farba nerozíde s modelom, strážia e2e
-testy: pevné časy pokryjú zelenú, oranžovú aj červenú, tarifa s jednou cenou sivú, a ťuknutie na prstenec overí, že sa farba
-mení aj s bežcom a po zrušení náhľadu sa vráti.
+testy: pevné časy pokryjú zelenú, oranžovú aj červenú, tarifa s jednou cenou sivú, a náhľad na grafe overí, že sa farba
+mení aj s ním a po zrušení náhľadu sa vráti.
 
 Medzi vstupmi stavu je aj `chartSizes` – skutočné rozmery plátien grafov v pixeloch.
 Napĺňa ich `ResizeObserver` v `interactions.js` a render z nich cez `fillDims` postaví
@@ -277,19 +277,21 @@ odpoveďou dlaždice. Dlaždica s jednou vecou otvorí rovno jej panel. Panel ve
 cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
 aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
 
-Karta Teraz nahrádza kartu Terazky. Ciferník a denný prstenec v novom dizajne nie sú, ich úlohu
+Karta Teraz a karta Terazky súčasnej appky majú to isté rozloženie (súčasná vo vlastných farbách,
+návrh A v `docs/navrhy/terazky-ako-obloha.html`). Ciferník a denný prstenec zanikli, ich úlohu
 preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
 (aj náhľad iného času cez `previewMinutes`), plán z `dayPlan` a krátke odpovede spotrebičov
-z `deviceShorts` – ukazuje presne to, čo karta Terazky. Meranie, ktoré mlčí (`pvFreshness`), už nie
-je výkon „teraz“ v žiadnej appke (`freshPowerKw` v `shared/hero-model.js`): ciferník, graf aj veta
+z `deviceShorts` – obe karty z neho ukazujú to isté. Graf kreslí `web/day-chart.js` a ťah po ňom
+obsluhuje `web/teraz-gestures.js`, oba neutrálne moduly spoločné pre obe appky. Meranie, ktoré mlčí (`pvFreshness`), už nie
+je výkon „teraz“ v žiadnej appke (`freshPowerKw` v `shared/hero-model.js`): číslo, graf aj veta
 karty Môžem? vtedy počítajú z krivky dňa a povedia, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
 `shared/day-chart.js`: predpoveď ako plochu, nameranú krivku po posledný bod ako bielu čiaru,
 hranicu veľkých spotrebičov (`lowKw` z `powerThresholds`, od nej je plán zelený) a pod grafom pás
 plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom strede. Graf je zároveň posúvač času
-(`role="slider"`): prst, kurzor aj šípky ukážu náhľad. Náhľad je krok navigácie (`preview`
-v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. Listovanie kariet
-nad grafom nebeží (`.day-scrub` je úchytka vo `web/gesture.js`, ako jazdec na prstenci súčasnej
-appky). Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
+(`role="slider"`): prst, kurzor aj šípky ukážu náhľad. V novej appke je náhľad krok navigácie (`preview`
+v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. V súčasnej appke krokom
+nie je, rovnako ako vybraný deň. Listovanie kariet
+nad grafom nebeží (`.day-scrub` je úchytka vo `web/gesture.js`). Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
 
 Karta 7 dní ukazuje dni ako predpoveď počasia. `shared/sedem-dni.js` berie súčty a najlepší deň
 z `weekStatsModel` (deň vyberá `bestDayIndex`, ten istý v oboch appkách), celé kWh riadkov
@@ -299,7 +301,7 @@ z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú
 s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
 sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
-(`obloha/web/render/day-chart.js`), pri inom dni než dnešok bez značky „teraz“. „Teraz“ nie je
+(`web/day-chart.js`, spoločný pre obe appky), pri inom dni než dnešok bez značky „teraz“. „Teraz“ nie je
 zvislá čiara, ale bod na konci nameranej krivky a stlmené bunky pásu plánu, ktoré už prešli –
 hranica stlmeného a plného pásu ukazuje „teraz“ aj v noci, keď bod leží na nule. Krivky sú v SVG,
 ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, čas náhľadu) sú
@@ -353,9 +355,9 @@ dňa – a len ťah v stĺpci 7 dní (`swipeTarget`; prvok, na ktorom ťah zača
 - **Nezapisuj, čo sa nezmenilo.** Zápis do DOM označí prvok za špinavý aj vtedy, keď doň
   zapíšeš to isté, čo tam už je. Účet nepríde hneď – príde, keď si appka najbližšie vypýta
   rozmery, lebo vtedy musí prehliadač dopočítať layout. Pri ťahaní jazdca po dennom prstenci
-  tak jeden zbytočný zápis zdražel každý ďalší pohyb prsta. `memo.js` si preto pamätá, čo sám
-  naposledy zapísal, a denný prstenec aj chipy spotrebičov sa prekresľujú len
-  pri zmene vlastných vstupov. Namerané: 1,675 → 0,675 ms na pohyb na mobilnej šírke,
+  (kým ho súčasná appka mala) tak jeden zbytočný zápis zdražel každý ďalší pohyb prsta. `memo.js` si preto pamätá, čo sám
+  naposledy zapísal, a prvky, ktoré sa menia zriedka (napríklad legenda grafu dňa),
+  sa prekresľujú len pri zmene vlastných vstupov. Namerané: 1,675 → 0,675 ms na pohyb na mobilnej šírke,
   2,817 → 0,892 ms na desktope. Na karte 7 dní má to isté ešte jeden dôvod: prepísané
   tlačidlo berie so sebou fokus klávesnice, takže rebríček, prepínač dní, bodky aj tabuľka
   idú cez `writeHtml`. Keď sa obsah naozaj zmení, vráti fokus na prvok na tom istom mieste.
@@ -398,8 +400,8 @@ Cena elektriny a slnko sú dve nezávislé veci a appka ich tak aj drží:
 `dayPlan` v `shared/day-plan.js` ich spojí po štvrťhodinách: pásmo, výkon a farba. Farba
 je jedno pravidlo (`smartTier`): od dolnej hranice výkonu zelená – slnko pokryje veľké
 spotrebiče, cena nehrá rolu – inak farba úrovne (oranžová lacné, sivá bežné, červená drahé).
-Z plánu čítajú denný prstenec, pozadie stránky, texty aj spotrebiče, takže segment pod bežcom
-a farba pozadia sú vždy to isté číslo. Plán berie krivku dňa, nie živý výkon – stavová bodka
+Z plánu čítajú pás plánu pod grafom dňa, pozadie stránky, texty aj spotrebiče, takže bunka pásu
+v zvolenom čase a farba pozadia sú vždy to isté číslo. Plán berie krivku dňa, nie živý výkon – stavová bodka
 počíta so živým výkonom a môže sa od neho na chvíľu líšiť.
 
 Texty sú mriežka úroveň × výroba (`SLOT_MESSAGES`), v noci (slnko pod obzorom) hovoria len
@@ -589,10 +591,11 @@ vyplní výšku okna. Grafy sa tak natiahnu na veľkom monitore a stlačia na n�
 
 Od 768 px mala stránka mriežku dvoch rovnakých stĺpcov: vľavo Terazky, vpravo Dnes-Zajtra
 (tá preto na desktope nemala vlastnú položku v navigácii). Keď karta Dnes-Zajtra zanikla,
-mriežka zanikla s ňou a Terazky idú cez celú šírku stránky. Stránka je tu položkou zvislého
+mriežka zanikla s ňou a Terazky idú cez celú šírku stránky (vľavo číslo a graf dňa, vpravo
+odporúčania pod sebou). Stránka je tu položkou zvislého
 flexu a vystredenie cez `margin: 0 auto` jej vypína naťahovanie na šírku rodiča, takže
-potrebuje `width: 100%`: karta Terazky vlastnú šírku nemá (ciferník sa počíta z percent,
-odporúčanie je `container-type: inline-size`, teda so size containmentom v osi x), takže bez
+potrebuje `width: 100%`: karta Terazky vlastnú šírku nemá (graf dňa je
+`container-type: inline-size`, teda so size containmentom v osi x), takže bez
 toho by sa stránka scvrkla na svoje okraje. Stráži to e2e test „karta Terazky má celú šírku
 stránky“.
 
@@ -605,7 +608,7 @@ potrebuje 315 px výšky a 385 px šírky – toľko jej celá výška mriežky 
 vysokej obrazovke. Grafy sa stlačiť dajú, riadky tabuľky pod čitateľnosť nie, tak miesto
 dostane to, čo ho naozaj potrebuje.
 
-Čo v nízkom okne ustúpi: ciferník sa zmenší z 240 na 190 px (do 720 px výšky) a nad grafom
+Čo v nízkom okne ustúpi: karta Terazky sa posúva sama (`overflow-y: auto`, ako Štatistika) a nad grafom
 stĺpcov zmizne riadok so súčtami (do 900 px výšky) – hovorí to isté, čo kartička „7 dní
 spolu“ nad ním. Plátno grafu nikdy neklesne pod 96 px; pod tým by bolo nižšie než jeho
 vlastné okraje.

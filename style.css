@@ -189,9 +189,6 @@
 
     --dur: 0.35s;
     --page-max: 480px;
-    /* Najväčší rozumný priemer ciferníka. Nad touto hranicou už kruh nerastie, aj keď je
-       miesta viac - na tablete by inak zabral celú kartu. */
-    --dial-max: 360px;
     /* Miesto, ktoré si stránka rezervuje pod obsahom pre fixnú spodnú navigáciu (platí len
        do 1023px, na desktope má .page vlastný padding-bottom). Nie je to presná výška pása
        (tá je 52px, viď .nav-item nižšie) - rozdiel je zámerná rezerva. Keď sa mení výška
@@ -635,34 +632,250 @@ b {
     color: var(--ink-45);
 }
 
-/* ---- Terazky: náhľad času -------------------------------------------------
-   Bublina s časom nad pásom dňa zanikla spolu s pásom. Čas je teraz vnútri ciferníka
-   nad hodnotou (.dial-num .when) a návrat na "teraz" je tlačidlo pod jednotkou. Ani
-   jedno nestojí mimo kruhu, takže zobrazenie náhľadu nič v layoute neposunie.
-   Tlačidlo je zámerne výrazné – biele s čiernym písmom a pulzuje: ciferník v náhľade
-   ukazuje iný čas než teraz a to sa nesmie prehliadnuť. Pulzuje len tieň okolo, rozmer
-   tlačidla sa nemení, takže nič v okolí neposúva. Útlm pohybu pulz vypne (viď hore). */
-.preview-reset {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: var(--sp-2);
-    padding: 5px 12px;
+/* ---- Terazky ---------------------------------------------------------------
+   Rozloženie karty Teraz z novej appky vo farbách tejto (návrh A v docs/navrhy/terazky-ako-obloha.html):
+   číslo kW s riadkami pod ním, graf dňa s pásom plánu a pás odporúčaní. Graf kreslí web/day-chart.js
+   (spoločný s novou appkou), farby pásu sú tie isté ako všade tu: zelená slnko stačí, jantárová
+   lacná sieť, červená drahá, sivá bežná cena. Číslo má farbu plánu dňa v zvolenom čase - tú istú
+   ako nádych pozadia (--tint-rgb z data-tier, render/header.js). */
+.tz-head h1,
+.tz-head p {
+    margin: 0;
+}
+.tz-kick {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+/* Na úzkom displeji sa číslo zmenší s jeho šírkou, aby sa „~10.25 kW“ nezalomilo. */
+.tz-num {
+    margin-top: 2px;
+    font-size: min(92px, 24vw);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+    color: rgb(var(--tint-rgb));
+}
+.tz-num small {
+    margin-left: 6px;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--ink-45);
+}
+/* Číslo z typickej strechy priznáva odhad aj písmom. */
+.tz-num.est {
+    font-style: italic;
+}
+.tz-src {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+/* Prístup k meraniu neplatí (shared/pristup.js): dôvod je v riadku, cesta k oprave v páse pod hlavičkou. */
+.tz-src b {
+    color: var(--red);
+}
+.tz-sub {
+    margin-top: 2px;
+    font-size: 15px;
+    color: var(--ink-70);
+}
+.tz-retry {
+    margin-top: var(--sp-3);
+    padding: 8px 16px;
+    border: 1px solid var(--ink-20);
     border-radius: var(--radius-pill);
-    border: 1px solid #fff;
+    background: var(--ink-05);
+    font-weight: 600;
+}
+
+/* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
+   ten obsluhuje JS (web/teraz-gestures.js). */
+.tz-plot {
+    margin-top: var(--sp-4);
+}
+.tz-chart {
+    padding: 14px 10px 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+}
+.day-scrub {
+    touch-action: pan-y;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+}
+/* Prst aj kurzor trafia vždy rámček grafu, nie graf v ňom: render ho pri každom posune náhľadu
+   vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove by k rámčeku
+   nedošli a náhľad by zamrzol po prvom pohybe. */
+.day-scrub .dc-box {
+    pointer-events: none;
+}
+.dc {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.dc-area {
+    fill: var(--ink-08);
+    stroke: var(--ink-45);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+/* Nameraná krivka dneška: plná biela cez predpoveď. */
+.dc-real {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.dc-limit {
+    stroke: rgba(var(--green-rgb), 0.7);
+    stroke-dasharray: 3 4;
+}
+/* Popisky grafu sú HTML nad SVG: graf sa s oknom zväčšuje, písmo nie. Poloha je v % grafu
+   (web/day-chart.js); model kladie nápis hranice mimo kriviek podľa DAY_CHART_LABELS
+   v shared/day-chart.js - písmo tu nesmie byť väčšie než tam. */
+.dc-box {
+    position: relative;
+    container-type: inline-size;
+}
+.dc-box > span {
+    position: absolute;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.dc-t {
+    color: var(--ink-45);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    transform: translate(-50%, 2px);
+}
+/* Nápis hranice: spodkom tesne nad svojím miestom, zarovnaný k nemu začiatkom alebo koncom. Na
+   grafe širokom aspoň 448 px (wideScale v shared/day-chart.js) má vlastnú polohu. */
+.dc-limit-t {
+    left: var(--nx);
+    top: var(--ny);
+    color: var(--ink-45);
+    font-size: 12px;
+    transform: translate(var(--na), calc(-100% - 2px));
+}
+@container (min-width: 448px) {
+    .dc-limit-t {
+        left: var(--wx);
+        top: var(--wy);
+        transform: translate(var(--wa), calc(-100% - 2px));
+    }
+}
+.dc-now-dot {
+    fill: var(--ink);
+}
+.dc-prev {
+    stroke: var(--ink-70);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+}
+.dc-prev-dot {
+    fill: var(--card-bg);
+    stroke: var(--ink);
+    stroke-width: 2;
+}
+/* Čas náhľadu na vrchu jeho čiary, vystredený na nej; polohu dáva render. */
+.dc-at-t {
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    transform: translate(-50%, calc(-100% - 2px));
+}
+/* Bunka pásu pod čiarou náhľadu: väčšia a s okrajom, jej farba povie, čo vtedy platí. */
+.dc-cell-on {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+}
+.dc [data-tone='plain'] {
+    fill: rgba(var(--grey-rgb), 0.55);
+}
+.dc [data-tone='sun'] {
+    fill: var(--green);
+}
+.dc [data-tone='cheap'] {
+    fill: var(--amber);
+}
+.dc [data-tone='costly'] {
+    fill: var(--red);
+}
+/* Bunky pásu, ktoré dnes už prešli: stlmené, hranica s plným pásom je „teraz“. */
+.dc .dc-past {
+    fill-opacity: 0.3;
+}
+.tz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: var(--sp-2) 2px 0;
+    font-size: 13px;
+    color: var(--ink-70);
+}
+.tz-legend span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+.tz-legend span::before {
+    content: '';
+    width: 12px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(var(--grey-rgb), 0.55);
+}
+.tz-legend [data-tone='sun']::before {
+    background: var(--green);
+}
+.tz-legend [data-tone='cheap']::before {
+    background: var(--amber);
+}
+.tz-legend [data-tone='costly']::before {
+    background: var(--red);
+}
+.tz-hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    margin: 2px 2px 0;
+    font-size: 13px;
+    color: var(--ink-45);
+}
+/* Späť na teraz: zámerne výrazné - biele a pulzuje. Číslo aj graf ukazujú iný čas než teraz
+   a to sa nesmie prehliadnuť. Pulzuje len tieň, rozmer tlačidla sa nemení. */
+.tz-reset {
+    flex: none;
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
     background: #fff;
     color: #000;
     font-family: var(--font-mono);
-    font-size: var(--fs-xs);
+    font-size: var(--fs-sm);
     font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    animation: preview-reset-pulse 1.6s ease-out infinite;
-    /* Vnútro ciferníka inak kliky neberie (viď .dial-num), tomuto ich treba vrátiť. */
-    pointer-events: auto;
+    letter-spacing: 0.04em;
+    animation: tz-reset-pulse 1.6s ease-out infinite;
 }
-@keyframes preview-reset-pulse {
+@keyframes tz-reset-pulse {
     0% {
         box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
     }
@@ -673,43 +886,95 @@ b {
         box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
     }
 }
-.preview-reset svg,
-.wait-chip svg {
-    width: 13px;
-    height: 13px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    flex-shrink: 0;
+
+/* Pás odporúčaní listuje a prichytáva prehliadač; karty sú užšie než pás, aby bolo vidno, že
+   ďalej niečo je. Pás siaha k okrajom stránky (záporný okraj = padding .page). */
+.tz-recs {
+    margin-top: var(--sp-1);
+}
+.tz-strip {
+    display: flex;
+    gap: 10px;
+    margin: 0 -20px;
+    padding: 4px 20px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 20px;
+    scrollbar-width: none;
+}
+.tz-strip::-webkit-scrollbar {
+    display: none;
+}
+.tz-strip:focus-visible {
+    outline-offset: -2px;
+}
+.tz-rec {
+    flex: 0 0 86%;
+    display: grid;
+    align-content: start;
+    gap: var(--sp-2);
+    padding: 16px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+    scroll-snap-align: start;
+}
+.tz-rec h2,
+.tz-rec p {
+    margin: 0;
+}
+.tz-rec p {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--ink-70);
+}
+.tz-rec-head {
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+.tz-rec-ttl {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.tz-bar {
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--ink-08);
+    overflow: hidden;
+}
+.tz-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--green);
+}
+.tz-dots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: var(--sp-3) 0 var(--sp-2);
+}
+.tz-dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink-20);
+}
+.tz-dots i.on {
+    background: var(--ink);
 }
 
-/* ---- Terazky: ciferník ----------------------------------------------------- */
-.dial-hero {
-    text-align: center;
-    padding-top: var(--sp-1);
-    margin-bottom: var(--sp-5);
-}
-/* Obal je štvorec presne veľký ako ciferník - značka "teraz" aj jazdec sa v ňom
-   polohujú v percentách (viď ringPercent), takže o jeho veľkosti nemusia vedieť.
-   container-type: size z neho zároveň robí kontajner pre cqmin nižšie: číslo v strede
-   sa tak odvíja od ciferníka, nie od okna, a nemusí ho naháňať pri každom breakpointe. */
-.dial-wrap {
-    position: relative;
-    width: min(100%, var(--dial-max));
-    aspect-ratio: 1;
-    margin: 18px auto var(--sp-1);
-    container-type: size;
-}
-/* Nad ciferníkom nie je nič - ciferník tak môže byť na každej šírke rovnako veľký.
-   Jeho strop drží --dial-max na obale (.dial-wrap), plátno ho len vyplní. */
-.dial-svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-/* Vonkajší prstenec: plán dňa - cena z tarify, zelená pri slnku. Kreslí ho dayRingSvg. */
+/* ---- Prstenec plánu dňa a farebné značky --------------------------------------
+   Oblúky prstenca kreslí dayRingSvg (web/svg.js) - v sprievodcovi a zhrnutí tarify. Značky .sw
+   sú farebné štvorčeky v legendách. */
 .day-band {
     fill: none;
     stroke-width: 8;
@@ -727,607 +992,6 @@ b {
 }
 .day-band.grey {
     stroke: var(--grey);
-}
-.dial-hour {
-    fill: var(--ink-35);
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.04em;
-    text-anchor: middle;
-    dominant-baseline: middle;
-}
-.dial-track {
-    fill: none;
-    stroke: var(--ink-08);
-    stroke-width: 14;
-}
-.dial-ring {
-    fill: none;
-    stroke: var(--ink-20);
-    stroke-width: 14;
-    stroke-linecap: round;
-    /* 490 ≈ obvod kružnice s polomerom 78 (RING.rPower). Je to len východiskový stav pred
-       prvým prekreslením - presnú hodnotu nastaví render do oboch vlastností naraz, aby sa
-       podiel počítal z toho istého čísla, akým je prstenec rozdelený. */
-    stroke-dasharray: 490;
-    stroke-dashoffset: 490;
-    transition:
-        stroke-dashoffset 0.6s ease,
-        stroke var(--dur);
-}
-/* Guľatý koniec oblúka nakreslí bodku aj vtedy, keď je oblúk nulový - pri nulovej výrobe
-   tak na vrchu prstenca ostávala farebná bodka, hoci nebolo čo ukázať. Zrovnaný koniec
-   nenakreslí nič. Prepína to render podľa podielu výkonu (viď renderHero). */
-.dial-ring.empty {
-    stroke-linecap: butt;
-}
-/* Pri ťahaní jazdca musí oblúk ísť za prstom hneď, nie s polsekundovým oneskorením. */
-.panel-terazky.dragging .dial-ring {
-    transition: stroke var(--dur);
-}
-.dial-num {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    /* Ťuknutie do stredu ciferníka patrí ciferníku (nastaví náhľad), nie textu v ňom.
-       Tlačidlo "Teraz" si kliky vracia samo (viď .preview-reset). */
-    pointer-events: none;
-}
-/* Čas, ktorý číslo pod ním opisuje. Rovnaké písmo ako jednotka pod číslom - je to
-   popiska údaja, nie ovládač; ovládač je jazdec na prstenci. */
-.dial-num .when {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    letter-spacing: 0.12em;
-    color: var(--ink-35);
-    transition: color var(--dur);
-}
-.dial-num .when.preview {
-    color: var(--accent);
-}
-.dial-num .val {
-    font-family: var(--font-mono);
-    /* 17 % menšieho rozmeru ciferníka - najdlhšie číslo má päť znakov ("10.44", od 100 kW
-       "100.0", viď dialText v shared/hero-model.js) a zmestí sa tak medzi prstence pri každej
-       jeho veľkosti. */
-    font-size: clamp(22px, 17cqmin, 58px);
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    transition: color var(--dur);
-}
-.dial-num .unit {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-35);
-}
-
-/* ---- Terazky: jazdec na dennom prstenci ------------------------------------
-   Vrstva nad ciferníkom. Jazdec je v nej stále: v pokoji je značkou "teraz" (.at-now),
-   počas náhľadu objímkou a značka "teraz" vtedy na prstenci nie je. Sedí v percentách
-   obalu, takže sa s ciferníkom sám zmenšuje. */
-.dial-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-/* Značka "teraz": slnko od východu po západ, v noci mesiac (triedu .night prepína
-   renderRingMarks podľa sunUp v shared/solar.js). Kresba je maska a farbu jej dáva pozadie,
-   takže je biela ako všetko ostatné v appke. Tmavý kruh pod ňou preruší prstenec - bez neho
-   by sa lúče strácali vo farbe pásma. Rovnakú kresbu má aj vysvetlivka v karte Info. */
-:root {
-    --sky-sun: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-9 -9 18 18'><circle r='3.4'/><path d='M0-5.6V-7.9M0 5.6V7.9M-5.6 0H-7.9M5.6 0H7.9M3.96 3.96L5.59 5.59M-3.96 3.96L-5.59 5.59M3.96-3.96L5.59-5.59M-3.96-3.96L-5.59-5.59' stroke='black' stroke-width='1.6' stroke-linecap='round'/></svg>");
-    --sky-moon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-9 -9 18 18'><mask id='m'><rect x='-9' y='-9' width='18' height='18' fill='white'/><circle cx='3.3' cy='-2.6' r='5.4'/></mask><g transform='translate(1.3 -1) rotate(-20)'><circle r='6.6' mask='url(%23m)'/></g></svg>");
-}
-.dial-grip.at-now .grip-collar,
-.sky-mark {
-    display: grid;
-    place-items: center;
-    width: 21px;
-    height: 21px;
-    border-radius: 50%;
-}
-.dial-grip.at-now .grip-collar {
-    background: var(--bg);
-    border: 0;
-    box-shadow: none;
-    gap: 0;
-}
-.dial-grip.at-now .grip-collar i {
-    display: none;
-}
-.dial-grip.at-now .grip-collar::before,
-.sky-mark::before {
-    content: '';
-    width: 18px;
-    height: 18px;
-    background: var(--ink);
-    -webkit-mask: var(--sky-sun) center / contain no-repeat;
-    mask: var(--sky-sun) center / contain no-repeat;
-}
-.dial-grip.at-now.night .grip-collar::before {
-    -webkit-mask-image: var(--sky-moon);
-    mask-image: var(--sky-moon);
-}
-/* Dotykový cieľ je väčší než kresba: samotná objímka má 40 × 20 px, chytiť sa dá
-   štvorec 44 × 44 px okolo nej. touch-action: none, lebo ťahanie jazdca je jeho
-   vlastné gesto - prehliadač ani listovanie kariet doň nesmú hovoriť (viď DRAG_HANDLE
-   vo web/swipe.js a pravidlo "Dotyk a kurzor" v CLAUDE.md). */
-.dial-grip {
-    position: absolute;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    pointer-events: auto;
-    touch-action: none;
-    cursor: grab;
-}
-.dial-grip:active {
-    cursor: grabbing;
-}
-/* Rámček zaostrenia obopína kresbu, nie neviditeľný dotykový štvorec 44 × 44 px - okolo
-   neho by z jazdca spravil terč trikrát väčší, než v skutočnosti je. Predvolený rámček
-   prehliadača robil presne to. */
-.dial-grip:focus-visible {
-    outline: none;
-}
-.dial-grip:focus-visible .grip-collar {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
-}
-/* V pokoji (žiadny náhľad) je jazdec značkou "teraz" - slnkom alebo mesiacom, nie úchytkou.
-   Ostáva pritom tlačidlom, takže sa naň dá prejsť tabulátorom a šípkami rovno otvoriť
-   náhľad; bez toho by sa k náhľadu času z klávesnice nedalo dostať vôbec.
-   pointer-events: none je zámer: prstu ani myši nemá čo brať. Ťuknutie tak prepadne na
-   ciferník pod ním (ten nastaví náhľad na tú istú minútu) a ťah do strán ponad bodku
-   naďalej prepína kartu, namiesto aby ho zožrala výnimka DRAG_HANDLE. */
-.dial-grip.at-now {
-    pointer-events: none;
-}
-/* Objímka: korálik navlečený na prstenci. Dlhá os leží po obvode (otočenie robí JS,
-   viď renderRingMarks), tri priečne ryhy sú úchop. */
-.grip-collar {
-    display: grid;
-    grid-auto-flow: column;
-    gap: 3px;
-    place-content: center;
-    width: 40px;
-    height: 20px;
-    border-radius: var(--radius-pill);
-    border: 2px solid var(--accent);
-    background: var(--bg);
-    box-shadow: 0 0 0 3px var(--bg);
-    transition: border-color var(--dur);
-}
-.grip-collar i {
-    width: 2px;
-    height: 8px;
-    border-radius: 2px;
-    background: var(--accent);
-    opacity: 0.75;
-    transition: background-color var(--dur);
-}
-
-/* ---- Terazky: ikonka a popup s vysvetlením ciferníka -----------------------
-   Obsah popupu je statický, JS len ukazuje a skrýva prekrytie (.hidden). */
-.info-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Klikacia plocha 36 px, vidno je len obrys 20 px v jej strede - do ikonky sa dá trafiť
-       prstom a vzhľad ostáva malý. */
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: #fff;
-}
-/* Ikonka visí pod hlavičkou, pod časom - je absolútna, takže hlavičku nezväčšuje. Ukazuje sa
-   len na karte Terazky, ktorej ciferník vysvetľuje. Ukotvená je na celú .appbar (sticky je tiež
-   ukotvenie), nie na .appbar-inner: pod tou je bez zadaných panelov červená výzva a ikonka by padla na ňu.
-   Navigácia je tu fixed, takže do výšky .appbar nepatrí. .appbar je na celú šírku okna, preto
-   odsadenie sprava ráta s okrajom stredného stĺpca (--page-max). */
-.appbar-info {
-    position: absolute;
-    top: calc(100% - 6px);
-    right: max(12px, (100% - var(--page-max)) / 2 + 12px);
-    display: none;
-}
-body:has(#page[data-panel='terazky']) .appbar-info {
-    display: flex;
-}
-/* Na širokej obrazovke je hlavička jeden riadok (.appbar-inner je tu flex) - ikonka je jeho
-   posledná položka, hneď za hodinami, nie pod nimi. */
-@media (min-width: 1024px) {
-    .appbar-info {
-        position: static;
-        flex: 0 0 auto;
-        /* Neviditeľný okraj klikacej plochy nesmie zväčšiť riadok hlavičky. */
-        margin: -8px;
-    }
-}
-.info-btn svg {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.9;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.info-btn svg .dot {
-    fill: currentColor;
-    stroke: none;
-}
-/* Prekrytie je position: fixed, nie súčasť .dial-hero - má sadnúť na celú obrazovku,
-   nie len na kartu. Popup je vyšší než malý displej, preto sa v ňom dá scrollovať. */
-.info-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 70px 20px 20px;
-    background: rgba(0, 0, 0, 0.62);
-    overflow-y: auto;
-}
-.info-popup {
-    position: relative;
-    width: 100%;
-    max-width: 340px;
-    margin: auto 0;
-    background: var(--card-bg);
-    border: 1px solid var(--ink-12);
-    border-radius: var(--radius-lg);
-    padding: 22px 20px 20px;
-    text-align: left;
-}
-.info-close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 26px;
-    height: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--ink-20);
-    background: var(--ink-05);
-    color: var(--ink-45);
-    font-size: 15px;
-    line-height: 1;
-}
-.info-popup h2 {
-    margin: 0 0 4px;
-    font-size: var(--fs-lg);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-}
-.info-sub {
-    margin: 0 0 18px;
-    font-size: var(--fs-sm);
-    color: var(--ink-35);
-}
-.info-ok {
-    margin-top: 18px;
-    width: 100%;
-    padding: 11px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--ink-20);
-    background: var(--ink-05);
-    color: var(--ink);
-    font-family: var(--font-body);
-    font-size: var(--fs-md);
-    font-weight: 600;
-    text-align: center;
-}
-/* Ilustračný ciferník: pevné pásma aj ukážková hodnota výkonu, nie živé dáta - na
-   vysvetlenie farieb a prstencov to netreba prepočítavať. Farby pásiem (.day-band)
-   aj pozadie prstenca (.dial-track) sú tie isté triedy ako na skutočnom ciferníku. */
-.info-dial {
-    display: block;
-    width: 180px;
-    height: 180px;
-    margin: 0 auto 18px;
-}
-.info-dial-power {
-    fill: none;
-    stroke: var(--green);
-    stroke-width: 14;
-    stroke-linecap: round;
-    stroke-dasharray: 490;
-    stroke-dashoffset: 172;
-}
-/* Slnko na ilustračnom ciferníku - tá istá kresba ako --sky-sun, len nakreslená priamo v SVG. */
-.info-dial-now .halo {
-    fill: var(--card-bg);
-}
-.info-dial-now .sun {
-    fill: var(--ink);
-}
-.info-dial-now .rays {
-    fill: none;
-    stroke: var(--ink);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-}
-.info-rows {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 14px;
-}
-.info-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    font-size: var(--fs-md);
-    line-height: 1.45;
-    color: var(--ink-70);
-}
-.info-row-icon {
-    flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
-    margin-top: 1px;
-}
-.info-icon-tariff .seg {
-    fill: none;
-    stroke-width: 3.2;
-}
-.info-icon-tariff .seg.green {
-    stroke: var(--green);
-}
-.info-icon-tariff .seg.amber {
-    stroke: var(--amber);
-}
-.info-icon-tariff .seg.red {
-    stroke: var(--red);
-}
-.info-icon-power .track {
-    fill: none;
-    stroke: var(--ink-08);
-    stroke-width: 4;
-}
-.info-icon-power .arc {
-    fill: none;
-    stroke: var(--green);
-    stroke-width: 4;
-    stroke-linecap: round;
-    stroke-dasharray: 30 50;
-}
-.info-icon-drag circle,
-.info-icon-drag path {
-    fill: none;
-    stroke: var(--ink-45);
-    stroke-width: 2;
-}
-.info-icon-drag path {
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-/* Farba pásma vo vnútri popisku prstenca - rovnaká trieda ako v .go-legend nižšie. */
-.info-tiers {
-    list-style: none;
-    margin: 6px 0 0;
-    padding: 0;
-    display: grid;
-    gap: 4px;
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-}
-.info-tiers li {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-/* Podpis pod kartou Info. */
-.app-credit {
-    font-size: var(--fs-xs);
-    color: var(--ink-20);
-    text-align: center;
-    margin: var(--sp-4) 0 0;
-}
-.app-credit + .app-credit {
-    margin-top: 0;
-}
-
-/* ---- Terazky: verdikt a spotrebiče --------------------------------------- */
-.verdict {
-    text-align: center;
-    /* Container query jednotky (cqw) nižšie potrebujú predka s inline-size kontajnmentom -
-       na rozdiel od vw sa tak veľkosť písma odvíja od skutočnej šírky karty, nie okna.
-       To je podstatné, lebo táto šírka sa naprieč breakpointami nemení monotónne
-       (tablet na výšku má kartu širšiu než malý desktop so stĺpcami vedľa seba). */
-    container-type: inline-size;
-}
-/* Nadpisy (h1 aj h3 nižšie) majú font-size ako % šírky karty, nie pevné číslo - vďaka tomu
-   sa vždy zmestia na jeden riadok bez ohľadu na dĺžku textu aj šírku obrazovky. Koeficient
-   je odmeraný na najdlhší reálny text z shared/messages.js (viď PR popis), s malou rezervou.
-   white-space/ellipsis je len poistka pre nečakane dlhší text v budúcnosti. */
-.verdict h1 {
-    font-size: clamp(10px, 4.1cqw, var(--fs-xl));
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.15;
-    margin: 0 0 var(--sp-2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.verdict .body {
-    margin: 0 0 var(--sp-4);
-    color: var(--ink-45);
-    font-size: 15px;
-}
-/* Listovanie do strán. Posúva a prichytáva prehliadač (scroll-snap), JS len číta, ktorá
-   stránka ostala na obrazovke. Skrytá stránka vypadne z toku, takže pri jedinej stránke
-   niet čo posúvať a pás sa správa ako obyčajný blok. */
-.pager {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-}
-.pager::-webkit-scrollbar {
-    display: none;
-}
-.pager-page {
-    flex: 0 0 100%;
-    min-width: 0;
-    scroll-snap-align: start;
-}
-.pager-page-wait {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.pager-page-forecast h3 {
-    margin: 0 0 var(--sp-2);
-    font-size: clamp(10px, 6.8cqw, var(--fs-lg));
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.pager-dots {
-    display: flex;
-    justify-content: center;
-    gap: var(--sp-1);
-    margin-bottom: var(--sp-3);
-}
-.pager-dot {
-    position: relative;
-    width: 20px;
-    height: 20px;
-}
-.pager-dot::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 7px;
-    height: 7px;
-    transform: translate(-50%, -50%);
-    border-radius: var(--radius-pill);
-    background: var(--ink-12);
-    transition: background var(--dur);
-}
-.pager-dot.active::before {
-    background: var(--ink-45);
-}
-@media (prefers-reduced-motion: reduce) {
-    .pager {
-        scroll-behavior: auto;
-    }
-}
-.go-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: var(--sp-2);
-    margin-bottom: var(--sp-3);
-}
-.go-chip {
-    --chip: var(--ink-20);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 10px 4px 8px;
-    border-radius: var(--radius-md);
-    border: 1px solid color-mix(in srgb, var(--chip) 35%, transparent);
-    background: color-mix(in srgb, var(--chip) 12%, transparent);
-    color: var(--chip);
-    transition:
-        color var(--dur),
-        background-color var(--dur),
-        border-color var(--dur);
-}
-.go-chip svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.go-chip .go-name {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-.go-chip .go-power {
-    display: none;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--ink-45);
-}
-.go-chip.tier-green {
-    --chip: var(--green);
-}
-.go-chip.tier-amber {
-    --chip: var(--amber);
-}
-.go-chip.tier-red {
-    --chip: var(--red);
-}
-.go-chip.tier-grey {
-    --chip: var(--grey);
-}
-.go-chip.state-no {
-    opacity: 0.35;
-    text-decoration: line-through;
-}
-/* Position: fixed, súradnice dopočíta JS pri kliku - chip je v posúvateľnom pageri
-   (overflow-x: auto), ktorý by inak tooltip nad sebou orezal. */
-.chip-tooltip {
-    position: fixed;
-    transform: translate(-50%, calc(-100% - 6px));
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--ink);
-    color: var(--bg);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 40;
-    transition: opacity 0.15s;
-}
-.chip-tooltip.visible {
-    opacity: 1;
-}
-.go-legend {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--sp-3);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--ink-35);
-    margin-bottom: var(--sp-3);
-}
-.go-legend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
 }
 .sw {
     width: 8px;
@@ -1347,140 +1011,15 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 .sw.grey {
     background: var(--grey);
 }
-.wait-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 12px;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--green) 12%, transparent);
-    color: var(--green);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
+/* Podpis pod kartou Info. */
+.app-credit {
+    font-size: var(--fs-xs);
+    color: var(--ink-20);
+    text-align: center;
+    margin: var(--sp-4) 0 0;
 }
-
-/* Mobil a tablet (do 1023px): menšie medzery medzi ciferníkom a odporúčaním - na úzkej
-   obrazovke je výška vzácnejšia než vzduch medzi komponentmi. Na desktope (viď nižšie) je
-   miesta dosť, tam ostávajú medzery plné.
-   Medzera pod kartou "Čo robiť teraz" tu nie je - .verdict je posledná vec v karte. */
-@media (max-width: 1023px) {
-    .dial-hero {
-        margin-bottom: var(--sp-3);
-    }
-    .dial-wrap {
-        margin-top: 10px;
-    }
-    .verdict h1 {
-        margin-bottom: var(--sp-1);
-    }
-    .verdict .body {
-        margin-bottom: var(--sp-2);
-    }
-    .pager-dots {
-        margin-bottom: var(--sp-2);
-    }
-}
-
-/* Mobil a tablet, karta Terazky: garancia bez scrollovania - nielen "spravidla sa zmestí",
-   ale appka sa na túto kartu správa ako obrazovka, nie dokument (rovnaký princíp ako
-   .panel na desktope nižšie). :has() zapne režim len vtedy, keď #page má
-   data-panel="terazky" (nastavuje ho renderPanels vo web/render/index.js) - iné karty
-   (7 dní, Nastavenie, Info) zostávajú bežne scrollovateľné, nič na nich sa nemení.
-
-   Druhá podmienka je min-height: 620px, teda "keď je dosť výšky". Pod ňou sa režim vôbec
-   nezapne a karta je bežný scrollovateľný dokument ako ostatné tri. Dôvod: v režime
-   obrazovky sa pretečený obsah odstrihne (.page { overflow: hidden } nižšie), a odstrihnúť
-   odporúčanie pod ciferníkom je horšie než dovoliť scroll. Podmienka je na výšku, nie na
-   orientáciu - telefón na šírku je len jeden z prípadov, kedy výška nestačí; to isté robí
-   zväčšené systémové písmo, rozdelená obrazovka aj starý malý telefón na výšku.
-   620px nie je nové číslo: je to najnižšia výška, ktorú overuje e2e test garancie, takže
-   režim platí presne tam, kde je otestovaný.
-
-   Telo obrazovky je stĺpec s pevnou výškou 100dvh (nie 100vh - to na mobile nepočíta
-   s mizajúcou/objavujúcou sa adresovou lištou, dvh áno). Scroll nie je čo skúsiť, lebo
-   všetko pretečené odstrihne .page (overflow: hidden nižšie) - a práve preto ho telo samo
-   mať nesmie: overflow na <body> sa prenáša na výrez okna, prehliadač potom potiahnutie
-   nadol neberie ako pretiahnutie stránky a neponúkne obnovu ťahom (pull to refresh).
-   Ostatné karty ju majú, karta Terazky ju takto celý čas strácala. Stráži to e2e test
-   "mobil: ťahom nadol sa dá obnoviť každá karta".
-
-   Hlavička si necháva svoju prirodzenú výšku (flex: 0 0 auto), .page dostane všetko, čo
-   zvyšné (flex: 1 1 auto; min-height: 0 - bez neho by flex-item nešiel zmenšiť pod výšku
-   svojho obsahu). Spodná navigácia ostáva position:fixed ako
-   predtým (nie je v tomto stĺpci, žije v .appbar) - .page preto potrebuje len o kúsok
-   menšie padding-bottom než v bežnom (scrollovateľnom) režime, viď --nav-h nižšie.
-
-   Vnútri karty už nie je čo rozdeľovať: po zániku pása dňa sú v nej len ciferník
-   a odporúčanie, oboje s prirodzenou výškou. Keď sa nezmestia, ustúpi ciferník
-   (viď clamp nižšie) - jediné, čo má pevný rozmer. */
-@media (max-width: 1023px) and (min-height: 620px) {
-    body:has(#page[data-panel='terazky']) {
-        height: 100dvh;
-        display: flex;
-        flex-direction: column;
-    }
-    /* relative, nie sticky - v stĺpci na výšku obrazovky nie je čo lepiť. Pre tok je to to
-       isté ako static, no ostáva ukotvením pre ikonku „i“ (viď .appbar-info). */
-    body:has(#page[data-panel='terazky']) .appbar {
-        flex: 0 0 auto;
-        position: relative;
-    }
-    body:has(#page[data-panel='terazky']) .page {
-        /* width:100% - .page je teraz flex-item stĺpca (flex-direction:column na body vyššie)
-           a margin:0 auto (viď .page vyššie) sa v tomto kontexte správa inak než v bežnom
-           dokumentovom toku: bez explicitnej šírky by auto-margin prebil align-items:stretch
-           a stránka by sa zmenšila na šírku obsahu namiesto zabratia celej šírky. */
-        width: 100%;
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        padding-bottom: var(--nav-h);
-    }
-    body:has(#page[data-panel='terazky']) #panel-terazky {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        /* Keď je miesta viac, než kruh unesie (--dial-max nižšie), nech zvyšok ostane nad
-           a pod dvojicou kruh + odporúčanie, nie medzi nimi. */
-        justify-content: center;
-    }
-
-    /* Mobil, režim obrazovky: ciferník je jediné, čo sa vie prispôsobiť - odporúčanie pod ním
-       zámerne neustupuje, aby text neskákal vo veľkosti. Preto dostane presne to, čo v karte
-       zvýši: .dial-hero si vezme zvyšnú výšku (flex: 1 1 auto) a kruh v ňom je štvorec veľký
-       ako menší z rozmerov toho miesta - min(100cqw, 100cqh), .dial-hero je na to kontajner.
-
-       Nie height: 100% + aspect-ratio: 1 + max-width: 100%, ako tu stálo predtým: keď bolo
-       miesto vyššie než široké (vysoké úzke telefóny, typicky Android 20:9), max-width zúžil
-       šírku, ale výška ostala a obal prestal byť štvorcom. Kruh v SVG sa pritom vystredil, kým
-       značka "teraz" sa polohuje v percentách obalu (ringPercent) - na 360 × 800 tak visela
-       18 px nad prstencom. Stráži to e2e test "mobil: karta Terazky sa ... zmestí".
-
-       Zámerne bez zmeranej konštanty: predtým tu stál clamp so súčtom všetkého okolo kruhu
-       (hlavička + paddingy + navigácia + karta odporúčania), ktorý bolo treba prepočítať pri
-       každej zmene ktorejkoľvek z tých vecí. Toto číslo si dopočíta prehliadač sám a nemá ako
-       zostarnúť. Číslo v strede sa odvíja od kruhu cez cqmin (viď .dial-num .val). */
-    body:has(#page[data-panel='terazky']) .dial-hero {
-        flex: 1 1 auto;
-        min-height: 0;
-        max-height: var(--dial-max);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: var(--sp-4);
-        container-type: size;
-    }
-    body:has(#page[data-panel='terazky']) .dial-wrap {
-        width: min(100cqw, 100cqh, var(--dial-max));
-        margin: 0;
-    }
-    body:has(#page[data-panel='terazky']) .verdict {
-        flex: 0 0 auto;
-    }
+.app-credit + .app-credit {
+    margin-top: 0;
 }
 
 /* ---- Predpoveď a 7 dní: štatistiky ----------------------------------------- */
@@ -4927,9 +4466,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     :root {
         --page-max: 720px;
     }
-    .go-chip .go-power {
-        display: block;
-    }
     #week-curve {
         aspect-ratio: 680 / 420;
     }
@@ -4974,9 +4510,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         order: 3;
         white-space: nowrap;
     }
-    .appbar-info {
-        order: 4;
-    }
     .bottomnav {
         position: sticky;
         bottom: auto;
@@ -5014,14 +4547,36 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         height: 26px;
         margin: -13px 0 0 -13px;
     }
-    /* Karta Terazky má na širokej obrazovke celú šírku stránky. Kým vedľa nej stála karta
-       Dnes-Zajtra, delila si stránka šírku mriežkou 1:1; tá karta zanikla (jej dáta sú
-       v karte 7 dní), takže tu mriežka nie je a karta ide cez celú šírku - ciferník
-       s odporúčaním pod ním sa vystredia, spotrebiče a hlášky v pageri dostanú celý riadok. */
+    /* Karta Terazky: vľavo číslo a graf dňa, vpravo odporúčania pod sebou - na šírku je miesta
+       dosť, listovať netreba. */
     #panel-terazky {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-rows: auto 1fr;
+        column-gap: var(--sp-6);
+        align-content: start;
+    }
+    .tz-head,
+    .tz-plot {
+        grid-column: 1;
+    }
+    .tz-recs {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        margin-top: 0;
+    }
+    .tz-strip {
         flex-direction: column;
-        justify-content: center;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+        scroll-snap-type: none;
+    }
+    .tz-rec {
+        flex: none;
+    }
+    .tz-dots {
+        display: none;
     }
 }
 
@@ -5062,9 +4617,9 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         padding-bottom: var(--sp-3);
         /* Stránka je tu položkou zvislého flexu a `margin: 0 auto` (vystredenie na širokom
            monitore) jej vypína naťahovanie na šírku rodiča - bez tohto by si šírku vzala
-           podľa obsahu. Karta Terazky pritom vlastnú šírku nemá: ciferník sa počíta
-           z percent a odporúčanie je `container-type: inline-size`, takže do nej nerátajú
-           ani ony. Stránka by sa scvrkla na svoje okraje. */
+           podľa obsahu. Karta Terazky pritom vlastnú šírku nemá: graf dňa je
+           `container-type: inline-size`, takže do nej nepočíta. Stránka by sa scvrkla na
+           svoje okraje. */
         width: 100%;
     }
     .panel {
@@ -5079,7 +4634,8 @@ body:has(#page[data-panel='terazky']) .appbar-info {
     }
     /* Štatistika sa na desktope zmestí, na nízkom okne sa radšej posunie, než oreže. */
     #panel-statistika,
-    #panel-mozem {
+    #panel-mozem,
+    #panel-terazky {
         overflow-y: auto;
     }
     .wz-foot {
@@ -5216,12 +4772,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
         min-height: 0;
         overflow: auto;
     }
-
-    /* Ciferník sa drží stropu --dial-max a stojí v strede karty; zvislé miesto navyše ostáva
-       nad a pod dvojicou ciferník + odporúčanie (justify-content: center vyššie). */
-    .dial-wrap {
-        margin: 0 auto;
-    }
 }
 
 /* Nízke okno na desktope: riadok nad grafom stĺpcov ("Spolu za 7 dní / Priemer /
@@ -5231,16 +4781,6 @@ body:has(#page[data-panel='terazky']) .appbar-info {
 @media (min-width: 1024px) and (max-height: 900px) {
     #week-bars-stat {
         display: none;
-    }
-}
-
-/* Nízke okno na desktope: kruh by si inak vzal celú výšku a na odporúčanie pod ním by
-   neostalo. Stačí mu znížiť strop - všetko ostatné sa prispôsobí samo: číslo cez cqmin,
-   jazdec so značkou "teraz" cez percentá obalu, dasharray prstenca je v jednotkách
-   viewBoxu, takže zmena veľkosti v CSS ho neovplyvní vôbec. */
-@media (min-width: 1024px) and (max-height: 720px) {
-    #panel-terazky {
-        --dial-max: 200px;
     }
 }
 

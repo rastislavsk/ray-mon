@@ -32,17 +32,16 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   7 dní alebo mesiac na streche ako plagát – veľké číslo kWh, stĺpce dní (mesiac ako mriežka),
   nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň a hodnota podľa tarify. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
   systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si
-  appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na dennom prstenci ciferníka. Karta je v navigácii
+  appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na páse plánu dňa na karte Terazky. Karta je v navigácii
   prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.
-- **Terazky** – aktuálny výkon na ciferníku a pod ním pás odporúčaní: jednovetné
-  odporúčanie („Najlepší čas dňa — zapni všetko“), stav piatich spotrebičov, predpoveď dňa
-  a prípadne čas, kedy bude lepšie. Listuje sa potiahnutím do strán alebo klikom na bodky;
-  poradie má konce – na prvej správe sa dá ísť len ďalej, na poslednej len späť.
-  Ciferník sa číta aj ako 24-hodinový: vonkajší prstenec je plán dňa – cena elektriny podľa
-  tarify (oranžová lacné pásmo, sivá bežná cena, červená drahé) a zelená tam, kde predpoveď
-  sľubuje dosť slnka na veľké spotrebiče. Značka „teraz“ na ňom je slnko, v noci mesiac. Potiahnutím jazdca po prstenci alebo ťuknutím
-  naň si pozrieš, ako to bude vyzerať v inom čase. Ikonka „i“ pod aktuálnym časom v hlavičke (len na tejto karte) otvorí
-  popup Ako čítať ciferník: čo prstence a farby na ciferníku znamenajú.
+- **Terazky** – rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
+  výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, pod ním graf dňa – krivka
+  predpovede, nameraná krivka, hranica veľkých spotrebičov a pás plánu po polhodinách (zelená
+  slnko stačí, oranžová lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené).
+  Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas, „Späť na teraz“ ho vráti.
+  Pod grafom je pás štyroch kariet do strán: čo robiť teraz, spotrebiče s krátkou odpoveďou
+  z karty Môžem?, dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy bude lepšie.
+  Na širokej obrazovke sú karty pod sebou vedľa grafu. Obsah počíta ten istý model ako nová appka.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
   dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
@@ -103,8 +102,8 @@ tooltip sa pri ňom neukáže tiež. Nová karta sa pritom prisunie z tej strany
 rovnako pri ťahaní aj pri kliku na navigáciu. Kto má v systéme zapnutý útlm pohybu, dostane
 prepnutie bez animácie. Ťahanie si pre seba
 nechávajú len veci, ktoré sa samy posúvajú do strán: pás odporúčaní na karte Terazky – ten
-si ho necháva aj na krajnej správe, takže ťah v ňom nikdy neopustí kartu – a jazdec na prstenci
-ciferníka, ktorý sa ťahá a kartu neprepne.
+si ho necháva aj na krajnej karte, takže ťah v ňom nikdy neopustí kartu appky – a graf dňa na tej
+istej karte, kde ťah do strán ukazuje iný čas a kartu neprepne.
 
 Systémové tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) vracia o krok späť
 v appke: najprv zavrie detail dňa, potom sa vracia po kartách v opačnom poradí, než si

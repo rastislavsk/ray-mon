@@ -2,24 +2,13 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import {
-    bestDayIndex,
-    dayTimelineModel,
-    RING,
-    ringPercent,
-    usePct,
-    visibleHours,
-    weekDayTiers,
-    weekHeatMax,
-    weekHeatModel,
-} from '../../shared/chart-model.js';
+import { bestDayIndex, dayTimelineModel, RING, usePct, weekDayTiers, weekHeatMax, weekHeatModel } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     APP_URL,
     installedKw,
     PLANT,
     powerThresholds,
-    PREVIEW,
     DAYLOG_STORAGE_KEY,
     OLD_STORAGE_KEYS,
     SETTINGS_STORAGE_KEY,
@@ -39,7 +28,9 @@ import {
     SHARE_LINK_VERSION,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
-import { fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
+import { dayPlan, fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
+import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
+import { terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel } from '../../shared/hero-model.js';
@@ -49,17 +40,9 @@ import { useTier } from '../../web/render/sedemdni.js';
 import { kwhText, moneyText } from '../../web/render/statistika.js';
 import { statsModel } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
-import { deviceShorts, mozemModel } from '../../shared/mozem.js';
+import { mozemModel } from '../../shared/mozem.js';
 import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
-import {
-    dayWindowCard,
-    fitLabel,
-    forecastDayMessage,
-    MOZEM_SKY_TEXTS,
-    mozemListTitle,
-    terazTypicalText,
-    weekMessage,
-} from '../../shared/messages.js';
+import { dayWindowCard, fitLabel, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
@@ -185,153 +168,138 @@ function atTime(hm) {
 /** Model hlavnej karty v danej chvíli, s predpoveďou postavenou v tej istej chvíli ako v appke. @param {Date} instant */
 const modelAt = (instant) => heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
 
-const todayForecastMsg = forecastDayMessage(visibleHours(forecast.hourlyToday), true, powerThresholds(PLANT));
+// ---- Karta Terazky ------------------------------------------------------------
+// Rozloženie karty Teraz novej appky (návrh A v docs/navrhy/terazky-ako-obloha.html). Očakávané
+// texty počíta tá istá funkcia ako appka (terazModel v shared/teraz.js) z tých istých dát.
 
-/** Nástenný čas FIXED_NOW v zóne prehliadača, nie procesu - z rovnakého dôvodu, aký
- * popisuje atTime nižšie. Testy ho potrebujú v oboch podobách: ako text v ciferníku
- * a ako minútu dňa pre polohu na prstenci. */
-const APP_NOW = (() => {
-    const hm = FIXED_NOW.toLocaleTimeString('en-GB', {
-        timeZone: 'Europe/Bratislava',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    });
-    const [h, m] = hm.split(':').map(Number);
-    return { hm, minutes: h * 60 + m };
-})();
+/**
+ * Vstup karty Terazky v danej chvíli, tak ako ho skladá appka: meranie z fixtures, predpoveď
+ * postavená v tej istej chvíli. @param {Date} instant @param {object} [extra]
+ * @returns {import('../../shared/teraz.js').TerazInput}
+ */
+const terazVstup = (instant, extra = {}) => ({
+    ...OWNER,
+    now: instant,
+    loading: false,
+    known: 'elektraren',
+    pristup: null,
+    pv,
+    forecast: forecastAt(instant),
+    previewMinutes: null,
+    ...extra,
+});
 
-test('meranie mlčí: ciferník neukáže číslo spred hodiny ako výkon teraz, Môžem? povie odkedy', async ({ page }) => {
+/** Model karty Terazky v danej chvíli. @param {Date} instant @param {object} [extra] */
+const terazAt = (instant, extra = {}) => terazModel(terazVstup(instant, extra));
+
+/** Minúta dňa pre čas „HH:MM“. @param {string} hm */
+const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
+
+/** Bod na grafe dňa pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
+async function bodGrafu(page, min) {
+    // Kým nie je karta celá (pás odporúčaní, písma), stránka ešte rastie - keď sa pritom objaví
+    // posuvník (Linux v CI), graf sa zúži a bod zmeraný skôr by trafil iný čas. Meria sa preto
+    // až po ustálení: ten istý rozmer v dvoch snímkach za sebou.
+    await expect(page.locator('#tz-recs')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator('#tz-chart').scrollIntoViewIfNeeded();
+    const rozmer = () => page.locator('#tz-chart svg').boundingBox();
+    let box = await rozmer();
+    for (let i = 0; i < 20; i++) {
+        await dveSnimky(page);
+        const dalsi = await rozmer();
+        if (box && dalsi && box.x === dalsi.x && box.y === dalsi.y && box.width === dalsi.width) break;
+        box = dalsi;
+    }
+    if (!box) throw new Error('graf nie je vidno');
+    return { x: box.x + (chartX(min) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
+}
+
+/** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
+const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`).getAttribute('data-tone');
+
+/** Riadok nad číslom: nadpis modelu, čas (len bez náhľadu) a obec. @param {ReturnType<typeof terazModel>} m @param {string} [hm] */
+const kick = (m, hm) => `${m.title}${hm ? ` · ${hm}` : ''} · ${SITE.name}`;
+
+test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie odkedy; Môžem? to isté', async ({ page }) => {
     // Krivka z fixtures končí o 13:00, o 14:30 za slnka ju Worker posiela stále rovnakú.
     const { instant } = atTime('14:30');
     const pvData = { ...pv, updatedAt: instant.toISOString() };
     const errors = await openApp(page, { start: 'terazky', time: instant, pvData });
-    const expected = heroModel({ now: instant, pv: pvData, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
+    const m = terazAt(instant, { pv: pvData });
     await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
-    await expect(page.locator('#pv-power')).toHaveText(expected.powerText);
-    await expect(page.locator('#pv-power')).not.toHaveText(String(pv.realTimePowerKw));
-    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
+    await expect(page.locator('#tz-num-val')).toHaveText(m.num);
+    await expect(page.locator('#tz-num-val')).not.toHaveText(String(pv.realTimePowerKw));
+    expect(m.source).toMatch(/^odhad z predpovede · /);
+    await expect(page.locator('#tz-src')).toHaveText(m.source);
+    await expect(page.locator('#tz-now-head')).toHaveText(m.cards?.now.head ?? '');
     await page.locator('#nav-mozem').click();
     await expect(page.locator('.mozem-fact')).toContainText('meranie neodpovedá od 13:00');
     await expect(page.locator('.mozem-fact')).toContainText('odhad z predpovede');
     expect(errors).toEqual([]);
 });
 
-test('hlavná karta o 13:00 zodpovedá modelu', async ({ page }) => {
+test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporúčaní', async ({ page }) => {
     const errors = await openApp(page, { start: 'terazky' });
-    const expected = modelAt(atTime('13:00').instant);
+    const { instant } = atTime('13:00');
+    const m = terazAt(instant);
+    const k = m.cards;
+    if (!k || !m.chart) throw new Error('model o 13:00 nemá graf ani odporúčania');
     await expect(page.locator('#pv-time')).toHaveText('13:00');
-    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
-    await expect(page.locator('#verdict-body')).toHaveText(expected.message.body);
-    await expect(page.locator('#pv-power')).toHaveText('6.41');
-    await expect(page.locator('#verdict-go-row .go-chip')).toHaveCount(5);
-    await expect(page.locator('#pv-updated')).toHaveText('meranie');
-    // Teraz, Spotrebiče a Predpoveď dňa sú tam vždy - bodky sú vidno, no štvrtá
-    // (Lepšie bude) nie je.
-    await expect(page.locator('#verdict-dots .pager-dot')).toHaveCount(4);
-    await expect(page.locator('#verdict-dots')).toBeVisible();
-    await expect(page.locator('#verdict-dot-wait')).toBeHidden();
-    await expect(page.locator('#verdict-page-wait')).toBeHidden();
-    // Defaultne otvorená prvá stránka je "Čo robiť teraz".
-    const dots = page.locator('#verdict-dots .pager-dot');
-    await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toBeInViewport();
-    // Odznak s tarifou zanikol - nie je nad ciferníkom ani v pageri.
-    await expect(page.locator('#verdict-page-eyebrow')).toHaveCount(0);
-    await expect(page.locator('#panel-terazky')).not.toContainText('Suntime');
-    // Správa o predpovedi dňa žije už len tu, v pageri.
-    await expect(page.locator('#verdict-forecast-title')).toHaveText(todayForecastMsg.title);
-    await expect(page.locator('#verdict-forecast-body')).toHaveText(todayForecastMsg.body);
-    // Slnko v lacnom pásme prefarbí pozadie celej stránky dozelena.
+    await expect(page.locator('#tz-title')).toHaveText(kick(m, '13:00'));
+    await expect(page.locator('#tz-num-val')).toHaveText('6.41');
+    expect(m.num).toBe('6.41');
+    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
+    await expect(page.locator('#tz-sub')).toHaveText(m.sub);
+    await expect(page.locator('#tz-retry')).toBeHidden();
+    // Graf dňa: predpoveď, nameraná krivka, hranica s popiskom a pás plánu po polhodinách.
+    await expect(page.locator('#tz-chart .dc-area')).toHaveCount(1);
+    await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
+    await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
+    await expect(page.locator('#tz-chart rect[data-tone]')).toHaveCount(48);
+    await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
+    await expect(page.locator('#tz-legend span')).toHaveText(m.chart.legend.map((l) => l.text));
+    await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart.valueText);
+    await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart.desc);
+    await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
+    // Pás odporúčaní: štyri karty, prvá je „čo robiť teraz“.
+    await expect(page.locator('#tz-now-head')).toHaveText(k.now.head);
+    await expect(page.locator('#tz-now-body')).toHaveText(k.now.body);
+    expect(k.devices.map((d) => d.name)).toEqual(['Práčka', 'Umývačka', 'Sušička', 'Auto', 'Bojler']);
+    await expect(page.locator('#tz-devices')).toHaveText(k.devices.map((d) => `${d.name} ${d.short}`).join(' · '));
+    await expect(page.locator('#tz-today')).toHaveText(k.today.line);
+    await expect(page.locator('#tz-window')).toHaveText(k.today.window);
+    await expect(page.locator('#tz-later')).toHaveText(k.later);
+    await expect(page.locator('#tz-dots i')).toHaveCount(4);
+    await expect(page.locator('#tz-dots i').first()).toHaveClass('on');
+    // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa ako pozadie: slnko v lacnom pásme.
+    expect(await farbaPasu(page, minuta('13:00'))).toBe(cellAt(planCells(dayPlan(terazVstup(instant))), minuta('13:00')).tone);
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
+    // Ciferník zanikol aj s popupom k nemu.
+    await expect(page.locator('#dial-wrap, [data-info-open], #info-overlay')).toHaveCount(0);
     expect(errors).toEqual([]);
 });
 
-test('klik na spotrebič (mobil) ukáže tooltip s príkonom a časom z karty Môžem?, nie je orezaný pagerom', async ({ page }) => {
-    await openApp(page, { start: 'terazky' });
-    const chip = page.locator('#verdict-go-row .go-chip').first();
-    const tooltip = page.locator('#verdict-chip-tooltip');
-    // Prvý spotrebič je práčka; čas je tá istá krátka odpoveď, akú má karta Môžem?.
-    const when = deviceShorts({ ...OWNER, now: FIXED_NOW, pv, forecast: forecastAt(FIXED_NOW) })['Práčka'];
-    expect(when).toMatch(/^do \d\d:\d\d$/);
-    await expect(tooltip).not.toHaveClass(/visible/);
-    await chip.click();
-    await expect(tooltip).toHaveClass(/visible/);
-    await expect(tooltip).toHaveText(`${await chip.getAttribute('data-power')} · ${when}`);
-    await expect(tooltip).toBeInViewport();
-    // Druhý klik na ten istý chip tooltip zavrie.
-    await chip.click();
-    await expect(tooltip).not.toHaveClass(/visible/);
-});
-
-test('verdikt sa listuje do strán: teraz (defaultne prvá), spotrebiče, predpoveď dňa, kedy bude lepšie', async ({ page }) => {
-    const { instant } = atTime('07:00');
-    // O 07:00 slnko ešte nepokrýva veľké spotrebiče a predpoveď má pred sebou silnejšie okno
-    // (okolo poludnia), takže čakací čas vznikne.
-    const errors = await openApp(page, { start: 'terazky', time: instant });
-    const expected = modelAt(instant);
-    expect(expected.waitTime).not.toBeNull();
-
-    const dots = page.locator('#verdict-dots .pager-dot');
-    await expect(page.locator('#verdict-dots')).toBeVisible();
-    await expect(dots.nth(3)).toBeVisible();
-    await expect(page.locator('#verdict-wait-time')).toHaveText(String(expected.waitTime));
-    await expect(page.locator('#verdict-pager')).toHaveAttribute('tabindex', '0');
-    // Defaultne otvorená prvá stránka je "Čo robiť teraz".
-    await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
-    await expect(page.locator('#verdict-headline')).toBeInViewport();
+test('pás odporúčaní sa listuje do strán, bodky idú za ním a na kraji sa zastaví', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky' });
+    const dots = page.locator('#tz-dots i');
+    const strip = page.locator('#tz-strip');
+    await expect(strip).toHaveAttribute('tabindex', '0');
+    await expect(dots.nth(0)).toHaveClass('on');
 
     // Posun do strán nad pásom = to isté gesto ako prst; stránku dopočíta scroll-snap.
-    const pager = page.locator('#verdict-pager');
-    await pager.hover();
+    await strip.hover();
     await page.mouse.wheel(400, 0);
-    await expect(dots.nth(1)).toHaveClass(/active/);
-    await expect(dots.nth(0)).not.toHaveClass(/active/);
-    await expect(page.locator('#verdict-go-row .go-chip')).toHaveCount(5);
-    await expect(page.locator('#verdict-go-row')).toBeInViewport();
-
-    // Ešte jeden posun na tretiu stránku "Predpoveď dňa".
+    await expect(dots.nth(1)).toHaveClass('on');
+    await expect(page.locator('#tz-devices')).toBeInViewport();
     await page.mouse.wheel(400, 0);
-    await expect(dots.nth(2)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-forecast-title')).toHaveText(todayForecastMsg.title);
-    await expect(page.locator('#verdict-page-forecast')).toBeInViewport();
-
-    // Posledný posun na štvrtú stránku "Lepšie bude".
     await page.mouse.wheel(400, 0);
-    await expect(dots.nth(3)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-wait-chip')).toBeInViewport();
-
-    // Poradie má koniec: posun za poslednú stránku sa nezacyklí, ostáva na nej.
+    await expect(dots.nth(3)).toHaveClass('on');
+    await expect(page.locator('#tz-later')).toBeInViewport();
+    // Za poslednou kartou nič nie je - pás sa nezacyklí.
     await page.mouse.wheel(400, 0);
-    await expect(dots.nth(3)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-wait-chip')).toBeInViewport();
-
-    // Bodka posunie pás späť na prvú stránku.
-    await dots.nth(0).click();
-    await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toBeInViewport();
-
-    // A ten istý koniec na druhej strane: z prvej stránky sa naspäť nedá.
-    await page.mouse.wheel(-400, 0);
-    await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toBeInViewport();
-
-    // Ťuknutie na odporúčanie posunie pás na ďalšiu stránku.
-    await page.locator('#verdict-headline').click();
-    await expect(dots.nth(1)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-go-row')).toBeInViewport();
-    // Ťuknutie na spotrebič ukáže jeho tooltip, pás nechá na mieste.
-    await page.locator('#verdict-go-row .go-chip').first().click();
-    await expect(page.locator('#verdict-chip-tooltip')).toHaveClass(/visible/);
-    await expect(dots.nth(1)).toHaveClass(/active/);
-    // Z poslednej stránky ide ťuknutie znova na prvú.
-    await dots.nth(3).click();
-    await expect(page.locator('#verdict-wait-chip')).toBeInViewport();
-    await page.locator('#verdict-wait-chip').click();
-    await expect(dots.nth(0)).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toBeInViewport();
+    await expect(dots.nth(3)).toHaveClass('on');
+    await expect(page.locator('#panel-terazky')).toBeVisible();
 
     // Posuvná oblasť bez prístupu z klávesnice je vážny nález axe - preto sa kontroluje tu.
     const results = await new AxeBuilder({ page }).include('#panel-terazky').analyze();
@@ -346,14 +314,15 @@ for (const [hm, label] of [
     ['21:00', 'drahé pásmo večer'],
     ['02:00', 'noc'],
 ]) {
-    test(`verdikt o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
+    test(`odporúčanie o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
         const { instant } = atTime(hm);
         const errors = await openApp(page, { start: 'terazky', time: instant });
-        const expected = modelAt(instant);
-        await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
+        const m = terazAt(instant);
+        await expect(page.locator('#tz-now-head')).toHaveText(m.cards?.now.head ?? '');
+        await expect(page.locator('#tz-num-val')).toHaveText(m.num);
         // Pozadie stránky drží farbu plánu dňa. Tieto časy pokryjú červenú (21:00, VT bez
         // slnka) aj oranžovú (19:30 a 02:00, NT bez slnka), 13:00 zelenú v teste vyššie.
-        await expect(page.locator('html')).toHaveAttribute('data-tier', expected.tier || '');
+        await expect(page.locator('html')).toHaveAttribute('data-tier', modelAt(instant).tier || '');
         expect(errors).toEqual([]);
     });
 }
@@ -385,7 +354,7 @@ for (const [hm, label] of [
     });
 }
 
-test('jedna cena celý deň: v noci sivé pozadie, bodka aj prstenec bez oranžovej a červenej', async ({ page }) => {
+test('jedna cena celý deň: v noci sivé pozadie, bodka aj pás plánu bez oranžovej a červenej', async ({ page }) => {
     /** @type {import('../../shared/config.js').Tariff} */
     const flat = {
         currency: '€',
@@ -400,170 +369,79 @@ test('jedna cena celý deň: v noci sivé pozadie, bodka aj prstenec bez oranžo
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'grey');
     // Bodka počíta so živým výkonom z kiosku - ten je v testovacích dátach celý deň rovnaký.
     await expect(page.locator('html')).toHaveAttribute('data-accent', expected.accent || '');
-    await expect(page.locator('#verdict-headline')).toHaveText(expected.message.headline);
-    await expect(page.locator('#day-ring .day-band.grey').first()).toBeAttached();
-    await expect(page.locator('#day-ring .day-band.amber, #day-ring .day-band.red')).toHaveCount(0);
+    await expect(page.locator('#tz-now-head')).toHaveText(expected.message.headline);
+    await expect(page.locator('#tz-chart rect[data-tone="plain"]').first()).toBeAttached();
+    await expect(page.locator('#tz-chart rect[data-tone="cheap"], #tz-chart rect[data-tone="costly"]')).toHaveCount(0);
     expect(errors).toEqual([]);
 });
 
-/** Bod na dennom prstenci ciferníka pre danú minútu dňa - ten istý výpočet, aký appka
- * používa na umiestnenie jazdca. @param {{x: number, y: number, width: number, height: number}} box @param {number} minutes */
-function ringXY(box, minutes) {
-    const { left, top } = ringPercent(minutes);
-    return { x: box.x + (box.width * left) / 100, y: box.y + (box.height * top) / 100 };
-}
+test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Späť na teraz“ ho zruší', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky', time: atTime('13:00').instant });
+    const { instant } = atTime('13:00');
+    const teraz = terazAt(instant);
+    const nahlad = terazAt(instant, { previewMinutes: minuta('21:00') });
+    const z = await bodGrafu(page, minuta('10:00'));
+    const na = await bodGrafu(page, minuta('21:00'));
+    await page.mouse.move(z.x, z.y);
+    await page.mouse.down();
+    await page.mouse.move(na.x, na.y, { steps: 8 });
+    await page.mouse.up();
+    // Nadpis povie, ku ktorému času číslo patrí; čas je aj v grafe pri čiare.
+    expect(nahlad.title).toBe('O 21:00');
+    await expect(page.locator('#tz-title')).toHaveText(kick(nahlad));
+    await expect(page.locator('#tz-num-val')).toHaveText(nahlad.num);
+    await expect(page.locator('#tz-now-head')).toHaveText(nahlad.cards?.now.head ?? '');
+    await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('21:00');
+    await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('21:00'))) ?? '');
+    await expect(page.locator('#tz-hint')).toHaveText('');
+    // Pozadie ide s náhľadom (21:00 je drahé pásmo bez slnka), bodka ostáva o stave teraz.
+    await expect(page.locator('html')).toHaveAttribute('data-tier', 'red');
+    await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(instant).accent || '');
+    // Graf pod kurzorom sa nepohol.
+    expect((await bodGrafu(page, minuta('21:00'))).y).toBe(na.y);
 
-test('náhľad iného času ťuknutím na prstenec a návrat na teraz', async ({ page }) => {
-    await openApp(page, { start: 'terazky' });
-    const box = await page.locator('#dial-wrap').boundingBox();
-    if (!box) throw new Error('ciferník nemá rozmer');
-    const six = ringXY(box, 6 * 60);
-    await page.mouse.click(six.x, six.y);
-    await expect(page.locator('#dial-grip')).not.toHaveClass(/at-now/);
-    // Presná minúta závisí od zaokrúhlenia pixelov, preto rozsah okolo 06:00.
-    await expect(page.locator('#dial-when')).toHaveText(/^0[56]:\d{2}$/);
-    await expect(page.locator('#pv-power-unit')).toContainText('kW (');
-    await expect(page.locator('#preview-reset')).toBeVisible();
-    // Pozadie sleduje bežca: o 06:00 je lacné NT a slnko ešte nesvieti, teda oranžová namiesto zelenej.
-    await expect(page.locator('html')).toHaveAttribute('data-tier', 'amber');
-    await page.locator('#preview-reset').click();
-    await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
-    await expect(page.locator('#preview-reset')).toBeHidden();
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
-    await expect(page.locator('#dial-when')).toHaveText(APP_NOW.hm);
-    // Zrušenie náhľadu vráti pozadie do farby plánu v tejto chvíli.
+    const spat = page.getByRole('button', { name: 'Späť na teraz' });
+    await spat.click();
+    await expect(page.locator('#tz-title')).toHaveText(kick(teraz, '13:00'));
+    await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
+    await expect(spat).toBeHidden();
+    await expect(page.locator('#tz-chart')).toBeFocused();
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
-});
-
-test('ťahanie jazdca: denný prstenec sa nemení, dotiahnutie na "teraz" náhľad zruší', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
-    const box = await page.locator('#dial-wrap').boundingBox();
-    if (!box) throw new Error('ciferník nemá rozmer');
-    const ring = page.locator('#day-ring');
-
-    // Denný prstenec je plán dňa (tarifa a krivka výroby) - ťahanie jazdca ním nesmie pohnúť.
-    await page.mouse.click(ringXY(box, 6 * 60).x, ringXY(box, 6 * 60).y);
-    const beforeDrag = await ring.innerHTML();
-
-    // Ťahanie musí začať na samotnom jazdci - poslucháče sedia na ňom, nie na ciferníku.
-    const grip = await page.locator('#dial-grip').boundingBox();
-    if (!grip) throw new Error('jazdec nemá rozmer');
-    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
-    await page.mouse.down();
-    for (const m of [8 * 60, 10 * 60, 12 * 60, 14 * 60]) {
-        const p = ringXY(box, m);
-        await page.mouse.move(p.x, p.y);
-    }
-    await page.mouse.up();
-    await expect(page.locator('#dial-when')).toHaveText(/^1[34]:\d{2}$/);
-    expect(await ring.innerHTML()).toBe(beforeDrag);
-
-    // Dotiahnutie jazdca na značku "teraz" je skratka späť do živého stavu.
-    const grip2 = await page.locator('#dial-grip').boundingBox();
-    if (!grip2) throw new Error('jazdec nemá rozmer');
-    await page.mouse.move(grip2.x + grip2.width / 2, grip2.y + grip2.height / 2);
-    await page.mouse.down();
-    const now = ringXY(box, APP_NOW.minutes);
-    await page.mouse.move(now.x, now.y);
-    await page.mouse.up();
-    await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
     expect(errors).toEqual([]);
 });
 
-test('značka "teraz" je od východu po západ slnko, v noci mesiac', async ({ page }) => {
-    // Hranice počíta tá istá funkcia ako sprievodca nastavením; päť minút od nich stačí
-    // na to, aby test nezávisel od zaokrúhlenia na minútu.
-    const { rise, set } = sunTimes(SITE, '2026-09-05');
-    if (rise === null || set === null) throw new Error('5. 9. v Dvoranoch slnko vychádza aj zapadá');
-    const at = (/** @type {number} */ min) => new Date(Date.parse('2026-09-05T00:00:00+02:00') + min * 60000);
-    for (const [min, night] of /** @type {Array<[number, boolean]>} */ ([
-        [rise - 5, true],
-        [rise + 5, false],
-        [set - 5, false],
-        [set + 5, true],
-    ])) {
-        await openApp(page, { start: 'terazky', time: at(min) });
-        const grip = page.locator('#dial-grip');
-        await expect(grip, minutesToTimeStr(min)).toHaveClass(/at-now/);
-        if (night) await expect(grip, minutesToTimeStr(min)).toHaveClass(/night/);
-        else await expect(grip, minutesToTimeStr(min)).not.toHaveClass(/night/);
-    }
-
-    // Počas náhľadu je na prstenci len objímka jazdca - slnko ani mesiac tam nie sú.
-    // Vráti ich tlačidlo "Teraz".
-    const grip = page.locator('#dial-grip');
-    const box = await page.locator('#dial-wrap').boundingBox();
-    if (!box) throw new Error('ciferník nemá rozmer');
-    await page.mouse.click(ringXY(box, 12 * 60).x, ringXY(box, 12 * 60).y);
-    await expect(grip).not.toHaveClass(/at-now/);
-    await page.locator('#preview-reset').click();
-    await expect(grip).toHaveClass(/at-now/);
-    await expect(grip).toHaveClass(/night/);
-});
-
-test('náhľad času sa dá celý ovládať z klávesnice, nielen prstom', async ({ page }) => {
-    await openApp(page, { start: 'terazky' });
-    const grip = page.locator('#dial-grip');
-
-    // V pokoji je jazdec značkou "teraz" - ale ostáva tlačidlom, takže sa naň dá prejsť
-    // tabulátorom. Bez toho by sa k náhľadu času z klávesnice nedalo dostať vôbec.
-    await expect(grip).toBeVisible();
-    await expect(grip).toHaveClass(/at-now/);
-    await expect(grip).toHaveAttribute('aria-valuetext', `Teraz ${APP_NOW.hm}`);
-    await grip.focus();
-    await expect(grip).toBeFocused();
-
-    // Šípka náhľad rovno otvorí, od aktuálneho času.
+test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kraje dňa, Escape vráti teraz', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky' });
+    const { instant } = atTime('13:00');
+    const graf = page.getByRole('slider', { name: 'Graf dňa, šípkami si pozrieš iný čas' });
+    const hodnota = (/** @type {string} */ hm) => terazAt(instant, { previewMinutes: minuta(hm) }).chart?.valueText ?? '';
+    await graf.focus();
     await page.keyboard.press('ArrowRight');
-    await expect.poll(async () => Number(await grip.getAttribute('aria-valuenow'))).toBe(APP_NOW.minutes + PREVIEW.keyStepMin);
-    await expect(grip).not.toHaveClass(/at-now/);
-    await expect(page.locator('#pv-power-unit')).toContainText('kW (');
+    await expect(graf).toHaveAttribute('aria-valuetext', hodnota('13:15'));
+    await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('13:15');
     await page.keyboard.press('ArrowLeft');
-    await expect.poll(async () => Number(await grip.getAttribute('aria-valuenow'))).toBe(APP_NOW.minutes);
-    // Popis pre čítačku obrazovky musí sedieť s tým, čo je v ciferníku napísané.
-    await expect(grip).toHaveAttribute('aria-valuetext', `Náhľad ${await page.locator('#dial-when').textContent()}`);
-
-    // Esc sa vráti do živého stavu, Enter náhľad zase otvorí.
+    await page.keyboard.press('ArrowLeft');
+    await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
+    await expect(page.locator('#tz-num-val')).toHaveText(terazAt(instant, { previewMinutes: minuta('12:45') }).num);
+    await page.keyboard.press('End');
+    await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('23:45')));
+    await page.keyboard.press('Home');
+    await expect(graf).toHaveAttribute('aria-valuenow', '0');
     await page.keyboard.press('Escape');
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
-    await expect(grip).toHaveClass(/at-now/);
-    await page.keyboard.press('Enter');
-    await expect(page.locator('#pv-power-unit')).toContainText('kW (');
+    await expect(graf).toHaveAttribute('aria-valuetext', terazAt(instant).chart?.valueText ?? '');
+    await expect(page.locator('#tz-reset')).toBeHidden();
+    expect(errors).toEqual([]);
 });
 
-test('pri nulovej výrobe neostane na prstenci bodka', async ({ page }) => {
-    await openApp(page, { start: 'terazky' });
-    const box = await page.locator('#dial-wrap').boundingBox();
-    if (!box) throw new Error('ciferník nemá rozmer');
-    const ring = page.locator('#dial-ring');
-
-    // Cez deň oblúk niečo ukazuje a guľatý koniec je v poriadku.
-    await expect(ring).not.toHaveClass(/empty/);
-
-    // V noci panely nedávajú nič. Guľatý koniec by aj z nulového oblúka nakreslil bodku,
-    // preto sa na ten čas zrovná - inak by prstenec tvrdil, že sa niečo vyrába.
-    const noc = ringXY(box, 2 * 60);
-    await page.mouse.click(noc.x, noc.y);
-    await expect(page.locator('#pv-power')).toHaveText('0.00');
-    await expect(ring).toHaveClass(/empty/);
-    await expect(ring).toHaveCSS('stroke-linecap', 'butt');
-});
-
-test('popisok jednotky v ciferníku sedí pod číslom, nie pri okraji', async ({ page }) => {
-    await openApp(page, { start: 'terazky' });
-    // Pravidlo .unit pre polia v Nastavení ho raz chytilo tiež a odsunulo cez hodinu 6.
-    // Meria sa až po načítaní písiem a opakovane: šírka čísla sa so záložným písmom líši
-    // a v CI sa rozloženie neraz ustáli až chvíľu po prvom vykreslení.
-    await page.evaluate(() => document.fonts.ready);
-    const poloha = async () => {
-        const val = await page.locator('#pv-power').boundingBox();
-        const unit = await page.locator('#pv-power-unit').boundingBox();
-        if (!val || !unit) throw new Error('číslo alebo popisok nemá rozmer');
-        return { pod: unit.y >= val.y + val.height - 1, odStredu: Math.abs(unit.x + unit.width / 2 - (val.x + val.width / 2)) };
-    };
-    await expect.poll(async () => (await poloha()).pod).toBe(true);
-    await expect.poll(async () => (await poloha()).odStredu).toBeLessThan(4);
+test('prístupnosť karty Terazky: žiadne závažné nálezy axe počas náhľadu', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky' });
+    await page.locator('#tz-chart').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tz-reset')).toBeVisible();
+    const results = await new AxeBuilder({ page }).include('#panel-terazky').analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious.map((v) => v.id)).toEqual([]);
+    expect(errors).toEqual([]);
 });
 
 /** Poradie viditeľných blokov karty 7 dní zhora nadol - tak, ako ich vidí používateľ
@@ -1015,53 +893,6 @@ test('nastavenie: položka Zdieľať appku v sekcii Appka sa otvorí až ťuknut
     expect(errors).toEqual([]);
 });
 
-test('terazky: ikonka „i“ otvorí popup, ktorý vysvetľuje všetky štyri časti ciferníka', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
-    // Popup je vidno až po ťuknutí na ikonku v hlavičke karty.
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    await page.locator('[data-info-open]').click();
-    await expect(page.locator('#info-title')).toHaveText('Ako čítať ciferník');
-    // Ilustračný ciferník aj štyri vysvetlivky: prstenec, značka "teraz", oblúk výkonu, jazdec.
-    await expect(page.locator('#info-overlay .info-dial')).toBeVisible();
-    await expect(page.locator('#info-overlay .info-row')).toHaveCount(4);
-    // Štyri farby prstenca (slnko a tri cenové úrovne) sú rozpísané po riadkoch, nie schované do jednej vety.
-    await expect(page.locator('#info-overlay .info-tiers li')).toHaveCount(4);
-
-    // Zatvára ho krížik, "Rozumiem", klik mimo popupu aj Esc; klik dovnútra ho nezavrie.
-    await page.locator('#info-overlay .info-row').first().click();
-    await expect(page.locator('#info-overlay')).toBeVisible();
-    await page.locator('.info-close').click();
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    await page.locator('[data-info-open]').click();
-    await page.locator('.info-ok').click();
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    await page.locator('[data-info-open]').click();
-    await page.locator('#info-overlay').click({ position: { x: 5, y: 5 } });
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    await page.locator('[data-info-open]').click();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#info-overlay')).toBeHidden();
-
-    // Späť ho zatvorí ako prvé a ostane na karte Terazky; ďalšie Späť až potom prepne kartu.
-    await page.locator('#nav-7dni').click();
-    await page.locator('#nav-terazky').click();
-    await page.locator('[data-info-open]').click();
-    await expect(page.locator('#info-overlay')).toBeVisible();
-    await page.goBack();
-    await ocakavajKartu(page, 'terazky');
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    await page.goBack();
-    await ocakavajKartu(page, '7dni');
-    await page.locator('#nav-terazky').click();
-
-    // Pri odchode z karty sa zatvorí, nech sa pri návrate sám od seba nezjaví.
-    await page.locator('[data-info-open]').click();
-    await page.evaluate(() => document.getElementById('nav-7dni')?.click());
-    await page.locator('#nav-terazky').click();
-    await expect(page.locator('#info-overlay')).toBeHidden();
-    expect(errors).toEqual([]);
-});
-
 /** Dve snímky prehliadača: čo appka po udalosti zapísala, je potom na obrazovke. @param {import('@playwright/test').Page} page */
 const dveSnimky = (page) =>
     page.evaluate(() => new Promise((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo(undefined)))));
@@ -1072,8 +903,8 @@ const poMinute = (page) => page.clock.setFixedTime(new Date(FIXED_NOW.getTime() 
 /** Jedna nevydarená obnova nemá prepnúť živý výkon na odhad - o minútu by sa vrátil späť
  * a nameraná krivka by medzitým z grafu zmizla. */
 test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', async ({ page }) => {
-    const errors = await openApp(page);
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+    const errors = await openApp(page, { start: 'terazky' });
+    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
 
     await page.route(WORKER_PV_URL, (route) => route.abort());
     await poMinute(page);
@@ -1082,7 +913,7 @@ test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', as
     await zlyhala;
     await dveSnimky(page);
     // Jedno čítanie, nie čakanie: stav hneď po nevydarenej obnove.
-    expect(await page.locator('#pv-power-unit').textContent()).toBe('kW teraz');
+    expect(await page.locator('#tz-src').textContent()).toBe('živé meranie');
     expect(await page.locator('#pv-updated').textContent()).not.toBe('živý výkon nedostupný');
     expect(errors).toEqual([]);
 });
@@ -1171,7 +1002,7 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
         await dveSnimky(page);
     };
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
     expect(telo, 'meranie z druhej appky, žiadny dopyt').toEqual([]);
     // Po 5 minútach je na rade. Huawei odmietne (limit): ďalší pokus až po ďalších 5 minútach.
     await obnov(5);
@@ -1196,7 +1027,7 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
 /** Pri pomalej sieti by každý minútový časovač a návrat z pozadia pridal ďalšiu požiadavku
  * a staršia odpoveď mohla prepísať novšiu. */
 test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbehnutej', async ({ page }) => {
-    const errors = await openApp(page);
+    const errors = await openApp(page, { start: 'terazky' });
     let volania = 0;
     /** @type {() => void} */
     let pustit = () => {};
@@ -1213,7 +1044,7 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
     await page.waitForTimeout(300);
     expect(volania, 'súbežné obnovy poslali viac požiadaviek').toBe(1);
     pustit();
-    await expect(page.locator('#pv-power-unit')).toHaveText('kW teraz');
+    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
     expect(errors).toEqual([]);
 });
 
@@ -1241,8 +1072,11 @@ test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', a
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
     const errors = await openApp(page, { start: 'terazky', offline: true });
     await expect(page.locator('#pv-updated')).toHaveText('dáta nedostupné');
-    await expect(page.locator('#pv-power')).toHaveText('–');
-    await expect(page.locator('#verdict-headline')).not.toHaveText('Načítavam…');
+    await expect(page.locator('#tz-num-val')).toHaveText('–');
+    await expect(page.locator('#tz-sub')).not.toHaveText('Načítavam…');
+    await expect(page.locator('#tz-retry')).toBeVisible();
+    await expect(page.locator('#tz-plot')).toBeHidden();
+    await expect(page.locator('#tz-recs')).toBeHidden();
     await page.locator('#nav-7dni').click();
     await expect(page.locator('#week-msg-title')).toHaveText('Predpoveď sa pripravuje');
     expect(errors).toEqual([]);
@@ -1337,10 +1171,10 @@ test('prístupnosť: otázka na polohu a sivé karty bez panelov bez závažnýc
  * Karta Terazky má na širokej obrazovke celú šírku stránky - kým existovala karta
  * Dnes-Zajtra, delili si ju na polovicu. Stránka je tu položkou zvislého flexu a vystredenie
  * cez `margin: 0 auto` jej vypína naťahovanie na šírku; karta pritom vlastnú šírku nemá
- * (ciferník sa počíta z percent, odporúčanie je `container-type: inline-size`), takže bez
- * `width: 100%` by sa stránka scvrkla na svoje okraje. Práve to test stráži.
+ * (graf dňa je `container-type: inline-size`), takže bez `width: 100%` by sa stránka scvrkla
+ * na svoje okraje. Vľavo je číslo s grafom, vpravo odporúčania pod sebou - listovať netreba.
  */
-test('široká obrazovka: karta Terazky má celú šírku stránky', async ({ page }) => {
+test('široká obrazovka: karta Terazky má celú šírku stránky, graf vľavo a odporúčania vpravo pod sebou', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const errors = await openApp(page, { start: 'terazky' });
     await expect(page.locator('#panel-terazky')).toBeVisible();
@@ -1349,24 +1183,27 @@ test('široká obrazovka: karta Terazky má celú šírku stránky', async ({ pa
         const stranka = document.getElementById('page');
         const style = getComputedStyle(stranka);
         const obsah = stranka.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const box = (/** @type {string} */ id) => document.getElementById(id).getBoundingClientRect();
+        const karty = [...document.querySelectorAll('#tz-strip .tz-rec')].map((k) => k.getBoundingClientRect());
         return {
             stranka: Math.round(stranka.getBoundingClientRect().width),
             obsah: Math.round(obsah),
-            panel: Math.round(document.getElementById('panel-terazky').getBoundingClientRect().width),
-            pager: Math.round(document.getElementById('verdict-pager').getBoundingClientRect().width),
+            panel: Math.round(box('panel-terazky').width),
+            grafVpravo: box('tz-chart').right,
+            odporucaniaVlavo: box('tz-recs').left,
+            podSebou: karty.every((k, i) => i === 0 || k.top >= karty[i - 1].bottom),
+            pasSaPosuva: document.getElementById('tz-strip').scrollWidth > document.getElementById('tz-strip').clientWidth,
         };
     });
     // Stránka je široká na maximum, ktoré jej dáva --page-max (1120 px na desktope).
     expect(rozlozenie.stranka, 'stránka sa scvrkla, karta nedostala celú šírku').toBe(1120);
     expect(Math.abs(rozlozenie.panel - rozlozenie.obsah), 'karta nevyplní celú šírku stránky').toBeLessThanOrEqual(1);
-    expect(Math.abs(rozlozenie.pager - rozlozenie.obsah), 'pager odporúčaní nevyplní celú šírku karty').toBeLessThanOrEqual(1);
-
-    // Defaultná prvá stránka pageru (Čo robiť teraz) nesmie ostať prázdna ani na desktope.
-    const expectedNow = modelAt(atTime('13:00').instant).message;
-    await expect(page.locator('#verdict-dots .pager-dot').first()).toHaveClass(/active/);
-    await expect(page.locator('#verdict-headline')).toBeVisible();
-    await expect(page.locator('#verdict-headline')).toHaveText(expectedNow.headline);
-    await expect(page.locator('#verdict-forecast-title')).toHaveText(todayForecastMsg.title);
+    expect(rozlozenie.odporucaniaVlavo, 'odporúčania nie sú vedľa grafu').toBeGreaterThan(rozlozenie.grafVpravo);
+    expect(rozlozenie.podSebou, 'karty odporúčaní nie sú pod sebou').toBe(true);
+    expect(rozlozenie.pasSaPosuva, 'pás odporúčaní sa na širokej obrazovke posúva do strán').toBe(false);
+    await expect(page.locator('#tz-dots')).toBeHidden();
+    for (const id of ['tz-now-head', 'tz-devices', 'tz-today', 'tz-later']) await expect(page.locator(`#${id}`)).toBeInViewport();
+    await expect(page.locator('#tz-now-head')).toHaveText(terazAt(atTime('13:00').instant).cards?.now.head ?? '');
     expect(errors).toEqual([]);
 });
 
@@ -1425,90 +1262,28 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
 });
 
 /**
- * Na mobile a tablete (do 1023px) a od 620px výšky sa karta Terazky správa ako obrazovka,
- * nie dokument (rovnaký princíp ako desktop vyššie): ciferník ustupuje podľa výšky okna,
- * aby pod ním vždy ostalo miesto na odporúčanie. Testuje sa naprieč bežnými výškami mobilov,
- * od veľkého telefónu (844px) po malý (667px, iPhone SE) až po spodnú hranicu režimu
- * (620px) - všade musí byť vidno naraz ciferník s denným prstencom aj odporúčanie s bodkami,
- * bez scrollovania a bez toho, aby čokoľvek zapadlo pod spodnú navigáciu. Čo sa deje pod 620px, hovorí test hneď za týmto.
+ * Karta Terazky je na mobile bežný dokument ako ostatné karty: čo sa nezmestí, doscrolluje sa.
+ * Na nízkej obrazovke na výšku aj na telefóne na šírku musí byť po doscrollovaní celý pás
+ * odporúčaní nad spodnou navigáciou - dostupný, nie odstrihnutý ani zakrytý.
  */
-test('mobil: karta Terazky sa od 620px výšky zmestí na obrazovku bez scrollovania', async ({ page }) => {
-    // 360 × 800 je bežný Android 20:9 - miesto na ciferník je tam vyššie než široké.
-    for (const [width, height, settings] of /** @type {Array<[number, number, null?]>} */ ([
-        [390, 844],
-        [390, 740],
-        [390, 667],
-        [390, 620],
-        [360, 800],
-        // Ukážka má pod hlavičkou navyše červenú výzvu - ciferník musí ustúpiť aj jej.
-        [390, 620, null],
-        [360, 800, null],
-    ])) {
-        await page.setViewportSize({ width, height });
-        const errors = await openApp(page, { start: 'terazky', settings: settings === undefined ? OWNER : settings });
-
-        const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
-        expect(scroll, `výška ${height}px: appka preteká o ${scroll} px`).toBeLessThanOrEqual(0);
-
-        const geometria = await page.evaluate(() => ({
-            kartaSpodok: document.querySelector('.verdict').getBoundingClientRect().bottom,
-            navVrch: document.querySelector('.bottomnav').getBoundingClientRect().top,
-        }));
-        expect(geometria.kartaSpodok, `výška ${height}px: odporúčanie zapadá pod spodnú navigáciu`).toBeLessThanOrEqual(geometria.navVrch);
-
-        // Ciferník je jediné, čo tu ustupuje - musí ostať viditeľný aj na najnižšej výške,
-        // a s ním aj jeho denný prstenec, ktorý je jedinou cestou k náhľadu iného času.
-        await expect(page.locator('.dial-svg'), `výška ${height}px`).toBeVisible();
-        await expect(page.locator('#day-ring path').first(), `výška ${height}px`).toBeVisible();
-        await expect(page.locator('#verdict-dots'), `výška ${height}px`).toBeVisible();
-
-        // Obal ciferníka musí ostať štvorcom: prstenec sa v SVG vystredí, no značka "teraz"
-        // sa polohuje v percentách obalu (ringPercent) - na nižšom či širšom obale by visela
-        // mimo prstenca.
-        const obal = await page.locator('#dial-wrap').boundingBox();
-        if (!obal) throw new Error('ciferník nemá rozmer');
-        expect(
-            Math.abs(obal.width - obal.height),
-            `${width}x${height}: obal ciferníka ${obal.width}x${obal.height} nie je štvorec`,
-        ).toBeLessThan(1);
-        expect(errors).toEqual([]);
-    }
-});
-
-/**
- * Pod 620px výšky sa režim obrazovky nezapne a karta je bežný dokument. Je to zámer:
- * v režime obrazovky sa pretečený obsah odstrihne (.page { overflow: hidden }), a odstrihnúť
- * odporúčanie pod ciferníkom je horšie než dovoliť scroll. Podmienka je na výšku, nie na
- * orientáciu, preto sa skúša aj nízka výška na výšku (390x520), aj telefón na šírku
- * (740x360). Po doscrollovaní nadol musí byť celé odporúčanie nad spodnou navigáciou -
- * teda dostupné, nie odstrihnuté ani zakryté.
- */
-test('mobil: pod 620px výšky sa karta Terazky odomkne a dá sa doscrollovať', async ({ page }) => {
+test('mobil: karta Terazky sa dá doscrollovať a pás odporúčaní ostane nad navigáciou', async ({ page }) => {
     for (const { width, height } of [
+        { width: 390, height: 844 },
         { width: 390, height: 520 },
         { width: 740, height: 360 },
     ]) {
         await page.setViewportSize({ width, height });
         const errors = await openApp(page, { start: 'terazky' });
         const rozmer = `${width}x${height}`;
-
-        const zamknute = await page.evaluate(() =>
-            ['body', '.page', '#panel-terazky']
-                .map((sel) => `${sel}: ${getComputedStyle(document.querySelector(sel)).overflowY}`)
-                .filter((s) => s.endsWith('hidden') || s.endsWith('clip')),
-        );
-        expect(zamknute, `${rozmer}: karta ostala zamknutá, obsah sa odstrihne namiesto scrollovania`).toEqual([]);
-
         await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
         const geometria = await page.evaluate(() => ({
-            kartaSpodok: document.querySelector('.verdict').getBoundingClientRect().bottom,
+            pasSpodok: document.getElementById('tz-dots').getBoundingClientRect().bottom,
             navVrch: document.querySelector('.bottomnav').getBoundingClientRect().top,
         }));
-        expect(geometria.kartaSpodok, `${rozmer}: odporúčanie sa ani po doscrollovaní nedostane nad spodnú navigáciu`).toBeLessThanOrEqual(
+        expect(geometria.pasSpodok, `${rozmer}: pás odporúčaní sa ani po doscrollovaní nedostane nad spodnú navigáciu`).toBeLessThanOrEqual(
             geometria.navVrch,
         );
-
-        await expect(page.locator('.dial-svg'), rozmer).toBeVisible();
+        await expect(page.locator('#tz-chart svg'), rozmer).toBeVisible();
         expect(errors).toEqual([]);
     }
 });
@@ -1546,7 +1321,6 @@ test('mobil: každá položka navigácie má viditeľný text na jeden riadok a 
             expect(m.pismo, nazov).toBeGreaterThanOrEqual(11);
         }
         for (const panel of PANELS) {
-            if (panel === 'terazky') continue; // tá má vlastný test vyššie, na nízkej obrazovke sa nescrolluje
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
             await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
@@ -1566,9 +1340,9 @@ test('mobil: každá položka navigácie má viditeľný text na jeden riadok a 
 /**
  * Obnovu ťahom nadol (pull to refresh) robí prehliadač sám: ponúkne ju, keď je stránka na
  * vrchu a dá sa potiahnuť nadol. Stačí jedno overflow: hidden na <body> - prenáša sa na
- * výrez okna - a gesto ticho zmizne. Presne to sa stalo karte Terazky, ktorá si telo
- * zamykala kvôli garancii bez scrollovania (viď test vyššie). Garanciu drží .page, telo
- * musí ostať voľné, inak karta stratí obnovu, ktorú ostatné karty majú.
+ * výrez okna - a gesto ticho zmizne. Presne to sa kedysi stalo karte Terazky, ktorá si telo
+ * zamykala kvôli garancii bez scrollovania. Telo musí ostať voľné, inak karta stratí obnovu,
+ * ktorú ostatné karty majú.
  */
 test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     const errors = await openApp(page);
@@ -1699,24 +1473,6 @@ async function swipe(page, sel, { dx, dy = 0, ms = 0 }) {
  * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dx: number }} opts */
 function tahajVBode(page, opts) {
     return tah(page, opts);
-}
-
-/** Ťahanie prstom od stredu prvku, nie ponad neho: gesto musí začať presne na ňom. Jazdec na
- * prstenci je široký 44 px, takže `swipe` (ten začína o pol ťahu skôr) by sa naň netrafil.
- * @param {import('@playwright/test').Page} page @param {string} sel @param {{ dx: number, dy?: number, ms?: number }} opts */
-async function tahajOdStredu(page, sel, { dx, dy = 0, ms = 300 }) {
-    const box = await page.locator(sel).boundingBox();
-    if (!box) throw new Error(`Prvok ${sel} nie je vidno`);
-    const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-    for (const t of [0.34, 0.67, 1]) {
-        await page.waitForTimeout(ms / 3);
-        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * t, y: y + dy * t }] });
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await cdp.detach();
 }
 
 /** Ťuknutie prstom: krátke podržanie a mikropohyb, ako pri skutočnej ruke. @param {import('@playwright/test').Page} page @param {number} x @param {number} y */
@@ -1906,9 +1662,12 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     const errors = await openApp(page, { start: 'terazky' });
     const zaciatok = await page.evaluate(() => history.length);
 
-    // Prelistovanie odporúčaní na tretiu stránku je výber vnútri karty, nie krok navigácie.
-    await page.locator('#verdict-dots .pager-dot').nth(2).click();
-    await expect(page.locator('#verdict-dots .pager-dot').nth(2)).toHaveClass(/active/);
+    // Prelistovanie odporúčaní aj náhľad iného času sú výber vnútri karty, nie krok navigácie.
+    await page.locator('#tz-strip').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+    await expect(page.locator('#tz-dots i').nth(3)).toHaveClass('on');
+    await page.locator('#tz-chart').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tz-reset')).toBeVisible();
     await page.locator('#nav-7dni').click();
     expect(await page.evaluate(() => history.length), 'do histórie pribudlo len prepnutie karty').toBe(zaciatok + 1);
 
@@ -1917,7 +1676,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, list: false, guide: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, list: false },
     });
     expect(errors).toEqual([]);
 });
@@ -2013,7 +1772,7 @@ test.describe('listovanie kariet prstom', () => {
         // Doľava sa ide dopredu v poradí navigácie, doprava späť.
         await swipe(page, '#mozem-body', { dx: -120 });
         await ocakavajKartu(page, 'terazky');
-        await swipe(page, '#dial-hero', { dx: -120 });
+        await swipe(page, '.tz-head', { dx: -120 });
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: -120 });
         await ocakavajKartu(page, 'statistika');
@@ -2030,7 +1789,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, '7dni');
         await swipe(page, '#week-sub', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
-        await swipe(page, '#dial-hero', { dx: 120 });
+        await swipe(page, '.tz-head', { dx: 120 });
         await ocakavajKartu(page, 'mozem');
 
         // Na prvej karte znova ostane.
@@ -2040,7 +1799,7 @@ test.describe('listovanie kariet prstom', () => {
         await ocakavajKartu(page, 'terazky');
 
         // Šikmý ťah je posúvanie po stránke, nie listovanie.
-        await swipe(page, '#dial-hero', { dx: -120, dy: 120 });
+        await swipe(page, '.tz-head', { dx: -120, dy: 120 });
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
@@ -2099,21 +1858,22 @@ test.describe('listovanie kariet prstom', () => {
         expect(errors).toEqual([]);
     });
 
-    test('pás odporúčaní si ťahanie necháva pre seba aj na krajnej stránke', async ({ page }) => {
+    test('pás odporúčaní si ťahanie necháva pre seba aj na krajnej karte', async ({ page }) => {
         const errors = await openApp(page, { start: 'terazky' });
-        const dots = page.locator('#verdict-dots .pager-dot');
+        const pas = page.locator('#tz-strip');
+        await pas.scrollIntoViewIfNeeded();
 
-        // Pás pod ciferníkom sa listuje sám, takže gesto nad ním patrí jemu a karta ostáva -
-        // aj na prvej stránke, z ktorej naspäť nevedie nič.
-        await swipe(page, '#verdict-pager', { dx: 120 });
+        // Pás pod grafom sa listuje sám, takže gesto nad ním patrí jemu a karta appky ostáva -
+        // aj na prvej karte pásu, z ktorej naspäť nevedie nič.
+        await swipe(page, '#tz-strip', { dx: 120 });
         await ocakavajKartu(page, 'terazky');
-        await swipe(page, '#verdict-pager', { dx: -120 });
+        await swipe(page, '#tz-strip', { dx: -120 });
         await ocakavajKartu(page, 'terazky');
 
-        // To isté na poslednej stránke - bez času čakania je ňou predpoveď dňa.
-        await dots.nth(2).click();
-        await expect(dots.nth(2)).toHaveClass(/active/);
-        await swipe(page, '#verdict-pager', { dx: -120 });
+        // To isté na poslednej karte pásu.
+        await pas.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+        await expect(page.locator('#tz-dots i').nth(3)).toHaveClass('on');
+        await swipe(page, '#tz-strip', { dx: -120 });
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
@@ -2290,65 +2050,46 @@ test.describe('listovanie kariet prstom', () => {
         }
     });
 
-    /** Značka "teraz" je na prstenci a okolo 06:00 stojí na pravom okraji ciferníka, kde jej
-     * 44 px široký štvorec presiahne kartu o necelé dva pixely. Karta má overflow-x: hidden,
-     * takže vidno to nie je - ale swipe.js to kedysi čítal ako vnútorný posuvný pás pod prstom
-     * a gesto mu odovzdal. Listovanie tak bolo v tú hodinu mŕtve. Test ide presne na ten čas;
-     * hranicu (vnútorný pás sa musí dať naozaj posúvať) drží pravidlo, nie zoznam výnimiek. */
-    test('ťah ponad ciferník prepne kartu aj o 06:00, keď značka "teraz" trčí cez okraj', async ({ page }) => {
-        const errors = await openApp(page, { start: 'terazky', time: atTime('06:00').instant });
+    test('ťuknutie na graf dňa bez pohybu ukáže náhľad v tom čase a nechá ho svietiť', async ({ page }) => {
+        const errors = await openApp(page, { start: 'terazky' });
+        const bod = await bodGrafu(page, minuta('16:00'));
+        await tuknutie(page, bod.x, bod.y);
+        // Ťuknutie sa o 2 px pohne (tuknutie), čas náhľadu je štvrťhodina pod prstom.
+        const cas = page.locator('#tz-chart .dc-at-t');
+        await expect(cas).toHaveText(/^16:(00|15)$/);
+        const ukazany = await cas.textContent();
+        await page.waitForTimeout(TOOLTIP_HOLD_MS + 200);
+        await expect(cas).toHaveText(ukazany ?? '');
         await ocakavajKartu(page, 'terazky');
-
-        await swipe(page, '#dial-hero', { dx: -120 });
-        await ocakavajKartu(page, '7dni');
         expect(errors).toEqual([]);
     });
 
-    test('ťah ponad ciferník prepne kartu a nenastaví náhľad iného času', async ({ page }) => {
+    test('zvislý ťah cez graf dňa posunie stránku a náhľad neukáže', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
         const errors = await openApp(page, { start: 'terazky' });
-
-        // Ciferník je na mobile najväčšia plocha karty, listovať sa cez ňu dá. Ťuknutie naň
-        // ale nastavuje náhľad iného času - po geste ho preto appka potlačí, v oboch smeroch.
-        await swipe(page, '#dial-wrap', { dx: 120 });
-        await ocakavajKartu(page, 'mozem');
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
-
-        await swipe(page, '#dial-wrap', { dx: -120 });
-        await ocakavajKartu(page, '7dni');
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#dial-grip')).toHaveClass(/at-now/);
-
-        // Obyčajné ťuknutie na prstenec náhľad nastaví.
-        const box = await page.locator('#dial-wrap').boundingBox();
-        if (!box) throw new Error('ciferník nemá rozmer');
-        const six = ringXY(box, 6 * 60);
-        await page.locator('#dial-wrap').click({ position: { x: six.x - box.x, y: six.y - box.y } });
-        await expect(page.locator('#dial-grip')).not.toHaveClass(/at-now/);
+        const bod = await bodGrafu(page, minuta('12:00'));
+        await tah(page, { x: bod.x, y: bod.y, dx: 0, dy: -160, ms: 300 });
+        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(0);
+        await page.waitForTimeout(300);
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
+        await expect(page.locator('#tz-reset')).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
 
-    /** Jazdec je jediná výnimka z pravidla o ťahaní: gesto, ktoré by inde prelistovalo kartu,
-     * na ňom posúva náhľad času (výnimka DRAG_HANDLE vo `swipe.js`). Preto sa ťahá doľava
-     * a dosť ďaleko - kratší ťah než SWIPE.minDistPx by za listovanie neprešiel ani bez tej
-     * výnimky a test by nekontroloval nič. */
-    test('ťahanie jazdca prstom posúva náhľad času a kartu neprepne', async ({ page }) => {
+    /** Graf dňa je úchytka (DRAG_HANDLE vo web/gesture.js): gesto, ktoré by inde prelistovalo
+     * kartu, na ňom posúva náhľad času. Preto rýchlo a ďaleko - kratší ťah než SWIPE.minDistPx
+     * by za listovanie neprešiel ani bez tej výnimky a test by nekontroloval nič. */
+    test('rýchly vodorovný ťah po grafe dňa ukazuje náhľad a kartu neprelistuje', async ({ page }) => {
         const errors = await openApp(page, { start: 'terazky' });
-        const box = await page.locator('#dial-wrap').boundingBox();
-        if (!box) throw new Error('ciferník nemá rozmer');
-
-        // Náhľad treba najprv zapnúť - bez neho jazdec na prstenci nie je.
-        const start = ringXY(box, 5 * 60);
-        await page.locator('#dial-wrap').click({ position: { x: start.x - box.x, y: start.y - box.y } });
-        const grip = await page.locator('#dial-grip').boundingBox();
-        if (!grip) throw new Error('jazdec nie je vidno');
-
-        // Ťah naprieč ciferníkom: z 05:00 vľavo dole k 20:00 vpravo hore.
-        const ciel = ringXY(box, 20 * 60);
-        const dx = ciel.x - (grip.x + grip.width / 2);
-        expect(Math.abs(dx), 'ťah je kratší než hranica listovania, test by nič nekontroloval').toBeGreaterThan(SWIPE.minDistPx);
-        await tahajOdStredu(page, '#dial-grip', { dx, dy: ciel.y - (grip.y + grip.height / 2) });
-        await expect(page.locator('#dial-when')).toHaveText(/^(19|20|21):\d{2}$/);
+        const bod = await bodGrafu(page, minuta('16:00'));
+        const ciel = await bodGrafu(page, minuta('09:00'));
+        expect(Math.abs(ciel.x - bod.x), 'ťah je kratší než hranica listovania, test by nič nekontroloval').toBeGreaterThan(
+            SWIPE.minDistPx,
+        );
+        await tah(page, { x: bod.x, y: bod.y, dx: ciel.x - bod.x, dy: 0, ms: 60 });
+        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('09:00');
+        await page.waitForTimeout(300);
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
@@ -2497,11 +2238,6 @@ test('mobil: hlavička ostane pod stavovým riadkom telefónu', async ({ page })
         expect(vrch, `karta ${panel}: hlavička zasahuje do stavového riadku`).toBeGreaterThanOrEqual(SAFE_TOP);
     }
 
-    // Karta Terazky je obrazovka bez scrollovania (viď test vyššie) - bezpečná zóna jej
-    // nesmie nič vytlačiť von.
-    await page.locator('#nav-terazky').click();
-    const scroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
-    expect(scroll, `karta Terazky preteká o ${scroll} px`).toBeLessThanOrEqual(0);
     expect(errors).toEqual([]);
 });
 
@@ -2587,8 +2323,8 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#panels-bar')).toBeVisible();
         await expect(page.locator('#panels-bar')).toHaveClass(/\bodhad\b/);
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#pv-power')).not.toHaveText('–');
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
+        await expect(page.locator('#tz-num-val')).toHaveText(/^~[0-9]/);
+        await expect(page.locator('#tz-num')).toHaveClass('tz-num est');
         await expect(page.locator('#panels-bar')).toBeVisible();
         expect(errors).toEqual([]);
     });
@@ -2632,7 +2368,7 @@ test.describe('moja elektráreň', () => {
         const vstup = { ...typical, known: /** @type {const} */ ('poloha'), now: FIXED_NOW, loading: false, pv: null };
         const forecast = buildForecast(weather, FIXED_NOW, SITE, typical.plant);
         const m = mozemModel({ ...vstup, forecast });
-        const hero = heroModel({ ...vstup, forecast, previewMinutes: null });
+        const teraz = terazModel({ ...vstup, forecast, previewMinutes: null, zdroj: null, pristup: null });
         const kwp = installedKw(typical.plant);
         await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#panels-bar')).toBeVisible();
@@ -2651,9 +2387,11 @@ test.describe('moja elektráreň', () => {
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#panels-bar')).toBeHidden();
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#pv-power')).toHaveText(hero.powerText);
-        await expect(page.locator('#pv-power-unit')).toHaveText('kW (odhad)');
-        await expect(page.locator('#verdict-headline')).toHaveText(hero.message.headline);
+        // Ten istý odhad ako karta Teraz novej appky: „~“ a veta o typickej streche.
+        await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
+        expect(teraz.num).toMatch(/^~[0-9]/);
+        await expect(page.locator('#tz-sub')).toHaveText(teraz.sub);
+        await expect(page.locator('#tz-now-head')).toHaveText(teraz.cards?.now.head ?? '');
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#panels-bar')).toBeVisible();
         const vazne = (await new AxeBuilder({ page }).include('#panels-bar').analyze()).violations
@@ -3319,7 +3057,7 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bojler: piaty riadok zoznamu; na Terazky má odpoveď v bublinke', async ({ page }) => {
+    test('bojler: piaty riadok zoznamu; na Terazky je medzi spotrebičmi s tou istou odpoveďou', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
@@ -3329,9 +3067,7 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('[data-mozem-item="bojler"] .mozem-head')).toHaveText(bojler.head);
 
         await page.locator('#nav-terazky').click();
-        await page.locator('#verdict-dots button').nth(1).click();
-        await page.locator('#verdict-go-row [data-device="Bojler"]').click();
-        await expect(page.locator('#verdict-chip-tooltip')).toHaveText(`2,0 kW · ${bojler.short}`);
+        await expect(page.locator('#tz-devices')).toContainText(`Bojler ${bojler.short}`);
         expect(errors).toEqual([]);
     });
 

@@ -241,20 +241,16 @@ test('záložky pri úprave z prehľadu: panely, plocha a tarifa', () => {
     assert.deepEqual(editTabs(state(), OWNER, 'smer'), { group: null, roof: false, tariff: null });
 });
 
-test('sprievodca v novej appke nespomína ciferník ani prstenec, v súčasnej pri tarife áno', () => {
+test('sprievodca nespomína ciferník ani prstenec - žiadna appka ho nemá, tarifu ukazuje pás plánu dňa', () => {
     const s = state();
     const draft = s.settingsDraft;
     const dial = /ciferník|prstenec|prstenc/i;
     for (const step of SETUP_STEPS) {
-        const t = T.textsFor(s, draft, step, false);
+        const t = T.textsFor(s, draft, step);
         assert.doesNotMatch(`${t.title} ${t.lead}`, dial, step);
     }
-    assert.doesNotMatch(T.TARIFF_DUNNO_PLAN, dial);
+    assert.doesNotMatch(T.TARIFF_DUNNO, dial);
     const one = { ...TARIFF, bands: [TARIFF.bands[0]] };
-    assert.doesNotMatch(T.priceCheck(one, false).text, dial);
-    assert.match(T.textsFor(s, draft, 'tarifa', false).lead, /pás plánu dňa/);
-    // Súčasná appka ostáva pri ciferníku.
-    assert.match(T.textsFor(s, draft, 'tarifa').lead, /zafarbí ciferník/);
-    assert.match(T.TARIFF_DUNNO, /ciferník/);
-    assert.match(T.priceCheck(one).text, /ciferník/);
+    assert.doesNotMatch(T.priceCheck(one).text, dial);
+    assert.match(T.textsFor(s, draft, 'tarifa').lead, /pás plánu dňa/);
 });

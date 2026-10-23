@@ -27,7 +27,7 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
     assert.equal(calls, 1);
     assert.equal(store.get().panel, '7dni');
     assert.equal(store.get().weekSelDay, 3);
-    assert.equal(store.get().verdictPage, 0, 'verdikt začína na prvej stránke');
+    assert.equal(store.get().terazPage, 0, 'pás odporúčaní začína na prvej stránke');
     // Rozmery okna prichádzajú zvonku, stav si ich nedomýšľa.
     assert.equal(store.get().wide, false);
     assert.equal(store.get().tall, false);
@@ -98,7 +98,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: 1,
         weekDetail: null,
         infoOpen: null,
-        dialGuideOpen: false,
         mozemSummary: false,
         mozemList: false,
     });
@@ -107,7 +106,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: -1,
         weekDetail: null,
         infoOpen: null,
-        dialGuideOpen: false,
         mozemSummary: false,
         mozemList: false,
     });
@@ -127,14 +125,13 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
         info: null,
         summary: false,
         list: false,
-        guide: false,
     });
     // Súhrn v karte Môžem? je obrazovka - Späť ju zavrie.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemSummary: true })));
     // Zoznam vecí v karte Môžem? tiež.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemList: true })));
-    // Vybraný deň ani stránka verdiktu nie sú miesto v appke - Späť sa na ne nevracia.
-    assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, verdictPage: 2 })));
+    // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
+    assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, panel: '7dni' })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, weekDetail: 'day' })));
     // Detail dňa a detail týždňa sú dve rôzne miesta, nie jedno "otvorené".
@@ -145,8 +142,6 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
     // Rozbalená položka sekcie Appka je krok - Späť na telefóne ju zbalí a vráti na zoznam.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'nastavenie' }), navStep({ ...state, panel: 'nastavenie', infoOpen: 'share' })));
     assert.ok(!sameNavStep(navStep({ ...state, infoOpen: null }), navStep({ ...state, infoOpen: 'share' })));
-    // Otvorený popup s návodom k ciferníku je krok - Späť ho najprv zatvorí.
-    assert.ok(!sameNavStep(navStep(state), navStep({ ...state, dialGuideOpen: true })));
     // Rozpísané údaje v sprievodcovi krokom nie sú.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, setupLink: 'x', setupKwp: 5 })));
 });
@@ -161,7 +156,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             info: null,
             summary: false,
             list: false,
-            guide: false,
         }),
         {
             panel: '7dni',
@@ -170,7 +164,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            dialGuideOpen: false,
             mozemSummary: false,
             mozemList: false,
             setupReturn: null,
@@ -186,7 +179,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             info: null,
             summary: false,
             list: false,
-            guide: false,
         }),
         {
             panel: '7dni',
@@ -195,7 +187,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            dialGuideOpen: false,
             mozemSummary: false,
             mozemList: false,
             setupReturn: null,
@@ -211,7 +202,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         info: null,
         summary: false,
         list: false,
-        guide: false,
     });
     assert.equal(smer.setupStep, 'smer');
     assert.equal(smer.setupRoof, 1);
@@ -225,7 +215,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             info: null,
             summary: false,
             list: false,
-            guide: false,
         }).setupReturn,
         null,
     );
@@ -239,7 +228,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             info: 'share',
             summary: false,
             list: false,
-            guide: false,
         }).infoOpen,
         'share',
     );
@@ -252,7 +240,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             info: null,
             summary: false,
             list: false,
-            guide: false,
         }).infoOpen,
         null,
     );
@@ -267,15 +254,14 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         info: null,
         summary: false,
         list: false,
-        guide: false,
         ...x,
     });
     assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', summary: true }) }), krok({ panel: 'mozem', summary: true }));
     assert.equal(navStepFrom({ step: krok({ summary: 'áno' }) }), null, 'súhrn je áno alebo nie');
     assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', list: true }) }), krok({ panel: 'mozem', list: true }));
     assert.equal(navStepFrom({ step: krok({ list: 1 }) }), null, 'zoznam je áno alebo nie');
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'terazky', guide: true }) }), krok({ panel: 'terazky', guide: true }));
-    assert.equal(navStepFrom({ step: krok({ guide: 'áno' }) }), null, 'popup je otvorený alebo nie');
+    // Položka zo staršej verzie s otvoreným popupom k ciferníku (zanikol) vráti kartu bez neho.
+    assert.deepEqual(navStepFrom({ step: { ...krok({ panel: 'terazky' }), guide: true } }), krok({ panel: 'terazky' }));
     assert.deepEqual(navStepFrom({ step: krok({ weekDetail: 'day' }) }), krok({ weekDetail: 'day' }));
     assert.deepEqual(navStepFrom({ step: krok({ weekDetail: 'week' }) }), krok({ weekDetail: 'week' }));
     assert.deepEqual(
