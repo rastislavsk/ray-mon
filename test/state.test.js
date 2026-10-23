@@ -100,6 +100,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         infoOpen: null,
         mozemSummary: false,
         mozemList: false,
+        stavTip: false,
     });
     assert.deepEqual(panelChange('nastavenie', '7dni'), {
         panel: '7dni',
@@ -108,6 +109,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         infoOpen: null,
         mozemSummary: false,
         mozemList: false,
+        stavTip: false,
     });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
     assert.equal(panelChange('nastavenie', 'terazky').panelDir, -1);
@@ -166,6 +168,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             infoOpen: null,
             mozemSummary: false,
             mozemList: false,
+            stavTip: false,
             setupReturn: null,
         },
     );
@@ -189,6 +192,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             infoOpen: null,
             mozemSummary: false,
             mozemList: false,
+            stavTip: false,
             setupReturn: null,
         },
     );

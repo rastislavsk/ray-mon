@@ -33,7 +33,8 @@ import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js'
 import { terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
-import { heroModel } from '../../shared/hero-model.js';
+import { heroModel, stavMerania } from '../../shared/hero-model.js';
+import { stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
@@ -1042,6 +1043,48 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
     await obnov(10);
     await expect.poll(() => telo.length).toBe(2);
     expect(telo[1]).toBe(nova);
+    expect(errors).toEqual([]);
+});
+
+test('bublina stavu merania: ťuknutie na čas vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
+    const errors = await openApp(page);
+    const clock = page.locator('#pv-clock');
+    const tip = page.locator('#pv-tip');
+    await expect(page.locator('#pv-updated')).toHaveText('meranie');
+    await expect(tip).toBeHidden();
+    await clock.click();
+    await expect(tip).toBeVisible();
+    await expect(clock).toHaveAttribute('aria-expanded', 'true');
+    // Text počíta to isté jadro ako appka (a ako Obloha).
+    const ocak = stavMeraniaText(stavMerania({ now: FIXED_NOW, pv, site: SITE, zdroj: OWNER.zdroj, pristup: null }));
+    await expect(page.locator('#pv-tip-title')).toHaveText(ocak.nadpis);
+    await expect(page.locator('#pv-tip-text')).toHaveText(ocak.text);
+    await expect(page.locator('#pv-tip-btn')).toBeHidden();
+    // Ťuknutie mimo bubliny ju zavrie a nič pod ňou nespustí - karta ostáva tá istá.
+    const karta = await page.locator('#page').getAttribute('data-panel');
+    await page.locator('#pv-tip-bg').click({ position: { x: 30, y: 400 } });
+    await expect(tip).toBeHidden();
+    await expect(clock).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.locator('#page').getAttribute('data-panel')).toBe(karta);
+    // Text pod časom ju otvorí tiež; Escape ju zavrie a fokus ostane na čase.
+    await page.locator('#pv-updated').click();
+    await expect(tip).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(tip).toBeHidden();
+    await expect(clock).toBeFocused();
+    expect(errors).toEqual([]);
+});
+
+test('bublina stavu bez merania: Pripojiť meranie › otvorí krok Meranie sprievodcu a bublinu zavrie', async ({ page }) => {
+    const errors = await openApp(page, { settings: { ...OWNER, zdroj: null } });
+    await page.locator('#pv-clock').click();
+    await expect(page.locator('#pv-tip-title')).toHaveText('Odhad z predpovede');
+    const btn = page.locator('#pv-tip-btn');
+    await expect(btn).toHaveText('Pripojiť meranie ›');
+    await btn.click();
+    await ocakavajKartu(page, 'nastavenie');
+    await expect(page.locator('#wz-meranie')).toBeVisible();
+    await expect(page.locator('#pv-tip')).toBeHidden();
     expect(errors).toEqual([]);
 });
 
