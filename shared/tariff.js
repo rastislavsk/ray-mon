@@ -2,7 +2,7 @@
 // rozvrh na deň, pásmo v danej minúte, farebné "tiery", kontrola a čítanie uloženej tarify.
 // Čisté funkcie bez DOM.
 
-import { CURRENCIES, DEVICES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
+import { CURRENCIES, LEVEL_TIER, MINUTES_PER_DAY, PRICE_LEVELS, TARIFF_LIMITS } from './config.js';
 import { fmt2, hoursText, minutesToTimeStr, timeStrToMinutes } from './format.js';
 import { isObj } from './valid.js';
 
@@ -67,40 +67,12 @@ export function productionLevel(powerKw, th) {
 /**
  * Farba podľa ceny aj výkonu FV: od dolnej hranice je zelená bez ohľadu na cenu (slnko pokryje
  * veľké spotrebiče), pod ňou podľa úrovne pásma - červená drahé, sivá bežné, oranžová lacné.
- * @param {PriceLevel | null} level @param {number} powerKw @param {PowerThresholds} th @param {Tier | null} [fallback] bez výkonu
+ * @param {PriceLevel | null} level @param {number} powerKw @param {PowerThresholds} th
  * @returns {Tier | null}
  */
-export function smartTier(level, powerKw, th, fallback = levelTier(level)) {
-    if (!Number.isFinite(powerKw)) return fallback;
-    if (powerKw >= th.lowKw) return 'green';
+export function smartTier(level, powerKw, th) {
+    if (Number.isFinite(powerKw) && powerKw >= th.lowKw) return 'green';
     return levelTier(level);
-}
-
-/**
- * Auto má vlastnú farebnú logiku, lebo berie 11 kW: zelené len pri vysokej výrobe mimo drahého
- * pásma, v lacnom pásme bez slnka oranžové, inak červené.
- * @param {PriceLevel | null} level @param {number} powerKw @param {PowerThresholds} th @returns {Tier}
- */
-export function autoTier(level, powerKw, th) {
-    if (!Number.isFinite(powerKw) || powerKw < th.highKw) return level === 'lacna' ? 'amber' : 'red';
-    return level === 'draha' ? 'amber' : 'green';
-}
-
-/**
- * Stav každého spotrebiča: 'go', keď slnko pokryje veľké spotrebiče (alebo, pri aute a bojleri,
- * v lacnom pásme), inak 'wait'. V slabý deň sú spotrebiče, ktoré sa bez slnka neoplatia,
- * 'no' - slnko ich v taký deň nepokryje vôbec.
- * @param {{ tier: Tier | null, level: PriceLevel }} slot pás plánu dňa v danej minúte
- * @param {boolean} weakDay dnešná špička nedosiahne ani hranicu slabého dňa
- * @returns {Array<{name: string, powerKw: number, state: 'go' | 'wait' | 'no'}>}
- */
-export function deviceStates(slot, weakDay) {
-    return DEVICES.map((d) => {
-        const base = { name: d.name, powerKw: d.powerKw };
-        if (weakDay && !d.weakDay) return { ...base, state: 'no' };
-        const go = slot.tier === 'green' || (d.cheapGrid && slot.level === 'lacna');
-        return { ...base, state: go ? 'go' : 'wait' };
-    });
 }
 
 /**

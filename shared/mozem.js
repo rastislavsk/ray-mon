@@ -1,6 +1,6 @@
 // Karta Môžem?: jednoduchá odpoveď pre celú rodinu - môžem teraz zapnúť práčku, a keď nie,
 // tak kedy. Čisté funkcie bez DOM. Stojí na pláne dňa (shared/day-plan.js), takže „áno“ tu
-// je tá istá zelená ako na dennom prstenci ciferníka; ďalšie dni berie z predpovede.
+// je tá istá zelená ako v grafe dňa na karte Teraz(ky); ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
 import { DEVICES, EVERYDAY, installedKw, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
@@ -77,7 +77,7 @@ const deviceOf = (name) => DEVICES.find((d) => d.name === name) || null;
 
 /**
  * Najbližší iný deň, keď slnko spotrebič pokryje. Slabý deň preskočí spotrebiče, ktoré sa
- * v slabý deň neodporúčajú (weakDay v DEVICES) - rovnako ako deviceStates.
+ * v slabý deň neodporúčajú (weakDay v DEVICES).
  * @param {DayCtx} ctx @param {number} minKw @param {boolean} weakOk
  * @returns {{ day: LaterDay | null, weakSkipped: boolean }}
  */

@@ -259,12 +259,11 @@ export function chartTooltipModel(model, relX) {
     };
 }
 
-// ---- Denný prstenec (ciferník na karte Terazky) ----------------------------------
-// Ciferník sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo, polnoc dole.
+// ---- Kruh dňa (rozvrh tarify) -----------------------------------------------------
+// Kruh sa číta ako 24-hodinový: poludnie hore, 06:00 vľavo, 18:00 vpravo, polnoc dole.
 // Deň ide v smere hodinových ručičiek, takže slnko prejde zľava cez vrch doprava.
-// Vonkajší prstenec je plán dňa (cena z tarify a slnko z predpovede), vnútorný oblúk
-// aktuálny výkon.
-export const RING = { viewBox: 240, rDay: 106, dayWidth: 8, rPower: 78, powerWidth: 14 };
+// Kreslí sa ním rozvrh tarify v sprievodcovi a malé prstence tarify v Nastavení.
+export const RING = { viewBox: 240, rDay: 106 };
 
 /** Bod na kružnici pre minútu dňa, v jednotkách viewBoxu. @param {number} r @param {number} minutes */
 export function ringPoint(r, minutes) {
@@ -273,29 +272,15 @@ export function ringPoint(r, minutes) {
     return { x: c + r * Math.cos(rad), y: c + r * Math.sin(rad) };
 }
 
-/** Poloha na dennom prstenci v percentách jeho obalu - obal je štvorec, takže sa mierka
- * vyrieši sama a appka nemusí poznať, aký veľký ciferník práve je. @param {number} minutes */
-export function ringPercent(minutes) {
-    const p = ringPoint(RING.rDay, minutes);
-    return { left: (p.x / RING.viewBox) * 100, top: (p.y / RING.viewBox) * 100 };
-}
-
-/** Uhol jazdca od stredu ciferníka -> minúta dňa. Opak ringPoint; polnoc nie je stena,
+/** Uhol prsta od stredu kruhu -> minúta dňa. Opak ringPoint; polnoc nie je stena,
  * záporný uhol sa obtočí. @param {number} dx @param {number} dy vzdialenosť od stredu */
 export function minutesFromAngle(dx, dy) {
     const deg = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
     return Math.round((((deg + 360) % 360) / 360) * MINUTES_PER_DAY) % MINUTES_PER_DAY;
 }
 
-/** Vzdialenosť dvoch minút po obvode - cez polnoc je to bližšie než rozdiel čísel.
- * @param {number} a @param {number} b */
-export function ringGap(a, b) {
-    const d = Math.abs(a - b) % MINUTES_PER_DAY;
-    return Math.min(d, MINUTES_PER_DAY - d);
-}
-
 /**
- * Plán dňa ako oblúky vonkajšieho prstenca: susedné štvrťhodiny s rovnakou farbou sú jeden
+ * Plán dňa ako oblúky kruhu: susedné štvrťhodiny s rovnakou farbou sú jeden
  * oblúk. Krajné body a príznak dlhého oblúka sú čísla, samotné "d" skladá web/svg.js.
  * @param {Array<{ startMin: number, min: number, tier: import('./config.js').Tier | null }>} plan plán dňa (`dayPlan`)
  */
@@ -325,8 +310,8 @@ export function dayRingModel(plan) {
 }
 
 /**
- * Kruh rozvrhu v sprievodcovi: tie isté oblúky ako na ciferníku, k nim rezy medzi pásmami,
- * ryska na každú hodinu a popis každej tretej. Poludnie hore, ako na ciferníku.
+ * Kruh rozvrhu v sprievodcovi: tie isté oblúky ako malé prstence tarify, k nim rezy medzi pásmami,
+ * ryska na každú hodinu a popis každej tretej. Poludnie hore.
  * @param {Array<{ startMin: number, min: number, tier: import('./config.js').Tier | null }>} segs rozvrh ako farby (`scheduleTiers`)
  */
 export function tariffRingModel(segs) {
@@ -633,7 +618,7 @@ export function planesCompassModel(strings) {
 /**
  * Kompas smeru plochy: osem výsekov, dráha slnka a otočenie strechy v strede. Dráha ide cez
  * deň z východu cez poludnie na západ - na severnej pologuli cez juh, na južnej cez sever.
- * `buttons` sú polohy tlačidiel v percentách obalu, rovnako ako ringPercent pri ciferníku.
+ * `buttons` sú polohy tlačidiel v percentách obalu, takže appka nemusí poznať veľkosť kompasu.
  * @param {number} azDeg zvolený smer @param {boolean} south lokalita na južnej pologuli
  */
 export function compassModel(azDeg, south) {

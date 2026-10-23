@@ -13,11 +13,9 @@ import {
 } from '../shared/config.js';
 import {
     autoLevels,
-    autoTier,
     bandAt,
     changesOf,
     checkTariff,
-    deviceStates,
     isSeasonSchedule,
     isWeekendSchedule,
     levelTier,
@@ -114,44 +112,12 @@ test('productionLevel a smartTier: od dolnej hranice zelená, pod ňou farba cen
     assert.equal(levelTier('draha'), 'red');
     assert.equal(levelTier(null), null);
     assert.equal(smartTier('draha', NaN, th), 'red');
-    assert.equal(smartTier('draha', NaN, th, null), null);
     assert.equal(smartTier('draha', th.lowKw, th), 'green');
     assert.equal(smartTier('draha', 0.5, th), 'red');
     assert.equal(smartTier('bezna', 0.5, th), 'grey');
     assert.equal(smartTier('lacna', 0.5, th), 'amber');
     // Pri menšej elektrárni je rovnaký výkon „viac“.
     assert.equal(productionLevel(2.5, powerThresholds(TYPICAL_PLANT)), 'vys');
-});
-
-test('autoTier: lacné pásmo bez slnka oranžové, inak bez slnka červené, silné slnko mimo drahého zelené', () => {
-    assert.equal(autoTier('lacna', 0, th), 'amber');
-    assert.equal(autoTier('lacna', NaN, th), 'amber');
-    assert.equal(autoTier('bezna', 1, th), 'red');
-    assert.equal(autoTier('draha', 3, th), 'red');
-    assert.equal(autoTier('lacna', th.highKw, th), 'green');
-    assert.equal(autoTier('bezna', th.highKw, th), 'green');
-    assert.equal(autoTier('draha', th.highKw, th), 'amber');
-});
-
-test('deviceStates: pri slnku go, auto a bojler aj v lacnom pásme, v slabý deň sušička a umývačka no', () => {
-    const states = (/** @type {any} */ slot, weak = false) => Object.fromEntries(deviceStates(slot, weak).map((d) => [d.name, d.state]));
-    assert.deepEqual(states({ tier: 'green', level: 'draha' }), { Práčka: 'go', Sušička: 'go', Umývačka: 'go', Auto: 'go', Bojler: 'go' });
-    assert.deepEqual(states({ tier: 'amber', level: 'lacna' }), {
-        Práčka: 'wait',
-        Sušička: 'wait',
-        Umývačka: 'wait',
-        Auto: 'go',
-        Bojler: 'go',
-    });
-    assert.ok(deviceStates({ tier: 'grey', level: 'bezna' }, false).every((d) => d.state === 'wait'));
-    assert.deepEqual(states({ tier: 'green', level: 'lacna' }, true), {
-        Práčka: 'go',
-        Sušička: 'no',
-        Umývačka: 'no',
-        Auto: 'go',
-        Bojler: 'go',
-    });
-    assert.equal(deviceStates({ tier: 'green', level: 'lacna' }, false).find((d) => d.name === 'Auto')?.powerKw, 11);
 });
 
 test('autoLevels: najlacnejšie lacné, najdrahšie drahé, ostatné bežné; bez cien null', () => {

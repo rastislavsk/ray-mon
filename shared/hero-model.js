@@ -1,13 +1,13 @@
-// Model hlavnej karty (ciferník, verdikt, spotrebiče) pre daný čas dňa.
+// Model hlavnej karty (výkon, pásmo, odporúčanie) pre daný čas dňa.
 // Rovnaká logika pre živé "teraz" aj pre náhľad iného času; líši sa len zdroj výkonu.
 
-import { installedKw, powerThresholds, STALE_PV_MS, STALE_PV_SUN_DEG } from './config.js';
+import { powerThresholds, STALE_PV_MS, STALE_PV_SUN_DEG } from './config.js';
 import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
 import { planAt } from './day-plan.js';
 import { getSlotMessage, voiceTexts } from './messages-core.js';
-import { autoTier, deviceStates, productionLevel, smartTier } from './tariff.js';
+import { smartTier } from './tariff.js';
 
 /**
  * @typedef {{ now: Date, tariff: import('./config.js').Tariff, pv: import('./kiosk.js').PvData | null,
@@ -29,7 +29,7 @@ export function freshPowerKw({ now, pv, site }) {
     return pvFreshness({ now, pv, site }).stale ? null : /** @type {number} */ (pv.realTimePowerKw);
 }
 
-/** Živý výkon pre ciferník: v náhľade iného času žiadny. @param {HeroInput} state @returns {number | null} */
+/** Živý výkon na kartu: v náhľade iného času žiadny. @param {HeroInput} state @returns {number | null} */
 function livePower(state) {
     return state.previewMinutes === null ? freshPowerKw(state) : null;
 }
@@ -91,43 +91,20 @@ function waitTimeFor(state, sunny) {
 }
 
 /**
- * Výkon do stredu ciferníka: dve desatinné miesta, no najviac päť znakov. Šesť („100.00“) sa
- * medzi prstence nezmestí (viď .dial-num .val v style.css), preto od 100 kW ostáva jedno.
+ * Veľké číslo výkonu: dve desatinné miesta, no najviac päť znakov, od 100 kW teda jedno.
  * Bodka je tu zámerne, hoci zvyšok appky píše desatinnú čiarku: veľké číslo ako na displeji
  * meniča s ňou vyzerá lepšie. Čiarku sme skúsili (#180) a vrátili.
  * @param {number} kw
  */
-function dialText(kw) {
+function powerTextOf(kw) {
     const text = kw.toFixed(2);
     return text.length > 5 ? kw.toFixed(1) : text;
 }
 
 /**
- * Ciferník: podiel inštalovaného výkonu a farba podľa pásma výroby.
- * @param {number} power @param {number} kwp @param {import('./config.js').PowerThresholds} th
- */
-function dialFor(power, kwp, th) {
-    const level = productionLevel(power, th);
-    /** @type {Record<string, import('./config.js').Tier>} */ const tierByLevel = { niz: 'red', str: 'amber', vys: 'green' };
-    return {
-        fraction: Number.isFinite(power) ? Math.max(0, Math.min(1, power / kwp)) : 0,
-        tier: level ? tierByLevel[level] : null,
-    };
-}
-
-/**
- * Jednotka pod číslom v ciferníku: odkiaľ výkon je. Bez výkonu (žiadne dáta, panely nie sú
- * zadané) stojí v ciferníku pomlčka - tá nie je odhad.
- * @param {number} power @param {boolean} live @param {boolean} measured
- */
-function unitFor(power, live, measured) {
-    if (!Number.isFinite(power)) return 'kW';
-    return live ? 'kW teraz' : measured ? 'kW (merané)' : 'kW (odhad)';
-}
-
-/**
- * Odkiaľ výkon je - to isté ako `unitFor`, len ako hodnota (karta Teraz novej appky ho píše
- * vlastnými slovami). @param {number} power @param {boolean} live @param {boolean} measured
+ * Odkiaľ výkon je: naživo, z merania v krivke dňa, alebo z predpovede. Bez výkonu (žiadne dáta,
+ * panely nie sú zadané) null - pomlčka nie je odhad. Karty ho píšu vlastnými slovami
+ * (terazSourceText). @param {number} power @param {boolean} live @param {boolean} measured
  * @returns {'live' | 'measured' | 'forecast' | null}
  */
 function sourceFor(power, live, measured) {
@@ -144,17 +121,13 @@ export function heroModel(state, voice = 'drzy') {
     const power = powerFor(state, live, minutes, nowMinutes);
     const th = powerThresholds(state.plant);
     // Štvrťhodina plánu dňa: pásmo tarify a farba z krivky dňa. Pozadie (tier) sa tak zhoduje
-    // so segmentom pod bežcom na prstenci; bodka (accent) počíta so živým výkonom.
+    // s pásom plánu pod zvoleným časom v grafe dňa; bodka (accent) počíta so živým výkonom.
     const slot = planAt(state, minutes);
     const level = slot.level;
     const T = voiceTexts(voice);
     const message = slot.night
         ? T.NIGHT_MESSAGES[level]
         : getSlotMessage(level, power, state.forecast, th, voice) || T.PRICE_MESSAGES[level];
-    const deviceTier = smartTier(level, power, th, null);
-    // Slabý deň: dnešná špička nedosiahne ani jeho hranicu, slnko veľké spotrebiče nepokryje.
-    const today = state.forecast ? state.forecast.days[0] : null;
-    const weakDay = !!today && today.peakKw < th.weakPeakKw;
     const boundary = realCurveBoundary(state.pv ? state.pv.realCurveToday : null, nowMinutes);
     const measured = boundary !== null && minutes <= boundary;
 
@@ -163,19 +136,11 @@ export function heroModel(state, voice = 'drzy') {
         preview,
         power,
         tier: slot.tier,
-        band: slot.band,
         accent: smartTier(level, power, th),
         isNight: slot.night,
         message,
-        devices: deviceStates(slot, weakDay).map((d) => ({
-            ...d,
-            tier: d.name === 'Auto' ? autoTier(level, power, th) : deviceTier,
-        })),
         waitTime: waitTimeFor(state, slot.tier === 'green'),
-        dial: dialFor(power, installedKw(state.plant), th),
-        powerText: Number.isFinite(power) ? dialText(power) : '–',
-        unitText: unitFor(power, live !== null, measured),
+        powerText: Number.isFinite(power) ? powerTextOf(power) : '–',
         source: sourceFor(power, live !== null, measured),
-        previewLabel: preview ? `Náhľad · ${minutesToTimeStr(minutes)}` : null,
     };
 }

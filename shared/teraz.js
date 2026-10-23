@@ -223,7 +223,7 @@ function soFar(hourly, nowMin) {
 }
 
 /**
- * Karta Kedy lepšie: ešte dnes (waitTime z heroModel, ako „Lepšie bude o“ v súčasnej appke)
+ * Karta Kedy lepšie: ešte dnes (waitTime z heroModel)
  * a najbližší silný deň - špička aspoň po hornú hranicu výkonu, tú istú, od ktorej predpoveď
  * hlási „zajtra slnečno“.
  * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
