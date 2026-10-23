@@ -1,10 +1,19 @@
 // Štart novej appky: DOM, stav z uloženého nastavenia (to isté, čo číta súčasná appka),
 // prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
-import { incomingSettings, readLink } from '../shared/settings.js';
+import { incomingSettings, linkHash, readLink } from '../shared/settings.js';
 import { initUrlMirror } from '../web/settings-store.js';
 import { createStore } from '../web/store.js';
-import { dropOldStored, loadDayLog, loadLook, loadOdmietnutie, loadSettings, loadSite, loadStartPanel } from '../web/storage.js';
+import {
+    dropOldStored,
+    loadDayLog,
+    loadLook,
+    loadOdmietnutie,
+    loadSettings,
+    loadSite,
+    loadStartPanel,
+    loadVlastnaAdresa,
+} from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -17,8 +26,10 @@ const saved = loadSettings();
 const site = saved ? null : loadSite();
 // Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží - ako súčasná
 // appka. To isté, čo je už uložené, sa neponúka.
-// Odkaz, ktorý appka nevie prevziať, nezmizne potichu - ponuka povie prečo (linkError).
-const link = readLink(location.hash);
+// Odkaz, ktorý appka nevie prevziať, nezmizne potichu - ponuka povie prečo (linkError). Adresa,
+// ktorú appka v tejto karte zapísala sama, odkazom nie je - po obnovení nesie staré nastavenie.
+const hash = linkHash(location.pathname, location.hash, loadVlastnaAdresa());
+const link = readLink(hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
 // Dáta, ktoré appky už nepoužívajú (zápisy „Pustil/a som“), v telefóne nenechávame.
@@ -30,7 +41,7 @@ const store = createStore(
         site,
         incoming,
         linkError: link?.error ?? null,
-        startPanel: loadStartPanel(location.hash),
+        startPanel: loadStartPanel(hash),
         dayLog: loadDayLog(),
         online: navigator.onLine,
         // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
