@@ -42,6 +42,7 @@ export function parseSolax(json, now) {
         cumulativeEnergyKwh: num(r.yieldtotal),
         stationName: null,
         realCurveToday: [],
+        measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
 }

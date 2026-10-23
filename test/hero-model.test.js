@@ -141,6 +141,18 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
     // Ráno tesne po východe slnka krivka ešte nemusí mať ani bod; o desiatej už áno.
     assert.deepEqual(fresh(at('07:00'), []), { label: 'aktualizované', time: '07:00', stale: false });
     assert.equal(fresh(at('10:00'), []).stale, true);
+    // Výrobca cez API krivku neposiela vôbec: čas merania je measuredAt, za slnka čerstvé 20 minút.
+    const api = (/** @type {Date} */ measured) => ({
+        ...pv,
+        realCurveToday: [],
+        measuredAt: measured.toISOString(),
+        updatedAt: measured.toISOString(),
+    });
+    const apiFresh = (/** @type {Date} */ now, /** @type {Date} */ measured) => pvFreshness({ now, site: SITE, pv: api(measured) });
+    assert.deepEqual(apiFresh(at('10:00'), at('10:00')), { label: 'meranie', time: '10:00', stale: false });
+    assert.deepEqual(apiFresh(at('10:15'), at('10:00')), { label: 'meranie', time: '10:00', stale: false });
+    assert.deepEqual(apiFresh(at('10:30'), at('10:00')), { label: 'meranie', time: '10:00', stale: true });
+    assert.equal(freshPowerKw({ now: at('10:05'), site: SITE, pv: api(at('10:00')) }), pv.realTimePowerKw);
     // Staré stiahnutie je zastarané aj v noci.
     const old = pvFreshness({ now: at('22:00'), site: SITE, pv: { ...pv, updatedAt: at('21:00').toISOString() } });
     assert.equal(old.stale, true);

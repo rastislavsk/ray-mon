@@ -126,6 +126,8 @@ test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z menič
         [pv.realTimePowerKw, pv.dailyEnergyKwh, pv.monthEnergyKwh, pv.cumulativeEnergyKwh, pv.stationName],
         [sum.kw, 18.2, 410.5, 9876.4, 'Dvorany'],
     );
+    // Krivku dňa Northbound nemá: čas merania nesie measuredAt.
+    assert.deepEqual([pv.realCurveToday, pv.measuredAt], [[], NOW.toISOString()]);
     // Elektráreň bez súčtov: z meničov.
     const bez = nbPv(sum, parseNbStationReal(stationReal, 'NE=3'), '', NOW);
     assert.deepEqual([bez.dailyEnergyKwh, bez.monthEnergyKwh, bez.cumulativeEnergyKwh, bez.stationName], [14, null, 1000, null]);

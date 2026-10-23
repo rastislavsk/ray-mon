@@ -108,6 +108,7 @@ export function deyePv(kw, dnes, nazov, now) {
         cumulativeEnergyKwh: null,
         stationName: nazov || null,
         realCurveToday: [],
+        measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
 }

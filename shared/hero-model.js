@@ -48,7 +48,8 @@ function powerFor(state, live, minutes, nowMinutes) {
  * Kedy menič naposledy meral a či je to priveľmi dávno. Čas merania je posledný bod dnešnej
  * krivky - "aktualizované" (čas stiahnutia) by pri výpadku meniča ďalej rástlo, krivka nie.
  * Mlčanie krivky je chyba, len keď slnko svietilo celé okno STALE_PV_MS; inak je večer
- * a noc bez merania normálne. Bez bodu krivky zostáva čas stiahnutia. `label` je bez času -
+ * a noc bez merania normálne. Zdroj bez krivky (výrobca cez API) posiela čas merania
+ * v `measuredAt`. Bez bodu krivky aj bez neho zostáva čas stiahnutia. `label` je bez času -
  * hlavička ukazuje čas a slovo v dvoch riadkoch.
  * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site }} state
  * @returns {{ label: string, time: string, stale: boolean }}
@@ -57,7 +58,9 @@ export function pvFreshness({ now, pv, site }) {
     const nowMinutes = localMinutes(now, site.timezone);
     const updated = new Date(pv.updatedAt);
     const fetchStale = now.getTime() - updated.getTime() > STALE_PV_MS;
-    const measured = realCurveBoundary(pv.realCurveToday, nowMinutes);
+    const measured =
+        realCurveBoundary(pv.realCurveToday, nowMinutes) ??
+        (pv.measuredAt ? Math.min(localMinutes(new Date(pv.measuredAt), site.timezone), nowMinutes) : null);
     const windowStart = new Date(now.getTime() - STALE_PV_MS);
     const sunUp = solarPosition(windowStart, site.lat, site.lon).elevationDeg > STALE_PV_SUN_DEG;
     const silent = sunUp && (measured === null || (nowMinutes - measured) * 60000 > STALE_PV_MS);

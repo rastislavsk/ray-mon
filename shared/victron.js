@@ -73,6 +73,7 @@ export function parseVictronPv(json, nazov, now) {
         cumulativeEnergyKwh: sumOf(records, TOTAL),
         stationName: nazov || null,
         realCurveToday: [],
+        measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
 }
