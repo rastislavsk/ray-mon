@@ -12,37 +12,38 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 
 ## Čo je čo
 
-| Súbor                          | Téma                                                                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `nahlad-casu-umiestnenie.html` | Karta Spotrebiče — kam s bublinou náhľadu času: dnešný stav vs. tri umiestnenia                                      |
-| `nahlad-casu-variant-b.html`   | Rozpracovanie zvoleného variantu B: prívesok, zárez, obežnica                                                        |
-| `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                               |
-| `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                                |
-| `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť)            |
-| `7dni-priebeh-dna.html`        | Detail dňa (súčasná appka) – namiesto grafu: hodiny (A), časti dňa (B), oblúk slnka (C); `?den=premenlivy`           |
-| `7dni-priebeh-dna-2.html`      | Detail dňa – oblačnosť a kedy zapnúť spotrebiče: panoráma oblohy (D), deň ako kalendár (E)                           |
-| `7dni-priebeh-dna-3.html`      | Detail dňa – D2: panoráma so značkami ✓ ◐ ✕, „teraz“ a bublinou (zamietnuté ako príliš detské)                       |
-| `7dni-priebeh-dna-4.html`      | Detail dňa – D3 (vybraný): okno na spotrebiče, časová os oblačnosť / výroba / pás spotrebičov                        |
-| `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)              |
-| `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup                   |
-| `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)                |
-| `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)                      |
-| `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)                |
-| `mozem-co-mozem-c.html`        | Obrazovka „Čo môžem“ (súčasná appka) – skupiny podľa času (A), dlaždice (B), pás dneška a dlaždice (C, vybraný)      |
-| `mozem-skupiny.html`           | Karta Môžem? (nová appka) – „Čo môžem“ v štyroch skupinách: dlaždice (A), časová os (B)                              |
-| `nahlad-casu-graf.html`        | Graf dňa (nová appka) – čo ukázať pri náhľade času: len čas v štítku (A), čas pri čiare (B, vybraný), v nadpise (C)  |
-| `teraz-v-grafe.html`           | Graf dňa (nová appka) – „teraz“ bez zvislej čiary: len bod (A), bod a stlmená minulosť pásu (B, vybraný)             |
-| `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami                   |
-| `meranie-cez-api.html`         | Živé meranie aj cez API výrobcu meniča – výber značky, prihlásenie, overenie hneď, zoznam značiek a bezpečnosť       |
-| `meranie-pristup-neplati.html` | Keď výrobca prístup k meraniu prestane prijímať: hláška s dôvodom podľa značky, pripojiť znova, Deye pred vypršaním  |
-| `meranie-mlci.html`            | Krok 2: meranie, ktoré mlčí – ciferník a Môžem? počítajú z krivky dňa, nie zo starého čísla                          |
-| `jeden-zoznam-veci.html`       | Krok 3: jeden zoznam vecí s bojlerom – piata dlaždica cez celú šírku, bublinka na Terazky, Spotrebiče v Oblohe       |
-| `poloha-bez-panelov.html`      | Krok 4: poloha bez panelov – súčasná appka odpovedá z typickej strechy, jantárový pás „Hádam podľa suseda“ (A)       |
-| `odkaz-verzia.html`            | Verzia odkazu s nastavením – appka povie, prečo odkaz neprevezme (poškodený, z novšej verzie); pravidlo A            |
-| `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
-| `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)               |
-| `mozem-zoznam.html`            | Čo môžem (súčasná appka) ako zoznam s hláškami jadra namiesto dlaždíc: tmavé riadky (A), zelené riadky (B)           |
-| `terazky-ako-obloha.html`      | Terazky podľa Teraz z Oblohy: len pás odporúčaní pod ciferníkom (B), celá karta s grafom dňa (A); farby súčasnej     |
+| Súbor                          | Téma                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `nahlad-casu-umiestnenie.html` | Karta Spotrebiče — kam s bublinou náhľadu času: dnešný stav vs. tri umiestnenia                                       |
+| `nahlad-casu-variant-b.html`   | Rozpracovanie zvoleného variantu B: prívesok, zárez, obežnica                                                         |
+| `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                                |
+| `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                                 |
+| `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť)             |
+| `7dni-priebeh-dna.html`        | Detail dňa (súčasná appka) – namiesto grafu: hodiny (A), časti dňa (B), oblúk slnka (C); `?den=premenlivy`            |
+| `7dni-priebeh-dna-2.html`      | Detail dňa – oblačnosť a kedy zapnúť spotrebiče: panoráma oblohy (D), deň ako kalendár (E)                            |
+| `7dni-priebeh-dna-3.html`      | Detail dňa – D2: panoráma so značkami ✓ ◐ ✕, „teraz“ a bublinou (zamietnuté ako príliš detské)                        |
+| `7dni-priebeh-dna-4.html`      | Detail dňa – D3 (vybraný): okno na spotrebiče, časová os oblačnosť / výroba / pás spotrebičov                         |
+| `nastavenie-sprievodca.html`   | Karta Nastavenie — sprievodca nastavením elektrárne v šiestich krokoch (16 obrazoviek, klikací telefón)               |
+| `tarify-vlastne-pasma.html`    | Vlastné tarifné pásma — logika (cena × slnko), sprievodca Tarifa, ciferník A vs. B, texty a postup                    |
+| `statistika-uspory.html`       | Nová karta Štatistika — výroba a jej hodnota: počítadlo (A), hodnota dňa (B), týždeň a návratnosť (C)                 |
+| `karta-mozem.html`             | Nová karta Môžem? pre rodinu – odpovede (A), stories (B), plagát so suchým humorom (C, vybraný)                       |
+| `mozem-co-mozem.html`          | Karta Môžem? – blok „Čo môžem“ o krok ďalej: riadok + obrazovka (A, vybraný), panel (B), tlačidlo (C)                 |
+| `mozem-co-mozem-c.html`        | Obrazovka „Čo môžem“ (súčasná appka) – skupiny podľa času (A), dlaždice (B), pás dneška a dlaždice (C, vybraný)       |
+| `mozem-skupiny.html`           | Karta Môžem? (nová appka) – „Čo môžem“ v štyroch skupinách: dlaždice (A), časová os (B)                               |
+| `nahlad-casu-graf.html`        | Graf dňa (nová appka) – čo ukázať pri náhľade času: len čas v štítku (A), čas pri čiare (B, vybraný), v nadpise (C)   |
+| `teraz-v-grafe.html`           | Graf dňa (nová appka) – „teraz“ bez zvislej čiary: len bod (A), bod a stlmená minulosť pásu (B, vybraný)              |
+| `prve-otvorenie-poloha.html`   | Prvé otvorenie bez ukážky Londýna: najprv poloha, potom panely alebo „Teraz nie“ so sivými kartami                    |
+| `meranie-cez-api.html`         | Živé meranie aj cez API výrobcu meniča – výber značky, prihlásenie, overenie hneď, zoznam značiek a bezpečnosť        |
+| `meranie-pristup-neplati.html` | Keď výrobca prístup k meraniu prestane prijímať: hláška s dôvodom podľa značky, pripojiť znova, Deye pred vypršaním   |
+| `meranie-mlci.html`            | Krok 2: meranie, ktoré mlčí – ciferník a Môžem? počítajú z krivky dňa, nie zo starého čísla                           |
+| `jeden-zoznam-veci.html`       | Krok 3: jeden zoznam vecí s bojlerom – piata dlaždica cez celú šírku, bublinka na Terazky, Spotrebiče v Oblohe        |
+| `poloha-bez-panelov.html`      | Krok 4: poloha bez panelov – súčasná appka odpovedá z typickej strechy, jantárový pás „Hádam podľa suseda“ (A)        |
+| `odkaz-verzia.html`            | Verzia odkazu s nastavením – appka povie, prečo odkaz neprevezme (poškodený, z novšej verzie); pravidlo A             |
+| `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá  |
+| `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)                |
+| `mozem-zoznam.html`            | Čo môžem (súčasná appka) ako zoznam s hláškami jadra namiesto dlaždíc: tmavé riadky (A), zelené riadky (B)            |
+| `terazky-ako-obloha.html`      | Terazky podľa Teraz z Oblohy: len pás odporúčaní pod ciferníkom (B), celá karta s grafom dňa (A); farby súčasnej      |
+| `terazky-casova-os.html`       | Terazky / Teraz s časovou osou: A, B, C; oblačnosť pruhom (C1) či heatmapou (C2); C2 s výplňou nad hranicou (vybraný) |
 
 ## Prečo je to v repozitári
 

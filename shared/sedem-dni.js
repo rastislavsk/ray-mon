@@ -17,7 +17,7 @@ import {
     weekStatsModel,
 } from './chart-model.js';
 import { installedKw, powerThresholds } from './config.js';
-import { dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
+import { chartLegend, dayChartModel, planCells, slotTone } from './day-chart.js';
 import { dayHourTiers, forecastDayPlan } from './day-plan.js';
 import { dateParts, dayNameShort, fmt1, fmtSum, weekDayLong, weekDayName, weekDayShort } from './format.js';
 import {
@@ -188,7 +188,7 @@ export function sedemDayModel(input, index, voice = 'drzy') {
             { value: Number.isFinite(day.peakKw) ? fmt1(day.peakKw) : '–', label: SEDEM_TEXTS.kwPeak },
             sedemWindowTile(mainWindow(windows)),
         ],
-        chart: chartOf(input, day, plan, nowMin),
+        chart: chartOf(input, day, plan, nowMin, voice),
         done: nowMin === null ? '' : todayCard(input, plan, nowMin).line,
         clear: sedemClearText(day.clearKwhTotal, usePct(day)),
         message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0, voice),
@@ -199,8 +199,9 @@ export function sedemDayModel(input, index, voice = 'drzy') {
  * Graf dňa z kroku 3 (day-chart.js): predpoveď dňa, pri dnešku nameraná krivka a „teraz“,
  * hranica veľkých spotrebičov, pás plánu s legendou a popis pre čítačku.
  * @param {SedemData} input @param {ForecastDay} day @param {import('./day-plan.js').PlanSlot[]} plan @param {number | null} nowMin
+ * @param {import('./messages.js').Voice} voice
  */
-function chartOf(input, day, plan, nowMin) {
+function chartOf(input, day, plan, nowMin, voice) {
     const curve = nowMin !== null && input.pv ? input.pv.realCurveToday : [];
     const hourly = nowMin !== null ? input.forecast.hourlyToday : day.hourly;
     const nowKw = nowMin === null ? NaN : dayKwAt(nowMin, curve, hourly, nowMin);
@@ -217,8 +218,9 @@ function chartOf(input, day, plan, nowMin) {
             limitKw: powerThresholds(input.plant).lowKw,
             limitText: voiceTexts().TERAZ_TEXTS.limit,
             preview: null,
+            voice,
         }),
-        legend: planLegend(planCells(plan)),
+        legend: chartLegend(planCells(plan)),
         desc: dayChartText({
             now: nowMin === null ? null : { min: nowMin, kwText: Number.isFinite(nowKw) ? fmt1(nowKw) : '–', tone: tone(nowMin) },
             sun: windows('sun'),

@@ -973,14 +973,26 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('nameraná krivka dneška je biela čiara cez predpoveď, hranica veľkých spotrebičov s popiskom', async ({ page }) => {
+    test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom, oblačnosť a okno', async ({
+        page,
+    }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
-        await expect(page.locator('#tz-chart .dc-area')).toHaveCount(1);
+        await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(24);
+        await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
+        await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
-        await expect(page.locator('#tz-chart rect[data-tone]')).toHaveCount(48);
+        await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
         await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
-        await expect(page.locator('#tz-legend span')).toHaveText(['slnko stačí', 'lacná sieť', 'drahá sieť']);
+        await expect(page.locator('#tz-chart .dc-win-t')).toHaveText('Zapni veľké · 9–17:30');
+        await expect(page.locator('#tz-legend span')).toHaveText([
+            'výkon',
+            'veľké spotrebiče',
+            'oblačnosť',
+            'slnko stačí',
+            'lacná sieť',
+            'drahá sieť',
+        ]);
         expect(errors).toEqual([]);
     });
 
@@ -1446,12 +1458,13 @@ test.describe('karta 7 dní', () => {
         await expect(page.locator('#sd-list')).toBeHidden();
         const d = sedemDayModel(vstupSedem(), 0);
         await expect.poll(() => denVStranke(page)).toEqual(denZModelu(d));
-        // „Teraz“ je bod na krivke a stlmené bunky pásu, ktoré už prešli - zvislá čiara nie je.
+        // „Teraz“ je bod na krivke, čiara s časom a stlmené bunky pásu, ktoré už prešli.
         await expect(page.locator('#sd-day-chart .dc-now-dot')).toHaveCount(1);
         const prešlo = d.chart.cells.filter((c) => c.past).length;
         expect(prešlo).toBeGreaterThan(0);
         await expect(page.locator('#sd-day-chart .dc-past')).toHaveCount(prešlo);
-        await expect(page.locator('#sd-day-chart line')).toHaveCount(1);
+        await expect(page.locator('#sd-day-chart .dc-prev')).toHaveCount(1);
+        await expect(page.locator('#sd-day-chart .dc-at-t')).toHaveText('13:00');
         await expect(page.locator('#sd-day-chart .dc-real')).toHaveCount(1);
         await expect(page.locator('#sd-day-chart')).toHaveAttribute('aria-label', d.chart.desc);
         await expect(page.locator('#sd-day-done')).toHaveText(d.done);
@@ -1464,6 +1477,7 @@ test.describe('karta 7 dní', () => {
         await page.locator('#sd-days [data-day="4"]').click();
         await expect.poll(() => denVStranke(page)).toEqual(denZModelu(sedemDayModel(vstupSedem(), 4)));
         await expect(page.locator('#sd-day-chart .dc-now-dot')).toHaveCount(0);
+        await expect(page.locator('#sd-day-chart .dc-prev')).toHaveCount(0);
         await expect(page.locator('#sd-day-chart .dc-past')).toHaveCount(0);
         await expect(page.locator('#sd-day-done')).toBeHidden();
         expect(errors).toEqual([]);
@@ -1574,7 +1588,7 @@ test.describe('karta 7 dní: detail dňa bez cien zo siete', () => {
                         const riadky = [d.done, d.clear].filter(Boolean);
                         await expect(page.locator('#sd-day-facts > :visible')).toHaveText(riadky);
                         await expect(page.locator('#sd-day-facts')).toBeVisible({ visible: riadky.length > 0 });
-                        await expect(page.locator('#sd-day-chart rect[data-tone]')).toHaveCount(d.chart.cells.length);
+                        await expect(page.locator('#sd-day-chart rect[data-from]')).toHaveCount(d.chart.cells.length);
                         await expect(page.locator('#sd-day-legend span')).toHaveText(d.chart.legend.map((l) => l.text));
                         await page.locator('#sd-day-back').click();
                         await expect(page.locator('#sd-list')).toBeVisible();

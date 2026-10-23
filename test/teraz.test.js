@@ -9,6 +9,7 @@ import {
     DAY_CHART,
     DAY_CHART_LABELS,
     dayChartModel,
+    fillPath,
     limitBox,
     limitSpot,
     planCells,
@@ -18,6 +19,7 @@ import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
 import {
+    DAY_CHART_KEYS,
     mozemGuessText,
     mozemOfflineText,
     TERAZ_TEXTS,
@@ -130,7 +132,7 @@ test('chartX a chartMinutes: celý deň medzi okrajmi grafu, náhľad po štvrť
     assert.equal(chartMinutes(1), MINUTES_PER_DAY - 15);
 });
 
-test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, pás, teraz a čas náhľadu v grafe', () => {
+test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť, hranica, pás, okno a čiara „teraz“', () => {
     const i = input(at('13:00'));
     const plan = dayPlan(i);
     const forecast = /** @type {import('../shared/solar.js').Forecast} */ (i.forecast);
@@ -147,8 +149,9 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
         limitText: 'veľké spotrebiče',
     };
     const m = dayChartModel({ ...base, preview: null });
-    assert.match(m.area, new RegExp(`^M${DAY_CHART.left} ${DAY_CHART.base} L`));
-    assert.match(m.area, /Z$/);
+    // Predpoveď ide cez celý deň, od polnoci po polnoc.
+    assert.match(m.forecast, new RegExp(`^M${DAY_CHART.left} `));
+    assert.match(m.forecast, new RegExp(` L${DAY_CHART.right} [0-9.]+$`));
     // Nameraná krivka končí na hranici (11:00), nie na poslednom bode kiosku.
     const realXs = m.real
         .slice(1)
@@ -156,37 +159,90 @@ test('dayChartModel: plocha predpovede, nameraná krivka po hranicu, hranica, p�
         .map((p) => Number(p.split(' ')[0]));
     assert.equal(Math.max(...realXs), Math.round(chartX(hm(11)) * 10) / 10);
     assert.ok(m.limitY > DAY_CHART.top && m.limitY < DAY_CHART.base);
+    // Plocha pod krivkou dňa: nad hranicou aj pod ňou, sýta časť nikdy pod čiarou.
+    const ys = (/** @type {string} */ d) => [...d.matchAll(/ (-?[0-9.]+)(?= L|Z)/g)].map((x) => Number(x[1]));
+    assert.ok(m.over && m.under);
+    assert.ok(ys(m.over).every((y) => y <= m.limitY));
+    assert.ok(ys(m.under).every((y) => y >= m.limitY));
+    // Os kW: okrúhly krok, horná čiara je vrch stupnice tesne nad špičkou (7,9 kW).
+    assert.deepEqual(
+        m.grid.map((g) => g.label),
+        ['0', '2', '4', '6', '8'],
+    );
+    assert.equal(m.grid[0].y, DAY_CHART.base);
+    assert.equal(m.grid[m.grid.length - 1].y, DAY_CHART.top);
+    // Oblačnosť: bunka na každú hodinu dňa, percentá z predpovede.
+    assert.deepEqual(
+        m.clouds.map((c) => c.hour),
+        Array.from({ length: 24 }, (_, h) => h),
+    );
+    assert.deepEqual(
+        m.clouds.map((c) => c.cloud),
+        forecast.hourlyToday.map((p) => p.cloud),
+    );
     assert.equal(m.cells.length, 48);
     // Teraz je 13:00: bunky do 13:00 prešli a sú stlmené, bunka od 13:00 ešte platí.
     assert.deepEqual(
         m.cells.map((c) => c.past),
         m.cells.map((_, i) => i < 26),
     );
-    // Iný deň než dnešok „teraz“ nemá, nestlmí sa nič.
-    assert.ok(dayChartModel({ ...base, nowMin: null, preview: null }).cells.every((c) => !c.past));
+    // Iný deň než dnešok „teraz“ nemá, nestlmí sa nič a čiara nie je.
+    const other = dayChartModel({ ...base, nowMin: null, preview: null });
+    assert.ok(other.cells.every((c) => !c.past));
+    assert.equal(other.mark, null);
     assert.deepEqual(
         m.ticks.map((t) => t.label),
         ['0', '6', '12', '18', '24'],
     );
+    // Okno na veľké spotrebiče: tam, kde slnko stačí (pás „slnko stačí“), s nápisom ako v 7 dňoch.
+    assert.deepEqual(
+        m.windows.map((w) => [w.from, w.to]),
+        [[hm(9), hm(17, 30)]],
+    );
+    assert.equal(m.windowLabel?.text, 'Zapni veľké · 9–17:30');
     assert.equal(m.now.x, Math.round(chartX(hm(13)) * 10) / 10);
     assert.ok(m.now.y !== null && m.now.y < DAY_CHART.base);
-    assert.equal(m.preview, null);
+    // Bez náhľadu stojí čiara na „teraz“ s jeho časom.
+    assert.ok(m.mark);
+    assert.equal(m.mark.preview, false);
+    assert.equal(m.mark.x, m.now.x);
+    assert.equal(m.mark.label.text, '13:00');
+    assert.equal(m.mark.cell, m.cells[26]);
+    assert.equal(m.mark.hour, 13);
 
-    // Čas náhľadu: nad čiarou, šírka v px z počtu znakov (v grafe ho udrží CSS v rendri), a bunka
-    // pásu pod čiarou na zvýraznenie.
+    // Čas náhľadu: nad čiarou, šírka v px z počtu znakov (v grafe ho udrží CSS v rendri), bunka
+    // pásu a hodina oblačnosti pod čiarou na zvýraznenie.
     const text = terazPreviewTime(hm(15, 30));
     const withPreview = dayChartModel({ ...base, preview: { min: hm(15, 30), kw: 4.9, text } });
-    const p = withPreview.preview;
+    const p = withPreview.mark;
     assert.ok(p);
+    assert.equal(p.preview, true);
     assert.equal(p.x, Math.round(chartX(hm(15, 30)) * 10) / 10);
     assert.equal(p.label.text, '15:30');
     assert.equal(p.label.w, Math.round(text.length * DAY_CHART_LABELS.timeCharEm * DAY_CHART_LABELS.timePx));
     assert.equal(p.cell, withPreview.cells[31]);
-    // Bez výkonu bodka nie je, bez predpovede ani plocha; prázdna krivka sa nekreslí.
+    assert.equal(p.hour, 15);
+    // Bez výkonu bodka nie je, bez predpovede ani krivky, plocha či oblačnosť.
     const empty = dayChartModel({ ...base, hourly: [], real: [], boundary: null, nowKw: NaN, preview: null });
-    assert.equal(empty.area, '');
+    assert.equal(empty.forecast, '');
     assert.equal(empty.real, '');
+    assert.equal(empty.over, '');
+    assert.equal(empty.under, '');
+    assert.deepEqual(empty.clouds, []);
     assert.equal(empty.now.y, null);
+});
+
+test('fillPath: plocha nad hranicou končí presne na čiare, pod hranicou siaha najvyššie po ňu', () => {
+    const limitY = 50;
+    // Krivka vystúpi nad čiaru (menšie y) a znova klesne.
+    const line = [
+        { x: 0, y: 100 },
+        { x: 10, y: 30 },
+        { x: 20, y: 100 },
+    ];
+    // Priesečníky s čiarou y = 50: x = 10 * 50 / 70 ≈ 7,1 a symetricky ≈ 12,9.
+    assert.equal(fillPath(line, limitY, 'over'), 'M0 50 L0 50 L7.1 50 L10 30 L12.9 50 L20 50 L20 50Z');
+    assert.equal(fillPath(line, limitY, 'under'), `M0 ${DAY_CHART.base} L0 100 L7.1 50 L10 50 L12.9 50 L20 100 L20 ${DAY_CHART.base}Z`);
 });
 
 /** Krivka v jednotkách grafu: výška (0 až 1 stupnice) v každej celej hodine. @param {(hour: number) => number} h */
@@ -347,7 +403,7 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
     assert.deepEqual(m.hint, { text: TERAZ_TEXTS.hint, reset: false });
     assert.deepEqual(
         m.chart.legend.map((l) => l.text),
-        [TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
+        [DAY_CHART_KEYS.power, TERAZ_TEXTS.limit, DAY_CHART_KEYS.cloud, TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
     );
     assert.match(m.chart.desc, /^Výroba počas dňa\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
 });
@@ -367,8 +423,9 @@ test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „
     assert.equal(m.cards?.now.head, hero.message.headline);
     const now = terazModel(input(at('13:00')));
     assert.equal(m.chart?.now.x, now.chart?.now.x);
-    assert.equal(m.chart?.preview?.label.text, '15:30');
-    assert.equal(m.chart?.preview?.cell.tone, 'sun');
+    const mark = m.chart?.mark;
+    assert.ok(mark);
+    assert.deepEqual([mark.preview, mark.label.text, mark.cell.tone], [true, '15:30', 'sun']);
     assert.equal(m.chart?.value, hm(15, 30));
     assert.match(m.chart?.valueText ?? '', /^Náhľad 15:30, /);
 });

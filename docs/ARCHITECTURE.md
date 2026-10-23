@@ -60,7 +60,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 | `mozem-sky.js`                                                               | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, dlaždice, oblúk, výzvy).    |
 | `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
-| `day-chart.js`                                                               | Graf dňa novej appky (Teraz, detail dňa): geometria krivky, hranice, „teraz“, náhľadu a pás plánu po polhodinách.    |
+| `day-chart.js`                                                               | Graf dňa (Teraz/Terazky, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno. |
 | `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
 | `setup-texts.js`                                                             | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.             |
 | `nastavenie.js`                                                              | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                 |
@@ -285,9 +285,13 @@ z `deviceShorts` – obe karty z neho ukazujú to isté. Graf kreslí `web/day-c
 obsluhuje `web/teraz-gestures.js`, oba neutrálne moduly spoločné pre obe appky. Meranie, ktoré mlčí (`pvFreshness`), už nie
 je výkon „teraz“ v žiadnej appke (`freshPowerKw` v `shared/hero-model.js`): číslo, graf aj veta
 karty Môžem? vtedy počítajú z krivky dňa a povedia, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
-`shared/day-chart.js`: predpoveď ako plochu, nameranú krivku po posledný bod ako bielu čiaru,
-hranicu veľkých spotrebičov (`lowKw` z `powerThresholds`, od nej je plán zelený) a pod grafom pás
-plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom strede. Graf je zároveň posúvač času
+`shared/day-chart.js` (návrh C2 v `docs/navrhy/terazky-casova-os.html`): hore oblačnosť po hodinách
+ako riadok buniek (sýtosť je oblačnosť), predpoveď ako prerušovanú čiaru, nameranú krivku po posledný
+bod ako plnú, os kW s okrúhlym krokom (`kwGridStep`), hranicu veľkých spotrebičov (`lowKw`
+z `powerThresholds`, od nej je plán zelený) a plochu pod krivkou dňa – sýtu nad hranicou, jemnú pod
+ňou (`fillPath`). Pod grafom je pás plánu po polhodinách – bunka má farbu štvrťhodiny vo svojom
+strede – a pod ním zátvorka nad každým oknom, keď slnko stačí, s nápisom „Zapni veľké · 9–17:30“
+pod najdlhším (`fitLabel`, ten istý ako v páse spotrebičov v 7 dňoch súčasnej appky). Graf je zároveň posúvač času
 (`role="slider"`): prst, kurzor aj šípky ukážu náhľad. V novej appke je náhľad krok navigácie (`preview`
 v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. V súčasnej appke krokom
 nie je, rovnako ako vybraný deň. Listovanie kariet
@@ -301,10 +305,10 @@ z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú
 s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
 sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
-(`web/day-chart.js`, spoločný pre obe appky), pri inom dni než dnešok bez značky „teraz“. „Teraz“ nie je
-zvislá čiara, ale bod na konci nameranej krivky a stlmené bunky pásu plánu, ktoré už prešli –
-hranica stlmeného a plného pásu ukazuje „teraz“ aj v noci, keď bod leží na nule. Krivky sú v SVG,
-ktoré sa s grafom zväčšuje; popisky (hodiny, nápis hranice veľkých spotrebičov, čas náhľadu) sú
+(`web/day-chart.js`, spoločný pre obe appky), pri inom dni než dnešok bez značky „teraz“. „Teraz“ je
+bod na konci nameranej krivky, stlmené bunky pásu plánu, ktoré už prešli, a bez náhľadu aj čiara
+náhľadu s časom – stojí na „teraz“, kým ju prst neposunie. Krivky sú v SVG, ktoré sa s grafom
+zväčšuje; popisky (hodiny, čísla osi kW, nápis hranice veľkých spotrebičov, čas náhľadu, nápis okna) sú
 HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerastú. Nápis hranice kladie
 `limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky, bod
 „teraz“ ani čiaru náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad

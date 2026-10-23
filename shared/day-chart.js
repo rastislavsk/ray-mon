@@ -1,27 +1,47 @@
-// Graf dňa novej appky (obloha/) na karte Teraz aj v detaile dňa na karte 7 dní: krivka výroby
-// od polnoci do polnoci, hranica veľkých spotrebičov, značka „teraz“ a náhľad iného času, pod
-// grafom pás plánu po polhodinách.
+// Graf dňa na karte Terazky / Teraz v oboch appkách a v detaile dňa na karte 7 dní novej appky:
+// odhora oblačnosť po hodinách, krivka výroby od polnoci do polnoci s osou kW, hranica veľkých
+// spotrebičov a plocha nad ňou, značka „teraz“ a náhľad iného času, pod grafom pás plánu po
+// polhodinách a pod ním okno na veľké spotrebiče.
 // Čistá geometria v súradniciach SVG (viewBox DAY_CHART.w × DAY_CHART.h) podľa návrhu
-// (docs/navrhy/smer-b-obloha.html, `dayChart`). Plán aj výkon prichádzajú hotové z day-plan.js
+// (docs/navrhy/terazky-casova-os.html, C2 s výplňou). Plán aj výkon prichádzajú hotové z day-plan.js
 // a hero-model.js - tu sa nič nepočíta inak, len kreslí.
 
+import { kwGridStep } from './chart-model.js';
 import { MINUTES_PER_DAY, PREVIEW } from './config.js';
-import { TERAZ_TONES } from './messages-core.js';
+import { formatGridKw } from './format.js';
+import { DAY_CHART_KEYS, fitLabel, TERAZ_TEXTS, TERAZ_TONES, terazPreviewTime } from './messages-core.js';
 
 /** Čo platí v danej štvrťhodine plánu: slnko stačí, lacná sieť, drahá sieť, inak bežná cena. @typedef {'sun' | 'cheap' | 'costly' | 'plain'} Tone */
 /** @typedef {{ from: number, to: number, tone: Tone }} Cell bunka pásu plánu, minúty dňa */
 
 /**
- * Rozmery grafu: vodorovne od `left` po `right` je celý deň, zvislo od `top` (najvyšší výkon
- * stupnice) po `base` (nula). Pod nulou pás plánu a popisky hodín, nad `top` čas náhľadu.
+ * Rozmery grafu: vodorovne od `left` po `right` je celý deň (vľavo od `left` čísla osi kW),
+ * zvislo odhora čas náhľadu, riadok oblačnosti (`cloudY`, výška `cloudH`), voľné miesto pre nápis
+ * hranice, keď musí vystúpiť nad krivku, krivka od `top`
+ * (najvyšší výkon stupnice) po `base` (nula), pás plánu (`bandY`, `bandH`) s hodinami pod ním
+ * a okno na veľké spotrebiče (zátvorka na `winY`, nápis pod ňou).
  */
-export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 112, bandY: 120, bandH: 9, cellMin: 30 };
+export const DAY_CHART = {
+    w: 320,
+    h: 206,
+    left: 26,
+    right: 306,
+    cloudY: 24,
+    cloudH: 12,
+    top: 62,
+    base: 138,
+    bandY: 148,
+    bandH: 9,
+    winY: 182,
+    cellMin: 30,
+};
 
 /**
- * Popisky grafu - hodiny, nápis hranice veľkých spotrebičov a čas náhľadu - majú na každej šírke
- * tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie. Kreslia sa preto ako
- * HTML nad SVG (web/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
- * (.dc-t, .dc-limit-t, .dc-at-t) a musí sedieť s číslami tu: `limitPx` a `timePx` veľkosť písma,
+ * Popisky grafu - hodiny, čísla osi kW, nápis hranice veľkých spotrebičov, čas náhľadu a nápis okna -
+ * majú na každej šírke tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie.
+ * Kreslia sa preto ako HTML nad SVG (web/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
+ * (.dc-t, .dc-y, .dc-limit-t, .dc-at-t, .dc-win-t) a musí sedieť s číslami tu: `limitPx`, `timePx`
+ * a `winPx` veľkosť písma,
  * `charEm` a `timeCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
  * od čiary. `minScale` je najmenšia mierka grafu (px na jednotku
  * viewBoxu): graf široký 274 px na displeji 320 px - tam zaberá nápis v jednotkách grafu najviac.
@@ -30,8 +50,9 @@ export const DAY_CHART = { w: 320, h: 150, left: 10, right: 310, top: 24, base: 
  * kde by na telefóne prekryl krivku.
  */
 export const DAY_CHART_LABELS = {
-    limitPx: 13,
+    limitPx: 12,
     timePx: 15,
+    winPx: 13,
     charEm: 0.5,
     timeCharEm: 0.56,
     lineEm: 1.25,
@@ -90,6 +111,20 @@ export function planLegend(cells) {
     return order.filter((t) => cells.some((c) => c.tone === t)).map((tone) => ({ tone, text: TERAZ_TONES[tone] }));
 }
 
+/**
+ * Celá legenda pod grafom dňa: výkon, hranica veľkých spotrebičov a oblačnosť, za nimi farby pásu
+ * plánu (planLegend). `tone` je kľúč pre CSS appky (`data-tone`).
+ * @param {Array<{ tone: Tone }>} cells @returns {Array<{ tone: string, text: string }>}
+ */
+export function chartLegend(cells) {
+    return [
+        { tone: 'power', text: DAY_CHART_KEYS.power },
+        { tone: 'limit', text: TERAZ_TEXTS.limit },
+        { tone: 'cloud', text: DAY_CHART_KEYS.cloud },
+        ...planLegend(cells),
+    ];
+}
+
 /** Bunka pásu, do ktorej padne minúta dňa. @template {Cell} T @param {T[]} cells @param {number} min */
 export function cellAt(cells, min) {
     return cells[Math.min(cells.length - 1, Math.max(0, Math.floor(min / DAY_CHART.cellMin)))];
@@ -112,58 +147,168 @@ export function chartMinutes(rel) {
 
 /**
  * Geometria grafu dňa.
- * @param {{ plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number }>,
+ * @param {{ plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number, cloud?: number | null }>,
  *   real: Array<{ hour: number, kw: number }>, boundary: number | null, nowMin: number | null, nowKw: number,
- *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null }} d `hourly`
- *   predpoveď dňa, `real` nameraná krivka (kreslí sa po `boundary`, posledný nameraný bod), `nowMin`
+ *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null,
+ *   voice?: import('./messages-core.js').Voice }} d `hourly`
+ *   predpoveď dňa aj s oblačnosťou po hodinách, `real` nameraná krivka (kreslí sa po `boundary`, posledný
+ *   nameraný bod), `nowMin`
  *   značka „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov
- *   a `limitText` nápis pri nej, `preview` náhľad iného času s popiskom (čas)
+ *   a `limitText` nápis pri nej, `preview` náhľad iného času s popiskom (čas), `voice` tón nápisu okna
  */
-export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview }) {
+export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview, voice = 'drzy' }) {
     const C = DAY_CHART;
     const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary);
     const kws = [limitKw, ...hourly.map((p) => p.kw), ...measured.map((p) => p.kw), nowMin === null ? 0 : nowKw, preview ? preview.kw : 0];
-    // Stupnica s rezervou nad najvyšším bodom, aby krivka nenarážala na čas náhľadu.
-    const max = Math.max(...kws.filter(Number.isFinite)) * 1.1 || 1;
-    const y = (/** @type {number} */ kw) => r1(C.base - (Math.max(0, kw) / max) * (C.base - C.top));
+    const { step, max } = kwScale(kws);
+    const y = (/** @type {number} */ kw) => r1(C.base - (Math.min(max, Math.max(0, kw)) / max) * (C.base - C.top));
     const x = (/** @type {number} */ min) => r1(chartX(min));
-    const toPt = (/** @type {{ hour: number, kw: number }} */ p) => ({ x: x(p.hour * 60), y: y(p.kw) });
-    const path = (/** @type {Pt[]} */ list) => `M${list.map((p) => `${p.x} ${p.y}`).join(' L')}`;
-    const last = hourly[hourly.length - 1];
-    // Obrys plochy predpovede: od nuly cez hodiny po koniec dňa a späť na nulu.
-    const edge = hourly.length
-        ? [{ x: x(0), y: C.base }, ...hourly.map(toPt), { x: x(MINUTES_PER_DAY), y: y(last.kw) }, { x: x(MINUTES_PER_DAY), y: C.base }]
-        : [];
-    const curve = measured.length > 1 ? measured.map(toPt) : [];
+    const limitY = y(limitKw);
+    const { forecast, curve, paths } = linesOf(hourly, measured, x, y, limitY);
     const cellW = r1(chartX(C.cellMin) - chartX(0) - 0.8);
     const at = (/** @type {number} */ min, /** @type {number} */ kw) => ({ x: x(min), y: Number.isFinite(kw) ? y(kw) : null });
     // Bunky, ktoré dnes už prešli, sú stlmené: hranica medzi nimi a plným pásom ukazuje „teraz“ aj
-    // v páse (zvislá čiara „teraz“ nie je, len bod). Bunka, v ktorej „teraz“ je, ešte platí.
+    // v páse. Bunka, v ktorej „teraz“ je, ešte platí.
     const cells = planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW, past: nowMin !== null && c.to <= nowMin }));
+    const windows = sunWindows(plan).map((w) => ({ ...w, x0: x(w.from), x1: x(w.to) }));
+    // Čiara náhľadu stojí bez náhľadu na „teraz“ (ak je dnešok) - čas pri nej povie, ktorá chvíľa to je.
+    const at0 = preview ?? (nowMin === null ? null : { min: nowMin, kw: nowKw, text: terazPreviewTime(nowMin) });
+    const mark = at0 && { ...at(at0.min, at0.kw), min: at0.min, text: at0.text };
     return {
-        area: edge.length ? `${path(edge)}Z` : '',
-        real: curve.length ? path(curve) : '',
-        limitY: y(limitKw),
+        ...paths,
+        grid: Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step).map((kw) => ({ y: y(kw), label: formatGridKw(kw) })),
+        limitY,
         limitText,
         // Nápis hranice nesmie prekryť krivky, bod „teraz“ ani čiaru náhľadu.
-        limitAt: limitPlaces(y(limitKw), limitText, [edge, curve], marksOf(nowMin, preview)),
+        limitAt: limitPlaces(limitY, limitText, [forecast, curve], marksOf(nowMin, mark)),
+        clouds: cloudCells(hourly, x),
         cells,
         ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
+        // Okno na veľké spotrebiče pod pásom: zátvorka nad každým, nápis pod najdlhším.
+        windows,
+        windowLabel: windowLabelOf(windows, voice),
         now: nowMin === null ? null : at(nowMin, nowKw),
-        // Náhľad: čas pri čiare a zvýraznená bunka pásu pod ňou - jej farba povie, čo vtedy platí.
-        preview: preview ? { ...at(preview.min, preview.kw), label: labelOf(preview.text), cell: cellAt(cells, preview.min) } : null,
+        // Čiara náhľadu (alebo „teraz“): čas nad ňou, zvýraznená bunka pásu a hodina oblačnosti pod ňou.
+        mark: mark && {
+            x: mark.x,
+            y: mark.y,
+            preview: !!preview,
+            label: labelOf(mark.text),
+            cell: cellAt(cells, mark.min),
+            hour: Math.min(23, Math.floor(mark.min / 60)),
+        },
     };
 }
 
 /**
- * Značky, ktorým sa nápis hranice vyhne: bod „teraz“ a čiara náhľadu s časom nad ňou.
- * @param {number | null} nowMin @param {{ min: number, text: string } | null} preview @returns {Mark[]}
+ * Čiary grafu: predpoveď cez celý deň (posledná hodina drží do polnoci), nameraná krivka a plocha
+ * pod krivkou dňa - meranie po hranicu, za ňou predpoveď, tá istá ako výkon v náhľade (dayKwAt).
+ * Plocha je sýta nad hranicou veľkých spotrebičov (slnko navyše na ne) a jemná pod ňou.
+ * @param {Array<{ hour: number, kw: number }>} hourly @param {Array<{ hour: number, kw: number }>} measured
+ * @param {(min: number) => number} x @param {(kw: number) => number} y @param {number} limitY
  */
-function marksOf(nowMin, preview) {
+function linesOf(hourly, measured, x, y, limitY) {
+    const toPt = (/** @type {{ hour: number, kw: number }} */ p) => ({ x: x(p.hour * 60), y: y(p.kw) });
+    const path = (/** @type {Pt[]} */ list) => (list.length ? `M${list.map((p) => `${p.x} ${p.y}`).join(' L')}` : '');
+    const last = hourly[hourly.length - 1];
+    const forecast = last ? [...hourly.map(toPt), { x: x(MINUTES_PER_DAY), y: y(last.kw) }] : [];
+    const curve = measured.length > 1 ? measured.map(toPt) : [];
+    const end = curve.length ? curve[curve.length - 1].x : -Infinity;
+    const day = [...curve, ...forecast.filter((p) => p.x > end)];
+    return {
+        forecast,
+        curve,
+        paths: {
+            forecast: path(forecast),
+            real: path(curve),
+            over: day.some((p) => p.y < limitY) ? fillPath(day, limitY, 'over') : '',
+            under: day.length ? fillPath(day, limitY, 'under') : '',
+        },
+    };
+}
+
+/**
+ * Stupnica osi kW: najviac päť čiar s okrúhlym krokom (kwGridStep), horná čiara je vrch stupnice -
+ * prvý násobok kroku nad najvyšším bodom.
+ * @param {number[]} kws
+ */
+function kwScale(kws) {
+    const peak = Math.max(0, ...kws.filter(Number.isFinite));
+    const step = kwGridStep(peak, 4);
+    return { step, max: Math.max(1, Math.ceil(peak / step)) * step };
+}
+
+/**
+ * Nápis okna pod najdlhším z okien (pri viacerých by sa nápisy bili): „Zapni veľké · 9–17:30“.
+ * @param {Array<{ from: number, to: number, x0: number, x1: number }>} windows
+ * @param {import('./messages-core.js').Voice} voice
+ */
+function windowLabelOf(windows, voice) {
+    if (!windows.length) return null;
+    const w = windows.reduce((a, b) => (b.to - b.from > a.to - a.from ? b : a));
+    return winLabelOf(r1((w.x0 + w.x1) / 2), fitLabel({ ...w, level: 'go' }, Infinity, voice));
+}
+
+/**
+ * Úseky dňa, keď slnko stačí na veľké spotrebiče (tier zelená - ten istý pás „slnko stačí“ ako
+ * v páse plánu a úroveň „Zapni veľké“ vo fitSegments).
+ * @param {import('./day-plan.js').PlanSlot[]} plan @returns {Array<{ from: number, to: number }>}
+ */
+function sunWindows(plan) {
+    /** @type {Array<{ from: number, to: number }>} */ const out = [];
+    for (const s of plan) {
+        if (s.tier !== 'green') continue;
+        const last = out[out.length - 1];
+        if (last && last.to === s.startMin) last.to += s.min;
+        else out.push({ from: s.startMin, to: s.startMin + s.min });
+    }
+    return out;
+}
+
+/**
+ * Oblačnosť po hodinách: bunka na hodinu, `cloud` v percentách. Hodina bez údaja bunku nemá.
+ * @param {Array<{ hour: number, cloud?: number | null }>} hourly @param {(min: number) => number} x
+ */
+function cloudCells(hourly, x) {
+    const w = r1(x(60) - x(0) - 1.6);
+    return hourly
+        .filter((p) => Number.isFinite(p.cloud) && p.hour >= 0 && p.hour < 24)
+        .map((p) => ({ hour: p.hour, x: r1(x(p.hour * 60) + 0.8), w, cloud: /** @type {number} */ (p.cloud) }));
+}
+
+/**
+ * Plocha pod krivkou dňa nad hranicou (`over`: medzi krivkou a čiarou, kde je krivka nad ňou) alebo
+ * pod ňou (`under`: od nuly po krivku, najvyššie po čiaru). Kde krivka čiaru pretne, pribudne bod
+ * priesečníka, aby plocha končila presne na nej.
+ * @param {Pt[]} line @param {number} limitY @param {'over' | 'under'} part
+ */
+export function fillPath(line, limitY, part) {
+    /** @type {Pt[]} */ const pts = [];
+    line.forEach((p, i) => {
+        const prev = line[i - 1];
+        if (prev && (prev.y - limitY) * (p.y - limitY) < 0) {
+            const t = (limitY - prev.y) / (p.y - prev.y);
+            pts.push({ x: r1(prev.x + t * (p.x - prev.x)), y: limitY });
+        }
+        pts.push(p);
+    });
+    const clamp = (/** @type {number} */ v) => (part === 'over' ? Math.min(v, limitY) : Math.max(v, limitY));
+    const edge = part === 'over' ? limitY : DAY_CHART.base;
+    const first = pts[0];
+    const last = pts[pts.length - 1];
+    return `M${first.x} ${edge} L${pts.map((p) => `${p.x} ${clamp(p.y)}`).join(' L')} L${last.x} ${edge}Z`;
+}
+
+/**
+ * Značky, ktorým sa nápis hranice vyhne: bod „teraz“ a čiara náhľadu (bez náhľadu stojí na „teraz“)
+ * s časom nad ňou.
+ * @param {number | null} nowMin @param {{ min: number, text: string } | null} mark @returns {Mark[]}
+ */
+function marksOf(nowMin, mark) {
     /** @type {Mark[]} */
     const marks = [];
     if (nowMin !== null) marks.push({ x: r1(chartX(nowMin)), halfPx: 0 });
-    if (preview) marks.push({ x: r1(chartX(preview.min)), halfPx: labelOf(preview.text).w / 2 });
+    if (mark) marks.push({ x: r1(chartX(mark.min)), halfPx: labelOf(mark.text).w / 2 });
     return marks;
 }
 
@@ -183,6 +328,15 @@ function limitPlaces(limitY, text, lines, marks) {
 function labelOf(text) {
     const L = DAY_CHART_LABELS;
     return { w: Math.round(text.length * L.timeCharEm * L.timePx), text };
+}
+
+/**
+ * Nápis okna pod pásom: šírka v px z počtu znakov - render ho podľa nej udrží celý v grafe.
+ * @param {number} x stred okna @param {string} text
+ */
+function winLabelOf(x, text) {
+    const L = DAY_CHART_LABELS;
+    return { x, text, w: Math.round(text.length * L.timeCharEm * L.winPx) };
 }
 
 /** @typedef {{ x: number, y: number }} Pt bod v jednotkách grafu */
@@ -257,7 +411,7 @@ function limitAnchors() {
 
 /**
  * Kde stojí nápis hranice veľkých spotrebičov. Na žiadnom grafe s mierkou aspoň `scale` nesmie
- * prekryť krivku predpovede, nameranú krivku ani značky („teraz“, náhľad) a musí ostať v grafe.
+ * prekryť krivku predpovede, nameranú krivku ani značky („teraz“, náhľad) a musí ostať v ploche krivky (pod riadkom oblačnosti).
  * Skúša sa: tesne nad čiarou na konci, na začiatku; potom na konci a na začiatku nad krivkou (nápis sa
  * zdvihne na voľné miesto nad ňou); potom to isté po krokoch pozdĺž čiary. Keď nič z toho nejde,
  * ostane nad čiarou na konci. Od značky sa nápis drží vodorovne v celej výške grafu: čiara náhľadu
@@ -269,7 +423,7 @@ function limitAnchors() {
 export function limitSpot(limitY, text, lines, marks, scale = DAY_CHART_LABELS.minScale) {
     const free = (/** @type {Spot} */ spot) => {
         const b = limitBox(text, spot, scale);
-        if (b.y0 < 0) return false;
+        if (b.y0 < DAY_CHART.cloudY + DAY_CHART.cloudH) return false;
         const hit = (/** @type {Mark} */ m) => {
             const r = Math.max(MARK_R, m.halfPx / scale + LINE_PAD);
             return m.x + r >= b.x0 && m.x - r <= b.x1;
