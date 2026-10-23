@@ -186,8 +186,34 @@ test('hlavička: miesto elektrárne, čas a bodka živého merania', async ({ pa
 test('hlavička: čerstvé meranie bez výkonu nie je živé, rovnako ako na karte Teraz', async ({ page }) => {
     const errors = await openObloha(page, { time: at('13:00'), pvData: { ...pv, realTimePowerKw: null } });
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
-    await expect(page.locator('#hdr-tone')).toHaveText('živé meranie nedostupné');
+    await expect(page.locator('#hdr-status')).toHaveText('meranie nedostupné');
     expect(errors).toEqual([]);
+});
+
+test('hlavička: čas posledného merania, nie hodiny; zastarané so slovom, bez merania slovom', async ({ page }) => {
+    // Meranie z 13:00 (posledný bod krivky), appka o 13:10: čas merania, nie 13:10 - ako súčasná appka.
+    const errors = await openObloha(page, { time: at('13:10') });
+    await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
+    await expect(page.locator('#hdr-status')).toHaveText('13:00');
+    await expect(page.locator('#hdr-tone')).toHaveText('živé meranie');
+    // Za slnka viac ako 20 minút bez merania: čas so slovom, bodka odhadu.
+    await page.clock.setFixedTime(at('13:30'));
+    await page.reload();
+    await expect(page.locator('#hdr-status')).toHaveText('13:00 · zastarané');
+    await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
+    await expect(page.locator('#hdr-tone')).toHaveText('meranie zastarané');
+    expect(errors).toEqual([]);
+});
+
+test('hlavička: pripojené meranie neprišlo, alebo meranie nie je pripojené', async ({ browser }) => {
+    const bezMerania = await browser.newPage();
+    await openObloha(bezMerania, { settings: /** @type {any} */ ({ ...OWNER, zdroj: null }) });
+    await expect(bezMerania.locator('#hdr-status')).toHaveText('odhad z predpovede');
+    await expect(bezMerania.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
+    const neprislo = await browser.newPage();
+    await openObloha(neprislo, { pvData: /** @type {any} */ (null) });
+    await expect(neprislo.locator('#hdr-status')).toHaveText('meranie nedostupné');
+    await expect(neprislo.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
 });
 
 test('útlm pohybu: obloha sa mení bez prechodu', async ({ page }) => {

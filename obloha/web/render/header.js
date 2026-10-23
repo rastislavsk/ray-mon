@@ -1,16 +1,17 @@
-// Hlavička: vľavo miesto elektrárne, vpravo čas a bodka živého merania. Bez zadaných panelov
-// je vpravo biely štítok „Zadaj panely ›“, ktorý otvorí kartu Nastavenie.
+// Hlavička: vľavo miesto elektrárne, vpravo bodka živého merania a čas posledného merania (ako
+// súčasná appka), bez neho slovom, čo appka ukazuje. Bez zadaných panelov je vpravo biely štítok
+// „Zadaj panely ›“, ktorý otvorí kartu Nastavenie.
 
 import { freshPowerKw, pvFreshness } from '../../../shared/hero-model.js';
-import { minutesToTimeStr } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { neplatiOf } from '../../../shared/pristup.js';
-import { localMinutes } from '../../../shared/solar.js';
 
 /**
  * Čo hlavička ukazuje. `tone` je farba bodky: `live` čerstvé meranie z meniča, `odhad` len
- * predpoveď (bez merania, alebo meranie chýba či je staré), `off` žiadne dáta. `toneText` je to
- * isté slovom pre čítačku obrazovky.
+ * predpoveď (bez merania, alebo meranie chýba či je staré), `off` žiadne dáta. `status` je čas
+ * posledného merania (pvFreshness, ten istý ako v súčasnej appke), pri zastaranom so slovom - samotný
+ * starý čas by vyzeral ako zle idúce hodiny; bez merania slovo. `toneText` dopĺňa pre čítačku
+ * obrazovky, čo bodka hovorí farbou, keď to `status` nepovie sám.
  * @param {import('../state.js').AppState} state
  * @returns {{ place: string, setup: boolean, status: string, tone: 'live' | 'odhad' | 'off', toneText: string }}
  */
@@ -20,19 +21,24 @@ export function headerModel(state) {
     if (state.known !== 'elektraren') return { ...off(''), setup: true };
     if (state.loading) return off('načítavam…');
     if (!state.pv && !state.forecast) return off('bez dát');
-    const status = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
     // Živé je to, čo karty berú za výkon teraz (freshPowerKw) - čerstvé meranie bez výkonu nie.
-    if (freshPowerKw(state) !== null) return { place, setup: false, status, tone: 'live', toneText: 'živé meranie' };
-    return { place, setup: false, status, tone: 'odhad', toneText: odhadText(state) };
+    if (state.pv && freshPowerKw(state) !== null) {
+        const { time } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
+        return { place, setup: false, status: time, tone: 'live', toneText: 'živé meranie' };
+    }
+    return { place, setup: false, tone: 'odhad', ...odhad(state) };
 }
 
-/** Prečo hlavička ukazuje len odhad, slovom pre čítačku. @param {import('../state.js').AppState} state */
-function odhadText(state) {
-    if (state.pv)
-        return pvFreshness({ now: state.now, pv: state.pv, site: state.site }).stale ? 'meranie zastarané' : 'živé meranie nedostupné';
+/** Čo hlavička ukáže, keď živé meranie nie je. @param {import('../state.js').AppState} state */
+function odhad(state) {
+    const nedostupne = { status: 'meranie nedostupné', toneText: '' };
+    if (state.pv) {
+        const { time, stale } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
+        return stale ? { status: `${time} · zastarané`, toneText: 'meranie zastarané' } : nedostupne;
+    }
     const neplati = neplatiOf(state);
-    if (neplati) return neplati.tone;
-    return state.zdroj ? 'živé meranie nedostupné' : 'odhad z predpovede';
+    if (neplati) return { status: neplati.hlavicka, toneText: neplati.tone };
+    return state.zdroj ? nedostupne : { status: 'odhad z predpovede', toneText: '' };
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
