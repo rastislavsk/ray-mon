@@ -40,7 +40,7 @@ function initNavigation(store, dom) {
         if (dashboard(store.get())) dom.panels[to].focus();
     };
     for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
-    const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzZnova, dom.sdGuessBtn, dom.sdAskBtn];
+    const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzNoteBtn, dom.sdGuessBtn, dom.sdAskBtn];
     toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn);
     // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi. Sú to dva kroky navigácie -
     // Späť z panelov vráti do prehľadu Nastavenia, ako keby ich otvoril odtiaľ.

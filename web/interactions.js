@@ -46,8 +46,9 @@ function initNavigation(store, dom) {
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
-        // Pás „Meranie treba pripojiť znova“: v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom.
-        // Pred prepnutím karty - to pás prekreslí a značku z tlačidla zoberie.
+        // Pás „Meranie treba pripojiť znova“ (aj pás odhadu na karte Terazky pri odmietnutom prístupe):
+        // v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom. Pred prepnutím karty - to pás
+        // prekreslí a značku z tlačidla zoberie.
         if (target.closest('[data-pristup-go]')) dom.settingsPlant.open = true;
         const panelBtn = target.closest('button[data-panel]');
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
@@ -58,6 +59,13 @@ function initNavigation(store, dom) {
         // so starým skriptom z cache by po kliku naň skryla všetky karty naraz.
         if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
             store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
+        }
+        // Pás odhadu na karte Terazky: jeden krok navigácie do Nastavenia, bez merania rovno na krok
+        // Meranie sprievodcu (ako výzva v Štatistike), pri odmietnutom prístupe na hlásenie vyššie.
+        if (target.closest('#tz-note-btn')) {
+            const s = store.get();
+            const znova = dom.tzNoteBtn.hasAttribute('data-pristup-go');
+            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? {} : stepEdit(s, 'meranie', true)) });
         }
         // Odkaz „nastav panely“ v hlavičke: jeden krok navigácie rovno na krok Panel sprievodcu.
         if (target.closest('#pv-setup-go')) {

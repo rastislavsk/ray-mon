@@ -392,6 +392,25 @@ button:focus-visible {
 .cta .pbtn:focus-visible {
     outline-color: var(--ink);
 }
+/* Pás „Odhad z predpovede“ na karte Teraz: ikona počasia vľavo, text a tlačidlo vedľa nej. */
+.note {
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    margin-top: 12px;
+}
+.note-ico {
+    grid-row: span 3;
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+.note-ico .fill {
+    fill: currentColor;
+    fill-opacity: 0.15;
+}
 
 /* Tmavé sklo: biely text sa dá čítať aj na svetlej poludňajšej oblohe. */
 .glass {
@@ -672,22 +691,6 @@ button:focus-visible {
     text-transform: uppercase;
     color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
-}
-/* Prístup k meraniu neplatí (shared/pristup.js): dôvod v riadku a odkaz do Nastavenia pod ním. */
-.src b {
-    color: var(--costly-text);
-}
-.src-go {
-    display: block;
-    margin: 10px 20px 0;
-    padding: 7px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 700;
-    cursor: pointer;
 }
 
 /* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -

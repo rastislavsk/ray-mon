@@ -960,13 +960,32 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
+    test('bez merania: biely pás pod číslom povie, že je to odhad, a vedie do Nastavenia', async ({ page }) => {
+        const errors = await openObloha(page, { time: at('13:00'), settings: { ...OWNER, zdroj: null } });
+        await page.locator('#nav-terazky').click();
+        const m = terazModel(vstupTeraz(at('13:00'), { zdroj: null, pv: null }));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
+        await expect(page.locator('#tz-src')).toBeHidden();
+        await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
+        await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
+        await expect(page.locator('#tz-note-btn')).toHaveText(m.note?.btn ?? '');
+        await page.locator('#tz-note-btn').click();
+        await ocakavajKartu(page, 'nastavenie');
+        expect(errors).toEqual([]);
+    });
+
     test('meranie neodpovedá: číslo je odhad a povie, kedy prišlo posledné meranie', async ({ page }) => {
         const stare = pvAt(at('11:40'));
         const errors = await openObloha(page, { time: at('13:00'), pvData: stare });
         await page.locator('#nav-terazky').click();
         const m = terazModel(vstupTeraz(at('13:00'), { pv: stare }));
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
-        await expect(page.locator('#tz-src')).toHaveText(/^odhad z predpovede · meranie neodpovedá od \d\d:\d\d$/);
+        await expect(page.locator('#tz-src')).toBeHidden();
+        await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
+        await expect(page.locator('#tz-note-text')).toHaveText(
+            /^Meranie neodpovedá od \d\d:\d\d\. Kým sa neozve, číslo počíta z počasia\.$/,
+        );
+        await expect(page.locator('#tz-note-btn')).toBeHidden();
         await expect(page.locator('#tz-chart')).toBeVisible();
         await expect(page.locator('#tz-strip')).toBeVisible();
         expect(errors).toEqual([]);

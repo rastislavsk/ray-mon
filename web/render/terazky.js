@@ -35,9 +35,15 @@ function renderHead(state, m, dom) {
     dom.tzNum.classList.toggle('est', m.estimate);
     dom.tzNumVal.textContent = m.num;
     show(dom.tzSrc, m.source !== '');
-    dom.tzSrc.innerHTML = escapeHtml(m.source) + (m.znova ? ` · <b>${escapeHtml(m.znova)}</b>` : '');
+    dom.tzSrc.textContent = m.source;
     show(dom.tzSub, m.sub !== '');
     dom.tzSub.textContent = m.sub;
+    show(dom.tzNote, !!m.note);
+    dom.tzNoteTitle.textContent = m.note?.title ?? '';
+    dom.tzNoteText.textContent = m.note?.text ?? '';
+    show(dom.tzNoteBtn, !!m.note?.btn);
+    dom.tzNoteBtn.textContent = m.note?.btn ?? '';
+    dom.tzNoteBtn.toggleAttribute('data-pristup-go', !!m.note?.znova);
     show(dom.tzRetry, m.retry);
     dom.tzRetry.textContent = TERAZ_TEXTS.retry;
 }

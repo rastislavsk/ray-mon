@@ -14,6 +14,7 @@ import {
     terazChartText,
     terazClearText,
     terazLaterText,
+    terazNoteText,
     terazPreviewTime,
     terazPreviewTitle,
     terazSliderText,
@@ -56,9 +57,11 @@ export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
     const hero = heroModel(input, voice);
     const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
     const plan = dayPlan(input);
+    const note = estimate ? null : noteOf(input, now, voice);
     return {
         ...empty('ok', estimate),
-        ...headOf(input, hero, estimate, voice),
+        ...headOf(input, hero, { estimate, note, voice }),
+        note,
         guess: estimate,
         chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
@@ -68,34 +71,41 @@ export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
 }
 
 /**
- * Nadpis, číslo a dva riadky pod ním: odkiaľ výkon je (a odkedy mlčí meranie) a koľko z jasnej
- * oblohy. Pri typickej streche „~“ a veta, že to nie je vlastná strecha. Počas náhľadu nadpis
- * namiesto „Teraz“ povie čas, ku ktorému číslo patrí - text sa mení, riadok ostáva, aby sa graf
- * pod prstom nepohol.
- * @param {TerazInput} input
- * @param {ReturnType<typeof heroModel>} hero @param {boolean} estimate @param {import('./messages.js').Voice} voice
+ * Nadpis, číslo a dva riadky pod ním: odkiaľ výkon je a koľko z jasnej oblohy. Pri typickej
+ * streche „~“ a veta, že to nie je vlastná strecha. Počas náhľadu nadpis namiesto „Teraz“ povie
+ * čas, ku ktorému číslo patrí - text sa mení, riadok ostáva, aby sa graf pod prstom nepohol.
+ * Keď je pod číslom pás odhadu (`note`), riadok „odhad z predpovede“ by ho len opakoval.
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ * @param {{ estimate: boolean, note: ReturnType<typeof noteOf>, voice: import('./messages.js').Voice }} o
  */
-function headOf(input, hero, estimate, voice) {
+function headOf(input, hero, { estimate, note, voice }) {
     const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
-        return { title, num, source: '', znova: '', sub: terazTypicalText(installedKw(input.plant), voice) };
+        return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
-    const pv = pvStatus(input);
-    const silent = !hero.preview && !!input.zdroj && !pv.ok;
-    // Výrobca prístup odmietol: nie „meranie neodpovedá“, ale prečo a cesta k oprave (shared/pristup.js).
-    const zdroj = /** @type {import('./zdroje.js').Zdroj | null} */ (input.zdroj);
-    const p = hero.preview ? null : pristupModel({ zdroj, pristup: input.pristup ?? null, now: input.now, timezone: input.site.timezone });
-    const znova = p && p.druh === 'neplati' ? p.riadok : '';
-    return {
-        title,
-        num: hero.powerText,
-        source: znova
-            ? terazSourceText(hero.source, { silent: false, since: null })
-            : terazSourceText(hero.source, { silent, since: pv.since }),
-        znova,
-        sub: clearSub(input, hero),
-    };
+    const source = !hero.source || (note && hero.source === 'forecast') ? '' : terazSourceText(hero.source);
+    return { title, num: hero.powerText, source, sub: clearSub(input, hero) };
+}
+
+/**
+ * Pás pod číslom, keď appka teraz nemá údaje z meniča a číslo je odhad z predpovede: bez merania
+ * vedie k jeho pripojeniu, pri odmietnutom prístupe povie prečo a vedie k oprave
+ * (shared/pristup.js), keď meranie mlčí, povie odkedy. Rozhoduje výkon teraz, nie náhľad - pás
+ * počas ťahania po grafe ostáva, aby sa graf pod prstom nepohol. Inak null. `btn` je text
+ * tlačidla, prázdny bez tlačidla; `znova`: tlačidlo vedie k opätovnému pripojeniu, nie k prvému.
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
+ * @param {import('./messages.js').Voice} voice
+ */
+function noteOf(input, now, voice) {
+    if (now.source !== 'forecast') return null;
+    const T = voiceTexts(voice).TERAZ_TEXTS;
+    if (!input.zdroj) return { title: T.noteTitle, text: T.noteText, btn: T.noteBtn, znova: false };
+    const zdroj = /** @type {import('./zdroje.js').Zdroj} */ (input.zdroj);
+    const p = pristupModel({ zdroj, pristup: input.pristup ?? null, now: input.now, timezone: input.site.timezone });
+    const riadok = p && p.druh === 'neplati' ? p.riadok : '';
+    const text = terazNoteText({ since: pvStatus(input).since, riadok }, voice);
+    return { title: T.noteTitle, text, btn: riadok ? T.noteAgainBtn : '', znova: !!riadok };
 }
 
 /** Karta bez grafu a odporúčaní. @param {'ask' | 'loading' | 'offline' | 'ok'} kind @param {boolean} estimate */
@@ -107,8 +117,8 @@ function empty(kind, estimate) {
         title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
         source: '',
-        znova: '',
         sub: '',
+        note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,
         chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),

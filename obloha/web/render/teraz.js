@@ -61,10 +61,14 @@ export function renderTeraz(state, dom) {
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
     show(dom.tzSrc, m.source !== '');
-    setHtml(dom.tzSrc, escapeHtml(m.source) + (m.znova ? ` · <b>${escapeHtml(m.znova)}</b>` : ''));
-    show(dom.tzZnova, m.znova !== '');
+    setText(dom.tzSrc, m.source);
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
+    show(dom.tzNote, !!m.note);
+    setText(dom.tzNoteTitle, m.note?.title ?? '');
+    setText(dom.tzNoteText, m.note?.text ?? '');
+    show(dom.tzNoteBtn, !!m.note?.btn);
+    setText(dom.tzNoteBtn, m.note?.btn ?? '');
     show(dom.tzRetry, m.retry);
     setText(dom.tzRetry, TERAZ_TEXTS.retry);
     show(dom.tzGuess, m.guess);
