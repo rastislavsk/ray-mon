@@ -158,8 +158,8 @@ button:focus-visible {
    ťuknutie má 44 px. Kým appka stav merania nepozná (načítavam…), je vypnuté. */
 button.live {
     min-height: 44px;
-    margin: -2px -8px;
-    padding: 0 8px;
+    margin: -2px -12px;
+    padding: 0 12px;
     border: 0;
     border-radius: 22px;
     background: none;
@@ -169,8 +169,17 @@ button.live {
 button.live:disabled {
     cursor: default;
 }
+/* Pilulka z tmavého skla hovorí, že sa na bodku a čas dá ťuknúť - svetlá by bielemu textu na
+   jasnej oblohe vzala kontrast. Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa
+   pýtať prečo. Čítačka ho nečíta (alternatívny text je prázdny). */
+button.live:enabled {
+    background: var(--glass);
+}
+button.live:enabled[data-tone='odhad'] #hdr-status::after {
+    content: ' ›' / '';
+}
 button.live[aria-expanded='true'] {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(8, 16, 40, 0.5);
 }
 /* Vrstva pod hlavičkou (.st má z-index 5): pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
 .tip-bg {

@@ -197,12 +197,21 @@ test('hlavička: čas posledného merania, nie hodiny; zastarané so slovom, bez
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
     await expect(page.locator('#hdr-status')).toHaveText('13:00');
     await expect(page.locator('#hdr-tone')).toHaveText('živé meranie');
+    // Pilulka hovorí, že sa na stav dá ťuknúť; „›“ (len v CSS, čítačka ho nečíta) len keď meranie nie je živé.
+    const naznak = () =>
+        page.evaluate(() => [
+            getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-live'))).backgroundColor,
+            getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-status')), '::after').content,
+        ]);
+    expect((await naznak())[0]).not.toBe('rgba(0, 0, 0, 0)');
+    expect((await naznak())[1]).toBe('none');
     // Za slnka viac ako 20 minút bez merania: čas so slovom, bodka odhadu.
     await page.clock.setFixedTime(at('13:30'));
     await page.reload();
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · zastarané');
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
     await expect(page.locator('#hdr-tone')).toHaveText('meranie zastarané');
+    expect((await naznak())[1]).toContain('›');
     expect(errors).toEqual([]);
 });
 
