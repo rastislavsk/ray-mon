@@ -195,7 +195,8 @@ test.describe('živá obloha', () => {
         await page.reload();
         await appReady(page);
         await expect.poll(() => obloha(page)).toEqual(SKY.calm);
-        await expect(page.locator('#hdr-status')).toHaveText('21:00');
+        // Hlavička ukazuje čas merania, nie hodiny: meranie z 13:00 je večer už staré.
+        await expect(page.locator('#hdr-status')).toHaveText('13:00 · zastarané');
         await karta(page, 'nastavenie');
         await expect(prepinac).toHaveAttribute('aria-checked', 'false');
 

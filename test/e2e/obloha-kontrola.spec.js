@@ -471,10 +471,10 @@ test.describe('čítačka obrazovky', () => {
         await expect(page.locator('#mz-word')).toHaveText(pred.word);
         await expect(live).toHaveText('');
 
-        // Minúta ubehne, odpoveď je tá istá: čítačka nič nepočuje.
+        // Minúta ubehne (časovač hodín prekreslí appku), odpoveď je tá istá: čítačka nič nepočuje.
         cas = at('16:59');
         await page.clock.runFor(60_000);
-        await expect(page.locator('#hdr-status')).toHaveText('16:59');
+        await expect(page.locator('#mz-word')).toHaveText(modelMozem(cas).word);
         await expect(live).toHaveText('');
 
         // O hodinu je odpoveď iná: ohlási sa nové slovo a veta.
