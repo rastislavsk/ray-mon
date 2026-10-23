@@ -1,7 +1,7 @@
 // Hlavička: vľavo miesto elektrárne, vpravo čas a bodka živého merania. Bez zadaných panelov
 // je vpravo biely štítok „Zadaj panely ›“, ktorý otvorí kartu Nastavenie.
 
-import { pvFreshness } from '../../../shared/hero-model.js';
+import { freshPowerKw, pvFreshness } from '../../../shared/hero-model.js';
 import { minutesToTimeStr } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { neplatiOf } from '../../../shared/pristup.js';
@@ -21,17 +21,18 @@ export function headerModel(state) {
     if (state.loading) return off('načítavam…');
     if (!state.pv && !state.forecast) return off('bez dát');
     const status = minutesToTimeStr(localMinutes(state.now, state.site.timezone));
-    if (state.pv && !pvFreshness({ now: state.now, pv: state.pv, site: state.site }).stale)
-        return { place, setup: false, status, tone: 'live', toneText: 'živé meranie' };
-    const neplati = state.pv ? null : neplatiOf(state);
-    const toneText = state.pv
-        ? 'meranie zastarané'
-        : neplati
-          ? neplati.tone
-          : state.zdroj
-            ? 'živé meranie nedostupné'
-            : 'odhad z predpovede';
-    return { place, setup: false, status, tone: 'odhad', toneText };
+    // Živé je to, čo karty berú za výkon teraz (freshPowerKw) - čerstvé meranie bez výkonu nie.
+    if (freshPowerKw(state) !== null) return { place, setup: false, status, tone: 'live', toneText: 'živé meranie' };
+    return { place, setup: false, status, tone: 'odhad', toneText: odhadText(state) };
+}
+
+/** Prečo hlavička ukazuje len odhad, slovom pre čítačku. @param {import('../state.js').AppState} state */
+function odhadText(state) {
+    if (state.pv)
+        return pvFreshness({ now: state.now, pv: state.pv, site: state.site }).stale ? 'meranie zastarané' : 'živé meranie nedostupné';
+    const neplati = neplatiOf(state);
+    if (neplati) return neplati.tone;
+    return state.zdroj ? 'živé meranie nedostupné' : 'odhad z predpovede';
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

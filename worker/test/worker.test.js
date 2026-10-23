@@ -94,8 +94,14 @@ test('POST /pripoj: zlé údaje 400 bez sťahovania, výpadok výrobcu 502, bez 
     assert.equal((await handlePripoj(req(), {}, NOW, kioskOk())).status, 503);
 });
 
-test('POST /pv: holý odkaz na kiosk (appka spred zapečatenia) vráti pv aj zapečatený prístup', async () => {
+test('POST /pv: holý odkaz na kiosk (appka spred zapečatenia) vráti pv aj zapečatený prístup', async (t) => {
+    const log = t.mock.method(console, 'log', () => {});
     const res = await handleRequest(pvRequest(KIOSK_PAGE), ENV, NOW, kioskOk());
+    // Úspešné meranie je v logu so spôsobom, bez odkazu.
+    assert.deepEqual(
+        log.mock.calls.map((c) => c.arguments[0]),
+        ['meranie: huawei-kiosk'],
+    );
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('access-control-allow-origin'), '*');
     const body = await res.json();

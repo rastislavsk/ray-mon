@@ -38,6 +38,9 @@ test('znovaDue: po prvom odmietnutí interval spôsobu, potom raz za hodinu; bez
     const b = odmietnute(a, NB, NOW, '', false);
     assert.equal(znovaDue(b, NB, o(interval)), false, 'po usúdení, že prístup neplatí, nie každých 5 minút');
     assert.equal(znovaDue(b, NB, o(PRISTUP.skusMs)), true);
+    // Po odmietnutí a výpadkoch za ním sa čaká aj od posledného dopytu, nie každú minútu.
+    assert.equal(znovaDue(a, NB, o(interval), o(interval - 60_000).getTime()), false);
+    assert.equal(znovaDue(a, NB, o(2 * interval), o(interval).getTime()), true);
     assert.equal(znovaDue(b, { ...NB, pecat: 'v1.Ina' }, NOW), null);
     assert.equal(znovaDue(null, NB, NOW), null);
 });

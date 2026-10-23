@@ -124,7 +124,7 @@ function nextMeranie(teraz, result, now, skus) {
 function pvNow(s, zdroj, skus, lastAt) {
     if (!zdroj || skus) return true;
     const at = new Date();
-    return znovaDue(s.pristup, zdroj, at) ?? pvDue(zdroj, s.pv, at, lastAt);
+    return znovaDue(s.pristup, zdroj, at, lastAt) ?? pvDue(zdroj, s.pv, at, lastAt);
 }
 
 /**

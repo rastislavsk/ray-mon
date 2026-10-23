@@ -2796,6 +2796,17 @@ test.describe('moja elektráreň', () => {
         expect((await ulozene(page)).zdroj).toEqual(TEST_ZDROJ);
         expect(JSON.stringify(await ulozene(page))).not.toContain('Abc123xyz');
         expect(page.url()).not.toContain(TEST_ZDROJ.pecat);
+        // Pripojenie je dopyt aj pri prvom pripojení: rytmus ho pozná, takže obnovenie stránky
+        // sa hneď nepýta znova (Huawei by to do 5 minút odmietol) a ukáže meranie z pripojenia.
+        const rytmus = JSON.parse((await page.evaluate((k) => localStorage.getItem(k), config.MERANIE_STORAGE_KEY)) || 'null');
+        expect([rytmus?.sposob, rytmus?.nazov, rytmus?.pv?.updatedAt]).toEqual([
+            TEST_ZDROJ.sposob,
+            TEST_ZDROJ.nazov,
+            FIXED_NOW.toISOString(),
+        ]);
+        await page.reload();
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
+        expect(bodies.pv).toEqual([]);
         expect(errors).toEqual([]);
     });
 
