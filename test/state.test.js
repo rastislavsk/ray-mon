@@ -131,9 +131,8 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
     });
     // Súhrn v karte Môžem? je obrazovka - Späť ju zavrie.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemSummary: true })));
-    // Zoznam vecí v karte Môžem? tiež - rozbalená vec v ňom už nie.
+    // Zoznam vecí v karte Môžem? tiež.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemList: true })));
-    assert.ok(sameNavStep(navStep({ ...state, mozemList: true }), navStep({ ...state, mozemList: true, mozemOpen: 'pracka' })));
     // Vybraný deň ani stránka verdiktu nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, verdictPage: 2 })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, panel: '7dni' })));

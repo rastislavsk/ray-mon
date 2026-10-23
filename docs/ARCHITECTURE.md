@@ -455,12 +455,12 @@ a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 Veci s ikonami nie sú na hlavnej obrazovke karty, ale o ťuknutie ďalej (návrh A
 v `docs/navrhy/mozem-co-mozem.html`). Karta ich zhrnie do riadku „Čo môžem“ (`glance`
 v modeli): koľko ide hneď, bodka za každú vec a výnimky slovom. Zoznam vecí je druhá obrazovka
-karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie. Dlaždice sú po
-dvoch; pri nepárnom počte leží posledná cez celú šírku (`wide`), aby neostala v riadku sama (návrh
-`docs/navrhy/jeden-zoznam-veci.html`).
+karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie. Veci sú
+v ňom pod sebou ako riadky (návrh A v `docs/navrhy/mozem-zoznam.html`): čas so značkou, veľká
+veta (`head`), prečo (`text`) a vysvetlenie pod čiarou (`extra`). Všetko je vidno hneď, riadok sa
+neťuká ani nerozbaľuje.
 
-Texty sú v `messages.js`. Rozbalená vec v zozname je `mozemOpen` - nastavenie vnútri karty,
-nie krok navigácie. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
+Texty sú v `messages.js`. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
 Obsah karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
 
 Karta kedysi vedela zapísať „Pustil/a som“ - spustenie spotrebiča na čestné slovo, z ktorého

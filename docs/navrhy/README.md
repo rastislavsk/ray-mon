@@ -41,6 +41,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `odkaz-verzia.html`            | Verzia odkazu s nastavením – appka povie, prečo odkaz neprevezme (poškodený, z novšej verzie); pravidlo A            |
 | `smer-b-obloha.html`           | Nový dizajn „Živá obloha“ (smer B, vybraný 2. 10. 2026): všetkých 5 kariet, detail týždňa, desktop, widget, pravidlá |
 | `jedno-jadro-dva-kabaty.html`  | Obe appky natrvalo (22. 10. 2026): pravidlo jadro × kabát, deväť rozdielov, tri zjednotenia (všetky A)               |
+| `mozem-zoznam.html`            | Čo môžem (súčasná appka) ako zoznam s hláškami jadra namiesto dlaždíc: tmavé riadky (A), zelené riadky (B)           |
 
 ## Prečo je to v repozitári
 

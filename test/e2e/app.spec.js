@@ -2647,7 +2647,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('.mozem-glance small')).toHaveText(mozemListTitle(true));
         await page.locator('[data-mozem-list]').click();
         await expect(page.locator('.mozem-list-kick')).toHaveText(new RegExp(' · odhad$'));
-        await expect(page.locator('.mozem-t span')).toHaveText(m.items.filter((i) => i.answer.kind !== 'always').map((i) => i.short));
+        await expect(page.locator('.mozem-short')).toHaveText(m.items.filter((i) => i.answer.kind !== 'always').map((i) => i.short));
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#panels-bar')).toBeHidden();
         await page.locator('#nav-terazky').click();
@@ -3254,7 +3254,7 @@ test.describe('karta Štatistika', () => {
 test.describe('karta Môžem?', () => {
     /** Model karty tak, ako ho appka počíta v pevnom čase testov. */
     const model = () => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
-    /** Spotrebiče - dlaždice zoznamu, hranie a fén sú v bloku Kedykoľvek. @param {ReturnType<typeof model>} m */
+    /** Spotrebiče - riadky zoznamu, hranie a fén sú v bloku Kedykoľvek. @param {ReturnType<typeof model>} m */
     const devices = (m) => m.items.filter((i) => i.answer.kind !== 'always');
 
     test('o 13:00 za jasna: veľké slovo, veta, pás dneška a riadok Čo môžem podľa modelu', async ({ page }) => {
@@ -3269,11 +3269,11 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-glance b')).toHaveText(m.glance.title);
         await expect(page.locator('.mozem-glance-sub')).toHaveText(m.glance.sub);
         await expect(page.locator('.mozem-pips i'), 'bodka za každý spotrebič').toHaveCount(devices(m).length);
-        await expect(page.locator('.mozem-item'), 'veci s ikonami sú až v zozname').toHaveCount(0);
+        await expect(page.locator('.mozem-row'), 'veci s ikonami sú až v zozname').toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
-    test('zoznam vecí: otvorí sa z riadku, pás, dlaždice a Kedykoľvek podľa modelu, Späť ho zavrie', async ({ page }) => {
+    test('zoznam vecí: otvorí sa z riadku, pás, riadky vecí a Kedykoľvek podľa modelu, Späť ho zavrie', async ({ page }) => {
         const errors = await openApp(page, { start: 'terazky' });
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
@@ -3283,8 +3283,8 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-band-top')).toHaveText(band.label + band.value);
         await expect(page.locator('.mozem-band-ticks')).toContainText(band.mid);
         await expect(page.locator('.mozem-band-text')).toHaveText(band.text);
-        await expect(page.locator('.mozem-t b')).toHaveText(devices(m).map((i) => i.name));
-        await expect(page.locator('.mozem-t span')).toHaveText(devices(m).map((i) => i.short));
+        await expect(page.locator('.mozem-row-top b')).toHaveText(devices(m).map((i) => i.name));
+        await expect(page.locator('.mozem-short')).toHaveText(devices(m).map((i) => i.short));
         await expect(page.locator('.mozem-anytime span')).toHaveText(m.anytime.map((a) => a.name));
         await expect(page.locator('.mozem-hero'), 'zoznam je samostatná obrazovka').toHaveCount(0);
 
@@ -3300,39 +3300,33 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('ťuknutie na vec ju rozbalí a druhé zbalí; nie je to krok navigácie', async ({ page }) => {
+    test('riadok veci ukáže hneď vetu, prečo aj vysvetlenie; ťuknutie naň nič nerobí', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
+        const m = model();
+        await expect(page.locator('.mozem-head')).toHaveText(devices(m).map((i) => i.head));
+        await expect(page.locator('.mozem-why')).toHaveText(devices(m).map((i) => i.text));
+        const pracka = /** @type {ReturnType<typeof model>['items'][number]} */ (m.items.find((i) => i.id === 'pracka'));
+        const row = page.locator('[data-mozem-item="pracka"]');
+        await expect(row.locator('.mozem-extra')).toHaveText(pracka.extra);
+        await expect(row.locator('.mozem-extra b'), 'otázka pred vysvetlením je tučná').toHaveText(pracka.extra.split(' ')[0]);
         const pred = await page.evaluate(() => history.length);
-        const pracka = /** @type {ReturnType<typeof model>['items'][number]} */ (model().items.find((i) => i.id === 'pracka'));
-        const btn = page.locator('[data-mozem-item="pracka"]');
-        await btn.click();
-        await expect(btn).toHaveAttribute('aria-expanded', 'true');
-        // Rozbalenie ide za riadok dlaždíc, nie medzi práčku a umývačku vedľa nej.
-        await expect(page.locator('[data-mozem-item="umyvacka"] + .mozem-more')).toHaveCount(1);
-        await expect(page.locator('.mozem-more b')).toHaveText(pracka.head);
-        await expect(page.locator('.mozem-more .mozem-extra')).toHaveText(pracka.extra);
-        await btn.click();
-        await expect(page.locator('.mozem-more')).toHaveCount(0);
-        expect(await page.evaluate(() => history.length), 'rozbalenie nepridáva krok do histórie').toBe(pred);
+        const html = await page.locator('#mozem-body').innerHTML();
+        await row.click();
+        expect(await page.locator('#mozem-body').innerHTML(), 'riadok sa nerozbaľuje').toBe(html);
+        expect(await page.evaluate(() => history.length)).toBe(pred);
         expect(errors).toEqual([]);
     });
 
-    test('bojler: piata dlaždica leží cez celú šírku, rozbalí sa pod ňou; na Terazky má odpoveď v bublinke', async ({ page }) => {
+    test('bojler: piaty riadok zoznamu; na Terazky má odpoveď v bublinke', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
         const bojler = /** @type {ReturnType<typeof model>['items'][number]} */ (model().items.find((i) => i.id === 'bojler'));
-        await expect(page.locator('.mozem-item')).toHaveCount(5);
-        await expect(page.locator('.mozem-item.wide')).toHaveCount(1);
-        const tile = page.locator('[data-mozem-item="bojler"]');
-        await expect(tile).toHaveClass(/\bwide\b/);
-        const [grid, box] = await Promise.all([page.locator('.mozem-grid').boundingBox(), tile.boundingBox()]);
-        expect(Math.abs((box?.width ?? 0) - (grid?.width ?? 0)), 'ležatá dlaždica ide cez celú šírku').toBeLessThan(1);
-        await tile.click();
-        await expect(page.locator('[data-mozem-item="bojler"] + .mozem-more b')).toHaveText(bojler.head);
-        await expect(page.locator('.mozem-item.wide'), 'ležatá ostáva, aj keď za ňou je rozbalenie').toHaveCount(1);
+        await expect(page.locator('.mozem-row')).toHaveCount(5);
+        await expect(page.locator('.mozem-row').nth(4)).toHaveAttribute('data-mozem-item', 'bojler');
+        await expect(page.locator('[data-mozem-item="bojler"] .mozem-head')).toHaveText(bojler.head);
 
         await page.locator('#nav-terazky').click();
         await page.locator('#verdict-dots button').nth(1).click();
@@ -3341,7 +3335,7 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('staré zápisy „Pustil/a som“ appka pri štarte zmaže a rozbalená vec nemá čo zapisovať', async ({ page }) => {
+    test('staré zápisy „Pustil/a som“ appka pri štarte zmaže a vec v zozname nemá čo zapisovať', async ({ page }) => {
         const errors = await openApp(page);
         const stare = JSON.stringify([{ d: '2026-09-05', id: 'pracka', m: 12 * 60, sun: true }]);
         await page.evaluate(
@@ -3355,9 +3349,8 @@ test.describe('karta Môžem?', () => {
         );
         await page.locator('#nav-mozem').click();
         await page.locator('[data-mozem-list]').click();
-        await page.locator('[data-mozem-item="pracka"]').click();
-        await expect(page.locator('#mozem-more')).toBeVisible();
-        await expect(page.locator('#mozem-more button')).toHaveCount(0);
+        await expect(page.locator('[data-mozem-item="pracka"]')).toBeVisible();
+        await expect(page.locator('.mozem-rows button')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
@@ -3368,8 +3361,8 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
         await expect(page.locator('.summary-link'), 'bez merania súhrn nie je').toHaveCount(0);
         await page.locator('[data-mozem-list]').click();
-        await expect(page.locator('.mozem-band'), 'bez pásu dneška nie je ani pás nad dlaždicami').toHaveCount(0);
-        await expect(page.locator('[data-mozem-item="pracka"] .mozem-t span')).toHaveText('neviem');
+        await expect(page.locator('.mozem-band'), 'bez pásu dneška nie je ani pás nad vecami').toHaveCount(0);
+        await expect(page.locator('[data-mozem-item="pracka"] .mozem-short')).toHaveText('neviem');
         await expect(page.locator('.mozem-anytime')).toContainText('Hranie');
         expect(errors).toEqual([]);
     });
