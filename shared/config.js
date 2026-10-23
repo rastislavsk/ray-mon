@@ -469,6 +469,14 @@ export const MERANIE_STORAGE_KEY = 'meranie-v1';
 export const SUCTY_STORAGE_KEY = 'sucty-v1';
 
 /**
+ * Adresa, ktorú appka v tejto karte prehliadača naposledy zapísala (cesta a časť za mriežkou,
+ * initUrlMirror vo web/settings-store.js). Je v sessionStorage - patrí karte a prežije jej obnovenie.
+ * Po obnovení starej karty tak appka spozná, že staré nastavenie v adrese je jej vlastné, a neponúkne
+ * ho prevziať namiesto novšieho uloženého.
+ */
+export const ADRESA_SESSION_KEY = 'adresa-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */

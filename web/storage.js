@@ -5,6 +5,7 @@
 // sa spýta na polohu ako pri prvom otvorení a uloženie ohlási ako neúspešné.
 
 import {
+    ADRESA_SESSION_KEY,
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
@@ -50,6 +51,24 @@ function write(key, value) {
         return true;
     } catch {
         return false;
+    }
+}
+
+/** Adresa, ktorú appka v tejto karte naposledy zapísala (ADRESA_SESSION_KEY); bez nej null. */
+export function loadVlastnaAdresa() {
+    try {
+        return sessionStorage.getItem(ADRESA_SESSION_KEY);
+    } catch {
+        return null;
+    }
+}
+
+/** @param {string} adresa cesta a časť za mriežkou */
+export function saveVlastnaAdresa(adresa) {
+    try {
+        sessionStorage.setItem(ADRESA_SESSION_KEY, adresa);
+    } catch {
+        // Bez sessionStorage appka po obnovení ponúkne aj vlastnú adresu, ako predtým.
     }
 }
 

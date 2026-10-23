@@ -4,6 +4,7 @@
 
 import { shareHash } from '../shared/settings.js';
 import { savedSettings } from '../shared/setup-flow.js';
+import { saveVlastnaAdresa } from './storage.js';
 
 export * from './storage.js';
 
@@ -24,16 +25,20 @@ export * from './storage.js';
  * čo si zo Safari prinesie, je adresa. Pri prvom spustení z plochy tak ponúkne nastavenie
  * prevziať, namiesto toho, aby sa pýtala na polohu. Kým čaká ponuka z otvoreného odkazu, adresa
  * nesie ten odkaz, aby sa dal pridať na plochu aj pred rozhodnutím; odkaz, ktorý appka nevie
- * prevziať, ostáva v adrese, kým človek hlášku nezavrie.
+ * prevziať, ostáva v adrese, kým človek hlášku nezavrie. Čo zapísala, si appka pamätá v karte
+ * (saveVlastnaAdresa) - po obnovení starej karty vlastnú adresu neponúkne (linkOnStart).
  * @param {{ get: () => MirrorState, subscribe: (fn: (state: MirrorState) => void) => unknown }} store
  */
 export function initUrlMirror(store) {
+    /** @type {string | null} */ let zapisana = null;
     /** @param {MirrorState} s */
     const mirror = (s) => {
         if (s.incoming || s.linkError) return;
         // Aj prvá karta: appka pridaná na plochu iPhonu si ju inak z Safari neprenesie.
         const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, false, s.startPanel);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);
+        const adresa = location.pathname + hash;
+        if (adresa !== zapisana) saveVlastnaAdresa((zapisana = adresa));
     };
     mirror(store.get());
     store.subscribe(mirror);

@@ -335,6 +335,17 @@ export function readLink(text) {
     return settings ? { settings, error: null } : { settings: null, error: 'poskodeny' };
 }
 
+/**
+ * Časť adresy za mriežkou, ktorú appka pri štarte berie ako odkaz (nastavenie, prvá karta), alebo
+ * prázdna, keď je to adresa, ktorú appka v tejto karte sama zapísala (`vlastna`, cesta a časť za
+ * mriežkou). Taká adresa nesie nastavenie z chvíle zápisu - po zmene v druhej appke či inej karte by
+ * ho obnovenie starej karty ponúklo prevziať a prevzatie by novšie nastavenie prepísalo starším.
+ * @param {string} path @param {string} hash @param {string | null} vlastna @returns {string}
+ */
+export function linkHash(path, hash, vlastna) {
+    return vlastna !== null && vlastna === path + hash ? '' : hash;
+}
+
 /** Nastavenie z odkazu, alebo null - pre miesta, ktoré dôvod nepotrebujú. @param {string} text @returns {Settings | null} */
 export const settingsFromLink = (text) => readLink(text)?.settings ?? null;
 

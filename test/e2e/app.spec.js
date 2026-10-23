@@ -3476,6 +3476,24 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#import-offer')).toBeHidden();
     });
 
+    // Obe appky majú spoločné úložisko, no každá vlastnú adresu: stará karta nesie nastavenie
+    // z chvíle, keď ho zapísala, a prevzatie po obnovení by novšie nastavenie prepísalo starším.
+    test('stará karta po zmene nastavenia inde: vlastnú adresu neponúkne, cudzí odkaz v tej istej karte áno', async ({ page }) => {
+        const errors = await openApp(page);
+        const novsie = { ...OWNER, plant: { ...OWNER.plant, panelWp: OWNER.plant.panelWp + 10 } };
+        await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(novsie))]);
+        await page.reload();
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
+        await expect(page.locator('#import-offer')).toBeHidden();
+        expect(await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), SETTINGS_STORAGE_KEY)).toEqual(toUser(novsie));
+        expect(settingsFromLink(page.url()), 'adresa nesie novšie uložené').toEqual({ ...novsie, zdroj: null });
+        // Odkaz s iným nastavením otvorený v tej istej karte appka zapísaný nemá - ponúkne ho.
+        await page.goto(page.url().split('#')[0] + HASH);
+        await page.reload();
+        await expect(page.locator('#import-offer')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
     test('bez zadaných panelov je adresa holá', async ({ page }) => {
         await openApp(page, { settings: null, site: SITE });
         expect(new URL(page.url()).hash).toBe('');

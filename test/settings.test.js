@@ -304,3 +304,12 @@ test('incomingSettings: to isté sa neponúka, ani keď odkaz nenesie meranie a 
     const inyZdroj = { ...ulozene, zdroj: { ...ZDROJ, nazov: 'Iná' } };
     assert.equal(incomingSettings(inyZdroj, ulozene), inyZdroj, 'iné meranie v odkaze sa ponúkne');
 });
+
+test('linkHash: adresa, ktorú appka v karte zapísala sama, odkazom nie je; cudzia áno', async () => {
+    const { linkHash } = await import('../shared/settings.js');
+    const hash = '#nastavenie=abc';
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=abc'), '', 'vlastná adresa po obnovení');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=xyz'), hash, 'iný odkaz v tej istej karte');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/obloha/#nastavenie=abc'), hash, 'druhá appka v tej istej karte');
+    assert.equal(linkHash('/ray-mon/', hash, null), hash, 'nová karta či appka z plochy');
+});

@@ -570,6 +570,24 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         expect(errors).toEqual([]);
     });
 
+    // Obe appky majú spoločné úložisko, no každá vlastnú adresu: stará karta nesie nastavenie
+    // z chvíle, keď ho zapísala, a prevzatie po obnovení by novšie nastavenie prepísalo starším.
+    test('stará karta po zmene nastavenia inde: vlastnú adresu neponúkne, cudzí odkaz v tej istej karte áno', async ({ page }) => {
+        const errors = await openObloha(page);
+        const novsie = { ...OWNER, plant: { ...OWNER.plant, panelWp: OWNER.plant.panelWp + 10 } };
+        await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(novsie))]);
+        await page.reload();
+        await expect(page.locator('#hdr-status')).toHaveText('13:00');
+        await expect(page.locator('#import-offer')).toBeHidden();
+        expect(await ulozene(page)).toEqual(toUser(novsie));
+        expect(settingsFromLink(page.url()), 'adresa nesie novšie uložené').toEqual({ ...novsie, zdroj: null });
+        // Odkaz s iným nastavením otvorený v tej istej karte appka zapísaný nemá - ponúkne ho.
+        await page.goto(page.url().split('#')[0] + HASH);
+        await page.reload();
+        await expect(page.locator('#import-offer')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
     test('odkaz, ktorý appka nevie prevziať: povie prečo a len Zavrieť; vložený v sprievodcovi tiež', async ({ page }) => {
         const novsi = `#${SHARE_HASH_KEY}=${Buffer.from(JSON.stringify({ v: SHARE_LINK_VERSION + 1, ...toUser(OWNER) })).toString('base64url')}`;
         const errors = await openObloha(page, { settings: null, hash: novsi });
