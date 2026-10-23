@@ -96,9 +96,19 @@
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
                 <p id="tz-src" class="src"></p>
-                <!-- Výrobca prístup k meraniu odmietol (shared/pristup.js): vedie do Nastavenia, kde je dôvod. -->
-                <button type="button" id="tz-znova" class="src-go hidden">Pripojiť znova ›</button>
                 <p id="tz-sub" class="sub"></p>
+                <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča (bez merania, meranie
+                     mlčí, výrobca prístup odmietol). Tlačidlo vedie do Nastavenia. -->
+                <div id="tz-note" class="cta note hidden">
+                    <svg class="note-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3" />
+                        <path d="M9 2.5v1M3.5 8h1M5.1 4.1l.7.7M12.9 4.1l-.7.7" />
+                        <path class="fill" d="M7.5 19.5h10a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.5 1.2A2.9 2.9 0 0 0 7.5 19.5z" />
+                    </svg>
+                    <b id="tz-note-title"></b>
+                    <p id="tz-note-text"></p>
+                    <button type="button" id="tz-note-btn" class="pbtn"></button>
+                </div>
                 <button type="button" id="tz-retry" class="pbtn retry"></button>
                 <div id="tz-guess" class="cta">
                     <b id="tz-guess-title"></b>

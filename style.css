@@ -680,14 +680,60 @@ b {
     text-transform: uppercase;
     color: var(--ink-45);
 }
-/* Prístup k meraniu neplatí (shared/pristup.js): dôvod je v riadku, cesta k oprave v páse pod hlavičkou. */
-.tz-src b {
-    color: var(--red);
-}
 .tz-sub {
     margin-top: 2px;
     font-size: 15px;
     color: var(--ink-70);
+}
+/* Pás „Odhad z predpovede“: jantárový ako pás odhadu pod hlavičkou, ikona počasia vľavo. */
+.tz-note {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    align-items: start;
+    margin-top: 14px;
+    padding: 12px 14px 14px;
+    border: 1px solid rgba(var(--amber-rgb), 0.45);
+    border-left: 4px solid var(--amber);
+    border-radius: var(--radius-md);
+    background: rgba(var(--amber-rgb), 0.1);
+}
+.tz-note-ico {
+    grid-row: span 3;
+    width: 26px;
+    height: 26px;
+    margin-top: 1px;
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+.tz-note-ico .fill {
+    fill: var(--amber);
+    fill-opacity: 0.15;
+}
+.tz-note b {
+    font-size: 16px;
+    line-height: 1.25;
+    color: var(--amber);
+}
+.tz-note p {
+    font-size: var(--fs-md);
+    line-height: 1.35;
+    color: var(--ink-70);
+}
+.tz-note-btn {
+    justify-self: start;
+    margin-top: 6px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--amber);
+    color: var(--ink-on-color);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 .tz-retry {
     margin-top: var(--sp-3);

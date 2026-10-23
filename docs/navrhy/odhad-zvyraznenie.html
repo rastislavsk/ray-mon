@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: zvýraznený odhad na karte Teraz</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky, farby a rozmery sú tu vlastné. Čísla a texty sú z návrhu terazky-ako-obloha.html
+               (Dvorany nad Nitrou, 08:13). */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-700-latin-ext.woff2') format('woff2');
+                font-weight: 700;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+                /* Obloha */
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --o-ink: #0b1430;
+            }
+            body {
+                margin: 0;
+                background: #050505;
+                color: var(--ink);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 32px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            .lead {
+                max-width: 780px;
+                color: var(--ink-45);
+                margin: 8px 0 0;
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+                margin-top: 18px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+            }
+            figcaption {
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+
+            /* ---------- výrez telefónu: len hlava karty a graf ---------- */
+            .phone {
+                width: 375px;
+                max-width: calc(100vw - 32px);
+                height: 470px;
+                border-radius: 36px 36px 0 0;
+                border: 1px solid var(--ink-12);
+                border-bottom: 0;
+                overflow: hidden;
+                position: relative;
+                -webkit-mask-image: linear-gradient(#000 82%, transparent);
+                mask-image: linear-gradient(#000 82%, transparent);
+            }
+
+            /* ===== súčasná appka (Terazky) ===== */
+            .t {
+                background: radial-gradient(120% 45% at 50% 0%, rgba(255, 107, 87, 0.16), transparent 70%), #0a0a0a;
+            }
+            .t .hdr {
+                padding: 22px 20px 0;
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+            }
+            .t .hdr b {
+                font-size: 15px;
+                letter-spacing: 0.12em;
+            }
+            .t .hdr small {
+                display: block;
+                font-size: 11px;
+                color: var(--ink-45);
+                margin-top: 6px;
+            }
+            .t .hdr .r {
+                text-align: right;
+                font-size: 12px;
+            }
+            .t .scr {
+                padding: 18px 16px 0;
+            }
+            .t .eyebrow {
+                font-family: var(--mono);
+                font-weight: 700;
+                font-size: 12px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                margin: 0;
+            }
+            .t .num {
+                margin: 2px 0 0;
+                font-weight: 700;
+                font-size: 92px;
+                line-height: 0.95;
+                letter-spacing: -0.04em;
+                color: var(--red);
+                display: flex;
+                align-items: baseline;
+                gap: 6px;
+            }
+            .t .num small {
+                font-family: var(--mono);
+                font-size: 18px;
+                letter-spacing: 0.04em;
+                color: var(--ink-45);
+                font-weight: 500;
+                font-style: normal;
+            }
+            .t .src {
+                margin: 10px 0 0;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .t .sub {
+                margin: 2px 0 0;
+                font-size: 15px;
+                color: var(--ink-70);
+            }
+            .t .chart {
+                margin-top: 16px;
+                padding: 14px 14px 10px;
+                background: #151614;
+                border: 1px solid var(--ink-12);
+                border-radius: 18px;
+            }
+
+            /* ===== Živá obloha (Teraz) ===== */
+            .o {
+                font-family: 'Archivo', system-ui, sans-serif;
+                color: #fff;
+                background: linear-gradient(180deg, #6b86b4 0%, #a9a7b6 55%, #c9a487 100%);
+            }
+            .o .ttl {
+                padding: 26px 20px 0;
+                font-size: 15px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                margin: 0;
+            }
+            .o .num {
+                margin: 0;
+                padding: 2px 20px 0;
+                font-size: 76px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                letter-spacing: -0.03em;
+                line-height: 0.95;
+                text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+            }
+            .o .num small {
+                margin-left: 6px;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 0;
+                font-style: normal;
+            }
+            .o .src {
+                margin: 0;
+                padding: 8px 20px 0;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+            }
+            .o .sub {
+                margin: 0;
+                padding: 2px 20px 0;
+                font-size: 15px;
+            }
+            .o .chart {
+                margin: 14px 14px 0;
+                padding: 10px 8px 6px;
+                border-radius: 22px;
+                background: rgba(8, 16, 40, 0.3);
+            }
+            .chart svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+
+            /* ---------- A: štítok ---------- */
+            .num.est {
+                font-style: italic;
+            }
+            .t .num.est {
+                opacity: 0.78;
+            }
+            .tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border-radius: 999px;
+                font-weight: 700;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+            .tag svg {
+                width: 18px;
+                height: 18px;
+                flex: none;
+            }
+            .t .tag {
+                margin-top: 12px;
+                padding: 6px 12px 6px 9px;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                color: var(--amber);
+                background: rgba(255, 194, 75, 0.12);
+                border: 1px solid rgba(255, 194, 75, 0.55);
+            }
+            .o .tag {
+                margin: 12px 20px 0;
+                padding: 7px 14px 7px 10px;
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                color: var(--o-ink);
+                background: #fff;
+                box-shadow: 0 4px 18px rgba(5, 10, 30, 0.18);
+            }
+            .o .src.tag-after {
+                padding-top: 6px;
+            }
+
+            /* ---------- B: pás s vysvetlením ---------- */
+            .note {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 4px 12px;
+                align-items: start;
+            }
+            .note svg {
+                width: 26px;
+                height: 26px;
+                grid-row: span 3;
+                margin-top: 1px;
+            }
+            .note b {
+                font-size: 16px;
+                line-height: 1.25;
+            }
+            .note p {
+                margin: 0;
+                font-size: 14px;
+                line-height: 1.35;
+            }
+            .note button {
+                justify-self: start;
+                margin-top: 6px;
+                border: 0;
+                border-radius: 999px;
+                padding: 7px 14px;
+                font: inherit;
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .t .note {
+                margin-top: 14px;
+                padding: 12px 14px 14px;
+                border-radius: 14px;
+                background: rgba(255, 194, 75, 0.1);
+                border: 1px solid rgba(255, 194, 75, 0.45);
+                border-left: 4px solid var(--amber);
+            }
+            .t .note b {
+                color: var(--amber);
+            }
+            .t .note p {
+                color: var(--ink-70);
+            }
+            .t .note button {
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.04em;
+                background: var(--amber);
+                color: #0b0b0b;
+            }
+            .o .note {
+                margin: 12px 14px 0;
+                padding: 14px 16px;
+                border-radius: 22px;
+                background: #fff;
+                color: var(--o-ink);
+            }
+            .o .note p {
+                color: #2b3550;
+            }
+            .o .note button {
+                background: var(--o-ink);
+                color: #fff;
+            }
+
+            /* ---------- texty ---------- */
+            .notes {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 14px;
+            }
+            .notes > div {
+                background: #151614;
+                border: 1px solid var(--ink-12);
+                border-radius: 18px;
+                padding: 18px 20px;
+            }
+            .notes h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            .notes ul {
+                margin: 0;
+                padding-left: 18px;
+                color: var(--ink-70);
+                font-size: 14px;
+            }
+            .notes li + li {
+                margin-top: 6px;
+            }
+            .notes .q h3 {
+                color: var(--amber);
+            }
+            .pro {
+                color: var(--green);
+            }
+            .con {
+                color: var(--red);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Odhad z predpovede, nie z tvojej strechy</h1>
+                <p class="lead">
+                    Keď appka nemá dáta z meniča (meranie nie je nastavené alebo mlčí), veľké číslo na karte Teraz je odhad z predpovede
+                    počasia. Dnes to hovorí len drobný sivý riadok pod číslom – ľahko sa prehliadne a číslo vyzerá ako skutočná výroba. Dve
+                    možnosti, ako to povedať hneď. Obe sú v oboch appkách (Živá obloha hore, súčasná appka dole) a obe len pre stav
+                    <i>odhad z predpovede</i>; s živým meraním sa nemení nič.
+                </p>
+                <p class="lead">
+                    <b>Rozhodnutie:</b> možnosť B vo všetkých prípadoch (aj keď meranie mlčí), číslo ostáva rovné (bez kurzívy), v súčasnej
+                    appke jantárová, v Oblohe biela.
+                </p>
+            </section>
+
+            <section>
+                <h2>Dnes</h2>
+                <div class="row">
+                    <figure>
+                        <figcaption><b>Živá obloha</b> · bez merania</figcaption>
+                        <div class="phone o">
+                            <h3 class="ttl">Teraz</h3>
+                            <p class="num">1.13<small>kW</small></p>
+                            <p class="src">Odhad z predpovede</p>
+                            <p class="sub">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="chart"><svg data-chart="o"></svg></div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Súčasná appka</b> · bez merania</figcaption>
+                        <div class="phone t">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r">–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <p class="eyebrow">Teraz · 08:13 · Dvorany nad Nitrou</p>
+                                <p class="num">1.13<small>kW</small></p>
+                                <p class="src">Odhad z predpovede</p>
+                                <p class="sub">40 % z toho, čo by dala jasná obloha</p>
+                                <div class="chart"><svg data-chart="t"></svg></div>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Možnosť A · štítok namiesto riadku</h2>
+                <p class="lead">
+                    Sivý riadok sa zmení na výrazný štítok s ikonou oblaku so slnkom a číslo sa skloní (kurzíva), ako to už robí pri
+                    typickej streche. Rozloženie karty sa nepohne – graf ostáva na mieste. Keď meranie mlčí, pod štítkom ostane riadok,
+                    odkedy.
+                </p>
+                <div class="row">
+                    <figure>
+                        <figcaption><b>Obloha</b> · bez merania</figcaption>
+                        <div class="phone o">
+                            <h3 class="ttl">Teraz</h3>
+                            <p class="num est">1.13<small>kW</small></p>
+                            <span class="tag"><svg data-icon></svg>Odhad z predpovede</span>
+                            <p class="sub" style="padding-top: 8px">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="chart"><svg data-chart="o"></svg></div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Obloha</b> · meranie mlčí</figcaption>
+                        <div class="phone o">
+                            <h3 class="ttl">Teraz</h3>
+                            <p class="num est">1.13<small>kW</small></p>
+                            <span class="tag"><svg data-icon></svg>Odhad z predpovede</span>
+                            <p class="src tag-after">Meranie neodpovedá od 07:40</p>
+                            <p class="sub">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="chart"><svg data-chart="o"></svg></div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Súčasná appka</b> · bez merania</figcaption>
+                        <div class="phone t">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r">–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <p class="eyebrow">Teraz · 08:13 · Dvorany nad Nitrou</p>
+                                <p class="num est">1.13<small>kW</small></p>
+                                <span class="tag"><svg data-icon></svg>Odhad z predpovede</span>
+                                <p class="sub" style="margin-top: 8px">40 % z toho, čo by dala jasná obloha</p>
+                                <div class="chart"><svg data-chart="t"></svg></div>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Možnosť B · pás s vysvetlením a cestou ďalej</h2>
+                <p class="lead">
+                    Pod číslom pribudne krátky pás: čo to je, prečo a čo s tým. Bez merania vedie do Nastavenia na pripojenie meniča, keď
+                    meranie mlčí, povie odkedy. Číslo je tiež v kurzíve. Povie viac, ale graf posunie asi o 90 px nižšie.
+                </p>
+                <div class="row">
+                    <figure>
+                        <figcaption><b>Obloha</b> · bez merania</figcaption>
+                        <div class="phone o">
+                            <h3 class="ttl">Teraz</h3>
+                            <p class="num est">1.13<small>kW</small></p>
+                            <p class="sub" style="padding-top: 8px">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="note">
+                                <svg data-icon></svg>
+                                <b>Odhad z predpovede, nie tvoja strecha</b>
+                                <p>Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.</p>
+                                <button type="button">Pripojiť meranie ›</button>
+                            </div>
+                            <div class="chart"><svg data-chart="o"></svg></div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Obloha</b> · meranie mlčí</figcaption>
+                        <div class="phone o">
+                            <h3 class="ttl">Teraz</h3>
+                            <p class="num est">1.13<small>kW</small></p>
+                            <p class="sub" style="padding-top: 8px">40 % z toho, čo by dala jasná obloha</p>
+                            <div class="note">
+                                <svg data-icon></svg>
+                                <b>Odhad z predpovede, nie tvoja strecha</b>
+                                <p>Meranie neodpovedá od 07:40. Kým sa neozve, číslo počíta z počasia.</p>
+                            </div>
+                            <div class="chart"><svg data-chart="o"></svg></div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption><b>Súčasná appka</b> · bez merania</figcaption>
+                        <div class="phone t">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="r">–:–<small>odhad z predpovede</small></div>
+                            </div>
+                            <div class="scr">
+                                <p class="eyebrow">Teraz · 08:13 · Dvorany nad Nitrou</p>
+                                <p class="num est">1.13<small>kW</small></p>
+                                <p class="sub" style="margin-top: 8px">40 % z toho, čo by dala jasná obloha</p>
+                                <div class="note">
+                                    <svg data-icon></svg>
+                                    <b>Odhad z predpovede, nie tvoja strecha</b>
+                                    <p>Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.</p>
+                                    <button type="button">Pripojiť meranie ›</button>
+                                </div>
+                                <div class="chart"><svg data-chart="t"></svg></div>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="notes">
+                <div>
+                    <h3>Možnosť A · štítok</h3>
+                    <ul>
+                        <li class="pro">Graf ani pás odporúčaní sa nepohnú, karta vyzerá rovnako s meraním aj bez neho.</li>
+                        <li class="pro">Žiadny nový text – štítok nesie ten istý „Odhad z predpovede“ z jadra.</li>
+                        <li class="con">
+                            Nepovie prečo ani čo s tým – kto nevie, čo je „predpoveď“, sa nedozvie, že treba pripojiť menič.
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Možnosť B · pás s vysvetlením</h3>
+                    <ul>
+                        <li class="pro">Povie to celou vetou („nie tvoja strecha“) a hneď ponúkne cestu: Pripojiť meranie.</li>
+                        <li class="pro">Vzhľadom zapadá k výzve pri typickej streche (biela karta v Oblohe).</li>
+                        <li class="con">Graf je nižšie, na malom mobile vypadne časť pásu odporúčaní pod okraj.</li>
+                        <li class="con">Nové texty v oboch tónoch (drzý / slušný) – patria do jadra, aby ich obe appky mali rovnaké.</li>
+                    </ul>
+                </div>
+                <div class="q">
+                    <h3>Na rozhodnutie</h3>
+                    <ul>
+                        <li>A, alebo B? Dá sa aj B len bez merania a A, keď meranie mlčí (to je dočasné, netreba ho vysvetľovať).</li>
+                        <li>Kurzíva čísla: áno (ako pri typickej streche), alebo nechať číslo rovné?</li>
+                        <li>
+                            V súčasnej appke jantárová (už znamená odhad v páse pod hlavičkou), v Oblohe biela (výzva, nie chyba) – súhlas?
+                        </li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+        <script>
+            // Ukážkový deň ako v terazky-ako-obloha.html – kresba, nie výpočet appky.
+            const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+            const kw = (h) => (h < 6.6 || h > 17.6 ? 0 : 6.9 * Math.exp(-((h - 12.2) ** 2) / (2 * 2.35 ** 2)));
+            const tier = (h) => {
+                if (h >= 8.75 && h < 15.5) return 0;
+                if ((h >= 7.5 && h < 8.5) || (h >= 20.5 && h < 21.5) || (h >= 22.5 && h < 23.5)) return 2;
+                return 1;
+            };
+            const W = 311,
+                T = 22,
+                base = 112,
+                max = 7.4,
+                now = 8.22;
+            const y = (v) => base - (v / max) * (base - T),
+                x = (h) => (h / 24) * W;
+            function chart(svg, obloha) {
+                const tiers = obloha ? [css('--yes'), css('--cheap'), css('--costly')] : [css('--green'), css('--amber'), css('--red')];
+                const ink = obloha ? '#fff' : css('--ink');
+                const dim = obloha ? 'rgba(255,255,255,.82)' : css('--ink-45');
+                let line = '';
+                for (let i = 0; i <= 96; i++) line += `${i ? 'L' : 'M'}${x(i / 4).toFixed(1)},${y(kw(i / 4)).toFixed(1)}`;
+                let band = '';
+                const sw = W / 96;
+                for (let i = 0; i < 96; i++) {
+                    const h = i / 4;
+                    band += `<rect x="${(i * sw + 0.6).toFixed(1)}" y="${base + 8}" width="${(sw - 1.2).toFixed(1)}" height="9" rx="2" fill="${tiers[tier(h)]}" opacity="${h + 0.25 <= now ? 0.3 : 1}"/>`;
+                }
+                const ax = [0, 6, 12, 18, 24]
+                    .map(
+                        (h) =>
+                            `<text x="${x(h)}" y="${base + 34}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" font-size="11" fill="${dim}">${h}</text>`,
+                    )
+                    .join('');
+                const thr = y(2.1);
+                svg.setAttribute('viewBox', `0 0 ${W} ${base + 40}`);
+                svg.innerHTML = `
+                    <path d="${line}L${W},${base}L0,${base}Z" fill="${obloha ? 'rgba(255,255,255,.14)' : css('--ink-08')}"/>
+                    <path d="${line}" fill="none" stroke="${ink}" stroke-opacity=".9" stroke-width="1.6"/>
+                    <line x1="0" x2="${W}" y1="${thr}" y2="${thr}" stroke="${tiers[0]}" stroke-opacity=".8" stroke-dasharray="4 4"/>
+                    <text x="${W}" y="${thr - 7}" text-anchor="end" font-size="12" fill="${dim}">veľké spotrebiče</text>
+                    ${band}${ax}
+                    <circle cx="${x(now)}" cy="${y(kw(now))}" r="5.5" fill="${ink}" stroke="${obloha ? '#55617d' : '#151614'}" stroke-width="2"/>`;
+            }
+            for (const s of document.querySelectorAll('[data-chart]')) chart(s, s.dataset.chart === 'o');
+
+            // Ikona: oblak so slnkom = „z predpovede počasia“.
+            for (const s of document.querySelectorAll('[data-icon]')) {
+                s.setAttribute('viewBox', '0 0 24 24');
+                s.setAttribute('fill', 'none');
+                s.setAttribute('stroke', 'currentColor');
+                s.setAttribute('stroke-width', '1.8');
+                s.setAttribute('stroke-linecap', 'round');
+                s.setAttribute('aria-hidden', 'true');
+                s.innerHTML = `
+                    <circle cx="9" cy="8" r="3"/>
+                    <path d="M9 2.5v1M3.5 8h1M5.1 4.1l.7.7M12.9 4.1l-.7.7"/>
+                    <path d="M7.5 19.5h10a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.5 1.2A2.9 2.9 0 0 0 7.5 19.5z" fill="currentColor" fill-opacity=".15"/>`;
+            }
+        </script>
+    </body>
+</html>

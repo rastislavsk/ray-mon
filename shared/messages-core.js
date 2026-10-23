@@ -481,8 +481,8 @@ export function phonesPerHour(kw) {
 }
 
 /**
- * Fakt v hlavičke karty Môžem?, keď svieti a meranie mlčí - povie odkedy, ako riadok pod číslom
- * karty Teraz (terazSourceText). @param {string} since čas posledného merania
+ * Fakt v hlavičke karty Môžem?, keď svieti a meranie mlčí - povie odkedy, ako pás pod číslom
+ * karty Teraz (terazNoteText). @param {string} since čas posledného merania
  */
 export const silentFact = (since) => `meranie neodpovedá od ${since}`;
 
@@ -843,6 +843,10 @@ export const TERAZ_TEXTS = {
     askTitle: 'Kde máš strechu?',
     askText: 'Bez polohy neviem, kedy u teba svieti. Zadaj ju v Nastavení a ukážem ti výkon aj plán dňa.',
     askBtn: 'Zadaj polohu',
+    noteTitle: 'Odhad z predpovede, nie tvoja strecha',
+    noteText: 'Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.',
+    noteBtn: 'Pripojiť meranie',
+    noteAgainBtn: 'Pripojiť znova',
 };
 
 /** @type {typeof TERAZ_TEXTS} */
@@ -857,6 +861,8 @@ const TERAZ_TEXTS_SLUSNE = {
     askTitle: 'Kde máte strechu?',
     askText: 'Bez polohy neviem, kedy u vás svieti. Zadajte ju v Nastavení a ukážem vám výkon aj plán dňa.',
     askBtn: 'Zadajte polohu',
+    noteTitle: 'Odhad z predpovede, nie vaša strecha',
+    noteText: 'Appka nemá údaje z vášho meniča. Číslo počíta z počasia.',
 };
 
 /** Koniec úseku dňa: polnoc na konci dňa je „24:00“, nie „00:00“. @param {number} min */
@@ -867,16 +873,25 @@ export const spanText = (w) => `${hm(w.from)} – ${endHm(w.to)}`;
 
 /**
  * Riadok pod číslom: odkiaľ výkon je. Živé meranie, namerané (krivka dneška), alebo odhad
- * z predpovede - a keď meranie mlčí, aj odkedy.
- * @param {'live' | 'measured' | 'forecast' | null} source
- * @param {{ silent: boolean, since: string | null }} pv `silent`: vlastné meranie mlčí, `since`: čas
- *   posledného merania (null, keď neprišlo vôbec)
+ * z predpovede. Keď appka teraz meranie nemá, povie to pás pod číslom (terazNoteText) a tento
+ * riadok sa pri odhade nepíše. @param {'live' | 'measured' | 'forecast' | null} source
  */
-export function terazSourceText(source, { silent, since }) {
+export function terazSourceText(source) {
     if (source === 'live') return 'živé meranie';
     if (source === 'measured') return 'namerané';
-    if (!silent) return 'odhad z predpovede';
-    return `odhad z predpovede · ${since ? silentFact(since) : 'meranie neodpovedá'}`;
+    return 'odhad z predpovede';
+}
+
+/**
+ * Veta v páse „Odhad z predpovede“, keď meranie mlčí alebo výrobca prístup odmietol: čo sa stalo
+ * a že číslo je z počasia. Bez merania vôbec je to pevný text `noteText`.
+ * @param {{ since: string | null, riadok: string }} p `since`: čas posledného merania (null, keď
+ *   neprišlo vôbec), `riadok`: prečo prístup neplatí (shared/pristup.js), inak prázdny
+ * @param {Voice} [voice]
+ */
+export function terazNoteText({ since, riadok }, voice = 'drzy') {
+    if (riadok) return `${riadok}. Kým meranie ${polite(voice) ? 'nepripojíte' : 'nepripojíš'} znova, číslo počíta z počasia.`;
+    return `${since ? `Meranie neodpovedá od ${since}` : 'Meranie neodpovedá'}. Kým sa neozve, číslo počíta z počasia.`;
 }
 
 /** Veta pod číslom: koľko z jasnej oblohy. @param {number} pct */

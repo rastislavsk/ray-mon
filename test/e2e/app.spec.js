@@ -221,6 +221,23 @@ const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.
 /** Riadok nad číslom: nadpis modelu, čas (len bez náhľadu) a obec. @param {ReturnType<typeof terazModel>} m @param {string} [hm] */
 const kick = (m, hm) => `${m.title}${hm ? ` · ${hm}` : ''} · ${SITE.name}`;
 
+test('bez merania: pás pod číslom povie, že je to odhad, a vedie na krok Meranie', async ({ page }) => {
+    const errors = await openApp(page, { settings: { ...OWNER, zdroj: null }, start: 'terazky' });
+    const m = terazAt(FIXED_NOW, { zdroj: null, pv: null });
+    await expect(page.locator('#tz-note')).toBeVisible();
+    await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
+    await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
+    await expect(page.locator('#tz-src')).toBeHidden();
+    // S meraním pás nie je.
+    expect(terazAt(FIXED_NOW).note).toBe(null);
+    await page.locator('#tz-note-btn').click();
+    await ocakavajKartu(page, 'nastavenie');
+    await expect(page.locator('#wz-meranie')).toBeVisible();
+    await page.goBack();
+    await ocakavajKartu(page, 'terazky');
+    expect(errors).toEqual([]);
+});
+
 test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie odkedy; Môžem? to isté', async ({ page }) => {
     // Krivka z fixtures končí o 13:00, o 14:30 za slnka ju Worker posiela stále rovnakú.
     const { instant } = atTime('14:30');
@@ -230,8 +247,12 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
     await expect(page.locator('#tz-num-val')).toHaveText(m.num);
     await expect(page.locator('#tz-num-val')).not.toHaveText(String(pv.realTimePowerKw));
-    expect(m.source).toMatch(/^odhad z predpovede · /);
-    await expect(page.locator('#tz-src')).toHaveText(m.source);
+    // Odhad povie jantárový pás pod číslom, riadok odhadu ho neopakuje; tlačidlo nie je - meranie je nastavené.
+    expect(m.note?.text).toMatch(/^Meranie neodpovedá od 13:00\. /);
+    await expect(page.locator('#tz-src')).toBeHidden();
+    await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
+    await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
+    await expect(page.locator('#tz-note-btn')).toBeHidden();
     await expect(page.locator('#tz-now-head')).toHaveText(m.cards?.now.head ?? '');
     await page.locator('#nav-mozem').click();
     await expect(page.locator('.mozem-fact')).toContainText('meranie neodpovedá od 13:00');

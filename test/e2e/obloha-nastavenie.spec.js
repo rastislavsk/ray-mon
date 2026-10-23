@@ -440,8 +440,8 @@ test.describe('prístup k meraniu neplatí či vyprší', () => {
             return route.fulfill({ status: 400, json: { chyba: 'udaje' } });
         });
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-src')).toContainText(m.riadok);
-        await page.locator('#tz-znova').click();
+        await expect(page.locator('#tz-note-text')).toContainText(m.riadok);
+        await page.locator('#tz-note-btn').click();
         await expect(page.locator('#ns-pristup')).toBeVisible();
         await expect(page.locator('#ns-pristup')).toContainText(m.karta.text);
         await expect(page.locator('#ns-rows')).toContainText(m.stav);

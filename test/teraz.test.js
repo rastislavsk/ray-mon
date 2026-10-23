@@ -33,6 +33,7 @@ import {
     terazWindowText,
 } from '../shared/messages.js';
 import { deviceShorts } from '../shared/mozem.js';
+import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
@@ -383,13 +384,55 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     assert.equal(hero.source, 'forecast');
     assert.ok(Number.isFinite(stale.realTimePowerKw));
     assert.notEqual(Number(m.num), stale.realTimePowerKw);
-    // Čas je posledný bod krivky, ten istý, aký ukazuje hlavička.
-    assert.equal(m.source, `odhad z predpovede · meranie neodpovedá od ${pvFreshness({ now: at('13:00'), pv: stale, site: SITE }).time}`);
+    // Odhad povie pás pod číslom, riadok ho neopakuje. Čas je posledný bod krivky, ten istý, aký
+    // ukazuje hlavička.
+    assert.equal(m.source, '');
+    const since = pvFreshness({ now: at('13:00'), pv: stale, site: SITE }).time;
+    assert.deepEqual(m.note, {
+        title: TERAZ_TEXTS.noteTitle,
+        text: `Meranie neodpovedá od ${since}. Kým sa neozve, číslo počíta z počasia.`,
+        btn: '',
+        znova: false,
+    });
     assert.equal(m.cards?.now.head, hero.message.headline);
     // Kiosk nastavený, meranie vôbec neprišlo.
-    assert.equal(terazModel(input(at('13:00'), { pv: null })).source, 'odhad z predpovede · meranie neodpovedá');
-    // Bez kiosku nemá čo mlčať.
-    assert.equal(terazModel(input(at('13:00'), { pv: null, zdroj: null })).source, 'odhad z predpovede');
+    assert.equal(terazModel(input(at('13:00'), { pv: null })).note?.text, 'Meranie neodpovedá. Kým sa neozve, číslo počíta z počasia.');
+});
+
+test('terazModel: bez merania pás odhadu vedie k pripojeniu, s meraním pás nie je', () => {
+    const bez = input(at('13:00'), { pv: null, zdroj: null });
+    const m = terazModel(bez);
+    assert.equal(m.source, '');
+    assert.deepEqual(m.note, { title: TERAZ_TEXTS.noteTitle, text: TERAZ_TEXTS.noteText, btn: TERAZ_TEXTS.noteBtn, znova: false });
+    assert.deepEqual(terazModel(bez, { voice: 'slusny' }).note, {
+        title: 'Odhad z predpovede, nie vaša strecha',
+        text: 'Appka nemá údaje z vášho meniča. Číslo počíta z počasia.',
+        btn: TERAZ_TEXTS.noteBtn,
+        znova: false,
+    });
+    // Náhľad pás nechá (graf sa pod prstom nepohne), aj keď ide do minulosti.
+    assert.deepEqual(terazModel({ ...bez, previewMinutes: hm(9) }).note, m.note);
+    // Živé meranie: pás nie je, ani v náhľade budúcnosti - tam ostáva riadok odhadu.
+    assert.equal(terazModel(input(at('13:00'))).note, null);
+    const buduce = terazModel(input(at('13:00'), { previewMinutes: hm(15) }));
+    assert.equal(buduce.note, null);
+    assert.equal(buduce.source, 'odhad z predpovede');
+    // Typická strecha má vlastnú výzvu, pás odhadu nie.
+    assert.equal(terazModel(guessInput(at('13:00'))).note, null);
+});
+
+test('terazModel: výrobca prístup odmietol - pás povie prečo a vedie k opätovnému pripojeniu', () => {
+    const zdroj = { sposob: 'huawei-northbound', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: '' };
+    const now = at('13:00');
+    const pristup = odmietnute(odmietnute(null, zdroj, now, '', false), zdroj, now, 'prihlasenie:20400', false);
+    const i = input(now, { zdroj, pv: null, pristup });
+    assert.deepEqual(terazModel(i).note, {
+        title: TERAZ_TEXTS.noteTitle,
+        text: 'Huawei prestal prijímať prístup. Kým meranie nepripojíš znova, číslo počíta z počasia.',
+        btn: TERAZ_TEXTS.noteAgainBtn,
+        znova: true,
+    });
+    assert.match(terazModel(i, { voice: 'slusny' }).note?.text ?? '', /Kým meranie nepripojíte znova/);
 });
 
 test('terazModel: noc - výkon 0, veta o obzore, okno, ktoré už bolo, a lacná sieť', () => {
@@ -450,10 +493,9 @@ test('terazModel: predpoveď z iného dňa (po polnoci pred obnovou) netvrdí dn
 });
 
 test('texty karty Teraz', () => {
-    assert.equal(terazSourceText('live', { silent: false, since: null }), 'živé meranie');
-    assert.equal(terazSourceText('measured', { silent: true, since: '11:40' }), 'namerané');
-    assert.equal(terazSourceText('forecast', { silent: false, since: null }), 'odhad z predpovede');
-    assert.equal(terazSourceText(null, { silent: true, since: '11:40' }), 'odhad z predpovede · meranie neodpovedá od 11:40');
+    assert.equal(terazSourceText('live'), 'živé meranie');
+    assert.equal(terazSourceText('measured'), 'namerané');
+    assert.equal(terazSourceText('forecast'), 'odhad z predpovede');
     assert.equal(terazClearText(72), '72 % z toho, čo by dala jasná obloha');
     assert.equal(terazPreviewTime(hm(15, 30)), '15:30');
     assert.equal(terazSliderText(hm(8), true, '1.20', 'costly'), 'Náhľad 08:00, 1.20 kW, drahá sieť');
