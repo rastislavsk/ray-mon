@@ -29,7 +29,6 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   weekDetail: 'day' | 'week' | null,
  *   verdictPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
- *   mozemOpen: string | null,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemSummary: boolean,
  *   mozemList: boolean,
@@ -118,9 +117,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
-        // Karta Môžem?: rozbalená vec (id z MOZEM_ITEMS, null = žiadna). Je to nastavenie vnútri
-        // karty, nie krok navigácie.
-        mozemOpen: /** @type {string | null} */ (null),
         // Denník výroby po dňoch pre súhrn (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
         dayLog: {},
         // Obrazovka súhrnu v karte Môžem? - je to krok navigácie, Späť ju zavrie. Obdobie je

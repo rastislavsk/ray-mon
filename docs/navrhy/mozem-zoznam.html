@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Čo môžem ako zoznam</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky, farby a rozmery sú tu vlastné. Texty vecí sú skutočné odpovede jadra
+               (mozemItemText) pre vzorový jasný deň 5. 9. 2026 o 08:00 a 19:00. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-700-latin-ext.woff2') format('woff2');
+                font-weight: 700;
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-on-color: #0b0b0b;
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+            }
+            body {
+                margin: 0;
+                background: #050505;
+                color: var(--ink);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 32px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h1 {
+                font-size: clamp(26px, 5vw, 36px);
+            }
+            h2 {
+                font-size: 21px;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 72ch;
+            }
+            ul {
+                padding-left: 1.2em;
+                display: grid;
+                gap: 6px;
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 0.86em;
+                color: var(--ink-45);
+            }
+            .intro {
+                display: grid;
+                gap: 10px;
+                color: var(--ink-70);
+            }
+            .eyebrow {
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            .boards {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 36px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                width: min(390px, 100%);
+            }
+            figcaption {
+                margin-bottom: 12px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 18px;
+            }
+            figcaption span {
+                font-size: 14px;
+                color: var(--ink-70);
+            }
+            .pros {
+                margin-top: 12px;
+                font-size: 14px;
+                color: var(--ink-70);
+                list-style: none;
+                padding: 0;
+            }
+
+            /* ---- Telefón ---- */
+            .phone {
+                box-sizing: border-box;
+                width: 100%;
+                padding: 0 16px 20px;
+                border-radius: 32px;
+                border: 1px solid var(--ink-12);
+                background: radial-gradient(120% 40% at 50% 0%, #1c2a12 0%, var(--bg) 60%);
+            }
+            .phone.night {
+                background: radial-gradient(120% 40% at 50% 0%, #2a1512 0%, var(--bg) 60%);
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                padding: 16px 4px 0;
+                font-family: var(--mono);
+            }
+            .hdr b {
+                display: block;
+                font-size: 15px;
+                letter-spacing: 0.04em;
+            }
+            .hdr small {
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                color: var(--ink-45);
+            }
+            .hdr .clock {
+                text-align: right;
+                font-size: 13px;
+            }
+            .hdr .clock i {
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                margin-right: 6px;
+                border-radius: 50%;
+                background: var(--green);
+                vertical-align: 2px;
+            }
+            .back {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                min-height: 44px;
+                margin-top: 10px;
+                font-family: var(--mono);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                color: var(--ink-70);
+            }
+            .back svg,
+            .ico svg,
+            .any svg {
+                fill: none;
+                stroke: currentColor;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .back svg {
+                width: 18px;
+                height: 18px;
+                stroke-width: 2.4;
+            }
+            .title {
+                font-size: 34px;
+                font-weight: 700;
+                letter-spacing: -0.03em;
+                line-height: 1;
+            }
+            .kick {
+                margin: 6px 0 0;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                color: var(--ink-45);
+            }
+
+            /* Pás dneška ako v súčasnej appke. */
+            .band {
+                margin-top: 16px;
+                padding: 16px;
+                border-radius: 22px;
+                color: var(--ink-on-color);
+                background: var(--bg-band);
+            }
+            .band.go {
+                --bg-band: var(--green);
+            }
+            .band.none {
+                --bg-band: var(--red);
+            }
+            .band-top {
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--mono);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+            }
+            .track {
+                position: relative;
+                height: 12px;
+                margin-top: 12px;
+                border-radius: 99px;
+                background: rgba(0, 0, 0, 0.14);
+                overflow: hidden;
+            }
+            .track i {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+            }
+            .track .win {
+                background: var(--ink-on-color);
+            }
+            .track .past {
+                left: 0;
+                background:
+                    repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.28) 0 4px, transparent 4px 8px),
+                    linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), var(--bg-band);
+            }
+            .ticks {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 4px;
+                font-family: var(--mono);
+                font-size: 11px;
+            }
+            .band-text {
+                margin-top: 12px;
+                padding-top: 10px;
+                border-top: 1.5px solid rgba(0, 0, 0, 0.2);
+                font-size: 15px;
+                font-weight: 500;
+            }
+
+            /* ---- Zoznam vecí ---- */
+            .list {
+                display: grid;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .row {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr);
+                gap: 12px;
+                padding: 14px 14px 14px 12px;
+                border-radius: 20px;
+                border: 1.5px solid var(--ink-12);
+                background: var(--card-bg);
+            }
+            .ico svg {
+                width: 28px;
+                height: 28px;
+                stroke-width: 1.7;
+            }
+            .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+            .name {
+                font-size: 15px;
+                font-weight: 700;
+            }
+            .short {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-family: var(--mono);
+                font-size: 13px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            .mark {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            .mark svg {
+                width: 12px;
+                height: 12px;
+                fill: none;
+                stroke: var(--ink-on-color);
+                stroke-width: 3;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .head {
+                margin-top: 6px;
+                font-size: 19px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+                line-height: 1.15;
+            }
+            .text {
+                margin-top: 4px;
+                font-size: 15px;
+                line-height: 1.35;
+                color: var(--ink-70);
+            }
+            .extra {
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1.5px solid var(--ink-12);
+                font-family: var(--mono);
+                font-size: 12px;
+                line-height: 1.4;
+                color: var(--ink-45);
+            }
+            .extra b {
+                color: var(--ink-70);
+            }
+            .go .short,
+            .go .head {
+                color: var(--green);
+            }
+            .wait .short,
+            .wait .head,
+            .cheap .short,
+            .cheap .head {
+                color: var(--amber);
+            }
+            /* A: tmavý riadok, farba odpovede je pásik vľavo, značka a veta. */
+            .row.go {
+                border-left: 5px solid var(--green);
+            }
+            .row.wait,
+            .row.cheap {
+                border-left: 5px solid var(--amber);
+            }
+
+            /* B: čo ide hneď, je na plnej zelenej ako dnešné dlaždice. */
+            .full .row.go {
+                border-color: var(--green);
+                border-left-width: 1.5px;
+                background: var(--green);
+                color: var(--ink-on-color);
+            }
+            .full .row.wait,
+            .full .row.cheap {
+                border-left-width: 1.5px;
+                border-color: var(--amber);
+            }
+            .full .row.go .short,
+            .full .row.go .head,
+            .full .row.go .text,
+            .full .row.go .extra,
+            .full .row.go .extra b {
+                color: var(--ink-on-color);
+            }
+            .full .row.go .extra {
+                border-top-color: rgba(0, 0, 0, 0.2);
+            }
+            .full .row.go .mark svg {
+                stroke: var(--green);
+            }
+
+            /* Kedykoľvek ako dnes. */
+            .any {
+                margin-top: 8px;
+                padding: 12px 16px;
+                border-radius: 22px;
+                border: 1.5px dashed var(--ink-20);
+            }
+            .any-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px 14px;
+            }
+            .any h4 {
+                margin: 0;
+                font-family: var(--mono);
+                font-size: 12px;
+                letter-spacing: 0.14em;
+                color: var(--ink-45);
+            }
+            .any span {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 15px;
+                font-weight: 500;
+            }
+            .any svg {
+                width: 22px;
+                height: 22px;
+                stroke-width: 1.7;
+            }
+            .any p {
+                margin-top: 6px;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .nav {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 18px;
+                padding-top: 12px;
+                border-top: 1px solid var(--ink-12);
+                font-family: var(--mono);
+                font-size: 11px;
+                color: var(--ink-45);
+            }
+            .nav b {
+                color: var(--ink);
+            }
+
+            /* ---- Tabuľka textov ---- */
+            .tbl {
+                overflow-x: auto;
+            }
+            table {
+                border-collapse: collapse;
+                min-width: 640px;
+                font-size: 14px;
+            }
+            th,
+            td {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--ink-12);
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                color: var(--ink-45);
+            }
+            .q {
+                padding: 14px 16px;
+                border-radius: 16px;
+                border: 1.5px solid var(--amber);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header class="intro">
+                <p class="eyebrow">Návrh · karta Môžem? · súčasná appka</p>
+                <h1>Čo môžem ako zoznam</h1>
+                <p>
+                    Dlaždice ukazujú len meno a čas. Vysvetlenie, prečo a dokedy, bolo schované v rozbalení po ťuknutí a s ním aj „Pustil/a
+                    som“. To sme dnes odstránili (<code>bez-pustil-som.html</code>), takže ťuknutie na dlaždicu už nemá čo robiť navyše.
+                    Zoznam ukáže všetko hneď, ako kedysi variant A v
+                    <code>mozem-co-mozem.html</code>: odpoveď, prečo a čo keď sa zamračí.
+                </p>
+                <p>
+                    Všetky texty vecí sú tie, ktoré jadro (<code>mozemItemText</code>) vracia už dnes. Nič nové sa nepočíta ani nepíše, mení
+                    sa len kabát.
+                </p>
+            </header>
+
+            <section>
+                <h2>A – Tmavé riadky s farebným pásikom (odporúčam)</h2>
+                <div class="boards">
+                    <figure>
+                        <figcaption><b>08:00 · jasno</b><span>Štyri veci idú hneď, auto čaká na silnejšie slnko.</span></figcaption>
+                        <div class="phone">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="clock"><i></i>08:00<br /><small>meranie</small></div>
+                            </div>
+                            <div class="back">
+                                <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></svg>SPÄŤ
+                            </div>
+                            <div class="title">Čo môžem</div>
+                            <p class="kick">TERAZ · 08:00 · DVORANY</p>
+                            <div class="band go">
+                                <div class="band-top"><b>IDE HNEĎ · ZO SLNKA</b><span>do 17:30</span></div>
+                                <div class="track">
+                                    <i class="win" style="left: 18.75%; width: 59.4%"></i><i class="past" style="width: 18.75%"></i>
+                                </div>
+                                <div class="ticks"><span>05</span><span>teraz · ešte 9 h 30 min</span><span>21</span></div>
+                                <p class="band-text">4 z 5 vecí môžeš pustiť hneď.</p>
+                            </div>
+                            <div class="list" data-list="a0800"></div>
+                            <div class="any" data-any></div>
+                            <div class="nav">
+                                <b>Môžem?</b><span>Terazky</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <figcaption>
+                            <b>19:00 · slnko skončilo</b><span>Práčky čakajú na zajtra, auto a bojler na lacný prúd.</span>
+                        </figcaption>
+                        <div class="phone night">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="clock"><i></i>19:00<br /><small>meranie</small></div>
+                            </div>
+                            <div class="back">
+                                <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></svg>SPÄŤ
+                            </div>
+                            <div class="title">Čo môžem</div>
+                            <p class="kick">TERAZ · 19:00 · DVORANY</p>
+                            <div class="band none">
+                                <div class="band-top"><b>DNES UŽ NIE</b><span></span></div>
+                                <div class="track"><i class="past" style="width: 87.5%"></i></div>
+                                <div class="ticks"><span>05</span><span>teraz</span><span>21</span></div>
+                                <p class="band-text">Slnko skončilo o 17:30. Zajtra od 08:00.</p>
+                            </div>
+                            <div class="list" data-list="a1900"></div>
+                            <div class="any" data-any></div>
+                            <div class="nav">
+                                <b>Môžem?</b><span>Terazky</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+                <ul class="pros">
+                    <li>+ dlhá veta sa číta ľahko, tmavé pozadie nekričí ani pri piatich zelených riadkoch</li>
+                    <li>+ farbu odpovede nesie pásik, čas a veta, takže pri prechode očami sa dá zoznam prečítať aj bez textu</li>
+                    <li>− menej „plagátové“ ako dnešné zelené dlaždice</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>B – Zelené riadky ako dnešné dlaždice</h2>
+                <div class="boards">
+                    <figure>
+                        <figcaption><b>08:00 · jasno</b><span>Rovnaký obsah, čo ide hneď, je na plnej zelenej.</span></figcaption>
+                        <div class="phone full">
+                            <div class="hdr">
+                                <div><b>Toilet Apps Ltd.</b><small>RAY-MON</small></div>
+                                <div class="clock"><i></i>08:00<br /><small>meranie</small></div>
+                            </div>
+                            <div class="back">
+                                <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></svg>SPÄŤ
+                            </div>
+                            <div class="title">Čo môžem</div>
+                            <p class="kick">TERAZ · 08:00 · DVORANY</p>
+                            <div class="band go">
+                                <div class="band-top"><b>IDE HNEĎ · ZO SLNKA</b><span>do 17:30</span></div>
+                                <div class="track">
+                                    <i class="win" style="left: 18.75%; width: 59.4%"></i><i class="past" style="width: 18.75%"></i>
+                                </div>
+                                <div class="ticks"><span>05</span><span>teraz · ešte 9 h 30 min</span><span>21</span></div>
+                                <p class="band-text">4 z 5 vecí môžeš pustiť hneď.</p>
+                            </div>
+                            <div class="list" data-list="a0800"></div>
+                            <div class="any" data-any></div>
+                            <div class="nav">
+                                <b>Môžem?</b><span>Terazky</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+                <ul class="pros">
+                    <li>+ ostáva jazyk dnešných dlaždíc a pásu dneška</li>
+                    <li>− päť zelených blokov pod zeleným pásom zlieva do jednej plochy, dlhý text na nej unavuje</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Čo je v riadku</h2>
+                <p>Všetko sú polia, ktoré <code>mozemModel</code> pri každej veci vracia už dnes.</p>
+                <div class="tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Miesto v riadku</th>
+                                <th>Pole</th>
+                                <th>Príklad</th>
+                                <th>Dnes v appke</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Vpravo hore, so značkou</td>
+                                <td><code>short</code></td>
+                                <td>do 15:30 · o 08:15 · lacno · zajtra 08:00</td>
+                                <td>veľké číslo na dlaždici</td>
+                            </tr>
+                            <tr>
+                                <td>Veľká veta</td>
+                                <td><code>head</code></td>
+                                <td>Pusti ju do 15:30. · Zapoj ho, prúd je lacný.</td>
+                                <td>v rozbalení</td>
+                            </tr>
+                            <tr>
+                                <td>Prečo</td>
+                                <td><code>text</code></td>
+                                <td>Program má 2 hodiny, takto dobehne celý na slnku.</td>
+                                <td>v rozbalení</td>
+                            </tr>
+                            <tr>
+                                <td>Mono riadok pod čiarou</td>
+                                <td><code>extra</code></td>
+                                <td>Mrak? Nevadí. Najviac berie… · Musíš hneď? Hodina nabíjania ~2,09 €.</td>
+                                <td>v rozbalení</td>
+                            </tr>
+                            <tr>
+                                <td>—</td>
+                                <td><code>mozemTileNote</code></td>
+                                <td>celá zo slnka · asi 240 km zo slnka</td>
+                                <td>malý text na dlaždici; v zozname ho nahradí <code>text</code>, ktorý hovorí to isté celou vetou</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo sa zmení v kóde</h2>
+                <ul>
+                    <li>
+                        <b>Jadro nič.</b> Texty aj odpovede ostávajú, golden súbory (<code>texty-drzy.json</code>,
+                        <code>forecast.json</code>) sa nemenia. Živá obloha sa nemení.
+                    </li>
+                    <li>
+                        <code>web/render/mozem.js</code>: <code>tilesHtml</code>, <code>tileHtml</code> a <code>moreHtml</code> nahradí
+                        <code>rowHtml</code>; riadok nie je tlačidlo, nič sa nerozbaľuje.
+                    </li>
+                    <li>
+                        Stav <code>mozemOpen</code> a jeho obsluha v <code>web/mozem-interactions.js</code> zmiznú, ďalšie ťuknutie na
+                        zozname nie je.
+                    </li>
+                    <li>
+                        <code>style.css</code>: <code>.mozem-grid</code>, <code>.mozem-item</code>, <code>.mozem-more</code> zmiznú,
+                        pribudne <code>.mozem-row</code>. <code>mozemTileNote</code> ostane v jadre, používa ju aj Živá obloha.
+                    </li>
+                    <li>E2e testy dlaždíc a rozbalenia sa prepíšu na riadky; <code>npm run screenshots</code> do toho istého PR.</li>
+                    <li>V <code>index.html</code> ani <code>dom.js</code> nič nepribudne, všetko je v <code>#mozem-body</code>.</li>
+                </ul>
+            </section>
+
+            <section class="q">
+                <h2>Na rozhodnutie</h2>
+                <ul>
+                    <li><b>A alebo B?</b> Odporúčam A.</li>
+                    <li>
+                        <b>Čas dvakrát?</b> „do 15:30“ vpravo aj „Pusti ju do 15:30.“ vo vete. Vpravo slúži na rýchly prehľad, veta nesie
+                        tón. Druhá možnosť je vpravo nechať len značku.
+                    </li>
+                    <li>
+                        <b>Riadok „Mrak?“ vždy?</b> Je pri každej veci, ktorá ide hneď. Ak je ho veľa, dá sa nechať len pri sušičke a aute,
+                        kde mrak naozaj niečo mení – to by ale bola zmena v jadre (obe appky).
+                    </li>
+                    <li><b>Poradie</b> ostáva podľa nastavenia vecí, nie podľa odpovede.</li>
+                </ul>
+            </section>
+        </main>
+
+        <script>
+            // Riadky sa skladajú z jedného zoznamu textov, aby boli vo všetkých telefónoch rovnaké.
+            // Texty sú výstup mozemModel(...).items pre 5. 9. 2026 (test/helpers.js, fixtureData).
+            const ICONS = {
+                pracka: 'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z',
+                umyvacka:
+                    'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7 11.5h10M8.5 11.5v6M12 11.5v6M15.5 11.5v6',
+                susicka:
+                    'M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0',
+                auto: 'M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18',
+                bojler: 'M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z',
+                tv: 'M4 4.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1zM9 20.5h6M12 16.5v4',
+                hranie: 'M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6h-4A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM7.5 10.5v3M6 12h3M15.5 11.2h.01M17.5 13h.01',
+                fen: 'M4 7.5a4.5 4.5 0 0 1 4.5-4.5H20v9H8.5A4.5 4.5 0 0 1 4 7.5zM9 12l1.5 8.5h3L12.5 12M20 5v5',
+            };
+            const MARKS = { go: 'M5 12.5l4.5 4.5L19 7.5', cheap: 'M5 12.5l4.5 4.5L19 7.5', wait: 'M12 6v6l3.5 2' };
+            const ITEMS = {
+                a0800: [
+                    [
+                        'pracka',
+                        'Práčka',
+                        'go',
+                        'do 15:30',
+                        'Pusti ju do 15:30.',
+                        'Program má 2 hodiny, takto dobehne celý na slnku.',
+                        'Mrak?',
+                        'Nevadí. Najviac berie na začiatku pri ohreve vody. Stojí to ~0,19 €.',
+                    ],
+                    [
+                        'umyvacka',
+                        'Umývačka',
+                        'go',
+                        'do 15:00',
+                        'Pusti ju do 15:00.',
+                        'Program má 2 a pol hodiny, takto dobehne celý na slnku.',
+                        'Mrak?',
+                        'Nevadí. Najviac berie pri ohreve vody. Stojí to ~0,21 €.',
+                    ],
+                    [
+                        'susicka',
+                        'Sušička',
+                        'go',
+                        'do 16:00',
+                        'Pusti ju do 16:00.',
+                        'Program má hodinu a pol, takto dobehne celý na slnku.',
+                        'Mrak?',
+                        'Sušička berie prúd celý čas, zvyšok pôjde zo siete. Stojí to ~0,42 €.',
+                    ],
+                    [
+                        'auto',
+                        'Auto',
+                        'wait',
+                        'o 08:15',
+                        'Zapoj ho o 08:15.',
+                        'Na auto treba silné slnko a to bude o 08:15.',
+                        'Musíš hneď?',
+                        'Hodina nabíjania ~2,09 €.',
+                    ],
+                    [
+                        'bojler',
+                        'Bojler',
+                        'go',
+                        'do 16:30',
+                        'Zapni ho do 16:30.',
+                        'Ohrev trvá asi hodinu, takto dobehne celý na slnku.',
+                        'Mrak?',
+                        'Vodu dohreje sieť. Stojí to ~0,38 €.',
+                    ],
+                ],
+                a1900: [
+                    [
+                        'pracka',
+                        'Práčka',
+                        'wait',
+                        'zajtra 08:00',
+                        'Zajtra od 08:00.',
+                        'Dnes to už slnko neutiahne.',
+                        'Nepočká to?',
+                        'Stojí to ~0,14 €.',
+                    ],
+                    [
+                        'umyvacka',
+                        'Umývačka',
+                        'wait',
+                        'zajtra 08:00',
+                        'Zajtra od 08:00.',
+                        'Dnes to už slnko neutiahne.',
+                        'Nepočká to?',
+                        'Stojí to ~0,15 €.',
+                    ],
+                    [
+                        'susicka',
+                        'Sušička',
+                        'wait',
+                        'zajtra 08:00',
+                        'Zajtra od 08:00.',
+                        'Dnes to už slnko neutiahne.',
+                        'Nepočká to?',
+                        'Stojí to ~0,31 €.',
+                    ],
+                    [
+                        'auto',
+                        'Auto',
+                        'cheap',
+                        'lacno',
+                        'Zapoj ho, prúd je lacný.',
+                        'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+                        '',
+                        'Zajtra od 09:00 by to išlo zo strechy.',
+                    ],
+                    [
+                        'bojler',
+                        'Bojler',
+                        'cheap',
+                        'lacno',
+                        'Zapni ho, prúd je lacný.',
+                        'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
+                        '',
+                        'Zajtra od 08:00 by to išlo zo strechy.',
+                    ],
+                ],
+            };
+            const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+            const row = ([id, name, tone, short, head, text, q, a]) =>
+                `<div class="row ${tone}"><span class="ico">${svg(ICONS[id])}</span><div>` +
+                `<div class="top"><span class="name">${name}</span><span class="short">${short}<span class="mark">${svg(MARKS[tone])}</span></span></div>` +
+                `<p class="head">${head}</p><p class="text">${text}</p>` +
+                `<p class="extra">${q ? `<b>${q}</b> ` : ''}${a}</p></div></div>`;
+            for (const el of document.querySelectorAll('[data-list]')) el.innerHTML = ITEMS[el.dataset.list].map(row).join('');
+            const any =
+                '<div class="any-row"><h4>KEDYKOĽVEK</h4>' +
+                ['tv:TV', 'hranie:Hranie', 'fen:Fén'].map((s) => `<span>${svg(ICONS[s.split(':')[0]])}${s.split(':')[1]}</span>`).join('') +
+                '</div><p>Bežné spotrebiče berú málo alebo krátko, to nie je otázka pre strechu.</p>';
+            for (const el of document.querySelectorAll('[data-any]')) el.innerHTML = any;
+        </script>
+    </body>
+</html>

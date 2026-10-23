@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem?: zoznam vecí, rozbalenie veci a súhrn na zdieľanie. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
+// Poslucháče karty Môžem?: zoznam vecí a súhrn na zdieľanie. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
 // web/render/mozem.js.
 
 import { SUMMARY_PERIODS } from '../shared/summary.js';
@@ -9,22 +9,17 @@ import { shareSummary } from './share-image.js';
 /** @typedef {import('./dom.js').Dom} Dom */
 
 /**
- * Karta Môžem?: riadok „Čo môžem“ otvorí zoznam vecí, ťuknutie na vec v ňom ju rozbalí (druhé
- * zbalí). Rozbalenie je nastavenie vnútri karty, nie krok navigácie - Späť sa naň nevracia.
+ * Karta Môžem?: riadok „Čo môžem“ otvorí zoznam vecí. Veci v ňom sú len na čítanie, všetko
+ * je vidno hneď.
  * @param {Store} store @param {Dom} dom
  */
 export function initMozem(store, dom) {
     dom.mozemBody.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         // Zoznam vecí je obrazovka karty ako súhrn: otvorenie je krok navigácie, šípka späť
-        // ten istý krok ako tlačidlo Späť. Otvára sa vždy zbalený.
-        if (target.closest('[data-mozem-list]')) return store.setState({ mozemList: true, mozemOpen: null });
+        // ten istý krok ako tlačidlo Späť.
+        if (target.closest('[data-mozem-list]')) return store.setState({ mozemList: true });
         if (target.closest('[data-mozem-list-back]')) return backTo(store, { mozemList: false });
-        const item = target.closest('[data-mozem-item]');
-        if (item instanceof HTMLElement) {
-            const id = item.dataset.mozemItem || null;
-            return store.setState({ mozemOpen: store.get().mozemOpen === id ? null : id });
-        }
         onSummaryClick(store, target);
     });
 }
