@@ -41,7 +41,7 @@ function initNavigation(store, dom) {
     };
     for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
     const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzNoteBtn, dom.sdGuessBtn, dom.sdAskBtn];
-    toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn);
+    toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn, dom.tipBtn);
     // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi. Sú to dva kroky navigácie -
     // Späť z panelov vráti do prehľadu Nastavenia, ako keby ich otvoril odtiaľ.
     const toPanels = () => {
@@ -67,6 +67,24 @@ function initNavigation(store, dom) {
 }
 
 /**
+ * Bublina s vysvetlením stavu merania: ťuknutie na bodku a čas ju otvorí aj zavrie, ťuknutie
+ * kamkoľvek mimo nej (priehľadná vrstva pod ňou, aby nič pod bublinou nespustilo) a Escape ju
+ * zavrú. Tlačidlo v nej vedie do Nastavenia (initNavigation) a bublinu tiež zavrie.
+ * @param {Store} store @param {Dom} dom
+ */
+function initStavTip(store, dom) {
+    const close = () => store.setState({ stavTip: false });
+    dom.live.addEventListener('click', () => store.setState({ stavTip: !store.get().stavTip }));
+    dom.tipBg.addEventListener('click', close);
+    dom.tipBtn.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !store.get().stavTip) return;
+        close();
+        dom.live.focus();
+    });
+}
+
+/**
  * Rozloženie podľa šírky okna: pri otočení tabletu či zmene okna sa prepne hneď. Stav (otvorený
  * detail, náhľad, sprievodca) sa pri tom nemení, mení sa len to, čo je kde.
  * @param {Store} store
@@ -83,6 +101,7 @@ function initLayout(store) {
  */
 export function initInteractions(store, dom) {
     initNavigation(store, dom);
+    initStavTip(store, dom);
     initLayout(store);
     const refresh = createRefresh(store);
     initMozem(store, dom, refresh);

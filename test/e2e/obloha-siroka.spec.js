@@ -451,7 +451,7 @@ test.describe('tablet na šírku prstom', () => {
 });
 
 test.describe('klávesnica na počítači', () => {
-    test('Tab ide stĺpcami zľava doprava, potom navigáciou; fokus je vždy vidieť', async ({ page }) => {
+    test('Tab ide stavom merania v hlavičke, stĺpcami zľava doprava, potom navigáciou; fokus je vždy vidieť', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         /** @type {Array<{ name: string, column: number, nav: boolean, visible: boolean, inView: boolean }>} */
         const kroky = [];
@@ -477,7 +477,9 @@ test.describe('klávesnica na počítači', () => {
             kroky.push(k);
             if (k.nav) break;
         }
-        const vStlpcoch = kroky.filter((k) => !k.nav);
+        // Prvá zastávka je bodka a čas v hlavičke (bublina so stavom merania), až potom stĺpce.
+        expect(kroky[0]?.name).toBe('hdr-live');
+        const vStlpcoch = kroky.slice(1).filter((k) => !k.nav);
         expect(kroky.at(-1)?.nav, 'Tab sa nedostal do navigácie').toBe(true);
         expect(
             vStlpcoch.every((k) => k.column >= 0),
