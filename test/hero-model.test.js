@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_DAYS, ALL_MONTHS, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { freshPowerKw, heroModel, liveStatus, pvFreshness } from '../shared/hero-model.js';
+import { ALL_DAYS, ALL_MONTHS, PLANT, PRISTUP, SITE, TARIFF } from '../shared/config.js';
+import { freshPowerKw, heroModel, liveStatus, pvFreshness, stavMerania } from '../shared/hero-model.js';
+import { stavMeraniaText } from '../shared/messages-core.js';
+import { odmietnute } from '../shared/pristup.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -174,4 +176,40 @@ test('liveStatus: stav živého merania pre riadok v Nastavení', () => {
     });
     assert.deepEqual(liveStatus({ ...base, pv: null }), { tone: 'off', text: 'nepripojené' });
     assert.deepEqual(liveStatus({ ...base, pv: null, loading: true }), { tone: 'wait', text: 'pripájam…' });
+});
+
+test('stavMerania a jeho vysvetlenie: živé, zastarané, neprišlo, pripojiť znova, odhad', () => {
+    const NB = { sposob: 'huawei-northbound', pecat: 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345', nazov: 'Dvorany' };
+    const stav = (/** @type {Date} */ now, /** @type {any} */ p, /** @type {any} */ zdroj = NB, /** @type {any} */ pristup = null) =>
+        stavMerania({ now, pv: p, site: SITE, zdroj, pristup });
+    const cerstve = { ...pv, updatedAt: at('13:10').toISOString() };
+    // Krivka vo vzorke končí 13:00.
+    assert.deepEqual(stav(at('13:10'), cerstve), { druh: 'zive', cas: '13:00', neplati: null });
+    assert.deepEqual(stav(at('13:30'), { ...cerstve, updatedAt: at('13:30').toISOString() }), {
+        druh: 'zastarane',
+        cas: '13:00',
+        neplati: null,
+    });
+    assert.equal(stav(at('13:10'), { ...cerstve, realTimePowerKw: null }).druh, 'neprislo', 'meranie bez výkonu');
+    assert.equal(stav(at('13:10'), null).druh, 'neprislo', 'pripojené meranie neprišlo');
+    assert.equal(stav(at('13:10'), null, null).druh, 'odhad', 'meranie nie je pripojené');
+    let o = odmietnute(null, NB, at('13:00'), 'prihlasenie:20400', false);
+    for (let i = 1; i < PRISTUP.odmietnutia; i++) o = odmietnute(o, NB, at('13:00'), 'prihlasenie:20400', false);
+    const znova = stav(at('13:10'), null, NB, o);
+    assert.equal(znova.druh, 'znova');
+    assert.equal(znova.neplati?.hlavicka, 'meranie treba pripojiť znova');
+
+    // Texty: čas merania, značka pri neplatnom prístupe, tlačidlo len kde treba niečo urobiť, oba tóny.
+    const text = (/** @type {any} */ s, voice = 'drzy') => stavMeraniaText(s, /** @type {any} */ (voice));
+    assert.match(text(stav(at('13:10'), cerstve)).text, /^Menič poslal výkon o 13:00\. .*tvoja strecha/);
+    assert.match(text(stav(at('13:10'), cerstve), 'slusny').text, /vaša strecha/);
+    assert.match(text(stav(at('13:30'), { ...cerstve, updatedAt: at('13:30').toISOString() })).text, /^Od 13:00 neprišlo nové meranie\./);
+    assert.equal(text(znova).text.startsWith('Huawei prestal prijímať prístup, ktorý si zadal.'), true);
+    assert.equal(text(znova, 'slusny').text.startsWith('Huawei prestal prijímať prístup, ktorý ste zadali.'), true);
+    assert.equal(text(znova).tlacidlo, 'Pripojiť znova ›');
+    assert.equal(text({ druh: 'znova', cas: '', neplati: null }).text.startsWith('Výrobca prestal'), true);
+    assert.equal(text(stav(at('13:10'), null, null)).tlacidlo, 'Pripojiť meranie ›');
+    assert.match(text(stav(at('13:10'), null, null), 'slusny').text, /pripojte ho v Nastavení/);
+    assert.match(text(stav(at('13:10'), null), 'slusny').text, /nemusíte nič robiť/);
+    for (const s of [stav(at('13:10'), cerstve), stav(at('13:10'), null)]) assert.equal(text(s).tlacidlo, '');
 });

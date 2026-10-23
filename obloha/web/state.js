@@ -19,7 +19,8 @@ import { setupInit } from '../../shared/setup-flow.js';
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
- * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo.
+ * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo. `stavTip` je
+ * otvorená bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'day' | 'week'} WeekDetail
@@ -48,6 +49,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
  *   parts: Partial<Record<Part, PartState>>,
+ *   stavTip: boolean,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
@@ -122,6 +124,7 @@ export function initialState(
         shareKiosk: false,
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
         parts: {},
+        stavTip: false,
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
         ...setupInit(start, known),
@@ -142,6 +145,7 @@ export function panelChange(from, to) {
         weekDetail: /** @type {WeekDetail | null} */ (null),
         poster: /** @type {PosterPeriod | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
+        stavTip: false,
     };
 }
 

@@ -21,7 +21,8 @@ import { MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
-import { heroModel } from '../../shared/hero-model.js';
+import { heroModel, stavMerania } from '../../shared/hero-model.js';
+import { stavMeraniaText } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
@@ -214,6 +215,46 @@ test('hlavička: pripojené meranie neprišlo, alebo meranie nie je pripojené',
     await openObloha(neprislo, { pvData: /** @type {any} */ (null) });
     await expect(neprislo.locator('#hdr-status')).toHaveText('meranie nedostupné');
     await expect(neprislo.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
+});
+
+test('bublina stavu: ťuknutie na bodku a čas vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
+    const errors = await openObloha(page, { time: at('13:10') });
+    const live = page.locator('#hdr-live');
+    const tip = page.locator('#hdr-tip');
+    await expect(tip).toBeHidden();
+    await live.click();
+    await expect(tip).toBeVisible();
+    await expect(live).toHaveAttribute('aria-expanded', 'true');
+    // Text počíta to isté jadro ako appka.
+    const ocak = stavMeraniaText(stavMerania({ now: at('13:10'), pv, site: SITE, zdroj: OWNER.zdroj, pristup: null }));
+    await expect(page.locator('#hdr-tip-title')).toHaveText(ocak.nadpis);
+    await expect(page.locator('#hdr-tip-text')).toHaveText(ocak.text);
+    await expect(page.locator('#hdr-tip-btn')).toBeHidden();
+    // Ťuknutie mimo bubliny ju zavrie a nič pod ňou nespustí - karta ostáva tá istá.
+    const karta = await page.locator('#page').getAttribute('data-panel');
+    await page.locator('#hdr-tip-bg').click({ position: { x: 30, y: 400 } });
+    await expect(tip).toBeHidden();
+    await expect(live).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.locator('#page').getAttribute('data-panel')).toBe(karta);
+    // Escape ju zavrie a fokus ostane na bodke a čase.
+    await live.click();
+    await expect(tip).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(tip).toBeHidden();
+    await expect(live).toBeFocused();
+    expect(errors).toEqual([]);
+});
+
+test('bublina stavu bez merania: tlačidlo Pripojiť meranie otvorí Nastavenie a bublinu zavrie', async ({ page }) => {
+    const errors = await openObloha(page, { settings: /** @type {any} */ ({ ...OWNER, zdroj: null }) });
+    await page.locator('#hdr-live').click();
+    await expect(page.locator('#hdr-tip-title')).toHaveText('Odhad z predpovede');
+    const btn = page.locator('#hdr-tip-btn');
+    await expect(btn).toHaveText('Pripojiť meranie ›');
+    await btn.click();
+    await expect(page.locator('#page')).toHaveAttribute('data-panel', 'nastavenie');
+    await expect(page.locator('#hdr-tip')).toBeHidden();
+    expect(errors).toEqual([]);
 });
 
 test('útlm pohybu: obloha sa mení bez prechodu', async ({ page }) => {

@@ -33,14 +33,21 @@
         ></script>
     </head>
     <body>
+        <!-- Ťuknutie kamkoľvek mimo bubliny ju zavrie a nič pod ňou nespustí. -->
+        <div id="hdr-tip-bg" class="tip-bg hidden"></div>
         <header class="st">
             <span id="hdr-place" class="place">RAY-MON</span>
-            <span id="hdr-live" class="live" data-tone="off">
+            <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
                 <i aria-hidden="true"></i>
                 <span id="hdr-status">načítavam…</span>
                 <span id="hdr-tone" class="sr"></span>
-            </span>
+            </button>
             <button type="button" id="hdr-setup" class="need hidden"></button>
+            <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
+                <b id="hdr-tip-title"></b>
+                <p id="hdr-tip-text"></p>
+                <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
+            </div>
         </header>
 
         <main id="page" class="page">

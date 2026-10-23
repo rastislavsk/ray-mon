@@ -992,6 +992,69 @@ export const EMPTY_MESSAGES = {
     week: { title: 'Predpoveď sa pripravuje', body: 'Týždenné dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
 };
 
+/**
+ * Vysvetlenie stavu merania (stavMerania v hero-model.js) - bublina pri bodke a čase v hlavičke
+ * Oblohy: nadpis, text a pri stavoch, kde treba niečo urobiť, tlačidlo do Nastavenia (inak prázdne).
+ * @param {{ druh: 'zive' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: { riadok: string } | null }} stav
+ * @param {Voice} [voice] @returns {{ nadpis: string, text: string, tlacidlo: string }}
+ */
+export function stavMeraniaText(stav, voice = 'drzy') {
+    const w = polite(voice) ? STAV_SLOVA_SLUSNE : STAV_SLOVA;
+    switch (stav.druh) {
+        case 'zive':
+            return {
+                nadpis: 'Živé meranie',
+                text: `Menič poslal výkon o ${stav.cas}. Karty počítajú s tým, čo ${w.tvoja} strecha vyrába práve teraz. Ďalšie meranie príde o pár minút.`,
+                tlacidlo: '',
+            };
+        case 'zastarane':
+            return {
+                nadpis: 'Meranie je zastarané',
+                text: `Od ${stav.cas} neprišlo nové meranie. Karty zatiaľ rátajú s predpoveďou. Býva za tým výpadok internetu pri meniči alebo u výrobcu – appka to skúša ďalej sama.`,
+                tlacidlo: '',
+            };
+        case 'neprislo':
+            return {
+                nadpis: 'Meranie neprišlo',
+                text: `Appka sa na meranie pýtala, ale odpoveď neprišla. Karty rátajú s predpoveďou. O chvíľu to skúsi znova, ${w.nemusis} nič robiť.`,
+                tlacidlo: '',
+            };
+        case 'znova':
+            return {
+                nadpis: 'Meranie treba pripojiť znova',
+                text: `${stav.neplati?.riadok ?? 'Výrobca prestal prijímať prístup'}, ktorý ${w.zadal}. Kým meranie ${w.nepripojis} znova, karty rátajú s predpoveďou.`,
+                tlacidlo: 'Pripojiť znova ›',
+            };
+        default:
+            return {
+                nadpis: 'Odhad z predpovede',
+                text: `Meranie nie je pripojené. Čísla sú odhad z predpovede počasia a ${w.tvojich} panelov. Ak ${w.tvoj} menič posiela dáta cez internet, ${w.pripoj} ho v Nastavení.`,
+                tlacidlo: 'Pripojiť meranie ›',
+            };
+    }
+}
+
+/** Slová vysvetlenia stavu merania, ktoré sa v tóne líšia (tykanie a vykanie). */
+const STAV_SLOVA = {
+    tvoja: 'tvoja',
+    tvojich: 'tvojich',
+    tvoj: 'tvoj',
+    nemusis: 'nemusíš',
+    zadal: 'si zadal',
+    nepripojis: 'nepripojíš',
+    pripoj: 'pripoj',
+};
+/** @type {typeof STAV_SLOVA} */
+const STAV_SLOVA_SLUSNE = {
+    tvoja: 'vaša',
+    tvojich: 'vašich',
+    tvoj: 'váš',
+    nemusis: 'nemusíte',
+    zadal: 'ste zadali',
+    nepripojis: 'nepripojíte',
+    pripoj: 'pripojte',
+};
+
 // ---- Pevné texty podľa tónu ---------------------------------------------------------
 
 /** Pevné texty drzého tónu - tie isté objekty, ktoré používa súčasná appka. Celé (aj s kartami 7 dní a Štatistika) vracia voiceTexts v messages.js. */

@@ -8,6 +8,7 @@ import { localMinutes, solarPosition } from './solar.js';
 import { planAt } from './day-plan.js';
 import { getSlotMessage, voiceTexts } from './messages-core.js';
 import { smartTier } from './tariff.js';
+import { neplatiOf } from './pristup.js';
 
 /**
  * @typedef {{ now: Date, tariff: import('./config.js').Tariff, pv: import('./kiosk.js').PvData | null,
@@ -70,6 +71,25 @@ export function pvFreshness({ now, pv, site }) {
         time,
         stale: fetchStale || silent,
     };
+}
+
+/**
+ * Stav živého merania: rátajú karty s meraním, a keď nie, prečo. `cas` je čas posledného merania
+ * (pvFreshness), kde meranie je, inak prázdny; `neplati` model prístupu, ktorý výrobca prestal
+ * prijímať (neplatiOf). Meranie bez výkonu je pre karty to isté ako meranie, ktoré neprišlo.
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site,
+ *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null }} s
+ * @returns {{ druh: 'zive' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: ReturnType<typeof neplatiOf> }}
+ */
+export function stavMerania(s) {
+    if (s.pv) {
+        const { time, stale } = pvFreshness({ now: s.now, pv: s.pv, site: s.site });
+        if (stale) return { druh: 'zastarane', cas: time, neplati: null };
+        return { druh: freshPowerKw(s) === null ? 'neprislo' : 'zive', cas: time, neplati: null };
+    }
+    const neplati = neplatiOf(s);
+    if (neplati) return { druh: 'znova', cas: '', neplati };
+    return { druh: s.zdroj ? 'neprislo' : 'odhad', cas: '', neplati: null };
 }
 
 /**
