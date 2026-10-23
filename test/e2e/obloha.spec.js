@@ -183,6 +183,13 @@ test('hlavička: miesto elektrárne, čas a bodka živého merania', async ({ pa
     expect(errors).toEqual([]);
 });
 
+test('hlavička: čerstvé meranie bez výkonu nie je živé, rovnako ako na karte Teraz', async ({ page }) => {
+    const errors = await openObloha(page, { time: at('13:00'), pvData: { ...pv, realTimePowerKw: null } });
+    await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
+    await expect(page.locator('#hdr-tone')).toHaveText('živé meranie nedostupné');
+    expect(errors).toEqual([]);
+});
+
 test('útlm pohybu: obloha sa mení bez prechodu', async ({ page }) => {
     await openObloha(page);
     const prechod = () => page.evaluate(() => getComputedStyle(document.documentElement).transitionDuration);

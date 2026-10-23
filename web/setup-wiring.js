@@ -76,12 +76,16 @@ export function applySettings(store, next, refresh, extra = {}) {
         store.setState({ settingsNote: 'Uložiť sa nepodarilo. Prehliadač možno nepovoľuje ukladanie dát.' });
         return;
     }
+    const pv = flow.pripojenePv(store.get(), next.zdroj);
+    // Pripojenie bolo dopytom aj pri prvom pripojení, keď rytmus ešte nemal k čomu patriť: obnovenie
+    // stránky či druhá appka by sa inak hneď pýtali znova a Huawei by dopyt do 5 minút odmietol.
+    if (next.zdroj && pv) saveRytmus(dalsiRytmus(loadRytmus(), next.zdroj, new Date(pv.updatedAt), pv));
     switchPlant(store, next, 'elektraren', refresh, {
         settingsDraft: next,
         settingsNote: 'Uložené. Prepočítavam predpoveď.',
         settingsRev: store.get().settingsRev + 1,
         setupLive: !!next.zdroj,
-        pv: flow.pripojenePv(store.get(), next.zdroj),
+        pv,
         ...extra,
     });
 }

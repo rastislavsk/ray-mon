@@ -41,6 +41,15 @@ function chyba(err) {
     return json(druh === 'udaje' ? 400 : 502, kod ? { chyba: druh, kod } : { chyba: druh });
 }
 
+/**
+ * Úspešné meranie do logu: spôsob a či chýbal výkon - inak sa pri odpovedi 200 nedá zistiť, prečo
+ * appka ukazuje odhad. Bez prístupu a hodnôt merania.
+ * @param {string} sposob @param {import('../../shared/kiosk.js').PvData} pv
+ */
+function zalogujMeranie(sposob, pv) {
+    console.log(`meranie: ${sposob}${pv.realTimePowerKw === null ? ' (bez výkonu)' : ''}`);
+}
+
 /** Telo požiadavky ako text, najviac MAX_BODY znakov; dlhšie je null. @param {Request} request */
 async function telo(request) {
     const text = await request.text();
@@ -60,6 +69,7 @@ export async function handlePv(request, env, now, fetchImpl) {
         try {
             const { pv } = await ZDROJE['huawei-kiosk'].meraj({ odkaz: body }, ctx);
             const pecat = key ? await zapecat(key, { sposob: 'huawei-kiosk', pristup: { odkaz: body } }) : undefined;
+            zalogujMeranie('huawei-kiosk', pv);
             return json(200, { pv, pecat });
         } catch (err) {
             return chyba(err);
@@ -71,6 +81,7 @@ export async function handlePv(request, env, now, fetchImpl) {
     try {
         const res = await zdroj.meraj(obsah.pristup, ctx);
         const pecat = res.pristup && key ? await zapecat(key, { sposob: obsah.sposob, pristup: res.pristup }) : undefined;
+        zalogujMeranie(obsah.sposob, res.pv);
         return json(200, { pv: res.pv, pecat });
     } catch (err) {
         return chyba(err);

@@ -55,14 +55,17 @@ export const neplati = (o, zdroj) => patri(o, zdroj) && /** @type {Odmietnutie} 
 /**
  * Je po odmietnutí čas sa opýtať znova? null, keď odmietnutie k meraniu nepatrí - vtedy
  * rozhoduje bežný interval (pvDue). Kým appka ešte neusúdila, že prístup neplatí, čaká interval
- * spôsobu; potom raz za PRISTUP.skusMs.
- * @param {Odmietnutie | null} o @param {Zdroj | null} zdroj @param {Date} now @returns {boolean | null}
+ * spôsobu; potom raz za PRISTUP.skusMs. Čaká sa od odmietnutia aj od posledného dopytu (`lastAt`,
+ * ms - aj nevydareného, aj z druhej appky): po odmietnutí a výpadkoch za ním by sa inak appka
+ * pýtala každú minútu a Huawei by odmietal pre priveľa dopytov.
+ * @param {Odmietnutie | null} o @param {Zdroj | null} zdroj @param {Date} now @param {number} [lastAt]
+ * @returns {boolean | null}
  */
-export function znovaDue(o, zdroj, now) {
+export function znovaDue(o, zdroj, now, lastAt = 0) {
     if (!o || !zdroj || !patri(o, zdroj)) return null;
     const s = sposobOf(zdroj.sposob);
     const wait = neplati(o, zdroj) ? PRISTUP.skusMs : (s?.intervalMs ?? 0) - SLACK_MS;
-    return now.getTime() - o.at >= wait;
+    return now.getTime() - Math.max(o.at, lastAt) >= wait;
 }
 
 /**
