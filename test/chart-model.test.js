@@ -18,8 +18,6 @@ import {
     minutesFromAngle,
     panelGridModel,
     RING,
-    ringGap,
-    ringPercent,
     ringPoint,
     smoothPath,
     tiltModel,
@@ -96,7 +94,7 @@ test('chartTooltipModel: ľavý okraj = 05:00, pravý = 21:00, strop len ak body
     assert.ok(tip.clearKw !== null && tip.yFrac > 0 && tip.yFrac < 1);
 });
 
-test('denný prstenec: poludnie hore, pásma obídu celý deň, uhol a minúta sú navzájom opačné', () => {
+test('kruh dňa: poludnie hore, pásma obídu celý deň, uhol a minúta sú navzájom opačné', () => {
     const c = RING.viewBox / 2;
     const midnight = ringPoint(RING.rDay, 0);
     assert.ok(Math.abs(midnight.x - c) < 1e-9 && midnight.y > c, 'polnoc je dole');
@@ -110,13 +108,6 @@ test('denný prstenec: poludnie hore, pásma obídu celý deň, uhol a minúta s
         const p = ringPoint(RING.rDay, m);
         assert.equal(minutesFromAngle(p.x - c, p.y - c), m, `minúta ${m} tam a späť`);
     }
-
-    const mid = ringPercent(MINUTES_PER_DAY / 2);
-    assert.ok(Math.abs(mid.left - 50) < 1e-9 && mid.top < 50, 'percentá sedia s bodom');
-
-    // Polnoc nie je stena: 23:50 a 00:10 sú od seba 20 minút, nie 1420.
-    assert.equal(ringGap(1430, 10), 20);
-    assert.equal(ringGap(600, 700), 100);
 
     const bands = dayRingModel(dayPlan({ now: FIXED_NOW, tariff: TARIFF, site: SITE, plant: PLANT, pv, forecast }));
     assert.ok(bands.length > 1 && bands.every((b) => ['green', 'amber', 'red'].includes(String(b.cls))));

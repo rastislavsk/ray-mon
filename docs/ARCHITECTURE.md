@@ -106,11 +106,11 @@ nákres sklonu a mriežka panelov vznikajú ako modely v `chart-model.js` a SVG 
 (`sunTimes`) aj výrobu za jasného dňa (`clearDayKwh`) počíta `solar.js`. Časť Tarifa má
 obrazovky podľa typu sadzby (`tariffSteps`): jedna cena len typ a ceny, dve pásma aj rozvrh
 a výnimky, tri a viac pásiem navyše pásma. Rozvrh sa maľuje prstom po kruhu, ktorý má tú istú
-geometriu ako ciferník (`tariffRingModel`); `<svg>` kruhu ostáva v stránke a render píše len
+geometriu ako malé prstence tarify (`tariffRingModel`, `RING` v `shared/chart-model.js`); `<svg>` kruhu ostáva v stránke a render píše len
 do jeho `<g>`, aby zachytenie prsta (pointer capture) vydržalo celý ťah. Upravovaný rozvrh
 a pásmo, ktorým sa maľuje (`setupSched`, `setupBrush`), sú nastavenie vnútri obrazovky, nie
 krok navigácie. Presná cesta aj pre klávesnicu je zoznam úsekov s formulárom pod kruhom.
-Hodiny, ciferník aj predpoveď idú podľa časového pásma lokality,
+Hodiny, graf dňa aj predpoveď idú podľa časového pásma lokality,
 nie telefónu. Nastavenie sa dá zdieľať odkazom `…/#nastavenie=…` (`shareUrl` a
 `readLink` v `shared/settings.js`): je zbalené za mriežkou, ktorú prehliadač
 neposiela na server, a pri otvorení prejde tou istou kontrolou ako nastavenie z úložiska.
@@ -444,12 +444,12 @@ to, či môžu teraz pustiť práčku, a keď nie, kedy. Karta Môžem? im odpov
 (návrh C v `docs/navrhy/karta-mozem.html`; varianty so zoznamom a so stories sú tam ako
 zamietnuté).
 
-Počíta `shared/mozem.js` z plánu dňa (`dayPlan`), takže „áno“ je tá istá zelená ako na dennom
-prstenci: výkon z krivky dňa od dolnej hranice výkonu. Stav karty je `go` (teraz je zelená),
+Počíta `shared/mozem.js` z plánu dňa (`dayPlan`), takže „áno“ je tá istá zelená ako v pláne
+grafu dňa: výkon z krivky dňa od dolnej hranice výkonu. Stav karty je `go` (teraz je zelená),
 `wait` (zelená príde ešte dnes), `none` (dnešná zelená už bola), `slabo` (dnes cez deň
 nebude žiadna), `offline` (predpoveď nie je) a `loading`. Ďalšie dni berie z hodinovej
 predpovede. Pre spotrebiče platia pravidlá z `DEVICES`: v slabý deň sa umývačka a sušička
-neodporúčajú ako v `deviceStates`, auto potrebuje horný prah výkonu a lacné pásmo mu stačí, len
+neodporúčajú (`weakDay`), auto potrebuje horný prah výkonu a lacné pásmo mu stačí, len
 keď dnes slnko už nepríde - neskoršie slnko vyhrá nad lacnou sieťou. Typický program
 spotrebiča (`MOZEM_ITEMS` v `config.js`) určuje, dokedy ho pustiť, aby dobehol na slnku,
 a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
@@ -480,7 +480,7 @@ na plátno z toho istého modelu a posiela ho `navigator.share`; kde zdieľanie 
 obrázok sa stiahne. Nič z toho neodchádza na server.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
-Môžem?, ten, kto elektráreň platí, ciferník. Predvolená je Môžem? (`START_PANELS[0]`, jediné
+Môžem?, ten, kto elektráreň platí, Terazky. Predvolená je Môžem? (`START_PANELS[0]`, jediné
 miesto, odkiaľ to berie aj `initialState` a `shareHash`). Ukladá sa pod vlastným kľúčom
 (`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=terazky` za mriežkou -
 predvolená karta sa nepíše. Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa
@@ -527,8 +527,8 @@ heatmapy dňa – výroba po hodinách v tých istých farbách a s tou istou mi
 v heatmape týždňa (`weekHeatMax`, stupnica nad grafom), v strede krivka oblačnosti 0–100 %
 (pri dnešku „teraz“; nameranú výrobu časová os nekreslí, je to predpoveď dňa), dole pás
 spotrebičov z plánu dňa po
-štvrťhodinách (`fitSegments` v `shared/day-plan.js`): _zapni veľké_ je tá istá zelená ako na
-dennom prstenci, _čiastočne_ je slnko aspoň na úrovni špičky slabého dňa, zvyšok _zo siete_.
+štvrťhodinách (`fitSegments` v `shared/day-plan.js`): _zapni veľké_ je tá istá zelená ako v pláne
+dňa (`smartTier`), _čiastočne_ je slnko aspoň na úrovni špičky slabého dňa, zvyšok _zo siete_.
 Tarifa do pásu nevstupuje – hovorí len o slnku. Zelené okno je navyše jemná plocha cez celý
 graf. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu, overený na farbosleposť
 (pozri komentár pri tokenoch v `style.css`). Oblačnosť zaberá presne plochu medzi `padT`

@@ -381,7 +381,6 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     // Karta Terazky súčasnej appky ráta to isté (heroModel): staré číslo z kiosku sa netvári ako výkon teraz.
     assert.equal(m.num, hero.powerText);
     assert.equal(hero.source, 'forecast');
-    assert.equal(hero.unitText, 'kW (odhad)');
     assert.ok(Number.isFinite(stale.realTimePowerKw));
     assert.notEqual(Number(m.num), stale.realTimePowerKw);
     // Čas je posledný bod krivky, ten istý, aký ukazuje hlavička.

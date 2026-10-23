@@ -2,15 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, powerThresholds, TYPICAL_PLANT } from '../shared/config.js';
 import { PRICE_LEVELS } from '../shared/config.js';
-import {
-    dayDetailMessage,
-    forecastDayMessage,
-    getSlotMessage,
-    NIGHT_MESSAGES,
-    PRICE_MESSAGES,
-    SLOT_MESSAGES,
-    weekMessage,
-} from '../shared/messages.js';
+import { dayDetailMessage, getSlotMessage, NIGHT_MESSAGES, PRICE_MESSAGES, SLOT_MESSAGES, weekMessage } from '../shared/messages.js';
 
 const th = powerThresholds(PLANT);
 
@@ -36,24 +28,6 @@ test('getSlotMessage: override pri silnejšom slnku, pri bežnej cene rozhodne z
     assert.match(getSlotMessage('bezna', 0.5, { tomorrowSunny: true }, th)?.body || '', /Zajtra bude slnečno/);
     assert.match(getSlotMessage('bezna', 0.5, { tomorrowSunny: false }, th)?.body || '', /slnečno nebude/);
     assert.equal(getSlotMessage('lacna', 6, null, th)?.headline, 'Najlepší čas dňa — zapni všetko');
-});
-
-test('forecastDayMessage: slabý deň, dnes a zajtra', () => {
-    const weak = [{ hour: 12, kw: 0.8 }];
-    assert.equal(forecastDayMessage(weak, true, th).title, 'Dnes bude slabo');
-    assert.equal(forecastDayMessage(weak, false, th).title, 'Zajtra bude slabšie');
-    const pts = [
-        { hour: 8, kw: 1 },
-        { hour: 11, kw: 4 },
-        { hour: 13, kw: 6 },
-        { hour: 15, kw: 4.5 },
-        { hour: 18, kw: 1 },
-    ];
-    const today = forecastDayMessage(pts, true, th);
-    assert.equal(today.title, 'Najsilnejšie slnko okolo 13:00');
-    assert.match(today.body, /medzi 11:00 a 16:00/);
-    assert.match(forecastDayMessage(pts, false, th).body, /~6,0 kW/);
-    assert.equal(forecastDayMessage([], true, th).title, 'Dnes bude slabo');
 });
 
 /** Detail dňa má nad správou hlavičku s názvom dňa, takže text deň nepomenúva - inak by
@@ -86,8 +60,6 @@ test('slabý deň sa meria veľkosťou elektrárne, nie pevnými kilowattmi', ()
     const mala = powerThresholds(TYPICAL_PLANT);
     assert.equal(dayDetailMessage(den, th).title, 'Slabý deň');
     assert.equal(dayDetailMessage(den, mala).title, 'Najsilnejšie slnko okolo 12:00');
-    assert.equal(forecastDayMessage(den, true, th).title, 'Dnes bude slabo');
-    assert.equal(forecastDayMessage(den, false, mala).title, 'Zajtra bude slnečno');
 });
 
 test('weekMessage: najsilnejší a najslabší deň', () => {

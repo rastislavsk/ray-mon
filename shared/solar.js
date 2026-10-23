@@ -173,7 +173,7 @@ export function localHour(dateUtc, timezone) {
 }
 
 /**
- * Minúta dňa (0-1439) v danom časovom pásme. Hodiny, ciferník aj tarifné okná appky idú
+ * Minúta dňa (0-1439) v danom časovom pásme. Hodiny, graf dňa aj tarifné okná appky idú
  * podľa času lokality, nie telefónu - kto sa pozerá na elektráreň v inom pásme, vidí jej čas.
  * @param {Date} dateUtc @param {string} timezone
  */
@@ -222,8 +222,8 @@ const SUNRISE_ELEVATION_DEG = -0.833;
 
 /**
  * Je slnko nad obzorom? To isté kritérium ako východ a západ v sunTimes, takže platí aj
- * v polárny deň či noc, keď slnko nevyjde alebo nezapadne. Ciferník podľa toho ukazuje
- * na značke „teraz“ slnko alebo mesiac.
+ * v polárny deň či noc, keď slnko nevyjde alebo nezapadne. Podľa neho je štvrťhodina plánu dňa nočná
+ * a obloha karty Môžem? má slnko.
  * @param {Date} dateUtc @param {Site} site
  */
 export function sunUp(dateUtc, site) {

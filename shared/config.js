@@ -123,9 +123,9 @@ export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statis
 
 /**
  * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
- * ten, kto elektráreň platí, ciferník. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
+ * ten, kto elektráreň platí, Terazky. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
  * `&prva=…` za mriežkou. Prvá v zozname je predvolená - Môžem? je jednoduchá odpoveď pre celú
- * rodinu, ciferník Terazky potrebuje vysvetlenie. Predvolená karta sa do odkazu nepíše.
+ * rodinu, Terazky s grafom dňa sú podrobnejšie. Predvolená karta sa do odkazu nepíše.
  */
 export const START_PANELS = /** @type {const} */ (['mozem', 'terazky']);
 export const START_STORAGE_KEY = 'prva-karta-v1';
@@ -148,12 +148,12 @@ export const START_HASH_KEY = 'prva';
  */
 export const LAYOUT_PX = { medium: 1024, wide: 1280 };
 
-/** Minút v dni. Ciferník ich rozloží po obvode, rozvrh tarify ich delí na pásma. */
+/** Minút v dni. Graf dňa ich rozloží po šírke, rozvrh tarify ich delí na pásma. */
 export const MINUTES_PER_DAY = 1440;
 
 /**
  * Inštalovaný výkon zostavy v kWp: počet panelov × výkon panelu. Jediné miesto, kde sa počíta -
- * ciferník, hranice výkonu, karta 7 dní aj Nastavenie ho berú odtiaľto. Nezaokrúhľuje sa,
+ * graf dňa, hranice výkonu, karta 7 dní aj Nastavenie ho berú odtiaľto. Nezaokrúhľuje sa,
  * zaokrúhľuje až text (kwpText v format.js).
  * @param {Plant} plant
  */
@@ -569,9 +569,6 @@ export const TOOLTIP_HOLD_MS = 1600;
 // Kedy je tooltip po skrytí naozaj neviditeľný. Musí byť aspoň taký dlhý ako prechod
 // `opacity` na `.chart-tooltip` v style.css - až potom sa dajú zahodiť jeho súradnice.
 export const TOOLTIP_FADE_MS = 200;
-
-// Ako dlho po poslednom posune sa listovanie považuje za ustálené (ms).
-export const PAGER_SETTLE_MS = 90;
 
 // Dáta staršie než toto sú "zastarané" a appka to ukáže. Platí pre stiahnutie z kiosku
 // aj pre posledné meranie z meniča.

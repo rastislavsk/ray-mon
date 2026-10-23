@@ -1,6 +1,6 @@
 // Plán dňa: pre každú štvrťhodinu pásmo tarify, výkon FV a z toho farba. Z plánu čítajú
-// ciferník (denný prstenec), pozadie stránky, texty odporúčaní aj spotrebiče - farba pod
-// bežcom na prstenci a farba pozadia sú tak vždy to isté číslo. Čisté funkcie bez DOM.
+// graf dňa (pás plánu), pozadie stránky aj texty odporúčaní - farba pod zvoleným časom
+// v grafe a farba pozadia sú tak vždy to isté číslo. Čisté funkcie bez DOM.
 
 import { MINUTES_PER_DAY, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayKwAt, interpolate } from './chart-model.js';
@@ -81,7 +81,7 @@ export function forecastDayPlan(input, index) {
  * Farba každej hodiny ľubovoľného dňa predpovede - stĺpce v detaile dňa na karte 7 dní.
  * Rovnaká logika ako plán dňa (smartTier): pásmo tarify v tej hodine toho dňa (aj s výnimkami
  * rozvrhu, víkend či sezóna) a výkon z predpovede. Farba stĺpca o 13:00 je tak tá istá, akú by
- * v ten deň o 13:00 mal ciferník.
+ * v ten deň o 13:00 mal pás plánu v grafe dňa.
  * @param {import('./solar.js').ForecastDay} day @param {import('./config.js').Tariff} tariff
  * @param {import('./config.js').Plant} plant @returns {Array<import('./config.js').Tier | null>} ako `day.hourly`
  */
@@ -95,7 +95,7 @@ export function dayHourTiers(day, tariff, plant) {
 
 /**
  * Ako veľmi štvrťhodina plánu pokryje veľké spotrebiče - pás pod grafom v detaile dňa.
- * `go`: slnko stačí (tá istá zelená ako na dennom prstenci, smartTier). `part`: slnko je hore
+ * `go`: slnko stačí (tá istá zelená ako v pláne dňa, smartTier). `part`: slnko je hore
  * a panely dávajú aspoň toľko, koľko je špička slabého dňa - časť pôjde zo siete. `grid`:
  * zvyšok, všetko zo siete. Tarifa sem nevstupuje, pás hovorí len o slnku.
  * @param {PlanSlot} slot @param {import('./config.js').PowerThresholds} th @returns {FitLevel}

@@ -13,37 +13,28 @@ const at = (/** @type {string} */ hm) => {
 };
 const base = { tariff: TARIFF, pv, forecast, previewMinutes: null, site: SITE, plant: PLANT };
 
-test('13:00 so 6,4 kW v lacnom pásme: zelená, všetky spotrebiče go, žiadne čakanie', () => {
+test('13:00 so 6,4 kW v lacnom pásme: zelená, výkon naživo', () => {
     const m = heroModel({ ...base, now: at('13:00') });
     assert.equal(m.tier, 'green');
     assert.equal(m.accent, 'green');
     assert.equal(m.message.headline, 'Najlepší čas dňa — zapni všetko');
-    assert.ok(m.devices.every((d) => d.state === 'go' && d.tier === 'green'));
-    assert.equal(m.waitTime, null);
     assert.equal(m.powerText, '6.41');
-    assert.equal(m.unitText, 'kW teraz');
-    assert.equal(m.dial.tier, 'green');
+    assert.equal(m.source, 'live');
+    assert.equal(m.waitTime, null);
 });
 
-test('číslo v ciferníku má najviac päť znakov, aj pri 100 kW', () => {
-    // Šesť znakov („100.00“) sa medzi prstence nezmestí - od 100 kW ostáva jedno desatinné miesto.
+test('veľké číslo výkonu má najviac päť znakov, aj pri 100 kW', () => {
     const vykon = (/** @type {number} */ kw) => heroModel({ ...base, now: at('13:00'), pv: { ...pv, realTimePowerKw: kw } }).powerText;
     assert.equal(vykon(10.44), '10.44');
     assert.equal(vykon(100), '100.0');
     assert.equal(vykon(99.996), '100.0', 'zaokrúhlenie na dve desatiny by dalo šesť znakov');
 });
 
-test('02:00 v noci: text o lacnom nočnom prúde, auto a bojler go, ostatné čakajú', () => {
+test('02:00 v noci: text o lacnom nočnom prúde', () => {
     const m = heroModel({ ...base, now: at('02:00'), pv: { ...pv, realTimePowerKw: 0 } });
     assert.ok(m.isNight);
     assert.equal(m.tier, 'amber');
-    assert.equal(m.band.name, 'NT');
     assert.equal(m.message.headline, 'Lacný nočný prúd');
-    const auto = m.devices.find((d) => d.name === 'Auto');
-    assert.equal(auto?.tier, 'amber');
-    assert.equal(auto?.state, 'go');
-    assert.equal(m.devices.find((d) => d.name === 'Práčka')?.state, 'wait');
-    assert.equal(m.dial.tier, 'red');
 });
 
 test('21:00 VT bez slnka: červená a text o drahej sieti v tme', () => {
@@ -72,23 +63,10 @@ test('jedna cena celý deň: bez slnka sivá, pri slnku zelená', () => {
     assert.equal(noc.tier, 'grey');
     assert.equal(noc.accent, 'grey');
     assert.equal(noc.message.headline, 'Slnko nesvieti');
-    assert.ok(
-        noc.devices.every((d) => d.state === 'wait'),
-        'bez lacného pásma nejde nič',
-    );
     assert.equal(heroModel({ ...base, tariff: flat, now: at('13:00') }).tier, 'green');
 });
 
-test('slabý deň: sušička a umývačka nie sú odporúčané vôbec', () => {
-    const weak = { ...forecast, days: [{ ...forecast.days[0], peakKw: 0.8 }, ...forecast.days.slice(1)] };
-    const m = heroModel({ ...base, now: at('13:00'), forecast: weak });
-    const states = Object.fromEntries(m.devices.map((d) => [d.name, d.state]));
-    assert.equal(states.Sušička, 'no');
-    assert.equal(states.Umývačka, 'no');
-    assert.equal(states.Práčka, 'go');
-});
-
-test('čakací chip len keď slnko ešte nepokrýva spotrebiče a predpoveď hlási silnejšie', () => {
+test('čakanie len keď slnko ešte nepokrýva spotrebiče a predpoveď hlási silnejšie', () => {
     const f = { ...forecast, strongerWindowAhead: true, hoursAhead: 3, windowDaypart: 'poobede' };
     const m = heroModel({ ...base, now: at('07:00'), forecast: f, pv: { ...pv, realTimePowerKw: 0.5 } });
     assert.equal(m.waitTime, '10:00');
@@ -98,27 +76,23 @@ test('čakací chip len keď slnko ešte nepokrýva spotrebiče a predpoveď hl�
 
 test('náhľad iného času berie výkon z krivky: minulosť merané, budúcnosť odhad', () => {
     const past = heroModel({ ...base, now: at('13:00'), previewMinutes: 10 * 60 });
-    assert.ok(past.preview && past.unitText === 'kW (merané)' && past.previewLabel === 'Náhľad · 10:00');
+    assert.ok(past.preview && past.minutes === 10 * 60 && past.source === 'measured');
     const future = heroModel({ ...base, now: at('13:00'), previewMinutes: 16 * 60 });
-    assert.equal(future.unitText, 'kW (odhad)');
+    assert.equal(future.source, 'forecast');
     assert.equal(future.waitTime, null);
     assert.ok(Number.isFinite(future.power));
 });
 
-test('bez dát je v ciferníku pomlčka a jednotka netvrdí, že je to odhad', () => {
+test('bez dát je výkon pomlčka a netvrdí, že je to odhad', () => {
     const m = heroModel({ ...base, now: at('13:00'), pv: null, forecast: null });
     assert.equal(m.powerText, '–');
-    assert.equal(m.unitText, 'kW');
+    assert.equal(m.source, null);
 });
 
-test('bez živého merania je „teraz“ odhad z predpovede a ciferník meria voči vlastnej zostave', () => {
+test('bez živého merania je „teraz“ odhad z predpovede', () => {
     const m = heroModel({ ...base, now: at('13:00'), pv: null });
     assert.ok(Number.isFinite(m.power) && m.power > 0, `odhad ${m.power}`);
-    assert.equal(m.unitText, 'kW (odhad)');
-    // Tá istá výroba na polovičnej zostave vyplní ciferník dvakrát viac (strop je 100 %).
-    const half = { ...PLANT, strings: [{ panels: 12, azimuthDeg: 180, tiltDeg: 40 }] };
-    const small = heroModel({ ...base, now: at('13:00'), pv: null, plant: half });
-    assert.ok(Math.abs(small.dial.fraction - Math.min(1, 2 * m.dial.fraction)) < 0.02, `${small.dial.fraction} vs ${m.dial.fraction}`);
+    assert.equal(m.source, 'forecast');
 });
 
 test('kiosk bez živého výkonu: nie nameraná nula, ale posledné meranie z krivky alebo odhad', () => {
@@ -129,21 +103,21 @@ test('kiosk bez živého výkonu: nie nameraná nula, ale posledné meranie z kr
     assert.equal(posledny.hour, 13, 'krivka v ukážke končí o 13:00');
     const teraz = heroModel({ ...base, now: at('13:00'), pv: bezVykonu });
     assert.equal(teraz.power, posledny.kw);
-    assert.equal(teraz.unitText, 'kW (merané)');
+    assert.equal(teraz.source, 'measured');
     // Za koncom krivky ostáva odhad z predpovede, rovnako ako bez kiosku.
     const neskor = heroModel({ ...base, now: at('13:30'), pv: bezVykonu });
     assert.ok(neskor.power > 0, `odhad ${neskor.power}`);
-    assert.equal(neskor.unitText, 'kW (odhad)');
+    assert.equal(neskor.source, 'forecast');
 });
 
-test('meranie, ktoré mlčí: číslo spred hodiny nie je výkon teraz, ciferník aj odporúčanie idú z odhadu', () => {
+test('meranie, ktoré mlčí: číslo spred hodiny nie je výkon teraz, výkon aj odporúčanie idú z odhadu', () => {
     // Krivka v ukážke končí o 13:00. O 14:30 za slnka meranie mlčí - kiosk ešte drží 13:00.
     const now = at('14:30');
     const stale = { ...pv, updatedAt: now.toISOString() };
     assert.equal(pvFreshness({ now, pv: stale, site: SITE }).stale, true);
     assert.equal(freshPowerKw({ now, pv: stale, site: SITE }), null);
     const m = heroModel({ ...base, now, pv: stale });
-    assert.equal(m.unitText, 'kW (odhad)');
+    assert.equal(m.source, 'forecast');
     assert.notEqual(m.power, pv.realTimePowerKw);
     // To isté ako bez merania: odporúčanie stojí na krivke dňa, nie na starom čísle.
     const bez = heroModel({ ...base, now, pv: { ...stale, realTimePowerKw: null } });

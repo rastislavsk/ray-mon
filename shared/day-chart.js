@@ -56,7 +56,7 @@ const TICK_HOURS = [0, 6, 12, 18, 24];
 const r1 = (v) => Math.round(v * 10) / 10;
 
 /**
- * Farba štvrťhodiny plánu. Zelená je tá istá ako na dennom prstenci súčasnej appky (`tier`
+ * Farba štvrťhodiny plánu. Zelená je tá istá ako v pláne dňa (`tier`
  * zo smartTier), modrá a červená cena pásma tarify.
  * @param {{ tier: import('./config.js').Tier | null, level: import('./config.js').PriceLevel }} slot @returns {Tone}
  */

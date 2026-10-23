@@ -141,10 +141,6 @@ function directDay(out, v) {
     strings(M.dayDetailMessage(pts, th, v), 'dayDetail.silny', out);
     strings(M.dayDetailMessage(weak, th, v), 'dayDetail.slaby', out);
     strings(M.sedemDayMessage(pts, th, false, v), 'sedemDay.bezOkna', out);
-    for (const today of [true, false]) {
-        strings(M.forecastDayMessage(pts, today, th), `forecastDay.${today}`, out);
-        strings(M.forecastDayMessage(weak, today, th), `forecastDay.slaby.${today}`, out);
-    }
     strings(M.EMPTY_MESSAGES, 'empty', out);
 }
 

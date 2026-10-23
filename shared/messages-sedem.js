@@ -26,7 +26,7 @@ const weakDayMessage = (voice) => ({
 /**
  * Správa v detaile dňa. O ktorý deň ide, hovorí hlavička nad ňou, takže text sám deň
  * nepomenúva - inak by sa pre stredu musel prekladať do "v stredu" a pre štvrtok do
- * "vo štvrtok". Dnes a Zajtra majú vlastné znenie vo forecastDayMessage nižšie.
+ * "vo štvrtok".
  * @param {Array<{hour: number, kw: number}>} pts @param {import('./config.js').PowerThresholds} th @param {Voice} [voice]
  * @returns {{ title: string, body: string }}
  */
@@ -37,35 +37,6 @@ export function dayDetailMessage(pts, th, voice = 'drzy') {
     return {
         title: `Najsilnejšie slnko okolo ${peakLabel}`,
         body: `Špička ~${fmt1(peak.kw)} kW. Veľké spotrebiče majú najviac zmysel medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
-    };
-}
-
-/**
- * Správa pod grafom predpovede pre jeden deň.
- * @param {Array<{hour: number, kw: number}>} pts @param {boolean} isToday
- * @param {import('./config.js').PowerThresholds} th
- * @returns {{ title: string, body: string }}
- */
-export function forecastDayMessage(pts, isToday, th) {
-    const { peak, rangeStart, rangeEnd } = peakWindow(pts);
-
-    if (peak.kw < th.weakPeakKw) {
-        return isToday
-            ? { title: 'Dnes bude slabo', body: 'Výroba bude celý deň nízka. Veľké spotrebiče si radšej naplánuj na iný deň.' }
-            : { title: 'Zajtra bude slabšie', body: 'Predpoveď počíta s nízkou výrobou. Ak to nie je súrne, počkaj na slnečnejší deň.' };
-    }
-
-    const peakLabel = hourLabel(peak.hour);
-
-    if (isToday) {
-        return {
-            title: `Najsilnejšie slnko okolo ${peakLabel}`,
-            body: `Špička okolo ${peakLabel}. Veľké spotrebiče majú najviac zmysel medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
-        };
-    }
-    return {
-        title: 'Zajtra bude slnečno',
-        body: `Špička okolo ${peakLabel} (~${fmt1(peak.kw)} kW). Veľké spotrebiče má zmysel naplánovať medzi ${rangeStart}:00 a ${rangeEnd}:00.`,
     };
 }
 
