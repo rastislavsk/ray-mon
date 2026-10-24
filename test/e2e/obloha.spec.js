@@ -348,14 +348,16 @@ test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ pag
     expect(errors).toEqual([]);
 });
 
-test.describe('listovanie kariet prstom a tlačidlo Späť', () => {
+test.describe('ťah prstom a tlačidlo Späť', () => {
     test.use({ hasTouch: true });
 
-    /** Ťah prstom po stránke - začína nad veľkým číslom či slovom, nie nad grafom karty Teraz,
-     * kde ťah do strán ukazuje náhľad a kartu neprelistuje (to skúša skupina „karta Teraz prstom“).
-     * @param {import('@playwright/test').Page} page @param {number} dx @param {number} [dy] */
-    async function tah(page, dx, dy = 0) {
-        const start = { x: 200, y: 180 };
+    /** Ťah prstom z prvku `sel` o `dx` (a `dy`) - jeden pohyb, bez meraného času, takže o
+     * prelistovaní dňa rozhoduje len dĺžka ťahu.
+     * @param {import('@playwright/test').Page} page @param {string} sel @param {number} dx @param {number} [dy] */
+    async function tah(page, sel, dx, dy = 0) {
+        const box = await page.locator(sel).boundingBox();
+        if (!box) throw new Error(`${sel} nie je vidno`);
+        const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
         await page.evaluate(
             ([s, d]) => {
                 const target = /** @type {Element} */ (document.elementFromPoint(s.x, s.y));
@@ -373,20 +375,73 @@ test.describe('listovanie kariet prstom a tlačidlo Späť', () => {
         );
     }
 
-    test('ťah doľava prelistuje na ďalšiu kartu, doprava späť, na kraji nikam', async ({ page }) => {
+    /** Detail dňa je otvorený na `den`: nadpis je celé meno dňa, ktoré nesie jeho čip.
+     * @param {import('@playwright/test').Page} page @param {number} den */
+    async function ocakavajDen(page, den) {
+        const meno = await page.locator(`#sd-day-strip [data-day="${den}"]`).getAttribute('aria-label');
+        await expect(page.locator('#sd-day-title')).toHaveText(meno ?? '');
+        await expect(page.locator('.pager-ghost')).toHaveCount(0);
+        await ocakavajKartu(page, '7dni');
+    }
+
+    /** Karty sa prepínajú len ťuknutím v navigácii (docs/navrhy/7dni-listovanie-dni.html). */
+    test('ťah do strán kartu neprelistuje', async ({ page }) => {
         const errors = await openObloha(page);
         await ocakavajKartu(page, 'mozem');
-        await tah(page, 120);
-        await ocakavajKartu(page, 'mozem');
-        await tah(page, -120);
-        await ocakavajKartu(page, 'terazky');
-        await tah(page, -120);
-        await ocakavajKartu(page, '7dni');
-        await tah(page, 120);
-        await ocakavajKartu(page, 'terazky');
-        // Zvislý ťah nie je listovanie.
-        await tah(page, -40, 200);
-        await ocakavajKartu(page, 'terazky');
+        for (const dx of [-200, 200]) {
+            await tah(page, '#mz-word', dx);
+            await ocakavajKartu(page, 'mozem');
+        }
+        expect(errors).toEqual([]);
+    });
+
+    test('v detaile dňa ťah listuje dni, na kraji ostane; čipy a čítačka idú s ním', async ({ page }) => {
+        const errors = await openObloha(page);
+        await page.locator('#nav-7dni').click();
+        await page.locator('#sd-days [data-day="2"]').click();
+        await ocakavajDen(page, 2);
+        await expect(page.locator('#sd-day-strip [aria-current="true"]')).toHaveAttribute('data-day', '2');
+
+        await tah(page, '#sd-day-title', -220);
+        await ocakavajDen(page, 3);
+        await expect(page.locator('#sd-day-strip [aria-current="true"]')).toHaveAttribute('data-day', '3');
+        const pocet = await page.locator('#sd-day-strip [data-day]').count();
+        await expect(page.locator('#sd-day-live')).toHaveText(`${await page.locator('#sd-day-title').textContent()}, deň 4 zo ${pocet}`);
+        await tah(page, '#sd-day-title', 220);
+        await ocakavajDen(page, 2);
+        // Zvislý ťah deň neprelistuje. (Krátky ťah bez švihu skúša súčasná appka - tu prídu
+        // udalosti bez pauzy, teda ako veľmi rýchly švih.)
+        await tah(page, '#sd-day-title', -20, 200);
+        await ocakavajDen(page, 2);
+
+        // Čip prelistuje na deň, ktorý nesie; z prvého dňa ťah doprava detail nezatvorí.
+        await page.locator('#sd-day-strip [data-day="0"]').click();
+        await ocakavajDen(page, 0);
+        await tah(page, '#sd-day-title', 220);
+        await ocakavajDen(page, 0);
+        await expect(page.locator('#sd-day')).toBeVisible();
+        await page.locator('#sd-day-strip [data-day="6"]').click();
+        await ocakavajDen(page, 6);
+        await tah(page, '#sd-day-title', -220);
+        await ocakavajDen(page, 6);
+
+        // Šípka späť je prvá v riadku čipov a vráti do prehľadu.
+        await expect(page.locator('#sd-day-back')).toHaveAccessibleName('Späť na 7 dní');
+        await page.locator('#sd-day-back').click();
+        await expect(page.locator('#sd-list')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('v detaile týždňa ťah do strán nerobí nič', async ({ page }) => {
+        const errors = await openObloha(page);
+        await page.locator('#nav-7dni').click();
+        await page.locator('#sd-sum').click();
+        await expect(page.locator('#sd-week')).toBeVisible();
+        for (const dx of [-220, 220]) {
+            await tah(page, '#sd-week-title', dx);
+            await expect(page.locator('#sd-week')).toBeVisible();
+            await ocakavajKartu(page, '7dni');
+        }
         expect(errors).toEqual([]);
     });
 
@@ -1598,7 +1653,7 @@ test.describe('karta 7 dní: detail dňa bez cien zo siete', () => {
 test.describe('karta 7 dní prstom', () => {
     test.use({ hasTouch: true });
 
-    test('v detaile dňa ťah doľava ide na ďalší deň, doprava späť, z dneška doprava do prehľadu', async ({ page }) => {
+    test('v detaile dňa ťah doľava ide na ďalší deň, doprava späť, z dneška doprava nikam', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         const errors = await openSedem(page);
         await page.locator('#sd-days [data-day="0"]').click();
@@ -1612,7 +1667,11 @@ test.describe('karta 7 dní prstom', () => {
         await expect(page.locator('#sd-day-title')).toHaveText('Zajtra 6.9.');
         await tahNad(page, '#sd-day-sub', 160);
         await expect(page.locator('#sd-day-title')).toHaveText('Dnes 5.9.');
+        // Z dneška ťah doprava detail nezatvorí - späť vedie šípka v riadku čipov.
         await tahNad(page, '#sd-day-sub', 160);
+        await page.waitForTimeout(400);
+        await expect(page.locator('#sd-day-title')).toHaveText('Dnes 5.9.');
+        await page.locator('#sd-day-back').click();
         await expect(page.locator('#sd-list')).toBeVisible();
         await ocakavajKartu(page, '7dni');
         // Listovanie dní nebolo krokom navigácie: Späť z prehľadu ide na predošlú kartu.
@@ -1621,7 +1680,7 @@ test.describe('karta 7 dní prstom', () => {
         expect(errors).toEqual([]);
     });
 
-    test('v detaile týždňa ťah doprava vráti do prehľadu, mimo detailu ťah listuje karty', async ({ page }) => {
+    test('v detaile týždňa ani v prehľade ťah do strán nerobí nič', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         const errors = await openSedem(page);
         await page.locator('#sd-sum').click();
@@ -1629,9 +1688,11 @@ test.describe('karta 7 dní prstom', () => {
         await tahNad(page, '#sd-week-range', -160);
         await expect(page.locator('#sd-week')).toBeVisible();
         await tahNad(page, '#sd-week-range', 160);
+        await expect(page.locator('#sd-week')).toBeVisible();
+        await page.locator('#sd-week-back').click();
         await expect(page.locator('#sd-list')).toBeVisible();
         await tahNad(page, '#sd-title', 160);
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, '7dni');
         expect(errors).toEqual([]);
     });
 

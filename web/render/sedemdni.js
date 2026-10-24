@@ -23,7 +23,6 @@ import {
 import { installedKw } from '../../shared/config.js';
 import { forecastDayPlan } from '../../shared/day-plan.js';
 import {
-    dayNameShort,
     escapeHtml,
     fmt1,
     hourLabel,
@@ -31,14 +30,16 @@ import {
     weekDateLabel,
     weekDayLong,
     weekDayName,
+    weekDayPosition,
     weekDayShort,
 } from '../../shared/format.js';
 import { dayWindowCard, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
-import { mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { SKY_WORDS } from '../../shared/messages-sedem.js';
+import { dayStripModel, dayWeather, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_BACK, ICON_CLOUD, ICON_NEXT, ICON_PARTLY, ICON_SUN } from '../icons.js';
 import { dayChartHtml, legendHtml } from '../day-chart.js';
-import { changed, writeHtml } from '../memo.js';
+import { writeHtml } from '../memo.js';
 import { forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
 
 /** @typedef {import('../../shared/solar.js').ForecastDay} ForecastDay */
@@ -306,23 +307,38 @@ function renderView(detail, narrow, tall, dom) {
     for (const key of /** @type {const} */ (['weekBlockHeat', 'weekBlockBars', 'weekBlockCurve']))
         dom[key].classList.toggle('hidden', detail ? !vidno.includes(key) : narrow);
     dom.weekDayHead.classList.toggle('hidden', !detail);
-    // Pás dní patrí k hlavičke detailu dňa: v detaile týždňa ani v prehľade nie je čo listovať.
+    // Riadok so šípkou späť je v oboch detailoch; čipy dní len v detaile dňa - v detaile týždňa
+    // ani v prehľade nie je čo listovať.
+    dom.weekDayNav.classList.toggle('hidden', !detail);
     dom.weekDayStrip.classList.toggle('hidden', detail !== 'day');
     // Deň si používateľ vybral klikom v prehľade, prepínač dní nad krivkou je tu navyše.
     dom.weekDayTabs.classList.toggle('hidden', !!detail);
 }
 
-/** Hlavička obrazovky detailu: čo je otvorené. Odkiaľ sa vraciame, hovorí šípka vedľa nej.
- * @param {'day' | 'week' | null} detail @param {ForecastDay} day @param {number} sel @param {import('../dom.js').Dom} dom */
-function renderDayHead(detail, day, sel, dom) {
+/**
+ * Nadpis detailu pod riadkom so šípkou späť: deň s ikonou oblohy a slovom pod ním, ako v detaile
+ * dňa novej appky (počasie dňa aj slovo sú z jadra, dayWeather a SKY_WORDS). Po prelistovaní
+ * dňa ho ohlási čítačka (#week-day-live, mimo pásu, ktorý sa pri ťahu kopíruje).
+ * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom */
+function renderDayHead(detail, days, sel, dom) {
+    const day = days[sel];
+    const weather = detail === 'day' ? dayWeather(day) : null;
     dom.weekDayTitle.textContent = detail === 'week' ? 'Celý týždeň' : weekDayLong(day.date, sel);
+    writeHtml(dom.weekDayIcon, weather ? SKY_ICONS[weather] : '', 'weekDayIcon');
+    dom.weekDaySub.textContent = weather ? SKY_WORDS[weather] : '';
+    dom.weekDaySub.classList.toggle('hidden', !weather);
+    dom.weekDayLive.textContent = detail === 'day' ? weekDayPosition(day.date, sel, days.length) : '';
 }
 
+/** Ikona oblohy pri nadpise dňa. Len ozdoba - počasie slovom nesie riadok pod nadpisom.
+ * @type {Record<import('../../shared/sky.js').SkyWeather, string>} */
+const SKY_ICONS = { jasno: ICON_SUN, polojasno: ICON_PARTLY, zamracene: ICON_CLOUD };
+
 /**
- * Pás dní pod hlavičkou: koľko dní týždeň má, na ktorom stojíme a že sa dá listovať ďalej.
- * Ťah prstom sa sám neohlási, takže bez neho nič nenaznačovalo, že susedný deň je o gesto
+ * Čipy dní vedľa šípky späť: koľko dní týždeň má, na ktorom stojíme a že sa dá listovať ďalej.
+ * Ťah prstom sa sám neohlási, takže bez nich nič nenaznačovalo, že susedný deň je o gesto
  * vedľa. Čip nesie skratku dňa v týždni aj pri dnešku a zajtrajšku - "Dnes" a "Zajtra" stojí
- * v nadpise nad ním. Najlepší deň týždňa tu zelenú linku z prehľadu nemá: pod skratkou dňa
+ * v nadpise pod ním. Najlepší deň týždňa tu zelenú linku z prehľadu nemá: pod skratkou dňa
  * mätie - pôsobí ako vybraný deň alebo dnešok.
  *
  * Čip je tlačidlo s data-day-index, takže deň prepne ten istý poslucháč ako riadok
@@ -332,11 +348,11 @@ function renderDayHead(detail, day, sel, dom) {
  */
 function renderDayStrip(detail, days, sel, dom) {
     if (detail !== 'day') return;
-    const html = days
-        .map((d, i) => {
+    const html = dayStripModel(days, sel)
+        .map((c) => {
             // aria-current hovorí čítačke to, čo oku hovorí plný čip.
-            const teraz = i === sel ? ' aria-current="true"' : '';
-            return `<button type="button" class="day-chip${i === sel ? ' sel' : ''}" data-day-index="${i}" aria-label="${escapeHtml(weekDayLong(d.date, i))}"${teraz}>${escapeHtml(dayNameShort(d.date))}</button>`;
+            const teraz = c.current ? ' aria-current="true"' : '';
+            return `<button type="button" class="day-chip${c.current ? ' sel' : ''}" data-day-index="${c.index}" aria-label="${escapeHtml(c.label)}"${teraz}>${escapeHtml(c.short)}</button>`;
         })
         .join('');
     writeHtml(dom.weekDayStrip, html, 'dayStrip');
@@ -344,8 +360,8 @@ function renderDayStrip(detail, days, sel, dom) {
 
 /**
  * Susedné dni pod detailom dňa: tlačidlá „‹ Streda 41 kWh“ a „Piatok 32 kWh ›“. Nesú
- * data-day-index, takže deň prepne ten istý poslucháč - aj so smerom, z ktorého sa detail
- * prisunie (dayPick v interactions.js).
+ * data-day-index, takže deň prelistujú tak ako čip - tým istým dojazdom ako po ťahu prstom
+ * (initNavigation v interactions.js).
  * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom
  */
 function renderDaySteps(detail, days, sel, dom) {
@@ -360,38 +376,6 @@ function renderDaySteps(detail, days, sel, dom) {
         return `<button type="button" class="day-step ${kam}" data-day-index="${i}">${kam === 'prev' ? sipka + text : text + sipka}</button>`;
     };
     writeHtml(pas, step(sel - 1, 'prev') + step(sel + 1, 'next'), 'daySteps');
-}
-
-/**
- * Prisunutie pri prelistovaní dňa (ťah prstom, viď targetFor vo web/swipe.js): nový deň príde
- * z tej strany, ktorou sa listovalo - to isté, čo panel-in-* robí pri prepnutí kariet.
- *
- * Animuje sa len samotné prelistovanie, nie otvorenie detailu: keď sa zmenil aj druh detailu,
- * používateľ práve prišiel z prehľadu a nič sa nelistovalo. Oba kľúče sa preto kontrolujú pri
- * každom prekreslení, nech si memo pamätá, čo naozaj bolo na obrazovke.
- *
- * Reštart animácie: karta sa pri zmene dňa neprekresľuje z display:none, tak si animácia nemá
- * ako naskočiť sama - prehliadač ju spustí odznova až vtedy, keď sa zmení jej meno. Preto sú
- * v CSS dve rovnaké (day-in-a a day-in-b) a striedajú sa; ktorá bola naposledy, drží samotná
- * trieda na prvku.
- * @param {'day' | 'week' | null} detail @param {number} sel @param {1 | -1} dir
- * @param {import('../dom.js').Dom} dom
- */
-function renderDayAnim(detail, sel, dir, dom) {
-    const inyDruh = changed('weekDetailDruh', detail);
-    const inyDen = changed('weekDetailDen', sel);
-    const prvky = [dom.weekDayHead, dom.weekGrid];
-    // Pri odchode z detailu aj pri príchode doň trieda z posledného listovania odchádza.
-    // Hlavička detailu sa totiž medzitým skryje a znovu ukáže, a to samo o sebe animáciu
-    // spustí - detail otvorený z prehľadu by sa tak prisunul, hoci sa nelistovalo.
-    if (inyDruh) for (const el of prvky) el.classList.remove('day-in-a', 'day-in-b', 'day-in-prev');
-    if (detail !== 'day' || !inyDen || inyDruh) return;
-    const dalsia = dom.weekDayHead.classList.contains('day-in-b') ? 'day-in-a' : 'day-in-b';
-    for (const el of prvky) {
-        el.classList.remove('day-in-a', 'day-in-b');
-        el.classList.add(dalsia);
-        el.classList.toggle('day-in-prev', dir < 0);
-    }
 }
 
 /** Heatmapa celého týždňa: na širokej obrazovke a v detaile týždňa. Detail dňa ju nemá -
@@ -467,9 +451,8 @@ export function renderSedemdni(state, dom) {
     }
     const sel = Math.min(state.weekSelDay, days.length - 1);
 
-    renderDayHead(detail, days[sel], sel, dom);
+    renderDayHead(detail, days, sel, dom);
     renderDayStrip(detail, days, sel, dom);
-    renderDayAnim(detail, sel, state.weekDayDir, dom);
     const stats = weekStatsModel(days, state.pv, state.forecast ? state.forecast.tomorrowSunny : false);
     renderStats(stats, dom, !!detail);
     const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);

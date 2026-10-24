@@ -12,6 +12,7 @@ import {
     timeStrToMinutes,
     weekDayLabel,
     weekDayLong,
+    weekDayPosition,
     weekDayName,
     weekDayShort,
 } from '../shared/format.js';
@@ -56,4 +57,9 @@ test('čísla a popisky', () => {
     assert.equal(weekDayName('2026-09-05', 0), 'Dnes');
     assert.equal(weekDayName('2026-09-06', 1), 'Zajtra');
     assert.equal(escapeHtml('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
+});
+
+test('weekDayPosition: nadpis detailu a poradie dňa pre čítačku', () => {
+    assert.equal(weekDayPosition('2026-09-07', 2, 7), 'Pondelok 7.9., deň 3 zo 7');
+    assert.equal(weekDayPosition('2026-09-05', 0, 7), 'Dnes 5.9., deň 1 zo 7');
 });

@@ -26,6 +26,7 @@ import {
 } from '../shared/messages.js';
 import { planWindows } from '../shared/mozem.js';
 import {
+    dayStripModel,
     dayWeather,
     mainWindow,
     rowName,
@@ -356,4 +357,13 @@ test('dayChartModel: bez „teraz“ (iný deň) značka chýba a stupnica ide l
         planLegend(planCells(plan)).map((l) => l.tone),
         ['sun', 'plain'],
     );
+});
+
+test('dayStripModel: skratka dňa aj pri dnešku, celé meno pre čítačku, otvorený deň', () => {
+    const days = /** @type {any} */ ([{ date: '2026-09-05' }, { date: '2026-09-06' }, { date: '2026-09-07' }]);
+    assert.deepEqual(dayStripModel(days, 2), [
+        { index: 0, short: 'So', label: 'Dnes 5.9.', current: false },
+        { index: 1, short: 'Ne', label: 'Zajtra 6.9.', current: false },
+        { index: 2, short: 'Po', label: 'Pondelok 7.9.', current: true },
+    ]);
 });

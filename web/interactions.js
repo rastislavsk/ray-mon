@@ -5,15 +5,16 @@ import { chartTooltipModel } from '../shared/chart-model.js';
 import { SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { parseStartPanel } from '../shared/settings.js';
+import { initDayPager } from './day-pager.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
+import { render } from './render/index.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
 import { clearStored, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
-import { initSwipe } from './swipe.js';
 import { initTerazky } from './terazky-interactions.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -24,23 +25,49 @@ import { initTerazky } from './terazky-interactions.js';
  * Čo spraví klik na deň. Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra,
  * v prepínači dní, v páse dní pod hlavičkou detailu aj priamo v grafoch. Prehľad dní - v oboch
  * podobách - navyše otvorí detail dňa (na mobile; na širokej obrazovke sa stav neprejaví),
- * kým výber v grafoch a v prepínači len prepína, čo je na nich vidno.
- *
- * Čip v páse dní a tlačidlo susedného dňa pod detailom deň tiež len prepínajú, ale nesú aj smer skoku:
- * detail sa potom prisunie z tej strany, ktorou sa skočilo - to isté, čo pri ťahu prstom
- * dopočíta targetFor vo web/swipe.js.
- * @param {Store} store @param {Dom} dom @param {Element} btn
+ * kým výber v grafoch a v prepínači len prepína, čo je na nich vidno. Čip v páse dní a tlačidlo
+ * susedného dňa pod detailom deň prelistujú tak ako ťah prstom (initNavigation).
+ * @param {Dom} dom @param {Element} btn
  * @returns {Partial<import('./state.js').AppState>}
  */
-function dayPick(store, dom, btn) {
+function dayPick(dom, btn) {
     const weekSelDay = Number(btn.getAttribute('data-day-index'));
     if (dom.weekList.contains(btn) || dom.weekTbody.contains(btn) || dom.weekTrio.contains(btn)) return { weekSelDay, weekDetail: 'day' };
-    if (!btn.closest('.day-strip, .day-steps')) return { weekSelDay };
-    return { weekSelDay, weekDayDir: weekSelDay < store.get().weekSelDay ? -1 : 1 };
+    return { weekSelDay };
 }
 
-/** @param {Store} store @param {Dom} dom */
-function initNavigation(store, dom) {
+/**
+ * Listovanie dní v detaile dňa (web/day-pager.js): ťah prstom, čipy dní, tlačidlá susedných dní
+ * a šípky na klávesnici. Susedný deň kreslí počas ťahu ten istý render ako deň na obrazovke -
+ * na chvíľu so susedným dňom v stave, potom znova so skutočným. Detail je len na mobile.
+ * @param {Store} store @param {Dom} dom
+ */
+function initDays(store, dom) {
+    return initDayPager({
+        area: dom.weekTrack,
+        keys: dom.panels['7dni'],
+        track: dom.weekTrack,
+        day: () => {
+            const s = store.get();
+            const count = s.forecast?.days.length ?? 0;
+            if (s.panel !== '7dni' || s.weekDetail !== 'day' || s.wide || !count) return null;
+            return { index: Math.min(s.weekSelDay, count - 1), count };
+        },
+        snapshot: (days) => {
+            const s = store.get();
+            const out = days.map((weekSelDay) => {
+                render({ ...s, weekSelDay }, dom);
+                return /** @type {HTMLElement} */ (dom.weekTrack.cloneNode(true));
+            });
+            render(s, dom);
+            return out;
+        },
+        commit: (weekSelDay) => store.setState({ weekSelDay }),
+    });
+}
+
+/** @param {Store} store @param {Dom} dom @param {ReturnType<typeof initDays>} days */
+function initNavigation(store, dom, days) {
     document.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
@@ -77,7 +104,10 @@ function initNavigation(store, dom) {
         const totalBtn = target.closest('[data-week-detail]');
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
         const weekBtn = target.closest('[data-day-index]');
-        if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) store.setState(dayPick(store, dom, weekBtn));
+        if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) {
+            if (weekBtn.closest('.day-strip, .day-steps')) days.goTo(Number(weekBtn.getAttribute('data-day-index')));
+            else store.setState(dayPick(dom, weekBtn));
+        }
     });
     dom.weekDayBack.addEventListener('click', () => closeDetail(store));
 }
@@ -92,15 +122,8 @@ function initTapTooltipClosing() {
     document.addEventListener('click', closeOthers);
 }
 
-/** Zavrie tooltipy všetkých grafov naraz. Potrebuje to listovanie prstom: gesto sa začína
- * nad grafom, takže closeOthers vyššie ho za "mimo grafu" nepovažuje. */
-function hideChartTooltips() {
-    tapTooltips.forEach(({ hide }) => hide());
-}
-
-/** Najpomalšie gesto, ktoré ešte môže byť švihnutím na susednú kartu (viď web/swipe.js):
- * prejsť minDistPx za flickMs. Kto ide pomalšie, prezerá si krivku. Odvodené, nie nová
- * konštanta - hranica sa tak nemôže rozísť s tým, čo za švihnutie považuje swipe.js. */
+/** Najpomalšie gesto, ktoré je ešte švihnutím ponad graf, nie prezeraním: prejsť minDistPx za
+ * flickMs. Kto ide pomalšie, prezerá si krivku a tooltip ide za prstom. */
 const MIN_FLICK_SPEED = SWIPE.minDistPx / SWIPE.flickMs;
 
 /**
@@ -156,7 +179,7 @@ function bindTouch(wrap, handle, hide) {
     wrap.addEventListener('touchend', (e) => {
         const bolStart = start;
         start = null;
-        // Ťuknutie ukáže tooltip až tu; švihnutie ho neukáže vôbec (kartu prepne swipe.js).
+        // Ťuknutie ukáže tooltip až tu; švihnutie ho neukáže vôbec.
         // Posunutá stránka znamená, že gesto si vzal prehliadač na scrollovanie - aj keď prst
         // prešiel krátku vzdialenosť a na ťuknutie by inak vyzeral.
         if (
@@ -441,10 +464,9 @@ function initStavTip(store, dom) {
 /** @param {Store} store @param {Dom} dom @param {{ wide: MediaQueryList }} mq */
 export function initInteractions(store, dom, mq) {
     initViewportZoomRealign();
-    initNavigation(store, dom);
+    initNavigation(store, dom, initDays(store, dom));
     initStavTip(store, dom);
     initHistory(store);
-    initSwipe(store, dom, hideChartTooltips);
     initTapTooltipClosing();
     initCurveTooltip(store, dom.weekCurveWrap, dom.weekCurve, dom.weekCurveTooltip, weekCurveModel);
     initRectTooltip(dom.weekHeatWrap, dom.weekHeatTooltip);

@@ -722,9 +722,9 @@ test.describe('pohyb v sprievodcovi', () => {
         await page.goBack();
         await expect(page.locator('#ns-cta')).toBeVisible();
         await expect(page.locator('#wizard')).toBeHidden();
-        // Mimo sprievodcu ťah listuje karty ako inde.
+        // Ani mimo sprievodcu ťah karty nelistuje - len ťuknutie v navigácii.
         await tah(page, '#ns-cta', 150);
-        await ocakavajKartu(page, 'statistika');
+        await ocakavajKartu(page, 'nastavenie');
         expect(errors).toEqual([]);
     });
 

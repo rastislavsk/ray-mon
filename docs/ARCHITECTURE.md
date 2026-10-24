@@ -79,14 +79,11 @@ poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
-zmenilo (viď „Nezapisuj, čo sa nezmenilo“ nižšie). `swipe.js` prekladá ťahanie prstom (to, či ťah vôbec bol listovaním, rozhodne `gesture.js`) na
-susednú kartu – a v detaile dňa na susedný deň, lebo detail je podobrazovka karty a gesto ju
-neopúšťa – rozhodne len, čo je na rade, a zmenu urobí `setState` ako pri kliku na
-navigáciu. Čo si ťahanie nechá pre seba, nie je zoznam výnimiek, ale pravidlo: keď sa
-najbližší vnútorný pás pod prstom ešte má kam posunúť tým smerom, patrí gesto jemu.
-Menované sú len úchytky, ktoré sa ťahajú a neposúvajú: graf dňa na karte Terazky (`.day-scrub`),
-kruh rozvrhu tarify v sprievodcovi a posúvač (`input[type=range]`, sklon strechy v sprievodcovi
-nastavením).
+zmenilo (viď „Nezapisuj, čo sa nezmenilo“ nižšie). Karty sa ťahom prsta nelistujú, len ťuknutím
+v navigácii. Ťah do strán listuje jedine dni v detaile dňa karty 7 dní: `day-pager.js` (spoločný
+pre obe appky) vedie pás s dňom za prstom a vedľa neho postaví kópie susedných dní – nakreslí ich
+ten istý `render`, zavolaný na chvíľu so susedným dňom v stave. Posun počas ťahu nie je v stave;
+kam pás po pustení dobehne, rozhodne `shared/day-pager.js` a do stavu ide až výsledný deň.
 `storage.js` ukladá nastavenie elektrárne do `localStorage` (`settings-store.js` ho znova vyváža a pridáva zrkadlenie do adresy). Kartu Nastavenie tvorí
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
@@ -128,7 +125,7 @@ neho sa appka spúšťa z adresy, z ktorej ju človek pridal, aj s časťou za m
 detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
 istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je
 len značka s krokom navigácie, takže odkaz na appku ostáva jeden. Šípka späť v detaile dňa
-a ťah doprava z neho sú ten istý krok ako tlačidlo Späť, preto volajú `history.back()`
+je ten istý krok ako tlačidlo Späť, preto volajú `history.back()`
 (`closeDetail`) a nový krok nezapisujú – inak by Späť na telefóne detail znovu otvorilo.
 
 Prechod medzi kartami je iba CSS: `panelChange` v `state.js` dopočíta k novej karte aj smer
@@ -208,10 +205,10 @@ ten istý súbor:
   takže obe appky dostanú to isté. Deye celkovú výrobu nedáva - jeho mesiac a rok ostávajú prázdne.
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
-  hodiny), `gesture.js` (rozpoznanie ťahu do strán), `nav-history.js` (kroky navigácie
+  hodiny), `day-pager.js` (listovanie dní v detaile dňa prstom), `nav-history.js` (kroky navigácie
   v histórii prehliadača), `setup-wiring.js` (poslucháče sprievodcu nastavením a uloženie),
   `settings-store.js` (zrkadlenie nastavenia do adresy) a `svg.js` (SVG z modelov). Vznikli vytiahnutím zo `state.js`, `settings-store.js`,
-  `interactions.js`, `swipe.js` a `history.js`; tie ich používajú ďalej a správanie súčasnej
+  `interactions.js` a `history.js`; tie ich používajú ďalej a správanie súčasnej
   appky sa nezmenilo. `state.js` a `settings-store.js` ich znova vyvážajú, aby sa nemuseli meniť
   ich odberatelia.
 
@@ -294,8 +291,7 @@ strede – a pod ním zátvorka nad každým oknom, keď slnko stačí, s nápis
 pod najdlhším (`fitLabel`, ten istý ako v páse spotrebičov v 7 dňoch súčasnej appky). Graf je zároveň posúvač času
 (`role="slider"`): prst, kurzor aj šípky ukážu náhľad. V novej appke je náhľad krok navigácie (`preview`
 v kroku histórie), takže ho zruší aj Späť; posun po grafe nový krok nepridá. V súčasnej appke krokom
-nie je, rovnako ako vybraný deň. Listovanie kariet
-nad grafom nebeží (`.day-scrub` je úchytka vo `web/gesture.js`). Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
+nie je, rovnako ako vybraný deň. Pás odporúčaní listuje prehliadač (`scroll-snap`), bodky ukazujú stránku zo stavu.
 
 Karta 7 dní ukazuje dni ako predpoveď počasia. `shared/sedem-dni.js` berie súčty a najlepší deň
 z `weekStatsModel` (deň vyberá `bestDayIndex`, ten istý v oboch appkách), celé kWh riadkov
@@ -314,10 +310,10 @@ HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerast�
 „teraz“ ani čiaru náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad
 krivku. Keď prst pri náhľade prejde ponad nápis, nápis preskočí na voľné miesto. Polohy sú dve – pre úzky graf a pre
 graf široký aspoň 448 px – a vyberá ich container query v `style.css`. Detail je krok
-navigácie (`detail` v kroku histórie): Späť, Escape aj „‹ 7 dní“ vrátia do prehľadu, posun
-prehľadu aj fokus na riadok si pamätá render. Listovanie dní v detaile nový krok nepridá; ťah
-do strán rozhoduje `swipeTarget` v `obloha/web/state.js` – v detaile dňa susedný deň, inak ako
-súčasná appka (`web/swipe.js`).
+navigácie (`detail` v kroku histórie): Späť, Escape aj šípka späť (v detaile dňa prvý čip v riadku
+dní) vrátia do prehľadu, posun prehľadu aj fokus na riadok si pamätá render. Listovanie dní
+v detaile nový krok nepridá; ťahom, čipmi aj šípkami na klávesnici ho vedie `web/day-pager.js`,
+ten istý ako v súčasnej appke.
 
 Karta Nastavenie novej appky má prehľad podľa návrhu (karta strechy s kompasom plôch, riadky
 ELEKTRÁREŇ; čísla skladá `shared/nastavenie.js`) a sprievodcu, ktorý je **ten istý ako v súčasnej
@@ -326,8 +322,8 @@ stav → zmena), texty v `shared/setup-texts.js`, poslucháče vo `web/setup-wir
 sprievodcu majú v oboch appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód
 a ukladá tým istým `web/storage.js`. Každá appka si len kreslí svoje (`web/render/nastavenie.js`,
 `obloha/web/render/sprievodca.js`) a dodá krok späť cez svoju históriu. Obrazovka sprievodcu je
-krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); počas sprievodcu ťah do strán
-kartu neprepne (`swipeTarget`) a Escape je jeho „Späť“. Úprava panelov z prehľadu má navyše
+krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); Escape je
+jeho „Späť“. Úprava panelov z prehľadu má navyše
 záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa všetko o streche.
 
 Na širšej obrazovke nová appka mení rozloženie podľa šírky okna, nie podľa druhu zariadenia.
@@ -341,8 +337,8 @@ render každej karty sa len pýta, či je na obrazovke. `panel` je v prehľade a
 ho navigácia (presunie naň fokus, krokom v histórii to nie je – `sameNavStep` berie stĺpce prehľadu
 ako jednu obrazovku) alebo to, čo v ňom človek otvorí (panel veci, náhľad, detail). Pri zmene okna
 sa preto ukáže práve ten stĺpec aj s tým, čo je v ňom otvorené. Štatistika a Nastavenie sú aj na
-širokej obrazovke samostatná stránka. Ťah do strán v prehľade karty nelistuje, len dni v detaile
-dňa – a len ťah v stĺpci 7 dní (`swipeTarget`; prvok, na ktorom ťah začal, dodá `web/gesture.js`).
+širokej obrazovke samostatná stránka. Ťah do strán listuje len dni v detaile dňa – pás s dňom je
+v stĺpci 7 dní, takže ťah inde nerobí nič.
 
 ## Prečo takto
 

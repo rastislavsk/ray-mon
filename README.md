@@ -90,21 +90,16 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Nastavenie nesie aj adresa v prehliadači, takže appka pridaná na plochu iPhonu (ktorá
   úložisko Safari nevidí) ho pri prvom spustení ponúkne prevziať tiež.
 
-Medzi kartami sa dá na dotykovej obrazovke prechádzať aj potiahnutím prsta do strán, v
-poradí spodnej navigácie – aj ponad grafy a prehľad dní. V detaile dňa listuje to isté
-gesto dni v týždni, nie karty: doľava na ďalší deň, doprava na predchádzajúci – a nový deň
-sa prisunie z tej strany, ktorou si ťahal, rovnako ako karta pri prepnutí. Nezacyklí sa
-– za posledným dňom už ťah nevedie nikam a z prvého dňa (Dnes) sa ťahom doprava vrátiš do
-prehľadu dní, teda tam, kam vedie aj šípka späť v hlavičke detailu. V detaile týždňa je to
-to isté: doľava sa nedeje nič, doprava zavrie detail. Nad grafom
-listuje rýchle švihnutie a tooltip sa pri ňom vôbec neukáže; pomalé ťahanie po krivke ostáva
-prezeraním s tooltipom ako doteraz. Zvislý ťah je posúvanie stránky – aj keď prst začne na grafe – a
-tooltip sa pri ňom neukáže tiež. Nová karta sa pritom prisunie z tej strany, ktorou si listoval –
-rovnako pri ťahaní aj pri kliku na navigáciu. Kto má v systéme zapnutý útlm pohybu, dostane
-prepnutie bez animácie. Ťahanie si pre seba
-nechávajú len veci, ktoré sa samy posúvajú do strán: pás odporúčaní na karte Terazky – ten
-si ho necháva aj na krajnej karte, takže ťah v ňom nikdy neopustí kartu appky – a graf dňa na tej
-istej karte, kde ťah do strán ukazuje iný čas a kartu neprepne.
+Karty sa prepínajú ťuknutím v spodnej navigácii; ťah prstom do strán ich neprelistuje. Ťahom sa
+listujú dni v detaile dňa na karte 7 dní: obsah ide za prstom a vedľa neho už vidno susedný deň,
+po pustení dobehne na nový deň (za tretinou šírky alebo pri rýchlom švihnutí), inak sa vráti. Na
+Dnes a na poslednom dni sa pás len poddá. Nad detailom je riadok so šípkou späť do prehľadu a
+čipmi dní – ťuknutie na čip, tlačidlá susedných dní dole aj šípky na klávesnici listujú tým istým
+pohybom. Nadpis dňa nesie ikonu oblohy a pod ním slovo (jasno, polojasno, zamračené) – v oboch
+appkách rovnako. Po prelistovaní čítačka ohlási deň a jeho poradie. Kto má v systéme zapnutý útlm
+pohybu, dostane prelistovanie bez dojazdu. Nad grafom stĺpcov v detaile týždňa je pomalé ťahanie
+prezeraním s tooltipom, rýchle švihnutie ho ani neukáže. Zvislý ťah je posúvanie stránky – aj keď
+prst začne na grafe – a tooltip sa pri ňom neukáže tiež.
 
 Systémové tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) vracia o krok späť
 v appke: najprv zavrie detail dňa, potom sa vracia po kartách v opačnom poradí, než si

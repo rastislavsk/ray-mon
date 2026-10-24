@@ -1,27 +1,20 @@
 // Poslucháče novej appky. Každý končí volaním setState; nikto tu nekreslí do DOM.
 
 import { LAYOUT_PX, PANELS } from '../../shared/config.js';
-import { initSwipeGesture } from '../../web/gesture.js';
 import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
 import { setupStart } from '../../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
-import { closeDetail } from './nav-back.js';
 import { initTeraz } from './teraz-interactions.js';
-import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep, swipeTarget } from './state.js';
+import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
 
-/** Karta, v ktorej leží prvok (null = mimo kariet). @param {Dom} dom @param {EventTarget | null} el */
-function panelOf(dom, el) {
-    const card = el instanceof Element ? el.closest('.panel') : null;
-    return PANELS.find((p) => dom.panels[p] === card) ?? null;
-}
-
 /**
- * Navigácia, štítok „Zadaj panely ›“ a výzvy na kartách (všetky vedú do Nastavenia), listovanie
- * prstom (karty, v detaile karty 7 dní dni) a tlačidlo Späť. V prehľade so stĺpcami navigácia
+ * Navigácia, štítok „Zadaj panely ›“ a výzvy na kartách (všetky vedú do Nastavenia) a tlačidlo
+ * Späť. Karty sa ťahom prsta nelistujú, len ťuknutím v navigácii (dni v detaile karty 7 dní
+ * listuje web/day-pager.js, viď sedem-interactions.js). V prehľade so stĺpcami navigácia
  * neprepína obrazovku, ale presunie fokus na stĺpec (a stránku k nemu, keď nie je vidieť).
  * @param {Store} store @param {Dom} dom
  */
@@ -49,15 +42,6 @@ function initNavigation(store, dom) {
         if (store.get().known === 'poloha') store.setState(setupStart(store.get()));
     };
     for (const btn of toSetup) btn.addEventListener('click', toPanels);
-    initSwipeGesture(dom.page, {
-        // Kým je otvorený panel veci, plagát alebo okno sekcie Appka, ťah nad nimi kartu neprepína.
-        enabled: () => !store.get().mozemItem && !store.get().poster && !store.get().appSheet,
-        onSwipe: (dx, target) => {
-            const to = swipeTarget(store.get(), dx, panelOf(dom, target));
-            if (to === 'back') closeDetail(store);
-            else if (to) store.setState(to);
-        },
-    });
     trackHistory(store, {
         step: navStep,
         same: sameNavStep,
