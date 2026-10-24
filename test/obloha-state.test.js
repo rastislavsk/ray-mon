@@ -1,4 +1,4 @@
-// Stav novej appky (obloha/web/state.js): krok histórie, návrat naň, ťah prstom, prehľad so
+// Stav novej appky (obloha/web/state.js): krok histórie, návrat naň, prehľad so
 // stĺpcami a časti appky, ktoré obrazovka potrebuje.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,11 +13,9 @@ import {
     navStepFrom,
     navStepOf,
     neededParts,
-    nextPanel,
     ready,
     sameNavStep,
     shows,
-    swipeTarget,
 } from '../obloha/web/state.js';
 
 /** @typedef {import('../obloha/web/state.js').AppState} AppState */
@@ -29,9 +27,6 @@ function stateWith(patch = {}) {
     const s = initialState(NOW, { saved: null, site: SITE, startPanel: 'mozem', dayLog: {}, online: true });
     return { ...s, ...patch };
 }
-
-/** Predpoveď s daným počtom dní - swipeTarget z nej číta len dĺžku. @param {number} n */
-const forecastOf = (n) => /** @type {any} */ ({ days: Array.from({ length: n }, () => ({})) });
 
 /** Úplný krok, ako ho appka zapisuje do histórie. @param {Partial<import('../obloha/web/state.js').NavStep>} [patch] */
 const step = (patch = {}) => ({
@@ -60,12 +55,6 @@ test('layoutOf: hranice šírky podľa LAYOUT_PX', () => {
     assert.equal(layoutOf(1023), 'narrow');
     assert.equal(layoutOf(1024), 'medium');
     assert.equal(layoutOf(1280), 'wide');
-});
-
-test('nextPanel: na kraji sa listovanie nezacyklí', () => {
-    assert.equal(nextPanel('mozem', 1), 'terazky');
-    assert.equal(nextPanel('mozem', -1), null);
-    assert.equal(nextPanel('nastavenie', 1), null);
 });
 
 test('dashboard a shows: prehľad so stĺpcami len na širšej obrazovke a len na jeho kartách', () => {
@@ -176,36 +165,4 @@ test('navChange: v prehľade návrat na krok prehľadu nechá aktívny stĺpec',
     assert.equal(navChange(wide, step({ panel: 'mozem' })).panel, 'mozem');
     // Na úzkej obrazovke krok prehľadu vráti jeho kartu.
     assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'mozem', dash: true })).panel, 'mozem');
-});
-
-test('swipeTarget: na telefóne listuje karty, na kraji nikam', () => {
-    assert.equal(/** @type {any} */ (swipeTarget(stateWith(), -50)).panel, 'terazky');
-    assert.equal(swipeTarget(stateWith(), 50), null);
-    assert.equal(/** @type {any} */ (swipeTarget(stateWith({ panel: 'terazky' }), 50)).panel, 'mozem');
-    assert.equal(swipeTarget(stateWith({ panel: 'nastavenie' }), -50), null);
-});
-
-test('swipeTarget: počas sprievodcu nastavením nevedie nikam', () => {
-    assert.equal(swipeTarget(stateWith({ panel: 'nastavenie', setupStep: 'lokalita' }), 50), null);
-});
-
-test('swipeTarget: v detaile dňa listuje dni, z kraja doprava vedie späť do prehľadu', () => {
-    const day = (/** @type {number} */ weekDay) => stateWith({ panel: '7dni', weekDetail: 'day', weekDay, forecast: forecastOf(7) });
-    assert.deepEqual(swipeTarget(day(2), -50), { weekDay: 3 });
-    assert.deepEqual(swipeTarget(day(2), 50), { weekDay: 1 });
-    assert.equal(swipeTarget(day(0), 50), 'back');
-    assert.equal(swipeTarget(day(6), -50), null);
-    const week = stateWith({ panel: '7dni', weekDetail: 'week', forecast: forecastOf(7) });
-    assert.equal(swipeTarget(week, 50), 'back');
-    assert.equal(swipeTarget(week, -50), null);
-    // Bez predpovede detail nie je čo listovať - ťah listuje karty.
-    assert.equal(/** @type {any} */ (swipeTarget(stateWith({ panel: '7dni', weekDetail: 'day' }), 50)).panel, 'terazky');
-});
-
-test('swipeTarget: v prehľade karty nelistuje, dni len ťahom v stĺpci 7 dní', () => {
-    const wide = stateWith({ layout: 'wide', panel: 'mozem', weekDetail: 'day', weekDay: 2, forecast: forecastOf(7) });
-    assert.deepEqual(swipeTarget(wide, -50, '7dni'), { weekDay: 3 });
-    assert.equal(swipeTarget(wide, -50, 'mozem'), null);
-    assert.equal(swipeTarget(wide, -50), null);
-    assert.equal(swipeTarget(stateWith({ layout: 'wide' }), -50, 'mozem'), null);
 });

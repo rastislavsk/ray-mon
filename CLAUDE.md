@@ -8,7 +8,7 @@ ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 Appky sú dve a ostávajú natrvalo: súčasná (koreň, `web/`, `style.css`) a „Živá obloha“
 v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
-(`store.js`, `storage.js`, `data.js`, `refresh.js`, `gesture.js`, `nav-history.js`,
+(`store.js`, `storage.js`, `data.js`, `refresh.js`, `day-pager.js`, `nav-history.js`,
 `setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`, `day-chart.js`,
 `teraz-gestures.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
@@ -97,20 +97,24 @@ s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `style.css` 
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
 posunúť stránku – patrí len úchytkám na ťahanie (kruh rozvrhu tarify v sprievodcovi). Plochy,
-cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Terazky / Teraz): zvislé posúvanie si necháva
+cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Terazky / Teraz, pás dňa
+`.day-track` v detaile dňa karty 7 dní): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
 
-Listovanie kariet ťahom (`web/gesture.js`, karty a dni vyberá v súčasnej appke `web/swipe.js`, v novej `swipeTarget` v `obloha/web/state.js`) si gesto neberie tam, kde sa pod prstom ťahá niečo do
-strán. Rozhoduje pravidlo (vnútorný pás, ktorý sa má kam posunúť), menované sú len úchytky, ktoré
-sa ťahajú a neposúvajú: graf dňa na karte Terazky / Teraz (`.day-scrub`, ťah po ňom je
-náhľad iného času), kruh rozvrhu tarify (`.tariff-ring`, prst po
-ňom maľuje pásmo) a posúvač `input[type=range]` (sklon strechy v sprievodcovi nastavením). Nový posúvač tak netreba nikam dopisovať.
-Nová appka na širšej obrazovke (prehľad so stĺpcami, `dashboard` v `obloha/web/state.js`) karty ťahom
-nelistuje vôbec – sú vedľa seba; listuje len dni v detaile dňa, a to ťahom v stĺpci 7 dní.
+**Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii – v oboch appkách. Ťah do strán má
+jediné miesto: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`).
+Obsah dňa ide za prstom a vedľa neho stojí susedný deň, ktorý nakreslil ten istý render (appka ho na
+chvíľu zavolá so susedným dňom a výsledok skopíruje) – iný kód na kreslenie dňa preto nepíš. Kópie
+sú bez `id` (inak by boli v stránke dvakrát), takže štýly obsahu dňa stoja na triedach, nie na `id`. Posun
+počas ťahu nie je v stave; do stavu ide až deň, na ktorom pás zastal. Na kraji sa pás len poddá,
+z detailu von vedie šípka späť (prvý čip v riadku dní). Myš ťahať nemusí – čipy a šípky na klávesnici.
+Nová appka v prehľade so stĺpcami listuje dni ťahom v stĺpci 7 dní, pás je v ňom.
+Návrh: `docs/navrhy/7dni-listovanie-dni.html`.
 
-Kontrolujú to e2e testy v skupine „listovanie kariet prstom“: ťuknutie bez jediného pohybu prsta
-musí tooltip ukázať a nechať svietiť, zvislý ťah cez graf musí posunúť stránku a tooltip neukázať.
+Kontrolujú to e2e testy v skupinách „ťah prstom: karty sa nelistujú, dni v detaile áno“ (súčasná
+appka) a „ťah prstom a tlačidlo Späť“ (nová): ťuknutie bez jediného pohybu prsta musí tooltip
+ukázať a nechať svietiť, zvislý ťah cez graf musí posunúť stránku a tooltip neukázať.
 
 ## Ako overovať
 

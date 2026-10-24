@@ -1,0 +1,1469 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Listovanie dní – pager</title>
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: #222;
+                color: #eee;
+                font-family: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+                padding: 24px 16px 64px;
+                line-height: 1.45;
+            }
+            h1 {
+                font-size: 26px;
+                margin-bottom: 6px;
+            }
+            /* Len nadpisy sekcií stránky, nie nadpis dňa v telefóne. */
+            .wrap > h2 {
+                font-size: 19px;
+                margin: 40px 0 12px;
+            }
+            .lead {
+                max-width: 820px;
+                color: #cfcfcf;
+            }
+            .lead b {
+                color: #fff;
+            }
+            .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+            }
+            /* ---- Ovládanie ukážok ---- */
+            .ctrl {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                margin: 20px 0 8px;
+                padding: 10px 12px;
+                border-radius: 14px;
+                background: rgba(30, 30, 30, 0.94);
+                border: 1px solid #3a3a3a;
+            }
+            .ctrl .grp {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+            }
+            .ctrl .sep {
+                width: 1px;
+                align-self: stretch;
+                background: #444;
+                margin: 0 4px;
+            }
+            .ctrl button,
+            .ctrl label {
+                font: inherit;
+                font-size: 13px;
+                color: #eee;
+                background: #333;
+                border: 1px solid #4a4a4a;
+                border-radius: 999px;
+                padding: 6px 12px;
+                cursor: pointer;
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+            }
+            .ctrl button[aria-pressed='true'] {
+                background: #9ef25b;
+                color: #10140c;
+                border-color: #9ef25b;
+            }
+            .ctrl .k {
+                font-size: 12px;
+                color: #aaa;
+            }
+            .say {
+                min-height: 1.5em;
+                color: #ffd36e;
+                font-size: 14px;
+                margin: 4px 0 18px;
+            }
+            .wall {
+                display: flex;
+                gap: 40px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .col {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+            .cap {
+                font-size: 15px;
+                font-weight: 600;
+                color: #ddd;
+            }
+            .sr-box {
+                width: 360px;
+                font-size: 13px;
+                color: #bbb;
+                background: #2b2b2b;
+                border: 1px dashed #555;
+                border-radius: 10px;
+                padding: 8px 10px;
+            }
+            .sr-box b {
+                color: #fff;
+                font-weight: 600;
+            }
+            /* Prst v ukážkach */
+            .finger {
+                position: absolute;
+                z-index: 40;
+                width: 44px;
+                height: 44px;
+                margin: -22px 0 0 -22px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.35);
+                border: 2px solid rgba(255, 255, 255, 0.85);
+                box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12);
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.15s;
+            }
+            .finger.on {
+                opacity: 1;
+            }
+            /* ---- Telefón ---- */
+            .phone {
+                position: relative;
+                width: 360px;
+                height: 740px;
+                border-radius: 34px;
+                overflow: hidden;
+                border: 8px solid #0b0b0b;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            }
+            .screen {
+                position: absolute;
+                inset: 0 0 64px 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                touch-action: pan-y;
+                user-select: none;
+                -webkit-user-select: none;
+                scrollbar-width: none;
+                outline: none;
+            }
+            .screen:focus-visible {
+                box-shadow: inset 0 0 0 3px #ffd36e;
+            }
+            .screen::-webkit-scrollbar {
+                display: none;
+            }
+            .viewport {
+                position: relative;
+                overflow: hidden;
+            }
+            .track {
+                display: flex;
+                will-change: transform;
+            }
+            .panel {
+                flex: 0 0 100%;
+                min-width: 0;
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 64px;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 11px;
+            }
+            .nav span {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 3px;
+                width: 64px;
+            }
+            .nav svg {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .sr {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+
+            /* ---- Súčasná appka ---- */
+            .sucasna {
+                --bg: #0a0a0a;
+                --surface: #151614;
+                --ink: #f2f0ea;
+                --ink-2: rgba(242, 240, 234, 0.72);
+                --ink-3: rgba(242, 240, 234, 0.56);
+                --hair: rgba(242, 240, 234, 0.1);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b5a;
+                background: radial-gradient(120% 50% at 0% 0%, #1d2c12 0%, #0a0a0a 60%) var(--bg);
+                color: var(--ink);
+                font-family: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+            }
+            .sucasna .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 14px 18px 6px;
+            }
+            .sucasna .brand {
+                font-family: 'IBM Plex Mono', monospace;
+                font-weight: 600;
+                font-size: 15px;
+                letter-spacing: 0.08em;
+            }
+            .sucasna .brand small {
+                display: block;
+                font-size: 10px;
+                font-weight: 400;
+                color: var(--ink-3);
+            }
+            .pill {
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                padding: 5px 10px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid var(--hair);
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px;
+            }
+            .pill i {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--green);
+            }
+            .chips {
+                display: flex;
+                gap: 2px;
+                padding: 10px 14px 6px;
+            }
+            /* Prvý čip: šípka späť na prehľad 7 dní. Iný tvar než dni, aby sa nezamenila za deň. */
+            .chips .cback {
+                flex: 0 0 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 6px;
+                border: 1px solid var(--hair);
+                border-radius: 11px;
+                color: var(--green);
+            }
+            .chips .cback svg {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .sucasna .ttl {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                font-size: 26px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                padding: 8px 20px 0;
+            }
+            .sucasna .ttl svg {
+                width: 26px;
+                height: 26px;
+            }
+            .sucasna .sub {
+                font-size: 14px;
+                color: var(--ink-2);
+                padding: 2px 20px 14px;
+            }
+            .chips button {
+                flex: 1;
+                font: inherit;
+                font-size: 13px;
+                padding: 7px 0;
+                border: 0;
+                border-radius: 11px;
+                background: transparent;
+                color: var(--ink-2);
+                cursor: pointer;
+                transition:
+                    background 0.12s,
+                    color 0.12s;
+            }
+            .sucasna .chips button[aria-current='true'] {
+                background: var(--ink);
+                color: #111;
+                font-weight: 600;
+            }
+            .sucasna .card {
+                margin: 0 18px 14px;
+                padding: 14px 16px;
+                border-radius: 18px;
+                background: var(--surface);
+                border: 1px solid var(--hair);
+            }
+            .sucasna .wlbl {
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .sucasna .wval {
+                font-size: 38px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+                margin: 4px 0 8px;
+            }
+            .sucasna .wstate {
+                font-size: 14px;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+            .sucasna .wstate i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #777;
+            }
+            .sucasna .wstate.live i {
+                background: var(--green);
+            }
+            .sucasna .wsub {
+                font-size: 12.5px;
+                color: var(--ink-3);
+                margin-top: 6px;
+            }
+            .sucasna .sect {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 10.5px;
+                letter-spacing: 0.14em;
+                color: var(--ink-3);
+                margin: 6px 20px 8px;
+            }
+            .sucasna .chart {
+                padding: 8px 6px 4px;
+            }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 12px;
+                font-size: 12px;
+                margin: 0 20px 14px;
+            }
+            .legend i {
+                display: inline-block;
+                width: 12px;
+                height: 3px;
+                border-radius: 2px;
+                vertical-align: middle;
+                margin-right: 5px;
+            }
+            .kpis {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin: 0 18px 14px;
+            }
+            .sucasna .kpis div {
+                padding: 10px;
+                border-radius: 14px;
+                background: var(--surface);
+                border: 1px solid var(--hair);
+                font-size: 12px;
+                color: var(--ink-2);
+            }
+            .sucasna .kpis b {
+                display: block;
+                font-size: 19px;
+                color: var(--ink);
+                margin: 2px 0;
+            }
+            .sucasna .kpis b small {
+                font-size: 11px;
+                font-weight: 400;
+            }
+            .steps {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin: 0 18px 18px;
+            }
+            .steps button {
+                font: inherit;
+                color: var(--ink);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px;
+                border-radius: 16px;
+                background: var(--surface);
+                border: 1px solid var(--hair);
+                cursor: pointer;
+                text-align: left;
+            }
+            .steps button.next {
+                justify-content: flex-end;
+                text-align: right;
+                grid-column: 2;
+            }
+            .steps b {
+                display: block;
+                font-size: 14px;
+            }
+            .steps small {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 10px;
+                color: var(--ink-3);
+            }
+            .sucasna .nav {
+                background: #0d0e0c;
+                border-top: 1px solid var(--hair);
+                color: var(--ink-2);
+            }
+            .sucasna .nav .on {
+                color: var(--green);
+            }
+
+            /* ---- Živá obloha ---- */
+            .obloha {
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --glass: rgba(8, 16, 40, 0.3);
+                --dim: rgba(255, 255, 255, 0.82);
+                background: linear-gradient(180deg, #2a5ea4 0%, #4d7cb8 55%, #7896bf 100%);
+                color: #fff;
+                font-family:
+                    'Archivo',
+                    -apple-system,
+                    'Segoe UI',
+                    Arial,
+                    sans-serif;
+            }
+            .obloha .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 14px 16px 4px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .obloha .pill {
+                background: var(--glass);
+                border-color: rgba(255, 255, 255, 0.2);
+                font-family: inherit;
+                padding: 9px 14px;
+            }
+            .obloha .pill i {
+                background: var(--yes);
+            }
+            .obloha .chips button {
+                color: var(--dim);
+                font-weight: 600;
+            }
+            .obloha .chips button[aria-current='true'] {
+                background: var(--glass);
+                color: #fff;
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+            }
+            .obloha .chips .cback {
+                color: #fff;
+                background: var(--glass);
+                border-color: rgba(255, 255, 255, 0.25);
+            }
+            .obloha .ttl {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                font-size: 30px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                padding: 8px 18px 0;
+            }
+            .obloha .ttl svg {
+                width: 28px;
+                height: 28px;
+            }
+            .obloha .sub {
+                font-size: 14px;
+                padding: 4px 18px 0;
+                color: var(--dim);
+            }
+            .obloha .kpis {
+                margin: 14px 14px 0;
+            }
+            .obloha .kpis div {
+                padding: 10px;
+                border-radius: 14px;
+                background: var(--glass);
+                font-size: 12px;
+            }
+            .obloha .kpis b {
+                display: block;
+                font-size: 20px;
+                font-weight: 800;
+            }
+            .glass {
+                margin: 12px 14px 0;
+                padding: 14px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+                font-size: 14px;
+            }
+            .glass h3 {
+                font-size: 17px;
+                margin-bottom: 6px;
+            }
+            .obloha .chart {
+                padding: 10px 6px 4px;
+            }
+            .obloha .legend {
+                margin: 10px 18px 0;
+            }
+            .obloha .note {
+                font-size: 13px;
+                color: var(--dim);
+                padding: 14px 18px 22px;
+            }
+            .obloha .nav {
+                background: rgba(6, 10, 28, 0.78);
+                color: #fff;
+                font-weight: 700;
+            }
+            .obloha .nav .on {
+                color: var(--yes);
+            }
+
+            /* ---- Široká obrazovka ---- */
+            .wide {
+                position: relative;
+                width: min(1060px, 100%);
+                height: 640px;
+                margin: 0 auto;
+                border-radius: 16px;
+                border: 8px solid #0b0b0b;
+                overflow: hidden;
+                display: grid;
+                grid-template-columns: 1fr 1fr 360px;
+                gap: 14px;
+                padding: 56px 14px 14px;
+            }
+            .wide .wtop {
+                position: absolute;
+                left: 22px;
+                top: 16px;
+                right: 22px;
+                display: flex;
+                justify-content: space-between;
+                font-weight: 700;
+            }
+            .wide .ghost {
+                border-radius: 22px;
+                background: rgba(8, 16, 40, 0.22);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                padding: 16px;
+                font-weight: 800;
+                font-size: 20px;
+                color: rgba(255, 255, 255, 0.75);
+            }
+            .wide .ghost p {
+                font-size: 13px;
+                font-weight: 400;
+                margin-top: 8px;
+            }
+            .wide .colday {
+                position: relative;
+                border-radius: 22px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                overflow: hidden;
+            }
+            .wide .colday .screen {
+                inset: 0;
+            }
+
+            /* ---- Tabuľky a texty ---- */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+                margin-top: 6px;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid #3a3a3a;
+            }
+            th {
+                color: #aaa;
+                font-weight: 600;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            td q {
+                color: #ffd36e;
+            }
+            td del {
+                color: #ff8f80;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 11px;
+                padding: 1px 7px;
+                border-radius: 999px;
+                background: #3a3a3a;
+                color: #ddd;
+                margin-right: 4px;
+            }
+            .tag.new {
+                background: #2f4a1c;
+                color: #b9f28c;
+            }
+            .tag.gone {
+                background: #4a221c;
+                color: #ffb3a8;
+            }
+            .tag.q {
+                background: #4a3c14;
+                color: #ffd36e;
+            }
+            ul.pts {
+                padding-left: 20px;
+                color: #cfcfcf;
+                max-width: 860px;
+            }
+            ul.pts li {
+                margin: 4px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <h1>Listovanie dní v detaile – pager</h1>
+            <p class="lead">
+                Podľa posudku dizajnéra. <b>Karty sa ťahom už nelistujú</b> (v oboch appkách len ťuknutím na ikonu dole). Ťah ostáva
+                <b>iba v detaile dňa na karte 7 dní</b> a mení sa na pager: obsah ide za prstom, počas ťahu je vidno kus starého aj nového
+                dňa. Telefóny sú živé – ťahaj myšou alebo prstom, ťukaj na dni, alebo vyber ukážku. Čísla sú z tých istých testovacích dát
+                ako snímky v README (Dvorany, sobota 5. 9.).
+            </p>
+            <p class="lead" style="margin-top: 8px">
+                <b>Verzia 2 (vybraný variant A, dve zmeny):</b> šípka späť na prehľad 7 dní je prvý čip pred dňami, horný riadok so šípkou
+                zmizol (v Oblohe aj s textom „7 dní“). Nadpis dňa v súčasnej appke je ako v Oblohe: pod čipmi, s ikonou oblohy a slovom pod
+                ním.
+            </p>
+
+            <div class="ctrl" role="toolbar" aria-label="Ukážky">
+                <div class="grp">
+                    <span class="k">Ukážka:</span>
+                    <button type="button" data-demo="pokoj">1 · Pokoj</button>
+                    <button type="button" data-demo="polovica">2 · Ťah v polovici</button>
+                    <button type="button" data-demo="prah">3 · Pod prahom → návrat</button>
+                    <button type="button" data-demo="svih">Rýchly švih</button>
+                    <button type="button" data-demo="gumicka">4 · Gumička na kraji</button>
+                    <button type="button" data-demo="scroll">5 · Zvislý scroll</button>
+                </div>
+                <div class="sep"></div>
+                <div class="grp">
+                    <button type="button" id="rm" aria-pressed="false">6 · Znížený pohyb</button>
+                </div>
+            </div>
+            <p class="say" id="say" aria-live="polite"></p>
+
+            <div class="wall">
+                <div class="col">
+                    <div class="cap">Súčasná appka</div>
+                    <div class="phone sucasna" id="ph-s"></div>
+                    <div class="sr-box">Čítačka po presune ohlási: <b data-sr="s"></b></div>
+                </div>
+                <div class="col">
+                    <div class="cap">Živá obloha</div>
+                    <div class="phone obloha" id="ph-o"></div>
+                    <div class="sr-box">Čítačka po presune ohlási: <b data-sr="o"></b></div>
+                </div>
+            </div>
+
+            <h2>7 · Bez dotyku</h2>
+            <ul class="pts">
+                <li>
+                    <b>Myš:</b> ťahať netreba. V oboch appkách čipy dní hore, v súčasnej aj dlaždice susedných dní dole (sú tam už dnes).
+                    Späť na prehľad vedie prvý čip so šípkou.
+                </li>
+                <li>
+                    <b>Klávesnica:</b> keď je fokus v detaile (klikni do telefónu alebo naň prejdi Tabom), šípky ← → listujú dni. Na kraji
+                    sa nič nedeje.
+                </li>
+                <li>
+                    <b>Čítačka:</b> susedné dni v páse sú <code>inert</code> a <code>aria-hidden</code>, čítačka vidí len aktuálny deň. Po
+                    presune ohlási nadpis dňa a poradie (rámik pod telefónom).
+                </li>
+            </ul>
+
+            <h2>8 · Obloha na širokej obrazovke</h2>
+            <p class="lead" style="margin-bottom: 14px">
+                Karty sú vedľa seba, takže ťahom sa medzi nimi nelistuje (tak je to už dnes). Pager je len v stĺpci 7 dní a správa sa
+                rovnako ako na mobile.
+            </p>
+            <div class="wide obloha" id="wide">
+                <div class="wtop">
+                    <span>Dvorany nad Nitrou</span><span class="pill"><i></i>13:00</span>
+                </div>
+                <div class="ghost">
+                    Môžem?
+                    <p>(karta bez zmeny)</p>
+                </div>
+                <div class="ghost">
+                    Teraz
+                    <p>(karta bez zmeny – graf dňa ostáva úchytkou na náhľad času)</p>
+                </div>
+                <div class="colday" id="ph-w"></div>
+            </div>
+
+            <h2>Ako sa pás hýbe</h2>
+            <table>
+                <tr>
+                    <th>Čo</th>
+                    <th>Pravidlo</th>
+                </tr>
+                <tr>
+                    <td>Začiatok ťahu</td>
+                    <td>Smer sa rozhodne po ~9 px. Do strán, keď |dx| &gt; 1,2 · |dy|, inak je to scroll a pás sa nepohne.</td>
+                </tr>
+                <tr>
+                    <td>Počas ťahu</td>
+                    <td>Pás ide 1:1 za prstom. Čip sa prepne, keď je nový deň za polovicou.</td>
+                </tr>
+                <tr>
+                    <td>Dokončenie</td>
+                    <td>Po pustení za 35 % šírky alebo pri švihu rýchlejšom ako 0,5 px/ms (posledných 80 ms). Švih späť ťah zruší.</td>
+                </tr>
+                <tr>
+                    <td>Dojazd</td>
+                    <td>180–280 ms podľa zvyšnej dráhy, krivka <code>cubic-bezier(0.2, 0, 0, 1)</code>. Dá sa chytiť prstom v pohybe.</td>
+                </tr>
+                <tr>
+                    <td>Kraj (Dnes, posledný deň)</td>
+                    <td>Gumička: pás sa poddá najviac o 20 % šírky a vráti sa. <b>Ťah doprava z Dnes už nevracia na prehľad.</b></td>
+                </tr>
+                <tr>
+                    <td>Scroll</td>
+                    <td>
+                        Nový deň začne na rovnakej výške, kým je hlavička vidno. Ak je odscrollované nižšie, stránka vyskočí hore k nadpisu.
+                    </td>
+                </tr>
+                <tr>
+                    <td>Znížený pohyb</td>
+                    <td>Pás stále ide za prstom (je to priama manipulácia), ale po pustení sa presunie hneď, bez dojazdu.</td>
+                </tr>
+                <tr>
+                    <td>Čo stojí</td>
+                    <td>
+                        Hlavička appky, riadok čipov so šípkou späť, spodná lišta. Všetko ostatné, vrátane nadpisu dňa s ikonou oblohy, ide
+                        s pásom.
+                    </td>
+                </tr>
+            </table>
+
+            <h2>9 · Texty</h2>
+            <table>
+                <tr>
+                    <th>Appka</th>
+                    <th>Text</th>
+                    <th>Poznámka</th>
+                </tr>
+                <tr>
+                    <td>obe</td>
+                    <td><span class="tag new">nový</span>čítačka: <q>Pondelok 7.9., deň 3 zo 7</q></td>
+                    <td>Nadpis detailu (<code>weekDayLong</code>) a poradie. Pre Dnes: <q>Dnes 5.9., deň 1 zo 7</q>.</td>
+                </tr>
+                <tr>
+                    <td>obe</td>
+                    <td>
+                        <span class="tag new">nový</span>čip so šípkou, bez textu; čítačka: <q>Späť na 7 dní</q><br />
+                        <span class="tag gone">preč</span>horný riadok so šípkou (súčasná) a <q>‹ 7 dní</q> (Obloha)
+                    </td>
+                    <td>Jeden text pre obe appky. Súčasná appka mala doteraz <q>Späť na prehľad dní</q>.</td>
+                </tr>
+                <tr>
+                    <td>Obloha</td>
+                    <td><span class="tag new">nový</span>čipy <q>So Ne Po Ut St Št Pi</q></td>
+                    <td>Ako v súčasnej appke, celý deň v <code>aria-label</code>.</td>
+                </tr>
+                <tr>
+                    <td>súčasná</td>
+                    <td>
+                        <span class="tag new">nový</span>pod nadpisom slovo oblohy: <q>jasno</q> / <q>polojasno</q> / <q>zamračené</q>, pri
+                        nadpise ikona
+                    </td>
+                    <td>Tie isté slová a ikony ako v Oblohe (<code>SKY_WORDS</code>), nadpis zostáva <code>weekDayLong</code>.</td>
+                </tr>
+                <tr>
+                    <td>Obloha</td>
+                    <td><span class="tag">bez zmeny</span><q>Potiahni do strán na susedný deň.</q> / <q>Potiahnite …</q></td>
+                    <td>Platí ďalej.</td>
+                </tr>
+                <tr>
+                    <td>Obloha</td>
+                    <td><span class="tag q">otázka</span><q>Potiahni doprava a vrátiš sa na 7 dní.</q> (obrazovka Týždeň)</td>
+                    <td>
+                        Ťah doprava späť na prehľad sa ruší aj tu? Potom text zmizne a späť vedie len <q>‹ 7 dní</q>. Odporúčam áno, rovnako
+                        ako v detaile dňa.
+                    </td>
+                </tr>
+                <tr>
+                    <td>obe</td>
+                    <td><span class="tag gone">preč</span>listovanie kariet ťahom</td>
+                    <td>Používateľ nevidí žiadny text, gesto nebolo nikde opísané. Karty sa prepínajú len spodnou lištou.</td>
+                </tr>
+                <tr>
+                    <td>obe</td>
+                    <td><span class="tag gone">preč</span>ťah doprava z prvého dňa späť na prehľad</td>
+                    <td>Na kraji je gumička. Späť: šípka v hlavičke a systémové Späť.</td>
+                </tr>
+            </table>
+        </div>
+
+        <script>
+            // ---- Dáta: tie isté testovacie dáta ako snímky v README (Dvorany, sobota 5. 9., 13:00) ----
+            const DAYS = [
+                {
+                    t: 'Dnes 5.9.',
+                    name: 'Dnes',
+                    chip: 'So',
+                    kwh: '61,4',
+                    kw: 7.9,
+                    w: ['09:00', '17:30'],
+                    st: 'Práve prebieha · ešte 4 h 30 min',
+                    live: true,
+                    cloud: 8,
+                    sky: 'jasno',
+                    mid: ['Zatiaľ', '31,7', 'kWh', '52 % plánu'],
+                    done: 'Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.',
+                    clear: '65,0',
+                    pct: 94,
+                },
+                {
+                    t: 'Zajtra 6.9.',
+                    name: 'Zajtra',
+                    chip: 'Ne',
+                    kwh: '48,5',
+                    kw: 6.3,
+                    w: ['07:30', '17:00'],
+                    st: '9 h 30 min slnka na veľké spotrebiče',
+                    cloud: 43,
+                    sky: 'polojasno',
+                    clear: '64,8',
+                    pct: 75,
+                },
+                {
+                    t: 'Pondelok 7.9.',
+                    name: 'Pondelok',
+                    chip: 'Po',
+                    kwh: '27,4',
+                    kw: 3.5,
+                    w: ['08:30', '16:00'],
+                    st: '7 h 30 min slnka na veľké spotrebiče',
+                    cloud: 86,
+                    sky: 'zamračené',
+                    clear: '64,5',
+                    pct: 42,
+                },
+                {
+                    t: 'Utorok 8.9.',
+                    name: 'Utorok',
+                    chip: 'Ut',
+                    kwh: '53,6',
+                    kw: 6.9,
+                    w: ['07:15', '17:15'],
+                    st: '10 h slnka na veľké spotrebiče',
+                    cloud: 30,
+                    sky: 'polojasno',
+                    clear: '64,2',
+                    pct: 83,
+                },
+                {
+                    t: 'Streda 9.9.',
+                    name: 'Streda',
+                    chip: 'St',
+                    kwh: '41,2',
+                    kw: 5.4,
+                    w: ['07:45', '17:00'],
+                    st: '9 h 15 min slnka na veľké spotrebiče',
+                    cloud: 58,
+                    sky: 'polojasno',
+                    clear: '63,8',
+                    pct: 65,
+                },
+                {
+                    t: 'Štvrtok 10.9.',
+                    name: 'Štvrtok',
+                    chip: 'Št',
+                    kwh: '62,5',
+                    kw: 8.2,
+                    w: ['07:15', '17:15'],
+                    st: '10 h slnka na veľké spotrebiče',
+                    cloud: 10,
+                    sky: 'jasno',
+                    clear: '63,5',
+                    pct: 98,
+                },
+                {
+                    t: 'Piatok 11.9.',
+                    name: 'Piatok',
+                    chip: 'Pi',
+                    kwh: '32,3',
+                    kw: 4.1,
+                    w: ['08:15', '16:30'],
+                    st: '8 h 15 min slnka na veľké spotrebiče',
+                    cloud: 68,
+                    sky: 'polojasno',
+                    clear: '63,2',
+                    pct: 51,
+                },
+            ];
+            const N = DAYS.length;
+            const START = 2;
+            const kwhRound = (s) => Math.round(parseFloat(s.replace(',', '.')));
+            const fmt = (n) => String(n).replace('.', ',');
+
+            // ---- Graf dňa (zjednodušený, len na pohľad) ----
+            function chart(d, di, c) {
+                const W = 330,
+                    x0 = 26,
+                    x1 = 318,
+                    yTop = 52,
+                    y0 = 132;
+                const X = (h) => x0 + ((x1 - x0) * h) / 24;
+                const Y = (kw) => y0 - ((y0 - yTop) * kw) / 10;
+                const kwAt = (h) => (h < 6 || h > 19.5 ? 0 : d.kw * Math.exp(-(((h - 12.5) / 3.1) ** 2)));
+                let s = `<svg viewBox="0 0 ${W} 190" width="100%" aria-hidden="true" style="display:block">`;
+                // oblačnosť po hodinách - viac oblakov = svetlejšia
+                for (let h = 0; h < 24; h++) {
+                    const n = Math.sin((h + 1) * 12.9898 + di * 78.233) * 43758.5453;
+                    const v = Math.max(0, Math.min(100, d.cloud + (n - Math.floor(n) - 0.5) * 40));
+                    const g = Math.round(70 + v * 1.25);
+                    s += `<rect x="${X(h) + 1}" y="8" width="${(x1 - x0) / 24 - 2.5}" height="11" rx="2.5" fill="rgb(${g},${g + 4},${g + 9})"/>`;
+                }
+                s += `<text x="${x0 - 4}" y="${yTop - 10}" font-size="10" fill="${c.mute}" text-anchor="end">kW</text>`;
+                for (const v of [0, 2.5, 5, 7.5, 10]) {
+                    s += `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c.grid}"/>`;
+                    s += `<text x="${x0 - 4}" y="${Y(v) + 3.5}" font-size="10" fill="${c.mute}" text-anchor="end">${fmt(v)}</text>`;
+                }
+                let line = '',
+                    fill = '';
+                for (let i = 0; i <= 96; i++) {
+                    const h = i / 4,
+                        k = kwAt(h);
+                    line += `${i ? 'L' : 'M'}${X(h).toFixed(1)},${Y(k).toFixed(1)}`;
+                    fill += `${i ? 'L' : 'M'}${X(h).toFixed(1)},${Y(Math.max(k, 2.5)).toFixed(1)}`;
+                }
+                s += `<path d="${fill}L${X(24)},${Y(2.5)}L${X(0)},${Y(2.5)}Z" fill="${c.green}" opacity=".55"/>`;
+                s += `<path d="${line}" fill="none" stroke="${c.green}" stroke-width="1.4" stroke-dasharray="4 3"/>`;
+                s += `<line x1="${x0}" x2="${x1}" y1="${Y(2.5)}" y2="${Y(2.5)}" stroke="${c.ink}" stroke-dasharray="2 3"/>`;
+                s += `<text x="${x1 - 2}" y="${Y(2.5) - 7}" font-size="10.5" fill="${c.ink}" text-anchor="end" opacity=".85">veľké spotrebiče</text>`;
+                for (let i = 0; i < 48; i++) {
+                    const h = i / 2 + 0.25;
+                    const col = kwAt(h) >= 2.5 ? c.yes : (h >= 6 && h < 8.5) || (h >= 17.5 && h < 21) ? c.costly : c.cheap;
+                    s += `<rect x="${X(i / 2) + 0.6}" y="146" width="${(x1 - x0) / 48 - 1.4}" height="9" rx="2.5" fill="${col}"/>`;
+                }
+                for (const h of [0, 6, 12, 18, 24])
+                    s += `<text x="${X(h)}" y="174" font-size="10.5" fill="${c.ink}" text-anchor="middle">${h}</text>`;
+                return s + '</svg>';
+            }
+            const C_S = {
+                ink: '#f2f0ea',
+                mute: 'rgba(242,240,234,.55)',
+                grid: 'rgba(242,240,234,.1)',
+                green: '#7fbf4a',
+                yes: '#9ef25b',
+                cheap: '#ffc24b',
+                costly: '#ff6b5a',
+            };
+            const C_O = {
+                ink: '#fff',
+                mute: 'rgba(255,255,255,.75)',
+                grid: 'rgba(255,255,255,.18)',
+                green: '#8fd06a',
+                yes: '#b9f28c',
+                cheap: '#7cc4ff',
+                costly: '#ff7a66',
+            };
+
+            const ICON = {
+                jasno: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#ffd36e"/><g stroke="#ffd36e" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>',
+                polojasno:
+                    '<svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="4.5" fill="#ffd36e"/><path d="M8 20h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.6A3.3 3.3 0 0 0 8 20z" fill="#e8edf5"/></svg>',
+                zamračené:
+                    '<svg viewBox="0 0 24 24"><path d="M6.5 19h11a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.3 1.9A3.6 3.6 0 0 0 6.5 19z" fill="#e8edf5"/></svg>',
+            };
+            const NAV_ICONS = [
+                '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+                '<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
+                '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+                '<path d="M6 20V11M12 20V5M18 20v-6"/>',
+                '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+            ];
+            const nav = (labels, on) =>
+                `<div class="nav">${labels.map((l, i) => `<span class="${i === on ? 'on' : ''}"><svg viewBox="0 0 24 24">${NAV_ICONS[i]}</svg>${l}</span>`).join('')}</div>`;
+            const chipsHtml = () =>
+                `<div class="chips"><button type="button" class="cback" aria-label="Späť na 7 dní"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>${DAYS.map((d, i) => `<button type="button" data-go="${i}" aria-label="${d.t}">${d.chip}</button>`).join('')}</div>`;
+            const stepsHtml = (i) =>
+                `<div class="steps">${i > 0 ? `<button type="button" data-go="${i - 1}"><span>‹</span><span><b>${DAYS[i - 1].name}</b><small>${kwhRound(DAYS[i - 1].kwh)} kWh</small></span></button>` : ''}` +
+                `${i < N - 1 ? `<button type="button" class="next" data-go="${i + 1}"><span><b>${DAYS[i + 1].name}</b><small>${kwhRound(DAYS[i + 1].kwh)} kWh</small></span><span>›</span></button>` : ''}</div>`;
+
+            // ---- Obsah panelov ----
+            function panelSucasna(d, i) {
+                const mid = d.mid || ['Oblačnosť', String(d.cloud), '%', 'priemer dňa'];
+                return `<h2 class="ttl">${d.t}${ICON[d.sky]}</h2><p class="sub">${d.sky}</p>
+                    <div class="card"><div class="wlbl">Okno na veľké spotrebiče</div><div class="wval">${d.w[0]} – ${d.w[1]}</div>
+                    <div class="wstate ${d.live ? 'live' : ''}"><i></i>${d.st}</div><div class="wsub">Práčka, sušička, bojler · najviac slnka okolo 12:00</div></div>
+                    <div class="sect">PRIEBEH VÝROBY</div>
+                    <div class="card chart">${chart(d, i, C_S)}</div>
+                    <div class="legend"><span><i style="background:#9ef25b"></i>výkon</span><span><i style="background:#7fbf4a"></i>predpoveď</span><span><i style="background:linear-gradient(90deg,#555,#ddd)"></i>oblačnosť</span>
+                    <span><i style="background:#9ef25b"></i>slnko stačí</span><span><i style="background:#ffc24b"></i>lacná sieť</span><span><i style="background:#ff6b5a"></i>drahá sieť</span></div>
+                    <div class="kpis"><div>Predpoveď<b>${d.kwh}<small> kWh</small></b>na celý deň</div><div>${mid[0]}<b>${mid[1]}<small> ${mid[2]}</small></b>${mid[3]}</div><div>Špička<b>${fmt(d.kw)}<small> kW</small></b>okolo 12:00</div></div>
+                    ${stepsHtml(i)}`;
+            }
+            function panelObloha(d, i) {
+                return `<h2 class="ttl">${d.t}${ICON[d.sky]}</h2><p class="sub">${d.sky}</p>
+                    <div class="kpis"><div><b>${d.kwh}</b>kWh za deň</div><div><b>${fmt(d.kw)}</b>kW špička</div><div><b>${d.w[0]}</b>do ${d.w[1]}</div></div>
+                    <div class="glass chart">${chart(d, i, C_O)}</div>
+                    <div class="legend"><span><i style="background:#b9f28c"></i>výkon</span><span><i style="background:#8fd06a"></i>predpoveď</span><span><i style="background:linear-gradient(90deg,#666,#eee)"></i>oblačnosť</span>
+                    <span><i style="background:#b9f28c"></i>slnko stačí</span><span><i style="background:#7cc4ff"></i>lacná sieť</span><span><i style="background:#ff7a66"></i>drahá sieť</span></div>
+                    <div class="glass">${d.done ? `<p>${d.done}</p>` : ''}<p>Jasná obloha by dala ${d.clear} kWh, predpoveď je ${d.pct} % z toho.</p></div>
+                    <div class="glass"><h3>Najsilnejšie slnko okolo 12:00</h3><p>Špička ~${fmt(d.kw)} kW. Veľké spotrebiče majú najviac zmysel medzi 9:00 a 16:00.</p></div>
+                    <p class="note">Potiahni do strán na susedný deň.</p>`;
+            }
+            const track = (fn) =>
+                `<div class="viewport"><div class="track">${DAYS.map((d, i) => `<div class="panel">${fn(d, i)}</div>`).join('')}</div></div>`;
+
+            // ---- Pager: jeden posun pre všetky pásy v telefóne ----
+            const reduced = { on: matchMedia('(prefers-reduced-motion: reduce)').matches };
+            const T = { lock: 9, ratio: 1.2, commit: 0.35, flick: 0.5, window: 80, rubberMax: 0.2 };
+
+            class Pager {
+                constructor({ screen, tracks, viewport, onVisual, onSettled }) {
+                    Object.assign(this, { screen, tracks, viewport, onVisual, onSettled });
+                    this.index = START;
+                    this.vis = -1;
+                    this.state = null;
+                    this.anim = null;
+                    this.layout();
+                    this.setX(-this.index * this.w);
+                    this.settleUi();
+                }
+                layout() {
+                    this.w = this.viewport.clientWidth;
+                }
+                setX(x) {
+                    this.x = x;
+                    for (const t of this.tracks) t.style.transform = `translate3d(${x}px,0,0)`;
+                    this.updateVis();
+                }
+                updateVis() {
+                    const v = Math.max(0, Math.min(N - 1, Math.round(-this.x / this.w)));
+                    if (v !== this.vis) {
+                        this.vis = v;
+                        this.onVisual(v);
+                    }
+                }
+                rubber(raw) {
+                    const min = -(N - 1) * this.w;
+                    const r = (d) => Math.min(T.rubberMax * this.w, this.w * (1 - 1 / ((d / this.w) * 0.55 + 1)));
+                    if (raw > 0) return r(raw);
+                    if (raw < min) return min - r(min - raw);
+                    return raw;
+                }
+                stopAnim() {
+                    if (!this.anim) return;
+                    cancelAnimationFrame(this.anim.raf);
+                    clearTimeout(this.anim.to);
+                    const m = new DOMMatrix(getComputedStyle(this.tracks[0]).transform);
+                    for (const t of this.tracks) t.style.transition = 'none';
+                    this.anim = null;
+                    this.setX(m.m41);
+                }
+                down(px, py, t = performance.now()) {
+                    this.layout();
+                    this.stopAnim();
+                    this.state = 'pending';
+                    this.sx = px;
+                    this.sy = py;
+                    this.x0 = this.x;
+                    this.samples = [{ t, x: px }];
+                    this.moved = false;
+                }
+                move(px, py, t = performance.now()) {
+                    if (!this.state) return;
+                    const dx = px - this.sx,
+                        dy = py - this.sy;
+                    if (this.state === 'pending') {
+                        if (Math.hypot(dx, dy) < T.lock) return;
+                        this.state = Math.abs(dx) > T.ratio * Math.abs(dy) ? 'drag' : 'scroll';
+                    }
+                    if (this.state !== 'drag') return;
+                    this.moved = true;
+                    this.setX(this.rubber(this.x0 + dx));
+                    this.samples.push({ t, x: px });
+                    while (this.samples.length > 2 && t - this.samples[0].t > T.window) this.samples.shift();
+                }
+                up() {
+                    const was = this.state;
+                    this.state = null;
+                    if (was !== 'drag') {
+                        // Ťuknutie do rozbehnutého pásu ho zastaví - dojazd potom k najbližšiemu dňu.
+                        if (Math.abs(this.x + this.index * this.w) > 0.5) this.goto(Math.round(-this.x / this.w));
+                        return;
+                    }
+                    const a = this.samples[0],
+                        b = this.samples[this.samples.length - 1];
+                    const v = b.t > a.t ? (b.x - a.x) / (b.t - a.t) : 0;
+                    const p = -this.x / this.w;
+                    const lo = Math.max(0, Math.floor(p)),
+                        hi = Math.min(N - 1, Math.ceil(p));
+                    let target;
+                    if (v < -T.flick) target = hi;
+                    else if (v > T.flick) target = lo;
+                    else if (p > this.index) target = p - lo > T.commit ? hi : lo;
+                    else target = hi - p > T.commit ? lo : hi;
+                    this.goto(Math.max(0, Math.min(N - 1, target)));
+                }
+                cancel() {
+                    this.state = null;
+                    this.goto(this.index);
+                }
+                goto(target) {
+                    target = Math.max(0, Math.min(N - 1, target));
+                    this.stopAnim();
+                    const to = -target * this.w;
+                    const dist = Math.abs(to - this.x);
+                    const ms = reduced.on || dist < 1 ? 0 : Math.round(180 + Math.min(1, dist / this.w) * 100);
+                    const changed = target !== this.index;
+                    this.index = target;
+                    if (!ms) {
+                        for (const t of this.tracks) t.style.transition = 'none';
+                        this.setX(to);
+                        this.settleUi(changed);
+                        return;
+                    }
+                    for (const t of this.tracks) t.style.transition = `transform ${ms}ms cubic-bezier(0.2, 0, 0, 1)`;
+                    for (const t of this.tracks) t.style.transform = `translate3d(${to}px,0,0)`;
+                    const anim = { raf: 0, to: 0 };
+                    const tick = () => {
+                        this.x = new DOMMatrix(getComputedStyle(this.tracks[0]).transform).m41;
+                        this.updateVis();
+                        anim.raf = requestAnimationFrame(tick);
+                    };
+                    anim.raf = requestAnimationFrame(tick);
+                    anim.to = setTimeout(() => {
+                        cancelAnimationFrame(anim.raf);
+                        for (const t of this.tracks) t.style.transition = 'none';
+                        this.anim = null;
+                        this.setX(to);
+                        this.settleUi(changed);
+                    }, ms + 20);
+                    this.anim = anim;
+                }
+                settleUi(changed) {
+                    // Susedné panely: čítačka ani Tab sa k nim nedostanú.
+                    for (const t of this.tracks)
+                        [...t.children].forEach((p, i) => {
+                            p.inert = i !== this.index;
+                            p.setAttribute('aria-hidden', String(i !== this.index));
+                        });
+                    // Výšku pásu určuje aktívny deň.
+                    this.viewport.style.height = this.viewport.querySelector('.track').children[this.index].offsetHeight + 'px';
+                    if (changed) {
+                        const top = this.viewport.offsetTop;
+                        if (this.screen.scrollTop > top) this.screen.scrollTo({ top: 0, behavior: reduced.on ? 'auto' : 'smooth' });
+                    }
+                    this.onSettled(this.index, changed);
+                }
+            }
+
+            function bindPointer(screen, pager) {
+                let id = null,
+                    dragged = false;
+                screen.addEventListener('pointerdown', (e) => {
+                    if (e.button !== 0 || demoBusy) return;
+                    id = e.pointerId;
+                    dragged = false;
+                    pager.down(e.clientX, e.clientY);
+                });
+                screen.addEventListener('pointermove', (e) => {
+                    if (e.pointerId !== id) return;
+                    pager.move(e.clientX, e.clientY);
+                    if (pager.state === 'drag' && !dragged) {
+                        dragged = true;
+                        screen.setPointerCapture(id);
+                    }
+                    // Myšou sa zvislý „scroll“ v ukážke neposúva - telefón to robí sám.
+                    if (pager.state === 'scroll' && e.pointerType === 'mouse') screen.scrollTop -= e.movementY;
+                });
+                const end = (e, cancel) => {
+                    if (e.pointerId !== id) return;
+                    id = null;
+                    cancel && pager.state === 'drag' ? pager.cancel() : pager.up();
+                };
+                screen.addEventListener('pointerup', (e) => end(e, false));
+                screen.addEventListener('pointercancel', (e) => end(e, true));
+                // Po ťahu nesmie dobehnúť klik na čip alebo dlaždicu pod prstom.
+                screen.addEventListener(
+                    'click',
+                    (e) => {
+                        if (dragged) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            dragged = false;
+                            return;
+                        }
+                        const go = e.target.closest('[data-go]');
+                        if (go) pager.goto(Number(go.dataset.go));
+                    },
+                    true,
+                );
+                screen.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') pager.goto(pager.index - 1);
+                    else if (e.key === 'ArrowRight') pager.goto(pager.index + 1);
+                    else return;
+                    e.preventDefault();
+                });
+            }
+
+            const srText = (i) => `${DAYS[i].t}, deň ${i + 1} zo ${N}`;
+
+            function buildSucasna(root) {
+                root.innerHTML = `<div class="screen" tabindex="0" aria-label="Detail dňa">
+                    <div class="top"><div class="brand">RAY-MON<small>DVORANY</small></div><span class="pill"><i></i>13:00</span></div>
+                    ${chipsHtml()}
+                    <div class="body">${track(panelSucasna)}</div>
+                    <p class="sr" aria-live="polite" data-live></p></div>
+                    ${nav(['Môžem?', 'Terazky', '7 dní', 'Štatistika', 'Nastavenie'], 2)}<div class="finger"></div>`;
+                return wire(root, 's', root.querySelector('.body .viewport'));
+            }
+            function buildObloha(root, wide) {
+                root.innerHTML = `<div class="screen" tabindex="0" aria-label="Detail dňa">
+                    ${wide ? '' : '<div class="top"><span>Dvorany nad Nitrou</span><span class="pill"><i></i>13:00</span></div>'}
+                    ${chipsHtml()}
+                    <div class="body">${track(panelObloha)}</div>
+                    <p class="sr" aria-live="polite" data-live></p></div>
+                    ${wide ? '' : nav(['Môžem?', 'Teraz', '7 dní', 'Štatistika', 'Nastavenie'], 2)}<div class="finger"></div>`;
+                return wire(root, wide ? 'w' : 'o', root.querySelector('.body .viewport'));
+            }
+            function wire(root, key, viewport) {
+                const screen = root.querySelector('.screen');
+                const chips = [...root.querySelectorAll('.chips [data-go]')];
+                const live = root.querySelector('[data-live]');
+                const box = document.querySelector(`[data-sr="${key}"]`);
+                const pager = new Pager({
+                    screen,
+                    viewport,
+                    tracks: [...root.querySelectorAll('.track')],
+                    onVisual(v) {
+                        chips.forEach((c, i) => c.setAttribute('aria-current', String(i === v)));
+                    },
+                    onSettled(i, changed) {
+                        if (changed) live.textContent = srText(i);
+                        if (box) box.textContent = srText(i);
+                    },
+                });
+                pager.root = root;
+                bindPointer(screen, pager);
+                return pager;
+            }
+
+            const pagers = [buildSucasna(document.getElementById('ph-s')), buildObloha(document.getElementById('ph-o'), false)];
+            const widePager = buildObloha(document.getElementById('ph-w'), true);
+            addEventListener('resize', () => [...pagers, widePager].forEach((p) => (p.layout(), p.goto(p.index))));
+
+            // ---- Ukážky: skriptovaný prst ----
+            let demoBusy = false;
+            const say = (t) => (document.getElementById('say').textContent = t);
+            const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+            const ease = (t) => t * t * (3 - 2 * t);
+
+            function finger(p, on, fx, fy) {
+                const f = p.root.querySelector('.finger');
+                f.classList.toggle('on', on);
+                if (on) {
+                    f.style.left = fx + 'px';
+                    f.style.top = fy + 'px';
+                }
+            }
+            /** Prst sa dotkne v bode (fx, fy) telefónu a ťahá o dx (podiel šírky) počas ms. */
+            async function drag(dx, ms, { hold = 0, release = true, curve = ease, fx = 0.62, fy = 0.55 } = {}) {
+                const run = pagers.map(async (p) => {
+                    const r = p.screen.getBoundingClientRect();
+                    const sx = r.left + r.width * fx,
+                        sy = r.top + r.height * fy;
+                    // Čas prsta ráta ukážka sama - rýchlosť švihu nezávisí od toho, ako často prehliadač kreslí.
+                    const t0 = performance.now();
+                    p.down(sx, sy, t0);
+                    finger(p, true, r.width * fx, r.height * fy);
+                    await new Promise((done) => {
+                        const step = () => {
+                            const k = Math.min(1, (performance.now() - t0) / ms);
+                            const x = curve(k) * dx * p.w;
+                            p.move(sx + x, sy + k * 2, t0 + k * ms);
+                            finger(p, true, r.width * fx + x, r.height * fy);
+                            k < 1 ? requestAnimationFrame(step) : done();
+                        };
+                        requestAnimationFrame(step);
+                    });
+                    if (hold) {
+                        await wait(hold);
+                        // Prst stojí - rýchlosť pri pustení je nula.
+                        const t = t0 + ms + hold;
+                        p.samples = [
+                            { t: t - 1, x: p.samples.at(-1).x },
+                            { t, x: p.samples.at(-1).x },
+                        ];
+                    }
+                    if (release) {
+                        p.up();
+                        finger(p, false);
+                    }
+                });
+                await Promise.all(run);
+            }
+            async function reset(index = START) {
+                for (const p of pagers) {
+                    p.state = null;
+                    finger(p, false);
+                    p.screen.scrollTo({ top: 0 });
+                    const was = reduced.on;
+                    reduced.on = true;
+                    p.goto(index);
+                    reduced.on = was;
+                }
+                await wait(250);
+            }
+            const DEMOS = {
+                async pokoj() {
+                    await reset();
+                    say('Detail dňa v pokoji. Ťahaj myšou alebo prstom, alebo ťukni na čip dňa.');
+                },
+                async polovica() {
+                    await reset();
+                    say(
+                        'Ťah zastavený uprostred: vľavo koniec pondelka, vpravo začiatok utorka. Čip sa práve prepol. Pusti klikom na „Pokoj“.',
+                    );
+                    await drag(-0.5, 900, { release: false });
+                },
+                async prah() {
+                    await reset();
+                    say('Ťah o 25 % šírky a pustenie bez švihu: pod prahom 35 %, pás sa vráti na pondelok.');
+                    await drag(-0.25, 700, { hold: 450 });
+                },
+                async svih() {
+                    await reset();
+                    say('Krátky rýchly švih (asi 16 % šírky za 90 ms): prah nedosiahol, ale rýchlosť áno – deň sa prelistuje.');
+                    await drag(-0.16, 90, { curve: (t) => t });
+                },
+                async gumicka() {
+                    await reset(0);
+                    say(
+                        'Dnes je prvý deň. Ťah doprava o 70 % šírky – pás sa poddá najviac o pätinu a po pustení sa vráti. Na prehľad nevracia.',
+                    );
+                    await drag(0.7, 900, { hold: 500 });
+                    await wait(500);
+                    await reset(N - 1);
+                    say('To isté na poslednom dni (piatok), ťah doľava.');
+                    await drag(-0.7, 900, { hold: 500 });
+                },
+                async scroll() {
+                    await reset();
+                    say('Zvislý scroll: pás sa nepohne, karta sa posúva normálne…');
+                    await Promise.all(pagers.map((p) => p.screen.scrollTo({ top: 420, behavior: 'smooth' })));
+                    await wait(1100);
+                    say('…a švih na ďalší deň, keď je hlavička mimo obrazovky: utorok začne od nadpisu.');
+                    await drag(-0.3, 160, { curve: (t) => t, fy: 0.4 });
+                },
+            };
+            document.querySelectorAll('[data-demo]').forEach((b) =>
+                b.addEventListener('click', async () => {
+                    if (demoBusy && b.dataset.demo !== 'pokoj') return;
+                    demoBusy = true;
+                    try {
+                        await DEMOS[b.dataset.demo]();
+                    } finally {
+                        demoBusy = b.dataset.demo === 'polovica';
+                        if (b.dataset.demo === 'pokoj') demoBusy = false;
+                    }
+                }),
+            );
+            const rm = document.getElementById('rm');
+            rm.setAttribute('aria-pressed', String(reduced.on));
+            rm.addEventListener('click', () => {
+                reduced.on = !reduced.on;
+                rm.setAttribute('aria-pressed', String(reduced.on));
+                say(
+                    reduced.on
+                        ? 'Znížený pohyb: pás ide za prstom, ale po pustení sa presunie hneď, bez dojazdu.'
+                        : 'Plný pohyb s dojazdom.',
+                );
+            });
+            DEMOS.pokoj();
+        </script>
+    </body>
+</html>

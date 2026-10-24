@@ -142,3 +142,9 @@ export function weekDayLong(dateStr, index) {
 export function escapeHtml(value) {
     return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+/** "Pondelok 7.9., deň 3 zo 7" - čo čítačka ohlási po prelistovaní dňa v detaile karty 7 dní.
+ * @param {string} dateStr @param {number} index @param {number} count */
+export function weekDayPosition(dateStr, index, count) {
+    return `${weekDayLong(dateStr, index)}, deň ${index + 1} zo ${count}`;
+}

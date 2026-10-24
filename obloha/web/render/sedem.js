@@ -3,9 +3,9 @@
 // stĺpcami a mapou hodina × deň. Všetko počíta shared/sedem-dni.js (nad modelmi karty 7 dní
 // súčasnej appky) a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
-import { escapeHtml } from '../../../shared/format.js';
+import { escapeHtml, weekDayPosition } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages.js';
-import { sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
+import { dayStripModel, sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
 import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
 import { weatherIcon } from './icons.js';
 import { dashboard, shows } from '../state.js';
@@ -63,11 +63,33 @@ function renderList(m, dom, SEDEM_TEXTS) {
     setText(dom.sdHint, SEDEM_TEXTS.hint);
 }
 
+/**
+ * Čipy dní vedľa šípky späť: na ktorom dni týždňa stojíme a že sa dá listovať ďalej. Tie isté ako
+ * v súčasnej appke (dayStripModel). Deň prepnú poslucháč v sedem-interactions.js.
+ * @param {ReturnType<typeof dayStripModel>} chips
+ */
+const stripHtml = (chips) =>
+    chips
+        .map(
+            (c) =>
+                `<button type="button" class="day-chip" data-day="${c.index}" aria-label="${escapeHtml(c.label)}"${c.current ? ' aria-current="true"' : ''}>` +
+                `${escapeHtml(c.short)}</button>`,
+        )
+        .join('');
+
 /** Detail dňa. @param {SedemData} data @param {number} index @param {Dom} dom @param {AppState['voice']} voice */
 function renderDay(data, index, dom, voice) {
     const SEDEM_TEXTS = voiceTexts(voice).SEDEM_TEXTS;
     const d = sedemDayModel(data, index, voice);
+    const days = data.forecast.days;
     setText(dom.sdDayBackText, SEDEM_TEXTS.back);
+    // Na úzkom telefóne sa čipy posúvajú do strán - nový deň sa postaví do stredu pásu.
+    if (setHtml(dom.sdDayStrip, stripHtml(dayStripModel(days, index)))) {
+        const chip = dom.sdDayStrip.querySelector('[aria-current]');
+        if (chip instanceof HTMLElement) dom.sdDayStrip.scrollLeft = chip.offsetLeft - (dom.sdDayStrip.clientWidth - chip.offsetWidth) / 2;
+    }
+    // Po prelistovaní dňa ho ohlási čítačka.
+    setText(dom.sdDayLive, weekDayPosition(days[index].date, index, days.length));
     setText(dom.sdDayTitle, d.title);
     setHtml(dom.sdDayIcon, d.weather ? weatherIcon(d.weather) : '');
     show(dom.sdDaySub, d.sub !== '');
@@ -135,7 +157,6 @@ function renderWeek(data, dom, voice) {
     setText(dom.sdHeatNote, SEDEM_TEXTS.heatNote);
     setText(dom.sdWeekMsgTitle, w.message.title);
     setText(dom.sdWeekMsgBody, w.message.body);
-    setText(dom.sdWeekHint, SEDEM_TEXTS.weekHint);
 }
 
 /**

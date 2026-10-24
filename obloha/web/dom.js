@@ -121,6 +121,10 @@ function sedemDom() {
         sdDay: byId('sd-day'),
         sdDayBack: byId('sd-day-back'),
         sdDayBackText: byId('sd-day-back-text'),
+        sdDayStrip: byId('sd-day-strip'),
+        sdDayPager: byId('sd-day-pager'),
+        sdDayTrack: byId('sd-day-track'),
+        sdDayLive: byId('sd-day-live'),
         sdDayTitle: byId('sd-day-title'),
         sdDayIcon: byId('sd-day-icon'),
         sdDaySub: byId('sd-day-sub'),
@@ -146,7 +150,6 @@ function sedemDom() {
         sdHeatNote: byId('sd-heat-note'),
         sdWeekMsgTitle: byId('sd-week-msg-title'),
         sdWeekMsgBody: byId('sd-week-msg-body'),
-        sdWeekHint: byId('sd-week-hint'),
     };
 }
 

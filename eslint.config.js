@@ -13,7 +13,7 @@ const NEUTRAL_WEB = [
     'storage',
     'data',
     'refresh',
-    'gesture',
+    'day-pager',
     'nav-history',
     'setup-wiring',
     'settings-store',

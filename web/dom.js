@@ -87,17 +87,28 @@ function terazkyDom() {
     };
 }
 
+// Detail dňa a týždňa karty 7 dní: riadok so šípkou späť a čipmi, pás, ktorý ide pri listovaní za prstom, a nadpis.
+function sedemDetailDom() {
+    return {
+        weekDayNav: byId('week-day-nav'),
+        weekDayBack: byId('week-day-back'),
+        weekDayStrip: byId('week-day-strip'),
+        weekTrack: byId('week-track'),
+        weekDayHead: byId('week-day-head'),
+        weekDayTitle: byId('week-day-title'),
+        weekDayIcon: byId('week-day-icon'),
+        weekDaySub: byId('week-day-sub'),
+        weekDaySteps: byId('week-day-steps'),
+        weekDayLive: byId('week-day-live'),
+    };
+}
+
 function sedemdniDom() {
     return {
+        ...sedemDetailDom(),
         weekSub: byId('week-sub'),
         weekHead: byId('week-head'),
         weekTrio: byId('week-trio'),
-        weekDayHead: byId('week-day-head'),
-        weekDayBack: byId('week-day-back'),
-        weekDayTitle: byId('week-day-title'),
-        weekDayStrip: byId('week-day-strip'),
-        weekDaySteps: byId('week-day-steps'),
-        weekGrid: byId('week-grid'),
         weekBlockHeat: byId('week-block-heat'),
         weekBlockBars: byId('week-block-bars'),
         weekBlockCurve: byId('week-block-curve'),

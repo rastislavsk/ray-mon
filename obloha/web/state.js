@@ -150,14 +150,6 @@ export function panelChange(from, to) {
 }
 
 /**
- * Susedná karta v poradí navigácie, alebo null na kraji - listovanie sa nezacyklí.
- * @param {Panel} panel @param {1 | -1} dir 1 = ďalšia, -1 = predchádzajúca @returns {Panel | null}
- */
-export function nextPanel(panel, dir) {
-    return PANELS[PANELS.indexOf(panel) + dir] ?? null;
-}
-
-/**
  * Rozloženie podľa šírky okna (LAYOUT_PX): telefón a tablet na výšku, tablet na šírku, počítač.
  * @param {number} width šírka okna v px @returns {Layout}
  */
@@ -360,37 +352,4 @@ export function navChange(state, step) {
         appSheet: step.sheet,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
-}
-
-/**
- * Kam vedie ťah prstom do strán. Mimo detailu karty 7 dní listuje karty (na kraji nikam). Počas
- * sprievodcu nastavením nevedie nikam - človek by omylom odišiel z rozpísaného nastavenia.
- * Detail je podobrazovka karty a ťah ju neopúšťa: v detaile dňa listuje dni, ako súčasná appka
- * (web/swipe.js). Ťah doprava je všade krok späť, takže keď už listovať nie je kam (dnešok, alebo
- * detail týždňa), vedie do prehľadu dní - `'back'`, krok v histórii. Doľava z posledného dňa
- * nevedie nikam. V prehľade so stĺpcami sú karty vedľa seba a listovať ich nemá zmysel; ťah tam
- * listuje len dni v detaile, a to len ťah v stĺpci 7 dní (`where`).
- * @param {AppState} state @param {number} dx záporné = ťah doľava
- * @param {Panel | null} [where] karta, v ktorej ťah začal (null = mimo kariet)
- * @returns {Partial<AppState> | 'back' | null}
- */
-export function swipeTarget(state, dx, where = null) {
-    const dash = dashboard(state);
-    if (state.panel === 'nastavenie' && state.setupStep) return null;
-    if ((dash ? where === '7dni' : state.panel === '7dni') && state.weekDetail && state.forecast)
-        return swipeDetail(state.weekDetail, state.weekDay, state.forecast.days.length, dx);
-    const to = dash ? null : nextPanel(state.panel, dx < 0 ? 1 : -1);
-    return to ? panelChange(state.panel, to) : null;
-}
-
-/**
- * Ťah v detaile karty 7 dní: v detaile dňa susedný deň, inak (a na kraji doprava) späť do prehľadu.
- * @param {WeekDetail} detail @param {number} day @param {number} days počet dní v predpovedi @param {number} dx
- * @returns {{ weekDay: number } | 'back' | null}
- */
-function swipeDetail(detail, day, days, dx) {
-    const back = dx > 0 ? /** @type {const} */ ('back') : null;
-    if (detail === 'week') return back;
-    const to = day + (dx < 0 ? 1 : -1);
-    return to >= 0 && to < days ? { weekDay: to } : back;
 }

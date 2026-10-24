@@ -25,7 +25,6 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
  *   weekSelDay: number,
- *   weekDayDir: 1 | -1,
  *   weekDetail: 'day' | 'week' | null,
  *   terazPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
@@ -105,10 +104,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba - hlavička hovorí "načítavam…".
         loading: true,
         weekSelDay: 0,
-        // Smer posledného prelistovania dní v detaile dňa: 1 na ďalší deň, -1 na predchádzajúci.
-        // Od neho závisí, z ktorej strany sa detail prisunie (viď day-in-* v style.css) - to isté,
-        // čo panelDir robí pre karty.
-        weekDayDir: /** @type {1 | -1} */ (1),
         // Karta 7 dní má na mobile dve obrazovky: prehľad dní a detail vybraného dňa.
         // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
         weekDetail: null,
@@ -172,32 +167,9 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
 /** @typedef {ReturnType<typeof createStore<AppState>>} Store */
 
 /**
- * Susedná karta v poradí navigácie, alebo null na kraji - listovanie sa nezacyklí.
- * @param {Panel} panel @param {1 | -1} dir 1 = ďalšia, -1 = predchádzajúca
- * @returns {Panel | null}
- */
-export function nextPanel(panel, dir) {
-    const i = PANELS.indexOf(panel);
-    return i < 0 ? null : (PANELS[i + dir] ?? null);
-}
-
-/**
- * Susedný deň v detaile dňa, alebo null na kraji týždňa - listovanie sa nezacyklí, rovnako
- * ako pri kartách. Z posledného dňa teda ťah doľava nevedie nikam a z prvého ťah doprava
- * tiež nie; von z detailu vedie šípka späť v jeho hlavičke.
- * @param {number} sel @param {1 | -1} dir 1 = nasledujúci deň, -1 = predchádzajúci
- * @param {number} count koľko dní predpoveď má
- * @returns {number | null}
- */
-export function nextWeekDay(sel, dir, count) {
-    const i = sel + dir;
-    return i >= 0 && i < count ? i : null;
-}
-
-/**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
- * v navigácii, nie z toho, či sa ťahalo alebo klikalo - prechod tak vyzerá rovnako pri
- * oboch. Detail dňa aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
+ * v navigácii, nie z toho, odkiaľ sa prepínalo (spodná lišta, tlačidlo Späť, výzva na
+ * karte) - prechod tak vyzerá rovnako pri všetkých. Detail dňa aj rozbalená položka sekcie Appka sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */

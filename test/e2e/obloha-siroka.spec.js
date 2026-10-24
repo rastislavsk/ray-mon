@@ -435,16 +435,18 @@ test.describe('tablet na šírku prstom', () => {
 
         await page.locator('#sd-days [data-day="0"]').click();
         await expect(page.locator('#sd-day-title')).toHaveText(/^Dnes/);
-        await tah(page, '#sd-day-sub', -160);
+        await tah(page, '#sd-day-sub', -300);
         await expect(page.locator('#sd-day-title')).toHaveText(/^Zajtra/);
         // Ťah v stĺpci Môžem? dni nelistuje.
         await tah(page, '#mz-word', -160);
         await page.waitForTimeout(200);
         await expect(page.locator('#sd-day-title')).toHaveText(/^Zajtra/);
-        await tah(page, '#sd-day-sub', 160);
+        await tah(page, '#sd-day-sub', 300);
         await expect(page.locator('#sd-day-title')).toHaveText(/^Dnes/);
-        await tah(page, '#sd-day-sub', 160);
-        await expect(page.locator('#sd-list')).toBeVisible();
+        // Z prvého dňa ťah doprava nikam nevedie - detail ostáva, späť vedie šípka.
+        await tah(page, '#sd-day-sub', 300);
+        await page.waitForTimeout(400);
+        await expect(page.locator('#sd-day-title')).toHaveText(/^Dnes/);
         await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         expect(errors).toEqual([]);
     });

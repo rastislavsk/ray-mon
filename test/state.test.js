@@ -10,9 +10,7 @@ import {
     navPrevFrom,
     navStep,
     navStepFrom,
-    nextPanel,
     nextPv,
-    nextWeekDay,
     panelChange,
     sameNavStep,
     savedSettings,
@@ -69,27 +67,6 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
     assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');
     assert.equal(isWelcome(site, 'lokalita'), false, 'zmena polohy už nie je prvé otvorenie');
-});
-
-test('poradie kariet pri listovaní prstom: na kraji sa nezacyklí', () => {
-    assert.equal(nextPanel('terazky', 1), '7dni');
-    assert.equal(nextPanel('7dni', 1), 'statistika');
-    assert.equal(nextPanel('statistika', 1), 'nastavenie');
-    assert.equal(nextPanel('nastavenie', 1), null, 'za poslednou kartou už nič nie je');
-    assert.equal(nextPanel('nastavenie', -1), 'statistika');
-    assert.equal(nextPanel('7dni', -1), 'terazky');
-    assert.equal(nextPanel('terazky', -1), 'mozem', 'Môžem? je v navigácii pred Terazky');
-    assert.equal(nextPanel('mozem', -1), null, 'pred prvou kartou už nič nie je');
-    assert.equal(nextPanel('mozem', 1), 'terazky');
-});
-
-test('poradie dní v detaile dňa: na kraji týždňa sa nezacyklí', () => {
-    assert.equal(nextWeekDay(0, 1, 7), 1);
-    assert.equal(nextWeekDay(5, 1, 7), 6);
-    assert.equal(nextWeekDay(6, 1, 7), null, 'za posledným dňom týždňa už nič nie je');
-    assert.equal(nextWeekDay(3, -1, 7), 2);
-    assert.equal(nextWeekDay(0, -1, 7), null, 'pred prvým dňom už nič nie je - von vedie šípka späť');
-    assert.equal(nextWeekDay(0, 1, 0), null, 'bez dát nie je kam listovať');
 });
 
 test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa prepínalo', () => {

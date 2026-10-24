@@ -40,8 +40,7 @@ function previewAt(chart, h, clientX) {
 /**
  * Prst. Vodorovný ťah po grafe ukazuje náhľad za prstom; zvislý patrí prehliadaču, ktorý posúva
  * stránku (`touch-action: pan-y`), a náhľad nezapne. Ťuknutie bez pohybu ukáže náhľad v tom
- * čase a nechá ho svietiť. Listovanie kariet ťahom nad grafom nebeží (`.day-scrub` je úchytka
- * vo web/gesture.js), takže ťah do strán kartu neprepne.
+ * čase a nechá ho svietiť.
  * @param {HTMLElement} chart @param {ScrubHooks} h
  */
 function bindTouch(chart, h) {

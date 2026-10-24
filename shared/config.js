@@ -592,15 +592,29 @@ export const PREVIEW = {
     keyStepMin: 15,
 };
 
-// Prepínanie kariet potiahnutím prsta (web/gesture.js, v oboch appkách). Prah je kompromis: dosť veľký, aby
-// gesto nespustil ťuk roztrasenou rukou, dosť malý, aby stačil pohodlný pohyb palca.
+// Rozlíšenie ťuknutia od švihnutia prstom na grafoch (tooltip vo web/interactions.js, náhľad času
+// vo web/teraz-gestures.js). Karty sa ťahom nelistujú - len ťuknutím na ikonu v spodnej lište.
 export const SWIPE = {
-    minDistPx: 60, // koľko musí prst prejsť vodorovne
-    maxOffAxisRatio: 0.6, // zvislý posun smie byť najviac takýto podiel vodorovného
-    maxDurationMs: 600, // pomalšie ťahanie už nie je gesto, ale posúvanie po stránke
-    // Nad grafom je vodorovný ťah zároveň prezeraním krivky (tooltip ide za prstom), takže
-    // tam kartu prepne len rýchle švihnutie. Pokojné sledovanie krivky je pomalšie.
+    minDistPx: 60, // od takéhoto posunu prsta to už nie je ťuknutie
+    // Nad grafom je vodorovný ťah prezeraním krivky (tooltip ide za prstom); rýchlejší pohyb
+    // je švihnutie, pri ktorom tooltip nemá ani preblikúť.
     flickMs: 300,
+};
+
+// Listovanie dní v detaile dňa karty 7 dní (shared/day-pager.js, web/day-pager.js, v oboch
+// appkách): obsah ide za prstom, susedný deň je vidno už počas ťahu. Návrh a prečo tieto čísla:
+// docs/navrhy/7dni-listovanie-dni.html.
+export const DAY_PAGER = {
+    lockPx: 9, // po takomto pohybe prsta sa rozhodne, či je to listovanie, alebo scroll
+    axisRatio: 1.2, // listovanie, keď je vodorovný posun aspoň toľkokrát väčší než zvislý
+    commit: 0.35, // podiel šírky, za ktorým sa po pustení deň prelistuje
+    flickPxMs: 0.5, // švih rýchlejší než toto (px/ms) prelistuje aj pod prahom, opačný ťah zruší
+    velocityMs: 80, // rýchlosť sa meria z posledných toľkých milisekúnd ťahu
+    rubberMax: 0.2, // na prvom a poslednom dni sa pás poddá najviac o tento podiel šírky
+    rubberK: 0.55, // tuhosť gumičky: čím menšie, tým tuhšia
+    minMs: 180, // dojazd po pustení: krátka zvyšná dráha
+    maxMs: 280, // dojazd po pustení: celá šírka
+    gapPx: 16, // medzera medzi dňami v páse
 };
 
 /**

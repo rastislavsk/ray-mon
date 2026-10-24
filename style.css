@@ -1375,8 +1375,8 @@ b {
     margin-bottom: var(--sp-2);
 }
 /* pan-y, nie none: zvislé posúvanie stránky patrí prehliadaču, aj keď prst začne na grafe -
-   inak sa cez graf nedá scrollovať vôbec. Vodorovnú zložku si necháva JS (listovanie kariet
-   vo web/swipe.js, tooltip vo web/interactions.js). */
+   inak sa cez graf nedá scrollovať vôbec. Vodorovnú zložku si necháva JS (tooltip vo
+   web/interactions.js). */
 .chart-wrap {
     position: relative;
     touch-action: pan-y;
@@ -1444,7 +1444,7 @@ b {
     stroke: var(--bg);
     stroke-width: 2;
 }
-#week-block-curve .axis-label {
+.curve-block .axis-label {
     font-size: 10px;
 }
 .heat-cell {
@@ -1648,53 +1648,35 @@ b {
     }
 }
 
-/* Prelistovanie dňa v detaile (ťah prstom): nový deň príde posunutý z tej strany, ktorou sa
-   listovalo, a za 200 ms dojde na miesto - to isté, čo panel-in-* robí pri prepnutí kariet.
-   Triedu pridáva renderDayAnim vo web/render/sedemdni.js na hlavičku detailu a na mriežku,
-   teda na všetko, čo je v detaile vidno.
+/* Listovanie dní v detaile dňa (web/day-pager.js): pás #week-track ide za prstom a vedľa neho
+   stoja kópie susedných dní (.pager-ghost), ktoré nakreslil ten istý render. Kópie sú len počas
+   ťahu a dojazdu; vodorovne ich oreže stránka (.page má overflow-x: clip). Zvislý posun stránky
+   si nad pásom necháva prehliadač (pan-y), vodorovný ťah patrí listovaniu.
 
-   Prečo dve rovnaké animácie: karta sa pri zmene dňa neprekresľuje z display:none (ako pri
-   prepnutí kariet), takže animácia nemá ako naskočiť sama - prehliadač ju spustí odznova až
-   vtedy, keď sa zmení jej meno. Render preto medzi a a b strieda. Smer nesie premenná
-   --day-in-from, nech nie sú potrebné štyri.
-
-   Útlm pohybu ich vypína globálne, viď @media na začiatku súboru. Pravidlá zámerne nesiahajú
-   na display, takže utilitu .hidden nemajú ako prebiť. */
-@keyframes day-in-a {
-    from {
-        opacity: 0;
-        transform: translateX(var(--day-in-from));
-    }
+   Útlm pohybu vypína prechod globálne, viď @media na začiatku súboru - pás potom po pustení
+   prsta skočí na miesto hneď. Pravidlá nesiahajú na display, takže .hidden nemajú ako prebiť. */
+.day-track {
+    position: relative;
 }
-@keyframes day-in-b {
-    from {
-        opacity: 0;
-        transform: translateX(var(--day-in-from));
-    }
+#panel-7dni.detail .day-track {
+    touch-action: pan-y;
 }
-.day-in-a,
-.day-in-b {
-    --day-in-from: 24px;
-    animation-duration: 200ms;
-    animation-timing-function: ease-out;
-}
-.day-in-a {
-    animation-name: day-in-a;
-}
-.day-in-b {
-    animation-name: day-in-b;
-}
-.day-in-prev {
-    --day-in-from: -24px;
+.pager-ghost {
+    position: absolute;
+    top: 0;
+    width: 100%;
 }
 
-/* Hlavička obrazovky s detailom dňa: šípka späť a názov dňa. Zobrazuje sa len vtedy, keď
-   je karta v detaile (renderSedemdni jej inak pridá .hidden). */
-.day-head {
+/* Riadok nad detailom: šípka späť na prehľad a čipy dní (v detaile týždňa len šípka). Pod ním
+   nadpis detailu - deň s ikonou oblohy a slovom pod ním, ako v detaile dňa novej appky.
+   Zobrazujú sa len vtedy, keď je karta v detaile (renderSedemdni im inak pridá .hidden). */
+.day-nav {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: var(--sp-3);
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+}
+.day-head {
     margin-bottom: var(--sp-4);
 }
 .day-back {
@@ -1721,33 +1703,52 @@ b {
     stroke-linejoin: round;
 }
 .day-head-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0;
     font-size: var(--fs-lg);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
+.day-head-icon svg {
+    display: block;
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.day-head-sub {
+    margin: 2px 0 0;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
 
 /* ---- 7 dní: detail dňa na mobile (návrh H1) ----------------------------------
    .detail pridáva renderView len na mobile, takže nič z tohto sa desktopu nedotkne.
-   Hlavička je jeden riadok - zelená šípka späť a nadpis dňa vedľa nej, pod ňou pás dní
-   (.day-strip). Na displeji zaberá čo najmenej, nech je graf dňa hneď vidno. Len vzhľad -
-   poradie v HTML aj poslucháče ostávajú. */
+   Hore jeden riadok - zelená šípka späť a čipy dní vedľa nej, pod ním nadpis dňa. Na displeji
+   zaberá čo najmenej, nech je graf dňa hneď vidno. */
 #panel-7dni.detail .day-back {
-    width: 32px;
+    width: 36px;
     height: 32px;
     border-radius: 10px;
     color: var(--green);
 }
 #panel-7dni.detail .day-head-title {
-    font-size: 20px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 /* Tri čísla dňa ako dlaždice pod grafom (dayKpis vo web/render/sedemdni.js). V HTML stoja nad
    grafom, kde ich má desktop ako riadok; detail ich poradím (order) posunie pod legendu. */
-#panel-7dni.detail #week-block-curve {
+#panel-7dni.detail .curve-block {
     display: flex;
     flex-direction: column;
 }
-#panel-7dni.detail #week-curve-stat {
+#panel-7dni.detail .curve-stat {
     order: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1780,8 +1781,8 @@ b {
     color: var(--ink-45);
 }
 /* Detail dňa na mobile má graf dňa (ako karta Terazky), ostatné pohľady krivku s jej legendou. */
-#panel-7dni.detail #week-block-curve .chart-card,
-#panel-7dni.detail #week-block-curve .chart-footer,
+#panel-7dni.detail .curve-block .chart-card,
+#panel-7dni.detail .curve-block .chart-footer,
 #panel-7dni:not(.detail) #week-day-chart,
 #panel-7dni:not(.detail) #week-day-legend {
     display: none;
@@ -1901,15 +1902,14 @@ b {
     stroke-linejoin: round;
 }
 
-/* Pás dní pod hlavičkou detailu dňa: na ktorom dni týždňa stojíme a že sa dá listovať ďalej.
-   Ťah prstom sa sám neohlási, takže bez neho nič nenaznačovalo, že susedný deň je o gesto
-   vedľa. Čipy sa delia o šírku rovným dielom; výška 32 px, aby sa na ne dalo ťuknúť prstom.
-   Odsadenie zhora je záporné: hlavička si drží svoj odstup od obsahu a pás patrí k nej,
-   nie k prvému grafu. */
+/* Čipy dní vedľa šípky späť: na ktorom dni týždňa stojíme a že sa dá listovať ďalej. Ťah
+   prstom sa sám neohlási, takže bez nich nič nenaznačovalo, že susedný deň je o gesto vedľa.
+   Čipy sa delia o šírku rovným dielom; výška 32 px, aby sa na ne dalo ťuknúť prstom. */
 .day-strip {
     display: flex;
+    flex: 1 1 0;
+    min-width: 0;
     gap: 2px;
-    margin: calc(-1 * var(--sp-2)) 0 var(--sp-4);
 }
 .day-chip {
     flex: 1 1 0;
@@ -4757,6 +4757,11 @@ b {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto minmax(0, 1fr);
         gap: var(--sp-3);
+    }
+    /* Pás dňa (#week-track) je tu len obal - detail dňa a listovanie sú len na mobile - takže
+       mriežka grafov ostáva priamo treťou radou karty. */
+    #panel-7dni .day-track {
+        display: contents;
     }
     #panel-7dni .section-head,
     #panel-7dni .stat-trio,

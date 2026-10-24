@@ -346,3 +346,12 @@ function heatOf(input, days) {
 /** @typedef {ReturnType<typeof sedemModel>} SedemModel */
 /** @typedef {ReturnType<typeof sedemDayModel>} SedemDayModel */
 /** @typedef {ReturnType<typeof sedemWeekModel>} SedemWeekModel */
+
+/**
+ * Čipy dní nad detailom dňa v oboch appkách: skratka dňa (aj pri dnešku - „Dnes“ stojí
+ * v nadpise pod nimi), celé meno pre čítačku a ktorý deň je otvorený.
+ * @param {import('./solar.js').ForecastDay[]} days @param {number} sel
+ */
+export function dayStripModel(days, sel) {
+    return days.map((d, i) => ({ index: i, short: dayNameShort(d.date), label: weekDayLong(d.date, i), current: i === sel }));
+}

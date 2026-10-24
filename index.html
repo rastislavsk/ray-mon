@@ -234,130 +234,140 @@
                         <div class="stat-meta" id="week-total-meta"></div>
                     </button>
                 </div>
-                <div class="day-head hidden" id="week-day-head">
-                    <button type="button" class="day-back" id="week-day-back" aria-label="Späť na prehľad dní">
+                <!-- Riadok nad detailom: šípka späť na prehľad a čipy dní. Stojí mimo pásu #week-track,
+                     ktorý pri listovaní ide za prstom (web/day-pager.js). Čipy skladá render (renderDayStrip). -->
+                <div class="day-nav hidden" id="week-day-nav">
+                    <button type="button" class="day-back" id="week-day-back" aria-label="Späť na 7 dní">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
                     </button>
-                    <h2 class="day-head-title" id="week-day-title">Deň</h2>
+                    <div class="day-strip" id="week-day-strip"></div>
                 </div>
-                <!-- Pás dní pod hlavičkou detailu. Mimo prvkov, ktoré sa pri listovaní prisúvajú (viď
-                     renderDayAnim) - pás má stáť. Obsah skladá render (renderDayStrip). -->
-                <div class="day-strip hidden" id="week-day-strip"></div>
-                <div class="week-grid" id="week-grid">
-                    <section class="week-block" id="week-block-heat">
-                        <div class="chart-top">
-                            <span class="lbl" id="week-heat-label">Heatmapa (kW) · hodina × deň</span
-                            ><span class="heat-scale mono" id="week-heat-scale"></span>
-                        </div>
-                        <div class="chart-card">
-                            <div class="chart-wrap" id="week-heat-wrap">
-                                <svg id="week-heat" aria-hidden="true"></svg>
-                                <div id="week-heat-tooltip" class="chart-tooltip">
-                                    <div class="tt-time"></div>
-                                    <div class="tt-kw"></div>
+                <div class="day-track" id="week-track">
+                    <div class="day-head hidden" id="week-day-head">
+                        <h2 class="day-head-title">
+                            <span id="week-day-title">Deň</span><span class="day-head-icon" id="week-day-icon"></span>
+                        </h2>
+                        <p class="day-head-sub" id="week-day-sub"></p>
+                    </div>
+                    <div class="week-grid" id="week-grid">
+                        <section class="week-block" id="week-block-heat">
+                            <div class="chart-top">
+                                <span class="lbl" id="week-heat-label">Heatmapa (kW) · hodina × deň</span
+                                ><span class="heat-scale mono" id="week-heat-scale"></span>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-wrap" id="week-heat-wrap">
+                                    <svg id="week-heat" aria-hidden="true"></svg>
+                                    <div id="week-heat-tooltip" class="chart-tooltip">
+                                        <div class="tt-time"></div>
+                                        <div class="tt-kw"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </section>
-                    <section class="week-block" id="week-block-bars">
-                        <div class="chart-top"><span class="lbl">Denná výroba (kWh)</span></div>
-                        <div class="stat-line" id="week-bars-stat"></div>
-                        <div class="chart-card">
-                            <div class="chart-wrap" id="week-bars-wrap">
-                                <svg id="week-bars" aria-hidden="true"></svg>
-                                <div id="week-bars-tooltip" class="chart-tooltip">
-                                    <div class="tt-time"></div>
-                                    <div class="tt-kw"></div>
+                        </section>
+                        <section class="week-block" id="week-block-bars">
+                            <div class="chart-top"><span class="lbl">Denná výroba (kWh)</span></div>
+                            <div class="stat-line" id="week-bars-stat"></div>
+                            <div class="chart-card">
+                                <div class="chart-wrap" id="week-bars-wrap">
+                                    <svg id="week-bars" aria-hidden="true"></svg>
+                                    <div id="week-bars-tooltip" class="chart-tooltip">
+                                        <div class="tt-time"></div>
+                                        <div class="tt-kw"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="chart-footer plain">
-                            <div class="chart-legend">
-                                <span><i class="leg-sq"></i>predpoveď</span
-                                ><span id="week-bars-clear-legend"><i class="leg-dash"></i>jasná obloha (strop)</span>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="week-block" id="week-block-curve">
-                        <!-- Okno na veľké spotrebiče: len v detaile dňa na mobile (renderDayWindow). -->
-                        <div class="day-window hidden" id="week-day-window"></div>
-                        <div class="chart-top">
-                            <span class="lbl">Priebeh výroby</span>
-                        </div>
-                        <div class="utabs" id="week-day-tabs" role="tablist"></div>
-                        <div class="stat-line" id="week-curve-stat"></div>
-                        <div class="chart-card">
-                            <div class="chart-wrap" id="week-curve-wrap">
-                                <svg id="week-curve" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true"></svg>
-                                <div id="week-curve-tooltip" class="chart-tooltip">
-                                    <div class="tt-time"></div>
-                                    <div class="tt-kw"></div>
+                            <div class="chart-footer plain">
+                                <div class="chart-legend">
+                                    <span><i class="leg-sq"></i>predpoveď</span
+                                    ><span id="week-bars-clear-legend"><i class="leg-dash"></i>jasná obloha (strop)</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="chart-footer">
-                            <div class="chart-legend">
-                                <span><i class="leg-line"></i>predpoveď</span><span><i class="leg-dash"></i>oblačnosť</span
-                                ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
+                        </section>
+                        <section class="week-block curve-block" id="week-block-curve">
+                            <!-- Okno na veľké spotrebiče: len v detaile dňa na mobile (renderDayWindow). -->
+                            <div class="day-window hidden" id="week-day-window"></div>
+                            <div class="chart-top">
+                                <span class="lbl">Priebeh výroby</span>
                             </div>
-                        </div>
-                        <!-- Detail dňa na mobile: graf dňa ako na karte Terazky (web/day-chart.js) namiesto
+                            <div class="utabs" id="week-day-tabs" role="tablist"></div>
+                            <div class="stat-line curve-stat" id="week-curve-stat"></div>
+                            <div class="chart-card">
+                                <div class="chart-wrap" id="week-curve-wrap">
+                                    <svg id="week-curve" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true"></svg>
+                                    <div id="week-curve-tooltip" class="chart-tooltip">
+                                        <div class="tt-time"></div>
+                                        <div class="tt-kw"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-footer">
+                                <div class="chart-legend">
+                                    <span><i class="leg-line"></i>predpoveď</span><span><i class="leg-dash"></i>oblačnosť</span
+                                    ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
+                                </div>
+                            </div>
+                            <!-- Detail dňa na mobile: graf dňa ako na karte Terazky (web/day-chart.js) namiesto
                              krivky nad ním; ktorý platí, rozhoduje CSS podľa .detail. -->
-                        <div id="week-day-chart" class="tz-chart" role="img"></div>
-                        <p id="week-day-legend" class="tz-legend"></p>
-                    </section>
-                    <section class="week-block" id="week-block-table">
-                        <div class="chart-top"><span class="lbl">Prehľad dní</span></div>
-                        <div class="week-tbl-wrap" tabindex="0" role="region" aria-label="Prehľad dní, vodorovne posúvateľná tabuľka">
-                            <table class="week-table">
-                                <thead>
-                                    <tr>
-                                        <th>Deň</th>
-                                        <th>Výroba</th>
-                                        <th class="mid">Obloha</th>
-                                        <th class="mid">Využitie</th>
-                                        <th>Špička</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="week-tbody"></tbody>
-                            </table>
-                        </div>
-                    </section>
-                    <!-- Rebríček dní: prehľad karty 7 dní na mobile. Musí ostať posledným .week-block
+                            <div id="week-day-chart" class="tz-chart" role="img"></div>
+                            <p id="week-day-legend" class="tz-legend"></p>
+                        </section>
+                        <section class="week-block" id="week-block-table">
+                            <div class="chart-top"><span class="lbl">Prehľad dní</span></div>
+                            <div class="week-tbl-wrap" tabindex="0" role="region" aria-label="Prehľad dní, vodorovne posúvateľná tabuľka">
+                                <table class="week-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Deň</th>
+                                            <th>Výroba</th>
+                                            <th class="mid">Obloha</th>
+                                            <th class="mid">Využitie</th>
+                                            <th>Špička</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="week-tbody"></tbody>
+                                </table>
+                            </div>
+                        </section>
+                        <!-- Rebríček dní: prehľad karty 7 dní na mobile. Musí ostať posledným .week-block
                          v mriežke - desktop umiestňuje bloky cez .week-block:nth-child(1..4) v style.css
                          a nový blok pred nimi by to poradie posunul. Na širokej obrazovke sa nekreslí,
                          tam je na prehľad miesta dosť na bubliny aj tabuľku vyššie. -->
-                    <section class="week-block hidden" id="week-block-list">
-                        <!-- Súčet za týždeň má vlastnú bublinu nad dňami: je to súhrn zoznamu, nie jeho
+                        <section class="week-block hidden" id="week-block-list">
+                            <!-- Súčet za týždeň má vlastnú bublinu nad dňami: je to súhrn zoznamu, nie jeho
                              ôsmy riadok. Je to tlačidlo - otvára detail týždňa rovnako ako bublina
                              "7 dní spolu" na širokej obrazovke. -->
-                        <button type="button" class="week-list-hero" data-week-detail>
-                            <span class="week-list-sum">
-                                <span class="lbl">Spolu za 7 dní</span>
-                                <span class="stat-num-row"><span class="num" id="week-list-total">–</span><span class="u">kWh</span></span>
-                            </span>
-                            <span class="week-list-avg">ø <b id="week-list-avg">–</b> / deň</span>
-                            <!-- Týždeň v malom, ozdoba súčtu; čítačka ho preskočí - tie isté čísla povie riadok dňa. -->
-                            <span class="week-list-spark hidden" id="week-list-spark" aria-hidden="true"></span>
-                        </button>
-                        <div class="week-list" id="week-list"></div>
-                        <!-- Legenda pásu dňa: zelené úseky sú okná na veľké spotrebiče, to isté
+                            <button type="button" class="week-list-hero" data-week-detail>
+                                <span class="week-list-sum">
+                                    <span class="lbl">Spolu za 7 dní</span>
+                                    <span class="stat-num-row"
+                                        ><span class="num" id="week-list-total">–</span><span class="u">kWh</span></span
+                                    >
+                                </span>
+                                <span class="week-list-avg">ø <b id="week-list-avg">–</b> / deň</span>
+                                <!-- Týždeň v malom, ozdoba súčtu; čítačka ho preskočí - tie isté čísla povie riadok dňa. -->
+                                <span class="week-list-spark hidden" id="week-list-spark" aria-hidden="true"></span>
+                            </button>
+                            <div class="week-list" id="week-list"></div>
+                            <!-- Legenda pásu dňa: zelené úseky sú okná na veľké spotrebiče, to isté
                              ako v karte 7 dní novej appky (sunWindows v shared/sedem-dni.js).
                              Zelená linka podčiarkuje výkon najlepšieho dňa (bestDayIndex). -->
-                        <div class="week-legend">
-                            <span><i class="tier-green"></i>kedy pustiť veľké spotrebiče</span>
-                            <span><i class="best-line"></i>najlepší deň týždňa</span>
+                            <div class="week-legend">
+                                <span><i class="tier-green"></i>kedy pustiť veľké spotrebiče</span>
+                                <span><i class="best-line"></i>najlepší deň týždňa</span>
+                            </div>
+                        </section>
+                        <div class="msg-block" id="week-msg-block">
+                            <span class="msg-eyebrow">Odporúčanie</span>
+                            <h3 id="week-msg-title">Načítavam…</h3>
+                            <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
                         </div>
-                    </section>
-                    <div class="msg-block" id="week-msg-block">
-                        <span class="msg-eyebrow">Odporúčanie</span>
-                        <h3 id="week-msg-title">Načítavam…</h3>
-                        <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
                     </div>
+                    <!-- Susedné dni pod detailom dňa („‹ Streda 41 kWh“). Obsah skladá render (renderDaySteps). -->
+                    <div class="day-steps hidden" id="week-day-steps"></div>
                 </div>
-                <!-- Susedné dni pod detailom dňa („‹ Streda 41 kWh“). Stoja mimo #week-grid, ktorý sa pri
-                     listovaní prisúva - majú stáť. Obsah skladá render (renderDaySteps). -->
-                <div class="day-steps hidden" id="week-day-steps"></div>
+                <!-- Po prelistovaní dňa ho ohlási čítačka. Mimo pásu, aby ho nekopírovali susedné dni. -->
+                <p class="sr-only" id="week-day-live" aria-live="polite"></p>
             </section>
 
             <!-- PANEL: ŠTATISTIKA -->
