@@ -35,41 +35,6 @@ export function forecastChartSvg(m) {
     return out;
 }
 
-/**
- * Časová os dňa (detail dňa na mobile): okno na veľké spotrebiče ako jemná plocha, riadok
- * heatmapy dňa (tie isté bunky ako v heatmape týždňa), mriežka a plocha oblačnosti, pás
- * spotrebičov s popismi, časová os a „teraz“. @param {NonNullable<ReturnType<typeof import('../shared/chart-model.js').dayTimelineModel>>} m
- */
-export function dayTimelineSvg(m) {
-    const { dims } = m;
-    const right = dims.w - dims.padR;
-    let out = m.wash.map((w) => `<rect class="tl-wash" x="${n(w.x)}" y="${n(w.y)}" width="${n(w.w)}" height="${n(w.h)}" rx="6"/>`).join('');
-    for (const c of m.cells)
-        out += `<rect class="${heatClass(c)}" x="${n(c.x)}" y="${m.heatY}" width="${n(c.w)}" height="${m.heatH}" rx="3" fill-opacity="${heatOpacity(c)}"/>`;
-    for (const g of m.gridY) {
-        out += `<line class="grid" x1="${dims.padL}" y1="${n(g.y)}" x2="${right}" y2="${n(g.y)}"/>`;
-        out += `<text class="axis-label" x="${right + 5}" y="${n(g.y + 3)}">${g.label}</text>`;
-    }
-    out += `<text class="axis-label" x="${right + 5}" y="${dims.padT - 13}">%</text>`;
-    if (m.area) {
-        const d = smoothPath(m.line);
-        out += `<path class="tl-area" d="${d} L ${n(m.area.last)} ${n(m.area.base)} L ${n(m.area.first)} ${n(m.area.base)} Z"/>`;
-        out += `<path class="tl-cloud" d="${d}"/>`;
-    }
-    for (const f of m.fit) {
-        out += `<rect class="tl-fit ${f.level}" x="${n(f.x)}" y="${n(m.fitY)}" width="${n(f.w)}" height="${m.fitH}" rx="4"/>`;
-        if (f.label)
-            out += `<text class="tl-fit-label ${f.level}" x="${n(f.x + f.w / 2)}" y="${n(m.labelY)}" text-anchor="middle">${escapeHtml(f.label)}</text>`;
-    }
-    for (const g of m.gridX) out += `<text class="axis-label" x="${n(g.x)}" y="${m.axisY}" text-anchor="${g.anchor}">${g.label}</text>`;
-    if (m.nowX !== null) {
-        out += `<line class="tl-now" x1="${n(m.nowX)}" y1="${m.heatY - 2}" x2="${n(m.nowX)}" y2="${n(m.fitY + m.fitH + 2)}"/>`;
-        out += `<rect class="tl-now-pill" x="${n(m.nowX - 19)}" y="0" width="38" height="15" rx="4"/>`;
-        out += `<text class="tl-now-text" x="${n(m.nowX)}" y="11" text-anchor="middle">${m.nowText}</text>`;
-    }
-    return out;
-}
-
 /** Denný prstenec: plán dňa (alebo rozvrh tarify) ako oblúky po obvode.
  * @param {ReturnType<typeof import('../shared/chart-model.js').dayRingModel>} m */
 export function dayRingSvg(m) {
@@ -85,7 +50,7 @@ export function dayRingSvg(m) {
 /** @param {{ title: string, text: string } | null} tip */
 const tipAttrs = (tip) => (tip ? ` data-tip-title="${escapeHtml(tip.title)}" data-tip="${escapeHtml(tip.text)}"` : '');
 
-/** Bunka heatmapy - v heatmape týždňa aj v riadku dňa na časovej osi. Farba je pásmo výkonu,
+/** Bunka heatmapy týždňa. Farba je pásmo výkonu,
  * sýtosť podiel z maxima; prázdna hodina je len naznačená. @param {{ tier: string | null, frac: number }} c */
 const heatClass = (c) => `heat-cell${c.tier ? ` tier-${c.tier}` : ''}`;
 /** @param {{ tier: string | null, frac: number }} c */

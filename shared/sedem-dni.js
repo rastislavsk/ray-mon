@@ -196,6 +196,17 @@ export function sedemDayModel(input, index, voice = 'drzy') {
 }
 
 /**
+ * Graf dňa v detaile dňa na karte 7 dní oboch appiek - ten istý ako v sedemDayModel, pri dnešku
+ * s nameranou krivkou a „teraz“.
+ * @param {SedemData} input @param {number} index deň v `forecast.days`
+ */
+export function sedemDayChart(input, index) {
+    const day = input.forecast.days[index];
+    const nowMin = isToday(input, day) ? localMinutes(input.now, input.site.timezone) : null;
+    return chartOf(input, day, forecastDayPlan(input, index), nowMin);
+}
+
+/**
  * Graf dňa z kroku 3 (day-chart.js): predpoveď dňa, pri dnešku nameraná krivka a „teraz“,
  * hranica veľkých spotrebičov, pás plánu s legendou a popis pre čítačku.
  * @param {SedemData} input @param {ForecastDay} day @param {import('./day-plan.js').PlanSlot[]} plan @param {number | null} nowMin

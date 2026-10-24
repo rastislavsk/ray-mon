@@ -157,90 +157,9 @@ export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) 
 }
 
 /**
- * Plátno časovej osi dňa (detail dňa na karte 7 dní na mobile). Odhora: štítok „teraz“, riadok
- * heatmapy dňa (výroba po hodinách), krivka oblačnosti, pás spotrebičov, jeho popisy a časová
- * os. Oblačnosť zaberá presne plochu medzi `padT` a `h - padB` (0 až 100 %), takže tooltip
- * (chartTooltipModel) počíta hodinu tou istou mierkou ako pri krivke.
- */
-export const TIMELINE = {
-    dims: { w: 320, h: 206, padL: 2, padR: 24, padT: 50, padB: 64, hourStep: 3, xLabelGap: 0, yAxis: false },
-    heatY: 20,
-    heatH: 18,
-    fitGap: 8,
-    fitH: 10,
-    gap: 2,
-};
-
-/**
- * Model časovej osi dňa: bunka heatmapy na hodinu (tá istá farba a mierka ako riadok dňa
- * v heatmape týždňa, `heatMax` je jej maximum - weekHeatMax), oblačnosť ako plocha s čiarou,
- * pri dnešku „teraz“, pod tým pás spotrebičov z plánu dňa (`segments`, fitSegments
- * v shared/day-plan.js) a zelené okno ako jemná plocha cez všetky pásy. Popis úseku pásu
- * dodá `label` (fitLabel v shared/messages-core.js) podľa šírky úseku.
- * @param {{ pts: import('./solar.js').DayHourPoint[], nowHour?: number | null, heatMax: number,
- *   segments: Array<{ from: number, to: number, level: import('./day-plan.js').FitLevel }>,
- *   label: (seg: { from: number, to: number, level: import('./day-plan.js').FitLevel }, widthPx: number) => string }} input
- */
-export function dayTimelineModel({ pts, nowHour = null, heatMax, segments, label }) {
-    const T = TIMELINE;
-    const dims = T.dims;
-    const { min: hMin, max: hMax } = HOUR_RANGE;
-    const visible = visibleHours(pts);
-    if (!visible.length) return null;
-    const maxKw = Math.max(...visible.map((p) => p.kw), 0.5);
-    const { scale, ...frame } = hourFrame(dims, maxKw, [], nowHour);
-    /** Úsek v hodinách orezaný na produkčné okno, s medzerou T.gap medzi susedmi. @param {number} a @param {number} b */
-    const span = (a, b) => {
-        const x = scale.x(Math.max(a, hMin));
-        const w = scale.x(Math.min(b, hMax)) - x;
-        return { x: x + T.gap / 2, w: w - T.gap };
-    };
-    const cells = visible
-        .map((p) => {
-            const frac = p.kw / heatMax;
-            return { ...span(p.hour - 0.5, p.hour + 0.5), frac, tier: frac <= 0.02 ? null : heatBand(frac) };
-        })
-        .filter((c) => c.w > 0);
-    const base = scale.yPct(0);
-    const fitY = base + T.fitGap;
-    const fit = segments
-        .map((seg) => {
-            const g = span(seg.from / 60, seg.to / 60);
-            return { ...g, level: seg.level, label: g.w > 0 ? label(seg, g.w) : '' };
-        })
-        .filter((s) => s.w > 0);
-    const cloudOk = visible.every((p) => Number.isFinite(p.cloud));
-    const line = cloudOk ? visible.map((p) => ({ x: scale.x(p.hour), y: scale.yPct(/** @type {number} */ (p.cloud)) })) : [];
-    const top = T.heatY - 4;
-    return {
-        ...frame,
-        kind: /** @type {const} */ ('timeline'),
-        dims,
-        maxKw,
-        pts: visible,
-        // Tooltip sa pýta, či oblačnosť je, a bod kreslí na nej (chartTooltipModel).
-        cloud: cloudOk ? line : null,
-        cells,
-        heatMax,
-        heatY: T.heatY,
-        heatH: T.heatH,
-        line,
-        area: line.length ? { base, first: line[0].x, last: line[line.length - 1].x } : null,
-        gridY: [0, 50, 100].map((pct) => ({ y: scale.yPct(pct), label: String(pct) })),
-        fit,
-        fitY,
-        fitH: T.fitH,
-        labelY: fitY + T.fitH + 15,
-        axisY: dims.h - 4,
-        wash: fit.filter((s) => s.level === 'go').map((s) => ({ x: s.x, w: s.w, y: top, h: fitY + T.fitH + 4 - top })),
-        nowText: nowHour === null ? '' : hourFloatToTimeStr(nowHour),
-    };
-}
-
-/**
  * Tooltip nad krivkou: pre relatívnu polohu kurzora (0-1 šírky plátna) vráti čas,
  * výkon, oblačnosť, prípadne bezoblačný strop a polohu bodu v % plátna.
- * @param {{ kind: 'curve' | 'timeline', dims: Dims, maxKw: number, pts: HourPoint[], cloud: unknown[] | null }} model krivka aj časová os dňa
+ * @param {{ dims: Dims, maxKw: number, pts: HourPoint[], cloud: unknown[] | null }} model krivka
  * @param {number} relX
  */
 export function chartTooltipModel(model, relX) {
@@ -254,8 +173,7 @@ export function chartTooltipModel(model, relX) {
         kw,
         cloud: hasCloud ? Math.round(interpolate(model.pts, hour, 'cloud')) : null,
         clearKw: hasClear ? interpolate(model.pts, hour, 'clearKw') : null,
-        // Časová os dňa kreslí oblačnosť, krivka výrobu - bod tooltipu sedí na tom, čo vidno.
-        yFrac: (model.kind === 'timeline' && hasCloud ? scale.yPct(interpolate(model.pts, hour, 'cloud')) : scale.y(kw)) / model.dims.h,
+        yFrac: scale.y(kw) / model.dims.h,
     };
 }
 
