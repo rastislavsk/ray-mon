@@ -973,9 +973,7 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom, oblačnosť a okno', async ({
-        page,
-    }) => {
+    test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
         await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(24);
         await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
@@ -984,10 +982,10 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
         await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
         await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
-        await expect(page.locator('#tz-chart .dc-win-t')).toHaveText('Zapni veľké · 9–17:30');
+        await expect(page.locator('#tz-chart .dc-win-t')).toHaveCount(0);
         await expect(page.locator('#tz-legend span')).toHaveText([
             'výkon',
-            'veľké spotrebiče',
+            'predpoveď',
             'oblačnosť',
             'slnko stačí',
             'lacná sieť',

@@ -188,7 +188,7 @@ export function sedemDayModel(input, index, voice = 'drzy') {
             { value: Number.isFinite(day.peakKw) ? fmt1(day.peakKw) : '–', label: SEDEM_TEXTS.kwPeak },
             sedemWindowTile(mainWindow(windows)),
         ],
-        chart: chartOf(input, day, plan, nowMin, voice),
+        chart: chartOf(input, day, plan, nowMin),
         done: nowMin === null ? '' : todayCard(input, plan, nowMin).line,
         clear: sedemClearText(day.clearKwhTotal, usePct(day)),
         message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0, voice),
@@ -199,9 +199,8 @@ export function sedemDayModel(input, index, voice = 'drzy') {
  * Graf dňa z kroku 3 (day-chart.js): predpoveď dňa, pri dnešku nameraná krivka a „teraz“,
  * hranica veľkých spotrebičov, pás plánu s legendou a popis pre čítačku.
  * @param {SedemData} input @param {ForecastDay} day @param {import('./day-plan.js').PlanSlot[]} plan @param {number | null} nowMin
- * @param {import('./messages.js').Voice} voice
  */
-function chartOf(input, day, plan, nowMin, voice) {
+function chartOf(input, day, plan, nowMin) {
     const curve = nowMin !== null && input.pv ? input.pv.realCurveToday : [];
     const hourly = nowMin !== null ? input.forecast.hourlyToday : day.hourly;
     const nowKw = nowMin === null ? NaN : dayKwAt(nowMin, curve, hourly, nowMin);
@@ -218,7 +217,6 @@ function chartOf(input, day, plan, nowMin, voice) {
             limitKw: powerThresholds(input.plant).lowKw,
             limitText: voiceTexts().TERAZ_TEXTS.limit,
             preview: null,
-            voice,
         }),
         legend: chartLegend(planCells(plan)),
         desc: dayChartText({

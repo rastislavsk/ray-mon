@@ -279,7 +279,7 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     await expect(page.locator('#tz-sub')).toHaveText(m.sub);
     await expect(page.locator('#tz-retry')).toBeHidden();
     // Graf dňa: oblačnosť po hodinách, predpoveď, nameraná krivka, plocha nad hranicou, hranica
-    // s popiskom, os kW, pás plánu po polhodinách, okno pod ním a čiara na „teraz“ s časom.
+    // s popiskom, os kW, pás plánu po polhodinách a čiara na „teraz“ s časom.
     await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(m.chart.clouds.length);
     await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
@@ -288,7 +288,6 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     await expect(page.locator('#tz-chart .dc-y:not(.dc-unit)')).toHaveText(m.chart.grid.map((g) => g.label));
     await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
     await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
-    await expect(page.locator('#tz-chart .dc-win-t')).toHaveText(m.chart.windowLabel?.text ?? '');
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('13:00');
     await expect(page.locator('#tz-legend span')).toHaveText(m.chart.legend.map((l) => l.text));
     await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart.valueText);

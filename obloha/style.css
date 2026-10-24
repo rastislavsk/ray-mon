@@ -802,10 +802,10 @@ button.live[aria-expanded='true'] {
     width: 100%;
     height: auto;
 }
-/* Oblačnosť po hodinách nad krivkou: sýtosť bunky (fill-opacity) je oblačnosť, bunka pod čiarou
-   náhľadu má okraj. */
+/* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
+   web/day-chart.js), bunka pod čiarou náhľadu má okraj. */
 .dc-cloud {
-    fill: #fff;
+    fill: color-mix(in srgb, #4d5560 var(--c), #fff);
 }
 .dc-cloud-on {
     stroke: #fff;
@@ -814,12 +814,9 @@ button.live[aria-expanded='true'] {
 .dc-grid {
     stroke: rgba(255, 255, 255, 0.16);
 }
-/* Plocha pod krivkou dňa: sýta nad hranicou veľkých spotrebičov (slnko navyše na ne), jemná pod ňou. */
+/* Plocha pod krivkou dňa len nad hranicou veľkých spotrebičov (slnko navyše na ne). */
 .dc-over {
     fill: rgba(185, 242, 140, 0.5);
-}
-.dc-under {
-    fill: rgba(185, 242, 140, 0.12);
 }
 /* Predpoveď prerušovaná, nameraná krivka dneška plná - obe zelené: zelená v grafe je len slnko. */
 .dc-fc {
@@ -836,14 +833,8 @@ button.live[aria-expanded='true'] {
     stroke-linejoin: round;
     stroke-linecap: round;
 }
-/* Zátvorka okna na veľké spotrebiče pod pásom plánu. */
-.dc-win {
-    fill: none;
-    stroke: var(--yes);
-    stroke-width: 1.5;
-}
 .dc-limit {
-    stroke: rgba(185, 242, 140, 0.8);
+    stroke: #fff;
     stroke-dasharray: 3 4;
 }
 /* Popisky grafu sú HTML nad SVG: graf sa s oknom zväčšuje, písmo nie - na každej šírke má tú istú
@@ -874,13 +865,6 @@ button.live[aria-expanded='true'] {
 }
 .dc-unit {
     font-size: 10px;
-}
-/* Nápis okna pod zátvorkou, vystredený na nej; polohu dáva render. */
-.dc-win-t {
-    color: #fff;
-    font-size: 13px;
-    font-weight: 700;
-    transform: translateX(-50%);
 }
 /* Nápis hranice: spodkom tesne nad svojím miestom (čiara, alebo voľné miesto nad krivkou),
    zarovnaný k nemu začiatkom alebo koncom. Na grafe širokom aspoň 448 px (wideScale 1,4 v
@@ -972,20 +956,20 @@ button.live[aria-expanded='true'] {
 .legend [data-tone='costly']::before {
     background: var(--costly);
 }
-/* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, hranica bodkovane, oblačnosť od jasna po zamračené. */
+/* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, predpoveď prerušovane, oblačnosť od jasna po zamračené. */
 .legend [data-tone='power']::before {
     height: 2.5px;
     background: var(--yes);
 }
-.legend [data-tone='limit']::before {
+.legend [data-tone='forecast']::before {
     height: 0;
-    border-top: 2px dotted rgba(185, 242, 140, 0.85);
+    border-top: 2px dashed rgba(185, 242, 140, 0.6);
     border-radius: 0;
     background: none;
 }
 .legend [data-tone='cloud']::before {
     width: 22px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), #fff);
+    background: linear-gradient(90deg, #fff, #4d5560);
 }
 .hint {
     display: flex;

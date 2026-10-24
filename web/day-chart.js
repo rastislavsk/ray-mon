@@ -29,17 +29,14 @@ const spotVars = (key, s) => `--${key}x:${pctX(s.x)};--${key}y:${pctY(s.y)};--${
 /** Vodorovná poloha nápisu so šírkou `w` px vystredeného na `x`, no celého v grafe (CSS clamp). @param {number} x @param {number} w */
 const clampX = (x, w) => `clamp(${w / 2 + 2}px, ${pctX(x)}, calc(100% - ${w / 2 + 2}px))`;
 
-/**
- * Sýtosť bunky oblačnosti: jasno je len naznačené, ale viditeľné (riadok tam je), zamračené takmer plné.
- * @param {number} pct
- */
-const cloudOpacity = (pct) => r2(0.12 + (Math.min(100, Math.max(0, pct)) / 100) * 0.8);
+/** Oblačnosť bunky v % pre style.css (`--c`): jasno svetlé, zamračené tmavosivé. @param {number} pct */
+const cloudPct = (pct) => `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
 
 /**
  * Popisky nad SVG: čísla osi kW, hodiny pod pásom plánu, nápis hranice veľkých spotrebičov tam, kde
  * ho model položil (spodkom na `y`, zarovnaný začiatkom alebo koncom; na úzkom a na širokom grafe
- * inde - vyberá style.css podľa šírky grafu), čas náhľadu (alebo „teraz“) spodkom nad riadkom
- * oblačnosti a nápis okna pod zátvorkou, oba vystredené, no celé v grafe.
+ * inde - vyberá style.css podľa šírky grafu) a čas náhľadu (alebo „teraz“) spodkom nad riadkom
+ * oblačnosti, vystredený, no celý v grafe.
  * @param {Chart} c
  */
 function labelsHtml(c) {
@@ -56,15 +53,12 @@ function labelsHtml(c) {
     const time = m
         ? `<span class="dc-at-t" style="left:${clampX(m.x, m.label.w)};top:${pctY(MARK_TOP)}">${escapeHtml(m.label.text)}</span>`
         : '';
-    const w = c.windowLabel;
-    const win = w ? `<span class="dc-win-t" style="left:${clampX(w.x, w.w)};top:${pctY(C.winY + 3)}">${escapeHtml(w.text)}</span>` : '';
-    return axis + ticks + limit + time + win;
+    return axis + ticks + limit + time;
 }
 
 /**
- * Odhora: oblačnosť po hodinách, mriežka osi kW, plocha pod krivkou dňa (sýta nad hranicou veľkých
- * spotrebičov, jemná pod ňou), hranica, predpoveď (prerušovaná) a meranie (plná čiara), pás plánu,
- * zátvorky okna na veľké spotrebiče, „teraz“ (len pri dnešku: bod na krivke a stlmené bunky pásu,
+ * Odhora: oblačnosť po hodinách, mriežka osi kW, plocha pod krivkou dňa nad hranicou veľkých
+ * spotrebičov, hranica, predpoveď (prerušovaná) a meranie (plná čiara), pás plánu, „teraz“ (len pri dnešku: bod na krivke a stlmené bunky pásu,
  * ktoré už prešli) a čiara náhľadu, nad tým popisky. Farby sú v style.css appky; pás podľa
  * `data-tone`, `data-from` nesie začiatok bunky (minúta dňa).
  * @param {Chart} c
@@ -75,7 +69,7 @@ export function dayChartHtml(c) {
     const clouds = c.clouds
         .map(
             (b) =>
-                `<rect x="${b.x}" y="${C.cloudY}" width="${b.w}" height="${C.cloudH}" rx="2.5" fill-opacity="${cloudOpacity(b.cloud)}"` +
+                `<rect x="${b.x}" y="${C.cloudY}" width="${b.w}" height="${C.cloudH}" rx="2.5" style="--c:${cloudPct(b.cloud)}"` +
                 ` class="dc-cloud${m && m.hour === b.hour ? ' dc-cloud-on' : ''}" data-hour="${b.hour}"/>`,
         )
         .join('');
@@ -86,14 +80,6 @@ export function dayChartHtml(c) {
                 `<rect x="${b.x}" y="${C.bandY}" width="${b.w}" height="${C.bandH}" rx="2" data-tone="${b.tone}" data-from="${b.from}"` +
                 `${b.past ? ' class="dc-past"' : ''}/>`,
         )
-        .join('');
-    // Zátvorka nad každým oknom: vodorovná čiara s krátkymi nožičkami hore k pásu.
-    const windows = c.windows
-        .map((w) => {
-            const a = r2(w.x0 + 1);
-            const b = r2(w.x1 - 1);
-            return `<path d="M${a} ${C.winY - 3} L${a} ${C.winY} L${b} ${C.winY} L${b} ${C.winY - 3}" class="dc-win"/>`;
-        })
         .join('');
     const dot = (/** @type {number | null} */ y, /** @type {number} */ x, /** @type {number} */ r, /** @type {string} */ cls) =>
         y === null ? '' : `<circle cx="${x}" cy="${y}" r="${r}" class="${cls}"/>`;
@@ -112,13 +98,11 @@ export function dayChartHtml(c) {
         `<svg class="dc" viewBox="0 0 ${C.w} ${C.h}">` +
         clouds +
         grid +
-        (c.under ? `<path d="${c.under}" class="dc-under"/>` : '') +
         (c.over ? `<path d="${c.over}" class="dc-over"/>` : '') +
         `<line x1="${C.left}" x2="${C.right}" y1="${c.limitY}" y2="${c.limitY}" class="dc-limit"/>` +
         (c.forecast ? `<path d="${c.forecast}" class="dc-fc"/>` : '') +
         (c.real ? `<path d="${c.real}" class="dc-real"/>` : '') +
         cells +
-        windows +
         mark +
         now +
         '</svg>' +
