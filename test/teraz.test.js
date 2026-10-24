@@ -159,15 +159,14 @@ test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť
         .map((p) => Number(p.split(' ')[0]));
     assert.equal(Math.max(...realXs), Math.round(chartX(hm(11)) * 10) / 10);
     assert.ok(m.limitY > DAY_CHART.top && m.limitY < DAY_CHART.base);
-    // Plocha pod krivkou dňa: nad hranicou aj pod ňou, sýta časť nikdy pod čiarou.
+    // Plocha pod krivkou dňa len nad hranicou, nikdy pod čiarou.
     const ys = (/** @type {string} */ d) => [...d.matchAll(/ (-?[0-9.]+)(?= L|Z)/g)].map((x) => Number(x[1]));
-    assert.ok(m.over && m.under);
+    assert.ok(m.over);
     assert.ok(ys(m.over).every((y) => y <= m.limitY));
-    assert.ok(ys(m.under).every((y) => y >= m.limitY));
-    // Os kW: okrúhly krok, horná čiara je vrch stupnice tesne nad špičkou (7,9 kW).
+    // Os kW: pevne do 10 kW, nech sa dni dajú porovnať.
     assert.deepEqual(
         m.grid.map((g) => g.label),
-        ['0', '2', '4', '6', '8'],
+        ['0', '2,5', '5', '7,5', '10'],
     );
     assert.equal(m.grid[0].y, DAY_CHART.base);
     assert.equal(m.grid[m.grid.length - 1].y, DAY_CHART.top);
@@ -194,12 +193,6 @@ test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť
         m.ticks.map((t) => t.label),
         ['0', '6', '12', '18', '24'],
     );
-    // Okno na veľké spotrebiče: tam, kde slnko stačí (pás „slnko stačí“), s nápisom ako v 7 dňoch.
-    assert.deepEqual(
-        m.windows.map((w) => [w.from, w.to]),
-        [[hm(9), hm(17, 30)]],
-    );
-    assert.equal(m.windowLabel?.text, 'Zapni veľké · 9–17:30');
     assert.equal(m.now.x, Math.round(chartX(hm(13)) * 10) / 10);
     assert.ok(m.now.y !== null && m.now.y < DAY_CHART.base);
     // Bez náhľadu stojí čiara na „teraz“ s jeho časom.
@@ -227,7 +220,6 @@ test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť
     assert.equal(empty.forecast, '');
     assert.equal(empty.real, '');
     assert.equal(empty.over, '');
-    assert.equal(empty.under, '');
     assert.deepEqual(empty.clouds, []);
     assert.equal(empty.now.y, null);
 });
@@ -403,7 +395,7 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
     assert.deepEqual(m.hint, { text: TERAZ_TEXTS.hint, reset: false });
     assert.deepEqual(
         m.chart.legend.map((l) => l.text),
-        [DAY_CHART_KEYS.power, TERAZ_TEXTS.limit, DAY_CHART_KEYS.cloud, TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
+        [DAY_CHART_KEYS.power, DAY_CHART_KEYS.forecast, DAY_CHART_KEYS.cloud, TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
     );
     assert.match(m.chart.desc, /^Výroba počas dňa\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
 });
