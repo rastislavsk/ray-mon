@@ -150,9 +150,6 @@
     /* Časová os detailu dňa. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu.
        Rad prešiel kontrolou farbosleposti a kontrastu voči --card-bg (lightness monotónna,
        krok >= 0,06, svetlý koniec >= 2:1) - pri zmene ho treba overiť znova. */
-    --fit-grid: #4a4e47;
-    --fit-part: #6f9a4c;
-    --fit-go: var(--green);
     /* Tmavé písmo a čiary na plnej farbe (karta Môžem?, plagát súhrnu). Číta ho aj obrázok
        pre story (web/share-image.js), rovnako ako farby vyššie. */
     --ink-on-color: #0b0b0b;
@@ -1447,53 +1444,6 @@ b {
     stroke: var(--bg);
     stroke-width: 2;
 }
-/* Detail dňa na mobile: časová os dňa (dayTimelineSvg vo web/svg.js). Odhora riadok heatmapy
-   dňa (.heat-cell, tie isté farby ako heatmapa týždňa), oblačnosť, pás spotrebičov a os; zelené
-   okno je jemná plocha cez všetky pásy. Oblačnosť je sivá krivka s vlasovými čiarami. */
-.tl-wash {
-    fill: rgba(var(--green-rgb), 0.07);
-}
-.tl-area {
-    fill: rgba(var(--grey-rgb), 0.08);
-}
-.tl-cloud {
-    fill: none;
-    stroke: var(--ink-45);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.tl-fit {
-    fill: var(--fit-grid);
-}
-.tl-fit.part {
-    fill: var(--fit-part);
-}
-.tl-fit.go {
-    fill: var(--fit-go);
-}
-.tl-fit-label {
-    font-family: var(--font-body);
-    font-size: 11.5px;
-    fill: var(--ink-45);
-}
-.tl-fit-label.go {
-    fill: var(--ink);
-    font-weight: 600;
-}
-.tl-now {
-    stroke: var(--ink);
-    stroke-width: 1;
-}
-.tl-now-pill {
-    fill: var(--ink);
-}
-.tl-now-text {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 600;
-    fill: var(--ink-on-color);
-}
 #week-block-curve .axis-label {
     font-size: 10px;
 }
@@ -1829,39 +1779,15 @@ b {
     font-weight: 500;
     color: var(--ink-45);
 }
-/* Legenda: krivka a časová os majú každá svoju (viď index.html), platí tá, ktorá sa kreslí.
-   Stupnica heatmapy v hlavičke patrí len časovej osi. */
-#panel-7dni.detail .leg-curve,
-#panel-7dni:not(.detail) .leg-tl,
-#panel-7dni:not(.detail) #week-curve-scale {
+/* Detail dňa na mobile má graf dňa (ako karta Terazky), ostatné pohľady krivku s jej legendou. */
+#panel-7dni.detail #week-block-curve .chart-card,
+#panel-7dni.detail #week-block-curve .chart-footer,
+#panel-7dni:not(.detail) #week-day-chart,
+#panel-7dni:not(.detail) #week-day-legend {
     display: none;
-}
-.leg-line-fc {
-    width: 14px;
-    height: 0;
-    border-top: 2px solid var(--ink-45);
-    display: inline-block;
-}
-.leg-fit {
-    width: 12px;
-    height: 8px;
-    border-radius: 2px;
-    display: inline-block;
-    background: var(--fit-grid);
-}
-.leg-fit.part {
-    background: var(--fit-part);
-}
-.leg-fit.go {
-    background: var(--fit-go);
 }
 #panel-7dni.detail .chart-top {
     margin-bottom: var(--sp-2);
-}
-#panel-7dni.detail .chart-legend {
-    font-family: var(--font-body);
-    font-size: 11.5px;
-    color: var(--ink-70);
 }
 /* Okno na veľké spotrebiče nad grafom (renderDayWindow vo web/render/sedemdni.js). */
 .day-window {

@@ -2,13 +2,12 @@
 // doménovou logikou (shared/), takže test chytí rozdiel medzi modelom a tým, čo je v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { bestDayIndex, dayTimelineModel, RING, usePct, weekDayTiers, weekHeatMax, weekHeatModel } from '../../shared/chart-model.js';
+import { bestDayIndex, RING, usePct, weekDayTiers } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     APP_URL,
     installedKw,
     PLANT,
-    powerThresholds,
     DAYLOG_STORAGE_KEY,
     OLD_STORAGE_KEYS,
     SETTINGS_STORAGE_KEY,
@@ -28,11 +27,11 @@ import {
     SHARE_LINK_VERSION,
 } from '../../shared/config.js';
 import * as config from '../../shared/config.js';
-import { dayPlan, fitSegments, forecastDayPlan } from '../../shared/day-plan.js';
+import { dayPlan, forecastDayPlan } from '../../shared/day-plan.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
-import { mainWindow, sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong } from '../../shared/format.js';
@@ -43,7 +42,7 @@ import { statsModel } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
-import { dayWindowCard, fitLabel, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
+import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
@@ -534,7 +533,7 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-list .wday.best')).toHaveCount(1);
     await expect(page.locator('#week-list .wday.best')).toHaveAttribute('data-day-index', String(bestDayIndex(forecast.days)));
 
-    // Klik na deň otvorí jeho detail: okno na veľké spotrebiče, časovú os dňa a tri čísla.
+    // Klik na deň otvorí jeho detail: okno na veľké spotrebiče, graf dňa a tri čísla.
     await page.locator('#week-list [data-day-index="5"]').click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
     await expect(page.locator('#week-block-list')).toBeHidden();
@@ -553,26 +552,19 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(den5.kwhTotal)} kWh`);
     await expect(page.locator('#week-curve-stat .kpi').nth(1)).toHaveText(`Oblačnosť${Math.round(Number(den5.cloudAvgPct))} %priemer dňa`);
-    // Časová os: hore riadok heatmapy dňa - tie isté farby ako riadok dňa v heatmape týždňa -,
-    // pod ním krivka oblačnosti a pás spotrebičov z plánu dňa s popismi. Očakávanie ráta ten
-    // istý model ako appka.
-    const heatMax = weekHeatMax(forecast.days);
-    const os = dayTimelineModel({ pts: den5.hourly, heatMax, segments: fitSegments(plan5, powerThresholds(PLANT)), label: fitLabel });
-    if (!os) throw new Error('časová os bez modelu');
-    const riadok5 = weekHeatModel(forecast.days, 5).cells.filter((c) => c.dayIndex === 5);
-    expect(await page.locator('#week-curve .heat-cell').evaluateAll((els) => els.map((el) => el.getAttribute('class')))).toEqual(
-        riadok5.map((c) => `heat-cell${c.tier ? ` tier-${c.tier}` : ''}`),
-    );
-    await expect(page.locator('#week-curve path.tl-cloud')).toHaveCount(1);
-    await expect(page.locator('#week-curve-scale')).toBeVisible();
-    await expect(page.locator('#week-curve-scale')).toContainText(`${fmt1(heatMax)} kW`);
-    expect(await page.locator('#week-curve .tl-fit').evaluateAll((els) => els.map((el) => el.getAttribute('class')))).toEqual(
-        os.fit.map((f) => `tl-fit ${f.level}`),
-    );
-    expect(await page.locator('#week-curve .tl-fit-label').allTextContents()).toEqual(os.fit.map((f) => f.label).filter(Boolean));
-    await expect(page.locator('#week-curve .tl-wash')).toHaveCount(os.wash.length);
-    // Iný deň než dnešok nemá „teraz“.
-    await expect(page.locator('#week-curve .tl-now')).toHaveCount(0);
+    // Graf dňa ako na karte Terazky - ten istý ako v detaile dňa novej appky. Očakávanie ráta
+    // ten istý model ako appka; krivka výroby s legendou tu nie je.
+    const graf5 = sedemDayChart(vstup, 5);
+    await expect(page.locator('#week-day-chart .dc-cloud')).toHaveCount(graf5.clouds.length);
+    await expect(page.locator('#week-day-chart rect[data-from]')).toHaveCount(48);
+    await expect(page.locator('#week-day-chart .dc-limit-t')).toHaveText(graf5.limitText);
+    await expect(page.locator('#week-day-chart .dc-y:not(.dc-unit)')).toHaveText(graf5.grid.map((g) => g.label));
+    await expect(page.locator('#week-day-chart')).toHaveAttribute('aria-label', graf5.desc);
+    await expect(page.locator('#week-day-legend span')).toHaveText(graf5.legend.map((l) => l.text));
+    await expect(page.locator('#week-curve')).toBeHidden();
+    // Iný deň než dnešok nemá „teraz“ ani nameranú krivku.
+    await expect(page.locator('#week-day-chart .dc-now-dot')).toHaveCount(0);
+    await expect(page.locator('#week-day-chart .dc-real')).toHaveCount(0);
     // Pod detailom susedné dni: predchádzajúci aj ďalší.
     await expect(page.locator('.day-steps .day-step')).toHaveCount(2);
     await expect(page.locator('.day-steps .day-step.prev')).toHaveAttribute('data-day-index', '4');
@@ -694,20 +686,17 @@ test('7 dní na mobile: bublina so súčtom otvára detail týždňa', async ({ 
 });
 
 /**
- * Detail dňa na mobile je predpoveď: nameranú výrobu nekreslí ani pri dnešku. Dnešok má navyše
- * len „teraz“ na časovej osi a v číslach pod ňou, koľko už nabehlo.
+ * Detail dnešného dňa má v grafe dňa nameranú krivku a „teraz“ (ako karta Terazky), v číslach
+ * pod ním, koľko už nabehlo. Iný deň nič z toho nemá.
  */
-test('7 dní: detail dnešného dňa má „teraz“, nameranú výrobu len v číslach', async ({ page }) => {
+test('7 dní: detail dnešného dňa má „teraz“ a nameranú krivku', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
     await page.locator('#week-list [data-day-index="0"]').click();
-    // Časová os je predpoveď dňa - nameraná krivka v nej nie je, a tak ani v legende.
-    await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
-    await expect(page.locator('#week-curve circle.dot-real')).toHaveCount(0);
-    await expect(page.locator('#week-curve-live-legend')).toBeHidden();
-    // Dnešok má „teraz“ s časom a karta okna počíta s ním.
-    await expect(page.locator('#week-curve .tl-now')).toHaveCount(1);
-    await expect(page.locator('#week-curve .tl-now-text')).toHaveText(minutesToTimeStr(localMinutes(FIXED_NOW, SITE.timezone)));
+    // Dnešok má nameranú krivku a „teraz“ s časom a karta okna počíta s ním.
+    await expect(page.locator('#week-day-chart .dc-real')).toHaveCount(1);
+    await expect(page.locator('#week-day-chart .dc-now-dot')).toHaveCount(1);
+    await expect(page.locator('#week-day-chart .dc-at-t')).toHaveText(minutesToTimeStr(localMinutes(FIXED_NOW, SITE.timezone)));
     const vstup0 = { ...OWNER, now: FIXED_NOW, pv, forecast: forecastAt(FIXED_NOW) };
     const okno0 = dayWindowCard(
         mainWindow(sunWindows(forecastDayPlan(vstup0, 0))),
@@ -720,8 +709,8 @@ test('7 dní: detail dnešného dňa má „teraz“, nameranú výrobu len v č
 
     await page.locator('#week-day-back').click();
     await page.locator('#week-list [data-day-index="3"]').click();
-    await expect(page.locator('#week-curve path.line-real')).toHaveCount(0);
-    await expect(page.locator('#week-curve-live-legend')).toBeHidden();
+    await expect(page.locator('#week-day-chart .dc-real')).toHaveCount(0);
+    await expect(page.locator('#week-day-chart .dc-now-dot')).toHaveCount(0);
     await expect(page.locator('#week-curve-stat')).not.toContainText('Zatiaľ');
     expect(errors).toEqual([]);
 });
@@ -1640,12 +1629,23 @@ async function otvorPolozku(page, id) {
     await expect(item).toHaveAttribute('open', '');
 }
 
-/** Graf priebehu dňa je na mobile až v detaile vybraného dňa - otvára sa klikom na riadok
- * rebríčka. @param {import('@playwright/test').Page} page @param {number} [den] */
-async function otvorDetailDna(page, den = 0) {
+/** Graf s tooltipom je na mobile v detaile týždňa (denné súčty) - otvára sa klikom na súčet
+ * týždňa. Detail dňa má graf dňa ako karta Terazky, bez tooltipu. @param {import('@playwright/test').Page} page */
+async function otvorDetailTyzdna(page) {
     await page.locator('#nav-7dni').click();
-    await page.locator(`#week-list [data-day-index="${den}"]`).click();
-    await expect(page.locator('#week-curve-wrap')).toBeVisible();
+    await page.locator('.week-list-hero').click();
+    await expect(page.locator('#week-bars-wrap')).toBeVisible();
+}
+
+/** Krivka priebehu dňa s tooltipom: na širokom displeji (dotykový notebook, tablet na šírku) je
+ * na karte 7 dní hneď, bez detailu. Ťuknutie na ňu nič neotvára, takže je vidno len tooltip.
+ * @param {import('@playwright/test').Page} page */
+async function otvorKrivkuNaSirokom(page) {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('#nav-7dni').click();
+    const wrap = page.locator('#week-curve-wrap');
+    await wrap.scrollIntoViewIfNeeded();
+    await expect(wrap).toBeVisible();
 }
 
 test('prechod medzi kartami: smer podľa poradia a nič nepretečie do strán', async ({ page }) => {
@@ -1960,43 +1960,44 @@ test.describe('listovanie kariet prstom', () => {
         expect(errors).toEqual([]);
     });
 
-    test('nad grafom listuje švihnutie, pomalé sledovanie krivky nie', async ({ page }) => {
+    test('nad grafom je švihnutie krok späť, pomalé sledovanie stĺpcov nie', async ({ page }) => {
         const errors = await openApp(page);
-        await otvorDetailDna(page);
+        await otvorDetailTyzdna(page);
 
-        // Ťahaním po krivke sa graf prezerá (tooltip ide za prstom) - to nie je listovanie.
+        // Ťahaním po stĺpcoch sa graf prezerá (tooltip ide za prstom) - to nie je gesto.
         // Tooltip sa sám zatvára po TOOLTIP_HOLD_MS, takže sa pozerá na sledovanú triedu, nie
         // na stav po kontrole karty - na zaťaženom stroji by sa trafila až za ten čas.
-        await sledujTooltip(page, 'week-curve-tooltip');
-        await swipe(page, '#week-curve-wrap', { dx: -120, ms: 500 });
-        expect(await boloVidno(page), 'pomalý ťah po krivke neukázal tooltip').toBe(true);
-        await ocakavajDetailDna(page, 0);
+        await sledujTooltip(page, 'week-bars-tooltip');
+        await swipe(page, '#week-bars-wrap', { dx: 120, ms: 500 });
+        expect(await boloVidno(page), 'pomalý ťah po stĺpcoch neukázal tooltip').toBe(true);
+        await expect(page.locator('#week-day-title')).toHaveText('Celý týždeň');
 
-        // Rýchle švihnutie ponad ten istý graf prelistuje na ďalší deň a tooltip po sebe
-        // upratá - hodnota pod prstom už patrí inej krivke.
-        await swipe(page, '#week-curve-wrap', { dx: -120 });
-        await ocakavajDetailDna(page, 1);
-        await expect(page.locator('#week-curve-tooltip')).not.toHaveClass(/visible/);
+        // Rýchle švihnutie doprava ponad ten istý graf vráti do prehľadu dní a tooltip po sebe
+        // upratá.
+        await swipe(page, '#week-bars-wrap', { dx: 120 });
+        await expect(page.locator('#week-day-head')).toBeHidden();
+        await expect(page.locator('#week-bars-tooltip')).not.toHaveClass(/visible/);
         expect(errors).toEqual([]);
     });
 
     test('pri švihnutí ponad graf tooltip ani neprebliskne, ťuknutie ho ukáže', async ({ page }) => {
         const errors = await openApp(page);
-        await otvorDetailDna(page);
+        await otvorDetailTyzdna(page);
 
-        await sledujTooltip(page, 'week-curve-tooltip');
-        await swipe(page, '#week-curve-wrap', { dx: -120 });
-        await ocakavajDetailDna(page, 1);
+        await sledujTooltip(page, 'week-bars-tooltip');
+        await swipe(page, '#week-bars-wrap', { dx: 120 });
+        await expect(page.locator('#week-day-head')).toBeHidden();
         expect(await boloVidno(page), 'tooltip preblikol počas švihnutia').toBe(false);
 
         // Ťuknutie na graf ho naopak ukázať musí - inak by sa hodnota nedala prečítať.
         // Aj tu sa pozerá na sledovanú triedu, nie na stav po chvíli: tooltip sa sám zatvára
         // po TOOLTIP_HOLD_MS a na zaťaženom stroji by sa kontrola trafila až za ten čas.
-        await otvorDetailDna(page);
-        await sledujTooltip(page, 'week-curve-tooltip');
-        await swipe(page, '#week-curve-wrap', { dx: 0 });
+        await page.locator('.week-list-hero').click();
+        await expect(page.locator('#week-bars-wrap')).toBeVisible();
+        await sledujTooltip(page, 'week-bars-tooltip');
+        await swipe(page, '#week-bars-wrap', { dx: 0 });
         expect(await boloVidno(page), 'ťuknutie na graf neukázalo tooltip').toBe(true);
-        await ocakavajDetailDna(page, 0);
+        await expect(page.locator('#week-day-title')).toHaveText('Celý týždeň');
         expect(errors).toEqual([]);
     });
 
@@ -2040,7 +2041,7 @@ test.describe('listovanie kariet prstom', () => {
      * po chvíli ešte stále je. */
     test('ťuknutie na graf bez pohybu prsta ukáže tooltip a ten ostane', async ({ page }) => {
         const errors = await openApp(page);
-        await otvorDetailDna(page);
+        await otvorKrivkuNaSirokom(page);
         const graf = await page.locator('#week-curve-wrap').boundingBox();
         if (!graf) throw new Error('graf priebehu dňa nie je vidno');
 
@@ -2060,7 +2061,7 @@ test.describe('listovanie kariet prstom', () => {
      * časovač prvého - inak by tooltip z druhého ťuknutia zhasol skôr, než by sa dal prečítať. */
     test('druhé ťuknutie na graf nechá tooltip svietiť celý čas, nezhasne ho časovač prvého', async ({ page }) => {
         const errors = await openApp(page);
-        await otvorDetailDna(page);
+        await otvorKrivkuNaSirokom(page);
         const graf = await page.locator('#week-curve-wrap').boundingBox();
         if (!graf) throw new Error('graf priebehu dňa nie je vidno');
         const y = graf.y + graf.height / 2;

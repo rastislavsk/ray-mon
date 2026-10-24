@@ -282,8 +282,7 @@
                         <!-- Okno na veľké spotrebiče: len v detaile dňa na mobile (renderDayWindow). -->
                         <div class="day-window hidden" id="week-day-window"></div>
                         <div class="chart-top">
-                            <span class="lbl">Priebeh výroby</span
-                            ><span class="heat-scale mono" id="week-curve-scale" aria-hidden="true"></span>
+                            <span class="lbl">Priebeh výroby</span>
                         </div>
                         <div class="utabs" id="week-day-tabs" role="tablist"></div>
                         <div class="stat-line" id="week-curve-stat"></div>
@@ -298,17 +297,14 @@
                         </div>
                         <div class="chart-footer">
                             <div class="chart-legend">
-                                <!-- Krivka (desktop a prepínač dní) a časová os (detail dňa na mobile) majú
-                                     každá svoju legendu; ktorá platí, rozhoduje CSS podľa .detail. -->
-                                <span class="leg-curve"><i class="leg-line"></i>predpoveď</span
-                                ><span class="leg-curve"><i class="leg-dash"></i>oblačnosť</span
-                                ><span class="leg-tl"><i class="leg-line-fc"></i>oblačnosť</span
-                                ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span
-                                ><span class="leg-tl"><i class="leg-fit go"></i>slnko stačí</span
-                                ><span class="leg-tl"><i class="leg-fit part"></i>čiastočne</span
-                                ><span class="leg-tl"><i class="leg-fit grid"></i>zo siete</span>
+                                <span><i class="leg-line"></i>predpoveď</span><span><i class="leg-dash"></i>oblačnosť</span
+                                ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
                             </div>
                         </div>
+                        <!-- Detail dňa na mobile: graf dňa ako na karte Terazky (web/day-chart.js) namiesto
+                             krivky nad ním; ktorý platí, rozhoduje CSS podľa .detail. -->
+                        <div id="week-day-chart" class="tz-chart" role="img"></div>
+                        <p id="week-day-legend" class="tz-legend"></p>
                     </section>
                     <section class="week-block" id="week-block-table">
                         <div class="chart-top"><span class="lbl">Prehľad dní</span></div>
