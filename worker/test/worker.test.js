@@ -280,6 +280,14 @@ const NB_ROKY = [
     { stationCode: 'NE=1', collectTime: Date.UTC(2026, 0, 1) - 3600000, dataItemMap: { PVYield: 4321.5 } },
 ];
 
+/** 5-minútové body meniča (SEČ, NOW je 13:00): včerajší večer (do dneška nepatrí) a dnešné ráno a obed. */
+const NB_HISTORIA = [
+    { devDn: 'NE=11', collectTime: Date.UTC(2026, 8, 4, 17, 0), dataItems: { active_power: 0.4 } },
+    { devDn: 'NE=11', collectTime: Date.UTC(2026, 8, 5, 6, 0), dataItems: { active_power: 1.2 } },
+    { devDn: 'NE=11', collectTime: Date.UTC(2026, 8, 5, 6, 5), dataItems: { active_power: null } },
+    { devDn: 'NE=11', collectTime: Date.UTC(2026, 8, 5, 10, 50), dataItems: { active_power: 4.0 } },
+];
+
 /**
  * Podvrhnutý server Northbound. Prihlásenie vráti token v hlavičke `xsrf-token`, dáta len
  * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
@@ -296,6 +304,7 @@ function northbound(
         stareFail,
         devTyp = 38,
         rokFail,
+        historiaFail,
     } = /** @type {any} */ ({}),
 ) {
     /** @type {Array<{ path: string, body: any, token: string | null, cookie: string | null }>} */ const calls = [];
@@ -309,7 +318,8 @@ function northbound(
         // Starší zoznam (Historical Interfaces): bez stránkovania, stationCode a stationName.
         '/thirdData/getStationList': () =>
             stareFail ? fail(stareFail) : ok([{ stationCode: 'NE=1', stationName: 'Dvorany', capacity: 0.01 }]),
-        '/thirdData/getDevList': () => ok([{ id: 11, stationCode: 'NE=1', devTypeId: devTyp }]),
+        '/thirdData/getDevList': () => ok([{ id: 11, devDn: 'NE=11', stationCode: 'NE=1', devTypeId: devTyp }]),
+        '/rest/openapi/pvms/nbi/v1/device/history': () => (historiaFail ? fail(historiaFail) : ok(NB_HISTORIA)),
         '/thirdData/getDevRealKpi': () =>
             realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
         '/thirdData/getStationRealKpi': () =>
@@ -363,6 +373,7 @@ test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným do
             '/thirdData/getStationRealKpi',
             '/thirdData/getDevRealKpi',
             '/thirdData/getKpiStationYear',
+            '/rest/openapi/pvms/nbi/v1/device/history',
         ],
     );
     assert.equal(stanice[0].pv.yearEnergyKwh, 4321.5, 'tohtoročné PVYield');
@@ -376,6 +387,63 @@ test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným do
     assert.equal(meranie.pv.realTimePowerKw, 4.2);
     assert.equal(meranie.pecat, undefined);
     assert.equal(s.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: priebeh dňa z device/history najviac raz za 15 minút, medzitým posledná krivka a aktuálny bod', async () => {
+    const s = northbound({ platne: ['t1'] });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    const historie = () => s.calls.filter((c) => c.path === '/rest/openapi/pvms/nbi/v1/device/history');
+    // Pri pripojení: menič podľa devDn, od polnoci (SEČ) po teraz.
+    assert.equal(historie().length, 1);
+    const body = historie()[0].body;
+    assert.deepEqual([body.devDn, body.devTypeId, body.endTime], ['NE=11', 38, NOW.getTime()]);
+    assert.ok(body.startTime <= Date.UTC(2026, 8, 4, 22, 0) && body.startTime > Date.UTC(2026, 8, 4, 21, 50), 'od polnoci SEČ');
+    // Dnešné body (bez včerajška a bez prázdnej hodnoty) a za nimi aktuálny výkon o 13:00.
+    const dnes = [
+        { hour: 8, kw: 1.2 },
+        { hour: 12.8333, kw: 4 },
+        { hour: 13, kw: 4.2 },
+    ];
+    assert.deepEqual(stanice[0].pv.realCurveToday, dnes);
+    const o = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60 * 1000);
+    // Do 15 minút sa na históriu nepýta: zapečatená krivka a aktuálny bod, pečať bez zmeny.
+    const skoro = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(10), s.impl)).json();
+    assert.equal(historie().length, 1);
+    assert.equal(skoro.pecat, undefined);
+    assert.deepEqual(skoro.pv.realCurveToday, [...dnes.slice(0, 2), { hour: 13.1667, kw: 4.2 }]);
+    // Po 15 minútach znova, s novým časom v pečati.
+    const potom = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(15), s.impl)).json();
+    assert.equal(historie().length, 2);
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    assert.equal((await otvor(await key, potom.pecat))?.pristup.krivkaAt, o(15).getTime());
+    // Účet bez povoleného rozhrania: meranie prejde bez krivky a ďalší pokus až o 15 minút.
+    const bez = northbound({ historiaFail: 401, platne: ['t1'] });
+    const r = await (await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, bez.impl)).json();
+    assert.equal(r.stanice[0].pv.realTimePowerKw, 4.2);
+    assert.deepEqual(r.stanice[0].pv.realCurveToday, []);
+    await handlePv(pvRequest(r.stanice[0].pecat), ENV, o(10), bez.impl);
+    assert.equal(bez.calls.filter((c) => c.path === '/rest/openapi/pvms/nbi/v1/device/history').length, 1);
+    // Pečať spred krivky dňa (meniče bez devDn): zoznam zariadení raz, potom krivka.
+    const stara = await zapecat(key, {
+        sposob: 'huawei-northbound',
+        pristup: {
+            ...NB_UDAJE,
+            token: 't1',
+            tokenAt: NOW.getTime(),
+            rokAt: NOW.getTime(),
+            plant: 'NE=1',
+            nazov: 'Dvorany',
+            devs: { 38: [11] },
+        },
+    });
+    const m = northbound({ platne: ['t1'] });
+    const prve = await (await handlePv(pvRequest(stara), ENV, NOW, m.impl)).json();
+    assert.deepEqual(prve.pv.realCurveToday, dnes);
+    assert.deepEqual((await otvor(await key, prve.pecat))?.pristup.dns, { 38: ['NE=11'] });
+    await handlePv(pvRequest(prve.pecat), ENV, o(5), m.impl);
+    assert.equal(m.calls.filter((c) => c.path === '/thirdData/getDevList').length, 1, 'zoznam zariadení len raz');
 });
 
 test('Huawei Northbound: rok z getKpiStationYear najviac raz za 6 hodín, bez neho meria ďalej', async () => {

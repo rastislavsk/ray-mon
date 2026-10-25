@@ -8,16 +8,20 @@ import { FOXESS, foxHeaders, parseFoxList, parseFoxPv } from '../../shared/foxes
 import {
     checkNbLogin,
     NB,
+    nbKrivkaDnes,
     nbPv,
     nbServer,
+    parseNbDevDns,
     parseNbDevices,
     parseNbDevReal,
+    parseNbHistory,
     parseNbStationReal,
     parseNbStations,
     parseNbStationYear,
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
+import { localMinutes } from '../../shared/solar.js';
 import { parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
 import { VyrobcaChyba } from '../../shared/vyrobca.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
@@ -153,8 +157,9 @@ async function solaxPv(token, sn, ctx) {
 // ---- Huawei Northbound ---------------------------------------------------------------
 
 /**
- * Elektráreň Northbound: id, meno a meniče po typoch (`{ 1: [id…] }`), ako ich vrátil zoznam
- * zariadení pri pripojení. @typedef {{ plant: string, nazov: string, devs: Record<string, number[]> }} NbPlant
+ * Elektráreň Northbound: id, meno a meniče po typoch - číselné id (`devs`, `{ 1: [id…] }`) pre
+ * meranie a textové `devDn` (`dns`) pre priebeh dňa -, ako ich vrátil zoznam zariadení.
+ * @typedef {{ plant: string, nazov: string, devs: Record<string, number[]>, dns: Record<string, string[]> }} NbPlant
  */
 
 /**
@@ -268,15 +273,35 @@ async function nbNajdi(server, rel, udaje, ctx) {
     if (!stanice.length) return [];
     const devJson = await nbPost(sp, NB.devList, { stationCodes: stanice.map((st) => st.plant).join(',') }, 'zariadenia');
     const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
-    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {} }));
+    const dns = prevod(() => parseNbDevDns(devJson), 'zariadenia');
+    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {}, dns: dns[st.plant] ?? {} }));
     const pv = await nbMeraj(sp, plants).catch(() => null);
     const rok = await nbRok(sp, plants);
+    // Priebeh dňa hneď pri pripojení, nech je v grafe od prvého merania.
+    /** @type {Map<string, import('../../shared/huawei-nb.js').NbKrivka | null>} */ const krivky = new Map();
+    for (const p of plants) if (Object.keys(p.dns).length) krivky.set(p.plant, await nbKrivka(sp, p));
     return plants.map((p) => {
         const zmerane = pv?.get(p.plant);
+        const krivka = krivky.get(p.plant) ?? null;
         return {
             nazov: p.nazov,
-            pristup: { server, meno: udaje.meno, heslo: udaje.heslo, ...rel, tokenAt, rokAt: tokenAt, ...p },
-            pv: zmerane ? { ...zmerane, yearEnergyKwh: rok.get(p.plant) ?? null } : null,
+            pristup: {
+                server,
+                meno: udaje.meno,
+                heslo: udaje.heslo,
+                ...rel,
+                tokenAt,
+                rokAt: tokenAt,
+                ...p,
+                ...(krivky.has(p.plant) ? { krivkaAt: tokenAt, krivka } : {}),
+            },
+            pv: zmerane
+                ? {
+                      ...zmerane,
+                      yearEnergyKwh: rok.get(p.plant) ?? null,
+                      realCurveToday: nbKrivkaDnes(krivka, zmerane.realTimePowerKw, ctx.now),
+                  }
+                : null,
         };
     });
 }
@@ -300,17 +325,64 @@ async function nbRok(sp, plants) {
 
 /**
  * Meniče elektrárne, ktorá ich v pečati nemá - pripojenej skôr, než appka poznala menič s batériou
- * (23093). Zoznam zariadení má limit 25 denne, preto sa pýta raz: volajúci zapečatí čas pokusu, aj
- * keď zoznam nevyjde. Bez neho sa meria ďalej len zo súčtov elektrárne, ako doteraz.
+ * (23093) či priebeh dňa (`devDn`). Zoznam zariadení má limit 25 denne, preto sa pýta raz: volajúci
+ * zapečatí čas pokusu, aj keď zoznam nevyjde. Bez neho sa meria ďalej ako doteraz.
  * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<NbPlant>}
  */
 async function nbDoplnDevs(sp, plant) {
     try {
         const json = await nbPost(sp, NB.devList, { stationCodes: plant.plant }, 'zariadenia');
-        return { ...plant, devs: parseNbDevices(json)[plant.plant] ?? {} };
+        return { ...plant, devs: parseNbDevices(json)[plant.plant] ?? {}, dns: parseNbDevDns(json)[plant.plant] ?? {} };
     } catch {
         return plant;
     }
+}
+
+/**
+ * Priebeh dňa meničov elektrárne z historického rozhrania: jeden dopyt na menič, od polnoci (v pásme
+ * elektrárne) po teraz. Zlyhanie meranie nezastaví (účet napr. rozhranie nemá povolené, limit 407):
+ * vráti null a appka dostane poslednú zapečatenú krivku.
+ * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<import('../../shared/huawei-nb.js').NbKrivka | null>}
+ */
+async function nbKrivka(sp, plant) {
+    const now = sp.ctx.now.getTime();
+    const startTime = now - (localMinutes(sp.ctx.now, NB.pasmo) + 1) * 60 * 1000;
+    try {
+        const jsons = [];
+        for (const [typ, dns] of Object.entries(plant.dns))
+            for (const devDn of dns)
+                jsons.push(await nbPost(sp, NB.devHistory, { devDn, devTypeId: Number(typ), startTime, endTime: now }, 'krivka'));
+        return parseNbHistory(jsons, sp.ctx.now);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Čo si meranie elektrárne vypýta navyše: zoznam zariadení raz, keď v pečati chýbajú meniče či ich
+ * devDn (nbDoplnDevs), rok najviac raz za NB.rokMs (nbRok) a priebeh dňa najviac raz za NB.krivkaMs
+ * (nbKrivka). Hodnota je čas dopytu na zapečatenie, 0 = nepýta sa.
+ * @param {Record<string, unknown>} pristup @param {NbPlant} plant @param {number} now
+ */
+function nbPlan(pristup, plant, now) {
+    const chyba = (/** @type {'devs' | 'dns'} */ k, /** @type {string} */ at) => !Object.keys(plant[k]).length && !Number(pristup[at]);
+    return {
+        devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') ? now : 0,
+        rokAt: now - (Number(pristup.rokAt) || 0) >= NB.rokMs ? now : 0,
+        krivkaAt: now - (Number(pristup.krivkaAt) || 0) >= NB.krivkaMs ? now : 0,
+    };
+}
+
+/**
+ * Meranie elektrárne a podľa plánu aj rok a priebeh dňa (ten len pri meničoch s devDn).
+ * @param {NbSpoj} sp @param {NbPlant} plant @param {ReturnType<typeof nbPlan>} plan
+ */
+async function nbMerajPodlaPlanu(sp, plant, plan) {
+    const pv = /** @type {PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
+    const krivkaAt = Object.keys(plant.dns).length ? plan.krivkaAt : 0;
+    const krivka = krivkaAt ? await nbKrivka(sp, plant) : null;
+    if (plan.rokAt) pv.yearEnergyKwh = (await nbRok(sp, [plant])).get(plant.plant) ?? null;
+    return { pv, krivka, krivkaAt };
 }
 
 /**
@@ -343,6 +415,7 @@ async function nbSRelaciou(p, ctx, fn) {
 /** Prístup Northbound zo zapečateného objektu. @param {Record<string, unknown>} p */
 function nbPristup(p) {
     const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
+    const dns = p.dns && typeof p.dns === 'object' ? /** @type {Record<string, string[]>} */ (p.dns) : {};
     return {
         server: nbServer(p.server),
         meno: str(p.meno),
@@ -350,7 +423,7 @@ function nbPristup(p) {
         token: str(p.token),
         cookie: str(p.cookie),
         tokenAt: Number(p.tokenAt) || 0,
-        plant: { plant: str(p.plant), nazov: str(p.nazov), devs },
+        plant: { plant: str(p.plant), nazov: str(p.nazov), devs, dns },
     };
 }
 
@@ -452,17 +525,25 @@ export const ZDROJE = {
         async meraj(pristup, ctx) {
             const p = nbPristup(pristup);
             if (!p.server || !p.meno || !p.heslo || !p.plant.plant) throw new ZdrojChyba('udaje');
-            // Bez meniča v pečati sa zoznam zariadení vypýta raz (nbDoplnDevs); čas pokusu sa zapečatí.
-            let plant = p.plant;
-            const devsAt = Object.keys(plant.devs).length || Number(pristup.devsAt) ? 0 : ctx.now.getTime();
-            // Rok najviac raz za NB.rokMs (nbRok); čas dopytu sa zapečatí.
-            const rokAt = ctx.now.getTime() - (Number(pristup.rokAt) || 0) >= NB.rokMs ? ctx.now.getTime() : 0;
-            const { vysledok: pv, relacia } = await nbSRelaciou(p, ctx, async (sp) => {
-                if (devsAt && plant === p.plant) plant = await nbDoplnDevs(sp, plant);
-                const zmerane = /** @type {import('../../shared/kiosk.js').PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
-                return rokAt ? { ...zmerane, yearEnergyKwh: (await nbRok(sp, [plant])).get(plant.plant) ?? null } : zmerane;
+            const plan = nbPlan(pristup, p.plant, ctx.now.getTime());
+            // Zoznam zariadení len raz, aj keď sa po zrušenej relácii (305) meria znova.
+            /** @type {NbPlant | null} */ let plant = null;
+            const { vysledok, relacia } = await nbSRelaciou(p, ctx, async (sp) => {
+                plant ??= plan.devsAt ? await nbDoplnDevs(sp, p.plant) : p.plant;
+                return nbMerajPodlaPlanu(sp, plant, plan);
             });
-            const zmeny = { ...relacia, ...(devsAt ? { devs: plant.devs, devsAt } : {}), ...(rokAt ? { rokAt } : {}) };
+            const { pv, krivkaAt } = vysledok;
+            const zariadenia = /** @type {NbPlant} */ (/** @type {unknown} */ (plant));
+            // Medzi dopytmi posledná zapečatená krivka a za ňou aktuálny výkon (nbKrivkaDnes).
+            const krivka =
+                vysledok.krivka ?? /** @type {import('../../shared/huawei-nb.js').NbKrivka | undefined} */ (pristup.krivka) ?? null;
+            pv.realCurveToday = nbKrivkaDnes(krivka, pv.realTimePowerKw, ctx.now);
+            const zmeny = {
+                ...relacia,
+                ...(plan.devsAt ? { devs: zariadenia.devs, dns: zariadenia.dns, devsAt: plan.devsAt, dnsAt: plan.devsAt } : {}),
+                ...(plan.rokAt ? { rokAt: plan.rokAt } : {}),
+                ...(krivkaAt ? { krivkaAt, krivka } : {}),
+            };
             return Object.keys(zmeny).length ? { pv, pristup: { ...pristup, ...zmeny } } : { pv };
         },
     },

@@ -5,10 +5,13 @@ import assert from 'node:assert/strict';
 import {
     checkNbLogin,
     NB,
+    nbKrivkaDnes,
     nbPv,
     nbServer,
+    parseNbDevDns,
     parseNbDevices,
     parseNbDevReal,
+    parseNbHistory,
     parseNbStationReal,
     parseNbStations,
     parseNbStationYear,
@@ -153,4 +156,43 @@ test('rok: tohtoročné PVYield (inak inverter_power), minuloročné nie', () =>
     assert.equal(parseNbStationYear(json, 'NE=2', now), 288760);
     assert.equal(parseNbStationYear(json, 'NE=3', now), null, 'tento rok ešte nič');
     assert.throws(() => parseNbStationYear({ success: false, failCode: 401, data: null }, 'NE=1', now), VyrobcaChyba);
+});
+
+test('priebeh dňa: devDn meničov, 5-minútové body sčítané cez meniče, len dnes, za nimi aktuálny výkon', () => {
+    const zoznam = {
+        success: true,
+        data: [
+            { id: 1, devDn: 'NE=1', stationCode: 'NE=9', devTypeId: 38 },
+            { id: 2, devDn: 'NE=2', stationCode: 'NE=9', devTypeId: 1 },
+            { id: 3, devDn: 'NE=3', stationCode: 'NE=9', devTypeId: 17 },
+            { id: 4, stationCode: 'NE=9', devTypeId: 38 },
+        ],
+    };
+    assert.deepEqual(parseNbDevDns(zoznam), { 'NE=9': { 38: ['NE=1'], 1: ['NE=2'] } });
+    // 5. 9. 2026 13:00 SELČ. Dva meniče v tom istom čase zberu sa sčítajú, včerajšok a prázdna hodnota nie.
+    const now = new Date('2026-09-05T11:00:00Z');
+    const bod = (/** @type {string} */ dn, /** @type {number} */ t, /** @type {unknown} */ kw) => ({
+        devDn: dn,
+        collectTime: t,
+        dataItems: { active_power: kw },
+    });
+    const ráno = Date.UTC(2026, 8, 5, 6, 0);
+    const krivka = parseNbHistory(
+        [
+            { success: true, data: [bod('NE=1', ráno, 1), bod('NE=1', Date.UTC(2026, 8, 4, 17, 0), 2), bod('NE=1', ráno + 300000, 'N/A')] },
+            { success: true, data: [bod('NE=2', ráno, '0.5'), { devDn: 'NE=2' }] },
+        ],
+        now,
+    );
+    assert.deepEqual(krivka, { den: '2026-09-05', body: [[480, 1.5]] });
+    assert.throws(() => parseNbHistory([{ success: false, failCode: 407 }], now), VyrobcaChyba);
+    assert.deepEqual(nbKrivkaDnes(krivka, 4.2, now), [
+        { hour: 8, kw: 1.5 },
+        { hour: 13, kw: 4.2 },
+    ]);
+    // Bez aktuálneho výkonu len krivka; krivka z iného dňa (po polnoci) ani nič zapečatené - prázdno.
+    assert.deepEqual(nbKrivkaDnes(krivka, null, now), [{ hour: 8, kw: 1.5 }]);
+    assert.deepEqual(nbKrivkaDnes(krivka, 4.2, new Date('2026-09-05T22:30:00Z')), []);
+    assert.deepEqual(nbKrivkaDnes(null, 4.2, now), []);
+    assert.equal(NB.krivkaMs, 15 * 60 * 1000);
 });
