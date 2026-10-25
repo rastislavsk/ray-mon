@@ -3975,13 +3975,6 @@ b {
     font-size: var(--fs-md);
     color: var(--ink-70);
 }
-/* Mono štítok nad textom odkazu do Štatistiky. */
-.summary-link small {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
 /* Dlaždice skupín vecí (ako v novej appke, docs/navrhy/smer-b-obloha.html) vo farbách tejto:
    široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. Celá dlaždica je
    tlačidlo, ktoré otvorí panel veci či skupiny zospodu. */
@@ -4234,15 +4227,6 @@ b {
 .summary b {
     color: var(--ink-on-color);
 }
-.summary-link svg {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
 /* Prepínač obdobia je .seg zo sprievodcu, len na svetlom plagáte. */
 .summary .seg {
     background: rgba(0, 0, 0, 0.14);
@@ -4402,24 +4386,6 @@ b {
 .summary-note {
     margin: 0;
     font-size: var(--fs-sm);
-}
-/* Odkaz z karty Môžem? na plagát mesiaca v Štatistike - ten istý prechod farieb ako plagát. */
-.summary-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--sp-3);
-    padding: 16px 18px;
-    border-radius: 22px;
-    background: linear-gradient(120deg, var(--green), var(--amber) 55%, var(--red));
-    color: var(--ink-on-color);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-    text-align: left;
-}
-.summary-link small {
-    display: block;
-    font-weight: 600;
 }
 
 /* ---- Širšie obrazovky ----------------------------------------------------- */

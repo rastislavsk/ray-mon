@@ -171,9 +171,6 @@ function summaryKick(d) {
     return `${d.month.charAt(0).toUpperCase()}${d.month.slice(1)} na streche`;
 }
 
-/** Odkaz na plagát mesiaca na karte Môžem?: „Október na streche: 168 kWh“. @param {string} kick @param {number} kwh */
-export const statsLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh), 0)} kWh`;
-
 /** Peniaze na plagáte: do 10 s centami („1,60 €“), inak celé („50 €“). @param {number} v @param {string} currency */
 const money = (v, currency) => `${fmtSum(v, v < 10 ? 2 : 0)} ${currency}`;
 

@@ -1,8 +1,7 @@
-// Poslucháče karty Môžem?: panel veci či skupiny a odkaz do Štatistiky. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
-// web/render/mozem.js.
+// Poslucháče karty Môžem?: panel veci či skupiny. Každý končí volaním setState (alebo krokom
+// v histórii cez backTo), kreslí web/render/mozem.js.
 
 import { backTo } from './history.js';
-import { panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -16,10 +15,7 @@ export function initMozem(store, dom) {
     dom.mozemBody.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         const tile = target.closest('[data-mozem-item]');
-        if (tile instanceof HTMLElement && tile.dataset.mozemItem) return store.setState({ mozemItem: tile.dataset.mozemItem });
-        // Odkaz na mesiac na streche: karta Štatistika na mesiaci, jeden krok navigácie.
-        if (target.closest('[data-mozem-stats]'))
-            store.setState({ ...panelChange(store.get().panel, 'statistika'), statsPeriod: 'mesiac' });
+        if (tile instanceof HTMLElement && tile.dataset.mozemItem) store.setState({ mozemItem: tile.dataset.mozemItem });
     });
     const close = () => backTo(store, { mozemItem: null });
     dom.mozemSheetX.addEventListener('click', close);
