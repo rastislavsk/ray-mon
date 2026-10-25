@@ -1,44 +1,21 @@
-// Texty karty Štatistika a plagátu novej appky a súhrnu na zdieľanie. Nová appka ich sťahuje až
-// s kartou Štatistika (obloha/web/parts.js); spoločný vstup do všetkých textov je messages.js.
-// Čisté funkcie bez DOM.
+// Texty karty Štatistika v oboch appkách: plagát obdobia (nadpis, riadky, poznámka) a výzvy.
+// Nová appka ich sťahuje až s kartou Štatistika (obloha/web/parts.js); spoločný vstup do všetkých
+// textov je messages.js. Čisté funkcie bez DOM.
 
-import { dateParts, dayNameLong, dayNameShort, fmt1, fmtSum } from './format.js';
+import { dateParts, fmt1, fmtSum } from './format.js';
 import { DATE_RE } from './valid.js';
 import { MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
+/** @typedef {import('./stats.js').StatsPeriod} StatsPeriod */
 
-// ---- Karta Štatistika a plagát v novej appke ---------------------------------------
-// Súčty, hodnotu podľa tarify aj súhrn počíta to isté ako súčasná appka (statsModel,
-// summaryModel); tu sú len texty nového vzhľadu (shared/statistika.js).
-
-/** Mesiac v genitíve: „Najlepší deň októbra“. */
-const MONTHS_OF = [
-    'januára',
-    'februára',
-    'marca',
-    'apríla',
-    'mája',
-    'júna',
-    'júla',
-    'augusta',
-    'septembra',
-    'októbra',
-    'novembra',
-    'decembra',
-];
-
-/** Pevné texty karty a plagátu: prepínač, popisky, výzvy a tlačidlá. */
+/** Pevné texty karty: prepínač, výzvy a tlačidlá. */
 export const STATISTIKA_TEXTS = {
     title: 'Štatistika',
     periods: { dnes: 'Dnes', mesiac: 'Mesiac', rok: 'Rok', spolu: 'Spolu' },
     periodsLabel: 'Obdobie',
-    equiv: 'To je ako',
-    phones: 'nabitý mobil',
-    km: 'elektrickým autom',
     loading: TERAZ_TEXTS.loading,
     retry: MOZEM_SKY_TEXTS.retry,
-    forecastSub: 'odhad z predpovede na celý dnešok',
     note: 'Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.',
     pricesTitle: 'Doplň ceny v tarife',
     pricesText: 'Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.',
@@ -56,20 +33,10 @@ export const STATISTIKA_TEXTS = {
     setupBtn: 'Nastaviť panely',
     laterTitle: 'Keď ich zadáš, uvidíš',
     laterText:
-        'Vyrobené dnes, za mesiac, rok aj od spustenia · koľko je to mobilov a kilometrov autom · najlepší deň · plagát na zdieľanie',
+        'Vyrobené dnes, za mesiac, rok aj od spustenia · koľko je to mobilov a kilometrov autom · najlepší deň · hodnota podľa tarify',
     askTitle: 'Kde máš strechu?',
     askText: 'Bez polohy neviem, kde tvoja strecha je, nieto koľko vyrobila. Zadaj ju v Nastavení a začnem počítať.',
     askBtn: 'Zadaj polohu',
-    posterLabel: 'Súhrn na zdieľanie',
-    posterShare: 'Zdieľať do story',
-    posterClose: 'Zavrieť',
-    posterFoot: 'RAY-MON · slnko nefakturuje',
-    posterPhones: 'nabitý mobil',
-    posterKm: 'elektrickým autom',
-    posterValue: 'hodnota podľa tarify',
-    posterCo2: 'CO2eq menej ako zo siete',
-    posterPayback: 'uhlíka panelov od spustenia',
-    posterPaid: 'uhlík panelov splatený',
 };
 
 /** @type {typeof STATISTIKA_TEXTS} */
@@ -88,20 +55,7 @@ const STATISTIKA_TEXTS_SLUSNE = {
     askTitle: 'Kde máte strechu?',
     askText: 'Bez polohy neviem, kde je vaša strecha, ani koľko vyrobila. Zadajte ju v Nastavení a začnem počítať.',
     askBtn: 'Zadajte polohu',
-    posterFoot: 'RAY-MON',
 };
-
-/**
- * Odkiaľ je veľké číslo zo živého merania: „vyrobené dnes do 13:00“, „vyrobené v októbri“. Súčet,
- * ktorý nesiaha na začiatok obdobia (shared/sucty.js), povie odkiaľ: „vyrobené tento rok od 21. 10.“,
- * „vyrobené dnes od 09:12 do 13:00“.
- * @param {import('./stats.js').StatsPeriod} period
- * @param {{ time: string, month: string, od?: string | null }} d `time` čas merania, `month` mesiac v lokáli („októbri“), `od` odText
- */
-export function statsHeroSub(period, { time, month, od = null }) {
-    const s = od ? ` ${od}` : '';
-    return `vyrobené ${{ dnes: `dnes${s} do ${time}`, mesiac: `v ${month}${s}`, rok: `tento rok${s}`, spolu: 'od spustenia' }[period]}`;
-}
 
 // ---- Súčty dopočítané z celkovej výroby (shared/sucty.js) ---------------------------
 
@@ -123,7 +77,7 @@ const OD_OBDOBIA = /** @type {const} */ ([
 ]);
 
 /**
- * Poznámka Štatistiky, keď je niektorý súčet len od prvého merania: „Fox ESS neposiela súčet za rok.
+ * Veta, keď je niektorý súčet len od prvého merania: „Fox ESS neposiela súčet za rok.
  * Rátam ho sám z celkovej výroby, zatiaľ od 21. 10. – skôr som meranie nemal.“ Inak prázdna.
  * @param {string} znacka meno značky (menoZnacky) @param {import('./kiosk.js').PvData['od']} od
  */
@@ -138,57 +92,13 @@ export function suctyOdNote(znacka, od) {
     return `${znacka || 'Výrobca'} neposiela súčet za ${zoznam}. Rátam ${mena.length === 1 ? 'ho' : 'ich'} sám z celkovej výroby, ${kedy} – skôr som meranie nemal.`;
 }
 
-/** Hodnota podľa tarify: „Hodnota podľa tarify 4,78 €“, odhad s „≈“. @param {number} value @param {string} currency @param {boolean} estimate */
-export function statsValueText(value, currency, estimate) {
-    return `Hodnota podľa tarify ${estimate ? '≈ ' : ''}${fmtSum(value, 2)} ${currency}`;
+// ---- Uhlík ---------------------------------------------------------------------------
+
+/** Úspora CO2eq: do 10 kg s desatinou („~2,4 kg“), do tony celé („~38 kg“), potom v tonách („~1,3 t“). @param {number} kg */
+export function posterCo2Value(kg) {
+    if (kg >= 1000) return `~${fmt1(kg / 1000)} t`;
+    return `~${kg < 10 ? fmt1(kg) : fmtSum(Math.round(kg), 0)} kg`;
 }
-
-/** Pás pod dneškom: koľko z predpovede už strecha vyrobila. @param {number} pct @param {number} forecastKwh */
-export function statsProgressText(pct, forecastKwh) {
-    return `${pct} % z predpovede ${fmt1(forecastKwh)} kWh`;
-}
-
-/**
- * Najlepší deň mesiaca: nadpis a veta. Dnešok je ešte rozbehnutý, preto iná veta.
- * @param {{ date: string, kwh: number, today: boolean }} best @param {Voice} [voice]
- */
-export function statsBestText(best, voice = 'drzy') {
-    const { day, month } = dateParts(best.date);
-    const title = `Najlepší deň ${MONTHS_OF[month - 1]}`;
-    if (polite(voice))
-        return {
-            title,
-            text: best.today
-                ? `Dnes · ${fmt1(best.kwh)} kWh. Strecha dnes pracuje naplno.`
-                : `${dayNameLong(best.date)} ${day}. · ${fmt1(best.kwh)} kWh. Strecha vtedy pracovala naplno.`,
-        };
-    return {
-        title,
-        text: best.today
-            ? `Dnes · ${fmt1(best.kwh)} kWh. Strecha dnes maká ako blázon.`
-            : `${dayNameLong(best.date)} ${day}. · ${fmt1(best.kwh)} kWh. Strecha vtedy makala ako blázon.`,
-    };
-}
-
-/** Tlačidlo plagátu: „Október na streche · zdieľať“. @param {string} kick nadpis súhrnu (summaryTexts) */
-export const posterButtonText = (kick) => `${kick} · zdieľať`;
-
-/** Odkaz na plagát na karte Môžem?: „Október na streche: 168 kWh · súhrn“. @param {string} kick @param {number} kwh */
-export const posterLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh), 0)} kWh · súhrn na zdieľanie`;
-
-/**
- * Najlepší deň na plagáte nakrátko: „so 14.“, „dnes“; v roku s mesiacom, „14. 6.“ - deň bez
- * mesiaca by tam nebol jednoznačný.
- * @param {{ date: string, today: boolean }} best @param {import('./config.js').SummaryPeriod} [period]
- */
-export function posterBestDay(best, period) {
-    if (best.today) return 'dnes';
-    const { day, month } = dateParts(best.date);
-    return period === 'rok' ? `${day}. ${month}.` : `${dayNameShort(best.date).toLowerCase()} ${day}.`;
-}
-
-/** Úspora CO2eq na plagáte: do 10 kg s desatinou („~2,4 kg“), inak celé („~38 kg“). @param {number} kg */
-export const posterCo2Value = (kg) => `~${kg < 10 ? fmt1(kg) : fmtSum(Math.round(kg), 0)} kg`;
 
 /**
  * Splatený uhlík panelov v percentách, nadol - 100 % až keď je naozaj splatený.
@@ -205,7 +115,7 @@ export function posterPayback(share) {
  */
 
 /**
- * Poznámka pod plagátom aj súhrnom: s akými faktormi a odkiaľ CO2eq počíta, aby sa číslo dalo overiť.
+ * Poznámka pod plagátom: s akými faktormi a odkiaľ CO2eq počíta, aby sa číslo dalo overiť.
  * @param {CarbonFactors & { debtT: number | null }} c
  */
 export function posterCarbonNote({ gridG, gridSource, pvG, pvSource, debtT, lifeYears }) {
@@ -217,7 +127,7 @@ export function posterCarbonNote({ gridG, gridSource, pvG, pvSource, debtT, life
         : `${base} Výroba týchto panelov aj s meničom stála asi ${fmt1(debtT)} t CO2eq, rozpočítaná na ${lifeYears} rokov prevádzky.`;
 }
 
-// ---- Súhrn na zdieľanie ------------------------------------------------------------
+// ---- Plagát obdobia na karte Štatistika ----------------------------------------------
 
 /** Tvar podstatného mena podľa počtu: 1 rok, 2 roky, 5 rokov. @param {number} n @param {[string, string, string]} forms */
 export function plural(n, [one, few, many]) {
@@ -226,7 +136,7 @@ export function plural(n, [one, few, many]) {
 }
 
 /**
- * Trasy na porovnanie kilometrov, od najkratšej. Súhrn vyberie najdlhšiu, na ktorú to stačí.
+ * Trasy na porovnanie kilometrov, od najkratšej. Plagát vyberie najdlhšiu, na ktorú to stačí.
  * Vzdialenosti sú po ceste z Bratislavy, zaokrúhlené; rok na streche dá aj obvod Zeme (40 075 km).
  */
 export const SUMMARY_TRIPS = [
@@ -239,67 +149,124 @@ export const SUMMARY_TRIPS = [
     { km: 40000, text: 'raz okolo Zeme' },
 ];
 
+/** Koľkokrát okolo Zeme, od dvoch: „dvakrát“, „päťkrát“, od desať „12-krát“. */
+const TIMES = ['', 'raz', 'dvakrát', 'trikrát', 'štyrikrát', 'päťkrát', 'šesťkrát', 'sedemkrát', 'osemkrát', 'deväťkrát'];
+
+/** Na čo stačia kilometre: najdlhšia trasa, od dvoch obvodov Zeme ich počet. @param {number} km */
+function tripText(km) {
+    const earth = Math.floor(km / SUMMARY_TRIPS[SUMMARY_TRIPS.length - 1].km);
+    if (earth >= 2) return `${TIMES[earth] ?? `${earth}-krát`} okolo Zeme`;
+    const trip = SUMMARY_TRIPS.filter((x) => x.km <= km).pop();
+    return trip ? trip.text : 'na elektrinu, zo strechy';
+}
+
 /**
- * Nadpis súhrnu: „Posledných 7 dní na streche“, „September na streche“, „Rok 2026 na streche“.
- * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string }} d
+ * Nadpis plagátu: „Dnes na streche“, „September na streche“, „Rok 2026 na streche“, „Od spustenia na streche“.
+ * @param {{ period: StatsPeriod, month: string, year: string }} d
  */
 function summaryKick(d) {
-    if (d.period === 'tyzden') return 'Posledných 7 dní na streche';
+    if (d.period === 'dnes') return 'Dnes na streche';
+    if (d.period === 'spolu') return 'Od spustenia na streche';
     if (d.period === 'rok') return `Rok ${d.year} na streche`;
     return `${d.month.charAt(0).toUpperCase()}${d.month.slice(1)} na streche`;
 }
 
-/**
- * Nadpis, riadky a poznámka súhrnu. Čísla prichádzajú hotové zo shared/summary.js. `kick` je
- * nadpis obdobia (aj na tlačidle a v odkaze), `heading` nadpis súhrnu a plagátu - pri súčte, ktorý
- * nesiaha na začiatok obdobia, s „od 21. 10.“.
- * @param {{ period: import('./config.js').SummaryPeriod, month: string, year: string, kwh: number, phones: number, km: number,
- *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, currency: string,
- *   missing: number, co2Kg: number, payback: number | null, debtT: number | null,
- *   carbon: CarbonFactors, od: string | null, znacka: string }} d
+/** Odkaz na plagát mesiaca na karte Môžem?: „Október na streche: 168 kWh“. @param {string} kick @param {number} kwh */
+export const statsLinkText = (kick, kwh) => `${kick}: ${fmtSum(Math.round(kwh), 0)} kWh`;
 
+/** Peniaze na plagáte: do 10 s centami („1,60 €“), inak celé („50 €“). @param {number} v @param {string} currency */
+const money = (v, currency) => `${fmtSum(v, v < 10 ? 2 : 0)} ${currency}`;
+
+/**
+ * Pás pod veľkým číslom: dnešok voči predpovedi, celý čas voči uhlíku z výroby panelov.
+ * @param {{ pct: number, forecastKwh: number } | { payback: number }} d
+ * @returns {{ pct: number, left: string, right: string }}
  */
-export function summaryTexts(d) {
+export function summaryMeter(d) {
+    if ('payback' in d) {
+        const p = posterPayback(d.payback);
+        return { pct: p.pct, left: 'uhlík z výroby panelov', right: p.paid ? 'splatený' : `${p.pct} % splatené` };
+    }
+    return { pct: Math.max(0, Math.min(100, d.pct)), left: `z predpovede ${fmt1(d.forecastKwh)} kWh`, right: `${d.pct} %` };
+}
+
+/**
+ * Čísla plagátu obdobia zo živého merania (shared/summary.js).
+ * @typedef {{ period: StatsPeriod, month: string, year: string, kwh: number, phones: number, km: number,
+ *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, valuePerDay: number | null, currency: string,
+ *   rest: { kwh: number, total: number } | null, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
+ *   carbon: CarbonFactors, od: string | null, znacka: string }} SummaryFacts
+ */
+
+/**
+ * Nadpis, riadky a poznámka plagátu. Čísla prichádzajú hotové zo shared/summary.js. `kick` je
+ * nadpis obdobia (aj v odkaze z karty Môžem?), `heading` nadpis plagátu - pri súčte, ktorý nesiaha
+ * na začiatok obdobia, s „od 21. 10.“.
+ * @param {SummaryFacts} d @param {Voice} [voice]
+ */
+export function summaryTexts(d, voice = 'drzy') {
     const kick = summaryKick(d);
     const heading = d.od ? `${kick} ${odText(d.od)}` : kick;
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
         rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
-        const trip = SUMMARY_TRIPS.filter((x) => x.km <= d.km).pop();
-        rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: trip ? trip.text : 'na elektrinu, zo strechy' });
+        rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: tripText(d.km) });
     }
-    if (d.best) rows.push({ t: `Najlepší deň: ${bestDay(d.best, d.period)}`, s: `${fmt1(d.best.kwh)} kWh za jediný deň` });
-    if (d.value !== null && d.kwh > 0) rows.push({ t: `Hodnota ~${fmtSum(d.value, 0)} ${d.currency}`, s: 'toľko by sme za to dali sieti' });
+    if (d.rest)
+        rows.push({ t: `Do večera ešte ~${fmt1(d.rest.kwh)} kWh`, s: `podľa predpovede, spolu by bolo ~${fmt1(d.rest.total)} kWh` });
+    if (d.best) rows.push({ t: `Najlepší deň: ${bestDay(d.best)}`, s: `${fmt1(d.best.kwh)} kWh za jediný deň` });
+    if (d.value !== null && d.kwh > 0) {
+        const perDay = d.valuePerDay === null ? '' : ` · v priemere ${money(d.valuePerDay, d.currency)} za deň`;
+        rows.push({ t: `Hodnota ~${fmtSum(d.value, 0)} ${d.currency}`, s: `toľko by sme za to dali sieti${perDay}` });
+    }
     rows.push(...carbonRows(d));
-    return { kick, heading, rows, note: summaryNote(d) };
+    return { kick, heading, rows, note: summaryNote(d, voice) };
 }
 
 /**
- * Poznámka pod súhrnom: dni, ktoré v denníku chýbajú, a s akými faktormi sa počíta CO2eq.
- * @param {Parameters<typeof summaryTexts>[0]} d
+ * Plagát dneška bez merania: odhad z predpovede, vlnovka pred každým číslom.
+ * @param {{ kwh: number, phones: number, km: number, value: number | null, currency: string }} d
  */
-function summaryNote(d) {
-    const od = d.od
-        ? `Súčet ${d.period === 'rok' ? 'roka' : 'mesiaca'} je ${odText(d.od)} – skôr appka meranie z ${d.znacka || 'meniča'} nemala.`
-        : '';
+export function summaryEstimateTexts(d) {
+    /** @type {Array<{ t: string, s: string }>} */ const rows = [];
+    if (d.kwh > 0) {
+        rows.push({ t: `~${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: 'ak vyjde predpoveď' });
+        rows.push({ t: `~${fmtSum(Math.round(d.km), 0)} km autom`, s: tripText(d.km) });
+        if (d.value !== null) rows.push({ t: `Hodnota ~${money(d.value, d.currency)}`, s: 'toľko by sme za to dali sieti' });
+    }
+    return { kick: 'Dnes podľa predpovede', heading: 'Dnes podľa predpovede', rows };
+}
+
+/**
+ * Poznámka pod plagátom: súčet od prvého merania, dni, ktoré v denníku chýbajú, čo je hodnota
+ * a s akými faktormi sa počíta CO2eq.
+ * @param {SummaryFacts} d @param {Voice} voice
+ */
+function summaryNote(d, voice) {
+    const key = /** @type {const} */ ({ dnes: 'den', mesiac: 'mesiac', rok: 'rok', spolu: null })[d.period];
+    const od = d.od && key ? suctyOdNote(d.znacka, { [key]: d.od }) : '';
     const missing = d.missing
         ? `Za ${d.missing} ${plural(d.missing, ['deň', 'dni', 'dní'])} appka čísla nemá – vtedy ju nikto neotvoril.`
         : '';
+    const value = d.value !== null && d.kwh > 0 ? statistikaTexts(voice).note : '';
     const carbon = d.kwh > 0 || d.payback !== null ? posterCarbonNote({ ...d.carbon, debtT: d.debtT }) : '';
-    return [od, missing, carbon].filter(Boolean).join(' ');
+    return [od, missing, value, carbon].filter(Boolean).join(' ');
 }
 
 /**
- * Riadok uhlíka v súhrne - jeden, aby sa súhrn s cenami zmestil do obrázka do story:
- * úspora CO2eq za obdobie a pod ňou koľko z uhlíka výroby panelov je splatené. Bez výroby za
- * obdobie len návratnosť, bez súčtu od spustenia len úspora.
- * @param {{ kwh: number, co2Kg: number, payback: number | null, debtT: number | null }} d
+ * Riadok uhlíka: úspora CO2eq za obdobie a pod ňou koľko z uhlíka výroby panelov je splatené.
+ * Pri celom čase je splatený podiel v páse nad riadkami, pod úsporou je preto dlh panelov. Bez
+ * výroby za obdobie len návratnosť, bez súčtu od spustenia len úspora.
+ * @param {SummaryFacts} d
  */
 function carbonRows(d) {
     const p = d.payback === null ? null : posterPayback(d.payback);
+    const co2 = `${posterCo2Value(d.co2Kg)} CO2eq menej`;
+    if (d.kwh > 0 && d.period === 'spolu')
+        return [{ t: co2, s: d.debtT === null ? 'než zo siete SR' : `výroba panelov aj meniča stála ~${fmt1(d.debtT)} t CO2eq` }];
     const paid =
         p && (p.paid ? 'uhlík z výroby panelov už je splatený' : `od spustenia panely splatili ${p.pct} % uhlíka zo svojej výroby`);
-    if (d.kwh > 0) return [{ t: `${posterCo2Value(d.co2Kg)} CO2eq menej`, s: paid || 'než zo siete SR, aj s uhlíkom z výroby panelov' }];
+    if (d.kwh > 0) return [{ t: co2, s: paid || 'než zo siete SR, aj s uhlíkom z výroby panelov' }];
     if (!p || d.debtT === null) return [];
     return [
         {
@@ -317,15 +284,14 @@ function phonesSub(phones) {
     return `jeden mobil nabíjaný každý deň na ${days} ${plural(days, ['deň', 'dni', 'dní'])}`;
 }
 
-/** Najlepší deň: v týždni meno dňa, v mesiaci a roku dátum. @param {{ date: string, today: boolean }} b @param {import('./config.js').SummaryPeriod} period */
-function bestDay(b, period) {
+/** Najlepší deň mesiaca či roka: dátum, dnešok slovom. @param {{ date: string, today: boolean }} b */
+function bestDay(b) {
     if (b.today) return 'dnes';
-    if (period === 'tyzden') return dayNameLong(b.date).toLowerCase();
     const { day, month } = dateParts(b.date);
     return `${day}. ${month}.`;
 }
 
-/** Pevné texty karty a plagátu v danom tóne. @param {Voice} [voice] */
+/** Pevné texty karty v danom tóne. @param {Voice} [voice] */
 export function statistikaTexts(voice = 'drzy') {
     return polite(voice) ? STATISTIKA_TEXTS_SLUSNE : STATISTIKA_TEXTS;
 }

@@ -28,11 +28,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   ako v novej appke: veľké spotrebiče (práčka, umývačka, sušička) s pásom dňa, auto, bojler a drobnosti
   (hranie, fén), každá s jednou odpoveďou („do 17:30“, „o 10:30“, „zajtra 08:00“, „lacno“).
   Ťuknutie na dlaždicu otvorí panel zospodu: pri skupine jej veci, každú so svojím časom, pri jednej veci
-  čo robiť, prečo, a čo keď sa zamračí alebo to treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
-  7 dní alebo mesiac na streche ako plagát – veľké číslo kWh, stĺpce dní (mesiac ako mriežka),
-  nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň a hodnota podľa tarify. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
-  systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si
-  appka odkladá sama, deň, keď nebola otvorená, v stĺpcoch chýba a súhrn to povie. „Áno“ je tá istá zelená ako na páse plánu dňa na karte Terazky. Karta je v navigácii
+  čo robiť, prečo, a čo keď sa zamračí alebo to treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na mesiac na streche
+  v karte **Štatistika** (len so živým meraním). „Áno“ je tá istá zelená ako na páse plánu dňa na karte Terazky. Karta je v navigácii
   prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.
 - **Terazky** – rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
   výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, pod ním graf dňa – hore oblačnosť
@@ -56,14 +53,18 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
   mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
   naraz.
-- **Štatistika** – koľko elektráreň vyrobila dnes, tento mesiac, tento rok a od spustenia
-  (prepínač obdobia, jedno veľké číslo a zvyšné obdobia v riadkoch pod ním) a akú hodnotu
-  má tá elektrina podľa tarify, teda koľko by za ňu človek zaplatil zo siete. Dnešok sa
+- **Štatistika** – plagát obdobia: dnes, tento mesiac, tento rok alebo od spustenia na streche
+  (prepínač obdobia na plagáte). Veľké číslo kWh, pod ním obrázok obdobia – dnešok voči predpovedi,
+  mesiac ako mriežka dní, rok ako stĺpce mesiacov, celý čas ako splatený uhlík z výroby panelov – a
+  očíslované riadky v jednotkách, ktoré pozná každý: nabitia mobilu, kilometre autom s porovnaním
+  trasy, koľko ešte do večera, najlepší deň, úspora CO2eq a hodnota podľa tarify, teda koľko by
+  za tú elektrinu človek zaplatil zo siete. Dni si appka odkladá sama, deň, keď nebola otvorená,
+  v mriežke chýba a plagát to povie. Dnešok sa
   oceňuje podľa pásiem z nameranej krivky, dlhšie obdobia (kiosk ich posiela len ako súčet)
   priemernou cenou podľa toho, do ktorých pásiem padá výroba z predpovede. Koľko elektriny
   domácnosť spotrebovala sama, appka nevie – kiosk hlási len výrobu – a karta to hovorí.
-  Súčty posiela len živé meranie; bez neho karta ukáže dnešok podľa predpovede a ponúkne
-  meranie pripojiť, bez cien ukáže len kWh a ponúkne ceny doplniť. Obe výzvy otvoria
+  Súčty posiela len živé meranie; bez neho karta ukáže sivý plagát dneška podľa predpovede a
+  ponúkne meranie pripojiť, bez cien ukáže plagát bez hodnoty a ponúkne ceny doplniť. Obe výzvy otvoria
   rovno ten krok v Nastavení.
 - **Nastavenie** – moja elektráreň. Pri prvom otvorení sa appka spýta len na polohu; panely
   môže človek nastaviť hneď, alebo ich odložiť – vtedy karta 7 dní ukazuje predpoveď pre

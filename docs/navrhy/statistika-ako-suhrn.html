@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Štatistika ako súhrn</title>
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                font-weight: 300 700;
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                font-weight: 700;
+                src: url('../../fonts/ibm-plex-mono-700-latin-ext.woff2') format('woff2');
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                font-weight: 500;
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                /* Súčasná appka */
+                --bg: #0a0a0a;
+                --card-bg: #151614;
+                --c-ink: #f2f0ea;
+                --c-ink-45: rgba(242, 240, 234, 0.64);
+                --c-ink-05: rgba(242, 240, 234, 0.06);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --ink-on-color: #0b0b0b;
+                --poster-mid: 58%;
+                --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+                --grotesk: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+                /* Nová appka */
+                --s1: #3d6fb3;
+                --s2: #8db4e0;
+                --glass: rgba(8, 16, 40, 0.3);
+                --dim: rgba(255, 255, 255, 0.82);
+                --poster-1: #ffd36e;
+                --poster-2: #ff8a5c;
+                --poster-3: #6d55d6;
+                --poster-ink: #1d1030;
+                --o-ink: #0b1430;
+                --archivo: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+                /* Stránka návrhu */
+                --page: #10131c;
+                --page-2: #181c28;
+                --page-ink: #e9ecf4;
+                --page-dim: #9aa3b8;
+                --new: #ffd36e;
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--page-ink);
+                font-family: var(--archivo);
+                line-height: 1.45;
+            }
+            button {
+                font: inherit;
+                cursor: pointer;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 28px 16px 60px;
+            }
+            h1 {
+                margin: 0 0 6px;
+                font-size: 1.6rem;
+                font-variation-settings: 'wdth' 112;
+            }
+            .lede {
+                margin: 0 0 18px;
+                max-width: 780px;
+                color: var(--page-dim);
+            }
+            .lede b {
+                color: var(--page-ink);
+            }
+            .controls {
+                display: grid;
+                gap: 10px;
+                margin: 0 0 24px;
+            }
+            .switch {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+            }
+            .switch > span {
+                min-width: 70px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: var(--page-dim);
+            }
+            .switch button {
+                min-height: 40px;
+                padding: 8px 14px;
+                border: 1px solid #343b4f;
+                border-radius: 999px;
+                background: var(--page-2);
+                color: var(--page-ink);
+                font-weight: 700;
+            }
+            .switch button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--o-ink);
+                border-color: #fff;
+            }
+            .cols2 {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 28px;
+                align-items: start;
+            }
+            .col h2 {
+                margin: 0 0 2px;
+                font-size: 1.05rem;
+            }
+            .col > p {
+                margin: 0 0 12px;
+                font-size: 0.875rem;
+                color: var(--page-dim);
+                min-height: 2.6em;
+            }
+
+            /* ===== Telefóny ===== */
+            .phone {
+                position: relative;
+                width: 100%;
+                max-width: 375px;
+                margin: 0 auto;
+                border-radius: 34px;
+                overflow: hidden;
+                box-shadow:
+                    0 0 0 8px #05070c,
+                    0 20px 50px rgba(0, 0, 0, 0.5);
+            }
+
+            /* ---- Súčasná appka ---- */
+            .cur {
+                padding: 18px 14px 22px;
+                color: var(--c-ink);
+                font-family: var(--grotesk);
+                background:
+                    radial-gradient(circle at 20% 0%, rgba(158, 242, 91, 0.14) 0%, rgba(158, 242, 91, 0) 42%),
+                    radial-gradient(circle at 82% 5%, rgba(158, 242, 91, 0.13) 0%, rgba(158, 242, 91, 0) 46%), var(--bg);
+            }
+            .cur .head {
+                padding: 0 6px 12px;
+            }
+            .cur .head h3 {
+                margin: 0;
+                font-size: 26px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+            }
+            .cur .head p {
+                margin: 2px 0 0;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--c-ink-45);
+            }
+            .cur .seg {
+                display: grid;
+                grid-auto-flow: column;
+                grid-auto-columns: 1fr;
+                gap: 2px;
+                padding: 4px;
+                border-radius: 999px;
+                background: rgba(0, 0, 0, 0.14);
+            }
+            .cur .seg button {
+                min-height: 36px;
+                padding: 0;
+                border: 0;
+                border-radius: 999px;
+                background: transparent;
+                font-family: var(--mono);
+                font-size: 10.5px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--ink-on-color);
+            }
+            .cur .seg button[aria-pressed='true'] {
+                background: var(--ink-on-color);
+                color: var(--c-ink);
+            }
+            .cur .seg button:disabled {
+                opacity: 0.35;
+                cursor: default;
+            }
+            .summary {
+                display: grid;
+                gap: 12px;
+                padding: 14px 18px 22px;
+                border-radius: 28px;
+                color: var(--ink-on-color);
+                background: linear-gradient(165deg, var(--green) 0%, var(--amber) var(--poster-mid), var(--red) 100%);
+            }
+            .summary.off {
+                background: linear-gradient(165deg, #cfccc2, #8f8c84);
+            }
+            .summary-kick {
+                margin: 4px 0 0;
+                font-family: var(--mono);
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+            }
+            .summary-big {
+                margin: 0;
+                font-size: min(88px, 24vw);
+                font-weight: 700;
+                letter-spacing: -0.06em;
+                line-height: 0.85;
+            }
+            .summary-big.est {
+                font-style: italic;
+            }
+            .summary-big small {
+                font-size: 28px;
+                letter-spacing: -0.02em;
+            }
+            .summary-bars {
+                display: flex;
+                align-items: flex-end;
+                gap: 6px;
+                height: 88px;
+            }
+            .summary-bars.year {
+                gap: 3px;
+            }
+            .summary-bars span {
+                display: flex;
+                flex: 1;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: center;
+                gap: 4px;
+                height: 100%;
+                font-family: var(--mono);
+                font-size: 10px;
+                font-weight: 700;
+            }
+            .summary-bars i {
+                width: 100%;
+                border-radius: 6px 6px 2px 2px;
+                background: rgba(0, 0, 0, 0.55);
+            }
+            .summary-bars i.best {
+                background: var(--ink-on-color);
+            }
+            .summary-bars i.partial {
+                outline: 1.5px dashed rgba(0, 0, 0, 0.45);
+                outline-offset: 1.5px;
+            }
+            .summary-bars i.missing,
+            .summary-cal i.missing {
+                background: transparent;
+                outline: 1.5px dashed rgba(0, 0, 0, 0.45);
+                outline-offset: -1.5px;
+            }
+            .summary-cal {
+                display: grid;
+                grid-template-columns: repeat(10, minmax(0, 1fr));
+                gap: 4px;
+            }
+            .summary-cal i {
+                aspect-ratio: 1;
+                border-radius: 4px;
+                background: var(--ink-on-color);
+            }
+            .summary-cal i.future {
+                background: transparent;
+                outline: 1.5px solid rgba(0, 0, 0, 0.18);
+                outline-offset: -1.5px;
+            }
+            /* Pás: dnešok voči predpovedi, celý čas voči uhlíku z výroby panelov. */
+            .summary-meter {
+                display: grid;
+                gap: 6px;
+            }
+            .summary-meter .track {
+                position: relative;
+                height: 22px;
+                border-radius: 999px;
+                background: rgba(0, 0, 0, 0.16);
+                overflow: hidden;
+            }
+            .summary-meter .fill {
+                position: absolute;
+                inset: 0 auto 0 0;
+                border-radius: 999px;
+                background: var(--ink-on-color);
+            }
+            .summary-meter p {
+                display: flex;
+                justify-content: space-between;
+                margin: 0;
+                font-family: var(--mono);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .summary-rows {
+                display: grid;
+            }
+            .summary-row {
+                display: grid;
+                grid-template-columns: 24px minmax(0, 1fr);
+                gap: 12px;
+                align-items: baseline;
+                padding: 10px 0;
+                border-top: 2px solid var(--ink-on-color);
+            }
+            .summary-row b {
+                font-family: var(--mono);
+                font-size: 13px;
+            }
+            .summary-row span {
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                line-height: 1.2;
+            }
+            .summary-row small {
+                display: block;
+                margin-top: 2px;
+                font-size: 13px;
+                font-weight: 500;
+                letter-spacing: 0;
+            }
+            .summary-note {
+                margin: 0;
+                font-size: 13px;
+            }
+            .summary-share {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                min-height: 54px;
+                border: 0;
+                border-radius: 999px;
+                background: var(--ink-on-color);
+                color: var(--c-ink);
+                font-family: var(--grotesk);
+                font-size: 17px;
+                font-weight: 700;
+            }
+            .summary-share svg,
+            .choice svg {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.4;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .choice {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                margin-top: 12px;
+                padding: 14px 16px;
+                border: 1px solid rgba(242, 240, 234, 0.16);
+                border-radius: 18px;
+                background: var(--card-bg);
+                color: var(--c-ink);
+                font-family: var(--grotesk);
+                text-align: left;
+            }
+            .choice b {
+                display: block;
+                font-size: 16px;
+            }
+            .choice span span {
+                font-size: 13px;
+                color: var(--c-ink-45);
+            }
+
+            /* ---- Nová appka ---- */
+            .obl {
+                padding: 18px 0 22px;
+                color: #fff;
+                font-family: var(--archivo);
+                background: linear-gradient(180deg, var(--s1), var(--s2));
+            }
+            .obl .head {
+                padding: 0 20px 10px;
+            }
+            .obl .head h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+            }
+            .obl .head p {
+                margin: 0;
+                font-size: 0.9375rem;
+            }
+            .pc {
+                container-type: inline-size;
+                display: grid;
+                gap: 12px;
+                margin: 0 14px;
+                padding: 16px 18px 20px;
+                border-radius: 24px;
+                background: linear-gradient(165deg, var(--poster-1), var(--poster-2) 50%, var(--poster-3));
+                color: var(--poster-ink);
+            }
+            .pc.off {
+                background: linear-gradient(165deg, #d9dce6, #8790a8);
+            }
+            .pc p,
+            .pc h4 {
+                margin: 0;
+            }
+            .pc .seg {
+                display: flex;
+                gap: 2px;
+                padding: 3px;
+                border-radius: 999px;
+                background: rgba(29, 16, 48, 0.14);
+            }
+            .pc .seg button {
+                flex: 1 1 0;
+                min-width: 0;
+                min-height: 40px;
+                padding: 4px 2px;
+                border: 0;
+                border-radius: 999px;
+                background: transparent;
+                color: var(--poster-ink);
+                font-size: 0.8125rem;
+                font-weight: 700;
+            }
+            .pc .seg button[aria-pressed='true'] {
+                background: var(--poster-ink);
+                color: #fff;
+            }
+            .pc .seg button:disabled {
+                opacity: 0.35;
+                cursor: default;
+            }
+            .pc h4 {
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .pn {
+                font-size: min(62px, 15vw, 100cqi / var(--n, 7) * 1.3);
+                font-weight: 900;
+                font-variation-settings: 'wdth' 125;
+                line-height: 0.95;
+                white-space: nowrap;
+            }
+            .pn.est {
+                font-style: italic;
+            }
+            .pcols {
+                display: flex;
+                gap: 3px;
+                align-items: flex-end;
+                height: 64px;
+            }
+            .pcols span {
+                display: flex;
+                flex: 1;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: center;
+                gap: 3px;
+                height: 100%;
+                font-size: 0.625rem;
+                font-weight: 800;
+            }
+            .pcols i {
+                width: 100%;
+                border-radius: 2px;
+                background: var(--poster-ink);
+                opacity: 0.55;
+            }
+            .pcols i.best {
+                opacity: 0.9;
+            }
+            .pcols i.partial {
+                outline: 1.5px dashed var(--poster-ink);
+                outline-offset: 1.5px;
+            }
+            .pcols i.missing {
+                border: 1.5px solid var(--poster-ink);
+                background: transparent;
+                opacity: 0.45;
+            }
+            .pcal {
+                display: grid;
+                grid-template-columns: repeat(10, minmax(0, 1fr));
+                gap: 4px;
+            }
+            .pcal i {
+                aspect-ratio: 1;
+                border-radius: 3px;
+                background: var(--poster-ink);
+            }
+            .pcal i.missing {
+                border: 1.5px solid var(--poster-ink);
+                background: transparent;
+                opacity: 0.45;
+            }
+            .pcal i.future {
+                border: 1.5px solid rgba(29, 16, 48, 0.2);
+                background: transparent;
+            }
+            .pmeter {
+                display: grid;
+                gap: 5px;
+            }
+            .pmeter .track {
+                position: relative;
+                height: 14px;
+                border-radius: 999px;
+                background: rgba(29, 16, 48, 0.16);
+                overflow: hidden;
+            }
+            .pmeter .fill {
+                position: absolute;
+                inset: 0 auto 0 0;
+                border-radius: 999px;
+                background: var(--poster-ink);
+            }
+            .pmeter p {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                font-weight: 800;
+            }
+            .prows {
+                display: grid;
+            }
+            .prow {
+                display: grid;
+                grid-template-columns: 22px minmax(0, 1fr);
+                gap: 10px;
+                align-items: baseline;
+                padding: 9px 0;
+                border-top: 1.5px solid var(--poster-ink);
+            }
+            .prow b {
+                font-size: 0.75rem;
+                font-weight: 900;
+            }
+            .prow span {
+                font-size: 1.125rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 110;
+                line-height: 1.2;
+            }
+            .prow small {
+                display: block;
+                margin-top: 2px;
+                font-size: 0.8125rem;
+                font-weight: 500;
+                font-variation-settings: 'wdth' 100;
+            }
+            .pc .note {
+                font-size: 0.8125rem;
+                line-height: 1.4;
+            }
+            .pc .foot {
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .pbtn {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 50px;
+                padding: 10px 18px;
+                border: 0;
+                border-radius: 999px;
+                background: #fff;
+                color: var(--o-ink);
+                font-family: var(--archivo);
+                font-size: 1rem;
+                font-weight: 800;
+            }
+            .pc .pbtn {
+                background: var(--poster-ink);
+                color: #fff;
+            }
+            .cta {
+                display: grid;
+                gap: 8px;
+                margin: 12px 14px 0;
+                padding: 14px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+            }
+            .cta b {
+                font-size: 1rem;
+            }
+            .cta p {
+                margin: 0;
+                font-size: 0.875rem;
+                color: var(--dim);
+            }
+
+            /* Nový text oproti dnešku - len v návrhu. */
+            .phone mark {
+                background: none;
+                color: inherit;
+                text-decoration: underline wavy 1.5px;
+                text-underline-offset: 3px;
+            }
+            .legend {
+                margin: 14px 0 0;
+                font-size: 0.8125rem;
+                color: var(--page-dim);
+            }
+            .legend u {
+                text-decoration: underline wavy 1.5px;
+                text-underline-offset: 3px;
+                color: var(--page-ink);
+            }
+
+            /* ===== Rozbor ===== */
+            .notes {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 18px;
+                margin-top: 36px;
+            }
+            .box {
+                padding: 18px 20px;
+                border: 1px solid #2a3045;
+                border-radius: 18px;
+                background: var(--page-2);
+            }
+            .box h3 {
+                margin: 0 0 8px;
+                font-size: 1rem;
+            }
+            .box ul,
+            .box ol {
+                margin: 0;
+                padding-left: 20px;
+                font-size: 0.9rem;
+                color: var(--page-dim);
+            }
+            .box li {
+                margin: 6px 0;
+            }
+            .box li b {
+                color: var(--page-ink);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.85rem;
+            }
+            th,
+            td {
+                padding: 6px 8px;
+                border-top: 1px solid #2a3045;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--page-dim);
+                font-weight: 700;
+            }
+            td:first-child {
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Štatistika ako súhrn</h1>
+            <p class="lede">
+                Karta Štatistika v oboch appkách prevezme podobu, akú má dnes v súčasnej appke <b>súhrn na zdieľanie</b> (Môžem? → Súhrn):
+                plagát vo farbách appky, veľké číslo, obrázok dní, očíslované riadky v jednotkách, ktoré pozná každý. Obdobia ostávajú tie,
+                ktoré má Štatistika dnes – <b>Dnes, Mesiac, Rok, Spolu</b>. <b>Zdieľanie do story sa ruší v oboch appkách</b> – karta nemá
+                tlačidlo zdieľania a obrázok sa nikde nerobí. Čísla sú vymyslené, október 2026, nedeľa 25. 10.
+            </p>
+            <div class="controls">
+                <div class="switch" id="sw-period" role="group" aria-label="Obdobie">
+                    <span>Obdobie</span>
+                    <button type="button" data-v="dnes" aria-pressed="false">Dnes</button>
+                    <button type="button" data-v="mesiac" aria-pressed="true">Mesiac</button>
+                    <button type="button" data-v="rok" aria-pressed="false">Rok</button>
+                    <button type="button" data-v="spolu" aria-pressed="false">Spolu</button>
+                </div>
+                <div class="switch" id="sw-state" role="group" aria-label="Stav">
+                    <span>Stav</span>
+                    <button type="button" data-v="live" aria-pressed="true">S meraním a cenami</button>
+                    <button type="button" data-v="noprice" aria-pressed="false">Bez cien</button>
+                    <button type="button" data-v="off" aria-pressed="false">Bez merania</button>
+                </div>
+            </div>
+
+            <div class="cols2">
+                <div class="col">
+                    <h2>Súčasná appka</h2>
+                    <p>
+                        Plagát súhrnu tak, ako je dnes – zelená → oranžová → červená, Space Grotesk a mono štítky. Bez tlačidla Späť, je to
+                        karta.
+                    </p>
+                    <div class="phone cur" id="ph-cur"></div>
+                </div>
+                <div class="col">
+                    <h2>Živá obloha</h2>
+                    <p>
+                        To isté rozloženie (riadky 01–05, dlaždice plagátu odchádzajú spolu so story) vo farbách plagátu novej appky –
+                        obloha pri západe slnka, Archivo.
+                    </p>
+                    <div class="phone obl" id="ph-obl"></div>
+                </div>
+            </div>
+            <p class="legend"><u>Podčiarknuté vlnovkou</u> sú texty, ktoré dnes v appke nie sú.</p>
+
+            <div class="notes">
+                <section class="box">
+                    <h3>Čo ukáže ktoré obdobie</h3>
+                    <table>
+                        <tr>
+                            <th>Obdobie</th>
+                            <th>Obrázok</th>
+                            <th>Riadky</th>
+                        </tr>
+                        <tr>
+                            <td>Dnes</td>
+                            <td>pás voči predpovedi (dnes ho má Štatistika)</td>
+                            <td>mobil, km, z predpovede, hodnota, CO2eq</td>
+                        </tr>
+                        <tr>
+                            <td>Mesiac</td>
+                            <td>štvorčeky dní (ako súhrn), dni, ktoré ešte prídu, ako obrys</td>
+                            <td>mobil, km, najlepší deň, hodnota + ø za deň, CO2eq</td>
+                        </tr>
+                        <tr>
+                            <td>Rok</td>
+                            <td>12 stĺpcov mesiacov (ako súhrn)</td>
+                            <td>to isté + ø za deň</td>
+                        </tr>
+                        <tr>
+                            <td>Spolu</td>
+                            <td>pás: koľko uhlíka z výroby panelov je splatené</td>
+                            <td>mobil, km, hodnota, CO2eq, od kedy</td>
+                        </tr>
+                    </table>
+                </section>
+                <section class="box">
+                    <h3>Čo sa oproti dnešku zmení</h3>
+                    <ul>
+                        <li>
+                            <b>Odchádza zoznam ostatných období</b> pod veľkým číslom (Dnes / Mesiac / Rok / Spolu s kWh a €). Každé obdobie
+                            je jedno ťuknutie v prepínači.
+                        </li>
+                        <li>
+                            <b>Súhrn v Môžem? už nie je samostatná obrazovka.</b> Odkaz na konci karty ostane bez „na zdieľanie“ („Október
+                            na streche: 312 kWh“) a otvorí kartu Štatistika na mesiaci.
+                        </li>
+                        <li>
+                            <b>Zdieľanie do story odchádza celé:</b> tlačidlo v súhrne, plagát v dialógu a jeho tlačidlá v novej appke,
+                            generovanie obrázka (<code>web/share-image.js</code>, <code>poster-image.js</code>) aj pätka „RAY-MON · slnko
+                            nefakturuje“. <b>Zdieľať appku</b> a odkaz s nastavením ostávajú – to je iná vec.
+                        </li>
+                        <li>
+                            <b>Veta o hodnote</b> („čo by si zaplatil zo siete…“) a poznámka o chýbajúcich dňoch idú do poznámky pod
+                            riadkami.
+                        </li>
+                        <li><b>Výzvy</b> (doplň ceny, pripoj meranie) ostávajú pod plagátom.</li>
+                    </ul>
+                </section>
+                <section class="box">
+                    <h3>Rozhodnuté 25. 10. 2026</h3>
+                    <ol>
+                        <li><b>Obdobia:</b> Dnes, Mesiac, Rok, Spolu – bez týždňa.</li>
+                        <li><b>Zdieľanie do story</b> sa ruší celé, v oboch appkách.</li>
+                        <li>
+                            <b>Bez merania:</b> sivý plagát dneška podľa predpovede, ostatné obdobia vypnuté, pod ním výzva na pripojenie
+                            merania.
+                        </li>
+                        <li><b>Nová appka</b> má riadky 01–05 ako súčasná; dlaždice plagátu odchádzajú so story.</li>
+                    </ol>
+                </section>
+            </div>
+        </main>
+
+        <script>
+            // Vymyslené dáta - október 2026, nedeľa 25. 10. Prepočty ako v appke: mobil 0,015 kWh, 6 km na kWh.
+            const SITE = 'Bratislava · 9,8 kWp';
+            const fmt = (n, d = 0) => n.toLocaleString('sk-SK', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/ /g, ' ');
+
+            const OCT = [
+                11.2,
+                15.4,
+                24.6,
+                22.1,
+                8.3,
+                4.1,
+                13.9,
+                17.2,
+                19.0,
+                16.4,
+                null,
+                12.8,
+                6.2,
+                9.4,
+                14.7,
+                18.8,
+                11.0,
+                null,
+                14.2,
+                9.8,
+                17.6,
+                null,
+                12.1,
+                21.3,
+                18.4,
+            ];
+            const YEAR = [
+                ['jan', 210],
+                ['feb', 395],
+                ['mar', 742],
+                ['apr', 1018],
+                ['máj', 1212],
+                ['jún', 1326, 'best'],
+                ['júl', 1290, 'partial'],
+                ['aug', 1174],
+                ['sep', 790],
+                ['okt', 312, 'partial'],
+                ['nov', null, 'future'],
+                ['dec', null, 'future'],
+            ];
+
+            /** Riadky každého obdobia: t - hlavný text, s - pod ním, nw - text, ktorý dnes v appke nie je. */
+            const P = {
+                dnes: {
+                    kick: 'Dnes na streche',
+                    kickNew: true,
+                    kwh: 18.4,
+                    viz: 'meter',
+                    meter: { pct: 71, left: 'z predpovede 26,0 kWh', right: '71 %' },
+                    rows: [
+                        { t: '1 227 nabití mobilu', s: 'jeden mobil nabíjaný každý deň na 3 roky' },
+                        { t: '110 km autom', s: 'na elektrinu, zo strechy' },
+                        { t: 'Do večera ešte ~7,6 kWh', s: 'ak vyjde predpoveď na 26,0 kWh', nw: true },
+                        { t: 'Hodnota ~3 €', s: 'toľko by sme za to dali sieti', price: true },
+                        { t: '~0,9 kg CO2eq menej', s: 'od spustenia panely splatili 18 % uhlíka zo svojej výroby' },
+                    ],
+                    note: 'Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.',
+                },
+                mesiac: {
+                    kick: 'Október na streche',
+                    kwh: 312,
+                    viz: 'cal',
+                    rows: [
+                        { t: '20 800 nabití mobilu', s: 'jeden mobil nabíjaný každý deň na 56 rokov' },
+                        { t: '1 872 km autom', s: 'až do Barcelony' },
+                        { t: 'Najlepší deň: 3. 10.', s: '24,6 kWh za jediný deň' },
+                        { t: 'Hodnota ~50 €', s: 'toľko by sme za to dali sieti · ø 2 € za deň', price: true, nwSub: ' · ø 2 € za deň' },
+                        { t: '~16 kg CO2eq menej', s: 'od spustenia panely splatili 18 % uhlíka zo svojej výroby' },
+                    ],
+                    note: 'Za 3 dni appka čísla nemá – vtedy ju nikto neotvoril. CO2eq za celý životný cyklus: kWh zo siete SR 95 g, zo slnka 45 g.',
+                },
+                rok: {
+                    kick: 'Rok 2026 na streche',
+                    kwh: 9112,
+                    viz: 'year',
+                    rows: [
+                        { t: '607 467 nabití mobilu', s: 'jeden mobil nabíjaný každý deň na 1 664 rokov' },
+                        { t: '54 672 km autom', s: 'raz okolo Zeme' },
+                        { t: 'Najlepší deň: 14. 6.', s: '61,2 kWh za jediný deň' },
+                        { t: 'Hodnota ~1 458 €', s: 'toľko by sme za to dali sieti · ø 4 € za deň', price: true, nwSub: ' · ø 4 € za deň' },
+                        { t: '~455 kg CO2eq menej', s: 'od spustenia panely splatili 18 % uhlíka zo svojej výroby' },
+                    ],
+                    note: 'Za 9 dní appka čísla nemá – vtedy ju nikto neotvoril. Súčet roka je od meniča, stĺpce mesiacov z denníka appky.',
+                },
+                spolu: {
+                    kick: 'Od spustenia na streche',
+                    kickNew: true,
+                    kwh: 27840,
+                    viz: 'payback',
+                    meter: { pct: 18, left: 'uhlík z výroby panelov', right: '18 % splatené' },
+                    rows: [
+                        { t: '1 856 000 nabití mobilu', s: 'jeden mobil nabíjaný každý deň na 5 084 rokov' },
+                        { t: '167 040 km autom', s: 'štyrikrát okolo Zeme', nwSub: 'štyrikrát okolo Zeme' },
+                        { t: 'Od apríla 2023', s: '2 roky a pol na streche · ø 30 kWh za deň', nw: true },
+                        { t: 'Hodnota ~4 454 €', s: 'toľko by sme za to dali sieti', price: true },
+                        { t: '~1,3 t CO2eq menej', s: 'z ~14,7 t CO2eq, ktoré stála výroba panelov aj meniča' },
+                    ],
+                    note: 'Súčet od spustenia posiela menič. Výroba týchto panelov aj s meničom stála asi 14,7 t CO2eq, rozpočítaná na 30 rokov prevádzky.',
+                },
+            };
+
+            let period = 'mesiac';
+            let state = 'live';
+
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            /** Text s vyznačenou novou časťou. */
+            function sub(r) {
+                if (!r.nwSub) return esc(r.s);
+                const i = r.s.indexOf(r.nwSub);
+                return esc(r.s.slice(0, i)) + `<mark>${esc(r.nwSub)}</mark>` + esc(r.s.slice(i + r.nwSub.length));
+            }
+            function rowsOf(p) {
+                let rows = P[p].rows;
+                if (state === 'noprice') rows = rows.filter((r) => !r.price);
+                return rows;
+            }
+            const maxOf = (arr) => Math.max(...arr.filter((v) => v !== null));
+
+            const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+            const LABELS = { dnes: 'Dnes', mesiac: 'Mesiac', rok: 'Rok', spolu: 'Spolu' };
+
+            function segHtml() {
+                return Object.keys(LABELS)
+                    .map(
+                        (p) =>
+                            `<button type="button" data-p="${p}" aria-pressed="${p === period}"${state === 'off' && p !== 'dnes' ? ' disabled' : ''}>${LABELS[p]}</button>`,
+                    )
+                    .join('');
+            }
+
+            // ---- Súčasná appka ----
+            function curViz(d) {
+                if (d.viz === 'meter' || d.viz === 'payback')
+                    return (
+                        `<div class="summary-meter"><div class="track"><div class="fill" style="width:${d.meter.pct}%"></div></div>` +
+                        `<p><span>${d.viz === 'payback' ? `<mark>${esc(d.meter.left)}</mark>` : esc(d.meter.left)}</span><span>${esc(d.meter.right)}</span></p></div>`
+                    );
+                if (d.viz === 'cal') {
+                    const max = maxOf(OCT);
+                    const cells = OCT.map((v) =>
+                        v === null ? '<i class="missing"></i>' : `<i style="opacity:${(0.15 + (v / max) * 0.85).toFixed(2)}"></i>`,
+                    );
+                    for (let i = OCT.length; i < 31; i++) cells.push('<i class="future"></i>');
+                    return `<div class="summary-cal">${cells.join('')}</div>`;
+                }
+                const max = maxOf(YEAR.map((m) => m[1]));
+                return (
+                    '<div class="summary-bars year">' +
+                    YEAR.map(([n, v, c]) => {
+                        const h = c === 'future' ? 0 : Math.max(4, Math.round((v / max) * 100));
+                        return `<span><i class="${c || ''}" style="height:${h}%"></i>${n}</span>`;
+                    }).join('') +
+                    '</div>'
+                );
+            }
+
+            function curHtml() {
+                const head = `<div class="head"><h3>Štatistika</h3><p>${SITE}</p></div>`;
+                const seg = `<div class="seg" role="group" aria-label="Obdobie">${segHtml()}</div>`;
+                if (state === 'off')
+                    return (
+                        head +
+                        `<section class="summary off">${seg}<h2 class="summary-kick"><mark>Dnes podľa predpovede</mark></h2>` +
+                        `<p class="summary-big est">~26<small> kWh</small></p>` +
+                        `<div class="summary-rows"><div class="summary-row"><b>01</b><span>~1 733 nabití mobilu<small>ak vyjde predpoveď</small></span></div>` +
+                        `<div class="summary-row"><b>02</b><span>Hodnota ~4 €<small>toľko by sme za to dali sieti</small></span></div></div>` +
+                        `<p class="summary-note"><mark>Mesiac, rok a celý čas posiela menič. Keď odpovie, ukážu sa.</mark></p></section>` +
+                        `<button type="button" class="choice"><span><b>Pripojiť živé meranie</b><span>Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.</span></span>${CHEVRON}</button>`
+                    );
+                const d = P[period];
+                const rows = rowsOf(period)
+                    .map(
+                        (r, i) =>
+                            `<div class="summary-row"><b>0${i + 1}</b><span>${r.nw ? `<mark>${esc(r.t)}</mark>` : esc(r.t)}<small>${r.nw ? `<mark>${esc(r.s)}</mark>` : sub(r)}</small></span></div>`,
+                    )
+                    .join('');
+                const kick = d.kickNew ? `<mark>${esc(d.kick)}</mark>` : esc(d.kick);
+                const note = state === 'noprice' ? d.note.replace(/^Hodnota je.*?appka nevie\.\s?/, '') : d.note;
+                return (
+                    head +
+                    `<section class="summary">${seg}<h2 class="summary-kick">${kick}</h2>` +
+                    `<p class="summary-big">${fmt(Math.round(d.kwh))}<small> kWh</small></p>${curViz(d)}` +
+                    `<div class="summary-rows">${rows}</div>` +
+                    (note ? `<p class="summary-note">${esc(note)}</p>` : '') +
+                    `</section>` +
+                    (state === 'noprice'
+                        ? `<button type="button" class="choice"><span><b>Doplň ceny v tarife</b><span>Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.</span></span>${CHEVRON}</button>`
+                        : '')
+                );
+            }
+
+            // ---- Nová appka ----
+            function oblViz(d) {
+                if (d.viz === 'meter' || d.viz === 'payback')
+                    return (
+                        `<div class="pmeter"><div class="track"><div class="fill" style="width:${d.meter.pct}%"></div></div>` +
+                        `<p><span>${d.viz === 'payback' ? `<mark>${esc(d.meter.left)}</mark>` : esc(d.meter.left)}</span><span>${esc(d.meter.right)}</span></p></div>`
+                    );
+                if (d.viz === 'cal') {
+                    const max = maxOf(OCT);
+                    const cells = OCT.map((v) =>
+                        v === null ? '<i class="missing"></i>' : `<i style="opacity:${(0.15 + (v / max) * 0.85).toFixed(2)}"></i>`,
+                    );
+                    for (let i = OCT.length; i < 31; i++) cells.push('<i class="future"></i>');
+                    return `<div class="pcal">${cells.join('')}</div>`;
+                }
+                const max = maxOf(YEAR.map((m) => m[1]));
+                return (
+                    '<div class="pcols">' +
+                    YEAR.map(([n, v, c]) => {
+                        const h = c === 'future' ? 0 : Math.max(4, Math.round((v / max) * 100));
+                        return `<span><i class="${c === 'future' ? '' : c || ''}" style="height:${h}%"></i>${n.slice(0, 1)}</span>`;
+                    }).join('') +
+                    '</div>'
+                );
+            }
+
+            function oblHtml() {
+                const head = `<div class="head"><h3>Štatistika</h3><p>${SITE}</p></div>`;
+                const seg = `<div class="seg" role="group" aria-label="Obdobie">${segHtml()}</div>`;
+                if (state === 'off')
+                    return (
+                        head +
+                        `<section class="pc off">${seg}<h4><mark>Dnes podľa predpovede</mark></h4>` +
+                        `<p class="pn est" style="--n:9">~26 kWh</p>` +
+                        `<div class="prows"><p class="prow"><b>01</b><span>~1 733 nabití mobilu<small>ak vyjde predpoveď</small></span></p>` +
+                        `<p class="prow"><b>02</b><span>Hodnota ~4 €<small>toľko by sme za to dali sieti</small></span></p></div>` +
+                        `<p class="note"><mark>Mesiac, rok a celý čas posiela menič. Keď odpovie, ukážu sa.</mark></p></section>` +
+                        `<div class="cta"><b>Pripoj živé meranie</b><p>Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.</p><button type="button" class="pbtn">Pripojiť</button></div>`
+                    );
+                const d = P[period];
+                const kwh = `${fmt(Math.round(d.kwh))} kWh`;
+                const rows = rowsOf(period)
+                    .map(
+                        (r, i) =>
+                            `<p class="prow"><b>0${i + 1}</b><span>${r.nw ? `<mark>${esc(r.t)}</mark>` : esc(r.t)}<small>${r.nw ? `<mark>${esc(r.s)}</mark>` : sub(r)}</small></span></p>`,
+                    )
+                    .join('');
+                const kick = d.kickNew ? `<mark>${esc(d.kick)}</mark>` : esc(d.kick);
+                const note = state === 'noprice' ? d.note.replace(/^Hodnota je.*?appka nevie\.\s?/, '') : d.note;
+                return (
+                    head +
+                    `<section class="pc">${seg}<h4>${kick}</h4>` +
+                    `<p class="pn" style="--n:${kwh.length}">${kwh}</p>${oblViz(d)}` +
+                    `<div class="prows">${rows}</div>` +
+                    (note ? `<p class="note">${esc(note)}</p>` : '') +
+                    `</section>` +
+                    (state === 'noprice'
+                        ? `<div class="cta"><b>Doplň ceny v tarife</b><p>Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.</p><button type="button" class="pbtn">Doplniť ceny</button></div>`
+                        : '')
+                );
+            }
+
+            function render() {
+                if (state === 'off') period = 'dnes';
+                document.getElementById('ph-cur').innerHTML = curHtml();
+                document.getElementById('ph-obl').innerHTML = oblHtml();
+                for (const b of document.querySelectorAll('#sw-period button')) {
+                    b.setAttribute('aria-pressed', String(b.dataset.v === period));
+                    b.disabled = state === 'off' && b.dataset.v !== 'dnes';
+                }
+                for (const b of document.querySelectorAll('#sw-state button'))
+                    b.setAttribute('aria-pressed', String(b.dataset.v === state));
+            }
+
+            document.getElementById('sw-period').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((period = b.dataset.v), render());
+            });
+            document.getElementById('sw-state').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((state = b.dataset.v), render());
+            });
+            // Prepínač priamo na plagáte funguje tiež.
+            for (const id of ['ph-cur', 'ph-obl'])
+                document.getElementById(id).addEventListener('click', (e) => {
+                    const b = e.target.closest('[data-p]');
+                    if (b && !b.disabled) ((period = b.dataset.p), render());
+                });
+            render();
+        </script>
+    </body>
+</html>

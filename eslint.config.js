@@ -18,7 +18,6 @@ const NEUTRAL_WEB = [
     'setup-wiring',
     'settings-store',
     'svg',
-    'share-file',
     'qr',
     'day-chart',
     'teraz-gestures',

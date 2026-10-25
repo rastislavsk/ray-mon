@@ -29,9 +29,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   terazPage: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
- *   mozemSummary: boolean,
  *   mozemItem: string | null,
- *   summaryPeriod: import('../shared/summary.js').SummaryPeriod,
  *   previewMinutes: number | null,
  *   wide: boolean,
  *   tall: boolean,
@@ -74,7 +72,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, item: string | null }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, item: string | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -112,15 +110,10 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
-        // Denník výroby po dňoch pre súhrn (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
+        // Denník výroby po dňoch pre plagát Štatistiky (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
         dayLog: {},
-        // Obrazovka súhrnu v karte Môžem? - je to krok navigácie, Späť ju zavrie. Obdobie je
-        // nastavenie vnútri nej.
-        mozemSummary: false,
-        // Zoznam vecí v karte Môžem? (čo môžem pustiť a dokedy) - druhá obrazovka karty ako súhrn,
-        // krok navigácie, Späť ju zavrie.
+        // Panel veci či skupiny v karte Môžem? - krok navigácie, Späť ho zavrie.
         mozemItem: null,
-        summaryPeriod: /** @type {import('../shared/summary.js').SummaryPeriod} */ ('mesiac'),
         previewMinutes: null,
         wide: layout.wide,
         // Či je okno dosť vysoké na to, aby sa do prehľadu dní zmestila aj správa týždňa
@@ -179,7 +172,6 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
-        mozemSummary: false,
         mozemItem: null,
         stavTip: false,
     };
@@ -199,7 +191,6 @@ export function navStep(state) {
         setup: state.setupStep,
         roof: state.setupRoof,
         info: state.infoOpen,
-        summary: state.mozemSummary,
         item: state.mozemItem,
     };
 }
@@ -212,7 +203,6 @@ export function sameNavStep(a, b) {
         a.setup === b.setup &&
         a.roof === b.roof &&
         a.info === b.info &&
-        a.summary === b.summary &&
         a.item === b.item
     );
 }
@@ -232,7 +222,6 @@ export function navChange(from, step) {
         setupStep: step.setup,
         setupRoof: step.roof,
         infoOpen: step.info,
-        mozemSummary: step.summary,
         mozemItem: step.item,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
@@ -278,15 +267,15 @@ function validPanelPlace(panel, weekDetail) {
 }
 
 /**
- * Obrazovky karty Môžem?: súhrn (otvorený alebo nie) a vec či skupina, ktorej panel je otvorený
- * (`item`, null = žiadny). Položka zo staršej verzie appky ich nepozná - súhrn je `false`, panel
- * zatvorený; zrušený zoznam vecí (`list`) sa vráti na kartu. Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom;
- * položka zo staršej verzie, ktorá ho ešte nesie, sa vráti na kartu bez neho.
- * @param {Record<string, unknown>} step @returns {{ summary: boolean, item: string | null } | null}
+ * Obrazovka karty Môžem?: vec či skupina, ktorej panel je otvorený (`item`, null = žiadny). Položka
+ * zo staršej verzie appky ju nepozná - panel zatvorený; zrušený zoznam vecí (`list`) sa vráti na kartu.
+ * Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom a súhrn na zdieľanie (`summary`)
+ * s presunom do karty Štatistika; položka zo staršej verzie, ktorá ich ešte nesie, sa vráti na kartu bez nich.
+ * @param {Record<string, unknown>} step @returns {{ item: string | null } | null}
  */
-function screensIn({ summary = false, item = null }) {
-    if (typeof summary !== 'boolean' || (item !== null && typeof item !== 'string')) return null;
-    return { summary, item };
+function screensIn({ item = null }) {
+    if (item !== null && typeof item !== 'string') return null;
+    return { item };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

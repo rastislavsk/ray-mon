@@ -1,25 +1,18 @@
-// Karta Štatistika: výroba za dnes, mesiac, rok a celý čas a jej hodnota podľa tarify.
-// Celý obsah karty skladá render do #stats-body, v index.html sú len nosiče. Počíta
-// shared/stats.js.
+// Karta Štatistika: plagát obdobia - dnes, mesiac, rok alebo celý čas na streche - v prechode farieb
+// stavu, s prepínačom obdobia, veľkým číslom, obrázkom dní a očíslovanými riadkami. Bez merania
+// dnešok z predpovede. Celý obsah karty skladá render do #stats-body, v index.html sú len nosiče.
+// Počíta shared/summary.js.
 
 import { installedKw } from '../../shared/config.js';
-import { escapeHtml, fmt1, fmtSum, kwpText } from '../../shared/format.js';
-import { EMPTY_MESSAGES } from '../../shared/messages.js';
+import { escapeHtml, kwpText, monthNameShort } from '../../shared/format.js';
+import { EMPTY_MESSAGES, STATISTIKA_TEXTS } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
-import { STATS_PERIODS, statsModel } from '../../shared/stats.js';
+import { STATS_PERIODS } from '../../shared/stats.js';
+import { summaryModel } from '../../shared/summary.js';
 import { SETUP_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 
-/** @typedef {ReturnType<typeof statsModel>} StatsModel */
-
-/** Popisky prepínača obdobia. */
-const PERIOD_LABELS = { dnes: 'Dnes', mesiac: 'Mesiac', rok: 'Rok', spolu: 'Spolu' };
-
-/** kWh do textu: „31,7“, od tisíc „9 112“; bez údaja pomlčka. @param {number | null} kwh */
-export const kwhText = (kwh) => (kwh === null ? '–' : fmtSum(kwh, 1));
-
-/** Peniaze do textu: „4,78 €“, od tisíc „1 297 €“. @param {number} value @param {string} currency */
-export const moneyText = (value, currency) => `${fmtSum(value, 2)} ${escapeHtml(currency)}`;
+/** @typedef {import('../../shared/summary.js').SummaryModel} SummaryModel */
 
 /** Výzva, ktorá vedie do Nastavenia (data-stats-go, viď initStats vo web/interactions.js).
  * @param {string} go krok sprievodcu, alebo `nastavenie` pre samotnú kartu @param {string} title @param {string} text */
@@ -30,84 +23,93 @@ function goHtml(go, title, text) {
     );
 }
 
-/** @param {import('../../shared/stats.js').StatsPeriod} period */
-function segHtml(period) {
+/** Prepínač obdobia na plagáte; bez merania sa dá vybrať len dnešok. @param {SummaryModel} m */
+function segHtml(m) {
     const buttons = STATS_PERIODS.map(
-        (p) => `<button type="button" data-stats-period="${p}" aria-pressed="${p === period}">${PERIOD_LABELS[p]}</button>`,
+        (p) =>
+            `<button type="button" data-stats-period="${p}" aria-pressed="${p === m.period}"${!m.periods && p !== 'dnes' ? ' disabled' : ''}>` +
+            `${STATISTIKA_TEXTS.periods[p]}</button>`,
     ).join('');
-    return `<div class="seg" role="group" aria-label="Obdobie">${buttons}</div>`;
+    return `<div class="seg" role="group" aria-label="${STATISTIKA_TEXTS.periodsLabel}">${buttons}</div>`;
 }
 
-/** Veľké číslo obdobia, eurá, pri dnešku pásik voči predpovedi a pri mesiaci a roku priemer.
- * @param {StatsModel} m */
-function heroHtml(m) {
-    const h = m.hero;
-    let html = `<div class="stats-hero"><span class="lbl">${escapeHtml(h.heading)}</span>`;
-    html += `<div class="stats-num"><span class="num">${kwhText(h.kwh)}</span><span class="u">kWh</span></div>`;
-    if (h.value !== null) html += `<div class="stats-eur">${moneyText(h.value, m.currency)}<small>hodnota podľa tarify</small></div>`;
-    if (m.progress && m.forecastToday) {
-        const pct = Math.max(0, Math.min(100, m.progress.pct));
-        html +=
-            `<div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>` +
-            `<div class="progress-caption"><span>z predpovede <b>${fmt1(m.forecastToday.kwh)} kWh</b></span><span><b>${m.progress.pct} %</b></span></div></div>`;
+/**
+ * Obrázok pod veľkým číslom: pás (dnešok voči predpovedi, splatený uhlík panelov), mesiac ako
+ * mriežka štvorčekov, rok ako 12 stĺpcov mesiacov. Chýbajúci deň aj mesiac je len obrys,
+ * mesiac, v ktorom niektorý deň chýba, má stĺpec s prerušovaným obrysom (je nižší, než mesiac
+ * naozaj bol), deň či mesiac, ktorý ešte len príde, je tenký obrys, resp. bez stĺpca.
+ * @param {NonNullable<SummaryModel['viz']>} viz
+ */
+function vizHtml(viz) {
+    if (viz.kind === 'meter')
+        return (
+            `<div class="summary-meter"><div class="summary-track" aria-hidden="true"><i style="width:${viz.pct}%"></i></div>` +
+            `<p><span>${escapeHtml(viz.left)}</span><span>${escapeHtml(viz.right)}</span></p></div>`
+        );
+    if (viz.kind === 'days') {
+        const cells = viz.days
+            .map((d) =>
+                d.future
+                    ? '<i class="future"></i>'
+                    : d.frac === null
+                      ? '<i class="missing"></i>'
+                      : `<i style="opacity:${(0.15 + d.frac * 0.85).toFixed(2)}"></i>`,
+            )
+            .join('');
+        return `<div class="summary-cal" aria-hidden="true">${cells}</div>`;
     }
-    if (h.perDay !== null) html += `<div class="stats-meta">ø <b>${fmt1(h.perDay)} kWh</b> za deň</div>`;
-    return `${html}</div>`;
-}
-
-/** Ostatné obdobia pod veľkým číslom. @param {StatsModel} m */
-function rowsHtml(m) {
-    const rows = m.rows
-        .map(
-            (r) =>
-                `<div class="stats-row"><span class="k">${escapeHtml(r.label)}${r.od ? ` <span class="od">${escapeHtml(r.od)}</span>` : ''}</span>` +
-                `<span class="v">${kwhText(r.kwh)} kWh</span>` +
-                `<span class="e">${r.value === null ? '' : moneyText(r.value, m.currency)}</span></div>`,
-        )
+    const bars = viz.months
+        .map((m) => {
+            const cls = m.future
+                ? 'future'
+                : m.frac === null
+                  ? 'missing'
+                  : [m.best ? 'best' : '', m.partial ? 'partial' : ''].join(' ').trim();
+            const h = m.future ? 0 : m.frac === null ? 30 : Math.max(4, Math.round(m.frac * 100));
+            return `<span><i class="${cls}" style="height:${h}%"></i>${escapeHtml(monthNameShort(m.month))}</span>`;
+        })
         .join('');
-    return `<div class="stats-rows">${rows}</div>`;
+    return `<div class="summary-bars year" aria-hidden="true">${bars}</div>`;
 }
 
-/** Bez merania: dnešok podľa predpovede. @param {StatsModel} m */
-function forecastHtml(m) {
-    if (!m.forecastToday) return `<p class="stats-note">${escapeHtml(EMPTY_MESSAGES.forecast.body)}</p>`;
-    const f = m.forecastToday;
+/** Plagát obdobia; bez čísel (meranie ani predpoveď) prázdny. @param {SummaryModel} m */
+function posterHtml(m) {
+    if (m.kind === 'none') return '';
+    const est = m.kind === 'estimate';
+    const rows = m.rows
+        .map((r, i) => `<div class="summary-row"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></div>`)
+        .join('');
     return (
-        `<div class="stats-hero"><span class="lbl">Dnes podľa predpovede</span>` +
-        `<div class="stats-num"><span class="num">${fmt1(f.kwh)}</span><span class="u">kWh</span></div>` +
-        (f.value === null ? '' : `<div class="stats-eur">≈ ${moneyText(f.value, m.currency)}<small>hodnota podľa tarify</small></div>`) +
-        `</div>`
+        `<section class="summary${est ? ' est' : ''}">${segHtml(m)}` +
+        (m.heading ? `<h3 class="summary-kick">${escapeHtml(m.heading)}</h3>` : '') +
+        `<p class="summary-big" style="--n:${m.big.length}">${escapeHtml(m.big)}<small> kWh</small></p>${m.viz ? vizHtml(m.viz) : ''}` +
+        (rows ? `<div class="summary-rows">${rows}</div>` : '') +
+        (m.note ? `<p class="summary-note">${escapeHtml(m.note)}</p>` : '') +
+        `</section>`
     );
 }
 
 /** Obsah karty podľa toho, čo appka o elektrárni vie. `neplati` je veta namiesto „meranie
  * neodpovedá“, keď výrobca prístup odmietol (shared/pristup.js).
- * @param {StatsModel} m @param {boolean} noPanels @param {string | null} [neplati] */
+ * @param {SummaryModel} m @param {boolean} noPanels @param {string | null} [neplati] */
 export function statsHtml(m, noPanels, neplati = null) {
     if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
+    const poster = posterHtml(m) || `<p class="stats-note">${escapeHtml(EMPTY_MESSAGES.forecast.body)}</p>`;
     // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
     if (noPanels)
-        return (
-            forecastHtml(m) + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.')
-        );
-    const prices = m.priced ? '' : goHtml('ceny', 'Doplň ceny v tarife', 'Uvidíš, akú hodnotu má vyrobená elektrina v peniazoch.');
-    if (m.status === 'live') {
-        const note = m.priced
-            ? `<p class="stats-note">Hodnota je to, čo by si za túto elektrinu zaplatil zo siete podľa svojej tarify. Koľko z nej si spotreboval sám, appka nevie.</p>`
-            : '';
-        const od = m.odNote ? `<p class="stats-note">${escapeHtml(m.odNote)}</p>` : '';
-        return segHtml(m.hero.period) + heroHtml(m) + rowsHtml(m) + od + note + prices;
-    }
+        return poster + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.');
+    const prices = m.priced ? '' : goHtml('ceny', STATISTIKA_TEXTS.pricesTitle, STATISTIKA_TEXTS.pricesText);
+    if (m.kind === 'live') return poster + prices;
     const live =
         m.status === 'offline'
             ? `<p class="stats-note">${escapeHtml(neplati ?? 'Živé meranie teraz neodpovedá. Súčty za mesiac, rok a celý čas sa ukážu, keď sa spojenie obnoví.')}</p>`
             : goHtml('meranie', 'Pripojiť živé meranie', 'Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.');
-    return forecastHtml(m) + live + prices;
+    return poster + live + prices;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderStatistika(state, dom) {
     dom.statsSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
     const neplati = neplatiOf(state)?.statistika ?? null;
-    writeHtml(dom.statsBody, statsHtml(statsModel(state, state.statsPeriod), state.known !== 'elektraren', neplati), 'statsBody');
+    writeHtml(dom.statsBody, statsHtml(summaryModel(state, state.statsPeriod), state.known !== 'elektraren', neplati), 'statsBody');
 }

@@ -53,8 +53,7 @@
     --dim: rgba(255, 255, 255, 0.82);
     --cheap-text: #b0dbff;
     --costly-text: #ffc4ba;
-    /* Plagát na zdieľanie: obloha pri západe slnka a tmavé písmo na nej. Tie isté tokeny číta
-       obrázok do story (web/poster-image.js), dialóg a obrázok tak majú jednu paletu. */
+    /* Plagát obdobia na karte Štatistika: obloha pri západe slnka a tmavé písmo na nej. */
     --poster-1: #ffd36e;
     --poster-2: #ff8a5c;
     --poster-3: #6d55d6;
@@ -1371,81 +1370,179 @@ button.live[aria-expanded='true'] {
 .seg button[aria-pressed='true']:focus-visible {
     outline-offset: 3px;
 }
-.stat .knum {
-    padding-top: 16px;
-}
-.progress {
+/* Plagát obdobia (docs/navrhy/statistika-ako-suhrn.html): obloha pri západe slnka a tmavé písmo
+   na nej. Veľké číslo .pn sa zmenšuje podľa šírky karty (cqi). */
+.pc {
+    container-type: inline-size;
     display: grid;
-    gap: 6px;
-    padding: 12px 20px 0;
+    /* Jeden stĺpec, ktorý neprerastie kartu: pri veľkom písme v systéme sa riadky a prepínač
+       zalomia, nevytŕčajú z okna. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin: 14px 14px 0;
+    padding: 14px 16px 20px;
+    border-radius: 24px;
+    background: linear-gradient(var(--poster-angle), var(--poster-1), var(--poster-2) 50%, var(--poster-3));
+    color: var(--poster-ink);
 }
-.progress .sub {
-    padding: 0;
+/* Bez merania (dnešok len z predpovede) je plagát sivý. */
+.pc.est {
+    background: linear-gradient(var(--poster-angle), #dfe2ea, #8790a8);
 }
-/* Pás dneška voči predpovedi je biely - zelená patrí len oknu, keď slnko stačí. */
-.progress .bar i {
-    background: #fff;
-}
-.eq {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
-    gap: 8px;
-}
-.stat .eq p {
-    font-size: 0.8125rem;
-    line-height: 1.3;
-}
-.eq b {
-    display: block;
-    font-size: 1.5rem;
+.pc h2 {
+    font-size: 0.75rem;
     font-weight: 800;
-    font-variation-settings: 'wdth' 112;
-    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
-/* Čísla z odhadu (predpoveď, denník appky) priznávajú odhad písmom. */
-.glass.est .eq b,
-.rows .est b {
+/* Prepínač obdobia na plagáte: .seg, len v tmavom písme plagátu. */
+.pc .pseg {
+    margin: 0;
+    border: 0;
+    background: rgba(29, 16, 48, 0.14);
+}
+.pc .pseg button {
+    color: var(--poster-ink);
+}
+.pc .pseg button[aria-pressed='true'] {
+    background: var(--poster-ink);
+    color: #fff;
+}
+/* Bez merania sa dá vybrať len dnešok - ostatné obdobia posiela menič. */
+.pc .pseg button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+/* Ročné „9 112 kWh“ je dlhšie než mesačné - --n je počet znakov (render/statistika.js), aby sa
+   číslo zmestilo do karty v jednom riadku. */
+.pn {
+    font-size: min(62px, 15vw, 100cqi / var(--n, 7) * 1.3);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 125;
+    font-variant-numeric: tabular-nums;
+    line-height: 0.95;
+    white-space: nowrap;
+}
+/* Odhad z predpovede priznáva odhad aj písmom. */
+.pn.est {
     font-style: italic;
 }
-.rows {
-    gap: 0;
+/* Pás: dnešok voči predpovedi, celý čas voči uhlíku z výroby panelov. */
+.pmeter {
+    display: grid;
+    gap: 5px;
 }
-.rows p {
+.ptrack {
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(29, 16, 48, 0.16);
+    overflow: hidden;
+}
+.ptrack i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--poster-ink);
+}
+.pc .pmeter p {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 12px;
-    padding: 9px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 0.9375rem;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
 }
-.rows p:last-child {
-    border-bottom: 0;
-}
-.rows b {
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-/* „od 21. 10.“ pri súčte, ktorý appka ráta až od prvého merania (shared/sucty.js). */
-.rows .od {
-    font-size: inherit;
-    color: var(--dim);
-}
-.stat .glass p {
-    font-size: 0.9688rem;
-    line-height: 1.4;
-}
-.stat .sub.note {
-    padding-bottom: 0;
-    font-size: 0.8438rem;
-}
-.posters {
+/* Mesiac: štvorček na deň, sýtosť podľa výroby voči najlepšiemu dňu. */
+.pcal {
     display: grid;
-    gap: 10px;
-    padding: 16px 14px 18px;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
 }
-.posters .pbtn {
-    justify-self: stretch;
+.pcal i {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: var(--poster-ink);
+}
+/* Deň, ktorý v denníku chýba: len obrys, aby bolo vidno, že číslo nie je. */
+.pcal i.missing {
+    border: 1.5px solid var(--poster-ink);
+    background: transparent;
+    opacity: 0.45;
+}
+/* Deň, ktorý ešte len príde: tenký obrys. */
+.pcal i.future {
+    border: 1.5px solid rgba(29, 16, 48, 0.2);
+    background: transparent;
+}
+/* Rok: stĺpec na mesiac s jeho začiatočným písmenom. */
+.cols {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 64px;
+}
+.cols span {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+.cols i {
+    width: 100%;
+    border-radius: 2px;
+    background: var(--poster-ink);
+    opacity: 0.55;
+}
+.cols i.best {
+    opacity: 0.9;
+}
+/* Mesiac roka, v ktorom niektorý deň v denníku chýba: stĺpec je nižší, než mesiac naozaj bol. */
+.cols i.partial {
+    outline: 1.5px dashed var(--poster-ink);
+    outline-offset: 1.5px;
+}
+/* Mesiac bez jediného dňa v denníku: len obrys. */
+.cols i.missing {
+    border: 1.5px solid var(--poster-ink);
+    background: transparent;
+    opacity: 0.45;
+}
+/* Očíslované riadky: nabitia mobilu, km autom, najlepší deň, hodnota, uhlík. */
+.pc .prow {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 10px;
+    align-items: baseline;
+    padding: 9px 0;
+    border-top: 1.5px solid var(--poster-ink);
+}
+.prow b {
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+.prow span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 1.125rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 110;
+    line-height: 1.2;
+}
+.prow small {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-variation-settings: 'wdth' 100;
+}
+.pc .pnote {
+    font-size: 0.8125rem;
+    line-height: 1.4;
 }
 /* Výzva bez panelov: tlačidlo pri vstupe na kartu trikrát zapulzuje a zastaví sa. Animácia sa
    spustí vždy, keď sa prvok ukáže (karta či výzva bola skrytá). Útlm pohybu ju vypne celú. */
@@ -1467,112 +1564,13 @@ button.live[aria-expanded='true'] {
     font-style: italic;
 }
 
-/* Plagát na zdieľanie. Dialóg je stmavený rám cez celú obrazovku, obsah v strede - ťuknutie
-   mimo obsahu trafí dialóg a zatvorí ho. Karta .pc je to, čo kreslí aj obrázok do story. */
-.poster {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    margin: 0;
-    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-    border: 0;
-    background: transparent;
-    color: #fff;
-    overflow-y: auto;
-}
-.poster::backdrop {
-    background: rgba(5, 8, 20, 0.96);
-}
-.poster-in {
-    display: grid;
-    align-content: center;
-    gap: 12px;
-    max-width: 420px;
-    min-height: 100%;
-    margin: 0 auto;
-}
-.pc {
-    /* Veľké číslo .pn sa zmenšuje podľa šírky karty (cqi). */
-    container-type: inline-size;
-    display: grid;
-    gap: 12px;
-    padding: 22px 20px;
-    border-radius: 24px;
-    background: linear-gradient(var(--poster-angle), var(--poster-1), var(--poster-2) 50%, var(--poster-3));
-    color: var(--poster-ink);
-}
-.pc h2,
-.pc p {
-    margin: 0;
-}
-.pc h2,
-.pc .foot {
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-/* Ročné „9 112 kWh“ je dlhšie než mesačné - --n je počet znakov (render/poster.js), aby sa číslo
-   zmestilo do karty v jednom riadku. */
-.pn {
-    font-size: min(62px, 15vw, 100cqi / var(--n, 7) * 1.3);
-    font-weight: 900;
-    font-variation-settings: 'wdth' 125;
-    line-height: 0.95;
-    white-space: nowrap;
-}
-.cols {
-    display: flex;
-    gap: 3px;
-    align-items: flex-end;
-    height: 52px;
-}
-.cols i {
-    flex: 1;
-    border-radius: 2px;
-    background: var(--poster-ink);
-    opacity: 0.55;
-}
-.cols i.best {
-    opacity: 0.9;
-}
-/* Mesiac roka, v ktorom niektorý deň v denníku chýba: stĺpec je nižší, než mesiac naozaj bol. */
-.cols i.partial {
-    outline: 1.5px dashed var(--poster-ink);
-    outline-offset: 1.5px;
-}
-/* Deň, ktorý v denníku chýba: len obrys, aby bolo vidno, že číslo nie je. */
-.cols i.missing {
-    height: 30%;
-    border: 1.5px solid var(--poster-ink);
-    background: transparent;
-    opacity: 0.45;
-}
-.pg {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
-    gap: 10px;
-    font-size: 0.8125rem;
-    line-height: 1.25;
-}
-.pg strong {
-    display: block;
-    font-size: 1.3125rem;
-    font-weight: 900;
-    font-variation-settings: 'wdth' 110;
-}
-.poster .note {
-    margin: 0;
-    font-size: 0.8438rem;
+.stat .glass p {
+    font-size: 0.9688rem;
     line-height: 1.4;
 }
-.poster .pbtn {
-    justify-self: stretch;
-}
-/* Na takmer čiernom podklade plagátu je vedľajšie tlačidlo plné - priesvitné by nemalo pod sebou nič stáleho. */
-.poster .pbtn.ghost {
-    background: #1d2233;
+.stat .sub.note {
+    padding-bottom: 0;
+    font-size: 0.8438rem;
 }
 
 /* Panel veci zospodu. Dialóg sám je len rám, obsah je vo vnútri - ťuknutie mimo obsahu

@@ -52,8 +52,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `chart-model.js`                                                             | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                    |
 | `hero-model.js`                                                              | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                |
 | `stats.js`                                                                   | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                  |
-| `daylog.js`                                                                  | Denník výroby po dňoch pre súhrn: kontrola, zápis vyššieho súčtu, dni obdobia.                                       |
-| `summary.js`                                                                 | Súhrn na zdieľanie: týždeň alebo mesiac v kWh, prepočtoch, najlepšom dni, hodnote a uhlíku.                          |
+| `daylog.js`                                                                  | Denník výroby po dňoch pre plagát Štatistiky: kontrola, zápis vyššieho súčtu, dni obdobia.                           |
+| `summary.js`                                                                 | Plagát obdobia na karte Štatistika v oboch appkách: kWh, obrázok obdobia, prepočty, najlepší deň, hodnota a uhlík.   |
 | `mozem.js`                                                                   | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                   |
 | `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
 | `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                          |
@@ -200,8 +200,8 @@ ten istý súbor:
   z celkovej výroby: pri prvom meraní v období si zapamätá celkovú výrobu na jeho začiatku (kotvu)
   a súčet je potom celkovo teraz mínus ona. Súčet od výrobcu má prednosť a kotvu posunie - Huawei
   posiela rok z `getKpiStationYear` raz za 6 hodín a medzitým ho appka dorátava. Kým kotva nesiaha
-  na začiatok obdobia, súčet je len od prvého merania: `pv.od` to povie a Štatistika, súhrn aj plagát
-  ukážu „od 21. 10.“ a vetu, prečo. Robí to `refresh.js` pri každom meraní od Workera (`sSuctami`),
+  na začiatok obdobia, súčet je len od prvého merania: `pv.od` to povie a plagát Štatistiky
+  ukáže „od 21. 10.“ a vetu, prečo. Robí to `refresh.js` pri každom meraní od Workera (`sSuctami`),
   takže obe appky dostanú to isté. Deye celkovú výrobu nedáva - jeho mesiac a rok ostávajú prázdne.
 - **Nameraná krivka dňa** (`pv.realCurveToday`). Kiosk FusionSolar ju posiela s každým meraním.
   Pripojenia cez API ju berú z historického rozhrania výrobcu: Huawei Northbound `device/history`
@@ -227,7 +227,7 @@ alebo do neutrálneho modulu ako vyššie.
 a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov. Preto:
 
 - **Neskoré časti.** Pri štarte sa sťahuje len jadro: úvodná karta (Môžem? alebo Teraz), hlavička,
-  navigácia a obloha. Karty 7 dní, Štatistika s plagátom a Nastavenie so sprievodcom sú tri časti
+  navigácia a obloha. Karty 7 dní, Štatistika a Nastavenie so sprievodcom sú tri časti
   (`PARTS` v `obloha/web/state.js`, vstupy `obloha/web/part-*.js`), ktoré `obloha/web/parts.js`
   načíta dynamickým `import()` – keď ich obrazovka potrebuje (`neededParts`), inak sekundu po
   prvom vykreslení, keď je prehliadač voľný. Prvé vykreslenie čaká len na časti, ktoré úvodná
@@ -442,6 +442,17 @@ priemernú cenu podľa toho, do ktorých pásiem (aj s víkendovými a sezónnym
 výroba z predpovede na najbližší týždeň. Kto nezadal ceny všetkých pásiem, eurá nevidí vôbec –
 polovičné ceny by dali polovičné eurá.
 
+Obsah je plagát obdobia (`summaryModel` v `shared/summary.js`, návrh
+`docs/navrhy/statistika-ako-suhrn.html`) - ten istý v oboch appkách, každá ho kreslí vo svojich farbách;
+nová appka k nemu pridá svoje stavy bez polohy a bez panelov (`statistikaModel`). Na každé obdobie
+iný obrázok: dnešok voči predpovedi, mesiac ako mriežka dní, rok ako stĺpce mesiacov, celý čas ako
+splatený uhlík z výroby panelov. Štvorčeky dní a stĺpce mesiacov stoja na denníku (`shared/daylog.js`),
+ktorý si appka vedie sama - kiosk dni neposiela. Denník sa dopĺňa pri každej obnove merania, vždy
+vyšším súčtom dňa, a až od 03:00 miestneho času (`DAYLOG.fromMin`): tesne po polnoci môže kiosk ešte
+hlásiť včerajšok. Deň, keď appka nebola otvorená, chýba a plagát to povie. Bez merania je plagát sivý
+odhad dneška z predpovede a ostatné obdobia sa vybrať nedajú. Zdieľanie do story (obrázok plagátu)
+appka nemá - zrušilo sa spolu so súhrnom v karte Môžem?, ktorý karta Štatistika nahradila.
+
 Obsah karty skladá render celý do `#stats-body`, v `index.html` sú len nosiče. Obdobie (`statsPeriod`) je nastavenie
 vnútri karty, nie krok navigácie. Výzvy „Doplň ceny“ a „Pripojiť živé meranie“ prepnú na kartu
 Nastavenie a jedným `setState` rovno otvoria ten krok sprievodcu (`stepEdit`), takže tlačidlo
@@ -475,14 +486,7 @@ ukazovala „beží do …“ a súčty v súhrne. Kiosk vidí len výrobu, nie 
 nevedela a nikto to nepoužíval; od `docs/navrhy/bez-pustil-som.html` to nie je v žiadnej appke.
 Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS`, `dropOldStored`).
 
-Súhrn na zdieľanie (`shared/summary.js`) je obrazovka karty Môžem? a krok navigácie
-(`summary` v `NavStep`): Späť ho zavrie rovnako ako detail dňa. Mesačný súčet berie presne
-z kiosku, týždeň a stĺpce dní z denníka (`shared/daylog.js`), ktorý si appka vedie sama - kiosk
-dni neposiela. Denník sa dopĺňa pri každej obnove merania, vždy vyšším súčtom dňa, a až od 03:00
-miestneho času (`DAYLOG.fromMin`): tesne po polnoci môže kiosk ešte hlásiť včerajšok. Deň, keď
-appka nebola otvorená, chýba a súhrn to povie. Obrázok pre story kreslí `web/share-image.js`
-na plátno z toho istého modelu a posiela ho `navigator.share`; kde zdieľanie súborov nie je,
-obrázok sa stiahne. Nič z toho neodchádza na server.
+Na konci karty je odkaz na plagát mesiaca v karte Štatistika - jeden krok navigácie, Späť vráti na Môžem?.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
 Môžem?, ten, kto elektráreň platí, Terazky. Predvolená je Môžem? (`START_PANELS[0]`, jediné

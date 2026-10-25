@@ -75,7 +75,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: 1,
         weekDetail: null,
         infoOpen: null,
-        mozemSummary: false,
         mozemItem: null,
         stavTip: false,
     });
@@ -84,7 +83,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: -1,
         weekDetail: null,
         infoOpen: null,
-        mozemSummary: false,
         mozemItem: null,
         stavTip: false,
     });
@@ -102,12 +100,9 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
         setup: null,
         roof: 0,
         info: null,
-        summary: false,
         item: null,
     });
-    // Súhrn v karte Môžem? je obrazovka - Späť ju zavrie.
-    assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemSummary: true })));
-    // Zoznam vecí v karte Môžem? tiež.
+    // Panel veci v karte Môžem? je obrazovka - Späť ho zavrie.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemItem: 'pracka' })));
     // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
@@ -133,7 +128,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            summary: false,
             item: null,
         }),
         {
@@ -143,7 +137,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            mozemSummary: false,
             mozemItem: null,
             stavTip: false,
             setupReturn: null,
@@ -157,7 +150,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            summary: false,
             item: null,
         }),
         {
@@ -167,7 +159,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            mozemSummary: false,
             mozemItem: null,
             stavTip: false,
             setupReturn: null,
@@ -181,7 +172,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         setup: 'smer',
         roof: 1,
         info: null,
-        summary: false,
         item: null,
     });
     assert.equal(smer.setupStep, 'smer');
@@ -194,7 +184,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: 'suhrn',
             roof: 0,
             info: null,
-            summary: false,
             item: null,
         }).setupReturn,
         null,
@@ -207,7 +196,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: 'share',
-            summary: false,
             item: null,
         }).infoOpen,
         'share',
@@ -219,7 +207,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            summary: false,
             item: null,
         }).infoOpen,
         null,
@@ -233,12 +220,11 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         setup: null,
         roof: 0,
         info: null,
-        summary: false,
         item: null,
         ...x,
     });
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', summary: true }) }), krok({ panel: 'mozem', summary: true }));
-    assert.equal(navStepFrom({ step: krok({ summary: 'áno' }) }), null, 'súhrn je áno alebo nie');
+    // Položka zo staršej verzie s otvoreným súhrnom na zdieľanie (presunul sa do Štatistiky) vráti kartu bez neho.
+    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', summary: true }) }), krok({ panel: 'mozem' }));
     assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', item: 'velke' }) }), krok({ panel: 'mozem', item: 'velke' }));
     assert.equal(navStepFrom({ step: krok({ item: 1 }) }), null, 'panel veci je id alebo nič');
     // Položka zo staršej verzie so zrušeným zoznamom vecí sa vráti na kartu.

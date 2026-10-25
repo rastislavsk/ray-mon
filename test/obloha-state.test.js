@@ -34,7 +34,6 @@ const step = (patch = {}) => ({
     item: null,
     preview: null,
     detail: null,
-    poster: null,
     setup: null,
     roof: 0,
     sheet: null,
@@ -74,12 +73,12 @@ test('ready: karta v jadre je pripravená vždy, neskorá až po načítaní svo
     assert.equal(ready({ parts: { sedem: 'ok' } }, '7dni'), true);
 });
 
-test('neededParts: karty na obrazovke, plagát a ponuka nastavenia z odkazu', () => {
+test('neededParts: karty na obrazovke a ponuka nastavenia z odkazu', () => {
     assert.deepEqual(neededParts(stateWith()), []);
     assert.deepEqual(neededParts(stateWith({ panel: '7dni' })), ['sedem']);
     // V prehľade je 7 dní vidieť aj z karty Môžem?.
     assert.deepEqual(neededParts(stateWith({ layout: 'wide' })), ['sedem']);
-    assert.deepEqual(neededParts(stateWith({ poster: 'mesiac' })), ['statistika']);
+    assert.deepEqual(neededParts(stateWith({ panel: 'statistika' })), ['statistika']);
     const incoming = /** @type {any} */ ({});
     assert.deepEqual(neededParts(stateWith({ incoming })), ['nastavenie']);
     assert.deepEqual(neededParts(stateWith({ panel: 'nastavenie' })), ['nastavenie']);
@@ -88,7 +87,7 @@ test('neededParts: karty na obrazovke, plagát a ponuka nastavenia z odkazu', ()
 test('navStep → navStepOf: krok prežije cestu cez históriu', () => {
     const s = stateWith({ panel: 'terazky', terazPreview: 600 });
     assert.deepEqual(navStepOf(navStep(s)), navStep(s));
-    const dash = stateWith({ layout: 'wide', panel: '7dni', weekDetail: 'day', poster: 'tyzden' });
+    const dash = stateWith({ layout: 'wide', panel: '7dni', weekDetail: 'day' });
     assert.deepEqual(navStepOf(navStep(dash)), navStep(dash));
     assert.equal(navStep(dash).dash, true);
     assert.deepEqual(navStepFrom({ step: navStep(s) }), navStep(s));
@@ -123,10 +122,8 @@ test('navStepOf: časť kroku, ktorá nepatrí karte, sa zahodí', () => {
     assert.equal(field({ panel: 'mozem', detail: 'day' }, 'detail'), null);
     assert.equal(field({ panel: 'mozem', detail: 'day', dash: true }, 'detail'), 'day');
     assert.equal(field({ panel: '7dni', detail: 'mesiac' }, 'detail'), null);
-    // Plagát len Môžem? a Štatistike.
-    assert.equal(field({ panel: 'terazky', poster: 'tyzden' }, 'poster'), null);
-    assert.equal(field({ panel: 'statistika', poster: 'tyzden' }, 'poster'), 'tyzden');
-    assert.equal(field({ panel: 'mozem', poster: 'storočie' }, 'poster'), null);
+    // Plagát v dialógu zanikol - položka zo staršej verzie, ktorá ho nesie, vráti kartu bez neho.
+    assert.deepEqual(navStepOf({ panel: 'statistika', poster: 'mesiac' }), step({ panel: 'statistika' }));
     // Okno sekcie Appka len Nastaveniu.
     assert.equal(field({ panel: 'mozem', sheet: 'share' }, 'sheet'), null);
     assert.equal(field({ panel: 'nastavenie', sheet: 'reset' }, 'sheet'), 'reset');

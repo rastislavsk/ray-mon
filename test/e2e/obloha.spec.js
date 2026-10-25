@@ -771,7 +771,7 @@ test.describe('karta Môžem?', () => {
         await expect(riadok).toBeFocused();
         // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
         expect(await page.evaluate(() => history.state)).toEqual({
-            step: { panel: 'mozem', item: null, preview: null, detail: null, poster: null, setup: null, roof: 0, sheet: null },
+            step: { panel: 'mozem', item: null, preview: null, detail: null, setup: null, roof: 0, sheet: null },
         });
         expect(errors).toEqual([]);
     });
@@ -793,7 +793,7 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('#mz-sheet')).toBeHidden();
         await expect(dlazdica).toBeFocused();
         expect(await page.evaluate(() => history.state)).toEqual({
-            step: { panel: 'mozem', item: null, preview: null, detail: null, poster: null, setup: null, roof: 0, sheet: null },
+            step: { panel: 'mozem', item: null, preview: null, detail: null, setup: null, roof: 0, sheet: null },
         });
         expect(errors).toEqual([]);
     });

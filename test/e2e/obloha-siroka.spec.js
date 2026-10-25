@@ -334,29 +334,14 @@ test.describe('dialógy na počítači', () => {
         expect(errors).toEqual([]);
     });
 
-    test('plagát je dialóg v strede; Escape aj Späť ho zavrú a fokus sa vráti na tlačidlo', async ({ page }) => {
+    test('odkaz v stĺpci Môžem? otvorí Štatistiku na mesiaci; Späť vráti do prehľadu', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
-        // Zo Štatistiky.
-        await page.locator('#nav-statistika').click();
-        const tlacidlo = page.locator('#st-posters [data-poster]').first();
-        await tlacidlo.click();
-        await expect(page.locator('#poster')).toBeVisible();
-        await vStrede(page, '#poster .poster-in');
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#poster')).toBeHidden();
-        await expect(tlacidlo).toBeFocused();
-        await tlacidlo.click();
-        await expect(page.locator('#poster')).toBeVisible();
-        await page.goBack();
-        await expect(page.locator('#poster')).toBeHidden();
-        await expect(tlacidlo).toBeFocused();
-        // Z odkazu v stĺpci Môžem?.
         await page.locator('#nav-mozem').click();
         await page.locator('#mz-summary').click();
-        await expect(page.locator('#poster')).toBeVisible();
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#poster')).toBeHidden();
-        await expect(page.locator('#mz-summary')).toBeFocused();
+        await expect(page.locator('#panel-statistika')).toBeVisible();
+        await expect(page.locator('#st-poster [data-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.goBack();
+        await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         expect(errors).toEqual([]);
     });
 

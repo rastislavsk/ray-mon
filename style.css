@@ -2069,16 +2069,14 @@ b {
     min-width: 0;
 }
 /* Veľké číslo s jednotkou - rovnaké v prehľade 7 dní aj v Štatistike. */
-.week-list-hero .num,
-.stats-num .num {
+.week-list-hero .num {
     font-family: var(--font-mono);
     font-size: var(--fs-num);
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1;
 }
-.week-list-hero .u,
-.stats-num .u {
+.week-list-hero .u {
     font-family: var(--font-mono);
     font-size: var(--fs-sm);
     color: var(--ink-35);
@@ -2646,9 +2644,8 @@ b {
 .app-items .app-credit {
     margin: 0;
 }
-/* Rám zoznamu: prehľad elektrárne v Nastavení a ostatné obdobia v Štatistike. */
-.sum-list,
-.stats-rows {
+/* Rám zoznamu: prehľad elektrárne v Nastavení. */
+.sum-list {
     display: grid;
     border-radius: var(--radius-lg);
     border: 1px solid var(--ink-12);
@@ -3779,83 +3776,12 @@ b {
 }
 
 /* ---- Štatistika ------------------------------------------------------------ */
-/* Výroba za obdobie a jej hodnota podľa tarify (návrh A v docs/navrhy/statistika-uspory.html).
-   Obsah skladá render do #stats-body; prepínač obdobia je .seg zo sprievodcu, výzvy sú .choice
-   a pásik dneška je ten istý .progress-* ako v bubline Dnes na karte 7 dní. */
+/* Plagát obdobia (docs/navrhy/statistika-ako-suhrn.html). Obsah skladá render do #stats-body;
+   plagát je .summary nižšie, výzvy sú .choice. */
 .stats {
     display: grid;
     gap: var(--sp-3);
     max-width: 560px;
-}
-/* Veľké číslo obdobia - rám ako bublina so súčtom týždňa (.week-list-hero). */
-.stats-hero {
-    display: grid;
-    gap: 6px;
-    padding: var(--sp-4);
-    background: var(--card-bg);
-    border: 1px solid var(--ink-08);
-    border-radius: var(--radius-lg);
-}
-.stats-num {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 2px;
-}
-/* Eurá sú zelené: je to hodnota elektriny zo slnka, tá istá farba ako slnko na ciferníku. */
-.stats-eur {
-    font-family: var(--font-mono);
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--green);
-}
-.stats-eur small {
-    margin-left: 6px;
-    font-size: var(--fs-xs);
-    font-weight: 400;
-    color: var(--ink-35);
-}
-.stats-meta {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--ink-45);
-}
-.stats-meta b {
-    color: var(--ink);
-}
-/* Ostatné obdobia pod veľkým číslom majú rám zoznamu spolu s .sum-list. */
-.stats-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: baseline;
-    gap: var(--sp-3);
-    padding: 11px 14px;
-    border-bottom: 1px solid var(--ink-05);
-    font-size: var(--fs-md);
-}
-.stats-row:last-child {
-    border-bottom: 0;
-}
-.stats-row .k {
-    color: var(--ink-45);
-}
-/* „od 21. 10.“ pri súčte, ktorý appka ráta až od prvého merania (shared/sucty.js). */
-.stats-row .k .od {
-    color: var(--ink-35);
-}
-.stats-row .v,
-.stats-row .e {
-    font-family: var(--font-mono);
-    text-align: right;
-    white-space: nowrap;
-}
-.stats-row .e {
-    min-width: 72px;
-    color: var(--green);
-}
-/* Bez cien je stĺpec eur prázdny - nemá si držať miesto, kWh idú k pravému okraju. */
-.stats-row .e:empty {
-    min-width: 0;
 }
 .stats-note {
     margin: 0;
@@ -4049,7 +3975,7 @@ b {
     font-size: var(--fs-md);
     color: var(--ink-70);
 }
-/* Mono štítok nad textom: „Súhrn na zdieľanie“. */
+/* Mono štítok nad textom odkazu do Štatistiky. */
 .summary-link small {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -4291,21 +4217,10 @@ b {
     margin-top: 3px;
     font-size: 14px;
 }
-/* Späť zo súhrnu na kartu (backButtonHtml v render/suhrn.js). */
-.summary-back {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 44px;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-/* ---- Môžem?: súhrn na zdieľanie ------------------------------------------------ */
-/* Plagát v prechode farieb stavu - ten istý, aký ide do obrázka pre story (web/share-image.js). */
+/* ---- Štatistika: plagát obdobia ---------------------------------------------- */
+/* Plagát v prechode farieb stavu. Bez merania (dnešok len z predpovede) je sivý. */
 .summary {
+    container-type: inline-size;
     display: grid;
     gap: var(--sp-3);
     padding: 14px 20px 22px;
@@ -4313,18 +4228,13 @@ b {
     color: var(--ink-on-color);
     background: linear-gradient(165deg, var(--green) 0%, var(--amber) var(--poster-mid), var(--red) 100%);
 }
+.summary.est {
+    background: linear-gradient(165deg, #d6d3ca 0%, #8f8c84 100%);
+}
 .summary b {
     color: var(--ink-on-color);
 }
-.summary-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--sp-2);
-}
-.summary-back svg,
-.summary-link svg,
-.summary-share svg {
+.summary-link svg {
     width: 20px;
     height: 20px;
     fill: none;
@@ -4346,6 +4256,10 @@ b {
     background: var(--ink-on-color);
     color: var(--ink);
 }
+/* Bez merania sa dá vybrať len dnešok - ostatné obdobia posiela menič. */
+.summary .seg button:disabled {
+    opacity: 0.4;
+}
 .summary-kick {
     margin: 4px 0 0;
     font-family: var(--font-mono);
@@ -4354,9 +4268,12 @@ b {
     letter-spacing: 0.16em;
     text-transform: uppercase;
 }
+/* Dlhšie číslo („21 505“) sa zmenšuje podľa počtu znakov (--n, render/statistika.js) a šírky
+   plagátu, aby sa aj s „kWh“ zmestilo do jedného riadka. */
 .summary-big {
     margin: 0;
-    font-size: min(96px, 26vw);
+    font-size: min(96px, 26vw, (100cqi - 72px) / var(--n, 3) * 1.75);
+    white-space: nowrap;
     font-weight: 700;
     letter-spacing: -0.06em;
     line-height: 0.85;
@@ -4364,6 +4281,38 @@ b {
 .summary-big small {
     font-size: 28px;
     letter-spacing: -0.02em;
+}
+/* Odhad z predpovede priznáva odhad aj písmom. */
+.summary.est .summary-big {
+    font-style: italic;
+}
+/* Pás: dnešok voči predpovedi, celý čas voči uhlíku z výroby panelov. */
+.summary-meter {
+    display: grid;
+    gap: 6px;
+}
+.summary-track {
+    height: 22px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.16);
+    overflow: hidden;
+}
+.summary-track i {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--ink-on-color);
+}
+.summary-meter p {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 .summary-bars {
     display: flex;
@@ -4416,6 +4365,12 @@ b {
     border-radius: 4px;
     background: var(--ink-on-color);
 }
+/* Deň, ktorý ešte len príde: tenký obrys. */
+.summary-cal i.future {
+    background: transparent;
+    outline: 1.5px solid rgba(0, 0, 0, 0.18);
+    outline-offset: -1.5px;
+}
 .summary-rows {
     display: grid;
 }
@@ -4448,19 +4403,7 @@ b {
     margin: 0;
     font-size: var(--fs-sm);
 }
-.summary-share {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    min-height: 54px;
-    border-radius: var(--radius-pill);
-    background: var(--ink-on-color);
-    color: var(--ink);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-}
-/* Odkaz na súhrn na konci karty - ten istý prechod farieb ako súhrn, kam vedie. */
+/* Odkaz z karty Môžem? na plagát mesiaca v Štatistike - ten istý prechod farieb ako plagát. */
 .summary-link {
     display: flex;
     justify-content: space-between;

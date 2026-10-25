@@ -1,9 +1,8 @@
-// Poslucháče karty Môžem?: panel veci či skupiny a súhrn na zdieľanie. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
+// Poslucháče karty Môžem?: panel veci či skupiny a odkaz do Štatistiky. Každý končí volaním setState (alebo krokom v histórii cez backTo), kreslí
 // web/render/mozem.js.
 
-import { SUMMARY_PERIODS } from '../shared/summary.js';
 import { backTo } from './history.js';
-import { shareSummary } from './share-image.js';
+import { panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -18,7 +17,9 @@ export function initMozem(store, dom) {
         const target = /** @type {HTMLElement} */ (e.target);
         const tile = target.closest('[data-mozem-item]');
         if (tile instanceof HTMLElement && tile.dataset.mozemItem) return store.setState({ mozemItem: tile.dataset.mozemItem });
-        onSummaryClick(store, target);
+        // Odkaz na mesiac na streche: karta Štatistika na mesiaci, jeden krok navigácie.
+        if (target.closest('[data-mozem-stats]'))
+            store.setState({ ...panelChange(store.get().panel, 'statistika'), statsPeriod: 'mesiac' });
     });
     const close = () => backTo(store, { mozemItem: null });
     dom.mozemSheetX.addEventListener('click', close);
@@ -29,20 +30,4 @@ export function initMozem(store, dom) {
         e.preventDefault();
         close();
     });
-}
-
-/**
- * Súhrn na zdieľanie: otvorenie je krok navigácie, šípka späť ten istý krok ako tlačidlo Späť
- * (backTo), obdobie je nastavenie vnútri obrazovky, zdieľanie pošle obrázok systému.
- * @param {Store} store @param {HTMLElement} target
- */
-function onSummaryClick(store, target) {
-    if (target.closest('[data-mozem-summary]')) return store.setState({ mozemSummary: true });
-    if (target.closest('[data-summary-back]')) return backTo(store, { mozemSummary: false });
-    const period = target.closest('[data-summary-period]');
-    if (period instanceof HTMLElement) {
-        const p = SUMMARY_PERIODS.find((x) => x === period.dataset.summaryPeriod);
-        return p && store.setState({ summaryPeriod: p });
-    }
-    if (target.closest('[data-summary-share]')) shareSummary(store.get());
 }

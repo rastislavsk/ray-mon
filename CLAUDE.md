@@ -9,7 +9,7 @@ Appky sú dve a ostávajú natrvalo: súčasná (koreň, `web/`, `style.css`) a 
 v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `day-pager.js`, `nav-history.js`,
-`setup-wiring.js`, `settings-store.js`, `svg.js`, `share-file.js`, `qr.js`, `day-chart.js`,
+`setup-wiring.js`, `settings-store.js`, `svg.js`, `qr.js`, `day-chart.js`,
 `teraz-gestures.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť

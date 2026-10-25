@@ -9,9 +9,8 @@
 import { MINUTES_PER_DAY } from './config.js';
 import { localDateKey } from './solar.js';
 import { weekStatsModel } from './chart-model.js';
-import { odText, suctyOdNote } from './messages-statistika.js';
+import { odText } from './messages-statistika.js';
 import { bandAt, scheduleFor } from './tariff.js';
-import { menoZnacky } from './zdroje.js';
 
 /** @typedef {'dnes' | 'mesiac' | 'rok' | 'spolu'} StatsPeriod */
 /** @typedef {import('./config.js').Tariff} Tariff */
@@ -213,9 +212,6 @@ export function statsModel(input, period) {
         priced: !tariff.bands.some((b) => b.price === null),
         currency: tariff.currency,
         hero: all[period],
-        // Veta, keď je niektorý súčet len od prvého merania (shared/sucty.js).
-        odNote: pv && input.zdroj ? suctyOdNote(menoZnacky(input.zdroj.sposob), pv.od) : '',
-        rows: STATS_PERIODS.filter((p) => p !== period).map((p) => all[p]),
         // Dnešok voči predpovedi - ten istý výpočet ako bublina Dnes na karte 7 dní.
         // Počíta s dneškom na prvom mieste predpovede, preto len vtedy, keď tam naozaj je.
         progress: period === 'dnes' && todayForecast && todayForecast === days[0] ? weekStatsModel(days, pv, false).progress : null,

@@ -70,10 +70,6 @@ test('statsModel: dnešok z kiosku ocenený podľa pásiem nameranej krivky', ()
     assert.equal(m.hero.value, /** @type {number} */ (pv.dailyEnergyKwh) * /** @type {number} */ (price));
     // Ráno padlo do drahého VT, zvyšok do NT - cena je niekde medzi nimi.
     assert.ok(/** @type {number} */ (price) > 0.14 && /** @type {number} */ (price) < 0.19);
-    assert.deepEqual(
-        m.rows.map((r) => r.period),
-        ['mesiac', 'rok', 'spolu'],
-    );
     assert.deepEqual(m.progress, { realKwh: pv.dailyEnergyKwh, pct: Math.round((100 * 31.7) / forecast.days[0].kwhTotal) });
 });
 
@@ -110,7 +106,6 @@ test('statsModel: bez cien sú len kWh', () => {
     const m = statsModel({ ...OWNER, tariff: TARIFF }, 'dnes');
     assert.equal(m.priced, false);
     assert.equal(m.hero.value, null);
-    assert.ok(m.rows.every((r) => r.value === null));
     assert.equal(/** @type {NonNullable<typeof m.forecastToday>} */ (m.forecastToday).value, null);
 });
 

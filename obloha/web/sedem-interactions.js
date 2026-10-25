@@ -63,7 +63,7 @@ export function initSedem(store, dom, refresh) {
     document.addEventListener('keydown', (e) => {
         const s = store.get();
         if (e.key !== 'Escape' || e.defaultPrevented || !shows(s, '7dni') || !s.weekDetail) return;
-        if (s.mozemItem || s.poster || s.appSheet) return;
+        if (s.mozemItem || s.appSheet) return;
         e.preventDefault();
         closeDetail(store);
     });
