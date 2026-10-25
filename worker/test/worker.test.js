@@ -712,3 +712,155 @@ test('Deye: obnova prístupu len heslom, aplikáciu a e-mail Worker doplní zo s
         assert.equal(res.status, 400);
     }
 });
+
+// ---- Krivka dňa pri meraní cez API (Fox ESS, Solis, Deye, Victron) ---------------------------
+
+/** Čas v ms z miestneho času 5. 9. (SELČ = UTC+2). @param {number} h @param {number} [m] */
+const sel = (h, m = 0) => Date.UTC(2026, 8, 5, h - 2, m);
+const POLNOC = Date.UTC(2026, 8, 4, 22);
+
+const DEYE_B = 'https://eu1-developer.deyecloud.com';
+const VRM = 'https://vrmapi.victronenergy.com/v2';
+/** @type {Array<{ sposob: string, udaje: Record<string, string>, routes: any[], krivka: (c: any) => boolean, poziadavka: (c: any) => void, kw: number }>} */
+const KRIVKA_PRIPADY = [
+    {
+        sposob: 'foxess-kluc',
+        udaje: { kluc: 'k' },
+        routes: [
+            [
+                'https://www.foxesscloud.com/op/v0/device/history/query',
+                200,
+                {
+                    errno: 0,
+                    result: [
+                        {
+                            deviceSN: '60BH1234',
+                            datas: [{ variable: 'pvPower', unit: 'kW', data: [{ time: '2026-09-05 06:00:00', value: 1.5 }] }],
+                        },
+                    ],
+                },
+            ],
+            ['https://www.foxesscloud.com/op/v0/device/list', 200, FOX_LIST],
+            ['https://www.foxesscloud.com/op/v1/device/real/query', 200, FOX_REAL],
+            ['https://www.foxesscloud.com/op/v0/device/generation', 200, FOX_GEN],
+        ],
+        krivka: (c) => c.url.endsWith('/history/query'),
+        poziadavka: (c) =>
+            assert.deepEqual(JSON.parse(c.init.body), { sn: '60BH1234', variables: ['pvPower'], begin: POLNOC, end: NOW.getTime() }),
+        kw: 3.4,
+    },
+    {
+        sposob: 'solis-kluc',
+        udaje: { keyId: '1300386381676565707', secret: 'tajne' },
+        routes: [
+            [
+                'https://www.soliscloud.com:13333/v1/api/stationDay',
+                200,
+                { code: '0', data: [{ time: sel(8), power: 1500, powerStr: 'W' }] },
+            ],
+            ['https://www.soliscloud.com:13333/v1/api/userStationList', 200, SOLIS_OK],
+        ],
+        krivka: (c) => c.url.endsWith('/stationDay'),
+        poziadavka: (c) => {
+            const body = JSON.parse(c.init.body);
+            assert.deepEqual([body.money, body.time, body.timeZone], ['EUR', '2026-09-05', 1]);
+            assert.match(c.init.headers.authorization, /^API 1300386381676565707:/);
+        },
+        kw: 5.772,
+    },
+    {
+        sposob: 'deye-aplikacia',
+        udaje: { appId: '202406270000000', appSecret: 'app-tajne', email: 'a@b.sk', heslo: 'moje-heslo' },
+        routes: [
+            [`${DEYE_B}/v1.0/account/token`, 200, { success: true, code: '1000000', accessToken: 'deye-token' }],
+            [
+                `${DEYE_B}/v1.0/station/list`,
+                200,
+                { success: true, stationList: [{ id: 10, name: 'Chata', installedCapacity: 10, regionTimezone: 'Europe/Bratislava' }] },
+            ],
+            [`${DEYE_B}/v1.0/station/latest`, 200, { success: true, generationPower: 3400 }],
+            // Jedna odpoveď na obe zrnitosti: dnešok (generationValue) aj body dňa (generationPower).
+            [
+                `${DEYE_B}/v1.0/station/history`,
+                200,
+                { success: true, stationDataItems: [{ generationValue: 18.2, generationPower: 1500, timeStamp: sel(8) / 1000 }] },
+            ],
+        ],
+        krivka: (c) => c.url.endsWith('/station/history') && JSON.parse(c.init.body).granularity === 1,
+        poziadavka: (c) => assert.deepEqual(JSON.parse(c.init.body), { stationId: 10, granularity: 1, startAt: '2026-09-05' }),
+        kw: 3.4,
+    },
+    {
+        sposob: 'victron-token',
+        udaje: { token: 'vrm-token' },
+        routes: [
+            [`${VRM}/users/me`, 200, { success: true, user: { id: 22 } }],
+            [`${VRM}/users/22/installations`, 200, { success: true, records: [{ idSite: 7, name: 'Chata' }] }],
+            [
+                `${VRM}/installations/7/diagnostics`,
+                200,
+                { success: true, records: [{ dbusServiceType: 'solarcharger', dbusPath: '/Yield/Power', rawValue: 2400 }] },
+            ],
+            [`${VRM}/installations/7/stats`, 200, { success: true, records: { Pb: [[sel(8), 0.25]], Pc: [[sel(8), 0.125]] } }],
+        ],
+        krivka: (c) => c.url.includes('/stats?'),
+        poziadavka: (c) =>
+            assert.ok(
+                c.url.endsWith(
+                    `/installations/7/stats?type=solar_yield&interval=15mins&start=${POLNOC / 1000}&end=${NOW.getTime() / 1000}`,
+                ),
+            ),
+        kw: 2.4,
+    },
+];
+
+/** Krivka jednej značky: pri pripojení, do 15 minút bez dopytu, po nich znova. @param {(typeof KRIVKA_PRIPADY)[number]} p */
+async function overKrivku(p) {
+    const o = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60 * 1000);
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const f = vyrobca(p.routes);
+    const pocet = () => f.calls.filter(p.krivka).length;
+    const res = await handlePripoj(pripojRequest({ sposob: p.sposob, udaje: p.udaje }), ENV, NOW, f.impl);
+    const { stanice } = await res.json();
+    // Pri pripojení: priebeh dňa (8:00 → 1,5 kW) a za ním aktuálny výkon o 13:00.
+    assert.equal(pocet(), 1, p.sposob);
+    p.poziadavka(f.calls.find(p.krivka));
+    assert.deepEqual(
+        stanice[0].pv.realCurveToday,
+        [
+            { hour: 8, kw: 1.5 },
+            { hour: 13, kw: p.kw },
+        ],
+        p.sposob,
+    );
+    // Do 15 minút len zapečatená krivka a aktuálny bod, pečať bez zmeny.
+    const skoro = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(10), f.impl)).json();
+    assert.equal(pocet(), 1, p.sposob);
+    assert.equal(skoro.pecat, undefined, p.sposob);
+    assert.deepEqual(
+        skoro.pv.realCurveToday,
+        [
+            { hour: 8, kw: 1.5 },
+            { hour: 13.1667, kw: p.kw },
+        ],
+        p.sposob,
+    );
+    // Po 15 minútach znova, s novým časom v pečati.
+    const potom = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(15), f.impl)).json();
+    assert.equal(pocet(), 2, p.sposob);
+    assert.equal((await otvor(await key, potom.pecat))?.pristup.krivkaAt, o(15).getTime(), p.sposob);
+}
+
+test('krivka dňa: Fox ESS, Solis, Deye a Victron - priebeh dňa pri pripojení, potom najviac raz za 15 minút', async () => {
+    for (const p of KRIVKA_PRIPADY) await overKrivku(p);
+    // Rozhranie histórie nevyjde (Fox ESS bez neho): meranie prejde, krivka je prázdna.
+    const bez = vyrobca([
+        ['https://www.foxesscloud.com/op/v0/device/history/query', 503, {}],
+        ['https://www.foxesscloud.com/op/v0/device/list', 200, FOX_LIST],
+        ['https://www.foxesscloud.com/op/v1/device/real/query', 200, FOX_REAL],
+        ['https://www.foxesscloud.com/op/v0/device/generation', 200, FOX_GEN],
+    ]);
+    const r = await (await handlePripoj(pripojRequest({ sposob: 'foxess-kluc', udaje: { kluc: 'k' } }), ENV, NOW, bez.impl)).json();
+    assert.equal(r.stanice[0].pv.realTimePowerKw, 3.4);
+    assert.deepEqual(r.stanice[0].pv.realCurveToday, []);
+});

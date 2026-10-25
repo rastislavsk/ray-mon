@@ -1,6 +1,7 @@
 // Fox ESS Open API (https://www.foxesscloud.com/public/i18n/en/OpenApiDocument.html): podpis
 // požiadavky a prevod odpovedí na formát `pv`. Sieť je vo Workeri (worker/src/zdroje.js).
 
+import { krivkaZBodov } from './krivka.js';
 import { md5 } from './md5.js';
 import { isObj } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
@@ -13,6 +14,9 @@ export const FOXESS = {
     list: '/op/v0/device/list',
     real: '/op/v1/device/real/query',
     generation: '/op/v0/device/generation',
+    // História meniča za najviac 24 hodín (priebeh dňa). Limit 1440 dopytov denne na menič je
+    // spoločný so živým meraním.
+    history: '/op/v0/device/history/query',
     // „Too many requests“ - výrobca neodpovedal na údaje, len pribrzdil.
     tooFrequent: 40400,
 };
@@ -81,4 +85,39 @@ export function parseFoxPv(realJson, genJson, nazov, now) {
         measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
+}
+
+/**
+ * Čas bodu histórie v ms. Dokumentácia hovorí len „utc time“; živé meranie má formát
+ * `yyyy-MM-dd HH:mm:ss zZ` (napr. `2024-01-10 15:20:01 CET+0100`). Posun za časom sa preto
+ * použije, keď je, inak je čas v UTC. @param {unknown} text @returns {number}
+ */
+export function foxCas(text) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:.*?([+-])(\d{2}):?(\d{2}))?/.exec(String(text));
+    if (!m) return NaN;
+    const [y, mo, d, h, mi, sec] = m.slice(1, 7).map((v) => Number(v ?? 0));
+    const posun = m[7] ? (m[7] === '-' ? -1 : 1) * (Number(m[8]) * 60 + Number(m[9])) : 0;
+    return Date.UTC(y, mo - 1, d, h, mi, sec) - posun * 60 * 1000;
+}
+
+/**
+ * Priebeh dňa z „history/query“: `pvPower` (kW, vo W sa prepočíta) v čase bodu.
+ * @param {unknown} json @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
+ */
+export function parseFoxHistory(json, now, tz) {
+    const r = result(json);
+    const device = Array.isArray(r) ? r[0] : null;
+    const datas =
+        isObj(device) && Array.isArray(/** @type {any} */ (device).datas) ? /** @type {any[]} */ (/** @type {any} */ (device).datas) : [];
+    const pv = datas.find((d) => isObj(d) && d.variable === 'pvPower');
+    const nasobok = pv?.unit === 'W' ? 0.001 : 1;
+    const body = Array.isArray(pv?.data) ? /** @type {any[]} */ (pv.data).filter(isObj) : [];
+    return krivkaZBodov(
+        body.map((b) => {
+            const kw = num(b.value);
+            return { t: foxCas(b.time), kw: kw === null ? null : kw * nasobok };
+        }),
+        now,
+        tz,
+    );
 }

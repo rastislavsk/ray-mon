@@ -204,11 +204,12 @@ ten istý súbor:
   ukážu „od 21. 10.“ a vetu, prečo. Robí to `refresh.js` pri každom meraní od Workera (`sSuctami`),
   takže obe appky dostanú to isté. Deye celkovú výrobu nedáva - jeho mesiac a rok ostávajú prázdne.
 - **Nameraná krivka dňa** (`pv.realCurveToday`). Kiosk FusionSolar ju posiela s každým meraním.
-  Huawei cez API účet (Northbound) ju dáva len historickým rozhraním zariadení (`device/history`,
-  5-minútové body jedného meniča, limit pri jednom meniči raz za 10 minút): Worker sa naň pýta pri
-  pripojení a potom najviac raz za 15 minút, krivku drží v pečati a medzitým k nej pridáva aktuálny
-  výkon (`nbKrivkaDnes`), aby čiara v grafe dňa došla až k „teraz“. Ostatné spôsoby pripojenia
-  krivku zatiaľ neposielajú - graf má len bod „teraz“.
+  Pripojenia cez API ju berú z historického rozhrania výrobcu: Huawei Northbound `device/history`
+  (5-minútové body meniča, limit pri jednom meniči raz za 10 minút), Fox ESS `history/query`, Solis
+  `stationDay`, Deye `station/history` s `granularity: 1` a Victron `stats` s `solar_yield` po 15 minútach.
+  Worker sa pýta pri pripojení a potom najviac raz za 15 minút (`KRIVKA` v `shared/krivka.js`), krivku
+  drží v pečati a medzitým k nej pridáva aktuálny výkon (`krivkaDnes`), aby čiara v grafe dňa došla až
+  k „teraz“. SolaX priebeh dňa v API nemá - graf má len bod „teraz“.
 - **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
   (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
   hodiny), `day-pager.js` (listovanie dní v detaile dňa prstom), `nav-history.js` (kroky navigácie

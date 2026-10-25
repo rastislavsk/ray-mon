@@ -10,6 +10,7 @@
 // výkon sa porovná s inštalovaným výkonom elektrárne (kWp): hodnota vyššia než jeho dvojnásobok
 // nemôže byť v kW, je vo wattoch.
 
+import { krivkaZBodov } from './krivka.js';
 import { isObj } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
@@ -111,4 +112,23 @@ export function deyePv(kw, dnes, nazov, now) {
         measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
+}
+
+/**
+ * Priebeh dňa z /station/history s `granularity: 1` (body dňa, len výkon): `generationPower`
+ * prevedený na kW (deyeKw) v čase `timeStamp` - v sekundách ako pri /station/history/power, v ms
+ * sa prijme tiež.
+ * @param {unknown} json @param {number | null} kwp @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
+ */
+export function parseDeyeFrames(json, kwp, now, tz) {
+    const items = ok(json).stationDataItems;
+    const body = Array.isArray(items) ? /** @type {any[]} */ (items).filter(isObj) : [];
+    return krivkaZBodov(
+        body.map((b) => {
+            const t = Number(b.timeStamp);
+            return { t: t < 1e12 ? t * 1000 : t, kw: deyeKw(num(b.generationPower), kwp) };
+        }),
+        now,
+        tz,
+    );
 }
