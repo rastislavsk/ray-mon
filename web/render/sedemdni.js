@@ -433,6 +433,32 @@ function renderEmpty(dom) {
     dom.weekMsgBody.textContent = EMPTY_MESSAGES.week.body;
 }
 
+/**
+ * Prehľad týždňa: rebríček dní, mapa hodina × deň, denné stĺpce a tabuľka s prepínačom dní.
+ * @param {import('../state.js').AppState} state @param {ForecastDay[]} days @param {number} sel
+ * @param {ReturnType<typeof weekStatsModel>} stats @param {import('../dom.js').Dom} dom
+ */
+function renderWeek(state, days, sel, stats, dom) {
+    const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);
+    const bands = days.map((_, i) => windowBand(sunWindows(forecastDayPlan({ ...state, forecast }, i))));
+    renderList(stats, weekListModel(days, sel), bands, bestDayIndex(days), dom);
+
+    // Mapa a stĺpce dostanú skutočný rozmer karty len na širokej obrazovke; na mobile si
+    // plátno určia samy, aby rozloženie ostalo také, aké bolo.
+    renderHeat(state, days, sel, dom);
+
+    // Na desktope má karta dosť miesta na to, aby strop jasnej oblohy zbytočne
+    // neprekrýval čísla nad stĺpcami - tam ho preto nekreslíme, na mobile ostáva.
+    const barsSize = state.wide ? state.chartSizes.weekBars : null;
+    const bars = weekBarsModel(days, sel, barsSize ? { W: barsSize.w, H: barsSize.h } : undefined, !state.wide);
+    dom.weekBars.setAttribute('viewBox', `0 0 ${bars.W} ${bars.H}`);
+    dom.weekBars.setAttribute('height', String(bars.H));
+    writeHtml(dom.weekBars, weekBarsSvg(bars), 'weekBars');
+    dom.weekBarsClearLegend.classList.toggle('hidden', state.wide);
+
+    renderTableAndTabs(days, sel, dom);
+}
+
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderSedemdni(state, dom) {
     // Bez zadaných panelov počíta predpoveď s typickou strechou - a musí to povedať.
@@ -455,24 +481,10 @@ export function renderSedemdni(state, dom) {
     renderDayStrip(detail, days, sel, dom);
     const stats = weekStatsModel(days, state.pv, state.forecast ? state.forecast.tomorrowSunny : false);
     renderStats(stats, dom, !!detail);
-    const forecast = /** @type {import('../../shared/solar.js').Forecast} */ (state.forecast);
-    const bands = days.map((_, i) => windowBand(sunWindows(forecastDayPlan({ ...state, forecast }, i))));
-    renderList(stats, weekListModel(days, sel), bands, bestDayIndex(days), dom);
-
-    // Mapa a stĺpce dostanú skutočný rozmer karty len na širokej obrazovke; na mobile si
-    // plátno určia samy, aby rozloženie ostalo také, aké bolo.
-    renderHeat(state, days, sel, dom);
-
-    // Na desktope má karta dosť miesta na to, aby strop jasnej oblohy zbytočne
-    // neprekrýval čísla nad stĺpcami - tam ho preto nekreslíme, na mobile ostáva.
-    const barsSize = state.wide ? state.chartSizes.weekBars : null;
-    const bars = weekBarsModel(days, sel, barsSize ? { W: barsSize.w, H: barsSize.h } : undefined, !state.wide);
-    dom.weekBars.setAttribute('viewBox', `0 0 ${bars.W} ${bars.H}`);
-    dom.weekBars.setAttribute('height', String(bars.H));
-    writeHtml(dom.weekBars, weekBarsSvg(bars), 'weekBars');
-    dom.weekBarsClearLegend.classList.toggle('hidden', state.wide);
-
-    renderTableAndTabs(days, sel, dom);
+    // Detail dňa ukazuje len deň; prehľad týždňa pod ním je skrytý. Pri listovaní sa render volá
+    // pri každom ťahu viackrát (kópie susedných dní, web/day-pager.js) a prehľad - plán každého
+    // zo siedmich dní, mapa, stĺpce, tabuľka - bol väčšina jeho času. Prekreslí sa, keď ho bude vidno.
+    if (detail !== 'day') renderWeek(state, days, sel, stats, dom);
     renderCurve(state, days[sel], stats.progress, detail === 'day', dom);
     renderDaySteps(detail, days, sel, dom);
     const msg = weekMessage(days);
