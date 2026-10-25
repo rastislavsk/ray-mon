@@ -4,6 +4,7 @@
 // Kľúč (API ID a API Secret) si majiteľ vypýta od podpory Solis, potom ho nájde v SolisCloud
 // (Account → Basic Settings → API Management). Dáta sa podľa dokumentácie obnovujú raz za 5 minút.
 
+import { krivkaZBodov } from './krivka.js';
 import { md5 } from './md5.js';
 import { isObj } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
@@ -11,7 +12,13 @@ import { VyrobcaChyba } from './vyrobca.js';
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
 /** Server (aj s portom z dokumentácie) a cesta zoznamu elektrární. */
-export const SOLIS = { base: 'https://www.soliscloud.com:13333', stations: '/v1/api/userStationList', contentType: 'application/json' };
+export const SOLIS = {
+    base: 'https://www.soliscloud.com:13333',
+    stations: '/v1/api/userStationList',
+    // Priebeh dňa elektrárne (výkon `power` s jednotkou `powerStr` a čas v ms), 2 dopyty za sekundu.
+    stationDay: '/v1/api/stationDay',
+    contentType: 'application/json',
+};
 
 /** MD5 textu ako base64 (hlavička Content-MD5). @param {string} text */
 export function md5Base64(text) {
@@ -52,17 +59,20 @@ function kilo(v, unit) {
     return typeof v === 'number' && Number.isFinite(v) && k !== undefined ? v * k : null;
 }
 
+/** Overí odpoveď: úspech je `code: "0"` (príklad v dokumentácii pole `success` nemá); kód chyby, napr. I0012 zlý účet. @param {unknown} json */
+function ok(json) {
+    if (!isObj(json) || String(/** @type {any} */ (json).code) !== '0')
+        throw new VyrobcaChyba('SolisCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
+    return /** @type {any} */ (json);
+}
+
 /**
  * Elektrárne na účte zo zoznamu userStationList: id (ako text - čísla sú dlhšie, než JavaScript
- * presne udrží), meno a meranie.
- * @param {unknown} json @param {Date} now @returns {Array<{ id: string, nazov: string, pv: PvData }>}
+ * presne udrží), meno, časové pásmo (posun v hodinách, pre priebeh dňa) a meranie.
+ * @param {unknown} json @param {Date} now @returns {Array<{ id: string, nazov: string, tz: number | null, pv: PvData }>}
  */
 export function parseSolisStations(json, now) {
-    // Úspech je `code: "0"`; príklad v dokumentácii pole `success` nemá, preto rozhoduje kód.
-    if (!isObj(json) || String(/** @type {any} */ (json).code) !== '0')
-        // Kód chyby je `code` v odpovedi, napr. I0012 zlý účet.
-        throw new VyrobcaChyba('SolisCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
-    const page = /** @type {any} */ (json).data?.page;
+    const page = ok(json).data?.page;
     const records = Array.isArray(page?.records) ? /** @type {any[]} */ (page.records) : [];
     return records
         .filter((r) => isObj(r) && r.id !== undefined && r.id !== null)
@@ -71,6 +81,7 @@ export function parseSolisStations(json, now) {
             return {
                 id: String(r.id),
                 nazov,
+                tz: typeof r.timeZone === 'number' && Number.isFinite(r.timeZone) ? r.timeZone : null,
                 pv: {
                     realTimePowerKw: kilo(r.power, r.powerStr),
                     dailyEnergyKwh: kilo(r.dayEnergy, r.dayEnergyStr),
@@ -84,4 +95,18 @@ export function parseSolisStations(json, now) {
                 },
             };
         });
+}
+
+/**
+ * Priebeh dňa elektrárne zo stationDay: `power` v jednotke `powerStr` v čase `time` (ms).
+ * @param {unknown} json @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
+ */
+export function parseSolisDay(json, now, tz) {
+    const data = ok(json).data;
+    const body = Array.isArray(data) ? /** @type {any[]} */ (data).filter(isObj) : [];
+    return krivkaZBodov(
+        body.map((b) => ({ t: Number(b.time), kw: kilo(b.power, b.powerStr) })),
+        now,
+        tz,
+    );
 }

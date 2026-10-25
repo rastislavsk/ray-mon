@@ -9,11 +9,10 @@
 //
 // Priebeh dňa (nameranú krivku) dáva len historické rozhranie zariadení: 5-minútové body jedného
 // meniča za najviac 24 hodín na dopyt. Limit je (počet meničov / 600) dopytov za sekundu na účet,
-// pri jednom meniči teda raz za 10 minút. Worker sa pýta najviac raz za NB.krivkaMs, krivku drží
-// v pečati a medzitým k nej pridáva aktuálny výkon (nbKrivkaDnes).
+// pri jednom meniči teda raz za 10 minút. Worker sa pýta najviac raz za KRIVKA.ms (shared/krivka.js).
 
 import { KIOSK, SITE } from './config.js';
-import { localDateKey, localMinutes } from './solar.js';
+import { krivkaZBodov } from './krivka.js';
 import { isObj } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
@@ -36,8 +35,6 @@ export const NB = {
     // 5-minútové dáta meniča (SmartPVMS 26.2.0, Historical Device Data API) - priebeh dňa.
     // Zariadenie sa v ňom určuje textovým `devDn` zo zoznamu zariadení, nie číselným id.
     devHistory: '/rest/openapi/pvms/nbi/v1/device/history',
-    // Najviac raz za 15 minút: limit pri jednom meniči je raz za 10 minút, s rezervou.
-    krivkaMs: 15 * 60 * 1000,
     // Pásmo elektrárne na „dnes“ a hodiny krivky - rozhranie ho neposiela, appka je pre Slovensko.
     pasmo: SITE.timezone,
     // Typy zariadení, ktoré sú meniče: string inverter, residential inverter a menič s batériou
@@ -208,48 +205,20 @@ export function parseNbStationYear(json, plant, now) {
 }
 
 /**
- * Zapečatená krivka dňa: dátum v pásme elektrárne a body `[minúta dňa, kW]` - krátky zápis, nech je
- * pečať malá (dopyt appky do Workera má limit).
- * @typedef {{ den: string, body: Array<[number, number]> }} NbKrivka
+ * Krivka dňa z odpovedí historického rozhrania (jedna na menič): `active_power` (kW) v čase zberu
+ * (`collectTime`), sčítaný cez meniče (krivkaZBodov).
+ * @param {unknown[]} jsons @param {Date} now @returns {import('./krivka.js').Krivka}
  */
-
-/**
- * Krivka dňa z odpovedí historického rozhrania (jedna na menič): `active_power` (kW) sčítaný cez
- * meniče v tom istom čase zberu (`collectTime`), len body z dnešného dňa v pásme elektrárne.
- * @param {unknown[]} jsons @param {Date} now @param {string} [tz] @returns {NbKrivka}
- */
-export function parseNbHistory(jsons, now, tz = NB.pasmo) {
-    const den = localDateKey(now, tz);
-    /** @type {Map<number, number>} */ const sum = new Map();
-    for (const json of jsons) {
+export function parseNbHistory(jsons, now) {
+    const rows = jsons.flatMap((json) => {
         const d = data(json);
-        for (const row of Array.isArray(d) ? d : []) {
-            if (!isObj(row) || !Number.isFinite(row.collectTime) || !isObj(row.dataItems)) continue;
-            const kw = num(row.dataItems.active_power);
-            if (kw === null) continue;
-            const t = /** @type {number} */ (row.collectTime);
-            if (localDateKey(new Date(t), tz) !== den) continue;
-            sum.set(t, (sum.get(t) ?? 0) + kw);
-        }
-    }
-    const body = [...sum.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([t, kw]) => /** @type {[number, number]} */ ([localMinutes(new Date(t), tz), Math.round(kw * 1000) / 1000]));
-    return { den, body };
-}
-
-/**
- * Dnešná krivka pre appku (`realCurveToday`): zapečatené body a za nimi aktuálny výkon, nech čiara
- * dôjde až po „teraz“. Krivka z iného dňa (po polnoci) sa nepoužije.
- * @param {NbKrivka | null | undefined} krivka @param {number | null} kw aktuálny výkon @param {Date} now
- * @param {string} [tz] @returns {Array<{ hour: number, kw: number }>}
- */
-export function nbKrivkaDnes(krivka, kw, now, tz = NB.pasmo) {
-    if (!krivka || krivka.den !== localDateKey(now, tz) || !Array.isArray(krivka.body) || !krivka.body.length) return [];
-    const body = krivka.body.map(([min, v]) => ({ hour: Number((min / 60).toFixed(4)), kw: v }));
-    const teraz = localMinutes(now, tz);
-    if (kw !== null && teraz > krivka.body[krivka.body.length - 1][0]) body.push({ hour: Number((teraz / 60).toFixed(4)), kw });
-    return body;
+        return Array.isArray(d) ? d.filter((r) => isObj(r) && isObj(r.dataItems)) : [];
+    });
+    return krivkaZBodov(
+        rows.map((r) => ({ t: Number(r.collectTime), kw: num(r.dataItems.active_power) })),
+        now,
+        NB.pasmo,
+    );
 }
 
 /**

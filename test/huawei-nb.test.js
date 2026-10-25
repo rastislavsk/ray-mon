@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import {
     checkNbLogin,
     NB,
-    nbKrivkaDnes,
     nbPv,
     nbServer,
     parseNbDevDns,
@@ -186,13 +185,4 @@ test('priebeh dňa: devDn meničov, 5-minútové body sčítané cez meniče, le
     );
     assert.deepEqual(krivka, { den: '2026-09-05', body: [[480, 1.5]] });
     assert.throws(() => parseNbHistory([{ success: false, failCode: 407 }], now), VyrobcaChyba);
-    assert.deepEqual(nbKrivkaDnes(krivka, 4.2, now), [
-        { hour: 8, kw: 1.5 },
-        { hour: 13, kw: 4.2 },
-    ]);
-    // Bez aktuálneho výkonu len krivka; krivka z iného dňa (po polnoci) ani nič zapečatené - prázdno.
-    assert.deepEqual(nbKrivkaDnes(krivka, null, now), [{ hour: 8, kw: 1.5 }]);
-    assert.deepEqual(nbKrivkaDnes(krivka, 4.2, new Date('2026-09-05T22:30:00Z')), []);
-    assert.deepEqual(nbKrivkaDnes(null, 4.2, now), []);
-    assert.equal(NB.krivkaMs, 15 * 60 * 1000);
 });

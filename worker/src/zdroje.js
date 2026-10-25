@@ -2,13 +2,22 @@
 // pripojiť a ako merať. Sieť je len tu - prevod odpovedí výrobcu na formát `pv` je v shared/,
 // aby sa dal testovať. Worker sa pýta len serverov výrobcu, nikdy adresy od používateľa.
 
-import { VYROBCA_RETRY } from '../../shared/config.js';
-import { DEYE, deyeKw, deyePv, deyeToday, parseDeyeDay, parseDeyeLatest, parseDeyeStations, parseDeyeToken } from '../../shared/deye.js';
-import { FOXESS, foxHeaders, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
+import { SITE, VYROBCA_RETRY } from '../../shared/config.js';
+import {
+    DEYE,
+    deyeKw,
+    deyePv,
+    deyeToday,
+    parseDeyeDay,
+    parseDeyeFrames,
+    parseDeyeLatest,
+    parseDeyeStations,
+    parseDeyeToken,
+} from '../../shared/deye.js';
+import { FOXESS, foxHeaders, parseFoxHistory, parseFoxList, parseFoxPv } from '../../shared/foxess.js';
 import {
     checkNbLogin,
     NB,
-    nbKrivkaDnes,
     nbPv,
     nbServer,
     parseNbDevDns,
@@ -21,13 +30,15 @@ import {
 } from '../../shared/huawei-nb.js';
 import { kioskApiUrl, parseKiosk } from '../../shared/kiosk.js';
 import { parseSolax, solaxUrl } from '../../shared/solax.js';
-import { localMinutes } from '../../shared/solar.js';
-import { parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
+import { KRIVKA, krivkaDnes, polnoc } from '../../shared/krivka.js';
+import { localDateKey } from '../../shared/solar.js';
+import { parseSolisDay, parseSolisStations, SOLIS, solisRequest } from '../../shared/solis.js';
 import { VyrobcaChyba } from '../../shared/vyrobca.js';
-import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../../shared/victron.js';
+import { parseVictronMe, parseVictronPv, parseVictronSites, parseVictronYield, VICTRON, victronHeaders } from '../../shared/victron.js';
 import { fetchWithRetry } from './http.js';
 
 /** @typedef {import('../../shared/kiosk.js').PvData} PvData */
+/** @typedef {import('../../shared/krivka.js').Krivka} Krivka */
 /** @typedef {{ now: Date, fetchImpl: typeof fetch }} Ctx */
 /**
  * Elektráreň nájdená pri pripojení: meno u výrobcu, čo treba na meranie (to sa zapečatí), čo
@@ -84,6 +95,32 @@ const MAX_STANIC = 10;
 const str = (v) => (typeof v === 'string' ? v : '');
 
 /**
+ * Meranie s krivkou dňa (shared/krivka.js): priebeh dňa (`stiahni`) najviac raz za KRIVKA.ms - čas
+ * pokusu a krivka sa zapečatia -, medzitým posledná zapečatená krivka a za ňou aktuálny výkon.
+ * Zlyhanie histórie meranie nezastaví: ostane posledná krivka a ďalší pokus o KRIVKA.ms.
+ * @param {Record<string, unknown>} pristup @param {PvData} pv @param {Ctx} ctx @param {string} tz pásmo elektrárne
+ * @param {() => Promise<Krivka>} stiahni @returns {Promise<{ pv: PvData, pristup?: Record<string, unknown> }>}
+ */
+async function sKrivkou(pristup, pv, ctx, tz, stiahni) {
+    const now = ctx.now.getTime();
+    const na = now - (Number(pristup.krivkaAt) || 0) >= KRIVKA.ms;
+    const nova = na ? await stiahni().catch(() => null) : null;
+    const krivka = nova ?? /** @type {Krivka | null} */ (pristup.krivka ?? null);
+    const s = { ...pv, realCurveToday: krivkaDnes(krivka, pv.realTimePowerKw, ctx.now, tz) };
+    return na ? { pv: s, pristup: { ...pristup, krivkaAt: now, krivka } } : { pv: s };
+}
+
+/**
+ * Elektráreň z pripojenia s krivkou dňa hneď od začiatku (sKrivkou); bez merania aj bez krivky.
+ * @param {Najdena} n @param {Ctx} ctx @param {string} tz @param {() => Promise<Krivka>} stiahni @returns {Promise<Najdena>}
+ */
+async function najdenaSKrivkou(n, ctx, tz, stiahni) {
+    if (!n.pv) return n;
+    const r = await sKrivkou(n.pristup, n.pv, ctx, tz, stiahni);
+    return { ...n, pv: r.pv, pristup: r.pristup ?? n.pristup };
+}
+
+/**
  * JSON z adresy výrobcu, s opakovaním pri prechodnej chybe. Zamietnutý prístup (401, 403) sú zlé
  * údaje, ostatné zlyhania výpadok výrobcu. `krok` sa pribalí ku kódu chyby.
  * @param {string} url @param {RequestInit} init @param {Ctx} ctx @param {string} [krok] @returns {Promise<unknown>}
@@ -131,6 +168,17 @@ function fox(path, kluc, ctx, body, query = '') {
     return getJson(`${FOXESS.base}${path}${query}`, init, ctx);
 }
 
+/** Priebeh dňa meniča Fox ESS (`pvPower`) od polnoci po teraz. @param {string} kluc @param {string} sn @param {Ctx} ctx */
+async function foxKrivka(kluc, sn, ctx) {
+    const json = await fox(FOXESS.history, kluc, ctx, {
+        sn,
+        variables: ['pvPower'],
+        begin: polnoc(ctx.now, SITE.timezone),
+        end: ctx.now.getTime(),
+    });
+    return parseFoxHistory(json, ctx.now, SITE.timezone);
+}
+
 /** Meranie jedného meniča Fox ESS: výkon a súčty naraz, nie po sebe. @param {string} kluc @param {string} sn @param {string} nazov @param {Ctx} ctx */
 async function foxPv(kluc, sn, nazov, ctx) {
     const [real, gen] = await Promise.all([
@@ -144,6 +192,13 @@ async function foxPv(kluc, sn, nazov, ctx) {
 async function victronPv(token, idSite, nazov, ctx) {
     const json = await getJson(`${VICTRON.base}${VICTRON.diagnostics(idSite)}`, { headers: victronHeaders(token) }, ctx);
     return prevod(() => parseVictronPv(json, nazov, ctx.now));
+}
+
+/** Priebeh dňa inštalácie Victron (výroba panelov po 15 minútach) od polnoci po teraz. @param {string} token @param {number} idSite @param {Ctx} ctx */
+async function victronKrivka(token, idSite, ctx) {
+    const sek = (/** @type {number} */ ms) => Math.floor(ms / 1000);
+    const path = VICTRON.solarYield(idSite, sek(polnoc(ctx.now, SITE.timezone)), sek(ctx.now.getTime()));
+    return parseVictronYield(await getJson(`${VICTRON.base}${path}`, { headers: victronHeaders(token) }, ctx), ctx.now, SITE.timezone);
 }
 
 /** SolaX: meranie z tokenu a registračného čísla modulu. @param {unknown} token @param {unknown} sn @param {Ctx} ctx */
@@ -278,7 +333,7 @@ async function nbNajdi(server, rel, udaje, ctx) {
     const pv = await nbMeraj(sp, plants).catch(() => null);
     const rok = await nbRok(sp, plants);
     // Priebeh dňa hneď pri pripojení, nech je v grafe od prvého merania.
-    /** @type {Map<string, import('../../shared/huawei-nb.js').NbKrivka | null>} */ const krivky = new Map();
+    /** @type {Map<string, Krivka | null>} */ const krivky = new Map();
     for (const p of plants) if (Object.keys(p.dns).length) krivky.set(p.plant, await nbKrivka(sp, p));
     return plants.map((p) => {
         const zmerane = pv?.get(p.plant);
@@ -299,7 +354,7 @@ async function nbNajdi(server, rel, udaje, ctx) {
                 ? {
                       ...zmerane,
                       yearEnergyKwh: rok.get(p.plant) ?? null,
-                      realCurveToday: nbKrivkaDnes(krivka, zmerane.realTimePowerKw, ctx.now),
+                      realCurveToday: krivkaDnes(krivka, zmerane.realTimePowerKw, ctx.now, NB.pasmo),
                   }
                 : null,
         };
@@ -342,11 +397,11 @@ async function nbDoplnDevs(sp, plant) {
  * Priebeh dňa meničov elektrárne z historického rozhrania: jeden dopyt na menič, od polnoci (v pásme
  * elektrárne) po teraz. Zlyhanie meranie nezastaví (účet napr. rozhranie nemá povolené, limit 407):
  * vráti null a appka dostane poslednú zapečatenú krivku.
- * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<import('../../shared/huawei-nb.js').NbKrivka | null>}
+ * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<Krivka | null>}
  */
 async function nbKrivka(sp, plant) {
     const now = sp.ctx.now.getTime();
-    const startTime = now - (localMinutes(sp.ctx.now, NB.pasmo) + 1) * 60 * 1000;
+    const startTime = polnoc(sp.ctx.now, NB.pasmo);
     try {
         const jsons = [];
         for (const [typ, dns] of Object.entries(plant.dns))
@@ -360,7 +415,7 @@ async function nbKrivka(sp, plant) {
 
 /**
  * Čo si meranie elektrárne vypýta navyše: zoznam zariadení raz, keď v pečati chýbajú meniče či ich
- * devDn (nbDoplnDevs), rok najviac raz za NB.rokMs (nbRok) a priebeh dňa najviac raz za NB.krivkaMs
+ * devDn (nbDoplnDevs), rok najviac raz za NB.rokMs (nbRok) a priebeh dňa najviac raz za KRIVKA.ms
  * (nbKrivka). Hodnota je čas dopytu na zapečatenie, 0 = nepýta sa.
  * @param {Record<string, unknown>} pristup @param {NbPlant} plant @param {number} now
  */
@@ -369,7 +424,7 @@ function nbPlan(pristup, plant, now) {
     return {
         devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') ? now : 0,
         rokAt: now - (Number(pristup.rokAt) || 0) >= NB.rokMs ? now : 0,
-        krivkaAt: now - (Number(pristup.krivkaAt) || 0) >= NB.krivkaMs ? now : 0,
+        krivkaAt: now - (Number(pristup.krivkaAt) || 0) >= KRIVKA.ms ? now : 0,
     };
 }
 
@@ -433,23 +488,35 @@ function nbPristup(p) {
 const base64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 
 /**
- * Zoznam elektrární SolisCloud s meraním. Požiadavka je podpísaná HmacSHA1 kľúčom API Secret
- * podľa dokumentácie (Authorization: API {apiId}:{sign}).
- * @param {string} keyId @param {string} secret @param {Ctx} ctx
+ * Požiadavka SolisCloud podpísaná HmacSHA1 kľúčom API Secret podľa dokumentácie
+ * (Authorization: API {apiId}:{sign}).
+ * @param {string} path @param {unknown} data @param {{ keyId: string, secret: string }} kluc @param {Ctx} ctx @param {string} krok
  */
-async function solisStations(keyId, secret, ctx) {
-    if (!keyId || !secret) throw new ZdrojChyba('udaje');
-    const body = JSON.stringify({ pageNo: 1, pageSize: 100 });
-    const req = solisRequest(SOLIS.stations, body, ctx.now);
+async function solis(path, data, { keyId, secret }, ctx, krok) {
+    const body = JSON.stringify(data);
+    const req = solisRequest(path, body, ctx.now);
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
     const sign = base64(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(req.toSign)));
-    const json = await getJson(
-        `${SOLIS.base}${SOLIS.stations}`,
-        { method: 'POST', headers: { ...req.headers, authorization: `API ${keyId}:${sign}` }, body },
-        ctx,
-        'zoznam',
-    );
+    const init = { method: 'POST', headers: { ...req.headers, authorization: `API ${keyId}:${sign}` }, body };
+    return getJson(`${SOLIS.base}${path}`, init, ctx, krok);
+}
+
+/** Zoznam elektrární SolisCloud s meraním. @param {string} keyId @param {string} secret @param {Ctx} ctx */
+async function solisStations(keyId, secret, ctx) {
+    if (!keyId || !secret) throw new ZdrojChyba('udaje');
+    const json = await solis(SOLIS.stations, { pageNo: 1, pageSize: 100 }, { keyId, secret }, ctx, 'zoznam');
     return prevod(() => parseSolisStations(json, ctx.now), 'zoznam');
+}
+
+/**
+ * Priebeh dňa elektrárne SolisCloud (stationDay). `tz` je posun pásma elektrárne v hodinách zo
+ * zoznamu elektrární (bez neho stredoeurópsky čas).
+ * @param {string} keyId @param {string} secret @param {string} id @param {unknown} tz @param {Ctx} ctx
+ */
+async function solisKrivka(keyId, secret, id, tz, ctx) {
+    const timeZone = typeof tz === 'number' ? tz : 1;
+    const body = { id, money: 'EUR', time: localDateKey(ctx.now, SITE.timezone), timeZone };
+    return parseSolisDay(await solis(SOLIS.stationDay, body, { keyId, secret }, ctx, 'krivka'), ctx.now, SITE.timezone);
 }
 
 // ---- Deye ------------------------------------------------------------------------------
@@ -468,6 +535,21 @@ function deye(path, token, body, ctx, krok) {
         body: JSON.stringify(body),
     };
     return getJson(`${DEYE.base}${path}`, init, ctx, krok);
+}
+
+/**
+ * Priebeh dňa elektrárne Deye (/station/history s `granularity: 1`) v jej pásme.
+ * @param {string} token @param {{ id: number, kwp: number | null, tz: string }} st @param {Ctx} ctx
+ */
+async function deyeKrivka(token, st, ctx) {
+    const json = await deye(
+        DEYE.history,
+        token,
+        { stationId: st.id, granularity: 1, startAt: localDateKey(ctx.now, st.tz) },
+        ctx,
+        'krivka',
+    );
+    return parseDeyeFrames(json, st.kwp, ctx.now, st.tz);
 }
 
 /**
@@ -534,10 +616,9 @@ export const ZDROJE = {
             });
             const { pv, krivkaAt } = vysledok;
             const zariadenia = /** @type {NbPlant} */ (/** @type {unknown} */ (plant));
-            // Medzi dopytmi posledná zapečatená krivka a za ňou aktuálny výkon (nbKrivkaDnes).
-            const krivka =
-                vysledok.krivka ?? /** @type {import('../../shared/huawei-nb.js').NbKrivka | undefined} */ (pristup.krivka) ?? null;
-            pv.realCurveToday = nbKrivkaDnes(krivka, pv.realTimePowerKw, ctx.now);
+            // Medzi dopytmi posledná zapečatená krivka a za ňou aktuálny výkon (krivkaDnes).
+            const krivka = vysledok.krivka ?? /** @type {Krivka | undefined} */ (pristup.krivka) ?? null;
+            pv.realCurveToday = krivkaDnes(krivka, pv.realTimePowerKw, ctx.now, NB.pasmo);
             const zmeny = {
                 ...relacia,
                 ...(plan.devsAt ? { devs: zariadenia.devs, dns: zariadenia.dns, devsAt: plan.devsAt, dnsAt: plan.devsAt } : {}),
@@ -549,17 +630,26 @@ export const ZDROJE = {
     },
     'solis-kluc': {
         async pripoj(udaje, ctx) {
-            const stanice = await solisStations(str(udaje.keyId), str(udaje.secret), ctx);
-            return stanice.slice(0, MAX_STANIC).map((st) => ({
-                nazov: st.nazov,
-                pristup: { keyId: udaje.keyId, secret: udaje.secret, id: st.id },
-                pv: st.pv,
-            }));
+            const [keyId, secret] = [str(udaje.keyId), str(udaje.secret)];
+            const stanice = await solisStations(keyId, secret, ctx);
+            return Promise.all(
+                stanice
+                    .slice(0, MAX_STANIC)
+                    .map((st) =>
+                        najdenaSKrivkou(
+                            { nazov: st.nazov, pristup: { keyId: udaje.keyId, secret: udaje.secret, id: st.id, tz: st.tz }, pv: st.pv },
+                            ctx,
+                            SITE.timezone,
+                            () => solisKrivka(keyId, secret, st.id, st.tz, ctx),
+                        ),
+                    ),
+            );
         },
         async meraj(pristup, ctx) {
-            const st = (await solisStations(str(pristup.keyId), str(pristup.secret), ctx)).find((x) => x.id === str(pristup.id));
+            const [keyId, secret] = [str(pristup.keyId), str(pristup.secret)];
+            const st = (await solisStations(keyId, secret, ctx)).find((x) => x.id === str(pristup.id));
             if (!st) throw new ZdrojChyba('udaje');
-            return { pv: st.pv };
+            return sKrivkou(pristup, st.pv, ctx, SITE.timezone, () => solisKrivka(keyId, secret, st.id, pristup.tz ?? st.tz, ctx));
         },
     },
     'deye-aplikacia': {
@@ -579,7 +669,7 @@ export const ZDROJE = {
             return Promise.all(
                 list.slice(0, MAX_STANIC).map(async (st) => {
                     const stanica = { id: st.id, nazov: st.nazov, kwp: st.kwp, tz: pasmo(st.tz) };
-                    return {
+                    const najdena = {
                         nazov: st.nazov,
                         // Heslo sa neukladá - v pečati je token (60 dní), čo treba o elektrárni a údaje
                         // aplikácie s e-mailom, aby na obnovu tokenu stačilo zadať heslo.
@@ -587,6 +677,7 @@ export const ZDROJE = {
                         pv: await deyeMeraj(token, stanica, ctx).catch(() => null),
                         platiDo,
                     };
+                    return najdenaSKrivkou(najdena, ctx, stanica.tz, () => deyeKrivka(token, stanica, ctx));
                 }),
             );
         },
@@ -595,7 +686,9 @@ export const ZDROJE = {
             const id = Number(pristup.id);
             if (!str(pristup.token) || !Number.isSafeInteger(id)) throw new ZdrojChyba('udaje');
             const kwp = typeof pristup.kwp === 'number' ? pristup.kwp : null;
-            return { pv: await deyeMeraj(str(pristup.token), { id, nazov: str(pristup.nazov), kwp, tz: pasmo(pristup.tz) }, ctx) };
+            const st = { id, nazov: str(pristup.nazov), kwp, tz: pasmo(pristup.tz) };
+            const token = str(pristup.token);
+            return sKrivkou(pristup, await deyeMeraj(token, st, ctx), ctx, st.tz, () => deyeKrivka(token, st, ctx));
         },
     },
     'foxess-kluc': {
@@ -605,15 +698,23 @@ export const ZDROJE = {
             const list = await fox(FOXESS.list, kluc, ctx, { currentPage: 1, pageSize: MAX_STANIC });
             const menice = prevod(() => parseFoxList(list));
             return Promise.all(
-                menice.slice(0, MAX_STANIC).map(async (m) => ({
-                    nazov: m.nazov,
-                    pristup: { kluc, sn: m.sn, nazov: m.nazov },
-                    pv: await foxPv(kluc, m.sn, m.nazov, ctx).catch(() => null),
-                })),
+                menice.slice(0, MAX_STANIC).map(async (m) =>
+                    najdenaSKrivkou(
+                        {
+                            nazov: m.nazov,
+                            pristup: { kluc, sn: m.sn, nazov: m.nazov },
+                            pv: await foxPv(kluc, m.sn, m.nazov, ctx).catch(() => null),
+                        },
+                        ctx,
+                        SITE.timezone,
+                        () => foxKrivka(kluc, m.sn, ctx),
+                    ),
+                ),
             );
         },
         async meraj(pristup, ctx) {
-            return { pv: await foxPv(str(pristup.kluc), str(pristup.sn), str(pristup.nazov), ctx) };
+            const [kluc, sn] = [str(pristup.kluc), str(pristup.sn)];
+            return sKrivkou(pristup, await foxPv(kluc, sn, str(pristup.nazov), ctx), ctx, SITE.timezone, () => foxKrivka(kluc, sn, ctx));
         },
     },
     'solax-token': {
@@ -634,17 +735,26 @@ export const ZDROJE = {
             if (idUser === null) throw new ZdrojChyba('udaje');
             const sites = parseVictronSites(await getJson(`${VICTRON.base}${VICTRON.installations(idUser)}`, { headers }, ctx));
             return Promise.all(
-                sites.slice(0, MAX_STANIC).map(async (site) => ({
-                    nazov: site.nazov,
-                    pristup: { token, idSite: site.idSite, nazov: site.nazov },
-                    pv: await victronPv(token, site.idSite, site.nazov, ctx).catch(() => null),
-                })),
+                sites.slice(0, MAX_STANIC).map(async (site) =>
+                    najdenaSKrivkou(
+                        {
+                            nazov: site.nazov,
+                            pristup: { token, idSite: site.idSite, nazov: site.nazov },
+                            pv: await victronPv(token, site.idSite, site.nazov, ctx).catch(() => null),
+                        },
+                        ctx,
+                        SITE.timezone,
+                        () => victronKrivka(token, site.idSite, ctx),
+                    ),
+                ),
             );
         },
         async meraj(pristup, ctx) {
             const idSite = Number(pristup.idSite);
             if (!Number.isInteger(idSite)) throw new ZdrojChyba('udaje');
-            return { pv: await victronPv(str(pristup.token), idSite, str(pristup.nazov), ctx) };
+            const token = str(pristup.token);
+            const pv = await victronPv(token, idSite, str(pristup.nazov), ctx);
+            return sKrivkou(pristup, pv, ctx, SITE.timezone, () => victronKrivka(token, idSite, ctx));
         },
     },
 };

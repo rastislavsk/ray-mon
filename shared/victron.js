@@ -6,6 +6,7 @@
 // (W) a PV meniče `/Ac/Power` (W); celková výroba z `/Yield/System` a `/Ac/Energy/Forward` (kWh).
 // Dnešnú výrobu dokumentácia jednoznačne nepomenúva, preto ostáva prázdna.
 
+import { krivkaZBodov } from './krivka.js';
 import { isObj } from './valid.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
@@ -18,6 +19,11 @@ export const VICTRON = {
     installations: (idUser) => `/users/${idUser}/installations`,
     /** Posledné hodnoty všetkých zariadení inštalácie. @param {number} idSite */
     diagnostics: (idSite) => `/installations/${idSite}/diagnostics?count=1000`,
+    /**
+     * Výroba panelov po 15 minútach (kWh za interval) od `start` po `end` (unix sekundy).
+     * @param {number} idSite @param {number} start @param {number} end
+     */
+    solarYield: (idSite, start, end) => `/installations/${idSite}/stats?type=solar_yield&interval=15mins&start=${start}&end=${end}`,
 };
 
 /** Hlavičky s prístupovým tokenom (formát `Token <token>`). @param {string} token */
@@ -76,4 +82,27 @@ export function parseVictronPv(json, nazov, now) {
         measuredAt: now.toISOString(),
         updatedAt: now.toISOString(),
     };
+}
+
+/**
+ * Priebeh dňa zo štatistiky `solar_yield` po 15 minútach: `records` má pod každým kódom
+ * (výroba do batérie, spotreby, siete …) body `[čas, kWh]`. Súčet kódov v tom istom čase je výroba
+ * panelov za 15 minút, štvornásobok je priemerný výkon v kW. Čas je v ms, v sekundách sa prijme tiež.
+ * @param {unknown} json @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
+ */
+export function parseVictronYield(json, now, tz) {
+    if (!ok(json)) throw new Error('Victron: stats bez success');
+    const records = /** @type {any} */ (json).records;
+    const series = isObj(records) ? Object.values(records).filter(Array.isArray) : [];
+    const body = series.flatMap((rows) =>
+        /** @type {unknown[]} */ (rows)
+            .filter((r) => Array.isArray(r) && r.length >= 2)
+            .map((r) => {
+                const [t, kwh] = /** @type {[unknown, unknown]} */ (r);
+                const ts = Number(t);
+                const v = typeof kwh === 'number' && Number.isFinite(kwh) ? kwh * 4 : null;
+                return { t: ts < 1e12 ? ts * 1000 : ts, kw: v };
+            }),
+    );
+    return krivkaZBodov(body, now, tz);
 }
