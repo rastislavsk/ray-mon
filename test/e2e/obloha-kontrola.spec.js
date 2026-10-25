@@ -132,11 +132,9 @@ async function kazdaKarta(page, check) {
 
     await karta(page, 'statistika');
     await check('Štatistika');
-    await page.locator('#st-posters [data-poster]').first().click();
-    await expect(page.locator('#poster')).toBeVisible();
-    await check('Štatistika › plagát');
-    await page.locator('#poster-close').click();
-    await expect(page.locator('#poster')).toBeHidden();
+    await page.locator('#st-poster [data-period="rok"]').click();
+    await expect(page.locator('#st-poster [data-period="rok"]')).toHaveAttribute('aria-pressed', 'true');
+    await check('Štatistika › rok');
 
     await karta(page, 'nastavenie');
     await check('Nastavenie');
@@ -532,28 +530,3 @@ for (const { width, height, name: kde } of VSETKY) {
         });
     }
 }
-
-test('plagát: popisky čísel na obrázku 1080 × 1920 sú každý v jednom riadku, aj „najlepší deň, 52,1 kWh“', async ({ page }) => {
-    await openObloha(page);
-    await karta(page, 'statistika');
-    await page.locator('[data-poster="mesiac"]').click();
-    await expect(page.locator('#poster')).toBeVisible();
-    const vysledok = await page.evaluate(async () => {
-        const tiles = [...document.querySelectorAll('#poster-tiles p')].map((p) => ({
-            value: p.querySelector('strong')?.textContent ?? '',
-            label: [...p.childNodes]
-                .filter((n) => n.nodeType === Node.TEXT_NODE)
-                .map((n) => n.textContent)
-                .join(''),
-        }));
-        const { look, tileLabels } = await import('/obloha/web/poster-image.js');
-        const t = look();
-        await document.fonts.load(`500 42px ${t.font}`);
-        const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
-        const { size, lines } = tileLabels(ctx, tiles, t);
-        return { size, labels: tiles.map((x) => x.label), lines };
-    });
-    expect(vysledok.labels).toContain('najlepší deň, 52,1 kWh');
-    expect(vysledok.size).toBeGreaterThanOrEqual(32);
-    expect(vysledok.lines).toEqual(vysledok.labels.map((l) => [l]));
-});

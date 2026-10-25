@@ -89,9 +89,9 @@
                     <h2 id="mz-list-title" class="glass-ttl"></h2>
                     <div id="mz-items" class="tiles"></div>
                 </section>
-                <!-- Nenápadný odkaz na plagát na zdieľanie (ten istý dialóg ako z karty Štatistika). Ukáže ho
-                     až kód plagátu, ktorý sa načíta po prvom vykreslení (web/parts.js). -->
-                <button type="button" id="mz-summary" class="lnk hidden" aria-haspopup="dialog">
+                <!-- Nenápadný odkaz na plagát mesiaca v karte Štatistika. Ukáže ho až kód Štatistiky, ktorý
+                     sa načíta po prvom vykreslení (web/parts.js). -->
+                <button type="button" id="mz-summary" class="lnk hidden">
                     <span id="mz-summary-text"></span><span aria-hidden="true"> ›</span>
                 </button>
             </section>
@@ -246,9 +246,8 @@
                     </div>
                 </div>
             </section>
-            <!-- Karta Štatistika: súčty za obdobia, „to je ako“, najlepší deň mesiaca a tlačidlá plagátu.
-                 Texty aj stavy skladá render (web/render/statistika.js) z shared/statistika.js, tu sú
-                 len nosiče. -->
+            <!-- Karta Štatistika: plagát obdobia s prepínačom a výzvy pod ním. Texty aj stavy skladá render
+                 (web/render/statistika.js) z shared/statistika.js, tu sú len nosiče. -->
             <section id="panel-statistika" class="panel stat hidden" aria-labelledby="ttl-statistika">
                 <h1 id="ttl-statistika" class="ttl">Štatistika</h1>
                 <p id="st-sub" class="sub"></p>
@@ -270,33 +269,7 @@
                     </section>
                 </div>
                 <div id="st-body">
-                    <div id="st-seg" class="seg per" role="group">
-                        <button type="button" data-period="dnes"></button>
-                        <button type="button" data-period="mesiac"></button>
-                        <button type="button" data-period="rok"></button>
-                        <button type="button" data-period="spolu"></button>
-                    </div>
-                    <p id="st-num" class="knum"><span id="st-num-val"></span><small>kWh</small></p>
-                    <p id="st-src" class="sub"></p>
-                    <p id="st-value" class="sub"></p>
-                    <div id="st-progress" class="progress">
-                        <div class="bar" aria-hidden="true"><i id="st-bar"></i></div>
-                        <p id="st-progress-text" class="sub"></p>
-                    </div>
-                    <section id="st-equiv" class="glass" aria-labelledby="st-equiv-title">
-                        <h2 id="st-equiv-title" class="glass-ttl"></h2>
-                        <div class="eq">
-                            <p><b id="st-phones"></b><span id="st-phones-label"></span></p>
-                            <p><b id="st-km"></b><span id="st-km-label"></span></p>
-                        </div>
-                    </section>
-                    <div id="st-rows" class="glass rows"></div>
-                    <section id="st-best" class="glass" aria-labelledby="st-best-title">
-                        <h2 id="st-best-title" class="glass-ttl"></h2>
-                        <p id="st-best-text"></p>
-                    </section>
-                    <p id="st-od" class="sub note"></p>
-                    <p id="st-note" class="sub note"></p>
+                    <section id="st-poster" class="pc"></section>
                     <p id="st-measure-off" class="sub note"></p>
                     <div id="st-measure" class="cta">
                         <b id="st-measure-title"></b>
@@ -308,7 +281,6 @@
                         <p id="st-prices-text"></p>
                         <button type="button" id="st-prices-btn" class="pbtn"></button>
                     </div>
-                    <div id="st-posters" class="posters"></div>
                 </div>
             </section>
             <!-- Karta Nastavenie: prehľad elektrárne a sprievodca jej nastavením. Prehľad skladá render
@@ -730,23 +702,6 @@
             </div>
         </dialog>
 
-        <!-- Plagát na zdieľanie: súhrn mesiaca alebo týždňa. Otvára ho karta Štatistika aj odkaz
-             na karte Môžem?. Modálny dialóg: fokus ostane v ňom, Escape aj Späť ho zatvoria. Obrázok
-             na zdieľanie (obloha/web/poster-image.js) kreslí tú istú kartu .pc. -->
-        <dialog id="poster" class="poster" aria-labelledby="poster-title">
-            <div class="poster-in">
-                <div class="pc">
-                    <h2 id="poster-title"></h2>
-                    <p id="poster-kwh" class="pn"></p>
-                    <div id="poster-cols" class="cols" aria-hidden="true"></div>
-                    <div id="poster-tiles" class="pg"></div>
-                    <p id="poster-foot" class="foot"></p>
-                </div>
-                <p id="poster-note" class="note"></p>
-                <button type="button" id="poster-share" class="pbtn"></button>
-                <button type="button" id="poster-close" class="pbtn ghost"></button>
-            </div>
-        </dialog>
         <!-- Zdieľať appku: odkaz na novú appku, voliteľne s nastavením a kioskom, QR kód a WhatsApp.
              Skladá render/nastavenie.js; bez QR knižnice ostane len odkaz. -->
         <dialog id="ns-share-sheet" class="sheet" aria-labelledby="ns-share-title">

@@ -1,4 +1,4 @@
-// E2E pre kartu Štatistika a plagát na zdieľanie v novej appke „Živá obloha“ (obloha/). Pevný čas,
+// E2E pre kartu Štatistika s plagátom obdobia v novej appke „Živá obloha“ (obloha/). Pevný čas,
 // dáta z fixtures a očakávané hodnoty počítané tou istou funkciou (shared/statistika.js), ktorú
 // volá appka - test tak odhalí rozdiel medzi modelom a tým, čo je naozaj v DOM.
 import { expect, test } from '@playwright/test';
@@ -6,12 +6,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { DAYLOG_STORAGE_KEY, PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
 import { recordDay } from '../../shared/daylog.js';
 import { kwpText } from '../../shared/format.js';
-import { posterLinkText, STATISTIKA_TEXTS } from '../../shared/messages.js';
+import { statsLinkText, STATISTIKA_TEXTS } from '../../shared/messages.js';
 import { toUser } from '../../shared/settings.js';
 import { buildForecast, localMinutes } from '../../shared/solar.js';
 import { STATS_PERIODS } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
-import { kwhText, posterModel, statistikaModel } from '../../shared/statistika.js';
+import { statistikaModel } from '../../shared/statistika.js';
+import { bigText } from '../../shared/summary.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv } = fixtureData();
@@ -69,55 +70,24 @@ const vstup = (extra = {}) => ({
     ...extra,
 });
 
-/** Čo karta ukazuje. @param {import('@playwright/test').Page} page */
-const kartaVStranke = (page) =>
+/** Čo ukazuje plagát na karte. @param {import('@playwright/test').Page} page */
+const plagatVStranke = (page) =>
     page.evaluate(() => {
-        const text = (/** @type {string} */ id) => document.getElementById(id)?.textContent ?? '';
-        const visible = (/** @type {string} */ id) => !document.getElementById(id)?.closest('.hidden');
+        const pc = /** @type {HTMLElement} */ (document.getElementById('st-poster'));
         return {
-            num: text('st-num-val'),
-            src: text('st-src'),
-            value: visible('st-value') ? text('st-value') : null,
-            progress: visible('st-progress') ? text('st-progress-text') : null,
-            equiv: visible('st-equiv') ? [text('st-phones'), text('st-km')] : null,
-            rows: [...document.querySelectorAll('#st-rows p')].map((p) => p.textContent),
-            best: visible('st-best') ? text('st-best-text') : null,
-            posters: [...document.querySelectorAll('#st-posters [data-poster]')].map((b) => b.textContent),
+            shown: !pc.closest('.hidden'),
+            heading: pc.querySelector('h2')?.textContent ?? '',
+            big: pc.querySelector('.pn')?.textContent ?? '',
+            rows: [...pc.querySelectorAll('.prow span')].map((s) => s.textContent),
+            note: pc.querySelector('.pnote')?.textContent ?? '',
         };
     });
 
 /** To isté z modelu. @param {ReturnType<typeof statistikaModel>} m */
-const kartaZModelu = (m) => ({
-    num: kwhText(m.hero?.kwh ?? null),
-    src: m.hero?.sub ?? '',
-    value: m.value,
-    progress: m.progress?.text ?? null,
-    equiv: m.equiv && [m.equiv.phones, m.equiv.km],
-    rows: m.rows.map((r) => `${r.name}${r.od ? ` ${r.od}` : ''}${kwhText(r.kwh)} kWh`),
-    best: m.best?.text ?? null,
-    posters: m.posters.map((p) => p.label),
-});
-
-/** Čo ukazuje plagát. @param {import('@playwright/test').Page} page */
-const plagatVStranke = (page) =>
-    page.evaluate(() => ({
-        title: document.getElementById('poster-title')?.textContent,
-        kwh: document.getElementById('poster-kwh')?.textContent,
-        cols: [...document.querySelectorAll('#poster-cols i')].map((i) =>
-            i.classList.contains('missing') ? null : i.getAttribute('style'),
-        ),
-        tiles: [...document.querySelectorAll('#poster-tiles p')].map((p) => p.textContent),
-        note: document.getElementById('poster-note')?.closest('.hidden') ? '' : document.getElementById('poster-note')?.textContent,
-    }));
-
-/** @param {NonNullable<ReturnType<typeof posterModel>>} m */
-const plagatZModelu = (m) => ({
-    title: m.title,
-    kwh: m.kwh,
-    cols: m.cols.map((c) => (c.h === null ? null : `height:${c.h}%`)),
-    tiles: m.tiles.map((t) => `${t.value}${t.label}`),
-    note: m.note,
-});
+const plagatZModelu = (m) => {
+    const s = /** @type {NonNullable<typeof m.summary>} */ (m.summary);
+    return { shown: true, heading: s.heading, big: `${s.big} kWh`, rows: s.rows.map((r) => r.t + r.s), note: s.note };
+};
 
 /** Závažné a kritické nálezy axe v celej stránke. @param {import('@playwright/test').Page} page @returns {Promise<string[]>} */
 const vazneNalezy = async (page) =>
@@ -126,43 +96,49 @@ const vazneNalezy = async (page) =>
         .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 
 test.describe('karta Štatistika', () => {
-    test('každé obdobie: veľké číslo, odkiaľ je, „to je ako“ a ostatné riadky ako statistikaModel', async ({ page }) => {
+    test('každé obdobie: plagát ako statistikaModel, obrázok obdobia a prepínač na plagáte', async ({ page }) => {
         const errors = await openStat(page);
         await expect(page.locator('#st-sub')).toHaveText(kwpText(10.44));
         for (const period of STATS_PERIODS) {
-            await page.locator(`#st-seg [data-period="${period}"]`).click();
-            await expect(page.locator(`#st-seg [data-period="${period}"]`)).toHaveAttribute('aria-pressed', 'true');
-            await expect(page.locator('#st-seg [aria-pressed="true"]')).toHaveCount(1);
-            await expect.poll(() => kartaVStranke(page), period).toEqual(kartaZModelu(statistikaModel(vstup(), period)));
+            const btn = page.locator(`#st-poster [data-period="${period}"]`);
+            await btn.click();
+            await expect(btn).toHaveAttribute('aria-pressed', 'true');
+            await expect(btn, 'fokus ostane na prepínači aj po prekreslení plagátu').toBeFocused();
+            await expect(page.locator('#st-poster [aria-pressed="true"]')).toHaveCount(1);
+            await expect.poll(() => plagatVStranke(page), period).toEqual(plagatZModelu(statistikaModel(vstup(), period)));
+            // Veľké číslo v jednom riadku v karte (ročné „9 112 kWh“ je dlhšie).
+            const preteka = await page.locator('#st-poster .pn').evaluate((el) => el.scrollWidth > el.clientWidth);
+            expect(preteka, `${period}: veľké číslo pretečie kartu`).toBe(false);
         }
-        await expect(page.locator('#st-note')).toHaveText(STATISTIKA_TEXTS.note);
-        await expect(page.locator('#st-measure, #st-prices, #st-measure-off')).toHaveCount(3);
+        await page.locator('#st-poster [data-period="dnes"]').click();
+        await expect(page.locator('#st-poster .pmeter p')).toContainText('z predpovede');
+        await page.locator('#st-poster [data-period="mesiac"]').click();
+        await expect(page.locator('#st-poster .pcal i')).toHaveCount(30);
+        await expect(page.locator('#st-poster .pcal i.missing'), '3. september v denníku chýba').toHaveCount(1);
+        await page.locator('#st-poster [data-period="rok"]').click();
+        await expect(page.locator('#st-poster .cols span')).toHaveCount(12);
+        await page.locator('#st-poster [data-period="spolu"]').click();
+        await expect(page.locator('#st-poster .pmeter p')).toContainText('uhlík z výroby panelov');
         for (const id of ['#st-measure', '#st-prices', '#st-measure-off']) await expect(page.locator(id)).toBeHidden();
+        await expect(page.locator('#poster, #st-posters'), 'plagát v dialógu ani zdieľanie do story nie je').toHaveCount(0);
         // Prepínač: štyri tlačidlá aspoň 44 px vysoké.
-        const heights = await page.locator('#st-seg button').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+        const heights = await page
+            .locator('#st-poster [data-period]')
+            .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
         expect(heights).toHaveLength(4);
         for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
         expect(errors).toEqual([]);
     });
 
-    test('dnes: pás voči predpovedi a najlepší deň mesiaca z denníka', async ({ page }) => {
-        await openStat(page);
-        const m = statistikaModel(vstup(), 'dnes');
-        await expect(page.locator('#st-progress-text')).toHaveText(/** @type {string} */ (m.progress?.text));
-        expect(await page.locator('#st-bar').evaluate((el) => el.style.width)).toBe(`${m.progress?.pct}%`);
-        await expect(page.locator('#st-best-title')).toHaveText('Najlepší deň septembra');
-        await expect(page.locator('#st-best-text')).toHaveText('Streda 2. · 52,1 kWh. Strecha vtedy makala ako blázon.');
-    });
-
-    test('bez merania (kiosk nie je): dnešok z predpovede ako odhad, bez prepínača a výzva pripojiť meranie', async ({ page }) => {
+    test('bez merania (kiosk nie je): sivý plagát dneška z predpovede, ostatné obdobia nejdú, výzva pripojiť meranie', async ({ page }) => {
         const errors = await openStat(page, { settings: { ...OWNER, zdroj: null } });
-        const m = statistikaModel(vstup({ zdroj: null, pv: null }), 'dnes');
-        await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
-        await expect(page.locator('#st-src')).toHaveText('odhad z predpovede na celý dnešok');
-        await expect(page.locator('#st-num')).toHaveClass(/\best\b/);
-        await expect(page.locator('#st-seg')).toBeHidden();
-        await expect(page.locator('#st-rows')).toBeHidden();
-        await expect(page.locator('#st-posters')).toBeHidden();
+        const m = statistikaModel(vstup({ zdroj: null, pv: null }), 'mesiac');
+        expect(m.summary?.kind).toBe('estimate');
+        await expect.poll(() => plagatVStranke(page)).toEqual(plagatZModelu(m));
+        await expect(page.locator('#st-poster')).toHaveClass(/\best\b/);
+        await expect(page.locator('#st-poster .pn')).toHaveClass(/\best\b/);
+        await expect(page.locator('#st-poster [data-period="dnes"]')).toHaveAttribute('aria-pressed', 'true');
+        for (const p of ['mesiac', 'rok', 'spolu']) await expect(page.locator(`#st-poster [data-period="${p}"]`)).toBeDisabled();
         await expect(page.locator('#st-measure-title')).toHaveText(STATISTIKA_TEXTS.measureTitle);
         await page.locator('#st-measure-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
@@ -173,14 +149,14 @@ test.describe('karta Štatistika', () => {
         await openStat(page, { onPv: (route) => route.abort() });
         await expect(page.locator('#st-measure-off')).toHaveText(STATISTIKA_TEXTS.measureOff);
         await expect(page.locator('#st-measure')).toBeHidden();
-        await expect(page.locator('#st-src')).toHaveText(STATISTIKA_TEXTS.forecastSub);
+        await expect(page.locator('#st-poster h2')).toHaveText('Dnes podľa predpovede');
     });
 
-    test('bez cien v tarife: len kWh a výzva doplniť ceny', async ({ page }) => {
+    test('bez cien v tarife: bez hodnoty a výzva doplniť ceny', async ({ page }) => {
         await openStat(page, { settings: { ...OWNER, tariff: TARIFF } });
-        await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(statistikaModel(vstup({ tariff: TARIFF }), 'dnes')));
-        await expect(page.locator('#st-value')).toBeHidden();
-        await expect(page.locator('#st-note')).toBeHidden();
+        const m = statistikaModel(vstup({ tariff: TARIFF }), 'dnes');
+        await expect.poll(() => plagatVStranke(page)).toEqual(plagatZModelu(m));
+        expect(m.summary?.rows.some((r) => r.t.startsWith('Hodnota'))).toBe(false);
         await expect(page.locator('#st-prices-title')).toHaveText(STATISTIKA_TEXTS.pricesTitle);
         await page.locator('#st-prices-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
@@ -195,7 +171,7 @@ test.describe('karta Štatistika', () => {
         net.off = false;
         await page.locator('#st-retry').click();
         await expect(page.locator('#st-retry')).toBeHidden();
-        await expect(page.locator('#st-num-val')).toHaveText(kwhText(pv.dailyEnergyKwh));
+        await expect(page.locator('#st-poster .pn')).toHaveText(`${bigText(pv.dailyEnergyKwh)} kWh`);
         expect(errors).toEqual([]);
     });
 
@@ -208,7 +184,7 @@ test.describe('karta Štatistika', () => {
         await expect(page.locator('#st-retry')).toBeHidden();
         await expect(page.locator('#st-body')).toBeHidden();
         cakaju.forEach((f) => f());
-        await expect(page.locator('#st-num-val')).toHaveText(kwhText(pv.dailyEnergyKwh));
+        await expect(page.locator('#st-poster .pn')).toHaveText(`${bigText(pv.dailyEnergyKwh)} kWh`);
     });
 
     test('poloha bez panelov: biela výzva, tlačidlo trikrát zapulzuje, plagát nie je; súčasná appka ostáva', async ({ page }) => {
@@ -217,7 +193,6 @@ test.describe('karta Štatistika', () => {
         await expect(page.locator('#st-setup-title')).toHaveText(STATISTIKA_TEXTS.setupTitle);
         await expect(page.locator('#st-later-title')).toHaveText(STATISTIKA_TEXTS.laterTitle);
         await expect(page.locator('#st-body')).toBeHidden();
-        await expect(page.locator('#st-posters [data-poster]')).toHaveCount(0);
         expect(await page.locator('#st-setup .cta').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
         /** Animácie tlačidla: meno a počet opakovaní. */
         const pulz = () =>
@@ -236,7 +211,7 @@ test.describe('karta Štatistika', () => {
         await page.locator('#st-setup-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
 
-        // Súčasná appka v tom istom stave: Štatistika ako doteraz, s výzvou nastaviť panely.
+        // Súčasná appka v tom istom stave: Štatistika s výzvou nastaviť panely.
         await page.goto('/');
         await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
         await page.locator('#nav-statistika').click();
@@ -259,10 +234,19 @@ test.describe('karta Štatistika', () => {
         await page.locator('#st-ask-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
     });
+
+    test('prístupnosť: žiadne závažné nálezy axe na karte, bez merania ani bez panelov', async ({ page }) => {
+        await openStat(page);
+        expect(await vazneNalezy(page), 'karta').toEqual([]);
+        await openStat(page, { settings: { ...OWNER, zdroj: null, tariff: TARIFF } });
+        expect(await vazneNalezy(page), 'bez merania a bez cien').toEqual([]);
+        await openStat(page, { settings: null, site: SITE });
+        expect(await vazneNalezy(page), 'bez panelov').toEqual([]);
+    });
 });
 
 test.describe('súčty, ktoré výrobca neposiela', () => {
-    test('Fox ESS bez roka: rok od prvého merania na karte, veta pod ňou aj plagát', async ({ page }) => {
+    test('Fox ESS bez roka: rok od prvého merania v nadpise plagátu aj vo vete pod ním', async ({ page }) => {
         const FOX = { ...TEST_ZDROJ, sposob: 'foxess-kluc' };
         const surove = { ...pv, yearEnergyKwh: null };
         const errors = await openStat(page, {
@@ -272,161 +256,43 @@ test.describe('súčty, ktoré výrobca neposiela', () => {
         const doplnene = doplnSucty(null, suctyZdroj(FOX), surove, '2026-09-05', '13:00').pv;
         const v = vstup({ zdroj: FOX, pv: doplnene });
         for (const period of STATS_PERIODS) {
-            await page.locator(`#st-seg [data-period="${period}"]`).click();
-            await expect.poll(() => kartaVStranke(page), period).toEqual(kartaZModelu(statistikaModel(v, period)));
+            await page.locator(`#st-poster [data-period="${period}"]`).click();
+            await expect.poll(() => plagatVStranke(page), period).toEqual(plagatZModelu(statistikaModel(v, period)));
         }
-        await expect(page.locator('#st-src')).toHaveText('vyrobené od spustenia');
-        await page.locator('#st-seg [data-period="rok"]').click();
-        await expect(page.locator('#st-src')).toHaveText('vyrobené tento rok od 5. 9.');
-        const odNote = statistikaModel(v, 'rok').odNote;
-        expect(odNote).toBe('Fox ESS neposiela súčet za rok. Rátam ho sám z celkovej výroby, zatiaľ od 5. 9. – skôr som meranie nemal.');
-        await expect(page.locator('#st-od')).toHaveText(odNote);
-        await page.locator('[data-poster="rok"]').click();
-        await expect(page.locator('#poster')).toBeVisible();
-        const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(v, 'rok'));
-        expect(await plagatVStranke(page)).toEqual(plagatZModelu(m));
-        expect(m.title).toBe('Rok 2026 na streche od 5. 9. · Dvorany nad Nitrou');
-        expect(m.note).toMatch(/^Súčet roka je od 5. 9./);
+        await page.locator('#st-poster [data-period="rok"]').click();
+        await expect(page.locator('#st-poster h2')).toHaveText('Rok 2026 na streche od 5. 9.');
+        await expect(page.locator('#st-poster .pnote')).toContainText(
+            'Fox ESS neposiela súčet za rok. Rátam ho sám z celkovej výroby, zatiaľ od 5. 9. – skôr som meranie nemal.',
+        );
         expect(errors).toEqual([]);
     });
 
     test('kiosk so všetkými súčtami: žiadne „od“ ani veta', async ({ page }) => {
         await openStat(page);
-        await page.locator('#st-seg [data-period="rok"]').click();
-        await expect(page.locator('#st-src')).toHaveText('vyrobené tento rok');
-        await expect(page.locator('#st-od')).toBeHidden();
-        await expect(page.locator('#st-rows .od')).toHaveCount(0);
+        await page.locator('#st-poster [data-period="rok"]').click();
+        await expect(page.locator('#st-poster h2')).toHaveText('Rok 2026 na streche');
+        await expect(page.locator('#st-poster .pnote')).not.toContainText('neposiela súčet');
     });
 });
 
-test.describe('plagát na zdieľanie', () => {
-    test('mesiac, týždeň aj rok: čísla ako posterModel, chýbajúce dni povedané, všetko sa zmestí', async ({ page }) => {
-        const errors = await openStat(page);
-        for (const period of /** @type {const} */ (['mesiac', 'tyzden', 'rok'])) {
-            await page.locator(`[data-poster="${period}"]`).click();
-            await expect(page.locator('#poster')).toBeVisible();
-            const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(vstup(), period));
-            expect(await plagatVStranke(page)).toEqual(plagatZModelu(m));
-            expect(m.note, 'v denníku chýbajú dni - plagát to musí povedať').not.toBe('');
-            await expect(page.locator('#poster-foot')).toHaveText('RAY-MON · slnko nefakturuje');
-            expect(m.tiles.map((t) => t.label)).not.toContain('pranie zo slnka');
-            // Veľké číslo v jednom riadku v karte (ročné „9 112 kWh“ je dlhšie) a obrázok do story
-            // s číslami nad pätičkou a každým číslom celým v stĺpci.
-            const miesto = await page.evaluate(async (m) => {
-                const pn = /** @type {HTMLElement} */ (document.getElementById('poster-kwh'));
-                const pc = /** @type {HTMLElement} */ (pn.closest('.pc'));
-                const { look, layout, tileValueSize } = await import('/obloha/web/poster-image.js');
-                const t = look();
-                await Promise.all([500, 800, 900].map((w) => document.fonts.load(`${w} 100px ${t.font}`)));
-                const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
-                const l = layout(ctx, m, t);
-                return {
-                    preteka: pn.scrollWidth > pn.clientWidth || pc.getBoundingClientRect().right > innerWidth,
-                    koniec: l.bottom,
-                    paticka: l.foot,
-                    cisla: tileValueSize(ctx, m.tiles, t),
-                };
-            }, m);
-            expect(miesto.preteka, `${period}: veľké číslo pretečie kartu`).toBe(false);
-            expect(miesto.koniec, `${period}: čísla zasahujú do pätičky obrázka`).toBeLessThanOrEqual(miesto.paticka - 60);
-            expect(miesto.cisla, `${period}: čísla sú zmenšené pod 60 px`).toBeGreaterThanOrEqual(60);
-            await page.locator('#poster-close').click();
-            await expect(page.locator('#poster')).toBeHidden();
-            await expect(page.locator(`[data-poster="${period}"]`)).toBeFocused();
-        }
-        expect(await plagatZModelu(/** @type {any} */ (posterModel(vstup(), 'tyzden'))).cols).toHaveLength(7);
-        expect(plagatZModelu(/** @type {any} */ (posterModel(vstup(), 'rok'))).cols, 'január až september').toHaveLength(9);
-        expect(errors).toEqual([]);
-    });
-
-    test('Zavrieť, Escape aj Späť plagát zatvoria a fokus sa vráti na tlačidlo', async ({ page }) => {
-        await openStat(page);
-        const btn = page.locator('[data-poster="mesiac"]');
-        await btn.click();
-        await expect(page.locator('#poster')).toBeVisible();
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#poster')).toBeHidden();
-        await expect(btn).toBeFocused();
-        await btn.click();
-        await expect(page.locator('#poster')).toBeVisible();
-        await page.goBack();
-        await expect(page.locator('#poster')).toBeHidden();
-        await expect(btn).toBeFocused();
+test.describe('odkaz na karte Môžem?', () => {
+    test('otvorí plagát mesiaca v karte Štatistika; Späť vráti na Môžem?', async ({ page }) => {
+        const errors = await openStat(page, { panel: 'mozem' });
+        const m = statistikaModel(vstup(), 'mesiac');
+        const s = /** @type {NonNullable<typeof m.summary>} */ (m.summary);
+        await expect(page.locator('#mz-summary-text')).toHaveText(statsLinkText(s.kick, /** @type {number} */ (s.kwh)));
+        await page.locator('#mz-summary').click();
         await expect(page.locator('#panel-statistika')).toBeVisible();
-        // Zatvorenie bol krok späť - ďalšie Späť vedie z karty preč, plagát sa neotvorí znova.
+        await expect(page.locator('#st-poster [data-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(() => plagatVStranke(page)).toEqual(plagatZModelu(m));
         await page.goBack();
         await expect(page.locator('#panel-mozem')).toBeVisible();
-        await expect(page.locator('#poster')).toBeHidden();
-    });
-
-    test('odkaz na karte Môžem? otvorí ten istý plagát mesiaca', async ({ page }) => {
-        const errors = await openStat(page, { panel: 'mozem' });
-        const m = /** @type {NonNullable<ReturnType<typeof posterModel>>} */ (posterModel(vstup(), 'mesiac'));
-        await expect(page.locator('#mz-summary-text')).toHaveText(posterLinkText(m.kick, m.total));
-        await page.locator('#mz-summary').click();
-        await expect(page.locator('#poster')).toBeVisible();
-        expect(await plagatVStranke(page)).toEqual(plagatZModelu(m));
-        await page.locator('#poster-close').click();
-        await expect(page.locator('#mz-summary')).toBeFocused();
         expect(errors).toEqual([]);
     });
 
-    test('bez merania odkaz na Môžem? ani tlačidlá plagátu nie sú', async ({ page }) => {
+    test('bez merania odkaz nie je', async ({ page }) => {
         await openStat(page, { settings: { ...OWNER, zdroj: null }, panel: 'mozem' });
         await expect(page.locator('#mz-word')).not.toHaveText('');
         await expect(page.locator('#mz-summary')).toBeHidden();
-    });
-
-    test('Zdieľať do story pošle systému obrázok 1080 × 1920', async ({ page }) => {
-        await page.addInitScript(() => {
-            /** @type {any} */ const w = window;
-            w.zdielane = null;
-            navigator.canShare = () => true;
-            navigator.share = async (/** @type {any} */ data) => {
-                const f = data.files[0];
-                const img = await createImageBitmap(f);
-                w.zdielane = { name: f.name, type: f.type, size: f.size, width: img.width, height: img.height };
-            };
-        });
-        const errors = await openStat(page);
-        await page.locator('[data-poster="tyzden"]').click();
-        await page.locator('#poster-share').click();
-        await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).zdielane?.name)).toBe('ray-mon-tyzden.png');
-        const shared = await page.evaluate(() => /** @type {any} */ (window).zdielane);
-        expect(shared).toMatchObject({ type: 'image/png', width: 1080, height: 1920 });
-        expect(shared.size, 'obrázok nie je prázdny').toBeGreaterThan(10000);
-        expect(errors).toEqual([]);
-    });
-
-    test('bez zdieľania súborov (počítač) sa obrázok 1080 × 1920 stiahne', async ({ page }) => {
-        await page.addInitScript(() => {
-            /** @type {any} */ (navigator).canShare = undefined;
-        });
-        await openStat(page);
-        await page.locator('[data-poster="mesiac"]').click();
-        const download = page.waitForEvent('download');
-        await page.locator('#poster-share').click();
-        const file = await download;
-        expect(file.suggestedFilename()).toBe('ray-mon-mesiac.png');
-        const png = await page.evaluate(
-            async (url) => {
-                const img = await createImageBitmap(await (await fetch(url)).blob());
-                return { width: img.width, height: img.height };
-            },
-            `data:image/png;base64,${(await import('node:fs')).readFileSync(/** @type {string} */ (await file.path())).toString('base64')}`,
-        );
-        expect(png).toEqual({ width: 1080, height: 1920 });
-    });
-
-    test('prístupnosť: žiadne závažné nálezy axe na karte ani s otvoreným plagátom', async ({ page }) => {
-        await openStat(page);
-        expect(await vazneNalezy(page), 'karta').toEqual([]);
-        await page.locator('[data-poster="mesiac"]').click();
-        await expect(page.locator('#poster')).toBeVisible();
-        expect(await vazneNalezy(page), 'plagát').toEqual([]);
-        await openStat(page, { settings: { ...OWNER, zdroj: null, tariff: TARIFF } });
-        expect(await vazneNalezy(page), 'bez merania a bez cien').toEqual([]);
-        await openStat(page, { settings: null, site: SITE });
-        expect(await vazneNalezy(page), 'bez panelov').toEqual([]);
     });
 });

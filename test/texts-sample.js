@@ -12,9 +12,9 @@ import { mozemModel } from '../shared/mozem.js';
 import { mozemSkyModel } from '../shared/mozem-sky.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../shared/sedem-dni.js';
 import { typicalSettings } from '../shared/settings.js';
-import { posterModel, statistikaModel } from '../shared/statistika.js';
+import { statistikaModel } from '../shared/statistika.js';
 import { STATS_PERIODS } from '../shared/stats.js';
-import { SUMMARY_PERIODS, summaryModel } from '../shared/summary.js';
+import { summaryModel } from '../shared/summary.js';
 import { terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -96,10 +96,7 @@ export function sampleTexts(voice) {
                 );
                 strings(sedemWeekModel(i, v), `${p}.week`, out);
             }
-            for (const period of SUMMARY_PERIODS) {
-                strings(summaryModel(i, period), `${p}.summary.${period}`, out);
-                strings(posterModel(i, period, v), `${p}.poster.${period}`, out);
-            }
+            for (const period of STATS_PERIODS) strings(summaryModel(i, period, v), `${p}.summary.${period}`, out);
         }
     }
     direct(out, v);
@@ -194,33 +191,36 @@ function directMisc(out, v) {
     out['groupAlways'] = M.MOZEM_GROUP_ALWAYS;
     out['teraz.typical'] = M.terazTypicalText(5, v);
     out['sedem.guess'] = M.sedemGuessText(5, v);
-    strings(M.statsBestText({ date: '2026-09-05', kwh: 31.2, today: true }, v), 'best.dnes', out);
-    strings(M.statsBestText({ date: '2026-09-03', kwh: 35.5, today: false }, v), 'best.inyDen', out);
     for (const k of /** @type {const} */ (['vsetko', 'cast', 'nic']))
         for (const missing of [0, 1, 3])
             strings(
-                M.summaryTexts({
-                    period: 'mesiac',
-                    month: 'september',
-                    year: '2026',
-                    kwh: 300,
-                    phones: 20000,
-                    km: 1800,
-                    best: { date: '2026-09-03', kwh: 35.5, today: false },
-                    value: 50,
-                    currency: '€',
-                    missing,
-                    // Uhlík: rozpracovaný, splatený aj bez súčtu od spustenia.
-                    co2Kg: 14.4,
-                    ...{
-                        vsetko: { payback: 0.129, debtT: 11 },
-                        cast: { payback: 1.2, debtT: 11 },
-                        nic: { payback: null, debtT: null },
-                    }[k],
-                    carbon: carbonFacts(300, null, PLANT).carbon,
-                    od: null,
-                    znacka: 'Huawei',
-                }),
+                M.summaryTexts(
+                    {
+                        period: 'mesiac',
+                        month: 'september',
+                        year: '2026',
+                        kwh: 300,
+                        phones: 20000,
+                        km: 1800,
+                        best: { date: '2026-09-03', kwh: 35.5, today: false },
+                        value: 50,
+                        valuePerDay: 1.6,
+                        currency: '€',
+                        rest: null,
+                        missing,
+                        // Uhlík: rozpracovaný, splatený aj bez súčtu od spustenia.
+                        co2Kg: 14.4,
+                        ...{
+                            vsetko: { payback: 0.129, debtT: 11 },
+                            cast: { payback: 1.2, debtT: 11 },
+                            nic: { payback: null, debtT: null },
+                        }[k],
+                        carbon: carbonFacts(300, null, PLANT).carbon,
+                        od: null,
+                        znacka: 'Huawei',
+                    },
+                    v,
+                ),
                 `summary.${k}.${missing}`,
                 out,
             );
@@ -235,8 +235,6 @@ function directSucty(out) {
         victron: { den: '09:12', mesiac: '2026-10-22', rok: '2026-10-22' },
     }))
         out[`sucty.${k}`] = M.suctyOdNote('Fox ESS', od);
-    out['sucty.sub.rok'] = M.statsHeroSub('rok', { time: '13:00', month: 'októbri', od: M.odText('2026-10-21') });
-    out['sucty.sub.dnes'] = M.statsHeroSub('dnes', { time: '13:00', month: 'októbri', od: M.odText('09:12') });
     for (const period of /** @type {const} */ (['mesiac', 'rok']))
         strings(
             M.summaryTexts({
@@ -248,7 +246,9 @@ function directSucty(out) {
                 km: 277,
                 best: { date: '2026-10-21', kwh: 24.8, today: false },
                 value: null,
+                valuePerDay: null,
                 currency: '€',
+                rest: null,
                 missing: 0,
                 co2Kg: 3,
                 payback: null,

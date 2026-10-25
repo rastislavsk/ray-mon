@@ -123,11 +123,6 @@ test.describe('tón hlášok', () => {
         await karta(page, 'mozem');
         const ocakavane = { word: slusny.word, lead: slusny.lead };
         await expect.poll(() => mozemVStranke(page)).toEqual(ocakavane);
-        // Päta plagátu bez „slnko nefakturuje“.
-        await page.locator('#mz-summary').click();
-        await expect(page.locator('#poster-foot')).toHaveText('RAY-MON');
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#poster')).not.toBeVisible();
 
         await page.reload();
         await appReady(page);

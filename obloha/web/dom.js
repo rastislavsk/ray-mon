@@ -150,7 +150,7 @@ function sedemDom() {
     };
 }
 
-/** Karta Štatistika a plagát na zdieľanie. */
+/** Karta Štatistika s plagátom obdobia. */
 function statistikaDom() {
     return {
         stSub: byId('st-sub'),
@@ -166,26 +166,7 @@ function statistikaDom() {
         stLaterTitle: byId('st-later-title'),
         stLaterText: byId('st-later-text'),
         stBody: byId('st-body'),
-        stSeg: byId('st-seg'),
-        stNum: byId('st-num'),
-        stNumVal: byId('st-num-val'),
-        stSrc: byId('st-src'),
-        stValue: byId('st-value'),
-        stProgress: byId('st-progress'),
-        stBar: byId('st-bar'),
-        stProgressText: byId('st-progress-text'),
-        stEquiv: byId('st-equiv'),
-        stEquivTitle: byId('st-equiv-title'),
-        stPhones: byId('st-phones'),
-        stPhonesLabel: byId('st-phones-label'),
-        stKm: byId('st-km'),
-        stKmLabel: byId('st-km-label'),
-        stRows: byId('st-rows'),
-        stBest: byId('st-best'),
-        stBestTitle: byId('st-best-title'),
-        stBestText: byId('st-best-text'),
-        stOd: byId('st-od'),
-        stNote: byId('st-note'),
+        stPoster: byId('st-poster'),
         stMeasureOff: byId('st-measure-off'),
         stMeasure: byId('st-measure'),
         stMeasureTitle: byId('st-measure-title'),
@@ -195,16 +176,6 @@ function statistikaDom() {
         stPricesTitle: byId('st-prices-title'),
         stPricesText: byId('st-prices-text'),
         stPricesBtn: byId('st-prices-btn'),
-        stPosters: byId('st-posters'),
-        poster: /** @type {HTMLDialogElement} */ (byId('poster')),
-        posterTitle: byId('poster-title'),
-        posterKwh: byId('poster-kwh'),
-        posterCols: byId('poster-cols'),
-        posterTiles: byId('poster-tiles'),
-        posterFoot: byId('poster-foot'),
-        posterNote: byId('poster-note'),
-        posterShare: byId('poster-share'),
-        posterClose: byId('poster-close'),
     };
 }
 

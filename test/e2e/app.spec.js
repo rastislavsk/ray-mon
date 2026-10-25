@@ -34,15 +34,13 @@ import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
-import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
+import { dayNameShort, fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
-import { kwhText, moneyText } from '../../web/render/statistika.js';
-import { statsModel } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
-import { SUMMARY_PERIODS, summaryModel } from '../../shared/summary.js';
-import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
+import { summaryModel } from '../../shared/summary.js';
+import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, statsLinkText, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
@@ -1721,7 +1719,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, summary: false, item: null },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, item: null },
     });
     expect(errors).toEqual([]);
 });
@@ -2877,45 +2875,68 @@ test.describe('moja elektráreň', () => {
 test.describe('karta Štatistika', () => {
     /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
     const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-    /** Model karty tak, ako ho appka počíta v pevnom čase testov. @param {typeof OWNER} settings @param {import('../../shared/stats.js').StatsPeriod} period */
-    const model = (settings, period) =>
-        statsModel(
-            { ...settings, now: FIXED_NOW, loading: false, pv: settings.zdroj ? pv : null, forecast: forecastAt(FIXED_NOW) },
+    /** Plagát tak, ako ho appka počíta v pevnom čase testov. @param {typeof OWNER} settings @param {import('../../shared/stats.js').StatsPeriod} period */
+    const plagat = (settings, period) =>
+        summaryModel(
+            { ...settings, now: FIXED_NOW, loading: false, pv: settings.zdroj ? pv : null, forecast: forecastAt(FIXED_NOW), dayLog: {} },
             period,
         );
+    /** Plagát v stránke má text z modelu: nadpis, veľké číslo, riadky a poznámku. @param {import('@playwright/test').Page} page @param {ReturnType<typeof plagat>} m */
+    const ocakavajPlagat = async (page, m) => {
+        await expect(page.locator('.summary-kick')).toHaveText(m.heading);
+        await expect(page.locator('.summary-big')).toHaveText(`${m.big} kWh`);
+        await expect(page.locator('.summary-row span')).toHaveText(m.rows.map((r) => r.t + r.s));
+        if (m.note) await expect(page.locator('.summary-note')).toHaveText(m.note);
+        else await expect(page.locator('.summary-note')).toHaveCount(0);
+    };
 
-    test('s meraním a cenami: počítadlo po obdobiach s hodnotou podľa tarify', async ({ page }) => {
+    test('s meraním a cenami: plagát každého obdobia ako summaryModel', async ({ page }) => {
         const settings = { ...OWNER, tariff: PRICED };
         const errors = await openApp(page, { settings });
         await page.locator('#nav-statistika').click();
         await ocakavajKartu(page, 'statistika');
         await expect(page.locator('#stats-sub')).toHaveText(`${SITE.name} · ${kwpText(10.44)}`);
-
-        const dnes = model(settings, 'dnes');
-        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené dnes');
-        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(dnes.hero.kwh));
-        await expect(page.locator('.stats-eur')).toContainText(moneyText(/** @type {number} */ (dnes.hero.value), '€'));
-        await expect(page.locator('.stats-hero .progress-caption')).toContainText(`${dnes.progress?.pct} %`);
-        await expect(page.locator('.stats-row')).toHaveCount(3);
         await expect(page.locator('.stats-go')).toHaveCount(0);
 
-        // Obdobie je nastavenie vnútri karty: prepne veľké číslo aj riadky pod ním.
-        const rok = model(settings, 'rok');
+        const dnes = plagat(settings, 'dnes');
+        await ocakavajPlagat(page, dnes);
+        expect(dnes.rows.map((r) => r.t)).toContainEqual(expect.stringMatching(/^Hodnota ~/));
+        const pas = /** @type {Extract<NonNullable<typeof dnes.viz>, { kind: 'meter' }>} */ (dnes.viz);
+        await expect(page.locator('.summary-meter p')).toHaveText(pas.left + pas.right);
+
+        // Obdobie je nastavenie vnútri karty: prepne celý plagát.
+        await page.locator('[data-stats-period="mesiac"]').click();
+        await expect(page.locator('[data-stats-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
+        await ocakavajPlagat(page, plagat(settings, 'mesiac'));
+        await expect(page.locator('.summary-cal i')).toHaveCount(30);
+        await expect(page.locator('.summary-cal i.future'), '6. až 30. september ešte len príde').toHaveCount(25);
+
+        // Rok: súčet z kiosku a 12 mesiacov - denník pozná len dnešok, takže september je neúplný,
+        // január až august bez čísla a október až december ešte len prídu.
         await page.locator('[data-stats-period="rok"]').click();
-        await expect(page.locator('[data-stats-period="rok"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené v roku 2026');
-        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(rok.hero.kwh));
-        await expect(page.locator('.stats-eur')).toContainText(moneyText(/** @type {number} */ (rok.hero.value), '€'));
-        await expect(page.locator('.stats-meta')).toContainText(`${fmt1(/** @type {number} */ (rok.hero.perDay))} kWh`);
-        await expect(page.locator('.stats-row .k')).toHaveText(['Dnes', 'September', 'Od spustenia']);
+        await ocakavajPlagat(page, plagat(settings, 'rok'));
+        await expect(page.locator('.summary-bars.year span')).toHaveCount(12);
+        await expect(page.locator('.summary-bars.year i.missing')).toHaveCount(8);
+        await expect(page.locator('.summary-bars.year i.partial')).toHaveCount(1);
+        await expect(page.locator('.summary-bars.year i.future')).toHaveCount(3);
+
+        await page.locator('[data-stats-period="spolu"]').click();
+        const spolu = plagat(settings, 'spolu');
+        await ocakavajPlagat(page, spolu);
+        await expect(page.locator('.summary-meter p')).toContainText('uhlík z výroby panelov');
+        // Veľké číslo sa aj s „kWh“ zmestí do jedného riadka.
+        const big = await page.locator('.summary-big').boundingBox();
+        expect(big?.height).toBeLessThan(110);
+        await expect(page.locator('[data-summary-share]'), 'zdieľanie do story nie je').toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
-    test('bez cien: len kWh a výzva, ktorá otvorí ceny v tarife; Späť vráti do Štatistiky', async ({ page }) => {
+    test('bez cien: bez hodnoty a výzva, ktorá otvorí ceny v tarife; Späť vráti do Štatistiky', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-statistika').click();
-        await expect(page.locator('.stats-hero .num')).toHaveText(kwhText(model(OWNER, 'dnes').hero.kwh));
-        await expect(page.locator('.stats-eur')).toHaveCount(0);
+        const m = plagat(OWNER, 'dnes');
+        await ocakavajPlagat(page, m);
+        expect(m.rows.some((r) => r.t.startsWith('Hodnota'))).toBe(false);
 
         await page.locator('[data-stats-go="ceny"]').click();
         await ocakavajKartu(page, 'nastavenie');
@@ -2925,16 +2946,16 @@ test.describe('karta Štatistika', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez merania: dnešok podľa predpovede a výzva pripojiť meranie', async ({ page }) => {
+    test('bez merania: sivý plagát dneška podľa predpovede, ostatné obdobia nejdú, výzva pripojiť meranie', async ({ page }) => {
         const settings = { ...OWNER, tariff: PRICED, zdroj: null };
         const errors = await openApp(page, { settings });
         await page.locator('#nav-statistika').click();
-        const m = model(settings, 'dnes');
-        await expect(page.locator('.stats-hero .lbl')).toHaveText('Dnes podľa predpovede');
-        await expect(page.locator('.stats-hero .num')).toHaveText(
-            fmt1(/** @type {NonNullable<typeof m.forecastToday>} */ (m.forecastToday).kwh),
-        );
-        await expect(page.locator('#stats-body .seg')).toHaveCount(0);
+        const m = plagat(settings, 'mesiac');
+        expect(m.kind).toBe('estimate');
+        await expect(page.locator('.summary.est')).toBeVisible();
+        await ocakavajPlagat(page, m);
+        await expect(page.locator('[data-stats-period="dnes"]')).toHaveAttribute('aria-pressed', 'true');
+        for (const p of ['mesiac', 'rok', 'spolu']) await expect(page.locator(`[data-stats-period="${p}"]`)).toBeDisabled();
 
         await page.locator('[data-stats-go="meranie"]').click();
         await ocakavajKartu(page, 'nastavenie');
@@ -2949,6 +2970,46 @@ test.describe('karta Štatistika', () => {
         await page.locator('[data-stats-go="nastavenie"]').click();
         await ocakavajKartu(page, 'nastavenie');
         await expect(page.locator('#setup-cta')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('súčty, ktoré výrobca neposiela (Fox ESS): rok od prvého merania v nadpise aj v poznámke', async ({ page }) => {
+        const FOX = { ...TEST_ZDROJ, sposob: 'foxess-kluc' };
+        const surove = { ...pv, yearEnergyKwh: null };
+        const errors = await openApp(page, { settings: { ...OWNER, zdroj: FOX }, pvData: surove });
+        // Appka rok dopočíta z celkovej výroby: od začiatku dneška, prvého dňa merania.
+        const doplnene = doplnSucty(null, suctyZdroj(FOX), surove, '2026-09-05', '13:00').pv;
+        expect(doplnene.od).toEqual({ rok: '2026-09-05' });
+        const vstup = { ...OWNER, zdroj: FOX, now: FIXED_NOW, loading: false, pv: doplnene, forecast: forecastAt(FIXED_NOW), dayLog: {} };
+        await page.locator('#nav-statistika').click();
+        await page.locator('[data-stats-period="rok"]').click();
+        const m = summaryModel(vstup, 'rok');
+        expect(m.heading).toBe('Rok 2026 na streche od 5. 9.');
+        expect(m.note).toMatch(/^Fox ESS neposiela súčet za rok. Rátam ho sám z celkovej výroby, zatiaľ od 5. 9./);
+        await ocakavajPlagat(page, m);
+        expect(errors).toEqual([]);
+    });
+
+    test('odkaz na karte Môžem? otvorí plagát mesiaca v Štatistike; Späť vráti na Môžem?', async ({ page }) => {
+        const errors = await openApp(page, { start: 'terazky' });
+        await page.locator('#nav-mozem').click();
+        const mesiac = plagat(OWNER, 'mesiac');
+        await expect(page.locator('.summary-link')).toContainText(statsLinkText(mesiac.kick, /** @type {number} */ (mesiac.kwh)));
+        await page.locator('.summary-link').click();
+        await ocakavajKartu(page, 'statistika');
+        await expect(page.locator('[data-stats-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
+        await ocakavajPlagat(page, mesiac);
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('denník si zapíše dnešok', async ({ page }) => {
+        const errors = await openApp(page);
+        const log = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), DAYLOG_STORAGE_KEY);
+        expect(log).toEqual({ '2026-09-05': pv.dailyEnergyKwh });
         expect(errors).toEqual([]);
     });
 });
@@ -3054,148 +3115,9 @@ test.describe('karta Môžem?', () => {
         await page.locator('#nav-mozem').click();
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
-        await expect(page.locator('.summary-link'), 'bez merania súhrn nie je').toHaveCount(0);
+        await expect(page.locator('.summary-link'), 'bez merania odkaz do Štatistiky nie je').toHaveCount(0);
         await expect(page.locator('.mozem-tile b')).toHaveText(['neviem', 'neviem', 'neviem', 'kedykoľvek']);
         await expect(page.locator('.mozem-tile-bar'), 'bez okna slnka pás nie je').toHaveCount(0);
-        expect(errors).toEqual([]);
-    });
-
-    /** Súhrn tak, ako ho appka počíta v pevnom čase testov. @param {'tyzden' | 'mesiac'} period */
-    const suhrn = (period) =>
-        /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
-            summaryModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW), dayLog: {} }, period)
-        );
-
-    test('súhrn: otvorí sa z karty, prepína obdobie a Späť ho zavrie', async ({ page }) => {
-        const errors = await openApp(page, { start: 'terazky' });
-        await page.locator('#nav-mozem').click();
-        const mesiac = suhrn('mesiac');
-        await expect(page.locator('.summary-link')).toContainText(`${mesiac.kick}: ${fmtSum(Math.round(mesiac.kwh), 0)} kWh`);
-        await page.locator('.summary-link').click();
-        await expect(page.locator('.summary-kick')).toHaveText(mesiac.kick);
-        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(mesiac.kwh), 0)} kWh`);
-        await expect(page.locator('.summary-row span')).toHaveCount(mesiac.rows.length);
-        await expect(page.locator('.summary-cal i')).toHaveCount(mesiac.days.length);
-
-        await page.locator('[data-summary-period="tyzden"]').click();
-        const tyzden = suhrn('tyzden');
-        await expect(page.locator('.summary-kick')).toHaveText(tyzden.kick);
-        await expect(page.locator('.summary-bars span')).toHaveCount(7);
-        await expect(page.locator('.summary-note')).toHaveText(tyzden.note);
-
-        // Rok: súčet z kiosku a 12 mesiacov - denník pozná len dnešok, takže september je neúplný,
-        // január až august bez čísla a október až december ešte len prídu.
-        await page.locator('[data-summary-period="rok"]').click();
-        const rok = suhrn('rok');
-        await expect(page.locator('.summary-kick')).toHaveText(rok.kick);
-        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(rok.kwh), 0)} kWh`);
-        await expect(page.locator('.summary-bars.year span')).toHaveCount(12);
-        await expect(page.locator('.summary-bars.year i.missing')).toHaveCount(8);
-        await expect(page.locator('.summary-bars.year i.partial')).toHaveCount(1);
-        await expect(page.locator('.summary-bars.year i.future')).toHaveCount(3);
-        await expect(page.locator('.summary-row span')).toHaveCount(rok.rows.length);
-        await expect(page.locator('.summary-note')).toHaveText(rok.note);
-
-        // Súhrn je obrazovka karty: Späť na telefóne ho zavrie, ďalšie Späť už vedie preč z karty.
-        await page.goBack();
-        await expect(page.locator('.mozem-hero')).toBeVisible();
-        await ocakavajKartu(page, 'mozem');
-        await page.locator('.summary-link').click();
-        await page.locator('[data-summary-back]').click();
-        await expect(page.locator('.summary')).toHaveCount(0);
-        await page.goBack();
-        await ocakavajKartu(page, 'terazky');
-        expect(errors).toEqual([]);
-    });
-
-    test('súčty, ktoré výrobca neposiela (Fox ESS): rok od prvého merania v Štatistike aj v súhrne', async ({ page }) => {
-        const FOX = { ...TEST_ZDROJ, sposob: 'foxess-kluc' };
-        const surove = { ...pv, yearEnergyKwh: null };
-        const errors = await openApp(page, { settings: { ...OWNER, zdroj: FOX }, pvData: surove });
-        // Appka rok dopočíta z celkovej výroby: od začiatku dneška, prvého dňa merania.
-        const doplnene = doplnSucty(null, suctyZdroj(FOX), surove, '2026-09-05', '13:00').pv;
-        expect(doplnene.od).toEqual({ rok: '2026-09-05' });
-        const vstup = { ...OWNER, zdroj: FOX, now: FIXED_NOW, loading: false, pv: doplnene, forecast: forecastAt(FIXED_NOW) };
-        const s = statsModel(vstup, 'dnes');
-        const rok = /** @type {NonNullable<typeof s.rows[number]>} */ (s.rows.find((r) => r.period === 'rok'));
-        await page.locator('#nav-statistika').click();
-        await expect(page.locator('.stats-row', { hasText: 'Rok' }).locator('.k')).toHaveText(`${rok.label} ${rok.od}`);
-        await expect(page.locator('.stats-row', { hasText: 'Rok' }).locator('.v')).toHaveText(`${kwhText(rok.kwh)} kWh`);
-        await expect(page.locator('.stats-note').first()).toHaveText(s.odNote);
-        expect(s.odNote).toContain('Fox ESS neposiela súčet za rok');
-        await page.locator('[data-stats-period="rok"]').click();
-        await expect(page.locator('.stats-hero .lbl')).toHaveText('Vyrobené v roku 2026 od 5. 9.');
-
-        await page.locator('#nav-mozem').click();
-        await page.locator('.summary-link').click();
-        await page.locator('[data-summary-period="rok"]').click();
-        const m = /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
-            summaryModel({ ...vstup, dayLog: { '2026-09-05': /** @type {number} */ (pv.dailyEnergyKwh) } }, 'rok')
-        );
-        await expect(page.locator('.summary-kick')).toHaveText(m.heading);
-        expect(m.heading).toBe('Rok 2026 na streche od 5. 9.');
-        await expect(page.locator('.summary-big')).toHaveText(`${fmtSum(Math.round(m.kwh), 0)} kWh`);
-        await expect(page.locator('.summary-note')).toHaveText(m.note);
-        expect(m.note).toMatch(/^Súčet roka je od 5. 9. – skôr appka meranie z Fox ESS nemala./);
-        expect(errors).toEqual([]);
-    });
-
-    test('súhrn do story: aj s cenami a uhlíkom sa všetky riadky zmestia nad pätičku', async ({ page }) => {
-        // Najviac riadkov: prepočty, najlepší deň, hodnota (tarifa s cenami) a uhlík - úspora
-        // CO2eq s návratnosťou v jednom riadku (kiosk posiela súčet od spustenia).
-        const priced = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id === 'nt' ? 0.14 : 0.19 })) };
-        const zoznamy = SUMMARY_PERIODS.map(
-            (period) =>
-                /** @type {NonNullable<ReturnType<typeof summaryModel>>} */ (
-                    summaryModel(
-                        {
-                            ...OWNER,
-                            tariff: priced,
-                            now: FIXED_NOW,
-                            loading: false,
-                            pv,
-                            forecast: forecastAt(FIXED_NOW),
-                            dayLog: {},
-                        },
-                        period,
-                    )
-                ).rows,
-        );
-        expect(zoznamy.map((r) => r.length)).toEqual([5, 5, 5]);
-        await openApp(page);
-        const vysledok = await page.evaluate(async (zoznamy) => {
-            const { look, rows, rowsScale, ROWS_END } = await import('/web/share-image.js');
-            const t = look();
-            await Promise.all([document.fonts.load(`700 100px ${t.sans}`), document.fonts.load(`700 40px ${t.mono}`)]);
-            const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
-            const mierky = zoznamy.map((list) => rowsScale(ctx, list, t));
-            return { mierky, konce: zoznamy.map((list, i) => rows(ctx, list, t, false, mierky[i])), ROWS_END };
-        }, zoznamy);
-        for (const koniec of vysledok.konce) expect(koniec).toBeLessThanOrEqual(vysledok.ROWS_END);
-        // Zmenšené len mierne - pod 70 % by sa text v story ťažko čítal a rowsScale by ho pustil cez pätičku.
-        for (const k of vysledok.mierky) expect(k).toBeGreaterThan(0.7);
-    });
-
-    test('súhrn: denník si zapíše dnešok a zdieľanie pošle obrázok systému', async ({ page }) => {
-        await page.addInitScript(() => {
-            /** @type {any} */ const w = window;
-            w.zdielane = null;
-            navigator.canShare = () => true;
-            navigator.share = async (/** @type {any} */ data) => {
-                const f = data.files[0];
-                w.zdielane = { name: f.name, type: f.type, size: f.size };
-            };
-        });
-        const errors = await openApp(page);
-        const log = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), DAYLOG_STORAGE_KEY);
-        expect(log).toEqual({ '2026-09-05': pv.dailyEnergyKwh });
-        await page.locator('#nav-mozem').click();
-        await page.locator('.summary-link').click();
-        await page.locator('[data-summary-share]').click();
-        await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).zdielane?.name)).toBe('ray-mon-mesiac.png');
-        const shared = await page.evaluate(() => /** @type {any} */ (window).zdielane);
-        expect(shared.type).toBe('image/png');
-        expect(shared.size, 'obrázok nie je prázdny').toBeGreaterThan(10000);
         expect(errors).toEqual([]);
     });
 });
