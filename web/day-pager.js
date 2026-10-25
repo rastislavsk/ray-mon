@@ -175,9 +175,12 @@ function bindTouch(area, track, band, day, snapshot) {
         'touchstart',
         (e) => {
             end(true);
+            // Rozbehnutý dojazd predošlého ťahu sa najprv dokončí (zapíše svoj deň) a až potom
+            // sa číta otvorený deň - inak by rýchly druhý ťah počítal ešte so starým dňom
+            // a pás by po ňom zastal na tom istom dni.
+            band.finish();
             const d = e.touches.length === 1 ? day() : null;
             if (!d || !e.target) return;
-            band.finish();
             const t = e.touches[0];
             const samples = [{ t: e.timeStamp, x: t.clientX }];
             const stop = follow(e.target, move, end);
