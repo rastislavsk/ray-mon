@@ -5,7 +5,7 @@
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
 import { MOZEM_SKY_TEXTS, NO_LIVE_FACT } from '../../shared/messages.js';
-import { mozemModel } from '../../shared/mozem.js';
+import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
@@ -99,27 +99,13 @@ function rowsHtml(rows) {
         .join('');
 }
 
-/**
- * Čo je v paneli: vec (dlaždica s jednou vecou) alebo skupina so zoznamom vecí. Iné id (napr. zo
- * starého kroku v histórii) nič neotvorí.
- * @param {MozemModel} m @param {string | null} key
- * @returns {{ key: string, group: NonNullable<MozemModel['groups'][number]['sheet']> } | { key: string, item: MozemModel['items'][number] } | null}
- */
-function openOf(m, key) {
-    if (!key) return null;
-    const sheet = m.groups.find((g) => g.key === key)?.sheet;
-    if (sheet) return { key, group: sheet };
-    const item = m.items.find((it) => it.id === key);
-    return item ? { key, item } : null;
-}
-
 /** Dlaždica, ktorej panel je práve otvorený - po zatvorení sa fokus vráti na ňu. @type {string | null} */
 let shown = null;
 
 /**
  * Panel veci či skupiny: texty a otvorenie či zatvorenie dialógu podľa stavu. Po zatvorení
  * (krížik, Escape, Späť) sa fokus vráti na dlaždicu, z ktorej sa panel otvoril.
- * @param {ReturnType<typeof openOf>} open @param {Dom} dom
+ * @param {ReturnType<typeof mozemSheetOf>} open @param {Dom} dom
  */
 function renderSheet(open, dom) {
     if (!open) {
@@ -129,6 +115,7 @@ function renderSheet(open, dom) {
         if (tile instanceof HTMLElement) tile.focus();
         return;
     }
+    dom.mozemSheetX.setAttribute('aria-label', MOZEM_SKY_TEXTS.close);
     if ('group' in open) groupSheet(open.group, dom);
     else itemSheet(open.item, dom);
     if (!dom.mozemSheet.open) dom.mozemSheet.showModal();
@@ -188,5 +175,5 @@ export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     writeHtml(dom.mozemBody, mozemHtml(m, kick) + summaryLinkHtml(summaryModel(state, 'mesiac')), 'mozemBody');
-    renderSheet(openOf(m, state.mozemItem), dom);
+    renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }

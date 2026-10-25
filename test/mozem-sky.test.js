@@ -80,23 +80,16 @@ test('mozemModel: facts nesú cenu siete, okno pása dneška, živý výkon a v�
     assert.equal(mozemModel(input(FIXED_NOW, { forecast: null })).facts, null);
 });
 
-test('mozemItemText: `more` je to isté ako `extra`, len rozdelené na otázku a odpoveď', () => {
+test('mozemItemText: vysvetlenie `more` je otázka a odpoveď', () => {
     const m = mozemModel(input(FIXED_NOW));
-    for (const it of m.items) {
-        if (!it.more) {
-            assert.equal(it.extra, '', it.id);
-            continue;
-        }
-        if (it.tone === 'go') assert.equal(it.extra, `Mrak? ${it.more.a}`, it.id);
-        else assert.ok([it.extra, `${it.more.q} ${it.more.a}`].includes(it.extra), it.id);
-    }
+    for (const it of m.items.filter((i) => i.more)) assert.ok(it.more?.q.endsWith('?') && it.more.a, it.id);
     const go = m.items.find((i) => i.id === 'pracka');
     assert.equal(go?.more?.q, 'A keď sa zamračí?');
-    // Čakanie a iný deň: otázka je presne začiatok vety súčasnej appky.
+    // Čakanie: otázka „musíš hneď“.
     const rano = mozemModel(input(at('05:30')));
     const wait = rano.items.find((i) => i.tone === 'wait' && i.more);
     assert.ok(wait?.more);
-    assert.equal(wait.extra, `${wait.more.q} ${wait.more.a}`);
+    assert.match(wait.more.q, /hneď\?$/);
     // Lacná sieť bez slnka v ďalších dňoch nemá čo dodať.
     const auto = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((i) => i.id === 'auto'));
     const ctx = {
@@ -113,7 +106,6 @@ test('mozemItemText: `more` je to isté ako `extra`, len rozdelené na otázku a
     const lacno = mozemItemText(auto, itemAnswer(auto, ctx), { ctx, cost: null });
     assert.equal(lacno.tone, 'cheap');
     assert.equal(lacno.more, null);
-    assert.equal(lacno.extra, '');
 });
 
 test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, zrušenie behu', () => {

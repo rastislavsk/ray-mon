@@ -278,6 +278,20 @@ function groupsOf(items, strip) {
 }
 
 /**
+ * Panel, ktorý otvára ťuknutie na dlaždicu (`key` dlaždice, v appke uložený v stave): skupina so
+ * zoznamom vecí, alebo jedna vec. Iné id (napr. zo starého kroku v histórii) nič neotvorí.
+ * @param {{ groups: ReturnType<typeof groupsOf>, items: ReturnType<typeof mozemItems> }} m @param {string | null} key
+ * @returns {{ key: string, group: NonNullable<ReturnType<typeof groupsOf>[number]['sheet']> } | { key: string, item: ReturnType<typeof mozemItems>[number] } | null}
+ */
+export function mozemSheetOf(m, key) {
+    if (!key) return null;
+    const sheet = m.groups.find((g) => g.key === key)?.sheet;
+    if (sheet) return { key, group: sheet };
+    const item = m.items.find((it) => it.id === key);
+    return item ? { key, item } : null;
+}
+
+/**
  * Pás dňa v dlaždici: okno slnka a „teraz“ v percentách produkčného okna grafov (HOUR_RANGE)
  * a časy pod ním. Bez okna pás nie je.
  * @param {{ left: number, width: number, now: number } | null} strip
