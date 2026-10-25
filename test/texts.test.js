@@ -61,13 +61,12 @@ test('vzorka: každý text v slušnom tóne existuje a nie je prázdny, kde drz�
     for (const k of Object.keys(d)) assert.equal(p[k] === '', d[k] === '', k);
 });
 
-test('slušný tón: slová, hlášky a päta plagátu podľa návrhu', () => {
+test('slušný tón: slová a päta plagátu podľa návrhu', () => {
     const s = M.voiceTexts('slusny');
     assert.deepEqual(
         [s.MOZEM_WORDS.go, s.MOZEM_WORDS.wait, s.MOZEM_WORDS.slabo, s.MOZEM_WORDS.none, s.MOZEM_WORDS.offline],
         ['ÁNO, TERAZ', 'EŠTE NIE', 'SLABÝ DEŇ', 'DNES UŽ NIE', 'NEVIEM'],
     );
-    assert.ok(s.MOZEM_QUIPS.go.includes('Strecha dnes pracuje za vás.'));
     assert.equal(s.MOZEM_SKY_TEXTS.guessTitle, 'Toto je len odhad');
     assert.equal(s.STATISTIKA_TEXTS.setupTitle, 'Štatistika potrebuje vaše panely');
     assert.equal(s.STATISTIKA_TEXTS.posterFoot, 'RAY-MON');

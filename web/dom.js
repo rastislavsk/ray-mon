@@ -156,9 +156,22 @@ function sedemdniDom() {
     };
 }
 
-// Karta Môžem?: len nosič, obsah si skladá render (web/render/mozem.js).
+// Karta Môžem?: nosič, obsah si skladá render (web/render/mozem.js), a panel veci či skupiny zospodu.
 function mozemDom() {
-    return { mozemBody: byId('mozem-body') };
+    return {
+        mozemBody: byId('mozem-body'),
+        mozemSheet: /** @type {HTMLDialogElement} */ (byId('mozem-sheet')),
+        mozemSheetX: byId('mozem-sheet-x'),
+        mozemSheetTitle: byId('mozem-sheet-title'),
+        mozemSheetLead: byId('mozem-sheet-lead'),
+        mozemSheetRows: byId('mozem-sheet-rows'),
+        mozemSheetDoQ: byId('mozem-sheet-do-q'),
+        mozemSheetDo: byId('mozem-sheet-do'),
+        mozemSheetWhyQ: byId('mozem-sheet-why-q'),
+        mozemSheetWhy: byId('mozem-sheet-why'),
+        mozemSheetMoreQ: byId('mozem-sheet-more-q'),
+        mozemSheetMore: byId('mozem-sheet-more'),
+    };
 }
 
 // Karta Štatistika: len nosiče, obsah si skladá render (web/render/statistika.js).

@@ -3,18 +3,20 @@
 // je tá istá zelená ako v grafe dňa na karte Teraz(ky); ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
-import { DEVICES, EVERYDAY, installedKw, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { DEVICES, EVERYDAY, installedKw, MOZEM_GROUPS, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { weekDayName } from './format.js';
 import {
-    MOZEM_ANYTIME,
-    mozemBandText,
-    mozemGlanceText,
+    MOZEM_GROUP_ALWAYS,
+    MOZEM_GROUP_NAMES,
     mozemHeroText,
     mozemItemText,
+    mozemListTitle,
     mozemStripText,
+    mozemTileNote,
+    mozemTileValue,
     voiceTexts,
 } from './messages-core.js';
 import { localDateKey, localMinutes, sunUp } from './solar.js';
@@ -157,9 +159,6 @@ export function stripGeometry(w, nowMin) {
     return { left: w ? pct(w.from) : 0, width: w ? Math.round((pct(w.to) - pct(w.from)) * 10) / 10 : 0, now: pct(nowMin) };
 }
 
-/** Deň od epochy - hláška sa tak mení každý deň aj bez ťukania. @param {string} dateKey */
-const dayNumber = (dateKey) => Math.round(Date.parse(`${dateKey}T00:00:00Z`) / 86400000);
-
 /**
  * Stav celej karty: zelená teraz, slnko príde ešte dnes, dnes vôbec (slabý deň), už nie.
  * @param {Window[]} windows @param {number} nowMin @param {boolean} sun
@@ -199,81 +198,94 @@ function dayCtx(input) {
 }
 
 /** Hlavička karty bez predpovede: panely nie sú zadané, načítava sa, alebo dáta nie sú.
- * @param {boolean} loading @param {boolean} noPanels @param {number} page @param {Voice} voice */
-function emptyHead(loading, noPanels, page, voice) {
+ * @param {boolean} loading @param {boolean} noPanels @param {Voice} voice */
+function emptyHead(loading, noPanels, voice) {
     /** @type {MozemState} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
     return {
         state,
         word: voiceTexts(voice).MOZEM_WORDS[state],
         hero: mozemHeroText(state, null, voice),
         strip: null,
-        ...quipsOf(state, 0, page, voice),
     };
 }
 
-/** @template T @param {T[]} list @param {number} i */
-const pick = (list, i) => list[((i % list.length) + list.length) % list.length];
-
 /**
- * Hlášky stavu ako pás na listovanie: sada otočená tak, že prvá je hláška dňa, a stránka, na
- * ktorej človek stojí (`quipPage`), s jej textom (`quip`).
- * @param {MozemState} state @param {number} day číslo dňa, podľa neho sa hlášky striedajú
- * @param {number} page stránka zo stavu appky; mimo sady sa točí dokola
- * @param {Voice} voice
- */
-function quipsOf(state, day, page, voice) {
-    const set = voiceTexts(voice).MOZEM_QUIPS[state];
-    const quips = set.map((_, i) => pick(set, day + i));
-    const quipPage = ((page % quips.length) + quips.length) % quips.length;
-    return { quips, quipPage, quip: quips[quipPage] };
-}
-
-/**
- * Model karty Môžem?. `quipPage` je stránka v páse hlášok (0 = hláška dňa). `known`: čo appka o elektrárni vie
+ * Model karty Môžem?. `known`: čo appka o elektrárni vie
  * (bez neho uložená elektráreň). Pri známej polohe bez panelov (`poloha`) karta odpovedá
  * z typickej strechy, ktorú má vo vstupe (typicalSettings), a model to priznáva v `estimate` -
  * v oboch appkách. Bez polohy (`nic`) neodpovedá.
  *
- * `facts` sú údaje dňa pre nový vzhľad (null bez odpovede): cena siete teraz, dnešné okno
- * so slnkom (to isté ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa.
- * `band` je pás nad dlaždicami zoznamu vecí (null bez pásu dneška), `anytime` veci bloku
- * Kedykoľvek - obe len pre súčasnú appku.
- * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input @param {number} [quipPage]
- * @param {{ voice?: Voice }} [opts] `voice` tón hlášok
+ * `facts` sú údaje dňa (null bez odpovede): cena siete teraz, dnešné okno so slnkom (to isté
+ * ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
+ * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
+ * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
+ * @param {{ voice?: Voice }} [opts] `voice` tón textov
  */
-export function mozemModel(input, quipPage = 0, { voice = 'drzy' } = {}) {
+export function mozemModel(input, { voice = 'drzy' } = {}) {
     const known = input.known || 'elektraren';
     const estimate = known === 'poloha';
     const noPanels = known === 'nic';
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, ctx, voice);
     const head = ctx
-        ? dayHead(input, ctx, quipPage, voice, estimate ? installedKw(input.plant) : null)
-        : { ...emptyHead(input.loading, noPanels, quipPage, voice), facts: null };
+        ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null)
+        : { ...emptyHead(input.loading, noPanels, voice), facts: null };
     return {
         ...head,
         estimate,
         items,
-        ...listParts(head, ctx, items),
+        // Kým sa načítava, karta nič netvrdí - dlaždice nie sú.
+        list: head.state === 'loading' ? null : { title: mozemListTitle(estimate), estimate },
+        groups: groupsOf(items, head.strip),
     };
 }
 
+/** Poradie odpovedí od najlepšej: dlaždica skupiny ukáže najlepšiu odpoveď svojich vecí. */
+const RANK = { always: 0, go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
+
 /**
- * Časti zoznamu vecí v súčasnej appke: riadok, ktorým sa otvára, pás nad dlaždicami a blok
- * Kedykoľvek. Spotrebiče sú dlaždice; veci, na ktoré slnko netreba, sú v bloku spolu s TV.
- * @param {{ state: MozemState, strip: { text: string } | null, facts: { window: Window | null } | null }} head
- * @param {DayCtx | null} ctx @param {ReturnType<typeof mozemItems>} items
+ * Dlaždice skupín (MOZEM_GROUPS): jedna odpoveď za skupinu. `key` je to, čo ťuknutie otvorí -
+ * pri jednej veci jej panel, pri viacerých panel skupiny so zoznamom vecí. Pri viacerých veciach
+ * riadok pod odpoveďou vymenuje tie, ktoré odpovedajú inak; pri jednej veci povie,
+ * odkiaľ pôjde prúd. Široká dlaždica má pás dňa s oknom slnka.
+ * @param {ReturnType<typeof mozemItems>} items @param {{ left: number, width: number, now: number, text: string } | null} strip
  */
-function listParts(head, ctx, items) {
-    const devices = items.filter((it) => it.answer.kind !== 'always');
-    return {
-        glance: mozemGlanceText(devices),
-        band: ctx && head.strip ? mozemBandText(head.state, ctx.nowMin, head.facts?.window ?? null, devices, head.strip.text) : null,
-        anytime: [
-            { id: 'tv', name: MOZEM_ANYTIME.tv },
-            ...items.filter((it) => it.answer.kind === 'always').map((it) => ({ id: it.id, name: it.name })),
-        ],
-    };
+function groupsOf(items, strip) {
+    return MOZEM_GROUPS.map((g) => {
+        const own = items.filter((it) => g.items.includes(it.id));
+        const best = own.reduce((a, b) => (RANK[b.answer.kind] < RANK[a.answer.kind] ? b : a));
+        const name = MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)];
+        const value = mozemTileValue(best.answer, best.short);
+        const base = { id: g.id, size: g.size, name, items: g.items };
+        if (own.length === 1) {
+            return { ...base, key: best.id, value, tone: best.tone, note: mozemTileNote(best.answer), bar: null, sheet: null };
+        }
+        const note = own
+            .filter((it) => it.tone !== best.tone)
+            .map((it) => `${it.name} ${it.short}`)
+            .join(' · ');
+        const always = own.every((it) => it.answer.kind === 'always');
+        return {
+            ...base,
+            key: g.id,
+            value,
+            tone: best.tone,
+            note,
+            bar: g.size === 'wide' ? barOf(strip) : null,
+            sheet: { title: `${name}: ${value}`, lead: always ? MOZEM_GROUP_ALWAYS : (strip?.text ?? ''), rows: own },
+        };
+    });
+}
+
+/**
+ * Pás dňa v dlaždici: okno slnka a „teraz“ v percentách produkčného okna grafov (HOUR_RANGE)
+ * a časy pod ním. Bez okna pás nie je.
+ * @param {{ left: number, width: number, now: number } | null} strip
+ */
+function barOf(strip) {
+    if (!strip || !strip.width) return null;
+    const { min, max } = HOUR_RANGE;
+    return { left: strip.left, width: strip.width, now: strip.now, ticks: [min, (min + max) / 2, max].map((h) => `${h}:00`) };
 }
 
 /**
@@ -285,16 +297,16 @@ function mozemItems(input, ctx, voice = 'drzy') {
     return MOZEM_ITEMS.map((item) => {
         /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
         const text = mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice);
-        return { id: item.id, ...text, answer };
+        return { id: item.id, ...text, title: `${text.name}: ${text.short}`, answer };
     });
 }
 
 /**
- * Hlavička karty z plánu dňa: stav, veľké slovo, veta, pás dneška a hlášky. `typicalKwp` je výkon
+ * Hlavička karty z plánu dňa: stav, veľké slovo, veta a pás dneška. `typicalKwp` je výkon
  * typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
- * @param {PlanInput} input @param {DayCtx} ctx @param {number} quipPage @param {Voice} voice @param {number | null} typicalKwp
+ * @param {PlanInput} input @param {DayCtx} ctx @param {Voice} voice @param {number | null} typicalKwp
  */
-function dayHead(input, ctx, quipPage, voice, typicalKwp) {
+function dayHead(input, ctx, voice, typicalKwp) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
     const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
@@ -305,7 +317,6 @@ function dayHead(input, ctx, quipPage, voice, typicalKwp) {
         word: voiceTexts(voice).MOZEM_WORDS[state],
         hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp }, voice),
         strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
-        ...quipsOf(state, dayNumber(localDateKey(input.now, input.site.timezone)), quipPage, voice),
         facts: {
             level: slot.level,
             window,

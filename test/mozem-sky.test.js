@@ -170,7 +170,6 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k t
     assert.equal(m.list?.title, 'Čo môžem');
     assert.equal(m.retry, false);
     assert.equal(m.guess, '');
-    assert.equal(m.quip, base.quip);
     assert.equal(m.items.find((x) => x.id === 'pracka')?.title, `Práčka: ${base.items[0].short}`);
 });
 
@@ -219,7 +218,6 @@ test('mozemSkyModel: kým sa načítava, karta nič netvrdí', () => {
     const m = mozemSkyModel(input(FIXED_NOW, { forecast: null, pv: null, loading: true }));
     assert.equal(m.state, 'loading');
     assert.equal(m.list, null);
-    assert.equal(m.quip, '');
     assert.deepEqual(m.chips, []);
     assert.equal(m.retry, false);
 });

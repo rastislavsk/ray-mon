@@ -4049,85 +4049,250 @@ b {
     font-size: var(--fs-md);
     color: var(--ink-70);
 }
-/* Vstup do zoznamu: koľko ide hneď, bodka za každú vec vo farbe jej odpovede a výnimky slovom. */
-.mozem-glance {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--sp-3);
-    margin-top: var(--sp-2);
-    padding: 14px 16px;
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--ink-12);
-    background: var(--card-bg);
-    text-align: left;
-}
-.mozem-glance-t {
-    display: grid;
-    gap: 3px;
-    min-width: 0;
-}
-/* Mono štítok nad textom: „Čo môžem“, riadok pod nadpisom zoznamu, „Súhrn na zdieľanie“. */
-.mozem-glance small,
-.mozem-list-kick,
+/* Mono štítok nad textom: „Súhrn na zdieľanie“. */
 .summary-link small {
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
-.mozem-glance small,
-.mozem-list-kick {
+/* Dlaždice skupín vecí (ako v novej appke, docs/navrhy/smer-b-obloha.html) vo farbách tejto:
+   široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. Celá dlaždica je
+   tlačidlo, ktoré otvorí panel veci či skupiny zospodu. */
+.mozem-tiles-box {
+    display: grid;
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
+}
+.mozem-tiles-ttl {
+    margin: 0 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: var(--ink-45);
 }
-.mozem-list-kick {
-    margin: 0 0 var(--sp-2);
+.mozem-tiles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--sp-2);
 }
-.mozem-glance b {
-    font-size: var(--fs-lg);
+.mozem-tiles.est {
+    font-style: italic;
 }
-.mozem-glance-sub {
+.mozem-tile {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    min-width: 0;
+    min-height: 44px;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid var(--ink-12);
+    background: var(--card-bg);
+    text-align: left;
+}
+.mozem-tile[data-size='wide'],
+.mozem-tile[data-size='slim'] {
+    grid-column: 1 / -1;
+}
+.mozem-tile-hd {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 10px;
-    margin-top: 3px;
+    gap: 4px 6px;
+}
+.mozem-tile svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--ink-70);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.mozem-tile-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.mozem-tile b {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--tone);
+}
+.mozem-tile[data-size='wide'] b {
+    font-size: 28px;
+}
+.mozem-tile b::before {
+    content: '';
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.mozem-tile small {
     font-family: var(--font-mono);
     font-size: var(--fs-sm);
     color: var(--ink-70);
 }
-.mozem-pips {
+/* Tenký pás: ikony, meno a odpoveď v jednom riadku. */
+.mozem-tile[data-size='slim'] {
     display: flex;
-    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 10px 14px;
 }
-.mozem-pips i {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: currentColor;
+.mozem-tile[data-size='slim'] .mozem-tile-name {
+    flex: 1;
+    font-family: inherit;
+    font-size: 15px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink);
 }
-/* Šípka v kruhu ako pri súhrne, len svetlá na tmavej karte. */
-.mozem-glance > svg {
-    flex: none;
-    width: 32px;
-    height: 32px;
-    padding: 6px;
-    border-radius: 50%;
+.mozem-tile[data-size='slim'] b {
+    margin: 0;
+    font-size: 15px;
+}
+.mozem-tile[data-size='slim'] b::before {
+    width: 8px;
+    height: 8px;
+}
+/* Farba odpovede: tie isté významy ako v celej appke - zelená slnko, oranžová počkať či lacná
+   sieť, červená nie, sivá neviem. */
+.mozem-tiles [data-tone],
+.mozem-sheet-rows [data-tone] {
+    --tone: var(--green);
+}
+.mozem-tiles [data-tone='wait'],
+.mozem-tiles [data-tone='cheap'],
+.mozem-sheet-rows [data-tone='wait'],
+.mozem-sheet-rows [data-tone='cheap'] {
+    --tone: var(--amber);
+}
+.mozem-tiles [data-tone='no'],
+.mozem-sheet-rows [data-tone='no'] {
+    --tone: var(--red);
+}
+.mozem-tiles [data-tone='unk'],
+.mozem-sheet-rows [data-tone='unk'] {
+    --tone: var(--ink-45);
+}
+/* Pás dňa v širokej dlaždici: okno so slnkom, uplynulá časť stlmená, značka „teraz“. */
+.mozem-tile-bar {
+    position: relative;
+    height: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    background: var(--ink-12);
+}
+.mozem-tile-bar i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 5px;
+    background: var(--tone);
+}
+.mozem-tile-bar i.past {
+    opacity: 0.35;
+}
+.mozem-tile-bar span {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
     background: var(--ink);
-    fill: none;
-    stroke: var(--ink-on-color);
-    stroke-width: 2.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
 }
-/* Obrazovka so zoznamom vecí: šípka späť, nadpis a veci pod sebou. */
-.mozem-list {
-    display: grid;
+.mozem-tile-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-45);
+}
+/* Panel veci či skupiny zospodu: modálny dialóg, fokus ostane v ňom, Escape aj Späť ho zatvoria. */
+.mozem-sheet {
+    width: 100%;
+    max-width: var(--page-max, 520px);
+    max-height: 85dvh;
+    margin: auto auto 0;
+    padding: 22px 20px calc(28px + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1.5px solid var(--ink-12);
+    border-radius: 24px 24px 0 0;
+    background: var(--card-bg);
+    color: var(--ink);
+    overflow-y: auto;
+}
+.mozem-sheet::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+.mozem-sheet h2 {
+    margin: 0 48px 6px 0;
+    font-size: var(--fs-lg);
+}
+.mozem-sheet p {
+    margin: 0;
+    color: var(--ink-70);
+}
+.mozem-sheet-x {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--ink-12);
+    font-size: 24px;
+    line-height: 1;
+}
+.mozem-sheet-q {
+    margin: 16px 0 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.mozem-sheet-rows {
+    margin-top: 6px;
+}
+.mozem-sheet-row {
+    padding: 12px 0;
+    border-top: 1px solid var(--ink-12);
+}
+.mozem-sheet-row h3 {
+    display: flex;
+    justify-content: space-between;
     gap: var(--sp-2);
+    margin: 0;
+    font-size: 16px;
 }
-/* Späť na druhých obrazovkách karty: zoznam vecí a súhrn (backButtonHtml v render/suhrn.js). */
-.summary-back,
-.mozem-back {
+.mozem-sheet-row h3 span {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--tone);
+}
+.mozem-sheet-row p {
+    margin-top: 3px;
+    font-size: 14px;
+}
+/* Späť zo súhrnu na kartu (backButtonHtml v render/suhrn.js). */
+.summary-back {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -4137,257 +4302,6 @@ b {
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-}
-.mozem-back {
-    justify-self: start;
-    color: var(--ink-70);
-}
-.mozem-list-title {
-    margin: 0;
-    font-size: 34px;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-}
-/* Pás dneška nad dlaždicami (variant C v docs/navrhy/mozem-co-mozem-c.html): na plnej farbe
-   stavu ako hlavička karty, tmavé písmo. Okno so slnkom je tmavé, prešlý čas šrafovaný cez farbu
-   pásu, takže okno začína tam, kde je teraz. */
-.mozem-band {
-    --band-bg: var(--ink-20);
-    margin-top: var(--sp-2);
-    padding: 16px;
-    border-radius: 22px;
-    color: var(--ink-on-color);
-    background: var(--band-bg);
-}
-.mozem-band.st-go {
-    --band-bg: var(--green);
-}
-.mozem-band.st-wait {
-    --band-bg: var(--amber);
-}
-.mozem-band.st-slabo {
-    --band-bg: var(--grey);
-}
-.mozem-band.st-none {
-    --band-bg: var(--red);
-}
-.mozem-band p {
-    margin: 0;
-}
-.mozem-band-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 10px;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-}
-/* Globálne `b` dáva --ink, na plnej farbe by nadpis zmizol. */
-.mozem-band-top b {
-    color: var(--ink-on-color);
-}
-.mozem-band-track {
-    position: relative;
-    height: 12px;
-    margin-top: 12px;
-    border-radius: var(--radius-pill);
-    background: rgba(0, 0, 0, 0.14);
-    overflow: hidden;
-}
-.mozem-band-win {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    background: var(--ink-on-color);
-}
-.mozem-band-past {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    background:
-        repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.28) 0 4px, transparent 4px 8px),
-        linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), var(--band-bg);
-}
-.mozem-band-ticks {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 4px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-}
-.mozem-band .mozem-band-text {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1.5px solid rgba(0, 0, 0, 0.2);
-    font-size: 15px;
-    font-weight: 500;
-}
-/* Riadky spotrebičov (návrh A v docs/navrhy/mozem-zoznam.html): tmavý riadok s pásikom vo farbe
-   odpovede vľavo; farbu nesie aj čas so značkou a veľká veta. Všetko je vidno hneď, nič sa neťuká. */
-.mozem-rows {
-    display: grid;
-    gap: var(--sp-2);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-.mozem-row {
-    --row-tone: var(--ink-12);
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--sp-3);
-    padding: 14px 14px 14px 12px;
-    border-radius: 20px;
-    border: 1.5px solid var(--ink-12);
-    border-left: 5px solid var(--row-tone);
-    background: var(--card-bg);
-}
-.mozem-row[data-tone='go'] {
-    --row-tone: var(--green);
-}
-.mozem-row[data-tone='wait'],
-.mozem-row[data-tone='cheap'] {
-    --row-tone: var(--amber);
-}
-.mozem-row[data-tone='no'] {
-    --row-tone: var(--red);
-}
-.mozem-row p {
-    margin: 0;
-}
-.mozem-ico svg {
-    width: 28px;
-    height: 28px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.mozem-row-t {
-    min-width: 0;
-}
-.mozem-row-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-}
-.mozem-short {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.mozem-head {
-    margin-top: 6px;
-    font-size: 19px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    line-height: 1.15;
-}
-.mozem-row .mozem-why {
-    margin-top: 4px;
-    font-size: 15px;
-    line-height: 1.35;
-    color: var(--ink-70);
-}
-.mozem-row .mozem-extra {
-    margin-top: var(--sp-2);
-    padding-top: var(--sp-2);
-    border-top: 1.5px solid var(--ink-12);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    line-height: 1.4;
-    color: var(--ink-45);
-}
-.mozem-extra b {
-    color: var(--ink-70);
-}
-.tone-go {
-    color: var(--green);
-}
-.tone-wait,
-.tone-cheap {
-    color: var(--amber);
-}
-.tone-no {
-    color: var(--red);
-}
-.tone-unk {
-    color: var(--ink-45);
-}
-/* Značka odpovede: kruh vo farbe času (currentColor) s tmavou fajkou, hodinami či krížikom. */
-.mozem-mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: currentColor;
-}
-.mozem-mark svg {
-    width: 12px;
-    height: 12px;
-    fill: none;
-    stroke: var(--ink-on-color);
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-/* Kedykoľvek: bežné veci, na ktoré slnko netreba - prerušovaný obrys, nič na ťuknutie. */
-.mozem-anytime {
-    padding: 12px 16px;
-    border-radius: 22px;
-    border: 1.5px dashed var(--ink-20);
-}
-.mozem-anytime-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 14px;
-}
-.mozem-anytime h4 {
-    margin: 0;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.mozem-anytime span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 15px;
-    font-weight: 500;
-}
-.mozem-anytime svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.mozem-anytime p {
-    margin: 6px 0 0;
-    font-size: 13px;
-    color: var(--ink-45);
 }
 /* ---- Môžem?: súhrn na zdieľanie ------------------------------------------------ */
 /* Plagát v prechode farieb stavu - ten istý, aký ide do obrázka pre story (web/share-image.js). */
@@ -4409,7 +4323,6 @@ b {
     gap: var(--sp-2);
 }
 .summary-back svg,
-.mozem-back svg,
 .summary-link svg,
 .summary-share svg {
     width: 20px;

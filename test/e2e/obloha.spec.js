@@ -628,7 +628,7 @@ const modelKarty = (time, extra = {}, opts = {}) =>
         opts,
     );
 
-/** Čo karta ukazuje: slovo, veta, štítky, fakt, nadpis dlaždíc, odpovede dlaždíc a hláška. @param {import('@playwright/test').Page} page */
+/** Čo karta ukazuje: slovo, veta, štítky, fakt, nadpis dlaždíc a odpovede dlaždíc. @param {import('@playwright/test').Page} page */
 const kartaVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
@@ -641,7 +641,6 @@ const kartaVStranke = (page) =>
             title: text('#mz-list-title'),
             shorts: all('#mz-items .tile b'),
             notes: all('#mz-items .tile small'),
-            quip: text('#mz-quip-text'),
         };
     });
 
@@ -654,7 +653,6 @@ const kartaZModelu = (m) => ({
     title: m.list?.title ?? '',
     shorts: m.list ? m.groups.map((g) => g.value) : [],
     notes: m.list ? m.groups.map((g) => g.note).filter(Boolean) : [],
-    quip: m.quip,
 });
 
 /** Ťuknutie a ťah prstom cez CDP, teda ako naozajstný prst - prehliadač pri ťahu posúva stránku sám.
@@ -884,18 +882,6 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('#mz-answer')).toBeHidden();
         await page.getByRole('button', { name: 'Zadaj polohu' }).click();
         await ocakavajKartu(page, 'nastavenie');
-        expect(errors).toEqual([]);
-    });
-
-    test('ťuknutie na hlášku ukáže ďalšiu', async ({ page }) => {
-        const errors = await openObloha(page);
-        const hlaska = page.locator('#mz-quip-text');
-        const prva = modelKarty(FIXED_NOW).quip;
-        await expect(hlaska).toHaveText(prva);
-        await page.locator('#mz-quip').click();
-        await expect(hlaska).toHaveText(modelKarty(FIXED_NOW, {}, { quip: 1 }).quip);
-        await expect(hlaska).not.toHaveText(prva);
-        await expect(page.locator('#mz-quip small')).toHaveText('ťukni, príde ďalšia');
         expect(errors).toEqual([]);
     });
 

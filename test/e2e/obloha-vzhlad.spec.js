@@ -97,25 +97,19 @@ const modelMozem = (time, voice) =>
         { voice },
     );
 
-/** Slovo, veta a hláška na karte Môžem?. @param {import('@playwright/test').Page} page */
+/** Slovo a veta na karte Môžem?. @param {import('@playwright/test').Page} page */
 const mozemVStranke = async (page) => ({
     word: await page.locator('#mz-word').textContent(),
     lead: await page.locator('#mz-lead').textContent(),
-    quip: await page.locator('#mz-quip-text').textContent(),
-    hint: await page.locator('#mz-quip-hint').textContent(),
 });
 
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo, vetu a hlášku na Môžem? aj pätu plagátu a po obnovení ostane; súčasná appka ostáva drzá', async ({
-        page,
-    }) => {
+    test('Slušný zmení slovo a vetu na Môžem? aj pätu plagátu a po obnovení ostane; súčasná appka ostáva drzá', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
         expect(slusny.word).toBe('ÁNO, TERAZ');
-        await expect
-            .poll(() => mozemVStranke(page))
-            .toEqual({ word: drzy.word, lead: drzy.lead, quip: drzy.quip, hint: 'ťukni, príde ďalšia' });
+        await expect.poll(() => mozemVStranke(page)).toEqual({ word: drzy.word, lead: drzy.lead });
 
         await karta(page, 'nastavenie');
         const drzyBtn = page.locator('#ns-voice [data-voice="drzy"]');
@@ -127,7 +121,7 @@ test.describe('tón hlášok', () => {
         expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true });
 
         await karta(page, 'mozem');
-        const ocakavane = { word: slusny.word, lead: slusny.lead, quip: slusny.quip, hint: SLUSNY.MOZEM_SKY_TEXTS.quipHint };
+        const ocakavane = { word: slusny.word, lead: slusny.lead };
         await expect.poll(() => mozemVStranke(page)).toEqual(ocakavane);
         // Päta plagátu bez „slnko nefakturuje“.
         await page.locator('#mz-summary').click();

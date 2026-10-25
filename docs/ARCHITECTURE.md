@@ -266,20 +266,23 @@ sťahujú, ukazuje čas dňa bez počasia.
 Karta Môžem? novej appky odpovedá tým istým `mozemModel` ako súčasná – slovo, veta, časy aj
 odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
-len zo živého a čerstvého merania, inak s „asi“), dlaždice skupín vecí, oblúk slnka (`sunArc`: skutočný
+len zo živého a čerstvého merania, inak s „asi“), oblúk slnka (`sunArc`: skutočný
 východ a západ, zelený úsek je okno z pása dneška) a vetu, prečo dáta nie sú. Pri známej polohe
 bez panelov odpovedá z typickej strechy (`estimate` v `mozemModel`) a priznáva odhad - rovnako ako
 súčasná appka, ktorá to hovorí jantárovým pásom pod hlavičkou a riadkom „typická strecha“.
 
 Veci sú v skupinách (`MOZEM_GROUPS` v `config.js`, návrh A v `docs/navrhy/mozem-skupiny.html`):
 veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Zoznam vecí (`MOZEM_ITEMS`) je jeden pre
-obe appky, skupiny sú kabát Oblohy. Dlaždica ukáže jednu odpoveď skupiny:
+obe appky a dlaždice skupín (`groups` v `mozemModel`) tiež - obe appky ich kreslia rovnako, každá
+vo svojich farbách. Dlaždica ukáže jednu odpoveď skupiny:
 najlepšiu z jej vecí, a keď svieti, koniec slnka (spoločný pre všetky), nie štart programu.
 Dokedy pustiť ktorý program, povie panel skupiny – veci pod sebou, každá so svojím časom
 a vysvetlením. Veci, ktoré odpovedajú inak, vymenuje riadok pod
 odpoveďou dlaždice. Dlaždica s jednou vecou otvorí rovno jej panel. Panel veci či skupiny je `<dialog>` otvorený
 cez `showModal()`; otvorenie je krok navigácie (`{ panel, item }` v histórii), takže ho zatvorí
 aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile dňa súčasnej appky.
+V súčasnej appke je panel `#mozem-sheet` v `index.html` a krok navigácie je `mozemItem` (`item`
+v `NavStep`).
 
 Karta Teraz a karta Terazky súčasnej appky majú to isté rozloženie (súčasná vo vlastných farbách,
 návrh A v `docs/navrhy/terazky-ako-obloha.html`). Ciferník a denný prstenec zanikli, ich úlohu
@@ -461,16 +464,11 @@ keď dnes slnko už nepríde - neskoršie slnko vyhrá nad lacnou sieťou. Typic
 spotrebiča (`MOZEM_ITEMS` v `config.js`) určuje, dokedy ho pustiť, aby dobehol na slnku,
 a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 
-Veci s ikonami nie sú na hlavnej obrazovke karty, ale o ťuknutie ďalej (návrh A
-v `docs/navrhy/mozem-co-mozem.html`). Karta ich zhrnie do riadku „Čo môžem“ (`glance`
-v modeli): koľko ide hneď, bodka za každú vec a výnimky slovom. Zoznam vecí je druhá obrazovka
-karty ako súhrn a krok navigácie (`mozemList`, `list` v `NavStep`) - Späť ho zavrie. Veci sú
-v ňom pod sebou ako riadky (návrh A v `docs/navrhy/mozem-zoznam.html`): čas so značkou, veľká
-veta (`head`), prečo (`text`) a vysvetlenie pod čiarou (`extra`). Všetko je vidno hneď, riadok sa
-neťuká ani nerozbaľuje.
+Pod pásom dneška sú dlaždice skupín vecí, tie isté ako v novej appke (pozri vyššie). Riadok
+„Čo môžem“ so samostatnou obrazovkou zoznamu vecí aj hlášky pod kartou zanikli v oboch appkách.
 
-Texty sú v `messages.js`. Hláška (`quip` v modeli) sa ukazuje len v novej appke, súčasná ju nemá.
-Obsah karty skladá render celý do `#mozem-body`, v `index.html` je len nosič.
+Texty sú v `messages.js`. Obsah karty skladá render celý do `#mozem-body`, v `index.html` je
+nosič a panel veci.
 
 Karta kedysi vedela zapísať „Pustil/a som“ - spustenie spotrebiča na čestné slovo, z ktorého
 ukazovala „beží do …“ a súčty v súhrne. Kiosk vidí len výrobu, nie spotrebu, takže to overiť

@@ -8,8 +8,8 @@ import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
 
 /**
- * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny), `mozemQuip`
- * stránka hlášok, `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
+ * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny),
+ * `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
  * `terazPage` stránka pásu odporúčaní pod ním, `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `poster` otvorený plagát na zdieľanie (obdobie súhrnu, null = zatvorený; otvára ho Štatistika aj
@@ -32,7 +32,6 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   layout: Layout,
  *   tariff: import('../../shared/config.js').Tariff,
  *   mozemItem: string | null,
- *   mozemQuip: number,
  *   terazPreview: number | null,
  *   terazPage: number,
  *   weekDetail: WeekDetail | null,
@@ -106,7 +105,6 @@ export function initialState(
         loading: true,
         dayLog,
         mozemItem: null,
-        mozemQuip: 0,
         terazPreview: null,
         terazPage: 0,
         weekDetail: null,

@@ -22,16 +22,6 @@ export const MOZEM_ICONS = {
     bojler: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>',
     hranie: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6h-4A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM7.5 10.5v3M6 12h3M15.5 11.2h.01M17.5 13h.01"/></svg>',
     fen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5a4.5 4.5 0 0 1 4.5-4.5H20v9H8.5A4.5 4.5 0 0 1 4 7.5zM9 12l1.5 8.5h3L12.5 12M20 5v5"/></svg>',
-    tv: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1zM9 20.5h6M12 16.5v4"/></svg>',
-};
-
-/** Značka odpovede pri veci: fajka áno, hodiny neskôr, krížik nie, otáznik nevie. */
-export const MOZEM_MARKS = {
-    go: 'M5 12.5l4.5 4.5L19 7.5',
-    cheap: 'M5 12.5l4.5 4.5L19 7.5',
-    wait: 'M12 6v6l3.5 2',
-    no: 'M6 6l12 12M18 6L6 18',
-    unk: 'M9.2 9a2.9 2.9 0 1 1 3.8 2.8c-.6.3-1 .9-1 1.6v.6M12 17.2v.3',
 };
 
 /** Ikony riadkov v prehľade elektrárne (karta Nastavenie). */

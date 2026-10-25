@@ -79,12 +79,10 @@ export function sampleTexts(voice) {
         for (const [name, input] of Object.entries(inputs(now))) {
             const p = `${hm}.${name}`;
             const i = /** @type {any} */ (input);
-            for (const quip of [0, 1, 2, 3, 4]) {
-                strings(mozemModel(i, quip, { voice: v }), `${p}.mozem.q${quip}`, out);
-            }
+            strings(mozemModel(i, { voice: v }), `${p}.mozem`, out);
             for (const online of [true, false]) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;
-                strings(mozemSkyModel(i, { quip: 1, online, voice: v }), `${o}.mozemSky`, out);
+                strings(mozemSkyModel(i, { online, voice: v }), `${o}.mozemSky`, out);
                 strings(terazModel(i, { online, voice: v }), `${o}.teraz`, out);
                 strings(sedemModel(i, { online, voice: v }), `${o}.sedem`, out);
                 for (const period of STATS_PERIODS) strings(statistikaModel(i, period, { online, voice: v }), `${o}.stats.${period}`, out);
@@ -268,7 +266,6 @@ function directSucty(out) {
 function directConsts(out, v) {
     for (const [k, c] of Object.entries({
         MOZEM_WORDS: M.MOZEM_WORDS,
-        MOZEM_QUIPS: M.MOZEM_QUIPS,
         MOZEM_CHIPS: M.MOZEM_CHIPS,
         MOZEM_SKY_TEXTS: M.MOZEM_SKY_TEXTS,
         MOZEM_ITEM_TEXTS: M.MOZEM_ITEM_TEXTS,

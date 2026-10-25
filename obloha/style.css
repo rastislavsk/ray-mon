@@ -713,33 +713,6 @@ button.live[aria-expanded='true'] {
     color: var(--dim);
 }
 
-.quote {
-    display: block;
-    width: calc(100% - 28px);
-    margin: 12px 14px 16px;
-    padding: 6px;
-    border: 0;
-    background: transparent;
-    font-size: 1.25rem;
-    font-weight: 800;
-    font-variation-settings: 'wdth' 105;
-    line-height: 1.2;
-    text-align: left;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-}
-.quote q {
-    quotes: none;
-}
-.quote small {
-    display: block;
-    margin-top: 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: #fff;
-}
-
 /* ===== Karta Teraz ===== */
 .teraz p,
 .teraz h2 {
@@ -1342,7 +1315,7 @@ button.live[aria-expanded='true'] {
     fill: var(--yes);
 }
 
-/* Odkaz na plagát na karte Môžem?: nenápadný podčiarknutý text pod hláškou, nie tlačidlo. */
+/* Odkaz na plagát na karte Môžem?: nenápadný podčiarknutý text pod dlaždicami, nie tlačidlo. */
 .lnk {
     display: block;
     min-height: 44px;
@@ -1358,6 +1331,10 @@ button.live[aria-expanded='true'] {
     color: #fff;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
     cursor: pointer;
+}
+/* Pod dlaždicami odkaz drží odstup, aby sa ich dotykové plochy neprekrývali. */
+.tiles-box + .lnk {
+    margin-top: 8px;
 }
 
 /* ===== Karta Štatistika ===== */

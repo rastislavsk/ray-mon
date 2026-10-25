@@ -1,5 +1,5 @@
 // Karta Môžem? novej appky: oblúk slnka, štítky, veľké slovo a veta, fakt v mobiloch, výzvy,
-// dlaždice skupín vecí, riadok o mesiaci, hláška a panel veci či skupiny zospodu. Všetko počíta
+// dlaždice skupín vecí, riadok o mesiaci a panel veci či skupiny zospodu. Všetko počíta
 // shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
@@ -141,9 +141,6 @@ function renderCard(m, dom, voice) {
     dom.mzList.classList.toggle('est', !!m.list?.estimate);
     setText(dom.mzListTitle, m.list ? m.list.title : '');
     setHtml(dom.mzItems, m.list ? tilesHtml(m.groups) : '');
-    show(dom.mzQuip, !!m.quip);
-    setText(dom.mzQuipText, m.quip);
-    setText(dom.mzQuipHint, MOZEM_SKY_TEXTS.quipHint);
 }
 
 /**
@@ -243,7 +240,7 @@ export function renderMozem(state, dom) {
         renderAnnounce(null, dom);
         return renderSheet(null, dom);
     }
-    const m = mozemSkyModel(state, { quip: state.mozemQuip, online: state.online, voice: state.voice });
+    const m = mozemSkyModel(state, { online: state.online, voice: state.voice });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
     renderSheet(openOf(m, state.mozemItem), dom, state.voice);
