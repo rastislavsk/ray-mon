@@ -432,6 +432,36 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         expect(errors).toEqual([]);
     });
 
+    test('rýchly druhý ťah počas dojazdu posunie o ďalší deň', async ({ page }) => {
+        const errors = await openObloha(page);
+        await page.locator('#nav-7dni').click();
+        await page.locator('#sd-days [data-day="2"]').click();
+        await ocakavajDen(page, 2);
+        // Dva ťahy doľava priamo v stránke, druhý 40 ms po prvom - ešte počas dojazdu prvého
+        // (dojazd trvá najmenej DAY_PAGER.minMs). Každý musí posunúť o ďalší deň.
+        await page.evaluate(async () => {
+            const tah = () => {
+                const el = /** @type {HTMLElement} */ (document.querySelector('#sd-day-title'));
+                const r = el.getBoundingClientRect();
+                const y = r.top + r.height / 2;
+                const x = r.left + r.width / 2 + 80;
+                const touch = (/** @type {number} */ px) => new Touch({ identifier: 1, target: el, clientX: px, clientY: y });
+                const fire = (/** @type {string} */ type, /** @type {Touch[]} */ touches, /** @type {Touch} */ t) =>
+                    el.dispatchEvent(new TouchEvent(type, { touches, changedTouches: [t], bubbles: true, cancelable: true }));
+                fire('touchstart', [touch(x)], touch(x));
+                fire('touchmove', [touch(x - 80)], touch(x - 80));
+                fire('touchmove', [touch(x - 160)], touch(x - 160));
+                fire('touchend', [], touch(x - 160));
+            };
+            tah();
+            await new Promise((r) => setTimeout(r, 40));
+            if (!document.querySelector('.pager-ghost')) throw new Error('dojazd prvého ťahu už skončil, test by nič nemeral');
+            tah();
+        });
+        await ocakavajDen(page, 4);
+        expect(errors).toEqual([]);
+    });
+
     test('v detaile týždňa ťah do strán nerobí nič', async ({ page }) => {
         const errors = await openObloha(page);
         await page.locator('#nav-7dni').click();

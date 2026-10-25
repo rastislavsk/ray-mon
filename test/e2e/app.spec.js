@@ -1923,6 +1923,34 @@ test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
         expect(errors).toEqual([]);
     });
 
+    test('rýchly druhý ťah počas dojazdu posunie o ďalší deň', async ({ page }) => {
+        const errors = await openApp(page);
+        await otvorDen(page, 2);
+        // Dva ťahy doľava priamo v stránke, druhý 40 ms po prvom - ešte počas dojazdu prvého
+        // (dojazd trvá najmenej DAY_PAGER.minMs). Každý musí posunúť o ďalší deň.
+        await page.evaluate(async () => {
+            const tah = () => {
+                const el = /** @type {HTMLElement} */ (document.querySelector('#week-day-head'));
+                const r = el.getBoundingClientRect();
+                const y = r.top + r.height / 2;
+                const x = r.left + r.width / 2 + 80;
+                const touch = (/** @type {number} */ px) => new Touch({ identifier: 1, target: el, clientX: px, clientY: y });
+                const fire = (/** @type {string} */ type, /** @type {Touch[]} */ touches, /** @type {Touch} */ t) =>
+                    el.dispatchEvent(new TouchEvent(type, { touches, changedTouches: [t], bubbles: true, cancelable: true }));
+                fire('touchstart', [touch(x)], touch(x));
+                fire('touchmove', [touch(x - 80)], touch(x - 80));
+                fire('touchmove', [touch(x - 160)], touch(x - 160));
+                fire('touchend', [], touch(x - 160));
+            };
+            tah();
+            await new Promise((r) => setTimeout(r, 40));
+            if (!document.querySelector('.pager-ghost')) throw new Error('dojazd prvého ťahu už skončil, test by nič nemeral');
+            tah();
+        });
+        await ocakavajDetailDna(page, 4);
+        expect(errors).toEqual([]);
+    });
+
     test('šípky na klávesnici listujú dni rovnako ako ťah', async ({ page }) => {
         const errors = await openApp(page);
         await otvorDen(page, 2);
