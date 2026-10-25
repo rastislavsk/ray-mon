@@ -4,6 +4,7 @@
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
+import { mozemSheetOf } from '../../../shared/mozem.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
@@ -164,10 +165,7 @@ function renderAnnounce(m, dom) {
 /** Dlaždica, ktorej panel je práve otvorený - po zatvorení sa fokus vráti na ňu. @type {string | null} */
 let shown = null;
 
-/**
- * Čo je v paneli: vec (ťuknutie na dlaždicu s jednou vecou) alebo skupina so zoznamom vecí.
- * @typedef {{ key: string, item: Model['items'][number] } | { key: string, group: NonNullable<Model['groups'][number]['sheet']> }} Open
- */
+/** Čo je v paneli: vec (dlaždica s jednou vecou) alebo skupina so zoznamom vecí. @typedef {NonNullable<ReturnType<typeof mozemSheetOf>>} Open */
 
 /**
  * Panel veci či skupiny: texty a otvorenie či zatvorenie dialógu podľa stavu. Po zatvorení
@@ -220,19 +218,6 @@ function itemSheet(it, dom, T) {
     setText(dom.mzSheetMore, it.more ? it.more.a : '');
 }
 
-/**
- * Panel, ktorý stav otvára: vec podľa id, alebo skupina podľa id. Iné id (napr. zo starého
- * odkazu v histórii) nič neotvorí.
- * @param {Model} m @param {string | null} key @returns {Open | null}
- */
-function openOf(m, key) {
-    if (!key) return null;
-    const group = m.groups.find((g) => g.key === key && g.sheet);
-    if (group?.sheet) return { key, group: group.sheet };
-    const item = m.items.find((it) => it.id === key);
-    return item ? { key, item } : null;
-}
-
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
     // Panel veci patrí karte Môžem?; keď nie je na obrazovke, je vždy zatvorený.
@@ -243,5 +228,5 @@ export function renderMozem(state, dom) {
     const m = mozemSkyModel(state, { online: state.online, voice: state.voice });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
-    renderSheet(openOf(m, state.mozemItem), dom, state.voice);
+    renderSheet(mozemSheetOf(m, state.mozemItem), dom, state.voice);
 }

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
-import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, planWindows, stripGeometry } from '../shared/mozem.js';
+import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, mozemSheetOf, planWindows, stripGeometry } from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -103,7 +103,7 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     const pracka = item(m, 'pracka');
     assert.equal(pracka.tone, 'go');
     assert.match(pracka.short, /^do \d\d:\d\d$/);
-    assert.match(pracka.extra, /~0,14 €/, 'cena z lacného pásma');
+    assert.match(pracka.more?.a ?? '', /~0,14 €/, 'cena z lacného pásma');
     assert.match(item(m, 'auto').text, /asi \d+ km/);
     assert.equal(item(m, 'hranie').short, 'vždy OK');
 });
@@ -127,7 +127,7 @@ test('bez merania: priznaný odhad a bez cien žiadne eurá', () => {
     const m = mozemModel(input(FIXED_NOW, { pv: null, zdroj: null, tariff: FLAT }));
     assert.equal(m.state, 'go');
     assert.equal(m.hero.factV, 'odhad z predpovede');
-    assert.ok(m.items.every((i) => !i.extra.includes('€')));
+    assert.ok(m.items.every((i) => !i.more?.a.includes('€')));
 });
 
 test('rano pred slnkom: ešte nie, štart a spotrebiče o koľkej', () => {
@@ -137,7 +137,8 @@ test('rano pred slnkom: ešte nie, štart a spotrebiče o koľkej', () => {
     const pracka = item(m, 'pracka');
     assert.equal(pracka.tone, 'wait');
     assert.equal(pracka.short, `o ${m.hero.factV}`);
-    assert.match(pracka.extra, /^Musíš hneď\? Stojí to/);
+    assert.equal(pracka.more?.q, 'Musíš hneď?');
+    assert.match(pracka.more?.a ?? '', /^Stojí to/);
     assert.ok(item(m, 'auto').short >= pracka.short, 'auto potrebuje silnejšie slnko');
 });
 
@@ -154,7 +155,7 @@ test('večer: dnes už nie, auto na lacný prúd, ostatné zajtra', () => {
     assert.match(m.hero.lead, /Auto na lacný prúd/);
     assert.match(m.strip?.text || '', /^Slnko skončilo o/);
     assert.equal(item(m, 'auto').tone, 'cheap');
-    assert.match(item(m, 'auto').extra, /^Zajtra od/);
+    assert.match(item(m, 'auto').more?.a ?? '', /^Zajtra od/);
     assert.match(item(m, 'pracka').short, /^zajtra /);
 });
 
@@ -208,6 +209,23 @@ test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou'
     assert.equal(nic.word, 'Neviem.');
     assert.equal(nic.strip, null);
     assert.deepEqual([nic.hero.factK, nic.hero.factV], ['panely', 'nezadané']);
+});
+
+test('mozemSheetOf: skupina otvorí panel so zoznamom, vec s jednou dlaždicou svoj, iné id nič', () => {
+    const m = mozemModel(input(FIXED_NOW));
+    const velke = mozemSheetOf(m, 'velke');
+    assert.ok(velke && 'group' in velke);
+    assert.deepEqual(
+        velke.group.rows.map((r) => r.id),
+        ['pracka', 'umyvacka', 'susicka'],
+    );
+    const auto = mozemSheetOf(m, 'auto');
+    assert.ok(auto && 'item' in auto);
+    assert.equal(auto.item.title, `Auto: ${auto.item.short}`);
+    // Vec zo skupiny (napr. starý krok histórie) otvorí svoj panel, nie skupinu.
+    assert.ok(mozemSheetOf(m, 'pracka') && 'item' in /** @type {object} */ (mozemSheetOf(m, 'pracka')));
+    assert.equal(mozemSheetOf(m, 'nic-take'), null);
+    assert.equal(mozemSheetOf(m, null), null);
 });
 
 test('itemAnswer a itemCost: veci bez spotrebiča sú vždy OK a nemajú cenu', () => {

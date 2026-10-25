@@ -467,19 +467,18 @@ export function mozemStripText(state, { ctx, window, nextDay }) {
 
 /**
  * Riadok veci v mriežke a jej rozbalenie: krátka odpoveď, veta, vysvetlenie a pri spotrebičoch
- * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná. `extra` je to posledné jednou
- * vetou (súčasná appka), `more` to isté ako otázka a odpoveď pod vlastným nadpisom (panel veci
- * v novej appke); bez vysvetlenia je `more` null.
+ * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná. `more` je to posledné ako otázka
+ * a odpoveď pod vlastným nadpisom (panel veci); bez vysvetlenia je null.
  * @param {{ id: string, runMin: number | null }} item @param {import('./mozem.js').Answer} a
  * @param {{ ctx: DayCtx, cost: number | null } | null} env
  * @param {Voice} [voice]
- * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string, extra: string,
+ * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string,
  *   more: { q: string, a: string } | null }}
  */
 export function mozemItemText(item, a, env, voice = 'drzy') {
     const T = voiceTexts(voice);
     const t = T.MOZEM_ITEM_TEXTS[item.id];
-    const base = { name: t.name, extra: '', more: null };
+    const base = { name: t.name, more: null };
     if (a.kind === 'always') return { ...base, tone: 'go', short: 'vždy OK', ...T.MOZEM_ALWAYS[/** @type {'hranie' | 'fen'} */ (item.id)] };
     if (a.kind === 'unk' || !env) return { ...base, tone: 'unk', ...T.MOZEM_UNKNOWN };
     const isAuto = item.runMin === null;
@@ -490,7 +489,6 @@ export function mozemItemText(item, a, env, voice = 'drzy') {
             ...base,
             tone: 'go',
             ...goItem(t, a, item.runMin, env.ctx),
-            extra: `Mrak? ${cloud}`,
             more: { q: 'A keď sa zamračí?', a: cloud },
         };
     }
@@ -508,13 +506,12 @@ function cheapItem(t, next) {
         short: 'lacno',
         head: `${t.verb} ${t.pron}, prúd je lacný.`,
         text: 'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
-        extra: sun,
         more: sun ? { q: 'A zo slnka?', a: sun } : null,
     };
 }
 
-/** Vysvetlenie ako otázka s odpoveďou: jednou vetou aj zvlášť. @param {string} q @param {string} a */
-const ask = (q, a) => ({ extra: `${q} ${a}`, more: { q, a } });
+/** Vysvetlenie ako otázka s odpoveďou. @param {string} q @param {string} a */
+const ask = (q, a) => ({ more: { q, a } });
 
 /** Slnko príde ešte dnes. @param {{ verb: string, pron: string }} t @param {number} start @param {boolean} isAuto @param {boolean} draha */
 function waitItem(t, start, isAuto, draha) {
@@ -574,9 +571,11 @@ function laterItem(a, voice) {
     };
 }
 
-// ---- Karta Môžem? v novej appke „Živá obloha“ (obloha/) ----------------------------
-// Odpovede, časy a vety sú tie isté ako vyššie, tu sú len texty, ktoré nový vzhľad pridáva.
-// Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka ich tak nehláskuje.
+// ---- Karta Môžem?: dlaždice, panel veci a výzvy ------------------------------------
+// Odpovede, časy a vety sú tie isté ako vyššie. Dlaždice skupín a panel veci majú obe appky,
+// štítky nad slovom a výzvy len nová appka (obloha/) - výzvu z typickej strechy ukazuje aj
+// súčasná v páse pod hlavičkou. Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka
+// ich tak nehláskuje.
 
 /**
  * Štítky nad veľkým slovom: odpoveď slovom podľa stavu karty a cena siete teraz (bežná cena
@@ -595,7 +594,7 @@ export const MOZEM_CHIPS = {
     draha: 'Drahá sieť',
 };
 
-/** Pevné texty karty: nadpisy panelu veci, tlačidlá a výzvy. */
+/** Pevné texty karty: nadpisy a zatvorenie panelu veci (obe appky), tlačidlá a výzvy. Meno `SKY` ostalo z čias, keď ich mala len nová appka. */
 export const MOZEM_SKY_TEXTS = {
     retry: 'Skúsiť znova',
     sheetDo: 'Čo robiť',
