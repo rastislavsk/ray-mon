@@ -308,8 +308,21 @@ test('incomingSettings: to isté sa neponúka, ani keď odkaz nenesie meranie a 
 test('linkHash: adresa, ktorú appka v karte zapísala sama, odkazom nie je; cudzia áno', async () => {
     const { linkHash } = await import('../shared/settings.js');
     const hash = '#nastavenie=abc';
-    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=abc'), '', 'vlastná adresa po obnovení');
-    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=xyz'), hash, 'iný odkaz v tej istej karte');
-    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/obloha/#nastavenie=abc'), hash, 'druhá appka v tej istej karte');
-    assert.equal(linkHash('/ray-mon/', hash, null), hash, 'nová karta či appka z plochy');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=abc', false), '', 'vlastná adresa po obnovení');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=xyz', false), hash, 'iný odkaz v tej istej karte');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/obloha/#nastavenie=abc', false), hash, 'druhá appka v tej istej karte');
+    assert.equal(linkHash('/ray-mon/', hash, null, false), hash, 'nová karta či appka z plochy');
+    assert.equal(linkHash('/ray-mon/', hash, null, true), hash, 'odkaz bez značky sa ponúkne vždy');
+});
+
+test('linkHash: vlastná adresa z histórie prehliadača sa neponúkne, keď je uložené novšie či vymazané', async () => {
+    const { linkHash, shareHash, settingsFromLink, startFromLink } = await import('../shared/settings.js');
+    const vlastna = shareHash(DVORANY, false, 'terazky', true);
+    assert.match(vlastna, /^#nastavenie=[\w-]+&vlastna=1&prva=terazky$/);
+    assert.deepEqual(settingsFromLink(vlastna), DVORANY, 'značka nastavenie nemení');
+    assert.equal(startFromLink(vlastna), 'terazky');
+    assert.equal(shareHash(null, false, 'terazky', true), '#prva=terazky', 'bez nastavenia značky netreba');
+    assert.equal(linkHash('/ray-mon/', vlastna, null, true), '');
+    assert.equal(linkHash('/ray-mon/', vlastna, null, false), vlastna, 'appka na ploche iPhonu s prázdnym úložiskom');
+    assert.equal(shareHash(DVORANY, false), shareHash(DVORANY, false, undefined, false), 'Zdieľať značku nepridá');
 });

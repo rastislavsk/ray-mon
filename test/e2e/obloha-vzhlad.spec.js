@@ -14,6 +14,7 @@ import {
     START_STORAGE_KEY,
     STORAGE_KEYS,
     TARIFF,
+    VYMAZANE_STORAGE_KEY,
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { MOZEM_WORDS, voiceTexts } from '../../shared/messages.js';
@@ -339,12 +340,17 @@ test.describe('Nastaviť celé znova', () => {
         expect(await page.evaluate(() => JSON.stringify(localStorage))).toBe(predtym);
         await expect(page.locator('#ns-rows')).toContainText(SITE.name);
 
+        const stara = page.url();
         await page.locator('#ns-reset').click();
         await Promise.all([page.waitForEvent('load'), page.locator('#ns-reset-ok').click()]);
         await appReady(page);
         const zostalo = await page.evaluate((keys) => keys.filter((k) => localStorage.getItem(k) !== null), STORAGE_KEYS);
-        expect(zostalo).toEqual([]);
+        expect(zostalo, 'ostane len značka vymazania').toEqual([VYMAZANE_STORAGE_KEY]);
         expect(new URL(page.url()).hash).toBe('');
+        // Stará adresa z histórie prehliadača staré nastavenie neponúkne.
+        await page.goto(stara);
+        await appReady(page);
+        await expect(page.locator('#import-offer')).toBeHidden();
         // Ako pri prvom otvorení: Môžem? sa pýta na polohu, drzo a na živej (sivej) oblohe.
         await expect(page.locator('#panel-mozem')).toBeVisible();
         await expect(page.locator('#mz-ask')).toBeVisible();

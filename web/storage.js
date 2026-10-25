@@ -17,6 +17,7 @@ import {
     START_STORAGE_KEY,
     STORAGE_KEYS,
     SUCTY_STORAGE_KEY,
+    VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
@@ -140,9 +141,16 @@ export function saveDayLog(log) {
 /**
  * Zmaže všetko, čo appka v tomto prehliadači uložila. Len vlastné kľúče, nie celé úložisko:
  * appky na GitHub Pages toho istého autora zdieľajú jednu doménu, a teda aj localStorage.
+ * Ostane len značka vymazania - adresa z histórie prehliadača potom staré nastavenie neponúkne.
  */
 export function clearStored() {
     removeAll(STORAGE_KEYS);
+    write(VYMAZANE_STORAGE_KEY, '1');
+}
+
+/** Vymazal tu niekto údaje (clearStored)? */
+export function loadVymazane() {
+    return read(VYMAZANE_STORAGE_KEY) !== null;
 }
 
 /** Zmaže kľúče, ktoré appka už nepoužíva (OLD_STORAGE_KEYS). Volajú ho obe appky pri štarte. */
