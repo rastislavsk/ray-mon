@@ -40,7 +40,7 @@ import { useTier } from '../../web/render/sedemdni.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
-import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, statsLinkText, terazTypicalText, weekMessage } from '../../shared/messages.js';
+import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
@@ -2990,22 +2990,6 @@ test.describe('karta Štatistika', () => {
         expect(errors).toEqual([]);
     });
 
-    test('odkaz na karte Môžem? otvorí plagát mesiaca v Štatistike; Späť vráti na Môžem?', async ({ page }) => {
-        const errors = await openApp(page, { start: 'terazky' });
-        await page.locator('#nav-mozem').click();
-        const mesiac = plagat(OWNER, 'mesiac');
-        await expect(page.locator('.summary-link')).toContainText(statsLinkText(mesiac.kick, /** @type {number} */ (mesiac.kwh)));
-        await page.locator('.summary-link').click();
-        await ocakavajKartu(page, 'statistika');
-        await expect(page.locator('[data-stats-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
-        await ocakavajPlagat(page, mesiac);
-        await page.goBack();
-        await ocakavajKartu(page, 'mozem');
-        await page.goBack();
-        await ocakavajKartu(page, 'terazky');
-        expect(errors).toEqual([]);
-    });
-
     test('denník si zapíše dnešok', async ({ page }) => {
         const errors = await openApp(page);
         const log = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), DAYLOG_STORAGE_KEY);
@@ -3115,7 +3099,6 @@ test.describe('karta Môžem?', () => {
         await page.locator('#nav-mozem').click();
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
         await expect(page.locator('.mozem-strip')).toHaveCount(0);
-        await expect(page.locator('.summary-link'), 'bez merania odkaz do Štatistiky nie je').toHaveCount(0);
         await expect(page.locator('.mozem-tile b')).toHaveText(['neviem', 'neviem', 'neviem', 'kedykoľvek']);
         await expect(page.locator('.mozem-tile-bar'), 'bez okna slnka pás nie je').toHaveCount(0);
         expect(errors).toEqual([]);

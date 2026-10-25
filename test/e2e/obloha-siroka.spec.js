@@ -334,17 +334,6 @@ test.describe('dialógy na počítači', () => {
         expect(errors).toEqual([]);
     });
 
-    test('odkaz v stĺpci Môžem? otvorí Štatistiku na mesiaci; Späť vráti do prehľadu', async ({ page }) => {
-        const errors = await openObloha(page, POCITAC);
-        await page.locator('#nav-mozem').click();
-        await page.locator('#mz-summary').click();
-        await expect(page.locator('#panel-statistika')).toBeVisible();
-        await expect(page.locator('#st-poster [data-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
-        await page.goBack();
-        await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
-        expect(errors).toEqual([]);
-    });
-
     test('detail dňa a týždňa sa otvoria v stĺpci 7 dní; Escape, Späť aj „‹ 7 dní“ vrátia prehľad a fokus', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         const stlpec = /** @type {{ x: number, width: number }} */ (await page.locator('#panel-7dni').boundingBox());

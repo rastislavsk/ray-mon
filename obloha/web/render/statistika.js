@@ -1,15 +1,12 @@
 // Karta Štatistika novej appky: plagát obdobia - prepínač, veľké číslo kWh, obrázok dní, očíslované
-// riadky a poznámka - a pod ním výzvy. Odkaz na plagát mesiaca na karte Môžem? kreslí tiež. Všetko
-// počíta shared/statistika.js (plagát shared/summary.js, ten istý ako v súčasnej appke) a texty sú
+// riadky a poznámka - a pod ním výzvy. Všetko počíta shared/statistika.js (plagát shared/summary.js, ten istý ako v súčasnej appke) a texty sú
 // v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, monthNameShort } from '../../../shared/format.js';
-import { statsLinkText, voiceTexts } from '../../../shared/messages.js';
+import { voiceTexts } from '../../../shared/messages.js';
 import { neplatiOf } from '../../../shared/pristup.js';
 import { STATS_PERIODS } from '../../../shared/stats.js';
 import { statistikaModel } from '../../../shared/statistika.js';
-import { summaryModel } from '../../../shared/summary.js';
-import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -117,17 +114,8 @@ function renderCtas(m, dom, T, neplati) {
     setText(dom.stPricesBtn, T.pricesBtn);
 }
 
-/** Odkaz na karte Môžem?: mesiac na streche, vedie na plagát v Štatistike. Bez merania nie je. @param {import('../state.js').AppState} state @param {Dom} dom */
-function renderMozemLink(state, dom) {
-    const link = shows(state, 'mozem') ? summaryModel(state, 'mesiac', state.voice) : null;
-    const on = !!link && link.kind === 'live' && link.kwh !== null;
-    show(dom.mzSummary, on);
-    setText(dom.mzSummaryText, on ? statsLinkText(link.kick, /** @type {number} */ (link.kwh)) : '');
-}
-
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderStatistika(state, dom) {
-    renderMozemLink(state, dom);
     if (state.panel !== 'statistika') return;
     const T = voiceTexts(state.voice).STATISTIKA_TEXTS;
     const m = statistikaModel(state, state.statsPeriod, { online: state.online, voice: state.voice });

@@ -37,8 +37,6 @@ function mozemDom() {
         mzList: byId('mz-list'),
         mzListTitle: byId('mz-list-title'),
         mzItems: byId('mz-items'),
-        mzSummary: byId('mz-summary'),
-        mzSummaryText: byId('mz-summary-text'),
         mzSheet: /** @type {HTMLDialogElement} */ (byId('mz-sheet')),
         mzSheetX: byId('mz-sheet-x'),
         mzSheetTitle: byId('mz-sheet-title'),

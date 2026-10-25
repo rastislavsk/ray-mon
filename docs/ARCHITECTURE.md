@@ -486,7 +486,7 @@ ukazovala „beží do …“ a súčty v súhrne. Kiosk vidí len výrobu, nie 
 nevedela a nikto to nepoužíval; od `docs/navrhy/bez-pustil-som.html` to nie je v žiadnej appke.
 Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS`, `dropOldStored`).
 
-Na konci karty je odkaz na plagát mesiaca v karte Štatistika - jeden krok navigácie, Späť vráti na Môžem?.
+Štatistiku karta neukazuje, ani ako odkaz do karty Štatistika.
 
 Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
 Môžem?, ten, kto elektráreň platí, Terazky. Predvolená je Môžem? (`START_PANELS[0]`, jediné

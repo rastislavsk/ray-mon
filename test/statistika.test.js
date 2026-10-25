@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installedKw, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { kwpText } from '../shared/format.js';
-import { statsLinkText, STATISTIKA_TEXTS, statistikaTexts, summaryMeter } from '../shared/messages.js';
+import { STATISTIKA_TEXTS, statistikaTexts, summaryMeter } from '../shared/messages.js';
 import { STATS_PERIODS } from '../shared/stats.js';
 import { statistikaModel } from '../shared/statistika.js';
 import { summaryModel } from '../shared/summary.js';
@@ -28,8 +28,7 @@ const BASE = {
 /** Bez kiosku: meranie nie je, dnešok z predpovede. */
 const NO_KIOSK = { ...BASE, zdroj: null, pv: null };
 
-test('texty: odkaz z Môžem? a pás pod veľkým číslom', () => {
-    assert.equal(statsLinkText('September na streche', 168.2), 'September na streche: 168 kWh');
+test('texty: pás pod veľkým číslom', () => {
     assert.deepEqual(summaryMeter({ pct: 52, forecastKwh: 61.44 }), { pct: 52, left: 'z predpovede 61,4 kWh', right: '52 %' });
     assert.equal(summaryMeter({ pct: 130, forecastKwh: 20 }).pct, 100, 'pás nepretečie, veta povie celé číslo');
     assert.equal(summaryMeter({ pct: 130, forecastKwh: 20 }).right, '130 %');

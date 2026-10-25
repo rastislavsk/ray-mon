@@ -4,12 +4,11 @@
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
-import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, statsLinkText } from '../../shared/messages.js';
+import { MOZEM_SKY_TEXTS, NO_LIVE_FACT } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
 import { neplatiOf } from '../../shared/pristup.js';
-import { summaryModel } from '../../shared/summary.js';
 import { localMinutes } from '../../shared/solar.js';
-import { ICON_NEXT, MOZEM_ICONS } from '../icons.js';
+import { MOZEM_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
@@ -151,18 +150,6 @@ function itemSheet(it, dom) {
     put(dom.mozemSheetMore, it.more ? it.more.a : '');
 }
 
-/**
- * Odkaz na konci karty: mesiac na streche, ťuknutie otvorí ten istý plagát v karte Štatistika.
- * Bez merania nie je. @param {import('../../shared/summary.js').SummaryModel} m
- */
-function statsLinkHtml(m) {
-    if (m.kind !== 'live' || m.kwh === null) return '';
-    return (
-        `<button type="button" class="summary-link" data-mozem-stats><span><small>Štatistika</small>` +
-        `${escapeHtml(statsLinkText(m.kick, m.kwh))}. Pozri čísla.</span>${ICON_NEXT}</button>`
-    );
-}
-
 /** Model karty pre stav appky. @param {import('../state.js').AppState} state */
 function modelOf(state) {
     const model = mozemModel(state);
@@ -180,6 +167,6 @@ export function closeMozemSheet(dom) {
 export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, kick) + statsLinkHtml(summaryModel(state, 'mesiac')), 'mozemBody');
+    writeHtml(dom.mozemBody, mozemHtml(m, kick), 'mozemBody');
     renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }

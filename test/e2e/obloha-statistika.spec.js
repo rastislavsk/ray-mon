@@ -6,7 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { DAYLOG_STORAGE_KEY, PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
 import { recordDay } from '../../shared/daylog.js';
 import { kwpText } from '../../shared/format.js';
-import { statsLinkText, STATISTIKA_TEXTS } from '../../shared/messages.js';
+import { STATISTIKA_TEXTS } from '../../shared/messages.js';
 import { toUser } from '../../shared/settings.js';
 import { buildForecast, localMinutes } from '../../shared/solar.js';
 import { STATS_PERIODS } from '../../shared/stats.js';
@@ -272,27 +272,5 @@ test.describe('súčty, ktoré výrobca neposiela', () => {
         await page.locator('#st-poster [data-period="rok"]').click();
         await expect(page.locator('#st-poster h2')).toHaveText('Rok 2026 na streche');
         await expect(page.locator('#st-poster .pnote')).not.toContainText('neposiela súčet');
-    });
-});
-
-test.describe('odkaz na karte Môžem?', () => {
-    test('otvorí plagát mesiaca v karte Štatistika; Späť vráti na Môžem?', async ({ page }) => {
-        const errors = await openStat(page, { panel: 'mozem' });
-        const m = statistikaModel(vstup(), 'mesiac');
-        const s = /** @type {NonNullable<typeof m.summary>} */ (m.summary);
-        await expect(page.locator('#mz-summary-text')).toHaveText(statsLinkText(s.kick, /** @type {number} */ (s.kwh)));
-        await page.locator('#mz-summary').click();
-        await expect(page.locator('#panel-statistika')).toBeVisible();
-        await expect(page.locator('#st-poster [data-period="mesiac"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect.poll(() => plagatVStranke(page)).toEqual(plagatZModelu(m));
-        await page.goBack();
-        await expect(page.locator('#panel-mozem')).toBeVisible();
-        expect(errors).toEqual([]);
-    });
-
-    test('bez merania odkaz nie je', async ({ page }) => {
-        await openStat(page, { settings: { ...OWNER, zdroj: null }, panel: 'mozem' });
-        await expect(page.locator('#mz-word')).not.toHaveText('');
-        await expect(page.locator('#mz-summary')).toBeHidden();
     });
 });
