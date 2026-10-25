@@ -147,9 +147,6 @@
     --amber-rgb: 255, 194, 75;
     --red-rgb: 255, 107, 87;
     --grey-rgb: 185, 182, 172;
-    /* Časová os detailu dňa. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu.
-       Rad prešiel kontrolou farbosleposti a kontrastu voči --card-bg (lightness monotónna,
-       krok >= 0,06, svetlý koniec >= 2:1) - pri zmene ho treba overiť znova. */
     /* Tmavé písmo a čiary na plnej farbe (karta Môžem?, plagát súhrnu). Číta ho aj obrázok
        pre story (web/share-image.js), rovnako ako farby vyššie. */
     --ink-on-color: #0b0b0b;
