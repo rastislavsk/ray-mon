@@ -38,7 +38,7 @@ import { SKY_WORDS } from '../../shared/messages-sedem.js';
 import { dayStripModel, dayWeather, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_BACK, ICON_CLOUD, ICON_NEXT, ICON_PARTLY, ICON_SUN } from '../icons.js';
-import { dayChartHtml, legendHtml } from '../day-chart.js';
+import { cloudScaleHtml, dayChartHtml, legendHtml } from '../day-chart.js';
 import { writeHtml } from '../memo.js';
 import { forecastChartSvg, weekBarsSvg, weekHeatSvg } from '../svg.js';
 
@@ -270,6 +270,8 @@ function renderCurve(state, day, progress, detail, dom) {
     // Detail dňa má namiesto krivky graf dňa ako karta Terazky - ten istý ako v detaile dňa novej
     // appky (sedemDayChart). Ktorý z nich vidno, rozhoduje CSS podľa .detail.
     const chart = detail ? sedemDayChart(/** @type {import('../../shared/sedem-dni.js').SedemData} */ (state), state.weekSelDay) : null;
+    // Stupnica oblačnosti patrí ku grafu dňa - v riadku „Priebeh výroby“ nad ním, inde je prázdna.
+    writeHtml(dom.weekCloudScale, chart ? cloudScaleHtml(chart) : '', 'weekCloudScale');
     writeHtml(dom.weekDayChart, chart ? dayChartHtml(chart) : '', 'weekDayChart');
     writeHtml(dom.weekDayLegend, chart ? legendHtml(chart.legend) : '', 'weekDayLegend');
     if (chart) dom.weekDayChart.setAttribute('aria-label', chart.desc);
@@ -406,6 +408,7 @@ function renderEmpty(dom) {
         [dom.weekHeat, 'weekHeat'],
         [dom.weekBars, 'weekBars'],
         [dom.weekCurve, 'weekCurve'],
+        [dom.weekCloudScale, 'weekCloudScale'],
         [dom.weekDayChart, 'weekDayChart'],
         [dom.weekDayLegend, 'weekDayLegend'],
         [dom.weekDayTabs, 'weekDayTabs'],

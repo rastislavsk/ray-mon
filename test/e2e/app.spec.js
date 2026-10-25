@@ -33,7 +33,7 @@ import { terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { stavMeraniaText } from '../../shared/messages-core.js';
+import { DAY_CHART_KEYS, stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, fmtSum, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
@@ -280,6 +280,9 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     // Graf dňa: oblačnosť po hodinách, predpoveď, nameraná krivka, plocha nad hranicou, hranica
     // s popiskom, os kW, pás plánu po polhodinách a čiara na „teraz“ s časom.
     await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(m.chart.clouds.length);
+    // Stupnica oblačnosti nad grafom: jasno … zamračené, desať štvorčekov.
+    await expect(page.locator('#tz-cloud-scale span:not(.cs-sw)')).toHaveText([DAY_CHART_KEYS.clear, DAY_CHART_KEYS.cloudy]);
+    await expect(page.locator('#tz-cloud-scale .cs-sw i')).toHaveCount(10);
     await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
@@ -556,6 +559,9 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     // ten istý model ako appka; krivka výroby s legendou tu nie je.
     const graf5 = sedemDayChart(vstup, 5);
     await expect(page.locator('#week-day-chart .dc-cloud')).toHaveCount(graf5.clouds.length);
+    // Stupnica oblačnosti nad grafom: jasno … zamračené, desať štvorčekov.
+    await expect(page.locator('#week-cloud-scale span:not(.cs-sw)')).toHaveText([DAY_CHART_KEYS.clear, DAY_CHART_KEYS.cloudy]);
+    await expect(page.locator('#week-cloud-scale .cs-sw i')).toHaveCount(10);
     await expect(page.locator('#week-day-chart rect[data-from]')).toHaveCount(48);
     await expect(page.locator('#week-day-chart .dc-limit-t')).toHaveText(graf5.limitText);
     await expect(page.locator('#week-day-chart .dc-y:not(.dc-unit)')).toHaveText(graf5.grid.map((g) => g.label));

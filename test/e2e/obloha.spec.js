@@ -22,7 +22,7 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { stavMeraniaText } from '../../shared/messages-core.js';
+import { DAY_CHART_KEYS, stavMeraniaText } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
@@ -1031,6 +1031,9 @@ test.describe('karta Teraz', () => {
     test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
         await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(24);
+        // Stupnica oblačnosti nad grafom: jasno … zamračené, desať štvorčekov.
+        await expect(page.locator('#tz-cloud-scale span:not(.cs-sw)')).toHaveText([DAY_CHART_KEYS.clear, DAY_CHART_KEYS.cloudy]);
+        await expect(page.locator('#tz-cloud-scale .cs-sw i')).toHaveCount(10);
         await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
@@ -1530,6 +1533,9 @@ test.describe('karta 7 dní', () => {
         await page.locator('#sd-days [data-day="4"]').click();
         await expect.poll(() => denVStranke(page)).toEqual(denZModelu(sedemDayModel(vstupSedem(), 4)));
         await expect(page.locator('#sd-day-chart .dc-now-dot')).toHaveCount(0);
+        // Stupnica oblačnosti nad grafom: jasno … zamračené, desať štvorčekov.
+        await expect(page.locator('#sd-day-cloud-scale span:not(.cs-sw)')).toHaveText([DAY_CHART_KEYS.clear, DAY_CHART_KEYS.cloudy]);
+        await expect(page.locator('#sd-day-cloud-scale .cs-sw i')).toHaveCount(10);
         await expect(page.locator('#sd-day-chart .dc-prev')).toHaveCount(0);
         await expect(page.locator('#sd-day-chart .dc-past')).toHaveCount(0);
         await expect(page.locator('#sd-day-done')).toBeHidden();

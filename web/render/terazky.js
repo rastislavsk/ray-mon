@@ -7,7 +7,7 @@ import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
 import { voiceTexts } from '../../shared/messages-core.js';
 import { localMinutes } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
-import { dayChartHtml, legendHtml } from '../day-chart.js';
+import { cloudScaleHtml, dayChartHtml, legendHtml } from '../day-chart.js';
 import { writeHtml } from '../memo.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -48,11 +48,12 @@ function renderHead(state, m, dom) {
     dom.tzRetry.textContent = TERAZ_TEXTS.retry;
 }
 
-/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom */
+/** Stupnica oblačnosti nad grafom, graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom */
 function renderChart(m, dom) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
+    writeHtml(dom.tzCloudScale, cloudScaleHtml(c), 'tz-cloud-scale');
     writeHtml(dom.tzChart, dayChartHtml(c), 'tz-chart');
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));

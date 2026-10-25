@@ -51,6 +51,9 @@
     --glass: rgba(8, 16, 40, 0.3);
     --bar: rgba(6, 10, 28, 0.72);
     --dim: rgba(255, 255, 255, 0.82);
+    /* Oblačnosť v grafe dňa: jasno biele, zamračené tmavosivé - bunky, legenda aj stupnica. */
+    --cloud-clear: #fff;
+    --cloud-dark: #4d5560;
     --cheap-text: #b0dbff;
     --costly-text: #ffc4ba;
     /* Plagát na zdieľanie: obloha pri západe slnka a tmavé písmo na nej. Tie isté tokeny číta
@@ -805,7 +808,7 @@ button.live[aria-expanded='true'] {
 /* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
    web/day-chart.js), bunka pod čiarou náhľadu má okraj. */
 .dc-cloud {
-    fill: color-mix(in srgb, #4d5560 var(--c), #fff);
+    fill: color-mix(in srgb, var(--cloud-dark) var(--c), var(--cloud-clear));
 }
 .dc-cloud-on {
     stroke: #fff;
@@ -927,6 +930,31 @@ button.live[aria-expanded='true'] {
 .dc .dc-past {
     fill-opacity: 0.35;
 }
+/* Stupnica oblačnosti vpravo nad grafom dňa (cloudScaleHtml vo web/day-chart.js), text priamo na
+   oblohe je biely. Bez oblačnosti je prázdna. */
+.cloud-scale {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px 0;
+    font-size: 0.75rem;
+    color: #fff;
+    white-space: nowrap;
+}
+.cloud-scale:empty {
+    display: none;
+}
+.cs-sw {
+    display: inline-flex;
+    gap: 1px;
+}
+.cs-sw i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--cloud-dark) var(--c), var(--cloud-clear));
+}
 .legend {
     display: flex;
     flex-wrap: wrap;
@@ -969,7 +997,7 @@ button.live[aria-expanded='true'] {
 }
 .legend [data-tone='cloud']::before {
     width: 22px;
-    background: linear-gradient(90deg, #fff, #4d5560);
+    background: linear-gradient(90deg, var(--cloud-clear), var(--cloud-dark));
 }
 .hint {
     display: flex;

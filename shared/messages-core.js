@@ -824,7 +824,7 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
 export const TERAZ_TONES = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
 
 /** Legenda čiar a riadkov grafu dňa (nápis hranice je TERAZ_TEXTS.limit). */
-export const DAY_CHART_KEYS = { power: 'výkon', forecast: 'predpoveď', cloud: 'oblačnosť' };
+export const DAY_CHART_KEYS = { power: 'výkon', forecast: 'predpoveď', cloud: 'oblačnosť', clear: 'jasno', cloudy: 'zamračené' };
 
 /** Pevné texty karty: popisky, tlačidlá a výzvy. */
 export const TERAZ_TEXTS = {

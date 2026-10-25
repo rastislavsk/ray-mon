@@ -6,7 +6,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
-import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
+import { cloudScaleHtml, dayChartHtml, legendHtml } from '../../../web/day-chart.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -14,11 +14,12 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 
-/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS */
+/** Stupnica oblačnosti nad grafom, graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS */
 function renderChart(m, dom, TERAZ_TEXTS) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
+    setHtml(dom.tzCloudScale, cloudScaleHtml(c));
     setHtml(dom.tzChart, dayChartHtml(c));
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));

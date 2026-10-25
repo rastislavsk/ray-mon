@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../shared/format.js';
 import { DAY_CHART } from '../shared/day-chart.js';
+import { DAY_CHART_KEYS } from '../shared/messages-core.js';
 
 /** @typedef {ReturnType<typeof import('../shared/day-chart.js').dayChartModel>} Chart */
 
@@ -109,6 +110,20 @@ export function dayChartHtml(c) {
         labelsHtml(c) +
         '</div>'
     );
+}
+
+/** Počet štvorčekov stupnice oblačnosti. */
+const CLOUD_STEPS = 10;
+
+/**
+ * Stupnica oblačnosti nad grafom: „jasno … zamračené“ (štvorčeky) v tých istých farbách ako bunky riadku
+ * oblačnosti (`--c` ako pri bunke). Bez oblačnosti v grafe je prázdna a style.css ju skryje.
+ * @param {Chart} c
+ */
+export function cloudScaleHtml(c) {
+    if (!c.clouds.length) return '';
+    const sw = Array.from({ length: CLOUD_STEPS }, (_, i) => `<i style="--c:${cloudPct((i / (CLOUD_STEPS - 1)) * 100)}"></i>`).join('');
+    return `<span>${escapeHtml(DAY_CHART_KEYS.clear)}</span><span class="cs-sw">${sw}</span><span>${escapeHtml(DAY_CHART_KEYS.cloudy)}</span>`;
 }
 
 /** Legenda pod pásom plánu: farba a slovo. @param {Array<{ tone: string, text: string }>} legend */

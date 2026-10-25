@@ -157,6 +157,7 @@
                     <button type="button" id="tz-retry" class="tz-retry hidden"></button>
                 </div>
                 <div id="tz-plot" class="tz-plot hidden">
+                    <p id="tz-cloud-scale" class="cloud-scale" aria-hidden="true"></p>
                     <div
                         id="tz-chart"
                         class="tz-chart day-scrub"
@@ -288,7 +289,8 @@
                             <!-- Okno na veľké spotrebiče: len v detaile dňa na mobile (renderDayWindow). -->
                             <div class="day-window hidden" id="week-day-window"></div>
                             <div class="chart-top">
-                                <span class="lbl">Priebeh výroby</span>
+                                <span class="lbl">Priebeh výroby</span
+                                ><span id="week-cloud-scale" class="cloud-scale" aria-hidden="true"></span>
                             </div>
                             <div class="utabs" id="week-day-tabs" role="tablist"></div>
                             <div class="stat-line curve-stat" id="week-curve-stat"></div>
