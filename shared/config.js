@@ -469,6 +469,20 @@ export const SUCTY_STORAGE_KEY = 'sucty-v1';
 export const ADRESA_SESSION_KEY = 'adresa-v1';
 
 /**
+ * Značka v adrese (`&vlastna=1`), ktorú appka pripíše k nastaveniu, keď ho sama zrkadlí do adresy
+ * (initUrlMirror). Taká adresa nie je odkaz od niekoho, len kópia uloženého - prehliadač si ju však
+ * pamätá v histórii a ponúka ju aj v novej karte. Keď má appka niečo novšie (uložené nastavenie,
+ * alebo údaje vymazané), vlastnú adresu neponúkne prevziať (linkHash). Odkaz zo Zdieľať ju nemá.
+ */
+export const VLASTNA_HASH_KEY = 'vlastna';
+
+/**
+ * Značka, že človek v tomto prehliadači vymazal údaje (Vymazať údaje, Nastaviť celé znova). Je to
+ * jediné, čo vymazanie zapíše: stará adresa z histórie prehliadača potom staré nastavenie neponúkne.
+ */
+export const VYMAZANE_STORAGE_KEY = 'vymazane-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -482,6 +496,7 @@ export const STORAGE_KEYS = [
     PRISTUP_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     SUCTY_STORAGE_KEY,
+    VYMAZANE_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

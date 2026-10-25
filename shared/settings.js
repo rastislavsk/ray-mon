@@ -13,6 +13,7 @@ import {
     TARIFF,
     TARIFF_TEMPLATES,
     TYPICAL_PLANT,
+    VLASTNA_HASH_KEY,
     VOICES,
 } from './config.js';
 import { fmt2, kwpText } from './format.js';
@@ -267,15 +268,17 @@ function fromBase64Url(token) {
 /**
  * Časť adresy za mriežkou s nastavením (`#nastavenie=…`) a s kartou, na ktorej sa má appka
  * otvárať (`&prva=terazky`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
+ * Adresa, ktorú appka zrkadlí sama (`vlastna`), nesie pri nastavení značku VLASTNA_HASH_KEY.
  * @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
- * @param {StartPanel} [start]
+ * @param {StartPanel} [start] @param {boolean} [vlastna]
  */
-export function shareHash(settings, withZdroj, start = START_PANELS[0]) {
+export function shareHash(settings, withZdroj, start = START_PANELS[0], vlastna = false) {
     const parts = [];
     if (settings) {
         const user = toUser(settings);
         if (!withZdroj) user.zdroj = null;
         parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify({ v: SHARE_LINK_VERSION, ...user }))}`);
+        if (vlastna) parts.push(`${VLASTNA_HASH_KEY}=1`);
     }
     if (start !== START_PANELS[0]) parts.push(`${START_HASH_KEY}=${start}`);
     return parts.length ? `#${parts.join('&')}` : '';
@@ -340,10 +343,15 @@ export function readLink(text) {
  * prázdna, keď je to adresa, ktorú appka v tejto karte sama zapísala (`vlastna`, cesta a časť za
  * mriežkou). Taká adresa nesie nastavenie z chvíle zápisu - po zmene v druhej appke či inej karte by
  * ho obnovenie starej karty ponúklo prevziať a prevzatie by novšie nastavenie prepísalo starším.
- * @param {string} path @param {string} hash @param {string | null} vlastna @returns {string}
+ * To isté platí pre adresu so značkou VLASTNA_HASH_KEY z inej karty (história prehliadača), keď
+ * má appka novšie - uložené nastavenie, alebo vymazané údaje (`novsie`). Bez neho je taká adresa
+ * jediné, čo si appka na ploche iPhonu prenesie zo Safari, a ponúkne sa.
+ * @param {string} path @param {string} hash @param {string | null} vlastna @param {boolean} novsie
+ * @returns {string}
  */
-export function linkHash(path, hash, vlastna) {
-    return vlastna !== null && vlastna === path + hash ? '' : hash;
+export function linkHash(path, hash, vlastna, novsie) {
+    if (vlastna !== null && vlastna === path + hash) return '';
+    return novsie && new RegExp(`[#&]${VLASTNA_HASH_KEY}=1(?:&|$)`).test(hash) ? '' : hash;
 }
 
 /** Nastavenie z odkazu, alebo null - pre miesta, ktoré dôvod nepotrebujú. @param {string} text @returns {Settings | null} */

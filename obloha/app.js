@@ -13,6 +13,7 @@ import {
     loadSite,
     loadStartPanel,
     loadVlastnaAdresa,
+    loadVymazane,
 } from '../web/storage.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
@@ -28,7 +29,8 @@ const site = saved ? null : loadSite();
 // appka. To isté, čo je už uložené, sa neponúka.
 // Odkaz, ktorý appka nevie prevziať, nezmizne potichu - ponuka povie prečo (linkError). Adresa,
 // ktorú appka v tejto karte zapísala sama, odkazom nie je - po obnovení nesie staré nastavenie.
-const hash = linkHash(location.pathname, location.hash, loadVlastnaAdresa());
+// Ani vlastná adresa z histórie prehliadača, keď je uložené novšie alebo boli údaje vymazané.
+const hash = linkHash(location.pathname, location.hash, loadVlastnaAdresa(), saved !== null || loadVymazane());
 const link = readLink(hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);

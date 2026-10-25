@@ -3225,6 +3225,7 @@ test.describe('vymazanie údajov', () => {
         await page.reload();
         await appReady(page);
         expect(settingsFromLink(page.url()), 'adresa nesie uložené nastavenie').not.toBeNull();
+        const stara = page.url();
 
         await page.locator('#nav-nastavenie').click();
         await otvorPolozku(page, 'settings-clear');
@@ -3234,9 +3235,23 @@ test.describe('vymazanie údajov', () => {
         await expect(page.locator('#wz-lokalita')).toBeVisible();
         await appReady(page);
         const ulozene = await page.evaluate(() => ({ ...localStorage }));
-        expect(ulozene).toEqual({ 'cudzia-appka': 'ostane' });
+        expect(ulozene, 'ostane len značka vymazania').toEqual({ 'cudzia-appka': 'ostane', [config.VYMAZANE_STORAGE_KEY]: '1' });
         expect(settingsFromLink(page.url())).toBeNull();
         await expect(page.locator('#import-offer')).toBeHidden();
+
+        // Stará adresa z histórie prehliadača (návrh pri písaní adresy) staré nastavenie neponúkne -
+        // ani hneď po vymazaní, ani keď je medzitým nastavené nové.
+        await page.goto(stara);
+        await appReady(page);
+        await expect(page.locator('#wz-lokalita')).toBeVisible();
+        await expect(page.locator('#import-offer')).toBeHidden();
+        const nove = { ...OWNER, plant: { ...OWNER.plant, panelWp: OWNER.plant.panelWp + 10 } };
+        await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(nove))]);
+        await page.goto(stara);
+        await page.reload();
+        await expect(page.locator('#pv-updated')).toHaveText('meranie');
+        await expect(page.locator('#import-offer')).toBeHidden();
+        expect(settingsFromLink(page.url()), 'adresa nesie nové nastavenie').toEqual({ ...nove, zdroj: null });
         expect(errors).toEqual([]);
     });
 
