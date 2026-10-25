@@ -24,11 +24,11 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
 - **Môžem?** – odpoveď pre celú rodinu, nielen pre toho, kto sa vo fotovoltike vyzná. Hore jedno
   veľké slovo na plnej farbe (**ZAPNI TOOO**, **NO NO, NOT YET**, **NAHOVNO DEŇ**, **Dnes už ne e !**, **Neviem.**),
   jedna veta a jeden fakt v jednotkách, ktoré pozná každý (koľko mobilov strecha nabije za hodinu).
-  Pod tým pás dneška s úsekom, keď slnko stačí na veľké spotrebiče, a riadok **Čo môžem**: koľko
-  vecí ide hneď, farebná bodka za každú a výnimky slovom („5 zo 6 ide hneď · auto o 12:30“).
-  Ťuknutie naň otvorí zoznam vecí – práčka, umývačka, sušička, auto, hranie a fén – s krátkou
-  odpoveďou („do 15:30“, „o 10:30“, „zajtra 08:00“, „lacno“). Ťuknutie na vec ju rozbalí: čo robiť, prečo, a čo keď sa zamračí alebo to
-  treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
+  Pod tým pás dneška s úsekom, keď slnko stačí na veľké spotrebiče, a dlaždice **Čo môžem** – tie isté
+  ako v novej appke: veľké spotrebiče (práčka, umývačka, sušička) s pásom dňa, auto, bojler a drobnosti
+  (hranie, fén), každá s jednou odpoveďou („do 17:30“, „o 10:30“, „zajtra 08:00“, „lacno“).
+  Ťuknutie na dlaždicu otvorí panel zospodu: pri skupine jej veci, každú so svojím časom, pri jednej veci
+  čo robiť, prečo, a čo keď sa zamračí alebo to treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na **súhrn na zdieľanie**: posledných
   7 dní alebo mesiac na streche ako plagát – veľké číslo kWh, stĺpce dní (mesiac ako mriežka),
   nabitia mobilu, kilometre autom s porovnaním trasy, najlepší deň a hodnota podľa tarify. „Zdieľať do story“ z neho nakreslí obrázok 1080 × 1920 a pošle ho
   systémovému zdieľaniu telefónu (na desktope sa stiahne). Súhrn potrebuje živé meranie; dni si

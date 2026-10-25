@@ -865,6 +865,22 @@
             </section>
         </main>
 
+        <!-- Panel veci či skupiny karty Môžem? zospodu (ten istý ako v novej appke). Otvára sa ako
+             modálny dialóg: čítačka ho ohlási, fokus ostane v ňom a Escape aj Späť ho zatvoria. -->
+        <dialog id="mozem-sheet" class="mozem-sheet" aria-labelledby="mozem-sheet-title">
+            <button type="button" id="mozem-sheet-x" class="mozem-sheet-x" aria-label="Zavrieť"><span aria-hidden="true">×</span></button>
+            <h2 id="mozem-sheet-title"></h2>
+            <!-- Panel skupiny: veta o slnku a veci skupiny, každá so svojím časom a zápisom. -->
+            <p id="mozem-sheet-lead"></p>
+            <div id="mozem-sheet-rows" class="mozem-sheet-rows"></div>
+            <h3 id="mozem-sheet-do-q" class="mozem-sheet-q"></h3>
+            <p id="mozem-sheet-do"></p>
+            <h3 id="mozem-sheet-why-q" class="mozem-sheet-q"></h3>
+            <p id="mozem-sheet-why"></p>
+            <h3 id="mozem-sheet-more-q" class="mozem-sheet-q"></h3>
+            <p id="mozem-sheet-more"></p>
+        </dialog>
+
         <!-- Ponuka prevziať nastavenie z odkazu. Pevne nad spodnou navigáciou, aby bola
              vidieť na ktorejkoľvek karte a pri akomkoľvek posunutí stránky. -->
         <section class="import-offer hidden" id="import-offer" aria-live="polite" aria-labelledby="import-offer-title">

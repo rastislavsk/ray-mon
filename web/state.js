@@ -30,7 +30,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemSummary: boolean,
- *   mozemList: boolean,
+ *   mozemItem: string | null,
  *   summaryPeriod: import('../shared/summary.js').SummaryPeriod,
  *   previewMinutes: number | null,
  *   wide: boolean,
@@ -74,7 +74,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, list: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, summary: boolean, item: string | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -119,7 +119,7 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         mozemSummary: false,
         // Zoznam vecí v karte Môžem? (čo môžem pustiť a dokedy) - druhá obrazovka karty ako súhrn,
         // krok navigácie, Späť ju zavrie.
-        mozemList: false,
+        mozemItem: null,
         summaryPeriod: /** @type {import('../shared/summary.js').SummaryPeriod} */ ('mesiac'),
         previewMinutes: null,
         wide: layout.wide,
@@ -180,7 +180,7 @@ export function panelChange(from, to) {
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
         mozemSummary: false,
-        mozemList: false,
+        mozemItem: null,
         stavTip: false,
     };
 }
@@ -200,7 +200,7 @@ export function navStep(state) {
         roof: state.setupRoof,
         info: state.infoOpen,
         summary: state.mozemSummary,
-        list: state.mozemList,
+        item: state.mozemItem,
     };
 }
 
@@ -213,7 +213,7 @@ export function sameNavStep(a, b) {
         a.roof === b.roof &&
         a.info === b.info &&
         a.summary === b.summary &&
-        a.list === b.list
+        a.item === b.item
     );
 }
 
@@ -233,7 +233,7 @@ export function navChange(from, step) {
         setupRoof: step.roof,
         infoOpen: step.info,
         mozemSummary: step.summary,
-        mozemList: step.list,
+        mozemItem: step.item,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -278,14 +278,15 @@ function validPanelPlace(panel, weekDetail) {
 }
 
 /**
- * Obrazovky, ktoré sú otvorené alebo nie: súhrn a zoznam vecí v karte Môžem?. Položka zo staršej
- * verzie appky ich nepozná - sú `false`. Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom;
+ * Obrazovky karty Môžem?: súhrn (otvorený alebo nie) a vec či skupina, ktorej panel je otvorený
+ * (`item`, null = žiadny). Položka zo staršej verzie appky ich nepozná - súhrn je `false`, panel
+ * zatvorený; zrušený zoznam vecí (`list`) sa vráti na kartu. Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom;
  * položka zo staršej verzie, ktorá ho ešte nesie, sa vráti na kartu bez neho.
- * @param {Record<string, unknown>} step @returns {{ summary: boolean, list: boolean } | null}
+ * @param {Record<string, unknown>} step @returns {{ summary: boolean, item: string | null } | null}
  */
-function screensIn({ summary = false, list = false }) {
-    if (typeof summary !== 'boolean' || typeof list !== 'boolean') return null;
-    return { summary, list };
+function screensIn({ summary = false, item = null }) {
+    if (typeof summary !== 'boolean' || (item !== null && typeof item !== 'string')) return null;
+    return { summary, item };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

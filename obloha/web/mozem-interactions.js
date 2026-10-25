@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem? novej appky: panel veci či skupiny, hláška a „Skúsiť znova“.
+// Poslucháče karty Môžem? novej appky: panel veci či skupiny a „Skúsiť znova“.
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
 
 import { stepBack } from './nav-back.js';
@@ -28,7 +28,6 @@ export function initMozem(store, dom, refresh) {
         e.preventDefault();
         closeSheet(store);
     });
-    dom.mzQuip.addEventListener('click', () => store.setState({ mozemQuip: store.get().mozemQuip + 1 }));
     // Skúsiť znova je to isté načítanie ako pri štarte; kým beží, karta pokojne čaká.
     dom.mzRetry.addEventListener('click', () => {
         store.setState({ loading: true });

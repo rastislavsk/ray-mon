@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
-import { countdownText, durationText, mozemBandText, mozemGlanceText, MOZEM_QUIPS } from '../shared/messages.js';
+import { countdownText, durationText } from '../shared/messages.js';
 import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, planWindows, stripGeometry } from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
@@ -106,7 +106,6 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     assert.match(pracka.extra, /~0,14 €/, 'cena z lacného pásma');
     assert.match(item(m, 'auto').text, /asi \d+ km/);
     assert.equal(item(m, 'hranie').short, 'vždy OK');
-    assert.ok(MOZEM_QUIPS.go.includes(m.quip));
 });
 
 test('meranie mlčí: nie „Slnko to teraz platí za nás“ zo starého čísla, ale odhad a odkedy mlčí', () => {
@@ -157,7 +156,6 @@ test('večer: dnes už nie, auto na lacný prúd, ostatné zajtra', () => {
     assert.equal(item(m, 'auto').tone, 'cheap');
     assert.match(item(m, 'auto').extra, /^Zajtra od/);
     assert.match(item(m, 'pracka').short, /^zajtra /);
-    assert.ok(MOZEM_QUIPS.none.includes(m.quip));
 });
 
 test('večer vo VT: auto nie je lacno, čaká na zajtrajšie slnko', () => {
@@ -210,81 +208,6 @@ test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou'
     assert.equal(nic.word, 'Neviem.');
     assert.equal(nic.strip, null);
     assert.deepEqual([nic.hero.factK, nic.hero.factV], ['panely', 'nezadané']);
-});
-
-test('riadok Čo môžem: koľko ide hneď a výnimky slovom, najviac dve', () => {
-    const it = (/** @type {string} */ name, /** @type {string} */ tone, /** @type {string} */ short) => ({ name, tone, short });
-    const go = it('Hranie', 'go', 'vždy OK');
-    assert.deepEqual(mozemGlanceText([go, go, go, go, go, go]), { title: 'Všetko ide hneď', sub: 'Ťukni, dokedy.' });
-    assert.deepEqual(mozemGlanceText([go, go, go, go, go, it('Auto', 'wait', 'o 12:30')]), {
-        title: '5 zo 6 ide hneď',
-        sub: 'auto o 12:30',
-    });
-    const no = it('Sušička', 'no', 'zajtra 09:00');
-    assert.deepEqual(mozemGlanceText([no, no, no, it('Auto', 'cheap', 'lacno')]), {
-        title: 'Teraz nič',
-        sub: 'sušička zajtra 09:00, sušička zajtra 09:00 +2',
-    });
-    assert.equal(mozemGlanceText([go, no, no, no, no]).title, '1 z 5 ide hneď');
-    assert.equal(mozemGlanceText([go, no, no, no]).title, '1 zo 4 ide hneď');
-    assert.equal(mozemGlanceText([go, it('Práčka', 'unk', 'neviem')]).sub, 'Pri spotrebičoch bez dát neviem.');
-
-    // Model: riadok ráta so spotrebičmi, ktoré sú v zozname dlaždice - hranie a fén v ňom nie sú.
-    const rano = mozemModel(input(at('07:30')));
-    assert.deepEqual(rano.glance, mozemGlanceText(rano.items.filter((i) => i.answer.kind !== 'always')));
-    assert.equal(rano.glance.title, '4 z 5 ide hneď');
-    assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).glance.sub, 'Pri spotrebičoch bez dát neviem.');
-});
-
-test('pás nad dlaždicami: čo platí a dokedy, odpočet a koľko spotrebičov ide hneď', () => {
-    assert.deepEqual(mozemModel(input(FIXED_NOW)).band, {
-        label: 'Ide hneď · zo slnka',
-        value: 'do 17:30',
-        mid: 'teraz · ešte 4 h 30 min',
-        text: 'Všetko môžeš pustiť hneď.',
-    });
-    assert.equal(mozemModel(input(at('07:30'))).band?.text, '4 z 5 vecí môžeš pustiť hneď.');
-    // Po západe veta spod pásu na karte, ktorá povie aj ďalší deň.
-    const vecer = mozemModel(input(at('19:00')));
-    assert.deepEqual(vecer.band, { label: 'Dnes už nie', value: '', mid: 'teraz', text: vecer.strip?.text });
-    // Bez dát pás nie je.
-    assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).band, null);
-
-    // Vetvy, na ktoré fixtures v jednom dni nenarazia: slnko ešte príde, slabý deň.
-    const no = { tone: 'no' };
-    assert.deepEqual(mozemBandText('wait', 600, { from: 690, to: 900 }, [no, { tone: 'go' }], 'Slnko 11:30 – 15:00.'), {
-        label: 'Slnko príde',
-        value: 'o 11:30',
-        mid: 'teraz · slnko za 1 h 30 min',
-        text: '1 z 2 vecí môžeš pustiť hneď.',
-    });
-    assert.equal(mozemBandText('wait', 600, { from: 690, to: 900 }, [no, no], 'Slnko 11:30 – 15:00.').text, 'Slnko 11:30 – 15:00.');
-    assert.equal(mozemBandText('slabo', 600, null, [no], 'Dnes slnko veľké spotrebiče neutiahne.').label, 'Dnes slnko nestačí');
-});
-
-test('Kedykoľvek: TV a veci, na ktoré slnko netreba, aj bez dát', () => {
-    const names = [
-        { id: 'tv', name: 'TV' },
-        { id: 'hranie', name: 'Hranie' },
-        { id: 'fen', name: 'Fén' },
-    ];
-    assert.deepEqual(mozemModel(input(FIXED_NOW)).anytime, names);
-    assert.deepEqual(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).anytime, names);
-});
-
-test('hlášky: celá sada stavu, hláška dňa prvá, stránka mimo sady sa točí dokola', () => {
-    const m = mozemModel(input(FIXED_NOW), 0);
-    assert.deepEqual([...m.quips].sort(), [...MOZEM_QUIPS.go].sort(), 'každá hláška sady práve raz');
-    assert.equal(m.quipPage, 0);
-    assert.equal(m.quip, m.quips[0]);
-    const druha = mozemModel(input(FIXED_NOW), 1);
-    assert.equal(druha.quip, m.quips[1]);
-    assert.deepEqual(druha.quips, m.quips, 'poradie sa listovaním nemení');
-    assert.equal(mozemModel(input(FIXED_NOW), MOZEM_QUIPS.go.length).quipPage, 0, 'sada sa točí dokola');
-    assert.equal(mozemModel(input(FIXED_NOW), -1).quipPage, MOZEM_QUIPS.go.length - 1);
-    const nacitava = mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true }), 3);
-    assert.deepEqual(nacitava.quips, MOZEM_QUIPS.loading, 'jediná hláška, stránka vždy prvá');
-    assert.equal(nacitava.quipPage, 0);
 });
 
 test('itemAnswer a itemCost: veci bez spotrebiča sú vždy OK a nemajú cenu', () => {

@@ -301,15 +301,12 @@ test.describe('kontrast textu na oblohe a na skle', () => {
         });
     }
 
-    test('karta Môžem? napoludnie a za súmraku: skutočné farby z DOM, aj zelené časy pri veciach a „ťukni, príde ďalšia“', async ({
-        page,
-    }) => {
+    test('karta Môžem? napoludnie a za súmraku: skutočné farby z DOM, aj zelené časy pri veciach', async ({ page }) => {
         for (const time of ['13:00', '19:30']) {
             await openObloha(page, { time: at(time) });
             const stranka = await page.evaluate(() => window.kontrola.farby());
-            // Zelené odpovede pri veciach a nápis pod hláškou sú v meraní naozaj zahrnuté.
+            // Zelené odpovede pri veciach sú v meraní naozaj zahrnuté.
             expect(stranka.texts.some((t) => t.where.startsWith('b') && t.color !== 'rgb(255, 255, 255)')).toBe(true);
-            expect(stranka.texts.some((t) => t.where === '#mz-quip-hint')).toBe(true);
             expect(slabyKontrast(stranka), time).toEqual([]);
         }
     });

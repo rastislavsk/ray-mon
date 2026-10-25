@@ -251,34 +251,7 @@ export const MOZEM_WORDS = {
     bezpanelov: 'Neviem.',
 };
 
-/** Hlášky pod mriežkou, striedajú sa ťuknutím. Sada podľa stavu karty. */
-export const MOZEM_QUIPS = {
-    go: [
-        'Slnko platí. Ty nie.',
-        'Strecha dnes robí viac ako ty.',
-        'Teraz je to zo strechy. Večer nie.',
-        'Svieti. Nerieš a zapni.',
-        'Najlepšie hodiny dňa. Nepremrhaj ich scrollovaním.',
-    ],
-    wait: [
-        'Daj si raňajky. Práčka počká.',
-        'Slnko sa ešte rozcvičuje. Ty môžeš tiež.',
-        'Počkať sa tu vypláca. Doslova.',
-        'Ešte chvíľu. Ako keď sa načítava hra.',
-    ],
-    none: [
-        'Slnko má padla. Zajtra zase v robote.',
-        'Noc je na spanie, nie na sušičku.',
-        'Mesiac bohužiaľ nevyrába.',
-        'Strecha spí. Nebuď ju.',
-    ],
-    slabo: ['Slnko je dnes na home office.', 'Mraky majú dnes prednosť.', 'Slabý deň. Stáva sa aj najlepším.'],
-    offline: ['Aj slnko má niekedy výpadok. Tentoraz my.', 'Bez dát len hádam. A hádať nebudem.', 'Spýtaj sa toho, kto platí elektrinu.'],
-    loading: ['Pozerám na oblohu.'],
-    bezpanelov: ['Bez panelov len hádam. A hádať nebudem.', 'Povedz mi, čo máš na streche, a poviem ti, čo môžeš.'],
-};
-
-/** Slušný tón karty: veľké slovo vecne a hlášky bez irónie, s vykaním. Veľké slovo píše veľkými ako v návrhu. */
+/** Slušný tón karty: veľké slovo vecne, veľkými písmenami ako v návrhu. */
 const MOZEM_WORDS_SLUSNE = {
     go: 'ÁNO, TERAZ',
     wait: 'EŠTE NIE',
@@ -287,28 +260,6 @@ const MOZEM_WORDS_SLUSNE = {
     offline: 'NEVIEM',
     loading: 'MOMENT',
     bezpanelov: 'NEVIEM',
-};
-
-/** @type {typeof MOZEM_QUIPS} */
-const MOZEM_QUIPS_SLUSNE = {
-    go: [
-        'Strecha dnes pracuje za vás.',
-        'Slnečná energia je zadarmo.',
-        'Teraz to ide zo strechy, večer už zo siete.',
-        'Svieti. Je vhodný čas zapnúť spotrebiče.',
-        'Najlepšie hodiny dňa sú práve teraz.',
-    ],
-    wait: ['Práčka môže chvíľu počkať.', 'Slnko ešte len naberá silu.', 'Počkať sa oplatí.', 'Ešte chvíľu, slnko príde.'],
-    none: [
-        'Slnko dnes už skončilo. Zajtra bude znova vyrábať.',
-        'V noci panely nevyrábajú.',
-        'Väčšie spotrebiče sa oplatí zladiť so slnkom.',
-        'Ďalšie dni nájdete na karte 7 dní.',
-    ],
-    slabo: ['Dnes je oblačno, výroba bude nízka.', 'Oblačnosť sa mení, sledujem ju.', 'Slabý deň. Lepší príde.'],
-    offline: ['Dáta momentálne nie sú dostupné.', 'Bez dát nebudem odhadovať.', 'Skúste to o chvíľu znova.'],
-    loading: MOZEM_QUIPS.loading,
-    bezpanelov: ['Bez panelov môžem len odhadovať.', 'Zadajte, čo máte na streche, a poviem vám, čo môžete zapnúť.'],
 };
 
 /**
@@ -623,69 +574,6 @@ function laterItem(a, voice) {
     };
 }
 
-/** „zo“ pred číslom, ktoré sa číta so s/š na začiatku: zo štyroch, zo šiestich, zo siedmich. @param {number} n */
-const zFrom = (n) => ([4, 6, 7].includes(n) ? 'zo' : 'z');
-
-/** Koľko výnimiek riadok vstupu do zoznamu vymenuje; ďalšie zhrnie ako „+2“. */
-const GLANCE_NAMED = 2;
-
-/**
- * Riadok, ktorým sa z karty Môžem? otvára zoznam vecí: koľko ide hneď a výnimky slovom
- * („auto o 12:30“). Keď ide všetko, výnimky nie sú a riadok zavolá do zoznamu po časy.
- * @param {Array<{ name: string, tone: string, short: string }>} items
- * @returns {{ title: string, sub: string }}
- */
-export function mozemGlanceText(items) {
-    const n = items.length;
-    const go = items.filter((i) => i.tone === 'go').length;
-    const rest = items.filter((i) => i.tone !== 'go');
-    if (!rest.length) return { title: 'Všetko ide hneď', sub: 'Ťukni, dokedy.' };
-    const title = go ? `${go} ${zFrom(n)} ${n} ide hneď` : 'Teraz nič';
-    if (rest.every((i) => i.tone === 'unk')) return { title, sub: 'Pri spotrebičoch bez dát neviem.' };
-    const named = rest.slice(0, GLANCE_NAMED).map((i) => `${i.name.toLowerCase()} ${i.short}`);
-    const more = rest.length > GLANCE_NAMED ? ` +${rest.length - GLANCE_NAMED}` : '';
-    return { title, sub: named.join(', ') + more };
-}
-
-/**
- * Blok „Kedykoľvek“ pod dlaždicami v zozname vecí (súčasná appka): bežné spotrebiče, na ktoré
- * slnko netreba. TV na karte ako vec nie je, v bloku je, aby bolo jasné, že ide o bežné veci.
- */
-export const MOZEM_ANYTIME = {
-    title: 'Kedykoľvek',
-    tv: 'TV',
-    text: 'Bežné spotrebiče berú málo alebo krátko, to nie je otázka pre strechu.',
-};
-
-/**
- * Pás dneška nad dlaždicami v zozname vecí (súčasná appka): čo teraz platí a dokedy, odpočet
- * pod pásom a veta, koľko spotrebičov ide hneď. Keď hneď nejde nič alebo slnko dnes už nie je,
- * veta je tá istá ako pod pásom na karte (`stripText`).
- * @param {import('./mozem.js').MozemState} state @param {number} nowMin @param {MozemWindow | null} window
- * @param {Array<{ tone: string }>} devices spotrebiče v dlaždiciach @param {string} stripText
- * @returns {{ label: string, value: string, mid: string, text: string }}
- */
-export function mozemBandText(state, nowMin, window, devices, stripText) {
-    const n = devices.length;
-    const go = devices.filter((d) => d.tone === 'go').length;
-    const text = !go ? stripText : go === n ? 'Všetko môžeš pustiť hneď.' : `${go} ${zFrom(n)} ${n} vecí môžeš pustiť hneď.`;
-    if (state === 'go' && window)
-        return {
-            label: 'Ide hneď · zo slnka',
-            value: `do ${hm(window.to)}`,
-            mid: `teraz · ešte ${countdownText(window.to - nowMin)}`,
-            text,
-        };
-    if (state === 'wait' && window)
-        return {
-            label: 'Slnko príde',
-            value: `o ${hm(window.from)}`,
-            mid: `teraz · slnko za ${countdownText(window.from - nowMin)}`,
-            text,
-        };
-    return { label: state === 'slabo' ? 'Dnes slnko nestačí' : 'Dnes už nie', value: '', mid: 'teraz', text: stripText };
-}
-
 // ---- Karta Môžem? v novej appke „Živá obloha“ (obloha/) ----------------------------
 // Odpovede, časy a vety sú tie isté ako vyššie, tu sú len texty, ktoré nový vzhľad pridáva.
 // Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka ich tak nehláskuje.
@@ -710,7 +598,6 @@ export const MOZEM_CHIPS = {
 /** Pevné texty karty: nadpisy panelu veci, tlačidlá a výzvy. */
 export const MOZEM_SKY_TEXTS = {
     retry: 'Skúsiť znova',
-    quipHint: 'ťukni, príde ďalšia',
     sheetDo: 'Čo robiť',
     sheetWhy: 'Prečo',
     close: 'Zavrieť',
@@ -727,7 +614,6 @@ const MOZEM_CHIPS_SLUSNE = { ...MOZEM_CHIPS, wait: 'Počkajte' };
 /** @type {typeof MOZEM_SKY_TEXTS} */
 const MOZEM_SKY_TEXTS_SLUSNE = {
     ...MOZEM_SKY_TEXTS,
-    quipHint: 'ťuknite pre ďalší tip',
     guessTitle: 'Toto je len odhad',
     guessBtn: 'Zadajte panely',
     askTitle: 'Kde máte strechu?',
@@ -1092,7 +978,6 @@ const DRZY = {
     NIGHT_MESSAGES,
     PRICE_MESSAGES,
     MOZEM_WORDS,
-    MOZEM_QUIPS,
     MOZEM_ITEM_TEXTS,
     MOZEM_ALWAYS,
     MOZEM_UNKNOWN,
@@ -1108,7 +993,6 @@ const SLUSNY = {
     NIGHT_MESSAGES: NIGHT_MESSAGES_SLUSNE,
     PRICE_MESSAGES: PRICE_MESSAGES_SLUSNE,
     MOZEM_WORDS: MOZEM_WORDS_SLUSNE,
-    MOZEM_QUIPS: MOZEM_QUIPS_SLUSNE,
     MOZEM_ITEM_TEXTS: MOZEM_ITEM_TEXTS_SLUSNE,
     MOZEM_ALWAYS: MOZEM_ALWAYS_SLUSNE,
     MOZEM_UNKNOWN: MOZEM_UNKNOWN_SLUSNE,

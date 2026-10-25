@@ -76,7 +76,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         weekDetail: null,
         infoOpen: null,
         mozemSummary: false,
-        mozemList: false,
+        mozemItem: null,
         stavTip: false,
     });
     assert.deepEqual(panelChange('nastavenie', '7dni'), {
@@ -85,7 +85,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         weekDetail: null,
         infoOpen: null,
         mozemSummary: false,
-        mozemList: false,
+        mozemItem: null,
         stavTip: false,
     });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
@@ -103,12 +103,12 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
         roof: 0,
         info: null,
         summary: false,
-        list: false,
+        item: null,
     });
     // Súhrn v karte Môžem? je obrazovka - Späť ju zavrie.
     assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemSummary: true })));
     // Zoznam vecí v karte Môžem? tiež.
-    assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemList: true })));
+    assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemItem: 'pracka' })));
     // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, panel: '7dni' })));
@@ -134,7 +134,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             roof: 0,
             info: null,
             summary: false,
-            list: false,
+            item: null,
         }),
         {
             panel: '7dni',
@@ -144,7 +144,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupRoof: 0,
             infoOpen: null,
             mozemSummary: false,
-            mozemList: false,
+            mozemItem: null,
             stavTip: false,
             setupReturn: null,
         },
@@ -158,7 +158,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             roof: 0,
             info: null,
             summary: false,
-            list: false,
+            item: null,
         }),
         {
             panel: '7dni',
@@ -168,7 +168,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupRoof: 0,
             infoOpen: null,
             mozemSummary: false,
-            mozemList: false,
+            mozemItem: null,
             stavTip: false,
             setupReturn: null,
         },
@@ -182,7 +182,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         roof: 1,
         info: null,
         summary: false,
-        list: false,
+        item: null,
     });
     assert.equal(smer.setupStep, 'smer');
     assert.equal(smer.setupRoof, 1);
@@ -195,7 +195,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             roof: 0,
             info: null,
             summary: false,
-            list: false,
+            item: null,
         }).setupReturn,
         null,
     );
@@ -208,7 +208,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             roof: 0,
             info: 'share',
             summary: false,
-            list: false,
+            item: null,
         }).infoOpen,
         'share',
     );
@@ -220,7 +220,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             roof: 0,
             info: null,
             summary: false,
-            list: false,
+            item: null,
         }).infoOpen,
         null,
     );
@@ -234,13 +234,15 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         roof: 0,
         info: null,
         summary: false,
-        list: false,
+        item: null,
         ...x,
     });
     assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', summary: true }) }), krok({ panel: 'mozem', summary: true }));
     assert.equal(navStepFrom({ step: krok({ summary: 'áno' }) }), null, 'súhrn je áno alebo nie');
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', list: true }) }), krok({ panel: 'mozem', list: true }));
-    assert.equal(navStepFrom({ step: krok({ list: 1 }) }), null, 'zoznam je áno alebo nie');
+    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', item: 'velke' }) }), krok({ panel: 'mozem', item: 'velke' }));
+    assert.equal(navStepFrom({ step: krok({ item: 1 }) }), null, 'panel veci je id alebo nič');
+    // Položka zo staršej verzie so zrušeným zoznamom vecí sa vráti na kartu.
+    assert.deepEqual(navStepFrom({ step: { ...krok({ panel: 'mozem' }), list: true } }), krok({ panel: 'mozem' }));
     // Položka zo staršej verzie s otvoreným popupom k ciferníku (zanikol) vráti kartu bez neho.
     assert.deepEqual(navStepFrom({ step: { ...krok({ panel: 'terazky' }), guide: true } }), krok({ panel: 'terazky' }));
     assert.deepEqual(navStepFrom({ step: krok({ weekDetail: 'day' }) }), krok({ weekDetail: 'day' }));

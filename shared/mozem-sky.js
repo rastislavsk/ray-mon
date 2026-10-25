@@ -1,22 +1,12 @@
 // Karta Môžem? v novej appke „Živá obloha“ (obloha/). Počíta sa to isté ako v súčasnej appke
-// (mozemModel v shared/mozem.js), tu sa to len skladá pre nový vzhľad: štítky nad slovom, fakt
-// v mobiloch, dlaždice skupín vecí, panel veci či skupiny, oblúk slnka a výzvy. Čisté funkcie - čas, dáta
+// (mozemModel v shared/mozem.js, aj dlaždice skupín vecí), tu sa to len skladá pre nový vzhľad:
+// štítky nad slovom, fakt v mobiloch, oblúk slnka a výzvy. Čisté funkcie - čas, dáta
 // aj to, či je internet, prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { HOUR_RANGE } from './chart-model.js';
-import { installedKw, MOZEM_GROUPS, TYPICAL_PLANT } from './config.js';
+import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
-import {
-    MOZEM_GROUP_ALWAYS,
-    MOZEM_GROUP_NAMES,
-    mozemGuessText,
-    mozemListTitle,
-    mozemOfflineText,
-    mozemPhonesText,
-    mozemTileNote,
-    mozemTileValue,
-    voiceTexts,
-} from './messages-core.js';
+import { mozemGuessText, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages-core.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
@@ -62,17 +52,13 @@ export function pvStatus({ now, site, pv, zdroj }) {
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input
- * @param {{ quip?: number, online?: boolean, voice?: import('./messages.js').Voice }} [opts]
- *   stránka hlášok, či má telefón internet a tón hlášok
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts] či má telefón internet a tón textov
  */
-export function mozemSkyModel(input, { quip = 0, online = true, voice = 'drzy' } = {}) {
+export function mozemSkyModel(input, { online = true, voice = 'drzy' } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, quip, { voice });
+    const m = mozemModel(input, { voice });
     const f = m.facts;
     const offline = m.state === 'offline';
-    // Kým sa načítava, karta nič netvrdí - ani „neviem“ pri veciach, ani hlášku navyše k vete.
-    const loading = m.state === 'loading';
-    const items = m.items.map(sheetItem);
     return {
         ask: false,
         state: m.state,
@@ -82,67 +68,11 @@ export function mozemSkyModel(input, { quip = 0, online = true, voice = 'drzy' }
         phones: f ? phonesOf(input, f, m.estimate) : '',
         retry: offline,
         guess: m.estimate ? mozemGuessText(installedKw(TYPICAL_PLANT), voice) : '',
-        list: listOf(m.estimate, loading),
-        items,
-        groups: groupsOf(m, items),
-        quip: loading ? '' : m.quip,
+        list: m.list,
+        items: m.items,
+        groups: m.groups,
         arc: sunArc(input.now, input.site, f ? f.window : null),
     };
-}
-
-/** Nadpis dlaždíc vecí, pri typickej streche s odhadom. Kým sa načítava, dlaždice nie sú. @param {boolean} estimate @param {boolean} loading */
-const listOf = (estimate, loading) => (loading ? null : { title: mozemListTitle(estimate), estimate });
-
-/** Poradie odpovedí od najlepšej: dlaždica skupiny ukáže najlepšiu odpoveď svojich vecí. */
-const RANK = { always: 0, go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
-
-/**
- * Dlaždice skupín (MOZEM_GROUPS): jedna odpoveď za skupinu. `key` je to, čo ťuknutie otvorí -
- * pri jednej veci jej panel, pri viacerých panel skupiny so zoznamom vecí. Pri viacerých veciach
- * riadok pod odpoveďou vymenuje tie, ktoré odpovedajú inak; pri jednej veci povie,
- * odkiaľ pôjde prúd. Široká dlaždica má pás dňa s oknom slnka.
- * @param {ReturnType<typeof mozemModel>} m @param {ReturnType<typeof sheetItem>[]} items
- */
-function groupsOf(m, items) {
-    return MOZEM_GROUPS.map((g) => {
-        const own = m.items.filter((it) => g.items.includes(it.id));
-        const best = own.reduce((a, b) => (RANK[b.answer.kind] < RANK[a.answer.kind] ? b : a));
-        const name = MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)];
-        const value = mozemTileValue(best.answer, best.short);
-        const base = { id: g.id, size: g.size, name, items: g.items };
-        if (own.length === 1) {
-            return { ...base, key: best.id, value, tone: best.tone, note: mozemTileNote(best.answer), bar: null, sheet: null };
-        }
-        const note = own
-            .filter((it) => it.tone !== best.tone)
-            .map((it) => `${it.name} ${it.short}`)
-            .join(' · ');
-        const always = own.every((it) => it.answer.kind === 'always');
-        return {
-            ...base,
-            key: g.id,
-            value,
-            tone: best.tone,
-            note,
-            bar: g.size === 'wide' ? barOf(m.strip) : null,
-            sheet: {
-                title: `${name}: ${value}`,
-                lead: always ? MOZEM_GROUP_ALWAYS : (m.strip?.text ?? ''),
-                rows: items.filter((it) => g.items.includes(it.id)),
-            },
-        };
-    });
-}
-
-/**
- * Pás dňa v dlaždici: okno slnka a „teraz“ v percentách produkčného okna grafov (HOUR_RANGE)
- * a časy pod ním. Bez okna pás nie je.
- * @param {{ left: number, width: number, now: number } | null} strip
- */
-function barOf(strip) {
-    if (!strip || !strip.width) return null;
-    const { min, max } = HOUR_RANGE;
-    return { left: strip.left, width: strip.width, now: strip.now, ticks: [min, (min + max) / 2, max].map((h) => `${h}:00`) };
 }
 
 /** Štítky nad slovom: odpoveď a lacná či drahá sieť teraz. @param {ReturnType<typeof mozemModel>} m @param {import('./messages.js').Voice} voice @returns {Chip[]} */
@@ -174,24 +104,6 @@ export function offlineLead(input, online, voice = 'drzy') {
     return mozemOfflineText({ online, zdroj: !!input.zdroj, pvOk: pv.ok, pvSince: pv.since }, voice);
 }
 
-/**
- * Vec v zozname a v jej paneli: riadok (meno, krátka odpoveď, farba), nadpis panelu, „čo robiť“,
- * „prečo“ a otázka s odpoveďou.
- * @param {ReturnType<typeof mozemModel>['items'][number]} it
- */
-function sheetItem(it) {
-    return {
-        id: it.id,
-        name: it.name,
-        short: it.short,
-        tone: it.tone,
-        title: `${it.name}: ${it.short}`,
-        head: it.head,
-        text: it.text,
-        more: it.more,
-    };
-}
-
 /** Karta bez odpovede (appka nepozná polohu). */
 function emptyCard() {
     return {
@@ -203,9 +115,8 @@ function emptyCard() {
         retry: false,
         guess: '',
         list: null,
-        items: /** @type {ReturnType<typeof sheetItem>[]} */ ([]),
-        groups: /** @type {ReturnType<typeof groupsOf>} */ ([]),
-        quip: '',
+        items: /** @type {ReturnType<typeof mozemModel>['items']} */ ([]),
+        groups: /** @type {ReturnType<typeof mozemModel>['groups']} */ ([]),
     };
 }
 
