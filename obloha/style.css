@@ -967,9 +967,11 @@ button.live[aria-expanded='true'] {
     margin-top: 10px;
 }
 /* Zoznam pod grafom: prvý riadok (legenda a šípka) je tlačidlo, zvyšok vidno až po ťuknutí. */
+/* Spodný okraj: od pásu odporúčaní pod ním aspoň 8 px, aby sa ťuknutie netrafilo vedľa. */
 .tz-list {
     display: block;
     padding: 0;
+    margin-bottom: 8px;
 }
 .list-head {
     width: 100%;
