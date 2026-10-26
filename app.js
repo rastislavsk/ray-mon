@@ -9,6 +9,7 @@ import {
     initUrlMirror,
     loadDayLog,
     loadOdmietnutie,
+    loadOznamenia,
     loadSettings,
     loadSite,
     loadStartPanel,
@@ -16,6 +17,7 @@ import {
     loadVymazane,
 } from './web/settings-store.js';
 import { createStore, initialState } from './web/state.js';
+import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.js';
 
 // Jediná šírka, o ktorej appka vie: od 768 px kreslí grafy na skutočný rozmer karty.
 // Zvyšok rozloženia (vrátane desktopu od 1024 px) rieši CSS samo.
@@ -43,10 +45,14 @@ const store = createStore({
     ...initialState(now, layout, { saved, site, incoming, startPanel }),
     dayLog: loadDayLog(),
     pristup: loadOdmietnutie(),
+    oznamenia: loadOznamenia(),
+    oznamStav: oznamStav(),
     linkError: link?.error ?? null,
 });
 
 initUrlMirror(store);
+initOznamZrkadlo(store, './', './');
+initOznamZosulad(store, './');
 store.subscribe((state) => render(state, dom));
 const refresh = initInteractions(store, dom, mq);
 render(store.get(), dom);

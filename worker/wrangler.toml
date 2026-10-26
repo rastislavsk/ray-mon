@@ -9,3 +9,13 @@ compatibility_date = "2026-08-29"
 # Uchovávanie logov, aby sa dala dohľadať príčina zlyhania spätne, nielen v živom výpise.
 [observability]
 enabled = true
+
+# Odbery ranného oznámenia: adresa, kam telefón zobudiť, hodina a časové pásmo
+# (worker/src/oznamenia.js). Nič iné Worker neukladá.
+[[kv_namespaces]]
+binding = "ODBERY"
+id = "51a2f040218742d2addba28299417769"
+
+# Budenie ranných oznámení a pripomienok každú štvrťhodinu (OZNAMENIA.stepMin v shared/config.js).
+[triggers]
+crons = ["*/15 * * * *"]

@@ -140,7 +140,7 @@ oblohe, z ktorého vychádza údaj „využitie“. Počasie sa sťahuje najviac
 Huawei FusionSolar, kľúč z Fox ESS, token zo SolaX alebo Victron), tomu appka stiahne meranie cez Worker
 (každú minútu, pri značkách s prísnejšími limitmi či pomalším cloudom zriedkavejšie)
 (prehliadač sa k výrobcovi priamo nedostane). Telefón drží prístup len zapečatený – otvoriť ho
-vie iba Worker, a ten si nič neukladá. Bez merania appka ukazuje odhad z predpovede.
+vie iba Worker, a ten si ho neukladá. Bez merania appka ukazuje odhad z predpovede.
 
 Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 

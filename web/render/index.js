@@ -7,6 +7,7 @@ import { renderImportOffer, renderNastavenie } from './nastavenie.js';
 import { renderSedemdni } from './sedemdni.js';
 import { renderStatistika } from './statistika.js';
 import { renderTerazky } from './terazky.js';
+import { renderOznamenia } from './oznamenia.js';
 import { renderInfo } from './zdielat.js';
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
@@ -38,5 +39,6 @@ export function render(state, dom) {
         renderNastavenie(state, dom);
         // Návod a zdieľanie sú v karte Nastavenie (sekcia Appka), kedysi mali kartu Info.
         renderInfo(state, dom);
+        renderOznamenia(state, dom);
     }
 }

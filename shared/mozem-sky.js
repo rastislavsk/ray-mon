@@ -53,9 +53,10 @@ export function pvStatus({ now, site, pv, zdroj }) {
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input
- * @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts] či má telefón internet a tón textov
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice, devices?: readonly string[] }} [opts] či má telefón
+ *   internet, tón textov a spotrebiče doma (s nimi ráta Plán dňa)
  */
-export function mozemSkyModel(input, { online = true, voice = 'drzy' } = {}) {
+export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
     const m = mozemModel(input, { voice });
     const f = m.facts;
@@ -72,7 +73,7 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy' } = {}) {
         list: m.list,
         items: m.items,
         groups: m.groups,
-        plan: planDnaModel(input, { voice }),
+        plan: planDnaModel(input, { voice, devices }),
         arc: sunArc(input.now, input.site, f ? f.window : null),
     };
 }

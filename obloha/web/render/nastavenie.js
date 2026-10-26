@@ -5,7 +5,9 @@
 // Nastaviť celé znova.
 
 import { planesCompassModel } from '../../../shared/chart-model.js';
-import { OBLOHA_URL } from '../../../shared/config.js';
+import { OBLOHA_URL, OZNAMENIA } from '../../../shared/config.js';
+import { oznameniaTexts, voiceTexts } from '../../../shared/messages-core.js';
+import { OZNAMENIA_DEVICES, oznamOvladanie } from '../../../shared/oznamenia.js';
 import { shareUrl } from '../../../shared/settings.js';
 import { savedSettings } from '../../../shared/setup-flow.js';
 import { escapeHtml } from '../../../shared/format.js';
@@ -72,6 +74,46 @@ function renderHome(state, dom) {
     setHtml(dom.nsWarn, m.warnings.map((w) => `<p class="wz-msg">${escapeHtml(w)}</p>`).join(''));
     show(dom.nsNote, !!m.note);
     setText(dom.nsNote, m.note);
+}
+
+/**
+ * Oznámenia: ranný plán dňa, hodina a spotrebiče doma. Kým sa nedajú zapnúť (iPhone v Safari,
+ * zakázané, bez polohy), prepínač je vypnutý a hláška povie prečo.
+ * @param {AppState} state @param {Dom} dom
+ */
+function renderOznamenia(state, dom) {
+    const T = oznameniaTexts(state.voice);
+    const o = state.oznamenia;
+    setText(dom.nsOznamTitle, T.title);
+    setText(dom.nsOznamLabel, T.switchSky);
+    setText(dom.nsOznamSmall, T.switchSkySmall);
+    dom.nsOznam.setAttribute('aria-checked', String(o.on));
+    const ui = oznamOvladanie(state.known, state.oznamStav, o.on);
+    const stav = T.stav[ui.stav];
+    // Kým sa zapína, nedá sa meniť nič - zmena by sa po dobehnutí prepísala.
+    const off = ui.busy ? ' disabled' : '';
+    dom.nsOznam.toggleAttribute('disabled', ui.blocked);
+    show(dom.nsOznamStav, !!stav);
+    setText(dom.nsOznamStav, stav);
+    setText(dom.nsOznamHourLabel, T.when);
+    setText(dom.nsOznamHourSmall, T.whenSmall);
+    setHtml(
+        dom.nsOznamHour,
+        OZNAMENIA.hours
+            .map((h) => `<button type="button" class="mini" data-hour="${h}" aria-pressed="${h === o.hour}"${off}>${h}:00</button>`)
+            .join(''),
+    );
+    setText(dom.nsOznamDevLabel, T.devices);
+    setText(dom.nsOznamDevSmall, T.devicesSmall);
+    const names = voiceTexts(state.voice).MOZEM_ITEM_TEXTS;
+    setHtml(
+        dom.nsOznamDev,
+        OZNAMENIA_DEVICES.map(
+            (id) =>
+                `<button type="button" class="mini" data-device="${id}" aria-pressed="${o.devices.includes(id)}"${off}>${escapeHtml(names[id].name)}</button>`,
+        ).join(''),
+    );
+    setText(dom.nsOznamNote, T.privacy);
 }
 
 /** Vzhľad: živá obloha, tón hlášok a úvodná karta. @param {AppState} state @param {Dom} dom */
@@ -150,6 +192,7 @@ export function renderNastavenie(state, dom) {
     else {
         renderHome(state, dom);
         renderLook(state, dom);
+        renderOznamenia(state, dom);
     }
     renderAppSheets(state, dom);
 }

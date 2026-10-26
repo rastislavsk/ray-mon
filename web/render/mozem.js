@@ -185,6 +185,6 @@ export function closeMozemSheet(dom) {
 export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, kick, planDnaModel(state)), 'mozemBody');
+    writeHtml(dom.mozemBody, mozemHtml(m, kick, planDnaModel(state, { devices: state.oznamenia.devices })), 'mozemBody');
     renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }

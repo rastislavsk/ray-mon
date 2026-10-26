@@ -1,6 +1,8 @@
 // Cloudflare Worker: živé meranie pre appku. Prehliadač by sa na servery výrobcov meničov priamo
-// nedostal, preto sa ich pýta tento Worker. Nič neukladá - nemá úložisko ani plánované behy.
-// Prístup k meraniu drží appka zapečatený (worker/src/pecat.js), Worker ho pri každom meraní otvorí.
+// nedostal, preto sa ich pýta tento Worker. Prístupy ani nastavenie elektrárne neukladá - prístup
+// k meraniu drží appka zapečatený (worker/src/pecat.js), Worker ho pri každom meraní otvorí.
+// Jediné, čo si pamätá, sú odbery ranného oznámenia: adresa, kam telefón zobudiť, hodina
+// a časové pásmo (worker/src/oznamenia.js), a budí ich plánovaným behom každú štvrťhodinu.
 //
 // POST /pripoj: údaje z formulára sprievodcu -> nájdené elektrárne, každá so zapečateným prístupom.
 // Pri obnove prístupu príde aj stará pečať - z nej sa doplní, čo človek nemusí zadávať znova.
@@ -8,12 +10,13 @@
 // posielali appky spred zapečatenia - vtedy k meraniu pribalí aj zapečatený prístup, appka si ho
 // uloží namiesto odkazu.
 
-import { WORKER_PRIPOJ_PATH, WORKER_PV_PATH } from '../../shared/config.js';
+import { WORKER_OZNAMENIA_PATH, WORKER_PRIPOJ_PATH, WORKER_PRIPOMEN_PATH, WORKER_PV_PATH } from '../../shared/config.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
+import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
-/** @typedef {{ PECAT_KLUC?: string }} Env */
+/** @typedef {{ PECAT_KLUC?: string } & import('./oznamenia.js').OznamEnv} Env */
 
 const HEADERS = {
     'access-control-allow-origin': '*',
@@ -145,12 +148,22 @@ export async function handlePripoj(request, env, now, fetchImpl) {
     }
 }
 
+/** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
+const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
+
 /** @param {Request} request @param {Env} [env] @param {Date} [now] @param {typeof fetch} [fetchImpl] */
 export async function handleRequest(request, env = {}, now = new Date(), fetchImpl = fetch) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: HEADERS });
     const path = new URL(request.url).pathname;
-    if (path !== WORKER_PV_PATH && path !== WORKER_PRIPOJ_PATH) return json(404, { error: 'neznáma cesta' });
+    const paths = [WORKER_PV_PATH, WORKER_PRIPOJ_PATH, WORKER_OZNAMENIA_PATH, WORKER_PRIPOMEN_PATH];
+    if (!paths.includes(path)) return json(404, { error: 'neznáma cesta' });
     if (request.method !== 'POST') return json(405, { error: 'nepovolená metóda' });
+    if (path === WORKER_OZNAMENIA_PATH || path === WORKER_PRIPOMEN_PATH) {
+        const body = await telo(request);
+        // Zlyhaný zápis do KV (denný limit zápisov) je 503 s hlavičkami CORS, nie holá chyba Workera.
+        const status = await (path === WORKER_OZNAMENIA_PATH ? ulozOdber(body, env) : ulozPripomienku(body, env, now)).catch(() => 503);
+        return oznamOdpoved(status);
+    }
     return path === WORKER_PV_PATH ? handlePv(request, env, now, fetchImpl) : handlePripoj(request, env, now, fetchImpl);
 }
 
@@ -158,5 +171,12 @@ export default {
     /** @param {Request} request @param {Env} env */
     fetch(request, env) {
         return handleRequest(request, env);
+    },
+    /**
+     * Plánovaný beh (cron vo wrangler.toml): zobudí telefóny, ktorým nastal čas oznámenia.
+     * @param {{ scheduledTime: number }} controller @param {Env} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx
+     */
+    scheduled(controller, env, ctx) {
+        ctx.waitUntil(budenie(env, new Date(controller.scheduledTime), fetch));
     },
 };

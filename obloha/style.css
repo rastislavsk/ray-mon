@@ -3143,3 +3143,22 @@ button.live[aria-expanded='true'] {
         animation: none !important;
     }
 }
+
+/* ===== Nastavenie › Oznámenia ===== */
+/* Hláška, prečo sa oznámenia nedajú zapnúť, a riadok o súkromí. Spotrebiče sa pri úzkom displeji zalomia. */
+.oznam-stav,
+.oznam-note {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+.oznam-stav {
+    color: #fff;
+}
+.set .it.oznam-dev {
+    flex-wrap: wrap;
+}
+.oznam-dev .minis {
+    flex-wrap: wrap;
+}

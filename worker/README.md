@@ -1,8 +1,9 @@
 # Worker `ray-mon`
 
 Živé meranie pre appku. Prehliadač sa na servery výrobcov meničov priamo nedostane, preto sa
-ich za neho pýta tento Worker. Nič neukladá: nemá úložisko ani plánované behy. Má jediné
-tajomstvo – kľúč na zapečatenie prístupu. Predpoveď si appka počíta sama v prehliadači.
+ich za neho pýta tento Worker. Prístupy ani nastavenie elektrárne neukladá. Jediné, čo si
+pamätá, sú odbery ranného oznámenia (KV `ODBERY`, nižšie), a každú štvrťhodinu ich budí plánovaným
+behom. Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
 
 Spôsoby pripojenia sú v `shared/zdroje.js` (čo vidí človek) a vo `src/zdroje.js` (ako sa
 Worker pripojí a meria). Dnes kiosk Huawei FusionSolar, kľúč Fox ESS (Open API, podpísané
@@ -125,6 +126,50 @@ pribalí jeho pečať a appka si ju uloží namiesto odkazu.
 - Telo je `text/plain` (aj JSON pri `/pripoj`), takže prehliadač nerobí predbežnú CORS požiadavku.
 - Telo dlhšie než 10 000 znakov dostane 400.
 - Iné cesty vracajú 404, iné metódy 405, `OPTIONS` dostane 204. Odpovede sa necachujú.
+
+## Ranné oznámenie: `POST /oznamenia`, `POST /pripomen` a budenie
+
+Telefón, ktorý si v Nastavení zapne ranný plán dňa, sa prihlási k Web Push a pošle sem
+`{ endpoint, on: true, hour, tz }` – adresu odberu, hodinu (7, 8 alebo 9, `OZNAMENIA.hours`)
+a časové pásmo elektrárne (v ňom sa ráta zvolená hodina; keď sa poloha zmení, appka ho pošle znova).
+`on: false` odber zruší. Worker si to uloží do KV `ODBERY` pod kľúč
+`o:<odtlačok adresy>` a všetko dá do metadát kľúča. Polohu, panely, tarifu ani prístup
+k meraniu nepozná – plán si telefón vypočíta sám (`sw.js`, `shared/oznamenia.js`).
+
+`POST /pripomen` s `{ endpoint, at }` objedná jednorazové budenie (tlačidlo „Pripomeň o …“
+v oznámení na Androide), najviac `OZNAMENIA.remindMaxH` hodín dopredu. Kľúč `p:…` hodinu po
+svojom čase sám vyprší.
+
+Plánovaný beh (`[triggers] crons` vo `wrangler.toml`, každých 15 minút) prečíta zoznam odberov
+(jedna operácia `list` na 1 000 kľúčov, metadáta prídu s ním) a pošle **prázdny push** tým, ktorým
+v ich pásme práve nastala zvolená hodina, a pripomienkam, ktorých čas prišiel. Bez obsahu netreba
+šifrovať telo, stačí podpis VAPID (`src/webpush.js`, WebCrypto, bez knižnice). Adresa odberu musí
+byť https a patriť známej push službe (`OZNAMENIA.pushHosts`) – inak by Worker posielal
+požiadavky kamkoľvek. Odber, ktorý push služba už nepozná (404, 410), Worker zmaže.
+
+Na bezplatnom pláne má KV denne 1 000 zápisov a 1 000 operácií `list`. Budenie spraví 192 `list`
+denne (odbery a pripomienky, plus jednu na každých ďalších 1 000 kľúčov), zápis je len pri zapnutí
+či zmene a pri pripomienke. Zlyhaný zápis vráti 503 a appka povie, že sa to nepodarilo.
+
+Jeden plánovaný beh smie na bezplatnom pláne poslať najviac 50 požiadaviek – teda okolo 48 pushov
+v jednej štvrťhodine (kľúč VAPID sa importuje raz za beh). Keby odberov pribudlo viac, treba
+Workers Paid alebo rozložiť budenie; koľko pushov zlyhalo, píše log `budenie: … zlyhalo`.
+Odbery samy nevypršia, mažú sa pri vypnutí alebo keď push služba povie 404 či 410.
+
+Prečo nie Durable Object s alarmom: migráciu Durable Objectu nejde nahrať cez
+`wrangler versions upload`, ktorým sa nasadzujú pull requesty – každý taký PR by v CI spadol.
+
+### Nastavenie (raz)
+
+```bash
+cd worker
+npx wrangler kv namespace create ODBERY        # id z výpisu patrí do wrangler.toml
+npx wrangler secret put VAPID_JWK              # súkromný kľúč VAPID ako JWK (JSON)
+```
+
+Verejný kľúč VAPID je v `shared/config.js` (`OZNAMENIA.vapidPublic`); súkromný k nemu patrí
+len do tajomstva `VAPID_JWK`, nikdy do repozitára. Nový pár kľúčov znamená, že sa každý telefón
+musí prihlásiť znova (vypnúť a zapnúť oznámenia).
 
 ## Denný limit a obmedzenie počtu požiadaviek
 
