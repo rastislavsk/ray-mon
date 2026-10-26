@@ -132,10 +132,22 @@
                         aria-describedby="tz-chart-desc"
                     ></div>
                     <p id="tz-chart-desc" class="sr"></p>
-                    <p id="tz-legend" class="legend"></p>
-                    <div class="hint">
-                        <span id="tz-hint"></span>
+                    <!-- „Späť na teraz“ nad zoznamom: pod otvoreným zoznamom by vypadol z obrazovky. -->
+                    <div class="reset-row">
                         <button type="button" id="tz-reset" class="hint-btn"></button>
+                    </div>
+                    <!-- Zoznam pod grafom: zatvorený ukáže prvý riadok legendy, otvorený farby pásu
+                     a hodnoty v čase bodu grafu (docs/navrhy/teraz-rozbalovaci-zoznam.html). -->
+                    <div class="glass tz-list">
+                        <button type="button" id="tz-list-btn" class="list-head" aria-expanded="false" aria-controls="tz-list-body">
+                            <span id="tz-legend" class="legend"></span><span class="chev" aria-hidden="true"></span>
+                        </button>
+                        <div id="tz-list-body" class="list-body hidden">
+                            <p id="tz-bands" class="legend"></p>
+                            <p id="tz-when" class="list-when"></p>
+                            <ul id="tz-values" class="values"></ul>
+                            <p id="tz-hint" class="list-hint"></p>
+                        </div>
                     </div>
                 </div>
                 <div id="tz-recs">

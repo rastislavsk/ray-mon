@@ -24,17 +24,24 @@ import {
     mozemOfflineText,
     TERAZ_TEXTS,
     TERAZ_TONES,
+    terazBandNext,
+    terazBandText,
     terazChartText,
     terazClearText,
+    terazCloudText,
+    terazKwText,
     terazLaterText,
+    terazLimitFrom,
+    terazLimitGap,
     terazPreviewTime,
+    terazReadoutWhen,
     terazSliderText,
     terazSourceText,
     terazTodayText,
     terazTypicalText,
     terazWindowText,
 } from '../shared/messages.js';
-import { deviceShorts } from '../shared/mozem.js';
+import { deviceShorts, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { terazModel } from '../shared/teraz.js';
@@ -394,10 +401,76 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
     assert.equal(m.chart.valueText, terazSliderText(hm(13), false, hero.powerText, 'sun'));
     assert.deepEqual(m.hint, { text: TERAZ_TEXTS.hint, reset: false });
     assert.deepEqual(
-        m.chart.legend.map((l) => l.text),
-        [DAY_CHART_KEYS.power, DAY_CHART_KEYS.forecast, DAY_CHART_KEYS.cloud, TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
+        m.chart.keys.map((l) => l.text),
+        [DAY_CHART_KEYS.power, DAY_CHART_KEYS.forecast, DAY_CHART_KEYS.cloud],
+    );
+    assert.deepEqual(
+        m.chart.bands.map((l) => l.text),
+        [TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
     );
     assert.match(m.chart.desc, /^Výroba počas dňa\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
+});
+
+test('terazModel: zoznam pod grafom ukáže hodnoty v čase bodu grafu tak, ako ich kreslí graf', () => {
+    const i = input(at('13:00'));
+    const r = /** @type {NonNullable<ReturnType<typeof terazModel>['chart']>} */ (terazModel(i).chart).readout;
+    const hero = heroModel(i);
+    const hourly = /** @type {NonNullable<typeof i.forecast>} */ (i.forecast).hourlyToday;
+    const h13 = /** @type {{ kw: number, cloud: number }} */ (hourly.find((p) => p.hour === 13));
+    const limit = powerThresholds(PLANT).lowKw;
+    assert.equal(r.when, 'Teraz 13:00');
+    assert.deepEqual(
+        r.rows.map((x) => x.tone),
+        ['power', 'forecast', 'cloud', 'limit', 'sun'],
+    );
+    assert.equal(r.rows[0].value, terazKwText(hero.power));
+    // V celej hodine je predpoveď presne bod čiary, oblačnosť bunka tej hodiny.
+    assert.equal(r.rows[1].value, terazKwText(h13.kw));
+    assert.equal(r.rows[2].value, `${Math.round(h13.cloud)} %`);
+    assert.equal(r.rows[3].sub, terazLimitFrom(limit));
+    assert.equal(r.rows[3].value, terazLimitGap(hero.power, limit));
+    assert.match(r.rows[3].value, /^navyše \d+,\d\d kW$/);
+    // Úsek pásu plánu: zelený úsek, v ktorom 13:00 je, a čo po ňom príde.
+    const sun = planWindows(dayPlan(i), (s) => slotTone(s) === 'sun').find((w) => w.from <= hm(13) && hm(13) < w.to);
+    assert.equal(r.rows[4].text, `slnko stačí do ${terazPreviewTime(/** @type {{ to: number }} */ (sun).to)}`);
+    assert.match(r.rows[4].sub, /^potom /);
+});
+
+test('terazModel: zoznam pod grafom ide za náhľadom, na konci dňa nič nepríde', () => {
+    const r = (/** @type {number} */ min) =>
+        /** @type {NonNullable<ReturnType<typeof terazModel>['chart']>} */ (terazModel(input(at('13:00'), { previewMinutes: min })).chart)
+            .readout;
+    const night = r(hm(21));
+    assert.equal(night.when, 'O 21:00');
+    assert.equal(night.rows[0].value, '0,00 kW');
+    assert.match(night.rows[3].value, /^chýba /);
+    const last = r(hm(23, 45));
+    assert.match(last.rows[4].text, / do 24:00$/);
+    assert.equal(last.rows[4].sub, '');
+});
+
+test('texty zoznamu pod grafom: pomlčka bez údaja, chýba či navyše podľa hranice', () => {
+    assert.equal(terazKwText(NaN), '–');
+    assert.equal(terazKwText(1.234), '1,23 kW');
+    assert.equal(terazCloudText(null), '–');
+    assert.equal(terazCloudText(62.4), '62 %');
+    assert.equal(terazLimitGap(NaN, 2), '–');
+    assert.equal(terazLimitGap(1.5, 2), 'chýba 0,50 kW');
+    assert.equal(terazLimitGap(2, 2), 'navyše 0,00 kW');
+    assert.equal(terazLimitFrom(2.088), 'od 2,1 kW');
+    assert.equal(terazBandText('costly', MINUTES_PER_DAY), 'drahá sieť do 24:00');
+    assert.equal(terazBandNext(null), '');
+    assert.equal(terazBandNext('cheap'), 'potom lacná sieť');
+    assert.equal(terazReadoutWhen(hm(8, 15), false), 'Teraz 08:15');
+});
+
+test('terazModel: zoznam pod grafom bez hodinovej predpovede dneška píše pomlčky', () => {
+    const i = input(at('13:00'));
+    const f = /** @type {NonNullable<typeof i.forecast>} */ (i.forecast);
+    const m = terazModel({ ...i, forecast: { ...f, hourlyToday: [] } });
+    const rows = /** @type {NonNullable<typeof m.chart>} */ (m.chart).readout.rows;
+    assert.equal(rows[1].value, '–');
+    assert.equal(rows[2].value, '–');
 });
 
 test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „teraz“ v grafe ostáva', () => {

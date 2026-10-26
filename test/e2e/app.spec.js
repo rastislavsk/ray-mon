@@ -286,7 +286,7 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
     await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('13:00');
-    await expect(page.locator('#tz-legend span')).toHaveText(m.chart.legend.map((l) => l.text));
+    await expect(page.locator('#tz-legend span')).toHaveText(m.chart.keys.map((l) => l.text));
     await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart.valueText);
     await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart.desc);
     await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
@@ -435,6 +435,40 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await expect(spat).toBeHidden();
     await expect(page.locator('#tz-chart')).toBeFocused();
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
+    expect(errors).toEqual([]);
+});
+
+test('zoznam pod grafom: zatvorený len prvý riadok legendy, po ťuknutí farby pásu a hodnoty, ktoré idú za náhľadom', async ({ page }) => {
+    const errors = await openApp(page, { start: 'terazky' });
+    const { instant } = atTime('13:00');
+    const chart = (/** @type {object} */ extra = {}) => {
+        const c = terazAt(instant, extra).chart;
+        if (!c) throw new Error('model nemá graf');
+        return c;
+    };
+    const riadky = (/** @type {ReturnType<typeof chart>} */ c) => c.readout.rows.map((r) => `${r.text}${r.sub}${r.value}`);
+    const btn = page.locator('#tz-list-btn');
+    await expect(page.locator('#tz-legend span')).toHaveText(chart().keys.map((l) => l.text));
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#tz-list-body')).toBeHidden();
+    await btn.click();
+    await expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#tz-bands span')).toHaveText(chart().bands.map((l) => l.text));
+    await expect(page.locator('#tz-when')).toHaveText('Teraz 13:00');
+    await expect(page.locator('#tz-values li')).toHaveText(riadky(chart()));
+    await expect(page.locator('#tz-hint')).toBeVisible();
+    // Náhľad: hodnoty sú v čase pod prstom, zoznam ostáva otvorený a „Späť na teraz“ je nad ním.
+    await page.locator('#tz-chart').focus();
+    await page.keyboard.press('ArrowRight');
+    const nahlad = chart({ previewMinutes: minuta('13:15') });
+    await expect(page.locator('#tz-when')).toHaveText('O 13:15');
+    await expect(page.locator('#tz-values li')).toHaveText(riadky(nahlad));
+    const reset = await page.locator('#tz-reset').boundingBox();
+    const zoznam = await page.locator('.tz-list').boundingBox();
+    expect(reset && zoznam && reset.y + reset.height <= zoznam.y).toBe(true);
+    await btn.click();
+    await expect(page.locator('#tz-list-body')).toBeHidden();
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
     expect(errors).toEqual([]);
 });
 

@@ -115,11 +115,15 @@ export function planLegend(cells) {
  * @param {Array<{ tone: Tone }>} cells @returns {Array<{ tone: string, text: string }>}
  */
 export function chartLegend(cells) {
+    return [...chartKeys(), ...planLegend(cells)];
+}
+
+/** Prvý riadok legendy grafu dňa: čiary výkonu a predpovede a riadok oblačnosti. */
+export function chartKeys() {
     return [
         { tone: 'power', text: DAY_CHART_KEYS.power },
         { tone: 'forecast', text: DAY_CHART_KEYS.forecast },
         { tone: 'cloud', text: DAY_CHART_KEYS.cloud },
-        ...planLegend(cells),
     ];
 }
 

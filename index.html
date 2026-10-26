@@ -167,10 +167,22 @@
                         aria-describedby="tz-chart-desc"
                     ></div>
                     <p id="tz-chart-desc" class="sr-only"></p>
-                    <p id="tz-legend" class="tz-legend"></p>
-                    <div class="tz-hint">
-                        <span id="tz-hint"></span>
+                    <!-- „Späť na teraz“ nad zoznamom: pod otvoreným zoznamom by vypadol z obrazovky. -->
+                    <div class="tz-reset-row">
                         <button type="button" id="tz-reset" class="tz-reset hidden"></button>
+                    </div>
+                    <!-- Zoznam pod grafom: zatvorený ukáže prvý riadok legendy, otvorený farby pásu
+                     a hodnoty v čase bodu grafu (docs/navrhy/teraz-rozbalovaci-zoznam.html). -->
+                    <div class="tz-list">
+                        <button type="button" id="tz-list-btn" class="tz-list-head" aria-expanded="false" aria-controls="tz-list-body">
+                            <span id="tz-legend" class="tz-legend"></span><span class="tz-chev" aria-hidden="true"></span>
+                        </button>
+                        <div id="tz-list-body" class="tz-list-body hidden">
+                            <p id="tz-bands" class="tz-legend"></p>
+                            <p id="tz-when" class="tz-when"></p>
+                            <ul id="tz-values" class="tz-values"></ul>
+                            <p id="tz-hint" class="tz-list-hint"></p>
+                        </div>
                     </div>
                 </div>
                 <!-- Pás odporúčaní listuje a prichytáva prehliadač sám (scroll-snap), karty sú užšie než pás,

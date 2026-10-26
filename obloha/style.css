@@ -912,46 +912,165 @@ button.live[aria-expanded='true'] {
     gap: 6px;
     align-items: center;
 }
-.legend span::before {
+.legend span::before,
+.values span::before {
     content: '';
     width: 12px;
     height: 7px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.3);
 }
-.legend [data-tone='sun']::before {
+.legend [data-tone='sun']::before,
+.values [data-tone='sun']::before {
     background: var(--yes);
 }
-.legend [data-tone='cheap']::before {
+.legend [data-tone='cheap']::before,
+.values [data-tone='cheap']::before {
     background: var(--cheap);
 }
-.legend [data-tone='costly']::before {
+.legend [data-tone='costly']::before,
+.values [data-tone='costly']::before {
     background: var(--costly);
 }
 /* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, predpoveď prerušovane, oblačnosť od jasna po zamračené. */
-.legend [data-tone='power']::before {
+.legend [data-tone='power']::before,
+.values [data-tone='power']::before {
     height: 2.5px;
     background: var(--yes);
 }
-.legend [data-tone='forecast']::before {
+.legend [data-tone='forecast']::before,
+.values [data-tone='forecast']::before {
     height: 0;
     border-top: 2px dashed rgba(185, 242, 140, 0.6);
     border-radius: 0;
     background: none;
 }
-.legend [data-tone='cloud']::before {
+.legend [data-tone='cloud']::before,
+.values [data-tone='cloud']::before {
     width: 22px;
     background: linear-gradient(90deg, #fff, #4d5560);
 }
-.hint {
+/* Hranica veľkých spotrebičov v zozname: tenká prerušovaná čiara ako v grafe. */
+.values [data-tone='limit']::before {
+    height: 0;
+    border-top: 1.5px dashed rgba(185, 242, 140, 0.8);
+    border-radius: 0;
+    background: none;
+}
+/* „Späť na teraz“ nad zoznamom, vpravo. Bez náhľadu je tlačidlo skryté a riadok nezaberá nič. */
+.reset-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
+    padding: 0 14px;
+}
+.reset-row .hint-btn {
+    margin-top: 10px;
+}
+/* Zoznam pod grafom: prvý riadok (legenda a šípka) je tlačidlo, zvyšok vidno až po ťuknutí. */
+.tz-list {
+    display: block;
+    padding: 0;
+}
+.list-head {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 44px;
-    padding: 4px 16px 0 20px;
+    padding: 6px 8px 6px 16px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+.list-head .legend,
+.list-body .legend {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+}
+.chev {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    transition: transform 0.2s;
+}
+.chev::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: translateY(-2px) rotate(45deg);
+}
+.list-head[aria-expanded='true'] .chev {
+    transform: rotate(180deg);
+}
+.list-body {
+    padding: 0 16px 12px;
+}
+/* Farby pásu: druhý riadok legendy, bez čiary pod prvým. */
+.list-body > .legend {
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.list-when {
+    margin: 8px 0 2px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.values {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.84375rem;
+}
+.values li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 36px;
+    padding: 3px 0;
+}
+.values span {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    column-gap: 12px;
+    align-items: center;
+}
+.values span::before {
+    grid-row: 1 / span 2;
+    width: 22px;
+}
+.values small {
+    grid-column: 2;
+    font-size: 0.75rem;
+    color: var(--dim);
+    line-height: 1.3;
+}
+.values b {
+    flex: none;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.list-hint:empty {
+    display: none;
+}
+.list-hint {
+    margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
     font-size: 0.8125rem;
-    color: #fff;
+    color: var(--dim);
 }
 .hint-btn {
     flex: none;

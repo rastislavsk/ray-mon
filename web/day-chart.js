@@ -115,3 +115,19 @@ export function dayChartHtml(c) {
 export function legendHtml(legend) {
     return legend.map((l) => `<span data-tone="${l.tone}">${escapeHtml(l.text)}</span>`).join('');
 }
+
+/**
+ * Riadky zoznamu pod grafom dňa na karte Terazky / Teraz: vzorka (tá istá ako v legende), slovo,
+ * pod ním drobný riadok a vpravo hodnota. Položky `<li>` do `<ul>` appky.
+ * @param {Array<{ tone: string, text: string, sub: string, value: string }>} rows
+ */
+export function readoutHtml(rows) {
+    return rows
+        .map(
+            (r) =>
+                `<li><span data-tone="${r.tone}">${escapeHtml(r.text)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</span>` +
+                (r.value ? `<b>${escapeHtml(r.value)}</b>` : '') +
+                '</li>',
+        )
+        .join('');
+}

@@ -31,6 +31,7 @@ export function initTeraz(store, dom, refresh) {
         // Tlačidlo po návrate zmizne; fokus ostane na grafe, z ktorého sa dá pokračovať.
         dom.tzChart.focus();
     });
+    dom.tzListBtn.addEventListener('click', () => store.setState({ tzListOpen: !store.get().tzListOpen }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).

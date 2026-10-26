@@ -1054,14 +1054,39 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
         await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
         await expect(page.locator('#tz-chart .dc-win-t')).toHaveCount(0);
-        await expect(page.locator('#tz-legend span')).toHaveText([
-            'výkon',
-            'predpoveď',
-            'oblačnosť',
-            'slnko stačí',
-            'lacná sieť',
-            'drahá sieť',
-        ]);
+        await expect(page.locator('#tz-legend span')).toHaveText(['výkon', 'predpoveď', 'oblačnosť']);
+        await expect(page.locator('#tz-bands span')).toHaveText(['slnko stačí', 'lacná sieť', 'drahá sieť']);
+        expect(errors).toEqual([]);
+    });
+
+    test('zoznam pod grafom: zatvorený len prvý riadok legendy, po ťuknutí farby pásu a hodnoty, ktoré idú za náhľadom', async ({
+        page,
+    }) => {
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        const chart = (/** @type {object} */ extra = {}) => {
+            const c = terazModel(vstupTeraz(time, extra)).chart;
+            if (!c) throw new Error('model nemá graf');
+            return c;
+        };
+        const riadky = (/** @type {ReturnType<typeof chart>} */ c) => c.readout.rows.map((r) => `${r.text}${r.sub}${r.value}`);
+        const btn = page.locator('#tz-list-btn');
+        await expect(btn).toHaveAttribute('aria-expanded', 'false');
+        await expect(page.locator('#tz-list-body')).toBeHidden();
+        await btn.click();
+        await expect(btn).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#tz-bands span')).toHaveText(chart().bands.map((l) => l.text));
+        await expect(page.locator('#tz-when')).toHaveText('Teraz 13:00');
+        await expect(page.locator('#tz-values li')).toHaveText(riadky(chart()));
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.locator('#tz-when')).toHaveText('O 13:15');
+        await expect(page.locator('#tz-values li')).toHaveText(riadky(chart({ previewMinutes: minuta('13:15') })));
+        const reset = await page.locator('#tz-reset').boundingBox();
+        const zoznam = await page.locator('.tz-list').boundingBox();
+        expect(reset && zoznam && reset.y + reset.height <= zoznam.y).toBe(true);
+        await btn.click();
+        await expect(page.locator('#tz-list-body')).toBeHidden();
         expect(errors).toEqual([]);
     });
 
@@ -1358,8 +1383,11 @@ for (const width of [390, 320]) {
         await page.locator('#tz-chart').focus();
         await page.keyboard.press('ArrowRight');
         await expect(page.locator('#tz-reset')).toBeVisible();
+        await page.locator('#tz-list-btn').click();
+        await expect(page.locator('#tz-values')).toBeVisible();
+        expect((await page.locator('#tz-list-btn').boundingBox())?.height).toBeGreaterThanOrEqual(44);
         const mimo = await page.evaluate(() =>
-            ['#tz-num', '#tz-src', '#tz-sub', '#tz-chart', '#tz-legend', '.hint', '#tz-reset']
+            ['#tz-num', '#tz-src', '#tz-sub', '#tz-chart', '#tz-legend', '.tz-list', '#tz-values', '#tz-reset']
                 .map((sel) => ({ sel, box: /** @type {Element} */ (document.querySelector(sel)).getBoundingClientRect() }))
                 .filter(({ box }) => box.left < 0 || box.right > innerWidth + 0.5)
                 .map(({ sel }) => sel),

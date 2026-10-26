@@ -6,17 +6,25 @@
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, MOZEM_ITEMS, powerThresholds } from './config.js';
-import { chartLegend, dayChartModel, planCells, slotTone } from './day-chart.js';
+import { chartKeys, dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { heroModel } from './hero-model.js';
 import {
+    DAY_CHART_KEYS,
+    terazBandNext,
+    terazBandText,
     terazChartText,
     terazClearText,
+    terazCloudText,
+    terazKwText,
     terazLaterText,
+    terazLimitFrom,
+    terazLimitGap,
     terazNoteText,
     terazPreviewTime,
     terazPreviewTitle,
+    terazReadoutWhen,
     terazSliderText,
     terazSourceText,
     terazTodayText,
@@ -155,6 +163,7 @@ export function todayOf(input) {
 function chartOf(input, plan, hero, now) {
     const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
     const curve = input.pv ? input.pv.realCurveToday : [];
+    const limitKw = powerThresholds(input.plant).lowKw;
     const geo = dayChartModel({
         plan,
         hourly: input.forecast ? input.forecast.hourlyToday : [],
@@ -162,7 +171,7 @@ function chartOf(input, plan, hero, now) {
         boundary: realCurveBoundary(curve, now.minutes),
         nowMin: now.minutes,
         nowKw: now.power,
-        limitKw: powerThresholds(input.plant).lowKw,
+        limitKw,
         limitText: voiceTexts().TERAZ_TEXTS.limit,
         preview: hero.preview ? { min: hero.minutes, kw: hero.power, text: terazPreviewTime(hero.minutes) } : null,
     });
@@ -179,7 +188,48 @@ function chartOf(input, plan, hero, now) {
         }),
         value: hero.minutes,
         valueText: terazSliderText(hero.minutes, hero.preview, hero.powerText, tone(hero.minutes)),
-        legend: chartLegend(planCells(plan)),
+        // Zoznam pod grafom: zatvorený ukáže prvý riadok legendy (čiary a oblačnosť), otvorený pod ním
+        // farby pásu a hodnoty vo zvolenom čase.
+        keys: chartKeys(),
+        bands: planLegend(planCells(plan)),
+        readout: readoutOf(input, plan, hero, limitKw),
+    };
+}
+
+/**
+ * Hodnoty v čase, na ktorom je bod grafu (teraz, alebo náhľad): výkon ako veľké číslo, predpoveď
+ * a oblačnosť tak, ako ich kreslí graf (čiara predpovede medzi hodinami, oblačnosť po celých
+ * hodinách), odstup od hranice veľkých spotrebičov a úsek pásu plánu, v ktorom čas je.
+ * `tone` je kľúč vzorky pre CSS appky (`data-tone`), ten istý ako v legende.
+ * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
+ * @param {ReturnType<typeof heroModel>} hero @param {number} limitKw
+ */
+function readoutOf(input, plan, hero, limitKw) {
+    const min = hero.minutes;
+    const hourly = input.forecast ? input.forecast.hourlyToday : [];
+    const forecastKw = hourly.length ? interpolate(hourly, min / 60, 'kw') : NaN;
+    const hour = hourly.find((p) => p.hour === Math.floor(min / 60));
+    const cloud = hour && Number.isFinite(hour.cloud) ? /** @type {number} */ (hour.cloud) : null;
+    const step = plan[0].min;
+    const tone = slotTone(plan[Math.floor(min / step)]);
+    const span = /** @type {{ from: number, to: number }} */ (
+        planWindows(plan, (s) => slotTone(s) === tone).find((w) => w.from <= min && min < w.to)
+    );
+    const after = plan[span.to / step];
+    return {
+        when: terazReadoutWhen(min, hero.preview),
+        rows: [
+            { tone: 'power', text: DAY_CHART_KEYS.power, sub: '', value: terazKwText(hero.power) },
+            { tone: 'forecast', text: DAY_CHART_KEYS.forecast, sub: '', value: terazKwText(forecastKw) },
+            { tone: 'cloud', text: DAY_CHART_KEYS.cloud, sub: '', value: terazCloudText(cloud) },
+            {
+                tone: 'limit',
+                text: voiceTexts().TERAZ_TEXTS.limit,
+                sub: terazLimitFrom(limitKw),
+                value: terazLimitGap(hero.power, limitKw),
+            },
+            { tone, text: terazBandText(tone, span.to), sub: terazBandNext(after ? slotTone(after) : null), value: '' },
+        ],
     };
 }
 
