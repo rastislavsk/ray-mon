@@ -10,7 +10,7 @@ v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá niž�
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `day-pager.js`, `nav-history.js`,
 `setup-wiring.js`, `settings-store.js`, `svg.js`, `qr.js`, `day-chart.js`,
-`teraz-gestures.js`), takže
+`teraz-gestures.js`, `oznamenia.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
 vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
@@ -177,6 +177,11 @@ cache, uvidí jedno obnovenie stránky navyše.
   rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
 - `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`
   a naopak. Stačí nemeniť meno `app.js` ani `#pv-updated`, kam píše hlášku.
+- Service worker ranného oznámenia (`sw.js` v koreni, pre obe appky) **súbory appky
+  necachuje** – nesmie, inak by obišiel `boot.js`. Registruje sa s `updateViaCache: 'none'`,
+  aby prehliadač bral jeho statické importy zo `shared/` vždy čerstvé (dynamický `import()`
+  service worker nesmie). Každý push musí niečo ukázať, preto pri chybe ukáže výzvu pozrieť
+  appku. Meno `sw.js` nemeň – zaregistrované telefóny by ostali na starom.
 
 Kontrolujú to e2e testy v skupine „nasadenie a cache“: starý modul musí skončiť jedným
 obnovením a naštartovanou appkou, chyba, ktorú obnovenie nevyrieši, hláškou bez slučky. Testy

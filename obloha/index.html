@@ -346,6 +346,25 @@
                                 </span>
                             </div>
                         </section>
+                        <!-- Oznámenia: ranný plán dňa a spotrebiče doma - voľba telefónu, spoločná so súčasnou
+                             appkou (oznamenia-v1). Texty, hodiny a spotrebiče skladá render. -->
+                        <section class="glass set" aria-labelledby="ns-oznam-title">
+                            <h3 id="ns-oznam-title" class="glass-ttl"></h3>
+                            <button type="button" id="ns-oznam" class="it" role="switch" aria-checked="false">
+                                <span><b id="ns-oznam-label"></b><small id="ns-oznam-small"></small></span>
+                                <i class="tg" aria-hidden="true"></i>
+                            </button>
+                            <p id="ns-oznam-stav" class="oznam-stav hidden" role="status"></p>
+                            <div class="it pick">
+                                <span><b id="ns-oznam-hour-label"></b><small id="ns-oznam-hour-small"></small></span>
+                                <span id="ns-oznam-hour" class="minis" role="group" aria-labelledby="ns-oznam-hour-label"></span>
+                            </div>
+                            <div class="it pick oznam-dev">
+                                <span><b id="ns-oznam-dev-label"></b><small id="ns-oznam-dev-small"></small></span>
+                                <span id="ns-oznam-dev" class="minis" role="group" aria-labelledby="ns-oznam-dev-label"></span>
+                            </div>
+                            <p id="ns-oznam-note" class="oznam-note"></p>
+                        </section>
                         <section class="glass set" aria-labelledby="ns-app-title">
                             <h3 id="ns-app-title" class="glass-ttl">Appka</h3>
                             <button type="button" id="ns-share" class="it" aria-haspopup="dialog">

@@ -14,6 +14,8 @@ import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
 import { clearStored, saveStartPanel } from './settings-store.js';
 import { initMozem } from './mozem-interactions.js';
+import { initOznamenia } from './oznamenia-interactions.js';
+import { vypniOznamenia } from './oznamenia.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
 import { initTerazky } from './terazky-interactions.js';
 
@@ -397,8 +399,10 @@ function initSharing(store, dom, refresh) {
  * @param {Dom} dom
  */
 function initClearData(dom) {
-    dom.clearData.addEventListener('click', () => {
+    dom.clearData.addEventListener('click', async () => {
         if (!confirm('Vymazať všetky údaje appky z tohto prehliadača? Nedá sa to vrátiť.')) return;
+        // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
+        await vypniOznamenia('./');
         clearStored();
         history.replaceState(null, '', location.pathname + location.search);
         location.reload();
@@ -478,6 +482,7 @@ export function initInteractions(store, dom, mq) {
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);
     initClearData(dom);
+    initOznamenia(store, dom);
     initStats(store, dom);
     initMozem(store, dom);
     return refresh;

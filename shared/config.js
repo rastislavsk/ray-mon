@@ -509,6 +509,12 @@ export const VLASTNA_HASH_KEY = 'vlastna';
 export const VYMAZANE_STORAGE_KEY = 'vymazane-v1';
 
 /**
+ * Ranné oznámenie na tomto telefóne: zapnuté, hodina a spotrebiče, ktoré človek má doma (podľa
+ * nich ráta aj Plán dňa na karte Môžem?). Patrí telefónu, do odkazu s nastavením nejde.
+ */
+export const OZNAMENIA_STORAGE_KEY = 'oznamenia-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -523,6 +529,7 @@ export const STORAGE_KEYS = [
     MERANIE_STORAGE_KEY,
     SUCTY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
+    OZNAMENIA_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
@@ -561,6 +568,40 @@ export const WORKER_PV_PATH = '/pv';
 export const WORKER_PV_URL = new URL(WORKER_PV_PATH, WORKER_URL).href;
 export const WORKER_PRIPOJ_PATH = '/pripoj';
 export const WORKER_PRIPOJ_URL = new URL(WORKER_PRIPOJ_PATH, WORKER_URL).href;
+// Ranné oznámenie: odber tohto telefónu (`/oznamenia`, POST uloží, s `on: false` zruší) a jednorazová
+// pripomienka z tlačidla v oznámení (`/pripomen`).
+export const WORKER_OZNAMENIA_PATH = '/oznamenia';
+export const WORKER_OZNAMENIA_URL = new URL(WORKER_OZNAMENIA_PATH, WORKER_URL).href;
+export const WORKER_PRIPOMEN_PATH = '/pripomen';
+export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).href;
+
+/**
+ * Ranné oznámenie s plánom dňa. `hours`: hodiny, z ktorých si človek vyberie (miestny čas),
+ * `hour` predvolená. Worker budí raz za `stepMin` minút (cron vo worker/wrangler.toml), takže
+ * oznámenie aj pripomienka prídu do štvrťhodiny od svojho času. `remindMaxH`: pripomienka najviac
+ * tak ďaleko dopredu. `vapidPublic`: verejný kľúč VAPID (súkromný je tajomstvo Workera
+ * VAPID_JWK), ním sa telefón prihlási k odberu. `pushHosts`: služby, na ktoré Worker push pošle -
+ * inú adresu odberu odmietne, aby z neho nebol proxy server na čokoľvek. `remindWindowMin`:
+ * pripomienka patrí budeniu do toľkých minút od svojho času. `jwtH`: ako dlho platí podpis VAPID.
+ * `timeoutMs`: najdlhšie čakanie na service worker a Worker, potom appka povie, že sa nepodarilo.
+ */
+export const OZNAMENIA = {
+    hours: [7, 8, 9],
+    hour: 9,
+    stepMin: 15,
+    remindMaxH: 16,
+    remindWindowMin: 20,
+    jwtH: 12,
+    timeoutMs: 15000,
+    vapidPublic: 'BN5f22u_HXM_8YkH2CWmaNESDDADrK5RfWog4dSGGNl8OVAywRlD6bRL_3lX6bP2xXLWut8K6YrwFJRIoqoFGac',
+    pushHosts: ['fcm.googleapis.com', 'updates.push.services.mozilla.com', '.push.apple.com', '.notify.windows.com'],
+    maxEndpoint: 900,
+    // Service worker nevidí localStorage: appka mu nastavenie odkladá do Cache API pod `mirror`,
+    // pripomienky z tlačidla si service worker drží sám pod `reminders`.
+    cache: 'ray-mon-oznamenia',
+    mirror: 'oznamenia-nastavenie.json',
+    reminders: 'oznamenia-pripomienky.json',
+};
 
 /**
  * Verejný kiosk Huawei FusionSolar. Worker sťahuje len z týchto serverov a len túto cestu,

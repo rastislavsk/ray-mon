@@ -8,6 +8,8 @@ import { VOICES } from '../../shared/config.js';
 import { parseStartPanel } from '../../shared/settings.js';
 import { backAction } from '../../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from '../../web/setup-wiring.js';
+import { prepniSpotrebic } from '../../shared/oznamenia.js';
+import { nastavOznamenia, vypniOznamenia } from '../../web/oznamenia.js';
 import { clearStored, saveLook, saveStartPanel } from '../../web/storage.js';
 import { stepBack } from './nav-back.js';
 import { panelChange } from './state.js';
@@ -41,7 +43,36 @@ export function initNastavenie(store, dom, refresh) {
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null }));
     initLook(store, dom);
+    initOznam(store, dom);
     initAppSheets(store, dom);
+}
+
+/** Nová appka je v obloha/, service worker v koreni nad ňou. */
+const ROOT = '../';
+
+/**
+ * Oznámenia: prepínač, hodina a spotrebiče doma. Zapnutie, vypnutie a uloženie je spoločné so
+ * súčasnou appkou (web/oznamenia.js), voľba platí v oboch.
+ * @param {Store} store @param {Dom} dom
+ */
+function initOznam(store, dom) {
+    /** @param {Partial<import('../../shared/oznamenia.js').Oznamenia>} zmena */
+    const nastav = async (zmena) => {
+        const s = store.get();
+        // Kým sa zapína, ďalšia zmena by sa po dobehnutí prepísala starou voľbou.
+        if (s.oznamStav === 'caka') return;
+        if (zmena.on || (zmena.hour !== undefined && s.oznamenia.on)) store.setState({ oznamStav: 'caka' });
+        store.setState(await nastavOznamenia(s.oznamenia, zmena, { root: ROOT, timeZone: s.site.timezone }));
+    };
+    dom.nsOznam.addEventListener('click', () => nastav({ on: !store.get().oznamenia.on }));
+    dom.nsOznamHour.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-hour]') : null;
+        if (btn instanceof HTMLElement) nastav({ hour: Number(btn.dataset.hour) });
+    });
+    dom.nsOznamDev.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-device]') : null;
+        if (btn instanceof HTMLElement && btn.dataset.device) nastav(prepniSpotrebic(store.get().oznamenia, btn.dataset.device));
+    });
 }
 
 /**
@@ -95,7 +126,9 @@ function initAppSheets(store, dom) {
     dom.nsResetCancel.addEventListener('click', close);
     dom.nsShareSettings.addEventListener('change', () => store.setState({ shareSettings: dom.nsShareSettings.checked }));
     dom.nsShareKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.nsShareKiosk.checked }));
-    dom.nsResetOk.addEventListener('click', () => {
+    dom.nsResetOk.addEventListener('click', async () => {
+        // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
+        await vypniOznamenia(ROOT);
         clearStored();
         history.replaceState(null, '', location.pathname + location.search);
         location.reload();

@@ -2,6 +2,7 @@
 // setState (web/store.js) zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
 import { START_PANELS } from '../shared/config.js';
+import { oznameniaDefault } from '../shared/oznamenia.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
@@ -68,6 +69,8 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
  *   stavTip: boolean,
+ *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
+ *   oznamStav: import('./oznamenia.js').OznamStav,
  * }} AppState
  * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
@@ -158,6 +161,10 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         infoOpen: null,
         // Bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
         stavTip: false,
+        // Ranné oznámenie a spotrebiče doma (voľba telefónu, uložená načíta app.js) a čo s
+        // oznámeniami telefón vie (web/oznamenia.js) - podľa spotrebičov ráta aj Plán dňa.
+        oznamenia: oznameniaDefault(),
+        oznamStav: /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
     };
 }
 

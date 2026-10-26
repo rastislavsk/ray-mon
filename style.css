@@ -3877,6 +3877,27 @@ b {
     margin: 1px 0 0;
     accent-color: var(--green);
 }
+/* Položka Oznámenia: hodiny vedľa seba, hláška o stave jantárová, súkromie stlmené. */
+.oznam-hours {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+}
+.oznam-stav {
+    margin: 0;
+    font-size: var(--fs-md);
+    color: var(--amber);
+}
+.oznam-lead,
+.oznam-note {
+    margin: 0;
+    font-size: var(--fs-md);
+    color: var(--ink-70);
+}
+.oznam-note {
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
 
 /* ---- Ponuka prevziať nastavenie z odkazu ------------------------------------- */
 .import-offer {

@@ -107,6 +107,7 @@ export function sampleTexts(voice) {
 function direct(out, v) {
     directDay(out, v);
     directItems(out, v);
+    directPlan(out, v);
     directMisc(out, v);
     directConsts(out, v);
 }
@@ -172,6 +173,12 @@ function directItems(out, v) {
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
     strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
+}
+
+/** Plán dňa a ranné oznámenie: každý druh riadku, dňa a pripomienky. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
+function directPlan(out, v) {
+    const day = { name: 'Zajtra', index: 1, start: 660 };
+    const later = { name: 'Pondelok', index: 3, start: 600 };
     // Plán dňa: každý druh riadku pre každú vec, auto aj s úsporou pod a nad euro.
     /** @type {Array<[string, import('../shared/plan-dna.js').PlanRow]>} */
     const rows = [
@@ -186,6 +193,20 @@ function directItems(out, v) {
     for (const item of MOZEM_ITEMS.filter((i) => i.device))
         for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);
     Object.assign(out, { 'plan.title': M.PLAN_DNA_TITLE, 'plan.now': M.PLAN_DNA_NOW, 'plan.note': M.PLAN_DNA_NOTE });
+    // Ranné oznámenie: pevné texty, nadpis a text pre každý druh dňa a pripomienky.
+    const T = M.oznameniaTexts(v);
+    strings(T, 'oznam', out);
+    out['oznam.remind'] = T.remind(555);
+    const withId = (/** @type {string} */ id, /** @type {import('../shared/plan-dna.js').PlanRow} */ r) => ({ ...r, id });
+    const notices = {
+        jasno: [withId('pracka', rows[0][1]), withId('susicka', rows[1][1]), withId('auto', rows[0][1])],
+        inyDen: [withId('pracka', rows[4][1]), withId('umyvacka', rows[5][1]), withId('bojler', rows[3][1]), withId('auto', rows[3][1])],
+        nic: [withId('pracka', rows[6][1])],
+    };
+    for (const [k, list] of Object.entries(notices))
+        for (const weak of [true, false])
+            strings(M.planNoticeText({ rows: list, sunEnd: k === 'jasno' ? 1050 : null, weak }, v), `notice.${k}.${weak}`, out);
+    for (const [k, r] of rows) strings(M.reminderText(withId('umyvacka', r), 540, v), `remind.${k}`, out);
 }
 
 /** Výzvy, veta bez dát, najlepší deň a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
