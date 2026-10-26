@@ -3,28 +3,29 @@
 // bublinu s vysvetlením stavu. Bez zadaných panelov je vpravo biely štítok „Zadaj panely ›“,
 // ktorý otvorí kartu Nastavenie.
 
-import { stavMerania } from '../../../shared/hero-model.js';
-import { stavMeraniaText, voiceTexts } from '../../../shared/messages-core.js';
+import { bodkaMerania, stavMerania } from '../../../shared/hero-model.js';
+import { stavMeraniaSlovo, stavMeraniaText, voiceTexts } from '../../../shared/messages-core.js';
 
 /** @typedef {ReturnType<typeof stavMeraniaText>} Tip */
 
-/** Čo hlavička ukáže v stave merania: `status` a `toneText` pre čítačku obrazovky. */
-const STATUS = {
-    zive: (/** @type {string} */ cas) => ({ status: cas, toneText: 'živé meranie' }),
-    zastarane: (/** @type {string} */ cas) => ({ status: `${cas} · zastarané`, toneText: 'meranie zastarané' }),
-    neprislo: () => ({ status: 'meranie nedostupné', toneText: '' }),
-    odhad: () => ({ status: 'odhad z predpovede', toneText: '' }),
+/** Čo hlavička ukáže bez času merania: `status` a `toneText` pre čítačku obrazovky. */
+const BEZ_CASU = {
+    neprislo: { status: 'meranie nedostupné', toneText: '' },
+    odhad: { status: 'odhad z predpovede', toneText: '' },
 };
 
+/** Čo bodka hovorí tvarom, pre čítačku obrazovky - plná a polovičná bodka stoja pri čase merania. */
+const TONE_TEXT = { live: 'živé meranie', stale: 'meranie zastarané' };
+
 /**
- * Čo hlavička ukazuje. `tone` je farba bodky: `live` čerstvé meranie z meniča, `odhad` len
- * predpoveď (bez merania, alebo meranie chýba či je staré), `off` žiadne dáta. `status` je čas
- * posledného merania (pvFreshness, ten istý ako v súčasnej appke), pri zastaranom so slovom - samotný
- * starý čas by vyzeral ako zle idúce hodiny; bez merania slovo. `toneText` dopĺňa pre čítačku
- * obrazovky, čo bodka hovorí farbou, keď to `status` nepovie sám. `tip` je vysvetlenie stavu do
- * bubliny (null, kým appka stav merania nepozná - vtedy sa bodka a čas neťukajú).
+ * Čo hlavička ukazuje. `tone` je tvar bodky z jadra (bodkaMerania, ten istý ako v súčasnej appke):
+ * `live` plná, `stale` polovičná, `odhad` krúžok, `off` žiadne dáta. `status` je čas posledného
+ * merania (pvFreshness), pri zastaranom a v noci so slovom (stavMeraniaSlovo) - samotný starý čas
+ * by vyzeral ako zle idúce hodiny; bez merania slovo. `toneText` dopĺňa pre čítačku obrazovky, čo
+ * bodka hovorí tvarom, keď to `status` nepovie sám. `tip` je vysvetlenie stavu do bubliny (null,
+ * kým appka stav merania nepozná - vtedy sa bodka a čas neťukajú).
  * @param {import('../state.js').AppState} state
- * @returns {{ place: string, setup: boolean, status: string, tone: 'live' | 'odhad' | 'off', toneText: string, tip: Tip | null }}
+ * @returns {{ place: string, setup: boolean, status: string, tone: 'live' | 'stale' | 'odhad' | 'off', toneText: string, tip: Tip | null }}
  */
 export function headerModel(state) {
     const place = state.site.name || 'RAY-MON';
@@ -41,10 +42,14 @@ export function headerModel(state) {
     if (!state.pv && !state.forecast) return off('bez dát');
     const stav = stavMerania(state);
     const tip = stavMeraniaText(stav, state.voice);
-    const tone = stav.druh === 'zive' ? 'live' : 'odhad';
+    const tone = bodkaMerania(stav);
     if (stav.druh === 'znova' && stav.neplati)
         return { place, setup: false, status: stav.neplati.hlavicka, tone, toneText: stav.neplati.tone, tip };
-    return { place, setup: false, tone, ...STATUS[stav.druh === 'znova' ? 'odhad' : stav.druh](stav.cas), tip };
+    if (tone !== 'odhad') {
+        const slovo = stavMeraniaSlovo(stav);
+        return { place, setup: false, tone, status: slovo ? `${stav.cas} · ${slovo}` : stav.cas, toneText: TONE_TEXT[tone], tip };
+    }
+    return { place, setup: false, tone, ...BEZ_CASU[stav.druh === 'neprislo' ? 'neprislo' : 'odhad'], tip };
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

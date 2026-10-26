@@ -244,6 +244,13 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     const errors = await openApp(page, { start: 'terazky', time: instant, pvData });
     const m = terazAt(instant, { pv: pvData });
     await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
+    // Polovičná bodka ako v Oblohe a bublina povie, ako dlho menič mlčí.
+    await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'stale');
+    const tip = stavMeraniaText(stavMerania({ now: instant, pv: pvData, site: SITE, zdroj: OWNER.zdroj, pristup: null }));
+    expect(tip.text).toMatch(/^Menič mlčí od 13:00, už 1 h 30 min, hoci slnko svieti\./);
+    await page.locator('#pv-clock').click();
+    await expect(page.locator('#pv-tip-text')).toHaveText(tip.text);
+    await page.keyboard.press('Escape');
     // Za textom pod časom je „›“ (len v CSS, čítačka ho nečíta): bublina povie prečo zastarané.
     expect(
         await page.evaluate(() => getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-updated')), '::after').content),
@@ -356,32 +363,46 @@ for (const [hm, label] of [
     });
 }
 
-for (const [hm, label] of [
-    ['13:00', 'zelená'],
-    ['21:00', 'červená'],
-    ['02:00', 'oranžová'],
-]) {
-    test(`podsvietenie ikony aktívnej karty má rovnakú farbu ako stavová bodka (${hm}, ${label})`, async ({ page }) => {
-        const { instant } = atTime(hm);
-        await openApp(page, { time: instant });
-        await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(instant).accent || '');
-        // Appka štartuje zelenou a bodka aj podsvietenie sa do novej farby prelínajú. Uprostred
-        // prechodu sa ich farby o chlp líšia, preto sa číta až ustálená farba.
-        await page.evaluate(() =>
-            Promise.all(
-                document
-                    .getAnimations()
-                    .filter((a) => 'transitionProperty' in a && a.transitionProperty === 'background-color')
-                    // Prerušený prechod (nové prekreslenie) odmietne `finished` - aj tak je po ňom.
-                    .map((a) => a.finished.catch(() => {})),
-            ),
-        );
-        const dot = await page.locator('.appbar-clock .live-dot').evaluate((el) => getComputedStyle(el).backgroundColor);
-        const glow = await page.locator('.nav-item.active').evaluate((el) => getComputedStyle(el, '::after').backgroundColor);
-        expect(dot).toMatch(/^rgb\(/);
-        expect(glow).toBe(dot);
-    });
-}
+test('bodka pri čase hovorí o meraní ako v Oblohe, podsvietenie ikony v navigácii je neutrálne', async ({ browser }) => {
+    /** Tvar bodky, text pod časom, „›“ za ním a farba podsvietenia ikony aktívnej karty. @param {import('@playwright/test').Page} page */
+    const hlavicka = (page) =>
+        page.evaluate(() => {
+            const q = (/** @type {string} */ sel) => /** @type {Element} */ (document.querySelector(sel));
+            return {
+                tone: q('#pv-clock').getAttribute('data-tone'),
+                text: q('#pv-updated').textContent,
+                viac: getComputedStyle(q('#pv-updated'), '::after').content !== 'none',
+                glow: getComputedStyle(q('.nav-item.active'), '::after').backgroundColor,
+            };
+        });
+    const neutral = 'rgb(242, 240, 234)';
+    // Živé meranie: plná bodka. Podsvietenie je rovnaké pri zelenom aj červenom pásme.
+    const zive = await browser.newPage();
+    await openApp(zive, { time: atTime('13:00').instant });
+    expect(await hlavicka(zive)).toEqual({ tone: 'live', text: 'meranie', viac: false, glow: neutral });
+    // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
+    const spojenie = await browser.newPage();
+    const { instant: o1330 } = atTime('13:30');
+    await openApp(spojenie, { time: o1330 });
+    expect(await hlavicka(spojenie)).toEqual({ tone: 'stale', text: 'meranie · bez spojenia', viac: true, glow: neutral });
+    await spojenie.locator('#pv-clock').click();
+    await expect(spojenie.locator('#pv-tip-title')).toHaveText('Appka nemá spojenie');
+    // V noci dáta chodia, krivka stojí: menič spí - plná bodka, bez „›“, a pozadie drahého pásma.
+    const noc = await browser.newPage();
+    const { instant: o2310 } = atTime('23:10');
+    await openApp(noc, { time: o2310, pvData: { ...pv, updatedAt: o2310.toISOString() } });
+    expect(await hlavicka(noc)).toEqual({ tone: 'live', text: 'meranie · menič spí', viac: false, glow: neutral });
+    await expect(noc.locator('html')).toHaveAttribute('data-tier', modelAt(o2310).tier || '');
+    await noc.locator('#pv-clock').click();
+    await expect(noc.locator('#pv-tip-title')).toHaveText('Menič spí');
+    // Bez merania krúžok, kým appka nevie, sivá.
+    const odhad = await browser.newPage();
+    await openApp(odhad, { settings: { ...OWNER, zdroj: null } });
+    expect((await hlavicka(odhad)).tone).toBe('odhad');
+    const nic = await browser.newPage();
+    await openApp(nic, { offline: true });
+    expect((await hlavicka(nic)).tone).toBe('off');
+});
 
 test('jedna cena celý deň: v noci sivé pozadie, bodka aj pás plánu bez oranžovej a červenej', async ({ page }) => {
     /** @type {import('../../shared/config.js').Tariff} */
@@ -396,8 +417,6 @@ test('jedna cena celý deň: v noci sivé pozadie, bodka aj pás plánu bez oran
     const errors = await openApp(page, { start: 'terazky', time: instant, settings: { ...OWNER, tariff: flat } });
     const expected = heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER, tariff: flat });
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'grey');
-    // Bodka počíta so živým výkonom z kiosku - ten je v testovacích dátach celý deň rovnaký.
-    await expect(page.locator('html')).toHaveAttribute('data-accent', expected.accent || '');
     await expect(page.locator('#tz-now-head')).toHaveText(expected.message.headline);
     await expect(page.locator('#tz-chart rect[data-tone="plain"]').first()).toBeAttached();
     await expect(page.locator('#tz-chart rect[data-tone="cheap"], #tz-chart rect[data-tone="costly"]')).toHaveCount(0);
@@ -423,9 +442,9 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('21:00');
     await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('21:00'))) ?? '');
     await expect(page.locator('#tz-hint')).toHaveText('');
-    // Pozadie ide s náhľadom (21:00 je drahé pásmo bez slnka), bodka ostáva o stave teraz.
+    // Pozadie ide s náhľadom (21:00 je drahé pásmo bez slnka), bodka ostáva o stave merania teraz.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'red');
-    await expect(page.locator('html')).toHaveAttribute('data-accent', modelAt(instant).accent || '');
+    await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'live');
     // Graf pod kurzorom sa nepohol.
     expect((await bodGrafu(page, minuta('21:00'))).y).toBe(na.y);
 

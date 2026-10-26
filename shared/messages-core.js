@@ -1197,10 +1197,59 @@ export const EMPTY_MESSAGES = {
 };
 
 /**
- * Vysvetlenie stavu merania (stavMerania v hero-model.js) - bublina pri bodke a čase v hlavičke
- * Oblohy: nadpis, text a pri stavoch, kde treba niečo urobiť, tlačidlo do Nastavenia (inak prázdne).
- * @param {{ druh: 'zive' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: { riadok: string } | null }} stav
- * @param {Voice} [voice] @returns {{ nadpis: string, text: string, tlacidlo: string }}
+ * @typedef {{ druh: 'zive' | 'spi' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: { riadok: string } | null,
+ *   pricina?: 'spojenie' | 'menic' | null, mlci?: number | null }} StavMeraniaVstup stav merania (stavMerania v hero-model.js)
+ */
+
+/** Krátke slovo za čas pri zastaranom meraní, podľa príčiny - hlavička oboch appiek aj riadok v Nastavení. */
+export const STAV_SLOVO = { spojenie: 'bez spojenia', menic: 'zastarané' };
+
+/**
+ * Slovo za čas v hlavičke (oboch appiek), alebo prázdne, keď ho netreba: pri živom meraní
+ * stačí čas, pri odhade hlavička píše vlastný text. @param {StavMeraniaVstup} stav
+ */
+export function stavMeraniaSlovo(stav) {
+    if (stav.druh === 'zastarane') return STAV_SLOVO[stav.pricina ?? 'menic'];
+    return stav.druh === 'spi' ? 'menič spí' : '';
+}
+
+/**
+ * Bublina, keď meranie nejde, hoci je pripojené: menič v noci spí, appka nemá spojenie, alebo
+ * menič mlčí za slnka - vtedy aj ako dlho, keď je čas merania známy. Texty sú bez oslovenia,
+ * v oboch tónoch rovnaké. @param {StavMeraniaVstup} stav
+ */
+function stojiText(stav) {
+    const mlci = stav.mlci ?? null;
+    if (stav.druh === 'spi')
+        return {
+            nadpis: 'Menič spí',
+            text:
+                mlci === null
+                    ? 'Slnko je pod obzorom a menič nemá čo merať. Ráno sa ozve sám.'
+                    : `Posledné meranie prišlo o ${stav.cas}, odvtedy slnko zapadlo a menič nemá čo merať. Ráno sa ozve sám.`,
+            tlacidlo: '',
+        };
+    if (stav.pricina === 'spojenie')
+        return {
+            nadpis: 'Appka nemá spojenie',
+            text: `Od ${stav.cas} sa appka nedostala k novým dátam. Najčastejšie je to slabý signál alebo vypnuté dáta v telefóne. Karty zatiaľ rátajú s predpoveďou. Keď sa spojenie vráti, appka sa obnoví sama.`,
+            tlacidlo: '',
+        };
+    const odkedy =
+        mlci === null
+            ? `Od ${stav.cas} neprišlo nové meranie.`
+            : `Menič mlčí od ${stav.cas}, už ${countdownText(mlci)}, hoci slnko svieti.`;
+    return {
+        nadpis: 'Meranie je zastarané',
+        text: `${odkedy} Karty zatiaľ rátajú s predpoveďou. Býva za tým výpadok internetu pri meniči alebo u výrobcu – appka to skúša ďalej sama.`,
+        tlacidlo: '',
+    };
+}
+
+/**
+ * Vysvetlenie stavu merania - bublina pri bodke a čase v hlavičke oboch appiek: nadpis, text
+ * a pri stavoch, kde treba niečo urobiť, tlačidlo do Nastavenia (inak prázdne).
+ * @param {StavMeraniaVstup} stav @param {Voice} [voice] @returns {{ nadpis: string, text: string, tlacidlo: string }}
  */
 export function stavMeraniaText(stav, voice = 'drzy') {
     const w = polite(voice) ? STAV_SLOVA_SLUSNE : STAV_SLOVA;
@@ -1211,12 +1260,9 @@ export function stavMeraniaText(stav, voice = 'drzy') {
                 text: `Menič poslal výkon o ${stav.cas}. Karty počítajú s tým, čo ${w.tvoja} strecha vyrába práve teraz. Ďalšie meranie príde o pár minút.`,
                 tlacidlo: '',
             };
+        case 'spi':
         case 'zastarane':
-            return {
-                nadpis: 'Meranie je zastarané',
-                text: `Od ${stav.cas} neprišlo nové meranie. Karty zatiaľ rátajú s predpoveďou. Býva za tým výpadok internetu pri meniči alebo u výrobcu – appka to skúša ďalej sama.`,
-                tlacidlo: '',
-            };
+            return stojiText(stav);
         case 'neprislo':
             return {
                 nadpis: 'Meranie neprišlo',

@@ -205,13 +205,36 @@ test('hlavička: čas posledného merania, nie hodiny; zastarané so slovom, bez
         ]);
     expect((await naznak())[0]).not.toBe('rgba(0, 0, 0, 0)');
     expect((await naznak())[1]).toBe('none');
-    // Za slnka viac ako 20 minút bez merania: čas so slovom, bodka odhadu.
+    // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
     await page.clock.setFixedTime(at('13:30'));
     await page.reload();
-    await expect(page.locator('#hdr-status')).toHaveText('13:00 · zastarané');
-    await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
+    await expect(page.locator('#hdr-status')).toHaveText('13:00 · bez spojenia');
+    await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'stale');
     await expect(page.locator('#hdr-tone')).toHaveText('meranie zastarané');
     expect((await naznak())[1]).toContain('›');
+    expect(errors).toEqual([]);
+});
+
+test('hlavička: menič mlčí za slnka, alebo v noci spí - ten istý tvar bodky a slová ako súčasná appka', async ({ browser }) => {
+    // Dáta chodia (čas stiahnutia je teraz), krivka končí 13:00 a slnko svieti: polovičná bodka, zastarané.
+    const mlci = await browser.newPage();
+    const errors = await openObloha(mlci, { time: at('14:30'), pvData: { ...pv, updatedAt: at('14:30').toISOString() } });
+    await expect(mlci.locator('#hdr-status')).toHaveText('13:00 · zastarané');
+    await expect(mlci.locator('#hdr-live')).toHaveAttribute('data-tone', 'stale');
+    await mlci.locator('#hdr-live').click();
+    await expect(mlci.locator('#hdr-tip-title')).toHaveText('Meranie je zastarané');
+    await expect(mlci.locator('#hdr-tip-text')).toContainText('Menič mlčí od 13:00, už 1 h 30 min, hoci slnko svieti.');
+    // V noci menič spí: plná bodka, bez „›“.
+    const noc = await browser.newPage();
+    await openObloha(noc, { time: at('23:10'), pvData: { ...pv, updatedAt: at('23:10').toISOString() } });
+    await expect(noc.locator('#hdr-status')).toHaveText('13:00 · menič spí');
+    await expect(noc.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
+    await expect(noc.locator('#hdr-tone')).toHaveText('živé meranie');
+    expect(
+        await noc.evaluate(() => getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-status')), '::after').content),
+    ).toBe('none');
+    await noc.locator('#hdr-live').click();
+    await expect(noc.locator('#hdr-tip-title')).toHaveText('Menič spí');
     expect(errors).toEqual([]);
 });
 
