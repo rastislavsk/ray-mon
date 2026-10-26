@@ -245,7 +245,7 @@ export function renderMozem(state, dom) {
         renderAnnounce(null, dom);
         return renderSheet(null, dom);
     }
-    const m = mozemSkyModel(state, { online: state.online, voice: state.voice });
+    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
     renderSheet(mozemSheetOf(m, state.mozemItem), dom, state.voice);

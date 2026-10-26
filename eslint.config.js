@@ -21,6 +21,7 @@ const NEUTRAL_WEB = [
     'qr',
     'day-chart',
     'teraz-gestures',
+    'oznamenia',
 ];
 
 /**
@@ -70,6 +71,11 @@ export default [
         // vôbec, len jazyk a to, čo je rovnaké všade (Intl, URL, kódovanie textu).
         files: ['shared/**/*.js'],
         languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.es2022, ...SHARED_GLOBALS } },
+        rules,
+    },
+    {
+        files: ['sw.js'],
+        languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.serviceworker },
         rules,
     },
     {

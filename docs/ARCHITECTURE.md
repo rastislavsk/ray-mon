@@ -23,9 +23,16 @@ sa dá zavolať v Node z testov, takže predpoveď je overiteľná bez prehliada
 prístupom** (`worker/src/pecat.js`, AES-GCM tajným kľúčom Workera). Appka si uloží len pečať;
 pri meraní ju pošle Workeru (`POST /pv`) a ten ju otvorí, opýta sa výrobcu a vráti `pv`. Telefón
 tak heslo, kľúč ani odkaz na kiosk nedrží v čitateľnej podobe. Worker sa pýta len serverov výrobcu
-(z odkazu na kiosk berie len server a kľúč, `kioskApiUrl`), nič neukladá a nemá plánované behy.
+(z odkazu na kiosk berie len server a kľúč, `kioskApiUrl`) a prístupy ani nastavenie elektrárne neukladá.
 Bez pripojeného merania je aj „teraz“ odhad z predpovede. Návrh a prečo práve tieto značky:
 `docs/navrhy/meranie-cez-api.html`.
+
+Ranné oznámenie (Nastavenie › Oznámenia, `docs/navrhy/oznamenia.html`): telefón sa prihlási
+k Web Push a Worker si uloží len adresu odberu, hodinu a časové pásmo (KV `ODBERY`). Plánovaný
+beh ho v tú hodinu zobudí prázdnym pushom. Service worker `sw.js` (v koreni, pre obe appky,
+súbory necachuje) si stiahne predpoveď a plán dňa vypočíta tou istou funkciou jadra ako blok
+Plán dňa na karte Môžem? (`shared/plan-dna.js`, `shared/oznamenia.js`). Nastavenie mu appka
+odkladá do Cache API, lebo service worker nevidí localStorage (`web/oznamenia.js`).
 
 Prístup k meraniu nie je nikdy v adrese (`initUrlMirror`) – adresa končí v histórii, synchronizácii
 prehliadača aj na snímkach. Do zdieľaného odkazu ide len na výslovné zaškrtnutie, a aj vtedy

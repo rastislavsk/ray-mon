@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Ranný plán dňa</title>
+        <style>
+            /* Návrh: oznámenia v telefóne ako jeden ranný plán dňa (poradie dňa, logika A). Worker telefón
+               ráno raz zobudí prázdnym pushom, plán si service worker prepočíta z čerstvej predpovede.
+               Zamknutá obrazovka je schéma systémového oznámenia (presný vzhľad určuje Android či iOS), texty
+               sú tie, ktoré by appka poslala. Pri bežných spotrebičoch bez ceny v €, cenu má len auto.
+               Sekcia v Nastavení a Plán dňa na karte Môžem? sú na snímkach skutočných stránok v pull requeste. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                font-weight: 300 700;
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #1b1d22;
+                color: #f2f0ea;
+                font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+                line-height: 1.45;
+            }
+            header,
+            .notes {
+                max-width: 980px;
+                margin: 0 auto;
+                padding: 32px 16px 0;
+            }
+            h1 {
+                margin: 0 0 6px;
+                font-size: 22px;
+            }
+            h2 {
+                margin: 40px 0 8px;
+                font-size: 17px;
+            }
+            p,
+            li {
+                color: rgba(242, 240, 234, 0.8);
+            }
+            .page {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                justify-content: center;
+                padding: 24px 16px 8px;
+            }
+            figure {
+                margin: 0;
+                flex: 0 1 300px;
+                min-width: 0;
+            }
+            figcaption {
+                margin-bottom: 10px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            figcaption em {
+                font-style: normal;
+                font-weight: 400;
+                color: rgba(242, 240, 234, 0.6);
+            }
+            .lock {
+                border-radius: 36px;
+                border: 8px solid #000;
+                padding: 28px 12px 36px;
+                min-height: 470px;
+                background: linear-gradient(170deg, #2a4a7a 0%, #1d2f52 45%, #101826 100%);
+            }
+            .lock.gray {
+                background: linear-gradient(170deg, #4a5160 0%, #2c313b 50%, #15181e 100%);
+            }
+            .clock {
+                text-align: center;
+                font-size: 60px;
+                font-weight: 300;
+                letter-spacing: -0.02em;
+                line-height: 1;
+                margin: 6px 0 4px;
+            }
+            .date {
+                text-align: center;
+                font-size: 14px;
+                color: rgba(242, 240, 234, 0.75);
+                margin-bottom: 26px;
+            }
+            .ntf {
+                display: grid;
+                grid-template-columns: 32px 1fr;
+                gap: 10px;
+                padding: 12px;
+                margin-bottom: 8px;
+                border-radius: 18px;
+                background: rgba(30, 32, 38, 0.72);
+                backdrop-filter: blur(12px);
+            }
+            .ntf .ic {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: #0a0a0a;
+                display: grid;
+                place-items: center;
+            }
+            .ntf .ic svg {
+                width: 20px;
+                height: 20px;
+                stroke: #b6f36a;
+                fill: none;
+                stroke-width: 2;
+            }
+            .ntf .top {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                color: rgba(242, 240, 234, 0.6);
+            }
+            .ntf b {
+                display: block;
+                font-size: 15px;
+                margin: 1px 0 1px;
+            }
+            .ntf span.t {
+                font-size: 14px;
+                color: rgba(242, 240, 234, 0.88);
+            }
+            .ntf .acts {
+                display: flex;
+                gap: 16px;
+                margin-top: 10px;
+                padding-top: 8px;
+                border-top: 1px solid rgba(242, 240, 234, 0.14);
+                font-size: 13px;
+                font-weight: 600;
+                color: #b6f36a;
+            }
+            .ntf.old {
+                opacity: 0.55;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+                margin: 8px 0 0;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid rgba(242, 240, 234, 0.12);
+            }
+            th {
+                color: rgba(242, 240, 234, 0.6);
+                font-weight: 600;
+            }
+            td:first-child {
+                white-space: nowrap;
+                color: rgba(242, 240, 234, 0.6);
+            }
+            .wrap {
+                overflow-x: auto;
+            }
+            code {
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Ranný plán dňa</h1>
+            <p>
+                Jedno oznámenie denne, ráno v čase, ktorý si človek vyberie (predvolene 9:00): v akom poradí a kedy pustiť spotrebiče, aby
+                išli zo slnka – alebo že to dnes radšej počká. Poradie počíta jadro (logika A), aby sa práčka, sušička a umývačka o slnko
+                nebili. Worker telefón len zobudí, plán si telefón prepočíta z čerstvej predpovede. Pri bežných spotrebičoch nie je cena v
+                €, pri aute áno – tam si človek prínos zo slnka predstaví. Ťuknutie otvorí kartu Môžem? s blokom Plán dňa.
+            </p>
+        </header>
+
+        <div class="page">
+            <figure>
+                <figcaption>1 · Jasno <em>– slnko do 17:30, oznámenie o 9:00</em></figcaption>
+                <div class="lock">
+                    <div class="clock">9:00</div>
+                    <div class="date">sobota 5. septembra</div>
+                    <div class="ntf">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="4" />
+                                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>teraz</span></span
+                            ><b>Dnes slnko do 17:30</b
+                            ><span class="t"
+                                >Práčka 9:00 · umývačka 10:30 · sušička 11:00. Auto 12:45–16:00: ~120 km zo slnka, ušetríš ~3 €.</span
+                            ></span
+                        >
+                    </div>
+                </div>
+            </figure>
+
+            <figure>
+                <figcaption>2 · Slnko len dopoludnia</figcaption>
+                <div class="lock">
+                    <div class="clock">9:00</div>
+                    <div class="date">nedeľa 6. septembra</div>
+                    <div class="ntf">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>teraz</span></span
+                            ><b>Dnes slnko len dopoludnia</b
+                            ><span class="t"
+                                >Práčka hneď ráno, do 10:40. Sušička a umývačka radšej zajtra, bude jasno. Auto do 11:00: ~30 km zo slnka,
+                                ušetríš ~1 €.</span
+                            ></span
+                        >
+                    </div>
+                </div>
+            </figure>
+
+            <figure>
+                <figcaption>3 · Zamračené celý deň</figcaption>
+                <div class="lock gray">
+                    <div class="clock">9:00</div>
+                    <div class="date">pondelok 7. septembra</div>
+                    <div class="ntf">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>teraz</span></span
+                            ><b>Dnes zamračené celý deň</b
+                            ><span class="t"
+                                >Pranie, sušenie aj umývačku nechaj na stredu, bude jasno. Auto nabi v noci v lacnom pásme.</span
+                            ></span
+                        >
+                    </div>
+                </div>
+            </figure>
+
+            <figure>
+                <figcaption>4 · Zlý týždeň</figcaption>
+                <div class="lock gray">
+                    <div class="clock">9:00</div>
+                    <div class="date">pondelok 16. novembra</div>
+                    <div class="ntf">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>teraz</span></span
+                            ><b>Tento týždeň slnko nestačí</b
+                            ><span class="t"
+                                >Do nedele predpoveď slnko na spotrebiče nesľubuje. Pusti ich, keď treba, najlepšie v noci v lacnom
+                                pásme.</span
+                            ></span
+                        >
+                    </div>
+                </div>
+            </figure>
+
+            <figure>
+                <figcaption>5 · Android: tlačidlo Pripomeň <em>– rozbalené ráno, pripomienka o 10:30</em></figcaption>
+                <div class="lock">
+                    <div class="clock">10:30</div>
+                    <div class="date">sobota 5. septembra</div>
+                    <div class="ntf">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="4" />
+                                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>teraz</span></span
+                            ><b>Umývačka · teraz</b><span class="t">Oba ohrevy chytia slnko. Dobehne o 13:00.</span></span
+                        >
+                    </div>
+                    <div class="ntf old">
+                        <span class="ic"
+                            ><svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="4" />
+                                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg
+                        ></span>
+                        <span
+                            ><span class="top"><span>RAY-MON</span><span>9:00</span></span
+                            ><b>Dnes slnko do 17:30</b
+                            ><span class="t"
+                                >Práčka 9:00 · umývačka 10:30 · sušička 11:00. Auto 12:45–16:00: ~120 km zo slnka, ušetríš ~3 €.</span
+                            ><span class="acts"><span>Pripomeň o 10:30</span><span>Otvoriť plán</span></span></span
+                        >
+                    </div>
+                </div>
+            </figure>
+        </div>
+
+        <div class="notes">
+            <h2>Texty ranného oznámenia</h2>
+            <p>
+                Nadpis + text do ~200 znakov (zamknutá obrazovka ukáže 2–4 riadky). Časy, km a úsporu pri aute počíta jadro, tu sú z
+                príkladu. Slušný tón mení len slovesá.
+            </p>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Deň</th>
+                            <th>Drzý tón</th>
+                            <th>Slušný tón</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>jasno</td>
+                            <td>
+                                <b>Dnes slnko do 17:30</b><br />Práčka 9:00 · umývačka 10:30 · sušička 11:00. Auto 12:45–16:00: ~120 km zo
+                                slnka, ušetríš ~3 €.
+                            </td>
+                            <td>
+                                <b>Dnes slnko do 17:30</b><br />Práčka 9:00 · umývačka 10:30 · sušička 11:00. Auto 12:45–16:00: ~120 km zo
+                                slnka, ušetríte ~3 €.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>slnko len dopoludnia</td>
+                            <td>
+                                <b>Dnes slnko len dopoludnia</b><br />Práčka hneď ráno, do 10:40. Sušička a umývačka radšej zajtra, bude
+                                jasno. Auto do 11:00: ~30 km zo slnka, ušetríš ~1 €.
+                            </td>
+                            <td>
+                                <b>Dnes slnko len dopoludnia</b><br />Práčka hneď ráno, do 10:40. Sušička a umývačka radšej zajtra, bude
+                                jasno. Auto do 11:00: ~30 km zo slnka, ušetríte ~1 €.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>zamračené celý deň</td>
+                            <td>
+                                <b>Dnes zamračené celý deň</b><br />Pranie, sušenie aj umývačku nechaj na stredu, bude jasno. Auto nabi v
+                                noci v lacnom pásme.
+                            </td>
+                            <td>
+                                <b>Dnes zamračené celý deň</b><br />Pranie, sušenie aj umývačku nechajte na stredu, bude jasno. Auto nabite
+                                v noci v lacnom pásme.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>zlý týždeň</td>
+                            <td>
+                                <b>Tento týždeň slnko nestačí</b><br />Do nedele predpoveď slnko na spotrebiče nesľubuje. Pusti ich, keď
+                                treba, najlepšie v noci v lacnom pásme.
+                            </td>
+                            <td>
+                                <b>Tento týždeň slnko nestačí</b><br />Do nedele predpoveď slnko na spotrebiče nesľubuje. Pustite ich, keď
+                                treba, najlepšie v noci v lacnom pásme.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>prepočet zlyhal</td>
+                            <td><b>Plán na dnes</b><br />Nepodarilo sa mi ho vypočítať. Pozri appku.</td>
+                            <td><b>Plán na dnes</b><br />Nepodarilo sa ho vypočítať. Pozrite appku.</td>
+                        </tr>
+                        <tr>
+                            <td>tlačidlá (Android)</td>
+                            <td>Pripomeň o 10:30 · Otvoriť plán</td>
+                            <td>Pripomenúť o 10:30 · Otvoriť plán</td>
+                        </tr>
+                        <tr>
+                            <td>pripomienka</td>
+                            <td><b>Umývačka · teraz</b><br />Oba ohrevy chytia slnko. Dobehne o 13:00.</td>
+                            <td><b>Umývačka · teraz</b><br />Oba ohrevy chytia slnko. Dobehne o 13:00.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Plán dňa na karte Môžem?</h2>
+            <p>
+                Pod dlaždicami, v oboch appkách. Riadok: čas · spotrebič · prečo. Plán sa počíta vždy od teraz, takže čo prešlo, v ňom nie
+                je; čo je na rade, má TERAZ. Riadky sú podľa času. Päta: „Jeden po druhom, aby sa o slnko nebili.“
+            </p>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Čas</th>
+                            <th>Spotrebič</th>
+                            <th>Prečo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>09:00</td>
+                            <td>Práčka <em>teraz</em></td>
+                            <td>ohrev chytí slnko</td>
+                        </tr>
+                        <tr>
+                            <td>11:00</td>
+                            <td>Sušička</td>
+                            <td>po práčke, celá zo strechy</td>
+                        </tr>
+                        <tr>
+                            <td>10:30</td>
+                            <td>Umývačka</td>
+                            <td>oba ohrevy chytia slnko</td>
+                        </tr>
+                        <tr>
+                            <td>12:45–16:00</td>
+                            <td>Auto</td>
+                            <td>~120 km zo slnka, ušetríš ~3 €</td>
+                        </tr>
+                        <tr>
+                            <td>zajtra 08:00</td>
+                            <td>Sušička</td>
+                            <td>dnes slnko nestačí <em>(keď sa nezmestí)</em></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Sekcia Oznámenia v Nastavení</h2>
+            <div class="wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Čo</th>
+                            <th>Súčasná appka</th>
+                            <th>Živá obloha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>položka</td>
+                            <td><b>Oznámenia</b> – Ráno plán dňa: kedy pustiť ktorý spotrebič</td>
+                            <td>sekcia <b>Oznámenia</b> medzi Vzhľad a Appka</td>
+                        </tr>
+                        <tr>
+                            <td>prepínač</td>
+                            <td>☑ Ráno mi poslať plán dňa</td>
+                            <td><b>Ranný plán dňa</b> – jedno oznámenie denne, čo kedy pustiť</td>
+                        </tr>
+                        <tr>
+                            <td>popis</td>
+                            <td colspan="2">
+                                Jedno oznámenie denne: v akom poradí a kedy pustiť spotrebiče, aby išli zo slnka – alebo že to dnes radšej
+                                počká.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>čas</td>
+                            <td>Kedy: ◯ 7:00 ◯ 8:00 ◉ 9:00</td>
+                            <td><b>Kedy</b> – ráno o; tlačidlá 7:00 · 8:00 · 9:00</td>
+                        </tr>
+                        <tr>
+                            <td>spotrebiče</td>
+                            <td>Čo máš doma: ☑ Práčka ☑ Umývačka ☑ Sušička ☑ Auto ☐ Bojler</td>
+                            <td><b>Čo máš doma</b> – plán ráta len s tým; tlačidlá s tými istými predvoľbami</td>
+                        </tr>
+                        <tr>
+                            <td>súkromie</td>
+                            <td colspan="2">
+                                Server appky si pamätá len adresu, kam tento telefón ráno zobudiť, a čas. Polohu ani prístup k meniču
+                                nevidí.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>iPhone v Safari</td>
+                            <td colspan="2">Na iPhone pošle appka oznámenia, len keď je pridaná na plochu: Zdieľať → Pridať na plochu.</td>
+                        </tr>
+                        <tr>
+                            <td>zakázané v telefóne</td>
+                            <td colspan="2">
+                                Oznámenia máš v telefóne vypnuté. Zapni ich v nastaveniach prehliadača pre túto stránku.
+                                <em>(slušne: máte, zapnite)</em>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>bez elektrárne</td>
+                            <td colspan="2">
+                                Prepínač nejde zapnúť: Najprv zadaj polohu a panely, inak nemám z čoho rátať. <em>(slušne: zadajte)</em>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>nepodporuje</td>
+                            <td colspan="2">Tento prehliadač oznámenia neposiela.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Pravidlá</h2>
+            <ul>
+                <li>
+                    Jedno oznámenie denne. Ďalšie len vtedy, keď si ho človek vyžiada tlačidlom Pripomeň (Android; iPhone tlačidlá nemá).
+                </li>
+                <li>
+                    Plán dňa počíta jadro (<code>shared/</code>) – oznámenie aj karta Môžem? tou istou funkciou, obe appky povedia to isté.
+                </li>
+                <li>Pri práčke, umývačke, sušičke a bojleri žiadna cena v €. Pri aute km zo slnka a úspora oproti sieti.</li>
+                <li>Každý push musí niečo ukázať (Chrome aj iPhone), preto príde aj v zlý deň – povie, že to počká.</li>
+                <li>Voľby oznámení patria jednému telefónu, do odkazu s nastavením nejdú – <code>SHARE_LINK_VERSION</code> sa nemení.</li>
+                <li>Worker si pamätá len adresu odberu, čas a časové pásmo; prístupy ani nastavenie elektrárne nie.</li>
+            </ul>
+        </div>
+    </body>
+</html>

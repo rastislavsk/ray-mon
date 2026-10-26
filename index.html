@@ -495,6 +495,26 @@
                                         <div class="settings-body start-pick" id="start-pick"></div>
                                     </details>
                                 </li>
+                                <!-- Ranné oznámenie s plánom dňa a spotrebiče doma. O rozbalení appka nevie, voľby
+                                     do #oznam-body skladá render (render/oznamenia.js). -->
+                                <li>
+                                    <details class="settings-item" id="settings-oznamenia">
+                                        <summary class="settings-summary">
+                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z" />
+                                                <path d="M10 21h4" />
+                                            </svg>
+                                            <span class="settings-text">
+                                                <b id="oznam-title"></b>
+                                                <span class="settings-hint" id="oznam-hint"></span>
+                                            </span>
+                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </summary>
+                                        <div class="settings-body share-panel" id="oznam-body"></div>
+                                    </details>
+                                </li>
                                 <li>
                                     <details class="settings-item" id="info-share">
                                         <summary class="settings-summary">

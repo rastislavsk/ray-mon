@@ -10,6 +10,7 @@ import {
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
+    OZNAMENIA_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
@@ -21,6 +22,7 @@ import {
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
+import { parseOznamenia } from '../shared/oznamenia.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
@@ -223,4 +225,14 @@ export function loadStoredWeather() {
 /** @param {import('../shared/schema.js').StoredWeather} weather @returns {boolean} podarilo sa? */
 export function saveStoredWeather(weather) {
     return write(WEATHER_STORAGE_KEY, JSON.stringify(weather));
+}
+
+/** Ranné oznámenie a spotrebiče doma (OZNAMENIA_STORAGE_KEY); bez úložiska predvolené. @returns {import('../shared/oznamenia.js').Oznamenia} */
+export function loadOznamenia() {
+    return parseOznamenia(read(OZNAMENIA_STORAGE_KEY));
+}
+
+/** @param {import('../shared/oznamenia.js').Oznamenia} o @returns {boolean} podarilo sa? */
+export function saveOznamenia(o) {
+    return write(OZNAMENIA_STORAGE_KEY, JSON.stringify(o));
 }

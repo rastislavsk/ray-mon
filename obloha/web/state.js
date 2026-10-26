@@ -3,6 +3,7 @@
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
 import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_GROUPS, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
+import { oznameniaDefault } from '../../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
@@ -47,6 +48,8 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   shareKiosk: boolean,
  *   parts: Partial<Record<Part, PartState>>,
  *   stavTip: boolean,
+ *   oznamenia: import('../../shared/oznamenia.js').Oznamenia,
+ *   oznamStav: import('../../web/oznamenia.js').OznamStav,
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
@@ -71,7 +74,8 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   online: boolean,
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
- *   layout?: Layout }} start
+ *   layout?: Layout, oznamenia?: import('../../shared/oznamenia.js').Oznamenia,
+ *   oznamStav?: import('../../web/oznamenia.js').OznamStav }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
  *   na ktorej sa appka na tomto telefóne otvára, denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
@@ -80,7 +84,20 @@ import { setupInit } from '../../shared/setup-flow.js';
  */
 export function initialState(
     now,
-    { saved, site, startPanel, dayLog, online, incoming = null, linkError = null, look = DEFAULT_LOOK, layout = 'narrow', pristup = null },
+    {
+        saved,
+        site,
+        startPanel,
+        dayLog,
+        online,
+        incoming = null,
+        linkError = null,
+        look = DEFAULT_LOOK,
+        layout = 'narrow',
+        pristup = null,
+        oznamenia = oznameniaDefault(),
+        oznamStav = /** @type {import('../../web/oznamenia.js').OznamStav} */ ('ok'),
+    },
 ) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../../shared/settings.js').Known} */
@@ -121,6 +138,10 @@ export function initialState(
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
         parts: {},
         stavTip: false,
+        // Ranné oznámenie a spotrebiče doma (voľba telefónu, spoločná so súčasnou appkou) a čo s
+        // oznámeniami telefón vie - podľa spotrebičov ráta aj Plán dňa.
+        oznamenia,
+        oznamStav,
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
         ...setupInit(start, known),
