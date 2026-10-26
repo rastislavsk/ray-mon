@@ -9,7 +9,7 @@
 // a pevné texty v oboch tónoch vracia voiceTexts. Slušná varianta stojí pri drzej; kde text
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
-import { EVERYDAY, MINUTES_PER_DAY } from './config.js';
+import { DEVICES, EVERYDAY, MINUTES_PER_DAY } from './config.js';
 import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr } from './format.js';
 import { productionLevel } from './tariff.js';
 
@@ -315,6 +315,7 @@ const MOZEM_UNKNOWN_SLUSNE = {
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
 /** @typedef {import('./mozem.js').Window} MozemWindow */
+/** @typedef {(typeof import('./config.js').MOZEM_ITEMS)[number]} MozemItem */
 
 const hm = minutesToTimeStr;
 
@@ -469,7 +470,7 @@ export function mozemStripText(state, { ctx, window, nextDay }) {
  * Riadok veci v mriežke a jej rozbalenie: krátka odpoveď, veta, vysvetlenie a pri spotrebičoch
  * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná. `more` je to posledné ako otázka
  * a odpoveď pod vlastným nadpisom (panel veci); bez vysvetlenia je null.
- * @param {{ id: string, runMin: number | null }} item @param {import('./mozem.js').Answer} a
+ * @param {MozemItem} item @param {import('./mozem.js').Answer} a
  * @param {{ ctx: DayCtx, cost: number | null } | null} env
  * @param {Voice} [voice]
  * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string,
@@ -488,14 +489,14 @@ export function mozemItemText(item, a, env, voice = 'drzy') {
         return {
             ...base,
             tone: 'go',
-            ...goItem(t, a, item.runMin, env.ctx),
+            ...goItem(t, a, item, env),
             more: { q: 'A keď sa zamračí?', a: cloud },
         };
     }
     const now = cost || 'Pôjde to zo siete.';
-    if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, isAuto, env.ctx.draha), ...ask(ITEM_SAY[voice].now, now) };
+    if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, item, env.ctx.draha), ...ask(ITEM_SAY[voice].now, now) };
     if (a.kind === 'cheap') return { ...base, ...cheapItem(t, a.next) };
-    return { ...base, ...laterItem(a, voice), ...ask('Nepočká to?', now) };
+    return { ...base, ...laterItem(a, notTodayText(item, env), voice), ...ask('Nepočká to?', now) };
 }
 
 /** Slnko dnes nie, ale sieť je lacná. @param {{ verb: string, pron: string }} t @param {LaterDay | null} next */
@@ -513,38 +514,73 @@ function cheapItem(t, next) {
 /** Vysvetlenie ako otázka s odpoveďou. @param {string} q @param {string} a */
 const ask = (q, a) => ({ more: { q, a } });
 
-/** Slnko príde ešte dnes. @param {{ verb: string, pron: string }} t @param {number} start @param {boolean} isAuto @param {boolean} draha */
-function waitItem(t, start, isAuto, draha) {
-    return {
-        tone: /** @type {const} */ ('wait'),
-        short: `o ${hm(start)}`,
-        head: `${t.verb} ${t.pron} o ${hm(start)}.`,
-        text: isAuto
-            ? `Na auto treba silné slnko a to bude o ${hm(start)}.`
-            : `Teraz by to išlo zo siete${draha ? ' a tá je práve drahá' : ''}. O ${hm(start)} to utiahne strecha.`,
+/** Slnko príde ešte dnes. @param {{ verb: string, pron: string }} t @param {number} start @param {MozemItem} item @param {boolean} draha */
+function waitItem(t, start, item, draha) {
+    const at = hm(start);
+    const base = { tone: /** @type {const} */ ('wait'), short: `o ${at}`, head: `${t.verb} ${t.pron} o ${at}.` };
+    if (item.runMin === null) return { ...base, text: `Na auto treba silné slnko a to bude o ${at}.` };
+    const p = profileOf(item);
+    const d = draha ? ' a tá je práve drahá' : '';
+    const why = {
+        start: `Ohrev vody na začiatku by teraz išiel zo siete${d}. O ${at} ho utiahne strecha.`,
+        twice: `Prvý ohrev vody by teraz išiel zo siete${d}. Od ${at} chytia slnko oba.`,
+        whole: `Celý čas berie ${p.kw} kW a teraz by to išlo zo siete${d}. O ${at} to utiahne strecha.`,
     };
+    return { ...base, text: why[p.shape] };
+}
+
+/**
+ * Profil odberu veci pre vety (`heat` z MOZEM_ITEMS): ohrev len na začiatku (`start`), dva ohrevy
+ * (`twice`), alebo plný príkon celý program (`whole`). `kw` je príkon spotrebiča slovami.
+ * @param {MozemItem} item
+ */
+function profileOf(item) {
+    const heat = item.heat ?? [[0, item.runMin ?? 0]];
+    const kw = DEVICES.find((d) => d.name === item.device)?.powerKw ?? 0;
+    /** @type {'start' | 'twice' | 'whole'} */
+    const shape = heat.length > 1 ? 'twice' : heat[0][1] < (item.runMin ?? 0) ? 'start' : 'whole';
+    return { heat, shape, kw: Number.isInteger(kw) ? String(kw) : fmt1(kw), run: durationText(item.runMin ?? 0) };
+}
+
+/**
+ * Koľko pokryje strecha, keď vec pustíš teraz a slnko ju celú neutiahne: „Zo slnka asi 70 %,
+ * zvyšok ~0,06 €.“ Zvyšok je časť ceny behu zo siete, bez ceny v tarife chýba.
+ * @param {number} share @param {{ ctx: DayCtx, cost: number | null }} env
+ */
+function shareText(share, env) {
+    if (share >= 0.95) return 'Skoro všetko pôjde zo strechy.';
+    const rest = env.cost === null ? '' : `, zvyšok ~${money(env.cost * (1 - share), env.ctx.currency)}`;
+    return `Zo slnka asi ${Math.round(share * 10) * 10} %${rest}.`;
 }
 
 /** Rozbalenie, keď svieti. @param {{ verb: string, pron: string, run?: string }} t
- * @param {{ end: number, until: number, km: number | null }} a @param {number | null} runMin @param {DayCtx} ctx */
-function goItem(t, a, runMin, ctx) {
-    if (runMin === null)
+ * @param {{ end: number, until: number, km: number | null, share: number | null }} a @param {MozemItem} item
+ * @param {{ ctx: DayCtx, cost: number | null }} env */
+function goItem(t, a, item, env) {
+    if (item.runMin === null)
         return {
             short: `do ${hm(a.end)}`,
             head: `${t.verb} ${t.pron}.`,
             text: a.km ? `Do ${hm(a.end)} chytí zo slnka asi ${a.km} km.` : 'Slnko ho aspoň trochu nabije.',
         };
-    if (a.until > ctx.nowMin)
-        return {
-            short: `do ${hm(a.until)}`,
-            head: `${t.verb} ${t.pron} do ${hm(a.until)}.`,
-            text: `${t.run ?? 'Program má'} ${durationText(runMin)}, takto dobehne celý na slnku.`,
+    const p = profileOf(item);
+    const run = `${t.run ?? 'Program má'} ${p.run}`;
+    if (a.until >= env.ctx.nowMin) {
+        const until = hm(a.until);
+        const why = {
+            start: () => `Najviac berie prvých ${p.heat[0][1]} minút pri ohreve vody. Ten utiahne strecha, aj keď začne až o ${until}.`,
+            twice: () =>
+                `Vodu ohrieva dvakrát: na začiatku a pri oplachu o ${durationText(p.heat[1][0])}. Do ${until} chytia slnko oba ohrevy.`,
+            whole: () => `${run} a celý čas berie ${p.kw} kW. Do ${until} dobehne celý na slnku.`,
         };
-    return {
-        short: 'teraz',
-        head: `${t.verb} ${t.pron} hneď.`,
-        text: `${t.run ?? 'Program má'} ${durationText(runMin)} a slnko vydrží do ${hm(a.end)}. Koniec pôjde zo siete.`,
+        return { short: `do ${until}`, head: `${t.verb} ${t.pron} do ${until}.`, text: why[p.shape]() };
+    }
+    const why = {
+        start: () => `Ohrev na začiatku chytí slnko ${(a.share ?? 1) >= 0.95 ? 'ešte celý' : 'len sčasti'}, zvyšok programu berie málo.`,
+        twice: () => `Prvý ohrev ešte chytí slnko, oplach o ${hm((env.ctx.nowMin + p.heat[1][0]) % MINUTES_PER_DAY)} už nie.`,
+        whole: () => `${run}, ale slnko vydrží len do ${hm(a.end)}.`,
     };
+    return { short: 'teraz', head: `${t.verb} ${t.pron} hneď.`, text: `${why[p.shape]()} ${shareText(a.share ?? 1, env)}` };
 }
 
 /** Vety veci, ktoré sa v tónoch líšia. */
@@ -553,8 +589,24 @@ const ITEM_SAY = {
     slusny: { now: 'Potrebujete to hneď?', wait: ' Kým nebude poriadne slnko, radšej počkajte.' },
 };
 
-/** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem.js').Answer} a @param {Voice} voice */
-function laterItem(a, voice) {
+/**
+ * Prečo nie dnes, keď to slnko už neutiahne: čo by išlo zo siete a za koľko. Auto len povie, že dnes nie.
+ * @param {MozemItem} item @param {{ ctx: DayCtx, cost: number | null }} env
+ */
+function notTodayText(item, env) {
+    if (item.runMin === null) return 'Dnes to už slnko neutiahne.';
+    const p = profileOf(item);
+    const c = env.cost === null ? '' : money(env.cost, env.ctx.currency);
+    const why = {
+        start: () => `Dnes by to išlo zo siete${c ? ` za ~${c}` : ''} a väčšinu by zjedol ohrev vody.`,
+        twice: () => `Dnes by ohrevy vody išli zo siete${c ? `, umývanie za ~${c}` : ''}.`,
+        whole: () => `Celý čas berie ${p.kw} kW a dnes by to celé išlo zo siete${c ? ` za ~${c}` : ''}.`,
+    };
+    return why[p.shape]();
+}
+
+/** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem.js').Answer} a @param {string} notToday @param {Voice} voice */
+function laterItem(a, notToday, voice) {
     if (a.kind !== 'later')
         return {
             tone: /** @type {const} */ ('no'),
@@ -567,7 +619,7 @@ function laterItem(a, voice) {
         tone: /** @type {'wait' | 'no'} */ (day.index === 1 ? 'wait' : 'no'),
         short: day.index === 1 ? `zajtra ${hm(day.start)}` : day.name.toLowerCase(),
         head: `${laterWhen(day)}.`,
-        text: `Dnes to už slnko neutiahne.${a.weakSkipped ? ITEM_SAY[voice].wait : ''}`,
+        text: `${notToday}${a.weakSkipped ? ITEM_SAY[voice].wait : ''}`,
     };
 }
 

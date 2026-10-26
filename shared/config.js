@@ -376,18 +376,31 @@ export const DEVICES = [
  * Karta Môžem?: veci, na ktoré sa rodina pýta. Spotrebič (`device`) berie z DEVICES príkon
  * a pravidlá; `runMin` a `runKwh` sú typický program - podľa nich karta radí, dokedy ho pustiť,
  * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania; `runMin` bojlera
- * je typický ohrev nádrže. Zoznam je jeden pre obe appky. Veci bez
- * spotrebiča (`device: null`) sú od slnka nezávislé - berú málo alebo krátko.
- * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null }>}
+ * je typický ohrev nádrže. `heat` je profil odberu: úseky programu v minútach od štartu
+ * `[od, do)`, keď spotrebič berie plný príkon (ohrev vody, pri sušičke a bojleri celý čas) -
+ * tie potrebujú slnko nad hranicou zelenej. Zvyšok `runKwh` sa rozloží na ostatný čas programu.
+ * Zoznam je jeden pre obe appky. Veci bez spotrebiča (`device: null`) sú od slnka nezávislé -
+ * berú málo alebo krátko.
+ * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null,
+ *   heat: Array<[number, number]> | null }>}
  */
 export const MOZEM_ITEMS = [
-    { id: 'pracka', device: 'Práčka', runMin: 120, runKwh: 1 },
-    { id: 'umyvacka', device: 'Umývačka', runMin: 150, runKwh: 1.1 },
-    { id: 'susicka', device: 'Sušička', runMin: 90, runKwh: 2.2 },
-    { id: 'auto', device: 'Auto', runMin: null, runKwh: null },
-    { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2 },
-    { id: 'hranie', device: null, runMin: null, runKwh: null },
-    { id: 'fen', device: null, runMin: null, runKwh: null },
+    { id: 'pracka', device: 'Práčka', runMin: 120, runKwh: 1, heat: [[0, 20]] },
+    {
+        id: 'umyvacka',
+        device: 'Umývačka',
+        runMin: 150,
+        runKwh: 1.1,
+        heat: [
+            [0, 15],
+            [120, 135],
+        ],
+    },
+    { id: 'susicka', device: 'Sušička', runMin: 90, runKwh: 2.2, heat: [[0, 90]] },
+    { id: 'auto', device: 'Auto', runMin: null, runKwh: null, heat: null },
+    { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2, heat: [[0, 60]] },
+    { id: 'hranie', device: null, runMin: null, runKwh: null, heat: null },
+    { id: 'fen', device: null, runMin: null, runKwh: null, heat: null },
 ];
 
 /**

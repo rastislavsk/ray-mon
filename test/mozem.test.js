@@ -2,7 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
-import { dayWindow, deviceShorts, itemAnswer, itemCost, mozemModel, mozemSheetOf, planWindows, stripGeometry } from '../shared/mozem.js';
+import {
+    dayWindow,
+    deviceShorts,
+    itemAnswer,
+    itemCost,
+    mozemModel,
+    mozemSheetOf,
+    planWindows,
+    stripGeometry,
+    sunShare,
+} from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -235,12 +245,88 @@ test('itemAnswer a itemCost: veci bez spotrebiča sú vždy OK a nemajú cenu', 
     assert.equal(itemCost(hranie, ctx), null);
 });
 
-test('neskoro popoludní: program už celý na slnku nedobehne, karta to povie', () => {
+test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu podľa profilu odberu', () => {
+    const m = mozemModel(input(FIXED_NOW));
+    const [pracka, umyvacka, susicka] = ['pracka', 'umyvacka', 'susicka'].map((id) => item(m, id));
+    assert.equal(m.groups[0].value, 'do 17:30', 'slnko do 17:30');
+    // Práčka potrebuje slnko len na 20 minút ohrevu, umývačka aj na oplach o 2 h, sušička celý program.
+    assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['do 17:10', 'do 15:15', 'do 16:00']);
+    assert.match(pracka.text, /prvých 20 minút pri ohreve vody/);
+    assert.match(umyvacka.text, /dvakrát: na začiatku a pri oplachu o 2 hodiny/);
+    assert.match(susicka.text, /celý čas berie 1,5 kW/);
+    assert.equal(new Set([pracka.text, umyvacka.text, susicka.text]).size, 3, 'žiadne dve vety rovnaké');
+});
+
+test('neskoro popoludní: čo už celé na slnku nedobehne, povie koľko pokryje strecha a za koľko zvyšok', () => {
     const m = mozemModel(input(at('16:30')));
     assert.equal(m.state, 'go');
-    const pracka = item(m, 'pracka');
-    assert.equal(pracka.short, 'teraz');
-    assert.match(pracka.text, /Koniec pôjde zo siete\.$/);
+    assert.equal(item(m, 'pracka').short, 'do 17:10', 'ohrev práčky ešte chytí slnko');
+    const umyvacka = item(m, 'umyvacka');
+    assert.equal(umyvacka.short, 'teraz');
+    assert.match(umyvacka.text, /^Prvý ohrev ešte chytí slnko, oplach o 18:30 už nie\. Zo slnka asi \d0 %, zvyšok ~0,\d\d €\.$/);
+    assert.match(item(m, 'susicka').text, /slnko vydrží len do 17:30\. Zo slnka asi/);
+});
+
+test('tesne pred koncom slnka: pod polovicu zo strechy už nie „teraz“, ale iný deň s cenou zo siete', () => {
+    const m = mozemModel(input(at('17:20')));
+    assert.equal(item(m, 'pracka').short, 'teraz');
+    assert.match(item(m, 'pracka').text, /Zo slnka asi 50 %/);
+    const susicka = item(m, 'susicka');
+    assert.equal(susicka.short, 'zajtra 08:00');
+    assert.equal(susicka.text, 'Celý čas berie 1,5 kW a dnes by to celé išlo zo siete za ~0,31 €.');
+    assert.equal(item(m, 'bojler').tone, 'cheap', 'bojler ide na lacnú sieť');
+});
+
+test('večer bez ceny v tarife: vety bez eur', () => {
+    const m = mozemModel(input(at('19:50'), { tariff: FLAT }));
+    assert.equal(item(m, 'pracka').text, 'Dnes by to išlo zo siete a väčšinu by zjedol ohrev vody.');
+    assert.equal(item(m, 'umyvacka').text, 'Dnes by ohrevy vody išli zo siete.');
+});
+
+test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
+    const pracka = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((i) => i.id === 'pracka'));
+    const th = powerThresholds(PLANT);
+    const plan = (/** @type {(m: number) => number} */ kw) =>
+        Array.from({ length: 96 }, (_, i) => ({ startMin: i * 15, min: 15, kw: kw(i * 15) }));
+    const ctx = (/** @type {(m: number) => number} */ kw) => /** @type {any} */ ({ plan: plan(kw), th });
+    assert.equal(
+        sunShare(
+            pracka,
+            2,
+            ctx(() => 5),
+            600,
+        ),
+        1,
+    );
+    assert.equal(
+        sunShare(
+            pracka,
+            2,
+            ctx(() => 0),
+            600,
+        ),
+        0,
+    );
+    // Ohrev (20 min) bez slnka, zvyšok so slabým slnkom: zo strechy len ľahká časť programu.
+    const s = sunShare(
+        pracka,
+        2,
+        ctx((m) => (m < 630 ? 0 : 1)),
+        600,
+    );
+    assert.ok(s > 0.2 && s < 0.5, `ľahká časť: ${s}`);
+    // Štart o 23:00: ohrev a 40 minút ľahkej časti ešte v pláne dňa, po polnoci už nie.
+    assert.ok(
+        Math.abs(
+            sunShare(
+                pracka,
+                2,
+                ctx(() => 5),
+                23 * 60,
+            ) - 0.8,
+        ) < 1e-9,
+        'po polnoci plán dňa končí',
+    );
 });
 
 test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky, aj bojler', () => {
