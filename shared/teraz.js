@@ -35,7 +35,7 @@ import {
 import { deviceShorts, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pristupModel } from './pristup.js';
-import { localDateKey } from './solar.js';
+import { daylightSpan, localDateKey } from './solar.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
@@ -164,7 +164,9 @@ function chartOf(input, plan, hero, now) {
     const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
     const curve = input.pv ? input.pv.realCurveToday : [];
     const limitKw = powerThresholds(input.plant).lowKw;
+    const span = daylightSpan(input.site, localDateKey(input.now, input.site.timezone));
     const geo = dayChartModel({
+        span,
         plan,
         hourly: input.forecast ? input.forecast.hourlyToday : [],
         real: curve,
@@ -179,6 +181,7 @@ function chartOf(input, plan, hero, now) {
     return {
         ...geo,
         desc: terazChartText({
+            span,
             nowMin: now.minutes,
             kwText: now.powerText,
             tone: tone(now.minutes),
@@ -186,12 +189,13 @@ function chartOf(input, plan, hero, now) {
             cheap: windows('cheap'),
             costly: windows('costly'),
         }),
-        value: hero.minutes,
+        // Hodnota posúvača ostáva v jeho rozsahu aj v noci, keď je „teraz“ mimo osi; čas povie valueText.
+        value: Math.min(geo.range.max, Math.max(geo.range.min, hero.minutes)),
         valueText: terazSliderText(hero.minutes, hero.preview, hero.powerText, tone(hero.minutes)),
         // Zoznam pod grafom: zatvorený ukáže prvý riadok legendy (čiary a oblačnosť), otvorený pod ním
         // farby pásu a hodnoty vo zvolenom čase.
         keys: chartKeys(),
-        bands: planLegend(planCells(plan)),
+        bands: planLegend(planCells(plan, span)),
         readout: readoutOf(input, plan, hero, limitKw),
     };
 }

@@ -5,15 +5,18 @@ import {
     boxHitsLine,
     cellAt,
     chartMinutes,
+    chartRange,
     chartX,
     DAY_CHART,
     DAY_CHART_LABELS,
     dayChartModel,
     fillPath,
+    FULL_DAY,
     limitBox,
     limitSpot,
     planCells,
     slotTone,
+    tickHours,
 } from '../shared/day-chart.js';
 import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
@@ -139,6 +142,83 @@ test('chartX a chartMinutes: celý deň medzi okrajmi grafu, náhľad po štvrť
     assert.equal(chartMinutes(1), MINUTES_PER_DAY - 15);
 });
 
+test('os dňa od úsvitu: chartX, chartMinutes, rozsah posúvača a bunky pásu len v nej', () => {
+    const span = { from: hm(5), to: hm(18) };
+    assert.equal(chartX(hm(5), span), DAY_CHART.left);
+    assert.equal(chartX(hm(18), span), DAY_CHART.right);
+    // Noc je na kraji osi.
+    assert.equal(chartX(hm(1), span), DAY_CHART.left);
+    assert.equal(chartX(hm(22), span), DAY_CHART.right);
+    const rel = (/** @type {number} */ min) => chartX(min, span) / DAY_CHART.w;
+    assert.equal(chartMinutes(rel(hm(11, 30)), span), hm(11, 30));
+    assert.equal(chartMinutes(0, span), hm(5));
+    assert.equal(chartMinutes(1, span), hm(17, 45));
+    assert.deepEqual(chartRange(span), { min: hm(5), max: hm(17, 45) });
+    const cells = planCells(dayPlan(input(at('13:00'))), span);
+    assert.equal(cells.length, 26);
+    assert.equal(cells[0].from, hm(5));
+    assert.equal(cells[25].to, hm(18));
+    assert.equal(cellAt(cells, hm(13, 10)), cells[16]);
+    assert.equal(cellAt(cells, hm(1)), cells[0]);
+    assert.equal(cellAt(cells, hm(23)), cells[25]);
+});
+
+test('tickHours: kraje osi a medzi nimi násobky troch aspoň dve hodiny od kraja, na celom dni šiestich', () => {
+    assert.deepEqual(tickHours({ from: hm(5), to: hm(18) }), [5, 9, 12, 15, 18]);
+    assert.deepEqual(tickHours({ from: hm(6), to: hm(17) }), [6, 9, 12, 15, 17]);
+    assert.deepEqual(tickHours({ from: hm(3), to: hm(22) }), [3, 6, 9, 12, 15, 18, 22]);
+    assert.deepEqual(tickHours(FULL_DAY), [0, 6, 12, 18, 24]);
+});
+
+test('dayChartModel na osi dňa: krivka, oblačnosť a pás len v nej, „teraz“ v noci na kraji so šípkou von', () => {
+    const i = input(at('13:00'));
+    const forecast = /** @type {import('../shared/solar.js').Forecast} */ (i.forecast);
+    const span = { from: hm(5), to: hm(18) };
+    const base = {
+        span,
+        plan: dayPlan(i),
+        hourly: forecast.hourlyToday,
+        real: [],
+        boundary: null,
+        nowKw: 0,
+        limitKw: powerThresholds(PLANT).lowKw,
+        limitText: 'veľké spotrebiče',
+        preview: null,
+    };
+    const day = dayChartModel({ ...base, nowMin: hm(13) });
+    assert.deepEqual(day.span, span);
+    assert.deepEqual(day.range, { min: hm(5), max: hm(17, 45) });
+    assert.match(day.forecast, new RegExp(`^M${DAY_CHART.left} `));
+    assert.match(day.forecast, new RegExp(` L${DAY_CHART.right} [0-9.]+$`));
+    assert.deepEqual(
+        day.clouds.map((c) => c.hour),
+        Array.from({ length: 13 }, (_, h) => h + 5),
+    );
+    assert.equal(day.cells.length, 26);
+    assert.deepEqual(
+        day.ticks.map((t) => t.label),
+        ['5', '9', '12', '15', '18'],
+    );
+    assert.equal(day.mark?.label.text, '13:00');
+    assert.equal(day.mark?.cell, day.cells[16]);
+    assert.equal(day.mark?.hour, 13);
+
+    const evening = dayChartModel({ ...base, nowMin: hm(19, 45) });
+    assert.equal(evening.mark?.x, DAY_CHART.right);
+    assert.equal(evening.mark?.label.text, `${terazPreviewTime(hm(19, 45))} ›`);
+    assert.equal(evening.mark?.cell, null);
+    assert.equal(evening.mark?.hour, null);
+    assert.ok(
+        evening.cells.every((c) => c.past),
+        'deň na osi už prešiel',
+    );
+
+    const morning = dayChartModel({ ...base, nowMin: hm(4, 30) });
+    assert.equal(morning.mark?.x, DAY_CHART.left);
+    assert.equal(morning.mark?.label.text, `‹ ${terazPreviewTime(hm(4, 30))}`);
+    assert.ok(morning.cells.every((c) => !c.past));
+});
+
 test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť, hranica, pás, okno a čiara „teraz“', () => {
     const i = input(at('13:00'));
     const plan = dayPlan(i);
@@ -146,6 +226,7 @@ test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť
     const pv = /** @type {import('../shared/kiosk.js').PvData} */ (i.pv);
     const limitKw = powerThresholds(PLANT).lowKw;
     const base = {
+        span: FULL_DAY,
         plan,
         hourly: forecast.hourlyToday,
         real: pv.realCurveToday,
@@ -328,6 +409,7 @@ test('dayChartModel: nápis hranice sa pri náhľade posunie z jeho cesty', () =
     const i = input(at('13:00'));
     const forecast = /** @type {import('../shared/solar.js').Forecast} */ (i.forecast);
     const base = {
+        span: FULL_DAY,
         plan: dayPlan(i),
         hourly: forecast.hourlyToday,
         real: [],
@@ -408,7 +490,7 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
         m.chart.bands.map((l) => l.text),
         [TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
     );
-    assert.match(m.chart.desc, /^Výroba počas dňa\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
+    assert.match(m.chart.desc, /^Výroba od 05:00 do 21:00\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
 });
 
 test('terazModel: zoznam pod grafom ukáže hodnoty v čase bodu grafu tak, ako ich kreslí graf', () => {
@@ -635,6 +717,7 @@ test('texty karty Teraz', () => {
     assert.equal(terazLaterText({ wait: null, todayStrong: true, next: null }), 'Dnes je silný deň. Ďalší taký v predpovedi nie je.');
     assert.equal(terazLaterText({ wait: null, todayStrong: false, next: null }), 'Silný deň v predpovedi na týždeň nie je.');
     const desc = terazChartText({
+        span: { from: hm(5), to: hm(21) },
         nowMin: hm(13),
         kwText: '6.41',
         tone: 'sun',
@@ -647,10 +730,10 @@ test('texty karty Teraz', () => {
     });
     assert.equal(
         desc,
-        'Výroba počas dňa. Teraz 13:00: 6.41 kW, slnko stačí. Okno na veľké veci 09:00 – 17:30. Lacná sieť 00:00 – 06:00, 22:00 – 24:00.',
+        'Výroba od 05:00 do 21:00. Teraz 13:00: 6.41 kW, slnko stačí. Okno na veľké veci 09:00 – 17:30. Lacná sieť 00:00 – 06:00, 22:00 – 24:00.',
     );
     assert.match(
-        terazChartText({ nowMin: 0, kwText: '0.00', tone: 'costly', sun: [], cheap: [], costly: [{ from: 0, to: 60 }] }),
+        terazChartText({ span: FULL_DAY, nowMin: 0, kwText: '0.00', tone: 'costly', sun: [], cheap: [], costly: [{ from: 0, to: 60 }] }),
         /Okno na veľké veci dnes nebude\. Drahá sieť 00:00 – 01:00\.$/,
     );
 });

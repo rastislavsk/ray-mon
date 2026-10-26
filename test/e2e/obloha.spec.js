@@ -9,6 +9,7 @@ import {
     OLD_STORAGE_KEYS,
     PANELS,
     PLANT,
+    PREVIEW,
     SETTINGS_STORAGE_KEY,
     SITE,
     SITE_STORAGE_KEY,
@@ -1025,12 +1026,34 @@ const terazZModelu = (m) => ({
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
 const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
 
+/**
+ * Os grafu dňa tak, ako ju dal render do posúvača (chartRange v shared/day-chart.js).
+ * @param {import('@playwright/test').Page} page
+ */
+async function osGrafu(page) {
+    const graf = page.locator('#tz-chart');
+    const from = Number(await graf.getAttribute('aria-valuemin'));
+    return { from, to: Number(await graf.getAttribute('aria-valuemax')) + PREVIEW.keyStepMin };
+}
+
 /** Bod na grafe pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
 async function bodGrafu(page, min) {
     const box = await page.locator('#tz-chart svg').boundingBox();
     if (!box) throw new Error('graf nie je vidno');
-    return { x: box.x + (chartX(min) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
+    return { x: box.x + (chartX(min, await osGrafu(page)) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
 }
+
+/**
+ * Farba bunky pásu plánu pre minútu dňa, alebo null, keď minúta nie je na osi grafu (noc).
+ * @param {import('@playwright/test').Page} page @param {number} min
+ */
+async function farbaNaOsi(page, min) {
+    const bunka = page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`);
+    return (await bunka.count()) ? bunka.getAttribute('data-tone') : null;
+}
+
+/** Čo má byť v páse v čase „teraz“: farba, alebo nič, keď je teraz mimo osi. @param {ReturnType<typeof terazModel>} m @param {string} tone */
+const naOsi = (m, tone) => (m.chart?.mark?.cell ? tone : null);
 
 /** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
 const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`).getAttribute('data-tone');
@@ -1052,10 +1075,11 @@ test.describe('karta Teraz', () => {
             expect(m.num).toBe(hero.powerText);
             expect(m.cards?.now.head).toBe(hero.message.headline);
             await expect(page.locator('#tz-now-body')).toHaveText(hero.message.body);
-            // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa.
+            // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa. V noci je „teraz“ mimo osi
+            // grafu (deň so slnkom) a bunku v páse nemá - farbu povie zoznam pod grafom.
             const ocakavana = cellAt(planCells(dayPlan(vstup)), minuta(hm)).tone;
             if (tone) expect(ocakavana).toBe(tone);
-            expect(await farbaPasu(page, minuta(hm))).toBe(ocakavana);
+            expect(await farbaNaOsi(page, minuta(hm))).toBe(naOsi(m, ocakavana));
             await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart?.valueText ?? '');
             await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart?.desc ?? '');
             await expect(page.locator('#tz-retry')).toBeHidden();
@@ -1084,13 +1108,17 @@ test.describe('karta Teraz', () => {
 
     test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
-        await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(24);
+        // Os je deň so slnkom (5–21): oblačnosť, bunky pásu a hodiny len v nej.
+        const graf = terazModel(vstupTeraz(at('13:00'))).chart;
+        if (!graf) throw new Error('model nemá graf');
+        await expect(page.locator('#tz-chart .dc-cloud')).toHaveCount(graf.clouds.length);
+        expect(graf.clouds.length).toBe(16);
         await expect(page.locator('#tz-chart .dc-fc')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
         await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
-        await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
-        await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
+        await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(graf.cells.length);
+        await expect(page.locator('#tz-chart .dc-t')).toHaveText(['5', '9', '12', '15', '18', '21']);
         await expect(page.locator('#tz-chart .dc-win-t')).toHaveCount(0);
         await expect(page.locator('#tz-legend span')).toHaveText(['výkon', 'predpoveď', 'oblačnosť']);
         await expect(page.locator('#tz-bands span')).toHaveText(['slnko stačí', 'lacná sieť', 'drahá sieť']);
@@ -1177,10 +1205,11 @@ test.describe('karta Teraz', () => {
         await page.keyboard.press('ArrowLeft');
         await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
         await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('12:45') })).num);
+        // Home a End na kraje osi: deň so slnkom, nie polnoc.
         await page.keyboard.press('End');
-        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('23:45')));
+        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('20:45')));
         await page.keyboard.press('Home');
-        await expect(graf).toHaveAttribute('aria-valuenow', '0');
+        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('05:00')));
         await page.keyboard.press('Escape');
         await expect(graf).toHaveAttribute('aria-valuetext', terazModel(vstupTeraz(at('13:00'))).chart?.valueText ?? '');
         await expect(page.locator('#tz-reset')).toBeHidden();

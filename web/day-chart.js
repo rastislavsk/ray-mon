@@ -87,11 +87,15 @@ export function dayChartHtml(c) {
     // „Teraz“ je bod na krivke - nameraná krivka v ňom končí, v páse ho ukazujú stlmené bunky.
     const now = n ? dot(n.y, n.x, 4, 'dc-now-dot') : '';
     // Čiara náhľadu (bez náhľadu stojí na „teraz“) od oblačnosti po pás plánu; bunka pásu pod ňou je
-    // zvýraznená (väčšia, s okrajom), pri náhľade aj bod na krivke.
+    // zvýraznená (väčšia, s okrajom), pri náhľade aj bod na krivke. „Teraz“ mimo osi (noc) stojí na
+    // jej kraji bez bunky.
+    const cell = m && m.cell;
     const mark = m
         ? `<line x1="${m.x}" x2="${m.x}" y1="${MARK_TOP}" y2="${MARK_BOTTOM}" class="dc-prev"/>` +
           (m.preview ? dot(m.y, m.x, 5.5, 'dc-prev-dot') : '') +
-          `<rect x="${m.cell.x - 1}" y="${C.bandY - 3}" width="${r2(m.cell.w + 2)}" height="${C.bandH + 6}" rx="3" data-tone="${m.cell.tone}" class="dc-cell-on"/>`
+          (cell
+              ? `<rect x="${cell.x - 1}" y="${C.bandY - 3}" width="${r2(cell.w + 2)}" height="${C.bandH + 6}" rx="3" data-tone="${cell.tone}" class="dc-cell-on"/>`
+              : '')
         : '';
     return (
         '<div class="dc-box" aria-hidden="true">' +

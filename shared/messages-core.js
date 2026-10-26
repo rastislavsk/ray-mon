@@ -1142,22 +1142,24 @@ export function terazWindowText(w, past) {
 /**
  * Textový popis grafu pre čítačku obrazovky: teraz, okno na veľké veci, kedy je lacná a kedy
  * drahá sieť - to, čo inak nesie farba pásu.
- * @param {{ nowMin: number, kwText: string, tone: import('./day-chart.js').Tone,
+ * @param {{ span: { from: number, to: number }, nowMin: number, kwText: string, tone: import('./day-chart.js').Tone,
  *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
  */
-export function terazChartText({ nowMin, kwText, tone, sun, cheap, costly }) {
-    return dayChartText({ now: { min: nowMin, kwText, tone }, sun, cheap, costly });
+export function terazChartText({ span, nowMin, kwText, tone, sun, cheap, costly }) {
+    return dayChartText({ span, now: { min: nowMin, kwText, tone }, sun, cheap, costly });
 }
 
 /**
- * Textový popis grafu dňa pre čítačku: pri dnešku teraz, potom okno na veľké veci, lacná a drahá
- * sieť. Graf v detaile iného dňa než dnešok značku „teraz“ nemá (`now` je null).
- * @param {{ now: { min: number, kwText: string, tone: import('./day-chart.js').Tone } | null,
+ * Textový popis grafu dňa pre čítačku: os grafu (deň so slnkom), pri dnešku teraz, potom okno na
+ * veľké veci, lacná a drahá sieť za celý deň. Graf v detaile iného dňa než dnešok značku „teraz“
+ * nemá (`now` je null).
+ * @param {{ span: { from: number, to: number }, now: { min: number, kwText: string, tone: import('./day-chart.js').Tone } | null,
  *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
  */
-export function dayChartText({ now, sun, cheap, costly }) {
+export function dayChartText({ span, now, sun, cheap, costly }) {
     const list = (/** @type {Array<{ from: number, to: number }>} */ ws) => ws.map(spanText).join(', ');
-    const parts = ['Výroba počas dňa.'];
+    const full = span.from === 0 && span.to === MINUTES_PER_DAY;
+    const parts = [full ? 'Výroba počas dňa.' : `Výroba od ${hm(span.from)} do ${endHm(span.to)}.`];
     if (now) parts.push(`Teraz ${hm(now.min)}: ${now.kwText} kW, ${TERAZ_TONES[now.tone]}.`);
     parts.push(sun.length ? `Okno na veľké veci ${list(sun)}.` : `Okno na veľké veci ${now ? 'dnes ' : ''}nebude.`);
     if (cheap.length) parts.push(`Lacná sieť ${list(cheap)}.`);

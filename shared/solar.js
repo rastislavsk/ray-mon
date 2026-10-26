@@ -3,7 +3,7 @@
 // Čisté funkcie bez I/O - beží v Node, prehliadači aj Cloudflare Workeri.
 // Lokalita a zostava panelov prichádzajú ako parameter, nič z nich tu nie je natvrdo.
 
-import { CLEAR_SKY, FORECAST_DAYS_SHOWN, OPEN_METEO_RADIATION, powerThresholds } from './config.js';
+import { CLEAR_SKY, DAYLIGHT_PAD_MIN, FORECAST_DAYS_SHOWN, MINUTES_PER_DAY, OPEN_METEO_RADIATION, powerThresholds } from './config.js';
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
@@ -251,6 +251,24 @@ export function sunTimes(site, dateKey) {
         else out.rise ??= minute;
     }
     return out;
+}
+
+/** Úsek dňa v minútach od polnoci, `to` je bez neho. @typedef {{ from: number, to: number }} Span */
+
+/**
+ * Deň so slnkom ako úsek osi grafu dňa a pásu dňa na karte Môžem?: od celej hodiny pred
+ * „východ − DAYLIGHT_PAD_MIN“ po celú hodinu po „západ + DAYLIGHT_PAD_MIN“. Celé hodiny držia os
+ * susedných dní rovnakú - mení sa len občas o hodinu. Keď slnko v ten deň nevyjde alebo nezapadne
+ * (polárny deň či noc), je to celý deň.
+ * @param {Site} site @param {string} dateKey @returns {Span}
+ */
+export function daylightSpan(site, dateKey) {
+    const { rise, set } = sunTimes(site, dateKey);
+    if (rise === null || set === null || set <= rise) return { from: 0, to: MINUTES_PER_DAY };
+    return {
+        from: Math.max(0, Math.floor((rise - DAYLIGHT_PAD_MIN) / 60) * 60),
+        to: Math.min(MINUTES_PER_DAY, Math.ceil((set + DAYLIGHT_PAD_MIN) / 60) * 60),
+    };
 }
 
 /**

@@ -3,7 +3,7 @@
 // nepozná, čo s časom spraviť, mu povie appka cez `ScrubHooks`. Pravidlá dotyku sú v CLAUDE.md,
 // časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
-import { MINUTES_PER_DAY, PREVIEW, SWIPE } from '../shared/config.js';
+import { PREVIEW, SWIPE } from '../shared/config.js';
 import { chartMinutes } from '../shared/day-chart.js';
 
 /**
@@ -21,19 +21,26 @@ import { chartMinutes } from '../shared/day-chart.js';
 /** Koľko px musí prst prejsť, kým je jasné, či ide do strán (náhľad) alebo zvislo (posun stránky). */
 const AXIS_PX = 8;
 
-/** Posledná štvrťhodina dňa - najďalej, kam náhľad siaha. */
-const LAST = MINUTES_PER_DAY - PREVIEW.keyStepMin;
+/**
+ * Rozsah náhľadu: prvá a posledná štvrťhodina osi grafu. Render ho dáva do `aria-valuemin`
+ * a `aria-valuemax` (chartRange v shared/day-chart.js) - stav appky tu netreba.
+ * @param {HTMLElement} chart
+ */
+function rangeOf(chart) {
+    return { min: Number(chart.getAttribute('aria-valuemin')), max: Number(chart.getAttribute('aria-valuemax')) };
+}
 
 /**
  * Náhľad v čase pod prstom či kurzorom. Čas sa počíta z polohy v SVG grafu (nie v jeho rámčeku),
- * tým istým meradlom, akým graf kreslí (chartMinutes).
+ * tým istým meradlom, akým graf kreslí (chartMinutes na osi grafu).
  * @param {HTMLElement} chart @param {ScrubHooks} h @param {number} clientX
  */
 function previewAt(chart, h, clientX) {
     if (!h.active()) return;
     const svg = chart.querySelector('svg');
     const box = (svg || chart).getBoundingClientRect();
-    const min = chartMinutes((clientX - box.left) / (box.width || 1));
+    const r = rangeOf(chart);
+    const min = chartMinutes((clientX - box.left) / (box.width || 1), { from: r.min, to: r.max + PREVIEW.keyStepMin });
     if (h.current() !== min) h.preview(min);
 }
 
@@ -97,7 +104,7 @@ function bindPointer(chart, h) {
 
 /**
  * Klávesnica: graf je posúvač času. Šípky posúvajú po štvrťhodinách (PREVIEW.keyStepMin), Home
- * a End na kraje dňa, Escape vráti teraz.
+ * a End na kraje osi, Escape vráti teraz. Z noci (teraz mimo osi) skočí šípka na bližší kraj.
  * @param {HTMLElement} chart @param {ScrubHooks} h
  */
 function bindKeys(chart, h) {
@@ -110,11 +117,19 @@ function bindKeys(chart, h) {
         }
         const step = PREVIEW.keyStepMin;
         const from = h.current() ?? Math.floor(h.nowMin() / step) * step;
+        const r = rangeOf(chart);
         /** @type {Record<string, number>} */
-        const to = { ArrowLeft: from - step, ArrowDown: from - step, ArrowRight: from + step, ArrowUp: from + step, Home: 0, End: LAST };
+        const to = {
+            ArrowLeft: from - step,
+            ArrowDown: from - step,
+            ArrowRight: from + step,
+            ArrowUp: from + step,
+            Home: r.min,
+            End: r.max,
+        };
         if (!(e.key in to)) return;
         e.preventDefault();
-        h.preview(Math.max(0, Math.min(LAST, to[e.key])));
+        h.preview(Math.max(r.min, Math.min(r.max, to[e.key])));
     });
 }
 

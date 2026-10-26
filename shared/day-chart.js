@@ -1,9 +1,10 @@
 // Graf dňa na karte Terazky / Teraz v oboch appkách a v detaile dňa na karte 7 dní novej appky:
-// odhora oblačnosť po hodinách, krivka výroby od polnoci do polnoci s osou kW, hranica veľkých
-// spotrebičov a plocha nad ňou, značka „teraz“ a náhľad iného času, pod grafom pás plánu po
+// odhora oblačnosť po hodinách, krivka výroby cez deň so slnkom (daylightSpan) s osou kW, hranica
+// veľkých spotrebičov a plocha nad ňou, značka „teraz“ a náhľad iného času, pod grafom pás plánu po
 // polhodinách.
 // Čistá geometria v súradniciach SVG (viewBox DAY_CHART.w × DAY_CHART.h) podľa návrhu
-// (docs/navrhy/terazky-casova-os.html, C2 s výplňou). Plán aj výkon prichádzajú hotové z day-plan.js
+// (docs/navrhy/terazky-casova-os.html, C2 s výplňou; os len cez deň so slnkom podľa
+// docs/navrhy/terazky-den-od-usvitu.html, variant A). Plán aj výkon prichádzajú hotové z day-plan.js
 // a hero-model.js - tu sa nič nepočíta inak, len kreslí.
 
 import { kwGridStep } from './chart-model.js';
@@ -13,9 +14,10 @@ import { DAY_CHART_KEYS, TERAZ_TONES, terazPreviewTime } from './messages-core.j
 
 /** Čo platí v danej štvrťhodine plánu: slnko stačí, lacná sieť, drahá sieť, inak bežná cena. @typedef {'sun' | 'cheap' | 'costly' | 'plain'} Tone */
 /** @typedef {{ from: number, to: number, tone: Tone }} Cell bunka pásu plánu, minúty dňa */
+/** @typedef {import('./solar.js').Span} Span */
 
 /**
- * Rozmery grafu: vodorovne od `left` po `right` je celý deň (vľavo od `left` čísla osi kW),
+ * Rozmery grafu: vodorovne od `left` po `right` je os dňa - deň so slnkom (vľavo od `left` čísla osi kW),
  * zvislo odhora čas náhľadu, riadok oblačnosti (`cloudY`, výška `cloudH`), voľné miesto pre nápis
  * hranice, keď musí vystúpiť nad krivku, krivka od `top`
  * (`maxKw`, pevný vrch stupnice - krivky dní sa dajú porovnať na prvý pohľad) po `base` (nula)
@@ -68,8 +70,22 @@ const MARK_R = 7;
 /** Rezerva okolo krivky (hrúbka čiary). */
 const LINE_PAD = 1.5;
 
-/** Hodiny, ktoré majú pod grafom popisok. */
-const TICK_HOURS = [0, 6, 12, 18, 24];
+/** Celý deň - os grafu, keď slnko v ten deň nevyjde alebo nezapadne (daylightSpan). @type {Span} */
+export const FULL_DAY = { from: 0, to: MINUTES_PER_DAY };
+
+/**
+ * Hodiny s popiskom pod grafom: kraje osi a medzi nimi násobky troch (na celom dni šiestich), ktoré
+ * sú od kraja aspoň dve hodiny - aby sa nápisy nebili.
+ * @param {Span} span @returns {number[]}
+ */
+export function tickHours(span) {
+    const a = span.from / 60;
+    const b = span.to / 60;
+    const step = b - a > 20 ? 6 : 3;
+    const mid = [];
+    for (let h = Math.ceil(a / step) * step; h <= b; h += step) if (h - a >= 2 && b - h >= 2) mid.push(h);
+    return [a, ...mid, b];
+}
 
 /** Zaokrúhlenie súradnice na desatinu - kratší zápis SVG, oko rozdiel nevidí. @param {number} v */
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -87,14 +103,15 @@ export function slotTone(slot) {
 }
 
 /**
- * Pás plánu po polhodinách. Bunka má farbu štvrťhodiny v jej strede (druhej z dvoch) - jedno
- * pravidlo pre všetky bunky, nie väčšina ani priemer.
- * @param {import('./day-plan.js').PlanSlot[]} plan celý deň po štvrťhodinách (dayPlan) @returns {Cell[]}
+ * Pás plánu po polhodinách na osi grafu. Bunka má farbu štvrťhodiny v jej strede (druhej z dvoch) -
+ * jedno pravidlo pre všetky bunky, nie väčšina ani priemer.
+ * @param {import('./day-plan.js').PlanSlot[]} plan celý deň po štvrťhodinách (dayPlan) @param {Span} [span] os grafu
+ * @returns {Cell[]}
  */
-export function planCells(plan) {
+export function planCells(plan, span = FULL_DAY) {
     const step = plan[0].min;
-    return Array.from({ length: MINUTES_PER_DAY / DAY_CHART.cellMin }, (_, i) => {
-        const from = i * DAY_CHART.cellMin;
+    return Array.from({ length: (span.to - span.from) / DAY_CHART.cellMin }, (_, i) => {
+        const from = span.from + i * DAY_CHART.cellMin;
         const mid = plan[Math.floor((from + DAY_CHART.cellMin / 2) / step)];
         return { from, to: from + DAY_CHART.cellMin, tone: slotTone(mid) };
     });
@@ -127,63 +144,88 @@ export function chartKeys() {
     ];
 }
 
-/** Bunka pásu, do ktorej padne minúta dňa. @template {Cell} T @param {T[]} cells @param {number} min */
+/** Bunka pásu, do ktorej padne minúta dňa; mimo pásu krajná. @template {Cell} T @param {T[]} cells @param {number} min */
 export function cellAt(cells, min) {
-    return cells[Math.min(cells.length - 1, Math.max(0, Math.floor(min / DAY_CHART.cellMin)))];
+    return cells[Math.min(cells.length - 1, Math.max(0, Math.floor((min - cells[0].from) / DAY_CHART.cellMin)))];
 }
 
-/** Vodorovná poloha minúty dňa. @param {number} min */
-export const chartX = (min) => DAY_CHART.left + (min / MINUTES_PER_DAY) * (DAY_CHART.right - DAY_CHART.left);
+/** Vodorovná poloha minúty dňa na osi `span`; mimo nej na kraji. @param {number} min @param {Span} [span] */
+export const chartX = (min, span = FULL_DAY) =>
+    DAY_CHART.left +
+    ((Math.min(span.to, Math.max(span.from, min)) - span.from) / (span.to - span.from)) * (DAY_CHART.right - DAY_CHART.left);
+
+/**
+ * Rozsah posúvača času na grafe: prvá a posledná štvrťhodina osi (krok náhľadu). Appka ho dáva
+ * grafu do `aria-valuemin` / `aria-valuemax`, odkiaľ ho berie ovládanie (web/teraz-gestures.js).
+ * @param {Span} span
+ */
+export const chartRange = (span) => ({ min: span.from, max: span.to - PREVIEW.keyStepMin });
 
 /**
  * Minúta dňa pre miesto na grafe, zaokrúhlená na krok náhľadu (štvrťhodina, ako šípky na
- * klávesnici). Mimo kriviek sa drží krajov dňa.
- * @param {number} rel poloha od ľavého okraja grafu ako podiel jeho šírky (0 až 1)
+ * klávesnici). Mimo kriviek sa drží krajov osi.
+ * @param {number} rel poloha od ľavého okraja grafu ako podiel jeho šírky (0 až 1) @param {Span} [span] os grafu
  */
-export function chartMinutes(rel) {
+export function chartMinutes(rel, span = FULL_DAY) {
     const step = PREVIEW.keyStepMin;
     const frac = (rel * DAY_CHART.w - DAY_CHART.left) / (DAY_CHART.right - DAY_CHART.left);
-    const min = Math.round((Math.max(0, Math.min(1, frac)) * MINUTES_PER_DAY) / step) * step;
-    return Math.min(min, MINUTES_PER_DAY - step);
+    const min = span.from + Math.round((Math.max(0, Math.min(1, frac)) * (span.to - span.from)) / step) * step;
+    return Math.min(min, chartRange(span).max);
+}
+
+/**
+ * Čas pri čiare „teraz“. Keď je teraz mimo osi (noc), čiara stojí na jej kraji a čas má šípku von.
+ * @param {number} min @param {Span} span
+ */
+function markText(min, span) {
+    const t = terazPreviewTime(min);
+    if (min < span.from) return `‹ ${t}`;
+    return min >= span.to ? `${t} ›` : t;
 }
 
 /**
  * Geometria grafu dňa.
- * @param {{ plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number, cloud?: number | null }>,
+ * @param {{ span: Span, plan: import('./day-plan.js').PlanSlot[], hourly: Array<{ hour: number, kw: number, cloud?: number | null }>,
  *   real: Array<{ hour: number, kw: number }>, boundary: number | null, nowMin: number | null, nowKw: number,
- *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null }} d `hourly`
+ *   limitKw: number, limitText: string, preview: { min: number, kw: number, text: string } | null }} d `span`
+ *   os grafu (daylightSpan dňa), `hourly`
  *   predpoveď dňa aj s oblačnosťou po hodinách, `real` nameraná krivka (kreslí sa po `boundary`, posledný
  *   nameraný bod), `nowMin`
  *   značka „teraz“ (null = iný deň než dnešok, značka nie je), `limitKw` hranica veľkých spotrebičov
  *   a `limitText` nápis pri nej, `preview` náhľad iného času s popiskom (čas)
  */
-export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview }) {
+export function dayChartModel({ span, plan, hourly, real, boundary, nowMin, nowKw, limitKw, limitText, preview }) {
     const C = DAY_CHART;
-    const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary);
+    const inSpan = (/** @type {{ hour: number }} */ p) => p.hour * 60 >= span.from && p.hour * 60 <= span.to;
+    const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary && inSpan(p));
     const max = C.maxKw;
     const step = kwGridStep(max, 4);
     const y = (/** @type {number} */ kw) => r1(C.base - (Math.min(max, Math.max(0, kw)) / max) * (C.base - C.top));
-    const x = (/** @type {number} */ min) => r1(chartX(min));
+    const x = (/** @type {number} */ min) => r1(chartX(min, span));
     const limitY = y(limitKw);
-    const { forecast, curve, paths } = linesOf(hourly, measured, x, y, limitY);
-    const cellW = r1(chartX(C.cellMin) - chartX(0) - 0.8);
+    const { forecast, curve, paths } = linesOf(forecastOnAxis(hourly, span), measured, x, y, limitY);
+    const cellW = r1(chartX(span.from + C.cellMin, span) - chartX(span.from, span) - 0.8);
     const at = (/** @type {number} */ min, /** @type {number} */ kw) => ({ x: x(min), y: Number.isFinite(kw) ? y(kw) : null });
     // Bunky, ktoré dnes už prešli, sú stlmené: hranica medzi nimi a plným pásom ukazuje „teraz“ aj
     // v páse. Bunka, v ktorej „teraz“ je, ešte platí.
-    const cells = planCells(plan).map((c) => ({ ...c, x: x(c.from), w: cellW, past: nowMin !== null && c.to <= nowMin }));
+    const cells = planCells(plan, span).map((c) => ({ ...c, x: x(c.from), w: cellW, past: nowMin !== null && c.to <= nowMin }));
     // Čiara náhľadu stojí bez náhľadu na „teraz“ (ak je dnešok) - čas pri nej povie, ktorá chvíľa to je.
-    const at0 = preview ?? (nowMin === null ? null : { min: nowMin, kw: nowKw, text: terazPreviewTime(nowMin) });
+    // „Teraz“ mimo osi (noc) stojí na jej kraji, bez zvýraznenej bunky pásu a hodiny oblačnosti.
+    const at0 = preview ?? (nowMin === null ? null : { min: nowMin, kw: nowKw, text: markText(nowMin, span) });
     const mark = at0 && { ...at(at0.min, at0.kw), min: at0.min, text: at0.text };
+    const inside = !!mark && mark.min >= span.from && mark.min < span.to;
     return {
+        span,
+        range: chartRange(span),
         ...paths,
         grid: Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step).map((kw) => ({ y: y(kw), label: formatGridKw(kw) })),
         limitY,
         limitText,
         // Nápis hranice nesmie prekryť krivky, bod „teraz“ ani čiaru náhľadu.
-        limitAt: limitPlaces(limitY, limitText, [forecast, curve], marksOf(nowMin, mark)),
-        clouds: cloudCells(hourly, x),
+        limitAt: limitPlaces(limitY, limitText, [forecast, curve], marksOf(nowMin, mark, span)),
+        clouds: cloudCells(hourly, span, x),
         cells,
-        ticks: TICK_HOURS.map((h) => ({ x: x(h * 60), label: String(h) })),
+        ticks: tickHours(span).map((h) => ({ x: x(h * 60), label: String(h) })),
         now: nowMin === null ? null : at(nowMin, nowKw),
         // Čiara náhľadu (alebo „teraz“): čas nad ňou, zvýraznená bunka pásu a hodina oblačnosti pod ňou.
         mark: mark && {
@@ -191,24 +233,34 @@ export function dayChartModel({ plan, hourly, real, boundary, nowMin, nowKw, lim
             y: mark.y,
             preview: !!preview,
             label: labelOf(mark.text),
-            cell: cellAt(cells, mark.min),
-            hour: Math.min(23, Math.floor(mark.min / 60)),
+            cell: inside ? cellAt(cells, mark.min) : null,
+            hour: inside ? Math.floor(mark.min / 60) : null,
         },
     };
 }
 
 /**
- * Čiary grafu: predpoveď cez celý deň (posledná hodina drží do polnoci), nameraná krivka a plocha
- * nad hranicou veľkých spotrebičov (slnko navyše na ne) - krivka dňa je meranie po hranicu, za ňou
- * predpoveď, tá istá ako výkon v náhľade (dayKwAt). Pod hranicou plocha nie je.
- * @param {Array<{ hour: number, kw: number }>} hourly @param {Array<{ hour: number, kw: number }>} measured
+ * Hodiny predpovede na osi grafu; posledná drží po jej koniec.
+ * @template {{ hour: number, kw: number }} P @param {P[]} hourly @param {Span} span
+ * @returns {Array<{ hour: number, kw: number }>}
+ */
+function forecastOnAxis(hourly, span) {
+    const onAxis = hourly.filter((p) => p.hour * 60 >= span.from && p.hour * 60 <= span.to);
+    const last = onAxis[onAxis.length - 1];
+    return last && last.hour * 60 < span.to ? [...onAxis, { hour: span.to / 60, kw: last.kw }] : onAxis;
+}
+
+/**
+ * Čiary grafu: predpoveď cez celú os, nameraná krivka a plocha nad hranicou veľkých spotrebičov
+ * (slnko navyše na ne) - krivka dňa je meranie po hranicu, za ňou predpoveď, tá istá ako výkon
+ * v náhľade (dayKwAt). Pod hranicou plocha nie je.
+ * @param {Array<{ hour: number, kw: number }>} hourly predpoveď na osi @param {Array<{ hour: number, kw: number }>} measured
  * @param {(min: number) => number} x @param {(kw: number) => number} y @param {number} limitY
  */
 function linesOf(hourly, measured, x, y, limitY) {
     const toPt = (/** @type {{ hour: number, kw: number }} */ p) => ({ x: x(p.hour * 60), y: y(p.kw) });
     const path = (/** @type {Pt[]} */ list) => (list.length ? `M${list.map((p) => `${p.x} ${p.y}`).join(' L')}` : '');
-    const last = hourly[hourly.length - 1];
-    const forecast = last ? [...hourly.map(toPt), { x: x(MINUTES_PER_DAY), y: y(last.kw) }] : [];
+    const forecast = hourly.map(toPt);
     const curve = measured.length > 1 ? measured.map(toPt) : [];
     const end = curve.length ? curve[curve.length - 1].x : -Infinity;
     const day = [...curve, ...forecast.filter((p) => p.x > end)];
@@ -224,13 +276,13 @@ function linesOf(hourly, measured, x, y, limitY) {
 }
 
 /**
- * Oblačnosť po hodinách: bunka na hodinu, `cloud` v percentách. Hodina bez údaja bunku nemá.
- * @param {Array<{ hour: number, cloud?: number | null }>} hourly @param {(min: number) => number} x
+ * Oblačnosť po hodinách na osi: bunka na hodinu, `cloud` v percentách. Hodina bez údaja bunku nemá.
+ * @param {Array<{ hour: number, cloud?: number | null }>} hourly @param {Span} span @param {(min: number) => number} x
  */
-function cloudCells(hourly, x) {
-    const w = r1(x(60) - x(0) - 1.6);
+function cloudCells(hourly, span, x) {
+    const w = r1(x(span.from + 60) - x(span.from) - 1.6);
     return hourly
-        .filter((p) => Number.isFinite(p.cloud) && p.hour >= 0 && p.hour < 24)
+        .filter((p) => Number.isFinite(p.cloud) && p.hour * 60 >= span.from && p.hour * 60 < span.to)
         .map((p) => ({ hour: p.hour, x: r1(x(p.hour * 60) + 0.8), w, cloud: /** @type {number} */ (p.cloud) }));
 }
 
@@ -260,13 +312,13 @@ export function fillPath(line, limitY, part) {
 /**
  * Značky, ktorým sa nápis hranice vyhne: bod „teraz“ a čiara náhľadu (bez náhľadu stojí na „teraz“)
  * s časom nad ňou.
- * @param {number | null} nowMin @param {{ min: number, text: string } | null} mark @returns {Mark[]}
+ * @param {number | null} nowMin @param {{ min: number, text: string } | null} mark @param {Span} span @returns {Mark[]}
  */
-function marksOf(nowMin, mark) {
+function marksOf(nowMin, mark, span) {
     /** @type {Mark[]} */
     const marks = [];
-    if (nowMin !== null) marks.push({ x: r1(chartX(nowMin)), halfPx: 0 });
-    if (mark) marks.push({ x: r1(chartX(mark.min)), halfPx: labelOf(mark.text).w / 2 });
+    if (nowMin !== null) marks.push({ x: r1(chartX(nowMin, span)), halfPx: 0 });
+    if (mark) marks.push({ x: r1(chartX(mark.min, span)), halfPx: labelOf(mark.text).w / 2 });
     return marks;
 }
 

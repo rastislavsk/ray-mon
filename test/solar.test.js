@@ -9,6 +9,7 @@ import {
     clearDayKwh,
     clearSkyAcKw,
     clearSkyIrradiance,
+    daylightSpan,
     daypartFor,
     forecastAcKw,
     hourlySeries,
@@ -39,6 +40,16 @@ test('solarPosition: letné poludnie ~65°, zimné ~18°, azimut na juh', () => 
     const winter = pos(NOON_DEC);
     assert.ok(winter.elevationDeg > 16.5 && winter.elevationDeg < 19.5, `zima ${winter.elevationDeg}`);
     assert.ok(pos(new Date('2026-06-21T23:00:00Z')).elevationDeg < 0, 'polnoc pod horizontom');
+});
+
+test('daylightSpan: hodina pred východom a po západe, na celé hodiny von; v polárny deň či noc celý deň', () => {
+    // Východ 6:23, západ 16:41 → 5:23 a 17:41 → 5–18.
+    assert.deepEqual(daylightSpan(SITE, '2026-10-26'), { from: 5 * 60, to: 18 * 60 });
+    assert.deepEqual(daylightSpan(SITE, '2026-12-21'), { from: 6 * 60, to: 17 * 60 });
+    assert.deepEqual(daylightSpan(SITE, '2026-06-21'), { from: 3 * 60, to: 22 * 60 });
+    const north = { ...SITE, lat: 78.2, lon: 15.6, timezone: 'Arctic/Longyearbyen' };
+    assert.deepEqual(daylightSpan(north, '2026-06-21'), { from: 0, to: 1440 });
+    assert.deepEqual(daylightSpan(north, '2026-12-21'), { from: 0, to: 1440 });
 });
 
 test('solarPosition: ráno východ (azimut < 180), popoludní západ (> 180)', () => {

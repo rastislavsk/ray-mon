@@ -140,8 +140,14 @@ export const START_HASH_KEY = 'prva';
  */
 export const LAYOUT_PX = { medium: 1024, wide: 1280 };
 
-/** Minút v dni. Graf dňa ich rozloží po šírke, rozvrh tarify ich delí na pásma. */
+/** Minút v dni. Rozvrh tarify ich delí na pásma, graf dňa z nich ukáže deň so slnkom (DAYLIGHT_PAD_MIN). */
 export const MINUTES_PER_DAY = 1440;
+
+/**
+ * Koľko minút pred východom a po západe slnka ešte ukáže graf dňa a pás dňa na karte Môžem?
+ * (daylightSpan v solar.js). Kraje sa potom zaokrúhlia na celé hodiny smerom von.
+ */
+export const DAYLIGHT_PAD_MIN = 60;
 
 /**
  * Inštalovaný výkon zostavy v kWp: počet panelov × výkon panelu. Jediné miesto, kde sa počíta -

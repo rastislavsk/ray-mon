@@ -194,6 +194,16 @@ const terazAt = (instant, extra = {}) => terazModel(terazVstup(instant, extra));
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
 const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
 
+/**
+ * Os grafu dňa tak, ako ju dal render do posúvača (chartRange v shared/day-chart.js).
+ * @param {import('@playwright/test').Page} page
+ */
+async function osGrafu(page) {
+    const graf = page.locator('#tz-chart');
+    const from = Number(await graf.getAttribute('aria-valuemin'));
+    return { from, to: Number(await graf.getAttribute('aria-valuemax')) + config.PREVIEW.keyStepMin };
+}
+
 /** Bod na grafe dňa pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
 async function bodGrafu(page, min) {
     // Kým nie je karta celá (pás odporúčaní, písma), stránka ešte rastie - keď sa pritom objaví
@@ -211,7 +221,7 @@ async function bodGrafu(page, min) {
         box = dalsi;
     }
     if (!box) throw new Error('graf nie je vidno');
-    return { x: box.x + (chartX(min) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
+    return { x: box.x + (chartX(min, await osGrafu(page)) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
 }
 
 /** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
@@ -291,8 +301,10 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
     await expect(page.locator('#tz-chart .dc-y:not(.dc-unit)')).toHaveText(m.chart.grid.map((g) => g.label));
-    await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(48);
-    await expect(page.locator('#tz-chart .dc-t')).toHaveText(['0', '6', '12', '18', '24']);
+    // Os je deň so slnkom: bunky pásu a hodiny pod ním len v nej.
+    await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(m.chart.cells.length);
+    await expect(page.locator('#tz-chart .dc-t')).toHaveText(m.chart.ticks.map((t) => t.label));
+    expect(m.chart.ticks.map((t) => t.label)).toEqual(['5', '9', '12', '15', '18', '21']);
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('13:00');
     await expect(page.locator('#tz-legend span')).toHaveText(m.chart.keys.map((l) => l.text));
     await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart.valueText);
@@ -427,26 +439,26 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     const errors = await openApp(page, { start: 'terazky', time: atTime('13:00').instant });
     const { instant } = atTime('13:00');
     const teraz = terazAt(instant);
-    const nahlad = terazAt(instant, { previewMinutes: minuta('21:00') });
+    const nahlad = terazAt(instant, { previewMinutes: minuta('20:45') });
     const z = await bodGrafu(page, minuta('10:00'));
-    const na = await bodGrafu(page, minuta('21:00'));
+    const na = await bodGrafu(page, minuta('20:45'));
     await page.mouse.move(z.x, z.y);
     await page.mouse.down();
     await page.mouse.move(na.x, na.y, { steps: 8 });
     await page.mouse.up();
     // Nadpis povie, ku ktorému času číslo patrí; čas je aj v grafe pri čiare.
-    expect(nahlad.title).toBe('O 21:00');
+    expect(nahlad.title).toBe('O 20:45');
     await expect(page.locator('#tz-title')).toHaveText(kick(nahlad));
     await expect(page.locator('#tz-num-val')).toHaveText(nahlad.num);
     await expect(page.locator('#tz-now-head')).toHaveText(nahlad.cards?.now.head ?? '');
-    await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('21:00');
-    await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('21:00'))) ?? '');
+    await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('20:45');
+    await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('20:45'))) ?? '');
     await expect(page.locator('#tz-hint')).toHaveText('');
-    // Pozadie ide s náhľadom (21:00 je drahé pásmo bez slnka), bodka ostáva o stave merania teraz.
+    // Pozadie ide s náhľadom (20:45 je drahé pásmo bez slnka), bodka ostáva o stave merania teraz.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'red');
     await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'live');
     // Graf pod kurzorom sa nepohol.
-    expect((await bodGrafu(page, minuta('21:00'))).y).toBe(na.y);
+    expect((await bodGrafu(page, minuta('20:45'))).y).toBe(na.y);
 
     const spat = page.getByRole('button', { name: 'Späť na teraz' });
     await spat.click();
@@ -505,10 +517,11 @@ test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kr
     await page.keyboard.press('ArrowLeft');
     await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
     await expect(page.locator('#tz-num-val')).toHaveText(terazAt(instant, { previewMinutes: minuta('12:45') }).num);
+    // Home a End na kraje osi: deň so slnkom, nie polnoc.
     await page.keyboard.press('End');
-    await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('23:45')));
+    await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('20:45')));
     await page.keyboard.press('Home');
-    await expect(graf).toHaveAttribute('aria-valuenow', '0');
+    await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('05:00')));
     await page.keyboard.press('Escape');
     await expect(graf).toHaveAttribute('aria-valuetext', terazAt(instant).chart?.valueText ?? '');
     await expect(page.locator('#tz-reset')).toBeHidden();
@@ -608,7 +621,8 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     // ten istý model ako appka; krivka výroby s legendou tu nie je.
     const graf5 = sedemDayChart(vstup, 5);
     await expect(page.locator('#week-day-chart .dc-cloud')).toHaveCount(graf5.clouds.length);
-    await expect(page.locator('#week-day-chart rect[data-from]')).toHaveCount(48);
+    await expect(page.locator('#week-day-chart rect[data-from]')).toHaveCount(graf5.cells.length);
+    await expect(page.locator('#week-day-chart .dc-t')).toHaveText(graf5.ticks.map((t) => t.label));
     await expect(page.locator('#week-day-chart .dc-limit-t')).toHaveText(graf5.limitText);
     await expect(page.locator('#week-day-chart .dc-y:not(.dc-unit)')).toHaveText(graf5.grid.map((g) => g.label));
     await expect(page.locator('#week-day-chart')).toHaveAttribute('aria-label', graf5.desc);

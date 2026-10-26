@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Graf dňa od úsvitu</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" />
+        <style>
+            /* Návrh: os grafu dňa na karte Terazky / Teraz len od úsvitu po súmrak. Mockupy kreslí skript
+       dole tou istou geometriou ako shared/day-chart.js (viewBox 320 × 176), farby sú z style.css
+       a obloha/style.css. Dáta sú vymyslené, časy východu a západu sú zo sunTimes pre predvolenú
+       lokalitu. */
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --panel: #161b3a;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --ink: #0b1430;
+                --font: 'Archivo', system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font-family: var(--font);
+                font-size: 15px;
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
+            }
+            .wrap {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 36px 16px 72px;
+            }
+            .eyebrow {
+                margin: 0 0 8px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            h1 {
+                margin: 0 0 12px;
+                font-size: clamp(26px, 4vw, 38px);
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1.1;
+                text-wrap: balance;
+            }
+            h2 {
+                margin: 48px 0 10px;
+                font-size: 22px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+            }
+            h3 {
+                margin: 0;
+                font-size: 17px;
+                font-weight: 700;
+            }
+            p {
+                max-width: 74ch;
+            }
+            .lede {
+                margin: 0;
+                color: var(--muted);
+                max-width: 74ch;
+            }
+            .lede b,
+            .muted b {
+                color: var(--text);
+            }
+            .muted {
+                color: var(--muted);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 0.9em;
+                background: rgba(255, 255, 255, 0.07);
+                padding: 1px 5px;
+                border-radius: 5px;
+            }
+
+            /* Ovládanie: deň a čas „teraz“ pre všetky mockupy naraz. */
+            .controls {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 10px 18px;
+                margin-top: 24px;
+                padding: 12px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                background: rgba(22, 27, 58, 0.94);
+                backdrop-filter: blur(8px);
+            }
+            .seg {
+                display: flex;
+                gap: 4px;
+                flex-wrap: wrap;
+            }
+            .seg button {
+                font: inherit;
+                font-size: 14px;
+                font-weight: 600;
+                padding: 6px 12px;
+                border-radius: 999px;
+                border: 1px solid var(--line);
+                background: transparent;
+                color: var(--text);
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--ink);
+                border-color: #fff;
+            }
+            .clock {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+                min-width: 240px;
+            }
+            .clock output {
+                min-width: 3.2em;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+            }
+            .clock input {
+                flex: 1;
+                accent-color: var(--yes);
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+                gap: 28px 20px;
+                margin-top: 20px;
+            }
+            .col {
+                display: grid;
+                align-content: start;
+                gap: 10px;
+                min-width: 0;
+            }
+            .tag {
+                display: flex;
+                align-items: baseline;
+                gap: 10px;
+            }
+            .tag b {
+                display: inline-grid;
+                place-items: center;
+                min-width: 30px;
+                height: 30px;
+                padding: 0 8px;
+                border-radius: 999px;
+                background: #fff;
+                color: var(--ink);
+                font-weight: 800;
+            }
+            .tag.now b {
+                background: transparent;
+                color: var(--text);
+                border: 1px solid var(--line);
+            }
+            .tag.rec b {
+                background: var(--yes);
+            }
+            .desc {
+                margin: 0;
+                color: var(--muted);
+                font-size: 14px;
+            }
+            .desc b {
+                color: var(--text);
+            }
+            .coat {
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin: 4px 0 -2px;
+            }
+
+            /* ---- Karta s grafom: dva kabáty ---- */
+            .card {
+                width: min(375px, 100%);
+                padding: 14px 14px 12px;
+                border-radius: 22px;
+            }
+            .card.cur {
+                --c-ink: #f2f0ea;
+                --c-ink45: rgba(242, 240, 234, 0.64);
+                --c-ink08: rgba(242, 240, 234, 0.1);
+                --c-green: #9ef25b;
+                --c-sun: #9ef25b;
+                --c-green-a: rgba(158, 242, 91, 0.4);
+                --c-fc: rgba(158, 242, 91, 0.55);
+                --c-cheap: #ffc24b;
+                --c-costly: #ff6b57;
+                --c-plain: rgba(185, 182, 172, 0.55);
+                --c-cloud0: #e8e6df;
+                --c-cloud1: #5a5954;
+                --c-bg: #151614;
+                --c-font: var(--mono);
+                background: #151614;
+                border: 1px solid rgba(242, 240, 234, 0.14);
+                color: var(--c-ink);
+            }
+            .sky {
+                padding: 14px;
+                border-radius: 26px;
+                width: min(400px, 100%);
+                background: linear-gradient(180deg, #3d6fb6 0%, #6b8fbf 55%, #b39a86 100%);
+            }
+            .card.sky-in {
+                --c-ink: #fff;
+                --c-ink45: rgba(255, 255, 255, 0.82);
+                --c-ink08: rgba(255, 255, 255, 0.16);
+                --c-green: #b9f28c;
+                --c-sun: #b9f28c;
+                --c-green-a: rgba(185, 242, 140, 0.5);
+                --c-fc: rgba(185, 242, 140, 0.6);
+                --c-cheap: #7cc4ff;
+                --c-costly: #ff7a66;
+                --c-plain: rgba(255, 255, 255, 0.3);
+                --c-cloud0: #fff;
+                --c-cloud1: #4d5560;
+                --c-bg: #0b1430;
+                --c-font: var(--font);
+                width: 100%;
+                background: rgba(8, 16, 40, 0.42);
+                color: var(--c-ink);
+            }
+
+            .dc-box {
+                position: relative;
+            }
+            .dc-box svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .dc-box > span {
+                position: absolute;
+                line-height: 1.2;
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            .t {
+                color: var(--c-ink45);
+                font-family: var(--c-font);
+                font-size: 12px;
+                transform: translate(-50%, 2px);
+            }
+            .t.first {
+                transform: translate(-30%, 2px);
+            }
+            .t.last {
+                transform: translate(-70%, 2px);
+            }
+            .y {
+                color: var(--c-ink45);
+                font-family: var(--c-font);
+                font-size: 11px;
+                transform: translate(-100%, -50%);
+            }
+            .lim {
+                color: var(--c-ink45);
+                font-size: 12px;
+                transform: translate(0, calc(-100% - 2px));
+            }
+            .at {
+                color: var(--c-ink);
+                font-family: var(--c-font);
+                font-size: 14px;
+                font-weight: 700;
+                transform: translate(-50%, calc(-100% - 2px));
+            }
+            .at.l {
+                transform: translate(0, calc(-100% - 2px));
+            }
+            .at.r {
+                transform: translate(-100%, calc(-100% - 2px));
+            }
+            .night-t {
+                color: var(--c-ink45);
+                font-size: 10px;
+                transform: translate(-50%, -50%);
+            }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 14px;
+                margin-top: 10px;
+                font-size: 13px;
+                color: var(--c-ink45);
+            }
+            .legend span::before {
+                content: '';
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: -1px;
+                background: var(--dot);
+            }
+            .note {
+                margin-top: 8px;
+                font-size: 13px;
+                color: var(--c-ink45);
+            }
+            .note b {
+                color: var(--c-ink);
+            }
+
+            /* ---- Tabuľky a zoznamy ---- */
+            table {
+                border-collapse: collapse;
+                margin-top: 12px;
+                font-variant-numeric: tabular-nums;
+                width: min(100%, 640px);
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 12px 7px 0;
+                border-bottom: 1px solid var(--line);
+                font-size: 14px;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 600;
+            }
+            .box {
+                margin-top: 16px;
+                padding: 16px 18px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                background: var(--panel);
+                max-width: 820px;
+            }
+            .box ul,
+            .box ol {
+                margin: 6px 0 0;
+                padding-left: 20px;
+            }
+            .box li + li {
+                margin-top: 6px;
+            }
+            .box p {
+                margin: 6px 0 0;
+            }
+            .q li {
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <p class="eyebrow">Návrh · karta Terazky (súčasná appka) a Teraz (Živá obloha)</p>
+            <h1>Graf dňa od úsvitu po súmrak</h1>
+            <p class="lede">
+                Graf dňa má dnes os od polnoci do polnoci. Slnko z nej v októbri zaberie len strednú tretinu, v decembri ešte menej, a
+                zvyšok je rovná čiara na nule. Návrh: os ukáže
+                <b>len deň so slnkom – hodinu pred východom až hodinu po západe, zaokrúhlené na celé hodiny</b>. Krivka bude takmer dvakrát
+                širšia, bunky oblačnosti a pásu plánu tiež, a ťahať prstom po grafe pôjde jemnejšie.
+            </p>
+
+            <h2>Pred a po</h2>
+            <p class="muted">Dnes, 26. 10., 14:02 – súčasná appka. Vľavo graf, ako je teraz, vpravo os 5–18.</p>
+            <div class="grid">
+                <div class="col">
+                    <div class="tag now">
+                        <b>teraz</b>
+                        <h3>0–24 h</h3>
+                    </div>
+                    <div class="card cur" data-chart="full" data-fixed="1"></div>
+                </div>
+                <div class="col">
+                    <div class="tag rec">
+                        <b>návrh</b>
+                        <h3>5–18 h (východ 6:23, západ 16:41)</h3>
+                    </div>
+                    <div class="card cur" data-chart="A" data-fixed="1"></div>
+                </div>
+            </div>
+
+            <h2>Čo s nocou</h2>
+            <p class="muted">
+                Keď je „teraz“ mimo okna (ráno pred ním, večer po ňom), graf ho nemá kam nakresliť a nočná tarifa z pásu plánu zmizne. Dve
+                možnosti. Skús si deň a čas – mockupy sa prekreslia.
+            </p>
+            <div class="controls">
+                <div class="seg" id="days" role="group" aria-label="Deň">
+                    <button type="button" data-day="dec">21. 12.</button>
+                    <button type="button" data-day="oct" aria-pressed="true">dnes 26. 10.</button>
+                    <button type="button" data-day="jun">21. 6.</button>
+                </div>
+                <div class="seg" id="quick" role="group" aria-label="Čas">
+                    <button type="button" data-min="270">4:30</button>
+                    <button type="button" data-min="842">14:02</button>
+                    <button type="button" data-min="1185">19:45</button>
+                    <button type="button" data-min="1395">23:15</button>
+                </div>
+                <div class="clock">
+                    <label for="now">teraz</label>
+                    <input id="now" type="range" min="0" max="1425" step="15" value="840" />
+                    <output id="nowOut" for="now">14:00</output>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="col">
+                    <div class="tag rec">
+                        <b>A</b>
+                        <h3>Len deň</h3>
+                    </div>
+                    <p class="desc">
+                        Os je len okno. V noci stojí čiara „teraz“ na kraji grafu a čas pri nej má šípku von (<b>19:45 ›</b>). Celý pás je
+                        vtedy stlmený (deň prešiel) alebo plný (ešte nezačal). Nočná tarifa ostane v zozname pod grafom, ktorý ukazuje
+                        hodnoty v čase značky – a ten v noci ukazuje teraz.
+                    </p>
+                    <p class="coat">Súčasná appka</p>
+                    <div class="card cur" data-chart="A"></div>
+                    <p class="coat">Živá obloha</p>
+                    <div class="sky"><div class="card sky-in" data-chart="A"></div></div>
+                </div>
+                <div class="col">
+                    <div class="tag">
+                        <b>B</b>
+                        <h3>Noc na okrajoch</h3>
+                    </div>
+                    <p class="desc">
+                        Noc pred oknom a po ňom je zbalená do úzkeho pruhu na každom kraji (bez krivky, len pás plánu a mesiac). „Teraz“ v
+                        noci stojí v pruhu a nočná tarifa je vidno. Os je však
+                        <b>zlomená</b> – päť hodín noci má šírku pol hodiny dňa – a ťahom prsta sa v pruhu presne mieriť nedá.
+                    </p>
+                    <p class="coat">Súčasná appka</p>
+                    <div class="card cur" data-chart="B"></div>
+                    <p class="coat">Živá obloha</p>
+                    <div class="sky"><div class="card sky-in" data-chart="B"></div></div>
+                </div>
+            </div>
+
+            <div class="box">
+                <h3>Odporúčam A</h3>
+                <p class="muted">
+                    Je to presne to, čo graf má ukázať – slnko –, os je rovná a jednoduchá a nič nové sa nekreslí. Nočnú tarifu a výkon v
+                    čase „teraz“ povie zoznam pod grafom (ten počíta s časom, nie s osou), a kedy čo zapnúť cez noc, rieši plán dňa na karte
+                    Môžem?. B má zmysel, len ak chceš nočné pásma tarify vidieť v grafe.
+                </p>
+            </div>
+
+            <h2>Pravidlo okna</h2>
+            <p class="muted">
+                Od <b>celej hodiny pred</b> (východ − 1 h) po <b>celú hodinu po</b> (západ + 1 h). Zaokrúhlenie na celé hodiny drží os medzi
+                susednými dňami rovnakú – mení sa len občas o hodinu, takže pri listovaní dní v detaile karty 7 dní krivky nepreskakujú.
+                Východ a západ už appka počíta (<code>sunTimes</code> v <code>shared/solar.js</code>, to isté, čo kreslí oblúk slnka na
+                Môžem?). Pre predvolenú lokalitu:
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Deň</th>
+                        <th>Východ</th>
+                        <th>Západ</th>
+                        <th>Os</th>
+                        <th>Hodín</th>
+                        <th>Popisky</th>
+                    </tr>
+                </thead>
+                <tbody id="rule"></tbody>
+            </table>
+            <p class="muted">Kde slnko nevyjde alebo nezapadne (polárny deň či noc), ostane celý deň 0–24 ako dnes.</p>
+
+            <h2>Popisky osi</h2>
+            <p class="muted">
+                Dnes 0, 6, 12, 18, 24. Po novom: <b>začiatok a koniec okna</b> a medzi nimi <b>násobky troch</b>
+                (6, 9, 12, 15, 18, 21), ktoré sú od kraja aspoň dve hodiny – aby sa nápisy nebili. Poludnie je tak vždy na svojom mieste a
+                čísla sú tie, ktoré človek čaká.
+            </p>
+
+            <h2>Čo sa zmení</h2>
+            <div class="box">
+                <h3>Jadro (<code>shared/</code>) – rovnaké pre obe appky</h3>
+                <ul>
+                    <li>
+                        Nová funkcia okna dňa (napr. <code>chartSpan(site, dateKey)</code> v <code>shared/day-chart.js</code>, nad
+                        <code>sunTimes</code>) – jedno miesto pravdy pre začiatok a koniec osi.
+                    </li>
+                    <li>
+                        <code>dayChartModel</code>, <code>chartX</code> a <code>chartMinutes</code> dostanú okno namiesto pevného 0–1440:
+                        krivka, oblačnosť, bunky pásu, popisky osi a hľadanie miesta pre nápis hranice veľkých spotrebičov počítajú len v
+                        ňom. Značka mimo okna sa pritlačí ku kraju a dostane smer (<code>‹</code> / <code>›</code>).
+                    </li>
+                    <li>
+                        Posúvač času: náhľad (ťah prstom, šípky, Home / End) ide len po okne. Hranice dá graf do
+                        <code>aria-valuemin</code> / <code>aria-valuemax</code> – <code>web/teraz-gestures.js</code> ich odtiaľ prečíta,
+                        takže nepotrebuje stav ani jednej appky.
+                    </li>
+                    <li>Popis grafu pre čítačku pribalí rozsah: „Graf dňa od 5:00 do 18:00 …“.</li>
+                </ul>
+                <h3 style="margin-top: 14px">Kabát</h3>
+                <ul>
+                    <li>Bez zmien v HTML. CSS len zarovná krajný popisok osi, aby nevyšiel z grafu.</li>
+                    <li>
+                        Ten istý graf je aj v detaile dňa karty 7 dní v novej appke (<code>shared/sedem-dni.js</code>) – okno sa tam prejaví
+                        samo, každý deň so svojím.
+                    </li>
+                </ul>
+                <h3 style="margin-top: 14px">Čo ostane, ako je</h3>
+                <ul>
+                    <li>
+                        Týždenný graf a riadky dní karty 7 dní majú pevné okno 5–21 (<code>HOUR_RANGE</code>) – tam musí byť os pre všetky
+                        dni rovnaká.
+                    </li>
+                    <li>Plán dňa po štvrťhodinách, predpoveď, golden súbory – výpočet sa nemení, mení sa len to, čo graf ukáže.</li>
+                </ul>
+            </div>
+
+            <h2>Rozhodnuté</h2>
+            <ol class="q">
+                <li><b>Variant A</b> – len deň.</li>
+                <li>
+                    <b>Hodina navyše na oboch stranách</b> stačí (<code>DAYLIGHT_PAD_MIN</code> v <code>shared/config.js</code>). V decembri
+                    vyjde 6–17 (11 h), v júni 3–22 (19 h).
+                </li>
+                <li>
+                    <b>Pás dňa na Môžem?</b> (predtým 05:00–21:00 natvrdo) ide po tej istej osi ako graf dňa – v hlavičke aj v širokej
+                    dlaždici.
+                </li>
+            </ol>
+        </div>
+
+        <script>
+            // Mockupy: geometria podľa DAY_CHART v shared/day-chart.js. Dáta sú vymyslené, len aby krivka
+            // a pás vyzerali ako v appke; východ a západ sú zo sunTimes pre predvolenú lokalitu (48,48° s. š.).
+            const C = { w: 320, h: 176, left: 26, right: 306, cloudY: 24, cloudH: 12, top: 62, base: 138, bandY: 148, bandH: 9, maxKw: 10 };
+            const LIMIT = 2;
+            const DAYS = {
+                dec: { label: '21. 12.', rise: 457, set: 955, peak: 3.4 },
+                oct: { label: '26. 10.', rise: 383, set: 1001, peak: 6.1 },
+                jun: { label: '21. 6.', rise: 286, set: 1253, peak: 8.6 },
+                mar: { label: '29. 3.', rise: 395, set: 1153, peak: 7.2 },
+            };
+            const r1 = (v) => Math.round(v * 10) / 10;
+            const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+
+            /** Okno: celá hodina pred východom − 1 h až celá hodina po západe + 1 h. */
+            const windowOf = (d) => ({ from: Math.floor((d.rise - 60) / 60) * 60, to: Math.ceil((d.set + 60) / 60) * 60 });
+
+            /** Popisky osi: kraje okna a násobky troch aspoň 2 h od kraja. */
+            function ticksOf(w) {
+                const a = w.from / 60;
+                const b = w.to / 60;
+                const mid = [];
+                for (let h = Math.ceil(a / 3) * 3; h <= b; h += 3) if (h - a >= 2 && b - h >= 2) mid.push(h);
+                return [a, ...mid, b];
+            }
+
+            const kwAt = (d, m) => {
+                const t = (m - d.rise - 25) / (d.set - d.rise - 50);
+                if (t <= 0 || t >= 1) return 0;
+                return d.peak * Math.pow(Math.sin(Math.PI * t), 1.5);
+            };
+            const cloudAt = (h) => Math.round(50 + 40 * Math.sin(h * 0.9 + 1.3) * Math.cos(h * 0.37));
+            const tariff = (m) => (m < 360 || m >= 1320 ? 'cheap' : m >= 1020 && m < 1200 ? 'costly' : 'plain');
+            const toneAt = (d, m) => (kwAt(d, m + 7) >= LIMIT ? 'sun' : tariff(m));
+            const realAt = (d, m) => kwAt(d, m) * (0.92 + 0.12 * Math.sin(m / 47));
+
+            /** Úseky osi: [od, do] v minútach dňa → [x0, x1] v jednotkách grafu. */
+            function segmentsOf(variant, w) {
+                if (variant === 'full') return [{ from: 0, to: 1440, x0: C.left, x1: C.right, day: true }];
+                if (variant === 'A') return [{ from: w.from, to: w.to, x0: C.left, x1: C.right, day: true }];
+                const stub = 22;
+                const gap = 5;
+                const segs = [];
+                if (w.from > 0) segs.push({ from: 0, to: w.from, x0: C.left, x1: C.left + stub, day: false });
+                segs.push({
+                    from: w.from,
+                    to: w.to,
+                    x0: w.from > 0 ? C.left + stub + gap : C.left,
+                    x1: w.to < 1440 ? C.right - stub - gap : C.right,
+                    day: true,
+                });
+                if (w.to < 1440) segs.push({ from: w.to, to: 1440, x0: C.right - stub, x1: C.right, day: false });
+                return segs;
+            }
+
+            function draw(el, dayKey, nowMin) {
+                const variant = el.dataset.chart;
+                const d = DAYS[dayKey];
+                const w = variant === 'full' ? { from: 0, to: 1440 } : windowOf(d);
+                const segs = segmentsOf(variant, windowOf(d));
+                const day = segs.find((s) => s.day);
+                const x = (m) => {
+                    const s = segs.find((g) => m >= g.from && m <= g.to) ?? (m < segs[0].from ? segs[0] : segs[segs.length - 1]);
+                    const c = Math.max(s.from, Math.min(s.to, m));
+                    return r1(s.x0 + ((c - s.from) / (s.to - s.from)) * (s.x1 - s.x0));
+                };
+                const y = (kw) => r1(C.base - (Math.min(C.maxKw, Math.max(0, kw)) / C.maxKw) * (C.base - C.top));
+                const limitY = y(LIMIT);
+                const pct = (v, of) => `${(v / of) * 100}%`;
+                let svg = '';
+                let html = '';
+
+                // Noc v B: tmavší pruh s mesiacom a zlom osi.
+                for (const s of segs.filter((g) => !g.day)) {
+                    svg += `<rect x="${s.x0}" y="${C.cloudY}" width="${s.x1 - s.x0}" height="${C.base - C.cloudY}" rx="4" fill="var(--c-ink08)" />`;
+                    html += `<span class="night-t" style="left:${pct((s.x0 + s.x1) / 2, C.w)};top:${pct(90, C.h)}">☾</span>`;
+                    const bx = s.from === 0 ? s.x1 + 2.5 : s.x0 - 2.5;
+                    svg += `<path d="M${bx - 2} ${C.base + 3} l2 -6 M${bx + 1} ${C.base + 3} l2 -6" stroke="var(--c-ink45)" stroke-width="1" />`;
+                }
+
+                // Mriežka a čísla osi kW.
+                for (const kw of [0, 2.5, 5, 7.5, 10]) {
+                    svg += `<line x1="${day.x0}" x2="${day.x1}" y1="${y(kw)}" y2="${y(kw)}" stroke="var(--c-ink08)" />`;
+                    html += `<span class="y" style="left:${pct(C.left - 4, C.w)};top:${pct(y(kw), C.h)}">${String(kw).replace('.', ',')}</span>`;
+                }
+                html += `<span class="y" style="left:${pct(C.left - 4, C.w)};top:${pct(y(10) - 10, C.h)};font-size:10px">kW</span>`;
+
+                // Oblačnosť po hodinách v okne.
+                const hourW = x(w.from + 60) - x(w.from);
+                for (let h = w.from / 60; h < w.to / 60; h++) {
+                    const c = cloudAt(h);
+                    const on = Math.floor(Math.min(Math.max(nowMin, w.from), w.to - 1) / 60) === h;
+                    svg += `<rect x="${r1(x(h * 60) + 0.8)}" y="${C.cloudY}" width="${r1(hourW - 1.6)}" height="${C.cloudH}" rx="2.5" style="fill:color-mix(in srgb, var(--c-cloud1) ${c}%, var(--c-cloud0))" ${on ? 'stroke="var(--c-ink)" stroke-width="1.3"' : ''} />`;
+                }
+
+                // Krivky: predpoveď po hodinách, nameraná po teraz, plocha nad hranicou.
+                const fc = [];
+                for (let h = w.from / 60; h <= w.to / 60; h++) fc.push({ x: x(h * 60), y: y(kwAt(d, h * 60)) });
+                const path = (pts) => `M${pts.map((p) => `${p.x} ${p.y}`).join(' L')}`;
+                const real = [];
+                for (let m = w.from; m <= Math.min(nowMin, w.to); m += 15) real.push({ x: x(m), y: y(realAt(d, m)) });
+                const dayPts = [...real, ...fc.filter((p) => !real.length || p.x > real[real.length - 1].x)];
+                let over = '';
+                dayPts.forEach((p, i) => {
+                    const prev = dayPts[i - 1];
+                    if (prev && (prev.y - limitY) * (p.y - limitY) < 0) {
+                        const t = (limitY - prev.y) / (p.y - prev.y);
+                        over += ` L${r1(prev.x + t * (p.x - prev.x))} ${limitY}`;
+                    }
+                    over += ` L${p.x} ${Math.min(p.y, limitY)}`;
+                });
+                if (dayPts.some((p) => p.y < limitY))
+                    svg += `<path d="M${dayPts[0].x} ${limitY}${over} L${dayPts[dayPts.length - 1].x} ${limitY}Z" fill="var(--c-green-a)" />`;
+                svg += `<path d="${path(fc)}" fill="none" stroke="var(--c-fc)" stroke-width="1.3" stroke-dasharray="4 3" stroke-linejoin="round" />`;
+                if (real.length > 1)
+                    svg += `<path d="${path(real)}" fill="none" stroke="var(--c-green)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />`;
+
+                // Hranica veľkých spotrebičov.
+                svg += `<line x1="${day.x0}" x2="${day.x1}" y1="${limitY}" y2="${limitY}" stroke="#fff" stroke-dasharray="3 4" />`;
+                html += `<span class="lim" style="left:${pct(day.x0 + 2, C.w)};top:${pct(y(7.5) - 3, C.h)}">veľké spotrebiče</span>`;
+
+                // Pás plánu: v dni po polhodinách, v nočných pruhoch B zlúčené úseky.
+                for (const s of segs) {
+                    if (s.day) {
+                        for (let m = s.from; m < s.to; m += 30) {
+                            const tone = toneAt(d, m + 15);
+                            const on = !(nowMin < w.from || nowMin >= w.to) && m <= nowMin && nowMin < m + 30;
+                            const past = m + 30 <= nowMin;
+                            const cw = x(m + 30) - x(m) - 0.8;
+                            svg += `<rect x="${r1(x(m))}" y="${on ? C.bandY - 1.5 : C.bandY}" width="${r1(cw)}" height="${on ? C.bandH + 3 : C.bandH}" rx="2" style="fill:var(--c-${tone})" ${past ? 'fill-opacity="0.3"' : ''} ${on ? 'stroke="var(--c-ink)" stroke-width="1.5"' : ''} />`;
+                        }
+                    } else {
+                        let m = s.from;
+                        while (m < s.to) {
+                            const tone = tariff(m);
+                            let e = m;
+                            while (e < s.to && tariff(e) === tone) e += 15;
+                            const past = e <= nowMin;
+                            svg += `<rect x="${r1(x(m))}" y="${C.bandY}" width="${r1(Math.max(1, x(e) - x(m) - 0.8))}" height="${C.bandH}" rx="2" style="fill:var(--c-${tone})" ${past ? 'fill-opacity="0.3"' : ''} />`;
+                            m = e;
+                        }
+                    }
+                }
+
+                // Popisky osi.
+                const ticks = variant === 'full' ? [0, 6, 12, 18, 24] : ticksOf(w);
+                ticks.forEach((h, i) => {
+                    const cls = variant === 'full' ? '' : i === 0 ? ' first' : i === ticks.length - 1 ? ' last' : '';
+                    html += `<span class="t${cls}" style="left:${pct(x(h * 60), C.w)};top:${pct(C.bandY + C.bandH + 2, C.h)}">${h}</span>`;
+                });
+
+                // „Teraz“: čiara s časom; v A mimo okna pritlačená ku kraju so šípkou von.
+                const outside = variant === 'A' && (nowMin < w.from || nowMin > w.to);
+                const mx = x(nowMin);
+                const kw = nowMin <= w.to && nowMin >= w.from ? realAt(d, nowMin) : 0;
+                const my = y(kw);
+                svg += `<line x1="${mx}" x2="${mx}" y1="${C.cloudY - 4}" y2="${C.bandY + C.bandH + 2}" stroke="var(--c-ink)" stroke-opacity="0.7" stroke-width="1.5" stroke-dasharray="3 3" />`;
+                svg += `<circle cx="${mx}" cy="${my}" r="5" fill="var(--c-green)" />`;
+                let text = hm(nowMin);
+                let cls = 'at';
+                if (outside && nowMin < w.from) {
+                    text = `‹ ${text}`;
+                    cls += ' l';
+                } else if (outside) {
+                    text = `${text} ›`;
+                    cls += ' r';
+                } else if (mx < C.left + 24) cls += ' l';
+                else if (mx > C.right - 24) cls += ' r';
+                html += `<span class="${cls}" style="left:${pct(mx, C.w)};top:${pct(C.cloudY - 4, C.h)}">${text}</span>`;
+
+                const tones = new Set();
+                for (const s of segs) for (let m = s.from; m < s.to; m += 30) tones.add(s.day ? toneAt(d, m + 15) : tariff(m));
+                const names = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
+                const legend = ['sun', 'cheap', 'costly', 'plain']
+                    .filter((t) => tones.has(t))
+                    .map((t) => `<span style="--dot:var(--c-${t})">${names[t]}</span>`)
+                    .join('');
+                const night = variant === 'full' ? '' : `<div class="note">${noteOf(variant, w, nowMin)}</div>`;
+                el.innerHTML = `<div class="dc-box"><svg viewBox="0 0 ${C.w} ${C.h}" aria-hidden="true">${svg}</svg>${html}</div><div class="legend">${legend}</div>${night}`;
+            }
+
+            /** Čo povie zoznam pod grafom o čase „teraz“ – v noci tarifu. */
+            function noteOf(variant, w, nowMin) {
+                const names = { cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
+                const inNight = nowMin < w.from || nowMin >= w.to;
+                if (!inNight) return `Os ${hm(w.from)}–${hm(w.to)}. Náhľad času len v tomto rozsahu.`;
+                const t = tariff(nowMin);
+                let e = nowMin;
+                while (tariff(e % 1440) === t && e < nowMin + 1440) e += 15;
+                const lead = variant === 'A' ? 'Zoznam pod grafom:' : 'V pruhu noci:';
+                return `${lead} <b>${names[t]}</b> do ${hm(e % 1440)} · výkon 0 kW`;
+            }
+
+            let dayKey = 'oct';
+            let nowMin = 840;
+            const out = document.getElementById('nowOut');
+            const range = document.getElementById('now');
+            function redraw() {
+                out.textContent = hm(nowMin);
+                range.value = String(Math.round(nowMin / 15) * 15);
+                document
+                    .querySelectorAll('[data-chart]')
+                    .forEach((el) => draw(el, el.dataset.fixed ? 'oct' : dayKey, el.dataset.fixed ? 842 : nowMin));
+                document.querySelectorAll('#days button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.day === dayKey)));
+            }
+            range.addEventListener('input', () => {
+                nowMin = Number(range.value);
+                redraw();
+            });
+            document.getElementById('days').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                dayKey = b.dataset.day;
+                redraw();
+            });
+            document.getElementById('quick').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                nowMin = Number(b.dataset.min);
+                redraw();
+            });
+
+            // Tabuľka pravidla.
+            document.getElementById('rule').innerHTML = ['dec', 'mar', 'oct', 'jun']
+                .map((k) => {
+                    const d = DAYS[k];
+                    const w = windowOf(d);
+                    return `<tr><td>${d.label}</td><td>${hm(d.rise)}</td><td>${hm(d.set)}</td><td><b>${w.from / 60}–${w.to / 60}</b></td><td>${(w.to - w.from) / 60} h</td><td>${ticksOf(w).join(' · ')}</td></tr>`;
+                })
+                .join('');
+            redraw();
+        </script>
+    </body>
+</html>

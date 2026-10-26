@@ -2,7 +2,6 @@
 // panel veci či skupiny zospodu (ten istý ako v novej appke). Obsah karty skladá render
 // do #mozem-body, panel je dialóg v index.html. Počíta shared/mozem.js, texty sú v shared/messages.js.
 
-import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
 import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_NOW, PLAN_DNA_TITLE } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
@@ -37,7 +36,7 @@ function stripHtml(m) {
     if (!s) return '';
     const win = s.width > 0 ? `<i class="mozem-win st-${m.state}" style="left:${s.left}%;width:${s.width}%"></i>` : '';
     return (
-        `<div class="mozem-strip"><div class="mozem-strip-top" aria-hidden="true"><span>${hourLabel(HOUR_RANGE.min)}</span><span>dnes</span><span>${hourLabel(HOUR_RANGE.max)}</span></div>` +
+        `<div class="mozem-strip"><div class="mozem-strip-top" aria-hidden="true"><span>${hourLabel(s.from / 60)}</span><span>dnes</span><span>${hourLabel(s.to / 60)}</span></div>` +
         `<div class="mozem-track" aria-hidden="true">${win}<i class="mozem-past" style="width:${s.now}%"></i><i class="mozem-now" style="left:${s.now}%"></i></div>` +
         `<p class="mozem-strip-lbl">${escapeHtml(s.text)}</p></div>`
     );
