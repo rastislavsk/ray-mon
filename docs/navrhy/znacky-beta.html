@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Značky meničov v beta</title>
+        <style>
+            /* Návrh: v sprievodcovi nastavením (krok Značka meniča) označiť značky, ktorých pripojenie
+               je napísané podľa dokumentácie výrobcu, ale na skutočnom meniči ešte neoverené.
+               Overený je zatiaľ len Huawei. Dva telefóny pre každú appku: odznak pri mene (A, odporúčaný)
+               a slovo v popise (B). Farby a rozmery sú kópia zo style.css a obloha/style.css. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                font-weight: 300 700;
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #1b1d22;
+                color: #f2f0ea;
+                font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+                line-height: 1.45;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                cursor: default;
+            }
+            header,
+            .notes {
+                max-width: 980px;
+                margin: 0 auto;
+                padding: 32px 16px 0;
+            }
+            h1 {
+                margin: 0 0 6px;
+                font-size: 22px;
+            }
+            h2 {
+                margin: 40px 0 8px;
+                font-size: 17px;
+            }
+            p,
+            li {
+                color: rgba(242, 240, 234, 0.8);
+            }
+            .page {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                justify-content: center;
+                padding: 24px 16px 8px;
+            }
+            figure {
+                margin: 0;
+                flex: 0 1 375px;
+                min-width: 0;
+            }
+            figcaption {
+                margin-bottom: 10px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            figcaption em {
+                font-style: normal;
+                font-weight: 400;
+                color: rgba(242, 240, 234, 0.6);
+            }
+            .phone {
+                border-radius: 36px;
+                border: 8px solid #000;
+                overflow: hidden;
+                padding: 24px 16px 28px;
+            }
+            .lbl {
+                margin: 0 0 4px;
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .ttl {
+                margin: 0 0 14px;
+                font-size: 22px;
+                font-weight: 700;
+            }
+
+            /* ---------- Súčasná appka (style.css) ---------- */
+            .cur {
+                --card-bg: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --amber: #ffc24b;
+                --amber-rgb: 255, 194, 75;
+                background: #0a0a0a;
+                color: var(--ink);
+                font-family:
+                    'Space Grotesk',
+                    -apple-system,
+                    'Segoe UI',
+                    Arial,
+                    sans-serif;
+            }
+            .cur .lbl {
+                color: var(--ink-45);
+            }
+            .cur .list {
+                display: grid;
+                gap: 8px;
+            }
+            .choice {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                text-align: left;
+                padding: 14px;
+                border-radius: 12px;
+                border: 1px solid var(--ink-12);
+                background: var(--card-bg);
+            }
+            .choice[aria-pressed='true'] {
+                border-color: var(--amber);
+                background: rgba(var(--amber-rgb), 0.08);
+            }
+            .choice .dot {
+                flex: 0 0 auto;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2px solid var(--ink-20);
+            }
+            .choice[aria-pressed='true'] .dot {
+                border-color: var(--amber);
+                background: var(--amber);
+                box-shadow: inset 0 0 0 4px var(--card-bg);
+            }
+            .choice .t {
+                flex: 1;
+                display: grid;
+                gap: 1px;
+            }
+            .choice .t > span {
+                font-size: 12px;
+                color: var(--ink-45);
+            }
+            .choice[data-off] b {
+                color: var(--ink-45);
+            }
+            /* NOVÉ: odznak beta – obrys, nie výplň, aby nekonkuroval zvolenej voľbe ani zelenému štítku. */
+            .cur .beta {
+                display: inline-block;
+                margin-left: 8px;
+                padding: 0 6px;
+                border: 1px solid var(--ink-20);
+                border-radius: 999px;
+                color: var(--ink-45);
+                font-size: 10px;
+                font-weight: 600;
+                font-style: normal;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                line-height: 16px;
+                vertical-align: 2px;
+            }
+            .cur .msg {
+                margin: 14px 0 0;
+                padding: 2px 0 2px 10px;
+                font-size: 12px;
+                color: var(--ink-45);
+                border-left: 2px solid var(--amber);
+            }
+
+            /* ---------- Živá obloha (obloha/style.css) ---------- */
+            .sky {
+                --glass: rgba(8, 16, 40, 0.3);
+                --dim: rgba(255, 255, 255, 0.82);
+                --ink: #0b1430;
+                background: linear-gradient(180deg, #2f6fd0 0%, #4f8fe0 55%, #3a6cc0 100%);
+                color: #fff;
+                font-family:
+                    'Archivo',
+                    -apple-system,
+                    'Segoe UI',
+                    Arial,
+                    sans-serif;
+            }
+            .sky .lbl {
+                color: var(--dim);
+            }
+            .sky .list {
+                display: grid;
+                gap: 12px;
+            }
+            .opt {
+                display: grid;
+                gap: 2px;
+                width: 100%;
+                min-height: 56px;
+                padding: 12px 16px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 18px;
+                background: var(--glass);
+                text-align: left;
+            }
+            .opt b {
+                font-size: 1rem;
+            }
+            .opt > span {
+                font-size: 0.8438rem;
+                color: var(--dim);
+            }
+            .opt[aria-pressed='true'] {
+                border-color: #fff;
+                background: #fff;
+                color: var(--ink);
+            }
+            .opt[aria-pressed='true'] > span {
+                color: #2b3550;
+            }
+            .opt[data-off] b {
+                color: var(--dim);
+            }
+            /* NOVÉ: odznak beta – rovnaký obrys, na bielej zvolenej voľbe stmavne. */
+            .sky .beta {
+                display: inline-block;
+                margin-left: 8px;
+                padding: 0 7px;
+                border: 1px solid rgba(255, 255, 255, 0.6);
+                border-radius: 999px;
+                color: #fff;
+                font-size: 0.6875rem;
+                font-weight: 700;
+                font-style: normal;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                line-height: 17px;
+                vertical-align: 2px;
+            }
+            .sky .opt[aria-pressed='true'] .beta {
+                border-color: #2b3550;
+                color: #2b3550;
+            }
+            .sky .msg {
+                margin: 14px 0 0;
+                font-size: 0.875rem;
+                color: #fff;
+            }
+
+            .new {
+                outline: 2px dashed #ff5fa2;
+                outline-offset: 3px;
+                border-radius: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            td,
+            th {
+                padding: 8px;
+                border-bottom: 1px solid rgba(242, 240, 234, 0.12);
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: rgba(242, 240, 234, 0.6);
+                font-weight: 600;
+            }
+            code {
+                font-size: 13px;
+                color: #ffd98a;
+            }
+            .pick {
+                color: #9ef25b;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Značky meničov v beta</h1>
+            <p>
+                Krok <b>Značka meniča</b> v sprievodcovi nastavením. Overený na skutočnom meniči je zatiaľ len Huawei. Fox ESS, SolaX,
+                Victron, Solis a Deye sú napísané podľa dokumentácie výrobcu, takže dostanú malý odznak <b>Beta</b>. Značky, ktoré sa
+                pripojiť nedajú, ho nemajú – tam niet čo testovať. Ružový rámik = nové.
+            </p>
+        </header>
+
+        <h2 style="max-width: 980px; margin: 32px auto 0; padding: 0 16px">A · Odznak pri mene <span class="pick">(odporúčam)</span></h2>
+        <div class="page">
+            <figure>
+                <figcaption>Súčasná appka <em>· vybraný Fox ESS</em></figcaption>
+                <div class="phone cur">
+                    <p class="lbl">Nastavenie · krok 2 z 6</p>
+                    <p class="ttl">Značka meniča</p>
+                    <div class="list">
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span><span class="t"><b>Huawei</b><span>2 spôsoby pripojenia</span></span>
+                        </button>
+                        <button class="choice" aria-pressed="true">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>Fox ESS<i class="beta new">Beta</i></b
+                                ><span>Kľúč z FoxESS Cloud</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>SolaX<i class="beta">Beta</i></b
+                                ><span>Token zo SolaX Cloud</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>Victron<i class="beta">Beta</i></b
+                                ><span>Prístupový token z VRM</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>Solis<i class="beta">Beta</i></b
+                                ><span>Kľúč od podpory Solis</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>Deye<i class="beta">Beta</i></b
+                                ><span>Vlastná aplikácia v Deye Cloud</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false" data-off>
+                            <span class="dot"></span><span class="t"><b>SolarEdge</b><span>Zatiaľ sa nedá pripojiť</span></span>
+                        </button>
+                        <button class="choice" aria-pressed="false" data-off>
+                            <span class="dot"></span><span class="t"><b>Enphase</b><span>Zatiaľ sa nedá pripojiť</span></span>
+                        </button>
+                    </div>
+                    <p class="msg new">
+                        Beta: pripojenie podľa dokumentácie výrobcu, na skutočnom meniči ešte neoverené. Keď čísla nesedia s appkou výrobcu,
+                        daj vedieť.
+                    </p>
+                    <p class="msg">Svoju značku tu nevidíš? Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
+                </div>
+            </figure>
+
+            <figure>
+                <figcaption>Živá obloha <em>· vybraný Fox ESS</em></figcaption>
+                <div class="phone sky">
+                    <p class="lbl">Nastavenie · krok 2 z 6</p>
+                    <p class="ttl">Značka meniča</p>
+                    <div class="list">
+                        <button class="opt" aria-pressed="false"><b>Huawei</b><span>2 spôsoby pripojenia</span></button>
+                        <button class="opt" aria-pressed="true">
+                            <b>Fox ESS<i class="beta new">Beta</i></b
+                            ><span>Kľúč z FoxESS Cloud</span>
+                        </button>
+                        <button class="opt" aria-pressed="false">
+                            <b>SolaX<i class="beta">Beta</i></b
+                            ><span>Token zo SolaX Cloud</span>
+                        </button>
+                        <button class="opt" aria-pressed="false">
+                            <b>Victron<i class="beta">Beta</i></b
+                            ><span>Prístupový token z VRM</span>
+                        </button>
+                        <button class="opt" aria-pressed="false">
+                            <b>Solis<i class="beta">Beta</i></b
+                            ><span>Kľúč od podpory Solis</span>
+                        </button>
+                        <button class="opt" aria-pressed="false">
+                            <b>Deye<i class="beta">Beta</i></b
+                            ><span>Vlastná aplikácia v Deye Cloud</span>
+                        </button>
+                        <button class="opt" aria-pressed="false" data-off><b>SolarEdge</b><span>Zatiaľ sa nedá pripojiť</span></button>
+                    </div>
+                    <p class="msg new">
+                        Beta: pripojenie podľa dokumentácie výrobcu, na skutočnom meniči ešte neoverené. Keď čísla nesedia s appkou výrobcu,
+                        daj vedieť.
+                    </p>
+                </div>
+            </figure>
+        </div>
+
+        <h2 style="max-width: 980px; margin: 32px auto 0; padding: 0 16px">B · Slovo v popise</h2>
+        <div class="page">
+            <figure>
+                <figcaption>Súčasná appka <em>· bez nového prvku, len text</em></figcaption>
+                <div class="phone cur">
+                    <div class="list">
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span><span class="t"><b>Huawei</b><span>2 spôsoby pripojenia</span></span>
+                        </button>
+                        <button class="choice" aria-pressed="true">
+                            <span class="dot"></span
+                            ><span class="t"
+                                ><b>Fox ESS</b><span><span class="new">Beta ·</span> Kľúč z FoxESS Cloud</span></span
+                            >
+                        </button>
+                        <button class="choice" aria-pressed="false">
+                            <span class="dot"></span><span class="t"><b>SolaX</b><span>Beta · Token zo SolaX Cloud</span></span>
+                        </button>
+                    </div>
+                </div>
+            </figure>
+            <figure>
+                <figcaption>Živá obloha</figcaption>
+                <div class="phone sky">
+                    <div class="list">
+                        <button class="opt" aria-pressed="false"><b>Huawei</b><span>2 spôsoby pripojenia</span></button>
+                        <button class="opt" aria-pressed="true">
+                            <b>Fox ESS</b><span><span class="new">Beta ·</span> Kľúč z FoxESS Cloud</span>
+                        </button>
+                        <button class="opt" aria-pressed="false"><b>SolaX</b><span>Beta · Token zo SolaX Cloud</span></button>
+                    </div>
+                </div>
+            </figure>
+        </div>
+
+        <section class="notes">
+            <h2>Prečo A</h2>
+            <ul>
+                <li>Odznak je vidieť na prvý pohľad pri prechádzaní zoznamu; v B sa „Beta“ stratí v tlmenom popise.</li>
+                <li>Obrys namiesto výplne: nekonkuruje zvolenej voľbe (jantárová / biela) ani zelenému štítku pri spôsobe pripojenia.</li>
+                <li>Jedna veta pod zoznamom vysvetlí, čo beta znamená – raz, nie pri každej značke.</li>
+            </ul>
+
+            <h2>Texty</h2>
+            <table>
+                <tr>
+                    <th>Kde</th>
+                    <th>Text</th>
+                </tr>
+                <tr>
+                    <td>Odznak</td>
+                    <td>Beta</td>
+                </tr>
+                <tr>
+                    <td>Veta pod zoznamom (len keď je v zozname aspoň jedna beta značka)</td>
+                    <td>
+                        Beta: pripojenie podľa dokumentácie výrobcu, na skutočnom meniči ešte neoverené. Keď čísla nesedia s appkou výrobcu,
+                        daj vedieť.
+                    </td>
+                </tr>
+                <tr>
+                    <td>Čítačka obrazovky (pri odznaku)</td>
+                    <td>„Fox ESS, beta“ – odznak je súčasť mena tlačidla, netreba nič navyše.</td>
+                </tr>
+            </table>
+
+            <h2>Jadro</h2>
+            <ul>
+                <li>
+                    V <code>ZNACKY</code> (<code>shared/zdroje.js</code>) pribudne pri Huawei <code>overena: true</code>. Beta je značka,
+                    ktorá sa dá pripojiť a overená nie je – nová značka je tak beta sama od seba, kým ju niekto neoverí.
+                </li>
+                <li>Obe appky čítajú to isté pole, takže dajú rovnakú odpoveď. Odkaz s nastavením sa nemení, verzia ostáva.</li>
+                <li>Otvorená otázka: „daj vedieť“ – kam? Ak nemáme kontakt v appke, vetu skrátim na prvú polovicu.</li>
+            </ul>
+        </section>
+        <div style="height: 48px"></div>
+    </body>
+</html>

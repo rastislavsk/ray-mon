@@ -3614,6 +3614,23 @@ b {
 .choice[data-off] b {
     color: var(--ink-45);
 }
+/* Odznak Beta pri značke, ktorú nikto neoveril na skutočnom meniči. Len obrys, aby nekonkuroval
+   zvolenej voľbe ani zelenému štítku. Čítačka obrazovky ho prečíta ako súčasť mena tlačidla. */
+.choice[data-beta] b::after {
+    content: 'Beta';
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 6px;
+    border: 1px solid var(--ink-20);
+    border-radius: var(--radius-pill);
+    color: var(--ink-45);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 16px;
+    vertical-align: 2px;
+}
 /* Štítky pri spôsobe pripojenia: kto ho urobí, ako dlho; zelený hovorí, prečo je prvý. */
 .choice .t .tags {
     display: flex;

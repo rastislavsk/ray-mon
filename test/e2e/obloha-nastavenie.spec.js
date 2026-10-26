@@ -310,6 +310,11 @@ test('pripojenie kľúčom (Fox ESS) z prehľadu: návod, skryté pole, pripojen
     await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
     await page.locator('[data-setup-zmen]').click();
     await obrazovka(page, 'znacka');
+    // Fox ESS nikto neoveril na skutočnom meniči: odznak Beta a veta pod zoznamom; Huawei odznak nemá.
+    await expect(page.locator('[data-setup-znacka="foxess"]')).toHaveAttribute('data-beta');
+    await expect(page.locator('[data-setup-znacka="huawei"]')).not.toHaveAttribute('data-beta');
+    await expect(page.locator('[data-setup-znacka="fronius"]')).not.toHaveAttribute('data-beta');
+    await expect(page.locator('#wz-beta')).toBeVisible();
     await page.locator('[data-setup-znacka="foxess"]').click();
     await obrazovka(page, 'pripoj');
     await expect(page.locator('#wz-title')).toHaveText('Kľúč z FoxESS Cloud');
