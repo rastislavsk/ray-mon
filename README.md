@@ -1,7 +1,6 @@
 # RAY-MON
 
-Webová appka pre domácnosť s fotovoltikou – pôvodne pre Dvorany nad Nitrou, dnes pre
-kohokoľvek, kto si v Nastavení zadá svoju elektráreň. Na jednej obrazovke
+Webová appka pre domácnosť s fotovoltikou. Na jednej obrazovke
 odpovedá na otázku „môžem teraz zapnúť práčku?“ a k tomu ukazuje živý výkon panelov,
 predpoveď výroby na dnes a zajtra a prehľad na sedem dní. Robená je pre telefón, na
 tablete a desktope má vlastné rozloženie.
