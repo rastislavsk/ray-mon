@@ -60,3 +60,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `bez-pustil-som.html` | Karta Môžem? bez „Pustil/a som“ – čo zmizne v oboch appkách (beží do, súčet, riadok súhrnu, plagát) a čo s dátami |
 | `7dni-listovanie-dni.html` | Bez listovania kariet ťahom; dni v detaile ako pager za prstom (obe appky), gumička na kraji, šípka späť ako prvý čip |
 | `znacky-beta.html` | Sprievodca nastavením, krok Značka meniča – odznak Beta pri značkách neoverených na skutočnom meniči (A, vybraný) vs. slovo v popise (B) |
+| `teraz-rozbalovaci-zoznam.html` | Teraz[ky] – legenda a nápis pod grafom dňa ako rozbaľovací zoznam: prvý riadok návod a „ako čítať graf“ (A), prvý riadok legendy a hodnoty v čase pod prstom (B, vybraný) |

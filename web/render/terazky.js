@@ -7,7 +7,7 @@ import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
 import { voiceTexts } from '../../shared/messages-core.js';
 import { localMinutes } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
-import { dayChartHtml, legendHtml } from '../day-chart.js';
+import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
 import { writeHtml } from '../memo.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -48,8 +48,11 @@ function renderHead(state, m, dom) {
     dom.tzRetry.textContent = TERAZ_TEXTS.retry;
 }
 
-/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom */
-function renderChart(m, dom) {
+/**
+ * Graf, „Späť na teraz“ a zoznam pod grafom: prvý riadok legendy, po otvorení farby pásu,
+ * hodnoty v čase bodu grafu a nápis. @param {Model} m @param {boolean} open @param {Dom} dom
+ */
+function renderChart(m, open, dom) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
@@ -58,7 +61,12 @@ function renderChart(m, dom) {
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);
     dom.tzChartDesc.textContent = c.desc;
-    writeHtml(dom.tzLegend, legendHtml(c.legend), 'tz-legend');
+    writeHtml(dom.tzLegend, legendHtml(c.keys), 'tz-legend');
+    dom.tzListBtn.setAttribute('aria-expanded', String(open));
+    show(dom.tzListBody, open);
+    writeHtml(dom.tzBands, legendHtml(c.bands), 'tz-bands');
+    dom.tzWhen.textContent = c.readout.when;
+    writeHtml(dom.tzValues, readoutHtml(c.readout.rows), 'tz-values');
     dom.tzHint.textContent = m.hint.text;
     show(dom.tzReset, m.hint.reset);
     dom.tzReset.textContent = TERAZ_TEXTS.reset;
@@ -89,6 +97,6 @@ function renderCards(m, page, dom) {
 export function renderTerazky(state, dom) {
     const m = terazModel(state);
     renderHead(state, m, dom);
-    renderChart(m, dom);
+    renderChart(m, state.tzListOpen, dom);
     renderCards(m, state.terazPage, dom);
 }

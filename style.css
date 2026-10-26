@@ -995,44 +995,165 @@ b {
     gap: 6px;
     align-items: center;
 }
-.tz-legend span::before {
+.tz-legend span::before,
+.tz-values span::before {
     content: '';
     width: 12px;
     height: 6px;
     border-radius: 3px;
     background: rgba(var(--grey-rgb), 0.55);
 }
-.tz-legend [data-tone='sun']::before {
+.tz-legend [data-tone='sun']::before,
+.tz-values [data-tone='sun']::before {
     background: var(--green);
 }
-.tz-legend [data-tone='cheap']::before {
+.tz-legend [data-tone='cheap']::before,
+.tz-values [data-tone='cheap']::before {
     background: var(--amber);
 }
-.tz-legend [data-tone='costly']::before {
+.tz-legend [data-tone='costly']::before,
+.tz-values [data-tone='costly']::before {
     background: var(--red);
 }
 /* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, predpoveď prerušovane, oblačnosť od jasna po zamračené. */
-.tz-legend [data-tone='power']::before {
+.tz-legend [data-tone='power']::before,
+.tz-values [data-tone='power']::before {
     height: 2.5px;
     background: var(--green);
 }
-.tz-legend [data-tone='forecast']::before {
+.tz-legend [data-tone='forecast']::before,
+.tz-values [data-tone='forecast']::before {
     height: 0;
     border-top: 2px dashed rgba(var(--green-rgb), 0.55);
     border-radius: 0;
     background: none;
 }
-.tz-legend [data-tone='cloud']::before {
+.tz-legend [data-tone='cloud']::before,
+.tz-values [data-tone='cloud']::before {
     width: 22px;
     background: linear-gradient(90deg, #e8e6df, #5a5954);
 }
-.tz-hint {
+/* Hranica veľkých spotrebičov v zozname: tenká prerušovaná čiara ako v grafe. */
+.tz-values [data-tone='limit']::before {
+    height: 0;
+    border-top: 1.5px dashed rgba(var(--green-rgb), 0.75);
+    border-radius: 0;
+    background: none;
+}
+/* „Späť na teraz“ nad zoznamom, vpravo. Bez náhľadu je tlačidlo skryté a riadok nezaberá nič. */
+.tz-reset-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
+}
+.tz-reset-row .tz-reset {
+    margin-top: var(--sp-2);
+}
+/* Zoznam pod grafom: prvý riadok (legenda a šípka) je tlačidlo, zvyšok vidno až po ťuknutí. */
+.tz-list {
+    margin-top: var(--sp-2);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-md);
+}
+.tz-list-head {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
     align-items: center;
     gap: var(--sp-2);
-    min-height: 44px;
-    margin: 2px 2px 0;
+    padding: 6px 8px 6px 14px;
+    text-align: left;
+}
+.tz-list-head .tz-legend {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+.tz-chev {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--ink-08);
+    transition: transform 0.2s;
+}
+.tz-chev::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--ink-70);
+    border-bottom: 2px solid var(--ink-70);
+    transform: translateY(-2px) rotate(45deg);
+}
+.tz-list-head[aria-expanded='true'] .tz-chev {
+    transform: rotate(180deg);
+}
+.tz-list-body {
+    padding: 0 14px 10px;
+}
+/* Farby pásu: druhý riadok legendy, bez čiary pod prvým. */
+.tz-list-body > .tz-legend {
+    margin: 0 0 var(--sp-2);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--ink-08);
+}
+.tz-when {
+    margin: var(--sp-2) 0 2px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+}
+.tz-values {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13.5px;
+    color: var(--ink-70);
+}
+.tz-values li {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: 36px;
+    padding: 3px 0;
+}
+.tz-values span {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    column-gap: var(--sp-3);
+    align-items: center;
+}
+.tz-values span::before {
+    grid-row: 1 / span 2;
+    width: 22px;
+}
+.tz-values small {
+    grid-column: 2;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+    line-height: 1.3;
+}
+.tz-values b {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink);
+    white-space: nowrap;
+}
+.tz-list-hint:empty {
+    display: none;
+}
+.tz-list-hint {
+    margin: var(--sp-2) 0 0;
+    padding-top: var(--sp-2);
+    border-top: 1px solid var(--ink-08);
     font-size: 13px;
     color: var(--ink-45);
 }

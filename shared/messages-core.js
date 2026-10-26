@@ -835,6 +835,45 @@ export function terazPreviewTime(min) {
     return hm(min);
 }
 
+// Zoznam pod grafom dňa (docs/navrhy/teraz-rozbalovaci-zoznam.html, B): hodnoty v čase, na ktorom
+// je bod grafu - teraz, alebo náhľad pod prstom.
+
+/** Riadok nad hodnotami: ku ktorému času patria. @param {number} min @param {boolean} preview */
+export function terazReadoutWhen(min, preview) {
+    return `${preview ? 'O' : 'Teraz'} ${hm(min)}`;
+}
+
+/** Výkon v zozname, s desatinnou čiarkou ako zvyšok appky. Bez údaja pomlčka. @param {number} kw */
+export function terazKwText(kw) {
+    return Number.isFinite(kw) ? `${fmt2(kw)} kW` : '–';
+}
+
+/** Oblačnosť v percentách, bez údaja pomlčka. @param {number | null} pct */
+export function terazCloudText(pct) {
+    return pct === null ? '–' : `${Math.round(pct)} %`;
+}
+
+/** Odkiaľ začína hranica veľkých spotrebičov. @param {number} kw */
+export function terazLimitFrom(kw) {
+    return `od ${fmt1(kw)} kW`;
+}
+
+/** Koľko výkonu chýba do hranice veľkých spotrebičov, alebo koľko je ho navyše. @param {number} kw @param {number} limitKw */
+export function terazLimitGap(kw, limitKw) {
+    if (!Number.isFinite(kw)) return '–';
+    return kw < limitKw ? `chýba ${fmt2(limitKw - kw)} kW` : `navyše ${fmt2(kw - limitKw)} kW`;
+}
+
+/** Čo platí v páse plánu a dokedy. @param {import('./day-chart.js').Tone} tone @param {number} to */
+export function terazBandText(tone, to) {
+    return `${TERAZ_TONES[tone]} do ${endHm(to)}`;
+}
+
+/** Čo v páse plánu príde potom; na konci dňa nič. @param {import('./day-chart.js').Tone | null} tone */
+export function terazBandNext(tone) {
+    return tone ? `potom ${TERAZ_TONES[tone]}` : '';
+}
+
 /**
  * Hodnota grafu pre čítačku (posúvač): čas, výkon a čo vtedy platí.
  * @param {number} min @param {boolean} preview @param {string} kwText @param {import('./day-chart.js').Tone} tone

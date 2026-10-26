@@ -6,7 +6,7 @@
 import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
-import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
+import { dayChartHtml, legendHtml, readoutHtml } from '../../../web/day-chart.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -14,8 +14,12 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 
-/** Graf, legenda pod pásom a nápis s tlačidlom „Späť na teraz“. @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS */
-function renderChart(m, dom, TERAZ_TEXTS) {
+/**
+ * Graf, „Späť na teraz“ a zoznam pod grafom: prvý riadok legendy, po otvorení farby pásu,
+ * hodnoty v čase bodu grafu a nápis.
+ * @param {Model} m @param {boolean} open @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS
+ */
+function renderChart(m, open, dom, TERAZ_TEXTS) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
@@ -24,7 +28,12 @@ function renderChart(m, dom, TERAZ_TEXTS) {
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);
     setText(dom.tzChartDesc, c.desc);
-    setHtml(dom.tzLegend, legendHtml(c.legend));
+    setHtml(dom.tzLegend, legendHtml(c.keys));
+    dom.tzListBtn.setAttribute('aria-expanded', String(open));
+    show(dom.tzListBody, open);
+    setHtml(dom.tzBands, legendHtml(c.bands));
+    setText(dom.tzWhen, c.readout.when);
+    setHtml(dom.tzValues, readoutHtml(c.readout.rows));
     setText(dom.tzHint, m.hint.text);
     show(dom.tzReset, m.hint.reset);
     setText(dom.tzReset, TERAZ_TEXTS.reset);
@@ -79,6 +88,6 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskTitle, TERAZ_TEXTS.askTitle);
     setText(dom.tzAskText, TERAZ_TEXTS.askText);
     setText(dom.tzAskBtn, TERAZ_TEXTS.askBtn);
-    renderChart(m, dom, TERAZ_TEXTS);
+    renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
     renderCards(m, state.terazPage, dom, TERAZ_TEXTS);
 }
