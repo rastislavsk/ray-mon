@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { OZNAMENIA } from '../../shared/config.js';
 import { handleRequest } from '../src/index.js';
 import { budenie } from '../src/oznamenia.js';
-import { platnyOdber, vapidAuth } from '../src/webpush.js';
+import { platnyOdber, vapidKlic } from '../src/webpush.js';
 
 const FCM = 'https://fcm.googleapis.com/fcm/send/abc123';
 const APPLE = 'https://web.push.apple.com/QWERTY';
@@ -123,21 +123,42 @@ test('budenie: zobudí odbery, ktorým práve nastala hodina v ich pásme, a pri
     assert.equal(headers['content-length'], '0', 'push bez obsahu');
     assert.equal(headers.urgency, 'high');
     assert.equal(headers.ttl, String(OZNAMENIA.stepMin * 60));
-    // Podpis VAPID sa dá overiť verejným kľúčom a patrí push službe adresy.
-    const auth = await vapidAuth(FCM, jwk, now);
+    // Ako push služba: verejný kľúč vezme z `k` v hlavičke a ním overí podpis JWT.
+    const auth = calls[0].init.headers.authorization;
     const [, jwt, k] = /** @type {RegExpMatchArray} */ (auth.match(/^vapid t=([^,]+), k=(.+)$/));
-    assert.equal(k, OZNAMENIA.vapidPublic);
+    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', publicKey));
+    assert.equal(k, Buffer.from(raw).toString('base64url'), '`k` je verejný kľúč k tajomstvu');
     const [h, p, s] = jwt.split('.');
     const claims = JSON.parse(Buffer.from(p, 'base64url').toString());
-    assert.equal(claims.aud, 'https://fcm.googleapis.com');
-    assert.equal(claims.exp, now.getTime() / 1000 + 12 * 3600);
+    assert.equal(claims.aud, new URL(calls[0].url).origin);
+    assert.equal(claims.exp, now.getTime() / 1000 + OZNAMENIA.jwtH * 3600);
+    const fromK = await crypto.subtle.importKey('raw', Buffer.from(k, 'base64url'), { name: 'ECDSA', namedCurve: 'P-256' }, false, [
+        'verify',
+    ]);
     const ok = await crypto.subtle.verify(
         { name: 'ECDSA', hash: 'SHA-256' },
-        publicKey,
+        fromK,
         Buffer.from(s, 'base64url'),
         new TextEncoder().encode(`${h}.${p}`),
     );
     assert.ok(ok, 'podpis sedí');
+});
+
+test('vapidKlic: povie, keď tajomstvo nepatrí k verejnému kľúču appky', async () => {
+    const { jwk } = await testKeys();
+    assert.equal((await vapidKlic(jwk)).match, false);
+});
+
+test('POST /oznamenia: zlyhaný zápis do KV (denný limit) je 503 s CORS, nie pád', async () => {
+    const { jwk } = await testKeys();
+    const ODBERY = { ...fakeKv(), put: async () => Promise.reject(new Error('KV put() limit exceeded for the day')) };
+    const res = await handleRequest(post('/oznamenia', { endpoint: FCM, on: true, hour: 9, tz: 'UTC' }), { ODBERY, VAPID_JWK: jwk });
+    assert.equal(res.status, 503);
+    assert.equal(res.headers.get('access-control-allow-origin'), '*');
+});
+
+test('platnyOdber: adresa so znakmi mimo ASCII neprejde (metadáta KV majú limit v bajtoch)', () => {
+    assert.equal(platnyOdber(`${FCM}ťťť`), false);
 });
 
 test('budenie bez úložiska alebo kľúča nič nepošle', async () => {

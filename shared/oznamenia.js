@@ -77,14 +77,12 @@ export function reminderNotice(input, { id, voice = 'drzy' }) {
 
 /**
  * Čo service worker vie bez localStorage: nastavenie, ktoré mu appka odloží (poloha, panely,
- * tarifa, spotrebiče, tón a ktorú appku ťuknutie otvorí - cesta voči koreňu).
+ * tarifa, spotrebiče, tón, ktorú appku ťuknutie otvorí - cesta voči koreňu - a hodina, s ktorou sa
+ * pri obnove odberu prihlási znova).
  * @typedef {{ site: import('./config.js').Site, plant: import('./config.js').Plant, tariff: import('./config.js').Tariff,
- *   devices: string[], voice: import('./messages.js').Voice, app: string }} Zrkadlo
+ *   devices: string[], voice: import('./messages.js').Voice, app: string, hour: number }} Zrkadlo
  */
 /** Pripomienka z tlačidla: spotrebič a kedy (ISO čas). @typedef {{ id: string, at: string }} Pripomienka */
-
-/** Pripomienka patrí budeniu, ktoré príde do toľkých minút od jej času. */
-const REMIND_WINDOW_MIN = 20;
 
 /**
  * Čo ukáže service worker, keď ho Worker zobudí: pripomienka, ak jej čas práve nastal, inak ranný
@@ -96,10 +94,10 @@ export function swNotice(z, reminders, weather, now) {
     const forecast = buildForecast(weather, now, z.site, z.plant);
     const input = { now, site: z.site, plant: z.plant, tariff: z.tariff, pv: null, forecast };
     const off = (/** @type {Pripomienka} */ r) => (new Date(r.at).getTime() - now.getTime()) / 60000;
-    const due = reminders.find((r) => Math.abs(off(r)) <= REMIND_WINDOW_MIN);
-    const keep = reminders.filter((r) => r !== due && off(r) > -REMIND_WINDOW_MIN);
+    const due = reminders.find((r) => Math.abs(off(r)) <= OZNAMENIA.remindWindowMin);
+    const keep = reminders.filter((r) => r !== due && off(r) > -OZNAMENIA.remindWindowMin);
     const reminder = due ? reminderNotice(input, { id: due.id, voice: z.voice }) : null;
-    if (reminder) return { ...reminder, remind: null, keep };
+    if (reminder) return { ...reminder, remind: null, keep, reminder: true };
     const n = planNotice(input, { devices: z.devices, voice: z.voice });
     const nowMin = localMinutes(now, z.site.timezone);
     const remind = n.remind
@@ -109,7 +107,7 @@ export function swNotice(z, reminders, weather, now) {
               label: oznameniaTexts(z.voice).remind(n.remind.at),
           }
         : null;
-    return { title: n.title, body: n.body, remind, keep };
+    return { title: n.title, body: n.body, remind, keep, reminder: false };
 }
 
 /**
@@ -120,4 +118,30 @@ export function swNotice(z, reminders, weather, now) {
 export function morningDue(now, timeZone, hour) {
     const m = localMinutes(now, timeZone) - hour * 60;
     return m >= 0 && m < OZNAMENIA.stepMin;
+}
+
+/**
+ * Pridá či uberie spotrebič zo spotrebičov doma.
+ * @param {Oznamenia} o @param {string} id @returns {Partial<Oznamenia>}
+ */
+export const prepniSpotrebic = (o, id) => ({ devices: o.devices.includes(id) ? o.devices.filter((d) => d !== id) : [...o.devices, id] });
+
+/**
+ * Čo ukáže sekcia Oznámenia v oboch appkách: ktorá hláška (kľúč do oznameniaTexts().stav, prázdny
+ * bez hlášky) a či sú voľby zamknuté. Bez polohy appka nemá z čoho rátať; kým sa zapína, nedá sa
+ * nič meniť, aby sa zmeny nepobili. Zapnuté oznámenie sa dá vždy vypnúť.
+ * @param {import('./settings.js').Known} known @param {string} stav stav z web/oznamenia.js @param {boolean} on
+ * @returns {{ stav: 'ok' | 'caka' | 'plocha' | 'zakazane' | 'nepodporuje' | 'bezElektrarne' | 'chyba', blocked: boolean, busy: boolean }}
+ */
+export function oznamOvladanie(known, stav, on) {
+    const key = known === 'nic' ? 'bezElektrarne' : /** @type {any} */ (stav);
+    const busy = stav === 'caka';
+    const blocked = busy || (!on && ['bezElektrarne', 'plocha', 'nepodporuje', 'zakazane'].includes(key));
+    return { stav: key, blocked, busy };
+}
+
+/** Verejný kľúč VAPID ako bajty pre pushManager.subscribe (appka aj service worker). */
+export function vapidKeyBytes() {
+    const b64 = OZNAMENIA.vapidPublic.replace(/-/g, '+').replace(/_/g, '/');
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }

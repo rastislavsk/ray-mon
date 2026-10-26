@@ -1,5 +1,5 @@
 {
-  "hash": "95362f87687bfb6afb8dd9dc3384ec90ad6de2bda5c13581bf47e59f2ceda550",
+  "hash": "50e072e823ecaf93cd8454f35079a3ec2b4a6a2e8b3e7335456f2fa9e141989f",
   "texts": [
     "  o 12:00.",
     " , prúd je lacný.",
@@ -258,7 +258,7 @@
     "Otvoriť plán",
     "Oznámenia",
     "Oznámenia máš v telefóne vypnuté. Zapni ich v nastaveniach prehliadača pre túto stránku.",
-    "Oznámenia sa nepodarilo zapnúť. Skús znova.",
+    "Oznámenia sa nepodarilo nastaviť. Skús znova.",
     "Panely momentálne nedávajú veľa. Zajtra bude slnečno, tak to pokojne nechaj na zajtra.",
     "Panely momentálne nedávajú veľa. Zajtra podľa predpovede slnečno nebude, tak pokojne zapni, čo potrebuješ.",
     "Panely teraz veľa nedávajú. Silnejšie slnko príde poobede — veľké spotrebiče si nechaj na vtedy.",
@@ -282,6 +282,7 @@
     "Pondelok, zamračené, 27 kWh, okno 08:30 až 16:00",
     "Potiahni do strán na susedný deň.",
     "Pozerám na oblohu.",
+    "Pozri plán dňa v appke.",
     "Počasie poznám, tvoju strechu nie. Rátam s typickou strechou asi 5 kWp. Zadaj panely a odpoveď bude naozaj tvoja.",
     "Počkaj",
     "Počkaj na slnko",
@@ -303,6 +304,7 @@
     "Pripojiť meranie",
     "Pripojiť znova",
     "Pripomeň o 09:15",
+    "Pripomienka sa neobjednala",
     "Program má hodinu a pol a celý čas berie 1,5 kW. Do 13:20 dobehne celý na slnku.",
     "Program má hodinu a pol a celý čas berie 1,5 kW. Do 15:00 dobehne celý na slnku.",
     "Program má hodinu a pol a celý čas berie 1,5 kW. Do 16:00 dobehne celý na slnku.",

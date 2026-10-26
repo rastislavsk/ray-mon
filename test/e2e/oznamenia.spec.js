@@ -27,13 +27,20 @@ const OWNER = {
 };
 const T = oznameniaTexts();
 
-/** @param {import('@playwright/test').Page} page @param {'sucasna' | 'obloha'} app  {NotificationPermission} [permission] */
-async function otvor(page, app, permission = 'default') {
+/**
+ * @param {import('@playwright/test').Page} page @param {'sucasna' | 'obloha'} app
+ * @param {NotificationPermission} [permission] stav povolenia pri štarte
+ * @param {NotificationPermission} [answer] čo človek odpovie na otázku (`default` = otázku zavrel)
+ */
+async function otvor(page, app, permission = 'default', answer = permission === 'granted' ? 'granted' : 'denied') {
     // Prehliadač bez okna má oznámenia vždy zakázané - stav povolenia aj odpoveď na otázku podvrhne test.
-    await page.addInitScript((p) => {
-        Object.defineProperty(Notification, 'permission', { get: () => p });
-        Notification.requestPermission = async () => (p === 'granted' ? 'granted' : 'denied');
-    }, permission);
+    await page.addInitScript(
+        ([p, a]) => {
+            Object.defineProperty(Notification, 'permission', { get: () => p });
+            Notification.requestPermission = async () => a;
+        },
+        [permission, answer],
+    );
     await page.route(/cdnjs\.cloudflare\.com/, (r) => r.abort());
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
     await page.route(WORKER_OZNAMENIA_URL, (r) => r.fulfill({ json: { ok: true } }));
@@ -118,5 +125,74 @@ test.describe('oznámenia: Živá obloha', () => {
         await page.locator('#ns-oznam').click();
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.zakazane);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
+    });
+    test('povolené, ale bez push služby: service worker z obloha/ sa zaregistruje v koreni, zapnutie zlyhá s hláškou', async ({ page }) => {
+        await otvor(page, 'obloha', 'granted');
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-oznam').click();
+        await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.chyba);
+        await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
+        const reg = await page.evaluate(async () => {
+            const r = await navigator.serviceWorker.getRegistration('../sw.js');
+            return r ? { scope: r.scope, state: r.active?.state ?? null } : null;
+        });
+        expect(reg?.state).toBe('activated');
+        expect(reg?.scope).toMatch(/\/$/);
+        expect(reg?.scope).not.toMatch(/obloha\/$/);
+    });
+});
+
+test.describe('oznámenia: obe appky', () => {
+    test('zavretá otázka na povolenie: žiadna hláška o zákaze, dá sa skúsiť znova', async ({ page }) => {
+        await otvor(page, 'sucasna', 'default', 'default');
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-oznamenia summary').click();
+        await page.locator('#oznam-body [data-oznam-on]').click();
+        await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
+        await expect(page.locator('#oznam-body [data-oznam-on]')).toBeEnabled();
+        await expect(page.locator('#oznam-body .oznam-stav')).toHaveCount(0);
+    });
+
+    for (const app of /** @type {const} */ (['sucasna', 'obloha']))
+        test(`${app}: zapnuté oznámenie bez odberu v telefóne sa pri štarte prepne na vypnuté`, async ({ page }) => {
+            await page.addInitScript(
+                ([k, v]) => localStorage.setItem(k, v),
+                [OZNAMENIA_STORAGE_KEY, JSON.stringify({ on: true, hour: 9, devices: ['pracka'] })],
+            );
+            await otvor(page, app, 'granted');
+            await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9, devices: ['pracka'] });
+        });
+    test('zrkadlo pre service worker: po vypnutí (zmazaná cache) a novom zapnutí sa zapíše znova', async ({ page }) => {
+        await otvor(page, 'sucasna');
+        const zapisane = await page.evaluate(async () => {
+            const m = await import('/web/oznamenia.js');
+            const { OZNAMENIA } = await import('/shared/config.js');
+            /** @type {Array<(s: any) => void>} */ const fns = [];
+            let s = {
+                site: { timezone: 'Europe/Bratislava' },
+                plant: {},
+                tariff: {},
+                known: 'elektraren',
+                oznamenia: { on: true, hour: 9, devices: ['pracka'] },
+            };
+            const store = { get: () => s, subscribe: (/** @type {any} */ fn) => fns.push(fn) };
+            const nastav = (/** @type {any} */ patch) => {
+                s = { ...s, ...patch };
+                fns.forEach((fn) => fn(s));
+            };
+            const precitaj = async () => (await (await caches.open(OZNAMENIA.cache)).match(OZNAMENIA.mirror))?.json() ?? null;
+            const pockaj = () => new Promise((r) => setTimeout(r, 200));
+            m.initOznamZrkadlo(store, './', './');
+            await pockaj();
+            const prve = await precitaj();
+            nastav({ oznamenia: { ...s.oznamenia, on: false } });
+            await caches.delete(OZNAMENIA.cache);
+            nastav({ oznamenia: { ...s.oznamenia, on: true } });
+            await pockaj();
+            return { prve, druhe: await precitaj() };
+        });
+        expect(zapisane.prve?.devices).toEqual(['pracka']);
+        expect(zapisane.prve?.hour).toBe(9);
+        expect(zapisane.druhe).toEqual(zapisane.prve);
     });
 });

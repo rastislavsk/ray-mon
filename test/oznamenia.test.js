@@ -2,7 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, OZNAMENIA, PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { oznameniaTexts, planNoticeText } from '../shared/messages.js';
-import { morningDue, oznameniaDefault, parseOznamenia, planNotice, reminderNotice, swNotice } from '../shared/oznamenia.js';
+import {
+    morningDue,
+    oznameniaDefault,
+    oznamOvladanie,
+    parseOznamenia,
+    planNotice,
+    prepniSpotrebic,
+    reminderNotice,
+    swNotice,
+    vapidKeyBytes,
+} from '../shared/oznamenia.js';
 import { fixture, fixtureData } from './helpers.js';
 
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
@@ -126,7 +136,7 @@ test('pripomienka: teraz, keď je na rade; inak povie, čo sa zmenilo', () => {
 test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pripomienka', () => {
     const weather = fixture('open-meteo.json');
     /** @type {import('../shared/oznamenia.js').Zrkadlo} */
-    const z = { site: SITE, plant: PLANT, tariff: PRICED, devices: DEVICES, voice: 'drzy', app: 'obloha/' };
+    const z = { site: SITE, plant: PLANT, tariff: PRICED, devices: DEVICES, voice: 'drzy', app: 'obloha/', hour: 9 };
     const rano = swNotice(z, [], weather, at('09:00'));
     assert.equal(rano.title, 'Dnes slnko do 17:30');
     assert.ok(rano.remind);
@@ -136,8 +146,33 @@ test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pr
     const stara = { id: 'pracka', at: at('06:00').toISOString() };
     const pripomienka = swNotice(z, [stara, { id: rano.remind.id, at: rano.remind.at }], weather, remindAt);
     assert.match(pripomienka.title, / · teraz$/);
+    assert.equal(pripomienka.reminder, true, 'pripomienka má vlastnú značku v lište');
+    assert.equal(rano.reminder, false);
     assert.equal(pripomienka.remind, null);
     assert.deepEqual(pripomienka.keep, [], 'odoslaná aj stará pripomienka zmizli');
     const neskor = { id: 'susicka', at: at('15:00').toISOString() };
     assert.deepEqual(swNotice(z, [neskor], weather, at('09:00')).keep, [neskor], 'budúca ostáva');
+});
+
+test('oznamOvladanie: hláška a zámok sekcie Oznámenia, rovnaké pre obe appky', () => {
+    assert.deepEqual(oznamOvladanie('elektraren', 'ok', false), { stav: 'ok', blocked: false, busy: false });
+    assert.deepEqual(oznamOvladanie('nic', 'ok', false), { stav: 'bezElektrarne', blocked: true, busy: false });
+    assert.deepEqual(oznamOvladanie('poloha', 'zakazane', false), { stav: 'zakazane', blocked: true, busy: false });
+    assert.equal(oznamOvladanie('poloha', 'zakazane', true).blocked, false, 'zapnuté sa dá vždy vypnúť');
+    assert.deepEqual(oznamOvladanie('elektraren', 'caka', true), { stav: 'caka', blocked: true, busy: true }, 'kým sa zapína, nič');
+    assert.equal(oznamOvladanie('elektraren', 'chyba', false).blocked, false, 'po chybe sa dá skúsiť znova');
+    for (const k of ['ok', 'caka', 'plocha', 'zakazane', 'nepodporuje', 'bezElektrarne', 'chyba'])
+        assert.equal(typeof oznameniaTexts().stav[/** @type {keyof ReturnType<typeof oznameniaTexts>['stav']} */ (k)], 'string', k);
+});
+
+test('prepniSpotrebic pridá a uberie; kľúč VAPID má 65 bajtov', () => {
+    const o = oznameniaDefault();
+    assert.deepEqual(prepniSpotrebic(o, 'bojler').devices, [...DEVICES, 'bojler']);
+    assert.deepEqual(
+        prepniSpotrebic(o, 'auto').devices,
+        DEVICES.filter((d) => d !== 'auto'),
+    );
+    const key = vapidKeyBytes();
+    assert.equal(key.length, 65);
+    assert.equal(key[0], 4, 'nekomprimovaný bod P-256');
 });

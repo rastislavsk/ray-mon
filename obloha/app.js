@@ -16,7 +16,7 @@ import {
     loadVlastnaAdresa,
     loadVymazane,
 } from '../web/storage.js';
-import { initOznamZrkadlo, oznamStav } from '../web/oznamenia.js';
+import { initOznamZosulad, initOznamZrkadlo, oznamStav } from '../web/oznamenia.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -63,7 +63,8 @@ const store = createStore(
 // Adresa nesie uložené nastavenie - appka pridaná na plochu iPhonu si ho tak prenesie zo Safari.
 initUrlMirror(store);
 // Service worker ranného oznámenia nevidí localStorage - appka mu nastavenie odkladá sama.
-initOznamZrkadlo(store, 'obloha/');
+initOznamZrkadlo(store, 'obloha/', '../');
+initOznamZosulad(store, '../');
 // Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
 // skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
 // pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.

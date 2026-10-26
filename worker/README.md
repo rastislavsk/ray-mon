@@ -131,7 +131,8 @@ pribalí jeho pečať a appka si ju uloží namiesto odkazu.
 
 Telefón, ktorý si v Nastavení zapne ranný plán dňa, sa prihlási k Web Push a pošle sem
 `{ endpoint, on: true, hour, tz }` – adresu odberu, hodinu (7, 8 alebo 9, `OZNAMENIA.hours`)
-a svoje časové pásmo. `on: false` odber zruší. Worker si to uloží do KV `ODBERY` pod kľúč
+a časové pásmo elektrárne (v ňom sa ráta zvolená hodina; keď sa poloha zmení, appka ho pošle znova).
+`on: false` odber zruší. Worker si to uloží do KV `ODBERY` pod kľúč
 `o:<odtlačok adresy>` a všetko dá do metadát kľúča. Polohu, panely, tarifu ani prístup
 k meraniu nepozná – plán si telefón vypočíta sám (`sw.js`, `shared/oznamenia.js`).
 
@@ -146,9 +147,14 @@ v ich pásme práve nastala zvolená hodina, a pripomienkam, ktorých čas priš
 byť https a patriť známej push službe (`OZNAMENIA.pushHosts`) – inak by Worker posielal
 požiadavky kamkoľvek. Odber, ktorý push služba už nepozná (404, 410), Worker zmaže.
 
-Na bezplatnom pláne má KV denne 1 000 zápisov a 1 000 operácií `list`. Budenie spraví 96 `list`
-denne (plus jednu na každých ďalších 1 000 odberov), zápis je len pri zapnutí či zmene a pri
-pripomienke.
+Na bezplatnom pláne má KV denne 1 000 zápisov a 1 000 operácií `list`. Budenie spraví 192 `list`
+denne (odbery a pripomienky, plus jednu na každých ďalších 1 000 kľúčov), zápis je len pri zapnutí
+či zmene a pri pripomienke. Zlyhaný zápis vráti 503 a appka povie, že sa to nepodarilo.
+
+Jeden plánovaný beh smie na bezplatnom pláne poslať najviac 50 požiadaviek – teda okolo 48 pushov
+v jednej štvrťhodine (kľúč VAPID sa importuje raz za beh). Keby odberov pribudlo viac, treba
+Workers Paid alebo rozložiť budenie; koľko pushov zlyhalo, píše log `budenie: … zlyhalo`.
+Odbery samy nevypršia, mažú sa pri vypnutí alebo keď push služba povie 404 či 410.
 
 Prečo nie Durable Object s alarmom: migráciu Durable Objectu nejde nahrať cez
 `wrangler versions upload`, ktorým sa nasadzujú pull requesty – každý taký PR by v CI spadol.

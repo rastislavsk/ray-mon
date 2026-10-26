@@ -568,7 +568,7 @@ export const WORKER_PV_PATH = '/pv';
 export const WORKER_PV_URL = new URL(WORKER_PV_PATH, WORKER_URL).href;
 export const WORKER_PRIPOJ_PATH = '/pripoj';
 export const WORKER_PRIPOJ_URL = new URL(WORKER_PRIPOJ_PATH, WORKER_URL).href;
-// Ranné oznámenie: odber tohto telefónu (`/oznamenia`, POST uloží, DELETE zruší) a jednorazová
+// Ranné oznámenie: odber tohto telefónu (`/oznamenia`, POST uloží, s `on: false` zruší) a jednorazová
 // pripomienka z tlačidla v oznámení (`/pripomen`).
 export const WORKER_OZNAMENIA_PATH = '/oznamenia';
 export const WORKER_OZNAMENIA_URL = new URL(WORKER_OZNAMENIA_PATH, WORKER_URL).href;
@@ -581,13 +581,18 @@ export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).hre
  * oznámenie aj pripomienka prídu do štvrťhodiny od svojho času. `remindMaxH`: pripomienka najviac
  * tak ďaleko dopredu. `vapidPublic`: verejný kľúč VAPID (súkromný je tajomstvo Workera
  * VAPID_JWK), ním sa telefón prihlási k odberu. `pushHosts`: služby, na ktoré Worker push pošle -
- * inú adresu odberu odmietne, aby z neho nebol proxy server na čokoľvek.
+ * inú adresu odberu odmietne, aby z neho nebol proxy server na čokoľvek. `remindWindowMin`:
+ * pripomienka patrí budeniu do toľkých minút od svojho času. `jwtH`: ako dlho platí podpis VAPID.
+ * `timeoutMs`: najdlhšie čakanie na service worker a Worker, potom appka povie, že sa nepodarilo.
  */
 export const OZNAMENIA = {
     hours: [7, 8, 9],
     hour: 9,
     stepMin: 15,
     remindMaxH: 16,
+    remindWindowMin: 20,
+    jwtH: 12,
+    timeoutMs: 15000,
     vapidPublic: 'BN5f22u_HXM_8YkH2CWmaNESDDADrK5RfWog4dSGGNl8OVAywRlD6bRL_3lX6bP2xXLWut8K6YrwFJRIoqoFGac',
     pushHosts: ['fcm.googleapis.com', 'updates.push.services.mozilla.com', '.push.apple.com', '.notify.windows.com'],
     maxEndpoint: 900,

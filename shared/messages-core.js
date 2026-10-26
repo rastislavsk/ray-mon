@@ -790,6 +790,10 @@ export function oznameniaTexts(voice = 'drzy') {
     return {
         remind: (/** @type {number} */ at) => `${say.remind} ${hm(at)}`,
         open: 'Otvoriť plán',
+        remindFail: {
+            title: 'Pripomienka sa neobjednala',
+            body: p ? 'Pozrite plán dňa v appke.' : 'Pozri plán dňa v appke.',
+        },
         fail: { title: 'Plán na dnes', body: say.fail },
         title: 'Oznámenia',
         hint: 'Ráno plán dňa: kedy pustiť ktorý spotrebič',
@@ -813,7 +817,7 @@ export function oznameniaTexts(voice = 'drzy') {
             bezElektrarne: p
                 ? 'Najprv zadajte polohu a panely, inak nemám z čoho rátať.'
                 : 'Najprv zadaj polohu a panely, inak nemám z čoho rátať.',
-            chyba: p ? 'Oznámenia sa nepodarilo zapnúť. Skúste znova.' : 'Oznámenia sa nepodarilo zapnúť. Skús znova.',
+            chyba: p ? 'Oznámenia sa nepodarilo nastaviť. Skúste znova.' : 'Oznámenia sa nepodarilo nastaviť. Skús znova.',
         },
     };
 }

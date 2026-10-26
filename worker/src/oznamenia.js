@@ -9,7 +9,7 @@
 
 import { OZNAMENIA } from '../../shared/config.js';
 import { morningDue } from '../../shared/oznamenia.js';
-import { platnyOdber, posliPush } from './webpush.js';
+import { platnyOdber, posliPush, vapidKlic } from './webpush.js';
 
 /**
  * KV, ako ho Worker používa: kľúč, prázdna hodnota a metadáta.
@@ -104,13 +104,17 @@ async function vsetky(kv, prefix) {
  */
 export async function budenie(env, now, fetchImpl) {
     const kv = env.ODBERY;
-    const jwk = env.VAPID_JWK;
-    if (!kv || !jwk) return 0;
+    if (!kv || !env.VAPID_JWK) return 0;
+    // Kľúč sa importuje raz za beh, nie pri každom pushi - plánovaný beh má na bezplatnom pláne málo CPU.
+    const klic = await vapidKlic(env.VAPID_JWK);
+    if (!klic.match) console.log('budenie: VAPID_JWK nepatrí k OZNAMENIA.vapidPublic, push služby odmietnu podpis');
     let sent = 0;
+    let failed = 0;
     /** @param {string} key @param {string} endpoint @param {boolean} once */
     const zobud = async (key, endpoint, once) => {
-        const status = await posliPush(endpoint, jwk, now, fetchImpl).catch(() => 0);
+        const status = await posliPush(endpoint, klic, now, fetchImpl).catch(() => 0);
         if (status >= 200 && status < 300) sent++;
+        else failed++;
         if (once || status === 404 || status === 410) await kv.delete(key);
     };
     for (const k of await vsetky(kv, 'o:')) {
@@ -122,6 +126,6 @@ export async function budenie(env, now, fetchImpl) {
         const m = k.metadata;
         if (m && new Date(m.at).getTime() <= now.getTime() + 60 * 1000) await zobud(k.name, m.e, true);
     }
-    console.log(`budenie: ${sent} push`);
+    console.log(`budenie: ${sent} push${failed ? `, ${failed} zlyhalo` : ''}`);
     return sent;
 }

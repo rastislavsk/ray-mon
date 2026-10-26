@@ -158,8 +158,12 @@ export async function handleRequest(request, env = {}, now = new Date(), fetchIm
     const paths = [WORKER_PV_PATH, WORKER_PRIPOJ_PATH, WORKER_OZNAMENIA_PATH, WORKER_PRIPOMEN_PATH];
     if (!paths.includes(path)) return json(404, { error: 'neznáma cesta' });
     if (request.method !== 'POST') return json(405, { error: 'nepovolená metóda' });
-    if (path === WORKER_OZNAMENIA_PATH) return oznamOdpoved(await ulozOdber(await telo(request), env));
-    if (path === WORKER_PRIPOMEN_PATH) return oznamOdpoved(await ulozPripomienku(await telo(request), env, now));
+    if (path === WORKER_OZNAMENIA_PATH || path === WORKER_PRIPOMEN_PATH) {
+        const body = await telo(request);
+        // Zlyhaný zápis do KV (denný limit zápisov) je 503 s hlavičkami CORS, nie holá chyba Workera.
+        const status = await (path === WORKER_OZNAMENIA_PATH ? ulozOdber(body, env) : ulozPripomienku(body, env, now)).catch(() => 503);
+        return oznamOdpoved(status);
+    }
     return path === WORKER_PV_PATH ? handlePv(request, env, now, fetchImpl) : handlePripoj(request, env, now, fetchImpl);
 }
 

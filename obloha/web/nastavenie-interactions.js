@@ -8,7 +8,8 @@ import { VOICES } from '../../shared/config.js';
 import { parseStartPanel } from '../../shared/settings.js';
 import { backAction } from '../../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from '../../web/setup-wiring.js';
-import { nastavOznamenia, prepniSpotrebic, vypniOznamenia } from '../../web/oznamenia.js';
+import { prepniSpotrebic } from '../../shared/oznamenia.js';
+import { nastavOznamenia, vypniOznamenia } from '../../web/oznamenia.js';
 import { clearStored, saveLook, saveStartPanel } from '../../web/storage.js';
 import { stepBack } from './nav-back.js';
 import { panelChange } from './state.js';
@@ -58,7 +59,9 @@ function initOznam(store, dom) {
     /** @param {Partial<import('../../shared/oznamenia.js').Oznamenia>} zmena */
     const nastav = async (zmena) => {
         const s = store.get();
-        if (zmena.on) store.setState({ oznamStav: 'caka' });
+        // Kým sa zapína, ďalšia zmena by sa po dobehnutí prepísala starou voľbou.
+        if (s.oznamStav === 'caka') return;
+        if (zmena.on || (zmena.hour !== undefined && s.oznamenia.on)) store.setState({ oznamStav: 'caka' });
         store.setState(await nastavOznamenia(s.oznamenia, zmena, { root: ROOT, timeZone: s.site.timezone }));
     };
     dom.nsOznam.addEventListener('click', () => nastav({ on: !store.get().oznamenia.on }));

@@ -7,7 +7,7 @@
 import { planesCompassModel } from '../../../shared/chart-model.js';
 import { OBLOHA_URL, OZNAMENIA } from '../../../shared/config.js';
 import { oznameniaTexts, voiceTexts } from '../../../shared/messages-core.js';
-import { OZNAMENIA_DEVICES } from '../../../shared/oznamenia.js';
+import { OZNAMENIA_DEVICES, oznamOvladanie } from '../../../shared/oznamenia.js';
 import { shareUrl } from '../../../shared/settings.js';
 import { savedSettings } from '../../../shared/setup-flow.js';
 import { escapeHtml } from '../../../shared/format.js';
@@ -88,9 +88,11 @@ function renderOznamenia(state, dom) {
     setText(dom.nsOznamLabel, T.switchSky);
     setText(dom.nsOznamSmall, T.switchSkySmall);
     dom.nsOznam.setAttribute('aria-checked', String(o.on));
-    const stav = state.known === 'nic' ? T.stav.bezElektrarne : T.stav[state.oznamStav];
-    const blocked = state.known === 'nic' || ['plocha', 'nepodporuje', 'zakazane', 'caka'].includes(state.oznamStav);
-    dom.nsOznam.toggleAttribute('disabled', blocked && !o.on);
+    const ui = oznamOvladanie(state.known, state.oznamStav, o.on);
+    const stav = T.stav[ui.stav];
+    // Kým sa zapína, nedá sa meniť nič - zmena by sa po dobehnutí prepísala.
+    const off = ui.busy ? ' disabled' : '';
+    dom.nsOznam.toggleAttribute('disabled', ui.blocked);
     show(dom.nsOznamStav, !!stav);
     setText(dom.nsOznamStav, stav);
     setText(dom.nsOznamHourLabel, T.when);
@@ -98,7 +100,7 @@ function renderOznamenia(state, dom) {
     setHtml(
         dom.nsOznamHour,
         OZNAMENIA.hours
-            .map((h) => `<button type="button" class="mini" data-hour="${h}" aria-pressed="${h === o.hour}">${h}:00</button>`)
+            .map((h) => `<button type="button" class="mini" data-hour="${h}" aria-pressed="${h === o.hour}"${off}>${h}:00</button>`)
             .join(''),
     );
     setText(dom.nsOznamDevLabel, T.devices);
@@ -108,7 +110,7 @@ function renderOznamenia(state, dom) {
         dom.nsOznamDev,
         OZNAMENIA_DEVICES.map(
             (id) =>
-                `<button type="button" class="mini" data-device="${id}" aria-pressed="${o.devices.includes(id)}">${escapeHtml(names[id].name)}</button>`,
+                `<button type="button" class="mini" data-device="${id}" aria-pressed="${o.devices.includes(id)}"${off}>${escapeHtml(names[id].name)}</button>`,
         ).join(''),
     );
     setText(dom.nsOznamNote, T.privacy);
