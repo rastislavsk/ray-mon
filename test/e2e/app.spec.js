@@ -39,6 +39,7 @@ import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
+import { planDnaModel } from '../../shared/plan-dna.js';
 import { summaryModel } from '../../shared/summary.js';
 import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
@@ -3055,6 +3056,20 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-tile b')).toHaveText(m.groups.map((g) => g.value));
         await expect(page.locator('.mozem-tile-bar'), 'pás dňa má len široká dlaždica').toHaveCount(1);
         await expect(page.locator('#mozem-sheet')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('o 13:00 plán dňa pod dlaždicami podľa modelu, bez ceny pri spotrebičoch', async ({ page }) => {
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await ocakavajKartu(page, 'mozem');
+        const plan = planDnaModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
+        const rows = plan?.rows ?? [];
+        expect(rows.length).toBeGreaterThan(0);
+        await expect(page.locator('#mozem-plan-ttl')).toHaveText('Plán dňa');
+        await expect(page.locator('.mozem-plan-list li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
+        await expect(page.locator('.mozem-plan-note')).toHaveText(plan?.note ?? '');
+        for (const r of rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');
         expect(errors).toEqual([]);
     });
 

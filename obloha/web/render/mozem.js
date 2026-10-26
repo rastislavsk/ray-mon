@@ -3,7 +3,7 @@
 // shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
-import { voiceTexts } from '../../../shared/messages-core.js';
+import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
 import { mozemSheetOf } from '../../../shared/mozem.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { shows } from '../state.js';
@@ -142,6 +142,26 @@ function renderCard(m, dom, voice) {
     dom.mzList.classList.toggle('est', !!m.list?.estimate);
     setText(dom.mzListTitle, m.list ? m.list.title : '');
     setHtml(dom.mzItems, m.list ? tilesHtml(m.groups) : '');
+    renderPlan(m.list ? m.plan : null, dom);
+}
+
+/** Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu sa skryje. @param {Model['plan']} plan @param {Dom} dom */
+function renderPlan(plan, dom) {
+    const rows = plan ? plan.rows : [];
+    show(dom.mzPlan, rows.length > 0);
+    setText(dom.mzPlanTitle, PLAN_DNA_TITLE);
+    setHtml(
+        dom.mzPlanRows,
+        rows
+            .map(
+                (r) =>
+                    `<li><span class="row-t" data-tone="${r.tone}">${escapeHtml(r.time)}</span>` +
+                    `<b>${escapeHtml(r.name)}${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : ''}</b>` +
+                    `<span class="plan-w">${escapeHtml(r.why)}</span></li>`,
+            )
+            .join(''),
+    );
+    setText(dom.mzPlanNote, plan ? plan.note : '');
 }
 
 /**

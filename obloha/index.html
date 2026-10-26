@@ -89,6 +89,12 @@
                     <h2 id="mz-list-title" class="glass-ttl"></h2>
                     <div id="mz-items" class="tiles"></div>
                 </section>
+                <!-- Plán dňa: poradie spotrebičov na dnešné slnko (shared/plan-dna.js). Riadky skladá render. -->
+                <section id="mz-plan" class="glass plan hidden" aria-labelledby="mz-plan-title">
+                    <h2 id="mz-plan-title" class="glass-ttl"></h2>
+                    <ol id="mz-plan-rows" class="plan-rows"></ol>
+                    <p id="mz-plan-note" class="plan-note"></p>
+                </section>
             </section>
             <!-- Karta Teraz: texty, graf aj pás odporúčaní skladá render (web/render/teraz.js)
                  z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor

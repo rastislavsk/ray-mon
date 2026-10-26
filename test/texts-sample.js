@@ -172,6 +172,20 @@ function directItems(out, v) {
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
     strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
+    // Plán dňa: každý druh riadku pre každú vec, auto aj s úsporou pod a nad euro.
+    /** @type {Array<[string, import('../shared/plan-dna.js').PlanRow]>} */
+    const rows = [
+        ['sun', { id: '', kind: 'sun', start: 540, end: 660, after: null, km: 120, save: 2.85, currency: '€' }],
+        ['sunPo', { id: '', kind: 'sun', start: 660, end: 750, after: 'pracka', km: 0, save: 0.4, currency: '€' }],
+        ['sunBez', { id: '', kind: 'sun', start: 660, end: 750, after: null, km: null, save: null, currency: '€' }],
+        ['cheap', { id: '', kind: 'cheap', start: 1320 }],
+        ['zajtra', { id: '', kind: 'later', day }],
+        ['neskor', { id: '', kind: 'later', day: later }],
+        ['none', { id: '', kind: 'none' }],
+    ];
+    for (const item of MOZEM_ITEMS.filter((i) => i.device))
+        for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);
+    Object.assign(out, { 'plan.title': M.PLAN_DNA_TITLE, 'plan.now': M.PLAN_DNA_NOW, 'plan.note': M.PLAN_DNA_NOTE });
 }
 
 /** Výzvy, veta bez dát, najlepší deň a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */

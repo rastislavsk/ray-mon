@@ -86,7 +86,7 @@ const deviceOf = (name) => DEVICES.find((d) => d.name === name) || null;
  * @param {DayCtx} ctx @param {number} minKw @param {boolean} weakOk
  * @returns {{ day: LaterDay | null, weakSkipped: boolean }}
  */
-function laterDay(ctx, minKw, weakOk) {
+export function laterDay(ctx, minKw, weakOk) {
     let weakSkipped = false;
     for (const { day, index } of ctx.later) {
         if (!weakOk && day.peakKw < ctx.th.weakPeakKw) {
@@ -103,7 +103,7 @@ function laterDay(ctx, minKw, weakOk) {
  * Koľko km auto chytí zo slnka od teraz do konca okna: výkon plánu, najviac príkon nabíjačky.
  * @param {DayCtx} ctx @param {number} end @param {number} powerKw
  */
-function kmFromSun(ctx, end, powerKw) {
+export function kmFromSun(ctx, end, powerKw) {
     const kwh = ctx.plan
         .filter((s) => s.startMin + s.min > ctx.nowMin && s.startMin < end && Number.isFinite(s.kw))
         .reduce((sum, s) => sum + Math.min(s.kw, powerKw) * SLOT_H, 0);
@@ -210,7 +210,7 @@ function dayState(windows, nowMin, sun) {
  * Kontext dňa pre odpovede a texty.
  * @param {PlanInput} input @returns {DayCtx}
  */
-function dayCtx(input) {
+export function dayCtx(input) {
     const { now, site, tariff, forecast } = input;
     const nowMin = localMinutes(now, site.timezone);
     const today = localDateKey(now, site.timezone);

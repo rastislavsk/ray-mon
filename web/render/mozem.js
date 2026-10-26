@@ -4,14 +4,16 @@
 
 import { HOUR_RANGE } from '../../shared/chart-model.js';
 import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
-import { MOZEM_SKY_TEXTS, NO_LIVE_FACT } from '../../shared/messages.js';
+import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_NOW, PLAN_DNA_TITLE } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
+import { planDnaModel } from '../../shared/plan-dna.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { localMinutes } from '../../shared/solar.js';
 import { MOZEM_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
+/** @typedef {ReturnType<typeof planDnaModel>} PlanModel */
 /** @typedef {import('../dom.js').Dom} Dom */
 
 /** Veľké slovo pod 10 znakov sa zmestí vo veľkom písme, dlhšie („NO NO, NOT YET“) dostane menšie. */
@@ -78,12 +80,28 @@ function tilesHtml(m) {
     );
 }
 
+/** Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu (načítava sa, bez predpovede) nie je. @param {PlanModel} plan */
+function planHtml(plan) {
+    if (!plan || !plan.rows.length) return '';
+    const rows = plan.rows.map(
+        (r) =>
+            `<li data-tone="${r.tone}"><span class="mozem-plan-t">${escapeHtml(r.time)}</span>` +
+            `<span class="mozem-plan-n">${escapeHtml(r.name)}${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : ''}</span>` +
+            `<span class="mozem-plan-w">${escapeHtml(r.why)}</span></li>`,
+    );
+    return (
+        `<section class="mozem-plan" aria-labelledby="mozem-plan-ttl"><h3 id="mozem-plan-ttl" class="mozem-plan-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h3>` +
+        `<div class="mozem-plan-box"><ol class="mozem-plan-list">${rows.join('')}</ol><p class="mozem-plan-note">${escapeHtml(plan.note)}</p></div></section>`
+    );
+}
+
 /**
- * Hlavná obrazovka karty z modelu. `kick` je riadok nad slovom („Teraz · 13:00 · Dvorany“).
- * @param {MozemModel} m @param {string} kick
+ * Hlavná obrazovka karty z modelu. `kick` je riadok nad slovom („Teraz · 13:00 · Dvorany“),
+ * `plan` plán dňa pod dlaždicami.
+ * @param {MozemModel} m @param {string} kick @param {PlanModel} [plan]
  */
-export function mozemHtml(m, kick) {
-    return heroHtml(m, kick) + stripHtml(m) + tilesHtml(m);
+export function mozemHtml(m, kick, plan = null) {
+    return heroHtml(m, kick) + stripHtml(m) + tilesHtml(m) + (m.list ? planHtml(plan) : '');
 }
 
 /** Riadky panelu skupiny: meno, krátka odpoveď a prečo. @param {MozemModel['items']} rows */
@@ -167,6 +185,6 @@ export function closeMozemSheet(dom) {
 export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, kick), 'mozemBody');
+    writeHtml(dom.mozemBody, mozemHtml(m, kick, planDnaModel(state)), 'mozemBody');
     renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }

@@ -9,7 +9,7 @@
 // a pevné texty v oboch tónoch vracia voiceTexts. Slušná varianta stojí pri drzej; kde text
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
-import { DEVICES, EVERYDAY, MINUTES_PER_DAY } from './config.js';
+import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
 import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr } from './format.js';
 import { productionLevel } from './tariff.js';
 
@@ -316,6 +316,8 @@ const MOZEM_UNKNOWN_SLUSNE = {
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
 /** @typedef {import('./mozem.js').Window} MozemWindow */
 /** @typedef {(typeof import('./config.js').MOZEM_ITEMS)[number]} MozemItem */
+/** Veci karty podľa id. */
+const MOZEM_ITEMS_BY_ID = Object.fromEntries(MOZEM_ITEMS.map((i) => [i.id, i]));
 
 const hm = minutesToTimeStr;
 
@@ -482,8 +484,8 @@ export function mozemItemText(item, a, env, voice = 'drzy') {
     const base = { name: t.name, more: null };
     if (a.kind === 'always') return { ...base, tone: 'go', short: 'vždy OK', ...T.MOZEM_ALWAYS[/** @type {'hranie' | 'fen'} */ (item.id)] };
     if (a.kind === 'unk' || !env) return { ...base, tone: 'unk', ...T.MOZEM_UNKNOWN };
-    const isAuto = item.runMin === null;
-    const cost = env.cost === null ? '' : `${isAuto ? 'Hodina nabíjania' : 'Stojí to'} ~${money(env.cost, env.ctx.currency)}.`;
+    // Cenu má len auto: pri práčke či umývačke sú to centy, ktoré človeka nepresvedčia.
+    const cost = item.runMin === null && env.cost !== null ? `Hodina nabíjania ~${money(env.cost, env.ctx.currency)}.` : '';
     if (a.kind === 'go') {
         const cloud = `${t.cloud}${cost ? ` ${cost}` : ''}`;
         return {
@@ -496,7 +498,7 @@ export function mozemItemText(item, a, env, voice = 'drzy') {
     const now = cost || 'Pôjde to zo siete.';
     if (a.kind === 'wait') return { ...base, ...waitItem(t, a.start, item, env.ctx.draha), ...ask(ITEM_SAY[voice].now, now) };
     if (a.kind === 'cheap') return { ...base, ...cheapItem(t, a.next) };
-    return { ...base, ...laterItem(a, notTodayText(item, env), voice), ...ask('Nepočká to?', now) };
+    return { ...base, ...laterItem(a, notTodayText(item), voice), ...ask('Nepočká to?', now) };
 }
 
 /** Slnko dnes nie, ale sieť je lacná. @param {{ verb: string, pron: string }} t @param {LaterDay | null} next */
@@ -542,15 +544,10 @@ function profileOf(item) {
     return { heat, shape, kw: Number.isInteger(kw) ? String(kw) : fmt1(kw), run: durationText(item.runMin ?? 0) };
 }
 
-/**
- * Koľko pokryje strecha, keď vec pustíš teraz a slnko ju celú neutiahne: „Zo slnka asi 70 %,
- * zvyšok ~0,06 €.“ Zvyšok je časť ceny behu zo siete, bez ceny v tarife chýba.
- * @param {number} share @param {{ ctx: DayCtx, cost: number | null }} env
- */
-function shareText(share, env) {
+/** Koľko pokryje strecha, keď vec pustíš teraz a slnko ju celú neutiahne: „Zo slnka asi 70 %, zvyšok zo siete.“ @param {number} share */
+function shareText(share) {
     if (share >= 0.95) return 'Skoro všetko pôjde zo strechy.';
-    const rest = env.cost === null ? '' : `, zvyšok ~${money(env.cost * (1 - share), env.ctx.currency)}`;
-    return `Zo slnka asi ${Math.round(share * 10) * 10} %${rest}.`;
+    return `Zo slnka asi ${Math.round(share * 10) * 10} %, zvyšok zo siete.`;
 }
 
 /** Rozbalenie, keď svieti. @param {{ verb: string, pron: string, run?: string }} t
@@ -580,7 +577,7 @@ function goItem(t, a, item, env) {
         twice: () => `Prvý ohrev ešte chytí slnko, oplach o ${hm((env.ctx.nowMin + p.heat[1][0]) % MINUTES_PER_DAY)} už nie.`,
         whole: () => `${run}, ale slnko vydrží len do ${hm(a.end)}.`,
     };
-    return { short: 'teraz', head: `${t.verb} ${t.pron} hneď.`, text: `${why[p.shape]()} ${shareText(a.share ?? 1, env)}` };
+    return { short: 'teraz', head: `${t.verb} ${t.pron} hneď.`, text: `${why[p.shape]()} ${shareText(a.share ?? 1)}` };
 }
 
 /** Vety veci, ktoré sa v tónoch líšia. */
@@ -589,20 +586,16 @@ const ITEM_SAY = {
     slusny: { now: 'Potrebujete to hneď?', wait: ' Kým nebude poriadne slnko, radšej počkajte.' },
 };
 
-/**
- * Prečo nie dnes, keď to slnko už neutiahne: čo by išlo zo siete a za koľko. Auto len povie, že dnes nie.
- * @param {MozemItem} item @param {{ ctx: DayCtx, cost: number | null }} env
- */
-function notTodayText(item, env) {
+/** Prečo nie dnes, keď to slnko už neutiahne: čo by išlo zo siete. Auto len povie, že dnes nie. @param {MozemItem} item */
+function notTodayText(item) {
     if (item.runMin === null) return 'Dnes to už slnko neutiahne.';
     const p = profileOf(item);
-    const c = env.cost === null ? '' : money(env.cost, env.ctx.currency);
     const why = {
-        start: () => `Dnes by to išlo zo siete${c ? ` za ~${c}` : ''} a väčšinu by zjedol ohrev vody.`,
-        twice: () => `Dnes by ohrevy vody išli zo siete${c ? `, umývanie za ~${c}` : ''}.`,
-        whole: () => `Celý čas berie ${p.kw} kW a dnes by to celé išlo zo siete${c ? ` za ~${c}` : ''}.`,
+        start: 'Dnes by to išlo zo siete a väčšinu by zjedol ohrev vody.',
+        twice: 'Dnes by ohrevy vody išli zo siete.',
+        whole: `Celý čas berie ${p.kw} kW a dnes by to celé išlo zo siete.`,
     };
-    return why[p.shape]();
+    return why[p.shape];
 }
 
 /** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem.js').Answer} a @param {string} notToday @param {Voice} voice */
@@ -621,6 +614,58 @@ function laterItem(a, notToday, voice) {
         head: `${laterWhen(day)}.`,
         text: `${notToday}${a.weakSkipped ? ITEM_SAY[voice].wait : ''}`,
     };
+}
+
+// ---- Plán dňa (shared/plan-dna.js) ----------------------------------------------------
+// Riadok: čas, spotrebič a prečo. Pri bežných spotrebičoch bez ceny v €, cenu má len auto.
+
+/** Nadpis, štítok riadku, ktorý je na rade, a pätka bloku Plán dňa. */
+export const PLAN_DNA_TITLE = 'Plán dňa';
+export const PLAN_DNA_NOW = 'teraz';
+export const PLAN_DNA_NOTE = 'Jeden po druhom, aby sa o slnko nebili.';
+
+/** „po práčke“ - na koho vec v pláne čaká (PLAN_DNA.after). */
+const PLAN_AFTER = /** @type {Record<string, string>} */ ({ pracka: 'po práčke' });
+
+/**
+ * Texty riadku plánu dňa.
+ * @param {import('./plan-dna.js').PlanRow} row @param {Voice} [voice]
+ * @returns {{ name: string, time: string, why: string, tone: 'go' | 'cheap' | 'wait' | 'no' }}
+ */
+export function planDnaRowText(row, voice = 'drzy') {
+    const t = voiceTexts(voice).MOZEM_ITEM_TEXTS[row.id];
+    const name = t.name;
+    if (row.kind === 'cheap') return { name, time: `od ${hm(row.start)}`, why: 'v lacnom pásme', tone: 'cheap' };
+    if (row.kind === 'none') return { name, time: 'tento týždeň nie', why: 'slnko podľa predpovede nestačí', tone: 'no' };
+    if (row.kind === 'later') {
+        const soon = row.day.index === 1;
+        return {
+            name,
+            time: soon ? `zajtra ${hm(row.day.start)}` : row.day.name.toLowerCase(),
+            why: 'dnes slnko nestačí',
+            tone: soon ? 'wait' : 'no',
+        };
+    }
+    const item = /** @type {MozemItem} */ (MOZEM_ITEMS_BY_ID[row.id]);
+    if (item.runMin === null) return { name, time: `${hm(row.start)}–${hm(row.end)}`, why: autoSunWhy(row, voice), tone: 'go' };
+    const p = profileOf(item);
+    const why = { start: 'ohrev chytí slnko', twice: 'oba ohrevy chytia slnko', whole: `${t.pron === 'ju' ? 'celá' : 'celý'} zo strechy` }[
+        p.shape
+    ];
+    const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : '';
+    return { name, time: hm(row.start), why: `${after}${why}`, tone: 'go' };
+}
+
+/**
+ * Prečo auto na slnku: km zo slnka a koľko by tá energia stála zo siete. Úspora na celé eurá -
+ * centy by pri aute zbytočne tvrdili presnosť.
+ * @param {{ km: number | null, save: number | null, currency: string }} row @param {Voice} voice
+ */
+function autoSunWhy({ km, save, currency }, voice) {
+    const sun = km ? `~${km} km zo slnka` : 'aspoň trochu zo slnka';
+    if (!save) return sun;
+    const sum = save >= 1 ? `${Math.round(save)} ${currency}` : money(save, currency);
+    return `${sun}, ${polite(voice) ? 'ušetríte' : 'ušetríš'} ~${sum}`;
 }
 
 // ---- Karta Môžem?: dlaždice, panel veci a výzvy ------------------------------------
