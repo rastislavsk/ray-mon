@@ -14,7 +14,7 @@ enabled = true
 # (worker/src/oznamenia.js). Nič iné Worker neukladá.
 [[kv_namespaces]]
 binding = "ODBERY"
-id = "DOPLNIT_ID_KV"
+id = "51a2f040218742d2addba28299417769"
 
 # Budenie ranných oznámení a pripomienok každú štvrťhodinu (OZNAMENIA.stepMin v shared/config.js).
 [triggers]
