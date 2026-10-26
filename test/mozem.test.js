@@ -89,8 +89,9 @@ test('dayWindow: prvá a posledná hodina nad hranicou, inak null', () => {
 });
 
 test('stripGeometry: percentá v produkčnom okne, mimo neho na okraji', () => {
-    assert.deepEqual(stripGeometry({ from: 9 * 60, to: 13 * 60 }, 21 * 60), { left: 25, width: 25, now: 100 });
-    assert.deepEqual(stripGeometry(null, 0), { left: 0, width: 0, now: 0 });
+    const span = { from: 5 * 60, to: 21 * 60 };
+    assert.deepEqual(stripGeometry({ from: 9 * 60, to: 13 * 60 }, 21 * 60, span), { left: 25, width: 25, now: 100, ...span });
+    assert.deepEqual(stripGeometry(null, 0, span), { left: 0, width: 0, now: 0, ...span });
 });
 
 test('durationText a countdownText po slovensky', () => {

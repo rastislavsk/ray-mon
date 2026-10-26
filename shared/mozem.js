@@ -4,10 +4,9 @@
 // Texty skladá shared/messages.js, tu sa len počíta.
 
 import { DEVICES, EVERYDAY, installedKw, MOZEM_GROUPS, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
-import { HOUR_RANGE } from './chart-model.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
-import { weekDayName } from './format.js';
+import { pad2, weekDayName } from './format.js';
 import {
     MOZEM_GROUP_ALWAYS,
     MOZEM_GROUP_NAMES,
@@ -19,12 +18,13 @@ import {
     mozemTileValue,
     voiceTexts,
 } from './messages-core.js';
-import { localDateKey, localMinutes, sunUp } from './solar.js';
+import { daylightSpan, localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
 
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
 /** @typedef {import('./messages.js').Voice} Voice */
+/** Pás dneška: geometria (stripGeometry) a veta pod ním. @typedef {ReturnType<typeof stripGeometry> & { text: string }} Strip */
 /** @typedef {{ from: number, to: number }} Window úsek dňa v minútach od polnoci, `to` je bez neho */
 /** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading' | 'bezpanelov'} MozemState */
 /**
@@ -44,7 +44,8 @@ import { bandAt, scheduleFor } from './tariff.js';
  */
 /**
  * Čo o dni vie celá karta - vstup pre texty.
- * @typedef {{ nowMin: number, plan: PlanSlot[], th: import('./config.js').PowerThresholds, draha: boolean,
+ * `span` je deň so slnkom (daylightSpan) - os pásu dňa, tá istá ako os grafu dňa na karte Teraz.
+ * @typedef {{ nowMin: number, span: import('./solar.js').Span, plan: PlanSlot[], th: import('./config.js').PowerThresholds, draha: boolean,
  *   cheap: boolean, price: number | null, currency: string, weakToday: boolean,
  *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }> }} DayCtx
  */
@@ -181,15 +182,17 @@ export function itemCost(item, ctx) {
 }
 
 /**
- * Poloha úseku a značky „teraz“ na páse dňa v percentách jeho šírky. Pás je produkčné okno
- * grafov (HOUR_RANGE), aby hovoril o tých istých hodinách ako karta 7 dní.
- * @param {Window | null} w @param {number} nowMin
+ * Poloha úseku a značky „teraz“ na páse dňa v percentách jeho šírky. Pás je deň so slnkom
+ * (daylightSpan), aby hovoril o tých istých hodinách ako graf dňa na karte Teraz; `from` a `to`
+ * sú jeho kraje pre popisky.
+ * @param {Window | null} w @param {number} nowMin @param {import('./solar.js').Span} span
  */
-export function stripGeometry(w, nowMin) {
-    const a = HOUR_RANGE.min * 60;
-    const b = HOUR_RANGE.max * 60;
+export function stripGeometry(w, nowMin, span) {
+    const a = span.from;
+    const b = span.to;
     const pct = (/** @type {number} */ m) => Math.round(Math.max(0, Math.min(1, (m - a) / (b - a))) * 1000) / 10;
-    return { left: w ? pct(w.from) : 0, width: w ? Math.round((pct(w.to) - pct(w.from)) * 10) / 10 : 0, now: pct(nowMin) };
+    const geo = { left: w ? pct(w.from) : 0, width: w ? Math.round((pct(w.to) - pct(w.from)) * 10) / 10 : 0, now: pct(nowMin) };
+    return { ...geo, from: a, to: b };
 }
 
 /**
@@ -219,6 +222,7 @@ export function dayCtx(input) {
     const th = powerThresholds(input.plant);
     return {
         nowMin,
+        span: daylightSpan(site, today),
         plan: dayPlan(input),
         th,
         draha: band.level === 'draha',
@@ -281,7 +285,7 @@ const RANK = { always: 0, go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
  * pri jednej veci jej panel, pri viacerých panel skupiny so zoznamom vecí. Pri viacerých veciach
  * riadok pod odpoveďou vymenuje tie, ktoré odpovedajú inak; pri jednej veci povie,
  * odkiaľ pôjde prúd. Široká dlaždica má pás dňa s oknom slnka.
- * @param {ReturnType<typeof mozemItems>} items @param {{ left: number, width: number, now: number, text: string } | null} strip
+ * @param {ReturnType<typeof mozemItems>} items @param {Strip | null} strip
  */
 function groupsOf(items, strip) {
     return MOZEM_GROUPS.map((g) => {
@@ -325,14 +329,15 @@ export function mozemSheetOf(m, key) {
 }
 
 /**
- * Pás dňa v dlaždici: okno slnka a „teraz“ v percentách produkčného okna grafov (HOUR_RANGE)
- * a časy pod ním. Bez okna pás nie je.
- * @param {{ left: number, width: number, now: number } | null} strip
+ * Pás dňa v dlaždici: okno slnka a „teraz“ v percentách dňa so slnkom (stripGeometry) a pod ním
+ * časy kraja, stredu a konca. Bez okna pás nie je.
+ * @param {Strip | null} strip
  */
 function barOf(strip) {
     if (!strip || !strip.width) return null;
-    const { min, max } = HOUR_RANGE;
-    return { left: strip.left, width: strip.width, now: strip.now, ticks: [min, (min + max) / 2, max].map((h) => `${h}:00`) };
+    const label = (/** @type {number} */ m) => `${Math.floor(m / 60)}:${pad2(m % 60)}`;
+    const ticks = [strip.from, (strip.from + strip.to) / 2, strip.to].map(label);
+    return { left: strip.left, width: strip.width, now: strip.now, ticks };
 }
 
 /**
@@ -363,7 +368,7 @@ function dayHead(input, ctx, voice, typicalKwp) {
         state,
         word: voiceTexts(voice).MOZEM_WORDS[state],
         hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp }, voice),
-        strip: { ...stripGeometry(window, ctx.nowMin), text: mozemStripText(state, { ctx, window, nextDay }) },
+        strip: { ...stripGeometry(window, ctx.nowMin, ctx.span), text: mozemStripText(state, { ctx, window, nextDay }) },
         facts: {
             level: slot.level,
             window,

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bestDayIndex, usePct, visibleHours, weekListModel, weekStatsModel } from '../shared/chart-model.js';
 import { ALL_DAYS, ALL_MONTHS, installedKw, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
-import { chartLegend, DAY_CHART, dayChartModel, planCells, planLegend } from '../shared/day-chart.js';
+import { chartLegend, DAY_CHART, dayChartModel, FULL_DAY, planCells, planLegend } from '../shared/day-chart.js';
 import { dayHourTiers, dayPlan, forecastDayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import {
@@ -204,7 +204,7 @@ test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, n
     assert.match(d.done, /^Predpoveď 61,4 kWh, už nabehlo/);
     assert.equal(d.clear, sedemClearText(day.clearKwhTotal, usePct(day)));
     assert.deepEqual(d.message, dayDetailMessage(visibleHours(day.hourly), powerThresholds(PLANT)));
-    assert.match(d.chart.desc, /^Výroba počas dňa\. Teraz 13:00: /);
+    assert.match(d.chart.desc, /^Výroba od 05:00 do 21:00\. Teraz 13:00: /);
     assert.deepEqual(d.chart.legend, chartLegend(planCells(dayPlan(input))));
     assert.equal(d.first, true);
     assert.equal(d.last, false);
@@ -317,15 +317,15 @@ test('texty karty 7 dní', () => {
 test('dayChartText: bez „teraz“ pre iný deň, terazChartText ostáva to isté', () => {
     const w = [{ from: m(9), to: m(17) }];
     assert.equal(
-        dayChartText({ now: null, sun: [], cheap: w, costly: [] }),
+        dayChartText({ span: FULL_DAY, now: null, sun: [], cheap: w, costly: [] }),
         'Výroba počas dňa. Okno na veľké veci nebude. Lacná sieť 09:00 – 17:00.',
     );
     assert.equal(
-        terazChartText({ nowMin: m(13), kwText: '5,0', tone: 'sun', sun: w, cheap: [], costly: [] }),
+        terazChartText({ span: FULL_DAY, nowMin: m(13), kwText: '5,0', tone: 'sun', sun: w, cheap: [], costly: [] }),
         'Výroba počas dňa. Teraz 13:00: 5,0 kW, slnko stačí. Okno na veľké veci 09:00 – 17:00.',
     );
     assert.equal(
-        terazChartText({ nowMin: m(13), kwText: '0,0', tone: 'plain', sun: [], cheap: [], costly: w }),
+        terazChartText({ span: FULL_DAY, nowMin: m(13), kwText: '0,0', tone: 'plain', sun: [], cheap: [], costly: w }),
         'Výroba počas dňa. Teraz 13:00: 0,0 kW, bežná cena. Okno na veľké veci dnes nebude. Drahá sieť 09:00 – 17:00.',
     );
 });
@@ -339,6 +339,7 @@ test('dayChartModel: bez „teraz“ (iný deň) značka chýba a stupnica ide l
     };
     const plan = forecastDayPlan({ ...input, tariff: flat }, 2);
     const geo = dayChartModel({
+        span: FULL_DAY,
         plan,
         hourly: forecast.days[2].hourly,
         real: [],

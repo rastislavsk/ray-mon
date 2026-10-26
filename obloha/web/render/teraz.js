@@ -25,6 +25,8 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
     const c = m.chart;
     setHtml(dom.tzChart, dayChartHtml(c));
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
+    dom.tzChart.setAttribute('aria-valuemin', String(c.range.min));
+    dom.tzChart.setAttribute('aria-valuemax', String(c.range.max));
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);
     setText(dom.tzChartDesc, c.desc);

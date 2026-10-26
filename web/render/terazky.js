@@ -58,6 +58,8 @@ function renderChart(m, open, dom) {
     const c = m.chart;
     writeHtml(dom.tzChart, dayChartHtml(c), 'tz-chart');
     dom.tzChart.setAttribute('aria-label', TERAZ_TEXTS.slider);
+    dom.tzChart.setAttribute('aria-valuemin', String(c.range.min));
+    dom.tzChart.setAttribute('aria-valuemax', String(c.range.max));
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
     dom.tzChart.setAttribute('aria-valuetext', c.valueText);
     dom.tzChartDesc.textContent = c.desc;

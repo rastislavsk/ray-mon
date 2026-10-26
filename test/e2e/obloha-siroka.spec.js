@@ -543,7 +543,8 @@ test.describe('graf dňa na každej šírke', () => {
             merania.push(await popiskyGrafu(page, '#tz-chart'));
         }
         const [telefon] = merania;
-        expect(telefon.ticks).toHaveLength(5);
+        // Os 5–21 (deň so slnkom): 5, 9, 12, 15, 18, 21.
+        expect(telefon.ticks).toHaveLength(6);
         for (const m of merania) {
             for (const t of m.ticks) expect(Math.abs(t - telefon.ticks[0])).toBeLessThanOrEqual(1);
             expect(Math.abs(m.limit - telefon.limit)).toBeLessThanOrEqual(1);
@@ -590,8 +591,10 @@ test.describe('graf dňa na každej šírke', () => {
             await page.keyboard.press('Home');
             /** @type {string[]} */
             const zle = [];
-            // Po polhodinách celý deň: šípka posúva náhľad o štvrťhodinu.
-            for (let i = 0; i < 48; i++) {
+            // Po polhodinách celá os: šípka posúva náhľad o štvrťhodinu.
+            const od = Number(await graf.getAttribute('aria-valuemin'));
+            const po = Number(await graf.getAttribute('aria-valuemax'));
+            for (let i = 0; i <= (po - od) / 30; i++) {
                 const cas = (await page.locator('#tz-chart .dc-at-t').textContent()) ?? '';
                 for (const h of (await popiskyGrafu(page, '#tz-chart')).hits) zle.push(`náhľad ${cas}: ${h}`);
                 await page.keyboard.press('ArrowRight');

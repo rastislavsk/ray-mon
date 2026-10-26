@@ -39,7 +39,7 @@ import {
 import { planWindows } from './mozem.js';
 import { offlineLead } from './mozem-sky.js';
 import { skyWeather } from './sky.js';
-import { localDateKey, localMinutes } from './solar.js';
+import { daylightSpan, localDateKey, localMinutes } from './solar.js';
 import { todayCard } from './teraz.js';
 
 /**
@@ -217,8 +217,10 @@ function chartOf(input, day, plan, nowMin) {
     const nowKw = nowMin === null ? NaN : dayKwAt(nowMin, curve, hourly, nowMin);
     const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
     const windows = (/** @type {import('./day-chart.js').Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
+    const span = daylightSpan(input.site, day.date);
     return {
         ...dayChartModel({
+            span,
             plan,
             hourly,
             real: curve,
@@ -229,8 +231,9 @@ function chartOf(input, day, plan, nowMin) {
             limitText: voiceTexts().TERAZ_TEXTS.limit,
             preview: null,
         }),
-        legend: chartLegend(planCells(plan)),
+        legend: chartLegend(planCells(plan, span)),
         desc: dayChartText({
+            span,
             now: nowMin === null ? null : { min: nowMin, kwText: Number.isFinite(nowKw) ? fmt1(nowKw) : '–', tone: tone(nowMin) },
             sun: windows('sun'),
             cheap: windows('cheap'),
