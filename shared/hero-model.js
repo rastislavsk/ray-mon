@@ -6,8 +6,7 @@ import { dayKwAt, realCurveBoundary } from './chart-model.js';
 import { minutesToTimeStr, pad2 } from './format.js';
 import { localMinutes, solarPosition } from './solar.js';
 import { planAt } from './day-plan.js';
-import { getSlotMessage, voiceTexts } from './messages-core.js';
-import { smartTier } from './tariff.js';
+import { getSlotMessage, STAV_SLOVO, voiceTexts } from './messages-core.js';
 import { neplatiOf } from './pristup.js';
 
 /**
@@ -52,8 +51,12 @@ function powerFor(state, live, minutes, nowMinutes) {
  * a noc bez merania normálne. Zdroj bez krivky (výrobca cez API) posiela čas merania
  * v `measuredAt`. Bez bodu krivky aj bez neho zostáva čas stiahnutia. `label` je bez času -
  * hlavička ukazuje čas a slovo v dvoch riadkoch.
+ * `pricina` povie, prečo je zastarané: `spojenie` - appka sama nič nestiahla (telefón, server),
+ * `menic` - dáta chodia, ale menič mlčí, hoci slnko svieti. Pri oboch naraz je to spojenie - kým
+ * appka nič nestiahne, o meniči nevie nič nové. `spi`: nezastarané, slnko je pod hranicou a krivka
+ * mlčí - večer a v noci normálny stav, nie chyba. `mlci` je počet minút od merania (null bez neho).
  * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site }} state
- * @returns {{ label: string, time: string, stale: boolean }}
+ * @returns {{ label: string, time: string, stale: boolean, pricina: 'spojenie' | 'menic' | null, spi: boolean, mlci: number | null }}
  */
 export function pvFreshness({ now, pv, site }) {
     const nowMinutes = localMinutes(now, site.timezone);
@@ -64,32 +67,56 @@ export function pvFreshness({ now, pv, site }) {
         (pv.measuredAt ? Math.min(localMinutes(new Date(pv.measuredAt), site.timezone), nowMinutes) : null);
     const windowStart = new Date(now.getTime() - STALE_PV_MS);
     const sunUp = solarPosition(windowStart, site.lat, site.lon).elevationDeg > STALE_PV_SUN_DEG;
-    const silent = sunUp && (measured === null || (nowMinutes - measured) * 60000 > STALE_PV_MS);
+    const mlci = measured === null ? null : nowMinutes - measured;
+    const quiet = mlci === null || mlci * 60000 > STALE_PV_MS;
+    const pricina = fetchStale ? 'spojenie' : sunUp && quiet ? 'menic' : null;
     const time = minutesToTimeStr(measured === null ? localMinutes(updated, site.timezone) : measured);
     return {
         label: measured === null ? 'aktualizované' : 'meranie',
         time,
-        stale: fetchStale || silent,
+        stale: pricina !== null,
+        pricina,
+        spi: pricina === null && !sunUp && quiet,
+        mlci,
     };
 }
 
 /**
+ * @typedef {{ druh: 'zive' | 'spi' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string,
+ *   neplati: ReturnType<typeof neplatiOf>, pricina: 'spojenie' | 'menic' | null, mlci: number | null }} StavMerania
+ */
+
+/**
  * Stav živého merania: rátajú karty s meraním, a keď nie, prečo. `cas` je čas posledného merania
  * (pvFreshness), kde meranie je, inak prázdny; `neplati` model prístupu, ktorý výrobca prestal
- * prijímať (neplatiOf). Meranie bez výkonu je pre karty to isté ako meranie, ktoré neprišlo.
+ * prijímať (neplatiOf). Meranie bez výkonu je pre karty to isté ako meranie, ktoré neprišlo - okrem
+ * noci (`spi`), keď menič nemá čo merať. Pri `zastarane` nesie `pricina` a `mlci` z pvFreshness.
  * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site,
  *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null }} s
- * @returns {{ druh: 'zive' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: ReturnType<typeof neplatiOf> }}
+ * @returns {StavMerania}
  */
 export function stavMerania(s) {
+    const base = { cas: '', neplati: null, pricina: null, mlci: null };
     if (s.pv) {
-        const { time, stale } = pvFreshness({ now: s.now, pv: s.pv, site: s.site });
-        if (stale) return { druh: 'zastarane', cas: time, neplati: null };
-        return { druh: freshPowerKw(s) === null ? 'neprislo' : 'zive', cas: time, neplati: null };
+        const f = pvFreshness({ now: s.now, pv: s.pv, site: s.site });
+        if (f.pricina) return { ...base, druh: 'zastarane', cas: f.time, pricina: f.pricina, mlci: f.mlci };
+        if (f.spi) return { ...base, druh: 'spi', cas: f.time, mlci: f.mlci };
+        return { ...base, druh: freshPowerKw(s) === null ? 'neprislo' : 'zive', cas: f.time };
     }
     const neplati = neplatiOf(s);
-    if (neplati) return { druh: 'znova', cas: '', neplati };
-    return { druh: s.zdroj ? 'neprislo' : 'odhad', cas: '', neplati: null };
+    if (neplati) return { ...base, druh: 'znova', neplati };
+    return { ...base, druh: s.zdroj ? 'neprislo' : 'odhad' };
+}
+
+/**
+ * Tvar bodky pri čase v hlavičke - v oboch appkách ten istý: `live` plná (meranie ide, aj keď
+ * menič v noci spí), `stale` polovičná (meranie je pripojené, ale nové neprišlo), `odhad` krúžok
+ * (len predpoveď). Stav `off` (appka ešte nevie) určuje kabát pred načítaním.
+ * @param {StavMerania} stav @returns {'live' | 'stale' | 'odhad'}
+ */
+export function bodkaMerania(stav) {
+    if (stav.druh === 'zive' || stav.druh === 'spi') return 'live';
+    return stav.druh === 'zastarane' ? 'stale' : 'odhad';
 }
 
 /**
@@ -101,8 +128,8 @@ export function stavMerania(s) {
 export function liveStatus({ now, pv, site, zdroj, loading }) {
     if (!zdroj) return null;
     if (!pv) return loading ? { tone: 'wait', text: 'pripájam…' } : { tone: 'off', text: 'nepripojené' };
-    const { time, stale } = pvFreshness({ now, pv, site });
-    return stale ? { tone: 'stale', text: `zastarané · ${time}` } : { tone: 'ok', text: `pripojené · ${time}` };
+    const { time, pricina } = pvFreshness({ now, pv, site });
+    return pricina ? { tone: 'stale', text: `${STAV_SLOVO[pricina]} · ${time}` } : { tone: 'ok', text: `pripojené · ${time}` };
 }
 
 /** "Lepšie bude o HH:00" - len naživo, keď slnko ešte nepokrýva veľké spotrebiče a predpoveď hlási silnejšie. @param {HeroInput} state @param {boolean} sunny */
@@ -144,7 +171,7 @@ export function heroModel(state, voice = 'drzy') {
     const power = powerFor(state, live, minutes, nowMinutes);
     const th = powerThresholds(state.plant);
     // Štvrťhodina plánu dňa: pásmo tarify a farba z krivky dňa. Pozadie (tier) sa tak zhoduje
-    // s pásom plánu pod zvoleným časom v grafe dňa; bodka (accent) počíta so živým výkonom.
+    // s pásom plánu pod zvoleným časom v grafe dňa.
     const slot = planAt(state, minutes);
     const level = slot.level;
     const T = voiceTexts(voice);
@@ -159,7 +186,6 @@ export function heroModel(state, voice = 'drzy') {
         preview,
         power,
         tier: slot.tier,
-        accent: smartTier(level, power, th),
         isNight: slot.night,
         message,
         waitTime: waitTimeFor(state, slot.tier === 'green'),

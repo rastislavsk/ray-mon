@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, PLANT, PRISTUP, SITE, TARIFF } from '../shared/config.js';
-import { freshPowerKw, heroModel, liveStatus, pvFreshness, stavMerania } from '../shared/hero-model.js';
-import { stavMeraniaText } from '../shared/messages-core.js';
+import { bodkaMerania, freshPowerKw, heroModel, liveStatus, pvFreshness, stavMerania } from '../shared/hero-model.js';
+import { stavMeraniaSlovo, stavMeraniaText } from '../shared/messages-core.js';
 import { odmietnute } from '../shared/pristup.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -18,7 +18,6 @@ const base = { tariff: TARIFF, pv, forecast, previewMinutes: null, site: SITE, p
 test('13:00 so 6,4 kW v lacnom pásme: zelená, výkon naživo', () => {
     const m = heroModel({ ...base, now: at('13:00') });
     assert.equal(m.tier, 'green');
-    assert.equal(m.accent, 'green');
     assert.equal(m.message.headline, 'Najlepší čas dňa — zapni všetko');
     assert.equal(m.powerText, '6.41');
     assert.equal(m.source, 'live');
@@ -42,13 +41,11 @@ test('02:00 v noci: text o lacnom nočnom prúde', () => {
 test('21:00 VT bez slnka: červená a text o drahej sieti v tme', () => {
     const m = heroModel({ ...base, now: at('21:00'), pv: { ...pv, realTimePowerKw: 0 } });
     assert.equal(m.tier, 'red');
-    assert.equal(m.accent, 'red');
     assert.equal(m.message.headline, 'Drahá sieť a tma');
 });
 
 test('08:00 drahé pásmo bez dát: farba podľa ceny, číslo pomlčka', () => {
     const m = heroModel({ ...base, now: at('08:00'), pv: null, forecast: null });
-    assert.equal(m.accent, 'red');
     assert.equal(m.tier, 'red');
     assert.equal(m.powerText, '–');
     assert.equal(m.message.headline, 'Drahá elektrina');
@@ -63,7 +60,6 @@ test('jedna cena celý deň: bez slnka sivá, pri slnku zelená', () => {
     };
     const noc = heroModel({ ...base, tariff: flat, now: at('22:00'), pv: { ...pv, realTimePowerKw: 0 } });
     assert.equal(noc.tier, 'grey');
-    assert.equal(noc.accent, 'grey');
     assert.equal(noc.message.headline, 'Slnko nesvieti');
     assert.equal(heroModel({ ...base, tariff: flat, now: at('13:00') }).tier, 'green');
 });
@@ -134,15 +130,16 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
     // Stiahnuté práve teraz - sleduje sa len krivka, ktorá vo vzorke končí o 13:00.
     const fresh = (/** @type {Date} */ now, curve = pv.realCurveToday) =>
         pvFreshness({ now, site: SITE, pv: { ...pv, realCurveToday: curve, updatedAt: now.toISOString() } });
-    assert.deepEqual(fresh(at('13:00')), { label: 'meranie', time: '13:00', stale: false });
-    assert.deepEqual(fresh(at('13:15')), { label: 'meranie', time: '13:00', stale: false });
-    assert.deepEqual(fresh(at('13:30')), { label: 'meranie', time: '13:00', stale: true });
-    // Večer a v noci menič nemeria a nie je to chyba.
+    const ok = { label: 'meranie', time: '13:00', stale: false, pricina: null, spi: false };
+    assert.deepEqual(fresh(at('13:00')), { ...ok, mlci: 0 });
+    assert.deepEqual(fresh(at('13:15')), { ...ok, mlci: 15 });
+    assert.deepEqual(fresh(at('13:30')), { ...ok, stale: true, pricina: 'menic', mlci: 30 });
+    // Večer a v noci menič nemeria a nie je to chyba - menič spí.
     const evening = [...pv.realCurveToday, { hour: 18.75, kw: 0.1 }];
-    assert.deepEqual(fresh(at('21:00'), evening), { label: 'meranie', time: '18:45', stale: false });
+    assert.deepEqual(fresh(at('21:00'), evening), { ...ok, time: '18:45', spi: true, mlci: 135 });
     // Ráno tesne po východe slnka krivka ešte nemusí mať ani bod; o desiatej už áno.
-    assert.deepEqual(fresh(at('07:00'), []), { label: 'aktualizované', time: '07:00', stale: false });
-    assert.equal(fresh(at('10:00'), []).stale, true);
+    assert.deepEqual(fresh(at('07:00'), []), { ...ok, label: 'aktualizované', time: '07:00', spi: true, mlci: null });
+    assert.equal(fresh(at('10:00'), []).pricina, 'menic');
     // Výrobca cez API krivku neposiela vôbec: čas merania je measuredAt, za slnka čerstvé 20 minút.
     const api = (/** @type {Date} */ measured) => ({
         ...pv,
@@ -151,13 +148,17 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
         updatedAt: measured.toISOString(),
     });
     const apiFresh = (/** @type {Date} */ now, /** @type {Date} */ measured) => pvFreshness({ now, site: SITE, pv: api(measured) });
-    assert.deepEqual(apiFresh(at('10:00'), at('10:00')), { label: 'meranie', time: '10:00', stale: false });
-    assert.deepEqual(apiFresh(at('10:15'), at('10:00')), { label: 'meranie', time: '10:00', stale: false });
-    assert.deepEqual(apiFresh(at('10:30'), at('10:00')), { label: 'meranie', time: '10:00', stale: true });
+    const api10 = { ...ok, time: '10:00' };
+    assert.deepEqual(apiFresh(at('10:00'), at('10:00')), { ...api10, mlci: 0 });
+    assert.deepEqual(apiFresh(at('10:15'), at('10:00')), { ...api10, mlci: 15 });
+    assert.deepEqual(apiFresh(at('10:30'), at('10:00')), { ...api10, stale: true, pricina: 'spojenie', mlci: 30 });
     assert.equal(freshPowerKw({ now: at('10:05'), site: SITE, pv: api(at('10:00')) }), pv.realTimePowerKw);
-    // Staré stiahnutie je zastarané aj v noci.
+    // Staré stiahnutie je zastarané aj v noci - a príčinou je spojenie, nie menič. Za slnka tiež.
     const old = pvFreshness({ now: at('22:00'), site: SITE, pv: { ...pv, updatedAt: at('21:00').toISOString() } });
     assert.equal(old.stale, true);
+    assert.equal(old.pricina, 'spojenie');
+    assert.equal(old.spi, false);
+    assert.equal(pvFreshness({ now: at('14:00'), site: SITE, pv: { ...pv, updatedAt: at('13:00').toISOString() } }).pricina, 'spojenie');
 });
 
 test('liveStatus: stav živého merania pre riadok v Nastavení', () => {
@@ -174,6 +175,7 @@ test('liveStatus: stav živého merania pre riadok v Nastavení', () => {
         tone: 'stale',
         text: 'zastarané · 13:00',
     });
+    assert.deepEqual(liveStatus({ ...base, now: at('13:30'), pv: cerstve }), { tone: 'stale', text: 'bez spojenia · 13:00' });
     assert.deepEqual(liveStatus({ ...base, pv: null }), { tone: 'off', text: 'nepripojené' });
     assert.deepEqual(liveStatus({ ...base, pv: null, loading: true }), { tone: 'wait', text: 'pripájam…' });
 });
@@ -184,12 +186,19 @@ test('stavMerania a jeho vysvetlenie: živé, zastarané, neprišlo, pripojiť z
         stavMerania({ now, pv: p, site: SITE, zdroj, pristup });
     const cerstve = { ...pv, updatedAt: at('13:10').toISOString() };
     // Krivka vo vzorke končí 13:00.
-    assert.deepEqual(stav(at('13:10'), cerstve), { druh: 'zive', cas: '13:00', neplati: null });
+    const nic = { neplati: null, pricina: null, mlci: null };
+    assert.deepEqual(stav(at('13:10'), cerstve), { ...nic, druh: 'zive', cas: '13:00' });
     assert.deepEqual(stav(at('13:30'), { ...cerstve, updatedAt: at('13:30').toISOString() }), {
+        ...nic,
         druh: 'zastarane',
         cas: '13:00',
-        neplati: null,
+        pricina: 'menic',
+        mlci: 30,
     });
+    assert.deepEqual(stav(at('16:40'), cerstve), { ...nic, druh: 'zastarane', cas: '13:00', pricina: 'spojenie', mlci: 220 });
+    // V noci menič spí - aj keď výkon neposlal.
+    const noc = { ...cerstve, realTimePowerKw: null, updatedAt: at('23:10').toISOString() };
+    assert.deepEqual(stav(at('23:10'), noc), { ...nic, druh: 'spi', cas: '13:00', mlci: 610 });
     assert.equal(stav(at('13:10'), { ...cerstve, realTimePowerKw: null }).druh, 'neprislo', 'meranie bez výkonu');
     assert.equal(stav(at('13:10'), null).druh, 'neprislo', 'pripojené meranie neprišlo');
     assert.equal(stav(at('13:10'), null, null).druh, 'odhad', 'meranie nie je pripojené');
@@ -203,7 +212,15 @@ test('stavMerania a jeho vysvetlenie: živé, zastarané, neprišlo, pripojiť z
     const text = (/** @type {any} */ s, voice = 'drzy') => stavMeraniaText(s, /** @type {any} */ (voice));
     assert.match(text(stav(at('13:10'), cerstve)).text, /^Menič poslal výkon o 13:00\. .*tvoja strecha/);
     assert.match(text(stav(at('13:10'), cerstve), 'slusny').text, /vaša strecha/);
-    assert.match(text(stav(at('13:30'), { ...cerstve, updatedAt: at('13:30').toISOString() })).text, /^Od 13:00 neprišlo nové meranie\./);
+    const mlci = stav(at('16:40'), { ...cerstve, updatedAt: at('16:40').toISOString() });
+    assert.equal(text(mlci).nadpis, 'Meranie je zastarané');
+    assert.match(text(mlci).text, /^Menič mlčí od 13:00, už 3 h 40 min, hoci slnko svieti\. Karty zatiaľ rátajú s predpoveďou\./);
+    assert.match(text({ ...mlci, mlci: null }).text, /^Od 13:00 neprišlo nové meranie\./);
+    assert.equal(text(stav(at('16:40'), cerstve)).nadpis, 'Appka nemá spojenie');
+    assert.match(text(stav(at('16:40'), cerstve)).text, /^Od 13:00 sa appka nedostala k novým dátam\./);
+    assert.equal(text(stav(at('23:10'), noc)).nadpis, 'Menič spí');
+    assert.match(text(stav(at('23:10'), noc)).text, /^Posledné meranie prišlo o 13:00, odvtedy slnko zapadlo/);
+    assert.match(text({ ...stav(at('23:10'), noc), mlci: null }).text, /^Slnko je pod obzorom/);
     assert.equal(text(znova).text.startsWith('Huawei prestal prijímať prístup, ktorý si zadal.'), true);
     assert.equal(text(znova, 'slusny').text.startsWith('Huawei prestal prijímať prístup, ktorý ste zadali.'), true);
     assert.equal(text(znova).tlacidlo, 'Pripojiť znova ›');
@@ -212,4 +229,19 @@ test('stavMerania a jeho vysvetlenie: živé, zastarané, neprišlo, pripojiť z
     assert.match(text(stav(at('13:10'), null, null), 'slusny').text, /pripojte ho v Nastavení/);
     assert.match(text(stav(at('13:10'), null), 'slusny').text, /nemusíte nič robiť/);
     for (const s of [stav(at('13:10'), cerstve), stav(at('13:10'), null)]) assert.equal(text(s).tlacidlo, '');
+});
+
+test('bodka a slovo za čas: tvar podľa stavu merania, rovnaký v oboch appkách', () => {
+    const s = (/** @type {any} */ druh, /** @type {any} */ pricina = null) => ({ druh, cas: '13:00', neplati: null, pricina, mlci: null });
+    assert.equal(bodkaMerania(s('zive')), 'live');
+    assert.equal(bodkaMerania(s('spi')), 'live');
+    assert.equal(bodkaMerania(s('zastarane', 'menic')), 'stale');
+    assert.equal(bodkaMerania(s('zastarane', 'spojenie')), 'stale');
+    for (const druh of ['neprislo', 'znova', 'odhad']) assert.equal(bodkaMerania(s(druh)), 'odhad');
+    assert.equal(stavMeraniaSlovo(s('zive')), '');
+    assert.equal(stavMeraniaSlovo(s('spi')), 'menič spí');
+    assert.equal(stavMeraniaSlovo(s('zastarane', 'menic')), 'zastarané');
+    assert.equal(stavMeraniaSlovo(s('zastarane', 'spojenie')), 'bez spojenia');
+    assert.equal(stavMeraniaSlovo(s('zastarane')), 'zastarané');
+    assert.equal(stavMeraniaSlovo(s('odhad')), '');
 });

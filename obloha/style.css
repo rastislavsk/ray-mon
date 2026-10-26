@@ -149,6 +149,11 @@ button:focus-visible {
 .live[data-tone='live'] i {
     background: var(--yes);
 }
+/* Polovičná bodka: meranie je pripojené, ale nové neprišlo (bodkaMerania v shared/hero-model.js). */
+.live[data-tone='stale'] i {
+    background: linear-gradient(90deg, #fff 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1.5px #fff;
+}
 .live[data-tone='odhad'] i {
     background: transparent;
     box-shadow: inset 0 0 0 1.5px #fff;
@@ -174,7 +179,7 @@ button.live:disabled {
 button.live:enabled {
     background: var(--glass);
 }
-button.live:enabled[data-tone='odhad'] #hdr-status::after {
+button.live:enabled:is([data-tone='odhad'], [data-tone='stale']) #hdr-status::after {
     content: ' ›' / '';
 }
 button.live[aria-expanded='true'] {

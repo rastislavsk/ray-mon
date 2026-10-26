@@ -140,11 +140,10 @@ ako `data-tier` na `<html>` a tým to preň končí; zvyšok je CSS, ktoré si p
 toho prepne `--tint-rgb` a z neho poskladá `--bg-page`. Atribút sedí na `<html>`, nie na
 `<body>`, lebo `var()` vo vnútri custom property sa dosadzuje tam, kde je property zapísaná
 – `--bg-page` z `:root` by zmenu na `<body>` už nevidelo. Pozadie drží farbu plánu dňa
-(`hero.tier`: cena z tarify a výkon z krivky dňa), nie farbu stavovej bodky (`hero.accent`,
-tá počíta so živým výkonom), takže hovorí to isté, čo bunka pásu plánu pod čiarou náhľadu
-na grafe dňa. Pri
-náhľade iného času ide pozadie s náhľadom, kým bodka ostáva o stave teraz – preto sa model
-ráta dvakrát, ale len keď náhľad naozaj beží. Že sa farba nerozíde s modelom, strážia e2e
+(`hero.tier`: cena z tarify a výkon z krivky dňa), takže hovorí to isté, čo bunka pásu plánu
+pod čiarou náhľadu na grafe dňa, a pri náhľade iného času ide s ním. Bodka pri čase farbu
+ceny nenesie: v oboch appkách hovorí o stave merania (`bodkaMerania` v `shared/hero-model.js`
+– plná živé, polovičná zastarané, krúžok len predpoveď). Že sa farba nerozíde s modelom, strážia e2e
 testy: pevné časy pokryjú zelenú, oranžovú aj červenú, tarifa s jednou cenou sivú, a náhľad na grafe overí, že sa farba
 mení aj s ním a po zrušení náhľadu sa vráti.
 
@@ -411,8 +410,7 @@ Cena elektriny a slnko sú dve nezávislé veci a appka ich tak aj drží:
 je jedno pravidlo (`smartTier`): od dolnej hranice výkonu zelená – slnko pokryje veľké
 spotrebiče, cena nehrá rolu – inak farba úrovne (oranžová lacné, sivá bežné, červená drahé).
 Z plánu čítajú pás plánu pod grafom dňa, pozadie stránky, texty aj spotrebiče, takže bunka pásu
-v zvolenom čase a farba pozadia sú vždy to isté číslo. Plán berie krivku dňa, nie živý výkon – stavová bodka
-počíta so živým výkonom a môže sa od neho na chvíľu líšiť.
+v zvolenom čase a farba pozadia sú vždy to isté číslo. Plán berie krivku dňa, nie živý výkon.
 
 Texty sú mriežka úroveň × výroba (`SLOT_MESSAGES`), v noci (slnko pod obzorom) hovoria len
 o cene (`NIGHT_MESSAGES`) a bez dát ostáva len cena (`PRICE_MESSAGES`). Auto a bojler sú

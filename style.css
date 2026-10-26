@@ -211,23 +211,6 @@
     --tint-rgb: var(--grey-rgb);
 }
 
-/* Farba stavovej bodky pri čase (tarifa × výkon, teda "smart" farba - accent). data-accent
-   zapisuje renderHeader vo web/render/header.js, rovnako ako data-tier vyššie. Číta z nej
-   bodka aj podsvietenie ikony aktívnej karty v navigácii, aby obe hovorili tú istú farbu a mapovanie
-   farieb ostalo na jednom mieste. Zelená platí do prvého prekreslenia. */
-:root {
-    --live-rgb: var(--green-rgb);
-}
-:root[data-accent='amber'] {
-    --live-rgb: var(--amber-rgb);
-}
-:root[data-accent='red'] {
-    --live-rgb: var(--red-rgb);
-}
-:root[data-accent='grey'] {
-    --live-rgb: var(--grey-rgb);
-}
-
 /* ---- Základ ---------------------------------------------------------------- */
 * {
     box-sizing: border-box;
@@ -546,15 +529,26 @@ b {
 .panels-bar:not(.odhad) .panels-bar-house {
     display: none;
 }
+/* Bodka stavu merania - tvar ako v Oblohe (bodkaMerania v shared/hero-model.js), data-tone na
+   tlačidle s časom zapisuje renderHeader: plná zelená živé meranie, polovičná zastarané, krúžok
+   len predpoveď, sivá kým appka nevie. Obrys je tieň dovnútra, aby mali všetky tvary rovnakú veľkosť. */
 .live-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: rgb(var(--live-rgb));
-    box-shadow: 0 0 8px rgba(var(--live-rgb), 0.55);
-    transition:
-        background-color var(--dur),
-        box-shadow var(--dur);
+    background: rgb(var(--grey-rgb));
+}
+.appbar-clock[data-tone='live'] .live-dot {
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(var(--green-rgb), 0.55);
+}
+.appbar-clock[data-tone='stale'] .live-dot {
+    background: linear-gradient(90deg, var(--ink) 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.appbar-clock[data-tone='odhad'] .live-dot {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
 .bottomnav {
@@ -621,12 +615,11 @@ b {
 .nav-item.active {
     color: var(--ink);
 }
-/* Podsvietenie ikony: rozmazaný farebný kruh za ňou. Stred sadá presne na ikonu, nie na
+/* Podsvietenie ikony: rozmazaný svetlý kruh za ňou. Stred sadá presne na ikonu, nie na
    stred položky (pod ikonou je ešte popiska) - na mobile je 6px horný padding a ikona 24px,
    teda 6 + 12 = 18px od vrchu položky. Kruh má 12px rezervu okolo ikony, teda 36px okolo
-   24px ikony. Kruh je plná farba stlmená cez opacity, nie priehľadná farba v gradiente:
-   `background-color` tak ostáva presne tá istá hodnota ako má stavová bodka pri čase (e2e
-   test ich porovnáva). `z-index: -1` ho posunie za ikonu aj popisku; pozadie pása to
+   24px ikony. Kruh je neutrálny - farbu ceny a výkonu nesie pozadie stránky, bodka pri čase hovorí
+   o meraní. `z-index: -1` ho posunie za ikonu aj popisku; pozadie pása to
    neprekryje, lebo .bottomnav je vlastný stacking context (má z-index) a záporná vrstva sa
    kreslí až nad jeho pozadím. */
 .nav-item.active::after {
@@ -638,12 +631,10 @@ b {
     height: 36px;
     margin: -18px 0 0 -18px;
     border-radius: 50%;
-    /* Tá istá farba ako stavová bodka pri čase - podsvietenie aj bodka hovoria o tom istom stave. */
-    background: rgb(var(--live-rgb));
+    background: var(--ink);
     opacity: 0.45;
     filter: blur(8px);
     z-index: -1;
-    transition: background-color var(--dur);
 }
 
 /* ---- Stránka a karty ------------------------------------------------------- */
