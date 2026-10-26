@@ -686,6 +686,21 @@ test.describe('karta Môžem?', () => {
         });
     }
 
+    for (const hm of ['09:00', '13:00', '21:00']) {
+        test(`o ${hm} plán dňa pod dlaždicami podľa modelu, bez ceny pri spotrebičoch`, async ({ page }) => {
+            const errors = await openObloha(page, { time: at(hm) });
+            const plan = modelKarty(at(hm)).plan;
+            const rows = plan?.rows ?? [];
+            await expect(page.locator('#mz-plan')).toBeVisible();
+            await expect(page.locator('#mz-plan-title')).toHaveText('Plán dňa');
+            await expect(page.locator('#mz-plan-rows li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
+            await expect(page.locator('#mz-plan-rows .row-t')).toHaveText(rows.map((r) => r.time));
+            await expect(page.locator('#mz-plan-note')).toHaveText(plan?.note ?? '');
+            for (const r of rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');
+            expect(errors).toEqual([]);
+        });
+    }
+
     for (const width of [390, 320]) {
         test(`šírka ${width} px: dlaždice aspoň 44 px, nič sa neoreže, žiadne veľké slovo nepretečie`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });

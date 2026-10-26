@@ -404,6 +404,19 @@ export const MOZEM_ITEMS = [
 ];
 
 /**
+ * Plán dňa (karta Môžem?): poradie, v ktorom jadro rozvrhuje dnešné slnko medzi spotrebiče, aby
+ * sa ich ohrevy neprekrývali. `after`: spotrebič, na ktorý vec čaká (sušička suší, čo práčka
+ * vyprala). `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide posledné a berie
+ * silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
+ */
+export const PLAN_DNA = {
+    order: ['pracka', 'susicka', 'umyvacka', 'bojler', 'auto'],
+    after: /** @type {Record<string, string>} */ ({ susicka: 'pracka' }),
+    devices: ['pracka', 'umyvacka', 'susicka', 'auto'],
+    autoMinMin: 60,
+};
+
+/**
  * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica, `slim` tenký pás). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' | 'slim' }>}

@@ -650,6 +650,44 @@ button.live[aria-expanded='true'] {
 .row-t[data-tone='unk'] {
     color: var(--dim);
 }
+/* Plán dňa pod dlaždicami: riadok čas · spotrebič · prečo, čas vo farbe odpovede. */
+.plan-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* Čas a meno v riadku, keď sa zmestia; pri veľkom písme sa meno zalomí pod čas. */
+.plan-rows li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.plan-rows .row-t {
+    min-width: 6.5em;
+    font-size: 0.9375rem;
+    font-weight: 800;
+}
+.plan-rows b em {
+    margin-left: 6px;
+    font-size: 0.75rem;
+    font-style: normal;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--yes);
+}
+.plan-w {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+    color: var(--dim);
+}
+.plan-note {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
 /* Pás dňa: okno slnka, jeho uplynulá časť stlmená, biela čiarka je teraz. */
 .tile-bar {
     position: relative;
