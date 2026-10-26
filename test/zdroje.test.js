@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as T from '../shared/setup-texts.js';
 import {
     isIso,
+    jeBeta,
     isPecat,
     menoZnacky,
     parseZdroj,
@@ -33,6 +34,15 @@ test('katalóg: každý spôsob patrí značke, ktorá ho ponúka; nedostupné z
     assert.equal(sposobOf('neznamy'), null);
     assert.equal(menoZnacky('huawei-kiosk'), 'Huawei');
     assert.equal(menoZnacky('neznamy'), '');
+});
+
+test('jeBeta: overený je len Huawei; značka, ktorá sa nedá pripojiť, beta nie je', () => {
+    assert.deepEqual(
+        ZNACKY.filter(jeBeta).map((z) => z.id),
+        ['foxess', 'solax', 'victron', 'solis', 'deye'],
+    );
+    assert.equal(jeBeta(/** @type {any} */ (znackaOf('huawei'))), false);
+    assert.equal(jeBeta(/** @type {any} */ (znackaOf('fronius'))), false);
 });
 
 test('parseZdroj: zapečatený prístup, holý kiosk zo starých nastavení, inak null', () => {

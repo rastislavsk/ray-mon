@@ -315,6 +315,7 @@ function wizardFieldsDom() {
         wzLiveNoSub: byId('wz-live-no-sub'),
         wzLiveZmen: byId('wz-live-zmen'),
         wzZnacky: byId('wz-znacky'),
+        wzBeta: byId('wz-beta'),
         wzSposoby: byId('wz-sposoby'),
         wzNie: byId('wz-nie'),
         wzKroky: byId('wz-kroky'),

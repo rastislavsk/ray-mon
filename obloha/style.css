@@ -2033,6 +2033,27 @@ button.live[aria-expanded='true'] {
 .opt[data-off] b {
     color: var(--dim);
 }
+/* Odznak Beta pri značke, ktorú nikto neoveril na skutočnom meniči: obrys, na zvolenej (bielej) stmavne.
+   Čítačka obrazovky ho prečíta ako súčasť mena tlačidla. */
+.opt[data-beta] b::after {
+    content: 'Beta';
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 7px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 17px;
+    vertical-align: 2px;
+}
+.opt[data-beta][aria-pressed='true'] b::after {
+    border-color: #2b3550;
+    color: #2b3550;
+}
 /* Štítky pri spôsobe pripojenia: kto ho urobí, ako dlho; zelený hovorí, prečo je prvý. */
 .tags {
     display: flex;

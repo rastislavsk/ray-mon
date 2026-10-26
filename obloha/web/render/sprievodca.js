@@ -31,7 +31,7 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../../shared/tariff.js';
-import { polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
+import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
 import {
     compassSvg,
     miniCompassSvg,
@@ -273,9 +273,11 @@ function renderZnacka(state, dom) {
             const sposoby = sposobyOf(z);
             const sub =
                 'nie' in z ? 'Zatiaľ sa nedá pripojiť' : sposoby.length > 1 ? `${sposoby.length} spôsoby pripojenia` : sposoby[0].nazov;
-            return optHtml(`data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}`, z.meno, sub, z.id === state.setupZnacka);
+            const attrs = `data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}${jeBeta(z) ? ' data-beta' : ''}`;
+            return optHtml(attrs, z.meno, sub, z.id === state.setupZnacka);
         }).join(''),
     );
+    show(dom.wzBeta, ZNACKY.some(jeBeta));
 }
 
 /** Spôsoby pripojenia značky, alebo vysvetlenie, prečo sa nedá. @param {AppState} state @param {Dom} dom */

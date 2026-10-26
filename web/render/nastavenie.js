@@ -79,7 +79,7 @@ import {
     tariffKind,
 } from '../../shared/tariff.js';
 import { pristupModel } from '../../shared/pristup.js';
-import { polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
+import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
 import { SETUP_ICONS } from '../icons.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { savedSettings, setupDraft } from '../state.js';
@@ -428,9 +428,11 @@ function renderZnacka(state, dom) {
     const html = ZNACKY.map((z) => {
         const sposoby = sposobyOf(z);
         const sub = 'nie' in z ? 'Zatiaľ sa nedá pripojiť' : sposoby.length > 1 ? `${sposoby.length} spôsoby pripojenia` : sposoby[0].nazov;
-        return choiceHtml(`data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}`, z.meno, sub, z.id === state.setupZnacka);
+        const attrs = `data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}${jeBeta(z) ? ' data-beta' : ''}`;
+        return choiceHtml(attrs, z.meno, sub, z.id === state.setupZnacka);
     }).join('');
     writeHtml(dom.wzZnacky, html, 'wzZnacky');
+    dom.wzBeta.classList.toggle('hidden', !ZNACKY.some(jeBeta));
 }
 
 /** @param {AppState} state @param {Dom} dom */

@@ -2677,6 +2677,11 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-znacka')).toBeVisible();
         await expect(page.locator('#wz-title')).toHaveText('Akú značku má tvoj menič?');
         await expect(page.locator('#wz-next')).toBeDisabled();
+        // Značky, ktoré nikto neoveril na skutočnom meniči, majú odznak Beta a vetu pod zoznamom.
+        await expect(page.locator('[data-setup-znacka="foxess"]')).toHaveAttribute('data-beta');
+        await expect(page.locator('[data-setup-znacka="huawei"]')).not.toHaveAttribute('data-beta');
+        await expect(page.locator('[data-setup-znacka="fronius"]')).not.toHaveAttribute('data-beta');
+        await expect(page.locator('#wz-beta')).toBeVisible();
         // Značka, ktorá sa nedá: povie prečo a ponúkne odhad.
         await page.locator('[data-setup-znacka="fronius"]').click();
         await expect(page.locator('#wz-title')).toHaveText('Fronius zatiaľ pripojiť nevieme');

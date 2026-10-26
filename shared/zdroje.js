@@ -30,8 +30,9 @@ import { isObj } from './valid.js';
  */
 /**
  * Značka meniča: buď so spôsobmi pripojenia (prvý je odporúčaný), alebo s vysvetlením, prečo
- * sa k nej domácnosť zatiaľ nedostane.
- * @typedef {{ id: string, meno: string, sposoby: string[] } | { id: string, meno: string, nie: string }} Znacka
+ * sa k nej domácnosť zatiaľ nedostane. `overena` má značka, ktorej pripojenie niekto vyskúšal
+ * na skutočnom meniči - ostatné sú napísané len podľa dokumentácie výrobcu (beta).
+ * @typedef {{ id: string, meno: string, sposoby: string[], overena?: true } | { id: string, meno: string, nie: string }} Znacka
  */
 /**
  * Pripojené meranie tak, ako ho appka drží v nastavení. `pecat` je zapečatený prístup - otvoriť
@@ -183,7 +184,7 @@ export const SPOSOBY = [
 
 /** @type {Znacka[]} */
 export const ZNACKY = [
-    { id: 'huawei', meno: 'Huawei', sposoby: ['huawei-northbound', 'huawei-kiosk'] },
+    { id: 'huawei', meno: 'Huawei', sposoby: ['huawei-northbound', 'huawei-kiosk'], overena: true },
     { id: 'foxess', meno: 'Fox ESS', sposoby: ['foxess-kluc'] },
     { id: 'solax', meno: 'SolaX', sposoby: ['solax-token'] },
     { id: 'victron', meno: 'Victron', sposoby: ['victron-token'] },
@@ -212,6 +213,9 @@ export const znackaOf = (id) => ZNACKY.find((x) => x.id === id) ?? null;
 export function sposobyOf(z) {
     return 'sposoby' in z ? z.sposoby.map(sposobOf).filter((x) => x !== null) : [];
 }
+
+/** Dá sa pripojiť, ale na skutočnom meniči to ešte nikto neoveril. Nová značka je beta, kým ju niekto neoverí. @param {Znacka} z */
+export const jeBeta = (z) => 'sposoby' in z && !z.overena;
 
 /** Meno značky spôsobu, napr. „Huawei“. @param {string} sposob */
 export function menoZnacky(sposob) {
