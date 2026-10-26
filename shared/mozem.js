@@ -33,9 +33,10 @@ import { bandAt, scheduleFor } from './tariff.js';
  * @typedef {{ name: string, index: number, start: number }} LaterDay
  */
 /**
- * Odpoveď pre jednu vec. `cost` je cena behu zo siete teraz (pri aute hodina nabíjania), null
- * bez ceny v tarife.
- * @typedef {{ kind: 'go', end: number, until: number, km: number | null }
+ * Odpoveď pre jednu vec. Pri `go` je `until` posledný štart, pri ktorom ťažké úseky programu
+ * (`heat` v MOZEM_ITEMS) ešte chytia slnko, a `share` podiel energie programu pusteného teraz,
+ * ktorý pokryje strecha (pri aute null).
+ * @typedef {{ kind: 'go', end: number, until: number, km: number | null, share: number | null }
  *   | { kind: 'wait', start: number }
  *   | { kind: 'cheap', next: LaterDay | null }
  *   | { kind: 'later', day: LaterDay, weakSkipped: boolean }
@@ -49,6 +50,8 @@ import { bandAt, scheduleFor } from './tariff.js';
  */
 
 const SLOT_H = TARIFF_LIMITS.stepMin / 60;
+/** Najmenší podiel programu zo slnka, pri ktorom karta ešte povie „teraz“. */
+const MIN_SUN_SHARE = 0.5;
 
 /**
  * Súvislé úseky plánu dňa, v ktorých platí podmienka.
@@ -124,6 +127,33 @@ export function itemAnswer(item, ctx) {
     return later.day ? { kind: 'later', day: later.day, weakSkipped: later.weakSkipped || !usable } : { kind: 'none' };
 }
 
+/** Koniec posledného ťažkého úseku programu v minútach od štartu. @param {(typeof MOZEM_ITEMS)[number]} item */
+const heatEnd = (item) => Math.max(...(item.heat ?? [[0, item.runMin ?? 0]]).map(([, to]) => to));
+
+/**
+ * Koľko energie programu pusteného o `start` pokryje strecha (0 až 1). Ťažké úseky (`heat`) berú
+ * plný príkon a potrebujú slnko nad hranicou zelenej, ako graf dňa; zvyšok programu berie málo
+ * a stačí mu, keď strecha dá aspoň toľko. Po konci plánu dňa už slnko nie je.
+ * @param {(typeof MOZEM_ITEMS)[number]} item @param {number} powerKw @param {DayCtx} ctx @param {number} start
+ */
+export function sunShare(item, powerKw, ctx, start) {
+    const runMin = item.runMin ?? 0;
+    const heat = item.heat ?? [[0, runMin]];
+    const heavyMin = heat.reduce((sum, [from, to]) => sum + to - from, 0);
+    const lightMin = runMin - heavyMin;
+    const lightKw = lightMin > 0 ? Math.max(0, (item.runKwh ?? 0) - (powerKw * heavyMin) / 60) / (lightMin / 60) : 0;
+    let sun = 0;
+    let all = 0;
+    for (let m = 0; m < runMin; m++) {
+        const heavy = heat.some(([from, to]) => m >= from && m < to);
+        const needKw = heavy ? powerKw : lightKw;
+        const slot = ctx.plan[Math.floor((start + m) / TARIFF_LIMITS.stepMin)];
+        all += needKw;
+        if (slot && Number.isFinite(slot.kw) && slot.kw >= (heavy ? ctx.th.lowKw : lightKw)) sun += needKw;
+    }
+    return all > 0 ? sun / all : 1;
+}
+
 /**
  * Odpoveď z dnešného plánu: slnko stačí teraz, alebo príde ešte dnes. Inak null.
  * @param {(typeof MOZEM_ITEMS)[number]} item @param {number} powerKw @param {number} minKw @param {DayCtx} ctx
@@ -133,8 +163,11 @@ function todayAnswer(item, powerKw, minKw, ctx) {
     const windows = planWindows(ctx.plan, (s) => Number.isFinite(s.kw) && s.kw >= minKw);
     const cur = windows.find((w) => w.from <= ctx.nowMin && ctx.nowMin < w.to);
     if (cur) {
-        if (item.runMin === null) return { kind: 'go', end: cur.to, until: cur.to, km: kmFromSun(ctx, cur.to, powerKw) };
-        return { kind: 'go', end: cur.to, until: cur.to - item.runMin, km: null };
+        if (item.runMin === null) return { kind: 'go', end: cur.to, until: cur.to, km: kmFromSun(ctx, cur.to, powerKw), share: null };
+        const share = sunShare(item, powerKw, ctx, ctx.nowMin);
+        // Keď by strecha nepokryla ani polovicu, „áno“ by klamalo - odpovedá iný deň alebo lacná sieť.
+        if (share < MIN_SUN_SHARE) return null;
+        return { kind: 'go', end: cur.to, until: cur.to - heatEnd(item), km: null, share };
     }
     const next = windows.find((w) => w.from > ctx.nowMin);
     return next ? { kind: 'wait', start: next.from } : null;

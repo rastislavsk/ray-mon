@@ -291,7 +291,10 @@ test('skupiny: auto, bojler a drobnosti o 13:00', () => {
     assert.match(auto.note, /km zo slnka$/);
     assert.equal(drobne.value, 'kedykoľvek');
     assert.equal(drobne.sheet?.lead, MOZEM_GROUP_ALWAYS);
-    assert.equal(m.items.find((i) => i.id === 'bojler')?.text, 'Ohrev trvá asi hodinu, takto dobehne celý na slnku.');
+    assert.equal(
+        m.items.find((i) => i.id === 'bojler')?.text,
+        'Ohrev trvá asi hodinu a celý čas berie 2 kW. Do 16:30 dobehne celý na slnku.',
+    );
 });
 
 test('skupiny: veci skupiny odpovedajú rôzne - dlaždica ukáže najlepšiu, ostatné vymenuje', () => {
