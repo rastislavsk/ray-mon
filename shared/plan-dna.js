@@ -4,24 +4,29 @@
 // príkon; zvyšok programu si z rozpočtu len odpočíta svoj malý odber. Odber a voľný výkon
 // počíta tak isto ako odpovede karty Môžem? (shared/mozem.js). Čisté funkcie bez DOM; texty
 // skladá shared/messages-core.js. Návrh: docs/navrhy/plan-dna-rozpocet.html; poradie, ktoré
-// zmestí na slnko najviac: docs/navrhy/plan-dna-poradie.html.
+// zmestí na slnko najviac: docs/navrhy/plan-dna-poradie.html. Čo sa dnes nezmestí, rozvrhne
+// ten istý výpočet na ďalšie dni predpovede; sušička ide vždy v ten istý deň po práčke
+// (docs/navrhy/terazky-plan-dna.html).
 
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
+import { forecastDayPlan } from './day-plan.js';
+import { weekDayName } from './format.js';
 import { planDnaRowText, PLAN_DNA_NOTE } from './messages-core.js';
-import { dayCtx, freeKw, kmOf, laterDay, programDraw, sunMinKw } from './mozem.js';
+import { dayCtx, freeKw, kmOf, programDraw } from './mozem.js';
 
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
 /** @typedef {(typeof MOZEM_ITEMS)[number]} MozemItem */
 /**
  * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo
- * siete), v lacnom pásme od `start`, iný deň, alebo tento týždeň nie.
+ * siete), v lacnom pásme od `start`, iný deň (`after`: po čom v ten deň ide), alebo tento týždeň nie.
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
  *     km: number | null, save: number | null, currency: string }
  *   | { id: string, kind: 'cheap', start: number }
- *   | { id: string, kind: 'later', day: LaterDay }
+ *   | { id: string, kind: 'later', day: LaterDay, after: string | null }
  *   | { id: string, kind: 'none' }} PlanRow
  */
+/** Miesto na slnku v jednom dni. @typedef {Extract<PlanRow, { kind: 'sun' }>} SunRow */
 /** Deň, ktorý sa plánuje: kontext, mena a rozpočet voľného výkonu po minútach. @typedef {{ ctx: DayCtx, currency: string, free: number[] }} Den */
 
 const STEP = TARIFF_LIMITS.stepMin;
@@ -66,27 +71,63 @@ function cheapFrom(ctx, from) {
 }
 
 /**
- * Kam s vecou, ktorej sa dnes slnko neujde: auto a bojler (cheapGrid) do lacného pásma, ostatné
- * na iný deň so slnkom; keď taký nie je, aspoň do lacného pásma.
- * @param {MozemItem} item @param {(typeof DEVICES)[number]} device @param {DayCtx} ctx @param {number} from
- * @returns {PlanRow}
+ * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku,
+ * alebo kam inam. Dnešok rozvrhne najlepsiDen. Čo sa dnes nezmestí: auto a bojler (cheapGrid)
+ * do lacného pásma, ostatné tým istým výpočtom na ďalšie dni predpovede (iný deň má rozpočet
+ * slnka od polnoci). Čo sa nezmestí celý týždeň, ide aspoň do lacného pásma, inak tento týždeň
+ * nie. Riadky sú v poradí PLAN_DNA.order.
+ * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
+ * @returns {PlanRow[]}
  */
-function elsewhere(item, device, ctx, from) {
-    const cheap = cheapFrom(ctx, from);
-    if (device.cheapGrid && cheap !== null) return { id: item.id, kind: 'cheap', start: cheap };
-    const day = laterDay(ctx, sunMinKw(item, device, ctx), device.weakDay).day;
-    if (day) return { id: item.id, kind: 'later', day };
-    return cheap !== null ? { id: item.id, kind: 'cheap', start: cheap } : { id: item.id, kind: 'none' };
+export function planDna(ctx, input, devices) {
+    const list = chosen(devices);
+    /** @type {Map<string, PlanRow>} */ const rows = new Map();
+    const from0 = Math.ceil(ctx.nowMin / STEP) * STEP;
+    for (const r of najlepsiDen(ctx, input.tariff.currency, list)) rows.set(r.id, r);
+    const rest = list.filter(({ item, device }) => {
+        if (rows.has(item.id)) return false;
+        const cheap = device.cheapGrid ? cheapFrom(ctx, from0) : null;
+        if (cheap !== null) rows.set(item.id, { id: item.id, kind: 'cheap', start: cheap });
+        return cheap === null;
+    });
+    for (const { item } of ineDni(ctx, input, rest, rows)) {
+        // V lacnom pásme ide sušička až po práčke, ak tam ide aj tá.
+        const prev = rows.get(PLAN_DNA.after[item.id] ?? '');
+        const from = prev?.kind === 'cheap' ? prev.start + (MOZEM_ITEMS.find((i) => i.id === prev.id)?.runMin ?? 0) : from0;
+        const cheap = cheapFrom(ctx, from);
+        rows.set(item.id, cheap !== null ? { id: item.id, kind: 'cheap', start: cheap } : { id: item.id, kind: 'none' });
+    }
+    return list.map(({ item }) => /** @type {PlanRow} */ (rows.get(item.id)));
 }
 
 /**
- * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku,
- * alebo kam inam. Rozvrhuje v poradí PLAN_DNA.order, kým iné poradie domácich spotrebičov
- * nedá zreteľne lepší plán (lepsi); auto ide vždy posledné. Riadky sú v poradí PLAN_DNA.order.
- * @param {DayCtx} ctx @param {string} currency @param {readonly string[]} devices @returns {PlanRow[]}
+ * Ďalšie dni predpovede pre veci `rest`: každý deň tým istým rozvrhom ako dnešok, s rozpočtom
+ * slnka od polnoci. Miesta zapíše do `rows` a vráti to, čo sa nezmestí celý týždeň.
+ * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input
+ * @param {ReturnType<typeof chosen>} rest @param {Map<string, PlanRow>} rows
  */
-export function planDna(ctx, currency, devices) {
-    const list = chosen(devices);
+function ineDni(ctx, input, rest, rows) {
+    const { forecast } = input;
+    for (const { day, index } of ctx.later) {
+        if (!rest.length || !forecast) break;
+        const plan = forecastDayPlan({ ...input, forecast }, index);
+        const dctx = { ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw };
+        for (const r of najlepsiDen(dctx, input.tariff.currency, rest)) {
+            const at = { name: weekDayName(day.date, index), index, start: r.start };
+            rows.set(r.id, { id: r.id, kind: 'later', day: at, after: r.after });
+        }
+        rest = rest.filter(({ item }) => !rows.has(item.id));
+    }
+    return rest;
+}
+
+/**
+ * Najlepší rozvrh jedného dňa: v poradí PLAN_DNA.order, kým iné poradie domácich spotrebičov
+ * nedá zreteľne lepší plán (lepsi); auto ide vždy posledné. Vráti len to, čo sa v ten deň
+ * zmestí na slnko.
+ * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list @returns {SunRow[]}
+ */
+function najlepsiDen(ctx, currency, list) {
     const home = list.filter(({ item }) => item.runMin !== null);
     const auto = list.filter(({ item }) => item.runMin === null);
     let best = rozvrh(ctx, currency, list);
@@ -94,32 +135,47 @@ export function planDna(ctx, currency, devices) {
         const cand = rozvrh(ctx, currency, [...order, ...auto]);
         if (lepsi(cand, best)) best = cand;
     }
-    return list.map(({ item }) => /** @type {PlanRow} */ (best.rows.find((r) => r.id === item.id)));
+    return best.rows;
 }
 
 /**
- * Rozvrh v danom poradí: vec, ktorá na niečo čaká (`after`), ide až po nej. V slabý deň sa
- * spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú. Vráti riadky a to, čím
- * sa plány porovnávajú: koľko vecí je na slnku, kWh domácich spotrebičov zo siete a km auta.
+ * Rozvrh jedného dňa v danom poradí. Vec, ktorá na niečo čaká (`after`, sušička na práčku), ide
+ * až po nej a v ten istý deň: keď sa po nej nezmestí, nejde v ten deň ani jedna a rozvrh sa
+ * spraví znova bez nich - inak by mokrá bielizeň čakala na sušičku do ďalšieho dňa. V slabý deň
+ * sa spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú. Vráti miesta na slnku
+ * a to, čím sa plány porovnávajú: koľko vecí je na slnku, kWh domácich spotrebičov zo siete a km auta.
  * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list
+ * @returns {{ rows: SunRow[], sun: number, gridKwh: number, km: number }}
  */
 function rozvrh(ctx, currency, list) {
     /** @type {Den} */ const day = { ctx, currency, free: Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m)) };
     /** @type {Record<string, number>} */ const ends = {};
     const from0 = Math.ceil(ctx.nowMin / STEP) * STEP;
-    const rows = list.map(({ item, device }) => {
-        const after = PLAN_DNA.after[item.id] ?? null;
-        const waits = after !== null && ends[after] !== undefined;
-        const from = waits ? Math.max(from0, ends[after]) : from0;
+    /** @type {SunRow[]} */ const rows = [];
+    for (const { item, device } of list) {
+        const after = waitsFor(item.id, list);
+        if (after && ends[after] === undefined) continue;
+        const from = after ? Math.max(from0, ends[after]) : from0;
         const row = device.weakDay || !ctx.weakToday ? onSun(item, device, from, day) : null;
-        if (!row) return elsewhere(item, device, ctx, from);
+        if (!row && after)
+            return rozvrh(
+                ctx,
+                currency,
+                list.filter(({ item: i }) => i.id !== item.id && i.id !== after),
+            );
+        if (!row) continue;
         ends[item.id] = row.end;
-        return { ...row, after: waits ? after : null };
-    });
+        rows.push({ ...row, after });
+    }
     // Rozpočet ide pod nulu len tam, kde odber programu prevýši výrobu - to je odber zo siete.
     const gridKwh = day.free.reduce((sum, kw) => sum + Math.max(0, -kw), 0) / 60;
-    const sun = rows.filter((r) => r.kind === 'sun');
-    return { rows, sun: sun.length, gridKwh, km: sun.reduce((sum, r) => sum + (r.km ?? 0), 0) };
+    return { rows, sun: rows.length, gridKwh, km: rows.reduce((sum, r) => sum + (r.km ?? 0), 0) };
+}
+
+/** Na čo vec `id` čaká, keď je to v zozname, inak null. @param {string} id @param {ReturnType<typeof chosen>} list */
+function waitsFor(id, list) {
+    const after = PLAN_DNA.after[id];
+    return after && list.some(({ item }) => item.id === after) ? after : null;
 }
 
 /**
@@ -197,7 +253,7 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
     if (!input.forecast || input.known === 'nic') return null;
     const ctx = dayCtx(input);
     const now = Math.ceil(ctx.nowMin / STEP) * STEP;
-    const rows = planDna(ctx, input.tariff.currency, devices)
+    const rows = planDna(ctx, input, devices)
         .sort((a, b) => rowOrder(a) - rowOrder(b))
         .map((row) => ({ ...row, ...planDnaRowText(row, voice), now: row.kind === 'sun' && row.start <= now }));
     return { rows, note: PLAN_DNA_NOTE };

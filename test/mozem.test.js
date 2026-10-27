@@ -174,8 +174,8 @@ test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z
     assert.equal(vecer.state, 'none');
     assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Auto od 17:15 na lacný prúd, zvyšok zajtra.');
     assert.match(vecer.strip?.text ?? '', /^Slnko do /, 'pás dňa ostáva podľa slnka');
-    assert.equal(vecer.groups[0].value, 'zajtra 08:00');
-    assert.equal(vecer.groups[0].note, 'Práčka, sušička a umývačka zajtra 08:00');
+    assert.equal(vecer.groups[0].value, 'zajtra 07:30');
+    assert.equal(vecer.groups[0].note, 'Umývačka zajtra 07:30 · Práčka zajtra 07:45 · Sušička zajtra 09:45');
     const slusne = mozemModel(input(at('17:10')), { voice: 'slusny' });
     assert.equal(slusne.hero.lead, 'Na veľké spotrebiče už slnko nestačí. Auto od 17:15 z lacnej siete, ostatné zajtra.');
     // Bez spotrebičov doma karta odpovedá podľa slnka a dlaždice podľa vecí.
@@ -283,7 +283,8 @@ test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu po
 });
 
 test('neskoro popoludní: čo už celé na slnku nedobehne, povie koľko pokryje strecha, bez ceny', () => {
-    const m = mozemModel(input(at('16:30')));
+    // Bez sušičky: s ňou by práčka čakala na zajtra, aby išli v jeden deň.
+    const m = mozemModel(input(at('16:30')), { devices: ['pracka', 'umyvacka', 'auto'] });
     assert.equal(m.state, 'go');
     assert.equal(item(m, 'pracka').short, 'najneskôr 16:55', 'ohrev práčky ešte chytí slnko');
     const umyvacka = item(m, 'umyvacka');

@@ -315,8 +315,12 @@ test('skupiny: veci skupiny idú v pláne inokedy - dlaždica ukáže prvú, poz
         ...i.forecast,
         days: i.forecast.days.map((d, n) => (n === 0 ? { ...d, peakKw: 0.1 } : d)),
     };
-    const m = mozemSkyModel({ ...i, forecast });
+    // Bez sušičky - s ňou by práčka počkala na zajtra, aby išli v jeden deň.
+    const m = mozemSkyModel({ ...i, forecast }, { devices: ['pracka', 'umyvacka', 'auto'] });
     const velke = m.groups[0];
     assert.equal(velke.tone, 'go', 'práčka ide');
-    assert.equal(velke.note, 'Práčka teraz · Sušička a umývačka zajtra 08:00');
+    assert.equal(velke.note, 'Práčka teraz · Umývačka zajtra 07:30');
+    const spolu = mozemSkyModel({ ...i, forecast }).groups[0];
+    assert.equal(spolu.tone, 'wait', 'práčka čaká so sušičkou na zajtra');
+    assert.match(spolu.note ?? '', /Práčka zajtra \d\d:\d\d · Sušička zajtra \d\d:\d\d/);
 });

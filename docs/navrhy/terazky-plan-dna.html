@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plán dňa na Terazkách</title>
+        <style>
+            /* Návrh: Plán dňa na karte Terazky (súčasná appka) a Teraz (Živá obloha) ako hlavná
+               odpoveď „čo zapnúť a kedy“, nie druhá karta v karuseli. Dve možnosti, A a B, obe
+               v oboch appkách. Na konci oprava logiky: sušička pred práčkou na iný deň.
+               Situácia v mockupoch: 13:00, jasný deň, doma práčka, umývačka, sušička a auto -
+               rovnaké časy ako v PR #367. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --bad: #ff9b8a;
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 48px 0 6px;
+            }
+            h3 {
+                font-size: 16px;
+                margin: 24px 0 6px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            b,
+            strong {
+                color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 20px;
+            }
+            .cap {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 8px 0 0;
+                max-width: 340px;
+            }
+
+            /* Telefón */
+            .phone {
+                width: 340px;
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                overflow: hidden;
+                padding: 16px 14px 18px;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                opacity: 0.85;
+            }
+            .dot::before {
+                content: '';
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yes);
+                margin-right: 6px;
+            }
+            .chart {
+                height: 92px;
+                border-radius: 18px;
+                margin: 10px 0 12px;
+                position: relative;
+                overflow: hidden;
+            }
+            .chart svg {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+            }
+            .ghost {
+                opacity: 0.35;
+                font-size: 12px;
+                text-align: center;
+                padding: 6px 0;
+            }
+
+            /* Súčasná appka */
+            .t {
+                background: radial-gradient(120% 60% at 30% 0%, #1d2a17, #0b0e0a 70%);
+                font-family: 'Space Grotesk', var(--font);
+            }
+            .t .hdr {
+                font-family: var(--mono);
+            }
+            .t .kick {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.12em;
+                color: rgba(255, 255, 255, 0.7);
+                margin-top: 14px;
+            }
+            .t .big {
+                font-size: 64px;
+                line-height: 1;
+                font-weight: 700;
+                color: #a8f05a;
+                letter-spacing: -0.03em;
+            }
+            .t .big small {
+                font-size: 18px;
+                color: #ddd;
+                margin-left: 4px;
+            }
+            .t .chart {
+                background: #121611;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+            .t .poster {
+                border-radius: 22px;
+                padding: 16px 16px 14px;
+                color: #101010;
+                background: linear-gradient(180deg, #a6ee5a 0%, #e3d64a 55%, #ffb347 100%);
+            }
+            .t .poster .lbl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.14em;
+            }
+            .t .poster .ans {
+                font-size: 30px;
+                font-weight: 700;
+                line-height: 1.05;
+                letter-spacing: -0.02em;
+                margin: 6px 0 10px;
+            }
+            .t .poster ol {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .t .poster li {
+                display: grid;
+                grid-template-columns: 26px 1fr auto;
+                gap: 4px 8px;
+                border-top: 2px solid #101010;
+                padding: 8px 0 6px;
+                color: #101010;
+                align-items: baseline;
+            }
+            .t .poster .n {
+                font: 500 11px var(--mono);
+            }
+            .t .poster .what {
+                font-size: 18px;
+                font-weight: 700;
+            }
+            .t .poster .when {
+                font-size: 18px;
+                font-weight: 700;
+                text-align: right;
+            }
+            .t .poster .why {
+                grid-column: 2 / 4;
+                font-size: 13px;
+                margin-top: -2px;
+            }
+            .t .poster .now {
+                background: #101010;
+                color: #a8f05a;
+                border-radius: 999px;
+                padding: 0 10px;
+                font-size: 15px;
+            }
+            .t .poster .foot {
+                font-size: 12px;
+                margin-top: 6px;
+            }
+
+            /* Živá obloha */
+            .o {
+                background: linear-gradient(180deg, #2b63c8 0%, #3f7fd0 55%, #5590c9 100%);
+                font-family: 'Archivo', var(--font);
+            }
+            .o .ttl {
+                font-size: 26px;
+                font-weight: 800;
+                margin-top: 12px;
+            }
+            .o .big {
+                font-size: 58px;
+                font-weight: 900;
+                font-stretch: 125%;
+                line-height: 1;
+            }
+            .o .big small {
+                font-size: 18px;
+                font-stretch: 100%;
+            }
+            .o .chart {
+                background: rgba(10, 30, 70, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .o .glass {
+                background: rgba(14, 36, 80, 0.38);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 20px;
+                padding: 14px 16px;
+            }
+            .o .glass .lbl {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                opacity: 0.85;
+            }
+            .o .glass .ans {
+                font-size: 26px;
+                font-weight: 900;
+                font-stretch: 112%;
+                line-height: 1.1;
+                margin: 6px 0 10px;
+            }
+            .o .glass ol {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .o .glass li {
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 9px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.16);
+                color: #fff;
+                align-items: center;
+            }
+            .o .glass li > span:last-child {
+                font-weight: 800;
+                white-space: nowrap;
+            }
+            .o .glass .sub {
+                display: block;
+                font-size: 12px;
+                opacity: 0.75;
+            }
+            .o .pill {
+                background: #c8f59e;
+                color: #12305e;
+                border-radius: 999px;
+                padding: 0 10px;
+            }
+            .o .foot {
+                font-size: 12px;
+                opacity: 0.8;
+                margin-top: 4px;
+            }
+
+            /* Možnosť B: časová os */
+            .lanes {
+                margin-top: 4px;
+                position: relative;
+            }
+            .lane {
+                display: grid;
+                grid-template-columns: 74px 1fr;
+                align-items: center;
+                gap: 8px;
+                height: 26px;
+                font-size: 13px;
+            }
+            .track {
+                position: relative;
+                height: 14px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.08);
+            }
+            .bar {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 7px;
+            }
+            .t .bar {
+                background: #a8f05a;
+            }
+            .t .bar.off {
+                background: repeating-linear-gradient(45deg, #a8f05a 0 4px, #6e9e3b 4px 8px);
+            }
+            .o .bar {
+                background: #c8f59e;
+            }
+            .o .bar.off {
+                background: repeating-linear-gradient(45deg, #c8f59e 0 4px, #8db86a 4px 8px);
+            }
+            .nowline {
+                position: absolute;
+                top: -4px;
+                bottom: -4px;
+                width: 2px;
+                background: #fff;
+                left: calc(74px + 8px + (100% - 82px) * 0.4167);
+            }
+            .axis {
+                display: grid;
+                grid-template-columns: 74px 1fr;
+                gap: 8px;
+                font-size: 10px;
+                opacity: 0.6;
+                margin-top: 2px;
+            }
+            .axis div {
+                display: flex;
+                justify-content: space-between;
+            }
+            .t .answer {
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                background: #121611;
+                border-radius: 22px;
+                padding: 14px 14px 10px;
+            }
+            .t .answer .lbl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.14em;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .t .answer .ans {
+                font-size: 26px;
+                font-weight: 700;
+                line-height: 1.1;
+                color: #a8f05a;
+                margin: 6px 0 4px;
+            }
+            .t .answer .then {
+                font-size: 14px;
+                color: #ddd;
+                margin-bottom: 10px;
+            }
+            .o .then {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            .chips {
+                display: flex;
+                gap: 6px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            .chip {
+                font-size: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 999px;
+                padding: 2px 10px;
+            }
+
+            /* Logika */
+            table {
+                border-collapse: collapse;
+                margin-top: 10px;
+                font-size: 14px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 6px 14px 6px 0;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 500;
+            }
+            .bad {
+                color: var(--bad);
+            }
+            .ok {
+                color: var(--yes);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 13px;
+                color: var(--text);
+            }
+            .q {
+                border-left: 3px solid var(--yes);
+                padding: 4px 0 4px 12px;
+                margin-top: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Plán dňa na Terazkách / Teraz</h1>
+            <p>
+                Dnes je Plán dňa na Terazkách druhá karta v karuseli pod grafom („Spotrebiče“) – kto neposunie prstom, nevidí ho. Pritom je
+                to presne odpoveď, kvôli ktorej bežný človek appku otvára: <b>čo môžem zapnúť a kedy</b>. Obe možnosti ho vyťahujú z
+                karuselu nad graf, hneď pod živé číslo. Situácia: 13:00, jasný deň, doma práčka, umývačka, sušička a auto.
+            </p>
+
+            <h2>A · Plagát ako Štatistika</h2>
+            <p>
+                Plán dňa dostane vlastnú výraznú kartu v štýle Štatistiky: veľká veta s odpoveďou a pod ňou očíslované riadky v poradí
+                plánu. Riadok, ktorý platí teraz, má odznak <b>teraz</b>. V súčasnej appke farebný prechod ako karta Štatistika, v Živej
+                oblohe sklenená karta s veľkým písmom. Karusel ostáva pod grafom, už bez karty Spotrebiče.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone t">
+                        <div class="hdr"><span>Toilet Apps Ltd.</span><span class="dot">13:00</span></div>
+                        <div class="kick">TERAZ · 13:00 · DVORANY NAD NITROU</div>
+                        <div class="big">6.41<small>kW</small></div>
+                        <div class="poster" style="margin-top: 12px">
+                            <div class="lbl">PLÁN DŇA</div>
+                            <div class="ans">Teraz práčka<br />aj umývačka</div>
+                            <ol>
+                                <li>
+                                    <span class="n">01</span><span class="what">Práčka</span
+                                    ><span class="when"><span class="now">teraz</span></span>
+                                    <span class="why">hotová o 15:00, potom sušička</span>
+                                </li>
+                                <li>
+                                    <span class="n">02</span><span class="what">Umývačka</span
+                                    ><span class="when"><span class="now">teraz</span></span>
+                                    <span class="why">slnka je dosť na obe naraz</span>
+                                </li>
+                                <li>
+                                    <span class="n">03</span><span class="what">Auto</span><span class="when">13:15–16:00</span>
+                                    <span class="why">~120 km zo strechy</span>
+                                </li>
+                                <li>
+                                    <span class="n">04</span><span class="what">Sušička</span><span class="when">o 15:00</span>
+                                    <span class="why">po práčke</span>
+                                </li>
+                            </ol>
+                            <div class="foot">Podľa predpovede · mení sa s oblohou</div>
+                        </div>
+                        <div class="chart">
+                            <svg viewBox="0 0 300 92" preserveAspectRatio="none">
+                                <path d="M10 80 C 90 80 110 20 150 20 S 220 80 290 80" fill="none" stroke="#a8f05a" stroke-width="2" />
+                            </svg>
+                        </div>
+                        <div class="ghost">graf dňa a karusel – bez zmeny</div>
+                    </div>
+                    <p class="cap">Súčasná appka: karta v štýle Štatistiky medzi živým číslom a grafom.</p>
+                </div>
+                <div>
+                    <div class="phone o">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">13:00</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">7.66<small> kW</small></div>
+                        <div class="glass" style="margin-top: 12px">
+                            <div class="lbl">PLÁN DŇA</div>
+                            <div class="ans">Teraz práčka aj umývačka</div>
+                            <ol>
+                                <li>
+                                    <span>Práčka<span class="sub">hotová o 15:00</span></span
+                                    ><span class="pill">teraz</span>
+                                </li>
+                                <li>
+                                    <span>Umývačka<span class="sub">slnka je dosť na obe</span></span
+                                    ><span class="pill">teraz</span>
+                                </li>
+                                <li>
+                                    <span>Auto<span class="sub">~120 km zo strechy</span></span
+                                    ><span>13:15–16:00</span>
+                                </li>
+                                <li>
+                                    <span>Sušička<span class="sub">po práčke</span></span
+                                    ><span>o 15:00</span>
+                                </li>
+                            </ol>
+                            <div class="foot">Podľa predpovede · mení sa s oblohou</div>
+                        </div>
+                        <div class="chart">
+                            <svg viewBox="0 0 300 92" preserveAspectRatio="none">
+                                <path d="M10 80 C 90 80 110 20 150 20 S 220 80 290 80" fill="none" stroke="#fff" stroke-width="2" />
+                            </svg>
+                        </div>
+                        <div class="ghost">graf dňa a karusel – bez zmeny</div>
+                    </div>
+                    <p class="cap">Živá obloha: sklenená karta s veľkým písmom, odznak „teraz“ svetlozelený ako „slnko stačí“.</p>
+                </div>
+            </div>
+            <p>
+                <b>Plus:</b> najväčší kontrast na celej karte, rovnaký jazyk ako Štatistika, riadky aj s dôvodom. <b>Mínus:</b> graf sa
+                posunie nižšie, pri piatich spotrebičoch je karta vysoká (~330 px).
+            </p>
+
+            <h2>B · Odpoveď a časová os</h2>
+            <p>
+                Hore jedna veta, čo zapnúť teraz, pod ňou drobná časová os dňa: každý spotrebič má pruh, kedy pobeží, a biela čiara je
+                teraz. Človek naraz vidí, čo ide teraz, čo príde a čo na čo čaká (sušička začína tam, kde práčka končí). Šrafovaný kus pruhu
+                = program dobieha mimo silného slnka. Pod osou čipy pre spotrebiče na iný deň.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone t">
+                        <div class="hdr"><span>Toilet Apps Ltd.</span><span class="dot">13:00</span></div>
+                        <div class="kick">TERAZ · 13:00 · DVORANY NAD NITROU</div>
+                        <div class="big">6.41<small>kW</small></div>
+                        <div class="answer" style="margin-top: 12px">
+                            <div class="lbl">ZAPNI TERAZ</div>
+                            <div class="ans">Práčka a umývačka</div>
+                            <div class="then">Auto o 13:15 · sušička o 15:00 po práčke</div>
+                            <div class="lanes">
+                                <div class="lane">
+                                    <span>Práčka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 16.67%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Umývačka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 20.83%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Auto</span>
+                                    <div class="track"><div class="bar" style="left: 43.75%; width: 22.92%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Sušička</span>
+                                    <div class="track">
+                                        <div class="bar" style="left: 58.33%; width: 8.34%"></div>
+                                        <div class="bar off" style="left: 66.67%; width: 4.17%"></div>
+                                    </div>
+                                </div>
+                                <div class="nowline"></div>
+                            </div>
+                            <div class="axis">
+                                <span></span>
+                                <div><span>8</span><span>11</span><span>14</span><span>17</span><span>20</span></div>
+                            </div>
+                            <div class="chips"><span class="chip">Bojler · lacné pásmo 22:00</span></div>
+                        </div>
+                        <div class="chart">
+                            <svg viewBox="0 0 300 92" preserveAspectRatio="none">
+                                <path d="M10 80 C 90 80 110 20 150 20 S 220 80 290 80" fill="none" stroke="#a8f05a" stroke-width="2" />
+                            </svg>
+                        </div>
+                        <div class="ghost">graf dňa a karusel – bez zmeny</div>
+                    </div>
+                    <p class="cap">Súčasná appka: tmavá karta v štýle grafu, veta zelenou, os 8–20 h.</p>
+                </div>
+                <div>
+                    <div class="phone o">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">13:00</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">7.66<small> kW</small></div>
+                        <div class="glass" style="margin-top: 12px">
+                            <div class="lbl">ZAPNI TERAZ</div>
+                            <div class="ans">Práčka a umývačka</div>
+                            <div class="then">Auto o 13:15 · sušička o 15:00 po práčke</div>
+                            <div class="lanes">
+                                <div class="lane">
+                                    <span>Práčka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 16.67%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Umývačka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 20.83%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Auto</span>
+                                    <div class="track"><div class="bar" style="left: 43.75%; width: 22.92%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Sušička</span>
+                                    <div class="track">
+                                        <div class="bar" style="left: 58.33%; width: 8.34%"></div>
+                                        <div class="bar off" style="left: 66.67%; width: 4.17%"></div>
+                                    </div>
+                                </div>
+                                <div class="nowline"></div>
+                            </div>
+                            <div class="axis">
+                                <span></span>
+                                <div><span>8</span><span>11</span><span>14</span><span>17</span><span>20</span></div>
+                            </div>
+                            <div class="chips"><span class="chip">Bojler · lacné pásmo 22:00</span></div>
+                        </div>
+                        <div class="chart">
+                            <svg viewBox="0 0 300 92" preserveAspectRatio="none">
+                                <path d="M10 80 C 90 80 110 20 150 20 S 220 80 290 80" fill="none" stroke="#fff" stroke-width="2" />
+                            </svg>
+                        </div>
+                        <div class="ghost">graf dňa a karusel – bez zmeny</div>
+                    </div>
+                    <p class="cap">Živá obloha: tá istá os v sklenenej karte.</p>
+                </div>
+            </div>
+            <p>
+                <b>Plus:</b> odpoveď „teraz“ je jedna veta, poradie a väzby vidno bez čítania, karta je nižšia (~250 px). <b>Mínus:</b> os
+                je ďalší graf hneď nad grafom dňa; pruhy sú malé a čas vidno len z vety a osi, nie pri každom riadku.
+            </p>
+
+            <h3>Spoločné pre obe</h3>
+            <ul>
+                <li>
+                    Model je <code>planDnaModel</code> zo <code>shared/plan-dna.js</code> – ten istý ako karta Môžem?, len kabát je iný.
+                    Jadro sa nemení.
+                </li>
+                <li>Večer, keď už dnes nič nejde, veta povie „Dnes už nič – zajtra práčka o 9:00“ a riadky ukážu zajtrajšok.</li>
+                <li>Bez predpovede alebo bez panelov sa karta nekreslí (ako dnes blok na Môžem?).</li>
+                <li>Karta Spotrebiče z karuselu zmizne – bola by to tá istá odpoveď dvakrát.</li>
+            </ul>
+
+            <h2>Oprava logiky: sušička pred práčkou</h2>
+            <p>Čo vidíš teraz večer: <span class="bad">„Sušička zajtra o 8:00 · Práčka zajtra o 9:00“</span>.</p>
+            <h3>Prečo</h3>
+            <ul>
+                <li>
+                    Väzba <code>PLAN_DNA.after = { susicka: 'pracka' }</code> platí len pre <b>dnešné</b> slnko. Keď sa práčka dnes
+                    nezmestí, <code>rozvrh</code> jej koniec nezapíše (<code>ends.pracka</code> chýba), a sušička sa potom plánuje, akoby na
+                    nič nečakala.
+                </li>
+                <li>
+                    Iný deň vyberá <code>laterDay</code> v <code>shared/mozem.js</code> pre každý spotrebič zvlášť: prvá hodina, keď
+                    predpoveď prekročí príkon + spotrebu domu. Sušička (1,5 kW) má prah 1,8 kW – ráno o 8:00 už áno; práčka (2 kW) 2,3 kW –
+                    až o 9:00. Väzbu ani to, že si obe berú to isté slnko, tento kód nepozná.
+                </li>
+                <li>
+                    Navyše iný deň počíta inak ako dnešok: hodinový prah namiesto rozpočtu po minútach, takže práčka, ktorá 2 kW berie len
+                    prvých 20 minút, čaká zbytočne na hodinu, keď by 2,3 kW stačilo celé dve hodiny.
+                </li>
+            </ul>
+            <h3>Návrh</h3>
+            <ol>
+                <li>
+                    <b>Iný deň tým istým rozvrhom ako dnešok.</b> Čo sa dnes nezmestí, ide do <code>rozvrh</code> pre zajtrajšok (a ďalšie
+                    dni) s plánom dňa z <code>forecastDayPlan(input, index)</code> od polnoci. Rozpočet po minútach, väzby aj výber poradia
+                    sú potom pre všetky dni rovnaké a <code>laterDay</code> v Pláne dňa odpadne.
+                </li>
+                <li>
+                    <b>Väzba platí cez dni.</b> Sušička nesmie ísť na skorší deň ani skôr v ten istý deň, ako práčka skončí. Keď práčka ide
+                    zajtra, sušička sa hľadá zajtra od konca práčky.
+                </li>
+                <li>
+                    <b>Sušička len v deň práčky</b>: keď sa po práčke v ten deň nezmestí, oba idú na prvý deň, keď sa zmestia oba. Inak by
+                    appka radila prať dnes a sušiť zajtra – mokrá bielizeň cez noc.
+                </li>
+            </ol>
+            <table>
+                <tr>
+                    <th>Testovacia predpoveď, večer 19:50</th>
+                    <th>Predtým</th>
+                    <th>Po oprave</th>
+                </tr>
+                <tr>
+                    <td>Umývačka</td>
+                    <td>zajtra 08:00</td>
+                    <td class="ok">zajtra 07:30</td>
+                </tr>
+                <tr>
+                    <td>Práčka</td>
+                    <td>zajtra 08:00</td>
+                    <td class="ok">zajtra 07:45</td>
+                </tr>
+                <tr>
+                    <td>Sušička</td>
+                    <td class="bad">zajtra 08:00, naraz s práčkou</td>
+                    <td class="ok">zajtra 09:45, po práčke</td>
+                </tr>
+            </table>
+            <p class="cap" style="max-width: 760px">
+                Časy sú z <code>test/fixtures/open-meteo.json</code> (Dvorany, 5. 9. 2026). Predpoveď ani
+                <code>test/golden/forecast.json</code> sa nemenia, mení sa len rozvrh.
+            </p>
+            <p class="q">
+                <b>Rozhodnuté:</b> práčka a sušička idú vždy v jeden deň. Keď sa po práčke sušička nezmestí, čakajú obe na prvý deň, keď sa
+                zmestia obe. Kto sušičku doma nemá, tomu práčka ide hneď.
+            </p>
+        </main>
+    </body>
+</html>
