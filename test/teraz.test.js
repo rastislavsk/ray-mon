@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { installedKw, MINUTES_PER_DAY, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
+import { installedKw, MINUTES_PER_DAY, PLANT, powerThresholds, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
 import {
     boxHitsLine,
     cellAt,
@@ -44,7 +44,7 @@ import {
     terazTypicalText,
     terazWindowText,
 } from '../shared/messages.js';
-import { deviceShorts, planWindows } from '../shared/mozem.js';
+import { planDevices, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { terazModel } from '../shared/teraz.js';
@@ -457,7 +457,7 @@ test('limitBox: na najužšom grafe je nápis v jednotkách grafu najväčší, 
     assert.equal(limitBox(text, { x: DAY_CHART.left + 2, end: false, y: 80 }).x0, DAY_CHART.left + 2);
 });
 
-test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky (heroModel, deviceShorts)', () => {
+test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky (heroModel, planDevices)', () => {
     const i = input(at('13:00'));
     const m = terazModel(i);
     const hero = heroModel(i);
@@ -469,10 +469,11 @@ test('terazModel o 13:00: číslo, odporúčanie a spotrebiče ako karta Terazky
     assert.equal(m.guess, false);
     assert.ok(m.cards && m.chart);
     assert.deepEqual(m.cards.now, { head: hero.message.headline, body: hero.message.body });
-    const shorts = deviceShorts(i);
+    assert.deepEqual(m.cards.devices, planDevices(i));
     assert.deepEqual(
-        m.cards.devices,
-        MOZEM_ITEMS.filter((it) => it.device).map((it) => ({ name: it.device, short: shorts[/** @type {string} */ (it.device)] })),
+        terazModel(i, { devices: ['bojler'] }).cards?.devices.map((d) => d.name),
+        ['Bojler'],
+        'len spotrebiče doma',
     );
     assert.equal(
         m.cards.today.line,

@@ -97,7 +97,7 @@ function renderCards(m, page, dom) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTerazky(state, dom) {
-    const m = terazModel(state);
+    const m = terazModel(state, { devices: state.oznamenia.devices });
     renderHead(state, m, dom);
     renderChart(m, state.tzListOpen, dom);
     renderCards(m, state.terazPage, dom);

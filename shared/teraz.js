@@ -1,11 +1,11 @@
 // Karta Teraz v novej appke „Živá obloha“ (obloha/) a karta Terazky súčasnej appky - obe majú to
 // isté rozloženie, každá vo vlastných farbách. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
-// iného času cez `previewMinutes`), plán dňa z dayPlan, krátke odpovede spotrebičov z deviceShorts.
+// iného času cez `previewMinutes`), plán dňa z dayPlan, spotrebiče doma s časom z Plánu dňa (planDevices).
 // Tu sa to len skladá - číslo, graf dňa s pásom plánu a pás odporúčaní. Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
-import { installedKw, MOZEM_ITEMS, powerThresholds } from './config.js';
+import { installedKw, powerThresholds } from './config.js';
 import { chartKeys, dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
@@ -32,7 +32,7 @@ import {
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
-import { deviceShorts, planWindows } from './mozem.js';
+import { planDevices, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey } from './solar.js';
@@ -49,10 +49,10 @@ import { daylightSpan, localDateKey } from './solar.js';
  * `offline` (bez predpovede), `ok`. Pri známej polohe bez panelov (`known: 'poloha'`) karta
  * počíta s typickou strechou, ktorú má vo vstupe (typicalSettings), a priznáva to (`estimate`).
  * @param {TerazInput} input
- * @param {{ online?: boolean, voice?: import('./messages.js').Voice }} [opts]
- *   či má telefón internet (veta bez dát) a tón hlášok
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice, devices?: readonly string[] }} [opts]
+ *   či má telefón internet (veta bez dát), tón hlášok a spotrebiče doma (s nimi ráta Plán dňa)
  */
-export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
+export function terazModel(input, { online = true, voice = 'drzy', devices } = {}) {
     const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
     const estimate = input.known === 'poloha';
     if (input.known === 'nic') return { ...empty('ask', estimate), ask: true };
@@ -74,7 +74,7 @@ export function terazModel(input, { online = true, voice = 'drzy' } = {}) {
         chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        cards: cardsOf(input, plan, hero, now),
+        cards: cardsOf(input, plan, hero, now, devices),
     };
 }
 
@@ -238,18 +238,15 @@ function readoutOf(input, plan, hero, limitKw) {
 }
 
 /**
- * Pás odporúčaní: odporúčanie pre zvolený čas, spotrebiče s krátkymi odpoveďami karty Môžem?, dnešok a kedy bude lepšie.
+ * Pás odporúčaní: odporúčanie pre zvolený čas, spotrebiče doma s časom z Plánu dňa, dnešok a kedy bude lepšie.
  * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {ReturnType<typeof heroModel>} hero @param {ReturnType<typeof heroModel>} now
+ * @param {readonly string[]} [devices] spotrebiče doma
  */
-function cardsOf(input, plan, hero, now) {
-    const shorts = deviceShorts(input);
+function cardsOf(input, plan, hero, now, devices) {
     return {
         now: { head: hero.message.headline, body: hero.message.body },
-        devices: MOZEM_ITEMS.filter((it) => it.device && shorts[it.device]).map((it) => ({
-            name: /** @type {string} */ (it.device),
-            short: shorts[/** @type {string} */ (it.device)],
-        })),
+        devices: planDevices(input, devices),
         today: todayCard(input, plan, now.minutes),
         later: laterCard(input, now),
     };
