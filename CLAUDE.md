@@ -177,11 +177,16 @@ cache, uvidí jedno obnovenie stránky navyše.
   rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
 - `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`
   a naopak. Stačí nemeniť meno `app.js` ani `#pv-updated`, kam píše hlášku.
-- Service worker ranného oznámenia (`sw.js` v koreni, pre obe appky) **súbory appky
+- Service worker ranného oznámenia (`sw.js` v koreni) **súbory appky
   necachuje** – nesmie, inak by obišiel `boot.js`. Registruje sa s `updateViaCache: 'none'`,
   aby prehliadač bral jeho statické importy zo `shared/` vždy čerstvé (dynamický `import()`
   service worker nesmie). Každý push musí niečo ukázať, preto pri chybe ukáže výzvu pozrieť
-  appku. Meno `sw.js` nemeň – zaregistrované telefóny by ostali na starom.
+  appku. Meno `sw.js` nemeň – zaregistrované telefóny by ostali na starom. Nová appka má
+  `obloha/sw.js`, ktorý len importuje koreňový, s rozsahom `obloha/` – Android oznámenie
+  pripíše nainštalovanej appke (jej logo) len vtedy, keď rozsah service workera leží v jej
+  rozsahu. Adresy v `sw.js` sa preto rátajú od `import.meta.url`, nie od rozsahu. Odber je
+  v telefóne jeden; má ho appka, v ktorej sa oznámenie naposledy zaplo či zmenila hodina
+  (`web/oznamenia.js`).
 
 Kontrolujú to e2e testy v skupine „nasadenie a cache“: starý modul musí skončiť jedným
 obnovením a naštartovanou appkou, chyba, ktorú obnovenie nevyrieši, hláškou bez slučky. Testy
