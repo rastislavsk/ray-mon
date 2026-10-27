@@ -128,7 +128,7 @@ test('meranie mlčí: nie „Slnko to teraz platí za nás“ zo starého čísl
         pv: { .../** @type {import('../shared/kiosk.js').PvData} */ (fresh.pv), updatedAt: now.toISOString() },
     });
     assert.equal(m.state, 'go');
-    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti naplno\./);
+    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti\. Teraz /);
     assert.equal(m.hero.factK, 'meranie neodpovedá od 13:00');
     assert.equal(m.hero.factV, 'odhad z predpovede');
     assert.equal(m.facts?.liveKw, null);
@@ -155,11 +155,33 @@ test('rano pred slnkom: ešte nie, štart a spotrebiče o koľkej', () => {
     assert.ok(item(m, 'auto').short >= pracka.short, 'auto potrebuje silnejšie slnko');
 });
 
-test('v drahom pásme rano to karta povie', () => {
-    const m = mozemModel(input(at('09:40'), { pv: null, forecast: cloudy(0.3, [0]) }));
+test('v drahom pásme rano to karta povie, aj čo z plánu pôjde prvé', () => {
+    const DRAHA = { ...FLAT, bands: [{ ...FLAT.bands[0], level: /** @type {const} */ ('draha'), price: 0.19 }] };
+    const m = mozemModel(input(at('07:00'), { pv: null, tariff: DRAHA }));
     assert.equal(m.state, 'wait');
-    assert.match(m.hero.lead, /drahý prúd/);
+    assert.equal(m.hero.lead, 'Za 15 min pôjde zo strechy umývačka. Teraz by si platil drahý prúd.');
     assert.match(item(m, 'susicka').text, /práve drahá/);
+});
+
+test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z plánu nestačí', () => {
+    const rano = mozemModel(input(at('09:00')));
+    assert.equal(rano.state, 'go');
+    assert.equal(rano.hero.lead, 'Slnko to teraz platí za nás. Teraz práčka a umývačka, o 09:20 auto.');
+    assert.equal(mozemModel(input(at('09:00')), { voice: 'slusny' }).hero.lead.startsWith('Elektrinu teraz dodáva slnko. Teraz '), true);
+    // 17:10: zelená ešte svieti, ale na nič z plánu už nestačí - nie „zapni“.
+    const vecer = mozemModel(input(at('17:10')));
+    assert.equal(vecer.state, 'none');
+    assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Auto od 17:15 na lacný prúd, zvyšok zajtra.');
+    assert.match(vecer.strip?.text ?? '', /^Slnko do /, 'pás dňa ostáva podľa slnka');
+    assert.equal(vecer.groups[0].value, 'zajtra 08:00');
+    assert.equal(vecer.groups[0].note, 'Práčka, sušička a umývačka zajtra 08:00');
+    const slusne = mozemModel(input(at('17:10')), { voice: 'slusny' });
+    assert.equal(slusne.hero.lead, 'Na veľké spotrebiče už slnko nestačí. Auto od 17:15 z lacnej siete, ostatné zajtra.');
+    // Bez spotrebičov doma karta odpovedá podľa slnka a dlaždice podľa vecí.
+    const nic = mozemModel(input(at('09:00')), { devices: [] });
+    assert.equal(nic.state, 'go');
+    assert.equal(nic.hero.lead, 'Slnko to teraz platí za nás.');
+    assert.equal(nic.groups.length, 3);
 });
 
 test('večer: dnes už nie, auto na lacný prúd, ostatné zajtra', () => {
@@ -212,7 +234,7 @@ test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou'
     const m = mozemModel({ ...input(FIXED_NOW, { pv: null, zdroj: null }), known: 'poloha' });
     assert.equal(m.state, 'go');
     assert.equal(m.estimate, true);
-    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti naplno\./);
+    assert.match(m.hero.lead, /^Podľa predpovede teraz svieti\. Teraz /);
     assert.deepEqual([m.hero.factK, m.hero.factV], ['typická strecha', kwpRoughText(installedKw(PLANT))]);
     assert.equal(item(m, 'pracka').tone, 'go');
     // Bez polohy appka nevie nič - neviem a prečo.
@@ -250,7 +272,7 @@ test('itemAnswer a itemCost: vec bez spotrebiča karta nepozná a nemá cenu', (
 test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu podľa profilu odberu', () => {
     const m = mozemModel(input(FIXED_NOW));
     const [pracka, umyvacka, susicka] = ['pracka', 'umyvacka', 'susicka'].map((id) => item(m, id));
-    assert.equal(m.groups[0].value, 'do 17:15', 'slnko pre veľké spotrebiče do 17:15');
+    assert.equal(m.groups[0].value, 'teraz', 'práčka a umývačka podľa plánu idú teraz');
     // Práčka potrebuje slnko len na 20 minút ohrevu, umývačka aj na oplach o 2 h, sušička celý program.
     assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['do 16:55', 'do 15:15', 'do 16:00']);
     assert.match(pracka.text, /prvých 20 minút pri ohreve vody/);

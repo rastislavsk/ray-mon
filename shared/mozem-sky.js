@@ -8,7 +8,6 @@ import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
 import { mozemGuessText, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages-core.js';
 import { mozemModel } from './mozem.js';
-import { planDnaModel } from './plan-dna.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
 /** @typedef {import('./mozem.js').Window} Window */
@@ -58,7 +57,7 @@ export function pvStatus({ now, site, pv, zdroj }) {
  */
 export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, { voice });
+    const m = mozemModel(input, { voice, devices });
     const f = m.facts;
     const offline = m.state === 'offline';
     return {
@@ -73,7 +72,7 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } 
         list: m.list,
         items: m.items,
         groups: m.groups,
-        plan: planDnaModel(input, { voice, devices }),
+        plan: m.plan,
         arc: sunArc(input.now, input.site, f ? f.window : null),
     };
 }
@@ -120,7 +119,7 @@ function emptyCard() {
         list: null,
         items: /** @type {ReturnType<typeof mozemModel>['items']} */ ([]),
         groups: /** @type {ReturnType<typeof mozemModel>['groups']} */ ([]),
-        plan: /** @type {ReturnType<typeof planDnaModel>} */ (null),
+        plan: /** @type {import('./mozem.js').MozemModelPlan} */ (null),
     };
 }
 

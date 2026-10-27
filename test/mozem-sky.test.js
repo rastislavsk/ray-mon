@@ -246,10 +246,10 @@ test('sunArc: slnko medzi skutočným východom a západom, v noci mesiac, okno 
     assert.deepEqual(dec.win, { from: 0, to: 1 });
 });
 
-test('skupiny: o 13:00 jedna odpoveď za skupinu, koniec slnka a pás dňa, panel s vecami', () => {
-    const m = mozemSkyModel(input(FIXED_NOW));
+test('skupiny: len spotrebiče doma, polovičná dlaždica bez páru na celú šírku', () => {
+    const doma = mozemSkyModel(input(FIXED_NOW), { devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
     assert.deepEqual(
-        m.groups.map((g) => [g.id, g.key, g.size, g.name]),
+        doma.groups.map((g) => [g.id, g.key, g.size, g.name]),
         MOZEM_GROUPS.map((g) => [
             g.id,
             g.items.length > 1 ? g.id : g.items[0],
@@ -257,35 +257,50 @@ test('skupiny: o 13:00 jedna odpoveď za skupinu, koniec slnka a pás dňa, pane
             MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)],
         ]),
     );
+    // Predvolene bez bojlera: dlaždica Bojler nie je a auto ide na celú šírku.
+    assert.deepEqual(
+        mozemSkyModel(input(FIXED_NOW)).groups.map((g) => [g.id, g.size]),
+        [
+            ['velke', 'wide'],
+            ['auto', 'wide'],
+        ],
+    );
 });
 
-test('skupiny: veľké spotrebiče o 13:00 - koniec slnka, pás dňa a panel s vecami', () => {
+test('skupiny: veľké spotrebiče o 13:00 podľa Plánu dňa - čo je na rade, všetky s časom, pás dňa a panel', () => {
     const m = mozemSkyModel(input(FIXED_NOW));
     const velke = m.groups[0];
     const { sheet, bar } = velke;
     if (!sheet || !bar) throw new Error('veľké spotrebiče nemajú panel alebo pás');
     assert.equal(velke.tone, 'go');
-    assert.match(velke.value, /^do \d{2}:\d{2}$/);
-    assert.notEqual(velke.value, m.items[0].short, 'dlaždica hovorí koniec slnka, práčka štart programu');
-    assert.equal(velke.note, '', 'všetky odpovedajú rovnako');
+    assert.equal(velke.value, 'teraz');
+    assert.equal(velke.note, 'Práčka a umývačka teraz · Sušička o 15:00', 'rovnaké časy spolu');
     assert.ok(bar.width > 0 && bar.now > bar.left);
     assert.deepEqual(bar.ticks, ['5:00', '13:00', '21:00']);
     assert.deepEqual(
-        sheet.rows.map((r) => r.id),
-        ['pracka', 'umyvacka', 'susicka'],
+        sheet.rows.map((r) => [r.id, r.short]),
+        [
+            ['pracka', 'teraz'],
+            ['umyvacka', 'teraz'],
+            ['susicka', 'o 15:00'],
+        ],
     );
     assert.equal(sheet.title, `Veľké spotrebiče: ${velke.value}`);
     assert.match(sheet.lead, /^Slnko do /);
+    // Časy sú tie isté ako v bloku Plán dňa.
+    for (const r of sheet.rows) assert.equal(m.plan?.rows.find((p) => p.id === r.id)?.kind, 'sun');
 });
 
-test('skupiny: auto a bojler o 13:00', () => {
-    const m = mozemSkyModel(input(FIXED_NOW));
-    const [velke, auto, bojler] = m.groups;
+test('skupiny: auto a bojler o 13:00 podľa Plánu dňa', () => {
+    const m = mozemSkyModel(input(FIXED_NOW), { devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
+    const [, auto, bojler] = m.groups;
     assert.equal(m.groups.length, 3);
     assert.equal(bojler.key, 'bojler');
     assert.equal(bojler.sheet, null, 'jedna vec: ťuknutie otvorí jej panel');
-    assert.equal(bojler.value, velke.value, 'bojler aj veľké spotrebiče: ten istý koniec slnka');
+    assert.equal(bojler.value, 'teraz');
     assert.equal(bojler.note, 'zo slnka');
+    assert.equal(auto.tone, 'wait', 'auto až po ohrevoch');
+    assert.match(auto.value, /^o \d\d:\d\d$/);
     assert.match(auto.note, /km zo slnka$/);
     assert.equal(
         m.items.find((i) => i.id === 'bojler')?.text,
@@ -293,7 +308,7 @@ test('skupiny: auto a bojler o 13:00', () => {
     );
 });
 
-test('skupiny: veci skupiny odpovedajú rôzne - dlaždica ukáže najlepšiu, ostatné vymenuje', () => {
+test('skupiny: veci skupiny idú v pláne inokedy - dlaždica ukáže prvú, poznámka všetky', () => {
     // Slabý deň: práčka sa odporúča, sušička a umývačka nie.
     const i = input(FIXED_NOW);
     const forecast = i.forecast && {
@@ -303,5 +318,5 @@ test('skupiny: veci skupiny odpovedajú rôzne - dlaždica ukáže najlepšiu, o
     const m = mozemSkyModel({ ...i, forecast });
     const velke = m.groups[0];
     assert.equal(velke.tone, 'go', 'práčka ide');
-    assert.equal(velke.note, 'Umývačka zajtra 08:00 · Sušička zajtra 08:00');
+    assert.equal(velke.note, 'Práčka teraz · Sušička a umývačka zajtra 08:00');
 });

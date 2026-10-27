@@ -109,7 +109,7 @@ async function kazdaKarta(page, check) {
     await check('Môžem? › panel skupiny');
     await page.keyboard.press('Escape');
     await expect(page.locator('#mz-sheet')).toBeHidden();
-    await page.locator('[data-item="bojler"]').click();
+    await page.locator('[data-item="auto"]').click();
     await expect(page.locator('#mz-sheet')).toBeVisible();
     await check('Môžem? › panel veci');
     await page.keyboard.press('Escape');
@@ -452,7 +452,7 @@ test.describe('čítačka obrazovky', () => {
 
     test('Môžem? ohlási len zmenu odpovede, nie každú minútu ani pri načítaní', async ({ page }) => {
         // Meranie zo strechy ide s časom - Worker odpovedá snímkou z chvíle, v ktorej appka je.
-        let cas = at('16:58');
+        let cas = at('15:58');
         await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv: pvAt(cas) } }));
         await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
         await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
@@ -467,14 +467,14 @@ test.describe('čítačka obrazovky', () => {
         await expect(live).toHaveText('');
 
         // Minúta ubehne (časovač hodín prekreslí appku), odpoveď je tá istá: čítačka nič nepočuje.
-        cas = at('16:59');
+        cas = at('15:59');
         await page.clock.runFor(60_000);
         await expect(page.locator('#mz-word')).toHaveText(modelMozem(cas).word);
         await expect(live).toHaveText('');
 
         // O hodinu je odpoveď iná: ohlási sa nové slovo a veta.
         cas = at('18:05');
-        await page.clock.fastForward('01:06:00');
+        await page.clock.fastForward('02:06:00');
         const po = modelMozem(cas);
         expect(po.state).not.toBe(pred.state);
         await expect(page.locator('#mz-word')).toHaveText(po.word);

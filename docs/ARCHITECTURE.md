@@ -270,7 +270,10 @@ predpovede; dážď zatiaľ nie, appka zrážky nesťahuje. Bez dát je obloha s
 sťahujú, ukazuje čas dňa bez počasia.
 
 Karta Môžem? novej appky odpovedá tým istým `mozemModel` ako súčasná – slovo, veta, časy aj
-odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
+odpovede vecí sú tie isté. Stav karty, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa
+(`model.plan`, spotrebiče doma z Oznámení): „áno“, keď z plánu niečo ide teraz, „počkaj“, keď
+príde ešte dnes, inak „dnes už nie“. Dlaždica skupiny bez spotrebiča doma sa neukáže; pás dňa
+ostáva podľa slnka (zelenej). Panel veci odpovedá ďalej za vec samu (dokedy ju ešte pustiť). `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
 len zo živého a čerstvého merania, inak s „asi“), oblúk slnka (`sunArc`: skutočný
 východ a západ, zelený úsek je dnešné okno so slnkom) a vetu, prečo dáta nie sú. Pri známej polohe

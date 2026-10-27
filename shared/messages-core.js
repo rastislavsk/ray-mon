@@ -329,7 +329,7 @@ const laterWhen = (d) => `${d.name} od ${hm(d.start)}`;
 
 /**
  * Vety hlavičky karty Môžem? v oboch tónoch. `soon` je „zajtra“ alebo „keď vyjde slnko“.
- * Drzé sú tie isté, ktoré hovorí súčasná appka.
+ * Drzé sú tie isté, ktoré hovorí súčasná appka. Spotrebiče a časy do nich dopĺňa Plán dňa (PlanHero).
  */
 const HERO_SAY = {
     drzy: {
@@ -342,7 +342,9 @@ const HERO_SAY = {
         rest: (/** @type {string} */ soon) => ` Zvyšok ${soon}.`,
         made: 'dnes strecha nahnala',
         live: 'Slnko to teraz platí za nás.',
-        go: ' Práčka, sušička, auto, čo chceš.',
+        nostrong: 'Na veľké veci už slnko nestačí.',
+        onCheap: (/** @type {string} */ name, /** @type {string} */ time) => `${name} od ${time} na lacný prúd`,
+        restWord: 'zvyšok',
     },
     slusny: {
         bezpanelov: 'Nepoznám vaše panely, takže neviem, koľko strecha zvládne. Ak to potrebujete, zapnite to.',
@@ -354,17 +356,22 @@ const HERO_SAY = {
         rest: (/** @type {string} */ soon) => ` Ostatné ${soon}.`,
         made: 'dnes strecha vyrobila',
         live: 'Elektrinu teraz dodáva slnko.',
-        go: ' Môžete zapnúť práčku, sušičku aj nabíjanie auta.',
+        nostrong: 'Na veľké spotrebiče už slnko nestačí.',
+        onCheap: (/** @type {string} */ name, /** @type {string} */ time) => `${name} od ${time} z lacnej siete`,
+        restWord: 'ostatné',
     },
 };
 /** @typedef {(typeof HERO_SAY)['drzy']} HeroSay */
 
 /**
- * Veta a fakt pod veľkým slovom. Bez `data` (načítava sa, dáta nie sú) len stála veta.
+ * Veta a fakt pod veľkým slovom. Bez `data` (načítava sa, dáta nie sú) len stála veta. Spotrebiče
+ * a časy sú z Plánu dňa (`plan`, null bez spotrebičov doma - vtedy veta o slnku bez nich).
  * @param {import('./mozem.js').MozemState} state
  * @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, live: boolean, silentSince: string | null,
- *   measured: boolean, kwNow: number, todayKwh: number | null, tomorrowKwh: number | null, typicalKwp?: number | null } | null} data
- *   `typicalKwp`: výkon typickej strechy, keď appka panely nepozná
+ *   measured: boolean, kwNow: number, todayKwh: number | null, tomorrowKwh: number | null, typicalKwp?: number | null,
+ *   plan: PlanHero | null, sunLeft: boolean } | null} data
+ *   `typicalKwp`: výkon typickej strechy, keď appka panely nepozná; `sunLeft`: slnko ešte svieti dosť
+ *   (zelená teraz alebo neskôr), len na nič z plánu
  * @param {Voice} [voice]
  * @returns {{ lead: string, factK: string, factV: string }}
  */
@@ -374,26 +381,56 @@ export function mozemHeroText(state, data, voice = 'drzy') {
     if (state === 'bezpanelov') return { lead: say.bezpanelov, factK: 'panely', factV: 'nezadané' };
     if (!data || state === 'offline') return { lead: say.offline, factK: 'dáta', factV: 'nedostupné' };
     if (state === 'go') return goHero(data, say);
-    if (state === 'wait') {
-        const { ctx, window } = data;
-        const start = window ? window.from : ctx.nowMin;
-        return {
-            lead: `Za ${countdownText(start - ctx.nowMin)} to pôjde zo strechy.${ctx.draha ? say.pay : ''}`,
-            factK: 'štart',
-            factV: hm(start),
-        };
-    }
+    if (state === 'wait') return waitHero(data, say);
     return afterHero(state, data, say);
 }
 
 /**
- * Hlavička, keď dnes slnko už nepríde: slabý deň, alebo po zmene.
+ * Hlavička, keď slnko na niečo z plánu príde až neskôr: za koľko a čo (bez plánu len kedy).
+ * @param {{ ctx: DayCtx, window: MozemWindow | null, plan: PlanHero | null }} data @param {HeroSay} say
+ */
+function waitHero({ ctx, window, plan }, say) {
+    const next = plan?.next;
+    const start = next ? next.start : window ? window.from : ctx.nowMin;
+    const what = next ? `pôjde zo strechy ${next.name.toLowerCase()}` : 'to pôjde zo strechy';
+    return {
+        lead: `Za ${countdownText(start - ctx.nowMin)} ${what}.${ctx.draha ? say.pay : ''}`,
+        factK: 'štart',
+        factV: hm(start),
+    };
+}
+
+/**
+ * Čo hovorí Plán dňa hlavičke karty Môžem?: spotrebiče, ktoré idú teraz, najbližší ďalší na
+ * slnku a prvý v lacnom pásme (mená ako v riadkoch plánu, časy v minútach dňa).
+ * @typedef {{ now: string[], next: { name: string, start: number } | null, cheap: { name: string, start: number } | null }} PlanHero
+ */
+
+/**
+ * Časť vety o pláne, keď svieti: „ Teraz práčka a umývačka, o 09:20 auto.“ Bez plánu prázdna.
+ * @param {PlanHero | null} plan @param {HeroSay} say
+ */
+function planNowText(plan, say) {
+    if (!plan || !plan.now.length) return '';
+    const low = (/** @type {string} */ s) => s.toLowerCase();
+    const then = plan.next
+        ? `, o ${hm(plan.next.start)} ${low(plan.next.name)}`
+        : plan.cheap
+          ? `, ${low(say.onCheap(plan.cheap.name, hm(plan.cheap.start)))}`
+          : '';
+    return ` Teraz ${andList(plan.now.map(low))}${then}.`;
+}
+
+/**
+ * Hlavička, keď dnes z plánu na slnku už nič nepríde: slabý deň, po zmene, alebo slnko ešte svieti,
+ * ale na veľké veci nestačí (`sunLeft`).
  * @param {import('./mozem.js').MozemState} state
- * @param {{ ctx: DayCtx, nextDay: LaterDay | null, measured: boolean, todayKwh: number | null, tomorrowKwh: number | null }} data
+ * @param {{ ctx: DayCtx, nextDay: LaterDay | null, measured: boolean, todayKwh: number | null, tomorrowKwh: number | null,
+ *   plan: PlanHero | null, sunLeft: boolean }} data
  *   `measured`: dnešok je z merania, nie z predpovede
  * @param {HeroSay} say vety v tóne
  */
-function afterHero(state, { ctx, nextDay, measured, todayKwh, tomorrowKwh }, say) {
+function afterHero(state, { ctx, nextDay, measured, todayKwh, tomorrowKwh, plan, sunLeft }, say) {
     const soon = nextDay && nextDay.index === 1 ? 'zajtra' : 'keď vyjde slnko';
     const kwh = (/** @type {number | null} */ v) => (v === null ? '–' : `~${Math.round(v)} kWh`);
     if (state === 'slabo')
@@ -402,8 +439,10 @@ function afterHero(state, { ctx, nextDay, measured, todayKwh, tomorrowKwh }, say
             factK: 'dnes len',
             factV: kwh(todayKwh) + (tomorrowKwh === null ? '' : ` · zajtra ${kwh(tomorrowKwh)}`),
         };
+    // Slnko ešte svieti, len na nič z plánu nestačí - nie „skončilo“. Lacné pásmo povie plán aj s časom.
+    const rest = plan?.cheap ? ` ${say.onCheap(plan.cheap.name, hm(plan.cheap.start))}, ${say.restWord} ${soon}.` : '';
     return {
-        lead: `${say.done}${ctx.cheap ? say.cheap(soon) : say.rest(soon)}`,
+        lead: sunLeft ? `${say.nostrong}${rest || say.rest(soon)}` : `${say.done}${ctx.cheap ? say.cheap(soon) : say.rest(soon)}`,
         factK: measured ? say.made : 'dnes podľa predpovede',
         factV: todayKwh === null ? '–' : `${fmt1(todayKwh)} kWh`,
     };
@@ -424,16 +463,17 @@ export function phonesPerHour(kw) {
 export const silentFact = (since) => `meranie neodpovedá od ${since}`;
 
 /**
- * Hlavička, keď svieti: s čerstvým meraním nabitia mobilu, bez neho priznaný odhad - pri typickej
- * streche s čím appka počíta, a keď meranie mlčí, odkedy.
- * @param {{ live: boolean, silentSince: string | null, kwNow: number, typicalKwp?: number | null }} data @param {HeroSay} say vety v tóne
+ * Hlavička, keď svieti: čo z plánu ide teraz a čo potom, s čerstvým meraním nabitia mobilu, bez
+ * neho priznaný odhad - pri typickej streche s čím appka počíta, a keď meranie mlčí, odkedy.
+ * @param {{ live: boolean, silentSince: string | null, kwNow: number, typicalKwp?: number | null, plan: PlanHero | null }} data
+ * @param {HeroSay} say vety v tóne
  */
-function goHero({ live, silentSince, kwNow, typicalKwp = null }, say) {
-    const lead = live ? say.live : 'Podľa predpovede teraz svieti naplno.';
-    if (!live && typicalKwp !== null) return { lead: `${lead}${say.go}`, factK: 'typická strecha', factV: kwpRoughText(typicalKwp) };
+function goHero({ live, silentSince, kwNow, typicalKwp = null, plan }, say) {
+    const lead = `${live ? say.live : 'Podľa predpovede teraz svieti.'}${planNowText(plan, say)}`;
+    if (!live && typicalKwp !== null) return { lead, factK: 'typická strecha', factV: kwpRoughText(typicalKwp) };
     const phones = phonesPerHour(kwNow);
     return {
-        lead: `${lead}${say.go}`,
+        lead,
         factK: live ? 'strecha za hodinu nabije' : silentSince ? silentFact(silentSince) : NO_LIVE_FACT,
         factV: live ? `~${phones} mobilov` : 'odhad z predpovede',
     };
@@ -604,7 +644,7 @@ function laterItem(a, notToday, voice) {
 /** Nadpis, štítok riadku, ktorý je na rade, a pätka bloku Plán dňa. */
 export const PLAN_DNA_TITLE = 'Plán dňa';
 export const PLAN_DNA_NOW = 'teraz';
-export const PLAN_DNA_NOTE = 'Jeden po druhom, aby sa o slnko nebili.';
+export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
 /** Tlačidlo, ktoré zbalí rozbalený Plán dňa späť na prvý riadok. */
 export const PLAN_DNA_LESS = 'Skryť plán';
 /** Tlačidlo zbaleného Plánu dňa: koľko riadkov je pod prvým. @param {number} n */
@@ -899,6 +939,41 @@ export function mozemTileNote(a) {
     if (a.kind === 'go') return a.km ? `asi ${a.km} km zo slnka` : 'zo slnka';
     if (a.kind === 'cheap') return 'lacná sieť';
     return '';
+}
+
+/**
+ * Dlaždica podľa riadku Plánu dňa: veľká odpoveď (`value`), krátka do zoznamu (`short`), farba
+ * a riadok pod ňou. Na slnku teraz „teraz“ (auto do konca svojho úseku), neskôr „o 10:45“,
+ * inak čas riadku plánu.
+ * @param {{ id: string, kind: string, start?: number, end?: number, km?: number | null, now: boolean, time: string,
+ *   tone: TileTone }} row
+ * @returns {{ value: string, short: string, tone: TileTone, note: string }}
+ */
+export function planTileText(row) {
+    const sunNote = row.km ? `asi ${row.km} km zo slnka` : 'zo slnka';
+    if (row.kind === 'sun' && row.now) {
+        const value = row.id === 'auto' && row.end !== undefined ? `do ${hm(row.end)}` : 'teraz';
+        return { value, short: 'teraz', tone: 'go', note: sunNote };
+    }
+    if (row.kind === 'sun') {
+        const at = `o ${hm(row.start ?? 0)}`;
+        return { value: at, short: at, tone: 'wait', note: sunNote };
+    }
+    if (row.kind === 'cheap') return { value: row.time, short: row.time, tone: 'cheap', note: 'lacná sieť' };
+    return { value: row.time, short: row.time, tone: row.tone, note: '' };
+}
+
+/** Farba odpovede v dlaždici a zozname vecí. @typedef {'go' | 'wait' | 'cheap' | 'no' | 'unk'} TileTone */
+
+/**
+ * Riadok pod dlaždicou skupiny: všetky jej spotrebiče s časom z plánu, rovnaké časy spolu -
+ * „Práčka a umývačka teraz · Sušička o 11:00“.
+ * @param {Array<{ name: string, short: string }>} rows v poradí plánu
+ */
+export function planGroupNote(rows) {
+    /** @type {Map<string, string[]>} */ const byShort = new Map();
+    for (const r of rows) byShort.set(r.short, [...(byShort.get(r.short) ?? []), r.name]);
+    return [...byShort].map(([short, names]) => `${cap(andList(names.map((n) => n.toLowerCase())))} ${short}`).join(' · ');
 }
 
 /**

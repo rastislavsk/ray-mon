@@ -5,7 +5,6 @@ import AxeBuilder from '@axe-core/playwright';
 import { wordSize } from '../../obloha/web/render/mozem.js';
 import {
     LOOK_STORAGE_KEY,
-    MOZEM_GROUPS,
     OLD_STORAGE_KEYS,
     PANELS,
     PLANT,
@@ -700,7 +699,7 @@ test.describe('karta Môžem?', () => {
             const errors = await openObloha(page, { time: at(hm) });
             const m = modelKarty(at(hm));
             await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
-            await expect(page.locator('#mz-items .tile')).toHaveCount(MOZEM_GROUPS.length);
+            await expect(page.locator('#mz-items .tile')).toHaveCount(m.groups.length);
             await expect(page.locator('#mz-retry')).toBeHidden();
             await expect(page.locator('#mz-guess')).toBeHidden();
             // Zelený úsek oblúka je dnešné okno so slnkom; v noci je na oblúku mesiac.
@@ -742,7 +741,7 @@ test.describe('karta Môžem?', () => {
         test(`šírka ${width} px: dlaždice aspoň 44 px, nič sa neoreže, žiadne veľké slovo nepretečie`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
-            await expect(page.locator('#mz-items .tile')).toHaveCount(MOZEM_GROUPS.length);
+            await expect(page.locator('#mz-items .tile')).toHaveCount(modelKarty(FIXED_NOW).groups.length);
             const riadky = await page.locator('#mz-items .tile').evaluateAll((rows) =>
                 rows.map((row) => {
                     const box = row.getBoundingClientRect();
@@ -793,9 +792,10 @@ test.describe('karta Môžem?', () => {
 
     test('ťuknutie na dlaždicu jednej veci otvorí jej panel; Escape, Späť aj krížik ho zavrú a fokus sa vráti', async ({ page }) => {
         const errors = await openObloha(page);
-        const pr = modelKarty(FIXED_NOW).items.find((it) => it.id === 'bojler');
-        if (!pr) throw new Error('bojler v modeli chýba');
-        const riadok = page.locator('[data-item="bojler"]');
+        // Auto je predvolene jediná dlaždica s jednou vecou (bojler doma nie je).
+        const pr = modelKarty(FIXED_NOW).items.find((it) => it.id === 'auto');
+        if (!pr) throw new Error('auto v modeli chýba');
+        const riadok = page.locator('[data-item="auto"]');
         const panel = page.getByRole('dialog', { name: pr.title });
 
         await riadok.click();
