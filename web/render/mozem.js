@@ -84,7 +84,7 @@ function planHtml(plan, open) {
     );
     return (
         `<section class="mozem-plan" aria-labelledby="mozem-plan-ttl"><h3 id="mozem-plan-ttl" class="mozem-plan-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h3>` +
-        `<div class="mozem-plan-box"><ol id="mozem-plan-list" class="mozem-plan-list">${rows.join('')}</ol>` +
+        `<div class="mozem-plan-box"><ol id="mozem-plan-list" class="mozem-plan-list${shown.length < plan.rows.length ? ' zbaleny' : ''}">${rows.join('')}</ol>` +
         (open || !more ? `<p class="mozem-plan-note">${escapeHtml(plan.note)}</p>` : '') +
         (more
             ? `<button type="button" class="mozem-plan-more" data-mozem-plan aria-expanded="${open}" aria-controls="mozem-plan-list">` +

@@ -159,6 +159,7 @@ function renderPlan(plan, open, dom) {
     show(dom.mzPlanMore, more > 0);
     show(dom.mzPlanNote, open || more < 1);
     dom.mzPlanMore.setAttribute('aria-expanded', String(open));
+    dom.mzPlanRows.classList.toggle('zbaleny', rows.length < all.length);
     setText(dom.mzPlanMoreText, open ? PLAN_DNA_LESS : planDnaMoreText(more));
     setText(dom.mzPlanTitle, PLAN_DNA_TITLE);
     setHtml(
@@ -166,7 +167,7 @@ function renderPlan(plan, open, dom) {
         rows
             .map(
                 (r) =>
-                    `<li><span class="row-t" data-tone="${r.tone}">${escapeHtml(r.time)}</span>` +
+                    `<li data-tone="${r.tone}"><span class="row-t" data-tone="${r.tone}">${escapeHtml(r.time)}</span>` +
                     `<b>${escapeHtml(r.name)}${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : ''}</b>` +
                     `<span class="plan-w">${escapeHtml(r.why)}</span></li>`,
             )

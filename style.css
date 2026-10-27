@@ -4190,13 +4190,11 @@ b {
 .mozem-plan {
     display: grid;
     gap: var(--sp-2);
-    margin-top: var(--sp-3);
+    margin-top: var(--sp-5);
 }
+/* Plán je časová os bez rámika: kartami (tlačidlami) ostávajú len dlaždice nad ním. */
 .mozem-plan-box {
-    padding: 4px 14px 12px;
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--ink-12);
-    background: var(--card-bg);
+    padding: 4px 0 0;
 }
 .mozem-plan-list {
     margin: 0;
@@ -4205,12 +4203,48 @@ b {
 }
 /* Čas a meno v riadku, keď sa zmestia; pri veľkom písme sa meno zalomí pod čas. */
 .mozem-plan-list li {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 2px 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--ink-08);
+    padding: 6px 0 18px 30px;
+}
+/* Bodka na osi vo farbe odpovede; prvý riadok (čo je na rade) je plný a svieti. */
+.mozem-plan-list li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 9px;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2.5px solid var(--tone);
+    background: var(--bg);
+}
+.mozem-plan-list li:first-child::before {
+    background: var(--tone);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 22%, transparent);
+}
+/* Čiara k ďalšiemu riadku; zbalený plán má pod prvým riadkom prerušovaný chvost - kroky pokračujú. */
+.mozem-plan-list li::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 27px;
+    bottom: -5px;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--ink-12);
+}
+.mozem-plan-list li:last-child::after {
+    display: none;
+}
+.mozem-plan-list.zbaleny li:last-child::after {
+    display: block;
+    bottom: 2px;
+    background: repeating-linear-gradient(var(--ink-12) 0 4px, transparent 4px 8px);
 }
 .mozem-plan-t {
     min-width: 8em;
@@ -4236,20 +4270,20 @@ b {
     color: var(--ink-70);
 }
 .mozem-plan-note {
-    margin: 10px 0 0;
+    margin: 0 0 0 30px;
     font-size: var(--fs-sm);
     color: var(--ink-45);
 }
 /* Tlačidlo zbaleného či rozbaleného plánu; zbalený plán je bez pätky, tlačidlo stojí hneď pod riadkom. */
 .mozem-plan-more {
-    width: 100%;
+    width: calc(100% - 30px);
     min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--sp-2);
-    margin-top: 4px;
-    padding: 4px 0 0;
+    margin-left: 30px;
+    padding: 0;
     font-size: var(--fs-md);
     font-weight: 600;
     text-align: left;
