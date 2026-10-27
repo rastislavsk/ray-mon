@@ -5,8 +5,8 @@
 import { prepniSpotrebic } from '../shared/oznamenia.js';
 import { nastavOznamenia } from './oznamenia.js';
 
-/** Súčasná appka je v koreni, tam leží aj service worker. */
-const ROOT = './';
+/** Súčasná appka je v koreni, tam leží aj jej service worker (sw.js). */
+const APP = './';
 
 /** @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom */
 export function initOznamenia(store, dom) {
@@ -21,6 +21,6 @@ export function initOznamenia(store, dom) {
         else if (input.dataset.oznamDevice) zmena = prepniSpotrebic(s.oznamenia, input.dataset.oznamDevice);
         else return;
         if (zmena.on || (zmena.hour !== undefined && s.oznamenia.on)) store.setState({ oznamStav: 'caka' });
-        store.setState(await nastavOznamenia(s.oznamenia, zmena, { root: ROOT, timeZone: s.site.timezone }));
+        store.setState(await nastavOznamenia(s.oznamenia, zmena, { app: APP, timeZone: s.site.timezone }));
     });
 }

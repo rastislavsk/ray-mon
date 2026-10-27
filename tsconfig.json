@@ -10,5 +10,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true
   },
-  "include": ["app.js", "boot.js", "web/**/*.js", "obloha/**/*.js", "shared/**/*.js", "worker/src/**/*.js"]
+  "include": ["app.js", "boot.js", "web/**/*.js", "obloha/**/*.js", "shared/**/*.js", "worker/src/**/*.js"],
+  "exclude": ["obloha/sw.js"]
 }

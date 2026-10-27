@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 2 84 84" width="96" height="96">
+    <!-- Odznak oznámenia (sw.js): Android berie len tvar, preto biela na priehľadnom.
+         Zjednodušený favicon.svg: hrubšie lúče, bez čiar panelov - pri 24 dp by zanikli.
+         PNG z neho: vyrenderovať v Chromiu 96 × 96 s priehľadným pozadím. -->
+    <mask id="m">
+        <rect x="0" y="0" width="100" height="100" fill="#fff" />
+        <!-- medzera medzi slnkom a strechou, dvere -->
+        <path d="M15 80 L15 55 L50 30 L85 55 L85 80 Z" fill="#000" stroke="#000" stroke-width="7" stroke-linejoin="round" />
+    </mask>
+    <g mask="url(#m)" fill="#fff" stroke="#fff" stroke-width="5" stroke-linecap="round">
+        <line x1="70" y1="7" x2="70" y2="13" />
+        <line x1="90" y1="27" x2="84" y2="27" />
+        <line x1="84" y1="13" x2="80" y2="17" />
+        <line x1="56" y1="13" x2="60" y2="17" />
+        <circle cx="70" cy="27" r="10" stroke="none" />
+    </g>
+    <mask id="d">
+        <rect x="0" y="0" width="100" height="100" fill="#fff" />
+        <rect x="42" y="61" width="16" height="20" fill="#000" />
+    </mask>
+    <path d="M15 80 L15 55 L50 30 L85 55 L85 80 Z" fill="#fff" mask="url(#d)" />
+</svg>

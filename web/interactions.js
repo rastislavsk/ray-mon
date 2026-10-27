@@ -402,7 +402,7 @@ function initClearData(dom) {
     dom.clearData.addEventListener('click', async () => {
         if (!confirm('Vymazať všetky údaje appky z tohto prehliadača? Nedá sa to vrátiť.')) return;
         // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
-        await vypniOznamenia('./');
+        await vypniOznamenia();
         clearStored();
         history.replaceState(null, '', location.pathname + location.search);
         location.reload();

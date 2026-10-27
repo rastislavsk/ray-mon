@@ -2,8 +2,9 @@
 // boot.js. Worker telefón zobudí prázdnym pushom (worker/src/oznamenia.js); obsah sa vypočíta
 // až tu, z čerstvej predpovede a nastavenia, ktoré appka odložila do Cache API (OZNAMENIA.mirror),
 // tou istou funkciou jadra, akou počíta Plán dňa na karte Môžem? (shared/oznamenia.js).
-// Registrujú ho obe appky s updateViaCache: 'none', aby prehliadač bral aj jeho importy vždy
-// čerstvé. Každý push musí niečo ukázať - pri akejkoľvek chybe ukáže, nech sa človek pozrie do appky.
+// Súčasná appka ho registruje priamo, Živá obloha cez obloha/sw.js s vlastným rozsahom (kvôli
+// logu jej nainštalovanej appky v oznámení). Obe s updateViaCache: 'none', aby prehliadač bral
+// aj jeho importy vždy čerstvé. Každý push musí niečo ukázať - pri akejkoľvek chybe ukáže, nech sa človek pozrie do appky.
 // Mimo tsc: typy prehliadača (DOM) a service workera (WebWorker) sa v jednom projekte nedajú
 // zapnúť naraz. Logika je v shared/, tam ju tsc aj testy kontrolujú.
 
@@ -11,7 +12,13 @@ import { OZNAMENIA, openMeteoUrl, WORKER_OZNAMENIA_URL, WORKER_PRIPOMEN_URL } fr
 import { oznameniaTexts } from './shared/messages-core.js';
 import { swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 
-const ICON = 'icon-192.png';
+// Koreň appky. Tento súbor importuje aj obloha/sw.js, takže adresy sa nesmú počítať voči
+// rozsahu ani adrese service workera, ale voči tomuto súboru.
+const ROOT = new URL('./', import.meta.url).href;
+const ICON = new URL('icon-192.png', ROOT).href;
+// Malá ikona v lište (a na čistom Androide aj vľavo v oznámení). Android z nej berie len tvar
+// (priehľadnosť), farbu dá sám; bez nej tam ukáže logo Chrome. Zdroj je badge.svg.
+const BADGE = new URL('badge-96.png', ROOT).href;
 // Ranný plán a pripomienka majú vlastné značky, aby pripomienka plán v lište neprepísala.
 // `renotify`: aj oznámenie, ktoré nahradí staré s tou istou značkou, zazvoní.
 const TAG = { plan: 'plan-dna', remind: 'pripomienka' };
@@ -31,7 +38,7 @@ const ziskaj = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.tim
 
 /** @param {string} tag @param {{ title: string, body: string }} n @param {object} [extra] */
 const ukazOznamenie = (tag, n, extra = {}) =>
-    self.registration.showNotification(n.title, { body: n.body, icon: ICON, tag, renotify: true, ...extra });
+    self.registration.showNotification(n.title, { body: n.body, icon: ICON, badge: BADGE, tag, renotify: true, ...extra });
 
 /** Oznámenie z plánu dňa; keď sa nedá vypočítať, aspoň výzva pozrieť appku. */
 async function ukaz() {
@@ -72,7 +79,7 @@ async function pripomen(data) {
 /** Ťuknutie: tlačidlo Pripomeň, inak otvorí appku (okno práve tej appky, nie druhej). */
 async function klik(action, data) {
     if (action === 'pripomen' && data?.remind) return pripomen(data);
-    const url = new URL(data?.app ?? './', self.registration.scope);
+    const url = new URL(data?.app ?? './', ROOT);
     const appka = (/** @type {string} */ u) => new URL(u).pathname.replace(/index\.html$/, '') === url.pathname;
     const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const okno = okna.find((c) => appka(c.url));

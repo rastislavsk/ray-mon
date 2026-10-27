@@ -51,8 +51,8 @@ const store = createStore({
 });
 
 initUrlMirror(store);
-initOznamZrkadlo(store, './', './');
-initOznamZosulad(store, './');
+initOznamZrkadlo(store, './');
+initOznamZosulad(store);
 store.subscribe((state) => render(state, dom));
 const refresh = initInteractions(store, dom, mq);
 render(store.get(), dom);

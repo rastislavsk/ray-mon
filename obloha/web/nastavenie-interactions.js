@@ -47,8 +47,8 @@ export function initNastavenie(store, dom, refresh) {
     initAppSheets(store, dom);
 }
 
-/** Nová appka je v obloha/, service worker v koreni nad ňou. */
-const ROOT = '../';
+/** Nová appka je v obloha/, má tam aj vlastný service worker (obloha/sw.js). */
+const APP = 'obloha/';
 
 /**
  * Oznámenia: prepínač, hodina a spotrebiče doma. Zapnutie, vypnutie a uloženie je spoločné so
@@ -62,7 +62,7 @@ function initOznam(store, dom) {
         // Kým sa zapína, ďalšia zmena by sa po dobehnutí prepísala starou voľbou.
         if (s.oznamStav === 'caka') return;
         if (zmena.on || (zmena.hour !== undefined && s.oznamenia.on)) store.setState({ oznamStav: 'caka' });
-        store.setState(await nastavOznamenia(s.oznamenia, zmena, { root: ROOT, timeZone: s.site.timezone }));
+        store.setState(await nastavOznamenia(s.oznamenia, zmena, { app: APP, timeZone: s.site.timezone }));
     };
     dom.nsOznam.addEventListener('click', () => nastav({ on: !store.get().oznamenia.on }));
     dom.nsOznamHour.addEventListener('click', (e) => {
@@ -128,7 +128,7 @@ function initAppSheets(store, dom) {
     dom.nsShareKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.nsShareKiosk.checked }));
     dom.nsResetOk.addEventListener('click', async () => {
         // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
-        await vypniOznamenia(ROOT);
+        await vypniOznamenia();
         clearStored();
         history.replaceState(null, '', location.pathname + location.search);
         location.reload();

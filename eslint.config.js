@@ -74,7 +74,7 @@ export default [
         rules,
     },
     {
-        files: ['sw.js'],
+        files: ['sw.js', 'obloha/sw.js'],
         languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.serviceworker },
         rules,
     },

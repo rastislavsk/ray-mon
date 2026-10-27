@@ -128,19 +128,22 @@ test.describe('oznámenia: Živá obloha', () => {
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.zakazane);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
     });
-    test('povolené, ale bez push služby: service worker z obloha/ sa zaregistruje v koreni, zapnutie zlyhá s hláškou', async ({ page }) => {
+    test('povolené, ale bez push služby: vlastný service worker oblohy s rozsahom obloha/, zapnutie zlyhá s hláškou', async ({ page }) => {
         await otvor(page, 'obloha', 'granted');
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-oznam').click();
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.chyba);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
-        const reg = await page.evaluate(async () => {
-            const r = await navigator.serviceWorker.getRegistration('../sw.js');
-            return r ? { scope: r.scope, state: r.active?.state ?? null } : null;
-        });
-        expect(reg?.state).toBe('activated');
-        expect(reg?.scope).toMatch(/\/$/);
-        expect(reg?.scope).not.toMatch(/obloha\/$/);
+        const regs = await page.evaluate(async () =>
+            (await navigator.serviceWorker.getRegistrations()).map((r) => ({
+                scope: new URL(r.scope).pathname,
+                script: r.active ? new URL(r.active.scriptURL).pathname : null,
+                state: r.active?.state ?? null,
+            })),
+        );
+        // Rozsah obloha/ - Android potom oznámenie pripíše nainštalovanej oblohe (jej logo), nie Chrome.
+        // Koreňový sa nezaregistroval: oznámenie posiela len appka, v ktorej sa zaplo.
+        expect(regs).toEqual([{ scope: '/obloha/', script: '/obloha/sw.js', state: 'activated' }]);
     });
 });
 
@@ -184,7 +187,7 @@ test.describe('oznámenia: obe appky', () => {
             };
             const precitaj = async () => (await (await caches.open(OZNAMENIA.cache)).match(OZNAMENIA.mirror))?.json() ?? null;
             const pockaj = () => new Promise((r) => setTimeout(r, 200));
-            m.initOznamZrkadlo(store, './', './');
+            m.initOznamZrkadlo(store, './');
             await pockaj();
             const prve = await precitaj();
             nastav({ oznamenia: { ...s.oznamenia, on: false } });

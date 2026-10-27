@@ -29,8 +29,8 @@ Bez pripojeného merania je aj „teraz“ odhad z predpovede. Návrh a prečo p
 
 Ranné oznámenie (Nastavenie › Oznámenia, `docs/navrhy/oznamenia.html`): telefón sa prihlási
 k Web Push a Worker si uloží len adresu odberu, hodinu a časové pásmo (KV `ODBERY`). Plánovaný
-beh ho v tú hodinu zobudí prázdnym pushom. Service worker `sw.js` (v koreni, pre obe appky,
-súbory necachuje) si stiahne predpoveď a plán dňa vypočíta tou istou funkciou jadra ako blok
+beh ho v tú hodinu zobudí prázdnym pushom. Service worker `sw.js` (v koreni, súbory necachuje;
+nová appka ho má cez `obloha/sw.js` s vlastným rozsahom, aby oznámenie nieslo jej logo a nie Chrome) si stiahne predpoveď a plán dňa vypočíta tou istou funkciou jadra ako blok
 Plán dňa na karte Môžem? (`shared/plan-dna.js`, `shared/oznamenia.js`). Nastavenie mu appka
 odkladá do Cache API, lebo service worker nevidí localStorage (`web/oznamenia.js`).
 
