@@ -3075,7 +3075,7 @@ test.describe('karta Môžem?', () => {
     /** Model karty tak, ako ho appka počíta v pevnom čase testov. */
     const model = () => mozemModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
 
-    test('o 13:00 za jasna: veľké slovo, veta, pás dneška a dlaždice Čo môžem podľa modelu', async ({ page }) => {
+    test('o 13:00 za jasna: veľké slovo, veta, fakt a dlaždice Čo môžem podľa modelu, pás dneška nie je', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
@@ -3083,7 +3083,7 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('.mozem-word')).toHaveText(m.word);
         await expect(page.locator('.mozem-lead')).toHaveText(m.hero.lead);
         await expect(page.locator('.mozem-fact')).toContainText(m.hero.factV);
-        await expect(page.locator('.mozem-strip-lbl')).toHaveText(m.strip?.text || '');
+        await expect(page.locator('.mozem-strip')).toHaveCount(0);
         await expect(page.locator('.mozem-tiles-ttl')).toHaveText(mozemListTitle(false));
         await expect(page.locator('.mozem-tile-name')).toHaveText(m.groups.map((g) => g.name));
         await expect(page.locator('.mozem-tile b')).toHaveText(m.groups.map((g) => g.value));
@@ -3181,12 +3181,11 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez dát: Neviem., bez pásu dneška, spotrebiče neviem', async ({ page }) => {
+    test('bez dát: Neviem., spotrebiče neviem', async ({ page }) => {
         const errors = await openApp(page, { offline: true });
         await page.locator('#nav-mozem').click();
         await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
-        await expect(page.locator('.mozem-strip')).toHaveCount(0);
-        await expect(page.locator('.mozem-tile b')).toHaveText(['neviem', 'neviem', 'neviem', 'kedykoľvek']);
+        await expect(page.locator('.mozem-tile b')).toHaveText(['neviem', 'neviem', 'neviem']);
         await expect(page.locator('.mozem-tile-bar'), 'bez okna slnka pás nie je').toHaveCount(0);
         expect(errors).toEqual([]);
     });

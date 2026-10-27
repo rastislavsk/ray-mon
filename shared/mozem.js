@@ -8,7 +8,6 @@ import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { pad2, weekDayName } from './format.js';
 import {
-    MOZEM_GROUP_ALWAYS,
     MOZEM_GROUP_NAMES,
     mozemHeroText,
     mozemItemText,
@@ -24,7 +23,7 @@ import { bandAt, scheduleFor } from './tariff.js';
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
 /** @typedef {import('./messages.js').Voice} Voice */
-/** Pás dneška: geometria (stripGeometry) a veta pod ním. @typedef {ReturnType<typeof stripGeometry> & { text: string }} Strip */
+/** Pás dňa v širokej dlaždici: geometria (stripGeometry) a veta do panelu skupiny. @typedef {ReturnType<typeof stripGeometry> & { text: string }} Strip */
 /** @typedef {{ from: number, to: number }} Window úsek dňa v minútach od polnoci, `to` je bez neho */
 /** @typedef {'go' | 'wait' | 'slabo' | 'none' | 'offline' | 'loading' | 'bezpanelov'} MozemState */
 /**
@@ -40,7 +39,7 @@ import { bandAt, scheduleFor } from './tariff.js';
  *   | { kind: 'wait', start: number }
  *   | { kind: 'cheap', next: LaterDay | null }
  *   | { kind: 'later', day: LaterDay, weakSkipped: boolean }
- *   | { kind: 'none' } | { kind: 'unk' } | { kind: 'always' }} Answer
+ *   | { kind: 'none' } | { kind: 'unk' }} Answer
  */
 /**
  * Čo o dni vie celá karta - vstup pre texty.
@@ -118,7 +117,7 @@ export function kmFromSun(ctx, end, powerKw) {
  */
 export function itemAnswer(item, ctx) {
     const device = deviceOf(item.device);
-    if (!device) return { kind: 'always' };
+    if (!device) return { kind: 'unk' };
     const minKw = item.runMin === null ? ctx.th.highKw : ctx.th.lowKw;
     const usable = device.weakDay || !ctx.weakToday;
     const today = usable ? todayAnswer(item, device.powerKw, minKw, ctx) : null;
@@ -253,7 +252,7 @@ function emptyHead(loading, noPanels, voice) {
  * v oboch appkách. Bez polohy (`nic`) neodpovedá.
  *
  * `facts` sú údaje dňa (null bez odpovede): cena siete teraz, dnešné okno so slnkom (to isté
- * ako pás dneška), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
+ * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
  * @param {{ voice?: Voice }} [opts] `voice` tón textov
@@ -278,7 +277,7 @@ export function mozemModel(input, { voice = 'drzy' } = {}) {
 }
 
 /** Poradie odpovedí od najlepšej: dlaždica skupiny ukáže najlepšiu odpoveď svojich vecí. */
-const RANK = { always: 0, go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
+const RANK = { go: 0, wait: 1, cheap: 2, later: 3, none: 4, unk: 5 };
 
 /**
  * Dlaždice skupín (MOZEM_GROUPS): jedna odpoveď za skupinu. `key` je to, čo ťuknutie otvorí -
@@ -301,7 +300,6 @@ function groupsOf(items, strip) {
             .filter((it) => it.tone !== best.tone)
             .map((it) => `${it.name} ${it.short}`)
             .join(' · ');
-        const always = own.every((it) => it.answer.kind === 'always');
         return {
             ...base,
             key: g.id,
@@ -309,7 +307,7 @@ function groupsOf(items, strip) {
             tone: best.tone,
             note,
             bar: g.size === 'wide' ? barOf(strip) : null,
-            sheet: { title: `${name}: ${value}`, lead: always ? MOZEM_GROUP_ALWAYS : (strip?.text ?? ''), rows: own },
+            sheet: { title: `${name}: ${value}`, lead: strip?.text ?? '', rows: own },
         };
     });
 }
@@ -341,20 +339,20 @@ function barOf(strip) {
 }
 
 /**
- * Veci karty s odpoveďou. Bez predpovede (`ctx` null) spotrebič nevie a ostatné idú vždy. Pri
+ * Veci karty s odpoveďou. Bez predpovede (`ctx` null) karta o žiadnej nevie. Pri
  * veci ostáva aj odpoveď (`answer`) - z nej nová appka skladá dlaždice skupín.
  * @param {PlanInput} input @param {DayCtx | null} ctx @param {Voice} [voice]
  */
 function mozemItems(input, ctx, voice = 'drzy') {
     return MOZEM_ITEMS.map((item) => {
-        /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : deviceOf(item.device) ? { kind: 'unk' } : { kind: 'always' };
+        /** @type {Answer} */ const answer = ctx ? itemAnswer(item, ctx) : { kind: 'unk' };
         const text = mozemItemText(item, answer, ctx && { ctx, cost: itemCost(item, ctx) }, voice);
         return { id: item.id, ...text, title: `${text.name}: ${text.short}`, answer };
     });
 }
 
 /**
- * Hlavička karty z plánu dňa: stav, veľké slovo, veta a pás dneška. `typicalKwp` je výkon
+ * Hlavička karty z plánu dňa: stav, veľké slovo, veta a pás dňa pre dlaždicu. `typicalKwp` je výkon
  * typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
  * @param {PlanInput} input @param {DayCtx} ctx @param {Voice} voice @param {number | null} typicalKwp
  */

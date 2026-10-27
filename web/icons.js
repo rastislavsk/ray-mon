@@ -20,8 +20,6 @@ export const MOZEM_ICONS = {
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0"/></svg>',
     auto: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18"/></svg>',
     bojler: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>',
-    hranie: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6h-4A4 4 0 0 1 3 13v-1a4 4 0 0 1 4-4zM7.5 10.5v3M6 12h3M15.5 11.2h.01M17.5 13h.01"/></svg>',
-    fen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5a4.5 4.5 0 0 1 4.5-4.5H20v9H8.5A4.5 4.5 0 0 1 4 7.5zM9 12l1.5 8.5h3L12.5 12M20 5v5"/></svg>',
 };
 
 /** Ikony riadkov v prehľade elektrárne (karta Nastavenie). */

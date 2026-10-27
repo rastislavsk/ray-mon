@@ -868,7 +868,6 @@ test.describe('karta Môžem?', () => {
         await expect(page.locator('#mz-lead')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
         await expect(page.locator('#mz-list-title')).toHaveText('Čo môžem');
         await expect(page.locator('[data-item="velke"] b')).toHaveText('neviem');
-        await expect(page.locator('[data-item="drobne"] b')).toHaveText('kedykoľvek');
         await expect(page.locator('#mz-phones')).toBeHidden();
         const znova = page.getByRole('button', { name: 'Skúsiť znova' });
         await expect(znova).toBeVisible();

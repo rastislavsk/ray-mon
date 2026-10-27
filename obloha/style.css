@@ -524,7 +524,7 @@ button.live[aria-expanded='true'] {
     font-style: italic;
 }
 /* Dlaždice vecí v skupinách: tmavé sklo ako .glass, aby biely text bol čitateľný na každej
-   oblohe. Široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. */
+   oblohe. Široká cez celý riadok s pásom dňa, polovičné vedľa seba. */
 .tiles-box {
     display: grid;
     gap: 8px;
@@ -557,8 +557,7 @@ button.live[aria-expanded='true'] {
     text-align: left;
     cursor: pointer;
 }
-.tile[data-size='wide'],
-.tile[data-size='slim'] {
+.tile[data-size='wide'] {
     grid-column: 1 / -1;
 }
 .tile-hd {
@@ -609,30 +608,6 @@ button.live[aria-expanded='true'] {
 .tile small {
     font-size: 0.8125rem;
     color: var(--dim);
-}
-/* Tenký pás: ikony, meno a odpoveď v jednom riadku. */
-.tile[data-size='slim'] {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 10px;
-    padding: 10px 14px;
-}
-.tile[data-size='slim'] .tile-name {
-    flex: 1;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    letter-spacing: 0;
-    text-transform: none;
-    color: #fff;
-}
-.tile[data-size='slim'] b {
-    margin: 0;
-    font-size: 0.9375rem;
-}
-.tile[data-size='slim'] b::before {
-    width: 8px;
-    height: 8px;
 }
 /* Farba odpovede: tie isté významy ako všade - zelená slnko, modrá lacná sieť. */
 .tile[data-tone='go'] > b,

@@ -4073,62 +4073,8 @@ b {
     font-size: 13px;
     font-weight: 600;
 }
-.mozem-strip {
-    margin: 2px 6px 0;
-}
-.mozem-strip-top {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.mozem-track {
-    position: relative;
-    height: 22px;
-    margin-top: 6px;
-    border-radius: var(--radius-sm);
-    background: var(--ink-08);
-    overflow: hidden;
-}
-.mozem-win {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-radius: var(--radius-sm);
-    background: var(--green);
-}
-.mozem-win.st-wait {
-    background: var(--amber);
-}
-.mozem-win.st-none,
-.mozem-win.st-slabo {
-    background: var(--ink-20);
-}
-.mozem-past {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 4px, rgba(0, 0, 0, 0.2) 4px 8px);
-}
-.mozem-now {
-    position: absolute;
-    top: -2px;
-    bottom: -2px;
-    width: 3px;
-    margin-left: -1.5px;
-    background: #fff;
-}
-.mozem-strip-lbl {
-    margin: 6px 0 0;
-    font-size: var(--fs-md);
-    color: var(--ink-70);
-}
 /* Dlaždice skupín vecí (ako v novej appke, docs/navrhy/smer-b-obloha.html) vo farbách tejto:
-   široká cez celý riadok s pásom dňa, polovičné vedľa seba, tenký pás dole. Celá dlaždica je
+   široká cez celý riadok s pásom dňa, polovičné vedľa seba. Celá dlaždica je
    tlačidlo, ktoré otvorí panel veci či skupiny zospodu. */
 .mozem-tiles-box {
     display: grid;
@@ -4165,8 +4111,7 @@ b {
     background: var(--card-bg);
     text-align: left;
 }
-.mozem-tile[data-size='wide'],
-.mozem-tile[data-size='slim'] {
+.mozem-tile[data-size='wide'] {
     grid-column: 1 / -1;
 }
 .mozem-tile-hd {
@@ -4216,30 +4161,6 @@ b {
     font-family: var(--font-mono);
     font-size: var(--fs-sm);
     color: var(--ink-70);
-}
-/* Tenký pás: ikony, meno a odpoveď v jednom riadku. */
-.mozem-tile[data-size='slim'] {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 10px;
-    padding: 10px 14px;
-}
-.mozem-tile[data-size='slim'] .mozem-tile-name {
-    flex: 1;
-    font-family: inherit;
-    font-size: 15px;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--ink);
-}
-.mozem-tile[data-size='slim'] b {
-    margin: 0;
-    font-size: 15px;
-}
-.mozem-tile[data-size='slim'] b::before {
-    width: 8px;
-    height: 8px;
 }
 /* Farba odpovede: tie isté významy ako v celej appke - zelená slnko, oranžová počkať či lacná
    sieť, červená nie, sivá neviem. */

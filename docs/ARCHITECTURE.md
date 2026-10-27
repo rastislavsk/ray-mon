@@ -273,12 +273,12 @@ Karta Môžem? novej appky odpovedá tým istým `mozemModel` ako súčasná –
 odpovede vecí sú tie isté. `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
 len zo živého a čerstvého merania, inak s „asi“), oblúk slnka (`sunArc`: skutočný
-východ a západ, zelený úsek je okno z pása dneška) a vetu, prečo dáta nie sú. Pri známej polohe
+východ a západ, zelený úsek je dnešné okno so slnkom) a vetu, prečo dáta nie sú. Pri známej polohe
 bez panelov odpovedá z typickej strechy (`estimate` v `mozemModel`) a priznáva odhad - rovnako ako
 súčasná appka, ktorá to hovorí jantárovým pásom pod hlavičkou a riadkom „typická strecha“.
 
 Veci sú v skupinách (`MOZEM_GROUPS` v `config.js`, návrh A v `docs/navrhy/mozem-skupiny.html`):
-veľké spotrebiče, auto, bojler a drobnosti (hranie, fén). Zoznam vecí (`MOZEM_ITEMS`) je jeden pre
+veľké spotrebiče, auto a bojler. Zoznam vecí (`MOZEM_ITEMS`) je jeden pre
 obe appky a dlaždice skupín (`groups` v `mozemModel`) tiež - obe appky ich kreslia rovnako, každá
 vo svojich farbách. Dlaždica ukáže jednu odpoveď skupiny:
 najlepšiu z jej vecí, a keď svieti, koniec slnka (spoločný pre všetky), nie štart programu.

@@ -65,8 +65,6 @@ const ICONS = {
         '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M10 12c1-1 3 1 4 0M10 14.5c1-1 3 1 4 0"/>',
     auto: '<path d="M4 16.5v-4l2.2-5h11.6l2.2 5v4z"/><path d="M4 12.5h16"/><circle cx="8" cy="16.5" r="1.8"/><circle cx="16" cy="16.5" r="1.8"/>',
     bojler: '<rect x="7" y="2.5" width="10" height="17" rx="5"/><path d="M12 8c-1.7 2.2-2.2 3.2-2.2 4.3a2.2 2.2 0 0 0 4.4 0c0-1.1-.5-2.1-2.2-4.3z"/><path d="M10 19.5v2M14 19.5v2"/>',
-    hranie: '<path d="M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3 3 0 0 1-5.3 1.9L14.5 14h-5l-1.2 1.4A3 3 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8z"/><path d="M8 10v3.5M6.25 11.75h3.5"/>',
-    fen: '<circle cx="9" cy="9" r="5"/><circle cx="9" cy="9" r="1.6"/><path d="M14 6.5h6v5h-6M11 13.8l-1.2 6.7h3L14 12"/>',
 };
 
 /** @param {string} id */
@@ -92,7 +90,7 @@ function tilesHtml(groups) {
             const icons = g.items.map(icon).join('');
             const name = `<span class="tile-name">${escapeHtml(g.name)}</span>`;
             const value = `<b>${escapeHtml(g.value)}</b>`;
-            const head = g.size === 'slim' ? `${icons}${name}` : `<span class="tile-hd">${icons}${name}</span>`;
+            const head = `<span class="tile-hd">${icons}${name}</span>`;
             const note = g.note ? `<small>${escapeHtml(g.note)}</small>` : '';
             return (
                 `<button type="button" class="tile" data-item="${g.key}" data-size="${g.size}" data-tone="${g.tone}" aria-haspopup="dialog">` +
