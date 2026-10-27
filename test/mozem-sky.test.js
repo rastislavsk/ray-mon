@@ -4,7 +4,6 @@ import { installedKw, MOZEM_GROUPS, MOZEM_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PL
 import { kwpRoughText } from '../shared/format.js';
 import {
     MOZEM_CHIPS,
-    MOZEM_GROUP_ALWAYS,
     MOZEM_GROUP_NAMES,
     mozemGuessText,
     mozemItemText,
@@ -116,7 +115,6 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
         'do 16:00',
         'koniec slnka, nie štart programu',
     );
-    assert.equal(mozemTileValue({ kind: 'always' }, 'vždy OK'), 'kedykoľvek');
     assert.equal(mozemTileValue({ kind: 'wait', start: 630 }, 'o 10:30'), 'o 10:30');
     assert.equal(mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 }), 'asi 60 km zo slnka');
     assert.equal(mozemTileNote({ kind: 'go', end: 900, until: 840, km: null }), 'zo slnka');
@@ -189,7 +187,6 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
             ['velke', 'neviem', 'unk'],
             ['auto', 'neviem', 'unk'],
             ['bojler', 'neviem', 'unk'],
-            ['drobne', 'kedykoľvek', 'go'],
         ],
     );
     assert.equal(m.groups[0].bar, null, 'bez okna slnka pás nie je');
@@ -281,16 +278,15 @@ test('skupiny: veľké spotrebiče o 13:00 - koniec slnka, pás dňa a panel s v
     assert.match(sheet.lead, /^Slnko do /);
 });
 
-test('skupiny: auto, bojler a drobnosti o 13:00', () => {
+test('skupiny: auto a bojler o 13:00', () => {
     const m = mozemSkyModel(input(FIXED_NOW));
-    const [velke, auto, bojler, drobne] = m.groups;
+    const [velke, auto, bojler] = m.groups;
+    assert.equal(m.groups.length, 3);
     assert.equal(bojler.key, 'bojler');
     assert.equal(bojler.sheet, null, 'jedna vec: ťuknutie otvorí jej panel');
     assert.equal(bojler.value, velke.value, 'bojler aj veľké spotrebiče: ten istý koniec slnka');
     assert.equal(bojler.note, 'zo slnka');
     assert.match(auto.note, /km zo slnka$/);
-    assert.equal(drobne.value, 'kedykoľvek');
-    assert.equal(drobne.sheet?.lead, MOZEM_GROUP_ALWAYS);
     assert.equal(
         m.items.find((i) => i.id === 'bojler')?.text,
         'Ohrev trvá asi hodinu a celý čas berie 2 kW. Do 16:30 dobehne celý na slnku.',

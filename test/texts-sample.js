@@ -158,7 +158,6 @@ function directItems(out, v) {
         ['neskor', { kind: 'later', day: later, weakSkipped: true }],
         ['none', { kind: 'none' }],
         ['unk', { kind: 'unk' }],
-        ['always', { kind: 'always' }],
     ];
     for (const item of MOZEM_ITEMS)
         for (const [k, a] of answers)
@@ -223,7 +222,6 @@ function directMisc(out, v) {
     out['list'] = M.mozemListTitle(false);
     out['listOdhad'] = M.mozemListTitle(true);
     strings(M.MOZEM_GROUP_NAMES, 'group', out);
-    out['groupAlways'] = M.MOZEM_GROUP_ALWAYS;
     out['teraz.typical'] = M.terazTypicalText(5, v);
     out['sedem.guess'] = M.sedemGuessText(5, v);
     for (const k of /** @type {const} */ (['vsetko', 'cast', 'nic']))
@@ -304,7 +302,6 @@ function directConsts(out, v) {
         MOZEM_CHIPS: M.MOZEM_CHIPS,
         MOZEM_SKY_TEXTS: M.MOZEM_SKY_TEXTS,
         MOZEM_ITEM_TEXTS: M.MOZEM_ITEM_TEXTS,
-        MOZEM_ALWAYS: M.MOZEM_ALWAYS,
         MOZEM_UNKNOWN: M.MOZEM_UNKNOWN,
         NIGHT_MESSAGES: M.NIGHT_MESSAGES,
         PRICE_MESSAGES: M.PRICE_MESSAGES,

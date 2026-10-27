@@ -117,7 +117,6 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     assert.equal(pracka.more?.a, 'Nevadí. Najviac berie na začiatku pri ohreve vody.', 'pri práčke bez ceny');
     assert.match(item(m, 'auto').more?.a ?? '', /Hodina nabíjania ~\d+,\d\d €/, 'cenu má len auto');
     assert.match(item(m, 'auto').text, /asi \d+ km/);
-    assert.equal(item(m, 'hranie').short, 'vždy OK');
 });
 
 test('meranie mlčí: nie „Slnko to teraz platí za nás“ zo starého čísla, ale odhad a odkedy mlčí', () => {
@@ -198,13 +197,12 @@ test('celý týždeň bez slnka: tento týždeň nie', () => {
     assert.equal(item(m, 'auto').tone, 'cheap', 'cez deň v NT je aspoň lacno');
 });
 
-test('bez dát: neviem, pri spotrebičoch otáznik, hranie ostáva OK', () => {
+test('bez dát: neviem, pri spotrebičoch otáznik', () => {
     const m = mozemModel(input(FIXED_NOW, { pv: null, forecast: null }));
     assert.equal(m.state, 'offline');
     assert.equal(m.word, 'Neviem.');
     assert.equal(m.strip, null);
     assert.equal(item(m, 'pracka').tone, 'unk');
-    assert.equal(item(m, 'hranie').tone, 'go');
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true })).state, 'loading');
 });
 
@@ -240,11 +238,11 @@ test('mozemSheetOf: skupina otvorí panel so zoznamom, vec s jednou dlaždicou s
     assert.equal(mozemSheetOf(m, null), null);
 });
 
-test('itemAnswer a itemCost: veci bez spotrebiča sú vždy OK a nemajú cenu', () => {
-    const hranie = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((i) => i.id === 'hranie'));
+test('itemAnswer a itemCost: vec bez spotrebiča karta nepozná a nemá cenu', () => {
+    const nic = { id: 'nic', device: null, runMin: null, runKwh: null, heat: null };
     const ctx = /** @type {any} */ ({ price: 0.2 });
-    assert.deepEqual(itemAnswer(hranie, ctx), { kind: 'always' });
-    assert.equal(itemCost(hranie, ctx), null);
+    assert.deepEqual(itemAnswer(nic, ctx), { kind: 'unk' });
+    assert.equal(itemCost(nic, ctx), null);
 });
 
 test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu podľa profilu odberu', () => {

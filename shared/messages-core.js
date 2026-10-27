@@ -273,15 +273,7 @@ export const MOZEM_ITEM_TEXTS = {
     umyvacka: { name: 'Umývačka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie pri ohreve vody.' },
     susicka: { name: 'Sušička', verb: 'Pusti', pron: 'ju', cloud: 'Sušička berie prúd celý čas, zvyšok pôjde zo siete.' },
     auto: { name: 'Auto', verb: 'Zapoj', pron: 'ho', cloud: 'Nabíja sa ďalej, len zo siete.' },
-    hranie: { name: 'Hranie', verb: '', pron: '', cloud: '' },
-    fen: { name: 'Fén', verb: '', pron: '', cloud: '' },
     bojler: { name: 'Bojler', verb: 'Zapni', pron: 'ho', cloud: 'Vodu dohreje sieť.', run: 'Ohrev trvá asi' },
-};
-
-/** Veci, ktoré od slnka nezávisia: vždy OK, s vysvetlením. */
-export const MOZEM_ALWAYS = {
-    hranie: { head: 'Vždy OK.', text: 'Konzola aj PC berú menej ako chladnička. Hraj kedy chceš, to nie je otázka pre strechu.' },
-    fen: { head: 'Pokojne.', text: 'Fén berie veľa, ale len pár minút. To sú centy.' },
 };
 
 /** Bez dát o slnku nevie karta o spotrebiči nič povedať. */
@@ -295,15 +287,6 @@ const MOZEM_ITEM_TEXTS_SLUSNE = {
     susicka: { ...MOZEM_ITEM_TEXTS.susicka, verb: 'Pustite' },
     auto: { ...MOZEM_ITEM_TEXTS.auto, verb: 'Zapojte' },
     bojler: { ...MOZEM_ITEM_TEXTS.bojler, verb: 'Zapnite' },
-};
-
-/** @type {typeof MOZEM_ALWAYS} */
-const MOZEM_ALWAYS_SLUSNE = {
-    hranie: {
-        head: 'Vždy v poriadku.',
-        text: 'Konzola aj počítač berú menej ako chladnička. Hrať sa dá kedykoľvek, so strechou to nesúvisí.',
-    },
-    fen: MOZEM_ALWAYS.fen,
 };
 
 /** @type {typeof MOZEM_UNKNOWN} */
@@ -457,7 +440,7 @@ function goHero({ live, silentSince, kwNow, typicalKwp = null }, say) {
 }
 
 /**
- * Veta pod pásom dňa.
+ * Veta o dnešnom slnku v paneli skupiny vecí.
  * @param {import('./mozem.js').MozemState} state @param {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null }} data
  */
 export function mozemStripText(state, { ctx, window, nextDay }) {
@@ -482,7 +465,6 @@ export function mozemItemText(item, a, env, voice = 'drzy') {
     const T = voiceTexts(voice);
     const t = T.MOZEM_ITEM_TEXTS[item.id];
     const base = { name: t.name, more: null };
-    if (a.kind === 'always') return { ...base, tone: 'go', short: 'vždy OK', ...T.MOZEM_ALWAYS[/** @type {'hranie' | 'fen'} */ (item.id)] };
     if (a.kind === 'unk' || !env) return { ...base, tone: 'unk', ...T.MOZEM_UNKNOWN };
     // Cenu má len auto: pri práčke či umývačke sú to centy, ktoré človeka nepresvedčia.
     const cost = item.runMin === null && env.cost !== null ? `Hodina nabíjania ~${money(env.cost, env.ctx.currency)}.` : '';
@@ -893,11 +875,7 @@ export const MOZEM_GROUP_NAMES = {
     velke: 'Veľké spotrebiče',
     auto: 'Auto',
     bojler: 'Bojler',
-    drobne: 'Hranie, fén a drobnosti',
 };
-
-/** Veta v paneli skupiny, ktorej veci od slnka nezávisia. */
-export const MOZEM_GROUP_ALWAYS = 'Berú málo alebo krátko, slnko na ne netreba.';
 
 /**
  * Krátka odpoveď dlaždice: keď svieti, koniec slnka - ten je pre všetky veci skupiny rovnaký,
@@ -905,7 +883,6 @@ export const MOZEM_GROUP_ALWAYS = 'Berú málo alebo krátko, slnko na ne netreb
  * @param {import('./mozem.js').Answer} a @param {string} short krátka odpoveď veci
  */
 export function mozemTileValue(a, short) {
-    if (a.kind === 'always') return 'kedykoľvek';
     if (a.kind === 'go') return `do ${hm(a.end)}`;
     return short;
 }
@@ -1316,7 +1293,6 @@ const DRZY = {
     PRICE_MESSAGES,
     MOZEM_WORDS,
     MOZEM_ITEM_TEXTS,
-    MOZEM_ALWAYS,
     MOZEM_UNKNOWN,
     MOZEM_CHIPS,
     MOZEM_SKY_TEXTS,
@@ -1331,7 +1307,6 @@ const SLUSNY = {
     PRICE_MESSAGES: PRICE_MESSAGES_SLUSNE,
     MOZEM_WORDS: MOZEM_WORDS_SLUSNE,
     MOZEM_ITEM_TEXTS: MOZEM_ITEM_TEXTS_SLUSNE,
-    MOZEM_ALWAYS: MOZEM_ALWAYS_SLUSNE,
     MOZEM_UNKNOWN: MOZEM_UNKNOWN_SLUSNE,
     MOZEM_CHIPS: MOZEM_CHIPS_SLUSNE,
     MOZEM_SKY_TEXTS: MOZEM_SKY_TEXTS_SLUSNE,

@@ -405,8 +405,6 @@ export const MOZEM_ITEMS = [
     { id: 'susicka', device: 'Sušička', runMin: 90, runKwh: 2.2, heat: [[0, 90]] },
     { id: 'auto', device: 'Auto', runMin: null, runKwh: null, heat: null },
     { id: 'bojler', device: 'Bojler', runMin: 60, runKwh: 2, heat: [[0, 60]] },
-    { id: 'hranie', device: null, runMin: null, runKwh: null, heat: null },
-    { id: 'fen', device: null, runMin: null, runKwh: null, heat: null },
 ];
 
 /**
@@ -424,14 +422,13 @@ export const PLAN_DNA = {
 
 /**
  * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
- * (`wide` cez celú šírku s pásom dňa, `half` polovica, `slim` tenký pás). Mená sú v messages.
- * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' | 'slim' }>}
+ * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
+ * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
  */
 export const MOZEM_GROUPS = [
     { id: 'velke', items: ['pracka', 'umyvacka', 'susicka'], size: 'wide' },
     { id: 'auto', items: ['auto'], size: 'half' },
     { id: 'bojler', items: ['bojler'], size: 'half' },
-    { id: 'drobne', items: ['hranie', 'fen'], size: 'slim' },
 ];
 
 /**

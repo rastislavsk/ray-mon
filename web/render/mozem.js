@@ -1,8 +1,8 @@
-// Karta Môžem?: jedno veľké slovo, pás dneška a dlaždice skupín vecí; ťuknutie na dlaždicu otvorí
+// Karta Môžem?: jedno veľké slovo a dlaždice skupín vecí; ťuknutie na dlaždicu otvorí
 // panel veci či skupiny zospodu (ten istý ako v novej appke). Obsah karty skladá render
 // do #mozem-body, panel je dialóg v index.html. Počíta shared/mozem.js, texty sú v shared/messages.js.
 
-import { escapeHtml, hourLabel, minutesToTimeStr } from '../../shared/format.js';
+import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
 import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_NOW, PLAN_DNA_TITLE } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
 import { planDnaModel } from '../../shared/plan-dna.js';
@@ -30,18 +30,6 @@ function heroHtml(m, kick) {
     );
 }
 
-/** Pás dneška: úsek so slnkom, prešlý čas šrafovaný, značka „teraz“. @param {MozemModel} m */
-function stripHtml(m) {
-    const s = m.strip;
-    if (!s) return '';
-    const win = s.width > 0 ? `<i class="mozem-win st-${m.state}" style="left:${s.left}%;width:${s.width}%"></i>` : '';
-    return (
-        `<div class="mozem-strip"><div class="mozem-strip-top" aria-hidden="true"><span>${hourLabel(s.from / 60)}</span><span>dnes</span><span>${hourLabel(s.to / 60)}</span></div>` +
-        `<div class="mozem-track" aria-hidden="true">${win}<i class="mozem-past" style="width:${s.now}%"></i><i class="mozem-now" style="left:${s.now}%"></i></div>` +
-        `<p class="mozem-strip-lbl">${escapeHtml(s.text)}</p></div>`
-    );
-}
-
 /** @param {string} id */
 const iconOf = (id) => MOZEM_ICONS[/** @type {keyof typeof MOZEM_ICONS} */ (id)] || '';
 
@@ -62,7 +50,7 @@ function barHtml(b) {
 function tileHtml(g) {
     const icons = g.items.map(iconOf).join('');
     const name = `<span class="mozem-tile-name">${escapeHtml(g.name)}</span>`;
-    const head = g.size === 'slim' ? `${icons}${name}` : `<span class="mozem-tile-hd">${icons}${name}</span>`;
+    const head = `<span class="mozem-tile-hd">${icons}${name}</span>`;
     const note = g.note ? `<small>${escapeHtml(g.note)}</small>` : '';
     return (
         `<button type="button" class="mozem-tile" data-mozem-item="${g.key}" data-size="${g.size}" data-tone="${g.tone}" aria-haspopup="dialog">` +
@@ -100,7 +88,7 @@ function planHtml(plan) {
  * @param {MozemModel} m @param {string} kick @param {PlanModel} [plan]
  */
 export function mozemHtml(m, kick, plan = null) {
-    return heroHtml(m, kick) + stripHtml(m) + tilesHtml(m) + (m.list ? planHtml(plan) : '');
+    return heroHtml(m, kick) + tilesHtml(m) + (m.list ? planHtml(plan) : '');
 }
 
 /** Riadky panelu skupiny: meno, krátka odpoveď a prečo. @param {MozemModel['items']} rows */
