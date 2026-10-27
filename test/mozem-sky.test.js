@@ -304,7 +304,7 @@ test('skupiny: auto a bojler o 13:00 podľa Plánu dňa', () => {
     assert.match(auto.note, /km zo slnka$/);
     assert.equal(
         m.items.find((i) => i.id === 'bojler')?.text,
-        'Ohrev trvá asi hodinu a celý čas berie 2 kW. Do 16:15 dobehne celý na slnku.',
+        'Ohrev trvá asi hodinu a celý čas berie 2 kW. Pri štarte najneskôr o 16:15 dobehne celý na slnku.',
     );
 });
 
