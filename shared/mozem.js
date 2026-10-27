@@ -3,7 +3,17 @@
 // je tá istá zelená ako v grafe dňa na karte Teraz(ky); ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
-import { DEVICES, EVERYDAY, HOUSE_BASE_KW, installedKw, MOZEM_GROUPS, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
+import {
+    DEVICES,
+    EVERYDAY,
+    HOUSE_BASE_KW,
+    installedKw,
+    MOZEM_GROUPS,
+    MOZEM_ITEMS,
+    PLAN_DNA,
+    powerThresholds,
+    TARIFF_LIMITS,
+} from './config.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { pad2, weekDayName } from './format.js';
@@ -15,10 +25,15 @@ import {
     mozemStripText,
     mozemTileNote,
     mozemTileValue,
+    planGroupNote,
+    planTileText,
     voiceTexts,
 } from './messages-core.js';
 import { daylightSpan, localDateKey, localMinutes, sunUp } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
+// Kruhový import: plan-dna.js stojí na výpočtoch odtiaľto, karta zas na Pláne dňa. Obe strany
+// sa volajú až za behu, nie pri načítaní modulu, takže to ES moduly zvládnu.
+import { planDnaModel } from './plan-dna.js';
 
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
@@ -225,6 +240,33 @@ export function stripGeometry(w, nowMin, span) {
 }
 
 /**
+ * Stav karty podľa Plánu dňa: niečo z plánu ide teraz, príde ešte dnes na slnku, alebo dnes už
+ * nič - vtedy slabý deň, keď dnes zelená vôbec nebola (`sunState` podľa slnka, dayState).
+ * @param {PlanDnaRow[]} rows @param {MozemState} sunState @returns {MozemState}
+ */
+function planState(rows, sunState) {
+    const sun = rows.filter((r) => r.kind === 'sun');
+    if (sun.some((r) => r.now)) return 'go';
+    if (sun.length) return 'wait';
+    return sunState === 'slabo' ? 'slabo' : 'none';
+}
+
+/**
+ * Čo z plánu povie veta pod veľkým slovom: čo ide teraz, najbližšie ďalšie na slnku a prvé
+ * v lacnom pásme. @param {PlanDnaRow[]} rows riadky podľa času
+ * @returns {import('./messages-core.js').PlanHero}
+ */
+function planHero(rows) {
+    const next = rows.find((r) => r.kind === 'sun' && !r.now);
+    const cheap = rows.find((r) => r.kind === 'cheap');
+    return {
+        now: rows.filter((r) => r.kind === 'sun' && r.now).map((r) => r.name),
+        next: next && next.kind === 'sun' ? { name: next.name, start: next.start } : null,
+        cheap: cheap && cheap.kind === 'cheap' ? { name: cheap.name, start: cheap.start } : null,
+    };
+}
+
+/**
  * Stav celej karty: zelená teraz, slnko príde ešte dnes, dnes vôbec (slabý deň), už nie.
  * @param {Window[]} windows @param {number} nowMin @param {boolean} sun
  * @returns {{ state: MozemState, window: Window | null }}
@@ -284,26 +326,69 @@ function emptyHead(loading, noPanels, voice) {
  * `facts` sú údaje dňa (null bez odpovede): cena siete teraz, dnešné okno so slnkom (to isté
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
+ * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`, ten istý blok, ktorý
+ * appky kreslia pod dlaždicami), takže karta nikde nepovie nič iné než plán.
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
- * @param {{ voice?: Voice }} [opts] `voice` tón textov
+ * @param {{ voice?: Voice, devices?: readonly string[] }} [opts] `voice` tón textov, `devices` spotrebiče doma
  */
-export function mozemModel(input, { voice = 'drzy' } = {}) {
+export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices } = {}) {
     const known = input.known || 'elektraren';
     const estimate = known === 'poloha';
     const noPanels = known === 'nic';
     const ctx = input.forecast && !noPanels ? dayCtx(input) : null;
     const items = mozemItems(input, ctx, voice);
+    const plan = ctx ? planDnaModel(input, { devices, voice }) : null;
+    const rows = plan ? plan.rows : [];
     const head = ctx
-        ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null)
+        ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null, rows)
         : { ...emptyHead(input.loading, noPanels, voice), facts: null };
     return {
         ...head,
         estimate,
         items,
+        plan,
         // Kým sa načítava, karta nič netvrdí - dlaždice nie sú.
         list: head.state === 'loading' ? null : { title: mozemListTitle(estimate), estimate },
-        groups: groupsOf(items, head.strip),
+        groups: planGroups(items, head.strip, rows),
     };
+}
+
+/** @typedef {ReturnType<typeof planDnaModel>} MozemModelPlan */
+/** @typedef {NonNullable<MozemModelPlan>['rows'][number]} PlanDnaRow */
+
+/**
+ * Dlaždice skupín podľa Plánu dňa: skupina bez spotrebiča doma sa neukáže. Veľká odpoveď patrí
+ * tomu, čo je v pláne na rade najskôr; pri viacerých veciach riadok pod ňou vymenuje všetky
+ * s časom z plánu (planGroupNote) a panel skupiny ukáže ich časy z plánu. Polovičná dlaždica,
+ * ktorej chýba pár, ide na celú šírku. Bez plánu (nič doma, dáta nie sú) dlaždice z odpovedí vecí.
+ * @param {ReturnType<typeof mozemItems>} items @param {Strip | null} strip @param {PlanDnaRow[]} rows riadky plánu podľa času
+ */
+function planGroups(items, strip, rows) {
+    if (!rows.length) return groupsOf(items, strip);
+    const shown = MOZEM_GROUPS.flatMap((g) => {
+        const own = rows.filter((r) => g.items.includes(r.id));
+        return own.length ? [{ g, own }] : [];
+    });
+    const halves = shown.filter(({ g }) => g.size === 'half');
+    const lonely = halves.length % 2 ? halves[halves.length - 1].g : null;
+    return shown.map(({ g, own }) => {
+        const first = planTileText(own[0]);
+        const name = MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)];
+        const base = { id: g.id, size: g === lonely ? 'wide' : g.size, name, items: g.items, value: first.value, tone: first.tone };
+        if (own.length === 1) return { ...base, key: own[0].id, note: first.note, bar: null, sheet: null };
+        const tiles = own.map((r) => ({ id: r.id, name: r.name, ...planTileText(r) }));
+        const sheetRows = tiles.flatMap((t) => {
+            const it = items.find((i) => i.id === t.id);
+            return it ? [{ ...it, short: t.short, tone: t.tone }] : [];
+        });
+        return {
+            ...base,
+            key: g.id,
+            note: planGroupNote(tiles),
+            bar: g.size === 'wide' ? barOf(strip) : null,
+            sheet: { title: `${name}: ${first.value}`, lead: strip?.text ?? '', rows: sheetRows },
+        };
+    });
 }
 
 /** Poradie odpovedí od najlepšej: dlaždica skupiny ukáže najlepšiu odpoveď svojich vecí. */
@@ -382,21 +467,26 @@ function mozemItems(input, ctx, voice = 'drzy') {
 }
 
 /**
- * Hlavička karty z plánu dňa: stav, veľké slovo, veta a pás dňa pre dlaždicu. `typicalKwp` je výkon
- * typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
+ * Hlavička karty: stav, veľké slovo a veta podľa Plánu dňa, pás dňa pre dlaždicu podľa slnka
+ * (zelenej). `typicalKwp` je výkon typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
  * @param {PlanInput} input @param {DayCtx} ctx @param {Voice} voice @param {number | null} typicalKwp
+ * @param {PlanDnaRow[]} rows riadky Plánu dňa (bez spotrebičov doma prázdne - vtedy stav podľa slnka)
  */
-function dayHead(input, ctx, voice, typicalKwp) {
+function dayHead(input, ctx, voice, typicalKwp, rows) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
-    const { state, window } = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
+    const sun = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
+    const { window } = sun;
+    const state = rows.length ? planState(rows, sun.state) : sun.state;
     const nextDay = laterDay(ctx, ctx.th.lowKw, true).day;
     const facts = heroFacts(input, ctx);
     const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
+    const plan = rows.length ? planHero(rows) : null;
+    const sunLeft = sun.state === 'go' || sun.state === 'wait';
     return {
         state,
         word: voiceTexts(voice).MOZEM_WORDS[state],
-        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp }, voice),
-        strip: { ...stripGeometry(window, ctx.nowMin, ctx.span), text: mozemStripText(state, { ctx, window, nextDay }) },
+        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp, plan, sunLeft }, voice),
+        strip: { ...stripGeometry(window, ctx.nowMin, ctx.span), text: mozemStripText(sun.state, { ctx, window, nextDay }) },
         facts: {
             level: slot.level,
             window,

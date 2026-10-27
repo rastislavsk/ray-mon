@@ -171,6 +171,20 @@ function directItems(out, v) {
         out[`tileNote.${k}`] = M.mozemTileNote(a) || '(prázdne)';
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
+    // Dlaždica podľa riadku Plánu dňa: každý druh riadku, auto s km.
+    /** @type {Array<[string, any]>} */ const rows = [
+        ['teraz', { id: 'pracka', kind: 'sun', start: 600, end: 720, km: null, now: true, time: '10:00', tone: 'go' }],
+        ['autoTeraz', { id: 'auto', kind: 'sun', start: 600, end: 900, km: 120, now: true, time: '10:00–15:00', tone: 'go' }],
+        ['neskor', { id: 'auto', kind: 'sun', start: 660, end: 900, km: 90, now: false, time: '11:00–15:00', tone: 'go' }],
+        ['lacno', { id: 'auto', kind: 'cheap', start: 1320, now: false, time: 'od 22:00', tone: 'cheap' }],
+        ['inyDen', { id: 'pracka', kind: 'later', now: false, time: 'zajtra 08:00', tone: 'wait' }],
+    ];
+    for (const [k, r] of rows) strings(M.planTileText(r), `planTile.${k}`, out);
+    out['planGroupNote'] = M.planGroupNote([
+        { name: 'Práčka', short: 'teraz' },
+        { name: 'Umývačka', short: 'teraz' },
+        { name: 'Sušička', short: 'o 11:00' },
+    ]);
     strings(M.mozemItemText(MOZEM_ITEMS[0], { kind: 'go', end: 900, until: 800, km: null }, null, v), 'item.bezEnv', out);
 }
 

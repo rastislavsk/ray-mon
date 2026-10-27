@@ -5,14 +5,13 @@
 import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
 import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_LESS, PLAN_DNA_NOW, PLAN_DNA_TITLE, planDnaMoreText } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
-import { planDnaModel } from '../../shared/plan-dna.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { localMinutes } from '../../shared/solar.js';
 import { MOZEM_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
-/** @typedef {ReturnType<typeof planDnaModel>} PlanModel */
+/** @typedef {MozemModel['plan']} PlanModel */
 /** @typedef {import('../dom.js').Dom} Dom */
 
 /** Veľké slovo pod 10 znakov sa zmestí vo veľkom písme, dlhšie („NO NO, NOT YET“) dostane menšie. */
@@ -169,7 +168,7 @@ function itemSheet(it, dom) {
 
 /** Model karty pre stav appky. @param {import('../state.js').AppState} state */
 function modelOf(state) {
-    const model = mozemModel(state);
+    const model = mozemModel(state, { devices: state.oznamenia.devices });
     // Meranie je pripojené, len výrobca prestal prijímať prístup - nie „bez merania“ (shared/pristup.js).
     const neplati = model.hero.factK === NO_LIVE_FACT && !!neplatiOf(state);
     return neplati ? { ...model, hero: { ...model.hero, factK: 'meranie neplatí' } } : model;
@@ -184,10 +183,6 @@ export function closeMozemSheet(dom) {
 export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(
-        dom.mozemBody,
-        mozemHtml(m, kick, planDnaModel(state, { devices: state.oznamenia.devices }), state.mozemPlanOpen),
-        'mozemBody',
-    );
+    writeHtml(dom.mozemBody, mozemHtml(m, kick, m.plan, state.mozemPlanOpen), 'mozemBody');
     renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }
