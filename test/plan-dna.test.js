@@ -39,13 +39,15 @@ function cloudy(k, dayIdx) {
         })),
     };
 }
+/** Plán dňa pre vstup. @param {ReturnType<typeof input>} i @param {readonly string[]} devices */
+const planDnaAt = (i, devices) => planDna(dayCtx(i), i, devices);
 /** Riadok podľa id. @param {Array<{ id: string }>} rows @param {string} id */
 const row = (rows, id) => /** @type {any} */ (rows.find((r) => r.id === id));
 
 test('9:00 za jasna: každý na slnku, sušička po práčke, všetko sa zmestí do výroby nad spotrebou domu', () => {
     const i = input(at('09:00'));
     const ctx = dayCtx(i);
-    const rows = planDna(ctx, '€', ALL);
+    const rows = planDna(ctx, i, ALL);
     assert.deepEqual(
         rows.map((r) => r.kind),
         ['sun', 'sun', 'sun', 'sun', 'sun'],
@@ -123,33 +125,72 @@ test('večer: auto a bojler do lacného pásma, ostatné zajtra', () => {
 });
 
 test('poradie: umývačka pred práčkou, keď sa tak na slnko zmestia obe', () => {
-    // Slabé popoludnie: v pevnom poradí by práčka zabrala slnko a umývačka išla až zajtra.
-    const rows = planDna(dayCtx(input(at('13:00'), { pv: null, forecast: cloudy(0.4, [0]) })), '€', PLAN_DNA.devices);
+    // Slabé popoludnie: v pevnom poradí by práčka zabrala slnko a umývačka išla až zajtra. Bez
+    // sušičky - tá sa po práčke nezmestí a obe by išli na iný deň.
+    const devices = ['pracka', 'umyvacka', 'auto'];
+    const rows = planDnaAt(input(at('13:00'), { pv: null, forecast: cloudy(0.4, [0]) }), devices);
     assert.equal(row(rows, 'umyvacka').kind, 'sun');
     assert.equal(row(rows, 'umyvacka').start, 13 * 60);
     assert.equal(row(rows, 'pracka').kind, 'sun');
     assert.equal(row(rows, 'pracka').start, 13 * 60 + 15);
     assert.deepEqual(
         rows.map((r) => r.id),
-        PLAN_DNA.order.filter((id) => PLAN_DNA.devices.includes(id)),
+        PLAN_DNA.order.filter((id) => devices.includes(id)),
         'riadky v pevnom poradí',
     );
 });
 
 test('poradie: kvôli autu len pri zreteľnom rozdiele km, sušička vždy po práčke', () => {
     // Jasné ráno: umývačka ako prvá a auto chytí o 60 km viac.
-    const rano = planDna(dayCtx(input(at('08:00'), { pv: null })), '€', PLAN_DNA.devices);
+    const rano = planDnaAt(input(at('08:00'), { pv: null }), PLAN_DNA.devices);
     assert.equal(row(rano, 'umyvacka').start, 8 * 60);
     assert.equal(row(rano, 'auto').km, 250);
     // O 9:00 by iné poradie len skôr skončilo - ostáva pevné, práčka prvá.
-    const deviata = planDna(dayCtx(input(at('09:00'), { pv: null })), '€', ALL);
+    const deviata = planDnaAt(input(at('09:00'), { pv: null }), ALL);
     assert.equal(row(deviata, 'pracka').start, 9 * 60);
     for (const k of [1, 0.7, 0.5, 0.4])
         for (const hm of ['07:00', '09:00', '11:00', '13:00']) {
-            const rows = planDna(dayCtx(input(at(hm), { pv: null, forecast: cloudy(k, [0]) })), '€', ALL);
+            const rows = planDnaAt(input(at(hm), { pv: null, forecast: cloudy(k, [0]) }), ALL);
             const [pracka, susicka] = [row(rows, 'pracka'), row(rows, 'susicka')];
             if (pracka.kind === 'sun' && susicka.kind === 'sun') assert.ok(susicka.start >= pracka.end, `${k} ${hm}`);
         }
+});
+
+test('práčka a sušička v jeden deň: aj zajtra sušička až po práčke', () => {
+    // Večer: dnes nič, zajtra najprv práčka a sušička, až keď práčka dobehne (nie 8:00 a 9:00 naopak).
+    const m = planDnaModel(input(at('19:50')), { devices: ALL });
+    const [pracka, susicka] = [row(m?.rows ?? [], 'pracka'), row(m?.rows ?? [], 'susicka')];
+    assert.equal(pracka.kind, 'later');
+    assert.equal(susicka.kind, 'later');
+    assert.equal(susicka.day.index, pracka.day.index);
+    assert.ok(susicka.day.start >= pracka.day.start + 120, `${pracka.day.start} ${susicka.day.start}`);
+    assert.equal(susicka.why, 'po práčke');
+    assert.equal(pracka.why, 'dnes slnko nestačí');
+    // 16:30: ohrev práčky ešte chytí slnko, sušička po nej už nie - obe idú zajtra.
+    const popoludni = planDnaAt(input(at('16:30')), ALL);
+    assert.equal(row(popoludni, 'pracka').kind, 'later');
+    assert.equal(row(popoludni, 'susicka').kind, 'later');
+    assert.equal(row(planDnaAt(input(at('16:30')), ['pracka']), 'pracka').kind, 'sun', 'bez sušičky práčka ide dnes');
+    // Hocijaké počasie a čas: obe v ten istý deň, sušička po práčke.
+    for (const k of [1, 0.7, 0.4, 0.2])
+        for (const hm of ['07:00', '11:00', '15:00', '19:00']) {
+            const rows = planDnaAt(input(at(hm), { pv: null, forecast: cloudy(k, [0, 1]) }), ALL);
+            const [p, s] = [row(rows, 'pracka'), row(rows, 'susicka')];
+            const when = (/** @type {any} */ r) =>
+                r.kind === 'sun' ? [0, r.start] : r.kind === 'later' ? [r.day.index, r.day.start] : null;
+            const [wp, ws] = [when(p), when(s)];
+            if (!wp || !ws) continue;
+            assert.equal(ws[0], wp[0], `${k} ${hm}: ten istý deň`);
+            assert.ok(ws[1] >= wp[1] + 120, `${k} ${hm}: sušička po práčke`);
+        }
+});
+
+test('celý týždeň sa nezmestí na slnko, lacné pásmo: sušička až po práčke', () => {
+    const m = planDnaModel(input(at('09:00'), { pv: null, forecast: cloudy(0.01) }), { devices: ['pracka', 'susicka'] });
+    const [pracka, susicka] = [row(m?.rows ?? [], 'pracka'), row(m?.rows ?? [], 'susicka')];
+    assert.equal(pracka.kind, 'cheap');
+    assert.equal(susicka.kind, 'cheap');
+    assert.ok(susicka.start >= pracka.start + 120, `${pracka.start} ${susicka.start}`);
 });
 
 test('slabý deň: umývačka a sušička čakajú na iný deň, auto bez ceny v tarife', () => {

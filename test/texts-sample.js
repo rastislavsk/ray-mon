@@ -80,6 +80,8 @@ export function sampleTexts(voice) {
             const p = `${hm}.${name}`;
             const i = /** @type {any} */ (input);
             strings(mozemModel(i, { voice: v }), `${p}.mozem`, out);
+            // Len práčka: popoludní ide ešte dnes (so sušičkou by čakala na zajtra).
+            strings(mozemModel(i, { voice: v, devices: ['pracka'] }), `${p}.mozemPracka`, out);
             for (const online of [true, false]) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;
                 strings(mozemSkyModel(i, { online, voice: v }), `${o}.mozemSky`, out);
@@ -199,9 +201,10 @@ function directPlan(out, v) {
         ['sunPo', { id: '', kind: 'sun', start: 660, end: 750, after: 'pracka', km: 0, save: 0.4, currency: '€' }],
         ['sunBez', { id: '', kind: 'sun', start: 660, end: 750, after: null, km: null, save: null, currency: '€' }],
         ['cheap', { id: '', kind: 'cheap', start: 1320 }],
-        ['zajtra', { id: '', kind: 'later', day }],
-        ['neskor', { id: '', kind: 'later', day: later }],
+        ['zajtra', { id: '', kind: 'later', day, after: null }],
+        ['neskor', { id: '', kind: 'later', day: later, after: null }],
         ['none', { id: '', kind: 'none' }],
+        ['zajtraPo', { id: '', kind: 'later', day, after: 'pracka' }],
     ];
     for (const item of MOZEM_ITEMS.filter((i) => i.device))
         for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);

@@ -665,15 +665,7 @@ export function planDnaRowText(row, voice = 'drzy') {
     const name = t.name;
     if (row.kind === 'cheap') return { name, time: `od ${hm(row.start)}`, why: 'v lacnom pásme', tone: 'cheap' };
     if (row.kind === 'none') return { name, time: 'tento týždeň nie', why: 'slnko podľa predpovede nestačí', tone: 'no' };
-    if (row.kind === 'later') {
-        const soon = row.day.index === 1;
-        return {
-            name,
-            time: soon ? `zajtra ${hm(row.day.start)}` : row.day.name.toLowerCase(),
-            why: 'dnes slnko nestačí',
-            tone: soon ? 'wait' : 'no',
-        };
-    }
+    if (row.kind === 'later') return { name, ...laterRowText(row) };
     const item = /** @type {MozemItem} */ (MOZEM_ITEMS_BY_ID[row.id]);
     if (item.runMin === null) return { name, time: `${hm(row.start)}–${hm(row.end)}`, why: autoSunWhy(row, voice), tone: 'go' };
     const p = profileOf(item);
@@ -682,6 +674,20 @@ export function planDnaRowText(row, voice = 'drzy') {
     ];
     const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : '';
     return { name, time: hm(row.start), why: `${after}${why}`, tone: 'go' };
+}
+
+/**
+ * Riadok plánu na iný deň: zajtra s časom, neskôr len deň. Sušička povie, že ide po práčke.
+ * @param {Extract<import('./plan-dna.js').PlanRow, { kind: 'later' }>} row
+ * @returns {{ time: string, why: string, tone: 'wait' | 'no' }}
+ */
+function laterRowText({ day, after }) {
+    const soon = day.index === 1;
+    return {
+        time: soon ? `zajtra ${hm(day.start)}` : day.name.toLowerCase(),
+        why: after ? (PLAN_AFTER[after] ?? '') : 'dnes slnko nestačí',
+        tone: soon ? 'wait' : 'no',
+    };
 }
 
 /**
