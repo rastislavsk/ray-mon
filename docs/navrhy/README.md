@@ -46,6 +46,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `terazky-ako-obloha.html`      | Terazky podľa Teraz z Oblohy: len pás odporúčaní pod ciferníkom (B), celá karta s grafom dňa (A); farby súčasnej      |
 | `terazky-casova-os.html`       | Terazky / Teraz s časovou osou: A, B, C; oblačnosť pruhom (C1) či heatmapou (C2); C2 s výplňou nad hranicou (vybraný) |
 | `bodka-merania.html`           | Bodka pri čase v oboch appkách = stav merania; zastarané: bez spojenia, menič mlčí, menič spí; kruh v navigácii (B)   |
+| `plan-dna-zajtra.html`         | Plán dňa (Obloha) večer, keď dnes nič nejde na slnko: os sa prepne na zajtra (1), jedna os cez noc (2)                |
 
 ## Prečo je to v repozitári
 
