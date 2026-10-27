@@ -51,7 +51,7 @@ export function parseOznamenia(raw) {
  */
 export function planNotice(input, { devices, voice = 'drzy' }) {
     const ctx = dayCtx(input);
-    const rows = planDna(ctx, input.tariff.currency, devices);
+    const rows = planDna(ctx, input, devices);
     const green = planWindows(ctx.plan, (s) => Number.isFinite(s.kw) && s.kw >= ctx.th.lowKw).filter((w) => w.to > ctx.nowMin);
     const sunEnd = green.length ? green[green.length - 1].to : null;
     const now = Math.ceil(ctx.nowMin / TARIFF_LIMITS.stepMin) * TARIFF_LIMITS.stepMin;
@@ -71,7 +71,7 @@ const sortStart = (r) => (r.kind === 'sun' || r.kind === 'cheap' ? r.start : Inf
  */
 export function reminderNotice(input, { id, voice = 'drzy' }) {
     const ctx = dayCtx(input);
-    const [row] = planDna(ctx, input.tariff.currency, [id]);
+    const [row] = planDna(ctx, input, [id]);
     return row ? reminderText(row, ctx.nowMin, voice) : null;
 }
 
