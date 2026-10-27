@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plán dňa: rozpočet slnka</title>
+        <style>
+            /* Návrh: Plán dňa počíta s voľným výkonom (predpoveď − spotreba domu − spotrebiče už
+               v pláne) namiesto pevnej hranice 2 kW a zákazu prekryvu ohrevov. Čísla sú vypočítané:
+               „pred“ je shared/plan-dna.js, „po“ prototyp rozpočtu, oboje nad predpoveďou
+               z test/fixtures/open-meteo.json pre Dvorany. Zo siete a km ráta pre oba plány ten
+               istý výpočet: spotreba domu 0,4 kW, odbery spotrebičov sa sčítajú. */
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --panel: #161b3a;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --bad: #ff9b8a;
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font-family: var(--font);
+                font-size: 15px;
+                line-height: 1.55;
+            }
+            .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            .eyebrow {
+                margin: 0 0 6px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            h1 {
+                margin: 0 0 10px;
+                font-size: clamp(24px, 4vw, 34px);
+                line-height: 1.15;
+            }
+            h2 {
+                margin: 36px 0 10px;
+                font-size: 20px;
+            }
+            p {
+                margin: 0 0 12px;
+                max-width: 72ch;
+            }
+            .muted {
+                color: var(--muted);
+            }
+            .rule {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+                margin: 18px 0;
+            }
+            .rule div {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 14px 16px;
+            }
+            .rule b {
+                display: block;
+                margin-bottom: 4px;
+            }
+            .tabs {
+                display: flex;
+                gap: 8px;
+                margin: 12px 0 16px;
+                flex-wrap: wrap;
+            }
+            .tabs button {
+                font: inherit;
+                color: var(--text);
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 14px;
+                cursor: pointer;
+            }
+            .tabs button[aria-pressed='true'] {
+                background: var(--yes);
+                color: #0b1430;
+                border-color: var(--yes);
+                font-weight: 700;
+            }
+            .day {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+            .day h3 {
+                margin: 0 0 2px;
+                font-size: 17px;
+            }
+            .day svg {
+                width: 100%;
+                height: auto;
+                display: block;
+                margin: 8px 0 4px;
+            }
+            .cols {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            @media (max-width: 640px) {
+                .cols {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .col {
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 10px 12px;
+            }
+            .col h4 {
+                margin: 0 0 6px;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: var(--muted);
+            }
+            .col ul {
+                list-style: none;
+                margin: 0 0 8px;
+                padding: 0;
+            }
+            .col li {
+                display: flex;
+                gap: 10px;
+                padding: 3px 0;
+                border-bottom: 1px dashed var(--line);
+            }
+            .col li span:first-child {
+                min-width: 8em;
+                font-variant-numeric: tabular-nums;
+            }
+            .col li.zmena span:first-child {
+                color: var(--yes);
+                font-weight: 700;
+            }
+            .stat {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 0;
+            }
+            .stat b {
+                color: var(--text);
+            }
+            .stat b.lepsie {
+                color: var(--yes);
+            }
+            .stat b.horsie {
+                color: var(--bad);
+            }
+            .legend {
+                display: flex;
+                gap: 14px;
+                flex-wrap: wrap;
+                font-size: 12px;
+                color: var(--muted);
+            }
+            .legend i {
+                display: inline-block;
+                width: 12px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 5px;
+                vertical-align: -1px;
+            }
+            .open {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 14px 18px 14px 36px;
+            }
+            .open li,
+            ul.vyplyva li {
+                margin-bottom: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <p class="eyebrow">Návrh · Plán dňa · krok 1 z 3</p>
+            <h1>Rozpočet slnka namiesto hranice 2 kW</h1>
+            <p>
+                Plán dnes pustí spotrebič, keď predpoveď prekročí 2 kW, a dva ohrevy nikdy nedá naraz. Nový plán si pre každú minútu vedie,
+                koľko výkonu je ešte voľného, a každý spotrebič, ktorý doň zaradí, si svoj odber z neho odpočíta.
+            </p>
+            <div class="rule">
+                <div><b>Voľný výkon</b>predpoveď výroby − spotreba domu (0,4 kW) − spotrebiče, ktoré už v pláne sú.</div>
+                <div>
+                    <b>Spotrebič sa zmestí,</b>keď počas celého ohrevu je voľných aspoň toľko kW, aký má príkon (práčka 2, sušička a
+                    umývačka 1,5). Zvyšok programu si len odpočíta malý odber.
+                </div>
+                <div><b>Auto</b>dostane najdlhší úsek, kde po ostatných ostanú aspoň 4 kW, najmenej hodinu.</div>
+            </div>
+            <p class="muted">
+                Poradie ostáva pevné (práčka, sušička, umývačka, bojler, auto) – to rieši krok 2. Rovnaká hranica platí aj pre odpoveď karty
+                Môžem?, aby obe miesta hovorili to isté.
+            </p>
+
+            <h2>Porovnanie na predpovedi pre Dvorany</h2>
+            <div class="legend">
+                <span><i style="background: rgba(245, 196, 81, 0.35)"></i>predpoveď výroby</span>
+                <span><i style="background: var(--bad); height: 2px"></i>spotreba domu 0,4 kW</span>
+                <span><i style="background: #8ab4ff"></i>ohrev (plný príkon)</span>
+                <span><i style="background: rgba(138, 180, 255, 0.35)"></i>zvyšok programu</span>
+                <span><i style="background: var(--yes)"></i>auto</span>
+            </div>
+            <div class="tabs" role="group" aria-label="Kedy sa plán počíta">
+                <button type="button" data-hod="7" aria-pressed="true">Plán ráno o 7:00</button>
+                <button type="button" data-hod="11" aria-pressed="false">Plán o 11:00</button>
+            </div>
+            <div id="dni"></div>
+
+            <h2>Čo z toho vyplýva</h2>
+            <ul class="vyplyva">
+                <li>
+                    <b>Slnečný deň:</b> umývačka ide spolu s práčkou ráno, obed ostane autu. Plán o 7:00 dá autu o 30 km viac, plán o 11:00
+                    namiesto 30 km až 160 km.
+                </li>
+                <li>
+                    <b>Polooblačné ráno:</b> práčka o pol hodiny neskôr (8:15), lebo o 7:45 ešte nie sú voľné 2 kW nad spotrebou domu –
+                    ohrev už nejde čiastočne zo siete. Umývačka zato ráno namiesto 9:15. Auto dostane kratší úsek (11:45–14:30, 70 namiesto
+                    90 km): dnešný úsek siaha aj tam, kde po spotrebe domu neostanú 4 kW. Km sú pre oba plány rátané bez najmenšieho prúdu
+                    nabíjačky, takže dnešných 90 km je skôr nadhodnotených – pod 4 kW by auto časť bralo zo siete.
+                </li>
+                <li>
+                    <b>Slabšie slnko (špička 4,1 kW):</b> auto už nedostane hodinu okolo poludnia (dnes 20 km), ale lacné pásmo. Po
+                    odpočítaní spotreby domu ostáva menej než 4 kW, časť nabíjania by išla zo siete.
+                </li>
+                <li>Veľké spotrebiče idú zo siete len zlomkom kWh aj dnes – rozdiel je hlavne v aute a v tom, čo sa zmestí naraz.</li>
+            </ul>
+
+            <h2>Na rozhodnutie</h2>
+            <ol class="open">
+                <li><b>Spotreba domu 0,4 kW</b> – jedna konštanta pre každého, alebo neskôr voľba v Nastavení? Navrhujem konštantu.</li>
+                <li>
+                    <b>Auto pri slabšom slnku:</b> ak má auto dostať aj okraj (ako dnes 20 km pri 4,1 kW), hranica auta by sa rátala bez
+                    spotreby domu. Navrhujem nechať poctivú verziu.
+                </li>
+                <li><b>Texty sa nemenia</b> – mení sa len to, kedy a v akom poradí riadky povedia čas.</li>
+            </ol>
+        </div>
+        <script>
+            const DATA = [
+                {
+                    date: '2026-09-10',
+                    nazov: 'Slnečný deň',
+                    hod: 7,
+                    peak: 8.2,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0.6, 1, 1.4, 1.9, 2.49, 3.08, 3.67,
+                        4.21, 4.7, 5.19, 5.67, 6.09, 6.44, 6.78, 7.13, 7.39, 7.58, 7.76, 7.95, 8.06, 8.09, 8.12, 8.15, 8.12, 8.01, 7.9,
+                        7.79, 7.62, 7.39, 7.15, 6.92, 6.63, 6.29, 5.94, 5.6, 5.25, 4.88, 4.52, 4.15, 3.79, 3.44, 3.08, 2.73, 2.36, 1.97,
+                        1.59, 1.2, 0.89, 0.64, 0.39, 0.14, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 435, end: 555 },
+                        { id: 'susicka', kind: 'sun', start: 555, end: 645 },
+                        { id: 'umyvacka', kind: 'sun', start: 525, end: 675 },
+                        { id: 'auto', kind: 'sun', start: 660, end: 960 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 435, end: 555 },
+                        { id: 'susicka', kind: 'sun', start: 555, end: 645 },
+                        { id: 'umyvacka', kind: 'sun', start: 465, end: 615 },
+                        { id: 'auto', kind: 'sun', start: 600, end: 945 },
+                    ],
+                    vs: { grid: 0, km: 190 },
+                    vn: { grid: 0, km: 220 },
+                },
+                {
+                    date: '2026-09-10',
+                    nazov: 'Slnečný deň',
+                    hod: 11,
+                    peak: 8.2,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0.6, 1, 1.4, 1.9, 2.49, 3.08, 3.67,
+                        4.21, 4.7, 5.19, 5.67, 6.09, 6.44, 6.78, 7.13, 7.39, 7.58, 7.76, 7.95, 8.06, 8.09, 8.12, 8.15, 8.12, 8.01, 7.9,
+                        7.79, 7.62, 7.39, 7.15, 6.92, 6.63, 6.29, 5.94, 5.6, 5.25, 4.88, 4.52, 4.15, 3.79, 3.44, 3.08, 2.73, 2.36, 1.97,
+                        1.59, 1.2, 0.89, 0.64, 0.39, 0.14, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 750, end: 900 },
+                        { id: 'auto', kind: 'sun', start: 885, end: 960 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 660, end: 810 },
+                        { id: 'auto', kind: 'sun', start: 660, end: 945 },
+                    ],
+                    vs: { grid: 0, km: 30 },
+                    vn: { grid: 0, km: 160 },
+                },
+                {
+                    date: '2026-09-09',
+                    nazov: 'Polooblačný deň',
+                    hod: 7,
+                    peak: 5.4,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.31, 0.51, 0.72, 0.99, 1.33, 1.68,
+                        2.02, 2.35, 2.67, 2.98, 3.3, 3.59, 3.84, 4.09, 4.34, 4.55, 4.72, 4.89, 5.06, 5.18, 5.25, 5.32, 5.39, 5.42, 5.38,
+                        5.35, 5.32, 5.25, 5.12, 5, 4.87, 4.7, 4.49, 4.27, 4.06, 3.82, 3.57, 3.32, 3.07, 2.81, 2.55, 2.29, 2.03, 1.76, 1.48,
+                        1.2, 0.92, 0.69, 0.49, 0.31, 0.11, 0.02, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 465, end: 585 },
+                        { id: 'susicka', kind: 'sun', start: 585, end: 675 },
+                        { id: 'umyvacka', kind: 'sun', start: 555, end: 705 },
+                        { id: 'auto', kind: 'sun', start: 690, end: 900 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 495, end: 615 },
+                        { id: 'susicka', kind: 'sun', start: 615, end: 705 },
+                        { id: 'umyvacka', kind: 'sun', start: 465, end: 615 },
+                        { id: 'auto', kind: 'sun', start: 705, end: 870 },
+                    ],
+                    vs: { grid: 0.1, km: 90 },
+                    vn: { grid: 0, km: 70 },
+                },
+                {
+                    date: '2026-09-09',
+                    nazov: 'Polooblačný deň',
+                    hod: 11,
+                    peak: 5.4,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.31, 0.51, 0.72, 0.99, 1.33, 1.68,
+                        2.02, 2.35, 2.67, 2.98, 3.3, 3.59, 3.84, 4.09, 4.34, 4.55, 4.72, 4.89, 5.06, 5.18, 5.25, 5.32, 5.39, 5.42, 5.38,
+                        5.35, 5.32, 5.25, 5.12, 5, 4.87, 4.7, 4.49, 4.27, 4.06, 3.82, 3.57, 3.32, 3.07, 2.81, 2.55, 2.29, 2.03, 1.76, 1.48,
+                        1.2, 0.92, 0.69, 0.49, 0.31, 0.11, 0.02, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 750, end: 900 },
+                        { id: 'auto', kind: 'sun', start: 680, end: 750 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 660, end: 810 },
+                        { id: 'auto', kind: 'sun', start: 680, end: 780 },
+                    ],
+                    vs: { grid: 0, km: 30 },
+                    vn: { grid: 0, km: 40 },
+                },
+                {
+                    date: '2026-09-11',
+                    nazov: 'Slabšie slnko',
+                    hod: 7,
+                    peak: 4.1,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.08, 0.25, 0.42, 0.59, 0.82, 1.1, 1.4,
+                        1.69, 1.95, 2.2, 2.45, 2.7, 2.91, 3.09, 3.27, 3.45, 3.6, 3.71, 3.81, 3.92, 4, 4.04, 4.07, 4.11, 4.12, 4.09, 4.06,
+                        4.03, 3.98, 3.89, 3.8, 3.71, 3.6, 3.45, 3.3, 3.15, 2.99, 2.81, 2.63, 2.45, 2.26, 2.06, 1.85, 1.65, 1.44, 1.21, 0.98,
+                        0.75, 0.56, 0.4, 0.25, 0.09, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 495, end: 615 },
+                        { id: 'susicka', kind: 'sun', start: 615, end: 705 },
+                        { id: 'umyvacka', kind: 'sun', start: 585, end: 735 },
+                        { id: 'auto', kind: 'sun', start: 720, end: 780 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 510, end: 630 },
+                        { id: 'susicka', kind: 'sun', start: 630, end: 720 },
+                        { id: 'umyvacka', kind: 'sun', start: 480, end: 630 },
+                        { id: 'auto', kind: 'lacno', start: 420 },
+                    ],
+                    vs: { grid: 0.05, km: 20 },
+                    vn: { grid: 0.03, km: 0 },
+                },
+                {
+                    date: '2026-09-11',
+                    nazov: 'Slabšie slnko',
+                    hod: 11,
+                    peak: 4.1,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.08, 0.25, 0.42, 0.59, 0.82, 1.1, 1.4,
+                        1.69, 1.95, 2.2, 2.45, 2.7, 2.91, 3.09, 3.27, 3.45, 3.6, 3.71, 3.81, 3.92, 4, 4.04, 4.07, 4.11, 4.12, 4.09, 4.06,
+                        4.03, 3.98, 3.89, 3.8, 3.71, 3.6, 3.45, 3.3, 3.15, 2.99, 2.81, 2.63, 2.45, 2.26, 2.06, 1.85, 1.65, 1.44, 1.21, 0.98,
+                        0.75, 0.56, 0.4, 0.25, 0.09, 0.01, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 750, end: 900 },
+                        { id: 'auto', kind: 'sun', start: 680, end: 750 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 660, end: 810 },
+                        { id: 'auto', kind: 'lacno', start: 660 },
+                    ],
+                    vs: { grid: 0, km: 20 },
+                    vn: { grid: 0, km: 0 },
+                },
+                {
+                    date: '2026-09-07',
+                    nazov: 'Zamračené',
+                    hod: 7,
+                    peak: 3.5,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.07, 0.21, 0.35, 0.49, 0.68, 0.92, 1.15,
+                        1.39, 1.61, 1.83, 2.04, 2.25, 2.43, 2.58, 2.74, 2.89, 3.02, 3.11, 3.2, 3.29, 3.36, 3.39, 3.42, 3.45, 3.46, 3.44,
+                        3.41, 3.39, 3.34, 3.27, 3.2, 3.13, 3.03, 2.92, 2.81, 2.7, 2.57, 2.42, 2.27, 2.12, 1.97, 1.8, 1.63, 1.46, 1.29, 1.1,
+                        0.92, 0.73, 0.57, 0.42, 0.27, 0.11, 0.04, 0.03, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 510, end: 630 },
+                        { id: 'susicka', kind: 'sun', start: 630, end: 720 },
+                        { id: 'umyvacka', kind: 'sun', start: 600, end: 750 },
+                        { id: 'auto', kind: 'lacno', start: 420 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 540, end: 660 },
+                        { id: 'susicka', kind: 'sun', start: 660, end: 750 },
+                        { id: 'umyvacka', kind: 'sun', start: 510, end: 660 },
+                        { id: 'auto', kind: 'lacno', start: 420 },
+                    ],
+                    vs: { grid: 0.1, km: 0 },
+                    vn: { grid: 0.04, km: 0 },
+                },
+                {
+                    date: '2026-09-07',
+                    nazov: 'Zamračené',
+                    hod: 11,
+                    peak: 3.5,
+                    curve: [
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.07, 0.21, 0.35, 0.49, 0.68, 0.92, 1.15,
+                        1.39, 1.61, 1.83, 2.04, 2.25, 2.43, 2.58, 2.74, 2.89, 3.02, 3.11, 3.2, 3.29, 3.36, 3.39, 3.42, 3.45, 3.46, 3.44,
+                        3.41, 3.39, 3.34, 3.27, 3.2, 3.13, 3.03, 2.92, 2.81, 2.7, 2.57, 2.42, 2.27, 2.12, 1.97, 1.8, 1.63, 1.46, 1.29, 1.1,
+                        0.92, 0.73, 0.57, 0.42, 0.27, 0.11, 0.04, 0.03, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ],
+                    stary: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 750, end: 900 },
+                        { id: 'auto', kind: 'lacno', start: 660 },
+                    ],
+                    novy: [
+                        { id: 'pracka', kind: 'sun', start: 660, end: 780 },
+                        { id: 'susicka', kind: 'sun', start: 780, end: 870 },
+                        { id: 'umyvacka', kind: 'sun', start: 750, end: 900 },
+                        { id: 'auto', kind: 'lacno', start: 660 },
+                    ],
+                    vs: { grid: 0, km: 0 },
+                    vn: { grid: 0, km: 0 },
+                },
+            ];
+            const NAME = { pracka: 'Práčka', susicka: 'Sušička', umyvacka: 'Umývačka', auto: 'Auto', bojler: 'Bojler' };
+            const PROF = {
+                pracka: { run: 120, heat: [[0, 20]] },
+                susicka: { run: 90, heat: [[0, 90]] },
+                umyvacka: {
+                    run: 150,
+                    heat: [
+                        [0, 15],
+                        [120, 135],
+                    ],
+                },
+                bojler: { run: 60, heat: [[0, 60]] },
+            };
+            const ORDER = ['pracka', 'susicka', 'umyvacka', 'auto'];
+            const X0 = 5 * 60;
+            const X1 = 21 * 60;
+            const W = 640;
+            const L = 40;
+            const CH = 90;
+            const LANE = 14;
+            const TOP = 8;
+            const x = (m) => L + ((Math.min(Math.max(m, X0), X1) - X0) / (X1 - X0)) * (W - L - 6);
+            const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+            const cas = (r) =>
+                r.kind === 'sun'
+                    ? r.id === 'auto'
+                        ? `${hm(r.start)}–${hm(r.end)}`
+                        : hm(r.start)
+                    : r.kind === 'lacno'
+                      ? `od ${hm(r.start)} lacno`
+                      : r.kind === 'inyDen'
+                        ? r.den.toLowerCase()
+                        : 'tento týždeň nie';
+            const rect = (a, b, y, fill) =>
+                `<rect x="${x(a)}" y="${y}" width="${Math.max(0, x(b) - x(a))}" height="${LANE - 3}" rx="3" fill="${fill}"/>`;
+
+            function lanes(rows, y0, label) {
+                let s = `<text x="0" y="${y0 + 2 * LANE}" fill="rgba(243,241,251,.66)" font-size="11">${label}</text>`;
+                ORDER.forEach((id, i) => {
+                    const r = rows.find((q) => q.id === id);
+                    const y = y0 + i * LANE;
+                    if (!r || r.kind !== 'sun') return;
+                    if (id === 'auto') s += rect(r.start, r.end, y, '#b9f28c');
+                    else {
+                        const p = PROF[id];
+                        s += rect(r.start, r.start + p.run, y, 'rgba(138,180,255,.35)');
+                        p.heat.forEach(([a, b]) => (s += rect(r.start + a, r.start + b, y, '#8ab4ff')));
+                    }
+                    s += `<text x="${x(r.start) + 3}" y="${y + 9}" fill="#0b1430" font-size="9" font-weight="700">${NAME[id]}</text>`;
+                });
+                return s;
+            }
+
+            function svg(o) {
+                const yk = (k) => TOP + CH - (k / 9) * CH;
+                const bottom = TOP + CH + 18 + 2 * (4 * LANE + 8);
+                let path = `M${x(X0)} ${yk(0)}`;
+                o.curve.forEach((k, i) => {
+                    const m = i * 15 + 7.5;
+                    if (m >= X0 && m <= X1) path += `L${x(m).toFixed(1)} ${yk(k).toFixed(1)}`;
+                });
+                path += `L${x(X1)} ${yk(0)}Z`;
+                let s = `<svg viewBox="0 0 ${W} ${bottom}" role="img" aria-label="Predpoveď výroby a plán pred a po">`;
+                for (let h = 6; h <= 20; h += 2)
+                    s +=
+                        `<line x1="${x(h * 60)}" x2="${x(h * 60)}" y1="${TOP}" y2="${bottom}" stroke="rgba(255,255,255,.07)"/>` +
+                        `<text x="${x(h * 60)}" y="${TOP + CH + 12}" text-anchor="middle" fill="rgba(243,241,251,.5)" font-size="10">${h}:00</text>`;
+                [2, 4, 6, 8].forEach(
+                    (k) => (s += `<text x="0" y="${yk(k) + 3}" fill="rgba(243,241,251,.5)" font-size="10">${k} kW</text>`),
+                );
+                s += `<path d="${path}" fill="rgba(245,196,81,.35)" stroke="#f5c451" stroke-width="1.2"/>`;
+                s += `<line x1="${L}" x2="${W - 6}" y1="${yk(0.4)}" y2="${yk(0.4)}" stroke="#ff9b8a" stroke-dasharray="3 3"/>`;
+                s += `<line x1="${x(o.hod * 60)}" x2="${x(o.hod * 60)}" y1="${TOP}" y2="${TOP + CH}" stroke="#fff" stroke-dasharray="2 3"/>`;
+                const ly = TOP + CH + 20;
+                return `${s}${lanes(o.stary, ly, 'pred')}${lanes(o.novy, ly + 4 * LANE + 8, 'po')}</svg>`;
+            }
+
+            const zoznam = (rows, ine, oznac) =>
+                rows
+                    .map((r) => {
+                        const zmena = oznac && cas(r) !== cas(ine.find((q) => q.id === r.id));
+                        return `<li${zmena ? ' class="zmena"' : ''}><span>${cas(r)}</span><span>${NAME[r.id]}</span></li>`;
+                    })
+                    .join('');
+            const kwh = (n) => n.toFixed(2).replace('.', ',');
+            function stat(v, ine, nove) {
+                const km = nove ? (v.km > ine.km ? 'lepsie' : v.km < ine.km ? 'horsie' : '') : '';
+                return `<p class="stat">Auto zo slnka: <b class="${km}">${v.km} km</b> · veľké spotrebiče zo siete: <b>${kwh(v.grid)} kWh</b></p>`;
+            }
+
+            function kresli(hod) {
+                document.getElementById('dni').innerHTML = DATA.filter((o) => o.hod === hod)
+                    .map(
+                        (o) =>
+                            `<section class="day"><h3>${o.nazov}</h3>` +
+                            `<p class="stat">${o.date.split('-').reverse().join('. ')} · špička ${String(o.peak).replace('.', ',')} kW · plán počítaný o ${o.hod}:00</p>` +
+                            svg(o) +
+                            `<div class="cols"><div class="col"><h4>Pred</h4><ul>${zoznam(o.stary, o.novy, false)}</ul>${stat(o.vs, o.vn, false)}</div>` +
+                            `<div class="col"><h4>Po</h4><ul>${zoznam(o.novy, o.stary, true)}</ul>${stat(o.vn, o.vs, true)}</div></div></section>`,
+                    )
+                    .join('');
+                document
+                    .querySelectorAll('.tabs button')
+                    .forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.hod) === hod)));
+            }
+            document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => kresli(Number(b.dataset.hod))));
+            kresli(7);
+        </script>
+    </body>
+</html>

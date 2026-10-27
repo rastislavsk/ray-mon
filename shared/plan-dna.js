@@ -1,11 +1,13 @@
-// Plán dňa: dnešné slnko rozvrhnuté medzi spotrebiče jeden po druhom, aby sa ich ohrevy
-// neprekrývali (poradie a väzby v PLAN_DNA). Stojí na pláne dňa a profiloch odberu ako odpovede
-// karty Môžem? (shared/mozem.js) - „áno“ je tá istá zelená. Čisté funkcie bez DOM; texty skladá
-// shared/messages-core.js.
+// Plán dňa: dnešné slnko rozvrhnuté medzi spotrebiče jeden po druhom (poradie a väzby v PLAN_DNA)
+// ako rozpočet - pre každú minútu dňa výkon, ktorý ešte ostáva (výroba bez spotreby domu a bez
+// spotrebičov, ktoré už v pláne sú). Spotrebič sa zmestí, keď počas ohrevu ostáva aspoň jeho
+// príkon; zvyšok programu si z rozpočtu len odpočíta svoj malý odber. Odber a voľný výkon
+// počíta tak isto ako odpovede karty Môžem? (shared/mozem.js). Čisté funkcie bez DOM; texty
+// skladá shared/messages-core.js. Návrh: docs/navrhy/plan-dna-rozpocet.html.
 
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { planDnaRowText, PLAN_DNA_NOTE } from './messages-core.js';
-import { dayCtx, kmFromSun, laterDay, planWindows } from './mozem.js';
+import { dayCtx, freeKw, kmOf, laterDay, programDraw, sunMinKw } from './mozem.js';
 
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
@@ -19,73 +21,41 @@ import { dayCtx, kmFromSun, laterDay, planWindows } from './mozem.js';
  *   | { id: string, kind: 'later', day: LaterDay }
  *   | { id: string, kind: 'none' }} PlanRow
  */
+/** Deň, ktorý sa plánuje: kontext, mena a rozpočet voľného výkonu po minútach. @typedef {{ ctx: DayCtx, currency: string, free: number[] }} Den */
 
 const STEP = TARIFF_LIMITS.stepMin;
 const DAY_MIN = 24 * 60;
 
-/** Slnko stačí na plný príkon v tejto minúte dňa. @param {DayCtx} ctx @param {number} m */
-function strong(ctx, m) {
-    const slot = ctx.plan[Math.floor(m / STEP)];
-    return !!slot && Number.isFinite(slot.kw) && slot.kw >= ctx.th.lowKw;
-}
-
-/** Minúta patrí do niektorého úseku. @param {Array<[number, number]>} spans @param {number} m */
-const inSpans = (spans, m) => spans.some(([from, to]) => m >= from && m < to);
-
 /**
- * Najskorší štart od `from`, pri ktorom všetky ohrevy programu chytia slnko a neprekryjú sa
- * s ohrevmi vecí, ktoré už v pláne sú. Vráti štart a ohrevy v minútach dňa, alebo null.
- * @param {MozemItem} item @param {DayCtx} ctx @param {number} from @param {Array<[number, number]>} busy
+ * Najskorší štart od `from`, pri ktorom počas všetkých ohrevov ostáva v rozpočte aspoň odber
+ * programu. Vráti štart, alebo null. Ohrev za polnocou sa nezmestí nikdy.
+ * @param {Array<{ heavy: boolean, kw: number }>} draw @param {number[]} free @param {number} from
  */
-function sunStart(item, ctx, from, busy) {
-    const heat = item.heat ?? [[0, item.runMin ?? 0]];
+function sunStart(draw, free, from) {
     for (let start = from; start < DAY_MIN; start += STEP) {
-        /** @type {Array<[number, number]>} */ const spans = heat.map(([a, b]) => [start + a, start + b]);
-        const ok = spans.every(([a, b]) => {
-            for (let m = a; m < b; m++) if (!strong(ctx, m) || inSpans(busy, m)) return false;
-            return true;
-        });
-        if (ok) return { start, spans };
+        if (draw.every(({ heavy, kw }, m) => !heavy || (free[start + m] ?? 0) >= kw)) return start;
     }
     return null;
 }
 
 /**
- * Úsek silného slnka pre auto od `from`: najdlhší kus okna nad hranicou auta (highKw), v ktorom
- * nebeží ohrev inej veci - auto tak chytí najviac km, nie prvú medzeru medzi ohrevmi. Kratší
- * než PLAN_DNA.autoMinMin minút nestojí za zapojenie, vtedy null.
- * @param {DayCtx} ctx @param {number} from @param {Array<[number, number]>} busy
+ * Úsek pre auto od `from`: najdlhší kus dňa, v ktorom po ostatných spotrebičoch ostáva výkon
+ * aspoň na hranicu auta - auto tak chytí najviac km, nie prvú medzeru. Kratší než
+ * PLAN_DNA.autoMinMin minút nestojí za zapojenie, vtedy null.
+ * @param {number[]} free @param {number} minKw @param {number} from
  * @returns {[number, number] | null}
  */
-function autoSpan(ctx, from, busy) {
+function autoSpan(free, minKw, from) {
     /** @type {[number, number] | null} */ let best = null;
-    for (const w of planWindows(ctx.plan, (s) => Number.isFinite(s.kw) && s.kw >= ctx.th.highKw)) {
-        let a = Math.max(w.from, from);
-        while (a < w.to) {
-            while (a < w.to && inSpans(busy, a)) a++;
-            let b = a;
-            while (b < w.to && !inSpans(busy, b)) b++;
-            if (b - a >= PLAN_DNA.autoMinMin && (!best || b - a > best[1] - best[0])) best = [a, b];
-            a = b;
-        }
+    let a = from;
+    while (a < DAY_MIN) {
+        while (a < DAY_MIN && free[a] < minKw) a++;
+        let b = a;
+        while (b < DAY_MIN && free[b] >= minKw) b++;
+        if (b - a >= PLAN_DNA.autoMinMin && (!best || b - a > best[1] - best[0])) best = [a, b];
+        a = b;
     }
     return best;
-}
-
-/**
- * Koľko by energia, ktorú auto chytí zo slnka v úseku, stála zo siete (podľa pásma v každej
- * štvrťhodine). Bez ceny v niektorom pásme null.
- * @param {DayCtx} ctx @param {[number, number]} span @param {number} powerKw
- */
-function gridValue(ctx, [a, b], powerKw) {
-    let sum = 0;
-    for (const s of ctx.plan) {
-        const overlap = Math.min(b, s.startMin + s.min) - Math.max(a, s.startMin);
-        if (overlap <= 0 || !Number.isFinite(s.kw)) continue;
-        if (s.band.price === null) return null;
-        sum += Math.min(s.kw, powerKw) * (overlap / 60) * s.band.price;
-    }
-    return sum;
 }
 
 /** Prvá štvrťhodina lacného pásma od `from` do polnoci, alebo null. @param {DayCtx} ctx @param {number} from */
@@ -103,7 +73,7 @@ function cheapFrom(ctx, from) {
 function elsewhere(item, device, ctx, from) {
     const cheap = cheapFrom(ctx, from);
     if (device.cheapGrid && cheap !== null) return { id: item.id, kind: 'cheap', start: cheap };
-    const day = laterDay(ctx, item.runMin === null ? ctx.th.highKw : ctx.th.lowKw, device.weakDay).day;
+    const day = laterDay(ctx, sunMinKw(item, device, ctx), device.weakDay).day;
     if (day) return { id: item.id, kind: 'later', day };
     return cheap !== null ? { id: item.id, kind: 'cheap', start: cheap } : { id: item.id, kind: 'none' };
 }
@@ -115,7 +85,7 @@ function elsewhere(item, device, ctx, from) {
  * @param {DayCtx} ctx @param {string} currency @param {readonly string[]} devices @returns {PlanRow[]}
  */
 export function planDna(ctx, currency, devices) {
-    const day = { ctx, currency, busy: /** @type {Array<[number, number]>} */ ([]) };
+    /** @type {Den} */ const day = { ctx, currency, free: Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m)) };
     /** @type {Record<string, number>} */ const ends = {};
     const from0 = Math.ceil(ctx.nowMin / STEP) * STEP;
     return chosen(devices).map(({ item, device }) => {
@@ -139,24 +109,35 @@ function chosen(devices) {
 }
 
 /**
- * Miesto na slnku od `from`: auto dostane úsek silného slnka, ostatné najskorší štart, pri ktorom
- * ohrevy chytia slnko. Obsadené ohrevy pridá do `day.busy`. Bez miesta null.
- * @param {MozemItem} item @param {(typeof DEVICES)[number]} device @param {number} from
- * @param {{ ctx: DayCtx, currency: string, busy: Array<[number, number]> }} day
+ * Miesto na slnku od `from` a jeho odpočítanie z rozpočtu: auto dostane úsek silného slnka a berie
+ * z neho všetko až po príkon nabíjačky (km a cenu tej energie zo siete), ostatné najskorší štart,
+ * pri ktorom sa ohrevy zmestia. Bez miesta null.
+ * @param {MozemItem} item @param {(typeof DEVICES)[number]} device @param {number} from @param {Den} day
  */
-function onSun(item, device, from, { ctx, currency, busy }) {
+function onSun(item, device, from, { ctx, currency, free }) {
     const base = { id: item.id, kind: /** @type {const} */ ('sun'), after: /** @type {string | null} */ (null), currency };
     if (item.runMin === null) {
-        const span = autoSpan(ctx, from, busy);
+        // Rozpočet už je bez spotreby domu, takže hranica je samotné silné slnko.
+        const span = autoSpan(free, ctx.th.highKw, from);
         if (!span) return null;
-        busy.push(span);
-        const km = kmFromSun({ ...ctx, nowMin: span[0] }, span[1], device.powerKw);
-        return { ...base, start: span[0], end: span[1], km, save: gridValue(ctx, span, device.powerKw) };
+        let kwh = 0;
+        /** @type {number | null} */ let save = 0;
+        for (let m = span[0]; m < span[1]; m++) {
+            const take = Math.min(free[m], device.powerKw);
+            const price = ctx.plan[Math.floor(m / STEP)].band.price;
+            kwh += take / 60;
+            save = save === null || price === null ? null : save + (take / 60) * price;
+            free[m] -= take;
+        }
+        return { ...base, start: span[0], end: span[1], km: kmOf(kwh), save };
     }
-    const hit = sunStart(item, ctx, from, busy);
-    if (!hit) return null;
-    busy.push(...hit.spans);
-    return { ...base, start: hit.start, end: hit.start + item.runMin, km: null, save: null };
+    const draw = programDraw(item, device.powerKw);
+    const start = sunStart(draw, free, from);
+    if (start === null) return null;
+    draw.forEach(({ kw }, m) => {
+        if (start + m < DAY_MIN) free[start + m] -= kw;
+    });
+    return { ...base, start, end: start + item.runMin, km: null, save: null };
 }
 
 /**
