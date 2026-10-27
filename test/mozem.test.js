@@ -215,7 +215,7 @@ test('celý týždeň bez slnka: tento týždeň nie', () => {
 test('bez dát: neviem, pri spotrebičoch otáznik', () => {
     const m = mozemModel(input(FIXED_NOW, { pv: null, forecast: null }));
     assert.equal(m.state, 'offline');
-    assert.equal(m.word, 'Neviem.');
+    assert.equal(m.word, 'Nemám dáta, sme off-line');
     assert.equal(m.strip, null);
     assert.equal(item(m, 'pracka').tone, 'unk');
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null, loading: true })).state, 'loading');
@@ -231,7 +231,7 @@ test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou'
     // Bez polohy appka nevie nič - neviem a prečo.
     const nic = mozemModel({ ...input(FIXED_NOW, { pv: null }), known: 'nic' });
     assert.equal(nic.state, 'bezpanelov');
-    assert.equal(nic.word, 'Neviem.');
+    assert.equal(nic.word, 'Nastav panely, voe!');
     assert.equal(nic.strip, null);
     assert.deepEqual([nic.hero.factK, nic.hero.factV], ['panely', 'nezadané']);
 });
