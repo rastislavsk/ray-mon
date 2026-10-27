@@ -529,17 +529,13 @@ function todayFacts({ pv, forecast }) {
 }
 
 /**
- * Krátke odpovede karty Môžem? („do 14:45“, „o 10:00“) podľa názvu spotrebiča
- * z DEVICES - pre tooltip spotrebiča na karte Terazky a kartu Spotrebiče v Oblohe. Počíta len
- * veci, nie celú kartu.
- * @param {PlanInput} input @returns {Record<string, string>}
+ * Spotrebiče doma s časom z Plánu dňa („teraz“, „o 15:00“, auto „do 15:45“) v poradí plánu -
+ * panel Spotrebiče na kartách Terazky a Teraz. Tie isté časy ako dlaždice karty Môžem?
+ * (planTileText). Bez predpovede nič.
+ * @param {PlanInput} input @param {readonly string[]} [devices] spotrebiče doma
+ * @returns {Array<{ name: string, short: string }>}
  */
-export function deviceShorts(input) {
-    const items = mozemItems(input, input.forecast ? dayCtx(input) : null);
-    /** @type {Record<string, string>} */ const out = {};
-    for (const { id, device } of MOZEM_ITEMS) {
-        const it = items.find((x) => x.id === id);
-        if (device && it) out[device] = it.short;
-    }
-    return out;
+export function planDevices(input, devices = PLAN_DNA.devices) {
+    const plan = input.forecast ? planDnaModel(input, { devices }) : null;
+    return plan ? plan.rows.map((r) => ({ name: r.name, short: planTileText(r).value })) : [];
 }

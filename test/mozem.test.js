@@ -4,7 +4,7 @@ import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds,
 import { countdownText, durationText } from '../shared/messages.js';
 import {
     dayWindow,
-    deviceShorts,
+    planDevices,
     itemAnswer,
     itemCost,
     mozemModel,
@@ -354,13 +354,19 @@ test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
     );
 });
 
-test('deviceShorts: krátke odpovede podľa názvu spotrebiča pre tooltip na Terazky, aj bojler', () => {
+test('planDevices: spotrebiče doma s časom z Plánu dňa, ten istý ako dlaždice karty Môžem?', () => {
+    assert.deepEqual(planDevices(input(FIXED_NOW)), [
+        { name: 'Práčka', short: 'teraz' },
+        { name: 'Umývačka', short: 'teraz' },
+        { name: 'Auto', short: 'o 13:15' },
+        { name: 'Sušička', short: 'o 15:00' },
+    ]);
     const m = mozemModel(input(FIXED_NOW));
-    const shorts = deviceShorts(input(FIXED_NOW));
-    assert.equal(shorts['Práčka'], item(m, 'pracka').short);
-    assert.equal(shorts.Auto, item(m, 'auto').short);
-    assert.equal(shorts.Bojler, item(m, 'bojler').short, 'bojler je v jednom zozname vecí pre obe appky');
-    assert.deepEqual(Object.keys(shorts).sort(), ['Auto', 'Bojler', 'Práčka', 'Sušička', 'Umývačka']);
-    const bez = input(FIXED_NOW, { pv: null, forecast: null });
-    assert.equal(deviceShorts(bez)['Práčka'], item(mozemModel(bez), 'pracka').short, 'bez predpovede tá istá odpoveď ako na karte');
+    assert.equal(m.groups.find((g) => g.key === 'auto')?.value, 'o 13:15');
+    const doma = planDevices(input(FIXED_NOW), ['pracka', 'bojler']);
+    assert.deepEqual(
+        doma.map((d) => d.name),
+        ['Práčka', 'Bojler'],
+    );
+    assert.deepEqual(planDevices(input(FIXED_NOW, { pv: null, forecast: null })), [], 'bez predpovede nič');
 });

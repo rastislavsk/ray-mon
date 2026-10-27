@@ -66,7 +66,10 @@ function renderCards(m, page, dom, TERAZ_TEXTS) {
 export function renderTeraz(state, dom) {
     if (!shows(state, 'terazky')) return;
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
-    const m = terazModel({ ...state, previewMinutes: state.terazPreview }, { online: state.online, voice: state.voice });
+    const m = terazModel(
+        { ...state, previewMinutes: state.terazPreview },
+        { online: state.online, voice: state.voice, devices: state.oznamenia.devices },
+    );
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);

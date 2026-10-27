@@ -321,7 +321,7 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, graf dňa, pás odporú�
     // Pás odporúčaní: štyri karty, prvá je „čo robiť teraz“.
     await expect(page.locator('#tz-now-head')).toHaveText(k.now.head);
     await expect(page.locator('#tz-now-body')).toHaveText(k.now.body);
-    expect(k.devices.map((d) => d.name)).toEqual(['Práčka', 'Umývačka', 'Sušička', 'Auto', 'Bojler']);
+    expect(k.devices.map((d) => d.name)).toEqual(['Práčka', 'Umývačka', 'Auto', 'Sušička'], 'spotrebiče doma v poradí Plánu dňa');
     await expect(page.locator('#tz-devices')).toHaveText(k.devices.map((d) => `${d.name} ${d.short}`).join(' · '));
     await expect(page.locator('#tz-today')).toHaveText(k.today.line);
     await expect(page.locator('#tz-window')).toHaveText(k.today.window);
@@ -3164,12 +3164,11 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('dlaždica s jednou vecou otvorí panel veci: čo robiť, prečo a otázka; na Terazky tá istá odpoveď', async ({ page }) => {
+    test('dlaždica s jednou vecou otvorí panel veci: čo robiť, prečo a otázka; na Terazky ten istý čas ako dlaždica', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         const m = model();
         const auto = /** @type {ReturnType<typeof model>['items'][number]} */ (m.items.find((i) => i.id === 'auto'));
-        const bojler = /** @type {ReturnType<typeof model>['items'][number]} */ (m.items.find((i) => i.id === 'bojler'));
         await page.locator('[data-mozem-item="auto"]').click();
         await expect(page.locator('#mozem-sheet-title')).toHaveText(auto.title);
         await expect(page.locator('#mozem-sheet-do-q')).toHaveText(MOZEM_SKY_TEXTS.sheetDo);
@@ -3182,7 +3181,9 @@ test.describe('karta Môžem?', () => {
         await page.keyboard.press('Escape');
 
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-devices')).toContainText(`Bojler ${bojler.short}`);
+        const tile = m.groups.find((g) => g.key === 'auto');
+        await expect(page.locator('#tz-devices')).toContainText(`Auto ${tile?.value}`);
+        await expect(page.locator('#tz-devices')).not.toContainText('Bojler', { useInnerText: true });
         expect(errors).toEqual([]);
     });
 
