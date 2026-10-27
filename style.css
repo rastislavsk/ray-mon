@@ -1055,10 +1055,12 @@ b {
     padding: 6px 8px 6px 14px;
     text-align: left;
 }
+/* Užšia medzera medzi položkami: výkon, predpoveď a oblačnosť sa tak zmestia do riadku aj na 360 px. */
 .tz-list-head .tz-legend {
     flex: 1;
     min-width: 0;
     margin: 0;
+    column-gap: 10px;
 }
 .tz-chev {
     flex: none;
