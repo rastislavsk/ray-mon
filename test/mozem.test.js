@@ -113,7 +113,8 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     assert.ok(m.strip && m.strip.width > 0 && m.strip.now > m.strip.left);
     const pracka = item(m, 'pracka');
     assert.equal(pracka.tone, 'go');
-    assert.match(pracka.short, /^do \d\d:\d\d$/);
+    assert.match(pracka.short, /^najneskôr \d\d:\d\d$/, 'pri spotrebiči posledný štart, „do“ je len koniec');
+    assert.match(item(m, 'auto').short, /^do \d\d:\d\d$/, 'auto nabíja do konca slnka');
     assert.equal(pracka.more?.a, 'Nevadí. Najviac berie na začiatku pri ohreve vody.', 'pri práčke bez ceny');
     assert.match(item(m, 'auto').more?.a ?? '', /Hodina nabíjania ~\d+,\d\d €/, 'cenu má len auto');
     assert.match(item(m, 'auto').text, /asi \d+ km/);
@@ -274,7 +275,7 @@ test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu po
     const [pracka, umyvacka, susicka] = ['pracka', 'umyvacka', 'susicka'].map((id) => item(m, id));
     assert.equal(m.groups[0].value, 'teraz', 'práčka a umývačka podľa plánu idú teraz');
     // Práčka potrebuje slnko len na 20 minút ohrevu, umývačka aj na oplach o 2 h, sušička celý program.
-    assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['do 16:55', 'do 15:15', 'do 16:00']);
+    assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['najneskôr 16:55', 'najneskôr 15:15', 'najneskôr 16:00']);
     assert.match(pracka.text, /prvých 20 minút pri ohreve vody/);
     assert.match(umyvacka.text, /dvakrát: na začiatku a pri oplachu o 2 hodiny/);
     assert.match(susicka.text, /celý čas berie 1,5 kW/);
@@ -284,7 +285,7 @@ test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu po
 test('neskoro popoludní: čo už celé na slnku nedobehne, povie koľko pokryje strecha, bez ceny', () => {
     const m = mozemModel(input(at('16:30')));
     assert.equal(m.state, 'go');
-    assert.equal(item(m, 'pracka').short, 'do 16:55', 'ohrev práčky ešte chytí slnko');
+    assert.equal(item(m, 'pracka').short, 'najneskôr 16:55', 'ohrev práčky ešte chytí slnko');
     const umyvacka = item(m, 'umyvacka');
     assert.equal(umyvacka.short, 'teraz');
     assert.match(umyvacka.text, /^Prvý ohrev ešte chytí slnko, oplach o 18:30 už nie\. Zo slnka asi \d0 %, zvyšok zo siete\.$/);

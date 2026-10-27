@@ -589,10 +589,12 @@ function goItem(t, a, item, env) {
         const why = {
             start: () => `Najviac berie prvých ${p.heat[0][1]} minút pri ohreve vody. Ten utiahne strecha, aj keď začne až o ${until}.`,
             twice: () =>
-                `Vodu ohrieva dvakrát: na začiatku a pri oplachu o ${durationText(p.heat[1][0])}. Do ${until} chytia slnko oba ohrevy.`,
-            whole: () => `${run} a celý čas berie ${p.kw} kW. Do ${until} dobehne celý na slnku.`,
+                `Vodu ohrieva dvakrát: na začiatku a pri oplachu o ${durationText(p.heat[1][0])}. Pri štarte najneskôr o ${until} chytia slnko oba ohrevy.`,
+            whole: () =>
+                `${run} a celý čas berie ${p.kw} kW. Pri štarte najneskôr o ${until} dobehne ${t.pron === 'ju' ? 'celá' : 'celý'} na slnku.`,
         };
-        return { short: `do ${until}`, head: `${t.verb} ${t.pron} do ${until}.`, text: why[p.shape]() };
+        // „Do“ je v appke len koniec (nabíjanie auta, slnko); pri spotrebiči je to posledný štart.
+        return { short: `najneskôr ${until}`, head: `${t.verb} ${t.pron} najneskôr o ${until}.`, text: why[p.shape]() };
     }
     const why = {
         start: () => `Ohrev na začiatku chytí slnko ${(a.share ?? 1) >= 0.95 ? 'ešte celý' : 'len sčasti'}, zvyšok programu berie málo.`,
