@@ -65,7 +65,7 @@ test('slušný tón: slová a texty Štatistiky podľa návrhu', () => {
     const s = M.voiceTexts('slusny');
     assert.deepEqual(
         [s.MOZEM_WORDS.go, s.MOZEM_WORDS.wait, s.MOZEM_WORDS.slabo, s.MOZEM_WORDS.none, s.MOZEM_WORDS.offline],
-        ['ÁNO, TERAZ', 'EŠTE NIE', 'SLABÝ DEŇ', 'DNES UŽ NIE', 'NEVIEM'],
+        ['Teraz je to ok', 'Počkajte na slnko', 'Dnes bude slabý deň', 'DNES UŽ NIE', 'Nemám dáta, sme off-line'],
     );
     assert.equal(s.MOZEM_SKY_TEXTS.guessTitle, 'Toto je len odhad');
     assert.equal(s.STATISTIKA_TEXTS.setupTitle, 'Štatistika potrebuje vaše panely');
