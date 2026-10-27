@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plán dňa na zajtra</title>
+        <style>
+            /* Návrh: Plán dňa (Živá obloha, karta Teraz) večer, keď dnes už nič nejde na slnko.
+               Dnes sa os nekreslí a ostanú len štítky, ktoré opakujú vetu. Dva návrhy, ako ukázať os
+               dňa, na ktorý plán ukazuje, a povedať jasne, že je to zajtra.
+               Situácia v mockupoch: utorok 27. 10. 2026, 19:50, slnko už nevyrába. Doma bojler, auto,
+               umývačka, práčka a sušička – časy ako na screenshote z appky. Dĺžka lacného pásma pre
+               auto je ilustračná. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --dim: rgba(255, 255, 255, 0.82);
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 48px 0 6px;
+            }
+            h3 {
+                font-size: 16px;
+                margin: 24px 0 6px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            b,
+            strong {
+                color: var(--text);
+            }
+            code {
+                font-size: 13px;
+                color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 20px;
+            }
+            .cap {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 8px 0 0;
+                max-width: 340px;
+            }
+            table {
+                border-collapse: collapse;
+                margin-top: 10px;
+                font-size: 14px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 6px 14px 6px 0;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 500;
+            }
+
+            /* Telefón: Živá obloha večer */
+            .phone {
+                width: 340px;
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                overflow: hidden;
+                padding: 16px 14px 18px;
+                background: linear-gradient(180deg, #121636 0%, #1b2150 60%, #252c62 100%);
+                font-family: 'Archivo', var(--font);
+                color: #fff;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                opacity: 0.85;
+            }
+            .dot::before {
+                content: '';
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yes);
+                margin-right: 6px;
+            }
+            .ttl {
+                font-size: 26px;
+                font-weight: 800;
+                margin-top: 12px;
+            }
+            .big {
+                font-size: 58px;
+                font-weight: 900;
+                font-stretch: 125%;
+                line-height: 1;
+            }
+            .big small {
+                font-size: 18px;
+                font-stretch: 100%;
+            }
+            .pills {
+                display: flex;
+                gap: 6px;
+                margin: 8px 0 4px;
+            }
+            .pill {
+                font-size: 11px;
+                font-weight: 800;
+                border-radius: 999px;
+                padding: 2px 10px;
+                color: #12305e;
+            }
+            .pill.no {
+                background: rgba(255, 255, 255, 0.85);
+            }
+            .pill.cheap {
+                background: var(--cheap);
+            }
+            .say {
+                font-size: 15px;
+                margin: 0 0 12px;
+            }
+            .glass {
+                background: rgba(14, 20, 50, 0.55);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 20px;
+                padding: 14px 16px;
+            }
+            .lbl {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                opacity: 0.85;
+            }
+            .lbl .day {
+                background: var(--yes);
+                color: #12305e;
+                border-radius: 999px;
+                padding: 1px 8px;
+                margin-left: 4px;
+                letter-spacing: 0.08em;
+            }
+            .ans {
+                font-size: 24px;
+                font-weight: 900;
+                font-stretch: 112%;
+                line-height: 1.1;
+                margin: 6px 0 6px;
+            }
+            .then {
+                font-size: 14px;
+                margin: 0 0 10px;
+            }
+            .then .c {
+                color: #b0dbff;
+            }
+            .note {
+                font-size: 12px;
+                color: var(--dim);
+                margin: 10px 0 0;
+            }
+            .ghost {
+                opacity: 0.35;
+                font-size: 12px;
+                text-align: center;
+                padding: 10px 0 0;
+            }
+
+            /* Štítky (dnešný stav) */
+            .chips {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-top: 10px;
+            }
+            .chip {
+                font-size: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 999px;
+                padding: 2px 10px;
+            }
+
+            /* Časová os – rovnaká mriežka ako v appke: stĺpec mien, pás, os pod ním */
+            .tl {
+                --name: 74px;
+                position: relative;
+            }
+            .lane {
+                display: grid;
+                grid-template-columns: var(--name) 1fr;
+                align-items: center;
+                gap: 8px;
+                height: 24px;
+                font-size: 13px;
+            }
+            .track {
+                position: relative;
+                height: 14px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .bar {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 7px;
+                background: var(--yes);
+            }
+            .bar.cheap {
+                background: var(--cheap);
+            }
+            .axis {
+                position: relative;
+                height: 18px;
+                margin-left: calc(var(--name) + 8px);
+                font-size: 10px;
+                opacity: 0.7;
+            }
+            .axis span {
+                position: absolute;
+                top: 3px;
+                transform: translateX(-50%);
+            }
+            /* Plocha nad pásmi: noc tmavšie, polnoc ako deliaca čiara s menom dňa */
+            .over {
+                position: absolute;
+                top: 18px;
+                bottom: 18px;
+                left: calc(var(--name) + 8px);
+                right: 0;
+                pointer-events: none;
+            }
+            .night {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.28);
+                border-radius: 4px;
+            }
+            .mid {
+                position: absolute;
+                top: -18px;
+                bottom: 0;
+                width: 0;
+                border-left: 2px dashed rgba(255, 255, 255, 0.75);
+            }
+            .now {
+                position: absolute;
+                top: -18px;
+                bottom: 0;
+                width: 2px;
+                background: #fff;
+            }
+            .days {
+                position: relative;
+                height: 18px;
+                margin-left: calc(var(--name) + 8px);
+                font-size: 11px;
+                font-weight: 800;
+            }
+            .days span {
+                position: absolute;
+                top: 0;
+                white-space: nowrap;
+            }
+            .days .z {
+                color: var(--yes);
+            }
+            /* Návrh 1: os zajtrajška má hore pruh s menom dňa, aby sa nedala zameniť s dneškom */
+            .tmr {
+                margin-left: calc(var(--name) + 8px);
+                font-size: 11px;
+                font-weight: 800;
+                color: var(--yes);
+                border-bottom: 1px solid rgba(185, 242, 140, 0.5);
+                padding-bottom: 2px;
+                margin-bottom: 4px;
+            }
+            .tmr small {
+                font-weight: 500;
+                color: var(--dim);
+                margin-left: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Plán dňa na zajtra</h1>
+            <p>
+                Večer, keď dnes už žiadny spotrebič nejde na slnko, Plán dňa v Oblohe stratí časovú os. Ostane veta a pod ňou štítky, ktoré
+                tú vetu opakujú ešte raz. Os sa kreslí len pre spotrebiče na <b>dnešnom</b> slnku (<code>planLanes</code> v
+                <code>shared/plan-dna.js</code>), takže večer nemá čo nakresliť. Predpoveď na zajtra pritom máme a jadro už zajtrajšok
+                rozvrhuje – umývačka 07:45, práčka 08:00, sušička 10:00. Oba návrhy túto os ukážu tak, aby nikto nemohol prehliadnuť, že ide
+                o <b>zajtra</b>.
+            </p>
+            <p>Situácia: utorok 27. 10., 19:50, slnko už nevyrába. Bojler a auto idú dnes večer z lacnej siete, ostatné zajtra.</p>
+
+            <h2>Dnes</h2>
+            <div class="row">
+                <div>
+                    <div class="phone">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">19:50</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">0.00<small> kW</small></div>
+                        <div class="pills"><span class="pill no">NIE</span><span class="pill cheap">LACNÁ SIEŤ</span></div>
+                        <p class="say">Slnko dnes už nevyrába. Auto môžete nabíjať z lacnej siete, ostatné zajtra.</p>
+                        <div class="glass">
+                            <div class="lbl">PLÁN DŇA</div>
+                            <div class="ans">Bojler od 19:45</div>
+                            <p class="then">Auto od 19:45 · umývačka zajtra 07:45</p>
+                            <div class="chips">
+                                <span class="chip">Bojler · od 19:45</span><span class="chip">Auto · od 19:45</span>
+                                <span class="chip">Umývačka · zajtra 07:45</span><span class="chip">Práčka · zajtra 08:00</span>
+                                <span class="chip">Sušička · zajtra 10:00</span>
+                            </div>
+                            <p class="note">Naraz len toľko, koľko strecha utiahne.</p>
+                        </div>
+                    </div>
+                    <p class="cap">Teraz: bez osi, päť štítkov. Bojler a auto sú v nadpise, vo vete aj v štítkoch – trikrát to isté.</p>
+                </div>
+            </div>
+
+            <h2>Návrh 1 · Os sa prepne na zajtra</h2>
+            <p>
+                Keď na dnešnom slnku nie je nič, celý blok sa prepne na deň, na ktorý plán ukazuje. Hore v štítku <b>PLÁN NA</b> a zelená
+                plaketa s dňom, nadpis hovorí o zajtrajšom ráne. Dnešný večer (lacná sieť) je jedna veta pod nadpisom, modrou ako štítok
+                LACNÁ SIEŤ. Nad osou je ešte raz pruh <b>„Zajtra · streda 28. 10.“</b> s predpoveďou dňa. Čiara teraz na osi nie je – teraz
+                je dnes, nie zajtra. Štítky zmiznú, všetko povie veta a os.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">19:50</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">0.00<small> kW</small></div>
+                        <div class="pills"><span class="pill no">NIE</span><span class="pill cheap">LACNÁ SIEŤ</span></div>
+                        <p class="say">Slnko dnes už nevyrába. Auto môžete nabíjať z lacnej siete, ostatné zajtra.</p>
+                        <div class="glass">
+                            <div class="lbl">PLÁN NA <span class="day">ZAJTRA</span></div>
+                            <div class="ans">Ráno umývačka a práčka</div>
+                            <p class="then">
+                                <span class="c">Dnes z lacnej siete: bojler a auto od 19:45</span><br />Sušička o 10:00 po práčke
+                            </p>
+                            <div class="tl">
+                                <div class="tmr">Zajtra · streda 28. 10.<small>☀ jasno, do 7 kW</small></div>
+                                <div class="lane">
+                                    <span>Umývačka</span>
+                                    <div class="track"><i class="bar" style="left: 14.58%; width: 20.83%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Práčka</span>
+                                    <div class="track"><i class="bar" style="left: 16.67%; width: 16.67%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Sušička</span>
+                                    <div class="track"><i class="bar" style="left: 33.33%; width: 12.5%"></i></div>
+                                </div>
+                                <div class="axis">
+                                    <span style="left: 0%">6</span><span style="left: 25%">9</span><span style="left: 50%">12</span
+                                    ><span style="left: 75%">15</span><span style="left: 100%">18</span>
+                                </div>
+                            </div>
+                            <p class="note">Podľa predpovede na zajtra – ráno sa ešte môže zmeniť.</p>
+                        </div>
+                        <div class="ghost">graf dňa – bez zmeny</div>
+                    </div>
+                    <p class="cap">
+                        Os je celý zajtrajší deň so slnkom, rovnaká ako cez deň. „Zajtra“ je trikrát: v štítku, nad osou a v pätke.
+                        Predpoveď v pruhu (jasno, do 7 kW) je ilustračná.
+                    </p>
+                </div>
+            </div>
+            <p>
+                <b>Plus:</b> os vyzerá presne ako cez deň, len pre iný deň – nič nové sa učiť netreba. Pásy sú široké a čitateľné. Najmenej
+                práce: jadro len vráti os pre deň zo slnkom namiesto prázdnej. <b>Mínus:</b> dnešný večer (bojler, auto) je len veta, na osi
+                ho nevidno. Kto pozerá len na obrázok a nie na štítok, môže si zajtrajšie pásy prečítať ako dnešné – preto ten pruh nad
+                osou.
+            </p>
+
+            <h2>Návrh 2 · Jedna os cez noc</h2>
+            <p>
+                Os nezačína ránom, ale <b>teraz</b> a ide až do zajtrajšieho západu slnka. Vľavo biela čiara teraz, v polnoci prerušovaná
+                čiara a nad osou mená dní <b>dnes</b> | <b>zajtra · st</b>. Noc je stmavená. Bojler a auto majú modré pásy (lacná sieť),
+                spotrebiče na zajtrajšom slnku zelené – tie isté farby ako štítky ÁNO a LACNÁ SIEŤ. Štítky zmiznú.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">19:50</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">0.00<small> kW</small></div>
+                        <div class="pills"><span class="pill no">NIE</span><span class="pill cheap">LACNÁ SIEŤ</span></div>
+                        <p class="say">Slnko dnes už nevyrába. Auto môžete nabíjať z lacnej siete, ostatné zajtra.</p>
+                        <div class="glass">
+                            <div class="lbl">PLÁN DŇA</div>
+                            <div class="ans">Teraz bojler a auto</div>
+                            <p class="then">Zajtra ráno umývačka a práčka · sušička o 10:00</p>
+                            <div class="tl">
+                                <div class="days">
+                                    <span style="left: 0%">dnes</span><span class="z" style="left: calc(19.1% + 6px)">zajtra · st</span>
+                                </div>
+                                <div class="lane">
+                                    <span>Bojler</span>
+                                    <div class="track"><i class="bar cheap" style="left: 0%; width: 4.5%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Auto</span>
+                                    <div class="track"><i class="bar cheap" style="left: 0%; width: 46%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Umývačka</span>
+                                    <div class="track"><i class="bar" style="left: 53.9%; width: 11.2%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Práčka</span>
+                                    <div class="track"><i class="bar" style="left: 55.1%; width: 9%"></i></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Sušička</span>
+                                    <div class="track"><i class="bar" style="left: 64%; width: 6.7%"></i></div>
+                                </div>
+                                <div class="axis">
+                                    <span style="left: 19.1%">0</span><span style="left: 46.1%">6</span><span style="left: 73%">12</span
+                                    ><span style="left: 100%">18</span>
+                                </div>
+                                <div class="over">
+                                    <span class="night" style="left: 0%; width: 48%"></span>
+                                    <span class="night" style="left: 93.6%; width: 6.4%"></span>
+                                    <span class="mid" style="left: 19.1%"></span>
+                                    <span class="now" style="left: 0%"></span>
+                                </div>
+                            </div>
+                            <p class="note">Zajtra podľa predpovede · naraz len toľko, koľko strecha utiahne.</p>
+                        </div>
+                        <div class="ghost">graf dňa – bez zmeny</div>
+                    </div>
+                    <p class="cap">
+                        Os od teraz (19:50) po zajtrajší západ. Pás auta je ilustračný – dĺžku nabíjania v lacnom pásme dnes jadro nepočíta.
+                    </p>
+                </div>
+            </div>
+            <p>
+                <b>Plus:</b> celý zvyšok plánu na jednom obrázku – čo ide teraz z lacnej siete aj čo zajtra zo slnka. Nadpis môže znova
+                povedať „teraz“. <b>Mínus:</b> noc zaberie skoro polovicu osi a zajtrajšie pásy sú o polovicu užšie. Os je iná ako cez deň
+                (cez polnoc, s dvoma dňami), treba ju naučiť. Jadro musí dorátať aj koniec pásov v lacnej sieti (dnes vie len štart) – pri
+                aute to znamená vedieť, dokedy lacné pásmo trvá a koľko auto naberie.
+            </p>
+
+            <h2>Porovnanie</h2>
+            <table>
+                <tr>
+                    <th></th>
+                    <th>Návrh 1 · os na zajtra</th>
+                    <th>Návrh 2 · os cez noc</th>
+                </tr>
+                <tr>
+                    <td>Je jasné, že ide o zajtra?</td>
+                    <td>Áno – štítok, pruh nad osou, pätka</td>
+                    <td>Áno – mená dní a polnoc na osi</td>
+                </tr>
+                <tr>
+                    <td>Dnešný večer (lacná sieť)</td>
+                    <td>Len veta</td>
+                    <td>Na osi, modré pásy</td>
+                </tr>
+                <tr>
+                    <td>Čitateľnosť pásov</td>
+                    <td>Široké, ako cez deň</td>
+                    <td>Polovičné, noc berie miesto</td>
+                </tr>
+                <tr>
+                    <td>Práca v jadre</td>
+                    <td>Malá – os pre iný deň, koniec pásu pre iný deň</td>
+                    <td>Väčšia – os cez dva dni, koniec lacného pásma, nabíjanie auta v noci</td>
+                </tr>
+                <tr>
+                    <td>KISS</td>
+                    <td><b>Jednoduchší</b></td>
+                    <td>Zložitejší</td>
+                </tr>
+            </table>
+
+            <h3>Spoločné pre oba</h3>
+            <ul>
+                <li>
+                    <b>Kedy:</b> len keď na dnešnom slnku nie je nič a niektorý spotrebič má miesto na slnku v ďalšom dni predpovede. Cez
+                    deň sa nič nemení – čo ide na iný deň, ostáva štítkom pod dnešnou osou.
+                </li>
+                <li>
+                    <b>Iný deň ako zajtra:</b> keď je najbližšie slnko až napr. v štvrtok, os patrí štvrtku a štítok hovorí „PLÁN NA
+                    ŠTVRTOK“ (návrh 1), resp. os ide do štvrtka (návrh 2 – tu by bola os príliš dlhá, ďalší dôvod pre návrh 1).
+                </li>
+                <li><b>Nič na slnku celý týždeň:</b> ostáva dnešný stav – veta bez osi.</li>
+                <li>
+                    <b>Jadro:</b> rozvrh na zajtra už existuje (<code>ineDni</code> v <code>shared/plan-dna.js</code>), len pri riadku iného
+                    dňa zahodí koniec programu. Model os na iný deň vráti z jadra, takže ju súčasná appka vie prevziať bez ďalšej práce.
+                    Teraz ju mení len Obloha.
+                </li>
+                <li>
+                    <b>Predpoveď je zamknutá</b> (<code>test/golden/forecast.json</code>) – návrh ju nemení, mení sa len to, čo sa ukáže.
+                </li>
+            </ul>
+        </main>
+    </body>
+</html>
