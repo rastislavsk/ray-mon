@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem? novej appky: panel veci či skupiny a „Skúsiť znova“.
+// Poslucháče karty Môžem? novej appky: panel veci či skupiny, rozbalenie Plánu dňa a „Skúsiť znova“.
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
 
 import { stepBack } from './nav-back.js';
@@ -20,6 +20,7 @@ export function initMozem(store, dom, refresh) {
         // Panel robí z Môžem? aktívny stĺpec prehľadu (na telefóne je Môžem? aktívna karta).
         if (row instanceof HTMLElement && row.dataset.item) store.setState({ mozemItem: row.dataset.item, panel: 'mozem' });
     });
+    dom.mzPlanMore.addEventListener('click', () => store.setState({ mozemPlanOpen: !store.get().mozemPlanOpen }));
     dom.mzSheetX.addEventListener('click', () => closeSheet(store));
     // Ťuknutie vedľa panelu (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
     dom.mzSheet.addEventListener('click', (e) => e.target === dom.mzSheet && closeSheet(store));

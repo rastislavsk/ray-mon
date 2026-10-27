@@ -1,4 +1,4 @@
-// Poslucháče karty Môžem?: panel veci či skupiny. Každý končí volaním setState (alebo krokom
+// Poslucháče karty Môžem?: panel veci či skupiny a rozbalenie Plánu dňa. Každý končí volaním setState (alebo krokom
 // v histórii cez backTo), kreslí web/render/mozem.js.
 
 import { backTo } from './history.js';
@@ -16,6 +16,7 @@ export function initMozem(store, dom) {
         const target = /** @type {HTMLElement} */ (e.target);
         const tile = target.closest('[data-mozem-item]');
         if (tile instanceof HTMLElement && tile.dataset.mozemItem) store.setState({ mozemItem: tile.dataset.mozemItem });
+        if (target.closest('[data-mozem-plan]')) store.setState({ mozemPlanOpen: !store.get().mozemPlanOpen });
     });
     const close = () => backTo(store, { mozemItem: null });
     dom.mozemSheetX.addEventListener('click', close);

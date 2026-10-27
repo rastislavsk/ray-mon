@@ -41,7 +41,15 @@ import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { planDnaModel } from '../../shared/plan-dna.js';
 import { summaryModel } from '../../shared/summary.js';
-import { dayWindowCard, MOZEM_SKY_TEXTS, mozemListTitle, terazTypicalText, weekMessage } from '../../shared/messages.js';
+import {
+    dayWindowCard,
+    MOZEM_SKY_TEXTS,
+    mozemListTitle,
+    PLAN_DNA_LESS,
+    planDnaMoreText,
+    terazTypicalText,
+    weekMessage,
+} from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
@@ -3092,16 +3100,32 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('o 13:00 plán dňa pod dlaždicami podľa modelu, bez ceny pri spotrebičoch', async ({ page }) => {
+    test('o 13:00 plán dňa pod dlaždicami podľa modelu: zbalený na prvý riadok, tlačidlo rozbalí a zbalí, bez ceny pri spotrebičoch', async ({
+        page,
+    }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
         const plan = planDnaModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: forecastAt(FIXED_NOW) });
         const rows = plan?.rows ?? [];
-        expect(rows.length).toBeGreaterThan(0);
+        expect(rows.length).toBeGreaterThan(1);
+        const more = page.locator('.mozem-plan-more');
+        const riadky = rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`);
         await expect(page.locator('#mozem-plan-ttl')).toHaveText('Plán dňa');
-        await expect(page.locator('.mozem-plan-list li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
+        await expect(page.locator('.mozem-plan-list li')).toHaveText(riadky.slice(0, 1));
+        await expect(page.locator('.mozem-plan-note')).toHaveCount(0);
+        await expect(more).toHaveText(planDnaMoreText(rows.length - 1));
+        await expect(more).toHaveAttribute('aria-expanded', 'false');
+        // Z klávesnice: fokus ostane na tlačidle aj po prekreslení karty.
+        await more.focus();
+        await page.keyboard.press('Enter');
+        await expect(page.locator('.mozem-plan-list li')).toHaveText(riadky);
         await expect(page.locator('.mozem-plan-note')).toHaveText(plan?.note ?? '');
+        await expect(more).toHaveText(PLAN_DNA_LESS);
+        await expect(more).toHaveAttribute('aria-expanded', 'true');
+        await expect(more).toBeFocused();
+        await more.click();
+        await expect(page.locator('.mozem-plan-list li')).toHaveCount(1);
         for (const r of rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');
         expect(errors).toEqual([]);
     });

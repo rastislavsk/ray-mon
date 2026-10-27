@@ -41,6 +41,8 @@ function mozemDom() {
         mzPlanTitle: byId('mz-plan-title'),
         mzPlanRows: byId('mz-plan-rows'),
         mzPlanNote: byId('mz-plan-note'),
+        mzPlanMore: byId('mz-plan-more'),
+        mzPlanMoreText: byId('mz-plan-more-text'),
         mzSheet: /** @type {HTMLDialogElement} */ (byId('mz-sheet')),
         mzSheetX: byId('mz-sheet-x'),
         mzSheetTitle: byId('mz-sheet-title'),
