@@ -4240,6 +4240,27 @@ b {
     font-size: var(--fs-sm);
     color: var(--ink-45);
 }
+/* Tlačidlo zbaleného či rozbaleného plánu; zbalený plán je bez pätky, tlačidlo stojí hneď pod riadkom. */
+.mozem-plan-more {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    margin-top: 4px;
+    padding: 4px 0 0;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    text-align: left;
+}
+.mozem-plan-more .tz-chev {
+    width: 28px;
+    height: 28px;
+}
+.mozem-plan-more[aria-expanded='true'] .tz-chev {
+    transform: rotate(180deg);
+}
 /* Pás dňa v širokej dlaždici: okno so slnkom, uplynulá časť stlmená, značka „teraz“. */
 .mozem-tile-bar {
     position: relative;

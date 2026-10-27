@@ -29,6 +29,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   weekDetail: 'day' | 'week' | null,
  *   terazPage: number,
  *   tzListOpen: boolean,
+ *   mozemPlanOpen: boolean,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   mozemItem: string | null,
@@ -114,6 +115,9 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Zoznam pod grafom dňa na karte Terazky: na začiatku zatvorený. Nastavenie vnútri karty,
         // nie krok navigácie, a neukladá sa.
         tzListOpen: false,
+        // Plán dňa na karte Môžem?: na začiatku zbalený na prvý riadok. Nastavenie vnútri karty,
+        // nie krok navigácie, a neukladá sa.
+        mozemPlanOpen: false,
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),

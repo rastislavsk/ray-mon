@@ -74,6 +74,7 @@ test.describe('oznámenia: súčasná appka', () => {
         await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 7, devices: ['pracka', 'umyvacka', 'susicka'] });
         await page.locator('#nav-mozem').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka'])?.rows ?? [];
+        await page.locator('.mozem-plan-more').click();
         await expect(page.locator('.mozem-plan-list li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
         await expect(page.locator('.mozem-plan-list')).not.toContainText('Auto');
     });
@@ -116,6 +117,7 @@ test.describe('oznámenia: Živá obloha', () => {
             .toEqual({ on: false, hour: 8, devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
         await page.locator('#nav-mozem').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.rows ?? [];
+        await page.locator('#mz-plan-more').click();
         await expect(page.locator('#mz-plan-rows li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
     });
 

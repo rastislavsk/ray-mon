@@ -668,6 +668,32 @@ button.live[aria-expanded='true'] {
     font-size: 0.8125rem;
     color: var(--dim);
 }
+/* Tlačidlo zbaleného či rozbaleného plánu, s tou istou šípkou ako zoznam pod grafom karty Teraz. */
+.plan-more {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0 0;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+.plan-more .chev {
+    width: 28px;
+    height: 28px;
+}
+.plan-more[aria-expanded='true'] .chev {
+    transform: rotate(180deg);
+}
 /* Pás dňa: okno slnka, jeho uplynulá časť stlmená, biela čiarka je teraz. */
 .tile-bar {
     position: relative;

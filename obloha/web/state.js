@@ -11,7 +11,8 @@ import { setupInit } from '../../shared/setup-flow.js';
 /**
  * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny),
  * `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
- * `terazPage` stránka pásu odporúčaní pod ním, `tzListOpen` otvorený zoznam pod grafom (na začiatku zatvorený),`weekDetail` otvorený detail karty 7 dní (deň, týždeň,
+ * `terazPage` stránka pásu odporúčaní pod ním, `tzListOpen` otvorený zoznam pod grafom (na začiatku zatvorený),
+ * `mozemPlanOpen` rozbalený Plán dňa na karte Môžem? (na začiatku zbalený na prvý riadok),`weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
  * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
@@ -34,6 +35,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   terazPreview: number | null,
  *   terazPage: number,
  *   tzListOpen: boolean,
+ *   mozemPlanOpen: boolean,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
  *   statsPeriod: import('../../shared/stats.js').StatsPeriod,
@@ -123,6 +125,7 @@ export function initialState(
         terazPreview: null,
         terazPage: 0,
         tzListOpen: false,
+        mozemPlanOpen: false,
         weekDetail: null,
         weekDay: 0,
         statsPeriod: /** @type {import('../../shared/stats.js').StatsPeriod} */ ('dnes'),

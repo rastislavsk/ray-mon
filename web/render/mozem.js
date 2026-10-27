@@ -3,7 +3,7 @@
 // do #mozem-body, panel je dialóg v index.html. Počíta shared/mozem.js, texty sú v shared/messages.js.
 
 import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
-import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_NOW, PLAN_DNA_TITLE } from '../../shared/messages.js';
+import { MOZEM_SKY_TEXTS, NO_LIVE_FACT, PLAN_DNA_LESS, PLAN_DNA_NOW, PLAN_DNA_TITLE, planDnaMoreText } from '../../shared/messages.js';
 import { mozemModel, mozemSheetOf } from '../../shared/mozem.js';
 import { planDnaModel } from '../../shared/plan-dna.js';
 import { neplatiOf } from '../../shared/pristup.js';
@@ -67,10 +67,16 @@ function tilesHtml(m) {
     );
 }
 
-/** Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu (načítava sa, bez predpovede) nie je. @param {PlanModel} plan */
-function planHtml(plan) {
+/**
+ * Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu (načítava sa, bez predpovede) nie je.
+ * Zbalený ukáže len prvý riadok (čo je na rade) a tlačidlo, ktoré rozbalí ostatné aj s pätkou.
+ * @param {PlanModel} plan @param {boolean} open
+ */
+function planHtml(plan, open) {
     if (!plan || !plan.rows.length) return '';
-    const rows = plan.rows.map(
+    const more = plan.rows.length - 1;
+    const shown = open || !more ? plan.rows : plan.rows.slice(0, 1);
+    const rows = shown.map(
         (r) =>
             `<li data-tone="${r.tone}"><span class="mozem-plan-t">${escapeHtml(r.time)}</span>` +
             `<span class="mozem-plan-n">${escapeHtml(r.name)}${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : ''}</span>` +
@@ -78,17 +84,23 @@ function planHtml(plan) {
     );
     return (
         `<section class="mozem-plan" aria-labelledby="mozem-plan-ttl"><h3 id="mozem-plan-ttl" class="mozem-plan-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h3>` +
-        `<div class="mozem-plan-box"><ol class="mozem-plan-list">${rows.join('')}</ol><p class="mozem-plan-note">${escapeHtml(plan.note)}</p></div></section>`
+        `<div class="mozem-plan-box"><ol id="mozem-plan-list" class="mozem-plan-list">${rows.join('')}</ol>` +
+        (open || !more ? `<p class="mozem-plan-note">${escapeHtml(plan.note)}</p>` : '') +
+        (more
+            ? `<button type="button" class="mozem-plan-more" data-mozem-plan aria-expanded="${open}" aria-controls="mozem-plan-list">` +
+              `<span>${escapeHtml(open ? PLAN_DNA_LESS : planDnaMoreText(more))}</span><span class="tz-chev" aria-hidden="true"></span></button>`
+            : '') +
+        `</div></section>`
     );
 }
 
 /**
  * Hlavná obrazovka karty z modelu. `kick` je riadok nad slovom („Teraz · 13:00 · Dvorany“),
- * `plan` plán dňa pod dlaždicami.
- * @param {MozemModel} m @param {string} kick @param {PlanModel} [plan]
+ * `plan` plán dňa pod dlaždicami, `planOpen` či je rozbalený.
+ * @param {MozemModel} m @param {string} kick @param {PlanModel} [plan] @param {boolean} [planOpen]
  */
-export function mozemHtml(m, kick, plan = null) {
-    return heroHtml(m, kick) + tilesHtml(m) + (m.list ? planHtml(plan) : '');
+export function mozemHtml(m, kick, plan = null, planOpen = false) {
+    return heroHtml(m, kick) + tilesHtml(m) + (m.list ? planHtml(plan, planOpen) : '');
 }
 
 /** Riadky panelu skupiny: meno, krátka odpoveď a prečo. @param {MozemModel['items']} rows */
@@ -172,6 +184,10 @@ export function closeMozemSheet(dom) {
 export function renderMozem(state, dom) {
     const m = modelOf(state);
     const kick = `Teraz · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, kick, planDnaModel(state, { devices: state.oznamenia.devices })), 'mozemBody');
+    writeHtml(
+        dom.mozemBody,
+        mozemHtml(m, kick, planDnaModel(state, { devices: state.oznamenia.devices }), state.mozemPlanOpen),
+        'mozemBody',
+    );
     renderSheet(mozemSheetOf(m, state.mozemItem), dom);
 }

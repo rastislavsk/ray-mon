@@ -18,7 +18,7 @@ import {
     TARIFF,
     WORKER_PV_URL,
 } from '../../shared/config.js';
-import { MOZEM_WORDS } from '../../shared/messages.js';
+import { MOZEM_WORDS, PLAN_DNA_LESS, planDnaMoreText } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
@@ -711,13 +711,26 @@ test.describe('karta Môžem?', () => {
     }
 
     for (const hm of ['09:00', '13:00', '21:00']) {
-        test(`o ${hm} plán dňa pod dlaždicami podľa modelu, bez ceny pri spotrebičoch`, async ({ page }) => {
+        test(`o ${hm} plán dňa pod dlaždicami podľa modelu: zbalený na prvý riadok, tlačidlo rozbalí, bez ceny pri spotrebičoch`, async ({
+            page,
+        }) => {
             const errors = await openObloha(page, { time: at(hm) });
             const plan = modelKarty(at(hm)).plan;
             const rows = plan?.rows ?? [];
+            const riadky = rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`);
+            const more = page.locator('#mz-plan-more');
             await expect(page.locator('#mz-plan')).toBeVisible();
             await expect(page.locator('#mz-plan-title')).toHaveText('Plán dňa');
-            await expect(page.locator('#mz-plan-rows li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
+            if (rows.length > 1) {
+                await expect(page.locator('#mz-plan-rows li')).toHaveText(riadky.slice(0, 1));
+                await expect(page.locator('#mz-plan-note')).toBeHidden();
+                await expect(more).toHaveText(planDnaMoreText(rows.length - 1));
+                await expect(more).toHaveAttribute('aria-expanded', 'false');
+                await more.click();
+                await expect(more).toHaveText(PLAN_DNA_LESS);
+                await expect(more).toHaveAttribute('aria-expanded', 'true');
+            } else await expect(more).toBeHidden();
+            await expect(page.locator('#mz-plan-rows li')).toHaveText(riadky);
             await expect(page.locator('#mz-plan-rows .row-t')).toHaveText(rows.map((r) => r.time));
             await expect(page.locator('#mz-plan-note')).toHaveText(plan?.note ?? '');
             for (const r of rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');

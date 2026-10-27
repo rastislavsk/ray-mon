@@ -3,7 +3,7 @@
 // shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
-import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
+import { PLAN_DNA_LESS, PLAN_DNA_NOW, PLAN_DNA_TITLE, planDnaMoreText, voiceTexts } from '../../../shared/messages-core.js';
 import { mozemSheetOf } from '../../../shared/mozem.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { shows } from '../state.js';
@@ -112,8 +112,11 @@ function rowsHtml(rows) {
         .join('');
 }
 
-/** Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice */
-function renderCard(m, dom, voice) {
+/**
+ * Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice
+ * @param {boolean} planOpen je Plán dňa rozbalený?
+ */
+function renderCard(m, dom, voice, planOpen) {
     const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
     show(dom.mzArc, !!m.arc);
     if (m.arc) setHtml(dom.mzArc, arcSvg(m.arc, m.state === 'offline'));
@@ -140,13 +143,23 @@ function renderCard(m, dom, voice) {
     dom.mzList.classList.toggle('est', !!m.list?.estimate);
     setText(dom.mzListTitle, m.list ? m.list.title : '');
     setHtml(dom.mzItems, m.list ? tilesHtml(m.groups) : '');
-    renderPlan(m.list ? m.plan : null, dom);
+    renderPlan(m.list ? m.plan : null, planOpen, dom);
 }
 
-/** Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu sa skryje. @param {Model['plan']} plan @param {Dom} dom */
-function renderPlan(plan, dom) {
-    const rows = plan ? plan.rows : [];
-    show(dom.mzPlan, rows.length > 0);
+/**
+ * Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu sa skryje. Zbalený ukáže len prvý
+ * riadok (čo je na rade) a tlačidlo, ktoré rozbalí ostatné aj s pätkou.
+ * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
+ */
+function renderPlan(plan, open, dom) {
+    const all = plan ? plan.rows : [];
+    const more = all.length - 1;
+    const rows = open || more < 1 ? all : all.slice(0, 1);
+    show(dom.mzPlan, all.length > 0);
+    show(dom.mzPlanMore, more > 0);
+    show(dom.mzPlanNote, open || more < 1);
+    dom.mzPlanMore.setAttribute('aria-expanded', String(open));
+    setText(dom.mzPlanMoreText, open ? PLAN_DNA_LESS : planDnaMoreText(more));
     setText(dom.mzPlanTitle, PLAN_DNA_TITLE);
     setHtml(
         dom.mzPlanRows,
@@ -244,7 +257,7 @@ export function renderMozem(state, dom) {
         return renderSheet(null, dom);
     }
     const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices });
-    renderCard(m, dom, state.voice);
+    renderCard(m, dom, state.voice, state.mozemPlanOpen);
     renderAnnounce(m, dom);
     renderSheet(mozemSheetOf(m, state.mozemItem), dom, state.voice);
 }
