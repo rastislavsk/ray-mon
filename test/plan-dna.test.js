@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_DAYS, ALL_MONTHS, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
-import { dayCtx } from '../shared/mozem.js';
+import { ALL_DAYS, ALL_MONTHS, DEVICES, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
+import { dayCtx, freeKw, programDraw } from '../shared/mozem.js';
 import { planDna, planDnaModel } from '../shared/plan-dna.js';
 import { PLAN_DNA_NOTE } from '../shared/messages.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
@@ -42,7 +42,7 @@ function cloudy(k, dayIdx) {
 /** Riadok podľa id. @param {Array<{ id: string }>} rows @param {string} id */
 const row = (rows, id) => /** @type {any} */ (rows.find((r) => r.id === id));
 
-test('9:00 za jasna: každý na slnku, sušička po práčke, ohrevy sa neprekrývajú', () => {
+test('9:00 za jasna: každý na slnku, sušička po práčke, všetko sa zmestí do výroby nad spotrebou domu', () => {
     const i = input(at('09:00'));
     const ctx = dayCtx(i);
     const rows = planDna(ctx, '€', ALL);
@@ -54,15 +54,24 @@ test('9:00 za jasna: každý na slnku, sušička po práčke, ohrevy sa neprekr�
     assert.equal(pracka.start, 9 * 60, 'práčka hneď');
     assert.ok(susicka.start >= pracka.end, 'sušička až keď práčka dobehne');
     assert.equal(susicka.after, 'pracka');
-    // Ohrevy (plný príkon) dvoch vecí nikdy naraz.
-    const heats = rows
-        .filter((r) => r.kind === 'sun' && r.id !== 'auto')
-        .flatMap((r) => (MOZEM_ITEMS.find((m) => m.id === r.id)?.heat ?? []).map(([a, b]) => [r.start + a, r.start + b]));
-    for (const [a, b] of heats) for (const [c, d] of heats) if (a !== c || b !== d) assert.ok(b <= c || d <= a, `${a}-${b} a ${c}-${d}`);
+    // Rozpočet: v každej minúte ohrevu odber všetkých vecí v pláne neprekročí výrobu nad spotrebou
+    // domu a autu počas jeho úseku po nich ostane aspoň silné slnko.
+    /** @type {number[]} */ const draw = new Array(24 * 60).fill(0);
+    /** @type {boolean[]} */ const heavy = new Array(24 * 60).fill(false);
+    for (const r of rows.filter((x) => x.kind === 'sun' && x.id !== 'auto')) {
+        const item = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((m) => m.id === r.id));
+        const device = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === item.device));
+        programDraw(item, device.powerKw).forEach((p, m) => {
+            draw[r.start + m] += p.kw;
+            heavy[r.start + m] ||= p.heavy;
+        });
+    }
+    assert.ok(heavy.some(Boolean));
+    heavy.forEach((h, m) => h && assert.ok(draw[m] <= freeKw(ctx, m) + 1e-9, `minúta ${m}: ${draw[m]} kW`));
     const auto = row(rows, 'auto');
     assert.ok(auto.end - auto.start >= PLAN_DNA.autoMinMin);
     assert.ok(auto.km > 0 && auto.save > 0);
-    for (const [a, b] of heats) assert.ok(b <= auto.start || auto.end <= a, 'auto nenabíja, kým beží ohrev');
+    for (let m = auto.start; m < auto.end; m++) assert.ok(freeKw(ctx, m) - draw[m] >= ctx.th.highKw - 1e-9, `auto v minúte ${m}`);
 });
 
 test('model: riadky podľa času, teraz pri tom, čo je na rade, cena len pri aute', () => {
@@ -76,8 +85,9 @@ test('model: riadky podľa času, teraz pri tom, čo je na rade, cena len pri au
     assert.equal(m.rows[0].name, 'Práčka');
     assert.equal(m.rows[0].time, '09:00');
     assert.equal(m.rows[0].why, 'ohrev chytí slnko');
+    // Teraz je na rade všetko, čo štartuje hneď - za jasna práčka aj umývačka naraz.
     assert.ok(m.rows[0].now);
-    assert.equal(m.rows.filter((r) => r.now).length, 1);
+    for (const r of m.rows) assert.equal(r.now, r.time === '09:00', r.id);
     assert.equal(row(m.rows, 'susicka').why, 'po práčke, celá zo strechy');
     assert.equal(row(m.rows, 'umyvacka').why, 'oba ohrevy chytia slnko');
     assert.equal(row(m.rows, 'bojler').why, 'celý zo strechy');
@@ -93,9 +103,9 @@ test('model: riadky podľa času, teraz pri tom, čo je na rade, cena len pri au
 test('predvolene bez bojlera; bez predpovede alebo elektrárne plán nie je', () => {
     const m = planDnaModel(input(at('09:00')));
     assert.deepEqual(m?.rows.map((r) => r.id).sort(), [...PLAN_DNA.devices].sort());
-    // Ráno je medzi ohrevom práčky a umývačky hodinová medzera; auto má dostať dlhé poobedie.
+    // Za jasna sa veľké spotrebiče zmestia popri aute - auto dostane takmer celý deň.
     const auto = row(m?.rows ?? [], 'auto');
-    assert.ok(auto.start >= 12 * 60 && auto.end - auto.start >= 3 * 60, `auto ${auto.start}-${auto.end}`);
+    assert.ok(auto.end - auto.start >= 5 * 60, `auto ${auto.start}-${auto.end}`);
     assert.equal(planDnaModel(input(at('09:00'), { forecast: null })), null);
     assert.equal(planDnaModel(input(at('09:00'), { known: 'nic' })), null);
 });

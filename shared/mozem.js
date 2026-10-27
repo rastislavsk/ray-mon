@@ -3,7 +3,7 @@
 // je tá istá zelená ako v grafe dňa na karte Teraz(ky); ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
-import { DEVICES, EVERYDAY, installedKw, MOZEM_GROUPS, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { DEVICES, EVERYDAY, HOUSE_BASE_KW, installedKw, MOZEM_GROUPS, MOZEM_ITEMS, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { pad2, weekDayName } from './format.js';
@@ -106,9 +106,47 @@ export function laterDay(ctx, minKw, weakOk) {
 export function kmFromSun(ctx, end, powerKw) {
     const kwh = ctx.plan
         .filter((s) => s.startMin + s.min > ctx.nowMin && s.startMin < end && Number.isFinite(s.kw))
-        .reduce((sum, s) => sum + Math.min(s.kw, powerKw) * SLOT_H, 0);
-    return Math.floor((kwh * EVERYDAY.evKmPerKwh) / 10) * 10;
+        .reduce((sum, s) => sum + Math.min(Math.max(0, s.kw - HOUSE_BASE_KW), powerKw) * SLOT_H, 0);
+    return kmOf(kwh);
 }
+
+/** Km z energie pre auto, zaokrúhlené nadol na desiatky. @param {number} kwh */
+export const kmOf = (kwh) => Math.floor((kwh * EVERYDAY.evKmPerKwh) / 10) * 10;
+
+/**
+ * Odber programu po minútach od štartu: ťažké úseky (`heat`) berú plný príkon, zvyšok `runKwh`
+ * sa rozloží rovnomerne na ostatný čas.
+ * @param {(typeof MOZEM_ITEMS)[number]} item @param {number} powerKw
+ * @returns {Array<{ heavy: boolean, kw: number }>}
+ */
+export function programDraw(item, powerKw) {
+    const runMin = item.runMin ?? 0;
+    const heat = item.heat ?? [[0, runMin]];
+    const heavyMin = heat.reduce((sum, [from, to]) => sum + to - from, 0);
+    const lightMin = runMin - heavyMin;
+    const lightKw = lightMin > 0 ? Math.max(0, (item.runKwh ?? 0) - (powerKw * heavyMin) / 60) / (lightMin / 60) : 0;
+    return Array.from({ length: runMin }, (_, m) => {
+        const heavy = heat.some(([from, to]) => m >= from && m < to);
+        return { heavy, kw: heavy ? powerKw : lightKw };
+    });
+}
+
+/**
+ * Výkon, ktorý v minúte dňa ostáva spotrebičom: výroba z plánu dňa bez spotreby domu.
+ * Mimo plánu alebo bez údaja 0.
+ * @param {DayCtx} ctx @param {number} m
+ */
+export function freeKw(ctx, m) {
+    const slot = ctx.plan[Math.floor(m / TARIFF_LIMITS.stepMin)];
+    return slot && Number.isFinite(slot.kw) ? Math.max(0, slot.kw - HOUSE_BASE_KW) : 0;
+}
+
+/**
+ * Od akej výroby slnko spotrebič utiahne: nad spotrebou domu musí ostať jeho príkon, pri aute
+ * silné slnko (highKw) - nabíjačka pod ním ťahá zo siete.
+ * @param {(typeof MOZEM_ITEMS)[number]} item @param {(typeof DEVICES)[number]} device @param {DayCtx} ctx
+ */
+export const sunMinKw = (item, device, ctx) => (item.runMin === null ? ctx.th.highKw : device.powerKw) + HOUSE_BASE_KW;
 
 /**
  * Odpoveď pre spotrebič: teraz áno, neskôr dnes, lacno zo siete, iný deň, alebo nie.
@@ -118,7 +156,7 @@ export function kmFromSun(ctx, end, powerKw) {
 export function itemAnswer(item, ctx) {
     const device = deviceOf(item.device);
     if (!device) return { kind: 'unk' };
-    const minKw = item.runMin === null ? ctx.th.highKw : ctx.th.lowKw;
+    const minKw = sunMinKw(item, device, ctx);
     const usable = device.weakDay || !ctx.weakToday;
     const today = usable ? todayAnswer(item, device.powerKw, minKw, ctx) : null;
     if (today) return today;
@@ -131,26 +169,18 @@ export function itemAnswer(item, ctx) {
 const heatEnd = (item) => Math.max(...(item.heat ?? [[0, item.runMin ?? 0]]).map(([, to]) => to));
 
 /**
- * Koľko energie programu pusteného o `start` pokryje strecha (0 až 1). Ťažké úseky (`heat`) berú
- * plný príkon a potrebujú slnko nad hranicou zelenej, ako graf dňa; zvyšok programu berie málo
- * a stačí mu, keď strecha dá aspoň toľko. Po konci plánu dňa už slnko nie je.
+ * Koľko energie programu pusteného o `start` pokryje strecha (0 až 1): minúta sa ráta, keď
+ * výroba nad spotrebou domu pokryje celý odber programu v nej (programDraw). Po konci plánu dňa
+ * už slnko nie je.
  * @param {(typeof MOZEM_ITEMS)[number]} item @param {number} powerKw @param {DayCtx} ctx @param {number} start
  */
 export function sunShare(item, powerKw, ctx, start) {
-    const runMin = item.runMin ?? 0;
-    const heat = item.heat ?? [[0, runMin]];
-    const heavyMin = heat.reduce((sum, [from, to]) => sum + to - from, 0);
-    const lightMin = runMin - heavyMin;
-    const lightKw = lightMin > 0 ? Math.max(0, (item.runKwh ?? 0) - (powerKw * heavyMin) / 60) / (lightMin / 60) : 0;
     let sun = 0;
     let all = 0;
-    for (let m = 0; m < runMin; m++) {
-        const heavy = heat.some(([from, to]) => m >= from && m < to);
-        const needKw = heavy ? powerKw : lightKw;
-        const slot = ctx.plan[Math.floor((start + m) / TARIFF_LIMITS.stepMin)];
-        all += needKw;
-        if (slot && Number.isFinite(slot.kw) && slot.kw >= (heavy ? ctx.th.lowKw : lightKw)) sun += needKw;
-    }
+    programDraw(item, powerKw).forEach(({ kw }, m) => {
+        all += kw;
+        if (freeKw(ctx, start + m) >= kw) sun += kw;
+    });
     return all > 0 ? sun / all : 1;
 }
 

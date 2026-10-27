@@ -147,7 +147,9 @@ test('rano pred slnkom: ešte nie, štart a spotrebiče o koľkej', () => {
     assert.equal(m.hero.factK, 'štart');
     const pracka = item(m, 'pracka');
     assert.equal(pracka.tone, 'wait');
-    assert.equal(pracka.short, `o ${m.hero.factV}`);
+    // Práčka potrebuje nad spotrebou domu celé svoje 2 kW, štart karty (zelená) môže byť skôr.
+    assert.match(pracka.short, /^o \d\d:\d\d$/);
+    assert.ok(pracka.short >= `o ${m.hero.factV}`);
     assert.equal(pracka.more?.q, 'Musíš hneď?');
     assert.equal(pracka.more?.a, 'Pôjde to zo siete.', 'bez ceny');
     assert.ok(item(m, 'auto').short >= pracka.short, 'auto potrebuje silnejšie slnko');
@@ -157,7 +159,7 @@ test('v drahom pásme rano to karta povie', () => {
     const m = mozemModel(input(at('09:40'), { pv: null, forecast: cloudy(0.3, [0]) }));
     assert.equal(m.state, 'wait');
     assert.match(m.hero.lead, /drahý prúd/);
-    assert.match(item(m, 'pracka').text, /práve drahá/);
+    assert.match(item(m, 'susicka').text, /práve drahá/);
 });
 
 test('večer: dnes už nie, auto na lacný prúd, ostatné zajtra', () => {
@@ -248,9 +250,9 @@ test('itemAnswer a itemCost: vec bez spotrebiča karta nepozná a nemá cenu', (
 test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu podľa profilu odberu', () => {
     const m = mozemModel(input(FIXED_NOW));
     const [pracka, umyvacka, susicka] = ['pracka', 'umyvacka', 'susicka'].map((id) => item(m, id));
-    assert.equal(m.groups[0].value, 'do 17:30', 'slnko do 17:30');
+    assert.equal(m.groups[0].value, 'do 17:15', 'slnko pre veľké spotrebiče do 17:15');
     // Práčka potrebuje slnko len na 20 minút ohrevu, umývačka aj na oplach o 2 h, sušička celý program.
-    assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['do 17:10', 'do 15:15', 'do 16:00']);
+    assert.deepEqual([pracka.short, umyvacka.short, susicka.short], ['do 16:55', 'do 15:15', 'do 16:00']);
     assert.match(pracka.text, /prvých 20 minút pri ohreve vody/);
     assert.match(umyvacka.text, /dvakrát: na začiatku a pri oplachu o 2 hodiny/);
     assert.match(susicka.text, /celý čas berie 1,5 kW/);
@@ -260,7 +262,7 @@ test('13:00: každý spotrebič má vlastný posledný štart a vlastnú vetu po
 test('neskoro popoludní: čo už celé na slnku nedobehne, povie koľko pokryje strecha, bez ceny', () => {
     const m = mozemModel(input(at('16:30')));
     assert.equal(m.state, 'go');
-    assert.equal(item(m, 'pracka').short, 'do 17:10', 'ohrev práčky ešte chytí slnko');
+    assert.equal(item(m, 'pracka').short, 'do 16:55', 'ohrev práčky ešte chytí slnko');
     const umyvacka = item(m, 'umyvacka');
     assert.equal(umyvacka.short, 'teraz');
     assert.match(umyvacka.text, /^Prvý ohrev ešte chytí slnko, oplach o 18:30 už nie\. Zo slnka asi \d0 %, zvyšok zo siete\.$/);
@@ -268,7 +270,7 @@ test('neskoro popoludní: čo už celé na slnku nedobehne, povie koľko pokryje
 });
 
 test('tesne pred koncom slnka: pod polovicu zo strechy už nie „teraz“, ale iný deň, bez ceny', () => {
-    const m = mozemModel(input(at('17:20')));
+    const m = mozemModel(input(at('17:05')));
     assert.equal(item(m, 'pracka').short, 'teraz');
     assert.match(item(m, 'pracka').text, /Zo slnka asi 50 %/);
     const susicka = item(m, 'susicka');

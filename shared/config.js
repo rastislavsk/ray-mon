@@ -379,12 +379,20 @@ export const DEVICES = [
 ];
 
 /**
+ * Spotreba domu na pozadí v kW (chladnička, router, pohotovostné režimy). Spotrebiču ostáva len
+ * výroba nad ňou - Plán dňa aj odpovede karty Môžem? s ňou rátajú. Jedna pre každého, s veľkosťou
+ * elektrárne sa nemení.
+ */
+export const HOUSE_BASE_KW = 0.4;
+
+/**
  * Karta Môžem?: veci, na ktoré sa rodina pýta. Spotrebič (`device`) berie z DEVICES príkon
  * a pravidlá; `runMin` a `runKwh` sú typický program - podľa nich karta radí, dokedy ho pustiť,
  * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania; `runMin` bojlera
  * je typický ohrev nádrže. `heat` je profil odberu: úseky programu v minútach od štartu
  * `[od, do)`, keď spotrebič berie plný príkon (ohrev vody, pri sušičke a bojleri celý čas) -
- * tie potrebujú slnko nad hranicou zelenej. Zvyšok `runKwh` sa rozloží na ostatný čas programu.
+ * tie potrebujú, aby nad spotrebou domu (HOUSE_BASE_KW) ostal celý príkon. Zvyšok `runKwh` sa
+ * rozloží na ostatný čas programu.
  * Zoznam je jeden pre obe appky. Veci bez spotrebiča (`device: null`) sú od slnka nezávislé -
  * berú málo alebo krátko.
  * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null,
@@ -408,8 +416,8 @@ export const MOZEM_ITEMS = [
 ];
 
 /**
- * Plán dňa (karta Môžem?): poradie, v ktorom jadro rozvrhuje dnešné slnko medzi spotrebiče, aby
- * sa ich ohrevy neprekrývali. `after`: spotrebič, na ktorý vec čaká (sušička suší, čo práčka
+ * Plán dňa (karta Môžem?): poradie, v ktorom jadro rozvrhuje dnešné slnko medzi spotrebiče - každý
+ * si z neho odpočíta svoj odber, ďalší dostane, čo ostane. `after`: spotrebič, na ktorý vec čaká (sušička suší, čo práčka
  * vyprala). `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide posledné a berie
  * silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
  */
