@@ -122,6 +122,36 @@ test('večer: auto a bojler do lacného pásma, ostatné zajtra', () => {
     assert.equal(m?.rows.at(-1)?.kind, 'later', 'iné dni až za dneškom');
 });
 
+test('poradie: umývačka pred práčkou, keď sa tak na slnko zmestia obe', () => {
+    // Slabé popoludnie: v pevnom poradí by práčka zabrala slnko a umývačka išla až zajtra.
+    const rows = planDna(dayCtx(input(at('13:00'), { pv: null, forecast: cloudy(0.4, [0]) })), '€', PLAN_DNA.devices);
+    assert.equal(row(rows, 'umyvacka').kind, 'sun');
+    assert.equal(row(rows, 'umyvacka').start, 13 * 60);
+    assert.equal(row(rows, 'pracka').kind, 'sun');
+    assert.equal(row(rows, 'pracka').start, 13 * 60 + 15);
+    assert.deepEqual(
+        rows.map((r) => r.id),
+        PLAN_DNA.order.filter((id) => PLAN_DNA.devices.includes(id)),
+        'riadky v pevnom poradí',
+    );
+});
+
+test('poradie: kvôli autu len pri zreteľnom rozdiele km, sušička vždy po práčke', () => {
+    // Jasné ráno: umývačka ako prvá a auto chytí o 60 km viac.
+    const rano = planDna(dayCtx(input(at('08:00'), { pv: null })), '€', PLAN_DNA.devices);
+    assert.equal(row(rano, 'umyvacka').start, 8 * 60);
+    assert.equal(row(rano, 'auto').km, 250);
+    // O 9:00 by iné poradie len skôr skončilo - ostáva pevné, práčka prvá.
+    const deviata = planDna(dayCtx(input(at('09:00'), { pv: null })), '€', ALL);
+    assert.equal(row(deviata, 'pracka').start, 9 * 60);
+    for (const k of [1, 0.7, 0.5, 0.4])
+        for (const hm of ['07:00', '09:00', '11:00', '13:00']) {
+            const rows = planDna(dayCtx(input(at(hm), { pv: null, forecast: cloudy(k, [0]) })), '€', ALL);
+            const [pracka, susicka] = [row(rows, 'pracka'), row(rows, 'susicka')];
+            if (pracka.kind === 'sun' && susicka.kind === 'sun') assert.ok(susicka.start >= pracka.end, `${k} ${hm}`);
+        }
+});
+
 test('slabý deň: umývačka a sušička čakajú na iný deň, auto bez ceny v tarife', () => {
     const forecast = cloudy(0.05, [0, 1]);
     const i = input(at('09:00'), { pv: null, forecast, tariff: FLAT });
