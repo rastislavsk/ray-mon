@@ -11,19 +11,21 @@
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
-import { planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
+import { planDnaNextText, planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
 import { dayCtx, freeKw, kmOf, programDraw } from './mozem.js';
+import { daylightSpan } from './solar.js';
 
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
 /** @typedef {(typeof MOZEM_ITEMS)[number]} MozemItem */
 /**
  * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo
- * siete), v lacnom pásme od `start`, iný deň (`after`: po čom v ten deň ide), alebo tento týždeň nie.
+ * siete), v lacnom pásme od `start`, iný deň od `day.start` do `end` (`after`: po čom v ten deň ide),
+ * alebo tento týždeň nie.
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
  *     km: number | null, save: number | null, currency: string }
  *   | { id: string, kind: 'cheap', start: number }
- *   | { id: string, kind: 'later', day: LaterDay, after: string | null }
+ *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null }
  *   | { id: string, kind: 'none' }} PlanRow
  */
 /** Miesto na slnku v jednom dni. @typedef {Extract<PlanRow, { kind: 'sun' }>} SunRow */
@@ -114,7 +116,7 @@ function ineDni(ctx, input, rest, rows) {
         const dctx = { ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw };
         for (const r of najlepsiDen(dctx, input.tariff.currency, rest)) {
             const at = { name: weekDayName(day.date, index), index, start: r.start };
-            rows.set(r.id, { id: r.id, kind: 'later', day: at, after: r.after });
+            rows.set(r.id, { id: r.id, kind: 'later', day: at, end: r.end, after: r.after });
         }
         rest = rest.filter(({ item }) => !rows.has(item.id));
     }
@@ -258,7 +260,34 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
         .sort((a, b) => rowOrder(a) - rowOrder(b))
         .map((row) => ({ ...row, ...planDnaRowText(row, voice), now: row.kind === 'sun' && row.start <= now }))
         .map((row) => ({ ...row, value: planTileText(row).value }));
-    return { rows, note: PLAN_DNA_NOTE, lanes: planLanes(rows, ctx.span, ctx.nowMin) };
+    return { rows, note: PLAN_DNA_NOTE, lanes: planLanes(rows, ctx.span, ctx.nowMin), next: planNextDay(rows, ctx, input.site) };
+}
+
+/**
+ * Plán na ďalší deň, keď dnes na slnko nejde nič (večer, zamračený deň): os prvého ďalšieho dňa,
+ * v ktorom je niečo na slnku, s pásmi spotrebičov v ten deň a bez čiary teraz - teraz je dnes.
+ * Čo ide dnes z lacnej siete, povie veta (`head.tonight`), ostatné dni a „nie“ sú v `others`.
+ * Keď dnes niečo na slnku je, alebo žiadny deň predpovede, null.
+ * Návrh: docs/navrhy/plan-dna-zajtra.html, návrh 1.
+ * @param {Array<PlanRow & { name: string, value: string }>} rows
+ * @param {DayCtx} ctx @param {import('./config.js').Site} site
+ */
+export function planNextDay(rows, ctx, site) {
+    if (rows.some((r) => r.kind === 'sun')) return null;
+    const later = rows.flatMap((r) => (r.kind === 'later' ? [{ ...r, start: r.day.start }] : []));
+    const day = later.length ? ctx.later.find((x) => x.index === later[0].day.index) : null;
+    if (!day) return null;
+    const on = later.filter((r) => r.day.index === day.index).sort((a, b) => a.start - b.start);
+    const cheap = rows.flatMap((r) => (r.kind === 'cheap' ? [{ name: r.name, start: r.start }] : []));
+    const rest = rows.filter((r) => r.kind !== 'cheap' && !on.some((o) => o.id === r.id));
+    return {
+        ...planDnaNextText({ name: later[0].day.name, date: day.day.date, on, cheap }),
+        lanes: {
+            ...planAxis(on, daylightSpan(site, day.day.date)),
+            others: rest.map((r) => ({ id: r.id, name: r.name, value: r.value })),
+            now: null,
+        },
+    };
 }
 
 /**
@@ -269,15 +298,26 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
  * @param {{ from: number, to: number }} span @param {number} nowMin
  */
 export function planLanes(rows, span, nowMin) {
-    const pct = (/** @type {number} */ m) =>
-        Math.round(((Math.max(span.from, Math.min(span.to, m)) - span.from) / (span.to - span.from)) * 1000) / 10;
-    const lanes = rows.flatMap((r) =>
-        r.kind === 'sun' ? [{ id: r.id, name: r.name, left: pct(r.start), width: pct(r.end) - pct(r.start) }] : [],
-    );
+    const pct = axisPct(span);
+    const sun = rows.flatMap((r) => (r.kind === 'sun' ? [r] : []));
     const others = rows.filter((r) => r.kind !== 'sun').map((r) => ({ id: r.id, name: r.name, value: r.value }));
+    return { ...planAxis(sun, span), others, now: /** @type {number | null} */ (pct(nowMin)) };
+}
+
+/** Minúta dňa ako % osi `span`, mimo osi na jej kraji. @param {{ from: number, to: number }} span */
+const axisPct = (span) => (/** @type {number} */ m) =>
+    Math.round(((Math.max(span.from, Math.min(span.to, m)) - span.from) / (span.to - span.from)) * 1000) / 10;
+
+/**
+ * Pásy spotrebičov na osi `span` a hodiny po troch pod ňou, v percentách osi.
+ * @param {Array<{ id: string, name: string, start: number, end: number }>} items @param {{ from: number, to: number }} span
+ */
+function planAxis(items, span) {
+    const pct = axisPct(span);
+    const lanes = items.map((r) => ({ id: r.id, name: r.name, left: pct(r.start), width: pct(r.end) - pct(r.start) }));
     /** @type {Array<{ label: string, at: number }>} */ const ticks = [];
     for (let h = Math.ceil(span.from / 180) * 3; h * 60 <= span.to; h += 3) ticks.push({ label: String(h), at: pct(h * 60) });
-    return { lanes, others, ticks, now: pct(nowMin) };
+    return { lanes, ticks };
 }
 
 /** Poradie riadkov v bloku: dnes podľa času (slnko aj lacné pásmo), potom iné dni, nakoniec „nie“. @param {PlanRow} row */

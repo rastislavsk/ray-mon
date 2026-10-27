@@ -552,6 +552,28 @@ button.live[aria-expanded='true'] {
 .tl-then {
     font-size: 0.9375rem;
 }
+/* Plán na ďalší deň (docs/navrhy/plan-dna-zajtra.html, návrh 1): deň v nadpise zelenou plaketou,
+   dnešná lacná sieť modrou vetou, nad osou pruh s dňom a dátumom - aby sa zajtrajšie pásy nedali
+   prečítať ako dnešné. */
+.tl-day {
+    margin-left: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--yes);
+    color: #12305e;
+}
+.tl-tonight {
+    font-size: 0.9375rem;
+    color: var(--cheap-text);
+}
+.tl-strip {
+    margin: 0 0 4px calc(var(--name) + 8px);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--yes);
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--yes);
+}
 /* Stĺpec mien (--name) je v rem, aby pásy, os aj čiara teraz začínali na tom istom mieste, hoci
    majú iné písmo. Vpravo je miesto (--pad) pre polovicu poslednej hodiny pod osou. */
 .tl {

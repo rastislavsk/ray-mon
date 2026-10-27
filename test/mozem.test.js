@@ -387,6 +387,68 @@ test('Plán dňa pre kartu Teraz v novej appke: časová os', () => {
     assert.match(tma?.others[1].value ?? '', /^zajtra \d\d:\d\d$/);
 });
 
+test('Plán dňa na ďalší deň: večer os zajtrajška, dnešná lacná sieť vetou', () => {
+    // Cez deň je na slnku niečo dnes - plán na ďalší deň nie je.
+    assert.equal(mozemModel(input(FIXED_NOW)).plan?.next, null);
+    const plan = mozemModel(input(at('19:50')), { devices: ['pracka', 'susicka', 'bojler'] }).plan;
+    const next = plan?.next;
+    assert.ok(next);
+    assert.equal(next.title, 'Plán na');
+    assert.equal(next.day, 'zajtra');
+    assert.equal(next.strip, 'Zajtra · nedeľa 6.9.');
+    // Pásy podľa času, sušička po práčke, bez čiary teraz; nič na iný deň, takže bez štítkov.
+    assert.deepEqual(
+        next.lanes.lanes.map((l) => l.name),
+        ['Práčka', 'Sušička'],
+    );
+    const [pracka, susicka] = next.lanes.lanes;
+    assert.ok(pracka.left + pracka.width <= susicka.left + 0.1, 'sušička až po práčke');
+    for (const l of next.lanes.lanes) assert.ok(l.left >= 0 && l.width > 0 && l.left + l.width <= 100);
+    assert.equal(next.lanes.now, null);
+    assert.deepEqual(next.lanes.others, []);
+    assert.ok(next.lanes.ticks.every((t) => Number(t.label) % 3 === 0));
+    // Veta ako pri dnešku: prvý spotrebič s časom, za ním ďalší; bojler dnes z lacnej siete.
+    const row = (/** @type {string} */ id) => /** @type {any} */ (plan?.rows.find((r) => r.id === id));
+    assert.equal(next.head.lead, `Práčka o ${row('pracka').value.slice(-5)}`);
+    assert.equal(next.head.then, `Sušička o ${row('susicka').value.slice(-5)}`);
+    assert.match(next.head.tonight, /^Dnes z lacnej siete: bojler od \d\d:\d\d$/);
+});
+
+test('Plán dňa na ďalší deň: os dňa prvého riadku na iný deň, ostatné dni štítkom', async () => {
+    const { planNextDay } = await import('../shared/plan-dna.js');
+    const { dayCtx } = await import('../shared/mozem.js');
+    const { weekDayName } = await import('../shared/format.js');
+    const inp = input(at('19:50'));
+    const ctx = dayCtx(inp);
+    const [d1, d2] = ctx.later.slice(1);
+    /** @param {string} name @param {{ day: { date: string }, index: number }} d @param {number} start */
+    const later = (name, d, start) => ({
+        id: name,
+        kind: /** @type {const} */ ('later'),
+        day: { name: weekDayName(d.day.date, d.index), index: d.index, start },
+        end: start + 90,
+        after: null,
+        name,
+        value: 'neskôr',
+    });
+    const nie = { id: 'nie', kind: /** @type {const} */ ('none'), name: 'Sušička', value: 'tento týždeň nie' };
+    // Riadky prichádzajú v poradí dní; v ten deň idú pásy podľa času.
+    const next = planNextDay([later('Umývačka', d1, 600), later('Práčka', d1, 480), later('Auto', d2, 540), nie], ctx, inp.site);
+    assert.ok(next);
+    const name = weekDayName(d1.day.date, d1.index);
+    assert.equal(next.day, name.toLowerCase());
+    assert.equal(next.strip, `${name} ${d1.day.date.slice(8).replace(/^0/, '')}.${Number(d1.day.date.slice(5, 7))}.`);
+    assert.equal(next.head.lead, 'Práčka o 08:00');
+    assert.equal(next.head.then, 'Umývačka o 10:00');
+    assert.equal(next.head.tonight, '', 'bez lacnej siete bez vety');
+    assert.deepEqual(
+        next.lanes.others.map((o) => o.name),
+        ['Auto', 'Sušička'],
+    );
+    // Bez riadku na iný deň plán na ďalší deň nie je.
+    assert.equal(planNextDay([nie], ctx, inp.site), null);
+});
+
 test('mozemModel: veta bez spotrebičov, štítky a čo dá strecha za celý deň', () => {
     const m = mozemModel(input(FIXED_NOW));
     assert.equal(m.say, 'Slnko to teraz platí za nás.');

@@ -1008,6 +1008,30 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
+    test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz; súčasná appka bez zmeny', async ({ page }) => {
+        const time = at('19:50');
+        const errors = await openTeraz(page, { time });
+        const plan = terazModel(vstupTeraz(time)).plan;
+        const next = plan?.next;
+        if (!plan || !next) throw new Error('model nemá Plán na ďalší deň');
+        await expect(page.locator('#tz-plan-title')).toHaveText(`${next.title} ${next.day}`);
+        await expect(page.locator('#tz-plan .tl-day')).toHaveText(next.day);
+        await expect(page.locator('#tz-plan .tl-lead')).toHaveText(next.head.lead);
+        await expect(page.locator('#tz-plan .tl-tonight')).toHaveText(next.head.tonight);
+        await expect(page.locator('#tz-plan .tl-then')).toHaveText(next.head.then);
+        await expect(page.locator('#tz-plan .tl-strip')).toHaveText(next.strip);
+        expect(next.lanes.lanes.length).toBeGreaterThan(0);
+        await expect(page.locator('#tz-plan .tl-n')).toHaveText(next.lanes.lanes.map((l) => l.name));
+        await expect(page.locator('#tz-plan .tl-now')).toHaveCount(0);
+        await expect(page.locator('#tz-plan .tl-chip')).toHaveCount(next.lanes.others.length);
+        await expect(page.locator('#tz-plan .tl-note')).toHaveText(next.note);
+
+        // Súčasná appka večer ukazuje plán ako doteraz - plán na ďalší deň je len v Oblohe.
+        await otvorSucasnuAppku(page);
+        await expect(page.locator('.tz-plan-lead')).toHaveText(plan.head.lead);
+        expect(errors).toEqual([]);
+    });
+
     test('nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
         // Os je deň so slnkom (5–21): oblačnosť, bunky pásu a hodiny len v nej.
