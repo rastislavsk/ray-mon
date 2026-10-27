@@ -31,7 +31,6 @@ function stateWith(patch = {}) {
 /** Úplný krok, ako ho appka zapisuje do histórie. @param {Partial<import('../obloha/web/state.js').NavStep>} [patch] */
 const step = (patch = {}) => ({
     panel: /** @type {const} */ ('mozem'),
-    item: null,
     preview: null,
     detail: null,
     setup: null,
@@ -104,7 +103,6 @@ test('navStepOf: cudzia hodnota je null', () => {
     assert.equal(navStepOf(null), null);
     assert.equal(navStepOf(42), null);
     assert.equal(navStepOf({ panel: 'neexistuje' }), null);
-    assert.equal(navStepOf({ panel: 'mozem', item: 'raketa' }), null);
     assert.equal(navStepOf({ panel: 'nastavenie', setup: 'neexistuje' }), null);
     assert.equal(navStepOf({ panel: 'nastavenie', setup: 'lokalita', roof: -1 }), null);
     assert.equal(navStepOf({ panel: 'nastavenie', setup: 'lokalita', roof: 1.5 }), null);
@@ -130,9 +128,8 @@ test('navStepOf: časť kroku, ktorá nepatrí karte, sa zahodí', () => {
     // Prehľad poznajú len jeho karty.
     assert.equal(field({ panel: 'statistika', dash: true }, 'dash'), undefined);
     assert.equal(field({ panel: 'mozem', dash: 'áno' }, 'dash'), undefined);
-    // Panel veci aj skupiny vecí.
-    assert.equal(field({ panel: 'mozem', item: 'bojler' }, 'item'), 'bojler');
-    assert.equal(field({ panel: 'mozem', item: 'velke' }, 'item'), 'velke');
+    // Panel veci karty Môžem? zanikol s jej dlaždicami - položka, ktorá ho nesie, vráti kartu.
+    assert.deepEqual(navStepOf({ panel: 'mozem', item: 'bojler' }), step({ panel: 'mozem' }));
 });
 
 test('sameNavStep: v prehľade je prepnutie stĺpca ten istý krok, posun náhľadu tiež', () => {

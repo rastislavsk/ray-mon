@@ -1,4 +1,4 @@
-// Inline SVG ikony (spotrebiče, počasie). Iba reťazce, žiadna logika.
+// Inline SVG ikony (počasie, sprievodca). Iba reťazce, žiadna logika.
 
 export const ICON_SUN =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
@@ -10,17 +10,6 @@ export const ICON_PARTLY =
 /** Šípky na tlačidlách Späť a Ďalej v obsahu kariet. */
 export const ICON_BACK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
 export const ICON_NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
-
-/** Veci v karte Môžem? (kľúče sú id z MOZEM_ITEMS). Kreslené tak, aby sa spoznali aj bez popisu. */
-export const MOZEM_ICONS = {
-    pracka: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7.5 4.8h2M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9z"/></svg>',
-    umyvacka:
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M7 11.5h10M8.5 11.5v6M12 11.5v6M15.5 11.5v6"/></svg>',
-    susicka:
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1zM4 7h16M12 9.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 1 1 0-9zM9.8 14.3c.7-.8 1.5-.8 2.2 0s1.5.8 2.2 0"/></svg>',
-    auto: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5zM3 13h18"/></svg>',
-    bojler: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg>',
-};
 
 /** Ikony riadkov v prehľade elektrárne (karta Nastavenie). */
 export const SETUP_ICONS = {

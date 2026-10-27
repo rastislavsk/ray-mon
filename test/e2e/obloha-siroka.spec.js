@@ -94,8 +94,9 @@ test.describe('tri rozloženia podľa šírky okna', () => {
     test('telefón (390 px): jedna karta, navigácia dole', async ({ page }) => {
         const errors = await openObloha(page, TELEFON);
         const r = await rozlozenie(page);
-        expect(r).toMatchObject({ layout: 'narrow', columns: 1, nav: 'dole', current: 'nav-mozem', wide: false });
-        expect(r.panels.map((p) => p.id)).toEqual(['mozem']);
+        expect(r).toMatchObject({ layout: 'narrow', columns: 1, nav: 'dole', current: 'nav-terazky', wide: false });
+        expect(r.panels.map((p) => p.id)).toEqual(['terazky']);
+        await page.locator('#nav-mozem').click();
         await expect(page.locator('#mz-word')).toHaveText(mozemSkyModel(vstup(NOON)).word);
         expect(errors).toEqual([]);
     });
@@ -109,22 +110,20 @@ test.describe('tri rozloženia podľa šírky okna', () => {
         const errors = await openObloha(page, TABLET_VYSKA);
         const r = await rozlozenie(page);
         expect(r).toMatchObject({ layout: 'narrow', columns: 1, nav: 'dole', wide: false });
-        expect(r.panels.map((p) => p.id)).toEqual(['mozem']);
+        expect(r.panels.map((p) => p.id)).toEqual(['terazky']);
         // Obsah nie je roztiahnutý cez celú šírku: okraje po bokoch, stĺpec v strede.
-        const [mozem] = r.panels;
-        expect(mozem.right - mozem.left).toBeLessThanOrEqual(680);
-        expect(Math.abs(mozem.left - (TABLET_VYSKA.width - mozem.right))).toBeLessThanOrEqual(1);
-        await expect(page.locator('#mz-word')).toHaveText(mozemSkyModel(vstup(NOON)).word);
-        await page.locator('#nav-terazky').click();
+        const [teraz] = r.panels;
+        expect(teraz.right - teraz.left).toBeLessThanOrEqual(680);
+        expect(Math.abs(teraz.left - (TABLET_VYSKA.width - teraz.right))).toBeLessThanOrEqual(1);
         const graf = /** @type {{ width: number }} */ (await page.locator('#tz-chart').boundingBox()).width;
         expect(graf).toBeGreaterThan(naTelefone * 1.4);
         expect(errors).toEqual([]);
     });
 
-    test('tablet na šírku (1180 px): dva stĺpce - vľavo Môžem?, vpravo Teraz a pod ním 7 dní, navigácia hore', async ({ page }) => {
+    test('tablet na šírku (1180 px): dva stĺpce - vľavo Dnes, vpravo Teraz a pod ním 7 dní, navigácia hore', async ({ page }) => {
         const errors = await openObloha(page, TABLET_SIRKA);
         const r = await rozlozenie(page);
-        expect(r).toMatchObject({ layout: 'medium', columns: 2, nav: 'hore', current: 'nav-mozem', wide: false });
+        expect(r).toMatchObject({ layout: 'medium', columns: 2, nav: 'hore', current: 'nav-terazky', wide: false });
         const [mozem, teraz, sedem] = r.panels;
         expect(r.panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         expect(teraz.left).toBeGreaterThan(mozem.right);
@@ -135,10 +134,10 @@ test.describe('tri rozloženia podľa šírky okna', () => {
         expect(errors).toEqual([]);
     });
 
-    test('počítač (1440 px): tri stĺpce Môžem?, Teraz, 7 dní vedľa seba, navigácia hore s menom karty', async ({ page }) => {
+    test('počítač (1440 px): tri stĺpce Dnes, Teraz, 7 dní vedľa seba, navigácia hore s menom karty', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         const r = await rozlozenie(page);
-        expect(r).toMatchObject({ layout: 'wide', columns: 3, nav: 'hore', current: 'nav-mozem', wide: false });
+        expect(r).toMatchObject({ layout: 'wide', columns: 3, nav: 'hore', current: 'nav-terazky', wide: false });
         expect(r.panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         const [mozem, teraz, sedem] = r.panels;
         expect(teraz.left).toBeGreaterThan(mozem.right);
@@ -179,11 +178,11 @@ async function expectTextyKariet(page) {
     const v = vstup(NOON);
     const mozem = mozemSkyModel(v);
     await expect(page.locator('#mz-word')).toHaveText(mozem.word);
-    await expect(page.locator('#mz-lead')).toHaveText(mozem.lead);
-    await expect(page.locator('#mz-items .tile-name')).toHaveText(mozem.groups.map((g) => g.name));
+    await expect(page.locator('#mz-day-lead')).toHaveText(mozem.day?.lead ?? '');
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
-    await expect(page.locator('#tz-now-head')).toHaveText(teraz.cards?.now.head ?? '');
+    await expect(page.locator('#tz-say-text')).toHaveText(teraz.say?.text ?? '');
+    await expect(page.locator('#tz-plan .tl-lead')).toHaveText(teraz.plan?.head.lead ?? '');
     const sedem = sedemModel(v);
     await expect(page.locator('#sd-title')).toHaveText(sedem.title);
     await expect(page.locator('#sd-days .day em')).toHaveText(sedem.rows.map((r) => r.kwh));
@@ -244,38 +243,13 @@ test.describe('zmena šírky okna nič nestratí', () => {
         }
         expect(errors).toEqual([]);
     });
-
-    test('otvorený panel veci: z panelu zospodu je dialóg v strede a naopak, ostane otvorený', async ({ page }) => {
-        const errors = await openObloha(page, TELEFON);
-        await page.locator('[data-item="velke"]').click();
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        const zospodu = /** @type {{ y: number, height: number }} */ (await page.locator('#mz-sheet').boundingBox());
-        expect(Math.round(zospodu.y + zospodu.height)).toBe(TELEFON.height);
-        await page.setViewportSize(POCITAC);
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        await expect(page.locator('#mz-sheet-title')).not.toBeEmpty();
-        await vStrede(page, '#mz-sheet');
-        expect(errors).toEqual([]);
-    });
 });
 
-/**
- * Prvok je v strede okna (dialóg na širokej obrazovke).
- * @param {import('@playwright/test').Page} page @param {string} sel
- */
-async function vStrede(page, sel) {
-    const box = /** @type {{ x: number, y: number, width: number, height: number }} */ (await page.locator(sel).boundingBox());
-    const size = /** @type {{ width: number, height: number }} */ (page.viewportSize());
-    expect(Math.abs(box.x + box.width / 2 - size.width / 2), `${sel} nie je v strede vodorovne`).toBeLessThanOrEqual(2);
-    expect(Math.abs(box.y + box.height / 2 - size.height / 2), `${sel} nie je v strede zvislo`).toBeLessThanOrEqual(2);
-    expect(box.width).toBeLessThan(size.width * 0.6);
-}
-
 test.describe('navigácia na počítači', () => {
-    test('Môžem?, Teraz a 7 dní presunú fokus na stĺpec a zvýraznia ho, obrazovka ani história sa nemenia', async ({ page }) => {
+    test('Teraz, Dnes a 7 dní presunú fokus na stĺpec a zvýraznia ho, obrazovka ani história sa nemenia', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         const kroky = await page.evaluate(() => history.length);
-        for (const panel of ['terazky', '7dni', 'mozem']) {
+        for (const panel of ['mozem', '7dni', 'terazky']) {
             await page.locator(`#nav-${panel}`).click();
             await expect(page.locator(`#panel-${panel}`)).toBeFocused();
             await expect(page.locator(`#panel-${panel}`)).toHaveAttribute('data-on', '');
@@ -315,25 +289,6 @@ test.describe('navigácia na počítači', () => {
 });
 
 test.describe('dialógy na počítači', () => {
-    test('panel veci je dialóg v strede; Escape aj Späť ho zavrú a fokus sa vráti na riadok', async ({ page }) => {
-        const errors = await openObloha(page, POCITAC);
-        const riadok = page.locator('[data-item="velke"]');
-        await riadok.click();
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        await vStrede(page, '#mz-sheet');
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#mz-sheet')).toBeHidden();
-        await expect(riadok).toBeFocused();
-        await riadok.click();
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        await page.goBack();
-        await expect(page.locator('#mz-sheet')).toBeHidden();
-        await expect(riadok).toBeFocused();
-        // Stĺpce ostali, kde boli.
-        await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
-        expect(errors).toEqual([]);
-    });
-
     test('detail dňa a týždňa sa otvoria v stĺpci 7 dní; Escape, Späť aj „‹ 7 dní“ vrátia prehľad a fokus', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         const stlpec = /** @type {{ x: number, width: number }} */ (await page.locator('#panel-7dni').boundingBox());
@@ -400,18 +355,18 @@ test.describe('tablet na šírku prstom', () => {
         for (const dx of [-160, 160]) {
             await tah(page, '#mz-word', dx);
             await page.waitForTimeout(200);
-            await expect(page.locator('#nav-mozem')).toHaveAttribute('aria-current', 'page');
+            await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
             await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         }
         await tah(page, '#tz-num', -160);
         await page.waitForTimeout(200);
-        await expect(page.locator('#nav-mozem')).toHaveAttribute('aria-current', 'page');
+        await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
 
         await page.locator('#sd-days [data-day="0"]').click();
         await expect(page.locator('#sd-day-title')).toHaveText(/^Dnes/);
         await tah(page, '#sd-day-sub', -300);
         await expect(page.locator('#sd-day-title')).toHaveText(/^Zajtra/);
-        // Ťah v stĺpci Môžem? dni nelistuje.
+        // Ťah v stĺpci Dnes dni nelistuje.
         await tah(page, '#mz-word', -160);
         await page.waitForTimeout(200);
         await expect(page.locator('#sd-day-title')).toHaveText(/^Zajtra/);

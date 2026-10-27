@@ -2,17 +2,16 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_GROUPS, MOZEM_ITEMS, PANELS } from '../../shared/config.js';
+import { LAYOUT_PX, MINUTES_PER_DAY, PANELS } from '../../shared/config.js';
 import { oznameniaDefault } from '../../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
 import { setupInit } from '../../shared/setup-flow.js';
 
 /**
- * Stav. `mozemItem` je vec karty Môžem?, ktorej panel je otvorený (null = žiadny),
- * `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
- * `terazPage` stránka pásu odporúčaní pod ním, `tzListOpen` otvorený zoznam pod grafom (na začiatku zatvorený),
- * `mozemPlanOpen` rozbalený Plán dňa na karte Môžem? (na začiatku zbalený na prvý riadok),`weekDetail` otvorený detail karty 7 dní (deň, týždeň,
+ * Stav. `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
+ * `terazPage` stránka pásu odporúčaní na karte Dnes, `tzListOpen` otvorený zoznam pod grafom (na začiatku zatvorený),
+ * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
  * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
@@ -31,11 +30,9 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   panelDir: 1 | -1,
  *   layout: Layout,
  *   tariff: import('../../shared/config.js').Tariff,
- *   mozemItem: string | null,
  *   terazPreview: number | null,
  *   terazPage: number,
  *   tzListOpen: boolean,
- *   mozemPlanOpen: boolean,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
  *   statsPeriod: import('../../shared/stats.js').StatsPeriod,
@@ -65,7 +62,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * Appka (`sheet`) rovnako - Späť ho zavrie. `dash` hovorí, že krok patrí prehľadu so stĺpcami
  * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
- * @typedef {{ panel: Panel, item: string | null, preview: number | null, detail: WeekDetail | null,
+ * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
  *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, dash?: true }} NavStep
  */
 
@@ -121,11 +118,9 @@ export function initialState(
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.
         loading: true,
         dayLog,
-        mozemItem: null,
         terazPreview: null,
         terazPage: 0,
         tzListOpen: false,
-        mozemPlanOpen: false,
         weekDetail: null,
         weekDay: 0,
         statsPeriod: /** @type {import('../../shared/stats.js').StatsPeriod} */ ('dnes'),
@@ -152,7 +147,7 @@ export function initialState(
 }
 
 /**
- * Zmena karty aj so smerom podľa poradia v navigácii. Panel veci patrí karte Môžem?, náhľad
+ * Zmena karty aj so smerom podľa poradia v navigácii. Náhľad patrí
  * karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
@@ -160,7 +155,6 @@ export function panelChange(from, to) {
     return {
         panel: to,
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
-        mozemItem: /** @type {string | null} */ (null),
         terazPreview: /** @type {number | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
@@ -233,7 +227,6 @@ export function neededParts(state) {
 export function navStep(state) {
     return {
         panel: state.panel,
-        item: state.mozemItem,
         preview: state.terazPreview,
         detail: state.weekDetail,
         setup: state.setupStep,
@@ -250,7 +243,6 @@ export function navStep(state) {
 export function sameNavStep(a, b) {
     return (
         (a.panel === b.panel || (!!a.dash && !!b.dash)) &&
-        a.item === b.item &&
         (a.preview === null) === (b.preview === null) &&
         a.detail === b.detail &&
         a.setup === b.setup &&
@@ -290,9 +282,6 @@ function setupPlaceOf(setup = null, roof = 0) {
  */
 const dashOf = (panel, dash) => (dash === true && isColumn(panel) ? { dash: true } : {});
 
-/** Panely karty Môžem?, ktoré môže otvoriť krok histórie: vec alebo skupina vecí. */
-const SHEETS = new Set([...MOZEM_ITEMS.map((i) => i.id), ...MOZEM_GROUPS.map((g) => g.id)]);
-
 /**
  * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
  * pri nej správa ako predtým - odíde zo stránky.
@@ -302,8 +291,9 @@ export function navStepOf(raw) {
     // Položka zo skoršej verzie appky mala za krok len kartu.
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
-    const { panel, item, preview, detail, setup, roof, sheet, dash } =
-        /** @type {{ panel?: unknown, item?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
+    // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami; položka, ktorá ho ešte nesie, vráti len kartu.
+    const { panel, preview, detail, setup, roof, sheet, dash } =
+        /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
          *   sheet?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
@@ -312,17 +302,14 @@ export function navStepOf(raw) {
     const inDash = !!d.dash;
     // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
     const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
-    const step = {
+    return {
         panel: p,
-        item: null,
         preview: at ? /** @type {number} */ (preview) : null,
         detail: weekDetailOf(p, inDash, detail),
         ...place,
         sheet: appSheetOf(p, sheet),
         ...d,
     };
-    if (item === null || item === undefined) return step;
-    return SHEETS.has(/** @type {string} */ (item)) ? { ...step, item: /** @type {string} */ (item) } : null;
 }
 
 /** Krok, na ktorom položka histórie stojí. @param {unknown} raw */
@@ -332,7 +319,7 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
 /**
- * Návrat na krok z histórie (tlačidlo Späť): karta, panel veci, náhľad aj detail tak, ako boli.
+ * Návrat na krok z histórie (tlačidlo Späť): karta, náhľad aj detail tak, ako boli.
  * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
  * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
  * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
@@ -344,7 +331,6 @@ export function navChange(state, step) {
     const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
     return {
         ...panelChange(state.panel, panel),
-        mozemItem: step.item,
         terazPreview: preview,
         weekDetail: step.detail,
         setupStep: step.setup,

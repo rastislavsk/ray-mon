@@ -1,7 +1,8 @@
 // Karta Teraz v novej appke „Živá obloha“ (obloha/) a karta Terazky súčasnej appky - obe majú to
 // isté rozloženie, každá vo vlastných farbách. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
-// iného času cez `previewMinutes`), plán dňa z dayPlan, spotrebiče doma s časom z Plánu dňa (planDevices).
-// Tu sa to len skladá - číslo, graf dňa s pásom plánu a pás odporúčaní. Čisté funkcie,
+// iného času cez `previewMinutes`), plán dňa z dayPlan, odpoveď teraz a Plán dňa z mozemModel - tie isté
+// ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou, Plán dňa a graf dňa s pásom plánu.
+// Pás odporúčaní (dnesCards) kreslí karta Dnes. Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
@@ -32,7 +33,7 @@ import {
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
-import { planDevices, planWindows } from './mozem.js';
+import { mozemModel, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey } from './solar.js';
@@ -66,6 +67,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
     const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
+    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, aby sa graf nepohol.
+    const m = mozemModel(input, { voice, devices });
     return {
         ...empty('ok', estimate),
         ...headOf(input, hero, { estimate, note, voice }),
@@ -74,7 +77,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        cards: cardsOf(input, plan, hero, now, devices),
+        say: { chips: m.chips, text: m.say },
+        plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
     };
 }
 
@@ -131,7 +135,8 @@ function empty(kind, estimate) {
         guess: false,
         chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),
         hint: { text: '', reset: false },
-        cards: /** @type {ReturnType<typeof cardsOf> | null} */ (null),
+        say: /** @type {{ chips: import('./mozem.js').Chip[], text: string } | null} */ (null),
+        plan: /** @type {(NonNullable<import('./mozem.js').MozemModelPlan> & { head: { lead: string, then: string } }) | null} */ (null),
     };
 }
 
@@ -238,18 +243,14 @@ function readoutOf(input, plan, hero, limitKw) {
 }
 
 /**
- * Pás odporúčaní: odporúčanie pre zvolený čas, spotrebiče doma s časom z Plánu dňa, dnešok a kedy bude lepšie.
- * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
- * @param {ReturnType<typeof heroModel>} hero @param {ReturnType<typeof heroModel>} now
- * @param {readonly string[]} [devices] spotrebiče doma
+ * Pás odporúčaní na karte Dnes: dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy
+ * bude lepšie. Bez predpovede null.
+ * @param {TerazInput} input @param {import('./messages.js').Voice} [voice]
  */
-function cardsOf(input, plan, hero, now, devices) {
-    return {
-        now: { head: hero.message.headline, body: hero.message.body },
-        devices: planDevices(input, devices),
-        today: todayCard(input, plan, now.minutes),
-        later: laterCard(input, now),
-    };
+export function dnesCards(input, voice = 'drzy') {
+    if (!input.forecast) return null;
+    const now = heroModel({ ...input, previewMinutes: null }, voice);
+    return { today: todayCard(input, dayPlan(input), now.minutes), later: laterCard(input, now) };
 }
 
 /**

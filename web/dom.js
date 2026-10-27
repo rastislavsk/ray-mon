@@ -60,6 +60,10 @@ function terazkyDom() {
         tzNumVal: byId('tz-num-val'),
         tzSrc: byId('tz-src'),
         tzSub: byId('tz-sub'),
+        tzSay: byId('tz-say'),
+        tzChips: byId('tz-chips'),
+        tzSayText: byId('tz-say-text'),
+        tzPlan: byId('tz-plan'),
         tzNote: byId('tz-note'),
         tzNoteTitle: byId('tz-note-title'),
         tzNoteText: byId('tz-note-text'),
@@ -78,10 +82,6 @@ function terazkyDom() {
         tzReset: byId('tz-reset'),
         tzRecs: byId('tz-recs'),
         tzStrip: byId('tz-strip'),
-        tzNowHead: byId('tz-now-head'),
-        tzNowBody: byId('tz-now-body'),
-        tzDevicesTitle: byId('tz-devices-title'),
-        tzDevices: byId('tz-devices'),
         tzTodayTitle: byId('tz-today-title'),
         tzToday: byId('tz-today'),
         tzTodayBar: byId('tz-today-bar'),
@@ -161,21 +161,11 @@ function sedemdniDom() {
     };
 }
 
-// Karta Môžem?: nosič, obsah si skladá render (web/render/mozem.js), a panel veci či skupiny zospodu.
+// Karta Dnes (kódové meno mozem): nosič hlavičky, obsah si skladá render (web/render/mozem.js). Pás
+// odporúčaní pod ňou je v terazDom.
 function mozemDom() {
     return {
         mozemBody: byId('mozem-body'),
-        mozemSheet: /** @type {HTMLDialogElement} */ (byId('mozem-sheet')),
-        mozemSheetX: byId('mozem-sheet-x'),
-        mozemSheetTitle: byId('mozem-sheet-title'),
-        mozemSheetLead: byId('mozem-sheet-lead'),
-        mozemSheetRows: byId('mozem-sheet-rows'),
-        mozemSheetDoQ: byId('mozem-sheet-do-q'),
-        mozemSheetDo: byId('mozem-sheet-do'),
-        mozemSheetWhyQ: byId('mozem-sheet-why-q'),
-        mozemSheetWhy: byId('mozem-sheet-why'),
-        mozemSheetMoreQ: byId('mozem-sheet-more-q'),
-        mozemSheetMore: byId('mozem-sheet-more'),
     };
 }
 

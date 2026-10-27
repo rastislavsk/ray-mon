@@ -764,6 +764,111 @@ b {
     font-size: 15px;
     color: var(--ink-70);
 }
+/* Štítky a veta o teraz (tie isté ako mali karty Môžem? v novej appke) - Plán dňa pod nimi povie, čo zapnúť. */
+.tz-say {
+    margin-top: var(--sp-3);
+}
+.tz-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.tz-chip {
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-on-color);
+    background: var(--ink-20);
+}
+.tz-chip[data-tone='go'] {
+    background: var(--green);
+}
+.tz-chip[data-tone='cheap'] {
+    background: var(--amber);
+}
+.tz-chip[data-tone='costly'] {
+    background: var(--red);
+}
+.tz-say p {
+    margin: 8px 0 0;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+}
+/* Plán dňa ako plagát v štýle Štatistiky (docs/navrhy/terazky-plan-dna.html, možnosť A): veta,
+   čo ide teraz, a očíslované riadky pod čiarami. Riadok, ktorý ide teraz, má namiesto času odznak. */
+.tz-plan {
+    container-type: inline-size;
+    margin-top: var(--sp-4);
+    padding: 16px 20px 18px;
+    border-radius: 28px;
+    color: var(--ink-on-color);
+    background: linear-gradient(165deg, var(--green) 0%, var(--amber) var(--poster-mid), var(--red) 100%);
+}
+.tz-plan-ttl {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+.tz-plan-lead {
+    margin: 6px 0 12px;
+    font-size: min(9cqi, 34px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+}
+.tz-plan-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tz-plan-rows li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 8px;
+    padding: 8px 0 7px;
+    border-top: 2px solid rgba(0, 0, 0, 0.85);
+}
+.tz-plan-n {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+}
+.tz-plan-what,
+.tz-plan-when {
+    font-size: 18px;
+    font-weight: 700;
+}
+.tz-plan-when {
+    text-align: right;
+    white-space: nowrap;
+}
+.tz-plan-when em {
+    padding: 1px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 15px;
+    font-style: normal;
+    color: var(--green);
+    background: rgba(0, 0, 0, 0.85);
+}
+.tz-plan-why {
+    grid-column: 2 / 4;
+    font-size: 13px;
+    line-height: 1.3;
+}
+.tz-plan-note {
+    margin: 6px 0 0;
+    font-size: 12px;
+}
 /* Pás „Odhad z predpovede“: jantárový ako pás odhadu pod hlavičkou, ikona počasia vľavo. */
 .tz-note {
     display: grid;
@@ -1177,10 +1282,10 @@ b {
     }
 }
 
-/* Pás odporúčaní listuje a prichytáva prehliadač; karty sú užšie než pás, aby bolo vidno, že
-   ďalej niečo je. Pás siaha k okrajom stránky (záporný okraj = padding .page). */
+/* Pás odporúčaní (na karte Dnes) listuje a prichytáva prehliadač; karty sú užšie než pás, aby
+   bolo vidno, že ďalej niečo je. Pás siaha k okrajom stránky (záporný okraj = padding .page). */
 .tz-recs {
-    margin-top: var(--sp-1);
+    margin-top: var(--sp-3);
 }
 .tz-strip {
     display: flex;
@@ -3996,10 +4101,9 @@ b {
     cursor: pointer;
 }
 
-/* ---- Môžem? ---------------------------------------------------------------- */
-/* Odpoveď pre celú rodinu (návrh C v docs/navrhy/karta-mozem.html): jedno veľké slovo na plnej
-   farbe, pás dneška, riadok „Čo môžem“ a hláška. Veci s ikonami sú na obrazovke so zoznamom
-   (návrh A v docs/navrhy/mozem-co-mozem.html). Obsah skladá render do #mozem-body. */
+/* ---- Dnes (kódové meno mozem, doteraz Môžem?) --------------------------------- */
+/* Jedno veľké slovo na plnej farbe a čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html),
+   pod tým pás odporúčaní (.tz-recs). Hlavičku skladá render do #mozem-body. */
 .mozem {
     display: grid;
     gap: var(--sp-3);
@@ -4062,341 +4166,30 @@ b {
     font-weight: 500;
     line-height: 1.3;
 }
-.mozem-fact {
-    display: flex;
-    justify-content: space-between;
+/* Čo dá strecha za celý deň: tri čísla vedľa seba pod čiarou, ako fakt pod vetou na plagáte. */
+.mozem-eq {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
-    margin-top: 16px;
+    margin-top: 14px;
     padding-top: 12px;
     border-top: 2px solid rgba(0, 0, 0, 0.85);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 600;
 }
-/* Dlaždice skupín vecí (ako v novej appke, docs/navrhy/smer-b-obloha.html) vo farbách tejto:
-   široká cez celý riadok s pásom dňa, polovičné vedľa seba. Celá dlaždica je
-   tlačidlo, ktoré otvorí panel veci či skupiny zospodu. */
-.mozem-tiles-box {
-    display: grid;
-    gap: var(--sp-2);
-    margin-top: var(--sp-3);
-}
-.mozem-tiles-ttl,
-.mozem-plan-ttl {
-    margin: 0 2px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.mozem-tiles {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--sp-2);
-}
-.mozem-tiles.est {
-    font-style: italic;
-}
-.mozem-tile {
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    min-width: 0;
-    min-height: 44px;
-    padding: 12px 14px;
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--ink-12);
-    background: var(--card-bg);
-    text-align: left;
-}
-.mozem-tile[data-size='wide'] {
-    grid-column: 1 / -1;
-}
-.mozem-tile-hd {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 6px;
-}
-.mozem-tile svg {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: var(--ink-70);
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.mozem-tile-name {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.mozem-tile b {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 2px;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--tone);
-}
-.mozem-tile[data-size='wide'] b {
-    font-size: 28px;
-}
-.mozem-tile b::before {
-    content: '';
-    flex: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: currentColor;
-}
-.mozem-tile small {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-70);
-}
-/* Farba odpovede: tie isté významy ako v celej appke - zelená slnko, oranžová počkať či lacná
-   sieť, červená nie, sivá neviem. */
-.mozem-tiles [data-tone],
-.mozem-sheet-rows [data-tone],
-.mozem-plan [data-tone] {
-    --tone: var(--green);
-}
-.mozem-tiles [data-tone='wait'],
-.mozem-tiles [data-tone='cheap'],
-.mozem-sheet-rows [data-tone='wait'],
-.mozem-sheet-rows [data-tone='cheap'],
-.mozem-plan [data-tone='wait'],
-.mozem-plan [data-tone='cheap'] {
-    --tone: var(--amber);
-}
-.mozem-tiles [data-tone='no'],
-.mozem-sheet-rows [data-tone='no'],
-.mozem-plan [data-tone='no'] {
-    --tone: var(--red);
-}
-.mozem-tiles [data-tone='unk'],
-.mozem-sheet-rows [data-tone='unk'] {
-    --tone: var(--ink-45);
-}
-/* Plán dňa pod dlaždicami: riadok čas · spotrebič · prečo, čas vo farbe odpovede. */
-.mozem-plan {
-    display: grid;
-    gap: var(--sp-2);
-    margin-top: var(--sp-5);
-}
-/* Plán je časová os bez rámika: kartami (tlačidlami) ostávajú len dlaždice nad ním. */
-.mozem-plan-box {
-    padding: 4px 0 0;
-}
-.mozem-plan-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-/* Čas a meno v riadku, keď sa zmestia; pri veľkom písme sa meno zalomí pod čas. */
-.mozem-plan-list li {
-    position: relative;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 10px;
-    padding: 6px 0 18px 30px;
-}
-/* Bodka na osi vo farbe odpovede; prvý riadok (čo je na rade) je plný a svieti. */
-.mozem-plan-list li::before {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 9px;
-    box-sizing: border-box;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 2.5px solid var(--tone);
-    background: var(--bg);
-}
-.mozem-plan-list li:first-child::before {
-    background: var(--tone);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 22%, transparent);
-}
-/* Čiara k ďalšiemu riadku; zbalený plán má pod prvým riadkom prerušovaný chvost - kroky pokračujú. */
-.mozem-plan-list li::after {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 27px;
-    bottom: -5px;
-    width: 2px;
-    border-radius: 1px;
-    background: var(--ink-12);
-}
-.mozem-plan-list li:last-child::after {
-    display: none;
-}
-.mozem-plan-list.zbaleny li:last-child::after {
+.mozem-eq b {
     display: block;
-    bottom: 2px;
-    background: repeating-linear-gradient(var(--ink-12) 0 4px, transparent 4px 8px);
-}
-.mozem-plan-t {
-    min-width: 8em;
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--tone);
-}
-.mozem-plan-n {
+    font-size: min(7cqi, 26px);
     font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: inherit;
 }
-.mozem-plan-n em {
-    margin-left: 6px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-style: normal;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--green);
+.mozem-eq span {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.25;
 }
-.mozem-plan-w {
-    flex-basis: 100%;
-    font-size: var(--fs-sm);
-    color: var(--ink-70);
-}
-.mozem-plan-note {
-    margin: 0 0 0 30px;
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-}
-/* Tlačidlo zbaleného či rozbaleného plánu; zbalený plán je bez pätky, tlačidlo stojí hneď pod riadkom. */
-.mozem-plan-more {
-    width: calc(100% - 30px);
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--sp-2);
-    margin-left: 30px;
-    padding: 0;
-    font-size: var(--fs-md);
-    font-weight: 600;
-    text-align: left;
-}
-.mozem-plan-more .tz-chev {
-    width: 28px;
-    height: 28px;
-}
-.mozem-plan-more[aria-expanded='true'] .tz-chev {
-    transform: rotate(180deg);
-}
-/* Pás dňa v širokej dlaždici: okno so slnkom, uplynulá časť stlmená, značka „teraz“. */
-.mozem-tile-bar {
-    position: relative;
-    height: 10px;
-    margin-top: 10px;
-    border-radius: 5px;
-    background: var(--ink-12);
-}
-.mozem-tile-bar i {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-radius: 5px;
-    background: var(--tone);
-}
-.mozem-tile-bar i.past {
-    opacity: 0.35;
-}
-.mozem-tile-bar span {
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    width: 3px;
-    margin-left: -1.5px;
-    border-radius: 2px;
-    background: var(--ink);
-}
-.mozem-tile-ticks {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--ink-45);
-}
-/* Panel veci či skupiny zospodu: modálny dialóg, fokus ostane v ňom, Escape aj Späť ho zatvoria. */
-.mozem-sheet {
-    width: 100%;
-    max-width: var(--page-max, 520px);
-    max-height: 85dvh;
-    margin: auto auto 0;
-    padding: 22px 20px calc(28px + env(safe-area-inset-bottom));
-    border: 0;
-    border-top: 1.5px solid var(--ink-12);
-    border-radius: 24px 24px 0 0;
-    background: var(--card-bg);
-    color: var(--ink);
-    overflow-y: auto;
-}
-.mozem-sheet::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-}
-.mozem-sheet h2 {
-    margin: 0 48px 6px 0;
-    font-size: var(--fs-lg);
-}
-.mozem-sheet p {
-    margin: 0;
-    color: var(--ink-70);
-}
-.mozem-sheet-x {
-    position: absolute;
-    top: 14px;
-    right: 16px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--ink-12);
-    font-size: 24px;
-    line-height: 1;
-}
-.mozem-sheet-q {
-    margin: 16px 0 4px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.mozem-sheet-rows {
-    margin-top: 6px;
-}
-.mozem-sheet-row {
-    padding: 12px 0;
-    border-top: 1px solid var(--ink-12);
-}
-.mozem-sheet-row h3 {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--sp-2);
-    margin: 0;
-    font-size: 16px;
-}
-.mozem-sheet-row h3 span {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--tone);
-}
-.mozem-sheet-row p {
-    margin-top: 3px;
-    font-size: 14px;
-}
+
 /* ---- Štatistika: plagát obdobia ---------------------------------------------- */
 /* Plagát v prechode farieb stavu. Bez merania (dnešok len z predpovede) je sivý. */
 .summary {
@@ -4661,8 +4454,7 @@ b {
         height: 26px;
         margin: -13px 0 0 -13px;
     }
-    /* Karta Terazky: vľavo číslo a graf dňa, vpravo odporúčania pod sebou - na šírku je miesta
-       dosť, listovať netreba. */
+    /* Karta Terazky: vľavo číslo a graf dňa, vpravo Plán dňa. */
     #panel-terazky {
         display: grid;
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -4674,10 +4466,15 @@ b {
     .tz-plot {
         grid-column: 1;
     }
-    .tz-recs {
+    .tz-plan {
         grid-column: 2;
         grid-row: 1 / 3;
+        align-self: start;
         margin-top: 0;
+    }
+    /* Pás odporúčaní na karte Dnes: na šírku sú karty pod sebou, listovať netreba. */
+    .tz-recs {
+        max-width: 560px;
     }
     .tz-strip {
         flex-direction: column;

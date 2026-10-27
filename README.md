@@ -12,33 +12,30 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 
 Spodná navigácia má pod každou ikonou meno karty (na desktope je meno vedľa ikony).
 
-|               Môžem?                |                Terazky                 |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
-| :---------------------------------: | :------------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
-| ![Karta Môžem?](docs/img/mozem.png) | ![Karta Terazky](docs/img/terazky.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
+|                Terazky                 |               Dnes                |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
+| :------------------------------------: | :-------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
+| ![Karta Terazky](docs/img/terazky.png) | ![Karta Dnes](docs/img/mozem.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
-- **Môžem?** – odpoveď pre celú rodinu, nielen pre toho, kto sa vo fotovoltike vyzná. Hore jedno
-  veľké slovo na plnej farbe (**ZAPNI TOOO**, **NO NO, NOT YET**, **NAHOVNO DEŇ**, **Dnes už ne e !**, **Neviem.**),
-  jedna veta a jeden fakt v jednotkách, ktoré pozná každý (koľko mobilov strecha nabije za hodinu).
-  Pod tým dlaždice **Čo môžem** – tie isté
-  ako v novej appke: veľké spotrebiče (práčka, umývačka, sušička) s pásom dňa, auto a bojler,
-  každá s jednou odpoveďou („do 17:30“, „o 10:30“, „zajtra 08:00“, „lacno“).
-  Ťuknutie na dlaždicu otvorí panel zospodu: pri skupine jej veci, každú so svojím časom, pri jednej veci
-  čo robiť, prečo, a čo keď sa zamračí alebo to treba hneď – s cenou zo siete, keď ju tarifa pozná. Na konci karty je odkaz na mesiac na streche
-  v karte **Štatistika** (len so živým meraním). „Áno“ je tá istá zelená ako na páse plánu dňa na karte Terazky. Karta je v navigácii
-  prvá a appka sa na nej otvára – každý telefón si to môže zmeniť v Nastavení.
-- **Terazky** – rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
-  výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, pod ním graf dňa – hore oblačnosť
+- **Terazky** – karta je v navigácii prvá a appka sa na nej otvára (každý telefón si to môže
+  zmeniť v Nastavení). Rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
+  výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, štítky (ÁNO, LACNÁ SIEŤ…)
+  a veta o teraz („Slnko to teraz platí za nás.“). Pod nimi **Plán dňa** ako plagát v štýle
+  Štatistiky: veta, čo zapnúť teraz, a očíslované riadky – čo kedy zapnúť a prečo (práčka a
+  sušička vždy v jeden deň, sušička po práčke). Pod plánom graf dňa – hore oblačnosť
   po hodinách, krivka predpovede a nameraná krivka s osou kW, hranica veľkých spotrebičov s plochou
   nad ňou (slnko navyše na veľké spotrebiče), pás plánu po polhodinách (zelená slnko stačí, oranžová
   lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené) a pod ním okno „Zapni veľké“.
   Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas, „Späť na teraz“ ho vráti.
-  Pod grafom je pás štyroch kariet do strán: čo robiť teraz, spotrebiče s krátkou odpoveďou
-  z karty Môžem?, dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy bude lepšie.
-  Na širokej obrazovke sú karty pod sebou vedľa grafu. Obsah počíta ten istý model ako nová appka.
+  Na širokej obrazovke je Plán dňa vedľa grafu. Obsah počíta ten istý model ako nová appka.
+- **Dnes** (kedysi Môžem?) – hore jedno veľké slovo na plnej farbe (**ZAPNI TOOO**, **NO NO, NOT YET**,
+  **NAHOVNO DEŇ**, **Dnes už ne e !**, **Neviem.**) a pod ním, čo dá strecha za celý deň v jednotkách,
+  ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej (tie isté prepočty ako
+  Štatistika). Pod tým pás kariet do strán: dnešok (predpoveď, koľko už nabehlo, okno na veľké veci)
+  a kedy bude lepšie; na širokej obrazovke sú pod sebou.
 - **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
   voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
   dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
@@ -67,7 +64,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   rovno ten krok v Nastavení.
 - **Nastavenie** – moja elektráreň. Pri prvom otvorení sa appka spýta len na polohu; panely
   môže človek nastaviť hneď, alebo ich odložiť – vtedy karta 7 dní ukazuje predpoveď pre
-  typickú strechu v jeho polohe a karty Terazky a Môžem? z nej odpovedajú, s jantárovým pásom,
+  typickú strechu v jeho polohe a karty Terazky a Dnes z nej odpovedajú, s jantárovým pásom,
   že je to odhad, a tlačidlom panely zadať.
   Karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
@@ -82,7 +79,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   zostavou a kompasom plôch a pod ňou riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo
   Späť na telefóne vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Položka **Úvodná karta**
-  určuje, na ktorej karte sa appka otvára (Môžem? alebo Terazky). Je to voľba telefónu, nie
+  určuje, na ktorej karte sa appka otvára (Terazky alebo Dnes). Je to voľba telefónu, nie
   elektrárne, a ukladá sa zvlášť. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj so živým meraním. Kto taký odkaz otvorí (alebo ho

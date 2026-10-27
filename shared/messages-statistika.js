@@ -4,7 +4,7 @@
 
 import { dateParts, fmt1, fmtSum } from './format.js';
 import { DATE_RE } from './valid.js';
-import { MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
+import { MOZEM_SKY_TEXTS, polite, posterCo2Value, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
 /** @typedef {import('./stats.js').StatsPeriod} StatsPeriod */
@@ -93,12 +93,6 @@ export function suctyOdNote(znacka, od) {
 }
 
 // ---- Uhlík ---------------------------------------------------------------------------
-
-/** Úspora CO2eq: do 10 kg s desatinou („~2,4 kg“), do tony celé („~38 kg“), potom v tonách („~1,3 t“). @param {number} kg */
-export function posterCo2Value(kg) {
-    if (kg >= 1000) return `~${fmt1(kg / 1000)} t`;
-    return `~${kg < 10 ? fmt1(kg) : fmtSum(Math.round(kg), 0)} kg`;
-}
 
 /**
  * Splatený uhlík panelov v percentách, nadol - 100 % až keď je naozaj splatený.

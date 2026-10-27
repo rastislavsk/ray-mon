@@ -1,11 +1,11 @@
-// Karta Môžem? novej appky: oblúk slnka, štítky, veľké slovo a veta, fakt v mobiloch, výzvy,
-// dlaždice skupín vecí, riadok o mesiaci a panel veci či skupiny zospodu. Všetko počíta
-// shared/mozem-sky.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
+// Karta Dnes novej appky (kódové meno mozem, doteraz Môžem?): oblúk slnka, veľké slovo, čo dá
+// strecha za celý deň, výzvy a pás odporúčaní (docs/navrhy/dnes-a-teraz.html). Všetko počíta
+// shared/mozem-sky.js a shared/teraz.js, texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
-import { PLAN_DNA_LESS, PLAN_DNA_NOW, PLAN_DNA_TITLE, planDnaMoreText, voiceTexts } from '../../../shared/messages-core.js';
-import { mozemSheetOf } from '../../../shared/mozem.js';
+import { voiceTexts } from '../../../shared/messages-core.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
+import { dnesCards } from '../../../shared/teraz.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -57,78 +57,24 @@ function arcSvg(arc, off) {
     );
 }
 
-/** Obrysové ikony vecí (24 × 24), kľúče sú id z MOZEM_ITEMS. @type {Record<string, string>} */
-const ICONS = {
-    pracka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/>',
-    umyvacka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M4 8h16M8 12.5h8M8 16h8"/>',
-    susicka:
-        '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M10 12c1-1 3 1 4 0M10 14.5c1-1 3 1 4 0"/>',
-    auto: '<path d="M4 16.5v-4l2.2-5h11.6l2.2 5v4z"/><path d="M4 12.5h16"/><circle cx="8" cy="16.5" r="1.8"/><circle cx="16" cy="16.5" r="1.8"/>',
-    bojler: '<rect x="7" y="2.5" width="10" height="17" rx="5"/><path d="M12 8c-1.7 2.2-2.2 3.2-2.2 4.3a2.2 2.2 0 0 0 4.4 0c0-1.1-.5-2.1-2.2-4.3z"/><path d="M10 19.5v2M14 19.5v2"/>',
-};
-
-/** @param {string} id */
-const icon = (id) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ''}</svg>`;
-
-/** Pás dňa v širokej dlaždici: uplynulá časť okna stlmená. Čítačke nič nehovorí. @param {NonNullable<Model['groups'][number]['bar']>} b */
-function barHtml(b) {
-    const end = b.left + b.width;
-    const past = Math.max(0, Math.min(b.now, end) - b.left);
-    const seg = (/** @type {number} */ from, /** @type {number} */ w, /** @type {string} */ cls) =>
-        w > 0 ? `<i${cls} style="left:${from}%;width:${w}%"></i>` : '';
-    return (
-        `<div class="tile-bar" aria-hidden="true">${seg(b.left, past, ' class="past"')}${seg(b.left + past, b.width - past, '')}` +
-        `<span style="left:${b.now}%"></span></div>` +
-        `<div class="tile-ticks" aria-hidden="true">${b.ticks.map((t) => `<span>${t}</span>`).join('')}</div>`
-    );
-}
-
-/** Dlaždice skupín: celá dlaždica je tlačidlo, ktoré otvorí panel veci či skupiny. @param {Model['groups']} groups */
-function tilesHtml(groups) {
-    return groups
-        .map((g) => {
-            const icons = g.items.map(icon).join('');
-            const name = `<span class="tile-name">${escapeHtml(g.name)}</span>`;
-            const value = `<b>${escapeHtml(g.value)}</b>`;
-            const head = `<span class="tile-hd">${icons}${name}</span>`;
-            const note = g.note ? `<small>${escapeHtml(g.note)}</small>` : '';
-            return (
-                `<button type="button" class="tile" data-item="${g.key}" data-size="${g.size}" data-tone="${g.tone}" aria-haspopup="dialog">` +
-                `${head}${value}${note}${g.bar ? barHtml(g.bar) : ''}</button>`
-            );
-        })
-        .join('');
-}
-
-/** Riadky panelu skupiny: meno, krátka odpoveď a prečo. @param {Model['items']} rows */
-function rowsHtml(rows) {
-    return rows
-        .map(
-            (it) =>
-                `<div class="sheet-row"><h3>${escapeHtml(it.name)}</h3>` +
-                `<span class="row-t" data-tone="${it.tone}">${escapeHtml(it.short)}</span>` +
-                `<p>${escapeHtml(it.text)}</p></div>`,
-        )
-        .join('');
-}
-
-/**
- * Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice
- * @param {boolean} planOpen je Plán dňa rozbalený?
- */
-function renderCard(m, dom, voice, planOpen) {
+/** Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice */
+function renderCard(m, dom, voice) {
     const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
     show(dom.mzArc, !!m.arc);
     if (m.arc) setHtml(dom.mzArc, arcSvg(m.arc, m.state === 'offline'));
     show(dom.mzAnswer, !m.ask);
-    setHtml(dom.mzChips, m.chips.map((c) => `<span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`).join(''));
-    show(dom.mzChips, m.chips.length > 0);
     setText(dom.mzWord, m.word);
     dom.mzWord.style.setProperty('--word', `${wordSize(m.word)}px`);
     dom.mzWord.style.setProperty('--word-len', String(Math.max(1, ...m.word.split(/\s+/).map((w) => w.length))));
-    setText(dom.mzLead, m.lead);
-    show(dom.mzPhones, !!m.phones);
-    setText(dom.mzPhonesText, m.phones);
+    // S predpoveďou na dnešok namiesto vety čo dá strecha za celý deň.
+    show(dom.mzLead, !m.day);
+    setText(dom.mzLead, m.day ? '' : m.lead);
+    show(dom.mzDay, !!m.day);
+    setText(dom.mzDayLead, m.day ? m.day.lead : '');
+    setHtml(
+        dom.mzDayEq,
+        m.day ? m.day.eq.map((e) => `<div><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></div>`).join('') : '',
+    );
     show(dom.mzRetry, m.retry);
     setText(dom.mzRetry, MOZEM_SKY_TEXTS.retry);
     show(dom.mzGuess, !!m.guess);
@@ -139,41 +85,6 @@ function renderCard(m, dom, voice, planOpen) {
     setText(dom.mzAskTitle, MOZEM_SKY_TEXTS.askTitle);
     setText(dom.mzAskText, MOZEM_SKY_TEXTS.askText);
     setText(dom.mzAskBtn, MOZEM_SKY_TEXTS.askBtn);
-    show(dom.mzList, !!m.list);
-    dom.mzList.classList.toggle('est', !!m.list?.estimate);
-    setText(dom.mzListTitle, m.list ? m.list.title : '');
-    setHtml(dom.mzItems, m.list ? tilesHtml(m.groups) : '');
-    renderPlan(m.list ? m.plan : null, planOpen, dom);
-}
-
-/**
- * Plán dňa pod dlaždicami: čas, spotrebič a prečo. Bez plánu sa skryje. Zbalený ukáže len prvý
- * riadok (čo je na rade) a tlačidlo, ktoré rozbalí ostatné aj s pätkou.
- * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
- */
-function renderPlan(plan, open, dom) {
-    const all = plan ? plan.rows : [];
-    const more = all.length - 1;
-    const rows = open || more < 1 ? all : all.slice(0, 1);
-    show(dom.mzPlan, all.length > 0);
-    show(dom.mzPlanMore, more > 0);
-    show(dom.mzPlanNote, open || more < 1);
-    dom.mzPlanMore.setAttribute('aria-expanded', String(open));
-    dom.mzPlanRows.classList.toggle('zbaleny', rows.length < all.length);
-    setText(dom.mzPlanMoreText, open ? PLAN_DNA_LESS : planDnaMoreText(more));
-    setText(dom.mzPlanTitle, PLAN_DNA_TITLE);
-    setHtml(
-        dom.mzPlanRows,
-        rows
-            .map(
-                (r) =>
-                    `<li data-tone="${r.tone}"><span class="row-t" data-tone="${r.tone}">${escapeHtml(r.time)}</span>` +
-                    `<b>${escapeHtml(r.name)}${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : ''}</b>` +
-                    `<span class="plan-w">${escapeHtml(r.why)}</span></li>`,
-            )
-            .join(''),
-    );
-    setText(dom.mzPlanNote, plan ? plan.note : '');
 }
 
 /**
@@ -194,71 +105,35 @@ function renderAnnounce(m, dom) {
     if (before && before !== m.state) setText(dom.mzLive, `${m.word}. ${m.lead}`);
 }
 
-/** Dlaždica, ktorej panel je práve otvorený - po zatvorení sa fokus vráti na ňu. @type {string | null} */
-let shown = null;
-
-/** Čo je v paneli: vec (dlaždica s jednou vecou) alebo skupina so zoznamom vecí. @typedef {NonNullable<ReturnType<typeof mozemSheetOf>>} Open */
-
 /**
- * Panel veci či skupiny: texty a otvorenie či zatvorenie dialógu podľa stavu. Po zatvorení
- * (krížik, Escape, Späť) sa fokus vráti na dlaždicu, z ktorej sa panel otvoril.
- * @param {Open | null} open @param {Dom} dom @param {import('../../../shared/messages.js').Voice} [voice]
+ * Pás odporúčaní a bodky pod ním. Pás listuje prehliadač, bodka ukazuje stránku zo stavu.
+ * @param {ReturnType<typeof dnesCards>} k @param {number} page @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice
  */
-function renderSheet(open, dom, voice) {
-    const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
-    if (!open) {
-        if (dom.mzSheet.open) dom.mzSheet.close();
-        const tile = shown && dom.mzItems.querySelector(`[data-item="${shown}"]`);
-        shown = null;
-        if (tile instanceof HTMLElement) tile.focus();
-        return;
-    }
-    dom.mzSheetX.setAttribute('aria-label', MOZEM_SKY_TEXTS.close);
-    const group = 'group' in open ? open.group : null;
-    show(dom.mzSheetLead, !!group?.lead);
-    show(dom.mzSheetRows, !!group);
-    for (const el of [dom.mzSheetDoQ, dom.mzSheetDo, dom.mzSheetWhyQ, dom.mzSheetWhy]) show(el, !group);
-    if ('item' in open) itemSheet(open.item, dom, MOZEM_SKY_TEXTS);
-    else groupSheet(open.group, dom);
-    if (!dom.mzSheet.open) dom.mzSheet.showModal();
-    shown = open.key;
-}
-
-/** Panel skupiny: nadpis, veta o slnku a veci skupiny. @param {NonNullable<Model['groups'][number]['sheet']>} group @param {Dom} dom */
-function groupSheet(group, dom) {
-    setText(dom.mzSheetTitle, group.title);
-    setText(dom.mzSheetLead, group.lead);
-    setHtml(dom.mzSheetRows, rowsHtml(group.rows));
-    show(dom.mzSheetMoreQ, false);
-    show(dom.mzSheetMore, false);
-}
-
-/**
- * Panel veci: čo robiť, prečo a otázka s odpoveďou.
- * @param {Model['items'][number]} it @param {Dom} dom @param {ReturnType<typeof voiceTexts>['MOZEM_SKY_TEXTS']} T
- */
-function itemSheet(it, dom, T) {
-    setText(dom.mzSheetTitle, it.title);
-    setHtml(dom.mzSheetRows, '');
-    setText(dom.mzSheetDoQ, T.sheetDo);
-    setText(dom.mzSheetDo, it.head);
-    setText(dom.mzSheetWhyQ, T.sheetWhy);
-    setText(dom.mzSheetWhy, it.text);
-    show(dom.mzSheetMoreQ, !!it.more);
-    show(dom.mzSheetMore, !!it.more);
-    setText(dom.mzSheetMoreQ, it.more ? it.more.q : '');
-    setText(dom.mzSheetMore, it.more ? it.more.a : '');
+function renderCards(k, page, dom, voice) {
+    const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
+    show(dom.tzRecs, !!k);
+    if (!k) return;
+    dom.tzStrip.setAttribute('aria-label', TERAZ_TEXTS.strip);
+    setText(dom.tzTodayTitle, TERAZ_TEXTS.today);
+    setText(dom.tzToday, k.today.line);
+    show(/** @type {HTMLElement} */ (dom.tzTodayBar.parentElement), k.today.pct !== null);
+    dom.tzTodayBar.style.width = `${k.today.pct ?? 0}%`;
+    setText(dom.tzWindow, k.today.window);
+    setText(dom.tzLaterTitle, TERAZ_TEXTS.later);
+    setText(dom.tzLater, k.later);
+    [...dom.tzDots.children].forEach((dot, i) => dot.classList.toggle('on', i === page));
 }
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
-    // Panel veci patrí karte Môžem?; keď nie je na obrazovke, je vždy zatvorený.
-    if (!shows(state, 'mozem')) {
-        renderAnnounce(null, dom);
-        return renderSheet(null, dom);
-    }
+    if (!shows(state, 'mozem')) return renderAnnounce(null, dom);
     const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices });
-    renderCard(m, dom, state.voice, state.mozemPlanOpen);
+    renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
-    renderSheet(mozemSheetOf(m, state.mozemItem), dom, state.voice);
+    renderCards(
+        m.ask || m.state === 'loading' ? null : dnesCards({ ...state, previewMinutes: null }, state.voice),
+        state.terazPage,
+        dom,
+        state.voice,
+    );
 }

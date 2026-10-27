@@ -2,7 +2,7 @@
 
 import { PANELS } from '../dom.js';
 import { renderHeader } from './header.js';
-import { closeMozemSheet, renderMozem } from './mozem.js';
+import { renderMozem } from './mozem.js';
 import { renderImportOffer, renderNastavenie } from './nastavenie.js';
 import { renderSedemdni } from './sedemdni.js';
 import { renderStatistika } from './statistika.js';
@@ -31,7 +31,6 @@ export function render(state, dom) {
     renderPanels(state, dom);
     renderImportOffer(state, dom);
     if (state.panel === 'mozem') renderMozem(state, dom);
-    else closeMozemSheet(dom);
     if (state.panel === 'terazky') renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
     if (state.panel === 'statistika') renderStatistika(state, dom);

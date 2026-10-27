@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dnes a Teraz</title>
+        <style>
+            /* Návrh: karta Môžem? sa premenuje na Dnes a ide v navigácii druhá, prvá je Teraz(ky).
+   Z Dnes zmizne blok Čo môžem aj Plán dňa, na ich miesto príde pás odporúčaní
+   z Teraz(iek). Plán dňa ide na Teraz(ky) nad graf dňa: súčasná appka možnosť A,
+   Živá obloha možnosť B (docs/navrhy/terazky-plan-dna.html). */
+            .nav {
+                display: flex;
+                justify-content: space-around;
+                margin: 14px -14px -18px;
+                padding: 10px 4px 12px;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+                font-size: 10.5px;
+                text-align: center;
+            }
+            .t .nav {
+                background: #0b0e0a;
+            }
+            .o .nav {
+                background: #233a63;
+            }
+            .nav span {
+                opacity: 0.6;
+                flex: 1;
+            }
+            .nav span::before {
+                content: '';
+                display: block;
+                width: 16px;
+                height: 16px;
+                margin: 0 auto 4px;
+                border: 1.5px solid currentColor;
+                border-radius: 5px;
+            }
+            .nav .on {
+                opacity: 1;
+                font-weight: 700;
+            }
+            .t .nav .on {
+                color: #a8f05a;
+            }
+            .o .nav .on {
+                color: #c8f59e;
+            }
+            .hero {
+                border-radius: 24px;
+                padding: 16px;
+                margin-top: 12px;
+            }
+            .t .hero {
+                background: #a6ee5a;
+                color: #101010;
+            }
+            .t .hero .kick {
+                color: #101010;
+                margin: 0;
+            }
+            .hero .word {
+                font-size: 44px;
+                font-weight: 800;
+                line-height: 1;
+                margin: 8px 0;
+                letter-spacing: -0.02em;
+            }
+            .o .hero {
+                padding: 6px 0 0;
+            }
+            .o .hero .word {
+                font-weight: 900;
+                font-stretch: 125%;
+            }
+            .tags {
+                display: flex;
+                gap: 6px;
+            }
+            .tag {
+                font-size: 11px;
+                font-weight: 800;
+                border-radius: 999px;
+                padding: 3px 10px;
+                color: #12305e;
+            }
+            .strip {
+                display: flex;
+                gap: 10px;
+                overflow: hidden;
+                margin: 14px -14px 0 0;
+            }
+            .rec {
+                flex: 0 0 84%;
+                border-radius: 20px;
+                padding: 14px 16px;
+            }
+            .t .rec {
+                background: #121611;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+            .o .rec {
+                background: rgba(14, 36, 80, 0.38);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }
+            .rec .rttl {
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                opacity: 0.75;
+                margin-bottom: 6px;
+            }
+            .rec p {
+                margin: 0;
+                color: inherit;
+                font-size: 14px;
+            }
+            .dots {
+                text-align: center;
+                font-size: 10px;
+                letter-spacing: 4px;
+                opacity: 0.7;
+                margin-top: 8px;
+            }
+            .gone {
+                border: 1px dashed rgba(255, 255, 255, 0.35);
+                border-radius: 16px;
+                padding: 10px;
+                font-size: 12px;
+                text-align: center;
+                opacity: 0.7;
+                margin-top: 12px;
+            }
+            .spacer {
+                height: 40px;
+            }
+            .nowsay {
+                margin-top: 10px;
+            }
+            .nowsay p {
+                margin: 6px 0 0;
+                color: inherit;
+                font-size: 15px;
+            }
+            .t .nowsay .tag {
+                color: #101010;
+            }
+            .daylead {
+                font-size: 15px;
+                margin-top: 4px;
+            }
+            .eq {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 2px solid currentColor;
+            }
+            .eq b {
+                display: block;
+                font-size: 20px;
+                line-height: 1.1;
+            }
+            .eq span {
+                font-size: 12px;
+                opacity: 0.8;
+            }
+            .o .eq {
+                border-top-width: 1px;
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .hero b {
+                color: inherit;
+            }
+            .eq span {
+                display: block;
+                line-height: 1.25;
+                margin-top: 2px;
+            }
+
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --bad: #ff9b8a;
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 48px 0 6px;
+            }
+            h3 {
+                font-size: 16px;
+                margin: 24px 0 6px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            b,
+            strong {
+                color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 20px;
+            }
+            .cap {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 8px 0 0;
+                max-width: 340px;
+            }
+
+            /* Telefón */
+            .phone {
+                width: 340px;
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                overflow: hidden;
+                padding: 16px 14px 18px;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                opacity: 0.85;
+            }
+            .dot::before {
+                content: '';
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yes);
+                margin-right: 6px;
+            }
+            .chart {
+                height: 92px;
+                border-radius: 18px;
+                margin: 10px 0 12px;
+                position: relative;
+                overflow: hidden;
+            }
+            .chart svg {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+            }
+            .ghost {
+                opacity: 0.35;
+                font-size: 12px;
+                text-align: center;
+                padding: 6px 0;
+            }
+
+            /* Súčasná appka */
+            .t {
+                background: radial-gradient(120% 60% at 30% 0%, #1d2a17, #0b0e0a 70%);
+                font-family: 'Space Grotesk', var(--font);
+            }
+            .t .hdr {
+                font-family: var(--mono);
+            }
+            .t .kick {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.12em;
+                color: rgba(255, 255, 255, 0.7);
+                margin-top: 14px;
+            }
+            .t .big {
+                font-size: 64px;
+                line-height: 1;
+                font-weight: 700;
+                color: #a8f05a;
+                letter-spacing: -0.03em;
+            }
+            .t .big small {
+                font-size: 18px;
+                color: #ddd;
+                margin-left: 4px;
+            }
+            .t .chart {
+                background: #121611;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+            .t .poster {
+                border-radius: 22px;
+                padding: 16px 16px 14px;
+                color: #101010;
+                background: linear-gradient(180deg, #a6ee5a 0%, #e3d64a 55%, #ffb347 100%);
+            }
+            .t .poster .lbl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.14em;
+            }
+            .t .poster .ans {
+                font-size: 30px;
+                font-weight: 700;
+                line-height: 1.05;
+                letter-spacing: -0.02em;
+                margin: 6px 0 10px;
+            }
+            .t .poster ol {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .t .poster li {
+                display: grid;
+                grid-template-columns: 26px 1fr auto;
+                gap: 4px 8px;
+                border-top: 2px solid #101010;
+                padding: 8px 0 6px;
+                color: #101010;
+                align-items: baseline;
+            }
+            .t .poster .n {
+                font: 500 11px var(--mono);
+            }
+            .t .poster .what {
+                font-size: 18px;
+                font-weight: 700;
+            }
+            .t .poster .when {
+                font-size: 18px;
+                font-weight: 700;
+                text-align: right;
+            }
+            .t .poster .why {
+                grid-column: 2 / 4;
+                font-size: 13px;
+                margin-top: -2px;
+            }
+            .t .poster .now {
+                background: #101010;
+                color: #a8f05a;
+                border-radius: 999px;
+                padding: 0 10px;
+                font-size: 15px;
+            }
+            .t .poster .foot {
+                font-size: 12px;
+                margin-top: 6px;
+            }
+
+            /* Živá obloha */
+            .o {
+                background: linear-gradient(180deg, #2b63c8 0%, #3f7fd0 55%, #5590c9 100%);
+                font-family: 'Archivo', var(--font);
+            }
+            .o .ttl {
+                font-size: 26px;
+                font-weight: 800;
+                margin-top: 12px;
+            }
+            .o .big {
+                font-size: 58px;
+                font-weight: 900;
+                font-stretch: 125%;
+                line-height: 1;
+            }
+            .o .big small {
+                font-size: 18px;
+                font-stretch: 100%;
+            }
+            .o .chart {
+                background: rgba(10, 30, 70, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .o .glass {
+                background: rgba(14, 36, 80, 0.38);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 20px;
+                padding: 14px 16px;
+            }
+            .o .glass .lbl {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                opacity: 0.85;
+            }
+            .o .glass .ans {
+                font-size: 26px;
+                font-weight: 900;
+                font-stretch: 112%;
+                line-height: 1.1;
+                margin: 6px 0 10px;
+            }
+            .o .glass ol {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .o .glass li {
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 9px 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.16);
+                color: #fff;
+                align-items: center;
+            }
+            .o .glass li > span:last-child {
+                font-weight: 800;
+                white-space: nowrap;
+            }
+            .o .glass .sub {
+                display: block;
+                font-size: 12px;
+                opacity: 0.75;
+            }
+            .o .pill {
+                background: #c8f59e;
+                color: #12305e;
+                border-radius: 999px;
+                padding: 0 10px;
+            }
+            .o .foot {
+                font-size: 12px;
+                opacity: 0.8;
+                margin-top: 4px;
+            }
+
+            /* Možnosť B: časová os */
+            .lanes {
+                margin-top: 4px;
+                position: relative;
+            }
+            .lane {
+                display: grid;
+                grid-template-columns: 74px 1fr;
+                align-items: center;
+                gap: 8px;
+                height: 26px;
+                font-size: 13px;
+            }
+            .track {
+                position: relative;
+                height: 14px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.08);
+            }
+            .bar {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 7px;
+            }
+            .t .bar {
+                background: #a8f05a;
+            }
+            .t .bar.off {
+                background: repeating-linear-gradient(45deg, #a8f05a 0 4px, #6e9e3b 4px 8px);
+            }
+            .o .bar {
+                background: #c8f59e;
+            }
+            .o .bar.off {
+                background: repeating-linear-gradient(45deg, #c8f59e 0 4px, #8db86a 4px 8px);
+            }
+            .nowline {
+                position: absolute;
+                top: -4px;
+                bottom: -4px;
+                width: 2px;
+                background: #fff;
+                left: calc(74px + 8px + (100% - 82px) * 0.4167);
+            }
+            .axis {
+                display: grid;
+                grid-template-columns: 74px 1fr;
+                gap: 8px;
+                font-size: 10px;
+                opacity: 0.6;
+                margin-top: 2px;
+            }
+            .axis div {
+                display: flex;
+                justify-content: space-between;
+            }
+            .t .answer {
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                background: #121611;
+                border-radius: 22px;
+                padding: 14px 14px 10px;
+            }
+            .t .answer .lbl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.14em;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .t .answer .ans {
+                font-size: 26px;
+                font-weight: 700;
+                line-height: 1.1;
+                color: #a8f05a;
+                margin: 6px 0 4px;
+            }
+            .t .answer .then {
+                font-size: 14px;
+                color: #ddd;
+                margin-bottom: 10px;
+            }
+            .o .then {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            .chips {
+                display: flex;
+                gap: 6px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            .chip {
+                font-size: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 999px;
+                padding: 2px 10px;
+            }
+
+            /* Logika */
+            table {
+                border-collapse: collapse;
+                margin-top: 10px;
+                font-size: 14px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 6px 14px 6px 0;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 500;
+            }
+            .bad {
+                color: var(--bad);
+            }
+            .ok {
+                color: var(--yes);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 13px;
+                color: var(--text);
+            }
+            .q {
+                border-left: 3px solid var(--yes);
+                padding: 4px 0 4px 12px;
+                margin-top: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Dnes a Teraz: nové usporiadanie</h1>
+            <p>
+                Prvá karta v navigácii je <b>Teraz(ky)</b> a nad grafom dňa ukazuje Plán dňa: súčasná appka možnosť A (plagát), Živá obloha
+                možnosť B (veta a časová os). Pod živé číslo na Teraz(ky) prídu z Môžem? štítky (ÁNO, LACNÁ SIEŤ…) a prvá veta odpovede
+                („Slnko to teraz platí za nás.“) – bez zoznamu spotrebičov, ten je v Pláne dňa. Druhá karta <b>Dnes</b>
+                (doteraz Môžem?) si nechá veľké slovo a pod ním povie, čo strecha dá za celý deň: mobily, km autom, CO2. Bloky Čo môžem a
+                Plán dňa z nej zmiznú a na ich miesto príde pás odporúčaní, ktorý je dnes na Teraz(kách). Situácia: 13:00, jasný deň,
+                predpoveď na dnes 61,4 kWh.
+            </p>
+
+            <h2>Súčasná appka</h2>
+            <div class="row">
+                <div>
+                    <div class="phone t">
+                        <div class="hdr"><span>Toilet Apps Ltd.</span><span class="dot">13:00</span></div>
+                        <div class="kick">TERAZ · 13:00 · DVORANY NAD NITROU</div>
+                        <div class="big">6.41<small>kW</small></div>
+                        <div class="nowsay">
+                            <div class="tags">
+                                <span class="tag" style="background: #c8f59e">ÁNO</span
+                                ><span class="tag" style="background: #9cc8ff">LACNÁ SIEŤ</span>
+                            </div>
+                            <p>Slnko to teraz platí za nás.</p>
+                        </div>
+                        <div class="poster" style="margin-top: 12px">
+                            <div class="lbl">PLÁN DŇA</div>
+                            <div class="ans">Teraz práčka<br />aj umývačka</div>
+                            <ol>
+                                <li>
+                                    <span class="n">01</span><span class="what">Práčka</span
+                                    ><span class="when"><span class="now">teraz</span></span
+                                    ><span class="why">hotová o 15:00, potom sušička</span>
+                                </li>
+                                <li>
+                                    <span class="n">02</span><span class="what">Umývačka</span
+                                    ><span class="when"><span class="now">teraz</span></span
+                                    ><span class="why">slnka je dosť na obe naraz</span>
+                                </li>
+                                <li>
+                                    <span class="n">03</span><span class="what">Auto</span><span class="when">13:15–16:00</span
+                                    ><span class="why">~120 km zo strechy</span>
+                                </li>
+                                <li>
+                                    <span class="n">04</span><span class="what">Sušička</span><span class="when">o 15:00</span
+                                    ><span class="why">po práčke</span>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="chart" style="height: 150px">
+                            <svg viewBox="0 0 300 150" preserveAspectRatio="none">
+                                <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,.4)" stroke-dasharray="4 4" />
+                                <path
+                                    d="M10 130 C 90 130 110 30 150 30 S 220 130 290 130"
+                                    fill="rgba(168,240,90,.25)"
+                                    stroke="#a8f05a"
+                                    stroke-width="2"
+                                />
+                                <line x1="150" y1="10" x2="150" y2="140" stroke="#fff" stroke-dasharray="3 3" />
+                            </svg>
+                        </div>
+                        <div class="ghost">legenda grafu ▾ – bez zmeny; pás odporúčaní odišiel na Dnes</div>
+                        <div class="nav">
+                            <span class="on">Terazky</span><span>Dnes</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Terazky</b> (1. v navigácii): živé číslo, štítky a prvá veta, Plán dňa ako plagát, graf dňa.</p>
+                </div>
+                <div>
+                    <div class="phone t">
+                        <div class="hdr"><span>Toilet Apps Ltd.</span><span class="dot">13:00</span></div>
+                        <div class="hero">
+                            <div class="kick">DNES · 13:00 · DVORANY NAD NITROU</div>
+                            <div class="word">ZAPNI TOOO</div>
+                            <div class="daylead">Dnes strecha dá asi <b>61 kWh</b>. To je:</div>
+                            <div class="eq">
+                                <div><b>~4 090</b><span>nabitých mobilov</span></div>
+                                <div><b>~360 km</b><span>elektrickým autom</span></div>
+                                <div><b>~3,9 kg</b><span>CO2eq menej</span></div>
+                            </div>
+                        </div>
+                        <div class="strip">
+                            <div class="rec">
+                                <div class="rttl">DNEŠOK</div>
+                                <p>Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.</p>
+                                <p style="margin-top: 6px"><b>Veľké veci do 16:00</b></p>
+                            </div>
+                            <div class="rec">
+                                <div class="rttl">KEDY LEPŠIE</div>
+                                <p>Silnejšie už dnes nebude. Ďalší silný deň: štvrtok, ~58 kWh.</p>
+                            </div>
+                        </div>
+                        <div class="dots">● ○</div>
+                        <div class="gone">Čo môžem (dlaždice) a Plán dňa – zmiznú</div>
+                        <div class="spacer"></div>
+                        <div class="nav">
+                            <span>Terazky</span><span class="on">Dnes</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Dnes</b> (2. v navigácii, doteraz Môžem?): veľké slovo, čo dá strecha za deň, pás odporúčaní.</p>
+                </div>
+            </div>
+
+            <h2>Živá obloha</h2>
+            <div class="row">
+                <div>
+                    <div class="phone o">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">13:00</span></div>
+                        <div class="ttl">Teraz</div>
+                        <div class="big">7.66<small> kW</small></div>
+                        <div class="nowsay">
+                            <div class="tags">
+                                <span class="tag" style="background: #c8f59e">ÁNO</span
+                                ><span class="tag" style="background: #9cc8ff">LACNÁ SIEŤ</span>
+                            </div>
+                            <p>Slnko to teraz platí za nás.</p>
+                        </div>
+                        <div class="glass" style="margin-top: 12px">
+                            <div class="lbl">ZAPNI TERAZ</div>
+                            <div class="ans">Práčka a umývačka</div>
+                            <div class="then">Auto o 13:15 · sušička o 15:00 po práčke</div>
+                            <div class="lanes">
+                                <div class="lane">
+                                    <span>Práčka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 16.67%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Umývačka</span>
+                                    <div class="track"><div class="bar" style="left: 41.67%; width: 20.83%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Auto</span>
+                                    <div class="track"><div class="bar" style="left: 43.75%; width: 22.92%"></div></div>
+                                </div>
+                                <div class="lane">
+                                    <span>Sušička</span>
+                                    <div class="track">
+                                        <div class="bar" style="left: 58.33%; width: 8.34%"></div>
+                                        <div class="bar off" style="left: 66.67%; width: 4.17%"></div>
+                                    </div>
+                                </div>
+                                <div class="nowline"></div>
+                            </div>
+                            <div class="axis">
+                                <span></span>
+                                <div><span>8</span><span>11</span><span>14</span><span>17</span><span>20</span></div>
+                            </div>
+                        </div>
+                        <div class="chart" style="height: 150px">
+                            <svg viewBox="0 0 300 150" preserveAspectRatio="none">
+                                <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,.4)" stroke-dasharray="4 4" />
+                                <path
+                                    d="M10 130 C 90 130 110 30 150 30 S 220 130 290 130"
+                                    fill="rgba(255,255,255,.15)"
+                                    stroke="#fff"
+                                    stroke-width="2"
+                                />
+                                <line x1="150" y1="10" x2="150" y2="140" stroke="#fff" />
+                            </svg>
+                        </div>
+                        <div class="ghost">legenda a „Ťahaj prstom po grafe“ – bez zmeny</div>
+                        <div class="nav">
+                            <span class="on">Teraz</span><span>Dnes</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                        </div>
+                    </div>
+                    <p class="cap">
+                        <b>Teraz</b> (1. v navigácii): živé číslo, štítky a prvá veta, Plán dňa ako veta a časová os, graf dňa.
+                    </p>
+                </div>
+                <div>
+                    <div class="phone o">
+                        <div class="hdr"><span>Dvorany nad Nitrou</span><span class="dot">13:00</span></div>
+                        <div class="ghost" style="opacity: 0.5">oblúk slnka 06:09 – 19:24</div>
+                        <div class="hero">
+                            <div class="word">ZAPNI<br />TOOO</div>
+                            <div class="daylead">Dnes strecha dá asi <b>61 kWh</b>. To je:</div>
+                            <div class="eq">
+                                <div><b>~4 090</b><span>nabitých mobilov</span></div>
+                                <div><b>~360 km</b><span>elektrickým autom</span></div>
+                                <div><b>~3,9 kg</b><span>CO2eq menej</span></div>
+                            </div>
+                        </div>
+                        <div class="strip">
+                            <div class="rec">
+                                <div class="rttl">DNEŠOK</div>
+                                <p>Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.</p>
+                                <p style="margin-top: 6px"><b>Veľké veci do 16:00</b></p>
+                            </div>
+                            <div class="rec">
+                                <div class="rttl">KEDY LEPŠIE</div>
+                                <p>Silnejšie už dnes nebude. Ďalší silný deň: štvrtok, ~58 kWh.</p>
+                            </div>
+                        </div>
+                        <div class="dots">● ○</div>
+                        <div class="gone">Čo môžem (zoznam) a Plán dňa – zmiznú</div>
+                        <div class="ghost">„Strecha dnes robí viac ako ty.“ – ostáva</div>
+                        <div class="nav">
+                            <span>Teraz</span><span class="on">Dnes</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Dnes</b> (2. v navigácii): oblúk slnka, veľké slovo, čo dá strecha za deň, pás odporúčaní.</p>
+                </div>
+            </div>
+
+            <h2>Čo z pásu odporúčaní na Dnes</h2>
+            <p>Pás má dnes štyri karty. Na Dnes by som presunul len dve:</p>
+            <ul>
+                <li>
+                    <b>Dnešok</b> a <b>Kedy lepšie</b> – presunúť. Hovoria o celom dni, na Dnes patria. Dnešok ostáva aj napriek tomu, že
+                    predpoveď dňa je už v hlavičke (rozhodnuté) – pridáva, koľko už nabehlo, a okno na veľké veci.
+                </li>
+                <li><b>Spotrebiče</b> – vypustiť. Je to Plán dňa a ten už bude na Teraz(kách).</li>
+                <li>
+                    <b>Odporúčanie pre zvolený čas</b> („Najlepší čas dňa – zapni všetko“) – vypustiť. Na Teraz(kách) sa mení podľa toho,
+                    kam ťahaš po grafe. Na Dnes graf nie je, takže by len opakovala veľkú odpoveď nad ňou.
+                </li>
+            </ul>
+            <p>
+                Pozor: Dnes potom bude krátka karta – veľká odpoveď a dve karty pásu. Čas a km auta (dnes dlaždica v Čo môžem) budú už len v
+                Pláne dňa na Teraz(kách).
+            </p>
+
+            <h2>Čo sa presúva z hlavičky Môžem?</h2>
+            <ul>
+                <li>
+                    <b>Štítky</b> (ÁNO / ČIASTOČNE / NIE, LACNÁ SIEŤ / DRAHÁ SIEŤ) idú na Teraz(ky) pod živé číslo. V súčasnej appke sú
+                    nové, Obloha ich už má.
+                </li>
+                <li>
+                    <b>Prvá veta</b> odpovede („Slnko to teraz platí za nás.“) ide na Teraz(ky). Druhá časť („Teraz práčka a umývačka, o
+                    13:15 auto.“) zmizne – to isté hovorí Plán dňa hneď pod ňou.
+                </li>
+                <li>
+                    Na Dnes ostane <b>veľké slovo</b> (ZAPNI TOOO) a namiesto vety prepočet celého dňa z predpovede: 61,4 kWh = ~4 090
+                    nabití mobilu, ~360 km elektrickým autom, ~3,9 kg CO2eq menej. Údaj „strecha za hodinu nabije ~430 mobilov“ odpadne –
+                    nahradí ho celý deň.
+                </li>
+            </ul>
+
+            <h2>Je jadro rovnaké pre obe?</h2>
+            <ul>
+                <li>
+                    Prepočty dňa (mobily, km, CO2) rátajú tie isté funkcie ako Štatistika (<code>EVERYDAY</code>, uhlík v
+                    <code>shared/config.js</code>), len z predpovede na celý deň namiesto toho, čo už nabehlo. Obe appky tak povedia to isté
+                    číslo. Ráno je to celá predpoveď, večer skoro to, čo naozaj nabehlo.
+                </li>
+                <li>Štítky a prvá veta už v jadre sú (hlavička Môžem? v <code>shared/mozem.js</code>) – len ich bude kresliť iná karta.</li>
+                <li>
+                    <b>Áno.</b> Plán dňa v A aj B číta ten istý <code>planDnaModel</code> zo <code>shared/plan-dna.js</code>: rovnaké
+                    riadky, časy, poradie aj dôvody. Pruhy na časovej osi v B sú <code>start</code> a <code>end</code> tých istých riadkov.
+                </li>
+                <li>
+                    Veta hore („Teraz práčka aj umývačka“ v A, „Zapni teraz: Práčka a umývačka“ v B) musí prísť z jadra ako jedna funkcia,
+                    inak by sa appky mohli rozísť v tom, čo ide teraz. Podobnú vetu už skladá hlavička karty Môžem?
+                    (<code>planNowText</code>), takže z nej vyjde.
+                </li>
+                <li>Pás odporúčaní je model <code>cardsOf</code> v <code>shared/teraz.js</code> – presun na Dnes je len zmena kabáta.</li>
+                <li>
+                    Premenovanie a poradie v navigácii je kabát (HTML a texty). Interné meno karty <code>mozem</code> by som nechal –
+                    odkazuje naň ťuknutie na ranné oznámenie aj uložená posledná karta.
+                </li>
+                <li>Appka by sa po otvorení spúšťala na Teraz(kách), nie na Dnes, lebo je prvá v navigácii.</li>
+            </ul>
+        </main>
+    </body>
+</html>

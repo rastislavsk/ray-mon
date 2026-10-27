@@ -2,17 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
-import {
-    dayWindow,
-    planDevices,
-    itemAnswer,
-    itemCost,
-    mozemModel,
-    mozemSheetOf,
-    planWindows,
-    stripGeometry,
-    sunShare,
-} from '../shared/mozem.js';
+import { dayWindow, itemAnswer, itemCost, mozemModel, mozemSheetOf, planWindows, stripGeometry, sunShare } from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -355,19 +345,65 @@ test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
     );
 });
 
-test('planDevices: spotrebiče doma s časom z Plánu dňa, ten istý ako dlaždice karty Môžem?', () => {
-    assert.deepEqual(planDevices(input(FIXED_NOW)), [
-        { name: 'Práčka', short: 'teraz' },
-        { name: 'Umývačka', short: 'teraz' },
-        { name: 'Auto', short: 'o 13:15' },
-        { name: 'Sušička', short: 'o 15:00' },
-    ]);
+test('Plán dňa pre kartu Teraz(ky): časy ako dlaždice, veta nad ním a časová os', () => {
     const m = mozemModel(input(FIXED_NOW));
-    assert.equal(m.groups.find((g) => g.key === 'auto')?.value, 'o 13:15');
-    const doma = planDevices(input(FIXED_NOW), ['pracka', 'bojler']);
     assert.deepEqual(
-        doma.map((d) => d.name),
-        ['Práčka', 'Bojler'],
+        m.plan?.rows.map((r) => [r.name, r.value]),
+        [
+            ['Práčka', 'teraz'],
+            ['Umývačka', 'teraz'],
+            ['Auto', 'o 13:15'],
+            ['Sušička', 'o 15:00'],
+        ],
     );
-    assert.deepEqual(planDevices(input(FIXED_NOW, { pv: null, forecast: null })), [], 'bez predpovede nič');
+    assert.equal(m.groups.find((g) => g.key === 'auto')?.value, 'o 13:15', 'ten istý čas ako dlaždica');
+    assert.deepEqual(m.planHead, { lead: 'Teraz práčka a umývačka', then: 'Auto o 13:15 · sušička o 15:00' });
+    // Bez spotrebičov doma ani predpovede veta nie je.
+    assert.equal(mozemModel(input(FIXED_NOW), { devices: [] }).planHead, null);
+    assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).planHead, null);
+    // Večer: nič teraz, veta povie, čo príde najskôr - auto do lacného pásma, za ním zajtrajšie slnko.
+    const vecer = mozemModel(input(at('19:50'))).planHead;
+    assert.match(vecer?.lead ?? '', /^Auto od \d\d:\d\d$/);
+    assert.match(vecer?.then ?? '', /^\S+ zajtra \d\d:\d\d · \S+ zajtra \d\d:\d\d$/);
+});
+
+test('Plán dňa pre kartu Teraz v novej appke: časová os', () => {
+    // Pás pre každý spotrebič na slnku, os cez dnešné svetlo, čiara teraz.
+    const t = /** @type {NonNullable<ReturnType<typeof mozemModel>['plan']>} */ (mozemModel(input(FIXED_NOW)).plan).lanes;
+    assert.deepEqual(
+        t.lanes.map((l) => l.name),
+        ['Práčka', 'Umývačka', 'Auto', 'Sušička'],
+    );
+    for (const l of t.lanes) assert.ok(l.left >= 0 && l.width > 0 && l.left + l.width <= 100, `${l.name} ${l.left} ${l.width}`);
+    assert.ok(t.now > 0 && t.now < 100);
+    assert.ok(t.ticks.length >= 3 && t.ticks.every((x) => Number(x.label) % 3 === 0));
+    // Večer dnes na slnko nejde nič: os bez pásov, všetko pod ňou s časom z riadku plánu.
+    const tma = mozemModel(input(at('19:50')), { devices: ['pracka', 'bojler'] }).plan?.lanes;
+    assert.deepEqual(tma?.lanes, []);
+    assert.deepEqual(
+        tma?.others.map((o) => o.name),
+        ['Bojler', 'Práčka'],
+    );
+    assert.match(tma?.others[1].value ?? '', /^zajtra \d\d:\d\d$/);
+});
+
+test('mozemModel: veta bez spotrebičov, štítky a čo dá strecha za celý deň', () => {
+    const m = mozemModel(input(FIXED_NOW));
+    assert.equal(m.say, 'Slnko to teraz platí za nás.');
+    assert.match(m.hero.lead, /^Slnko to teraz platí za nás\. Teraz /, 'hlavička Dnes aj s plánom');
+    assert.deepEqual(
+        m.chips.map((c) => c.tone),
+        ['go', 'cheap'],
+    );
+    // Predpoveď dňa 61,4 kWh je viac, než nabehlo - ráta sa celý deň.
+    assert.deepEqual(m.day, {
+        lead: 'Dnes zo strechy asi 61 kWh. To je:',
+        eq: [
+            { value: '~4\u00a0090', label: 'nabitých mobilov' },
+            { value: '~370 km', label: 'elektrickým autom' },
+            { value: '~4,0 kg', label: 'CO2eq menej' },
+        ],
+    });
+    assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).day, null, 'bez predpovede nie');
+    assert.equal(mozemModel(input(FIXED_NOW, { forecast: null, pv: null, loading: true })).say, 'Pozerám na oblohu.');
 });

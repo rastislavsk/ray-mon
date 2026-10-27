@@ -13,7 +13,6 @@ import { weekCurveModel } from './render/sedemdni.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
 import { clearStored, saveStartPanel } from './settings-store.js';
-import { initMozem } from './mozem-interactions.js';
 import { initOznamenia } from './oznamenia-interactions.js';
 import { vypniOznamenia } from './oznamenia.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
@@ -484,6 +483,5 @@ export function initInteractions(store, dom, mq) {
     initClearData(dom);
     initOznamenia(store, dom);
     initStats(store, dom);
-    initMozem(store, dom);
     return refresh;
 }

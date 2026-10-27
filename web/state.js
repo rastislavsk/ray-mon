@@ -29,10 +29,8 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   weekDetail: 'day' | 'week' | null,
  *   terazPage: number,
  *   tzListOpen: boolean,
- *   mozemPlanOpen: boolean,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
- *   mozemItem: string | null,
  *   previewMinutes: number | null,
  *   wide: boolean,
  *   tall: boolean,
@@ -77,7 +75,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null, item: string | null }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -110,21 +108,16 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Karta 7 dní má na mobile dve obrazovky: prehľad dní a detail vybraného dňa.
         // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
         weekDetail: null,
-        // Stránka pásu odporúčaní na karte Terazky (nastavenie vnútri karty, nie krok navigácie).
+        // Stránka pásu odporúčaní na karte Dnes (nastavenie vnútri karty, nie krok navigácie).
         terazPage: 0,
         // Zoznam pod grafom dňa na karte Terazky: na začiatku zatvorený. Nastavenie vnútri karty,
         // nie krok navigácie, a neukladá sa.
         tzListOpen: false,
-        // Plán dňa na karte Môžem?: na začiatku zbalený na prvý riadok. Nastavenie vnútri karty,
-        // nie krok navigácie, a neukladá sa.
-        mozemPlanOpen: false,
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
         // Denník výroby po dňoch pre plagát Štatistiky (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
         dayLog: {},
-        // Panel veci či skupiny v karte Môžem? - krok navigácie, Späť ho zavrie.
-        mozemItem: null,
         previewMinutes: null,
         wide: layout.wide,
         // Či je okno dosť vysoké na to, aby sa do prehľadu dní zmestila aj správa týždňa
@@ -187,7 +180,6 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
-        mozemItem: null,
         stavTip: false,
     };
 }
@@ -206,20 +198,12 @@ export function navStep(state) {
         setup: state.setupStep,
         roof: state.setupRoof,
         info: state.infoOpen,
-        item: state.mozemItem,
     };
 }
 
 /** @param {NavStep} a @param {NavStep} b */
 export function sameNavStep(a, b) {
-    return (
-        a.panel === b.panel &&
-        a.weekDetail === b.weekDetail &&
-        a.setup === b.setup &&
-        a.roof === b.roof &&
-        a.info === b.info &&
-        a.item === b.item
-    );
+    return a.panel === b.panel && a.weekDetail === b.weekDetail && a.setup === b.setup && a.roof === b.roof && a.info === b.info;
 }
 
 /**
@@ -237,7 +221,6 @@ export function navChange(from, step) {
         setupStep: step.setup,
         setupRoof: step.roof,
         infoOpen: step.info,
-        mozemItem: step.item,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -263,15 +246,13 @@ export function navStepFrom(raw) {
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
     const { panel, weekDetail, setup = null, roof = 0, info = null } = /** @type {Record<string, unknown>} */ (step);
-    const screens = screensIn(/** @type {Record<string, unknown>} */ (step));
-    if (!screens || !validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
+    if (!validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
         weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
         setup: /** @type {SetupStep | null} */ (setup),
         roof: /** @type {number} */ (roof),
         info: /** @type {InfoItem | null} */ (info),
-        ...screens,
     };
 }
 
@@ -279,18 +260,6 @@ function navStepIn(step) {
 function validPanelPlace(panel, weekDetail) {
     const detailOk = weekDetail === null || weekDetail === 'day' || weekDetail === 'week';
     return detailOk && PANELS.some((p) => p === panel);
-}
-
-/**
- * Obrazovka karty Môžem?: vec či skupina, ktorej panel je otvorený (`item`, null = žiadny). Položka
- * zo staršej verzie appky ju nepozná - panel zatvorený; zrušený zoznam vecí (`list`) sa vráti na kartu.
- * Popup s návodom k ciferníku (`guide`) zanikol s ciferníkom a súhrn na zdieľanie (`summary`)
- * s presunom do karty Štatistika; položka zo staršej verzie, ktorá ich ešte nesie, sa vráti na kartu bez nich.
- * @param {Record<string, unknown>} step @returns {{ item: string | null } | null}
- */
-function screensIn({ item = null }) {
-    if (item !== null && typeof item !== 'string') return null;
-    return { item };
 }
 
 /** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */

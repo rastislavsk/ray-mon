@@ -971,6 +971,44 @@ export function planTileText(row) {
     return { value: row.time, short: row.time, tone: row.tone, note: '' };
 }
 
+/**
+ * Veta nad Plánom dňa na karte Teraz(ky): čo ide teraz, inak čo príde najskôr, a pod ňou ďalšie
+ * dve veci s časom - tie isté časy ako dlaždice (planTileText). Bez riadkov null.
+ * @param {Array<{ name: string, now: boolean, value: string }>} rows riadky plánu podľa času
+ */
+export function planDnaHeadText(rows) {
+    if (!rows.length) return null;
+    const low = (/** @type {string} */ s) => s.toLowerCase();
+    const now = rows.filter((r) => r.now);
+    const rest = rows.filter((r) => !r.now);
+    const lead = now.length ? `Teraz ${andList(now.map((r) => low(r.name)))}` : rest.length ? `${rest[0].name} ${rest[0].value}` : '';
+    const then = (now.length ? rest : rest.slice(1)).slice(0, 2).map((r) => `${low(r.name)} ${r.value}`);
+    return { lead, then: cap(then.join(' · ')) };
+}
+
+/** Úspora CO2eq: do 10 kg s desatinou („~2,4 kg“), do tony celé („~38 kg“), potom v tonách („~1,3 t“). @param {number} kg */
+export function posterCo2Value(kg) {
+    if (kg >= 1000) return `~${fmt1(kg / 1000)} t`;
+    return `~${kg < 10 ? fmt1(kg) : fmtSum(Math.round(kg), 0)} kg`;
+}
+
+/**
+ * Čo dá strecha za celý deň v jednotkách, ktoré pozná každý - hlavička karty Dnes. Mobily a km
+ * zaokrúhlené na desiatky, je to odhad z predpovede (k večeru blízko nameranému).
+ * @param {{ kwh: number, phones: number, km: number, co2Kg: number }} d
+ */
+export function dnesDayText({ kwh, phones, km, co2Kg }) {
+    const tens = (/** @type {number} */ n) => fmtSum(Math.round(n / 10) * 10, 0);
+    return {
+        lead: `Dnes zo strechy asi ${fmtSum(Math.round(kwh), 0)} kWh. To je:`,
+        eq: [
+            { value: `~${tens(phones)}`, label: 'nabitých mobilov' },
+            { value: `~${tens(km)} km`, label: 'elektrickým autom' },
+            { value: posterCo2Value(co2Kg), label: 'CO2eq menej' },
+        ],
+    };
+}
+
 /** Farba odpovede v dlaždici a zozname vecí. @typedef {'go' | 'wait' | 'cheap' | 'no' | 'unk'} TileTone */
 
 /**
@@ -982,17 +1020,6 @@ export function planGroupNote(rows) {
     /** @type {Map<string, string[]>} */ const byShort = new Map();
     for (const r of rows) byShort.set(r.short, [...(byShort.get(r.short) ?? []), r.name]);
     return [...byShort].map(([short, names]) => `${cap(andList(names.map((n) => n.toLowerCase())))} ${short}`).join(' · ');
-}
-
-/**
- * Fakt v mobiloch: koľko ich strecha nabije za hodinu. Zo živého merania naisto, z predpovede
- * (alebo z typickej strechy) s „asi“.
- * @param {number} kw výkon teraz @param {boolean} sure je to živé meranie z vlastnej strechy?
- */
-export function mozemPhonesText(kw, sure) {
-    const phones = phonesPerHour(kw);
-    if (phones <= 0) return 'Strecha teraz nenabije ani jeden mobil';
-    return `Strecha za hodinu nabije ${sure ? '' : 'asi '}${fmtSum(phones, 0)} mobilov`;
 }
 
 /**

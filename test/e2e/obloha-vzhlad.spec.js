@@ -98,19 +98,15 @@ const modelMozem = (time, voice) =>
         { voice },
     );
 
-/** Slovo a veta na karte Môžem?. @param {import('@playwright/test').Page} page */
-const mozemVStranke = async (page) => ({
-    word: await page.locator('#mz-word').textContent(),
-    lead: await page.locator('#mz-lead').textContent(),
-});
-
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo a vetu na Môžem? aj pätu plagátu a po obnovení ostane; súčasná appka ostáva drzá', async ({ page }) => {
+    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane; súčasná appka ostáva drzá', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
         expect(slusny.word).toBe('ÁNO, TERAZ');
-        await expect.poll(() => mozemVStranke(page)).toEqual({ word: drzy.word, lead: drzy.lead });
+        await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
+        await karta(page, 'mozem');
+        await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
         await karta(page, 'nastavenie');
         const drzyBtn = page.locator('#ns-voice [data-voice="drzy"]');
@@ -122,15 +118,20 @@ test.describe('tón hlášok', () => {
         expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true });
 
         await karta(page, 'mozem');
-        const ocakavane = { word: slusny.word, lead: slusny.lead };
-        await expect.poll(() => mozemVStranke(page)).toEqual(ocakavane);
+        await expect(page.locator('#mz-word')).toHaveText(slusny.word);
+        await karta(page, 'terazky');
+        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
 
         await page.reload();
         await appReady(page);
-        await expect.poll(() => mozemVStranke(page)).toEqual(ocakavane);
+        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
+        await karta(page, 'mozem');
+        await expect(page.locator('#mz-word')).toHaveText(slusny.word);
 
         // Súčasná appka nový kľúč nečíta a hovorí drzo.
         await otvorSucasnuAppku(page);
+        await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
+        await page.locator('#nav-mozem').click();
         await expect(page.locator('#mozem-body')).toContainText(MOZEM_WORDS.go);
         await expect(page.locator('#mozem-body')).not.toContainText(SLUSNY.MOZEM_WORDS.go);
         expect(errors).toEqual([]);
@@ -139,6 +140,7 @@ test.describe('tón hlášok', () => {
     test('Slušný mení výzvy na všetkých kartách a štítok v hlavičke (typická strecha)', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
         await expect(page.locator('#hdr-setup')).toHaveText('Zadaj panely ›');
+        await karta(page, 'mozem');
         await expect(page.locator('#mz-guess-title')).toHaveText('Hádam podľa suseda');
         await karta(page, 'nastavenie');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
@@ -209,29 +211,29 @@ test.describe('úvodná karta', () => {
     test('voľba v novej appke platí v súčasnej a naopak', async ({ page }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
-        const teraz = page.locator('#ns-start [data-start="terazky"]');
-        await expect(page.locator('#ns-start [data-start="mozem"]')).toHaveAttribute('aria-pressed', 'true');
-        await teraz.click();
-        await expect(teraz).toHaveAttribute('aria-pressed', 'true');
-        expect(await ulozene(page, START_STORAGE_KEY)).toBe('terazky');
+        const dnes = page.locator('#ns-start [data-start="mozem"]');
+        await expect(page.locator('#ns-start [data-start="terazky"]')).toHaveAttribute('aria-pressed', 'true');
+        await dnes.click();
+        await expect(dnes).toHaveAttribute('aria-pressed', 'true');
+        expect(await ulozene(page, START_STORAGE_KEY)).toBe('mozem');
 
-        // Súčasná appka sa otvorí na Terazky.
+        // Súčasná appka sa otvorí na Dnes.
         await otvorSucasnuAppku(page);
-        await expect(page.locator('#panel-terazky')).toBeVisible();
-        await expect(page.locator('#panel-mozem')).toBeHidden();
-        // V nej späť na Môžem?…
+        await expect(page.locator('#panel-mozem')).toBeVisible();
+        await expect(page.locator('#panel-terazky')).toBeHidden();
+        // V nej späť na Terazky…
         await page.locator('#nav-nastavenie').click();
         const polozka = page.locator('#settings-start');
         if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
-        await page.locator('[data-start-panel="mozem"]').click();
-        await expect(page.locator('[data-start-panel="mozem"]')).toHaveAttribute('aria-pressed', 'true');
+        await page.locator('[data-start-panel="terazky"]').click();
+        await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
 
-        // …a nová appka sa otvorí na Môžem? s tou istou voľbou v Nastavení.
+        // …a nová appka sa otvorí na Teraz s tou istou voľbou v Nastavení.
         await page.goto('/obloha/');
         await appReady(page);
-        await expect(page.locator('#panel-mozem')).toBeVisible();
+        await expect(page.locator('#panel-terazky')).toBeVisible();
         await karta(page, 'nastavenie');
-        await expect(page.locator('#ns-start [data-start="mozem"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#ns-start [data-start="terazky"]')).toHaveAttribute('aria-pressed', 'true');
         expect(errors).toEqual([]);
     });
 });
@@ -327,7 +329,7 @@ test.describe('Nastaviť celé znova', () => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
-        await page.locator('#ns-start [data-start="terazky"]').click();
+        await page.locator('#ns-start [data-start="mozem"]').click();
         const predtym = await page.evaluate(() => JSON.stringify(localStorage));
 
         await page.locator('#ns-reset').click();
@@ -351,10 +353,10 @@ test.describe('Nastaviť celé znova', () => {
         await page.goto(stara);
         await appReady(page);
         await expect(page.locator('#import-offer')).toBeHidden();
-        // Ako pri prvom otvorení: Môžem? sa pýta na polohu, drzo a na živej (sivej) oblohe.
-        await expect(page.locator('#panel-mozem')).toBeVisible();
-        await expect(page.locator('#mz-ask')).toBeVisible();
-        await expect(page.locator('#mz-ask-title')).toHaveText('Kde máš strechu?');
+        // Ako pri prvom otvorení: Teraz sa pýta na polohu, drzo a na živej (sivej) oblohe.
+        await expect(page.locator('#panel-terazky')).toBeVisible();
+        await expect(page.locator('#tz-ask')).toBeVisible();
+        await expect(page.locator('#tz-ask-title')).toHaveText('Kde máš strechu?');
         expect(errors).toEqual([]);
     });
 });

@@ -35,7 +35,7 @@ test('rovnaké hodnoty nespustia prekreslenie, odhlásenie funguje', () => {
     const store = createStore(initialState(new Date(), { wide: true, tall: true }, { site: SITE }));
     let calls = 0;
     const off = store.subscribe(() => calls++);
-    store.setState({ panel: 'mozem', wide: true });
+    store.setState({ panel: 'terazky', wide: true });
     assert.equal(calls, 0);
     off();
     store.setState({ panel: 'nastavenie' });
@@ -57,12 +57,12 @@ test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na
     assert.equal(welcome.panel, 'nastavenie');
     assert.equal(welcome.setupStep, 'lokalita');
     assert.equal(welcome.site.name, '', 'poloha je prázdna, kým ju človek nevyberie');
-    const site = initialState(now, layout, { site: SITE, startPanel: 'terazky' });
+    const site = initialState(now, layout, { site: SITE, startPanel: 'mozem' });
     assert.equal(site.known, 'poloha');
     assert.equal(site.plant.strings.length, 1, 'typická strecha v uloženej polohe');
     assert.equal(initialState(now, layout, { saved: typicalSettings(SITE), site: SITE }).known, 'elektraren', 'uložená elektráreň vyhrá');
-    assert.equal(site.panel, 'terazky');
-    assert.equal(initialState(now, layout, { site: SITE }).panel, 'mozem', 'bez voľby sa appka otvára na Môžem?');
+    assert.equal(site.panel, 'mozem');
+    assert.equal(initialState(now, layout, { site: SITE }).panel, 'terazky', 'bez voľby sa appka otvára na Terazkách');
     assert.equal(site.setupStep, null);
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
     assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');
@@ -75,7 +75,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: 1,
         weekDetail: null,
         infoOpen: null,
-        mozemItem: null,
         stavTip: false,
     });
     assert.deepEqual(panelChange('nastavenie', '7dni'), {
@@ -83,7 +82,6 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: -1,
         weekDetail: null,
         infoOpen: null,
-        mozemItem: null,
         stavTip: false,
     });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
@@ -95,15 +93,12 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
 test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka sprievodcu a položka Info, nič iné', () => {
     const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
     assert.deepEqual(navStep(state), {
-        panel: 'mozem',
+        panel: 'terazky',
         weekDetail: null,
         setup: null,
         roof: 0,
         info: null,
-        item: null,
     });
-    // Panel veci v karte Môžem? je obrazovka - Späť ho zavrie.
-    assert.ok(!sameNavStep(navStep({ ...state, panel: 'mozem' }), navStep({ ...state, panel: 'mozem', mozemItem: 'pracka' })));
     // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, panel: '7dni' })));
@@ -128,7 +123,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            item: null,
         }),
         {
             panel: '7dni',
@@ -137,7 +131,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            mozemItem: null,
             stavTip: false,
             setupReturn: null,
         },
@@ -150,7 +143,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            item: null,
         }),
         {
             panel: '7dni',
@@ -159,7 +151,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
-            mozemItem: null,
             stavTip: false,
             setupReturn: null,
         },
@@ -172,7 +163,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         setup: 'smer',
         roof: 1,
         info: null,
-        item: null,
     });
     assert.equal(smer.setupStep, 'smer');
     assert.equal(smer.setupRoof, 1);
@@ -184,7 +174,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: 'suhrn',
             roof: 0,
             info: null,
-            item: null,
         }).setupReturn,
         null,
     );
@@ -196,7 +185,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: 'share',
-            item: null,
         }).infoOpen,
         'share',
     );
@@ -207,7 +195,6 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
-            item: null,
         }).infoOpen,
         null,
     );
@@ -220,13 +207,12 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         setup: null,
         roof: 0,
         info: null,
-        item: null,
         ...x,
     });
     // Položka zo staršej verzie s otvoreným súhrnom na zdieľanie (presunul sa do Štatistiky) vráti kartu bez neho.
     assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', summary: true }) }), krok({ panel: 'mozem' }));
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', item: 'velke' }) }), krok({ panel: 'mozem', item: 'velke' }));
-    assert.equal(navStepFrom({ step: krok({ item: 1 }) }), null, 'panel veci je id alebo nič');
+    // Panel veci karty Môžem? zanikol s jej dlaždicami - položka, ktorá ho nesie, vráti kartu.
+    assert.deepEqual(navStepFrom({ step: krok({ panel: 'mozem', item: 'velke' }) }), krok({ panel: 'mozem' }));
     // Položka zo staršej verzie so zrušeným zoznamom vecí sa vráti na kartu.
     assert.deepEqual(navStepFrom({ step: { ...krok({ panel: 'mozem' }), list: true } }), krok({ panel: 'mozem' }));
     // Položka zo staršej verzie s otvoreným popupom k ciferníku (zanikol) vráti kartu bez neho.

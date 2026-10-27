@@ -9,7 +9,6 @@ import {
     mozemItemText,
     mozemListTitle,
     mozemOfflineText,
-    mozemPhonesText,
     mozemTileNote,
     mozemTileValue,
     phonesPerHour,
@@ -122,10 +121,6 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
     assert.equal(mozemTileNote({ kind: 'wait', start: 630 }), '');
 
     assert.equal(phonesPerHour(6.45), 430);
-    assert.equal(mozemPhonesText(6.45, true), 'Strecha za hodinu nabije 430 mobilov');
-    assert.equal(mozemPhonesText(6.45, false), 'Strecha za hodinu nabije asi 430 mobilov');
-    assert.equal(mozemPhonesText(30, true), 'Strecha za hodinu nabije 2\u00a0000 mobilov');
-    assert.equal(mozemPhonesText(0.05, false), 'Strecha teraz nenabije ani jeden mobil');
 
     assert.match(mozemOfflineText({ online: false, zdroj: true, pvOk: false, pvSince: null }), /^Nie je internet/);
     const bezPredpovede = mozemOfflineText({ online: true, zdroj: false, pvOk: false, pvSince: null });
@@ -141,7 +136,7 @@ test('texty novej karty: nadpis dlaždíc, odpoveď dlaždice, mobily, výzvy, z
     assert.match(mozemGuessText(5.22), /typickou strechou asi 5 kWp./);
 });
 
-test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k tomu štítky a mobily', () => {
+test('mozemSkyModel: o 13:00 to isté slovo, veta, odpovede aj deň v číslach ako mozemModel', () => {
     const i = input(FIXED_NOW);
     const m = mozemSkyModel(i);
     const base = mozemModel(i);
@@ -152,22 +147,20 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta a odpovede ako mozemModel, k t
         m.items.map((x) => [x.id, x.short, x.tone]),
         base.items.map((x) => [x.id, x.short, x.tone]),
     );
-    assert.deepEqual(m.chips, [
+    assert.deepEqual(base.chips, [
         { text: MOZEM_CHIPS.go, tone: 'go' },
         { text: MOZEM_CHIPS.lacna, tone: 'cheap' },
     ]);
-    assert.equal(m.phones, mozemPhonesText(fixtureData(FIXED_NOW).pv.realTimePowerKw, true), 'živé meranie naisto');
+    assert.deepEqual(m.day, base.day);
+    assert.match(m.day?.lead ?? '', /^Dnes zo strechy asi \d+ kWh\. To je:$/);
     assert.equal(m.list?.title, 'Čo môžem');
     assert.equal(m.retry, false);
     assert.equal(m.guess, '');
     assert.equal(m.items.find((x) => x.id === 'pracka')?.title, `Práčka: ${base.items[0].short}`);
 });
 
-test('mozemSkyModel: staré meranie, večer drahá sieť a bez kiosku je fakt v mobiloch „asi“', () => {
-    // O 17:00 meranie z fixtures stojí od 13:00 - je staré, takže výkon ide z plánu dňa.
-    assert.match(mozemSkyModel(input(at('17:00'))).phones, /asi/);
-    assert.match(mozemSkyModel(input(FIXED_NOW, { zdroj: null })).phones, /asi/);
-    const vecer = mozemSkyModel(input(at('21:00')));
+test('mozemModel: večer štítky povedia drahú sieť', () => {
+    const vecer = mozemModel(input(at('21:00')));
     assert.equal(vecer.state, 'none');
     assert.deepEqual(
         vecer.chips.map((c) => c.tone),
@@ -192,10 +185,10 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
     assert.equal(m.groups[0].bar, null, 'bez okna slnka pás nie je');
     assert.equal(m.groups[0].sheet?.lead, '');
     assert.equal(m.items.find((x) => x.id === 'pracka')?.short, 'neviem');
-    assert.equal(m.phones, '');
+    assert.equal(m.day, null);
     assert.equal(m.arc?.win, null);
     assert.deepEqual(
-        m.chips.map((c) => c.text),
+        mozemModel(input(FIXED_NOW, { forecast: null, pv: null })).chips.map((c) => c.text),
         [MOZEM_CHIPS.offline],
     );
     assert.match(mozemSkyModel(input(FIXED_NOW, { forecast: null }), { online: false }).lead, /^Nie je internet/);
@@ -207,7 +200,8 @@ test('mozemSkyModel: kým sa načítava, karta nič netvrdí', () => {
     const m = mozemSkyModel(input(FIXED_NOW, { forecast: null, pv: null, loading: true }));
     assert.equal(m.state, 'loading');
     assert.equal(m.list, null);
-    assert.deepEqual(m.chips, []);
+    assert.equal(m.day, null);
+    assert.deepEqual(mozemModel(input(FIXED_NOW, { forecast: null, pv: null, loading: true })).chips, []);
     assert.equal(m.retry, false);
 });
 
@@ -218,7 +212,7 @@ test('mozemSkyModel: poloha bez panelov odpovedá z typickej strechy a priznáva
     assert.ok(m.guess.includes(kwpRoughText(installedKw(TYPICAL_PLANT))));
     assert.match(m.list?.title || '', / · odhad$/);
     assert.equal(m.list?.estimate, true);
-    assert.match(m.phones, /asi/);
+    assert.ok(m.day, 'deň v číslach aj z typickej strechy');
 });
 
 test('mozemSkyModel: bez polohy len výzva, žiadne odpovede', () => {

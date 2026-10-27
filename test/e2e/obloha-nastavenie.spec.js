@@ -233,7 +233,7 @@ test.describe('sprievodca od nuly', () => {
             forecast: buildForecast(weather, FIXED_NOW, saved.site, saved.plant),
         });
         await expect(page.locator('#mz-word')).toHaveText(m.word);
-        await expect(page.locator('#mz-lead')).toHaveText(m.lead);
+        await expect(page.locator('#mz-day-lead')).toHaveText(m.day?.lead ?? '');
         await expect(page.locator('#mz-guess')).toBeHidden();
 
         // Súčasná appka prečíta to isté nastavenie.
@@ -669,7 +669,7 @@ test.describe('len poloha', () => {
         await page.goBack();
         await expect(page.locator('#ns-cta')).toBeVisible();
         await page.goBack();
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         // Aj tlačidlo „Zadaj panely“ na karte.
         await page.getByRole('button', { name: 'Zadaj panely', exact: true }).click();
         await obrazovka(page, 'panel');

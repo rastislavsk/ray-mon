@@ -256,14 +256,14 @@ test('tarifa: uloží sa aj s cenami, staré nastavenie bez nej dostane tarifu D
 
 test('prvá karta: v odkaze len keď nie je predvolená, s nastavením aj bez neho', async () => {
     const { parseStartPanel, shareHash, shareUrl, settingsFromLink, startFromLink } = await import('../shared/settings.js');
-    assert.equal(shareHash(null, true, 'mozem'), '', 'predvolená karta sa do adresy nepíše');
+    assert.equal(shareHash(null, true, 'terazky'), '', 'predvolená karta sa do adresy nepíše');
     assert.equal(shareHash(null, true), '', 'bez karty platí predvolená');
-    assert.equal(shareHash(null, true, 'terazky'), '#prva=terazky');
-    const url = shareUrl('https://x.test/', DVORANY, true, 'terazky');
-    assert.match(url, /^https:\/\/x\.test\/#nastavenie=[\w-]+&prva=terazky$/);
+    assert.equal(shareHash(null, true, 'mozem'), '#prva=mozem');
+    const url = shareUrl('https://x.test/', DVORANY, true, 'mozem');
+    assert.match(url, /^https:\/\/x\.test\/#nastavenie=[\w-]+&prva=mozem$/);
     assert.deepEqual(settingsFromLink(url), DVORANY, 'nastavenie sa z odkazu s prvou kartou prečíta rovnako');
-    assert.equal(startFromLink(url), 'terazky');
-    assert.equal(startFromLink('#prva=mozem'), 'mozem', 'starší odkaz „pre rodinu“ platí ďalej');
+    assert.equal(startFromLink(url), 'mozem');
+    assert.equal(startFromLink('#prva=terazky'), 'terazky', 'starší odkaz, keď Terazky ešte neboli predvolené, platí ďalej');
     assert.equal(startFromLink('#nastavenie=abc'), null);
     assert.equal(startFromLink('#prva=hacker'), null, 'neznáma karta sa ignoruje');
     assert.equal(startFromLink(''), null);
@@ -317,11 +317,11 @@ test('linkHash: adresa, ktorú appka v karte zapísala sama, odkazom nie je; cud
 
 test('linkHash: vlastná adresa z histórie prehliadača sa neponúkne, keď je uložené novšie či vymazané', async () => {
     const { linkHash, shareHash, settingsFromLink, startFromLink } = await import('../shared/settings.js');
-    const vlastna = shareHash(DVORANY, false, 'terazky', true);
-    assert.match(vlastna, /^#nastavenie=[\w-]+&vlastna=1&prva=terazky$/);
+    const vlastna = shareHash(DVORANY, false, 'mozem', true);
+    assert.match(vlastna, /^#nastavenie=[\w-]+&vlastna=1&prva=mozem$/);
     assert.deepEqual(settingsFromLink(vlastna), DVORANY, 'značka nastavenie nemení');
-    assert.equal(startFromLink(vlastna), 'terazky');
-    assert.equal(shareHash(null, false, 'terazky', true), '#prva=terazky', 'bez nastavenia značky netreba');
+    assert.equal(startFromLink(vlastna), 'mozem');
+    assert.equal(shareHash(null, false, 'mozem', true), '#prva=mozem', 'bez nastavenia značky netreba');
     assert.equal(linkHash('/ray-mon/', vlastna, null, true), '');
     assert.equal(linkHash('/ray-mon/', vlastna, null, false), vlastna, 'appka na ploche iPhonu s prázdnym úložiskom');
     assert.equal(shareHash(DVORANY, false), shareHash(DVORANY, false, undefined, false), 'Zdieľať značku nepridá');
