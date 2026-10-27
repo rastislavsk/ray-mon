@@ -246,20 +246,20 @@ export const MOZEM_WORDS = {
     wait: 'NO NO, NOT YET',
     slabo: 'NAHOVNO DEŇ',
     none: 'Dnes už ne e !',
-    offline: 'Neviem.',
+    offline: 'Nemám dáta, sme off-line',
     loading: 'Uno momento',
-    bezpanelov: 'Neviem.',
+    bezpanelov: 'Nastav panely, voe!',
 };
 
-/** Slušný tón karty: veľké slovo vecne, veľkými písmenami ako v návrhu. */
+/** Slušný tón karty: veľké slovo vecne. */
 const MOZEM_WORDS_SLUSNE = {
-    go: 'ÁNO, TERAZ',
-    wait: 'EŠTE NIE',
-    slabo: 'SLABÝ DEŇ',
+    go: 'Teraz je to ok',
+    wait: 'Počkajte na slnko',
+    slabo: 'Dnes bude slabý deň',
     none: 'DNES UŽ NIE',
-    offline: 'NEVIEM',
+    offline: 'Nemám dáta, sme off-line',
     loading: 'MOMENT',
-    bezpanelov: 'NEVIEM',
+    bezpanelov: 'Elektráreň zatiaľ nie je nastavená',
 };
 
 /**

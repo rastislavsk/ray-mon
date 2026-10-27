@@ -103,7 +103,7 @@ test.describe('tón hlášok', () => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
-        expect(slusny.word).toBe('ÁNO, TERAZ');
+        expect(slusny.word).toBe('Teraz je to ok');
         await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);

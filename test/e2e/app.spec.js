@@ -3098,10 +3098,10 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez dát: Neviem. s vetou prečo, pás odporúčaní nie je', async ({ page }) => {
+    test('bez dát: hláška off-line s vetou prečo, pás odporúčaní nie je', async ({ page }) => {
         const errors = await openApp(page, { offline: true });
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('.mozem-word')).toHaveText('Neviem.');
+        await expect(page.locator('.mozem-word')).toHaveText('Nemám dáta, sme off-line');
         await expect(page.locator('.mozem-eq')).toHaveCount(0);
         await expect(page.locator('#tz-recs')).toBeHidden();
         expect(errors).toEqual([]);

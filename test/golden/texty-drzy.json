@@ -1,5 +1,5 @@
 {
-  "hash": "f7125b13d23d31ce0edf4b7d277f725d2414255529ff1339cf7bc63d77170e48",
+  "hash": "7cd642b773c64420295decc3749d637d6a146587f2aae9b52b09ca4ce8c18e96",
   "texts": [
     "(prázdne)",
     "0,00 kW",
@@ -208,8 +208,10 @@
     "Najviac berie prvých 20 minút pri ohreve vody. Ten utiahne strecha, aj keď začne až o 15:00.",
     "Najviac berie prvých 20 minút pri ohreve vody. Ten utiahne strecha, aj keď začne až o 16:55.",
     "Naraz len toľko, koľko strecha utiahne.",
+    "Nastav panely, voe!",
     "Nastaviť panely",
     "Načítavam…",
+    "Nemám dáta, sme off-line",
     "Nemám predpoveď ani meranie. Skús o chvíľu, alebo sa spýtaj toho, kto platí elektrinu.",
     "Nepodarilo sa mi ho vypočítať. Pozri appku.",
     "Nepoznám tvoje panely, takže netuším, koľko toho strecha utiahne. Ak musíš, pusti to.",
