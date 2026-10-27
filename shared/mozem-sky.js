@@ -1,17 +1,16 @@
 // Karta Môžem? v novej appke „Živá obloha“ (obloha/). Počíta sa to isté ako v súčasnej appke
-// (mozemModel v shared/mozem.js, aj dlaždice skupín vecí), tu sa to len skladá pre nový vzhľad:
-// štítky nad slovom, fakt v mobiloch, oblúk slnka a výzvy. Čisté funkcie - čas, dáta
+// (mozemModel v shared/mozem.js), tu sa to len skladá pre nový vzhľad: veľké slovo, čo dá
+// strecha za celý deň, oblúk slnka a výzvy. Štítky a vetu o teraz kreslí karta Teraz. Čisté funkcie - čas, dáta
 // aj to, či je internet, prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
-import { mozemGuessText, mozemOfflineText, mozemPhonesText, voiceTexts } from './messages-core.js';
+import { mozemGuessText, mozemOfflineText } from './messages-core.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
 /** @typedef {import('./mozem.js').Window} Window */
-/** @typedef {{ text: string, tone: 'go' | 'plain' | 'cheap' | 'costly' }} Chip */
 /**
  * Oblúk slnka: východ a západ (minúta dňa, null v polárny deň či noc), kde je slnko medzi nimi
  * (0 = východ, 1 = západ, null = noc) a dnešné okno so slnkom tým istým meradlom.
@@ -64,9 +63,10 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } 
         ask: false,
         state: m.state,
         word: m.word,
+        // S predpoveďou na dnešok karta namiesto vety ukáže, čo dá strecha za celý deň (`day`);
+        // veta ostáva pre čítačku - ohlási ju pri zmene odpovede.
         lead: offline ? offlineLead(input, online, voice) : m.hero.lead,
-        chips: chipsOf(m, voice),
-        phones: f ? phonesOf(input, f, m.estimate) : '',
+        day: m.day,
         retry: offline,
         guess: m.estimate ? mozemGuessText(installedKw(TYPICAL_PLANT), voice) : '',
         list: m.list,
@@ -75,26 +75,6 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } 
         plan: m.plan,
         arc: sunArc(input.now, input.site, f ? f.window : null),
     };
-}
-
-/** Štítky nad slovom: odpoveď a lacná či drahá sieť teraz. @param {ReturnType<typeof mozemModel>} m @param {import('./messages.js').Voice} voice @returns {Chip[]} */
-function chipsOf(m, voice) {
-    const MOZEM_CHIPS = voiceTexts(voice).MOZEM_CHIPS;
-    /** @type {Chip[]} */ const chips = [];
-    if (MOZEM_CHIPS[m.state]) chips.push({ text: MOZEM_CHIPS[m.state], tone: m.state === 'go' ? 'go' : 'plain' });
-    const level = m.facts?.level;
-    if (level === 'lacna') chips.push({ text: MOZEM_CHIPS.lacna, tone: 'cheap' });
-    if (level === 'draha') chips.push({ text: MOZEM_CHIPS.draha, tone: 'costly' });
-    return chips;
-}
-
-/**
- * Fakt v mobiloch: naisto len zo živého a čerstvého merania vlastnej strechy, inak z plánu dňa s „asi“.
- * @param {Parameters<typeof pvStatus>[0]} input @param {NonNullable<ReturnType<typeof mozemModel>['facts']>} f @param {boolean} estimate
- */
-function phonesOf(input, f, estimate) {
-    const sure = f.liveKw !== null && pvStatus(input).ok && !estimate;
-    return mozemPhonesText(sure ? /** @type {number} */ (f.liveKw) : f.planKw, sure);
 }
 
 /**
@@ -112,8 +92,7 @@ function emptyCard() {
         state: /** @type {import('./mozem.js').MozemState} */ ('bezpanelov'),
         word: '',
         lead: '',
-        chips: /** @type {Chip[]} */ ([]),
-        phones: '',
+        day: /** @type {ReturnType<typeof mozemModel>['day']} */ (null),
         retry: false,
         guess: '',
         list: null,

@@ -15,7 +15,7 @@ import { typicalSettings } from '../shared/settings.js';
 import { statistikaModel } from '../shared/statistika.js';
 import { STATS_PERIODS } from '../shared/stats.js';
 import { summaryModel } from '../shared/summary.js';
-import { terazModel } from '../shared/teraz.js';
+import { dnesCards, terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave. @param {string} hm */
@@ -80,6 +80,8 @@ export function sampleTexts(voice) {
             const p = `${hm}.${name}`;
             const i = /** @type {any} */ (input);
             strings(mozemModel(i, { voice: v }), `${p}.mozem`, out);
+            // Pás odporúčaní karty Dnes.
+            if (i.forecast) strings(dnesCards({ ...i, previewMinutes: null }, v), `${p}.dnesCards`, out);
             for (const online of [true, false]) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;
                 strings(mozemSkyModel(i, { online, voice: v }), `${o}.mozemSky`, out);

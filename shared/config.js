@@ -116,18 +116,19 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 
 /**
  * Karty v poradí navigácie - kódové názvy, ktoré drží HTML id, CSS selektory aj stav. Popisky
- * sú v HTML a nemusia sa s nimi zhodovať (terazky je v novej appke „Teraz“). Rovnaké v oboch
+ * sú v HTML a nemusia sa s nimi zhodovať (terazky je v novej appke „Teraz“, mozem je v oboch
+ * „Dnes“ - kedysi Môžem?; meno ostalo kvôli uloženej úvodnej karte a odkazom). Rovnaké v oboch
  * appkách, takže uložená úvodná karta (START_PANELS) platí v oboch.
  */
-export const PANELS = /** @type {const} */ (['mozem', 'terazky', '7dni', 'statistika', 'nastavenie']);
+export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
 
 /**
- * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne: deti chcú Môžem?,
- * ten, kto elektráreň platí, Terazky. Ukladá sa zvlášť od nastavenia a do odkazu ide ako
- * `&prva=…` za mriežkou. Prvá v zozname je predvolená - Môžem? je jednoduchá odpoveď pre celú
- * rodinu, Terazky s grafom dňa sú podrobnejšie. Predvolená karta sa do odkazu nepíše.
+ * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne. Ukladá sa zvlášť od
+ * nastavenia a do odkazu ide ako `&prva=…` za mriežkou. Prvá v zozname je predvolená - Teraz(ky)
+ * s Plánom dňa odpovedajú, čo a kedy zapnúť (docs/navrhy/dnes-a-teraz.html). Predvolená karta
+ * sa do odkazu nepíše.
  */
-export const START_PANELS = /** @type {const} */ (['mozem', 'terazky']);
+export const START_PANELS = /** @type {const} */ (['terazky', 'mozem']);
 export const START_STORAGE_KEY = 'prva-karta-v1';
 export const START_HASH_KEY = 'prva';
 

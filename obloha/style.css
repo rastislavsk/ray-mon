@@ -299,7 +299,7 @@ button.live[aria-expanded='true'] {
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Karta Môžem? ===== */
+/* ===== Karta Dnes (kódové meno mozem, doteraz Môžem?) ===== */
 .mozem p,
 .mozem h2 {
     margin: 0;
@@ -409,24 +409,34 @@ button.live[aria-expanded='true'] {
     font-variation-settings: 'wdth' 95;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-.fact {
-    display: flex;
+/* Čo dá strecha za celý deň: tri čísla vedľa seba pod jemnou čiarou. */
+.den {
+    display: grid;
+    gap: 10px;
+}
+.eq {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    align-items: center;
-    padding: 10px 20px 0;
-    font-size: 0.9375rem;
-    font-variation-settings: 'wdth' 95;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-.fact svg {
-    flex: none;
-    width: 16px;
-    height: 16px;
-    fill: none;
-    stroke: #fff;
-    stroke-width: 2;
-    stroke-linecap: round;
+/* Číslo sa na úzkom displeji zmenší, aby sa „~4 090“ zmestilo do tretiny aj na 320 px. */
+.eq b {
+    display: block;
+    font-size: min(1.375rem, 5.4vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 100;
+    white-space: nowrap;
+    line-height: 1.1;
 }
-
+.eq span {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+}
 .pbtn {
     justify-self: start;
     min-height: 44px;
@@ -519,293 +529,102 @@ button.live[aria-expanded='true'] {
     text-transform: uppercase;
     color: var(--dim);
 }
-/* Odpoveď z typickej strechy priznáva odhad aj písmom. */
-.tiles-box.est .tiles {
-    font-style: italic;
-}
-/* Dlaždice vecí v skupinách: tmavé sklo ako .glass, aby biely text bol čitateľný na každej
-   oblohe. Široká cez celý riadok s pásom dňa, polovičné vedľa seba. */
-.tiles-box {
+/* ===== Karta Teraz ===== */
+/* Štítky a veta o teraz pod číslom (tie isté ako mala karta Môžem?). */
+.say {
     display: grid;
     gap: 8px;
-    margin: 12px 14px 0;
+    padding: 12px 20px 0;
 }
-/* Nadpis stojí priamo na oblohe, nie na skle - preto biely, ako každý text na oblohe. */
-.tiles-box .glass-ttl {
-    margin: 0 4px;
-    color: #fff;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+/* Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B): pás každého
+   spotrebiča na dnešnom slnku, biela čiara je teraz. Blok je kontajner - dlhé slovo vety ho
+   nenatiahne a veta sa zmenší s jeho šírkou. */
+#tz-plan {
+    container-type: inline-size;
 }
-.tiles {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-}
-.tile {
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    min-width: 0;
-    min-height: 44px;
-    padding: 12px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    font-style: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-.tile[data-size='wide'] {
-    grid-column: 1 / -1;
-}
-.tile-hd {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 6px;
-}
-.tile svg.ic {
-    flex: none;
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: #fff;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.tile-name {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--dim);
-}
-.tile b {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 2px;
-    font-size: 1.375rem;
-    font-weight: 800;
-    font-variation-settings: 'wdth' 110;
+.tl-lead {
+    font-size: min(1.625rem, 10cqi);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
     line-height: 1.1;
     overflow-wrap: anywhere;
 }
-.tile[data-size='wide'] b {
-    font-size: 1.75rem;
+.tl-then {
+    font-size: 0.9375rem;
 }
-.tile b::before {
-    content: '';
-    flex: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.45);
+/* Stĺpec mien (--name) je v rem, aby pásy, os aj čiara teraz začínali na tom istom mieste, hoci
+   majú iné písmo. Vpravo je miesto (--pad) pre polovicu poslednej hodiny pod osou. */
+.tl {
+    --name: 4.5rem;
+    --pad: 0.75rem;
+    position: relative;
+    padding-right: var(--pad);
 }
-.tile small {
-    font-size: 0.8125rem;
-    color: var(--dim);
-}
-/* Farba odpovede: tie isté významy ako všade - zelená slnko, modrá lacná sieť. */
-.tile[data-tone='go'] > b,
-.row-t[data-tone='go'] {
-    color: var(--yes);
-}
-.tile[data-tone='go'] > b::before {
-    background: var(--yes);
-}
-.tile[data-tone='cheap'] > b,
-.row-t[data-tone='cheap'] {
-    color: var(--cheap-text);
-}
-.tile[data-tone='cheap'] > b::before {
-    background: var(--cheap);
-}
-.tile[data-tone='no'] > b,
-.tile[data-tone='unk'] > b,
-.row-t[data-tone='no'],
-.row-t[data-tone='unk'] {
-    color: var(--dim);
-}
-/* Plán dňa pod dlaždicami: riadok čas · spotrebič · prečo, čas vo farbe odpovede. */
-.plan-rows {
-    margin: 0;
+.tl ul {
+    display: grid;
+    gap: 8px;
+    margin: 4px 0 0;
     padding: 0;
     list-style: none;
 }
-/* Plán je časová os na skle (bez skla by text na svetlej oblohe nebol čitateľný); kartami
-   (tlačidlami) sú len dlaždice nad ním. */
-.plan {
-    margin-top: 22px;
-}
-/* Čas a meno v riadku, keď sa zmestia; pri veľkom písme sa meno zalomí pod čas. */
-.plan-rows li {
-    --dot: var(--yes);
-    position: relative;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 10px;
-    padding: 6px 0 18px 30px;
-}
-.plan-rows li[data-tone='cheap'] {
-    --dot: var(--cheap);
-}
-.plan-rows li[data-tone='no'],
-.plan-rows li[data-tone='unk'] {
-    --dot: var(--dim);
-}
-/* Bodka na osi vo farbe odpovede; prvý riadok (čo je na rade) je plný a svieti. */
-.plan-rows li::before {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 10px;
-    box-sizing: border-box;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 2.5px solid var(--dot);
-    background: rgba(8, 16, 40, 0.6);
-}
-.plan-rows li:first-child::before {
-    background: var(--dot);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 25%, transparent);
-}
-/* Čiara k ďalšiemu riadku; zbalený plán má pod prvým riadkom prerušovaný chvost - kroky pokračujú. */
-.plan-rows li::after {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 28px;
-    bottom: -6px;
-    width: 2px;
-    border-radius: 1px;
-    background: rgba(255, 255, 255, 0.28);
-}
-.plan-rows li:last-child::after {
-    display: none;
-}
-.plan-rows.zbaleny li:last-child::after {
-    display: block;
-    bottom: 2px;
-    background: repeating-linear-gradient(rgba(255, 255, 255, 0.35) 0 4px, transparent 4px 8px);
-}
-.plan-rows .row-t {
-    min-width: 6.5em;
-    font-size: 0.9375rem;
-    font-weight: 800;
-}
-.plan-rows b em {
-    margin-left: 6px;
-    font-size: 0.75rem;
-    font-style: normal;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--yes);
-}
-.plan-w {
-    flex-basis: 100%;
-    font-size: 0.875rem;
-    color: var(--dim);
-}
-.plan-note {
-    margin: 0 0 0 30px;
-    font-size: 0.8125rem;
-    color: var(--dim);
-}
-/* Tlačidlo zbaleného či rozbaleného plánu, s tou istou šípkou ako zoznam pod grafom karty Teraz. */
-.plan-more {
-    width: calc(100% - 30px);
-    min-height: 44px;
-    display: flex;
+.tl li {
+    display: grid;
+    grid-template-columns: var(--name) minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    margin-left: 30px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    font-size: 0.9375rem;
-    font-weight: 700;
-    text-align: left;
-    cursor: pointer;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
 }
-.plan-more .chev {
-    width: 28px;
-    height: 28px;
-}
-.plan-more[aria-expanded='true'] .chev {
-    transform: rotate(180deg);
-}
-/* Pás dňa: okno slnka, jeho uplynulá časť stlmená, biela čiarka je teraz. */
-.tile-bar {
+.tl-track {
     position: relative;
-    height: 8px;
-    margin-top: 8px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.14);
+    height: 14px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.1);
 }
-.tile-bar i {
+.tl-track i {
     position: absolute;
     top: 0;
     bottom: 0;
-    border-radius: 4px;
+    border-radius: 7px;
     background: var(--yes);
 }
-.tile-bar i.past {
-    opacity: 0.35;
-}
-.tile-bar span {
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    width: 2px;
-    margin-left: -1px;
-    border-radius: 1px;
-    background: #fff;
-    box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.5);
-}
-.tile-ticks {
-    display: flex;
-    justify-content: space-between;
+.tl-axis {
+    position: relative;
+    height: 1.5em;
+    margin-left: calc(var(--name) + 8px);
     font-size: 0.75rem;
     color: var(--dim);
 }
-
-/* Panel skupiny: veci pod sebou, každá s časom a zápisom „Pustil/a som“. */
-.sheet-rows {
-    display: grid;
+.tl-axis > span {
+    position: absolute;
+    top: 3px;
+    transform: translateX(-50%);
 }
-/* Meno a čas v riadku, keď sa zmestia; pri veľkom písme sa čas zalomí pod meno. */
-.sheet-row {
+/* Čiara teraz cez všetky pásy: od začiatku pásov po ich koniec, `--at` je teraz v % osi. */
+.tl-now {
+    position: absolute;
+    top: 0;
+    bottom: 1.25rem;
+    left: calc(var(--name) + 8px + (100% - var(--name) - 8px - var(--pad)) * var(--at) / 100);
+    width: 2px;
+    background: #fff;
+    transform: translateX(-1px);
+}
+.tl-chips {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 4px 12px;
-    align-items: baseline;
-    padding: 12px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    gap: 6px;
 }
-.sheet-row h3 {
-    margin: 0;
-    font-size: 1.0625rem;
+.tl-chip {
+    padding: 2px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    font-size: 0.75rem;
 }
-.sheet-row .row-t {
-    font-size: 1rem;
-    font-weight: 800;
-}
-.sheet-row p {
-    flex-basis: 100%;
+.tl-note {
+    font-size: 0.75rem;
     color: var(--dim);
 }
-
-/* ===== Karta Teraz ===== */
 .teraz p,
 .teraz h2 {
     margin: 0;
@@ -3102,8 +2921,8 @@ button.live[aria-expanded='true'] {
     padding-bottom: 22px;
 }
 
-/* Prehľad: Môžem?, Teraz a 7 dní naraz ako stĺpce (data-dash). Obsah je ten istý ako na
-   telefóne, len vedľa seba. Na tablete na šírku dva stĺpce - vľavo Môžem?, vpravo Teraz a pod
+/* Prehľad: Dnes, Teraz a 7 dní naraz ako stĺpce (data-dash). Obsah je ten istý ako na
+   telefóne, len vedľa seba. Na tablete na šírku dva stĺpce - vľavo Dnes, vpravo Teraz a pod
    ním 7 dní; na počítači tri. Štatistika a Nastavenie ostávajú samostatnou stránkou v strede. */
 :root[data-dash] .st {
     max-width: 1520px;
@@ -3112,7 +2931,7 @@ button.live[aria-expanded='true'] {
 :root[data-dash] .page {
     display: grid;
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    /* Kratší stĺpec Môžem? nesmie roztiahnuť riadok s Teraz - voľné miesto patrí poslednému. */
+    /* Kratší stĺpec Dnes nesmie roztiahnuť riadok s Teraz - voľné miesto patrí poslednému. */
     grid-template-rows: auto 1fr;
     align-items: start;
     gap: 8px 20px;

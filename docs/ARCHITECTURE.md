@@ -65,7 +65,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
 | `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                          |
 | `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
-| `mozem-sky.js`                                                               | Karta Môžem? novej appky: model z `mozem.js` poskladaný pre nový vzhľad (štítky, mobily, dlaždice, oblúk, výzvy).    |
+| `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, oblúk, výzvy).          |
 | `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
 | `day-chart.js`                                                               | Graf dňa (Teraz/Terazky, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno. |
 | `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
@@ -466,12 +466,21 @@ vnútri karty, nie krok navigácie. Výzvy „Doplň ceny“ a „Pripojiť živ
 Nastavenie a jedným `setState` rovno otvoria ten krok sprievodcu (`stepEdit`), takže tlačidlo
 Späť vráti do Štatistiky.
 
-## Karta Môžem?
+## Karta Dnes (kódové meno mozem, kedysi Môžem?)
 
-Karta Terazky je písaná pre toho, kto sa vo fotovoltike vyzná. Ostatní v rodine chcú vedieť len
-to, či môžu teraz pustiť práčku, a keď nie, kedy. Karta Môžem? im odpovie jedným slovom
-(návrh C v `docs/navrhy/karta-mozem.html`; varianty so zoznamom a so stories sú tam ako
-zamietnuté).
+Odpoveď „čo môžem zapnúť a kedy“ dáva **Plán dňa** na karte Terazky / Teraz - je v navigácii prvá
+a appka sa na nej otvára (`docs/navrhy/dnes-a-teraz.html`). Nad plánom sú štítky a veta o teraz
+(`chips` a `say` z `mozemModel` - tá istá veta ako hlavička, len bez spotrebičov a časov, ktoré
+povie plán), plán má vetu nad sebou (`planHead`) a nová appka aj časovú os (`lanes` z
+`planDnaModel`). Súčasná appka ho kreslí ako plagát s očíslovanými riadkami, nová ako vetu s časovou
+osou (`docs/navrhy/terazky-plan-dna.html`, možnosti A a B) - model je ten istý.
+
+Karta Dnes (druhá v navigácii) má hore veľké slovo a pod ním, čo dá strecha za celý deň
+(`day`: `dnesDay` v `shared/mozem.js`, prepočty mobilov, km a CO2eq tie isté ako Štatistika),
+pod tým pás odporúčaní (`dnesCards` v `shared/teraz.js`: dnešok a kedy bude lepšie). Dlaždice
+„Čo môžem“, Plán dňa a panel veci z nej zmizli - kódové meno `mozem` ostalo kvôli uloženej
+úvodnej karte a odkazom. Pôvodne odpovedala jedným slovom (návrh C v
+`docs/navrhy/karta-mozem.html`).
 
 Počíta `shared/mozem.js` z plánu dňa (`dayPlan`), takže „áno“ je tá istá zelená ako v pláne
 grafu dňa: výkon z krivky dňa od dolnej hranice výkonu. Stav karty je `go` (teraz je zelená),
@@ -483,11 +492,11 @@ keď dnes slnko už nepríde - neskoršie slnko vyhrá nad lacnou sieťou. Typic
 spotrebiča (`MOZEM_ITEMS` v `config.js`) určuje, dokedy ho pustiť, aby dobehol na slnku,
 a koľko stojí zo siete; bez ceny v tarife sa eurá nepíšu.
 
-Pod pásom dneška sú dlaždice skupín vecí, tie isté ako v novej appke (pozri vyššie). Riadok
-„Čo môžem“ so samostatnou obrazovkou zoznamu vecí aj hlášky pod kartou zanikli v oboch appkách.
+Model dlaždíc skupín vecí (`groups`, `items`, `mozemSheetOf`) ostal v jadre a je pokrytý testami,
+hoci ho dnes žiadna karta nekreslí.
 
-Texty sú v `messages.js`. Obsah karty skladá render celý do `#mozem-body`, v `index.html` je
-nosič a panel veci.
+Texty sú v `messages.js`. Hlavičku karty skladá render do `#mozem-body`, pás odporúčaní je
+stály nosič v `index.html` (prekreslenie mu nezmení posunutie).
 
 Karta kedysi vedela zapísať „Pustil/a som“ - spustenie spotrebiča na čestné slovo, z ktorého
 ukazovala „beží do …“ a súčty v súhrne. Kiosk vidí len výrobu, nie spotrebu, takže to overiť
@@ -496,14 +505,13 @@ Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS
 
 Štatistiku karta neukazuje, ani ako odkaz do karty Štatistika.
 
-Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne: deti chcú
-Môžem?, ten, kto elektráreň platí, Terazky. Predvolená je Môžem? (`START_PANELS[0]`, jediné
-miesto, odkiaľ to berie aj `initialState` a `shareHash`). Ukladá sa pod vlastným kľúčom
-(`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=terazky` za mriežkou -
-predvolená karta sa nepíše. Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa
+Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne. Predvolená sú
+Terazky (`START_PANELS[0]`, jediné miesto, odkiaľ to berie aj `initialState` a `shareHash`). Ukladá sa
+pod vlastným kľúčom (`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=mozem` za
+mriežkou - predvolená karta sa nepíše. Kto si voľbu nikdy neuložil, otvára sa po zmene predvolenej
+karty na Terazkách. Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa
 uloží (`loadStartPanel`) - odkaz tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše
-vlastnú voľbu. Staršie odkazy „pre rodinu“ s `&prva=mozem` (z čias, keď bola predvolená
-Terazky a pri zdieľaní bolo na to zaškrtávatko) platia ďalej.
+vlastnú voľbu. Staršie odkazy s `&prva=terazky` (z čias, keď bola predvolená Môžem?) platia ďalej.
 Adresa v prehliadači ju nesie tiež (`initUrlMirror`), z toho istého dôvodu ako nastavenie:
 appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Položku „Úvodná karta“ si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
 nasadenia.

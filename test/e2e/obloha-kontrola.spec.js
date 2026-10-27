@@ -102,21 +102,11 @@ const obrazovka = (page, step) => expect(page.locator(`#wz-${step}`)).toBeVisibl
  * @param {import('@playwright/test').Page} page @param {(name: string) => Promise<void>} check
  */
 async function kazdaKarta(page, check) {
-    await karta(page, 'mozem');
-    await check('Môžem?');
-    await page.locator('[data-item="velke"]').click();
-    await expect(page.locator('#mz-sheet')).toBeVisible();
-    await check('Môžem? › panel skupiny');
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#mz-sheet')).toBeHidden();
-    await page.locator('[data-item="auto"]').click();
-    await expect(page.locator('#mz-sheet')).toBeVisible();
-    await check('Môžem? › panel veci');
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#mz-sheet')).toBeHidden();
-
     await karta(page, 'terazky');
     await check('Teraz');
+
+    await karta(page, 'mozem');
+    await check('Dnes');
 
     await karta(page, '7dni');
     await check('7 dní');
@@ -299,12 +289,13 @@ test.describe('kontrast textu na oblohe a na skle', () => {
         });
     }
 
-    test('karta Môžem? napoludnie a za súmraku: skutočné farby z DOM, aj zelené časy pri veciach', async ({ page }) => {
+    test('karta Teraz napoludnie a za súmraku: skutočné farby z DOM, aj farebné štítky pod číslom', async ({ page }) => {
         for (const time of ['13:00', '19:30']) {
             await openObloha(page, { time: at(time) });
+            await expect(page.locator('#tz-chips .chip').first()).toBeVisible();
             const stranka = await page.evaluate(() => window.kontrola.farby());
-            // Zelené odpovede pri veciach sú v meraní naozaj zahrnuté.
-            expect(stranka.texts.some((t) => t.where.startsWith('b') && t.color !== 'rgb(255, 255, 255)')).toBe(true);
+            // Štítky s tmavým písmom na farbe (ÁNO, LACNÁ SIEŤ) sú v meraní naozaj zahrnuté.
+            expect(stranka.texts.some((t) => t.color !== 'rgb(255, 255, 255)')).toBe(true);
             expect(slabyKontrast(stranka), time).toEqual([]);
         }
     });
@@ -450,7 +441,7 @@ test.describe('čítačka obrazovky', () => {
         }
     }
 
-    test('Môžem? ohlási len zmenu odpovede, nie každú minútu ani pri načítaní', async ({ page }) => {
+    test('Dnes ohlási len zmenu odpovede, nie každú minútu ani pri načítaní', async ({ page }) => {
         // Meranie zo strechy ide s časom - Worker odpovedá snímkou z chvíle, v ktorej appka je.
         let cas = at('15:58');
         await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv: pvAt(cas) } }));
@@ -459,6 +450,8 @@ test.describe('čítačka obrazovky', () => {
         await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))]);
         await page.clock.install({ time: cas });
         await page.goto('/obloha/');
+        await expect(page.locator('#page')).toHaveAttribute('data-panel', 'terazky');
+        await page.locator('#nav-mozem').click();
         await expect(page.locator('#page')).toHaveAttribute('data-panel', 'mozem');
         const live = page.locator('#mz-live');
         await expect(live).toHaveAttribute('role', 'status');

@@ -54,25 +54,22 @@
             <!-- Na širokej obrazovke sú Môžem?, Teraz a 7 dní stĺpce jednej stránky (prehľad): pre čítačku
                  majú spoločný nadpis a ich vlastné nadpisy sú o úroveň nižšie (render/index.js). -->
             <h1 id="ttl-prehlad" class="sr hidden">RAY-MON</h1>
-            <!-- Karta Môžem?: texty a stav skladá render (web/render/mozem.js) z shared/mozem-sky.js,
-                 tu sú len nosiče. Odpoveď je na oblohe pod oblúkom slnka, nadpis karty je len pre čítačku. -->
+            <!-- Karta Dnes (kódové meno mozem, doteraz Môžem?): texty a stav skladá render (web/render/mozem.js)
+                 z shared/mozem-sky.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka, pod ním čo dá
+                 strecha za celý deň a pás odporúčaní (docs/navrhy/dnes-a-teraz.html). Nadpis karty je len pre čítačku. -->
             <section id="panel-mozem" class="panel mozem" aria-labelledby="ttl-mozem">
-                <h1 id="ttl-mozem" class="sr">Môžem?</h1>
+                <h1 id="ttl-mozem" class="sr">Dnes</h1>
                 <div id="mz-arc" class="arc" aria-hidden="true"></div>
                 <div id="mz-answer" class="big">
-                    <div id="mz-chips" class="chips"></div>
                     <p id="mz-word" class="word"></p>
                     <p id="mz-lead" class="line"></p>
+                    <div id="mz-day" class="den">
+                        <p id="mz-day-lead" class="line"></p>
+                        <div id="mz-day-eq" class="eq"></div>
+                    </div>
                 </div>
                 <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
                 <p id="mz-live" class="sr" role="status"></p>
-                <p id="mz-phones" class="fact">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
-                        <path d="M10.5 18.5h3" />
-                    </svg>
-                    <span id="mz-phones-text"></span>
-                </p>
                 <button type="button" id="mz-retry" class="pbtn retry"></button>
                 <div id="mz-guess" class="cta">
                     <b id="mz-guess-title"></b>
@@ -84,23 +81,24 @@
                     <p id="mz-ask-text"></p>
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Veci v skupinách: jedna dlaždica, jedna odpoveď (MOZEM_GROUPS v shared/config.js). -->
-                <section id="mz-list" class="tiles-box" aria-labelledby="mz-list-title">
-                    <h2 id="mz-list-title" class="glass-ttl"></h2>
-                    <div id="mz-items" class="tiles"></div>
-                </section>
-                <!-- Plán dňa: poradie spotrebičov na dnešné slnko (shared/plan-dna.js). Riadky skladá render;
-                     zbalený ukáže len prvý, tlačidlo rozbalí ostatné aj s pätkou. -->
-                <section id="mz-plan" class="glass plan hidden" aria-labelledby="mz-plan-title">
-                    <h2 id="mz-plan-title" class="glass-ttl"></h2>
-                    <ol id="mz-plan-rows" class="plan-rows"></ol>
-                    <p id="mz-plan-note" class="plan-note"></p>
-                    <button type="button" id="mz-plan-more" class="plan-more hidden" aria-expanded="false" aria-controls="mz-plan-rows">
-                        <span id="mz-plan-more-text"></span><span class="chev" aria-hidden="true"></span>
-                    </button>
-                </section>
+                <!-- Pás odporúčaní: dnešok a kedy bude lepšie (shared/teraz.js, dnesCards). Listuje ho prehliadač. -->
+                <div id="tz-recs">
+                    <div id="tz-strip" class="strip" role="group" tabindex="0">
+                        <div class="glass rec">
+                            <h2 id="tz-today-title" class="glass-ttl"></h2>
+                            <p id="tz-today"></p>
+                            <div class="bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
+                            <p id="tz-window"></p>
+                        </div>
+                        <div class="glass rec">
+                            <h2 id="tz-later-title" class="glass-ttl"></h2>
+                            <p id="tz-later"></p>
+                        </div>
+                    </div>
+                    <div id="tz-dots" class="dots" aria-hidden="true"><i></i><i></i></div>
+                </div>
             </section>
-            <!-- Karta Teraz: texty, graf aj pás odporúčaní skladá render (web/render/teraz.js)
+            <!-- Karta Teraz: texty, štítky, Plán dňa aj graf skladá render (web/render/teraz.js)
                  z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
                  aj šípky na ňom ukážu iný čas (náhľad). -->
             <section id="panel-terazky" class="panel teraz hidden" aria-labelledby="ttl-terazky">
@@ -108,6 +106,11 @@
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
                 <p id="tz-src" class="src"></p>
                 <p id="tz-sub" class="sub"></p>
+                <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
+                <div id="tz-say" class="say">
+                    <div id="tz-chips" class="chips"></div>
+                    <p id="tz-say-text" class="line"></p>
+                </div>
                 <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča (bez merania, meranie
                      mlčí, výrobca prístup odmietol). Tlačidlo vedie do Nastavenia. -->
                 <div id="tz-note" class="cta note hidden">
@@ -131,6 +134,8 @@
                     <p id="tz-ask-text"></p>
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
+                <!-- Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B). Skladá render. -->
+                <section id="tz-plan" class="glass tl hidden" aria-labelledby="tz-plan-title"></section>
                 <div id="tz-plot">
                     <div
                         id="tz-chart"
@@ -159,29 +164,6 @@
                             <p id="tz-hint" class="list-hint"></p>
                         </div>
                     </div>
-                </div>
-                <div id="tz-recs">
-                    <div id="tz-strip" class="strip" role="group" tabindex="0">
-                        <div class="glass rec">
-                            <b id="tz-now-head" class="h"></b>
-                            <p id="tz-now-body"></p>
-                        </div>
-                        <div class="glass rec">
-                            <h2 id="tz-devices-title" class="glass-ttl"></h2>
-                            <p id="tz-devices"></p>
-                        </div>
-                        <div class="glass rec">
-                            <h2 id="tz-today-title" class="glass-ttl"></h2>
-                            <p id="tz-today"></p>
-                            <div class="bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
-                            <p id="tz-window"></p>
-                        </div>
-                        <div class="glass rec">
-                            <h2 id="tz-later-title" class="glass-ttl"></h2>
-                            <p id="tz-later"></p>
-                        </div>
-                    </div>
-                    <div id="tz-dots" class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
                 </div>
             </section>
             <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
@@ -336,7 +318,7 @@
                                 <i class="tg" aria-hidden="true"></i>
                             </button>
                             <div class="it pick">
-                                <span><b id="ns-voice-label">Tón hlášok</b><small>skús prepnúť a pozri Môžem?</small></span>
+                                <span><b id="ns-voice-label">Tón hlášok</b><small>skús prepnúť a pozri kartu Dnes</small></span>
                                 <span id="ns-voice" class="minis" role="group" aria-labelledby="ns-voice-label">
                                     <button type="button" class="mini" data-voice="drzy" aria-pressed="true">Drzý</button>
                                     <button type="button" class="mini" data-voice="slusny" aria-pressed="false">Slušný</button>
@@ -345,8 +327,8 @@
                             <div class="it pick">
                                 <span><b id="ns-start-label">Úvodná karta</b><small>platí aj v súčasnej appke</small></span>
                                 <span id="ns-start" class="minis" role="group" aria-labelledby="ns-start-label">
-                                    <button type="button" class="mini" data-start="mozem" aria-pressed="true">Môžem?</button>
-                                    <button type="button" class="mini" data-start="terazky" aria-pressed="false">Teraz</button>
+                                    <button type="button" class="mini" data-start="terazky" aria-pressed="true">Teraz</button>
+                                    <button type="button" class="mini" data-start="mozem" aria-pressed="false">Dnes</button>
                                 </span>
                             </div>
                         </section>
@@ -691,16 +673,19 @@
         </section>
 
         <nav class="tabs" aria-label="Karty appky">
-            <button type="button" id="nav-mozem" data-panel="mozem">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M8 12.5l2.8 2.8L16.5 9.5" />
-                </svg>
-                <span>Môžem?</span>
-            </button>
+            <!-- Teraz prvá, Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
             <button type="button" id="nav-terazky" data-panel="terazky">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
                 <span>Teraz</span>
+            </button>
+            <button type="button" id="nav-mozem" data-panel="mozem">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" />
+                    <path
+                        d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"
+                    />
+                </svg>
+                <span>Dnes</span>
             </button>
             <button type="button" id="nav-7dni" data-panel="7dni">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -723,24 +708,6 @@
                 <span>Nastavenie</span>
             </button>
         </nav>
-
-        <!-- Panel veci karty Môžem? zospodu. Otvára sa ako modálny dialóg: čítačka ho ohlási,
-             fokus ostane v ňom a Escape ho zatvorí. -->
-        <dialog id="mz-sheet" class="sheet" aria-labelledby="mz-sheet-title">
-            <div class="sheet-in">
-                <button type="button" id="mz-sheet-x" class="x"><span aria-hidden="true">×</span></button>
-                <h2 id="mz-sheet-title"></h2>
-                <!-- Panel skupiny: veta o slnku a veci skupiny, každá so svojím časom a zápisom. -->
-                <p id="mz-sheet-lead"></p>
-                <div id="mz-sheet-rows" class="sheet-rows"></div>
-                <h3 id="mz-sheet-do-q" class="q"></h3>
-                <p id="mz-sheet-do"></p>
-                <h3 id="mz-sheet-why-q" class="q"></h3>
-                <p id="mz-sheet-why"></p>
-                <h3 id="mz-sheet-more-q" class="q"></h3>
-                <p id="mz-sheet-more"></p>
-            </div>
-        </dialog>
 
         <!-- Zdieľať appku: odkaz na novú appku, voliteľne s nastavením a kioskom, QR kód a WhatsApp.
              Skladá render/nastavenie.js; bez QR knižnice ostane len odkaz. -->

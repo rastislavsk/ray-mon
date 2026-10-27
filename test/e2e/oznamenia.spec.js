@@ -72,11 +72,12 @@ test.describe('oznámenia: súčasná appka', () => {
         await page.locator('#oznam-body [data-oznam-hour="7"]').check();
         await page.locator('#oznam-body [data-oznam-device="auto"]').uncheck();
         await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 7, devices: ['pracka', 'umyvacka', 'susicka'] });
-        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka'])?.rows ?? [];
-        await page.locator('.mozem-plan-more').click();
-        await expect(page.locator('.mozem-plan-list li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
-        await expect(page.locator('.mozem-plan-list')).not.toContainText('Auto');
+        await expect(page.locator('.tz-plan-rows li')).toHaveText(
+            rows.map((r, i) => `${String(i + 1).padStart(2, '0')}${r.name}${r.now ? 'teraz' : r.value}${r.why}`),
+        );
+        await expect(page.locator('.tz-plan-rows')).not.toContainText('Auto');
     });
 
     test('odmietnuté povolenie: prepínač ostane vypnutý a hláška povie prečo', async ({ page }) => {
@@ -115,10 +116,11 @@ test.describe('oznámenia: Živá obloha', () => {
         await expect
             .poll(() => ulozene(page))
             .toEqual({ on: false, hour: 8, devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
-        await page.locator('#nav-mozem').click();
-        const rows = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.rows ?? [];
-        await page.locator('#mz-plan-more').click();
-        await expect(page.locator('#mz-plan-rows li')).toHaveText(rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`));
+        await page.locator('#nav-terazky').click();
+        const os = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.lanes;
+        await expect(page.locator('#tz-plan .tl-n')).toHaveText(os?.lanes.map((l) => l.name) ?? []);
+        await expect(page.locator('#tz-plan .tl-chip')).toHaveText(os?.others.map((o) => `${o.name} · ${o.value}`) ?? []);
+        await expect(page.locator('#tz-plan')).toContainText('Bojler');
     });
 
     test('odmietnuté povolenie: prepínač vypnutý a hláška', async ({ page }) => {

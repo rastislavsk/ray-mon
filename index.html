@@ -91,18 +91,20 @@
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
-                    <!-- Karta Môžem? (návrh C v docs/navrhy/karta-mozem.html) je v navigácii prvá a appka
-                         sa na nej aj otvára (START_PANELS v shared/config.js). -->
-                    <button id="nav-mozem" class="nav-item active" type="button" data-panel="mozem" aria-current="page">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M7.8 12.4l2.9 2.9 5.5-5.8" />
-                        </svg>
-                        <span class="lbl">Môžem?</span>
-                    </button>
-                    <button id="nav-terazky" class="nav-item" type="button" data-panel="terazky">
+                    <!-- Terazky sú v navigácii prvé a appka sa na nich aj otvára (START_PANELS v shared/config.js),
+                         Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
+                    <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
                         <span class="lbl">Terazky</span>
+                    </button>
+                    <button id="nav-mozem" class="nav-item" type="button" data-panel="mozem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4" />
+                            <path
+                                d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"
+                            />
+                        </svg>
+                        <span class="lbl">Dnes</span>
                     </button>
                     <button id="nav-7dni" class="nav-item" type="button" data-panel="7dni">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -129,13 +131,29 @@
         </header>
 
         <main class="page" id="page">
-            <!-- PANEL: MÔŽEM? -->
-            <!-- Jednoduchá odpoveď pre celú rodinu: môžem teraz zapnúť práčku, a keď nie, kedy
-                 (návrh C v docs/navrhy/karta-mozem.html). Obsah si celý skladá render do #mozem-body,
-                 v HTML je len nosič - ako pri karte Štatistika. -->
+            <!-- PANEL: DNES (kódové meno mozem, doteraz Môžem?) -->
+            <!-- Veľké slovo a čo dá strecha za celý deň, pod tým pás odporúčaní (docs/navrhy/dnes-a-teraz.html).
+                 Hlavičku skladá render do #mozem-body. Pás je stály nosič - prekreslenie mu nezmení
+                 posunutie; listuje a prichytáva ho prehliadač sám (scroll-snap), karty sú užšie než pás,
+                 aby bolo vidno, že ďalej niečo je. -->
             <section id="panel-mozem" class="panel hidden" aria-labelledby="mozem-title">
-                <h2 class="sr-only" id="mozem-title">Môžem?</h2>
+                <h2 class="sr-only" id="mozem-title">Dnes</h2>
                 <div class="mozem" id="mozem-body"></div>
+                <div id="tz-recs" class="tz-recs hidden">
+                    <div id="tz-strip" class="tz-strip" role="group" tabindex="0">
+                        <div class="tz-rec">
+                            <h2 id="tz-today-title" class="tz-rec-ttl"></h2>
+                            <p id="tz-today"></p>
+                            <div class="tz-bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
+                            <p id="tz-window"></p>
+                        </div>
+                        <div class="tz-rec">
+                            <h2 id="tz-later-title" class="tz-rec-ttl"></h2>
+                            <p id="tz-later"></p>
+                        </div>
+                    </div>
+                    <div id="tz-dots" class="tz-dots" aria-hidden="true"><i></i><i></i></div>
+                </div>
             </section>
 
             <!-- PANEL: TERAZKY -->
@@ -149,6 +167,11 @@
                     <p id="tz-num" class="tz-num"><span id="tz-num-val">–</span><small>kW</small></p>
                     <p id="tz-src" class="tz-src"></p>
                     <p id="tz-sub" class="tz-sub"></p>
+                    <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
+                    <div id="tz-say" class="tz-say hidden">
+                        <div id="tz-chips" class="tz-chips"></div>
+                        <p id="tz-say-text"></p>
+                    </div>
                     <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča. Tlačidlo vedie
                          na krok Meranie v sprievodcovi, pri odmietnutom prístupe na hlásenie v Elektrárni
                          (web/interactions.js). -->
@@ -164,6 +187,9 @@
                     </div>
                     <button type="button" id="tz-retry" class="tz-retry hidden"></button>
                 </div>
+                <!-- Plán dňa ako plagát: veta, očíslované riadky a pätka (docs/navrhy/terazky-plan-dna.html,
+                     možnosť A). Obsah skladá render (web/render/terazky.js). -->
+                <section id="tz-plan" class="tz-plan hidden" aria-labelledby="tz-plan-title"></section>
                 <div id="tz-plot" class="tz-plot hidden">
                     <div
                         id="tz-chart"
@@ -192,31 +218,6 @@
                             <p id="tz-hint" class="tz-list-hint"></p>
                         </div>
                     </div>
-                </div>
-                <!-- Pás odporúčaní listuje a prichytáva prehliadač sám (scroll-snap), karty sú užšie než pás,
-                     aby bolo vidno, že ďalej niečo je. Na širokej obrazovke sú karty pod sebou vedľa grafu. -->
-                <div id="tz-recs" class="tz-recs hidden">
-                    <div id="tz-strip" class="tz-strip" role="group" tabindex="0">
-                        <div class="tz-rec">
-                            <h2 id="tz-now-head" class="tz-rec-head"></h2>
-                            <p id="tz-now-body"></p>
-                        </div>
-                        <div class="tz-rec">
-                            <h2 id="tz-devices-title" class="tz-rec-ttl"></h2>
-                            <p id="tz-devices"></p>
-                        </div>
-                        <div class="tz-rec">
-                            <h2 id="tz-today-title" class="tz-rec-ttl"></h2>
-                            <p id="tz-today"></p>
-                            <div class="tz-bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
-                            <p id="tz-window"></p>
-                        </div>
-                        <div class="tz-rec">
-                            <h2 id="tz-later-title" class="tz-rec-ttl"></h2>
-                            <p id="tz-later"></p>
-                        </div>
-                    </div>
-                    <div id="tz-dots" class="tz-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
                 </div>
             </section>
 
@@ -908,22 +909,6 @@
                 </div>
             </section>
         </main>
-
-        <!-- Panel veci či skupiny karty Môžem? zospodu (ten istý ako v novej appke). Otvára sa ako
-             modálny dialóg: čítačka ho ohlási, fokus ostane v ňom a Escape aj Späť ho zatvoria. -->
-        <dialog id="mozem-sheet" class="mozem-sheet" aria-labelledby="mozem-sheet-title">
-            <button type="button" id="mozem-sheet-x" class="mozem-sheet-x"><span aria-hidden="true">×</span></button>
-            <h2 id="mozem-sheet-title"></h2>
-            <!-- Panel skupiny: veta o slnku a veci skupiny, každá so svojím časom a zápisom. -->
-            <p id="mozem-sheet-lead"></p>
-            <div id="mozem-sheet-rows" class="mozem-sheet-rows"></div>
-            <h3 id="mozem-sheet-do-q" class="mozem-sheet-q"></h3>
-            <p id="mozem-sheet-do"></p>
-            <h3 id="mozem-sheet-why-q" class="mozem-sheet-q"></h3>
-            <p id="mozem-sheet-why"></p>
-            <h3 id="mozem-sheet-more-q" class="mozem-sheet-q"></h3>
-            <p id="mozem-sheet-more"></p>
-        </dialog>
 
         <!-- Ponuka prevziať nastavenie z odkazu. Pevne nad spodnou navigáciou, aby bola
              vidieť na ktorejkoľvek karte a pri akomkoľvek posunutí stránky. -->

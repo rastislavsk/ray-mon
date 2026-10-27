@@ -17,13 +17,13 @@ import {
     TARIFF,
     WORKER_PV_URL,
 } from '../../shared/config.js';
-import { MOZEM_WORDS, PLAN_DNA_LESS, planDnaMoreText } from '../../shared/messages.js';
+import { MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
-import { terazModel } from '../../shared/teraz.js';
+import { dnesCards, terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -36,7 +36,7 @@ const weather = fixture('open-meteo.json');
 const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
 const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: TEST_ZDROJ };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
-const TITLES = { mozem: 'Môžem?', terazky: 'Teraz', '7dni': '7 dní', statistika: 'Štatistika', nastavenie: 'Nastavenie' };
+const TITLES = { mozem: 'Dnes', terazky: 'Teraz', '7dni': '7 dní', statistika: 'Štatistika', nastavenie: 'Nastavenie' };
 
 /** Presný okamih daného času 5. 9. 2026 v Bratislave (letný čas, UTC+2). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
@@ -122,7 +122,7 @@ for (const width of [390, 320]) {
     test(`navigácia prepína všetkých 5 kariet, popisky sú celé a položky aspoň 44 px (šírka ${width} px)`, async ({ page }) => {
         await page.setViewportSize({ width, height: 700 });
         const errors = await openObloha(page);
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         for (const panel of [...PANELS].reverse()) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
@@ -410,10 +410,10 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
     /** Karty sa prepínajú len ťuknutím v navigácii (docs/navrhy/7dni-listovanie-dni.html). */
     test('ťah do strán kartu neprelistuje', async ({ page }) => {
         const errors = await openObloha(page);
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         for (const dx of [-200, 200]) {
-            await tah(page, '#mz-word', dx);
-            await ocakavajKartu(page, 'mozem');
+            await tah(page, '#tz-num', dx);
+            await ocakavajKartu(page, 'terazky');
         }
         expect(errors).toEqual([]);
     });
@@ -506,7 +506,7 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         await page.goBack();
         await ocakavajKartu(page, '7dni');
         await page.goBack();
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         await page.goForward();
         await ocakavajKartu(page, '7dni');
         expect(errors).toEqual([]);
@@ -651,32 +651,32 @@ const modelKarty = (time, extra = {}, opts = {}) =>
         opts,
     );
 
-/** Čo karta ukazuje: slovo, veta, štítky, fakt, nadpis dlaždíc a odpovede dlaždíc. @param {import('@playwright/test').Page} page */
+/** Čo karta Dnes ukazuje: slovo, veta (len bez predpovede na dnešok) a čo dá strecha za celý deň. @param {import('@playwright/test').Page} page */
 const kartaVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
-        const all = (/** @type {string} */ sel) => [...document.querySelectorAll(sel)].map((el) => el.textContent);
+        const vidno = (/** @type {string} */ sel) => !document.querySelector(sel)?.classList.contains('hidden');
         return {
             word: text('#mz-word'),
-            lead: text('#mz-lead'),
-            chips: all('#mz-chips .chip'),
-            phones: text('#mz-phones-text'),
-            title: text('#mz-list-title'),
-            shorts: all('#mz-items .tile b'),
-            notes: all('#mz-items .tile small'),
+            lead: vidno('#mz-lead') ? text('#mz-lead') : '',
+            day: vidno('#mz-day') ? text('#mz-day-lead') : '',
+            eq: [...document.querySelectorAll('#mz-day-eq b')].map((el) => el.textContent),
         };
     });
 
 /** To isté z modelu. @param {ReturnType<typeof modelKarty>} m */
 const kartaZModelu = (m) => ({
     word: m.word,
-    lead: m.lead,
-    chips: m.chips.map((c) => c.text),
-    phones: m.phones,
-    title: m.list?.title ?? '',
-    shorts: m.list ? m.groups.map((g) => g.value) : [],
-    notes: m.list ? m.groups.map((g) => g.note).filter(Boolean) : [],
+    lead: m.day ? '' : m.lead,
+    day: m.day?.lead ?? '',
+    eq: m.day ? m.day.eq.map((e) => e.value) : [],
 });
+
+/** Otvorí kartu Dnes - appka sa otvára na Teraz. @param {import('@playwright/test').Page} page */
+async function naDnes(page) {
+    await page.locator('#nav-mozem').click();
+    await ocakavajKartu(page, 'mozem');
+}
 
 /** Ťuknutie a ťah prstom cez CDP, teda ako naozajstný prst - prehliadač pri ťahu posúva stránku sám.
  * @param {import('@playwright/test').Page} page @param {{ x: number, y: number, dy?: number }} gesto */
@@ -693,74 +693,48 @@ async function prst(page, { x, y, dy = 0 }) {
     await cdp.detach();
 }
 
-test.describe('karta Môžem?', () => {
+test.describe('karta Dnes', () => {
     for (const hm of ['13:00', '21:00', '05:30']) {
-        test(`o ${hm} ukazuje to isté slovo, vetu, štítky a odpovede ako model`, async ({ page }) => {
+        test(`o ${hm} ukazuje to isté slovo, deň v číslach a pás odporúčaní ako model`, async ({ page }) => {
             const errors = await openObloha(page, { time: at(hm) });
+            await naDnes(page);
             const m = modelKarty(at(hm));
             await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
-            await expect(page.locator('#mz-items .tile')).toHaveCount(m.groups.length);
             await expect(page.locator('#mz-retry')).toBeHidden();
             await expect(page.locator('#mz-guess')).toBeHidden();
             // Zelený úsek oblúka je dnešné okno so slnkom; v noci je na oblúku mesiac.
             await expect(page.locator('#mz-arc .arc-win')).toHaveCount(m.arc?.win ? 1 : 0);
             await expect(page.locator('#mz-arc .arc-moon')).toHaveCount(m.arc?.sun === null ? 1 : 0);
-            expect(errors).toEqual([]);
-        });
-    }
-
-    for (const hm of ['09:00', '13:00', '21:00']) {
-        test(`o ${hm} plán dňa pod dlaždicami podľa modelu: zbalený na prvý riadok, tlačidlo rozbalí, bez ceny pri spotrebičoch`, async ({
-            page,
-        }) => {
-            const errors = await openObloha(page, { time: at(hm) });
-            const plan = modelKarty(at(hm)).plan;
-            const rows = plan?.rows ?? [];
-            const riadky = rows.map((r) => `${r.time}${r.name}${r.now ? 'teraz' : ''}${r.why}`);
-            const more = page.locator('#mz-plan-more');
-            await expect(page.locator('#mz-plan')).toBeVisible();
-            await expect(page.locator('#mz-plan-title')).toHaveText('Plán dňa');
-            if (rows.length > 1) {
-                await expect(page.locator('#mz-plan-rows li')).toHaveText(riadky.slice(0, 1));
-                await expect(page.locator('#mz-plan-note')).toBeHidden();
-                await expect(more).toHaveText(planDnaMoreText(rows.length - 1));
-                await expect(more).toHaveAttribute('aria-expanded', 'false');
-                await more.click();
-                await expect(more).toHaveText(PLAN_DNA_LESS);
-                await expect(more).toHaveAttribute('aria-expanded', 'true');
-            } else await expect(more).toBeHidden();
-            await expect(page.locator('#mz-plan-rows li')).toHaveText(riadky);
-            await expect(page.locator('#mz-plan-rows .row-t')).toHaveText(rows.map((r) => r.time));
-            await expect(page.locator('#mz-plan-note')).toHaveText(plan?.note ?? '');
-            for (const r of rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');
+            // Pás odporúčaní: dnešok a kedy bude lepšie.
+            const k = dnesCards({
+                ...OWNER,
+                now: at(hm),
+                loading: false,
+                known: 'elektraren',
+                pv,
+                forecast: buildForecast(weather, at(hm), SITE, PLANT),
+                previewMinutes: null,
+            });
+            await expect(page.locator('#tz-today')).toHaveText(k?.today.line ?? '');
+            await expect(page.locator('#tz-later')).toHaveText(k?.later ?? '');
+            await expect(page.locator('#tz-dots i')).toHaveCount(2);
             expect(errors).toEqual([]);
         });
     }
 
     for (const width of [390, 320]) {
-        test(`šírka ${width} px: dlaždice aspoň 44 px, nič sa neoreže, žiadne veľké slovo nepretečie`, async ({ page }) => {
+        test(`šírka ${width} px: čísla dňa sa neorežú, žiadne veľké slovo nepretečie`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
-            await expect(page.locator('#mz-items .tile')).toHaveCount(modelKarty(FIXED_NOW).groups.length);
-            const riadky = await page.locator('#mz-items .tile').evaluateAll((rows) =>
-                rows.map((row) => {
-                    const box = row.getBoundingClientRect();
-                    const parts = [...row.children].map((c) => c.getBoundingClientRect());
-                    return {
-                        text: row.textContent,
-                        h: box.height,
-                        inside:
-                            box.left >= 0 &&
-                            box.right <= innerWidth &&
-                            parts.every((p) => p.left >= box.left - 0.5 && p.right <= box.right + 0.5),
-                        fits: row.scrollWidth <= row.clientWidth + 0.5,
-                    };
+            await naDnes(page);
+            await expect(page.locator('#mz-day-eq > div')).toHaveCount(3);
+            const cisla = await page.locator('#mz-day-eq > div').evaluateAll((els) =>
+                els.map((el) => {
+                    const box = el.getBoundingClientRect();
+                    return { text: el.textContent, ok: box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 0.5 };
                 }),
             );
-            for (const r of riadky) {
-                expect(r.h, r.text ?? '').toBeGreaterThanOrEqual(44);
-                expect(r.inside && r.fits, `${r.text} je orezaný`).toBe(true);
-            }
+            for (const c of cisla) expect(c.ok, `${c.text} je orezané`).toBe(true);
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
             // Každé veľké slovo, aké karta pozná, s veľkosťou podľa wordSize ako v appke.
             for (const word of new Set(Object.values(MOZEM_WORDS))) {
@@ -790,66 +764,6 @@ test.describe('karta Môžem?', () => {
         });
     }
 
-    test('ťuknutie na dlaždicu jednej veci otvorí jej panel; Escape, Späť aj krížik ho zavrú a fokus sa vráti', async ({ page }) => {
-        const errors = await openObloha(page);
-        // Auto je predvolene jediná dlaždica s jednou vecou (bojler doma nie je).
-        const pr = modelKarty(FIXED_NOW).items.find((it) => it.id === 'auto');
-        if (!pr) throw new Error('auto v modeli chýba');
-        const riadok = page.locator('[data-item="auto"]');
-        const panel = page.getByRole('dialog', { name: pr.title });
-
-        await riadok.click();
-        await expect(panel).toBeVisible();
-        await expect(page.locator('#mz-sheet-do')).toHaveText(pr.head);
-        await expect(page.locator('#mz-sheet-why')).toHaveText(pr.text);
-        await expect(page.locator('#mz-sheet-more-q')).toHaveText(pr.more?.q ?? '');
-        await expect(page.locator('#mz-sheet-more')).toHaveText(pr.more?.a ?? '');
-        await expect(page.locator('#mz-sheet-rows')).toBeHidden();
-        await page.keyboard.press('Escape');
-        await expect(panel).toBeHidden();
-        await expect(riadok).toBeFocused();
-
-        await riadok.click();
-        await expect(panel).toBeVisible();
-        await page.goBack();
-        await expect(panel).toBeHidden();
-        await expect(riadok).toBeFocused();
-        await ocakavajKartu(page, 'mozem');
-
-        await riadok.click();
-        await expect(panel).toBeVisible();
-        await page.getByRole('button', { name: 'Zavrieť' }).click();
-        await expect(panel).toBeHidden();
-        await expect(riadok).toBeFocused();
-        // Zatvorenie bolo krokom späť v histórii: ďalšie Späť panel znovu neotvorí.
-        expect(await page.evaluate(() => history.state)).toEqual({
-            step: { panel: 'mozem', item: null, preview: null, detail: null, setup: null, roof: 0, sheet: null },
-        });
-        expect(errors).toEqual([]);
-    });
-
-    test('panel skupiny: veci s vlastným časom, bez tlačidiel; zatvorenie je krok späť', async ({ page }) => {
-        const errors = await openObloha(page);
-        const sheet = modelKarty(FIXED_NOW).groups[0].sheet;
-        if (!sheet) throw new Error('veľké spotrebiče nemajú panel');
-        const dlazdica = page.locator('[data-item="velke"]');
-        await dlazdica.click();
-        await expect(page.getByRole('dialog', { name: sheet.title })).toBeVisible();
-        await expect(page.locator('#mz-sheet-lead')).toHaveText(sheet.lead);
-        await expect(page.locator('#mz-sheet-rows h3')).toHaveText(['Práčka', 'Umývačka', 'Sušička']);
-        await expect(page.locator('#mz-sheet-rows .row-t')).toHaveText(sheet.rows.map((r) => r.short));
-        await expect(page.locator('#mz-sheet-do')).toBeHidden();
-        await expect(page.locator('#mz-sheet-rows button')).toHaveCount(0);
-        // Zatvorenie panelu skupiny je krok späť v histórii a fokus sa vráti na dlaždicu.
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#mz-sheet')).toBeHidden();
-        await expect(dlazdica).toBeFocused();
-        expect(await page.evaluate(() => history.state)).toEqual({
-            step: { panel: 'mozem', item: null, preview: null, detail: null, setup: null, roof: 0, sheet: null },
-        });
-        expect(errors).toEqual([]);
-    });
-
     test('staré zápisy „Pustil/a som“ nová appka pri štarte zmaže', async ({ page }) => {
         const errors = await openObloha(page);
         const stare = JSON.stringify([{ d: '2026-09-05', id: 'pracka', m: 12 * 60, sun: true }]);
@@ -875,31 +789,33 @@ test.describe('karta Môžem?', () => {
         await page.clock.setFixedTime(FIXED_NOW);
         await page.goto('/obloha/');
         await appReady(page);
+        await naDnes(page);
 
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW, { pv: null, forecast: null })));
         await expect(page.locator('#mz-word')).toHaveText(MOZEM_WORDS.offline);
         await expect(page.locator('#mz-lead')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
-        await expect(page.locator('#mz-list-title')).toHaveText('Čo môžem');
-        await expect(page.locator('[data-item="velke"] b')).toHaveText('neviem');
-        await expect(page.locator('#mz-phones')).toBeHidden();
-        const znova = page.getByRole('button', { name: 'Skúsiť znova' });
+        await expect(page.locator('#tz-plan')).toBeHidden();
+        const znova = page.locator('#mz-retry');
         await expect(znova).toBeVisible();
 
         offline = false;
         await znova.click();
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW)));
         await expect(znova).toBeHidden();
+        await expect(page.locator('#tz-recs')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
     test('bez internetu to karta povie', async ({ page }) => {
         await openObloha(page, { offline: true });
         await page.context().setOffline(true);
+        await naDnes(page);
         await expect(page.locator('#mz-lead')).toHaveText(/^Nie je internet/);
     });
 
-    test('poloha bez panelov: odpoveď z typickej strechy s ODHAD a výzva, súčasná appka odpovedá to isté', async ({ page }) => {
+    test('poloha bez panelov: deň z typickej strechy a výzva, súčasná appka odpovedá to isté', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
+        await naDnes(page);
         const typical = typicalSettings(SITE);
         const m = mozemSkyModel({
             ...typical,
@@ -910,13 +826,11 @@ test.describe('karta Môžem?', () => {
             forecast: buildForecast(weather, FIXED_NOW, SITE, typical.plant),
         });
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
-        await expect(page.locator('#mz-list-title')).toHaveText(/ · odhad$/);
-        await expect(page.locator('#mz-phones-text')).toHaveText(/asi|ani jeden/);
         await expect(page.locator('#mz-guess-title')).toHaveText('Hádam podľa suseda');
         await expect(page.locator('#mz-guess-text')).toHaveText(m.guess);
         // Biela výzva, nie červená.
         expect(await page.locator('#mz-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
-        await page.getByRole('button', { name: 'Zadaj panely', exact: true }).click();
+        await page.locator('#mz-guess-btn').click();
         await ocakavajKartu(page, 'nastavenie');
 
         // Súčasná appka v tom istom stave odpovedá to isté slovo (jedno jadro, dva kabáty).
@@ -926,56 +840,18 @@ test.describe('karta Môžem?', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez polohy: len výzva zadať polohu, bez zoznamu odpovedí', async ({ page }) => {
+    test('bez polohy: na Teraz len výzva zadať polohu, bez Plánu dňa', async ({ page }) => {
         const errors = await openObloha(page, { settings: null });
-        await expect(page.locator('#mz-ask')).toBeVisible();
-        await expect(page.locator('#mz-list')).toBeHidden();
-        await expect(page.locator('#mz-answer')).toBeHidden();
-        await page.getByRole('button', { name: 'Zadaj polohu' }).click();
+        await expect(page.locator('#tz-ask')).toBeVisible();
+        await expect(page.locator('#tz-plan')).toBeHidden();
+        await page.locator('#tz-ask-btn').click();
         await ocakavajKartu(page, 'nastavenie');
         expect(errors).toEqual([]);
-    });
-
-    test('prístupnosť: žiadne závažné nálezy axe s otvoreným panelom veci', async ({ page }) => {
-        await openObloha(page);
-        await page.locator('[data-item="auto"]').click();
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        expect(await vazneNalezy(page)).toEqual([]);
-    });
-
-    test('prístupnosť: žiadne závažné nálezy axe s otvoreným panelom skupiny', async ({ page }) => {
-        await openObloha(page);
-        await page.locator('[data-item="velke"]').click();
-        await expect(page.locator('#mz-sheet-rows')).toBeVisible();
-        expect(await vazneNalezy(page)).toEqual([]);
     });
 
     test('prístupnosť: bez polohy žiadne závažné nálezy axe', async ({ page }) => {
         await openObloha(page, { settings: null });
         expect(await vazneNalezy(page)).toEqual([]);
-    });
-});
-
-test.describe('karta Môžem? prstom', () => {
-    test.use({ hasTouch: true });
-
-    test('ťuknutie prstom na dlaždicu otvorí panel, zvislý ťah cez dlaždice posunie stránku bez panelu', async ({ page }) => {
-        await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openObloha(page);
-        const zoznam = await page.locator('#mz-items').boundingBox();
-        if (!zoznam) throw new Error('zoznam vecí nie je vidno');
-        await prst(page, { x: zoznam.x + zoznam.width / 2, y: zoznam.y + zoznam.height / 2, dy: -160 });
-        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez zoznam neposunula').toBeGreaterThan(0);
-        await page.waitForTimeout(300);
-        await expect(page.locator('#mz-sheet')).toBeHidden();
-        await ocakavajKartu(page, 'mozem');
-
-        const riadok = await page.locator('[data-item="velke"]').boundingBox();
-        if (!riadok) throw new Error('dlaždicu nie je vidno');
-        await prst(page, { x: riadok.x + 40, y: riadok.y + riadok.height / 2 });
-        await expect(page.locator('#mz-sheet')).toBeVisible();
-        await expect(page.locator('#mz-sheet-title')).toHaveText(/^Veľké spotrebiče: /);
-        expect(errors).toEqual([]);
     });
 });
 
@@ -1021,7 +897,7 @@ const terazVStranke = (page) =>
             source: text('#tz-src'),
             sub: text('#tz-sub'),
             hint: text('#tz-hint'),
-            head: text('#tz-now-head'),
+            say: text('#tz-say-text'),
         };
     });
 
@@ -1032,7 +908,7 @@ const terazZModelu = (m) => ({
     source: m.source,
     sub: m.sub,
     hint: m.hint.text,
-    head: m.cards?.now.head ?? '',
+    say: m.say?.text ?? '',
 });
 
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
@@ -1048,8 +924,9 @@ async function osGrafu(page) {
     return { from, to: Number(await graf.getAttribute('aria-valuemax')) + PREVIEW.keyStepMin };
 }
 
-/** Bod na grafe pre minútu dňa, v pixeloch stránky. @param {import('@playwright/test').Page} page @param {number} min */
+/** Bod na grafe pre minútu dňa, v pixeloch okna (graf je nad ním posunutý do okna). @param {import('@playwright/test').Page} page @param {number} min */
 async function bodGrafu(page, min) {
+    await page.locator('#tz-chart').scrollIntoViewIfNeeded();
     const box = await page.locator('#tz-chart svg').boundingBox();
     if (!box) throw new Error('graf nie je vidno');
     return { x: box.x + (chartX(min, await osGrafu(page)) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
@@ -1085,8 +962,7 @@ test.describe('karta Teraz', () => {
             await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
             // Pri čerstvom meraní je to presne heroModel - to isté, čo počíta karta Terazky.
             expect(m.num).toBe(hero.powerText);
-            expect(m.cards?.now.head).toBe(hero.message.headline);
-            await expect(page.locator('#tz-now-body')).toHaveText(hero.message.body);
+            await expect(page.locator('#tz-chips .chip')).toHaveText(m.say?.chips.map((c) => c.text) ?? []);
             // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa. V noci je „teraz“ mimo osi
             // grafu (deň so slnkom) a bunku v páse nemá - farbu povie zoznam pod grafom.
             const ocakavana = cellAt(planCells(dayPlan(vstup)), minuta(hm)).tone;
@@ -1096,25 +972,39 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart?.desc ?? '');
             await expect(page.locator('#tz-retry')).toBeHidden();
             await expect(page.locator('#tz-guess')).toBeHidden();
-            await expect(page.locator('#tz-dots i')).toHaveCount(4);
 
-            // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon a odporúčanie.
+            // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon, veta aj Plán dňa.
             await otvorSucasnuAppku(page);
             await page.locator('#nav-terazky').click();
             await expect(page.locator('#tz-num-val')).toHaveText(m.num);
-            await expect(page.locator('#tz-now-head')).toHaveText(m.cards?.now.head ?? '');
-            await expect(page.locator('#tz-devices')).toHaveText((m.cards?.devices ?? []).map((d) => `${d.name} ${d.short}`).join(' · '));
+            await expect(page.locator('#tz-say-text')).toHaveText(m.say?.text ?? '');
+            if (m.plan) await expect(page.locator('.tz-plan-lead')).toHaveText(m.plan.head.lead);
             expect(errors).toEqual([]);
         });
     }
 
-    test('karta Spotrebiče: spotrebiče doma s časom z Plánu dňa, ako zoznam v súčasnej appke', async ({ page }) => {
+    test('Plán dňa: veta a časová os ako model, v súčasnej appke ten istý plán ako plagát', async ({ page }) => {
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
-        const m = terazModel(vstupTeraz(time));
-        const devices = m.cards?.devices ?? [];
-        expect(devices.map((d) => d.name)).toEqual(['Práčka', 'Umývačka', 'Auto', 'Sušička'], 'bojler doma predvolene nie je');
-        await expect(page.locator('#tz-devices')).toHaveText(devices.map((d) => `${d.name} ${d.short}`).join(' · '));
+        const plan = terazModel(vstupTeraz(time)).plan;
+        if (!plan) throw new Error('model nemá Plán dňa');
+        await expect(page.locator('#tz-plan-title')).toHaveText('Plán dňa');
+        await expect(page.locator('#tz-plan .tl-lead')).toHaveText(plan.head.lead);
+        await expect(page.locator('#tz-plan .tl-then')).toHaveText(plan.head.then);
+        expect(plan.lanes.lanes.map((l) => l.name)).toEqual(['Práčka', 'Umývačka', 'Auto', 'Sušička'], 'bojler doma predvolene nie je');
+        await expect(page.locator('#tz-plan .tl-n')).toHaveText(plan.lanes.lanes.map((l) => l.name));
+        await expect(page.locator('#tz-plan .tl-axis span')).toHaveText(plan.lanes.ticks.map((t) => t.label));
+        // Čiara teraz stojí tam, kde začína pás práčky - tá ide teraz.
+        const x = await page.evaluate(() => {
+            const ciara = /** @type {Element} */ (document.querySelector('#tz-plan .tl-now')).getBoundingClientRect();
+            const pras = /** @type {Element} */ (document.querySelector('#tz-plan .tl-track i')).getBoundingClientRect();
+            return { ciara: ciara.left + ciara.width / 2, pras: pras.left };
+        });
+        expect(Math.abs(x.ciara - x.pras)).toBeLessThan(4);
+
+        await otvorSucasnuAppku(page);
+        await expect(page.locator('.tz-plan-lead')).toHaveText(plan.head.lead);
+        await expect(page.locator('.tz-plan-what')).toHaveText(plan.rows.map((r) => r.name));
         expect(errors).toEqual([]);
     });
 
@@ -1170,6 +1060,8 @@ test.describe('karta Teraz', () => {
 
     test('kurzorom: ťahanie po grafe ukáže náhľad, „Späť na teraz“ aj tlačidlo Späť ho zrušia', async ({ page }) => {
         const errors = await openTeraz(page, { time: at('13:00') });
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
         const teraz = terazZModelu(terazModel(vstupTeraz(at('13:00'))));
         const nahlad = terazZModelu(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('15:30') })));
         const z = await bodGrafu(page, minuta('10:00'));
@@ -1255,7 +1147,7 @@ test.describe('karta Teraz', () => {
         );
         await expect(page.locator('#tz-note-btn')).toBeHidden();
         await expect(page.locator('#tz-chart')).toBeVisible();
-        await expect(page.locator('#tz-strip')).toBeVisible();
+        await expect(page.locator('#tz-plan')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -1277,7 +1169,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-sub')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
         // Žiadne vymyslené čísla: graf ani odporúčania sa neukážu.
         await expect(page.locator('#tz-plot')).toBeHidden();
-        await expect(page.locator('#tz-recs')).toBeHidden();
+        await expect(page.locator('#tz-plan')).toBeHidden();
         const znova = page.locator('#tz-retry');
         await expect(znova).toHaveText('Skúsiť znova');
         await expect(znova).toBeVisible();
@@ -1320,7 +1212,7 @@ test.describe('karta Teraz', () => {
         const errors = await openTeraz(page, { settings: null });
         await expect(page.locator('#tz-ask')).toBeVisible();
         await expect(page.locator('#tz-plot')).toBeHidden();
-        await expect(page.locator('#tz-recs')).toBeHidden();
+        await expect(page.locator('#tz-plan')).toBeHidden();
         await expect(page.locator('#tz-num')).toBeHidden();
         await page.locator('#tz-ask-btn').click();
         await ocakavajKartu(page, 'nastavenie');
@@ -1390,8 +1282,9 @@ test.describe('karta Teraz prstom', () => {
         await page.setViewportSize({ width: 375, height: 667 });
         const errors = await openTeraz(page, { time: at('13:00') });
         const bod = await bodGrafu(page, minuta('12:00'));
+        const y = await page.evaluate(() => window.scrollY);
         await prst(page, { ...bod, dy: -160 });
-        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(0);
+        await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(y);
         await page.waitForTimeout(300);
         await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
         await expect(page.locator('#tz-reset')).toBeHidden();
@@ -1412,9 +1305,10 @@ test.describe('karta Teraz prstom', () => {
         expect(errors).toEqual([]);
     });
 
-    test('pás odporúčaní sa posúva prstom do strán a listovanie kariet ho nepreberie', async ({ page }) => {
+    test('pás odporúčaní na Dnes sa posúva prstom do strán a listovanie kariet ho nepreberie', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openTeraz(page, { time: at('13:00') });
+        const errors = await openObloha(page, { time: at('13:00') });
+        await naDnes(page);
         const pas = page.locator('#tz-strip');
         await pas.scrollIntoViewIfNeeded();
         const box = await pas.boundingBox();
@@ -1422,18 +1316,19 @@ test.describe('karta Teraz prstom', () => {
         await prstTah(page, { x: box.x + box.width * 0.8, y: box.y + box.height / 2, dx: -220 });
         await expect.poll(() => pas.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
         await page.waitForTimeout(400);
-        await ocakavajKartu(page, 'terazky');
+        await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#tz-dots i.on')).toHaveCount(1);
         await expect(page.locator('#tz-dots i').first()).not.toHaveClass('on');
         expect(errors).toEqual([]);
     });
 });
 
-test.describe('karta Môžem? po kontrole kroku 2', () => {
+test.describe('karta Dnes po kontrole kroku 2', () => {
     for (const width of [390, 320]) {
         test(`šírka ${width} px: časy východu a západu pod oblúkom sú celé a odsadené od okraja ako ostatný obsah`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
+            await naDnes(page);
             const casy = await page.locator('#mz-arc .arc-t').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
             expect(casy).toHaveLength(2);
             // Odstup obsahu karty: odsadenie vety pod slovom.
@@ -1449,6 +1344,7 @@ test.describe('karta Môžem? po kontrole kroku 2', () => {
 
     test('výzva bez panelov píše výkon typickej strechy zaokrúhlene', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
+        await naDnes(page);
         await expect(page.locator('#mz-guess-text')).toHaveText(/Rátam s typickou strechou asi 5 kWp\./);
         await expect(page.locator('#mz-guess-text')).not.toHaveText(/5,22/);
         expect(errors).toEqual([]);
@@ -1715,7 +1611,7 @@ test.describe('karta 7 dní', () => {
         expect(await page.evaluate(() => window.scrollY)).toBe(y);
         // Ďalšie Späť sa správa ako doteraz: predošlá karta.
         await page.goBack();
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         await page.locator('#nav-7dni').click();
 
         await page.locator('#sd-sum').click();
@@ -1729,7 +1625,7 @@ test.describe('karta 7 dní', () => {
         await expect(page.locator('#sd-days [data-day="2"]')).toBeFocused();
         // Šípka ide krokom v histórii: Späť potom detail znovu neotvorí, ale vráti predošlú kartu.
         await page.goBack();
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
 });
@@ -1799,7 +1695,7 @@ test.describe('karta 7 dní prstom', () => {
         await ocakavajKartu(page, '7dni');
         // Listovanie dní nebolo krokom navigácie: Späť z prehľadu ide na predošlú kartu.
         await page.goBack();
-        await ocakavajKartu(page, 'mozem');
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
 

@@ -17,7 +17,9 @@ import {
 import { dayPlan } from './day-plan.js';
 import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { pad2, weekDayName } from './format.js';
+import { co2SavedKg } from './carbon.js';
 import {
+    dnesDayText,
     MOZEM_GROUP_NAMES,
     mozemHeroText,
     mozemItemText,
@@ -25,6 +27,7 @@ import {
     mozemStripText,
     mozemTileNote,
     mozemTileValue,
+    planDnaHeadText,
     planGroupNote,
     planTileText,
     voiceTexts,
@@ -309,12 +312,8 @@ export function dayCtx(input) {
  * @param {boolean} loading @param {boolean} noPanels @param {Voice} voice */
 function emptyHead(loading, noPanels, voice) {
     /** @type {MozemState} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
-    return {
-        state,
-        word: voiceTexts(voice).MOZEM_WORDS[state],
-        hero: mozemHeroText(state, null, voice),
-        strip: null,
-    };
+    const hero = mozemHeroText(state, null, voice);
+    return { state, word: voiceTexts(voice).MOZEM_WORDS[state], hero, say: hero.lead, strip: null };
 }
 
 /**
@@ -326,8 +325,10 @@ function emptyHead(loading, noPanels, voice) {
  * `facts` sú údaje dňa (null bez odpovede): cena siete teraz, dnešné okno so slnkom (to isté
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
- * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`, ten istý blok, ktorý
- * appky kreslia pod dlaždicami), takže karta nikde nepovie nič iné než plán.
+ * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`), takže karta nikde
+ * nepovie nič iné než plán. Karty Teraz(ky) kreslia plán s vetou nad ním (`planHead`), pod číslom
+ * štítky (`chips`) a len tú časť vety, ktorá plán neopakuje (`say`). Karta Dnes ukazuje, čo dá
+ * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
  * @param {{ voice?: Voice, devices?: readonly string[] }} [opts] `voice` tón textov, `devices` spotrebiče doma
  */
@@ -344,9 +345,12 @@ export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices }
         : { ...emptyHead(input.loading, noPanels, voice), facts: null };
     return {
         ...head,
+        chips: chipsOf(head.state, head.facts, voice),
+        day: dnesDayModel(input, ctx),
         estimate,
         items,
         plan,
+        planHead: planDnaHeadText(rows),
         // Kým sa načítava, karta nič netvrdí - dlaždice nie sú.
         list: head.state === 'loading' ? null : { title: mozemListTitle(estimate), estimate },
         groups: planGroups(items, head.strip, rows),
@@ -482,10 +486,13 @@ function dayHead(input, ctx, voice, typicalKwp, rows) {
     const slot = ctx.plan[Math.floor(ctx.nowMin / TARIFF_LIMITS.stepMin)];
     const plan = rows.length ? planHero(rows) : null;
     const sunLeft = sun.state === 'go' || sun.state === 'wait';
+    const data = { ctx, window, nextDay, ...facts, typicalKwp, plan, sunLeft };
     return {
         state,
         word: voiceTexts(voice).MOZEM_WORDS[state],
-        hero: mozemHeroText(state, { ctx, window, nextDay, ...facts, typicalKwp, plan, sunLeft }, voice),
+        hero: mozemHeroText(state, data, voice),
+        // Tá istá veta bez spotrebičov a časov - tie povie Plán dňa hneď pod ňou.
+        say: mozemHeroText(state, { ...data, plan: null }, voice).lead,
         strip: { ...stripGeometry(window, ctx.nowMin, ctx.span), text: mozemStripText(sun.state, { ctx, window, nextDay }) },
         facts: {
             level: slot.level,
@@ -528,14 +535,37 @@ function todayFacts({ pv, forecast }) {
     return { measured: false, todayKwh: forecast?.days[0]?.kwhTotal ?? null };
 }
 
+/** @typedef {{ text: string, tone: 'go' | 'plain' | 'cheap' | 'costly' }} Chip */
+
 /**
- * Spotrebiče doma s časom z Plánu dňa („teraz“, „o 15:00“, auto „do 15:45“) v poradí plánu -
- * panel Spotrebiče na kartách Terazky a Teraz. Tie isté časy ako dlaždice karty Môžem?
- * (planTileText). Bez predpovede nič.
- * @param {PlanInput} input @param {readonly string[]} [devices] spotrebiče doma
- * @returns {Array<{ name: string, short: string }>}
+ * Štítky k odpovedi: stav (ÁNO, NESKÔR…) a lacná či drahá sieť teraz. Bez údajov dňa len stav.
+ * @param {MozemState} state @param {{ level: import('./config.js').PriceLevel } | null} facts @param {Voice} voice
+ * @returns {Chip[]}
  */
-export function planDevices(input, devices = PLAN_DNA.devices) {
-    const plan = input.forecast ? planDnaModel(input, { devices }) : null;
-    return plan ? plan.rows.map((r) => ({ name: r.name, short: planTileText(r).value })) : [];
+function chipsOf(state, facts, voice) {
+    const MOZEM_CHIPS = voiceTexts(voice).MOZEM_CHIPS;
+    /** @type {Chip[]} */ const chips = [];
+    if (MOZEM_CHIPS[state]) chips.push({ text: MOZEM_CHIPS[state], tone: state === 'go' ? 'go' : 'plain' });
+    if (facts?.level === 'lacna') chips.push({ text: MOZEM_CHIPS.lacna, tone: 'cheap' });
+    if (facts?.level === 'draha') chips.push({ text: MOZEM_CHIPS.draha, tone: 'costly' });
+    return chips;
+}
+
+/**
+ * Čo dá strecha za celý dnešok: predpoveď dňa, a keď už meranie nabehlo viac, to nabehnuté.
+ * V jednotkách, ktoré pozná každý (tie isté prepočty ako Štatistika). Bez predpovede na dnešok null.
+ * @param {PlanInput} input
+ */
+export function dnesDay({ now, site, pv, forecast }) {
+    const day = forecast?.days.find((d) => d.date === localDateKey(now, site.timezone));
+    if (!day) return null;
+    const measured = pv && Number.isFinite(pv.dailyEnergyKwh) ? /** @type {number} */ (pv.dailyEnergyKwh) : 0;
+    const kwh = Math.max(day.kwhTotal, measured);
+    return { kwh, phones: kwh / EVERYDAY.phoneChargeKwh, km: kwh * EVERYDAY.evKmPerKwh, co2Kg: co2SavedKg(kwh) };
+}
+
+/** Texty dneška pre kartu Dnes; bez odpovede karty (`ctx` null) či predpovede na dnešok null. @param {PlanInput} input @param {DayCtx | null} ctx */
+function dnesDayModel(input, ctx) {
+    const d = ctx && dnesDay(input);
+    return d ? dnesDayText(d) : null;
 }

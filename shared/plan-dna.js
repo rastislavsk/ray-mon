@@ -7,7 +7,7 @@
 // zmestí na slnko najviac: docs/navrhy/plan-dna-poradie.html.
 
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
-import { planDnaRowText, PLAN_DNA_NOTE } from './messages-core.js';
+import { planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
 import { dayCtx, freeKw, kmOf, laterDay, programDraw, sunMinKw } from './mozem.js';
 
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
@@ -188,8 +188,9 @@ function onSun(item, device, from, { ctx, currency, free }) {
 }
 
 /**
- * Model bloku Plán dňa na karte Môžem? pre obe appky: riadky (čas, spotrebič, prečo) a pätka.
- * Bez predpovede alebo bez elektrárne null. Riadok, ktorého štart je teraz, má `now`.
+ * Model bloku Plán dňa pre obe appky: riadky (čas, spotrebič, prečo), pätka a časová os dneška
+ * (`lanes`). Bez predpovede alebo bez elektrárne null. Riadok, ktorého štart je teraz, má `now`,
+ * `value` je jeho čas tak, ako ho povie dlaždica (planTileText: „teraz“, „o 15:00“, „zajtra 07:30“).
  * @param {import('./day-plan.js').PlanInput & { known?: import('./settings.js').Known }} input
  * @param {{ devices?: readonly string[], voice?: import('./messages.js').Voice }} [opts]
  */
@@ -199,8 +200,28 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
     const now = Math.ceil(ctx.nowMin / STEP) * STEP;
     const rows = planDna(ctx, input.tariff.currency, devices)
         .sort((a, b) => rowOrder(a) - rowOrder(b))
-        .map((row) => ({ ...row, ...planDnaRowText(row, voice), now: row.kind === 'sun' && row.start <= now }));
-    return { rows, note: PLAN_DNA_NOTE };
+        .map((row) => ({ ...row, ...planDnaRowText(row, voice), now: row.kind === 'sun' && row.start <= now }))
+        .map((row) => ({ ...row, value: planTileText(row).value }));
+    return { rows, note: PLAN_DNA_NOTE, lanes: planLanes(rows, ctx.span, ctx.nowMin) };
+}
+
+/**
+ * Časová os Plánu dňa: pre každý spotrebič na dnešnom slnku pás od štartu po koniec programu,
+ * os cez dnešné svetlo (daylightSpan) s hodinami po troch a čiara teraz - všetko v percentách
+ * osi. Čo na slnko dnes nejde (iný deň, lacné pásmo, nie), je v `others` s časom z riadku plánu.
+ * @param {Array<PlanRow & { name: string, value: string }>} rows
+ * @param {{ from: number, to: number }} span @param {number} nowMin
+ */
+export function planLanes(rows, span, nowMin) {
+    const pct = (/** @type {number} */ m) =>
+        Math.round(((Math.max(span.from, Math.min(span.to, m)) - span.from) / (span.to - span.from)) * 1000) / 10;
+    const lanes = rows.flatMap((r) =>
+        r.kind === 'sun' ? [{ id: r.id, name: r.name, left: pct(r.start), width: pct(r.end) - pct(r.start) }] : [],
+    );
+    const others = rows.filter((r) => r.kind !== 'sun').map((r) => ({ id: r.id, name: r.name, value: r.value }));
+    /** @type {Array<{ label: string, at: number }>} */ const ticks = [];
+    for (let h = Math.ceil(span.from / 180) * 3; h * 60 <= span.to; h += 3) ticks.push({ label: String(h), at: pct(h * 60) });
+    return { lanes, others, ticks, now: pct(nowMin) };
 }
 
 /** Poradie riadkov v bloku: dnes podľa času (slnko aj lacné pásmo), potom iné dni, nakoniec „nie“. @param {PlanRow} row */

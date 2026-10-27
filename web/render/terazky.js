@@ -1,10 +1,11 @@
-// Karta Terazky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, graf dňa s pásom
-// plánu, náhľad iného času a pás odporúčaní. Všetko počíta shared/teraz.js - ten istý model ako
+// Karta Terazky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, štítky a veta
+// o teraz, Plán dňa ako plagát (docs/navrhy/terazky-plan-dna.html, možnosť A), graf dňa s pásom
+// plánu a náhľad iného času. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js - ten istý model ako
 // v novej appke, takže obe povedia to isté - a texty sú v shared/messages-core.js. Tu sa len
 // zapisuje do DOM. Farbu čísla a pozadia dáva style.css podľa data-tier (render/header.js).
 
 import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
-import { voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-core.js';
 import { localMinutes } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
@@ -74,31 +75,47 @@ function renderChart(m, open, dom) {
     dom.tzReset.textContent = TERAZ_TEXTS.reset;
 }
 
-/** Pás odporúčaní a bodky pod ním. Pás listuje prehliadač, bodka ukazuje stránku zo stavu.
- * @param {Model} m @param {number} page @param {Dom} dom */
-function renderCards(m, page, dom) {
-    show(dom.tzRecs, !!m.cards);
-    if (!m.cards) return;
-    const k = m.cards;
-    dom.tzStrip.setAttribute('aria-label', TERAZ_TEXTS.strip);
-    dom.tzNowHead.textContent = k.now.head;
-    dom.tzNowBody.textContent = k.now.body;
-    dom.tzDevicesTitle.textContent = TERAZ_TEXTS.devices;
-    writeHtml(dom.tzDevices, k.devices.map((d) => `${escapeHtml(d.name)} <b>${escapeHtml(d.short)}</b>`).join(' · '), 'tz-devices');
-    dom.tzTodayTitle.textContent = TERAZ_TEXTS.today;
-    dom.tzToday.textContent = k.today.line;
-    show(/** @type {HTMLElement} */ (dom.tzTodayBar.parentElement), k.today.pct !== null);
-    dom.tzTodayBar.style.width = `${k.today.pct ?? 0}%`;
-    dom.tzWindow.textContent = k.today.window;
-    dom.tzLaterTitle.textContent = TERAZ_TEXTS.later;
-    dom.tzLater.textContent = k.later;
-    [...dom.tzDots.children].forEach((dot, i) => dot.classList.toggle('on', i === page));
+/** Štítky a veta o teraz pod číslom. @param {Model} m @param {Dom} dom */
+function renderSay(m, dom) {
+    show(dom.tzSay, !!m.say);
+    if (!m.say) return;
+    writeHtml(
+        dom.tzChips,
+        m.say.chips.map((c) => `<span class="tz-chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`).join(''),
+        'tz-chips',
+    );
+    dom.tzSayText.textContent = m.say.text;
+}
+
+/**
+ * Plán dňa ako plagát: veta, čo ide teraz, očíslované riadky (spotrebič, čas alebo „teraz“, prečo)
+ * a pätka. Bez plánu (bez predpovede, nič doma) nie je.
+ * @param {Model['plan']} plan @param {Dom} dom
+ */
+function renderPlan(plan, dom) {
+    show(dom.tzPlan, !!plan && plan.rows.length > 0);
+    if (!plan || !plan.rows.length) return;
+    const rows = plan.rows.map(
+        (r, i) =>
+            `<li data-tone="${r.tone}"><span class="tz-plan-n">${String(i + 1).padStart(2, '0')}</span>` +
+            `<span class="tz-plan-what">${escapeHtml(r.name)}</span>` +
+            `<span class="tz-plan-when">${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : escapeHtml(r.value)}</span>` +
+            `<span class="tz-plan-why">${escapeHtml(r.why)}</span></li>`,
+    );
+    writeHtml(
+        dom.tzPlan,
+        `<h2 id="tz-plan-title" class="tz-plan-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h2>` +
+            `<p class="tz-plan-lead">${escapeHtml(plan.head.lead)}</p>` +
+            `<ol class="tz-plan-rows">${rows.join('')}</ol><p class="tz-plan-note">${escapeHtml(plan.note)}</p>`,
+        'tz-plan',
+    );
 }
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTerazky(state, dom) {
     const m = terazModel(state, { devices: state.oznamenia.devices });
     renderHead(state, m, dom);
+    renderSay(m, dom);
+    renderPlan(m.plan, dom);
     renderChart(m, state.tzListOpen, dom);
-    renderCards(m, state.terazPage, dom);
 }
