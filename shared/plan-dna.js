@@ -3,7 +3,8 @@
 // spotrebičov, ktoré už v pláne sú). Spotrebič sa zmestí, keď počas ohrevu ostáva aspoň jeho
 // príkon; zvyšok programu si z rozpočtu len odpočíta svoj malý odber. Odber a voľný výkon
 // počíta tak isto ako odpovede karty Môžem? (shared/mozem.js). Čisté funkcie bez DOM; texty
-// skladá shared/messages-core.js. Návrh: docs/navrhy/plan-dna-rozpocet.html.
+// skladá shared/messages-core.js. Návrh: docs/navrhy/plan-dna-rozpocet.html; poradie, ktoré
+// zmestí na slnko najviac: docs/navrhy/plan-dna-poradie.html.
 
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { planDnaRowText, PLAN_DNA_NOTE } from './messages-core.js';
@@ -79,16 +80,34 @@ function elsewhere(item, device, ctx, from) {
 }
 
 /**
- * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku
- * v poradí PLAN_DNA, alebo kam inam. Vec, ktorá na niečo čaká (`after`), ide až po nej.
- * V slabý deň sa spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú.
+ * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku,
+ * alebo kam inam. Rozvrhuje v poradí PLAN_DNA.order, kým iné poradie domácich spotrebičov
+ * nedá zreteľne lepší plán (lepsi); auto ide vždy posledné. Riadky sú v poradí PLAN_DNA.order.
  * @param {DayCtx} ctx @param {string} currency @param {readonly string[]} devices @returns {PlanRow[]}
  */
 export function planDna(ctx, currency, devices) {
+    const list = chosen(devices);
+    const home = list.filter(({ item }) => item.runMin !== null);
+    const auto = list.filter(({ item }) => item.runMin === null);
+    let best = rozvrh(ctx, currency, list);
+    for (const order of poradia(home)) {
+        const cand = rozvrh(ctx, currency, [...order, ...auto]);
+        if (lepsi(cand, best)) best = cand;
+    }
+    return list.map(({ item }) => /** @type {PlanRow} */ (best.rows.find((r) => r.id === item.id)));
+}
+
+/**
+ * Rozvrh v danom poradí: vec, ktorá na niečo čaká (`after`), ide až po nej. V slabý deň sa
+ * spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú. Vráti riadky a to, čím
+ * sa plány porovnávajú: koľko vecí je na slnku, kWh domácich spotrebičov zo siete a km auta.
+ * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list
+ */
+function rozvrh(ctx, currency, list) {
     /** @type {Den} */ const day = { ctx, currency, free: Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m)) };
     /** @type {Record<string, number>} */ const ends = {};
     const from0 = Math.ceil(ctx.nowMin / STEP) * STEP;
-    return chosen(devices).map(({ item, device }) => {
+    const rows = list.map(({ item, device }) => {
         const after = PLAN_DNA.after[item.id] ?? null;
         const waits = after !== null && ends[after] !== undefined;
         const from = waits ? Math.max(from0, ends[after]) : from0;
@@ -96,6 +115,34 @@ export function planDna(ctx, currency, devices) {
         if (!row) return elsewhere(item, device, ctx, from);
         ends[item.id] = row.end;
         return { ...row, after: waits ? after : null };
+    });
+    // Rozpočet ide pod nulu len tam, kde odber programu prevýši výrobu - to je odber zo siete.
+    const gridKwh = day.free.reduce((sum, kw) => sum + Math.max(0, -kw), 0) / 60;
+    const sun = rows.filter((r) => r.kind === 'sun');
+    return { rows, sun: sun.length, gridKwh, km: sun.reduce((sum, r) => sum + (r.km ?? 0), 0) };
+}
+
+/**
+ * Je plán `a` zreteľne lepší než `b`? Viac vecí na slnku, inak aspoň o PLAN_DNA.betterKwh menej
+ * zo siete, inak aspoň o PLAN_DNA.betterKm viac km pre auto.
+ * @param {ReturnType<typeof rozvrh>} a @param {ReturnType<typeof rozvrh>} b
+ */
+function lepsi(a, b) {
+    if (a.sun !== b.sun) return a.sun > b.sun;
+    if (Math.abs(a.gridKwh - b.gridKwh) >= PLAN_DNA.betterKwh) return a.gridKwh < b.gridKwh;
+    return a.km - b.km >= PLAN_DNA.betterKm;
+}
+
+/**
+ * Všetky poradia vecí, v ktorých vec s `after` ide až po tej, na ktorú čaká.
+ * @template {{ item: MozemItem }} T @param {T[]} list @returns {T[][]}
+ */
+function poradia(list) {
+    if (list.length <= 1) return [list];
+    return list.flatMap((x, i) => {
+        const rest = list.filter((_, j) => j !== i);
+        const waits = rest.some(({ item }) => item.id === PLAN_DNA.after[x.item.id]);
+        return waits ? [] : poradia(rest).map((p) => [x, ...p]);
     });
 }
 

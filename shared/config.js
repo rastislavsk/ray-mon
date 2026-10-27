@@ -416,16 +416,21 @@ export const MOZEM_ITEMS = [
 ];
 
 /**
- * Plán dňa (karta Môžem?): poradie, v ktorom jadro rozvrhuje dnešné slnko medzi spotrebiče - každý
- * si z neho odpočíta svoj odber, ďalší dostane, čo ostane. `after`: spotrebič, na ktorý vec čaká (sušička suší, čo práčka
- * vyprala). `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide posledné a berie
- * silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
+ * Plán dňa (karta Môžem?): jadro rozvrhuje dnešné slnko medzi spotrebiče jeden po druhom - každý
+ * si z neho odpočíta svoj odber, ďalší dostane, čo ostane. `order`: predvolené poradie. Iné poradie
+ * domácich spotrebičov vyhrá, len keď zmestí na slnko viac vecí, ušetrí aspoň `betterKwh` zo siete
+ * alebo dá autu aspoň `betterKm` km navyše - inak sa riadky zbytočne nepreskupujú
+ * (docs/navrhy/plan-dna-poradie.html). `after`: spotrebič, na ktorý vec čaká (sušička suší, čo
+ * práčka vyprala). `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide vždy posledné
+ * a berie silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
  */
 export const PLAN_DNA = {
     order: ['pracka', 'susicka', 'umyvacka', 'bojler', 'auto'],
     after: /** @type {Record<string, string>} */ ({ susicka: 'pracka' }),
     devices: ['pracka', 'umyvacka', 'susicka', 'auto'],
     autoMinMin: 60,
+    betterKwh: 0.1,
+    betterKm: 20,
 };
 
 /**
