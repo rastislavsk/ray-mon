@@ -19,9 +19,11 @@ const byId = (/** @type {string} */ id) => {
 // Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
 export { PANELS };
 
-// Položky sekcie Appka v karte Nastavenie (natívne <details>): zatiaľ len zdieľanie.
-// Kedysi boli v karte Info - odtiaľ id v HTML `info-<položka>` aj názvy v kóde.
-export const INFO_ITEMS = /** @type {const} */ (['share']);
+// Rozbaľovacie položky karty Nastavenie (natívne <details>) a ich id v HTML. Rozbalená je najviac
+// jedna a je krokom navigácie - tlačidlo Späť ju zbalí. Zdieľanie bolo kedysi v karte Info -
+// odtiaľ id `info-share` aj názvy v kóde.
+const INFO_IDS = { plant: 'settings-plant', oznamenia: 'settings-oznamenia', share: 'info-share', clear: 'settings-clear' };
+export const INFO_ITEMS = /** @type {(keyof typeof INFO_IDS)[]} */ (Object.keys(INFO_IDS));
 
 function headerDom() {
     return {
@@ -229,7 +231,6 @@ function setupHomeDom() {
         setupHero: byId('setup-hero'),
         setupRows: byId('setup-rows'),
         setupWarnings: byId('setup-warnings'),
-        settingsPlant: /** @type {HTMLDetailsElement} */ (byId('settings-plant')),
         settingsPlantHint: byId('settings-plant-hint'),
         setupNote: byId('setup-note'),
         wizard: byId('wizard'),
@@ -351,7 +352,7 @@ function wizardTariffDom() {
 function zdielanieDom() {
     return {
         infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (
-            Object.fromEntries(INFO_ITEMS.map((i) => [i, byId(`info-${i}`)]))
+            Object.fromEntries(INFO_ITEMS.map((i) => [i, byId(INFO_IDS[i])]))
         ),
         shareOptions: byId('share-options'),
         shareWithSettings: input('share-with-settings'),

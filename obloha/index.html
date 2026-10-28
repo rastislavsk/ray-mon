@@ -311,9 +311,23 @@
                         <!-- Prístup k meraniu neplatí či čoskoro vyprší (shared/pristup.js): dôvod a tlačidlá. -->
                         <div id="ns-pristup" class="glass pristup hidden" role="status"></div>
                         <div id="ns-hero" class="glass plant"></div>
-                        <section class="glass set" aria-labelledby="ns-rows-title">
-                            <h3 id="ns-rows-title" class="glass-ttl">Elektráreň</h3>
-                            <div id="ns-rows"></div>
+                        <section class="glass set fold" aria-labelledby="ns-rows-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-elektraren"
+                                    class="fold-head"
+                                    data-ns-fold="elektraren"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-elektraren"
+                                >
+                                    <span class="fold-t"><span id="ns-rows-title" class="glass-ttl">Elektráreň</span></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-elektraren" class="ns-body hidden">
+                                <div id="ns-rows"></div>
+                            </div>
                         </section>
                         <div id="ns-warn" class="wz-stack"></div>
                         <p id="ns-note" class="sub note" role="status"></p>
@@ -321,49 +335,93 @@
                             Prevziať nastavenie z odkazu<span aria-hidden="true"> ›</span>
                         </button>
                         <!-- Vzhľad: voľby telefónu, nie elektrárne. Tón a živá obloha sú len novej appky (vzhlad-v1). -->
-                        <section class="glass set" aria-labelledby="ns-look-title">
-                            <h3 id="ns-look-title" class="glass-ttl">Vzhľad</h3>
-                            <button type="button" id="ns-live-sky" class="it" role="switch" aria-checked="true">
-                                <span><b>Živá obloha</b><small>vypni pre pokojnú tmavú</small></span>
-                                <i class="tg" aria-hidden="true"></i>
-                            </button>
-                            <div class="it pick">
-                                <span><b id="ns-voice-label">Tón hlášok</b><small>skús prepnúť a pozri kartu Dnes</small></span>
-                                <span id="ns-voice" class="minis" role="group" aria-labelledby="ns-voice-label">
-                                    <button type="button" class="mini" data-voice="drzy" aria-pressed="true">Drzý</button>
-                                    <button type="button" class="mini" data-voice="slusny" aria-pressed="false">Slušný</button>
-                                </span>
+                        <section class="glass set fold" aria-labelledby="ns-look-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-vzhlad"
+                                    class="fold-head"
+                                    data-ns-fold="vzhlad"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-vzhlad"
+                                >
+                                    <span class="fold-t"><span id="ns-look-title" class="glass-ttl">Vzhľad</span></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-vzhlad" class="ns-body hidden">
+                                <button type="button" id="ns-live-sky" class="it" role="switch" aria-checked="true">
+                                    <span><b>Živá obloha</b><small>vypni pre pokojnú tmavú</small></span>
+                                    <i class="tg" aria-hidden="true"></i>
+                                </button>
+                                <div class="it pick">
+                                    <span><b id="ns-voice-label">Tón hlášok</b><small>skús prepnúť a pozri kartu Dnes</small></span>
+                                    <span id="ns-voice" class="minis" role="group" aria-labelledby="ns-voice-label">
+                                        <button type="button" class="mini" data-voice="drzy" aria-pressed="true">Drzý</button>
+                                        <button type="button" class="mini" data-voice="slusny" aria-pressed="false">Slušný</button>
+                                    </span>
+                                </div>
                             </div>
                         </section>
                         <!-- Oznámenia: ranný plán dňa a spotrebiče doma - voľba telefónu, spoločná so súčasnou
                              appkou (oznamenia-v1). Texty, hodiny a spotrebiče skladá render. -->
-                        <section class="glass set" aria-labelledby="ns-oznam-title">
-                            <h3 id="ns-oznam-title" class="glass-ttl"></h3>
-                            <button type="button" id="ns-oznam" class="it" role="switch" aria-checked="false">
-                                <span><b id="ns-oznam-label"></b><small id="ns-oznam-small"></small></span>
-                                <i class="tg" aria-hidden="true"></i>
-                            </button>
-                            <p id="ns-oznam-stav" class="oznam-stav hidden" role="status"></p>
-                            <div class="it pick">
-                                <span><b id="ns-oznam-hour-label"></b><small id="ns-oznam-hour-small"></small></span>
-                                <span id="ns-oznam-hour" class="minis" role="group" aria-labelledby="ns-oznam-hour-label"></span>
+                        <section class="glass set fold" aria-labelledby="ns-oznam-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-oznamenia"
+                                    class="fold-head"
+                                    data-ns-fold="oznamenia"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-oznamenia"
+                                >
+                                    <span class="fold-t"><span id="ns-oznam-title" class="glass-ttl"></span></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-oznamenia" class="ns-body hidden">
+                                <button type="button" id="ns-oznam" class="it" role="switch" aria-checked="false">
+                                    <span><b id="ns-oznam-label"></b><small id="ns-oznam-small"></small></span>
+                                    <i class="tg" aria-hidden="true"></i>
+                                </button>
+                                <p id="ns-oznam-stav" class="oznam-stav hidden" role="status"></p>
+                                <div class="it pick">
+                                    <span><b id="ns-oznam-hour-label"></b><small id="ns-oznam-hour-small"></small></span>
+                                    <span id="ns-oznam-hour" class="minis" role="group" aria-labelledby="ns-oznam-hour-label"></span>
+                                </div>
+                                <div class="it pick oznam-dev">
+                                    <span><b id="ns-oznam-dev-label"></b><small id="ns-oznam-dev-small"></small></span>
+                                    <span id="ns-oznam-dev" class="minis" role="group" aria-labelledby="ns-oznam-dev-label"></span>
+                                </div>
+                                <p id="ns-oznam-note" class="oznam-note"></p>
                             </div>
-                            <div class="it pick oznam-dev">
-                                <span><b id="ns-oznam-dev-label"></b><small id="ns-oznam-dev-small"></small></span>
-                                <span id="ns-oznam-dev" class="minis" role="group" aria-labelledby="ns-oznam-dev-label"></span>
-                            </div>
-                            <p id="ns-oznam-note" class="oznam-note"></p>
                         </section>
-                        <section class="glass set" aria-labelledby="ns-app-title">
-                            <h3 id="ns-app-title" class="glass-ttl">Appka</h3>
-                            <button type="button" id="ns-share" class="it" aria-haspopup="dialog">
-                                <span><b>Zdieľať appku</b><small>QR kód, WhatsApp, aj s mojím nastavením</small></span>
-                                <span aria-hidden="true">›</span>
-                            </button>
-                            <button type="button" id="ns-reset" class="it" aria-haspopup="dialog">
-                                <span><b>Nastaviť celé znova</b><small>vymaže všetko, čo appka uložila v tomto prehliadači</small></span>
-                                <span aria-hidden="true">›</span>
-                            </button>
+                        <section class="glass set fold" aria-labelledby="ns-app-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-appka"
+                                    class="fold-head"
+                                    data-ns-fold="appka"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-appka"
+                                >
+                                    <span class="fold-t"><span id="ns-app-title" class="glass-ttl">Appka</span></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-appka" class="ns-body hidden">
+                                <button type="button" id="ns-share" class="it" aria-haspopup="dialog">
+                                    <span><b>Zdieľať appku</b><small>QR kód, WhatsApp, aj s mojím nastavením</small></span>
+                                    <span aria-hidden="true">›</span>
+                                </button>
+                                <button type="button" id="ns-reset" class="it" aria-haspopup="dialog">
+                                    <span
+                                        ><b>Nastaviť celé znova</b><small>vymaže všetko, čo appka uložila v tomto prehliadači</small></span
+                                    >
+                                    <span aria-hidden="true">›</span>
+                                </button>
+                            </div>
                         </section>
                     </div>
 

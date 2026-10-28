@@ -1,8 +1,8 @@
 // Poslucháče karty Nastavenie novej appky. Sprievodcu (aj riadky prehľadu, ktoré otvárajú jeho
 // kroky) obsluhuje web/setup-wiring.js - ten istý kód ako v súčasnej appke. Tu je len to, čím sa
 // nová appka líši: krok späť cez jej históriu, karta po odložení panelov, Escape a ponuka
-// prevziať nastavenie z otvoreného odkazu. A sekcie Vzhľad a Appka: živá obloha, tón hlášok,
-// Zdieľať appku a Nastaviť celé znova.
+// prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Vzhľad a Appka: živá obloha,
+// tón hlášok, Zdieľať appku a Nastaviť celé znova.
 
 import { VOICES } from '../../shared/config.js';
 import { backAction } from '../../shared/setup-flow.js';
@@ -11,7 +11,7 @@ import { prepniSpotrebic } from '../../shared/oznamenia.js';
 import { nastavOznamenia, vypniOznamenia } from '../../web/oznamenia.js';
 import { clearStored, saveLook } from '../../web/storage.js';
 import { stepBack } from './nav-back.js';
-import { panelChange } from './state.js';
+import { NS_FOLDS, panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -41,9 +41,26 @@ export function initNastavenie(store, dom, refresh) {
         applySettings(store, s.incoming, refresh, { incoming: null, ...(s.known === 'nic' ? { setupStep: null } : {}) });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null }));
+    initFolds(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
+}
+
+/**
+ * Zbaliteľné sekcie (Elektráreň, Vzhľad, Oznámenia, Appka). Rozbalenie je krok navigácie, zbalenie
+ * nadpisom ten istý krok ako tlačidlo Späť - inak by sekcia ostala v histórii a Späť by ju znovu rozbalilo.
+ * @param {Store} store @param {Dom} dom
+ */
+function initFolds(store, dom) {
+    for (const f of dom.nsFolds) {
+        const key = NS_FOLDS.find((k) => k === f.key);
+        if (!key) continue;
+        f.head.addEventListener('click', () => {
+            if (store.get().nsOpen === key) stepBack(store, { nsOpen: null });
+            else store.setState({ nsOpen: key });
+        });
+    }
 }
 
 /** Nová appka je v obloha/, má tam aj vlastný service worker (obloha/sw.js). */

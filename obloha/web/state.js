@@ -17,7 +17,8 @@ import { setupInit } from '../../shared/setup-flow.js';
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
  * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
- * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
+ * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova), `nsOpen` rozbalená sekcia
+ * karty Nastavenie (NS_FOLDS; pri štarte sú všetky zbalené ako položky v súčasnej appke) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
  * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo. `stavTip` je
@@ -26,6 +27,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
+ * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('../../web/refresh.js').RefreshState & import('../../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
  *   panelDir: 1 | -1,
@@ -44,6 +46,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   voice: import('../../shared/messages.js').Voice,
  *   liveSky: boolean,
  *   appSheet: AppSheet | null,
+ *   nsOpen: NsFold | null,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
  *   parts: Partial<Record<Part, PartState>>,
@@ -60,14 +63,17 @@ import { setupInit } from '../../shared/setup-flow.js';
  * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
- * Appka (`sheet`) rovnako - Späť ho zavrie. Otvorený Plán dňa na karte Teraz (`plan`) a zoznam pod
+ * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený Plán dňa na karte Teraz (`plan`) a zoznam pod
  * jej grafom (`legend`) tiež, Späť ich zbalí. `dash` hovorí, že krok patrí prehľadu so stĺpcami
  * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
  * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
- *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, plan: boolean,
- *   legend: boolean, dash?: true }} NavStep
+ *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
+ *   plan: boolean, legend: boolean, dash?: true }} NavStep
  */
+
+/** Zbaliteľné sekcie karty Nastavenie, v poradí na karte. Rozbalená je najviac jedna. */
+export const NS_FOLDS = /** @type {const} */ (['elektraren', 'vzhlad', 'oznamenia', 'appka']);
 
 /**
  * @param {Date} now
@@ -136,6 +142,7 @@ export function initialState(
         voice: look.voice,
         liveSky: look.liveSky,
         appSheet: null,
+        nsOpen: null,
         shareSettings: false,
         shareKiosk: false,
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
@@ -165,6 +172,7 @@ export function panelChange(from, to) {
         tzListOpen: false,
         weekDetail: /** @type {WeekDetail | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
+        nsOpen: /** @type {NsFold | null} */ (null),
         stavTip: false,
     };
 }
@@ -239,6 +247,7 @@ export function navStep(state) {
         setup: state.setupStep,
         roof: state.setupRoof,
         sheet: state.appSheet,
+        fold: state.nsOpen,
         plan: state.tzPlanOpen,
         legend: state.tzListOpen,
         ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
@@ -257,6 +266,7 @@ export function sameNavStep(a, b) {
         a.setup === b.setup &&
         a.roof === b.roof &&
         a.sheet === b.sheet &&
+        a.fold === b.fold &&
         a.plan === b.plan &&
         a.legend === b.legend
     );
@@ -274,6 +284,13 @@ const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (de
  * @param {Panel} panel @param {unknown} sheet @returns {AppSheet | null}
  */
 const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
+
+/**
+ * Rozbalená sekcia karty Nastavenie z položky histórie. Patrí len tej karte; položka zo skoršej
+ * verzie ju nemá - všetko je zbalené.
+ * @param {Panel} panel @param {unknown} fold @returns {NsFold | null}
+ */
+const nsFoldOf = (panel, fold) => (panel === 'nastavenie' && NS_FOLDS.find((f) => f === fold)) || null;
 
 /**
  * Otvorený Plán dňa či zoznam pod grafom z položky histórie. Patria len karte Teraz (v prehľade
@@ -310,9 +327,9 @@ export function navStepOf(raw) {
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
     // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami; položka, ktorá ho ešte nesie, vráti len kartu.
-    const { panel, preview, detail, setup, roof, sheet, plan, legend, dash } =
+    const { panel, preview, detail, setup, roof, sheet, fold, plan, legend, dash } =
         /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown, plan?: unknown, legend?: unknown, dash?: unknown }} */ (raw);
+         *   sheet?: unknown, fold?: unknown, plan?: unknown, legend?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
@@ -326,6 +343,7 @@ export function navStepOf(raw) {
         detail: weekDetailOf(p, inDash, detail),
         ...place,
         sheet: appSheetOf(p, sheet),
+        fold: nsFoldOf(p, fold),
         plan: terazOpenOf(p, inDash, plan),
         legend: terazOpenOf(p, inDash, legend),
         ...d,
@@ -356,6 +374,7 @@ export function navChange(state, step) {
         setupStep: step.setup,
         setupRoof: step.roof,
         appSheet: step.sheet,
+        nsOpen: step.fold,
         tzPlanOpen: step.plan,
         tzListOpen: step.legend,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),

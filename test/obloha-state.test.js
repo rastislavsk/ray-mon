@@ -37,6 +37,7 @@ const step = (patch = {}) => ({
     setup: null,
     roof: 0,
     sheet: null,
+    fold: null,
     plan: false,
     legend: false,
     ...patch,
@@ -154,6 +155,25 @@ test('navChange: návrat na krok vráti kartu aj s tým, čo bolo otvorené', ()
     // Krok uprostred sprievodcu úpravu neukončí.
     assert.ok(!('setupReturn' in navChange(stateWith(), step({ panel: 'nastavenie', setup: 'lokalita' }))));
     assert.equal(navChange(stateWith(), step({ panel: 'nastavenie', setup: 'suhrn' })).setupReturn, null);
+});
+
+test('sekcie Nastavenia: pri štarte zbalené, rozbalená je krok navigácie, s kartou sa zbalí', () => {
+    assert.equal(stateWith().nsOpen, null);
+    const open = stateWith({ panel: 'nastavenie', nsOpen: 'vzhlad' });
+    assert.equal(navStep(open).fold, 'vzhlad');
+    assert.deepEqual(navStepOf(navStep(open)), navStep(open));
+    // Rozbalenie je nový krok - Späť sekciu zbalí, iná sekcia je tiež nový krok.
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, nsOpen: null })));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, nsOpen: 'appka' })));
+    // Sekcia patrí len karte Nastavenie; neznáma sa zahodí, položka zo skoršej verzie ju nemá.
+    assert.equal(field({ panel: 'mozem', fold: 'vzhlad' }, 'fold'), null);
+    assert.equal(field({ panel: 'nastavenie', fold: 'hacker' }, 'fold'), null);
+    assert.equal(field({ panel: 'nastavenie' }, 'fold'), null);
+    // Späť na krok so zbalenou sekciou ju zbalí, na krok s rozbalenou ju rozbalí.
+    assert.equal(navChange(open, step({ panel: 'nastavenie' })).nsOpen, null);
+    assert.equal(navChange(stateWith({ panel: 'nastavenie' }), step({ panel: 'nastavenie', fold: 'oznamenia' })).nsOpen, 'oznamenia');
+    // Iná karta sekciu zbalí.
+    assert.equal(panelChange('nastavenie', 'mozem').nsOpen, null);
 });
 
 test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou sa zbalí', () => {

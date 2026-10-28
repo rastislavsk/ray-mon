@@ -79,7 +79,9 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je
   v karte rozbaľovacia položka **Elektráreň** s prehľadom: karta s menom, celkovým výkonom,
   zostavou a kompasom plôch a pod ňou riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo
-  Späť na telefóne vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
+  Späť na telefóne vracia v sprievodcovi o obrazovku a rozbalenú položku Nastavenia zbalí (v oboch
+  appkách; v Živej oblohe sa rovnako zbaľujú sekcie Elektráreň, Vzhľad, Oznámenia a Appka).
+  Rozbalená je najviac jedna položka. Nastavenie sa ukladá len v prehliadači.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Appka sa otvára vždy
   na karte Terazky. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
