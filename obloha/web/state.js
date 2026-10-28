@@ -10,7 +10,8 @@ import { setupInit } from '../../shared/setup-flow.js';
 
 /**
  * Stav. `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
- * `terazPage` stránka pásu odporúčaní na karte Dnes, `tzListOpen` otvorený zoznam pod grafom (na začiatku zatvorený),
+ * `terazPage` stránka pásu odporúčaní na karte Dnes, `tzListOpen` otvorený zoznam pod grafom - legenda
+ * časovej osi (na začiatku zatvorený),
  * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
@@ -59,12 +60,13 @@ import { setupInit } from '../../shared/setup-flow.js';
  * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
- * Appka (`sheet`) rovnako - Späť ho zavrie. Otvorený Plán dňa na karte Teraz (`plan`) tiež, Späť ho zbalí. `dash` hovorí, že krok patrí prehľadu so stĺpcami
+ * Appka (`sheet`) rovnako - Späť ho zavrie. Otvorený Plán dňa na karte Teraz (`plan`) a zoznam pod
+ * jej grafom (`legend`) tiež, Späť ich zbalí. `dash` hovorí, že krok patrí prehľadu so stĺpcami
  * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
  * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
  *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, plan: boolean,
- *   dash?: true }} NavStep
+ *   legend: boolean, dash?: true }} NavStep
  */
 
 /**
@@ -150,8 +152,8 @@ export function initialState(
 }
 
 /**
- * Zmena karty aj so smerom podľa poradia v navigácii. Náhľad a otvorený Plán dňa patria
- * karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
+ * Zmena karty aj so smerom podľa poradia v navigácii. Náhľad, otvorený Plán dňa a zoznam pod
+ * grafom patria karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
@@ -160,6 +162,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         terazPreview: /** @type {number | null} */ (null),
         tzPlanOpen: false,
+        tzListOpen: false,
         weekDetail: /** @type {WeekDetail | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
         stavTip: false,
@@ -237,6 +240,7 @@ export function navStep(state) {
         roof: state.setupRoof,
         sheet: state.appSheet,
         plan: state.tzPlanOpen,
+        legend: state.tzListOpen,
         ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
     };
 }
@@ -253,7 +257,8 @@ export function sameNavStep(a, b) {
         a.setup === b.setup &&
         a.roof === b.roof &&
         a.sheet === b.sheet &&
-        a.plan === b.plan
+        a.plan === b.plan &&
+        a.legend === b.legend
     );
 }
 
@@ -271,11 +276,11 @@ const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (de
 const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
 
 /**
- * Otvorený Plán dňa z položky histórie. Patrí len karte Teraz (v prehľade ktorémukoľvek stĺpcu - Teraz
- * je vidieť vždy); položka zo skoršej verzie ho nemá, plán je zbalený.
- * @param {Panel} panel @param {boolean} dash @param {unknown} plan
+ * Otvorený Plán dňa či zoznam pod grafom z položky histórie. Patria len karte Teraz (v prehľade
+ * ktorémukoľvek stĺpcu - Teraz je vidieť vždy); položka zo skoršej verzie ich nemá, sú zbalené.
+ * @param {Panel} panel @param {boolean} dash @param {unknown} open
  */
-const planOpenOf = (panel, dash, plan) => (panel === 'terazky' || dash) && plan === true;
+const terazOpenOf = (panel, dash, open) => (panel === 'terazky' || dash) && open === true;
 
 /**
  * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
@@ -305,9 +310,9 @@ export function navStepOf(raw) {
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
     // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami; položka, ktorá ho ešte nesie, vráti len kartu.
-    const { panel, preview, detail, setup, roof, sheet, plan, dash } =
+    const { panel, preview, detail, setup, roof, sheet, plan, legend, dash } =
         /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown, plan?: unknown, dash?: unknown }} */ (raw);
+         *   sheet?: unknown, plan?: unknown, legend?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
@@ -321,7 +326,8 @@ export function navStepOf(raw) {
         detail: weekDetailOf(p, inDash, detail),
         ...place,
         sheet: appSheetOf(p, sheet),
-        plan: planOpenOf(p, inDash, plan),
+        plan: terazOpenOf(p, inDash, plan),
+        legend: terazOpenOf(p, inDash, legend),
         ...d,
     };
 }
@@ -333,7 +339,7 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
 /**
- * Návrat na krok z histórie (tlačidlo Späť): karta, náhľad, detail aj Plán dňa tak, ako boli.
+ * Návrat na krok z histórie (tlačidlo Späť): karta, náhľad, detail, Plán dňa aj zoznam pod grafom tak, ako boli.
  * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
  * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
  * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
@@ -351,6 +357,7 @@ export function navChange(state, step) {
         setupRoof: step.roof,
         appSheet: step.sheet,
         tzPlanOpen: step.plan,
+        tzListOpen: step.legend,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }

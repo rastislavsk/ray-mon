@@ -31,9 +31,12 @@ export function initTeraz(store, dom, refresh) {
         // Tlačidlo po návrate zmizne; fokus ostane na grafe, z ktorého sa dá pokračovať.
         dom.tzChart.focus();
     });
-    dom.tzListBtn.addEventListener('click', () => store.setState({ tzListOpen: !store.get().tzListOpen }));
-    // Otvorený Plán dňa je krok navigácie: Späť ho zbalí a zbalenie hlavičkou ide tou istou cestou.
-    // Otvorenie robí z Teraz aktívny stĺpec prehľadu, ako náhľad.
+    // Otvorený Plán dňa aj zoznam pod grafom sú krok navigácie: Späť ich zbalí a zbalenie hlavičkou
+    // ide tou istou cestou. Otvorenie robí z Teraz aktívny stĺpec prehľadu, ako náhľad.
+    dom.tzListBtn.addEventListener('click', () => {
+        if (store.get().tzListOpen) stepBack(store, { tzListOpen: false });
+        else store.setState({ tzListOpen: true, panel: 'terazky' });
+    });
     dom.tzPlanBtn.addEventListener('click', () => {
         if (store.get().tzPlanOpen) stepBack(store, { tzPlanOpen: false });
         else store.setState({ tzPlanOpen: true, panel: 'terazky' });
