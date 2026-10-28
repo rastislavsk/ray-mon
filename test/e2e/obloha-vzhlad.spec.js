@@ -1,5 +1,5 @@
-// E2E karty Nastavenie novej appky „Živá obloha“, krok 6b: Vzhľad (živá obloha, tón hlášok, úvodná
-// karta) a Appka (Zdieľať appku, Nastaviť celé znova). Očakávané texty počítajú tie isté funkcie
+// E2E karty Nastavenie novej appky „Živá obloha“, krok 6b: Vzhľad (živá obloha, tón hlášok)
+// a Appka (Zdieľať appku, Nastaviť celé znova). Očakávané texty počítajú tie isté funkcie
 // ako appka (shared/messages.js, mozemSkyModel), takže test odhalí rozdiel medzi modelom a stránkou.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -11,7 +11,6 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     SKY,
-    START_STORAGE_KEY,
     STORAGE_KEYS,
     TARIFF,
     VYMAZANE_STORAGE_KEY,
@@ -208,32 +207,17 @@ test.describe('živá obloha', () => {
 });
 
 test.describe('úvodná karta', () => {
-    test('voľba v novej appke platí v súčasnej a naopak', async ({ page }) => {
+    test('obe appky sa otvárajú na Teraz(kách), voľba v Nastavení nie je a stará uložená sa zmaže', async ({ page }) => {
+        await page.addInitScript(() => localStorage.setItem('prva-karta-v1', 'mozem'));
         const errors = await openObloha(page);
-        await karta(page, 'nastavenie');
-        const dnes = page.locator('#ns-start [data-start="mozem"]');
-        await expect(page.locator('#ns-start [data-start="terazky"]')).toHaveAttribute('aria-pressed', 'true');
-        await dnes.click();
-        await expect(dnes).toHaveAttribute('aria-pressed', 'true');
-        expect(await ulozene(page, START_STORAGE_KEY)).toBe('mozem');
-
-        // Súčasná appka sa otvorí na Dnes.
-        await otvorSucasnuAppku(page);
-        await expect(page.locator('#panel-mozem')).toBeVisible();
-        await expect(page.locator('#panel-terazky')).toBeHidden();
-        // V nej späť na Terazky…
-        await page.locator('#nav-nastavenie').click();
-        const polozka = page.locator('#settings-start');
-        if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
-        await page.locator('[data-start-panel="terazky"]').click();
-        await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
-
-        // …a nová appka sa otvorí na Teraz s tou istou voľbou v Nastavení.
-        await page.goto('/obloha/');
-        await appReady(page);
         await expect(page.locator('#panel-terazky')).toBeVisible();
+        expect(await ulozene(page, 'prva-karta-v1')).toBeNull();
         await karta(page, 'nastavenie');
-        await expect(page.locator('#ns-start [data-start="terazky"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#ns-start, [data-start]')).toHaveCount(0);
+
+        await otvorSucasnuAppku(page);
+        await expect(page.locator('#panel-terazky')).toBeVisible();
+        await expect(page.locator('#panel-mozem')).toBeHidden();
         expect(errors).toEqual([]);
     });
 });
@@ -329,7 +313,6 @@ test.describe('Nastaviť celé znova', () => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
-        await page.locator('#ns-start [data-start="mozem"]').click();
         const predtym = await page.evaluate(() => JSON.stringify(localStorage));
 
         await page.locator('#ns-reset').click();

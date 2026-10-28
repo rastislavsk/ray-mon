@@ -15,8 +15,6 @@ import {
     RANNA_TRIEDA_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
-    START_PANELS,
-    START_STORAGE_KEY,
     STORAGE_KEYS,
     SUCTY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
@@ -29,16 +27,7 @@ import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
 import { parseSucty } from '../shared/sucty.js';
-import {
-    DEFAULT_LOOK,
-    lookToStored,
-    parseLook,
-    parseStartPanel,
-    parseStoredSettings,
-    parseStoredSite,
-    startFromLink,
-    toUser,
-} from '../shared/settings.js';
+import { DEFAULT_LOOK, lookToStored, parseLook, parseStoredSettings, parseStoredSite, toUser } from '../shared/settings.js';
 
 /** Hodnota z localStorage; keď nie je, alebo úložisko chýba či hádže, null. @param {string} key */
 function read(key) {
@@ -105,26 +94,6 @@ export function loadSite() {
 /** @param {import('../shared/config.js').Site} site @returns {boolean} podarilo sa? */
 export function saveSite(site) {
     return write(SITE_STORAGE_KEY, JSON.stringify(site));
-}
-
-/**
- * Karta, na ktorej sa appka na tomto telefóne otvára. Uložená voľba vyhrá; bez nej platí
- * karta z odkazu (`&prva=…`) a tá sa rovno uloží - kto dostal odkaz pre rodinu, nemusí nič
- * nastavovať. Odkaz tak vlastnú voľbu nikdy neprepíše.
- * @param {string} hash časť adresy za mriežkou @returns {import('../shared/settings.js').StartPanel}
- */
-export function loadStartPanel(hash) {
-    // Bez úložiska platí odkaz alebo predvolená karta.
-    const stored = parseStartPanel(read(START_STORAGE_KEY));
-    if (stored) return stored;
-    const linked = startFromLink(hash);
-    if (linked) saveStartPanel(linked);
-    return linked || START_PANELS[0];
-}
-
-/** @param {import('../shared/settings.js').StartPanel} panel @returns {boolean} podarilo sa? */
-export function saveStartPanel(panel) {
-    return write(START_STORAGE_KEY, panel);
 }
 
 /** @param {import('../shared/settings.js').Settings} settings @returns {boolean} podarilo sa? */

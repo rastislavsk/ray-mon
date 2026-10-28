@@ -13,7 +13,6 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     SKY,
-    START_STORAGE_KEY,
     TARIFF,
     WORKER_PV_URL,
 } from '../../shared/config.js';
@@ -311,22 +310,14 @@ test('nastavenie uložené súčasnou appkou nová appka vidí a nič v ňom nem
     const chata = { ...OWNER, site: { ...SITE, name: 'Chata pod Zoborom' } };
     const errors = await pripravSiet(page, { settings: chata });
     await page.clock.setFixedTime(FIXED_NOW);
-    // Súčasná appka: úvodnú kartu Terazky si človek vyberie v jej Nastavení.
     await otvorSucasnuAppku(page);
-    await page.locator('#nav-nastavenie').click();
-    const polozka = page.locator('#settings-start');
-    if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
-    await page.locator('[data-start-panel="terazky"]').click();
-    await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
     const ulozene = await page.evaluate(() => JSON.stringify(localStorage));
 
     await page.goto('/obloha/');
     await appReady(page);
     await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d$/);
     await expect(page.locator('#hdr-place')).toHaveText('Chata pod Zoborom');
-    // Uložená karta Terazky sa v novej appke volá Teraz.
     await ocakavajKartu(page, 'terazky');
-    expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('terazky');
     expect(await page.evaluate(() => JSON.stringify(localStorage)), 'nová appka uložené nastavenie neprepisuje').toBe(ulozene);
     expect(errors).toEqual([]);
 });

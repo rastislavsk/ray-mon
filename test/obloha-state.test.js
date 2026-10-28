@@ -25,8 +25,8 @@ const NOW = new Date('2026-09-05T11:00:00Z');
 
 /** Stav s typickou strechou v SITE, prípadne so zmenami. @param {Partial<AppState>} [patch] @returns {AppState} */
 function stateWith(patch = {}) {
-    const s = initialState(NOW, { saved: null, site: SITE, startPanel: 'mozem', dayLog: {}, online: true });
-    return { ...s, ...patch };
+    const s = initialState(NOW, { saved: null, site: SITE, dayLog: {}, online: true });
+    return { ...s, panel: 'mozem', ...patch };
 }
 
 /** Úplný krok, ako ho appka zapisuje do histórie. @param {Partial<import('../obloha/web/state.js').NavStep>} [patch] */
@@ -42,7 +42,7 @@ const step = (patch = {}) => ({
 });
 
 test('initialState: bez nastavenia aj polohy appka nič nepozná, s polohou počíta s typickou strechou', () => {
-    const none = initialState(NOW, { saved: null, site: null, startPanel: 'terazky', dayLog: {}, online: false });
+    const none = initialState(NOW, { saved: null, site: null, dayLog: {}, online: false });
     assert.equal(none.known, 'nic');
     assert.equal(none.panel, 'terazky');
     assert.equal(none.layout, 'narrow');

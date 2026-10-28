@@ -10,11 +10,10 @@ export * from './storage.js';
 
 /**
  * Časť stavu, ktorú adresa nesie: uložené nastavenie, či ho appka pozná, nastavenie z odkazu
- * čakajúce na rozhodnutie a prvá karta tohto telefónu.
+ * čakajúce na rozhodnutie.
  * @typedef {Pick<import('../shared/setup-flow.js').SetupState, 'site' | 'plant' | 'tariff' | 'zdroj' | 'known'> & {
  *   incoming: import('../shared/settings.js').Settings | null,
  *   linkError: import('../shared/settings.js').LinkError | null,
- *   startPanel: import('../shared/settings.js').StartPanel,
  * }} MirrorState
  */
 
@@ -34,8 +33,7 @@ export function initUrlMirror(store) {
     /** @param {MirrorState} s */
     const mirror = (s) => {
         if (s.incoming || s.linkError) return;
-        // Aj prvá karta: appka pridaná na plochu iPhonu si ju inak z Safari neprenesie.
-        const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, false, s.startPanel, true);
+        const hash = shareHash(s.known === 'elektraren' ? savedSettings(s) : null, false, true);
         if (location.hash !== hash) history.replaceState(history.state, '', location.pathname + location.search + hash);
         const adresa = location.pathname + hash;
         if (adresa !== zapisana) saveVlastnaAdresa((zapisana = adresa));

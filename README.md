@@ -80,9 +80,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   v karte rozbaľovacia položka **Elektráreň** s prehľadom: karta s menom, celkovým výkonom,
   zostavou a kompasom plôch a pod ňou riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo
   Späť na telefóne vracia v sprievodcovi o obrazovku. Nastavenie sa ukladá len v prehliadači.
-  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Položka **Úvodná karta**
-  určuje, na ktorej karte sa appka otvára (Terazky alebo Dnes). Je to voľba telefónu, nie
-  elektrárne, a ukladá sa zvlášť. **Zdieľať appku**: QR kód,
+  Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Appka sa otvára vždy
+  na karte Terazky. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj so živým meraním. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.

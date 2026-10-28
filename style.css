@@ -4068,16 +4068,6 @@ b {
     }
 }
 
-/* Karta, na ktorej sa appka na tomto telefóne otvára (položka „Úvodná karta“ v Nastavení). */
-.start-pick {
-    display: grid;
-    gap: var(--sp-2);
-}
-.start-choices {
-    display: grid;
-    gap: var(--sp-2);
-}
-
 /* Vymazanie údajov (položka „Vymazať údaje“ v Nastavení). Tlačidlo len obrysom: je nevratné,
    nemá lákať ako hlavná akcia. */
 .clear-data {

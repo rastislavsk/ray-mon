@@ -117,20 +117,11 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 /**
  * Karty v poradí navigácie - kódové názvy, ktoré drží HTML id, CSS selektory aj stav. Popisky
  * sú v HTML a nemusia sa s nimi zhodovať (terazky je v novej appke „Teraz“, mozem je v oboch
- * „Dnes“ - kedysi Môžem?; meno ostalo kvôli uloženej úvodnej karte a odkazom). Rovnaké v oboch
- * appkách, takže uložená úvodná karta (START_PANELS) platí v oboch.
+ * „Dnes“ - kedysi Môžem?). Rovnaké v oboch appkách. Prvá v zozname je karta, na ktorej sa obe
+ * appky vždy otvárajú - Teraz(ky) s Plánom dňa odpovedajú, čo a kedy zapnúť
+ * (docs/navrhy/dnes-a-teraz.html).
  */
 export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
-
-/**
- * Karta, na ktorej sa appka otvára. Je to voľba telefónu, nie elektrárne. Ukladá sa zvlášť od
- * nastavenia a do odkazu ide ako `&prva=…` za mriežkou. Prvá v zozname je predvolená - Teraz(ky)
- * s Plánom dňa odpovedajú, čo a kedy zapnúť (docs/navrhy/dnes-a-teraz.html). Predvolená karta
- * sa do odkazu nepíše.
- */
-export const START_PANELS = /** @type {const} */ (['terazky', 'mozem']);
-export const START_STORAGE_KEY = 'prva-karta-v1';
-export const START_HASH_KEY = 'prva';
 
 /**
  * Šírky okna (px), od ktorých nová appka mení rozloženie. Pod `medium` je telefón aj tablet na
@@ -463,9 +454,10 @@ export const MOZEM_GROUPS = [
 /**
  * Kľúče, ktoré appka už nepoužíva a pri štarte ich zmaže. Mená sa nesmú použiť znova na niečo
  * iné - v starších telefónoch pod nimi môžu ležať staré dáta. `spustenia-v1` boli zápisy
- * „Pustil/a som“ z karty Môžem?.
+ * „Pustil/a som“ z karty Môžem?, `prva-karta-v1` voľba úvodnej karty - appka sa dnes otvára vždy
+ * na Teraz(kách).
  */
-export const OLD_STORAGE_KEYS = ['spustenia-v1'];
+export const OLD_STORAGE_KEYS = ['spustenia-v1', 'prva-karta-v1'];
 
 /**
  * Denník výroby po dňoch pre súhrn na zdieľanie. Kiosk posiela len súčty (dnes, mesiac, rok),
@@ -553,7 +545,6 @@ export const OZNAMENIA_STORAGE_KEY = 'oznamenia-v1';
 export const STORAGE_KEYS = [
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
-    START_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     WEATHER_STORAGE_KEY,

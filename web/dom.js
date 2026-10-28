@@ -354,7 +354,6 @@ function zdielanieDom() {
         shareWithSettings: input('share-with-settings'),
         shareWithKiosk: input('share-with-kiosk'),
         shareKioskRow: byId('share-kiosk-row'),
-        startPick: byId('start-pick'),
         oznamTitle: byId('oznam-title'),
         oznamHint: byId('oznam-hint'),
         oznamBody: byId('oznam-body'),

@@ -4,7 +4,6 @@
 import { chartTooltipModel } from '../shared/chart-model.js';
 import { SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
-import { parseStartPanel } from '../shared/settings.js';
 import { initDayPager } from './day-pager.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
@@ -12,7 +11,7 @@ import { render } from './render/index.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
-import { clearStored, saveStartPanel } from './settings-store.js';
+import { clearStored } from './settings-store.js';
 import { initOznamenia } from './oznamenia-interactions.js';
 import { vypniOznamenia } from './oznamenia.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
@@ -374,21 +373,12 @@ function initSharing(store, dom, refresh) {
     dom.importAccept.addEventListener('click', () => {
         const s = store.get();
         if (!s.incoming) return;
-        // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na svojej
-        // prvej karte (odkaz pre rodinu ju môže určiť).
+        // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na prvej karte.
         /** @type {Partial<import('./state.js').AppState>} */
-        const away = s.known === 'nic' ? { ...panelChange(s.panel, s.startPanel), setupStep: null } : {};
+        const away = s.known === 'nic' ? { ...panelChange(s.panel, PANELS[0]), setupStep: null } : {};
         applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null, importNote: '' }));
-    // Voľby prvej karty skladá render (render/zdielat.js), preto poslucháč sedí na karte.
-    dom.setup.addEventListener('click', (e) => {
-        const btn = /** @type {HTMLElement} */ (e.target).closest('[data-start-panel]');
-        const panel = btn instanceof HTMLElement ? parseStartPanel(btn.dataset.startPanel) : null;
-        if (!panel) return;
-        saveStartPanel(panel);
-        store.setState({ startPanel: panel });
-    });
 }
 
 /**

@@ -180,10 +180,10 @@ ten istý súbor:
 
 - **`shared/`** celé. Zmena výpočtu sa prejaví v oboch appkách naraz. Zoznam kariet `PANELS` je
   v `config.js`, kódové názvy sú v oboch rovnaké (karta Terazky sa v novej volá Teraz, kód
-  ostáva `terazky`), takže uložená úvodná karta platí v oboch bez prevodu.
+  ostáva `terazky`). Obe appky sa otvárajú vždy na prvej z nich, `PANELS[0]`.
 - **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
-  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `prva-karta-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
+  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
   ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
   z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
   (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
@@ -484,8 +484,8 @@ dát vo `web/refresh.js`); keď sa deň oproti nej zmení, slovo to povie. Farba
 appky ide podľa triedy dňa, stav `go`/`wait`/… už len pre vetu, štítky a pás dňa. Pod slovom je, čo dá strecha za celý deň
 (`day`: `dnesDay` v `shared/mozem.js`, prepočty mobilov, km a CO2eq tie isté ako Štatistika),
 pod tým pás odporúčaní (`dnesCards` v `shared/teraz.js`: dnešok a kedy bude lepšie). Dlaždice
-„Čo môžem“, Plán dňa a panel veci z nej zmizli - kódové meno `mozem` ostalo kvôli uloženej
-úvodnej karte a odkazom. Pôvodne odpovedala jedným slovom (návrh C v
+„Čo môžem“, Plán dňa a panel veci z nej zmizli - kódové meno `mozem` ostalo z čias,
+keď sa ukladala úvodná karta. Pôvodne odpovedala jedným slovom (návrh C v
 `docs/navrhy/karta-mozem.html`).
 
 Počíta `shared/mozem.js` z plánu dňa (`dayPlan`), takže „áno“ je tá istá zelená ako v pláne
@@ -511,16 +511,10 @@ Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS
 
 Štatistiku karta neukazuje, ani ako odkaz do karty Štatistika.
 
-Na ktorej karte sa appka otvára, je voľba telefónu (`startPanel`), nie elektrárne. Predvolená sú
-Terazky (`START_PANELS[0]`, jediné miesto, odkiaľ to berie aj `initialState` a `shareHash`). Ukladá sa
-pod vlastným kľúčom (`START_STORAGE_KEY`), nie v nastavení, a do odkazu ide ako `&prva=mozem` za
-mriežkou - predvolená karta sa nepíše. Kto si voľbu nikdy neuložil, otvára sa po zmene predvolenej
-karty na Terazkách. Uložená voľba vždy vyhrá; bez nej platí karta z odkazu a hneď sa
-uloží (`loadStartPanel`) - odkaz tak nastaví telefón, ktorý ešte nič nemá, a nikomu neprepíše
-vlastnú voľbu. Staršie odkazy s `&prva=terazky` (z čias, keď bola predvolená Môžem?) platia ďalej.
-Adresa v prehliadači ju nesie tiež (`initUrlMirror`), z toho istého dôvodu ako nastavenie:
-appka pridaná na plochu iPhonu si z Safari prenesie len adresu. Položku „Úvodná karta“ si robí render (`render/zdielat.js`), takže zmena nepotrebovala dve
-nasadenia.
+Obe appky sa otvárajú vždy na Teraz(kách) (`PANELS[0]`, bez polohy v sprievodcovi Nastavenia).
+Voľba úvodnej karty v Nastavení bola a už nie je: starú uloženú voľbu (`prva-karta-v1`) appky pri
+štarte zmažú (`OLD_STORAGE_KEYS`) a `&prva=…` v starších odkazoch nečítajú - nastavenie z takého
+odkazu sa prevezme rovnako.
 
 ## Karta 7 dní na mobile
 
