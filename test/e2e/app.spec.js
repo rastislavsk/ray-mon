@@ -44,7 +44,7 @@ import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekM
 import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
-import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
+import { bigWords, FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
@@ -3104,6 +3104,23 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('.mozem-word')).toHaveText('Nemám dáta, sme off-line');
         await expect(page.locator('.mozem-eq')).toHaveCount(0);
         await expect(page.locator('#tz-recs')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('každé veľké slovo sa zmestí na plagát aj na 320 px', async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 700 });
+        const errors = await openApp(page);
+        await page.locator('#nav-mozem').click();
+        await expect(page.locator('.mozem-word')).toBeVisible();
+        // Súčasná appka hovorí len drzo. Veľkosť ako v renderi: podľa najdlhšieho slova.
+        for (const word of bigWords('drzy')) {
+            const ok = await page.locator('.mozem-word').evaluate((el, w) => {
+                el.textContent = w;
+                el.style.setProperty('--word-len', String(Math.max(...w.split(/s+/).map((x) => x.length))));
+                return el.scrollWidth <= el.clientWidth + 0.5;
+            }, word);
+            expect(ok, `„${word}“ sa nezmestí`).toBe(true);
+        }
         expect(errors).toEqual([]);
     });
 });

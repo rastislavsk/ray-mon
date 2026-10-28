@@ -475,7 +475,13 @@ povie plán), plán má vetu nad sebou (`planHead`) a nová appka aj časovú os
 `planDnaModel`). Súčasná appka ho kreslí ako plagát s očíslovanými riadkami, nová ako vetu s časovou
 osou (`docs/navrhy/terazky-plan-dna.html`, možnosti A a B) - model je ten istý.
 
-Karta Dnes (druhá v navigácii) má hore veľké slovo a pod ním, čo dá strecha za celý deň
+Karta Dnes (druhá v navigácii) má hore veľké slovo o celom dni (`shared/den-trieda.js`,
+`docs/navrhy/dnes-hlasky-dna.html`): trieda dňa (výborný, dobrý, slabý, nanič) z toho istého
+rozvrhu ako Plán dňa, len od polnoci - koľko spotrebičov sa za deň zmestí na slnko, a či aj
+s rezervou na mrak. Ráno hovorí predpoveď, cez deň namerané s predpoveďou na zvyšok a po západe
+namerané. Trieda, ktorú appka videla ráno, je v telefóne (`ranna-trieda-v1`, zapisuje ju obnova
+dát vo `web/refresh.js`); keď sa deň oproti nej zmení, slovo to povie. Farba plagátu súčasnej
+appky ide podľa triedy dňa, stav `go`/`wait`/… už len pre vetu, štítky a pás dňa. Pod slovom je, čo dá strecha za celý deň
 (`day`: `dnesDay` v `shared/mozem.js`, prepočty mobilov, km a CO2eq tie isté ako Štatistika),
 pod tým pás odporúčaní (`dnesCards` v `shared/teraz.js`: dnešok a kedy bude lepšie). Dlaždice
 „Čo môžem“, Plán dňa a panel veci z nej zmizli - kódové meno `mozem` ostalo kvôli uloženej

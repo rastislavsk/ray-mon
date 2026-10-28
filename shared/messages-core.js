@@ -240,27 +240,74 @@ export function getSlotMessage(level, powerKw, forecast, th, voice = 'drzy') {
 // Tón je zámerne suchý, nie roztomilý: čítajú ho najmä tínedžeri (návrh C
 // v docs/navrhy/karta-mozem.html). Veľké slovo, jedna veta, žiadne kW.
 
-/** Veľké slovo karty podľa stavu. */
+/** Veľké slovo karty, keď o dni nevie nič: dáta nie sú, načítava sa, panely nie sú zadané. */
 export const MOZEM_WORDS = {
-    go: 'ZAPNI TOOO',
-    wait: 'NO NO, NOT YET',
-    slabo: 'NAHOVNO DEŇ',
-    none: 'Dnes už ne e !',
     offline: 'Nemám dáta, sme off-line',
     loading: 'Uno momento',
     bezpanelov: 'Nastav panely, voe!',
 };
 
-/** Slušný tón karty: veľké slovo vecne. */
+/** Slušný tón karty: veľké slovo vecne. @type {typeof MOZEM_WORDS} */
 const MOZEM_WORDS_SLUSNE = {
-    go: 'Teraz je to ok',
-    wait: 'Počkajte na slnko',
-    slabo: 'Dnes bude slabý deň',
-    none: 'DNES UŽ NIE',
     offline: 'Nemám dáta, sme off-line',
     loading: 'MOMENT',
     bezpanelov: 'Elektráreň zatiaľ nie je nastavená',
 };
+
+/**
+ * Veľké slovo o celom dni (shared/den-trieda.js, docs/navrhy/dnes-hlasky-dna.html): ráno a cez
+ * deň podľa triedy dňa, cez deň zmena oproti rannej triede, večer zhodnotenie nameraného.
+ * Rozdiel NAGOVNO / NAHOVNO je zámerný.
+ */
+export const DEN_WORDS = {
+    rano: {
+        vyborny: 'Oskar dnes pujde na plný koule',
+        dobry: 'Not baaad dneskaj',
+        slaby: 'NAGOVNO DEŇ',
+        nanic: 'ÚPLNE NAHOVNO DEŇ',
+    },
+    zmena: {
+        lepsi: 'Tak jo, Oskar nakoniec vylezie',
+        horsi: 'Dojebabralo sa nám to dneskaj',
+    },
+    vecer: {
+        vyborny: 'Oskar to dnes odpálil na plný koule',
+        dobry: 'Not baad, zer gút',
+        slaby: 'Dneskaj ništ moc, nem džo',
+        nanic: 'Dnes to bolo pjekne nagovno',
+    },
+};
+
+/** @type {typeof DEN_WORDS} */
+const DEN_WORDS_SLUSNE = {
+    rano: {
+        vyborny: 'Dnes bude výborný deň',
+        dobry: 'Dnes bude dobrý deň',
+        slaby: 'Dnes bude slabý deň',
+        nanic: 'Dnes takmer nič nevyrobíme',
+    },
+    zmena: {
+        lepsi: 'Deň bude lepší, ako sa čakalo',
+        horsi: 'Deň bude slabší, ako sa čakalo',
+    },
+    vecer: {
+        vyborny: 'Dnes to bol výborný deň',
+        dobry: 'Dnes to bol dobrý deň',
+        slaby: 'Dnes to bol slabý deň',
+        nanic: 'Dnes sme takmer nič nevyrobili',
+    },
+};
+
+/**
+ * Veľké slovo pre deň (denSlovo v shared/den-trieda.js).
+ * @param {{ cls: import('./den-trieda.js').DenTrieda, faza: import('./den-trieda.js').DenFaza, change: 'lepsi' | 'horsi' | null }} d
+ * @param {Voice} voice
+ */
+export function denWord({ cls, faza, change }, voice) {
+    const w = voiceTexts(voice).DEN_WORDS;
+    if (change) return w.zmena[change];
+    return faza === 'vecer' ? w.vecer[cls] : w.rano[cls];
+}
 
 /**
  * Veci v karte Môžem?: meno, sloveso a zámeno do viet („Pusti ju o 10:30.“) a čo sa stane, keď
@@ -1436,6 +1483,7 @@ const DRZY = {
     NIGHT_MESSAGES,
     PRICE_MESSAGES,
     MOZEM_WORDS,
+    DEN_WORDS,
     MOZEM_ITEM_TEXTS,
     MOZEM_UNKNOWN,
     MOZEM_CHIPS,
@@ -1450,6 +1498,7 @@ const SLUSNY = {
     NIGHT_MESSAGES: NIGHT_MESSAGES_SLUSNE,
     PRICE_MESSAGES: PRICE_MESSAGES_SLUSNE,
     MOZEM_WORDS: MOZEM_WORDS_SLUSNE,
+    DEN_WORDS: DEN_WORDS_SLUSNE,
     MOZEM_ITEM_TEXTS: MOZEM_ITEM_TEXTS_SLUSNE,
     MOZEM_UNKNOWN: MOZEM_UNKNOWN_SLUSNE,
     MOZEM_CHIPS: MOZEM_CHIPS_SLUSNE,

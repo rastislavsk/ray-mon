@@ -12,6 +12,7 @@ import {
     OLD_STORAGE_KEYS,
     OZNAMENIA_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
+    RANNA_TRIEDA_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     START_PANELS,
@@ -22,6 +23,7 @@ import {
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
+import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
@@ -225,6 +227,16 @@ export function loadStoredWeather() {
 /** @param {import('../shared/schema.js').StoredWeather} weather @returns {boolean} podarilo sa? */
 export function saveStoredWeather(weather) {
     return write(WEATHER_STORAGE_KEY, JSON.stringify(weather));
+}
+
+/** Trieda dňa, ktorú appka dnes videla ráno (RANNA_TRIEDA_STORAGE_KEY); bez úložiska null. @returns {import('../shared/den-trieda.js').RannaTrieda | null} */
+export function loadRanna() {
+    return readJson(RANNA_TRIEDA_STORAGE_KEY, parseRanna, null);
+}
+
+/** @param {import('../shared/den-trieda.js').RannaTrieda} r @returns {boolean} podarilo sa? */
+export function saveRanna(r) {
+    return write(RANNA_TRIEDA_STORAGE_KEY, JSON.stringify(r));
 }
 
 /** Ranné oznámenie a spotrebiče doma (OZNAMENIA_STORAGE_KEY); bez úložiska predvolené. @returns {import('../shared/oznamenia.js').Oznamenia} */

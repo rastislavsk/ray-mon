@@ -17,7 +17,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WORKER_PV_URL,
 } from '../../shared/config.js';
-import { MOZEM_WORDS, voiceTexts } from '../../shared/messages.js';
+import { voiceTexts } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -103,7 +103,7 @@ test.describe('tón hlášok', () => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
-        expect(slusny.word).toBe('Teraz je to ok');
+        expect(slusny.word).toBe('Dnes bude dobrý deň');
         await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
@@ -132,8 +132,8 @@ test.describe('tón hlášok', () => {
         await otvorSucasnuAppku(page);
         await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body')).toContainText(MOZEM_WORDS.go);
-        await expect(page.locator('#mozem-body')).not.toContainText(SLUSNY.MOZEM_WORDS.go);
+        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(drzy.word);
+        await expect(page.locator('#mozem-body')).not.toContainText(slusny.word);
         expect(errors).toEqual([]);
     });
 

@@ -318,6 +318,7 @@ function directSucty(out) {
 function directConsts(out, v) {
     for (const [k, c] of Object.entries({
         MOZEM_WORDS: M.MOZEM_WORDS,
+        DEN_WORDS: M.DEN_WORDS,
         MOZEM_CHIPS: M.MOZEM_CHIPS,
         MOZEM_SKY_TEXTS: M.MOZEM_SKY_TEXTS,
         MOZEM_ITEM_TEXTS: M.MOZEM_ITEM_TEXTS,

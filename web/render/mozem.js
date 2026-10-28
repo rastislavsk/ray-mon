@@ -15,9 +15,6 @@ import { writeHtml } from '../memo.js';
 
 const TERAZ_TEXTS = voiceTexts().TERAZ_TEXTS;
 
-/** Veľké slovo pod 10 znakov sa zmestí vo veľkom písme, dlhšie („NO NO, NOT YET“) dostane menšie. */
-const LONG_WORD = 10;
-
 /**
  * Hlavička: kedy, kde, veľké slovo a pod ním čo dá strecha za celý deň. Bez predpovede na dnešok
  * (načítava sa, dáta nie sú, panely nezadané) namiesto toho veta, prečo karta nevie viac.
@@ -29,9 +26,13 @@ export function mozemHtml(m, kick) {
           m.day.eq.map((e) => `<div><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></div>`).join('') +
           '</div>'
         : `<p class="mozem-lead">${escapeHtml(m.hero.lead)}</p>`;
+    // Farba plagátu hovorí to isté čo slovo - o celom dni. Bez dát farba stavu (načítava sa, nie sú).
+    const tone = m.den ? `den-${m.den.cls}` : `st-${m.state}`;
+    // Písmo sa zmenší podľa najdlhšieho slova, aby sa nikdy neorezalo (ako v novej appke).
+    const len = Math.max(1, ...m.word.split(/s+/).map((w) => w.length));
     return (
-        `<section class="mozem-hero st-${m.state}"><div class="mozem-kick">${escapeHtml(kick)}</div>` +
-        `<p class="mozem-word${m.word.length >= LONG_WORD ? ' long' : ''}">${escapeHtml(m.word)}</p>${day}</section>`
+        `<section class="mozem-hero ${tone}"><div class="mozem-kick">${escapeHtml(kick)}</div>` +
+        `<p class="mozem-word" style="--word-len: ${len}">${escapeHtml(m.word)}</p>${day}</section>`
     );
 }
 
@@ -56,7 +57,7 @@ function renderCards(k, page, dom) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
-    const m = mozemModel(state, { devices: state.oznamenia.devices });
+    const m = mozemModel(state, { devices: state.oznamenia.devices, ranna: state.ranna });
     const kick = `Dnes · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     writeHtml(dom.mozemBody, mozemHtml(m, kick), 'mozemBody');
     renderCards(m.state === 'loading' ? null : dnesCards(state), state.terazPage, dom);

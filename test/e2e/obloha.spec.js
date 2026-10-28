@@ -28,7 +28,7 @@ import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dn
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { FIXED_NOW, fixture, fixtureData, pvAt } from '../helpers.js';
+import { bigWords, FIXED_NOW, fixture, fixtureData, pvAt } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -737,7 +737,7 @@ test.describe('karta Dnes', () => {
             for (const c of cisla) expect(c.ok, `${c.text} je orezané`).toBe(true);
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
             // Každé veľké slovo, aké karta pozná, s veľkosťou podľa wordSize ako v appke.
-            for (const word of new Set(Object.values(MOZEM_WORDS))) {
+            for (const word of [...bigWords('drzy'), ...bigWords('slusny')]) {
                 const ok = await page.evaluate(
                     ([w, size]) => {
                         const el = /** @type {HTMLElement} */ (document.getElementById('mz-word'));
@@ -836,7 +836,7 @@ test.describe('karta Dnes', () => {
         // Súčasná appka v tom istom stave odpovedá to isté slovo (jedno jadro, dva kabáty).
         await otvorSucasnuAppku(page);
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(MOZEM_WORDS[m.state]);
+        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(m.word);
         expect(errors).toEqual([]);
     });
 

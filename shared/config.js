@@ -435,6 +435,21 @@ export const PLAN_DNA = {
 };
 
 /**
+ * Trieda celého dňa pre veľké slovo karty Dnes (docs/navrhy/dnes-hlasky-dna.html), zo slnka
+ * celého dňa od polnoci: výborný, keď sa všetky spotrebiče zmestia na slnko aj vtedy, keď by
+ * strecha dala len `reserve` výkonu (rezerva na mrak), dobrý, keď sa zmestia všetky, slabý, keď
+ * aspoň jeden, inak nanič. Bez spotrebičov doma ráta s predvolenými (PLAN_DNA.devices) - minúty
+ * zelenej deň nerozlíšia, zelená začína už pri lowKw.
+ */
+export const DEN_TRIEDA = { reserve: 2 / 3 };
+
+/**
+ * Trieda dňa, ktorú appka pre dnešok videla ráno - s ňou karta Dnes porovná, či sa deň zlepšil či
+ * pokazil. Patrí telefónu, do odkazu s nastavením nejde.
+ */
+export const RANNA_TRIEDA_STORAGE_KEY = 'ranna-trieda-v1';
+
+/**
  * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
@@ -547,6 +562,7 @@ export const STORAGE_KEYS = [
     SUCTY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
+    RANNA_TRIEDA_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */

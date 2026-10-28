@@ -51,12 +51,13 @@ export function pvStatus({ now, site, pv, zdroj }) {
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input
- * @param {{ online?: boolean, voice?: import('./messages.js').Voice, devices?: readonly string[] }} [opts] či má telefón
- *   internet, tón textov a spotrebiče doma (s nimi ráta Plán dňa)
+ * @param {{ online?: boolean, voice?: import('./messages.js').Voice, devices?: readonly string[],
+ *   ranna?: import('./den-trieda.js').RannaTrieda | null }} [opts] či má telefón internet, tón textov,
+ *   spotrebiče doma (s nimi ráta Plán dňa) a ranná trieda dňa
  */
-export function mozemSkyModel(input, { online = true, voice = 'drzy', devices } = {}) {
+export function mozemSkyModel(input, { online = true, voice = 'drzy', devices, ranna = null } = {}) {
     if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
-    const m = mozemModel(input, { voice, devices });
+    const m = mozemModel(input, { voice, devices, ranna });
     const f = m.facts;
     const offline = m.state === 'offline';
     return {

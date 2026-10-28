@@ -31,6 +31,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   tzListOpen: boolean,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
+ *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  *   previewMinutes: number | null,
  *   wide: boolean,
  *   tall: boolean,
@@ -118,6 +119,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
         // Denník výroby po dňoch pre plagát Štatistiky (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
         dayLog: {},
+        // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js). Načíta sa pri štarte, zapisuje ju obnova dát.
+        ranna: null,
         previewMinutes: null,
         wide: layout.wide,
         // Či je okno dosť vysoké na to, aby sa do prehľadu dní zmestila aj správa týždňa

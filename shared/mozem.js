@@ -19,6 +19,7 @@ import { freshPowerKw, pvFreshness } from './hero-model.js';
 import { pad2, weekDayName } from './format.js';
 import { co2SavedKg } from './carbon.js';
 import {
+    denWord,
     dnesDayText,
     MOZEM_GROUP_NAMES,
     mozemHeroText,
@@ -37,6 +38,7 @@ import { bandAt, scheduleFor } from './tariff.js';
 // Kruhový import: plan-dna.js stojí na výpočtoch odtiaľto, karta zas na Pláne dňa. Obe strany
 // sa volajú až za behu, nie pri načítaní modulu, takže to ES moduly zvládnu.
 import { planDnaModel } from './plan-dna.js';
+import { denFaza, denSlovo, denTrieda, rannaFor } from './den-trieda.js';
 
 /** @typedef {import('./day-plan.js').PlanSlot} PlanSlot */
 /** @typedef {import('./day-plan.js').PlanInput} PlanInput */
@@ -308,10 +310,21 @@ export function dayCtx(input) {
     };
 }
 
+/**
+ * Čo veľké slovo povie o celom dni: trieda dňa, časť dňa a zmena oproti rannej triede. Večer
+ * hodnotí len namerané - bez nameranej krivky dneška ostáva ranná hláška.
+ * @param {PlanInput} input @param {readonly string[]} devices @param {import('./den-trieda.js').RannaTrieda | null | undefined} ranna
+ */
+function denOf(input, devices, ranna) {
+    const measured = !!input.pv && input.pv.realCurveToday.length > 0;
+    const rano = rannaFor(ranna, localDateKey(input.now, input.site.timezone), devices);
+    return denSlovo(denTrieda(input, devices), denFaza(input), rano, measured);
+}
+
 /** Hlavička karty bez predpovede: panely nie sú zadané, načítava sa, alebo dáta nie sú.
  * @param {boolean} loading @param {boolean} noPanels @param {Voice} voice */
 function emptyHead(loading, noPanels, voice) {
-    /** @type {MozemState} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
+    /** @type {'bezpanelov' | 'loading' | 'offline'} */ const state = noPanels ? 'bezpanelov' : loading ? 'loading' : 'offline';
     const hero = mozemHeroText(state, null, voice);
     return { state, word: voiceTexts(voice).MOZEM_WORDS[state], hero, say: hero.lead, strip: null };
 }
@@ -330,9 +343,12 @@ function emptyHead(loading, noPanels, voice) {
  * štítky (`chips`) a len tú časť vety, ktorá plán neopakuje (`say`). Karta Dnes ukazuje, čo dá
  * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
- * @param {{ voice?: Voice, devices?: readonly string[] }} [opts] `voice` tón textov, `devices` spotrebiče doma
+ * Veľké slovo hovorí o celom dni (`den`: trieda, časť dňa a zmena oproti rannej triede `ranna`,
+ * shared/den-trieda.js), veta pod ním o tom, čo teraz.
+ * @param {{ voice?: Voice, devices?: readonly string[], ranna?: import('./den-trieda.js').RannaTrieda | null }} [opts]
+ *   `voice` tón textov, `devices` spotrebiče doma, `ranna` trieda dňa, ktorú appka videla ráno (platí len pre dnešok a tie isté spotrebiče)
  */
-export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices } = {}) {
+export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices, ranna } = {}) {
     const known = input.known || 'elektraren';
     const estimate = known === 'poloha';
     const noPanels = known === 'nic';
@@ -341,8 +357,8 @@ export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices }
     const plan = ctx ? planDnaModel(input, { devices, voice }) : null;
     const rows = plan ? plan.rows : [];
     const head = ctx
-        ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null, rows)
-        : { ...emptyHead(input.loading, noPanels, voice), facts: null };
+        ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null, { rows, den: denOf(input, devices, ranna) })
+        : { ...emptyHead(input.loading, noPanels, voice), facts: null, den: null };
     return {
         ...head,
         chips: chipsOf(head.state, head.facts, voice),
@@ -474,9 +490,10 @@ function mozemItems(input, ctx, voice = 'drzy') {
  * Hlavička karty: stav, veľké slovo a veta podľa Plánu dňa, pás dňa pre dlaždicu podľa slnka
  * (zelenej). `typicalKwp` je výkon typickej strechy, keď appka panely nepozná (null s vlastnými panelmi).
  * @param {PlanInput} input @param {DayCtx} ctx @param {Voice} voice @param {number | null} typicalKwp
- * @param {PlanDnaRow[]} rows riadky Plánu dňa (bez spotrebičov doma prázdne - vtedy stav podľa slnka)
+ * @param {{ rows: PlanDnaRow[], den: ReturnType<typeof denOf> }} day riadky Plánu dňa (bez spotrebičov doma
+ *   prázdne - vtedy stav podľa slnka) a čo veľké slovo povie o celom dni
  */
-function dayHead(input, ctx, voice, typicalKwp, rows) {
+function dayHead(input, ctx, voice, typicalKwp, { rows, den }) {
     const general = planWindows(ctx.plan, (s) => s.tier === 'green');
     const sun = dayState(general, ctx.nowMin, sunUp(input.now, input.site));
     const { window } = sun;
@@ -489,7 +506,8 @@ function dayHead(input, ctx, voice, typicalKwp, rows) {
     const data = { ctx, window, nextDay, ...facts, typicalKwp, plan, sunLeft };
     return {
         state,
-        word: voiceTexts(voice).MOZEM_WORDS[state],
+        word: denWord(den, voice),
+        den,
         hero: mozemHeroText(state, data, voice),
         // Tá istá veta bez spotrebičov a časov - tie povie Plán dňa hneď pod ňou.
         say: mozemHeroText(state, { ...data, plan: null }, voice).lead,

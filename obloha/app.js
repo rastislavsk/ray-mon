@@ -7,6 +7,7 @@ import { createStore } from '../web/store.js';
 import {
     dropOldStored,
     loadDayLog,
+    loadRanna,
     loadLook,
     loadOdmietnutie,
     loadOznamenia,
@@ -47,6 +48,7 @@ const store = createStore(
         linkError: link?.error ?? null,
         startPanel: loadStartPanel(hash),
         dayLog: loadDayLog(),
+        ranna: loadRanna(),
         online: navigator.onLine,
         // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
         pristup: loadOdmietnutie(),

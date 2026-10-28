@@ -98,7 +98,9 @@ test('durationText a countdownText po slovensky', () => {
 test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy', () => {
     const m = mozemModel(input(FIXED_NOW));
     assert.equal(m.state, 'go');
-    assert.equal(m.word, 'ZAPNI TOOO');
+    // Slovo hovorí o celom dni: dopoludnie namerané pod predpoveďou, auto by pri mraku nechytilo slnko.
+    assert.deepEqual(m.den, { cls: 'dobry', faza: 'den', change: null });
+    assert.equal(m.word, 'Not baaad dneskaj');
     assert.match(m.hero.factV, /^~\d+ mobilov$/);
     assert.ok(m.strip && m.strip.width > 0 && m.strip.now > m.strip.left);
     const pracka = item(m, 'pracka');
