@@ -81,11 +81,15 @@ function axisHtml({ lanes, ticks, now }, strip) {
  * ako štítok s časom. Keď dnes na slnko nejde nič, plán ukáže ďalší deň so slnkom (`plan.next`):
  * deň v nadpise a nad osou, dnešnú lacnú sieť vetou, bez čiary teraz
  * (docs/navrhy/plan-dna-zajtra.html, návrh 1). Bez plánu (bez predpovede, nič doma) nie je.
- * @param {Model['plan']} plan @param {Dom} dom
+ * Zbalený ukáže len nadpis a vetu v hlavičke, zvyšok je až po otvorení
+ * (docs/navrhy/teraz-plan-rozbalovaci.html).
+ * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
  */
-function renderPlan(plan, dom) {
+function renderPlan(plan, open, dom) {
     show(dom.tzPlan, !!plan && plan.rows.length > 0);
-    if (!plan || !plan.rows.length) return setHtml(dom.tzPlan, '');
+    dom.tzPlanBtn.setAttribute('aria-expanded', String(open));
+    show(dom.tzPlanBody, open);
+    if (!plan || !plan.rows.length) return setHtml(dom.tzPlanBody, '');
     const next = plan.next;
     // Dnešok a ďalší deň majú ten istý tvar: nadpis, veta, os so štítkami a pätka.
     const v = next
@@ -93,11 +97,11 @@ function renderPlan(plan, dom) {
         : { ...plan, head: { ...plan.head, tonight: '' }, strip: '', title: escapeHtml(PLAN_DNA_TITLE) };
     const { head, lanes } = v;
     const chips = lanes.others.map((o) => `<span class="tl-chip">${escapeHtml(o.name)} · ${escapeHtml(o.value)}</span>`).join('');
+    setHtml(dom.tzPlanTitle, v.title);
+    setText(dom.tzPlanLead, head.lead);
     setHtml(
-        dom.tzPlan,
-        `<h2 id="tz-plan-title" class="glass-ttl">${v.title}</h2>` +
-            `<p class="tl-lead">${escapeHtml(head.lead)}</p>` +
-            (head.tonight ? `<p class="tl-tonight">${escapeHtml(head.tonight)}</p>` : '') +
+        dom.tzPlanBody,
+        (head.tonight ? `<p class="tl-tonight">${escapeHtml(head.tonight)}</p>` : '') +
             (head.then ? `<p class="tl-then">${escapeHtml(head.then)}</p>` : '') +
             (lanes.lanes.length ? axisHtml(lanes, v.strip) : '') +
             (chips ? `<div class="tl-chips">${chips}</div>` : '') +
@@ -137,6 +141,6 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, TERAZ_TEXTS.askText);
     setText(dom.tzAskBtn, TERAZ_TEXTS.askBtn);
     renderSay(m, dom);
-    renderPlan(m.plan, dom);
+    renderPlan(m.plan, state.tzPlanOpen, dom);
     renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
 }

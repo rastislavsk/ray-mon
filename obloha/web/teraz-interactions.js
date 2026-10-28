@@ -32,6 +32,12 @@ export function initTeraz(store, dom, refresh) {
         dom.tzChart.focus();
     });
     dom.tzListBtn.addEventListener('click', () => store.setState({ tzListOpen: !store.get().tzListOpen }));
+    // Otvorený Plán dňa je krok navigácie: Späť ho zbalí a zbalenie hlavičkou ide tou istou cestou.
+    // Otvorenie robí z Teraz aktívny stĺpec prehľadu, ako náhľad.
+    dom.tzPlanBtn.addEventListener('click', () => {
+        if (store.get().tzPlanOpen) stepBack(store, { tzPlanOpen: false });
+        else store.setState({ tzPlanOpen: true, panel: 'terazky' });
+    });
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).

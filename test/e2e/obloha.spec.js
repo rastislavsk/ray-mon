@@ -990,6 +990,8 @@ test.describe('karta Teraz', () => {
         if (!plan) throw new Error('model nemá Plán dňa');
         await expect(page.locator('#tz-plan-title')).toHaveText('Plán dňa');
         await expect(page.locator('#tz-plan .tl-lead')).toHaveText(plan.head.lead);
+        // Os a čiara teraz sú až v otvorenom pláne.
+        await page.locator('#tz-plan-btn').click();
         await expect(page.locator('#tz-plan .tl-then')).toHaveText(plan.head.then);
         expect(plan.lanes.lanes.map((l) => l.name)).toEqual(['Práčka', 'Umývačka', 'Auto', 'Sušička'], 'bojler doma predvolene nie je');
         await expect(page.locator('#tz-plan .tl-n')).toHaveText(plan.lanes.lanes.map((l) => l.name));
@@ -1005,6 +1007,46 @@ test.describe('karta Teraz', () => {
         await otvorSucasnuAppku(page);
         await expect(page.locator('.tz-plan-lead')).toHaveText(plan.head.lead);
         await expect(page.locator('.tz-plan-what')).toHaveText(plan.rows.map((r) => r.name));
+        expect(errors).toEqual([]);
+    });
+
+    test('Plán dňa je pri štarte zbalený, graf pri čísle; hlavička ho otvorí, Späť aj hlavička zbalia', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        const plan = terazModel(vstupTeraz(time)).plan;
+        if (!plan) throw new Error('model nemá Plán dňa');
+        const hlavicka = page.getByRole('button', { name: `Plán dňa ${plan.head.lead}` });
+        const telo = page.locator('#tz-plan-body');
+        // Zbalený: nadpis a veta v hlavičke, zvyšok skrytý a graf celý na prvej obrazovke.
+        await expect(hlavicka).toHaveAttribute('aria-expanded', 'false');
+        await expect(telo).toBeHidden();
+        const graf = await page.locator('#tz-chart').boundingBox();
+        expect((graf?.y ?? 0) + (graf?.height ?? 0), 'graf nie je pri čísle na prvej obrazovke').toBeLessThanOrEqual(812);
+
+        await hlavicka.click();
+        await expect(hlavicka).toHaveAttribute('aria-expanded', 'true');
+        await expect(telo).toBeVisible();
+        await expect(page.locator('#tz-plan .tl-n')).toHaveText(plan.lanes.lanes.map((l) => l.name));
+        // Tlačidlo Späť v telefóne plán zbalí a ostane na karte, ďalšie ide na predošlú kartu.
+        await page.goBack();
+        await expect(telo).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
+        // Zbalenie hlavičkou je ten istý krok - ďalšie Späť už nezbalí nič, ide na predošlú kartu.
+        await hlavicka.click();
+        await expect(telo).toBeVisible();
+        await hlavicka.click();
+        await expect(telo).toBeHidden();
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        // Iná karta plán zbalí: návrat na Teraz ho ukáže zbalený.
+        await page.locator('#nav-terazky').click();
+        await hlavicka.click();
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        await expect(telo).toBeHidden();
         expect(errors).toEqual([]);
     });
 
