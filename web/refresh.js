@@ -4,6 +4,7 @@
 
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
+import { denFaza, denTrieda, recordRanna } from '../shared/den-trieda.js';
 import { minutesToTimeStr } from '../shared/format.js';
 import { neplati, odmietnute, znovaDue } from '../shared/pristup.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
@@ -16,6 +17,7 @@ import {
     loadSettings,
     loadSucty,
     saveDayLog,
+    saveRanna,
     saveOdmietnutie,
     saveRytmus,
     saveSettings,
@@ -36,6 +38,8 @@ import {
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
  *   dayLog: import('../shared/daylog.js').DayLog,
+ *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
+ *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -204,6 +208,7 @@ export function createRefresh(store) {
         if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
         store.setState({ forecast: result.forecast, loading: false, now, dayLog, ...pecat, ...meranie });
+        zapamatajRannu(store);
     };
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.
@@ -218,6 +223,22 @@ export function createRefresh(store) {
         bezi = { site, plant, zdroj, promise };
         return promise;
     };
+}
+
+/**
+ * Ranná trieda dňa pre kartu Dnes (shared/den-trieda.js): po každej obnove dát z toho istého stavu,
+ * z ktorého kreslí karta, a so spotrebičmi doma. Bez predpovede nie je z čoho.
+ * @param {RefreshStore} store
+ */
+function zapamatajRannu(store) {
+    const s = store.get();
+    if (!s.forecast) return;
+    const devices = s.oznamenia.devices;
+    const date = localDateKey(s.now, s.site.timezone);
+    const ranna = recordRanna(s.ranna, { date, devices, cls: denTrieda(s, devices), faza: denFaza(s) });
+    if (ranna === s.ranna) return;
+    saveRanna(ranna);
+    store.setState({ ranna });
 }
 
 /**

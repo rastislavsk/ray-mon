@@ -70,7 +70,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * @param {Date} now
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
  *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
- *   online: boolean,
+ *   online: boolean, ranna: import('../../shared/den-trieda.js').RannaTrieda | null,
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout, oznamenia?: import('../../shared/oznamenia.js').Oznamenia,
@@ -89,6 +89,7 @@ export function initialState(
         startPanel,
         dayLog,
         online,
+        ranna,
         incoming = null,
         linkError = null,
         look = DEFAULT_LOOK,
@@ -118,6 +119,8 @@ export function initialState(
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.
         loading: true,
         dayLog,
+        // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js); zapisuje ju obnova dát.
+        ranna,
         terazPreview: null,
         terazPage: 0,
         tzListOpen: false,

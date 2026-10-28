@@ -31,8 +31,10 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené) a pod ním okno „Zapni veľké“.
   Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas, „Späť na teraz“ ho vráti.
   Na širokej obrazovke je Plán dňa vedľa grafu. Obsah počíta ten istý model ako nová appka.
-- **Dnes** (kedysi Môžem?) – hore jedno veľké slovo na plnej farbe (**ZAPNI TOOO**, **NO NO, NOT YET**,
-  **NAHOVNO DEŇ**, **Dnes už ne e !**, **Neviem.**) a pod ním, čo dá strecha za celý deň v jednotkách,
+- **Dnes** (kedysi Môžem?) – hore jedno veľké slovo o celom dni na farbe triedy dňa: ráno podľa
+  predpovede (**Oskar dnes pujde na plný koule**, **NAGOVNO DEŇ**…), cez deň, keď sa deň oproti ránu
+  zlepší či pokazí (**Tak jo, Oskar nakoniec vylezie**), a večer podľa nameraného (**Not baad, zer gút**).
+  Trieda dňa je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň v jednotkách,
   ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej (tie isté prepočty ako
   Štatistika). Pod tým pás kariet do strán: dnešok (predpoveď, koľko už nabehlo, okno na veľké veci)
   a kedy bude lepšie; na širokej obrazovke sú pod sebou.

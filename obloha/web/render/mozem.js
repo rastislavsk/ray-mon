@@ -100,9 +100,11 @@ function renderAnnounce(m, dom) {
         return;
     }
     if (m.state === 'loading' || m.ask) return;
+    // Odpoveď je stav aj veľké slovo - slovo o celom dni sa mení aj vtedy, keď stav nie.
     const before = dom.mzLive.dataset.state;
-    dom.mzLive.dataset.state = m.state;
-    if (before && before !== m.state) setText(dom.mzLive, `${m.word}. ${m.lead}`);
+    const now = `${m.state} ${m.word}`;
+    dom.mzLive.dataset.state = now;
+    if (before && before !== now) setText(dom.mzLive, `${m.word}. ${m.lead}`);
 }
 
 /**
@@ -127,7 +129,7 @@ function renderCards(k, page, dom, voice) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
     if (!shows(state, 'mozem')) return renderAnnounce(null, dom);
-    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices });
+    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices, ranna: state.ranna });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
     renderCards(

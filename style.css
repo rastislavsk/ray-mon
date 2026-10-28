@@ -4118,16 +4118,17 @@ b {
     color: var(--ink-on-color);
     background: var(--ink-20);
 }
-.mozem-hero.st-go {
+/* Farba podľa triedy celého dňa (shared/den-trieda.js) - hovorí to isté čo veľké slovo. */
+.mozem-hero.den-vyborny {
     background: var(--green);
 }
-.mozem-hero.st-wait {
+.mozem-hero.den-dobry {
     background: var(--amber);
 }
-.mozem-hero.st-slabo {
+.mozem-hero.den-slaby {
     background: var(--grey);
 }
-.mozem-hero.st-none {
+.mozem-hero.den-nanic {
     background: var(--red);
 }
 /* Bez predpovede (dáta nie sú): tmavšia a stlmenejšia sivá než --grey pri „slabo“, aby výpadok
@@ -4147,17 +4148,16 @@ b {
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
+/* Veľkosť aj podľa najdlhšieho slova (--word-len z renderu): verzálka má v tomto písme na znak
+   najviac asi 0,75 em, takže slovo sa zmestí na šírku bloku vždy, aj „DOJEBABRALO“. */
 .mozem-word {
     margin: 18px 0 12px;
-    font-size: min(23cqi, 96px);
+    font-size: min(23cqi, 96px, calc(100cqi / (var(--word-len, 1) * 0.8)));
     font-weight: 700;
     line-height: 0.86;
     letter-spacing: -0.055em;
     text-transform: uppercase;
     text-wrap: balance;
-}
-.mozem-word.long {
-    font-size: min(18cqi, 76px);
 }
 .mozem-lead {
     margin: 0;

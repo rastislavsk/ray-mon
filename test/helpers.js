@@ -1,10 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { PLANT, SITE } from '../shared/config.js';
 import { parseKiosk } from '../shared/kiosk.js';
+import { voiceTexts } from '../shared/messages.js';
 import { buildForecast, localMinutes } from '../shared/solar.js';
 
 /** Pevný čas testov: 5. 9. 2026 13:00 miestneho (11:00 UTC), rovnaký deň ako fixtures. */
 export const FIXED_NOW = new Date('2026-09-05T11:00:00Z');
+
+/**
+ * Každé veľké slovo karty Dnes v danom tóne: o celom dni (DEN_WORDS) aj bez dát (MOZEM_WORDS).
+ * @param {import('../shared/messages.js').Voice} voice @returns {string[]}
+ */
+export function bigWords(voice) {
+    const { DEN_WORDS, MOZEM_WORDS } = voiceTexts(voice);
+    return [...new Set([...Object.values(DEN_WORDS).flatMap((g) => Object.values(g)), ...Object.values(MOZEM_WORDS)])];
+}
 
 export const fixture = (/** @type {string} */ name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
 

@@ -127,7 +127,7 @@ function ineDni(ctx, input, rest, rows) {
  * zmestí na slnko.
  * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list @returns {SunRow[]}
  */
-function najlepsiDen(ctx, currency, list) {
+export function najlepsiDen(ctx, currency, list) {
     const home = list.filter(({ item }) => item.runMin !== null);
     const auto = list.filter(({ item }) => item.runMin === null);
     let best = rozvrh(ctx, currency, list);
@@ -203,7 +203,7 @@ function poradia(list) {
 }
 
 /** Vybrané veci v poradí PLAN_DNA, každá so svojím spotrebičom. @param {readonly string[]} devices */
-function chosen(devices) {
+export function chosen(devices) {
     return PLAN_DNA.order.flatMap((id) => {
         const item = MOZEM_ITEMS.find((i) => i.id === id);
         const device = item && DEVICES.find((d) => d.name === item.device);

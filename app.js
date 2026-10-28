@@ -8,6 +8,7 @@ import {
     dropOldStored,
     initUrlMirror,
     loadDayLog,
+    loadRanna,
     loadOdmietnutie,
     loadOznamenia,
     loadSettings,
@@ -44,6 +45,7 @@ const startPanel = loadStartPanel(hash);
 const store = createStore({
     ...initialState(now, layout, { saved, site, incoming, startPanel }),
     dayLog: loadDayLog(),
+    ranna: loadRanna(),
     pristup: loadOdmietnutie(),
     oznamenia: loadOznamenia(),
     oznamStav: oznamStav(),

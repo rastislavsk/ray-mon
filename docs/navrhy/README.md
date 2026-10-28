@@ -63,3 +63,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `znacky-beta.html` | Sprievodca nastavením, krok Značka meniča – odznak Beta pri značkách neoverených na skutočnom meniči (A, vybraný) vs. slovo v popise (B) |
 | `teraz-rozbalovaci-zoznam.html` | Teraz[ky] – legenda a nápis pod grafom dňa ako rozbaľovací zoznam: prvý riadok návod a „ako čítať graf“ (A), prvý riadok legendy a hodnoty v čase pod prstom (B, vybraný) |
 | `oznamenia.html` | Oznámenia v telefóne: jeden ranný plán dňa (logika A) – jasno, len dopoludnia, zamračené, zlý týždeň, tlačidlo Pripomeň; Plán dňa na Môžem?, Nastavenie |
+| `dnes-hlasky-dna.html` | Karta Dnes – veľké slovo o celom dni: ráno z predpovede, cez deň zmena, večer zo skutočnej výroby; trieda dňa podľa spotrebičov na slnku |

@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Hlášky celého dňa</title>
+        <style>
+            /* Návrh: veľké slovo karty Dnes hovorí o celom dni, nie o tom, čo je teraz. Ráno podľa
+               predpovede, cez deň podľa predpovede doplnenej o namerané, večer podľa skutočnej
+               výroby. Trieda dňa podľa toho, koľko spotrebičov sa za deň zmestí na slnko (Plán dňa).
+               Texty schválil používateľ 28. 10. 2026. Veta pod slovom je len ilustrácia. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+                /* Farby plagátu súčasnej appky (style.css). */
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --grey: #b9b6ac;
+                --ink-on-color: #0b0b0b;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 48px 0 6px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            b,
+            strong {
+                color: var(--text);
+            }
+            table {
+                border-collapse: collapse;
+                margin: 12px 0;
+                font-size: 14px;
+                display: block;
+                overflow-x: auto;
+                max-width: 100%;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 14px 7px 0;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 600;
+            }
+            td.d {
+                font-weight: 700;
+            }
+
+            /* Ovládanie */
+            .controls {
+                display: grid;
+                gap: 12px;
+                margin-top: 20px;
+            }
+            .seg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+            }
+            .seg .lbl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--muted);
+                min-width: 92px;
+            }
+            .seg button {
+                font: inherit;
+                font-size: 13px;
+                color: var(--text);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 5px 12px;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--text);
+                color: var(--page);
+                border-color: var(--text);
+            }
+            .why {
+                font-size: 14px;
+                border-left: 3px solid var(--yes);
+                padding: 6px 12px;
+                margin: 16px 0 0;
+                max-width: 760px;
+            }
+
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 20px;
+            }
+            .cap {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 8px 0 0;
+                max-width: 340px;
+            }
+            .phone {
+                width: 340px;
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                overflow: hidden;
+                padding: 16px 14px 18px;
+                min-height: 360px;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                opacity: 0.85;
+            }
+
+            /* Súčasná appka: plagát, veľkosť slova zo šírky bloku (cqi) ako v style.css. */
+            .t {
+                background: #0b0e0a;
+                font-family: 'Space Grotesk', var(--font);
+            }
+            .t .hdr {
+                font-family: var(--mono);
+            }
+            .t .ttl {
+                font-size: 24px;
+                font-weight: 700;
+                margin: 14px 0 10px;
+            }
+            .t .hero {
+                container-type: inline-size;
+                padding: 20px 20px 18px;
+                border-radius: 28px;
+                color: var(--ink-on-color);
+                background: var(--grey);
+            }
+            .t .hero.c-vyborny {
+                background: var(--green);
+            }
+            .t .hero.c-dobry {
+                background: var(--amber);
+            }
+            .t .hero.c-slaby {
+                background: var(--grey);
+            }
+            .t .hero.c-nanic {
+                background: var(--red);
+            }
+            .t .kick {
+                font: 600 11px var(--mono);
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+            .t .word {
+                margin: 18px 0 12px;
+                font-size: min(23cqi, 96px);
+                font-weight: 700;
+                line-height: 0.86;
+                letter-spacing: -0.055em;
+                text-transform: uppercase;
+                text-wrap: balance;
+                overflow-wrap: normal;
+            }
+            .t .word.long {
+                font-size: min(18cqi, 76px);
+            }
+            .t .lead {
+                margin: 0;
+                font-size: 17px;
+                font-weight: 500;
+                line-height: 1.3;
+                color: var(--ink-on-color);
+            }
+            .t .over {
+                outline: 3px dashed #ff2a6d;
+                outline-offset: 2px;
+            }
+
+            /* Živá obloha: slovo podľa najdlhšieho slova (--word-len) ako v obloha/style.css. */
+            .o {
+                background: linear-gradient(180deg, #2b63c8 0%, #3f7fd0 55%, #5590c9 100%);
+                font-family: 'Archivo', var(--font);
+            }
+            .o.c-nanic,
+            .o.c-slaby {
+                background: linear-gradient(180deg, #56606f 0%, #6b7584 55%, #7d8794 100%);
+            }
+            .o.vecer {
+                background: linear-gradient(180deg, #1b2350 0%, #3a3567 55%, #7a4f6e 100%);
+            }
+            .o .ttl {
+                font-size: 26px;
+                font-weight: 800;
+                margin-top: 12px;
+            }
+            .o .word {
+                margin: 22px 0 12px;
+                font-size: min(50px, calc(298px / var(--word-len, 10)));
+                font-weight: 900;
+                font-stretch: 125%;
+                letter-spacing: -0.02em;
+                line-height: 0.92;
+                text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+                text-wrap: balance;
+            }
+            .o .lead {
+                margin: 0;
+                font-size: 17.5px;
+                line-height: 1.3;
+                font-stretch: 95%;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Hlášky celého dňa na karte Dnes</h1>
+            <p>
+                Veľké slovo hore hovorí o <b>celom dni</b>: ráno podľa predpovede, cez deň podľa predpovede doplnenej o to, čo už strecha
+                dala, a večer podľa skutočnej výroby. Čo robiť <b>teraz</b>, hovorí veta pod slovom a Plán dňa, tak ako dnes. Vyber scenár a
+                tón, obe appky sa prekreslia.
+            </p>
+
+            <div class="controls">
+                <div class="seg" id="seg-sc"><span class="lbl">Scenár</span></div>
+                <div class="seg" id="seg-tone">
+                    <span class="lbl">Tón</span>
+                    <button type="button" data-tone="drzy" aria-pressed="true">Drzý</button>
+                    <button type="button" data-tone="slusny" aria-pressed="false">Slušný</button>
+                </div>
+            </div>
+            <p class="why" id="why"></p>
+
+            <div class="row">
+                <div>
+                    <div class="phone t">
+                        <div class="hdr"><span>RAY-MON</span><span id="t-time"></span></div>
+                        <div class="ttl">Dnes</div>
+                        <section class="hero" id="t-hero">
+                            <div class="kick" id="t-kick"></div>
+                            <p class="word" id="t-word"></p>
+                            <p class="lead" id="t-lead"></p>
+                        </section>
+                    </div>
+                    <p class="cap">
+                        Súčasná appka, vždy drzý tón. Farba plagátu podľa triedy dňa. Prerušovaný rámik ukazuje, že slovo pretečie šírku
+                        bloku.
+                    </p>
+                </div>
+                <div>
+                    <div class="phone o" id="o-phone">
+                        <div class="hdr"><span>RAY-MON</span><span id="o-time"></span></div>
+                        <div class="ttl">Dnes</div>
+                        <p class="word" id="o-word"></p>
+                        <p class="lead" id="o-lead"></p>
+                    </div>
+                    <p class="cap">Živá obloha. Písmo sa zmenší podľa najdlhšieho slova, takže sa nikdy neoreže.</p>
+                </div>
+            </div>
+
+            <h2>Trieda dňa</h2>
+            <p>
+                Počíta sa z celého dňa od 0:00 tým istým výpočtom ako Plán dňa: zmestí sa spotrebič do zelenej plochy nad krivkou
+                spotrebičov? „Zmestí sa“ znamená, že okno má aspoň 15 minút navyše, aby hláška neblikala pri programe, ktorý sa zmestí len
+                tesne.
+            </p>
+            <table>
+                <tr>
+                    <th>Trieda</th>
+                    <th>So spotrebičmi doma</th>
+                    <th>Bez spotrebičov (hodiny zelenej za deň)</th>
+                    <th>Farba plagátu</th>
+                </tr>
+                <tr>
+                    <td class="d">výborný</td>
+                    <td>zmestia sa všetky a zelená ostane ešte aspoň na polovicu toho, čo potrebovali</td>
+                    <td>nad 4 h</td>
+                    <td>zelená</td>
+                </tr>
+                <tr>
+                    <td class="d">dobrý</td>
+                    <td>zmestia sa všetky, bez väčšej rezervy</td>
+                    <td>2 až 4 h</td>
+                    <td>jantárová</td>
+                </tr>
+                <tr>
+                    <td class="d">slabý</td>
+                    <td>zmestí sa aspoň jeden, nie všetky</td>
+                    <td>do 2 h</td>
+                    <td>sivá</td>
+                </tr>
+                <tr>
+                    <td class="d">nanič</td>
+                    <td>nezmestí sa ani jeden</td>
+                    <td>žiadna</td>
+                    <td>červená</td>
+                </tr>
+            </table>
+
+            <h2>Fázy dňa</h2>
+            <table>
+                <tr>
+                    <th>Fáza</th>
+                    <th>Odkiaľ trieda</th>
+                    <th>Hláška</th>
+                </tr>
+                <tr>
+                    <td class="d">0:00 – východ slnka</td>
+                    <td>predpoveď na celý deň</td>
+                    <td>ranná podľa triedy</td>
+                </tr>
+                <tr>
+                    <td class="d">východ – západ</td>
+                    <td>namerané doteraz + predpoveď na zvyšok</td>
+                    <td>ranná podľa triedy; keď je trieda iná ako ranná, hláška o zmene</td>
+                </tr>
+                <tr>
+                    <td class="d">západ – 0:00</td>
+                    <td>namerané štvrťhodiny celého dňa</td>
+                    <td>večerná podľa triedy; bez meraní ostáva ranná</td>
+                </tr>
+            </table>
+
+            <h2>Všetky hlášky</h2>
+            <table id="all"></table>
+
+            <h2>Otvorené otázky</h2>
+            <ul>
+                <li>
+                    <b>S čím porovnať „zmenu“.</b> Ranná trieda sa musí niekde zapamätať. Najjednoduchšie je uložiť ju v telefóne pri prvom
+                    načítaní dňa. Kto otvorí appku prvý raz až na obed, hlášku o zmene neuvidí, kým by ju Worker nedržal pre všetkých.
+                </li>
+                <li>
+                    <b>Dlhé slová v súčasnej appke.</b> Slovo tam má pevnú veľkosť podľa šírky bloku, takže „DOJEBABRALO“ či „ODPÁLIL“ môže
+                    pretiecť (rámik v mockupe). Riešenie: prevziať pravidlo novej appky a zmenšiť písmo podľa najdlhšieho slova.
+                </li>
+                <li>
+                    <b>Farba plagátu.</b> Dnes ide podľa toho, čo je teraz (zelená, keď slnko stačí). S hláškou o celom dni by išla podľa
+                    triedy dňa, aby slovo a farba hovorili to isté.
+                </li>
+            </ul>
+        </main>
+        <script>
+            const WORDS = {
+                rano: {
+                    vyborny: ['Oskar dnes pujde na plný koule', 'Dnes bude výborný deň'],
+                    dobry: ['Not baaad dneskaj', 'Dnes bude dobrý deň'],
+                    slaby: ['NAGOVNO DEŇ', 'Dnes bude slabý deň'],
+                    nanic: ['ÚPLNE NAHOVNO DEŇ', 'Dnes takmer nič nevyrobíme'],
+                },
+                zmena: {
+                    lepsi: ['Tak jo, Oskar nakoniec vylezie', 'Deň bude lepší, ako sa čakalo'],
+                    horsi: ['Dojebabralo sa nám to dneskaj', 'Deň bude slabší, ako sa čakalo'],
+                },
+                vecer: {
+                    vyborny: ['Oskar to dnes odpálil na plný koule', 'Dnes to bol výborný deň'],
+                    dobry: ['Not baad, zer gút', 'Dnes to bol dobrý deň'],
+                    slaby: ['Dneskaj ništ moc, nem džo', 'Dnes to bol slabý deň'],
+                    nanic: ['Dnes to bolo pjekne nagovno', 'Dnes sme takmer nič nevyrobili'],
+                },
+            };
+            const CLASS_NAME = { vyborny: 'výborný', dobry: 'dobrý', slaby: 'slabý', nanic: 'nanič' };
+
+            // Scenáre: čas, fáza, trieda, prípadne zmena a prečo. Veta pod slovom je ilustrácia.
+            const SCENARIOS = [
+                {
+                    id: 'r-v',
+                    name: 'Ráno · výborný',
+                    time: '07:10',
+                    phase: 'rano',
+                    cls: 'vyborny',
+                    kick: 'Predpoveď na dnes',
+                    why: 'Predpoveď: na slnko sa zmestia 4 zo 4 spotrebičov, potrebujú 5 h, zelená bude 8 h.',
+                    lead: ['Slnko vyjde o 7:40, prvá zelená od 9:30.', 'Slnko vyjde o 7:40, prvá zelená od 9:30.'],
+                },
+                {
+                    id: 'r-d',
+                    name: 'Ráno · dobrý',
+                    time: '07:10',
+                    phase: 'rano',
+                    cls: 'dobry',
+                    kick: 'Predpoveď na dnes',
+                    why: 'Predpoveď: zmestia sa 4 zo 4, potrebujú 5 h, zelená bude 5 h 45 min (rezerva menej ako polovica).',
+                    lead: ['Zelená od 10:15 do 16:00. Práčka prvá.', 'Zelená od 10:15 do 16:00. Práčku pustite prvú.'],
+                },
+                {
+                    id: 'r-s',
+                    name: 'Ráno · slabý',
+                    time: '07:10',
+                    phase: 'rano',
+                    cls: 'slaby',
+                    kick: 'Predpoveď na dnes',
+                    why: 'Predpoveď: zmestí sa len práčka (1 zo 4), zelená 2 h okolo obeda.',
+                    lead: ['Na slnko sa zmestí len práčka, o 11:30.', 'Na slnko sa zmestí len práčka, o 11:30.'],
+                },
+                {
+                    id: 'r-n',
+                    name: 'Ráno · nanič',
+                    time: '07:10',
+                    phase: 'rano',
+                    cls: 'nanic',
+                    kick: 'Predpoveď na dnes',
+                    why: 'Predpoveď: nezmestí sa ani jeden spotrebič, zelená dnes nebude vôbec.',
+                    lead: ['Dnes všetko zo siete. Lacno od 13:00.', 'Dnes všetko zo siete. Lacnejšie od 13:00.'],
+                },
+                {
+                    id: 'z-h',
+                    name: 'Cez deň · horší',
+                    time: '12:40',
+                    phase: 'zmena',
+                    change: 'horsi',
+                    cls: 'slaby',
+                    kick: 'Dnes',
+                    why: 'Ráno dobrý (4 zo 4). O 12:40: namerané doteraz + nová predpoveď = zmestí sa už len 1 zo 4.',
+                    lead: ['Prišli mraky. Umývačka radšej na lacno o 22:00.', 'Prišli mraky. Umývačku radšej v lacnom pásme o 22:00.'],
+                },
+                {
+                    id: 'z-l',
+                    name: 'Cez deň · lepší',
+                    time: '11:20',
+                    phase: 'zmena',
+                    change: 'lepsi',
+                    cls: 'dobry',
+                    kick: 'Dnes',
+                    why: 'Ráno slabý (1 zo 4). O 11:20: hmla zmizla, zmestia sa 4 zo 4.',
+                    lead: ['Teraz svieti. Práčka hneď, sušička po nej.', 'Teraz svieti. Práčku hneď, sušičku po nej.'],
+                },
+                {
+                    id: 'd-d',
+                    name: 'Cez deň · bez zmeny',
+                    time: '13:00',
+                    phase: 'rano',
+                    cls: 'dobry',
+                    kick: 'Dnes',
+                    why: 'Trieda je stále tá istá ako ráno (dobrý), preto ostáva ranná hláška.',
+                    lead: ['Slnko to teraz platí za nás.', 'Slnko to teraz platí za nás.'],
+                },
+                {
+                    id: 'v-v',
+                    name: 'Večer · výborný',
+                    time: '19:30',
+                    phase: 'vecer',
+                    cls: 'vyborny',
+                    kick: 'Ako bolo dnes',
+                    why: 'Namerané: 4 zo 4 by sa zmestili, zelená bola 7 h 30 min pri potrebe 5 h.',
+                    lead: ['Strecha dala 38 kWh. Zajtra podobne.', 'Strecha dala 38 kWh. Zajtra podobne.'],
+                },
+                {
+                    id: 'v-d',
+                    name: 'Večer · dobrý',
+                    time: '19:30',
+                    phase: 'vecer',
+                    cls: 'dobry',
+                    kick: 'Ako bolo dnes',
+                    why: 'Namerané: 4 zo 4, ale len s malou rezervou.',
+                    lead: ['Strecha dala 24 kWh.', 'Strecha dala 24 kWh.'],
+                },
+                {
+                    id: 'v-s',
+                    name: 'Večer · slabý',
+                    time: '19:30',
+                    phase: 'vecer',
+                    cls: 'slaby',
+                    kick: 'Ako bolo dnes',
+                    why: 'Namerané: zmestil by sa len 1 zo 4.',
+                    lead: ['Strecha dala 9 kWh. Zajtra lepšie.', 'Strecha dala 9 kWh. Zajtra lepšie.'],
+                },
+                {
+                    id: 'v-n',
+                    name: 'Večer · nanič',
+                    time: '19:30',
+                    phase: 'vecer',
+                    cls: 'nanic',
+                    kick: 'Ako bolo dnes',
+                    why: 'Namerané: nezmestil by sa ani jeden, zelená nebola vôbec.',
+                    lead: ['Strecha dala 2 kWh.', 'Strecha dala 2 kWh.'],
+                },
+                {
+                    id: 'b-s',
+                    name: 'Bez spotrebičov · slabý',
+                    time: '10:00',
+                    phase: 'rano',
+                    cls: 'slaby',
+                    kick: 'Predpoveď na dnes',
+                    why: 'Doma nie sú spotrebiče, rozhoduje dĺžka zelenej: dnes 1 h 30 min, teda slabý.',
+                    lead: ['Zelená len okolo 12:00.', 'Zelená len okolo 12:00.'],
+                },
+            ];
+
+            let sc = SCENARIOS[0];
+            let tone = 'drzy';
+            const $ = (id) => document.getElementById(id);
+
+            function wordOf(s, t) {
+                const i = t === 'drzy' ? 0 : 1;
+                if (s.phase === 'zmena') return WORDS.zmena[s.change][i];
+                return WORDS[s.phase][s.cls][i];
+            }
+
+            function render() {
+                // Súčasná appka tón nemá, hovorí vždy drzo.
+                const tWord = wordOf(sc, 'drzy');
+                const w = wordOf(sc, tone);
+                $('t-time').textContent = $('o-time').textContent = sc.time;
+                $('t-word').textContent = tWord;
+                $('t-lead').textContent = sc.lead[0];
+                $('o-word').textContent = w;
+                $('o-lead').textContent = sc.lead[tone === 'drzy' ? 0 : 1];
+                $('t-kick').textContent = sc.kick;
+                $('t-hero').className = 'hero c-' + sc.cls;
+                const tw = $('t-word');
+                tw.classList.toggle('long', tWord.length >= 10);
+                tw.classList.remove('over');
+                requestAnimationFrame(() => tw.classList.toggle('over', tw.scrollWidth > tw.clientWidth + 1));
+                const ow = $('o-word');
+                ow.style.setProperty('--word-len', String(Math.max(1, ...w.split(/\s+/).map((x) => x.length))));
+                $('o-phone').className = 'phone o c-' + sc.cls + (sc.phase === 'vecer' ? ' vecer' : '');
+                $('why').textContent = 'Trieda: ' + CLASS_NAME[sc.cls] + '. ' + sc.why;
+                for (const b of document.querySelectorAll('#seg-sc button')) b.setAttribute('aria-pressed', String(b.dataset.id === sc.id));
+                for (const b of document.querySelectorAll('#seg-tone button'))
+                    b.setAttribute('aria-pressed', String(b.dataset.tone === tone));
+            }
+
+            for (const s of SCENARIOS) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.dataset.id = s.id;
+                b.textContent = s.name;
+                b.addEventListener('click', () => {
+                    sc = s;
+                    render();
+                });
+                $('seg-sc').append(b);
+            }
+            for (const b of document.querySelectorAll('#seg-tone button'))
+                b.addEventListener('click', () => {
+                    tone = b.dataset.tone;
+                    render();
+                });
+
+            // Tabuľka všetkých hlášok.
+            const rows = [['Fáza', 'Trieda / zmena', 'Drzý', 'Slušný']];
+            for (const k of Object.keys(WORDS.rano)) rows.push(['Ráno a cez deň', CLASS_NAME[k], ...WORDS.rano[k]]);
+            rows.push(['Cez deň, zmena', 'deň je lepší', ...WORDS.zmena.lepsi]);
+            rows.push(['Cez deň, zmena', 'deň je horší', ...WORDS.zmena.horsi]);
+            for (const k of Object.keys(WORDS.vecer)) rows.push(['Večer', CLASS_NAME[k], ...WORDS.vecer[k]]);
+            $('all').innerHTML = rows
+                .map(
+                    (r, i) =>
+                        '<tr>' + r.map((c, j) => (i ? `<td${j === 1 ? ' class="d"' : ''}>${c}</td>` : `<th>${c}</th>`)).join('') + '</tr>',
+                )
+                .join('');
+
+            document.fonts.ready.then(render);
+            render();
+        </script>
+    </body>
+</html>
