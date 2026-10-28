@@ -1,7 +1,6 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
 // setState (web/store.js) zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
-import { START_PANELS } from '../shared/config.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
@@ -51,7 +50,6 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   importNote: string,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
- *   startPanel: import('../shared/settings.js').StartPanel,
  *   setupStep: SetupStep | null,
  *   setupRoof: number,
  *   setupReturn: 'suhrn' | 'prehlad' | null,
@@ -82,13 +80,12 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
 /**
  * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
  * @param {{ saved?: import('../shared/settings.js').Settings | null, site?: import('../shared/config.js').Site | null,
- *   incoming?: import('../shared/settings.js').Settings | null,
- *   startPanel?: import('../shared/settings.js').StartPanel }} start uložené nastavenie, bez neho
- *   uložená poloha (appka počíta s typickou strechou v nej), nastavenie z odkazu, ktoré appka
- *   ponúkne prevziať, a karta, na ktorej sa appka na tomto telefóne otvára
+ *   incoming?: import('../shared/settings.js').Settings | null }} start uložené nastavenie, bez neho
+ *   uložená poloha (appka počíta s typickou strechou v nej) a nastavenie z odkazu, ktoré appka
+ *   ponúkne prevziať
  * @returns {AppState}
  */
-export function initialState(now, layout, { saved = null, site = null, incoming = null, startPanel = START_PANELS[0] }) {
+export function initialState(now, layout, { saved = null, site = null, incoming = null }) {
     /** @type {import('../shared/settings.js').Known} */
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
     // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí.
@@ -96,7 +93,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     return {
         now,
-        panel: welcome ? 'nastavenie' : startPanel,
+        // Appka sa otvára vždy na prvej karte (Terazky), bez polohy v sprievodcovi.
+        panel: welcome ? 'nastavenie' : PANELS[0],
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
         panelDir: 1,
@@ -154,8 +152,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Čo pribaliť k zdieľanému odkazu na appku.
         shareSettings: false,
         shareKiosk: false,
-        // Karta, na ktorej sa appka na tomto telefóne otvára (voľba v karte Nastavenie).
-        startPanel,
         // Rozbalená položka sekcie Appka v karte Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
         // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
         infoOpen: null,

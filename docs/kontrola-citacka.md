@@ -78,8 +78,8 @@ otvorí okno s plagátom a tlačidlami Zdieľať a Zavrieť.
 
 **Nastavenie.** Nadpis „Nastavenie“, potom „Moja strecha“ a pod nadpisom „Elektráreň“ riadky
 (poloha, panely, menič, meranie, tarifa) – každý je tlačidlo, ktoré otvorí krok sprievodcu.
-Pod nadpisom „Vzhľad“ je prepínač „Živá obloha“ (povie zapnuté / vypnuté) a dvojice tlačidiel
-Tón hlášok a Úvodná karta. Pod „Appka“ sú „Zdieľať appku“ a „Nastaviť celé znova“ – obe
+Pod nadpisom „Vzhľad“ je prepínač „Živá obloha“ (povie zapnuté / vypnuté) a dvojica tlačidiel
+Tón hlášok. Pod „Appka“ sú „Zdieľať appku“ a „Nastaviť celé znova“ – obe
 otvoria okno, ktoré čítačka ohlási, a gesto Späť ho zavrie.
 
 **Zmena odpovede.** Ak necháš appku otvorenú na Môžem? vo chvíli, keď sa odpoveď mení (napr.

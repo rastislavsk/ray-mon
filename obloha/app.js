@@ -13,7 +13,6 @@ import {
     loadOznamenia,
     loadSettings,
     loadSite,
-    loadStartPanel,
     loadVlastnaAdresa,
     loadVymazane,
 } from '../web/storage.js';
@@ -39,14 +38,12 @@ const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
 // Dáta, ktoré appky už nepoužívajú (zápisy „Pustil/a som“), v telefóne nenechávame.
 dropOldStored();
-// Úvodná karta je voľba telefónu, spoločná so súčasnou appkou (prva-karta-v1).
 const store = createStore(
     initialState(new Date(), {
         saved,
         site,
         incoming,
         linkError: link?.error ?? null,
-        startPanel: loadStartPanel(hash),
         dayLog: loadDayLog(),
         ranna: loadRanna(),
         online: navigator.onLine,

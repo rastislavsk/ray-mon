@@ -12,7 +12,6 @@ import {
     OLD_STORAGE_KEYS,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
-    START_STORAGE_KEY,
     STORAGE_KEYS,
     SITE,
     SWIPE,
@@ -41,7 +40,7 @@ import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { summaryModel } from '../../shared/summary.js';
 import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekMessage } from '../../shared/messages.js';
-import { settingsFromLink, shareUrl, startFromLink, toUser, typicalSettings } from '../../shared/settings.js';
+import { settingsFromLink, shareUrl, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
 import { bigWords, FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
@@ -109,16 +108,12 @@ async function ulozPolohu(page, site) {
  * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil). So
  * `settings: null` a `site` pozná appka len polohu, bez oboch sa na ňu pýta. Appka sa otvára
- * na predvolenej karte Môžem?; `start: 'terazky'` je telefón, ktorý si v Nastavení vybral
- * ciferník (tiež len ak voľbu ešte nemá) - pre testy, ktoré skúšajú ciferník.
+ * vždy na Terazkách.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string,
- *   start?: 'mozem' | 'terazky' | null, pvData?: typeof pv }} [opts] `pvData` odpovie Worker namiesto merania z fixtures
+ *   pvData?: typeof pv }} [opts] `pvData` odpovie Worker namiesto merania z fixtures
  */
-async function openApp(
-    page,
-    { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '', start = null, pvData = pv } = {},
-) {
+async function openApp(page, { time = FIXED_NOW, offline = false, settings = OWNER, site = null, hash = '', pvData = pv } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -137,11 +132,6 @@ async function openApp(
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
     if (site) await ulozPolohu(page, site);
-    if (start)
-        await page.addInitScript(
-            ([key, value]) => localStorage.getItem(key) || localStorage.setItem(key, value),
-            [START_STORAGE_KEY, start],
-        );
     await page.clock.setFixedTime(time);
     await page.goto(`/${hash}`);
     await appReady(page);
@@ -230,7 +220,7 @@ const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.
 const kick = (m, hm) => `${m.title}${hm ? ` · ${hm}` : ''} · ${SITE.name}`;
 
 test('bez merania: pás pod číslom povie, že je to odhad, a vedie na krok Meranie', async ({ page }) => {
-    const errors = await openApp(page, { settings: { ...OWNER, zdroj: null }, start: 'terazky' });
+    const errors = await openApp(page, { settings: { ...OWNER, zdroj: null } });
     const m = terazAt(FIXED_NOW, { zdroj: null, pv: null });
     await expect(page.locator('#tz-note')).toBeVisible();
     await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
@@ -250,7 +240,7 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     // Krivka z fixtures končí o 13:00, o 14:30 za slnka ju Worker posiela stále rovnakú.
     const { instant } = atTime('14:30');
     const pvData = { ...pv, updatedAt: instant.toISOString() };
-    const errors = await openApp(page, { start: 'terazky', time: instant, pvData });
+    const errors = await openApp(page, { time: instant, pvData });
     const m = terazAt(instant, { pv: pvData });
     await expect(page.locator('#pv-updated')).toHaveText('meranie · zastarané');
     // Polovičná bodka ako v Oblohe a bublina povie, ako dlho menič mlčí.
@@ -277,7 +267,7 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
 });
 
 test('karta Terazky o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dňa', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     const { instant } = atTime('13:00');
     const m = terazAt(instant);
     if (!m.say || !m.chart) throw new Error('model o 13:00 nemá graf ani vetu');
@@ -318,7 +308,8 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf d
 });
 
 test('pás odporúčaní na karte Dnes sa listuje do strán, bodky idú za ním a na kraji sa zastaví', async ({ page }) => {
-    const errors = await openApp(page, { start: 'mozem' });
+    const errors = await openApp(page);
+    await page.locator('#nav-mozem').click();
     const dots = page.locator('#tz-dots i');
     const strip = page.locator('#tz-strip');
     await expect(strip).toHaveAttribute('tabindex', '0');
@@ -349,7 +340,7 @@ for (const [hm, label] of [
 ]) {
     test(`veta o teraz o ${hm} (${label}) sedí s modelom`, async ({ page }) => {
         const { instant } = atTime(hm);
-        const errors = await openApp(page, { start: 'terazky', time: instant });
+        const errors = await openApp(page, { time: instant });
         const m = terazAt(instant);
         await expect(page.locator('#tz-say-text')).toHaveText(m.say?.text ?? '');
         await expect(page.locator('#tz-num-val')).toHaveText(m.num);
@@ -411,7 +402,7 @@ test('jedna cena celý deň: v noci sivé pozadie, bodka aj pás plánu bez oran
         ],
     };
     const { instant } = atTime('22:00');
-    const errors = await openApp(page, { start: 'terazky', time: instant, settings: { ...OWNER, tariff: flat } });
+    const errors = await openApp(page, { time: instant, settings: { ...OWNER, tariff: flat } });
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'grey');
     await expect(page.locator('#tz-say-text')).toHaveText(terazAt(instant, { tariff: flat }).say?.text ?? '');
     await expect(page.locator('#tz-chart rect[data-tone="plain"]').first()).toBeAttached();
@@ -420,7 +411,7 @@ test('jedna cena celý deň: v noci sivé pozadie, bodka aj pás plánu bez oran
 });
 
 test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Späť na teraz“ ho zruší', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky', time: atTime('13:00').instant });
+    const errors = await openApp(page, { time: atTime('13:00').instant });
     const { instant } = atTime('13:00');
     const teraz = terazAt(instant);
     const nahlad = terazAt(instant, { previewMinutes: minuta('20:45') });
@@ -456,7 +447,7 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
 });
 
 test('zoznam pod grafom: zatvorený len prvý riadok legendy, po ťuknutí farby pásu a hodnoty, ktoré idú za náhľadom', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     const { instant } = atTime('13:00');
     const chart = (/** @type {object} */ extra = {}) => {
         const c = terazAt(instant, extra).chart;
@@ -490,7 +481,7 @@ test('zoznam pod grafom: zatvorený len prvý riadok legendy, po ťuknutí farby
 });
 
 test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kraje dňa, Escape vráti teraz', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     const { instant } = atTime('13:00');
     const graf = page.getByRole('slider', { name: 'Graf dňa, šípkami si pozrieš iný čas' });
     const hodnota = (/** @type {string} */ hm) => terazAt(instant, { previewMinutes: minuta(hm) }).chart?.valueText ?? '';
@@ -514,7 +505,7 @@ test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kr
 });
 
 test('prístupnosť karty Terazky: žiadne závažné nálezy axe počas náhľadu', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     await page.locator('#tz-chart').focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('#tz-reset')).toBeVisible();
@@ -974,7 +965,7 @@ const poMinute = (page) => page.clock.setFixedTime(new Date(FIXED_NOW.getTime() 
 /** Jedna nevydarená obnova nemá prepnúť živý výkon na odhad - o minútu by sa vrátil späť
  * a nameraná krivka by medzitým z grafu zmizla. */
 test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     await expect(page.locator('#tz-src')).toHaveText('živé meranie');
 
     await page.route(WORKER_PV_URL, (route) => route.abort());
@@ -992,7 +983,7 @@ test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', as
 /** Výrobca prístup odmietol (vypršal, zrušený, iné heslo): nie „meranie neodpovedá“, ale prečo
  * a cesta k oprave - a appka ho prestane zaťažovať (shared/pristup.js). */
 test('prístup k meraniu neplatí: pás, hlásenie v Nastavení, Skúsiť znova a Pripojiť znova', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     let odmieta = true;
     let volania = 0;
     await page.route(WORKER_PV_URL, (route) => {
@@ -1061,7 +1052,7 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
         ([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v),
         [config.MERANIE_STORAGE_KEY, JSON.stringify({ sposob: nb.sposob, nazov: nb.nazov, at: FIXED_NOW.getTime(), pv: pvTeraz })],
     );
-    const errors = await openApp(page, { settings: { ...OWNER, zdroj: nb }, start: 'terazky' });
+    const errors = await openApp(page, { settings: { ...OWNER, zdroj: nb } });
     /** @type {string[]} */ const telo = [];
     let odpoved = /** @type {number} */ (502);
     await page.route(WORKER_PV_URL, (route) => {
@@ -1149,7 +1140,7 @@ test('bublina stavu bez merania: Pripojiť meranie › otvorí krok Meranie spri
 /** Pri pomalej sieti by každý minútový časovač a návrat z pozadia pridal ďalšiu požiadavku
  * a staršia odpoveď mohla prepísať novšiu. */
 test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbehnutej', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     let volania = 0;
     /** @type {() => void} */
     let pustit = () => {};
@@ -1192,7 +1183,7 @@ test('QR knižnica z CDN sa spustí, len ak je to presne očakávaný súbor', a
 });
 
 test('bez dát: appka neukáže chybu, iba stav "dáta nedostupné"', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky', offline: true });
+    const errors = await openApp(page, { offline: true });
     await expect(page.locator('#pv-updated')).toHaveText('dáta nedostupné');
     await expect(page.locator('#tz-num-val')).toHaveText('–');
     await expect(page.locator('#tz-sub')).not.toHaveText('Načítavam…');
@@ -1301,7 +1292,7 @@ test('široká obrazovka: karta Terazky má celú šírku stránky, graf vľavo 
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     await expect(page.locator('#panel-terazky')).toBeVisible();
 
     const rozlozenie = await page.evaluate(() => {
@@ -1403,7 +1394,7 @@ test('mobil: karta Terazky sa dá doscrollovať a pás odporúčaní ostane nad 
         { width: 740, height: 360 },
     ]) {
         await page.setViewportSize({ width, height });
-        const errors = await openApp(page, { start: 'terazky' });
+        const errors = await openApp(page);
         const rozmer = `${width}x${height}`;
         await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
         const geometria = await page.evaluate(() => ({
@@ -1763,7 +1754,7 @@ test('tlačidlo Späť vracia o krok v appke, dopredu ide zase tam', async ({ pa
 /** Krokom navigácie je karta a detail dňa, nič iné. Listovanie odporúčaní či výber dňa sa
  * deje vnútri karty, takže Späť ich nepočíta - inak by sa z appky nedalo odísť. */
 test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appku', async ({ page }) => {
-    const errors = await openApp(page, { start: 'terazky' });
+    const errors = await openApp(page);
     const zaciatok = await page.evaluate(() => history.length);
 
     // Náhľad iného času je výber vnútri karty, nie krok navigácie.
@@ -2152,7 +2143,7 @@ test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
     });
 
     test('ťuknutie na graf dňa bez pohybu ukáže náhľad v tom čase a nechá ho svietiť', async ({ page }) => {
-        const errors = await openApp(page, { start: 'terazky' });
+        const errors = await openApp(page);
         const bod = await bodGrafu(page, minuta('16:00'));
         await tuknutie(page, bod.x, bod.y);
         // Ťuknutie sa o 2 px pohne (tuknutie), čas náhľadu je štvrťhodina pod prstom.
@@ -2167,7 +2158,7 @@ test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
 
     test('zvislý ťah cez graf dňa posunie stránku a náhľad neukáže', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openApp(page, { start: 'terazky' });
+        const errors = await openApp(page);
         const bod = await bodGrafu(page, minuta('12:00'));
         await tah(page, { x: bod.x, y: bod.y, dx: 0, dy: -160, ms: 300 });
         await expect.poll(() => page.evaluate(() => window.scrollY), 'stránka sa cez graf neposunula').toBeGreaterThan(0);
@@ -2180,7 +2171,7 @@ test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
 
     /** Ťah po grafe dňa posúva náhľad času - aj rýchly a ďaleký, dlhší než SWIPE.minDistPx. */
     test('rýchly vodorovný ťah po grafe dňa ukazuje náhľad a kartu neprelistuje', async ({ page }) => {
-        const errors = await openApp(page, { start: 'terazky' });
+        const errors = await openApp(page);
         const bod = await bodGrafu(page, minuta('16:00'));
         const ciel = await bodGrafu(page, minuta('09:00'));
         expect(Math.abs(ciel.x - bod.x), 'ťah je kratší než hranica listovania, test by nič nekontroloval').toBeGreaterThan(
@@ -3148,84 +3139,30 @@ test.describe('Plán dňa na Terazkách', () => {
     });
 });
 
-test.describe('prvá karta tohto telefónu', () => {
-    test('bez uloženej voľby sa appka otvorí na Terazkách a nič neuloží ani nepridá do adresy', async ({ page }) => {
+test.describe('appka sa otvára vždy na Terazkách', () => {
+    test('nič neuloží ani nepridá do adresy, voľba prvej karty v Nastavení nie je', async ({ page }) => {
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
         await expect(page.locator('#nav-mozem')).not.toHaveAttribute('aria-current', 'page');
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBeNull();
-        expect(startFromLink(page.url()), 'predvolená karta sa do adresy nepíše').toBeNull();
+        expect(await page.evaluate(() => localStorage.getItem('prva-karta-v1'))).toBeNull();
+        expect(page.url()).not.toContain('prva=');
         expect(await page.evaluate(() => history.state?.step?.panel)).toBe('terazky');
+        await expect(page.locator('#settings-start, [data-start-panel]')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
-    test('s uloženou voľbou Dnes sa appka otvorí na Dnes', async ({ page }) => {
-        await page.addInitScript((key) => localStorage.setItem(key, 'mozem'), START_STORAGE_KEY);
-        const errors = await openApp(page);
-        await ocakavajKartu(page, 'mozem');
-        await expect(page.locator('#nav-terazky')).not.toHaveAttribute('aria-current', 'page');
-        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('mozem');
-        expect(errors).toEqual([]);
-    });
-
-    test('voľba v Nastavení: po ďalšom otvorení appky je prvá Dnes, adresa ju nesie', async ({ page }) => {
+    test('stará uložená voľba Dnes sa ignoruje a pri štarte zmaže', async ({ page }) => {
+        await page.addInitScript(() => localStorage.setItem('prva-karta-v1', 'mozem'));
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
-        await page.locator('#nav-nastavenie').click();
-        await otvorPolozku(page, 'settings-start');
-        const dnes = page.locator('[data-start-panel="mozem"]');
-        await expect(page.locator('[data-start-panel="terazky"]')).toHaveAttribute('aria-pressed', 'true');
-        await dnes.click();
-        await expect(dnes).toHaveAttribute('aria-pressed', 'true');
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
-        expect(startFromLink(page.url()), 'appka pridaná na plochu iPhonu si voľbu prenesie z adresy').toBe('mozem');
-
-        await page.reload();
-        await ocakavajKartu(page, 'mozem');
-        expect(await page.evaluate(() => history.state?.step?.panel)).toBe('mozem');
-
-        // Návrat k predvolenej: z adresy prvá karta zmizne.
-        await page.locator('#nav-nastavenie').click();
-        await otvorPolozku(page, 'settings-start');
-        await page.locator('[data-start-panel="terazky"]').click();
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('terazky');
-        expect(startFromLink(page.url())).toBeNull();
+        expect(await page.evaluate(() => localStorage.getItem('prva-karta-v1'))).toBeNull();
         expect(errors).toEqual([]);
     });
 
-    test('odkaz s prvou kartou: telefón bez voľby sa otvorí na Dnes a zapamätá si to', async ({ page }) => {
+    test('starší odkaz s prvou kartou (prva=mozem) otvorí Terazky a nič neuloží', async ({ page }) => {
         const errors = await openApp(page, { hash: '#prva=mozem' });
-        await ocakavajKartu(page, 'mozem');
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('mozem');
-        expect(errors).toEqual([]);
-    });
-
-    test('starší odkaz s Terazkami (prva=terazky) ďalej funguje: telefón bez voľby si Terazky zapamätá', async ({ page }) => {
-        const errors = await openApp(page, { hash: '#prva=terazky' });
         await ocakavajKartu(page, 'terazky');
-        expect(await page.evaluate((key) => localStorage.getItem(key), START_STORAGE_KEY)).toBe('terazky');
-        expect(errors).toEqual([]);
-    });
-
-    test('odkaz s prvou kartou neprepíše vlastnú voľbu telefónu', async ({ page }) => {
-        await page.addInitScript((key) => localStorage.setItem(key, 'mozem'), START_STORAGE_KEY);
-        const errors = await openApp(page, { hash: '#prva=terazky' });
-        await ocakavajKartu(page, 'mozem');
-        expect(errors).toEqual([]);
-    });
-
-    test('zdieľanie: odkaz prvú kartu nenesie, ani keď si telefón vybral Dnes', async ({ page }) => {
-        const errors = await openApp(page, { start: 'mozem' });
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#info-share > summary').click();
-        await expect(page.locator('#share-options input[type="checkbox"]')).toHaveCount(2);
-        const wa = page.locator('#share-whatsapp');
-        const shared = async () => decodeURIComponent(((await wa.getAttribute('href')) || '').replace('https://wa.me/?text=', ''));
-        expect(await shared()).toBe(shareUrl(APP_URL, null, false));
-        await page.locator('#share-with-settings').check();
-        const url = await shared();
-        expect(startFromLink(url)).toBeNull();
-        expect(settingsFromLink(url)).toEqual({ ...OWNER, zdroj: null });
+        expect(await page.evaluate(() => localStorage.getItem('prva-karta-v1'))).toBeNull();
         expect(errors).toEqual([]);
     });
 });

@@ -116,13 +116,11 @@ function renderOznamenia(state, dom) {
     setText(dom.nsOznamNote, T.privacy);
 }
 
-/** Vzhľad: živá obloha, tón hlášok a úvodná karta. @param {AppState} state @param {Dom} dom */
+/** Vzhľad: živá obloha a tón hlášok. @param {AppState} state @param {Dom} dom */
 function renderLook(state, dom) {
     dom.nsLiveSky.setAttribute('aria-checked', String(state.liveSky));
     for (const b of dom.nsVoice.querySelectorAll('[data-voice]'))
         b.setAttribute('aria-pressed', String(b.getAttribute('data-voice') === state.voice));
-    for (const b of dom.nsStart.querySelectorAll('[data-start]'))
-        b.setAttribute('aria-pressed', String(b.getAttribute('data-start') === state.startPanel));
 }
 
 /**

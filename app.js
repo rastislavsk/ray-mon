@@ -13,7 +13,6 @@ import {
     loadOznamenia,
     loadSettings,
     loadSite,
-    loadStartPanel,
     loadVlastnaAdresa,
     loadVymazane,
 } from './web/settings-store.js';
@@ -40,10 +39,8 @@ const link = readLink(hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
 const layout = { wide: mq.wide.matches, tall: isTall() };
-// Karta, na ktorej sa appka otvára: voľba tohto telefónu, inak z odkazu pre rodinu (&prva=…).
-const startPanel = loadStartPanel(hash);
 const store = createStore({
-    ...initialState(now, layout, { saved, site, incoming, startPanel }),
+    ...initialState(now, layout, { saved, site, incoming }),
     dayLog: loadDayLog(),
     ranna: loadRanna(),
     pristup: loadOdmietnutie(),

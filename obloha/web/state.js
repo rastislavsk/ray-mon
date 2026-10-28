@@ -14,9 +14,8 @@ import { setupInit } from '../../shared/setup-flow.js';
  * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
- * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, `startPanel` karta, na ktorej
- * sa appka na tomto telefóne otvára, a `incoming` nastavenie z otvoreného odkazu, ktoré čaká na
- * potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
+ * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
+ * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
@@ -39,7 +38,6 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   weekDay: number,
  *   statsPeriod: import('../../shared/stats.js').StatsPeriod,
  *   online: boolean,
- *   startPanel: import('../../shared/settings.js').StartPanel,
  *   incoming: import('../../shared/settings.js').Settings | null,
  *   linkError: import('../../shared/settings.js').LinkError | null,
  *   voice: import('../../shared/messages.js').Voice,
@@ -72,14 +70,13 @@ import { setupInit } from '../../shared/setup-flow.js';
 /**
  * @param {Date} now
  * @param {{ saved: import('../../shared/settings.js').Settings | null, site: import('../../shared/config.js').Site | null,
- *   startPanel: import('../../shared/settings.js').StartPanel, dayLog: import('../../shared/daylog.js').DayLog,
+ *   dayLog: import('../../shared/daylog.js').DayLog,
  *   online: boolean, ranna: import('../../shared/den-trieda.js').RannaTrieda | null,
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout, oznamenia?: import('../../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('../../web/oznamenia.js').OznamStav }} start
- *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), karta,
- *   na ktorej sa appka na tomto telefóne otvára, denník výroby, internet, nastavenie
+ *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
  * @returns {AppState}
@@ -89,7 +86,6 @@ export function initialState(
     {
         saved,
         site,
-        startPanel,
         dayLog,
         online,
         ranna,
@@ -107,7 +103,8 @@ export function initialState(
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
     return {
         now,
-        panel: startPanel,
+        // Appka sa otvára vždy na prvej karte (Teraz).
+        panel: PANELS[0],
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         panelDir: 1,
         layout,
@@ -132,7 +129,6 @@ export function initialState(
         weekDay: 0,
         statsPeriod: /** @type {import('../../shared/stats.js').StatsPeriod} */ ('dnes'),
         online,
-        startPanel,
         incoming,
         linkError,
         voice: look.voice,

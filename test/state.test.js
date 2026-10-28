@@ -49,20 +49,20 @@ test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s
     assert.deepEqual(savedSettings(state), settings);
 });
 
-test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou na svojej karte', () => {
+test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou vždy na Terazkách', () => {
     const now = new Date();
     const layout = { wide: false, tall: false };
-    const welcome = initialState(now, layout, { startPanel: 'mozem' });
+    const welcome = initialState(now, layout, {});
     assert.equal(welcome.known, 'nic');
     assert.equal(welcome.panel, 'nastavenie');
     assert.equal(welcome.setupStep, 'lokalita');
     assert.equal(welcome.site.name, '', 'poloha je prázdna, kým ju človek nevyberie');
-    const site = initialState(now, layout, { site: SITE, startPanel: 'mozem' });
+    const site = initialState(now, layout, { site: SITE });
     assert.equal(site.known, 'poloha');
     assert.equal(site.plant.strings.length, 1, 'typická strecha v uloženej polohe');
     assert.equal(initialState(now, layout, { saved: typicalSettings(SITE), site: SITE }).known, 'elektraren', 'uložená elektráreň vyhrá');
-    assert.equal(site.panel, 'mozem');
-    assert.equal(initialState(now, layout, { site: SITE }).panel, 'terazky', 'bez voľby sa appka otvára na Terazkách');
+    assert.equal(site.panel, 'terazky');
+    assert.equal(initialState(now, layout, { saved: typicalSettings(SITE) }).panel, 'terazky');
     assert.equal(site.setupStep, null);
     assert.equal(isWelcome(welcome, welcome.setupStep), true);
     assert.equal(isWelcome(welcome, 'odkaz'), false, 'vloženie odkazu je bežná obrazovka sprievodcu');

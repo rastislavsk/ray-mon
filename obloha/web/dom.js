@@ -221,7 +221,6 @@ function nastavenieDom() {
         importDecline: byId('import-decline'),
         nsLiveSky: byId('ns-live-sky'),
         nsVoice: byId('ns-voice'),
-        nsStart: byId('ns-start'),
         nsOznamTitle: byId('ns-oznam-title'),
         nsOznam: byId('ns-oznam'),
         nsOznamLabel: byId('ns-oznam-label'),

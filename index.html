@@ -91,7 +91,7 @@
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
-                    <!-- Terazky sú v navigácii prvé a appka sa na nich aj otvára (START_PANELS v shared/config.js),
+                    <!-- Terazky sú v navigácii prvé a appka sa na nich vždy otvára (PANELS v shared/config.js),
                          Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
                     <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
@@ -485,26 +485,6 @@
                         <section class="app-items" aria-labelledby="app-items-title">
                             <div class="group-lbl" id="app-items-title">Appka</div>
                             <ul class="settings-list">
-                                <!-- Na ktorej karte sa appka na tomto telefóne otvára. O rozbalení appka nevie, voľby
-                                     do #start-pick skladá render (renderStartPick). -->
-                                <li>
-                                    <details class="settings-item" id="settings-start">
-                                        <summary class="settings-summary">
-                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                                <rect x="7" y="2" width="10" height="20" rx="2" />
-                                                <path d="M11 18h2" />
-                                            </svg>
-                                            <span class="settings-text">
-                                                <b>Úvodná karta</b>
-                                                <span class="settings-hint">Ktorá karta sa na tomto telefóne otvorí ako prvá</span>
-                                            </span>
-                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </summary>
-                                        <div class="settings-body start-pick" id="start-pick"></div>
-                                    </details>
-                                </li>
                                 <!-- Ranné oznámenie s plánom dňa a spotrebiče doma. O rozbalení appka nevie, voľby
                                      do #oznam-body skladá render (render/oznamenia.js). -->
                                 <li>
@@ -583,8 +563,8 @@
                                         </summary>
                                         <div class="settings-body clear-data">
                                             <p>
-                                                Zmaže elektráreň, polohu, úvodnú kartu a denník výroby. Appka sa potom otvorí ako prvýkrát.
-                                                Odinštalovanie appky tieto údaje samo nezmaže.
+                                                Zmaže elektráreň, polohu a denník výroby. Appka sa potom otvorí ako prvýkrát. Odinštalovanie
+                                                appky tieto údaje samo nezmaže.
                                             </p>
                                             <button type="button" class="danger-btn" id="clear-data">Vymazať údaje</button>
                                         </div>

@@ -8,8 +8,6 @@ import {
     SETTINGS_LIMITS,
     SHARE_HASH_KEY,
     SHARE_LINK_VERSION,
-    START_HASH_KEY,
-    START_PANELS,
     TARIFF,
     TARIFF_TEMPLATES,
     TYPICAL_PLANT,
@@ -263,52 +261,29 @@ function fromBase64Url(token) {
     return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
-/** @typedef {(typeof START_PANELS)[number]} StartPanel karta, na ktorej sa appka otvára */
-
 /**
- * Časť adresy za mriežkou s nastavením (`#nastavenie=…`) a s kartou, na ktorej sa má appka
- * otvárať (`&prva=terazky`). Predvolená karta sa do adresy nepíše. Bez oboch prázdny reťazec.
+ * Časť adresy za mriežkou s nastavením (`#nastavenie=…`). Bez nastavenia prázdny reťazec.
  * Adresa, ktorú appka zrkadlí sama (`vlastna`), nesie pri nastavení značku VLASTNA_HASH_KEY.
+ * Staršie odkazy niesli aj prvú kartu (`&prva=…`); appka sa dnes otvára vždy na Teraz(kách),
+ * takže ju z odkazu nečíta.
  * @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
- * @param {StartPanel} [start] @param {boolean} [vlastna]
+ * @param {boolean} [vlastna]
  */
-export function shareHash(settings, withZdroj, start = START_PANELS[0], vlastna = false) {
-    const parts = [];
-    if (settings) {
-        const user = toUser(settings);
-        if (!withZdroj) user.zdroj = null;
-        parts.push(`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify({ v: SHARE_LINK_VERSION, ...user }))}`);
-        if (vlastna) parts.push(`${VLASTNA_HASH_KEY}=1`);
-    }
-    if (start !== START_PANELS[0]) parts.push(`${START_HASH_KEY}=${start}`);
-    return parts.length ? `#${parts.join('&')}` : '';
+export function shareHash(settings, withZdroj, vlastna = false) {
+    if (!settings) return '';
+    const user = toUser(settings);
+    if (!withZdroj) user.zdroj = null;
+    const parts = [`${SHARE_HASH_KEY}=${toBase64Url(JSON.stringify({ v: SHARE_LINK_VERSION, ...user }))}`];
+    if (vlastna) parts.push(`${VLASTNA_HASH_KEY}=1`);
+    return `#${parts.join('&')}`;
 }
 
 /**
- * Odkaz na appku, voliteľne s nastavením elektrárne a prvou kartou. Bez nich je to holý odkaz.
+ * Odkaz na appku, voliteľne s nastavením elektrárne. Bez neho je to holý odkaz.
  * @param {string} appUrl @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
- * @param {StartPanel} [start]
  */
-export function shareUrl(appUrl, settings, withZdroj, start) {
-    return appUrl + shareHash(settings, withZdroj, start);
-}
-
-/**
- * Prvá karta z hodnoty z úložiska alebo z odkazu; čokoľvek iné je null.
- * @param {unknown} raw @returns {StartPanel | null}
- */
-export function parseStartPanel(raw) {
-    return START_PANELS.find((p) => p === raw) || null;
-}
-
-/**
- * Prvá karta z časti adresy za mriežkou (`…&prva=terazky`), alebo null. Platí aj `prva=mozem`
- * zo starších odkazov, keď Môžem? ešte nebola predvolená.
- * @param {string} text @returns {StartPanel | null}
- */
-export function startFromLink(text) {
-    const m = new RegExp(`[#&]${START_HASH_KEY}=([a-z0-9]{1,20})(?:&|$)`).exec(String(text || '').trim());
-    return m ? parseStartPanel(m[1]) : null;
+export function shareUrl(appUrl, settings, withZdroj) {
+    return appUrl + shareHash(settings, withZdroj);
 }
 
 /**
@@ -339,7 +314,7 @@ export function readLink(text) {
 }
 
 /**
- * Časť adresy za mriežkou, ktorú appka pri štarte berie ako odkaz (nastavenie, prvá karta), alebo
+ * Časť adresy za mriežkou, ktorú appka pri štarte berie ako odkaz s nastavením, alebo
  * prázdna, keď je to adresa, ktorú appka v tejto karte sama zapísala (`vlastna`, cesta a časť za
  * mriežkou). Taká adresa nesie nastavenie z chvíle zápisu - po zmene v druhej appke či inej karte by
  * ho obnovenie starej karty ponúklo prevziať a prevzatie by novšie nastavenie prepísalo starším.

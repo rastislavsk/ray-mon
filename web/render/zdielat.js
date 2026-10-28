@@ -4,7 +4,6 @@
 
 import { APP_URL } from '../../shared/config.js';
 import { shareUrl } from '../../shared/settings.js';
-import { writeHtml } from '../memo.js';
 import { qrPainter } from '../qr.js';
 import { savedSettings } from '../state.js';
 
@@ -20,32 +19,7 @@ export function currentShareUrl(state) {
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderInfo(state, dom) {
     for (const [key, el] of Object.entries(dom.infoItems)) el.open = key === state.infoOpen;
-    renderStartPick(state, dom);
     renderZdielat(state, dom);
-}
-
-/** Voľby prvej karty: čo sa na tomto telefóne otvorí po spustení. */
-const START_CHOICES = [
-    { panel: 'terazky', title: 'Otvárať kartu Terazky', text: 'Výkon, Plán dňa - čo a kedy zapnúť - a graf dňa s tarifou.' },
-    { panel: 'mozem', title: 'Otvárať kartu Dnes', text: 'Jedno veľké slovo a čo dá strecha za celý deň.' },
-];
-
-/**
- * Položka „Úvodná karta“ v sekcii Appka (voľba karty, na ktorej sa appka na tomto telefóne
- * otvára).
- * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
- */
-function renderStartPick(state, dom) {
-    const buttons = START_CHOICES.map(
-        (c) =>
-            `<button type="button" class="choice" data-start-panel="${c.panel}" aria-pressed="${c.panel === state.startPanel}">` +
-            `<span class="dot"></span><span class="t"><b>${c.title}</b><span>${c.text}</span></span></button>`,
-    ).join('');
-    writeHtml(
-        dom.startPick,
-        `<div class="start-choices" role="group" aria-label="Karta, na ktorej sa appka otvára">${buttons}</div>`,
-        'startPick',
-    );
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
