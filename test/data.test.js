@@ -9,36 +9,15 @@ import {
     SITE,
     TYPICAL_PLANT,
     WEATHER_CACHE_MS,
-    WEATHER_KEEP_MS,
-    WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { loadData, pripojZdroj, searchPlaces } from '../web/data.js';
-import { FIXED_NOW, fixture, fixtureData } from './helpers.js';
+import { FIXED_NOW, fakeFetch, fixture, fixtureData } from './helpers.js';
 
 /** Iná elektráreň než Dvorany - na overenie, že sa sťahuje pre ňu. */
 const OTHER_SITE = { name: 'Sevilla', lat: 37.39, lon: -5.98, elevationM: 10, timezone: 'Europe/Madrid' };
 
 const weatherJson = fixture('open-meteo.json');
 const { pv } = fixtureData();
-
-/**
- * Falošný fetch: odpovede podľa URL, null = výpadok. Zapisuje, čo sa volalo.
- * @param {Record<string, unknown>} routes
- */
-function fakeFetch(routes) {
-    /** @type {string[]} */ const calls = [];
-    const impl = /** @type {typeof fetch} */ (
-        /** @type {unknown} */ (
-            async (/** @type {string} */ url) => {
-                calls.push(url);
-                const body = routes[url];
-                if (body === undefined || body === null) return { ok: false, status: 500, json: async () => ({}) };
-                return { ok: true, status: 200, json: async () => body };
-            }
-        )
-    );
-    return { impl, calls };
-}
 
 test('bez merania: Worker sa ani nevolá, predpoveď je počítaná v prehliadači', async () => {
     const f = fakeFetch({ [openMeteoUrl(SITE)]: weatherJson });
@@ -81,55 +60,6 @@ test('počasie sa drží v pamäti; pri výpadku ostáva staré, pri zlých dát
         broken.impl,
     );
     assert.equal(r.forecast, null);
-});
-
-/**
- * Nové otvorenie appky: modul data.js načítaný nanovo, s prázdnou pamäťou (adresa s ?značkou je
- * pre Node iný modul).
- * @param {string} tag @returns {Promise<typeof import('../web/data.js')>}
- */
-const openApp = (tag) => import(/** @type {string} */ (`../web/data.js?${tag}`));
-
-test('počasie sa odkladá v prehliadači: po otvorení je predpoveď hneď, bez siete', async () => {
-    /** @type {Map<string, string>} */ const saved = new Map();
-    /** @type {any} */ (globalThis).localStorage = {
-        getItem: (/** @type {string} */ k) => saved.get(k) ?? null,
-        setItem: (/** @type {string} */ k, /** @type {string} */ v) => saved.set(k, String(v)),
-        removeItem: (/** @type {string} */ k) => saved.delete(k),
-    };
-    try {
-        const settings = { site: SITE, plant: PLANT, zdroj: null };
-        const prve = await openApp('prve');
-        assert.equal(prve.keptForecast(settings, FIXED_NOW), null, 'prvé otvorenie nemá nič odložené');
-        await prve.loadData(settings, FIXED_NOW, fakeFetch({ [openMeteoUrl(SITE)]: weatherJson }).impl);
-        assert.ok(saved.has(WEATHER_STORAGE_KEY));
-
-        // Ďalšie otvorenie: predpoveď je hneď a je tá istá ako z čerstvého počasia.
-        const druhe = await openApp('druhe');
-        assert.deepEqual(druhe.keptForecast(settings, FIXED_NOW), fixtureData().forecast);
-        assert.equal(druhe.keptForecast({ site: OTHER_SITE, plant: TYPICAL_PLANT }, FIXED_NOW), null, 'iná lokalita');
-        // Do WEATHER_CACHE_MS sa počasie znova nesťahuje ani po otvorení.
-        const ticho = fakeFetch({});
-        const r = await druhe.loadData(settings, new Date(FIXED_NOW.getTime() + 60_000), ticho.impl);
-        assert.deepEqual(ticho.calls, []);
-        assert.ok(r.forecast);
-
-        // Staršie než WEATHER_KEEP_MS sa nepoužije ani pri výpadku; hodiny posunuté dozadu tiež nie.
-        const tretie = await openApp('tretie');
-        const neskoro = new Date(FIXED_NOW.getTime() + WEATHER_KEEP_MS);
-        assert.equal(tretie.keptForecast(settings, neskoro), null);
-        assert.equal(tretie.keptForecast(settings, new Date(FIXED_NOW.getTime() - 60_000)), null);
-        assert.equal((await tretie.loadData(settings, neskoro, fakeFetch({}).impl)).forecast, null);
-        // Do WEATHER_KEEP_MS výpadok nechá odložené počasie.
-        const skor = new Date(neskoro.getTime() - 60_000);
-        assert.ok((await tretie.loadData(settings, skor, fakeFetch({}).impl)).forecast);
-
-        // Poškodený zápis: akoby nič odložené nebolo.
-        saved.set(WEATHER_STORAGE_KEY, '{"url":1}');
-        assert.equal((await openApp('stvrte')).keptForecast(settings, FIXED_NOW), null);
-    } finally {
-        delete (/** @type {any} */ (globalThis).localStorage);
-    }
 });
 
 test('searchPlaces vráti lokality, pri chybe hádže', async () => {
