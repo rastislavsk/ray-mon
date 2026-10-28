@@ -124,7 +124,10 @@ npm run test:e2e  # Playwright: všetky karty, interakcie, prístupnosť
 cd worker && npx wrangler deploy --dry-run --outdir dist
 ```
 
-Pokrytie `shared/` musí ostať aspoň 90 % riadkov, inak `npm test` zlyhá. Očakávané texty
+Pokrytie `shared/` musí ostať aspoň 90 % riadkov, inak `npm test` zlyhá. Okrem súhrnu platí prah aj pre
+každý súbor zvlášť (85 % riadkov, 75 % vetiev, `FILE_MIN` v `test/run.js`), aby nový modul bez testov
+nezapadol v priemere. Test, ktorý načíta ten istý modul viackrát (`import('…?značka')`), patrí do
+`test/bez-pokrytia/` – v jednom behu s ostatnými by Node 22 pokrytie toho modulu spočítal zle. Očakávané texty
 v e2e testoch sa počítajú tou istou funkciou ako v appke, takže test odhalí rozdiel medzi
 modelom a tým, čo je naozaj v DOM.
 

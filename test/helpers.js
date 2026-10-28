@@ -65,3 +65,36 @@ export async function podvrhniQr(page, maxLen) {
         g.QRCode.CorrectLevel = { L: 1, M: 0, Q: 3, H: 2 };
     }, maxLen);
 }
+
+/**
+ * Falošný fetch: odpovede podľa URL, null = výpadok. Zapisuje, čo sa volalo.
+ * @param {Record<string, unknown>} routes
+ */
+export function fakeFetch(routes) {
+    /** @type {string[]} */ const calls = [];
+    const impl = /** @type {typeof fetch} */ (
+        /** @type {unknown} */ (
+            async (/** @type {string} */ url) => {
+                calls.push(url);
+                const body = routes[url];
+                if (body === undefined || body === null) return { ok: false, status: 500, json: async () => ({}) };
+                return { ok: true, status: 200, json: async () => body };
+            }
+        )
+    );
+    return { impl, calls };
+}
+
+/**
+ * Falošný localStorage na globalThis, ako ho vidí web/storage.js. Vráti zapísané hodnoty
+ * a upratanie, ktoré ho zas odstráni.
+ */
+export function fakeStorage() {
+    /** @type {Map<string, string>} */ const saved = new Map();
+    /** @type {any} */ (globalThis).localStorage = {
+        getItem: (/** @type {string} */ k) => saved.get(k) ?? null,
+        setItem: (/** @type {string} */ k, /** @type {string} */ v) => saved.set(k, String(v)),
+        removeItem: (/** @type {string} */ k) => saved.delete(k),
+    };
+    return { saved, restore: () => delete (/** @type {any} */ (globalThis).localStorage) };
+}
