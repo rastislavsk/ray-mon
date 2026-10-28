@@ -697,7 +697,8 @@ export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
 
 /**
  * Texty Plánu dňa na ďalší deň (planNextDay): nadpis s dňom, veta ako pri dnešku (prvý spotrebič
- * s časom, za ním ďalšie dva), čo ide dnes z lacnej siete, pruh nad osou s dňom a dátumom a pätka.
+ * s časom, za ním ďalšie dva), čo ide dnes z lacnej siete, pruh nad osou s dňom a dátumom, pätka
+ * a čas každého spotrebiča v ten deň pre riadky plánu.
  * @param {{ name: string, date: string, on: Array<{ name: string, start: number }>, cheap: Array<{ name: string, start: number }> }} d
  *   `name` deň („Zajtra“, „Štvrtok“), `on` spotrebiče na slnku v ten deň podľa času, `cheap` dnes v lacnom pásme
  */
@@ -707,21 +708,24 @@ export function planDnaNextText({ name, date, on, cheap }) {
     for (const c of cheap) byStart.set(c.start, [...(byStart.get(c.start) ?? []), low(c.name)]);
     const tonight = [...byStart].map(([start, names]) => `${andList(names)} od ${hm(start)}`).join(', ');
     const long = dayNameLong(date);
+    const at = (/** @type {{ start: number }} */ r) => `o ${hm(r.start)}`;
     return {
         title: 'Plán na',
         day: low(name),
         head: {
-            lead: `${on[0].name} o ${hm(on[0].start)}`,
+            lead: `${on[0].name} ${at(on[0])}`,
             then: cap(
                 on
                     .slice(1, 3)
-                    .map((r) => `${low(r.name)} o ${hm(r.start)}`)
+                    .map((r) => `${low(r.name)} ${at(r)}`)
                     .join(' · '),
             ),
             tonight: tonight ? `Dnes z lacnej siete: ${tonight}` : '',
         },
         strip: `${name === long ? name : `${name} · ${low(long)}`} ${weekDateLabel(date)}`,
         note: 'Je to predpoveď, do rána sa ešte môže zmeniť.',
+        /** Čas každého spotrebiča z `on` v riadku plánu („o 07:45“). */
+        values: on.map(at),
     };
 }
 

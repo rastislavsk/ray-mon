@@ -891,6 +891,20 @@ b {
     color: var(--green);
     background: rgba(0, 0, 0, 0.85);
 }
+/* Plán na ďalší deň (docs/navrhy/plan-dna-zajtra.html): deň v nadpise ako odznak „teraz“, aby sa
+   zajtrajšie riadky nedali prečítať ako dnešné; dnešná lacná sieť jednou vetou nad riadkami. */
+.tz-plan-day {
+    margin-left: 4px;
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+    color: var(--green);
+    background: rgba(0, 0, 0, 0.85);
+}
+.tz-plan-tonight {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
 .tz-plan-why {
     grid-column: 2 / 4;
     font-size: 13px;
