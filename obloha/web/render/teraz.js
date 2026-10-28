@@ -1,5 +1,5 @@
 // Karta Teraz novej appky: veľké číslo kW a veta pod ním, štítky a veta o teraz, Plán dňa ako veta
-// a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B), graf dňa s pásom plánu, náhľad iného
+// a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B; večer na ďalší deň, plan-dna-zajtra.html), graf dňa s pásom plánu, náhľad iného
 // času a výzvy. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js (nad heroModel a dayPlan,
 // tými istými ako karta Terazky súčasnej appky) a texty sú v shared/messages.js - tu sa len
 // zapisuje do DOM.
@@ -53,15 +53,11 @@ function renderSay(m, dom) {
 }
 
 /**
- * Plán dňa ako veta a časová os: čo ide teraz, ďalšie dve veci s časom, pás každého spotrebiča
- * na dnešnom slnku s čiarou teraz a hodinami pod osou. Čo dnes na slnko nejde, je pod osou
- * ako štítok s časom. Bez plánu (bez predpovede, nič doma) nie je.
- * @param {Model['plan']} plan @param {Dom} dom
+ * Časová os plánu: pás každého spotrebiča, hodiny pod osou, čiara teraz (pri ďalšom dni nie je)
+ * a nad osou pruh s dňom, keď je os iného dňa (`strip`).
+ * @param {Pick<NonNullable<Model['plan']>['lanes'], 'lanes' | 'ticks' | 'now'>} os @param {string} strip
  */
-function renderPlan(plan, dom) {
-    show(dom.tzPlan, !!plan && plan.rows.length > 0);
-    if (!plan || !plan.rows.length) return setHtml(dom.tzPlan, '');
-    const { lanes, others, ticks, now } = plan.lanes;
+function axisHtml({ lanes, ticks, now }, strip) {
     const rows = lanes
         .map(
             (l) =>
@@ -70,17 +66,46 @@ function renderPlan(plan, dom) {
         )
         .join('');
     const axis = ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('');
-    const chips = others.map((o) => `<span class="tl-chip">${escapeHtml(o.name)} · ${escapeHtml(o.value)}</span>`).join('');
+    return (
+        `<div class="tl" aria-hidden="true">` +
+        (strip ? `<div class="tl-strip">${escapeHtml(strip)}</div>` : '') +
+        `<ul>${rows}</ul><div class="tl-axis">${axis}</div>` +
+        (now === null ? '' : `<span class="tl-now" style="--at:${now}"></span>`) +
+        `</div>`
+    );
+}
+
+/**
+ * Plán dňa ako veta a časová os: čo ide teraz, ďalšie dve veci s časom, pás každého spotrebiča
+ * na dnešnom slnku s čiarou teraz a hodinami pod osou. Čo dnes na slnko nejde, je pod osou
+ * ako štítok s časom. Keď dnes na slnko nejde nič, plán ukáže ďalší deň so slnkom (`plan.next`):
+ * deň v nadpise a nad osou, dnešnú lacnú sieť vetou, bez čiary teraz
+ * (docs/navrhy/plan-dna-zajtra.html, návrh 1). Bez plánu (bez predpovede, nič doma) nie je.
+ * Zbalený ukáže len nadpis a vetu v hlavičke, zvyšok je až po otvorení
+ * (docs/navrhy/teraz-plan-rozbalovaci.html).
+ * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
+ */
+function renderPlan(plan, open, dom) {
+    show(dom.tzPlan, !!plan && plan.rows.length > 0);
+    dom.tzPlanBtn.setAttribute('aria-expanded', String(open));
+    show(dom.tzPlanBody, open);
+    if (!plan || !plan.rows.length) return setHtml(dom.tzPlanBody, '');
+    const next = plan.next;
+    // Dnešok a ďalší deň majú ten istý tvar: nadpis, veta, os so štítkami a pätka.
+    const v = next
+        ? { ...next, title: `${escapeHtml(next.title)} <span class="tl-day">${escapeHtml(next.day)}</span>` }
+        : { ...plan, head: { ...plan.head, tonight: '' }, strip: '', title: escapeHtml(PLAN_DNA_TITLE) };
+    const { head, lanes } = v;
+    const chips = lanes.others.map((o) => `<span class="tl-chip">${escapeHtml(o.name)} · ${escapeHtml(o.value)}</span>`).join('');
+    setHtml(dom.tzPlanTitle, v.title);
+    setText(dom.tzPlanLead, head.lead);
     setHtml(
-        dom.tzPlan,
-        `<h2 id="tz-plan-title" class="glass-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h2>` +
-            `<p class="tl-lead">${escapeHtml(plan.head.lead)}</p>` +
-            (plan.head.then ? `<p class="tl-then">${escapeHtml(plan.head.then)}</p>` : '') +
-            (lanes.length
-                ? `<div class="tl" aria-hidden="true"><ul>${rows}</ul><div class="tl-axis">${axis}</div><span class="tl-now" style="--at:${now}"></span></div>`
-                : '') +
+        dom.tzPlanBody,
+        (head.tonight ? `<p class="tl-tonight">${escapeHtml(head.tonight)}</p>` : '') +
+            (head.then ? `<p class="tl-then">${escapeHtml(head.then)}</p>` : '') +
+            (lanes.lanes.length ? axisHtml(lanes, v.strip) : '') +
             (chips ? `<div class="tl-chips">${chips}</div>` : '') +
-            `<p class="tl-note">${escapeHtml(plan.note)}</p>`,
+            `<p class="tl-note">${escapeHtml(v.note)}</p>`,
     );
 }
 
@@ -116,6 +141,6 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, TERAZ_TEXTS.askText);
     setText(dom.tzAskBtn, TERAZ_TEXTS.askBtn);
     renderSay(m, dom);
-    renderPlan(m.plan, dom);
+    renderPlan(m.plan, state.tzPlanOpen, dom);
     renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
 }

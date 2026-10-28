@@ -134,8 +134,19 @@
                     <p id="tz-ask-text"></p>
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B). Skladá render. -->
-                <section id="tz-plan" class="glass tl hidden" aria-labelledby="tz-plan-title"></section>
+                <!-- Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B), zbaliteľný
+                     (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je tlačidlo, zvyšok
+                     je až po otvorení. Pri štarte je zbalený, aby bol graf pri veľkom čísle. Skladá render. -->
+                <section id="tz-plan" class="glass fold hidden" aria-labelledby="tz-plan-title">
+                    <h2 class="fold-h">
+                        <button type="button" id="tz-plan-btn" class="fold-head" aria-expanded="false" aria-controls="tz-plan-body">
+                            <span class="fold-t"
+                                ><span id="tz-plan-title" class="glass-ttl"></span><span id="tz-plan-lead" class="tl-lead"></span></span
+                            ><span class="chev" aria-hidden="true"></span>
+                        </button>
+                    </h2>
+                    <div id="tz-plan-body" class="fold-body hidden"></div>
+                </section>
                 <div id="tz-plot">
                     <div
                         id="tz-chart"

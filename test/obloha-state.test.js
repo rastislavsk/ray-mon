@@ -13,6 +13,7 @@ import {
     navStepFrom,
     navStepOf,
     neededParts,
+    panelChange,
     ready,
     sameNavStep,
     shows,
@@ -36,6 +37,7 @@ const step = (patch = {}) => ({
     setup: null,
     roof: 0,
     sheet: null,
+    plan: false,
     ...patch,
 });
 
@@ -151,6 +153,25 @@ test('navChange: návrat na krok vráti kartu aj s tým, čo bolo otvorené', ()
     // Krok uprostred sprievodcu úpravu neukončí.
     assert.ok(!('setupReturn' in navChange(stateWith(), step({ panel: 'nastavenie', setup: 'lokalita' }))));
     assert.equal(navChange(stateWith(), step({ panel: 'nastavenie', setup: 'suhrn' })).setupReturn, null);
+});
+
+test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou sa zbalí', () => {
+    assert.equal(stateWith().tzPlanOpen, false);
+    const open = stateWith({ panel: 'terazky', tzPlanOpen: true });
+    assert.equal(navStep(open).plan, true);
+    assert.deepEqual(navStepOf(navStep(open)), navStep(open));
+    // Otvorenie je nový krok - Späť ho zbalí.
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzPlanOpen: false })));
+    // Plán patrí karte Teraz, v prehľade ktorémukoľvek stĺpcu; položka zo skoršej verzie ho nemá.
+    assert.equal(field({ panel: 'mozem', plan: true }, 'plan'), false);
+    assert.equal(field({ panel: 'mozem', plan: true, dash: true }, 'plan'), true);
+    assert.equal(field({ panel: 'terazky', plan: 'áno' }, 'plan'), false);
+    assert.equal(field({ panel: 'terazky' }, 'plan'), false);
+    // Späť na krok so zbaleným plánom ho zbalí, na krok s otvoreným ho otvorí.
+    assert.equal(navChange(open, step({ panel: 'terazky' })).tzPlanOpen, false);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', plan: true })).tzPlanOpen, true);
+    // Iná karta plán zbalí.
+    assert.equal(panelChange('terazky', 'mozem').tzPlanOpen, false);
 });
 
 test('navChange: v prehľade návrat na krok prehľadu nechá aktívny stĺpec', () => {

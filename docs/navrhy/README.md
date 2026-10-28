@@ -46,6 +46,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `terazky-ako-obloha.html`      | Terazky podľa Teraz z Oblohy: len pás odporúčaní pod ciferníkom (B), celá karta s grafom dňa (A); farby súčasnej      |
 | `terazky-casova-os.html`       | Terazky / Teraz s časovou osou: A, B, C; oblačnosť pruhom (C1) či heatmapou (C2); C2 s výplňou nad hranicou (vybraný) |
 | `bodka-merania.html`           | Bodka pri čase v oboch appkách = stav merania; zastarané: bez spojenia, menič mlčí, menič spí; kruh v navigácii (B)   |
+| `plan-dna-zajtra.html`         | Plán dňa (Obloha) večer, keď dnes nič nejde na slnko: os sa prepne na zajtra (1), jedna os cez noc (2)                |
 
 ## Prečo je to v repozitári
 
@@ -62,5 +63,6 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `7dni-listovanie-dni.html` | Bez listovania kariet ťahom; dni v detaile ako pager za prstom (obe appky), gumička na kraji, šípka späť ako prvý čip |
 | `znacky-beta.html` | Sprievodca nastavením, krok Značka meniča – odznak Beta pri značkách neoverených na skutočnom meniči (A, vybraný) vs. slovo v popise (B) |
 | `teraz-rozbalovaci-zoznam.html` | Teraz[ky] – legenda a nápis pod grafom dňa ako rozbaľovací zoznam: prvý riadok návod a „ako čítať graf“ (A), prvý riadok legendy a hodnoty v čase pod prstom (B, vybraný) |
+| `teraz-plan-rozbalovaci.html` | Teraz (nová appka) – Plán dňa nad grafom ako rozbaľovací blok: pri štarte zbalený, Späť ho zbalí, aby pri ťahaní po grafe bolo vidno výkon hore |
 | `oznamenia.html` | Oznámenia v telefóne: jeden ranný plán dňa (logika A) – jasno, len dopoludnia, zamračené, zlý týždeň, tlačidlo Pripomeň; Plán dňa na Môžem?, Nastavenie |
 | `dnes-hlasky-dna.html` | Karta Dnes – veľké slovo o celom dni: ráno z predpovede, cez deň zmena, večer zo skutočnej výroby; trieda dňa podľa spotrebičov na slnku |

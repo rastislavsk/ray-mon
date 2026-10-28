@@ -542,6 +542,43 @@ button.live[aria-expanded='true'] {
 #tz-plan {
     container-type: inline-size;
 }
+/* Zbaliteľný Plán dňa (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je
+   tlačidlo cez celú šírku so šípkou ako pri zozname pod grafom, zvyšok plánu je až po otvorení.
+   Veta v hlavičke má jednu veľkosť zbalená aj otvorená - pri otvorení neskáče. */
+#tz-plan.fold {
+    display: block;
+    padding: 0;
+}
+.fold-h {
+    font-size: inherit;
+    font-weight: inherit;
+}
+.fold-head {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 10px 12px 16px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+.fold-t {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+.fold-head .tl-lead {
+    font-size: min(1.25rem, 7cqi);
+}
+.fold-body {
+    display: grid;
+    gap: 10px;
+    padding: 0 12px 14px 16px;
+}
 .tl-lead {
     font-size: min(1.625rem, 10cqi);
     font-weight: 900;
@@ -551,6 +588,28 @@ button.live[aria-expanded='true'] {
 }
 .tl-then {
     font-size: 0.9375rem;
+}
+/* Plán na ďalší deň (docs/navrhy/plan-dna-zajtra.html, návrh 1): deň v nadpise zelenou plaketou,
+   dnešná lacná sieť modrou vetou, nad osou pruh s dňom a dátumom - aby sa zajtrajšie pásy nedali
+   prečítať ako dnešné. */
+.tl-day {
+    margin-left: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--yes);
+    color: #12305e;
+}
+.tl-tonight {
+    font-size: 0.9375rem;
+    color: var(--cheap-text);
+}
+.tl-strip {
+    margin: 0 0 4px calc(var(--name) + 8px);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--yes);
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--yes);
 }
 /* Stĺpec mien (--name) je v rem, aby pásy, os aj čiara teraz začínali na tom istom mieste, hoci
    majú iné písmo. Vpravo je miesto (--pad) pre polovicu poslednej hodiny pod osou. */
@@ -921,7 +980,8 @@ button.live[aria-expanded='true'] {
     border-bottom: 2px solid #fff;
     transform: translateY(-2px) rotate(45deg);
 }
-.list-head[aria-expanded='true'] .chev {
+.list-head[aria-expanded='true'] .chev,
+.fold-head[aria-expanded='true'] .chev {
     transform: rotate(180deg);
 }
 .list-body {

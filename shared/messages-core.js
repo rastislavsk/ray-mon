@@ -10,7 +10,7 @@
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
 import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
-import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr } from './format.js';
+import { dayNameLong, fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr, weekDateLabel } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -698,6 +698,36 @@ export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
 export const PLAN_DNA_LESS = 'Skryť plán';
 /** Tlačidlo zbaleného Plánu dňa: koľko riadkov je pod prvým. @param {number} n */
 export const planDnaMoreText = (n) => `Celý plán · ešte ${n}`;
+
+/**
+ * Texty Plánu dňa na ďalší deň (planNextDay): nadpis s dňom, veta ako pri dnešku (prvý spotrebič
+ * s časom, za ním ďalšie dva), čo ide dnes z lacnej siete, pruh nad osou s dňom a dátumom a pätka.
+ * @param {{ name: string, date: string, on: Array<{ name: string, start: number }>, cheap: Array<{ name: string, start: number }> }} d
+ *   `name` deň („Zajtra“, „Štvrtok“), `on` spotrebiče na slnku v ten deň podľa času, `cheap` dnes v lacnom pásme
+ */
+export function planDnaNextText({ name, date, on, cheap }) {
+    const low = (/** @type {string} */ s) => s.toLowerCase();
+    /** @type {Map<number, string[]>} */ const byStart = new Map();
+    for (const c of cheap) byStart.set(c.start, [...(byStart.get(c.start) ?? []), low(c.name)]);
+    const tonight = [...byStart].map(([start, names]) => `${andList(names)} od ${hm(start)}`).join(', ');
+    const long = dayNameLong(date);
+    return {
+        title: 'Plán na',
+        day: low(name),
+        head: {
+            lead: `${on[0].name} o ${hm(on[0].start)}`,
+            then: cap(
+                on
+                    .slice(1, 3)
+                    .map((r) => `${low(r.name)} o ${hm(r.start)}`)
+                    .join(' · '),
+            ),
+            tonight: tonight ? `Dnes z lacnej siete: ${tonight}` : '',
+        },
+        strip: `${name === long ? name : `${name} · ${low(long)}`} ${weekDateLabel(date)}`,
+        note: 'Je to predpoveď, do rána sa ešte môže zmeniť.',
+    };
+}
 
 /** „po práčke“ - na koho vec v pláne čaká (PLAN_DNA.after). */
 const PLAN_AFTER = /** @type {Record<string, string>} */ ({ pracka: 'po práčke' });
