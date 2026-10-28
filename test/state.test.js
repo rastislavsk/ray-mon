@@ -283,7 +283,8 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         navStepFrom({ step: krok({ panel: 'nastavenie', setup: 'pocet', roof: 2 }) }),
         krok({ panel: 'nastavenie', setup: 'pocet', roof: 2 }),
     );
-    assert.deepEqual(navStepFrom({ step: krok({ panel: 'nastavenie', info: 'share' }) }), krok({ panel: 'nastavenie', info: 'share' }));
+    for (const info of ['plant', 'oznamenia', 'share', 'clear'])
+        assert.deepEqual(navStepFrom({ step: krok({ panel: 'nastavenie', info }) }), krok({ panel: 'nastavenie', info }), info);
     assert.equal(navStepFrom({ step: krok({ panel: 'nastavenie', info: 'neznama' }) }), null, 'položka, ktorá neexistuje');
     // Položka histórie zo staršej verzie so zrušenou kartou Info je cudzia - Späť odíde zo stránky.
     assert.equal(navStepFrom({ step: krok({ panel: 'info', info: 'share' }) }), null, 'zrušená karta Info');

@@ -76,9 +76,11 @@ zvolené povie „vybraté“ alebo „stlačené“. Potom veľké číslo v kW
 nabití mobilu a kilometrami autom, riadky s číslami a najlepší deň. Úplne dole tlačidlá plagátu; dvojťuk
 otvorí okno s plagátom a tlačidlami Zdieľať a Zavrieť.
 
-**Nastavenie.** Nadpis „Nastavenie“, potom „Moja strecha“ a pod nadpisom „Elektráreň“ riadky
+**Nastavenie.** Nadpis „Nastavenie“, potom „Moja strecha“. Sekcie Elektráreň, Vzhľad, Oznámenia
+a Appka sú zbalené; nadpis každej je tlačidlo, ktoré čítačka ohlási ako zbalené / rozbalené,
+a gesto Späť rozbalenú zbalí. Pod „Elektráreň“ sú riadky
 (poloha, panely, menič, meranie, tarifa) – každý je tlačidlo, ktoré otvorí krok sprievodcu.
-Pod nadpisom „Vzhľad“ je prepínač „Živá obloha“ (povie zapnuté / vypnuté) a dvojica tlačidiel
+Pod „Vzhľad“ je prepínač „Živá obloha“ (povie zapnuté / vypnuté) a dvojica tlačidiel
 Tón hlášok. Pod „Appka“ sú „Zdieľať appku“ a „Nastaviť celé znova“ – obe
 otvoria okno, ktoré čítačka ohlási, a gesto Späť ho zavrie.
 

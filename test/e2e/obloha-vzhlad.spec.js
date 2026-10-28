@@ -80,6 +80,12 @@ async function otvorSucasnuAppku(page) {
 /** @param {import('@playwright/test').Page} page @param {string} panel */
 const karta = (page, panel) => page.locator(`#nav-${panel}`).click();
 
+/** Rozbalí sekciu karty Nastavenie - pri štarte sú všetky zbalené. @param {import('@playwright/test').Page} page @param {string} key */
+async function rozbal(page, key) {
+    const head = page.locator(`#ns-fold-${key}`);
+    if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+}
+
 /** Uložená hodnota z localStorage. @param {import('@playwright/test').Page} page @param {string} key */
 const ulozene = (page, key) => page.evaluate((k) => localStorage.getItem(k), key);
 
@@ -108,6 +114,7 @@ test.describe('tón hlášok', () => {
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
         await karta(page, 'nastavenie');
+        await rozbal(page, 'vzhlad');
         const drzyBtn = page.locator('#ns-voice [data-voice="drzy"]');
         const slusnyBtn = page.locator('#ns-voice [data-voice="slusny"]');
         await expect(drzyBtn).toHaveAttribute('aria-pressed', 'true');
@@ -142,6 +149,7 @@ test.describe('tón hlášok', () => {
         await karta(page, 'mozem');
         await expect(page.locator('#mz-guess-title')).toHaveText('Hádam podľa suseda');
         await karta(page, 'nastavenie');
+        await rozbal(page, 'vzhlad');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
         await expect(page.locator('#hdr-setup')).toHaveText(SLUSNY.HEADER_TEXTS.setup);
         await karta(page, 'mozem');
@@ -171,6 +179,7 @@ test.describe('živá obloha', () => {
         await expect.poll(() => obloha(page)).toEqual([zivo.top, zivo.bottom]);
 
         await karta(page, 'nastavenie');
+        await rozbal(page, 'vzhlad');
         const prepinac = page.locator('#ns-live-sky');
         await expect(prepinac).toHaveAttribute('role', 'switch');
         await expect(prepinac).toHaveAttribute('aria-checked', 'true');
@@ -189,6 +198,7 @@ test.describe('živá obloha', () => {
         // Hlavička ukazuje čas merania, nie hodiny: dáta stiahnuté o 13:00 sú večer už staré - appka nemá spojenie.
         await expect(page.locator('#hdr-status')).toHaveText('13:00 · bez spojenia');
         await karta(page, 'nastavenie');
+        await rozbal(page, 'vzhlad');
         await expect(prepinac).toHaveAttribute('aria-checked', 'false');
 
         // Zapnutie vráti oblohu podľa času a počasia.
@@ -222,12 +232,48 @@ test.describe('úvodná karta', () => {
     });
 });
 
+test.describe('zbaliteľné sekcie', () => {
+    test('pri štarte zbalené, nadpis rozbalí a zbalí, Späť na telefóne zbalí; rozbalená je najviac jedna', async ({ page }) => {
+        const errors = await openObloha(page);
+        await karta(page, '7dni');
+        await karta(page, 'nastavenie');
+        const sekcie = ['elektraren', 'vzhlad', 'oznamenia', 'appka'];
+        for (const key of sekcie) {
+            await expect(page.locator(`#ns-fold-${key}`)).toHaveAttribute('aria-expanded', 'false');
+            await expect(page.locator(`#ns-body-${key}`)).toBeHidden();
+        }
+        for (const key of sekcie) {
+            await page.locator(`#ns-fold-${key}`).click();
+            await expect(page.locator(`#ns-fold-${key}`)).toHaveAttribute('aria-expanded', 'true');
+            await expect(page.locator(`#ns-body-${key}`)).toBeVisible();
+            for (const ina of sekcie.filter((x) => x !== key)) await expect(page.locator(`#ns-body-${ina}`)).toBeHidden();
+            await page.goBack();
+            await expect(page.locator('#panel-nastavenie')).toBeVisible();
+            await expect(page.locator(`#ns-body-${key}`)).toBeHidden();
+        }
+        // Zbalenie nadpisom ide cez históriu: ďalšie Späť už prepne kartu, sekciu znovu nerozbalí.
+        await page.locator('#ns-fold-vzhlad').click();
+        await page.locator('#ns-fold-vzhlad').click();
+        await expect(page.locator('#ns-body-vzhlad')).toBeHidden();
+        await page.goBack();
+        await expect(page.locator('#panel-7dni')).toBeVisible();
+        // S kartou sa sekcia zbalí.
+        await karta(page, 'nastavenie');
+        await rozbal(page, 'appka');
+        await karta(page, 'terazky');
+        await karta(page, 'nastavenie');
+        await expect(page.locator('#ns-body-appka')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+});
+
 test.describe('Zdieľať appku', () => {
     test('odkaz, ktorý sa do QR kódu nezmestí: okno sa otvorí a ukáže len odkaz', async ({ page }) => {
         // Kód unesie odkaz bez nastavenia, s nastavením elektrárne už nie.
         await podvrhniQr(page, OBLOHA_URL.length + 20);
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
+        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-sheet')).toBeVisible();
         await expect(page.locator('#ns-qr [data-qr]')).toHaveAttribute('data-qr', OBLOHA_URL);
@@ -252,6 +298,7 @@ test.describe('Zdieľať appku', () => {
     test('odkaz vedie na novú appku, s nastavením ho nová appka prevezme; bez QR knižnice len odkaz', async ({ page, browser }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
+        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         const okno = page.locator('#ns-share-sheet');
         await expect(okno).toBeVisible();
@@ -302,6 +349,7 @@ test.describe('Zdieľať appku', () => {
     test('bez uloženej elektrárne voľby s nastavením nie sú', async ({ page }) => {
         await openObloha(page, { settings: null, site: SITE });
         await karta(page, 'nastavenie');
+        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-opts')).toBeHidden();
         await expect(page.locator('#ns-share-link')).toHaveText(OBLOHA_URL);
@@ -312,7 +360,9 @@ test.describe('Nastaviť celé znova', () => {
     test('po zrušení sa nič nezmení, po potvrdení je appka ako pri prvom otvorení', async ({ page }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
+        await rozbal(page, 'vzhlad');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
+        await rozbal(page, 'appka');
         const predtym = await page.evaluate(() => JSON.stringify(localStorage));
 
         await page.locator('#ns-reset').click();
@@ -347,6 +397,7 @@ test.describe('Nastaviť celé znova', () => {
 test('sprievodca pri tarife nespomína ciferník v žiadnej appke, obe hovoria o páse plánu dňa', async ({ page }) => {
     const errors = await openObloha(page);
     await karta(page, 'nastavenie');
+    await rozbal(page, 'elektraren');
     await page.locator('#ns-rows [data-setup-edit="tarifa"]').click();
     await expect(page.locator('#wz-tarifa')).toBeVisible();
     await expect(page.locator('#wz-lead')).toContainText('pás plánu dňa');
@@ -373,9 +424,12 @@ const vazneNalezy = async (page) =>
 test('prístupnosť: Nastavenie, okno Zdieľať appku aj potvrdenie bez závažných nálezov axe', async ({ page }) => {
     await openObloha(page);
     await karta(page, 'nastavenie');
+    expect(await vazneNalezy(page), 'Nastavenie so zbalenými sekciami').toEqual([]);
+    await rozbal(page, 'vzhlad');
     await page.locator('#ns-live-sky').click();
     await page.locator('#ns-voice [data-voice="slusny"]').click();
     expect(await vazneNalezy(page), 'Nastavenie').toEqual([]);
+    await rozbal(page, 'appka');
     await page.locator('#ns-share').click();
     await page.locator('#ns-share-settings').check();
     expect(await vazneNalezy(page), 'Zdieľať appku').toEqual([]);
@@ -408,6 +462,10 @@ for (const width of [320, 390]) {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         expect(await page.evaluate(zlePrvky, '#ns-home')).toEqual([]);
+        for (const key of ['elektraren', 'vzhlad', 'oznamenia', 'appka']) {
+            await rozbal(page, key);
+            expect(await page.evaluate(zlePrvky, '#ns-home'), key).toEqual([]);
+        }
         await page.locator('#ns-share').click();
         await page.locator('#ns-share-settings').check();
         expect(await page.evaluate(zlePrvky, '#ns-share-sheet')).toEqual([]);

@@ -1850,6 +1850,18 @@ button.live[aria-expanded='true'] {
 .set {
     gap: 0;
 }
+/* Sekcie karty Nastavenie sa zbaľujú ako položky v súčasnej appke: nadpis so šípkou je tlačidlo
+   cez celú šírku (ten istý vzor ako Plán dňa), riadky sú až po rozbalení. */
+/* Odstupy: aspoň 8 px medzi nadpisom a prvým riadkom aj medzi zbalenou sekciou a odkazom pod ňou. */
+.set.fold {
+    padding: 0 0 4px;
+}
+.set.fold .fold-head {
+    padding-right: 6px;
+}
+.ns-body {
+    padding: 8px 16px 6px;
+}
 .set .it {
     display: flex;
     justify-content: space-between;

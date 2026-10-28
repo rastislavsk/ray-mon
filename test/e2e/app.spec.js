@@ -1851,6 +1851,31 @@ test('Späť v sekcii Appka zbalí položku a vráti na zoznam, nie na predchád
     expect(errors).toEqual([]);
 });
 
+test('Späť zbalí každú položku Nastavenia; rozbalená je najviac jedna', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-nastavenie').click();
+    const polozky = ['settings-plant', 'settings-oznamenia', 'info-share', 'settings-clear'];
+    for (const id of polozky) {
+        await page.locator(`#${id} > summary`).click();
+        await expect(page.locator(`#${id}`)).toHaveAttribute('open', '');
+        for (const ina of polozky.filter((x) => x !== id)) await expect(page.locator(`#${ina}`)).not.toHaveAttribute('open');
+        await page.goBack();
+        await ocakavajKartu(page, 'nastavenie');
+        await expect(page.locator(`#${id}`)).not.toHaveAttribute('open');
+    }
+    // Druhá rozbalená zbalí prvú; Späť sa vracia po krokoch - na prvú, potom na zoznam.
+    await page.locator('#settings-plant > summary').click();
+    await page.locator('#settings-clear > summary').click();
+    await expect(page.locator('#settings-plant')).not.toHaveAttribute('open');
+    await page.goBack();
+    await expect(page.locator('#settings-plant')).toHaveAttribute('open', '');
+    await expect(page.locator('#settings-clear')).not.toHaveAttribute('open');
+    await page.goBack();
+    await expect(page.locator('#settings-plant')).not.toHaveAttribute('open');
+    await ocakavajKartu(page, 'nastavenie');
+    expect(errors).toEqual([]);
+});
+
 test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
     test.use({ hasTouch: true });
 

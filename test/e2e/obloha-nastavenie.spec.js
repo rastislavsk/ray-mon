@@ -84,7 +84,14 @@ async function openObloha(page, { settings = OWNER, site = null, hash = '' } = {
 }
 
 /** @param {import('@playwright/test').Page} page */
-const nastavenie = (page) => page.locator('#nav-nastavenie').click();
+async function nastavenie(page) {
+    await page.locator('#nav-nastavenie').click();
+    // Riadky elektrárne sú v zbalenej sekcii - testy tu pracujú s nimi, tak ju rozbalí (ak je).
+    // Karta sa sťahuje až po štarte; čaká, kým je na nej prehľad alebo sprievodca.
+    await expect(page.locator('#ns-home:visible, #wizard:visible')).toHaveCount(1);
+    const head = page.locator('#ns-fold-elektraren');
+    if ((await head.isVisible()) && (await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+}
 /** @param {import('@playwright/test').Page} page */
 const dalej = (page) => page.locator('#wz-next').click();
 /** Uložené nastavenie v tvare úložiska. @param {import('@playwright/test').Page} page */

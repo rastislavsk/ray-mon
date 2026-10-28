@@ -181,6 +181,15 @@ function renderAppSheets(state, dom) {
     }
 }
 
+/** Zbaliteľné sekcie: rozbalená je najviac jedna (nsOpen). @param {AppState} state @param {Dom} dom */
+function renderFolds(state, dom) {
+    for (const f of dom.nsFolds) {
+        const open = f.key === state.nsOpen;
+        f.head.setAttribute('aria-expanded', String(open));
+        show(f.body, open);
+    }
+}
+
 /** @param {AppState} state @param {Dom} dom */
 export function renderNastavenie(state, dom) {
     const open = state.setupStep !== null;
@@ -189,6 +198,7 @@ export function renderNastavenie(state, dom) {
     if (open) renderWizard(state, dom);
     else {
         renderHome(state, dom);
+        renderFolds(state, dom);
         renderLook(state, dom);
         renderOznamenia(state, dom);
     }

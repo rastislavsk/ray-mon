@@ -214,6 +214,12 @@ function nastavenieDom() {
         nsWarn: byId('ns-warn'),
         nsNote: byId('ns-note'),
         nsLink: byId('ns-link'),
+        // Zbaliteľné sekcie: tlačidlo s nadpisom a telo, ktoré ovláda (aria-controls).
+        nsFolds: [...document.querySelectorAll('[data-ns-fold]')].map((head) => ({
+            key: /** @type {HTMLElement} */ (head).dataset.nsFold,
+            head,
+            body: byId(head.getAttribute('aria-controls') || ''),
+        })),
         importOffer: byId('import-offer'),
         importOfferTitle: byId('import-offer-title'),
         importOfferText: byId('import-offer-text'),

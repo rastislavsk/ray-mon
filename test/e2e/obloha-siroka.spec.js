@@ -174,6 +174,12 @@ test.describe('tri rozloženia podľa šírky okna', () => {
 });
 
 /** Stĺpce prehľadu majú tie isté texty ako karty na telefóne - z tých istých modelov. @param {import('@playwright/test').Page} page */
+/** Rozbalí sekciu karty Nastavenie - pri štarte sú všetky zbalené. @param {import('@playwright/test').Page} page @param {string} key */
+async function rozbal(page, key) {
+    const head = page.locator(`#ns-fold-${key}`);
+    if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+}
+
 async function expectTextyKariet(page) {
     const v = vstup(NOON);
     const mozem = mozemSkyModel(v);
@@ -229,6 +235,7 @@ test.describe('zmena šírky okna nič nestratí', () => {
     test('rozpísaný sprievodca: ostane tá istá obrazovka aj s tým, čo je napísané', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         await page.locator('#nav-nastavenie').click();
+        await rozbal(page, 'elektraren');
         await page.locator('#ns-rows [data-setup-edit]').first().click();
         await expect(page.locator('#wizard')).toBeVisible();
         const nadpis = await page.locator('#wz-title').textContent();

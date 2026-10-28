@@ -107,6 +107,7 @@ test.describe('oznámenia: Živá obloha', () => {
     test('sekcia Oznámenia: prepínač, hodina 9:00 predvolená a spotrebiče; voľba platí aj v Pláne dňa', async ({ page }) => {
         await otvor(page, 'obloha');
         await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-oznamenia').click();
         await expect(page.locator('#ns-oznam-title')).toHaveText(T.title);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
         await expect(page.locator('#ns-oznam-hour [aria-pressed="true"]')).toHaveText('9:00');
@@ -126,6 +127,7 @@ test.describe('oznámenia: Živá obloha', () => {
     test('odmietnuté povolenie: prepínač vypnutý a hláška', async ({ page }) => {
         await otvor(page, 'obloha');
         await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-oznamenia').click();
         await page.locator('#ns-oznam').click();
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.zakazane);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
@@ -133,6 +135,7 @@ test.describe('oznámenia: Živá obloha', () => {
     test('povolené, ale bez push služby: vlastný service worker oblohy s rozsahom obloha/, zapnutie zlyhá s hláškou', async ({ page }) => {
         await otvor(page, 'obloha', 'granted');
         await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-oznamenia').click();
         await page.locator('#ns-oznam').click();
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.chyba);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');

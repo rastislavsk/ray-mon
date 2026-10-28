@@ -74,9 +74,9 @@ function initNavigation(store, dom, days) {
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
         // Pás „Meranie treba pripojiť znova“ (aj pás odhadu na karte Terazky pri odmietnutom prístupe):
-        // v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom. Pred prepnutím karty - to pás
-        // prekreslí a značku z tlačidla zoberie.
-        if (target.closest('[data-pristup-go]')) dom.settingsPlant.open = true;
+        // v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom - v tom istom kroku ako prepnutie karty.
+        /** @type {Partial<import('./state.js').AppState>} */
+        const pristup = target.closest('[data-pristup-go]') ? { infoOpen: 'plant' } : {};
         const panelBtn = target.closest('button[data-panel]');
         // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
         // z tej istej strany ako pri ťahaní prstom.
@@ -85,7 +85,7 @@ function initNavigation(store, dom, days) {
         // skôr než skript, ktorý kartu zapojí (pravidlo o cache v CLAUDE.md), a nová stránka
         // so starým skriptom z cache by po kliku naň skryla všetky karty naraz.
         if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
-            store.setState(panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)));
+            store.setState({ ...panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)), ...pristup });
         }
         // Pás odhadu na karte Terazky: jeden krok navigácie do Nastavenia, bez merania rovno na krok
         // Meranie sprievodcu (ako výzva v Štatistike), pri odmietnutom prístupe na hlásenie vyššie.
@@ -94,7 +94,7 @@ function initNavigation(store, dom, days) {
         if (noteBtn) {
             const s = store.get();
             const znova = noteBtn.hasAttribute('data-pristup-go');
-            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? {} : stepEdit(s, 'meranie', true)) });
+            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? pristup : stepEdit(s, 'meranie', true)) });
         }
         // Odkaz „nastav panely“ v hlavičke: jeden krok navigácie rovno na krok Panel sprievodcu.
         if (target.closest('#pv-setup-go')) {
@@ -349,8 +349,9 @@ export function isTall() {
 }
 
 /**
- * Položky sekcie Appka v karte Nastavenie sú natívne <details>: rozbalí ich prehliadač sám (ťuknutie, klávesnica,
- * hľadanie v stránke), appka to len prevezme do stavu. Zbalenie ťuknutím je ten istý krok ako
+ * Položky karty Nastavenie (Elektráreň, Oznámenia, Zdieľať appku, Vymazať údaje) sú natívne <details>:
+ * rozbalí ich prehliadač sám (ťuknutie, klávesnica, hľadanie v stránke), appka to len prevezme do
+ * stavu. Rozbalená je najviac jedna - render ostatné zbalí. Zbalenie ťuknutím je ten istý krok ako
  * tlačidlo Späť, preto ide cez backTo - inak by položka ostala v histórii a Späť by ju znovu
  * rozbalilo. Keď sa `open` zhoduje so stavom, udalosť spôsobilo prekreslenie a netreba nič.
  * @param {Store} store @param {Dom} dom

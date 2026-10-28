@@ -96,6 +96,12 @@ const dalej = (page) => page.locator('#wz-next').click();
 /** @param {import('@playwright/test').Page} page @param {string} step */
 const obrazovka = (page, step) => expect(page.locator(`#wz-${step}`)).toBeVisible();
 
+/** Rozbalí sekciu karty Nastavenie - pri štarte sú všetky zbalené. @param {import('@playwright/test').Page} page @param {string} key */
+async function rozbal(page, key) {
+    const head = page.locator(`#ns-fold-${key}`);
+    if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+}
+
 /**
  * Prejde všetky karty, ich detaily a dialógy uloženej elektrárne a na každom mieste zavolá
  * `check` s menom miesta.
@@ -128,6 +134,11 @@ async function kazdaKarta(page, check) {
 
     await karta(page, 'nastavenie');
     await check('Nastavenie');
+    for (const key of ['elektraren', 'vzhlad', 'oznamenia']) {
+        await rozbal(page, key);
+        await check(`Nastavenie › ${key}`);
+    }
+    await rozbal(page, 'appka');
     await page.locator('#ns-share').click();
     await expect(page.locator('#ns-share-sheet')).toBeVisible();
     await page.locator('#ns-share-settings').check();
@@ -137,6 +148,7 @@ async function kazdaKarta(page, check) {
     await expect(page.locator('#ns-reset-sheet')).toBeVisible();
     await check('Nastavenie › Nastaviť celé znova');
     await page.locator('#ns-reset-cancel').click();
+    await rozbal(page, 'elektraren');
     await page.locator('#ns-rows [data-setup-edit]').first().click();
     await expect(page.locator('#wizard')).toBeVisible();
     await check('Nastavenie › úprava z prehľadu');

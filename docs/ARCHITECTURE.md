@@ -95,7 +95,10 @@ kam pás po pustení dobehne, rozhodne `shared/day-pager.js` a do stavu ide až 
 prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
 `render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
 kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré ostali, aby sa
-nemenil stav ani HTML. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
+nemenil stav ani HTML. `INFO_ITEMS` dnes zahŕňa všetky rozbaľovacie položky karty (Elektráreň,
+Oznámenia, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je krokom navigácie, takže
+ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
+v `obloha/web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
 ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
