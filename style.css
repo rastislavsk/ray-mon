@@ -804,13 +804,33 @@ b {
 .tz-plan {
     container-type: inline-size;
     margin-top: var(--sp-4);
-    padding: 16px 20px 18px;
     border-radius: 28px;
     color: var(--ink-on-color);
     background: linear-gradient(165deg, var(--green) 0%, var(--amber) var(--poster-mid), var(--red) 100%);
 }
-.tz-plan-ttl {
+/* Zbaliteľný plagát (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je
+   tlačidlo cez celú šírku so šípkou ako pri zozname pod grafom, riadky a pätka sú až po otvorení.
+   Veta má jednu veľkosť zbalená aj otvorená - pri otvorení neskáče. */
+.tz-plan-h {
     margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+.tz-plan-head {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 14px 12px 14px 20px;
+    text-align: left;
+}
+.tz-plan-t {
+    flex: 1;
+    min-width: 0;
+}
+.tz-plan-ttl {
+    display: block;
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 600;
@@ -818,12 +838,23 @@ b {
     text-transform: uppercase;
 }
 .tz-plan-lead {
-    margin: 6px 0 12px;
-    font-size: min(9cqi, 34px);
+    display: block;
+    margin-top: 4px;
+    font-size: min(7cqi, 26px);
     font-weight: 700;
     line-height: 1.05;
     letter-spacing: -0.03em;
     text-wrap: balance;
+}
+/* Šípka na plagáte je tmavá ako jeho písmo. */
+.tz-plan-head .tz-chev {
+    background: rgba(0, 0, 0, 0.12);
+}
+.tz-plan-head .tz-chev::before {
+    border-color: var(--ink-on-color);
+}
+.tz-plan-body {
+    padding: 0 20px 18px;
 }
 .tz-plan-rows {
     margin: 0;
@@ -1185,7 +1216,8 @@ b {
     border-bottom: 2px solid var(--ink-70);
     transform: translateY(-2px) rotate(45deg);
 }
-.tz-list-head[aria-expanded='true'] .tz-chev {
+.tz-list-head[aria-expanded='true'] .tz-chev,
+.tz-plan-head[aria-expanded='true'] .tz-chev {
     transform: rotate(180deg);
 }
 .tz-list-body {

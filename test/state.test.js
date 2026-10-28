@@ -75,6 +75,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: 1,
         weekDetail: null,
         infoOpen: null,
+        tzPlanOpen: false,
         stavTip: false,
     });
     assert.deepEqual(panelChange('nastavenie', '7dni'), {
@@ -82,6 +83,7 @@ test('smer prechodu ide podľa poradia v navigácii, nie podľa toho, ako sa pre
         panelDir: -1,
         weekDetail: null,
         infoOpen: null,
+        tzPlanOpen: false,
         stavTip: false,
     });
     assert.equal(panelChange('terazky', 'nastavenie').panelDir, 1);
@@ -98,6 +100,7 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
         setup: null,
         roof: 0,
         info: null,
+        plan: false,
     });
     // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
     assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
@@ -123,6 +126,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
+            plan: false,
         }),
         {
             panel: '7dni',
@@ -131,6 +135,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
+            tzPlanOpen: false,
             stavTip: false,
             setupReturn: null,
         },
@@ -143,6 +148,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
+            plan: false,
         }),
         {
             panel: '7dni',
@@ -151,6 +157,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setupStep: null,
             setupRoof: 0,
             infoOpen: null,
+            tzPlanOpen: false,
             stavTip: false,
             setupReturn: null,
         },
@@ -163,6 +170,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
         setup: 'smer',
         roof: 1,
         info: null,
+        plan: false,
     });
     assert.equal(smer.setupStep, 'smer');
     assert.equal(smer.setupRoof, 1);
@@ -174,6 +182,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: 'suhrn',
             roof: 0,
             info: null,
+            plan: false,
         }).setupReturn,
         null,
     );
@@ -185,6 +194,7 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: 'share',
+            plan: false,
         }).infoOpen,
         'share',
     );
@@ -195,9 +205,30 @@ test('Späť obnoví kartu aj otvorený detail, smer prechodu ide podľa poradia
             setup: null,
             roof: 0,
             info: null,
+            plan: false,
         }).infoOpen,
         null,
     );
+});
+
+test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou sa zbalí', () => {
+    const state = initialState(new Date(), { wide: false, tall: false }, { site: SITE });
+    assert.equal(state.tzPlanOpen, false);
+    const open = { ...state, tzPlanOpen: true };
+    assert.equal(navStep(open).plan, true);
+    // Otvorenie je nový krok - Späť ho zbalí.
+    assert.ok(!sameNavStep(navStep(state), navStep(open)));
+    assert.deepEqual(navStepFrom({ step: navStep(open) }), navStep(open));
+    // Plán patrí len karte Terazky; položka zo staršej verzie ho nemá - plán je zbalený.
+    /** @type {import('../web/state.js').NavStep} */
+    const krok = { panel: 'mozem', weekDetail: null, setup: null, roof: 0, info: null, plan: false };
+    assert.equal(navStepFrom({ step: { ...krok, plan: true } })?.plan, false);
+    assert.equal(navStepFrom({ step: { ...krok, panel: 'terazky', plan: 'áno' } })?.plan, false);
+    assert.equal(navStepFrom({ step: { panel: 'terazky', weekDetail: null } })?.plan, false);
+    // Späť na krok so zbaleným plánom ho zbalí, na krok s otvoreným ho otvorí; iná karta ho zbalí.
+    assert.equal(navChange('terazky', { ...krok, panel: 'terazky' }).tzPlanOpen, false);
+    assert.equal(navChange('mozem', { ...krok, panel: 'terazky', plan: true }).tzPlanOpen, true);
+    assert.equal(panelChange('terazky', 'mozem').tzPlanOpen, false);
 });
 
 test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
@@ -207,6 +238,7 @@ test('položka histórie sa číta len ak naozaj nesie krok navigácie', () => {
         setup: null,
         roof: 0,
         info: null,
+        plan: false,
         ...x,
     });
     // Položka zo staršej verzie s otvoreným súhrnom na zdieľanie (presunul sa do Štatistiky) vráti kartu bez neho.

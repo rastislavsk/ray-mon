@@ -1769,7 +1769,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, plan: false },
     });
     expect(errors).toEqual([]);
 });
@@ -3135,6 +3135,46 @@ test.describe('Plán dňa na Terazkách', () => {
         await expect(page.locator('.tz-plan-rows')).toContainText(`Auto${auto?.value}`);
         await expect(page.locator('.tz-plan-rows')).not.toContainText('Bojler');
         for (const r of plan.rows.filter((x) => x.id !== 'auto')) expect(r.why, r.id).not.toContain('€');
+        expect(errors).toEqual([]);
+    });
+
+    test('plán je nad grafom a pri štarte zbalený; hlavička ho otvorí, Späť aj hlavička zbalia', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const errors = await openApp(page);
+        await ocakavajKartu(page, 'terazky');
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        const plan = /** @type {NonNullable<ReturnType<typeof terazAt>['plan']>} */ (terazAt(FIXED_NOW).plan);
+        const hlavicka = page.getByRole('button', { name: `${PLAN_DNA_TITLE} ${plan.head.lead}` });
+        const telo = page.locator('#tz-plan-body');
+        // Zbalený: nadpis a veta v hlavičke, riadky skryté; plán stojí nad grafom.
+        await expect(hlavicka).toHaveAttribute('aria-expanded', 'false');
+        await expect(telo).toBeHidden();
+        const planBox = await page.locator('#tz-plan').boundingBox();
+        const grafBox = await page.locator('#tz-chart').boundingBox();
+        expect(planBox?.y ?? 0, 'plán nie je nad grafom').toBeLessThan(grafBox?.y ?? 0);
+
+        await hlavicka.click();
+        await expect(hlavicka).toHaveAttribute('aria-expanded', 'true');
+        await expect(telo).toBeVisible();
+        await expect(page.locator('.tz-plan-what')).toHaveText(plan.rows.map((r) => r.name));
+        // Tlačidlo Späť v telefóne plán zbalí a ostane na karte, ďalšie ide na predošlú kartu.
+        await page.goBack();
+        await expect(telo).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
+        // Zbalenie hlavičkou je ten istý krok - ďalšie Späť už nezbalí nič, ide na predošlú kartu.
+        await hlavicka.click();
+        await expect(telo).toBeVisible();
+        await hlavicka.click();
+        await expect(telo).toBeHidden();
+        await page.goBack();
+        await ocakavajKartu(page, 'mozem');
+        // Iná karta plán zbalí: návrat na Terazky ho ukáže zbalený.
+        await page.locator('#nav-terazky').click();
+        await hlavicka.click();
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        await expect(telo).toBeHidden();
         expect(errors).toEqual([]);
     });
 });

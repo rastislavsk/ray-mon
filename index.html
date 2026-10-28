@@ -187,6 +187,22 @@
                     </div>
                     <button type="button" id="tz-retry" class="tz-retry hidden"></button>
                 </div>
+                <!-- Plán dňa ako plagát: veta, očíslované riadky a pätka (docs/navrhy/terazky-plan-dna.html,
+                     možnosť A), zbaliteľný (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom
+                     a vetou je tlačidlo, riadky a pätka sú až po otvorení. Pri štarte je zbalený, aby bol graf
+                     pri čísle. Na mobile stojí nad časovou osou, na šírku v pravom stĺpci. Skladá render
+                     (web/render/terazky.js). -->
+                <section id="tz-plan" class="tz-plan hidden" aria-labelledby="tz-plan-title">
+                    <h2 class="tz-plan-h">
+                        <button type="button" id="tz-plan-btn" class="tz-plan-head" aria-expanded="false" aria-controls="tz-plan-body">
+                            <span class="tz-plan-t"
+                                ><span id="tz-plan-title" class="tz-plan-ttl"></span
+                                ><span id="tz-plan-lead" class="tz-plan-lead"></span></span
+                            ><span class="tz-chev" aria-hidden="true"></span>
+                        </button>
+                    </h2>
+                    <div id="tz-plan-body" class="tz-plan-body hidden"></div>
+                </section>
                 <div id="tz-plot" class="tz-plot hidden">
                     <div
                         id="tz-chart"
@@ -216,10 +232,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Plán dňa ako plagát: veta, očíslované riadky a pätka (docs/navrhy/terazky-plan-dna.html,
-                     možnosť A). Na mobile stojí pod časovou osou, na šírku v pravom stĺpci. Obsah skladá
-                     render (web/render/terazky.js). -->
-                <section id="tz-plan" class="tz-plan hidden" aria-labelledby="tz-plan-title"></section>
             </section>
 
             <!-- PANEL: 7 DNÍ -->
