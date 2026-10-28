@@ -694,10 +694,6 @@ function laterItem(a, notToday, voice) {
 export const PLAN_DNA_TITLE = 'Plán dňa';
 export const PLAN_DNA_NOW = 'teraz';
 export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
-/** Tlačidlo, ktoré zbalí rozbalený Plán dňa späť na prvý riadok. */
-export const PLAN_DNA_LESS = 'Skryť plán';
-/** Tlačidlo zbaleného Plánu dňa: koľko riadkov je pod prvým. @param {number} n */
-export const planDnaMoreText = (n) => `Celý plán · ešte ${n}`;
 
 /**
  * Texty Plánu dňa na ďalší deň (planNextDay): nadpis s dňom, veta ako pri dnešku (prvý spotrebič

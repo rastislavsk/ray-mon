@@ -335,7 +335,6 @@ function wizardTariffDom() {
         wzIvalFrom: select('wz-ival-from'),
         wzIvalTo: select('wz-ival-to'),
         wzIvalBand: select('wz-ival-band'),
-        wzIvalSet: byId('wz-ival-set'),
         wzExc: byId('wz-exc'),
         wzCurrency: byId('wz-currency'),
         wzPrices: byId('wz-prices'),
