@@ -30,8 +30,12 @@ export function initTerazky(store, dom, refresh) {
         // Tlačidlo po návrate zmizne; fokus ostane na grafe, z ktorého sa dá pokračovať.
         dom.tzChart.focus();
     });
-    dom.tzListBtn.addEventListener('click', () => store.setState({ tzListOpen: !store.get().tzListOpen }));
-    // Otvorený Plán dňa je krok navigácie: Späť ho zbalí a zbalenie hlavičkou ide tou istou cestou.
+    // Otvorený Plán dňa aj zoznam pod grafom sú krok navigácie: Späť ich zbalí a zbalenie hlavičkou
+    // ide tou istou cestou.
+    dom.tzListBtn.addEventListener('click', () => {
+        if (store.get().tzListOpen) backTo(store, { tzListOpen: false });
+        else store.setState({ tzListOpen: true });
+    });
     dom.tzPlanBtn.addEventListener('click', () => {
         if (store.get().tzPlanOpen) backTo(store, { tzPlanOpen: false });
         else store.setState({ tzPlanOpen: true });

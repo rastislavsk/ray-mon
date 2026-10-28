@@ -1112,6 +1112,14 @@ test.describe('karta Teraz', () => {
         expect(reset && zoznam && reset.y + reset.height <= zoznam.y).toBe(true);
         await btn.click();
         await expect(page.locator('#tz-list-body')).toBeHidden();
+        // Tlačidlo Späť v telefóne otvorený zoznam zbalí a ostane na karte.
+        await page.getByRole('button', { name: 'Späť na teraz' }).click();
+        await btn.click();
+        await expect(page.locator('#tz-list-body')).toBeVisible();
+        await page.goBack();
+        await expect(page.locator('#tz-list-body')).toBeHidden();
+        await expect(btn).toHaveAttribute('aria-expanded', 'false');
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
     });
 

@@ -477,6 +477,13 @@ test('zoznam pod grafom: zatvorený len prvý riadok legendy, po ťuknutí farby
     await btn.click();
     await expect(page.locator('#tz-list-body')).toBeHidden();
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    // Tlačidlo Späť v telefóne otvorený zoznam zbalí a ostane na karte.
+    await btn.click();
+    await expect(page.locator('#tz-list-body')).toBeVisible();
+    await page.goBack();
+    await expect(page.locator('#tz-list-body')).toBeHidden();
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await ocakavajKartu(page, 'terazky');
     expect(errors).toEqual([]);
 });
 
@@ -1769,7 +1776,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, plan: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, plan: false, legend: false },
     });
     expect(errors).toEqual([]);
 });

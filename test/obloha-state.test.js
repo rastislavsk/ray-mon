@@ -38,6 +38,7 @@ const step = (patch = {}) => ({
     roof: 0,
     sheet: null,
     plan: false,
+    legend: false,
     ...patch,
 });
 
@@ -172,6 +173,20 @@ test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou s
     assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', plan: true })).tzPlanOpen, true);
     // Iná karta plán zbalí.
     assert.equal(panelChange('terazky', 'mozem').tzPlanOpen, false);
+});
+
+test('zoznam pod grafom (legenda): otvorený je krok navigácie, Späť a iná karta ho zbalia', () => {
+    assert.equal(stateWith().tzListOpen, false);
+    const open = stateWith({ panel: 'terazky', tzListOpen: true });
+    assert.equal(navStep(open).legend, true);
+    assert.deepEqual(navStepOf(navStep(open)), navStep(open));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzListOpen: false })));
+    assert.equal(field({ panel: 'mozem', legend: true }, 'legend'), false);
+    assert.equal(field({ panel: 'mozem', legend: true, dash: true }, 'legend'), true);
+    assert.equal(field({ panel: 'terazky' }, 'legend'), false);
+    assert.equal(navChange(open, step({ panel: 'terazky' })).tzListOpen, false);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', legend: true })).tzListOpen, true);
+    assert.equal(panelChange('terazky', 'mozem').tzListOpen, false);
 });
 
 test('navChange: v prehľade návrat na krok prehľadu nechá aktívny stĺpec', () => {

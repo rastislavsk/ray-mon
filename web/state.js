@@ -76,7 +76,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem položka sekcie Appka v karte Nastavenie
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null,
- *   plan: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ *   plan: boolean, legend: boolean }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -111,8 +111,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         weekDetail: null,
         // Stránka pásu odporúčaní na karte Dnes (nastavenie vnútri karty, nie krok navigácie).
         terazPage: 0,
-        // Zoznam pod grafom dňa na karte Terazky: na začiatku zatvorený. Nastavenie vnútri karty,
-        // nie krok navigácie, a neukladá sa.
+        // Zoznam pod grafom dňa na karte Terazky (legenda časovej osi): na začiatku zatvorený a neukladá sa.
+        // Otvorený je krok navigácie - Späť ho zbalí.
         tzListOpen: false,
         // Plán dňa na karte Terazky: pri štarte vždy zbalený, aby bol graf pri čísle
         // (docs/navrhy/teraz-plan-rozbalovaci.html). Otvorený je krok navigácie - Späť ho zbalí.
@@ -174,8 +174,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
 /**
  * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
  * v navigácii, nie z toho, odkiaľ sa prepínalo (spodná lišta, tlačidlo Späť, výzva na
- * karte) - prechod tak vyzerá rovnako pri všetkých. Detail dňa, rozbalená položka sekcie Appka aj otvorený
- * Plán dňa sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
+ * karte) - prechod tak vyzerá rovnako pri všetkých. Detail dňa, rozbalená položka sekcie Appka, otvorený
+ * Plán dňa aj zoznam pod grafom sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
  * by sa appka mala vrátiť o hodinu neskôr.
  * @param {Panel} from @param {Panel} to
  */
@@ -186,14 +186,15 @@ export function panelChange(from, to) {
         weekDetail: null,
         infoOpen: /** @type {null} */ (null),
         tzPlanOpen: false,
+        tzListOpen: false,
         stavTip: false,
     };
 }
 
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
- * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka sekcie Appka a otvorený Plán dňa
- * na karte Terazky. Zvyšok stavu (vybraný deň, stránka
+ * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka sekcie Appka, otvorený Plán dňa
+ * a zoznam pod grafom na karte Terazky. Zvyšok stavu (vybraný deň, stránka
  * pásu odporúčaní, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
@@ -206,6 +207,7 @@ export function navStep(state) {
         roof: state.setupRoof,
         info: state.infoOpen,
         plan: state.tzPlanOpen,
+        legend: state.tzListOpen,
     };
 }
 
@@ -217,7 +219,8 @@ export function sameNavStep(a, b) {
         a.setup === b.setup &&
         a.roof === b.roof &&
         a.info === b.info &&
-        a.plan === b.plan
+        a.plan === b.plan &&
+        a.legend === b.legend
     );
 }
 
@@ -237,6 +240,7 @@ export function navChange(from, step) {
         setupRoof: step.roof,
         infoOpen: step.info,
         tzPlanOpen: step.plan,
+        tzListOpen: step.legend,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -257,12 +261,12 @@ export function navStepFrom(raw) {
  * ani položky sekcie Appka nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
  * a chýbajúca položka tiež `null`, teda nič rozbalené. Položka zo staršej verzie so zrušenou
  * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu. Otvorený Plán dňa
- * patrí len karte Terazky; položka zo staršej verzie ho nepozná - plán je zbalený.
+ * a zoznam pod grafom patria len karte Terazky; položka zo staršej verzie ich nepozná - sú zbalené.
  * @param {unknown} step @returns {NavStep | null}
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0, info = null, plan } = /** @type {Record<string, unknown>} */ (step);
+    const { panel, weekDetail, setup = null, roof = 0, info = null, plan, legend } = /** @type {Record<string, unknown>} */ (step);
     if (!validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
@@ -271,6 +275,7 @@ function navStepIn(step) {
         roof: /** @type {number} */ (roof),
         info: /** @type {InfoItem | null} */ (info),
         plan: panel === 'terazky' && plan === true,
+        legend: panel === 'terazky' && legend === true,
     };
 }
 
