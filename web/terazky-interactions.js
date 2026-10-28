@@ -1,8 +1,9 @@
 // Poslucháče karty Terazky: náhľad iného času na grafe dňa (prst, kurzor, klávesnica - spoločné
 // s kartou Teraz novej appky, web/teraz-gestures.js), „Späť na teraz“, zoznam pod grafom, „Skúsiť znova“
-// a stránka pásu odporúčaní. Každý končí volaním setState; kreslí render/terazky.js.
+// a stránka pásu odporúčaní, rozbalenie Plánu dňa. Každý končí volaním setState; kreslí render/terazky.js.
 
 import { localMinutes } from '../shared/solar.js';
+import { backTo } from './history.js';
 import { bindDayScrub, stripPage } from './teraz-gestures.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -30,6 +31,11 @@ export function initTerazky(store, dom, refresh) {
         dom.tzChart.focus();
     });
     dom.tzListBtn.addEventListener('click', () => store.setState({ tzListOpen: !store.get().tzListOpen }));
+    // Otvorený Plán dňa je krok navigácie: Späť ho zbalí a zbalenie hlavičkou ide tou istou cestou.
+    dom.tzPlanBtn.addEventListener('click', () => {
+        if (store.get().tzPlanOpen) backTo(store, { tzPlanOpen: false });
+        else store.setState({ tzPlanOpen: true });
+    });
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).

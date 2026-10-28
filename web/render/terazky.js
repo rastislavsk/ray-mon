@@ -89,11 +89,14 @@ function renderSay(m, dom) {
 
 /**
  * Plán dňa ako plagát: veta, čo ide teraz, očíslované riadky (spotrebič, čas alebo „teraz“, prečo)
- * a pätka. Bez plánu (bez predpovede, nič doma) nie je.
- * @param {Model['plan']} plan @param {Dom} dom
+ * a pätka. Bez plánu (bez predpovede, nič doma) nie je. Zbalený ukáže len nadpis a vetu v hlavičke,
+ * riadky a pätka sú až po otvorení (docs/navrhy/teraz-plan-rozbalovaci.html).
+ * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
  */
-function renderPlan(plan, dom) {
+function renderPlan(plan, open, dom) {
     show(dom.tzPlan, !!plan && plan.rows.length > 0);
+    dom.tzPlanBtn.setAttribute('aria-expanded', String(open));
+    show(dom.tzPlanBody, open);
     if (!plan || !plan.rows.length) return;
     const rows = plan.rows.map(
         (r, i) =>
@@ -102,11 +105,11 @@ function renderPlan(plan, dom) {
             `<span class="tz-plan-when">${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : escapeHtml(r.value)}</span>` +
             `<span class="tz-plan-why">${escapeHtml(r.why)}</span></li>`,
     );
+    dom.tzPlanTitle.textContent = PLAN_DNA_TITLE;
+    dom.tzPlanLead.textContent = plan.head.lead;
     writeHtml(
-        dom.tzPlan,
-        `<h2 id="tz-plan-title" class="tz-plan-ttl">${escapeHtml(PLAN_DNA_TITLE)}</h2>` +
-            `<p class="tz-plan-lead">${escapeHtml(plan.head.lead)}</p>` +
-            `<ol class="tz-plan-rows">${rows.join('')}</ol><p class="tz-plan-note">${escapeHtml(plan.note)}</p>`,
+        dom.tzPlanBody,
+        `<ol class="tz-plan-rows">${rows.join('')}</ol><p class="tz-plan-note">${escapeHtml(plan.note)}</p>`,
         'tz-plan',
     );
 }
@@ -116,6 +119,6 @@ export function renderTerazky(state, dom) {
     const m = terazModel(state, { devices: state.oznamenia.devices });
     renderHead(state, m, dom);
     renderSay(m, dom);
-    renderPlan(m.plan, dom);
+    renderPlan(m.plan, state.tzPlanOpen, dom);
     renderChart(m, state.tzListOpen, dom);
 }
