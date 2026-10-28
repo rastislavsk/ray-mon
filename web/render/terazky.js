@@ -1,5 +1,6 @@
 // Karta Terazky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, štítky a veta
-// o teraz, Plán dňa ako plagát (docs/navrhy/terazky-plan-dna.html, možnosť A), graf dňa s pásom
+// o teraz, Plán dňa ako plagát (docs/navrhy/terazky-plan-dna.html, možnosť A; večer na ďalší deň,
+// plan-dna-zajtra.html), graf dňa s pásom
 // plánu a náhľad iného času. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js - ten istý model ako
 // v novej appke, takže obe povedia to isté - a texty sú v shared/messages-core.js. Tu sa len
 // zapisuje do DOM. Farbu čísla a pozadia dáva style.css podľa data-tier (render/header.js).
@@ -90,7 +91,9 @@ function renderSay(m, dom) {
 /**
  * Plán dňa ako plagát: veta, čo ide teraz, očíslované riadky (spotrebič, čas alebo „teraz“, prečo)
  * a pätka. Bez plánu (bez predpovede, nič doma) nie je. Zbalený ukáže len nadpis a vetu v hlavičke,
- * riadky a pätka sú až po otvorení (docs/navrhy/teraz-plan-rozbalovaci.html).
+ * riadky a pätka sú až po otvorení (docs/navrhy/teraz-plan-rozbalovaci.html). Keď dnes na slnko
+ * nejde nič, plagát je plán na ďalší deň so slnkom (`plan.next`): deň v nadpise, veta a riadky
+ * o tom dni, dnešná lacná sieť jednou vetou nad riadkami (docs/navrhy/plan-dna-zajtra.html).
  * @param {Model['plan']} plan @param {boolean} open @param {Dom} dom
  */
 function renderPlan(plan, open, dom) {
@@ -98,18 +101,24 @@ function renderPlan(plan, open, dom) {
     dom.tzPlanBtn.setAttribute('aria-expanded', String(open));
     show(dom.tzPlanBody, open);
     if (!plan || !plan.rows.length) return;
-    const rows = plan.rows.map(
+    const next = plan.next;
+    // Dnešok a ďalší deň majú ten istý tvar: nadpis, veta, riadky a pätka.
+    const v = next
+        ? { ...next, title: `${escapeHtml(next.title)} <span class="tz-plan-day">${escapeHtml(next.day)}</span>` }
+        : { ...plan, head: { ...plan.head, tonight: '' }, title: escapeHtml(PLAN_DNA_TITLE) };
+    const rows = v.rows.map(
         (r, i) =>
             `<li data-tone="${r.tone}"><span class="tz-plan-n">${String(i + 1).padStart(2, '0')}</span>` +
             `<span class="tz-plan-what">${escapeHtml(r.name)}</span>` +
             `<span class="tz-plan-when">${r.now ? `<em>${escapeHtml(PLAN_DNA_NOW)}</em>` : escapeHtml(r.value)}</span>` +
             `<span class="tz-plan-why">${escapeHtml(r.why)}</span></li>`,
     );
-    dom.tzPlanTitle.textContent = PLAN_DNA_TITLE;
-    dom.tzPlanLead.textContent = plan.head.lead;
+    writeHtml(dom.tzPlanTitle, v.title, 'tz-plan-title');
+    dom.tzPlanLead.textContent = v.head.lead;
     writeHtml(
         dom.tzPlanBody,
-        `<ol class="tz-plan-rows">${rows.join('')}</ol><p class="tz-plan-note">${escapeHtml(plan.note)}</p>`,
+        (v.head.tonight ? `<p class="tz-plan-tonight">${escapeHtml(v.head.tonight)}</p>` : '') +
+            `<ol class="tz-plan-rows">${rows.join('')}</ol><p class="tz-plan-note">${escapeHtml(v.note)}</p>`,
         'tz-plan',
     );
 }

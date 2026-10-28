@@ -414,9 +414,18 @@ test('Plán dňa na ďalší deň: večer os zajtrajška, dnešná lacná sieť 
     assert.equal(next.head.lead, `Práčka o ${row('pracka').value.slice(-5)}`);
     assert.equal(next.head.then, `Sušička o ${row('susicka').value.slice(-5)}`);
     assert.match(next.head.tonight, /^Dnes z lacnej siete: bojler od \d\d:\d\d$/);
+    // Riadky pre plagát súčasnej appky: bez dnešnej lacnej siete (tú povie veta), s časom v ten deň.
+    assert.deepEqual(
+        next.rows.map((r) => [r.name, r.value]),
+        [
+            ['Práčka', `o ${row('pracka').value.slice(-5)}`],
+            ['Sušička', `o ${row('susicka').value.slice(-5)}`],
+        ],
+    );
+    assert.equal(next.rows[1].why, row('susicka').why, 'prečo ostáva z riadku plánu');
 });
 
-test('Plán dňa na ďalší deň: os dňa prvého riadku na iný deň, ostatné dni štítkom', async () => {
+test('Plán dňa na ďalší deň: os dňa prvého riadku na iný deň, ostatné dni štítkom aj riadkom', async () => {
     const { planNextDay } = await import('../shared/plan-dna.js');
     const { dayCtx } = await import('../shared/mozem.js');
     const { weekDayName } = await import('../shared/format.js');
@@ -430,10 +439,13 @@ test('Plán dňa na ďalší deň: os dňa prvého riadku na iný deň, ostatné
         day: { name: weekDayName(d.day.date, d.index), index: d.index, start },
         end: start + 90,
         after: null,
-        name,
-        value: 'neskôr',
+        ...texty(name, 'neskôr'),
     });
-    const nie = { id: 'nie', kind: /** @type {const} */ ('none'), name: 'Sušička', value: 'tento týždeň nie' };
+    /** @param {string} name @param {string} value */
+    function texty(name, value) {
+        return { name, value, time: value, why: '', tone: /** @type {const} */ ('wait'), now: false };
+    }
+    const nie = { id: 'nie', kind: /** @type {const} */ ('none'), ...texty('Sušička', 'tento týždeň nie') };
     // Riadky prichádzajú v poradí dní; v ten deň idú pásy podľa času.
     const next = planNextDay([later('Umývačka', d1, 600), later('Práčka', d1, 480), later('Auto', d2, 540), nie], ctx, inp.site);
     assert.ok(next);
@@ -446,6 +458,15 @@ test('Plán dňa na ďalší deň: os dňa prvého riadku na iný deň, ostatné
     assert.deepEqual(
         next.lanes.others.map((o) => o.name),
         ['Auto', 'Sušička'],
+    );
+    assert.deepEqual(
+        next.rows.map((r) => [r.name, r.value]),
+        [
+            ['Práčka', 'o 08:00'],
+            ['Umývačka', 'o 10:00'],
+            ['Auto', 'neskôr'],
+            ['Sušička', 'tento týždeň nie'],
+        ],
     );
     // Bez riadku na iný deň plán na ďalší deň nie je.
     assert.equal(planNextDay([nie], ctx, inp.site), null);

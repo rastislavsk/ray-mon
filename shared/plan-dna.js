@@ -29,6 +29,10 @@ import { daylightSpan } from './solar.js';
  *   | { id: string, kind: 'none' }} PlanRow
  */
 /** Miesto na slnku v jednom dni. @typedef {Extract<PlanRow, { kind: 'sun' }>} SunRow */
+/**
+ * Riadok bloku Plán dňa: miesto v pláne s textami (planDnaRowText), `now` keď ide teraz, a `value` - čas tak, ako ho povie dlaždica.
+ * @typedef {PlanRow & ReturnType<typeof planDnaRowText> & { now: boolean, value: string }} PlanDnaRow
+ */
 /** Deň, ktorý sa plánuje: kontext, mena a rozpočet voľného výkonu po minútach. @typedef {{ ctx: DayCtx, currency: string, free: number[] }} Den */
 
 const STEP = TARIFF_LIMITS.stepMin;
@@ -267,9 +271,11 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
  * Plán na ďalší deň, keď dnes na slnko nejde nič (večer, zamračený deň): os prvého ďalšieho dňa,
  * v ktorom je niečo na slnku, s pásmi spotrebičov v ten deň a bez čiary teraz - teraz je dnes.
  * Čo ide dnes z lacnej siete, povie veta (`head.tonight`), ostatné dni a „nie“ sú v `others`.
+ * `rows` sú riadky plánu bez dnešnej lacnej siete: najprv spotrebiče v ten deň podľa času
+ * (s časom „o 07:45“), potom ostatné - pre plagát súčasnej appky, ktorý os nemá.
  * Keď dnes niečo na slnku je, alebo žiadny deň predpovede, null.
  * Návrh: docs/navrhy/plan-dna-zajtra.html, návrh 1.
- * @param {Array<PlanRow & { name: string, value: string }>} rows
+ * @param {PlanDnaRow[]} rows
  * @param {DayCtx} ctx @param {import('./config.js').Site} site
  */
 export function planNextDay(rows, ctx, site) {
@@ -280,8 +286,10 @@ export function planNextDay(rows, ctx, site) {
     const on = later.filter((r) => r.day.index === day.index).sort((a, b) => a.start - b.start);
     const cheap = rows.flatMap((r) => (r.kind === 'cheap' ? [{ name: r.name, start: r.start }] : []));
     const rest = rows.filter((r) => r.kind !== 'cheap' && !on.some((o) => o.id === r.id));
+    const { values, ...texts } = planDnaNextText({ name: later[0].day.name, date: day.day.date, on, cheap });
     return {
-        ...planDnaNextText({ name: later[0].day.name, date: day.day.date, on, cheap }),
+        ...texts,
+        rows: [...on.map((r, i) => ({ ...r, value: values[i] })), ...rest],
         lanes: {
             ...planAxis(on, daylightSpan(site, day.day.date)),
             others: rest.map((r) => ({ id: r.id, name: r.name, value: r.value })),

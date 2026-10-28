@@ -2399,7 +2399,7 @@ test.describe('moja elektráreň', () => {
         expect(teraz.num).toMatch(/^~[0-9]/);
         await expect(page.locator('#tz-sub')).toHaveText(teraz.sub);
         await expect(page.locator('#tz-say-text')).toHaveText(teraz.say?.text ?? '');
-        await expect(page.locator('.tz-plan-lead')).toHaveText(teraz.plan?.head.lead ?? '');
+        await expect(page.locator('.tz-plan-lead')).toHaveText((teraz.plan?.next ?? teraz.plan)?.head.lead ?? '');
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#panels-bar')).toBeVisible();
         const vazne = (await new AxeBuilder({ page }).include('#panels-bar').analyze()).violations

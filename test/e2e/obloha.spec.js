@@ -969,7 +969,7 @@ test.describe('karta Teraz', () => {
             await page.locator('#nav-terazky').click();
             await expect(page.locator('#tz-num-val')).toHaveText(m.num);
             await expect(page.locator('#tz-say-text')).toHaveText(m.say?.text ?? '');
-            if (m.plan) await expect(page.locator('.tz-plan-lead')).toHaveText(m.plan.head.lead);
+            if (m.plan) await expect(page.locator('.tz-plan-lead')).toHaveText((m.plan.next ?? m.plan).head.lead);
             expect(errors).toEqual([]);
         });
     }
@@ -1041,7 +1041,9 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz; súčasná appka bez zmeny', async ({ page }) => {
+    test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz; v súčasnej appke plagát na zajtra', async ({
+        page,
+    }) => {
         const time = at('19:50');
         const errors = await openTeraz(page, { time });
         const plan = terazModel(vstupTeraz(time)).plan;
@@ -1059,9 +1061,17 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-plan .tl-chip')).toHaveCount(next.lanes.others.length);
         await expect(page.locator('#tz-plan .tl-note')).toHaveText(next.note);
 
-        // Súčasná appka večer ukazuje plán ako doteraz - plán na ďalší deň je len v Oblohe.
+        // Súčasná appka: ten istý plán na zajtra ako plagát - deň v nadpise, veta, dnešná lacná sieť
+        // nad riadkami a riadky v ten deň s časom.
         await otvorSucasnuAppku(page);
-        await expect(page.locator('.tz-plan-lead')).toHaveText(plan.head.lead);
+        await expect(page.locator('#tz-plan-title')).toHaveText(`${next.title} ${next.day}`);
+        await expect(page.locator('.tz-plan-day')).toHaveText(next.day);
+        await expect(page.locator('.tz-plan-lead')).toHaveText(next.head.lead);
+        await page.locator('#tz-plan-btn').click();
+        await expect(page.locator('.tz-plan-tonight')).toHaveText(next.head.tonight);
+        await expect(page.locator('.tz-plan-what')).toHaveText(next.rows.map((r) => r.name));
+        await expect(page.locator('.tz-plan-when')).toHaveText(next.rows.map((r) => r.value));
+        await expect(page.locator('.tz-plan-note')).toHaveText(next.note);
         expect(errors).toEqual([]);
     });
 
