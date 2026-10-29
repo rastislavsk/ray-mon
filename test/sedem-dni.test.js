@@ -10,6 +10,7 @@ import { kwpRoughText } from '../shared/format.js';
 import {
     dayChartText,
     dayDetailMessage,
+    dayTempText,
     SEDEM_TEXTS,
     sedemBarsText,
     sedemClearText,
@@ -26,6 +27,7 @@ import {
 } from '../shared/messages.js';
 import { planWindows } from '../shared/mozem.js';
 import {
+    dayHeadSub,
     dayStripModel,
     dayWeather,
     mainWindow,
@@ -68,6 +70,22 @@ test('rowName: Dnes, Zajtra, potom skratka dňa s dňom v mesiaci', () => {
         forecast.days.map((d, i) => rowName(d.date, i)),
         ['Dnes', 'Zajtra', 'Po 7.', 'Ut 8.', 'St 9.', 'Št 10.', 'Pi 11.'],
     );
+});
+
+test('dayTempText: celé stupne od najnižšej po najvyššiu, pod nulou mínus, bez teploty nič', () => {
+    assert.equal(dayTempText({ tempMinC: 6.4, tempMaxC: 21.6 }), '6° – 22°');
+    assert.equal(dayTempText({ tempMinC: -3.2, tempMaxC: 4 }), '−3° – 4°');
+    // -0,4 sa zaokrúhli na nulu, nie na „−0°“.
+    assert.equal(dayTempText({ tempMinC: -0.4, tempMaxC: 0.2 }), '0° – 0°');
+    assert.equal(dayTempText({ tempMinC: null, tempMaxC: null }), '');
+});
+
+test('dayHeadSub: počasie slovom a teplota dňa; čo v dátach nie je, vypadne', () => {
+    const day = forecast.days[0];
+    assert.equal(dayHeadSub(day), `jasno · ${dayTempText(day)}`);
+    assert.equal(dayHeadSub({ ...day, tempMinC: null, tempMaxC: null }), 'jasno');
+    assert.equal(dayHeadSub({ ...day, cloudAvgPct: null }), dayTempText(day));
+    assert.equal(dayHeadSub({ ...day, cloudAvgPct: null, tempMinC: null, tempMaxC: null }), '');
 });
 
 test('dayWeather: stav z oblačnosti tou istou hranicou ako obloha, bez oblačnosti nič', () => {
@@ -196,7 +214,8 @@ test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, n
     const d = sedemDayModel(input, 0);
     const day = forecast.days[0];
     assert.equal(d.title, 'Dnes 5.9.');
-    assert.equal(d.sub, 'jasno');
+    assert.equal(d.sub, dayHeadSub(day));
+    assert.match(d.sub, /^jasno · \d+° – \d+°$/);
     const w = mainWindow(sunWindows(dayPlan(input)));
     assert.deepEqual(d.nums, [{ value: '61,4', label: 'kWh za deň' }, { value: '7,9', label: 'kW špička' }, sedemWindowTile(w)]);
     assert.ok(d.chart.now, 'pri dnešku je značka teraz');
@@ -222,7 +241,7 @@ test('sedemDayModel: iný deň bez „teraz“ a bez merania; deň bez okna „b
     assert.equal(weak.message.title, 'Slabý deň');
     assert.match(weak.chart.desc, /Okno na veľké veci nebude\./);
     // Typická strecha to povie aj v detaile.
-    assert.equal(sedemDayModel({ ...input, known: 'poloha' }, 2).sub, 'zamračené · typická strecha');
+    assert.equal(sedemDayModel({ ...input, known: 'poloha' }, 2).sub, `${dayHeadSub(forecast.days[2])} · typická strecha`);
 });
 
 test('sedemWeekModel: čísla zo súhrnu súčasnej appky, 7 stĺpcov, mapa 7 × hodiny, hláška weekMessage', () => {

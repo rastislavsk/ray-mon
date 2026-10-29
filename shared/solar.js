@@ -12,7 +12,8 @@ import { CLEAR_SKY, DAYLIGHT_PAD_MIN, FORECAST_DAYS_SHOWN, MINUTES_PER_DAY, OPEN
 /** @typedef {HourPoint & { clearKw: number }} DayHourPoint */
 /**
  * @typedef {{ date: string, hourly: DayHourPoint[], kwhTotal: number, clearKwhTotal: number,
- *   peakKw: number, peakHour: number | null, cloudAvgPct: number | null }} ForecastDay
+ *   peakKw: number, peakHour: number | null, cloudAvgPct: number | null,
+ *   tempMinC: number | null, tempMaxC: number | null }} ForecastDay
  */
 /**
  * @typedef {{ strongerWindowAhead: boolean, windowDaypart: string | null, peakKw: number | null,
@@ -346,6 +347,8 @@ function buildDay(dayKey, entries, site, plant) {
     let peak = hourly[0] || { hour: null, kw: 0 };
     for (const h of hourly) if (h.kw > peak.kw) peak = h;
     const cloudVals = hourly.map((h) => h.cloud).filter((c) => c != null);
+    // Najnižšia a najvyššia teplota celého dňa, aj nočná (detail dňa karty 7 dní).
+    const temps = entries.map((e) => e.tempC).filter(Number.isFinite);
     return {
         date: dayKey,
         hourly,
@@ -360,6 +363,8 @@ function buildDay(dayKey, entries, site, plant) {
         peakKw: round(peak.kw, 2),
         peakHour: peak.hour,
         cloudAvgPct: cloudVals.length ? Math.round(cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length) : null,
+        tempMinC: temps.length ? round(Math.min(...temps), 1) : null,
+        tempMaxC: temps.length ? round(Math.max(...temps), 1) : null,
     };
 }
 

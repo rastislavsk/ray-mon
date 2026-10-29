@@ -22,6 +22,7 @@ import { dayHourTiers, forecastDayPlan } from './day-plan.js';
 import { dateParts, dayNameShort, fmt1, fmtSum, weekDayLong, weekDayName, weekDayShort } from './format.js';
 import {
     dayChartText,
+    dayTempText,
     sedemBarsText,
     sedemClearText,
     sedemDayMessage,
@@ -71,6 +72,16 @@ export function rowName(date, index) {
  */
 export function dayWeather(day) {
     return day.cloudAvgPct === null ? null : skyWeather(day.cloudAvgPct);
+}
+
+/**
+ * Riadok pod nadpisom detailu dňa v oboch appkách: počasie slovom a teplota dňa
+ * („zamračené · 6° – 22°“). Čo v dátach nie je, vypadne; bez oboch prázdny text.
+ * @param {ForecastDay} day
+ */
+export function dayHeadSub(day) {
+    const weather = dayWeather(day);
+    return [weather ? SKY_WORDS[weather] : '', dayTempText(day)].filter(Boolean).join(' · ');
 }
 
 /** Okná na veľké veci: zelené úseky plánu dňa. @param {import('./day-plan.js').PlanSlot[]} plan @returns {Window[]} */
@@ -182,7 +193,7 @@ export function sedemDayModel(input, index, voice = 'drzy') {
         last: index === days.length - 1,
         title: weekDayLong(day.date, index),
         weather,
-        sub: [weather ? SKY_WORDS[weather] : '', input.known === 'poloha' ? SEDEM_TEXTS.typical : ''].filter(Boolean).join(' · '),
+        sub: [dayHeadSub(day), input.known === 'poloha' ? SEDEM_TEXTS.typical : ''].filter(Boolean).join(' · '),
         nums: [
             { value: fmt1(day.kwhTotal), label: SEDEM_TEXTS.kwhDay },
             { value: Number.isFinite(day.peakKw) ? fmt1(day.peakKw) : '–', label: SEDEM_TEXTS.kwPeak },

@@ -189,6 +189,24 @@ test('buildForecast: 7 dní, dnes = miestny dátum, zajtra má 24 hodín, golden
     );
 });
 
+test('buildForecast: teplota dňa je najnižšia a najvyššia hodina celého dňa, aj nočná', () => {
+    const weather = fixture('open-meteo.json');
+    const forecast = buildForecast(weather, FIXED_NOW, SITE, PLANT);
+    for (const d of forecast.days) {
+        const temps = weather.hourly.time.flatMap((/** @type {string} */ t, /** @type {number} */ i) =>
+            localDateKey(new Date(`${t}Z`), SITE.timezone) === d.date ? [weather.hourly.temperature_2m[i]] : [],
+        );
+        assert.equal(temps.length, 24);
+        assert.equal(d.tempMinC, Number(Math.min(...temps).toFixed(1)));
+        assert.equal(d.tempMaxC, Number(Math.max(...temps).toFixed(1)));
+    }
+    // Deň bez teploty v dátach (koniec rozsahu Open-Meteo dáva null) teplotu nevymýšľa.
+    const bezTeploty = { ...weather, hourly: { ...weather.hourly, temperature_2m: weather.hourly.temperature_2m.map(() => null) } };
+    const prazdny = buildForecast(bezTeploty, FIXED_NOW, SITE, PLANT).days[0];
+    assert.equal(prazdny.tempMinC, null);
+    assert.equal(prazdny.tempMaxC, null);
+});
+
 test('iná lokalita: na južnej pologuli je slnko na poludnie na severe a hodiny idú podľa jej pásma', () => {
     // Pravé poludnie v Sydney (151,21° E) je v decembri približne 01:57 UTC.
     const noon = solarPosition(new Date('2026-12-21T01:57:00Z'), SYDNEY.lat, SYDNEY.lon);

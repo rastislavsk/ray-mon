@@ -30,7 +30,7 @@ import { dayPlan, forecastDayPlan } from '../../shared/day-plan.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dnesCards, terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
-import { mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { dayHeadSub, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { HEADER_TEXTS, stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
@@ -601,6 +601,9 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     // Klik na deň otvorí jeho detail: okno na veľké spotrebiče, graf dňa a tri čísla.
     await page.locator('#week-list [data-day-index="5"]').click();
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
+    // Pod nadpisom počasie slovom a teplota dňa - ten istý text ako v novej appke.
+    await expect(page.locator('#week-day-sub')).toHaveText(dayHeadSub(forecast.days[5]));
+    await expect(page.locator('#week-day-sub')).toHaveText(/ · −?\d+° – −?\d+°$/);
     await expect(page.locator('#week-block-list')).toBeHidden();
     await expect(page.locator('#week-day-tabs')).toBeHidden();
     expect(await viditelneBloky(page)).toEqual(['week-block-curve']);
