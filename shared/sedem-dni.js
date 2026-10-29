@@ -76,7 +76,7 @@ export function dayWeather(day) {
 
 /**
  * Riadok pod nadpisom detailu dňa v oboch appkách: počasie slovom a teplota dňa
- * („zamračené · 6° – 22°“). Čo v dátach nie je, vypadne; bez oboch prázdny text.
+ * („zamračené · 6° / 22°“). Čo v dátach nie je, vypadne; bez oboch prázdny text.
  * @param {ForecastDay} day
  */
 export function dayHeadSub(day) {
