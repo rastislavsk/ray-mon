@@ -380,6 +380,8 @@ export function collectDom() {
         ...wizardTariffDom(),
         // <html> nesie farby oblohy (--s1, --s2) a počasie (data-sky).
         root: document.documentElement,
+        // Farba stavového riadku telefónu = vrch oblohy (renderSky).
+        themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
         page: byId('page'),
         place: byId('hdr-place'),
         live: /** @type {HTMLButtonElement} */ (byId('hdr-live')),

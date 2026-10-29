@@ -43,7 +43,7 @@ import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekM
 import { settingsFromLink, shareUrl, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
-import { bigWords, FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
+import { bigWords, FIXED_NOW, fixture, fixtureData, podvrhniQr, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
@@ -155,6 +155,22 @@ function atTime(hm) {
 
 /** Model hlavnej karty v danej chvíli, s predpoveďou postavenou v tej istej chvíli ako v appke. @param {Date} instant */
 const modelAt = (instant) => heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
+
+test('stavový riadok telefónu má farbu vrchu pozadia aj po zmene tarify', async ({ page }) => {
+    const [den, noc] = [atTime('13:00').instant, atTime('22:30').instant];
+    // Test má zmysel, len keď sa farba pozadia medzi tými dvoma chvíľami naozaj zmení.
+    expect(modelAt(den).tier).not.toBe(modelAt(noc).tier);
+    const errors = await openApp(page, { time: den });
+    const denFarba = await page.locator('meta[name="theme-color"]').getAttribute('content');
+    expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
+
+    await page.clock.setFixedTime(noc);
+    await page.reload();
+    await appReady(page);
+    await expect(page.locator('meta[name="theme-color"]')).not.toHaveAttribute('content', String(denFarba));
+    expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
+    expect(errors).toEqual([]);
+});
 
 // ---- Karta Terazky ------------------------------------------------------------
 // Rozloženie karty Teraz novej appky (návrh A v docs/navrhy/terazky-ako-obloha.html). Očakávané
