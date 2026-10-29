@@ -25,14 +25,14 @@ import { DAY_CHART_KEYS, TERAZ_TONES, terazPreviewTime } from './messages-core.j
  */
 export const DAY_CHART = {
     w: 320,
-    h: 176,
+    h: 184,
     left: 20,
     right: 306,
     cloudY: 24,
     cloudH: 12,
     top: 62,
-    base: 138,
-    bandY: 148,
+    base: 146,
+    bandY: 156,
     bandH: 9,
     maxKw: 10,
     cellMin: 30,
