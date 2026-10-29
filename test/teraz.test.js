@@ -251,10 +251,10 @@ test('dayChartModel: predpoveď, nameraná krivka po hranicu, os kW, oblačnosť
     const ys = (/** @type {string} */ d) => [...d.matchAll(/ (-?[0-9.]+)(?= L|Z)/g)].map((x) => Number(x[1]));
     assert.ok(m.over);
     assert.ok(ys(m.over).every((y) => y <= m.limitY));
-    // Os kW: pevne do 10 kW, nech sa dni dajú porovnať.
+    // Os kW: pevne do 10 kW, nech sa dni dajú porovnať, a celé čísla - bez desatín je stĺpec čísel úzky.
     assert.deepEqual(
         m.grid.map((g) => g.label),
-        ['0', '2,5', '5', '7,5', '10'],
+        ['0', '2', '4', '6', '8', '10'],
     );
     assert.equal(m.grid[0].y, DAY_CHART.base);
     assert.equal(m.grid[m.grid.length - 1].y, DAY_CHART.top);

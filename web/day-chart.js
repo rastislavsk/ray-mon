@@ -41,9 +41,7 @@ const cloudPct = (pct) => `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
  */
 function labelsHtml(c) {
     const C = DAY_CHART;
-    const axis =
-        c.grid.map((g) => `<span class="dc-y" style="left:${pctX(C.left - 4)};top:${pctY(g.y)}">${g.label}</span>`).join('') +
-        `<span class="dc-y dc-unit" style="left:${pctX(C.left - 4)};top:${pctY(C.top - 14)}">kW</span>`;
+    const axis = c.grid.map((g) => `<span class="dc-y" style="left:${pctX(C.left - 4)};top:${pctY(g.y)}">${g.label}</span>`).join('');
     const ticks = c.ticks
         .map((t) => `<span class="dc-t" style="left:${pctX(t.x)};top:${pctY(C.bandY + C.bandH)}">${t.label}</span>`)
         .join('');
