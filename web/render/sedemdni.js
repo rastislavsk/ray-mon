@@ -34,8 +34,7 @@ import {
     weekDayShort,
 } from '../../shared/format.js';
 import { dayWindowCard, EMPTY_MESSAGES, weekMessage } from '../../shared/messages.js';
-import { SKY_WORDS } from '../../shared/messages-sedem.js';
-import { dayStripModel, dayWeather, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
+import { dayHeadSub, dayStripModel, dayWeather, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { localMinutes } from '../../shared/solar.js';
 import { ICON_BACK, ICON_CLOUD, ICON_NEXT, ICON_PARTLY, ICON_SUN } from '../icons.js';
 import { dayChartHtml, legendHtml } from '../day-chart.js';
@@ -317,7 +316,7 @@ function renderView(detail, narrow, tall, dom) {
 
 /**
  * Nadpis detailu pod riadkom so šípkou späť: deň s ikonou oblohy a slovom pod ním, ako v detaile
- * dňa novej appky (počasie dňa aj slovo sú z jadra, dayWeather a SKY_WORDS). Po prelistovaní
+ * dňa novej appky (počasie dňa, slovo aj teplota sú z jadra, dayWeather a dayHeadSub). Po prelistovaní
  * dňa ho ohlási čítačka (#week-day-live, mimo pásu, ktorý sa pri ťahu kopíruje).
  * @param {'day' | 'week' | null} detail @param {ForecastDay[]} days @param {number} sel @param {import('../dom.js').Dom} dom */
 function renderDayHead(detail, days, sel, dom) {
@@ -325,8 +324,9 @@ function renderDayHead(detail, days, sel, dom) {
     const weather = detail === 'day' ? dayWeather(day) : null;
     dom.weekDayTitle.textContent = detail === 'week' ? 'Celý týždeň' : weekDayLong(day.date, sel);
     writeHtml(dom.weekDayIcon, weather ? SKY_ICONS[weather] : '', 'weekDayIcon');
-    dom.weekDaySub.textContent = weather ? SKY_WORDS[weather] : '';
-    dom.weekDaySub.classList.toggle('hidden', !weather);
+    const sub = detail === 'day' ? dayHeadSub(day) : '';
+    dom.weekDaySub.textContent = sub;
+    dom.weekDaySub.classList.toggle('hidden', !sub);
     dom.weekDayLive.textContent = detail === 'day' ? weekDayPosition(day.date, sel, days.length) : '';
 }
 

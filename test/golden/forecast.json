@@ -402,7 +402,9 @@
       "clearKwhTotal": 65,
       "peakKw": 7.94,
       "peakHour": 12,
-      "cloudAvgPct": 12
+      "cloudAvgPct": 12,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-06",
@@ -556,7 +558,9 @@
       "clearKwhTotal": 64.8,
       "peakKw": 6.35,
       "peakHour": 12,
-      "cloudAvgPct": 43
+      "cloudAvgPct": 43,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-07",
@@ -710,7 +714,9 @@
       "clearKwhTotal": 64.5,
       "peakKw": 3.47,
       "peakHour": 12,
-      "cloudAvgPct": 86
+      "cloudAvgPct": 86,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-08",
@@ -864,7 +870,9 @@
       "clearKwhTotal": 64.2,
       "peakKw": 6.89,
       "peakHour": 12,
-      "cloudAvgPct": 30
+      "cloudAvgPct": 30,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-09",
@@ -1018,7 +1026,9 @@
       "clearKwhTotal": 63.8,
       "peakKw": 5.43,
       "peakHour": 12,
-      "cloudAvgPct": 58
+      "cloudAvgPct": 58,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-10",
@@ -1172,7 +1182,9 @@
       "clearKwhTotal": 63.5,
       "peakKw": 8.17,
       "peakHour": 12,
-      "cloudAvgPct": 10
+      "cloudAvgPct": 10,
+      "tempMinC": 6,
+      "tempMaxC": 22
     },
     {
       "date": "2026-09-11",
@@ -1326,7 +1338,9 @@
       "clearKwhTotal": 63.2,
       "peakKw": 4.13,
       "peakHour": 12,
-      "cloudAvgPct": 68
+      "cloudAvgPct": 68,
+      "tempMinC": 6,
+      "tempMaxC": 22
     }
   ],
   "updatedAt": "2026-09-05T11:00:00.000Z"

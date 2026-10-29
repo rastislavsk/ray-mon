@@ -20,6 +20,8 @@ test('validátor odhalí chýbajúce a zle typované polia', () => {
     assert.ok(validateForecast({ ...forecast, days: 'x' }).some((e) => e.includes('days')));
     assert.ok(validateForecast({ ...forecast, days: [{ ...forecast.days[0], date: '5.9.' }] }).some((e) => e.includes('date')));
     assert.ok(validateForecast({ ...forecast, tomorrowSunny: 'yes' }).some((e) => e.includes('tomorrowSunny')));
+    assert.ok(validateForecast({ ...forecast, days: [{ ...forecast.days[0], tempMaxC: '22' }] }).some((e) => e.includes('tempMaxC')));
+    assert.deepEqual(validateForecast({ ...forecast, days: [{ ...forecast.days[0], tempMinC: null, tempMaxC: null }] }), []);
 });
 
 test('parseStoredWeather: odložené počasie s adresou, časom a dátami, inak null', () => {

@@ -67,6 +67,17 @@ export function weekMessage(days) {
 /** Počasie dňa slovom - ikona v riadku je len ozdoba, význam nesie toto slovo. @type {Record<import('./sky.js').SkyWeather, string>} */
 export const SKY_WORDS = { jasno: 'jasno', polojasno: 'polojasno', zamracene: 'zamračené' };
 
+/**
+ * Teplota dňa v celých stupňoch, od najnižšej po najvyššiu: „6° – 22°“, pod nulou so znamienkom
+ * mínus („−3° – 4°“). Bez teploty v dátach prázdny text.
+ * @param {{ tempMinC: number | null, tempMaxC: number | null }} day
+ */
+export function dayTempText(day) {
+    if (day.tempMinC == null || day.tempMaxC == null) return '';
+    const deg = (/** @type {number} */ c) => `${Math.round(c) < 0 ? '−' : ''}${Math.abs(Math.round(c))}°`;
+    return `${deg(day.tempMinC)} – ${deg(day.tempMaxC)}`;
+}
+
 /** Pevné texty karty: nadpisy, popisky čísel, tlačidlá a výzvy. */
 export const SEDEM_TEXTS = {
     question: 'Veľké pranie?',

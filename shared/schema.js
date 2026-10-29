@@ -37,6 +37,7 @@ function checkDay(d, i, errors) {
         errors.push(`forecast.days[${i}]: kwhTotal, clearKwhTotal, peakKw čísla`);
     if (d.peakHour !== null && !isNum(d.peakHour)) errors.push(`forecast.days[${i}].peakHour: číslo alebo null`);
     if (!isNumOrNull(d.cloudAvgPct)) errors.push(`forecast.days[${i}].cloudAvgPct: číslo alebo null`);
+    if (!isNumOrNull(d.tempMinC) || !isNumOrNull(d.tempMaxC)) errors.push(`forecast.days[${i}]: tempMinC, tempMaxC číslo alebo null`);
     checkHourPoints(d.hourly, `forecast.days[${i}].hourly`, errors);
 }
 
