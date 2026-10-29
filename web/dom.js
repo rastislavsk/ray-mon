@@ -31,16 +31,17 @@ function headerDom() {
         // z --tint-rgb a obe musia byť na tom istom prvku (viď :root v style.css).
         root: document.documentElement,
         page: byId('page'),
-        // Čas aktualizácie dát.
-        pvTime: byId('pv-time'),
+        // Miesto elektrárne a čas merania (bez neho slovo), pre čítačku aj čo hovorí bodka.
+        pvPlace: byId('pv-place'),
         pvUpdated: byId('pv-updated'),
+        pvTone: byId('pv-tone'),
         pvClock: /** @type {HTMLButtonElement} */ (byId('pv-clock')),
         pvTip: byId('pv-tip'),
         pvTipBg: byId('pv-tip-bg'),
         pvTipTitle: byId('pv-tip-title'),
         pvTipText: byId('pv-tip-text'),
         pvTipBtn: byId('pv-tip-btn'),
-        // Bez zadaných panelov namiesto textu pod časom odkaz do sprievodcu.
+        // Bez zadaných panelov namiesto bodky a času odkaz do sprievodcu.
         pvSetupGo: byId('pv-setup-go'),
         panelsBar: byId('panels-bar'),
         panelsBarTitle: byId('panels-bar-title'),

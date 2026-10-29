@@ -66,3 +66,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `teraz-plan-rozbalovaci.html` | Teraz (nová appka) – Plán dňa nad grafom ako rozbaľovací blok: pri štarte zbalený, Späť ho zbalí, aby pri ťahaní po grafe bolo vidno výkon hore |
 | `oznamenia.html` | Oznámenia v telefóne: jeden ranný plán dňa (logika A) – jasno, len dopoludnia, zamračené, zlý týždeň, tlačidlo Pripomeň; Plán dňa na Môžem?, Nastavenie |
 | `dnes-hlasky-dna.html` | Karta Dnes – veľké slovo o celom dni: ráno z predpovede, cez deň zmena, večer zo skutočnej výroby; trieda dňa podľa spotrebičov na slnku |
+| `hlavicka-jednotna.html` | Jedna hlavička pre obe appky: RAY-MON a pod ním lokalita, vpravo bodka a čas ako v Oblohe, prilepená hore; model hlavičky v `shared/hlavicka.js` |

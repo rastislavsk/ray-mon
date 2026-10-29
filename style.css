@@ -280,7 +280,7 @@ b {
    Appka má v index.html "viewport-fit=cover" a "apple-mobile-web-app-status-bar-style:
    black-translucent": po pridaní na plochu iPhonu tak stránka začína pod stavovým
    riadkom - teda pod hodinami a batériou systému. Bez tohto odsadenia sa celý riadok
-   s názvom firmy schoval za stavový riadok a bolo ho vidieť len na okamih, kým ťahanie
+   s názvom appky schoval za stavový riadok a bolo ho vidieť len na okamih, kým ťahanie
    prstom nadol (obnova ťahom) posunulo stránku nižšie. Odsadenie je vnútri .appbar,
    takže pozadie hlavičky siaha až pod stavový riadok a prechod zostáva plynulý. */
 /* z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
@@ -292,16 +292,17 @@ b {
     background: var(--bg-page);
     background-attachment: fixed;
 }
+/* Dva riadky: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku oboch
+   (docs/navrhy/hlavicka-jednotna.html) - rovnako ako v Oblohe. */
 .appbar-inner {
     position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--sp-3);
     max-width: var(--page-max);
     margin: 0 auto;
     padding: 18px 20px 12px;
-}
-.appbar-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 }
 .appbar-label {
     font-family: var(--font-mono);
@@ -310,58 +311,60 @@ b {
     letter-spacing: 0.18em;
     color: #fff;
 }
-/* Druhý riadok hlavičky: vľavo podnadpis (názov appky), vpravo čo znamená čas nad ním. Oba
-   drobným sivým písmom, aby vynikol názov a čas. */
-.appbar-sub {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--sp-2);
+/* Miesto elektrárne drobným sivým písmom, aby vynikol názov a čas. Dlhé sa radšej zalomí, než by
+   sa orezalo - ako v Oblohe. */
+.appbar-place {
+    grid-row: 2;
+    min-width: 0;
     margin-top: var(--sp-1);
+    overflow-wrap: anywhere;
     font-family: var(--font-mono);
     font-size: var(--fs-xs);
     color: var(--ink-35);
     letter-spacing: 0.04em;
 }
-/* Text pod časom je nad okrajom plochy tlačidla času, ktorá siaha až k nemu - ťuknutie naň trafí jeho. */
-.pv-updated-line {
-    position: relative;
-    text-align: right;
-}
-/* Bez zadaných panelov namiesto textu odkaz do sprievodcu (viď updatedLine vo web/render/header.js).
-   Zelená ako ostatné akcie (.plant-save), na pozadí hlavičky má kontrast nad 7 : 1 aj pri
-   najsilnejšom zelenom podfarbení. Plocha na ťuknutie je väčšia než text, riadok nezväčší. */
+.appbar-clock,
 .pv-setup-go {
-    font: inherit;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+/* Bez zadaných panelov namiesto bodky a času odkaz do sprievodcu. Zelená ako ostatné akcie
+   (.plant-save), na pozadí hlavičky má kontrast nad 7 : 1 aj pri najsilnejšom zelenom podfarbení.
+   Plocha na ťuknutie je väčšia než text, hlavičku nezväčší. */
+.pv-setup-go {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
     font-weight: 700;
     color: var(--green);
     background: none;
     border: 0;
-    padding: 8px 0;
-    margin: -8px 0;
+    padding: 12px 0;
+    margin: -12px 0;
     cursor: pointer;
 }
 /* Bodka s časom je tlačidlo, ktoré otvorí bublinu so stavom merania: vyzerá ako text, plocha na
-   ťuknutie je väčšia, riadok nezväčší. Text pod časom robí to isté. */
+   ťuknutie je väčšia, hlavičku nezväčší. */
 .appbar-clock {
     position: relative;
     display: flex;
     align-items: center;
     gap: 7px;
     font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--ink-70);
+    font-size: 14px;
+    color: var(--ink);
+    white-space: nowrap;
     background: none;
     border: 0;
     border-radius: var(--radius-pill);
-    padding: 12px 8px;
-    margin: -12px -8px;
+    padding: 12px 12px;
+    margin: -12px -12px;
     cursor: pointer;
 }
 .appbar-clock:disabled {
     cursor: default;
 }
-/* Jemná pilulka hovorí, že sa na bodku s časom dá ťuknúť. Je nižšia než plocha na ťuknutie, aby
-   nezasahovala do riadku pod ňou; kreslí ju vrstva pod obsahom hlavičky (nad jej pozadím). */
+/* Jemná pilulka hovorí, že sa na bodku s časom dá ťuknúť. Kreslí ju vrstva pod obsahom hlavičky
+   (nad jej pozadím). */
 .appbar-clock:enabled::before {
     content: '';
     position: absolute;
@@ -373,12 +376,9 @@ b {
 .appbar-clock[aria-expanded='true']::before {
     background: var(--ink-20);
 }
-/* Keď meranie nie je živé, pribudne za textom pod časom „›“ - vtedy má človek dôvod sa pýtať prečo.
-   Čítačka ho nečíta (alternatívny text je prázdny). */
-#pv-updated {
-    cursor: pointer;
-}
-#pv-updated[data-viac]::after {
+/* Keď meranie nie je živé, pribudne za časom „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka
+   ho nečíta (alternatívny text je prázdny). */
+.appbar-clock:enabled:is([data-tone='odhad'], [data-tone='stale']) #pv-updated::after {
     content: ' ›' / '';
 }
 /* Vrstva pod hlavičkou: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam (aj na navigáciu). */
@@ -437,26 +437,6 @@ b {
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-}
-/* Na úzkych mobilných obrazovkách sa názov s týmto letter-spacingom
-   nezmestí na jeden riadok vedľa času. Veľkosť škáluje s šírkou obrazovky
-   (clamp), čas má flex-shrink: 0, aby pri nedostatku miesta ustupoval
-   vždy iba text loga a nikdy nezasahoval do zobrazenia času. Desktop
-   (od 768px) je nedotknutý. */
-@media (max-width: 767px) {
-    .appbar-top {
-        gap: var(--sp-2);
-    }
-    .appbar-label {
-        min-width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        font-size: clamp(11px, 8px + 1.3vw, 16.5px);
-    }
-    .appbar-clock {
-        flex-shrink: 0;
-    }
 }
 /* Pás pod hlavičkou: červený, keď výrobca prestal prijímať prístup k meraniu - to je chyba. Červená je
    tmavšia než --red, lebo biele písmo na --red nie je čitateľné. Bez zadaných panelov (.odhad) je
@@ -4482,34 +4462,20 @@ b {
     :root {
         --page-max: 1120px;
     }
-    /* Hlavička je jeden riadok: názov, podnadpis ... bodka s časom, text k času, ikonka.
-       Obaly riadkov (display: contents) tu nehrajú rolu, ich deti sú položkami .appbar-inner;
-       poradie ich striedá, lebo podnadpis a text k času sú v HTML v tom istom riadku. */
+    /* Hlavička je jeden riadok: RAY-MON, miesto ... bodka s časom. */
     .appbar-inner {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         gap: var(--sp-3);
         padding: 5px 20px;
-    }
-    .appbar-top,
-    .appbar-sub {
-        display: contents;
-    }
-    .appbar-label,
-    .appbar-clock,
-    .appbar-sub {
         line-height: 1.2;
     }
-    .appbar-by {
-        order: 1;
-        margin-right: auto;
+    .appbar-place {
+        margin: 0 auto 0 0;
     }
-    .appbar-clock {
-        order: 2;
-    }
-    .pv-updated-line {
-        order: 3;
-        white-space: nowrap;
+    .appbar-clock,
+    .pv-setup-go {
+        align-self: center;
     }
     .bottomnav {
         position: sticky;

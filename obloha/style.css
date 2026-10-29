@@ -112,26 +112,44 @@ button:focus-visible {
 }
 
 /* ===== Hlavička ===== */
-/* Hlavička je nad vrstvou .tip-bg, aby bublina v nej a tlačidlo stavu ostali ťukateľné. */
+/* Ako v súčasnej appke: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku
+   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Na telefóne je prilepená hore a pod sebou
+   má tú istú oblohu ako stránka - prechody stoja na mieste voči obrazovke (fixed), takže medzi
+   hlavičkou a obsahom pod ňou nie je šev. Obsah v šírke stránky, pozadie cez celú šírku.
+   Hlavička je nad vrstvou .tip-bg, aby bublina v nej a tlačidlo stavu ostali ťukateľné. */
 .st {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 5;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 12px;
-    max-width: 640px;
-    margin: 0 auto;
-    padding: max(16px, env(safe-area-inset-top)) 20px 2px;
-    font-size: 0.8125rem;
+    column-gap: 12px;
+    padding: max(16px, env(safe-area-inset-top)) max(20px, calc((100% - 600px) / 2)) 10px;
+    font-size: 0.875rem;
     font-variation-settings: 'wdth' 100;
-    min-height: 52px;
+    background:
+        linear-gradient(180deg, transparent, var(--s3)) fixed,
+        linear-gradient(180deg, var(--s1), var(--s2)) fixed;
 }
-/* Dlhé meno miesta sa radšej zalomí, než by sa orezalo (aj pri väčšom písme v systéme). */
+.st .name {
+    font-weight: 800;
+    font-size: 1.0625rem;
+    letter-spacing: 0.06em;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1.25;
+}
+/* Dlhé meno miesta sa radšej zalomí, než by sa orezalo (aj pri väčšom písme v systéme). Biele
+   ako všetko na holej oblohe - tlmený text (--dim) patrí len na tmavé sklo. */
 .st .place {
+    grid-row: 2;
     min-width: 0;
     overflow-wrap: anywhere;
-    color: #fff;
+    font-size: 0.8125rem;
+}
+.st :is(.live, .need) {
+    grid-column: 2;
+    grid-row: 1 / span 2;
 }
 .live {
     display: inline-flex;
@@ -2942,8 +2960,11 @@ button.live[aria-expanded='true'] {
 :root:is([data-layout='medium'], [data-layout='wide']) :is(.st, .page) {
     width: 100%;
 }
+/* Prilepená je tu navigácia, hlavička odíde so stránkou. */
 :root:is([data-layout='medium'], [data-layout='wide']) .st {
+    position: relative;
     padding-top: 10px;
+    background: none;
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .page {
     padding-bottom: calc(28px + env(safe-area-inset-bottom));
