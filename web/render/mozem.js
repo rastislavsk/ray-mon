@@ -30,11 +30,12 @@ export function mozemHtml(m, kick) {
         : `<p class="mozem-lead">${escapeHtml(m.hero.lead)}</p>`;
     // Farba plagátu hovorí to isté čo slovo - o celom dni. Bez dát farba stavu (načítava sa, nie sú).
     const tone = m.den ? `den-${m.den.cls}` : `st-${m.state}`;
-    // Písmo sa zmenší podľa najdlhšieho slova, aby sa nikdy neorezalo (ako v novej appke).
+    // Písmo sa zmenší podľa najdlhšieho slova, aby sa nikdy neorezalo (ako v novej appke), a podľa
+    // dĺžky celej hlášky, aby dlhá hláška nemala viac ako tri riadky.
     const len = Math.max(1, ...m.word.split(/\s+/).map((w) => w.length));
     return (
         `<section class="mozem-hero ${tone}"><div class="mozem-kick">${escapeHtml(kick)}</div>` +
-        `<p class="mozem-word" style="--word-len: ${len}">${escapeHtml(m.word)}</p>${day}</section>`
+        `<p class="mozem-word" style="--word-len: ${len}; --word-chars: ${Math.max(1, m.word.length)}">${escapeHtml(m.word)}</p>${day}</section>`
     );
 }
 

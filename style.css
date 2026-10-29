@@ -4244,10 +4244,12 @@ b {
     text-transform: uppercase;
 }
 /* Veľkosť aj podľa najdlhšieho slova (--word-len z renderu): verzálka má v tomto písme na znak
-   najviac asi 0,75 em, takže slovo sa zmestí na šírku bloku vždy, aj „DOJEBABRALO“. */
+   najviac asi 0,75 em, takže slovo sa zmestí na šírku bloku vždy, aj „DOJEBABRALO“. A podľa dĺžky
+   celej hlášky (--word-chars): s medzerami a zalomením vychádza asi 0,7 em na znak, takže dlhá
+   hláška („Oskar dnes pujde na plný koule“) má najviac tri riadky. Krátke hlášky to nezmenší. */
 .mozem-word {
     margin: 18px 0 12px;
-    font-size: min(23cqi, 96px, calc(100cqi / (var(--word-len, 1) * 0.8)));
+    font-size: min(23cqi, 96px, calc(100cqi / (var(--word-len, 1) * 0.8)), calc(300cqi / (var(--word-chars, 1) * 0.7)));
     font-weight: 700;
     line-height: 0.86;
     letter-spacing: -0.055em;
