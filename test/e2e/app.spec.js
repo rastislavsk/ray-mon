@@ -603,7 +603,7 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-day-title')).toHaveText(weekDayLong(forecast.days[5].date, 5));
     // Pod nadpisom počasie slovom a teplota dňa - ten istý text ako v novej appke.
     await expect(page.locator('#week-day-sub')).toHaveText(dayHeadSub(forecast.days[5]));
-    await expect(page.locator('#week-day-sub')).toHaveText(/ · −?\d+° – −?\d+°$/);
+    await expect(page.locator('#week-day-sub')).toHaveText(/ · −?\d+° \/ −?\d+°$/);
     await expect(page.locator('#week-block-list')).toBeHidden();
     await expect(page.locator('#week-day-tabs')).toBeHidden();
     expect(await viditelneBloky(page)).toEqual(['week-block-curve']);

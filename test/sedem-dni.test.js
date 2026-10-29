@@ -73,10 +73,10 @@ test('rowName: Dnes, Zajtra, potom skratka dňa s dňom v mesiaci', () => {
 });
 
 test('dayTempText: celé stupne od najnižšej po najvyššiu, pod nulou mínus, bez teploty nič', () => {
-    assert.equal(dayTempText({ tempMinC: 6.4, tempMaxC: 21.6 }), '6° – 22°');
-    assert.equal(dayTempText({ tempMinC: -3.2, tempMaxC: 4 }), '−3° – 4°');
+    assert.equal(dayTempText({ tempMinC: 6.4, tempMaxC: 21.6 }), '6° / 22°');
+    assert.equal(dayTempText({ tempMinC: -3.2, tempMaxC: 4 }), '−3° / 4°');
     // -0,4 sa zaokrúhli na nulu, nie na „−0°“.
-    assert.equal(dayTempText({ tempMinC: -0.4, tempMaxC: 0.2 }), '0° – 0°');
+    assert.equal(dayTempText({ tempMinC: -0.4, tempMaxC: 0.2 }), '0° / 0°');
     assert.equal(dayTempText({ tempMinC: null, tempMaxC: null }), '');
 });
 
@@ -215,7 +215,7 @@ test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, n
     const day = forecast.days[0];
     assert.equal(d.title, 'Dnes 5.9.');
     assert.equal(d.sub, dayHeadSub(day));
-    assert.match(d.sub, /^jasno · \d+° – \d+°$/);
+    assert.match(d.sub, /^jasno · \d+° \/ \d+°$/);
     const w = mainWindow(sunWindows(dayPlan(input)));
     assert.deepEqual(d.nums, [{ value: '61,4', label: 'kWh za deň' }, { value: '7,9', label: 'kW špička' }, sedemWindowTile(w)]);
     assert.ok(d.chart.now, 'pri dnešku je značka teraz');
