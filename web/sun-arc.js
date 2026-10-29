@@ -18,7 +18,9 @@ function arcPoint(f) {
 
 /**
  * Oblúk slnka: prerušovaná dráha, zelený úsek dnešného okna, slnko na dráhe (v noci mesiac)
- * a časy východu a západu. Bez dát je slnko len sivý kruh a okno nie je.
+ * a časy východu a západu. Bez dát je slnko len sivý kruh a okno nie je. Slnko je v obale
+ * `.arc-body` bez posunu, aby ho štýl appky mohol orezať obzorom (orez na skupine s posunom
+ * by sa počítal v jej posunutých súradniciach).
  * @param {SunArc} arc @param {boolean} off
  */
 export function sunArcSvg(arc, off) {
@@ -38,6 +40,6 @@ export function sunArcSvg(arc, off) {
     return (
         `<svg viewBox="0 0 320 132"><path class="arc-path" d="M${cx - rx} ${cy} A${rx} ${ry} 0 0 1 ${cx + rx} ${cy}"/>${win}` +
         `<line x1="0" y1="${cy}" x2="320" y2="${cy}" class="arc-ground"/>${label(arc.rise, cx - rx)}${label(arc.set, cx + rx)}` +
-        `<g transform="translate(${at})">${body}</g></svg>`
+        `<g class="arc-body"><g transform="translate(${at})">${body}</g></g></svg>`
     );
 }

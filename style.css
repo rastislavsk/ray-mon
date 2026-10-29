@@ -4146,9 +4146,10 @@ b {
     max-width: 560px;
 }
 /* Dráha slnka nad plagátom (SVG skladá web/sun-arc.js): prerušovaná dráha, zelené okno, keď slnko
-   stačí, jantárové slnko a časy východu a západu pod koncami oblúka. */
+   stačí, jantárové slnko a časy východu a západu pod koncami oblúka. Bočný odstup je ten istý ako
+   text plagátu, takže konce oblúka s ním lícujú; zospodu s medzerou gridu asi 24 px vzduchu. */
 .mozem-arc {
-    padding: 4px 20px 0;
+    padding: 0 20px 14px;
 }
 .mozem-arc svg {
     display: block;
@@ -4173,11 +4174,19 @@ b {
 .mozem-arc .arc-ground {
     stroke: var(--ink-20);
 }
+/* Slnko pod obzorom nevidno: pri východe a západe z neho trčí len polovica, a čas pod ním tak
+   nič nezakryje. Spodných 14 zo 132 jednotiek viewBoxu je pod obzorom (y 118). */
+.mozem-arc .arc-body {
+    clip-path: inset(-20% -20% 10.6% -20%) view-box;
+}
+/* Časy sú štítky, nie obsah - menšie a tlmené, aby nesúperili s plagátom. */
 .mozem-arc .arc-t {
-    fill: var(--ink);
+    fill: rgba(242, 240, 234, 0.55);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
     text-anchor: middle;
+    transform: translateY(6px);
 }
 .mozem-arc .arc-glow {
     fill: rgba(255, 194, 75, 0.2);
