@@ -10,7 +10,7 @@ v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá niž�
 platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
 (`store.js`, `storage.js`, `data.js`, `refresh.js`, `day-pager.js`, `nav-history.js`,
 `setup-wiring.js`, `settings-store.js`, `svg.js`, `qr.js`, `day-chart.js`,
-`teraz-gestures.js`, `oznamenia.js`), takže
+`teraz-gestures.js`, `oznamenia.js`, `sun-arc.js`), takže
 **zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
 siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
 vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
