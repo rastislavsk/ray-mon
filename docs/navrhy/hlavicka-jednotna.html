@@ -1,0 +1,668 @@
+<title>Jednotná hlavička</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+    /* Návrh: obe appky majú rovnakú hlavičku – dva riadky, prilepenú hore. Vľavo RAY-MON a pod ním
+       lokalita z nastavenia, vpravo bodka a čas merania ako dnes v Oblohe (bez riadku „meranie“).
+       Farby a písma prevzaté zo style.css a obloha/style.css. Údaje sú vzorové. */
+    @font-face {
+        font-family: 'Space Grotesk';
+        font-weight: 300 700;
+        src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'IBM Plex Mono';
+        font-weight: 500;
+        src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'IBM Plex Mono';
+        font-weight: 700;
+        src: url('../../fonts/ibm-plex-mono-700-latin-ext.woff2') format('woff2');
+    }
+    @font-face {
+        font-family: 'Archivo';
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+        src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0a0a0a;
+        --ink: #f2f0ea;
+        --ink-45: rgba(242, 240, 234, 0.64);
+        --ink-35: rgba(242, 240, 234, 0.5);
+        --ink-12: rgba(242, 240, 234, 0.16);
+        --ink-08: rgba(242, 240, 234, 0.1);
+        --green: #9ef25b;
+        --yes: #b9f28c;
+        --amber: #ffc24b;
+        --font-body: 'Space Grotesk', -apple-system, 'Segoe UI', Arial, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+        --font-sky: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+    }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 16px 80px;
+        display: grid;
+        gap: 44px;
+    }
+    section {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    h1,
+    h2 {
+        margin: 0;
+        line-height: 1.2;
+        text-wrap: balance;
+    }
+    h1 {
+        font-size: clamp(28px, 5.5vw, 40px);
+    }
+    h2 {
+        font-size: 21px;
+    }
+    p,
+    ul {
+        margin: 0;
+        max-width: 70ch;
+    }
+    ul {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 6px;
+    }
+    .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+    }
+    .lead,
+    .dim {
+        color: var(--ink-45);
+    }
+    code {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        background: var(--ink-08);
+        padding: 1px 5px;
+        border-radius: 4px;
+    }
+
+    /* ---- Prepínače ---- */
+    .ctl {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    .ctl span {
+        font-size: 13px;
+        color: var(--ink-45);
+        margin-right: 4px;
+    }
+    .ctl button {
+        font: inherit;
+        font-size: 13.5px;
+        color: var(--ink);
+        background: var(--ink-08);
+        border: 1px solid var(--ink-12);
+        border-radius: 999px;
+        padding: 6px 12px;
+        cursor: pointer;
+    }
+    .ctl button[aria-pressed='true'] {
+        background: var(--ink);
+        color: #111;
+        border-color: var(--ink);
+    }
+
+    /* ---- Telefóny ---- */
+    .phones {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+        max-width: 640px;
+        gap: 18px;
+        align-items: start;
+    }
+    .ph {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+    }
+    .ph-lbl {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+    }
+    .scr {
+        position: relative;
+        height: 300px;
+        overflow: hidden;
+        border-radius: 22px;
+        box-shadow: 0 0 0 1px var(--ink-12);
+    }
+    .scr.cur {
+        background: radial-gradient(120% 70% at 50% 0%, #1c2a12 0%, var(--bg) 70%);
+    }
+    .scr.sky {
+        background: linear-gradient(180deg, #2f6fd2 0%, #7fb2f0 100%);
+        font-family: var(--font-sky);
+        color: #fff;
+    }
+    /* Obsah pod hlavičkou: pri „posunuté“ vyjde hore pod ňu. */
+    .body {
+        position: absolute;
+        inset: 0;
+        padding: 92px 16px 0;
+        transition: transform 0.4s;
+    }
+    .scrolled .body {
+        transform: translateY(-120px);
+    }
+    .scrolled .scr.old .body {
+        transform: translateY(-120px);
+    }
+    .arc {
+        height: 70px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+        position: relative;
+        margin-bottom: 16px;
+    }
+    .arc::before {
+        content: '';
+        position: absolute;
+        left: 8%;
+        right: 8%;
+        top: 20px;
+        bottom: -50px;
+        border: 3px solid #9ef25b;
+        border-bottom: 0;
+        border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        opacity: 0.8;
+    }
+    .arc::after {
+        content: '';
+        position: absolute;
+        left: calc(50% - 13px);
+        top: 6px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #ffc24b;
+        box-shadow: 0 0 0 9px rgba(255, 194, 75, 0.25);
+    }
+    .sky .arc::after {
+        background: #fff3c4;
+    }
+    .card {
+        border-radius: 22px;
+        padding: 16px;
+        height: 260px;
+    }
+    .cur .card {
+        background: #ffc24b;
+        color: #111;
+        font-family: var(--font-body);
+    }
+    .sky .card {
+        background: rgba(8, 16, 40, 0.3);
+    }
+    .card b {
+        display: block;
+        font-size: 34px;
+        line-height: 0.95;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .cur .card .kick {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        margin-bottom: 10px;
+    }
+
+    /* ---- Hlavička (návrh) ---- */
+    .hd {
+        position: absolute;
+        inset: 0 0 auto;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 2px 12px;
+        padding: 18px 16px 10px;
+    }
+    .cur .hd {
+        background: radial-gradient(120% 233% at 50% 0%, #1c2a12 0%, var(--bg) 70%);
+    }
+    .sky .hd {
+        background: linear-gradient(180deg, #2f6fd2 0px, #3b78d6 90px);
+    }
+    .hd .name {
+        grid-column: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #fff;
+    }
+    .cur .hd .name {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 16.5px;
+        letter-spacing: 0.18em;
+    }
+    .sky .hd .name {
+        font-weight: 800;
+        font-size: 17px;
+        letter-spacing: 0.06em;
+        font-stretch: 112%;
+    }
+    .hd .place {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cur .hd .place {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        color: var(--ink-35);
+    }
+    .sky .hd .place {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.82);
+    }
+    /* Bodka a čas: jeden riadok, cez obe výšky hlavičky (ako dnes v Oblohe). */
+    .hd .live {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .cur .hd .live {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        color: var(--ink);
+        background: var(--ink-08);
+    }
+    .sky .hd .live {
+        font-size: 14px;
+        background: rgba(8, 16, 40, 0.3);
+    }
+    .hd .need {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #fff;
+        color: #111;
+    }
+    .cur .hd .need {
+        font-family: var(--font-mono);
+        background: none;
+        color: var(--green);
+        padding: 6px 0;
+    }
+    .i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        box-sizing: border-box;
+        flex: none;
+    }
+    .cur .i.t-live {
+        background: var(--green);
+        box-shadow: 0 0 8px rgba(158, 242, 91, 0.55);
+    }
+    .sky .i.t-live {
+        background: var(--yes);
+    }
+    .i.t-stale {
+        border: 1.5px solid currentColor;
+        background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+    }
+    .i.t-odhad {
+        border: 1.5px solid currentColor;
+    }
+    .i.t-off {
+        background: #8a8984;
+    }
+
+    /* ---- Dnešné hlavičky (na porovnanie) ---- */
+    .old .hd {
+        background: none;
+    }
+    .old.cur .hd .name {
+        font-size: 15px;
+    }
+    .old .hd .live small {
+        display: block;
+    }
+    .oldsub {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: right;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-35);
+    }
+    .old.cur .hd .live {
+        grid-row: 1;
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+    .old.sky .hd {
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding-top: 22px;
+    }
+    .old.sky .hd .place {
+        grid-row: 1;
+        color: #fff;
+        font-size: 13px;
+    }
+    .old.sky .hd .live {
+        grid-row: 1;
+        font-size: 13px;
+        background: none;
+    }
+    .old.sky .hd .need {
+        grid-row: 1;
+    }
+    .old.sky .hd,
+    .old.cur .hd {
+        position: absolute;
+    }
+    /* Dnes Obloha hlavičku neprilepí: pri posunutí odíde hore s obsahom. */
+    .scrolled .old.sky .hd {
+        transform: translateY(-120px);
+        transition: transform 0.4s;
+    }
+    .old.sky .hd {
+        transition: transform 0.4s;
+    }
+
+    /* ---- Široká obrazovka ---- */
+    .wide {
+        border-radius: 16px;
+        box-shadow: 0 0 0 1px var(--ink-12);
+        overflow: hidden;
+    }
+    .wide .hd {
+        position: static;
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        padding: 12px 20px;
+    }
+    .wide .hd .place {
+        margin-right: auto;
+    }
+    .wide .hd .live {
+        align-self: center;
+    }
+
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--ink-12);
+        border-radius: 10px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 600px;
+        font-size: 14px;
+    }
+    th,
+    td {
+        text-align: left;
+        vertical-align: top;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--ink-08);
+    }
+    th {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-45);
+        font-weight: 500;
+    }
+    tr:last-child td {
+        border-bottom: 0;
+    }
+    td.old {
+        color: var(--ink-45);
+    }
+    .q {
+        border: 1px solid var(--ink-12);
+        border-radius: 14px;
+        padding: 14px 16px;
+        display: grid;
+        gap: 6px;
+    }
+    .q b {
+        font-size: 15.5px;
+    }
+    .q p {
+        font-size: 14.5px;
+        color: var(--ink-45);
+    }
+</style>
+
+<main>
+    <header>
+        <p class="eyebrow">Návrh · 29. 10. 2026</p>
+        <h1>Jedna hlavička pre obe appky</h1>
+        <p class="lead">
+            Dva riadky ako dnes v súčasnej appke, prilepené hore v oboch. Vľavo RAY-MON a pod ním lokalita elektrárne z Nastavenia. Vpravo
+            bodka a čas merania ako dnes v Oblohe: väčšie, v jednom riadku, bez slova „meranie“ pod nimi.
+        </p>
+    </header>
+
+    <section>
+        <h2>Na mobile: dnes a po zmene</h2>
+        <div class="ctl" id="stav">
+            <span>Stav merania:</span>
+            <button type="button" data-s="live" aria-pressed="true">živé</button>
+            <button type="button" data-s="stale" aria-pressed="false">zastarané</button>
+            <button type="button" data-s="odhad" aria-pressed="false">odhad bez merania</button>
+            <button type="button" data-s="setup" aria-pressed="false">bez panelov</button>
+            <button type="button" data-s="loading" aria-pressed="false">načítavam</button>
+        </div>
+        <div class="ctl" id="dlzka">
+            <span>Lokalita:</span>
+            <button type="button" data-p="Dvorany nad Nitrou" aria-pressed="true">Dvorany nad Nitrou</button>
+            <button type="button" data-p="Liptovský Mikuláš-Palúdzka, Žilinský kraj" aria-pressed="false">dlhá</button>
+            <button type="button" data-p="" aria-pressed="false">žiadna</button>
+        </div>
+        <div class="ctl">
+            <span>Stránka:</span>
+            <button type="button" id="scroll" aria-pressed="false">posunutá nadol</button>
+        </div>
+
+        <div class="phones" id="phones"></div>
+    </section>
+
+    <section>
+        <h2>Na širokej obrazovke</h2>
+        <p class="dim">
+            Súčasná appka tu už dnes skladá hlavičku do jedného riadku. Zostane tak, len s novými textami: RAY-MON, za ním lokalita, vpravo
+            čas.
+        </p>
+        <div class="wide cur" style="background: #0a0a0a">
+            <div class="hd" id="wide-cur"></div>
+        </div>
+        <div class="wide sky" style="background: linear-gradient(90deg, #2f6fd2, #4d8be0)">
+            <div class="hd" id="wide-sky"></div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Čo sa mení</h2>
+        <div class="scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Súčasná appka dnes</th>
+                        <th>Obloha dnes</th>
+                        <th>Obe po zmene</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. riadok vľavo</td>
+                        <td class="old">Toilet Apps Ltd.</td>
+                        <td class="old">lokalita (bez nej RAY-MON)</td>
+                        <td><b>RAY-MON</b></td>
+                    </tr>
+                    <tr>
+                        <td>2. riadok vľavo</td>
+                        <td class="old">RAY-MON</td>
+                        <td class="old">–</td>
+                        <td>lokalita z Nastavenia, dlhá sa oreže „…“; bez lokality prázdny</td>
+                    </tr>
+                    <tr>
+                        <td>Vpravo</td>
+                        <td class="old">bodka + čas 12 px, pod ním „meranie“ / „odhad“</td>
+                        <td class="old">bodka + čas 13 px v jednom riadku, pri zastaranom „· zastarané“</td>
+                        <td>ako Obloha, 14 px, na výšku oboch riadkov; ťuknutie otvorí bublinu so stavom</td>
+                    </tr>
+                    <tr>
+                        <td>Bez panelov</td>
+                        <td class="old">„Zadaj panely ›“ pod časom</td>
+                        <td class="old">biely štítok namiesto času</td>
+                        <td>výzva namiesto času, každá appka svojím kabátom</td>
+                    </tr>
+                    <tr>
+                        <td>Pri posúvaní</td>
+                        <td class="old">prilepená hore</td>
+                        <td class="old">odíde so stránkou</td>
+                        <td>prilepená hore v oboch; Obloha má pod ňou tú istú oblohu (bez švu)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="dim">
+            „Toilet Apps Ltd.“ ostáva v pätke Nastavenia. Písmo si každá appka nechá svoje (mono vs. Archivo), rozloženie a správanie bude
+            rovnaké.
+        </p>
+    </section>
+
+    <section>
+        <h2>Jedno jadro</h2>
+        <p>
+            Dnes si každá appka skladá text hlavičky sama a líšia sa (<code>dáta nedostupné</code> vs. <code>bez dát</code>,
+            <code>–:–</code> + „odhad“ vs. „odhad z predpovede“). Odporúčam model hlavičky presunúť do <code>shared/</code> – miesto, čas,
+            slovo stavu, tvar bodky, výzva – a obom appkám nechať len kreslenie. Potom sa už nerozídu.
+        </p>
+    </section>
+
+    <section>
+        <h2>Na rozhodnutie</h2>
+        <div class="q">
+            <b>1. RAY-MON v Oblohe jej písmom (Archivo), alebo mono ako súčasná appka?</b>
+            <p>Návrh: Archivo, široké a tučné – hlavička je kabát, písmo k nemu patrí.</p>
+        </div>
+        <div class="q">
+            <b>2. Lokalita v súčasnej appke je aj na plagáte karty Dnes („DNES · 13:00 · DVORANY…“).</b>
+            <p>Návrh: zatiaľ nechať, je to iná úloha. Ak ti tam bude prekážať dvakrát, uberieme ju z plagátu.</p>
+        </div>
+    </section>
+</main>
+
+<script>
+    const S = {
+        live: { tone: 'live', cur: '13:00', sky: '13:00' },
+        stale: { tone: 'stale', cur: '12:10 · zastarané', sky: '12:10 · zastarané' },
+        odhad: { tone: 'odhad', cur: 'odhad z predpovede', sky: 'odhad z predpovede' },
+        setup: { setup: true },
+        loading: { tone: 'off', cur: 'načítavam…', sky: 'načítavam…' },
+    };
+    const OLD_CUR = {
+        live: ['13:00', 'meranie'],
+        stale: ['12:10', 'meranie zastarané ›'],
+        odhad: ['–:–', 'odhad ›'],
+        loading: ['–:–', 'načítavam…'],
+    };
+    let stav = 'live';
+    let place = 'Dvorany nad Nitrou';
+
+    const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+    const right = (s, app) =>
+        s.setup ? `<span class="need">Zadaj panely ›</span>` : `<span class="live"><i class="i t-${s.tone}"></i>${esc(s[app])}</span>`;
+
+    function hdNew(app) {
+        return `<span class="name">RAY-MON</span><span class="place">${esc(place) || '&nbsp;'}</span>${right(S[stav], app)}`;
+    }
+    function hdOldCur() {
+        const s = S[stav];
+        const o = OLD_CUR[stav];
+        const r = s.setup
+            ? `<span class="live"><i class="i t-odhad"></i>–:–</span><span class="oldsub" style="color:var(--green)">Zadaj panely ›</span>`
+            : `<span class="live"><i class="i t-${s.tone}"></i>${o[0]}</span><span class="oldsub">${o[1]}</span>`;
+        return `<span class="name">Toilet Apps Ltd.</span><span class="place">RAY-MON</span>${r}`;
+    }
+    function hdOldSky() {
+        return `<span class="place">${esc(place) || 'RAY-MON'}</span>${right(S[stav], 'sky')}`;
+    }
+    const body = (app) =>
+        `<div class="body"><div class="arc"></div><div class="card">${
+            app === 'cur' ? '<div class="kick">DNES · 13:00</div><b>Not baaad dneskaj</b>' : '<b>Zapni tooo</b>'
+        }</div></div>`;
+    const phone = (lbl, cls, hd, app) =>
+        `<div class="ph"><span class="ph-lbl">${lbl}</span><div class="scr ${cls}">${body(app)}<div class="hd">${hd}</div></div></div>`;
+
+    function draw() {
+        document.getElementById('phones').innerHTML =
+            phone('Súčasná appka · dnes', 'cur old', hdOldCur(), 'cur') +
+            phone('Súčasná appka · návrh', 'cur', hdNew('cur'), 'cur') +
+            phone('Obloha · dnes', 'sky old', hdOldSky(), 'sky') +
+            phone('Obloha · návrh', 'sky', hdNew('sky'), 'sky');
+        document.getElementById('wide-cur').innerHTML = hdNew('cur');
+        document.getElementById('wide-sky').innerHTML = hdNew('sky');
+    }
+
+    function group(id, attr, set) {
+        const el = document.getElementById(id);
+        el.addEventListener('click', (e) => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            el.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+            set(b.dataset[attr]);
+            draw();
+        });
+    }
+    group('stav', 's', (v) => (stav = v));
+    group('dlzka', 'p', (v) => (place = v));
+    document.getElementById('scroll').addEventListener('click', (e) => {
+        const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+        e.currentTarget.setAttribute('aria-pressed', String(on));
+        document.getElementById('phones').classList.toggle('scrolled', on);
+    });
+    draw();
+</script>

@@ -96,10 +96,11 @@ function initNavigation(store, dom, days) {
             const znova = noteBtn.hasAttribute('data-pristup-go');
             store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? pristup : stepEdit(s, 'meranie', true)) });
         }
-        // Odkaz „nastav panely“ v hlavičke: jeden krok navigácie rovno na krok Panel sprievodcu.
+        // Výzva „Zadaj panely“ v hlavičke: jeden krok navigácie do Nastavenia - kto pozná polohu,
+        // rovno na krok Panel sprievodcu (ako v Oblohe).
         if (target.closest('#pv-setup-go')) {
             const s = store.get();
-            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...setupStart(s) });
+            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(s.known === 'poloha' ? setupStart(s) : {}) });
         }
         const totalBtn = target.closest('[data-week-detail]');
         if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
@@ -437,8 +438,7 @@ function initTicks(store, mq) {
 }
 
 /**
- * Bublina s vysvetlením stavu merania: bodka s časom ju otvorí aj zavrie, rovnako ťuknutie na text
- * pod časom (pre klávesnicu stačí jedno tlačidlo). Ťuknutie kamkoľvek mimo nej (priehľadná vrstva,
+ * Bublina s vysvetlením stavu merania: bodka s časom ju otvorí aj zavrie. Ťuknutie kamkoľvek mimo nej (priehľadná vrstva,
  * aby nič pod bublinou nespustilo) a Escape ju zavrú. Tlačidlo v nej mení kartu (initNavigation),
  * a tým ju zavrie tiež (panelChange).
  * @param {Store} store @param {Dom} dom
@@ -446,7 +446,6 @@ function initTicks(store, mq) {
 function initStavTip(store, dom) {
     const toggle = () => !dom.pvClock.disabled && store.setState({ stavTip: !store.get().stavTip });
     dom.pvClock.addEventListener('click', toggle);
-    dom.pvUpdated.addEventListener('click', toggle);
     dom.pvTipBg.addEventListener('click', () => store.setState({ stavTip: false }));
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape' || !store.get().stavTip) return;

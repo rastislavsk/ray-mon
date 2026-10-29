@@ -1,34 +1,13 @@
-// Hlavička: bodka stavu merania s časom poslednej aktualizácie dát, pod ním čo ten čas znamená,
-// a farba plánu dňa pre pozadie celej stránky (vrátane náhľadu iného času).
+// Hlavička: RAY-MON a pod ním miesto elektrárne, vpravo bodka stavu merania a čas posledného
+// merania - to isté ako Obloha (shared/hlavicka.js). Okrem toho farba plánu dňa pre pozadie celej
+// stránky (vrátane náhľadu iného času).
 
 import { installedKw } from '../../shared/config.js';
-import { bodkaMerania, heroModel, pvFreshness, stavMerania } from '../../shared/hero-model.js';
-import { stavMeraniaSlovo, stavMeraniaText } from '../../shared/messages-core.js';
+import { heroModel } from '../../shared/hero-model.js';
+import { hlavickaModel } from '../../shared/hlavicka.js';
+import { voiceTexts } from '../../shared/messages-core.js';
 import { MOZEM_SKY_TEXTS, terazTypicalText } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
-
-/**
- * Pravý horný roh hlavičky: čas aktualizácie dát a pod ním text k nemu. Kde čas nie je, stojí
- * tam „–:–“, aby riadok nemenil tvar. Bez zadaných panelov je namiesto textu odkaz `go`, ktorý
- * otvorí sprievodcu na kroku Panel - výzvu nemá každá karta, hlavičku vidno na všetkých. V Nastavení,
- * kde človek už je, ostáva obyčajný text.
- * @param {import('../state.js').AppState} state @returns {{ time: string, text: string, go?: boolean }}
- */
-export function updatedLine(state) {
-    const none = (/** @type {string} */ text) => ({ time: '–:–', text });
-    if (state.known === 'nic') return none('vitaj');
-    if (state.loading) return none('načítavam…');
-    if (!state.pv && !state.forecast) return none('dáta nedostupné');
-    if (state.known !== 'elektraren')
-        return state.panel === 'nastavenie' ? none('panely nie sú zadané') : { ...none('nastav panely ›'), go: true };
-    // Kto si pripojil meranie, tomu chýba; ostatní ho ani nečakajú a vidia odhad.
-    const neplati = state.pv ? null : neplatiOf(state);
-    if (neplati) return none(neplati.hlavicka);
-    if (!state.pv) return none(state.zdroj ? 'živý výkon nedostupný' : 'odhad z predpovede');
-    const { label, time } = pvFreshness({ now: state.now, pv: state.pv, site: state.site });
-    const slovo = stavMeraniaSlovo(stavMerania(state));
-    return { time, text: slovo ? `${label} · ${slovo}` : label };
-}
 
 /**
  * Pás bez zadaných panelov: karty odpovedajú z typickej strechy a pás povie s čím - texty Oblohy
@@ -73,64 +52,34 @@ function barOf(state) {
 }
 
 /**
- * Stav merania, alebo null, kým ho appka nepozná (vitaj, načítavam…, bez panelov, bez dát).
- * @param {import('../state.js').AppState} state
+ * Hlavička: miesto, bodka a čas, bez zadaných panelov výzva namiesto nich, a bublina stavu merania.
+ * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
-function stavOf(state) {
-    if (state.known !== 'elektraren' || state.loading || (!state.pv && !state.forecast)) return null;
-    return stavMerania(state);
-}
-
-/**
- * Tvar bodky pri čase - to isté jadro ako v Oblohe (bodkaMerania); `off`, kým appka stav merania
- * nepozná. @param {import('../state.js').AppState} state @returns {'live' | 'stale' | 'odhad' | 'off'}
- */
-function bodkaOf(state) {
-    const stav = stavOf(state);
-    return stav ? bodkaMerania(stav) : 'off';
-}
-
-/**
- * Vysvetlenie stavu merania do bubliny pod bodkou a časom - to isté jadro a texty ako v Oblohe.
- * Null, kým appka stav merania nepozná - vtedy sa bodka a čas neťukajú. `znova`: tlačidlo vedie na
- * hlásenie o neplatnom prístupe v Nastavení; `zive`: bodka je plná (bez „›“ za textom pod časom).
- * @param {import('../state.js').AppState} state
- */
-export function stavTipOf(state) {
-    const stav = stavOf(state);
-    if (!stav) return null;
-    return { ...stavMeraniaText(stav), znova: stav.druh === 'znova', zive: bodkaMerania(stav) === 'live' };
-}
-
-/** Bublina stavu merania: obsah, a či je otvorená. @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
-function renderStavTip(state, dom) {
-    const tip = stavTipOf(state);
-    const open = state.stavTip && !!tip;
-    dom.pvClock.disabled = !tip;
+function renderHlavicka(state, dom) {
+    const m = hlavickaModel(state);
+    dom.pvPlace.textContent = m.place;
+    dom.pvUpdated.textContent = m.status;
+    dom.pvTone.textContent = m.toneText;
+    // Tvar bodky drží data-tone na tlačidle s bodkou a časom - kreslí ho style.css pri .live-dot.
+    dom.pvClock.dataset.tone = m.tone;
+    dom.pvClock.classList.toggle('hidden', m.setup);
+    dom.pvClock.disabled = !m.tip;
+    dom.pvSetupGo.classList.toggle('hidden', !m.setup);
+    dom.pvSetupGo.textContent = voiceTexts().HEADER_TEXTS.setup;
+    const open = state.stavTip && !!m.tip;
     dom.pvClock.setAttribute('aria-expanded', String(open));
     dom.pvTip.classList.toggle('hidden', !open);
     dom.pvTipBg.classList.toggle('hidden', !open);
-    dom.pvTipTitle.textContent = tip?.nadpis ?? '';
-    dom.pvTipText.textContent = tip?.text ?? '';
-    dom.pvTipBtn.textContent = tip?.tlacidlo ?? '';
-    dom.pvTipBtn.classList.toggle('hidden', !tip?.tlacidlo);
-    dom.pvTipBtn.toggleAttribute('data-pristup-go', !!tip?.znova);
-    // „›“ za textom pod časom (style.css), keď meranie nie je živé.
-    dom.pvUpdated.toggleAttribute('data-viac', !!tip && !tip.zive);
+    dom.pvTipTitle.textContent = m.tip?.nadpis ?? '';
+    dom.pvTipText.textContent = m.tip?.text ?? '';
+    dom.pvTipBtn.textContent = m.tip?.tlacidlo ?? '';
+    dom.pvTipBtn.classList.toggle('hidden', !m.tip?.tlacidlo);
+    dom.pvTipBtn.toggleAttribute('data-pristup-go', !!m.tip?.znova);
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
-    const updated = updatedLine(state);
-    dom.pvTime.textContent = updated.time;
-    const go = updated.go === true;
-    dom.pvUpdated.textContent = go ? '' : updated.text;
-    dom.pvSetupGo.textContent = go ? updated.text : '';
-    dom.pvUpdated.classList.toggle('hidden', go);
-    dom.pvSetupGo.classList.toggle('hidden', !go);
-    // Tvar bodky drží data-tone na tlačidle s bodkou a časom - kreslí ho style.css pri .live-dot.
-    dom.pvClock.dataset.tone = bodkaOf(state);
-    renderStavTip(state, dom);
+    renderHlavicka(state, dom);
     // Pás o odhade z typickej strechy - len na kartách, ktoré z nej odpovedajú bez slova o nej. Karta
     // 7 dní to hovorí v podnadpise, Štatistika má vlastnú výzvu.
     renderPanelsBar(state, dom);
