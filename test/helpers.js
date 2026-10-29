@@ -98,3 +98,30 @@ export function fakeStorage() {
     };
     return { saved, restore: () => delete (/** @type {any} */ (globalThis).localStorage) };
 }
+
+/**
+ * Stavový riadok telefónu (meta theme-color) a vrchný riadok stránky pod ním. Android pod stavový
+ * riadok stránku nepustí, len ho zafarbí, takže tieto dve farby musia nadväzovať. Vráti najväčší
+ * rozdiel jednej zložky (0-255) medzi theme-color a priemernou farbou vrchného riadku obrazovky.
+ * @param {import('@playwright/test').Page} page @returns {Promise<number>}
+ */
+export async function rozdielStavovehoRiadku(page) {
+    const width = page.viewportSize()?.width ?? 0;
+    const png = await page.screenshot({ clip: { x: 0, y: 0, width, height: 1 } });
+    return page.evaluate(async (b64) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${b64}`;
+        await img.decode();
+        const ctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'));
+        ctx.canvas.width = img.width;
+        ctx.canvas.height = 1;
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, img.width, 1).data;
+        const vrch = [0, 1, 2].map((i) => d.filter((_, j) => j % 4 === i).reduce((a, b) => a + b, 0) / img.width);
+        // Canvas prepíše akýkoľvek zápis farby (#hex, rgb(…)) na #rrggbb.
+        ctx.fillStyle = /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')).content;
+        const meta = String(ctx.fillStyle);
+        const farba = [1, 3, 5].map((i) => parseInt(meta.slice(i, i + 2), 16));
+        return Math.max(...farba.map((v, i) => Math.abs(v - vrch[i])));
+    }, png.toString('base64'));
+}

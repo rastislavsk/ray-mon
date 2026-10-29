@@ -30,6 +30,8 @@ function headerDom() {
         // <html>, nie <body>: farba tarify sa zapisuje sem, lebo --bg-page je zložené
         // z --tint-rgb a obe musia byť na tom istom prvku (viď :root v style.css).
         root: document.documentElement,
+        // Farba stavového riadku telefónu (--status-bar v style.css).
+        themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
         page: byId('page'),
         // Miesto elektrárne a čas merania (bez neho slovo), pre čítačku aj čo hovorí bodka.
         pvPlace: byId('pv-place'),

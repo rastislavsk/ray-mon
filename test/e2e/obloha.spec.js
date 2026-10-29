@@ -27,7 +27,7 @@ import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dn
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { bigWords, FIXED_NOW, fixture, fixtureData, pvAt } from '../helpers.js';
+import { bigWords, FIXED_NOW, fixture, fixtureData, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -163,6 +163,21 @@ test('obloha o 13:00 a o 21:00 má iné farby, tie isté ako výpočet v shared/
     await expect.poll(() => oblohaVStranke(page)).toEqual({ top: vecer.top, bottom: vecer.bottom, sky: vecer.weather });
     expect(vecer.top).not.toBe(poludnie.top);
     expect(vecer.bottom).not.toBe(poludnie.bottom);
+    expect(errors).toEqual([]);
+});
+
+test('stavový riadok telefónu má farbu vrchu oblohy', async ({ page }) => {
+    // Bez prechodu: farba oblohy sa inak prelína 0,7 s a vrch stránky by ešte nesedel.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const errors = await openObloha(page, { time: at('13:00') });
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', ocakavanaObloha(at('13:00')).top);
+    expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
+
+    await page.clock.setFixedTime(at('21:00'));
+    await page.reload();
+    await appReady(page);
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', ocakavanaObloha(at('21:00')).top);
+    expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
     expect(errors).toEqual([]);
 });
 

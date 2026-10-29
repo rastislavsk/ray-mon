@@ -83,12 +83,26 @@ export function renderHeader(state, dom) {
     // Pás o odhade z typickej strechy - len na kartách, ktoré z nej odpovedajú bez slova o nej. Karta
     // 7 dní to hovorí v podnadpise, Štatistika má vlastnú výzvu.
     renderPanelsBar(state, dom);
-    // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
-    if (state.known === 'nic') {
-        dom.root.dataset.tier = '';
-        return;
-    }
     // Pozadie drží farbu plánu dňa (tier: cena z tarify a výroba z krivky dňa) a sleduje aj
     // náhľad iného času - hovorí teda to isté, čo pás plánu pod zvoleným časom v grafe dňa.
-    dom.root.dataset.tier = heroModel(state).tier || '';
+    // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
+    dom.root.dataset.tier = state.known === 'nic' ? '' : heroModel(state).tier || '';
+    // Stavový riadok telefónu dostane farbu vrchu pozadia. Počíta ju CSS (--status-bar), tu sa
+    // len prečíta - farby tarify tak ostanú na jednom mieste.
+    const farba = hexColor(getComputedStyle(dom.root).getPropertyValue('--status-bar'));
+    if (dom.themeColor.content !== farba) dom.themeColor.content = farba;
+}
+
+/**
+ * Farba z getComputedStyle ako #rrggbb. Chrome ju vracia ako `color(srgb 0.2 0.16 0.08)`
+ * (zložky 0-1) alebo `rgb(51, 41, 21)`; theme-color dostane radšej obyčajný zápis.
+ * @param {string} css @returns {string}
+ */
+function hexColor(css) {
+    const scale = css.trim().startsWith('color(') ? 255 : 1;
+    const hex2 = (/** @type {string} */ v) =>
+        Math.round(Number(v) * scale)
+            .toString(16)
+            .padStart(2, '0');
+    return `#${(css.match(/[\d.]+/g) ?? []).slice(0, 3).map(hex2).join('')}`;
 }

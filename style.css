@@ -114,6 +114,13 @@
 }
 
 /* ---- Tokeny ---------------------------------------------------------------- */
+/* Zaregistrovaná ako farba, aby getComputedStyle vrátil hotovú farbu, nie text s var()
+   (číta ju renderHeader pre theme-color, viď --status-bar nižšie). */
+@property --status-bar {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #0a0a0a;
+}
 :root {
     --bg: #0a0a0a;
     /* Pozadie celej stránky. Je tu ako token, lebo ho okrem <body> maľuje aj hlavička
@@ -128,6 +135,10 @@
     --bg-page:
         radial-gradient(circle at 20% 0%, rgba(var(--tint-rgb), 0.14) 0%, rgba(var(--tint-rgb), 0) 42%),
         radial-gradient(circle at 82% 5%, rgba(var(--tint-rgb), 0.13) 0%, rgba(var(--tint-rgb), 0) 46%), var(--bg);
+    /* Farba stavového riadku telefónu (meta theme-color). Android pod neho stránku nepustí,
+       zafarbí ho len jednou farbou - preto tou, ktorú má --bg-page hore pri okraji: nádych
+       tarify oboch kruhov sa tam sčíta zhruba na 17 %. Zapisuje ju renderHeader. */
+    --status-bar: color-mix(in srgb, rgb(var(--tint-rgb)) 17%, var(--bg));
     --card-bg: #151614;
     --ink: #f2f0ea;
     --ink-70: rgba(242, 240, 234, 0.94);
