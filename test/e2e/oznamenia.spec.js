@@ -172,6 +172,19 @@ test.describe('oznámenia: obe appky', () => {
             await otvor(page, app, 'granted');
             await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9, devices: ['pracka'] });
         });
+    // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení), sw.js ale berie logo
+    // z koreňa rozsahu, v ktorom ho appka zaregistrovala - stačí, že tam každá appka svoje má.
+    for (const [app, scope] of /** @type {const} */ ([
+        ['sucasna', '/'],
+        ['obloha', '/obloha/'],
+    ]))
+        test(`${app}: logo pre oznámenie leží v koreni rozsahu service workera`, async ({ page }) => {
+            const res = await page.request.get(`${scope}icon-192.png`);
+            expect(res.status()).toBe(200);
+            expect(res.headers()['content-type']).toBe('image/png');
+            const manifest = await (await page.request.get(`${scope}manifest.webmanifest`)).json();
+            expect(manifest.icons[0].src).toBe('icon-192.png');
+        });
     test('zrkadlo pre service worker: po vypnutí (zmazaná cache) a novom zapnutí sa zapíše znova', async ({ page }) => {
         await otvor(page, 'sucasna');
         const zapisane = await page.evaluate(async () => {

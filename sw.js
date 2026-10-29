@@ -15,7 +15,9 @@ import { swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 // Koreň appky. Tento súbor importuje aj obloha/sw.js, takže adresy sa nesmú počítať voči
 // rozsahu ani adrese service workera, ale voči tomuto súboru.
 const ROOT = new URL('./', import.meta.url).href;
-const ICON = new URL('icon-192.png', ROOT).href;
+// Logo v oznámení: každá appka ho má v koreni svojho rozsahu (icon-192.png, obloha/icon-192.png),
+// takže sa ráta od rozsahu - Obloha tak ukáže svoje, nie logo súčasnej appky.
+const ICON = new URL('icon-192.png', self.registration.scope).href;
 // Malá ikona v lište (a na čistom Androide aj vľavo v oznámení). Android z nej berie len tvar
 // (priehľadnosť), farbu dá sám; bez nej tam ukáže logo Chrome. Zdroj je badge.svg.
 const BADGE = new URL('badge-96.png', ROOT).href;
