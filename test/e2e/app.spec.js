@@ -285,7 +285,7 @@ test('karta Terazky o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf d
     await expect(page.locator('#tz-chart .dc-real')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-over')).toHaveCount(1);
     await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
-    await expect(page.locator('#tz-chart .dc-y:not(.dc-unit)')).toHaveText(m.chart.grid.map((g) => g.label));
+    await expect(page.locator('#tz-chart .dc-y')).toHaveText(m.chart.grid.map((g) => g.label));
     // Os je deň so slnkom: bunky pásu a hodiny pod ním len v nej.
     await expect(page.locator('#tz-chart rect[data-from]')).toHaveCount(m.chart.cells.length);
     await expect(page.locator('#tz-chart .dc-t')).toHaveText(m.chart.ticks.map((t) => t.label));
@@ -607,7 +607,7 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-day-chart rect[data-from]')).toHaveCount(graf5.cells.length);
     await expect(page.locator('#week-day-chart .dc-t')).toHaveText(graf5.ticks.map((t) => t.label));
     await expect(page.locator('#week-day-chart .dc-limit-t')).toHaveText(graf5.limitText);
-    await expect(page.locator('#week-day-chart .dc-y:not(.dc-unit)')).toHaveText(graf5.grid.map((g) => g.label));
+    await expect(page.locator('#week-day-chart .dc-y')).toHaveText(graf5.grid.map((g) => g.label));
     await expect(page.locator('#week-day-chart')).toHaveAttribute('aria-label', graf5.desc);
     await expect(page.locator('#week-day-legend span')).toHaveText(graf5.legend.map((l) => l.text));
     await expect(page.locator('#week-curve')).toBeHidden();

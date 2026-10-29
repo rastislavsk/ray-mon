@@ -1062,9 +1062,6 @@ b {
     font-size: 11px;
     transform: translate(-100%, -50%);
 }
-.dc-unit {
-    font-size: 10px;
-}
 /* Nápis hranice: spodkom tesne nad svojím miestom, zarovnaný k nemu začiatkom alebo koncom. Na
    grafe širokom aspoň 448 px (wideScale v shared/day-chart.js) má vlastnú polohu. */
 .dc-limit-t {

@@ -26,7 +26,7 @@ import { DAY_CHART_KEYS, TERAZ_TONES, terazPreviewTime } from './messages-core.j
 export const DAY_CHART = {
     w: 320,
     h: 176,
-    left: 26,
+    left: 20,
     right: 306,
     cloudY: 24,
     cloudH: 12,
@@ -199,7 +199,9 @@ export function dayChartModel({ span, plan, hourly, real, boundary, nowMin, nowK
     const inSpan = (/** @type {{ hour: number }} */ p) => p.hour * 60 >= span.from && p.hour * 60 <= span.to;
     const measured = boundary === null ? [] : real.filter((p) => p.hour * 60 <= boundary && inSpan(p));
     const max = C.maxKw;
-    const step = kwGridStep(max, 4);
+    // Krok 2: čísla osi celé (2,5 by malo desatiny) a úzke, takže graf má viac šírky. Jednotku
+    // os nemá - kW nesú hodnoty pod grafom.
+    const step = kwGridStep(max, 5);
     const y = (/** @type {number} */ kw) => r1(C.base - (Math.min(max, Math.max(0, kw)) / max) * (C.base - C.top));
     const x = (/** @type {number} */ min) => r1(chartX(min, span));
     const limitY = y(limitKw);
