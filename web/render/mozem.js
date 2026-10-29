@@ -15,8 +15,6 @@ import { sunArcSvg } from '../sun-arc.js';
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
 /** @typedef {import('../dom.js').Dom} Dom */
 
-const TERAZ_TEXTS = voiceTexts().TERAZ_TEXTS;
-
 /**
  * Hlavička: kedy, kde, veľké slovo a pod ním čo dá strecha za celý deň. Bez predpovede na dnešok
  * (načítava sa, dáta nie sú, panely nezadané) namiesto toho veta, prečo karta nevie viac.
@@ -43,10 +41,11 @@ export function mozemHtml(m, kick) {
 const show = (el, on) => el.classList.toggle('hidden', !on);
 
 /** Pás odporúčaní a bodky pod ním. Pás listuje prehliadač, bodka ukazuje stránku zo stavu.
- * @param {ReturnType<typeof dnesCards>} k @param {number} page @param {Dom} dom */
-function renderCards(k, page, dom) {
+ * @param {ReturnType<typeof dnesCards>} k @param {number} page @param {Dom} dom @param {import('../../shared/messages.js').Voice} voice */
+function renderCards(k, page, dom, voice) {
     show(dom.tzRecs, !!k);
     if (!k) return;
+    const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
     dom.tzStrip.setAttribute('aria-label', TERAZ_TEXTS.strip);
     dom.tzTodayTitle.textContent = TERAZ_TEXTS.today;
     dom.tzToday.textContent = k.today.line;
@@ -60,10 +59,10 @@ function renderCards(k, page, dom) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
-    const m = mozemModel(state, { devices: state.oznamenia.devices, ranna: state.ranna });
+    const m = mozemModel(state, { voice: state.voice, devices: state.doma, ranna: state.ranna });
     const kick = `Dnes · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
     // Nad plagátom dráha slnka s časom východu a západu - tá istá ako v novej appke.
     const arc = sunArcSvg(sunArc(state.now, state.site, m.facts ? m.facts.window : null), m.state === 'offline');
     writeHtml(dom.mozemBody, `<div class="mozem-arc" aria-hidden="true">${arc}</div>${mozemHtml(m, kick)}`, 'mozemBody');
-    renderCards(m.state === 'loading' ? null : dnesCards(state), state.terazPage, dom);
+    renderCards(m.state === 'loading' ? null : dnesCards(state, state.voice), state.terazPage, dom, state.voice);
 }

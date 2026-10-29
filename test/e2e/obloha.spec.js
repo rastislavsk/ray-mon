@@ -126,7 +126,7 @@ for (const width of [390, 320]) {
             await page.locator(`#nav-${panel}`).click();
             await ocakavajKartu(page, panel);
             // Nastavenie (krok 6) ukazuje prehľad elektrárne.
-            if (panel === 'nastavenie') await expect(page.locator('#ns-home h2')).toHaveText('Moja strecha');
+            if (panel === 'nastavenie') await expect(page.locator('#ns-home h2')).toHaveText('Moja elektráreň');
         }
         const polozky = await page.locator('.tabs button').evaluateAll((buttons) =>
             buttons.map((b) => {

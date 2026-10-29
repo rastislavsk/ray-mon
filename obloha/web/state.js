@@ -2,7 +2,8 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté ako v súčasnej appke,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MINUTES_PER_DAY, PANELS } from '../../shared/config.js';
+import { LAYOUT_PX, MINUTES_PER_DAY, NASTAVENIE_SEKCIE, PANELS } from '../../shared/config.js';
+import { domaDefault } from '../../shared/doma.js';
 import { oznameniaDefault } from '../../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../../shared/setup.js';
@@ -17,7 +18,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
  * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
- * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Nastaviť celé znova), `nsOpen` rozbalená sekcia
+ * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Vymazať údaje), `nsOpen` rozbalená sekcia
  * karty Nastavenie (NS_FOLDS; pri štarte sú všetky zbalené ako položky v súčasnej appke) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté ako v súčasnej appke
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
@@ -53,6 +54,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   stavTip: boolean,
  *   oznamenia: import('../../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('../../web/oznamenia.js').OznamStav,
+ *   doma: string[],
  * }} AppState
  * @typedef {ReturnType<typeof import('../../web/store.js').createStore<AppState>>} Store
  */
@@ -72,8 +74,23 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   plan: boolean, legend: boolean, dash?: true }} NavStep
  */
 
-/** Zbaliteľné sekcie karty Nastavenie, v poradí na karte. Rozbalená je najviac jedna. */
-export const NS_FOLDS = /** @type {const} */ (['elektraren', 'vzhlad', 'oznamenia', 'appka']);
+/** Zbaliteľné sekcie karty Nastavenie, v poradí na karte - tie isté v oboch appkách. Rozbalená je najviac jedna. */
+export const NS_FOLDS = NASTAVENIE_SEKCIE;
+
+/**
+ * Voľby telefónu, spoločné so súčasnou appkou: ranné oznámenie, čo s oznámeniami telefón vie,
+ * a spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
+ * @param {{ oznamenia?: import('../../shared/oznamenia.js').Oznamenia, oznamStav?: import('../../web/oznamenia.js').OznamStav, doma?: string[] }} o
+ */
+const telefon = ({
+    oznamenia = oznameniaDefault(),
+    oznamStav = /** @type {import('../../web/oznamenia.js').OznamStav} */ ('ok'),
+    doma = domaDefault(),
+}) => ({
+    oznamenia,
+    oznamStav,
+    doma,
+});
 
 /**
  * @param {Date} now
@@ -83,7 +100,7 @@ export const NS_FOLDS = /** @type {const} */ (['elektraren', 'vzhlad', 'oznameni
  *   pristup?: import('../../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../../shared/settings.js').Settings | null, linkError?: import('../../shared/settings.js').LinkError | null, look?: import('../../shared/settings.js').Look,
  *   layout?: Layout, oznamenia?: import('../../shared/oznamenia.js').Oznamenia,
- *   oznamStav?: import('../../web/oznamenia.js').OznamStav }} start
+ *   oznamStav?: import('../../web/oznamenia.js').OznamStav, doma?: string[] }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
@@ -102,8 +119,7 @@ export function initialState(
         look = DEFAULT_LOOK,
         layout = 'narrow',
         pristup = null,
-        oznamenia = oznameniaDefault(),
-        oznamStav = /** @type {import('../../web/oznamenia.js').OznamStav} */ ('ok'),
+        ...phone
     },
 ) {
     const start = saved || (site ? typicalSettings(site) : emptySettings());
@@ -148,10 +164,7 @@ export function initialState(
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
         parts: {},
         stavTip: false,
-        // Ranné oznámenie a spotrebiče doma (voľba telefónu, spoločná so súčasnou appkou) a čo s
-        // oznámeniami telefón vie - podľa spotrebičov ráta aj Plán dňa.
-        oznamenia,
-        oznamStav,
+        ...telefon(phone),
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
         ...setupInit(start, known),

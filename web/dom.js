@@ -19,10 +19,17 @@ const byId = (/** @type {string} */ id) => {
 // Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
 export { PANELS };
 
-// Rozbaľovacie položky karty Nastavenie (natívne <details>) a ich id v HTML. Rozbalená je najviac
-// jedna a je krokom navigácie - tlačidlo Späť ju zbalí. Zdieľanie bolo kedysi v karte Info -
-// odtiaľ id `info-share` aj názvy v kóde.
-const INFO_IDS = { plant: 'settings-plant', oznamenia: 'settings-oznamenia', share: 'info-share', clear: 'settings-clear' };
+// Rozbaľovacie položky karty Nastavenie (natívne <details>) a ich id v HTML, v poradí na karte.
+// Rozbalená je najviac jedna a je krokom navigácie - tlačidlo Späť ju zbalí. Zdieľanie bolo
+// kedysi v karte Info - odtiaľ id `info-share` aj názvy v kóde.
+const INFO_IDS = {
+    plant: 'settings-plant',
+    doma: 'settings-doma',
+    oznamenia: 'settings-oznamenia',
+    vzhlad: 'settings-vzhlad',
+    share: 'info-share',
+    clear: 'settings-clear',
+};
 export const INFO_ITEMS = /** @type {(keyof typeof INFO_IDS)[]} */ (Object.keys(INFO_IDS));
 
 function headerDom() {
@@ -225,15 +232,21 @@ function setupDom() {
 function setupHomeDom() {
     return {
         settingsHead: byId('settings-head'),
+        settingsTitle: byId('settings-title'),
         setup: byId('setup'),
         setupHome: byId('setup-home'),
-        setupSite: byId('setup-site'),
-        setupSiteName: byId('setup-site-name'),
         setupCta: byId('setup-cta'),
-        setupOverview: byId('setup-overview'),
+        setupCtaTitle: byId('setup-cta-title'),
+        setupCtaSteps: byId('setup-cta-steps'),
+        setupCtaText: byId('setup-cta-text'),
+        setupCtaBtn: byId('setup-cta-btn'),
+        setupCtaLink: byId('setup-cta-link'),
+        setupPristup: byId('setup-pristup'),
         setupHero: byId('setup-hero'),
         setupRows: byId('setup-rows'),
         setupWarnings: byId('setup-warnings'),
+        setupActions: byId('setup-actions'),
+        settingsPlantTitle: byId('settings-plant-title'),
         settingsPlantHint: byId('settings-plant-hint'),
         setupNote: byId('setup-note'),
         wizard: byId('wizard'),
@@ -243,6 +256,7 @@ function setupHomeDom() {
         wzSub: byId('wz-sub'),
         wzTitle: byId('wz-title'),
         wzLead: byId('wz-lead'),
+        wzGroupTabs: byId('wz-group-tabs'),
         wzRoofTabs: byId('wz-roof-tabs'),
         wzTariffTabs: byId('wz-tariff-tabs'),
     };
@@ -351,20 +365,41 @@ function wizardTariffDom() {
     };
 }
 
-// Sekcia Appka (zdieľanie) a ponuka prevziať nastavenie z odkazu.
+// Sekcie Čo máš doma, Oznámenia, Vzhľad a Appka (zdieľanie, vymazanie) a ponuka prevziať
+// nastavenie z odkazu.
 function zdielanieDom() {
     return {
         infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (
             Object.fromEntries(INFO_ITEMS.map((i) => [i, byId(INFO_IDS[i])]))
         ),
-        shareOptions: byId('share-options'),
-        shareWithSettings: input('share-with-settings'),
-        shareWithKiosk: input('share-with-kiosk'),
-        shareKioskRow: byId('share-kiosk-row'),
+        domaTitle: byId('doma-title'),
+        domaHint: byId('doma-hint'),
+        domaBody: byId('doma-body'),
         oznamTitle: byId('oznam-title'),
         oznamHint: byId('oznam-hint'),
         oznamBody: byId('oznam-body'),
+        vzhladTitle: byId('vzhlad-title'),
+        vzhladHint: byId('vzhlad-hint'),
+        vzhladBody: byId('vzhlad-body'),
+        appItemsTitle: byId('app-items-title'),
+        shareTitle: byId('share-title'),
+        shareHint: byId('share-hint'),
+        shareText: byId('share-text'),
+        shareOptions: byId('share-options'),
+        shareWithSettings: input('share-with-settings'),
+        shareWithSettingsLabel: byId('share-with-settings-label'),
+        shareWithKiosk: input('share-with-kiosk'),
+        shareWithKioskLabel: byId('share-with-kiosk-label'),
+        shareKioskRow: byId('share-kiosk-row'),
+        shareLink: /** @type {HTMLAnchorElement} */ (byId('share-link')),
+        shareWaLabel: byId('share-wa-label'),
+        clearTitle: byId('clear-title'),
+        clearHint: byId('clear-hint'),
+        clearAsk: byId('clear-ask'),
+        clearText: byId('clear-text'),
         clearData: byId('clear-data'),
+        clearCancel: byId('clear-cancel'),
+        credits: [byId('credit-1'), byId('credit-2')],
         importOffer: byId('import-offer'),
         importOfferTitle: byId('import-offer-title'),
         importOfferText: byId('import-offer-text'),

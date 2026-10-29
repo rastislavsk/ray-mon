@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, SITE, TARIFF, TARIFF_TEMPLATES } from '../shared/config.js';
 import { editTabs, listText, nastavenieModel, nastavenieRows, setupCta } from '../shared/nastavenie.js';
+import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
@@ -16,7 +17,15 @@ const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: ZDROJ };
 function state(patch = {}) {
     const known = patch.known ?? 'elektraren';
     const start = known === 'elektraren' ? OWNER : known === 'poloha' ? typicalSettings(SITE) : emptySettings();
-    return { now: FIXED_NOW, known, ...start, ...setupInit(start, known), pv: null, loading: false, ...patch };
+    const phone = {
+        voice: 'drzy',
+        doma: ['pracka', 'auto'],
+        oznamenia: { on: false, hour: 9 },
+        oznamStav: 'ok',
+        shareSettings: false,
+        shareKiosk: false,
+    };
+    return { now: FIXED_NOW, known, ...start, ...setupInit(start, known), pv: null, loading: false, pristup: null, ...phone, ...patch };
 }
 
 test('texty obrazoviek: privítanie, celkový výkon, tri plochy a menič s výkonom panelov', () => {
@@ -178,43 +187,111 @@ test('karta elektrárne a riadky zhrnutia', () => {
     assert.equal(kwp[0].value, '–');
 });
 
-test('prehľad novej appky: výzva len bez panelov, riadky a karta strechy', () => {
+test('prehľad oboch appiek: výzva len bez panelov, riadky a karta elektrárne', () => {
     assert.equal(listText(['juh']), 'juh');
     assert.equal(listText(['juh', 'východ', 'západ']), 'juh, východ a západ');
     const cta = setupCta(state({ known: 'poloha' }));
     assert.equal(cta?.title, 'Ešte 6 krokov a appka bude tvoja');
     assert.deepEqual(cta?.steps, [true, false, false, false, false, false, false]);
     assert.equal(cta?.stepsLabel, 'Hotový 1 zo 7 krokov');
+    assert.match(String(cta?.text), new RegExp(`^Poloha ${SITE.name} je hotová\\. Ďalej panely.* preskočíš tlačidlom Neviem\\.$`));
+    assert.match(String(setupCta(state({ known: 'poloha' }), 'slusny')?.text), /preskočíte tlačidlom Neviem\.$/);
+    assert.equal(cta?.link, 'Mám odkaz s nastavením');
     assert.equal(setupCta(state()), null);
     const { pv } = fixtureData();
     const m = nastavenieModel(state({ pv }));
+    assert.equal(m.title, 'Moja elektráreň');
     assert.equal(m.hero?.kwp, '10,44');
     assert.equal(m.hero?.line, '24 panelov · juh a východ · menič 10 kW');
     assert.match(String(m.hero?.clear), /^za jasného dňa okolo \d+ kWh$/);
     assert.deepEqual(
-        m.rows.map((r) => [r.label, r.value, r.edit, r.start]),
+        m.elektraren.rows.map((r) => [r.label, r.value, r.extra, r.edit, r.start]),
         [
-            ['Poloha', SITE.name, 'lokalita', false],
-            ['Panely', '2 plochy · 435 Wp', 'panel', false],
-            ['Živé meranie', 'Huawei · pripojené · 13:00', 'meranie', false],
-            ['Tarifa', '2 pásma · lacno 20 h', 'tarifa', false],
+            ['Poloha', SITE.name, '', 'lokalita', false],
+            ['Panely', '2 plochy · 24 × 435 Wp', '', 'panel', false],
+            ['Menič', '10 kW', '', 'menic', false],
+            ['Živé meranie', 'Huawei', '', 'meranie', false],
+            ['Tarifa', '2 pásma · lacno 20 h', 'bez cien', 'tarifa', false],
         ],
     );
-    assert.equal(nastavenieRows(state({ zdroj: null }))[2].value, 'bez merania, odhad z predpovede');
+    assert.deepEqual(m.elektraren.rows[3].status, { tone: 'ok', text: 'pripojené · 13:00' });
+    assert.equal(m.elektraren.hint, 'Poloha, panely, menič, meranie a tarifa');
+    assert.equal(m.elektraren.odkaz?.label, 'Prevziať nastavenie z odkazu');
+    assert.equal(m.elektraren.sprievodca?.label, 'Prejsť sprievodcom znova');
+    assert.equal(m.pristup, null);
+    assert.equal(nastavenieRows(state({ zdroj: null }))[3].value, 'bez merania, odhad z predpovede');
+    const guess = nastavenieRows(state({ setupPick: { wp: 'guess', ac: 'guess' } }));
+    assert.deepEqual([guess[1].guess, guess[2].guess], [true, true]);
     const poloha = nastavenieModel(state({ known: 'poloha' }));
     assert.equal(poloha.hero, null);
+    assert.deepEqual([poloha.elektraren.odkaz, poloha.elektraren.sprievodca], [null, null]);
     assert.deepEqual(
-        poloha.rows.map((r) => [r.value, r.edit, r.start]),
+        poloha.elektraren.rows.map((r) => [r.value, r.edit, r.start]),
         [
             [SITE.name, 'lokalita', false],
             ['nezadané', null, true],
+            ['nezadaný', null, true],
             ['nepripojené, nepovinné', null, true],
             ['nezadaná', null, true],
         ],
     );
-    assert.deepEqual(poloha.warnings, []);
+    assert.deepEqual(poloha.elektraren.warnings, []);
     const one = nastavenieRows(state({ plant: { ...PLANT, strings: [PLANT.strings[0]], panelWp: NaN } }));
-    assert.equal(one[1].value, '1 plocha · – Wp');
+    assert.match(one[1].value, /^1 plocha · \d+ × – Wp$/);
+});
+
+test('prehľad: neplatný prístup k meraniu je navrchu, v podnadpise aj v riadku merania', () => {
+    const b = odmietnute(odmietnute(null, ZDROJ, FIXED_NOW, '', false), ZDROJ, FIXED_NOW, '', false);
+    const m = nastavenieModel(state({ pristup: b }));
+    assert.equal(m.pristup?.druh, 'neplati');
+    assert.equal(m.pristup?.nadpis, 'Meranie treba pripojiť znova');
+    assert.deepEqual([m.elektraren.hint, m.elektraren.hintErr], ['Meranie treba pripojiť znova', true]);
+    assert.deepEqual(m.elektraren.rows[3].status, { tone: 'off', text: 'prístup neplatí' });
+});
+
+test('prehľad: Čo máš doma, Oznámenia, Vzhľad a Appka v oboch tónoch', () => {
+    const m = nastavenieModel(state());
+    assert.equal(m.doma.title, 'Čo máš doma');
+    assert.equal(m.doma.hint, 'Práčka a auto');
+    assert.deepEqual(
+        m.doma.devices.filter((d) => d.on).map((d) => d.id),
+        ['pracka', 'auto'],
+    );
+    assert.equal(nastavenieModel(state({ doma: [] })).doma.hint, 'zatiaľ nič');
+    assert.equal(m.oznamenia.hint, 'Ráno plán dňa: kedy pustiť ktorý spotrebič');
+    assert.deepEqual(
+        m.oznamenia.hours.map((h) => [h.label, h.on]),
+        [
+            ['7:00', false],
+            ['8:00', false],
+            ['9:00', true],
+        ],
+    );
+    assert.equal(m.oznamenia.uses, 'Ráta so spotrebičmi z položky Čo máš doma.');
+    assert.equal(m.oznamenia.stav, '');
+    const on = nastavenieModel(state({ oznamenia: { on: true, hour: 7 }, oznamStav: 'caka' }));
+    assert.deepEqual([on.oznamenia.hint, on.oznamenia.busy, on.oznamenia.stav], ['Ráno o 7:00 plán dňa', true, 'Zapínam…']);
+    assert.equal(m.vzhlad.hint, 'Tón hlášok: drzý');
+    assert.deepEqual(
+        m.vzhlad.voices.map((v) => [v.label, v.on]),
+        [
+            ['Drzý', true],
+            ['Slušný', false],
+        ],
+    );
+    assert.deepEqual([m.share.options, m.share.kioskShown], [true, false]);
+    assert.equal(nastavenieModel(state({ shareSettings: true })).share.kioskShown, true);
+    assert.equal(nastavenieModel(state({ known: 'poloha' })).share.options, false);
+    assert.equal(m.clear.title, 'Vymazať údaje');
+    assert.equal(m.credit.length, 2);
+    const p = nastavenieModel(state({ voice: 'slusny' }));
+    assert.equal(p.doma.title, 'Čo máte doma');
+    assert.match(p.doma.note, /označíte\.$/);
+    assert.equal(p.oznamenia.uses, 'Ráta so spotrebičmi z položky Čo máte doma.');
+    assert.equal(p.vzhlad.hint, 'Tón hlášok: slušný');
+    assert.match(p.share.text, /pošlite odkaz\.$/);
+    assert.match(p.share.kiosk, /vašu výrobu$/);
+    assert.match(String(p.elektraren.sprievodca?.small), /prejdete krok po kroku$/);
 });
 
 test('záložky pri úprave z prehľadu: panely, plocha a tarifa', () => {

@@ -263,15 +263,15 @@ test('prvá karta už do odkazu nejde; starší odkaz s ňou sa prečíta rovnak
 });
 
 test('parseLook: chýbajúci či neplatný vzhľad je predvolený, každá voľba zvlášť', () => {
-    assert.deepEqual(DEFAULT_LOOK, { voice: 'drzy', liveSky: true });
+    assert.deepEqual(DEFAULT_LOOK, { voice: 'drzy', liveSky: true, bgTint: true });
     for (const raw of [null, undefined, 'slusny', 42, [], {}]) assert.deepEqual(parseLook(raw), DEFAULT_LOOK, String(raw));
-    assert.deepEqual(parseLook({ ton: 'slusny', obloha: false }), { voice: 'slusny', liveSky: false });
-    assert.deepEqual(parseLook({ ton: 'drzy', obloha: true }), { voice: 'drzy', liveSky: true });
-    assert.deepEqual(parseLook({ ton: 'vulgarny', obloha: false }), { voice: 'drzy', liveSky: false });
-    assert.deepEqual(parseLook({ ton: 'slusny', obloha: 'nie' }), { voice: 'slusny', liveSky: true });
+    assert.deepEqual(parseLook({ ton: 'slusny', obloha: false }), { voice: 'slusny', liveSky: false, bgTint: true });
+    assert.deepEqual(parseLook({ ton: 'drzy', obloha: true, farba: false }), { voice: 'drzy', liveSky: true, bgTint: false });
+    assert.deepEqual(parseLook({ ton: 'vulgarny', obloha: false }), { voice: 'drzy', liveSky: false, bgTint: true });
+    assert.deepEqual(parseLook({ ton: 'slusny', obloha: 'nie', farba: 'nie' }), { voice: 'slusny', liveSky: true, bgTint: true });
     // Uložený tvar sa prečíta späť ten istý.
-    const look = { voice: /** @type {const} */ ('slusny'), liveSky: false };
-    assert.deepEqual(lookToStored(look), { ton: 'slusny', obloha: false });
+    const look = { voice: /** @type {const} */ ('slusny'), liveSky: false, bgTint: false };
+    assert.deepEqual(lookToStored(look), { ton: 'slusny', obloha: false, farba: false });
     assert.deepEqual(parseLook(JSON.parse(JSON.stringify(lookToStored(look)))), look);
 });
 

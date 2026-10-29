@@ -92,12 +92,15 @@ pre obe appky) vedie pás s dňom za prstom a vedľa neho postaví kópie susedn
 ten istý `render`, zavolaný na chvíľu so susedným dňom v stave. Posun počas ťahu nie je v stave;
 kam pás po pustení dobehne, rozhodne `shared/day-pager.js` a do stavu ide až výsledný deň.
 `storage.js` ukladá nastavenie elektrárne do `localStorage` (`settings-store.js` ho znova vyváža a pridáva zrkadlenie do adresy). Kartu Nastavenie tvorí
-prehľad uloženej elektrárne a sprievodca jej nastavením (`setup-interactions.js`,
-`render/nastavenie.js`) a pod prehľadom sekcia Appka – zdieľanie (`render/zdielat.js`). Tá bola kedysi samostatnou
+prehľad a sprievodca nastavením elektrárne (`setup-interactions.js`, `render/nastavenie.js`). Prehľad –
+výzva, hlásenie o prístupe, karta elektrárne a sekcie Elektráreň, Čo máš doma, Oznámenia, Vzhľad
+a Appka – skladá pre obe appky jeden model `shared/nastavenie.js` (poradie `NASTAVENIE_SEKCIE`
+v `shared/config.js`, návrh `docs/navrhy/nastavenie-zjednotenie.html`); súčasná appka ho kreslí
+v `render/prehlad.js`, poslucháče má `prehlad-interactions.js`. Sekcia Appka bola kedysi samostatnou
 kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré ostali, aby sa
 nemenil stav ani HTML. `INFO_ITEMS` dnes zahŕňa všetky rozbaľovacie položky karty (Elektráreň,
-Oznámenia, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je krokom navigácie, takže
-ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
+Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je
+krokom navigácie, takže ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
 v `obloha/web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
 ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v

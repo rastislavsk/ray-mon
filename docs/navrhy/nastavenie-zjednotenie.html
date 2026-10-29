@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Nastavenie v oboch appkách</title>
+        <!-- Návrh: zjednotená karta Nastavenie v súčasnej appke aj v Oblohe (29. 10. 2026).
+             Samostatný súbor - nič neimportuje z appky, farby a texty sú tu ako kópia. Obidva
+             telefóny kreslí jeden model (MODEL nižšie) - presne to je zjednotenie C. -->
+        <style>
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-display: swap;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-display: swap;
+            }
+            :root {
+                --page: #f4f2ec;
+                --page-ink: #1c1b18;
+                --page-dim: #6b6860;
+                --page-line: #dedad0;
+                --page-card: #ffffff;
+                --pick: #2f6d1f;
+                /* Súčasná appka */
+                --c-bg: #0a0a0a;
+                --c-card: #151614;
+                --c-ink: #f2f0ea;
+                --c-dim: rgba(242, 240, 234, 0.64);
+                --c-line: rgba(242, 240, 234, 0.1);
+                --c-green: #9ef25b;
+                --c-amber: #ffc24b;
+                --c-red: #ff6b57;
+                /* Obloha */
+                --o-glass: rgba(8, 16, 40, 0.3);
+                --o-dim: rgba(255, 255, 255, 0.82);
+                --o-yes: #b9f28c;
+                --o-costly: #ffc4ba;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root:not([data-theme='light']) {
+                    --page: #17161a;
+                    --page-ink: #eceae4;
+                    --page-dim: #a29f97;
+                    --page-line: #2d2c30;
+                    --page-card: #201f24;
+                    --pick: #9ef25b;
+                }
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--page-ink);
+                font:
+                    15px/1.5 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+            }
+            main {
+                max-width: 1040px;
+                margin: 0 auto;
+                padding: 28px 16px 64px;
+            }
+            h1 {
+                font-size: 26px;
+                margin: 0 0 4px;
+            }
+            h2 {
+                font-size: 19px;
+                margin: 40px 0 8px;
+            }
+            .lead {
+                color: var(--page-dim);
+                margin: 0 0 18px;
+                max-width: 70ch;
+            }
+            .done {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                gap: 8px;
+                padding: 0;
+                margin: 0 0 24px;
+                list-style: none;
+            }
+            .done li {
+                background: var(--page-card);
+                border: 1px solid var(--page-line);
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 13.5px;
+            }
+            .done b {
+                display: block;
+                font-size: 12px;
+                color: var(--page-dim);
+                font-weight: 600;
+            }
+            .controls {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 14px 22px;
+                align-items: center;
+                margin: 0 0 18px;
+                font-size: 13.5px;
+            }
+            .seg {
+                display: inline-flex;
+                border: 1px solid var(--page-line);
+                border-radius: 999px;
+                overflow: hidden;
+                background: var(--page-card);
+            }
+            .seg button {
+                border: 0;
+                background: none;
+                color: inherit;
+                font: inherit;
+                padding: 6px 12px;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--page-ink);
+                color: var(--page);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                justify-content: center;
+            }
+            .phone-wrap {
+                width: 360px;
+                max-width: 100%;
+            }
+            .phone-wrap > p {
+                margin: 0 0 8px;
+                font-weight: 600;
+            }
+            .phone-wrap > p span {
+                color: var(--page-dim);
+                font-weight: 400;
+            }
+            .phone {
+                position: relative;
+                height: 720px;
+                border-radius: 34px;
+                border: 8px solid #222;
+                overflow: hidden;
+            }
+            .screen {
+                height: 100%;
+                overflow-y: auto;
+                padding: 18px 14px 28px;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 1px 6px;
+                border-radius: 4px;
+                background: #ffc24b;
+                color: #1b1400;
+                vertical-align: 1px;
+                margin-left: 6px;
+            }
+            .tag.new {
+                background: #9ef25b;
+                color: #0b1a00;
+            }
+
+            /* ---- Kabát súčasnej appky ---- */
+            .cur {
+                background: var(--c-bg);
+                color: var(--c-ink);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+            }
+            .cur .screen {
+                background:
+                    radial-gradient(circle at 20% 0%, rgba(var(--tint), 0.16) 0%, rgba(var(--tint), 0) 42%),
+                    radial-gradient(circle at 82% 5%, rgba(var(--tint), 0.14) 0%, rgba(var(--tint), 0) 46%), var(--c-bg);
+                transition: background 0.4s;
+            }
+            .cur[data-bg='on'] {
+                --tint: 255, 194, 75;
+            }
+            .cur[data-bg='off'] {
+                --tint: 10, 10, 10;
+            }
+            .cur h3.ttl {
+                font-size: 26px;
+                margin: 6px 0 2px;
+                font-weight: 600;
+            }
+            .cur .sub {
+                color: var(--c-dim);
+                font-size: 13px;
+                margin: 0 0 14px;
+            }
+            .cur .card {
+                background: var(--c-card);
+                border: 1px solid var(--c-line);
+                border-radius: 18px;
+                padding: 14px;
+                margin: 0 0 10px;
+            }
+            .cur .hero {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+            .cur .big {
+                font-size: 34px;
+                font-weight: 600;
+                line-height: 1.1;
+            }
+            .cur .big small {
+                font-size: 15px;
+                color: var(--c-dim);
+            }
+            .cur .muted {
+                color: var(--c-dim);
+                font-size: 12.5px;
+            }
+            .cur .warn {
+                border-color: rgba(255, 107, 87, 0.5);
+            }
+            .cur .warn b {
+                color: var(--c-red);
+            }
+            .cur .btn {
+                display: block;
+                width: 100%;
+                border: 0;
+                border-radius: 999px;
+                padding: 11px;
+                margin-top: 10px;
+                background: var(--c-ink);
+                color: #0b0b0b;
+                font:
+                    600 14px 'Space Grotesk',
+                    sans-serif;
+                cursor: pointer;
+            }
+            .cur .btn.danger {
+                background: var(--c-red);
+            }
+            .cur .btn.ghost {
+                background: none;
+                color: var(--c-ink);
+                border: 1px solid var(--c-line);
+            }
+            .cur .linkb {
+                background: none;
+                border: 0;
+                color: var(--c-ink);
+                text-decoration: underline;
+                font: inherit;
+                font-size: 13px;
+                padding: 10px 0 0;
+                cursor: pointer;
+            }
+            .cur .group-lbl {
+                font-family: ui-monospace, monospace;
+                font-size: 10.5px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--c-dim);
+                margin: 18px 0 6px 4px;
+            }
+            .cur details {
+                background: var(--c-card);
+                border: 1px solid var(--c-line);
+                border-radius: 14px;
+                margin: 0 0 8px;
+            }
+            .cur summary {
+                list-style: none;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                cursor: pointer;
+            }
+            .cur summary::-webkit-details-marker {
+                display: none;
+            }
+            .cur .ico {
+                width: 30px;
+                height: 30px;
+                border-radius: 9px;
+                background: rgba(242, 240, 234, 0.08);
+                display: grid;
+                place-items: center;
+                flex: none;
+                font-size: 15px;
+            }
+            .cur summary .t {
+                flex: 1;
+                min-width: 0;
+            }
+            .cur summary b {
+                display: block;
+                font-size: 14.5px;
+                font-weight: 600;
+            }
+            .cur summary .t span {
+                display: block;
+                font-size: 12px;
+                color: var(--c-dim);
+            }
+            .cur summary .t span.err {
+                color: var(--c-red);
+            }
+            .cur .chev {
+                color: var(--c-dim);
+                transition: transform 0.2s;
+            }
+            .cur details[open] > summary .chev {
+                transform: rotate(90deg);
+            }
+            .cur .body {
+                padding: 0 12px 12px;
+                font-size: 13px;
+            }
+            .cur .row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 9px 0;
+                border: 0;
+                border-top: 1px solid var(--c-line);
+                background: none;
+                color: inherit;
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
+            }
+            .cur .row b {
+                display: block;
+                font-weight: 500;
+                font-size: 12px;
+                color: var(--c-dim);
+            }
+            .cur .row span.v {
+                font-size: 13.5px;
+            }
+            .cur .row .st {
+                font-size: 11px;
+                padding: 1px 7px;
+                border-radius: 999px;
+                background: rgba(158, 242, 91, 0.14);
+                color: var(--c-green);
+                white-space: nowrap;
+            }
+            .cur .row .st.off {
+                background: rgba(255, 107, 87, 0.14);
+                color: var(--c-red);
+            }
+            .cur .check {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                padding: 6px 0;
+            }
+            .cur .check input {
+                accent-color: var(--c-green);
+                width: 17px;
+                height: 17px;
+            }
+            .cur .inline {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 16px;
+            }
+            .cur .lbl {
+                font-size: 12px;
+                color: var(--c-dim);
+                margin: 10px 0 2px;
+            }
+            .cur .note {
+                font-size: 11.5px;
+                color: var(--c-dim);
+                margin: 10px 0 0;
+            }
+            .cur .credit {
+                font-family: ui-monospace, monospace;
+                font-size: 11px;
+                color: var(--c-dim);
+                text-align: center;
+                margin: 18px 0 0;
+                line-height: 1.7;
+            }
+            .cur .steps {
+                display: flex;
+                gap: 4px;
+                margin: 10px 0;
+            }
+            .cur .steps i {
+                flex: 1;
+                height: 4px;
+                border-radius: 2px;
+                background: rgba(242, 240, 234, 0.14);
+            }
+            .cur .steps i.on {
+                background: var(--c-green);
+            }
+            .cur .qr,
+            .obl .qr {
+                width: 120px;
+                height: 120px;
+                margin: 10px auto;
+                background: repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 15px 15px;
+                border: 8px solid #fff;
+                border-radius: 6px;
+            }
+            .share-url {
+                display: block;
+                font-size: 11.5px;
+                word-break: break-all;
+                text-align: center;
+                opacity: 0.8;
+            }
+
+            /* ---- Kabát Oblohy ---- */
+            .obl {
+                color: #fff;
+                font-family: 'Archivo', system-ui, sans-serif;
+            }
+            .obl .screen {
+                background: linear-gradient(180deg, #3f7fd6 0%, #79b3ec 48%, #b7d8f2 100%);
+                background-attachment: local;
+            }
+            .obl[data-sky='off'] .screen {
+                background: linear-gradient(180deg, #121a2e 0%, #1a2440 100%);
+            }
+            .obl h3.ttl {
+                font-size: 30px;
+                font-weight: 800;
+                font-stretch: 80%;
+                margin: 6px 0 12px;
+                letter-spacing: -0.01em;
+            }
+            .obl .glass {
+                background: var(--o-glass);
+                backdrop-filter: blur(14px);
+                border-radius: 20px;
+                padding: 14px;
+                margin: 0 0 10px;
+            }
+            .obl .kwp {
+                font-size: 38px;
+                font-weight: 800;
+                font-stretch: 85%;
+                line-height: 1;
+                margin: 0;
+            }
+            .obl .kwp small {
+                font-size: 16px;
+                font-weight: 500;
+            }
+            .obl .hero {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+            .obl .dim {
+                color: var(--o-dim);
+                font-size: 13px;
+                margin: 6px 0 0;
+            }
+            .obl .pbtn {
+                display: block;
+                width: 100%;
+                border: 0;
+                border-radius: 999px;
+                padding: 12px;
+                margin-top: 10px;
+                background: #fff;
+                color: #0b1430;
+                font:
+                    700 14.5px 'Archivo',
+                    sans-serif;
+                cursor: pointer;
+            }
+            .obl .pbtn.ghost {
+                background: rgba(255, 255, 255, 0.16);
+                color: #fff;
+            }
+            .obl .pbtn.danger {
+                background: #ff7a66;
+                color: #1d0700;
+            }
+            .obl .warn b {
+                color: var(--o-costly);
+            }
+            .obl .fold-head {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+                align-items: center;
+                border: 0;
+                background: none;
+                color: #fff;
+                font:
+                    700 11.5px 'Archivo',
+                    sans-serif;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                padding: 2px 0;
+                cursor: pointer;
+            }
+            .obl .fold-head .chev {
+                transition: transform 0.2s;
+                font-size: 15px;
+            }
+            .obl .fold-head[aria-expanded='true'] .chev {
+                transform: rotate(90deg);
+            }
+            .obl .it {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                padding: 10px 0;
+                border: 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.14);
+                background: none;
+                color: #fff;
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
+            }
+            .obl .it:first-child {
+                margin-top: 8px;
+            }
+            .obl .it b {
+                display: block;
+                font-weight: 600;
+                font-size: 14.5px;
+            }
+            .obl .it small {
+                display: block;
+                color: var(--o-dim);
+                font-size: 12.5px;
+            }
+            .obl .it small.err {
+                color: var(--o-costly);
+            }
+            .obl .it.pick {
+                flex-wrap: wrap;
+                cursor: default;
+            }
+            .obl .tg {
+                width: 42px;
+                height: 24px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.25);
+                position: relative;
+                flex: none;
+            }
+            .obl .tg::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: #fff;
+                transition: left 0.2s;
+            }
+            .obl [aria-checked='true'] .tg {
+                background: var(--o-yes);
+            }
+            .obl [aria-checked='true'] .tg::after {
+                left: 21px;
+            }
+            .obl .minis {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .obl .mini {
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                background: none;
+                color: #fff;
+                border-radius: 999px;
+                padding: 4px 11px;
+                font:
+                    600 12.5px 'Archivo',
+                    sans-serif;
+                cursor: pointer;
+            }
+            .obl .mini[aria-pressed='true'] {
+                background: #fff;
+                color: #0b1430;
+                border-color: #fff;
+            }
+            .obl .note {
+                font-size: 12px;
+                color: var(--o-dim);
+                margin: 10px 0 0;
+            }
+            .obl .lnk {
+                display: block;
+                background: none;
+                border: 0;
+                color: #fff;
+                font:
+                    600 13.5px 'Archivo',
+                    sans-serif;
+                padding: 8px 2px;
+                cursor: pointer;
+            }
+            .obl .steps {
+                display: flex;
+                gap: 4px;
+                margin: 10px 0;
+            }
+            .obl .steps i {
+                flex: 1;
+                height: 5px;
+                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.25);
+            }
+            .obl .steps i.on {
+                background: var(--o-yes);
+            }
+            .obl .credit {
+                font-size: 11px;
+                text-align: center;
+                color: var(--o-dim);
+                margin: 16px 0 0;
+                line-height: 1.7;
+            }
+            .obl .chk {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                font-size: 13.5px;
+                padding: 5px 0;
+            }
+
+            /* Okno (sheet) v telefóne */
+            .sheet {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: flex-end;
+            }
+            .sheet[hidden] {
+                display: none;
+            }
+            .sheet-in {
+                width: 100%;
+                border-radius: 22px 22px 0 0;
+                padding: 18px 16px 22px;
+                max-height: 90%;
+                overflow-y: auto;
+            }
+            .cur .sheet-in {
+                background: #1b1c19;
+            }
+            .obl .sheet-in {
+                background: #1a2647;
+            }
+            .sheet-in h4 {
+                margin: 0 0 6px;
+                font-size: 19px;
+            }
+            .sheet-in p {
+                margin: 0 0 8px;
+                font-size: 13.5px;
+                opacity: 0.88;
+            }
+
+            /* Spodná časť stránky */
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                background: var(--page-card);
+                border: 1px solid var(--page-line);
+                border-radius: 14px;
+                padding: 14px 16px;
+            }
+            .opt.rec {
+                border: 2px solid var(--pick);
+            }
+            .opt h3 {
+                margin: 0 0 4px;
+                font-size: 15.5px;
+            }
+            .opt h3 em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--pick);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-left: 6px;
+            }
+            .opt p {
+                margin: 0 0 6px;
+                font-size: 13.5px;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 13px;
+            }
+            .opt .plus {
+                color: #2f7d20;
+            }
+            .opt .minus {
+                color: #b5402c;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root:not([data-theme='light']) .opt .plus {
+                    color: #9ef25b;
+                }
+                :root:not([data-theme='light']) .opt .minus {
+                    color: #ff8a75;
+                }
+            }
+            .opt .sample {
+                margin-top: 8px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                background: var(--page);
+                font-size: 12.5px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+                background: var(--page-card);
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            .tbl {
+                overflow-x: auto;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 10px;
+                border-bottom: 1px solid var(--page-line);
+                vertical-align: top;
+            }
+            th {
+                font-size: 12px;
+                color: var(--page-dim);
+                font-weight: 600;
+            }
+            td.k {
+                white-space: nowrap;
+                font-family: ui-monospace, monospace;
+                font-size: 12px;
+                color: var(--page-dim);
+            }
+            pre {
+                background: var(--page-card);
+                border: 1px solid var(--page-line);
+                border-radius: 12px;
+                padding: 12px 14px;
+                font-size: 12.5px;
+                overflow-x: auto;
+            }
+            .q li {
+                margin-bottom: 8px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    transition: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Nastavenie v oboch appkách</h1>
+            <p class="lead">
+                Jeden model karty v jadre (zjednotenie C), dva kabáty. Oba telefóny nižšie kreslí ten istý zoznam sekcií, položiek a textov
+                – líši sa len ovládanie a vzhľad. Klikať sa dá na zbalené sekcie, riadky aj okná.
+            </p>
+
+            <ul class="done">
+                <li><b>Nadpis</b>Moja elektráreň</li>
+                <li><b>Poradie</b>Elektráreň · Čo máš doma · Oznámenia · Vzhľad · Appka</li>
+                <li><b>Elektráreň</b>5 riadkov, karta elektrárne a hlásenie o prístupe vždy na očiach</li>
+                <li><b>Nové meno</b>„Prejsť sprievodcom znova“ (údaje ostanú)</li>
+                <li><b>Čo máš doma</b>samostatná položka, nie súčasť Oznámení</li>
+                <li><b>Mazanie</b>„Vymazať údaje“, potvrdenie v stránke namiesto <code>confirm()</code></li>
+                <li><b>Kredit</b>v oboch appkách</li>
+                <li><b>Vzhľad</b>aj v súčasnej appke: tón (spoločný) a farba pozadia podľa ceny</li>
+                <li><b>Čo máš doma – úložisko</b>vlastné miesto, raz presunie zo starého</li>
+                <li><b>Zdieľať</b>súčasná rozbaľovacia položka, Obloha okno</li>
+            </ul>
+
+            <div class="controls">
+                <span
+                    >Stav:
+                    <span class="seg" id="ctl-state">
+                        <button type="button" data-v="done" aria-pressed="true">Elektráreň hotová</button
+                        ><button type="button" data-v="pristup" aria-pressed="false">Prístup neplatí</button
+                        ><button type="button" data-v="poloha" aria-pressed="false">Len poloha</button>
+                    </span></span
+                >
+                <span
+                    >Tón:
+                    <span class="seg" id="ctl-voice">
+                        <button type="button" data-v="drzy" aria-pressed="true">Drzý</button
+                        ><button type="button" data-v="slusny" aria-pressed="false">Slušný</button>
+                    </span></span
+                >
+            </div>
+
+            <div class="phones">
+                <div class="phone-wrap">
+                    <p>Súčasná appka <span>· rozbaľovacie položky</span></p>
+                    <div class="phone cur" id="cur" data-bg="on"><div class="screen"></div></div>
+                </div>
+                <div class="phone-wrap">
+                    <p>Živá obloha <span>· sklenené sekcie, otvorená najviac jedna</span></p>
+                    <div class="phone obl" id="obl" data-sky="on"><div class="screen"></div></div>
+                </div>
+            </div>
+
+            <h2>Vzhľad v súčasnej appke: čo by sme vedeli ponúknuť</h2>
+            <p class="lead">
+                Obloha má dve voľby: živá obloha a tón hlášok. Pre súčasnú appku je tu šesť kandidátov, od najlacnejšieho po najdrahší.
+                Vybrané sú A a B – v ľavom telefóne sú zapojené (sekcia Vzhľad), skús ich prepnúť.
+            </p>
+            <div class="opts">
+                <div class="opt rec">
+                    <h3>A · Tón hlášok<em>vybrané</em></h3>
+                    <p>Drzý / Slušný, rovnako ako v Oblohe. Texty pre oba tóny už sú v jadre (<code>voiceTexts</code>).</p>
+                    <ul>
+                        <li class="plus">takmer zadarmo, appky si budú hovoriť rovnako</li>
+                        <li class="plus">slušný tón sa hodí pre rodičov a starých rodičov</li>
+                        <li class="minus">súčasná appka volá texty na pár miestach bez tónu – treba ich prejsť</li>
+                    </ul>
+                    <div class="sample" id="sample-voice"></div>
+                </div>
+                <div class="opt rec">
+                    <h3>B · Farba pozadia podľa ceny<em>vybrané</em></h3>
+                    <p>
+                        Zapnuté: pozadie dýcha farbou tarify ako dnes. Vypnuté: pokojná čierna. Je to obdoba „Živej oblohy“, takže Vzhľad má
+                        v oboch appkách dve voľby rovnakého druhu.
+                    </p>
+                    <ul>
+                        <li class="plus">lacné: render nezapíše <code>data-tier</code>, zvyšok ostáva</li>
+                        <li class="plus">kto má appku ako kiosk na stene, nechce blikanie farieb</li>
+                        <li class="minus">bez farby pozadia ostane cena len na ciferníku</li>
+                    </ul>
+                </div>
+                <div class="opt">
+                    <h3>C · Svetlý režim</h3>
+                    <p>Tmavý / Svetlý / Podľa telefónu.</p>
+                    <ul>
+                        <li class="plus">ľudia to od appiek čakajú, cez deň na slnku sa lepšie číta</li>
+                        <li class="minus">najdrahšie: celý <code>style.css</code> je tmavý, stovky farieb, snímky do README, kontrasty</li>
+                        <li class="minus">zelená a žltá na bielom potrebujú vlastné tmavšie odtiene</li>
+                    </ul>
+                </div>
+                <div class="opt">
+                    <h3>D · Väčšie písmo</h3>
+                    <p>Bežné / Väčšie. Zväčší tokeny <code>--fs-*</code> zhruba o 15 %.</p>
+                    <ul>
+                        <li class="plus">pomôže starším, nič sa nemusí kresliť nanovo</li>
+                        <li class="minus">ciferník, graf dňa a pás 7 dní majú pevné miesto – riziko, že sa rozsypú</li>
+                        <li class="minus">e2e testy by mali bežať pri oboch veľkostiach</li>
+                    </ul>
+                </div>
+                <div class="opt">
+                    <h3>E · Úvodná karta</h3>
+                    <p>S ktorou kartou sa appka otvorí: Terazky, Dnes, 7 dní…</p>
+                    <ul>
+                        <li class="plus">jednoduché, výpočet by bol v jadre a Obloha ho prevezme</li>
+                        <li class="minus">nie je to vzhľad, skôr správanie – patrilo by inam</li>
+                    </ul>
+                </div>
+                <div class="opt">
+                    <h3>F · Nočné stlmenie (nekonvenčné)</h3>
+                    <p>Po západe slnka appka sama stlmí farby a jas grafov, ráno ich vráti.</p>
+                    <ul>
+                        <li class="plus">sedí k appke o slnku, v noci aj tak nič nevyrába</li>
+                        <li class="minus">appka, ktorá sa sama mení, mätie; ťažšie sa testuje a robí snímky</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Texty: jeden zoznam pre obe appky</h2>
+            <p class="lead">
+                Toto by vrátil model v jadre. Kabát smie rozhodnúť, či podtext ukáže pri zbalenej sekcii (súčasná áno, Obloha nie), ale
+                nesmie ho prepísať.
+            </p>
+            <div class="tbl">
+                <table id="texts">
+                    <thead>
+                        <tr>
+                            <th>Kľúč</th>
+                            <th>Text (drzý)</th>
+                            <th>Slušný, ak sa líši</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h2>Model v jadre (C)</h2>
+            <p class="lead">
+                <code>shared/nastavenie.js</code> by vrátil celú kartu. Nevie, pre ktorú appku počíta: sekcia Vzhľad v ňom má len to, čo
+                majú obe appky (tón), a voľbu navyše (živá obloha, farba pozadia) si do nej pridá kabát.
+            </p>
+            <pre>
+nastavenieModel(state) → {
+  title: 'Moja elektráreň',
+  cta:     null | { title, steps, stepsLabel, text, button, link },
+  pristup: null | { druh, nadpis, text, tlacidlo, skus },
+  hero:    null | { kwp, line, clear, label },
+  sections: [
+    { key: 'elektraren', title, hint, hintErr, rows: [{ key, label, value, extra, guess, status, edit, start }],
+      actions: [{ key: 'odkaz', … }, { key: 'sprievodca', … }], warnings: [...] },
+    { key: 'doma',      title, hint, devices: [{ id, name, on }], note },
+    { key: 'oznamenia', title, hint, switch: { label, small, on, blocked }, stav,
+      hours: [{ h, label, on }], usesDevices, privacy, busy },
+    { key: 'vzhlad',    title, hint, voice: { label, small, options: [{ id, label, on }] } },  // + voľba kabátu
+    { key: 'appka',     title, items: [share, clear] },
+  ],
+  share:  { title, text, withSettings, withKiosk, url },
+  clear:  { title, text, ok, cancel },
+  credit: ['Toilet Apps Ltd.', 'Made by 2R &amp; Claude ¯\_(ツ)_/¯'],
+}</pre>
+            <p class="lead">
+                E2E test v oboch appkách prejde model a overí, že každý text je v DOM – rovnako, ako to robíme pri iných kartách. Keď jedna
+                appka položku vynechá, test zčervenie.
+            </p>
+
+            <h2>Rozhodnuté 29. 10. 2026</h2>
+            <ol class="q">
+                <li><b>Vzhľad v súčasnej appke:</b> A (tón hlášok) + B (farba pozadia podľa ceny).</li>
+                <li>
+                    <b>Tón je spoločný pre obe appky.</b> Dnes je v <code>vzhlad-v1</code> a súčasná appka ho nečíta – prepnutie v jednej
+                    appke platí aj v druhej. Živá obloha a farba pozadia ostanú každá svojej appke.
+                </li>
+                <li>
+                    <b>Čo máš doma má vlastné miesto v úložisku</b> (napr. <code>doma-v1</code>). Spotrebiče sú dnes v
+                    <code>oznamenia-v1</code>; appka ich pri prvom spustení raz presunie, aby nikto neprišiel o označené. Odber oznámení na
+                    Workeri ich posiela ďalej rovnako.
+                </li>
+                <li><b>Zdieľať v súčasnej appke</b> ostane rozbaľovacia položka, Obloha si nechá okno. Texty sú v oboch rovnaké.</li>
+            </ol>
+        </main>
+
+        <script>
+            // Jeden model, dva kabáty - presne podľa zjednotenia C.
+            const DEVICES = [
+                ['pracka', 'Práčka'],
+                ['umyvacka', 'Umývačka'],
+                ['susicka', 'Sušička'],
+                ['auto', 'Auto'],
+                ['bojler', 'Bojler'],
+            ];
+            const ui = {
+                state: 'done',
+                voice: 'drzy',
+                devices: new Set(['pracka', 'umyvacka', 'auto']),
+                oznamOn: true,
+                hour: 8,
+                tint: true,
+                live: true,
+                oblOpen: 'elektraren',
+                sheet: { cur: null, obl: null },
+                shareSettings: true,
+                shareKiosk: false,
+                curOpen: new Set(['elektraren']),
+            };
+
+            const listText = (a) => (a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} a ${a[a.length - 1]}`);
+
+            function model() {
+                const p = ui.voice === 'slusny';
+                const done = ui.state !== 'poloha';
+                const pristup = ui.state === 'pristup';
+                const names = DEVICES.filter(([id]) => ui.devices.has(id)).map(([, n]) => n);
+                const hintDoma = names.length ? listText(names.map((n, i) => (i ? n.toLowerCase() : n))) : 'zatiaľ nič';
+                return {
+                    title: 'Moja elektráreň',
+                    cta: done
+                        ? null
+                        : {
+                              title: 'Ešte 6 krokov a appka bude tvoja',
+                              stepsLabel: 'Hotový 1 zo 7 krokov',
+                              text: p
+                                  ? 'Poloha Bratislava je hotová. Ďalej panely, plochy strechy, menič, meranie a tarifa. Na čo neviete odpoveď, preskočíte tlačidlom Neviem.'
+                                  : 'Poloha Bratislava je hotová. Ďalej panely, plochy strechy, menič, meranie a tarifa. Na čo nevieš odpoveď, preskočíš tlačidlom Neviem.',
+                              button: 'Pokračovať: panely',
+                              link: 'Mám odkaz s nastavením',
+                          },
+                    pristup: pristup
+                        ? {
+                              nadpis: 'Meranie treba pripojiť znova',
+                              text: 'Huawei prestal prijímať prístup. Kým ho nepripojíš, appka ukazuje odhad z predpovede.',
+                              tlacidlo: 'Pripojiť znova',
+                              skus: 'Skúsiť znova',
+                          }
+                        : null,
+                    hero: done
+                        ? { kwp: '8,1', line: '18 panelov · juh a východ · menič 8 kW', clear: 'za jasného dňa okolo 52 kWh' }
+                        : null,
+                    sections: [
+                        {
+                            key: 'elektraren',
+                            ico: '☀',
+                            title: 'Elektráreň',
+                            hint: pristup ? 'Meranie treba pripojiť znova' : 'Poloha, panely, menič, meranie a tarifa',
+                            hintErr: pristup,
+                            rows: [
+                                { label: 'Poloha', value: 'Bratislava' },
+                                { label: 'Panely', value: done ? '2 plochy · 18 × 450 Wp' : 'nezadané' },
+                                { label: 'Menič', value: done ? '8 kW' : 'nezadaný' },
+                                {
+                                    label: 'Živé meranie',
+                                    value: !done ? 'nepripojené, nepovinné' : 'Huawei',
+                                    status: !done ? null : pristup ? { off: true, text: 'prístup neplatí' } : { text: 'živé' },
+                                },
+                                {
+                                    label: 'Tarifa',
+                                    value: done ? '2 pásma · lacno 20 h · víkend inak' : 'nezadaná',
+                                    extra: done ? '0,16 / 0,11 € za kWh' : '',
+                                },
+                            ],
+                            actions: done
+                                ? [
+                                      { b: 'Prevziať nastavenie z odkazu', s: 'Nahradí to, čo je uložené teraz' },
+                                      { b: 'Prejsť sprievodcom znova', s: 'Údaje ostanú, len ich prejdeš krok po kroku' },
+                                  ]
+                                : [],
+                        },
+                        {
+                            key: 'doma',
+                            ico: '⌂',
+                            title: p ? 'Čo máte doma' : 'Čo máš doma',
+                            hint: hintDoma,
+                            note: p
+                                ? 'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíte.'
+                                : 'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíš.',
+                        },
+                        {
+                            key: 'oznamenia',
+                            ico: '🔔',
+                            title: 'Oznámenia',
+                            hint: ui.oznamOn ? `Ráno o ${ui.hour}:00 plán dňa` : 'Ráno plán dňa: kedy pustiť ktorý spotrebič',
+                            sw: { label: 'Ranný plán dňa', small: 'jedno oznámenie denne, čo kedy pustiť' },
+                            when: { label: 'Kedy', small: 'ráno o' },
+                            uses: p ? 'Ráta so spotrebičmi z položky Čo máte doma.' : 'Ráta so spotrebičmi z položky Čo máš doma.',
+                            privacy:
+                                'Server appky si pamätá len adresu, kam tento telefón ráno zobudiť, a čas. Polohu ani prístup k meniču nevidí.',
+                        },
+                        {
+                            key: 'vzhlad',
+                            ico: '◐',
+                            title: 'Vzhľad',
+                            hint: ui.voice === 'drzy' ? 'Drzý tón' : 'Slušný tón',
+                            voice: {
+                                label: 'Tón hlášok',
+                                small: p ? 'skúste prepnúť a pozrite kartu Dnes' : 'skús prepnúť a pozri kartu Dnes',
+                            },
+                        },
+                        { key: 'appka', title: 'Appka' },
+                    ],
+                    share: {
+                        title: 'Zdieľať appku',
+                        small: 'QR kód, WhatsApp, aj s mojím nastavením',
+                        text: p
+                            ? 'Druhý telefón naskenuje QR kód, alebo mu pošlite odkaz.'
+                            : 'Druhý telefón naskenuje QR kód, alebo mu pošli odkaz.',
+                        withSettings: 'Pridať moje nastavenie elektrárne',
+                        withKiosk: 'aj živé meranie – kto odkaz dostane, uvidí tvoju výrobu',
+                        wa: 'Poslať cez WhatsApp',
+                    },
+                    clear: {
+                        title: 'Vymazať údaje',
+                        small: 'všetko, čo appka uložila v tomto prehliadači',
+                        ask: 'Vymazať všetky údaje?',
+                        text: 'Zmaže sa elektráreň, poloha, denník výroby, spotrebiče aj vzhľad – v oboch appkách, lebo majú spoločné úložisko. Ranné oznámenie sa vypne. Odinštalovanie appky tieto údaje samo nezmaže.',
+                        ok: 'Vymazať',
+                        cancel: 'Nechať tak',
+                    },
+                    credit: ['Toilet Apps Ltd.', 'Made by 2R & Claude ¯\\_(ツ)_/¯'],
+                };
+            }
+
+            const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+            const compass = `<svg width="74" height="74" viewBox="-40 -40 80 80" aria-label="Plochy panelov: juh 12, východ 6">
+                <circle r="34" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+                <text y="-24" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">S</text>
+                <path d="M0 0L0 28" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                <path d="M0 0L24 0" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>
+                <circle r="4" fill="currentColor"/></svg>`;
+
+            // ---- Kabát súčasnej appky ----
+            function renderCur(m) {
+                const el = document.getElementById('cur');
+                el.dataset.bg = ui.tint ? 'on' : 'off';
+                let h = `<h3 class="ttl">${m.title}</h3><p class="sub">Elektráreň, oznámenia, vzhľad a appka</p>`;
+                if (m.cta)
+                    h += `<div class="card"><b>${m.cta.title}</b><div class="steps" role="img" aria-label="${m.cta.stepsLabel}">${'<i class="on"></i>' + '<i></i>'.repeat(6)}</div>
+                        <p class="muted">${m.cta.text}</p><button class="btn" type="button">${m.cta.button}</button>
+                        <button class="linkb" type="button">${m.cta.link}</button></div>`;
+                if (m.pristup)
+                    h += `<div class="card warn"><b>${m.pristup.nadpis}.</b> <span class="muted">${m.pristup.text}</span>
+                        <button class="btn" type="button">${m.pristup.tlacidlo}</button><button class="linkb" type="button">${m.pristup.skus}</button></div>`;
+                if (m.hero)
+                    h += `<div class="card hero"><div><div class="big">${m.hero.kwp}<small> kWp</small></div>
+                        <div class="muted">${m.hero.line}</div><div class="muted">${m.hero.clear}</div></div>${compass}</div>`;
+                const sec = (s, body) =>
+                    `<details data-k="${s.key}"${ui.curOpen.has(s.key) ? ' open' : ''}><summary><span class="ico">${s.ico}</span>
+                    <span class="t"><b>${s.title}</b><span${s.hintErr ? ' class="err"' : ''}>${esc(s.hint)}</span></span><span class="chev">›</span></summary>
+                    <div class="body">${body}</div></details>`;
+                const [el_, doma, ozn, vz] = m.sections;
+                h += sec(
+                    el_,
+                    el_.rows
+                        .map(
+                            (r) =>
+                                `<button class="row" type="button"><span><b>${r.label}</b><span class="v">${esc(r.value)}</span>${r.extra ? `<br><span class="muted">${r.extra}</span>` : ''}</span>
+                                ${r.status ? `<span class="st${r.status.off ? ' off' : ''}">${r.status.text}</span>` : ''}<span class="chev">›</span></button>`,
+                        )
+                        .join('') +
+                        el_.actions
+                            .map(
+                                (a) =>
+                                    `<button class="row" type="button"><span><span class="v">${a.b}</span><br><span class="muted">${a.s}</span></span><span class="chev">›</span></button>`,
+                            )
+                            .join(''),
+                );
+                h += sec(
+                    doma,
+                    `<div class="inline">${DEVICES.map(([id, n]) => `<label class="check"><input type="checkbox" data-dev="${id}"${ui.devices.has(id) ? ' checked' : ''}/> ${n}</label>`).join('')}</div>
+                    <p class="note">${doma.note}</p>`,
+                );
+                h += sec(
+                    ozn,
+                    `<label class="check"><input type="checkbox" data-oznam${ui.oznamOn ? ' checked' : ''}/> <span>${ozn.sw.label}<br><span class="muted">${ozn.sw.small}</span></span></label>
+                    <div class="lbl">${ozn.when.label} · ${ozn.when.small}</div>
+                    <div class="inline">${[7, 8, 9].map((x) => `<label class="check"><input type="radio" name="c-hour" data-hour="${x}"${x === ui.hour ? ' checked' : ''}/> ${x}:00</label>`).join('')}</div>
+                    <p class="note">${ozn.uses}</p><p class="note">${ozn.privacy}</p>`,
+                );
+                h += sec(
+                    vz,
+                    `<div class="lbl">${vz.voice.label} · ${vz.voice.small}</div>
+                    <div class="inline">${[
+                        ['drzy', 'Drzý'],
+                        ['slusny', 'Slušný'],
+                    ]
+                        .map(
+                            ([v, l]) =>
+                                `<label class="check"><input type="radio" name="c-voice" data-voice="${v}"${ui.voice === v ? ' checked' : ''}/> ${l}</label>`,
+                        )
+                        .join('')}</div>
+                    <label class="check" style="margin-top:6px"><input type="checkbox" data-tint${ui.tint ? ' checked' : ''}/> <span>Farba pozadia podľa ceny <span class="tag new">len súčasná</span><br><span class="muted">vypni pre pokojnú čiernu</span></span></label>`,
+                );
+                h += `<div class="group-lbl">${m.sections[4].title}</div>`;
+                h += `<details data-k="share"${ui.curOpen.has('share') ? ' open' : ''}><summary><span class="ico">⇪</span><span class="t"><b>${m.share.title}</b><span>${m.share.small}</span></span><span class="chev">›</span></summary>
+                    <div class="body"><p class="muted" style="margin:0 0 6px">${m.share.text}</p>
+                    <label class="check"><input type="checkbox" data-share-s${ui.shareSettings ? ' checked' : ''}/> ${m.share.withSettings}</label>
+                    ${ui.shareSettings && ui.state !== 'poloha' ? `<label class="check"><input type="checkbox" data-share-k${ui.shareKiosk ? ' checked' : ''}/> ${m.share.withKiosk}</label>` : ''}
+                    <div class="qr"></div><span class="share-url">https://rasti.github.io/ray-mon/#nastavenie=v3…</span>
+                    <button class="btn" type="button">${m.share.wa}</button></div></details>`;
+                h += `<details data-k="clear"${ui.curOpen.has('clear') ? ' open' : ''}><summary><span class="ico">🗑</span><span class="t"><b>${m.clear.title}</b><span>${m.clear.small}</span></span><span class="chev">›</span></summary>
+                    <div class="body"><p class="muted" style="margin:0">${m.clear.text}</p>
+                    <button class="btn danger" type="button" data-sheet="clear">${m.clear.title}</button></div></details>`;
+                h += `<p class="credit">${m.credit.map(esc).join('<br>')}</p>`;
+                h += sheetHtml('cur', m);
+                el.querySelector('.screen').innerHTML = h;
+            }
+
+            // ---- Kabát Oblohy ----
+            function renderObl(m) {
+                const el = document.getElementById('obl');
+                el.dataset.sky = ui.live ? 'on' : 'off';
+                let h = `<h3 class="ttl">${m.title}</h3>`;
+                if (m.cta)
+                    h += `<div class="glass"><b>${m.cta.title}</b><div class="steps" role="img" aria-label="${m.cta.stepsLabel}">${'<i class="on"></i>' + '<i></i>'.repeat(6)}</div>
+                        <p class="dim">${m.cta.text}</p><button class="pbtn" type="button">${m.cta.button}</button>
+                        <button class="lnk" type="button">${m.cta.link} ›</button></div>`;
+                if (m.pristup)
+                    h += `<div class="glass warn"><b>${m.pristup.nadpis}</b><p class="dim">${m.pristup.text}</p>
+                        <button class="pbtn" type="button">${m.pristup.tlacidlo}</button><button class="pbtn ghost" type="button">${m.pristup.skus}</button></div>`;
+                if (m.hero)
+                    h += `<div class="glass hero"><div><p class="kwp">${m.hero.kwp}<small> kWp</small></p><p class="dim">${m.hero.line}<br>${m.hero.clear}</p></div>${compass}</div>`;
+                const fold = (s, body) => {
+                    const open = ui.oblOpen === s.key;
+                    return `<section class="glass"><button class="fold-head" type="button" data-fold="${s.key}" aria-expanded="${open}"><span>${s.title}</span><span class="chev">›</span></button>${open ? `<div>${body}</div>` : ''}</section>`;
+                };
+                const [el_, doma, ozn, vz, app] = m.sections;
+                h += fold(
+                    el_,
+                    el_.rows
+                        .map(
+                            (r) =>
+                                `<button class="it" type="button"><span><b>${r.label}</b><small${r.status?.off ? ' class="err"' : ''}>${esc(r.value)}${r.status ? ` · ${r.status.text}` : ''}${r.extra ? ` · ${r.extra}` : ''}</small></span><span>›</span></button>`,
+                        )
+                        .join('') +
+                        el_.actions
+                            .map(
+                                (a) =>
+                                    `<button class="it" type="button"><span><b>${a.b}</b><small>${a.s}</small></span><span>›</span></button>`,
+                            )
+                            .join(''),
+                );
+                h += fold(
+                    doma,
+                    `<div class="it pick"><span class="minis">${DEVICES.map(([id, n]) => `<button class="mini" type="button" data-dev="${id}" aria-pressed="${ui.devices.has(id)}">${n}</button>`).join('')}</span></div>
+                    <p class="note">${doma.note}</p>`,
+                );
+                h += fold(
+                    ozn,
+                    `<button class="it" type="button" role="switch" data-oznam aria-checked="${ui.oznamOn}"><span><b>${ozn.sw.label}</b><small>${ozn.sw.small}</small></span><i class="tg"></i></button>
+                    <div class="it pick"><span><b>${ozn.when.label}</b><small>${ozn.when.small}</small></span><span class="minis">${[7, 8, 9].map((x) => `<button class="mini" type="button" data-hour="${x}" aria-pressed="${x === ui.hour}">${x}:00</button>`).join('')}</span></div>
+                    <p class="note">${ozn.uses}</p><p class="note">${ozn.privacy}</p>`,
+                );
+                h += fold(
+                    vz,
+                    `<button class="it" type="button" role="switch" data-live aria-checked="${ui.live}"><span><b>Živá obloha <span class="tag new">len Obloha</span></b><small>vypni pre pokojnú tmavú</small></span><i class="tg"></i></button>
+                    <div class="it pick"><span><b>${vz.voice.label}</b><small>${vz.voice.small}</small></span><span class="minis">${[
+                        ['drzy', 'Drzý'],
+                        ['slusny', 'Slušný'],
+                    ]
+                        .map(
+                            ([v, l]) =>
+                                `<button class="mini" type="button" data-voice="${v}" aria-pressed="${ui.voice === v}">${l}</button>`,
+                        )
+                        .join('')}</span></div>`,
+                );
+                h += fold(
+                    app,
+                    `<button class="it" type="button" data-sheet="share"><span><b>${m.share.title}</b><small>${m.share.small}</small></span><span>›</span></button>
+                    <button class="it" type="button" data-sheet="clear"><span><b>${m.clear.title}</b><small>${m.clear.small}</small></span><span>›</span></button>`,
+                );
+                h += `<p class="credit">${m.credit.map(esc).join('<br>')}</p>`;
+                h += sheetHtml('obl', m);
+                el.querySelector('.screen').innerHTML = h;
+            }
+
+            function sheetHtml(who, m) {
+                const s = ui.sheet[who];
+                const btn = who === 'cur' ? 'btn' : 'pbtn';
+                let inner = '';
+                if (s === 'clear')
+                    inner = `<h4>${m.clear.ask}</h4><p>${m.clear.text}</p><button class="${btn} danger" type="button" data-close>${m.clear.ok}</button><button class="${btn} ghost" type="button" data-close>${m.clear.cancel}</button>`;
+                if (s === 'share')
+                    inner = `<h4>${m.share.title}</h4><p>${m.share.text}</p>
+                        <label class="chk"><input type="checkbox" data-share-s${ui.shareSettings ? ' checked' : ''}/> ${m.share.withSettings}</label>
+                        ${ui.shareSettings && ui.state !== 'poloha' ? `<label class="chk"><input type="checkbox" data-share-k${ui.shareKiosk ? ' checked' : ''}/> ${m.share.withKiosk}</label>` : ''}
+                        <div class="qr"></div><span class="share-url">https://rasti.github.io/ray-mon/obloha/#nastavenie=v3…</span>
+                        <button class="${btn}" type="button">${m.share.wa}</button><button class="${btn} ghost" type="button" data-close>Zavrieť</button>`;
+                return `<div class="sheet" data-close-bg${s ? '' : ' hidden'} style="position:absolute"><div class="sheet-in">${inner}</div></div>`;
+            }
+
+            const SAMPLES = {
+                drzy: 'Ukážka na karte Dnes: „Práčku pusti o 11:00. Slnko to zatiahne, sieť ani necekne.“',
+                slusny: 'Ukážka na karte Dnes: „Práčku odporúčam pustiť o 11:00, pôjde zo slnka.“',
+            };
+
+            function renderTexts(m) {
+                const saved = ui.voice;
+                ui.voice = 'slusny';
+                const s = model();
+                ui.voice = saved;
+                const d = m;
+                const rows = [
+                    ['title', d.title],
+                    ['cta.title', 'Ešte 6 krokov a appka bude tvoja'],
+                    [
+                        'cta.text',
+                        'Poloha {obec} je hotová. Ďalej panely, plochy strechy, menič, meranie a tarifa. Na čo nevieš odpoveď, preskočíš tlačidlom Neviem.',
+                        'neviete … preskočíte',
+                    ],
+                    ['cta.button / link', 'Pokračovať: panely · Mám odkaz s nastavením'],
+                    ['hero', '{kWp} kWp · {N} panelov · {smery} · menič {kW} · za jasného dňa okolo {kWh} kWh'],
+                    ['elektraren', 'Elektráreň · Poloha, panely, menič, meranie a tarifa'],
+                    ['elektraren.rows', 'Poloha · Panely · Menič · Živé meranie · Tarifa'],
+                    ['elektraren.odkaz', 'Prevziať nastavenie z odkazu · Nahradí to, čo je uložené teraz'],
+                    ['elektraren.sprievodca', 'Prejsť sprievodcom znova · Údaje ostanú, len ich prejdeš krok po kroku'],
+                    ['doma', `${d.sections[1].title} · {zoznam spotrebičov}`, s.sections[1].title],
+                    ['doma.note', d.sections[1].note, s.sections[1].note],
+                    ['oznamenia', 'Oznámenia · Ráno o {h}:00 plán dňa (vypnuté: Ráno plán dňa: kedy pustiť ktorý spotrebič)'],
+                    ['oznamenia.switch', 'Ranný plán dňa · jedno oznámenie denne, čo kedy pustiť'],
+                    ['oznamenia.when', 'Kedy · ráno o'],
+                    ['oznamenia.uses', d.sections[2].uses, s.sections[2].uses],
+                    ['oznamenia.privacy', d.sections[2].privacy],
+                    ['vzhlad', 'Vzhľad · {Drzý|Slušný} tón'],
+                    ['vzhlad.voice', `Tón hlášok · ${d.sections[3].voice.small}`, s.sections[3].voice.small],
+                    ['appka', 'Appka'],
+                    ['share', `${d.share.title} · ${d.share.small}`],
+                    ['share.text', d.share.text, s.share.text],
+                    ['share.options', `${d.share.withSettings} · ${d.share.withKiosk}`],
+                    ['share.wa', d.share.wa],
+                    ['clear', `${d.clear.title} · ${d.clear.small}`],
+                    ['clear.ask', d.clear.ask],
+                    ['clear.text', d.clear.text],
+                    ['clear.ok / cancel', `${d.clear.ok} · ${d.clear.cancel}`],
+                    ['credit', d.credit.join(' · ')],
+                ];
+                document.querySelector('#texts tbody').innerHTML = rows
+                    .map(([k, a, b]) => `<tr><td class="k">${k}</td><td>${esc(a)}</td><td>${b && b !== a ? esc(b) : ''}</td></tr>`)
+                    .join('');
+            }
+
+            function render() {
+                const m = model();
+                renderCur(m);
+                renderObl(m);
+                document.getElementById('sample-voice').textContent = SAMPLES[ui.voice];
+                for (const [id, key] of [
+                    ['ctl-state', 'state'],
+                    ['ctl-voice', 'voice'],
+                ])
+                    for (const b of document.querySelectorAll(`#${id} button`))
+                        b.setAttribute('aria-pressed', String(b.dataset.v === ui[key]));
+            }
+
+            document.getElementById('ctl-state').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((ui.state = b.dataset.v), render());
+            });
+            document.getElementById('ctl-voice').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((ui.voice = b.dataset.v), render());
+            });
+
+            for (const who of ['cur', 'obl']) {
+                const root = document.getElementById(who);
+                // Rozbalenie <details> si súčasná appka pamätá, aby ho prekreslenie nezavrelo.
+                root.addEventListener(
+                    'toggle',
+                    (e) => {
+                        const d = e.target;
+                        if (!(d instanceof HTMLDetailsElement)) return;
+                        d.open ? ui.curOpen.add(d.dataset.k) : ui.curOpen.delete(d.dataset.k);
+                    },
+                    true,
+                );
+                root.addEventListener('click', (e) => {
+                    const t = e.target;
+                    const q = (sel) => t.closest(sel);
+                    let x;
+                    if ((x = q('[data-fold]'))) ui.oblOpen = ui.oblOpen === x.dataset.fold ? null : x.dataset.fold;
+                    else if ((x = q('[data-dev]'))) {
+                        const id = x.dataset.dev;
+                        ui.devices.has(id) ? ui.devices.delete(id) : ui.devices.add(id);
+                    } else if ((x = q('[data-hour]'))) ui.hour = Number(x.dataset.hour);
+                    else if ((x = q('[data-voice]'))) ui.voice = x.dataset.voice;
+                    else if (q('[data-oznam]')) ui.oznamOn = !ui.oznamOn;
+                    else if (q('[data-live]')) ui.live = !ui.live;
+                    else if (q('[data-tint]')) ui.tint = !ui.tint;
+                    else if (q('[data-share-s]')) ui.shareSettings = !ui.shareSettings;
+                    else if (q('[data-share-k]')) ui.shareKiosk = !ui.shareKiosk;
+                    else if ((x = q('[data-sheet]'))) ui.sheet[who] = x.dataset.sheet;
+                    else if (q('[data-close]') || t.matches('[data-close-bg]')) ui.sheet[who] = null;
+                    else return;
+                    if (t.matches('input')) e.preventDefault();
+                    render();
+                });
+            }
+
+            render();
+            renderTexts(model());
+        </script>
+    </body>
+</html>

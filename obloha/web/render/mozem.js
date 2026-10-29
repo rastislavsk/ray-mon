@@ -94,7 +94,7 @@ function renderCards(k, page, dom, voice) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
     if (!shows(state, 'mozem')) return renderAnnounce(null, dom);
-    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.oznamenia.devices, ranna: state.ranna });
+    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.doma, ranna: state.ranna });
     renderCard(m, dom, state.voice);
     renderAnnounce(m, dom);
     renderCards(

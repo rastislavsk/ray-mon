@@ -1,9 +1,9 @@
-// Karta Nastavenie: prehľad uloženej elektrárne a sprievodca jej nastavením. Sprievodca ukazuje
+// Karta Nastavenie: prehľad (render/prehlad.js) a sprievodca nastavením elektrárne. Sprievodca ukazuje
 // vždy jednu obrazovku (setupStep v stave); obrazovky sú v index.html, render ich len prepína
 // a dopĺňa. Hodnoty polí prepíše len pri zmene settingsRev, plochy alebo obrazovky - inak by
 // prepisoval to, čo človek práve píše. Texty sú spoločné s novou appkou (shared/setup-texts.js).
 
-import { compassModel, dayRingModel, panelGridModel, planesCompassModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
+import { compassModel, panelGridModel, planesCompassModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     CURRENCIES,
@@ -16,9 +16,9 @@ import {
     TARIFF_TEMPLATES,
 } from '../../shared/config.js';
 import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
-import { liveStatus } from '../../shared/hero-model.js';
+import { editTabs } from '../../shared/nastavenie.js';
 import { checkSettings, readLink } from '../../shared/settings.js';
-import { ROOF_STEPS, SETUP_SECTIONS, TARIFF_STEPS, tariffSteps } from '../../shared/setup.js';
+import { SETUP_SECTIONS, TARIFF_STEPS } from '../../shared/setup.js';
 import { brushOf, schedIndex, setupReady, udajeReady, znovaModel } from '../../shared/setup-flow.js';
 import {
     AC_GUESS,
@@ -61,7 +61,6 @@ import {
     summaryRows as summaryData,
     TARIFF_DUNNO,
     TARIFF_KINDS,
-    TARIFF_TABS,
     textsFor,
     TILT_PRESETS,
     udajeNote,
@@ -78,21 +77,12 @@ import {
     scheduleTiers,
     tariffKind,
 } from '../../shared/tariff.js';
-import { pristupModel } from '../../shared/pristup.js';
 import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
 import { SETUP_ICONS } from '../icons.js';
+import { miniTariff, renderPrehlad } from './prehlad.js';
 import { changedKeys, writeHtml } from '../memo.js';
-import { savedSettings, setupDraft } from '../state.js';
-import {
-    compassSvg,
-    miniCompassSvg,
-    panelGridSvg,
-    panelLabelSvg,
-    planesCompassSvg,
-    tariffMiniSvg,
-    tariffRingSvg,
-    tiltSvg,
-} from '../svg.js';
+import { setupDraft } from '../state.js';
+import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, planesCompassSvg, tariffRingSvg, tiltSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -100,38 +90,25 @@ import {
 /** @typedef {import('../../shared/setup.js').SetupStep} SetupStep */
 /** @typedef {import('../../shared/config.js').Tariff} Tariff */
 
-// ---- Prehľad uloženej elektrárne a zhrnutie sprievodcu -------------------------------
+// ---- Zhrnutie sprievodcu ------------------------------------------------------------
 
 /** Jeden riadok zhrnutia. Ťuknutie naň otvorí jeho krok (data-setup-edit). extra je druhý
- * riadok pod hodnotou, side stav vpravo pred šípkou. */
+ * riadok pod hodnotou. */
 function sumRow(
     /** @type {string} */ key,
     /** @type {string} */ icon,
     /** @type {string} */ label,
     /** @type {string} */ value,
-    { extra = '', side = '' } = {},
+    { extra = '' } = {},
 ) {
     return (
         `<button type="button" class="sum-row" data-setup-edit="${key}"><span class="sum-ico">${icon}</span>` +
-        `<span class="t"><span class="k">${label}</span><span class="v">${value}</span>${extra}</span>${side}${SETUP_ICONS.chevron}</button>`
+        `<span class="t"><span class="k">${label}</span><span class="v">${value}</span>${extra}</span>${SETUP_ICONS.chevron}</button>`
     );
 }
 
-/**
- * Riadky zhrnutia: poloha, panel, plochy, menič, meranie, tarifa. V prehľade uloženej elektrárne
- * (withLive) má meranie vpravo aj stav pripojenia.
- * @param {Settings} s @param {AppState} state
- */
-function summaryRows(s, state, withLive = false) {
-    const p = withLive ? pristupModel({ zdroj: s.zdroj, pristup: state.pristup, now: state.now, timezone: state.site.timezone }) : null;
-    // Prístup neplatí či čoskoro vyprší (shared/pristup.js): stav je z neho.
-    const live = p
-        ? { tone: p.druh === 'neplati' ? 'off' : 'stale', text: p.stavKratko }
-        : withLive
-          ? liveStatus({ ...state, zdroj: s.zdroj })
-          : null;
-    // Stav dvakrát: na mobile namiesto podnadpisu, na desktope vpravo (viď .sum-live v style.css).
-    const status = (/** @type {string} */ where) => (live ? `<span class="sum-live ${where} ${live.tone}">${live.text}</span>` : '');
+/** Riadky zhrnutia sprievodcu: poloha, panel, plochy, menič, meranie, tarifa. @param {Settings} s @param {AppState} state */
+function summaryRows(s, state) {
     return summaryData(s, state)
         .map((r) => {
             const icon =
@@ -142,9 +119,8 @@ function summaryRows(s, state, withLive = false) {
                       : SETUP_ICONS[/** @type {keyof typeof SETUP_ICONS} */ (r.icon)];
             const extra =
                 (r.extra ? `<span class="k2">${escapeHtml(r.extra)}</span>` : '') +
-                (r.guess ? `<span class="est">${GUESS_MARK}</span>` : '') +
-                (r.key === 'meranie' ? status('in-line') : '');
-            return sumRow(r.key, icon, r.label, escapeHtml(r.value), { extra, side: r.key === 'meranie' ? status('at-side') : '' });
+                (r.guess ? `<span class="est">${GUESS_MARK}</span>` : '');
+            return sumRow(r.key, icon, r.label, escapeHtml(r.value), { extra });
         })
         .join('');
 }
@@ -163,25 +139,6 @@ function heroHtml(s, state) {
     );
 }
 
-/** Podnadpis položky Elektráreň v Nastavení (index.html), keď nie je hlásenie o meraní. */
-const PLANT_HINT = 'Poloha, panely, menič, meranie a tarifa';
-
-/**
- * Hlásenie, že prístup k meraniu neplatí či čoskoro vyprší (shared/pristup.js), s tlačidlami
- * „Pripojiť znova“ (či „Obnoviť prístup“) a „Skúsiť znova“. Obsluhuje ich web/setup-wiring.js.
- * @param {ReturnType<typeof pristupModel>} p
- */
-function pristupHtml(p) {
-    if (!p) return '';
-    const err = p.druh === 'neplati' ? ' err' : '';
-    return (
-        `<p class="plant-msg${err}"><b>${escapeHtml(p.karta.nadpis)}.</b> ${escapeHtml(p.karta.text)}</p>` +
-        (p.karta.skus ? `<p class="plant-msg err">${escapeHtml(p.karta.skus)}</p>` : '') +
-        `<button type="button" class="plant-save" data-setup-znova>${escapeHtml(p.karta.tlacidlo)}</button>` +
-        (p.druh === 'neplati' ? '<button type="button" class="link-btn" data-pristup-skus>Skúsiť znova</button>' : '')
-    );
-}
-
 /** Hlásenia pod zhrnutím: chyby blokujú uloženie, varovania nie. @param {Settings} s */
 function messagesHtml(s) {
     const { errors, warnings } = checkSettings(s);
@@ -189,33 +146,6 @@ function messagesHtml(s) {
         errors.map((e) => `<p class="plant-msg err">${escapeHtml(e)}</p>`).join('') +
         warnings.map((w) => `<p class="plant-msg">${escapeHtml(w)}</p>`).join('')
     );
-}
-
-/** Prehľad karty: poloha a výzva dokončiť elektráreň (panely nie sú zadané), alebo zhrnutie
- * uloženej elektrárne. @param {AppState} state @param {Dom} dom */
-function renderHome(state, dom) {
-    const noPanels = state.known !== 'elektraren';
-    dom.setupSite.classList.toggle('hidden', !noPanels);
-    dom.setupSiteName.textContent = state.site.name;
-    dom.setupCta.classList.toggle('hidden', !noPanels);
-    dom.setupOverview.classList.toggle('hidden', noPanels);
-    dom.setupNote.textContent = state.settingsNote;
-    if (noPanels) return;
-    const saved = savedSettings(state);
-    const pristup = pristupModel({ zdroj: state.zdroj, pristup: state.pristup, now: state.now, timezone: state.site.timezone });
-    writeHtml(dom.setupHero, heroHtml(saved, state), 'setupHero');
-    writeHtml(dom.setupRows, summaryRows(saved, state, true), 'setupRows');
-    writeHtml(
-        dom.setupWarnings,
-        pristupHtml(pristup) +
-            checkSettings(saved)
-                .warnings.map((w) => `<p class="plant-msg">${escapeHtml(w)}</p>`)
-                .join(''),
-        'setupWarnings',
-    );
-    // Zbalená Elektráreň povie, že vnútri čaká hlásenie o meraní.
-    dom.settingsPlantHint.textContent = pristup ? pristup.karta.nadpis : PLANT_HINT;
-    dom.settingsPlantHint.classList.toggle('err', pristup?.druh === 'neplati');
 }
 
 // ---- Obrazovky sprievodcu ---------------------------------------------------------
@@ -517,8 +447,6 @@ function renderSuhrn(state, draft, dom) {
 // ---- Obrazovky tarify -------------------------------------------------------------
 
 /** Malý prstenec rozvrhu. @param {Tariff} t @param {number} [i] */
-const miniTariff = (t, i = 0) => tariffMiniSvg(dayRingModel(scheduleTiers(t, t.schedules[i])));
-
 /** @param {AppState} state @param {Settings} draft @param {Dom} dom */
 function renderTarifa(state, draft, dom) {
     const kind = tariffKind(draft.tariff);
@@ -726,9 +654,19 @@ function renderTariffMsgs(draft, step, dom) {
 
 // ---- Hlavička, polia a tlačidlá sprievodcu ---------------------------------------
 
+/** Záložky pri úprave z prehľadu (shared/nastavenie.js). @param {HTMLElement} el @param {Array<{ step: string, label: string, on: boolean }> | null} tabs @param {string} name */
+function renderTabs(el, tabs, name) {
+    el.classList.toggle('hidden', !tabs);
+    if (tabs)
+        writeHtml(
+            el,
+            tabs.map((t) => `<button type="button" data-setup-tab="${t.step}" aria-pressed="${t.on}">${t.label}</button>`).join(''),
+            name,
+        );
+}
+
 /** @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {number} roof @param {Dom} dom */
 function renderHead(state, draft, step, roof, dom) {
-    const edit = state.setupReturn !== null;
     const foot = footModel(state, draft, step, false);
     dom.wzClose.classList.toggle('hidden', !foot.closeShown);
     dom.wzStep.textContent = stepLabel(state, step);
@@ -737,30 +675,17 @@ function renderHead(state, draft, step, roof, dom) {
     const prog =
         section < 0 ? '' : SETUP_SECTIONS.map((_, i) => `<i class="${i < section ? 'done' : i === section ? 'now' : ''}"></i>`).join('');
     writeHtml(dom.wzProg, prog, 'wzProg');
-    const onRoof = /** @type {readonly string[]} */ (ROOF_STEPS).includes(step);
     dom.wzSub.textContent = subText(state, draft, step, roof);
     const texts = textsFor(state, draft, step);
     dom.wzTitle.textContent = texts.title;
     dom.wzLead.textContent = texts.lead;
     dom.wzLead.classList.toggle('hidden', !texts.lead);
-    dom.wzRoofTabs.classList.toggle('hidden', !edit || !onRoof);
+    const tabs = editTabs(state, draft, step);
+    renderTabs(dom.wzGroupTabs, tabs.group, 'wzGroupTabs');
+    dom.wzRoofTabs.classList.toggle('hidden', !tabs.roof);
     for (const b of dom.wzRoofTabs.children)
         b.setAttribute('aria-pressed', String(/** @type {HTMLElement} */ (b).dataset.setupTab === step));
-    renderTariffTabs(draft, step, edit, dom);
-}
-
-/** Úprava tarify z prehľadu: záložky na jej obrazovky, ako pri ploche strechy.
- * @param {Settings} draft @param {SetupStep} step @param {boolean} edit @param {Dom} dom */
-function renderTariffTabs(draft, step, edit, dom) {
-    const onTariff = /** @type {readonly string[]} */ (TARIFF_STEPS).includes(step);
-    dom.wzTariffTabs.classList.toggle('hidden', !edit || !onTariff);
-    writeHtml(
-        dom.wzTariffTabs,
-        tariffSteps(tariffKind(draft.tariff))
-            .map((k) => `<button type="button" data-setup-tab="${k}" aria-pressed="${k === step}">${TARIFF_TABS[k]}</button>`)
-            .join(''),
-        'wzTariffTabs',
-    );
+    renderTabs(dom.wzTariffTabs, tabs.tariff, 'wzTariffTabs');
 }
 
 /** Hodnoty polí - len keď sa zmení to, k čomu patria, nie pri každom písmene. @param {AppState} state @param {number} roof @param {Dom} dom */
@@ -836,7 +761,7 @@ export function renderNastavenie(state, dom) {
     dom.setupHome.classList.toggle('hidden', open);
     dom.wizard.classList.toggle('hidden', !open);
     if (open) renderWizard(state, dom);
-    else renderHome(state, dom);
+    renderPrehlad(state, dom);
 }
 
 /**

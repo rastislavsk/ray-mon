@@ -8,6 +8,8 @@ import {
     dropOldStored,
     initUrlMirror,
     loadDayLog,
+    loadDoma,
+    loadLook,
     loadRanna,
     loadOdmietnutie,
     loadOznamenia,
@@ -39,6 +41,8 @@ const link = readLink(hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
 const layout = { wide: mq.wide.matches, tall: isTall() };
+// Vzhľad: tón hlášok je spoločný s novou appkou, farba pozadia je len tejto appky.
+const look = loadLook();
 const store = createStore({
     ...initialState(now, layout, { saved, site, incoming }),
     dayLog: loadDayLog(),
@@ -46,6 +50,9 @@ const store = createStore({
     pristup: loadOdmietnutie(),
     oznamenia: loadOznamenia(),
     oznamStav: oznamStav(),
+    doma: loadDoma(),
+    voice: look.voice,
+    bgTint: look.bgTint,
     linkError: link?.error ?? null,
 });
 

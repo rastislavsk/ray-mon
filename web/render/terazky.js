@@ -15,7 +15,8 @@ import { writeHtml } from '../memo.js';
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
 
-const TERAZ_TEXTS = voiceTexts().TERAZ_TEXTS;
+/** Pevné texty karty v tóne appky. @param {import('../state.js').AppState} state */
+const textsOf = (state) => voiceTexts(state.voice).TERAZ_TEXTS;
 
 /** @param {HTMLElement} el @param {boolean} on */
 const show = (el, on) => el.classList.toggle('hidden', !on);
@@ -47,14 +48,15 @@ function renderHead(state, m, dom) {
     dom.tzNoteBtn.textContent = m.note?.btn ?? '';
     dom.tzNoteBtn.toggleAttribute('data-pristup-go', !!m.note?.znova);
     show(dom.tzRetry, m.retry);
-    dom.tzRetry.textContent = TERAZ_TEXTS.retry;
+    dom.tzRetry.textContent = textsOf(state).retry;
 }
 
 /**
  * Graf, „Späť na teraz“ a zoznam pod grafom: prvý riadok legendy, po otvorení farby pásu,
  * hodnoty v čase bodu grafu a nápis. @param {Model} m @param {boolean} open @param {Dom} dom
+ * @param {ReturnType<typeof textsOf>} TERAZ_TEXTS
  */
-function renderChart(m, open, dom) {
+function renderChart(m, open, dom, TERAZ_TEXTS) {
     show(dom.tzPlot, !!m.chart);
     if (!m.chart) return;
     const c = m.chart;
@@ -125,9 +127,9 @@ function renderPlan(plan, open, dom) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTerazky(state, dom) {
-    const m = terazModel(state, { devices: state.oznamenia.devices });
+    const m = terazModel(state, { voice: state.voice, devices: state.doma });
     renderHead(state, m, dom);
     renderSay(m, dom);
     renderPlan(m.plan, state.tzPlanOpen, dom);
-    renderChart(m, state.tzListOpen, dom);
+    renderChart(m, state.tzListOpen, dom, textsOf(state));
 }

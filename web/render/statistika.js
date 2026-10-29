@@ -5,7 +5,7 @@
 
 import { installedKw } from '../../shared/config.js';
 import { escapeHtml, kwpText, monthNameShort } from '../../shared/format.js';
-import { EMPTY_MESSAGES, STATISTIKA_TEXTS } from '../../shared/messages.js';
+import { EMPTY_MESSAGES, STATISTIKA_TEXTS, voiceTexts } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { STATS_PERIODS } from '../../shared/stats.js';
 import { summaryModel } from '../../shared/summary.js';
@@ -91,14 +91,14 @@ function posterHtml(m) {
 
 /** Obsah karty podľa toho, čo appka o elektrárni vie. `neplati` je veta namiesto „meranie
  * neodpovedá“, keď výrobca prístup odmietol (shared/pristup.js).
- * @param {SummaryModel} m @param {boolean} noPanels @param {string | null} [neplati] */
-export function statsHtml(m, noPanels, neplati = null) {
+ * @param {SummaryModel} m @param {boolean} noPanels @param {string | null} [neplati] @param {typeof STATISTIKA_TEXTS} [T] texty v tóne appky */
+export function statsHtml(m, noPanels, neplati = null, T = STATISTIKA_TEXTS) {
     if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
     const poster = posterHtml(m) || `<p class="stats-note">${escapeHtml(EMPTY_MESSAGES.forecast.body)}</p>`;
     // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
     if (noPanels)
         return poster + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.');
-    const prices = m.priced ? '' : goHtml('ceny', STATISTIKA_TEXTS.pricesTitle, STATISTIKA_TEXTS.pricesText);
+    const prices = m.priced ? '' : goHtml('ceny', T.pricesTitle, T.pricesText);
     if (m.kind === 'live') return poster + prices;
     const live =
         m.status === 'offline'
@@ -111,5 +111,6 @@ export function statsHtml(m, noPanels, neplati = null) {
 export function renderStatistika(state, dom) {
     dom.statsSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
     const neplati = neplatiOf(state)?.statistika ?? null;
-    writeHtml(dom.statsBody, statsHtml(summaryModel(state, state.statsPeriod), state.known !== 'elektraren', neplati), 'statsBody');
+    const m = summaryModel(state, state.statsPeriod, state.voice);
+    writeHtml(dom.statsBody, statsHtml(m, state.known !== 'elektraren', neplati, voiceTexts(state.voice).STATISTIKA_TEXTS), 'statsBody');
 }

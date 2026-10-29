@@ -7,6 +7,7 @@
 import {
     ADRESA_SESSION_KEY,
     DAYLOG_STORAGE_KEY,
+    DOMA_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -21,6 +22,7 @@ import {
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
 import { parseDayLog } from '../shared/daylog.js';
+import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
@@ -142,14 +144,18 @@ function removeAll(keys) {
     }
 }
 
-/** Vzhľad novej appky (tón hlášok, živá obloha); bez úložiska predvolený. @returns {import('../shared/settings.js').Look} */
+/** Vzhľad (tón hlášok, živá obloha, farba pozadia); bez úložiska predvolený. @returns {import('../shared/settings.js').Look} */
 export function loadLook() {
     return readJson(LOOK_STORAGE_KEY, parseLook, DEFAULT_LOOK);
 }
 
-/** @param {import('../shared/settings.js').Look} look @returns {boolean} podarilo sa? */
-export function saveLook(look) {
-    return write(LOOK_STORAGE_KEY, JSON.stringify(lookToStored(look)));
+/**
+ * Zmena vzhľadu. Zvyšok sa prečíta z úložiska - voľbu, ktorú má len druhá appka (živá obloha,
+ * farba pozadia), táto appka nepozná a nesmie ju prepísať.
+ * @param {Partial<import('../shared/settings.js').Look>} zmena @returns {boolean} podarilo sa?
+ */
+export function saveLook(zmena) {
+    return write(LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ ...loadLook(), ...zmena })));
 }
 
 /** Prístup k meraniu, ktorý výrobca odmietol (shared/pristup.js); bez úložiska null. @returns {import('../shared/pristup.js').Odmietnutie | null} */
@@ -208,7 +214,7 @@ export function saveRanna(r) {
     return write(RANNA_TRIEDA_STORAGE_KEY, JSON.stringify(r));
 }
 
-/** Ranné oznámenie a spotrebiče doma (OZNAMENIA_STORAGE_KEY); bez úložiska predvolené. @returns {import('../shared/oznamenia.js').Oznamenia} */
+/** Ranné oznámenie (OZNAMENIA_STORAGE_KEY); bez úložiska predvolené. @returns {import('../shared/oznamenia.js').Oznamenia} */
 export function loadOznamenia() {
     return parseOznamenia(read(OZNAMENIA_STORAGE_KEY));
 }
@@ -216,4 +222,23 @@ export function loadOznamenia() {
 /** @param {import('../shared/oznamenia.js').Oznamenia} o @returns {boolean} podarilo sa? */
 export function saveOznamenia(o) {
     return write(OZNAMENIA_STORAGE_KEY, JSON.stringify(o));
+}
+
+/**
+ * Spotrebiče doma (DOMA_STORAGE_KEY); bez úložiska predvolené. Kým vlastné miesto nemali, boli
+ * v nastavení oznámení - odtiaľ sa pri prvom načítaní raz presunú, aby nikto neprišiel o voľbu.
+ * @returns {string[]}
+ */
+export function loadDoma() {
+    const raw = read(DOMA_STORAGE_KEY);
+    if (raw !== null) return parseDoma(raw);
+    const stare = domaZOznameni(read(OZNAMENIA_STORAGE_KEY));
+    if (!stare) return parseDoma(null);
+    saveDoma(stare);
+    return stare;
+}
+
+/** @param {readonly string[]} devices @returns {boolean} podarilo sa? */
+export function saveDoma(devices) {
+    return write(DOMA_STORAGE_KEY, JSON.stringify(domaToStored(devices)));
 }
