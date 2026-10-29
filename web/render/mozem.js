@@ -1,14 +1,16 @@
-// Karta Dnes (kódové meno mozem, doteraz Môžem?): veľké slovo a čo dá strecha za celý deň, pod tým
+// Karta Dnes (kódové meno mozem, doteraz Môžem?): dráha slnka, veľké slovo a čo dá strecha za celý deň, pod tým
 // pás odporúčaní - dnešok a kedy bude lepšie (docs/navrhy/dnes-a-teraz.html). Hlavičku skladá render
 // do #mozem-body, pás je stály nosič v index.html. Počíta shared/mozem.js a shared/teraz.js,
 // texty sú v shared/messages.js.
 
 import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
 import { voiceTexts } from '../../shared/messages-core.js';
+import { sunArc } from '../../shared/mozem-sky.js';
 import { mozemModel } from '../../shared/mozem.js';
 import { localMinutes } from '../../shared/solar.js';
 import { dnesCards } from '../../shared/teraz.js';
 import { writeHtml } from '../memo.js';
+import { sunArcSvg } from '../sun-arc.js';
 
 /** @typedef {ReturnType<typeof mozemModel>} MozemModel */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -29,7 +31,7 @@ export function mozemHtml(m, kick) {
     // Farba plagátu hovorí to isté čo slovo - o celom dni. Bez dát farba stavu (načítava sa, nie sú).
     const tone = m.den ? `den-${m.den.cls}` : `st-${m.state}`;
     // Písmo sa zmenší podľa najdlhšieho slova, aby sa nikdy neorezalo (ako v novej appke).
-    const len = Math.max(1, ...m.word.split(/s+/).map((w) => w.length));
+    const len = Math.max(1, ...m.word.split(/\s+/).map((w) => w.length));
     return (
         `<section class="mozem-hero ${tone}"><div class="mozem-kick">${escapeHtml(kick)}</div>` +
         `<p class="mozem-word" style="--word-len: ${len}">${escapeHtml(m.word)}</p>${day}</section>`
@@ -59,6 +61,8 @@ function renderCards(k, page, dom) {
 export function renderMozem(state, dom) {
     const m = mozemModel(state, { devices: state.oznamenia.devices, ranna: state.ranna });
     const kick = `Dnes · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))} · ${state.site.name}`;
-    writeHtml(dom.mozemBody, mozemHtml(m, kick), 'mozemBody');
+    // Nad plagátom dráha slnka s časom východu a západu - tá istá ako v novej appke.
+    const arc = sunArcSvg(sunArc(state.now, state.site, m.facts ? m.facts.window : null), m.state === 'offline');
+    writeHtml(dom.mozemBody, `<div class="mozem-arc" aria-hidden="true">${arc}</div>${mozemHtml(m, kick)}`, 'mozemBody');
     renderCards(m.state === 'loading' ? null : dnesCards(state), state.terazPage, dom);
 }

@@ -2,10 +2,11 @@
 // strecha za celý deň, výzvy a pás odporúčaní (docs/navrhy/dnes-a-teraz.html). Všetko počíta
 // shared/mozem-sky.js a shared/teraz.js, texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
-import { escapeHtml, minutesToTimeStr } from '../../../shared/format.js';
+import { escapeHtml } from '../../../shared/format.js';
 import { voiceTexts } from '../../../shared/messages-core.js';
 import { mozemSkyModel } from '../../../shared/mozem-sky.js';
 import { dnesCards } from '../../../shared/teraz.js';
+import { sunArcSvg } from '../../../web/sun-arc.js';
 import { shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -21,47 +22,11 @@ export function wordSize(word) {
     return word.length <= 7 ? 66 : word.length <= 11 ? 50 : 42;
 }
 
-// Oblúk v súradniciach návrhu: polovica elipsy nad obzorom, východ vľavo, západ vpravo.
-const ARC = { cx: 160, cy: 118, rx: 140, ry: 88 };
-const MOON = { x: 262, y: 42 };
-
-/** Bod na oblúku, 0 = východ, 1 = západ. @param {number} f */
-function arcPoint(f) {
-    const a = Math.PI * (1 - f);
-    return `${(ARC.cx + ARC.rx * Math.cos(a)).toFixed(1)} ${(ARC.cy - ARC.ry * Math.sin(a)).toFixed(1)}`;
-}
-
-/**
- * Oblúk slnka: prerušovaná dráha, zelený úsek dnešného okna, slnko na dráhe (v noci mesiac)
- * a časy východu a západu. Bez dát je slnko len sivý kruh a okno nie je.
- * @param {NonNullable<Model['arc']>} arc @param {boolean} off
- */
-function arcSvg(arc, off) {
-    const { cx, cy, rx, ry } = ARC;
-    const win =
-        arc.win && arc.win.to > arc.win.from
-            ? `<path class="arc-win" d="M${arcPoint(arc.win.from)} A${rx} ${ry} 0 0 1 ${arcPoint(arc.win.to)}"/>`
-            : '';
-    const at = arc.sun === null ? `${MOON.x} ${MOON.y}` : arcPoint(arc.sun);
-    const body = off
-        ? '<circle r="12" class="arc-off"/>'
-        : arc.sun === null
-          ? '<circle r="11" class="arc-moon"/><circle cx="6" cy="-4" r="9" class="arc-moon-cut"/>'
-          : '<circle r="24" class="arc-glow"/><circle r="13" class="arc-sun"/>';
-    const label = (/** @type {number | null} */ m, /** @type {number} */ x) =>
-        m === null ? '' : `<text x="${x}" y="130" class="arc-t">${minutesToTimeStr(m)}</text>`;
-    return (
-        `<svg viewBox="0 0 320 132"><path class="arc-path" d="M${cx - rx} ${cy} A${rx} ${ry} 0 0 1 ${cx + rx} ${cy}"/>${win}` +
-        `<line x1="0" y1="${cy}" x2="320" y2="${cy}" class="arc-ground"/>${label(arc.rise, cx - rx)}${label(arc.set, cx + rx)}` +
-        `<g transform="translate(${at})">${body}</g></svg>`
-    );
-}
-
 /** Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../../shared/messages.js').Voice} voice */
 function renderCard(m, dom, voice) {
     const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
     show(dom.mzArc, !!m.arc);
-    if (m.arc) setHtml(dom.mzArc, arcSvg(m.arc, m.state === 'offline'));
+    if (m.arc) setHtml(dom.mzArc, sunArcSvg(m.arc, m.state === 'offline'));
     show(dom.mzAnswer, !m.ask);
     setText(dom.mzWord, m.word);
     dom.mzWord.style.setProperty('--word', `${wordSize(m.word)}px`);

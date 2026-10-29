@@ -4109,6 +4109,56 @@ b {
     gap: var(--sp-3);
     max-width: 560px;
 }
+/* Dráha slnka nad plagátom (SVG skladá web/sun-arc.js): prerušovaná dráha, zelené okno, keď slnko
+   stačí, jantárové slnko a časy východu a západu pod koncami oblúka. */
+.mozem-arc {
+    padding: 4px 20px 0;
+}
+.mozem-arc svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    /* Žiara slnka pri východe a západe siaha za okraj oblúka. */
+    overflow: visible;
+}
+.mozem-arc .arc-path {
+    fill: none;
+    stroke: var(--ink-20);
+    stroke-width: 2;
+    stroke-dasharray: 3 6;
+}
+.mozem-arc .arc-win {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+.mozem-arc .arc-ground {
+    stroke: var(--ink-20);
+}
+.mozem-arc .arc-t {
+    fill: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-anchor: middle;
+}
+.mozem-arc .arc-glow {
+    fill: rgba(255, 194, 75, 0.2);
+}
+.mozem-arc .arc-sun {
+    fill: var(--amber);
+}
+.mozem-arc .arc-moon {
+    fill: var(--ink);
+}
+/* Kosák: kruh vo farbe pozadia zakryje časť mesiaca. */
+.mozem-arc .arc-moon-cut {
+    fill: var(--bg);
+}
+.mozem-arc .arc-off {
+    fill: var(--ink-20);
+}
 /* Hlavička je plagát: tmavé písmo na plnej farbe stavu. Veľkosť slova sa ráta zo šírky bloku
    (cqi), takže „ZAPÍNAJ.“ sa zmestí na 320 px displeji aj na desktope. */
 .mozem-hero {

@@ -22,6 +22,7 @@ const NEUTRAL_WEB = [
     'day-chart',
     'teraz-gestures',
     'oznamenia',
+    'sun-arc',
 ];
 
 /**
