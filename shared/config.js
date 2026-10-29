@@ -124,6 +124,12 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
 
 /**
+ * Sekcie karty Nastavenie v poradí na karte - rovnaké v oboch appkách (shared/nastavenie.js,
+ * docs/navrhy/nastavenie-zjednotenie.html).
+ */
+export const NASTAVENIE_SEKCIE = /** @type {const} */ (['elektraren', 'doma', 'oznamenia', 'vzhlad', 'appka']);
+
+/**
  * Šírky okna (px), od ktorých nová appka mení rozloženie. Pod `medium` je telefón aj tablet na
  * výšku: jedna karta a navigácia dole. Od `medium` (tablet na šírku) sú Môžem?, Teraz a 7 dní
  * v dvoch stĺpcoch, od `wide` (počítač) v troch, navigácia je hore. `medium` je tá istá šírka,
@@ -469,14 +475,14 @@ export const DAYLOG = { limit: 400, fromMin: 180 };
 export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /**
- * Tón hlášok novej appky (obloha/): drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká
- * a je vecný. Súčasná appka hovorí len drzo. Prvý v zozname je predvolený.
+ * Tón hlášok: drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká a je vecný. Voľba je
+ * spoločná pre obe appky (Nastavenie › Vzhľad). Prvý v zozname je predvolený.
  */
 export const VOICES = /** @type {const} */ (['drzy', 'slusny']);
 
 /**
- * Vzhľad novej appky - tón hlášok a živá obloha (vypnutá = pokojná tmavá). Sú to voľby len
- * novej appky, preto majú vlastný kľúč; súčasná appka ho nečíta. Formát: { ton, obloha }.
+ * Vzhľad: tón hlášok (spoločný pre obe appky), živá obloha novej appky (vypnutá = pokojná tmavá)
+ * a farba pozadia podľa ceny v súčasnej (vypnutá = pokojná čierna). Formát: { ton, obloha, farba }.
  */
 export const LOOK_STORAGE_KEY = 'vzhlad-v1';
 
@@ -533,10 +539,16 @@ export const VLASTNA_HASH_KEY = 'vlastna';
 export const VYMAZANE_STORAGE_KEY = 'vymazane-v1';
 
 /**
- * Ranné oznámenie na tomto telefóne: zapnuté, hodina a spotrebiče, ktoré človek má doma (podľa
- * nich ráta aj Plán dňa na karte Môžem?). Patrí telefónu, do odkazu s nastavením nejde.
+ * Ranné oznámenie na tomto telefóne: zapnuté a hodina. Patrí telefónu, do odkazu s nastavením
+ * nejde. Staršia verzia v ňom mala aj spotrebiče - tie sú teraz pod DOMA_STORAGE_KEY.
  */
 export const OZNAMENIA_STORAGE_KEY = 'oznamenia-v1';
+
+/**
+ * Čo má človek doma: spotrebiče, s ktorými ráta Plán dňa aj ranné oznámenie (shared/doma.js).
+ * Patrí telefónu, do odkazu s nastavením nejde. Formát: { devices }.
+ */
+export const DOMA_STORAGE_KEY = 'doma-v1';
 
 /**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
@@ -553,6 +565,7 @@ export const STORAGE_KEYS = [
     SUCTY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
+    DOMA_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
 ];
 

@@ -115,7 +115,7 @@ export function renderTeraz(state, dom) {
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
     const m = terazModel(
         { ...state, previewMinutes: state.terazPreview },
-        { online: state.online, voice: state.voice, devices: state.oznamenia.devices },
+        { online: state.online, voice: state.voice, devices: state.doma },
     );
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');

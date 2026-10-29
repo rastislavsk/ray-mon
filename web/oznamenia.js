@@ -138,7 +138,7 @@ export async function vypniOznamenia() {
 }
 
 /**
- * Zmena voľby z Nastavenia (zapnúť, vypnúť, hodina, spotrebiče): zapne či vypne odber, keď treba,
+ * Zmena voľby z Nastavenia (zapnúť, vypnúť, hodina): zapne či vypne odber, keď treba,
  * a voľbu uloží. Keď zapnutie zlyhá, ostane vypnuté a stav povie prečo. Keď zlyhá zmena hodiny,
  * ostane stará hodina - tú má aj Worker - a stav `chyba`, takže sa dá skúsiť znova.
  * @param {import('../shared/oznamenia.js').Oznamenia} o @param {Partial<import('../shared/oznamenia.js').Oznamenia>} zmena
@@ -195,9 +195,9 @@ export function initOznamZrkadlo(store, app) {
             pasmo = '';
             return;
         }
-        const { hour, devices } = s.oznamenia;
+        const { hour } = s.oznamenia;
         /** @type {import('../shared/oznamenia.js').Zrkadlo} */
-        const z = { site: s.site, plant: s.plant, tariff: s.tariff, devices, voice: s.voice ?? 'drzy', app, hour };
+        const z = { site: s.site, plant: s.plant, tariff: s.tariff, devices: s.doma, voice: s.voice, app, hour };
         const text = JSON.stringify(z);
         if (text === posledne) return;
         posledne = text;
@@ -221,5 +221,5 @@ export function initOznamZrkadlo(store, app) {
  * Časť stavu oboch appiek, z ktorej vzniká zrkadlo pre service worker.
  * @typedef {{ site: import('../shared/config.js').Site, plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff, known: import('../shared/settings.js').Known,
- *   oznamenia: import('../shared/oznamenia.js').Oznamenia, voice?: import('../shared/messages.js').Voice }} MirrorSource
+ *   oznamenia: import('../shared/oznamenia.js').Oznamenia, doma: string[], voice: import('../shared/messages.js').Voice }} MirrorSource
  */

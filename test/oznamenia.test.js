@@ -8,7 +8,6 @@ import {
     oznamOvladanie,
     parseOznamenia,
     planNotice,
-    prepniSpotrebic,
     reminderNotice,
     swNotice,
     vapidKeyBytes,
@@ -38,20 +37,13 @@ const input = (now, extra = {}) => ({
 });
 
 test('parseOznamenia: predvolene vypnuté o 9:00, poškodené a neznáme hodnoty nahradí, nič nezahodí celé', () => {
-    assert.deepEqual(parseOznamenia(null), { on: false, hour: 9, devices: DEVICES });
+    assert.deepEqual(parseOznamenia(null), { on: false, hour: 9 });
     assert.equal(OZNAMENIA.hour, 9);
     assert.deepEqual(parseOznamenia('{zle'), oznameniaDefault());
-    assert.deepEqual(parseOznamenia(JSON.stringify({ on: true, hour: 7, devices: ['pracka', 'bojler'] })), {
-        on: true,
-        hour: 7,
-        devices: ['pracka', 'bojler'],
-    });
-    assert.deepEqual(parseOznamenia(JSON.stringify({ on: 'ano', hour: 13, devices: ['pracka', 'tv', 'pracka'] })), {
-        on: false,
-        hour: 9,
-        devices: ['pracka'],
-    });
-    assert.deepEqual(parseOznamenia(JSON.stringify({ on: true })).devices, DEVICES);
+    assert.deepEqual(parseOznamenia('"text"'), oznameniaDefault());
+    // Spotrebiče zo staršej verzie sa tu ignorujú - presúva ich shared/doma.js.
+    assert.deepEqual(parseOznamenia(JSON.stringify({ on: true, hour: 7, devices: ['pracka', 'bojler'] })), { on: true, hour: 7 });
+    assert.deepEqual(parseOznamenia(JSON.stringify({ on: 'ano', hour: 13 })), { on: false, hour: 9 });
 });
 
 test('morningDue: prvá štvrťhodina zvolenej hodiny v pásme telefónu', () => {
@@ -165,13 +157,7 @@ test('oznamOvladanie: hláška a zámok sekcie Oznámenia, rovnaké pre obe appk
         assert.equal(typeof oznameniaTexts().stav[/** @type {keyof ReturnType<typeof oznameniaTexts>['stav']} */ (k)], 'string', k);
 });
 
-test('prepniSpotrebic pridá a uberie; kľúč VAPID má 65 bajtov', () => {
-    const o = oznameniaDefault();
-    assert.deepEqual(prepniSpotrebic(o, 'bojler').devices, [...DEVICES, 'bojler']);
-    assert.deepEqual(
-        prepniSpotrebic(o, 'auto').devices,
-        DEVICES.filter((d) => d !== 'auto'),
-    );
+test('kľúč VAPID má 65 bajtov', () => {
     const key = vapidKeyBytes();
     assert.equal(key.length, 65);
     assert.equal(key[0], 4, 'nekomprimovaný bod P-256');

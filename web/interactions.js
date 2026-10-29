@@ -11,9 +11,7 @@ import { render } from './render/index.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { panelChange } from './state.js';
-import { clearStored } from './settings-store.js';
-import { initOznamenia } from './oznamenia-interactions.js';
-import { vypniOznamenia } from './oznamenia.js';
+import { initPrehlad } from './prehlad-interactions.js';
 import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
 import { initTerazky } from './terazky-interactions.js';
 
@@ -350,7 +348,7 @@ export function isTall() {
 }
 
 /**
- * Položky karty Nastavenie (Elektráreň, Oznámenia, Zdieľať appku, Vymazať údaje) sú natívne <details>:
+ * Položky karty Nastavenie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje) sú natívne <details>:
  * rozbalí ich prehliadač sám (ťuknutie, klávesnica, hľadanie v stránke), appka to len prevezme do
  * stavu. Rozbalená je najviac jedna - render ostatné zbalí. Zbalenie ťuknutím je ten istý krok ako
  * tlačidlo Späť, preto ide cez backTo - inak by položka ostala v histórii a Späť by ju znovu
@@ -381,23 +379,6 @@ function initSharing(store, dom, refresh) {
         applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null, importNote: '' }));
-}
-
-/**
- * „Vymazať údaje“ v Nastavení. Po vymazaní sa stránka obnoví a appka naštartuje ako pri prvom
- * otvorení - jednoduchšie a istejšie než skladať čistý stav ručne. Adresu treba vyčistiť tiež:
- * nesie uložené nastavenie (initUrlMirror) a appka by ho po obnovení ponúkla prevziať.
- * @param {Dom} dom
- */
-function initClearData(dom) {
-    dom.clearData.addEventListener('click', async () => {
-        if (!confirm('Vymazať všetky údaje appky z tohto prehliadača? Nedá sa to vrátiť.')) return;
-        // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
-        await vypniOznamenia();
-        clearStored();
-        history.replaceState(null, '', location.pathname + location.search);
-        location.reload();
-    });
 }
 
 /**
@@ -470,8 +451,7 @@ export function initInteractions(store, dom, mq) {
     initSetup(store, dom, refresh);
     initInfoItems(store, dom);
     initSharing(store, dom, refresh);
-    initClearData(dom);
-    initOznamenia(store, dom);
+    initPrehlad(store, dom);
     initStats(store, dom);
     return refresh;
 }

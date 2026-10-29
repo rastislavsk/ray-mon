@@ -6,15 +6,17 @@ import { installedKw } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
 import { hlavickaModel } from '../../shared/hlavicka.js';
 import { voiceTexts } from '../../shared/messages-core.js';
-import { MOZEM_SKY_TEXTS, terazTypicalText } from '../../shared/messages.js';
+import { terazTypicalText } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
 
 /**
  * Pás bez zadaných panelov: karty odpovedajú z typickej strechy a pás povie s čím - texty Oblohy
  * (výzva na karte Môžem? a veta pod číslom karty Teraz). @param {number} kwp výkon typickej strechy
+ * @param {import('../../shared/messages.js').Voice} voice
  */
-function guessBar(kwp) {
-    const typical = terazTypicalText(kwp);
+function guessBar(kwp, voice) {
+    const typical = terazTypicalText(kwp, voice);
+    const { MOZEM_SKY_TEXTS } = voiceTexts(voice);
     return {
         nadpis: MOZEM_SKY_TEXTS.guessTitle,
         text: `${typical[0].toUpperCase()}${typical.slice(1)}.`,
@@ -46,7 +48,7 @@ function renderPanelsBar(state, dom) {
  */
 function barOf(state) {
     if (state.panel !== 'terazky' && state.panel !== 'mozem') return null;
-    if (state.known === 'poloha') return { odhad: true, t: guessBar(installedKw(state.plant)) };
+    if (state.known === 'poloha') return { odhad: true, t: guessBar(installedKw(state.plant), state.voice) };
     const pas = state.known === 'elektraren' ? (neplatiOf(state)?.pas ?? null) : null;
     return pas ? { odhad: false, t: pas } : null;
 }
@@ -56,7 +58,7 @@ function barOf(state) {
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderHlavicka(state, dom) {
-    const m = hlavickaModel(state);
+    const m = hlavickaModel(state, state.voice);
     dom.pvPlace.textContent = m.place;
     dom.pvUpdated.textContent = m.status;
     dom.pvTone.textContent = m.toneText;
@@ -65,7 +67,7 @@ function renderHlavicka(state, dom) {
     dom.pvClock.classList.toggle('hidden', m.setup);
     dom.pvClock.disabled = !m.tip;
     dom.pvSetupGo.classList.toggle('hidden', !m.setup);
-    dom.pvSetupGo.textContent = voiceTexts().HEADER_TEXTS.setup;
+    dom.pvSetupGo.textContent = voiceTexts(state.voice).HEADER_TEXTS.setup;
     const open = state.stavTip && !!m.tip;
     dom.pvClock.setAttribute('aria-expanded', String(open));
     dom.pvTip.classList.toggle('hidden', !open);
@@ -87,6 +89,9 @@ export function renderHeader(state, dom) {
     // náhľad iného času - hovorí teda to isté, čo pás plánu pod zvoleným časom v grafe dňa.
     // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
     dom.root.dataset.tier = state.known === 'nic' ? '' : heroModel(state).tier || '';
+    // Vypnutá farba pozadia (Nastavenie › Vzhľad): pozadie aj stavový riadok sú pokojne čierne.
+    // Číslo na karte Terazky farbu plánu dňa drží ďalej - nesie údaj, nie náladu.
+    dom.root.dataset.farba = state.bgTint ? 'zap' : 'vyp';
     // Stavový riadok telefónu dostane farbu vrchu pozadia. Počíta ju CSS (--status-bar), tu sa
     // len prečíta - farby tarify tak ostanú na jednom mieste.
     const farba = hexColor(getComputedStyle(dom.root).getPropertyValue('--status-bar'));

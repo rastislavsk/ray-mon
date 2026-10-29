@@ -32,12 +32,13 @@ import { dnesCards, terazModel } from '../../shared/teraz.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { dayHeadSub, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { HEADER_TEXTS, stavMeraniaText } from '../../shared/messages-core.js';
+import { HEADER_TEXTS, oznameniaTexts, stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
+import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
 import { summaryModel } from '../../shared/summary.js';
 import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekMessage } from '../../shared/messages.js';
 import { settingsFromLink, shareUrl, toUser, typicalSettings } from '../../shared/settings.js';
@@ -1045,16 +1046,16 @@ test('prístup k meraniu neplatí: pás, hlásenie v Nastavení, Skúsiť znova 
     expect(volania, 'po usúdení, že prístup neplatí, sa nepýta každú minútu').toBe(2);
     await expect(bar).toBeVisible();
 
-    // Pás vedie do Nastavenia, Elektráreň je rozbalená a hlásenie povie prečo.
+    // Pás vedie do Nastavenia: hlásenie navrchu karty povie prečo, Elektráreň je rozbalená.
     await page.locator('#panels-bar-go').click();
     await expect(page.locator('#settings-plant')).toHaveAttribute('open', '');
     await expect(page.locator('#settings-plant-hint')).toHaveText(m.karta.nadpis);
-    await expect(page.locator('#setup-warnings .plant-msg').first()).toContainText(m.karta.text);
+    await expect(page.locator('#setup-pristup .plant-msg').first()).toContainText(m.karta.text);
     await expect(page.locator('[data-setup-edit="meranie"] .sum-live.in-line')).toHaveText(m.stavKratko);
     // Skúsiť znova sa opýta hneď; keď to nepomôže, povie to.
     await page.locator('[data-pristup-skus]').click();
     await expect.poll(() => volania).toBe(3);
-    await expect(page.locator('#setup-warnings')).toContainText('Huawei prístup stále neprijíma.');
+    await expect(page.locator('#setup-pristup')).toContainText('Huawei prístup stále neprijíma.');
     // Pripojiť znova: rovno formulár kiosku, dôvod navrchu, návod pre nové pripojenie skrytý.
     await page.locator('[data-setup-znova]').click();
     await expect(page.locator('#wz-title')).toHaveText(m.sprievodca.nadpis);
@@ -1065,7 +1066,7 @@ test('prístup k meraniu neplatí: pás, hlásenie v Nastavení, Skúsiť znova 
     // Výrobca prístup znova prijíma: hlásenie zmizne aj z úložiska.
     odmieta = false;
     await page.locator('[data-pristup-skus]').click();
-    await expect(page.locator('#setup-warnings')).not.toContainText(m.karta.nadpis);
+    await expect(page.locator('#setup-pristup')).toBeHidden();
     await expect(page.locator('#settings-plant-hint')).toHaveText('Poloha, panely, menič, meranie a tarifa');
     expect(await page.evaluate((k) => localStorage.getItem(k), config.PRISTUP_STORAGE_KEY)).toBe(null);
     expect(errors).toEqual([]);
@@ -1873,10 +1874,41 @@ test('Späť v sekcii Appka zbalí položku a vráti na zoznam, nie na predchád
     expect(errors).toEqual([]);
 });
 
+test('Nastavenie: sekcie v poradí a s textami z jadra, farba pozadia sa dá vypnúť a ostane vypnutá', async ({ page }) => {
+    const errors = await openApp(page);
+    await page.locator('#nav-nastavenie').click();
+    const T = NASTAVENIE_TEXTS;
+    await expect(page.locator('#settings-title')).toHaveText(T.title);
+    // To isté poradie ako v Oblohe (NASTAVENIE_SEKCIE), sekcia Appka má dve položky.
+    expect(config.NASTAVENIE_SEKCIE).toEqual(['elektraren', 'doma', 'oznamenia', 'vzhlad', 'appka']);
+    await expect(page.locator('#setup-home .settings-text > b')).toHaveText([
+        T.elektraren,
+        T.doma[0],
+        oznameniaTexts().title,
+        T.vzhlad,
+        T.share.title,
+        T.clear.title,
+    ]);
+    await expect(page.locator('#app-items-title')).toHaveText(T.appka);
+    await expect(page.locator('#setup-home .app-credit')).toHaveText(T.credit);
+
+    await expect(page.locator('html')).toHaveAttribute('data-farba', 'zap');
+    await otvorPolozku(page, 'settings-vzhlad');
+    await page.locator('#vzhlad-body [data-farba]').uncheck();
+    await expect(page.locator('html')).toHaveAttribute('data-farba', 'vyp');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0a0a0a');
+    const look = () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), config.LOOK_STORAGE_KEY);
+    expect(await look()).toEqual({ ton: 'drzy', obloha: true, farba: false });
+    await page.reload();
+    await appReady(page);
+    await expect(page.locator('html')).toHaveAttribute('data-farba', 'vyp');
+    expect(errors).toEqual([]);
+});
+
 test('Späť zbalí každú položku Nastavenia; rozbalená je najviac jedna', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-nastavenie').click();
-    const polozky = ['settings-plant', 'settings-oznamenia', 'info-share', 'settings-clear'];
+    const polozky = ['settings-plant', 'settings-doma', 'settings-oznamenia', 'settings-vzhlad', 'info-share', 'settings-clear'];
     for (const id of polozky) {
         await page.locator(`#${id} > summary`).click();
         await expect(page.locator(`#${id}`)).toHaveAttribute('open', '');
@@ -2397,9 +2429,9 @@ test.describe('moja elektráreň', () => {
         expect((await ulozenaPoloha(page)).name).toBe('Sevilla');
         // Kto sprievodcu zavrie, má v Nastavení polohu a výzvu dokončiť elektráreň.
         await page.locator('#wz-close').click();
-        await expect(page.locator('#setup-site')).toContainText('Sevilla');
+        await expect(page.locator('#setup-cta-text')).toContainText('Poloha Sevilla je hotová.');
         await expect(page.locator('#setup-cta')).toBeVisible();
-        await expect(page.locator('#setup-overview')).toBeHidden();
+        await expect(page.locator('#setup-hero')).toBeHidden();
         await page.locator('#setup-cta [data-setup-go="start"]').click();
         await expect(page.locator('#wz-panel')).toBeVisible();
         expect(errors).toEqual([]);
@@ -2408,13 +2440,14 @@ test.describe('moja elektráreň', () => {
     test('len poloha: zmena polohy z Nastavenia uloží novú, panely ostávajú nezadané', async ({ page }) => {
         const errors = await openApp(page, { settings: null, site: SITE });
         await page.locator('#nav-nastavenie').click();
-        await expect(page.locator('#setup-site-name')).toHaveText(SITE.name);
-        await page.locator('#setup-site [data-setup-edit="lokalita"]').click();
+        await expect(page.locator('#setup-cta-text')).toContainText(`Poloha ${SITE.name} je hotová.`);
+        await otvorPolozku(page, 'settings-plant');
+        await page.locator('#setup-rows [data-setup-edit="lokalita"]').click();
         await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
         await expect(page.locator('#wz-next')).toBeDisabled();
         await vyberMiesto(page, 'Syd', 'Sydney');
         await dalej(page);
-        await expect(page.locator('#setup-site-name')).toHaveText('Sydney');
+        await expect(page.locator('#setup-cta-text')).toContainText('Poloha Sydney je hotová.');
         expect((await ulozenaPoloha(page)).name).toBe('Sydney');
         expect(await ulozene(page)).toBeNull();
         expect(errors).toEqual([]);
@@ -2614,7 +2647,7 @@ test.describe('moja elektráreň', () => {
         await dalej(page);
 
         await otvorPolozku(page, 'settings-plant');
-        await expect(page.locator('#setup-overview')).toBeVisible();
+        await expect(page.locator('#setup-rows')).toBeVisible();
         await expect(page.locator('#setup-note')).toHaveText('Uložené. Prepočítavam predpoveď.');
         await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
         const stored = await ulozene(page);
@@ -2729,7 +2762,10 @@ test.describe('moja elektráreň', () => {
         await otvorPolozku(page, 'settings-plant');
         await expect(page.locator('#setup-hero .big')).toHaveText('10,44 kWp');
 
-        await page.locator('#setup-rows [data-setup-edit="roof:1"]').click();
+        await page.locator('#setup-rows [data-setup-edit="panel"]').click();
+        await expect(page.locator('#wz-group-tabs [aria-pressed="true"]')).toHaveText('Výkon');
+        await page.locator('#wz-group-tabs [data-setup-tab="dalsia"]').click();
+        await page.locator('[data-setup-roof-edit="1"]').click();
         await expect(page.locator('#wz-step')).toHaveText('Úprava · Strecha');
         await expect(page.locator('#wz-roof-tabs')).toBeVisible();
         await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
@@ -2738,7 +2774,7 @@ test.describe('moja elektráreň', () => {
         await page.locator('[data-setup-tab="sklon"]').click();
         await page.locator('[data-setup-tilt="20"]').click();
         await dalej(page);
-        await expect(page.locator('#setup-overview')).toBeVisible();
+        await expect(page.locator('#setup-rows')).toBeVisible();
         const stored = await ulozene(page);
         expect(stored.strings[1]).toEqual({ panels: 8, azimuthDeg: 180, tiltDeg: 20 });
         expect(toUser(/** @type {any} */ (settingsFromLink(page.url()))), 'adresa nesie nové nastavenie').toEqual({
@@ -2928,7 +2964,7 @@ test.describe('moja elektráreň', () => {
 
         await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
         await page.locator('#wz-next').click();
-        await expect(page.locator('#setup-overview')).toBeVisible();
+        await expect(page.locator('#setup-rows')).toBeVisible();
         const row = page.locator('#setup-rows [data-setup-edit="tarifa"]');
         await expect(row).toContainText('3 pásma');
         await expect(row).toContainText('víkend inak');
@@ -2970,7 +3006,9 @@ test.describe('moja elektráreň', () => {
                 .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
         expect(await vazne()).toEqual([]);
         await otvorPolozku(page, 'settings-plant');
-        await page.locator('#setup-rows [data-setup-edit="roof:0"]').click();
+        await page.locator('#setup-rows [data-setup-edit="panel"]').click();
+        await page.locator('#wz-group-tabs [data-setup-tab="dalsia"]').click();
+        await page.locator('[data-setup-roof-edit="0"]').click();
         // Kompas z klávesnice: šípky otáčajú o 45°.
         await page.locator('[data-setup-az="180"]').focus();
         await page.keyboard.press('ArrowRight');
@@ -3289,7 +3327,7 @@ test.describe('vymazanie údajov', () => {
 
         await page.locator('#nav-nastavenie').click();
         await otvorPolozku(page, 'settings-clear');
-        page.once('dialog', (d) => d.accept());
+        await expect(page.locator('#clear-ask')).toHaveText(NASTAVENIE_TEXTS.clear.ask);
         await page.locator('#clear-data').click();
 
         await expect(page.locator('#wz-lokalita')).toBeVisible();
@@ -3315,14 +3353,14 @@ test.describe('vymazanie údajov', () => {
         expect(errors).toEqual([]);
     });
 
-    test('zrušenie otázky nič nezmaže', async ({ page }) => {
+    test('Nechať tak nič nezmaže a položku zbalí', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-nastavenie').click();
         await otvorPolozku(page, 'settings-clear');
-        page.once('dialog', (d) => d.dismiss());
-        await page.locator('#clear-data').click();
+        await expect(page.locator('#clear-cancel')).toHaveText(NASTAVENIE_TEXTS.clear.cancel);
+        await page.locator('#clear-cancel').click();
+        await expect(page.locator('#settings-clear')).not.toHaveAttribute('open');
         expect(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_STORAGE_KEY)).not.toBeNull();
-        await expect(page.locator('#settings-clear')).toBeVisible();
         expect(errors).toEqual([]);
     });
 });

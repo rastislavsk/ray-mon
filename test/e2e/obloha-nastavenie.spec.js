@@ -264,7 +264,7 @@ async function ocakavajKartu(page, panel) {
 test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, ktorú súčasná appka hneď vidí', async ({ page }) => {
     const errors = await openObloha(page);
     await nastavenie(page);
-    await expect(page.locator('#ns-home h2')).toHaveText('Moja strecha');
+    await expect(page.locator('#ns-home h2')).toHaveText('Moja elektráreň');
     await expect(page.locator('#ns-cta')).toBeHidden();
     await expect(page.locator('#ns-hero .kwp')).toHaveText('10,44 kWp');
     await expect(page.locator('#ns-hero')).toContainText('24 panelov · juh a východ · menič 10 kW');
@@ -272,8 +272,9 @@ test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, kt
     await expect(page.locator('#ns-hero .planes-compass')).toHaveAttribute('aria-label', /juh 16 panelov, východ 8 panelov/);
     await expect(page.locator('#ns-rows .it')).toHaveText([
         /Poloha.*Dvorany nad Nitrou/,
-        /Panely.*2 plochy · 435 Wp/,
-        /Živé meranie.*pripojené · 13:00/,
+        /Panely.*2 plochy · 24 × 435 Wp/,
+        /Menič.*10 kW/,
+        /Živé meranie.*Huawei · pripojené · 13:00/,
         /Tarifa.*2 pásma · lacno 20 h/,
     ]);
 
@@ -649,12 +650,18 @@ test.describe('len poloha', () => {
         await expect(page.locator('#ns-cta-steps')).toHaveAttribute('aria-label', 'Hotový 1 zo 7 krokov');
         await expect(page.locator('#ns-cta-steps i.on')).toHaveCount(1);
         await expect(page.locator('#ns-cta-steps i')).toHaveCount(7);
-        await expect(page.locator('#ns-cta-text')).toHaveText(/^Poloha je hotová\./);
+        await expect(page.locator('#ns-cta-text')).toHaveText(new RegExp(`^Poloha ${SITE.name} je hotová\.`));
         expect(await page.locator('#ns-cta').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
         expect(await pulz(page)).toEqual([{ name: 'pulse-card', iterations: 3 }]);
         await expect.poll(() => pulz(page), { timeout: 6000 }).toEqual([]);
         await expect(page.locator('#ns-hero')).toBeHidden();
-        await expect(page.locator('#ns-rows .it')).toHaveText([/Dvorany nad Nitrou/, /nezadané/, /nepripojené, nepovinné/, /nezadaná/]);
+        await expect(page.locator('#ns-rows .it')).toHaveText([
+            /Dvorany nad Nitrou/,
+            /nezadané/,
+            /nezadaný/,
+            /nepripojené, nepovinné/,
+            /nezadaná/,
+        ]);
         await page.locator('#ns-cta-btn').click();
         await obrazovka(page, 'panel');
         expect(errors).toEqual([]);

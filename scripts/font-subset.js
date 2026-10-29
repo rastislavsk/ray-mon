@@ -40,6 +40,8 @@ export const CHARS = [
     '°×·²–—‘’‚“„…‹›«»€→←↑↓−≈±',
     // Meny v Nastavení (shared/config.js, CURRENCIES): £ a zł.
     '£ł',
+    // Podpis v Nastavení (¯\_(ツ)_/¯). Katakanu ツ Archivo nemá - vykreslí ju záložné písmo.
+    '¯ツ',
 ].join('');
 
 /** @param {Uint8Array} bytes */

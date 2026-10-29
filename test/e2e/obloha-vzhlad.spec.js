@@ -1,10 +1,11 @@
 // E2E karty Nastavenie novej appky „Živá obloha“, krok 6b: Vzhľad (živá obloha, tón hlášok)
-// a Appka (Zdieľať appku, Nastaviť celé znova). Očakávané texty počítajú tie isté funkcie
+// a Appka (Zdieľať appku, Vymazať údaje). Očakávané texty počítajú tie isté funkcie
 // ako appka (shared/messages.js, mozemSkyModel), takže test odhalí rozdiel medzi modelom a stránkou.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
     LOOK_STORAGE_KEY,
+    NASTAVENIE_SEKCIE,
     OBLOHA_URL,
     PLANT,
     SETTINGS_STORAGE_KEY,
@@ -16,6 +17,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WORKER_PV_URL,
 } from '../../shared/config.js';
+import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
 import { voiceTexts } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
@@ -104,7 +106,7 @@ const modelMozem = (time, voice) =>
     );
 
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane; súčasná appka ostáva drzá', async ({ page }) => {
+    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane; platí aj v súčasnej appke', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
@@ -121,7 +123,7 @@ test.describe('tón hlášok', () => {
         await slusnyBtn.click();
         await expect(slusnyBtn).toHaveAttribute('aria-pressed', 'true');
         await expect(drzyBtn).toHaveAttribute('aria-pressed', 'false');
-        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true });
+        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true, farba: true });
 
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
@@ -134,12 +136,15 @@ test.describe('tón hlášok', () => {
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
 
-        // Súčasná appka nový kľúč nečíta a hovorí drzo.
+        // Tón je spoločný: súčasná appka hovorí slušne tiež a v jej Nastavení je vybraný Slušný.
         await otvorSucasnuAppku(page);
-        await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
+        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
         await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(drzy.word);
-        await expect(page.locator('#mozem-body')).not.toContainText(slusny.word);
+        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(slusny.word);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#settings-vzhlad > summary').click();
+        await expect(page.locator('#vzhlad-body [data-voice="slusny"]')).toBeChecked();
+        await expect(page.locator('#doma-title')).toHaveText('Čo máte doma');
         expect(errors).toEqual([]);
     });
 
@@ -186,7 +191,7 @@ test.describe('živá obloha', () => {
         await prepinac.click();
         await expect(prepinac).toHaveAttribute('aria-checked', 'false');
         await expect.poll(() => obloha(page)).toEqual(SKY.calm);
-        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'drzy', obloha: false });
+        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'drzy', obloha: false, farba: true });
         // Pokojná obloha nemá prechod.
         expect(await page.evaluate(() => getComputedStyle(document.documentElement).transitionDuration)).toBe('0s');
 
@@ -237,7 +242,11 @@ test.describe('zbaliteľné sekcie', () => {
         const errors = await openObloha(page);
         await karta(page, '7dni');
         await karta(page, 'nastavenie');
-        const sekcie = ['elektraren', 'vzhlad', 'oznamenia', 'appka'];
+        const sekcie = NASTAVENIE_SEKCIE;
+        // Poradie sekcií je to isté ako v súčasnej appke - dáva ho jadro.
+        expect(
+            await page.locator('[data-ns-fold]').evaluateAll((els) => els.map((e) => /** @type {HTMLElement} */ (e).dataset.nsFold)),
+        ).toEqual([...sekcie]);
         for (const key of sekcie) {
             await expect(page.locator(`#ns-fold-${key}`)).toHaveAttribute('aria-expanded', 'false');
             await expect(page.locator(`#ns-body-${key}`)).toBeHidden();
@@ -356,7 +365,7 @@ test.describe('Zdieľať appku', () => {
     });
 });
 
-test.describe('Nastaviť celé znova', () => {
+test.describe('Vymazať údaje', () => {
     test('po zrušení sa nič nezmení, po potvrdení je appka ako pri prvom otvorení', async ({ page }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
@@ -368,7 +377,8 @@ test.describe('Nastaviť celé znova', () => {
         await page.locator('#ns-reset').click();
         const okno = page.locator('#ns-reset-sheet');
         await expect(okno).toBeVisible();
-        await expect(page.locator('#ns-reset-text')).toContainText('v novej aj v súčasnej appke');
+        await expect(page.locator('#ns-reset-title')).toHaveText(NASTAVENIE_TEXTS.clear.ask);
+        await expect(page.locator('#ns-reset-text')).toHaveText(NASTAVENIE_TEXTS.clear.text);
         await page.locator('#ns-reset-cancel').click();
         await expect(okno).toBeHidden();
         await expect(page.locator('#ns-reset')).toBeFocused();
@@ -462,7 +472,7 @@ for (const width of [320, 390]) {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         expect(await page.evaluate(zlePrvky, '#ns-home')).toEqual([]);
-        for (const key of ['elektraren', 'vzhlad', 'oznamenia', 'appka']) {
+        for (const key of NASTAVENIE_SEKCIE) {
             await rozbal(page, key);
             expect(await page.evaluate(zlePrvky, '#ns-home'), key).toEqual([]);
         }

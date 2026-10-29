@@ -1,8 +1,9 @@
 // Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
 // setState (web/store.js) zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
 
+import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
-import { typicalSettings } from '../shared/settings.js';
+import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
 import { INFO_ITEMS, PANELS } from './dom.js';
@@ -70,6 +71,9 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   stavTip: boolean,
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
+ *   doma: string[],
+ *   voice: import('../shared/messages.js').Voice,
+ *   bgTint: boolean,
  * }} AppState
  * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
@@ -166,6 +170,12 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // oznámeniami telefón vie (web/oznamenia.js) - podľa spotrebičov ráta aj Plán dňa.
         oznamenia: oznameniaDefault(),
         oznamStav: /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
+        // Spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
+        doma: domaDefault(),
+        // Vzhľad (Nastavenie › Vzhľad): tón hlášok, spoločný s novou appkou, a farba pozadia podľa
+        // ceny - vypnutá je pozadie pokojne čierne. Uložený načíta app.js.
+        voice: DEFAULT_LOOK.voice,
+        bgTint: DEFAULT_LOOK.bgTint,
     };
 }
 

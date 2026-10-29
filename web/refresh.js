@@ -38,7 +38,7 @@ import {
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
  *   dayLog: import('../shared/daylog.js').DayLog,
- *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
+ *   doma: string[],
  *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
@@ -233,7 +233,7 @@ export function createRefresh(store) {
 function zapamatajRannu(store) {
     const s = store.get();
     if (!s.forecast) return;
-    const devices = s.oznamenia.devices;
+    const devices = s.doma;
     const date = localDateKey(s.now, s.site.timezone);
     const ranna = recordRanna(s.ranna, { date, devices, cls: denTrieda(s, devices), faza: denFaza(s) });
     if (ranna === s.ranna) return;

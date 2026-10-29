@@ -134,7 +134,7 @@ async function kazdaKarta(page, check) {
 
     await karta(page, 'nastavenie');
     await check('Nastavenie');
-    for (const key of ['elektraren', 'vzhlad', 'oznamenia']) {
+    for (const key of ['elektraren', 'doma', 'oznamenia', 'vzhlad']) {
         await rozbal(page, key);
         await check(`Nastavenie › ${key}`);
     }
@@ -146,7 +146,7 @@ async function kazdaKarta(page, check) {
     await page.locator('#ns-share-x').click();
     await page.locator('#ns-reset').click();
     await expect(page.locator('#ns-reset-sheet')).toBeVisible();
-    await check('Nastavenie › Nastaviť celé znova');
+    await check('Nastavenie › Vymazať údaje');
     await page.locator('#ns-reset-cancel').click();
     await rozbal(page, 'elektraren');
     await page.locator('#ns-rows [data-setup-edit]').first().click();

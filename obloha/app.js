@@ -7,6 +7,7 @@ import { createStore } from '../web/store.js';
 import {
     dropOldStored,
     loadDayLog,
+    loadDoma,
     loadRanna,
     loadLook,
     loadOdmietnutie,
@@ -49,13 +50,14 @@ const store = createStore(
         online: navigator.onLine,
         // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
         pristup: loadOdmietnutie(),
-        // Tón hlášok a živá obloha sú voľby len novej appky (vzhlad-v1).
+        // Tón hlášok (spoločný so súčasnou appkou) a živá obloha (len táto appka), vzhlad-v1.
         look: loadLook(),
         // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
         layout: layoutOf(window.innerWidth),
-        // Ranné oznámenie a spotrebiče doma - voľba telefónu, spoločná so súčasnou appkou (oznamenia-v1).
+        // Ranné oznámenie a spotrebiče doma - voľby telefónu, spoločné so súčasnou appkou.
         oznamenia: loadOznamenia(),
         oznamStav: oznamStav(),
+        doma: loadDoma(),
     }),
 );
 

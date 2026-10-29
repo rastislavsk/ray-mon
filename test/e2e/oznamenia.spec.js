@@ -3,6 +3,7 @@
 // hlášky, keď sa oznámenia zapnúť nedajú, a že service worker sa zaregistruje (jeho importy sedia).
 import { expect, test } from '@playwright/test';
 import {
+    DOMA_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
     PLANT,
     SETTINGS_STORAGE_KEY,
@@ -56,6 +57,8 @@ async function otvor(page, app, permission = 'default', answer = permission === 
 
 /** Uložená voľba oznámení. @param {import('@playwright/test').Page} page */
 const ulozene = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), OZNAMENIA_STORAGE_KEY);
+/** Uložené spotrebiče doma. @param {import('@playwright/test').Page} page */
+const doma = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), DOMA_STORAGE_KEY);
 
 /** Plán dňa, ako ho appka počíta so spotrebičmi doma. @param {string[]} devices */
 const plan = (devices) =>
@@ -69,9 +72,13 @@ test.describe('oznámenia: súčasná appka', () => {
         await expect(page.locator('#oznam-title')).toHaveText(T.title);
         await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
         await expect(page.locator('#oznam-body [data-oznam-hour="9"]')).toBeChecked();
+        await expect(page.locator('#oznam-body')).toContainText(T.uses);
         await page.locator('#oznam-body [data-oznam-hour="7"]').check();
-        await page.locator('#oznam-body [data-oznam-device="auto"]').uncheck();
-        await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 7, devices: ['pracka', 'umyvacka', 'susicka'] });
+        await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 7 });
+        await page.locator('#settings-doma summary').click();
+        await page.locator('#doma-body [data-doma="auto"]').uncheck();
+        await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka'] });
+        await expect(page.locator('#doma-hint')).toHaveText('Práčka, umývačka a sušička');
         await page.locator('#nav-terazky').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka'])?.rows ?? [];
         await expect(page.locator('.tz-plan-rows li')).toHaveText(
@@ -112,11 +119,11 @@ test.describe('oznámenia: Živá obloha', () => {
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
         await expect(page.locator('#ns-oznam-hour [aria-pressed="true"]')).toHaveText('9:00');
         await page.locator('#ns-oznam-hour [data-hour="8"]').click();
-        await page.locator('#ns-oznam-dev [data-device="bojler"]').click();
-        await expect(page.locator('#ns-oznam-dev [data-device="bojler"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect
-            .poll(() => ulozene(page))
-            .toEqual({ on: false, hour: 8, devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
+        await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 8 });
+        await page.locator('#ns-fold-doma').click();
+        await page.locator('#ns-doma [data-device="bojler"]').click();
+        await expect(page.locator('#ns-doma [data-device="bojler"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
         await page.locator('#nav-terazky').click();
         const os = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.lanes;
         await expect(page.locator('#tz-plan .tl-n')).toHaveText(os?.lanes.map((l) => l.name) ?? []);
@@ -170,7 +177,9 @@ test.describe('oznámenia: obe appky', () => {
                 [OZNAMENIA_STORAGE_KEY, JSON.stringify({ on: true, hour: 9, devices: ['pracka'] })],
             );
             await otvor(page, app, 'granted');
-            await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9, devices: ['pracka'] });
+            await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9 });
+            // Spotrebiče zo staršej verzie sa presunuli do Čo máš doma.
+            expect(await doma(page)).toEqual({ devices: ['pracka'] });
         });
     // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení), sw.js ale berie logo
     // z koreňa rozsahu, v ktorom ho appka zaregistrovala - stačí, že tam každá appka svoje má.
@@ -196,7 +205,9 @@ test.describe('oznámenia: obe appky', () => {
                 plant: {},
                 tariff: {},
                 known: 'elektraren',
-                oznamenia: { on: true, hour: 9, devices: ['pracka'] },
+                oznamenia: { on: true, hour: 9 },
+                doma: ['pracka'],
+                voice: 'drzy',
             };
             const store = { get: () => s, subscribe: (/** @type {any} */ fn) => fns.push(fn) };
             const nastav = (/** @type {any} */ patch) => {

@@ -2,27 +2,25 @@
 // funkcie bez DOM a siete - volá ich service worker (sw.js) v chvíli, keď ho Worker zobudí,
 // a appky v Nastavení. Plán počíta shared/plan-dna.js, vety skladá shared/messages-core.js.
 
-import { MOZEM_ITEMS, OZNAMENIA, PLAN_DNA, TARIFF_LIMITS } from './config.js';
+import { OZNAMENIA, TARIFF_LIMITS } from './config.js';
 import { oznameniaTexts, planNoticeText, reminderText } from './messages-core.js';
 import { dayCtx, planWindows } from './mozem.js';
 import { planDna } from './plan-dna.js';
 import { buildForecast, localMinutes } from './solar.js';
 
 /**
- * Voľba telefónu: oznámenie zapnuté, hodina (miestny čas, jedna z OZNAMENIA.hours) a spotrebiče,
- * ktoré človek má doma - s nimi ráta oznámenie aj Plán dňa na karte Môžem?.
- * @typedef {{ on: boolean, hour: number, devices: string[] }} Oznamenia
+ * Voľba telefónu: oznámenie zapnuté a hodina (miestny čas, jedna z OZNAMENIA.hours). Spotrebiče,
+ * s ktorými oznámenie ráta, sú v položke Čo máš doma (shared/doma.js).
+ * @typedef {{ on: boolean, hour: number }} Oznamenia
  */
 
-/** Pred prvou voľbou: vypnuté, predvolená hodina a spotrebiče plánu. @returns {Oznamenia} */
-export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour, devices: [...PLAN_DNA.devices] });
-
-/** Spotrebiče, ktoré sa dajú vybrať: veci karty, ktoré majú spotrebič. */
-export const OZNAMENIA_DEVICES = MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id);
+/** Pred prvou voľbou: vypnuté a predvolená hodina. @returns {Oznamenia} */
+export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour });
 
 /**
  * Uložená voľba (JSON z úložiska). Čokoľvek poškodené alebo neznáme sa nahradí predvolenou
- * hodnotou, nie zahodí celé - nová appka tak prečíta aj voľbu staršej.
+ * hodnotou, nie zahodí celé - nová appka tak prečíta aj voľbu staršej. Spotrebiče, ktoré v nej
+ * mala staršia verzia, presúva shared/doma.js.
  * @param {string | null} raw @returns {Oznamenia}
  */
 export function parseOznamenia(raw) {
@@ -34,14 +32,7 @@ export function parseOznamenia(raw) {
         return base;
     }
     if (!v || typeof v !== 'object') return base;
-    const devices = Array.isArray(v.devices)
-        ? v.devices.filter((/** @type {unknown} */ d) => OZNAMENIA_DEVICES.includes(String(d)))
-        : base.devices;
-    return {
-        on: v.on === true,
-        hour: OZNAMENIA.hours.includes(v.hour) ? v.hour : base.hour,
-        devices: [...new Set(/** @type {string[]} */ (devices))],
-    };
+    return { on: v.on === true, hour: OZNAMENIA.hours.includes(v.hour) ? v.hour : base.hour };
 }
 
 /**
@@ -119,12 +110,6 @@ export function morningDue(now, timeZone, hour) {
     const m = localMinutes(now, timeZone) - hour * 60;
     return m >= 0 && m < OZNAMENIA.stepMin;
 }
-
-/**
- * Pridá či uberie spotrebič zo spotrebičov doma.
- * @param {Oznamenia} o @param {string} id @returns {Partial<Oznamenia>}
- */
-export const prepniSpotrebic = (o, id) => ({ devices: o.devices.includes(id) ? o.devices.filter((d) => d !== id) : [...o.devices, id] });
 
 /**
  * Čo ukáže sekcia Oznámenia v oboch appkách: ktorá hláška (kľúč do oznameniaTexts().stav, prázdny

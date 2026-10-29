@@ -1,15 +1,15 @@
 // Poslucháče karty Nastavenie novej appky. Sprievodcu (aj riadky prehľadu, ktoré otvárajú jeho
 // kroky) obsluhuje web/setup-wiring.js - ten istý kód ako v súčasnej appke. Tu je len to, čím sa
 // nová appka líši: krok späť cez jej históriu, karta po odložení panelov, Escape a ponuka
-// prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Vzhľad a Appka: živá obloha,
-// tón hlášok, Zdieľať appku a Nastaviť celé znova.
+// prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
+// Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
 import { VOICES } from '../../shared/config.js';
 import { backAction } from '../../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from '../../web/setup-wiring.js';
-import { prepniSpotrebic } from '../../shared/oznamenia.js';
+import { prepniSpotrebic } from '../../shared/doma.js';
 import { nastavOznamenia, vypniOznamenia } from '../../web/oznamenia.js';
-import { clearStored, saveLook } from '../../web/storage.js';
+import { clearStored, saveDoma, saveLook } from '../../web/storage.js';
 import { stepBack } from './nav-back.js';
 import { NS_FOLDS, panelChange } from './state.js';
 
@@ -42,13 +42,14 @@ export function initNastavenie(store, dom, refresh) {
     });
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null }));
     initFolds(store, dom);
+    initDoma(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
 }
 
 /**
- * Zbaliteľné sekcie (Elektráreň, Vzhľad, Oznámenia, Appka). Rozbalenie je krok navigácie, zbalenie
+ * Zbaliteľné sekcie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad, Appka). Rozbalenie je krok navigácie, zbalenie
  * nadpisom ten istý krok ako tlačidlo Späť - inak by sekcia ostala v histórii a Späť by ju znovu rozbalilo.
  * @param {Store} store @param {Dom} dom
  */
@@ -67,8 +68,22 @@ function initFolds(store, dom) {
 const APP = 'obloha/';
 
 /**
- * Oznámenia: prepínač, hodina a spotrebiče doma. Zapnutie, vypnutie a uloženie je spoločné so
- * súčasnou appkou (web/oznamenia.js), voľba platí v oboch.
+ * Čo máš doma: spotrebič pridá či uberie a uloží - spoločné so súčasnou appkou (doma-v1).
+ * @param {Store} store @param {Dom} dom
+ */
+function initDoma(store, dom) {
+    dom.nsDoma.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-device]') : null;
+        if (!(btn instanceof HTMLElement) || !btn.dataset.device) return;
+        const doma = prepniSpotrebic(store.get().doma, btn.dataset.device);
+        saveDoma(doma);
+        store.setState({ doma });
+    });
+}
+
+/**
+ * Oznámenia: prepínač a hodina. Zapnutie, vypnutie a uloženie je spoločné so súčasnou appkou
+ * (web/oznamenia.js), voľba platí v oboch.
  * @param {Store} store @param {Dom} dom
  */
 function initOznam(store, dom) {
@@ -85,21 +100,17 @@ function initOznam(store, dom) {
         const btn = e.target instanceof Element ? e.target.closest('[data-hour]') : null;
         if (btn instanceof HTMLElement) nastav({ hour: Number(btn.dataset.hour) });
     });
-    dom.nsOznamDev.addEventListener('click', (e) => {
-        const btn = e.target instanceof Element ? e.target.closest('[data-device]') : null;
-        if (btn instanceof HTMLElement && btn.dataset.device) nastav(prepniSpotrebic(store.get().oznamenia, btn.dataset.device));
-    });
 }
 
 /**
- * Vzhľad: tón a živá obloha sa ukladajú pod vlastný kľúč novej appky (vzhlad-v1).
+ * Vzhľad (vzhlad-v1): tón je spoločný so súčasnou appkou, živá obloha len tejto. Ukladá sa len
+ * zmena - farbu pozadia súčasnej appky táto nepozná a nesmie ju prepísať.
  * @param {Store} store @param {Dom} dom
  */
 function initLook(store, dom) {
     /** @param {Partial<Pick<import('./state.js').AppState, 'voice' | 'liveSky'>>} patch */
     const look = (patch) => {
-        const s = { ...store.get(), ...patch };
-        saveLook({ voice: s.voice, liveSky: s.liveSky });
+        saveLook(patch);
         store.setState(patch);
     };
     dom.nsLiveSky.addEventListener('click', () => look({ liveSky: !store.get().liveSky }));
@@ -112,9 +123,8 @@ function initLook(store, dom) {
 
 /**
  * Okná sekcie Appka. Otvorenie je krok navigácie, zatvorenie (krížik, Escape, ťuknutie vedľa, Nechať
- * tak) ten istý krok ako tlačidlo Späť. Nastaviť celé znova po potvrdení zmaže všetko uložené
- * a obnoví stránku - appka naštartuje ako pri prvom otvorení, rovnako ako „Vymazať údaje“ v súčasnej
- * appke. Adresu treba vyčistiť tiež: nesie uložené nastavenie a appka by ho po obnovení ponúkla prevziať.
+ * tak) ten istý krok ako tlačidlo Späť. Vymazať údaje po potvrdení zmaže všetko uložené
+ * a obnoví stránku - appka naštartuje ako pri prvom otvorení, rovnako ako v súčasnej appke. Adresu treba vyčistiť tiež: nesie uložené nastavenie a appka by ho po obnovení ponúkla prevziať.
  * @param {Store} store @param {Dom} dom
  */
 function initAppSheets(store, dom) {

@@ -221,6 +221,11 @@
 :root[data-tier='grey'] {
     --tint-rgb: var(--grey-rgb);
 }
+/* Farba pozadia vypnutá v Nastavení › Vzhľad (data-farba zapisuje renderHeader): pokojná čierna. */
+:root[data-farba='vyp'] {
+    --bg-page: var(--bg);
+    --status-bar: var(--bg);
+}
 
 /* ---- Základ ---------------------------------------------------------------- */
 * {
@@ -2538,27 +2543,8 @@ b {
 .settings-body {
     padding: 0 16px 18px;
 }
-/* Položka Elektráreň nemá čo ukázať, kým je prehľad skrytý (panely nie sú zadané): výzva k sprievodcovi je nad ňou. */
-.plant-list:has(#setup-overview.hidden) {
-    display: none;
-}
 
-/* ---- Moja elektráreň (položka nastavenia) ----------------------------------- */
-.site-note {
-    display: grid;
-    gap: 2px;
-    margin-bottom: var(--sp-3);
-    padding: 12px 14px;
-    border-radius: var(--radius-md);
-    background: rgba(var(--amber-rgb), 0.1);
-    border: 1px solid rgba(var(--amber-rgb), 0.35);
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-}
-.site-note b {
-    color: var(--amber);
-    font-size: var(--fs-md);
-}
+/* ---- Moja elektráreň: polia sprievodcu -------------------------------------- */
 .field {
     display: grid;
     gap: 6px;
@@ -2781,9 +2767,40 @@ b {
     margin: 0;
     color: var(--ink-45);
 }
-.setup-cta .link-btn,
-.setup-overview > .link-btn {
+.setup-cta .link-btn {
     justify-self: center;
+}
+/* Koľko krokov sprievodcu ostáva: hotové zelené. */
+.setup-steps {
+    display: flex;
+    gap: 4px;
+}
+.setup-steps i {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ink-12);
+}
+.setup-steps i.on {
+    background: var(--green);
+}
+/* Hlásenie o prístupe k meraniu nad kartou elektrárne. */
+.setup-pristup {
+    display: grid;
+    gap: var(--sp-3);
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    border: 1px solid rgba(var(--red-rgb), 0.45);
+}
+/* Prevziať z odkazu a Prejsť sprievodcom znova pod riadkami Elektrárne. */
+.setup-actions {
+    display: grid;
+    gap: var(--sp-2);
+}
+.setup-actions:empty,
+.setup-home > .plant-note:empty {
+    display: none;
 }
 .setup-house {
     width: 100%;
@@ -4020,15 +4037,36 @@ b {
     font-size: var(--fs-md);
     color: var(--amber);
 }
-.oznam-lead,
 .oznam-note {
     margin: 0;
+    width: 100%;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+/* Nadpis skupiny volieb (Kedy, Tón hlášok) stojí vľavo, nie v strede položky. */
+.share-panel > .group-lbl {
+    align-self: stretch;
+    margin-top: 0;
+}
+/* Podtext pri voľbe (Ranný plán dňa, Farba pozadia). */
+.check-row small {
+    display: block;
+    font-size: var(--fs-sm);
+    color: var(--ink-45);
+}
+/* Zdieľať appku: veta nad voľbami a odkaz pod QR kódom. */
+.share-text {
+    margin: 0;
+    width: 100%;
     font-size: var(--fs-md);
     color: var(--ink-70);
 }
-.oznam-note {
-    font-size: var(--fs-sm);
+.share-link {
+    max-width: 100%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
     color: var(--ink-45);
+    overflow-wrap: anywhere;
 }
 
 /* ---- Ponuka prevziať nastavenie z odkazu ------------------------------------- */

@@ -1911,6 +1911,25 @@ button.live[aria-expanded='true'] {
 .set .it small.est {
     font-style: italic;
 }
+/* Neplatný prístup k meraniu v riadku Živé meranie. */
+.set .it small.err {
+    color: var(--costly-text);
+}
+/* Odkaz s nastavením pod výzvou - na bielej karte tmavý. */
+.cta .lnk {
+    justify-self: start;
+    color: var(--ink);
+}
+/* Podpis pod kartou, ako v súčasnej appke. Stojí priamo na oblohe, preto biely (kontrast). */
+.nast .credit {
+    margin: 0;
+    font-size: 0.75rem;
+    text-align: center;
+    color: #fff;
+}
+.nast .credit:first-of-type {
+    margin-top: 16px;
+}
 .nast .note {
     padding-top: 10px;
 }
@@ -3104,7 +3123,7 @@ button.live[aria-expanded='true'] {
 }
 
 /* ===== Nastavenie › Oznámenia ===== */
-/* Hláška, prečo sa oznámenia nedajú zapnúť, a riadok o súkromí. Spotrebiče sa pri úzkom displeji zalomia. */
+/* Hláška, prečo sa oznámenia nedajú zapnúť, riadok o spotrebičoch a o súkromí. */
 .oznam-stav,
 .oznam-note {
     margin: 0;
@@ -3115,9 +3134,7 @@ button.live[aria-expanded='true'] {
 .oznam-stav {
     color: #fff;
 }
-.set .it.oznam-dev {
-    flex-wrap: wrap;
-}
-.oznam-dev .minis {
+/* Spotrebiče v Čo máš doma sa pri úzkom displeji zalomia. */
+.minis.wrap {
     flex-wrap: wrap;
 }
