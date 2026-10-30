@@ -66,6 +66,12 @@ function initDays(store, dom) {
 
 /** @param {Store} store @param {Dom} dom @param {ReturnType<typeof initDays>} days */
 function initNavigation(store, dom, days) {
+    // Iná karta začína navrchu. Prepnutie kartu aj tak vráti do východiskového stavu (zavrie
+    // detail dňa, rozbalené časti), takže stará pozícia by mierila do iného obsahu. Platí aj
+    // pre Späť. Dni v detaile dňa listuje day-pager.js a pozíciu na stránke nechávajú tak.
+    store.subscribe((state, prev) => {
+        if (state.panel !== prev.panel) window.scrollTo(0, 0);
+    });
     document.addEventListener('click', (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
