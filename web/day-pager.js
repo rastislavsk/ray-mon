@@ -19,7 +19,7 @@ import { DAY_PAGER } from '../shared/config.js';
 import { pagerAxis, pagerOffset, pagerSettleMs, pagerTarget, pagerVelocity } from '../shared/day-pager.js';
 
 /** @typedef {{ index: number, count: number }} Day otvorený deň a počet dní v predpovedi */
-/** @typedef {{ track: HTMLElement, area: HTMLElement, commit: (index: number) => void }} BandOpts */
+/** @typedef {{ track: HTMLElement, commit: (index: number) => void }} BandOpts */
 
 /** Krivka dojazdu: rýchly štart, mäkké dosadnutie. */
 const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
@@ -30,7 +30,7 @@ const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)'
  * Pás s dňom: posun, kópie susedných dní vedľa neho a dojazd na miesto.
  * @param {BandOpts} o
  */
-function createBand({ track, area, commit }) {
+function createBand({ track, commit }) {
     /** @type {{ timer: number, done: () => void } | null} */
     let anim = null;
     let shown = 0;
@@ -47,15 +47,10 @@ function createBand({ track, area, commit }) {
         move(0);
     };
 
-    /** Nový deň začína na rovnakej výške, kým je začiatok detailu vidno; inak stránka vyskočí hore k nemu. */
-    const keepTop = () => {
-        const top = area.getBoundingClientRect().top;
-        if (top < 0) window.scrollBy(0, top - DAY_PAGER.gapPx * 6);
-    };
-
+    // Nový deň ostáva na rovnakej výške stránky ako predošlý - kto si odscrolloval dole, chce
+    // porovnať to isté miesto v ďalšom dni. Stránka preto po prelistovaní nikam neskáče.
     return {
         move,
-        keepTop,
         /** Kópia dňa vedľa skutočného: `dir` -1 vľavo, 1 vpravo. @param {HTMLElement} el @param {number} dir @param {number} width */
         place(el, dir, width) {
             for (const n of [el, ...el.querySelectorAll('[id]')]) n.removeAttribute('id');
@@ -76,7 +71,6 @@ function createBand({ track, area, commit }) {
                 // tým na jednu snímku preblikol starý deň.
                 if (to !== from) commit(to);
                 clear();
-                if (to !== from) keepTop();
             };
             const ms = reducedMotion() ? 0 : pagerSettleMs(x - shown, width);
             if (!ms) return done();
@@ -215,7 +209,7 @@ function bindTouch(area, track, band, day, snapshot) {
  * @returns {{ goTo: (index: number) => void }}
  */
 export function initDayPager({ area, keys, track, day, snapshot, commit }) {
-    const band = createBand({ track, area, commit });
+    const band = createBand({ track, commit });
     bindTouch(area, track, band, day, snapshot);
 
     /** Skok na deň z čipu, tlačidla susedného dňa alebo klávesnice - s tým istým dojazdom ako po ťahu. @param {number} to */
@@ -223,10 +217,7 @@ export function initDayPager({ area, keys, track, day, snapshot, commit }) {
         band.finish();
         const d = day();
         if (!d || to === d.index || to < 0 || to >= d.count) return;
-        if (reducedMotion()) {
-            commit(to);
-            return band.keepTop();
-        }
+        if (reducedMotion()) return commit(to);
         const width = track.clientWidth;
         const dir = to > d.index ? 1 : -1;
         band.place(snapshot([to])[0], dir, width);
