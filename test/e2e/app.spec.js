@@ -1990,6 +1990,22 @@ test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
         expect(errors).toEqual([]);
     });
 
+    /** Kto si v detaile odscrolloval dole, ostane po prelistovaní na rovnakej výške - stránka neskočí hore. */
+    test('po ťahu na ďalší deň stránka ostane odscrollovaná, kde bola', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 500 });
+        const errors = await openApp(page);
+        await otvorDen(page, 2);
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        const pred = await page.evaluate(() => window.scrollY);
+        expect(pred, 'detail dňa musí byť vyšší ako obrazovka, inak test nič neoverí').toBeGreaterThan(100);
+        const box = await page.locator('#week-track').boundingBox();
+        if (!box) throw new Error('Pás dňa nie je vidno');
+        await tah(page, { x: box.x + box.width / 2 + 110, y: 400, dx: -220 });
+        await ocakavajDetailDna(page, 3);
+        expect(await page.evaluate(() => window.scrollY)).toBe(pred);
+        expect(errors).toEqual([]);
+    });
+
     /** Rýchlosť švihu meria appka z časov dotykových udalostí. Dotyky cez CDP majú skutočný čas
      * aj s réžiou testu, takže by pod záťažou celej sady aj rýchly švih vyšiel ako pomalý ťah.
      * Udalosti preto vznikajú priamo v stránke, 20 ms po sebe. */
