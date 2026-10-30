@@ -222,7 +222,7 @@ test.describe('živá obloha', () => {
 });
 
 test.describe('úvodná karta', () => {
-    test('obe appky sa otvárajú na Teraz(kách), voľba v Nastavení nie je a stará uložená sa zmaže', async ({ page }) => {
+    test('obe appky sa otvárajú na karte Teraz, voľba v Nastavení nie je a stará uložená sa zmaže', async ({ page }) => {
         await page.addInitScript(() => localStorage.setItem('prva-karta-v1', 'mozem'));
         const errors = await openObloha(page);
         await expect(page.locator('#panel-terazky')).toBeVisible();

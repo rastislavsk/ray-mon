@@ -71,7 +71,7 @@ function initNavigation(store, dom, days) {
         // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
         // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
         // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
-        // Pás „Meranie treba pripojiť znova“ (aj pás odhadu na karte Terazky pri odmietnutom prístupe):
+        // Pás „Meranie treba pripojiť znova“ (aj pás odhadu na karte Teraz pri odmietnutom prístupe):
         // v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom - v tom istom kroku ako prepnutie karty.
         /** @type {Partial<import('./state.js').AppState>} */
         const pristup = target.closest('[data-pristup-go]') ? { infoOpen: 'plant' } : {};
@@ -85,7 +85,7 @@ function initNavigation(store, dom, days) {
         if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
             store.setState({ ...panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)), ...pristup });
         }
-        // Pás odhadu na karte Terazky: jeden krok navigácie do Nastavenia, bez merania rovno na krok
+        // Pás odhadu na karte Teraz: jeden krok navigácie do Nastavenia, bez merania rovno na krok
         // Meranie sprievodcu (ako výzva v Štatistike), pri odmietnutom prístupe na hlásenie vyššie.
         // To isté robí tlačidlo v bubline stavu merania v hlavičke.
         const noteBtn = target.closest('#tz-note-btn, #pv-tip-btn');

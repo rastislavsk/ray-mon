@@ -264,7 +264,7 @@ function fromBase64Url(token) {
 /**
  * Časť adresy za mriežkou s nastavením (`#nastavenie=…`). Bez nastavenia prázdny reťazec.
  * Adresa, ktorú appka zrkadlí sama (`vlastna`), nesie pri nastavení značku VLASTNA_HASH_KEY.
- * Staršie odkazy niesli aj prvú kartu (`&prva=…`); appka sa dnes otvára vždy na Teraz(kách),
+ * Staršie odkazy niesli aj prvú kartu (`&prva=…`); appka sa dnes otvára vždy na karte Teraz,
  * takže ju z odkazu nečíta.
  * @param {Settings | null} settings @param {boolean} withZdroj pribaliť aj prístup k živému meraniu
  * @param {boolean} [vlastna]

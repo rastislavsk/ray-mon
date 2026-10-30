@@ -266,7 +266,7 @@ function renderCurve(state, day, progress, detail, dom) {
     const m = weekCurveModel(state);
     writeHtml(dom.weekCurve, m ? forecastChartSvg(m) : '', 'weekCurve');
     if (m) dom.weekCurve.setAttribute('viewBox', `0 0 ${m.dims.w} ${m.dims.h}`);
-    // Detail dňa má namiesto krivky graf dňa ako karta Terazky - ten istý ako v detaile dňa novej
+    // Detail dňa má namiesto krivky graf dňa ako karta Teraz - ten istý ako v detaile dňa novej
     // appky (sedemDayChart). Ktorý z nich vidno, rozhoduje CSS podľa .detail.
     const chart = detail ? sedemDayChart(/** @type {import('../../shared/sedem-dni.js').SedemData} */ (state), state.weekSelDay) : null;
     writeHtml(dom.weekDayChart, chart ? dayChartHtml(chart) : '', 'weekDayChart');

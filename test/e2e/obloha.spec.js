@@ -959,14 +959,14 @@ test.describe('karta Teraz', () => {
     /** @type {Record<string, string | null>} */
     const pasma = { '13:00': 'sun', '19:30': 'cheap', '20:45': 'costly', '02:00': 'cheap', '08:00': null };
     for (const [hm, tone] of Object.entries(pasma)) {
-        test(`o ${hm} ukazuje ten istý výkon, vetu a odporúčanie ako model aj karta Terazky súčasnej appky`, async ({ page }) => {
+        test(`o ${hm} ukazuje ten istý výkon, vetu a odporúčanie ako model aj karta Teraz súčasnej appky`, async ({ page }) => {
             const time = at(hm);
             const errors = await openTeraz(page, { time });
             const vstup = vstupTeraz(time);
             const m = terazModel(vstup);
             const hero = heroModel(vstup);
             await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
-            // Pri čerstvom meraní je to presne heroModel - to isté, čo počíta karta Terazky.
+            // Pri čerstvom meraní je to presne heroModel - to isté, čo počíta karta Teraz.
             expect(m.num).toBe(hero.powerText);
             await expect(page.locator('#tz-chips .chip')).toHaveText(m.say?.chips.map((c) => c.text) ?? []);
             // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa. V noci je „teraz“ mimo osi

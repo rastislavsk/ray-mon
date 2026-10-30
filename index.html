@@ -64,7 +64,7 @@
                     <button type="button" class="pv-tip-btn hidden" id="pv-tip-btn"></button>
                 </div>
             </div>
-            <!-- Pás pod hlavičkou na kartách Terazky a Môžem?: bez zadaných panelov jantárový (trieda odhad,
+            <!-- Pás pod hlavičkou na kartách Teraz a Môžem?: bez zadaných panelov jantárový (trieda odhad,
                  karty odpovedajú z typickej strechy a pás povie s čím), keď výrobca prestal prijímať prístup
                  k meraniu (shared/pristup.js), červený. Texty píše render. -->
             <div class="panels-bar hidden" id="panels-bar">
@@ -85,11 +85,11 @@
             </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
-                    <!-- Terazky sú v navigácii prvé a appka sa na nich vždy otvára (PANELS v shared/config.js),
+                    <!-- Teraz je v navigácii prvá a appka sa na nej vždy otvára (PANELS v shared/config.js),
                          Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
                     <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
-                        <span class="lbl">Terazky</span>
+                        <span class="lbl">Teraz</span>
                     </button>
                     <button id="nav-mozem" class="nav-item" type="button" data-panel="mozem">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -335,7 +335,7 @@
                                     ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
                                 </div>
                             </div>
-                            <!-- Detail dňa na mobile: graf dňa ako na karte Terazky (web/day-chart.js) namiesto
+                            <!-- Detail dňa na mobile: graf dňa ako na karte Teraz (web/day-chart.js) namiesto
                              krivky nad ním; ktorý platí, rozhoduje CSS podľa .detail. -->
                             <div id="week-day-chart" class="tz-chart" role="img"></div>
                             <p id="week-day-legend" class="tz-legend"></p>

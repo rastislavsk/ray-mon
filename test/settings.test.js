@@ -259,7 +259,7 @@ test('prvá karta už do odkazu nejde; starší odkaz s ňou sa prečíta rovnak
     assert.equal(shareHash(null, true), '');
     assert.match(shareUrl('https://x.test/', DVORANY, true), /^https:\/\/x\.test\/#nastavenie=[\w-]+$/);
     const stary = `${shareUrl('https://x.test/', DVORANY, true)}&prva=mozem`;
-    assert.deepEqual(settingsFromLink(stary), DVORANY, 'appka sa otvára na Terazkách, nastavenie z odkazu platí');
+    assert.deepEqual(settingsFromLink(stary), DVORANY, 'appka sa otvára na karte Teraz, nastavenie z odkazu platí');
 });
 
 test('parseLook: chýbajúci či neplatný vzhľad je predvolený, každá voľba zvlášť', () => {

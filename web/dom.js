@@ -10,12 +10,12 @@ const byId = (/** @type {string} */ id) => {
 };
 
 // Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: mozem = „Môžem?", terazky = „Terazky", 7dni = „7 dní",
+// preto tu ostáva mapovanie: mozem = „Môžem?", terazky = „Teraz" (v súčasnej appke kedysi Terazky), 7dni = „7 dní",
 // statistika = „Štatistika", nastavenie = „Nastavenie". Popiska je text pre používateľa a mení
 // sa podľa chuti; kódový názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí
 // naháňať.
 // Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka).
-// Môžem? je v navigácii prvá, appka sa ale otvára na karte Terazky (initialState).
+// Môžem? je v navigácii prvá, appka sa ale otvára na karte Teraz (initialState).
 // Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
 export { PANELS };
 
@@ -64,7 +64,7 @@ function headerDom() {
     };
 }
 
-/** Karta Terazky: nosiče, do ktorých píše render/terazky.js (rovnaké ako karta Teraz novej appky). */
+/** Karta Teraz: nosiče, do ktorých píše render/terazky.js (rovnaké ako karta Teraz novej appky). */
 function terazkyDom() {
     return {
         tzTitle: byId('tz-title'),

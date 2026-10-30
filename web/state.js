@@ -99,7 +99,7 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
     const start = saved || (site ? typicalSettings(site) : emptySettings());
     return {
         now,
-        // Appka sa otvára vždy na prvej karte (Terazky), bez polohy v sprievodcovi.
+        // Appka sa otvára vždy na prvej karte (Teraz), bez polohy v sprievodcovi.
         panel: welcome ? 'nastavenie' : PANELS[0],
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
@@ -115,10 +115,10 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         weekDetail: null,
         // Stránka pásu odporúčaní na karte Dnes (nastavenie vnútri karty, nie krok navigácie).
         terazPage: 0,
-        // Zoznam pod grafom dňa na karte Terazky (legenda časovej osi): na začiatku zatvorený a neukladá sa.
+        // Zoznam pod grafom dňa na karte Teraz (legenda časovej osi): na začiatku zatvorený a neukladá sa.
         // Otvorený je krok navigácie - Späť ho zbalí.
         tzListOpen: false,
-        // Plán dňa na karte Terazky: pri štarte vždy zbalený, aby bol graf pri čísle
+        // Plán dňa na karte Teraz: pri štarte vždy zbalený, aby bol graf pri čísle
         // (docs/navrhy/teraz-plan-rozbalovaci.html). Otvorený je krok navigácie - Späť ho zbalí.
         tzPlanOpen: false,
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
@@ -204,7 +204,7 @@ export function panelChange(from, to) {
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
  * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka Nastavenia, otvorený Plán dňa
- * a zoznam pod grafom na karte Terazky. Zvyšok stavu (vybraný deň, stránka
+ * a zoznam pod grafom na karte Teraz. Zvyšok stavu (vybraný deň, stránka
  * pásu odporúčaní, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
@@ -271,7 +271,7 @@ export function navStepFrom(raw) {
  * ani rozbalenú položku Nastavenia nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
  * a chýbajúca položka tiež `null`, teda nič rozbalené. Položka zo staršej verzie so zrušenou
  * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu. Otvorený Plán dňa
- * a zoznam pod grafom patria len karte Terazky; položka zo staršej verzie ich nepozná - sú zbalené.
+ * a zoznam pod grafom patria len karte Teraz; položka zo staršej verzie ich nepozná - sú zbalené.
  * @param {unknown} step @returns {NavStep | null}
  */
 function navStepIn(step) {

@@ -1,6 +1,6 @@
 // Karta Môžem?: jednoduchá odpoveď pre celú rodinu - môžem teraz zapnúť práčku, a keď nie,
 // tak kedy. Čisté funkcie bez DOM. Stojí na pláne dňa (shared/day-plan.js), takže „áno“ tu
-// je tá istá zelená ako v grafe dňa na karte Teraz(ky); ďalšie dni berie z predpovede.
+// je tá istá zelená ako v grafe dňa na karte Teraz; ďalšie dni berie z predpovede.
 // Texty skladá shared/messages.js, tu sa len počíta.
 
 import {
@@ -339,7 +339,7 @@ function emptyHead(loading, noPanels, voice) {
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
  * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`), takže karta nikde
- * nepovie nič iné než plán. Karty Teraz(ky) kreslia plán s vetou nad ním (`planHead`), pod číslom
+ * nepovie nič iné než plán. Karty Teraz v oboch appkách kreslia plán s vetou nad ním (`planHead`), pod číslom
  * štítky (`chips`) a len tú časť vety, ktorá plán neopakuje (`say`). Karta Dnes ukazuje, čo dá
  * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input

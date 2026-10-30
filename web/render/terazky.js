@@ -1,4 +1,4 @@
-// Karta Terazky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, štítky a veta
+// Karta Teraz súčasnej appky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, štítky a veta
 // o teraz, Plán dňa ako plagát (docs/navrhy/terazky-plan-dna.html, možnosť A; večer na ďalší deň,
 // plan-dna-zajtra.html), graf dňa s pásom
 // plánu a náhľad iného času. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js - ten istý model ako

@@ -641,7 +641,7 @@ b {
     /* Kvôli prechodu medzi kartami (panel-in-* nižšie): posunutá karta na okamih presiahne
        stránku do strany a bez orezania by sa dala vodorovne poscrollovať. Zámerne "clip",
        nie "hidden": hidden by zo stránky urobil scrollovací kontajner aj zvislo a to by
-       rozbilo garancie o výške karty Terazky (viď @media nižšie). Clip len oreže. */
+       rozbilo garancie o výške karty Teraz (viď @media nižšie). Clip len oreže. */
     overflow-x: clip;
 }
 
@@ -707,7 +707,7 @@ b {
     color: var(--ink-45);
 }
 
-/* ---- Terazky ---------------------------------------------------------------
+/* ---- Teraz ---------------------------------------------------------------
    Rozloženie karty Teraz z novej appky vo farbách tejto (návrh A v docs/navrhy/terazky-ako-obloha.html):
    číslo kW s riadkami pod ním, graf dňa s pásom plánu a pás odporúčaní. Graf kreslí web/day-chart.js
    (spoločný s novou appkou), farby pásu sú tie isté ako všade tu: zelená slnko stačí, jantárová
@@ -2035,7 +2035,7 @@ b {
     font-weight: 500;
     color: var(--ink-45);
 }
-/* Detail dňa na mobile má graf dňa (ako karta Terazky), ostatné pohľady krivku s jej legendou. */
+/* Detail dňa na mobile má graf dňa (ako karta Teraz), ostatné pohľady krivku s jej legendou. */
 #panel-7dni.detail .curve-block .chart-card,
 #panel-7dni.detail .curve-block .chart-footer,
 #panel-7dni:not(.detail) #week-day-chart,
@@ -4563,7 +4563,7 @@ b {
         height: 26px;
         margin: -13px 0 0 -13px;
     }
-    /* Karta Terazky: vľavo číslo a graf dňa, vpravo Plán dňa. */
+    /* Karta Teraz: vľavo číslo a graf dňa, vpravo Plán dňa. */
     #panel-terazky {
         display: grid;
         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -4613,7 +4613,7 @@ b {
    a karty vyplnia výšku okna. Grafy sa tak samy natiahnu na veľkom monitore
    a stlačia na nízkom notebooku.
 
-   Meranie pred touto zmenou: karty Terazky a Zdieľať sa zmestili už predtým
+   Meranie pred touto zmenou: karty Teraz a Zdieľať sa zmestili už predtým
    (na 1920x1080 im ostávalo 347 px prázdneho miesta), pretekala len karta 7 dní
    a to o 97 az 409 px podľa výšky okna. */
 @media (min-width: 1024px) {
@@ -4637,7 +4637,7 @@ b {
         padding-bottom: var(--sp-3);
         /* Stránka je tu položkou zvislého flexu a `margin: 0 auto` (vystredenie na širokom
            monitore) jej vypína naťahovanie na šírku rodiča - bez tohto by si šírku vzala
-           podľa obsahu. Karta Terazky pritom vlastnú šírku nemá: graf dňa je
+           podľa obsahu. Karta Teraz pritom vlastnú šírku nemá: graf dňa je
            `container-type: inline-size`, takže do nej nepočíta. Stránka by sa scvrkla na
            svoje okraje. */
         width: 100%;

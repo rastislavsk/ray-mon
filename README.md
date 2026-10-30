@@ -12,15 +12,15 @@ z Open-Meteo a živé meranie jej sprostredkuje Cloudflare Worker.
 
 Spodná navigácia má pod každou ikonou meno karty (na desktope je meno vedľa ikony).
 
-|                Terazky                 |               Dnes                |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
-| :------------------------------------: | :-------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
-| ![Karta Terazky](docs/img/terazky.png) | ![Karta Dnes](docs/img/mozem.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
+|                Teraz                 |               Dnes                |               7 dní               |                  Štatistika                  |                  Nastavenie                  |
+| :----------------------------------: | :-------------------------------: | :-------------------------------: | :------------------------------------------: | :------------------------------------------: |
+| ![Karta Teraz](docs/img/terazky.png) | ![Karta Dnes](docs/img/mozem.png) | ![Karta 7 dní](docs/img/7dni.png) | ![Karta Štatistika](docs/img/statistika.png) | ![Karta Nastavenie](docs/img/nastavenie.png) |
 
 Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrárne – čísla na nich
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
-- **Terazky** – karta je v navigácii prvá a appka sa na nej otvára (každý telefón si to môže
+- **Teraz** – karta je v navigácii prvá a appka sa na nej otvára (každý telefón si to môže
   zmeniť v Nastavení). Rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
   výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, štítky (ÁNO, LACNÁ SIEŤ…)
   a veta o teraz („Slnko to teraz platí za nás.“). Pod nimi **Plán dňa** ako plagát v štýle
@@ -66,7 +66,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   rovno ten krok v Nastavení.
 - **Nastavenie** – moja elektráreň. Pri prvom otvorení sa appka spýta len na polohu; panely
   môže človek nastaviť hneď, alebo ich odložiť – vtedy karta 7 dní ukazuje predpoveď pre
-  typickú strechu v jeho polohe a karty Terazky a Dnes z nej odpovedajú, s jantárovým pásom,
+  typickú strechu v jeho polohe a karty Teraz a Dnes z nej odpovedajú, s jantárovým pásom,
   že je to odhad, a tlačidlom panely zadať.
   Karta ponúka **sprievodcu**: sedem krokov s jednou
   otázkou na obrazovku a ukazovateľom postupu. Poloha kdekoľvek na svete (vyhľadávanie
@@ -83,7 +83,7 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   appkách; v Živej oblohe sa rovnako zbaľujú sekcie Elektráreň, Vzhľad, Oznámenia a Appka).
   Rozbalená je najviac jedna položka. Nastavenie sa ukladá len v prehliadači.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Appka sa otvára vždy
-  na karte Terazky. **Zdieľať appku**: QR kód,
+  na karte Teraz. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
   nastavenie elektrárne, voliteľne aj so živým meraním. Kto taký odkaz otvorí (alebo ho
   prilepí do Nastavenia), dostane ponuku nastavenie prevziať; appka ho bez potvrdenia neuloží.

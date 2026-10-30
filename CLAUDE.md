@@ -97,7 +97,7 @@ s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `style.css` 
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
 posunúť stránku – patrí len úchytkám na ťahanie (kruh rozvrhu tarify v sprievodcovi). Plochy,
-cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Terazky / Teraz, pás dňa
+cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Teraz, pás dňa
 `.day-track` v detaile dňa karty 7 dní): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
