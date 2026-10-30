@@ -25,7 +25,6 @@ test('setState zlúči zmenu a zavolá odberateľa presne raz', () => {
     assert.equal(calls, 1);
     assert.equal(store.get().panel, '7dni');
     assert.equal(store.get().weekSelDay, 3);
-    assert.equal(store.get().terazPage, 0, 'pás odporúčaní začína na prvej stránke');
     // Rozmery okna prichádzajú zvonku, stav si ich nedomýšľa.
     assert.equal(store.get().wide, false);
     assert.equal(store.get().tall, false);
@@ -106,7 +105,7 @@ test('krok navigácie pre tlačidlo Späť je karta, otvorený detail, obrazovka
         legend: false,
     });
     // Vybraný deň, stránka pásu odporúčaní ani náhľad času nie sú miesto v appke - Späť sa na ne nevracia.
-    assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, terazPage: 2, previewMinutes: 600 })));
+    assert.ok(sameNavStep(navStep(state), navStep({ ...state, weekSelDay: 4, previewMinutes: 600 })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, panel: '7dni' })));
     assert.ok(!sameNavStep(navStep(state), navStep({ ...state, weekDetail: 'day' })));
     // Detail dňa a detail týždňa sú dve rôzne miesta, nie jedno "otvorené".

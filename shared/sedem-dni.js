@@ -37,7 +37,9 @@ import {
     voiceTexts,
     weekMessage,
 } from './messages.js';
-import { planWindows } from './mozem.js';
+import { mainWindow, planWindows, sunWindows } from './mozem.js';
+
+export { mainWindow, sunWindows };
 import { offlineLead } from './mozem-sky.js';
 import { skyWeather } from './sky.js';
 import { daylightSpan, localDateKey, localMinutes } from './solar.js';
@@ -82,16 +84,6 @@ export function dayWeather(day) {
 export function dayHeadSub(day) {
     const weather = dayWeather(day);
     return [weather ? SKY_WORDS[weather] : '', dayTempText(day)].filter(Boolean).join(' · ');
-}
-
-/** Okná na veľké veci: zelené úseky plánu dňa. @param {import('./day-plan.js').PlanSlot[]} plan @returns {Window[]} */
-export function sunWindows(plan) {
-    return planWindows(plan, (s) => s.tier === 'green');
-}
-
-/** Hlavné okno dňa: najdlhšie, pri rovnakej dĺžke skoršie. @param {Window[]} windows @returns {Window | null} */
-export function mainWindow(windows) {
-    return windows.reduce((best, w) => (!best || w.to - w.from > best.to - best.from ? w : best), /** @type {Window | null} */ (null));
 }
 
 /**

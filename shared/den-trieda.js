@@ -4,6 +4,7 @@
 // Čisté funkcie bez DOM; úložisko rannej triedy rieši web/refresh.js.
 
 import { DEN_TRIEDA, PLAN_DNA } from './config.js';
+import { forecastDayPlan } from './day-plan.js';
 import { dayCtx } from './mozem.js';
 import { chosen, najlepsiDen } from './plan-dna.js';
 import { localDateKey, localMinutes, sunTimes } from './solar.js';
@@ -24,10 +25,29 @@ export const DEN_TRIEDY = ['vyborny', 'dobry', 'slaby', 'nanic'];
  * @returns {DenTrieda}
  */
 export function denTrieda(input, devices) {
-    const ctx = { ...dayCtx(input), nowMin: 0 };
+    return triedaOf({ ...dayCtx(input), nowMin: 0 }, input.tariff.currency, devices);
+}
+
+/**
+ * Trieda iného dňa predpovede (`index` v `forecast.days`, napr. zajtrajška na karte Dnes večer):
+ * ten istý výpočet z plánu toho dňa, ako ho rozvrhuje Plán dňa (shared/plan-dna.js, ineDni).
+ * @param {import('./day-plan.js').PlanInput & { forecast: import('./solar.js').Forecast }} input @param {number} index
+ * @param {readonly string[]} devices spotrebiče doma @returns {DenTrieda}
+ */
+export function denTriedaDna(input, index, devices) {
+    const ctx = dayCtx(input);
+    const day = input.forecast.days[index];
+    const plan = forecastDayPlan(input, index);
+    return triedaOf({ ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw }, input.tariff.currency, devices);
+}
+
+/**
+ * Trieda dňa z jeho kontextu (rozpočet slnka od polnoci): koľko spotrebičov sa za deň zmestí na slnko.
+ * @param {import('./mozem.js').DayCtx} ctx @param {string} currency @param {readonly string[]} devices @returns {DenTrieda}
+ */
+function triedaOf(ctx, currency, devices) {
     const own = chosen(devices);
     const list = own.length ? own : chosen(PLAN_DNA.devices);
-    const currency = input.tariff.currency;
     const fit = najlepsiDen(ctx, currency, list).length;
     if (!fit) return 'nanic';
     if (fit < list.length) return 'slaby';

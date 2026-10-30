@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dnes: tri smery</title>
+        <style>
+            /* Návrh: tri smery úpravy karty Dnes (kódové meno mozem) po dizajnérskom posudku.
+   A upratať, B okno ako hrdina plagátu, C karta podľa časti dňa. Hlavičku, oblúk slnka
+   a navigáciu do telefónov dopĺňa skript na konci podľa data-atribútov. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            :root {
+                color-scheme: dark;
+                --page: #0e1229;
+                --line: rgba(255, 255, 255, 0.12);
+                --text: #f3f1fb;
+                --muted: rgba(243, 241, 251, 0.66);
+                --yes: #b9f28c;
+                --bad: #ff9b8a;
+                --amber: #ffc94a;
+                --green: #a8f05a;
+                --font: system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 56px 0 6px;
+                padding-top: 24px;
+                border-top: 1px solid var(--line);
+            }
+            h3 {
+                font-size: 16px;
+                margin: 24px 0 6px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            b,
+            strong {
+                color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                margin-top: 20px;
+                align-items: flex-start;
+            }
+            .phone p,
+            .phone li,
+            .phone b,
+            .desk p,
+            .desk li {
+                color: inherit;
+            }
+            .cap {
+                font-size: 13px;
+                color: var(--muted);
+                margin: 8px 0 0;
+                max-width: 340px;
+            }
+            .cap b {
+                display: block;
+                color: var(--text);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 13px;
+                color: var(--text);
+            }
+
+            /* Telefón */
+            .phone {
+                width: 340px;
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                overflow: hidden;
+                padding: 16px 14px 18px;
+                display: flex;
+                flex-direction: column;
+            }
+            .phone .body {
+                flex: 1;
+            }
+            .hdr {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                font-size: 12px;
+            }
+            .hdr .brand b {
+                display: block;
+                font-size: 15px;
+                letter-spacing: 0.08em;
+            }
+            .hdr .brand span {
+                opacity: 0.7;
+                font-size: 10.5px;
+            }
+            .hdr .clock {
+                border-radius: 999px;
+                padding: 4px 10px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .hdr .clock::before {
+                content: '';
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yes);
+                margin-right: 6px;
+            }
+            .arc {
+                display: block;
+                width: 100%;
+                height: auto;
+                margin: 4px 0 2px;
+            }
+            .nav {
+                display: flex;
+                justify-content: space-around;
+                margin: 16px -14px -18px;
+                padding: 10px 4px 12px;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+                font-size: 10.5px;
+                text-align: center;
+            }
+            .t .nav {
+                background: #0b0e0a;
+            }
+            .o .nav {
+                background: #233a63;
+            }
+            .nav span {
+                opacity: 0.6;
+                flex: 1;
+            }
+            .nav span::before {
+                content: '';
+                display: block;
+                width: 16px;
+                height: 16px;
+                margin: 0 auto 4px;
+                border: 1.5px solid currentColor;
+                border-radius: 5px;
+            }
+            .nav .on {
+                opacity: 1;
+                font-weight: 700;
+            }
+            .t .nav .on {
+                color: var(--green);
+            }
+            .o .nav .on {
+                color: #c8f59e;
+            }
+
+            /* Súčasná appka */
+            .t {
+                background: radial-gradient(120% 50% at 30% 0%, #1d2a17, #0b0e0a 70%);
+                font-family: 'Space Grotesk', var(--font);
+            }
+            .t.night {
+                background: radial-gradient(120% 50% at 30% 0%, #2a1814, #0b0a0a 70%);
+            }
+            .t .hdr {
+                font-family: var(--mono);
+            }
+            .t .poster {
+                border-radius: 26px;
+                padding: 16px 18px 16px;
+                color: #101010;
+                background: var(--amber);
+                margin-top: 10px;
+            }
+            .t .poster.green {
+                background: var(--green);
+            }
+            .kick {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .t .word {
+                font-size: 46px;
+                font-weight: 700;
+                line-height: 0.95;
+                letter-spacing: -0.03em;
+                text-transform: uppercase;
+                margin: 6px 0 12px;
+            }
+            .t .word.sm {
+                font-size: 30px;
+            }
+            .lead {
+                font-size: 15px;
+                margin: 0;
+            }
+            .eq {
+                list-style: none;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin: 10px 0 0;
+                padding: 10px 0 0;
+                border-top: 2px solid currentColor;
+            }
+            .eq li {
+                color: inherit;
+            }
+            .eq b {
+                display: block;
+                font-size: 20px;
+                line-height: 1.1;
+                color: inherit;
+            }
+            .eq span {
+                display: block;
+                font-size: 12px;
+                line-height: 1.25;
+                margin-top: 2px;
+                opacity: 0.85;
+            }
+            .card {
+                border-radius: 20px;
+                padding: 14px 16px;
+                margin-top: 10px;
+            }
+            .t .card {
+                background: #121611;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+            .card .rttl {
+                font: 500 11px var(--mono);
+                letter-spacing: 0.14em;
+                opacity: 0.75;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+            }
+            .o .card .rttl {
+                font:
+                    700 11px 'Archivo',
+                    var(--font);
+            }
+            .card p {
+                margin: 0;
+                color: inherit;
+                font-size: 14px;
+            }
+            .card p + p {
+                margin-top: 8px;
+            }
+            .bar {
+                height: 8px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.1);
+                margin: 8px 0 0;
+                overflow: hidden;
+            }
+            .bar i {
+                display: block;
+                height: 100%;
+                background: var(--green);
+            }
+            .o .bar i {
+                background: #c8f59e;
+            }
+            .strip {
+                display: flex;
+                gap: 10px;
+                overflow: hidden;
+                margin-right: -14px;
+            }
+            .strip .card {
+                flex: 0 0 86%;
+            }
+            .dots {
+                text-align: center;
+                font-size: 10px;
+                letter-spacing: 4px;
+                opacity: 0.7;
+                margin-top: 8px;
+            }
+            .nw {
+                white-space: nowrap;
+            }
+
+            /* Živá obloha */
+            .o {
+                background: linear-gradient(180deg, #2b63c8 0%, #3f7fd0 55%, #5590c9 100%);
+                font-family: 'Archivo', var(--font);
+            }
+            .o.dawn {
+                background: linear-gradient(180deg, #3b3f6e 0%, #8a6f8e 55%, #d59a8a 100%);
+            }
+            .o.night {
+                background: linear-gradient(180deg, #0c1534 0%, #18265a 60%, #283a72 100%);
+            }
+            .o .word {
+                font-size: 42px;
+                font-weight: 900;
+                font-stretch: 125%;
+                line-height: 0.98;
+                margin: 4px 0 10px;
+            }
+            .o .word.sm {
+                font-size: 28px;
+            }
+            .o .eq {
+                border-top: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            .o .card {
+                background: rgba(14, 36, 80, 0.42);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }
+            .o .scrim {
+                background: rgba(14, 36, 80, 0.28);
+                border-radius: 14px;
+                padding: 8px 10px;
+                margin: 10px -4px 0;
+            }
+            .o .scrim .eq {
+                border-top: 0;
+                margin-top: 0;
+                padding-top: 0;
+            }
+            .o .scrim .eq span {
+                font-size: 13px;
+                opacity: 0.95;
+            }
+            .o .chip {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 800;
+                border-radius: 999px;
+                padding: 2px 10px;
+                color: #12305e;
+                background: var(--amber);
+            }
+            .o .chip.green {
+                background: #c8f59e;
+            }
+
+            /* Smer B: akčná veta a malý riadok čísel */
+            .act {
+                border-radius: 16px;
+                padding: 10px 12px;
+                margin-top: 2px;
+            }
+            .t .act {
+                background: #101010;
+                color: var(--amber);
+            }
+            .o .act {
+                background: #c8f59e;
+                color: #12305e;
+            }
+            .act .what {
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                opacity: 0.85;
+            }
+            .act .when {
+                font-size: 26px;
+                font-weight: 800;
+                line-height: 1.1;
+                white-space: nowrap;
+            }
+            .act .rest {
+                font-size: 14px;
+            }
+            .tiny {
+                font-size: 12.5px;
+                margin: 10px 0 0;
+                padding-top: 8px;
+                border-top: 1.5px solid currentColor;
+                color: inherit;
+            }
+            .o .tiny {
+                border-top: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            .oneline {
+                display: flex;
+                gap: 10px;
+                align-items: baseline;
+                margin-top: 12px;
+                padding: 10px 14px;
+                border-radius: 16px;
+                font-size: 14px;
+            }
+            .t .oneline {
+                background: #121611;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+            }
+            .o .oneline {
+                background: rgba(14, 36, 80, 0.42);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }
+            .oneline .k {
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                opacity: 0.75;
+                white-space: nowrap;
+            }
+
+            /* Smer C: odpočítavanie a zajtrajšok */
+            .count {
+                font-size: 54px;
+                font-weight: 800;
+                line-height: 1;
+                letter-spacing: -0.03em;
+                margin-top: 6px;
+            }
+            .o .count {
+                font-weight: 900;
+                font-stretch: 115%;
+                font-size: 50px;
+            }
+            .count small {
+                font-size: 22px;
+            }
+            .tom {
+                border-radius: 22px;
+                padding: 14px 16px;
+                margin-top: 12px;
+            }
+            .t .tom {
+                background: var(--green);
+                color: #101010;
+            }
+            .o .tom {
+                background: rgba(200, 245, 158, 0.18);
+                border: 1px solid rgba(200, 245, 158, 0.6);
+            }
+            .phone .tom .word {
+                font-size: 26px;
+                margin: 4px 0 6px;
+            }
+            .grade {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                font-size: 14px;
+                margin-top: 8px;
+            }
+            .grade b {
+                font-size: 26px;
+                color: inherit;
+            }
+
+            /* Poznámky v telefóne */
+            .note {
+                display: inline-block;
+                font: 600 10.5px var(--font);
+                color: #12305e;
+                background: #fff3a8;
+                border-radius: 6px;
+                padding: 1px 6px;
+                margin: 8px 0 0;
+            }
+
+            /* Desktop */
+            .desk {
+                width: 760px;
+                max-width: 100%;
+                border-radius: 18px;
+                border: 1px solid var(--line);
+                padding: 16px 18px 18px;
+            }
+            .desk .cols {
+                display: grid;
+                grid-template-columns: 1.15fr 1fr;
+                gap: 14px;
+                align-items: start;
+            }
+
+            /* Tabuľka */
+            table {
+                border-collapse: collapse;
+                margin-top: 10px;
+                font-size: 14px;
+                width: 100%;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 8px 14px 8px 0;
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--muted);
+                font-weight: 500;
+            }
+            td {
+                color: var(--muted);
+            }
+            td:first-child {
+                color: var(--text);
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            .q {
+                border-left: 3px solid var(--yes);
+                padding: 4px 0 4px 12px;
+                margin-top: 16px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Karta Dnes: tri smery</h1>
+            <p>
+                Po dizajnérskom posudku. Hlavný problém karty: jediná rada, podľa ktorej sa dá konať, teda <b>okno na veľké veci</b>, je
+                schovaná v druhom riadku orezanej karty pásu. Najlepšie miesto plagátu zaberajú mobily, km a CO2, podľa ktorých sa nič
+                nerozhoduje. Ďalej riadok s časom a miestom nad slovom (opakuje hlavičku), pás, ktorého druhú kartu nikto nenájde, večer
+                opačné poradie a predpoveď dvakrát v inej presnosti.
+            </p>
+            <p>
+                Situácia ako v testovacích dátach: Dvorany nad Nitrou, slnko 06:09 – 19:24, dobrý deň, predpoveď 61,4 kWh, okno na veľké
+                veci 09:00 – 17:30. Zajtrajšie čísla (okno 08:15 – 17:00, 55 kWh) sú vymyslené pre ukážku. Tón drzý.
+            </p>
+
+            <h2>Dnes (pre porovnanie)</h2>
+            <div class="row">
+                <div>
+                    <div class="phone t" data-time="13:00" data-sun="0.517" data-win="0.215,0.857">
+                        <div class="poster">
+                            <div class="kick">Dnes · 13:00 · Dvorany nad Nitrou</div>
+                            <div class="word">Not baaad dneskaj</div>
+                            <p class="lead">Dnes zo strechy asi 61 kWh. To je:</p>
+                            <ul class="eq">
+                                <li><b>~4 090</b><span>nabitých mobilov</span></li>
+                                <li><b>~370 km</b><span>elektrickým autom</span></li>
+                                <li><b>~4,0 kg</b><span>CO2eq menej</span></li>
+                            </ul>
+                        </div>
+                        <div class="strip">
+                            <div class="card">
+                                <div class="rttl">Dnešok</div>
+                                <p>Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.</p>
+                                <div class="bar"><i style="width: 52%"></i></div>
+                                <p>Okno na veľké veci 09:00 – 17:30.</p>
+                            </div>
+                            <div class="card">
+                                <div class="rttl">Kedy lepšie</div>
+                                <p>Dnes je silný deň.</p>
+                            </div>
+                        </div>
+                        <div class="dots">● ○</div>
+                    </div>
+                    <p class="cap"><b>Súčasná appka, 13:00</b>Odpoveď začína v tretine obrazovky, okno je až v páse.</p>
+                </div>
+                <div>
+                    <div class="phone o" data-time="13:00" data-sun="0.517" data-win="0.215,0.857">
+                        <div class="word">Not baaad dneskaj</div>
+                        <p class="lead">Dnes zo strechy asi 61 kWh. To je:</p>
+                        <ul class="eq">
+                            <li><b>~4 090</b><span>nabitých mobilov</span></li>
+                            <li><b>~370 km</b><span>elektrickým autom</span></li>
+                            <li><b>~4,0 kg</b><span>CO2eq menej</span></li>
+                        </ul>
+                        <div class="strip">
+                            <div class="card">
+                                <div class="rttl">Dnešok</div>
+                                <p>Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.</p>
+                                <div class="bar"><i style="width: 52%"></i></div>
+                                <p>Okno na veľké veci 09:00 – 17:30.</p>
+                            </div>
+                            <div class="card">
+                                <div class="rttl">Kedy lepšie</div>
+                                <p>Dnes je silný deň.</p>
+                            </div>
+                        </div>
+                        <div class="dots">● ○</div>
+                    </div>
+                    <p class="cap"><b>Živá obloha, 13:00</b>Malé biele písmo na svetlej oblohe, pod pásom prázdno.</p>
+                </div>
+            </div>
+
+            <!-- ================================================================== -->
+            <h2>A – Upratať</h2>
+            <p>
+                Len kabát, nič nové sa nepočíta. Riadok <code>DNES · 13:00 · MIESTO</code> zmizne (ako na Teraz v #396). Pás sa zruší: karty
+                Dnešok a Kedy lepšie stoja pod sebou na každej šírke, bez bodiek a bez vodorovného ťahu. <b>Po západe slnka</b> ide Kedy
+                lepšie prvá. Čísla sú zoznam (čítačka ich oddelí), v Živej oblohe dostanú tmavší podklad kvôli kontrastu. Na počítači
+                súčasnej appky plagát vľavo, karty vpravo.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone t" data-time="13:00" data-sun="0.517" data-win="0.215,0.857">
+                        <div class="poster">
+                            <div class="word">Not baaad dneskaj</div>
+                            <p class="lead">Dnes zo strechy asi 61 kWh. To je:</p>
+                            <ul class="eq">
+                                <li><b>~4 090</b><span>nabitých mobilov</span></li>
+                                <li><b>~370 km</b><span>elektrickým autom</span></li>
+                                <li><b>~4,0 kg</b><span>CO₂eq menej</span></li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Dnešok</div>
+                            <p>Predpoveď 61 kWh, už nabehlo 31,7 kWh.</p>
+                            <div class="bar"><i style="width: 52%"></i></div>
+                            <p>Okno na veľké veci <span class="nw">09:00 – 17:30</span>.</p>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Kedy lepšie</div>
+                            <p>Dnes je silný deň. Ďalší taký: piatok, okolo 58 kWh.</p>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Súčasná appka, 13:00</b>Slovo hneď pod oblúkom. Karty pod sebou, presahujú obrazovku o ~110 px.</p>
+                </div>
+                <div>
+                    <div class="phone t night" data-time="20:30" data-sun="night">
+                        <div class="poster">
+                            <div class="word">Not baad, zer gút</div>
+                            <p class="lead">Dnes zo strechy 58 kWh. To je:</p>
+                            <ul class="eq">
+                                <li><b>~3 900</b><span>nabitých mobilov</span></li>
+                                <li><b>~350 km</b><span>elektrickým autom</span></li>
+                                <li><b>~3,8 kg</b><span>CO₂eq menej</span></li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Kedy lepšie</div>
+                            <p>Najbližší silný deň: zajtra, okolo 55 kWh.</p>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Dnešok</div>
+                            <p>Nabehlo 58,2 kWh z predpovede 61 kWh.</p>
+                            <div class="bar"><i style="width: 95%"></i></div>
+                            <p>Okno na veľké veci bolo <span class="nw">09:00 – 17:30</span>.</p>
+                        </div>
+                        <span class="note">večer: Kedy lepšie ide prvá</span>
+                    </div>
+                    <p class="cap"><b>Súčasná appka, 20:30</b>Po západe slnka je dôležitejšie, čo bude, než čo bolo.</p>
+                </div>
+                <div>
+                    <div class="phone o" data-time="13:00" data-sun="0.517" data-win="0.215,0.857">
+                        <div class="word">Not baaad dneskaj</div>
+                        <p class="lead">Dnes zo strechy asi 61 kWh. To je:</p>
+                        <div class="scrim">
+                            <ul class="eq">
+                                <li><b>~4 090</b><span>nabitých mobilov</span></li>
+                                <li><b>~370 km</b><span>elektrickým autom</span></li>
+                                <li><b>~4,0 kg</b><span>CO₂eq menej</span></li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Dnešok</div>
+                            <p>Predpoveď 61 kWh, už nabehlo 31,7 kWh.</p>
+                            <div class="bar"><i style="width: 52%"></i></div>
+                            <p>Okno na veľké veci <span class="nw">09:00 – 17:30</span>.</p>
+                        </div>
+                        <div class="card">
+                            <div class="rttl">Kedy lepšie</div>
+                            <p>Dnes je silný deň. Ďalší taký: piatok, okolo 58 kWh.</p>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Živá obloha, 13:00</b>Prázdne miesto pod pásom zaplnia karty. Čísla na tmavšom podklade.</p>
+                </div>
+            </div>
+            <h3>Počítač, súčasná appka</h3>
+            <div class="row">
+                <div class="desk t">
+                    <div class="cols">
+                        <div class="poster" style="margin-top: 0">
+                            <div class="word">Not baaad dneskaj</div>
+                            <p class="lead">Dnes zo strechy asi 61 kWh. To je:</p>
+                            <ul class="eq">
+                                <li><b>~4 090</b><span>nabitých mobilov</span></li>
+                                <li><b>~370 km</b><span>elektrickým autom</span></li>
+                                <li><b>~4,0 kg</b><span>CO₂eq menej</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="card" style="margin-top: 0">
+                                <div class="rttl">Dnešok</div>
+                                <p>Predpoveď 61 kWh, už nabehlo 31,7 kWh.</p>
+                                <div class="bar"><i style="width: 52%"></i></div>
+                                <p>Okno na veľké veci <span class="nw">09:00 – 17:30</span>.</p>
+                            </div>
+                            <div class="card">
+                                <div class="rttl">Kedy lepšie</div>
+                                <p>Dnes je silný deň. Ďalší taký: piatok, okolo 58 kWh.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="cap" style="max-width: 760px">Dnes má karta na 1440 px šírku 560 px a 60 % plochy ostáva prázdnych.</p>
+
+            <!-- ================================================================== -->
+            <h2>B – Okno ako hrdina plagátu</h2>
+            <p>
+                Slovo ostáva. Hneď pod ním <b>jedna akčná veta</b>: kedy dnes pustiť veľké veci a koľko času ešte zostáva. Večer tá istá
+                veta hovorí o zajtrajšku. Mobily, km a CO₂ sa zmenšia do jedného riadku pod čiarou spolu s tým, koľko už nabehlo, takže
+                predpoveď je na karte raz. Oblúk vyznačí okno popiskami na jeho krajoch. Pás zmizne, Kedy lepšie je jeden riadok pod
+                plagátom.
+            </p>
+            <div class="row">
+                <div>
+                    <div class="phone t" data-time="13:00" data-sun="0.517" data-win="0.215,0.857" data-labels="1">
+                        <div class="poster">
+                            <div class="word">Not baaad dneskaj</div>
+                            <div class="act">
+                                <div class="what">Veľké veci</div>
+                                <div class="when">09:00 – 17:30</div>
+                                <div class="rest">ešte 4 h 30 min</div>
+                            </div>
+                            <p class="tiny">Nabehlo 31,7 z ~61 kWh · ~4 090 mobilov · ~370 km autom · ~4 kg CO₂</p>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Ďalší silný deň: piatok, ~58 kWh.</span></div>
+                    </div>
+                    <p class="cap"><b>Súčasná appka, 13:00</b>Kedy pustiť práčku vidno za 2 sekundy. Celá karta sa zmestí na obrazovku.</p>
+                </div>
+                <div>
+                    <div class="phone t night" data-time="20:30" data-sun="night">
+                        <div class="poster">
+                            <div class="word">Not baad, zer gút</div>
+                            <div class="act">
+                                <div class="what">Zajtra veľké veci</div>
+                                <div class="when">08:15 – 17:00</div>
+                                <div class="rest">okolo 55 kWh</div>
+                            </div>
+                            <p class="tiny">Dnes 58,2 z predpovede 61 kWh · ~3 900 mobilov · ~350 km autom · ~3,8 kg CO₂</p>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Zajtra je silný deň.</span></div>
+                    </div>
+                    <p class="cap"><b>Súčasná appka, 20:30</b>Večer sa veta prepne na zajtrajšok, dnešok ostane v malom riadku.</p>
+                </div>
+                <div>
+                    <div class="phone o" data-time="13:00" data-sun="0.517" data-win="0.215,0.857" data-labels="1">
+                        <div class="word">Not baaad dneskaj</div>
+                        <div class="act">
+                            <div class="what">Veľké veci</div>
+                            <div class="when">09:00 – 17:30</div>
+                            <div class="rest">ešte 4 h 30 min</div>
+                        </div>
+                        <div class="scrim">
+                            <p class="tiny" style="border: 0; margin: 0; padding: 0">
+                                Nabehlo 31,7 z ~61 kWh · ~4 090 mobilov · ~370 km autom · ~4 kg CO₂
+                            </p>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Ďalší silný deň: piatok, ~58 kWh.</span></div>
+                    </div>
+                    <p class="cap"><b>Živá obloha, 13:00</b>Akčná veta v zelenej pilulke ako „teraz“ na karte Teraz.</p>
+                </div>
+                <div>
+                    <div class="phone o night" data-time="20:30" data-sun="night">
+                        <div class="word">Not baad, zer gút</div>
+                        <div class="act">
+                            <div class="what">Zajtra veľké veci</div>
+                            <div class="when">08:15 – 17:00</div>
+                            <div class="rest">okolo 55 kWh</div>
+                        </div>
+                        <div class="scrim">
+                            <p class="tiny" style="border: 0; margin: 0; padding: 0">
+                                Dnes 58,2 z predpovede 61 kWh · ~3 900 mobilov · ~350 km autom · ~3,8 kg CO₂
+                            </p>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Zajtra je silný deň.</span></div>
+                    </div>
+                    <p class="cap"><b>Živá obloha, 20:30</b></p>
+                </div>
+            </div>
+
+            <!-- ================================================================== -->
+            <h2>C – Karta podľa časti dňa</h2>
+            <p>
+                Časť dňa je už v jadre (<code>denFaza</code>: ráno pred východom, deň, večer po západe). Podľa nej sa mení celá kostra
+                karty, nie len slovo: <b>ráno plán</b>, <b>cez deň odpočítavanie</b>, <b>večer vysvedčenie a zajtrajšok</b>. Živá obloha
+                dostane farbu triedy dňa ako čip, aby slabý a výborný deň nevyzerali rovnako. Vždy jedno veľké číslo a jedna veta, žiadny
+                zoznam spotrebičov.
+            </p>
+            <h3>Súčasná appka</h3>
+            <div class="row">
+                <div>
+                    <div class="phone t night" data-time="05:45" data-sun="dawn" data-win="0.215,0.857" data-labels="1">
+                        <div class="poster">
+                            <div class="kick">Plán na dnes</div>
+                            <div class="word">Not baaad dneskaj</div>
+                            <p class="lead">Strecha dá okolo <b>61 kWh</b>.</p>
+                            <p class="tiny">Veľké veci daj medzi <b class="nw">09:00 – 17:30</b>.</p>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Ďalší silný deň: piatok, ~58 kWh.</span></div>
+                    </div>
+                    <p class="cap"><b>Ráno, 05:45</b>Plán: koľko a kedy.</p>
+                </div>
+                <div>
+                    <div class="phone t" data-time="13:00" data-sun="0.517" data-win="0.215,0.857" data-labels="1">
+                        <div class="poster">
+                            <div class="kick">Not baaad dneskaj</div>
+                            <div class="count">4 h 30 <small>min</small></div>
+                            <p class="lead">ešte slnka na veľké veci, do 17:30</p>
+                            <p class="tiny">Nabehlo 31,7 z ~61 kWh</p>
+                            <div class="bar" style="background: rgba(0, 0, 0, 0.15)">
+                                <i style="width: 52%; background: #101010"></i>
+                            </div>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Dnes je silný deň.</span></div>
+                    </div>
+                    <p class="cap"><b>Deň, 13:00</b>Odpočítavanie, slovo sa zmenší na štítok. Oblúk funguje ako hodiny.</p>
+                </div>
+                <div>
+                    <div class="phone t night" data-time="20:30" data-sun="night">
+                        <div class="poster">
+                            <div class="kick">Vysvedčenie</div>
+                            <div class="word sm">Not baad, zer gút</div>
+                            <div class="grade"><span>Dnes zo strechy</span><b>58,2 kWh</b></div>
+                            <p class="tiny">predpoveď bola 61 kWh · ~3 900 mobilov · ~350 km autom</p>
+                        </div>
+                        <div class="tom">
+                            <div class="kick">Zajtra</div>
+                            <div class="word">Oskar pujde na plný koule</div>
+                            <p class="lead">Okolo 55 kWh, veľké veci <b class="nw">08:15 – 17:00</b>.</p>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Večer, 20:30</b>Dnešok uzavretý, zajtrajšok so svojím slovom aj farbou.</p>
+                </div>
+            </div>
+            <h3>Živá obloha</h3>
+            <div class="row">
+                <div>
+                    <div class="phone o dawn" data-time="05:45" data-sun="dawn" data-win="0.215,0.857" data-labels="1">
+                        <span class="chip">dobrý deň</span>
+                        <div class="kick" style="margin-top: 8px">Plán na dnes</div>
+                        <div class="word">Not baaad dneskaj</div>
+                        <p class="lead">Strecha dá okolo <b>61 kWh</b>.</p>
+                        <div class="act" style="margin-top: 10px">
+                            <div class="what">Veľké veci</div>
+                            <div class="when">09:00 – 17:30</div>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Ďalší silný deň: piatok, ~58 kWh.</span></div>
+                    </div>
+                    <p class="cap"><b>Ráno, 05:45</b>Čip s triedou dňa nesie farbu, ktorú súčasná appka dáva celému plagátu.</p>
+                </div>
+                <div>
+                    <div class="phone o" data-time="13:00" data-sun="0.517" data-win="0.215,0.857" data-labels="1">
+                        <span class="chip">Not baaad dneskaj</span>
+                        <div class="count">4 h 30 <small>min</small></div>
+                        <p class="lead">ešte slnka na veľké veci, do 17:30</p>
+                        <div class="scrim">
+                            <p class="tiny" style="border: 0; margin: 0; padding: 0">Nabehlo 31,7 z ~61 kWh</p>
+                            <div class="bar"><i style="width: 52%"></i></div>
+                        </div>
+                        <div class="oneline"><span class="k">Kedy lepšie</span><span>Dnes je silný deň.</span></div>
+                    </div>
+                    <p class="cap"><b>Deň, 13:00</b></p>
+                </div>
+                <div>
+                    <div class="phone o night" data-time="20:30" data-sun="night">
+                        <div class="kick">Vysvedčenie</div>
+                        <div class="word sm">Not baad, zer gút</div>
+                        <div class="grade"><span>Dnes zo strechy</span><b>58,2 kWh</b></div>
+                        <div class="scrim">
+                            <p class="tiny" style="border: 0; margin: 0; padding: 0">
+                                predpoveď bola 61 kWh · ~3 900 mobilov · ~350 km autom
+                            </p>
+                        </div>
+                        <div class="tom">
+                            <span class="chip green">zajtra výborný deň</span>
+                            <div class="word">Oskar pujde na plný koule</div>
+                            <p class="lead">Okolo 55 kWh, veľké veci <b class="nw">08:15 – 17:00</b>.</p>
+                        </div>
+                    </div>
+                    <p class="cap"><b>Večer, 20:30</b></p>
+                </div>
+            </div>
+
+            <!-- ================================================================== -->
+            <h2>Porovnanie</h2>
+            <table>
+                <tr>
+                    <th></th>
+                    <th>Výhody</th>
+                    <th>Nevýhody</th>
+                    <th>Jadro (<code>shared/</code>)</th>
+                    <th>Práca</th>
+                </tr>
+                <tr>
+                    <td>A Upratať</td>
+                    <td>Malé riziko, nič nové sa nepočíta. Rieši riadok navyše, skrytú kartu pásu, desktop, čítačku a nadpisy.</td>
+                    <td>Okno na veľké veci ostane v menšej karte. Na mobile súčasnej appky karta presiahne obrazovku.</td>
+                    <td>Len poradie kariet podľa <code>denFaza</code>.</td>
+                    <td>½–1 deň</td>
+                </tr>
+                <tr>
+                    <td>B Okno ako hrdina</td>
+                    <td>Odpoveď na „kedy“ za 2 s. Kratšia karta, bez vodorovného ťahu, predpoveď raz. Rieši päť najväčších problémov.</td>
+                    <td>
+                        Mení rozloženie schválené v <code>dnes-a-teraz.html</code> (veľké čísla). Popisky okna zasiahnu zdieľaný
+                        <code>sun-arc.js</code>.
+                    </td>
+                    <td>
+                        Model hlavičky (okno, zostáva, zajtrajšok) zložený z <code>todayCard</code>, <code>laterCard</code>,
+                        <code>denFaza</code>.
+                    </td>
+                    <td>2–3 dni</td>
+                </tr>
+                <tr>
+                    <td>C Podľa časti dňa</td>
+                    <td>
+                        Karta odpovedá na otázku, ktorú si človek v tú hodinu kladie. Má zmysel aj večer. Silný charakter, ladí s hláškami
+                        dňa.
+                    </td>
+                    <td>
+                        Rozloženie sa cez deň mení, veci nie sú tam, kde boli ráno. Odpočítavanie sa prekrýva s kartou Teraz. Tri sady e2e
+                        testov a snímok. Zajtrajší deň potrebuje vlastnú triedu.
+                    </td>
+                    <td>Model troch častí dňa, trieda zajtrajška.</td>
+                    <td>4–6 dní</td>
+                </tr>
+            </table>
+
+            <h3>Rýchle výhry do každého smeru</h3>
+            <ul>
+                <li>Čas okna sa nezalomí za pomlčkou (nezalomiteľné medzery v <code>terazWindowText</code>).</li>
+                <li>Bez riadku s časom a miestom nad slovom v súčasnej appke.</li>
+                <li>Čísla ako zoznam <code>&lt;ul&gt;</code>, aby ich čítačka oddelila.</li>
+                <li>
+                    Nadpisy v súčasnej appke (karta <code>h1</code> ako Teraz, karty pod ňou <code>h2</code>) a ohlásenie zmeny pre čítačku.
+                </li>
+                <li>Pás pod sebou v stĺpci Živej oblohy na počítači.</li>
+                <li>Kontrast čísel v Živej oblohe: väčšie písmo a tmavší podklad.</li>
+                <li>„CO2eq“ ako „CO₂eq“ (treba znova vyrobiť podmnožinu písma).</li>
+            </ul>
+
+            <p class="q">
+                Odporúčanie dizajnéra: <b>B</b>, pred ním rýchle výhry. Hlavná chyba nie je vo vzhľade, ale v tom, že rada, podľa ktorej sa
+                dá konať, je schovaná. B ju dá na plagát bez nových výpočtov. Z C sa dá neskôr prevziať večerný zajtrajšok, ten je v B už
+                naznačený.
+            </p>
+        </main>
+        <script>
+            // Hlavička, oblúk slnka a navigácia do každého telefónu podľa data-atribútov.
+            const W = 300;
+            const H = 104;
+            const cx = 150;
+            const base = 88;
+            const rx = 124;
+            const ry = 70;
+            const at = (f) => [cx - rx * Math.cos(Math.PI * f), base - ry * Math.sin(Math.PI * f)];
+            const path = (a, b) => {
+                let d = '';
+                for (let i = 0; i <= 40; i++) {
+                    const [x, y] = at(a + ((b - a) * i) / 40);
+                    d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+                }
+                return d;
+            };
+            const fmt = (f) => {
+                const m = Math.round(369 + f * 795);
+                return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+            };
+            for (const ph of document.querySelectorAll('.phone')) {
+                const o = ph.classList.contains('o');
+                const green = o ? '#c8f59e' : '#a8f05a';
+                const win = ph.dataset.win ? ph.dataset.win.split(',').map(Number) : null;
+                const sun = ph.dataset.sun;
+                let svg = `<svg class="arc" viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+                svg += `<line x1="16" y1="${base}" x2="${W - 16}" y2="${base}" stroke="rgba(255,255,255,.25)"/>`;
+                svg += `<path d="${path(0, 1)}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-dasharray="2 5"/>`;
+                if (win) svg += `<path d="${path(win[0], win[1])}" fill="none" stroke="${green}" stroke-width="4" stroke-linecap="round"/>`;
+                if (win && ph.dataset.labels) {
+                    for (const f of win) {
+                        const [x, y] = at(f);
+                        svg += `<circle cx="${x}" cy="${y}" r="3.5" fill="${green}"/>`;
+                        svg += `<text x="${x + (f < 0.5 ? -8 : 8)}" y="${y + 4}" font-size="11" font-weight="700" fill="${green}" text-anchor="${f < 0.5 ? 'end' : 'start'}">${fmt(f)}</text>`;
+                    }
+                }
+                if (sun === 'night') {
+                    svg += `<circle cx="${W - 46}" cy="22" r="9" fill="#f3f1fb"/><circle cx="${W - 42}" cy="19" r="8" fill="${o ? '#0c1534' : '#1a0f0c'}"/>`;
+                } else if (sun === 'dawn') {
+                    svg += `<circle cx="30" cy="${base}" r="6" fill="#ffd27a" opacity=".7"/>`;
+                } else if (sun) {
+                    const [x, y] = at(Number(sun));
+                    svg += `<circle cx="${x}" cy="${y}" r="16" fill="rgba(255,210,122,.25)"/><circle cx="${x}" cy="${y}" r="10" fill="${o ? '#fff1c4' : '#ffc94a'}"/>`;
+                }
+                svg += `<text x="16" y="${base + 13}" font-size="10" fill="rgba(255,255,255,.7)">06:09</text>`;
+                svg += `<text x="${W - 16}" y="${base + 13}" font-size="10" fill="rgba(255,255,255,.7)" text-anchor="end">19:24</text></svg>`;
+                const body = document.createElement('div');
+                body.className = 'body';
+                body.append(...ph.childNodes);
+                ph.innerHTML =
+                    `<div class="hdr"><div class="brand"><b>RAY-MON</b><span>Dvorany nad Nitrou</span></div><span class="clock">${ph.dataset.time}</span></div>` +
+                    svg;
+                ph.append(body);
+                ph.insertAdjacentHTML(
+                    'beforeend',
+                    '<div class="nav"><span>Teraz</span><span class="on">Dnes</span><span>7 dní</span><span>Štatistika</span><span>Nastavenie</span></div>',
+                );
+            }
+        </script>
+    </body>
+</html>

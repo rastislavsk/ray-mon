@@ -56,17 +56,28 @@
                  majú spoločný nadpis a ich vlastné nadpisy sú o úroveň nižšie (render/index.js). -->
             <h1 id="ttl-prehlad" class="sr hidden">RAY-MON</h1>
             <!-- Karta Dnes (kódové meno mozem, doteraz Môžem?): texty a stav skladá render (web/render/mozem.js)
-                 z shared/mozem-sky.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka, pod ním čo dá
-                 strecha za celý deň a pás odporúčaní (docs/navrhy/dnes-a-teraz.html). Nadpis karty je len pre čítačku. -->
+                 z shared/mozem-sky.js a shared/dnes-faza.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka,
+                 pod ním čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html); zvyšok sa mení s časťou dňa - ráno plán,
+                 cez deň odpočet okna, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
+                 Nadpis karty je len pre čítačku. -->
             <section id="panel-mozem" class="panel mozem" aria-labelledby="ttl-mozem">
                 <h1 id="ttl-mozem" class="sr">Dnes</h1>
                 <div id="mz-arc" class="arc" aria-hidden="true"></div>
                 <div id="mz-answer" class="big">
+                    <span id="mz-chip" class="chip"></span>
+                    <p id="mz-kick" class="kick"></p>
                     <p id="mz-word" class="word"></p>
+                    <p id="mz-count" class="count"><b id="mz-count-val"></b><span id="mz-count-text"></span></p>
+                    <p id="mz-grade" class="grade"><span id="mz-grade-label"></span><b id="mz-grade-val"></b></p>
                     <p id="mz-lead" class="line"></p>
                     <div id="mz-day" class="den">
                         <p id="mz-day-lead" class="line"></p>
-                        <div id="mz-day-eq" class="eq"></div>
+                        <ul id="mz-day-eq" class="eq"></ul>
+                    </div>
+                    <div id="mz-more" class="mz-more">
+                        <p id="mz-line"></p>
+                        <p id="mz-progress"></p>
+                        <div id="mz-bar" class="bar" aria-hidden="true"><i id="mz-bar-val"></i></div>
                     </div>
                 </div>
                 <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
@@ -82,21 +93,15 @@
                     <p id="mz-ask-text"></p>
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Pás odporúčaní: dnešok a kedy bude lepšie (shared/teraz.js, dnesCards). Listuje ho prehliadač. -->
-                <div id="tz-recs">
-                    <div id="tz-strip" class="strip" role="group" tabindex="0">
-                        <div class="glass rec">
-                            <h2 id="tz-today-title" class="glass-ttl"></h2>
-                            <p id="tz-today"></p>
-                            <div class="bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
-                            <p id="tz-window"></p>
-                        </div>
-                        <div class="glass rec">
-                            <h2 id="tz-later-title" class="glass-ttl"></h2>
-                            <p id="tz-later"></p>
-                        </div>
-                    </div>
-                    <div id="tz-dots" class="dots" aria-hidden="true"><i></i><i></i></div>
+                <!-- Večer zajtrajšok, inak riadok Kedy lepšie (shared/dnes-faza.js). -->
+                <div id="mz-tom" class="glass tom">
+                    <span id="mz-tom-chip" class="chip"></span>
+                    <p id="mz-tom-word" class="word"></p>
+                    <p id="mz-tom-text" class="line"></p>
+                </div>
+                <div id="mz-later" class="glass later">
+                    <h2 id="mz-later-title" class="glass-ttl"></h2>
+                    <p id="mz-later-text"></p>
                 </div>
             </section>
             <!-- Karta Teraz: texty, štítky, Plán dňa aj graf skladá render (web/render/teraz.js)

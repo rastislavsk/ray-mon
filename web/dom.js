@@ -96,15 +96,6 @@ function terazkyDom() {
         tzValues: byId('tz-values'),
         tzHint: byId('tz-hint'),
         tzReset: byId('tz-reset'),
-        tzRecs: byId('tz-recs'),
-        tzStrip: byId('tz-strip'),
-        tzTodayTitle: byId('tz-today-title'),
-        tzToday: byId('tz-today'),
-        tzTodayBar: byId('tz-today-bar'),
-        tzWindow: byId('tz-window'),
-        tzLaterTitle: byId('tz-later-title'),
-        tzLater: byId('tz-later'),
-        tzDots: byId('tz-dots'),
     };
 }
 

@@ -126,28 +126,12 @@
 
         <main class="page" id="page">
             <!-- PANEL: DNES (kódové meno mozem, doteraz Môžem?) -->
-            <!-- Veľké slovo a čo dá strecha za celý deň, pod tým pás odporúčaní (docs/navrhy/dnes-a-teraz.html).
-                 Hlavičku skladá render do #mozem-body. Pás je stály nosič - prekreslenie mu nezmení
-                 posunutie; listuje a prichytáva ho prehliadač sám (scroll-snap), karty sú užšie než pás,
-                 aby bolo vidno, že ďalej niečo je. -->
+            <!-- Plagát s veľkým slovom, ktorý sa mení s časťou dňa: ráno plán, cez deň odpočet okna na veľké
+                 veci, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C). Celé skladá
+                 render do #mozem-body. -->
             <section id="panel-mozem" class="panel hidden" aria-labelledby="mozem-title">
                 <h2 class="sr-only" id="mozem-title">Dnes</h2>
                 <div class="mozem" id="mozem-body"></div>
-                <div id="tz-recs" class="tz-recs hidden">
-                    <div id="tz-strip" class="tz-strip" role="group" tabindex="0">
-                        <div class="tz-rec">
-                            <h2 id="tz-today-title" class="tz-rec-ttl"></h2>
-                            <p id="tz-today"></p>
-                            <div class="tz-bar" aria-hidden="true"><i id="tz-today-bar"></i></div>
-                            <p id="tz-window"></p>
-                        </div>
-                        <div class="tz-rec">
-                            <h2 id="tz-later-title" class="tz-rec-ttl"></h2>
-                            <p id="tz-later"></p>
-                        </div>
-                    </div>
-                    <div id="tz-dots" class="tz-dots" aria-hidden="true"><i></i><i></i></div>
-                </div>
             </section>
 
             <!-- PANEL: TERAZKY -->

@@ -1,7 +1,7 @@
 // Karta Teraz súčasnej appky v rozložení karty Teraz z novej appky: číslo kW s riadkami pod ním, štítky a veta
 // o teraz, Plán dňa ako plagát (docs/navrhy/terazky-plan-dna.html, možnosť A; večer na ďalší deň,
 // plan-dna-zajtra.html), graf dňa s pásom
-// plánu a náhľad iného času. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js - ten istý model ako
+// plánu a náhľad iného času. Kedy bude lepšie povie karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js - ten istý model ako
 // v novej appke, takže obe povedia to isté - a texty sú v shared/messages-core.js. Tu sa len
 // zapisuje do DOM. Farbu čísla a pozadia dáva style.css podľa data-tier (render/header.js).
 

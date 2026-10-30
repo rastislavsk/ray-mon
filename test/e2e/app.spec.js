@@ -28,7 +28,8 @@ import {
 import * as config from '../../shared/config.js';
 import { dayPlan, forecastDayPlan } from '../../shared/day-plan.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
-import { dnesCards, terazModel } from '../../shared/teraz.js';
+import { terazModel } from '../../shared/teraz.js';
+import { dnesFaza } from '../../shared/dnes-faza.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { dayHeadSub, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
@@ -310,10 +311,10 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', m.chart.valueText);
     await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart.desc);
     await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
-    // Štítky a veta o teraz; pás odporúčaní je na karte Dnes.
+    // Štítky a veta o teraz; kedy bude lepšie je na karte Dnes.
     await expect(page.locator('#tz-chips .tz-chip')).toHaveText(m.say.chips.map((c) => c.text));
     await expect(page.locator('#tz-say-text')).toHaveText(m.say.text);
-    await expect(page.locator('#panel-terazky #tz-recs')).toHaveCount(0);
+    await expect(page.locator('#panel-terazky .mozem-later')).toHaveCount(0);
     // Pás plánu má v čase „teraz“ farbu toho istého plánu dňa ako pozadie: slnko v lacnom pásme.
     expect(await farbaPasu(page, minuta('13:00'))).toBe(cellAt(planCells(dayPlan(terazVstup(instant))), minuta('13:00')).tone);
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
@@ -322,25 +323,11 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     expect(errors).toEqual([]);
 });
 
-test('pás odporúčaní na karte Dnes sa listuje do strán, bodky idú za ním a na kraji sa zastaví', async ({ page }) => {
+test('karta Dnes nemá vážny nález prístupnosti a nič sa na nej neposúva do strán', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#nav-mozem').click();
-    const dots = page.locator('#tz-dots i');
-    const strip = page.locator('#tz-strip');
-    await expect(strip).toHaveAttribute('tabindex', '0');
-    await expect(dots.nth(0)).toHaveClass('on');
-
-    // Posun do strán nad pásom = to isté gesto ako prst; stránku dopočíta scroll-snap.
-    await strip.hover();
-    await page.mouse.wheel(400, 0);
-    await expect(dots.nth(1)).toHaveClass('on');
-    await expect(page.locator('#tz-later')).toBeInViewport();
-    // Za poslednou kartou nič nie je - pás sa nezacyklí.
-    await page.mouse.wheel(400, 0);
-    await expect(dots.nth(1)).toHaveClass('on');
-    await expect(page.locator('#panel-mozem')).toBeVisible();
-
-    // Posuvná oblasť bez prístupu z klávesnice je vážny nález axe - preto sa kontroluje tu.
+    await expect(page.locator('.mozem-later')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const results = await new AxeBuilder({ page }).include('#panel-mozem').analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(serious.map((v) => v.id)).toEqual([]);
@@ -1216,7 +1203,7 @@ test('bez dát: appka neukáže chybu, iba stav "bez dát"', async ({ page }) =>
     await expect(page.locator('#tz-sub')).not.toHaveText('Načítavam…');
     await expect(page.locator('#tz-retry')).toBeVisible();
     await expect(page.locator('#tz-plot')).toBeHidden();
-    await expect(page.locator('#tz-recs')).toBeHidden();
+    await expect(page.locator('.mozem-later')).toHaveCount(0);
     await page.locator('#nav-7dni').click();
     await expect(page.locator('#week-msg-title')).toHaveText('Predpoveď sa pripravuje');
     expect(errors).toEqual([]);
@@ -1312,12 +1299,10 @@ test('prístupnosť: otázka na polohu a sivé karty bez panelov bez závažnýc
  * Dnes-Zajtra, delili si ju na polovicu. Stránka je tu položkou zvislého flexu a vystredenie
  * cez `margin: 0 auto` jej vypína naťahovanie na šírku; karta pritom vlastnú šírku nemá
  * (graf dňa je `container-type: inline-size`), takže bez `width: 100%` by sa stránka scvrkla
- * na svoje okraje. Vľavo je číslo s grafom, vpravo Plán dňa. Pás odporúčaní na karte Dnes je
- * na šírku pod sebou - listovať netreba.
+ * na svoje okraje. Vľavo je číslo s grafom, vpravo Plán dňa. Na karte Dnes sa nič
+ * neposúva do strán.
  */
-test('široká obrazovka: karta Teraz má celú šírku stránky, graf vľavo a Plán dňa vpravo; odporúčania na Dnes pod sebou', async ({
-    page,
-}) => {
+test('široká obrazovka: karta Teraz má celú šírku stránky, graf vľavo a Plán dňa vpravo; Dnes bez posúvania do strán', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const errors = await openApp(page);
     await expect(page.locator('#panel-terazky')).toBeVisible();
@@ -1341,17 +1326,10 @@ test('široká obrazovka: karta Teraz má celú šírku stránky, graf vľavo a 
     expect(rozlozenie.odporucaniaVlavo, 'Plán dňa nie je vedľa grafu').toBeGreaterThan(rozlozenie.grafVpravo);
     await expect(page.locator('.tz-plan-lead')).toHaveText(terazAt(atTime('13:00').instant).plan?.head.lead ?? '');
 
-    // Karta Dnes: pás odporúčaní pod sebou, nič sa neposúva do strán.
+    // Karta Dnes: nič sa neposúva do strán, riadok Kedy lepšie je vidno bez posúvania.
     await page.locator('#nav-mozem').click();
-    const pas = await page.evaluate(() => {
-        const karty = [...document.querySelectorAll('#tz-strip .tz-rec')].map((k) => k.getBoundingClientRect());
-        const strip = /** @type {HTMLElement} */ (document.getElementById('tz-strip'));
-        return { podSebou: karty.every((k, i) => i === 0 || k.top >= karty[i - 1].bottom), posuva: strip.scrollWidth > strip.clientWidth };
-    });
-    expect(pas.podSebou, 'karty odporúčaní nie sú pod sebou').toBe(true);
-    expect(pas.posuva, 'pás odporúčaní sa na širokej obrazovke posúva do strán').toBe(false);
-    await expect(page.locator('#tz-dots')).toBeHidden();
-    for (const id of ['tz-today', 'tz-later']) await expect(page.locator(`#${id}`)).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.locator('.mozem-later')).toBeInViewport();
     expect(errors).toEqual([]);
 });
 
@@ -1414,7 +1392,7 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
  * Na nízkej obrazovke na výšku aj na telefóne na šírku musí byť po doscrollovaní celý pás
  * odporúčaní nad spodnou navigáciou - dostupný, nie odstrihnutý ani zakrytý.
  */
-test('mobil: karta Teraz sa dá doscrollovať a pás odporúčaní ostane nad navigáciou', async ({ page }) => {
+test('mobil: karta Teraz sa dá doscrollovať a jej koniec ostane nad navigáciou', async ({ page }) => {
     for (const { width, height } of [
         { width: 390, height: 844 },
         { width: 390, height: 520 },
@@ -1425,10 +1403,15 @@ test('mobil: karta Teraz sa dá doscrollovať a pás odporúčaní ostane nad na
         const rozmer = `${width}x${height}`;
         await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
         const geometria = await page.evaluate(() => ({
-            pasSpodok: document.getElementById('tz-dots').getBoundingClientRect().bottom,
+            // Spodok posledného viditeľného prvku karty.
+            pasSpodok: Math.max(
+                ...[...document.getElementById('panel-terazky').children]
+                    .filter((el) => /** @type {HTMLElement} */ (el).offsetParent !== null)
+                    .map((el) => el.getBoundingClientRect().bottom),
+            ),
             navVrch: document.querySelector('.bottomnav').getBoundingClientRect().top,
         }));
-        expect(geometria.pasSpodok, `${rozmer}: pás odporúčaní sa ani po doscrollovaní nedostane nad spodnú navigáciu`).toBeLessThanOrEqual(
+        expect(geometria.pasSpodok, `${rozmer}: koniec karty sa ani po doscrollovaní nedostane nad spodnú navigáciu`).toBeLessThanOrEqual(
             geometria.navVrch,
         );
         await expect(page.locator('#tz-chart svg'), rozmer).toBeVisible();
@@ -3177,7 +3160,7 @@ test.describe('karta Štatistika', () => {
 });
 
 test.describe('karta Dnes', () => {
-    test('o 13:00 za jasna: veľké slovo, čo dá strecha za celý deň a pás odporúčaní podľa modelu', async ({ page }) => {
+    test('o 13:00 za jasna: veľké slovo, odpočet okna, čo dá strecha za celý deň a kedy lepšie podľa modelu', async ({ page }) => {
         const errors = await openApp(page);
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
@@ -3187,11 +3170,13 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('.mozem-lead')).toHaveText(day.lead);
         await expect(page.locator('.mozem-eq b')).toHaveText(day.eq.map((e) => e.value));
         await expect(page.locator('.mozem-eq span')).toHaveText(day.eq.map((e) => e.label));
-        const k = /** @type {NonNullable<ReturnType<typeof dnesCards>>} */ (dnesCards(terazVstup(FIXED_NOW)));
-        await expect(page.locator('#tz-today')).toHaveText(k.today.line);
-        await expect(page.locator('#tz-window')).toHaveText(k.today.window);
-        await expect(page.locator('#tz-later')).toHaveText(k.later);
-        await expect(page.locator('#tz-dots i')).toHaveCount(2);
+        // O 13:00 v okne: odpočet do konca okna, koľko už nabehlo a kedy bude lepšie.
+        const d = /** @type {NonNullable<ReturnType<typeof dnesFaza>>} */ (dnesFaza(terazVstup(FIXED_NOW), m.den, m.facts?.window ?? null));
+        await expect(page.locator('.mozem-count')).toHaveText(`${d.count?.value}${d.count?.text}`);
+        await expect(page.locator('.mozem-line')).toHaveText([d.progress?.text ?? '']);
+        await expect(page.locator('.mozem-bar i')).toHaveAttribute('style', `width: ${d.progress?.pct}%`);
+        await expect(page.locator('.mozem-later span').last()).toHaveText(d.later);
+        await expect(page.locator('.mozem-kick, .mozem-tom')).toHaveCount(0);
         // Dlaždice, Plán dňa ani panel veci na karte Dnes nie sú - Plán dňa je na karte Teraz.
         await expect(page.locator('.mozem-tile, .mozem-plan, #mozem-sheet')).toHaveCount(0);
         expect(errors).toEqual([]);
@@ -3212,12 +3197,11 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('bez dát: hláška off-line s vetou prečo, pás odporúčaní nie je', async ({ page }) => {
+    test('bez dát: hláška off-line s vetou prečo, časť dňa ani Kedy lepšie nie sú', async ({ page }) => {
         const errors = await openApp(page, { offline: true });
         await page.locator('#nav-mozem').click();
         await expect(page.locator('.mozem-word')).toHaveText('Nemám dáta, sme off-line');
-        await expect(page.locator('.mozem-eq')).toHaveCount(0);
-        await expect(page.locator('#tz-recs')).toBeHidden();
+        await expect(page.locator('.mozem-eq, .mozem-count, .mozem-later')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 

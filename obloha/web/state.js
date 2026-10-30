@@ -11,7 +11,7 @@ import { setupInit } from '../../shared/setup-flow.js';
 
 /**
  * Stav. `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
- * `terazPage` stránka pásu odporúčaní na karte Dnes, `tzListOpen` otvorený zoznam pod grafom - legenda
+ * `tzListOpen` otvorený zoznam pod grafom - legenda
  * časovej osi (na začiatku zatvorený),
  * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
@@ -35,7 +35,6 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   layout: Layout,
  *   tariff: import('../../shared/config.js').Tariff,
  *   terazPreview: number | null,
- *   terazPage: number,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
  *   weekDetail: WeekDetail | null,
@@ -146,7 +145,6 @@ export function initialState(
         // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js); zapisuje ju obnova dát.
         ranna,
         terazPreview: null,
-        terazPage: 0,
         tzListOpen: false,
         tzPlanOpen: false,
         weekDetail: null,

@@ -4,7 +4,7 @@
 
 import { localMinutes } from '../shared/solar.js';
 import { backTo } from './history.js';
-import { bindDayScrub, stripPage } from './teraz-gestures.js';
+import { bindDayScrub } from './teraz-gestures.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -45,12 +45,4 @@ export function initTerazky(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
-    dom.tzStrip.addEventListener(
-        'scroll',
-        () => {
-            const page = stripPage(dom.tzStrip);
-            if (page !== store.get().terazPage) store.setState({ terazPage: page });
-        },
-        { passive: true },
-    );
 }

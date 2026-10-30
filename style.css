@@ -1321,91 +1321,6 @@ b {
     }
 }
 
-/* Pás odporúčaní (na karte Dnes) listuje a prichytáva prehliadač; karty sú užšie než pás, aby
-   bolo vidno, že ďalej niečo je. Pás siaha k okrajom stránky (záporný okraj = padding .page). */
-.tz-recs {
-    margin-top: var(--sp-3);
-}
-.tz-strip {
-    display: flex;
-    gap: 10px;
-    margin: 0 -20px;
-    padding: 4px 20px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scroll-padding: 0 20px;
-    scrollbar-width: none;
-}
-.tz-strip::-webkit-scrollbar {
-    display: none;
-}
-.tz-strip:focus-visible {
-    outline-offset: -2px;
-}
-.tz-rec {
-    flex: 0 0 86%;
-    display: grid;
-    align-content: start;
-    gap: var(--sp-2);
-    padding: 16px 18px;
-    background: var(--card-bg);
-    border: 1px solid var(--ink-12);
-    border-radius: var(--radius-lg);
-    scroll-snap-align: start;
-}
-.tz-rec h2,
-.tz-rec p {
-    margin: 0;
-}
-.tz-rec p {
-    font-size: 15px;
-    line-height: 1.4;
-    color: var(--ink-70);
-}
-.tz-rec-head {
-    font-size: 19px;
-    font-weight: 600;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-    text-wrap: balance;
-}
-.tz-rec-ttl {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-}
-.tz-bar {
-    height: 6px;
-    border-radius: var(--radius-pill);
-    background: var(--ink-08);
-    overflow: hidden;
-}
-.tz-bar i {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--green);
-}
-.tz-dots {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    padding: var(--sp-3) 0 var(--sp-2);
-}
-.tz-dots i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ink-20);
-}
-.tz-dots i.on {
-    background: var(--ink);
-}
-
 /* ---- Prstenec plánu dňa a farebné značky --------------------------------------
    Oblúky prstenca kreslí dayRingSvg (web/svg.js) - v sprievodcovi a zhrnutí tarify. Značky .sw
    sú farebné štvorčeky v legendách. */
@@ -4164,8 +4079,9 @@ b {
 }
 
 /* ---- Dnes (kódové meno mozem, doteraz Môžem?) --------------------------------- */
-/* Jedno veľké slovo na plnej farbe a čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html),
-   pod tým pás odporúčaní (.tz-recs). Hlavičku skladá render do #mozem-body. */
+/* Jedno veľké slovo na plnej farbe a čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html);
+   čo plagát ešte povie, sa mení s časťou dňa (docs/navrhy/dnes-tri-smery.html, smer C). Pod ním
+   večer zajtrajšok a riadok Kedy lepšie. Celé skladá render do #mozem-body. */
 .mozem {
     display: grid;
     gap: var(--sp-3);
@@ -4292,6 +4208,9 @@ b {
 /* Čo dá strecha za celý deň: tri čísla vedľa seba pod čiarou, ako fakt pod vetou na plagáte. */
 .mozem-eq {
     display: grid;
+    list-style: none;
+    margin-bottom: 0;
+    padding-left: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-top: 14px;
@@ -4311,6 +4230,110 @@ b {
     margin-top: 2px;
     font-size: 13px;
     line-height: 1.25;
+}
+/* Cez deň s odpočtom a večer s vysvedčením je hlavné číslo pod slovom - slovo je menšie. */
+.mozem-word.sm {
+    margin: 10px 0 8px;
+    font-size: min(11cqi, 44px, calc(100cqi / (var(--word-len, 1) * 0.8)));
+}
+/* Odpočet okna na veľké veci: koľko ešte zostáva, alebo o koľko začne. */
+.mozem-count {
+    margin: 0 0 6px;
+}
+.mozem-count b {
+    display: block;
+    color: inherit;
+    font-size: min(17cqi, 64px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+.mozem-count span {
+    display: block;
+    margin-top: 6px;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    line-height: 1.3;
+}
+/* Vysvedčenie: namerané za dnešok ako veľké číslo vpravo od popisu. */
+.mozem-grade {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+}
+.mozem-grade b {
+    color: inherit;
+    font-size: min(10cqi, 36px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+/* Veta o okne či predpovedi a koľko už nabehlo - pod číslami, menšia než veta nad nimi. */
+.mozem-line {
+    margin: 12px 0 0;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.35;
+}
+.mozem-bar {
+    height: 8px;
+    margin-top: 8px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+.mozem-bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ink-on-color);
+}
+/* Večer zajtrajšok: menší plagát vo farbe triedy zajtrajška. */
+.mozem-tom {
+    container-type: inline-size;
+    padding: 16px 20px;
+    border-radius: 24px;
+    color: var(--ink-on-color);
+    background: var(--ink-20);
+}
+.mozem-tom.den-vyborny {
+    background: var(--green);
+}
+.mozem-tom.den-dobry {
+    background: var(--amber);
+}
+.mozem-tom.den-slaby {
+    background: var(--grey);
+}
+.mozem-tom.den-nanic {
+    background: var(--red);
+}
+/* Kedy lepšie: jeden riadok pod plagátom namiesto pásu kariet. */
+.mozem-later {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    margin: 0;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--ink-70);
+    background: var(--card-bg);
+    border: 1px solid var(--ink-12);
+    border-radius: var(--radius-lg);
+}
+.mozem-later-k {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-45);
 }
 
 /* ---- Štatistika: plagát obdobia ---------------------------------------------- */
@@ -4580,23 +4603,6 @@ b {
         grid-row: 1 / 3;
         align-self: start;
         margin-top: 0;
-    }
-    /* Pás odporúčaní na karte Dnes: na šírku sú karty pod sebou, listovať netreba. */
-    .tz-recs {
-        max-width: 560px;
-    }
-    .tz-strip {
-        flex-direction: column;
-        margin: 0;
-        padding: 0;
-        overflow: visible;
-        scroll-snap-type: none;
-    }
-    .tz-rec {
-        flex: none;
-    }
-    .tz-dots {
-        display: none;
     }
 }
 
