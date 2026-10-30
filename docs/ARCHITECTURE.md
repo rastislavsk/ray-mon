@@ -67,7 +67,7 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
 | `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, oblúk, výzvy).          |
 | `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
-| `day-chart.js`                                                               | Graf dňa (Teraz/Terazky, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno. |
+| `day-chart.js`                                                               | Graf dňa (Teraz, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.         |
 | `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
 | `setup-texts.js`                                                             | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.             |
 | `nastavenie.js`                                                              | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                 |
@@ -82,7 +82,7 @@ spustil vždy. Podrobnosti v CLAUDE.md, sekcia o nasadení a cache.
 zavolá prekreslenie práve raz, rovnaká hodnota nespustí nič. `render/index.js` je jediné
 miesto, ktoré kreslí, a kreslí len viditeľné karty. `interactions.js` obsahuje
 poslucháče (karta Môžem? má vlastné `mozem-interactions.js`, sprievodca
-`setup-interactions.js` nad spoločným `setup-wiring.js`, karta Terazky `terazky-interactions.js` nad spoločným `teraz-gestures.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
+`setup-interactions.js` nad spoločným `setup-wiring.js`, karta Teraz `terazky-interactions.js` nad spoločným `teraz-gestures.js`) a každý končí volaním `setState` – jedinou výnimkou sú tooltipy, ktoré nie sú
 súčasťou stavu a zapisujú sa priamo. `dom.js` drží všetky odkazy do DOM, takže render
 funkcie nikdy nevolajú `querySelector` samy. `svg.js` skladá SVG z modelu a nič nepočíta.
 `memo.js` drží tri pomôcky, vďaka ktorým render zapisuje do DOM len to, čo sa naozaj
@@ -185,8 +185,8 @@ s `!important`, žiadne `:hover`. Čo appky zdieľajú, nie je skopírované –
 ten istý súbor:
 
 - **`shared/`** celé. Zmena výpočtu sa prejaví v oboch appkách naraz. Zoznam kariet `PANELS` je
-  v `config.js`, kódové názvy sú v oboch rovnaké (karta Terazky sa v novej volá Teraz, kód
-  ostáva `terazky`). Obe appky sa otvárajú vždy na prvej z nich, `PANELS[0]`.
+  v `config.js`, kódové názvy sú v oboch rovnaké (karta Teraz – v súčasnej appke kedysi Terazky – má kód
+  `terazky`). Obe appky sa otvárajú vždy na prvej z nich, `PANELS[0]`.
 - **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
 - **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
   (`elektraren-v1`, `poloha-v1`, `dni-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
@@ -196,7 +196,7 @@ ten istý súbor:
 - **Prístup k meraniu neplatí** (`shared/pristup.js`, návrh `docs/navrhy/meranie-pristup-neplati.html`).
   Keď Worker na `/pv` odpovie 400, výrobca prístup odmietol - nie je to výpadok. `refresh.js` odmietnutia
   počíta za sebou (`pristup-v1`, aby appka po otvorení neskúšala zlé heslo hneď znova); po dvoch appka povie
-  prečo (nová: riadok pod číslom na karte Teraz a karta v Nastavení, súčasná: červený pás na Terazky
+  prečo (nová: riadok pod číslom na karte Teraz a karta v Nastavení, súčasná: červený pás na karte Teraz
   a Môžem? a hlásenie v rozbalenej Elektrárni), zahodí posledné meranie a pýta sa už len raz za hodinu.
   „Pripojiť znova“ otvorí formulár pripojeného spôsobu (`zdrojZnova`), „Skúsiť znova“ sa opýta hneď.
   Prístup na čas (Deye, `platiDo`) appka týždeň vopred pripomenie a obnoví len heslom.
@@ -299,7 +299,7 @@ aj Späť, a krížik či Escape idú cez `history.back()` ako šípka v detaile
 V súčasnej appke je panel `#mozem-sheet` v `index.html` a krok navigácie je `mozemItem` (`item`
 v `NavStep`).
 
-Karta Teraz a karta Terazky súčasnej appky majú to isté rozloženie (súčasná vo vlastných farbách,
+Karta Teraz má v oboch appkách to isté rozloženie (súčasná vo vlastných farbách,
 návrh A v `docs/navrhy/terazky-ako-obloha.html`). Ciferník a denný prstenec zanikli, ich úlohu
 preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
 (aj náhľad iného času cez `previewMinutes`), plán z `dayPlan` a krátke odpovede spotrebičov
@@ -474,7 +474,7 @@ Späť vráti do Štatistiky.
 
 ## Karta Dnes (kódové meno mozem, kedysi Môžem?)
 
-Odpoveď „čo môžem zapnúť a kedy“ dáva **Plán dňa** na karte Terazky / Teraz - je v navigácii prvá
+Odpoveď „čo môžem zapnúť a kedy“ dáva **Plán dňa** na karte Teraz - je v navigácii prvá
 a appka sa na nej otvára (`docs/navrhy/dnes-a-teraz.html`). Nad plánom sú štítky a veta o teraz
 (`chips` a `say` z `mozemModel` - tá istá veta ako hlavička, len bez spotrebičov a časov, ktoré
 povie plán), plán má vetu nad sebou (`planHead`) a nová appka aj časovú os (`lanes` z
@@ -517,7 +517,7 @@ Staré zápisy (`spustenia-v1`) obe appky pri štarte zmažú (`OLD_STORAGE_KEYS
 
 Štatistiku karta neukazuje, ani ako odkaz do karty Štatistika.
 
-Obe appky sa otvárajú vždy na Teraz(kách) (`PANELS[0]`, bez polohy v sprievodcovi Nastavenia).
+Obe appky sa otvárajú vždy na karte Teraz (`PANELS[0]`, bez polohy v sprievodcovi Nastavenia).
 Voľba úvodnej karty v Nastavení bola a už nie je: starú uloženú voľbu (`prva-karta-v1`) appky pri
 štarte zmažú (`OLD_STORAGE_KEYS`) a `&prva=…` v starších odkazoch nečítajú - nastavenie z takého
 odkazu sa prevezme rovnako.
@@ -620,17 +620,17 @@ Z tabuľky ešte predtým zmizol stĺpec „Oblačnosť“ – ten istý údaj h
 Od 1024 px sa stránka správa ako obrazovka, nie ako dokument: `body` nescrolluje a karta
 vyplní výšku okna. Grafy sa tak natiahnu na veľkom monitore a stlačia na nízkom notebooku.
 
-Od 768 px mala stránka mriežku dvoch rovnakých stĺpcov: vľavo Terazky, vpravo Dnes-Zajtra
+Od 768 px mala stránka mriežku dvoch rovnakých stĺpcov: vľavo Teraz (vtedy Terazky), vpravo Dnes-Zajtra
 (tá preto na desktope nemala vlastnú položku v navigácii). Keď karta Dnes-Zajtra zanikla,
-mriežka zanikla s ňou a Terazky idú cez celú šírku stránky (vľavo číslo a graf dňa, vpravo
+mriežka zanikla s ňou a Teraz ide cez celú šírku stránky (vľavo číslo a graf dňa, vpravo
 odporúčania pod sebou). Stránka je tu položkou zvislého
 flexu a vystredenie cez `margin: 0 auto` jej vypína naťahovanie na šírku rodiča, takže
-potrebuje `width: 100%`: karta Terazky vlastnú šírku nemá (graf dňa je
+potrebuje `width: 100%`: karta Teraz vlastnú šírku nemá (graf dňa je
 `container-type: inline-size`, teda so size containmentom v osi x), takže bez
-toho by sa stránka scvrkla na svoje okraje. Stráži to e2e test „karta Terazky má celú šírku
+toho by sa stránka scvrkla na svoje okraje. Stráži to e2e test „karta Teraz má celú šírku
 stránky“.
 
-Meranie pred tou zmenou ukázalo, že problém bol užší, než sa zdalo: karty Terazky
+Meranie pred tou zmenou ukázalo, že problém bol užší, než sa zdalo: karty Teraz
 a Zdieľať sa zmestili už predtým (na 1920 × 1080 im ostávalo 347 px prázdneho miesta,
 lebo mali pevnú výšku), pretekala len karta 7 dní, a to o 97 až 409 px podľa výšky okna.
 
@@ -639,7 +639,7 @@ potrebuje 315 px výšky a 385 px šírky – toľko jej celá výška mriežky 
 vysokej obrazovke. Grafy sa stlačiť dajú, riadky tabuľky pod čitateľnosť nie, tak miesto
 dostane to, čo ho naozaj potrebuje.
 
-Čo v nízkom okne ustúpi: karta Terazky sa posúva sama (`overflow-y: auto`, ako Štatistika) a nad grafom
+Čo v nízkom okne ustúpi: karta Teraz sa posúva sama (`overflow-y: auto`, ako Štatistika) a nad grafom
 stĺpcov zmizne riadok so súčtami (do 900 px výšky) – hovorí to isté, čo kartička „7 dní
 spolu“ nad ním. Plátno grafu nikdy neklesne pod 96 px; pod tým by bolo nižšie než jeho
 vlastné okraje.

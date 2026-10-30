@@ -116,9 +116,9 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 
 /**
  * Karty v poradí navigácie - kódové názvy, ktoré drží HTML id, CSS selektory aj stav. Popisky
- * sú v HTML a nemusia sa s nimi zhodovať (terazky je v novej appke „Teraz“, mozem je v oboch
+ * sú v HTML a nemusia sa s nimi zhodovať (terazky je v oboch „Teraz“ - v súčasnej kedysi Terazky, mozem je v oboch
  * „Dnes“ - kedysi Môžem?). Rovnaké v oboch appkách. Prvá v zozname je karta, na ktorej sa obe
- * appky vždy otvárajú - Teraz(ky) s Plánom dňa odpovedajú, čo a kedy zapnúť
+ * appky vždy otvárajú - karta Teraz s Plánom dňa odpovedá, čo a kedy zapnúť
  * (docs/navrhy/dnes-a-teraz.html).
  */
 export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
@@ -461,7 +461,7 @@ export const MOZEM_GROUPS = [
  * Kľúče, ktoré appka už nepoužíva a pri štarte ich zmaže. Mená sa nesmú použiť znova na niečo
  * iné - v starších telefónoch pod nimi môžu ležať staré dáta. `spustenia-v1` boli zápisy
  * „Pustil/a som“ z karty Môžem?, `prva-karta-v1` voľba úvodnej karty - appka sa dnes otvára vždy
- * na Teraz(kách).
+ * na karte Teraz.
  */
 export const OLD_STORAGE_KEYS = ['spustenia-v1', 'prva-karta-v1'];
 

@@ -1,4 +1,4 @@
-// Ovládanie karty Teraz (v súčasnej appke Terazky), spoločné pre obe appky: graf dňa ako posúvač
+// Ovládanie karty Teraz, spoločné pre obe appky: graf dňa ako posúvač
 // času (prst, kurzor, klávesnica) a stránka pásu odporúčaní. Neutrálny modul (CLAUDE.md) - stav
 // nepozná, čo s časom spraviť, mu povie appka cez `ScrubHooks`. Pravidlá dotyku sú v CLAUDE.md,
 // časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.

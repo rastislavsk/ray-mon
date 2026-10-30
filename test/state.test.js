@@ -49,7 +49,7 @@ test('stav nesie tarifu uloženého nastavenia a savedSettings ju vráti spolu s
     assert.deepEqual(savedSettings(state), settings);
 });
 
-test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou vždy na Terazkách', () => {
+test('bez polohy appka začína otázkou na ňu v karte Nastavenie, s polohou vždy na karte Teraz', () => {
     const now = new Date();
     const layout = { wide: false, tall: false };
     const welcome = initialState(now, layout, {});
@@ -230,7 +230,7 @@ test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou s
     // Otvorenie je nový krok - Späť ho zbalí.
     assert.ok(!sameNavStep(navStep(state), navStep(open)));
     assert.deepEqual(navStepFrom({ step: navStep(open) }), navStep(open));
-    // Plán patrí len karte Terazky; položka zo staršej verzie ho nemá - plán je zbalený.
+    // Plán patrí len karte Teraz; položka zo staršej verzie ho nemá - plán je zbalený.
     /** @type {import('../web/state.js').NavStep} */
     const krok = { panel: 'mozem', weekDetail: null, setup: null, roof: 0, info: null, plan: false, legend: false };
     assert.equal(navStepFrom({ step: { ...krok, plan: true } })?.plan, false);

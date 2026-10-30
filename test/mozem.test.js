@@ -347,7 +347,7 @@ test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
     );
 });
 
-test('Plán dňa pre kartu Teraz(ky): časy ako dlaždice, veta nad ním a časová os', () => {
+test('Plán dňa pre kartu Teraz: časy ako dlaždice, veta nad ním a časová os', () => {
     const m = mozemModel(input(FIXED_NOW));
     assert.deepEqual(
         m.plan?.rows.map((r) => [r.name, r.value]),

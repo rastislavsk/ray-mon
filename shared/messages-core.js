@@ -1047,7 +1047,7 @@ export function planTileText(row) {
 }
 
 /**
- * Veta nad Plánom dňa na karte Teraz(ky): čo ide teraz, inak čo príde najskôr, a pod ňou ďalšie
+ * Veta nad Plánom dňa na karte Teraz: čo ide teraz, inak čo príde najskôr, a pod ňou ďalšie
  * dve veci s časom - tie isté časy ako dlaždice (planTileText). Bez riadkov null.
  * @param {Array<{ name: string, now: boolean, value: string }>} rows riadky plánu podľa času
  */
@@ -1115,7 +1115,7 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
 }
 
 // ---- Karta Teraz v novej appke -----------------------------------------------------
-// Výkon, odporúčanie a plán dňa počíta to isté ako kartu Terazky súčasnej appky (heroModel,
+// Výkon, odporúčanie a plán dňa počíta to isté ako kartu Teraz súčasnej appky (heroModel,
 // dayPlan); tu sú len texty nového vzhľadu (shared/teraz.js).
 
 /**

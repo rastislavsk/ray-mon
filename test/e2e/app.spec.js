@@ -109,7 +109,7 @@ async function ulozPolohu(page, site) {
  * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * (len ak tam ešte nič nie je - opätovné načítanie stránky si nechá, čo test uložil). So
  * `settings: null` a `site` pozná appka len polohu, bez oboch sa na ňu pýta. Appka sa otvára
- * vždy na Terazkách.
+ * vždy na karte Teraz.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string,
  *   pvData?: typeof pv }} [opts] `pvData` odpovie Worker namiesto merania z fixtures
@@ -173,12 +173,12 @@ test('stavový riadok telefónu má farbu vrchu pozadia aj po zmene tarify', asy
     expect(errors).toEqual([]);
 });
 
-// ---- Karta Terazky ------------------------------------------------------------
+// ---- Karta Teraz ------------------------------------------------------------
 // Rozloženie karty Teraz novej appky (návrh A v docs/navrhy/terazky-ako-obloha.html). Očakávané
 // texty počíta tá istá funkcia ako appka (terazModel v shared/teraz.js) z tých istých dát.
 
 /**
- * Vstup karty Terazky v danej chvíli, tak ako ho skladá appka: meranie z fixtures, predpoveď
+ * Vstup karty Teraz v danej chvíli, tak ako ho skladá appka: meranie z fixtures, predpoveď
  * postavená v tej istej chvíli. @param {Date} instant @param {object} [extra]
  * @returns {import('../../shared/teraz.js').TerazInput}
  */
@@ -194,7 +194,7 @@ const terazVstup = (instant, extra = {}) => ({
     ...extra,
 });
 
-/** Model karty Terazky v danej chvíli. @param {Date} instant @param {object} [extra] */
+/** Model karty Teraz v danej chvíli. @param {Date} instant @param {object} [extra] */
 const terazAt = (instant, extra = {}) => terazModel(terazVstup(instant, extra));
 
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
@@ -283,7 +283,7 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     expect(errors).toEqual([]);
 });
 
-test('karta Terazky o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dňa', async ({ page }) => {
+test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dňa', async ({ page }) => {
     const errors = await openApp(page);
     const { instant } = atTime('13:00');
     const m = terazAt(instant);
@@ -529,7 +529,7 @@ test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kr
     expect(errors).toEqual([]);
 });
 
-test('prístupnosť karty Terazky: žiadne závažné nálezy axe počas náhľadu', async ({ page }) => {
+test('prístupnosť karty Teraz: žiadne závažné nálezy axe počas náhľadu', async ({ page }) => {
     const errors = await openApp(page);
     await page.locator('#tz-chart').focus();
     await page.keyboard.press('ArrowRight');
@@ -621,7 +621,7 @@ test('7 dní na mobile: prehľad dní, detail dňa a návrat späť', async ({ p
     await expect(page.locator('#week-curve-stat .kpi')).toHaveCount(3);
     await expect(page.locator('#week-curve-stat')).toContainText(`${fmt1(den5.kwhTotal)} kWh`);
     await expect(page.locator('#week-curve-stat .kpi').nth(1)).toHaveText(`Oblačnosť${Math.round(Number(den5.cloudAvgPct))} %priemer dňa`);
-    // Graf dňa ako na karte Terazky - ten istý ako v detaile dňa novej appky. Očakávanie ráta
+    // Graf dňa ako na karte Teraz - ten istý ako v detaile dňa novej appky. Očakávanie ráta
     // ten istý model ako appka; krivka výroby s legendou tu nie je.
     const graf5 = sedemDayChart(vstup, 5);
     await expect(page.locator('#week-day-chart .dc-cloud')).toHaveCount(graf5.clouds.length);
@@ -756,7 +756,7 @@ test('7 dní na mobile: bublina so súčtom otvára detail týždňa', async ({ 
 });
 
 /**
- * Detail dnešného dňa má v grafe dňa nameranú krivku a „teraz“ (ako karta Terazky), v číslach
+ * Detail dnešného dňa má v grafe dňa nameranú krivku a „teraz“ (ako karta Teraz), v číslach
  * pod ním, koľko už nabehlo. Iný deň nič z toho nemá.
  */
 test('7 dní: detail dnešného dňa má „teraz“ a nameranú krivku', async ({ page }) => {
@@ -1311,14 +1311,14 @@ test('prístupnosť: otázka na polohu a sivé karty bez panelov bez závažnýc
 });
 
 /**
- * Karta Terazky má na širokej obrazovke celú šírku stránky - kým existovala karta
+ * Karta Teraz má na širokej obrazovke celú šírku stránky - kým existovala karta
  * Dnes-Zajtra, delili si ju na polovicu. Stránka je tu položkou zvislého flexu a vystredenie
  * cez `margin: 0 auto` jej vypína naťahovanie na šírku; karta pritom vlastnú šírku nemá
  * (graf dňa je `container-type: inline-size`), takže bez `width: 100%` by sa stránka scvrkla
  * na svoje okraje. Vľavo je číslo s grafom, vpravo Plán dňa. Pás odporúčaní na karte Dnes je
  * na šírku pod sebou - listovať netreba.
  */
-test('široká obrazovka: karta Terazky má celú šírku stránky, graf vľavo a Plán dňa vpravo; odporúčania na Dnes pod sebou', async ({
+test('široká obrazovka: karta Teraz má celú šírku stránky, graf vľavo a Plán dňa vpravo; odporúčania na Dnes pod sebou', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -1413,11 +1413,11 @@ test('desktop: appka sa zmestí na obrazovku bez scrollovania', async ({ page })
 });
 
 /**
- * Karta Terazky je na mobile bežný dokument ako ostatné karty: čo sa nezmestí, doscrolluje sa.
+ * Karta Teraz je na mobile bežný dokument ako ostatné karty: čo sa nezmestí, doscrolluje sa.
  * Na nízkej obrazovke na výšku aj na telefóne na šírku musí byť po doscrollovaní celý pás
  * odporúčaní nad spodnou navigáciou - dostupný, nie odstrihnutý ani zakrytý.
  */
-test('mobil: karta Terazky sa dá doscrollovať a pás odporúčaní ostane nad navigáciou', async ({ page }) => {
+test('mobil: karta Teraz sa dá doscrollovať a pás odporúčaní ostane nad navigáciou', async ({ page }) => {
     for (const { width, height } of [
         { width: 390, height: 844 },
         { width: 390, height: 520 },
@@ -1491,7 +1491,7 @@ test('mobil: každá položka navigácie má viditeľný text na jeden riadok a 
 /**
  * Obnovu ťahom nadol (pull to refresh) robí prehliadač sám: ponúkne ju, keď je stránka na
  * vrchu a dá sa potiahnuť nadol. Stačí jedno overflow: hidden na <body> - prenáša sa na
- * výrez okna - a gesto ticho zmizne. Presne to sa kedysi stalo karte Terazky, ktorá si telo
+ * výrez okna - a gesto ticho zmizne. Presne to sa kedysi stalo karte Teraz, ktorá si telo
  * zamykala kvôli garancii bez scrollovania. Telo musí ostať voľné, inak karta stratí obnovu,
  * ktorú ostatné karty majú.
  */
@@ -1510,7 +1510,7 @@ test('mobil: ťahom nadol sa dá obnoviť každá karta', async ({ page }) => {
     expect(errors).toEqual([]);
 });
 
-test('široká obrazovka: prepnutie na 7 dní skryje kartu Terazky', async ({ page }) => {
+test('široká obrazovka: prepnutie na 7 dní skryje kartu Teraz', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const errors = await openApp(page);
     await page.locator('#nav-7dni').click();
@@ -1673,7 +1673,7 @@ async function otvorPolozku(page, id) {
 }
 
 /** Graf s tooltipom je na mobile v detaile týždňa (denné súčty) - otvára sa klikom na súčet
- * týždňa. Detail dňa má graf dňa ako karta Terazky, bez tooltipu. @param {import('@playwright/test').Page} page */
+ * týždňa. Detail dňa má graf dňa ako karta Teraz, bez tooltipu. @param {import('@playwright/test').Page} page */
 async function otvorDetailTyzdna(page) {
     await page.locator('#nav-7dni').click();
     await page.locator('.week-list-hero').click();
@@ -2403,7 +2403,7 @@ test.describe('moja elektráreň', () => {
         expect(errors).toEqual([]);
     });
 
-    test('„Teraz nie“: uloží sa len poloha, 7 dní ukáže predpoveď pre typickú strechu, Terazky a Môžem? sú sivé', async ({ page }) => {
+    test('„Teraz nie“: uloží sa len poloha, 7 dní ukáže predpoveď pre typickú strechu, Teraz a Môžem? sú sivé', async ({ page }) => {
         const errors = await openApp(page, { settings: null });
         await vyberMiesto(page, 'Sev', 'Sevilla');
         await page.locator('#wz-later').click();
@@ -3176,7 +3176,7 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('#tz-window')).toHaveText(k.today.window);
         await expect(page.locator('#tz-later')).toHaveText(k.later);
         await expect(page.locator('#tz-dots i')).toHaveCount(2);
-        // Dlaždice, Plán dňa ani panel veci na karte Dnes nie sú - Plán dňa je na Terazkách.
+        // Dlaždice, Plán dňa ani panel veci na karte Dnes nie sú - Plán dňa je na karte Teraz.
         await expect(page.locator('.mozem-tile, .mozem-plan, #mozem-sheet')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
@@ -3228,7 +3228,7 @@ test.describe('karta Dnes', () => {
     }
 });
 
-test.describe('Plán dňa na Terazkách', () => {
+test.describe('Plán dňa na karte Teraz', () => {
     test('o 13:00: štítky a veta bez spotrebičov, plagát s očíslovanými riadkami podľa modelu', async ({ page }) => {
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
@@ -3242,7 +3242,7 @@ test.describe('Plán dňa na Terazkách', () => {
         const riadky = plan.rows.map((r, i) => `${String(i + 1).padStart(2, '0')}${r.name}${r.now ? 'teraz' : r.value}${r.why}`);
         await expect(page.locator('.tz-plan-rows li')).toHaveText(riadky);
         await expect(page.locator('.tz-plan-note')).toHaveText(plan.note);
-        // Auto má na Terazkách ten istý čas ako dlaždica auta v modeli karty Dnes; bojler predvolene doma nie je.
+        // Auto má na karte Teraz ten istý čas ako dlaždica auta v modeli karty Dnes; bojler predvolene doma nie je.
         const auto = mozemModel(terazVstup(FIXED_NOW)).groups.find((g) => g.key === 'auto');
         await expect(page.locator('.tz-plan-rows')).toContainText(`Auto${auto?.value}`);
         await expect(page.locator('.tz-plan-rows')).not.toContainText('Bojler');
@@ -3281,7 +3281,7 @@ test.describe('Plán dňa na Terazkách', () => {
         await expect(telo).toBeHidden();
         await page.goBack();
         await ocakavajKartu(page, 'mozem');
-        // Iná karta plán zbalí: návrat na Terazky ho ukáže zbalený.
+        // Iná karta plán zbalí: návrat na kartu Teraz ho ukáže zbalený.
         await page.locator('#nav-terazky').click();
         await hlavicka.click();
         await page.locator('#nav-mozem').click();
@@ -3291,7 +3291,7 @@ test.describe('Plán dňa na Terazkách', () => {
     });
 });
 
-test.describe('appka sa otvára vždy na Terazkách', () => {
+test.describe('appka sa otvára vždy na karte Teraz', () => {
     test('nič neuloží ani nepridá do adresy, voľba prvej karty v Nastavení nie je', async ({ page }) => {
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
@@ -3311,7 +3311,7 @@ test.describe('appka sa otvára vždy na Terazkách', () => {
         expect(errors).toEqual([]);
     });
 
-    test('starší odkaz s prvou kartou (prva=mozem) otvorí Terazky a nič neuloží', async ({ page }) => {
+    test('starší odkaz s prvou kartou (prva=mozem) otvorí Teraz a nič neuloží', async ({ page }) => {
         const errors = await openApp(page, { hash: '#prva=mozem' });
         await ocakavajKartu(page, 'terazky');
         expect(await page.evaluate(() => localStorage.getItem('prva-karta-v1'))).toBeNull();

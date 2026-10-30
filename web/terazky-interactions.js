@@ -1,4 +1,4 @@
-// Poslucháče karty Terazky: náhľad iného času na grafe dňa (prst, kurzor, klávesnica - spoločné
+// Poslucháče karty Teraz: náhľad iného času na grafe dňa (prst, kurzor, klávesnica - spoločné
 // s kartou Teraz novej appky, web/teraz-gestures.js), „Späť na teraz“, zoznam pod grafom, „Skúsiť znova“
 // a stránka pásu odporúčaní, rozbalenie Plánu dňa. Každý končí volaním setState; kreslí render/terazky.js.
 

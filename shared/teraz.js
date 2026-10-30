@@ -1,4 +1,4 @@
-// Karta Teraz v novej appke „Živá obloha“ (obloha/) a karta Terazky súčasnej appky - obe majú to
+// Karta Teraz v novej appke „Živá obloha“ (obloha/) a karta Teraz súčasnej appky - obe majú to
 // isté rozloženie, každá vo vlastných farbách. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
 // iného času cez `previewMinutes`), plán dňa z dayPlan, odpoveď teraz a Plán dňa z mozemModel - tie isté
 // ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou, Plán dňa a graf dňa s pásom plánu.

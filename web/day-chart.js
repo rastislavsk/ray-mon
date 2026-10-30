@@ -1,4 +1,4 @@
-// Graf dňa - ten istý na karte Teraz (Terazky) v oboch appkách aj v detaile dňa na karte 7 dní novej
+// Graf dňa - ten istý na karte Teraz v oboch appkách aj v detaile dňa na karte 7 dní novej
 // appky. Geometriu aj polohu popiskov počíta shared/day-chart.js, tu sa len skladá značkovanie:
 // oblačnosť, krivky a pás v SVG, ktoré sa s grafom zväčšuje, a popisky ako HTML nad ním - tie majú
 // na každej šírke tú istú veľkosť v px. Čistý reťazec bez DOM, preto neutrálny modul (CLAUDE.md); farby dáva style.css appky.
@@ -119,7 +119,7 @@ export function legendHtml(legend) {
 }
 
 /**
- * Riadky zoznamu pod grafom dňa na karte Terazky / Teraz: vzorka (tá istá ako v legende), slovo,
+ * Riadky zoznamu pod grafom dňa na karte Teraz: vzorka (tá istá ako v legende), slovo,
  * pod ním drobný riadok a vpravo hodnota. Položky `<li>` do `<ul>` appky.
  * @param {Array<{ tone: string, text: string, sub: string, value: string }>} rows
  */

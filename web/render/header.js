@@ -25,7 +25,7 @@ function guessBar(kwp, voice) {
 }
 
 /**
- * Pás pod hlavičkou na kartách Terazky a Môžem?: odhad z typickej strechy (jantárový, `odhad`),
+ * Pás pod hlavičkou na kartách Teraz a Môžem?: odhad z typickej strechy (jantárový, `odhad`),
  * alebo prístup k meraniu, ktorý výrobca prestal prijímať (shared/pristup.js, červený). Tlačidlo
  * vedie do Nastavenia; pri prístupe `data-pristup-go` povie, že tam má rozbaliť Elektráreň
  * s hlásením (web/interactions.js).
@@ -90,7 +90,7 @@ export function renderHeader(state, dom) {
     // Kým appka nepozná polohu, nie je čo zafarbiť - a bez časového pásma ani čo rátať.
     dom.root.dataset.tier = state.known === 'nic' ? '' : heroModel(state).tier || '';
     // Vypnutá farba pozadia (Nastavenie › Vzhľad): pozadie aj stavový riadok sú pokojne čierne.
-    // Číslo na karte Terazky farbu plánu dňa drží ďalej - nesie údaj, nie náladu.
+    // Číslo na karte Teraz farbu plánu dňa drží ďalej - nesie údaj, nie náladu.
     dom.root.dataset.farba = state.bgTint ? 'zap' : 'vyp';
     // Stavový riadok telefónu dostane farbu vrchu pozadia. Počíta ju CSS (--status-bar), tu sa
     // len prečíta - farby tarify tak ostanú na jednom mieste.

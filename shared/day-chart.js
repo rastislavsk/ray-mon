@@ -1,4 +1,4 @@
-// Graf dňa na karte Terazky / Teraz v oboch appkách a v detaile dňa na karte 7 dní novej appky:
+// Graf dňa na karte Teraz v oboch appkách a v detaile dňa na karte 7 dní novej appky:
 // odhora oblačnosť po hodinách, krivka výroby cez deň so slnkom (daylightSpan) s osou kW, hranica
 // veľkých spotrebičov a plocha nad ňou, značka „teraz“ a náhľad iného času, pod grafom pás plánu po
 // polhodinách.
