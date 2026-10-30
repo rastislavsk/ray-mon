@@ -276,6 +276,12 @@ export const DEN_WORDS = {
         slaby: 'Dneskaj ništ moc, nem džo',
         nanic: 'Dnes to bolo pjekne nagovno',
     },
+    zajtra: {
+        vyborny: 'Zajtra Oskar pujde na plný koule',
+        dobry: 'Zajtra not baaad',
+        slaby: 'Zajtra NAGOVNO DEŇ',
+        nanic: 'Zajtra ÚPLNE NAHOVNO DEŇ',
+    },
 };
 
 /** @type {typeof DEN_WORDS} */
@@ -296,6 +302,12 @@ const DEN_WORDS_SLUSNE = {
         slaby: 'Dnes to bol slabý deň',
         nanic: 'Dnes sme takmer nič nevyrobili',
     },
+    zajtra: {
+        vyborny: 'Zajtra bude výborný deň',
+        dobry: 'Zajtra bude dobrý deň',
+        slaby: 'Zajtra bude slabý deň',
+        nanic: 'Zajtra takmer nič nevyrobíme',
+    },
 };
 
 /**
@@ -307,6 +319,58 @@ export function denWord({ cls, faza, change }, voice) {
     const w = voiceTexts(voice).DEN_WORDS;
     if (change) return w.zmena[change];
     return faza === 'vecer' ? w.vecer[cls] : w.rano[cls];
+}
+
+/** Trieda dňa slovami - štítok na karte Dnes v novej appke. Bez postoja, jedna pre oba tóny. */
+export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slaby: 'slabý deň', nanic: 'deň skoro bez slnka' };
+
+/** Pevné texty karty Dnes podľa časti dňa (shared/dnes-faza.js). */
+export const DNES_TEXTS = { plan: 'Plán na dnes', grade: 'Vysvedčenie', gradeLabel: 'Dnes zo strechy', later: 'Kedy lepšie' };
+
+/** Ráno: kedy dnes pustiť veľké veci. @param {{ from: number, to: number } | null} w @param {Voice} voice */
+export function dnesPlanText(w, voice) {
+    if (!w) return 'Okno na veľké veci dnes nebude.';
+    return `Veľké veci ${polite(voice) ? 'dajte' : 'daj'} medzi ${spanText(w)}.`;
+}
+
+/**
+ * Cez deň: odpočet okna na veľké veci - koľko z neho ešte zostáva (`go`), alebo o koľko začne (`wait`).
+ * @param {'go' | 'wait'} kind @param {{ from: number, to: number }} w @param {number} left minúty
+ */
+export function dnesCountText(kind, w, left) {
+    const text = kind === 'go' ? `ešte slnka na veľké veci, do ${endHm(w.to)}` : `do okna na veľké veci ${spanText(w)}`;
+    return { value: countdownText(left), text };
+}
+
+/**
+ * Cez deň: koľko už nabehlo z predpovede dneška - z merania naisto, bez neho podľa predpovede.
+ * @param {{ forecastKwh: number, doneKwh: number, measured: boolean }} d
+ */
+export function dnesProgressText({ forecastKwh, doneKwh, measured }) {
+    const of = `${fmt1(doneKwh)} z ~${fmtSum(Math.round(forecastKwh), 0)} kWh`;
+    return measured ? `Nabehlo ${of}.` : `Podľa predpovede už asi ${of}.`;
+}
+
+/** Večer: namerané za dnešok a čo sľubovala predpoveď. @param {number} kwh @param {number | null} forecastKwh */
+export function dnesGradeText(kwh, forecastKwh) {
+    return {
+        value: `${fmt1(kwh)} kWh`,
+        line: forecastKwh === null ? '' : `Predpoveď bola ${fmtSum(Math.round(forecastKwh), 0)} kWh.`,
+    };
+}
+
+/**
+ * Večer: zajtrajšok - trieda dňa, veľké slovo, koľko dá strecha a okno na veľké veci.
+ * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number, window: { from: number, to: number } | null }} d @param {Voice} voice
+ */
+export function dnesZajtraText({ cls, kwh, window }, voice) {
+    const okolo = `Okolo ${fmtSum(Math.round(kwh), 0)} kWh`;
+    return {
+        kick: 'Zajtra',
+        chip: `zajtra ${DEN_NAZVY[cls]}`,
+        word: voiceTexts(voice).DEN_WORDS.zajtra[cls],
+        text: window ? `${okolo}, veľké veci ${spanText(window)}.` : `${okolo}, okno na veľké veci nebude.`,
+    };
 }
 
 /**

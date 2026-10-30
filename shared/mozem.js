@@ -88,6 +88,16 @@ export function planWindows(plan, ok) {
     return out;
 }
 
+/** Okná na veľké veci: zelené úseky plánu dňa. @param {import('./day-plan.js').PlanSlot[]} plan @returns {Window[]} */
+export function sunWindows(plan) {
+    return planWindows(plan, (s) => s.tier === 'green');
+}
+
+/** Hlavné okno dňa: najdlhšie, pri rovnakej dĺžke skoršie. @param {Window[]} windows @returns {Window | null} */
+export function mainWindow(windows) {
+    return windows.reduce((best, w) => (!best || w.to - w.from > best.to - best.from ? w : best), /** @type {Window | null} */ (null));
+}
+
 /**
  * Kedy iný deň slnko stačí: od prvej po poslednú hodinu predpovede nad hranicou výkonu.
  * @param {import('./solar.js').ForecastDay} day @param {number} minKw @returns {Window | null}
@@ -570,15 +580,17 @@ function chipsOf(state, facts, voice) {
 }
 
 /**
- * Čo dá strecha za celý dnešok: predpoveď dňa, a keď už meranie nabehlo viac, to nabehnuté.
+ * Čo dá strecha za celý dnešok: predpoveď dňa, a keď už meranie nabehlo viac, to nabehnuté. Po západe
+ * slnka len namerané.
  * V jednotkách, ktoré pozná každý (tie isté prepočty ako Štatistika). Bez predpovede na dnešok null.
  * @param {PlanInput} input
  */
 export function dnesDay({ now, site, pv, forecast }) {
     const day = forecast?.days.find((d) => d.date === localDateKey(now, site.timezone));
     if (!day) return null;
-    const measured = pv && Number.isFinite(pv.dailyEnergyKwh) ? /** @type {number} */ (pv.dailyEnergyKwh) : 0;
-    const kwh = Math.max(day.kwhTotal, measured);
+    const measured = pv && Number.isFinite(pv.dailyEnergyKwh) ? /** @type {number} */ (pv.dailyEnergyKwh) : null;
+    // Po západe slnka je deň uzavretý: namerané je celá výroba, aj keď predpoveď sľubovala viac.
+    const kwh = measured !== null && denFaza({ now, site }) === 'vecer' ? measured : Math.max(day.kwhTotal, measured ?? 0);
     return { kwh, phones: kwh / EVERYDAY.phoneChargeKwh, km: kwh * EVERYDAY.evKmPerKwh, co2Kg: co2SavedKg(kwh) };
 }
 

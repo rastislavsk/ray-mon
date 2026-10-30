@@ -139,17 +139,3 @@ export function bindDayScrub(chart, hooks) {
     bindPointer(chart, hooks);
     bindKeys(chart, hooks);
 }
-
-/**
- * Stránka pásu odporúčaní, na ktorej pás stojí. Karty sú užšie než pás (vidno kus ďalšej),
- * takže sa stránka počíta z kroku medzi kartami; posledná sa celá ku kraju nedostane, preto
- * platí aj koniec posunu.
- * @param {HTMLElement} strip
- */
-export function stripPage(strip) {
-    const cards = strip.children;
-    if (cards.length < 2) return 0;
-    if (strip.scrollLeft >= strip.scrollWidth - strip.clientWidth - 2) return cards.length - 1;
-    const step = /** @type {HTMLElement} */ (cards[1]).offsetLeft - /** @type {HTMLElement} */ (cards[0]).offsetLeft;
-    return Math.min(cards.length - 1, Math.max(0, Math.round(strip.scrollLeft / (step || 1))));
-}

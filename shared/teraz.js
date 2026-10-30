@@ -2,7 +2,7 @@
 // isté rozloženie, každá vo vlastných farbách. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
 // iného času cez `previewMinutes`), plán dňa z dayPlan, odpoveď teraz a Plán dňa z mozemModel - tie isté
 // ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou, Plán dňa a graf dňa s pásom plánu.
-// Pás odporúčaní (dnesCards) kreslí karta Dnes. Čisté funkcie,
+// Dnešok a kedy lepšie (dnesCards) berie karta Dnes (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
@@ -243,8 +243,8 @@ function readoutOf(input, plan, hero, limitKw) {
 }
 
 /**
- * Pás odporúčaní na karte Dnes: dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy
- * bude lepšie. Bez predpovede null.
+ * Dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy bude lepšie - z toho skladá
+ * kartu Dnes shared/dnes-faza.js. Bez predpovede null.
  * @param {TerazInput} input @param {import('./messages.js').Voice} [voice]
  */
 export function dnesCards(input, voice = 'drzy') {
@@ -269,9 +269,24 @@ export function todayCard(input, plan, nowMin) {
     const measured = kwh !== null && Number.isFinite(kwh);
     const done = measured ? /** @type {number} */ (kwh) : day ? soFar(day.hourly, nowMin) : 0;
     return {
-        line: day ? terazTodayText({ forecastKwh: day.kwhTotal, doneKwh: done, measured }) : '',
-        pct: day && day.kwhTotal > 0 ? Math.min(100, Math.round((100 * done) / day.kwhTotal)) : null,
+        ...dayDone(day, done, measured),
         window: terazWindowText(window, !ahead && !!window),
+    };
+}
+
+/**
+ * Čo z predpovede dneška už nabehlo: čísla pre kartu Dnes cez deň (shared/dnes-faza.js) - predpoveď
+ * dňa (null bez nej), nabehnuté a či je namerané -, riadok a percento pre pás. Bez predpovede na dnešok prázdne.
+ * @param {import('./solar.js').ForecastDay | null} day @param {number} done @param {boolean} measured
+ */
+function dayDone(day, done, measured) {
+    if (!day) return { forecastKwh: null, doneKwh: done, measured, line: '', pct: null };
+    return {
+        forecastKwh: day.kwhTotal,
+        doneKwh: done,
+        measured,
+        line: terazTodayText({ forecastKwh: day.kwhTotal, doneKwh: done, measured }),
+        pct: day.kwhTotal > 0 ? Math.min(100, Math.round((100 * done) / day.kwhTotal)) : null,
     };
 }
 

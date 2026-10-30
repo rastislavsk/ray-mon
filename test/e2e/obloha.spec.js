@@ -22,7 +22,8 @@ import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js'
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
-import { dnesCards, terazModel } from '../../shared/teraz.js';
+import { dnesFaza } from '../../shared/dnes-faza.js';
+import { terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -662,39 +663,69 @@ test.describe('nasadenie a cache: karty načítané neskôr (obloha/web/parts.js
  * Model karty pre dáta z fixtures v danej chvíli, tak ako ho počíta appka.
  * @param {Date} time @param {object} [extra] @param {Parameters<typeof mozemSkyModel>[1]} [opts]
  */
-const modelKarty = (time, extra = {}, opts = {}) =>
-    mozemSkyModel(
-        {
-            ...OWNER,
-            now: time,
-            loading: false,
-            known: /** @type {const} */ ('elektraren'),
-            pv,
-            forecast: buildForecast(weather, time, SITE, PLANT),
-            ...extra,
-        },
-        opts,
-    );
+const modelKarty = (time, extra = {}, opts = {}) => {
+    const input = {
+        ...OWNER,
+        now: time,
+        loading: false,
+        known: /** @type {const} */ ('elektraren'),
+        pv,
+        forecast: buildForecast(weather, time, SITE, PLANT),
+        ...extra,
+    };
+    const m = mozemSkyModel(input, opts);
+    // Čo sa mení s časťou dňa - appka to skladá tou istou funkciou (obloha/web/render/mozem.js).
+    const faza = m.ask || m.state === 'loading' ? null : dnesFaza(input, m.den, m.window, { voice: opts.voice, devices: opts.devices });
+    return { ...m, faza };
+};
 
-/** Čo karta Dnes ukazuje: slovo, veta (len bez predpovede na dnešok) a čo dá strecha za celý deň. @param {import('@playwright/test').Page} page */
+/**
+ * Čo karta Dnes ukazuje: slovo, veta (len bez predpovede na dnešok), čo dá strecha za celý deň
+ * a to, čo sa mení s časťou dňa. @param {import('@playwright/test').Page} page
+ */
 const kartaVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
         const vidno = (/** @type {string} */ sel) => !document.querySelector(sel)?.classList.contains('hidden');
+        const ak = (/** @type {string} */ sel) => (vidno(sel) ? text(sel) : '');
         return {
             word: text('#mz-word'),
-            lead: vidno('#mz-lead') ? text('#mz-lead') : '',
-            day: vidno('#mz-day') ? text('#mz-day-lead') : '',
+            lead: ak('#mz-lead'),
+            day: vidno('#mz-day') ? ak('#mz-day-lead') : '',
             eq: [...document.querySelectorAll('#mz-day-eq b')].map((el) => el.textContent),
+            chip: ak('#mz-chip'),
+            kick: ak('#mz-kick'),
+            count: ak('#mz-count'),
+            grade: ak('#mz-grade'),
+            line: vidno('#mz-more') ? ak('#mz-line') : '',
+            progress: vidno('#mz-more') ? ak('#mz-progress') : '',
+            tomorrow: vidno('#mz-tom') ? [text('#mz-tom-chip'), text('#mz-tom-word'), text('#mz-tom-text')] : null,
+            later: vidno('#mz-later') ? text('#mz-later-text') : '',
         };
     });
+
+/** Karta bez časti dňa (dáta nie sú, poloha chýba). @type {import('../../shared/dnes-faza.js').DnesFaza} */
+const BEZ_FAZY = { faza: 'den', chip: '', kick: '', count: null, progress: null, grade: null, line: '', later: '', tomorrow: null };
+
+/** Časť dňa z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').DnesFaza} d */
+const fazaZModelu = (d) => ({
+    chip: d.chip,
+    kick: d.kick,
+    count: d.count ? d.count.value + d.count.text : '',
+    grade: d.grade ? d.grade.label + d.grade.value : '',
+    line: d.line,
+    progress: d.progress ? d.progress.text : '',
+    tomorrow: d.tomorrow ? [d.tomorrow.chip, d.tomorrow.word, d.tomorrow.text] : null,
+    later: d.later,
+});
 
 /** To isté z modelu. @param {ReturnType<typeof modelKarty>} m */
 const kartaZModelu = (m) => ({
     word: m.word,
     lead: m.day ? '' : m.lead,
-    day: m.day?.lead ?? '',
+    day: m.day && !m.faza?.grade ? m.day.lead : '',
     eq: m.day ? m.day.eq.map((e) => e.value) : [],
+    ...fazaZModelu(m.faza ?? BEZ_FAZY),
 });
 
 /** Otvorí kartu Dnes - appka sa otvára na Teraz. @param {import('@playwright/test').Page} page */
@@ -720,7 +751,7 @@ async function prst(page, { x, y, dy = 0 }) {
 
 test.describe('karta Dnes', () => {
     for (const hm of ['13:00', '21:00', '05:30']) {
-        test(`o ${hm} ukazuje to isté slovo, deň v číslach a pás odporúčaní ako model`, async ({ page }) => {
+        test(`o ${hm} ukazuje to isté slovo, deň v číslach a časť dňa ako model`, async ({ page }) => {
             const errors = await openObloha(page, { time: at(hm) });
             await naDnes(page);
             const m = modelKarty(at(hm));
@@ -730,19 +761,9 @@ test.describe('karta Dnes', () => {
             // Zelený úsek oblúka je dnešné okno so slnkom; v noci je na oblúku mesiac.
             await expect(page.locator('#mz-arc .arc-win')).toHaveCount(m.arc?.win ? 1 : 0);
             await expect(page.locator('#mz-arc .arc-moon')).toHaveCount(m.arc?.sun === null ? 1 : 0);
-            // Pás odporúčaní: dnešok a kedy bude lepšie.
-            const k = dnesCards({
-                ...OWNER,
-                now: at(hm),
-                loading: false,
-                known: 'elektraren',
-                pv,
-                forecast: buildForecast(weather, at(hm), SITE, PLANT),
-                previewMinutes: null,
-            });
-            await expect(page.locator('#tz-today')).toHaveText(k?.today.line ?? '');
-            await expect(page.locator('#tz-later')).toHaveText(k?.later ?? '');
-            await expect(page.locator('#tz-dots i')).toHaveCount(2);
+            // Ráno plán, cez deň odpočet, večer vysvedčenie a zajtrajšok - porovnané v kartaVStranke.
+            await expect(page.locator('#mz-kick')).toHaveText(m.faza?.kick || /^$/);
+            if (hm === '21:00') await expect(page.locator('#mz-tom')).toBeVisible();
             expect(errors).toEqual([]);
         });
     }
@@ -752,8 +773,8 @@ test.describe('karta Dnes', () => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
             await naDnes(page);
-            await expect(page.locator('#mz-day-eq > div')).toHaveCount(3);
-            const cisla = await page.locator('#mz-day-eq > div').evaluateAll((els) =>
+            await expect(page.locator('#mz-day-eq > li')).toHaveCount(3);
+            const cisla = await page.locator('#mz-day-eq > li').evaluateAll((els) =>
                 els.map((el) => {
                     const box = el.getBoundingClientRect();
                     return { text: el.textContent, ok: box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 0.5 };
@@ -827,7 +848,7 @@ test.describe('karta Dnes', () => {
         await znova.click();
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW)));
         await expect(znova).toBeHidden();
-        await expect(page.locator('#tz-recs')).toBeVisible();
+        await expect(page.locator('#mz-later')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -842,14 +863,18 @@ test.describe('karta Dnes', () => {
         const errors = await openObloha(page, { settings: null, site: SITE });
         await naDnes(page);
         const typical = typicalSettings(SITE);
-        const m = mozemSkyModel({
+        /** @type {Parameters<typeof mozemSkyModel>[0]} */
+        const input = {
             ...typical,
+            zdroj: null,
             now: FIXED_NOW,
             loading: false,
             known: 'poloha',
             pv: null,
             forecast: buildForecast(weather, FIXED_NOW, SITE, typical.plant),
-        });
+        };
+        const sky = mozemSkyModel(input);
+        const m = { ...sky, faza: dnesFaza(input, sky.den, sky.window) };
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
         await expect(page.locator('#mz-guess-title')).toHaveText('Hádam podľa suseda');
         await expect(page.locator('#mz-guess-text')).toHaveText(m.guess);
@@ -1411,23 +1436,6 @@ test.describe('karta Teraz prstom', () => {
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('09:00');
         await page.waitForTimeout(300);
         await ocakavajKartu(page, 'terazky');
-        expect(errors).toEqual([]);
-    });
-
-    test('pás odporúčaní na Dnes sa posúva prstom do strán a listovanie kariet ho nepreberie', async ({ page }) => {
-        await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openObloha(page, { time: at('13:00') });
-        await naDnes(page);
-        const pas = page.locator('#tz-strip');
-        await pas.scrollIntoViewIfNeeded();
-        const box = await pas.boundingBox();
-        if (!box) throw new Error('pás odporúčaní nie je vidno');
-        await prstTah(page, { x: box.x + box.width * 0.8, y: box.y + box.height / 2, dx: -220 });
-        await expect.poll(() => pas.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-        await page.waitForTimeout(400);
-        await ocakavajKartu(page, 'mozem');
-        await expect(page.locator('#tz-dots i.on')).toHaveCount(1);
-        await expect(page.locator('#tz-dots i').first()).not.toHaveClass('on');
         expect(errors).toEqual([]);
     });
 });

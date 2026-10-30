@@ -27,7 +27,6 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   loading: boolean,
  *   weekSelDay: number,
  *   weekDetail: 'day' | 'week' | null,
- *   terazPage: number,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
@@ -113,8 +112,6 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Karta 7 dní má na mobile dve obrazovky: prehľad dní a detail vybraného dňa.
         // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
         weekDetail: null,
-        // Stránka pásu odporúčaní na karte Dnes (nastavenie vnútri karty, nie krok navigácie).
-        terazPage: 0,
         // Zoznam pod grafom dňa na karte Teraz (legenda časovej osi): na začiatku zatvorený a neukladá sa.
         // Otvorený je krok navigácie - Späť ho zbalí.
         tzListOpen: false,

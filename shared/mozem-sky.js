@@ -68,6 +68,9 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy', devices, r
         // veta ostáva pre čítačku - ohlási ju pri zmene odpovede.
         lead: offline ? offlineLead(input, online, voice) : m.hero.lead,
         day: m.day,
+        // Slovo o dni a dnešné okno - z nich karta skladá to, čo sa mení s časťou dňa (shared/dnes-faza.js).
+        den: m.den,
+        window: f ? f.window : null,
         retry: offline,
         guess: m.estimate ? mozemGuessText(installedKw(TYPICAL_PLANT), voice) : '',
         list: m.list,
@@ -94,6 +97,8 @@ function emptyCard() {
         word: '',
         lead: '',
         day: /** @type {ReturnType<typeof mozemModel>['day']} */ (null),
+        den: /** @type {ReturnType<typeof mozemModel>['den']} */ (null),
+        window: /** @type {import('./mozem.js').Window | null} */ (null),
         retry: false,
         guess: '',
         list: null,

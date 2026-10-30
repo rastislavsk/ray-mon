@@ -4,7 +4,7 @@
 // Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
 import { localMinutes } from '../../shared/solar.js';
-import { bindDayScrub, stripPage } from '../../web/teraz-gestures.js';
+import { bindDayScrub } from '../../web/teraz-gestures.js';
 import { stepBack } from './nav-back.js';
 import { shows } from './state.js';
 
@@ -46,12 +46,4 @@ export function initTeraz(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
-    dom.tzStrip.addEventListener(
-        'scroll',
-        () => {
-            const page = stripPage(dom.tzStrip);
-            if (page !== store.get().terazPage) store.setState({ terazPage: page });
-        },
-        { passive: true },
-    );
 }

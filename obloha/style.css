@@ -434,6 +434,9 @@ button.live[aria-expanded='true'] {
 }
 .eq {
     display: grid;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding-top: 10px;
@@ -454,6 +457,79 @@ button.live[aria-expanded='true'] {
     margin-top: 2px;
     font-size: 0.8125rem;
     line-height: 1.25;
+}
+/* Karta Dnes podľa časti dňa (docs/navrhy/dnes-tri-smery.html, smer C): štítok s triedou dňa,
+   riadok nad slovom, odpočet okna či vysvedčenie dneška a večer zajtrajšok v skle. */
+.mozem .chip {
+    justify-self: start;
+    background: rgba(14, 36, 80, 0.3);
+}
+.mozem .chip[data-cls='vyborny'] {
+    background: var(--yes);
+    border-color: var(--yes);
+    color: #14300c;
+}
+.mozem .chip[data-cls='dobry'] {
+    background: #ffc94a;
+    border-color: #ffc94a;
+    color: #3a2a00;
+}
+.kick {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+/* Cez deň s odpočtom, večer s vysvedčením a v zajtrajšku je slovo menšie - hlavné je číslo pod
+   ním. Veľkosť z renderu (--word) tu neplatí, na úzkom displeji rozhoduje najdlhšie slovo. */
+.word.sm,
+.tom .word {
+    font-size: min(2rem, calc((min(100vw, 640px) - 40px) / var(--word-len, 10)));
+}
+.count b {
+    display: block;
+    font-size: min(3.25rem, 14vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+}
+.count span {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.0938rem;
+    line-height: 1.3;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.grade {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-size: 1.0938rem;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.grade b {
+    font-size: min(2rem, 9vw);
+    font-weight: 900;
+}
+/* Riadky pod číslami na tmavšom podklade, aby sa biele písmo dalo čítať aj na svetlej oblohe. */
+.mz-more {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(14, 36, 80, 0.32);
+}
+.mz-more p {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+}
+.later p {
+    font-size: 0.9375rem;
+    line-height: 1.35;
 }
 .pbtn {
     justify-self: start;
@@ -1074,39 +1150,6 @@ button.live[aria-expanded='true'] {
     cursor: pointer;
 }
 
-/* Pás odporúčaní listuje prehliadač; karty sú užšie než pás, aby bolo vidno, že ďalej niečo je. */
-.strip {
-    display: flex;
-    gap: 10px;
-    padding: 12px 14px 4px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scroll-padding: 0 14px;
-    scrollbar-width: none;
-}
-.strip::-webkit-scrollbar {
-    display: none;
-}
-.strip:focus-visible {
-    outline: 3px solid #fff;
-    outline-offset: -3px;
-}
-.rec {
-    flex: 0 0 86%;
-    align-content: start;
-    margin: 0;
-    scroll-snap-align: start;
-}
-.rec p {
-    font-size: 0.9375rem;
-    line-height: 1.35;
-}
-.rec .h {
-    font-size: 1.1875rem;
-    line-height: 1.2;
-    font-variation-settings: 'wdth' 108;
-}
 .bar {
     height: 6px;
     border-radius: 999px;
@@ -1118,22 +1161,6 @@ button.live[aria-expanded='true'] {
     height: 100%;
     background: var(--yes);
 }
-.dots {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    padding: 6px 0 14px;
-}
-.dots i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
-}
-.dots i.on {
-    background: #fff;
-}
-
 /* ===== Karta 7 dní ===== */
 .sedem p,
 .sedem h2,

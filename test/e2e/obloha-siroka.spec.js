@@ -425,7 +425,8 @@ test.describe('klávesnica na počítači', () => {
         ).toBe(true);
         const stlpce = vStlpcoch.map((k) => k.column);
         expect(stlpce).toEqual([...stlpce].sort((a, b) => a - b));
-        expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));
+        // Stĺpec Dnes nemá ovládače, ktoré by čakali na klávesnicu - Tab ho preskočí.
+        expect(new Set(stlpce)).toEqual(new Set([1, 2]));
         expect(kroky.filter((k) => !k.visible).map((k) => k.name)).toEqual([]);
         expect(kroky.filter((k) => !k.inView).map((k) => k.name)).toEqual([]);
         expect(errors).toEqual([]);
