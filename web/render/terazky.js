@@ -5,9 +5,8 @@
 // v novej appke, takže obe povedia to isté - a texty sú v shared/messages-core.js. Tu sa len
 // zapisuje do DOM. Farbu čísla a pozadia dáva style.css podľa data-tier (render/header.js).
 
-import { escapeHtml, minutesToTimeStr } from '../../shared/format.js';
+import { escapeHtml } from '../../shared/format.js';
 import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-core.js';
-import { localMinutes } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
 import { writeHtml } from '../memo.js';
@@ -21,19 +20,10 @@ const textsOf = (state) => voiceTexts(state.voice).TERAZ_TEXTS;
 /** @param {HTMLElement} el @param {boolean} on */
 const show = (el, on) => el.classList.toggle('hidden', !on);
 
-/**
- * Riadok nad číslom: „Teraz · 08:13 · Dvorany“, počas náhľadu „O 12:15 · Dvorany“ - čas je už
- * v nadpise modelu. To isté ako riadok nad slovom na karte Môžem?.
- * @param {import('../state.js').AppState} state @param {Model} m
- */
-function kick(state, m) {
-    const time = state.previewMinutes === null ? ` · ${minutesToTimeStr(localMinutes(state.now, state.site.timezone))}` : '';
-    return `${m.title}${time} · ${state.site.name}`;
-}
-
 /** Číslo a riadky pod ním. @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom */
 function renderHead(state, m, dom) {
-    dom.tzTitle.textContent = kick(state, m);
+    // Len „Teraz“, počas náhľadu „O 12:15“ - čas a miesto ukazuje hlavička, ako v novej appke.
+    dom.tzTitle.textContent = m.title;
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     dom.tzNumVal.textContent = m.num;

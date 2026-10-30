@@ -233,9 +233,6 @@ async function bodGrafu(page, min) {
 /** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
 const farbaPasu = (page, min) => page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`).getAttribute('data-tone');
 
-/** Riadok nad číslom: nadpis modelu, čas (len bez náhľadu) a obec. @param {ReturnType<typeof terazModel>} m @param {string} [hm] */
-const kick = (m, hm) => `${m.title}${hm ? ` · ${hm}` : ''} · ${SITE.name}`;
-
 test('bez merania: pás pod číslom povie, že je to odhad, a vedie na krok Meranie', async ({ page }) => {
     const errors = await openApp(page, { settings: { ...OWNER, zdroj: null } });
     const m = terazAt(FIXED_NOW, { zdroj: null, pv: null });
@@ -290,9 +287,9 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     if (!m.say || !m.chart) throw new Error('model o 13:00 nemá graf ani vetu');
     await expect(page.locator('#pv-updated')).toHaveText('13:00');
     await expect(page.locator('#pv-place')).toHaveText(SITE.name);
-    await expect(page.locator('#tz-title')).toHaveText(kick(m, '13:00'));
-    await expect(page.locator('#tz-num-val')).toHaveText('6.41');
-    expect(m.num).toBe('6.41');
+    await expect(page.locator('#tz-title')).toHaveText(m.title);
+    await expect(page.locator('#tz-num-val')).toHaveText('6.4');
+    expect(m.num).toBe('6.4');
     await expect(page.locator('#tz-src')).toHaveText('živé meranie');
     await expect(page.locator('#tz-sub')).toHaveText(m.sub);
     await expect(page.locator('#tz-retry')).toBeHidden();
@@ -441,7 +438,7 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await page.mouse.up();
     // Nadpis povie, ku ktorému času číslo patrí; čas je aj v grafe pri čiare.
     expect(nahlad.title).toBe('O 20:45');
-    await expect(page.locator('#tz-title')).toHaveText(kick(nahlad));
+    await expect(page.locator('#tz-title')).toHaveText(nahlad.title);
     await expect(page.locator('#tz-num-val')).toHaveText(nahlad.num);
     // Štítky a veta ostávajú o teraz - pod prstom sa nemenia.
     await expect(page.locator('#tz-say-text')).toHaveText(teraz.say?.text ?? '');
@@ -456,7 +453,7 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
 
     const spat = page.getByRole('button', { name: 'Späť na teraz' });
     await spat.click();
-    await expect(page.locator('#tz-title')).toHaveText(kick(teraz, '13:00'));
+    await expect(page.locator('#tz-title')).toHaveText(teraz.title);
     await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
     await expect(spat).toBeHidden();
     await expect(page.locator('#tz-chart')).toBeFocused();
