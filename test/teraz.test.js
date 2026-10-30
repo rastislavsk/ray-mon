@@ -646,7 +646,7 @@ test('terazModel: výrobca prístup odmietol - pás povie prečo a vedie k opät
 
 test('terazModel: noc - výkon 0, veta o obzore, okno, ktoré už bolo, a lacná sieť', () => {
     const vecer = terazModel(input(at('21:00')));
-    assert.equal(vecer.num, '0.00');
+    assert.equal(vecer.num, '0');
     assert.equal(vecer.sub, TERAZ_TEXTS.night);
     assert.match(dnesCards(input(at('21:00')))?.today.window ?? '', /^Okno na veľké veci bolo /);
     const noc = terazModel(input(at('02:00')));

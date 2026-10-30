@@ -141,14 +141,14 @@ function waitTimeFor(state, sunny) {
 }
 
 /**
- * Veľké číslo výkonu: dve desatinné miesta, no najviac päť znakov, od 100 kW teda jedno.
- * Bodka je tu zámerne, hoci zvyšok appky píše desatinnú čiarku: veľké číslo ako na displeji
- * meniča s ňou vyzerá lepšie. Čiarku sme skúsili (#180) a vrátili.
+ * Veľké číslo výkonu: jedno desatinné miesto, nula bez neho („0“, nie „0.0“) - druhé desatinné
+ * miesto bolo pre rodinu len šum. Bodka je tu zámerne, hoci zvyšok appky píše desatinnú čiarku:
+ * veľké číslo ako na displeji meniča s ňou vyzerá lepšie. Čiarku sme skúsili (#180) a vrátili.
  * @param {number} kw
  */
 function powerTextOf(kw) {
-    const text = kw.toFixed(2);
-    return text.length > 5 ? kw.toFixed(1) : text;
+    const text = kw.toFixed(1);
+    return text === '0.0' ? '0' : text;
 }
 
 /**

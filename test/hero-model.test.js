@@ -19,16 +19,18 @@ test('13:00 so 6,4 kW v lacnom pásme: zelená, výkon naživo', () => {
     const m = heroModel({ ...base, now: at('13:00') });
     assert.equal(m.tier, 'green');
     assert.equal(m.message.headline, 'Najlepší čas dňa — zapni všetko');
-    assert.equal(m.powerText, '6.41');
+    assert.equal(m.powerText, '6.4');
     assert.equal(m.source, 'live');
     assert.equal(m.waitTime, null);
 });
 
-test('veľké číslo výkonu má najviac päť znakov, aj pri 100 kW', () => {
+test('veľké číslo výkonu má jedno desatinné miesto s bodkou, nula je len „0“', () => {
     const vykon = (/** @type {number} */ kw) => heroModel({ ...base, now: at('13:00'), pv: { ...pv, realTimePowerKw: kw } }).powerText;
-    assert.equal(vykon(10.44), '10.44');
+    assert.equal(vykon(10.44), '10.4');
     assert.equal(vykon(100), '100.0');
-    assert.equal(vykon(99.996), '100.0', 'zaokrúhlenie na dve desatiny by dalo šesť znakov');
+    assert.equal(vykon(0.06), '0.1');
+    assert.equal(vykon(0.04), '0', 'čo sa zaokrúhli na nulu, je nula bez desatín');
+    assert.equal(vykon(0), '0');
 });
 
 test('02:00 v noci: text o lacnom nočnom prúde', () => {
