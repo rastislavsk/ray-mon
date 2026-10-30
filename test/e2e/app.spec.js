@@ -3206,22 +3206,27 @@ test.describe('karta Dnes', () => {
     });
 
     for (const width of [320, 390]) {
-        test(`každé veľké slovo sa zmestí na plagát na ${width} px a má najviac tri riadky`, async ({ page }) => {
+        test(`každé veľké slovo sa zmestí na plagát na ${width} px a má najviac dva riadky`, async ({ page }) => {
             await page.setViewportSize({ width, height: 700 });
             const errors = await openApp(page);
             await page.locator('#nav-mozem').click();
             await expect(page.locator('.mozem-word')).toBeVisible();
-            // Súčasná appka hovorí len drzo. Veľkosť ako v renderi: podľa najdlhšieho slova a dĺžky hlášky.
-            for (const word of bigWords('drzy')) {
-                const { fits, lines } = await page.locator('.mozem-word').evaluate((el, w) => {
+            // Súčasná appka hovorí len drzo. Veľkosť ako v renderi: podľa najdlhšieho slova a dĺžky hlášky,
+            // veľké aj menšie slovo (cez deň s odpočtom, večer s vysvedčením).
+            for (const [word, sm] of bigWords('drzy').flatMap((w) => [
+                [w, false],
+                [w, true],
+            ])) {
+                const { fits, lines } = await page.locator('.mozem-word').evaluate((el, [w, small]) => {
+                    el.classList.toggle('sm', small);
                     el.textContent = w;
                     el.style.setProperty('--word-len', String(Math.max(...w.split(/\s+/).map((x) => x.length))));
                     el.style.setProperty('--word-chars', String(w.length));
                     const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
                     return { fits: el.scrollWidth <= el.clientWidth + 0.5, lines: Math.round(el.clientHeight / lineHeight) };
-                }, word);
+                }, /** @type {const} */ ([word, sm]));
                 expect(fits, `„${word}“ sa nezmestí`).toBe(true);
-                expect(lines, `„${word}“ má priveľa riadkov`).toBeLessThanOrEqual(3);
+                expect(lines, `„${word}“${sm ? ' (malé)' : ''} má priveľa riadkov`).toBeLessThanOrEqual(2);
             }
             expect(errors).toEqual([]);
         });

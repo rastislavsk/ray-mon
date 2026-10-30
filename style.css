@@ -4187,11 +4187,12 @@ b {
 }
 /* Veľkosť aj podľa najdlhšieho slova (--word-len z renderu): verzálka má v tomto písme na znak
    najviac asi 0,75 em, takže slovo sa zmestí na šírku bloku vždy, aj „DOJEBABRALO“. A podľa dĺžky
-   celej hlášky (--word-chars): s medzerami a zalomením vychádza asi 0,7 em na znak, takže dlhá
-   hláška („Oskar dnes pujde na plný koule“) má najviac tri riadky. Krátke hlášky to nezmenší. */
+   celej hlášky (--word-chars): s medzerami a zalomením na dva riadky treba počítať asi 0,8 em na
+   znak, takže dlhá hláška („Oskar dnes pujde na plný koule“) má najviac dva riadky - dlhšia má menšie písmo.
+   Krátke hlášky to nezmenší. */
 .mozem-word {
     margin: 18px 0 12px;
-    font-size: min(23cqi, 96px, calc(100cqi / (var(--word-len, 1) * 0.8)), calc(300cqi / (var(--word-chars, 1) * 0.7)));
+    font-size: min(23cqi, 96px, calc(100cqi / (var(--word-len, 1) * 0.8)), calc(200cqi / (var(--word-chars, 1) * 0.8)));
     font-weight: 700;
     line-height: 0.86;
     letter-spacing: -0.055em;
@@ -4231,10 +4232,11 @@ b {
     font-size: 13px;
     line-height: 1.25;
 }
-/* Cez deň s odpočtom a večer s vysvedčením je hlavné číslo pod slovom - slovo je menšie. */
+/* Cez deň s odpočtom a večer s vysvedčením je hlavné číslo pod slovom - slovo je menšie. Aj tu
+   najviac dva riadky. */
 .mozem-word.sm {
     margin: 10px 0 8px;
-    font-size: min(11cqi, 44px, calc(100cqi / (var(--word-len, 1) * 0.8)));
+    font-size: min(11cqi, 44px, calc(100cqi / (var(--word-len, 1) * 0.8)), calc(200cqi / (var(--word-chars, 1) * 0.8)));
 }
 /* Odpočet okna na veľké veci: koľko ešte zostáva, alebo o koľko začne. */
 .mozem-count {
