@@ -1927,6 +1927,25 @@ test('Späť zbalí každú položku Nastavenia; rozbalená je najviac jedna', a
     expect(errors).toEqual([]);
 });
 
+/** Iná karta začína navrchu, nie na výške, kam bola odscrollovaná predošlá. */
+test('po prepnutí karty je stránka navrchu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 400 });
+    const errors = await openApp(page);
+    await page.locator('#nav-7dni').click();
+    await ocakavajKartu(page, '7dni');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    expect(await page.evaluate(() => window.scrollY), 'karta musí byť vyššia ako obrazovka, inak test nič neoverí').toBeGreaterThan(100);
+    await page.locator('#nav-mozem').click();
+    await ocakavajKartu(page, 'mozem');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    // Späť vedie na kartu 7 dní tiež navrch.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.goBack();
+    await ocakavajKartu(page, '7dni');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    expect(errors).toEqual([]);
+});
+
 test.describe('ťah prstom: karty sa nelistujú, dni v detaile áno', () => {
     test.use({ hasTouch: true });
 

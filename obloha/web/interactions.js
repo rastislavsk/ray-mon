@@ -19,6 +19,11 @@ import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelCh
  * @param {Store} store @param {Dom} dom
  */
 function initNavigation(store, dom) {
+    // Iná karta začína navrchu (aj cez Späť), ako v súčasnej appke. V prehľade so stĺpcami sa
+    // stránka nehýbe - k stĺpcu ju posunie fokus.
+    store.subscribe((state, prev) => {
+        if (state.panel !== prev.panel && !dashboard(state)) window.scrollTo(0, 0);
+    });
     const go = (/** @type {import('./state.js').Panel} */ to) => {
         if (dashboard(store.get()) && isColumn(to)) {
             // Len iný aktívny stĺpec: panel veci, náhľad aj detail v ostatných stĺpcoch ostávajú.
