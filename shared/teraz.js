@@ -68,11 +68,13 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
     const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
-    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, aby sa graf nepohol.
+    // Štítky, veta a Plán dňa hovoria o teraz, nie o náhľade - pod prstom sa nemenia, aby sa graf
+    // nepohol. Počas náhľadu ich appky ukážu sivé (`preview`): v zvolenom čase neplatia.
     const m = mozemModel(input, { voice, devices });
     return {
         ...empty('ok', estimate),
         ...headOf(input, hero, { estimate, note, voice }),
+        preview: hero.preview,
         note,
         guess: estimate,
         chart: chartOf(input, plan, hero, now),
@@ -148,6 +150,7 @@ function empty(kind, estimate) {
         num: '',
         source: '',
         sub: '',
+        preview: false,
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,

@@ -1248,6 +1248,8 @@ test.describe('karta Teraz', () => {
         await page.keyboard.press('ArrowLeft');
         await page.keyboard.press('ArrowLeft');
         await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
+        // Štítky, veta a Plán dňa platia pre teraz - počas náhľadu sú sivé.
+        for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).toHaveAttribute('data-nahlad', '');
         await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'), { previewMinutes: minuta('12:45') })).num);
         // Home a End na kraje osi: deň so slnkom, nie polnoc.
         await page.keyboard.press('End');
@@ -1257,6 +1259,7 @@ test.describe('karta Teraz', () => {
         await page.keyboard.press('Escape');
         await expect(graf).toHaveAttribute('aria-valuetext', terazModel(vstupTeraz(at('13:00'))).chart?.valueText ?? '');
         await expect(page.locator('#tz-reset')).toBeHidden();
+        for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).not.toHaveAttribute('data-nahlad');
         expect(errors).toEqual([]);
     });
 
