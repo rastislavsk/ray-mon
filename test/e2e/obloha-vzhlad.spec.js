@@ -18,6 +18,7 @@ import {
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
+import { NS_FOLDS } from '../../obloha/web/state.js';
 import { voiceTexts } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
@@ -242,8 +243,10 @@ test.describe('zbaliteľné sekcie', () => {
         const errors = await openObloha(page);
         await karta(page, '7dni');
         await karta(page, 'nastavenie');
-        const sekcie = NASTAVENIE_SEKCIE;
-        // Poradie sekcií je to isté ako v súčasnej appke - dáva ho jadro.
+        const sekcie = NS_FOLDS;
+        // Poradie sekcií je to isté ako v súčasnej appke - dáva ho jadro. Appka sa nezbaľuje, ako v súčasnej appke.
+        expect(sekcie).toEqual(NASTAVENIE_SEKCIE.filter((k) => k !== 'appka'));
+        await expect(page.locator('#ns-app-title')).toHaveText(NASTAVENIE_TEXTS.appka);
         expect(
             await page.locator('[data-ns-fold]').evaluateAll((els) => els.map((e) => /** @type {HTMLElement} */ (e).dataset.nsFold)),
         ).toEqual([...sekcie]);
@@ -268,10 +271,10 @@ test.describe('zbaliteľné sekcie', () => {
         await expect(page.locator('#panel-7dni')).toBeVisible();
         // S kartou sa sekcia zbalí.
         await karta(page, 'nastavenie');
-        await rozbal(page, 'appka');
+        await rozbal(page, 'doma');
         await karta(page, 'terazky');
         await karta(page, 'nastavenie');
-        await expect(page.locator('#ns-body-appka')).toBeHidden();
+        await expect(page.locator('#ns-body-doma')).toBeHidden();
         expect(errors).toEqual([]);
     });
 });
@@ -282,7 +285,6 @@ test.describe('Zdieľať appku', () => {
         await podvrhniQr(page, OBLOHA_URL.length + 20);
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
-        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-sheet')).toBeVisible();
         await expect(page.locator('#ns-qr [data-qr]')).toHaveAttribute('data-qr', OBLOHA_URL);
@@ -307,7 +309,6 @@ test.describe('Zdieľať appku', () => {
     test('odkaz vedie na novú appku, s nastavením ho nová appka prevezme; bez QR knižnice len odkaz', async ({ page, browser }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
-        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         const okno = page.locator('#ns-share-sheet');
         await expect(okno).toBeVisible();
@@ -358,7 +359,6 @@ test.describe('Zdieľať appku', () => {
     test('bez uloženej elektrárne voľby s nastavením nie sú', async ({ page }) => {
         await openObloha(page, { settings: null, site: SITE });
         await karta(page, 'nastavenie');
-        await rozbal(page, 'appka');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-opts')).toBeHidden();
         await expect(page.locator('#ns-share-link')).toHaveText(OBLOHA_URL);
@@ -371,7 +371,6 @@ test.describe('Vymazať údaje', () => {
         await karta(page, 'nastavenie');
         await rozbal(page, 'vzhlad');
         await page.locator('#ns-voice [data-voice="slusny"]').click();
-        await rozbal(page, 'appka');
         const predtym = await page.evaluate(() => JSON.stringify(localStorage));
 
         await page.locator('#ns-reset').click();
@@ -439,7 +438,6 @@ test('prístupnosť: Nastavenie, okno Zdieľať appku aj potvrdenie bez závažn
     await page.locator('#ns-live-sky').click();
     await page.locator('#ns-voice [data-voice="slusny"]').click();
     expect(await vazneNalezy(page), 'Nastavenie').toEqual([]);
-    await rozbal(page, 'appka');
     await page.locator('#ns-share').click();
     await page.locator('#ns-share-settings').check();
     expect(await vazneNalezy(page), 'Zdieľať appku').toEqual([]);
@@ -472,7 +470,7 @@ for (const width of [320, 390]) {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         expect(await page.evaluate(zlePrvky, '#ns-home')).toEqual([]);
-        for (const key of NASTAVENIE_SEKCIE) {
+        for (const key of NS_FOLDS) {
             await rozbal(page, key);
             expect(await page.evaluate(zlePrvky, '#ns-home'), key).toEqual([]);
         }

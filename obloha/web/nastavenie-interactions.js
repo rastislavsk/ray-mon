@@ -49,7 +49,7 @@ export function initNastavenie(store, dom, refresh) {
 }
 
 /**
- * Zbaliteľné sekcie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad, Appka). Rozbalenie je krok navigácie, zbalenie
+ * Zbaliteľné sekcie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad). Rozbalenie je krok navigácie, zbalenie
  * nadpisom ten istý krok ako tlačidlo Späť - inak by sekcia ostala v histórii a Späť by ju znovu rozbalilo.
  * @param {Store} store @param {Dom} dom
  */

@@ -164,7 +164,7 @@ test('sekcie Nastavenia: pri štarte zbalené, rozbalená je krok navigácie, s 
     assert.deepEqual(navStepOf(navStep(open)), navStep(open));
     // Rozbalenie je nový krok - Späť sekciu zbalí, iná sekcia je tiež nový krok.
     assert.ok(!sameNavStep(navStep(open), navStep({ ...open, nsOpen: null })));
-    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, nsOpen: 'appka' })));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, nsOpen: 'doma' })));
     // Sekcia patrí len karte Nastavenie; neznáma sa zahodí, položka zo skoršej verzie ju nemá.
     assert.equal(field({ panel: 'mozem', fold: 'vzhlad' }, 'fold'), null);
     assert.equal(field({ panel: 'nastavenie', fold: 'hacker' }, 'fold'), null);

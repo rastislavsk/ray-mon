@@ -89,6 +89,8 @@ function renderHome(state, m, dom) {
     setText(dom.nsNote, m.note);
     const e = m.elektraren;
     setText(dom.nsRowsTitle, e.title);
+    setText(dom.nsRowsHint, e.hint);
+    dom.nsRowsHint.classList.toggle('err', e.hintErr);
     setHtml(dom.nsRows, rowsHtml(e));
     setHtml(dom.nsWarn, e.warnings.map((w) => `<p class="wz-msg">${escapeHtml(w)}</p>`).join(''));
     setHtml(
@@ -101,6 +103,7 @@ function renderHome(state, m, dom) {
 /** Čo máš doma: spotrebiče. @param {Model} m @param {Dom} dom */
 function renderDoma(m, dom) {
     setText(dom.nsDomaTitle, m.doma.title);
+    setText(dom.nsDomaHint, m.doma.hint);
     setHtml(dom.nsDoma, minisHtml(m.doma.devices.map((d) => ({ attr: `data-device="${d.id}"`, label: d.name, on: d.on }))));
     setText(dom.nsDomaNote, m.doma.note);
 }
@@ -113,6 +116,7 @@ function renderDoma(m, dom) {
 function renderOznamenia(m, dom) {
     const o = m.oznamenia;
     setText(dom.nsOznamTitle, o.title);
+    setText(dom.nsOznamHint, o.hint);
     setText(dom.nsOznamLabel, o.label);
     setText(dom.nsOznamSmall, o.small);
     dom.nsOznam.setAttribute('aria-checked', String(o.on));
@@ -137,13 +141,14 @@ function renderOznamenia(m, dom) {
 function renderLook(state, m, dom) {
     const v = m.vzhlad;
     setText(dom.nsLookTitle, v.title);
+    setText(dom.nsLookHint, v.hint);
     setText(dom.nsVoiceLabel, v.voiceLabel);
     setText(dom.nsVoiceSmall, v.voiceSmall);
     setHtml(dom.nsVoice, minisHtml(v.voices.map((x) => ({ attr: `data-voice="${x.id}"`, label: x.label, on: x.on }))));
     dom.nsLiveSky.setAttribute('aria-checked', String(state.liveSky));
 }
 
-/** Sekcia Appka: riadky okien a podpis. @param {Model} m @param {Dom} dom */
+/** Appka: nadpis, položky okien a podpis. @param {Model} m @param {Dom} dom */
 function renderAppka(m, dom) {
     setText(dom.nsAppTitle, m.appka.title);
     setText(dom.nsShareRowTitle, m.share.title);

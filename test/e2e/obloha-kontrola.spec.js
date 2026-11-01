@@ -138,7 +138,6 @@ async function kazdaKarta(page, check) {
         await rozbal(page, key);
         await check(`Nastavenie › ${key}`);
     }
-    await rozbal(page, 'appka');
     await page.locator('#ns-share').click();
     await expect(page.locator('#ns-share-sheet')).toBeVisible();
     await page.locator('#ns-share-settings').check();

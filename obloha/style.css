@@ -1957,6 +1957,28 @@ button.live[aria-expanded='true'] {
 .set.fold .fold-head {
     padding-right: 6px;
 }
+/* Položky karty Nastavenie stoja tesnejšie než ostatné sklá - je ich veľa pod sebou. */
+.set.fold,
+.app-items .set {
+    margin-top: 6px;
+}
+/* Podnadpis pod názvom sekcie: čo v nej je, alebo čo je nastavené (ten istý text ako v súčasnej appke). */
+.fold-hint {
+    font-size: 0.7813rem;
+    color: var(--dim);
+}
+.fold-hint.err {
+    color: var(--costly-text);
+}
+/* Appka: nadpis stojí priamo na oblohe (biely kvôli kontrastu), pod ním zdieľanie a vymazanie údajov
+   ako samostatné položky, ako v súčasnej appke. */
+.app-items .group-lbl {
+    margin: 20px 18px 0;
+    color: #fff;
+}
+.app-items .set {
+    padding: 2px 16px;
+}
 .ns-body {
     padding: 8px 16px 6px;
 }
