@@ -507,6 +507,8 @@ test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kr
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
+    // Štítky, veta a Plán dňa platia pre teraz - počas náhľadu sú sivé.
+    for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).toHaveAttribute('data-nahlad', '');
     await expect(page.locator('#tz-num-val')).toHaveText(terazAt(instant, { previewMinutes: minuta('12:45') }).num);
     // Home a End na kraje osi: deň so slnkom, nie polnoc.
     await page.keyboard.press('End');
@@ -516,6 +518,7 @@ test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kr
     await page.keyboard.press('Escape');
     await expect(graf).toHaveAttribute('aria-valuetext', terazAt(instant).chart?.valueText ?? '');
     await expect(page.locator('#tz-reset')).toBeHidden();
+    for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).not.toHaveAttribute('data-nahlad');
     expect(errors).toEqual([]);
 });
 

@@ -686,6 +686,12 @@ button.live[aria-expanded='true'] {
 #tz-plan {
     container-type: inline-size;
 }
+/* Počas náhľadu iného času sú štítky, veta aj Plán dňa sivé: hovoria o teraz, nie o zvolenom čase. */
+.say[data-nahlad],
+#tz-plan[data-nahlad] {
+    filter: grayscale(1);
+    opacity: 0.75;
+}
 /* Zbaliteľný Plán dňa (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je
    tlačidlo cez celú šírku so šípkou ako pri zozname pod grafom, zvyšok plánu je až po otvorení.
    Veta v hlavičke má jednu veľkosť zbalená aj otvorená - pri otvorení neskáče. */

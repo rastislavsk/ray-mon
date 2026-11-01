@@ -573,9 +573,11 @@ test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „
     assert.equal(terazModel(input(at('13:00'), { previewMinutes: hm(9) }), { voice: 'slusny' }).title, 'O 09:00');
     // Čas je v grafe pri čiare, pod grafom ostáva len „Späť na teraz“.
     assert.deepEqual(m.hint, { text: '', reset: true });
-    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia.
+    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, appka ich len zosivie.
     assert.deepEqual(m.say, terazModel(input(at('13:00'))).say);
     const now = terazModel(input(at('13:00')));
+    assert.equal(m.preview, true);
+    assert.equal(now.preview, false);
     assert.equal(m.chart?.now.x, now.chart?.now.x);
     const mark = m.chart?.mark;
     assert.ok(mark);

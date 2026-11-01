@@ -46,6 +46,9 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
 /** Štítky a veta o teraz pod číslom. @param {Model} m @param {Dom} dom */
 function renderSay(m, dom) {
     show(dom.tzSay, !!m.say);
+    // Počas náhľadu iného času sú štítky, veta aj Plán dňa sivé - platia pre teraz.
+    dom.tzSay.toggleAttribute('data-nahlad', m.preview);
+    dom.tzPlan.toggleAttribute('data-nahlad', m.preview);
     setHtml(
         dom.tzChips,
         m.say ? m.say.chips.map((c) => `<span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`).join('') : '',
