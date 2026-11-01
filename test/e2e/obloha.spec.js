@@ -591,6 +591,22 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
         await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d$/);
         expect(errors).toEqual([expect.stringContaining('Chýba element #hdr-tone')]);
     });
+
+    test('starý shared/teraz.js bez príznaku náhľadu: štítky a Plán dňa sa pri posune času neprepínajú', async ({ page }) => {
+        // Nový render so starým jadrom z cache: model nemá `preview`, nič nesmie zosivieť ani blikať.
+        await page.route('**/shared/teraz.js', async (route) => {
+            const body = (await (await route.fetch()).text()).replace(/^\s*preview: [\w.]+,\n/gm, '');
+            await route.fulfill({ contentType: 'text/javascript', body });
+        });
+        const errors = await openTeraz(page);
+        await page.locator('#tz-chart').focus();
+        for (let i = 0; i < 3; i++) {
+            await page.keyboard.press('ArrowLeft');
+            for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).not.toHaveAttribute('data-nahlad');
+        }
+        await expect(page.locator('#tz-reset')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
 });
 
 // Karty 7 dní, Štatistika a Nastavenie sa sťahujú až po štarte (obloha/web/parts.js) - boot.js ich
