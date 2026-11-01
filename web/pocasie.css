@@ -17,7 +17,8 @@
     --wx-moon-x: 80%;
     --wx-moon-top: 150px;
     --wx-prec-h: 190px;
-    position: absolute;
+    /* Stojí voči obrazovke: slnko svieti hore, aj keď človek kartu posunie (hlavička je sklo). */
+    position: fixed;
     z-index: -1;
     top: 0;
     left: 0;
@@ -81,11 +82,11 @@
         rgba(var(--wx-ray), 0.28) 10deg,
         transparent 11.2deg 17deg
     );
-    animation: wx-spin 240s steps(1200) infinite;
+    animation: wx-spin 240s steps(3600) infinite;
 }
 .wx-r2 {
     background: repeating-conic-gradient(from 0deg, transparent 0deg, rgba(var(--wx-ray), 0.24) 3deg, transparent 7deg 23deg);
-    animation: wx-spin 360s steps(1800) infinite reverse;
+    animation: wx-spin 360s steps(5400) infinite reverse;
 }
 .wx-flare {
     width: 46px;
@@ -105,7 +106,7 @@
 /* ---- oblaky: mäkké kopy z rozmazaných kruhov ---- */
 .wx-cloud {
     filter: blur(10px);
-    animation: wx-drift 70s steps(140) infinite alternate;
+    animation: wx-drift 70s ease-in-out infinite alternate;
 }
 .wx-cloud::before,
 .wx-cloud::after {
@@ -182,7 +183,7 @@
     inset: -40px -60px auto -60px;
     height: 420px;
     filter: blur(18px);
-    animation: wx-drift 120s steps(240) infinite alternate;
+    animation: wx-drift 120s ease-in-out infinite alternate;
     background:
         radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
         radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), 0.34), transparent 70%),
@@ -311,8 +312,9 @@
 
 /* ---- čo je v ktorom stave vidno; sila cez filter: opacity(), aby ju neprebila animácia blikania.
    Lúče sa otáčajú bez rozmazania (filter) - mäkké hrany majú v prechode farieb, rozmazaná otáčajúca
-   sa vrstva je drahá na slabom telefóne. Pomalé pohyby (lúče, oblaky) idú po krokoch raz za
-   pätinu až pol sekundy, nie v každom snímku - oko rozdiel nevidí, telefón áno. ---- */
+   sa vrstva je drahá na slabom telefóne. Lúče sa pootočia 15-krát za sekundu, nie v každom snímku:
+   posun o necelý pixel oko nevidí, telefón ušetrí väčšinu prekresľovania (pri 5-krát za sekundu
+   bolo trhanie vidno). ---- */
 .wx[data-wx='jasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-flare),
 .wx[data-wx='polojasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-c1, .wx-c2, .wx-c3),
 .wx[data-wx='zamracene']:not([data-noc]) :is(.wx-diffuse, .wx-deck),

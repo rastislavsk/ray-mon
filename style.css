@@ -308,30 +308,37 @@ b {
     background: var(--bg-page);
     background-attachment: fixed;
 }
-/* Pri vrchu stránky je hlavička priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css)
-   svietilo aj cez ňu a spod stavového riadku. Po posune o kúsok dostane pozadie, aby pod ňou
-   nebolo vidno obsah. Robí to prehliadač podľa posunu stránky (animation-timeline), bez JS;
-   kde to nevie, ostáva hlavička s pozadím. Stránka, ktorá sa nedá posunúť, animáciu nespustí -
-   preto je priehľadnosť základ a pozadie prináša až animácia. */
+/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu.
+   Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod hlavičkou prechádza,
+   a slnko za ním ostane vidno. Robí to prehliadač podľa posunu stránky (animation-timeline), bez
+   JS; kde to nevie, ostáva hlavička s pozadím. Pri útlme pohybu je sklo stále. */
 @supports (animation-timeline: scroll()) {
     .appbar {
         background: transparent;
-        animation: appbar-pozadie linear both;
-        animation-timeline: scroll(root);
-        animation-range: 0 32px;
     }
-    /* Útlm pohybu vypne aj túto animáciu - hlavička má potom pozadie stále. */
+    .appbar::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background: color-mix(in srgb, var(--bg) 70%, transparent);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        opacity: 0;
+        animation: appbar-sklo linear both;
+        animation-timeline: scroll(root);
+        animation-range: 0 48px;
+    }
     @media (prefers-reduced-motion: reduce) {
-        .appbar {
-            background: var(--bg-page);
-            background-attachment: fixed;
+        .appbar::before {
+            opacity: 1;
         }
     }
 }
-@keyframes appbar-pozadie {
+@keyframes appbar-sklo {
     to {
-        background: var(--bg-page);
-        background-attachment: fixed;
+        opacity: 1;
     }
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Slnko je teplo biele, nie žlté - žltou
