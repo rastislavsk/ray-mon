@@ -48,6 +48,8 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `bodka-merania.html`           | Bodka pri čase v oboch appkách = stav merania; zastarané: bez spojenia, menič mlčí, menič spí; kruh v navigácii (B)   |
 | `nastavenie-zjednotenie.html`  | Karta Nastavenie v oboch appkách z jedného modelu (C): poradie, texty, Čo máš doma, Vzhľad v súčasnej (A–F)           |
 | `plan-dna-zajtra.html`         | Plán dňa (Obloha) večer, keď dnes nič nejde na slnko: os sa prepne na zajtra (1), jedna os cez noc (2)                |
+| `teraz-bez-grafu.html`         | Karta Teraz bez grafu dňa: 6 návrhov a posudok; príbeh dňa (A), hodiny okolo teraz (B) – zamietnuté, chce obraz       |
+| `teraz-obraz-dna.html`         | Karta Teraz – obraz dňa namiesto grafu: 8 vizuálnych variantov a posudok; stuha dňa (A), plán na dráhe (B)            |
 
 ## Prečo je to v repozitári
 

@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Teraz: obraz dňa</title>
+        <style>
+            /* Návrh: karta Teraz – obraz dňa namiesto grafu. Druhé kolo po zamietnutí textov a zoznamov
+   (teraz-bez-grafu.html): dizajnér rozpracoval štyri vizuálne smery do 8 variantov, kritik vybral
+   dva – A stuha dňa, B plán na dráhe. Deň je vymyslený a počíta ho skript na konci; nič
+   neimportuje zo shared/ ani web/. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-500-latin-ext.woff2') format('woff2');
+                font-weight: 500;
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0a0a0a;
+                --card: #151614;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --ink-08: rgba(242, 240, 234, 0.1);
+                --green: #9ef25b;
+                --part: #6f9a4c;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --grey: #b9b6ac;
+                --on-color: #0b0b0b;
+                --font: 'Space Grotesk', system-ui, 'Segoe UI', Arial, sans-serif;
+                --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--ink);
+                font: 15px/1.5 var(--font);
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+            h1 {
+                font-size: 28px;
+                margin: 0 0 8px;
+            }
+            h2 {
+                font-size: 22px;
+                margin: 56px 0 6px;
+                padding-top: 24px;
+                border-top: 1px solid var(--ink-12);
+            }
+            h3 {
+                font-size: 16px;
+                margin: 24px 0 6px;
+            }
+            main > p,
+            main > ul li,
+            .cap {
+                color: var(--ink-45);
+                max-width: 780px;
+            }
+            main b,
+            main strong {
+                color: var(--ink);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 13px;
+                color: var(--ink);
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 1000px;
+                font-size: 14px;
+                margin-top: 12px;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--ink-12);
+            }
+            th {
+                color: var(--ink-45);
+                font-weight: 500;
+            }
+            td {
+                color: var(--ink-70);
+            }
+            .score {
+                font-family: var(--mono);
+                color: var(--ink);
+                white-space: nowrap;
+            }
+            .pick td {
+                background: rgba(158, 242, 91, 0.06);
+            }
+
+            /* Ovládanie ukážky */
+            .controls {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px 22px;
+                margin: 18px 0 4px;
+                padding: 12px 14px;
+                border: 1px solid var(--ink-12);
+                border-radius: 14px;
+                font-size: 13px;
+            }
+            .controls fieldset {
+                border: 0;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+            }
+            .controls legend {
+                float: left;
+                color: var(--ink-45);
+                margin-right: 4px;
+            }
+            .controls label {
+                cursor: pointer;
+            }
+            .controls input {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .controls span {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 99px;
+                border: 1px solid var(--ink-20);
+                color: var(--ink-70);
+            }
+            .controls input:checked + span {
+                background: var(--ink);
+                color: var(--on-color);
+                border-color: var(--ink);
+            }
+            .controls input:focus-visible + span {
+                outline: 2px solid var(--ink);
+                outline-offset: 2px;
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                margin-top: 20px;
+                align-items: flex-start;
+            }
+            .col {
+                width: 360px;
+                max-width: 100%;
+            }
+            .cap {
+                font-size: 13px;
+                margin: 10px 0 0;
+            }
+            .cap > b:first-child {
+                display: block;
+                color: var(--ink);
+                font-size: 15px;
+                margin-bottom: 2px;
+            }
+
+            /* Telefón: všetko v em, aby šlo písmo zväčšiť */
+            .phone {
+                --tint: var(--grey);
+                width: var(--w, 360px);
+                max-width: 100%;
+                border-radius: 30px;
+                border: 1px solid var(--ink-12);
+                overflow: hidden;
+                padding: 1.1em 0.9em 1.3em;
+                font-size: calc(15px * var(--scale, 1));
+                background:
+                    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--tint) 16%, transparent) 0%, transparent 45%),
+                    radial-gradient(circle at 85% 4%, color-mix(in srgb, var(--tint) 14%, transparent) 0%, transparent 48%), var(--bg);
+            }
+            .phone[data-tone='sun'] {
+                --tint: var(--green);
+            }
+            .phone[data-tone='cheap'] {
+                --tint: var(--amber);
+            }
+            .phone[data-tone='costly'] {
+                --tint: var(--red);
+            }
+            .p-hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.8em;
+                color: var(--ink-45);
+                margin-bottom: 0.9em;
+            }
+            .p-hdr b {
+                color: var(--ink);
+                font-family: var(--mono);
+                font-weight: 500;
+            }
+            .kick {
+                font-size: 0.85em;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                margin: 0;
+            }
+            .num {
+                margin: 0;
+                font-size: 3.6em;
+                line-height: 1.05;
+                font-weight: 600;
+                color: var(--tint);
+                font-variant-numeric: tabular-nums;
+            }
+            .num small {
+                font-size: 0.38em;
+                margin-left: 0.2em;
+                color: var(--ink-45);
+                font-weight: 500;
+            }
+            .src,
+            .sub {
+                margin: 0.1em 0 0;
+                font-size: 0.87em;
+                color: var(--ink-45);
+            }
+            .src b {
+                color: var(--ink-70);
+                font-weight: 500;
+            }
+            .plan-row {
+                margin: 1.1em 0 0;
+                padding: 0.75em 0.9em;
+                border-radius: 14px;
+                background: var(--card);
+                display: flex;
+                justify-content: space-between;
+                gap: 0.6em;
+                font-size: 0.87em;
+            }
+            .plan-row span {
+                color: var(--ink-45);
+                text-align: right;
+            }
+            .poster {
+                margin: 1.1em 0 0;
+                padding: 0.9em 0.9em 0.8em;
+                border-radius: 14px;
+                background: var(--card);
+                font-size: 0.87em;
+            }
+            .poster ol {
+                list-style: none;
+                margin: 0.5em 0 0;
+                padding: 0;
+            }
+            .poster li {
+                display: grid;
+                grid-template-columns: 1.8em 1fr auto;
+                gap: 0.5em;
+                padding: 0.35em 0;
+                border-top: 1px solid var(--ink-08);
+            }
+            .poster li span:first-child {
+                font-family: var(--mono);
+                color: var(--ink-45);
+            }
+            .poster li span:last-child {
+                font-family: var(--mono);
+            }
+            .box {
+                margin-top: 0.8em;
+                padding: 0.9em 0.8em 0.9em;
+                border-radius: 18px;
+                background: var(--card);
+            }
+            .box-ttl {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 0 0 0.4em;
+                font-size: 0.8em;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+                font-weight: 500;
+                min-height: 2.2em;
+            }
+            .reset {
+                font: inherit;
+                letter-spacing: 0;
+                text-transform: none;
+                font-size: 1.05em;
+                padding: 0.35em 0.85em;
+                border-radius: 99px;
+                border: 1px solid var(--ink-20);
+                background: transparent;
+                color: var(--ink);
+                cursor: pointer;
+            }
+            .hint {
+                margin: 0.3em 0 0;
+                font-size: 0.8em;
+                color: var(--ink-45);
+                min-height: 1.5em;
+            }
+
+            /* Plocha obrazu: SVG + popisky v HTML nad ním */
+            .viz {
+                position: relative;
+                touch-action: pan-y;
+                user-select: none;
+                -webkit-user-select: none;
+                cursor: pointer;
+                border-radius: 10px;
+            }
+            .viz:focus-visible {
+                outline: 2px solid var(--ink);
+                outline-offset: 4px;
+            }
+            .viz svg {
+                display: block;
+                width: 100%;
+                overflow: visible;
+            }
+            .lbl {
+                position: absolute;
+                transform: translateX(-50%);
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            .word {
+                top: 0;
+                font-size: 0.75em;
+                color: var(--ink-45);
+            }
+            .word[data-c='sun'] {
+                color: var(--green);
+            }
+            .word[data-c='cheap'] {
+                color: var(--amber);
+            }
+            .word[data-c='costly'] {
+                color: var(--red);
+            }
+            .tk {
+                font-family: var(--mono);
+                font-size: 0.75em;
+                color: var(--ink-45);
+            }
+            .bub {
+                top: 0;
+                z-index: 2;
+                font-family: var(--mono);
+                font-size: 0.8em;
+                font-weight: 500;
+                padding: 0.05em 0.5em;
+                border-radius: 7px;
+                background: var(--ink);
+                color: var(--on-color);
+            }
+            .bub i {
+                font-style: normal;
+                font-family: var(--font);
+                font-weight: 500;
+            }
+            .flow {
+                animation: flow 600ms ease-out both;
+            }
+            @keyframes flow {
+                from {
+                    clip-path: inset(0 100% 0 0);
+                }
+                to {
+                    clip-path: inset(0 0 0 0);
+                }
+            }
+
+            /* B: čipy pod dráhou */
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0.7em 0 0;
+            }
+            .chip {
+                font: inherit;
+                font-size: 0.85em;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45em;
+                padding: 0 0.85em;
+                border-radius: 99px;
+                border: 1px solid var(--ink-20);
+                background: transparent;
+                color: var(--ink-70);
+                cursor: pointer;
+            }
+            .chip svg {
+                width: 1.2em;
+                height: 1.2em;
+            }
+            .chip b {
+                font-family: var(--mono);
+                font-weight: 500;
+                color: var(--ink);
+            }
+            .chip[aria-pressed='true'] {
+                background: var(--ink);
+                color: var(--on-color);
+            }
+            .chip[aria-pressed='true'] b {
+                color: var(--on-color);
+            }
+            .chip:focus-visible,
+            .reset:focus-visible {
+                outline: 2px solid var(--ink);
+                outline-offset: 2px;
+            }
+            .nav {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 1.2em;
+                padding-top: 0.8em;
+                border-top: 1px solid var(--ink-12);
+                font-size: 0.75em;
+                color: var(--ink-45);
+            }
+            .nav b {
+                color: var(--ink);
+            }
+            .sr {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                white-space: nowrap;
+            }
+            .aria {
+                margin-top: 10px;
+                padding: 10px 12px;
+                border-radius: 10px;
+                border: 1px dashed var(--ink-20);
+                font-family: var(--mono);
+                font-size: 11.5px;
+                line-height: 1.45;
+                color: var(--ink-45);
+                max-width: 360px;
+                word-break: break-word;
+            }
+            .aria b {
+                color: var(--ink-70);
+                font-weight: 500;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Teraz: obraz dňa</h1>
+            <p>
+                Druhé kolo. Prvé prepisovalo graf dňa do viet a zoznamov (<a href="teraz-bez-grafu.html">teraz-bez-grafu.html</a>) a to si
+                zamietol: moderné appky idú vizualizáciou. Dizajnér preto rozpracoval štyri smery, ktoré si vybral (scéna dňa, žiarivá
+                stuha, ciferník, spotrebiče na dráhe), do <b>ôsmich variantov</b>. Kritik ich posúdil a vybral dva. Tie sú tu ako klikacie
+                telefóny.
+            </p>
+            <p>
+                Obidva nahrádzajú krivku s osou kW obrazom, ktorý sa má čítať pohľadom bez legendy.
+                <b>Posun prstom ostáva presne ako dnes</b>: ťuknutie ukáže iný čas a nechá ho, vodorovný ťah posúva čas, zvislý stránku.
+                Klávesnica: šípky po 15 minútach, Home/End, Escape. Nič sa nehýbe samo. Raz pri načítaní stuha vytečie zľava a „Späť na
+                teraz“ dobehne na miesto.
+            </p>
+
+            <h2 id="ukazka">Klikacia ukážka</h2>
+            <p>
+                Deň je vymyslený: slnko 6:00–19:00, lacná sieť 22:00–6:00 a 13:00–15:00, drahá 17:00–20:00. Elektráreň má 6 kWp a hranice sa
+                s ňou škálujú ako v appke (veľké spotrebiče od 2 kW, auto od 4 kW pri 6 kWp). Plán dňa ukladá práčku, sušičku, umývačku a
+                auto rovnako ako appka: z rozpočtu, teda výroba mínus 0,4 kW domu mínus spotrebiče, ktoré už v pláne sú.
+            </p>
+            <form class="controls" id="ctl" aria-label="Nastavenie ukážky">
+                <fieldset>
+                    <legend>Teraz je</legend>
+                    <label><input type="radio" name="now" value="450" /><span>7:30</span></label>
+                    <label><input type="radio" name="now" value="725" checked /><span>12:05</span></label>
+                    <label><input type="radio" name="now" value="270" /><span>4:30</span></label>
+                    <label><input type="radio" name="now" value="1260" /><span>21:00</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Deň</legend>
+                    <label><input type="radio" name="day" value="sunny" checked /><span>slnečný</span></label>
+                    <label><input type="radio" name="day" value="mixed" /><span>poobede mraky</span></label>
+                    <label><input type="radio" name="day" value="cloudy" /><span>zamračený</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Tarifa</legend>
+                    <label><input type="radio" name="tarif" value="pasma" checked /><span>pásma</span></label>
+                    <label><input type="radio" name="tarif" value="jedna" /><span>jedna cena</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Strecha</legend>
+                    <label><input type="radio" name="roof" value="mine" checked /><span>meranie</span></label>
+                    <label><input type="radio" name="roof" value="typical" /><span>typická (~)</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Elektráreň</legend>
+                    <label><input type="radio" name="kwp" value="3" /><span>3 kWp</span></label>
+                    <label><input type="radio" name="kwp" value="6" checked /><span>6 kWp</span></label>
+                    <label><input type="radio" name="kwp" value="15" /><span>15 kWp</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>A: hrúbka stuhy</legend>
+                    <label><input type="radio" name="scaleMode" value="plant" checked /><span>podľa elektrárne</span></label>
+                    <label><input type="radio" name="scaleMode" value="fixed" /><span>pevne 10 kW</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>A: obrys predpovede</legend>
+                    <label><input type="radio" name="ghost" value="on" checked /><span>áno</span></label>
+                    <label><input type="radio" name="ghost" value="off" /><span>nie</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>B: doma</legend>
+                    <label><input type="radio" name="devices" value="all" checked /><span>práčka, sušička, umývačka, auto</span></label>
+                    <label><input type="radio" name="devices" value="none" /><span>nič nevybraté</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>B: plagát Plánu dňa</legend>
+                    <label><input type="radio" name="poster" value="on" checked /><span>ostáva</span></label>
+                    <label><input type="radio" name="poster" value="off" /><span>zmizne</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Šírka</legend>
+                    <label><input type="radio" name="w" value="360" checked /><span>360 px</span></label>
+                    <label><input type="radio" name="w" value="320" /><span>320 px</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Tón</legend>
+                    <label><input type="radio" name="voice" value="ty" checked /><span>tykanie</span></label>
+                    <label><input type="radio" name="voice" value="vy" /><span>vykanie</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Písmo</legend>
+                    <label><input type="radio" name="scale" value="1" checked /><span>100 %</span></label>
+                    <label><input type="radio" name="scale" value="1.5" /><span>150 %</span></label>
+                </fieldset>
+            </form>
+
+            <div class="row">
+                <div class="col">
+                    <div class="phone" id="pa"></div>
+                    <p class="cap">
+                        <b>A · Stuha dňa</b>
+                        Deň je jedna stuha. <b>Hrubá a svietivo zelená</b> = slnko stačí na veľké spotrebiče, tmavozelená = slnko svieti,
+                        ale nestačí. Pod stuhou vždy beží <b>kábel siete</b> vo farbe tarify, takže tenký koniec dňa nie je diera a drahý
+                        večer je vidieť. Nad stuhou je pás oblačnosti v štyroch sivých, nad ním slová úsekov. Prejdená časť je matná a tenký
+                        obrys v nej ukazuje, čo hovorila predpoveď.
+                    </p>
+                    <p class="cap" id="ca"></p>
+                    <div class="aria" id="aa"></div>
+                </div>
+                <div class="col">
+                    <div class="phone" id="pb"></div>
+                    <p class="cap">
+                        <b>B · Plán na dráhe</b>
+                        Kapsuly sú <b>riadky Plánu dňa</b>, nie vlastný výpočet. Majú tie isté časy ako plagát nad nimi a ako karta Môžem?.
+                        Pod nimi je nízka stuha v troch stupňoch (slnko stačí / svieti / sieť), sieť vo farbe tarify. Kapsuly nie sú
+                        tlačidlá na ploche posúvača. Na vec sa skáče čipmi pod dráhou.
+                    </p>
+                    <div class="aria" id="ab"></div>
+                </div>
+            </div>
+
+            <h2>Čo z grafu kde je</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>V grafe dnes</th>
+                        <th>A · Stuha dňa</th>
+                        <th>B · Plán na dráhe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Krivka výroby, tvar dňa</td>
+                        <td>Hrúbka stuhy. Tvar dňa ostáva celý.</td>
+                        <td>Len tri stupne nízkej stuhy. Tvar dňa ustúpi, presné kW sú v hlavičke pri posune.</td>
+                    </tr>
+                    <tr>
+                        <td>Meranie vs. predpoveď</td>
+                        <td>Obrys predpovede v prejdenej časti (prepínač)</td>
+                        <td>Len číslom v hlavičke pri náhľade minulosti</td>
+                    </tr>
+                    <tr>
+                        <td>Os kW, mriežka, čiara hranice, legenda</td>
+                        <td colspan="2">
+                            <b>Vypadnú.</b> Hranica je farba „slnko stačí“, to je to isté pravidlo (<code>smartTier</code>).
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Oblačnosť po hodinách</td>
+                        <td colspan="2">
+                            Pás v štyroch sivých ako vo vybranom detaile dňa (D3), hodina bez údaja je šrafovaná. Žiadne obláčiky.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Pás plánu, štyri tóny</td>
+                        <td>Zelená stuha a kábel siete vo farbe tarify, slová úsekov nad nimi</td>
+                        <td>Kapsuly (slnko a lacná sieť z Plánu dňa) a farba nízkej stuhy</td>
+                    </tr>
+                    <tr>
+                        <td>Teraz, minulosť, noc</td>
+                        <td colspan="2">
+                            Šev s bodkou. Minulosť je matná a tmavšia, nie priehľadná. V noci šev stojí na kraji so šípkou von.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Náhľad: „O 16:30“, číslo, farba, Späť na teraz</td>
+                        <td colspan="2">Bez zmeny. Je to ten istý stav, bublina nad ihlou povie čas, kW a tarifu.</td>
+                    </tr>
+                    <tr>
+                        <td>Plán dňa (plagát)</td>
+                        <td>Ostáva, ako je</td>
+                        <td>Kapsuly ho kreslia. Plagát môže zmiznúť (prepínač), alebo ostať ako zoznam.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="osem">Osem variantov a posudok kritika</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variant</th>
+                        <th>Princíp</th>
+                        <th>Skóre</th>
+                        <th>Výhrada kritika</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1a Dom pod oblohou</td>
+                        <td>Ilustrácia domu. Slnko na oblohe, panely svietia, okno s práčkou sa rozsvieti.</td>
+                        <td class="score">3</td>
+                        <td>Ukazuje jeden okamih namiesto dňa a pôsobí ako detská infografika</td>
+                    </tr>
+                    <tr>
+                        <td>1b Obloha za číslom</td>
+                        <td>Hlavička karty ako obloha v Apple Weather</td>
+                        <td class="score">4</td>
+                        <td>
+                            Deň z nej nevyčítaš. Ako doplnok dostala 7, v Oblohe by však porušila pravidlo „obloha je nálada, nie údaj“.
+                        </td>
+                    </tr>
+                    <tr class="pick">
+                        <td>2a Svetelná stuha</td>
+                        <td>Hrúbka a jas = slnko, farba = tón, mraky ako závoj</td>
+                        <td class="score">7</td>
+                        <td>
+                            Drahá sieť večer bola len 3 px nitka a lupa nič nové neukázala. V mockupe A je to opravené káblom a bublinou.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2b Rad panelov</td>
+                        <td>Stuha rozsekaná na solárne panely</td>
+                        <td class="score">4,5</td>
+                        <td>Heatmapa v prestrojení. Jas malých buniek oko neporovná.</td>
+                    </tr>
+                    <tr>
+                        <td>3a Prstenec dňa</td>
+                        <td>24-hodinový kruh, vnútri „slnečný kvet“</td>
+                        <td class="score">5</td>
+                        <td>Polárne kódovanie a zásah do jadra (náhľad aj v noci)</td>
+                    </tr>
+                    <tr>
+                        <td>3b Ciferník ako hlavička</td>
+                        <td>Číslo v strede kruhu, po prstenci ide slnko</td>
+                        <td class="score">3,5</td>
+                        <td>Najväčšia strata za najväčší zásah</td>
+                    </tr>
+                    <tr class="pick">
+                        <td>4a Kapsuly na dráhe</td>
+                        <td>Kapsuly s ikonkami spotrebičov v ich oknách</td>
+                        <td class="score">6</td>
+                        <td>Okná z vlastného výpočtu by protirečili Plánu dňa. V mockupe B sú to preto riadky Plánu dňa.</td>
+                    </tr>
+                    <tr>
+                        <td>4b Páska pod ihlou</td>
+                        <td>Pevná ihla, pod ňou ide priblížený deň</td>
+                        <td class="score">5</td>
+                        <td>Celý deň len v mini-mape, nové gesto so zotrvačnosťou</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Čo kritik v podklade opravil (overené v kóde)</h3>
+            <ul>
+                <li>
+                    <b>Ikonky spotrebičov nesmú mať vlastný výpočet.</b> Plán dňa aj Môžem? ukladajú veci z rozpočtu: výroba mínus 0,4 kW
+                    domu mínus to, čo už v pláne je. Ikonka „auto 11–14“ z prostého „kW ≥ 4“ by povedala iný čas ako riadok pod ňou. Preto A
+                    ikonky nemá a B kreslí riadky Plánu dňa.
+                </li>
+                <li>
+                    Tri stupne <code>go / part / grid</code> už má vybraný detail dňa (D3, <code>fitLevel</code>). Obraz ich má použiť, nie
+                    vymýšľať nové.
+                </li>
+                <li>
+                    Pevná stupnica 10 kW nesedí s hranicami, ktoré sa škálujú podľa elektrárne. Prepni Elektráreň na 3 alebo 15 kWp a hrúbku
+                    na „pevne 10 kW“: pri 3 kWp je stuha celý deň tenká, hoci slnko stačí.
+                </li>
+                <li>
+                    Nič sa nehýbe samo, lebo dych a pulz sú pohyb bez informácie. Žiadne glyfy obláčikov, tie si raz už zamietol ako detské.
+                </li>
+            </ul>
+
+            <h2>Na rozhodnutie</h2>
+            <ul>
+                <li>
+                    <b>A · Stuha dňa.</b> Plus: tvar dňa ostáva celý vrátane rozdielu oproti predpovedi, nič netreba dekódovať a karta je
+                    kratšia ako dnes. Plán dňa sa nemení. Mínus: stále je to údaj kreslený hrúbkou, teda „mäkký graf“. Je otázka, či ho
+                    človek, ktorý graf nečíta, prečíta.
+                </li>
+                <li>
+                    <b>B · Plán na dráhe.</b> Plus: odpovedá rovno „kedy čo zapnúť“ a človek nemusí nič čítať, ikonka práčky je odpoveď.
+                    Plagát Plánu dňa môže zmiznúť, takže karta sa skráti. Mínus: koľko slnka bude, ukazujú len tri stupne a meranie vs.
+                    predpoveď len číslo. Bez vybratých spotrebičov ostane len všeobecné „slnko stačí“.
+                </li>
+                <li>
+                    <b>A aj B spolu:</b> stuha A ako hlavný obraz a kapsuly B v plagáte Plánu dňa namiesto riadkov. Prvá veta pre tých, čo
+                    chcú vedieť „koľko“, druhá pre tých, čo chcú vedieť „kedy“. Je to najväčší zásah, dva nové obrazy na údržbu.
+                </li>
+            </ul>
+            <p>
+                <b>Odporúčam B s plagátom, ktorý zmizne.</b> Pre ľudí, ktorí nečítajú grafy, je obraz s odpoveďou silnejší ako akýkoľvek
+                obraz údajov. Karta navyše stratí jeden blok, nič nepribudne. Do jadra pribudne len skladací model z <code>planDna</code>,
+                <code>fitSegments</code> a oblačnosti, obe appky ho môžu prevziať. Ak je pre teba dôležitý tvar dňa a porovnanie s
+                predpoveďou, vyber A. Mockup je kreslený v kabáte súčasnej appky. Pre Oblohu treba overiť farby na skle nad jasnou,
+                zamračenou aj nočnou oblohou a časy v Archivo, to spravím pri vybranom.
+            </p>
+        </main>
+
+        <script>
+            // Vymyslený deň a z neho oba obrazy. Logika napodobňuje jadro (smartTier, fitLevel, plan-dna
+            // s rozpočtom, powerThresholds škálované podľa elektrárne), ale je to len kópia pre návrh.
+            const SPAN = { from: 300, to: 1200 };
+            const LAST = SPAN.to - 15;
+            const HOUSE = 0.4;
+            const CLOUDS = {
+                sunny: [10, 10, 5, 5, 0, 0, 5, 5, 10, 15, 20, 25, 30, 30, 30],
+                mixed: [20, 15, 10, 10, 5, 10, 20, 40, 75, 85, 90, 80, 70, 60, 60],
+                cloudy: [90, 95, 90, 85, 85, null, 90, 90, 85, 90, 90, 90, 95, 95, 95],
+            };
+            const TONE = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
+            const S = {
+                now: 725,
+                day: 'sunny',
+                tarif: 'pasma',
+                roof: 'mine',
+                kwp: 6,
+                scaleMode: 'plant',
+                ghost: 'on',
+                devices: 'all',
+                poster: 'on',
+                w: 360,
+                voice: 'ty',
+                scale: 1,
+            };
+            const P = { a: null, b: null };
+            let flowed = false;
+
+            const th = () => {
+                const k = S.kwp / 6;
+                return { low: 2 * k, high: 4 * k, weak: 1.2 * k };
+            };
+            const hm = (m) => `${Math.floor(m / 60) % 24}:${String(m % 60).padStart(2, '0')}`;
+            const tilde = () => (S.roof === 'typical' ? '~' : '');
+            const kw1 = (v) => tilde() + v.toFixed(1).replace('.', ',');
+            const quarter = (m) => Math.floor(m / 15) * 15;
+            const inDay = (m) => m >= SPAN.from && m <= LAST;
+            const v = (ty, vy) => (S.voice === 'ty' ? ty : vy);
+            const cloudAt = (m) => {
+                const h = Math.floor(m / 60) - 5;
+                const c = CLOUDS[S.day];
+                return h >= 0 && h < c.length ? c[h] : null;
+            };
+            const clear = (m) => (m <= 360 || m >= 1140 ? 0 : 0.85 * S.kwp * Math.pow(Math.sin((Math.PI * (m - 360)) / 780), 1.4));
+            const forecast = (m) => {
+                let c = cloudAt(m);
+                if (c === null) c = cloudAt(m - 60) ?? 80;
+                return clear(m) * (1 - (0.82 * c) / 100);
+            };
+            const measured = (m) => forecast(m) * (S.day === 'cloudy' ? 1.12 : 0.9 + 0.07 * Math.sin(m / 41));
+            const kwAt = (m) => (m <= S.now ? measured(m) : forecast(m));
+            const level = (m) => {
+                const x = ((m % 1440) + 1440) % 1440;
+                if (S.tarif === 'jedna') return 'plain';
+                if (x < 360 || x >= 1320 || (x >= 780 && x < 900)) return 'cheap';
+                if (x >= 1020 && x < 1200) return 'costly';
+                return 'plain';
+            };
+            // Tón štvrťhodiny podľa výkonu na jej začiatku (smartTier: od lowKw slnko stačí).
+            const toneAt = (m) => (inDay(m) && kwAt(quarter(m)) >= th().low ? 'sun' : level(m));
+            // Stupeň ako fitLevel z D3: slnko stačí / svieti, ale nestačí / sieť.
+            const fitAt = (m) => (toneAt(m) === 'sun' ? 'go' : inDay(m) && kwAt(quarter(m)) >= th().weak ? 'part' : 'grid');
+            const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+            function segments(fn) {
+                const out = [];
+                for (let m = SPAN.from; m < SPAN.to; m += 15) {
+                    const t = fn(m);
+                    const last = out[out.length - 1];
+                    if (last && last.v === t) last.to = m + 15;
+                    else out.push({ from: m, to: m + 15, v: t });
+                }
+                return out;
+            }
+            function nextChange(m) {
+                const t = inDay(m) ? toneAt(m) : level(m);
+                for (let x = quarter(m) + 15; x < m + 1440; x += 15) {
+                    const y = x % 1440;
+                    const t2 = inDay(y) ? toneAt(y) : level(y);
+                    if (t2 !== t) return { at: y, tone: t2 };
+                }
+                return null;
+            }
+
+            /** Plán dňa ako v appke: z predpovede, z rozpočtu (výroba − dom − čo už je v pláne). */
+            const DEVICES = [
+                { id: 'pracka', name: 'Práčka', min: 120, kw: 2.0 },
+                { id: 'susicka', name: 'Sušička', min: 90, kw: 1.8, after: 'pracka' },
+                { id: 'umyvacka', name: 'Umývačka', min: 120, kw: 1.5 },
+            ];
+            function plan() {
+                if (S.devices === 'none') return [];
+                const occ = {};
+                const budget = (q) => forecast(q) - HOUSE - (occ[q] || 0);
+                const rows = [];
+                for (const d of DEVICES) {
+                    const prev = d.after && rows.find((r) => r.id === d.after);
+                    if (d.after && !prev) continue;
+                    let start = prev ? prev.to : SPAN.from;
+                    let found = null;
+                    for (let s = start; s + d.min <= SPAN.to; s += 15) {
+                        let ok = true;
+                        for (let q = s; q < s + d.min; q += 15) if (budget(q) < d.kw) ok = false;
+                        if (ok) {
+                            found = { kind: 'sun', from: s, to: s + d.min };
+                            break;
+                        }
+                        if (prev) break; // sušička len hneď po práčke
+                    }
+                    if (!found && S.tarif === 'pasma') {
+                        for (let s = Math.max(start, 360); s + d.min <= SPAN.to; s += 15) {
+                            let ok = true;
+                            for (let q = s; q < s + d.min; q += 15) if (level(q) !== 'cheap') ok = false;
+                            if (ok) {
+                                found = { kind: 'cheap', from: s, to: s + d.min };
+                                break;
+                            }
+                            if (prev) break;
+                        }
+                    }
+                    if (!found) continue;
+                    if (found.kind === 'sun') for (let q = found.from; q < found.to; q += 15) occ[q] = (occ[q] || 0) + d.kw;
+                    rows.push({ ...d, ...found });
+                }
+                // Auto: najdlhší úsek, kde po všetkom ostane aspoň highKw.
+                let best = null;
+                let cur = null;
+                for (let q = SPAN.from; q < SPAN.to; q += 15) {
+                    if (budget(q) >= th().high) {
+                        if (!cur) cur = { from: q, to: q + 15 };
+                        else cur.to = q + 15;
+                        if (!best || cur.to - cur.from > best.to - best.from) best = { ...cur };
+                    } else cur = null;
+                }
+                if (best && best.to - best.from >= 60) rows.push({ id: 'auto', name: 'Auto', kind: 'sun', ...best });
+                return rows.sort((a, b) => a.from - b.from);
+            }
+
+            const ICON = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M7 6.5h2"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M10 11.5c1 1 3 1 4 2"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M4 8h16M8 13h8M8 16h8"/>',
+                auto: '<path d="M4 16v-3l2-5h12l2 5v3z"/><circle cx="8" cy="16.5" r="1.8"/><circle cx="16" cy="16.5" r="1.8"/>',
+                sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>',
+                plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>',
+            };
+            const ico = (id, x, y, s, col) =>
+                `<g transform="translate(${x} ${y}) scale(${s / 24})" fill="none" stroke="${col}" stroke-width="${(1.7 * 24) / s / 1.4}" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</g>`;
+            const icoSvg = (id) =>
+                `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg>`;
+
+            const COL = { go: '#9ef25b', part: '#6f9a4c', cheap: '#ffc24b', costly: '#ff6b57', plain: '#8f8c84', grid: '#8f8c84' };
+            const CARD = '#151614';
+            // Minulosť: matná a tmavšia (zmes s pozadím karty), nie priehľadná.
+            function dim(hex, f = 0.38) {
+                const a = parseInt(hex.slice(1), 16);
+                const b = parseInt(CARD.slice(1), 16);
+                const ch = (s) => Math.round(((a >> s) & 255) * (1 - f) + ((b >> s) & 255) * f);
+                return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
+            }
+            function contrast(h1, h2) {
+                const L = (hex) => {
+                    const n = parseInt(hex.slice(1), 16);
+                    const c = [16, 8, 0].map((s) => {
+                        const x = ((n >> s) & 255) / 255;
+                        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+                    });
+                    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+                };
+                const [a, b] = [L(h1), L(h2)].sort((x, y) => y - x);
+                return (a + 0.05) / (b + 0.05);
+            }
+            const cloudFill = (c) =>
+                c === null ? 'url(#hatch)' : c < 25 ? '#3a3b37' : c < 50 ? '#5d5e58' : c < 75 ? '#86857e' : '#b3b1a8';
+
+            /** Hlavička karty (rovnaká v A aj B). */
+            function head(t, preview, plan) {
+                const k = inDay(t) ? kwAt(t) : 0;
+                const past = t <= S.now;
+                const srcWord = !preview
+                    ? S.roof === 'typical'
+                        ? 'odhad podľa typickej strechy'
+                        : 'živé meranie'
+                    : past && inDay(t)
+                      ? 'namerané'
+                      : 'odhad z predpovede';
+                const cl = clear(t);
+                const sub =
+                    !inDay(t) || cl < 0.05 ? 'slnko je pod obzorom' : `${Math.round((k / cl) * 100)} % z toho, čo by dala jasná obloha`;
+                return (
+                    `<div class="p-hdr"><span>Bratislava</span><b>${hm(S.now)}</b></div>` +
+                    `<p class="kick">${preview ? `O ${hm(t)}` : 'Teraz'}</p>` +
+                    `<p class="num">${kw1(k)}<small>kW</small></p>` +
+                    `<p class="src"><b>${srcWord}</b></p><p class="sub">${sub}</p>`
+                );
+            }
+            function planRow(rows) {
+                const txt = rows.length ? rows.map((r) => `${r.name.toLowerCase()} ${hm(r.from)}`).join(' · ') : 'dnes nič na slnko';
+                return `<div class="plan-row"><b>Plán dňa</b><span>${txt} ▸</span></div>`;
+            }
+            function poster(rows) {
+                if (!rows.length)
+                    return `<div class="poster"><b>Plán dňa</b><ol><li><span>–</span><span>Doma nemáš nič vybraté</span><span></span></li></ol></div>`;
+                return (
+                    `<div class="poster"><b>Plán dňa</b><ol>` +
+                    rows
+                        .map(
+                            (r, i) =>
+                                `<li><span>${String(i + 1).padStart(2, '0')}</span><span>${r.name} · ${r.kind === 'sun' ? 'na slnko' : 'lacná sieť'}</span><span>${hm(r.from)}–${hm(r.to)}</span></li>`,
+                        )
+                        .join('') +
+                    '</ol></div>'
+                );
+            }
+
+            function valueText(t, preview) {
+                const tone = inDay(t) ? toneAt(t) : level(t);
+                const k = inDay(t) ? kwAt(t) : 0;
+                return `${preview ? 'Náhľad' : 'Teraz'} ${hm(t)}, ${kw1(k)} kW, ${TONE[tone]}`;
+            }
+            function bubble(t, preview, X) {
+                const night = !inDay(t);
+                const x = X(Math.min(LAST, Math.max(SPAN.from, t)));
+                const tone = night ? level(t) : toneAt(t);
+                const time = night ? (t < SPAN.from ? `‹ ${hm(t)}` : `${hm(t)} ›`) : hm(t);
+                const k = inDay(t) ? kwAt(t) : 0;
+                const text = `${time} · ${kw1(k)} kW · ${TONE[tone]}`;
+                const w = text.length * 7.6 * S.scale + 16;
+                return `<span class="lbl bub" style="left:clamp(${w / 2}px, ${x}px, calc(100% - ${w / 2}px))">${time} · ${kw1(k)} kW <i>· ${TONE[tone]}</i></span>`;
+            }
+            function ticks(X, y) {
+                return [6, 9, 12, 15, 18].map((h) => `<span class="lbl tk" style="left:${X(h * 60)}px;top:${y}px">${h}</span>`).join('');
+            }
+            function srText(rows) {
+                const go = segments(fitAt).filter((s) => s.v === 'go');
+                const parts = [];
+                parts.push(
+                    go.length
+                        ? `Slnko stačí na veľké spotrebiče ${go.map((s) => `${hm(s.from)} až ${hm(s.to)}`).join(', ')}.`
+                        : 'Slnko dnes na veľké spotrebiče nestačí.',
+                );
+                const costly = segments((m) => level(m)).filter((s) => s.v === 'costly');
+                if (costly.length) parts.push(`Drahá sieť ${costly.map((s) => `${hm(s.from)} až ${hm(s.to)}`).join(', ')}.`);
+                if (rows)
+                    for (const r of rows) parts.push(`${r.name} ${hm(r.from)} až ${hm(r.to)}${r.kind === 'cheap' ? ', lacná sieť' : ''}.`);
+                return parts.join(' ');
+            }
+
+            /* ---------- A: stuha dňa ---------- */
+            function renderA() {
+                const el = document.getElementById('pa');
+                const preview = P.a !== null;
+                const t = preview ? P.a : S.now;
+                el.dataset.tone = inDay(t) ? toneAt(t) : level(t);
+                el.style.setProperty('--scale', S.scale);
+                el.style.setProperty('--w', S.w + 'px');
+                const rows = plan();
+                el.innerHTML =
+                    head(t, preview) +
+                    planRow(rows) +
+                    `<section class="box" aria-label="Deň"><h3 class="box-ttl"><span>Dnešný deň</span>${preview ? '<button type="button" class="reset" data-reset>Späť na teraz</button>' : ''}</h3>` +
+                    `<div class="viz" id="va" role="slider" tabindex="0"></div>` +
+                    `<p class="hint">${preview ? '' : v('Ťahaj prstom po stuhe a pozri si iný čas.', 'Ťahajte prstom po stuhe a pozrite si iný čas.')}</p>` +
+                    `<p class="sr" aria-live="polite">${valueText(t, preview)}</p></section>` +
+                    '<div class="nav"><span>Dnes</span><b>Teraz</b><span>7 dní</span><span>Štatistika</span></div>';
+                const box = document.getElementById('va');
+                const W = box.clientWidth;
+                const f = S.scale;
+                const L = 6;
+                const R = W - 6;
+                const X = (m) => L + ((m - SPAN.from) / (SPAN.to - SPAN.from)) * (R - L);
+                const yCloud = 22 * f;
+                const cloudH = 10;
+                const yMid = yCloud + cloudH + 34;
+                const maxH = 24;
+                const H = yMid + maxH + 10 + 18 * f;
+                const ref = S.scaleMode === 'fixed' ? 10 : 0.85 * S.kwp;
+                const half = (k) => 4 + (maxH - 4) * Math.sqrt(Math.min(1, Math.max(0, k) / ref));
+                // Kábel siete: celý deň vo farbe tarify, 8 px.
+                let s = `<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#26271f"/><path d="M0 0v4" stroke="#5d5e58" stroke-width="1.4"/></pattern></defs>`;
+                for (let h = 5; h < 20; h++) {
+                    const c = cloudAt(h * 60);
+                    s += `<rect x="${X(h * 60) + 0.5}" y="${yCloud}" width="${X(h * 60 + 60) - X(h * 60) - 1}" height="${cloudH}" rx="2" fill="${cloudFill(c)}"${(h + 1) * 60 <= S.now ? ' opacity="0.55"' : ''}/>`;
+                }
+                let g = '';
+                for (const seg of segments((m) => level(m))) {
+                    const past = (x) => x <= S.now;
+                    const a = seg.from;
+                    const b = seg.to;
+                    const cut = Math.min(b, Math.max(a, S.now));
+                    if (cut > a) g += `<rect x="${X(a)}" y="${yMid - 4}" width="${X(cut) - X(a)}" height="8" fill="${dim(COL[seg.v])}"/>`;
+                    if (b > cut) g += `<rect x="${X(cut)}" y="${yMid - 4}" width="${X(b) - X(cut)}" height="8" fill="${COL[seg.v]}"/>`;
+                    void past;
+                }
+                // Slnko: plocha y = mid ± half(kw), po štvrťhodinách s hladkým okrajom; farba podľa stupňa.
+                const pts = [];
+                for (let m = SPAN.from; m <= SPAN.to; m += 15)
+                    pts.push({ m, h: kwAt(Math.min(m, LAST + 14)) >= th().weak * 0.6 ? half(kwAt(Math.min(m, LAST + 14))) : 4 });
+                const path = (from, to, fn) => {
+                    const p = pts.filter((q) => q.m >= from && q.m <= to);
+                    if (p.length < 2) return '';
+                    const top = p.map((q, i) => `${i ? 'L' : 'M'}${X(q.m).toFixed(1)} ${(yMid - fn(q)).toFixed(1)}`).join('');
+                    const bot = p
+                        .slice()
+                        .reverse()
+                        .map((q) => `L${X(q.m).toFixed(1)} ${(yMid + fn(q)).toFixed(1)}`)
+                        .join('');
+                    return top + bot + 'Z';
+                };
+                const fits = segments(fitAt);
+                let glow = '';
+                let body = '';
+                // „Svieti, ale nestačí“ leží pod káblom siete, aby bolo vidno tarifu (lacná sieť v zamračený deň).
+                let bodyPart = '';
+                for (const seg of fits) {
+                    if (seg.v === 'grid') continue;
+                    const col = COL[seg.v];
+                    const cut = Math.min(seg.to, Math.max(seg.from, quarter(S.now)));
+                    const pieces = [];
+                    if (cut > seg.from) pieces.push([seg.from, cut, true]);
+                    if (seg.to > cut) pieces.push([cut, seg.to, false]);
+                    for (const [a, b, past] of pieces) {
+                        const d = path(a, b, (q) => q.h);
+                        if (!d) continue;
+                        if (seg.v === 'go' && !past) {
+                            glow += `<path d="${path(a, b, (q) => q.h + 7)}" fill="${col}" opacity="0.10"/><path d="${path(a, b, (q) => q.h + 3.5)}" fill="${col}" opacity="0.16"/>`;
+                        }
+                        if (seg.v === 'part') {
+                            bodyPart += `<path d="${d}" fill="${past ? dim(col) : col}"/>`;
+                            continue;
+                        }
+                        body += `<path d="${d}" fill="${past ? dim(col) : col}"${S.roof === 'typical' ? ` stroke="${CARD}" stroke-width="1.2" stroke-dasharray="2 3"` : ''}/>`;
+                        if (!past)
+                            body += `<path d="${path(a, b, (q) => q.h)
+                                .split('L')
+                                .slice(0, Math.max(2, Math.round((b - a) / 15) + 1))
+                                .join('L')}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>`;
+                    }
+                }
+                // Obrys predpovede v prejdenej časti.
+                let ghost = '';
+                if (S.ghost === 'on' && S.now > SPAN.from) {
+                    const end = Math.min(S.now, SPAN.to);
+                    const fp = [];
+                    for (let m = SPAN.from; m <= end; m += 15) fp.push({ m, h: forecast(m) >= th().weak * 0.6 ? half(forecast(m)) : 4 });
+                    if (fp.length > 1) {
+                        const top = fp.map((q, i) => `${i ? 'L' : 'M'}${X(q.m).toFixed(1)} ${(yMid - q.h).toFixed(1)}`).join('');
+                        const bot = fp.map((q, i) => `${i ? 'L' : 'M'}${X(q.m).toFixed(1)} ${(yMid + q.h).toFixed(1)}`).join('');
+                        ghost = `<path d="${top}" fill="none" stroke="rgba(242,240,234,.55)" stroke-width="1" stroke-dasharray="3 2"/><path d="${bot}" fill="none" stroke="rgba(242,240,234,.55)" stroke-width="1" stroke-dasharray="3 2"/>`;
+                    }
+                }
+                // Teraz: šev s bodkou; náhľad: ihla.
+                const nx = inDay(S.now) ? X(S.now) : S.now < SPAN.from ? L : R;
+                let marks = `<line x1="${nx}" x2="${nx}" y1="${yCloud - 2}" y2="${yMid + maxH + 4}" stroke="#f2f0ea" stroke-width="1"/><circle cx="${nx}" cy="${yMid}" r="3.5" fill="#f2f0ea"/>`;
+                if (preview) {
+                    const px = X(Math.min(LAST, Math.max(SPAN.from, t)));
+                    marks += `<line x1="${px}" x2="${px}" y1="${16 * f}" y2="${yMid + maxH + 6}" stroke="#f2f0ea" stroke-width="2"/><circle cx="${px}" cy="${yMid}" r="5.5" fill="${CARD}" stroke="#f2f0ea" stroke-width="2"/>`;
+                }
+                const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${s}<g class="${flowed ? '' : 'flow'}">${bodyPart}${g}${glow}${body}${ghost}</g>${marks}</svg>`;
+                // Slová úsekov nad oblačnosťou: len keď sa zmestia.
+                let words = '';
+                if (!preview && inDay(S.now)) {
+                    for (const seg of segments((m) => toneAt(m))) {
+                        const word = seg.v === 'sun' ? 'slnko stačí' : TONE[seg.v];
+                        const need = word.length * 6.6 * f + 10;
+                        if (X(seg.to) - X(seg.from) >= need)
+                            words += `<span class="lbl word" data-c="${seg.v}" style="left:${(X(seg.from) + X(seg.to)) / 2}px">${word}</span>`;
+                    }
+                }
+                box.innerHTML = svg + words + (preview || !inDay(S.now) ? bubble(t, preview, X) : '') + ticks(X, yMid + maxH + 8);
+                box.setAttribute('aria-label', v('Dnešný deň, šípkami si pozrieš iný čas', 'Dnešný deň, šípkami si pozriete iný čas'));
+                box.setAttribute('aria-valuemin', SPAN.from);
+                box.setAttribute('aria-valuemax', LAST);
+                box.setAttribute('aria-valuenow', Math.min(LAST, Math.max(SPAN.from, t)));
+                box.setAttribute('aria-valuetext', valueText(t, preview));
+                box.setAttribute('aria-describedby', 'da');
+                box.insertAdjacentHTML('afterend', `<p class="sr" id="da">${srText(null)}</p>`);
+                document.getElementById('aa').innerHTML =
+                    `<b>aria-valuetext:</b> ${valueText(t, preview)}<br><b>popis:</b> ${srText(null)}`;
+                const past = dim(COL.go);
+                document.getElementById('ca').innerHTML =
+                    `Kontrast matnej minulosti voči karte: zelená ${contrast(past, CARD).toFixed(1)} : 1, kábel lacnej siete ${contrast(dim(COL.cheap), CARD).toFixed(1)} : 1, drahej ${contrast(dim(COL.costly), CARD).toFixed(1)} : 1 (cieľ aspoň 3 : 1).`;
+                bind(el, 'a', 'va');
+            }
+
+            /* ---------- B: plán na dráhe ---------- */
+            function renderB() {
+                const el = document.getElementById('pb');
+                const preview = P.b !== null;
+                const t = preview ? P.b : S.now;
+                el.dataset.tone = inDay(t) ? toneAt(t) : level(t);
+                el.style.setProperty('--scale', S.scale);
+                el.style.setProperty('--w', S.w + 'px');
+                const rows = plan();
+                // Bez vybratých spotrebičov: všeobecné kapsuly „slnko stačí“ (a lacná sieť cez deň).
+                let caps = rows.map((r) => ({ ...r, icon: r.id }));
+                if (!rows.length) {
+                    caps = segments(fitAt)
+                        .filter((x) => x.v === 'go')
+                        .map((x) => ({ id: 'sun', name: 'Slnko stačí', kind: 'sun', from: x.from, to: x.to, icon: 'sun' }));
+                    if (S.tarif === 'pasma')
+                        caps = caps.concat(
+                            segments((m) => toneAt(m))
+                                .filter((x) => x.v === 'cheap' && x.from >= 360)
+                                .map((x) => ({ id: 'plug', name: 'Lacná sieť', kind: 'cheap', from: x.from, to: x.to, icon: 'plug' })),
+                        );
+                }
+                // Rady: najviac tri, sušička nadväzuje na práčku v tom istom rade.
+                const lanes = [];
+                for (const c of caps.sort((a, b) => a.from - b.from)) {
+                    let i = c.after ? lanes.findIndex((l) => l.some((x) => x.id === c.after)) : -1;
+                    if (i < 0) i = lanes.findIndex((l) => l.every((x) => x.to <= c.from || x.from >= c.to));
+                    if (i < 0) {
+                        if (lanes.length >= 3) {
+                            c.more = true;
+                            continue;
+                        }
+                        lanes.push([]);
+                        i = lanes.length - 1;
+                    }
+                    lanes[i].push(c);
+                    c.lane = i;
+                }
+                const hidden = caps.filter((c) => c.more).length;
+                el.innerHTML =
+                    head(t, preview) +
+                    (S.poster === 'on' ? poster(rows) : '') +
+                    `<section class="box" aria-label="Deň"><h3 class="box-ttl"><span>${S.poster === 'on' ? 'Dnešný deň' : 'Plán dňa'}</span>${preview ? '<button type="button" class="reset" data-reset>Späť na teraz</button>' : ''}</h3>` +
+                    `<div class="viz" id="vb" role="slider" tabindex="0"></div>` +
+                    `<p class="hint">${preview ? '' : v('Ťahaj prstom po dráhe a pozri si iný čas.', 'Ťahajte prstom po dráhe a pozrite si iný čas.')}</p>` +
+                    `<div class="chips" role="group" aria-label="Skoč na">${caps
+                        .map(
+                            (c) =>
+                                `<button type="button" class="chip" data-go="${c.from}" aria-pressed="${preview && t >= c.from && t < c.to}">${icoSvg(c.icon)}${c.name}<b>${hm(c.from)}</b></button>`,
+                        )
+                        .join('')}</div>` +
+                    `<p class="sr" aria-live="polite">${valueText(t, preview)}</p></section>` +
+                    '<div class="nav"><span>Dnes</span><b>Teraz</b><span>7 dní</span><span>Štatistika</span></div>';
+                const box = document.getElementById('vb');
+                const W = box.clientWidth;
+                const f = S.scale;
+                const L = 6;
+                const R = W - 6;
+                const X = (m) => L + ((Math.min(SPAN.to, Math.max(SPAN.from, m)) - SPAN.from) / (SPAN.to - SPAN.from)) * (R - L);
+                const yCloud = 22 * f;
+                const capH = 32;
+                const noSun = !caps.some((c) => c.kind === 'sun');
+                const yLane0 = yCloud + 10 + 10 + (noSun ? 24 * f : 0);
+                const nL = Math.max(1, lanes.length);
+                const yRibbon = yLane0 + nL * (capH + 4) + 12;
+                const H = yRibbon + 12 + 8 + 18 * f;
+                let s = `<defs><pattern id="hatchb" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="#26271f"/><path d="M0 0v4" stroke="#5d5e58" stroke-width="1.4"/></pattern></defs>`;
+                for (let h = 5; h < 20; h++) {
+                    const c = cloudAt(h * 60);
+                    s += `<rect x="${X(h * 60) + 0.5}" y="${yCloud}" width="${X(h * 60 + 60) - X(h * 60) - 1}" height="10" rx="2" fill="${c === null ? 'url(#hatchb)' : cloudFill(c)}"${(h + 1) * 60 <= S.now ? ' opacity="0.55"' : ''}/>`;
+                }
+                // Nízka stuha: go / part / grid (grid vo farbe tarify), výška 8–24.
+                const ref = 0.85 * S.kwp;
+                for (let m = SPAN.from; m < SPAN.to; m += 15) {
+                    const fit = fitAt(m);
+                    const col = fit === 'grid' ? COL[level(m)] : COL[fit];
+                    const hh = fit === 'grid' ? 8 : 8 + 16 * Math.min(1, kwAt(m) / ref);
+                    const past = m + 15 <= S.now;
+                    s += `<rect x="${X(m)}" y="${yRibbon - hh / 2}" width="${X(m + 15) - X(m) + 0.4}" height="${hh}" fill="${past ? dim(col) : col}"/>`;
+                }
+                if (noSun)
+                    s += `<text x="${W / 2}" y="${yLane0 - 8 * f}" text-anchor="middle" fill="rgba(242,240,234,.64)" font-size="${13 * f}" font-family="Space Grotesk, system-ui">Na slnko dnes nič · lepší deň: štvrtok</text>`;
+                // Kapsuly.
+                for (const c of caps.filter((x) => !x.more)) {
+                    const x1 = X(c.from) + 1;
+                    const x2 = X(c.to) - 1;
+                    const y = yLane0 + c.lane * (capH + 4);
+                    const w = x2 - x1;
+                    const done = c.to <= S.now;
+                    const base = c.kind === 'sun' ? COL.go : COL.cheap;
+                    const fill = done ? dim(base) : base;
+                    const on = preview ? t >= c.from && t < c.to : false;
+                    const typical = S.roof === 'typical' && c.kind === 'sun';
+                    s += `<rect x="${x1}" y="${y}" width="${w}" height="${capH}" rx="${capH / 2}" fill="${fill}"${typical ? ' fill-opacity="0.75" stroke="#f2f0ea" stroke-width="1" stroke-dasharray="3 3"' : ''}${on ? ' stroke="#f2f0ea" stroke-width="1.5"' : ''}/>`;
+                    if (S.now > c.from && S.now < c.to)
+                        s += `<rect x="${x1}" y="${y}" width="${X(S.now) - x1}" height="${capH}" rx="${capH / 2}" fill="${dim(base)}"/>`;
+                    const ink = '#0b0b0b';
+                    if (w >= 26) s += ico(c.icon, x1 + (w >= 96 ? 9 : w / 2 - 9), y + 7, 18, ink);
+                    else s += `<circle cx="${x1 + w / 2}" cy="${y + capH / 2}" r="3" fill="${ink}"/>`;
+                    if (w >= 96)
+                        s += `<text x="${x1 + 32}" y="${y + capH / 2 + 4.5}" fill="${ink}" font-size="12.5" font-weight="600" font-family="IBM Plex Mono, monospace">${hm(c.from)}–${hm(c.to)}</text>`;
+                }
+                if (hidden)
+                    s += `<text x="${R}" y="${yLane0 + 2 * (capH + 4) + capH / 2 + 4}" text-anchor="end" fill="#f2f0ea" font-size="12">+${hidden}</text>`;
+                const nx = inDay(S.now) ? X(S.now) : S.now < SPAN.from ? L : R;
+                let marks = `<line x1="${nx}" x2="${nx}" y1="${yCloud - 2}" y2="${yRibbon + 14}" stroke="#f2f0ea" stroke-width="1"/><circle cx="${nx}" cy="${yRibbon}" r="3.5" fill="#f2f0ea"/>`;
+                if (preview) {
+                    const px = X(Math.min(LAST, Math.max(SPAN.from, t)));
+                    marks += `<line x1="${px}" x2="${px}" y1="${16 * f}" y2="${yRibbon + 14}" stroke="#f2f0ea" stroke-width="2"/><circle cx="${px}" cy="${yRibbon}" r="5.5" fill="${CARD}" stroke="#f2f0ea" stroke-width="2"/>`;
+                }
+                box.innerHTML =
+                    `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${s}${marks}</svg>` +
+                    (preview || !inDay(S.now) ? bubble(t, preview, X) : '') +
+                    ticks(X, yRibbon + 16);
+                box.setAttribute(
+                    'aria-label',
+                    v('Plán dňa na dráhe, šípkami si pozrieš iný čas', 'Plán dňa na dráhe, šípkami si pozriete iný čas'),
+                );
+                box.setAttribute('aria-valuemin', SPAN.from);
+                box.setAttribute('aria-valuemax', LAST);
+                box.setAttribute('aria-valuenow', Math.min(LAST, Math.max(SPAN.from, t)));
+                box.setAttribute('aria-valuetext', valueText(t, preview));
+                box.setAttribute('aria-describedby', 'db');
+                box.insertAdjacentHTML('afterend', `<p class="sr" id="db">${srText(rows)}</p>`);
+                document.getElementById('ab').innerHTML =
+                    `<b>aria-valuetext:</b> ${valueText(t, preview)}<br><b>popis:</b> ${srText(rows)}`;
+                bind(el, 'b', 'vb');
+            }
+
+            const render = () => {
+                renderA();
+                renderB();
+                flowed = true;
+            };
+            function setPreview(k, m) {
+                P[k] = m === null || m === S.now ? null : Math.min(LAST, Math.max(SPAN.from, m));
+                render();
+            }
+            /** „Späť na teraz“ dobehne za 350 ms (pri reduced motion hneď). */
+            function glideHome(k, sid) {
+                const from = P[k];
+                const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (from === null || reduce || !inDay(S.now)) {
+                    setPreview(k, null);
+                    return document.getElementById(sid).focus();
+                }
+                const t0 = performance.now();
+                const step = (now) => {
+                    const p = Math.min(1, (now - t0) / 350);
+                    const e = 1 - Math.pow(1 - p, 3);
+                    if (p < 1) {
+                        P[k] = Math.round(from + (S.now - from) * e);
+                        render();
+                        requestAnimationFrame(step);
+                    } else {
+                        setPreview(k, null);
+                        document.getElementById(sid).focus();
+                    }
+                };
+                requestAnimationFrame(step);
+            }
+            function bind(el, k, sid) {
+                el.onclick = (e) => {
+                    if (e.target.closest('[data-reset]')) return glideHome(k, sid);
+                    const b = e.target.closest('[data-go]');
+                    if (b) setPreview(k, Number(b.dataset.go));
+                };
+                const s = document.getElementById(sid);
+                const at = (x) => {
+                    const r = s.getBoundingClientRect();
+                    const f = Math.min(1, Math.max(0, (x - r.left - 6) / (r.width - 12)));
+                    return Math.min(LAST, quarter(SPAN.from + f * (SPAN.to - SPAN.from)));
+                };
+                // Kurzor a pero: stlač a ťahaj. Prst: ťuknutie aj vodorovný ťah (pan-y nechá zvislý stránke).
+                s.onpointerdown = (e) => {
+                    const start = { x: e.clientX, y: e.clientY };
+                    let axis = e.pointerType === 'touch' ? null : 'x';
+                    if (axis) setPreview(k, at(e.clientX));
+                    const move = (ev) => {
+                        if (!axis) {
+                            const dx = Math.abs(ev.clientX - start.x);
+                            const dy = Math.abs(ev.clientY - start.y);
+                            if (dx < 8 && dy < 8) return;
+                            axis = dx > dy ? 'x' : 'y';
+                        }
+                        if (axis === 'x') setPreview(k, at(ev.clientX));
+                    };
+                    const up = (ev) => {
+                        if (!axis) setPreview(k, at(ev.clientX));
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', up);
+                        if (e.pointerType !== 'touch') document.getElementById(sid).focus();
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up);
+                };
+                s.onkeydown = (e) => {
+                    const cur = P[k] ?? S.now;
+                    let m = null;
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowUp')
+                        m = inDay(cur) ? quarter(cur) + 15 : cur < SPAN.from ? SPAN.from : LAST;
+                    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown')
+                        m = inDay(cur) ? Math.ceil(cur / 15) * 15 - 15 : cur < SPAN.from ? SPAN.from : LAST;
+                    else if (e.key === 'Home') m = SPAN.from;
+                    else if (e.key === 'End') m = LAST;
+                    else if (e.key === 'Escape') return (e.preventDefault(), glideHome(k, sid));
+                    if (m === null) return;
+                    e.preventDefault();
+                    setPreview(k, m);
+                    document.getElementById(sid).focus();
+                };
+            }
+
+            document.getElementById('ctl').addEventListener('change', (e) => {
+                const { name, value } = e.target;
+                S[name] = ['now', 'scale', 'kwp', 'w'].includes(name) ? Number(value) : value;
+                P.a = P.b = null;
+                render();
+            });
+            render();
+        </script>
+    </body>
+</html>
