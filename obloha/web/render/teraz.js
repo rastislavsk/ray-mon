@@ -8,7 +8,8 @@ import { escapeHtml } from '../../../shared/format.js';
 import { PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../../../web/day-chart.js';
-import { shows } from '../state.js';
+import { pocasieHtml, pocasieStav } from '../../../web/pocasie.js';
+import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
@@ -117,6 +118,7 @@ export function renderTeraz(state, dom) {
         { ...state, previewMinutes: state.terazPreview },
         { online: state.online, voice: state.voice, devices: state.doma },
     );
+    renderPocasie(state, m, dom);
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
@@ -143,4 +145,19 @@ export function renderTeraz(state, dom) {
     renderSay(m, dom);
     renderPlan(m.plan, state.tzPlanOpen, dom);
     renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
+}
+
+/**
+ * Počasie v pozadí karty (docs/navrhy/teraz-pocasie-2.html). Bez dát o počasí nie je, s vypnutou
+ * živou oblohou (Nastavenie › Vzhľad) tiež - kto ju vypol, chcel pokoj. V prehľade so stĺpcami
+ * nie je: vrstva siaha cez celú šírku obrazovky, nie len cez stĺpec Teraz.
+ * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
+ */
+function renderPocasie(state, m, dom) {
+    const p = state.liveSky && !dashboard(state) ? m.pocasie : null;
+    show(dom.wx, !!p);
+    if (!p) return;
+    setHtml(dom.wx, pocasieHtml(p.mesiac));
+    dom.wx.dataset.wx = pocasieStav(p);
+    dom.wx.toggleAttribute('data-noc', p.noc);
 }

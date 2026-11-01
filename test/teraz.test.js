@@ -47,6 +47,7 @@ import {
 import { mozemModel, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
+import { moonPhase } from '../shared/solar.js';
 import { dnesCards, terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -742,4 +743,21 @@ test('texty karty Teraz', () => {
         terazChartText({ span: FULL_DAY, nowMin: 0, kwText: '0.00', tone: 'costly', sun: [], cheap: [], costly: [{ from: 0, to: 60 }] }),
         /Okno na veľké veci dnes nebude\. Drahá sieť 00:00 – 01:00\.$/,
     );
+});
+
+test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a v náhľade bez merania', () => {
+    // 13:00: menič meria; keď dáva len zlomok jasnej oblohy, je zamračené, hoci predpoveď hovorí jasno.
+    const i = input(at('13:00'));
+    const den = terazModel(i).pocasie;
+    assert.equal(den?.noc, false);
+    assert.equal(den?.zrazky, null);
+    assert.equal(den?.mesiac, moonPhase(i.now));
+    const slabo = { ...i, pv: { ...i.pv, realTimePowerKw: 0.3 } };
+    assert.equal(terazModel(slabo).pocasie?.jas, 'zamracene');
+    // Náhľad o 18:00 je v budúcnosti - meranie nie je, jas je z predpovede (jasný deň).
+    assert.equal(terazModel({ ...slabo, previewMinutes: 18 * 60 }).pocasie?.jas, 'jasno');
+    // 22:30: noc.
+    assert.equal(terazModel(input(at('22:30'))).pocasie?.noc, true);
+    // Bez predpovede kresba nie je.
+    assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
 });

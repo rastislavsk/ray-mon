@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Počasie v pozadí karty Teraz – rozhodnutia</title>
+        <style>
+                        /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+                           z appky. Pokračovanie docs/navrhy/teraz-pocasie.html: realistické počasie cez celú hornú
+                           časť obrazovky a rozhodnutia z 1. 11. 2026. Karty sú zjednodušené výrezy (len horná časť). */
+                        @font-face {
+                            font-family: 'Space Grotesk';
+                            src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                            font-weight: 300 700;
+                        }
+                        @font-face {
+                            font-family: 'IBM Plex Mono';
+                            src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                            font-weight: 600;
+                        }
+                        @font-face {
+                            font-family: 'Archivo';
+                            font-weight: 100 900;
+                            font-stretch: 62% 125%;
+                            src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                        }
+                        :root {
+                            color-scheme: dark light;
+                            --page: #050505;
+                            --panel: #121311;
+                            --text: #f2f0ea;
+                            --muted: rgba(242, 240, 234, 0.66);
+                            --line: rgba(242, 240, 234, 0.14);
+                        }
+                        @media (prefers-color-scheme: light) {
+                            :root {
+                                --page: #f4f2ec;
+                                --panel: #fff;
+                                --text: #16170f;
+                                --muted: rgba(22, 23, 15, 0.66);
+                                --line: rgba(22, 23, 15, 0.14);
+                            }
+                        }
+                        body {
+                            margin: 0;
+                            background: var(--page);
+                            color: var(--text);
+                            font-family: 'Space Grotesk', system-ui, sans-serif;
+                            line-height: 1.5;
+                        }
+                        main {
+                            max-width: 900px;
+                            margin: 0 auto;
+                            padding: 28px 16px 80px;
+                            display: grid;
+                            grid-template-columns: minmax(0, 1fr);
+                            gap: 32px;
+                        }
+                        h1, h2 { margin: 0; line-height: 1.2; }
+                        p, li { color: var(--muted); max-width: 720px; }
+                        code { font-family: 'IBM Plex Mono', monospace; font-size: 0.86em; }
+                        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+                        th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+                        th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+                        .ctrl { position: sticky; top: 0; z-index: 5; background: var(--page); padding: 10px 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+                        .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+                        .seg button { font: inherit; font-size: 14px; color: var(--text); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+                        .seg button[aria-pressed='true'] { background: var(--text); color: var(--page); border-color: var(--text); }
+                        .pair { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+                        figure { margin: 0; width: 360px; max-width: 100%; }
+                        figcaption { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+                        /* ---------- výrez obrazovky: od horného okraja (pod stavovým riadkom) po vetu pod číslom ---------- */
+                        .scr { position: relative; overflow: hidden; height: 420px; border-radius: 28px; border: 1px solid var(--line); isolation: isolate; color: #fff; }
+                        .scr > :not(.wxfx) { position: relative; z-index: 1; margin: 0; }
+                        .scr p {
+                color: inherit;
+                max-width: none;
+            }
+            .sbar { display: flex; justify-content: space-between; align-items: center; height: 47px; padding: 0 28px; font: 600 15px/1 system-ui, sans-serif; }
+                        .cur { background: radial-gradient(circle at 20% 0%, rgba(158, 242, 91, 0.14), transparent 42%), radial-gradient(circle at 82% 5%, rgba(158, 242, 91, 0.13), transparent 46%), #0a0a0a; font-family: 'Space Grotesk', system-ui, sans-serif; }
+                        .cur[data-tier='amber'] { background: radial-gradient(circle at 20% 0%, rgba(255, 194, 75, 0.14), transparent 42%), radial-gradient(circle at 82% 5%, rgba(255, 194, 75, 0.13), transparent 46%), #0a0a0a; }
+                        .cur .brand { padding: 12px 18px 0; font: 600 18px 'IBM Plex Mono', monospace; letter-spacing: 0.2em; }
+                        .cur .kick { padding: 34px 18px 0; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.14em; color: rgba(242, 240, 234, 0.64); }
+                        .cur .num { padding: 0 18px; font-size: 86px; font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; color: #9ef25b; }
+                        .cur[data-tier='amber'] .num { color: #ffc24b; }
+                        .cur .num small, .obl .num small { font-size: 18px; margin-left: 6px; letter-spacing: 0; }
+                        .cur .sub { padding: 10px 18px 0; font-size: 15px; }
+                        .obl { background: linear-gradient(180deg, var(--s1, #1767c9), var(--s2, #4fa3e2)); font-family: 'Archivo', system-ui, sans-serif; }
+                        .obl .brand { padding: 10px 18px 0; font-size: 18px; font-weight: 800; font-variation-settings: 'wdth' 112; }
+                        .obl .ttl { padding: 18px 18px 0; font-size: 30px; font-weight: 800; font-variation-settings: 'wdth' 112; }
+                        .obl .num { padding: 0 18px; font-size: 68px; font-weight: 900; font-variation-settings: 'wdth' 118; line-height: 0.95; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18); }
+                        .obl .sub { padding: 8px 18px 0; font-size: 15px; }
+                        [data-wx='polojasno'] .obl { --s1: #3669a9; --s2: #70a4ce; }
+                        :is([data-wx='zamracene'], [data-wx='dazd'], [data-wx='sneh']) .obl { --s1: #4c6a92; --s2: #88a5bf; }
+                        [data-noc] .obl { --s1: #070b1f; --s2: #141b3d; }
+                        /* Zrážky končia nad vetou pod číslom (v appke výška podľa polohy vety). */
+                        .scr .wxfx { --prec-h: 200px; }
+                        :root[data-motion='off'] .wxfx * { animation: none; }
+
+                        /* ---------- efekty počasia (návrh pre kabát oboch appiek) ---------- */
+            /* Počasie v pozadí karty Teraz: svetlo z pravého horného rohu, slabne smerom k číslu. */
+            .wxfx{position:absolute;z-index:0;top:0;left:0;width:100%;height:660px;overflow:hidden;pointer-events:none;
+              --sx:calc(100% + 14px);--sy:-20px;--core:255,252,240;--warm:255,226,160;--ray:255,240,205;
+              --cl:226,228,232;--cl-dark:120,128,140;--drop:190,210,240;--flake:255,255,255;
+              -webkit-mask-image:linear-gradient(180deg,#000 50%,transparent 100%);mask-image:linear-gradient(180deg,#000 50%,transparent 100%)}
+            .wxfx.obl{--core:255,255,250;--warm:255,246,214;--ray:255,255,240;--cl:255,255,255;--cl-dark:70,88,115;--drop:235,242,255}
+            .wxfx > *,.wxfx .prec > *{position:absolute;display:none}
+            /* --- slnko --- */
+            .wxfx .halo{inset:0;background:radial-gradient(circle at var(--sx) var(--sy), rgba(var(--core),.95) 0 20px, rgba(var(--core),.8) 28px, rgba(var(--warm),.42) 50px, rgba(var(--warm),.18) 100px, rgba(var(--warm),.08) 190px, rgba(var(--warm),.04) 320px, transparent 520px);animation:pulse 9s ease-in-out infinite alternate}
+            .wxfx .rays{width:1600px;height:1600px;left:calc(var(--sx) - 800px);top:calc(var(--sy) - 800px);
+              -webkit-mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.75) 60px,rgba(0,0,0,.35) 220px,rgba(0,0,0,.12) 420px,rgba(0,0,0,.04) 620px,transparent 800px);
+              mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.75) 60px,rgba(0,0,0,.35) 220px,rgba(0,0,0,.12) 420px,rgba(0,0,0,.04) 620px,transparent 800px)}
+            .wxfx .r1{background:repeating-conic-gradient(from 3deg, rgba(var(--ray),.55) 0deg 1.6deg, transparent 2.4deg 9deg, rgba(var(--ray),.3) 9.6deg 10.4deg, transparent 11deg 17deg);filter:blur(2px);animation:spin 240s linear infinite}
+            .wxfx .r2{background:repeating-conic-gradient(from 0deg, rgba(var(--ray),.28) 0deg 4deg, transparent 6deg 23deg);filter:blur(5px);animation:spin 360s linear infinite reverse, breathe 7s ease-in-out infinite alternate}
+            .wxfx .flare{border-radius:50%;width:46px;height:46px;left:calc(var(--sx) - 150px);top:130px;background:radial-gradient(circle, rgba(var(--ray),.16), rgba(var(--ray),.05) 60%, transparent 70%)}
+            /* --- rozptýlené svetlo za mrakmi --- */
+            .wxfx .diffuse{inset:0;background:radial-gradient(ellipse 70% 55% at 85% 0%, rgba(var(--core),.30), rgba(var(--core),.10) 45%, transparent 75%)}
+            /* --- mraky: mäkké kopy z rozmazaných kruhov --- */
+            .wxfx .cloud{filter:blur(10px);animation:drift 70s ease-in-out infinite alternate}
+            .wxfx .cloud::before,.wxfx .cloud::after{content:'';position:absolute;border-radius:50%;background:inherit}
+            .wxfx .c1{left:52%;top:70px;width:220px;height:70px;border-radius:40px;background:rgba(var(--cl),.55)}
+            .wxfx .c1::before{width:110px;height:100px;left:30px;top:-50px}
+            .wxfx .c1::after{width:90px;height:80px;left:110px;top:-34px}
+            .wxfx .c2{left:18%;top:150px;width:200px;height:56px;border-radius:30px;background:rgba(var(--cl),.32);animation-duration:95s;animation-direction:alternate-reverse}
+            .wxfx .c2::before{width:90px;height:80px;left:40px;top:-40px}
+            .wxfx .c2::after{width:70px;height:60px;left:110px;top:-26px}
+            .wxfx .c3{left:62%;top:200px;width:180px;height:50px;border-radius:30px;background:rgba(var(--cl),.28);animation-duration:80s}
+            .wxfx .c3::before{width:80px;height:70px;left:30px;top:-34px}
+            .wxfx .c3::after{width:60px;height:50px;left:96px;top:-22px}
+            /* zatiahnutá obloha: súvislá vrstva oblakov */
+            .wxfx .deck{inset:-40px -60px auto -60px;height:420px;filter:blur(18px);animation:drift 120s ease-in-out infinite alternate;
+              background:
+               radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--cl),.30), transparent 70%),
+               radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--cl),.34), transparent 70%),
+               radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--cl),.36), transparent 70%),
+               radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--cl),.20), transparent 70%),
+               radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--cl),.22), transparent 70%),
+               linear-gradient(180deg, rgba(var(--cl-dark),.35), transparent 85%)}
+            .wxfx .deck.dark{background:
+               radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--cl-dark),.55), transparent 70%),
+               radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--cl-dark),.6), transparent 70%),
+               radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--cl-dark),.6), transparent 70%),
+               radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--cl),.12), transparent 70%),
+               radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--cl),.14), transparent 70%),
+               linear-gradient(180deg, rgba(var(--cl-dark),.5), transparent 85%)}
+            /* --- dážď: šikmé tenké čiary v dvoch rýchlostiach --- */
+            .wxfx .rain{left:-100px;right:-100px;top:-300px;height:1000px;transform:rotate(12deg)}
+            .wxfx .rain1{background:repeating-linear-gradient(90deg, transparent 0 17px, rgba(var(--drop),.5) 17px 18.4px, transparent 18px 37px),
+              repeating-linear-gradient(180deg, transparent 0 40px, #000 40px 62px, transparent 62px 100px);
+              -webkit-mask-image:repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);mask-image:repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
+              animation:fall1 .7s linear infinite}
+            .wxfx .rain2{background:repeating-linear-gradient(90deg, transparent 0 29px, rgba(var(--drop),.32) 29px 30px, transparent 30px 53px);
+              -webkit-mask-image:repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);mask-image:repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
+              animation:fall2 1.1s linear infinite}
+            /* --- sneh: vločky rôznej veľkosti, pomaly --- */
+            .wxfx .snow{left:-50px;right:-50px;top:-300px;height:1000px}
+            .wxfx .snow1{background:radial-gradient(circle at 20% 30%, rgba(var(--flake),.85) 0 1.4px, transparent 2.2px) 0 0/53px 61px, radial-gradient(circle at 70% 75%, rgba(var(--flake),.6) 0 1px, transparent 1.8px) 11px 23px/79px 67px, radial-gradient(circle at 45% 10%, rgba(var(--flake),.7) 0 1.2px, transparent 2px) 31px 7px/97px 89px;animation:snow1 9s linear infinite}
+            .wxfx .snow2{background:radial-gradient(circle at 50% 50%, rgba(var(--flake),.8) 0 2.6px, transparent 3.8px) 0 0/131px 113px, radial-gradient(circle at 20% 80%, rgba(var(--flake),.6) 0 2px, transparent 3px) 47px 61px/157px 139px;filter:blur(.8px);animation:snow2 14s linear infinite}
+            /* --- noc: mesiac a hviezdy --- */
+            .wxfx .moonglow{inset:0;background:radial-gradient(circle at 80% 173px, rgba(220,225,255,.16) 0 26px, rgba(200,210,255,.07) 70px, rgba(200,210,255,.03) 150px, transparent 280px)}
+            .wxfx .moon{width:46px;height:46px;left:calc(80% - 23px);top:150px;filter:drop-shadow(0 0 14px rgba(230,232,255,.35))}
+            .wxfx .moon svg{display:block;width:100%;height:100%}
+            .wxfx .stars{inset:0;background:
+              radial-gradient(circle at 12% 18%, #fff 0 1px, transparent 1.6px), radial-gradient(circle at 34% 8%, #fff 0 .8px, transparent 1.4px),
+              radial-gradient(circle at 56% 22%, #fff 0 1.2px, transparent 1.8px), radial-gradient(circle at 70% 40%, #fff 0 .8px, transparent 1.4px),
+              radial-gradient(circle at 92% 30%, #fff 0 1px, transparent 1.6px), radial-gradient(circle at 46% 46%, #fff 0 .7px, transparent 1.3px),
+              radial-gradient(circle at 80% 58%, #fff 0 .9px, transparent 1.5px), radial-gradient(circle at 24% 52%, #fff 0 .8px, transparent 1.4px),
+              radial-gradient(circle at 64% 6%, #fff 0 .9px, transparent 1.5px);animation:twinkle 4s ease-in-out infinite alternate}
+            .wxfx .stars2{inset:0;background:
+              radial-gradient(circle at 6% 36%, #fff 0 .8px, transparent 1.4px), radial-gradient(circle at 40% 30%, #fff 0 1px, transparent 1.6px),
+              radial-gradient(circle at 86% 12%, #fff 0 .8px, transparent 1.4px), radial-gradient(circle at 58% 60%, #fff 0 .7px, transparent 1.3px);
+              animation:twinkle 3s ease-in-out -1.5s infinite alternate-reverse}
+            /* --- čo je v ktorom stave vidno (display); sila cez filter:opacity, aby ju neprebila animácia blikania --- */
+            [data-wx=jasno]:not([data-noc]) :is(.halo,.r1,.r2,.flare){display:block}
+            [data-wx=polojasno]:not([data-noc]) :is(.halo,.r1,.r2,.c1,.c2,.c3){display:block}
+            [data-wx=polojasno]:not([data-noc]) .halo{filter:opacity(.45)}
+            [data-wx=polojasno]:not([data-noc]) .r2{filter:blur(5px) opacity(.3)}
+            [data-wx=polojasno]:not([data-noc]) .r1{filter:blur(2px) opacity(.15)}
+            [data-wx=zamracene]:not([data-noc]) :is(.diffuse,.deck){display:block}
+            [data-wx=zamracene]:not([data-noc]) .diffuse{filter:opacity(.3)}
+            [data-wx=dazd] :is(.deck,.rain1,.rain2){display:block}
+            [data-wx=sneh] :is(.deck,.snow1,.snow2){display:block}
+            /* --- noc: žiadne slnko; mesiac podľa fázy, hviezdy zakryté podľa oblačnosti --- */
+            .wxfx[data-noc]{--cl:150,158,185;--cl-dark:20,24,40}
+            .wxfx.obl[data-noc]{--cl:170,180,210;--cl-dark:10,14,32}
+            [data-noc][data-wx=jasno] :is(.moonglow,.moon,.stars,.stars2){display:block}
+            [data-noc][data-wx=polojasno] :is(.moonglow,.moon,.stars,.stars2,.c1,.c2,.c3){display:block}
+            [data-noc][data-wx=polojasno] .moonglow{filter:opacity(.6)}
+            [data-noc][data-wx=polojasno] :is(.stars,.stars2){filter:opacity(.45)}
+            [data-noc][data-wx=polojasno] .cloud{filter:blur(12px)}
+            [data-noc][data-wx=zamracene] :is(.deck,.moonglow){display:block}
+            [data-noc][data-wx=zamracene] .moonglow{filter:opacity(.2)}
+            @keyframes spin{to{transform:rotate(360deg)}}
+            @keyframes pulse{from{opacity:.92}to{opacity:1}}
+            @keyframes breathe{from{opacity:.65}to{opacity:1}}
+            @keyframes twinkle{from{opacity:.45}to{opacity:1}}
+            @keyframes drift{from{transform:translateX(-20px)}to{transform:translateX(24px)}}
+            @keyframes fall1{from{transform:rotate(12deg) translateY(0)}to{transform:rotate(12deg) translateY(90px)}}
+            @keyframes fall2{from{transform:rotate(12deg) translateY(0)}to{transform:rotate(12deg) translateY(120px)}}
+            @keyframes snow1{from{transform:translate(0,0)}to{transform:translate(17px,200px)}}
+            @keyframes snow2{from{transform:translate(0,0)}to{transform:translate(-30px,200px)}}
+            @media (prefers-reduced-motion:reduce){.wxfx *{animation:none!important}}
+            /* Zrážky končia nad vetou pod číslom: obal s maskou, výška podľa spodku čísla (dopočíta skript). */
+            .wxfx > .prec{position:absolute;display:block;left:0;right:0;top:0;height:var(--prec-h,190px);overflow:hidden;
+              -webkit-mask-image:linear-gradient(180deg,#000 0,#000 60%,transparent 100%);mask-image:linear-gradient(180deg,#000 0,#000 60%,transparent 100%)}
+              color:#fff;font:600 16px/1 -apple-system,system-ui,sans-serif;pointer-events:none}
+        </style>
+    </head>
+    <body>
+        <main data-wx="jasno">
+            <header>
+                <h1>Počasie v pozadí karty Teraz – rozhodnutia</h1>
+                <p>
+                    Pokračovanie <code>teraz-pocasie.html</code>. Z možnosti A vzniklo realistické počasie cez celú hornú časť obrazovky: od
+                    horného okraja (aj pod stavovým riadkom nainštalovanej appky) po vetu pod číslom výkonu. Svetlo prichádza z pravého
+                    horného rohu a k číslu slabne. Ukážky nižšie sú zjednodušené výrezy; snímky skutočných kariet boli len v dočasnom
+                    náhľade mimo repozitára.
+                </p>
+            </header>
+
+            <div class="ctrl">
+                <div class="seg" data-seg="cas">
+                    <button type="button" data-v="den" aria-pressed="true">Deň</button>
+                    <button type="button" data-v="noc" aria-pressed="false">Noc</button>
+                </div>
+                <div class="seg" data-seg="wx">
+                    <button type="button" data-v="jasno" aria-pressed="true">Jasno</button>
+                    <button type="button" data-v="polojasno" aria-pressed="false">Polooblačno</button>
+                    <button type="button" data-v="zamracene" aria-pressed="false">Zamračené</button>
+                    <button type="button" data-v="dazd" aria-pressed="false">Dážď</button>
+                    <button type="button" data-v="sneh" aria-pressed="false">Sneh</button>
+                </div>
+                <div class="seg" data-seg="motion">
+                    <button type="button" data-v="on" aria-pressed="true">Pohyb zap</button>
+                    <button type="button" data-v="off" aria-pressed="false">vyp</button>
+                </div>
+            </div>
+
+            <div class="pair">
+                <figure>
+                    <figcaption>Súčasná appka</figcaption>
+                    <div class="scr cur" data-scr>
+                        <div class="wxfx" aria-hidden="true" data-fx></div>
+                        <p class="sbar"><span data-cas>12:00</span><span>▮▮▮ ◔</span></p>
+                        <p class="brand">RAY-MON</p>
+                        <p class="kick">Teraz</p>
+                        <p class="num"><span data-num>7.9</span><small>kW</small></p>
+                        <p class="sub" data-sub>95 % z toho, čo by dala jasná obloha</p>
+                    </div>
+                </figure>
+                <figure>
+                    <figcaption>Živá obloha</figcaption>
+                    <div class="scr obl" data-scr>
+                        <div class="wxfx obl" aria-hidden="true" data-fx></div>
+                        <p class="sbar"><span data-cas>12:00</span><span>▮▮▮ ◔</span></p>
+                        <p class="brand">RAY-MON</p>
+                        <p class="ttl">Teraz</p>
+                        <p class="num"><span data-num>7.9</span><small>kW</small></p>
+                        <p class="sub" data-sub>95 % z toho, čo by dala jasná obloha</p>
+                    </div>
+                </figure>
+            </div>
+
+            <section>
+                <h2>Stavy</h2>
+                <ul>
+                    <li>
+                        <b>Jasno</b> – slnko za pravým horným rohom, vidno len kúsok; lúče sa pomaly otáčajú (4–6 min za otočku) a k číslu
+                        slabnú.
+                    </li>
+                    <li><b>Polooblačno</b> – to isté slnko asi na polovičnú silu, čiastočne za mäkkými mrakmi.</li>
+                    <li>
+                        <b>Zamračené</b> – slnko nevidno, len slabé rozptýlené svetlo v rohu (slabšie ako polooblačno) a súvislá vrstva
+                        oblakov.
+                    </li>
+                    <li><b>Dážď, sneh</b> – oblaky a zrážky; končia nad vetou pod číslom, text pod ním ostáva čistý.</li>
+                    <li>
+                        <b>Noc</b> – žiadne slnko. Mesiac podľa fázy vpravo od čísla a hviezdy. Polooblačno: mraky čiastočne zakrývajú
+                        mesiac a hviezdy. Zamračené, dážď, sneh: mesiac ani hviezdy nevidno. Fáza sa počíta z dátumu (stredný synodický
+                        mesiac, presnosť asi pol dňa) – v ukážke 5. 9. 2026 večer, ubúdajúci kosáčik.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Rozhodnutia (1. 11. 2026)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Otázka</th>
+                            <th>Rozhodnutie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Vypnuté živé pozadie (Obloha: živá obloha, súčasná: farba pozadia)</td>
+                            <td>Kresba počasia zmizne tiež. Žiadny ďalší prepínač.</td>
+                        </tr>
+                        <tr>
+                            <td>Appka nemá dáta o počasí</td>
+                            <td>Kresba nie je.</td>
+                        </tr>
+                        <tr>
+                            <td>Meranie z meniča nesedí s predpoveďou oblačnosti</td>
+                            <td>
+                                Jas (jasno / polooblačno / zamračené) podľa merania, keď je k dispozícii; dážď a sneh vždy z predpovede.
+                                Rozhoduje jadro pre obe appky.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Široká obrazovka v Oblohe (stĺpce)</td>
+                            <td>Kresba len v karte Teraz.</td>
+                        </tr>
+                        <tr>
+                            <td>Jantárová farba ceny v noci (súčasná appka)</td>
+                            <td>Nechať, ako je.</td>
+                        </tr>
+                        <tr>
+                            <td>Hlavička pri vrchu stránky</td>
+                            <td>Priehľadná, pri posúvaní dostane pozadie.</td>
+                        </tr>
+                        <tr>
+                            <td>Počasie pod stavovým riadkom telefónu</td>
+                            <td>
+                                Áno, v nainštalovanej appke (iPhone aj Android podľa skúsenosti používateľa). Pozor: komentár pri
+                                <code>--status-bar</code> v <code>style.css</code> tvrdí, že Android stránku pod stavový riadok nepustí –
+                                overiť na telefóne pri kódovaní.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Dážď a sneh</td>
+                            <td>
+                                Sťahovať hneď: doplniť zrážky a sneženie do <code>openMeteoUrl</code> (zmení
+                                <code>test/golden/forecast.json</code>).
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Štítok stavu merania vpravo hore</td>
+                            <td>Dostane plné pozadie, aby ho slnko a mesiac neprekrývali.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+        <script>
+            // Ukážka, nie kód appky: čísla a vety sú vymyslené pre každý stav.
+            const STAVY = {
+                jasno: ['7.9', '95 % z toho, čo by dala jasná obloha', 'green'],
+                polojasno: ['2.9', '35 % z toho, čo by dala jasná obloha', 'green'],
+                zamracene: ['1.0', '12 % z toho, čo by dala jasná obloha', 'amber'],
+                dazd: ['1.0', '12 % z toho, čo by dala jasná obloha', 'amber'],
+                sneh: ['1.0', '12 % z toho, čo by dala jasná obloha', 'amber'],
+            };
+            // Fáza mesiaca 5. 9. 2026 o 21:30 zo stredného synodického mesiaca.
+            const faza = (((Date.UTC(2026, 8, 5, 19, 30) - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530588853) / 29.530588853;
+            function mesiac(p) {
+                const rx = (Math.abs(Math.cos(2 * Math.PI * p)) * 23).toFixed(2);
+                const ubuda = p > 0.5,
+                    kosak = p < 0.25 || p > 0.75;
+                const von = ubuda ? 0 : 1,
+                    hrana = ubuda ? (kosak ? 1 : 0) : kosak ? 0 : 1;
+                return `<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="23" fill="rgba(200,205,230,.10)"/><path fill="#ecebe2" d="M23 0A23 23 0 0 ${von} 23 46A${rx} 23 0 0 ${hrana} 23 0z"/></svg>`;
+            }
+            for (const fx of document.querySelectorAll('[data-fx]')) {
+                fx.innerHTML = `<i class="diffuse"></i><i class="moonglow"></i><i class="stars"></i><i class="stars2"></i><i class="moon">${mesiac(faza)}</i><i class="halo"></i><i class="rays r2"></i><i class="rays r1"></i><i class="flare"></i><i class="deck"></i><i class="cloud c2"></i><i class="cloud c1"></i><i class="cloud c3"></i><div class="prec"><i class="rain rain2"></i><i class="rain rain1"></i><i class="snow snow1"></i><i class="snow snow2"></i></div>`;
+            }
+            const main = document.querySelector('main');
+            const vyber = { cas: 'den', wx: 'jasno' };
+            function prekresli() {
+                const noc = vyber.cas === 'noc';
+                const [num, sub, tier] = noc ? ['0', 'slnko je pod obzorom', 'amber'] : STAVY[vyber.wx];
+                main.dataset.wx = vyber.wx;
+                main.toggleAttribute('data-noc', noc);
+                for (const fx of document.querySelectorAll('[data-fx]')) {
+                    fx.dataset.wx = vyber.wx;
+                    fx.toggleAttribute('data-noc', noc);
+                    fx.querySelector('.deck').classList.toggle('dark', vyber.wx === 'dazd');
+                }
+                for (const s of document.querySelectorAll('[data-scr]')) {
+                    if (s.classList.contains('cur')) s.dataset.tier = tier;
+                    s.querySelector('[data-num]').textContent = num;
+                    s.querySelector('[data-sub]').textContent = sub;
+                    s.querySelector('[data-cas]').textContent = noc ? '21:30' : '12:00';
+                }
+            }
+            for (const seg of document.querySelectorAll('[data-seg]')) {
+                seg.addEventListener('click', (e) => {
+                    const b = e.target.closest('button');
+                    if (!b) return;
+                    for (const x of seg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+                    if (seg.dataset.seg === 'motion') document.documentElement.dataset.motion = b.dataset.v;
+                    else {
+                        vyber[seg.dataset.seg] = b.dataset.v;
+                        prekresli();
+                    }
+                });
+            }
+            prekresli();
+        </script>
+    </body>
+</html>

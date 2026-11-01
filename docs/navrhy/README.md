@@ -68,3 +68,5 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `oznamenia.html` | Oznámenia v telefóne: jeden ranný plán dňa (logika A) – jasno, len dopoludnia, zamračené, zlý týždeň, tlačidlo Pripomeň; Plán dňa na Môžem?, Nastavenie |
 | `dnes-hlasky-dna.html` | Karta Dnes – veľké slovo o celom dni: ráno z predpovede, cez deň zmena, večer zo skutočnej výroby; trieda dňa podľa spotrebičov na slnku |
 | `hlavicka-jednotna.html` | Jedna hlavička pre obe appky: RAY-MON a pod ním lokalita, vpravo bodka a čas ako v Oblohe, prilepená hore; model hlavičky v `shared/hlavicka.js` |
+| `teraz-pocasie.html` | Karta Teraz (obe appky) – počasie v pozadí napravo od čísla kW: A ilustrácia oblohy, B častice, C symbol a nádych |
+| `teraz-pocasie-2.html` | Karta Teraz – počasie cez celú hornú časť obrazovky (deň aj noc, mesiac podľa fázy) a rozhodnutia k nemu |

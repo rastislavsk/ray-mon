@@ -42,6 +42,8 @@ function renderPanels(state, dom) {
     dom.page.dataset.panel = state.panel;
     dom.page.dataset.dir = state.panelDir > 0 ? 'next' : 'prev';
     dom.dashTitle.classList.toggle('hidden', !dash);
+    // Počasie v pozadí patrí len karte Teraz - na nej ho zapne render/teraz.js.
+    if (!shows(state, 'terazky')) show(dom.wx, false);
     for (const p of PANELS) {
         const column = dash && isColumn(p);
         dom.panels[p].classList.toggle('hidden', !shows(state, p) || !ready(state, p));

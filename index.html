@@ -23,6 +23,7 @@
              by ich stiahol dvakrát. -->
         <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
         <link rel="preload" href="fonts/ibm-plex-mono-600-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="stylesheet" href="web/pocasie.css" />
         <link rel="stylesheet" href="style.css" />
         <!-- integrity: prehliadač knižnicu spustí, len ak je to presne tento súbor (hash z cdnjs).
              Keby niekto na CDN obsah podvrhol, cudzí skript by mal prístup k uloženému
@@ -36,6 +37,9 @@
         ></script>
     </head>
     <body>
+        <!-- Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy skladá web/pocasie.js,
+             stav zapisuje render/terazky.js, čo je vidno, rozhoduje web/pocasie.css. Len dekorácia. -->
+        <div id="wx" class="wx hidden" aria-hidden="true"></div>
         <!-- Ťuknutie kamkoľvek mimo bubliny stavu merania ju zavrie a nič pod ňou nespustí. -->
         <div class="pv-tip-bg hidden" id="pv-tip-bg"></div>
         <header class="appbar">

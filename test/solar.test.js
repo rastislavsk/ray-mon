@@ -16,9 +16,11 @@ import {
     localDateKey,
     localHour,
     localMinutes,
+    moonPhase,
     orientationShare,
     plantAcKw,
     poaIrradiance,
+    precipOf,
     solarPosition,
     sunTimes,
     sunUp,
@@ -111,6 +113,7 @@ test('alignToLocalHours: celé hodiny nechá, polhodinové posunie na celú mies
         irr: { ghi, dni: 2 * ghi, dhi: ghi / 2 },
         tempC: ghi / 10,
         cloudPct,
+        precip: /** @type {import('../shared/solar.js').Precip} */ (ghi > 0 ? 'dazd' : null),
     });
     const raw = [hodina('2026-09-05T05:00:00Z', 0), hodina('2026-09-05T06:00:00Z', 100, null)];
     // Bratislava (+2): UTC hodina je aj celá miestna hodina, nemení sa nič.
@@ -123,6 +126,7 @@ test('alignToLocalHours: celé hodiny nechá, polhodinové posunie na celú mies
     assert.deepEqual(india[0].irr, { ghi: 50, dni: 100, dhi: 25 });
     assert.equal(india[0].tempC, 5);
     assert.equal(india[0].cloudPct, null, 'chýbajúca oblačnosť sa nedopočítava');
+    assert.equal(india[0].precip, 'dazd', 'zrážky patria hodine, ktorá sa končí neskoršou UTC hodinou');
     // Nepál (+5:45): 06:00 UTC je 11:45 miestneho, 11:00 je 05:15 UTC - štvrtina cesty.
     const nepal = alignToLocalHours(raw, 'Asia/Kathmandu');
     assert.equal(nepal[0].dateUtc.toISOString(), '2026-09-05T05:15:00.000Z');
@@ -140,17 +144,24 @@ test('pásmo s polhodinovým posunom: čas silnejšieho slnka ukazuje na hodinu,
     assert.equal(10 + f.hoursAhead, spicka.hour);
 });
 
-test('hourlySeries: zoradené podľa miestnej hodiny, kw na 2 desatiny, cloud zaokrúhlený', () => {
+test('hourlySeries: zoradené podľa miestnej hodiny, kw na 2 desatiny, cloud zaokrúhlený, zrážky', () => {
     const series = hourlySeries(
         [
-            { dateUtc: new Date('2026-07-01T12:00:00Z'), acKw: 3.14159, localDate: '2026-07-01', cloudPct: 33.3, tempC: 20 },
-            { dateUtc: new Date('2026-07-01T10:00:00Z'), acKw: 1, localDate: '2026-07-01', cloudPct: null, tempC: 18 },
+            {
+                dateUtc: new Date('2026-07-01T12:00:00Z'),
+                acKw: 3.14159,
+                localDate: '2026-07-01',
+                cloudPct: 33.3,
+                tempC: 20,
+                precip: 'dazd',
+            },
+            { dateUtc: new Date('2026-07-01T10:00:00Z'), acKw: 1, localDate: '2026-07-01', cloudPct: null, tempC: 18, precip: null },
         ],
         TZ,
     );
     assert.deepEqual(series, [
-        { hour: 12, kw: 1, cloud: null },
-        { hour: 14, kw: 3.14, cloud: 33 },
+        { hour: 12, kw: 1, cloud: null, precip: null },
+        { hour: 14, kw: 3.14, cloud: 33, precip: 'dazd' },
     ]);
 });
 
@@ -350,4 +361,42 @@ test('orientationShare: juh najlepší na severnej pologuli, sever na južnej', 
     assert.ok(Math.abs(share(SITE, 90) - share(SITE, 270)) < 0.05, 'východ a západ sú skoro rovnaké');
     assert.ok(share(SITE, 0, 0) === share(SITE, 180, 0), 'na plochej streche na smere nezáleží');
     assert.ok(share(SYDNEY, 0) > share(SYDNEY, 180), 'na južnej pologuli je lepší sever');
+});
+
+test('precipOf: sneh od 0,1 cm, dážď od 0,2 mm, pár kvapiek a chýbajúce hodnoty sú bez zrážok', () => {
+    assert.equal(precipOf(0.35, 0.5), 'sneh', 'keď sneží, padá aj voda - vidno vločky');
+    assert.equal(precipOf(0.8, 0), 'dazd');
+    assert.equal(precipOf(0.1, 0), null);
+    assert.equal(precipOf(undefined, undefined), null);
+});
+
+test('Open-Meteo: adresa pýta zrážky aj sneženie, predpoveď ich nesie v hodinách', () => {
+    assert.match(openMeteoUrl(SITE), /precipitation,snowfall/);
+    const f = buildForecast(fixture('open-meteo.json'), FIXED_NOW, SITE, PLANT);
+    // Fixtures: tretí deň (7. 9.) prší 10-16 UTC, siedmy (11. 9.) sneží 0-5 UTC.
+    const dazd = f.days[2].hourly.filter((h) => h.precip === 'dazd').map((h) => h.hour);
+    assert.deepEqual(dazd, [12, 13, 14, 15, 16, 17, 18]);
+    assert.ok(f.days[6].hourly.some((h) => h.precip === 'sneh'));
+    assert.ok(
+        f.days[4].hourly.every((h) => h.precip === null),
+        'pár kvapiek pod prahom nie je dážď',
+    );
+    // Odpoveď bez týchto premenných (staršia uložená v prehliadači) dá hodiny bez zrážok.
+    const stara = fixture('open-meteo.json');
+    delete stara.hourly.precipitation;
+    delete stara.hourly.snowfall;
+    assert.ok(buildForecast(stara, FIXED_NOW, SITE, PLANT).hourlyToday.every((h) => h.precip === null));
+});
+
+test('moonPhase: nov, spln a ubúdajúci kosáčik v známe dni', () => {
+    // Nov 6. 1. 2000 18:14 UTC je začiatok počítania.
+    assert.equal(moonPhase(new Date(Date.UTC(2000, 0, 6, 18, 14))), 0);
+    // Spln 3. 3. 2026 11:38 UTC (zatmenie Mesiaca) - stredný mesiac sa smie mýliť o deň.
+    assert.ok(Math.abs(moonPhase(new Date('2026-03-03T11:38:00Z')) - 0.5) < 1 / 29.5);
+    // 5. 9. 2026 večer: po poslednej štvrti (4. 9.), ubúda.
+    const faza = moonPhase(new Date('2026-09-05T19:30:00Z'));
+    assert.ok(faza > 0.75 && faza < 0.85, String(faza));
+    // Pred rokom 2000 ostáva fáza v rozsahu 0-1.
+    const stara = moonPhase(new Date('1999-12-31T00:00:00Z'));
+    assert.ok(stara >= 0 && stara < 1);
 });

@@ -35,6 +35,7 @@ import {
 } from './messages-core.js';
 import { mozemModel, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
+import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey } from './solar.js';
 
@@ -79,7 +80,24 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
         say: { chips: m.chips, text: m.say },
         plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
+        pocasie: pocasieOf(input, hero),
     };
+}
+
+/**
+ * Počasie v pozadí karty v zvolenej chvíli (aj v náhľade iného času): hodina predpovede, a keď
+ * je výkon v tej chvíli nameraný, aj jeho podiel z jasnej oblohy (shared/pocasie.js).
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ */
+function pocasieOf(input, hero) {
+    const hour = Math.floor(hero.minutes / 60);
+    const point = input.forecast?.hourlyToday.find((h) => h.hour === hour);
+    const today = todayOf(input);
+    const merane =
+        today && (hero.source === 'live' || hero.source === 'measured')
+            ? { kw: hero.power, clearKw: interpolate(today.hourly, hero.minutes / 60, 'clearKw'), installedKw: installedKw(input.plant) }
+            : null;
+    return pocasie({ point, noc: hero.isNight, now: input.now, merane });
 }
 
 /**
@@ -137,6 +155,7 @@ function empty(kind, estimate) {
         hint: { text: '', reset: false },
         say: /** @type {{ chips: import('./mozem.js').Chip[], text: string } | null} */ (null),
         plan: /** @type {(NonNullable<import('./mozem.js').MozemModelPlan> & { head: { lead: string, then: string } }) | null} */ (null),
+        pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
     };
 }
 

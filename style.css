@@ -308,6 +308,39 @@ b {
     background: var(--bg-page);
     background-attachment: fixed;
 }
+/* Pri vrchu stránky je hlavička priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css)
+   svietilo aj cez ňu a spod stavového riadku. Po posune o kúsok dostane pozadie, aby pod ňou
+   nebolo vidno obsah. Robí to prehliadač podľa posunu stránky (animation-timeline), bez JS;
+   kde to nevie, ostáva hlavička s pozadím. Stránka, ktorá sa nedá posunúť, animáciu nespustí -
+   preto je priehľadnosť základ a pozadie prináša až animácia. */
+@supports (animation-timeline: scroll()) {
+    .appbar {
+        background: transparent;
+        animation: appbar-pozadie linear both;
+        animation-timeline: scroll(root);
+        animation-range: 0 32px;
+    }
+    /* Útlm pohybu vypne aj túto animáciu - hlavička má potom pozadie stále. */
+    @media (prefers-reduced-motion: reduce) {
+        .appbar {
+            background: var(--bg-page);
+            background-attachment: fixed;
+        }
+    }
+}
+@keyframes appbar-pozadie {
+    to {
+        background: var(--bg-page);
+        background-attachment: fixed;
+    }
+}
+/* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Slnko je teplo biele, nie žlté - žltou
+   tu hovorí cena (lacná sieť). Mesiac stojí vpravo od čísla (v noci je číslo vždy „0“), zrážky
+   končia nad vetou pod číslom. */
+.wx {
+    --wx-moon-top: calc(var(--safe-top) + 122px);
+    --wx-prec-h: calc(var(--safe-top) + 195px);
+}
 /* Dva riadky: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku oboch
    (docs/navrhy/hlavicka-jednotna.html) - rovnako ako v Oblohe. */
 .appbar-inner {
@@ -387,10 +420,11 @@ b {
     inset: 6px 0;
     z-index: -1;
     border-radius: var(--radius-pill);
-    background: var(--ink-08);
+    /* Plná, nie priesvitná: vpravo hore za ňou svieti slnko počasia (web/pocasie.css). */
+    background: color-mix(in srgb, var(--ink) 8%, var(--bg));
 }
 .appbar-clock[aria-expanded='true']::before {
-    background: var(--ink-20);
+    background: color-mix(in srgb, var(--ink) 20%, var(--bg));
 }
 /* Keď meranie nie je živé, pribudne za časom „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka
    ho nečíta (alternatívny text je prázdny). */

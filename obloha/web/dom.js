@@ -60,6 +60,7 @@ function mozemDom() {
 /** Karta Teraz. */
 function terazDom() {
     return {
+        wx: byId('wx'),
         tzTitle: byId('ttl-terazky'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),

@@ -10,6 +10,7 @@ import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
 import { writeHtml } from '../memo.js';
+import { pocasieHtml, pocasieStav } from '../pocasie.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -115,9 +116,24 @@ function renderPlan(plan, open, dom) {
     );
 }
 
+/**
+ * Počasie v pozadí karty (docs/navrhy/teraz-pocasie-2.html). Bez dát o počasí nie je, a keď
+ * človek vypne farbu pozadia (Nastavenie › Vzhľad), zmizne s ňou - chcel pokoj.
+ * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
+ */
+function renderPocasie(state, m, dom) {
+    const p = state.bgTint ? m.pocasie : null;
+    show(dom.wx, !!p);
+    if (!p) return;
+    writeHtml(dom.wx, pocasieHtml(p.mesiac), 'wx');
+    dom.wx.dataset.wx = pocasieStav(p);
+    dom.wx.toggleAttribute('data-noc', p.noc);
+}
+
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTerazky(state, dom) {
     const m = terazModel(state, { voice: state.voice, devices: state.doma });
+    renderPocasie(state, m, dom);
     renderHead(state, m, dom);
     renderSay(m, dom);
     renderPlan(m.plan, state.tzPlanOpen, dom);

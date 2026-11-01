@@ -1,0 +1,408 @@
+/* Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html), spoločné pre obe appky.
+   Vrstvy skladá web/pocasie.js, stav (data-wx, data-noc) zapisuje render karty Teraz. Svetlo
+   prichádza z pravého horného rohu obrazovky (aj spod stavového riadku) a k číslu výkonu slabne.
+   Farby a polohu mesiaca a konca zrážok si každá appka nastaví vo svojom style.css cez premenné.
+   Kresba je dekorácia: nezachytí dotyk, čítačka ju nevidí (aria-hidden v HTML), útlm pohybu
+   zastaví jej pohyb (pravidlo prefers-reduced-motion v style.css oboch appiek). */
+.wx {
+    --wx-sx: calc(100% + 14px);
+    --wx-sy: -20px;
+    --wx-core: 255, 252, 240;
+    --wx-warm: 255, 226, 160;
+    --wx-ray: 255, 240, 205;
+    --wx-cl: 226, 228, 232;
+    --wx-cl-dark: 120, 128, 140;
+    --wx-drop: 190, 210, 240;
+    --wx-flake: 255, 255, 255;
+    --wx-moon-x: 80%;
+    --wx-moon-top: 150px;
+    --wx-prec-h: 190px;
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 660px;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+}
+.wx > *,
+.wx > .wx-prec > * {
+    position: absolute;
+    display: none;
+}
+
+/* ---- slnko ---- */
+.wx-halo {
+    inset: 0;
+    background: radial-gradient(
+        circle at var(--wx-sx) var(--wx-sy),
+        rgba(var(--wx-core), 0.95) 0 20px,
+        rgba(var(--wx-core), 0.8) 28px,
+        rgba(var(--wx-warm), 0.42) 50px,
+        rgba(var(--wx-warm), 0.18) 100px,
+        rgba(var(--wx-warm), 0.08) 190px,
+        rgba(var(--wx-warm), 0.04) 320px,
+        transparent 520px
+    );
+}
+.wx-rays {
+    width: 1040px;
+    height: 1040px;
+    left: calc(var(--wx-sx) - 520px);
+    top: calc(var(--wx-sy) - 520px);
+    -webkit-mask-image: radial-gradient(
+        circle,
+        #000 0,
+        rgba(0, 0, 0, 0.75) 40px,
+        rgba(0, 0, 0, 0.35) 140px,
+        rgba(0, 0, 0, 0.12) 270px,
+        rgba(0, 0, 0, 0.04) 400px,
+        transparent 520px
+    );
+    mask-image: radial-gradient(
+        circle,
+        #000 0,
+        rgba(0, 0, 0, 0.75) 40px,
+        rgba(0, 0, 0, 0.35) 140px,
+        rgba(0, 0, 0, 0.12) 270px,
+        rgba(0, 0, 0, 0.04) 400px,
+        transparent 520px
+    );
+}
+.wx-r1 {
+    background: repeating-conic-gradient(
+        from 3deg,
+        transparent 0deg,
+        rgba(var(--wx-ray), 0.5) 0.9deg,
+        transparent 2.6deg 9deg,
+        rgba(var(--wx-ray), 0.28) 10deg,
+        transparent 11.2deg 17deg
+    );
+    animation: wx-spin 240s steps(1200) infinite;
+}
+.wx-r2 {
+    background: repeating-conic-gradient(from 0deg, transparent 0deg, rgba(var(--wx-ray), 0.24) 3deg, transparent 7deg 23deg);
+    animation: wx-spin 360s steps(1800) infinite reverse;
+}
+.wx-flare {
+    width: 46px;
+    height: 46px;
+    left: calc(var(--wx-sx) - 150px);
+    top: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--wx-ray), 0.16), rgba(var(--wx-ray), 0.05) 60%, transparent 70%);
+}
+
+/* ---- rozptýlené svetlo za oblakmi ---- */
+.wx-diffuse {
+    inset: 0;
+    background: radial-gradient(ellipse 70% 55% at 85% 0%, rgba(var(--wx-core), 0.3), rgba(var(--wx-core), 0.1) 45%, transparent 75%);
+}
+
+/* ---- oblaky: mäkké kopy z rozmazaných kruhov ---- */
+.wx-cloud {
+    filter: blur(10px);
+    animation: wx-drift 70s steps(140) infinite alternate;
+}
+.wx-cloud::before,
+.wx-cloud::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: inherit;
+}
+.wx-c1 {
+    left: 52%;
+    top: 70px;
+    width: 220px;
+    height: 70px;
+    border-radius: 40px;
+    background: rgba(var(--wx-cl), 0.55);
+}
+.wx-c1::before {
+    width: 110px;
+    height: 100px;
+    left: 30px;
+    top: -50px;
+}
+.wx-c1::after {
+    width: 90px;
+    height: 80px;
+    left: 110px;
+    top: -34px;
+}
+.wx-c2 {
+    left: 18%;
+    top: 150px;
+    width: 200px;
+    height: 56px;
+    border-radius: 30px;
+    background: rgba(var(--wx-cl), 0.32);
+    animation-duration: 95s;
+    animation-direction: alternate-reverse;
+}
+.wx-c2::before {
+    width: 90px;
+    height: 80px;
+    left: 40px;
+    top: -40px;
+}
+.wx-c2::after {
+    width: 70px;
+    height: 60px;
+    left: 110px;
+    top: -26px;
+}
+.wx-c3 {
+    left: 62%;
+    top: 200px;
+    width: 180px;
+    height: 50px;
+    border-radius: 30px;
+    background: rgba(var(--wx-cl), 0.28);
+    animation-duration: 80s;
+}
+.wx-c3::before {
+    width: 80px;
+    height: 70px;
+    left: 30px;
+    top: -34px;
+}
+.wx-c3::after {
+    width: 60px;
+    height: 50px;
+    left: 96px;
+    top: -22px;
+}
+/* Zatiahnutá obloha: súvislá vrstva oblakov, pri daždi tmavšia. */
+.wx-deck {
+    inset: -40px -60px auto -60px;
+    height: 420px;
+    filter: blur(18px);
+    animation: wx-drift 120s steps(240) infinite alternate;
+    background:
+        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
+        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), 0.34), transparent 70%),
+        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), 0.36), transparent 70%),
+        radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.2), transparent 70%),
+        radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.22), transparent 70%),
+        linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.35), transparent 85%);
+}
+.wx[data-wx='dazd'] .wx-deck {
+    background:
+        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl-dark), 0.55), transparent 70%),
+        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
+        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
+        radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.12), transparent 70%),
+        radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.14), transparent 70%),
+        linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.5), transparent 85%);
+}
+
+/* ---- zrážky: končia nad vetou pod číslom (--wx-prec-h nastaví appka) ---- */
+.wx > .wx-prec {
+    display: block;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: var(--wx-prec-h);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
+}
+/* Dážď: šikmé tenké čiary v dvoch rýchlostiach. */
+.wx-rain {
+    left: -100px;
+    right: -100px;
+    top: -300px;
+    height: 1000px;
+    transform: rotate(12deg);
+}
+.wx-rain1 {
+    background: repeating-linear-gradient(90deg, transparent 0 17px, rgba(var(--wx-drop), 0.5) 17px 18.4px, transparent 18.4px 37px);
+    -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
+    mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
+    animation: wx-fall1 0.7s linear infinite;
+}
+.wx-rain2 {
+    background: repeating-linear-gradient(90deg, transparent 0 29px, rgba(var(--wx-drop), 0.32) 29px 30px, transparent 30px 53px);
+    -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
+    mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
+    animation: wx-fall2 1.1s linear infinite;
+}
+/* Sneh: vločky rôznej veľkosti v dlaždiciach nesúdeliteľných rozmerov, aby nebolo vidno mriežku. */
+.wx-snow {
+    left: -50px;
+    right: -50px;
+    top: -300px;
+    height: 1000px;
+}
+.wx-snow1 {
+    background:
+        radial-gradient(circle at 20% 30%, rgba(var(--wx-flake), 0.85) 0 1.4px, transparent 2.2px) 0 0 / 53px 61px,
+        radial-gradient(circle at 70% 75%, rgba(var(--wx-flake), 0.6) 0 1px, transparent 1.8px) 11px 23px / 79px 67px,
+        radial-gradient(circle at 45% 10%, rgba(var(--wx-flake), 0.7) 0 1.2px, transparent 2px) 31px 7px / 97px 89px;
+    animation: wx-snow1 9s linear infinite;
+}
+.wx-snow2 {
+    background:
+        radial-gradient(circle at 50% 50%, rgba(var(--wx-flake), 0.8) 0 2.6px, transparent 3.8px) 0 0 / 131px 113px,
+        radial-gradient(circle at 20% 80%, rgba(var(--wx-flake), 0.6) 0 2px, transparent 3px) 47px 61px / 157px 139px;
+    filter: blur(0.8px);
+    animation: wx-snow2 14s linear infinite;
+}
+
+/* ---- noc: mesiac podľa fázy a hviezdy ---- */
+.wx-moonglow {
+    inset: 0;
+    background: radial-gradient(
+        circle at var(--wx-moon-x) calc(var(--wx-moon-top) + 23px),
+        rgba(220, 225, 255, 0.16) 0 26px,
+        rgba(200, 210, 255, 0.07) 70px,
+        rgba(200, 210, 255, 0.03) 150px,
+        transparent 280px
+    );
+}
+.wx-moon {
+    width: 46px;
+    height: 46px;
+    left: calc(var(--wx-moon-x) - 23px);
+    top: var(--wx-moon-top);
+    filter: drop-shadow(0 0 14px rgba(230, 232, 255, 0.35));
+}
+.wx-moon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.wx-moon-dark {
+    fill: rgba(200, 205, 230, 0.1);
+}
+.wx-moon-lit {
+    fill: #ecebe2;
+}
+.wx-stars,
+.wx-stars2 {
+    inset: 0;
+}
+.wx-stars {
+    background:
+        radial-gradient(circle at 12% 18%, #fff 0 1px, transparent 1.6px),
+        radial-gradient(circle at 34% 8%, #fff 0 0.8px, transparent 1.4px),
+        radial-gradient(circle at 56% 22%, #fff 0 1.2px, transparent 1.8px),
+        radial-gradient(circle at 70% 40%, #fff 0 0.8px, transparent 1.4px),
+        radial-gradient(circle at 92% 30%, #fff 0 1px, transparent 1.6px),
+        radial-gradient(circle at 46% 46%, #fff 0 0.7px, transparent 1.3px),
+        radial-gradient(circle at 80% 58%, #fff 0 0.9px, transparent 1.5px),
+        radial-gradient(circle at 24% 52%, #fff 0 0.8px, transparent 1.4px),
+        radial-gradient(circle at 64% 6%, #fff 0 0.9px, transparent 1.5px);
+    animation: wx-twinkle 4s ease-in-out infinite alternate;
+}
+.wx-stars2 {
+    background:
+        radial-gradient(circle at 6% 36%, #fff 0 0.8px, transparent 1.4px),
+        radial-gradient(circle at 40% 30%, #fff 0 1px, transparent 1.6px),
+        radial-gradient(circle at 86% 12%, #fff 0 0.8px, transparent 1.4px),
+        radial-gradient(circle at 58% 60%, #fff 0 0.7px, transparent 1.3px);
+    animation: wx-twinkle 3s ease-in-out -1.5s infinite alternate-reverse;
+}
+
+/* ---- čo je v ktorom stave vidno; sila cez filter: opacity(), aby ju neprebila animácia blikania.
+   Lúče sa otáčajú bez rozmazania (filter) - mäkké hrany majú v prechode farieb, rozmazaná otáčajúca
+   sa vrstva je drahá na slabom telefóne. Pomalé pohyby (lúče, oblaky) idú po krokoch raz za
+   pätinu až pol sekundy, nie v každom snímku - oko rozdiel nevidí, telefón áno. ---- */
+.wx[data-wx='jasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-flare),
+.wx[data-wx='polojasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-c1, .wx-c2, .wx-c3),
+.wx[data-wx='zamracene']:not([data-noc]) :is(.wx-diffuse, .wx-deck),
+.wx[data-wx='dazd'] :is(.wx-deck, .wx-rain1, .wx-rain2),
+.wx[data-wx='sneh'] :is(.wx-deck, .wx-snow1, .wx-snow2),
+.wx[data-noc][data-wx='jasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2),
+.wx[data-noc][data-wx='polojasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2, .wx-c1, .wx-c2, .wx-c3),
+.wx[data-noc][data-wx='zamracene'] :is(.wx-deck, .wx-moonglow) {
+    display: block;
+}
+.wx[data-wx='polojasno']:not([data-noc]) .wx-halo {
+    filter: opacity(0.45);
+}
+.wx[data-wx='polojasno']:not([data-noc]) .wx-r2 {
+    filter: opacity(0.3);
+}
+.wx[data-wx='polojasno']:not([data-noc]) .wx-r1 {
+    filter: opacity(0.15);
+}
+.wx[data-wx='zamracene']:not([data-noc]) .wx-diffuse {
+    filter: opacity(0.3);
+}
+/* V noci sú oblaky tmavé, osvetlené len mesiacom. */
+.wx[data-noc] {
+    --wx-cl: 150, 158, 185;
+    --wx-cl-dark: 20, 24, 40;
+}
+.wx[data-noc][data-wx='polojasno'] .wx-moonglow {
+    filter: opacity(0.6);
+}
+.wx[data-noc][data-wx='polojasno'] :is(.wx-stars, .wx-stars2) {
+    filter: opacity(0.45);
+}
+.wx[data-noc][data-wx='polojasno'] .wx-cloud {
+    filter: blur(12px);
+}
+.wx[data-noc][data-wx='zamracene'] .wx-moonglow {
+    filter: opacity(0.2);
+}
+
+@keyframes wx-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+@keyframes wx-twinkle {
+    from {
+        opacity: 0.45;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes wx-drift {
+    from {
+        transform: translateX(-20px);
+    }
+    to {
+        transform: translateX(24px);
+    }
+}
+@keyframes wx-fall1 {
+    from {
+        transform: rotate(12deg) translateY(0);
+    }
+    to {
+        transform: rotate(12deg) translateY(90px);
+    }
+}
+@keyframes wx-fall2 {
+    from {
+        transform: rotate(12deg) translateY(0);
+    }
+    to {
+        transform: rotate(12deg) translateY(120px);
+    }
+}
+@keyframes wx-snow1 {
+    from {
+        transform: translate(0, 0);
+    }
+    to {
+        transform: translate(17px, 200px);
+    }
+}
+@keyframes wx-snow2 {
+    from {
+        transform: translate(0, 0);
+    }
+    to {
+        transform: translate(-30px, 200px);
+    }
+}
