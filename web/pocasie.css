@@ -309,6 +309,18 @@
         radial-gradient(circle at 58% 60%, #fff 0 0.7px, transparent 1.3px);
     animation: wx-twinkle 3s ease-in-out -1.5s infinite alternate-reverse;
 }
+/* Skutočná obloha nad elektrárňou (shared/hviezdy.js): SVG v oboch vrstvách nahradí hviezdy
+   z CSS. Keď model hviezdy nepošle (staršie jadro z cache), data-hviezdy nie je a ostanú tie. */
+.wx[data-hviezdy] :is(.wx-stars, .wx-stars2) {
+    background: none;
+}
+.wx-stars svg,
+.wx-stars2 svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: #fff;
+}
 
 /* ---- čo je v ktorom stave vidno; sila cez filter: opacity(), aby ju neprebila animácia blikania.
    Lúče sa otáčajú bez rozmazania (filter) - mäkké hrany majú v prechode farieb, rozmazaná otáčajúca

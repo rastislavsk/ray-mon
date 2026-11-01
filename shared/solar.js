@@ -205,6 +205,23 @@ export function localDateKey(dateUtc, timezone) {
 }
 
 /**
+ * Okamih, keď sú v pásme `timezone` hodiny na minúte dňa `minutes` dňa `dateKey` - opak
+ * localDateKey a localMinutes. Posun pásma sa odhadne z rozdielu a raz spresní, aby sedel aj
+ * v deň prechodu času; minúta, ktorá v ten deň neexistuje (jarný skok), padne o hodinu ďalej.
+ * @param {string} dateKey @param {number} minutes @param {string} timezone
+ */
+export function localToUtc(dateKey, minutes, timezone) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const wall = Date.UTC(y, m - 1, d, 0, minutes);
+    let t = wall;
+    for (let i = 0; i < 2; i++) {
+        const [ly, lm, ld] = localDateKey(new Date(t), timezone).split('-').map(Number);
+        t += wall - Date.UTC(ly, lm - 1, ld, 0, localMinutes(new Date(t), timezone));
+    }
+    return new Date(t);
+}
+
+/**
  * Dátum "YYYY-MM-DD" posunutý o celé kalendárne dni. Nie o 24 hodín: deň prechodu na letný
  * čas má 23 hodín a na zimný 25, takže 24 h od 23:30 pred jarným prechodom preskočí celý
  * nasledujúci deň a 48 h od 00:30 pred jesenným skončí v tom istom dni druhýkrát.
