@@ -786,3 +786,24 @@ export const POCASIE = {
     zamracene: 0.3,
     istyPodiel: 0.15,
 };
+
+/**
+ * Hviezdy v noci na karte Teraz (shared/hviezdy.js): skutočná obloha nad elektrárňou, pohľad
+ * k rovníku (na severnej pologuli na juh, na južnej a na rovníku na sever), stereografické
+ * premietanie so stredom vo výške `vyskaStredu` °. Pole má `sirka` × `vyska` jednotiek, jednotka
+ * je v strede pohľadu stupeň; stred pohľadu leží v `stredY` výšky poľa. Vidno hviezdy do
+ * magnitúdy `magMax`; oblačnosť 100 % hranicu zníži o `oblakyMag`, spln o `splnMag`. Hviezdy pod
+ * `minVyska` ° nie sú (pri obzore ich aj tak skryje opar). Poloha sa počíta po `krokMin`
+ * minútach (obloha sa za ten čas pootočí o 1°), aby sa kresba neprepisovala každú minútu.
+ */
+export const HVIEZDY = {
+    magMax: 3.5,
+    oblakyMag: 2,
+    splnMag: 1,
+    vyskaStredu: 35,
+    sirka: 200,
+    vyska: 140,
+    stredY: 0.55,
+    minVyska: 3,
+    krokMin: 4,
+};

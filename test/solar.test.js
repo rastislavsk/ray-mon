@@ -16,6 +16,7 @@ import {
     localDateKey,
     localHour,
     localMinutes,
+    localToUtc,
     moonPhase,
     orientationShare,
     plantAcKw,
@@ -399,4 +400,19 @@ test('moonPhase: nov, spln a ubúdajúci kosáčik v známe dni', () => {
     // Pred rokom 2000 ostáva fáza v rozsahu 0-1.
     const stara = moonPhase(new Date('1999-12-31T00:00:00Z'));
     assert.ok(stara >= 0 && stara < 1);
+});
+
+test('localToUtc: miestny čas elektrárne na okamih, aj v deň prechodu času a na južnej pologuli', () => {
+    assert.equal(localToUtc('2026-09-05', 22 * 60 + 30, 'Europe/Bratislava').toISOString(), '2026-09-05T20:30:00.000Z');
+    assert.equal(localToUtc('2026-12-05', 22 * 60 + 30, 'Europe/Bratislava').toISOString(), '2026-12-05T21:30:00.000Z');
+    assert.equal(localToUtc('2026-09-05', 22 * 60 + 30, 'America/Sao_Paulo').toISOString(), '2026-09-06T01:30:00.000Z');
+    assert.equal(localToUtc('2026-09-05', 0, 'Asia/Kolkata').toISOString(), '2026-09-04T18:30:00.000Z');
+    // 25. 10. 2026 sa o 03:00 letného času ide na 02:00 zimného: ráno ešte letný, večer už zimný čas.
+    assert.equal(localToUtc('2026-10-25', 60, 'Europe/Bratislava').toISOString(), '2026-10-24T23:00:00.000Z');
+    assert.equal(localToUtc('2026-10-25', 22 * 60, 'Europe/Bratislava').toISOString(), '2026-10-25T21:00:00.000Z');
+    // Každá minúta dňa sa vráti na seba.
+    for (let min = 0; min < 1440; min += 37) {
+        const t = localToUtc('2026-03-29', min, 'Europe/Bratislava');
+        if (min < 120 || min >= 180) assert.equal(localMinutes(t, 'Europe/Bratislava'), min);
+    }
 });

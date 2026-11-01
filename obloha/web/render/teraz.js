@@ -8,7 +8,7 @@ import { escapeHtml } from '../../../shared/format.js';
 import { PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../../../web/day-chart.js';
-import { pocasieHtml, pocasieStav } from '../../../web/pocasie.js';
+import { hviezdySvg, pocasieHtml, pocasieStav } from '../../../web/pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -163,7 +163,15 @@ function renderPocasie(state, m, dom) {
     const p = state.liveSky && !dashboard(state) ? m.pocasie : null;
     show(dom.wx, !!p);
     if (!p) return;
-    setHtml(dom.wx, pocasieHtml(p.mesiac));
+    setHtml(dom.wx, pocasieHtml(p.mesiac, p.juh));
     dom.wx.dataset.wx = pocasieStav(p);
     dom.wx.toggleAttribute('data-noc', p.noc);
+    // Skutočné hviezdy do vlastných vrstiev, mimo HTML počasia - ich posun nereštartuje oblaky.
+    // Bez nich (cez deň, alebo staršie jadro z cache po nasadení) ostanú hviezdy z CSS.
+    const ma = Array.isArray(p.hviezdy);
+    dom.wx.toggleAttribute('data-hviezdy', ma);
+    const [a, b] = ma ? hviezdySvg(/** @type {import('../../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy)) : ['', ''];
+    const vrstvy = dom.wx.querySelectorAll('.wx-stars, .wx-stars2');
+    setHtml(vrstvy[0], a);
+    setHtml(vrstvy[1], b);
 }

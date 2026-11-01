@@ -758,8 +758,15 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(terazModel(slabo).pocasie?.jas, 'zamracene');
     // Náhľad o 18:00 je v budúcnosti - meranie nie je, jas je z predpovede (jasný deň).
     assert.equal(terazModel({ ...slabo, previewMinutes: 18 * 60 }).pocasie?.jas, 'jasno');
-    // 22:30: noc.
-    assert.equal(terazModel(input(at('22:30'))).pocasie?.noc, true);
+    // 22:30: noc, s hviezdami nad elektrárňou.
+    const noc = terazModel(input(at('22:30'))).pocasie;
+    assert.equal(noc?.noc, true);
+    assert.ok(Array.isArray(noc?.hviezdy));
+    assert.equal(den?.hviezdy, null);
+    // Náhľad o hodinu neskôr posunie mesiac aj hviezdy do tej chvíle, nie do teraz.
+    const neskor = terazModel({ ...input(at('22:30')), previewMinutes: 23 * 60 + 32 }).pocasie;
+    assert.notDeepEqual(neskor?.hviezdy, noc?.hviezdy);
+    assert.equal(neskor?.mesiac, moonPhase(at('23:32')));
     // Bez predpovede kresba nie je.
     assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
 });

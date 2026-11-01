@@ -37,7 +37,7 @@ import { mozemModel, planWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
-import { daylightSpan, localDateKey } from './solar.js';
+import { daylightSpan, localDateKey, localToUtc } from './solar.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
@@ -88,7 +88,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
 
 /**
  * Počasie v pozadí karty v zvolenej chvíli (aj v náhľade iného času): hodina predpovede, a keď
- * je výkon v tej chvíli nameraný, aj jeho podiel z jasnej oblohy (shared/pocasie.js).
+ * je výkon v tej chvíli nameraný, aj jeho podiel z jasnej oblohy (shared/pocasie.js). Mesiac
+ * a hviezdy sú z tej istej chvíle, nie z teraz.
  * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
  */
 function pocasieOf(input, hero) {
@@ -99,7 +100,10 @@ function pocasieOf(input, hero) {
         today && (hero.source === 'live' || hero.source === 'measured')
             ? { kw: hero.power, clearKw: interpolate(today.hourly, hero.minutes / 60, 'clearKw'), installedKw: installedKw(input.plant) }
             : null;
-    return pocasie({ point, noc: hero.isNight, now: input.now, merane });
+    // Minúta náhľadu je miestny čas elektrárne, hviezdy a mesiac potrebujú okamih v UTC.
+    const tz = input.site.timezone;
+    const chvila = hero.preview ? localToUtc(localDateKey(input.now, tz), hero.minutes, tz) : input.now;
+    return pocasie({ point, noc: hero.isNight, chvila, site: input.site, merane });
 }
 
 /**
