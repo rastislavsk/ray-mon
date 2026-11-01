@@ -3588,6 +3588,22 @@ test.describe('nasadenie a cache', () => {
         await expect(page.locator('#pv-updated')).toHaveText('appka sa nenačítala, skús to o chvíľu');
         expect(loads()).toBe(2);
     });
+
+    test('starý shared/teraz.js bez príznaku náhľadu: štítky a Plán dňa sa pri posune času neprepínajú', async ({ page }) => {
+        // Nový render so starým jadrom z cache: model nemá `preview`, nič nesmie zosivieť ani blikať.
+        await page.route('**/shared/teraz.js', async (route) => {
+            const body = (await (await route.fetch()).text()).replace(/^\s*preview: [\w.]+,\n/gm, '');
+            await route.fulfill({ contentType: 'text/javascript', body });
+        });
+        const errors = await openApp(page);
+        await page.locator('#tz-chart').focus();
+        for (let i = 0; i < 3; i++) {
+            await page.keyboard.press('ArrowLeft');
+            for (const id of ['#tz-say', '#tz-plan']) await expect(page.locator(id)).not.toHaveAttribute('data-nahlad');
+        }
+        await expect(page.locator('#tz-reset')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
 });
 
 test('počasie v pozadí karty Teraz: stav z jadra, len na karte Teraz, s farbou pozadia zmizne', async ({ page }) => {

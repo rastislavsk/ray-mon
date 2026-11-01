@@ -72,9 +72,12 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
 /** Štítky a veta o teraz pod číslom. @param {Model} m @param {Dom} dom */
 function renderSay(m, dom) {
     show(dom.tzSay, !!m.say);
-    // Počas náhľadu iného času sú štítky, veta aj Plán dňa sivé - platia pre teraz.
-    dom.tzSay.toggleAttribute('data-nahlad', m.preview);
-    dom.tzPlan.toggleAttribute('data-nahlad', m.preview);
+    // Počas náhľadu iného času sú štítky, veta aj Plán dňa sivé - platia pre teraz. `=== true`:
+    // starý shared/teraz.js z cache po nasadení `preview` nemá a toggleAttribute s undefined by
+    // značku pri každom prekreslení prepol (CLAUDE.md, Nasadenie a cache).
+    const nahlad = m.preview === true;
+    dom.tzSay.toggleAttribute('data-nahlad', nahlad);
+    dom.tzPlan.toggleAttribute('data-nahlad', nahlad);
     if (!m.say) return;
     writeHtml(
         dom.tzChips,
