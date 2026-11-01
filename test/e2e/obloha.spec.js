@@ -171,13 +171,18 @@ test('obloha o 13:00 a o 21:00 má iné farby, tie isté ako výpočet v shared/
 test('stavový riadok telefónu má farbu vrchu oblohy', async ({ page }) => {
     // Bez prechodu: farba oblohy sa inak prelína 0,7 s a vrch stránky by ešte nesedel.
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    // Porovnáva sa farba oblohy: počasie karty Teraz (#wx) je kresba nad ňou, ktorá zámerne
+    // svieti aj spod stavového riadku (slnko v pravom hornom rohu), a pri meraní je skryté.
+    const skryPocasie = () => page.addStyleTag({ content: '#wx { visibility: hidden; }' });
     const errors = await openObloha(page, { time: at('13:00') });
+    await skryPocasie();
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', ocakavanaObloha(at('13:00')).top);
     expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
 
     await page.clock.setFixedTime(at('21:00'));
     await page.reload();
     await appReady(page);
+    await skryPocasie();
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', ocakavanaObloha(at('21:00')).top);
     expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
     expect(errors).toEqual([]);
