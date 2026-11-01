@@ -335,7 +335,9 @@
                                     aria-expanded="false"
                                     aria-controls="ns-body-elektraren"
                                 >
-                                    <span class="fold-t"><span id="ns-rows-title" class="glass-ttl"></span></span
+                                    <span class="fold-t"
+                                        ><span id="ns-rows-title" class="glass-ttl"></span
+                                        ><small id="ns-rows-hint" class="fold-hint"></small></span
                                     ><span class="chev" aria-hidden="true"></span>
                                 </button>
                             </h3>
@@ -356,7 +358,9 @@
                                     aria-expanded="false"
                                     aria-controls="ns-body-doma"
                                 >
-                                    <span class="fold-t"><span id="ns-doma-title" class="glass-ttl"></span></span
+                                    <span class="fold-t"
+                                        ><span id="ns-doma-title" class="glass-ttl"></span
+                                        ><small id="ns-doma-hint" class="fold-hint"></small></span
                                     ><span class="chev" aria-hidden="true"></span>
                                 </button>
                             </h3>
@@ -378,7 +382,9 @@
                                     aria-expanded="false"
                                     aria-controls="ns-body-oznamenia"
                                 >
-                                    <span class="fold-t"><span id="ns-oznam-title" class="glass-ttl"></span></span
+                                    <span class="fold-t"
+                                        ><span id="ns-oznam-title" class="glass-ttl"></span
+                                        ><small id="ns-oznam-hint" class="fold-hint"></small></span
                                     ><span class="chev" aria-hidden="true"></span>
                                 </button>
                             </h3>
@@ -407,7 +413,9 @@
                                     aria-expanded="false"
                                     aria-controls="ns-body-vzhlad"
                                 >
-                                    <span class="fold-t"><span id="ns-look-title" class="glass-ttl"></span></span
+                                    <span class="fold-t"
+                                        ><span id="ns-look-title" class="glass-ttl"></span
+                                        ><small id="ns-look-hint" class="fold-hint"></small></span
                                     ><span class="chev" aria-hidden="true"></span>
                                 </button>
                             </h3>
@@ -422,25 +430,17 @@
                                 </button>
                             </div>
                         </section>
-                        <section class="glass set fold" aria-labelledby="ns-app-title">
-                            <h3 class="fold-h">
-                                <button
-                                    type="button"
-                                    id="ns-fold-appka"
-                                    class="fold-head"
-                                    data-ns-fold="appka"
-                                    aria-expanded="false"
-                                    aria-controls="ns-body-appka"
-                                >
-                                    <span class="fold-t"><span id="ns-app-title" class="glass-ttl"></span></span
-                                    ><span class="chev" aria-hidden="true"></span>
-                                </button>
-                            </h3>
-                            <div id="ns-body-appka" class="ns-body hidden">
+                        <!-- Appka: zdieľanie a vymazanie údajov ako samostatné položky pod nadpisom, ako v súčasnej appke.
+                             Neskladajú sa - každá otvára svoje okno. -->
+                        <section class="app-items" aria-labelledby="ns-app-title">
+                            <h3 id="ns-app-title" class="glass-ttl group-lbl"></h3>
+                            <div class="glass set">
                                 <button type="button" id="ns-share" class="it" aria-haspopup="dialog">
                                     <span><b id="ns-share-row-title"></b><small id="ns-share-row-small"></small></span>
                                     <span aria-hidden="true">›</span>
                                 </button>
+                            </div>
+                            <div class="glass set">
                                 <button type="button" id="ns-reset" class="it" aria-haspopup="dialog">
                                     <span><b id="ns-reset-row-title"></b><small id="ns-reset-row-small"></small></span>
                                     <span aria-hidden="true">›</span>

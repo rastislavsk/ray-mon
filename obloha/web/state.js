@@ -73,8 +73,13 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   plan: boolean, legend: boolean, dash?: true }} NavStep
  */
 
-/** Zbaliteľné sekcie karty Nastavenie, v poradí na karte - tie isté v oboch appkách. Rozbalená je najviac jedna. */
-export const NS_FOLDS = NASTAVENIE_SEKCIE;
+/**
+ * Zbaliteľné sekcie karty Nastavenie, v poradí na karte - tie isté v oboch appkách. Rozbalená je najviac jedna.
+ * Appka sa nezbaľuje: zdieľanie a vymazanie údajov sú samostatné položky pod nadpisom, ako v súčasnej appke.
+ */
+export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], 'appka'>[]} */ (
+    NASTAVENIE_SEKCIE.filter((k) => k !== 'appka')
+);
 
 /**
  * Voľby telefónu, spoločné so súčasnou appkou: ranné oznámenie, čo s oznámeniami telefón vie,
