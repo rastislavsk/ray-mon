@@ -15,6 +15,8 @@ function renderPanels(state, dom) {
     dom.page.dataset.dir = state.panelDir > 0 ? 'next' : 'prev';
     // Otázka na polohu pri prvom otvorení je jediná obrazovka - ostatné karty ešte nič nevedia.
     dom.bottomnav.classList.toggle('hidden', state.known === 'nic');
+    // Počasie v pozadí patrí len karte Teraz - na nej ho zapne render/terazky.js.
+    if (state.panel !== 'terazky') dom.wx.classList.add('hidden');
     for (const p of PANELS) {
         dom.panels[p].classList.toggle('hidden', p !== state.panel);
         dom.navs[p].classList.toggle('active', p === state.panel);

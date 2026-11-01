@@ -373,7 +373,7 @@ test('precipOf: sneh od 0,1 cm, dážď od 0,2 mm, pár kvapiek a chýbajúce ho
 test('Open-Meteo: adresa pýta zrážky aj sneženie, predpoveď ich nesie v hodinách', () => {
     assert.match(openMeteoUrl(SITE), /precipitation,snowfall/);
     const f = buildForecast(fixture('open-meteo.json'), FIXED_NOW, SITE, PLANT);
-    // Fixtures: tretí deň (8. 9.) prší 10-16 UTC, siedmy (11. 9.) sneží 0-5 UTC.
+    // Fixtures: tretí deň (7. 9.) prší 10-16 UTC, siedmy (11. 9.) sneží 0-5 UTC.
     const dazd = f.days[2].hourly.filter((h) => h.precip === 'dazd').map((h) => h.hour);
     assert.deepEqual(dazd, [12, 13, 14, 15, 16, 17, 18]);
     assert.ok(f.days[6].hourly.some((h) => h.precip === 'sneh'));

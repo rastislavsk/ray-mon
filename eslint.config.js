@@ -23,6 +23,7 @@ const NEUTRAL_WEB = [
     'teraz-gestures',
     'oznamenia',
     'sun-arc',
+    'pocasie',
 ];
 
 /**

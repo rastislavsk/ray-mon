@@ -36,6 +36,7 @@ import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { HEADER_TEXTS, oznameniaTexts, stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
+import { pocasieStav } from '../../web/pocasie.js';
 import { useTier } from '../../web/render/sedemdni.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { mozemModel } from '../../shared/mozem.js';
@@ -162,13 +163,18 @@ test('stavový riadok telefónu má farbu vrchu pozadia aj po zmene tarify', asy
     const [den, noc] = [atTime('13:00').instant, atTime('22:30').instant];
     // Test má zmysel, len keď sa farba pozadia medzi tými dvoma chvíľami naozaj zmení.
     expect(modelAt(den).tier).not.toBe(modelAt(noc).tier);
+    // Porovnáva sa farba pozadia: počasie karty Teraz (#wx) je kresba nad ním, ktorá zámerne
+    // svieti aj spod stavového riadku (slnko v pravom hornom rohu), a pri meraní je skryté.
+    const skryPocasie = () => page.addStyleTag({ content: '#wx { visibility: hidden; }' });
     const errors = await openApp(page, { time: den });
+    await skryPocasie();
     const denFarba = await page.locator('meta[name="theme-color"]').getAttribute('content');
     expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
 
     await page.clock.setFixedTime(noc);
     await page.reload();
     await appReady(page);
+    await skryPocasie();
     await expect(page.locator('meta[name="theme-color"]')).not.toHaveAttribute('content', String(denFarba));
     expect(await rozdielStavovehoRiadku(page)).toBeLessThanOrEqual(3);
     expect(errors).toEqual([]);
@@ -3579,4 +3585,33 @@ test.describe('nasadenie a cache', () => {
         await expect(page.locator('#pv-updated')).toHaveText('appka sa nenačítala, skús to o chvíľu');
         expect(loads()).toBe(2);
     });
+});
+
+test('počasie v pozadí karty Teraz: stav z jadra, len na karte Teraz, s farbou pozadia zmizne', async ({ page }) => {
+    const errors = await openApp(page);
+    const den = terazAt(atTime('13:00').instant).pocasie;
+    if (!den) throw new Error('model o 13:00 nemá počasie');
+    await expect(page.locator('#wx')).toBeVisible();
+    await expect(page.locator('#wx')).toHaveAttribute('data-wx', pocasieStav(den));
+    await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
+    // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
+    await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
+    expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+    await page.locator('#nav-mozem').click();
+    await expect(page.locator('#wx')).toBeHidden();
+    await page.locator('#nav-nastavenie').click();
+    await otvorPolozku(page, 'settings-vzhlad');
+    await page.locator('#vzhlad-body [data-farba]').uncheck();
+    await page.locator('#nav-terazky').click();
+    await expect(page.locator('#tz-num-val')).toBeVisible();
+    await expect(page.locator('#wx')).toBeHidden();
+    expect(errors).toEqual([]);
+});
+
+test('počasie v pozadí karty Teraz: v noci mesiac, nie slnko', async ({ page }) => {
+    const errors = await openApp(page, { time: atTime('22:30').instant });
+    await expect(page.locator('#wx')).toHaveAttribute('data-noc', '');
+    await expect(page.locator('#wx .wx-moon')).toBeVisible();
+    await expect(page.locator('#wx .wx-halo')).toBeHidden();
+    expect(errors).toEqual([]);
 });

@@ -3,6 +3,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { wordSize } from '../../obloha/web/render/mozem.js';
+import { pocasieStav } from '../../web/pocasie.js';
 import {
     LOOK_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -2013,5 +2014,48 @@ test.describe('karta 7 dní: stavy', () => {
         expect(await vazneNalezy(page), 'detail týždňa').toEqual([]);
         await openSedem(page, { settings: null, site: SITE });
         expect(await vazneNalezy(page), 'bez panelov').toEqual([]);
+    });
+});
+
+test.describe('počasie v pozadí karty Teraz', () => {
+    test('stav z jadra cez deň aj v noci, len na karte Teraz', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const den = terazModel(vstupTeraz(at('13:00'))).pocasie;
+        if (!den) throw new Error('model o 13:00 nemá počasie');
+        await expect(page.locator('#wx')).toBeVisible();
+        await expect(page.locator('#wx')).toHaveAttribute('data-wx', pocasieStav(den));
+        await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
+        // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
+        await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
+        expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+        await page.locator('#nav-mozem').click();
+        await expect(page.locator('#wx')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('v noci mesiac, nie slnko', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('22:30') });
+        await expect(page.locator('#wx')).toHaveAttribute('data-noc', '');
+        await expect(page.locator('#wx .wx-moon')).toBeVisible();
+        await expect(page.locator('#wx .wx-halo')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('vypnutá živá obloha vypne aj počasie', async ({ page }) => {
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ voice: 'drzy', liveSky: false }))],
+        );
+        const errors = await openTeraz(page);
+        await expect(page.locator('#wx')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('v prehľade so stĺpcami nie je', async ({ page }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const errors = await openObloha(page, { pvData: pvAt(FIXED_NOW) });
+        await expect(page.locator('#panel-terazky')).toBeVisible();
+        await expect(page.locator('#wx')).toBeHidden();
+        expect(errors).toEqual([]);
     });
 });

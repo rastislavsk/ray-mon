@@ -132,6 +132,50 @@ button:focus-visible {
         linear-gradient(180deg, transparent, var(--s3)) fixed,
         linear-gradient(180deg, var(--s1), var(--s2)) fixed;
 }
+/* Pri vrchu stránky je hlavička priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css)
+   svietilo aj cez ňu a spod stavového riadku. Po posune o kúsok dostane oblohu, aby pod ňou nebolo
+   vidno obsah. Robí to prehliadač podľa posunu stránky (animation-timeline), bez JS; kde to nevie,
+   ostáva hlavička s oblohou. Stránka, ktorá sa nedá posunúť, animáciu nespustí - preto je
+   priehľadnosť základ a oblohu prináša až animácia. */
+@supports (animation-timeline: scroll()) {
+    .st {
+        background: transparent;
+        animation: st-pozadie linear both;
+        animation-timeline: scroll(root);
+        animation-range: 0 32px;
+    }
+    /* Útlm pohybu vypne aj túto animáciu - hlavička má potom oblohu stále. */
+    @media (prefers-reduced-motion: reduce) {
+        .st {
+            background:
+                linear-gradient(180deg, transparent, var(--s3)) fixed,
+                linear-gradient(180deg, var(--s1), var(--s2)) fixed;
+        }
+    }
+}
+@keyframes st-pozadie {
+    to {
+        background:
+            linear-gradient(180deg, transparent, var(--s3)) fixed,
+            linear-gradient(180deg, var(--s1), var(--s2)) fixed;
+    }
+}
+/* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
+   mesiac stojí vpravo od čísla (v noci je číslo vždy „0“), zrážky končia nad vetou pod číslom. */
+.wx {
+    --wx-core: 255, 255, 250;
+    --wx-warm: 255, 246, 214;
+    --wx-ray: 255, 255, 240;
+    --wx-cl: 255, 255, 255;
+    --wx-cl-dark: 70, 88, 115;
+    --wx-drop: 235, 242, 255;
+    --wx-moon-top: calc(env(safe-area-inset-top) + 118px);
+    --wx-prec-h: calc(env(safe-area-inset-top) + 177px);
+}
+.wx[data-noc] {
+    --wx-cl: 170, 180, 210;
+    --wx-cl-dark: 10, 14, 32;
+}
 .st .name {
     font-weight: 800;
     font-size: 1.0625rem;
@@ -194,14 +238,15 @@ button.live:disabled {
 /* Pilulka z tmavého skla hovorí, že sa na bodku a čas dá ťuknúť - svetlá by bielemu textu na
    jasnej oblohe vzala kontrast. Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa
    pýtať prečo. Čítačka ho nečíta (alternatívny text je prázdny). */
+/* Tmavšia ako ostatné sklo: vpravo hore za ňou svieti slnko počasia (web/pocasie.css). */
 button.live:enabled {
-    background: var(--glass);
+    background: rgba(8, 16, 40, 0.5);
 }
 button.live:enabled:is([data-tone='odhad'], [data-tone='stale']) #hdr-status::after {
     content: ' ›' / '';
 }
 button.live[aria-expanded='true'] {
-    background: rgba(8, 16, 40, 0.5);
+    background: rgba(8, 16, 40, 0.68);
 }
 /* Vrstva pod hlavičkou (.st má z-index 5): pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
 .tip-bg {

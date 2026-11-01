@@ -67,6 +67,7 @@ function headerDom() {
 /** Karta Teraz: nosiče, do ktorých píše render/terazky.js (rovnaké ako karta Teraz novej appky). */
 function terazkyDom() {
     return {
+        wx: byId('wx'),
         tzTitle: byId('tz-title'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),
