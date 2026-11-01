@@ -224,7 +224,7 @@ export function openMeteoUrl(site) {
     return (
         'https://api.open-meteo.com/v1/forecast' +
         `?latitude=${site.lat}&longitude=${site.lon}` +
-        `&hourly=${R.ghi},${R.dni},${R.dhi},temperature_2m,cloud_cover` +
+        `&hourly=${R.ghi},${R.dni},${R.dhi},temperature_2m,cloud_cover,precipitation,snowfall` +
         `&forecast_days=${FORECAST_API_DAYS}&past_days=${FORECAST_PAST_DAYS}&timezone=UTC`
     );
 }
@@ -755,7 +755,7 @@ export const SKY = {
     clearPct: 30,
     overcastPct: 70,
     // Koľko sivej sa cez deň primieša do farieb neba. V noci je oblačnosť vidno menej
-    // (viď skyColors), dážď appka zatiaľ nepozná.
+    // (viď skyColors). Dážď a sneh farbu neba nemenia - kreslí ich počasie na karte Teraz.
     cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
     cloud: ['#5b6b82', '#98a5b5'],
     // Bez dát: sivá obloha, ktorá netvrdí nič o počasí.
@@ -768,4 +768,21 @@ export const SKY = {
     // navyše je rezerva na zaokrúhlenie farieb v prehliadači a výšky medzi meranými bodmi.
     shade: '#050a1e',
     shadeContrast: 4.6,
+};
+
+/**
+ * Počasie v pozadí karty Teraz (shared/pocasie.js, docs/navrhy/teraz-pocasie-2.html).
+ * Zrážky za hodinu z Open-Meteo: dážď od `dazdMm` (precipitation, mm), sneh od `snehCm`
+ * (snowfall, cm) - menej je len pár kvapiek, ktoré by kresba preháňala. Jas z merania: podiel
+ * výkonu z výkonu pri jasnej oblohe (veta „x % z toho, čo by dala jasná obloha“) od `jasno`
+ * je jasno, pod `zamracene` zamračené, medzi nimi polooblačno. Meraniu sa verí, len keď by
+ * jasná obloha dala aspoň `istyPodiel` výkonu zostavy - ráno a večer pri nízkom slnku podiel
+ * skáče a o oblakoch nehovorí.
+ */
+export const POCASIE = {
+    dazdMm: 0.2,
+    snehCm: 0.1,
+    jasno: 0.7,
+    zamracene: 0.3,
+    istyPodiel: 0.15,
 };

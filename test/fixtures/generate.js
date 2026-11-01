@@ -15,6 +15,12 @@ const START = new Date('2026-09-05T00:00:00Z');
 const CLOUD_BY_DAY = [10, 45, 90, 25, 60, 5, 75, 30, 50];
 // Včerajšok (past_days).
 const CLOUD_PAST = 35;
+// Zrážky (mm) a sneženie (cm) za hodinu: v zamračený deň popoludní prší, v ďalší zamračený
+// deň v noci sneží a v polooblačný deň padá pár kvapiek pod prahom dažďa (POCASIE).
+/** @param {number} day @param {number} h hodina UTC */
+const rainMm = (day, h) => (day === 2 && h >= 10 && h <= 16 ? 0.8 : day === 4 && h === 12 ? 0.1 : 0);
+/** @param {number} day @param {number} h hodina UTC */
+const snowCm = (day, h) => (day === 6 && h <= 5 ? 0.5 : 0);
 
 const R = OPEN_METEO_RADIATION;
 /** @type {Record<string, Array<string | number>>} */
@@ -25,6 +31,8 @@ const hourly = {
     [R.dhi]: [],
     temperature_2m: [],
     cloud_cover: [],
+    precipitation: [],
+    snowfall: [],
 };
 for (let i = -FORECAST_PAST_DAYS * 24; i < FORECAST_API_DAYS * 24; i++) {
     const t = new Date(START.getTime() + i * 3600 * 1000);
@@ -45,6 +53,9 @@ for (let i = -FORECAST_PAST_DAYS * 24; i < FORECAST_API_DAYS * 24; i++) {
     hourly[R.dhi].push(Number(dhi.toFixed(1)));
     hourly.temperature_2m.push(Number((14 + 8 * Math.sin(((t.getUTCHours() - 8) / 24) * 2 * Math.PI)).toFixed(1)));
     hourly.cloud_cover.push(Math.round(Math.max(0, Math.min(100, cloud))));
+    const day = Math.floor(i / 24);
+    hourly.precipitation.push(i < 0 ? 0 : rainMm(day, t.getUTCHours()) + snowCm(day, t.getUTCHours()) * 0.7);
+    hourly.snowfall.push(i < 0 ? 0 : snowCm(day, t.getUTCHours()));
 }
 writeFileSync(
     new URL('open-meteo.json', OUT),

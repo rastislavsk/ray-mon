@@ -3,12 +3,27 @@
 // Čisté funkcie bez I/O - beží v Node, prehliadači aj Cloudflare Workeri.
 // Lokalita a zostava panelov prichádzajú ako parameter, nič z nich tu nie je natvrdo.
 
-import { CLEAR_SKY, DAYLIGHT_PAD_MIN, FORECAST_DAYS_SHOWN, MINUTES_PER_DAY, OPEN_METEO_RADIATION, powerThresholds } from './config.js';
+import {
+    CLEAR_SKY,
+    DAYLIGHT_PAD_MIN,
+    FORECAST_DAYS_SHOWN,
+    MINUTES_PER_DAY,
+    OPEN_METEO_RADIATION,
+    POCASIE,
+    powerThresholds,
+} from './config.js';
+
+/** Stredný synodický mesiac (od novu po nov) v dňoch. */
+const SYNODIC_MONTH = 29.530588853;
 
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
 
-/** @typedef {{ hour: number, kw: number, cloud: number | null }} HourPoint */
+/**
+ * Zrážky v hodine predpovede: dážď, sneh, alebo nič (aj keď ich Open-Meteo neposlalo).
+ * @typedef {'dazd' | 'sneh' | null} Precip
+ * @typedef {{ hour: number, kw: number, cloud: number | null, precip?: Precip }} HourPoint
+ */
 /** @typedef {HourPoint & { clearKw: number }} DayHourPoint */
 /**
  * @typedef {{ date: string, hourly: DayHourPoint[], kwhTotal: number, clearKwhTotal: number,
@@ -311,7 +326,7 @@ export function daypartFor(dateUtc, timezone) {
     return 'neskôr';
 }
 
-/** @typedef {{ dateUtc: Date, acKw: number, localDate: string, cloudPct: number | null, tempC: number }} HourEntry */
+/** @typedef {{ dateUtc: Date, acKw: number, localDate: string, cloudPct: number | null, tempC: number, precip: Precip }} HourEntry */
 
 /**
  * Hodinové pole pre graf, zoradené podľa miestnej hodiny.
@@ -323,6 +338,7 @@ export function hourlySeries(entries, timezone) {
             hour: localHour(h.dateUtc, timezone),
             kw: round(h.acKw, 2),
             cloud: Number.isFinite(h.cloudPct) ? Math.round(/** @type {number} */ (h.cloudPct)) : null,
+            precip: h.precip,
         }))
         .sort((a, b) => a.hour - b.hour);
 }
@@ -396,7 +412,7 @@ function strongerWindowAhead(hourly, todayKey, nowHourStart, timezone, th) {
     };
 }
 
-/** @typedef {{ dateUtc: Date, irr: Irradiance, tempC: number, cloudPct: number | null }} WeatherHour */
+/** @typedef {{ dateUtc: Date, irr: Irradiance, tempC: number, cloudPct: number | null, precip: Precip }} WeatherHour */
 
 /**
  * Open-Meteo dáva hodiny v UTC. V pásme s polhodinovým posunom (India +5:30, Nepál +5:45,
@@ -426,6 +442,8 @@ function between(a, b, t) {
         irr: { ghi: mix(a.irr.ghi, b.irr.ghi), dni: mix(a.irr.dni, b.irr.dni), dhi: mix(a.irr.dhi, b.irr.dhi) },
         tempC: mix(a.tempC, b.tempC),
         cloudPct: a.cloudPct === null || b.cloudPct === null ? null : mix(a.cloudPct, b.cloudPct),
+        // Zrážky sú súčtom za hodinu, ktorá sa končí v čase `b` - posunutá hodina leží v nej.
+        precip: b.precip,
     };
 }
 
@@ -433,7 +451,7 @@ function between(a, b, t) {
  * Zloží celý výstup predpovede z odpovede Open-Meteo pre danú lokalitu a zostavu. Toto je
  * jediné miesto, kde vzniká formát `forecast` - používa ho Worker aj testy. Žiarenie je
  * okamžité (OPEN_METEO_RADIATION v config.js), teda patrí presne k času záznamu.
- * @param {{ hourly: { time: string[], temperature_2m: number[], cloud_cover?: number[] } & Record<string, number[]> }} data
+ * @param {{ hourly: { time: string[], temperature_2m: number[], cloud_cover?: number[], precipitation?: number[], snowfall?: number[] } & Record<string, number[]> }} data
  * @param {Date} now @param {Site} site @param {Plant} plant
  * @returns {Forecast}
  */
@@ -470,7 +488,7 @@ export function buildForecast(data, now, site, plant) {
  * @returns {HourEntry[]}
  */
 function forecastHours(data, site, plant) {
-    const { time, temperature_2m: tempArr, cloud_cover: cloudArr } = data.hourly;
+    const { time, temperature_2m: tempArr, cloud_cover: cloudArr, precipitation: rainArr, snowfall: snowArr } = data.hourly;
     const ghiArr = data.hourly[OPEN_METEO_RADIATION.ghi];
     const dniArr = data.hourly[OPEN_METEO_RADIATION.dni];
     const dhiArr = data.hourly[OPEN_METEO_RADIATION.dhi];
@@ -480,6 +498,7 @@ function forecastHours(data, site, plant) {
         irr: { ghi: ghiArr[i], dni: dniArr[i], dhi: dhiArr[i] },
         tempC: tempArr[i],
         cloudPct: cloudArr ? cloudArr[i] : null,
+        precip: precipOf(rainArr?.[i], snowArr?.[i]),
     }));
     return alignToLocalHours(weather, site.timezone).map((w) => ({
         dateUtc: w.dateUtc,
@@ -487,5 +506,29 @@ function forecastHours(data, site, plant) {
         localDate: localDateKey(w.dateUtc, site.timezone),
         cloudPct: w.cloudPct,
         tempC: w.tempC,
+        precip: w.precip,
     }));
+}
+
+/**
+ * Zrážky v hodine zo súčtu zrážok (mm) a sneženia (cm) za ňu (prahy POCASIE). Sneh vyhráva:
+ * keď sneží, padá aj voda, ale na oblohe je vidno vločky. Chýbajúce hodnoty (staršia
+ * odpoveď bez týchto premenných) znamenajú bez zrážok.
+ * @param {number | undefined} mm @param {number | undefined} cm @returns {Precip}
+ */
+export function precipOf(mm, cm) {
+    if (Number.isFinite(cm) && /** @type {number} */ (cm) >= POCASIE.snehCm) return 'sneh';
+    return Number.isFinite(mm) && /** @type {number} */ (mm) >= POCASIE.dazdMm ? 'dazd' : null;
+}
+
+/**
+ * Fáza Mesiaca v čase `date`: 0 nov, 0,25 prvá štvrť, 0,5 spln, 0,75 posledná štvrť. Zo
+ * stredného synodického mesiaca od novu 6. 1. 2000 18:14 UTC - skutočný Mesiac sa od neho
+ * odchyľuje najviac asi o pol dňa, na kresbu kosáčika to stačí.
+ * @param {Date} date @returns {number}
+ */
+export function moonPhase(date) {
+    const days = (date.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000;
+    const phase = (days % SYNODIC_MONTH) / SYNODIC_MONTH;
+    return phase < 0 ? phase + 1 : phase;
 }
