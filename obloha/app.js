@@ -18,6 +18,7 @@ import {
     loadVymazane,
 } from '../web/storage.js';
 import { initOznamZosulad, initOznamZrkadlo, oznamStav } from '../web/oznamenia.js';
+import { initSklo } from '../web/sklo.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -66,6 +67,8 @@ initUrlMirror(store);
 // Service worker ranného oznámenia nevidí localStorage - appka mu nastavenie odkladá sama.
 initOznamZrkadlo(store, 'obloha/');
 initOznamZosulad(store);
+// Sklo hlavičky po posune stránky.
+initSklo();
 // Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
 // skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
 // pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.

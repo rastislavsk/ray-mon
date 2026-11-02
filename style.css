@@ -123,8 +123,8 @@
 }
 :root {
     --bg: #0a0a0a;
-    /* Pozadie celej stránky. Je tu ako token, lebo ho okrem <body> maľuje aj hlavička
-       a pás navigácie - všetky s background-attachment: fixed, takže sa vrstvy kreslia
+    /* Pozadie celej stránky. Je tu ako token, lebo ho okrem <body> maľuje aj pás navigácie
+       na širokej obrazovke - oba s background-attachment: fixed, takže sa vrstvy kreslia
        voči výrezu okna a prechody medzi nimi nie sú vidieť.
 
        Farbu berie z --tint-rgb, teda z tarifného okna, v ktorom sme práve teraz (zapisuje
@@ -298,46 +298,35 @@ b {
    riadkom - teda pod hodinami a batériou systému. Bez tohto odsadenia sa celý riadok
    s názvom appky schoval za stavový riadok a bolo ho vidieť len na okamih, kým ťahanie
    prstom nadol (obnova ťahom) posunulo stránku nižšie. Odsadenie je vnútri .appbar,
-   takže pozadie hlavičky siaha až pod stavový riadok a prechod zostáva plynulý. */
+   takže jej sklo (nižšie) siaha až pod stavový riadok. */
 /* z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
 .appbar {
     position: sticky;
     top: 0;
     z-index: 32;
     padding-top: var(--safe-top);
-    background: var(--bg-page);
-    background-attachment: fixed;
 }
-/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu.
-   Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod hlavičkou prechádza,
-   a slnko za ním ostane vidno. Robí to prehliadač podľa posunu stránky (animation-timeline), bez
-   JS; kde to nevie, ostáva hlavička s pozadím. Pri útlme pohybu je sklo stále. */
-@supports (animation-timeline: scroll()) {
-    .appbar {
-        background: transparent;
-    }
+/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu
+   a pod stavovým riadkom. Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod
+   hlavičkou prechádza, a slnko za ním ostane vidno. Posun zapisuje web/sklo.js (data-posun na <html>).
+   Pri útlme pohybu je sklo stále. */
+.appbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    opacity: 0;
+    transition: opacity var(--dur);
+}
+:root[data-posun] .appbar::before {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
     .appbar::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background: color-mix(in srgb, var(--bg) 70%, transparent);
-        -webkit-backdrop-filter: blur(16px);
-        backdrop-filter: blur(16px);
-        opacity: 0;
-        animation: appbar-sklo linear both;
-        animation-timeline: scroll(root);
-        animation-range: 0 48px;
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .appbar::before {
-            opacity: 1;
-        }
-    }
-}
-@keyframes appbar-sklo {
-    to {
         opacity: 1;
     }
 }
