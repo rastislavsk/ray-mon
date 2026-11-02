@@ -3,7 +3,7 @@
 // a dopĺňa. Hodnoty polí prepíše len pri zmene settingsRev, plochy alebo obrazovky - inak by
 // prepisoval to, čo človek práve píše. Texty sú spoločné s novou appkou (shared/setup-texts.js).
 
-import { compassModel, panelGridModel, planesCompassModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
+import { compassModel, panelGridModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     CURRENCIES,
@@ -79,10 +79,10 @@ import {
 } from '../../shared/tariff.js';
 import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
 import { SETUP_ICONS } from '../icons.js';
-import { miniTariff, renderPrehlad } from './prehlad.js';
+import { heroGrid, miniTariff, renderPrehlad } from './prehlad.js';
 import { changedKeys, writeHtml } from '../memo.js';
 import { setupDraft } from '../state.js';
-import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, planesCompassSvg, tariffRingSvg, tiltSvg } from '../svg.js';
+import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tariffRingSvg, tiltSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -125,17 +125,15 @@ function summaryRows(s, state) {
         .join('');
 }
 
-/** Karta elektrárne nad riadkami: meno, celkový výkon, zostava, výroba za jasného dneška
- * a vpravo kompas s plochami panelov. @param {Settings} s @param {AppState} state */
-function heroHtml(s, state) {
-    const h = plantHero(s, state.now);
+/** Karta elektrárne nad riadkami: meno a celkový výkon, pod nimi panely s meničom a vpravo
+ * ružica plôch. @param {Settings} s */
+function heroHtml(s) {
+    const h = plantHero(s);
     if (!h) return `<div class="hero-t"><div class="big">– kWp</div></div>`;
-    return (
-        `<div class="hero-t"><b class="name">${escapeHtml(h.name)}</b>` +
-        `<div class="big">${kwpText(h.kwp).replace(' kWp', '<small> kWp</small>')}</div>` +
-        `<div class="sub">${h.panels} panelov · menič ${h.ac}</div>` +
-        `<div class="sub">dnes za jasnej oblohy približne ${h.clearKwh} kWh</div></div>` +
-        planesCompassSvg(planesCompassModel(s.plant.strings), `Plochy panelov: ${h.planes}`)
+    return heroGrid(
+        `<div class="hero-t"><b class="name">${escapeHtml(h.name)}</b><div class="big">${kwpText(h.kwp).replace(' kWp', '<small> kWp</small>')}</div></div>`,
+        s.plant.strings,
+        h,
     );
 }
 
@@ -439,7 +437,7 @@ function renderStanice(state, sposob, dom) {
 function renderSuhrn(state, draft, dom) {
     const derived = derivedNote(state, draft);
     const html =
-        `<div class="setup-hero">${heroHtml(draft, state)}</div><div class="sum-list">${summaryRows(draft, state)}</div>` +
+        `<div class="setup-hero">${heroHtml(draft)}</div><div class="sum-list">${summaryRows(draft, state)}</div>` +
         `<div class="plant-msgs">${derived?.err ? derivedHtml(state, draft) : messagesHtml(draft)}</div>`;
     writeHtml(dom.wzSummary, html, 'wzSummary');
 }

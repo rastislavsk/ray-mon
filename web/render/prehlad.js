@@ -5,7 +5,7 @@
 // ktorú má len táto appka (farba pozadia podľa ceny), si do sekcie Vzhľad pridáva sama.
 
 import { APP_URL } from '../../shared/config.js';
-import { dayRingModel, planesCompassModel } from '../../shared/chart-model.js';
+import { dayRingModel } from '../../shared/chart-model.js';
 import { escapeHtml } from '../../shared/format.js';
 import { nastavenieModel } from '../../shared/nastavenie.js';
 import { shareUrl } from '../../shared/settings.js';
@@ -14,7 +14,7 @@ import { SETUP_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 import { qrPainter } from '../qr.js';
 import { savedSettings } from '../state.js';
-import { planesCompassSvg, tariffMiniSvg } from '../svg.js';
+import { plantFiguresSvg, tariffMiniSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -25,6 +25,16 @@ const FARBA = { label: 'Farba pozadia podľa ceny', small: 'vypni pre pokojnú �
 
 /** Ikonka tarify: deň ako kruh pásiem. @param {import('../../shared/config.js').Tariff} t @param {number} [i] rozvrh */
 export const miniTariff = (t, i = 0) => tariffMiniSvg(dayRingModel(scheduleTiers(t, t.schedules[i])));
+
+/**
+ * Karta elektrárne (Nastavenie aj zhrnutie sprievodcu): text vľavo hore, pod ním panely
+ * s meničom, vpravo ružica plôch.
+ * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {import('../svg.js').PlantFigures} h
+ */
+export function heroGrid(text, strings, h) {
+    const f = plantFiguresSvg(strings, h);
+    return `<div class="hero-g">${text}${f.rose}${f.kit}</div>`;
+}
 
 /** @param {HTMLElement} el @param {boolean} on */
 const show = (el, on) => el.classList.toggle('hidden', !on);
@@ -97,9 +107,7 @@ function renderTop(state, m, dom) {
     writeHtml(
         dom.setupHero,
         m.hero
-            ? `<div class="hero-t"><div class="big">${m.hero.kwp}<small> kWp</small></div>` +
-                  `<div class="sub">${escapeHtml(m.hero.line)}</div><div class="sub">${escapeHtml(m.hero.clear)}</div></div>` +
-                  planesCompassSvg(planesCompassModel(state.plant.strings), m.hero.label)
+            ? heroGrid(`<div class="hero-t"><div class="big">${m.hero.kwp}<small> kWp</small></div></div>`, state.plant.strings, m.hero)
             : '',
         'setupHero',
     );

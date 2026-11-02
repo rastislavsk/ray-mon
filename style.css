@@ -2846,16 +2846,37 @@ b {
 .setup-house .door {
     fill: var(--ink-08);
 }
-/* Karta elektrárne (návrh H1): vľavo meno, výkon a zostava, vpravo kompas s plochami. */
+/* Karta elektrárne (docs/navrhy/nastavenie-kompas-ploch-a.html): vľavo meno a výkon, pod nimi
+   panely s meničom, vpravo ružica plôch cez oba riadky. Keď sa panely vedľa ružice nezmestia,
+   idú pod ňu na celú šírku - rozhoduje šírka karty, nie obrazovky. */
 .setup-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--sp-3);
+    container-type: inline-size;
     padding: var(--sp-4) 18px;
     background: var(--card-bg);
     border: 1px solid var(--ink-08);
     border-radius: var(--radius-lg);
+}
+.setup-hero .hero-g {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px var(--sp-3);
+}
+.setup-hero .planes-compass {
+    grid-column: 2;
+    grid-row: 1 / 3;
+}
+.setup-hero .planes-kit {
+    grid-column: 1;
+    align-self: end;
+}
+@container (max-width: 305px) {
+    .setup-hero .planes-compass {
+        grid-row: 1;
+    }
+    .setup-hero .planes-kit {
+        grid-column: 1 / -1;
+    }
 }
 .setup-hero .hero-t {
     display: grid;
@@ -2879,36 +2900,121 @@ b {
     font-weight: 500;
     color: var(--ink-45);
 }
-.setup-hero .sub {
-    font-size: var(--fs-sm);
-    color: var(--ink-45);
-}
+/* Ružica plôch: hlavné plochy plné zelené, ostatné jantárový obrys, strana poludnia so slnkom. */
 .planes-compass {
-    width: 96px;
-    height: 96px;
+    width: 112px;
+    height: 112px;
 }
 .planes-compass .ring {
     fill: none;
-    stroke: var(--ink-12);
+    stroke: var(--ink-20);
     stroke-width: 1.5;
+}
+.planes-compass .noon {
+    fill: none;
+    stroke: rgba(var(--amber-rgb), 0.55);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+.planes-compass .tick {
+    stroke: var(--ink-35);
+}
+.planes-compass .tick.major {
+    stroke-width: 1.5;
+}
+.planes-compass .wedge {
+    fill: rgba(var(--amber-rgb), 0.22);
+    stroke: var(--amber);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+.planes-compass .wedge.main {
+    fill: var(--green);
+    stroke: none;
 }
 .planes-compass text {
     font-family: var(--font-mono);
-    font-size: 9px;
     text-anchor: middle;
-    fill: var(--ink-35);
+    fill: var(--ink);
 }
-.planes-compass .arrow {
-    stroke: var(--amber);
-    stroke-width: 4;
-    stroke-linecap: round;
+.planes-compass .num {
+    font-size: 14px;
+    font-weight: 700;
 }
-.planes-compass .arrow.main {
-    stroke: var(--green);
-    stroke-width: 6;
+.planes-compass .dir {
+    font-size: 13px;
+    font-weight: 700;
+}
+.planes-compass .dir.dim {
+    font-size: 11px;
+    font-weight: 400;
+    fill: var(--ink-45);
+}
+.planes-compass .dir.sun {
+    font-size: 11px;
+    fill: var(--ink-on-color);
+}
+.planes-compass .sun {
+    fill: var(--amber);
 }
 .planes-compass .hub {
     fill: var(--ink);
+}
+/* Panely a menič: rovnaké farby ako výseky ružice, pri orezávaní menič červený. */
+.planes-kit {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+.planes-kit .pv {
+    fill: rgba(var(--amber-rgb), 0.22);
+    stroke: var(--amber);
+    stroke-width: 1.2;
+}
+.planes-kit .pv.main {
+    fill: var(--green);
+    stroke: none;
+}
+.planes-kit text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-anchor: middle;
+    fill: var(--ink);
+}
+.planes-kit .lbl,
+.planes-kit .kw {
+    font-weight: 700;
+}
+.planes-kit .cap {
+    fill: var(--ink-45);
+}
+.planes-kit .wire {
+    stroke: var(--ink-45);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.planes-kit .inv {
+    fill: var(--ink-08);
+    stroke: var(--ink-45);
+    stroke-width: 1.5;
+}
+.planes-kit .wave {
+    fill: none;
+    stroke: var(--ink-45);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+.planes-kit.clip .wire {
+    fill: var(--red);
+    stroke: none;
+}
+.planes-kit.clip .inv,
+.planes-kit.clip .wave {
+    stroke: var(--red);
+}
+.planes-kit.clip .cap {
+    font-weight: 700;
+    fill: var(--red);
 }
 /* Popiska skupiny v karte Nastavenie (Elektráreň, Appka). */
 .group-lbl {

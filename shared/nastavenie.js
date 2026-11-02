@@ -242,7 +242,7 @@ export function nastavenieModel(state) {
     const voice = state.voice;
     const done = state.known === 'elektraren';
     const saved = savedSettings(state);
-    const h = done ? plantHero(saved, state.now) : null;
+    const h = done ? plantHero(saved) : null;
     const p = done ? pristupOf(state) : null;
     const names = voiceTexts(voice).MOZEM_ITEM_TEXTS;
     const doma = DOMA_DEVICES.filter((id) => state.doma.includes(id)).map((id, i) => (i ? names[id].name.toLowerCase() : names[id].name));
@@ -250,12 +250,7 @@ export function nastavenieModel(state) {
         title: T.title,
         cta: setupCta(state, voice),
         pristup: p && { druh: p.druh, ...p.karta },
-        hero: h && {
-            kwp: kwpText(h.kwp).replace(' kWp', ''),
-            line: `${h.panels} panelov · ${listText(h.dirs)} · menič ${h.ac}`,
-            clear: `za jasného dňa okolo ${h.clearKwh} kWh`,
-            label: `Plochy panelov: ${h.planes}`,
-        },
+        hero: h && { ...h, kwp: kwpText(h.kwp).replace(' kWp', '') },
         note: state.settingsNote,
         elektraren: {
             title: T.elektraren,

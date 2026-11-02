@@ -1896,13 +1896,33 @@ button.live[aria-expanded='true'] {
     flex: 1;
 }
 
-/* Karta strechy: veľké kWp, zostava a vpravo kompas plôch. */
+/* Karta strechy (docs/navrhy/nastavenie-kompas-ploch-a.html): veľké kWp, pod ním panely s meničom
+   a vpravo ružica plôch cez oba riadky. Keď sa panely vedľa ružice nezmestia, idú pod ňu na celú
+   šírku - rozhoduje šírka karty, nie obrazovky. */
 .plant {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    container-type: inline-size;
+}
+.plant-g {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 10px 12px;
+}
+.plant-g .planes-compass {
+    grid-column: 2;
+    grid-row: 1 / 3;
+}
+.plant-g .planes-kit {
+    grid-column: 1;
+    align-self: end;
+}
+@container (max-width: 305px) {
+    .plant-g .planes-compass {
+        grid-row: 1;
+    }
+    .plant-g .planes-kit {
+        grid-column: 1 / -1;
+    }
 }
 .plant p {
     font-size: 0.8438rem;
@@ -1919,30 +1939,120 @@ button.live[aria-expanded='true'] {
     font-variation-settings: 'wdth' 118;
     line-height: 1;
 }
+/* Ružica plôch: hlavné plochy plné biele, ostatné biely obrys, strana poludnia so slnkom. */
 .planes-compass {
     flex: none;
-    width: 88px;
-    height: 88px;
+    width: 112px;
+    height: 112px;
 }
 .planes-compass .ring {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.35);
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1.5;
+}
+.planes-compass .noon {
+    fill: none;
+    stroke: rgba(255, 211, 110, 0.85);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+.planes-compass .tick {
+    stroke: rgba(255, 255, 255, 0.7);
+}
+.planes-compass .tick.major {
+    stroke-width: 1.5;
+}
+.planes-compass .wedge {
+    fill: rgba(255, 255, 255, 0.22);
+    stroke: #fff;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+.planes-compass .wedge.main {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: none;
 }
 .planes-compass text {
+    text-anchor: middle;
+    fill: #fff;
+}
+.planes-compass .num {
+    font-size: 14px;
+    font-weight: 700;
+}
+.planes-compass .dir {
+    font-size: 13px;
+    font-weight: 700;
+}
+.planes-compass .dir.dim {
+    font-size: 11px;
+    font-weight: 400;
+    fill: var(--dim);
+}
+.planes-compass .dir.sun {
+    font-size: 11px;
+    fill: var(--poster-ink);
+}
+.planes-compass .sun {
+    fill: #ffd36e;
+}
+.planes-compass .hub {
+    fill: #fff;
+}
+/* Panely a menič: rovnaké farby ako výseky ružice, pri orezávaní menič v teplej farbe. */
+.planes-kit {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+.planes-kit .pv {
+    fill: rgba(255, 255, 255, 0.22);
+    stroke: #fff;
+    stroke-width: 1.2;
+}
+.planes-kit .pv.main {
+    fill: rgba(255, 255, 255, 0.95);
+    stroke: none;
+}
+.planes-kit text {
     font-size: 12px;
     text-anchor: middle;
     fill: #fff;
 }
-.planes-compass .arrow {
-    stroke: #fff;
-    stroke-width: 3;
+.planes-kit .lbl,
+.planes-kit .kw {
+    font-weight: 700;
+}
+.planes-kit .cap {
+    fill: var(--dim);
+}
+.planes-kit .wire {
+    stroke: rgba(255, 255, 255, 0.75);
+    stroke-width: 2.5;
     stroke-linecap: round;
 }
-.planes-compass .arrow.main {
-    stroke-width: 4;
+.planes-kit .inv {
+    fill: rgba(255, 255, 255, 0.14);
+    stroke: rgba(255, 255, 255, 0.75);
+    stroke-width: 1.5;
 }
-.planes-compass .hub {
-    fill: #fff;
+.planes-kit .wave {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.75);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+.planes-kit.clip .wire {
+    fill: var(--costly-text);
+    stroke: none;
+}
+.planes-kit.clip .inv,
+.planes-kit.clip .wave {
+    stroke: var(--costly-text);
+}
+.planes-kit.clip .cap {
+    font-weight: 700;
+    fill: var(--costly-text);
 }
 /* Riadky, ktoré otvárajú krok sprievodcu (prehľad aj zhrnutie). */
 .set {

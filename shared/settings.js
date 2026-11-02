@@ -3,6 +3,7 @@
 // Čisté funkcie - úložisko, sieť a formulár rieši web/.
 
 import {
+    acClips,
     installedKw,
     PLANT,
     SETTINGS_LIMITS,
@@ -140,7 +141,7 @@ export function checkSettings(s) {
     // je zostava v poriadku, a potom ten istý, aký appka používa všade inde.
     const panels = totalPanels(s);
     const kwp = errors.length ? null : installedKw(plant);
-    if (kwp !== null && kwp > plant.acLimitKw * SETTINGS_LIMITS.dcAcWarnRatio)
+    if (kwp !== null && acClips(plant))
         warnings.push(`Panely majú spolu viac než menič zvládne. Za jasných dní bude menič orezávať špičky na ${plant.acLimitKw} kW.`);
     // Na južnej pologuli je slnko na severe. Plocha otočená na juh tam dostane málo, čo je
     // skoro vždy omyl pri zadávaní, nie skutočná strecha.

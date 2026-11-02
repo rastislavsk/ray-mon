@@ -269,8 +269,10 @@ test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, kt
     await expect(page.locator('#ns-home h2')).toHaveText('Moja elektráreň');
     await expect(page.locator('#ns-cta')).toBeHidden();
     await expect(page.locator('#ns-hero .kwp')).toHaveText('10,44 kWp');
-    await expect(page.locator('#ns-hero')).toContainText('24 panelov · juh a východ · menič 10 kW');
-    await expect(page.locator('#ns-hero')).toContainText(/za jasného dňa okolo \d+ kWh/);
+    // Panely a menič sú obrázok s popisom pre čítačku, riadok o výrobe za jasného dňa už v karte nie je.
+    await expect(page.locator('#ns-hero .planes-kit')).toHaveAttribute('aria-label', '24 panelov po 435 Wp, menič 10 kW');
+    await expect(page.locator('#ns-hero .planes-kit .cap')).toHaveText('menič');
+    await expect(page.locator('#ns-hero')).not.toContainText('kWh');
     await expect(page.locator('#ns-hero .planes-compass')).toHaveAttribute('aria-label', /juh 16 panelov, východ 8 panelov/);
     await expect(page.locator('#ns-rows .it')).toHaveText([
         /Poloha.*Dvorany nad Nitrou/,
@@ -294,7 +296,8 @@ test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, kt
     await page.locator('[data-setup-ac="8"]').click();
     await expect(page.locator('#wz-next')).toHaveText('Uložiť zmenu');
     await dalej(page);
-    await expect(page.locator('#ns-hero')).toContainText('menič 8 kW');
+    // 10,44 kWp na menič 8 kW je nad hranicou 1,3: menič za jasných dní oreže špičky.
+    await expect(page.locator('#ns-hero .planes-kit')).toHaveAttribute('aria-label', /menič 8 kW, za jasných dní oreže špičky$/);
     expect((await ulozene(page)).acLimitKw).toBe(8);
 
     // Zrušenie úpravy nechá, ako bolo.
