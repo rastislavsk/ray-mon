@@ -5,6 +5,7 @@ import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
 import { setupStart } from '../../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
+import { obnovaMerania } from '../../shared/hlavicka.js';
 import { pripojenieOf } from './render/header.js';
 import { initTeraz } from './teraz-interactions.js';
 import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep } from './state.js';
@@ -75,8 +76,9 @@ function initStavTip(store, dom) {
 }
 
 /**
- * Bublina „Meranie pripojené“ zhasne sama PRIPOJENIE_BUBLINA_MS po tom, ako sa ukázala, alebo hneď
- * po ťuknutí. Ukáže sa len raz po pripojení - zhasnutie zruší jej čakanie (pripojenieCaka).
+ * Bublina „Meranie pripojené“ či „Meranie sa obnovilo“: keď sa meranie vráti z výpadku, appka si ju
+ * poznačí (obnovaMerania). Zhasne sama PRIPOJENIE_BUBLINA_MS po tom, ako sa ukázala, alebo hneď po
+ * ťuknutí. Ukáže sa raz - zhasnutie zruší jej čakanie (meranieBublina).
  * @param {Store} store @param {Dom} dom
  */
 function initPripojene(store, dom) {
@@ -85,10 +87,13 @@ function initPripojene(store, dom) {
     const zhasni = () => {
         clearTimeout(timer);
         timer = undefined;
-        store.setState({ pripojenieCaka: false });
+        store.setState({ meranieBublina: '' });
     };
-    store.subscribe((state) => {
-        if (timer === undefined && pripojenieOf(state)) timer = setTimeout(zhasni, PRIPOJENIE_BUBLINA_MS);
+    store.subscribe((state, prev) => {
+        // Zápis až po tomto prekreslení: vnorený setState by ostatní odberatelia (render) dostali
+        // skôr než tento stav a ten by bublinu po ňom zase skryl.
+        if (!state.meranieBublina && obnovaMerania(prev, state)) queueMicrotask(() => store.setState({ meranieBublina: 'obnovene' }));
+        else if (timer === undefined && pripojenieOf(state)) timer = setTimeout(zhasni, PRIPOJENIE_BUBLINA_MS);
     });
     dom.pripojene.addEventListener('click', zhasni);
 }

@@ -84,7 +84,7 @@ function renderHlavicka(state, dom) {
  * počká. Zhasne ju web/interactions.js. @param {import('../state.js').AppState} state
  */
 export function pripojenieOf(state) {
-    return state.panel === 'terazky' ? pripojenieBublina({ ...state, caka: state.pripojenieCaka }) : null;
+    return state.panel === 'terazky' ? pripojenieBublina({ ...state, caka: state.meranieBublina }) : null;
 }
 
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */

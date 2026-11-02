@@ -366,7 +366,7 @@ for (const [hm, label] of [
     });
 }
 
-test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási', async ({ page }) => {
+test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási; po návrate merania bublina', async ({ page }) => {
     await page.clock.install({ time: atTime('13:00').instant });
     const errors = await openApp(page, { time: atTime('13:00').instant });
     await expect(page.locator('#pv-updated')).toHaveText('13:00');
@@ -388,6 +388,18 @@ test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási', 
     pust();
     await expect(page.locator('#pv-updated')).toHaveText('meranie nedostupné');
     await expect(page.locator('#tz-note')).toBeVisible();
+    // Meranie sa vrátilo: pás odhadu zmizne a bublina povie prečo.
+    const o1402 = atTime('14:02').instant;
+    const spat = { ...pv, updatedAt: o1402.toISOString(), realCurveToday: [...pv.realCurveToday, { hour: 14, kw: 1.2 }] };
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv: spat } }));
+    await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
+    await page.clock.setFixedTime(o1402);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#pv-updated')).toHaveText('14:00');
+    await expect(page.locator('#tz-note')).toBeHidden();
+    await expect(page.locator('#pripojene-title')).toHaveText('Meranie sa obnovilo');
+    await expect(page.locator('#pripojene-text')).toHaveText(pripojenieText('zive', 'Huawei · Dvorany', 'obnovene').text);
     expect(errors).toEqual([]);
 });
 

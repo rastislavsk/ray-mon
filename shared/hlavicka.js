@@ -60,13 +60,29 @@ export function hlavickaModel(s, voice = 'drzy') {
 }
 
 /**
- * Bublina po novom pripojení merania (`caka`: appka ju po pripojení ešte neukázala). Ukáže sa, až
- * keď prvé meranie naozaj prišlo - vtedy karta Teraz prestane ukazovať odhad, a bublina povie
- * prečo. Kým meranie nepríde, null a bublina počká.
- * @param {HlavickaVstup & { caka: boolean }} s
+ * Bublina, ktorú appka ešte neukázala (`caka`): po novom pripojení merania (`pripojene`) alebo po
+ * návrate merania z výpadku (`obnovene`, obnovaMerania). Ukáže sa, až keď meranie naozaj prišlo -
+ * vtedy karta Teraz prestane ukazovať odhad, a bublina povie prečo. Kým nepríde, null a počká.
+ * @param {HlavickaVstup & { caka: '' | 'pripojene' | 'obnovene' }} s
  */
 export function pripojenieBublina(s) {
     if (!s.caka || !s.zdroj) return null;
     const druh = stavMerania(s).druh;
-    return druh === 'zive' || druh === 'spi' ? pripojenieText(druh, zdrojText(s.zdroj)) : null;
+    if (druh !== 'zive' && (druh !== 'spi' || s.caka === 'obnovene')) return null;
+    return pripojenieText(druh, zdrojText(s.zdroj), s.caka);
+}
+
+/**
+ * Vrátilo sa meranie z výpadku? Pred zmenou appka hlásila, že meranie mlčí alebo neprišlo, a to po
+ * dokončenom pokuse o stiahnutie (nie pri štarte či pri načítaní, `pokusAt`), teraz je živé - to isté
+ * meranie (nové pripojenie má vlastnú bublinu a začína načítaním). Do noci (`spi`) sa meranie nevracia:
+ * „menič mlčí“ po západe slnka len prestane platiť, menič sa neozval.
+ * @param {HlavickaVstup} pred @param {HlavickaVstup} teraz
+ */
+export function obnovaMerania(pred, teraz) {
+    // To isté meranie podľa spôsobu a elektrárne - pečať sa mení aj pri obnovenom tokene (web/refresh.js).
+    const ten = pred.zdroj && pred.zdroj.sposob === teraz.zdroj?.sposob && pred.zdroj.nazov === teraz.zdroj.nazov;
+    if (!ten || pred.loading || !pred.pokusAt) return false;
+    const bolo = stavMerania(pred).druh;
+    return (bolo === 'zastarane' || bolo === 'neprislo') && stavMerania(teraz).druh === 'zive';
 }
