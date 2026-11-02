@@ -172,15 +172,8 @@ test('karta elektrárne a riadky zhrnutia', () => {
     const h = T.plantHero(OWNER);
     assert.equal(h?.kwp, 10.44);
     assert.equal(h?.planes, 'Plochy panelov: juh 16 panelov, východ 8 panelov');
-    assert.equal(h?.kit, '24 panelov po 435 Wp, menič 10 kW');
-    assert.equal(h?.clip, false);
-    assert.equal(h?.cap, 'menič');
     assert.equal(h?.south, false);
-    // Menič o viac ako tretinu menší než panely: oreže špičky.
-    const maly = T.plantHero({ ...OWNER, plant: { ...OWNER.plant, acLimitKw: 7 } });
-    assert.equal(maly?.clip, true);
-    assert.equal(maly?.cap, 'oreže');
-    assert.match(String(maly?.kit), /menič 7 kW, za jasných dní oreže špičky$/);
+    assert.equal(T.plantHero({ ...OWNER, site: { ...OWNER.site, lat: -33.9 } })?.south, true);
     assert.equal(T.plantHero(emptySettings()), null);
     assert.deepEqual([0, 44, 180, 200, 359, -45].map(T.dirShort), ['S', 'SV', 'J', 'J', 'S', 'SZ']);
     const rows = T.summaryRows(OWNER, state({ setupPick: { wp: 'guess', ac: 'guess' } }));
@@ -212,7 +205,6 @@ test('prehľad oboch appiek: výzva len bez panelov, riadky a karta elektrárne'
     assert.equal(m.title, 'Moja elektráreň');
     assert.equal(m.hero?.kwp, '10,44');
     assert.equal(m.hero?.planes, 'Plochy panelov: juh 16 panelov, východ 8 panelov');
-    assert.equal(m.hero?.kit, '24 panelov po 435 Wp, menič 10 kW');
     assert.deepEqual(
         m.elektraren.rows.map((r) => [r.label, r.value, r.extra, r.edit, r.start]),
         [

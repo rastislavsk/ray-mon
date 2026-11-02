@@ -37,7 +37,7 @@ import {
     miniCompassSvg,
     panelGridSvg,
     panelLabelSvg,
-    plantFiguresSvg,
+    plantRoseSvg,
     tariffMiniSvg,
     tariffRingSvg,
     tiltSvg,
@@ -67,12 +67,11 @@ const last = { fields: '', tariff: '' };
 // ---- Prehľad pred uložením a obrazovky polohy, panelov a plôch ------------------------
 
 /**
- * Karta strechy (Nastavenie aj zhrnutie): kWp vľavo hore, pod ním panely s meničom, vpravo ružica plôch.
- * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {import('../../../web/svg.js').PlantFigures} h
+ * Karta strechy (Nastavenie aj zhrnutie): vľavo ružica plôch, vpravo kWp.
+ * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {{ south: boolean, planes: string }} h
  */
 export function plantGrid(text, strings, h) {
-    const f = plantFiguresSvg(strings, h);
-    return `<div class="plant-g">${text}${f.rose}${f.kit}</div>`;
+    return `<div class="plant-g">${plantRoseSvg(strings, h)}${text}</div>`;
 }
 
 /** Zhrnutie: karta strechy a riadky, ťuknutie na riadok ho opraví. @param {AppState} state @param {Settings} draft */

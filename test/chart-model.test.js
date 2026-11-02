@@ -437,35 +437,3 @@ test('planesRoseModel: blízke smery jeden výsek, rovnaké plochy obe hlavné, 
     assert.ok(!bez.main);
     assert.equal(bez.num.text, '0');
 });
-
-test('planesKitModel: skupiny panelov od najväčšej, čiara do meniča, najviac štyri riadky', async () => {
-    const { planesKitModel, PLANES_KIT } = await import('../shared/chart-model.js');
-    const { cellW, gap, maxRows, top, cellH } = PLANES_KIT;
-    const m = planesKitModel([
-        { panels: 8, azimuthDeg: 90 },
-        { panels: 16, azimuthDeg: 180 },
-    ]);
-    assert.deepEqual(
-        m.groups.map((g) => [g.az, g.panels, g.cells.length, g.main]),
-        [
-            [180, 16, 16, true],
-            [90, 8, 8, false],
-        ],
-    );
-    // Šesť stĺpcov; skupiny stoja dole na spoločnej čiare.
-    const bottom = top + maxRows * (cellH + gap) - gap;
-    for (const g of m.groups) assert.equal(Math.max(...g.cells.map((p) => p.y)) + cellH, bottom);
-    assert.equal(m.groups[0].labelX, (6 * (cellW + gap) - gap) / 2);
-    assert.ok(m.wire.x0 > Math.max(...m.groups[1].cells.map((p) => p.x)) && m.wire.x1 < m.box.x);
-    assert.equal(m.width, m.box.x + m.box.w + 1);
-    // Tri plochy v užších skupinách (4 stĺpce); veľká plocha nakreslí najviac 4 riadky.
-    const tri = planesKitModel([
-        { panels: 40, azimuthDeg: 180 },
-        { panels: 6, azimuthDeg: 270 },
-        { panels: NaN, azimuthDeg: 0 },
-    ]);
-    assert.equal(tri.groups[0].cells.length, 16);
-    assert.equal(tri.groups[0].panels, 40);
-    assert.equal(tri.groups[2].cells.length, 0);
-    assert.ok(!tri.groups[2].main);
-});

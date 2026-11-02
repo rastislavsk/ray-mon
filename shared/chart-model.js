@@ -586,56 +586,6 @@ export function planesRoseModel(strings, south) {
 }
 
 /**
- * Panely a menič vedľa ružice: panely každej plochy ako malé obdĺžniky (najviac maxRows riadkov,
- * pri troch plochách v užších skupinách), pod skupinou smer a počet, čiara do meniča a menič
- * ako škatuľka. Rozmery v px - obrázok sa nezväčšuje, písmo ostane také, aké je v CSS.
- */
-export const PLANES_KIT = { cellW: 6, cellH: 8, gap: 2, maxRows: 4, groupGap: 9, minGroupW: 24, wire: 22, boxW: 46, top: 2, labelGap: 15 };
-
-/**
- * Skupiny panelov zľava od najväčšej plochy. Hlavné (najviac panelov) sú plné, ostatné obrysom,
- * rovnako ako výseky ružice. Pri viac paneloch, než sa zmestí, sa kreslí celá mriežka a skutočný
- * počet povie popis pod ňou.
- * @param {Array<{ panels: number, azimuthDeg: number }>} strings
- */
-export function planesKitModel(strings) {
-    const { cellW, cellH, gap, maxRows, groupGap, minGroupW, wire, boxW, top, labelGap } = PLANES_KIT;
-    const panels = (/** @type {number} */ p) => (Number.isFinite(p) && p > 0 ? Math.round(p) : 0);
-    const sorted = [...strings].sort((p, q) => panels(q.panels) - panels(p.panels));
-    const max = Math.max(...sorted.map((s) => panels(s.panels)), 0);
-    const cols = sorted.length >= 3 ? 4 : 6;
-    const gridH = maxRows * (cellH + gap) - gap;
-    let x = 0;
-    const groups = sorted.map((s) => {
-        const count = panels(s.panels);
-        const shown = Math.min(count, cols * maxRows);
-        const rows = Math.ceil(shown / cols);
-        const w = Math.max(Math.min(shown, cols) * (cellW + gap) - gap, 0);
-        // Skupiny stoja na spoločnej čiare (dole), menšie sú nižšie.
-        const y0 = top + gridH - rows * (cellH + gap) + gap;
-        const cells = Array.from({ length: shown }, (_, k) => ({
-            x: x + (k % cols) * (cellW + gap),
-            y: y0 + Math.floor(k / cols) * (cellH + gap),
-        }));
-        const g = { cells, az: s.azimuthDeg, panels: count, labelX: x + w / 2, main: max > 0 && count === max };
-        x += Math.max(w, minGroupW) + groupGap;
-        return g;
-    });
-    const x0 = x - groupGap + 4;
-    const boxX = x0 + wire;
-    return {
-        cellW,
-        cellH,
-        groups,
-        labelY: top + gridH + labelGap,
-        wire: { x0, x1: boxX - 3, y: top + gridH / 2 + 2 },
-        box: { x: boxX, y: top - 1, w: boxW, h: gridH + 2 },
-        width: boxX + boxW + 1,
-        height: top + gridH + labelGap + 4,
-    };
-}
-
-/**
  * Kompas smeru plochy: osem výsekov, dráha slnka a otočenie strechy v strede. Dráha ide cez
  * deň z východu cez poludnie na západ - na severnej pologuli cez juh, na južnej cez sever.
  * `buttons` sú polohy tlačidiel v percentách obalu, takže appka nemusí poznať veľkosť kompasu.
