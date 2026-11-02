@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Kompas plôch</title>
+        <!-- Náhľad (2. 11. 2026): karta elektrárne na karte Nastavenie, pole s kompasom plôch.
+     Dve možnosti od dizajnéra, upravené po oponentúre skeptika, a tretia zjednodušená cesta.
+     Nič neimportuje z appky. Výroba za jasného dňa v možnosti B je zjednodušený model
+     v tejto stránke - v appke by ju dal výpočet pre jednu plochu zo shared/solar.js. -->
+        <style>
+            :root {
+                --page: #f4f2ec;
+                --page-ink: #1c1b18;
+                --page-dim: #6b6860;
+                --page-line: #dedad0;
+                --page-card: #fffdf8;
+                --ok: #2f7d32;
+                --warn: #a15c00;
+                --c-bg: #0a0a0a;
+                --c-card: #151614;
+                --c-ink: #f2f0ea;
+                --c-dim: rgba(242, 240, 234, 0.62);
+                --c-line: rgba(242, 240, 234, 0.12);
+                --o-glass: rgba(8, 16, 40, 0.3);
+                --o-dim: rgba(255, 255, 255, 0.85);
+            }
+            @media (prefers-color-scheme: dark) {
+                :root:not([data-theme='light']) {
+                    --page: #17161a;
+                    --page-ink: #eceae4;
+                    --page-dim: #a29f97;
+                    --page-line: #2d2c30;
+                    --page-card: #1f1e23;
+                    --ok: #8fd18f;
+                    --warn: #f0b060;
+                }
+            }
+            :root[data-theme='dark'] {
+                --page: #17161a;
+                --page-ink: #eceae4;
+                --page-dim: #a29f97;
+                --page-line: #2d2c30;
+                --page-card: #1f1e23;
+                --ok: #8fd18f;
+                --warn: #f0b060;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--page-ink);
+                font:
+                    15px/1.5 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 24px 16px 64px;
+            }
+            h1 {
+                font-size: 26px;
+                margin: 0 0 4px;
+            }
+            h2 {
+                font-size: 21px;
+                margin: 44px 0 4px;
+                padding-top: 22px;
+                border-top: 1px solid var(--page-line);
+            }
+            h3 {
+                font-size: 13px;
+                margin: 20px 0 8px;
+                color: var(--page-dim);
+                font-weight: 600;
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+            p.lead {
+                color: var(--page-dim);
+                max-width: 78ch;
+                margin: 4px 0 0;
+            }
+            .row {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+                gap: 14px;
+            }
+            .ex {
+                font-size: 12px;
+                color: var(--page-dim);
+                margin: 0 0 6px;
+            }
+            .box {
+                background: var(--page-card);
+                border: 1px solid var(--page-line);
+                border-radius: 14px;
+                padding: 14px 16px;
+                margin-top: 12px;
+            }
+            .box h4 {
+                margin: 0 0 6px;
+                font-size: 14px;
+            }
+            .box ul {
+                margin: 0;
+                padding-left: 18px;
+            }
+            .box li {
+                margin: 3px 0;
+            }
+            .cols {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+                gap: 12px;
+            }
+            .plus h4 {
+                color: var(--ok);
+            }
+            .minus h4 {
+                color: var(--warn);
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 8px;
+                border-bottom: 1px solid var(--page-line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--page-dim);
+                font-weight: 600;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+            .tablewrap {
+                overflow-x: auto;
+            }
+            /* súčasná appka */
+            .cl {
+                background: var(--c-bg);
+                border-radius: 22px;
+                padding: 14px;
+                font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+                color: var(--c-ink);
+            }
+            .cl .card {
+                background: var(--c-card);
+                border: 1px solid var(--c-line);
+                border-radius: 18px;
+                padding: 16px 18px;
+            }
+            .cl .big {
+                font-size: 32px;
+                font-weight: 700;
+                color: #9ef25b;
+                letter-spacing: -0.02em;
+                line-height: 1.1;
+            }
+            .cl .big small {
+                font-size: 14px;
+                color: var(--c-dim);
+                font-weight: 500;
+            }
+            .cl .sub {
+                font-size: 12px;
+                color: var(--c-dim);
+            }
+            /* Obloha */
+            .ob {
+                border-radius: 22px;
+                padding: 14px;
+                color: #fff;
+                font-family: system-ui, 'Segoe UI', sans-serif;
+                font-stretch: 112%;
+                background: linear-gradient(170deg, #2f5fae 0%, #5b8fd6 45%, #f0b77d 100%);
+            }
+            .ob.light {
+                background: linear-gradient(170deg, #7fb2ee 0%, #b9d6f5 55%, #fbe0b0 100%);
+            }
+            .ob .card {
+                background: var(--o-glass);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                padding: 14px 16px;
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+            }
+            .ob .big {
+                font-size: 15px;
+                margin: 0;
+            }
+            .ob .big b {
+                font-size: 34px;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .ob .sub {
+                font-size: 13px;
+                color: var(--o-dim);
+                line-height: 1.4;
+                margin: 4px 0 0;
+            }
+            .hero {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 12px;
+            }
+            .hero2 {
+                display: grid;
+                gap: 8px;
+            }
+            .hero2 .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                gap: 10px;
+            }
+            .hero2 .kwh {
+                text-align: right;
+            }
+            .cl .hero2 .kwh b {
+                font-size: 20px;
+            }
+            .ob .hero2 .kwh b {
+                font-size: 22px;
+                font-weight: 800;
+            }
+            .strip {
+                max-width: 360px;
+                width: 100%;
+            }
+            .strip svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            svg text {
+                font-family: inherit;
+            }
+            .phone {
+                max-width: 360px;
+            }
+            .note {
+                font-size: 13px;
+                color: var(--page-dim);
+                margin-top: 8px;
+                max-width: 90ch;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 99px;
+                background: var(--page-line);
+                color: var(--page-ink);
+                vertical-align: 3px;
+                margin-left: 6px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Karta elektrárne: kompas plôch</h1>
+            <p class="lead">
+                Pole vpravo od kWp v karte elektrárne (karta Nastavenie). Dizajnér navrhol dve možnosti, skeptik ich oponoval a tu sú
+                upravené verzie. Na konci je tretia, najjednoduchšia cesta a porovnanie. Každá možnosť je v oboch appkách. Obloha je
+                striedavo na tmavšej a svetlej dennej oblohe.
+            </p>
+            <p class="lead">
+                Príklady: (a) juh 16 + východ 8 · (b) jedna plocha juh · (c) východ 10 + západ 10 · (d) tri plochy (viac appka nedovolí):
+                juh 12, západ 6, sever 4 · (e) južná pologuľa: sever 16 + východ 8 · (f) blízke smery 170° a 200° z odkazu (sprievodca dáva
+                kroky po 45°, odkaz hocijaký azimut).
+            </p>
+
+            <h2>Súčasný stav</h2>
+            <p class="lead">
+                Čiary zo stredu: dĺžka = počet panelov voči najväčšej ploche, farba = hlavná plocha. Bez čísel a bez vzťahu k slnku. Písmená
+                majú 9 px a v súčasnej appke slabý kontrast. Východ + západ s rovnakým počtom vyzerá ako jedna vodorovná čiara. V Oblohe sa
+                hlavná plocha líši len o 1 px.
+            </p>
+            <h3>Súčasná appka</h3>
+            <div class="row" id="cur-cl"></div>
+            <h3>Obloha</h3>
+            <div class="row" id="cur-ob"></div>
+
+            <h2>Možnosť A – Ružica plôch <span class="tag">upravená</span></h2>
+            <p class="lead">
+                Pohľad zhora ako doteraz, rovnaký jazyk ako veľký kompas v sprievodcovi. Každá plocha je výsek. Plocha výseku zodpovedá
+                počtu panelov a číslo stojí hneď za jeho špičkou. Strana poludnia je na obruči zvýraznená a stojí na nej malé slnko. Smer sa
+                číta podľa polohy, veľkosť podľa výseku a presné číslo je napísané.
+            </p>
+            <h3>Súčasná appka</h3>
+            <div class="row" id="a-cl"></div>
+            <h3>Obloha</h3>
+            <div class="row" id="a-ob"></div>
+            <div class="box">
+                <h4>Čo sa zmenilo po skeptikovi</h4>
+                <ul>
+                    <li>
+                        <b>Menší, ale čitateľnejší:</b> 112 px namiesto 128. Text vľavo sa na telefóne nezalamuje o riadok viac. Písmo je v
+                        kresbe väčšie, takže aj v zhrnutí sprievodcu (zväčšenom z 88 na 96 px) majú čísla vyše 11 px.
+                    </li>
+                    <li>
+                        <b>Slnko bez lúčov a vnútri kresby:</b> je to malý kotúč s písmenom strany poludnia (J, na južnej pologuli S).
+                        Predtým lúče trčali von z kresby a písmeno sa strácalo.
+                    </li>
+                    <li>
+                        <b>Bez tvrdenia o tieni:</b> tienistá polovica zmizla. Obruč je jedna a strana poludnia je len tlmene zvýraznená. V
+                        lete severná plocha ráno a večer vyrába, takže tvrdiť opak by nebola pravda.
+                    </li>
+                    <li><b>Užšie výseky (33° namiesto 38°):</b> susedné smery po 45° už medzi sebou majú viditeľnú medzeru.</li>
+                    <li>
+                        <b>Číslo vždy za špičkou, vo vnútri obruče:</b> nemusí sa tlačiť do úzkeho výseku, platí aj pre trojmiestne číslo.
+                        Písmeno smeru stojí za obručou.
+                    </li>
+                    <li>
+                        <b>Blízke smery sa spoja:</b> plochy bližšie ako šírka výseku (príklad f) sa nakreslia ako jeden výsek so súčtom. V
+                        aria-label ostanú zvlášť. Rozhoduje o tom jadro, nie kabát.
+                    </li>
+                    <li><b>Rovnaké plochy sú hlavné obe</b> (príklad c). Dnes o tom rozhoduje poradie, teda náhoda.</li>
+                    <li><b>Smer už nie je v texte vľavo</b> („juh a východ“). Hovorí ho obraz, čítačke ho povie aria-label.</li>
+                </ul>
+            </div>
+            <div class="cols">
+                <div class="box plus">
+                    <h4>Výhody</h4>
+                    <ul>
+                        <li>Malá zmena, ktorá sa týka len kabátu a modelu kompasu. Nový výpočet netreba a predpoveď ostáva netknutá.</li>
+                        <li>Jeden komponent na všetkých štyroch miestach (karta elektrárne a zhrnutie sprievodcu v oboch appkách).</li>
+                        <li>Človek sa dozvie počet panelov na ploche a kde je poludnie.</li>
+                        <li>Rozloženie karty ostáva.</li>
+                    </ul>
+                </div>
+                <div class="box minus">
+                    <h4>Nevýhody</h4>
+                    <ul>
+                        <li>Stále je to mapa, ktorú treba prečítať.</li>
+                        <li>Nepovie, <i>kedy</i> plocha vyrába. Vysvetlenie, prečo mám východ a západ, chýba.</li>
+                        <li>Pri zlúčených smeroch (f) sa číslo zo súčtu nedá priradiť jednej ploche bez aria-label.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="box">
+                <h4>Čo by sa menilo v kóde (odhad)</h4>
+                <ul>
+                    <li>
+                        <code>planesCompassModel(strings, south)</code> v <code>shared/chart-model.js</code> vráti výseky (cesta, číslo,
+                        poloha čísla, písmeno, hlavná áno/nie) so zlúčením blízkych smerov. <code>PLANES_COMPASS</code> dostane nové
+                        polomery.
+                    </li>
+                    <li>
+                        <code>planesCompassSvg</code> vo <code>web/svg.js</code> sa prepíše a farby pôjdu cez triedy v
+                        <code>style.css</code> aj <code>obloha/style.css</code>.
+                    </li>
+                    <li>
+                        Druhý argument <code>south</code> pribudne na všetkých štyroch miestach volania. Treba upraviť testy modelu. Golden
+                        predpoveď ani odkaz sa nemenia.
+                    </li>
+                </ul>
+            </div>
+
+            <h2>Možnosť B – Deň plôch <span class="tag">upravená</span></h2>
+            <p class="lead">
+                Smer plochy ukáže tým, čo pre teba znamená, teda <i>kedy</i> plocha vyrába. Pod kWp je nízky pás, v ktorom má každá plocha
+                svoj kopček výroby za jasného letného dňa: východ ráno, juh na poludnie, západ večer a sever nízko. Pás nemá os kW ani čiaru
+                súčtu, aby nepôsobil ako ďalší graf ako na karte Teraz.
+            </p>
+            <h3>Súčasná appka</h3>
+            <div class="row" id="b-cl"></div>
+            <h3>Obloha</h3>
+            <div class="row" id="b-ob"></div>
+            <div class="box">
+                <h4>Čo sa zmenilo po skeptikovi</h4>
+                <ul>
+                    <li>
+                        <b>Pevný deň namiesto „dnes“:</b> karta nesie stálu vlastnosť elektrárne, takže pás ukazuje jasný najdlhší deň roka
+                        a je to na ňom napísané. Predtým sa kopčeky menili každý deň a v novembri sa čiara meniča neukázala vôbec.
+                    </li>
+                    <li>
+                        <b>Menič len keď oreže:</b> keď by súčet v lete prerástol menič, objaví sa čiarkovaná hranica „menič v lete oreže“.
+                        Pri (a) ju vidno.
+                    </li>
+                    <li>
+                        <b>Bez čiary súčtu a bez šrafy:</b> hlavná plocha je plná, ostatné sú len obrys. V Oblohe sa tak biela na bielej
+                        nezlieva.
+                    </li>
+                    <li>
+                        <b>Štítok na vrchu vlastného kopčeka,</b> nie na súčte. Plocha, ktorá dáva oproti hlavnej málo (sever), má štítok „·
+                        málo“. Štítky nevyjdú z pásu.
+                    </li>
+                    <li>
+                        <b>Nižší pás (asi 84 px) s obmedzenou šírkou:</b> písmo na tablete nenarastie. Čas poludnia zmizol, ostal len východ
+                        a západ slnka.
+                    </li>
+                    <li>
+                        <b>Pri jednej ploche sa pás nekreslí</b> (b). Jeden kopček nepovie nič navyše, preto ostane malý kompas z možnosti
+                        A.
+                    </li>
+                </ul>
+            </div>
+            <div class="cols">
+                <div class="box plus">
+                    <h4>Výhody</h4>
+                    <ul>
+                        <li>Odpovedá na otázky „prečo mám východ a západ?“ a „čo mi dáva sever?“ obrazom, bez viet.</li>
+                        <li>Ukáže aj poddimenzovaný menič.</li>
+                        <li>Na južnej pologuli sa nič neprevracia, ráno je vždy vľavo.</li>
+                    </ul>
+                </div>
+                <div class="box minus">
+                    <h4>Nevýhody</h4>
+                    <ul>
+                        <li>
+                            <b>Skeptik ju ako náhradu kompasu neodporúča.</b> Aj bez osi je to žáner „krivka nad obzorom“ ako na karte
+                            Teraz.
+                        </li>
+                        <li>Karta narastie asi o 90 px a riadky Elektráreň sa posunú nižšie.</li>
+                        <li>
+                            V texte je „dnes za jasnej oblohy … kWh“, ale v obraze letný deň. Sú to dva rôzne dni na jednej karte. Text by
+                            sa musel zmeniť, alebo to presne popísať.
+                        </li>
+                        <li>
+                            Zásah do jadra: výpočet pre jednu plochu v <code>shared/solar.js</code> (zdieľa ho predpoveď, golden musí ostať
+                            rovnaký), nový model s testami a časy slnka v pásme lokality.
+                        </li>
+                        <li>
+                            Zhrnutie sprievodcu by ostalo pri kompase, takže by to boli dva rôzne obrazy tej istej veci. Skeptik by B dal
+                            skôr do kroku plôch v sprievodcovi.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Tretia cesta – súčasné čiary s číslami <span class="tag">od skeptika</span></h2>
+            <p class="lead">
+                Najmenšia zmena: čiary ostanú, na konci každej je počet panelov, písmená sú väčšie a strana poludnia je na obruči
+                zvýraznená. Zmena je len v kabáte plus pravidlo o blízkych smeroch v jadre. Je to polovica prínosu A za zlomok práce a dá sa
+                neskôr dotiahnuť na A.
+            </p>
+            <h3>Súčasná appka</h3>
+            <div class="row" id="c-cl"></div>
+            <h3>Obloha</h3>
+            <div class="row" id="c-ob"></div>
+
+            <h2>Porovnanie</h2>
+            <div class="tablewrap">
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>A – Ružica</th>
+                        <th>B – Deň plôch</th>
+                        <th>Tretia – čiary s číslami</th>
+                    </tr>
+                    <tr>
+                        <td>Čo sa dozviem</td>
+                        <td>smer, počet panelov, stranu poludnia</td>
+                        <td>kedy ktorá plocha vyrába, orezanie meničom</td>
+                        <td>smer, počet panelov</td>
+                    </tr>
+                    <tr>
+                        <td>Výška karty</td>
+                        <td>bez zmeny</td>
+                        <td>+ asi 90 px</td>
+                        <td>bez zmeny</td>
+                    </tr>
+                    <tr>
+                        <td>Jadro</td>
+                        <td>úprava modelu kompasu</td>
+                        <td>nový model a výpočet pre jednu plochu</td>
+                        <td>len zlúčenie blízkych smerov</td>
+                    </tr>
+                    <tr>
+                        <td>Riziko pre predpoveď</td>
+                        <td>žiadne</td>
+                        <td>stredné (zdieľaný výpočet)</td>
+                        <td>žiadne</td>
+                    </tr>
+                    <tr>
+                        <td>Zámena s grafom na Teraz</td>
+                        <td>nie</td>
+                        <td>áno, čiastočne</td>
+                        <td>nie</td>
+                    </tr>
+                    <tr>
+                        <td>Práca</td>
+                        <td>malá až stredná</td>
+                        <td>veľká</td>
+                        <td>malá</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="box">
+                <h4>Odporúčanie</h4>
+                <p style="margin: 0">
+                    Odporúčam <b>A</b>. Vyrieši to, čo je na dnešnom kompase zlé (bez čísel, nečitateľné písmená, žiadny vzťah k slnku), bez
+                    rizika a rovnako na všetkých štyroch miestach. <b>B</b> je silnejší nápad, ale nepatrí do karty elektrárne. Ak chceš
+                    ukázať, kedy plocha vyrába, patrí skôr do kroku plôch v sprievodcovi. <b>Tretiu cestu</b> by som zvolil, len ak chceš čo
+                    najmenšiu zmenu hneď. Rozhoduješ ty.
+                </p>
+            </div>
+        </main>
+
+        <script>
+            // ---------- Príklady ----------
+            const WP = 435;
+            const SUMMER = { n: 23.4, s: -23.4 }; // deklinácia na najdlhší deň: sever jún, juh december
+            const EX = [
+                {
+                    id: 'a',
+                    t: '(a) juh 16 + východ 8',
+                    lat: 48.3,
+                    off: 48,
+                    ac: 7,
+                    planes: [
+                        { p: 16, az: 180, tilt: 35 },
+                        { p: 8, az: 90, tilt: 35 },
+                    ],
+                },
+                { id: 'b', t: '(b) jedna plocha juh', lat: 48.3, off: 48, ac: 5, planes: [{ p: 12, az: 180, tilt: 35 }] },
+                {
+                    id: 'c',
+                    t: '(c) východ 10 + západ 10',
+                    lat: 48.3,
+                    off: 48,
+                    ac: 8,
+                    planes: [
+                        { p: 10, az: 90, tilt: 30 },
+                        { p: 10, az: 270, tilt: 30 },
+                    ],
+                },
+                {
+                    id: 'd',
+                    t: '(d) tri plochy: juh 12, západ 6, sever 4',
+                    lat: 48.3,
+                    off: 48,
+                    ac: 10,
+                    planes: [
+                        { p: 12, az: 180, tilt: 35 },
+                        { p: 6, az: 270, tilt: 35 },
+                        { p: 4, az: 0, tilt: 35 },
+                    ],
+                },
+                {
+                    id: 'e',
+                    t: '(e) južná pologuľa: sever 16 + východ 8',
+                    lat: -33.9,
+                    off: 46,
+                    ac: 10,
+                    planes: [
+                        { p: 16, az: 0, tilt: 30 },
+                        { p: 8, az: 90, tilt: 30 },
+                    ],
+                },
+                {
+                    id: 'f',
+                    t: '(f) z odkazu: 170° 10 panelov + 200° 6 panelov',
+                    lat: 48.3,
+                    off: 48,
+                    ac: 8,
+                    planes: [
+                        { p: 10, az: 170, tilt: 30 },
+                        { p: 6, az: 200, tilt: 30 },
+                    ],
+                },
+            ];
+            const DIR8 = [
+                ['S', 'sever'],
+                ['SV', 'severovýchod'],
+                ['V', 'východ'],
+                ['JV', 'juhovýchod'],
+                ['J', 'juh'],
+                ['JZ', 'juhozápad'],
+                ['Z', 'západ'],
+                ['SZ', 'severozápad'],
+            ];
+            const dirOf = (az) => (az % 45 === 0 ? DIR8[az / 45] : [DIR8[Math.round(az / 45) % 8][0], `${az}°`]);
+            const n = (v) => Math.round(v * 10) / 10;
+            const pt = (az, r, c) => ({ x: c + r * Math.sin((az * Math.PI) / 180), y: c - r * Math.cos((az * Math.PI) / 180) });
+            const rad = (d) => (d * Math.PI) / 180,
+                deg = (r) => (r * 180) / Math.PI;
+            const angDist = (a, b) => {
+                const d = Math.abs(a - b) % 360;
+                return d > 180 ? 360 - d : d;
+            };
+
+            // ---------- Texty karty ----------
+            function texts(ex, withDirs) {
+                const panels = ex.planes.reduce((s, p) => s + p.p, 0);
+                const kwp = ((panels * WP) / 1000).toFixed(2).replace('.', ',');
+                const dirs = [...new Set(ex.planes.map((p) => dirOf(p.az)[1]))];
+                const dirTxt = dirs.length > 2 ? `${dirs.length} smery` : dirs.join(' a ');
+                const label = 'Plochy panelov: ' + ex.planes.map((p) => `${dirOf(p.az)[1]} ${p.p} panelov`).join(', ');
+                const line = `${panels} panelov${withDirs ? ' · ' + dirTxt : ''} · menič ${ex.ac} kW`;
+                return { panels, kwp, label, line, kwh: Math.round(((panels * WP) / 1000) * 2.9) };
+            }
+
+            // ---------- Súčasný kompas ----------
+            function currentSvg(ex, skin) {
+                const c = 52,
+                    max = Math.max(...ex.planes.map((p) => p.p)),
+                    mainIdx = ex.planes.findIndex((p) => p.p === max);
+                const size = skin === 'cl' ? 96 : 88;
+                let o = `<svg viewBox="0 0 104 104" width="${size}" height="${size}" role="img" aria-label="${texts(ex).label}">`;
+                o += `<circle cx="52" cy="52" r="48" fill="none" stroke="${skin === 'cl' ? 'rgba(242,240,234,.12)' : 'rgba(255,255,255,.35)'}" stroke-width="1.5"/>`;
+                for (const [az, t] of [
+                    [0, 'S'],
+                    [90, 'V'],
+                    [180, 'J'],
+                    [270, 'Z'],
+                ]) {
+                    const p = pt(az, 38, c);
+                    o += `<text x="${n(p.x)}" y="${n(p.y + 3)}" font-size="${skin === 'cl' ? 9 : 12}" text-anchor="middle" fill="${skin === 'cl' ? 'rgba(242,240,234,.35)' : '#fff'}">${t}</text>`;
+                }
+                ex.planes
+                    .map((p, i) => ({ p, main: i === mainIdx }))
+                    .sort((a, b) => a.main - b.main)
+                    .forEach(({ p, main }) => {
+                        const e = pt(p.az, 12 + (16 * p.p) / max, c);
+                        const col = skin === 'cl' ? (main ? '#9ef25b' : '#ffc24b') : '#fff';
+                        const w = skin === 'cl' ? (main ? 6 : 4) : main ? 4 : 3;
+                        o += `<line x1="52" y1="52" x2="${n(e.x)}" y2="${n(e.y)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+                    });
+                return o + `<circle cx="52" cy="52" r="4" fill="${skin === 'cl' ? '#f2f0ea' : '#fff'}"/></svg>`;
+            }
+
+            // ---------- Spoločné: zlúčenie blízkych smerov (v appke by to robilo jadro) ----------
+            const SECTOR = 33;
+            function groups(ex) {
+                const out = [];
+                for (const p of [...ex.planes].sort((a, b) => b.p - a.p)) {
+                    const g = out.find((q) => angDist(q.az, p.az) < SECTOR);
+                    if (g) g.p += p.p;
+                    else out.push({ az: p.az, p: p.p });
+                }
+                const max = Math.max(...out.map((g) => g.p));
+                return out.map((g) => ({ ...g, main: g.p === max }));
+            }
+            function palette(skin) {
+                return skin === 'cl'
+                    ? {
+                          ring: 'rgba(242,240,234,.22)',
+                          noon: 'rgba(255,194,75,.55)',
+                          sun: '#ffc24b',
+                          tick: 'rgba(242,240,234,.45)',
+                          lbl: '#f2f0ea',
+                          dim: 'rgba(242,240,234,.6)',
+                          mainF: '#9ef25b',
+                          othF: 'rgba(255,194,75,.22)',
+                          othS: '#ffc24b',
+                          num: '#f2f0ea',
+                          hub: '#f2f0ea',
+                      }
+                    : {
+                          ring: 'rgba(255,255,255,.4)',
+                          noon: 'rgba(255,231,168,.85)',
+                          sun: '#ffe7a8',
+                          tick: 'rgba(255,255,255,.7)',
+                          lbl: '#fff',
+                          dim: 'rgba(255,255,255,.85)',
+                          mainF: 'rgba(255,255,255,.95)',
+                          othF: 'rgba(255,255,255,.22)',
+                          othS: '#fff',
+                          num: '#fff',
+                          hub: '#fff',
+                      };
+            }
+            function arcPath(a0, a1, r, c) {
+                const p = pt(a0, r, c),
+                    q = pt(a1, r, c),
+                    large = (a1 - a0 + 360) % 360 > 180 ? 1 : 0;
+                return `M${n(p.x)} ${n(p.y)} A${r} ${r} 0 ${large} 1 ${n(q.x)} ${n(q.y)}`;
+            }
+
+            // ---------- Možnosť A: ružica ----------
+            const V = 118,
+                C0 = V / 2,
+                R_RING = 45,
+                R0 = 8,
+                R_MAX = 23,
+                R_LBL = 53;
+            function wedge(az, r0, r1, half, c) {
+                const a = pt(az - half, r1, c),
+                    b = pt(az + half, r1, c),
+                    d = pt(az + half, r0, c),
+                    e = pt(az - half, r0, c);
+                return `M${n(e.x)} ${n(e.y)} L${n(a.x)} ${n(a.y)} A${r1} ${r1} 0 0 1 ${n(b.x)} ${n(b.y)} L${n(d.x)} ${n(d.y)} A${r0} ${r0} 0 0 0 ${n(e.x)} ${n(e.y)}Z`;
+            }
+            function roseSvg(ex, skin, size = 112) {
+                const c = C0,
+                    south = ex.lat < 0,
+                    noon = south ? 0 : 180,
+                    P = palette(skin),
+                    gs = groups(ex);
+                const max = Math.max(...gs.map((g) => g.p));
+                let o = `<svg viewBox="0 0 ${V} ${V}" width="${size}" height="${size}" role="img" aria-label="${texts(ex).label}. Poludnie je na ${south ? 'severe' : 'juhu'}.">`;
+                o += `<circle cx="${c}" cy="${c}" r="${R_RING}" fill="none" stroke="${P.ring}" stroke-width="1.5"/>`;
+                // strana poludnia: tlmene zvýraznená polovica obruče, žiadny tieň na druhej strane
+                o += `<path d="${south ? arcPath(270, 90, R_RING, c) : arcPath(90, 270, R_RING, c)}" fill="none" stroke="${P.noon}" stroke-width="3" stroke-linecap="round"/>`;
+                for (let az = 0; az < 360; az += 45) {
+                    const a = pt(az, R_RING - 3, c),
+                        b = pt(az, R_RING + 3, c);
+                    o += `<line x1="${n(a.x)}" y1="${n(a.y)}" x2="${n(b.x)}" y2="${n(b.y)}" stroke="${P.tick}" stroke-width="${az % 90 ? 1 : 1.5}"/>`;
+                }
+                // výseky, hlavné navrch
+                for (const g of [...gs].sort((a, b) => a.main - b.main)) {
+                    const r1 = R0 + (R_MAX - R0) * Math.sqrt(g.p / max);
+                    o += `<path d="${wedge(g.az, R0, r1, SECTOR / 2, c)}" fill="${g.main ? P.mainF : P.othF}" stroke="${g.main ? 'none' : P.othS}" stroke-width="1.5" stroke-linejoin="round"/>`;
+                    // číslo za špičkou; pri vodorovnom smere ďalej o polovicu šírky textu, aby nezasahovalo do výseku
+                    const tp = pt(g.az, r1 + 7 + Math.abs(Math.sin((g.az * Math.PI) / 180)) * String(g.p).length * 4.2, c);
+                    o += `<text x="${n(tp.x)}" y="${n(tp.y + 5)}" font-size="14" font-weight="700" text-anchor="middle" fill="${P.num}">${g.p}</text>`;
+                }
+                // slnko: malý kotúč bez lúčov za obručou na poludní, nesie písmeno strany poludnia
+                const s = pt(noon, R_LBL, c);
+                o += `<circle cx="${n(s.x)}" cy="${n(s.y)}" r="6" fill="${P.sun}"/>`;
+                // písmená za obručou: smery plôch tučne, sever hore a strana poludnia tenko
+                const marks = new Map();
+                marks.set(0, false);
+                marks.set(noon, false);
+                for (const g of gs) marks.set((Math.round(g.az / 45) % 8) * 45, true);
+                for (const [az, strong] of marks) {
+                    const p = pt(az, R_LBL, c);
+                    o += `<text x="${n(p.x)}" y="${n(p.y + (az === noon ? 3.5 : 5))}" font-size="${az === noon ? 10 : strong ? 13 : 11}" font-weight="${strong || az === noon ? 700 : 400}" text-anchor="middle" fill="${az === noon ? '#2a1a00' : strong ? P.lbl : P.dim}">${DIR8[az / 45][0]}</text>`;
+                }
+                return o + `<circle cx="${c}" cy="${c}" r="3" fill="${P.hub}"/></svg>`;
+            }
+
+            // ---------- Tretia cesta: čiary s číslami ----------
+            function linesSvg(ex, skin) {
+                const c = C0,
+                    south = ex.lat < 0,
+                    noon = south ? 0 : 180,
+                    P = palette(skin),
+                    gs = groups(ex);
+                const max = Math.max(...gs.map((g) => g.p));
+                let o = `<svg viewBox="0 0 ${V} ${V}" width="104" height="104" role="img" aria-label="${texts(ex).label}">`;
+                o += `<circle cx="${c}" cy="${c}" r="${R_RING}" fill="none" stroke="${P.ring}" stroke-width="1.5"/>`;
+                o += `<path d="${south ? arcPath(270, 90, R_RING, c) : arcPath(90, 270, R_RING, c)}" fill="none" stroke="${P.noon}" stroke-width="3" stroke-linecap="round"/>`;
+                for (const g of [...gs].sort((a, b) => a.main - b.main)) {
+                    const r1 = 9 + (14 * g.p) / max,
+                        e = pt(g.az, r1, c),
+                        tp = pt(g.az, r1 + 8 + Math.abs(Math.sin((g.az * Math.PI) / 180)) * String(g.p).length * 4, c);
+                    const col = skin === 'cl' ? (g.main ? '#9ef25b' : '#ffc24b') : '#fff';
+                    o += `<line x1="${c}" y1="${c}" x2="${n(e.x)}" y2="${n(e.y)}" stroke="${col}" stroke-width="${g.main ? 6 : 4}" stroke-linecap="round" ${!g.main && skin === 'ob' ? 'stroke-opacity=".7"' : ''}/>`;
+                    o += `<text x="${n(tp.x)}" y="${n(tp.y + 5)}" font-size="13" font-weight="700" text-anchor="middle" fill="${P.num}">${g.p}</text>`;
+                }
+                for (const az of [0, 90, 180, 270]) {
+                    const p = pt(az, R_LBL, c);
+                    o += `<text x="${n(p.x)}" y="${n(p.y + 4)}" font-size="12" text-anchor="middle" fill="${az === noon ? P.lbl : P.dim}" font-weight="${az === noon ? 700 : 400}">${DIR8[az / 45][0]}</text>`;
+                }
+                return o + `<circle cx="${c}" cy="${c}" r="3.5" fill="${P.hub}"/></svg>`;
+            }
+
+            // ---------- Možnosť B: deň plôch (zjednodušená jasná obloha, len pre náhľad) ----------
+            function sun(lat, decl, solarH) {
+                const H = rad(15 * (solarH - 12)),
+                    f = rad(lat),
+                    d = rad(decl);
+                const el = Math.asin(Math.sin(f) * Math.sin(d) + Math.cos(f) * Math.cos(d) * Math.cos(H));
+                const az = deg(Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(f) - Math.tan(d) * Math.cos(f))) + 180;
+                return { el, az: rad(az) };
+            }
+            function planeKw(lat, decl, pl, h) {
+                const s = sun(lat, decl, h);
+                if (s.el <= 0.01) return 0;
+                const am = 1 / Math.sin(s.el),
+                    dni = 1353 * Math.pow(0.7, Math.pow(am, 0.678)),
+                    dhi = 0.11 * dni;
+                const b = rad(pl.tilt),
+                    g = rad(pl.az);
+                const ci = Math.sin(s.el) * Math.cos(b) + Math.cos(s.el) * Math.sin(b) * Math.cos(s.az - g);
+                return ((((pl.p * WP) / 1000) * (dni * Math.max(0, ci) + (dhi * (1 + Math.cos(b))) / 2)) / 1000) * 0.86;
+            }
+            function dayModel(ex) {
+                const decl = ex.lat < 0 ? SUMMER.s : SUMMER.n,
+                    step = 1 / 6,
+                    hs = [];
+                for (let h = 2; h <= 22.001; h += step) hs.push(h);
+                const per = ex.planes.map((pl) => hs.map((h) => planeKw(ex.lat, decl, pl, h)));
+                const sum = hs.map((_, i) => per.reduce((s, a) => s + a[i], 0));
+                const lit = hs.filter((h) => sun(ex.lat, decl, h).el > 0);
+                return { hs, per, peak: Math.max(...sum), clip: Math.max(...sum) > ex.ac, rise: lit[0], set: lit[lit.length - 1] };
+            }
+            const clock = (h, off) => {
+                const m = Math.round(h * 60 + off);
+                return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+            };
+            function daySvg(ex, skin) {
+                const W = 300,
+                    H = 84,
+                    top = 18,
+                    base = 62,
+                    m = dayModel(ex),
+                    P = palette(skin);
+                const h0 = m.rise - 0.4,
+                    h1 = m.set + 0.4;
+                const x = (h) => n(10 + ((h - h0) / (h1 - h0)) * (W - 20));
+                const ymax = Math.max(m.peak, ...m.per.map((a) => Math.max(...a))) * 1.04;
+                const y = (v) => n(base - (Math.min(v, ymax) / ymax) * (base - top));
+                const peaks = m.per.map((a) => Math.max(...a)),
+                    maxPeak = Math.max(...peaks);
+                const mainCol = skin === 'cl' ? '#9ef25b' : '#fff',
+                    othCol = skin === 'cl' ? '#ffc24b' : '#fff';
+                let o =
+                    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${texts(ex).label}. Za jasného letného dňa: ` +
+                    ex.planes
+                        .map((p, i) => `${dirOf(p.az)[1]} vyrába najviac okolo ${clock(m.hs[m.per[i].indexOf(peaks[i])], ex.off)}`)
+                        .join(', ') +
+                    `.">`;
+                o += `<text x="10" y="11" font-size="10" fill="${P.dim}">jasný najdlhší deň</text>`;
+                const area = (a) =>
+                    `M${x(m.hs[0])} ${base} ` +
+                    a.map((v, k) => `L${x(m.hs[k])} ${y(v)}`).join(' ') +
+                    ` L${x(m.hs[m.hs.length - 1])} ${base}Z`;
+                const order = ex.planes.map((p, i) => ({ p, i, main: peaks[i] === maxPeak })).sort((a, b) => b.main - a.main);
+                for (const { i, main } of order) {
+                    o += main
+                        ? `<path d="${area(m.per[i])}" fill="${mainCol}" fill-opacity="${skin === 'cl' ? 0.8 : 0.9}"/>`
+                        : `<path d="${area(m.per[i])}" fill="none" stroke="${othCol}" stroke-width="2" stroke-linejoin="round"/>`;
+                }
+                if (m.clip) {
+                    const yc = y(ex.ac);
+                    o +=
+                        `<line x1="10" x2="${W - 10}" y1="${yc}" y2="${yc}" stroke="${P.lbl}" stroke-opacity=".75" stroke-dasharray="4 3"/>` +
+                        `<text x="${W - 10}" y="${n(yc - 3)}" font-size="10" text-anchor="end" fill="${P.dim}">menič v lete oreže</text>`;
+                }
+                o += `<line x1="4" x2="${W - 4}" y1="${base}" y2="${base}" stroke="${P.ring}" stroke-width="1.5"/>`;
+                for (const [h, anchor] of [
+                    [m.rise, 'start'],
+                    [m.set, 'end'],
+                ]) {
+                    const cx = x(h);
+                    o += `<path d="M${n(cx - 5)} ${base} A5 5 0 0 1 ${n(cx + 5)} ${base}Z" fill="${P.sun}"/>`;
+                    o += `<text x="${anchor === 'start' ? n(cx - 6) : n(cx + 6)}" y="${base + 16}" font-size="11" text-anchor="${anchor}" fill="${P.dim}">${clock(h, ex.off)}</text>`;
+                }
+                // štítok na vrchu vlastného kopčeka; slabá plocha dostane „· málo“; nikdy nad horný okraj
+                const placed = [];
+                ex.planes
+                    .map((p, i) => ({ p, i, k: m.per[i].indexOf(peaks[i]) }))
+                    .sort((a, b) => peaks[b.i] - peaks[a.i])
+                    .forEach(({ p, i, k }) => {
+                        const lx = Math.min(W - 30, Math.max(30, +x(m.hs[k])));
+                        let ly = Math.max(top - 2, +y(peaks[i]) - 5);
+                        const weak = peaks[i] < maxPeak * 0.3;
+                        while (placed.some((q) => Math.abs(q.x - lx) < 46 && Math.abs(q.y - ly) < 12)) ly += 12;
+                        ly = Math.min(ly, base - 4);
+                        placed.push({ x: lx, y: ly });
+                        o += `<text x="${n(lx)}" y="${n(ly)}" font-size="11.5" font-weight="700" text-anchor="middle" fill="${P.lbl}" paint-order="stroke" stroke="${skin === 'cl' ? '#151614' : 'rgba(20,40,90,.55)'}" stroke-width="3">${dirOf(p.az)[0]} ${p.p}${weak ? ' · málo' : ''}</text>`;
+                    });
+                return o + `</svg>`;
+            }
+
+            // ---------- Karty ----------
+            function heroSide(ex, skin, fig, withDirs) {
+                const t = texts(ex, withDirs);
+                const head =
+                    skin === 'cl'
+                        ? `<div><div class="big">${t.kwp}<small> kWp</small></div><div class="sub">${t.line}</div><div class="sub">dnes za jasnej oblohy približne ${t.kwh} kWh</div></div>`
+                        : `<div><p class="big"><b>${t.kwp}</b> kWp</p><p class="sub">${t.line}<br>dnes za jasnej oblohy približne ${t.kwh} kWh</p></div>`;
+                return `<div class="card hero">${head}${fig}</div>`;
+            }
+            function heroWide(ex, skin) {
+                if (ex.planes.length === 1) return heroSide(ex, skin, roseSvg(ex, skin), false);
+                const t = texts(ex, false);
+                const head =
+                    skin === 'cl'
+                        ? `<div class="top"><div><div class="big">${t.kwp}<small> kWp</small></div><div class="sub">${t.line}</div></div><div class="kwh"><b>${t.kwh} kWh</b><div class="sub">dnes za jasnej oblohy</div></div></div>`
+                        : `<div class="top"><div><p class="big"><b>${t.kwp}</b> kWp</p><p class="sub">${t.line}</p></div><div class="kwh"><b>${t.kwh} kWh</b><p class="sub" style="margin:0">dnes za jasnej oblohy</p></div></div>`;
+                return `<div class="card hero2">${head}<div class="strip">${daySvg(ex, skin)}</div></div>`;
+            }
+            function fill(id, skin, make) {
+                document.getElementById(id).innerHTML = EX.map(
+                    (ex, k) =>
+                        `<div class="phone"><p class="ex">${ex.t}</p><div class="${skin === 'cl' ? 'cl' : 'ob' + (k % 2 ? ' light' : '')}">${make(ex)}</div></div>`,
+                ).join('');
+            }
+            fill('cur-cl', 'cl', (ex) => heroSide(ex, 'cl', currentSvg(ex, 'cl'), true));
+            fill('cur-ob', 'ob', (ex) => heroSide(ex, 'ob', currentSvg(ex, 'ob'), true));
+            fill('a-cl', 'cl', (ex) => heroSide(ex, 'cl', roseSvg(ex, 'cl'), false));
+            fill('a-ob', 'ob', (ex) => heroSide(ex, 'ob', roseSvg(ex, 'ob'), false));
+            fill('b-cl', 'cl', (ex) => heroWide(ex, 'cl'));
+            fill('b-ob', 'ob', (ex) => heroWide(ex, 'ob'));
+            fill('c-cl', 'cl', (ex) => heroSide(ex, 'cl', linesSvg(ex, 'cl'), false));
+            fill('c-ob', 'ob', (ex) => heroSide(ex, 'ob', linesSvg(ex, 'ob'), false));
+        </script>
+    </body>
+</html>

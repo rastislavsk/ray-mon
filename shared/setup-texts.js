@@ -2,12 +2,12 @@
 // zhrnutia. Obe appky ich kreslia každá po svojom (web/render/nastavenie.js, obloha/web/render/),
 // ale pýtajú sa rovnako - preto sú texty tu, na jednom mieste. Žiadne HTML, len reťazce a dáta.
 
-import { installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
+import { acClips, installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
 import { fmt2, hoursText, kwpText, minutesToTimeStr } from './format.js';
 import { checkSettings, sameSettings, settingsHint, siteMetaText, totalPanels } from './settings.js';
 import { SETUP_SECTIONS, setupSection } from './setup.js';
 import { isWelcome, savedSettings, schedIndex, znovaModel } from './setup-flow.js';
-import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
+import { localDateKey, sunTimes } from './solar.js';
 import { autoLevels, isSeasonSchedule, isWeekendSchedule, scheduleRuns, tariffHint, tariffPricesText } from './tariff.js';
 import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
@@ -141,6 +141,9 @@ export const fieldText = (n) => (n !== null && Number.isFinite(n) ? String(n).re
 
 /** Názov smeru; mimo ôsmich smerov (staré nastavenie) aspoň stupne. @param {number} az */
 export const dirName = (az) => (DIRS.find((d) => d.az === az) || { name: `${az}°` }).name;
+
+/** Skratka smeru najbližšieho z ôsmich (J, SV …) - aj pre azimut mimo nich. @param {number} az */
+export const dirShort = (az) => DIRS[Math.round((((az % 360) + 360) % 360) / 45) % 8].short;
 
 /** Výkon v kW bez zbytočných núl: 10 kW, 7,5 kW. @param {number} kw */
 export const kwText = (kw) => `${fieldText(Math.round(kw * 10) / 10)} kW`;
@@ -552,22 +555,25 @@ export function priceCheck(t) {
 // ---- Zhrnutie a prehľad elektrárne ---------------------------------------------------
 
 /**
- * Karta elektrárne: meno, celkový výkon, zostava a výroba za jasného dneška. Bez úplného
- * nastavenia (chýba výkon alebo poloha) null.
- * @param {Settings} s @param {Date} now
+ * Karta elektrárne: meno, celkový výkon, plochy pre ružicu a panely s meničom pre obrázok vedľa
+ * nej. `clip` - menič za jasných dní oreže špičky (acClips), `cap` slovo pod meničom. Bez úplného nastavenia (chýba výkon
+ * alebo poloha) null.
+ * @param {Settings} s
  */
-export function plantHero(s, now) {
+export function plantHero(s) {
     const check = checkSettings(s);
     if (check.kwp === null || !hasSite(s)) return null;
-    const today = localDateKey(now, s.site.timezone);
+    const ac = kwText(s.plant.acLimitKw);
+    const clip = acClips(s.plant);
     return {
         name: s.site.name,
         kwp: check.kwp,
-        panels: totalPanels(s),
-        ac: kwText(s.plant.acLimitKw),
-        clearKwh: Math.round(clearDayKwh(s.site, s.plant, today)),
-        planes: s.plant.strings.map((x) => `${dirName(x.azimuthDeg).toLowerCase()} ${x.panels} panelov`).join(', '),
-        dirs: [...new Set(s.plant.strings.map((x) => dirName(x.azimuthDeg).toLowerCase()))],
+        ac,
+        clip,
+        south: s.site.lat < 0,
+        planes: `Plochy panelov: ${s.plant.strings.map((x) => `${dirName(x.azimuthDeg).toLowerCase()} ${x.panels} panelov`).join(', ')}`,
+        cap: clip ? 'oreže' : 'menič',
+        kit: `${totalPanels(s)} panelov po ${Math.round(s.plant.panelWp)} Wp, menič ${ac}${clip ? ', za jasných dní oreže špičky' : ''}`,
     };
 }
 

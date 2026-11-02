@@ -513,24 +513,126 @@ export function compassPoint(azDeg, r, c = COMPASS.viewBox / 2) {
     return { x: c + r * Math.sin(rad), y: c - r * Math.cos(rad) };
 }
 
-/** Kompas plôch v karte elektrárne (prehľad v karte Nastavenie): viewBox a polomery. */
-// Svetové strany sú na polomere rLabel, šípky končia pred nimi (rMax), aby ich nezakryli.
-export const PLANES_COMPASS = { viewBox: 104, rRing: 48, rLabel: 38, rMin: 12, rMax: 28 };
+/**
+ * Ružica plôch v karte elektrárne (Nastavenie a zhrnutie sprievodcu). Plocha je výsek široký
+ * sectorDeg medzi rMin a rMax, číslo panelov stojí za jeho špičkou, písmená smerov na rLabel
+ * za obručou rRing. Text má v kresbe veľkosť, ktorá aj pri 112 px ostane nad 10 px.
+ */
+export const PLANES_ROSE = { viewBox: 118, rRing: 45, rMin: 8, rMax: 23, rLabel: 53, sectorDeg: 33, tick: 3 };
+
+/** Uhlová vzdialenosť dvoch azimutov, 0-180°. @param {number} a @param {number} b */
+const angDist = (a, b) => {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+};
 
 /**
- * Plochy panelov na jednom kompase: šípka na plochu v smere, kam je otočená, dlhá podľa
- * počtu panelov voči najväčšej ploche. Najväčšia plocha je hlavná (výraznejšia farba).
- * @param {Array<{ panels: number, azimuthDeg: number }>} strings
- * @returns {Array<{ x: number, y: number, main: boolean }>}
+ * Ružica plôch: výsek na každú plochu v smere, kam je otočená, s plochou úmernou počtu panelov
+ * (polomer rastie s odmocninou), a číslo panelov za špičkou. Plochy bližšie ako šírka výseku sa
+ * spoja do jedného výseku so súčtom, inak by sa prekryli (azimut z odkazu nemusí ísť po 45°).
+ * Hlavné sú všetky výseky s najväčším počtom. Polovica obruče na strane poludnia je zvýraznená
+ * a na poludní stojí slnko - na severnej pologuli na juhu, na južnej na severe. Písmená: sever
+ * hore vždy, strana poludnia na slnku, smery plôch tučne (`az` po 45°, skratku dá kabát).
+ * @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {boolean} south lokalita na južnej pologuli
  */
-export function planesCompassModel(strings) {
-    const { viewBox, rMin, rMax } = PLANES_COMPASS;
-    const max = Math.max(...strings.map((s) => (Number.isFinite(s.panels) ? s.panels : 0)), 0);
-    const mainIndex = strings.findIndex((s) => s.panels === max);
-    return strings.map((s, i) => {
-        const share = max > 0 && Number.isFinite(s.panels) ? s.panels / max : 0;
-        return { ...compassPoint(s.azimuthDeg, rMin + (rMax - rMin) * share, viewBox / 2), main: i === mainIndex };
+export function planesRoseModel(strings, south) {
+    const { viewBox, rRing, rMin, rMax, rLabel, sectorDeg, tick } = PLANES_ROSE;
+    const c = viewBox / 2;
+    const at = (/** @type {number} */ az, /** @type {number} */ r) => compassPoint(az, r, c);
+    /** @type {Array<{ az: number, panels: number }>} */
+    const groups = [];
+    const panels = (/** @type {number} */ p) => (Number.isFinite(p) && p > 0 ? p : 0);
+    for (const s of [...strings].sort((p, q) => panels(q.panels) - panels(p.panels))) {
+        const g = groups.find((x) => angDist(x.az, s.azimuthDeg) < sectorDeg);
+        if (g) g.panels += panels(s.panels);
+        else groups.push({ az: s.azimuthDeg, panels: panels(s.panels) });
+    }
+    const max = Math.max(...groups.map((g) => g.panels), 0);
+    const half = sectorDeg / 2;
+    const wedges = groups
+        .map((g) => {
+            const r1 = rMin + (rMax - rMin) * (max > 0 ? Math.sqrt(g.panels / max) : 0);
+            // Číslo za špičkou; pri boku ešte o polovicu šírky textu (asi 4,2 na číslicu), aby
+            // nezasahovalo do výseku.
+            const side = Math.abs(Math.sin((g.az * Math.PI) / 180));
+            const text = String(g.panels);
+            return {
+                r0: rMin,
+                r1,
+                outer: [at(g.az - half, r1), at(g.az + half, r1)],
+                inner: [at(g.az + half, rMin), at(g.az - half, rMin)],
+                num: { ...at(g.az, r1 + 7 + side * text.length * 4.2), text },
+                main: max > 0 && g.panels === max,
+            };
+        })
+        // Hlavné idú navrch.
+        .sort((p, q) => Number(p.main) - Number(q.main));
+    const noon = south ? 0 : 180;
+    /** @type {Map<number, 'dim' | 'strong' | 'sun'>} */
+    const letters = new Map([[0, 'dim']]);
+    for (const g of groups) letters.set((Math.round((((g.az % 360) + 360) % 360) / 45) % 8) * 45, 'strong');
+    letters.set(noon, 'sun');
+    return {
+        c,
+        rRing,
+        wedges,
+        ticks: Array.from({ length: 8 }, (_, i) => ({ a: at(i * 45, rRing - tick), b: at(i * 45, rRing + tick), major: i % 2 === 0 })),
+        // Polovica obruče od východu cez poludnie na západ, v dvoch oblúkoch (ako compassModel).
+        noonArc: [at(90, rRing), at(noon, rRing), at(270, rRing)],
+        noonSweep: south ? 0 : 1,
+        sun: at(noon, rLabel),
+        letters: [...letters].map(([az, kind]) => ({ ...at(az, rLabel), az, kind })),
+    };
+}
+
+/**
+ * Panely a menič vedľa ružice: panely každej plochy ako malé obdĺžniky (najviac maxRows riadkov,
+ * pri troch plochách v užších skupinách), pod skupinou smer a počet, čiara do meniča a menič
+ * ako škatuľka. Rozmery v px - obrázok sa nezväčšuje, písmo ostane také, aké je v CSS.
+ */
+export const PLANES_KIT = { cellW: 6, cellH: 8, gap: 2, maxRows: 4, groupGap: 9, minGroupW: 24, wire: 22, boxW: 46, top: 2, labelGap: 15 };
+
+/**
+ * Skupiny panelov zľava od najväčšej plochy. Hlavné (najviac panelov) sú plné, ostatné obrysom,
+ * rovnako ako výseky ružice. Pri viac paneloch, než sa zmestí, sa kreslí celá mriežka a skutočný
+ * počet povie popis pod ňou.
+ * @param {Array<{ panels: number, azimuthDeg: number }>} strings
+ */
+export function planesKitModel(strings) {
+    const { cellW, cellH, gap, maxRows, groupGap, minGroupW, wire, boxW, top, labelGap } = PLANES_KIT;
+    const panels = (/** @type {number} */ p) => (Number.isFinite(p) && p > 0 ? Math.round(p) : 0);
+    const sorted = [...strings].sort((p, q) => panels(q.panels) - panels(p.panels));
+    const max = Math.max(...sorted.map((s) => panels(s.panels)), 0);
+    const cols = sorted.length >= 3 ? 4 : 6;
+    const gridH = maxRows * (cellH + gap) - gap;
+    let x = 0;
+    const groups = sorted.map((s) => {
+        const count = panels(s.panels);
+        const shown = Math.min(count, cols * maxRows);
+        const rows = Math.ceil(shown / cols);
+        const w = Math.max(Math.min(shown, cols) * (cellW + gap) - gap, 0);
+        // Skupiny stoja na spoločnej čiare (dole), menšie sú nižšie.
+        const y0 = top + gridH - rows * (cellH + gap) + gap;
+        const cells = Array.from({ length: shown }, (_, k) => ({
+            x: x + (k % cols) * (cellW + gap),
+            y: y0 + Math.floor(k / cols) * (cellH + gap),
+        }));
+        const g = { cells, az: s.azimuthDeg, panels: count, labelX: x + w / 2, main: max > 0 && count === max };
+        x += Math.max(w, minGroupW) + groupGap;
+        return g;
     });
+    const x0 = x - groupGap + 4;
+    const boxX = x0 + wire;
+    return {
+        cellW,
+        cellH,
+        groups,
+        labelY: top + gridH + labelGap,
+        wire: { x0, x1: boxX - 3, y: top + gridH / 2 + 2 },
+        box: { x: boxX, y: top - 1, w: boxW, h: gridH + 2 },
+        width: boxX + boxW + 1,
+        height: top + gridH + labelGap + 4,
+    };
 }
 
 /**

@@ -72,3 +72,5 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `hlavicka-jednotna.html` | Jedna hlavička pre obe appky: RAY-MON a pod ním lokalita, vpravo bodka a čas ako v Oblohe, prilepená hore; model hlavičky v `shared/hlavicka.js` |
 | `teraz-pocasie.html` | Karta Teraz (obe appky) – počasie v pozadí napravo od čísla kW: A ilustrácia oblohy, B častice, C symbol a nádych |
 | `teraz-pocasie-2.html` | Karta Teraz – počasie cez celú hornú časť obrazovky (deň aj noc, mesiac podľa fázy) a rozhodnutia k nemu |
+| `nastavenie-kompas-ploch.html` | Karta elektrárne – kompas plôch: ružica (A), deň plôch (B), čiary s číslami; dizajnér a skeptik |
+| `nastavenie-kompas-ploch-a.html` | Ružica plôch bez riadku o výrobe, panely a menič vedľa nej: dlaždice, panely tečú do meniča (2, vybraný), pás meniča |

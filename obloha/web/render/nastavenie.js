@@ -4,7 +4,6 @@
 // z odkazu. Sprievodcu kreslí render/sprievodca.js. Okná sekcie Appka: Zdieľať appku (QR kód
 // z knižnice na CDN, odkaz, WhatsApp) a potvrdenie Vymazať údaje.
 
-import { planesCompassModel } from '../../../shared/chart-model.js';
 import { OBLOHA_URL } from '../../../shared/config.js';
 import { shareUrl } from '../../../shared/settings.js';
 import { savedSettings } from '../../../shared/setup-flow.js';
@@ -12,8 +11,7 @@ import { escapeHtml } from '../../../shared/format.js';
 import { nastavenieModel } from '../../../shared/nastavenie.js';
 import { IMPORT_OFFER, importOfferText, LINK_ERRORS } from '../../../shared/setup-texts.js';
 import { qrPainter } from '../../../web/qr.js';
-import { planesCompassSvg } from '../../../web/svg.js';
-import { renderWizard } from './sprievodca.js';
+import { plantGrid, renderWizard } from './sprievodca.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
@@ -79,12 +77,7 @@ function renderHome(state, m, dom) {
         setHtml(dom.nsPristup, pristupHtml(m.pristup));
     }
     show(dom.nsHero, !!m.hero);
-    if (m.hero)
-        setHtml(
-            dom.nsHero,
-            `<div><p class="kwp"><b>${m.hero.kwp}</b> kWp</p><p>${escapeHtml(m.hero.line)}<br>${escapeHtml(m.hero.clear)}</p></div>` +
-                planesCompassSvg(planesCompassModel(state.plant.strings), m.hero.label),
-        );
+    if (m.hero) setHtml(dom.nsHero, plantGrid(`<p class="kwp"><b>${m.hero.kwp}</b> kWp</p>`, state.plant.strings, m.hero));
     show(dom.nsNote, !!m.note);
     setText(dom.nsNote, m.note);
     const e = m.elektraren;

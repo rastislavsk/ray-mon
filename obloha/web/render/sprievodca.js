@@ -3,7 +3,7 @@
 // sú v index.html, render ukáže jednu a doplní ju. Hodnoty polí prepíše len pri zmene
 // settingsRev, plochy alebo obrazovky - inak by prepisoval to, čo človek práve píše.
 
-import { compassModel, dayRingModel, panelGridModel, planesCompassModel, tariffRingModel, tiltModel } from '../../../shared/chart-model.js';
+import { compassModel, dayRingModel, panelGridModel, tariffRingModel, tiltModel } from '../../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     CURRENCIES,
@@ -37,7 +37,7 @@ import {
     miniCompassSvg,
     panelGridSvg,
     panelLabelSvg,
-    planesCompassSvg,
+    plantFiguresSvg,
     tariffMiniSvg,
     tariffRingSvg,
     tiltSvg,
@@ -66,13 +66,20 @@ const last = { fields: '', tariff: '' };
 
 // ---- Prehľad pred uložením a obrazovky polohy, panelov a plôch ------------------------
 
+/**
+ * Karta strechy (Nastavenie aj zhrnutie): kWp vľavo hore, pod ním panely s meničom, vpravo ružica plôch.
+ * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {import('../../../web/svg.js').PlantFigures} h
+ */
+export function plantGrid(text, strings, h) {
+    const f = plantFiguresSvg(strings, h);
+    return `<div class="plant-g">${text}${f.rose}${f.kit}</div>`;
+}
+
 /** Zhrnutie: karta strechy a riadky, ťuknutie na riadok ho opraví. @param {AppState} state @param {Settings} draft */
 function summaryHtml(state, draft) {
-    const h = T.plantHero(draft, state.now);
+    const h = T.plantHero(draft);
     const hero = h
-        ? `<div class="glass plant"><div><p class="kwp"><b>${kwpText(h.kwp).replace(' kWp', '')}</b> kWp</p>` +
-          `<p>${h.panels} panelov · menič ${h.ac}<br>dnes za jasnej oblohy približne ${h.clearKwh} kWh</p></div>` +
-          `${planesCompassSvg(planesCompassModel(draft.plant.strings), `Plochy panelov: ${h.planes}`)}</div>`
+        ? `<div class="glass plant">${plantGrid(`<p class="kwp"><b>${kwpText(h.kwp).replace(' kWp', '')}</b> kWp</p>`, draft.plant.strings, h)}</div>`
         : '<div class="glass plant"><p class="kwp"><b>–</b> kWp</p></div>';
     const rows = T.summaryRows(draft, state)
         .map((r) => {

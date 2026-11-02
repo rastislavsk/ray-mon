@@ -366,18 +366,106 @@ test('weekHeatMax: najsilnejšia hodina týždňa, aspoň 0,4 kW', async () => {
     assert.equal(weekHeatMax(tichy), 0.4);
 });
 
-test('planesCompassModel: šípka na plochu v jej smere, dĺžka podľa panelov, hlavná je najväčšia', async () => {
-    const { planesCompassModel, PLANES_COMPASS } = await import('../shared/chart-model.js');
-    const c = PLANES_COMPASS.viewBox / 2;
-    const [juh, zapad] = planesCompassModel([
-        { panels: 16, azimuthDeg: 180 },
-        { panels: 8, azimuthDeg: 270 },
-    ]);
+test('planesRoseModel: výsek na plochu v jej smere, plocha podľa panelov, číslo za špičkou', async () => {
+    const { planesRoseModel, PLANES_ROSE } = await import('../shared/chart-model.js');
+    const c = PLANES_ROSE.viewBox / 2;
+    const m = planesRoseModel(
+        [
+            { panels: 8, azimuthDeg: 270 },
+            { panels: 16, azimuthDeg: 180 },
+        ],
+        false,
+    );
+    // Hlavná ide navrch, teda posledná.
+    const [zapad, juh] = m.wedges;
     assert.ok(juh.main && !zapad.main);
-    assert.ok(Math.abs(juh.x - c) < 1e-9 && Math.abs(juh.y - (c + PLANES_COMPASS.rMax)) < 1e-9, 'juh je dole, plná dĺžka');
-    assert.ok(zapad.x < c && Math.abs(zapad.y - c) < 1e-9, 'západ je vľavo');
-    assert.ok(c - zapad.x < PLANES_COMPASS.rMax && c - zapad.x > PLANES_COMPASS.rMin, 'polovica panelov, kratšia šípka');
-    // Rozpísaná plocha bez počtu panelov má najkratšiu šípku.
-    const [bez] = planesCompassModel([{ panels: NaN, azimuthDeg: 90 }]);
-    assert.ok(Math.abs(bez.x - (c + PLANES_COMPASS.rMin)) < 1e-9);
+    assert.equal(juh.r1, PLANES_ROSE.rMax, 'najväčšia plocha má plnú dĺžku');
+    // Polovica panelov = polovica plochy výseku, polomer cez odmocninu.
+    assert.ok(Math.abs(zapad.r1 - (PLANES_ROSE.rMin + (PLANES_ROSE.rMax - PLANES_ROSE.rMin) * Math.SQRT1_2)) < 1e-9);
+    assert.equal(juh.num.text, '16');
+    assert.ok(Math.abs(juh.num.x - c) < 1e-9 && juh.num.y > c + juh.r1, 'číslo juhu je pod špičkou');
+    assert.ok(zapad.num.x < c - zapad.r1 && Math.abs(zapad.num.y - c) < 1e-9, 'číslo západu je vľavo za špičkou');
+    // Slnko na juhu, písmená: sever slabo, západ tučne, juh na slnku.
+    assert.ok(m.sun.y > c);
+    assert.equal(m.noonSweep, 1);
+    assert.deepEqual(
+        m.letters.map((l) => [l.az, l.kind]),
+        [
+            [0, 'dim'],
+            [180, 'sun'],
+            [270, 'strong'],
+        ],
+    );
+    assert.equal(m.ticks.length, 8);
+});
+
+test('planesRoseModel: blízke smery jeden výsek, rovnaké plochy obe hlavné, južná pologuľa', async () => {
+    const { planesRoseModel, PLANES_ROSE } = await import('../shared/chart-model.js');
+    const c = PLANES_ROSE.viewBox / 2;
+    // 170° a 200° by sa prekryli - jeden výsek so súčtom, písmeno najbližšieho smeru.
+    const blizke = planesRoseModel(
+        [
+            { panels: 10, azimuthDeg: 170 },
+            { panels: 6, azimuthDeg: 200 },
+        ],
+        false,
+    );
+    assert.deepEqual(
+        blizke.wedges.map((w) => w.num.text),
+        ['16'],
+    );
+    assert.ok(blizke.letters.some((l) => l.az === 180));
+    const rovnake = planesRoseModel(
+        [
+            { panels: 10, azimuthDeg: 90 },
+            { panels: 10, azimuthDeg: 270 },
+        ],
+        false,
+    );
+    assert.ok(rovnake.wedges.every((w) => w.main));
+    // Na južnej pologuli je poludnie na severe; plocha na sever je tam na slnku.
+    const juh = planesRoseModel([{ panels: 16, azimuthDeg: 0 }], true);
+    assert.ok(juh.sun.y < c);
+    assert.equal(juh.noonSweep, 0);
+    assert.deepEqual(
+        juh.letters.map((l) => [l.az, l.kind]),
+        [[0, 'sun']],
+    );
+    // Rozpísaná plocha bez počtu panelov: najkratší výsek, nie hlavný, číslo 0.
+    const [bez] = planesRoseModel([{ panels: NaN, azimuthDeg: -45 }], false).wedges;
+    assert.equal(bez.r1, PLANES_ROSE.rMin);
+    assert.ok(!bez.main);
+    assert.equal(bez.num.text, '0');
+});
+
+test('planesKitModel: skupiny panelov od najväčšej, čiara do meniča, najviac štyri riadky', async () => {
+    const { planesKitModel, PLANES_KIT } = await import('../shared/chart-model.js');
+    const { cellW, gap, maxRows, top, cellH } = PLANES_KIT;
+    const m = planesKitModel([
+        { panels: 8, azimuthDeg: 90 },
+        { panels: 16, azimuthDeg: 180 },
+    ]);
+    assert.deepEqual(
+        m.groups.map((g) => [g.az, g.panels, g.cells.length, g.main]),
+        [
+            [180, 16, 16, true],
+            [90, 8, 8, false],
+        ],
+    );
+    // Šesť stĺpcov; skupiny stoja dole na spoločnej čiare.
+    const bottom = top + maxRows * (cellH + gap) - gap;
+    for (const g of m.groups) assert.equal(Math.max(...g.cells.map((p) => p.y)) + cellH, bottom);
+    assert.equal(m.groups[0].labelX, (6 * (cellW + gap) - gap) / 2);
+    assert.ok(m.wire.x0 > Math.max(...m.groups[1].cells.map((p) => p.x)) && m.wire.x1 < m.box.x);
+    assert.equal(m.width, m.box.x + m.box.w + 1);
+    // Tri plochy v užších skupinách (4 stĺpce); veľká plocha nakreslí najviac 4 riadky.
+    const tri = planesKitModel([
+        { panels: 40, azimuthDeg: 180 },
+        { panels: 6, azimuthDeg: 270 },
+        { panels: NaN, azimuthDeg: 0 },
+    ]);
+    assert.equal(tri.groups[0].cells.length, 16);
+    assert.equal(tri.groups[0].panels, 40);
+    assert.equal(tri.groups[2].cells.length, 0);
+    assert.ok(!tri.groups[2].main);
 });

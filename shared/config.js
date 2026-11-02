@@ -160,6 +160,15 @@ export function installedKw(plant) {
 // Bezoblačný model (Meinel + Laueho výšková korekcia) - horný strop výroby.
 export const CLEAR_SKY = { tau: 0.8, dhiFraction: 0.12 };
 
+/**
+ * Oreže menič za jasných dní špičky? Áno, keď panely majú viac než menič o viac ako
+ * SETTINGS_LIMITS.dcAcWarnRatio. Malý rozdiel je bežný a skoro nič nestojí.
+ * @param {Plant} plant
+ */
+export function acClips(plant) {
+    return installedKw(plant) > plant.acLimitKw * SETTINGS_LIMITS.dcAcWarnRatio;
+}
+
 /** Najvyšší výkon, aký elektráreň vie dodať: menší z výkonu panelov a meniča, v kW. @param {Plant} plant */
 function maxOutputKw(plant) {
     return Math.min(installedKw(plant), plant.acLimitKw);
