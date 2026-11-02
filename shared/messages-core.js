@@ -1582,13 +1582,19 @@ export const EMPTY_MESSAGES = {
 export const STAV_SLOVO = { spojenie: 'bez spojenia', menic: 'zastarané' };
 
 /**
- * Bublina po novom pripojení merania, keď prišlo prvé meranie: odkiaľ čísla sú. V noci menič spí
- * a namerané čísla prídu až ráno - bez toho by človek videl „pripojené“ a popri tom stále odhad.
+ * Bublina, keď karta Teraz prestane ukazovať odhad: po novom pripojení merania (`pripojene`), keď
+ * prišlo prvé meranie - v noci menič spí a namerané čísla prídu až ráno, bez toho by človek videl
+ * „pripojené“ a popri tom stále odhad; alebo keď sa meranie po výpadku vrátilo (`obnovene`).
  * Bez oslovenia, v oboch tónoch rovnaké. @param {'zive' | 'spi'} druh @param {string} zdroj napr. „Huawei · Dvorany“
+ * @param {'pripojene' | 'obnovene'} [ako]
  */
-export function pripojenieText(druh, zdroj) {
-    const veta = druh === 'spi' ? 'menič teraz spí, prvé namerané čísla budú ráno' : 'čísla sú odteraz z meniča';
-    return { nadpis: 'Meranie pripojené', text: zdroj ? `${zdroj} – ${veta}` : `${veta[0].toUpperCase()}${veta.slice(1)}` };
+export function pripojenieText(druh, zdroj, ako = 'pripojene') {
+    const obnovene = ako === 'obnovene';
+    const veta = druh === 'spi' ? 'menič teraz spí, prvé namerané čísla budú ráno' : `čísla sú ${obnovene ? 'znova' : 'odteraz'} z meniča`;
+    return {
+        nadpis: obnovene ? 'Meranie sa obnovilo' : 'Meranie pripojené',
+        text: zdroj ? `${zdroj} – ${veta}` : `${veta[0].toUpperCase()}${veta.slice(1)}`,
+    };
 }
 
 /**

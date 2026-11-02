@@ -54,7 +54,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   shareKiosk: boolean,
  *   parts: Partial<Record<Part, PartState>>,
  *   stavTip: boolean,
- *   pripojenieCaka: boolean,
+ *   meranieBublina: '' | 'pripojene' | 'obnovene',
  *   oznamenia: import('../../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('../../web/oznamenia.js').OznamStav,
  *   doma: string[],
@@ -174,8 +174,9 @@ export function initialState(
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
         parts: {},
         stavTip: false,
-        // Meranie sa práve pripojilo a bublina „Meranie pripojené“ ešte nesvietila (web/setup-wiring.js).
-        pripojenieCaka: false,
+        // Bublina, ktorú appka ešte neukázala: meranie sa práve pripojilo (web/setup-wiring.js), alebo
+        // sa vrátilo z výpadku (shared/hlavicka.js, obnovaMerania).
+        meranieBublina: /** @type {'' | 'pripojene' | 'obnovene'} */ (''),
         ...telefon(phone),
         // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
         // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.

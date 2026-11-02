@@ -42,5 +42,5 @@ function renderPripojene(state, dom) {
  * prestala ukazovať odhad. Inak počká. Zhasne ju web/interactions.js. @param {import('../state.js').AppState} state
  */
 export function pripojenieOf(state) {
-    return shows(state, 'terazky') ? pripojenieBublina({ ...state, caka: state.pripojenieCaka }) : null;
+    return shows(state, 'terazky') ? pripojenieBublina({ ...state, caka: state.meranieBublina }) : null;
 }

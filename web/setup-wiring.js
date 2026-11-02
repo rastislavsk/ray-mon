@@ -87,7 +87,7 @@ export function applySettings(store, next, refresh, extra = {}) {
         setupLive: !!next.zdroj,
         pv,
         // Nové pripojenie merania: keď prvé meranie dorazí, karta Teraz to povie bublinou (shared/hlavicka.js).
-        ...(novePripojenie(store.get().zdroj, next.zdroj) ? { pripojenieCaka: true } : {}),
+        ...(novePripojenie(store.get().zdroj, next.zdroj) ? { meranieBublina: 'pripojene' } : {}),
         ...extra,
     });
 }
