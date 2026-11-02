@@ -24,6 +24,7 @@ const NEUTRAL_WEB = [
     'oznamenia',
     'sun-arc',
     'pocasie',
+    'sklo',
 ];
 
 /**

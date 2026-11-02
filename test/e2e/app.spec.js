@@ -46,7 +46,7 @@ import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekM
 import { settingsFromLink, shareUrl, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
-import { bigWords, FIXED_NOW, fixture, fixtureData, podvrhniQr, rozdielStavovehoRiadku } from '../helpers.js';
+import { bigWords, FIXED_NOW, fixture, fixtureData, overSklo, podvrhniQr, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
@@ -158,6 +158,13 @@ function atTime(hm) {
 
 /** Model hlavnej karty v danej chvíli, s predpoveďou postavenou v tej istej chvíli ako v appke. @param {Date} instant */
 const modelAt = (instant) => heroModel({ now: instant, pv, forecast: forecastAt(instant), previewMinutes: null, ...OWNER });
+
+test('hlavička je na vrchu priehľadná, sklo sa zjaví až po posune', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 600 });
+    const errors = await openApp(page);
+    await overSklo(page, '.appbar');
+    expect(errors).toEqual([]);
+});
 
 test('stavový riadok telefónu má farbu vrchu pozadia aj po zmene tarify', async ({ page }) => {
     const [den, noc] = [atTime('13:00').instant, atTime('22:30').instant];

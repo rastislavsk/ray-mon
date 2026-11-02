@@ -125,3 +125,23 @@ export async function rozdielStavovehoRiadku(page) {
         return Math.max(...farba.map((v, i) => Math.abs(v - vrch[i])));
     }, png.toString('base64'));
 }
+
+/**
+ * Sklo hlavičky (`sel`): na vrchu stránky priehľadné, po posune zapnuté, po návrate späť vypnuté.
+ * Pozadie hlavičky samo je vždy priehľadné, aby pod ňou (a pod stavovým riadkom) svietilo počasie.
+ * @param {import('@playwright/test').Page} page @param {string} sel
+ */
+export async function overSklo(page, sel) {
+    const { expect } = await import('@playwright/test');
+    const sklo = () =>
+        page.evaluate((s) => Number(getComputedStyle(/** @type {Element} */ (document.querySelector(s)), '::before').opacity), sel);
+    const pozadie = () => page.evaluate((s) => getComputedStyle(/** @type {Element} */ (document.querySelector(s))).backgroundColor, sel);
+    expect(await pozadie()).toBe('rgba(0, 0, 0, 0)');
+    await expect.poll(sklo).toBe(0);
+    await page.evaluate(() => window.scrollTo(0, 200));
+    await expect(page.locator('html')).toHaveAttribute('data-posun', '');
+    await expect.poll(sklo).toBe(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator('html')).not.toHaveAttribute('data-posun', '');
+    await expect.poll(sklo).toBe(0);
+}

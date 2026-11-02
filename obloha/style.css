@@ -113,9 +113,9 @@ button:focus-visible {
 
 /* ===== Hlavička ===== */
 /* Ako v súčasnej appke: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku
-   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Na telefóne je prilepená hore a pod sebou
-   má tú istú oblohu ako stránka - prechody stoja na mieste voči obrazovke (fixed), takže medzi
-   hlavičkou a obsahom pod ňou nie je šev. Obsah v šírke stránky, pozadie cez celú šírku.
+   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Na telefóne je prilepená hore a priehľadná
+   (sklo nižšie), takže pod ňou aj pod stavovým riadkom je tá istá obloha ako na stránke. Obsah
+   v šírke stránky, sklo cez celú šírku.
    Hlavička je nad vrstvou .tip-bg, aby bublina v nej a tlačidlo stavu ostali ťukateľné. */
 .st {
     position: sticky;
@@ -128,40 +128,28 @@ button:focus-visible {
     padding: max(16px, env(safe-area-inset-top)) max(20px, calc((100% - 600px) / 2)) 10px;
     font-size: 0.875rem;
     font-variation-settings: 'wdth' 100;
-    background:
-        linear-gradient(180deg, transparent, var(--s3)) fixed,
-        linear-gradient(180deg, var(--s1), var(--s2)) fixed;
 }
-/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu.
-   Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod hlavičkou prechádza,
-   a slnko za ním ostane vidno. Robí to prehliadač podľa posunu stránky (animation-timeline), bez
-   JS; kde to nevie, ostáva hlavička s oblohou. Pri útlme pohybu je sklo stále. */
-@supports (animation-timeline: scroll()) {
-    .st {
-        background: transparent;
-    }
+/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu
+   a pod stavovým riadkom. Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod
+   hlavičkou prechádza, a slnko za ním ostane vidno. Posun zapisuje web/sklo.js (data-posun na <html>).
+   Pri útlme pohybu je sklo stále. */
+.st::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--s1) 45%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    opacity: 0;
+    transition: opacity 0.35s;
+}
+:root[data-posun] .st::before {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
     .st::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background: color-mix(in srgb, var(--s1) 45%, transparent);
-        -webkit-backdrop-filter: blur(16px);
-        backdrop-filter: blur(16px);
-        opacity: 0;
-        animation: st-sklo linear both;
-        animation-timeline: scroll(root);
-        animation-range: 0 48px;
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .st::before {
-            opacity: 1;
-        }
-    }
-}
-@keyframes st-sklo {
-    to {
         opacity: 1;
     }
 }
