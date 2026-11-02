@@ -3012,6 +3012,59 @@ button.live[aria-expanded='true'] {
     color: var(--ink);
 }
 
+/* Bublina „Meranie pripojené“ nad navigáciou, na mieste ponuky odkazu (.offer). Svieti pár sekúnd
+   (PRIPOJENIE_BUBLINA_MS), ťuknutie ju zhasne skôr. */
+.pripojene {
+    position: fixed;
+    inset: auto 16px calc(76px + env(safe-area-inset-bottom)) 16px;
+    /* Nad lepkavou hlavičkou (.st, 5), ktorá by ju inak prekryla. */
+    z-index: 6;
+    max-width: 580px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(10, 16, 38, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    line-height: 1.35;
+    animation: pripojene-in 0.3s ease-out;
+}
+.pripojene svg {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+}
+.pripojene circle {
+    fill: var(--yes);
+}
+.pripojene path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pripojene-txt {
+    display: grid;
+    font-size: 0.9375rem;
+    color: var(--dim);
+}
+.pripojene-txt b {
+    font-size: 1rem;
+    color: #fff;
+}
+@keyframes pripojene-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+
 /* ===== Spodná navigácia ===== */
 .tabs {
     position: fixed;
@@ -3120,6 +3173,10 @@ button.live[aria-expanded='true'] {
 }
 /* Ponuka prevziať nastavenie: dole už navigácia nie je. */
 :root:is([data-layout='medium'], [data-layout='wide']) .offer {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+}
+/* Bublina „Meranie pripojené“: dole už navigácia nie je. */
+:root:is([data-layout='medium'], [data-layout='wide']) .pripojene {
     bottom: calc(16px + env(safe-area-inset-bottom));
 }
 /* Panel veci a okná sekcie Appka sú dialóg v strede, nie panel zospodu. */

@@ -11,7 +11,7 @@ import { SEARCH_DEBOUNCE_MS, TARIFF_LIMITS } from '../shared/config.js';
 import { checkSettings, typicalSettings } from '../shared/settings.js';
 import * as flow from '../shared/setup-flow.js';
 import { pripojZdroj, searchPlaces } from './data.js';
-import { dalsiRytmus } from '../shared/zdroje.js';
+import { dalsiRytmus, novePripojenie } from '../shared/zdroje.js';
 import { loadRytmus, saveRytmus, saveSettings, saveSite } from './storage.js';
 
 /** @typedef {import('../shared/setup-flow.js').SetupState} SetupState */
@@ -86,6 +86,8 @@ export function applySettings(store, next, refresh, extra = {}) {
         settingsRev: store.get().settingsRev + 1,
         setupLive: !!next.zdroj,
         pv,
+        // Nové pripojenie merania: keď prvé meranie dorazí, karta Teraz to povie bublinou (shared/hlavicka.js).
+        ...(novePripojenie(store.get().zdroj, next.zdroj) ? { pripojenieCaka: true } : {}),
         ...extra,
     });
 }

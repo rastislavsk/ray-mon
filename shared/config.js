@@ -693,6 +693,9 @@ export const TOOLTIP_FADE_MS = 200;
 // aj pre posledné meranie z meniča.
 export const STALE_PV_MS = 20 * 60 * 1000;
 
+/** Ako dlho svieti bublina „Meranie pripojené“ nad navigáciou, kým sama zmizne (ms). */
+export const PRIPOJENIE_BUBLINA_MS = 5000;
+
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;

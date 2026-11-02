@@ -217,11 +217,26 @@ export function sposobyOf(z) {
 /** Dá sa pripojiť, ale na skutočnom meniči to ešte nikto neoveril. Nová značka je beta, kým ju niekto neoverí. @param {Znacka} z */
 export const jeBeta = (z) => 'sposoby' in z && !z.overena;
 
+/**
+ * Je `po` nové pripojenie merania oproti `pred`: prvé, iná elektráreň alebo obnovený prístup
+ * (každé pripojenie dá novú pečať). To isté meranie uložené znova so zmenou tarify či panelov nie je.
+ * @param {Zdroj | null} pred @param {Zdroj | null} po
+ */
+export function novePripojenie(pred, po) {
+    return !!po && po.pecat !== pred?.pecat;
+}
+
 /** Meno značky spôsobu, napr. „Huawei“. @param {string} sposob */
 export function menoZnacky(sposob) {
     const s = sposobOf(sposob);
     const z = s && znackaOf(s.znacka);
     return z ? z.meno : '';
+}
+
+/** Pripojené meranie jedným riadkom, napr. „Huawei · Dvorany“. @param {Zdroj} z */
+export function zdrojText(z) {
+    const sposob = sposobOf(z.sposob);
+    return [menoZnacky(z.sposob), z.nazov || (sposob ? sposob.nazov.toLowerCase() : '')].filter(Boolean).join(' · ');
 }
 
 // Zapečatený prístup: verzia, bodka a base64url (náhodný vektor + šifra AES-GCM, viď

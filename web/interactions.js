@@ -2,11 +2,12 @@
 // nikto tu nekreslí do DOM okrem tooltipov, ktoré nie sú súčasťou stavu.
 
 import { chartTooltipModel } from '../shared/chart-model.js';
-import { SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
+import { PRIPOJENIE_BUBLINA_MS, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
 import { fmt2 } from '../shared/format.js';
 import { initDayPager } from './day-pager.js';
 import { PANELS } from './dom.js';
 import { backTo, closeDetail, initHistory } from './history.js';
+import { pripojenieOf } from './render/header.js';
 import { render } from './render/index.js';
 import { weekCurveModel } from './render/sedemdni.js';
 import { createRefresh, startTicks } from './refresh.js';
@@ -441,11 +442,31 @@ function initStavTip(store, dom) {
     });
 }
 
+/**
+ * Bublina „Meranie pripojené“ zhasne sama PRIPOJENIE_BUBLINA_MS po tom, ako sa ukázala, alebo hneď
+ * po ťuknutí. Ukáže sa len raz po pripojení - zhasnutie zruší jej čakanie (pripojenieCaka).
+ * @param {Store} store @param {Dom} dom
+ */
+function initPripojene(store, dom) {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    const zhasni = () => {
+        clearTimeout(timer);
+        timer = undefined;
+        store.setState({ pripojenieCaka: false });
+    };
+    store.subscribe((state) => {
+        if (timer === undefined && pripojenieOf(state)) timer = setTimeout(zhasni, PRIPOJENIE_BUBLINA_MS);
+    });
+    dom.pripojene.addEventListener('click', zhasni);
+}
+
 /** @param {Store} store @param {Dom} dom @param {{ wide: MediaQueryList }} mq */
 export function initInteractions(store, dom, mq) {
     initViewportZoomRealign();
     initNavigation(store, dom, initDays(store, dom));
     initStavTip(store, dom);
+    initPripojene(store, dom);
     initHistory(store);
     initTapTooltipClosing();
     initCurveTooltip(store, dom.weekCurveWrap, dom.weekCurve, dom.weekCurveTooltip, weekCurveModel);

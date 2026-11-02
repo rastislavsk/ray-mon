@@ -588,6 +588,58 @@ b {
     box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
+/* Bublina „Meranie pripojené“ tesne nad spodnou navigáciou (52px, .nav-item). Svieti pár sekúnd
+   (PRIPOJENIE_BUBLINA_MS), ťuknutie ju zhasne skôr. */
+.pripojene {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(52px + 12px + env(safe-area-inset-bottom));
+    z-index: 31;
+    max-width: calc(var(--page-max) - 32px);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--ink-12);
+    border-radius: 16px;
+    background: var(--card-bg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    color: var(--ink);
+    line-height: 1.35;
+    animation: pripojene-in 0.3s ease-out;
+}
+.pripojene svg {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+}
+.pripojene circle {
+    fill: var(--green);
+}
+.pripojene path {
+    fill: none;
+    stroke: var(--ink-on-color);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pripojene-txt {
+    display: grid;
+    font-size: var(--fs-sm);
+    color: var(--ink-70);
+}
+.pripojene-txt b {
+    font-size: var(--fs-md);
+    color: var(--ink);
+}
+@keyframes pripojene-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
 .bottomnav {
     position: fixed;
     left: 0;
@@ -4597,6 +4649,10 @@ b {
     .appbar-clock,
     .pv-setup-go {
         align-self: center;
+    }
+    /* Navigácia je hore, bublina ostáva pri spodnom okraji. */
+    .pripojene {
+        bottom: 24px;
     }
     .bottomnav {
         position: sticky;

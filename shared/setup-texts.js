@@ -11,7 +11,7 @@ import { clearDayKwh, localDateKey, sunTimes } from './solar.js';
 import { autoLevels, isSeasonSchedule, isWeekendSchedule, scheduleRuns, tariffHint, tariffPricesText } from './tariff.js';
 import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
-import { menoZnacky, sposobOf, znackaOf } from './zdroje.js';
+import { menoZnacky, sposobOf, zdrojText, znackaOf } from './zdroje.js';
 
 /** @typedef {import('./settings.js').Settings} Settings */
 /** @typedef {import('./setup.js').SetupStep} SetupStep */
@@ -446,11 +446,8 @@ export function stanicaMeta(st) {
 /** Veta pod pripojenou elektrárňou: nech ju človek porovná s appkou výrobcu. */
 export const STANICA_CHECK = 'Skontroluj, či čísla sedia s appkou výrobcu. Odteraz ich appka ukazuje namiesto odhadu.';
 
-/** Pripojené meranie jedným riadkom, napr. „Huawei · Dvorany“. @param {import('./zdroje.js').Zdroj} z */
-export function zdrojText(z) {
-    const sposob = sposobOf(z.sposob);
-    return [menoZnacky(z.sposob), z.nazov || (sposob ? sposob.nazov.toLowerCase() : '')].filter(Boolean).join(' · ');
-}
+// Pripojené meranie jedným riadkom - žije v zdroje.js, lebo ho potrebuje aj hlavička.
+export { zdrojText };
 
 /** Čo je v odkaze s nastavením. @param {Settings} found */
 export function linkPreview(found) {

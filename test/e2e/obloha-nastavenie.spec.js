@@ -15,7 +15,9 @@ import {
     WORKER_PV_URL,
     SHARE_HASH_KEY,
     SHARE_LINK_VERSION,
+    PRIPOJENIE_BUBLINA_MS,
 } from '../../shared/config.js';
+import { pripojenieText } from '../../shared/messages-core.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -340,6 +342,31 @@ test('pripojenie kľúčom (Fox ESS) z prehľadu: návod, skryté pole, pripojen
     const stored = await ulozene(page);
     expect(stored.zdroj).toEqual({ sposob: 'foxess-kluc', pecat: TEST_ZDROJ.pecat, nazov: 'Dvorany' });
     expect(JSON.stringify(stored)).not.toContain('tajny-kluc-fox');
+    expect(errors).toEqual([]);
+});
+
+test('nové pripojenie merania: bublina na karte Teraz počká na ňu a sama zhasne', async ({ page }) => {
+    const errors = await openObloha(page);
+    // Každé pripojenie dá novú pečať - appka tak pozná, že nejde o to isté meranie uložené znova.
+    await page.route(WORKER_PRIPOJ_URL, (route) =>
+        route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: 'v1.NovaPecat0123456789abcdefgh', pv }] } }),
+    );
+    await nastavenie(page);
+    await page.locator('#ns-rows [data-setup-edit="meranie"]').click();
+    await page.locator('[data-setup-zmen]').click();
+    await page.locator('[data-setup-znacka="foxess"]').click();
+    await page.locator('[data-setup-pole="kluc"]').fill('tajny-kluc-fox');
+    await page.locator('#wz-pripojit').click();
+    await expect(page.locator('#wz-stanice [data-setup-stanica="0"]')).toHaveAttribute('aria-pressed', 'true');
+    await dalej(page);
+    // V Nastavení bublina nie je - čaká na kartu Teraz.
+    await expect(page.locator('#ns-rows')).toContainText('Fox ESS · pripojené');
+    await expect(page.locator('#pripojene')).toBeHidden();
+    await page.locator('#nav-terazky').click();
+    await expect(page.locator('#pripojene')).toBeVisible();
+    await expect(page.locator('#pripojene-title')).toHaveText('Meranie pripojené');
+    await expect(page.locator('#pripojene-text')).toHaveText(pripojenieText('zive', 'Fox ESS · Dvorany').text);
+    await expect(page.locator('#pripojene')).toBeHidden({ timeout: PRIPOJENIE_BUBLINA_MS + 3000 });
     expect(errors).toEqual([]);
 });
 

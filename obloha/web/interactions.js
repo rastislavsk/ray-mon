@@ -1,10 +1,11 @@
 // Poslucháče novej appky. Každý končí volaním setState; nikto tu nekreslí do DOM.
 
-import { LAYOUT_PX, PANELS } from '../../shared/config.js';
+import { LAYOUT_PX, PANELS, PRIPOJENIE_BUBLINA_MS } from '../../shared/config.js';
 import { trackHistory } from '../../web/nav-history.js';
 import { createRefresh, startTicks } from '../../web/refresh.js';
 import { setupStart } from '../../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
+import { pripojenieOf } from './render/header.js';
 import { initTeraz } from './teraz-interactions.js';
 import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep } from './state.js';
 
@@ -74,6 +75,25 @@ function initStavTip(store, dom) {
 }
 
 /**
+ * Bublina „Meranie pripojené“ zhasne sama PRIPOJENIE_BUBLINA_MS po tom, ako sa ukázala, alebo hneď
+ * po ťuknutí. Ukáže sa len raz po pripojení - zhasnutie zruší jej čakanie (pripojenieCaka).
+ * @param {Store} store @param {Dom} dom
+ */
+function initPripojene(store, dom) {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    const zhasni = () => {
+        clearTimeout(timer);
+        timer = undefined;
+        store.setState({ pripojenieCaka: false });
+    };
+    store.subscribe((state) => {
+        if (timer === undefined && pripojenieOf(state)) timer = setTimeout(zhasni, PRIPOJENIE_BUBLINA_MS);
+    });
+    dom.pripojene.addEventListener('click', zhasni);
+}
+
+/**
  * Rozloženie podľa šírky okna: pri otočení tabletu či zmene okna sa prepne hneď. Stav (otvorený
  * detail, náhľad, sprievodca) sa pri tom nemení, mení sa len to, čo je kde.
  * @param {Store} store
@@ -91,6 +111,7 @@ function initLayout(store) {
 export function initInteractions(store, dom) {
     initNavigation(store, dom);
     initStavTip(store, dom);
+    initPripojene(store, dom);
     initLayout(store);
     const refresh = createRefresh(store);
     initMozem(store, dom, refresh);

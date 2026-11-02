@@ -56,6 +56,10 @@ function headerDom() {
         panelsBarTitle: byId('panels-bar-title'),
         panelsBarText: byId('panels-bar-text'),
         panelsBarGo: byId('panels-bar-go'),
+        // Bublina „Meranie pripojené“ nad navigáciou.
+        pripojene: byId('pripojene'),
+        pripojeneTitle: byId('pripojene-title'),
+        pripojeneText: byId('pripojene-text'),
         bottomnav: byId('bottomnav'),
         panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
             Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))

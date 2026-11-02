@@ -87,6 +87,15 @@
                     <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie"></button>
                 </div>
             </div>
+            <!-- Bublina nad navigáciou po novom pripojení merania, keď prvé meranie prišlo a karta Teraz
+                 prestala ukazovať odhad (shared/hlavicka.js). Zmizne sama alebo ťuknutím. Texty píše render. -->
+            <div class="pripojene hidden" id="pripojene" role="status">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="11" />
+                    <path d="M7 12.4l3.2 3.1L17 8.8" />
+                </svg>
+                <span class="pripojene-txt"><b id="pripojene-title"></b><span id="pripojene-text"></span></span>
+            </div>
             <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
                 <div class="bottomnav-inner">
                     <!-- Teraz je v navigácii prvá a appka sa na nej vždy otvára (PANELS v shared/config.js),
