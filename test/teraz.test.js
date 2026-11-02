@@ -471,7 +471,7 @@ test('terazModel o 13:00: číslo, štítky s vetou a Plán dňa z mozemModel, p
     const cards = dnesCards(i);
     assert.ok(cards && m.chart && m.plan && m.say);
     const base = mozemModel(i);
-    assert.deepEqual(m.say, { chips: base.chips, text: base.say, nahlad: '' });
+    assert.deepEqual(m.say, { chips: base.chips, text: base.say });
     assert.equal(m.say.text, 'Slnko to teraz platí za nás.', 'bez spotrebičov - tie povie Plán dňa');
     assert.deepEqual(m.plan.rows, base.plan?.rows);
     assert.deepEqual(m.plan.head, { lead: 'Teraz práčka a umývačka', then: 'Auto o 13:15 · sušička o 15:00' });
@@ -573,9 +573,8 @@ test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „
     assert.equal(terazModel(input(at('13:00'), { previewMinutes: hm(9) }), { voice: 'slusny' }).title, 'O 09:00');
     // Čas je v grafe pri čiare, pod grafom ostáva len „Späť na teraz“.
     assert.deepEqual(m.hint, { text: '', reset: true });
-    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, appka ich len zosivie.
-    // Panel štítka to povie jedným riadkom.
-    assert.deepEqual(m.say, { ...terazModel(input(at('13:00'))).say, nahlad: 'Platí pre teraz (13:00), nie pre 15:30.' });
+    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, appka ich zosivie a vypne.
+    assert.deepEqual(m.say, terazModel(input(at('13:00'))).say);
     const now = terazModel(input(at('13:00')));
     assert.equal(m.preview, true);
     assert.equal(now.preview, false);

@@ -71,41 +71,43 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
 
 /**
  * Štítok pod číslom je tlačidlo, ťuknutie otvorí jeho panel. Tlačidlo je rám s dotykovou plochou,
- * štítok v ňom vyzerá ako doteraz. Starý shared/mozem.js z cache po nasadení štítku kľúč ani panel
- * nedáva - vtedy je štítok len nápis (CLAUDE.md, Nasadenie a cache).
- * @param {import('../../shared/mozem.js').Chip} c
+ * štítok v ňom vyzerá ako doteraz. Počas náhľadu iného času je vypnuté - štítok platí pre teraz.
+ * Starý shared/mozem.js z cache po nasadení štítku kľúč ani panel nedáva - vtedy je štítok len
+ * nápis (CLAUDE.md, Nasadenie a cache).
+ * @param {import('../../shared/mozem.js').Chip} c @param {boolean} nahlad
  */
-const chipHtml = (c) =>
+const chipHtml = (c, nahlad) =>
     c.key && c.info
-        ? `<button type="button" class="tz-chip-btn" data-chip="${c.key}" aria-haspopup="dialog"><span class="tz-chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span></button>`
+        ? `<button type="button" class="tz-chip-btn" data-chip="${c.key}" aria-haspopup="dialog"${nahlad ? ' disabled' : ''}><span class="tz-chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span></button>`
         : `<span class="tz-chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`;
 
 /** Štítky a veta o teraz pod číslom. @param {Model} m @param {Dom} dom */
 function renderSay(m, dom) {
     show(dom.tzSay, !!m.say);
-    // Počas náhľadu iného času sú štítky, veta aj Plán dňa sivé - platia pre teraz. `=== true`:
+    // Počas náhľadu iného času sú štítky, veta aj Plán dňa bledosivé a vypnuté - platia pre teraz
+    // (docs/navrhy/teraz-nahlad-neaktivne.html). Otvorený plán ostane otvorený: leží nad grafom
+    // a zbalený by graf posunul spod prsta. `=== true`:
     // starý shared/teraz.js z cache po nasadení `preview` nemá a toggleAttribute s undefined by
     // značku pri každom prekreslení prepol (CLAUDE.md, Nasadenie a cache).
     const nahlad = m.preview === true;
     dom.tzSay.toggleAttribute('data-nahlad', nahlad);
     dom.tzPlan.toggleAttribute('data-nahlad', nahlad);
+    dom.tzPlanBtn.disabled = nahlad;
     if (!m.say) return;
-    writeHtml(dom.tzChips, m.say.chips.map(chipHtml).join(''), 'tz-chips');
+    writeHtml(dom.tzChips, m.say.chips.map((c) => chipHtml(c, nahlad)).join(''), 'tz-chips');
     dom.tzSayText.textContent = m.say.text;
 }
 
 /**
- * Obsah panelu štítka. @param {import('../../shared/mozem.js').Chip} chip @param {string} nahlad riadok počas náhľadu
+ * Obsah panelu štítka. @param {import('../../shared/mozem.js').Chip} chip
  * @param {Dom} dom @param {ReturnType<typeof textsOf>} T
  */
-function fillChipSheet(chip, nahlad, dom, T) {
+function fillChipSheet(chip, dom, T) {
     dom.tzChipTag.dataset.tone = chip.tone;
     dom.tzChipTag.textContent = chip.text;
     dom.tzChipTitle.textContent = chip.info.title;
     show(dom.tzChipNow, chip.info.now !== '');
     dom.tzChipNow.textContent = chip.info.now;
-    show(dom.tzChipNahlad, nahlad !== '');
-    dom.tzChipNahlad.textContent = nahlad;
     dom.tzChipQ.textContent = T.chipWhy;
     dom.tzChipWhy.textContent = chip.info.why;
     dom.tzChipClose.textContent = T.chipClose;
@@ -121,8 +123,8 @@ const openChip = (key, m) => (key && m?.say ? (m.say.chips.find((c) => c.key ===
 let chipOpener = null;
 
 /**
- * Panel štítka (docs/navrhy/teraz-odznaky-vysvetlenie.html): štítok, nadpis, čo platí teraz, počas
- * náhľadu iného času riadok, že platí pre teraz, a čo štítok znamená. Otvorený je, kým je v stave
+ * Panel štítka (docs/navrhy/teraz-odznaky-vysvetlenie.html): štítok, nadpis, čo platí teraz, a čo
+ * štítok znamená. Otvorený je, kým je v stave
  * a karta má taký štítok - keď štítok zmizne (pásmo sa zmenilo, iná karta), panel sa zavrie.
  * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
  */
@@ -130,7 +132,7 @@ function renderChipSheet(state, m, dom) {
     const chip = openChip(state.tzChip, m);
     const d = dom.tzChipSheet;
     if (chip) {
-        fillChipSheet(chip, m?.say?.nahlad || '', dom, textsOf(state));
+        fillChipSheet(chip, dom, textsOf(state));
         if (!d.open) {
             d.showModal();
             chipOpener = chip.key;

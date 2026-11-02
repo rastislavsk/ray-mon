@@ -3350,7 +3350,9 @@ test.describe('Plán dňa na karte Teraz', () => {
 });
 
 test.describe('štítky na karte Teraz', () => {
-    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
+    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú; v náhľade sú vypnuté', async ({
+        page,
+    }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const errors = await openApp(page);
         await ocakavajKartu(page, 'terazky');
@@ -3367,7 +3369,6 @@ test.describe('štítky na karte Teraz', () => {
             await expect(page.locator('#tz-chip-now')).toHaveText(c.info.now);
             await expect(page.locator('#tz-chip-q')).toHaveText('Čo to znamená');
             await expect(page.locator('#tz-chip-why')).toHaveText(c.info.why);
-            await expect(page.locator('#tz-chip-nahlad')).toBeHidden();
             // Zavrieť vráti fokus na štítok, z ktorého sa panel otvoril.
             await page.locator('#tz-chip-close').click();
             await expect(panel).toBeHidden();
@@ -3385,13 +3386,25 @@ test.describe('štítky na karte Teraz', () => {
         await page.goBack();
         await expect(panel).toBeHidden();
         await ocakavajKartu(page, 'terazky');
-        // Počas náhľadu iného času panel povie, že štítky platia pre teraz.
+        // Počas náhľadu iného času sú štítky aj hlavička Plánu dňa vypnuté (docs/navrhy/teraz-nahlad-neaktivne.html):
+        // ťuknutie panel neotvorí a plán sa nerozbalí ani nezbalí. Otvorený plán ostane otvorený.
+        const plan = page.locator('#tz-plan-btn');
+        await plan.click();
+        await expect(plan).toHaveAttribute('aria-expanded', 'true');
         await page.locator('#tz-chart').focus();
         await page.keyboard.press('ArrowRight');
-        await stitok('stav').click();
-        await expect(page.locator('#tz-chip-nahlad')).toHaveText('Platí pre teraz (13:00), nie pre 13:15.');
-        await page.keyboard.press('Escape');
+        for (const c of chips) await expect(stitok(c.key)).toBeDisabled();
+        await expect(plan).toBeDisabled();
+        await stitok('stav').click({ force: true });
         await expect(panel).toBeHidden();
+        await plan.click({ force: true });
+        await expect(plan).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        // „Späť na teraz“ ich znova zapne.
+        await page.locator('#tz-reset').click();
+        await expect(plan).toBeEnabled();
+        await stitok('stav').click();
+        await expect(panel).toBeVisible();
         expect(errors).toEqual([]);
     });
 });

@@ -351,11 +351,24 @@ test('nastavenie uložené súčasnou appkou nová appka vidí a nič v ňom nem
     expect(errors).toEqual([]);
 });
 
-/** Závažné a kritické nálezy axe v celej stránke. @param {import('@playwright/test').Page} page @returns {Promise<string[]>} */
-const vazneNalezy = async (page) =>
-    (await new AxeBuilder({ page }).analyze()).violations
+/**
+ * Závažné a kritické nálezy axe v celej stránke. `vynechajKontrast`: prvky, na ktorých sa nemeria kontrast
+ * (vypnuté a zámerne bledé), ostatné pravidlá na nich platia.
+ * @param {import('@playwright/test').Page} page @param {{ vynechajKontrast?: string }} [opts] @returns {Promise<string[]>}
+ */
+const vazneNalezy = async (page, { vynechajKontrast } = {}) => {
+    const runs = vynechajKontrast
+        ? [
+              new AxeBuilder({ page }).disableRules(['color-contrast']),
+              new AxeBuilder({ page }).withRules(['color-contrast']).exclude(vynechajKontrast),
+          ]
+        : [new AxeBuilder({ page })];
+    const nalezy = [];
+    for (const axe of runs) nalezy.push(...(await axe.analyze()).violations);
+    return nalezy
         .filter((v) => v.impact === 'serious' || v.impact === 'critical')
         .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+};
 
 test('prístupnosť: žiadne závažné nálezy axe na žiadnej karte', async ({ page }) => {
     test.slow();
@@ -1129,7 +1142,9 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
+    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú; v náhľade sú vypnuté', async ({
+        page,
+    }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
@@ -1146,7 +1161,6 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-chip-now')).toHaveText(c.info.now);
             await expect(page.locator('#tz-chip-q')).toHaveText('Čo to znamená');
             await expect(page.locator('#tz-chip-why')).toHaveText(c.info.why);
-            await expect(page.locator('#tz-chip-nahlad')).toBeHidden();
             expect(await vazneNalezy(page)).toEqual([]);
             // Zavrieť vráti fokus na štítok, z ktorého sa panel otvoril.
             await page.locator('#tz-chip-close').click();
@@ -1165,13 +1179,25 @@ test.describe('karta Teraz', () => {
         await page.goBack();
         await expect(panel).toBeHidden();
         await ocakavajKartu(page, 'terazky');
-        // Počas náhľadu iného času panel povie, že štítky platia pre teraz.
+        // Počas náhľadu iného času sú štítky aj hlavička Plánu dňa vypnuté (docs/navrhy/teraz-nahlad-neaktivne.html):
+        // ťuknutie panel neotvorí a plán sa nerozbalí ani nezbalí. Otvorený plán ostane otvorený.
+        const plan = page.locator('#tz-plan-btn');
+        await plan.click();
+        await expect(plan).toHaveAttribute('aria-expanded', 'true');
         await page.locator('#tz-chart').focus();
         await page.keyboard.press('ArrowRight');
-        await stitok('stav').click();
-        await expect(page.locator('#tz-chip-nahlad')).toHaveText('Platí pre teraz (13:00), nie pre 13:15.');
-        await page.keyboard.press('Escape');
+        for (const c of chips) await expect(stitok(c.key)).toBeDisabled();
+        await expect(plan).toBeDisabled();
+        await stitok('stav').click({ force: true });
         await expect(panel).toBeHidden();
+        await plan.click({ force: true });
+        await expect(plan).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        // „Späť na teraz“ ich znova zapne.
+        await page.locator('#tz-reset').click();
+        await expect(plan).toBeEnabled();
+        await stitok('stav').click();
+        await expect(panel).toBeVisible();
         expect(errors).toEqual([]);
     });
 
@@ -1456,7 +1482,10 @@ test.describe('karta Teraz', () => {
         await page.locator('#tz-chart').focus();
         await page.keyboard.press('ArrowRight');
         await expect(page.locator('#tz-reset')).toBeVisible();
-        expect(await vazneNalezy(page)).toEqual([]);
+        // Štítky, veta a Plán dňa sú v náhľade vypnuté a zámerne bledé (docs/navrhy/teraz-nahlad-neaktivne.html):
+        // v zvolenom čase neplatia. Kontrast sa na ne nemeria, všetko ostatné áno - aj kontrast zvyšku stránky.
+        await expect(page.locator('[data-nahlad]')).toHaveCount(2);
+        expect(await vazneNalezy(page, { vynechajKontrast: '[data-nahlad]' })).toEqual([]);
         await openTeraz(page, { offline: true });
         expect(await vazneNalezy(page)).toEqual([]);
     });
