@@ -40,6 +40,7 @@ const step = (patch = {}) => ({
     fold: null,
     plan: false,
     legend: false,
+    chip: null,
     ...patch,
 });
 
@@ -207,6 +208,23 @@ test('zoznam pod grafom (legenda): otvorený je krok navigácie, Späť a iná k
     assert.equal(navChange(open, step({ panel: 'terazky' })).tzListOpen, false);
     assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', legend: true })).tzListOpen, true);
     assert.equal(panelChange('terazky', 'mozem').tzListOpen, false);
+});
+
+test('panel štítka na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {
+    assert.equal(stateWith().tzChip, null);
+    const open = stateWith({ panel: 'terazky', tzChip: 'stav' });
+    assert.equal(navStep(open).chip, 'stav');
+    assert.deepEqual(navStepOf(navStep(open)), navStep(open));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzChip: null })));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzChip: 'siet' })));
+    // Patrí karte Teraz, v prehľade so stĺpcami ktorémukoľvek stĺpcu; cudzia hodnota panel nemá.
+    assert.equal(field({ panel: 'mozem', chip: 'stav' }, 'chip'), null);
+    assert.equal(field({ panel: 'mozem', chip: 'stav', dash: true }, 'chip'), 'stav');
+    assert.equal(field({ panel: 'terazky', chip: 'iny' }, 'chip'), null);
+    assert.equal(field({ panel: 'terazky' }, 'chip'), null);
+    assert.equal(navChange(open, step({ panel: 'terazky' })).tzChip, null);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', chip: 'siet' })).tzChip, 'siet');
+    assert.equal(panelChange('terazky', 'mozem').tzChip, null);
 });
 
 test('navChange: v prehľade návrat na krok prehľadu nechá aktívny stĺpec', () => {

@@ -110,6 +110,10 @@ async function rozbal(page, key) {
 async function kazdaKarta(page, check) {
     await karta(page, 'terazky');
     await check('Teraz');
+    await page.locator('#tz-chips [data-chip="stav"]').click();
+    await expect(page.locator('#tz-chip-sheet')).toBeVisible();
+    await check('Teraz › panel štítka');
+    await page.locator('#tz-chip-close').click();
 
     await karta(page, 'mozem');
     await check('Dnes');

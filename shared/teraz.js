@@ -16,6 +16,7 @@ import {
     terazBandNext,
     terazBandText,
     terazChartText,
+    terazChipNahlad,
     terazClearText,
     terazCloudText,
     terazKwText,
@@ -80,10 +81,19 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         chart: chartOf(input, plan, hero, now),
         // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        say: { chips: m.chips, text: m.say },
+        say: sayOf(m, hero, now),
         plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
         pocasie: pocasieOf(input, hero),
     };
+}
+
+/**
+ * Štítky a veta pod číslom. Panel štítka počas náhľadu iného času povie, že platí pre teraz
+ * (`nahlad`, inak prázdny).
+ * @param {ReturnType<typeof mozemModel>} m @param {ReturnType<typeof heroModel>} hero zvolený čas @param {ReturnType<typeof heroModel>} now teraz
+ */
+function sayOf(m, hero, now) {
+    return { chips: m.chips, text: m.say, nahlad: hero.preview ? terazChipNahlad(now.minutes, hero.minutes) : '' };
 }
 
 /**
@@ -160,7 +170,7 @@ function empty(kind, estimate) {
         guess: false,
         chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),
         hint: { text: '', reset: false },
-        say: /** @type {{ chips: import('./mozem.js').Chip[], text: string } | null} */ (null),
+        say: /** @type {{ chips: import('./mozem.js').Chip[], text: string, nahlad: string } | null} */ (null),
         plan: /** @type {(NonNullable<import('./mozem.js').MozemModelPlan> & { head: { lead: string, then: string } }) | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
     };

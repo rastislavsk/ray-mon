@@ -43,6 +43,17 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
     setText(dom.tzReset, TERAZ_TEXTS.reset);
 }
 
+/**
+ * Štítok pod číslom je tlačidlo, ťuknutie otvorí jeho panel. Tlačidlo je rám s dotykovou plochou,
+ * štítok v ňom vyzerá ako doteraz. Starý shared/mozem.js z cache po nasadení štítku kľúč ani panel
+ * nedáva - vtedy je štítok len nápis (CLAUDE.md, Nasadenie a cache).
+ * @param {import('../../../shared/mozem.js').Chip} c
+ */
+const chipHtml = (c) =>
+    c.key && c.info
+        ? `<button type="button" class="chip-btn" data-chip="${c.key}" aria-haspopup="dialog"><span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span></button>`
+        : `<span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`;
+
 /** Štítky a veta o teraz pod číslom. @param {Model} m @param {Dom} dom */
 function renderSay(m, dom) {
     show(dom.tzSay, !!m.say);
@@ -52,11 +63,57 @@ function renderSay(m, dom) {
     const nahlad = m.preview === true;
     dom.tzSay.toggleAttribute('data-nahlad', nahlad);
     dom.tzPlan.toggleAttribute('data-nahlad', nahlad);
-    setHtml(
-        dom.tzChips,
-        m.say ? m.say.chips.map((c) => `<span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>`).join('') : '',
-    );
+    setHtml(dom.tzChips, m.say ? m.say.chips.map(chipHtml).join('') : '');
     setText(dom.tzSayText, m.say ? m.say.text : '');
+}
+
+/**
+ * Obsah panelu štítka. @param {import('../../../shared/mozem.js').Chip} chip @param {string} nahlad riadok počas náhľadu
+ * @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS
+ */
+function fillChipSheet(chip, nahlad, dom, TERAZ_TEXTS) {
+    dom.tzChipTag.dataset.tone = chip.tone;
+    setText(dom.tzChipTag, chip.text);
+    setText(dom.tzChipTitle, chip.info.title);
+    show(dom.tzChipNow, chip.info.now !== '');
+    setText(dom.tzChipNow, chip.info.now);
+    show(dom.tzChipNahlad, nahlad !== '');
+    setText(dom.tzChipNahlad, nahlad);
+    setText(dom.tzChipQ, TERAZ_TEXTS.chipWhy);
+    setText(dom.tzChipWhy, chip.info.why);
+    setText(dom.tzChipClose, TERAZ_TEXTS.chipClose);
+}
+
+/**
+ * Štítok, ktorého panel je otvorený - null, keď nie je otvorený žiadny alebo ho karta práve nemá.
+ * @param {string | null} key @param {Model | null} m @returns {import('../../../shared/mozem.js').Chip | null}
+ */
+const openChip = (key, m) => (key && m?.say ? (m.say.chips.find((c) => c.key === key && c.info) ?? null) : null);
+
+/** Štítok, ktorého panel bol otvorený - po zatvorení naň vráti fokus. @type {string | null} */
+let chipOpener = null;
+
+/**
+ * Panel štítka (docs/navrhy/teraz-odznaky-vysvetlenie.html): štítok, nadpis, čo platí teraz, počas
+ * náhľadu iného času riadok, že platí pre teraz, a čo štítok znamená. Otvorený je, kým je v stave
+ * a karta má taký štítok - keď štítok zmizne (pásmo sa zmenilo, iná karta), panel sa zavrie.
+ * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS
+ */
+function renderChipSheet(state, m, dom, TERAZ_TEXTS) {
+    const chip = openChip(state.tzChip, m);
+    const d = dom.tzChipSheet;
+    if (chip) {
+        fillChipSheet(chip, m?.say?.nahlad || '', dom, TERAZ_TEXTS);
+        if (!d.open) {
+            d.showModal();
+            chipOpener = chip.key;
+        }
+    } else if (d.open) {
+        d.close();
+        const btn = chipOpener ? dom.tzChips.querySelector(`[data-chip="${chipOpener}"]`) : null;
+        if (btn instanceof HTMLElement && shows(state, 'terazky')) btn.focus();
+        chipOpener = null;
+    }
 }
 
 /**
@@ -118,8 +175,11 @@ function renderPlan(plan, open, dom) {
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTeraz(state, dom) {
-    if (!shows(state, 'terazky')) return;
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
+    if (!shows(state, 'terazky')) {
+        renderChipSheet(state, null, dom, TERAZ_TEXTS);
+        return;
+    }
     const m = terazModel(
         { ...state, previewMinutes: state.terazPreview },
         { online: state.online, voice: state.voice, devices: state.doma },
@@ -149,6 +209,7 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, TERAZ_TEXTS.askText);
     setText(dom.tzAskBtn, TERAZ_TEXTS.askBtn);
     renderSay(m, dom);
+    renderChipSheet(state, m, dom, TERAZ_TEXTS);
     renderPlan(m.plan, state.tzPlanOpen, dom);
     renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
 }

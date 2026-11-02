@@ -1129,6 +1129,52 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
+    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        const chips = terazModel(vstupTeraz(time)).say?.chips ?? [];
+        expect(chips.map((c) => c.key)).toEqual(['stav', 'siet']);
+        const panel = page.locator('#tz-chip-sheet');
+        const stitok = (/** @type {string} */ key) => page.locator(`#tz-chips [data-chip="${key}"]`);
+        await expect(panel).toBeHidden();
+        for (const c of chips) {
+            await stitok(c.key).click();
+            await expect(panel).toBeVisible();
+            await expect(page.locator('#tz-chip-tag')).toHaveText(c.text);
+            await expect(page.locator('#tz-chip-title')).toHaveText(c.info.title);
+            await expect(page.locator('#tz-chip-now')).toHaveText(c.info.now);
+            await expect(page.locator('#tz-chip-q')).toHaveText('Čo to znamená');
+            await expect(page.locator('#tz-chip-why')).toHaveText(c.info.why);
+            await expect(page.locator('#tz-chip-nahlad')).toBeHidden();
+            expect(await vazneNalezy(page)).toEqual([]);
+            // Zavrieť vráti fokus na štítok, z ktorého sa panel otvoril.
+            await page.locator('#tz-chip-close').click();
+            await expect(panel).toBeHidden();
+            await expect(stitok(c.key)).toBeFocused();
+        }
+        await stitok('stav').click();
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        // Ťuknutie vedľa panelu (na stmavenú stránku nad ním) trafí dialóg a zavrie ho.
+        await stitok('stav').click();
+        await page.mouse.click(187, 60);
+        await expect(panel).toBeHidden();
+        // Tlačidlo Späť v telefóne panel zavrie a ostane na karte.
+        await stitok('siet').click();
+        await page.goBack();
+        await expect(panel).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
+        // Počas náhľadu iného času panel povie, že štítky platia pre teraz.
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('ArrowRight');
+        await stitok('stav').click();
+        await expect(page.locator('#tz-chip-nahlad')).toHaveText('Platí pre teraz (13:00), nie pre 13:15.');
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
     test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz; v súčasnej appke plagát na zajtra', async ({
         page,
     }) => {
