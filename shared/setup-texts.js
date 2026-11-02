@@ -2,7 +2,7 @@
 // zhrnutia. Obe appky ich kreslia každá po svojom (web/render/nastavenie.js, obloha/web/render/),
 // ale pýtajú sa rovnako - preto sú texty tu, na jednom mieste. Žiadne HTML, len reťazce a dáta.
 
-import { acClips, installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
+import { installedKw, SETTINGS_LIMITS, SETUP } from './config.js';
 import { fmt2, hoursText, kwpText, minutesToTimeStr } from './format.js';
 import { checkSettings, sameSettings, settingsHint, siteMetaText, totalPanels } from './settings.js';
 import { SETUP_SECTIONS, setupSection } from './setup.js';
@@ -555,25 +555,18 @@ export function priceCheck(t) {
 // ---- Zhrnutie a prehľad elektrárne ---------------------------------------------------
 
 /**
- * Karta elektrárne: meno, celkový výkon, plochy pre ružicu a panely s meničom pre obrázok vedľa
- * nej. `clip` - menič za jasných dní oreže špičky (acClips), `cap` slovo pod meničom. Bez úplného nastavenia (chýba výkon
- * alebo poloha) null.
+ * Karta elektrárne: meno, celkový výkon a plochy pre ružicu (popis pre čítačku, pologuľa). Bez
+ * úplného nastavenia (chýba výkon alebo poloha) null.
  * @param {Settings} s
  */
 export function plantHero(s) {
     const check = checkSettings(s);
     if (check.kwp === null || !hasSite(s)) return null;
-    const ac = kwText(s.plant.acLimitKw);
-    const clip = acClips(s.plant);
     return {
         name: s.site.name,
         kwp: check.kwp,
-        ac,
-        clip,
         south: s.site.lat < 0,
         planes: `Plochy panelov: ${s.plant.strings.map((x) => `${dirName(x.azimuthDeg).toLowerCase()} ${x.panels} panelov`).join(', ')}`,
-        cap: clip ? 'oreže' : 'menič',
-        kit: `${totalPanels(s)} panelov po ${Math.round(s.plant.panelWp)} Wp, menič ${ac}${clip ? ', za jasných dní oreže špičky' : ''}`,
     };
 }
 

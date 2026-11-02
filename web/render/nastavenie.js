@@ -125,8 +125,7 @@ function summaryRows(s, state) {
         .join('');
 }
 
-/** Karta elektrárne nad riadkami: meno a celkový výkon, pod nimi panely s meničom a vpravo
- * ružica plôch. @param {Settings} s */
+/** Karta elektrárne nad riadkami: vľavo ružica plôch, vpravo meno a celkový výkon. @param {Settings} s */
 function heroHtml(s) {
     const h = plantHero(s);
     if (!h) return `<div class="hero-t"><div class="big">– kWp</div></div>`;

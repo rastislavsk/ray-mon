@@ -14,7 +14,7 @@ import { SETUP_ICONS } from '../icons.js';
 import { writeHtml } from '../memo.js';
 import { qrPainter } from '../qr.js';
 import { savedSettings } from '../state.js';
-import { plantFiguresSvg, tariffMiniSvg } from '../svg.js';
+import { plantRoseSvg, tariffMiniSvg } from '../svg.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -27,13 +27,11 @@ const FARBA = { label: 'Farba pozadia podľa ceny', small: 'vypni pre pokojnú �
 export const miniTariff = (t, i = 0) => tariffMiniSvg(dayRingModel(scheduleTiers(t, t.schedules[i])));
 
 /**
- * Karta elektrárne (Nastavenie aj zhrnutie sprievodcu): text vľavo hore, pod ním panely
- * s meničom, vpravo ružica plôch.
- * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {import('../svg.js').PlantFigures} h
+ * Karta elektrárne (Nastavenie aj zhrnutie sprievodcu): vľavo ružica plôch, vpravo výkon.
+ * @param {string} text @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {{ south: boolean, planes: string }} h
  */
 export function heroGrid(text, strings, h) {
-    const f = plantFiguresSvg(strings, h);
-    return `<div class="hero-g">${text}${f.rose}${f.kit}</div>`;
+    return `<div class="hero-g">${plantRoseSvg(strings, h)}${text}</div>`;
 }
 
 /** @param {HTMLElement} el @param {boolean} on */

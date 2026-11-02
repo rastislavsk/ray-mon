@@ -1,7 +1,7 @@
 // Skladanie SVG reťazcov z modelov (shared/chart-model.js). Žiadne výpočty, iba zápis.
 // Farby idú cez CSS triedy (style.css), nie cez atribúty.
 
-import { compassPoint, planesKitModel, planesRoseModel, RING, smoothPath } from '../shared/chart-model.js';
+import { compassPoint, planesRoseModel, RING, smoothPath } from '../shared/chart-model.js';
 import { escapeHtml } from '../shared/format.js';
 import { dirShort } from '../shared/setup-texts.js';
 
@@ -162,41 +162,11 @@ function planesRoseSvg(m, label) {
 }
 
 /**
- * Panely a menič vedľa ružice: skupiny panelov podľa plôch, čiara do meniča a menič s výkonom.
- * Keď menič za jasných dní oreže špičky (`clip`), čiara sa pred ním zúži a pod ním je „oreže“.
- * @param {ReturnType<typeof import('../shared/chart-model.js').planesKitModel>} m
- * @param {PlantFigures} h výkon meniča, orezávanie, slovo pod meničom a popis pre čítačku
+ * Ružica plôch karty elektrárne z plôch a modelu karty (plantHero).
+ * @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {{ south: boolean, planes: string }} h
  */
-function planesKitSvg(m, h) {
-    const { cellW: cw, cellH: ch, wire, box } = m;
-    let out = `<svg class="planes-kit${h.clip ? ' clip' : ''}" viewBox="0 0 ${m.width} ${m.height}" width="${m.width}" height="${m.height}" role="img" aria-label="${escapeHtml(h.kit)}">`;
-    for (const g of m.groups) {
-        out += g.cells
-            .map((p) => `<rect class="pv${g.main ? ' main' : ''}" x="${p.x}" y="${p.y}" width="${cw}" height="${ch}" rx="1"/>`)
-            .join('');
-        out += `<text class="lbl" x="${n(g.labelX)}" y="${m.labelY}">${dirShort(g.az)} ${g.panels}</text>`;
-    }
-    const { x0, x1, y } = wire;
-    out += h.clip
-        ? `<path class="wire" d="M ${x0} ${y - 2.5} L ${x1 - 8} ${y - 2.5} L ${x1} ${y - 0.8} L ${x1} ${y + 0.8} L ${x1 - 8} ${y + 2.5} L ${x0} ${y + 2.5} Z"/>`
-        : `<line class="wire" x1="${x0}" y1="${y}" x2="${x1}" y2="${y}"/>`;
-    const cx = box.x + box.w / 2;
-    out +=
-        `<rect class="inv" x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="7"/>` +
-        `<path class="wave" d="M ${box.x + 12} ${box.y + 12} c 2.5 -5 5 -5 7.5 0 s 5 5 7.5 0 5 -5 5 -2.5"/>` +
-        `<text class="kw" x="${cx}" y="${box.y + box.h - 7}">${escapeHtml(h.ac)}</text>` +
-        `<text class="cap" x="${cx}" y="${m.labelY}">${escapeHtml(h.cap)}</text>`;
-    return `${out}</svg>`;
-}
-
-/** @typedef {{ ac: string, clip: boolean, cap: string, kit: string, south: boolean, planes: string }} PlantFigures */
-
-/**
- * Obe kresby karty elektrárne z plôch a modelu karty (plantHero): ružica plôch a panely s meničom.
- * @param {Array<{ panels: number, azimuthDeg: number }>} strings @param {PlantFigures} h
- */
-export function plantFiguresSvg(strings, h) {
-    return { rose: planesRoseSvg(planesRoseModel(strings, h.south), h.planes), kit: planesKitSvg(planesKitModel(strings), h) };
+export function plantRoseSvg(strings, h) {
+    return planesRoseSvg(planesRoseModel(strings, h.south), h.planes);
 }
 
 /** Malý kompas so šípkou - smer plochy v zhrnutí a v prehľade plôch. @param {number} azDeg */
