@@ -1500,9 +1500,6 @@ export function mozemNetInfo(level, run, voice = 'drzy') {
     return { title, now, why: chipTexts(voice).why[level] };
 }
 
-/** Riadok panelu štítka počas náhľadu iného času: štítky hovoria o teraz. @param {number} nowMin @param {number} previewMin */
-export const terazChipNahlad = (nowMin, previewMin) => `Platí pre teraz (${hm(nowMin)}), nie pre ${hm(previewMin)}.`;
-
 /**
  * Hodnota grafu pre čítačku (posúvač): čas, výkon a čo vtedy platí.
  * @param {number} min @param {boolean} preview @param {string} kwText @param {import('./day-chart.js').Tone} tone

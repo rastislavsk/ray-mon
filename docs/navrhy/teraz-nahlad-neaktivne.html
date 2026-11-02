@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: štítky a Plán dňa počas náhľadu</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky, farby a rozmery sú odpísané zo style.css a obloha/style.css. Čísla a časy sú
+               ukážkové (13:00 teraz, náhľad 17:30), nie výpočet jadra. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --ink-70: rgba(242, 240, 234, 0.94);
+                --ink-45: rgba(242, 240, 234, 0.64);
+                --ink-20: rgba(242, 240, 234, 0.26);
+                --ink-12: rgba(242, 240, 234, 0.16);
+                --green: #9ef25b;
+                --amber: #ffc24b;
+                --red: #ff6b57;
+                --on-color: #0b0b0b;
+                --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+                --body: 'Space Grotesk', system-ui, sans-serif;
+                --glass: rgba(10, 18, 40, 0.42);
+                --dim: rgba(255, 255, 255, 0.82);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #050505;
+                color: var(--ink);
+                font-family: var(--body);
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 32px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            .lead {
+                max-width: 800px;
+                color: var(--ink-45);
+                margin: 8px 0 0;
+            }
+            .lead b {
+                color: var(--ink);
+            }
+
+            /* Prepínač stavu nad telefónmi */
+            .ctl {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px 28px;
+                margin-top: 18px;
+                padding: 14px 16px;
+                border: 1px solid var(--ink-12);
+                border-radius: 14px;
+                background: #0e0e0d;
+            }
+            .ctl fieldset {
+                border: 0;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+            }
+            .ctl legend {
+                float: left;
+                margin-right: 8px;
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .ctl label {
+                cursor: pointer;
+            }
+            .ctl input {
+                position: absolute;
+                opacity: 0;
+            }
+            .ctl span {
+                display: inline-block;
+                padding: 5px 11px;
+                border: 1px solid var(--ink-20);
+                border-radius: 999px;
+                font-size: 13px;
+                color: var(--ink-70);
+            }
+            .ctl input:checked + span {
+                background: var(--ink);
+                color: var(--on-color);
+                border-color: var(--ink);
+            }
+            .ctl input:focus-visible + span {
+                outline: 2px solid var(--green);
+                outline-offset: 2px;
+            }
+
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                justify-content: center;
+            }
+            .col {
+                display: grid;
+                gap: 10px;
+                justify-items: center;
+                width: min(100%, 360px);
+            }
+            .col h3 {
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .phone {
+                position: relative;
+                width: 100%;
+                border: 1px solid var(--ink-12);
+                border-radius: 34px;
+                overflow: hidden;
+                padding: 22px 18px 18px;
+            }
+            .phone.a {
+                background: #0a0a0a;
+            }
+            .phone.b {
+                background: linear-gradient(180deg, #3d78c8 0%, #79a9de 55%, #b9d3ee 100%);
+                font-family: 'Archivo', var(--body);
+            }
+            .kick {
+                font-family: var(--mono);
+                font-size: 11px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: var(--ink-45);
+            }
+            .phone.b .kick {
+                color: #fff;
+            }
+            .num {
+                margin: 2px 0 0;
+                font-size: 58px;
+                font-weight: 700;
+                letter-spacing: -0.04em;
+                line-height: 1;
+            }
+            .num small {
+                font-size: 18px;
+                margin-left: 4px;
+                letter-spacing: 0;
+            }
+            .src {
+                margin: 4px 0 0;
+                font-size: 14px;
+                color: var(--ink-45);
+            }
+            .phone.b .src {
+                color: #fff;
+            }
+
+            /* Štítky a veta (blok, ktorý v náhľade sivne) */
+            .say {
+                margin-top: 14px;
+            }
+            .phone.b .say {
+                padding: 12px 14px;
+                border-radius: 22px;
+                background: var(--glass);
+            }
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0 8px;
+            }
+            .chip-btn {
+                display: inline-flex;
+                align-items: center;
+                min-height: 44px;
+                padding: 0;
+                border: 0;
+                background: none;
+                color: inherit;
+                font: inherit;
+                cursor: pointer;
+            }
+            .chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                font-family: var(--mono);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--on-color);
+            }
+            .chip[data-tone='go'] {
+                background: var(--green);
+            }
+            .chip[data-tone='cheap'] {
+                background: var(--amber);
+            }
+            .chip-btn .chip::after {
+                content: 'i';
+                width: 13px;
+                height: 13px;
+                border: 1.2px solid currentColor;
+                border-radius: 50%;
+                font-size: 9px;
+                line-height: 11px;
+                letter-spacing: 0;
+                text-align: center;
+                text-transform: none;
+                opacity: 0.75;
+            }
+            .say p {
+                margin: 4px 0 0;
+                font-size: 19px;
+                font-weight: 500;
+                line-height: 1.3;
+            }
+
+            /* Plán dňa */
+            .plan {
+                margin-top: 16px;
+                border-radius: 24px;
+                color: var(--on-color);
+                background: linear-gradient(165deg, var(--green) 0%, var(--amber) 60%, var(--red) 100%);
+            }
+            .phone.b .plan {
+                color: #fff;
+                background: var(--glass);
+            }
+            .plan-head {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 48px;
+                padding: 14px 12px 14px 18px;
+                border: 0;
+                background: none;
+                color: inherit;
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
+            }
+            .plan-t {
+                flex: 1;
+            }
+            .plan-ttl {
+                display: block;
+                font-family: var(--mono);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+            }
+            .plan-lead {
+                display: block;
+                margin-top: 4px;
+                font-size: 22px;
+                font-weight: 700;
+                line-height: 1.05;
+                letter-spacing: -0.03em;
+            }
+            .chev {
+                flex: none;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(0, 0, 0, 0.12);
+                display: grid;
+                place-items: center;
+            }
+            .phone.b .chev {
+                background: rgba(255, 255, 255, 0.16);
+            }
+            .chev::before {
+                content: '';
+                width: 8px;
+                height: 8px;
+                margin-top: -4px;
+                border: solid currentColor;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+            .plan[data-open] .chev::before {
+                margin-top: 4px;
+                transform: rotate(-135deg);
+            }
+            .plan-body {
+                display: none;
+                padding: 0 18px 16px;
+            }
+            .plan[data-open] .plan-body {
+                display: block;
+            }
+            .plan-body div {
+                display: flex;
+                justify-content: space-between;
+                padding: 7px 0 6px;
+                border-top: 2px solid rgba(0, 0, 0, 0.85);
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .phone.b .plan-body div {
+                border-top-color: rgba(255, 255, 255, 0.35);
+            }
+
+            /* Graf dňa so zvoleným časom (len náznak) */
+            .chart {
+                position: relative;
+                height: 120px;
+                margin-top: 16px;
+                border-radius: 18px;
+                background: #121311;
+                overflow: hidden;
+            }
+            .phone.b .chart {
+                background: var(--glass);
+            }
+            .chart svg {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+            }
+            .cur {
+                position: absolute;
+                top: 8px;
+                bottom: 8px;
+                width: 2px;
+                background: #fff;
+                transition: left 0.25s;
+            }
+            .cur b {
+                position: absolute;
+                top: -2px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 1px 6px;
+                border-radius: 6px;
+                background: #fff;
+                color: #000;
+                font-family: var(--mono);
+                font-size: 10px;
+            }
+            .reset {
+                display: none;
+                margin: 8px 0 0 auto;
+                padding: 6px 12px;
+                border: 1px solid var(--ink-20);
+                border-radius: 999px;
+                background: none;
+                color: inherit;
+                font: inherit;
+                font-size: 13px;
+            }
+            .phone[data-nahlad] .reset {
+                display: block;
+            }
+            .phone.b .reset {
+                border-color: rgba(255, 255, 255, 0.6);
+                color: #fff;
+            }
+
+            /* Náhľad: dnes 0.75, návrh 0.5 - viď stĺpec „Náhľad“ v prepínači */
+            .phone[data-nahlad] .say,
+            .phone[data-nahlad] .plan {
+                filter: grayscale(1);
+                opacity: var(--nahlad-op, 0.5);
+            }
+            .phone[data-nahlad][data-ver='dnes'] {
+                --nahlad-op: 0.75;
+            }
+            /* Návrh: štítok bez „i“ a bez reakcie, hlavička plánu bez šípky a bez reakcie */
+            .phone[data-nahlad][data-ver='navrh'] .chip-btn {
+                cursor: default;
+            }
+            .phone[data-nahlad][data-ver='navrh'] .chip-btn .chip::after {
+                display: none;
+            }
+            .phone[data-nahlad][data-ver='navrh'] .plan-head {
+                cursor: default;
+            }
+            .phone[data-nahlad][data-ver='navrh'] .chev {
+                visibility: hidden;
+            }
+
+            /* Hláška ukážky: čo by spravilo ťuknutie */
+            .toast {
+                position: absolute;
+                left: 14px;
+                right: 14px;
+                bottom: 14px;
+                padding: 10px 14px;
+                border-radius: 14px;
+                background: #1b1c1a;
+                border: 1px solid var(--ink-12);
+                color: var(--ink);
+                font-family: var(--body);
+                font-size: 13px;
+                opacity: 0;
+                transform: translateY(8px);
+                transition:
+                    opacity 0.2s,
+                    transform 0.2s;
+                pointer-events: none;
+            }
+            .toast.on {
+                opacity: 1;
+                transform: none;
+            }
+
+            /* Text */
+            section > h2 {
+                font-size: 22px;
+                margin-bottom: 10px;
+            }
+            .rules {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 14px;
+            }
+            .rule {
+                padding: 16px 18px;
+                border: 1px solid var(--ink-12);
+                border-radius: 16px;
+                background: #0e0e0d;
+            }
+            .rule h3 {
+                font-size: 16px;
+                margin-bottom: 6px;
+            }
+            .rule p,
+            .rule li {
+                margin: 0;
+                color: var(--ink-45);
+                font-size: 14px;
+            }
+            .rule ul {
+                margin: 6px 0 0;
+                padding-left: 18px;
+            }
+            .rule b,
+            .rule code {
+                color: var(--ink);
+            }
+            code {
+                font-family: var(--mono);
+                font-size: 12px;
+            }
+            .ops {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-top: 10px;
+            }
+            .ops div {
+                flex: 1 1 140px;
+                padding: 10px 12px;
+                border-radius: 12px;
+                background: #0a0a0a;
+                border: 1px solid var(--ink-12);
+                text-align: center;
+                font-size: 13px;
+                color: var(--ink-45);
+            }
+            .ops .sw {
+                display: inline-block;
+                margin-bottom: 6px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: var(--green);
+                color: var(--on-color);
+                font-family: var(--mono);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.12em;
+                filter: grayscale(1);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Štítky a Plán dňa počas náhľadu iného času</h1>
+                <p class="lead">
+                    Keď človek na grafe dňa posunie čas mimo <b>teraz</b>, štítky, veta pod nimi a Plán dňa už dnes sivnú – hovoria o teraz,
+                    nie o zvolenom čase. Návrh ich v náhľade <b>zbledne o 25 %</b> a <b>vypne</b>: štítok neotvorí panel a Plán dňa sa nedá
+                    rozbaliť ani zbaliť. Platí pre obe appky.
+                </p>
+                <div class="ctl">
+                    <fieldset>
+                        <legend>Čas</legend>
+                        <label><input type="radio" name="cas" value="teraz" /><span>Teraz 13:00</span></label>
+                        <label><input type="radio" name="cas" value="nahlad" checked /><span>Náhľad 17:30</span></label>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Verzia</legend>
+                        <label><input type="radio" name="ver" value="dnes" /><span>Dnes</span></label>
+                        <label><input type="radio" name="ver" value="navrh" checked /><span>Návrh</span></label>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Plán dňa</legend>
+                        <label><input type="radio" name="plan" value="zbaleny" checked /><span>Zbalený</span></label>
+                        <label><input type="radio" name="plan" value="otvoreny" /><span>Otvorený</span></label>
+                    </fieldset>
+                </div>
+                <p class="lead">Ťukni v telefóne na štítok alebo na hlavičku Plánu dňa – hláška dole povie, čo sa stane.</p>
+            </header>
+
+            <div class="phones">
+                <div class="col">
+                    <h3>Súčasná appka</h3>
+                    <div class="phone a"></div>
+                </div>
+                <div class="col">
+                    <h3>Živá obloha</h3>
+                    <div class="phone b"></div>
+                </div>
+            </div>
+
+            <section>
+                <h2>Čo sa mení</h2>
+                <div class="rules">
+                    <div class="rule">
+                        <h3>1. Bledšia sivá</h3>
+                        <p>
+                            Štítky, veta aj Plán dňa ostávajú čiernobiele (<code>grayscale(1)</code>), priehľadnosť klesne z
+                            <code>0.75</code> na <code>0.5</code> – o 25 bodov. V oboch appkách rovnako.
+                        </p>
+                        <div class="ops">
+                            <div><span class="sw" style="opacity: 1">ÁNO</span><br />teraz</div>
+                            <div><span class="sw" style="opacity: 0.75">ÁNO</span><br />dnes v náhľade</div>
+                            <div><span class="sw" style="opacity: 0.5">ÁNO</span><br />návrh</div>
+                        </div>
+                    </div>
+                    <div class="rule">
+                        <h3>2. Štítky bez panelu</h3>
+                        <ul>
+                            <li>
+                                Tlačidlá štítkov dostanú <code>disabled</code> – ťuknutie, myš ani klávesnica nič neotvoria a čítačka povie
+                                „nedostupné“.
+                            </li>
+                            <li>
+                                Zmizne malé <b>„i“</b> – to sľubuje, že sa dá ťuknúť. Štítok sa zúži o „i“ (asi 18 px); začiatok štítku a
+                                riadok pod ním sa nepohnú, rad je zarovnaný vľavo.
+                            </li>
+                            <li>
+                                Riadok „platí pre teraz, nie pre 17:30“ v paneli (<code>#tz-chip-nahlad</code>) už nebude mať kedy svietiť –
+                                zmaže sa z HTML, renderu aj jadra (<code>terazChipNahlad</code>).
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="rule">
+                        <h3>3. Plán dňa zamrznutý</h3>
+                        <ul>
+                            <li>Hlavička plánu dostane <code>disabled</code> a schová šípku – zbalený plán sa nedá otvoriť.</li>
+                            <li>
+                                <b>Otvorený plán ostane otvorený</b> (sivý). Plán leží nad grafom: keby sa pri posune zbalil, graf by
+                                človeku uskočil spod prsta. Zbaliť ho v náhľade tiež nejde.
+                            </li>
+                            <li>„Späť na teraz“ (alebo ťuknutie na teraz v grafe) všetko vráti – farby, „i“, šípku aj ťuknutia.</li>
+                        </ul>
+                    </div>
+                    <div class="rule">
+                        <h3>Kde to bude</h3>
+                        <ul>
+                            <li>
+                                <code>style.css</code> a <code>obloha/style.css</code>: priehľadnosť, skryté „i“ a šípka pod
+                                <code>[data-nahlad]</code>.
+                            </li>
+                            <li>
+                                <code>web/render/terazky.js</code> a <code>obloha/web/render/teraz.js</code>: <code>disabled</code> na
+                                štítkoch a hlavičke plánu podľa <code>m.preview</code>.
+                            </li>
+                            <li>
+                                Jadro sa nemení okrem zmazania riadku pre panel. Posúdi to e2e: v náhľade ťuknutie na štítok panel neotvorí
+                                a hlavička plánu nezmení <code>aria-expanded</code>.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <template id="phone">
+            <div class="kick">Teraz</div>
+            <p class="num"><span data-num>3,4</span><small>kW</small></p>
+            <p class="src" data-src>zo slnka, dom berie 0,6 kW</p>
+            <div class="say">
+                <div class="chips">
+                    <button type="button" class="chip-btn" data-k="chip"><span class="chip" data-tone="go">Áno</span></button>
+                    <button type="button" class="chip-btn" data-k="chip"><span class="chip" data-tone="cheap">Lacná sieť</span></button>
+                </div>
+                <p>Zapni práčku aj umývačku, slnko stačí do 15:40.</p>
+            </div>
+            <section class="plan">
+                <button type="button" class="plan-head" data-k="plan">
+                    <span class="plan-t"
+                        ><span class="plan-ttl">Plán dňa</span><span class="plan-lead">Teraz ide práčka, o 14:30 umývačka.</span></span
+                    >
+                    <span class="chev" aria-hidden="true"></span>
+                </button>
+                <div class="plan-body">
+                    <div><span>Práčka</span><span>teraz</span></div>
+                    <div><span>Umývačka</span><span>14:30</span></div>
+                    <div><span>Bojler</span><span>15:10</span></div>
+                </div>
+            </section>
+            <div class="chart">
+                <svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 112 C60 112 80 30 150 22 C220 30 240 112 300 112 Z" fill="rgba(158,242,91,.35)" />
+                    <path d="M0 112 C60 112 80 30 150 22 C220 30 240 112 300 112" fill="none" stroke="#9ef25b" stroke-width="2" />
+                </svg>
+                <div class="cur" data-cur><b data-curt>17:30</b></div>
+            </div>
+            <button type="button" class="reset" data-k="reset">Späť na teraz</button>
+            <div class="toast" data-toast></div>
+        </template>
+
+        <script>
+            const phones = [...document.querySelectorAll('.phone')];
+            const tpl = /** @type {HTMLTemplateElement} */ (document.getElementById('phone'));
+            for (const p of phones) p.append(tpl.content.cloneNode(true));
+
+            const val = (n) => /** @type {HTMLInputElement} */ (document.querySelector(`input[name="${n}"]:checked`)).value;
+            const setVal = (n, v) => {
+                /** @type {HTMLInputElement} */ (document.querySelector(`input[name="${n}"][value="${v}"]`)).checked = true;
+            };
+
+            function paint() {
+                const nahlad = val('cas') === 'nahlad';
+                const ver = val('ver');
+                const open = val('plan') === 'otvoreny';
+                for (const p of phones) {
+                    p.toggleAttribute('data-nahlad', nahlad);
+                    p.dataset.ver = ver;
+                    p.querySelector('.plan').toggleAttribute('data-open', open);
+                    p.querySelector('[data-num]').textContent = nahlad ? '1,1' : '3,4';
+                    p.querySelector('[data-src]').textContent = nahlad ? 'o 17:30 · odhad' : 'zo slnka, dom berie 0,6 kW';
+                    const cur = /** @type {HTMLElement} */ (p.querySelector('[data-cur]'));
+                    cur.style.left = nahlad ? '72%' : '50%';
+                    p.querySelector('[data-curt]').textContent = nahlad ? '17:30' : '13:00';
+                    const off = nahlad && ver === 'navrh';
+                    p.querySelectorAll('.chip-btn, .plan-head').forEach((b) => b.toggleAttribute('aria-disabled', off));
+                }
+            }
+
+            /** @type {number | undefined} */
+            let tId;
+            function toast(p, text) {
+                const t = p.querySelector('[data-toast]');
+                t.textContent = text;
+                t.classList.add('on');
+                clearTimeout(tId);
+                tId = setTimeout(() => t.classList.remove('on'), 2200);
+            }
+
+            for (const p of phones) {
+                p.addEventListener('click', (e) => {
+                    const b = /** @type {HTMLElement} */ (e.target).closest('[data-k]');
+                    if (!b) return;
+                    const nahlad = val('cas') === 'nahlad';
+                    const off = nahlad && val('ver') === 'navrh';
+                    if (b.dataset.k === 'reset') {
+                        setVal('cas', 'teraz');
+                        paint();
+                        toast(p, 'Späť na teraz – farby aj ťuknutia sú späť.');
+                        return;
+                    }
+                    if (off) {
+                        toast(p, 'Nič sa nestane – v náhľade sú štítky aj plán vypnuté.');
+                        return;
+                    }
+                    if (b.dataset.k === 'chip') {
+                        toast(
+                            p,
+                            nahlad
+                                ? 'Dnes: otvorí panel s riadkom „platí pre teraz, nie pre 17:30“.'
+                                : 'Otvorí panel s vysvetlením štítka.',
+                        );
+                    } else {
+                        setVal('plan', val('plan') === 'otvoreny' ? 'zbaleny' : 'otvoreny');
+                        paint();
+                        toast(p, nahlad ? 'Dnes: plán sa v náhľade rozbalí/zbalí.' : 'Plán dňa sa rozbalí/zbalí.');
+                    }
+                });
+            }
+            document.querySelector('.ctl').addEventListener('change', paint);
+            paint();
+        </script>
+    </body>
+</html>
