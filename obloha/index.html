@@ -830,6 +830,20 @@
             </div>
         </dialog>
 
+        <!-- Panel štítka na karte Teraz: čo platí teraz a čo štítok znamená (docs/navrhy/teraz-odznaky-vysvetlenie.html).
+             Texty sú zo shared/mozem.js, píše ich render/teraz.js. -->
+        <dialog id="tz-chip-sheet" class="sheet chip-sheet" aria-labelledby="tz-chip-title" aria-describedby="tz-chip-now">
+            <div class="sheet-in">
+                <span id="tz-chip-tag" class="chip"></span>
+                <h2 id="tz-chip-title"></h2>
+                <p id="tz-chip-now"></p>
+                <p id="tz-chip-nahlad" class="dim"></p>
+                <p id="tz-chip-q" class="q"></p>
+                <p id="tz-chip-why" class="dim"></p>
+                <button type="button" id="tz-chip-close" class="pbtn ghost"></button>
+            </div>
+        </dialog>
+
         <!-- Vymazať údaje: potvrdenie pred vymazaním všetkého uloženého. Nie je to krok, ktorý sa dá vrátiť. -->
         <dialog id="ns-reset-sheet" class="sheet" aria-labelledby="ns-reset-title" aria-describedby="ns-reset-text">
             <div class="sheet-in">

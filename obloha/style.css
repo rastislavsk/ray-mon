@@ -447,6 +447,44 @@ button.live[aria-expanded='true'] {
     border-color: var(--costly);
     color: #3a0b04;
 }
+/* Štítok pod číslom karty Teraz je tlačidlo, otvorí panel s vysvetlením. Tlačidlo je neviditeľný rám
+   s dotykovou plochou 44 px, štítok v ňom vyzerá ako doteraz; rad tlačidiel je zápornými okrajmi tam,
+   kde boli štítky. Malé „i“ hovorí, že sa naň dá ťuknúť - bez neho by štítok vyzeral ako popis. Znak
+   je v ::after, nie je v texte štítku. */
+.chips:has(.chip-btn) {
+    gap: 2px 8px;
+    margin-block: -10px;
+}
+.chip-btn {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    cursor: pointer;
+}
+.chip-btn .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.chip-btn .chip::after {
+    content: 'i';
+    content: 'i' / '';
+    box-sizing: border-box;
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.5625rem;
+    line-height: 10px;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: none;
+}
 /* Veľké slovo: veľkosť podľa dĺžky ako v návrhu (--word), na úzkom displeji ešte menšia podľa
    najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak
    takmer 1 em (NAHOVNO 0,96 em), preto delenie počtom znakov bez rezervy navyše. */
@@ -2166,6 +2204,20 @@ button.live[aria-expanded='true'] {
     justify-self: stretch;
     text-align: center;
     text-decoration: none;
+}
+/* Panel štítka karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html): to isté tmavé sklo, štítok
+   nad nadpisom, vysvetlenie tlmené. */
+.chip-sheet .chip {
+    justify-self: start;
+}
+.chip-sheet .dim {
+    color: var(--dim);
+}
+.chip-sheet .q {
+    margin-top: 6px;
+}
+.chip-sheet .pbtn {
+    margin-top: 8px;
 }
 
 /* ===== Sprievodca ===== */

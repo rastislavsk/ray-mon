@@ -147,10 +147,13 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta, odpovede aj deň v číslach 
         m.items.map((x) => [x.id, x.short, x.tone]),
         base.items.map((x) => [x.id, x.short, x.tone]),
     );
-    assert.deepEqual(base.chips, [
-        { text: MOZEM_CHIPS.go, tone: 'go' },
-        { text: MOZEM_CHIPS.lacna, tone: 'cheap' },
-    ]);
+    assert.deepEqual(
+        base.chips.map(({ key, text, tone }) => ({ key, text, tone })),
+        [
+            { key: 'stav', text: MOZEM_CHIPS.go, tone: 'go' },
+            { key: 'siet', text: MOZEM_CHIPS.lacna, tone: 'cheap' },
+        ],
+    );
     assert.deepEqual(m.day, base.day);
     assert.match(m.day?.lead ?? '', /^Dnes zo strechy asi \d+ kWh\. To je:$/);
     assert.equal(m.list?.title, 'Čo môžem');

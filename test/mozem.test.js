@@ -208,6 +208,52 @@ test('zamračený deň: slabý deň, umývačka a sušička sa preskočia, prá�
     assert.equal(umyvacka.tone, 'no');
 });
 
+/** Panely štítkov: kľúč, nadpis a čo platí teraz. @param {ReturnType<typeof mozemModel>} m */
+const chipPanels = (m) => m.chips.map((c) => [c.key, c.info.title, c.info.now]);
+
+test('štítky karty Teraz: panel stavu a ceny siete s časmi dňa', () => {
+    assert.deepEqual(chipPanels(mozemModel(input(at('13:00')))), [
+        ['stav', 'Slnko teraz stačí', 'Na veľké veci stačí do 17:30, ešte 4 h 30 min.'],
+        ['siet', 'Lacná sieť do 20:30', 'Potom drahá sieť do 21:30.'],
+    ]);
+    assert.deepEqual(chipPanels(mozemModel(input(at('06:30')))), [
+        ['stav', 'Slnko príde o 07:15', 'Za 45 min, vydrží do 17:30.'],
+        ['siet', 'Lacná sieť do 07:30', 'Potom drahá sieť do 08:30.'],
+    ]);
+    // Večer: koľko dnes nabehlo a kedy znova. Lacná noc trvá do rána podľa zajtrajšieho rozvrhu, nie do 24:00.
+    const noc = mozemModel(input(at('23:30')));
+    assert.deepEqual(chipPanels(noc), [
+        ['stav', 'Slnko skončilo zmenu', 'Na veľké veci stačilo do 17:30. Dnes strecha nahnala 31,7 kWh. Znova zajtra od 08:00.'],
+        ['siet', 'Lacná sieť do 07:30', 'Potom drahá sieť do 08:30.'],
+    ]);
+    assert.match(noc.chips[1].info.why, /^Čo slnko nepokryje/);
+    // Zelená ešte svieti, len na nič z plánu nestačí: nadpis tá istá veta ako hlavička karty.
+    assert.deepEqual(chipPanels(mozemModel(input(at('17:10'))))[0], [
+        'stav',
+        'Na veľké veci už slnko nestačí',
+        'Dnes strecha nahnala 31,7 kWh. Znova zajtra od 08:00.',
+    ]);
+    const slusne = mozemModel(input(at('21:00')), { voice: 'slusny' });
+    assert.deepEqual(chipPanels(slusne), [
+        ['stav', 'Slnko dnes už nevyrába', 'Na veľké spotrebiče stačilo do 17:30. Dnes strecha vyrobila 31,7 kWh. Znova zajtra od 08:00.'],
+        ['siet', 'Drahá sieť do 21:30', 'Potom lacná sieť do 22:30.'],
+    ]);
+    assert.match(slusne.chips[1].info.why, /odložte/);
+});
+
+test('štítky karty Teraz: slabý deň, bez dát a bez panelov', () => {
+    const slabo = mozemModel(input(at('12:00'), { pv: null, forecast: cloudy(0.05, [0]) }));
+    assert.equal(slabo.chips[0].info.title, 'Dnes je slabý deň');
+    assert.match(slabo.chips[0].info.now, /^Strecha dnes dá len ~\d+ kWh\. Najbližšie slnko na veľké veci: zajtra od \d\d:\d\d\.$/);
+    assert.match(slabo.chips[0].info.why, /veľké spotrebiče/);
+    // Bez predpovede ani panelov panel len vysvetlí - nemá čím ukázať čas.
+    const offline = mozemModel(input(at('12:00'), { pv: null, forecast: null }));
+    assert.deepEqual(chipPanels(offline), [['stav', 'Nemám dáta', '']]);
+    const bez = mozemModel(input(at('12:00'), { known: 'nic' }), { voice: 'slusny' });
+    assert.deepEqual(chipPanels(bez), [['stav', 'Nepoznám vaše panely', '']]);
+    assert.match(bez.chips[0].info.why, /Nastavení/);
+});
+
 test('celý týždeň bez slnka: tento týždeň nie', () => {
     const m = mozemModel(input(at('12:00'), { pv: null, forecast: cloudy(0.01) }));
     assert.equal(item(m, 'susicka').short, 'tento týždeň nie');

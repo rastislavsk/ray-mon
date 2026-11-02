@@ -14,6 +14,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * `tzListOpen` otvorený zoznam pod grafom - legenda
  * časovej osi (na začiatku zatvorený),
  * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
+ * `tzChip` otvorený panel štítka pod číslom karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
@@ -28,6 +29,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
+ * @typedef {import('../../shared/mozem.js').Chip['key']} TzChip
  * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('../../web/refresh.js').RefreshState & import('../../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
@@ -37,6 +39,7 @@ import { setupInit } from '../../shared/setup-flow.js';
  *   terazPreview: number | null,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
+ *   tzChip: TzChip | null,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
  *   statsPeriod: import('../../shared/stats.js').StatsPeriod,
@@ -66,12 +69,12 @@ import { setupInit } from '../../shared/setup-flow.js';
  * dňa vráti do prehľadu. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
  * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený Plán dňa na karte Teraz (`plan`) a zoznam pod
- * jej grafom (`legend`) tiež, Späť ich zbalí. `dash` hovorí, že krok patrí prehľadu so stĺpcami
+ * jej grafom (`legend`) tiež, Späť ich zbalí, a panel štítka pod jej číslom (`chip`) Späť zavrie. `dash` hovorí, že krok patrí prehľadu so stĺpcami
  * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
  * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
  *   setup: import('../../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
- *   plan: boolean, legend: boolean, dash?: true }} NavStep
+ *   plan: boolean, legend: boolean, chip: TzChip | null, dash?: true }} NavStep
  */
 
 /**
@@ -153,6 +156,7 @@ export function initialState(
         terazPreview: null,
         tzListOpen: false,
         tzPlanOpen: false,
+        tzChip: null,
         weekDetail: null,
         weekDay: 0,
         statsPeriod: /** @type {import('../../shared/stats.js').StatsPeriod} */ ('dnes'),
@@ -189,6 +193,7 @@ export function panelChange(from, to) {
         terazPreview: /** @type {number | null} */ (null),
         tzPlanOpen: false,
         tzListOpen: false,
+        tzChip: /** @type {TzChip | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
         nsOpen: /** @type {NsFold | null} */ (null),
@@ -269,6 +274,7 @@ export function navStep(state) {
         fold: state.nsOpen,
         plan: state.tzPlanOpen,
         legend: state.tzListOpen,
+        chip: state.tzChip,
         ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
     };
 }
@@ -287,7 +293,8 @@ export function sameNavStep(a, b) {
         a.sheet === b.sheet &&
         a.fold === b.fold &&
         a.plan === b.plan &&
-        a.legend === b.legend
+        a.legend === b.legend &&
+        a.chip === b.chip
     );
 }
 
@@ -319,6 +326,12 @@ const nsFoldOf = (panel, fold) => (panel === 'nastavenie' && NS_FOLDS.find((f) =
 const terazOpenOf = (panel, dash, open) => (panel === 'terazky' || dash) && open === true;
 
 /**
+ * Otvorený panel štítka z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
+ * ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} chip @returns {TzChip | null}
+ */
+const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet') ? chip : null);
+
+/**
  * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
  * chýbajúci krok je prehľad karty. Cudzia hodnota je null.
  * @param {unknown} setup @param {unknown} roof
@@ -346,9 +359,9 @@ export function navStepOf(raw) {
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
     // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami; položka, ktorá ho ešte nesie, vráti len kartu.
-    const { panel, preview, detail, setup, roof, sheet, fold, plan, legend, dash } =
+    const { panel, preview, detail, setup, roof, sheet, fold, plan, legend, chip, dash } =
         /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown, fold?: unknown, plan?: unknown, legend?: unknown, dash?: unknown }} */ (raw);
+         *   sheet?: unknown, fold?: unknown, plan?: unknown, legend?: unknown, chip?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
@@ -365,6 +378,7 @@ export function navStepOf(raw) {
         fold: nsFoldOf(p, fold),
         plan: terazOpenOf(p, inDash, plan),
         legend: terazOpenOf(p, inDash, legend),
+        chip: tzChipOf(p, inDash, chip),
         ...d,
     };
 }
@@ -396,6 +410,7 @@ export function navChange(state, step) {
         nsOpen: step.fold,
         tzPlanOpen: step.plan,
         tzListOpen: step.legend,
+        tzChip: step.chip,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }

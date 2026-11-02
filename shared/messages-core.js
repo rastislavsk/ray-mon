@@ -1216,6 +1216,9 @@ export const TERAZ_TEXTS = {
     noteText: 'Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.',
     noteBtn: 'Pripojiť meranie',
     noteAgainBtn: 'Pripojiť znova',
+    // Panel štítka pod číslom: nadpis vysvetlenia a zatvorenie.
+    chipWhy: 'Čo to znamená',
+    chipClose: MOZEM_SKY_TEXTS.close,
 };
 
 /** @type {typeof TERAZ_TEXTS} */
@@ -1354,6 +1357,151 @@ export function terazBandText(tone, to) {
 export function terazBandNext(tone) {
     return tone ? `potom ${TERAZ_TONES[tone]}` : '';
 }
+
+// ---- Panel štítka na karte Teraz ----------------------------------------------------
+// Ťuknutie na štítok pod číslom otvorí panel: nadpis, čo platí teraz (časy, čísla) a čo štítok
+// znamená vždy (docs/navrhy/teraz-odznaky-vysvetlenie.html). Veta pod štítkami sa v ňom neopakuje.
+
+/** @typedef {{ title: string, now: string, why: string }} ChipInfo */
+
+/** Pevné texty panelu v oboch tónoch: nadpisy, ktoré nezávisia od času, a čo štítok znamená. */
+const CHIP_TEXTS = {
+    drzy: {
+        big: 'veľké veci',
+        dnesDa: 'Strecha dnes dá len',
+        title: {
+            go: 'Slnko teraz stačí',
+            wait: 'Slnko príde neskôr',
+            slabo: 'Dnes je slabý deň',
+            none: 'Slnko skončilo zmenu',
+            offline: 'Nemám dáta',
+            bezpanelov: 'Nepoznám tvoje panely',
+            loading: '',
+        },
+        why: {
+            go: 'Áno znamená, že strecha teraz vyrába viac, než minie dom a k tomu veľký spotrebič. Čo zapneš, ide zo slnka, nie zo siete.',
+            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť prúdu zo siete.',
+            slabo: 'Je oblačno a výkon dnes ani na chvíľu nedosiahne čiaru „veľké spotrebiče“ v grafe.',
+            none: 'Na veľké spotrebiče už dnes slnko nestačí. Čo zapneš, pôjde väčšinou zo siete.',
+            offline: 'Bez predpovede a merania netvrdím áno ani nie. Keď sa dáta vrátia, odpoveď príde sama.',
+            bezpanelov: 'Chýba mi výkon panelov a ich smer. Stačí ich raz zadať v Nastavení.',
+            loading: '',
+            lacna: 'Čo slnko nepokryje, je teraz zo siete lacnejšie. Auto či bojler sa oplatí pustiť aj bez slnka.',
+            draha: 'Každá kWh zo siete je teraz najdrahšia. Čo nemusí bežať, odlož na slnko alebo do lacného pásma.',
+        },
+    },
+    slusny: {
+        big: 'veľké spotrebiče',
+        dnesDa: 'Strecha dnes vyrobí len',
+        title: {
+            go: 'Slnko teraz stačí',
+            wait: 'Slnko príde neskôr',
+            slabo: 'Dnes je slabý deň',
+            none: 'Slnko dnes už nevyrába',
+            offline: 'Nemám dáta',
+            bezpanelov: 'Nepoznám vaše panely',
+            loading: '',
+        },
+        why: {
+            go: 'Áno znamená, že strecha teraz vyrába viac, než minie dom a k tomu veľký spotrebič. Čo zapnete, ide zo slnka, nie zo siete.',
+            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť prúdu zo siete.',
+            slabo: 'Je oblačno a výkon dnes ani na chvíľu nedosiahne čiaru „veľké spotrebiče“ v grafe.',
+            none: 'Na veľké spotrebiče už dnes slnko nestačí. Čo zapnete, pôjde väčšinou zo siete.',
+            offline: 'Bez predpovede a merania netvrdím áno ani nie. Keď sa dáta vrátia, odpoveď príde sama.',
+            bezpanelov: 'Chýba mi výkon panelov a ich smer. Stačí ich raz zadať v Nastavení.',
+            loading: '',
+            lacna: 'Čo slnko nepokryje, je teraz zo siete lacnejšie. Auto či bojler sa oplatí pustiť aj bez slnka.',
+            draha: 'Každá kWh zo siete je teraz najdrahšia. Čo nemusí bežať, odložte na slnko alebo do lacného pásma.',
+        },
+    },
+};
+
+/** Pevné texty panelu v tóne. @param {Voice} voice */
+const chipTexts = (voice) => CHIP_TEXTS[polite(voice) ? 'slusny' : 'drzy'];
+
+/** Prvé písmeno malé: „zajtra od 11:00“ do stredu vety. @param {string} s */
+const low1 = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/**
+ * Údaje dňa z hlavičky karty pre panel štítka stavu. `window`: okno slnka na veľké veci (teraz,
+ * najbližšie, alebo dnešné posledné), `sunLeft`: slnko dnes ešte stačí na niečo.
+ * @typedef {{ ctx: DayCtx, window: MozemWindow | null, nextDay: LaterDay | null, measured: boolean, todayKwh: number | null,
+ *   plan: PlanHero | null, sunLeft: boolean }} ChipDay
+ */
+/** @typedef {(typeof CHIP_TEXTS)['drzy']} ChipTexts */
+
+/** Áno: dokedy slnko na veľké veci stačí. @param {ChipDay} d @param {ChipTexts} T */
+function goNow({ ctx, window: w }, T) {
+    const n = ctx.nowMin;
+    return w && w.from <= n && n < w.to ? `Na ${T.big} stačí do ${endHm(w.to)}, ešte ${countdownText(w.to - n)}.` : '';
+}
+
+/** Počkaj: kedy slnko príde - na prvú vec z plánu, bez plánu na veľké veci. @param {ChipDay} d */
+const waitStart = ({ ctx, window: w, plan }) => (plan?.next ? plan.next.start : w ? w.from : ctx.nowMin);
+
+/** Počkaj: za koľko slnko príde a dokedy vydrží. @param {ChipDay} d */
+function waitNow(d) {
+    const w = d.window;
+    const until = w && w.from > d.ctx.nowMin ? `, vydrží do ${endHm(w.to)}` : '';
+    return `Za ${countdownText(waitStart(d) - d.ctx.nowMin)}${until}.`;
+}
+
+/** Slabý deň: koľko strecha dnes dá a kedy slnko znova stačí. @param {ChipDay} d @param {ChipTexts} T */
+function slaboNow({ todayKwh, nextDay }, T) {
+    /** @type {string[]} */ const now = [];
+    if (todayKwh !== null) now.push(`${T.dnesDa} ~${Math.round(todayKwh)} kWh.`);
+    if (nextDay) now.push(`Najbližšie slnko na ${T.big}: ${low1(laterWhen(nextDay))}.`);
+    return now.join(' ');
+}
+
+/** Dnes už nie: dokedy slnko stačilo, koľko dnes nabehlo a kedy znova. @param {ChipDay} d @param {ChipTexts} T @param {HeroSay} say */
+function noneNow({ window: w, sunLeft, todayKwh, measured, nextDay }, T, say) {
+    /** @type {string[]} */ const now = [];
+    if (!sunLeft && w) now.push(`Na ${T.big} stačilo do ${endHm(w.to)}.`);
+    if (todayKwh !== null) now.push(cap(`${measured ? say.made : 'dnes podľa predpovede'} ${fmt1(todayKwh)} kWh.`));
+    if (nextDay) now.push(`Znova ${low1(laterWhen(nextDay))}.`);
+    return now.join(' ');
+}
+
+/**
+ * Panel štítka stavu: nadpis a čo platí teraz podľa údajov dňa z hlavičky karty, pod tým stále
+ * vysvetlenie. Bez údajov dňa (dáta nie sú, panely nie sú) len nadpis a vysvetlenie.
+ * @param {import('./mozem.js').MozemState} state @param {ChipDay | null} data
+ * @param {Voice} [voice] @returns {ChipInfo}
+ */
+export function mozemChipInfo(state, data, voice = 'drzy') {
+    const T = chipTexts(voice);
+    const why = T.why[state];
+    if (!data || state === 'loading' || state === 'offline' || state === 'bezpanelov') return { title: T.title[state], now: '', why };
+    if (state === 'go') return { title: T.title.go, now: goNow(data, T), why };
+    if (state === 'wait') return { title: `Slnko príde o ${hm(waitStart(data))}`, now: waitNow(data), why };
+    if (state === 'slabo') return { title: T.title.slabo, now: slaboNow(data, T), why };
+    const say = HERO_SAY[polite(voice) ? 'slusny' : 'drzy'];
+    // Slnko ešte svieti, len na nič z plánu nestačí - nadpis je tá istá veta ako v hlavičke karty.
+    return { title: data.sunLeft ? say.nostrong.slice(0, -1) : T.title.none, now: noneNow(data, T, say), why };
+}
+
+/** Štítok ceny podľa úrovne pásma. @type {Record<import('./config.js').PriceLevel, import('./day-chart.js').Tone>} */
+const LEVEL_TONE = { lacna: 'cheap', bezna: 'plain', draha: 'costly' };
+
+/** Koniec pásma: za polnocou čas zajtrajška, polnoc ako „24:00“. @param {number} min minúta od dnešnej polnoci */
+const runEndHm = (min) => endHm(min > MINUTES_PER_DAY ? min - MINUTES_PER_DAY : min);
+
+/**
+ * Panel štítka ceny siete: dokedy pásmo platí a čo príde potom.
+ * @param {'lacna' | 'draha'} level
+ * @param {{ to: number, next: { level: import('./config.js').PriceLevel, to: number } | null }} run
+ *   koniec pásma a nasledujúce pásmo s koncom, v minútach od dnešnej polnoci (za polnocou viac ako deň)
+ * @param {Voice} [voice] @returns {ChipInfo}
+ */
+export function mozemNetInfo(level, run, voice = 'drzy') {
+    const title = cap(`${TERAZ_TONES[LEVEL_TONE[level]]} do ${runEndHm(run.to)}`);
+    const now = run.next ? `Potom ${TERAZ_TONES[LEVEL_TONE[run.next.level]]} do ${runEndHm(run.next.to)}.` : '';
+    return { title, now, why: chipTexts(voice).why[level] };
+}
+
+/** Riadok panelu štítka počas náhľadu iného času: štítky hovoria o teraz. @param {number} nowMin @param {number} previewMin */
+export const terazChipNahlad = (nowMin, previewMin) => `Platí pre teraz (${hm(nowMin)}), nie pre ${hm(previewMin)}.`;
 
 /**
  * Hodnota grafu pre čítačku (posúvač): čas, výkon a čo vtedy platí.

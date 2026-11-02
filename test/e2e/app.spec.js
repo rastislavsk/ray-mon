@@ -1795,7 +1795,7 @@ test('Späť nepočíta výber vnútri karty, po vyčerpaní krokov opustí appk
     await page.goBack();
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => history.state), 'na prvej karte už appka v histórii nič nedrží').toEqual({
-        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, plan: false, legend: false },
+        step: { panel: 'terazky', weekDetail: null, setup: null, roof: 0, info: null, plan: false, legend: false, chip: null },
     });
     expect(errors).toEqual([]);
 });
@@ -3320,6 +3320,53 @@ test.describe('Plán dňa na karte Teraz', () => {
         await page.locator('#nav-mozem').click();
         await page.locator('#nav-terazky').click();
         await expect(telo).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('štítky na karte Teraz', () => {
+    test('štítky pod číslom otvoria panel s textom z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const errors = await openApp(page);
+        await ocakavajKartu(page, 'terazky');
+        const chips = terazAt(FIXED_NOW).say?.chips ?? [];
+        expect(chips.map((c) => c.key)).toEqual(['stav', 'siet']);
+        const panel = page.locator('#tz-chip-sheet');
+        const stitok = (/** @type {string} */ key) => page.locator(`#tz-chips [data-chip="${key}"]`);
+        await expect(panel).toBeHidden();
+        for (const c of chips) {
+            await stitok(c.key).click();
+            await expect(panel).toBeVisible();
+            await expect(page.locator('#tz-chip-tag')).toHaveText(c.text);
+            await expect(page.locator('#tz-chip-title')).toHaveText(c.info.title);
+            await expect(page.locator('#tz-chip-now')).toHaveText(c.info.now);
+            await expect(page.locator('#tz-chip-q')).toHaveText('Čo to znamená');
+            await expect(page.locator('#tz-chip-why')).toHaveText(c.info.why);
+            await expect(page.locator('#tz-chip-nahlad')).toBeHidden();
+            // Zavrieť vráti fokus na štítok, z ktorého sa panel otvoril.
+            await page.locator('#tz-chip-close').click();
+            await expect(panel).toBeHidden();
+            await expect(stitok(c.key)).toBeFocused();
+        }
+        await stitok('stav').click();
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        // Ťuknutie vedľa panelu (na stmavenú stránku nad ním) trafí dialóg a zavrie ho.
+        await stitok('stav').click();
+        await page.mouse.click(187, 60);
+        await expect(panel).toBeHidden();
+        // Tlačidlo Späť v telefóne panel zavrie a ostane na karte.
+        await stitok('siet').click();
+        await page.goBack();
+        await expect(panel).toBeHidden();
+        await ocakavajKartu(page, 'terazky');
+        // Počas náhľadu iného času panel povie, že štítky platia pre teraz.
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('ArrowRight');
+        await stitok('stav').click();
+        await expect(page.locator('#tz-chip-nahlad')).toHaveText('Platí pre teraz (13:00), nie pre 13:15.');
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
         expect(errors).toEqual([]);
     });
 });

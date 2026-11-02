@@ -1,6 +1,7 @@
 // Poslucháče karty Teraz: náhľad iného času na grafe dňa (prst, kurzor, klávesnica - spoločné
 // s kartou Teraz novej appky, web/teraz-gestures.js), „Späť na teraz“, zoznam pod grafom, „Skúsiť znova“
-// a stránka pásu odporúčaní, rozbalenie Plánu dňa. Každý končí volaním setState; kreslí render/terazky.js.
+// a stránka pásu odporúčaní, rozbalenie Plánu dňa a panel štítka pod číslom. Každý končí volaním
+// setState; kreslí render/terazky.js.
 
 import { localMinutes } from '../shared/solar.js';
 import { backTo } from './history.js';
@@ -40,9 +41,33 @@ export function initTerazky(store, dom, refresh) {
         if (store.get().tzPlanOpen) backTo(store, { tzPlanOpen: false });
         else store.setState({ tzPlanOpen: true });
     });
+    initChipSheet(store, dom);
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
+}
+
+/**
+ * Štítky pod číslom a ich panel. Otvorenie je krok navigácie, zatvorenie (Zavrieť, Escape, ťuknutie
+ * vedľa) ten istý krok ako tlačidlo Späť.
+ * @param {Store} store @param {Dom} dom
+ */
+function initChipSheet(store, dom) {
+    dom.tzChips.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-chip]') : null;
+        const key = btn instanceof HTMLElement ? btn.dataset.chip : undefined;
+        if (key === 'stav' || key === 'siet') store.setState({ tzChip: key });
+    });
+    const close = () => backTo(store, { tzChip: null });
+    const d = dom.tzChipSheet;
+    // Ťuknutie vedľa panelu (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
+    d.addEventListener('click', (e) => e.target === d && close());
+    // Escape: dialóg zavrie render podľa stavu, nie prehliadač sám.
+    d.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        close();
+    });
+    dom.tzChipClose.addEventListener('click', close);
 }

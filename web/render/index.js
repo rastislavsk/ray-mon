@@ -31,7 +31,8 @@ export function render(state, dom) {
     renderPanels(state, dom);
     renderImportOffer(state, dom);
     if (state.panel === 'mozem') renderMozem(state, dom);
-    if (state.panel === 'terazky') renderTerazky(state, dom);
+    // Karta Teraz sa volá aj inde - panel štítka sa pri odchode z nej zavrie.
+    renderTerazky(state, dom);
     if (state.panel === '7dni') renderSedemdni(state, dom);
     if (state.panel === 'statistika') renderStatistika(state, dom);
     if (state.panel === 'nastavenie') renderNastavenie(state, dom);

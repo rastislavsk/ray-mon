@@ -933,6 +933,20 @@
             </div>
         </section>
 
+        <!-- Panel štítka na karte Teraz: čo platí teraz a čo štítok znamená (docs/navrhy/teraz-odznaky-vysvetlenie.html).
+             Texty sú zo shared/mozem.js, píše ich web/render/terazky.js. -->
+        <dialog id="tz-chip-sheet" class="tz-sheet" aria-labelledby="tz-chip-title" aria-describedby="tz-chip-now">
+            <div class="tz-sheet-in">
+                <span id="tz-chip-tag" class="tz-chip"></span>
+                <h2 id="tz-chip-title"></h2>
+                <p id="tz-chip-now"></p>
+                <p id="tz-chip-nahlad" class="tz-sheet-dim"></p>
+                <p id="tz-chip-q" class="tz-sheet-q"></p>
+                <p id="tz-chip-why" class="tz-sheet-dim"></p>
+                <button type="button" id="tz-chip-close" class="tz-sheet-close"></button>
+            </div>
+        </dialog>
+
         <script type="module" src="boot.js"></script>
     </body>
 </html>

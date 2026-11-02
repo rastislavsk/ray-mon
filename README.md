@@ -23,7 +23,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
 - **Teraz** – karta je v navigácii prvá a appka sa na nej otvára (každý telefón si to môže
   zmeniť v Nastavení). Rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
   výkonom (vo farbe plánu dňa), odkiaľ je a koľko z jasnej oblohy, štítky (ÁNO, LACNÁ SIEŤ…)
-  a veta o teraz („Slnko to teraz platí za nás.“). Pod nimi **Plán dňa** ako plagát v štýle
+  a veta o teraz („Slnko to teraz platí za nás.“). Ťuknutie na štítok otvorí panel: čo platí teraz
+  (dokedy slnko stačí, dokedy trvá pásmo siete a čo príde potom) a čo štítok znamená. Pod nimi **Plán dňa** ako plagát v štýle
   Štatistiky: veta, čo zapnúť teraz, a očíslované riadky – čo kedy zapnúť a prečo (práčka a
   sušička vždy v jeden deň, sušička po práčke). Pod plánom graf dňa – hore oblačnosť
   po hodinách, krivka predpovede a nameraná krivka s osou kW, hranica veľkých spotrebičov s plochou

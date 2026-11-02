@@ -29,6 +29,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   weekDetail: 'day' | 'week' | null,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
+ *   tzChip: TzChip | null,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
@@ -79,8 +80,9 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  * @typedef {import('../shared/setup.js').SetupStep} SetupStep
  * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
  * @typedef {(typeof INFO_ITEMS)[number]} InfoItem rozbaľovacia položka karty Nastavenie
+ * @typedef {import('../shared/mozem.js').Chip['key']} TzChip štítok pod číslom karty Teraz
  * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null,
- *   plan: boolean, legend: boolean }} NavStep krok navigácie pre tlačidlo Späť
+ *   plan: boolean, legend: boolean, chip: TzChip | null }} NavStep krok navigácie pre tlačidlo Späť
  */
 
 /**
@@ -119,6 +121,9 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Plán dňa na karte Teraz: pri štarte vždy zbalený, aby bol graf pri čísle
         // (docs/navrhy/teraz-plan-rozbalovaci.html). Otvorený je krok navigácie - Späť ho zbalí.
         tzPlanOpen: false,
+        // Otvorený panel štítka pod číslom karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html).
+        // Krok navigácie - Späť ho zavrie.
+        tzChip: null,
         // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
         // naň nevracia, rovnako ako na vybraný deň.
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
@@ -197,14 +202,15 @@ export function panelChange(from, to) {
         infoOpen: /** @type {null} */ (null),
         tzPlanOpen: false,
         tzListOpen: false,
+        tzChip: /** @type {TzChip | null} */ (null),
         stavTip: false,
     };
 }
 
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
- * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka Nastavenia, otvorený Plán dňa
- * a zoznam pod grafom na karte Teraz. Zvyšok stavu (vybraný deň, stránka
+ * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka Nastavenia, otvorený Plán dňa,
+ * zoznam pod grafom a panel štítka na karte Teraz. Zvyšok stavu (vybraný deň, stránka
  * pásu odporúčaní, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
  * nevracia, rovnako ako v iných appkách.
  * @param {AppState} state @returns {NavStep}
@@ -218,6 +224,7 @@ export function navStep(state) {
         info: state.infoOpen,
         plan: state.tzPlanOpen,
         legend: state.tzListOpen,
+        chip: state.tzChip,
     };
 }
 
@@ -230,7 +237,8 @@ export function sameNavStep(a, b) {
         a.roof === b.roof &&
         a.info === b.info &&
         a.plan === b.plan &&
-        a.legend === b.legend
+        a.legend === b.legend &&
+        a.chip === b.chip
     );
 }
 
@@ -251,6 +259,7 @@ export function navChange(from, step) {
         infoOpen: step.info,
         tzPlanOpen: step.plan,
         tzListOpen: step.legend,
+        tzChip: step.chip,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }
@@ -270,13 +279,13 @@ export function navStepFrom(raw) {
  * Krok navigácie z hodnoty v položke histórie. Položka zo staršej verzie appky sprievodcu
  * ani rozbalenú položku Nastavenia nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
  * a chýbajúca položka tiež `null`, teda nič rozbalené. Položka zo staršej verzie so zrušenou
- * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu. Otvorený Plán dňa
- * a zoznam pod grafom patria len karte Teraz; položka zo staršej verzie ich nepozná - sú zbalené.
+ * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu. Otvorený Plán dňa,
+ * zoznam pod grafom a panel štítka patria len karte Teraz; položka zo staršej verzie ich nepozná - sú zbalené.
  * @param {unknown} step @returns {NavStep | null}
  */
 function navStepIn(step) {
     if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0, info = null, plan, legend } = /** @type {Record<string, unknown>} */ (step);
+    const { panel, weekDetail, setup = null, roof = 0, info = null, plan, legend, chip } = /** @type {Record<string, unknown>} */ (step);
     if (!validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
     return {
         panel: /** @type {Panel} */ (panel),
@@ -286,8 +295,12 @@ function navStepIn(step) {
         info: /** @type {InfoItem | null} */ (info),
         plan: panel === 'terazky' && plan === true,
         legend: panel === 'terazky' && legend === true,
+        chip: tzChipOf(panel, chip),
     };
 }
+
+/** Otvorený panel štítka z položky histórie - patrí len karte Teraz. @param {unknown} panel @param {unknown} chip @returns {TzChip | null} */
+const tzChipOf = (panel, chip) => (panel === 'terazky' && (chip === 'stav' || chip === 'siet') ? chip : null);
 
 /** Karta a detail dňa z položky histórie. @param {unknown} panel @param {unknown} weekDetail */
 function validPanelPlace(panel, weekDetail) {

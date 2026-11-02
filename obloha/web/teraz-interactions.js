@@ -1,6 +1,6 @@
 // Poslucháče karty Teraz novej appky: náhľad iného času na grafe (prst, kurzor, klávesnica),
-// „Späť na teraz“, „Skúsiť znova“ a stránka pásu odporúčaní. Každý končí volaním setState
-// (alebo krokom v histórii); kreslí render/teraz.js. Pravidlá dotyku sú v CLAUDE.md, časť
+// „Späť na teraz“, „Skúsiť znova“, stránka pásu odporúčaní a panel štítka pod číslom. Každý končí
+// volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Pravidlá dotyku sú v CLAUDE.md, časť
 // Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
 import { localMinutes } from '../../shared/solar.js';
@@ -41,9 +41,33 @@ export function initTeraz(store, dom, refresh) {
         if (store.get().tzPlanOpen) stepBack(store, { tzPlanOpen: false });
         else store.setState({ tzPlanOpen: true, panel: 'terazky' });
     });
+    initChipSheet(store, dom);
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
+}
+
+/**
+ * Štítky pod číslom a ich panel. Otvorenie je krok navigácie (robí z Teraz aktívny stĺpec prehľadu,
+ * ako náhľad), zatvorenie (Zavrieť, Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
+ * @param {Store} store @param {Dom} dom
+ */
+function initChipSheet(store, dom) {
+    dom.tzChips.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-chip]') : null;
+        const key = btn instanceof HTMLElement ? btn.dataset.chip : undefined;
+        if (key === 'stav' || key === 'siet') store.setState({ tzChip: key, panel: 'terazky' });
+    });
+    const close = () => stepBack(store, { tzChip: null });
+    const d = dom.tzChipSheet;
+    // Ťuknutie vedľa panelu (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
+    d.addEventListener('click', (e) => e.target === d && close());
+    // Escape: dialóg zavrie render podľa stavu, nie prehliadač sám.
+    d.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        close();
+    });
+    dom.tzChipClose.addEventListener('click', close);
 }
