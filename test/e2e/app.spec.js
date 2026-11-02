@@ -366,6 +366,31 @@ for (const [hm, label] of [
     });
 }
 
+test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási', async ({ page }) => {
+    await page.clock.install({ time: atTime('13:00').instant });
+    const errors = await openApp(page, { time: atTime('13:00').instant });
+    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    // Hodinu v pozadí. Po návrate odpoveď Workera chvíľu trvá - hodiny medzitým tiknú.
+    /** @type {(v?: unknown) => void} */ let pust = () => {};
+    const odpoved = new Promise((r) => (pust = r));
+    await page.route(WORKER_PV_URL, async (route) => {
+        await odpoved;
+        await route.abort();
+    });
+    // Hodiny tikajú každých REFRESH.clockMs od štartu; tik musí prísť skôr, než dopyt vyprší (TIMEOUT.appMs).
+    await page.clock.runFor(config.REFRESH.clockMs - 10_000);
+    await page.clock.setFixedTime(atTime('14:00').instant);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.clock.runFor(12_000);
+    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    await expect(page.locator('#tz-note')).toBeHidden();
+    // Pokus dobehol bez merania: až teraz appka povie, že meranie neodpovedá.
+    pust();
+    await expect(page.locator('#pv-updated')).toHaveText('meranie nedostupné');
+    await expect(page.locator('#tz-note')).toBeVisible();
+    expect(errors).toEqual([]);
+});
+
 test('bodka pri čase hovorí o meraní ako v Oblohe, podsvietenie ikony v navigácii je neutrálne', async ({ browser }) => {
     /** Tvar bodky, text pod časom, „›“ za ním a farba podsvietenia ikony aktívnej karty. @param {import('@playwright/test').Page} page */
     const hlavicka = (page) =>

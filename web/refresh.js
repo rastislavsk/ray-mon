@@ -35,6 +35,7 @@ import {
  *   zdroj: import('../shared/zdroje.js').Zdroj | null,
  *   pristup: import('../shared/pristup.js').Odmietnutie | null,
  *   pv: import('../shared/kiosk.js').PvData | null,
+ *   pokusAt: number,
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
  *   dayLog: import('../shared/daylog.js').DayLog,
@@ -207,7 +208,9 @@ export function createRefresh(store) {
             : teraz.dayLog;
         if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
-        store.setState({ forecast: result.forecast, loading: false, now, dayLog, ...pecat, ...meranie });
+        // Čas dokončeného pokusu: podľa neho sa posudzuje, či meranie mlčí (pvFreshness) - kým sa
+        // appka po návrate z pozadia neopýta, výpadok nehlási.
+        store.setState({ forecast: result.forecast, loading: false, now, pokusAt: now.getTime(), dayLog, ...pecat, ...meranie });
         zapamatajRannu(store);
     };
     return ({ skus = false } = {}) => {

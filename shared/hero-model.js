@@ -12,7 +12,7 @@ import { neplatiOf } from './pristup.js';
 /**
  * @typedef {{ now: Date, tariff: import('./config.js').Tariff, pv: import('./kiosk.js').PvData | null,
  *   forecast: import('./solar.js').Forecast | null, previewMinutes: number | null,
- *   site: import('./config.js').Site, plant: import('./config.js').Plant }} HeroInput
+ *   site: import('./config.js').Site, plant: import('./config.js').Plant, pokusAt?: number }} HeroInput
  */
 
 /**
@@ -21,12 +21,12 @@ import { neplatiOf } from './pristup.js';
  * počíta z krivky dňa a povie, že je to odhad. Jedno miesto pre obe appky a všetky karty.
  * Chýbajúci údaj treba strážiť zvlášť - kontrakt `pv` null povoľuje a Number(null) je 0,
  * takže by sa tváril ako nameraná nula.
- * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site }} state
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, pokusAt?: number }} state
  * @returns {number | null}
  */
-export function freshPowerKw({ now, pv, site }) {
+export function freshPowerKw({ now, pv, site, pokusAt }) {
     if (!pv || !Number.isFinite(pv.realTimePowerKw)) return null;
-    return pvFreshness({ now, pv, site }).stale ? null : /** @type {number} */ (pv.realTimePowerKw);
+    return pvFreshness({ now, pv, site, pokusAt }).stale ? null : /** @type {number} */ (pv.realTimePowerKw);
 }
 
 /** Živý výkon na kartu: v náhľade iného času žiadny. @param {HeroInput} state @returns {number | null} */
@@ -45,6 +45,16 @@ function powerFor(state, live, minutes, nowMinutes) {
 }
 
 /**
+ * K akému času sa čerstvosť merania posudzuje: k poslednému dokončenému pokusu o stiahnutie, alebo
+ * k stiahnutiu merania, ak je novšie (pripojenie v sprievodcovi) - nikdy nie za hodinami. Bez
+ * pokusu (0) hodiny. @param {Date} hodiny @param {Date} updated @param {number | undefined} pokusAt
+ */
+function casPosudku(hodiny, updated, pokusAt) {
+    if (!pokusAt) return hodiny;
+    return new Date(Math.min(hodiny.getTime(), Math.max(pokusAt, updated.getTime())));
+}
+
+/**
  * Kedy menič naposledy meral a či je to priveľmi dávno. Čas merania je posledný bod dnešnej
  * krivky - "aktualizované" (čas stiahnutia) by pri výpadku meniča ďalej rástlo, krivka nie.
  * Mlčanie krivky je chyba, len keď slnko svietilo celé okno STALE_PV_MS; inak je večer
@@ -55,12 +65,16 @@ function powerFor(state, live, minutes, nowMinutes) {
  * `menic` - dáta chodia, ale menič mlčí, hoci slnko svieti. Pri oboch naraz je to spojenie - kým
  * appka nič nestiahne, o meniči nevie nič nové. `spi`: nezastarané, slnko je pod hranicou a krivka
  * mlčí - večer a v noci normálny stav, nie chyba. `mlci` je počet minút od merania (null bez neho).
- * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site }} state
+ * Posudzuje sa k času posledného dokončeného pokusu o stiahnutie (`pokusAt`), nie k hodinám: po
+ * návrate z pozadia appka ešte nevie nič nové a kým sa na meranie neopýta, výpadok nehlási - inak
+ * by kým sa sťahuje tvrdila, že meranie neodpovedá. Bez neho (0) platí `now`.
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData, site: import('./config.js').Site, pokusAt?: number }} state
  * @returns {{ label: string, time: string, stale: boolean, pricina: 'spojenie' | 'menic' | null, spi: boolean, mlci: number | null }}
  */
-export function pvFreshness({ now, pv, site }) {
-    const nowMinutes = localMinutes(now, site.timezone);
+export function pvFreshness({ now: hodiny, pv, site, pokusAt }) {
     const updated = new Date(pv.updatedAt);
+    const now = casPosudku(hodiny, updated, pokusAt);
+    const nowMinutes = localMinutes(now, site.timezone);
     const fetchStale = now.getTime() - updated.getTime() > STALE_PV_MS;
     const measured =
         realCurveBoundary(pv.realCurveToday, nowMinutes) ??
@@ -92,13 +106,13 @@ export function pvFreshness({ now, pv, site }) {
  * prijímať (neplatiOf). Meranie bez výkonu je pre karty to isté ako meranie, ktoré neprišlo - okrem
  * noci (`spi`), keď menič nemá čo merať. Pri `zastarane` nesie `pricina` a `mlci` z pvFreshness.
  * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site,
- *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null }} s
+ *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null, pokusAt?: number }} s
  * @returns {StavMerania}
  */
 export function stavMerania(s) {
     const base = { cas: '', neplati: null, pricina: null, mlci: null };
     if (s.pv) {
-        const f = pvFreshness({ now: s.now, pv: s.pv, site: s.site });
+        const f = pvFreshness({ now: s.now, pv: s.pv, site: s.site, pokusAt: s.pokusAt });
         if (f.pricina) return { ...base, druh: 'zastarane', cas: f.time, pricina: f.pricina, mlci: f.mlci };
         if (f.spi) return { ...base, druh: 'spi', cas: f.time, mlci: f.mlci };
         return { ...base, druh: freshPowerKw(s) === null ? 'neprislo' : 'zive', cas: f.time };
@@ -122,13 +136,13 @@ export function bodkaMerania(stav) {
 /**
  * Stav živého merania do riadku v Nastavení: bodka (tone) a krátky text. Bez merania null -
  * kto meranie nechce, tomu nič nechýba.
- * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, zdroj: unknown, loading: boolean }} state
+ * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, zdroj: unknown, loading: boolean, pokusAt?: number }} state
  * @returns {{ tone: 'ok' | 'stale' | 'off' | 'wait', text: string } | null}
  */
-export function liveStatus({ now, pv, site, zdroj, loading }) {
+export function liveStatus({ now, pv, site, zdroj, loading, pokusAt }) {
     if (!zdroj) return null;
     if (!pv) return loading ? { tone: 'wait', text: 'pripájam…' } : { tone: 'off', text: 'nepripojené' };
-    const { time, pricina } = pvFreshness({ now, pv, site });
+    const { time, pricina } = pvFreshness({ now, pv, site, pokusAt });
     return pricina ? { tone: 'stale', text: `${STAV_SLOVO[pricina]} · ${time}` } : { tone: 'ok', text: `pripojené · ${time}` };
 }
 

@@ -10,7 +10,8 @@ import { bandAt, scheduleFor, smartTier } from './tariff.js';
 /**
  * @typedef {{ now: Date, tariff: import('./config.js').Tariff, site: import('./config.js').Site,
  *   plant: import('./config.js').Plant, pv: import('./kiosk.js').PvData | null,
- *   forecast: import('./solar.js').Forecast | null }} PlanInput
+ *   forecast: import('./solar.js').Forecast | null, pokusAt?: number }} PlanInput
+ * `pokusAt`: kedy appka naposledy dokončila pokus o stiahnutie dát (pvFreshness v hero-model.js).
  */
 /**
  * Štvrťhodina plánu. `kw` je výkon z krivky dňa (merané, potom predpoveď), nie živý údaj -
