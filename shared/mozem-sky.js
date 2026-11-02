@@ -40,9 +40,9 @@ export function sunArc(now, site, window) {
  * Meranie zo strechy: ide, alebo odkedy mlčí. Bez pripojeného merania nie je čo merať.
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown }} input
  */
-export function pvStatus({ now, site, pv, zdroj }) {
+export function pvStatus({ now, site, pv, zdroj, pokusAt }) {
     if (!zdroj || !pv) return { ok: false, since: null };
-    const fresh = pvFreshness({ now, pv, site });
+    const fresh = pvFreshness({ now, pv, site, pokusAt });
     return { ok: !fresh.stale, since: fresh.stale ? fresh.time : null };
 }
 

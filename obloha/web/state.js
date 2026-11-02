@@ -147,6 +147,8 @@ export function initialState(
         zdroj: start.zdroj,
         pristup,
         pv: null,
+        // Kedy appka naposledy dokončila pokus o stiahnutie dát (web/refresh.js); 0 = ešte nie.
+        pokusAt: 0,
         forecast: null,
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.
         loading: true,

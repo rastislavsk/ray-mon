@@ -23,6 +23,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   panel: Panel,
  *   panelDir: 1 | -1,
  *   pv: import('../shared/kiosk.js').PvData | null,
+ *   pokusAt: number,
  *   forecast: import('../shared/solar.js').Forecast | null,
  *   loading: boolean,
  *   weekSelDay: number,
@@ -107,6 +108,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
         panelDir: 1,
         pv: null,
+        // Kedy appka naposledy dokončila pokus o stiahnutie dát (web/refresh.js); 0 = ešte nie.
+        pokusAt: 0,
         forecast: null,
         // Dáta pre aktuálnu elektráreň sa ešte sťahujú (štart appky, uloženie nastavenia).
         // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba - hlavička hovorí "načítavam…".

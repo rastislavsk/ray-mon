@@ -563,9 +563,9 @@ function heroFacts(input, ctx) {
 }
 
 /** Odkedy meranie mlčí (čas posledného merania), alebo null, keď nemlčí alebo nie je. @param {PlanInput} input */
-function silentSince({ now, pv, site }) {
+function silentSince({ now, pv, site, pokusAt }) {
     if (!pv) return null;
-    const fresh = pvFreshness({ now, pv, site });
+    const fresh = pvFreshness({ now, pv, site, pokusAt });
     return fresh.stale ? fresh.time : null;
 }
 

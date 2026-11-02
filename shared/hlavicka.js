@@ -19,7 +19,7 @@ const TONE_TEXT = { live: 'živé meranie', stale: 'meranie zastarané' };
 /**
  * @typedef {{ known: import('./settings.js').Known, loading: boolean, now: Date,
  *   pv: import('./kiosk.js').PvData | null, forecast: unknown, site: import('./config.js').Site,
- *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null }} HlavickaVstup
+ *   zdroj: import('./zdroje.js').Zdroj | null, pristup: import('./pristup.js').Odmietnutie | null, pokusAt?: number }} HlavickaVstup
  */
 
 /**

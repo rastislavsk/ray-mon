@@ -79,6 +79,7 @@ test('meranie: prvá obnova sa pýta, ďalšia do intervalu spôsobu nie; dopyt 
     a.odpovede.push(meranie(FIXED_NOW));
     await a.refresh();
     assert.deepEqual(a.dopyty, [PECAT], 'Workeru ide zapečatený prístup');
+    assert.equal(a.store.get().pokusAt, FIXED_NOW.getTime(), 'čas dokončeného pokusu (pvFreshness)');
     assert.equal(a.store.get().pv?.updatedAt, pvAt(FIXED_NOW).updatedAt);
     assert.ok(a.saved.has(MERANIE_STORAGE_KEY), 'rytmus je spoločný pre obe appky');
     assert.ok(Object.keys(a.store.get().dayLog).length, 'dnešok je v denníku výroby');
@@ -86,6 +87,7 @@ test('meranie: prvá obnova sa pýta, ďalšia do intervalu spôsobu nie; dopyt 
     posun(t, MIN);
     await a.refresh();
     assert.equal(a.dopyty.length, 1, 'Huawei dá nové dáta až o 5 minút');
+    assert.equal(a.store.get().pokusAt, FIXED_NOW.getTime() + MIN, 'aj obnova bez dopytu na meranie je pokus');
     assert.ok(a.store.get().pv, 'posledné meranie ostáva');
 
     posun(t, 5 * MIN);

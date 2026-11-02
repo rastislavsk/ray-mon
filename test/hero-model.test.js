@@ -163,6 +163,25 @@ test('pvFreshness: čas merania je posledný bod krivky, mlčanie za slnka je za
     assert.equal(pvFreshness({ now: at('14:00'), site: SITE, pv: { ...pv, updatedAt: at('13:00').toISOString() } }).pricina, 'spojenie');
 });
 
+test('pvFreshness k poslednému pokusu: po návrate z pozadia appka výpadok nehlási, kým sa neopýta', () => {
+    // Appka sa naposledy pýtala o 13:00 (krivka končí o 13:00), potom ležala v pozadí do 14:30.
+    const pred = { ...pv, updatedAt: at('13:00').toISOString() };
+    const pokusAt = at('13:00').getTime();
+    const poNavrate = pvFreshness({ now: at('14:30'), site: SITE, pv: pred, pokusAt });
+    assert.deepEqual([poNavrate.stale, poNavrate.pricina, poNavrate.time], [false, null, '13:00']);
+    assert.equal(freshPowerKw({ now: at('14:30'), site: SITE, pv: pred, pokusAt }), pv.realTimePowerKw);
+    assert.equal(stavMerania({ now: at('14:30'), site: SITE, pv: pred, zdroj: null, pristup: null, pokusAt }).druh, 'zive');
+    // Pokus dobehol a meranie neprinieslo (staré ostalo): bez spojenia.
+    assert.equal(pvFreshness({ now: at('14:30'), site: SITE, pv: pred, pokusAt: at('14:30').getTime() }).pricina, 'spojenie');
+    // Pokus dobehol a dáta prišli, ale menič mlčí: menič - to isté ako bez pokusu.
+    const cerstve = { ...pv, updatedAt: at('14:30').toISOString() };
+    assert.equal(pvFreshness({ now: at('14:30'), site: SITE, pv: cerstve, pokusAt: at('14:30').getTime() }).pricina, 'menic');
+    // Meranie novšie než pokus (z pripojenia v sprievodcovi) sa posudzuje od svojho stiahnutia.
+    assert.equal(pvFreshness({ now: at('14:30'), site: SITE, pv: cerstve, pokusAt }).pricina, 'menic');
+    // Bez pokusu (0) platia hodiny.
+    assert.equal(pvFreshness({ now: at('14:30'), site: SITE, pv: pred, pokusAt: 0 }).pricina, 'spojenie');
+});
+
 test('liveStatus: stav živého merania pre riadok v Nastavení', () => {
     const base = {
         now: at('13:00'),
