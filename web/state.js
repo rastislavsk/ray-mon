@@ -68,6 +68,7 @@ export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
  *   setupDunno: boolean,
  *   infoOpen: InfoItem | null,
  *   stavTip: boolean,
+ *   pripojenieCaka: boolean,
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
@@ -163,6 +164,8 @@ export function initialState(now, layout, { saved = null, site = null, incoming 
         infoOpen: null,
         // Bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
         stavTip: false,
+        // Meranie sa práve pripojilo a bublina „Meranie pripojené“ ešte nesvietila (web/setup-wiring.js).
+        pripojenieCaka: false,
         // Ranné oznámenie a spotrebiče doma (voľba telefónu, uložená načíta app.js) a čo s
         // oznámeniami telefón vie (web/oznamenia.js) - podľa spotrebičov ráta aj Plán dňa.
         oznamenia: oznameniaDefault(),

@@ -4,7 +4,7 @@
 
 import { installedKw } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
-import { hlavickaModel } from '../../shared/hlavicka.js';
+import { hlavickaModel, pripojenieBublina } from '../../shared/hlavicka.js';
 import { voiceTexts } from '../../shared/messages-core.js';
 import { terazTypicalText } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
@@ -79,9 +79,21 @@ function renderHlavicka(state, dom) {
     dom.pvTipBtn.toggleAttribute('data-pristup-go', !!m.tip?.znova);
 }
 
+/**
+ * Bublina „Meranie pripojené“: na karte Teraz, ktorá práve prestala ukazovať odhad. Na inej karte
+ * počká. Zhasne ju web/interactions.js. @param {import('../state.js').AppState} state
+ */
+export function pripojenieOf(state) {
+    return state.panel === 'terazky' ? pripojenieBublina({ ...state, caka: state.pripojenieCaka }) : null;
+}
+
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderHeader(state, dom) {
     renderHlavicka(state, dom);
+    const b = pripojenieOf(state);
+    dom.pripojene.classList.toggle('hidden', !b);
+    dom.pripojeneTitle.textContent = b?.nadpis ?? '';
+    dom.pripojeneText.textContent = b?.text ?? '';
     // Pás o odhade z typickej strechy - len na kartách, ktoré z nej odpovedajú bez slova o nej. Karta
     // 7 dní to hovorí v podnadpise, Štatistika má vlastnú výzvu.
     renderPanelsBar(state, dom);

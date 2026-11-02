@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRISTUP, SITE } from '../shared/config.js';
-import { hlavickaModel } from '../shared/hlavicka.js';
+import { hlavickaModel, pripojenieBublina } from '../shared/hlavicka.js';
 import { odmietnute } from '../shared/pristup.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -76,4 +76,21 @@ test('hlavička: bez panelov výzva, pri načítaní a bez dát slovo bez bublin
     assert.deepEqual([nacitavam.status, nacitavam.tone, nacitavam.tip], ['načítavam…', 'off', null]);
     const bezDat = model({ pv: null, forecast: null });
     assert.deepEqual([bezDat.status, bezDat.tone, bezDat.tip], ['bez dát', 'off', null]);
+});
+
+test('bublina po pripojení: až keď prvé meranie prišlo, v noci že menič spí', () => {
+    const bublina = (/** @type {Partial<typeof base>} */ s, caka = true) => pripojenieBublina({ ...base, ...s, caka });
+    assert.deepEqual(bublina({}), { nadpis: 'Meranie pripojené', text: 'Huawei · Dvorany – čísla sú odteraz z meniča' });
+    const noc = bublina({ now: at('23:10'), pv: { ...cerstve, realTimePowerKw: null, updatedAt: at('23:10').toISOString() } });
+    assert.equal(noc?.text, 'Huawei · Dvorany – menič teraz spí, prvé namerané čísla budú ráno');
+    assert.equal(bublina({}, false), null, 'už ukázaná sa nevráti');
+    assert.equal(bublina({ pv: null }), null, 'meranie ešte neprišlo - počká');
+    assert.equal(
+        bublina({ now: at('13:30'), pv: { ...cerstve, updatedAt: at('13:30').toISOString() } }),
+        null,
+        'zastarané meranie nie je pripojenie',
+    );
+    assert.equal(bublina({ zdroj: null }), null, 'bez merania nie je čo ohlásiť');
+    const bezMena = bublina({ zdroj: /** @type {any} */ ({ ...NB, sposob: 'neznamy', nazov: '' }) });
+    assert.equal(bezMena?.text, 'Čísla sú odteraz z meniča');
 });

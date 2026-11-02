@@ -33,7 +33,7 @@ import { dnesFaza } from '../../shared/dnes-faza.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { dayHeadSub, mainWindow, sedemDayChart, sunWindows, windowBand } from '../../shared/sedem-dni.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { HEADER_TEXTS, oznameniaTexts, stavMeraniaText } from '../../shared/messages-core.js';
+import { HEADER_TEXTS, oznameniaTexts, pripojenieText, stavMeraniaText } from '../../shared/messages-core.js';
 import { dayNameShort, fmt1, hourLabel, kwpText, minutesToTimeStr, weekDayLong, weekDayPosition } from '../../shared/format.js';
 import { PANELS } from '../../web/dom.js';
 import { pocasieStav } from '../../web/pocasie.js';
@@ -2880,6 +2880,18 @@ test.describe('moja elektráreň', () => {
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
         await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        // Prvé meranie prišlo: karta Teraz už neukazuje odhad a bublina nad navigáciou povie prečo.
+        // Ťuknutie ju zhasne a na kartu sa už nevráti.
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#tz-note')).toBeHidden();
+        await expect(page.locator('#pripojene')).toBeVisible();
+        await expect(page.locator('#pripojene-text')).toHaveText(pripojenieText('zive', 'Huawei · Dvorany').text);
+        await page.locator('#pripojene').click();
+        await expect(page.locator('#pripojene')).toBeHidden();
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#pripojene')).toBeHidden();
+        await page.locator('#nav-nastavenie').click();
         // Prehľad v Nastavení ukáže, že kiosk odpovedá, aj čas posledného merania - na mobile
         // namiesto podnadpisu, ten sa skryje.
         await otvorPolozku(page, 'settings-plant');

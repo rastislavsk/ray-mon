@@ -6,6 +6,7 @@ import {
     jeBeta,
     isPecat,
     menoZnacky,
+    novePripojenie,
     parseZdroj,
     polaOf,
     SPOSOBY,
@@ -161,4 +162,13 @@ test('hláška pripojenia podľa kódu od Huawei: relácia v Shelly, oprávnenie
     );
     assert.equal(note('vyrobca', 'prihlasenie'), 'Huawei teraz neodpovedá alebo nič nenašiel. Skús to o chvíľu znova (prihlásenie).');
     assert.equal(note('udaje', ''), 'Huawei údaje neprijal. Skontroluj, či si skopíroval všetko celé.');
+});
+
+test('novePripojenie: prvé, iná elektráreň či obnovený prístup áno, to isté meranie uložené znova nie', () => {
+    const z = { sposob: 'huawei-northbound', pecat: PECAT, nazov: 'Dvorany' };
+    assert.equal(novePripojenie(null, z), true);
+    assert.equal(novePripojenie(z, { ...z, pecat: `${PECAT}x` }), true);
+    assert.equal(novePripojenie(z, { ...z }), false);
+    assert.equal(novePripojenie(z, null), false);
+    assert.equal(novePripojenie(null, null), false);
 });

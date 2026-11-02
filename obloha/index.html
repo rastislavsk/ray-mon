@@ -748,6 +748,16 @@
             </section>
         </main>
 
+        <!-- Bublina nad navigáciou po novom pripojení merania, keď prvé meranie prišlo a karta Teraz
+             prestala ukazovať odhad (shared/hlavicka.js). Zmizne sama alebo ťuknutím. Texty píše render. -->
+        <div id="pripojene" class="pripojene hidden" role="status">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" />
+                <path d="M7 12.4l3.2 3.1L17 8.8" />
+            </svg>
+            <span class="pripojene-txt"><b id="pripojene-title"></b><span id="pripojene-text"></span></span>
+        </div>
+
         <!-- Ponuka prevziať nastavenie z otvoreného odkazu (#nastavenie=…). Pevne nad navigáciou,
              aby bola vidieť na ktorejkoľvek karte. Odkaz môže poslať ktokoľvek, preto sa sám neuloží. -->
         <section id="import-offer" class="cta offer hidden" aria-live="polite" aria-labelledby="import-offer-title">

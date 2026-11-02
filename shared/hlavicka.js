@@ -4,7 +4,8 @@
 // Návrh: docs/navrhy/hlavicka-jednotna.html.
 
 import { bodkaMerania, stavMerania } from './hero-model.js';
-import { stavMeraniaSlovo, stavMeraniaText } from './messages-core.js';
+import { pripojenieText, stavMeraniaSlovo, stavMeraniaText } from './messages-core.js';
+import { zdrojText } from './zdroje.js';
 
 /** Čo hlavička ukáže bez času merania: `status` a `toneText` pre čítačku obrazovky. */
 const BEZ_CASU = {
@@ -56,4 +57,16 @@ export function hlavickaModel(s, voice = 'drzy') {
         return { place, setup: false, tone, status: slovo ? `${stav.cas} · ${slovo}` : stav.cas, toneText: TONE_TEXT[tone], tip };
     }
     return { place, setup: false, tone, ...BEZ_CASU[stav.druh === 'neprislo' ? 'neprislo' : 'odhad'], tip };
+}
+
+/**
+ * Bublina po novom pripojení merania (`caka`: appka ju po pripojení ešte neukázala). Ukáže sa, až
+ * keď prvé meranie naozaj prišlo - vtedy karta Teraz prestane ukazovať odhad, a bublina povie
+ * prečo. Kým meranie nepríde, null a bublina počká.
+ * @param {HlavickaVstup & { caka: boolean }} s
+ */
+export function pripojenieBublina(s) {
+    if (!s.caka || !s.zdroj) return null;
+    const druh = stavMerania(s).druh;
+    return druh === 'zive' || druh === 'spi' ? pripojenieText(druh, zdrojText(s.zdroj)) : null;
 }
