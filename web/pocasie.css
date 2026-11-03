@@ -178,25 +178,50 @@
     left: 96px;
     top: -22px;
 }
-/* Zatiahnutá obloha: súvislá vrstva oblakov, pri daždi tmavšia. */
+/* Zatiahnutá obloha: súvislá vrstva oblakov, pri daždi tmavšia. Ide stále jedným smerom (zľava
+   doprava): kresba je dlaždica so šírkou obrazovky a 80 px navyše do každej strany, vrstva sú dve
+   dlaždice za sebou a posunie sa presne o jednu, takže koniec nadviaže na začiatok bez skoku. Dve
+   kopy presahujú okraj dlaždice, preto majú kópiu o dlaždicu vedľa (115 % a -22 %) – inak by sa na
+   švíku rozpadli. Hýbe sa len transform, rozmazanie sa v každom snímku nepočíta znova.
+   --s je sila oblakov (násobok priehľadnosti). Spodná vrstva je sivá obloha za oblakmi; je
+   vypnutá (--wx-sivo-a 0), zapína ju len zamračené. */
 .wx-deck {
-    inset: -40px -80px auto -80px;
+    --s: 1;
+    left: -80px;
+    top: -40px;
+    width: calc(2 * (100% + 160px));
     height: 420px;
     filter: blur(18px);
-    animation: wx-drift 96s ease-in-out infinite alternate;
-    background:
-        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
-        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), 0.34), transparent 70%),
-        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), 0.36), transparent 70%),
-        radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.2), transparent 70%),
-        radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.22), transparent 70%),
-        linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.35), transparent 85%);
+    animation: wx-pas 45s linear infinite;
+    background-size: 50% 100%;
+    background-image:
+        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), calc(0.3 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl), calc(0.3 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), calc(0.34 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), calc(0.36 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl), calc(0.36 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), calc(0.2 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), calc(0.22 * var(--s))), transparent 70%),
+        linear-gradient(180deg, rgba(var(--wx-cl-dark), calc(0.35 * var(--s))), transparent 85%),
+        linear-gradient(180deg, rgba(var(--wx-sivo, 0, 0, 0), var(--wx-sivo-a, 0)), transparent 70%);
+}
+/* Zamračené (docs/navrhy/zamracene-oblaky.html): svetlosivé oblaky cez deň aj v noci, v oboch
+   appkách rovnaké, preto stoja na vrstve a nie na .wx, kde farby nastavuje appka. Za nimi sivá
+   obloha – Obloha ju má z jadra (SKY.sivost), súčasná appka (čierne pozadie) cez --wx-sivo-sila
+   a --wx-sivo vo svojom style.css. */
+.wx[data-wx='zamracene'] .wx-deck {
+    --wx-cl: 235, 236, 237;
+    --wx-cl-dark: 89, 90, 90;
+    --s: 1.2;
+    --wx-sivo-a: var(--wx-sivo-sila, 0);
 }
 .wx[data-wx='dazd'] .wx-deck {
-    background:
+    background-image:
         radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl-dark), 0.55), transparent 70%),
+        radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl-dark), 0.55), transparent 70%),
         radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
         radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
+        radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
         radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.12), transparent 70%),
         radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.14), transparent 70%),
         linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.5), transparent 85%);
@@ -380,14 +405,22 @@
         opacity: 1;
     }
 }
-/* Rozkmit oblakov musí ostať aspoň o šírku rozmazania pod 80 px, o ktoré vrstva .wx-deck presahuje
-   do strán – inak by pri okraji presvitala. Pri menšom rozkmite pôsobili oblaky nehybne. */
+/* Kyvadlo jednotlivých oblakov pri polojasne; pri menšom rozkmite pôsobili nehybne. */
 @keyframes wx-drift {
     from {
         transform: translateX(-40px);
     }
     to {
         transform: translateX(40px);
+    }
+}
+/* Súvislá vrstva oblakov: posun o jednu z dvoch dlaždíc (polovica vlastnej šírky). */
+@keyframes wx-pas {
+    from {
+        transform: translateX(-50%);
+    }
+    to {
+        transform: translateX(0);
     }
 }
 @keyframes wx-fall1 {

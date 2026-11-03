@@ -65,6 +65,12 @@ const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 /** @param {number[]} a @param {number[]} b @param {number} f 0 = a, 1 = b */
 const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
 
+/** Sivá s rovnakým jasom (luma podľa Rec. 709). @param {number[]} c */
+const naSivu = ([r, g, b]) => {
+    const y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    return [y, y, y];
+};
+
 /** @param {number[]} c */
 const css = (c) => `rgb(${c.join(', ')})`;
 
@@ -87,8 +93,9 @@ function designHour(minute, sun) {
 
 /**
  * Dve farby oblohy (hore a dole) v danej minúte dňa. Počasie primieša sivú, cez deň naplno
- * a v noci len štvrtinou - tmavá obloha je tmavá aj zamračená. Bez počasia (`null`, appka
- * nemá dáta) je obloha sivá.
+ * a v noci len štvrtinou - tmavá obloha je tmavá aj zamračená. Potom stratí časť farebného
+ * odtieňa (SKY.sivost): zamračená je sivá, svetlá cez deň a tmavá v noci. Bez počasia (`null`,
+ * appka nemá dáta) je obloha sivá.
  * @param {number} minute minúta dňa v pásme lokality (0-1439)
  * @param {{ rise: number | null, set: number | null }} sun východ a západ ako minúta dňa (sunTimes)
  * @param {SkyWeather | null} weather
@@ -107,7 +114,11 @@ export function skyColors(minute, sun, weather) {
     const { riseH, setH } = SKY;
     const day = t >= riseH - 1 && t <= setH + 1 ? Math.sin((Math.PI * (t - riseH + 1)) / (setH - riseH + 2)) : 0;
     const cf = SKY.cloudMix[weather] * Math.max(0.25, Math.min(1, day));
-    return sky(weather, css(mix(top, rgb(SKY.cloud[0]), cf)), css(mix(bottom, rgb(SKY.cloud[1]), cf)));
+    const farba = (/** @type {number[]} */ c, /** @type {string} */ mrak) => {
+        const m = mix(c, rgb(mrak), cf);
+        return css(mix(m, naSivu(m), SKY.sivost[weather]));
+    };
+    return sky(weather, farba(top, SKY.cloud[0]), farba(bottom, SKY.cloud[1]));
 }
 
 /**

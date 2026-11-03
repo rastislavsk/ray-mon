@@ -336,6 +336,13 @@ b {
 .wx {
     --wx-moon-top: calc(var(--safe-top) + 122px);
     --wx-prec-h: calc(var(--safe-top) + 195px);
+    /* Sivá obloha za oblakmi pri zamračenej (web/pocasie.css): pozadie appky je čierne, tak ju
+       kreslí počasie, hore s jasom zamračenej Oblohy na poludnie a v noci a k číslu slabne. */
+    --wx-sivo: 102, 102, 102;
+    --wx-sivo-sila: 0.9;
+}
+.wx[data-noc] {
+    --wx-sivo: 30, 30, 30;
 }
 /* Dva riadky: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku oboch
    (docs/navrhy/hlavicka-jednotna.html) - rovnako ako v Oblohe. */

@@ -770,6 +770,9 @@ export const SKY = {
     // (viď skyColors). Dážď a sneh farbu neba nemenia - kreslí ich počasie na karte Teraz.
     cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
     cloud: ['#5b6b82', '#98a5b5'],
+    // Koľko farebného odtieňa neba po primiešaní oblakov zmizne (0 = nič, 1 = sivá s rovnakým
+    // jasom), cez deň aj v noci. Zamračená obloha je sivá celá, aby za oblakmi nebolo vidno modrú.
+    sivost: { jasno: 0, polojasno: 0, zamracene: 1 },
     // Bez dát: sivá obloha, ktorá netvrdí nič o počasí.
     offline: ['#4f555f', '#7f858e'],
     // Vypnutá živá obloha (Nastavenie › Vzhľad): pokojná tmavá, nemení sa s časom ani počasím.
