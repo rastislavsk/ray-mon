@@ -46,7 +46,7 @@ import { dayWindowCard, MOZEM_SKY_TEXTS, PLAN_DNA_TITLE, terazTypicalText, weekM
 import { settingsFromLink, shareUrl, toUser, typicalSettings } from '../../shared/settings.js';
 import { buildForecast, localDateKey, localMinutes, sunTimes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
-import { bigWords, FIXED_NOW, fixture, fixtureData, overSklo, podvrhniQr, rozdielStavovehoRiadku } from '../helpers.js';
+import { bigWords, dazdKresba, FIXED_NOW, fixture, fixtureData, overSklo, podvrhniQr, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv, forecast } = fixtureData();
 // Počasie z Open-Meteo; predpoveď si z neho postaví prehliadač sám, rovnako ako naživo.
@@ -3728,10 +3728,19 @@ test('počasie v pozadí karty Teraz: stav z jadra, len na karte Teraz, s farbou
     if (!den) throw new Error('model o 13:00 nemá počasie');
     await expect(page.locator('#wx')).toBeVisible();
     await expect(page.locator('#wx')).toHaveAttribute('data-wx', pocasieStav(den));
+    if (den.dazd) await expect(page.locator('#wx')).toHaveAttribute('data-dazd', den.dazd);
+    else await expect(page.locator('#wx')).not.toHaveAttribute('data-dazd');
     await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
     // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
     await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
     expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+    // Dážď v každej sile: kvapky majú masku tej sily, mrholenie blízke kvapky nemá.
+    const kresby = [];
+    for (const sila of ['mrholenie', 'slaby', 'dazd', 'silny', null]) kresby.push(await dazdKresba(page, sila));
+    for (const k of kresby) expect(k[0]).toMatch(/^url\("data:image\/svg\+xml,/);
+    expect(kresby[0][2]).toBe('skryté');
+    expect(new Set(kresby.slice(0, 4).map((k) => k[0])).size, 'každá sila má vlastné kvapky').toBe(4);
+    expect(kresby[4], 'bez sily zo staršieho jadra bežný dážď').toEqual(kresby[2]);
     await page.locator('#nav-mozem').click();
     await expect(page.locator('#wx')).toBeHidden();
     await page.locator('#nav-nastavenie').click();

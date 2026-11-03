@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Dážď v štyroch silách na karte Teraz</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky. „Dnes“ je kópia dažďa z web/pocasie.css po #419, „Návrh“ sú tri hĺbkové vrstvy
+               kvapiek (ďaleko, stred, blízko) zo SVG dlaždíc, závoj a stmavenie podľa sily dažďa. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark light;
+                --page: #050505;
+                --text: #f2f0ea;
+                --muted: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.14);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --page: #f4f2ec;
+                    --text: #16170f;
+                    --muted: rgba(22, 23, 15, 0.66);
+                    --line: rgba(22, 23, 15, 0.14);
+                }
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 28px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 20px;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 780px;
+            }
+            code {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 0.86em;
+            }
+            .ctrl {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: var(--page);
+                padding: 10px 0;
+                border-bottom: 1px solid var(--line);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 20px;
+            }
+            .seg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .seg button {
+                font: inherit;
+                font-size: 14px;
+                color: var(--text);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 12px;
+                min-height: 36px;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--text);
+                color: var(--page);
+                border-color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+            }
+            figure {
+                margin: 0;
+                width: 360px;
+                max-width: 100%;
+            }
+            .row.male figure {
+                width: 270px;
+            }
+            figcaption {
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 8px;
+            }
+            figcaption b {
+                color: var(--text);
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 900px;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                font-size: 12px;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            td:nth-child(2) {
+                font-family: 'IBM Plex Mono', monospace;
+                white-space: nowrap;
+            }
+            .tab-wrap {
+                overflow-x: auto;
+            }
+
+            /* ---------- výrez obrazovky ---------- */
+            .scr {
+                --prec-h: 236px;
+                position: relative;
+                overflow: hidden;
+                height: 440px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                isolation: isolate;
+                color: #fff;
+            }
+            .male .scr {
+                height: 360px;
+            }
+            .scr > p {
+                position: relative;
+                z-index: 1;
+                margin: 0;
+                color: inherit;
+                max-width: none;
+            }
+            .sbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 47px;
+                padding: 0 28px;
+                font:
+                    600 15px/1 system-ui,
+                    sans-serif;
+            }
+            [data-app='cur'] .scr {
+                background: #0a0a0a;
+            }
+            [data-app='cur'] .brand {
+                padding: 12px 18px 0;
+                font:
+                    600 18px 'IBM Plex Mono',
+                    monospace;
+                letter-spacing: 0.2em;
+            }
+            [data-app='cur'] .kick {
+                padding: 34px 18px 0;
+                font:
+                    600 12px 'IBM Plex Mono',
+                    monospace;
+                letter-spacing: 0.14em;
+                color: rgba(242, 240, 234, 0.64);
+            }
+            [data-app='cur'] .num {
+                padding: 0 18px;
+                font-size: 86px;
+                font-weight: 700;
+                line-height: 0.95;
+                letter-spacing: -0.04em;
+                color: #ffc24b;
+            }
+            .num small {
+                font-size: 18px;
+                margin-left: 6px;
+                letter-spacing: 0;
+            }
+            [data-app='cur'] .sub {
+                padding: 10px 18px 0;
+                font-size: 15px;
+            }
+            /* Živá obloha pri daždi: zatiahnuté, teda sivá obloha (SKY.sivost.zamracene 1). */
+            [data-app='obl'] .scr {
+                background: linear-gradient(180deg, #5c6066, #96999e);
+                font-family: 'Archivo', system-ui, sans-serif;
+            }
+            [data-app='obl'][data-noc] .scr {
+                background: linear-gradient(180deg, #0e1018, #1d2029);
+            }
+            [data-app='obl'] .brand {
+                padding: 10px 18px 0;
+                font-size: 18px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+            }
+            [data-app='obl'] .kick {
+                padding: 18px 18px 0;
+                font-size: 30px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+            }
+            [data-app='obl'] .num {
+                padding: 0 18px;
+                font-size: 68px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                line-height: 0.95;
+                text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+            }
+            [data-app='obl'] .sub {
+                padding: 8px 18px 0;
+                font-size: 15px;
+            }
+            .male .num {
+                font-size: 56px;
+            }
+            [data-app='cur'] .male .num {
+                font-size: 64px;
+            }
+
+            /* ---------- počasie (kópia web/pocasie.css, farby appiek zo style.css) ---------- */
+            .wx {
+                --wx-cl: 226, 228, 232;
+                --wx-cl-dark: 120, 128, 140;
+                --wx-drop: 190, 210, 240;
+                --wx-sivo: 102, 102, 102;
+                position: absolute;
+                z-index: 0;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 660px;
+                overflow: hidden;
+                pointer-events: none;
+                -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+                mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+            }
+            [data-app='obl'] .wx {
+                --wx-cl: 255, 255, 255;
+                --wx-cl-dark: 70, 88, 115;
+                --wx-drop: 235, 242, 255;
+            }
+            [data-noc] .wx {
+                --wx-cl: 150, 158, 185;
+                --wx-cl-dark: 20, 24, 40;
+                --wx-sivo: 30, 30, 30;
+            }
+            [data-app='obl'][data-noc] .wx {
+                --wx-cl: 170, 180, 210;
+                --wx-cl-dark: 10, 14, 32;
+            }
+            .wx > *,
+            .wx-prec > * {
+                position: absolute;
+            }
+            [data-motion='off'] .wx * {
+                animation: none !important;
+            }
+            /* Súvislá tmavá vrstva oblakov pri daždi (dnešná), --s je sila. */
+            .wx-deck {
+                --s: 1;
+                left: -80px;
+                top: -40px;
+                width: calc(2 * (100% + 160px));
+                height: 420px;
+                filter: blur(18px);
+                animation: wx-pas 45s linear infinite;
+                background-size: 50% 100%;
+                background-image:
+                    radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl-dark), calc(0.55 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl-dark), calc(0.55 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.12), transparent 70%),
+                    radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.14), transparent 70%),
+                    linear-gradient(180deg, rgba(var(--wx-cl-dark), calc(0.5 * var(--s))), transparent 85%);
+            }
+            .wx-prec {
+                left: 0;
+                right: 0;
+                top: 0;
+                height: var(--prec-h);
+                overflow: hidden;
+                -webkit-mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
+                mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
+            }
+
+            /* DNES: šikmé tenké čiary v dvoch rýchlostiach. */
+            .dnes .wx-rain {
+                left: -100px;
+                right: -100px;
+                top: -300px;
+                height: 1000px;
+                transform: rotate(12deg);
+            }
+            .dnes .wx-rain1 {
+                background: repeating-linear-gradient(
+                    90deg,
+                    transparent 0 17px,
+                    rgba(var(--wx-drop), 0.5) 17px 18.4px,
+                    transparent 18.4px 37px
+                );
+                -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
+                mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
+                animation: wx-fall1 0.56s linear infinite;
+            }
+            .dnes .wx-rain2 {
+                background: repeating-linear-gradient(
+                    90deg,
+                    transparent 0 29px,
+                    rgba(var(--wx-drop), 0.32) 29px 30px,
+                    transparent 30px 53px
+                );
+                -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
+                mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
+                animation: wx-fall2 0.88s linear infinite;
+            }
+            @keyframes wx-fall1 {
+                from {
+                    transform: rotate(12deg) translateY(0);
+                }
+                to {
+                    transform: rotate(12deg) translateY(90px);
+                }
+            }
+            @keyframes wx-fall2 {
+                from {
+                    transform: rotate(12deg) translateY(0);
+                }
+                to {
+                    transform: rotate(12deg) translateY(120px);
+                }
+            }
+
+            /* NÁVRH. Sivá obloha za oblakmi aj v súčasnej appke (ako pri zamračenej), čím silnejší dážď,
+               tým tmavšia (--sivo-a). V Oblohe ju kreslí obloha appky, tu ju stmaví len .wx-sero. */
+            .navrh .wx-sivo {
+                inset: 0;
+                background: linear-gradient(180deg, rgba(var(--wx-sivo), var(--sivo-a, 0)), transparent 70%);
+            }
+            [data-app='obl'] .navrh .wx-sivo {
+                display: none;
+            }
+            /* Stmavenie: celá horná časť obrazovky ztmavne podľa sily dažďa. */
+            .navrh .wx-sero {
+                inset: 0;
+                background: linear-gradient(
+                    180deg,
+                    rgba(8, 10, 16, var(--sero, 0)),
+                    rgba(8, 10, 16, calc(0.5 * var(--sero, 0))) 60%,
+                    transparent
+                );
+            }
+            /* Kvapky: tri hĺbky. Každá vrstva je dlaždica SVG (kvapky rôznej dĺžky, hrúbky a jasu,
+               vzdialené už rozmazané v kresbe), použitá ako maska nad farbou --wx-drop. Vrstva je
+               o dve výšky dlaždice vyššia, je pootočená do smeru vetra a posúva sa presne o jednu
+               dlaždicu, takže koniec nadviaže na začiatok. Hýbe sa len transform. Sklon je proti
+               smeru hodín: kvapky padajú doprava dole, s vetrom, ktorým idú oblaky (dnes padajú proti nemu). */
+            .navrh .wx-kv {
+                left: -140px;
+                right: -140px;
+                background: rgb(var(--wx-drop));
+                -webkit-mask-repeat: repeat;
+                mask-repeat: repeat;
+                animation: var(--anim) linear infinite;
+                will-change: transform;
+            }
+            [data-noc] .navrh .wx-kv {
+                opacity: 0.7;
+            }
+            /* Závoj: mäkké pruhy hmly a dažďa, ktoré pomaly ťahajú do strany (dlaždica ako .wx-deck). */
+            .navrh .wx-zavoj {
+                left: -60px;
+                top: 0;
+                width: calc(2 * (100% + 120px));
+                height: 100%;
+                background-size: 50% 100%;
+                opacity: var(--zavoj, 0);
+                animation: wx-pas 28s linear infinite;
+                background-image:
+                    radial-gradient(ellipse 30% 60% at 20% 70%, rgba(var(--wx-cl), 0.32), transparent 70%),
+                    radial-gradient(ellipse 30% 60% at 120% 70%, rgba(var(--wx-cl), 0.32), transparent 70%),
+                    radial-gradient(ellipse 26% 70% at 58% 60%, rgba(var(--wx-cl), 0.26), transparent 70%),
+                    radial-gradient(ellipse 22% 50% at 86% 85%, rgba(var(--wx-cl), 0.22), transparent 70%),
+                    radial-gradient(ellipse 22% 50% at -14% 85%, rgba(var(--wx-cl), 0.22), transparent 70%),
+                    linear-gradient(180deg, transparent 20%, rgba(var(--wx-cl), 0.16) 70%, rgba(var(--wx-cl), 0.1));
+            }
+            [data-noc] .navrh .wx-zavoj {
+                opacity: calc(0.6 * var(--zavoj, 0));
+            }
+            @keyframes wx-pas {
+                from {
+                    transform: translateX(-50%);
+                }
+                to {
+                    transform: translateX(0);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wx * {
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main data-app="obl">
+            <header>
+                <h1>Dážď v štyroch silách na karte Teraz</h1>
+                <p>
+                    Dnes sú kvapky dve vrstvy rovnakých šikmých čiar. Návrh skladá dážď z troch hĺbok: ďaleko veľa krátkych, tenkých a
+                    rozmazaných kvapiek, ktoré padajú pomaly, v strede bežné, blízko málo dlhých, jasnejších a rýchlych čiar. Každá kvapka
+                    má inú dĺžku, hrúbku aj jas a k spodku sa rozjasní ako skutočná stopa padajúcej kvapky. Sila dažďa z predpovede mení
+                    počet kvapiek, ich rýchlosť, sklon vetra, tmu pod oblakmi a závoj.
+                </p>
+            </header>
+
+            <div class="ctrl">
+                <div class="seg" data-seg="sila">
+                    <button type="button" data-v="mrholenie" aria-pressed="false">Mrholenie</button>
+                    <button type="button" data-v="slaby" aria-pressed="false">Slabý dážď</button>
+                    <button type="button" data-v="dazd" aria-pressed="true">Dážď</button>
+                    <button type="button" data-v="silny" aria-pressed="false">Silný dážď</button>
+                </div>
+                <div class="seg" data-seg="app">
+                    <button type="button" data-v="cur" aria-pressed="false">Súčasná appka</button>
+                    <button type="button" data-v="obl" aria-pressed="true">Živá obloha</button>
+                </div>
+                <div class="seg" data-seg="cas">
+                    <button type="button" data-v="den" aria-pressed="true">Deň</button>
+                    <button type="button" data-v="noc" aria-pressed="false">Noc</button>
+                </div>
+                <div class="seg" data-seg="motion">
+                    <button type="button" data-v="on" aria-pressed="true">Pohyb zap</button>
+                    <button type="button" data-v="off" aria-pressed="false">vyp</button>
+                </div>
+            </div>
+
+            <div class="row">
+                <figure>
+                    <figcaption><b>Dnes</b> · rovnaký dážď pri každej sile</figcaption>
+                    <div class="scr dnes">
+                        <div class="wx" aria-hidden="true">
+                            <i class="wx-deck"></i>
+                            <div class="wx-prec"><i class="wx-rain wx-rain2"></i><i class="wx-rain wx-rain1"></i></div>
+                        </div>
+                    </div>
+                </figure>
+                <figure>
+                    <figcaption><b>Návrh</b> · <span data-nazov></span></figcaption>
+                    <div class="scr navrh" data-zvolena></div>
+                </figure>
+            </div>
+
+            <section>
+                <h2>Všetky štyri sily vedľa seba</h2>
+                <p>Tie isté vrstvy, mení sa len to, čo je v tabuľke nižšie. Appku, deň a noc a pohyb prepínajú tlačidlá hore.</p>
+            </section>
+            <div class="row male" data-vsetky></div>
+
+            <section>
+                <h2>Hranice z predpovede</h2>
+                <p>
+                    Open-Meteo dáva v hodinových dátach <code>precipitation</code>: súčet zrážok za predošlú hodinu v mm, z modelu so sieťou
+                    2 až 11 km. Je to priemer cez políčko siete, takže prudký lejak v ňom vyjde slabší ako na zrážkomere v záhrade – hranice
+                    preto stoja nižšie ako v klasifikácii zo staníc. Mrholenie meteorológ pozná podľa veľkosti kvapiek, nie podľa mm; model
+                    ju nevie, takže „mrholenie“ tu znamená „len pokvapkáva“.
+                </p>
+            </section>
+            <div class="tab-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sila</th>
+                            <th>mm za hodinu</th>
+                            <th>Prečo</th>
+                            <th>Ako vyzerá</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>bez zrážok</td>
+                            <td>pod 0,2</td>
+                            <td>dnešná hranica <code>POCASIE.dazdMm</code>; menej sú pár kvapiek, kresba by ich preháňala</td>
+                            <td>oblaky podľa oblačnosti</td>
+                        </tr>
+                        <tr>
+                            <td>mrholenie</td>
+                            <td>0,2 – 0,5</td>
+                            <td>britská meteorologická služba (Met Office) volá dážď pod 0,5 mm/h „slight“; na zemi sotva zmokneš</td>
+                            <td>takmer zvisle, drobné krátke kvapky pomaly, hmlistý závoj, oblaky svetlejšie</td>
+                        </tr>
+                        <tr>
+                            <td>slabý dážď</td>
+                            <td>0,5 – 2</td>
+                            <td>dolná časť „moderate“ (Met Office 0,5–4); americká AMS má slabý dážď do 2,5 mm/h zo staníc</td>
+                            <td>riedke kvapky vo všetkých hĺbkach, blízko len zopár</td>
+                        </tr>
+                        <tr>
+                            <td>dážď</td>
+                            <td>2 – 4</td>
+                            <td>horná časť „moderate“; v hodinovom priemere modelu je to už poriadny dážď</td>
+                            <td>husto, šikmejšie, tmavšie, blízko dlhé čiary</td>
+                        </tr>
+                        <tr>
+                            <td>silný dážď</td>
+                            <td>od 4</td>
+                            <td>Met Office „heavy“ (nad 4 mm/h); v modeli zväčša búrka alebo lejak</td>
+                            <td>najhustejšie a najrýchlejšie, silný vietor, tma pod oblakmi a pruhy dažďa v závoji</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+        <script>
+            // Ukážka, nie kód appky: obsah karty je vymyslený pre daždivý deň.
+            const TEXT = {
+                den: ['14:00', '0.4', '9 % z toho, čo by dala jasná obloha'],
+                noc: ['21:30', '0', 'slnko je pod obzorom'],
+            };
+            const NAZOV = { mrholenie: 'mrholenie', slaby: 'slabý dážď', dazd: 'dážď', silny: 'silný dážď' };
+
+            // Vrstvy kvapiek: w × h dlaždica, n kvapiek, dĺžka, hrúbka a jas od–do, rozmazanie v kresbe,
+            // rýchlosť v px/s. Dĺžka rastie s rýchlosťou (stopa kvapky za jeden pohľad oka).
+            const SILY = {
+                mrholenie: {
+                    uhol: 4,
+                    deck: 0.55,
+                    sero: 0.08,
+                    sivo: 0.85,
+                    zavoj: 0.8,
+                    vrstvy: [
+                        { w: 160, h: 200, n: 150, len: [5, 8], wid: [0.6, 0.9], al: [0.18, 0.38], blur: 0.5, v: 110 },
+                        { w: 220, h: 260, n: 50, len: [8, 12], wid: [0.8, 1.1], al: [0.3, 0.55], blur: 0.3, v: 170 },
+                    ],
+                },
+                slaby: {
+                    uhol: 8,
+                    deck: 0.8,
+                    sero: 0.15,
+                    sivo: 0.75,
+                    zavoj: 0.25,
+                    vrstvy: [
+                        { w: 160, h: 200, n: 60, len: [8, 13], wid: [0.7, 1], al: [0.2, 0.4], blur: 0.6, v: 300 },
+                        { w: 220, h: 260, n: 20, len: [15, 24], wid: [1, 1.4], al: [0.35, 0.6], blur: 0.3, v: 500 },
+                        { w: 300, h: 340, n: 4, len: [30, 44], wid: [1.4, 2], al: [0.5, 0.75], blur: 0, v: 760 },
+                    ],
+                },
+                dazd: {
+                    uhol: 12,
+                    deck: 1,
+                    sero: 0.25,
+                    sivo: 0.65,
+                    zavoj: 0.35,
+                    vrstvy: [
+                        { w: 160, h: 200, n: 120, len: [10, 16], wid: [0.7, 1.1], al: [0.2, 0.42], blur: 0.6, v: 380 },
+                        { w: 220, h: 260, n: 40, len: [20, 32], wid: [1, 1.5], al: [0.35, 0.65], blur: 0.3, v: 640 },
+                        { w: 300, h: 340, n: 9, len: [42, 62], wid: [1.5, 2.2], al: [0.55, 0.85], blur: 0, v: 980 },
+                    ],
+                },
+                silny: {
+                    uhol: 17,
+                    deck: 1.3,
+                    sero: 0.42,
+                    sivo: 0.5,
+                    zavoj: 0.75,
+                    vrstvy: [
+                        { w: 160, h: 200, n: 220, len: [12, 20], wid: [0.7, 1.1], al: [0.22, 0.45], blur: 0.6, v: 450 },
+                        { w: 220, h: 260, n: 72, len: [26, 40], wid: [1, 1.6], al: [0.35, 0.7], blur: 0.3, v: 780 },
+                        { w: 300, h: 340, n: 16, len: [54, 80], wid: [1.6, 2.4], al: [0.55, 0.9], blur: 0, v: 1200 },
+                    ],
+                },
+            };
+
+            // Pseudonáhoda so semienkom: tá istá kresba pri každom otvorení.
+            function nahoda(seed) {
+                let a = seed >>> 0;
+                return () => {
+                    a = (a + 0x6d2b79f5) >>> 0;
+                    let t = a;
+                    t = Math.imul(t ^ (t >>> 15), t | 1);
+                    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                };
+            }
+            // Kvapka: hore úzka, dole plná a zaoblená; prechod od priehľadnej hore k plnej dole.
+            function kvapka(x, y, len, w) {
+                const t = (w * 0.15).toFixed(2);
+                const r = (w / 2).toFixed(2);
+                return `M${(x - t).toFixed(2)} ${y.toFixed(1)}L${(x + +t).toFixed(2)} ${y.toFixed(1)}L${(x + w / 2).toFixed(2)} ${(y + len - w / 2).toFixed(1)}A${r} ${r} 0 0 1 ${(x - w / 2).toFixed(2)} ${(y + len - w / 2).toFixed(1)}Z`;
+            }
+            // Dlaždica: kvapky, ktoré presahujú okraj, majú kópiu na druhej strane, aby švík nebolo vidno.
+            function dlazdica(v, seed) {
+                const r = nahoda(seed);
+                const rad = (a, b) => a + (b - a) * r();
+                let cesty = '';
+                for (let i = 0; i < v.n; i++) {
+                    const x = rad(0, v.w);
+                    const y = rad(0, v.h);
+                    const len = rad(...v.len);
+                    const w = rad(...v.wid);
+                    const al = rad(...v.al).toFixed(2);
+                    for (const dx of [-v.w, 0, v.w])
+                        for (const dy of [-v.h, 0, v.h]) {
+                            const xx = x + dx;
+                            const yy = y + dy;
+                            if (xx + w < 0 || xx - w > v.w || yy + len < 0 || yy > v.h) continue;
+                            cesty += `<path fill-opacity="${al}" d="${kvapka(xx, yy, len, w)}"/>`;
+                        }
+                }
+                const filter = v.blur
+                    ? `<filter id="f" x="-2" y="-0.5" width="5" height="2"><feGaussianBlur stdDeviation="${v.blur}"/></filter>`
+                    : '';
+                const svg =
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="${v.w}" height="${v.h}" viewBox="0 0 ${v.w} ${v.h}">` +
+                    `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>` +
+                    `<stop offset="0.65" stop-color="#fff" stop-opacity="0.75"/><stop offset="1" stop-color="#fff"/></linearGradient>${filter}</defs>` +
+                    `<g fill="url(#g)"${v.blur ? ' filter="url(#f)"' : ''}>${cesty}</g></svg>`;
+                return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+            }
+
+            // CSS pre každú silu a vrstvu: maska, výška, posun o dlaždicu, trvanie.
+            let css = '';
+            for (const [meno, s] of Object.entries(SILY)) {
+                s.vrstvy.forEach((v, i) => {
+                    const trieda = `.wx-kv.k-${meno}-${i}`;
+                    const anim = `kv-${meno}-${i}`;
+                    const dl = dlazdica(v, 7 + i * 101 + meno.length * 13);
+                    css +=
+                        `${trieda}{top:-${2 * v.h}px;height:calc(var(--prec-h) + ${3 * v.h}px);-webkit-mask-image:${dl};mask-image:${dl};` +
+                        `-webkit-mask-size:${v.w}px ${v.h}px;mask-size:${v.w}px ${v.h}px;--anim:${anim} ${(v.h / v.v).toFixed(3)}s;}` +
+                        `@keyframes ${anim}{from{transform:rotate(-${s.uhol}deg) translateY(0)}to{transform:rotate(-${s.uhol}deg) translateY(${v.h}px)}}`;
+                });
+            }
+            document.head.insertAdjacentHTML('beforeend', `<style>${css}</style>`);
+
+            function navrhHtml(meno) {
+                const s = SILY[meno];
+                const kv = s.vrstvy.map((_, i) => `<i class="wx-kv k-${meno}-${i}"></i>`).join('');
+                return (
+                    `<div class="wx" aria-hidden="true" style="--s:${s.deck};--sero:${s.sero};--sivo-a:${s.sivo};--zavoj:${s.zavoj}">` +
+                    `<i class="wx-sivo"></i><i class="wx-deck" style="--s:${s.deck}"></i><i class="wx-sero"></i>` +
+                    `<div class="wx-prec"><i class="wx-zavoj"></i>${kv}</div></div>`
+                );
+            }
+            const KARTA =
+                '<p class="sbar"><span data-cas></span><span>▮▮▮ ◔</span></p><p class="brand">RAY-MON</p>' +
+                '<p class="kick"></p><p class="num"><span data-num></span><small>kW</small></p><p class="sub" data-sub></p>';
+
+            const vsetky = document.querySelector('[data-vsetky]');
+            for (const meno of Object.keys(SILY)) {
+                vsetky.insertAdjacentHTML(
+                    'beforeend',
+                    `<figure><figcaption><b>${NAZOV[meno]}</b></figcaption><div class="scr navrh">${navrhHtml(meno)}</div></figure>`,
+                );
+            }
+            for (const scr of document.querySelectorAll('.scr')) scr.insertAdjacentHTML('beforeend', KARTA);
+
+            const main = document.querySelector('main');
+            const vyber = { app: 'obl', cas: 'den', sila: 'dazd' };
+            const zvolena = document.querySelector('[data-zvolena]');
+            function prekresli() {
+                main.dataset.app = vyber.app;
+                main.toggleAttribute('data-noc', vyber.cas === 'noc');
+                zvolena.querySelector('.wx')?.remove();
+                zvolena.insertAdjacentHTML('afterbegin', navrhHtml(vyber.sila));
+                document.querySelector('[data-nazov]').textContent = NAZOV[vyber.sila];
+                const [cas, num, sub] = TEXT[vyber.cas];
+                for (const s of document.querySelectorAll('.scr')) {
+                    s.querySelector('[data-cas]').textContent = cas;
+                    s.querySelector('[data-num]').textContent = num;
+                    s.querySelector('[data-sub]').textContent = sub;
+                    s.querySelector('.kick').textContent = vyber.app === 'cur' ? 'TERAZ' : 'Teraz';
+                }
+            }
+            for (const seg of document.querySelectorAll('[data-seg]')) {
+                seg.addEventListener('click', (e) => {
+                    const b = e.target.closest('button');
+                    if (!b) return;
+                    for (const x of seg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+                    if (seg.dataset.seg === 'motion') document.documentElement.dataset.motion = b.dataset.v;
+                    else {
+                        vyber[seg.dataset.seg] = b.dataset.v;
+                        prekresli();
+                    }
+                });
+            }
+            prekresli();
+        </script>
+    </body>
+</html>

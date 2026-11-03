@@ -30,7 +30,8 @@
     mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
 }
 .wx > *,
-.wx > .wx-prec > * {
+.wx > .wx-prec > *,
+.wx-dazd > * {
     position: absolute;
     display: none;
 }
@@ -215,16 +216,20 @@
     --s: 1.2;
     --wx-sivo-a: var(--wx-sivo-sila, 0);
 }
+/* Dážď: tmavšie oblaky, čím silnejší, tým tmavšie (--dz-deck). Za nimi sivá obloha ako pri
+   zamračenej, pri silnejšom daždi tmavšia (--dz-sivo); kreslí ju len súčasná appka. */
 .wx[data-wx='dazd'] .wx-deck {
+    --s: var(--dz-deck);
     background-image:
-        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl-dark), 0.55), transparent 70%),
-        radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl-dark), 0.55), transparent 70%),
-        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
-        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
-        radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl-dark), 0.6), transparent 70%),
+        radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl-dark), calc(0.55 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl-dark), calc(0.55 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
+        radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl-dark), calc(0.6 * var(--s))), transparent 70%),
         radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.12), transparent 70%),
         radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.14), transparent 70%),
-        linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.5), transparent 85%);
+        linear-gradient(180deg, rgba(var(--wx-cl-dark), calc(0.5 * var(--s))), transparent 85%),
+        linear-gradient(180deg, rgba(var(--wx-sivo, 0, 0, 0), calc(var(--wx-sivo-sila, 0) * var(--dz-sivo))), transparent 70%);
 }
 
 /* ---- zrážky: končia nad vetou pod číslom (--wx-prec-h nastaví appka) ---- */
@@ -238,25 +243,141 @@
     -webkit-mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
 }
-/* Dážď: šikmé tenké čiary v dvoch rýchlostiach. */
-.wx-rain {
-    left: -100px;
-    right: -100px;
-    top: -300px;
-    height: 1000px;
-    transform: rotate(12deg);
+/* Dážď v štyroch silách (docs/navrhy/dazd-sily.html, sila v data-dazd z jadra): tri hĺbky kvapiek.
+   Ďaleko veľa krátkych, tenkých a rozmazaných, ktoré padajú pomaly, blízko málo dlhých, jasných
+   a rýchlych. Tvar kvapiek je v maskách z web/pocasie.js (--kv<vrstva>-<sila>), tu je ich farba,
+   rýchlosť a sklon. Vrstva je o dve výšky dlaždice vyššia a posunie sa presne o jednu, takže koniec
+   nadviaže na začiatok; hýbe sa len transform. Obal .wx-dazd je pootočený proti smeru hodín:
+   kvapky padajú doprava dole, s vetrom, ktorým idú oblaky. Bez data-dazd (staršie jadro z cache)
+   je to bežný dážď. Premenné sily: --dz-uhol sklon, --dz-t0 až --dz-t2 čas prechodu dlaždice
+   vrstvy (výška dlaždice / rýchlosť), --dz-deck tmavosť oblakov, --dz-sero stmavenie,
+   --dz-sivo sivá obloha v súčasnej appke, --dz-zavoj závoj. */
+.wx {
+    --dz-uhol: -12deg;
+    --dz-t0: 0.526s;
+    --dz-t1: 0.406s;
+    --dz-t2: 0.347s;
+    --dz-deck: 1;
+    --dz-sero: 0.25;
+    --dz-sivo: 0.7;
+    --dz-zavoj: 0.35;
 }
-.wx-rain1 {
-    background: repeating-linear-gradient(90deg, transparent 0 17px, rgba(var(--wx-drop), 0.5) 17px 18.4px, transparent 18.4px 37px);
-    -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
-    mask-image: repeating-linear-gradient(180deg, transparent 0 30px, #000 30px 52px, transparent 52px 90px);
-    animation: wx-fall1 0.56s linear infinite;
+.wx[data-dazd='mrholenie'] {
+    --dz-uhol: -4deg;
+    --dz-t0: 1.818s;
+    --dz-t1: 1.529s;
+    --dz-deck: 0.55;
+    --dz-sero: 0.08;
+    --dz-sivo: 0.95;
+    --dz-zavoj: 0.8;
 }
-.wx-rain2 {
-    background: repeating-linear-gradient(90deg, transparent 0 29px, rgba(var(--wx-drop), 0.32) 29px 30px, transparent 30px 53px);
-    -webkit-mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
-    mask-image: repeating-linear-gradient(180deg, transparent 0 50px, #000 50px 66px, transparent 66px 120px);
-    animation: wx-fall2 0.88s linear infinite;
+.wx[data-dazd='slaby'] {
+    --dz-uhol: -8deg;
+    --dz-t0: 0.667s;
+    --dz-t1: 0.52s;
+    --dz-t2: 0.447s;
+    --dz-deck: 0.8;
+    --dz-sero: 0.15;
+    --dz-sivo: 0.85;
+    --dz-zavoj: 0.25;
+}
+.wx[data-dazd='silny'] {
+    --dz-uhol: -17deg;
+    --dz-t0: 0.444s;
+    --dz-t1: 0.333s;
+    --dz-t2: 0.283s;
+    --dz-deck: 1.3;
+    --dz-sero: 0.42;
+    --dz-sivo: 0.55;
+    --dz-zavoj: 0.75;
+}
+/* Masky sily stoja v atribúte style obalu .wx-dazd, preto sa vyberajú až na ňom. */
+.wx-dazd {
+    --kv0: var(--kv0-dazd);
+    --kv1: var(--kv1-dazd);
+    --kv2: var(--kv2-dazd);
+}
+.wx[data-dazd='mrholenie'] .wx-dazd {
+    --kv0: var(--kv0-mrholenie);
+    --kv1: var(--kv1-mrholenie);
+}
+.wx[data-dazd='slaby'] .wx-dazd {
+    --kv0: var(--kv0-slaby);
+    --kv1: var(--kv1-slaby);
+    --kv2: var(--kv2-slaby);
+}
+.wx[data-dazd='silny'] .wx-dazd {
+    --kv0: var(--kv0-silny);
+    --kv1: var(--kv1-silny);
+    --kv2: var(--kv2-silny);
+}
+.wx-prec > .wx-dazd {
+    inset: 0;
+    transform: rotate(var(--dz-uhol));
+}
+.wx-kv {
+    left: -140px;
+    right: -140px;
+    background: rgb(var(--wx-drop));
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    animation: wx-kv0 var(--dz-t0) linear infinite;
+}
+.wx-kv0 {
+    top: -400px;
+    height: calc(100% + 600px);
+    -webkit-mask-image: var(--kv0);
+    mask-image: var(--kv0);
+    -webkit-mask-size: 160px 200px;
+    mask-size: 160px 200px;
+}
+.wx-kv1 {
+    top: -520px;
+    height: calc(100% + 780px);
+    -webkit-mask-image: var(--kv1);
+    mask-image: var(--kv1);
+    -webkit-mask-size: 220px 260px;
+    mask-size: 220px 260px;
+    animation-name: wx-kv1;
+    animation-duration: var(--dz-t1);
+}
+.wx-kv2 {
+    top: -680px;
+    height: calc(100% + 1020px);
+    -webkit-mask-image: var(--kv2);
+    mask-image: var(--kv2);
+    -webkit-mask-size: 300px 340px;
+    mask-size: 300px 340px;
+    animation-name: wx-kv2;
+    animation-duration: var(--dz-t2);
+}
+/* Stmavenie pod oblakmi a závoj: mäkké pruhy hmly a dažďa, ktoré pomaly ťahajú do strany
+   (dlaždica ako .wx-deck). V noci sú kvapky aj závoj slabšie, svieti na ne len mesto. */
+.wx-sero {
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8, 10, 16, var(--dz-sero)), rgba(8, 10, 16, calc(0.5 * var(--dz-sero))) 60%, transparent);
+}
+.wx-prec > .wx-zavoj {
+    left: -60px;
+    top: 0;
+    width: calc(2 * (100% + 120px));
+    height: 100%;
+    opacity: var(--dz-zavoj);
+    animation: wx-pas 28s linear infinite;
+    background-size: 50% 100%;
+    background-image:
+        radial-gradient(ellipse 30% 60% at 20% 70%, rgba(var(--wx-cl), 0.32), transparent 70%),
+        radial-gradient(ellipse 30% 60% at 120% 70%, rgba(var(--wx-cl), 0.32), transparent 70%),
+        radial-gradient(ellipse 26% 70% at 58% 60%, rgba(var(--wx-cl), 0.26), transparent 70%),
+        radial-gradient(ellipse 22% 50% at 86% 85%, rgba(var(--wx-cl), 0.22), transparent 70%),
+        radial-gradient(ellipse 22% 50% at -14% 85%, rgba(var(--wx-cl), 0.22), transparent 70%),
+        linear-gradient(180deg, transparent 20%, rgba(var(--wx-cl), 0.16) 70%, rgba(var(--wx-cl), 0.1));
+}
+.wx[data-noc] .wx-dazd {
+    opacity: 0.7;
+}
+.wx[data-noc] .wx-zavoj {
+    opacity: calc(0.6 * var(--dz-zavoj));
 }
 /* Sneh: vločky rôznej veľkosti v dlaždiciach nesúdeliteľných rozmerov, aby nebolo vidno mriežku. */
 .wx-snow {
@@ -355,7 +476,8 @@
 .wx[data-wx='jasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-flare),
 .wx[data-wx='polojasno']:not([data-noc]) :is(.wx-halo, .wx-r1, .wx-r2, .wx-c1, .wx-c2, .wx-c3),
 .wx[data-wx='zamracene']:not([data-noc]) :is(.wx-diffuse, .wx-deck),
-.wx[data-wx='dazd'] :is(.wx-deck, .wx-rain1, .wx-rain2),
+.wx[data-wx='dazd'] :is(.wx-deck, .wx-sero, .wx-zavoj, .wx-dazd, .wx-kv0, .wx-kv1),
+.wx[data-wx='dazd']:not([data-dazd='mrholenie']) .wx-kv2,
 .wx[data-wx='sneh'] :is(.wx-deck, .wx-snow1, .wx-snow2),
 .wx[data-noc][data-wx='jasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2),
 .wx[data-noc][data-wx='polojasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2, .wx-c1, .wx-c2, .wx-c3),
@@ -423,20 +545,19 @@
         transform: translateX(0);
     }
 }
-@keyframes wx-fall1 {
-    from {
-        transform: rotate(12deg) translateY(0);
-    }
+@keyframes wx-kv0 {
     to {
-        transform: rotate(12deg) translateY(90px);
+        transform: translateY(200px);
     }
 }
-@keyframes wx-fall2 {
-    from {
-        transform: rotate(12deg) translateY(0);
-    }
+@keyframes wx-kv1 {
     to {
-        transform: rotate(12deg) translateY(120px);
+        transform: translateY(260px);
+    }
+}
+@keyframes wx-kv2 {
+    to {
+        transform: translateY(340px);
     }
 }
 @keyframes wx-snow1 {

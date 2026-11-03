@@ -191,6 +191,9 @@ function renderPocasie(state, m, dom) {
     if (!p) return;
     const nove = writeHtml(dom.wx, pocasieHtml(p.mesiac, p.juh), 'wx');
     dom.wx.dataset.wx = pocasieStav(p);
+    // Sila dažďa (docs/navrhy/dazd-sily.html); staršie jadro z cache ju nepošle - kresba ukáže bežný dážď.
+    if (p.dazd) dom.wx.dataset.dazd = p.dazd;
+    else delete dom.wx.dataset.dazd;
     dom.wx.toggleAttribute('data-noc', p.noc);
     renderHviezdy(p.hviezdy, nove, dom);
 }

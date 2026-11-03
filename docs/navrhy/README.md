@@ -73,5 +73,6 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `teraz-pocasie.html` | Karta Teraz (obe appky) – počasie v pozadí napravo od čísla kW: A ilustrácia oblohy, B častice, C symbol a nádych |
 | `teraz-pocasie-2.html` | Karta Teraz – počasie cez celú hornú časť obrazovky (deň aj noc, mesiac podľa fázy) a rozhodnutia k nemu |
 | `zamracene-oblaky.html` | Karta Teraz – zamračená obloha: súčasná vrstva jedným smerom namiesto kyvadla, posuvníky na sivosť oblohy a mrakov (vybrané: 100 %, 10 %, × 1,2; nové kresby oblakov zamietnuté ako umelé) |
+| `dazd-sily.html` | Karta Teraz – dážď v štyroch silách (mrholenie, slabý, dážď, silný) z mm/h predpovede: tri hĺbky kvapiek zo SVG dlaždíc, závoj a stmavenie |
 | `nastavenie-kompas-ploch.html` | Karta elektrárne – kompas plôch: ružica (A), deň plôch (B), čiary s číslami; dizajnér a skeptik |
 | `nastavenie-kompas-ploch-a.html` | Ružica plôch bez riadku o výrobe, panely a menič vedľa nej: dlaždice, panely tečú do meniča (2, vybraný), pás meniča |

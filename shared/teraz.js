@@ -95,6 +95,9 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
 function pocasieOf(input, hero) {
     const hour = Math.floor(hero.minutes / 60);
     const point = input.forecast?.hourlyToday.find((h) => h.hour === hour);
+    // Zrážky z hodiny, ktorá sa končí po tejto chvíli (o 23:xx je to polnoc zajtrajška).
+    const zrazkyPoint =
+        hour < 23 ? input.forecast?.hourlyToday.find((h) => h.hour === hour + 1) : input.forecast?.hourlyTomorrow.find((h) => h.hour === 0);
     const today = todayOf(input);
     const merane =
         today && (hero.source === 'live' || hero.source === 'measured')
@@ -103,7 +106,7 @@ function pocasieOf(input, hero) {
     // Minúta náhľadu je miestny čas elektrárne, hviezdy a mesiac potrebujú okamih v UTC.
     const tz = input.site.timezone;
     const chvila = hero.preview ? localToUtc(localDateKey(input.now, tz), hero.minutes, tz) : input.now;
-    return pocasie({ point, noc: hero.isNight, chvila, site: input.site, merane });
+    return pocasie({ point, zrazkyPoint, noc: hero.isNight, chvila, site: input.site, merane });
 }
 
 /**
