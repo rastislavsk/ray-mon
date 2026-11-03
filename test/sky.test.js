@@ -79,15 +79,23 @@ test('skyColors: oblačnosť primieša sivú, zamračené viac než polojasno', 
 });
 
 test('skyColors: v noci mení oblačnosť oblohu menej než cez deň', () => {
-    // Koľkou časťou cesty od jasnej farby k sivej mrakov je zamračená obloha (0 = vôbec, 1 = celá).
+    // Koľkou časťou cesty od jasnej farby k sivej mrakov je polojasná obloha (0 = vôbec, 1 = celá).
     const podiel = (/** @type {number} */ min) => {
-        const [j, z, s] = [skyColors(min, SUN, 'jasno').top, skyColors(min, SUN, 'zamracene').top, css(SKY.cloud[0])].map((c) =>
+        const [j, z, s] = [skyColors(min, SUN, 'jasno').top, skyColors(min, SUN, 'polojasno').top, css(SKY.cloud[0])].map((c) =>
             (c.match(/\d+/g) || []).map(Number),
         );
         return Math.hypot(...z.map((v, i) => v - j[i])) / Math.hypot(...s.map((v, i) => v - j[i]));
     };
-    assert.ok(Math.abs(podiel(hm(13)) - SKY.cloudMix.zamracene) < 0.02, `poludnie ${podiel(hm(13))}`);
+    assert.ok(Math.abs(podiel(hm(13)) - SKY.cloudMix.polojasno) < 0.02, `poludnie ${podiel(hm(13))}`);
     assert.ok(podiel(hm(1)) < podiel(hm(13)) / 2, `noc ${podiel(hm(1))}`);
+});
+
+test('skyColors: zamračená obloha je sivá cez deň aj v noci, v noci tmavšia', () => {
+    const den = skyColors(hm(13), SUN, 'zamracene');
+    const noc = skyColors(hm(1), SUN, 'zamracene');
+    for (const c of [den.top, den.bottom, noc.top, noc.bottom]) assert.equal(sytost(c), 0, c);
+    const jas = (/** @type {string} */ c) => Number((c.match(/\d+/) || ['0'])[0]);
+    assert.ok(jas(noc.top) < jas(den.top) / 2, `${noc.top} vs ${den.top}`);
 });
 
 test('skyColors: bez dát je obloha sivá', () => {

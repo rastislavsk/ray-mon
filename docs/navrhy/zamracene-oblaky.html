@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Zamračená obloha na karte Teraz</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky. „Dnes“ je kópia web/pocasie.css po #413, „Upravené“ je tá istá vrstva oblakov,
+               ktorá ide stále jedným smerom, s tmavšími oblakmi v Oblohe cez deň. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark light;
+                --page: #050505;
+                --text: #f2f0ea;
+                --muted: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.14);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --page: #f4f2ec;
+                    --text: #16170f;
+                    --muted: rgba(22, 23, 15, 0.66);
+                    --line: rgba(22, 23, 15, 0.14);
+                }
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 28px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            p,
+            li {
+                color: var(--muted);
+                max-width: 760px;
+            }
+            code {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 0.86em;
+            }
+            .ctrl {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: var(--page);
+                padding: 10px 0;
+                border-bottom: 1px solid var(--line);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 20px;
+            }
+            .seg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .seg button {
+                font: inherit;
+                font-size: 14px;
+                color: var(--text);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 12px;
+                min-height: 36px;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--text);
+                color: var(--page);
+                border-color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+            }
+            figure {
+                margin: 0;
+                width: 360px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 8px;
+            }
+            figcaption b {
+                color: var(--text);
+            }
+
+            /* ---------- výrez obrazovky ---------- */
+            .scr {
+                position: relative;
+                overflow: hidden;
+                height: 420px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                isolation: isolate;
+                color: #fff;
+            }
+            .scr > p {
+                position: relative;
+                z-index: 1;
+                margin: 0;
+                color: inherit;
+                max-width: none;
+            }
+            .sbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 47px;
+                padding: 0 28px;
+                font:
+                    600 15px/1 system-ui,
+                    sans-serif;
+            }
+            [data-app='cur'] .scr {
+                background:
+                    radial-gradient(circle at 20% 0%, rgba(255, 194, 75, 0.14), transparent 42%),
+                    radial-gradient(circle at 82% 5%, rgba(255, 194, 75, 0.13), transparent 46%), #0a0a0a;
+            }
+            [data-app='cur'] .brand {
+                padding: 12px 18px 0;
+                font:
+                    600 18px 'IBM Plex Mono',
+                    monospace;
+                letter-spacing: 0.2em;
+            }
+            [data-app='cur'] .kick {
+                padding: 34px 18px 0;
+                font:
+                    600 12px 'IBM Plex Mono',
+                    monospace;
+                letter-spacing: 0.14em;
+                color: rgba(242, 240, 234, 0.64);
+            }
+            [data-app='cur'] .num {
+                padding: 0 18px;
+                font-size: 86px;
+                font-weight: 700;
+                line-height: 0.95;
+                letter-spacing: -0.04em;
+                color: #ffc24b;
+            }
+            .num small {
+                font-size: 18px;
+                margin-left: 6px;
+                letter-spacing: 0;
+            }
+            [data-app='cur'] .sub {
+                padding: 10px 18px 0;
+                font-size: 15px;
+            }
+            /* Živá obloha na poludnie pri zamračenej oblohe (SKY.cloudMix.zamracene 0,78). */
+            [data-app='obl'] .scr {
+                background: linear-gradient(180deg, #4c6a91, #88a5bf);
+                font-family: 'Archivo', system-ui, sans-serif;
+            }
+            [data-app='obl'][data-noc] .scr {
+                background: linear-gradient(180deg, #070b1f, #141b3d);
+            }
+            [data-app='obl'] .brand {
+                padding: 10px 18px 0;
+                font-size: 18px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+            }
+            [data-app='obl'] .kick {
+                padding: 18px 18px 0;
+                font-size: 30px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+            }
+            [data-app='obl'] .num {
+                padding: 0 18px;
+                font-size: 68px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                line-height: 0.95;
+                text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+            }
+            [data-app='obl'] .sub {
+                padding: 8px 18px 0;
+                font-size: 15px;
+            }
+
+            /* ---------- počasie (kópia web/pocasie.css) ---------- */
+            .wx {
+                --wx-core: 255, 252, 240;
+                --wx-cl: 226, 228, 232;
+                --wx-cl-dark: 120, 128, 140;
+                position: absolute;
+                z-index: 0;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 660px;
+                overflow: hidden;
+                pointer-events: none;
+                -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+                mask-image: linear-gradient(180deg, #000 50%, transparent 100%);
+            }
+            [data-app='obl'] .wx {
+                --wx-core: 255, 255, 250;
+                --wx-cl: 255, 255, 255;
+                --wx-cl-dark: 70, 88, 115;
+            }
+            [data-noc] .wx {
+                --wx-cl: 150, 158, 185;
+                --wx-cl-dark: 20, 24, 40;
+            }
+            [data-app='obl'][data-noc] .wx {
+                --wx-cl: 170, 180, 210;
+                --wx-cl-dark: 10, 14, 32;
+            }
+            .wx > * {
+                position: absolute;
+            }
+            [data-motion='off'] .wx * {
+                animation: none !important;
+            }
+            .wx-diffuse {
+                inset: 0;
+                background: radial-gradient(
+                    ellipse 70% 55% at 85% 0%,
+                    rgba(var(--wx-core), 0.3),
+                    rgba(var(--wx-core), 0.1) 45%,
+                    transparent 75%
+                );
+                filter: opacity(0.3);
+            }
+            [data-noc] .wx-diffuse {
+                display: none;
+            }
+
+            /* DNES: vrstva sa kýve o ±40 px za 96 s. */
+            .dnes .wx-deck {
+                inset: -40px -80px auto -80px;
+                height: 420px;
+                filter: blur(18px);
+                animation: wx-drift 96s ease-in-out infinite alternate;
+                background:
+                    radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
+                    radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), 0.34), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), 0.36), transparent 70%),
+                    radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.2), transparent 70%),
+                    radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.22), transparent 70%),
+                    linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.35), transparent 85%);
+            }
+            @keyframes wx-drift {
+                from {
+                    transform: translateX(-40px);
+                }
+                to {
+                    transform: translateX(40px);
+                }
+            }
+
+            /* UPRAVENÉ: tá istá kresba ako dlaždica, vrstva sú dve dlaždice za sebou a posunie sa o jednu
+               (zľava doprava), takže koniec nadviaže na začiatok bez skoku. Dlaždica má šírku dnešnej
+               vrstvy, kopy sú na tom istom mieste; dve, ktoré presahujú okraj, majú kópiu o dlaždicu
+               vedľa, aby sa na švíku nerozpadli. */
+            .upr .wx-deck {
+                left: -80px;
+                top: -40px;
+                width: calc(2 * (100% + 160px));
+                height: 420px;
+                filter: blur(18px);
+                animation: wx-pas 45s linear infinite;
+                background-size: 50% 100%;
+                background-image:
+                    radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
+                    radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl), 0.3), transparent 70%),
+                    radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), 0.34), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), 0.36), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl), 0.36), transparent 70%),
+                    radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), 0.2), transparent 70%),
+                    radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), 0.22), transparent 70%),
+                    linear-gradient(180deg, rgba(var(--wx-cl-dark), 0.35), transparent 85%);
+            }
+            /* Obloha cez deň: farbu oblakov, ich silu a farbu oblohy za nimi nastavujú posuvníky
+               (skript zapíše --n-cl, --n-cl-dark, --n-s, --n-s1, --n-s2 na .upr). */
+            [data-app='obl']:not([data-noc]) .scr.upr {
+                background: linear-gradient(180deg, var(--n-s1), var(--n-s2));
+            }
+            [data-app='obl']:not([data-noc]) .upr .wx {
+                --wx-cl: var(--n-cl);
+                --wx-cl-dark: var(--n-cl-dark);
+            }
+            [data-app='obl']:not([data-noc]) .upr .wx-deck {
+                --s: var(--n-s);
+                background-image:
+                    radial-gradient(ellipse 34% 26% at 15% 30%, rgba(var(--wx-cl), calc(0.3 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 34% 26% at 115% 30%, rgba(var(--wx-cl), calc(0.3 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 30% 24% at 45% 18%, rgba(var(--wx-cl), calc(0.34 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at 78% 26%, rgba(var(--wx-cl), calc(0.36 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 36% 28% at -22% 26%, rgba(var(--wx-cl), calc(0.36 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 30% 22% at 30% 55%, rgba(var(--wx-cl), calc(0.2 * var(--s))), transparent 70%),
+                    radial-gradient(ellipse 34% 24% at 70% 58%, rgba(var(--wx-cl), calc(0.22 * var(--s))), transparent 70%),
+                    linear-gradient(180deg, rgba(var(--wx-cl-dark), calc(0.35 * var(--s))), transparent 85%);
+            }
+            .ladenie {
+                display: grid;
+                gap: 14px;
+                padding: 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+            }
+            .ladenie label {
+                display: grid;
+                grid-template-columns: minmax(0, 11em) minmax(0, 1fr) 3.5em;
+                align-items: center;
+                gap: 12px;
+                font-size: 14px;
+            }
+            .ladenie input {
+                width: 100%;
+                min-height: 32px;
+            }
+            .ladenie output {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px;
+                text-align: right;
+            }
+            .ladenie .vzorky {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px 18px;
+                font-size: 13px;
+                color: var(--muted);
+            }
+            .ladenie .vzorky i {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border-radius: 4px;
+                vertical-align: -2px;
+                margin-right: 6px;
+                border: 1px solid var(--line);
+            }
+            .ladenie pre {
+                margin: 0;
+                font:
+                    12px/1.5 'IBM Plex Mono',
+                    monospace;
+                color: var(--muted);
+                white-space: pre-wrap;
+            }
+            @media (max-width: 520px) {
+                .ladenie label {
+                    grid-template-columns: minmax(0, 1fr) 3.5em;
+                }
+                .ladenie label input {
+                    grid-column: 1 / -1;
+                    grid-row: 2;
+                }
+            }
+            @keyframes wx-pas {
+                from {
+                    transform: translateX(-50%);
+                }
+                to {
+                    transform: translateX(0);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .wx * {
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main data-app="obl">
+            <header>
+                <h1>Zamračená obloha na karte Teraz</h1>
+                <p>
+                    Nové kresby oblakov (hustá pokrývka, ťažké kopy) boli zamietnuté ako umelé. Ostáva dnešná súvislá vrstva, len ide stále
+                    jedným smerom namiesto kyvadla (asi 12 px/s na telefóne, vrstva prejde dlaždicu za 45 s). Pre Oblohu cez deň sa sivosť
+                    oblohy, tmavosť a hustota mrakov dajú nastaviť posuvníkmi pod náhľadom.
+                </p>
+            </header>
+
+            <div class="ctrl">
+                <div class="seg" data-seg="app">
+                    <button type="button" data-v="cur" aria-pressed="false">Súčasná appka</button>
+                    <button type="button" data-v="obl" aria-pressed="true">Živá obloha</button>
+                </div>
+                <div class="seg" data-seg="cas">
+                    <button type="button" data-v="den" aria-pressed="true">Deň</button>
+                    <button type="button" data-v="noc" aria-pressed="false">Noc</button>
+                </div>
+                <div class="seg" data-seg="motion">
+                    <button type="button" data-v="on" aria-pressed="true">Pohyb zap</button>
+                    <button type="button" data-v="off" aria-pressed="false">vyp</button>
+                </div>
+            </div>
+
+            <div class="row">
+                <figure>
+                    <figcaption><b>Dnes</b> · kyvadlo ±40 px za 96 s</figcaption>
+                    <div class="scr dnes">
+                        <div class="wx" aria-hidden="true"><i class="wx-diffuse"></i><i class="wx-deck"></i></div>
+                    </div>
+                </figure>
+                <figure>
+                    <figcaption><b>Upravené</b> · jedným smerom, podľa posuvníkov</figcaption>
+                    <div class="scr upr">
+                        <div class="wx" aria-hidden="true"><i class="wx-diffuse"></i><i class="wx-deck"></i></div>
+                    </div>
+                </figure>
+            </div>
+
+            <section class="ladenie" aria-labelledby="ladenie-h">
+                <h2 id="ladenie-h">Nastavenie pre Oblohu cez deň</h2>
+                <label>
+                    <span>Sivosť oblohy</span>
+                    <input type="range" id="n-obloha" min="0" max="100" value="60" />
+                    <output for="n-obloha"></output>
+                </label>
+                <label>
+                    <span>Tmavosť mrakov</span>
+                    <input type="range" id="n-mraky" min="0" max="100" value="90" />
+                    <output for="n-mraky"></output>
+                </label>
+                <label>
+                    <span>Hustota mrakov</span>
+                    <input type="range" id="n-sila" min="100" max="300" step="10" value="220" />
+                    <output for="n-sila"></output>
+                </label>
+                <p class="vzorky">
+                    <span><i data-vz="s1"></i>obloha hore</span>
+                    <span><i data-vz="s2"></i>obloha dole</span>
+                    <span><i data-vz="cl"></i>mraky</span>
+                    <span><i data-vz="dk"></i>tieň mrakov</span>
+                </p>
+                <p data-varovanie hidden>Mraky sú svetlejšie ako obloha hore – budú vyzerať ako svetlé chuchvalce, nie ako zatiahnutie.</p>
+                <pre data-hodnoty></pre>
+            </section>
+        </main>
+        <script>
+            // Ukážka, nie kód appky: obsah karty je vymyslený pre zamračený deň.
+            const TEXT = {
+                den: ['12:00', '1.0', '12 % z toho, čo by dala jasná obloha'],
+                noc: ['21:30', '0', 'slnko je pod obzorom'],
+            };
+            const main = document.querySelector('main');
+            const vyber = { app: 'obl', cas: 'den' };
+            for (const scr of document.querySelectorAll('.scr')) {
+                scr.insertAdjacentHTML(
+                    'beforeend',
+                    '<p class="sbar"><span data-cas></span><span>▮▮▮ ◔</span></p><p class="brand">RAY-MON</p>' +
+                        '<p class="kick"></p><p class="num"><span data-num></span><small>kW</small></p><p class="sub" data-sub></p>',
+                );
+            }
+            function prekresli() {
+                main.dataset.app = vyber.app;
+                main.toggleAttribute('data-noc', vyber.cas === 'noc');
+                const [cas, num, sub] = TEXT[vyber.cas];
+                for (const s of document.querySelectorAll('.scr')) {
+                    s.querySelector('[data-cas]').textContent = cas;
+                    s.querySelector('[data-num]').textContent = num;
+                    s.querySelector('[data-sub]').textContent = sub;
+                    s.querySelector('.kick').textContent = vyber.app === 'cur' ? 'TERAZ' : 'Teraz';
+                }
+            }
+            for (const seg of document.querySelectorAll('[data-seg]')) {
+                seg.addEventListener('click', (e) => {
+                    const b = e.target.closest('button');
+                    if (!b) return;
+                    for (const x of seg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+                    if (seg.dataset.seg === 'motion') document.documentElement.dataset.motion = b.dataset.v;
+                    else {
+                        vyber[seg.dataset.seg] = b.dataset.v;
+                        prekresli();
+                    }
+                });
+            }
+            prekresli();
+
+            // Ladenie: obloha z dnešnej zamračenej (SKY.cloudMix 0,78) k neutrálnej sivej, mraky z bielej k tmavosivej.
+            const OBLOHA_DNES = [
+                [76, 106, 145],
+                [136, 165, 191],
+            ];
+            const OBLOHA_SIVA = [
+                [92, 96, 102],
+                [150, 153, 158],
+            ];
+            const MRAK_SVETLY = [255, 255, 255];
+            const MRAK_TMAVY = [58, 62, 70];
+            const zmes = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
+            const hex = (c) => '#' + c.map((x) => x.toString(16).padStart(2, '0')).join('');
+            const jas = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            const upr = document.querySelector('.upr');
+            const vstup = (id) => /** @type {HTMLInputElement} */ (document.getElementById(id));
+            function nalad() {
+                const o = +vstup('n-obloha').value / 100;
+                const m = +vstup('n-mraky').value / 100;
+                const s = +vstup('n-sila').value / 100;
+                const s1 = zmes(OBLOHA_DNES[0], OBLOHA_SIVA[0], o);
+                const s2 = zmes(OBLOHA_DNES[1], OBLOHA_SIVA[1], o);
+                const cl = zmes(MRAK_SVETLY, MRAK_TMAVY, m);
+                const dk = cl.map((x) => Math.round(x * 0.38));
+                upr.style.setProperty('--n-s1', hex(s1));
+                upr.style.setProperty('--n-s2', hex(s2));
+                upr.style.setProperty('--n-cl', cl.join(', '));
+                upr.style.setProperty('--n-cl-dark', dk.join(', '));
+                upr.style.setProperty('--n-s', String(s));
+                document.querySelector('[for="n-obloha"]').textContent = `${Math.round(o * 100)} %`;
+                document.querySelector('[for="n-mraky"]').textContent = `${Math.round(m * 100)} %`;
+                document.querySelector('[for="n-sila"]').textContent = `× ${s.toFixed(1)}`;
+                const vz = { s1, s2, cl, dk };
+                for (const el of document.querySelectorAll('[data-vz]')) el.style.background = hex(vz[el.dataset.vz]);
+                document.querySelector('[data-varovanie]').hidden = jas(cl) <= jas(s1);
+                document.querySelector('[data-hodnoty]').textContent =
+                    `obloha/style.css, .wx[data-wx='zamracene']:not([data-noc]):\n` +
+                    `  --wx-cl: ${cl.join(', ')};  --wx-cl-dark: ${dk.join(', ')};  --wx-deck-sila: ${s.toFixed(1)};\n` +
+                    `obloha cez deň pri zamračenej: hore ${hex(s1)}, dole ${hex(s2)}`;
+            }
+            for (const id of ['n-obloha', 'n-mraky', 'n-sila']) vstup(id).addEventListener('input', nalad);
+            nalad();
+        </script>
+    </body>
+</html>
