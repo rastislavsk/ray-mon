@@ -29,7 +29,7 @@ import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dn
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { bigWords, FIXED_NOW, fixture, fixtureData, overSklo, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
+import { bigWords, dazdKresba, FIXED_NOW, fixture, fixtureData, overSklo, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -2130,12 +2130,24 @@ test.describe('počasie v pozadí karty Teraz', () => {
         if (!den) throw new Error('model o 13:00 nemá počasie');
         await expect(page.locator('#wx')).toBeVisible();
         await expect(page.locator('#wx')).toHaveAttribute('data-wx', pocasieStav(den));
+        if (den.dazd) await expect(page.locator('#wx')).toHaveAttribute('data-dazd', den.dazd);
+        else await expect(page.locator('#wx')).not.toHaveAttribute('data-dazd');
         await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
         // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
         await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
         expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#wx')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('dážď v štyroch silách: každá má svoje kvapky, mrholenie bez blízkych', async ({ page }) => {
+        const errors = await openTeraz(page, { time: at('13:00') });
+        const kresby = [];
+        for (const sila of ['mrholenie', 'slaby', 'dazd', 'silny']) kresby.push(await dazdKresba(page, sila));
+        for (const k of kresby) expect(k[1]).toMatch(/^url\("data:image\/svg\+xml,/);
+        expect(kresby.map((k) => k[2] === 'skryté')).toEqual([true, false, false, false]);
+        expect(new Set(kresby.map((k) => k[0])).size).toBe(4);
         expect(errors).toEqual([]);
     });
 

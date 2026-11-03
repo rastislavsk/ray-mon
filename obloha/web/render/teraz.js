@@ -228,6 +228,9 @@ function renderPocasie(state, m, dom) {
     if (!p) return;
     setHtml(dom.wx, pocasieHtml(p.mesiac, p.juh));
     dom.wx.dataset.wx = pocasieStav(p);
+    // Sila dažďa (docs/navrhy/dazd-sily.html); staršie jadro z cache ju nepošle - kresba ukáže bežný dážď.
+    if (p.dazd) dom.wx.dataset.dazd = p.dazd;
+    else delete dom.wx.dataset.dazd;
     dom.wx.toggleAttribute('data-noc', p.noc);
     // Skutočné hviezdy do vlastných vrstiev, mimo HTML počasia - ich posun nereštartuje oblaky.
     // Bez nich (cez deň, alebo staršie jadro z cache po nasadení) ostanú hviezdy z CSS.

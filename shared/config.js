@@ -788,7 +788,11 @@ export const SKY = {
 /**
  * Počasie v pozadí karty Teraz (shared/pocasie.js, docs/navrhy/teraz-pocasie-2.html).
  * Zrážky za hodinu z Open-Meteo: dážď od `dazdMm` (precipitation, mm), sneh od `snehCm`
- * (snowfall, cm) - menej je len pár kvapiek, ktoré by kresba preháňala. Jas z merania: podiel
+ * (snowfall, cm) - menej je len pár kvapiek, ktoré by kresba preháňala. Sila dažďa
+ * (docs/navrhy/dazd-sily.html): od `dazdMm` mrholenie, od `dazdSila.slaby` slabý dážď, od
+ * `dazdSila.dazd` dážď, od `dazdSila.silny` silný dážď, všetko v mm za hodinu. Hranice 0,5 a 4 sú
+ * z delenia Met Office; zo staníc by stáli vyššie, no model ich priemeruje cez políčko siete
+ * (2-11 km), takže lejak v ňom vyjde slabší ako na zrážkomere. Jas z merania: podiel
  * výkonu z výkonu pri jasnej oblohe (veta „x % z toho, čo by dala jasná obloha“) od `jasno`
  * je jasno, pod `zamracene` zamračené, medzi nimi polooblačno. Meraniu sa verí, len keď by
  * jasná obloha dala aspoň `istyPodiel` výkonu zostavy - ráno a večer pri nízkom slnku podiel
@@ -796,6 +800,7 @@ export const SKY = {
  */
 export const POCASIE = {
     dazdMm: 0.2,
+    dazdSila: { slaby: 0.5, dazd: 2, silny: 4 },
     snehCm: 0.1,
     jasno: 0.7,
     zamracene: 0.3,

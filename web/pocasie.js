@@ -27,8 +27,101 @@ function mesiacSvg(faza, juh) {
 }
 
 /**
- * Vrstvy kresby: rozptýlené svetlo, mesiac a hviezdy, slnko s lúčmi, oblaky a zrážky (tie
- * v obale, ktorý končí nad vetou pod číslom). Pri tej istej fáze Mesiaca je HTML to isté.
+ * Kvapky dažďa (docs/navrhy/dazd-sily.html): tri hĺbky, každá je dlaždica w × h px (ďaleko, stred,
+ * blízko). Pre každú silu dažďa počet kvapiek `n`, ich dĺžka, hrúbka a jas od-do a rozmazanie
+ * nakreslené rovno v obrázku (vrstva sa potom len posúva, rozmazanie sa v snímkoch nepočíta).
+ * Rýchlosť, sklon a ostatné vrstvy dažďa určuje web/pocasie.css. Mrholenie blízke kvapky nemá.
+ */
+const KVAPKY = {
+    mrholenie: [
+        { n: 150, len: [5, 8], wid: [0.6, 0.9], al: [0.18, 0.38], blur: 0.5 },
+        { n: 50, len: [8, 12], wid: [0.8, 1.1], al: [0.3, 0.55], blur: 0.3 },
+    ],
+    slaby: [
+        { n: 60, len: [8, 13], wid: [0.7, 1], al: [0.2, 0.4], blur: 0.6 },
+        { n: 20, len: [15, 24], wid: [1, 1.4], al: [0.35, 0.6], blur: 0.3 },
+        { n: 4, len: [30, 44], wid: [1.4, 2], al: [0.5, 0.75], blur: 0 },
+    ],
+    dazd: [
+        { n: 120, len: [10, 16], wid: [0.7, 1.1], al: [0.2, 0.42], blur: 0.6 },
+        { n: 40, len: [20, 32], wid: [1, 1.5], al: [0.35, 0.65], blur: 0.3 },
+        { n: 9, len: [42, 62], wid: [1.5, 2.2], al: [0.55, 0.85], blur: 0 },
+    ],
+    silny: [
+        { n: 220, len: [12, 20], wid: [0.7, 1.1], al: [0.22, 0.45], blur: 0.6 },
+        { n: 72, len: [26, 40], wid: [1, 1.6], al: [0.35, 0.7], blur: 0.3 },
+        { n: 16, len: [54, 80], wid: [1.6, 2.4], al: [0.55, 0.9], blur: 0 },
+    ],
+};
+/** Rozmery dlaždíc v px; výšky musia sedieť s posunom vrstiev (wx-kv0 až wx-kv2) vo web/pocasie.css. */
+const DLAZDICA = [
+    [160, 200],
+    [220, 260],
+    [300, 340],
+];
+
+/** Pseudonáhoda so semienkom (mulberry32): tá istá kresba pri každom otvorení. @param {number} seed */
+function nahoda(seed) {
+    let a = seed >>> 0;
+    return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+/**
+ * Dlaždica kvapiek ako obrázok SVG pre CSS masku. Kvapka je úzky klin, hore priehľadný a dole
+ * plný, ako stopa padajúcej kvapky. Kvapka, ktorá presahuje okraj, má kópiu na druhej strane,
+ * aby švík dlaždíc nebolo vidno.
+ * @param {(typeof KVAPKY)['dazd'][number]} v @param {number} w @param {number} h @param {number} seed
+ */
+function dlazdica(v, w, h, seed) {
+    const r = nahoda(seed);
+    const od = (/** @type {number[]} */ [a, b]) => a + (b - a) * r();
+    const f = (/** @type {number} */ x) => +x.toFixed(1);
+    let cesty = '';
+    for (let i = 0; i < v.n; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const len = od(v.len);
+        const hr = od(v.wid);
+        const al = od(v.al).toFixed(2);
+        for (const dx of [-w, 0, w])
+            for (const dy of [-h, 0, h]) {
+                const xx = x + dx;
+                const yy = y + dy;
+                if (xx + hr < 0 || xx - hr > w || yy + len < 0 || yy > h) continue;
+                cesty += `<path fill-opacity='${al}' d='M${f(xx)} ${f(yy)}l${f(hr / 2)} ${f(len)}h${f(-hr)}z'/>`;
+            }
+    }
+    const rozmaz = v.blur ? `<filter id='f' x='-2' y='-.5' width='5' height='2'><feGaussianBlur stdDeviation='${v.blur}'/></filter>` : '';
+    const svg =
+        `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><defs><linearGradient id='g' x2='0' y2='1'>` +
+        `<stop offset='0' stop-color='#fff' stop-opacity='0'/><stop offset='.65' stop-color='#fff' stop-opacity='.75'/>` +
+        `<stop offset='1' stop-color='#fff'/></linearGradient>${rozmaz}</defs><g fill='url(#g)'${v.blur ? " filter='url(#f)'" : ''}>${cesty}</g></svg>`;
+    // Kódujú sa aj apostrofy: masky stoja v atribúte style ohraničenom apostrofmi.
+    return `url("data:image/svg+xml,${svg.replace(/[#<>%']/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`;
+}
+
+/** Masky kvapiek pre všetky sily ako premenné CSS (--kv<vrstva>-<sila>); počítajú sa raz. */
+let masky = '';
+function maskyKvapiek() {
+    if (!masky)
+        masky = Object.entries(KVAPKY)
+            .flatMap(([sila, vrstvy], k) =>
+                vrstvy.map((v, i) => `--kv${i}-${sila}:${dlazdica(v, DLAZDICA[i][0], DLAZDICA[i][1], 7 + 101 * i + 13 * k)}`),
+            )
+            .join(';');
+    return masky;
+}
+
+/**
+ * Vrstvy kresby: rozptýlené svetlo, mesiac a hviezdy, slnko s lúčmi, oblaky, stmavenie pri daždi
+ * a zrážky (tie v obale, ktorý končí nad vetou pod číslom). Kvapky dostanú masky všetkých síl
+ * dažďa naraz a silu vyberie CSS podľa data-dazd, takže zmena sily HTML nemení. Pri tej istej fáze Mesiaca je HTML to isté.
  * Hviezdy do vrstiev .wx-stars a .wx-stars2 zapisuje render zvlášť (hviezdySvg), aby ich posun
  * nereštartoval pohyb oblakov.
  * @param {number} faza fáza Mesiaca 0-1 @param {boolean} [juh] južná pologuľa - starší modul ho nepošle
@@ -40,7 +133,9 @@ export function pocasieHtml(faza, juh = false) {
         `<i class="wx-moon">${mesiacSvg(f, juh === true)}</i>` +
         '<i class="wx-halo"></i><i class="wx-rays wx-r2"></i><i class="wx-rays wx-r1"></i><i class="wx-flare"></i>' +
         '<i class="wx-deck"></i><i class="wx-cloud wx-c2"></i><i class="wx-cloud wx-c1"></i><i class="wx-cloud wx-c3"></i>' +
-        '<div class="wx-prec"><i class="wx-rain wx-rain2"></i><i class="wx-rain wx-rain1"></i>' +
+        '<i class="wx-sero"></i>' +
+        `<div class="wx-prec"><i class="wx-zavoj"></i><div class="wx-dazd" style='${maskyKvapiek()}'>` +
+        '<i class="wx-kv wx-kv0"></i><i class="wx-kv wx-kv1"></i><i class="wx-kv wx-kv2"></i></div>' +
         '<i class="wx-snow wx-snow1"></i><i class="wx-snow wx-snow2"></i></div>'
     );
 }

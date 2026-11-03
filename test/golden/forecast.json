@@ -750,6 +750,7 @@
           "kw": 3.47,
           "cloud": 92,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 8.33
         },
         {
@@ -757,6 +758,7 @@
           "kw": 3.38,
           "cloud": 94,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 7.97
         },
         {
@@ -764,6 +766,7 @@
           "kw": 3.09,
           "cloud": 95,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 7.08
         },
         {
@@ -771,6 +774,7 @@
           "kw": 2.64,
           "cloud": 95,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 5.73
         },
         {
@@ -778,6 +782,7 @@
           "kw": 2.05,
           "cloud": 95,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 4.21
         },
         {
@@ -785,6 +790,7 @@
           "kw": 1.38,
           "cloud": 94,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 2.76
         },
         {
@@ -792,6 +798,7 @@
           "kw": 0.64,
           "cloud": 93,
           "precip": "dazd",
+          "mm": 0.8,
           "clearKw": 1.14
         },
         {

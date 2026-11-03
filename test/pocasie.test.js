@@ -7,8 +7,8 @@ import { moonPhase } from '../shared/solar.js';
 
 const NOW = new Date('2026-09-05T19:32:00Z');
 const NITRA = { lat: 48.48, lon: 18.12 };
-/** @param {number | null} cloud @param {import('../shared/solar.js').Precip} [precip] */
-const hodina = (cloud, precip) => ({ hour: 12, kw: 1, cloud, precip });
+/** @param {number | null} cloud @param {import('../shared/solar.js').Precip} [precip] @param {number} [mm] */
+const hodina = (cloud, precip, mm) => ({ hour: 12, kw: 1, cloud, precip, ...(mm === undefined ? {} : { mm }) });
 
 test('jasZMerania: podiel z jasnej oblohy delí na jasno, polooblačno a zamračené', () => {
     const m = (/** @type {number} */ kw) => jasZMerania({ kw, clearKw: 8, installedKw: 10 });
@@ -28,6 +28,7 @@ test('pocasie: jas a zrážky z hodiny predpovede, noc a fáza Mesiaca', () => {
     assert.deepEqual(pocasie({ point: hodina(80, 'dazd'), noc: false, chvila: NOW, site: NITRA, merane: null }), {
         jas: 'zamracene',
         zrazky: 'dazd',
+        dazd: 'dazd',
         noc: false,
         mesiac: moonPhase(NOW),
         juh: false,
@@ -35,6 +36,24 @@ test('pocasie: jas a zrážky z hodiny predpovede, noc a fáza Mesiaca', () => {
     });
     // Hodina bez poľa zrážok (staršia predpoveď) je bez zrážok.
     assert.equal(pocasie({ point: hodina(10), noc: true, chvila: NOW, site: NITRA, merane: null })?.zrazky, null);
+});
+
+test('pocasie: sila dažďa podľa úhrnu za hodinu, zrážky z hodiny, ktorá sa končí po chvíli', () => {
+    const { dazdMm, dazdSila } = POCASIE;
+    const sila = (/** @type {number | undefined} */ mm) =>
+        pocasie({ point: hodina(90), zrazkyPoint: hodina(90, 'dazd', mm), noc: false, chvila: NOW, site: NITRA, merane: null })?.dazd;
+    assert.equal(sila(dazdMm), 'mrholenie');
+    assert.equal(sila(dazdSila.slaby - 0.1), 'mrholenie');
+    assert.equal(sila(dazdSila.slaby), 'slaby');
+    assert.equal(sila(dazdSila.dazd), 'dazd');
+    assert.equal(sila(dazdSila.silny - 0.1), 'dazd');
+    assert.equal(sila(dazdSila.silny), 'silny');
+    assert.equal(sila(undefined), 'dazd', 'staršia predpoveď z cache úhrn nemá');
+    // Dážď sa začne až v hodine, ktorá sa končí po chvíli - kresba ho už ukáže, oblačnosť je z tejto.
+    const p = pocasie({ point: hodina(40), zrazkyPoint: hodina(90, 'dazd', 3), noc: false, chvila: NOW, site: NITRA, merane: null });
+    assert.deepEqual([p?.jas, p?.zrazky, p?.dazd], ['polojasno', 'dazd', 'dazd']);
+    // Sneh sila dažďa nie je.
+    assert.equal(pocasie({ point: hodina(90, 'sneh'), noc: false, chvila: NOW, site: NITRA, merane: null })?.dazd, null);
 });
 
 test('pocasie: meranie prebije jas predpovede, nie zrážky; v noci sa meraniu neverí', () => {

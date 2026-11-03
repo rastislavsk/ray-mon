@@ -21,8 +21,9 @@ const SYNODIC_MONTH = 29.530588853;
 
 /**
  * Zrážky v hodine predpovede: dážď, sneh, alebo nič (aj keď ich Open-Meteo neposlalo).
+ * Pri daždi `mm` je jeho úhrn za hodinu (staršia predpoveď z cache ho nemá).
  * @typedef {'dazd' | 'sneh' | null} Precip
- * @typedef {{ hour: number, kw: number, cloud: number | null, precip?: Precip }} HourPoint
+ * @typedef {{ hour: number, kw: number, cloud: number | null, precip?: Precip, mm?: number }} HourPoint
  */
 /** @typedef {HourPoint & { clearKw: number }} DayHourPoint */
 /**
@@ -343,7 +344,7 @@ export function daypartFor(dateUtc, timezone) {
     return 'neskôr';
 }
 
-/** @typedef {{ dateUtc: Date, acKw: number, localDate: string, cloudPct: number | null, tempC: number, precip: Precip }} HourEntry */
+/** @typedef {{ dateUtc: Date, acKw: number, localDate: string, cloudPct: number | null, tempC: number, precip: Precip, mm: number }} HourEntry */
 
 /**
  * Hodinové pole pre graf, zoradené podľa miestnej hodiny.
@@ -356,6 +357,7 @@ export function hourlySeries(entries, timezone) {
             kw: round(h.acKw, 2),
             cloud: Number.isFinite(h.cloudPct) ? Math.round(/** @type {number} */ (h.cloudPct)) : null,
             precip: h.precip,
+            ...(h.precip === 'dazd' ? { mm: round(h.mm, 1) } : {}),
         }))
         .sort((a, b) => a.hour - b.hour);
 }
@@ -429,7 +431,7 @@ function strongerWindowAhead(hourly, todayKey, nowHourStart, timezone, th) {
     };
 }
 
-/** @typedef {{ dateUtc: Date, irr: Irradiance, tempC: number, cloudPct: number | null, precip: Precip }} WeatherHour */
+/** @typedef {{ dateUtc: Date, irr: Irradiance, tempC: number, cloudPct: number | null, precip: Precip, mm: number }} WeatherHour */
 
 /**
  * Open-Meteo dáva hodiny v UTC. V pásme s polhodinovým posunom (India +5:30, Nepál +5:45,
@@ -461,6 +463,7 @@ function between(a, b, t) {
         cloudPct: a.cloudPct === null || b.cloudPct === null ? null : mix(a.cloudPct, b.cloudPct),
         // Zrážky sú súčtom za hodinu, ktorá sa končí v čase `b` - posunutá hodina leží v nej.
         precip: b.precip,
+        mm: b.mm,
     };
 }
 
@@ -516,6 +519,7 @@ function forecastHours(data, site, plant) {
         tempC: tempArr[i],
         cloudPct: cloudArr ? cloudArr[i] : null,
         precip: precipOf(rainArr?.[i], snowArr?.[i]),
+        mm: Number(rainArr?.[i]) || 0,
     }));
     return alignToLocalHours(weather, site.timezone).map((w) => ({
         dateUtc: w.dateUtc,
@@ -524,6 +528,7 @@ function forecastHours(data, site, plant) {
         cloudPct: w.cloudPct,
         tempC: w.tempC,
         precip: w.precip,
+        mm: w.mm,
     }));
 }
 

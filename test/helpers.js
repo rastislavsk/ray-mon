@@ -145,3 +145,22 @@ export async function overSklo(page, sel) {
     await expect(page.locator('html')).not.toHaveAttribute('data-posun', '');
     await expect.poll(sklo).toBe(0);
 }
+
+/**
+ * Kresba dažďa v sile `sila` (docs/navrhy/dazd-sily.html): masky troch vrstiev kvapiek, „skryté“
+ * pre vrstvu, ktorú nevidno. Stav sa podstrčí rovno do atribútov #wx (deň s dažďom v testovacích
+ * dátach nemusí byť dnes) a prečíta v tom istom kroku - inak by ho prekreslenie appky medzitým vrátilo.
+ * @param {import('@playwright/test').Page} page @param {string | null} sila
+ */
+export function dazdKresba(page, sila) {
+    return page.locator('#wx').evaluate((el, s) => {
+        el.dataset.wx = 'dazd';
+        if (s) el.dataset.dazd = s;
+        else delete el.dataset.dazd;
+        return [0, 1, 2].map((i) => {
+            const kv = /** @type {HTMLElement} */ (el.querySelector(`.wx-kv${i}`));
+            const css = getComputedStyle(kv);
+            return css.display === 'none' || !kv.offsetHeight ? 'skryté' : css.maskImage;
+        });
+    }, sila);
+}

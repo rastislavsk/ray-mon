@@ -155,15 +155,25 @@ test('hourlySeries: zoradené podľa miestnej hodiny, kw na 2 desatiny, cloud za
                 cloudPct: 33.3,
                 tempC: 20,
                 precip: 'dazd',
+                mm: 1.26,
             },
-            { dateUtc: new Date('2026-07-01T10:00:00Z'), acKw: 1, localDate: '2026-07-01', cloudPct: null, tempC: 18, precip: null },
+            {
+                dateUtc: new Date('2026-07-01T10:00:00Z'),
+                acKw: 1,
+                localDate: '2026-07-01',
+                cloudPct: null,
+                tempC: 18,
+                precip: null,
+                mm: 0.1,
+            },
         ],
         TZ,
     );
     assert.deepEqual(series, [
         { hour: 12, kw: 1, cloud: null, precip: null },
-        { hour: 14, kw: 3.14, cloud: 33, precip: 'dazd' },
+        { hour: 14, kw: 3.14, cloud: 33, precip: 'dazd', mm: 1.3 },
     ]);
+    // Úhrn nesie len hodina s dažďom; pár kvapiek pod hranicou dažďa v predpovedi nezaberá miesto.
 });
 
 test('buildForecast: 7 dní, dnes = miestny dátum, zajtra má 24 hodín, golden sa nemení', () => {
