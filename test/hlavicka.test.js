@@ -82,15 +82,29 @@ test('riadok stavu pod číslom karty Teraz: stav merania, v náhľade odkiaľ j
     const h = model({});
     assert.deepEqual(stavRiadok(h, { preview: false, source: '' }), {
         text: '13:00 · živé meranie',
+        // Čas a slovo zvlášť - appky podčiarknu len slovo o stave.
+        pred: '13:00 · ',
+        slovo: 'živé meranie',
         tone: 'live',
         toneText: '',
         tip: h.tip,
     });
     // Náhľad iného času: čas merania by vedľa čísla z inej chvíle klamal - bez bodky a bez bubliny.
-    assert.deepEqual(stavRiadok(h, { preview: true, source: 'namerané' }), { text: 'namerané', tone: 'nahlad', toneText: '', tip: null });
+    assert.deepEqual(stavRiadok(h, { preview: true, source: 'namerané' }), {
+        text: 'namerané',
+        pred: '',
+        slovo: 'namerané',
+        tone: 'nahlad',
+        toneText: '',
+        tip: null,
+    });
     assert.equal(stavRiadok(model({ known: 'poloha' }), { preview: false, source: '' }), null);
     const stare = model({ now: at('13:30'), pv: { ...cerstve, updatedAt: at('13:30').toISOString() } });
     assert.equal(stavRiadok(stare, { preview: false, source: '' })?.toneText, 'meranie zastarané');
+    // Bez času je celý text slovom.
+    const odhad = stavRiadok(model({ pv: null }), { preview: false, source: '' });
+    assert.ok(odhad?.text);
+    assert.deepEqual([odhad.pred, odhad.slovo], ['', odhad.text]);
 });
 
 test('bublina po pripojení: až keď prvé meranie prišlo, v noci že menič spí', () => {

@@ -225,6 +225,10 @@ test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod 
     const errors = await openObloha(page, { time: at('13:00') });
     await expect(page.locator('#hdr-place')).toHaveText(SITE.name);
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
+    // Podčiarknuté je len slovo o stave - hovorí, že sa naň dá ťuknúť.
+    await expect(page.locator('#hdr-status .stav-slovo')).toHaveText('živé meranie');
+    expect(await page.locator('#hdr-status .stav-slovo').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('underline');
+    expect(await page.locator('#hdr-status').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
     // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
     await expect(page.locator('#hdr-tone')).toHaveText('');

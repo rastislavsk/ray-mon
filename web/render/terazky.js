@@ -50,6 +50,20 @@ function renderHead(state, m, dom) {
     dom.tzRetry.textContent = textsOf(state).retry;
 }
 
+/**
+ * Text riadku stavu: čas a slovo o stave, slovo v .stav-slovo (podčiarknuté, keď sa dá ťuknúť).
+ * Bez textu je prvok prázdny (:empty drží výšku riadku). Nezmenený text sa neprepisuje - render
+ * beží aj pri každom posune prsta po grafe.
+ * @param {HTMLElement} el @param {string} pred @param {string} slovo
+ */
+function writeStavText(el, pred, slovo) {
+    if (el.textContent === pred + slovo && (el.querySelector('.stav-slovo')?.textContent ?? '') === slovo) return;
+    const w = document.createElement('span');
+    w.className = 'stav-slovo';
+    w.textContent = slovo;
+    el.replaceChildren(...(pred ? [pred] : []), ...(slovo ? [w] : []));
+}
+
 /** Texty bubliny, keď riadok bublinu nemá. */
 const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '', znova: false };
 
@@ -62,8 +76,8 @@ const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '', znova: false };
 function renderStav(state, m, dom) {
     const r = stavRiadok(hlavickaModel(state, state.voice), m ?? { preview: false, source: '' });
     show(dom.tzStav, !!r);
-    const { text, tone, toneText, tip } = r ?? { text: '', tone: 'off', toneText: '', tip: null };
-    dom.pvUpdated.textContent = text;
+    const { pred, slovo, tone, toneText, tip } = r ?? { pred: '', slovo: '', tone: 'off', toneText: '', tip: null };
+    writeStavText(dom.pvUpdated, pred, slovo);
     dom.pvTone.textContent = toneText;
     dom.pvClock.dataset.tone = tone;
     dom.pvClock.disabled = !tip;
