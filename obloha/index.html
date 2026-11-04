@@ -37,22 +37,12 @@
         <!-- Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy skladá web/pocasie.js,
              stav zapisuje render/teraz.js, čo je vidno, rozhoduje web/pocasie.css. Len dekorácia. -->
         <div id="wx" class="wx hidden" aria-hidden="true"></div>
-        <!-- Ťuknutie kamkoľvek mimo bubliny ju zavrie a nič pod ňou nespustí. -->
+        <!-- Ťuknutie kamkoľvek mimo bubliny stavu merania (karta Teraz) ju zavrie a nič pod ňou nespustí. -->
         <div id="hdr-tip-bg" class="tip-bg hidden"></div>
         <header class="st">
             <span class="name">RAY-MON</span>
             <span id="hdr-place" class="place"></span>
-            <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
-                <i aria-hidden="true"></i>
-                <span id="hdr-status">načítavam…</span>
-                <span id="hdr-tone" class="sr"></span>
-            </button>
             <button type="button" id="hdr-setup" class="need hidden"></button>
-            <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
-                <b id="hdr-tip-title"></b>
-                <p id="hdr-tip-text"></p>
-                <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
-            </div>
         </header>
 
         <main id="page" class="page">
@@ -64,7 +54,7 @@
                  pod ním čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html); zvyšok sa mení s časťou dňa - ráno plán,
                  cez deň odpočet okna, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
                  Nadpis karty je len pre čítačku. -->
-            <section id="panel-mozem" class="panel mozem" aria-labelledby="ttl-mozem">
+            <section id="panel-mozem" class="panel mozem hidden" aria-labelledby="ttl-mozem">
                 <h1 id="ttl-mozem" class="sr">Dnes</h1>
                 <div id="mz-arc" class="arc" aria-hidden="true"></div>
                 <div id="mz-answer" class="big">
@@ -111,10 +101,24 @@
             <!-- Karta Teraz: texty, štítky, Plán dňa aj graf skladá render (web/render/teraz.js)
                  z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
                  aj šípky na ňom ukážu iný čas (náhľad). -->
-            <section id="panel-terazky" class="panel teraz hidden" aria-labelledby="ttl-terazky">
+            <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
-                <p id="tz-src" class="src"></p>
+                <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
+                     ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
+                     do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
+                <div id="tz-stav" class="stav">
+                    <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
+                        <i aria-hidden="true"></i>
+                        <span id="hdr-status">načítavam…</span>
+                        <span id="hdr-tone" class="sr"></span>
+                    </button>
+                    <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
+                        <b id="hdr-tip-title"></b>
+                        <p id="hdr-tip-text"></p>
+                        <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
+                    </div>
+                </div>
                 <p id="tz-sub" class="sub"></p>
                 <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
                 <div id="tz-say" class="say">

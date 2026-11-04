@@ -464,7 +464,9 @@ test('terazModel o 13:00: číslo, štítky s vetou a Plán dňa z mozemModel, p
     const hero = heroModel(i);
     assert.equal(m.kind, 'ok');
     assert.equal(m.num, hero.powerText);
-    assert.equal(m.source, 'živé meranie');
+    // Mimo náhľadu hovorí o čísle riadok stavu merania (stavRiadok v shared/hlavicka.js).
+    assert.equal(m.source, '');
+    assert.equal(m.preview, false);
     assert.match(m.sub, /^\d+ % z toho, čo by dala jasná obloha$/);
     assert.equal(m.retry, false);
     assert.equal(m.guess, false);
@@ -597,8 +599,7 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     assert.equal(hero.source, 'forecast');
     assert.ok(Number.isFinite(stale.realTimePowerKw));
     assert.notEqual(Number(m.num), stale.realTimePowerKw);
-    // Odhad povie pás pod číslom, riadok ho neopakuje. Čas je posledný bod krivky, ten istý, aký
-    // ukazuje hlavička.
+    // Odhad povie pás pod číslom. Čas je posledný bod krivky, ten istý, aký ukazuje riadok stavu merania.
     assert.equal(m.source, '');
     const since = pvFreshness({ now: at('13:00'), pv: stale, site: SITE }).time;
     assert.deepEqual(m.note, {

@@ -6,6 +6,7 @@
 // zapisuje do DOM. Farbu čísla a pozadia dáva style.css podľa data-tier (render/header.js).
 
 import { escapeHtml } from '../../shared/format.js';
+import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOW, PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
@@ -28,8 +29,6 @@ function renderHead(state, m, dom) {
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     dom.tzNumVal.textContent = m.num;
-    show(dom.tzSrc, m.source !== '');
-    dom.tzSrc.textContent = m.source;
     show(dom.tzSub, m.sub !== '');
     dom.tzSub.textContent = m.sub;
     show(dom.tzNote, !!m.note);
@@ -40,6 +39,36 @@ function renderHead(state, m, dom) {
     dom.tzNoteBtn.toggleAttribute('data-pristup-go', !!m.note?.znova);
     show(dom.tzRetry, m.retry);
     dom.tzRetry.textContent = textsOf(state).retry;
+}
+
+/** Texty bubliny, keď riadok bublinu nemá. */
+const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '', znova: false };
+
+/**
+ * Riadok stavu merania pod číslom (shared/hlavicka.js, stavRiadok): bodka, čas a slovo, a bublina
+ * s vysvetlením, keď je otvorená. Na inej karte (`m` null) náhľad nie je - riadok sa píše aj tak, aby
+ * hovoril o meraní, keď sa karta Teraz vráti. Tvar bodky drží data-tone na tlačidle (style.css).
+ * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
+ */
+function renderStav(state, m, dom) {
+    const r = stavRiadok(hlavickaModel(state, state.voice), m ?? { preview: false, source: '' });
+    show(dom.tzStav, !!r);
+    const { text, tone, toneText, tip } = r ?? { text: '', tone: 'off', toneText: '', tip: null };
+    dom.pvUpdated.textContent = text;
+    dom.pvTone.textContent = toneText;
+    dom.pvClock.dataset.tone = tone;
+    dom.pvClock.disabled = !tip;
+    const open = state.stavTip && !!tip;
+    dom.tzStav.classList.toggle('open', open);
+    dom.pvClock.setAttribute('aria-expanded', String(open));
+    show(dom.pvTip, open);
+    show(dom.pvTipBg, open);
+    const t = tip ?? BEZ_BUBLINY;
+    dom.pvTipTitle.textContent = t.nadpis;
+    dom.pvTipText.textContent = t.text;
+    dom.pvTipBtn.textContent = t.tlacidlo;
+    show(dom.pvTipBtn, !!t.tlacidlo);
+    dom.pvTipBtn.toggleAttribute('data-pristup-go', t.znova);
 }
 
 /**
@@ -218,12 +247,14 @@ function renderHviezdy(hviezdy, noveVrstvy, dom) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTerazky(state, dom) {
     if (state.panel !== 'terazky') {
+        renderStav(state, null, dom);
         renderChipSheet(state, null, dom);
         return;
     }
     const m = terazModel(state, { voice: state.voice, devices: state.doma });
     renderPocasie(state, m, dom);
     renderHead(state, m, dom);
+    renderStav(state, m, dom);
     renderSay(m, dom);
     renderChipSheet(state, m, dom);
     renderPlan(m.plan, state.tzPlanOpen, dom);

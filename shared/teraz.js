@@ -71,7 +71,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
     const m = mozemModel(input, { voice, devices });
     return {
         ...empty('ok', estimate),
-        ...headOf(input, hero, { estimate, note, voice }),
+        ...headOf(input, hero, { estimate, voice }),
         preview: hero.preview,
         note,
         guess: estimate,
@@ -120,20 +120,21 @@ function pocasieOf(input, hero) {
 }
 
 /**
- * Nadpis, číslo a dva riadky pod ním: odkiaľ výkon je a koľko z jasnej oblohy. Pri typickej
- * streche „~“ a veta, že to nie je vlastná strecha. Počas náhľadu nadpis namiesto „Teraz“ povie
- * čas, ku ktorému číslo patrí - text sa mení, riadok ostáva, aby sa graf pod prstom nepohol.
- * Keď je pod číslom pás odhadu (`note`), riadok „odhad z predpovede“ by ho len opakoval.
+ * Nadpis, číslo a riadok pod ním: koľko z jasnej oblohy. Pri typickej streche „~“ a veta, že to
+ * nie je vlastná strecha. Počas náhľadu nadpis namiesto „Teraz“ povie čas, ku ktorému číslo patrí -
+ * text sa mení, riadok ostáva, aby sa graf pod prstom nepohol. Medzi číslom a vetou je riadok stavu
+ * merania (stavRiadok v shared/hlavicka.js); `source` je preň odkiaľ je číslo v náhľade, mimo neho
+ * prázdny - vtedy riadok hovorí o meraní.
  * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
- * @param {{ estimate: boolean, note: ReturnType<typeof noteOf>, voice: import('./messages.js').Voice }} o
+ * @param {{ estimate: boolean, voice: import('./messages.js').Voice }} o
  */
-function headOf(input, hero, { estimate, note, voice }) {
+function headOf(input, hero, { estimate, voice }) {
     const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
         const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
         return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
-    const source = !hero.source || (note && hero.source === 'forecast') ? '' : terazSourceText(hero.source);
+    const source = hero.preview && hero.source ? terazSourceText(hero.source) : '';
     return { title, num: hero.powerText, source, sub: clearSub(input, hero) };
 }
 
