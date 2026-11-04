@@ -29,7 +29,7 @@ import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dn
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import { bigWords, dazdKresba, FIXED_NOW, fixture, fixtureData, overSklo, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
+import { bigWords, dazdKresba, FIXED_NOW, fixture, fixtureData, overHlavicku, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -168,10 +168,10 @@ test('obloha o 13:00 a o 21:00 má iné farby, tie isté ako výpočet v shared/
     expect(errors).toEqual([]);
 });
 
-test('hlavička je na vrchu priehľadná, sklo sa zjaví až po posune', async ({ page }) => {
+test('hlavička je priehľadná a pri posune odíde so stránkou', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 600 });
     const errors = await openObloha(page);
-    await overSklo(page, '.st');
+    await overHlavicku(page, '.st');
     expect(errors).toEqual([]);
 });
 

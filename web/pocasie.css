@@ -17,7 +17,7 @@
     --wx-moon-x: 80%;
     --wx-moon-top: 150px;
     --wx-prec-h: 190px;
-    /* Stojí voči obrazovke: slnko svieti hore, aj keď človek kartu posunie (hlavička je sklo). */
+    /* Stojí voči obrazovke: slnko svieti hore, aj keď človek kartu posunie (aj spod stavového riadku). */
     position: fixed;
     z-index: -1;
     top: 0;

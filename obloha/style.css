@@ -113,13 +113,13 @@ button:focus-visible {
 
 /* ===== Hlavička ===== */
 /* Ako v súčasnej appke: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku
-   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Na telefóne je prilepená hore a priehľadná
-   (sklo nižšie), takže pod ňou aj pod stavovým riadkom je tá istá obloha ako na stránke. Obsah
-   v šírke stránky, sklo cez celú šírku.
+   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Je priehľadná a nie je prilepená hore -
+   pri posune odíde s obsahom, takže pod ňou aj pod stavovým riadkom je tá istá obloha a počasie
+   ako na stránke. Prilepenú by Safari na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou
+   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky.
    Hlavička je nad vrstvou .tip-bg, aby bublina v nej a tlačidlo stavu ostali ťukateľné. */
 .st {
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 5;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -128,30 +128,6 @@ button:focus-visible {
     padding: max(16px, env(safe-area-inset-top)) max(20px, calc((100% - 600px) / 2)) 10px;
     font-size: 0.875rem;
     font-variation-settings: 'wdth' 100;
-}
-/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu
-   a pod stavovým riadkom. Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod
-   hlavičkou prechádza, a slnko za ním ostane vidno. Posun zapisuje web/sklo.js (data-posun na <html>).
-   Pri útlme pohybu je sklo stále. */
-.st::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: color-mix(in srgb, var(--s1) 45%, transparent);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
-    opacity: 0;
-    transition: opacity 0.35s;
-}
-:root[data-posun] .st::before {
-    opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-    .st::before {
-        opacity: 1;
-    }
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
    mesiac stojí vpravo od čísla (v noci je číslo vždy „0“), zrážky končia nad vetou pod číslom. */
@@ -3111,7 +3087,7 @@ button.live[aria-expanded='true'] {
 .pripojene {
     position: fixed;
     inset: auto 16px calc(76px + env(safe-area-inset-bottom)) 16px;
-    /* Nad lepkavou hlavičkou (.st, 5), ktorá by ju inak prekryla. */
+    /* Nad hlavičkou (.st, 5), ktorá by ju inak prekryla. */
     z-index: 6;
     max-width: 580px;
     margin: 0 auto;
@@ -3231,11 +3207,9 @@ button.live[aria-expanded='true'] {
 :root:is([data-layout='medium'], [data-layout='wide']) :is(.st, .page) {
     width: 100%;
 }
-/* Prilepená je tu navigácia, hlavička odíde so stránkou. */
+/* Prilepená je tu navigácia hore, hlavička pod ňou. */
 :root:is([data-layout='medium'], [data-layout='wide']) .st {
-    position: relative;
     padding-top: 10px;
-    background: none;
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .page {
     padding-bottom: calc(28px + env(safe-area-inset-bottom));
