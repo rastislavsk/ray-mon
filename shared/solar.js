@@ -252,7 +252,7 @@ function localDayTimes(dateKey, timezone, stepMin) {
 }
 
 // Slnko "vyšlo", keď je jeho horný okraj nad obzorom - štandardná korekcia na lom svetla.
-const SUNRISE_ELEVATION_DEG = -0.833;
+export const SUNRISE_ELEVATION_DEG = -0.833;
 
 /**
  * Je slnko nad obzorom? To isté kritérium ako východ a západ v sunTimes, takže platí aj

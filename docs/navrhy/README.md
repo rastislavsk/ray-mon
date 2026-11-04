@@ -78,3 +78,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `nastavenie-kompas-ploch.html` | Karta elektrárne – kompas plôch: ružica (A), deň plôch (B), čiary s číslami; dizajnér a skeptik |
 | `nastavenie-kompas-ploch-a.html` | Ružica plôch bez riadku o výrobe, panely a menič vedľa nej: dlaždice, panely tečú do meniča (2, vybraný), pás meniča |
 | `teraz-stav-merania.html` | Karta Teraz (Obloha) – bodka a čas merania z hlavičky do riadku pod číslom, bez oválu; tvoj návrh a finálny (celý riadok sa ťuká, slovo podľa stavu, náhľad času bez bodky); dizajnér a skeptik |
+| `obloha-noc.html` | Obloha – súmrak podľa výšky slnka (−6° súmrak, −12° noc, −18° najhlbšia noc, ráno opačne) a tmavšie nočné farby; zima aj leto, pás od poludnia do poludnia |

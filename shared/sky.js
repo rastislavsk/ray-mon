@@ -3,7 +3,7 @@
 
 import { SKY } from './config.js';
 import { over, parseColor, textContrast } from './contrast.js';
-import { localDateKey, localMinutes, sunTimes } from './solar.js';
+import { localDateKey, localMinutes, localToUtc, solarPosition, sunTimes, SUNRISE_ELEVATION_DEG } from './solar.js';
 
 /**
  * Počasie na oblohe. Dážď zatiaľ nie je - appka zrážky nesťahuje.
@@ -75,37 +75,61 @@ const naSivu = ([r, g, b]) => {
 const css = (c) => `rgb(${c.join(', ')})`;
 
 /**
- * Hodina dňa z návrhu, ktorá zodpovedá minúte `minute`. Návrh má slnko vždy od 7:00 do 18:30;
- * appka do toho premietne skutočný východ a západ, každý úsek (noc pred východom, deň, večer
- * po západe) natiahne alebo stlačí rovnomerne. Kde slnko v ten deň nevyjde alebo nezapadne
- * (polárna noc, polárny deň), ostáva čas z hodín - obloha návrhu je na to dosť dobrá.
- * @param {number} minute minúta dňa v pásme lokality @param {{ rise: number | null, set: number | null }} sun
+ * Hodina dňa z návrhu pre chvíľu `chvila` nad elektrárňou `site`. Návrh má slnko vždy od 7:00
+ * do 18:30. Kým je slnko nad obzorom, appka do toho premietne skutočný východ a západ a deň
+ * natiahne či stlačí rovnomerne; kde slnko v ten deň nevyjde alebo nezapadne (polárny deň),
+ * ostáva čas z hodín. Po západe a pred východom rozhoduje, ako hlboko je slnko pod obzorom
+ * (SKY.sumrak, docs/navrhy/obloha-noc.html), takže súmrak a noc prídu ako vonku, v zime aj
+ * v lete. Večer je, keď slnko klesá, ráno, keď stúpa - platí to aj v polárnu noc.
+ * @param {Date} chvila @param {import('./config.js').Site} site
  */
-function designHour(minute, sun) {
-    const t = minute / 60;
+function designHour(chvila, site) {
+    const vyska = solarPosition(chvila, site.lat, site.lon).elevationDeg;
+    if (vyska <= SUNRISE_ELEVATION_DEG) {
+        const stupa = solarPosition(new Date(chvila.getTime() + 60000), site.lat, site.lon).elevationDeg > vyska;
+        /** @type {Array<[number, number]>} */
+        const body = stupa
+            ? [[-90, 0], ...SKY.sumrak.rano, [SUNRISE_ELEVATION_DEG, SKY.riseH]]
+            : [[SUNRISE_ELEVATION_DEG, SKY.setH], ...SKY.sumrak.vecer, [-90, 24]];
+        return podlaVysky(body, vyska);
+    }
+    const t = localMinutes(chvila, site.timezone) / 60;
+    const sun = sunTimes(site, localDateKey(chvila, site.timezone));
     if (sun.rise === null || sun.set === null || sun.rise <= 0 || sun.rise >= sun.set) return t;
     const rise = sun.rise / 60;
     const set = sun.set / 60;
-    if (t <= rise) return (t * SKY.riseH) / rise;
+    if (t <= rise) return SKY.riseH;
     if (t <= set) return SKY.riseH + ((t - rise) * (SKY.setH - SKY.riseH)) / (set - rise);
-    return SKY.setH + ((t - set) * (24 - SKY.setH)) / (24 - set);
+    return SKY.setH;
 }
 
 /**
- * Dve farby oblohy (hore a dole) v danej minúte dňa. Počasie primieša sivú, cez deň naplno
+ * Hodina návrhu pre výšku slnka `vyska` medzi bodmi [výška, hodina], lineárne medzi susednými.
+ * @param {Array<[number, number]>} body @param {number} vyska
+ */
+function podlaVysky(body, vyska) {
+    for (let i = 1; i < body.length; i++) {
+        const [e0, h0] = body[i - 1];
+        const [e1, h1] = body[i];
+        if (vyska >= Math.min(e0, e1) && vyska <= Math.max(e0, e1)) return h0 + ((vyska - e0) / (e1 - e0)) * (h1 - h0);
+    }
+    return body[body.length - 1][1];
+}
+
+/**
+ * Dve farby oblohy (hore a dole) v chvíli `chvila` nad elektrárňou `site`. Počasie primieša sivú, cez deň naplno
  * a v noci len štvrtinou - tmavá obloha je tmavá aj zamračená. Potom stratí časť farebného
  * odtieňa (SKY.sivost): zamračená je sivá, svetlá cez deň a tmavá v noci. Koľko z oboch, určuje
  * zamračenosť 0-1 plynule (modrosivá obloha podľa sily oblačnosti); bez nej platí stred stavu
  * `weather` (jasno 0, polojasno 0,5, zamračené 1). Bez počasia (`null`, appka nemá dáta) je obloha sivá.
- * @param {number} minute minúta dňa v pásme lokality (0-1439)
- * @param {{ rise: number | null, set: number | null }} sun východ a západ ako minúta dňa (sunTimes)
+ * @param {Date} chvila @param {import('./config.js').Site} site
  * @param {SkyWeather | null} weather
  * @param {number} [zamracenost] 0 (jasno) až 1 (zamračené), viď shared/pocasie.js
  * @returns {Sky}
  */
-export function skyColors(minute, sun, weather, zamracenost) {
+export function skyColors(chvila, site, weather, zamracenost) {
     if (!weather) return sky(weather, SKY.offline[0], SKY.offline[1]);
-    const t = designHour(minute, sun);
+    const t = designHour(chvila, site);
     let i = 0;
     while (SKY.keys[i + 1][0] < t) i++;
     const [ha, a1, a2] = SKY.keys[i];
@@ -138,7 +162,9 @@ function podlaZamracenosti(tab, z) {
 }
 
 /**
- * Obloha pre stav appky v tejto chvíli. Kým appka nepozná polohu, alebo dáta nie sú (a už sa
+ * Obloha pre stav appky v zvolenej chvíli: teraz, alebo pri náhľade iného času na karte Teraz
+ * (`previewMinutes`) v tej chvíli - dopredu podľa predpovede, dozadu podľa merania, ako kresba
+ * počasia. Kým appka nepozná polohu, alebo dáta nie sú (a už sa
  * ani nesťahujú), je sivá. Kým sa prvé dáta sťahujú, ukazuje čas dňa bez počasia - sivé
  * bliknutie pri každom otvorení by klamalo, že dáta chýbajú. Počasie je to isté ako v kresbe
  * na karte Teraz (`teraz`, pocasieTeraz v shared/teraz.js): jas a zamračenosť z merania alebo
@@ -146,18 +172,18 @@ function podlaZamracenosti(tab, z) {
  * teraz sme, a bez nej len čas dňa. Vypnutá živá obloha (live = false) stojí
  * v pokojných tmavých farbách (SKY.calm) a nemení sa s časom ani počasím - bez dát je ale sivá ako vždy.
  * @param {{ now: Date, known: import('./settings.js').Known, site: import('./config.js').Site,
- *   forecast: import('./solar.js').Forecast | null, loading: boolean }} state
+ *   forecast: import('./solar.js').Forecast | null, loading: boolean, previewMinutes?: number | null }} state
  * @param {boolean} [live] živá obloha (Nastavenie › Vzhľad)
  * @param {Pick<import('./pocasie.js').Pocasie, 'jas' | 'zamracenost' | 'zrazky'> | null} [teraz]
  * @returns {Sky}
  */
-export function skyNow({ now, known, site, forecast, loading }, live = true, teraz = null) {
-    const offline = { rise: null, set: null };
-    if (known === 'nic' || (!forecast && !loading)) return skyColors(0, offline, null);
-    const minute = localMinutes(now, site.timezone);
-    const weather = teraz ? (teraz.zrazky ? 'zamracene' : teraz.jas) : zPredpovede(forecast, minute);
+export function skyNow({ now, known, site, forecast, loading, previewMinutes = null }, live = true, teraz = null) {
+    if (known === 'nic' || (!forecast && !loading)) return sky(null, SKY.offline[0], SKY.offline[1]);
+    const tz = site.timezone;
+    const chvila = previewMinutes === null ? now : localToUtc(localDateKey(now, tz), previewMinutes, tz);
+    const weather = teraz ? (teraz.zrazky ? 'zamracene' : teraz.jas) : zPredpovede(forecast, localMinutes(chvila, tz));
     if (!live) return sky(weather, SKY.calm[0], SKY.calm[1]);
-    return skyColors(minute, sunTimes(site, localDateKey(now, site.timezone)), weather, teraz?.zamracenost);
+    return skyColors(chvila, site, weather, teraz?.zamracenost);
 }
 
 /**
