@@ -299,6 +299,10 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     const m = terazAt(instant);
     if (!m.say || !m.chart) throw new Error('model o 13:00 nemá graf ani vetu');
     await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
+    // Podčiarknuté je len slovo o stave - hovorí, že sa naň dá ťuknúť.
+    await expect(page.locator('#pv-updated .stav-slovo')).toHaveText('živé meranie');
+    expect(await page.locator('#pv-updated .stav-slovo').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('underline');
+    expect(await page.locator('#pv-updated').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
     await expect(page.locator('#pv-place')).toHaveText(SITE.name);
     await expect(page.locator('#tz-title')).toHaveText(m.title);
     await expect(page.locator('#tz-num-val')).toHaveText('6.4');

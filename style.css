@@ -855,6 +855,12 @@ b {
 .tz-clock:enabled:is([data-tone='odhad'], [data-tone='stale']) #pv-updated::after {
     content: ' ›' / '';
 }
+/* Slovo o stave je podčiarknuté, keď sa na riadok dá ťuknúť (otvorí bublinu) - čas nie. */
+.tz-clock:enabled .stav-slovo {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
 .tz-sub {
     margin-top: 2px;
     font-size: 15px;

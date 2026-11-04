@@ -233,6 +233,12 @@ button.live:disabled {
 button.live:enabled:is([data-tone='odhad'], [data-tone='stale']) #hdr-status::after {
     content: ' ›' / '';
 }
+/* Slovo o stave je podčiarknuté, keď sa na riadok dá ťuknúť (otvorí bublinu) - čas nie. */
+button.live:enabled .stav-slovo {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
 button.live[aria-expanded='true'] {
     background: rgba(8, 16, 40, 0.45);
 }
@@ -707,9 +713,20 @@ button.live[aria-expanded='true'] {
     padding: 12px 20px 0;
 }
 /* Bez vety pod číslom stoja štítky hneď pod riadkom stavu merania. Obe sú tlačidlá s plochou 44 px
-   a zápornými okrajmi, takže medzi ich plochami musí byť aspoň 8 px (dotykové plochy v e2e). */
+   a zápornými okrajmi, takže medzi ich plochami musí byť aspoň 8 px (dotykové plochy v e2e). Medzeru
+   delí tenká čiara, odsadená ako text: hore číslo a meranie, dole štítky a čo z nich plynie. */
 #tz-sub.hidden + .say {
+    position: relative;
     padding-top: 30px;
+}
+#tz-sub.hidden + .say::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    right: 20px;
+    left: 20px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.4);
 }
 /* Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B): pás každého
    spotrebiča na dnešnom slnku, biela čiara je teraz. Blok je kontajner - dlhé slovo vety ho
