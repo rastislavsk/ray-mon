@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HVIEZDY, POCASIE } from '../shared/config.js';
+import { HVIEZDY, POCASIE, SKY } from '../shared/config.js';
 import { hviezdy } from '../shared/hviezdy.js';
 import { jasZMerania, pocasie } from '../shared/pocasie.js';
 import { moonPhase } from '../shared/solar.js';
@@ -27,6 +27,7 @@ test('jasZMerania: pri nízkom slnku a bez merania o oblakoch nič nehovorí', (
 test('pocasie: jas a zrážky z hodiny predpovede, noc a fáza Mesiaca', () => {
     assert.deepEqual(pocasie({ point: hodina(80, 'dazd'), noc: false, chvila: NOW, site: NITRA, merane: null }), {
         jas: 'zamracene',
+        zamracenost: 1,
         zrazky: 'dazd',
         dazd: 'dazd',
         noc: false,
@@ -64,6 +65,27 @@ test('pocasie: meranie prebije jas predpovede, nie zrážky; v noci sa meraniu n
     assert.equal(pocasie({ point: hodina(5), noc: true, chvila: NOW, site: NITRA, merane })?.jas, 'jasno');
     // Neisté meranie (nízke slnko) nechá jas z predpovede.
     assert.equal(pocasie({ point: hodina(50), noc: false, chvila: NOW, site: NITRA, merane: { ...merane, clearKw: 1 } })?.jas, 'polojasno');
+});
+
+test('pocasie: zamračenosť plynule z merania, inak z predpovede; zrážky sú zatiahnuté', () => {
+    const { clearPct, overcastPct } = SKY;
+    const zPred = (/** @type {number} */ cloud) =>
+        pocasie({ point: hodina(cloud), noc: false, chvila: NOW, site: NITRA, merane: null })?.zamracenost;
+    assert.equal(zPred(clearPct), 0);
+    assert.equal(zPred((clearPct + overcastPct) / 2), 0.5);
+    assert.equal(zPred(overcastPct), 1);
+    assert.equal(zPred(100), 1);
+    // Meranie prebije predpoveď: slnko pri predpovedi „zamračené“ je jasno, polovica cesty je stred.
+    const zMer = (/** @type {number} */ podiel, cloud = 90) =>
+        pocasie({ point: hodina(cloud), noc: false, chvila: NOW, site: NITRA, merane: { kw: 8 * podiel, clearKw: 8, installedKw: 10 } })
+            ?.zamracenost;
+    assert.equal(zMer(POCASIE.jasno), 0);
+    assert.ok(Math.abs(/** @type {number} */ (zMer((POCASIE.jasno + POCASIE.zamracene) / 2)) - 0.5) < 1e-9);
+    assert.equal(zMer(POCASIE.zamracene / 2, 0), 1);
+    // V noci sa meraniu neverí a pri daždi či snehu je zatiahnuté, aj keď slnko svieti.
+    const merane = { kw: 8, clearKw: 8, installedKw: 10 };
+    assert.equal(pocasie({ point: hodina(90), noc: true, chvila: NOW, site: NITRA, merane })?.zamracenost, 1);
+    assert.equal(pocasie({ point: hodina(10, 'sneh'), noc: false, chvila: NOW, site: NITRA, merane })?.zamracenost, 1);
 });
 
 test('pocasie: bez hodiny predpovede alebo bez oblačnosti nie je', () => {

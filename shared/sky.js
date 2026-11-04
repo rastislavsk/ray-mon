@@ -94,14 +94,16 @@ function designHour(minute, sun) {
 /**
  * Dve farby oblohy (hore a dole) v danej minúte dňa. Počasie primieša sivú, cez deň naplno
  * a v noci len štvrtinou - tmavá obloha je tmavá aj zamračená. Potom stratí časť farebného
- * odtieňa (SKY.sivost): zamračená je sivá, svetlá cez deň a tmavá v noci. Bez počasia (`null`,
- * appka nemá dáta) je obloha sivá.
+ * odtieňa (SKY.sivost): zamračená je sivá, svetlá cez deň a tmavá v noci. Koľko z oboch, určuje
+ * zamračenosť 0-1 plynule (modrosivá obloha podľa sily oblačnosti); bez nej platí stred stavu
+ * `weather` (jasno 0, polojasno 0,5, zamračené 1). Bez počasia (`null`, appka nemá dáta) je obloha sivá.
  * @param {number} minute minúta dňa v pásme lokality (0-1439)
  * @param {{ rise: number | null, set: number | null }} sun východ a západ ako minúta dňa (sunTimes)
  * @param {SkyWeather | null} weather
+ * @param {number} [zamracenost] 0 (jasno) až 1 (zamračené), viď shared/pocasie.js
  * @returns {Sky}
  */
-export function skyColors(minute, sun, weather) {
+export function skyColors(minute, sun, weather, zamracenost) {
     if (!weather) return sky(weather, SKY.offline[0], SKY.offline[1]);
     const t = designHour(minute, sun);
     let i = 0;
@@ -113,32 +115,57 @@ export function skyColors(minute, sun, weather) {
     const bottom = mix(rgb(a2), rgb(b2), f);
     const { riseH, setH } = SKY;
     const day = t >= riseH - 1 && t <= setH + 1 ? Math.sin((Math.PI * (t - riseH + 1)) / (setH - riseH + 2)) : 0;
-    const cf = SKY.cloudMix[weather] * Math.max(0.25, Math.min(1, day));
+    const z = zamracenost ?? STRED[weather];
+    const cf = podlaZamracenosti(SKY.cloudMix, z) * Math.max(0.25, Math.min(1, day));
+    const siva = podlaZamracenosti(SKY.sivost, z);
     const farba = (/** @type {number[]} */ c, /** @type {string} */ mrak) => {
         const m = mix(c, rgb(mrak), cf);
-        return css(mix(m, naSivu(m), SKY.sivost[weather]));
+        return css(mix(m, naSivu(m), siva));
     };
     return sky(weather, farba(top, SKY.cloud[0]), farba(bottom, SKY.cloud[1]));
+}
+
+/** Zamračenosť, ktorú má stav počasia, keď ju appka nepozná presnejšie. */
+const STRED = { jasno: 0, polojasno: 0.5, zamracene: 1 };
+
+/**
+ * Hodnota pre zamračenosť `z` medzi hodnotami pre jasno (0), polojasno (0,5) a zamračené (1).
+ * @param {Record<SkyWeather, number>} tab @param {number} z
+ */
+function podlaZamracenosti(tab, z) {
+    if (z <= 0.5) return tab.jasno + (tab.polojasno - tab.jasno) * (z / 0.5);
+    return tab.polojasno + (tab.zamracene - tab.polojasno) * ((z - 0.5) / 0.5);
 }
 
 /**
  * Obloha pre stav appky v tejto chvíli. Kým appka nepozná polohu, alebo dáta nie sú (a už sa
  * ani nesťahujú), je sivá. Kým sa prvé dáta sťahujú, ukazuje čas dňa bez počasia - sivé
- * bliknutie pri každom otvorení by klamalo, že dáta chýbajú. Oblačnosť je z hodiny predpovede,
- * v ktorej teraz sme; bez nej ostáva len čas dňa. Vypnutá živá obloha (live = false) stojí
+ * bliknutie pri každom otvorení by klamalo, že dáta chýbajú. Počasie je to isté ako v kresbe
+ * na karte Teraz (`teraz`, pocasieTeraz v shared/teraz.js): jas a zamračenosť z merania alebo
+ * z predpovede, pri daždi či snehu zamračené. Bez neho je oblačnosť z hodiny predpovede, v ktorej
+ * teraz sme, a bez nej len čas dňa. Vypnutá živá obloha (live = false) stojí
  * v pokojných tmavých farbách (SKY.calm) a nemení sa s časom ani počasím - bez dát je ale sivá ako vždy.
  * @param {{ now: Date, known: import('./settings.js').Known, site: import('./config.js').Site,
  *   forecast: import('./solar.js').Forecast | null, loading: boolean }} state
  * @param {boolean} [live] živá obloha (Nastavenie › Vzhľad)
+ * @param {Pick<import('./pocasie.js').Pocasie, 'jas' | 'zamracenost' | 'zrazky'> | null} [teraz]
  * @returns {Sky}
  */
-export function skyNow({ now, known, site, forecast, loading }, live = true) {
+export function skyNow({ now, known, site, forecast, loading }, live = true, teraz = null) {
     const offline = { rise: null, set: null };
     if (known === 'nic' || (!forecast && !loading)) return skyColors(0, offline, null);
     const minute = localMinutes(now, site.timezone);
-    const hour = Math.floor(minute / 60);
-    const cloud = forecast?.hourlyToday.find((h) => h.hour === hour)?.cloud ?? null;
-    const weather = cloud === null ? 'jasno' : skyWeather(cloud);
+    const weather = teraz ? (teraz.zrazky ? 'zamracene' : teraz.jas) : zPredpovede(forecast, minute);
     if (!live) return sky(weather, SKY.calm[0], SKY.calm[1]);
-    return skyColors(minute, sunTimes(site, localDateKey(now, site.timezone)), weather);
+    return skyColors(minute, sunTimes(site, localDateKey(now, site.timezone)), weather, teraz?.zamracenost);
+}
+
+/**
+ * Stav počasia z oblačnosti hodiny predpovede, v ktorej je minúta `minute`; bez nej jasno.
+ * @param {import('./solar.js').Forecast | null} forecast @param {number} minute
+ * @returns {SkyWeather}
+ */
+function zPredpovede(forecast, minute) {
+    const cloud = forecast?.hourlyToday.find((h) => h.hour === Math.floor(minute / 60))?.cloud ?? null;
+    return cloud === null ? 'jasno' : skyWeather(cloud);
 }

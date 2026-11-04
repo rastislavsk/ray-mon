@@ -3,6 +3,7 @@
 
 import { PANELS } from '../../../shared/config.js';
 import { skyNow } from '../../../shared/sky.js';
+import { pocasieTeraz } from '../../../shared/teraz.js';
 import { loaded } from '../parts.js';
 import { dashboard, isColumn, PARTS, partOf, ready, shows } from '../state.js';
 import { renderHeader } from './header.js';
@@ -13,11 +14,12 @@ import { show } from './write.js';
 /**
  * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok a počasie na <html>; prechod
  * medzi farbami robí CSS (zaregistrované --s1 a --s2 v style.css), takže pri útlme pohybu ho
- * vypne to isté pravidlo ako všetky ostatné prechody.
+ * vypne to isté pravidlo ako všetky ostatné prechody. Počasie neba je to isté ako v kresbe na karte
+ * Teraz v tejto chvíli (aj keď karta ukazuje náhľad iného času).
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    const sky = skyNow(state, state.liveSky);
+    const sky = skyNow(state, state.liveSky, pocasieTeraz({ ...state, previewMinutes: null }));
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
     dom.root.style.setProperty('--s3', sky.shade);
