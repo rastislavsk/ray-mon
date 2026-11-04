@@ -1,0 +1,209 @@
+<!doctype html>
+<!-- Dočasná skúška: čo iPhone (Safari 26+) kreslí pod stavový riadok pri rôznej stavbe hlavičky.
+     Nie je súčasť appky, po skúške sa zmaže. Varianty prepína ?v=1..6. -->
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Skúška iOS" />
+        <title>Skúška iOS</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            html {
+                color-scheme: dark;
+            }
+            /* Ako súčasná appka: tmavé pozadie s nádychom, farba #0a0a0a. */
+            body {
+                margin: 0;
+                color: #f2f0ea;
+                font:
+                    16px/1.45 -apple-system,
+                    system-ui,
+                    sans-serif;
+                background: radial-gradient(circle at 20% 0%, rgba(158, 242, 91, 0.14), transparent 42%), #0a0a0a;
+            }
+            /* Počasie: veľké jasné slnko vpravo hore, aj pod stavovým riadkom. */
+            .wx {
+                position: fixed;
+                z-index: -1;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 600px;
+                pointer-events: none;
+                background:
+                    radial-gradient(circle at 92% 0, #fff8d8 0 40px, #ffd36e 70px, rgba(255, 140, 60, 0.6) 160px, transparent 360px),
+                    linear-gradient(180deg, #3a1a6e, transparent 80%);
+            }
+            .appbar {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                padding: calc(env(safe-area-inset-top) + 12px) 20px 12px;
+            }
+            .appbar::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                z-index: -1;
+                background: rgba(10, 10, 10, 0.7);
+                -webkit-backdrop-filter: blur(16px);
+                backdrop-filter: blur(16px);
+                opacity: 0;
+                transition: opacity 0.35s;
+            }
+            :root[data-posun] .appbar::before {
+                opacity: 1;
+            }
+            .appbar b {
+                font:
+                    700 20px/1 ui-monospace,
+                    monospace;
+                letter-spacing: 0.15em;
+            }
+            .vypln {
+                display: none;
+            }
+
+            /* 2: hlavička neprijíma dotyk, len jej obsah. */
+            [data-v='2'] .appbar {
+                pointer-events: none;
+            }
+            [data-v='2'] .appbar > * {
+                pointer-events: auto;
+            }
+            /* 3 a 4: pás stavového riadku je obyčajná výplň, prilepená hlavička začína až pod ním. */
+            [data-v='3'] .vypln,
+            [data-v='4'] .vypln {
+                display: block;
+                height: env(safe-area-inset-top);
+            }
+            [data-v='3'] .appbar,
+            [data-v='4'] .appbar {
+                top: env(safe-area-inset-top);
+                padding-top: 12px;
+            }
+            /* 5 a 6: hlavička nie je prilepená, odíde s obsahom. */
+            [data-v='5'] .appbar,
+            [data-v='6'] .appbar {
+                position: relative;
+            }
+            /* 4 a 6: počasie nie je pevné, posúva sa so stránkou - hore tak nie je žiadny pevný prvok. */
+            [data-v='4'] .wx,
+            [data-v='6'] .wx {
+                position: absolute;
+            }
+
+            main {
+                padding: 0 20px 40px;
+            }
+            .varianty {
+                display: grid;
+                gap: 8px;
+                margin: 16px 0 24px;
+            }
+            .varianty a {
+                display: block;
+                padding: 12px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 12px;
+                color: inherit;
+                text-decoration: none;
+                background: rgba(0, 0, 0, 0.35);
+            }
+            .varianty a[aria-current] {
+                border-color: #ffd36e;
+                background: rgba(255, 211, 110, 0.15);
+            }
+            .diag {
+                font:
+                    13px/1.5 ui-monospace,
+                    monospace;
+                background: rgba(0, 0, 0, 0.45);
+                border-radius: 12px;
+                padding: 12px 14px;
+                white-space: pre-wrap;
+            }
+            .riadok {
+                height: 56px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                color: rgba(255, 255, 255, 0.6);
+            }
+            #inset {
+                position: absolute;
+                height: env(safe-area-inset-top);
+                width: 1px;
+                visibility: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wx" aria-hidden="true"></div>
+        <div id="inset"></div>
+        <div class="vypln"></div>
+        <header class="appbar"><b>RAY-MON</b> <span id="nazov"></span></header>
+        <main>
+            <h1 style="font-size: 22px; margin: 16px 0 4px">Čo je pod hodinami?</h1>
+            <p style="margin: 0; color: rgba(255, 255, 255, 0.75)">
+                Pri každom variante pozri pás s hodinami a batériou: vidno pod ním slnko a fialovú oblohu, alebo je jednofarebný? Potom
+                posuň stránku a pozri znova.
+            </p>
+            <nav class="varianty" id="varianty"></nav>
+            <div class="diag" id="diag"></div>
+            <div id="riadky"></div>
+        </main>
+        <script>
+            const VARIANTY = [
+                'Ako teraz: prilepená priehľadná hlavička cez stavový riadok',
+                'Ako 1, hlavička neprijíma dotyk (pointer-events: none)',
+                'Prilepená hlavička začína až pod stavovým riadkom',
+                'Ako 3 a počasie nie je pevné (posúva sa)',
+                'Hlavička nie je prilepená',
+                'Ako 5 a počasie nie je pevné: hore nie je nič pevné',
+            ];
+            const v = Math.min(Math.max(Number(new URLSearchParams(location.search).get('v')) || 1, 1), VARIANTY.length);
+            document.documentElement.dataset.v = String(v);
+            document.getElementById('nazov').textContent = ` · variant ${v}`;
+            document.getElementById('varianty').innerHTML = VARIANTY.map(
+                (t, i) => `<a href="?v=${i + 1}"${i + 1 === v ? ' aria-current="page"' : ''}><b>${i + 1}.</b> ${t}</a>`,
+            ).join('');
+            document.getElementById('riadky').innerHTML = Array.from(
+                { length: 30 },
+                (_, i) => `<div class="riadok">Riadok ${i + 1} na posúvanie</div>`,
+            ).join('');
+            const diag = () => {
+                const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+                document.getElementById('diag').textContent = [
+                    `variant: ${v}`,
+                    `z plochy: ${standalone ? 'áno' : 'nie (Safari)'}`,
+                    `výška stavového riadku: ${document.getElementById('inset').offsetHeight} px`,
+                    `posun: ${Math.round(scrollY)} px`,
+                    `šírka × výška: ${innerWidth} × ${innerHeight}`,
+                    navigator.userAgent.match(/OS [\d_]+/)?.[0]?.replace(/_/g, '.') ?? '',
+                ].join('\n');
+            };
+            let caka = false;
+            addEventListener(
+                'scroll',
+                () => {
+                    if (caka) return;
+                    caka = true;
+                    requestAnimationFrame(() => {
+                        caka = false;
+                        document.documentElement.toggleAttribute('data-posun', scrollY > 0);
+                        diag();
+                    });
+                },
+                { passive: true },
+            );
+            diag();
+        </script>
+    </body>
+</html>
