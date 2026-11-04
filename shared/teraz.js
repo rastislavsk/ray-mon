@@ -9,7 +9,6 @@ import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, powerThresholds } from './config.js';
 import { chartKeys, dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
-import { weekDayName } from './format.js';
 import { heroModel } from './hero-model.js';
 import {
     DAY_CHART_KEYS,
@@ -19,7 +18,6 @@ import {
     terazClearText,
     terazCloudText,
     terazKwText,
-    terazLaterText,
     terazLimitFrom,
     terazLimitGap,
     terazNoteText,
@@ -272,14 +270,14 @@ function readoutOf(input, plan, hero, limitKw) {
 }
 
 /**
- * Dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a kedy bude lepšie - z toho skladá
- * kartu Dnes shared/dnes-faza.js. Bez predpovede null.
+ * Dnešok (predpoveď, koľko už nabehlo, okno na veľké veci) a čas, keď bude ešte dnes lepšie
+ * (waitTime z heroModel) - z toho skladá kartu Dnes shared/dnes-faza.js. Bez predpovede null.
  * @param {TerazInput} input @param {import('./messages.js').Voice} [voice]
  */
 export function dnesCards(input, voice = 'drzy') {
     if (!input.forecast) return null;
     const now = heroModel({ ...input, previewMinutes: null }, voice);
-    return { today: todayCard(input, dayPlan(input), now.minutes), later: laterCard(input, now) };
+    return { today: todayCard(input, dayPlan(input), now.minutes), wait: now.waitTime };
 }
 
 /**
@@ -326,21 +324,6 @@ function dayDone(day, done, measured) {
  */
 function soFar(hourly, nowMin) {
     return hourly.reduce((sum, p) => sum + p.kw * Math.max(0, Math.min(1, (nowMin - (p.hour * 60 - 30)) / 60)), 0);
-}
-
-/**
- * Karta Kedy lepšie: ešte dnes (waitTime z heroModel)
- * a najbližší silný deň - špička aspoň po hornú hranicu výkonu, tú istú, od ktorej predpoveď
- * hlási „zajtra slnečno“.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
- */
-function laterCard(input, now) {
-    const th = powerThresholds(input.plant);
-    const days = input.forecast ? input.forecast.days : [];
-    const today = todayOf(input);
-    const nextIndex = days.findIndex((d, i) => i > 0 && d.peakKw >= th.highKw);
-    const next = nextIndex > 0 ? { name: weekDayName(days[nextIndex].date, nextIndex), kwh: days[nextIndex].kwhTotal } : null;
-    return terazLaterText({ wait: now.waitTime, todayStrong: !!today && today.peakKw >= th.highKw, next });
 }
 
 /** @typedef {ReturnType<typeof terazModel>} TerazModel */
