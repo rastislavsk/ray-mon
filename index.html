@@ -136,6 +136,12 @@
                 <div class="tz-head">
                     <h1 id="tz-title" class="tz-kick">Teraz</h1>
                     <p id="tz-num" class="tz-num"><span id="tz-num-val">–</span><small>kW</small></p>
+                    <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
+                    <p id="tz-jas" class="tz-jas hidden">
+                        <span class="tz-jas-track" aria-hidden="true"><i></i></span>
+                        <span id="tz-jas-label" aria-hidden="true"></span>
+                        <span id="tz-jas-text" class="sr-only"></span>
+                    </p>
                     <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
                          ťuknutie otvorí bublinu s vysvetlením (render/terazky.js). Mená prvkov ostali
                          z hlavičky - do #pv-updated píše boot.js hlášku, keď sa appka nenačíta. -->

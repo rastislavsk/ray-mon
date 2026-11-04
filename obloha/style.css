@@ -706,6 +706,11 @@ button.live[aria-expanded='true'] {
     gap: 8px;
     padding: 12px 20px 0;
 }
+/* Bez vety pod číslom stoja štítky hneď pod riadkom stavu merania. Obe sú tlačidlá s plochou 44 px
+   a zápornými okrajmi, takže medzi ich plochami musí byť aspoň 8 px (dotykové plochy v e2e). */
+#tz-sub.hidden + .say {
+    padding-top: 30px;
+}
 /* Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B): pás každého
    spotrebiča na dnešnom slnku, biela čiara je teraz. Blok je kontajner - dlhé slovo vety ho
    nenatiahne a veta sa zmenší s jeho šírkou. */
@@ -899,6 +904,40 @@ button.live[aria-expanded='true'] {
 /* Číslo z typickej strechy priznáva odhad aj písmom. */
 .knum.est {
     font-style: italic;
+}
+/* Pásik pod číslom: koľko z jasnej oblohy (teraz.jas v shared/teraz.js). Pevná šírka, aby sa
+   s číslom nemenil; v noci prázdny, nie skrytý, aby sa v náhľade graf pod prstom nepohol. */
+.jas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: min(190px, 100% - 40px);
+    margin: 0;
+    padding: 8px 20px 0;
+    box-sizing: content-box;
+}
+.jas-track {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+}
+.jas-track i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: #fff;
+    transform: scaleX(var(--jas, 0));
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+#tz-jas-label {
+    min-width: 4ch;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: right;
+    color: #fff;
 }
 
 /* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
