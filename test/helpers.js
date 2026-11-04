@@ -127,23 +127,18 @@ export async function rozdielStavovehoRiadku(page) {
 }
 
 /**
- * Sklo hlavičky (`sel`): na vrchu stránky priehľadné, po posune zapnuté, po návrate späť vypnuté.
- * Pozadie hlavičky samo je vždy priehľadné, aby pod ňou (a pod stavovým riadkom) svietilo počasie.
+ * Hlavička (`sel`) je priehľadná a nie je prilepená: pri posune odíde s obsahom. Prilepenú by Safari
+ * na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou farbou a počasie by pod ňou nebolo.
  * @param {import('@playwright/test').Page} page @param {string} sel
  */
-export async function overSklo(page, sel) {
+export async function overHlavicku(page, sel) {
     const { expect } = await import('@playwright/test');
-    const sklo = () =>
-        page.evaluate((s) => Number(getComputedStyle(/** @type {Element} */ (document.querySelector(s)), '::before').opacity), sel);
-    const pozadie = () => page.evaluate((s) => getComputedStyle(/** @type {Element} */ (document.querySelector(s))).backgroundColor, sel);
-    expect(await pozadie()).toBe('rgba(0, 0, 0, 0)');
-    await expect.poll(sklo).toBe(0);
-    await page.evaluate(() => window.scrollTo(0, 200));
-    await expect(page.locator('html')).toHaveAttribute('data-posun', '');
-    await expect.poll(sklo).toBe(1);
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(page.locator('html')).not.toHaveAttribute('data-posun', '');
-    await expect.poll(sklo).toBe(0);
+    const hlavicka = page.locator(sel);
+    expect(await hlavicka.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    expect(await hlavicka.evaluate((el) => getComputedStyle(el).position)).not.toMatch(/sticky|fixed/);
+    const vyska = (await hlavicka.boundingBox())?.height ?? 0;
+    await page.evaluate((y) => window.scrollTo(0, y), vyska + 50);
+    await expect.poll(async () => (await hlavicka.boundingBox())?.y ?? 0).toBeLessThan(-vyska);
 }
 
 /**

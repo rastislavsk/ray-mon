@@ -297,38 +297,16 @@ b {
    black-translucent": po pridaní na plochu iPhonu tak stránka začína pod stavovým
    riadkom - teda pod hodinami a batériou systému. Bez tohto odsadenia sa celý riadok
    s názvom appky schoval za stavový riadok a bolo ho vidieť len na okamih, kým ťahanie
-   prstom nadol (obnova ťahom) posunulo stránku nižšie. Odsadenie je vnútri .appbar,
-   takže jej sklo (nižšie) siaha až pod stavový riadok. */
-/* z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
+   prstom nadol (obnova ťahom) posunulo stránku nižšie.
+   Hlavička je priehľadná a nie je prilepená hore - pri posune odíde s obsahom. Pod ňou aj pod
+   stavovým riadkom tak svieti počasie karty Teraz (web/pocasie.css). Prilepenú hlavičku by Safari
+   na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou farbou (vyskúšané na telefóne,
+   4. 11. 2026); prilepená ostáva len navigácia.
+   z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
 .appbar {
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 32;
     padding-top: var(--safe-top);
-}
-/* Hlavička je priehľadná, aby počasie v pozadí karty Teraz (web/pocasie.css) svietilo aj cez ňu
-   a pod stavovým riadkom. Po posune stránky sa pod ňou plynule zjaví sklo: rozmaže obsah, ktorý pod
-   hlavičkou prechádza, a slnko za ním ostane vidno. Posun zapisuje web/sklo.js (data-posun na <html>).
-   Pri útlme pohybu je sklo stále. */
-.appbar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: color-mix(in srgb, var(--bg) 70%, transparent);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
-    opacity: 0;
-    transition: opacity var(--dur);
-}
-:root[data-posun] .appbar::before {
-    opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-    .appbar::before {
-        opacity: 1;
-    }
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Slnko je teplo biele, nie žlté - žltou
    tu hovorí cena (lacná sieť). Mesiac stojí vpravo od čísla (v noci je číslo vždy „0“), zrážky
@@ -4872,7 +4850,6 @@ b {
         flex-direction: column;
     }
     .appbar {
-        position: relative;
         flex: 0 0 auto;
     }
     .page {

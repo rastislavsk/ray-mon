@@ -20,7 +20,6 @@ import {
 } from './web/settings-store.js';
 import { createStore, initialState } from './web/state.js';
 import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.js';
-import { initSklo } from './web/sklo.js';
 
 // Jediná šírka, o ktorej appka vie: od 768 px kreslí grafy na skutočný rozmer karty.
 // Zvyšok rozloženia (vrátane desktopu od 1024 px) rieši CSS samo.
@@ -60,7 +59,6 @@ const store = createStore({
 initUrlMirror(store);
 initOznamZrkadlo(store, './');
 initOznamZosulad(store);
-initSklo();
 store.subscribe((state) => render(state, dom));
 const refresh = initInteractions(store, dom, mq);
 render(store.get(), dom);
