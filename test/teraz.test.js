@@ -48,7 +48,7 @@ import { mozemModel, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { moonPhase } from '../shared/solar.js';
-import { dnesCards, terazModel } from '../shared/teraz.js';
+import { dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
@@ -769,4 +769,16 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(neskor?.mesiac, moonPhase(at('23:32')));
     // Bez predpovede kresba nie je.
     assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
+});
+
+test('pocasieTeraz: počasie neba je z tejto chvíle aj počas náhľadu, rovnaké ako kresba', () => {
+    const slabo = { ...input(at('13:00')), pv: { ...input(at('13:00')).pv, realTimePowerKw: 0.3 } };
+    assert.deepEqual(pocasieTeraz(slabo), terazModel(slabo).pocasie);
+    // Náhľad o 18:00 kresbu posunie, nebo ostáva pri teraz (zamračené z merania).
+    const nahlad = { ...slabo, previewMinutes: 18 * 60 };
+    assert.equal(terazModel(nahlad).pocasie?.jas, 'jasno');
+    assert.equal(pocasieTeraz(nahlad)?.jas, 'zamracene');
+    assert.equal(pocasieTeraz(nahlad)?.zamracenost, 1);
+    assert.equal(pocasieTeraz({ ...slabo, forecast: null }), null);
+    assert.equal(pocasieTeraz({ ...slabo, known: 'nic' }), null);
 });

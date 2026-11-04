@@ -767,11 +767,13 @@ export const SKY = {
     clearPct: 30,
     overcastPct: 70,
     // Koľko sivej sa cez deň primieša do farieb neba. V noci je oblačnosť vidno menej
-    // (viď skyColors). Dážď a sneh farbu neba nemenia - kreslí ich počasie na karte Teraz.
+    // (viď skyColors). Hodnoty platia pre zamračenosť 0, 0,5 a 1 (shared/pocasie.js), medzi nimi
+    // sa menia plynule - nebo je modrosivé podľa sily oblačnosti; dážď a sneh sú zamračenosť 1.
     cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
     cloud: ['#5b6b82', '#98a5b5'],
     // Koľko farebného odtieňa neba po primiešaní oblakov zmizne (0 = nič, 1 = sivá s rovnakým
-    // jasom), cez deň aj v noci. Zamračená obloha je sivá celá, aby za oblakmi nebolo vidno modrú.
+    // jasom), cez deň aj v noci, rovnako plynule. Polojasno je ešte modré, zamračená obloha sivá
+    // celá, aby za oblakmi nebolo vidno modrú.
     sivost: { jasno: 0, polojasno: 0, zamracene: 1 },
     // Bez dát: sivá obloha, ktorá netvrdí nič o počasí.
     offline: ['#4f555f', '#7f858e'],

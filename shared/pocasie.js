@@ -3,15 +3,17 @@
 // Obe appky ho kreslia po svojom, odpoveď je jedna. Čisté funkcie, čas aj dáta prichádzajú
 // v parametroch.
 
-import { HVIEZDY, POCASIE } from './config.js';
+import { HVIEZDY, POCASIE, SKY } from './config.js';
 import { hviezdy } from './hviezdy.js';
 import { skyWeather } from './sky.js';
 import { moonPhase } from './solar.js';
 
 /**
  * @typedef {'mrholenie' | 'slaby' | 'dazd' | 'silny'} DazdSila
- * @typedef {{ jas: import('./sky.js').SkyWeather, zrazky: import('./solar.js').Precip, dazd: DazdSila | null, noc: boolean,
- *   mesiac: number, juh: boolean, hviezdy: import('./hviezdy.js').Hviezda[] | null }} Pocasie
+ * @typedef {{ jas: import('./sky.js').SkyWeather, zamracenost: number, zrazky: import('./solar.js').Precip, dazd: DazdSila | null,
+ *   noc: boolean, mesiac: number, juh: boolean, hviezdy: import('./hviezdy.js').Hviezda[] | null }} Pocasie
+ *   `zamracenost` 0 (jasno) až 1 (zamračené) z toho istého zdroja ako `jas`, pri zrážkach 1 - podľa nej
+ *   je modrosivá Obloha (docs/navrhy/obloha-farba-podla-pocasia.html);
  *   `dazd` sila dažďa, keď prší (docs/navrhy/dazd-sily.html); `mesiac` fáza 0-1 (moonPhase); `juh`
  *   elektráreň je na južnej pologuli (kosáčik dorastá zľava); `hviezdy` v noci skutočná obloha
  *   nad elektrárňou (shared/hviezdy.js), cez deň null
@@ -39,10 +41,32 @@ function silaDazda(h) {
  * @returns {import('./sky.js').SkyWeather | null}
  */
 export function jasZMerania(merane) {
-    if (!merane || !Number.isFinite(merane.kw) || !(merane.clearKw >= POCASIE.istyPodiel * merane.installedKw)) return null;
-    const podiel = merane.kw / merane.clearKw;
+    const podiel = podielZMerania(merane);
+    if (podiel === null) return null;
     if (podiel >= POCASIE.jasno) return 'jasno';
     return podiel < POCASIE.zamracene ? 'zamracene' : 'polojasno';
+}
+
+/** Podiel z jasnej oblohy, keď o oblakoch niečo hovorí (jasZMerania), inak null. @param {Parameters<typeof jasZMerania>[0]} merane */
+function podielZMerania(merane) {
+    if (!merane || !Number.isFinite(merane.kw) || !(merane.clearKw >= POCASIE.istyPodiel * merane.installedKw)) return null;
+    return merane.kw / merane.clearKw;
+}
+
+/** @param {number} x */
+const do01 = (x) => Math.min(1, Math.max(0, x));
+
+/**
+ * Zamračenosť 0-1 z toho istého zdroja ako jas (pocasie): z podielu merania medzi hranicami
+ * POCASIE.jasno (0) a POCASIE.zamracene (1), inak z oblačnosti predpovede medzi SKY.clearPct (0)
+ * a SKY.overcastPct (1). Pri daždi či snehu je obloha zatiahnutá - 1.
+ * @param {number} cloud oblačnosť z predpovede (%) @param {number | null} podiel z merania, null = nemeria
+ * @param {boolean} zrazky
+ */
+function zamracenostZ(cloud, podiel, zrazky) {
+    if (zrazky) return 1;
+    if (podiel !== null) return do01((POCASIE.jasno - podiel) / (POCASIE.jasno - POCASIE.zamracene));
+    return do01((cloud - SKY.clearPct) / (SKY.overcastPct - SKY.clearPct));
 }
 
 /**
@@ -61,13 +85,16 @@ export function jasZMerania(merane) {
  */
 export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane }) {
     if (!point || point.cloud === null) return null;
+    const podiel = noc ? null : podielZMerania(merane);
     const jas = (!noc && jasZMerania(merane)) || skyWeather(point.cloud);
+    const zrazky = (zrazkyPoint ?? point).precip ?? null;
     const krok = HVIEZDY.krokMin * 60000;
     const t = new Date(Math.round(chvila.getTime() / krok) * krok);
     const mesiac = moonPhase(t);
     return {
         jas,
-        zrazky: (zrazkyPoint ?? point).precip ?? null,
+        zamracenost: zamracenostZ(point.cloud, podiel, zrazky !== null),
+        zrazky,
         dazd: silaDazda(zrazkyPoint ?? point),
         noc,
         mesiac,

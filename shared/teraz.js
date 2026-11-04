@@ -85,6 +85,18 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
 }
 
 /**
+ * Počasie v tejto chvíli, aj keď karta Teraz ukazuje náhľad iného času - z neho je farba Oblohy
+ * na všetkých kartách (docs/navrhy/obloha-farba-podla-pocasia.html), takže nebo a kresba počasia
+ * hovoria to isté. Bez predpovede null.
+ * @param {TerazInput} input
+ */
+export function pocasieTeraz(input) {
+    if (input.known === 'nic' || !input.forecast) return null;
+    const teraz = { ...input, previewMinutes: null };
+    return pocasieOf(teraz, heroModel(teraz));
+}
+
+/**
  * Počasie v pozadí karty v zvolenej chvíli (aj v náhľade iného času): hodina predpovede, a keď
  * je výkon v tej chvíli nameraný, aj jeho podiel z jasnej oblohy (shared/pocasie.js). Mesiac
  * a hviezdy sú z tej istej chvíle, nie z teraz.

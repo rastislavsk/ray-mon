@@ -24,7 +24,7 @@ import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
 import { dnesFaza } from '../../shared/dnes-faza.js';
-import { terazModel } from '../../shared/teraz.js';
+import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -105,8 +105,11 @@ const oblohaVStranke = (page) =>
     });
 
 /** Obloha tak, ako ju appka vypočíta v danej chvíli s dátami z fixtures. @param {Date} time */
-const ocakavanaObloha = (time) =>
-    skyNow({ now: time, known: 'elektraren', site: SITE, forecast: buildForecast(weather, time, SITE, PLANT), loading: false });
+const ocakavanaObloha = (time) => {
+    // Počasie neba je to isté ako v kresbe na karte Teraz; appka má meranie z fixtures (pv).
+    const vstup = vstupTeraz(time, { pv });
+    return skyNow(vstup, true, pocasieTeraz(vstup));
+};
 
 /** @param {import('@playwright/test').Page} page @param {(typeof PANELS)[number]} panel */
 async function ocakavajKartu(page, panel) {

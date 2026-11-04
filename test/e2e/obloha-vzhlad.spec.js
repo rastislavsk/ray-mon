@@ -23,6 +23,7 @@ import { voiceTexts } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
+import { pocasieTeraz } from '../../shared/teraz.js';
 import { buildForecast } from '../../shared/solar.js';
 import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
@@ -36,6 +37,23 @@ const SLUSNY = voiceTexts('slusny');
 
 /** Presný okamih daného času 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
+
+/**
+ * Živá obloha tak, ako ju appka vypočíta v danej chvíli z dát, ktoré jej testy pošlú: počasie
+ * neba je to isté ako v kresbe na karte Teraz (pocasieTeraz). @param {Date} time
+ */
+const zivaObloha = (time) => {
+    const vstup = {
+        ...OWNER,
+        now: time,
+        loading: false,
+        known: /** @type {const} */ ('elektraren'),
+        pv,
+        forecast: buildForecast(weather, time, SITE, PLANT),
+        previewMinutes: null,
+    };
+    return skyNow(vstup, true, pocasieTeraz(vstup));
+};
 
 /**
  * Siete z fixtures (QR knižnica z CDN neodpovedá) a úložisko pred prvým otvorením. Uloží sa
@@ -175,13 +193,7 @@ test.describe('tón hlášok', () => {
 test.describe('živá obloha', () => {
     test('vypnutá stojí v pokojných tmavých farbách o 13:00 aj o 21:00, po obnovení ostane; zapnutie vráti živú', async ({ page }) => {
         const errors = await openObloha(page, { time: at('13:00') });
-        const zivo = skyNow({
-            now: at('13:00'),
-            known: 'elektraren',
-            site: SITE,
-            loading: false,
-            forecast: buildForecast(weather, at('13:00'), SITE, PLANT),
-        });
+        const zivo = zivaObloha(at('13:00'));
         await expect.poll(() => obloha(page)).toEqual([zivo.top, zivo.bottom]);
 
         await karta(page, 'nastavenie');
@@ -209,13 +221,7 @@ test.describe('živá obloha', () => {
 
         // Zapnutie vráti oblohu podľa času a počasia.
         await prepinac.click();
-        const vecer = skyNow({
-            now: at('21:00'),
-            known: 'elektraren',
-            site: SITE,
-            loading: false,
-            forecast: buildForecast(weather, at('21:00'), SITE, PLANT),
-        });
+        const vecer = zivaObloha(at('21:00'));
         await expect.poll(() => obloha(page)).toEqual([vecer.top, vecer.bottom]);
         expect(vecer.top).not.toBe(SKY.calm[0]);
         expect(errors).toEqual([]);

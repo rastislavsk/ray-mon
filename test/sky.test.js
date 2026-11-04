@@ -126,6 +126,30 @@ test('skyNow: oblačnosť z hodiny predpovede, v ktorej teraz sme', () => {
     assert.equal(skyNow({ ...base, forecast: bez }).weather, 'jasno');
 });
 
+test('skyColors: zamračenosť mení nebo plynule od modrej po sivú, stavy sú jej stredy', () => {
+    const z = (/** @type {number} */ x) => skyColors(hm(13), SUN, 'polojasno', x);
+    // Bez zamračenosti platí stred stavu: jasno 0, polojasno 0,5, zamračené 1.
+    assert.deepEqual(z(0.5), skyColors(hm(13), SUN, 'polojasno'));
+    assert.equal(z(0).top, skyColors(hm(13), SUN, 'jasno').top);
+    assert.equal(z(1).top, skyColors(hm(13), SUN, 'zamracene').top);
+    // Čím zamračenejšie, tým menej modrej - bez skokov.
+    const kroky = [0, 0.25, 0.5, 0.6, 0.75, 0.9, 1].map((x) => sytost(z(x).top));
+    for (let i = 1; i < kroky.length; i++) assert.ok(kroky[i] < kroky[i - 1], `${kroky}`);
+    assert.equal(kroky[kroky.length - 1], 0);
+});
+
+test('skyNow: s počasím z karty Teraz rozhoduje ono, nie oblačnosť predpovede', () => {
+    const { forecast } = fixtureData();
+    const mraky = { ...forecast, hourlyToday: forecast.hourlyToday.map((h) => ({ ...h, cloud: 100 })) };
+    const base = { now: FIXED_NOW, known: /** @type {const} */ ('elektraren'), site: SITE, loading: false, forecast: mraky };
+    // Predpoveď hlási zamračené, meranie jasno: nebo je modré ako kresba.
+    const slnko = skyNow(base, true, { jas: 'jasno', zamracenost: 0, zrazky: null });
+    assert.equal(slnko.weather, 'jasno');
+    assert.ok(sytost(slnko.top) > sytost(skyNow(base).top));
+    // Pri daždi je zamračené, aj keď kresba ukazuje polojasno.
+    assert.equal(skyNow(base, true, { jas: 'polojasno', zamracenost: 1, zrazky: 'dazd' }).weather, 'zamracene');
+});
+
 test('skyNow: bez dát sivá, počas prvého načítania čas dňa bez počasia', () => {
     const base = { now: FIXED_NOW, site: SITE, forecast: null };
     assert.equal(skyNow({ ...base, known: 'elektraren', loading: false }).weather, null);
