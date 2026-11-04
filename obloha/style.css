@@ -113,11 +113,11 @@ button:focus-visible {
 
 /* ===== Hlavička ===== */
 /* Ako v súčasnej appke: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku
-   oboch riadkov (docs/navrhy/hlavicka-jednotna.html). Je priehľadná a nie je prilepená hore -
+   oboch riadkov (docs/navrhy/hlavicka-jednotna.html) - bez zadaných panelov tam ostala výzva. Je priehľadná a nie je prilepená hore -
    pri posune odíde s obsahom, takže pod ňou aj pod stavovým riadkom je tá istá obloha a počasie
    ako na stránke. Prilepenú by Safari na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou
-   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky.
-   Hlavička je nad vrstvou .tip-bg, aby bublina v nej a tlačidlo stavu ostali ťukateľné. */
+   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky. Bodka a čas merania sú
+   v riadku pod číslom karty Teraz (.stav, docs/navrhy/teraz-stav-merania.html). */
 .st {
     position: relative;
     z-index: 5;
@@ -160,16 +160,33 @@ button:focus-visible {
     overflow-wrap: anywhere;
     font-size: 0.8125rem;
 }
-.st :is(.live, .need) {
+.st .need {
     grid-column: 2;
     grid-row: 1 / span 2;
+}
+/* ===== Stav merania pod číslom karty Teraz ===== */
+/* Bodka, čas a slovo o stave (stavRiadok v shared/hlavicka.js) písmom riadku pod číslom, bez
+   pozadia - ako ostatný text na holej oblohe. Pri otvorenej bubline je riadok nad vrstvou .tip-bg
+   (z-index 4), aby ostal ťukateľný a bublina pri ňom. */
+.stav {
+    position: relative;
+    padding: 8px 20px 0;
+}
+.stav.open {
+    z-index: 5;
 }
 .live {
     display: inline-flex;
     flex: none;
-    gap: 6px;
+    gap: 7px;
     align-items: center;
     color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 .live i {
     width: 7px;
@@ -189,53 +206,56 @@ button:focus-visible {
     background: transparent;
     box-shadow: inset 0 0 0 1.5px #fff;
 }
-/* Bodka a čas sú tlačidlo, ktoré otvorí bublinu s vysvetlením stavu: vyzerá ako text, plocha na
-   ťuknutie má 44 px. Kým appka stav merania nepozná (načítavam…), je vypnuté. */
+/* Pri náhľade iného času riadok hovorí len, odkiaľ je číslo v zvolenom čase - bodka patrí k teraz. */
+.live[data-tone='nahlad'] i {
+    display: none;
+}
+/* Celý riadok je tlačidlo, ktoré otvorí bublinu s vysvetlením stavu: vyzerá ako text, plocha na
+   ťuknutie má 44 px a výšku riadku nemení (záporný okraj). Kým appka stav merania nepozná
+   (načítavam…) a počas náhľadu je vypnuté. Prázdne (náhľad bez čísla) drží výšku riadku. */
 button.live {
     min-height: 44px;
-    margin: -2px -12px;
-    padding: 0 12px;
+    margin: -14px -10px -13px;
+    padding: 0 10px;
     border: 0;
     border-radius: 22px;
     background: none;
-    font: inherit;
     cursor: pointer;
 }
 button.live:disabled {
     cursor: default;
 }
-/* Pilulka z tmavého skla hovorí, že sa na bodku a čas dá ťuknúť - svetlá by bielemu textu na
-   jasnej oblohe vzala kontrast. Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa
-   pýtať prečo. Čítačka ho nečíta (alternatívny text je prázdny). */
-/* Tmavšia ako ostatné sklo: vpravo hore za ňou svieti slnko počasia (web/pocasie.css). */
-button.live:enabled {
-    background: rgba(8, 16, 40, 0.5);
+#hdr-status:empty::before {
+    content: '0';
 }
+/* Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka ho nečíta
+   (alternatívny text je prázdny). */
 button.live:enabled:is([data-tone='odhad'], [data-tone='stale']) #hdr-status::after {
     content: ' ›' / '';
 }
 button.live[aria-expanded='true'] {
-    background: rgba(8, 16, 40, 0.68);
+    background: rgba(8, 16, 40, 0.45);
 }
-/* Vrstva pod hlavičkou (.st má z-index 5): pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
+/* Vrstva pod riadkom stavu: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
 .tip-bg {
     position: fixed;
     inset: 0;
     z-index: 4;
     background: rgba(5, 8, 20, 0.3);
 }
-/* Bublina pod bodkou a časom, šípka ukazuje hore na ne. */
+/* Bublina pod riadkom stavu, šípka ukazuje hore na bodku. */
 .tip {
     position: absolute;
-    top: calc(100% + 8px);
-    right: 12px;
-    width: min(300px, calc(100% - 24px));
+    top: calc(100% + 12px);
+    left: 12px;
+    width: min(320px, calc(100% - 24px));
     padding: 14px 16px 16px;
     border-radius: 18px;
     background: rgba(10, 16, 38, 0.94);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    color: #fff;
     font-size: 0.9375rem;
     line-height: 1.4;
 }
@@ -243,7 +263,7 @@ button.live[aria-expanded='true'] {
     content: '';
     position: absolute;
     top: -6px;
-    right: 28px;
+    left: 18px;
     width: 12px;
     height: 12px;
     border-radius: 2px;
@@ -307,9 +327,13 @@ button.live[aria-expanded='true'] {
 }
 /* Kým appka kartu prvý raz nevykreslí (render zapíše data-panel), sú v stránke len prázdne
    nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
-   zaberajú ďalej, len ich nevidno. Hlášku boot.js nesie hlavička, tá je vidieť stále. */
+   zaberajú ďalej, len ich nevidno. Okrem riadku stavu merania na karte Teraz, ktorú stránka ukáže
+   pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“). */
 .page:not([data-panel]) {
     visibility: hidden;
+}
+.page:not([data-panel]) .stav {
+    visibility: visible;
 }
 /* Nadpis rastie s písmom v systéme, no najviac tak, aby sa slovo ako „Štatistika“ zmestilo na úzky displej. */
 .ttl {
@@ -875,15 +899,6 @@ button.live[aria-expanded='true'] {
 /* Číslo z typickej strechy priznáva odhad aj písmom. */
 .knum.est {
     font-style: italic;
-}
-.src {
-    padding: 8px 20px 0;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #fff;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -

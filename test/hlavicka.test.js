@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRISTUP, SITE } from '../shared/config.js';
-import { hlavickaModel, obnovaMerania, pripojenieBublina } from '../shared/hlavicka.js';
+import { hlavickaModel, obnovaMerania, pripojenieBublina, stavRiadok } from '../shared/hlavicka.js';
 import { odmietnute } from '../shared/pristup.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -30,9 +30,9 @@ const model = (/** @type {Partial<typeof base>} */ s, /** @type {any} */ voice) 
 test('hlavička: miesto, čas merania a bodka - v oboch appkách to isté', () => {
     const m = model({});
     assert.equal(m.place, SITE.name);
-    assert.equal(m.status, '13:00');
+    assert.equal(m.status, '13:00 · živé meranie');
     assert.equal(m.tone, 'live');
-    assert.equal(m.toneText, 'živé meranie');
+    assert.equal(m.toneText, '', 'riadok to povie slovom');
     assert.equal(m.setup, false);
     assert.equal(m.tip?.nadpis, 'Živé meranie');
     assert.equal(m.tip?.znova, false);
@@ -76,6 +76,21 @@ test('hlavička: bez panelov výzva, pri načítaní a bez dát slovo bez bublin
     assert.deepEqual([nacitavam.status, nacitavam.tone, nacitavam.tip], ['načítavam…', 'off', null]);
     const bezDat = model({ pv: null, forecast: null });
     assert.deepEqual([bezDat.status, bezDat.tone, bezDat.tip], ['bez dát', 'off', null]);
+});
+
+test('riadok stavu pod číslom karty Teraz: stav merania, v náhľade odkiaľ je číslo, bez panelov nie je', () => {
+    const h = model({});
+    assert.deepEqual(stavRiadok(h, { preview: false, source: '' }), {
+        text: '13:00 · živé meranie',
+        tone: 'live',
+        toneText: '',
+        tip: h.tip,
+    });
+    // Náhľad iného času: čas merania by vedľa čísla z inej chvíle klamal - bez bodky a bez bubliny.
+    assert.deepEqual(stavRiadok(h, { preview: true, source: 'namerané' }), { text: 'namerané', tone: 'nahlad', toneText: '', tip: null });
+    assert.equal(stavRiadok(model({ known: 'poloha' }), { preview: false, source: '' }), null);
+    const stare = model({ now: at('13:30'), pv: { ...cerstve, updatedAt: at('13:30').toISOString() } });
+    assert.equal(stavRiadok(stare, { preview: false, source: '' })?.toneText, 'meranie zastarané');
 });
 
 test('bublina po pripojení: až keď prvé meranie prišlo, v noci že menič spí', () => {

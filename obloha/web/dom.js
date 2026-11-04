@@ -64,7 +64,6 @@ function terazDom() {
         tzTitle: byId('ttl-terazky'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),
-        tzSrc: byId('tz-src'),
         tzSub: byId('tz-sub'),
         tzSay: byId('tz-say'),
         tzChips: byId('tz-chips'),
@@ -433,6 +432,8 @@ export function collectDom() {
         themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
         page: byId('page'),
         place: byId('hdr-place'),
+        // Bodka, čas merania a bublina sú v riadku pod číslom karty Teraz, mená ostali z hlavičky.
+        stav: byId('tz-stav'),
         live: /** @type {HTMLButtonElement} */ (byId('hdr-live')),
         status: byId('hdr-status'),
         tip: byId('hdr-tip'),

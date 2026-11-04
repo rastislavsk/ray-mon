@@ -5,6 +5,7 @@
 // zapisuje do DOM.
 
 import { escapeHtml } from '../../../shared/format.js';
+import { hlavickaModel, stavRiadok } from '../../../shared/hlavicka.js';
 import { PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
 import { terazModel } from '../../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../../../web/day-chart.js';
@@ -15,6 +16,35 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
+
+/** Texty bubliny, keď riadok bublinu nemá. */
+const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
+
+/**
+ * Riadok stavu merania pod číslom (shared/hlavicka.js, stavRiadok): bodka, čas a slovo, a bublina
+ * s vysvetlením, keď je otvorená. Keď karta Teraz nie je vidieť (`m` null), náhľad nie je - riadok sa
+ * píše aj tak, aby hovoril o meraní, keď sa karta vráti. Tvar bodky drží data-tone na tlačidle.
+ * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
+ */
+function renderStav(state, m, dom) {
+    const r = stavRiadok(hlavickaModel(state, state.voice), m ?? { preview: false, source: '' });
+    show(dom.stav, !!r);
+    const { text, tone, toneText, tip } = r ?? { text: '', tone: 'off', toneText: '', tip: null };
+    setText(dom.status, text);
+    setText(dom.tone, toneText);
+    dom.live.dataset.tone = tone;
+    dom.live.disabled = !tip;
+    const open = state.stavTip && !!tip;
+    dom.stav.classList.toggle('open', open);
+    dom.live.setAttribute('aria-expanded', String(open));
+    show(dom.tip, open);
+    show(dom.tipBg, open);
+    const t = tip ?? BEZ_BUBLINY;
+    setText(dom.tipTitle, t.nadpis);
+    setText(dom.tipText, t.text);
+    setText(dom.tipBtn, t.tlacidlo);
+    show(dom.tipBtn, !!t.tlacidlo);
+}
 
 /**
  * Graf, „Späť na teraz“ a zoznam pod grafom: prvý riadok legendy, po otvorení farby pásu,
@@ -179,6 +209,7 @@ function renderPlan(plan, open, dom) {
 export function renderTeraz(state, dom) {
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
     if (!shows(state, 'terazky')) {
+        renderStav(state, null, dom);
         renderChipSheet(state, null, dom, TERAZ_TEXTS);
         return;
     }
@@ -187,12 +218,11 @@ export function renderTeraz(state, dom) {
         { online: state.online, voice: state.voice, devices: state.doma },
     );
     renderPocasie(state, m, dom);
+    renderStav(state, m, dom);
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
-    show(dom.tzSrc, m.source !== '');
-    setText(dom.tzSrc, m.source);
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
     show(dom.tzNote, !!m.note);

@@ -605,7 +605,7 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         await page.locator('#import-accept').click();
         await expect(page.locator('#import-offer')).toBeHidden();
         expect(await ulozene(page)).toEqual(toUser(OWNER));
-        await expect(page.locator('#hdr-status')).toHaveText('13:00');
+        await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
         expect(settingsFromLink(page.url()), 'adresa nesie nastavenie, prístup k meraniu nie').toEqual({ ...OWNER, zdroj: null });
         expect(errors).toEqual([]);
     });
@@ -617,7 +617,7 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         const novsie = { ...OWNER, plant: { ...OWNER.plant, panelWp: OWNER.plant.panelWp + 10 } };
         await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(novsie))]);
         await page.reload();
-        await expect(page.locator('#hdr-status')).toHaveText('13:00');
+        await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
         await expect(page.locator('#import-offer')).toBeHidden();
         expect(await ulozene(page)).toEqual(toUser(novsie));
         expect(settingsFromLink(page.url()), 'adresa nesie novšie uložené').toEqual({ ...novsie, zdroj: null });

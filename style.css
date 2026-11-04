@@ -302,7 +302,7 @@ b {
    stavovým riadkom tak svieti počasie karty Teraz (web/pocasie.css). Prilepenú hlavičku by Safari
    na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou farbou (vyskúšané na telefóne,
    4. 11. 2026); prilepená ostáva len navigácia.
-   z-index nad vrstvou .pv-tip-bg (31): bublina stavu merania v hlavičke ostane nad ňou ťukateľná. */
+   Bodka a čas merania sú v riadku pod číslom karty Teraz (.tz-stav, docs/navrhy/teraz-stav-merania.html). */
 .appbar {
     position: relative;
     z-index: 32;
@@ -322,8 +322,8 @@ b {
 .wx[data-noc] {
     --wx-sivo: 30, 30, 30;
 }
-/* Dva riadky: vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku oboch
-   (docs/navrhy/hlavicka-jednotna.html) - rovnako ako v Oblohe. */
+/* Dva riadky: vľavo RAY-MON a pod ním miesto elektrárne, bez zadaných panelov vpravo výzva na výšku
+   oboch (docs/navrhy/hlavicka-jednotna.html) - rovnako ako v Oblohe. */
 .appbar-inner {
     position: relative;
     display: grid;
@@ -353,12 +353,11 @@ b {
     color: var(--ink-35);
     letter-spacing: 0.04em;
 }
-.appbar-clock,
 .pv-setup-go {
     grid-column: 2;
     grid-row: 1 / span 2;
 }
-/* Bez zadaných panelov namiesto bodky a času odkaz do sprievodcu. Zelená ako ostatné akcie
+/* Bez zadaných panelov odkaz do sprievodcu. Zelená ako ostatné akcie
    (.plant-save), na pozadí hlavičky má kontrast nad 7 : 1 aj pri najsilnejšom zelenom podfarbení.
    Plocha na ťuknutie je väčšia než text, hlavičku nezväčší. */
 .pv-setup-go {
@@ -372,60 +371,19 @@ b {
     margin: -12px 0;
     cursor: pointer;
 }
-/* Bodka s časom je tlačidlo, ktoré otvorí bublinu so stavom merania: vyzerá ako text, plocha na
-   ťuknutie je väčšia, hlavičku nezväčší. */
-.appbar-clock {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--font-mono);
-    font-size: 14px;
-    color: var(--ink);
-    white-space: nowrap;
-    background: none;
-    border: 0;
-    border-radius: var(--radius-pill);
-    padding: 12px 12px;
-    margin: -12px -12px;
-    cursor: pointer;
-}
-.appbar-clock:disabled {
-    cursor: default;
-}
-/* Jemná pilulka hovorí, že sa na bodku s časom dá ťuknúť. Kreslí ju vrstva pod obsahom hlavičky
-   (nad jej pozadím). */
-.appbar-clock:enabled::before {
-    content: '';
-    position: absolute;
-    inset: 6px 0;
-    z-index: -1;
-    border-radius: var(--radius-pill);
-    /* Plná, nie priesvitná: vpravo hore za ňou svieti slnko počasia (web/pocasie.css). */
-    background: color-mix(in srgb, var(--ink) 8%, var(--bg));
-}
-.appbar-clock[aria-expanded='true']::before {
-    background: color-mix(in srgb, var(--ink) 20%, var(--bg));
-}
-/* Keď meranie nie je živé, pribudne za časom „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka
-   ho nečíta (alternatívny text je prázdny). */
-.appbar-clock:enabled:is([data-tone='odhad'], [data-tone='stale']) #pv-updated::after {
-    content: ' ›' / '';
-}
-/* Vrstva pod hlavičkou: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam (aj na navigáciu). */
+/* Vrstva pod riadkom stavu merania: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam (aj na navigáciu). */
 .pv-tip-bg {
     position: fixed;
     inset: 0;
     z-index: 31;
     background: rgba(0, 0, 0, 0.35);
 }
-/* Bublina pod časom, šípka ukazuje hore naň. Navigácia je vnútri hlavičky (z-index 30) - bublina je nad ňou. */
+/* Bublina pod riadkom stavu, šípka ukazuje hore na bodku. */
 .pv-tip {
     position: absolute;
-    z-index: 31;
-    top: calc(100% - 4px);
-    right: 12px;
-    width: min(300px, calc(100% - 24px));
+    top: calc(100% + 8px);
+    left: -8px;
+    width: min(320px, calc(100vw - 32px));
     padding: 14px 16px 16px;
     border: 1px solid var(--ink-12);
     border-radius: 16px;
@@ -439,7 +397,7 @@ b {
     content: '';
     position: absolute;
     top: -7px;
-    right: 26px;
+    left: 14px;
     width: 12px;
     height: 12px;
     border-top: 1px solid var(--ink-12);
@@ -541,25 +499,30 @@ b {
     display: none;
 }
 /* Bodka stavu merania - tvar ako v Oblohe (bodkaMerania v shared/hero-model.js), data-tone na
-   tlačidle s časom zapisuje renderHeader: plná zelená živé meranie, polovičná zastarané, krúžok
-   len predpoveď, sivá kým appka nevie. Obrys je tieň dovnútra, aby mali všetky tvary rovnakú veľkosť. */
+   tlačidle s časom zapisuje render/terazky.js: plná zelená živé meranie, polovičná zastarané, krúžok
+   len predpoveď, sivá kým appka nevie, žiadna pri náhľade iného času (bodka patrí k teraz). Obrys
+   je tieň dovnútra, aby mali všetky tvary rovnakú veľkosť. */
 .live-dot {
+    flex: none;
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: rgb(var(--grey-rgb));
 }
-.appbar-clock[data-tone='live'] .live-dot {
+.tz-clock[data-tone='live'] .live-dot {
     background: var(--green);
     box-shadow: 0 0 8px rgba(var(--green-rgb), 0.55);
 }
-.appbar-clock[data-tone='stale'] .live-dot {
+.tz-clock[data-tone='stale'] .live-dot {
     background: linear-gradient(90deg, var(--ink) 50%, transparent 50%);
     box-shadow: inset 0 0 0 1.5px var(--ink);
 }
-.appbar-clock[data-tone='odhad'] .live-dot {
+.tz-clock[data-tone='odhad'] .live-dot {
     background: transparent;
     box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.tz-clock[data-tone='nahlad'] .live-dot {
+    display: none;
 }
 
 /* Bublina „Meranie pripojené“ tesne nad spodnou navigáciou (52px, .nav-item). Svieti pár sekúnd
@@ -814,13 +777,50 @@ b {
 .tz-num.est {
     font-style: italic;
 }
-.tz-src {
+/* Stav merania pod číslom (stavRiadok v shared/hlavicka.js): bodka, čas a slovo písmom riadku
+   pod číslom, bez pozadia. Pri otvorenej bubline je riadok nad vrstvou .pv-tip-bg (31) aj nad
+   navigáciou (30), aby ostal ťukateľný a bublina pri ňom. */
+.tz-stav {
+    position: relative;
     margin-top: 10px;
+}
+.tz-stav.open {
+    z-index: 32;
+}
+/* Celý riadok je tlačidlo, ktoré otvorí bublinu: vyzerá ako text, plocha na ťuknutie má 44 px
+   a výšku riadku nemení (záporný okraj). Kým appka stav nepozná a počas náhľadu je vypnuté. */
+.tz-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    margin: -15px -10px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: none;
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-70);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.tz-clock:disabled {
+    cursor: default;
+}
+.tz-clock[aria-expanded='true'] {
+    background: color-mix(in srgb, var(--ink) 14%, var(--bg));
+}
+/* Prázdny riadok (náhľad bez čísla) drží výšku, aby sa graf pod prstom nepohol. */
+#pv-updated:empty::before {
+    content: '0';
+}
+/* Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka ho
+   nečíta (alternatívny text je prázdny). */
+.tz-clock:enabled:is([data-tone='odhad'], [data-tone='stale']) #pv-updated::after {
+    content: ' ›' / '';
 }
 .tz-sub {
     margin-top: 2px;
@@ -4758,7 +4758,6 @@ b {
     .appbar-place {
         margin: 0 auto 0 0;
     }
-    .appbar-clock,
     .pv-setup-go {
         align-self: center;
     }

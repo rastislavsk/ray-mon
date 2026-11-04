@@ -1,0 +1,715 @@
+<title>Stav merania na karte Teraz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+    /* Návrh: bodka a čas merania odchádzajú z hlavičky (tmavý ovál) do riadku pod číslom karty Teraz
+       v novej appke (obloha/). Farby a písma prevzaté z obloha/style.css. Údaje sú vzorové. */
+    @font-face {
+        font-family: 'Archivo';
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+        src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --ink: #f2f0ea;
+        --dim: rgba(242, 240, 234, 0.72);
+        --line: rgba(242, 240, 234, 0.14);
+        --yes: #b9f28c;
+        --amber: #ffc24b;
+        --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+    }
+    * {
+        box-sizing: border-box;
+    }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 16px 80px;
+        display: grid;
+        gap: 48px;
+    }
+    h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        line-height: 1.2;
+    }
+    h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+    }
+    p,
+    li {
+        color: var(--dim);
+    }
+    b {
+        color: var(--ink);
+    }
+    .lead {
+        max-width: 70ch;
+        margin: 8px 0 0;
+    }
+    .phones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+    }
+    .ph {
+        display: grid;
+        gap: 8px;
+        width: 300px;
+        max-width: 100%;
+    }
+    .ph-lbl {
+        min-height: 3.2em;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+    }
+    .ph-lbl small {
+        display: block;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--dim);
+    }
+    .ph-lbl.mine {
+        color: var(--amber);
+    }
+    .ph-lbl.final {
+        color: var(--yes);
+    }
+
+    /* ---- Obrazovka telefónu ---- */
+    .scr {
+        position: relative;
+        height: 470px;
+        overflow: hidden;
+        border-radius: 28px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #2f6fd0 0%, #3d7fd6 45%, #5a8fcc 100%);
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.35;
+    }
+    .scr.night {
+        background: linear-gradient(180deg, #0d1638 0%, #18234d 60%, #263463 100%);
+    }
+    .scr.grey {
+        background: linear-gradient(180deg, #5b6372 0%, #6b7381 50%, #7b8290 100%);
+    }
+    .sun {
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 252, 235, 0.95) 0 22%, rgba(255, 246, 214, 0.45) 40%, transparent 70%);
+    }
+    .moon {
+        position: absolute;
+        top: 92px;
+        right: 34px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        box-shadow: inset -9px 3px 0 0 #e8ecf7;
+    }
+    .st {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 10px;
+        padding: 16px 16px 8px;
+    }
+    .st .name {
+        font-weight: 800;
+        font-size: 15px;
+        letter-spacing: 0.06em;
+        font-stretch: 112%;
+    }
+    .st .place {
+        grid-row: 2;
+        font-size: 12px;
+    }
+    .pill {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 20px;
+        background: rgba(8, 16, 40, 0.5);
+        font-size: 13px;
+    }
+    .ttl {
+        margin: 6px 0 0;
+        padding: 0 16px;
+        font-size: 30px;
+        font-weight: 900;
+        font-stretch: 118%;
+        line-height: 1.1;
+        color: #fff;
+    }
+    .knum {
+        margin: 0;
+        padding: 0 16px;
+        font-size: 66px;
+        font-weight: 900;
+        font-stretch: 118%;
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+    }
+    .knum small {
+        margin-left: 6px;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+    .knum.est {
+        font-style: italic;
+    }
+    .src {
+        margin: 0;
+        padding: 8px 16px 0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #fff;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    }
+    .sub {
+        margin: 0;
+        padding: 4px 16px 0;
+        font-size: 13.5px;
+        color: #fff;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    }
+    .chips {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px 0;
+    }
+    .chip {
+        padding: 4px 10px;
+        border-radius: 14px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #10203a;
+        background: var(--yes);
+    }
+    .chip.red {
+        background: #ff8a74;
+    }
+    .glass {
+        margin: 14px 12px 0;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(8, 16, 40, 0.28);
+        font-size: 12px;
+    }
+    .glass b {
+        display: block;
+        color: #fff;
+        font-size: 15px;
+    }
+    .note {
+        margin: 14px 12px 0;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: #fff;
+        color: #10203a;
+        font-size: 12px;
+    }
+    .note b {
+        display: block;
+        color: #10203a;
+        font-size: 14px;
+    }
+    .note p {
+        margin: 4px 0 0;
+        color: #44506a;
+    }
+    .chart {
+        margin: 14px 12px 0;
+        height: 120px;
+        border-radius: 18px;
+        background: rgba(8, 16, 40, 0.28);
+        position: relative;
+        overflow: hidden;
+    }
+    .chart svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+    .chart .when {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    /* Bodka merania - tvary ako v appke (bodkaMerania): plná, polovičná, krúžok. */
+    .dot {
+        display: inline-block;
+        flex: none;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--yes);
+    }
+    .dot.stale {
+        background: linear-gradient(90deg, #fff 50%, transparent 50%);
+        box-shadow: inset 0 0 0 1.5px #fff;
+    }
+    .dot.odhad {
+        background: transparent;
+        box-shadow: inset 0 0 0 1.5px #fff;
+    }
+
+    /* Tvoj návrh: bodka a čas pred slovom, ťuká sa na čas. */
+    .row-mine {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .row-mine .t {
+        text-decoration: underline dotted rgba(255, 255, 255, 0.7);
+        text-underline-offset: 3px;
+    }
+
+    /* Finálny návrh: celý riadok je tlačidlo (44 px na ťuknutie), vyzerá ako text. */
+    .row-fin {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        min-height: 32px;
+        margin: 2px 0 -4px -8px;
+        padding: 0 8px;
+        border-radius: 16px;
+        font-variant-numeric: tabular-nums;
+    }
+    .row-fin.open {
+        background: rgba(8, 16, 40, 0.4);
+    }
+    .row-fin .sep {
+        opacity: 0.7;
+    }
+    .tap {
+        outline: 2px dashed rgba(255, 194, 75, 0.9);
+        outline-offset: 3px;
+    }
+    .tip {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        z-index: 3;
+        padding: 12px 14px 14px;
+        border-radius: 16px;
+        background: rgba(10, 16, 38, 0.94);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        font-size: 13px;
+        line-height: 1.4;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 400;
+    }
+    .tip::before {
+        content: '';
+        position: absolute;
+        top: -5px;
+        left: 22px;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        background: rgba(10, 16, 38, 0.94);
+        transform: rotate(45deg);
+    }
+    .tip b {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+    }
+    .tip p {
+        margin: 0;
+    }
+    .shade {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: rgba(5, 8, 20, 0.3);
+    }
+    .lift {
+        position: relative;
+        z-index: 3;
+    }
+    .annot {
+        font-size: 0.8125rem;
+        color: var(--dim);
+        margin: 0;
+    }
+
+    /* ---- Text ---- */
+    .cols {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+    }
+    .card {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+    }
+    .card h3 {
+        margin: 0 0 6px;
+        font-size: 1.0625rem;
+    }
+    .card ul,
+    .card ol {
+        margin: 6px 0 0;
+        padding-left: 20px;
+    }
+    .card li + li {
+        margin-top: 6px;
+    }
+    .pro {
+        color: var(--yes);
+    }
+    .con {
+        color: #ff9e8a;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9375rem;
+    }
+    th,
+    td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+    }
+    th {
+        color: var(--ink);
+    }
+    td {
+        color: var(--dim);
+    }
+    .tbl {
+        overflow-x: auto;
+    }
+</style>
+
+<main>
+    <header>
+        <h1>Stav merania na karte Teraz</h1>
+        <p class="lead">
+            Bodka a čas posledného merania odchádzajú z hlavičky (tmavý ovál vpravo hore) do riadku pod číslom na karte Teraz, ako obyčajný
+            text bez oválu. Ťuknutie ukáže tú istú bublinu ako dnes. Týka sa novej appky (Živá obloha); súčasná appka ostáva, ako je.
+        </p>
+    </header>
+
+    <section>
+        <h2>Dnes, tvoj návrh a finálny návrh</h2>
+        <div class="phones" id="porovnanie"></div>
+    </section>
+
+    <section>
+        <h2>Finálny návrh vo všetkých stavoch</h2>
+        <p class="lead">Riadok má stále to isté miesto. Mení sa tvar bodky a slovo, ktoré po čase nasleduje.</p>
+        <div class="phones" id="stavy"></div>
+    </section>
+
+    <section>
+        <h2>Čo hovorí dizajnér</h2>
+        <div class="cols">
+            <div class="card">
+                <h3>Tvoj smer je dobrý</h3>
+                <p>
+                    Riadok pod číslom už existuje (<i>ŽIVÉ MERANIE</i>) a hovorí, odkiaľ číslo je. Čas merania patrí presne k nemu: „7.66
+                    kW, namerané o 13:00, živé“. V hlavičke visel čas osamote, ďaleko od čísla, ku ktorému patrí, a ovál bol najtmavšia vec
+                    na celej oblohe. Pribudne tým jediný riadok? Nie, žiadny – bodka a čas sa vojdú do riadku, ktorý tam je.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Čo by som na ňom zmenil (finálny návrh)</h3>
+                <ol>
+                    <li><b>Ťuká sa na celý riadok</b>, nie len na čas. Samotné „13:00“ je cieľ asi 40 × 16 px, prst ho minie.</li>
+                    <li>
+                        <b>Jedno slovo namiesto dvoch.</b> Dnes hovorí hlavička „12:20 · zastarané“ a riadok pod číslom „namerané“. Spojené:
+                        <i>◐ 12:20 · zastarané ›</i>. Slová sú tie isté ako dnes v hlavičke.
+                    </li>
+                    <li><b>„›“ len keď je dôvod sa pýtať</b> (zastarané, bez spojenia, odhad) – ako dnes v ovále.</li>
+                    <li>
+                        <b>Pri náhľade času riadok prepne</b> na čas náhľadu bez bodky („10:09 · namerané“). Bodka patrí k „teraz“; vedľa
+                        čísla z 10:09 by „13:00“ klamalo.
+                    </li>
+                    <li><b>Hlavička ostane RAY-MON a miesto</b>, vpravo nič. Slnko a mesiac počasia majú voľno.</li>
+                </ol>
+            </div>
+            <div class="card">
+                <h3>Iné nápady, ktoré prehrali</h3>
+                <ul>
+                    <li>
+                        <b>Čas pri nadpise</b> „Teraz &nbsp;● 13:00“. <span class="pro">Pekne spája teraz a čas.</span>
+                        <span class="con">V noci „Teraz 17:05“ klame a čas je zase ďaleko od zdroja čísla.</span>
+                    </li>
+                    <li>
+                        <b>Len bodka pri „kW“</b>, čas až v bubline. <span class="pro">Najčistejšie.</span>
+                        <span class="con"
+                            >Práve čas hovorí, či číslo ešte platí – skrytý by nebol vidno. Vpravo od čísla stojí mesiac.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Ostať v hlavičke, ovál preč.</b> <span class="pro">Najmenšia zmena.</span>
+                        <span class="con">Ovál tam je kvôli slnku vpravo hore – biely text na ňom zmizne.</span>
+                    </li>
+                    <li>
+                        <b>Čas pri zvislej čiare „teraz“ v grafe.</b> <span class="pro">Čas pri čase.</span>
+                        <span class="con">Graf je pod Plánom dňa, často mimo prvého pohľadu; a grafom sa posúva čas.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Čo hovorí skeptik</h2>
+        <div class="cols">
+            <div class="card">
+                <h3>Ostatné karty prídu o stav</h3>
+                <p>
+                    Na kartách Dnes, 7 dní a Štatistika dnes bodku vidno, po zmene nie. Kto pozerá len Dnes, nevie, že odpoveď stojí na
+                    odhade. <b>Odpoveď:</b> stav merania sa týka čísla „teraz“ – Dnes, 7 dní aj Štatistika sú o predpovedi a histórii. Keby
+                    to vadilo, bodka bez času môže na ostatných kartách ostať v hlavičke, no potom sú dve miesta pre jednu vec. Navrhujem
+                    nie.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Dve appky sa rozídu</h3>
+                <p>
+                    „Jednotná hlavička“ (docs/navrhy/hlavicka-jednotna.html) zjednotila obe appky. Toto ju v novej appke rozbije.
+                    <b>Odpoveď:</b> kde sa stav kreslí, je kabát – pravidlá to dovoľujú. Jadro (hlavickaModel, stavMerania, texty bubliny)
+                    sa nemení, obe appky dávajú tú istú odpoveď.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Odhad povie dvakrát to isté</h3>
+                <p>
+                    Bez merania je pod riadkom „○ odhad z predpovede ›“ hneď biely pás „Odhad z predpovede, nie tvoja strecha“.
+                    <b>Odpoveď:</b> beriem. Stále miesto je cennejšie než ušetrený riadok – kto sa naučí pozerať pod číslo, nájde stav vždy
+                    tam.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Bublina a široká obrazovka</h3>
+                <p>
+                    Bublina dnes visí z hlavičky a je nad tmavou vrstvou, ktorá zachytí ťuknutie mimo. V karte potrebuje nový nosič a riadok
+                    musí byť nad tou vrstvou. Na širokej obrazovke (tri stĺpce) bude stav v stĺpci Teraz, nie nad všetkými. Oboje sa dá,
+                    treba overiť e2e testami (ťuknutie, Esc, čítačka).
+                </p>
+            </div>
+            <div class="card">
+                <h3>Hlavička zostane prázdna vpravo</h3>
+                <p>
+                    RAY-MON a miesto vľavo, vpravo nič – môže pôsobiť nevyvážene. <b>Odpoveď:</b> je to obloha, voľný pravý horný roh nechá
+                    slnko počasia dýchať. Výzva „Zadaj panely ›“ tam ostáva, kým panely nie sú.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Rozdiel medzi tvojím a finálnym</h2>
+        <div class="tbl">
+            <table>
+                <tr>
+                    <th></th>
+                    <th>Tvoj návrh</th>
+                    <th>Finálny návrh</th>
+                </tr>
+                <tr>
+                    <td>Kde</td>
+                    <td>Riadok pod číslom</td>
+                    <td>Riadok pod číslom (ten istý)</td>
+                </tr>
+                <tr>
+                    <td>Poradie</td>
+                    <td>bodka · čas · stav</td>
+                    <td>bodka · čas · stav</td>
+                </tr>
+                <tr>
+                    <td>Na čo sa ťuká</td>
+                    <td>Len čas</td>
+                    <td>Celý riadok, plocha 44 px</td>
+                </tr>
+                <tr>
+                    <td>Slovo za časom</td>
+                    <td>Zdroj čísla (živé meranie, namerané)</td>
+                    <td>Stav merania – to, čo dnes píše hlavička (zastarané, bez spojenia, menič spí)</td>
+                </tr>
+                <tr>
+                    <td>Náhľad času v grafe</td>
+                    <td>—</td>
+                    <td>Čas náhľadu bez bodky, neťuká sa</td>
+                </tr>
+                <tr>
+                    <td>Hlavička</td>
+                    <td>RAY-MON a miesto</td>
+                    <td>RAY-MON a miesto</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    const sun = '<div class="sun"></div>';
+    const hlavicka = (pravo = '') =>
+        `<div class="st"><span class="name">RAY-MON</span><span class="place">Dvorany nad Nitrou</span>${pravo}</div>`;
+    const pill = (dot, text) => `<span class="pill"><i class="dot ${dot}"></i>${text}</span>`;
+    const graf = (when = '') => `<div class="chart">${when ? `<span class="when">${when}</span>` : ''}
+        <svg viewBox="0 0 276 120" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M10 100 C80 100 100 30 138 30 C176 30 196 100 266 100" fill="rgba(185,242,140,.25)" stroke="#b9f28c" stroke-width="2"/>
+            <line x1="${when ? 92 : 150}" y1="20" x2="${when ? 92 : 150}" y2="110" stroke="#fff" stroke-dasharray="3 3"/>
+        </svg></div>`;
+    const den = (num, est = false) => `<h1 class="ttl">Teraz</h1><p class="knum${est ? ' est' : ''}">${num}<small>kW</small></p>`;
+    const fin = (dot, text, extra = '') =>
+        `<p class="src"><span class="row-fin ${extra}">${dot ? `<i class="dot ${dot}"></i>` : ''}${text}</span></p>`;
+    const subChips = `<p class="sub">96 % z toho, čo by dala jasná obloha</p>
+        <div class="chips"><span class="chip">Áno</span><span class="chip red">Drahá sieť</span></div>`;
+    const plan =
+        '<div class="glass"><span style="opacity:.8;letter-spacing:.08em;font-size:10px;font-weight:700">PLÁN DŇA</span><b>Teraz práčka</b></div>';
+
+    const scr = (bg, body) => `<div class="scr ${bg}">${body}</div>`;
+    const phone = (lbl, lblCls, bg, body, annot = '') =>
+        `<div class="ph"><span class="ph-lbl ${lblCls}">${lbl}</span>${scr(bg, body)}${annot ? `<p class="annot">${annot}</p>` : ''}</div>`;
+
+    document.getElementById('porovnanie').innerHTML = [
+        phone(
+            'Dnes<small>tmavý ovál v hlavičke, pod číslom zdroj</small>',
+            '',
+            '',
+            sun + hlavicka(pill('', '13:00')) + den('7.66') + '<p class="src">Živé meranie</p>' + subChips + plan + graf(),
+        ),
+        phone(
+            'Tvoj návrh<small>bodka · čas · stav pod číslom, ťuká sa na čas</small>',
+            'mine',
+            '',
+            sun +
+                hlavicka() +
+                den('7.66') +
+                '<p class="src"><span class="row-mine"><i class="dot"></i><span class="t tap">13:00</span> · Živé meranie</span></p>' +
+                subChips +
+                plan +
+                graf(),
+            'Žltý rámik: plocha na ťuknutie.',
+        ),
+        phone(
+            'Finálny návrh<small>celý riadok sa ťuká, slovo podľa stavu merania</small>',
+            'final',
+            '',
+            sun +
+                hlavicka() +
+                den('7.66') +
+                fin('', '<i class="dot"></i>13:00 <span class="sep">·</span> Živé meranie', 'tap') +
+                subChips +
+                plan +
+                graf(),
+            'Žltý rámik: plocha na ťuknutie (v appke 44 px na výšku).',
+        ),
+    ].join('');
+
+    const tip = (top, nadpis, text) =>
+        `<div class="shade"></div><div class="tip" style="top:${top}px"><b>${nadpis}</b><p>${text}</p></div>`;
+
+    document.getElementById('stavy').innerHTML = [
+        phone(
+            'Živé meranie · bublina otvorená',
+            'final',
+            '',
+            sun +
+                hlavicka() +
+                den('7.66') +
+                `<p class="src lift"><span class="row-fin open"><i class="dot"></i>13:00 <span class="sep">·</span> Živé meranie</span></p>` +
+                tip(
+                    222,
+                    'Živé meranie',
+                    'Menič poslal výkon o 13:00. Karty počítajú s tým, čo tvoja strecha vyrába práve teraz. Ďalšie meranie príde o pár minút.',
+                ) +
+                subChips +
+                plan +
+                graf(),
+            'Bublina pod riadkom, šípka na bodku. Texty bubliny sú dnešné (stavMeraniaText).',
+        ),
+        phone(
+            'Zastarané',
+            'final',
+            '',
+            sun + hlavicka() + den('6.90') + fin('stale', '12:20 <span class="sep">·</span> zastarané ›') + subChips + plan + graf(),
+            'Menič mlčí za slnka. Číslo je posledné namerané.',
+        ),
+        phone(
+            'Bez spojenia',
+            'final',
+            '',
+            sun + hlavicka() + den('6.90') + fin('stale', '12:20 <span class="sep">·</span> bez spojenia ›') + subChips + plan + graf(),
+            'Telefón sa nedostal k dátam.',
+        ),
+        phone(
+            'Menič spí',
+            'final',
+            'night',
+            '<div class="moon"></div>' +
+                hlavicka() +
+                den('0') +
+                fin('stale', '17:05 <span class="sep">·</span> menič spí') +
+                '<p class="sub">Slnko zapadlo, ráno sa menič ozve sám.</p>' +
+                plan +
+                graf(),
+            'Bez „›“ – nie je sa čoho pýtať, bublina sa dá otvoriť aj tak.',
+        ),
+        phone(
+            'Odhad z predpovede',
+            'final',
+            'grey',
+            hlavicka() +
+                den('2.6', true) +
+                fin('odhad', 'Odhad z predpovede ›') +
+                '<p class="sub">41 % z toho, čo by dala jasná obloha</p>' +
+                '<div class="note"><b>Odhad z predpovede, nie tvoja strecha</b><p>Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.</p></div>' +
+                plan,
+            'Bez merania niet času – len krúžok a slovo.',
+        ),
+        phone(
+            'Náhľad času v grafe',
+            'final',
+            '',
+            sun + hlavicka() + den('3.12') + fin('', '10:09 <span class="sep">·</span> namerané') + subChips + plan + graf('10:09'),
+            'Čas náhľadu bez bodky, neťuká sa. „Späť na teraz“ vráti bodku a čas merania.',
+        ),
+    ].join('');
+</script>

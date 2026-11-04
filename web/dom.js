@@ -40,8 +40,10 @@ function headerDom() {
         // Farba stavového riadku telefónu (--status-bar v style.css).
         themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
         page: byId('page'),
-        // Miesto elektrárne a čas merania (bez neho slovo), pre čítačku aj čo hovorí bodka.
+        // Miesto elektrárne v hlavičke. Bodka, čas merania (bez neho slovo) a pre čítačku čo hovorí
+        // bodka sú v riadku pod číslom karty Teraz (#tz-stav), mená ostali z hlavičky.
         pvPlace: byId('pv-place'),
+        tzStav: byId('tz-stav'),
         pvUpdated: byId('pv-updated'),
         pvTone: byId('pv-tone'),
         pvClock: /** @type {HTMLButtonElement} */ (byId('pv-clock')),
@@ -75,7 +77,6 @@ function terazkyDom() {
         tzTitle: byId('tz-title'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),
-        tzSrc: byId('tz-src'),
         tzSub: byId('tz-sub'),
         tzSay: byId('tz-say'),
         tzChips: byId('tz-chips'),

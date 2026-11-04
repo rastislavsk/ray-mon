@@ -253,7 +253,7 @@ test('bez merania: pás pod číslom povie, že je to odhad, a vedie na krok Mer
     await expect(page.locator('#tz-note')).toBeVisible();
     await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
     await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
-    await expect(page.locator('#tz-src')).toBeHidden();
+    await expect(page.locator('#pv-updated')).toHaveText('odhad z predpovede');
     // S meraním pás nie je.
     expect(terazAt(FIXED_NOW).note).toBe(null);
     await page.locator('#tz-note-btn').click();
@@ -284,9 +284,8 @@ test('meranie mlčí: číslo nie je meranie spred hodiny, ale odhad, a povie od
     ).toContain('›');
     await expect(page.locator('#tz-num-val')).toHaveText(m.num);
     await expect(page.locator('#tz-num-val')).not.toHaveText(String(pv.realTimePowerKw));
-    // Odhad povie jantárový pás pod číslom, riadok odhadu ho neopakuje; tlačidlo nie je - meranie je nastavené.
+    // Odhad povie jantárový pás pod číslom; tlačidlo nie je - meranie je nastavené.
     expect(m.note?.text).toMatch(/^Meranie neodpovedá od 13:00\. /);
-    await expect(page.locator('#tz-src')).toBeHidden();
     await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
     await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
     await expect(page.locator('#tz-note-btn')).toBeHidden();
@@ -299,12 +298,14 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     const { instant } = atTime('13:00');
     const m = terazAt(instant);
     if (!m.say || !m.chart) throw new Error('model o 13:00 nemá graf ani vetu');
-    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     await expect(page.locator('#pv-place')).toHaveText(SITE.name);
     await expect(page.locator('#tz-title')).toHaveText(m.title);
     await expect(page.locator('#tz-num-val')).toHaveText('6.4');
     expect(m.num).toBe('6.4');
-    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
+    // Bodka a čas merania sú v riadku pod číslom, nie v hlavičke (docs/navrhy/teraz-stav-merania.html).
+    await expect(page.locator('.appbar #pv-clock')).toHaveCount(0);
+    await expect(page.locator('#tz-stav')).toBeVisible();
     await expect(page.locator('#tz-sub')).toHaveText(m.sub);
     await expect(page.locator('#tz-retry')).toBeHidden();
     // Graf dňa: oblačnosť po hodinách, predpoveď, nameraná krivka, plocha nad hranicou, hranica
@@ -369,7 +370,7 @@ for (const [hm, label] of [
 test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási; po návrate merania bublina', async ({ page }) => {
     await page.clock.install({ time: atTime('13:00').instant });
     const errors = await openApp(page, { time: atTime('13:00').instant });
-    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     // Hodinu v pozadí. Po návrate odpoveď Workera chvíľu trvá - hodiny medzitým tiknú.
     /** @type {(v?: unknown) => void} */ let pust = () => {};
     const odpoved = new Promise((r) => (pust = r));
@@ -382,7 +383,7 @@ test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási; p
     await page.clock.setFixedTime(atTime('14:00').instant);
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await page.clock.runFor(12_000);
-    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     await expect(page.locator('#tz-note')).toBeHidden();
     // Pokus dobehol bez merania: až teraz appka povie, že meranie neodpovedá.
     pust();
@@ -396,14 +397,14 @@ test('návrat z pozadia: kým sa appka na meranie neopýta, výpadok nehlási; p
     await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
     await page.clock.setFixedTime(o1402);
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-    await expect(page.locator('#pv-updated')).toHaveText('14:00');
+    await expect(page.locator('#pv-updated')).toHaveText('14:00 · živé meranie');
     await expect(page.locator('#tz-note')).toBeHidden();
     await expect(page.locator('#pripojene-title')).toHaveText('Meranie sa obnovilo');
     await expect(page.locator('#pripojene-text')).toHaveText(pripojenieText('zive', 'Huawei · Dvorany', 'obnovene').text);
     expect(errors).toEqual([]);
 });
 
-test('bodka pri čase hovorí o meraní ako v Oblohe, podsvietenie ikony v navigácii je neutrálne', async ({ browser }) => {
+test('bodka v riadku pod číslom hovorí o meraní ako v Oblohe, podsvietenie ikony v navigácii je neutrálne', async ({ browser }) => {
     /** Tvar bodky, text pod časom, „›“ za ním a farba podsvietenia ikony aktívnej karty. @param {import('@playwright/test').Page} page */
     const hlavicka = (page) =>
         page.evaluate(() => {
@@ -419,7 +420,7 @@ test('bodka pri čase hovorí o meraní ako v Oblohe, podsvietenie ikony v navig
     // Živé meranie: plná bodka. Podsvietenie je rovnaké pri zelenom aj červenom pásme.
     const zive = await browser.newPage();
     await openApp(zive, { time: atTime('13:00').instant });
-    expect(await hlavicka(zive)).toEqual({ tone: 'live', text: '13:00', viac: false, glow: neutral });
+    expect(await hlavicka(zive)).toEqual({ tone: 'live', text: '13:00 · živé meranie', viac: false, glow: neutral });
     // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
     const spojenie = await browser.newPage();
     const { instant: o1330 } = atTime('13:30');
@@ -482,9 +483,13 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('20:45');
     await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('20:45'))) ?? '');
     await expect(page.locator('#tz-hint')).toHaveText('');
-    // Pozadie ide s náhľadom (20:45 je drahé pásmo bez slnka), bodka ostáva o stave merania teraz.
+    // Pozadie ide s náhľadom (20:45 je drahé pásmo bez slnka). Riadok pod číslom povie, odkiaľ je číslo
+    // v zvolenom čase - bez bodky a času merania, ktorý by vedľa čísla z 20:45 klamal - a neťuká sa.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'red');
-    await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'live');
+    await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'nahlad');
+    await expect(page.locator('#pv-updated')).toHaveText(nahlad.source);
+    await expect(page.locator('#pv-clock')).toBeDisabled();
+    await expect(page.locator('#pv-clock .live-dot')).toBeHidden();
     // Graf pod kurzorom sa nepohol.
     expect((await bodGrafu(page, minuta('20:45'))).y).toBe(na.y);
 
@@ -495,6 +500,7 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await expect(spat).toBeHidden();
     await expect(page.locator('#tz-chart')).toBeFocused();
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'green');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     expect(errors).toEqual([]);
 });
 
@@ -953,7 +959,7 @@ test('kým sa dáta sťahujú, hlavička hovorí "načítavam…", nie "bez dát
     await expect(page.locator('#pv-updated')).toHaveText('načítavam…');
     await expect(page.locator('#pv-clock')).toHaveAttribute('data-tone', 'off');
     pustit();
-    await expect(page.locator('#pv-updated')).toHaveText('13:00');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
 });
 
 test('rýchly štart: počasie z minulého otvorenia ukáže predpoveď hneď, kým sa sťahuje nové', async ({ page }) => {
@@ -1033,7 +1039,7 @@ const poMinute = (page) => page.clock.setFixedTime(new Date(FIXED_NOW.getTime() 
  * a nameraná krivka by medzitým z grafu zmizla. */
 test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', async ({ page }) => {
     const errors = await openApp(page);
-    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
 
     await page.route(WORKER_PV_URL, (route) => route.abort());
     await poMinute(page);
@@ -1042,7 +1048,7 @@ test('výpadok kiosku na jednu obnovu: ostáva posledné meranie, nie odhad', as
     await zlyhala;
     await dveSnimky(page);
     // Jedno čítanie, nie čakanie: stav hneď po nevydarenej obnove.
-    expect(await page.locator('#tz-src').textContent()).toBe('živé meranie');
+    expect(await page.locator('#pv-updated').textContent()).toBe('13:00 · živé meranie');
     expect(await page.locator('#pv-updated').textContent()).not.toBe('meranie nedostupné');
     expect(errors).toEqual([]);
 });
@@ -1131,7 +1137,7 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
         await dveSnimky(page);
     };
-    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     expect(telo, 'meranie z druhej appky, žiadny dopyt').toEqual([]);
     // Po 5 minútach je na rade. Huawei odmietne (limit): ďalší pokus až po ďalších 5 minútach.
     await obnov(5);
@@ -1153,20 +1159,21 @@ test('spoločný rytmus meraní: druhá appka, nová pečať, bez merania nie ka
     expect(errors).toEqual([]);
 });
 
-test('bublina stavu merania: ťuknutie na čas vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
+test('bublina stavu merania: ťuknutie na riadok pod číslom vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
     const errors = await openApp(page);
     const clock = page.locator('#pv-clock');
     const tip = page.locator('#pv-tip');
-    await expect(page.locator('#pv-updated')).toHaveText('13:00');
-    // Pilulka okolo bodky s časom hovorí, že sa dá ťuknúť; pri živom meraní bez „›“.
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
+    // Bez pilulky, len text a bodka; pri živom meraní bez „›“. Plocha na ťuknutie má 44 px.
     const naznak = () =>
         page.evaluate(() => [
-            getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-clock')), '::before').backgroundColor,
+            getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-clock'))).backgroundColor,
             getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-updated')), '::after').content,
         ]);
-    const [pilulka, za] = await naznak();
-    expect(pilulka).not.toBe('rgba(0, 0, 0, 0)');
+    const [pozadie, za] = await naznak();
+    expect(pozadie).toBe('rgba(0, 0, 0, 0)');
     expect(za).toBe('none');
+    expect((await clock.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await expect(tip).toBeHidden();
     await clock.click();
     await expect(tip).toBeVisible();
@@ -1224,7 +1231,7 @@ test('obnova dát beží najviac raz naraz, ďalšie volania sa pridajú k rozbe
     await page.waitForTimeout(300);
     expect(volania, 'súbežné obnovy poslali viac požiadaviek').toBe(1);
     pustit();
-    await expect(page.locator('#tz-src')).toHaveText('živé meranie');
+    await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
     expect(errors).toEqual([]);
 });
 
@@ -2592,7 +2599,7 @@ test.describe('moja elektráreň', () => {
         const errors = await openApp(page, { settings: null, site: SITE });
         await page.locator('#nav-statistika').click();
         await expect(page.locator('#pv-setup-go')).toHaveText(HEADER_TEXTS.setup);
-        await expect(page.locator('#pv-clock')).toBeHidden();
+        await expect(page.locator('#tz-stav')).toBeHidden();
         const vazne = (
             await new AxeBuilder({ page }).include('.appbar').withRules(['color-contrast', 'button-name']).analyze()
         ).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
@@ -2923,7 +2930,7 @@ test.describe('moja elektráreň', () => {
         await expect(page.locator('#wz-summary')).toContainText('Huawei · Dvorany');
         await dalej(page);
         // Sevilla, FIXED_NOW 11:00 UTC = 13:00 miestneho.
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         // Prvé meranie prišlo: karta Teraz už neukazuje odhad a bublina nad navigáciou povie prečo.
         // Ťuknutie ju zhasne a na kartu sa už nevráti.
         await page.locator('#nav-terazky').click();
@@ -2959,7 +2966,7 @@ test.describe('moja elektráreň', () => {
             FIXED_NOW.toISOString(),
         ]);
         await page.reload();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         expect(bodies.pv).toEqual([]);
         expect(errors).toEqual([]);
     });
@@ -3493,7 +3500,7 @@ test.describe('vymazanie údajov', () => {
         await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(nove))]);
         await page.goto(stara);
         await page.reload();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         await expect(page.locator('#import-offer')).toBeHidden();
         expect(settingsFromLink(page.url()), 'adresa nesie nové nastavenie').toEqual({ ...nove, zdroj: null });
         expect(errors).toEqual([]);
@@ -3566,7 +3573,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         // Otázka na polohu už netreba - appka sa otvorí na svojej prvej karte.
         await ocakavajKartu(page, 'terazky');
         await expect(page.locator('#bottomnav')).toBeVisible();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
         expect(settingsFromLink(page.url()), 'adresa nesie nastavenie, prístup k meraniu nie').toEqual({ ...OWNER, zdroj: null });
@@ -3578,7 +3585,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await openApp(page);
         expect(settingsFromLink(page.url())).toEqual({ ...OWNER, zdroj: null });
         await page.reload();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         await expect(page.locator('#import-offer')).toBeHidden();
     });
 
@@ -3589,7 +3596,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         const novsie = { ...OWNER, plant: { ...OWNER.plant, panelWp: OWNER.plant.panelWp + 10 } };
         await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(novsie))]);
         await page.reload();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         await expect(page.locator('#import-offer')).toBeHidden();
         expect(await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), SETTINGS_STORAGE_KEY)).toEqual(toUser(novsie));
         expect(settingsFromLink(page.url()), 'adresa nesie novšie uložené').toEqual({ ...novsie, zdroj: null });
@@ -3655,7 +3662,7 @@ test.describe('zdieľanie nastavenia odkazom', () => {
         await expect(page.locator('#wz-suhrn')).toBeVisible();
         await expect(page.locator('#wz-summary .big')).toHaveText('10,44 kWp');
         await page.locator('#wz-next').click();
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), SETTINGS_STORAGE_KEY);
         expect(stored).toEqual(toUser(OWNER));
         expect(errors).toEqual([]);
@@ -3692,7 +3699,7 @@ test.describe('nasadenie a cache', () => {
     test('starý modul v cache: stránka sa raz obnoví a appka naštartuje', async ({ page }) => {
         const loads = await staryModul(page, 1);
         const errors = await openApp(page);
-        await expect(page.locator('#pv-updated')).toHaveText('13:00');
+        await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
         await expect.poll(loads).toBe(2);
         expect(errors).toEqual([expect.stringContaining('does not provide an export named')]);
         expect(await page.evaluate(() => sessionStorage.getItem('ray-mon-obnova'))).toBeNull();

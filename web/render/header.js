@@ -1,6 +1,6 @@
-// Hlavička: RAY-MON a pod ním miesto elektrárne, vpravo bodka stavu merania a čas posledného
-// merania - to isté ako Obloha (shared/hlavicka.js). Okrem toho farba plánu dňa pre pozadie celej
-// stránky (vrátane náhľadu iného času).
+// Hlavička: RAY-MON a pod ním miesto elektrárne, bez zadaných panelov vpravo výzva - to isté ako
+// Obloha (shared/hlavicka.js). Bodka a čas merania sú na karte Teraz (render/terazky.js). Okrem
+// toho farba plánu dňa pre pozadie celej stránky (vrátane náhľadu iného času).
 
 import { installedKw } from '../../shared/config.js';
 import { heroModel } from '../../shared/hero-model.js';
@@ -54,29 +54,14 @@ function barOf(state) {
 }
 
 /**
- * Hlavička: miesto, bodka a čas, bez zadaných panelov výzva namiesto nich, a bublina stavu merania.
+ * Hlavička: miesto a bez zadaných panelov výzva do sprievodcu.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderHlavicka(state, dom) {
     const m = hlavickaModel(state, state.voice);
     dom.pvPlace.textContent = m.place;
-    dom.pvUpdated.textContent = m.status;
-    dom.pvTone.textContent = m.toneText;
-    // Tvar bodky drží data-tone na tlačidle s bodkou a časom - kreslí ho style.css pri .live-dot.
-    dom.pvClock.dataset.tone = m.tone;
-    dom.pvClock.classList.toggle('hidden', m.setup);
-    dom.pvClock.disabled = !m.tip;
     dom.pvSetupGo.classList.toggle('hidden', !m.setup);
     dom.pvSetupGo.textContent = voiceTexts(state.voice).HEADER_TEXTS.setup;
-    const open = state.stavTip && !!m.tip;
-    dom.pvClock.setAttribute('aria-expanded', String(open));
-    dom.pvTip.classList.toggle('hidden', !open);
-    dom.pvTipBg.classList.toggle('hidden', !open);
-    dom.pvTipTitle.textContent = m.tip?.nadpis ?? '';
-    dom.pvTipText.textContent = m.tip?.text ?? '';
-    dom.pvTipBtn.textContent = m.tip?.tlacidlo ?? '';
-    dom.pvTipBtn.classList.toggle('hidden', !m.tip?.tlacidlo);
-    dom.pvTipBtn.toggleAttribute('data-pristup-go', !!m.tip?.znova);
 }
 
 /**

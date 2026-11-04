@@ -198,43 +198,48 @@ test('stavový riadok telefónu má farbu vrchu oblohy', async ({ page }) => {
     expect(errors).toEqual([]);
 });
 
-test('bez dát je obloha sivá a hlavička to povie', async ({ page }) => {
+test('bez dát je obloha sivá a riadok stavu to povie', async ({ page }) => {
     await openObloha(page, { offline: true });
     await expect(page.locator('#hdr-status')).toHaveText('bez dát');
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'off');
     expect(await oblohaVStranke(page)).toEqual({ top: SKY.offline[0], bottom: SKY.offline[1], sky: 'offline' });
 });
 
-test('hlavička: miesto elektrárne, čas a bodka živého merania', async ({ page }) => {
+test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod číslom karty Teraz', async ({ page }) => {
     const errors = await openObloha(page, { time: at('13:00') });
     await expect(page.locator('#hdr-place')).toHaveText(SITE.name);
-    await expect(page.locator('#hdr-status')).toHaveText('13:00');
+    await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
-    await expect(page.locator('#hdr-tone')).toHaveText('živé meranie');
+    // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
+    await expect(page.locator('#hdr-tone')).toHaveText('');
     await expect(page.locator('#hdr-setup')).toBeHidden();
+    // Riadok nie je v hlavičke, ale medzi číslom a vetou pod ním (docs/navrhy/teraz-stav-merania.html).
+    await expect(page.locator('header #hdr-live')).toHaveCount(0);
+    const y = (/** @type {string} */ sel) => page.locator(sel).evaluate((el) => el.getBoundingClientRect().top);
+    expect(await y('#tz-stav')).toBeGreaterThan(await y('#tz-num'));
+    expect(await y('#tz-stav')).toBeLessThan(await y('#tz-sub'));
     expect(errors).toEqual([]);
 });
 
-test('hlavička: čerstvé meranie bez výkonu nie je živé, rovnako ako na karte Teraz', async ({ page }) => {
+test('riadok stavu: čerstvé meranie bez výkonu nie je živé, rovnako ako na karte Teraz', async ({ page }) => {
     const errors = await openObloha(page, { time: at('13:00'), pvData: { ...pv, realTimePowerKw: null } });
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
     await expect(page.locator('#hdr-status')).toHaveText('meranie nedostupné');
     expect(errors).toEqual([]);
 });
 
-test('hlavička: čas posledného merania, nie hodiny; zastarané so slovom, bez merania slovom', async ({ page }) => {
+test('riadok stavu: čas posledného merania, nie hodiny; zastarané so slovom, bez merania slovom', async ({ page }) => {
     // Meranie z 13:00 (posledný bod krivky), appka o 13:10: čas merania, nie 13:10 - ako súčasná appka.
     const errors = await openObloha(page, { time: at('13:10') });
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
-    await expect(page.locator('#hdr-status')).toHaveText('13:00');
-    await expect(page.locator('#hdr-tone')).toHaveText('živé meranie');
-    // Pilulka hovorí, že sa na stav dá ťuknúť; „›“ (len v CSS, čítačka ho nečíta) len keď meranie nie je živé.
+    await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
+    // Bez oválu, len text a bodka; „›“ (len v CSS, čítačka ho nečíta) len keď meranie nie je živé.
     const naznak = () =>
         page.evaluate(() => [
             getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-live'))).backgroundColor,
             getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-status')), '::after').content,
         ]);
-    expect((await naznak())[0]).not.toBe('rgba(0, 0, 0, 0)');
+    expect((await naznak())[0]).toBe('rgba(0, 0, 0, 0)');
     expect((await naznak())[1]).toBe('none');
     // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
     await page.clock.setFixedTime(at('13:30'));
@@ -246,7 +251,7 @@ test('hlavička: čas posledného merania, nie hodiny; zastarané so slovom, bez
     expect(errors).toEqual([]);
 });
 
-test('hlavička: menič mlčí za slnka, alebo v noci spí - ten istý tvar bodky a slová ako súčasná appka', async ({ browser }) => {
+test('riadok stavu: menič mlčí za slnka, alebo v noci spí - ten istý tvar bodky a slová ako súčasná appka', async ({ browser }) => {
     // Dáta chodia (čas stiahnutia je teraz), krivka končí 13:00 a slnko svieti: polovičná bodka, zastarané.
     const mlci = await browser.newPage();
     const errors = await openObloha(mlci, { time: at('14:30'), pvData: { ...pv, updatedAt: at('14:30').toISOString() } });
@@ -269,7 +274,7 @@ test('hlavička: menič mlčí za slnka, alebo v noci spí - ten istý tvar bodk
     expect(errors).toEqual([]);
 });
 
-test('hlavička: pripojené meranie neprišlo, alebo meranie nie je pripojené', async ({ browser }) => {
+test('riadok stavu: pripojené meranie neprišlo, alebo meranie nie je pripojené', async ({ browser }) => {
     const bezMerania = await browser.newPage();
     await openObloha(bezMerania, { settings: /** @type {any} */ ({ ...OWNER, zdroj: null }) });
     await expect(bezMerania.locator('#hdr-status')).toHaveText('odhad z predpovede');
@@ -280,7 +285,7 @@ test('hlavička: pripojené meranie neprišlo, alebo meranie nie je pripojené',
     await expect(neprislo.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
 });
 
-test('bublina stavu: ťuknutie na bodku a čas vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
+test('bublina stavu: ťuknutie na riadok pod číslom vysvetlí stav, ťuknutie mimo a Escape ju zavrú', async ({ page }) => {
     const errors = await openObloha(page, { time: at('13:10') });
     const live = page.locator('#hdr-live');
     const tip = page.locator('#hdr-tip');
@@ -332,7 +337,7 @@ test('bez zadaných panelov je v hlavičke „Zadaj panely ›“ a otvorí Nast
     const errors = await openObloha(page, { settings: null, site: SITE });
     const stitok = page.locator('#hdr-setup');
     await expect(stitok).toHaveText('Zadaj panely ›');
-    await expect(page.locator('#hdr-live')).toBeHidden();
+    await expect(page.locator('#tz-stav')).toBeHidden();
     await stitok.click();
     await ocakavajKartu(page, 'nastavenie');
     expect(errors).toEqual([]);
@@ -347,7 +352,7 @@ test('nastavenie uložené súčasnou appkou nová appka vidí a nič v ňom nem
 
     await page.goto('/obloha/');
     await appReady(page);
-    await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d$/);
+    await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
     await expect(page.locator('#hdr-place')).toHaveText('Chata pod Zoborom');
     await ocakavajKartu(page, 'terazky');
     expect(await page.evaluate(() => JSON.stringify(localStorage)), 'nová appka uložené nastavenie neprepisuje').toBe(ulozene);
@@ -585,7 +590,7 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
     test('starý modul v cache: stránka sa raz obnoví a appka naštartuje', async ({ page }) => {
         const loads = await staryModul(page, 1);
         const errors = await openObloha(page);
-        await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d$/);
+        await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
         await expect.poll(loads).toBe(2);
         expect(errors).toEqual([expect.stringContaining('does not provide an export named')]);
         expect(await page.evaluate(() => sessionStorage.getItem('ray-mon-obloha-obnova'))).toBeNull();
@@ -611,7 +616,7 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
         page.on('load', () => loads++);
         const errors = await openObloha(page);
         await expect.poll(() => loads).toBe(2);
-        await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d$/);
+        await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
         expect(errors).toEqual([expect.stringContaining('Chýba element #hdr-tone')]);
     });
 
@@ -989,7 +994,8 @@ const terazVStranke = (page) =>
         return {
             title: text('#ttl-terazky'),
             num: text('#tz-num-val'),
-            source: text('#tz-src'),
+            // Riadok stavu hovorí o čísle (odkiaľ je) len v náhľade, inak o meraní (testy riadku stavu).
+            source: /** @type {HTMLElement} */ (document.querySelector('#hdr-live')).dataset.tone === 'nahlad' ? text('#hdr-status') : '',
             sub: text('#tz-sub'),
             hint: text('#tz-hint'),
             say: text('#tz-say-text'),
@@ -1317,9 +1323,15 @@ test.describe('karta Teraz', () => {
         expect(nahlad.hint).toBe('');
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('15:30');
         await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('15:30'))) ?? '');
+        // Riadok pod číslom povie, odkiaľ je číslo o 15:30 (porovnáva terazVStranke) - bez bodky a času
+        // merania, ktorý by vedľa neho klamal, a neťuká sa.
+        expect(nahlad.source).toBe('odhad z predpovede');
+        await expect(page.locator('#hdr-live')).toBeDisabled();
+        await expect(page.locator('#hdr-live i')).toBeHidden();
         const spat = page.getByRole('button', { name: 'Späť na teraz' });
         await spat.click();
         await expect.poll(() => terazVStranke(page)).toEqual(teraz);
+        await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
         await expect(spat).toBeHidden();
         await expect(page.locator('#tz-chart')).toBeFocused();
 
@@ -1366,7 +1378,7 @@ test.describe('karta Teraz', () => {
         await page.locator('#nav-terazky').click();
         const m = terazModel(vstupTeraz(at('13:00'), { zdroj: null, pv: null }));
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
-        await expect(page.locator('#tz-src')).toBeHidden();
+        await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
         await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
         await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
         await expect(page.locator('#tz-note-btn')).toHaveText(m.note?.btn ?? '');
@@ -1381,7 +1393,7 @@ test.describe('karta Teraz', () => {
         await page.locator('#nav-terazky').click();
         const m = terazModel(vstupTeraz(at('13:00'), { pv: stare }));
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
-        await expect(page.locator('#tz-src')).toBeHidden();
+        await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'stale');
         await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
         await expect(page.locator('#tz-note-text')).toHaveText(
             /^Meranie neodpovedá od \d\d:\d\d\. Kým sa neozve, číslo počíta z počasia\.$/,
@@ -1589,7 +1601,7 @@ for (const width of [390, 320]) {
         await expect(page.locator('#tz-values')).toBeVisible();
         expect((await page.locator('#tz-list-btn').boundingBox())?.height).toBeGreaterThanOrEqual(44);
         const mimo = await page.evaluate(() =>
-            ['#tz-num', '#tz-src', '#tz-sub', '#tz-chart', '#tz-legend', '.tz-list', '#tz-values', '#tz-reset']
+            ['#tz-num', '#tz-stav', '#tz-sub', '#tz-chart', '#tz-legend', '.tz-list', '#tz-values', '#tz-reset']
                 .map((sel) => ({ sel, box: /** @type {Element} */ (document.querySelector(sel)).getBoundingClientRect() }))
                 .filter(({ box }) => box.left < 0 || box.right > innerWidth + 0.5)
                 .map(({ sel }) => sel),
