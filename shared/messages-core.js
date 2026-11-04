@@ -1199,7 +1199,6 @@ export const TERAZ_TEXTS = {
     hint: 'Ťahaj prstom po grafe a pozri si iný čas.',
     reset: 'Späť na teraz',
     limit: 'veľké spotrebiče',
-    night: 'slnko je pod obzorom',
     loading: 'Načítavam…',
     slider: 'Graf dňa, šípkami si pozrieš iný čas',
     strip: 'Odporúčania, posúvaj do strán',
@@ -1292,9 +1291,9 @@ export function terazNoteText({ since, riadok }, voice = 'drzy') {
     return `${since ? `Meranie neodpovedá od ${since}` : 'Meranie neodpovedá'}. Kým sa neozve, číslo počíta z počasia.`;
 }
 
-/** Veta pod číslom: koľko z jasnej oblohy. @param {number} pct */
-export function terazClearText(pct) {
-    return `${pct} % z toho, čo by dala jasná obloha`;
+/** Pásik pod číslom karty Teraz pre čítačku: koľko z jasnej oblohy, v noci (null) o obzore. @param {number | null} pct */
+export function terazJasText(pct) {
+    return pct === null ? 'Slnko je pod obzorom.' : `${pct} % z toho, čo by dala jasná obloha.`;
 }
 
 /** Veta pod číslom pri typickej streche: priznáva, že nejde o vlastnú strechu. @param {number} kwp @param {Voice} [voice] */

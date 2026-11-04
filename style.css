@@ -777,6 +777,39 @@ b {
 .tz-num.est {
     font-style: italic;
 }
+/* Pásik pod číslom: koľko z jasnej oblohy (teraz.jas v shared/teraz.js). Pevná šírka, aby sa
+   s číslom nemenil; v noci prázdny, nie skrytý, aby sa v náhľade graf pod prstom nepohol. */
+.tz-jas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: min(170px, 100%);
+    margin: 8px 0 0;
+}
+.tz-jas-track {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--ink-12);
+}
+.tz-jas-track i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: rgb(var(--tint-rgb));
+    transform: scaleX(var(--jas, 0));
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+#tz-jas-label {
+    min-width: 4ch;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: right;
+    color: var(--ink-45);
+}
 /* Stav merania pod číslom (stavRiadok v shared/hlavicka.js): bodka, čas a slovo písmom riadku
    pod číslom, bez pozadia. Pri otvorenej bubline je riadok nad vrstvou .pv-tip-bg (31) aj nad
    navigáciou (30), aby ostal ťukateľný a bublina pri ňom. */

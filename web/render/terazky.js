@@ -22,6 +22,14 @@ const textsOf = (state) => voiceTexts(state.voice).TERAZ_TEXTS;
 /** @param {HTMLElement} el @param {boolean} on */
 const show = (el, on) => el.classList.toggle('hidden', !on);
 
+/** Pásik pod číslom: koľko z jasnej oblohy, v noci prázdny. @param {Model['jas']} jas @param {Dom} dom */
+function renderJas(jas, dom) {
+    show(dom.tzJas, !!jas);
+    dom.tzJas.style.setProperty('--jas', String((jas?.pct ?? 0) / 100));
+    dom.tzJasLabel.textContent = jas?.label ?? '';
+    dom.tzJasText.textContent = jas?.text ?? '';
+}
+
 /** Číslo a riadky pod ním. @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom */
 function renderHead(state, m, dom) {
     // Len „Teraz“, počas náhľadu „O 12:15“ - čas a miesto ukazuje hlavička, ako v novej appke.
@@ -29,6 +37,7 @@ function renderHead(state, m, dom) {
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     dom.tzNumVal.textContent = m.num;
+    renderJas(m.jas, dom);
     show(dom.tzSub, m.sub !== '');
     dom.tzSub.textContent = m.sub;
     show(dom.tzNote, !!m.note);

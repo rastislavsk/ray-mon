@@ -213,11 +213,13 @@ test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod 
     // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
     await expect(page.locator('#hdr-tone')).toHaveText('');
     await expect(page.locator('#hdr-setup')).toBeHidden();
-    // Riadok nie je v hlavičke, ale medzi číslom a vetou pod ním (docs/navrhy/teraz-stav-merania.html).
+    // Riadok nie je v hlavičke, ale pod číslom nad štítkami (docs/navrhy/teraz-stav-merania.html).
+    // Veta pod číslom je len pri typickej streche, s vlastnou je skrytá.
     await expect(page.locator('header #hdr-live')).toHaveCount(0);
+    await expect(page.locator('#tz-sub')).toBeHidden();
     const y = (/** @type {string} */ sel) => page.locator(sel).evaluate((el) => el.getBoundingClientRect().top);
     expect(await y('#tz-stav')).toBeGreaterThan(await y('#tz-num'));
-    expect(await y('#tz-stav')).toBeLessThan(await y('#tz-sub'));
+    expect(await y('#tz-stav')).toBeLessThan(await y('#tz-chips'));
     expect(errors).toEqual([]);
 });
 
@@ -997,6 +999,14 @@ const terazVStranke = (page) =>
             // Riadok stavu hovorí o čísle (odkiaľ je) len v náhľade, inak o meraní (testy riadku stavu).
             source: /** @type {HTMLElement} */ (document.querySelector('#hdr-live')).dataset.tone === 'nahlad' ? text('#hdr-status') : '',
             sub: text('#tz-sub'),
+            // Pásik pod číslom: percento, veta pre čítačku a koľko z dĺžky je vyplnené.
+            jas: document.querySelector('#tz-jas.hidden')
+                ? null
+                : {
+                      label: text('#tz-jas-label'),
+                      text: text('#tz-jas-text'),
+                      fill: getComputedStyle(/** @type {HTMLElement} */ (document.querySelector('#tz-jas'))).getPropertyValue('--jas'),
+                  },
             hint: text('#tz-hint'),
             say: text('#tz-say-text'),
         };
@@ -1008,6 +1018,7 @@ const terazZModelu = (m) => ({
     num: m.num,
     source: m.source,
     sub: m.sub,
+    jas: m.jas && { label: m.jas.label, text: m.jas.text, fill: String((m.jas.pct ?? 0) / 100) },
     hint: m.hint.text,
     say: m.say?.text ?? '',
 });

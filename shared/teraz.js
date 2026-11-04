@@ -15,8 +15,8 @@ import {
     terazBandNext,
     terazBandText,
     terazChartText,
-    terazClearText,
     terazCloudText,
+    terazJasText,
     terazKwText,
     terazLimitFrom,
     terazLimitGap,
@@ -81,7 +81,23 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         say: { chips: m.chips, text: m.say },
         plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
         pocasie: pocasieOf(input, hero),
+        jas: jasOf(input, hero),
     };
+}
+
+/**
+ * Pásik pod číslom: koľko z jasnej oblohy dáva strecha vo zvolenej chvíli, aby aj menej znalý
+ * videl, či je číslo veľa alebo málo. Jasná obloha je bezoblačný strop predpovede dneška
+ * (`clearKw`), ten istý, z ktorého počíta percento využitia karta 7 dní. Platí aj pre odhad
+ * z predpovede. V noci a bez stropu je pásik prázdny (`pct` null), nie skrytý - pod prstom
+ * v náhľade sa tak nič nepohne. `text` je pre čítačku.
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ */
+function jasOf(input, hero) {
+    const today = todayOf(input);
+    const clear = today ? interpolate(today.hourly, hero.minutes / 60, 'clearKw') : 0;
+    const pct = !hero.isNight && clear > 0 && Number.isFinite(hero.power) ? Math.min(100, Math.round((100 * hero.power) / clear)) : null;
+    return { pct, label: pct === null ? '–' : `${pct} %`, text: terazJasText(pct) };
 }
 
 /**
@@ -120,7 +136,7 @@ function pocasieOf(input, hero) {
 }
 
 /**
- * Nadpis, číslo a riadok pod ním: koľko z jasnej oblohy. Pri typickej streche „~“ a veta, že to
+ * Nadpis, číslo a riadok pod ním (pri vlastnej streche prázdny). Pri typickej streche „~“ a veta, že to
  * nie je vlastná strecha. Počas náhľadu nadpis namiesto „Teraz“ povie čas, ku ktorému číslo patrí -
  * text sa mení, riadok ostáva, aby sa graf pod prstom nepohol. Medzi číslom a vetou je riadok stavu
  * merania (stavRiadok v shared/hlavicka.js); `source` je preň odkiaľ je číslo v náhľade, mimo neho
@@ -135,7 +151,7 @@ function headOf(input, hero, { estimate, voice }) {
         return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
     }
     const source = hero.preview && hero.source ? terazSourceText(hero.source) : '';
-    return { title, num: hero.powerText, source, sub: clearSub(input, hero) };
+    return { title, num: hero.powerText, source, sub: '' };
 }
 
 /**
@@ -177,21 +193,8 @@ function empty(kind, estimate) {
         say: /** @type {{ chips: import('./mozem.js').Chip[], text: string } | null} */ (null),
         plan: /** @type {(NonNullable<import('./mozem.js').MozemModelPlan> & { head: { lead: string, then: string } }) | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
+        jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
-}
-
-/**
- * Veta pod číslom: koľko z jasnej oblohy v tej chvíli. Jasná obloha je bezoblačný strop
- * predpovede dneška (`clearKw`), ten istý, z ktorého počíta percento využitia karta 7 dní.
- * V noci (plán dňa: slnko pod obzorom) ani strop nie je, je len veta o obzore.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
- */
-function clearSub(input, hero) {
-    const today = todayOf(input);
-    const clear = today ? interpolate(today.hourly, hero.minutes / 60, 'clearKw') : 0;
-    if (hero.isNight || !(clear > 0)) return voiceTexts().TERAZ_TEXTS.night;
-    if (!Number.isFinite(hero.power)) return '';
-    return terazClearText(Math.min(100, Math.round((100 * hero.power) / clear)));
 }
 
 /** Dnešok v predpovedi, alebo null, keď predpoveď začína iným dňom (po polnoci pred obnovou). @param {import('./day-plan.js').PlanInput} input */

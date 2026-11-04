@@ -795,7 +795,7 @@ export const SKY = {
  * `dazdSila.dazd` dážď, od `dazdSila.silny` silný dážď, všetko v mm za hodinu. Hranice 0,5 a 4 sú
  * z delenia Met Office; zo staníc by stáli vyššie, no model ich priemeruje cez políčko siete
  * (2-11 km), takže lejak v ňom vyjde slabší ako na zrážkomere. Jas z merania: podiel
- * výkonu z výkonu pri jasnej oblohe (veta „x % z toho, čo by dala jasná obloha“) od `jasno`
+ * výkonu z výkonu pri jasnej oblohe od `jasno`
  * je jasno, pod `zamracene` zamračené, medzi nimi polooblačno. Meraniu sa verí, len keď by
  * jasná obloha dala aspoň `istyPodiel` výkonu zostavy - ráno a večer pri nízkom slnku podiel
  * skáče a o oblakoch nehovorí.

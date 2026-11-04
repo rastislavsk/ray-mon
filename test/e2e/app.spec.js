@@ -306,7 +306,13 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     // Bodka a čas merania sú v riadku pod číslom, nie v hlavičke (docs/navrhy/teraz-stav-merania.html).
     await expect(page.locator('.appbar #pv-clock')).toHaveCount(0);
     await expect(page.locator('#tz-stav')).toBeVisible();
-    await expect(page.locator('#tz-sub')).toHaveText(m.sub);
+    await expect(page.locator('#tz-sub')).toBeHidden();
+    // Pásik pod číslom: koľko z jasnej oblohy.
+    if (!m.jas || m.jas.pct === null) throw new Error('model o 13:00 nemá pásik jasu');
+    await expect(page.locator('#tz-jas')).toBeVisible();
+    await expect(page.locator('#tz-jas-label')).toHaveText(m.jas.label);
+    await expect(page.locator('#tz-jas-text')).toHaveText(m.jas.text);
+    expect(await page.locator('#tz-jas').evaluate((el) => el.style.getPropertyValue('--jas'))).toBe(String(m.jas.pct / 100));
     await expect(page.locator('#tz-retry')).toBeHidden();
     // Graf dňa: oblačnosť po hodinách, predpoveď, nameraná krivka, plocha nad hranicou, hranica
     // s popiskom, os kW, pás plánu po polhodinách a čiara na „teraz“ s časom.

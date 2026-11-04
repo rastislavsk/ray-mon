@@ -205,6 +205,14 @@ function renderPlan(plan, open, dom) {
     );
 }
 
+/** Pásik pod číslom: koľko z jasnej oblohy, v noci prázdny. @param {Model['jas']} jas @param {Dom} dom */
+function renderJas(jas, dom) {
+    show(dom.tzJas, !!jas);
+    dom.tzJas.style.setProperty('--jas', String((jas?.pct ?? 0) / 100));
+    setText(dom.tzJasLabel, jas?.label ?? '');
+    setText(dom.tzJasText, jas?.text ?? '');
+}
+
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTeraz(state, dom) {
     const TERAZ_TEXTS = voiceTexts(state.voice).TERAZ_TEXTS;
@@ -223,6 +231,7 @@ export function renderTeraz(state, dom) {
     show(dom.tzNum, m.num !== '');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
+    renderJas(m.jas, dom);
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
     show(dom.tzNote, !!m.note);

@@ -104,6 +104,12 @@
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
+                <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
+                <p id="tz-jas" class="jas hidden">
+                    <span class="jas-track" aria-hidden="true"><i></i></span>
+                    <span id="tz-jas-label" aria-hidden="true"></span>
+                    <span id="tz-jas-text" class="sr"></span>
+                </p>
                 <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
                      ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
                      do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
