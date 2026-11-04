@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Súmrak podľa slnka v Oblohe</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky. Výpočet oblohy je kópia skyColors zo shared/sky.js po #424, farby SKY.keys
+               z shared/config.js („Dnes“). „Návrh“ berie súmrak z výšky slnka pod obzorom (kópia solarPosition
+               zo shared/solar.js) a má tmavšie nočné kľúče. */
+            @font-face {
+                font-family: 'Space Grotesk';
+                src: url('../../fonts/space-grotesk-latin-ext.woff2') format('woff2');
+                font-weight: 300 700;
+            }
+            @font-face {
+                font-family: 'IBM Plex Mono';
+                src: url('../../fonts/ibm-plex-mono-600-latin-ext.woff2') format('woff2');
+                font-weight: 600;
+            }
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark light;
+                --page: #050505;
+                --text: #f2f0ea;
+                --muted: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.14);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --page: #f4f2ec;
+                    --text: #16170f;
+                    --muted: rgba(22, 23, 15, 0.66);
+                    --line: rgba(22, 23, 15, 0.14);
+                }
+            }
+            body {
+                margin: 0;
+                background: var(--page);
+                color: var(--text);
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 28px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 20px;
+            }
+            p {
+                color: var(--muted);
+                max-width: 760px;
+                margin: 8px 0 0;
+            }
+            code {
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 0.86em;
+            }
+            .ctrl {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: var(--page);
+                padding: 10px 0;
+                border-bottom: 1px solid var(--line);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 20px;
+            }
+            .seg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .seg button {
+                font: inherit;
+                font-size: 14px;
+                color: var(--text);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 12px;
+                min-height: 36px;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--text);
+                color: var(--page);
+                border-color: var(--text);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+            }
+            figure {
+                margin: 0;
+                width: 340px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 8px;
+            }
+            figcaption b {
+                color: var(--text);
+            }
+
+            /* ---------- výrez obrazovky Oblohy ---------- */
+            .scr {
+                position: relative;
+                overflow: hidden;
+                height: 560px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                color: #fff;
+                font-family: 'Archivo', system-ui, sans-serif;
+                background: linear-gradient(180deg, transparent, var(--s3)), linear-gradient(180deg, var(--s1), var(--s2));
+            }
+            .scr > * {
+                position: relative;
+            }
+            .scr p {
+                color: #fff;
+                max-width: none;
+            }
+            .sbar {
+                display: flex;
+                justify-content: space-between;
+                height: 44px;
+                align-items: center;
+                padding: 0 26px;
+                font:
+                    600 15px/1 system-ui,
+                    sans-serif;
+            }
+            .brand {
+                padding: 6px 18px 0;
+                font-size: 18px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1.1;
+            }
+            .brand small {
+                display: block;
+                font-size: 13px;
+                font-weight: 500;
+                font-variation-settings: 'wdth' 100;
+                opacity: 0.85;
+            }
+            .kick {
+                padding: 18px 18px 0;
+                font-size: 30px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 112;
+            }
+            .num {
+                padding: 0 18px;
+                font-size: 68px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                line-height: 0.95;
+            }
+            .num small {
+                font-size: 18px;
+                margin-left: 6px;
+            }
+            .sub {
+                padding: 8px 18px 0;
+                font-size: 15px;
+            }
+            .karta {
+                margin: 22px 16px 0;
+                padding: 14px 16px;
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.1);
+                font-size: 14px;
+            }
+            .karta b {
+                display: block;
+                font-size: 12px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+            }
+            .nav {
+                position: absolute;
+                left: 16px;
+                right: 16px;
+                bottom: 16px;
+                height: 58px;
+                border-radius: 20px;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .mesiac {
+                position: absolute;
+                right: 46px;
+                top: 132px;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 62% 50%, #ecebe2 0 46%, rgba(200, 205, 230, 0.12) 47%);
+                box-shadow: 0 0 26px rgba(230, 232, 255, 0.3);
+            }
+            .hviezdy {
+                position: absolute;
+                inset: 0 0 auto;
+                height: 300px;
+                background:
+                    radial-gradient(circle at 12% 18%, #fff 0 1px, transparent 1.6px),
+                    radial-gradient(circle at 34% 9%, #fff 0 0.8px, transparent 1.4px),
+                    radial-gradient(circle at 56% 22%, #fff 0 1.2px, transparent 1.8px),
+                    radial-gradient(circle at 70% 40%, #fff 0 0.8px, transparent 1.4px),
+                    radial-gradient(circle at 92% 30%, #fff 0 1px, transparent 1.6px),
+                    radial-gradient(circle at 46% 46%, #fff 0 0.7px, transparent 1.3px),
+                    radial-gradient(circle at 24% 52%, #fff 0 0.8px, transparent 1.4px),
+                    radial-gradient(circle at 64% 6%, #fff 0 0.9px, transparent 1.5px);
+                -webkit-mask-image: linear-gradient(#000 50%, transparent);
+                mask-image: linear-gradient(#000 50%, transparent);
+            }
+            .scr:not([data-noc]) :is(.mesiac, .hviezdy) {
+                display: none;
+            }
+            .scr[data-wx='zamracene'] :is(.mesiac, .hviezdy) {
+                opacity: 0.15;
+            }
+            .scr[data-wx='polojasno'] .hviezdy {
+                opacity: 0.45;
+            }
+            .farby {
+                margin: 8px 0 0;
+                font:
+                    12px/1.5 'IBM Plex Mono',
+                    monospace;
+                color: var(--muted);
+            }
+
+            /* ---------- pás celého večera a noci ---------- */
+            .pas {
+                display: grid;
+                gap: 6px;
+            }
+            .pas-r {
+                display: grid;
+                grid-template-columns: 4.5em minmax(0, 1fr);
+                align-items: center;
+                gap: 10px;
+                font-size: 13px;
+            }
+            .pas-r > div {
+                display: grid;
+                grid-template-rows: 1fr 1fr;
+                height: 56px;
+                border-radius: 10px;
+                overflow: hidden;
+                border: 1px solid var(--line);
+            }
+            .pas-r i {
+                display: block;
+            }
+            .os {
+                display: flex;
+                justify-content: space-between;
+                margin-left: calc(4.5em + 10px);
+                font:
+                    12px 'IBM Plex Mono',
+                    monospace;
+                color: var(--muted);
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 6px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            td code i {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 3px;
+                vertical-align: -1px;
+                margin-right: 6px;
+                border: 1px solid var(--line);
+            }
+            .tab-wrap {
+                overflow-x: auto;
+            }
+            .pas-r > div {
+                position: relative;
+            }
+            .znacka {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-left: 1px dashed rgba(255, 255, 255, 0.7);
+            }
+            .znacka span {
+                position: absolute;
+                top: 2px;
+                left: 3px;
+                font:
+                    10px 'IBM Plex Mono',
+                    monospace;
+                color: #fff;
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Súmrak podľa slnka a tmavšia noc v Oblohe</h1>
+                <p>
+                    Dnes Obloha rozťahuje celý večer od západu slnka po polnoc rovnomerne. V zime je večer dlhý, a tak je dlhý aj súmrak: v
+                    Nitre 4. 11. zapadá slnko o 16:21, ale nočná farba príde až o 19:50, hoci vonku je tma už okolo 17:36. Ráno obloha
+                    svetlie postupne už od polnoci.
+                </p>
+                <p>
+                    Návrh berie súmrak z toho, ako hlboko je slnko pod obzorom, rovnako ako meteorológovia: do 6° pod obzorom súmrak (ešte
+                    vidno farby), do 12° sa stmieva, pod 12° je noc a pod 18° najhlbšia noc. Ráno to isté opačne. Platí to v zime aj v lete
+                    a na severe, kde v lete úplná tma nepríde, ostane obloha v súmraku celú noc. Nočné farby sú zároveň tmavšie. Cez deň sa
+                    nemení nič.
+                </p>
+            </header>
+
+            <div class="ctrl">
+                <div class="seg" data-seg="den">
+                    <button type="button" data-v="2026-11-04" aria-pressed="true">4. 11.</button>
+                    <button type="button" data-v="2026-12-21" aria-pressed="false">21. 12.</button>
+                    <button type="button" data-v="2026-03-21" aria-pressed="false">21. 3.</button>
+                    <button type="button" data-v="2026-06-21" aria-pressed="false">21. 6.</button>
+                </div>
+                <div class="seg" data-seg="cas"></div>
+                <div class="seg" data-seg="wx">
+                    <button type="button" data-v="jasno" aria-pressed="true">Jasno</button>
+                    <button type="button" data-v="polojasno" aria-pressed="false">Polojasno</button>
+                    <button type="button" data-v="zamracene" aria-pressed="false">Zamračené</button>
+                </div>
+            </div>
+
+            <div class="row">
+                <figure>
+                    <figcaption><b>Dnes</b></figcaption>
+                    <div class="scr" data-k="dnes"></div>
+                    <p class="farby" data-f="dnes"></p>
+                </figure>
+                <figure>
+                    <figcaption><b>Návrh</b> · súmrak podľa slnka</figcaption>
+                    <div class="scr" data-k="navrh"></div>
+                    <p class="farby" data-f="navrh"></p>
+                </figure>
+            </div>
+
+            <section>
+                <h2>Od poludnia do poludnia</h2>
+                <p>
+                    Nitra vo zvolený deň pri zvolenom počasí. Horný pruh je vrch obrazovky, dolný spodok. Čiarkované čiary: západ a východ
+                    slnka a tma (slnko 12° pod obzorom).
+                </p>
+            </section>
+            <div class="pas">
+                <div class="pas-r">
+                    <span>Dnes</span>
+                    <div data-pas="dnes"><i></i><i></i></div>
+                </div>
+                <div class="pas-r">
+                    <span>Návrh</span>
+                    <div data-pas="navrh"><i></i><i></i></div>
+                </div>
+                <div class="os">
+                    <span>12</span><span>15</span><span>18</span><span>21</span><span>0</span><span>3</span><span>6</span><span>9</span
+                    ><span>12</span>
+                </div>
+            </div>
+
+            <section>
+                <h2>Kedy príde súmrak a noc</h2>
+                <p>Čas, keď obloha dosiahne farbu súmraku a nočnú farbu, a keď ráno začne svetlieť, v Nitre.</p>
+            </section>
+            <div class="tab-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Deň</th>
+                            <th>Západ</th>
+                            <th>Súmrak dnes / návrh</th>
+                            <th>Noc dnes / návrh</th>
+                            <th>Pred svitaním dnes / návrh</th>
+                            <th>Východ</th>
+                        </tr>
+                    </thead>
+                    <tbody data-casy></tbody>
+                </table>
+            </div>
+
+            <section>
+                <h2>Ako sa to počíta</h2>
+                <p>
+                    Cez deň (slnko nad obzorom) ostáva dnešné rozťahovanie dňa medzi východ a západ. Po západe a pred východom sa hodina
+                    vzoru berie z výšky slnka: večer západ → 18:30 vo vzore, −6° → súmrak (19:30), −12° → noc (21:00), −18° → najhlbšia noc
+                    (24:00); ráno −18° → najhlbšia noc (0:00), −12° → noc (3:00), −6° → pred svitaním (5:30), východ → 7:00. Či je večer
+                    alebo ráno, povie to, či slnko klesá alebo stúpa – preto to funguje aj tam, kde slnko v ten deň nevyjde.
+                </p>
+            </section>
+            <div class="tab-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kľúč</th>
+                            <th>Dnes hore / dole</th>
+                            <th>Návrh hore / dole</th>
+                        </tr>
+                    </thead>
+                    <tbody data-tab></tbody>
+                </table>
+            </div>
+        </main>
+        <script>
+            // Ukážka, nie kód appky. Kľúče: [hodina vzoru, hore, dole].
+            const DNES = [
+                [0, '#070b1f', '#141b3d'],
+                [5.5, '#0f1736', '#2b2f5c'],
+                [7, '#4b5aa6', '#f0a98a'],
+                [8.5, '#2f72c0', '#93c8ec'],
+                [12, '#1767c9', '#4fa3e2'],
+                [16, '#2864b4', '#cf9f6c'],
+                [18, '#463a8a', '#e3804f'],
+                [19.5, '#1d2257', '#5d437f'],
+                [21, '#0b1130', '#1d2550'],
+                [24, '#070b1f', '#141b3d'],
+            ];
+            const NAVRH = [
+                [0, '#030616', '#081028'],
+                [5.5, '#0a1029', '#1c2147'],
+                [7, '#4b5aa6', '#f0a98a'],
+                [8.5, '#2f72c0', '#93c8ec'],
+                [12, '#1767c9', '#4fa3e2'],
+                [16, '#2864b4', '#cf9f6c'],
+                [18, '#463a8a', '#e3804f'],
+                [19.5, '#141947', '#433262'],
+                [21, '#060a1f', '#0d1430'],
+                [24, '#030616', '#081028'],
+            ];
+            const SITE = { lat: 48.3, lon: 18.1 };
+            const OFFSET = { '2026-11-04': 1, '2026-12-21': 1, '2026-03-21': 1, '2026-06-21': 2 };
+            // Kópia SKY a skyColors (shared/config.js, shared/sky.js).
+            const SKY = {
+                riseH: 7,
+                setH: 18.5,
+                cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
+                cloud: ['#5b6b82', '#98a5b5'],
+                sivost: { jasno: 0, polojasno: 0, zamracene: 1 },
+                shade: [5, 10, 30],
+            };
+            const STRED = { jasno: 0, polojasno: 0.5, zamracene: 1 };
+            const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+            const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+            const naSivu = ([r, g, b]) => {
+                const y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+                return [y, y, y];
+            };
+            const hex = (c) => '#' + c.map((x) => x.toString(16).padStart(2, '0')).join('');
+            const rad = (d) => (d * Math.PI) / 180;
+
+            // Kópia solarPosition zo shared/solar.js (len výška slnka v stupňoch).
+            function vyska(d) {
+                const y0 = Date.UTC(d.getUTCFullYear(), 0, 1);
+                const doy = Math.floor((d.getTime() - y0) / 86400000) + 1;
+                const h = d.getUTCHours() + d.getUTCMinutes() / 60;
+                const g = ((2 * Math.PI) / 365) * (doy - 1 + (h - 12) / 24);
+                const eq =
+                    229.18 *
+                    (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+                const decl =
+                    0.006918 -
+                    0.399912 * Math.cos(g) +
+                    0.070257 * Math.sin(g) -
+                    0.006758 * Math.cos(2 * g) +
+                    0.000907 * Math.sin(2 * g) -
+                    0.002697 * Math.cos(3 * g) +
+                    0.00148 * Math.sin(3 * g);
+                const ha = rad((h * 60 + eq + 4 * SITE.lon) / 4 - 180);
+                const lat = rad(SITE.lat);
+                return (Math.asin(Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(ha)) * 180) / Math.PI;
+            }
+            const VYCHOD = -0.833;
+            // Okamih minúty `minuta` miestneho času od polnoci dňa `den` (nad 1440 je to ďalší deň).
+            const okamih = (den, minuta) => new Date(Date.parse(`${den}T00:00:00Z`) + (minuta - OFFSET[den] * 60) * 60000);
+            function slnko(den) {
+                let rise = null;
+                let set = null;
+                for (let m = 1; m < 1440; m++) {
+                    const a = vyska(okamih(den, m - 1)) > VYCHOD;
+                    const b = vyska(okamih(den, m)) > VYCHOD;
+                    if (!a && b && rise === null) rise = m;
+                    if (a && !b && set === null) set = m;
+                }
+                return { rise, set };
+            }
+
+            // DNES: celý večer a noc rozťahané rovnomerne (designHour zo shared/sky.js).
+            function hodinaDnes(minuta, sun) {
+                const t = (minuta % 1440) / 60;
+                const rise = sun.rise / 60;
+                const set = sun.set / 60;
+                if (t <= rise) return (t * SKY.riseH) / rise;
+                if (t <= set) return SKY.riseH + ((t - rise) * (SKY.setH - SKY.riseH)) / (set - rise);
+                return SKY.setH + ((t - set) * (24 - SKY.setH)) / (24 - set);
+            }
+            // NÁVRH: cez deň to isté, po západe a pred východom podľa výšky slnka [výška, hodina vzoru].
+            const VECER = [
+                [VYCHOD, 18.5],
+                [-6, 19.5],
+                [-12, 21],
+                [-18, 24],
+            ];
+            const RANO = [
+                [-18, 0],
+                [-12, 3],
+                [-6, 5.5],
+                [VYCHOD, 7],
+            ];
+            function podlaVysky(tab, e) {
+                for (let i = 0; i < tab.length - 1; i++) {
+                    const [e0, h0] = tab[i];
+                    const [e1, h1] = tab[i + 1];
+                    if (e >= Math.min(e0, e1) && e <= Math.max(e0, e1)) return h0 + ((e - e0) / (e1 - e0)) * (h1 - h0);
+                }
+                return tab[0][1];
+            }
+            function hodinaNavrh(den, minuta, sun) {
+                const d = okamih(den, minuta);
+                const e = vyska(d);
+                if (e > VYCHOD) return hodinaDnes(minuta, sun);
+                const klesa = vyska(new Date(d.getTime() + 60000)) < e;
+                if (klesa) return e <= -18 ? 24 : podlaVysky(VECER, e);
+                return e <= -18 ? 0 : podlaVysky(RANO, e);
+            }
+            function farby(keys, t, weather) {
+                let i = 0;
+                while (keys[i + 1][0] < t) i++;
+                const [ha, a1, a2] = keys[i];
+                const [hb, b1, b2] = keys[i + 1];
+                const f = (t - ha) / (hb - ha);
+                const top = mix(rgb(a1), rgb(b1), f);
+                const bottom = mix(rgb(a2), rgb(b2), f);
+                const day =
+                    t >= SKY.riseH - 1 && t <= SKY.setH + 1 ? Math.sin((Math.PI * (t - SKY.riseH + 1)) / (SKY.setH - SKY.riseH + 2)) : 0;
+                const z = STRED[weather];
+                const podla = (tab) =>
+                    z <= 0.5
+                        ? tab.jasno + (tab.polojasno - tab.jasno) * (z / 0.5)
+                        : tab.polojasno + (tab.zamracene - tab.polojasno) * ((z - 0.5) / 0.5);
+                const cf = podla(SKY.cloudMix) * Math.max(0.25, Math.min(1, day));
+                const siva = podla(SKY.sivost);
+                const farba = (c, mrak) => {
+                    const m = mix(c, rgb(mrak), cf);
+                    return mix(m, naSivu(m), siva);
+                };
+                return [farba(top, SKY.cloud[0]), farba(bottom, SKY.cloud[1])];
+            }
+            const hodina = (k, den, minuta, sun) => (k === 'dnes' ? hodinaDnes(minuta, sun) : hodinaNavrh(den, minuta, sun));
+            const obloha = (k, den, minuta, sun, wx) => farby(k === 'dnes' ? DNES : NAVRH, hodina(k, den, minuta, sun), wx);
+
+            // Stmavený spodok (skyShade).
+            const lin = (c) => {
+                c /= 255;
+                return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+            };
+            const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+            function shade(top, bottom) {
+                for (let a = 0; a <= 100; a++) {
+                    let ok = true;
+                    for (let k = 0; k <= 50 && ok; k++) {
+                        const t = k / 50;
+                        const s = top.map((v, i) => v + (bottom[i] - v) * t);
+                        const al = (a / 100) * t;
+                        const c = s.map((v, i) => v * (1 - al) + SKY.shade[i] * al);
+                        ok = 1.05 / (lum(c) + 0.05) >= 4.6;
+                    }
+                    if (ok) return `rgba(${SKY.shade.join(', ')}, ${a / 100})`;
+                }
+                return `rgb(${SKY.shade.join(', ')})`;
+            }
+            const hm = (m) => {
+                m = ((Math.round(m) % 1440) + 1440) % 1440;
+                return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+            };
+            // Večer: prvá minúta po západe, keď hodina vzoru dosiahne `h`. Ráno: prvá minúta po polnoci, keď prekročí `h`.
+            function kedy(k, den, sun, h, rano) {
+                const od = rano ? 1440 : sun.set;
+                const po = rano ? 1440 + sun.rise : 1440;
+                for (let m = od; m <= po; m++) {
+                    const t = hodina(k, den, m, sun);
+                    if (rano ? t >= h && t < 12 : t >= h || t < 12) return m;
+                }
+                return null;
+            }
+
+            const KARTA = (cas) =>
+                '<i class="hviezdy"></i><i class="mesiac"></i>' +
+                `<p class="sbar" style="margin:0"><span>${cas}</span><span>▮▮▮ ◔</span></p>` +
+                '<p class="brand" style="margin:0">RAY-MON<small>Dvorany nad Nitrou</small></p>' +
+                '<p class="kick" style="margin:0">Teraz</p><p class="num" style="margin:0">0<small>kW</small></p>' +
+                '<p class="sub" style="margin:0">slnko je pod obzorom</p>' +
+                '<div class="karta"><b>Plán na zajtra</b>Práčka 10:00 – 13:00</div><i class="nav"></i>';
+            const vyber = { den: '2026-11-04', cas: 1, wx: 'jasno' };
+            // Časy vzhľadom na západ a východ, aby dávali zmysel v každom ročnom období.
+            const CASY = [
+                ['západ + 20 min', (s) => s.set + 20],
+                ['+ 45 min', (s) => s.set + 45],
+                ['+ 1 h 15', (s) => s.set + 75],
+                ['+ 2 h', (s) => s.set + 120],
+                ['polnoc', () => 24 * 60],
+                ['východ − 1 h 30', (s) => 1440 + s.rise - 90],
+                ['− 45 min', (s) => 1440 + s.rise - 45],
+                ['− 15 min', (s) => 1440 + s.rise - 15],
+            ];
+            const segCas = document.querySelector('[data-seg="cas"]');
+            CASY.forEach(([n], i) =>
+                segCas.insertAdjacentHTML(
+                    'beforeend',
+                    `<button type="button" data-v="${i}" aria-pressed="${i === vyber.cas}">${n}</button>`,
+                ),
+            );
+            // Minúta (od poludnia zvoleného dňa), keď slnko klesne či stúpne cez `e` stupňov.
+            function prechod(den, e, rano) {
+                for (let m = 12 * 60; m < 36 * 60; m++) {
+                    const a = vyska(okamih(den, m));
+                    const b = vyska(okamih(den, m + 1));
+                    if (!rano && a > e && b <= e) return m;
+                    if (rano && m >= 24 * 60 && a < e && b >= e) return m;
+                }
+                return null;
+            }
+
+            function prekresli() {
+                const sun = slnko(vyber.den);
+                const m = CASY[vyber.cas][1](sun);
+                for (const k of ['dnes', 'navrh']) {
+                    const [a, b] = obloha(k, vyber.den, m, sun, vyber.wx);
+                    const scr = document.querySelector(`[data-k="${k}"]`);
+                    scr.style.setProperty('--s1', hex(a));
+                    scr.style.setProperty('--s2', hex(b));
+                    scr.style.setProperty('--s3', shade(a, b));
+                    scr.setAttribute('data-noc', '');
+                    scr.dataset.wx = vyber.wx;
+                    scr.innerHTML = KARTA(hm(m));
+                    document.querySelector(`[data-f="${k}"]`).textContent = `${hm(m)} · hore ${hex(a)} · dole ${hex(b)}`;
+                    // Pás od poludnia do poludnia ďalšieho dňa po štvrťhodinách.
+                    const N = 96;
+                    const krok = [];
+                    for (let i = 0; i <= N; i++) krok.push(obloha(k, vyber.den, 12 * 60 + i * 15, sun, vyber.wx));
+                    const pas = document.querySelector(`[data-pas="${k}"]`);
+                    const [h, d] = pas.querySelectorAll('i');
+                    const st = (j) => krok.map((c, i) => `${hex(c[j])} ${((i / N) * 100).toFixed(1)}%`).join(',');
+                    h.style.background = `linear-gradient(90deg, ${st(0)})`;
+                    d.style.background = `linear-gradient(90deg, ${st(1)})`;
+                    pas.querySelectorAll('.znacka').forEach((z) => z.remove());
+                    for (const [mm, n] of [
+                        [sun.set, 'západ'],
+                        [prechod(vyber.den, -12, false), 'tma'],
+                        [prechod(vyber.den, -12, true), 'tma'],
+                        [1440 + sun.rise, 'východ'],
+                    ]) {
+                        if (mm === null) continue;
+                        const x = ((mm - 12 * 60) / (24 * 60)) * 100;
+                        pas.insertAdjacentHTML('beforeend', `<i class="znacka" style="left:${x}%"><span>${n}</span></i>`);
+                    }
+                }
+            }
+
+            const casy = document.querySelector('[data-casy]');
+            for (const [den, n] of [
+                ['2026-11-04', '4. 11.'],
+                ['2026-12-21', '21. 12.'],
+                ['2026-03-21', '21. 3.'],
+                ['2026-06-21', '21. 6.'],
+            ]) {
+                const s = slnko(den);
+                const t = (k, h, rano) => {
+                    const v = kedy(k, den, s, h, rano);
+                    return v === null ? 'nepríde' : hm(v);
+                };
+                casy.insertAdjacentHTML(
+                    'beforeend',
+                    `<tr><td>${n}</td><td>${hm(s.set)}</td><td>${t('dnes', 19.5)} / <b>${t('navrh', 19.5)}</b></td>` +
+                        `<td>${t('dnes', 21)} / <b>${t('navrh', 21)}</b></td><td>${t('dnes', 5.5, true)} / <b>${t('navrh', 5.5, true)}</b></td>` +
+                        `<td>${hm(s.rise)}</td></tr>`,
+                );
+            }
+            const tab = document.querySelector('[data-tab]');
+            const vz = (c) => `<code><i style="background:${c}"></i>${c}</code>`;
+            DNES.forEach(([h, a, b], i) => {
+                const [, c, d] = NAVRH[i];
+                if (a === c && b === d) return;
+                tab.insertAdjacentHTML(
+                    'beforeend',
+                    `<tr><td>${String(h).replace('.', ',')}</td><td>${vz(a)} ${vz(b)}</td><td>${vz(c)} ${vz(d)}</td></tr>`,
+                );
+            });
+            for (const seg of document.querySelectorAll('[data-seg]')) {
+                seg.addEventListener('click', (e) => {
+                    const b = e.target.closest('button');
+                    if (!b) return;
+                    for (const x of seg.querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+                    vyber[seg.dataset.seg] = seg.dataset.seg === 'cas' ? +b.dataset.v : b.dataset.v;
+                    prekresli();
+                });
+            }
+            prekresli();
+        </script>
+    </body>
+</html>

@@ -745,23 +745,40 @@ export const DAY_PAGER = {
  * a oblačnosti. Farby a ich priebeh sú z návrhu `docs/navrhy/smer-b-obloha.html` (`KEYS`
  * a `skyAt`). Hodiny v `keys` sú hodiny dňa z návrhu, v ktorom slnko vychádza o `riseH`
  * a zapadá o `setH`; skutočný východ a západ v polohe elektrárne do nich premieta
- * `skyColors` v shared/sky.js. Každý kľúč je [hodina, farba hore, farba dole].
+ * `skyColors` v shared/sky.js. Každý kľúč je [hodina, farba hore, farba dole]. Noc (od 19:30
+ * do 5:30) je tmavá, takmer čierna s nádychom modrej (docs/navrhy/obloha-noc.html).
  */
 export const SKY = {
     riseH: 7,
     setH: 18.5,
     keys: /** @type {Array<[number, string, string]>} */ ([
-        [0, '#070b1f', '#141b3d'],
-        [5.5, '#0f1736', '#2b2f5c'],
+        [0, '#030616', '#081028'],
+        [5.5, '#0a1029', '#1c2147'],
         [7, '#4b5aa6', '#f0a98a'],
         [8.5, '#2f72c0', '#93c8ec'],
         [12, '#1767c9', '#4fa3e2'],
         [16, '#2864b4', '#cf9f6c'],
         [18, '#463a8a', '#e3804f'],
-        [19.5, '#1d2257', '#5d437f'],
-        [21, '#0b1130', '#1d2550'],
-        [24, '#070b1f', '#141b3d'],
+        [19.5, '#141947', '#433262'],
+        [21, '#060a1f', '#0d1430'],
+        [24, '#030616', '#081028'],
     ]),
+    // Súmrak podľa výšky slnka pod obzorom (°), ako ho delia meteorológovia: do -6° občiansky
+    // súmrak, do -12° sa stmieva, pod -18° je najhlbšia noc. Body sú [výška slnka, hodina
+    // návrhu]; medzi nimi a západom (`setH`) či východom (`riseH`) sa farba mení plynule. Ráno
+    // má aj bod pri -12°, aby rovnaká výška slnka dala večer aj ráno podobnú nočnú farbu.
+    sumrak: {
+        vecer: /** @type {Array<[number, number]>} */ ([
+            [-6, 19.5],
+            [-12, 21],
+            [-18, 24],
+        ]),
+        rano: /** @type {Array<[number, number]>} */ ([
+            [-18, 0],
+            [-12, 3],
+            [-6, 5.5],
+        ]),
+    },
     // Oblačnosť z Open-Meteo (cloud_cover, %): pod `clearPct` jasno, pod `overcastPct`
     // polojasno, inak zamračené.
     clearPct: 30,

@@ -14,12 +14,14 @@ import { show } from './write.js';
 /**
  * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok a počasie na <html>; prechod
  * medzi farbami robí CSS (zaregistrované --s1 a --s2 v style.css), takže pri útlme pohybu ho
- * vypne to isté pravidlo ako všetky ostatné prechody. Počasie neba je to isté ako v kresbe na karte
- * Teraz v tejto chvíli (aj keď karta ukazuje náhľad iného času).
+ * vypne to isté pravidlo ako všetky ostatné prechody. Nebo je v tej istej chvíli a s tým istým
+ * počasím ako kresba na karte Teraz, aj pri náhľade iného času.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    const sky = skyNow(state, state.liveSky, pocasieTeraz({ ...state, previewMinutes: null }));
+    // Náhľad iného času patrí karte Teraz: na ostatných kartách je nebo z tejto chvíle.
+    const chvila = { ...state, previewMinutes: shows(state, 'terazky') ? state.terazPreview : null };
+    const sky = skyNow(chvila, state.liveSky, pocasieTeraz(chvila));
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
     dom.root.style.setProperty('--s3', sky.shade);

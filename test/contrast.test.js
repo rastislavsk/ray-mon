@@ -13,7 +13,7 @@ import {
     textContrast,
 } from '../shared/contrast.js';
 import { skyAt, skyColors, skyNow, skyShade } from '../shared/sky.js';
-import { sunTimes } from '../shared/solar.js';
+import { localToUtc } from '../shared/solar.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const WHITE = parseColor('#fff');
@@ -57,8 +57,8 @@ test('contrastTarget: veľký text od 24 px, tučný už od 19 px', () => {
 
 test('skyShade: tmavá obloha stmavenie nepotrebuje, svetlý obzor áno', () => {
     assert.equal(skyShade(...SKY.calm), 'rgba(5, 10, 30, 0)');
-    const rano = skyColors(8 * 60, sunTimes(SITE, '2026-09-05'), 'jasno');
-    const poludnie = skyColors(13 * 60, sunTimes(SITE, '2026-09-05'), 'jasno');
+    const rano = skyColors(localToUtc('2026-09-05', 8 * 60, SITE.timezone), SITE, 'jasno');
+    const poludnie = skyColors(localToUtc('2026-09-05', 13 * 60, SITE.timezone), SITE, 'jasno');
     const alpha = (/** @type {string} */ c) => parseColor(c)[3];
     assert.ok(alpha(rano.shade) > alpha(poludnie.shade));
     assert.ok(alpha(poludnie.shade) > 0);
@@ -103,11 +103,10 @@ function cssTokens() {
 function everySky() {
     const out = [];
     for (const date of ['2026-06-21', '2026-09-05', '2026-12-21']) {
-        const sun = sunTimes(SITE, date);
         for (const weather of /** @type {const} */ (['jasno', 'polojasno', 'zamracene'])) {
             for (let m = 0; m < 1440; m += 15) {
                 const hm = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-                out.push({ name: `${date} ${hm} ${weather}`, sky: skyColors(m, sun, weather) });
+                out.push({ name: `${date} ${hm} ${weather}`, sky: skyColors(localToUtc(date, m, SITE.timezone), SITE, weather) });
             }
         }
     }

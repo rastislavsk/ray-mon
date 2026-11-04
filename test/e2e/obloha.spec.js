@@ -171,6 +171,22 @@ test('obloha o 13:00 a o 21:00 má iné farby, tie isté ako výpočet v shared/
     expect(errors).toEqual([]);
 });
 
+test('pri náhľade iného času na karte Teraz je obloha v tej chvíli, na iných kartách a po návrate teraz', async ({ page }) => {
+    const errors = await openTeraz(page, { time: at('13:00') });
+    const teraz = ocakavanaObloha(at('13:00'));
+    await expect.poll(() => oblohaVStranke(page)).toEqual({ top: teraz.top, bottom: teraz.bottom, sky: teraz.weather });
+    // Osem šípok po 15 minút: náhľad o 15:00, dopredu podľa predpovede.
+    await page.locator('#tz-chart').focus();
+    for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+    const vstup = vstupTeraz(at('13:00'), { pv, previewMinutes: 15 * 60 });
+    const nahlad = skyNow(vstup, true, pocasieTeraz(vstup));
+    expect(nahlad.top).not.toBe(teraz.top);
+    await expect.poll(() => oblohaVStranke(page)).toEqual({ top: nahlad.top, bottom: nahlad.bottom, sky: nahlad.weather });
+    await page.locator('#tz-reset').click();
+    await expect.poll(() => oblohaVStranke(page)).toEqual({ top: teraz.top, bottom: teraz.bottom, sky: teraz.weather });
+    expect(errors).toEqual([]);
+});
+
 test('hlavička je priehľadná a pri posune odíde so stránkou', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 600 });
     const errors = await openObloha(page);

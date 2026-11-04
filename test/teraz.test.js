@@ -781,14 +781,14 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
 });
 
-test('pocasieTeraz: počasie neba je z tejto chvíle aj počas náhľadu, rovnaké ako kresba', () => {
+test('pocasieTeraz: počasie neba je v zvolenej chvíli, rovnaké ako kresba', () => {
     const slabo = { ...input(at('13:00')), pv: { ...input(at('13:00')).pv, realTimePowerKw: 0.3 } };
     assert.deepEqual(pocasieTeraz(slabo), terazModel(slabo).pocasie);
-    // Náhľad o 18:00 kresbu posunie, nebo ostáva pri teraz (zamračené z merania).
+    assert.equal(pocasieTeraz(slabo)?.jas, 'zamracene', 'teraz z merania');
+    // Náhľad o 18:00 posunie kresbu aj nebo - dopredu podľa predpovede.
     const nahlad = { ...slabo, previewMinutes: 18 * 60 };
-    assert.equal(terazModel(nahlad).pocasie?.jas, 'jasno');
-    assert.equal(pocasieTeraz(nahlad)?.jas, 'zamracene');
-    assert.equal(pocasieTeraz(nahlad)?.zamracenost, 1);
+    assert.deepEqual(pocasieTeraz(nahlad), terazModel(nahlad).pocasie);
+    assert.equal(pocasieTeraz(nahlad)?.jas, 'jasno');
     assert.equal(pocasieTeraz({ ...slabo, forecast: null }), null);
     assert.equal(pocasieTeraz({ ...slabo, known: 'nic' }), null);
 });

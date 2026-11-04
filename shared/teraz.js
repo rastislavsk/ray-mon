@@ -101,15 +101,15 @@ function jasOf(input, hero) {
 }
 
 /**
- * Počasie v tejto chvíli, aj keď karta Teraz ukazuje náhľad iného času - z neho je farba Oblohy
- * na všetkých kartách (docs/navrhy/obloha-farba-podla-pocasia.html), takže nebo a kresba počasia
- * hovoria to isté. Bez predpovede null.
+ * Počasie karty Teraz v zvolenej chvíli (teraz, alebo pri náhľade iného času v ňom - dopredu
+ * z predpovede, dozadu z merania) bez zvyšku modelu karty. Z neho je farba Oblohy na všetkých
+ * kartách (docs/navrhy/obloha-farba-podla-pocasia.html), takže nebo a kresba počasia hovoria to
+ * isté. Bez predpovede null.
  * @param {TerazInput} input
  */
 export function pocasieTeraz(input) {
     if (input.known === 'nic' || !input.forecast) return null;
-    const teraz = { ...input, previewMinutes: null };
-    return pocasieOf(teraz, heroModel(teraz));
+    return pocasieOf(input, heroModel(input));
 }
 
 /**
