@@ -5,8 +5,18 @@
 
 import { PLAN_DNA } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
-import { denTriedaDna } from './den-trieda.js';
-import { DEN_NAZVY, DNES_TEXTS, dnesCountText, dnesGradeText, dnesPlanText, dnesProgressText, dnesZajtraText } from './messages-core.js';
+import { denTriedaDna, silnyDen } from './den-trieda.js';
+import { weekDayName } from './format.js';
+import {
+    DEN_NAZVY,
+    DNES_TEXTS,
+    dnesCountText,
+    dnesGradeText,
+    dnesPlanText,
+    dnesProgressText,
+    dnesZajtraText,
+    terazLaterText,
+} from './messages-core.js';
 import { mainWindow, sunWindows } from './mozem.js';
 import { localMinutes } from './solar.js';
 import { dnesCards, todayOf } from './teraz.js';
@@ -29,6 +39,7 @@ import { dnesCards, todayOf } from './teraz.js';
 export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DNA.devices } = {}) {
     const cards = den && dnesCards({ ...input, previewMinutes: null }, voice);
     if (!den || !cards) return null;
+    const later = laterOf(input, den.cls, devices, cards.wait);
     const base = {
         faza: den.faza,
         chip: DEN_NAZVY[den.cls],
@@ -37,7 +48,7 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         /** @type {{ text: string, pct: number | null } | null} */ progress: null,
         /** @type {{ label: string, value: string } | null} */ grade: null,
         line: '',
-        later: cards.later,
+        later,
         /** @type {Tomorrow | null} */ tomorrow: null,
     };
     if (den.faza === 'rano') return { ...base, kick: DNES_TEXTS.plan, line: dnesPlanText(window, voice) };
@@ -52,7 +63,7 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         grade: { label: DNES_TEXTS.gradeLabel, value: grade.value },
         line: grade.line,
         // Zajtrajšok nahradí riadok Kedy lepšie - povie to isté o najbližšom dni presnejšie.
-        later: tomorrow ? '' : cards.later,
+        later: tomorrow ? '' : later,
         tomorrow,
     };
 }
@@ -70,6 +81,20 @@ function cezDen(input, window, t) {
         progress: t.forecastKwh === null ? null : { text: dnesProgressText({ ...t, forecastKwh: t.forecastKwh }), pct: t.pct },
         line: kind ? '' : t.window,
     };
+}
+
+/**
+ * Riadok Kedy lepšie: ešte dnes (`wait` z heroModel) a najbližší silný deň predpovede. Silný je
+ * podľa triedy dňa (silnyDen) - tej istej, ktorú ukazuje veľké slovo, aby si karta neprotirečila.
+ * @param {Omit<import('./teraz.js').TerazInput, 'previewMinutes'>} input @param {import('./den-trieda.js').DenTrieda} cls trieda dneška
+ * @param {readonly string[]} devices @param {string | null} wait
+ */
+function laterOf(input, cls, devices, wait) {
+    const days = input.forecast ? input.forecast.days : [];
+    const data = input.forecast ? { ...input, forecast: input.forecast } : null;
+    const i = data ? days.findIndex((_, k) => k > 0 && silnyDen(denTriedaDna(data, k, devices))) : -1;
+    const next = i > 0 ? { name: weekDayName(days[i].date, i), kwh: days[i].kwhTotal } : null;
+    return terazLaterText({ wait, todayStrong: !!todayOf(input) && silnyDen(cls), next });
 }
 
 /**

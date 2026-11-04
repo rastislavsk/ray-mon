@@ -18,6 +18,9 @@ import { DATE_RE } from './valid.js';
 /** Triedy od najlepšej. @type {readonly DenTrieda[]} */
 export const DEN_TRIEDY = ['vyborny', 'dobry', 'slaby', 'nanic'];
 
+/** Silný deň - zmestia sa všetky spotrebiče (riadok Kedy lepšie na karte Dnes). @param {DenTrieda} cls */
+export const silnyDen = (cls) => cls === 'vyborny' || cls === 'dobry';
+
 /**
  * Trieda celého dnešného dňa (DEN_TRIEDA). Plán dňa už má namerané pred „teraz“ a predpoveď po
  * ňom, takže ráno je to predpoveď, cez deň oboje a po západe namerané.

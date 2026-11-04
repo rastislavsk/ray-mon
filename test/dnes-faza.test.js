@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { dnesFaza } from '../shared/dnes-faza.js';
-import { denTrieda, denTriedaDna } from '../shared/den-trieda.js';
+import { denTrieda, denTriedaDna, silnyDen } from '../shared/den-trieda.js';
 import { countdownText, DEN_NAZVY, DEN_WORDS, DNES_TEXTS, spanText, voiceTexts } from '../shared/messages.js';
+import { weekDayName } from '../shared/format.js';
 import { dnesDay, mozemModel } from '../shared/mozem.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -123,6 +124,23 @@ test('bez dát nič: načítava sa či chýba predpoveď', () => {
     assert.equal(faza(input(at('13:00'), { forecast: null })).d, null);
     const m = mozemModel(input(at('13:00')));
     assert.equal(dnesFaza(input(at('13:00'), { forecast: null }), m.den, null), null, 'slovo o dni bez predpovede nestačí');
+});
+
+test('Kedy lepšie hovorí o silnom dni podľa triedy dňa, nie podľa špičky predpovede', () => {
+    const i = input(at('13:00'));
+    const { m } = faza(i);
+    assert.ok(i.forecast && m.den && m.facts);
+    assert.ok(i.forecast.days[0].peakKw >= 4, 'fixture: špička dneška nad hranicou silného slnka');
+    const later = (/** @type {import('../shared/den-trieda.js').DenTrieda} */ cls) =>
+        dnesFaza(i, { cls, faza: 'den' }, m.facts?.window ?? null)?.later ?? '';
+    assert.doesNotMatch(later('slaby'), /Dnes je silný deň/, 'odznak Slabý deň - riadok mu neprotirečí');
+    assert.doesNotMatch(later('nanic'), /Dnes je silný deň/);
+    assert.match(later('dobry'), /Dnes je silný deň/);
+    assert.match(later('vyborny'), /Dnes je silný deň/);
+    const data = { ...i, forecast: i.forecast };
+    const k = i.forecast.days.findIndex((_, x) => x > 0 && silnyDen(denTriedaDna(data, x, PLAN_DNA.devices)));
+    assert.ok(k > 0, 'fixture: v predpovedi je ďalší silný deň');
+    assert.match(later('slaby'), new RegExp(`Najbližší silný deň: ${weekDayName(i.forecast.days[k].date, k).toLowerCase()},`));
 });
 
 test('trieda iného dňa: dnešok je tá istá ako denTrieda', () => {

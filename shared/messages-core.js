@@ -1553,8 +1553,8 @@ export function terazTodayText({ forecastKwh, doneKwh, measured }) {
 }
 
 /**
- * Karta Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel, ten istý ako „Lepšie bude o“
- * v súčasnej appke) a najbližší silný deň z predpovede.
+ * Riadok Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel, ten istý ako „Lepšie bude o“
+ * v súčasnej appke) a najbližší silný deň z predpovede - podľa triedy dňa (silnyDen v den-trieda.js).
  * @param {{ wait: string | null, todayStrong: boolean, next: { name: string, kwh: number } | null }} d
  */
 export function terazLaterText({ wait, todayStrong, next }) {
