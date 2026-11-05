@@ -81,7 +81,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         say: { chips: m.chips, text: m.say },
         plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
         pocasie: pocasieOf(input, hero),
-        jas: jasOf(input, hero),
+        jas: jasOf(input, hero, now),
     };
 }
 
@@ -89,15 +89,22 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
  * Pásik pod číslom: koľko z jasnej oblohy dáva strecha vo zvolenej chvíli, aby aj menej znalý
  * videl, či je číslo veľa alebo málo. Jasná obloha je bezoblačný strop predpovede dneška
  * (`clearKw`), ten istý, z ktorého počíta percento využitia karta 7 dní. Platí aj pre odhad
- * z predpovede. V noci a bez stropu je pásik prázdny (`pct` null), nie skrytý - pod prstom
- * v náhľade sa tak nič nepohne. `text` je pre čítačku.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ * z predpovede. V noci (slnko pod obzorom alebo strop nula) pásik nie je - na nočnej oblohe
+ * rušil. Či vôbec je, rozhoduje teraz (`now`), nie náhľad: keď v náhľade zvolený čas padne do noci,
+ * `pct` je null a appky pásik skryjú, no jeho miesto nechajú, aby sa graf pod prstom nepohol.
+ * Cez deň aj 0 % ostáva - vtedy niečo nie je v poriadku. `text` je pre čítačku.
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero zvolený čas
+ * @param {ReturnType<typeof heroModel>} now teraz
  */
-function jasOf(input, hero) {
+function jasOf(input, hero, now) {
     const today = todayOf(input);
-    const clear = today ? interpolate(today.hourly, hero.minutes / 60, 'clearKw') : 0;
-    const pct = !hero.isNight && clear > 0 && Number.isFinite(hero.power) ? Math.min(100, Math.round((100 * hero.power) / clear)) : null;
-    return { pct, label: pct === null ? '–' : `${pct} %`, text: terazJasText(pct) };
+    const clearAt = (/** @type {ReturnType<typeof heroModel>} */ h) =>
+        today && !h.isNight ? interpolate(today.hourly, h.minutes / 60, 'clearKw') : 0;
+    if (!(clearAt(now) > 0)) return null;
+    const clear = clearAt(hero);
+    if (!(clear > 0) || !Number.isFinite(hero.power)) return { pct: null, label: '', text: '' };
+    const pct = Math.min(100, Math.round((100 * hero.power) / clear));
+    return { pct, label: `${pct} %`, text: terazJasText(pct) };
 }
 
 /**

@@ -1291,9 +1291,9 @@ export function terazNoteText({ since, riadok }, voice = 'drzy') {
     return `${since ? `Meranie neodpovedá od ${since}` : 'Meranie neodpovedá'}. Kým sa neozve, číslo počíta z počasia.`;
 }
 
-/** Pásik pod číslom karty Teraz pre čítačku: koľko z jasnej oblohy, v noci (null) o obzore. @param {number | null} pct */
+/** Pásik pod číslom karty Teraz pre čítačku: koľko z jasnej oblohy. @param {number} pct */
 export function terazJasText(pct) {
-    return pct === null ? 'Slnko je pod obzorom.' : `${pct} % z toho, čo by dala jasná obloha.`;
+    return `${pct} % z toho, čo by dala jasná obloha.`;
 }
 
 /** Veta pod číslom pri typickej streche: priznáva, že nejde o vlastnú strechu. @param {number} kwp @param {Voice} [voice] */
