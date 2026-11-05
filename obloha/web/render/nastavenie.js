@@ -27,11 +27,12 @@ const rowsHtml = (e) =>
     e.rows
         .map((r) => {
             const go = r.start ? 'data-setup-go="start"' : `data-setup-edit="${r.edit}"`;
-            const value = [r.value, r.status?.text, r.extra].filter(Boolean).join(' · ');
-            const err = r.status?.tone === 'off' ? ' class="err"' : '';
+            // Farbí sa len stav merania, značka pred ním ostáva tlmená.
+            const status = r.status && `<span data-tone="${r.status.tone}">${escapeHtml(r.status.text)}</span>`;
+            const value = [escapeHtml(r.value), status, escapeHtml(r.extra)].filter(Boolean).join(' · ');
             return (
                 `<button type="button" class="it" ${go}><span><b>${escapeHtml(r.label)}</b>` +
-                `<small${err}>${escapeHtml(value)}</small>${r.guess ? `<small class="est">${escapeHtml(e.guessMark)}</small>` : ''}</span>` +
+                `<small>${value}</small>${r.guess ? `<small class="est">${escapeHtml(e.guessMark)}</small>` : ''}</span>` +
                 `<span aria-hidden="true">›</span></button>`
             );
         })
