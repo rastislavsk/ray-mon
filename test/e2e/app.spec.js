@@ -299,10 +299,6 @@ test('karta Teraz o 13:00 zodpovedá modelu: číslo, štítky s vetou, graf dň
     const m = terazAt(instant);
     if (!m.say || !m.chart) throw new Error('model o 13:00 nemá graf ani vetu');
     await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
-    // Podčiarknuté je len slovo o stave - hovorí, že sa naň dá ťuknúť.
-    await expect(page.locator('#pv-updated .stav-slovo')).toHaveText('živé meranie');
-    expect(await page.locator('#pv-updated .stav-slovo').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('underline');
-    expect(await page.locator('#pv-updated').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
     await expect(page.locator('#pv-place')).toHaveText(SITE.name);
     await expect(page.locator('#tz-title')).toHaveText(m.title);
     await expect(page.locator('#tz-num-val')).toHaveText('6.4');
@@ -430,7 +426,7 @@ test('bodka v riadku pod číslom hovorí o meraní ako v Oblohe, podsvietenie i
     // Živé meranie: plná bodka. Podsvietenie je rovnaké pri zelenom aj červenom pásme.
     const zive = await browser.newPage();
     await openApp(zive, { time: atTime('13:00').instant });
-    expect(await hlavicka(zive)).toEqual({ tone: 'live', text: '13:00 · živé meranie', viac: false, glow: neutral });
+    expect(await hlavicka(zive)).toEqual({ tone: 'live', text: '13:00 · živé meranie', viac: true, glow: neutral });
     // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
     const spojenie = await browser.newPage();
     const { instant: o1330 } = atTime('13:30');
@@ -438,11 +434,11 @@ test('bodka v riadku pod číslom hovorí o meraní ako v Oblohe, podsvietenie i
     expect(await hlavicka(spojenie)).toEqual({ tone: 'stale', text: '13:00 · bez spojenia', viac: true, glow: neutral });
     await spojenie.locator('#pv-clock').click();
     await expect(spojenie.locator('#pv-tip-title')).toHaveText('Appka nemá spojenie');
-    // V noci dáta chodia, krivka stojí: menič spí - plná bodka, bez „›“, a pozadie drahého pásma.
+    // V noci dáta chodia, krivka stojí: menič spí - plná bodka, „›“ (bublina sa dá otvoriť), pozadie drahého pásma.
     const noc = await browser.newPage();
     const { instant: o2310 } = atTime('23:10');
     await openApp(noc, { time: o2310, pvData: { ...pv, updatedAt: o2310.toISOString() } });
-    expect(await hlavicka(noc)).toEqual({ tone: 'live', text: '13:00 · menič spí', viac: false, glow: neutral });
+    expect(await hlavicka(noc)).toEqual({ tone: 'live', text: '13:00 · menič spí', viac: true, glow: neutral });
     await expect(noc.locator('html')).toHaveAttribute('data-tier', modelAt(o2310).tier || '');
     await noc.locator('#pv-clock').click();
     await expect(noc.locator('#pv-tip-title')).toHaveText('Menič spí');
@@ -1180,7 +1176,7 @@ test('bublina stavu merania: ťuknutie na riadok pod číslom vysvetlí stav, ť
     const clock = page.locator('#pv-clock');
     const tip = page.locator('#pv-tip');
     await expect(page.locator('#pv-updated')).toHaveText('13:00 · živé meranie');
-    // Bez pilulky, len text a bodka; pri živom meraní bez „›“. Plocha na ťuknutie má 44 px.
+    // Bez pilulky, len text a bodka; malé „›“ na konci hovorí, že sa dá ťuknúť. Plocha na ťuknutie má 44 px.
     const naznak = () =>
         page.evaluate(() => [
             getComputedStyle(/** @type {Element} */ (document.querySelector('#pv-clock'))).backgroundColor,
@@ -1188,7 +1184,7 @@ test('bublina stavu merania: ťuknutie na riadok pod číslom vysvetlí stav, ť
         ]);
     const [pozadie, za] = await naznak();
     expect(pozadie).toBe('rgba(0, 0, 0, 0)');
-    expect(za).toBe('none');
+    expect(za).toContain('›');
     expect((await clock.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await expect(tip).toBeHidden();
     await clock.click();
