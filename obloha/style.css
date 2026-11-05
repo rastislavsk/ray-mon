@@ -2103,7 +2103,7 @@ button.live[aria-expanded='true'] {
 /* Appka: nadpis stojí priamo na oblohe (biely kvôli kontrastu), pod ním zdieľanie a vymazanie údajov
    ako samostatné položky, ako v súčasnej appke. */
 .app-items .group-lbl {
-    margin: 20px 18px 0;
+    margin: 20px 20px 0;
     color: #fff;
 }
 .app-items .set {
