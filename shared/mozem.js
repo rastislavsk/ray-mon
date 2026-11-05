@@ -353,13 +353,13 @@ function emptyHead(loading, noPanels, voice) {
  * Model karty Môžem?. `known`: čo appka o elektrárni vie
  * (bez neho uložená elektráreň). Pri známej polohe bez panelov (`poloha`) karta odpovedá
  * z typickej strechy, ktorú má vo vstupe (typicalSettings), a model to priznáva v `estimate` -
- * v oboch appkách. Bez polohy (`nic`) neodpovedá.
+ *. Bez polohy (`nic`) neodpovedá.
  *
  * `facts` sú údaje dňa (null bez odpovede): cena siete teraz, dnešné okno so slnkom (to isté
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
- * vecí (null, kým sa načítava) a `groups` dlaždice skupín - obe appky ich kreslia rovnako.
+ * vecí (null, kým sa načítava) a `groups` dlaždice skupín.
  * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`), takže karta nikde
- * nepovie nič iné než plán. Karty Teraz v oboch appkách kreslia plán s vetou nad ním (`planHead`), pod číslom
+ * nepovie nič iné než plán. Karty Teraz kreslia plán s vetou nad ním (`planHead`), pod číslom
  * štítky (`chips`) a len tú časť vety, ktorá plán neopakuje (`say`). Karta Dnes ukazuje, čo dá
  * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
@@ -496,7 +496,7 @@ function barOf(strip) {
 
 /**
  * Veci karty s odpoveďou. Bez predpovede (`ctx` null) karta o žiadnej nevie. Pri
- * veci ostáva aj odpoveď (`answer`) - z nej nová appka skladá dlaždice skupín.
+ * veci ostáva aj odpoveď (`answer`) - z nej appka skladá dlaždice skupín.
  * @param {PlanInput} input @param {DayCtx | null} ctx @param {Voice} [voice]
  */
 function mozemItems(input, ctx, voice = 'drzy') {

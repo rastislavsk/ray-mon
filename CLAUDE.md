@@ -5,33 +5,15 @@
 Statická webová appka (GitHub Pages) pre domácnosť s fotovoltikou + Cloudflare Worker,
 ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 
-Appky sú dve a ostávajú natrvalo: súčasná (koreň, `web/`, `style.css`) a „Živá obloha“
-v `obloha/` (návrh `docs/navrhy/smer-b-obloha.html`). **Všetky pravidlá nižšie
-platia pre obe.** Zdieľajú `shared/`, Worker, uložené nastavenie a neutrálne moduly vo `web/`
-(`store.js`, `storage.js`, `data.js`, `refresh.js`, `day-pager.js`, `nav-history.js`,
-`setup-wiring.js`, `settings-store.js`, `svg.js`, `qr.js`, `day-chart.js`,
-`teraz-gestures.js`, `oznamenia.js`, `sun-arc.js`, `pocasie.js`), takže
-**zmena v nich sa prejaví v oboch appkách** – overuj obe. Nová appka nesmie importovať nič, čo
-siaha na DOM alebo stav súčasnej (`web/state.js`, `web/dom.js`, `web/render/`, …); čistú časť
-vytiahni do `shared/` alebo do neutrálneho modulu. Stráži to `no-restricted-imports`
-v `eslint.config.js` (zoznam `NEUTRAL_WEB` – nový neutrálny modul treba dopísať tam aj sem).
+Appka je jedna: „Živá obloha“ v koreni (`index.html`, `app.js`, `style.css`, `web/`). Pôvodná appka
+skončila v novembri 2026, jej posledný stav je v git tagu `original-posledna`.
 
-## Jedno jadro, dva kabáty
+`obloha/` je len prechod a nič nové doň nepatrí: `index.html` presmeruje staré odkazy aj s hashom,
+`sw.js` a `icon-192.png` držia odbery oznámení z čias, keď appka bývala tam (`APPKY` vo
+`web/oznamenia.js`). Odstrániť sa dá, až keď na žiadnom telefóne nebude starý odber.
 
-Návrh a prečo: `docs/navrhy/jedno-jadro-dva-kabaty.html`.
-
-- **Jadro** (`shared/`, neutrálne moduly vo `web/`, Worker, úložisko) dáva obom appkám tie isté
-  odpovede: či, kedy, koľko a prečo. **Kabát** (HTML, CSS, render, poslucháče, navigácia) smie mať
-  vlastné obrazovky, ovládanie, voľby vzhľadu aj funkcie, ktoré druhá appka nemá.
-- V jadre nie je nič, čo by vedelo, pre ktorú appku počíta: žiadny prepínač správania pre jednu
-  appku, žiadne dva zoznamy tej istej veci. Skúška: keby sa človek opýtal oboch appiek to isté
-  a dostal inú odpoveď, rozdiel patrí do jadra a zjednotí sa. Parameter, ktorý mení len podobu
-  (tón hlášok), je v poriadku.
-- Modely obrazoviek jednej appky (`shared/mozem-sky.js`, …) smú byť
-  v `shared/` kvôli testom, ale nesmú nič rozhodnúť samy – len skladajú spoločné výpočty.
-- Nová viditeľná funkcia nemusí byť v oboch appkách. Urob ju tam, kde ju úloha chce, a druhú
-  appku nemeň, kým to nie je úlohou. Jej výpočet patrí do jadra, aby ju druhá appka mohla
-  prevziať bez ďalšej práce.
+Jadro (`shared/`) ešte nesie zvyšky pôvodnej appky, ktoré testy nazvú použitými, hoci appka ich nečíta
+(napr. `farba` vo vzhľade, `pas` v `shared/pristup.js`). Keď na ne natrafíš, zmaž ich.
 
 ## Verzia odkazu s nastavením
 
@@ -49,7 +31,7 @@ Návrh: `docs/navrhy/odkaz-verzia.html`.
 - **Žiadne runtime závislosti.** Jediná externá knižnica je QR kód z CDN, načítaný s `defer`
   a nepovinný. Má v `index.html` hash v `integrity` – pri zmene verzie treba zmeniť aj ten
   (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Písma sú v repozitári
-  (`fonts/`, licencia OFL), nie z Google Fonts. Písmo novej appky je podmnožina len so znakmi
+  (`fonts/`, licencia OFL), nie z Google Fonts. Písmo appky je podmnožina len so znakmi
   appky – keď texty dostanú nový znak, vyrob ju znova podľa `scripts/font-subset.js` (ohlási to
   `test/font-subset.test.js`). Vývojové závislosti (lint, testy) sú v poriadku.
 - **Typy cez JSDoc a `tsc --checkJs`**, nie cez `.ts` súbory.
@@ -57,7 +39,7 @@ Návrh: `docs/navrhy/odkaz-verzia.html`.
   Čas a dáta do nej vstupujú ako parametre, aby sa dala testovať.
 - **Jedno miesto pravdy.** Konštanta, ktorá je v `shared/config.js`, sa nikde inde nepíše
   natvrdo. To isté platí pre výpočet: ak ho potrebuje appka aj Worker, žije v `shared/`.
-- **Jeden stav a jedno prekreslenie.** Stav appky je objekt vo `web/state.js`, mení sa
+- **Jeden stav a jedno prekreslenie.** Stav appky je objekt vo `web/state.js` (úložisko `web/store.js`), mení sa
   výhradne cez `setState` a prekresľuje výhradne cez `render` vo `web/render/index.js`.
   Render funkcie sú čisté: čítajú stav, zapisujú do DOM, nič nevolajú späť.
 - **Slovenčina** v komentároch, textoch pre používateľa aj v správach commitov.
@@ -88,7 +70,7 @@ Prehliadač po každom ťuknutí prstom dopošle aj kurzorové udalosti – `mou
 Tooltip grafu ukázaný prstom nám takto zhasínal `mouseleave` do 15 ms: na displeji z neho ostalo
 bliknutie a ťuknutie na graf prakticky nefungovalo. Kurzor a pero preto obsluhujú pointer udalosti
 s kontrolou `pointerType !== 'touch'`, prst má vlastný kód nad touch udalosťami (`bindTouch`
-vo `web/interactions.js`).
+vo `web/teraz-gestures.js` a `web/day-pager.js`).
 
 Typ zariadenia nezisťuj – žiadne `maxTouchPoints`, `@media (hover: hover)` ani userAgent. Appka
 reaguje na to, čím sa práve ovláda, nie na to, čo to je za prístroj; mobil s myšou aj notebook
@@ -97,23 +79,22 @@ s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `style.css` 
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
 posunúť stránku – patrí len úchytkám na ťahanie (kruh rozvrhu tarify v sprievodcovi). Plochy,
-cez ktoré človek scrolluje popri ceste, majú `pan-y` (`.chart-wrap`, graf dňa `.day-scrub` na karte Teraz, pás dňa
+cez ktoré človek scrolluje popri ceste, majú `pan-y` (graf dňa `.day-scrub` na karte Teraz, pás dňa
 `.day-track` v detaile dňa karty 7 dní): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
 
-**Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii – v oboch appkách. Ťah do strán má
+**Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii. Ťah do strán má
 jediné miesto: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`).
 Obsah dňa ide za prstom a vedľa neho stojí susedný deň, ktorý nakreslil ten istý render (appka ho na
 chvíľu zavolá so susedným dňom a výsledok skopíruje) – iný kód na kreslenie dňa preto nepíš. Kópie
 sú bez `id` (inak by boli v stránke dvakrát), takže štýly obsahu dňa stoja na triedach, nie na `id`. Posun
 počas ťahu nie je v stave; do stavu ide až deň, na ktorom pás zastal. Na kraji sa pás len poddá,
 z detailu von vedie šípka späť (prvý čip v riadku dní). Myš ťahať nemusí – čipy a šípky na klávesnici.
-Nová appka v prehľade so stĺpcami listuje dni ťahom v stĺpci 7 dní, pás je v ňom.
+V prehľade so stĺpcami sa dni listujú ťahom v stĺpci 7 dní, pás je v ňom.
 Návrh: `docs/navrhy/7dni-listovanie-dni.html`.
 
-Kontrolujú to e2e testy v skupinách „ťah prstom: karty sa nelistujú, dni v detaile áno“ (súčasná
-appka) a „ťah prstom a tlačidlo Späť“ (nová): ťuknutie bez jediného pohybu prsta musí tooltip
+Kontrolujú to e2e testy v skupine „ťah prstom a tlačidlo Späť“: ťuknutie bez jediného pohybu prsta musí tooltip
 ukázať a nechať svietiť, zvislý ťah cez graf musí posunúť stránku a tooltip neukázať.
 
 ## Ako overovať
@@ -172,26 +153,22 @@ cache, uvidí jedno obnovenie stránky navyše.
 
 Čo treba držať:
 
-- To isté platí pre `obloha/boot.js`, ktorý chráni novú appku (hlášku píše do `#hdr-status`),
-  a jeho e2e testy v `test/e2e/obloha.spec.js`.
-- Nová appka sťahuje karty 7 dní, Štatistika a Nastavenie až po štarte (`obloha/web/parts.js`) –
+- Appka sťahuje karty 7 dní, Štatistika a Nastavenie až po štarte (`web/parts.js`) –
   tie `boot.js` nechráni. Keď ich `import()` zlyhá, appka namiesto karty ukáže hlášku s tlačidlom,
   ktoré stiahne súbory znova a obnoví stránku (najviac raz). Kontroluje to e2e skupina „nasadenie
   a cache: karty načítané neskôr“. Nový modul pre tieto karty patrí do ich časti, nie do jadra.
 - `boot.js` **nesmie nič importovať staticky** – musí sa spustiť, aj keď je zvyšok grafu
   rozbitý. Z toho istého dôvodu `index.html` nenačítava žiadny iný modul appky.
 - `boot.js` je v cache tiež, takže jeho nová verzia musí fungovať so starým `index.html`
-  a naopak. Stačí nemeniť meno `app.js` ani `#pv-updated`, kam píše hlášku.
+  a naopak. Stačí nemeniť meno `app.js` ani `#hdr-status`, kam píše hlášku.
 - Service worker ranného oznámenia (`sw.js` v koreni) **súbory appky
   necachuje** – nesmie, inak by obišiel `boot.js`. Registruje sa s `updateViaCache: 'none'`,
   aby prehliadač bral jeho statické importy zo `shared/` vždy čerstvé (dynamický `import()`
   service worker nesmie). Každý push musí niečo ukázať, preto pri chybe ukáže výzvu pozrieť
-  appku. Meno `sw.js` nemeň – zaregistrované telefóny by ostali na starom. Nová appka má
-  `obloha/sw.js`, ktorý len importuje koreňový, s rozsahom `obloha/` – Android oznámenie
-  pripíše nainštalovanej appke (jej logo) len vtedy, keď rozsah service workera leží v jej
-  rozsahu. Adresy v `sw.js` sa preto rátajú od `import.meta.url`, nie od rozsahu. Odber je
-  v telefóne jeden; má ho appka, v ktorej sa oznámenie naposledy zaplo či zmenila hodina
-  (`web/oznamenia.js`).
+  appku. Meno `sw.js` nemeň – zaregistrované telefóny by ostali na starom. Staré odbery
+  drží `obloha/sw.js`, ktorý len importuje koreňový, preto sa adresy v `sw.js` rátajú od
+  `import.meta.url`, nie od rozsahu. Android oznámenie pripíše nainštalovanej appke (jej logo) len
+  vtedy, keď rozsah service workera leží v jej rozsahu.
 
 Kontrolujú to e2e testy v skupine „nasadenie a cache“: starý modul musí skončiť jedným
 obnovením a naštartovanou appkou, chyba, ktorú obnovenie nevyrieši, hláškou bez slučky. Testy

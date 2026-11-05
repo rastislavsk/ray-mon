@@ -1,5 +1,5 @@
-// Oblúk slnka nad veľkým slovom karty Dnes - v oboch appkách. Polohu slnka, okno a časy počíta
-// sunArc v shared/mozem-sky.js, tu sa len skladá SVG. Farby idú cez CSS triedy, každá appka
+// Oblúk slnka nad veľkým slovom karty Dnes. Polohu slnka, okno a časy počíta
+// sunArc v shared/mozem-sky.js, tu sa len skladá SVG. Farby idú cez CSS triedy, appka
 // ich má vo vlastnom štýle.
 
 import { minutesToTimeStr } from '../shared/format.js';

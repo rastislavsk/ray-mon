@@ -1,4 +1,4 @@
-// Listovanie dní v detaile dňa karty 7 dní, spoločné pre obe appky: obsah dňa ide za prstom
+// Listovanie dní v detaile dňa karty 7 dní: obsah dňa ide za prstom
 // a susedný deň je vidno už počas ťahu. Kam pás dobehne, rozhoduje shared/day-pager.js; tu je
 // prst, transform a kópie susedných dní. Návrh: docs/navrhy/7dni-listovanie-dni.html.
 //

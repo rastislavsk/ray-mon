@@ -1,4 +1,4 @@
-// E2E pre kartu Štatistika s plagátom obdobia v novej appke „Živá obloha“ (obloha/). Pevný čas,
+// E2E pre kartu Štatistika s plagátom obdobia. Pevný čas,
 // dáta z fixtures a očakávané hodnoty počítané tou istou funkciou (shared/statistika.js), ktorú
 // volá appka - test tak odhalí rozdiel medzi modelom a tým, čo je naozaj v DOM.
 import { expect, test } from '@playwright/test';
@@ -27,7 +27,7 @@ const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
 
 /**
- * Otvorí novú appku s pevným časom, uloženým nastavením a denníkom. `net.off`
+ * Otvorí appku s pevným časom, uloženým nastavením a denníkom. `net.off`
  * zhodí Worker aj Open-Meteo, kým ho test neprepne späť. `onPv` odpovedá namiesto Workera.
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, net?: { off: boolean }, panel?: string,
@@ -47,7 +47,7 @@ async function openStat(page, { settings = OWNER, site = null, net = { off: fals
     if (site) await uloz(SITE_STORAGE_KEY, JSON.stringify(site));
     await uloz(DAYLOG_STORAGE_KEY, JSON.stringify(LOG));
     await page.clock.setFixedTime(FIXED_NOW);
-    await page.goto('/obloha/');
+    await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
     await page.locator(`#nav-${panel}`).click();
     await expect(page.locator(`#panel-${panel}`)).toBeVisible();
@@ -187,7 +187,7 @@ test.describe('karta Štatistika', () => {
         await expect(page.locator('#st-poster .pn')).toHaveText(`${bigText(pv.dailyEnergyKwh)} kWh`);
     });
 
-    test('poloha bez panelov: biela výzva, tlačidlo trikrát zapulzuje, plagát nie je; súčasná appka ostáva', async ({ page }) => {
+    test('poloha bez panelov: biela výzva, tlačidlo trikrát zapulzuje, plagát nie je', async ({ page }) => {
         const errors = await openStat(page, { settings: null, site: SITE });
         await expect(page.locator('#st-sub')).toHaveText(STATISTIKA_TEXTS.setupSub);
         await expect(page.locator('#st-setup-title')).toHaveText(STATISTIKA_TEXTS.setupTitle);
@@ -210,12 +210,6 @@ test.describe('karta Štatistika', () => {
         expect(await pulz()).toEqual([{ name: 'pulse', iterations: 3 }]);
         await page.locator('#st-setup-btn').click();
         await expect(page.locator('#panel-nastavenie')).toBeVisible();
-
-        // Súčasná appka v tom istom stave: Štatistika s výzvou nastaviť panely.
-        await page.goto('/');
-        await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
-        await page.locator('#nav-statistika').click();
-        await expect(page.locator('#stats-body')).toContainText('Nastav si svoje panely');
         expect(errors).toEqual([]);
     });
 

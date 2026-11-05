@@ -1,116 +1,129 @@
-// Karta Štatistika: plagát obdobia - dnes, mesiac, rok alebo celý čas na streche - v prechode farieb
-// stavu, s prepínačom obdobia, veľkým číslom, obrázkom dní a očíslovanými riadkami. Bez merania
-// dnešok z predpovede. Celý obsah karty skladá render do #stats-body, v index.html sú len nosiče.
-// Počíta shared/summary.js.
+// Karta Štatistika: plagát obdobia - prepínač, veľké číslo kWh, obrázok dní, očíslované
+// riadky a poznámka - a pod ním výzvy. Všetko počíta shared/statistika.js (plagát shared/summary.js, ten istý) a texty sú
+// v shared/messages.js - tu sa len zapisuje do DOM.
 
-import { installedKw } from '../../shared/config.js';
-import { escapeHtml, kwpText, monthNameShort } from '../../shared/format.js';
-import { EMPTY_MESSAGES, STATISTIKA_TEXTS, voiceTexts } from '../../shared/messages.js';
+import { escapeHtml, monthNameShort } from '../../shared/format.js';
+import { voiceTexts } from '../../shared/messages.js';
 import { neplatiOf } from '../../shared/pristup.js';
 import { STATS_PERIODS } from '../../shared/stats.js';
-import { summaryModel } from '../../shared/summary.js';
-import { SETUP_ICONS } from '../icons.js';
-import { writeHtml } from '../memo.js';
+import { statistikaModel } from '../../shared/statistika.js';
+import { setHtml, setText, show } from './write.js';
 
-/** @typedef {import('../../shared/summary.js').SummaryModel} SummaryModel */
+/** @typedef {import('../dom.js').Dom} Dom */
+/** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
+/** @typedef {Texts['STATISTIKA_TEXTS']} T */
+/** @typedef {import('../../shared/summary.js').SummaryModel} Summary */
 
-/** Výzva, ktorá vedie do Nastavenia (data-stats-go, viď initStats vo web/interactions.js).
- * @param {string} go krok sprievodcu, alebo `nastavenie` pre samotnú kartu @param {string} title @param {string} text */
-function goHtml(go, title, text) {
-    return (
-        `<button type="button" class="choice stats-go" data-stats-go="${go}">` +
-        `<span class="t"><b>${escapeHtml(title)}</b><span>${escapeHtml(text)}</span></span>${SETUP_ICONS.chevron}</button>`
-    );
-}
-
-/** Prepínač obdobia na plagáte; bez merania sa dá vybrať len dnešok. @param {SummaryModel} m */
-function segHtml(m) {
-    const buttons = STATS_PERIODS.map(
+/** Prepínač obdobia na plagáte; bez merania sa dá vybrať len dnešok. @param {Summary} m @param {T} T */
+const segHtml = (m, T) =>
+    `<div class="seg pseg" role="group" aria-label="${escapeHtml(T.periodsLabel)}">` +
+    STATS_PERIODS.map(
         (p) =>
-            `<button type="button" data-stats-period="${p}" aria-pressed="${p === m.period}"${!m.periods && p !== 'dnes' ? ' disabled' : ''}>` +
-            `${STATISTIKA_TEXTS.periods[p]}</button>`,
-    ).join('');
-    return `<div class="seg" role="group" aria-label="${STATISTIKA_TEXTS.periodsLabel}">${buttons}</div>`;
-}
+            `<button type="button" data-period="${p}" aria-pressed="${p === m.period}"${!m.periods && p !== 'dnes' ? ' disabled' : ''}>` +
+            `${escapeHtml(T.periods[p])}</button>`,
+    ).join('') +
+    '</div>';
 
 /**
- * Obrázok pod veľkým číslom: pás (dnešok voči predpovedi, splatený uhlík panelov), mesiac ako
- * mriežka štvorčekov, rok ako 12 stĺpcov mesiacov. Chýbajúci deň aj mesiac je len obrys,
- * mesiac, v ktorom niektorý deň chýba, má stĺpec s prerušovaným obrysom (je nižší, než mesiac
- * naozaj bol), deň či mesiac, ktorý ešte len príde, je tenký obrys, resp. bez stĺpca.
- * @param {NonNullable<SummaryModel['viz']>} viz
+ * Obrázok pod veľkým číslom: pás, štvorčeky dní mesiaca, stĺpce mesiacov roka. Chýbajúci deň či
+ * mesiac je len obrys, mesiac s chýbajúcimi dňami má prerušovaný obrys, budúci deň tenký obrys.
+ * @param {NonNullable<Summary['viz']>} viz
  */
 function vizHtml(viz) {
     if (viz.kind === 'meter')
         return (
-            `<div class="summary-meter"><div class="summary-track" aria-hidden="true"><i style="width:${viz.pct}%"></i></div>` +
+            `<div class="pmeter"><div class="ptrack" aria-hidden="true"><i style="width:${viz.pct}%"></i></div>` +
             `<p><span>${escapeHtml(viz.left)}</span><span>${escapeHtml(viz.right)}</span></p></div>`
         );
-    if (viz.kind === 'days') {
-        const cells = viz.days
-            .map((d) =>
-                d.future
-                    ? '<i class="future"></i>'
-                    : d.frac === null
-                      ? '<i class="missing"></i>'
-                      : `<i style="opacity:${(0.15 + d.frac * 0.85).toFixed(2)}"></i>`,
-            )
-            .join('');
-        return `<div class="summary-cal" aria-hidden="true">${cells}</div>`;
-    }
-    const bars = viz.months
-        .map((m) => {
-            const cls = m.future
-                ? 'future'
-                : m.frac === null
-                  ? 'missing'
-                  : [m.best ? 'best' : '', m.partial ? 'partial' : ''].join(' ').trim();
-            const h = m.future ? 0 : m.frac === null ? 30 : Math.max(4, Math.round(m.frac * 100));
-            return `<span><i class="${cls}" style="height:${h}%"></i>${escapeHtml(monthNameShort(m.month))}</span>`;
-        })
-        .join('');
-    return `<div class="summary-bars year" aria-hidden="true">${bars}</div>`;
-}
-
-/** Plagát obdobia; bez čísel (meranie ani predpoveď) prázdny. @param {SummaryModel} m */
-function posterHtml(m) {
-    if (m.kind === 'none') return '';
-    const est = m.kind === 'estimate';
-    const rows = m.rows
-        .map((r, i) => `<div class="summary-row"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></div>`)
-        .join('');
+    if (viz.kind === 'days')
+        return (
+            '<div class="pcal" aria-hidden="true">' +
+            viz.days
+                .map((d) =>
+                    d.future
+                        ? '<i class="future"></i>'
+                        : d.frac === null
+                          ? '<i class="missing"></i>'
+                          : `<i style="opacity:${(0.15 + d.frac * 0.85).toFixed(2)}"></i>`,
+                )
+                .join('') +
+            '</div>'
+        );
     return (
-        `<section class="summary${est ? ' est' : ''}">${segHtml(m)}` +
-        (m.heading ? `<h3 class="summary-kick">${escapeHtml(m.heading)}</h3>` : '') +
-        `<p class="summary-big" style="--n:${m.big.length}">${escapeHtml(m.big)}<small> kWh</small></p>${m.viz ? vizHtml(m.viz) : ''}` +
-        (rows ? `<div class="summary-rows">${rows}</div>` : '') +
-        (m.note ? `<p class="summary-note">${escapeHtml(m.note)}</p>` : '') +
-        `</section>`
+        '<div class="cols" aria-hidden="true">' +
+        viz.months
+            .map((m) => {
+                const cls = m.frac === null && !m.future ? 'missing' : [m.best ? 'best' : '', m.partial ? 'partial' : ''].join(' ').trim();
+                const h = m.future ? 0 : m.frac === null ? 30 : Math.max(4, Math.round(m.frac * 100));
+                return `<span><i${cls ? ` class="${cls}"` : ''} style="height:${h}%"></i>${escapeHtml(monthNameShort(m.month).charAt(0))}</span>`;
+            })
+            .join('') +
+        '</div>'
     );
 }
 
-/** Obsah karty podľa toho, čo appka o elektrárni vie. `neplati` je veta namiesto „meranie
- * neodpovedá“, keď výrobca prístup odmietol (shared/pristup.js).
- * @param {SummaryModel} m @param {boolean} noPanels @param {string | null} [neplati] @param {typeof STATISTIKA_TEXTS} [T] texty v tóne appky */
-export function statsHtml(m, noPanels, neplati = null, T = STATISTIKA_TEXTS) {
-    if (m.status === 'loading') return `<p class="stats-note">Načítavam…</p>`;
-    const poster = posterHtml(m) || `<p class="stats-note">${escapeHtml(EMPTY_MESSAGES.forecast.body)}</p>`;
-    // Bez zadaných panelov: namiesto výziev na ceny a meranie jediná - nastaviť si ich.
-    if (noPanels)
-        return poster + goHtml('nastavenie', 'Nastav si svoje panely', 'Štatistika je o tvojej elektrárni, nie o typickej streche.');
-    const prices = m.priced ? '' : goHtml('ceny', T.pricesTitle, T.pricesText);
-    if (m.kind === 'live') return poster + prices;
-    const live =
-        m.status === 'offline'
-            ? `<p class="stats-note">${escapeHtml(neplati ?? 'Živé meranie teraz neodpovedá. Súčty za mesiac, rok a celý čas sa ukážu, keď sa spojenie obnoví.')}</p>`
-            : goHtml('meranie', 'Pripojiť živé meranie', 'Súčty za mesiac, rok a celý čas posiela menič, keď ho pripojíš.');
-    return poster + live + prices;
+/** Plagát obdobia. @param {Summary} m @param {T} T */
+function posterHtml(m, T) {
+    const kwh = `${m.big} kWh`;
+    const rows = m.rows
+        .map((r, i) => `<p class="prow"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></p>`)
+        .join('');
+    return (
+        segHtml(m, T) +
+        (m.heading ? `<h2>${escapeHtml(m.heading)}</h2>` : '') +
+        `<p class="pn${m.kind === 'estimate' ? ' est' : ''}" style="--n:${kwh.length}">${escapeHtml(kwh)}</p>` +
+        (m.viz ? vizHtml(m.viz) : '') +
+        (rows ? `<div class="prows">${rows}</div>` : '') +
+        (m.note ? `<p class="pnote">${escapeHtml(m.note)}</p>` : '')
+    );
 }
 
-/** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
+/** Výzvy a stavy bez čísel: bez polohy, bez panelov, načítavanie, bez dát. @param {import('../../shared/statistika.js').StatistikaModel} m @param {Dom} dom @param {T} T */
+function renderStates(m, dom, T) {
+    show(dom.stSub, m.sub !== '');
+    setText(dom.stSub, m.sub);
+    show(dom.stRetry, m.retry);
+    setText(dom.stRetry, T.retry);
+    show(dom.stAsk, m.kind === 'ask');
+    setText(dom.stAskTitle, T.askTitle);
+    setText(dom.stAskText, T.askText);
+    setText(dom.stAskBtn, T.askBtn);
+    // Biela výzva bez panelov; tlačidlo pri každom vstupe na kartu trikrát zapulzuje (CSS animácia
+    // sa spustí vždy, keď sa prvok ukáže) a zastaví sa.
+    show(dom.stSetup, m.kind === 'setup');
+    setText(dom.stSetupTitle, T.setupTitle);
+    setText(dom.stSetupText, T.setupText);
+    setText(dom.stSetupBtn, T.setupBtn);
+    setText(dom.stLaterTitle, T.laterTitle);
+    setText(dom.stLaterText, T.laterText);
+}
+
+/** Výzvy pod plagátom: meranie a ceny. `neplati` je veta namiesto „meranie neodpovedá“, keď výrobca
+ * prístup odmietol (shared/pristup.js).
+ * @param {import('../../shared/statistika.js').StatistikaModel} m @param {Dom} dom @param {T} T @param {string | null} neplati */
+function renderCtas(m, dom, T, neplati) {
+    show(dom.stMeasureOff, m.measure === 'off');
+    setText(dom.stMeasureOff, neplati ?? T.measureOff);
+    show(dom.stMeasure, m.measure === 'ask');
+    setText(dom.stMeasureTitle, T.measureTitle);
+    setText(dom.stMeasureText, T.measureText);
+    setText(dom.stMeasureBtn, T.measureBtn);
+    show(dom.stPrices, m.prices);
+    setText(dom.stPricesTitle, T.pricesTitle);
+    setText(dom.stPricesText, T.pricesText);
+    setText(dom.stPricesBtn, T.pricesBtn);
+}
+
+/** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderStatistika(state, dom) {
-    dom.statsSub.textContent = `${state.site.name} · ${kwpText(installedKw(state.plant))}`;
-    const neplati = neplatiOf(state)?.statistika ?? null;
-    const m = summaryModel(state, state.statsPeriod, state.voice);
-    writeHtml(dom.statsBody, statsHtml(m, state.known !== 'elektraren', neplati, voiceTexts(state.voice).STATISTIKA_TEXTS), 'statsBody');
+    if (state.panel !== 'statistika') return;
+    const T = voiceTexts(state.voice).STATISTIKA_TEXTS;
+    const m = statistikaModel(state, state.statsPeriod, { online: state.online, voice: state.voice });
+    renderStates(m, dom, T);
+    show(dom.stBody, m.kind === 'ok');
+    if (m.kind !== 'ok') return;
+    show(dom.stPoster, !!m.summary);
+    dom.stPoster.classList.toggle('est', m.summary?.kind === 'estimate');
+    setHtml(dom.stPoster, m.summary ? posterHtml(m.summary, T) : '');
+    renderCtas(m, dom, T, neplatiOf(state)?.statistika ?? null);
 }

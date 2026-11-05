@@ -1,12 +1,12 @@
-// Karta 7 dní novej appky: prehľad dní ako predpoveď počasia (nadpis s najlepším dňom, súčet
+// Karta 7 dní: prehľad dní ako predpoveď počasia (nadpis s najlepším dňom, súčet
 // týždňa, riadky so zeleným pásom okna), detail dňa s grafom z karty Teraz a detail týždňa so
 // stĺpcami a mapou hodina × deň. Všetko počíta shared/sedem-dni.js (nad modelmi karty 7 dní
-// súčasnej appky) a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
+// ) a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
-import { escapeHtml, weekDayPosition } from '../../../shared/format.js';
-import { voiceTexts } from '../../../shared/messages.js';
-import { dayStripModel, sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../../shared/sedem-dni.js';
-import { dayChartHtml, legendHtml } from '../../../web/day-chart.js';
+import { escapeHtml, weekDayPosition } from '../../shared/format.js';
+import { voiceTexts } from '../../shared/messages.js';
+import { dayStripModel, sedemDayModel, sedemModel, sedemWeekModel, WEEK_BARS, WEEK_HEAT } from '../../shared/sedem-dni.js';
+import { dayChartHtml, legendHtml } from '../day-chart.js';
 import { weatherIcon } from './icons.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
@@ -14,12 +14,12 @@ import { setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /** @typedef {import('../state.js').AppState} AppState */
-/** @typedef {import('../../../shared/sedem-dni.js').SedemData} SedemData */
+/** @typedef {import('../../shared/sedem-dni.js').SedemData} SedemData */
 
 /**
  * Riadky dní. Riadok je tlačidlo s celým znením pre čítačku; zelený pás má toľko úsekov, koľko
  * okien deň má, bez okna je prázdny. Ikona je ozdoba, deň bez oblačnosti v dátach ju nemá.
- * @param {import('../../../shared/sedem-dni.js').SedemModel['rows']} rows
+ * @param {import('../../shared/sedem-dni.js').SedemModel['rows']} rows
  */
 function rowsHtml(rows) {
     return rows
@@ -65,7 +65,7 @@ function renderList(m, dom, SEDEM_TEXTS) {
 
 /**
  * Čipy dní vedľa šípky späť: na ktorom dni týždňa stojíme a že sa dá listovať ďalej. Tie isté ako
- * v súčasnej appke (dayStripModel). Deň prepnú poslucháč v sedem-interactions.js.
+ * (dayStripModel). Deň prepnú poslucháč v sedem-interactions.js.
  * @param {ReturnType<typeof dayStripModel>} chips
  */
 const stripHtml = (chips) =>

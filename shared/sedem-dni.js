@@ -1,5 +1,4 @@
-// Karta 7 dní v novej appke „Živá obloha“ (obloha/). Nahrádza kartu 7 dní súčasnej appky
-// a počíta to isté: súčty a najlepší deň z weekStatsModel, kWh v riadkoch z weekListModel,
+// Karta 7 dní. Počíta: súčty a najlepší deň z weekStatsModel, kWh v riadkoch z weekListModel,
 // okno na veľké veci z plánu dňa (dnešok presne dayPlan, ako na kartách Môžem? a Teraz), farby
 // hodín z dayHourTiers, hlášky z dayDetailMessage a weekMessage. Tu sa to len skladá pre nový
 // vzhľad - prehľad dní ako predpoveď počasia, detail dňa s grafom z day-chart.js a detail
@@ -77,7 +76,7 @@ export function dayWeather(day) {
 }
 
 /**
- * Riadok pod nadpisom detailu dňa v oboch appkách: počasie slovom a teplota dňa
+ * Riadok pod nadpisom detailu dňa: počasie slovom a teplota dňa
  * („zamračené · 6° / 22°“). Čo v dátach nie je, vypadne; bez oboch prázdny text.
  * @param {ForecastDay} day
  */
@@ -142,7 +141,7 @@ export function sedemModel(input, { online = true, voice = 'drzy' } = {}) {
 }
 
 /**
- * Riadky dní: meno, počasie, zelený pás okna, kWh (tie isté celé kWh ako rebríček súčasnej
+ * Riadky dní: meno, počasie, zelený pás okna, kWh (tie isté celé kWh ako rebríček
  * appky, weekListModel) a celé znenie pre čítačku.
  * @param {ForecastDay[]} days @param {ReturnType<typeof weekListModel>} list @param {Window[][]} windows
  * @param {number} best najlepší deň @param {boolean} estimate
@@ -166,7 +165,7 @@ function rowsOf(days, list, windows, best, estimate) {
 /**
  * Detail dňa: nadpis s počasím, tri čísla (kWh, špička, okno), graf dňa s pásom plánu (pri
  * dnešku so značkou „teraz“ a nameranou krivkou), čo už nabehlo, strop jasnej oblohy, cena zo
- * siete a hláška. Čísla sú tie isté ako v detaile dňa súčasnej appky (kWh a špička na desatinu).
+ * siete a hláška. Čísla (kWh a špička na desatinu).
  * @param {SedemData} input @param {number} index deň v `forecast.days` @param {import('./messages.js').Voice} [voice] tón hlášky
  */
 export function sedemDayModel(input, index, voice = 'drzy') {
@@ -196,17 +195,6 @@ export function sedemDayModel(input, index, voice = 'drzy') {
         clear: sedemClearText(day.clearKwhTotal, usePct(day)),
         message: sedemDayMessage(visibleHours(day.hourly), th, windows.length > 0, voice),
     };
-}
-
-/**
- * Graf dňa v detaile dňa na karte 7 dní oboch appiek - ten istý ako v sedemDayModel, pri dnešku
- * s nameranou krivkou a „teraz“.
- * @param {SedemData} input @param {number} index deň v `forecast.days`
- */
-export function sedemDayChart(input, index) {
-    const day = input.forecast.days[index];
-    const nowMin = isToday(input, day) ? localMinutes(input.now, input.site.timezone) : null;
-    return chartOf(input, day, forecastDayPlan(input, index), nowMin);
 }
 
 /**
@@ -253,7 +241,7 @@ export const WEEK_HEAT = { w: 320, padL: 46, top: 18, rowH: 15, gap: 2 };
 
 /**
  * Detail týždňa: rozsah dátumov, tri čísla (kWh spolu, na deň, najlepší deň - tie isté ako
- * súhrn karty 7 dní súčasnej appky), stĺpce dní, mapa hodina × deň, popisy pre čítačku
+ * súhrn karty 7 dní), stĺpce dní, mapa hodina × deň, popisy pre čítačku
  * a hláška o najsilnejšom dni (weekMessage).
  * @param {SedemData} input @param {import('./messages.js').Voice} [voice]
  */
@@ -354,7 +342,7 @@ function heatOf(input, days) {
 /** @typedef {ReturnType<typeof sedemWeekModel>} SedemWeekModel */
 
 /**
- * Čipy dní nad detailom dňa v oboch appkách: skratka dňa (aj pri dnešku - „Dnes“ stojí
+ * Čipy dní nad detailom dňa: skratka dňa (aj pri dnešku - „Dnes“ stojí
  * v nadpise pod nimi), celé meno pre čítačku a ktorý deň je otvorený.
  * @param {import('./solar.js').ForecastDay[]} days @param {number} sel
  */

@@ -3,31 +3,26 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="theme-color" content="#4f555f" />
         <meta name="description" content="Kedy zapínať spotrebiče: živý výkon fotovoltiky, predpoveď výroby a odporúčania podľa tarify." />
         <title>RAY-MON</title>
-        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <link rel="icon" type="image/svg+xml" href="icon.svg" />
         <link rel="apple-touch-icon" href="apple-touch-icon.png" />
         <link rel="manifest" href="manifest.webmanifest" />
-        <!-- Safari na iOS nerešpektuje "display" z manifestu, otvára appku vždy vo vlastnej
-             karte prehliadača - bez tejto trojice meta tagov by po pridaní na plochu ostala
-             navigačná lišta aj tam. "apple-mobile-web-app-capable" je pre Chrome zastarané
-             (varovanie priamo z DevTools), preto je vedľa neho aj štandardné meno bez "apple-". -->
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="RAY-MON" />
-        <!-- Písma sú v repozitári (fonts/, @font-face v style.css). Tieto dve sú na obrazovke od
-             prvej chvíle - text stránky a štítky ako „Teraz · 08:13“ - tak ich prehliadač začne
-             sťahovať hneď, nie až po prečítaní štýlu. crossorigin je pri písmach povinný, inak
-             by ich stiahol dvakrát. -->
-        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
-        <link rel="preload" href="fonts/ibm-plex-mono-600-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <!-- Archivo je jediné písmo appky a na obrazovke je od prvej chvíle. crossorigin je pri
+             písmach povinný, inak by ho prehliadač stiahol dvakrát. -->
+        <link rel="preload" href="fonts/archivo-obloha.woff2" as="font" type="font/woff2" crossorigin />
         <link rel="stylesheet" href="web/pocasie.css" />
         <link rel="stylesheet" href="style.css" />
-        <!-- integrity: prehliadač knižnicu spustí, len ak je to presne tento súbor (hash z cdnjs).
-             Keby niekto na CDN obsah podvrhol, cudzí skript by mal prístup k uloženému
-             nastaveniu vrátane odkazu na kiosk. QR kód je nepovinný - bez knižnice karta funguje. -->
+        <!-- Appku spúšťa boot.js: keď sa po nasadení zmiešajú staré a nové moduly z cache,
+             stiahne ich znova a raz obnoví stránku. Žiadny iný modul appky sa tu nenačítava. -->
+        <script type="module" src="boot.js"></script>
+        <!-- QR kód v Zdieľať appku (Nastavenie). Tá istá knižnica a verzia, s hashom
+             v integrity. Je nepovinná - bez nej okno ukáže len odkaz. -->
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
             integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
@@ -38,863 +33,682 @@
     </head>
     <body>
         <!-- Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy skladá web/pocasie.js,
-             stav zapisuje render/terazky.js, čo je vidno, rozhoduje web/pocasie.css. Len dekorácia. -->
+             stav zapisuje render/teraz.js, čo je vidno, rozhoduje web/pocasie.css. Len dekorácia. -->
         <div id="wx" class="wx hidden" aria-hidden="true"></div>
         <!-- Ťuknutie kamkoľvek mimo bubliny stavu merania (karta Teraz) ju zavrie a nič pod ňou nespustí. -->
-        <div class="pv-tip-bg hidden" id="pv-tip-bg"></div>
-        <header class="appbar">
-            <div class="appbar-inner">
-                <span class="appbar-label">RAY-MON</span>
-                <span class="appbar-place" id="pv-place"></span>
-                <button type="button" class="pv-setup-go hidden" id="pv-setup-go"></button>
-            </div>
-            <!-- Pás pod hlavičkou na kartách Teraz a Môžem?: bez zadaných panelov jantárový (trieda odhad,
-                 karty odpovedajú z typickej strechy a pás povie s čím), keď výrobca prestal prijímať prístup
-                 k meraniu (shared/pristup.js), červený. Texty píše render. -->
-            <div class="panels-bar hidden" id="panels-bar">
-                <div class="panels-bar-inner" role="status">
-                    <svg class="panels-bar-alarm" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M12 3.5L2.5 20h19L12 3.5z" />
-                        <path d="M12 10v4.5M12 17.2v.3" />
-                    </svg>
-                    <svg class="panels-bar-house" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 11l9-7 9 7M5 9.5V20h14V9.5" />
-                    </svg>
-                    <span class="panels-bar-txt">
-                        <b id="panels-bar-title"></b>
-                        <span id="panels-bar-text"></span>
-                    </span>
-                    <button class="panels-bar-go" id="panels-bar-go" type="button" data-panel="nastavenie"></button>
-                </div>
-            </div>
-            <!-- Bublina nad navigáciou po novom pripojení merania, keď prvé meranie prišlo a karta Teraz
-                 prestala ukazovať odhad (shared/hlavicka.js). Zmizne sama alebo ťuknutím. Texty píše render. -->
-            <div class="pripojene hidden" id="pripojene" role="status">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="11" />
-                    <path d="M7 12.4l3.2 3.1L17 8.8" />
-                </svg>
-                <span class="pripojene-txt"><b id="pripojene-title"></b><span id="pripojene-text"></span></span>
-            </div>
-            <nav class="bottomnav" id="bottomnav" aria-label="Hlavná navigácia">
-                <div class="bottomnav-inner">
-                    <!-- Teraz je v navigácii prvá a appka sa na nej vždy otvára (PANELS v shared/config.js),
-                         Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
-                    <button id="nav-terazky" class="nav-item active" type="button" data-panel="terazky" aria-current="page">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z" /></svg>
-                        <span class="lbl">Teraz</span>
-                    </button>
-                    <button id="nav-mozem" class="nav-item" type="button" data-panel="mozem">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="4" />
-                            <path
-                                d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"
-                            />
-                        </svg>
-                        <span class="lbl">Dnes</span>
-                    </button>
-                    <button id="nav-7dni" class="nav-item" type="button" data-panel="7dni">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
-                            <path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2" />
-                        </svg>
-                        <span class="lbl">7 dní</span>
-                    </button>
-                    <button id="nav-statistika" class="nav-item" type="button" data-panel="statistika">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7M9.5 20V8M15 20v-5M20.5 20V4M2 20h20" /></svg>
-                        <span class="lbl">Štatistika</span>
-                    </button>
-                    <button id="nav-nastavenie" class="nav-item" type="button" data-panel="nastavenie">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="3" />
-                            <path
-                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                            />
-                        </svg>
-                        <span class="lbl">Nastavenie</span>
-                    </button>
-                </div>
-            </nav>
+        <div id="hdr-tip-bg" class="tip-bg hidden"></div>
+        <header class="st">
+            <span class="name">RAY-MON</span>
+            <span id="hdr-place" class="place"></span>
+            <button type="button" id="hdr-setup" class="need hidden"></button>
         </header>
 
-        <main class="page" id="page">
-            <!-- PANEL: DNES (kódové meno mozem, doteraz Môžem?) -->
-            <!-- Plagát s veľkým slovom, ktorý sa mení s časťou dňa: ráno plán, cez deň odpočet okna na veľké
-                 veci, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C). Celé skladá
-                 render do #mozem-body. -->
-            <section id="panel-mozem" class="panel hidden" aria-labelledby="mozem-title">
-                <h2 class="sr-only" id="mozem-title">Dnes</h2>
-                <div class="mozem" id="mozem-body"></div>
-            </section>
-
-            <!-- PANEL: TERAZKY -->
-            <!-- Rozloženie karty Teraz z novej appky vo farbách tejto (návrh A v docs/navrhy/terazky-ako-obloha.html):
-                 číslo kW, graf dňa s pásom plánu a pás štyroch odporúčaní. Obsah počíta shared/teraz.js - ten
-                 istý model ako v novej appke - a zapisuje render/terazky.js, tu sú len nosiče. Graf je zároveň
-                 posúvač času: prst, kurzor aj šípky na ňom ukážu iný čas (náhľad). -->
-            <section id="panel-terazky" class="panel panel-terazky" aria-labelledby="tz-title">
-                <div class="tz-head">
-                    <h1 id="tz-title" class="tz-kick">Teraz</h1>
-                    <p id="tz-num" class="tz-num"><span id="tz-num-val">–</span><small>kW</small></p>
-                    <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
-                    <p id="tz-jas" class="tz-jas hidden">
-                        <span class="tz-jas-track" aria-hidden="true"><i></i></span>
-                        <span id="tz-jas-label" aria-hidden="true"></span>
-                        <span id="tz-jas-text" class="sr-only"></span>
-                    </p>
-                    <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
-                         ťuknutie otvorí bublinu s vysvetlením (render/terazky.js). Mená prvkov ostali
-                         z hlavičky - do #pv-updated píše boot.js hlášku, keď sa appka nenačíta. -->
-                    <div id="tz-stav" class="tz-stav">
-                        <button
-                            type="button"
-                            class="tz-clock"
-                            id="pv-clock"
-                            data-tone="off"
-                            aria-expanded="false"
-                            aria-controls="pv-tip"
-                            disabled
-                        >
-                            <span class="live-dot"></span>
-                            <span id="pv-updated">načítavam…</span>
-                            <span class="sr-only" id="pv-tone"></span>
-                        </button>
-                        <div class="pv-tip hidden" id="pv-tip" role="region" aria-labelledby="pv-tip-title">
-                            <b id="pv-tip-title"></b>
-                            <p id="pv-tip-text"></p>
-                            <button type="button" class="pv-tip-btn hidden" id="pv-tip-btn"></button>
-                        </div>
+        <main id="page" class="page">
+            <!-- Na širokej obrazovke sú Môžem?, Teraz a 7 dní stĺpce jednej stránky (prehľad): pre čítačku
+                 majú spoločný nadpis a ich vlastné nadpisy sú o úroveň nižšie (render/index.js). -->
+            <h1 id="ttl-prehlad" class="sr hidden">RAY-MON</h1>
+            <!-- Karta Dnes (kódové meno mozem, doteraz Môžem?): texty a stav skladá render (web/render/mozem.js)
+                 z shared/mozem-sky.js a shared/dnes-faza.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka,
+                 pod ním čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html); zvyšok sa mení s časťou dňa - ráno plán,
+                 cez deň odpočet okna, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
+                 Nadpis karty je len pre čítačku. -->
+            <section id="panel-mozem" class="panel mozem hidden" aria-labelledby="ttl-mozem">
+                <h1 id="ttl-mozem" class="sr">Dnes</h1>
+                <div id="mz-arc" class="arc" aria-hidden="true"></div>
+                <div id="mz-answer" class="big">
+                    <span id="mz-chip" class="chip"></span>
+                    <p id="mz-kick" class="kick"></p>
+                    <p id="mz-word" class="word"></p>
+                    <p id="mz-count" class="count"><b id="mz-count-val"></b><span id="mz-count-text"></span></p>
+                    <p id="mz-grade" class="grade"><span id="mz-grade-label"></span><b id="mz-grade-val"></b></p>
+                    <p id="mz-lead" class="line"></p>
+                    <div id="mz-day" class="den">
+                        <p id="mz-day-lead" class="line"></p>
+                        <ul id="mz-day-eq" class="eq"></ul>
                     </div>
-                    <p id="tz-sub" class="tz-sub"></p>
-                    <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
-                    <div id="tz-say" class="tz-say hidden">
-                        <div id="tz-chips" class="tz-chips"></div>
-                        <p id="tz-say-text"></p>
+                    <div id="mz-more" class="mz-more">
+                        <p id="mz-line"></p>
+                        <p id="mz-progress"></p>
+                        <div id="mz-bar" class="bar" aria-hidden="true"><i id="mz-bar-val"></i></div>
                     </div>
-                    <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča. Tlačidlo vedie
-                         na krok Meranie v sprievodcovi, pri odmietnutom prístupe na hlásenie v Elektrárni
-                         (web/interactions.js). -->
-                    <div id="tz-note" class="tz-note hidden">
-                        <svg class="tz-note-ico" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="9" cy="8" r="3" />
-                            <path d="M9 2.5v1M3.5 8h1M5.1 4.1l.7.7M12.9 4.1l-.7.7" />
-                            <path class="fill" d="M7.5 19.5h10a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.5 1.2A2.9 2.9 0 0 0 7.5 19.5z" />
-                        </svg>
-                        <b id="tz-note-title"></b>
-                        <p id="tz-note-text"></p>
-                        <button type="button" id="tz-note-btn" class="tz-note-btn"></button>
-                    </div>
-                    <button type="button" id="tz-retry" class="tz-retry hidden"></button>
                 </div>
-                <!-- Plán dňa ako plagát: veta, očíslované riadky a pätka (docs/navrhy/terazky-plan-dna.html,
-                     možnosť A), zbaliteľný (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom
-                     a vetou je tlačidlo, riadky a pätka sú až po otvorení. Pri štarte je zbalený, aby bol graf
-                     pri čísle. Na mobile stojí nad časovou osou, na šírku v pravom stĺpci. Skladá render
-                     (web/render/terazky.js). -->
-                <section id="tz-plan" class="tz-plan hidden" aria-labelledby="tz-plan-title">
-                    <h2 class="tz-plan-h">
-                        <button type="button" id="tz-plan-btn" class="tz-plan-head" aria-expanded="false" aria-controls="tz-plan-body">
-                            <span class="tz-plan-t"
-                                ><span id="tz-plan-title" class="tz-plan-ttl"></span
-                                ><span id="tz-plan-lead" class="tz-plan-lead"></span></span
-                            ><span class="tz-chev" aria-hidden="true"></span>
+                <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
+                <p id="mz-live" class="sr" role="status"></p>
+                <button type="button" id="mz-retry" class="pbtn retry"></button>
+                <div id="mz-guess" class="cta">
+                    <b id="mz-guess-title"></b>
+                    <p id="mz-guess-text"></p>
+                    <button type="button" id="mz-guess-btn" class="pbtn"></button>
+                </div>
+                <div id="mz-ask" class="cta">
+                    <b id="mz-ask-title"></b>
+                    <p id="mz-ask-text"></p>
+                    <button type="button" id="mz-ask-btn" class="pbtn"></button>
+                </div>
+                <!-- Večer zajtrajšok, inak riadok Kedy lepšie (shared/dnes-faza.js). -->
+                <div id="mz-tom" class="glass tom">
+                    <span id="mz-tom-chip" class="chip"></span>
+                    <p id="mz-tom-word" class="word"></p>
+                    <p id="mz-tom-text" class="line"></p>
+                </div>
+                <div id="mz-later" class="glass later">
+                    <h2 id="mz-later-title" class="glass-ttl"></h2>
+                    <p id="mz-later-text"></p>
+                </div>
+            </section>
+            <!-- Karta Teraz: texty, štítky, Plán dňa aj graf skladá render (web/render/teraz.js)
+                 z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
+                 aj šípky na ňom ukážu iný čas (náhľad). -->
+            <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
+                <h1 id="ttl-terazky" class="ttl">Teraz</h1>
+                <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
+                <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
+                <p id="tz-jas" class="jas hidden">
+                    <span class="jas-track" aria-hidden="true"><i></i></span>
+                    <span id="tz-jas-label" aria-hidden="true"></span>
+                    <span id="tz-jas-text" class="sr"></span>
+                </p>
+                <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
+                     ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
+                     do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
+                <div id="tz-stav" class="stav">
+                    <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
+                        <i aria-hidden="true"></i>
+                        <span id="hdr-status">načítavam…</span>
+                        <span id="hdr-tone" class="sr"></span>
+                    </button>
+                    <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
+                        <b id="hdr-tip-title"></b>
+                        <p id="hdr-tip-text"></p>
+                        <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
+                    </div>
+                </div>
+                <p id="tz-sub" class="sub"></p>
+                <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
+                <div id="tz-say" class="say">
+                    <div id="tz-chips" class="chips"></div>
+                    <p id="tz-say-text" class="line"></p>
+                </div>
+                <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča (bez merania, meranie
+                     mlčí, výrobca prístup odmietol). Tlačidlo vedie do Nastavenia. -->
+                <div id="tz-note" class="cta note hidden">
+                    <svg class="note-ico" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3" />
+                        <path d="M9 2.5v1M3.5 8h1M5.1 4.1l.7.7M12.9 4.1l-.7.7" />
+                        <path class="fill" d="M7.5 19.5h10a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.5 1.2A2.9 2.9 0 0 0 7.5 19.5z" />
+                    </svg>
+                    <b id="tz-note-title"></b>
+                    <p id="tz-note-text"></p>
+                    <button type="button" id="tz-note-btn" class="pbtn"></button>
+                </div>
+                <button type="button" id="tz-retry" class="pbtn retry"></button>
+                <div id="tz-guess" class="cta">
+                    <b id="tz-guess-title"></b>
+                    <p id="tz-guess-text"></p>
+                    <button type="button" id="tz-guess-btn" class="pbtn"></button>
+                </div>
+                <div id="tz-ask" class="cta">
+                    <b id="tz-ask-title"></b>
+                    <p id="tz-ask-text"></p>
+                    <button type="button" id="tz-ask-btn" class="pbtn"></button>
+                </div>
+                <!-- Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B), zbaliteľný
+                     (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je tlačidlo, zvyšok
+                     je až po otvorení. Pri štarte je zbalený, aby bol graf pri veľkom čísle. Skladá render. -->
+                <section id="tz-plan" class="glass fold hidden" aria-labelledby="tz-plan-title">
+                    <h2 class="fold-h">
+                        <button type="button" id="tz-plan-btn" class="fold-head" aria-expanded="false" aria-controls="tz-plan-body">
+                            <span class="fold-t"
+                                ><span id="tz-plan-title" class="glass-ttl"></span><span id="tz-plan-lead" class="tl-lead"></span></span
+                            ><span class="chev" aria-hidden="true"></span>
                         </button>
                     </h2>
-                    <div id="tz-plan-body" class="tz-plan-body hidden"></div>
+                    <div id="tz-plan-body" class="fold-body hidden"></div>
                 </section>
-                <div id="tz-plot" class="tz-plot hidden">
+                <div id="tz-plot">
                     <div
                         id="tz-chart"
-                        class="tz-chart day-scrub"
+                        class="glass day-scrub"
                         role="slider"
                         tabindex="0"
                         aria-valuemin="0"
                         aria-valuemax="1425"
                         aria-describedby="tz-chart-desc"
                     ></div>
-                    <p id="tz-chart-desc" class="sr-only"></p>
+                    <p id="tz-chart-desc" class="sr"></p>
                     <!-- „Späť na teraz“ nad zoznamom: pod otvoreným zoznamom by vypadol z obrazovky. -->
-                    <div class="tz-reset-row">
-                        <button type="button" id="tz-reset" class="tz-reset hidden"></button>
+                    <div class="reset-row">
+                        <button type="button" id="tz-reset" class="hint-btn"></button>
                     </div>
                     <!-- Zoznam pod grafom: zatvorený ukáže prvý riadok legendy, otvorený farby pásu
                      a hodnoty v čase bodu grafu (docs/navrhy/teraz-rozbalovaci-zoznam.html). -->
-                    <div class="tz-list">
-                        <button type="button" id="tz-list-btn" class="tz-list-head" aria-expanded="false" aria-controls="tz-list-body">
-                            <span id="tz-legend" class="tz-legend"></span><span class="tz-chev" aria-hidden="true"></span>
+                    <div class="glass tz-list">
+                        <button type="button" id="tz-list-btn" class="list-head" aria-expanded="false" aria-controls="tz-list-body">
+                            <span id="tz-legend" class="legend"></span><span class="chev" aria-hidden="true"></span>
                         </button>
-                        <div id="tz-list-body" class="tz-list-body hidden">
-                            <p id="tz-bands" class="tz-legend"></p>
-                            <p id="tz-when" class="tz-when"></p>
-                            <ul id="tz-values" class="tz-values"></ul>
-                            <p id="tz-hint" class="tz-list-hint"></p>
+                        <div id="tz-list-body" class="list-body hidden">
+                            <p id="tz-bands" class="legend"></p>
+                            <p id="tz-when" class="list-when"></p>
+                            <ul id="tz-values" class="values"></ul>
+                            <p id="tz-hint" class="list-hint"></p>
                         </div>
                     </div>
                 </div>
             </section>
-
-            <!-- PANEL: 7 DNÍ -->
-            <section id="panel-7dni" class="panel hidden" aria-labelledby="week-title">
-                <div class="section-head" id="week-head">
-                    <h2 class="section-title" id="week-title">Predpoveď na 7 dní</h2>
-                    <div class="section-sub" id="week-sub"></div>
-                </div>
-                <div class="stat-trio" id="week-trio">
-                    <!-- Bubliny Dnes a Zajtra sú tlačidlá: otvárajú detail toho dňa presne tak, ako klik
-                         na jeho riadok v Prehľade dní (viď data-day-index v web/interactions.js). -->
-                    <button type="button" class="stat hi" data-day-index="0">
-                        <div class="stat-top"><span class="lbl">Dnes</span><span class="stat-badge" id="week-today-badge"></span></div>
-                        <div class="stat-num-row"><span class="num" id="week-today">–</span><span class="u">kWh</span></div>
-                        <div class="stat-meta" id="week-today-meta"></div>
-                        <div class="stat-progress" id="week-today-progress">
-                            <div class="progress-track"><div class="progress-fill" id="week-today-progress-fill"></div></div>
-                            <div class="progress-caption">
-                                <span id="week-today-progress-txt"></span><span id="week-today-progress-pct"></span>
-                            </div>
-                        </div>
+            <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
+                 aj grafy skladá render (web/render/sedem.js) z shared/sedem-dni.js, tu sú len nosiče.
+                 Nadpis karty je len pre čítačku, na oblohe je otázka s najlepším dňom. -->
+            <section id="panel-7dni" class="panel sedem hidden" aria-labelledby="ttl-7dni">
+                <h1 id="ttl-7dni" class="sr">7 dní</h1>
+                <div id="sd-list">
+                    <h2 id="sd-title" class="ttl"></h2>
+                    <button type="button" id="sd-sum" class="sumbtn">
+                        <span id="sd-sum-text"></span>
+                        <span aria-hidden="true">›</span>
                     </button>
-                    <button type="button" class="stat" data-day-index="1">
-                        <div class="stat-top"><span class="lbl">Zajtra</span><span class="stat-badge" id="week-tomorrow-badge"></span></div>
-                        <div class="stat-num-row">
-                            <span class="num" id="week-tomorrow">–</span><span class="u">kWh</span
-                            ><span class="trend" id="week-tomorrow-trend"></span>
-                        </div>
-                        <div class="stat-meta" id="week-tomorrow-meta"></div>
-                    </button>
-                    <button type="button" class="stat" data-week-detail>
-                        <div class="stat-top"><span class="lbl">7 dní spolu</span></div>
-                        <div class="stat-num-row"><span class="num" id="week-total">–</span><span class="u">kWh</span></div>
-                        <div class="stat-meta" id="week-total-meta"></div>
-                    </button>
-                </div>
-                <!-- Riadok nad detailom: šípka späť na prehľad a čipy dní. Stojí mimo pásu #week-track,
-                     ktorý pri listovaní ide za prstom (web/day-pager.js). Čipy skladá render (renderDayStrip). -->
-                <div class="day-nav hidden" id="week-day-nav">
-                    <button type="button" class="day-back" id="week-day-back" aria-label="Späť na 7 dní">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-                    </button>
-                    <div class="day-strip" id="week-day-strip"></div>
-                </div>
-                <div class="day-track" id="week-track">
-                    <div class="day-head hidden" id="week-day-head">
-                        <h2 class="day-head-title">
-                            <span id="week-day-title">Deň</span><span class="day-head-icon" id="week-day-icon"></span>
-                        </h2>
-                        <p class="day-head-sub" id="week-day-sub"></p>
+                    <p id="sd-sub" class="sub"></p>
+                    <button type="button" id="sd-retry" class="pbtn retry"></button>
+                    <div id="sd-ask" class="cta">
+                        <b id="sd-ask-title"></b>
+                        <p id="sd-ask-text"></p>
+                        <button type="button" id="sd-ask-btn" class="pbtn"></button>
                     </div>
-                    <div class="week-grid" id="week-grid">
-                        <section class="week-block" id="week-block-heat">
-                            <div class="chart-top">
-                                <span class="lbl" id="week-heat-label">Heatmapa (kW) · hodina × deň</span
-                                ><span class="heat-scale mono" id="week-heat-scale"></span>
+                    <div id="sd-guess" class="cta">
+                        <b id="sd-guess-title"></b>
+                        <p id="sd-guess-text"></p>
+                        <button type="button" id="sd-guess-btn" class="pbtn"></button>
+                    </div>
+                    <div id="sd-days" class="days"></div>
+                    <p id="sd-hint" class="sub note"></p>
+                </div>
+                <div id="sd-day" class="hidden">
+                    <!-- Šípka späť a čipy dní stoja; pás #sd-day-track pod nimi ide pri listovaní za prstom
+                         (web/day-pager.js). Čipy skladá render (render/sedem.js). -->
+                    <div class="day-nav">
+                        <button type="button" id="sd-day-back" class="day-back">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg
+                            ><span class="sr">Späť na <span id="sd-day-back-text"></span></span>
+                        </button>
+                        <div id="sd-day-strip" class="day-strip"></div>
+                    </div>
+                    <div id="sd-day-pager" class="day-pager">
+                        <div id="sd-day-track" class="day-track">
+                            <h2 class="ttl dttl"><span id="sd-day-title"></span><span id="sd-day-icon"></span></h2>
+                            <p id="sd-day-sub" class="sub"></p>
+                            <div id="sd-day-nums" class="nums"></div>
+                            <div id="sd-day-chart" class="glass dchart" role="img"></div>
+                            <p id="sd-day-legend" class="legend"></p>
+                            <div id="sd-day-facts" class="glass facts">
+                                <p id="sd-day-done"></p>
+                                <p id="sd-day-clear"></p>
                             </div>
-                            <div class="chart-card">
-                                <div class="chart-wrap" id="week-heat-wrap">
-                                    <svg id="week-heat" aria-hidden="true"></svg>
-                                    <div id="week-heat-tooltip" class="chart-tooltip">
-                                        <div class="tt-time"></div>
-                                        <div class="tt-kw"></div>
-                                    </div>
-                                </div>
+                            <div class="glass msg">
+                                <h3 id="sd-day-msg-title"></h3>
+                                <p id="sd-day-msg-body"></p>
                             </div>
-                        </section>
-                        <section class="week-block" id="week-block-bars">
-                            <div class="chart-top"><span class="lbl">Denná výroba (kWh)</span></div>
-                            <div class="stat-line" id="week-bars-stat"></div>
-                            <div class="chart-card">
-                                <div class="chart-wrap" id="week-bars-wrap">
-                                    <svg id="week-bars" aria-hidden="true"></svg>
-                                    <div id="week-bars-tooltip" class="chart-tooltip">
-                                        <div class="tt-time"></div>
-                                        <div class="tt-kw"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chart-footer plain">
-                                <div class="chart-legend">
-                                    <span><i class="leg-sq"></i>predpoveď</span
-                                    ><span id="week-bars-clear-legend"><i class="leg-dash"></i>jasná obloha (strop)</span>
-                                </div>
-                            </div>
-                        </section>
-                        <section class="week-block curve-block" id="week-block-curve">
-                            <!-- Okno na veľké spotrebiče: len v detaile dňa na mobile (renderDayWindow). -->
-                            <div class="day-window hidden" id="week-day-window"></div>
-                            <div class="chart-top">
-                                <span class="lbl">Priebeh výroby</span>
-                            </div>
-                            <div class="utabs" id="week-day-tabs" role="tablist"></div>
-                            <div class="stat-line curve-stat" id="week-curve-stat"></div>
-                            <div class="chart-card">
-                                <div class="chart-wrap" id="week-curve-wrap">
-                                    <svg id="week-curve" viewBox="0 0 320 150" preserveAspectRatio="none" aria-hidden="true"></svg>
-                                    <div id="week-curve-tooltip" class="chart-tooltip">
-                                        <div class="tt-time"></div>
-                                        <div class="tt-kw"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chart-footer">
-                                <div class="chart-legend">
-                                    <span><i class="leg-line"></i>predpoveď</span><span><i class="leg-dash"></i>oblačnosť</span
-                                    ><span id="week-curve-live-legend" class="hidden"><i class="leg-line-real"></i>skutočná výroba</span>
-                                </div>
-                            </div>
-                            <!-- Detail dňa na mobile: graf dňa ako na karte Teraz (web/day-chart.js) namiesto
-                             krivky nad ním; ktorý platí, rozhoduje CSS podľa .detail. -->
-                            <div id="week-day-chart" class="tz-chart" role="img"></div>
-                            <p id="week-day-legend" class="tz-legend"></p>
-                        </section>
-                        <section class="week-block" id="week-block-table">
-                            <div class="chart-top"><span class="lbl">Prehľad dní</span></div>
-                            <div class="week-tbl-wrap" tabindex="0" role="region" aria-label="Prehľad dní, vodorovne posúvateľná tabuľka">
-                                <table class="week-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Deň</th>
-                                            <th>Výroba</th>
-                                            <th class="mid">Obloha</th>
-                                            <th class="mid">Využitie</th>
-                                            <th>Špička</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="week-tbody"></tbody>
-                                </table>
-                            </div>
-                        </section>
-                        <!-- Rebríček dní: prehľad karty 7 dní na mobile. Musí ostať posledným .week-block
-                         v mriežke - desktop umiestňuje bloky cez .week-block:nth-child(1..4) v style.css
-                         a nový blok pred nimi by to poradie posunul. Na širokej obrazovke sa nekreslí,
-                         tam je na prehľad miesta dosť na bubliny aj tabuľku vyššie. -->
-                        <section class="week-block hidden" id="week-block-list">
-                            <!-- Súčet za týždeň má vlastnú bublinu nad dňami: je to súhrn zoznamu, nie jeho
-                             ôsmy riadok. Je to tlačidlo - otvára detail týždňa rovnako ako bublina
-                             "7 dní spolu" na širokej obrazovke. -->
-                            <button type="button" class="week-list-hero" data-week-detail>
-                                <span class="week-list-sum">
-                                    <span class="lbl">Spolu za 7 dní</span>
-                                    <span class="stat-num-row"
-                                        ><span class="num" id="week-list-total">–</span><span class="u">kWh</span></span
-                                    >
-                                </span>
-                                <span class="week-list-avg">ø <b id="week-list-avg">–</b> / deň</span>
-                                <!-- Týždeň v malom, ozdoba súčtu; čítačka ho preskočí - tie isté čísla povie riadok dňa. -->
-                                <span class="week-list-spark hidden" id="week-list-spark" aria-hidden="true"></span>
-                            </button>
-                            <div class="week-list" id="week-list"></div>
-                            <!-- Legenda pásu dňa: zelené úseky sú okná na veľké spotrebiče, to isté
-                             ako v karte 7 dní novej appky (sunWindows v shared/sedem-dni.js).
-                             Zelená linka podčiarkuje výkon najlepšieho dňa (bestDayIndex). -->
-                            <div class="week-legend">
-                                <span><i class="tier-green"></i>kedy pustiť veľké spotrebiče</span>
-                                <span><i class="best-line"></i>najlepší deň týždňa</span>
-                            </div>
-                        </section>
-                        <div class="msg-block" id="week-msg-block">
-                            <span class="msg-eyebrow">Odporúčanie</span>
-                            <h3 id="week-msg-title">Načítavam…</h3>
-                            <p id="week-msg-body">Týždenná predpoveď sa načítava.</p>
+                            <p id="sd-day-hint" class="sub note"></p>
                         </div>
                     </div>
-                    <!-- Susedné dni pod detailom dňa („‹ Streda 41 kWh“). Obsah skladá render (renderDaySteps). -->
-                    <div class="day-steps hidden" id="week-day-steps"></div>
+                    <!-- Po prelistovaní dňa ho ohlási čítačka. Mimo pásu, aby ho nekopírovali susedné dni. -->
+                    <p id="sd-day-live" class="sr" aria-live="polite"></p>
                 </div>
-                <!-- Po prelistovaní dňa ho ohlási čítačka. Mimo pásu, aby ho nekopírovali susedné dni. -->
-                <p class="sr-only" id="week-day-live" aria-live="polite"></p>
+                <div id="sd-week" class="hidden">
+                    <button type="button" id="sd-week-back" class="back">
+                        <span aria-hidden="true">‹</span><span class="sr">Späť na </span><span id="sd-week-back-text"></span>
+                    </button>
+                    <h2 id="sd-week-title" class="ttl"></h2>
+                    <p id="sd-week-range" class="sub"></p>
+                    <div id="sd-week-nums" class="nums"></div>
+                    <section class="glass" aria-labelledby="sd-bars-title">
+                        <h3 id="sd-bars-title" class="glass-ttl"></h3>
+                        <div id="sd-bars" class="chartbox" role="img"></div>
+                    </section>
+                    <section class="glass" aria-labelledby="sd-heat-title">
+                        <h3 id="sd-heat-title" class="glass-ttl"></h3>
+                        <div id="sd-heat" class="chartbox" role="img"></div>
+                        <p id="sd-heat-note" class="note"></p>
+                    </section>
+                    <div class="glass msg">
+                        <h3 id="sd-week-msg-title"></h3>
+                        <p id="sd-week-msg-body"></p>
+                    </div>
+                </div>
             </section>
-
-            <!-- PANEL: ŠTATISTIKA -->
-            <!-- Výroba za dnes, mesiac, rok a celý čas a jej hodnota podľa tarify (návrh A v
-                 docs/navrhy/statistika-uspory.html). Obsah karty si celý skladá render do #stats-body,
-                 v HTML sú len tieto nosiče. -->
-            <section id="panel-statistika" class="panel hidden" aria-labelledby="stats-title">
-                <div class="section-head">
-                    <h2 class="section-title" id="stats-title">Štatistika</h2>
-                    <div class="section-sub" id="stats-sub"></div>
+            <!-- Karta Štatistika: plagát obdobia s prepínačom a výzvy pod ním. Texty aj stavy skladá render
+                 (web/render/statistika.js) z shared/statistika.js, tu sú len nosiče. -->
+            <section id="panel-statistika" class="panel stat hidden" aria-labelledby="ttl-statistika">
+                <h1 id="ttl-statistika" class="ttl">Štatistika</h1>
+                <p id="st-sub" class="sub"></p>
+                <button type="button" id="st-retry" class="pbtn retry"></button>
+                <div id="st-ask" class="cta">
+                    <b id="st-ask-title"></b>
+                    <p id="st-ask-text"></p>
+                    <button type="button" id="st-ask-btn" class="pbtn"></button>
                 </div>
-                <div class="stats" id="stats-body"></div>
+                <div id="st-setup">
+                    <div class="cta">
+                        <b id="st-setup-title"></b>
+                        <p id="st-setup-text"></p>
+                        <button type="button" id="st-setup-btn" class="pbtn pulse"></button>
+                    </div>
+                    <section class="glass est" aria-labelledby="st-later-title">
+                        <h2 id="st-later-title" class="glass-ttl"></h2>
+                        <p id="st-later-text"></p>
+                    </section>
+                </div>
+                <div id="st-body">
+                    <section id="st-poster" class="pc"></section>
+                    <p id="st-measure-off" class="sub note"></p>
+                    <div id="st-measure" class="cta">
+                        <b id="st-measure-title"></b>
+                        <p id="st-measure-text"></p>
+                        <button type="button" id="st-measure-btn" class="pbtn"></button>
+                    </div>
+                    <div id="st-prices" class="cta">
+                        <b id="st-prices-title"></b>
+                        <p id="st-prices-text"></p>
+                        <button type="button" id="st-prices-btn" class="pbtn"></button>
+                    </div>
+                </div>
             </section>
-
-            <!-- PANEL: NASTAVENIE -->
-            <section id="panel-nastavenie" class="panel hidden" aria-labelledby="settings-title">
-                <div class="section-head" id="settings-head">
-                    <h2 class="section-title" id="settings-title">Moja elektráreň</h2>
-                </div>
-                <!-- Prehľad karty a sprievodca nastavením. Obsah prehľadu - texty, riadky aj voľby - skladá
-                     jeden model pre obe appky (shared/nastavenie.js), kreslí ho render/prehlad.js. Obrazovky
-                     sprievodcu sú tu všetky naraz, render ukáže jednu. Trieda .hidden drží kartu prázdnu, kým
-                     ju render prvýkrát nevyplní. -->
-                <div class="setup hidden" id="setup">
-                    <div class="setup-home" id="setup-home">
-                        <!-- Appka pozná polohu, panely ešte nie: koľko krokov ostáva. -->
-                        <div class="setup-cta hidden" id="setup-cta">
-                            <svg class="setup-house" viewBox="0 0 320 96" aria-hidden="true">
-                                <line class="ground" x1="10" y1="88" x2="310" y2="88" />
-                                <circle class="sun" cx="262" cy="26" r="11" />
-                                <path
-                                    class="rays"
-                                    d="M278 26h6M273.3 37.3l4.3 4.3M262 42v6M250.7 37.3l-4.3 4.3M246 26h-6M250.7 14.7l-4.3-4.3M262 10V4M273.3 14.7l4.3-4.3"
-                                />
-                                <rect class="wall" x="110" y="56" width="100" height="32" />
-                                <polygon class="roof-top" points="100,58 160,24 220,58" />
-                                <path class="pv" d="M170 29.7L182 36.5 184 33 172 26.2zM184 37.6L196 44.4 198 40.9 186 34.1z" />
-                                <rect class="door" x="148" y="68" width="14" height="20" />
-                            </svg>
-                            <h3 id="setup-cta-title"></h3>
-                            <div class="setup-steps" id="setup-cta-steps" role="img"></div>
-                            <p id="setup-cta-text"></p>
-                            <button type="button" class="plant-save" id="setup-cta-btn" data-setup-go="start"></button>
-                            <button type="button" class="link-btn" id="setup-cta-link" data-setup-go="odkaz"></button>
+            <!-- Karta Nastavenie: prehľad elektrárne a sprievodca jej nastavením. Prehľad skladá render
+                 (web/render/nastavenie.js), sprievodca má obrazovky tu všetky naraz a render ukáže jednu
+                 (web/render/sprievodca.js). Id a data- atribúty sprievodcu obsluhuje web/setup-wiring.js. -->
+            <section id="panel-nastavenie" class="panel nast hidden" aria-labelledby="ttl-nastavenie">
+                <h1 id="ttl-nastavenie" class="sr">Nastavenie</h1>
+                <div id="setup">
+                    <!-- Prehľad: texty, riadky aj voľby skladá jeden model (shared/nastavenie.js).
+                         Sekcie sú v poradí NASTAVENIE_SEKCIE, rozbalená je najviac jedna (nsOpen). -->
+                    <div id="ns-home">
+                        <h2 id="ns-title" class="ttl"></h2>
+                        <div id="ns-cta" class="cta pulse-card">
+                            <b id="ns-cta-title"></b>
+                            <div id="ns-cta-steps" class="steps" role="img"></div>
+                            <p id="ns-cta-text"></p>
+                            <button type="button" id="ns-cta-btn" class="pbtn" data-setup-go="start"></button>
+                            <button type="button" id="ns-cta-link" class="lnk" data-setup-go="odkaz"></button>
                         </div>
                         <!-- Prístup k meraniu neplatí či čoskoro vyprší (shared/pristup.js): dôvod a tlačidlá. -->
-                        <div class="setup-pristup hidden" id="setup-pristup" role="status"></div>
-                        <!-- Karta elektrárne: výkon, zostava a kompas s plochami. -->
-                        <div class="setup-hero hidden" id="setup-hero"></div>
-                        <div class="plant-note" id="setup-note" role="status"></div>
-                        <!-- Sekcie sú natívne <details>; rozbalená je najviac jedna (infoOpen v stave). Obsah
-                             a texty skladá render. -->
-                        <ul class="settings-list">
-                            <li>
-                                <details class="settings-item" id="settings-plant">
-                                    <summary class="settings-summary">
-                                        <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="12" cy="12" r="4" />
-                                            <path
-                                                d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
-                                            />
-                                        </svg>
-                                        <span class="settings-text">
-                                            <b id="settings-plant-title"></b>
-                                            <span class="settings-hint" id="settings-plant-hint"></span>
-                                        </span>
-                                        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </summary>
-                                    <div class="settings-body setup-overview">
-                                        <div class="sum-list" id="setup-rows"></div>
-                                        <div class="plant-msgs" id="setup-warnings"></div>
-                                        <div class="setup-actions" id="setup-actions"></div>
-                                    </div>
-                                </details>
-                            </li>
-                            <li>
-                                <details class="settings-item" id="settings-doma">
-                                    <summary class="settings-summary">
-                                        <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M4 11l8-7 8 7v9H4z" />
-                                            <path d="M10 20v-5h4v5" />
-                                        </svg>
-                                        <span class="settings-text">
-                                            <b id="doma-title"></b>
-                                            <span class="settings-hint" id="doma-hint"></span>
-                                        </span>
-                                        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </summary>
-                                    <div class="settings-body share-panel" id="doma-body"></div>
-                                </details>
-                            </li>
-                            <!-- Ranné oznámenie s plánom dňa. Čo s oznámeniami telefón vie, je v jadre (oznamOvladanie). -->
-                            <li>
-                                <details class="settings-item" id="settings-oznamenia">
-                                    <summary class="settings-summary">
-                                        <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z" />
-                                            <path d="M10 21h4" />
-                                        </svg>
-                                        <span class="settings-text">
-                                            <b id="oznam-title"></b>
-                                            <span class="settings-hint" id="oznam-hint"></span>
-                                        </span>
-                                        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </summary>
-                                    <div class="settings-body share-panel" id="oznam-body"></div>
-                                </details>
-                            </li>
-                            <!-- Vzhľad: tón hlášok (spoločný s novou appkou) a farba pozadia podľa ceny (len táto appka). -->
-                            <li>
-                                <details class="settings-item" id="settings-vzhlad">
-                                    <summary class="settings-summary">
-                                        <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="12" cy="12" r="9" />
-                                            <path d="M12 3a9 9 0 0 0 0 18z" />
-                                        </svg>
-                                        <span class="settings-text">
-                                            <b id="vzhlad-title"></b>
-                                            <span class="settings-hint" id="vzhlad-hint"></span>
-                                        </span>
-                                        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </summary>
-                                    <div class="settings-body share-panel" id="vzhlad-body"></div>
-                                </details>
-                            </li>
-                        </ul>
-                        <!-- Appka: zdieľanie a vymazanie údajov. Je v prehľade karty, takže sa skryje spolu s ním,
-                             keď je otvorený sprievodca. -->
-                        <section class="app-items" aria-labelledby="app-items-title">
-                            <div class="group-lbl" id="app-items-title"></div>
-                            <ul class="settings-list">
-                                <li>
-                                    <details class="settings-item" id="info-share">
-                                        <summary class="settings-summary">
-                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                                <circle cx="18" cy="5" r="3" />
-                                                <circle cx="6" cy="12" r="3" />
-                                                <circle cx="18" cy="19" r="3" />
-                                                <path d="M8.6 10.6l6.8-3.8M8.6 13.4l6.8 3.8" />
-                                            </svg>
-                                            <span class="settings-text">
-                                                <b id="share-title"></b>
-                                                <span class="settings-hint" id="share-hint"></span>
-                                            </span>
-                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </summary>
-                                        <div class="settings-body share-panel">
-                                            <p class="share-text" id="share-text"></p>
-                                            <div class="share-options" id="share-options">
-                                                <label class="check-row">
-                                                    <input type="checkbox" id="share-with-settings" />
-                                                    <span id="share-with-settings-label"></span>
-                                                </label>
-                                                <label class="check-row" id="share-kiosk-row">
-                                                    <input type="checkbox" id="share-with-kiosk" />
-                                                    <span id="share-with-kiosk-label"></span>
-                                                </label>
-                                            </div>
-                                            <div class="qr-frame" id="qrcode" role="img" aria-label="QR kód s odkazom na appku"></div>
-                                            <a class="share-link" id="share-link" href="./"></a>
-                                            <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="wa-btn">
-                                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path
-                                                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.669.15-.198.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12.001 2C6.478 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2.05 22l5.096-1.293A9.958 9.958 0 0012.001 22c5.523 0 10-4.477 10-10S17.524 2 12.001 2zm0 18.161c-1.635 0-3.146-.457-4.436-1.246l-.318-.19-3.3.837.882-3.222-.207-.331a8.117 8.117 0 01-1.24-4.328c0-4.5 3.66-8.161 8.16-8.161 4.502 0 8.161 3.66 8.161 8.161 0 4.502-3.66 8.161-8.161 8.161z"
-                                                    />
-                                                </svg>
-                                                <span id="share-wa-label"></span>
-                                            </a>
-                                        </div>
-                                    </details>
-                                </li>
-                                <!-- Zmaže všetko, čo appka v prehliadači uložila (web/prehlad-interactions.js). Rozbalenie
-                                     je prvý krok, tlačidlo Vymazať potvrdenie. Odinštalovanie appky to samo neurobí -
-                                     údaje patria doméne, nie ikone. -->
-                                <li>
-                                    <details class="settings-item" id="settings-clear">
-                                        <summary class="settings-summary">
-                                            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-                                            </svg>
-                                            <span class="settings-text">
-                                                <b id="clear-title"></b>
-                                                <span class="settings-hint" id="clear-hint"></span>
-                                            </span>
-                                            <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </summary>
-                                        <div class="settings-body clear-data">
-                                            <b id="clear-ask"></b>
-                                            <p id="clear-text"></p>
-                                            <button type="button" class="danger-btn" id="clear-data"></button>
-                                            <button type="button" class="link-btn" id="clear-cancel"></button>
-                                        </div>
-                                    </details>
-                                </li>
-                            </ul>
-                            <p class="app-credit mono" id="credit-1"></p>
-                            <p class="app-credit mono" id="credit-2"></p>
+                        <div id="ns-pristup" class="glass pristup hidden" role="status"></div>
+                        <div id="ns-hero" class="glass plant"></div>
+                        <p id="ns-note" class="sub note" role="status"></p>
+                        <section class="glass set fold" aria-labelledby="ns-rows-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-elektraren"
+                                    class="fold-head"
+                                    data-ns-fold="elektraren"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-elektraren"
+                                >
+                                    <span class="fold-t"
+                                        ><span id="ns-rows-title" class="glass-ttl"></span
+                                        ><small id="ns-rows-hint" class="fold-hint"></small></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-elektraren" class="ns-body hidden">
+                                <div id="ns-rows"></div>
+                                <div id="ns-warn" class="wz-stack"></div>
+                                <div id="ns-actions"></div>
+                            </div>
                         </section>
+                        <!-- Čo máš doma: spotrebiče, s ktorými ráta Plán dňa aj ranné oznámenie (doma-v1). -->
+                        <section class="glass set fold" aria-labelledby="ns-doma-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-doma"
+                                    class="fold-head"
+                                    data-ns-fold="doma"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-doma"
+                                >
+                                    <span class="fold-t"
+                                        ><span id="ns-doma-title" class="glass-ttl"></span
+                                        ><small id="ns-doma-hint" class="fold-hint"></small></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-doma" class="ns-body hidden">
+                                <div class="it pick">
+                                    <span id="ns-doma" class="minis wrap" role="group" aria-labelledby="ns-doma-title"></span>
+                                </div>
+                                <p id="ns-doma-note" class="oznam-note"></p>
+                            </div>
+                        </section>
+                        <!-- Oznámenia: ranný plán dňa - voľba telefónu (oznamenia-v1). -->
+                        <section class="glass set fold" aria-labelledby="ns-oznam-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-oznamenia"
+                                    class="fold-head"
+                                    data-ns-fold="oznamenia"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-oznamenia"
+                                >
+                                    <span class="fold-t"
+                                        ><span id="ns-oznam-title" class="glass-ttl"></span
+                                        ><small id="ns-oznam-hint" class="fold-hint"></small></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-oznamenia" class="ns-body hidden">
+                                <button type="button" id="ns-oznam" class="it" role="switch" aria-checked="false">
+                                    <span><b id="ns-oznam-label"></b><small id="ns-oznam-small"></small></span>
+                                    <i class="tg" aria-hidden="true"></i>
+                                </button>
+                                <p id="ns-oznam-stav" class="oznam-stav hidden" role="status"></p>
+                                <div class="it pick">
+                                    <span><b id="ns-oznam-hour-label"></b><small id="ns-oznam-hour-small"></small></span>
+                                    <span id="ns-oznam-hour" class="minis" role="group" aria-labelledby="ns-oznam-hour-label"></span>
+                                </div>
+                                <p id="ns-oznam-uses" class="oznam-note"></p>
+                                <p id="ns-oznam-note" class="oznam-note"></p>
+                            </div>
+                        </section>
+                        <!-- Vzhľad: tón hlášok a živá obloha. -->
+                        <section class="glass set fold" aria-labelledby="ns-look-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-vzhlad"
+                                    class="fold-head"
+                                    data-ns-fold="vzhlad"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-vzhlad"
+                                >
+                                    <span class="fold-t"
+                                        ><span id="ns-look-title" class="glass-ttl"></span
+                                        ><small id="ns-look-hint" class="fold-hint"></small></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-vzhlad" class="ns-body hidden">
+                                <div class="it pick">
+                                    <span><b id="ns-voice-label"></b><small id="ns-voice-small"></small></span>
+                                    <span id="ns-voice" class="minis" role="group" aria-labelledby="ns-voice-label"></span>
+                                </div>
+                                <button type="button" id="ns-live-sky" class="it" role="switch" aria-checked="true">
+                                    <span><b>Živá obloha</b><small>vypni pre pokojnú tmavú</small></span>
+                                    <i class="tg" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </section>
+                        <!-- Appka: zdieľanie a vymazanie údajov ako samostatné položky pod nadpisom.
+                             Neskladajú sa - každá otvára svoje okno. -->
+                        <section class="app-items" aria-labelledby="ns-app-title">
+                            <h3 id="ns-app-title" class="glass-ttl group-lbl"></h3>
+                            <div class="glass set">
+                                <button type="button" id="ns-share" class="it" aria-haspopup="dialog">
+                                    <span><b id="ns-share-row-title"></b><small id="ns-share-row-small"></small></span>
+                                    <span aria-hidden="true">›</span>
+                                </button>
+                            </div>
+                            <div class="glass set">
+                                <button type="button" id="ns-reset" class="it" aria-haspopup="dialog">
+                                    <span><b id="ns-reset-row-title"></b><small id="ns-reset-row-small"></small></span>
+                                    <span aria-hidden="true">›</span>
+                                </button>
+                            </div>
+                        </section>
+                        <p id="ns-credit-1" class="credit"></p>
+                        <p id="ns-credit-2" class="credit"></p>
                     </div>
 
-                    <div class="wizard hidden" id="wizard">
+                    <div id="wizard" class="wz hidden">
                         <div class="wz-head">
-                            <span class="wz-step" id="wz-step"></span>
-                            <button type="button" class="wz-close" id="wz-close" aria-label="Zavrieť sprievodcu">
+                            <span id="wz-step" class="wz-step"></span>
+                            <button type="button" id="wz-close" class="x" aria-label="Zavrieť sprievodcu">
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                             </button>
                         </div>
-                        <div class="wz-prog" id="wz-prog" aria-hidden="true"></div>
-                        <div class="wz-sub" id="wz-sub"></div>
-                        <h2 class="wz-title" id="wz-title"></h2>
-                        <p class="wz-lead" id="wz-lead"></p>
+                        <div id="wz-prog" class="wz-prog" aria-hidden="true"></div>
+                        <p id="wz-sub" class="wz-sub"></p>
+                        <h2 id="wz-title" class="wz-title"></h2>
+                        <p id="wz-lead" class="wz-lead"></p>
                         <!-- Úprava z prehľadu: záložky na kroky panelov, plochy a tarify. Skladá ich render. -->
-                        <div class="seg seg3 hidden" id="wz-group-tabs" role="group" aria-label="Čo na paneloch upraviť"></div>
-                        <div class="seg seg3 hidden" id="wz-roof-tabs" role="group" aria-label="Čo na ploche upraviť">
+                        <div id="wz-group-tabs" class="seg hidden" role="group" aria-label="Čo na paneloch upraviť"></div>
+                        <div id="wz-roof-tabs" class="seg hidden" role="group" aria-label="Čo na ploche upraviť">
                             <button type="button" data-setup-tab="smer">Smer</button>
                             <button type="button" data-setup-tab="sklon">Sklon</button>
                             <button type="button" data-setup-tab="pocet">Panely</button>
                         </div>
-                        <div class="seg seg3 hidden" id="wz-tariff-tabs" role="group" aria-label="Čo na tarife upraviť"></div>
+                        <div id="wz-tariff-tabs" class="seg hidden" role="group" aria-label="Čo na tarife upraviť"></div>
 
-                        <section class="wz-screen" id="wz-start" aria-label="Úvod">
-                            <svg class="setup-house" viewBox="0 0 320 96" aria-hidden="true">
-                                <line class="ground" x1="10" y1="88" x2="310" y2="88" />
-                                <circle class="sun" cx="262" cy="26" r="11" />
-                                <path
-                                    class="rays"
-                                    d="M278 26h6M273.3 37.3l4.3 4.3M262 42v6M250.7 37.3l-4.3 4.3M246 26h-6M250.7 14.7l-4.3-4.3M262 10V4M273.3 14.7l4.3-4.3"
-                                />
-                                <rect class="wall" x="110" y="56" width="100" height="32" />
-                                <polygon class="roof-top" points="100,58 160,24 220,58" />
-                                <path class="pv" d="M170 29.7L182 36.5 184 33 172 26.2zM184 37.6L196 44.4 198 40.9 186 34.1z" />
-                                <rect class="door" x="148" y="68" width="14" height="20" />
-                            </svg>
-                            <ul class="checklist">
+                        <section id="wz-start" class="wz-screen hidden" aria-label="Úvod">
+                            <ul class="glass checklist">
                                 <li>kde elektráreň stojí</li>
                                 <li>ktorým smerom sú otočené panely a koľko ich je</li>
                                 <li>výkon panelu a meniča (štítok alebo zmluva)</li>
                             </ul>
-                            <button type="button" class="choice" data-setup-go="odkaz">
-                                <span class="t"
-                                    ><b>Mám odkaz s nastavením</b
-                                    ><span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span></span
-                                >
+                            <button type="button" class="opt" data-setup-go="odkaz">
+                                <b>Mám odkaz s nastavením</b>
+                                <span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span>
                             </button>
                         </section>
 
-                        <section class="wz-screen" id="wz-odkaz" aria-label="Nastavenie z odkazu">
-                            <label class="field-label" for="wz-link">Odkaz s nastavením</label>
+                        <section id="wz-odkaz" class="wz-screen hidden" aria-label="Nastavenie z odkazu">
+                            <label class="flbl" for="wz-link">Odkaz s nastavením</label>
                             <input
-                                class="field-input"
                                 id="wz-link"
+                                class="fld"
                                 type="url"
                                 inputmode="url"
                                 autocomplete="off"
                                 placeholder="Vlož odkaz, ktorý ti niekto poslal"
                             />
-                            <p class="plant-msg err hidden" id="wz-link-note">
+                            <p id="wz-link-note" class="wz-msg err hidden">
                                 Tento odkaz neobsahuje nastavenie elektrárne. Skontroluj, či si skopíroval celý.
                             </p>
-                            <div class="place-card hidden" id="wz-link-preview"></div>
+                            <div id="wz-link-preview" class="glass place hidden"></div>
                         </section>
 
-                        <section class="wz-screen" id="wz-lokalita" aria-label="Poloha">
-                            <label class="sr-only" for="wz-place">Obec alebo mesto</label>
-                            <input class="field-input" id="wz-place" type="search" autocomplete="off" placeholder="Obec alebo mesto" />
-                            <div class="geo" id="wz-geo" aria-live="polite"></div>
+                        <section id="wz-lokalita" class="wz-screen hidden" aria-label="Poloha">
+                            <label class="sr" for="wz-place">Obec alebo mesto</label>
+                            <input id="wz-place" class="fld" type="search" autocomplete="off" placeholder="Obec alebo mesto" />
+                            <div id="wz-geo" class="geo" aria-live="polite"></div>
                             <div id="wz-place-card"></div>
-                            <details class="coords">
-                                <summary class="link-btn">Zadať súradnice ručne</summary>
+                            <details class="more">
+                                <summary>Zadať súradnice ručne</summary>
                                 <div class="two">
-                                    <label class="unit-wrap">
-                                        <span class="sr-only">Zemepisná šírka</span>
-                                        <input class="field-input num" id="wz-lat" inputmode="decimal" autocomplete="off" />
-                                        <span class="unit">° š.</span>
+                                    <label class="unit">
+                                        <span class="sr">Zemepisná šírka</span>
+                                        <input id="wz-lat" class="fld" inputmode="decimal" autocomplete="off" />
+                                        <span aria-hidden="true">° š.</span>
                                     </label>
-                                    <label class="unit-wrap">
-                                        <span class="sr-only">Zemepisná dĺžka</span>
-                                        <input class="field-input num" id="wz-lon" inputmode="decimal" autocomplete="off" />
-                                        <span class="unit">° d.</span>
+                                    <label class="unit">
+                                        <span class="sr">Zemepisná dĺžka</span>
+                                        <input id="wz-lon" class="fld" inputmode="decimal" autocomplete="off" />
+                                        <span aria-hidden="true">° d.</span>
                                     </label>
                                 </div>
                             </details>
-                            <!-- Len pri prvom otvorení (welcome): panely sa dajú odložiť a nastavenie prevziať z odkazu. -->
-                            <div class="wz-welcome hidden" id="wz-welcome">
-                                <button type="button" class="choice" id="wz-later" data-setup-later>
-                                    <span class="t"
-                                        ><b>Teraz nie, ukáž predpoveď</b><span>Panely nastavíš kedykoľvek v karte Nastavenie.</span></span
-                                    >
+                            <!-- Len pri prvom otvorení: panely sa dajú odložiť a nastavenie prevziať z odkazu. -->
+                            <div id="wz-welcome" class="wz-stack hidden">
+                                <button type="button" id="wz-later" class="opt" data-setup-later>
+                                    <b>Teraz nie, ukáž predpoveď</b>
+                                    <span>Panely nastavíš kedykoľvek v karte Nastavenie.</span>
                                 </button>
-                                <button type="button" class="choice" data-setup-go="odkaz">
-                                    <span class="t"
-                                        ><b>Mám odkaz s nastavením</b
-                                        ><span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span></span
-                                    >
+                                <button type="button" class="opt" data-setup-go="odkaz">
+                                    <b>Mám odkaz s nastavením</b>
+                                    <span>Poslal ti ho niekto, kto už appku má? Vlož ho a nemusíš nič vypĺňať.</span>
                                 </button>
                             </div>
                         </section>
 
-                        <section class="wz-screen" id="wz-panel" aria-label="Výkon panelov">
-                            <div class="seg seg2" role="group" aria-label="Čo o výkone vieš">
+                        <section id="wz-panel" class="wz-screen hidden" aria-label="Výkon panelov">
+                            <div class="seg" role="group" aria-label="Čo o výkone vieš">
                                 <button type="button" id="wz-wpmode-panel" data-setup-wpmode="panel">Výkon panelu</button>
                                 <button type="button" id="wz-wpmode-kwp" data-setup-wpmode="kwp">Celkový výkon</button>
                             </div>
-                            <div id="wz-wp-panel">
-                                <div id="wz-wp-label"></div>
-                                <div class="chips" id="wz-wp-chips" role="group" aria-label="Výkon panelu"></div>
-                                <div class="hidden" id="wz-wp-other">
-                                    <label class="field-label" for="wz-wp">Výkon panelu</label>
-                                    <div class="unit-wrap">
-                                        <input class="field-input num" id="wz-wp" inputmode="numeric" autocomplete="off" />
-                                        <span class="unit">Wp</span>
+                            <div id="wz-wp-panel" class="wz-stack">
+                                <div id="wz-wp-label" class="art label-art"></div>
+                                <div id="wz-wp-chips" class="pills" role="group" aria-label="Výkon panelu"></div>
+                                <div id="wz-wp-other" class="hidden">
+                                    <label class="flbl" for="wz-wp">Výkon panelu</label>
+                                    <div class="unit">
+                                        <input id="wz-wp" class="fld" inputmode="numeric" autocomplete="off" />
+                                        <span aria-hidden="true">Wp</span>
                                     </div>
                                 </div>
-                                <p class="plant-msg hidden" id="wz-wp-guess"></p>
+                                <p id="wz-wp-guess" class="wz-msg hidden"></p>
                             </div>
                             <div id="wz-wp-total">
-                                <label class="field-label" for="wz-kwp">Celkový výkon panelov</label>
-                                <div class="unit-wrap">
-                                    <input class="field-input num" id="wz-kwp" inputmode="decimal" autocomplete="off" />
-                                    <span class="unit">kWp</span>
+                                <label class="flbl" for="wz-kwp">Celkový výkon panelov</label>
+                                <div class="unit">
+                                    <input id="wz-kwp" class="fld" inputmode="decimal" autocomplete="off" />
+                                    <span aria-hidden="true">kWp</span>
                                 </div>
                             </div>
                         </section>
 
-                        <section class="wz-screen" id="wz-smer" aria-label="Smer plochy">
-                            <div id="wz-compass"></div>
-                            <div class="readout"><b id="wz-dir-name"></b><span id="wz-dir-deg"></span></div>
+                        <section id="wz-smer" class="wz-screen hidden" aria-label="Smer plochy">
+                            <div id="wz-compass" class="glass dial-box"></div>
+                            <p class="readout"><b id="wz-dir-name"></b><span id="wz-dir-deg"></span></p>
                             <div id="wz-dir-quality"></div>
-                            <details class="help">
-                                <summary class="link-btn">Ako zistím, kam smerujú?</summary>
+                            <details class="more">
+                                <summary>Ako zistím, kam smerujú?</summary>
                                 <p>Nájdi dom na satelitnej mape, sever je hore. Panely smerujú tam, kam strecha klesá, teda k odkvapu.</p>
                             </details>
                         </section>
 
-                        <section class="wz-screen" id="wz-sklon" aria-label="Sklon plochy">
-                            <div id="wz-tilt-art"></div>
-                            <div class="preset-grid" id="wz-tilt-presets" role="group" aria-label="Typ strechy"></div>
-                            <label class="field-label" for="wz-tilt">Presný sklon</label>
-                            <div class="range-row">
+                        <section id="wz-sklon" class="wz-screen hidden" aria-label="Sklon plochy">
+                            <div id="wz-tilt-art" class="glass art"></div>
+                            <div id="wz-tilt-presets" class="presets" role="group" aria-label="Typ strechy"></div>
+                            <label class="flbl" for="wz-tilt">Presný sklon</label>
+                            <div class="range">
                                 <input type="range" id="wz-tilt" min="0" max="90" step="5" />
-                                <output class="range-out" id="wz-tilt-out" for="wz-tilt"></output>
+                                <output id="wz-tilt-out" for="wz-tilt"></output>
                             </div>
                             <div id="wz-tilt-quality"></div>
                         </section>
 
-                        <section class="wz-screen" id="wz-pocet" aria-label="Počet panelov">
-                            <div class="stepper wz-stepper">
+                        <section id="wz-pocet" class="wz-screen hidden" aria-label="Počet panelov">
+                            <div class="stepper">
                                 <button type="button" data-setup-step="-1" aria-label="O panel menej">−</button>
-                                <label class="sr-only" for="wz-panels">Počet panelov</label>
-                                <input class="field-input num" id="wz-panels" inputmode="numeric" autocomplete="off" />
+                                <label class="sr" for="wz-panels">Počet panelov</label>
+                                <input id="wz-panels" class="fld" inputmode="numeric" autocomplete="off" />
                                 <button type="button" data-setup-step="1" aria-label="O panel viac">+</button>
                             </div>
-                            <div id="wz-panel-grid"></div>
-                            <p class="wz-kwp-line" id="wz-panels-kwp"></p>
+                            <div id="wz-panel-grid" class="glass art"></div>
+                            <p id="wz-panels-kwp" class="wz-line"></p>
                         </section>
 
-                        <section class="wz-screen" id="wz-dalsia" aria-label="Plochy panelov">
-                            <div class="roofs" id="wz-roofs"></div>
-                            <div class="plant-msgs" id="wz-derived"></div>
-                            <button type="button" class="choice" id="wz-roof-add">
-                                <span class="t"
-                                    ><b>Áno, pridať ďalšiu plochu</b><span>Opýtam sa na smer, sklon a počet panelov.</span></span
-                                >
+                        <section id="wz-dalsia" class="wz-screen hidden" aria-label="Plochy panelov">
+                            <div id="wz-roofs" class="glass wz-rows"></div>
+                            <div id="wz-derived"></div>
+                            <button type="button" id="wz-roof-add" class="opt">
+                                <b>Áno, pridať ďalšiu plochu</b>
+                                <span>Opýtam sa na smer, sklon a počet panelov.</span>
                             </button>
                         </section>
 
-                        <section class="wz-screen" id="wz-menic" aria-label="Menič">
-                            <div class="compare-bars" id="wz-ac-bars"></div>
-                            <div class="chips" id="wz-ac-chips" role="group" aria-label="Výkon meniča"></div>
-                            <div class="hidden" id="wz-ac-other">
-                                <label class="field-label" for="wz-ac">Výkon meniča</label>
-                                <div class="unit-wrap">
-                                    <input class="field-input num" id="wz-ac" inputmode="decimal" autocomplete="off" />
-                                    <span class="unit">kW</span>
+                        <section id="wz-menic" class="wz-screen hidden" aria-label="Menič">
+                            <div id="wz-ac-bars" class="glass bars"></div>
+                            <div id="wz-ac-chips" class="pills" role="group" aria-label="Výkon meniča"></div>
+                            <div id="wz-ac-other" class="hidden">
+                                <label class="flbl" for="wz-ac">Výkon meniča</label>
+                                <div class="unit">
+                                    <input id="wz-ac" class="fld" inputmode="decimal" autocomplete="off" />
+                                    <span aria-hidden="true">kW</span>
                                 </div>
                             </div>
-                            <p class="plant-msg hidden" id="wz-ac-guess">
-                                Počítam s meničom rovnako veľkým ako panely. V zhrnutí to bude označené ako odhad.
-                            </p>
+                            <p id="wz-ac-guess" class="wz-msg hidden"></p>
                         </section>
 
-                        <section class="wz-screen" id="wz-meranie" aria-label="Živé meranie">
-                            <svg class="wz-art" viewBox="0 0 300 90" aria-hidden="true">
-                                <line class="ground" x1="6" y1="82" x2="294" y2="82" />
-                                <path class="forecast" d="M10 82C70 82 100 14 150 14S230 82 290 82" />
-                                <path class="real" d="M10 82C60 82 90 30 112 34 128 37 132 18 150 22" />
-                                <circle class="now" cx="150" cy="22" r="4" />
-                            </svg>
-                            <button type="button" class="choice" id="wz-live-yes" data-setup-live="yes">
-                                <span class="dot"></span
-                                ><span class="t"
-                                    ><b>Áno, pripojím menič</b><span id="wz-live-yes-sub">Vyberieš značku a spôsob pripojenia.</span></span
-                                >
+                        <section id="wz-meranie" class="wz-screen hidden" aria-label="Živé meranie">
+                            <button type="button" id="wz-live-yes" class="opt" data-setup-live="yes">
+                                <b>Áno, pripojím menič</b>
+                                <span id="wz-live-yes-sub">Vyberieš značku a spôsob pripojenia.</span>
                             </button>
-                            <button type="button" class="choice" id="wz-live-no" data-setup-live="no">
-                                <span class="dot"></span
-                                ><span class="t"
-                                    ><b>Nie, stačí mi odhad</b><span id="wz-live-no-sub">Meranie sa dá pridať neskôr.</span></span
-                                >
+                            <button type="button" id="wz-live-no" class="opt" data-setup-live="no">
+                                <b>Nie, stačí mi odhad</b>
+                                <span id="wz-live-no-sub">Meranie sa dá pridať neskôr.</span>
                             </button>
-                            <button type="button" class="link-btn hidden" id="wz-live-zmen" data-setup-zmen>Pripojiť inak</button>
+                            <button type="button" id="wz-live-zmen" class="lnk hidden" data-setup-zmen>Pripojiť inak</button>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-znacka" aria-label="Značka meniča">
-                            <div class="wz-kinds" id="wz-znacky" role="group" aria-label="Značka meniča"></div>
-                            <p class="plant-msg" id="wz-beta">
+                        <section id="wz-znacka" class="wz-screen hidden" aria-label="Značka meniča">
+                            <div id="wz-znacky" class="wz-stack" role="group" aria-label="Značka meniča"></div>
+                            <p id="wz-beta" class="wz-msg">
                                 Beta: pripojenie podľa dokumentácie výrobcu, na skutočnom meniči ešte neoverené. Keď čísla nesedia s appkou
                                 výrobcu, daj vedieť.
                             </p>
-                            <p class="plant-msg">Svoju značku tu nevidíš? Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
+                            <p class="wz-msg">Svoju značku tu nevidíš? Kým ju nedoplníme, appka ukazuje odhad z predpovede počasia.</p>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-sposob" aria-label="Spôsob pripojenia">
-                            <div class="wz-kinds" id="wz-sposoby" role="group" aria-label="Spôsob pripojenia"></div>
-                            <div class="wz-zdroj hidden" id="wz-nie">
-                                <p class="plant-msg">
+                        <section id="wz-sposob" class="wz-screen hidden" aria-label="Spôsob pripojenia">
+                            <div id="wz-sposoby" class="wz-stack" role="group" aria-label="Spôsob pripojenia"></div>
+                            <div id="wz-nie" class="wz-stack hidden">
+                                <p class="glass wz-note">
                                     Appka bude ukazovať odhad z predpovede počasia. Plán dňa, tarifa aj štatistika fungujú rovnako.
                                 </p>
-                                <button type="button" class="plant-save" data-setup-odhad>Stačí mi odhad</button>
+                                <button type="button" class="pbtn" data-setup-odhad>Stačí mi odhad</button>
                             </div>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-pripoj" aria-label="Pripojenie merania">
-                            <ol class="howto" id="wz-kroky"></ol>
-                            <div class="wz-zdroj wz-sprava hidden" id="wz-sprava">
-                                <div class="field-label">Správa na skopírovanie</div>
-                                <p class="wz-letter" id="wz-sprava-text"></p>
-                                <button type="button" class="link-btn" id="wz-sprava-copy" data-setup-copy="">Skopírovať správu</button>
-                                <p class="plant-msg" id="wz-sprava-note"></p>
+                        <section id="wz-pripoj" class="wz-screen hidden" aria-label="Pripojenie merania">
+                            <ol id="wz-kroky" class="glass howto"></ol>
+                            <div id="wz-sprava" class="glass hidden">
+                                <span class="glass-ttl">Správa na skopírovanie</span>
+                                <p id="wz-sprava-text" class="wz-letter"></p>
+                                <button type="button" id="wz-sprava-copy" class="pbtn" data-setup-copy="">Skopírovať správu</button>
+                                <p id="wz-sprava-note" class="wz-msg"></p>
                             </div>
-                            <div class="wz-zdroj" id="wz-pola"></div>
-                            <button type="button" class="plant-save" id="wz-pripojit">Pripojiť</button>
-                            <p class="plant-msg hidden" id="wz-pripoj-note" role="status"></p>
-                            <div class="wz-kinds hidden" id="wz-stanice"></div>
-                            <p class="plant-msg" id="wz-pecat-note"></p>
+                            <div id="wz-pola" class="wz-stack"></div>
+                            <button type="button" id="wz-pripojit" class="pbtn">Pripojiť</button>
+                            <p id="wz-pripoj-note" class="wz-msg hidden" role="status"></p>
+                            <div id="wz-stanice" class="wz-stack hidden"></div>
+                            <p id="wz-pecat-note" class="wz-msg"></p>
                         </section>
 
-                        <!-- Tarifa: pásma, rozvrh dňa, výnimky a ceny. Obsah dopĺňa render, tu sú len
-                             nosiče. Do prvého prekreslenia sú skryté, aby sa neukázali pod inými
-                             obrazovkami sprievodcu. -->
-                        <section class="wz-screen hidden" id="wz-tarifa" aria-label="Typ sadzby">
-                            <div class="wz-kinds" id="wz-tariff-kinds" role="group" aria-label="Typ sadzby"></div>
-                            <button type="button" class="link-btn" data-setup-kind="dunno">Neviem</button>
-                            <p class="plant-msg hidden" id="wz-tariff-dunno">
-                                Appka bude počítať s jednou cenou a pás plánu dňa zafarbí len podľa slnka. Tarifu nájdeš na faktúre alebo v
-                                zmluve a doplníš ju kedykoľvek v Nastavení.
-                            </p>
+                        <section id="wz-tarifa" class="wz-screen hidden" aria-label="Typ sadzby">
+                            <div id="wz-tariff-kinds" class="wz-stack" role="group" aria-label="Typ sadzby"></div>
+                            <button type="button" class="pbtn ghost" data-setup-kind="dunno">Neviem</button>
+                            <p id="wz-tariff-dunno" class="wz-msg hidden"></p>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-pasma" aria-label="Pásma tarify">
-                            <div class="bands" id="wz-bands"></div>
-                            <button type="button" class="choice" id="wz-band-add">
-                                <span class="plus" aria-hidden="true">+</span
-                                ><span class="t"><b>Pridať pásmo</b><span>Najviac štyri</span></span>
+                        <section id="wz-pasma" class="wz-screen hidden" aria-label="Pásma tarify">
+                            <div id="wz-bands" class="wz-stack"></div>
+                            <button type="button" id="wz-band-add" class="opt">
+                                <b>Pridať pásmo</b>
+                                <span>Najviac štyri</span>
                             </button>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-rozvrh" aria-label="Rozvrh dňa">
-                            <div class="seg hidden" id="wz-sched-tabs" role="group" aria-label="Rozvrh"></div>
-                            <div class="brushes" id="wz-brushes" role="radiogroup" aria-label="Pásmo, ktorým maľuješ"></div>
+                        <section id="wz-rozvrh" class="wz-screen hidden" aria-label="Rozvrh dňa">
+                            <div id="wz-sched-tabs" class="seg hidden" role="group" aria-label="Rozvrh"></div>
+                            <div id="wz-brushes" class="pills" role="radiogroup" aria-label="Pásmo, ktorým maľuješ"></div>
                             <!-- Kruh je úchytka na ťahanie (touch-action: none): prst po ňom maľuje pásmo.
                                  Presná cesta aj pre klávesnicu je zoznam úsekov a formulár pod ním. -->
-                            <svg class="tariff-ring" id="wz-tariff-ring" viewBox="-12 -12 264 264" aria-hidden="true">
-                                <g id="wz-tariff-ring-g"></g>
-                            </svg>
-                            <p class="wz-kwp-line" id="wz-ring-sum"></p>
-                            <div class="chips" id="wz-sched-tpls" role="group" aria-label="Šablóny tvaru dňa"></div>
-                            <div class="field-label">Úseky</div>
-                            <ul class="ivals" id="wz-ivals"></ul>
+                            <div class="glass ring-box">
+                                <svg id="wz-tariff-ring" class="tariff-ring" viewBox="-12 -12 264 264" aria-hidden="true">
+                                    <g id="wz-tariff-ring-g"></g>
+                                </svg>
+                                <p id="wz-ring-sum" class="wz-line"></p>
+                            </div>
+                            <div id="wz-sched-tpls" class="pills" role="group" aria-label="Šablóny tvaru dňa"></div>
+                            <h3 class="flbl">Úseky</h3>
+                            <ul id="wz-ivals" class="glass ivals"></ul>
                             <div class="ival-form">
                                 <label
                                     >Od
-                                    <select class="field-input" id="wz-ival-from"></select></label
-                                ><label
+                                    <select id="wz-ival-from" class="fld"></select
+                                ></label>
+                                <label
                                     >do
-                                    <select class="field-input" id="wz-ival-to"></select></label
-                                ><label
+                                    <select id="wz-ival-to" class="fld"></select
+                                ></label>
+                                <label
                                     >pásmo
-                                    <select class="field-input" id="wz-ival-band"></select></label
-                                ><button type="button" class="chip" id="wz-ival-set">Nastaviť</button>
+                                    <select id="wz-ival-band" class="fld"></select
+                                ></label>
+                                <button type="button" id="wz-ival-set" class="pbtn">Nastaviť</button>
                             </div>
-                            <details class="help">
+                            <details class="more">
                                 <summary>Kde nájdem časy?</summary>
                                 <p>
                                     Na faktúre alebo na stránke distribučky pri časoch prepínania (HDO). Aj v rámci jednej distribučky sa
@@ -903,57 +717,147 @@
                             </details>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-vynimky" aria-label="Výnimky v rozvrhu">
-                            <div class="wz-stack" id="wz-exc"></div>
+                        <section id="wz-vynimky" class="wz-screen hidden" aria-label="Výnimky v rozvrhu">
+                            <div id="wz-exc" class="wz-stack"></div>
                         </section>
 
-                        <section class="wz-screen hidden" id="wz-ceny" aria-label="Ceny">
-                            <div class="field-label">Mena</div>
-                            <div class="chips" id="wz-currency" role="group" aria-label="Mena"></div>
-                            <div class="field-label">Cena za kWh</div>
-                            <div id="wz-prices"></div>
-                            <div id="wz-price-check"></div>
+                        <section id="wz-ceny" class="wz-screen hidden" aria-label="Ceny">
+                            <h3 class="flbl">Mena</h3>
+                            <div id="wz-currency" class="pills" role="group" aria-label="Mena"></div>
+                            <h3 class="flbl">Cena za kWh</h3>
+                            <div id="wz-prices" class="glass prices"></div>
+                            <div id="wz-price-check" class="wz-stack"></div>
                         </section>
 
-                        <div class="plant-msgs hidden" id="wz-tariff-msgs"></div>
+                        <div id="wz-tariff-msgs" class="wz-stack hidden"></div>
 
-                        <section class="wz-screen" id="wz-suhrn" aria-label="Zhrnutie">
-                            <div id="wz-summary"></div>
+                        <section id="wz-suhrn" class="wz-screen hidden" aria-label="Zhrnutie">
+                            <div id="wz-summary" class="wz-stack"></div>
                         </section>
 
                         <div class="wz-foot">
-                            <button type="button" class="wz-back" id="wz-back">Späť</button>
-                            <button type="button" class="plant-save" id="wz-next">Ďalej</button>
+                            <button type="button" id="wz-back" class="pbtn ghost">Späť</button>
+                            <button type="button" id="wz-next" class="pbtn">Ďalej</button>
                         </div>
                     </div>
                 </div>
             </section>
+            <!-- Namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js,
+                 render/index.js). Texty sú pevné - hláška musí fungovať aj bez zvyšku appky. -->
+            <section id="cakam" class="cakam hidden" aria-live="polite">
+                <p id="ck-loading" class="sub">načítavam…</p>
+                <div id="ck-fail" class="cta">
+                    <b>Táto časť appky sa nenačítala.</b>
+                    <p id="ck-again">Stiahnem ju znova a obnovím stránku.</p>
+                    <p id="ck-later">Skús to o chvíľu.</p>
+                    <button type="button" id="ck-retry" class="pbtn">Načítať znova</button>
+                </div>
+            </section>
         </main>
 
-        <!-- Ponuka prevziať nastavenie z odkazu. Pevne nad spodnou navigáciou, aby bola
-             vidieť na ktorejkoľvek karte a pri akomkoľvek posunutí stránky. -->
-        <section class="import-offer hidden" id="import-offer" aria-live="polite" aria-labelledby="import-offer-title">
+        <!-- Bublina nad navigáciou po novom pripojení merania, keď prvé meranie prišlo a karta Teraz
+             prestala ukazovať odhad (shared/hlavicka.js). Zmizne sama alebo ťuknutím. Texty píše render. -->
+        <div id="pripojene" class="pripojene hidden" role="status">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" />
+                <path d="M7 12.4l3.2 3.1L17 8.8" />
+            </svg>
+            <span class="pripojene-txt"><b id="pripojene-title"></b><span id="pripojene-text"></span></span>
+        </div>
+
+        <!-- Ponuka prevziať nastavenie z otvoreného odkazu (#nastavenie=…). Pevne nad navigáciou,
+             aby bola vidieť na ktorejkoľvek karte. Odkaz môže poslať ktokoľvek, preto sa sám neuloží. -->
+        <section id="import-offer" class="cta offer hidden" aria-live="polite" aria-labelledby="import-offer-title">
             <b id="import-offer-title">Prevziať nastavenie?</b>
-            <span class="import-offer-text" id="import-offer-text"></span>
-            <div class="import-offer-actions">
-                <button type="button" class="plant-save" id="import-accept">Prevziať</button>
-                <button type="button" class="link-btn" id="import-decline">Nie, ďakujem</button>
+            <p id="import-offer-text"></p>
+            <div class="offer-act">
+                <button type="button" id="import-accept" class="pbtn">Prevziať</button>
+                <button type="button" id="import-decline" class="pbtn ghost">Nie, ďakujem</button>
             </div>
         </section>
 
-        <!-- Panel štítka na karte Teraz: čo platí teraz a čo štítok znamená (docs/navrhy/teraz-odznaky-vysvetlenie.html).
-             Texty sú zo shared/mozem.js, píše ich web/render/terazky.js. -->
-        <dialog id="tz-chip-sheet" class="tz-sheet" aria-labelledby="tz-chip-title" aria-describedby="tz-chip-now">
-            <div class="tz-sheet-in">
-                <span id="tz-chip-tag" class="tz-chip"></span>
-                <h2 id="tz-chip-title"></h2>
-                <p id="tz-chip-now"></p>
-                <p id="tz-chip-q" class="tz-sheet-q"></p>
-                <p id="tz-chip-why" class="tz-sheet-dim"></p>
-                <button type="button" id="tz-chip-close" class="tz-sheet-close"></button>
+        <nav class="tabs" aria-label="Karty appky">
+            <!-- Teraz prvá, Dnes (kódové meno mozem, doteraz Môžem?) druhá - docs/navrhy/dnes-a-teraz.html. -->
+            <button type="button" id="nav-terazky" data-panel="terazky">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></svg>
+                <span>Teraz</span>
+            </button>
+            <button type="button" id="nav-mozem" data-panel="mozem">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" />
+                    <path
+                        d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"
+                    />
+                </svg>
+                <span>Dnes</span>
+            </button>
+            <button type="button" id="nav-7dni" data-panel="7dni">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="3" />
+                    <path d="M3 10h18M8 3v4M16 3v4" />
+                </svg>
+                <span>7 dní</span>
+            </button>
+            <button type="button" id="nav-statistika" data-panel="statistika">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-9" /></svg>
+                <span>Štatistika</span>
+            </button>
+            <button type="button" id="nav-nastavenie" data-panel="nastavenie">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                    />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>Nastavenie</span>
+            </button>
+        </nav>
+
+        <!-- Zdieľať appku: odkaz na appku, voliteľne s nastavením a kioskom, QR kód a WhatsApp.
+             Texty sú z toho istého modelu, skladá ich render/nastavenie.js; bez QR
+             knižnice ostane len odkaz. -->
+        <dialog id="ns-share-sheet" class="sheet" aria-labelledby="ns-share-title" aria-describedby="ns-share-text">
+            <div class="sheet-in">
+                <button type="button" id="ns-share-x" class="x" aria-label="Zavrieť"><span aria-hidden="true">×</span></button>
+                <h2 id="ns-share-title"></h2>
+                <p id="ns-share-text"></p>
+                <div id="ns-share-opts" class="chks">
+                    <label class="chk">
+                        <input type="checkbox" id="ns-share-settings" />
+                        <span id="ns-share-settings-label"></span>
+                    </label>
+                    <label class="chk" id="ns-share-kiosk-row">
+                        <input type="checkbox" id="ns-share-kiosk" />
+                        <span id="ns-share-kiosk-label"></span>
+                    </label>
+                </div>
+                <div id="ns-qr" class="qr hidden" role="img" aria-label="QR kód s odkazom na appku"></div>
+                <a id="ns-share-link" class="share-link" href="./"></a>
+                <a id="ns-share-wa" class="pbtn" href="#" target="_blank" rel="noopener"></a>
             </div>
         </dialog>
 
-        <script type="module" src="boot.js"></script>
+        <!-- Panel štítka na karte Teraz: čo platí teraz a čo štítok znamená (docs/navrhy/teraz-odznaky-vysvetlenie.html).
+             Texty sú zo shared/mozem.js, píše ich render/teraz.js. -->
+        <dialog id="tz-chip-sheet" class="sheet chip-sheet" aria-labelledby="tz-chip-title" aria-describedby="tz-chip-now">
+            <div class="sheet-in">
+                <span id="tz-chip-tag" class="chip"></span>
+                <h2 id="tz-chip-title"></h2>
+                <p id="tz-chip-now"></p>
+                <p id="tz-chip-q" class="q"></p>
+                <p id="tz-chip-why" class="dim"></p>
+                <button type="button" id="tz-chip-close" class="pbtn ghost"></button>
+            </div>
+        </dialog>
+
+        <!-- Vymazať údaje: potvrdenie pred vymazaním všetkého uloženého. Nie je to krok, ktorý sa dá vrátiť. -->
+        <dialog id="ns-reset-sheet" class="sheet" aria-labelledby="ns-reset-title" aria-describedby="ns-reset-text">
+            <div class="sheet-in">
+                <h2 id="ns-reset-title"></h2>
+                <p id="ns-reset-text"></p>
+                <button type="button" id="ns-reset-ok" class="pbtn"></button>
+                <button type="button" id="ns-reset-cancel" class="pbtn ghost"></button>
+            </div>
+        </dialog>
     </body>
 </html>

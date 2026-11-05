@@ -1,10 +1,10 @@
-# Ručná kontrola novej appky s čítačkou obrazovky
+# Ručná kontrola appky s čítačkou obrazovky
 
-Návod na vyskúšanie novej appky „Živá obloha“ tak, ako ju používa človek, ktorý nevidí na
+Návod na vyskúšanie appky tak, ako ju používa človek, ktorý nevidí na
 displej. Telefón vtedy číta nahlas, čo je pod prstom, a appka sa ovláda gestami. Celé to
 zaberie asi 20 minút na jednom telefóne.
 
-Adresa appky: **https://rastislavsk.github.io/ray-mon/obloha/**
+Adresa appky: **https://rastislavsk.github.io/ray-mon/**
 
 Najlepšie je otvoriť appku najprv bez čítačky, počkať, kým naskočí odpoveď, a čítačku zapnúť
 až potom.
@@ -97,7 +97,7 @@ nič a ostala na zozname.“ Aj „toto mi bolo nejasné“ je dobrý nález.
 ## Rýchlosť na vlastnom telefóne
 
 Google meria rýchlosť stránky na stránke **https://pagespeed.web.dev/**. Vlož do nej adresu
-`https://rastislavsk.github.io/ray-mon/obloha/` a stlač Analyzovať. Po chvíli ukáže dve
+`https://rastislavsk.github.io/ray-mon/` a stlač Analyzovať. Po chvíli ukáže dve
 záložky – Mobil a Počítač; dôležitá je Mobil. Hore je číslo Výkon (0 až 100) a pod ním
 „Largest Contentful Paint“ (za koľko sekúnd je hlavný obsah na displeji, dobré je pod 2,5 s)
 a „Cumulative Layout Shift“ (koľko obsah poskakuje pri načítaní, dobré je pod 0,1). Časť

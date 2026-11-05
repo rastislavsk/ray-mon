@@ -1,9 +1,9 @@
-// Meranie rýchlosti novej appky Lighthouse-om: Chromium z Playwrightu, emulácia mobilu so
+// Meranie rýchlosti Lighthouse-om: Chromium z Playwrightu, emulácia mobilu so
 // spomalenou sieťou a procesorom (predvolené nastavenie Lighthouse). Trikrát po sebe, vypíše
 // medián. Do CI to zámerne nepatrí - z toho istého dôvodu ako snímky (CLAUDE.md, Ako overovať).
 //
-//   npm run lighthouse:obloha                        lokálne (spustí vlastný server)
-//   npm run lighthouse:obloha -- https://…/obloha/   nasadená verzia
+//   npm run lighthouse                               lokálne (spustí vlastný server)
+//   npm run lighthouse -- https://…/ray-mon/          nasadená verzia
 //
 // Lokálny server hovorí HTTP/2 ako GitHub Pages. Pri HTTP/1.1 Lighthouse počíta najviac so 6
 // spojeniami na server, čo appku bez bundlera (veľa malých modulov) trestá viac než skutočnosť.
@@ -71,7 +71,7 @@ function serve(tls) {
 
 const tls = process.argv[2] ? null : certificate();
 if (!process.argv[2] && !tls) console.log('openssl chýba - meria sa cez HTTP/1.1 (Pages hovorí HTTP/2)');
-const url = process.argv[2] ?? `${tls ? 'https' : 'http'}://127.0.0.1:${PORT}/obloha/`;
+const url = process.argv[2] ?? `${tls ? 'https' : 'http'}://127.0.0.1:${PORT}/`;
 const server = process.argv[2] ? null : serve(tls);
 if (server) await new Promise((done) => server.listen(PORT, '127.0.0.1', () => done(undefined)));
 

@@ -27,7 +27,7 @@ const base = {
 };
 const model = (/** @type {Partial<typeof base>} */ s, /** @type {any} */ voice) => hlavickaModel({ ...base, ...s }, voice);
 
-test('hlavička: miesto, čas merania a bodka - v oboch appkách to isté', () => {
+test('hlavička: miesto, čas merania a bodka to isté', () => {
     const m = model({});
     assert.equal(m.place, SITE.name);
     assert.equal(m.status, '13:00 · živé meranie');

@@ -1,6 +1,5 @@
 // Uložené nastavenie a adresa v prehliadači. Čítanie a zápis do localStorage je vo
-// web/storage.js, tu je len zrkadlenie stavu do adresy. Modul je neutrálny - používajú ho obe
-// appky (súčasná aj nová v obloha/).
+// web/storage.js, tu je len zrkadlenie stavu do adresy.
 
 import { shareHash } from '../shared/settings.js';
 import { savedSettings } from '../shared/setup-flow.js';

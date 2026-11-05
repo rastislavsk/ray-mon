@@ -18,7 +18,7 @@ import { neplatiOf } from './pristup.js';
 /**
  * Výkon „teraz“ z merania, alebo null, keď ho niet: bez merania, keď výrobca výkon neposlal,
  * aj keď meranie mlčí (pvFreshness). Číslo spred hodiny už nie je výkon teraz - appka vtedy
- * počíta z krivky dňa a povie, že je to odhad. Jedno miesto pre obe appky a všetky karty.
+ * počíta z krivky dňa a povie, že je to odhad. Jedno miesto a všetky karty.
  * Chýbajúci údaj treba strážiť zvlášť - kontrakt `pv` null povoľuje a Number(null) je 0,
  * takže by sa tváril ako nameraná nula.
  * @param {{ now: Date, pv: import('./kiosk.js').PvData | null, site: import('./config.js').Site, pokusAt?: number }} state
@@ -123,7 +123,7 @@ export function stavMerania(s) {
 }
 
 /**
- * Tvar bodky pri čase v hlavičke - v oboch appkách ten istý: `live` plná (meranie ide, aj keď
+ * Tvar bodky pri čase v hlavičke ten istý: `live` plná (meranie ide, aj keď
  * menič v noci spí), `stale` polovičná (meranie je pripojené, ale nové neprišlo), `odhad` krúžok
  * (len predpoveď). Stav `off` (appka ešte nevie) určuje kabát pred načítaním.
  * @param {StavMerania} stav @returns {'live' | 'stale' | 'odhad'}

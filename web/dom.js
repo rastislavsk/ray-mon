@@ -1,80 +1,67 @@
-// Všetky DOM referencie na jednom mieste, načítané raz po naparsovaní stránky.
-// Render funkcie dostávajú tento objekt a nikdy nevolajú querySelector samy.
+// Všetky DOM referencie, načítané raz po naparsovaní stránky. Render funkcie
+// dostávajú tento objekt a nikdy nevolajú querySelector samy.
 
 import { PANELS } from '../shared/config.js';
 
+/** Prvok podľa id. Chýbajúci prvok je chyba (napr. staré index.html z cache) - boot.js ju zachytí. */
 const byId = (/** @type {string} */ id) => {
     const el = document.getElementById(id);
     if (!el) throw new Error(`Chýba element #${id}`);
     return el;
 };
 
-// Karty v poradí navigácie. Kódový názov a popiska v navigácii nie sú vždy to isté slovo,
-// preto tu ostáva mapovanie: mozem = „Môžem?", terazky = „Teraz" (v súčasnej appke kedysi Terazky), 7dni = „7 dní",
-// statistika = „Štatistika", nastavenie = „Nastavenie". Popiska je text pre používateľa a mení
-// sa podľa chuti; kódový názov drží HTML id, CSS selektory aj stav, tak nech ho popiska nemusí
-// naháňať.
-// Karta Info zanikla - zdieľanie je v karte Nastavenie (sekcia Appka).
-// Môžem? je v navigácii prvá, appka sa ale otvára na karte Teraz (initialState).
-// Zoznam je v shared/config.js, lebo ho má aj nová appka (obloha/).
-export { PANELS };
+/** @param {string} prefix */
+const perPanel = (prefix) =>
+    /** @type {Record<import('./state.js').Panel, HTMLElement>} */ (Object.fromEntries(PANELS.map((p) => [p, byId(`${prefix}-${p}`)])));
 
-// Rozbaľovacie položky karty Nastavenie (natívne <details>) a ich id v HTML, v poradí na karte.
-// Rozbalená je najviac jedna a je krokom navigácie - tlačidlo Späť ju zbalí. Zdieľanie bolo
-// kedysi v karte Info - odtiaľ id `info-share` aj názvy v kóde.
-const INFO_IDS = {
-    plant: 'settings-plant',
-    doma: 'settings-doma',
-    oznamenia: 'settings-oznamenia',
-    vzhlad: 'settings-vzhlad',
-    share: 'info-share',
-    clear: 'settings-clear',
-};
-export const INFO_ITEMS = /** @type {(keyof typeof INFO_IDS)[]} */ (Object.keys(INFO_IDS));
-
-function headerDom() {
+/** Karta Dnes (kódové meno mozem). Pás odporúčaní pod ňou je v terazDom. */
+function mozemDom() {
     return {
-        // <html>, nie <body>: farba tarify sa zapisuje sem, lebo --bg-page je zložené
-        // z --tint-rgb a obe musia byť na tom istom prvku (viď :root v style.css).
-        root: document.documentElement,
-        // Farba stavového riadku telefónu (--status-bar v style.css).
-        themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
-        page: byId('page'),
-        // Miesto elektrárne v hlavičke. Bodka, čas merania (bez neho slovo) a pre čítačku čo hovorí
-        // bodka sú v riadku pod číslom karty Teraz (#tz-stav), mená ostali z hlavičky.
-        pvPlace: byId('pv-place'),
-        tzStav: byId('tz-stav'),
-        pvUpdated: byId('pv-updated'),
-        pvTone: byId('pv-tone'),
-        pvClock: /** @type {HTMLButtonElement} */ (byId('pv-clock')),
-        pvTip: byId('pv-tip'),
-        pvTipBg: byId('pv-tip-bg'),
-        pvTipTitle: byId('pv-tip-title'),
-        pvTipText: byId('pv-tip-text'),
-        pvTipBtn: byId('pv-tip-btn'),
-        // Bez zadaných panelov namiesto bodky a času odkaz do sprievodcu.
-        pvSetupGo: byId('pv-setup-go'),
-        panelsBar: byId('panels-bar'),
-        panelsBarTitle: byId('panels-bar-title'),
-        panelsBarText: byId('panels-bar-text'),
-        panelsBarGo: byId('panels-bar-go'),
-        // Bublina „Meranie pripojené“ nad navigáciou.
-        pripojene: byId('pripojene'),
-        pripojeneTitle: byId('pripojene-title'),
-        pripojeneText: byId('pripojene-text'),
-        bottomnav: byId('bottomnav'),
-        panels: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (
-            Object.fromEntries(PANELS.map((p) => [p, byId(`panel-${p}`)]))
-        ),
-        navs: /** @type {Record<(typeof PANELS)[number], HTMLElement>} */ (Object.fromEntries(PANELS.map((p) => [p, byId(`nav-${p}`)]))),
+        mzArc: byId('mz-arc'),
+        mzAnswer: byId('mz-answer'),
+        mzChip: byId('mz-chip'),
+        mzKick: byId('mz-kick'),
+        mzWord: byId('mz-word'),
+        mzCount: byId('mz-count'),
+        mzCountVal: byId('mz-count-val'),
+        mzCountText: byId('mz-count-text'),
+        mzGrade: byId('mz-grade'),
+        mzGradeLabel: byId('mz-grade-label'),
+        mzGradeVal: byId('mz-grade-val'),
+        mzLead: byId('mz-lead'),
+        mzDay: byId('mz-day'),
+        mzDayLead: byId('mz-day-lead'),
+        mzDayEq: byId('mz-day-eq'),
+        mzMore: byId('mz-more'),
+        mzLine: byId('mz-line'),
+        mzProgress: byId('mz-progress'),
+        mzBar: byId('mz-bar'),
+        mzBarVal: byId('mz-bar-val'),
+        mzTom: byId('mz-tom'),
+        mzTomChip: byId('mz-tom-chip'),
+        mzTomWord: byId('mz-tom-word'),
+        mzTomText: byId('mz-tom-text'),
+        mzLater: byId('mz-later'),
+        mzLaterTitle: byId('mz-later-title'),
+        mzLaterText: byId('mz-later-text'),
+        mzLive: byId('mz-live'),
+        mzRetry: byId('mz-retry'),
+        mzGuess: byId('mz-guess'),
+        mzGuessTitle: byId('mz-guess-title'),
+        mzGuessText: byId('mz-guess-text'),
+        mzGuessBtn: byId('mz-guess-btn'),
+        mzAsk: byId('mz-ask'),
+        mzAskTitle: byId('mz-ask-title'),
+        mzAskText: byId('mz-ask-text'),
+        mzAskBtn: byId('mz-ask-btn'),
     };
 }
 
-/** Karta Teraz: nosiče, do ktorých píše render/terazky.js (rovnaké ako karta Teraz novej appky). */
-function terazkyDom() {
+/** Karta Teraz. */
+function terazDom() {
     return {
         wx: byId('wx'),
-        tzTitle: byId('tz-title'),
+        tzTitle: byId('ttl-terazky'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),
         tzSub: byId('tz-sub'),
@@ -101,6 +88,14 @@ function terazkyDom() {
         tzNoteText: byId('tz-note-text'),
         tzNoteBtn: byId('tz-note-btn'),
         tzRetry: byId('tz-retry'),
+        tzGuess: byId('tz-guess'),
+        tzGuessTitle: byId('tz-guess-title'),
+        tzGuessText: byId('tz-guess-text'),
+        tzGuessBtn: byId('tz-guess-btn'),
+        tzAsk: byId('tz-ask'),
+        tzAskTitle: byId('tz-ask-title'),
+        tzAskText: byId('tz-ask-text'),
+        tzAskBtn: byId('tz-ask-btn'),
         tzPlot: byId('tz-plot'),
         tzChart: byId('tz-chart'),
         tzChartDesc: byId('tz-chart-desc'),
@@ -115,92 +110,90 @@ function terazkyDom() {
     };
 }
 
-// Detail dňa a týždňa karty 7 dní: riadok so šípkou späť a čipmi, pás, ktorý ide pri listovaní za prstom, a nadpis.
-function sedemDetailDom() {
+/** Karta 7 dní: prehľad dní, detail dňa a detail týždňa. */
+function sedemDom() {
     return {
-        weekDayNav: byId('week-day-nav'),
-        weekDayBack: byId('week-day-back'),
-        weekDayStrip: byId('week-day-strip'),
-        weekTrack: byId('week-track'),
-        weekDayHead: byId('week-day-head'),
-        weekDayTitle: byId('week-day-title'),
-        weekDayIcon: byId('week-day-icon'),
-        weekDaySub: byId('week-day-sub'),
-        weekDaySteps: byId('week-day-steps'),
-        weekDayLive: byId('week-day-live'),
+        sdList: byId('sd-list'),
+        sdTitle: byId('sd-title'),
+        sdSum: byId('sd-sum'),
+        sdSumText: byId('sd-sum-text'),
+        sdSub: byId('sd-sub'),
+        sdRetry: byId('sd-retry'),
+        sdAsk: byId('sd-ask'),
+        sdAskTitle: byId('sd-ask-title'),
+        sdAskText: byId('sd-ask-text'),
+        sdAskBtn: byId('sd-ask-btn'),
+        sdGuess: byId('sd-guess'),
+        sdGuessTitle: byId('sd-guess-title'),
+        sdGuessText: byId('sd-guess-text'),
+        sdGuessBtn: byId('sd-guess-btn'),
+        sdDays: byId('sd-days'),
+        sdHint: byId('sd-hint'),
+        sdDay: byId('sd-day'),
+        sdDayBack: byId('sd-day-back'),
+        sdDayBackText: byId('sd-day-back-text'),
+        sdDayStrip: byId('sd-day-strip'),
+        sdDayPager: byId('sd-day-pager'),
+        sdDayTrack: byId('sd-day-track'),
+        sdDayLive: byId('sd-day-live'),
+        sdDayTitle: byId('sd-day-title'),
+        sdDayIcon: byId('sd-day-icon'),
+        sdDaySub: byId('sd-day-sub'),
+        sdDayNums: byId('sd-day-nums'),
+        sdDayChart: byId('sd-day-chart'),
+        sdDayLegend: byId('sd-day-legend'),
+        sdDayFacts: byId('sd-day-facts'),
+        sdDayDone: byId('sd-day-done'),
+        sdDayClear: byId('sd-day-clear'),
+        sdDayMsgTitle: byId('sd-day-msg-title'),
+        sdDayMsgBody: byId('sd-day-msg-body'),
+        sdDayHint: byId('sd-day-hint'),
+        sdWeek: byId('sd-week'),
+        sdWeekBack: byId('sd-week-back'),
+        sdWeekBackText: byId('sd-week-back-text'),
+        sdWeekTitle: byId('sd-week-title'),
+        sdWeekRange: byId('sd-week-range'),
+        sdWeekNums: byId('sd-week-nums'),
+        sdBarsTitle: byId('sd-bars-title'),
+        sdBars: byId('sd-bars'),
+        sdHeatTitle: byId('sd-heat-title'),
+        sdHeat: byId('sd-heat'),
+        sdHeatNote: byId('sd-heat-note'),
+        sdWeekMsgTitle: byId('sd-week-msg-title'),
+        sdWeekMsgBody: byId('sd-week-msg-body'),
     };
 }
 
-function sedemdniDom() {
+/** Karta Štatistika s plagátom obdobia. */
+function statistikaDom() {
     return {
-        ...sedemDetailDom(),
-        weekSub: byId('week-sub'),
-        weekHead: byId('week-head'),
-        weekTrio: byId('week-trio'),
-        weekBlockHeat: byId('week-block-heat'),
-        weekBlockBars: byId('week-block-bars'),
-        weekBlockCurve: byId('week-block-curve'),
-        weekBlockTable: byId('week-block-table'),
-        weekBlockList: byId('week-block-list'),
-        weekMsgBlock: byId('week-msg-block'),
-        weekToday: byId('week-today'),
-        weekTodayBadge: byId('week-today-badge'),
-        weekTodayMeta: byId('week-today-meta'),
-        weekTodayProgress: byId('week-today-progress'),
-        weekTodayProgressFill: byId('week-today-progress-fill'),
-        weekTodayProgressTxt: byId('week-today-progress-txt'),
-        weekTodayProgressPct: byId('week-today-progress-pct'),
-        weekTomorrow: byId('week-tomorrow'),
-        weekTomorrowBadge: byId('week-tomorrow-badge'),
-        weekTomorrowTrend: byId('week-tomorrow-trend'),
-        weekTomorrowMeta: byId('week-tomorrow-meta'),
-        weekTotal: byId('week-total'),
-        weekTotalMeta: byId('week-total-meta'),
-        weekHeatScale: byId('week-heat-scale'),
-        weekHeatWrap: byId('week-heat-wrap'),
-        weekHeat: byId('week-heat'),
-        weekHeatTooltip: byId('week-heat-tooltip'),
-        weekBarsStat: byId('week-bars-stat'),
-        weekBarsWrap: byId('week-bars-wrap'),
-        weekBars: byId('week-bars'),
-        weekBarsTooltip: byId('week-bars-tooltip'),
-        weekBarsClearLegend: byId('week-bars-clear-legend'),
-        weekDayTabs: byId('week-day-tabs'),
-        weekDayWindow: byId('week-day-window'),
-        weekCurveLiveLegend: byId('week-curve-live-legend'),
-        weekCurveStat: byId('week-curve-stat'),
-        weekDayChart: byId('week-day-chart'),
-        weekDayLegend: byId('week-day-legend'),
-        weekCurveWrap: byId('week-curve-wrap'),
-        weekCurve: byId('week-curve'),
-        weekCurveTooltip: byId('week-curve-tooltip'),
-        weekTbody: byId('week-tbody'),
-        weekList: byId('week-list'),
-        weekListTotal: byId('week-list-total'),
-        weekListAvg: byId('week-list-avg'),
-        weekListSpark: byId('week-list-spark'),
-        weekMsgTitle: byId('week-msg-title'),
-        weekMsgBody: byId('week-msg-body'),
+        stSub: byId('st-sub'),
+        stRetry: byId('st-retry'),
+        stAsk: byId('st-ask'),
+        stAskTitle: byId('st-ask-title'),
+        stAskText: byId('st-ask-text'),
+        stAskBtn: byId('st-ask-btn'),
+        stSetup: byId('st-setup'),
+        stSetupTitle: byId('st-setup-title'),
+        stSetupText: byId('st-setup-text'),
+        stSetupBtn: byId('st-setup-btn'),
+        stLaterTitle: byId('st-later-title'),
+        stLaterText: byId('st-later-text'),
+        stBody: byId('st-body'),
+        stPoster: byId('st-poster'),
+        stMeasureOff: byId('st-measure-off'),
+        stMeasure: byId('st-measure'),
+        stMeasureTitle: byId('st-measure-title'),
+        stMeasureText: byId('st-measure-text'),
+        stMeasureBtn: byId('st-measure-btn'),
+        stPrices: byId('st-prices'),
+        stPricesTitle: byId('st-prices-title'),
+        stPricesText: byId('st-prices-text'),
+        stPricesBtn: byId('st-prices-btn'),
     };
 }
 
-// Karta Dnes (kódové meno mozem): nosič hlavičky, obsah si skladá render (web/render/mozem.js). Pás
-// odporúčaní pod ňou je v terazDom.
-function mozemDom() {
-    return {
-        mozemBody: byId('mozem-body'),
-    };
-}
-
-// Karta Štatistika: len nosiče, obsah si skladá render (web/render/statistika.js).
-function statsDom() {
-    return {
-        statsSub: byId('stats-sub'),
-        statsBody: byId('stats-body'),
-    };
-}
-
-/** Obrazovky sprievodcu nastavením - každá je vlastná sekcia v index.html, render ukáže jednu. */
+/** Obrazovky sprievodcu v poradí krokov (id `wz-<krok>`). */
 const SETUP_SCREENS = /** @type {const} */ ([
     'start',
     'odkaz',
@@ -224,39 +217,102 @@ const SETUP_SCREENS = /** @type {const} */ ([
 ]);
 
 const input = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (byId(id));
+const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (byId(id));
 
-// Karta Nastavenie: prehľad elektrárne a sprievodca nastavením.
-function setupDom() {
+/** Karta Nastavenie: prehľad elektrárne a ponuka prevziať nastavenie z odkazu. */
+function nastavenieDom() {
     return {
-        ...setupHomeDom(),
-        ...wizardDom(),
-        ...wizardFieldsDom(),
-        ...wizardTariffDom(),
+        setupRoot: byId('setup'),
+        nsHome: byId('ns-home'),
+        nsTitle: byId('ns-title'),
+        nsCta: byId('ns-cta'),
+        nsCtaTitle: byId('ns-cta-title'),
+        nsCtaSteps: byId('ns-cta-steps'),
+        nsCtaText: byId('ns-cta-text'),
+        nsCtaBtn: byId('ns-cta-btn'),
+        nsCtaLink: byId('ns-cta-link'),
+        nsHero: byId('ns-hero'),
+        nsPristup: byId('ns-pristup'),
+        nsRowsTitle: byId('ns-rows-title'),
+        nsRowsHint: byId('ns-rows-hint'),
+        nsRows: byId('ns-rows'),
+        nsWarn: byId('ns-warn'),
+        nsActions: byId('ns-actions'),
+        nsNote: byId('ns-note'),
+        nsDomaTitle: byId('ns-doma-title'),
+        nsDomaHint: byId('ns-doma-hint'),
+        nsDoma: byId('ns-doma'),
+        nsDomaNote: byId('ns-doma-note'),
+        nsLookTitle: byId('ns-look-title'),
+        nsLookHint: byId('ns-look-hint'),
+        nsVoiceLabel: byId('ns-voice-label'),
+        nsVoiceSmall: byId('ns-voice-small'),
+        nsAppTitle: byId('ns-app-title'),
+        nsShareRowTitle: byId('ns-share-row-title'),
+        nsShareRowSmall: byId('ns-share-row-small'),
+        nsResetRowTitle: byId('ns-reset-row-title'),
+        nsResetRowSmall: byId('ns-reset-row-small'),
+        nsCredits: [byId('ns-credit-1'), byId('ns-credit-2')],
+        // Zbaliteľné sekcie: tlačidlo s nadpisom a telo, ktoré ovláda (aria-controls).
+        nsFolds: [...document.querySelectorAll('[data-ns-fold]')].map((head) => ({
+            key: /** @type {HTMLElement} */ (head).dataset.nsFold,
+            head,
+            body: byId(head.getAttribute('aria-controls') || ''),
+        })),
+        importOffer: byId('import-offer'),
+        importOfferTitle: byId('import-offer-title'),
+        importOfferText: byId('import-offer-text'),
+        importAccept: byId('import-accept'),
+        importDecline: byId('import-decline'),
     };
 }
 
-// Prehľad uloženej elektrárne (alebo výzva k sprievodcovi) a hlavička sprievodcu.
-function setupHomeDom() {
+/** Sekcie karty Nastavenie (Čo máš doma, Oznámenia, Vzhľad, Appka) a okná sekcie Appka. */
+function nastavenieSekcieDom() {
     return {
-        settingsHead: byId('settings-head'),
-        settingsTitle: byId('settings-title'),
-        setup: byId('setup'),
-        setupHome: byId('setup-home'),
-        setupCta: byId('setup-cta'),
-        setupCtaTitle: byId('setup-cta-title'),
-        setupCtaSteps: byId('setup-cta-steps'),
-        setupCtaText: byId('setup-cta-text'),
-        setupCtaBtn: byId('setup-cta-btn'),
-        setupCtaLink: byId('setup-cta-link'),
-        setupPristup: byId('setup-pristup'),
-        setupHero: byId('setup-hero'),
-        setupRows: byId('setup-rows'),
-        setupWarnings: byId('setup-warnings'),
-        setupActions: byId('setup-actions'),
-        settingsPlantTitle: byId('settings-plant-title'),
-        settingsPlantHint: byId('settings-plant-hint'),
-        setupNote: byId('setup-note'),
+        nsLiveSky: byId('ns-live-sky'),
+        nsVoice: byId('ns-voice'),
+        nsOznamTitle: byId('ns-oznam-title'),
+        nsOznamHint: byId('ns-oznam-hint'),
+        nsOznam: byId('ns-oznam'),
+        nsOznamLabel: byId('ns-oznam-label'),
+        nsOznamSmall: byId('ns-oznam-small'),
+        nsOznamStav: byId('ns-oznam-stav'),
+        nsOznamHourLabel: byId('ns-oznam-hour-label'),
+        nsOznamHourSmall: byId('ns-oznam-hour-small'),
+        nsOznamHour: byId('ns-oznam-hour'),
+        nsOznamUses: byId('ns-oznam-uses'),
+        nsOznamNote: byId('ns-oznam-note'),
+        nsShare: byId('ns-share'),
+        nsReset: byId('ns-reset'),
+        nsShareSheet: /** @type {HTMLDialogElement} */ (byId('ns-share-sheet')),
+        nsShareTitle: byId('ns-share-title'),
+        nsShareText: byId('ns-share-text'),
+        nsShareSettingsLabel: byId('ns-share-settings-label'),
+        nsShareKioskLabel: byId('ns-share-kiosk-label'),
+        nsShareX: byId('ns-share-x'),
+        nsShareOpts: byId('ns-share-opts'),
+        nsShareSettings: input('ns-share-settings'),
+        nsShareKiosk: input('ns-share-kiosk'),
+        nsShareKioskRow: byId('ns-share-kiosk-row'),
+        nsQr: byId('ns-qr'),
+        nsShareLink: /** @type {HTMLAnchorElement} */ (byId('ns-share-link')),
+        nsShareWa: /** @type {HTMLAnchorElement} */ (byId('ns-share-wa')),
+        nsResetSheet: /** @type {HTMLDialogElement} */ (byId('ns-reset-sheet')),
+        nsResetTitle: byId('ns-reset-title'),
+        nsResetText: byId('ns-reset-text'),
+        nsResetOk: byId('ns-reset-ok'),
+        nsResetCancel: byId('ns-reset-cancel'),
+    };
+}
+
+/** Sprievodca: hlavička, záložky, tlačidlá a polia, ktoré obsluhuje web/setup-wiring.js. */
+function wizardDom() {
+    return {
         wizard: byId('wizard'),
+        wzScreens: /** @type {Record<(typeof SETUP_SCREENS)[number], HTMLElement>} */ (
+            Object.fromEntries(SETUP_SCREENS.map((x) => [x, byId(`wz-${x}`)]))
+        ),
         wzStep: byId('wz-step'),
         wzClose: byId('wz-close'),
         wzProg: byId('wz-prog'),
@@ -266,25 +322,19 @@ function setupHomeDom() {
         wzGroupTabs: byId('wz-group-tabs'),
         wzRoofTabs: byId('wz-roof-tabs'),
         wzTariffTabs: byId('wz-tariff-tabs'),
-    };
-}
-
-// Obrazovky sprievodcu a ich prvky.
-function wizardDom() {
-    return {
-        wzScreens: /** @type {Record<(typeof SETUP_SCREENS)[number], HTMLElement>} */ (
-            Object.fromEntries(SETUP_SCREENS.map((s) => [s, byId(`wz-${s}`)]))
-        ),
+        wzTariffMsgs: byId('wz-tariff-msgs'),
+        wzBack: /** @type {HTMLButtonElement} */ (byId('wz-back')),
+        wzNext: /** @type {HTMLButtonElement} */ (byId('wz-next')),
         wzLink: input('wz-link'),
         wzLinkNote: byId('wz-link-note'),
         wzLinkPreview: byId('wz-link-preview'),
         wzPlace: input('wz-place'),
         wzGeo: byId('wz-geo'),
         wzPlaceCard: byId('wz-place-card'),
-        wzWelcome: byId('wz-welcome'),
-        wzLater: byId('wz-later'),
         wzLat: input('wz-lat'),
         wzLon: input('wz-lon'),
+        wzWelcome: byId('wz-welcome'),
+        wzLater: byId('wz-later'),
         wzWpModePanel: byId('wz-wpmode-panel'),
         wzWpModeKwp: byId('wz-wpmode-kwp'),
         wzWpPanel: byId('wz-wp-panel'),
@@ -298,7 +348,7 @@ function wizardDom() {
     };
 }
 
-// Druhá polovica obrazoviek: plochy, menič, meranie, zhrnutie a tlačidlá dole.
+/** Obrazovky plôch, meniča, merania a zhrnutia. */
 function wizardFieldsDom() {
     return {
         wzCompass: byId('wz-compass'),
@@ -341,14 +391,11 @@ function wizardFieldsDom() {
         wzStanice: byId('wz-stanice'),
         wzPecatNote: byId('wz-pecat-note'),
         wzSummary: byId('wz-summary'),
-        wzBack: /** @type {HTMLButtonElement} */ (byId('wz-back')),
-        wzNext: /** @type {HTMLButtonElement} */ (byId('wz-next')),
     };
 }
 
-// Obrazovky tarify: typ sadzby, pásma, rozvrh dňa, výnimky a ceny.
+/** Obrazovky tarify: typ sadzby, pásma, rozvrh dňa, výnimky a ceny. */
 function wizardTariffDom() {
-    const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (byId(id));
     return {
         wzTariffKinds: byId('wz-tariff-kinds'),
         wzTariffDunno: byId('wz-tariff-dunno'),
@@ -368,57 +415,54 @@ function wizardTariffDom() {
         wzCurrency: byId('wz-currency'),
         wzPrices: byId('wz-prices'),
         wzPriceCheck: byId('wz-price-check'),
-        wzTariffMsgs: byId('wz-tariff-msgs'),
-    };
-}
-
-// Sekcie Čo máš doma, Oznámenia, Vzhľad a Appka (zdieľanie, vymazanie) a ponuka prevziať
-// nastavenie z odkazu.
-function zdielanieDom() {
-    return {
-        infoItems: /** @type {Record<(typeof INFO_ITEMS)[number], HTMLDetailsElement>} */ (
-            Object.fromEntries(INFO_ITEMS.map((i) => [i, byId(INFO_IDS[i])]))
-        ),
-        domaTitle: byId('doma-title'),
-        domaHint: byId('doma-hint'),
-        domaBody: byId('doma-body'),
-        oznamTitle: byId('oznam-title'),
-        oznamHint: byId('oznam-hint'),
-        oznamBody: byId('oznam-body'),
-        vzhladTitle: byId('vzhlad-title'),
-        vzhladHint: byId('vzhlad-hint'),
-        vzhladBody: byId('vzhlad-body'),
-        appItemsTitle: byId('app-items-title'),
-        shareTitle: byId('share-title'),
-        shareHint: byId('share-hint'),
-        shareText: byId('share-text'),
-        shareOptions: byId('share-options'),
-        shareWithSettings: input('share-with-settings'),
-        shareWithSettingsLabel: byId('share-with-settings-label'),
-        shareWithKiosk: input('share-with-kiosk'),
-        shareWithKioskLabel: byId('share-with-kiosk-label'),
-        shareKioskRow: byId('share-kiosk-row'),
-        shareLink: /** @type {HTMLAnchorElement} */ (byId('share-link')),
-        shareWaLabel: byId('share-wa-label'),
-        clearTitle: byId('clear-title'),
-        clearHint: byId('clear-hint'),
-        clearAsk: byId('clear-ask'),
-        clearText: byId('clear-text'),
-        clearData: byId('clear-data'),
-        clearCancel: byId('clear-cancel'),
-        credits: [byId('credit-1'), byId('credit-2')],
-        importOffer: byId('import-offer'),
-        importOfferTitle: byId('import-offer-title'),
-        importOfferText: byId('import-offer-text'),
-        importAccept: byId('import-accept'),
-        importDecline: byId('import-decline'),
-        qrcode: byId('qrcode'),
-        shareWhatsapp: /** @type {HTMLAnchorElement} */ (byId('share-whatsapp')),
     };
 }
 
 export function collectDom() {
-    return { ...headerDom(), ...terazkyDom(), ...sedemdniDom(), ...mozemDom(), ...statsDom(), ...setupDom(), ...zdielanieDom() };
+    return {
+        ...mozemDom(),
+        ...terazDom(),
+        ...sedemDom(),
+        ...statistikaDom(),
+        ...nastavenieDom(),
+        ...nastavenieSekcieDom(),
+        ...wizardDom(),
+        ...wizardFieldsDom(),
+        ...wizardTariffDom(),
+        // <html> nesie farby oblohy (--s1, --s2) a počasie (data-sky).
+        root: document.documentElement,
+        // Farba stavového riadku telefónu = vrch oblohy (renderSky).
+        themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
+        page: byId('page'),
+        place: byId('hdr-place'),
+        // Bodka, čas merania a bublina sú v riadku pod číslom karty Teraz, mená ostali z hlavičky.
+        stav: byId('tz-stav'),
+        live: /** @type {HTMLButtonElement} */ (byId('hdr-live')),
+        status: byId('hdr-status'),
+        tip: byId('hdr-tip'),
+        tipBg: byId('hdr-tip-bg'),
+        tipTitle: byId('hdr-tip-title'),
+        tipText: byId('hdr-tip-text'),
+        tipBtn: byId('hdr-tip-btn'),
+        tone: byId('hdr-tone'),
+        setup: byId('hdr-setup'),
+        // Bublina „Meranie pripojené“ nad navigáciou.
+        pripojene: byId('pripojene'),
+        pripojeneTitle: byId('pripojene-title'),
+        pripojeneText: byId('pripojene-text'),
+        panels: perPanel('panel'),
+        // Nadpisy kariet a spoločný nadpis prehľadu so stĺpcami na širokej obrazovke.
+        titles: perPanel('ttl'),
+        dashTitle: byId('ttl-prehlad'),
+        navs: perPanel('nav'),
+        // Hláška namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js).
+        wait: byId('cakam'),
+        waitLoading: byId('ck-loading'),
+        waitFail: byId('ck-fail'),
+        waitAgain: byId('ck-again'),
+        waitLater: byId('ck-later'),
+        waitRetry: byId('ck-retry'),
+    };
 }
 
 /** @typedef {ReturnType<typeof collectDom>} Dom */

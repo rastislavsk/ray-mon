@@ -1,9 +1,9 @@
-/* Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html), spoločné pre obe appky.
+/* Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html).
    Vrstvy skladá web/pocasie.js, stav (data-wx, data-noc) zapisuje render karty Teraz. Svetlo
    prichádza z pravého horného rohu obrazovky (aj spod stavového riadku) a k číslu výkonu slabne.
-   Farby a polohu mesiaca a konca zrážok si každá appka nastaví vo svojom style.css cez premenné.
+   Farby a polohu mesiaca a konca zrážok si appka nastaví v style.css cez premenné.
    Kresba je dekorácia: nezachytí dotyk, čítačka ju nevidí (aria-hidden v HTML), útlm pohybu
-   zastaví jej pohyb (pravidlo prefers-reduced-motion v style.css oboch appiek). */
+   zastaví jej pohyb (pravidlo prefers-reduced-motion v style.css). */
 .wx {
     --wx-sx: calc(100% + 14px);
     --wx-sy: -20px;
@@ -208,7 +208,7 @@
 }
 /* Zamračené (docs/navrhy/zamracene-oblaky.html): svetlosivé oblaky cez deň aj v noci, v oboch
    appkách rovnaké, preto stoja na vrstve a nie na .wx, kde farby nastavuje appka. Za nimi sivá
-   obloha – Obloha ju má z jadra (SKY.sivost), súčasná appka (čierne pozadie) cez --wx-sivo-sila
+   obloha – appka ju má z jadra (SKY.sivost)
    a --wx-sivo vo svojom style.css. */
 .wx[data-wx='zamracene'] .wx-deck {
     --wx-cl: 235, 236, 237;
@@ -217,7 +217,7 @@
     --wx-sivo-a: var(--wx-sivo-sila, 0);
 }
 /* Dážď: tmavšie oblaky, čím silnejší, tým tmavšie (--dz-deck). Za nimi sivá obloha ako pri
-   zamračenej, pri silnejšom daždi tmavšia (--dz-sivo); kreslí ju len súčasná appka. */
+   zamračenej, pri silnejšom daždi tmavšia (--dz-sivo). */
 .wx[data-wx='dazd'] .wx-deck {
     --s: var(--dz-deck);
     background-image:
@@ -251,7 +251,7 @@
    kvapky padajú doprava dole, s vetrom, ktorým idú oblaky. Bez data-dazd (staršie jadro z cache)
    je to bežný dážď. Premenné sily: --dz-uhol sklon, --dz-t0 až --dz-t2 čas prechodu dlaždice
    vrstvy (výška dlaždice / rýchlosť), --dz-deck tmavosť oblakov, --dz-sero stmavenie,
-   --dz-sivo sivá obloha v súčasnej appke, --dz-zavoj závoj. */
+   --dz-sivo sivá obloha, --dz-zavoj závoj. */
 .wx {
     --dz-uhol: -12deg;
     --dz-t0: 0.526s;

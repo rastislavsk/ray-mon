@@ -1,7 +1,7 @@
 // Karta Dnes podľa časti dňa (smer C v docs/navrhy/dnes-tri-smery.html): ráno plán na dnes, cez deň
 // odpočet okna na veľké veci a koľko už nabehlo, večer vysvedčenie dneška a zajtrajšok. Veľké
 // slovo a čo dá strecha za celý deň počíta shared/mozem.js, tu je len to, čo sa mení s časťou
-// dňa - obe appky to kreslia z toho istého modelu. Čisté funkcie bez DOM, texty sú v messages-core.js.
+// dňa. Čisté funkcie bez DOM, texty sú v messages-core.js.
 
 import { PLAN_DNA } from './config.js';
 import { forecastDayPlan } from './day-plan.js';

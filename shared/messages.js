@@ -1,13 +1,13 @@
 // Všetky texty pre používateľa - spoločný vstup. Čisté funkcie bez DOM.
 //
-// Texty sú v troch súboroch, aby nová appka (obloha/) pri štarte nesťahovala texty kariet, ktoré
+// Texty sú v troch súboroch, aby appka pri štarte nesťahovala texty kariet, ktoré
 // nie sú vidieť: messages-core.js (hlášky, Môžem?, Teraz, hlavička), messages-sedem.js (7 dní,
 // denné a týždenné hlášky) a messages-statistika.js (Štatistika, plagát, súhrn). Jadro novej
-// appky importuje messages-core.js priamo; ostatní (súčasná appka, karty novej appky načítané
+// appky importuje messages-core.js priamo; ostatní (karty načítané
 // neskôr, testy) berú všetko odtiaľto.
 //
-// Tón hlášok: drzý (predvolený, ním hovorí súčasná appka) a slušný, ktorý vyká a je vecný - voľba
-// v novej appke (obloha/). Tón je parameter `voice` textových funkcií (posledný, predvolený drzý)
+// Tón hlášok: drzý (predvolený) a slušný, ktorý vyká a je vecný - voľba
+//. Tón je parameter `voice` textových funkcií (posledný, predvolený drzý)
 // a pevné texty v oboch tónoch vracia voiceTexts. Slušná varianta stojí pri drzej; kde text
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
@@ -22,7 +22,7 @@ export * from './messages-statistika.js';
 /** @typedef {import('./messages-core.js').Voice} Voice tón hlášok */
 /** @typedef {import('./messages-core.js').Message} Message */
 
-/** Pevné texty drzého tónu - tie isté objekty, ktoré používa súčasná appka. */
+/** Pevné texty drzého tónu. */
 const DRZY = { ...coreTexts('drzy'), SEDEM_TEXTS: sedemTexts('drzy'), STATISTIKA_TEXTS: statistikaTexts('drzy') };
 
 /** @type {typeof DRZY} */

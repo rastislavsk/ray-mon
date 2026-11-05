@@ -49,7 +49,6 @@ function sameShape(a, b, path) {
 test('voiceTexts: každý pevný text má obe varianty a žiadna nie je prázdna', () => {
     sameShape(M.voiceTexts('drzy'), M.voiceTexts('slusny'), 'texty');
     assert.equal(M.voiceTexts(), M.voiceTexts('drzy'));
-    // Drzé sú tie isté objekty, ktoré číta súčasná appka.
     assert.equal(M.voiceTexts('drzy').MOZEM_WORDS, M.MOZEM_WORDS);
     assert.equal(M.voiceTexts('drzy').STATISTIKA_TEXTS, M.STATISTIKA_TEXTS);
 });
@@ -72,13 +71,13 @@ test('slušný tón: slová a texty Štatistiky podľa návrhu', () => {
     assert.match(s.STATISTIKA_TEXTS.note, /by ste/);
 });
 
-// Tvary, ktoré tykajú (aj „ty“ samo): v slušnom tóne nesmú byť nikde, kde nová appka hovorí.
+// Tvary, ktoré tykajú (aj „ty“ samo): v slušnom tóne nesmú byť nikde, kde appka hovorí.
 const TYKANIE =
     /(^|[^\p{L}])(ty|tvoj\p{L}*|teba|tebe|ti|môžeš|chceš|musíš|potrebuješ|platíš|Zadaj|Ťukni|ťukni|Ťahaj|Potiahni|Pusti|Zapoj|zapni|Zapni|pozri|počkaj|Počkaj|nechaj|Hraj|Povedz|Spýtaj|Nerieš|Doplň|Pripoj|Skús|si pustil\/a|si vyrobil|si zaplatil|uvidíš|Uvidíš|zadáš|vrátiš)(?![\p{L}])/u;
 
-test('slušný tón vyká: v textoch novej appky nie je tykanie', () => {
+test('slušný tón vyká: v textoch nie je tykanie', () => {
     const p = sampleTexts('slusny');
-    // Riadok „glance“, veta pod pásom dňa a pás nad dlaždicami sú len v súčasnej appke, predpoveď dňa tiež.
+    // Riadok „glance“, veta pod pásom dňa a pás nad dlaždicami appka nepoužíva, predpoveď dňa tiež.
     const own = Object.entries(p).filter(([k]) => !/\.glance|\.strip\.|\.band\.|^forecastDay|^empty/.test(k));
     const bad = own.filter(([, v]) => TYKANIE.test(v));
     assert.deepEqual(bad, []);

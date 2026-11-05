@@ -2,8 +2,7 @@
 // boot.js. Worker telefón zobudí prázdnym pushom (worker/src/oznamenia.js); obsah sa vypočíta
 // až tu, z čerstvej predpovede a nastavenia, ktoré appka odložila do Cache API (OZNAMENIA.mirror),
 // tou istou funkciou jadra, akou počíta Plán dňa na karte Môžem? (shared/oznamenia.js).
-// Súčasná appka ho registruje priamo, Živá obloha cez obloha/sw.js s vlastným rozsahom (kvôli
-// logu jej nainštalovanej appky v oznámení). Obe s updateViaCache: 'none', aby prehliadač bral
+// Appka ho registruje s updateViaCache: 'none', aby prehliadač bral
 // aj jeho importy vždy čerstvé. Každý push musí niečo ukázať - pri akejkoľvek chybe ukáže, nech sa človek pozrie do appky.
 // Mimo tsc: typy prehliadača (DOM) a service workera (WebWorker) sa v jednom projekte nedajú
 // zapnúť naraz. Logika je v shared/, tam ju tsc aj testy kontrolujú.
@@ -12,11 +11,10 @@ import { OZNAMENIA, openMeteoUrl, WORKER_OZNAMENIA_URL, WORKER_PRIPOMEN_URL } fr
 import { oznameniaTexts } from './shared/messages-core.js';
 import { swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 
-// Koreň appky. Tento súbor importuje aj obloha/sw.js, takže adresy sa nesmú počítať voči
+// Koreň appky. Tento súbor importuje aj obloha/sw.js (odbery z čias, keď appka bývala v obloha/), takže adresy sa nesmú počítať voči
 // rozsahu ani adrese service workera, ale voči tomuto súboru.
 const ROOT = new URL('./', import.meta.url).href;
-// Logo v oznámení: každá appka ho má v koreni svojho rozsahu (icon-192.png, obloha/icon-192.png),
-// takže sa ráta od rozsahu - Obloha tak ukáže svoje, nie logo súčasnej appky.
+// Logo v oznámení: leží v koreni rozsahu service workera (icon-192.png, pre staré odbery obloha/icon-192.png).
 const ICON = new URL('icon-192.png', self.registration.scope).href;
 // Malá ikona v lište (a na čistom Androide aj vľavo v oznámení). Android z nej berie len tvar
 // (priehľadnosť), farbu dá sám; bez nej tam ukáže logo Chrome. Zdroj je badge.svg.

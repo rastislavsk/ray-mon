@@ -1,245 +1,300 @@
-// Jediný stav appky a jediné miesto, odkiaľ sa spúšťa prekreslenie.
-// setState (web/store.js) zlúči zmenu a zavolá odberateľov práve raz; rovnaké hodnoty nič nespustia.
+// Stav: jeden objekt, mení sa len cez setState (web/store.js) a prekresľuje len
+// cez render (render/index.js). Polia o elektrárni a dátach sú tie isté,
+// takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
+import { LAYOUT_PX, MINUTES_PER_DAY, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
 import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
-import { INFO_ITEMS, PANELS } from './dom.js';
-import { createStore } from './store.js';
-
-// Úložisko stavu a meranie po obnove dát sú v neutrálnych moduloch, ktoré používa aj nová
-// appka (obloha/). Tu sú znova vyvezené, aby sa ich odberatelia nemuseli meniť.
-export { createStore };
-export { nextPv } from './refresh.js';
-// Sprievodca nastavením je spoločný s novou appkou (shared/setup-flow.js).
-export { isWelcome, savedSettings, setupDraft } from '../shared/setup-flow.js';
 
 /**
- * @typedef {'mozem' | 'terazky' | '7dni' | 'statistika' | 'nastavenie'} Panel
- * @typedef {{
- *   now: Date,
+ * Stav. `terazPreview` čas náhľadu na grafe karty Teraz (minúta dňa, null = teraz),
+ * `tzListOpen` otvorený zoznam pod grafom - legenda
+ * časovej osi (na začiatku zatvorený),
+ * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
+ * `tzChip` otvorený panel štítka pod číslom karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
+ * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
+ * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
+ * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
+ * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
+ * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Vymazať údaje), `nsOpen` rozbalená sekcia
+ * karty Nastavenie (NS_FOLDS; pri štarte sú všetky zbalené) a `shareSettings`,
+ * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté
+ * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
+ * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo. `stavTip` je
+ * otvorená bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
+ * @typedef {(typeof PANELS)[number]} Panel
+ * @typedef {'narrow' | 'medium' | 'wide'} Layout
+ * @typedef {'day' | 'week'} WeekDetail
+ * @typedef {'share' | 'reset'} AppSheet
+ * @typedef {import('../shared/mozem.js').Chip['key']} TzChip
+ * @typedef {(typeof NS_FOLDS)[number]} NsFold
+ * @typedef {import('./refresh.js').RefreshState & import('../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
  *   panelDir: 1 | -1,
- *   pv: import('../shared/kiosk.js').PvData | null,
- *   pokusAt: number,
- *   forecast: import('../shared/solar.js').Forecast | null,
- *   loading: boolean,
- *   weekSelDay: number,
- *   weekDetail: 'day' | 'week' | null,
+ *   layout: Layout,
+ *   tariff: import('../shared/config.js').Tariff,
+ *   terazPreview: number | null,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
  *   tzChip: TzChip | null,
+ *   weekDetail: WeekDetail | null,
+ *   weekDay: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
- *   dayLog: import('../shared/daylog.js').DayLog,
- *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
- *   previewMinutes: number | null,
- *   wide: boolean,
- *   tall: boolean,
- *   chartSizes: Record<string, { w: number, h: number }>,
- *   site: import('../shared/config.js').Site,
- *   plant: import('../shared/config.js').Plant,
- *   tariff: import('../shared/config.js').Tariff,
- *   zdroj: import('../shared/zdroje.js').Zdroj | null,
- *   pristup: import('../shared/pristup.js').Odmietnutie | null,
- *   known: import('../shared/settings.js').Known,
- *   settingsDraft: import('../shared/settings.js').Settings,
- *   settingsRev: number,
- *   settingsNote: string,
- *   geo: GeoSearch,
+ *   online: boolean,
  *   incoming: import('../shared/settings.js').Settings | null,
  *   linkError: import('../shared/settings.js').LinkError | null,
- *   importNote: string,
+ *   voice: import('../shared/messages.js').Voice,
+ *   liveSky: boolean,
+ *   appSheet: AppSheet | null,
+ *   nsOpen: NsFold | null,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
- *   setupStep: SetupStep | null,
- *   setupRoof: number,
- *   setupReturn: 'suhrn' | 'prehlad' | null,
- *   setupKwp: number | null,
- *   setupPick: { wp: Pick, ac: Pick },
- *   setupLive: boolean,
- *   setupZnacka: string,
- *   setupSposob: string,
- *   setupUdaje: Record<string, string>,
- *   setupPripoj: import('../shared/setup-flow.js').Pripoj,
- *   setupObnova: boolean,
- *   setupLink: string,
- *   setupSched: number,
- *   setupBrush: string | null,
- *   setupDunno: boolean,
- *   infoOpen: InfoItem | null,
+ *   parts: Partial<Record<Part, PartState>>,
  *   stavTip: boolean,
  *   meranieBublina: '' | 'pripojene' | 'obnovene',
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
- *   voice: import('../shared/messages.js').Voice,
- *   bgTint: boolean,
  * }} AppState
- * @typedef {import('../shared/setup-flow.js').GeoSearch} GeoSearch
- * @typedef {import('../shared/setup.js').SetupStep} SetupStep
- * @typedef {import('../shared/setup-flow.js').ValuePick} Pick ako človek zadal hodnotu: tlačidlom, vlastným číslom, alebo „Neviem“
- * @typedef {(typeof INFO_ITEMS)[number]} InfoItem rozbaľovacia položka karty Nastavenie
- * @typedef {import('../shared/mozem.js').Chip['key']} TzChip štítok pod číslom karty Teraz
- * @typedef {{ panel: Panel, weekDetail: 'day' | 'week' | null, setup: SetupStep | null, roof: number, info: InfoItem | null,
- *   plan: boolean, legend: boolean, chip: TzChip | null }} NavStep krok navigácie pre tlačidlo Späť
+ * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
+ */
+/**
+ * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci, náhľad
+ * iného času na grafe karty Teraz a detail karty 7 dní. Pri náhľade je krokom to, že beží - posun
+ * po grafe nový krok nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň
+ * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
+ * dňa vráti do prehľadu. Obrazovka sprievodcu
+ * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
+ * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený Plán dňa na karte Teraz (`plan`) a zoznam pod
+ * jej grafom (`legend`) tiež, Späť ich zbalí, a panel štítka pod jej číslom (`chip`) Späť zavrie. `dash` hovorí, že krok patrí prehľadu so stĺpcami
+ * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
+ * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
+ * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
+ *   setup: import('../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
+ *   plan: boolean, legend: boolean, chip: TzChip | null, dash?: true }} NavStep
  */
 
 /**
- * @param {Date} now @param {{ wide: boolean, tall: boolean }} layout
- * @param {{ saved?: import('../shared/settings.js').Settings | null, site?: import('../shared/config.js').Site | null,
- *   incoming?: import('../shared/settings.js').Settings | null }} start uložené nastavenie, bez neho
- *   uložená poloha (appka počíta s typickou strechou v nej) a nastavenie z odkazu, ktoré appka
- *   ponúkne prevziať
+ * Zbaliteľné sekcie karty Nastavenie, v poradí na karte. Rozbalená je najviac jedna.
+ * Appka sa nezbaľuje: zdieľanie a vymazanie údajov sú samostatné položky pod nadpisom.
+ */
+export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], 'appka'>[]} */ (
+    NASTAVENIE_SEKCIE.filter((k) => k !== 'appka')
+);
+
+/**
+ * Voľby telefónu: ranné oznámenie, čo s oznámeniami telefón vie,
+ * a spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
+ * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} o
+ */
+const telefon = ({
+    oznamenia = oznameniaDefault(),
+    oznamStav = /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
+    doma = domaDefault(),
+}) => ({
+    oznamenia,
+    oznamStav,
+    doma,
+});
+
+/**
+ * @param {Date} now
+ * @param {{ saved: import('../shared/settings.js').Settings | null, site: import('../shared/config.js').Site | null,
+ *   dayLog: import('../shared/daylog.js').DayLog,
+ *   online: boolean, ranna: import('../shared/den-trieda.js').RannaTrieda | null,
+ *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
+ *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
+ *   layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
+ *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} start
+ *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
+ *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
+ *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
  * @returns {AppState}
  */
-export function initialState(now, layout, { saved = null, site = null, incoming = null }) {
+export function initialState(
+    now,
+    {
+        saved,
+        site,
+        dayLog,
+        online,
+        ranna,
+        incoming = null,
+        linkError = null,
+        look = DEFAULT_LOOK,
+        layout = 'narrow',
+        pristup = null,
+        ...phone
+    },
+) {
+    const start = saved || (site ? typicalSettings(site) : emptySettings());
     /** @type {import('../shared/settings.js').Known} */
     const known = saved ? 'elektraren' : site ? 'poloha' : 'nic';
-    // Bez polohy začína appka sprievodcom na otázke, kde elektráreň stojí.
-    const welcome = known === 'nic';
-    const start = saved || (site ? typicalSettings(site) : emptySettings());
     return {
         now,
-        // Appka sa otvára vždy na prvej karte (Teraz), bez polohy v sprievodcovi.
-        panel: welcome ? 'nastavenie' : PANELS[0],
+        // Appka sa otvára vždy na prvej karte (Teraz).
+        panel: PANELS[0],
         // Smer posledného prechodu medzi kartami: 1 dopredu v poradí navigácie, -1 späť.
-        // Od neho závisí, z ktorej strany sa nová karta prisunie (viď panel-in-* v style.css).
         panelDir: 1,
+        layout,
+        known,
+        site: start.site,
+        plant: start.plant,
+        tariff: start.tariff,
+        zdroj: start.zdroj,
+        pristup,
         pv: null,
         // Kedy appka naposledy dokončila pokus o stiahnutie dát (web/refresh.js); 0 = ešte nie.
         pokusAt: 0,
         forecast: null,
-        // Dáta pre aktuálnu elektráreň sa ešte sťahujú (štart appky, uloženie nastavenia).
-        // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba - hlavička hovorí "načítavam…".
+        // Kým beží prvé načítanie, chýbajúce dáta nie sú chyba.
         loading: true,
-        weekSelDay: 0,
-        // Karta 7 dní má na mobile dve obrazovky: prehľad dní a detail vybraného dňa.
-        // Na širokej obrazovke je na všetko miesto naraz a toto pole sa neprejaví.
-        weekDetail: null,
-        // Zoznam pod grafom dňa na karte Teraz (legenda časovej osi): na začiatku zatvorený a neukladá sa.
-        // Otvorený je krok navigácie - Späť ho zbalí.
+        dayLog,
+        // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js); zapisuje ju obnova dát.
+        ranna,
+        terazPreview: null,
         tzListOpen: false,
-        // Plán dňa na karte Teraz: pri štarte vždy zbalený, aby bol graf pri čísle
-        // (docs/navrhy/teraz-plan-rozbalovaci.html). Otvorený je krok navigácie - Späť ho zbalí.
         tzPlanOpen: false,
-        // Otvorený panel štítka pod číslom karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html).
-        // Krok navigácie - Späť ho zavrie.
         tzChip: null,
-        // Obdobie na karte Štatistika. Nastavenie vnútri karty, nie krok navigácie - Späť sa
-        // naň nevracia, rovnako ako na vybraný deň.
+        weekDetail: null,
+        weekDay: 0,
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
-        // Denník výroby po dňoch pre plagát Štatistiky (shared/daylog.js). Načíta sa pri štarte, dopĺňa ho obnova dát.
-        dayLog: {},
-        // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js). Načíta sa pri štarte, zapisuje ju obnova dát.
-        ranna: null,
-        previewMinutes: null,
-        wide: layout.wide,
-        // Či je okno dosť vysoké na to, aby sa do prehľadu dní zmestila aj správa týždňa
-        // (WEEK_MSG_MIN_H). Keď nie je, správa sa nekreslí - prehľad ostáva bez scrollovania.
-        tall: layout.tall,
-        // Skutočné rozmery plátien grafov. Napĺňa ich ResizeObserver v interactions.js;
-        // kým sú prázdne, grafy sa kreslia na pevné plátno z chartDims.
-        chartSizes: {},
-        // Elektráreň, pre ktorú appka počíta: uložené nastavenie, kým si ho používateľ
-        // nezadá, typická strecha v jeho polohe.
-        site: start.site,
-        plant: start.plant,
-        // Tarifa: pásma, rozvrh a ceny. Kedy svieti slnko, v nej nie je - to je z predpovede.
-        tariff: start.tariff,
-        // Pripojené živé meranie (shared/zdroje.js); null = bez merania.
-        zdroj: start.zdroj,
-        // Prístup k meraniu, ktorý výrobca odmietol (shared/pristup.js). Uložený načíta app.js.
-        pristup: null,
-        // Čo appka o elektrárni vie. `nic`: ukazuje len otázku na polohu (krok lokalita sprievodcu)
-        // bez navigácie a nič nesťahuje - site je prázdna, kým ju človek nevyberie. `poloha`:
-        // panely nie sú zadané, karty odpovedajú z typickej strechy a jantárový pás to povie.
-        known,
-        // Sprievodca nastavením a rozpísané nastavenie - to isté ako v novej appke (shared/setup-flow.js).
-        ...setupInit(start, known),
-        // Nastavenie z odkazu (otvoreného alebo prilepeného), ktoré čaká na potvrdenie.
-        // Odkaz môže poslať ktokoľvek, preto ho appka sama neuloží.
+        online,
         incoming,
-        // Odkaz, ktorý appka nevie prevziať (readLink), a prečo - ponuka to povie namiesto mlčania.
-        linkError: null,
-        importNote: '',
-        // Čo pribaliť k zdieľanému odkazu na appku.
+        linkError,
+        voice: look.voice,
+        liveSky: look.liveSky,
+        appSheet: null,
+        nsOpen: null,
         shareSettings: false,
         shareKiosk: false,
-        // Rozbalená položka karty Nastavenie (null = žiadna). Je to krok navigácie, takže tlačidlo
-        // Späť na telefóne položku zbalí a vráti na zoznam, nie na predchádzajúcu kartu.
-        infoOpen: null,
-        // Bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
+        // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
+        parts: {},
         stavTip: false,
         // Bublina, ktorú appka ešte neukázala: meranie sa práve pripojilo (web/setup-wiring.js), alebo
         // sa vrátilo z výpadku (shared/hlavicka.js, obnovaMerania).
         meranieBublina: /** @type {'' | 'pripojene' | 'obnovene'} */ (''),
-        // Ranné oznámenie a spotrebiče doma (voľba telefónu, uložená načíta app.js) a čo s
-        // oznámeniami telefón vie (web/oznamenia.js) - podľa spotrebičov ráta aj Plán dňa.
-        oznamenia: oznameniaDefault(),
-        oznamStav: /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
-        // Spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
-        doma: domaDefault(),
-        // Vzhľad (Nastavenie › Vzhľad): tón hlášok, spoločný s novou appkou, a farba pozadia podľa
-        // ceny - vypnutá je pozadie pokojne čierne. Uložený načíta app.js.
-        voice: DEFAULT_LOOK.voice,
-        bgTint: DEFAULT_LOOK.bgTint,
+        ...telefon(phone),
+        // Sprievodca nastavením a rozpísané nastavenie. Bez polohy čaká na karte Nastavenie otázka
+        // na ňu; appka sa aj tak otvára na svojej prvej karte, ktorá vedie do Nastavenia.
+        ...setupInit(start, known),
     };
 }
 
-/** @typedef {ReturnType<typeof createStore<AppState>>} Store */
-
 /**
- * Zmena karty aj so smerom, ktorým sa má nová karta prisunúť. Smer sa berie z poradia
- * v navigácii, nie z toho, odkiaľ sa prepínalo (spodná lišta, tlačidlo Späť, výzva na
- * karte) - prechod tak vyzerá rovnako pri všetkých. Detail dňa, rozbalená položka Nastavenia, otvorený
- * Plán dňa aj zoznam pod grafom sa pritom zatvárajú: je to vec jedného pozretia, nie stav, do ktorého
- * by sa appka mala vrátiť o hodinu neskôr.
+ * Zmena karty aj so smerom podľa poradia v navigácii. Náhľad, otvorený Plán dňa a zoznam pod
+ * grafom patria karte Teraz a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
     return {
         panel: to,
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
-        weekDetail: null,
-        infoOpen: /** @type {null} */ (null),
+        terazPreview: /** @type {number | null} */ (null),
         tzPlanOpen: false,
         tzListOpen: false,
         tzChip: /** @type {TzChip | null} */ (null),
+        weekDetail: /** @type {WeekDetail | null} */ (null),
+        appSheet: /** @type {AppSheet | null} */ (null),
+        nsOpen: /** @type {NsFold | null} */ (null),
         stavTip: false,
     };
 }
 
 /**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, či je otvorený detail dňa,
- * obrazovka sprievodcu nastavením aj s plochou panelov, rozbalená položka Nastavenia, otvorený Plán dňa,
- * zoznam pod grafom a panel štítka na karte Teraz. Zvyšok stavu (vybraný deň, stránka
- * pásu odporúčaní, náhľad času) je nastavenie vnútri karty, nie miesto v appke - tam sa Späť
- * nevracia, rovnako ako v iných appkách.
- * @param {AppState} state @returns {NavStep}
+ * Rozloženie podľa šírky okna (LAYOUT_PX): telefón a tablet na výšku, tablet na šírku, počítač.
+ * @param {number} width šírka okna v px @returns {Layout}
  */
+export function layoutOf(width) {
+    return width >= LAYOUT_PX.wide ? 'wide' : width >= LAYOUT_PX.medium ? 'medium' : 'narrow';
+}
+
+/** Karty, ktoré široká obrazovka ukazuje naraz ako stĺpce prehľadu, zľava doprava. */
+export const COLUMNS = /** @type {const} */ (['mozem', 'terazky', '7dni']);
+
+/** Je karta stĺpcom prehľadu? @param {Panel} panel */
+export const isColumn = (panel) => COLUMNS.some((c) => c === panel);
+
+/**
+ * Ukazuje appka prehľad so stĺpcami? Len na širšej obrazovke a len na kartách Môžem?, Teraz a
+ * 7 dní - Štatistika a Nastavenie sú aj tam samostatná stránka. `panel` je potom aktívny stĺpec:
+ * ten, ktorý vybrala navigácia alebo v ktorom človek naposledy niečo otvoril.
+ * @param {Pick<AppState, 'layout' | 'panel'>} state
+ */
+export const dashboard = (state) => state.layout !== 'narrow' && isColumn(state.panel);
+
+/**
+ * Je karta na obrazovke? Na telefóne len vybraná, v prehľade všetky jeho stĺpce.
+ * @param {Pick<AppState, 'layout' | 'panel'>} state @param {Panel} panel
+ */
+export const shows = (state, panel) => panel === state.panel || (dashboard(state) && isColumn(panel));
+
+/**
+ * Časti appky, ktorých kód sa nesťahuje pri štarte, ale až keď ich treba, alebo keď je prehliadač po
+ * prvom vykreslení voľný (web/parts.js): karta 7 dní, Štatistika s plagátom a Nastavenie so
+ * sprievodcom a ponukou prevziať nastavenie z odkazu. Úvodná karta, hlavička, navigácia a obloha
+ * sú v jadre - prvé zobrazenie na ne nečaká.
+ */
+export const PARTS = /** @type {const} */ (['sedem', 'statistika', 'nastavenie']);
+
+/**
+ * @typedef {(typeof PARTS)[number]} Part
+ * @typedef {'ok' | 'chyba' | 'koniec'} PartState načítaná; nenačítala sa (dá sa stiahnuť znova a
+ *   obnoviť stránku); nenačítala sa ani po obnovení v tejto karte prehliadača
+ */
+
+/** Časť appky, ktorej kód karta potrebuje (null = karta je v jadre). @param {Panel} panel @returns {Part | null} */
+export const partOf = (panel) => (panel === '7dni' ? 'sedem' : panel === 'statistika' || panel === 'nastavenie' ? panel : null);
+
+/** Je kód karty načítaný? Kým nie je, karta sa neukáže prázdna - namiesto nej je hláška. @param {Pick<AppState, 'parts'>} state @param {Panel} panel */
+export function ready(state, panel) {
+    const part = partOf(panel);
+    return !part || state.parts[part] === 'ok';
+}
+
+/**
+ * Časti, ktoré obrazovka práve potrebuje: karty na obrazovke a ponuka prevziať nastavenie z odkazu
+ * (patrí Nastaveniu).
+ * @param {AppState} state @returns {Part[]}
+ */
+export function neededParts(state) {
+    const shown = PANELS.filter((p) => shows(state, p)).map(partOf);
+    return PARTS.filter((part) => shown.includes(part) || (part === 'nastavenie' && (!!state.incoming || !!state.linkError)));
+}
+
+/** @param {AppState} state @returns {NavStep} */
 export function navStep(state) {
     return {
         panel: state.panel,
-        weekDetail: state.weekDetail,
+        preview: state.terazPreview,
+        detail: state.weekDetail,
         setup: state.setupStep,
         roof: state.setupRoof,
-        info: state.infoOpen,
+        sheet: state.appSheet,
+        fold: state.nsOpen,
         plan: state.tzPlanOpen,
         legend: state.tzListOpen,
         chip: state.tzChip,
+        ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
     };
 }
 
-/** @param {NavStep} a @param {NavStep} b */
+/**
+ * Rovnaký krok? V prehľade sú všetky stĺpce jedna obrazovka - prepnutie stĺpca nový krok nepridá.
+ * @param {NavStep} a @param {NavStep} b
+ */
 export function sameNavStep(a, b) {
     return (
-        a.panel === b.panel &&
-        a.weekDetail === b.weekDetail &&
+        (a.panel === b.panel || (!!a.dash && !!b.dash)) &&
+        (a.preview === null) === (b.preview === null) &&
+        a.detail === b.detail &&
         a.setup === b.setup &&
         a.roof === b.roof &&
-        a.info === b.info &&
+        a.sheet === b.sheet &&
+        a.fold === b.fold &&
         a.plan === b.plan &&
         a.legend === b.legend &&
         a.chip === b.chip
@@ -247,87 +302,118 @@ export function sameNavStep(a, b) {
 }
 
 /**
- * Návrat na skorší krok navigácie (tlačidlo Späť). Od panelChange sa líši jediným:
- * detail dňa nezatvára, ale nastavuje na to, čo v tom kroku bolo - Späť má obnoviť,
- * čo používateľ videl, nie to upratať.
- * @param {Panel} from @param {NavStep} step
+ * Detail z položky histórie. Patrí len karte 7 dní (v prehľade ktorémukoľvek stĺpcu - 7 dní je
+ * vidieť vždy); položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {boolean} dash @param {unknown} detail @returns {WeekDetail | null}
  */
-export function navChange(from, step) {
-    // Úprava jedného kroku končí zhrnutím alebo prehľadom - návrat na ne ju ukončí aj tu.
-    const endsEdit = step.setup === null || step.setup === 'suhrn';
+const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (detail === 'day' || detail === 'week') ? detail : null);
+
+/**
+ * Okno sekcie Appka z položky histórie. Patrí len karte Nastavenie; položka zo skoršej verzie ho nemá.
+ * @param {Panel} panel @param {unknown} sheet @returns {AppSheet | null}
+ */
+const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
+
+/**
+ * Rozbalená sekcia karty Nastavenie z položky histórie. Patrí len tej karte; položka zo skoršej
+ * verzie ju nemá - všetko je zbalené.
+ * @param {Panel} panel @param {unknown} fold @returns {NsFold | null}
+ */
+const nsFoldOf = (panel, fold) => (panel === 'nastavenie' && NS_FOLDS.find((f) => f === fold)) || null;
+
+/**
+ * Otvorený Plán dňa či zoznam pod grafom z položky histórie. Patria len karte Teraz (v prehľade
+ * ktorémukoľvek stĺpcu - Teraz je vidieť vždy); položka zo skoršej verzie ich nemá, sú zbalené.
+ * @param {Panel} panel @param {boolean} dash @param {unknown} open
+ */
+const terazOpenOf = (panel, dash, open) => (panel === 'terazky' || dash) && open === true;
+
+/**
+ * Otvorený panel štítka z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
+ * ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} chip @returns {TzChip | null}
+ */
+const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet') ? chip : null);
+
+/**
+ * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
+ * chýbajúci krok je prehľad karty. Cudzia hodnota je null.
+ * @param {unknown} setup @param {unknown} roof
+ * @returns {{ setup: import('../shared/setup.js').SetupStep | null, roof: number } | null}
+ */
+function setupPlaceOf(setup = null, roof = 0) {
+    const s = setup === null ? null : SETUP_STEPS.find((x) => x === setup);
+    if (s === undefined || !Number.isInteger(roof) || /** @type {number} */ (roof) < 0) return null;
+    return { setup: s, roof: /** @type {number} */ (roof) };
+}
+
+/**
+ * Prehľad so stĺpcami z položky histórie. Poznajú ho len jeho karty; položka zo skoršej verzie ho nemá.
+ * Vracia časť kroku: `{ dash: true }`, inak nič. @param {Panel} panel @param {unknown} dash @returns {{ dash?: true }}
+ */
+const dashOf = (panel, dash) => (dash === true && isColumn(panel) ? { dash: true } : {});
+
+/**
+ * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
+ * pri nej správa ako predtým - odíde zo stránky.
+ * @param {unknown} raw @returns {NavStep | null}
+ */
+export function navStepOf(raw) {
+    // Položka zo skoršej verzie appky mala za krok len kartu.
+    if (typeof raw === 'string') raw = { panel: raw };
+    if (!raw || typeof raw !== 'object') return null;
+    // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami; položka, ktorá ho ešte nesie, vráti len kartu.
+    const { panel, preview, detail, setup, roof, sheet, fold, plan, legend, chip, dash } =
+        /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
+         *   sheet?: unknown, fold?: unknown, plan?: unknown, legend?: unknown, chip?: unknown, dash?: unknown }} */ (raw);
+    const p = PANELS.find((x) => x === panel);
+    const place = setupPlaceOf(setup, roof);
+    if (!p || !place) return null;
+    const d = dashOf(p, dash);
+    const inDash = !!d.dash;
+    // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad.
+    const at = Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
     return {
-        ...panelChange(from, step.panel),
-        weekDetail: step.weekDetail,
+        panel: p,
+        preview: at ? /** @type {number} */ (preview) : null,
+        detail: weekDetailOf(p, inDash, detail),
+        ...place,
+        sheet: appSheetOf(p, sheet),
+        fold: nsFoldOf(p, fold),
+        plan: terazOpenOf(p, inDash, plan),
+        legend: terazOpenOf(p, inDash, legend),
+        chip: tzChipOf(p, inDash, chip),
+        ...d,
+    };
+}
+
+/** Krok, na ktorom položka histórie stojí. @param {unknown} raw */
+export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ step?: unknown }} */ (raw).step : null);
+
+/** Krok, z ktorého sa do položky histórie prišlo. @param {unknown} raw */
+export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
+
+/**
+ * Návrat na krok z histórie (tlačidlo Späť): karta, náhľad, detail, Plán dňa aj zoznam pod grafom tak, ako boli.
+ * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
+ * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
+ * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
+ * @param {AppState} state @param {NavStep} step
+ */
+export function navChange(state, step) {
+    const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
+    const endsEdit = step.setup === null || step.setup === 'suhrn';
+    const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
+    return {
+        ...panelChange(state.panel, panel),
+        terazPreview: preview,
+        weekDetail: step.detail,
         setupStep: step.setup,
         setupRoof: step.roof,
-        infoOpen: step.info,
+        appSheet: step.sheet,
+        nsOpen: step.fold,
         tzPlanOpen: step.plan,
         tzListOpen: step.legend,
         tzChip: step.chip,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
-}
-
-/**
- * Krok navigácie z položky histórie. Cudzie položky (iná stránka v tej istej karte
- * prehliadača, staršia verzia appky) vracajú null a Späť sa pri nich správa ako
- * predtým - odíde zo stránky.
- * @param {unknown} raw @returns {NavStep | null}
- */
-export function navStepFrom(raw) {
-    if (!raw || typeof raw !== 'object') return navStepIn(null);
-    return navStepIn(/** @type {{ step?: unknown }} */ (raw).step);
-}
-
-/**
- * Krok navigácie z hodnoty v položke histórie. Položka zo staršej verzie appky sprievodcu
- * ani rozbalenú položku Nastavenia nepozná - chýbajúci krok sprievodcu je `null`, teda prehľad karty,
- * a chýbajúca položka tiež `null`, teda nič rozbalené. Položka zo staršej verzie so zrušenou
- * kartou Info (`panel: 'info'`) neprejde kontrolou karty a Späť ju berie ako cudziu. Otvorený Plán dňa,
- * zoznam pod grafom a panel štítka patria len karte Teraz; položka zo staršej verzie ich nepozná - sú zbalené.
- * @param {unknown} step @returns {NavStep | null}
- */
-function navStepIn(step) {
-    if (!step || typeof step !== 'object') return null;
-    const { panel, weekDetail, setup = null, roof = 0, info = null, plan, legend, chip } = /** @type {Record<string, unknown>} */ (step);
-    if (!validPanelPlace(panel, weekDetail) || !validSetupPlace(setup, roof) || !validInfoItem(info)) return null;
-    return {
-        panel: /** @type {Panel} */ (panel),
-        weekDetail: /** @type {'day' | 'week' | null} */ (weekDetail),
-        setup: /** @type {SetupStep | null} */ (setup),
-        roof: /** @type {number} */ (roof),
-        info: /** @type {InfoItem | null} */ (info),
-        plan: panel === 'terazky' && plan === true,
-        legend: panel === 'terazky' && legend === true,
-        chip: tzChipOf(panel, chip),
-    };
-}
-
-/** Otvorený panel štítka z položky histórie - patrí len karte Teraz. @param {unknown} panel @param {unknown} chip @returns {TzChip | null} */
-const tzChipOf = (panel, chip) => (panel === 'terazky' && (chip === 'stav' || chip === 'siet') ? chip : null);
-
-/** Karta a detail dňa z položky histórie. @param {unknown} panel @param {unknown} weekDetail */
-function validPanelPlace(panel, weekDetail) {
-    const detailOk = weekDetail === null || weekDetail === 'day' || weekDetail === 'week';
-    return detailOk && PANELS.some((p) => p === panel);
-}
-
-/** Obrazovka sprievodcu a plocha z položky histórie. @param {unknown} setup @param {unknown} roof */
-function validSetupPlace(setup, roof) {
-    return (setup === null || SETUP_STEPS.some((s) => s === setup)) && Number.isInteger(roof) && /** @type {number} */ (roof) >= 0;
-}
-
-/** Rozbalená položka Nastavenia z položky histórie. @param {unknown} info */
-function validInfoItem(info) {
-    return info === null || INFO_ITEMS.some((i) => i === info);
-}
-
-/**
- * Krok navigácie, z ktorého appka do tejto položky histórie prišla (`prev`, zapisuje ho
- * initHistory). Podľa neho vie tlačidlo „Späť“ v sprievodcovi, či smie ísť cez históriu.
- * @param {unknown} raw @returns {NavStep | null}
- */
-export function navPrevFrom(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    return navStepIn(/** @type {{ prev?: unknown }} */ (raw).prev);
 }

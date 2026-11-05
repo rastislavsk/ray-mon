@@ -69,7 +69,7 @@ function inputs(now) {
 }
 
 /**
- * Všetky texty v danom tóne. Bez `voice` volá funkcie bez neho - tak, ako ich volá súčasná appka.
+ * Všetky texty v danom tóne. Bez `voice` volá funkcie bez neho.
  * @param {import('../shared/messages.js').Voice} [voice]
  */
 export function sampleTexts(voice) {
@@ -144,7 +144,6 @@ function directDay(out, v) {
     strings(M.dayDetailMessage(pts, th, v), 'dayDetail.silny', out);
     strings(M.dayDetailMessage(weak, th, v), 'dayDetail.slaby', out);
     strings(M.sedemDayMessage(pts, th, false, v), 'sedemDay.bezOkna', out);
-    strings(M.EMPTY_MESSAGES, 'empty', out);
 }
 
 /** Veci karty Môžem? a ich zápis. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */
@@ -213,7 +212,7 @@ function directPlan(out, v) {
     ];
     for (const item of MOZEM_ITEMS.filter((i) => i.device))
         for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);
-    Object.assign(out, { 'plan.title': M.PLAN_DNA_TITLE, 'plan.now': M.PLAN_DNA_NOW, 'plan.note': M.PLAN_DNA_NOTE });
+    Object.assign(out, { 'plan.title': M.PLAN_DNA_TITLE, 'plan.note': M.PLAN_DNA_NOTE });
     // Ranné oznámenie: pevné texty, nadpis a text pre každý druh dňa a pripomienky.
     const T = M.oznameniaTexts(v);
     strings(T, 'oznam', out);

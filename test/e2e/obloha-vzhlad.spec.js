@@ -1,12 +1,12 @@
-// E2E karty Nastavenie novej appky „Živá obloha“, krok 6b: Vzhľad (živá obloha, tón hlášok)
+// E2E karty Nastavenie, krok 6b: Vzhľad (živá obloha, tón hlášok)
 // a Appka (Zdieľať appku, Vymazať údaje). Očakávané texty počítajú tie isté funkcie
 // ako appka (shared/messages.js, mozemSkyModel), takže test odhalí rozdiel medzi modelom a stránkou.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
+    APP_URL,
     LOOK_STORAGE_KEY,
     NASTAVENIE_SEKCIE,
-    OBLOHA_URL,
     PLANT,
     SETTINGS_STORAGE_KEY,
     SITE,
@@ -18,7 +18,7 @@ import {
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
-import { NS_FOLDS } from '../../obloha/web/state.js';
+import { NS_FOLDS } from '../../web/state.js';
 import { voiceTexts } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
@@ -87,15 +87,9 @@ const appReady = (page) => expect(page.locator('#page')).toHaveAttribute('data-p
 /** @param {import('@playwright/test').Page} page @param {Parameters<typeof pripravSiet>[1]} [opts] */
 async function openObloha(page, opts) {
     const errors = await pripravSiet(page, opts);
-    await page.goto('/obloha/');
+    await page.goto('/');
     await appReady(page);
     return errors;
-}
-
-/** Súčasná appka; čaká, kým prepíše „načítavam…“. @param {import('@playwright/test').Page} page */
-async function otvorSucasnuAppku(page) {
-    await page.goto('/');
-    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
 }
 
 /** @param {import('@playwright/test').Page} page @param {string} panel */
@@ -125,7 +119,7 @@ const modelMozem = (time, voice) =>
     );
 
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane; platí aj v súčasnej appke', async ({ page }) => {
+    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
@@ -154,16 +148,6 @@ test.describe('tón hlášok', () => {
         await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
-
-        // Tón je spoločný: súčasná appka hovorí slušne tiež a v jej Nastavení je vybraný Slušný.
-        await otvorSucasnuAppku(page);
-        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
-        await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(slusny.word);
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-vzhlad > summary').click();
-        await expect(page.locator('#vzhlad-body [data-voice="slusny"]')).toBeChecked();
-        await expect(page.locator('#doma-title')).toHaveText('Čo máte doma');
         expect(errors).toEqual([]);
     });
 
@@ -229,17 +213,13 @@ test.describe('živá obloha', () => {
 });
 
 test.describe('úvodná karta', () => {
-    test('obe appky sa otvárajú na karte Teraz, voľba v Nastavení nie je a stará uložená sa zmaže', async ({ page }) => {
+    test('appka sa otvára na karte Teraz, voľba v Nastavení nie je a stará uložená sa zmaže', async ({ page }) => {
         await page.addInitScript(() => localStorage.setItem('prva-karta-v1', 'mozem'));
         const errors = await openObloha(page);
         await expect(page.locator('#panel-terazky')).toBeVisible();
         expect(await ulozene(page, 'prva-karta-v1')).toBeNull();
         await karta(page, 'nastavenie');
         await expect(page.locator('#ns-start, [data-start]')).toHaveCount(0);
-
-        await otvorSucasnuAppku(page);
-        await expect(page.locator('#panel-terazky')).toBeVisible();
-        await expect(page.locator('#panel-mozem')).toBeHidden();
         expect(errors).toEqual([]);
     });
 });
@@ -250,7 +230,7 @@ test.describe('zbaliteľné sekcie', () => {
         await karta(page, '7dni');
         await karta(page, 'nastavenie');
         const sekcie = NS_FOLDS;
-        // Poradie sekcií je to isté ako v súčasnej appke - dáva ho jadro. Appka sa nezbaľuje, ako v súčasnej appke.
+        // Poradie sekcií je to isté - dáva ho jadro. Appka sa nezbaľuje.
         expect(sekcie).toEqual(NASTAVENIE_SEKCIE.filter((k) => k !== 'appka'));
         await expect(page.locator('#ns-app-title')).toHaveText(NASTAVENIE_TEXTS.appka);
         expect(
@@ -288,17 +268,17 @@ test.describe('zbaliteľné sekcie', () => {
 test.describe('Zdieľať appku', () => {
     test('odkaz, ktorý sa do QR kódu nezmestí: okno sa otvorí a ukáže len odkaz', async ({ page }) => {
         // Kód unesie odkaz bez nastavenia, s nastavením elektrárne už nie.
-        await podvrhniQr(page, OBLOHA_URL.length + 20);
+        await podvrhniQr(page, APP_URL.length + 20);
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-sheet')).toBeVisible();
-        await expect(page.locator('#ns-qr [data-qr]')).toHaveAttribute('data-qr', OBLOHA_URL);
+        await expect(page.locator('#ns-qr [data-qr]')).toHaveAttribute('data-qr', APP_URL);
         await expect(page.locator('#ns-qr')).toBeVisible();
         expect(await page.evaluate(() => /** @type {any} */ (globalThis).qrLevels)).toEqual([0]);
 
         await page.locator('#ns-share-settings').check();
-        const dlhy = shareUrl(OBLOHA_URL, OWNER, false);
+        const dlhy = shareUrl(APP_URL, OWNER, false);
         await expect(page.locator('#ns-share-link')).toHaveText(dlhy);
         await expect(page.locator('#ns-qr')).toBeHidden();
 
@@ -312,28 +292,28 @@ test.describe('Zdieľať appku', () => {
         expect(errors).toEqual([]);
     });
 
-    test('odkaz vedie na novú appku, s nastavením ho nová appka prevezme; bez QR knižnice len odkaz', async ({ page, browser }) => {
+    test('odkaz vedie na appku, s nastavením ho appka prevezme; bez QR knižnice len odkaz', async ({ page, browser }) => {
         const errors = await openObloha(page);
         await karta(page, 'nastavenie');
         await page.locator('#ns-share').click();
         const okno = page.locator('#ns-share-sheet');
         await expect(okno).toBeVisible();
         const odkaz = page.locator('#ns-share-link');
-        await expect(odkaz).toHaveText(OBLOHA_URL);
-        expect(OBLOHA_URL).toMatch(/\/ray-mon\/obloha\/$/);
+        await expect(odkaz).toHaveText(APP_URL);
+        expect(APP_URL).toMatch(/\/ray-mon\/$/);
         // QR knižnica z CDN neodpovedá: okno ukáže len odkaz a WhatsApp.
         await expect(page.locator('#ns-qr')).toBeHidden();
-        await expect(page.locator('#ns-share-wa')).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(OBLOHA_URL)}`);
+        await expect(page.locator('#ns-share-wa')).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(APP_URL)}`);
 
         await expect(page.locator('#ns-share-kiosk-row')).toBeHidden();
         await page.locator('#ns-share-settings').check();
         await expect(page.locator('#ns-share-kiosk-row')).toBeVisible();
-        const sNastavenim = shareUrl(OBLOHA_URL, OWNER, false);
+        const sNastavenim = shareUrl(APP_URL, OWNER, false);
         await expect(odkaz).toHaveText(sNastavenim);
         await expect(odkaz).toHaveAttribute('href', sNastavenim);
         expect(settingsFromLink(sNastavenim)?.zdroj).toBe(null);
         await page.locator('#ns-share-kiosk').check();
-        await expect(odkaz).toHaveText(shareUrl(OBLOHA_URL, OWNER, true));
+        await expect(odkaz).toHaveText(shareUrl(APP_URL, OWNER, true));
         await page.locator('#ns-share-kiosk').uncheck();
 
         // Escape zavrie okno a fokus sa vráti na riadok.
@@ -351,7 +331,7 @@ test.describe('Zdieľať appku', () => {
         const druhyKontext = await browser.newContext({ baseURL: test.info().project.use.baseURL });
         const druhy = await druhyKontext.newPage();
         const errors2 = await pripravSiet(druhy, { settings: null });
-        await druhy.goto(`/obloha/${new URL(sNastavenim).hash}`);
+        await druhy.goto(`/${new URL(sNastavenim).hash}`);
         await appReady(druhy);
         await expect(druhy.locator('#import-offer')).toBeVisible();
         await druhy.locator('#import-accept').click();
@@ -367,7 +347,7 @@ test.describe('Zdieľať appku', () => {
         await karta(page, 'nastavenie');
         await page.locator('#ns-share').click();
         await expect(page.locator('#ns-share-opts')).toBeHidden();
-        await expect(page.locator('#ns-share-link')).toHaveText(OBLOHA_URL);
+        await expect(page.locator('#ns-share-link')).toHaveText(APP_URL);
     });
 });
 
@@ -409,7 +389,7 @@ test.describe('Vymazať údaje', () => {
     });
 });
 
-test('sprievodca pri tarife nespomína ciferník v žiadnej appke, obe hovoria o páse plánu dňa', async ({ page }) => {
+test('sprievodca pri tarife nespomína ciferník, hovorí o páse plánu dňa', async ({ page }) => {
     const errors = await openObloha(page);
     await karta(page, 'nastavenie');
     await rozbal(page, 'elektraren');
@@ -419,14 +399,6 @@ test('sprievodca pri tarife nespomína ciferník v žiadnej appke, obe hovoria o
     await expect(page.locator('#wz-lead')).not.toContainText(/ciferník|prstenec/);
     await page.locator('#wz-tarifa [data-setup-kind="dunno"]').click();
     await expect(page.locator('#wz-tariff-dunno')).not.toContainText('ciferník');
-
-    await otvorSucasnuAppku(page);
-    await page.locator('#nav-nastavenie').click();
-    const polozka = page.locator('#settings-plant');
-    if ((await polozka.getAttribute('open')) === null) await polozka.locator('> summary').click();
-    await page.locator('#setup-rows [data-setup-edit="tarifa"]').click();
-    await expect(page.locator('#wz-lead')).toContainText('pás plánu dňa');
-    await expect(page.locator('#wz-lead')).not.toContainText(/ciferník|prstenec/);
     expect(errors).toEqual([]);
 });
 

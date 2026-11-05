@@ -1,4 +1,4 @@
-// E2E novej appky „Živá obloha“ na širšej obrazovke (krok 8): tablet na výšku, tablet na šírku
+// E2E na širšej obrazovke (krok 8): tablet na výšku, tablet na šírku
 // a počítač. Rozloženie rozhoduje šírka okna (LAYOUT_PX v shared/config.js). Očakávané texty sa
 // počítajú tými istými modelmi ako na telefóne - stĺpce sú tie isté karty, len vedľa seba.
 import { expect, test } from '@playwright/test';
@@ -26,7 +26,7 @@ const TABLET_SIRKA = { width: 1180, height: 820 };
 const POCITAC = { width: 1440, height: 900 };
 
 /**
- * Otvorí novú appku s uloženými Dvoranami, pevným časom a dátami z fixtures.
+ * Otvorí appku s uloženými Dvoranami, pevným časom a dátami z fixtures.
  * @param {import('@playwright/test').Page} page @param {{ width: number, height: number }} size
  * @param {{ time?: Date, settings?: typeof OWNER | null }} [opts]
  */
@@ -46,7 +46,7 @@ async function openObloha(page, size, { time = NOON, settings = OWNER } = {}) {
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
     await page.clock.setFixedTime(time);
-    await page.goto('/obloha/');
+    await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
     await expect(page.locator('#hdr-status')).not.toHaveText('načítavam…');
     return errors;
@@ -160,7 +160,7 @@ test.describe('tri rozloženia podľa šírky okna', () => {
         const errors = await openObloha(page, POCITAC);
         for (const panel of ['statistika', 'nastavenie']) {
             await page.locator(`#nav-${panel}`).click();
-            // Kód karty sa môže ešte sťahovať (obloha/web/parts.js) - dovtedy je namiesto nej hláška.
+            // Kód karty sa môže ešte sťahovať (web/parts.js) - dovtedy je namiesto nej hláška.
             await expect(page.locator(`#panel-${panel}`)).toBeVisible();
             const r = await rozlozenie(page);
             expect(r.panels.map((p) => p.id)).toEqual([panel]);

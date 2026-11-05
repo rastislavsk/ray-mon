@@ -1,5 +1,5 @@
 // Kroky navigácie v histórii prehliadača, aby tlačidlo Späť vracalo o krok v appke. Nevie, čo
-// krok je - to mu povie volajúci (súčasná appka vo web/history.js, nová v obloha/). Adresa sa
+// krok je - to mu povie volajúci (web/nav-back.js). Adresa sa
 // nemení; položka histórie je len značka s krokom navigácie.
 
 /**

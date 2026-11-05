@@ -1,4 +1,4 @@
-// Výroba písma novej appky „Živá obloha“: jeden súbor woff2 s Archivom len so znakmi, ktoré appka
+// Výroba písma: jeden súbor woff2 s Archivom len so znakmi, ktoré appka
 // naozaj píše, s oboma osami (wdth, wght). Nahrádza dve podmnožiny Google Fonts (latin a latin-ext),
 // ktoré slovenčina potrebuje naraz a ktoré spolu mali 176 kB. Nie je súčasťou behu appky - výsledok
 // leží v repozitári (fonts/archivo-obloha.woff2) a stránka ho servíruje tak, ako je.

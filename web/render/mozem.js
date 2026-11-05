@@ -1,89 +1,138 @@
-// Karta Dnes (kódové meno mozem, doteraz Môžem?): dráha slnka a plagát s veľkým slovom, ktorý sa
-// mení s časťou dňa (smer C v docs/navrhy/dnes-tri-smery.html) - ráno plán, cez deň odpočet okna
-// na veľké veci, večer vysvedčenie dneška a pod ním zajtrajšok. Pod plagátom čo dá strecha za celý
-// deň a kedy bude lepšie. Všetko skladá render do #mozem-body; počíta shared/mozem.js
-// a shared/dnes-faza.js, texty sú v shared/messages.js.
+// Karta Dnes (kódové meno mozem, doteraz Môžem?): oblúk slnka, veľké slovo, čo dá
+// strecha za celý deň a výzvy (docs/navrhy/dnes-a-teraz.html). Zvyšok sa mení s časťou dňa - ráno
+// plán, cez deň odpočet okna na veľké veci, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html,
+// smer C). Všetko počíta shared/mozem-sky.js a shared/dnes-faza.js, texty sú v shared/messages.js -
+// tu sa len zapisuje do DOM.
 
-import { escapeHtml } from '../../shared/format.js';
-import { DNES_TEXTS } from '../../shared/messages-core.js';
 import { dnesFaza } from '../../shared/dnes-faza.js';
-import { sunArc } from '../../shared/mozem-sky.js';
-import { mozemModel } from '../../shared/mozem.js';
-import { writeHtml } from '../memo.js';
+import { escapeHtml } from '../../shared/format.js';
+import { DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
+import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { sunArcSvg } from '../sun-arc.js';
+import { shows } from '../state.js';
+import { setHtml, setText, show } from './write.js';
 
-/** @typedef {ReturnType<typeof mozemModel>} MozemModel */
+/** @typedef {import('../../shared/mozem-sky.js').MozemSkyModel} Model */
 /** @typedef {import('../../shared/dnes-faza.js').DnesFaza} DnesFaza */
 /** @typedef {import('../dom.js').Dom} Dom */
 
-/** Veľké slovo: písmo sa zmenší podľa najdlhšieho slova a dĺžky hlášky (style.css). @param {string} word @param {string} cls */
-function wordHtml(word, cls) {
-    const len = Math.max(1, ...word.split(/\s+/).map((w) => w.length));
-    return `<p class="mozem-word${cls}" style="--word-len: ${len}; --word-chars: ${Math.max(1, word.length)}">${escapeHtml(word)}</p>`;
-}
-
-/** Čo dá strecha za celý deň - tri čísla ako zoznam. @param {NonNullable<MozemModel['day']>} day */
-const eqHtml = (day) =>
-    `<ul class="mozem-eq">${day.eq.map((e) => `<li><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></li>`).join('')}</ul>`;
-
 /**
- * Čo dá strecha za celý deň, bez predpovede veta, prečo karta nevie viac. Večer vysvedčenie povie
- * namerané presne - veta „Dnes zo strechy asi…“ by ho opakovala.
- * @param {MozemModel} m @param {boolean} graded
+ * Veľkosť veľkého slova v px podľa jeho dĺžky, ako v návrhu: krátke slovo najväčšie. Na úzkom
+ * displeji ho štýl zmenší ešte podľa najdlhšieho slova v ňom (`--word-len`), aby sa nikdy
+ * neorezalo. @param {string} word
  */
-function dayHtml(m, graded) {
-    if (!m.day) return `<p class="mozem-lead">${escapeHtml(m.hero.lead)}</p>`;
-    return (graded ? '' : `<p class="mozem-lead">${escapeHtml(m.day.lead)}</p>`) + eqHtml(m.day);
+export function wordSize(word) {
+    return word.length <= 7 ? 66 : word.length <= 11 ? 50 : 42;
 }
 
-/** Časť plagátu podľa časti dňa: odpočet, vysvedčenie, veta a koľko už nabehlo. @param {DnesFaza} d */
-function fazaHtml(d) {
-    const count = d.count ? `<p class="mozem-count"><b>${escapeHtml(d.count.value)}</b><span>${escapeHtml(d.count.text)}</span></p>` : '';
-    const grade = d.grade ? `<p class="mozem-grade"><span>${escapeHtml(d.grade.label)}</span><b>${escapeHtml(d.grade.value)}</b></p>` : '';
-    const line = d.line ? `<p class="mozem-line">${escapeHtml(d.line)}</p>` : '';
-    const progress = d.progress
-        ? `<p class="mozem-line">${escapeHtml(d.progress.text)}</p>` +
-          (d.progress.pct === null ? '' : `<div class="mozem-bar" aria-hidden="true"><i style="width: ${d.progress.pct}%"></i></div>`)
-        : '';
-    return { top: count + grade, bottom: line + progress };
+/** Veľké slovo: veľkosť podľa dĺžky, na úzkom displeji podľa najdlhšieho slova. @param {HTMLElement} el @param {string} word */
+function setWord(el, word) {
+    setText(el, word);
+    el.style.setProperty('--word', `${wordSize(word)}px`);
+    el.style.setProperty('--word-len', String(Math.max(1, ...word.split(/\s+/).map((w) => w.length))));
 }
 
-/**
- * Plagát: riadok časti dňa, veľké slovo, odpočet či vysvedčenie a čo dá strecha za celý deň. Cez deň s odpočtom je slovo menšie - hlavná je odpoveď, dokedy svieti.
- * @param {MozemModel} m @param {DnesFaza | null} d
- */
-export function mozemHtml(m, d) {
-    // Farba plagátu hovorí to isté čo slovo - o celom dni. Bez dát farba stavu (načítava sa, nie sú).
-    const tone = m.den ? `den-${m.den.cls}` : `st-${m.state}`;
-    const parts = d ? fazaHtml(d) : { top: '', bottom: '' };
-    const kick = d?.kick ? `<div class="mozem-kick">${escapeHtml(d.kick)}</div>` : '';
-    const small = d?.count || d?.grade ? ' sm' : '';
-    return (
-        `<section class="mozem-hero ${tone}">${kick}${wordHtml(m.word, small)}${parts.top}` +
-        `${dayHtml(m, !!d?.grade)}${parts.bottom}</section>`
+/** Hlavná časť karty. @param {Model} m @param {Dom} dom @param {import('../../shared/messages.js').Voice} voice */
+function renderCard(m, dom, voice) {
+    const MOZEM_SKY_TEXTS = voiceTexts(voice).MOZEM_SKY_TEXTS;
+    show(dom.mzArc, !!m.arc);
+    if (m.arc) setHtml(dom.mzArc, sunArcSvg(m.arc, m.state === 'offline'));
+    show(dom.mzAnswer, !m.ask);
+    setWord(dom.mzWord, m.word);
+    // S predpoveďou na dnešok namiesto vety čo dá strecha za celý deň.
+    show(dom.mzLead, !m.day);
+    setText(dom.mzLead, m.day ? '' : m.lead);
+    show(dom.mzDay, !!m.day);
+    setText(dom.mzDayLead, m.day ? m.day.lead : '');
+    setHtml(
+        dom.mzDayEq,
+        m.day ? m.day.eq.map((e) => `<li><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></li>`).join('') : '',
     );
+    show(dom.mzRetry, m.retry);
+    setText(dom.mzRetry, MOZEM_SKY_TEXTS.retry);
+    show(dom.mzGuess, !!m.guess);
+    setText(dom.mzGuessTitle, MOZEM_SKY_TEXTS.guessTitle);
+    setText(dom.mzGuessText, m.guess);
+    setText(dom.mzGuessBtn, MOZEM_SKY_TEXTS.guessBtn);
+    show(dom.mzAsk, m.ask);
+    setText(dom.mzAskTitle, MOZEM_SKY_TEXTS.askTitle);
+    setText(dom.mzAskText, MOZEM_SKY_TEXTS.askText);
+    setText(dom.mzAskBtn, MOZEM_SKY_TEXTS.askBtn);
 }
 
-/** Zajtrajšok (večer) a riadok Kedy lepšie pod plagátom. @param {DnesFaza | null} d */
-function mozemMoreHtml(d) {
-    if (!d) return '';
+/** Karta bez častí podľa časti dňa (načítava sa, dáta nie sú, poloha chýba). @type {DnesFaza} */
+const NIC = { faza: 'den', chip: '', kick: '', count: null, progress: null, grade: null, line: '', later: '', tomorrow: null };
+
+/**
+ * Čo sa mení s časťou dňa: štítok s triedou dňa, riadok nad slovom, odpočet či vysvedčenie
+ * a pod číslami veta o okne a koľko už nabehlo. @param {DnesFaza} d @param {Model} m @param {Dom} dom
+ */
+function renderFaza(d, m, dom) {
+    show(dom.mzChip, !!d.chip);
+    setText(dom.mzChip, d.chip);
+    if (m.den) dom.mzChip.dataset.cls = m.den.cls;
+    show(dom.mzKick, !!d.kick);
+    setText(dom.mzKick, d.kick);
+    // Cez deň s odpočtom a večer s vysvedčením je slovo menšie - hlavné je číslo pod ním.
+    dom.mzWord.classList.toggle('sm', !!(d.count || d.grade));
+    show(dom.mzCount, !!d.count);
+    setText(dom.mzCountVal, d.count ? d.count.value : '');
+    setText(dom.mzCountText, d.count ? d.count.text : '');
+    show(dom.mzGrade, !!d.grade);
+    setText(dom.mzGradeLabel, d.grade ? d.grade.label : '');
+    setText(dom.mzGradeVal, d.grade ? d.grade.value : '');
+    // Večer povie namerané presne vysvedčenie - veta „Dnes zo strechy asi…“ by ho opakovala.
+    show(dom.mzDayLead, !d.grade);
+    const p = d.progress;
+    show(dom.mzMore, !!(d.line || p));
+    show(dom.mzLine, !!d.line);
+    setText(dom.mzLine, d.line);
+    show(dom.mzProgress, !!p);
+    setText(dom.mzProgress, p ? p.text : '');
+    show(dom.mzBar, !!p && p.pct !== null);
+    dom.mzBarVal.style.width = `${p?.pct ?? 0}%`;
+}
+
+/** Večer zajtrajšok, inak riadok Kedy lepšie. @param {DnesFaza} d @param {Dom} dom */
+function renderMore(d, dom) {
     const t = d.tomorrow;
-    const tomorrow = t
-        ? `<section class="mozem-tom den-${t.cls}"><div class="mozem-kick">${escapeHtml(t.kick)}</div>` +
-          `${wordHtml(t.word, ' sm')}<p class="mozem-lead">${escapeHtml(t.text)}</p></section>`
-        : '';
-    const later = d.later
-        ? `<p class="mozem-later"><span class="mozem-later-k">${escapeHtml(DNES_TEXTS.later)}</span><span>${escapeHtml(d.later)}</span></p>`
-        : '';
-    return tomorrow + later;
+    show(dom.mzTom, !!t);
+    setText(dom.mzTomChip, t ? t.chip : '');
+    if (t) dom.mzTomChip.dataset.cls = t.cls;
+    setWord(dom.mzTomWord, t ? t.word : '');
+    setText(dom.mzTomText, t ? t.text : '');
+    show(dom.mzLater, !!d.later);
+    setText(dom.mzLaterTitle, DNES_TEXTS.later);
+    setText(dom.mzLaterText, d.later);
+}
+
+/**
+ * Ohlásenie pre čítačku (role="status"): len keď sa odpoveď zmení sama - časom alebo novým
+ * meraním, napr. z POČKAJ na ÁNO. Nie každú minútu, nie pri načítaní ani pri návrate na kartu,
+ * vtedy čítačka prečíta kartu aj tak. Predchádzajúcu odpoveď si pamätá prvok ohlásenia.
+ * @param {Model | null} m null = karta nie je vidieť @param {Dom} dom
+ */
+function renderAnnounce(m, dom) {
+    if (!m) {
+        delete dom.mzLive.dataset.state;
+        setText(dom.mzLive, '');
+        return;
+    }
+    if (m.state === 'loading' || m.ask) return;
+    // Odpoveď je stav aj veľké slovo - slovo o celom dni sa mení aj vtedy, keď stav nie.
+    const before = dom.mzLive.dataset.state;
+    const now = `${m.state} ${m.word}`;
+    dom.mzLive.dataset.state = now;
+    if (before && before !== now) setText(dom.mzLive, `${m.word}. ${m.lead}`);
 }
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
-    const m = mozemModel(state, { voice: state.voice, devices: state.doma, ranna: state.ranna });
-    const d =
-        m.state === 'loading' ? null : dnesFaza(state, m.den, m.facts ? m.facts.window : null, { voice: state.voice, devices: state.doma });
-    // Nad plagátom dráha slnka s časom východu a západu - tá istá ako v novej appke.
-    const arc = sunArcSvg(sunArc(state.now, state.site, m.facts ? m.facts.window : null), m.state === 'offline');
-    writeHtml(dom.mozemBody, `<div class="mozem-arc" aria-hidden="true">${arc}</div>${mozemHtml(m, d)}${mozemMoreHtml(d)}`, 'mozemBody');
+    if (!shows(state, 'mozem')) return renderAnnounce(null, dom);
+    const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.doma, ranna: state.ranna });
+    const d = m.ask || m.state === 'loading' ? null : dnesFaza(state, m.den, m.window, { voice: state.voice, devices: state.doma });
+    renderCard(m, dom, state.voice);
+    renderFaza(d ?? NIC, m, dom);
+    renderMore(d ?? NIC, dom);
+    renderAnnounce(m, dom);
 }

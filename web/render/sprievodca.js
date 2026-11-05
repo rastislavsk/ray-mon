@@ -1,9 +1,9 @@
-// Sprievodca nastavením v novej appke: tie isté kroky, otázky a kontroly ako v súčasnej appke
+// Sprievodca nastavením: tie isté kroky, otázky a kontroly
 // (texty shared/setup-texts.js, logika shared/setup-flow.js), len vo vzhľade oblohy. Obrazovky
 // sú v index.html, render ukáže jednu a doplní ju. Hodnoty polí prepíše len pri zmene
 // settingsRev, plochy alebo obrazovky - inak by prepisoval to, čo človek práve píše.
 
-import { compassModel, dayRingModel, panelGridModel, tariffRingModel, tiltModel } from '../../../shared/chart-model.js';
+import { compassModel, dayRingModel, panelGridModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
 import {
     ALL_MONTHS,
     CURRENCIES,
@@ -14,14 +14,14 @@ import {
     SETUP,
     TARIFF_LIMITS,
     TARIFF_TEMPLATES,
-} from '../../../shared/config.js';
-import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../../shared/format.js';
-import { editTabs } from '../../../shared/nastavenie.js';
-import { checkSettings, readLink } from '../../../shared/settings.js';
-import { SETUP_SECTIONS, TARIFF_STEPS } from '../../../shared/setup.js';
-import { brushOf, schedIndex, setupDraft, setupReady, udajeReady, znovaModel } from '../../../shared/setup-flow.js';
-import * as T from '../../../shared/setup-texts.js';
-import { orientationShare } from '../../../shared/solar.js';
+} from '../../shared/config.js';
+import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
+import { editTabs } from '../../shared/nastavenie.js';
+import { checkSettings, readLink } from '../../shared/settings.js';
+import { SETUP_SECTIONS, TARIFF_STEPS } from '../../shared/setup.js';
+import { brushOf, schedIndex, setupDraft, setupReady, udajeReady, znovaModel } from '../../shared/setup-flow.js';
+import * as T from '../../shared/setup-texts.js';
+import { orientationShare } from '../../shared/solar.js';
 import {
     bandById,
     checkTariff,
@@ -30,25 +30,16 @@ import {
     scheduleRuns,
     scheduleTiers,
     tariffKind,
-} from '../../../shared/tariff.js';
-import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../../shared/zdroje.js';
-import {
-    compassSvg,
-    miniCompassSvg,
-    panelGridSvg,
-    panelLabelSvg,
-    plantRoseSvg,
-    tariffMiniSvg,
-    tariffRingSvg,
-    tiltSvg,
-} from '../../../web/svg.js';
+} from '../../shared/tariff.js';
+import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
+import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, plantRoseSvg, tariffMiniSvg, tariffRingSvg, tiltSvg } from '../svg.js';
 import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
-/** @typedef {import('../../../shared/settings.js').Settings} Settings */
-/** @typedef {import('../../../shared/setup.js').SetupStep} SetupStep */
-/** @typedef {import('../../../shared/config.js').Tariff} Tariff */
+/** @typedef {import('../../shared/settings.js').Settings} Settings */
+/** @typedef {import('../../shared/setup.js').SetupStep} SetupStep */
+/** @typedef {import('../../shared/config.js').Tariff} Tariff */
 /** @typedef {{ text: string, err?: boolean, ok?: boolean }} Msg */
 
 /** Hlásenie pod poľom. @param {Msg | null} m */
@@ -299,7 +290,7 @@ function renderSposob(state, dom) {
 }
 
 /** Pole formulára spôsobu. Telefón ho nemá čím vyplniť sám (autocomplete off), heslá skryje.
- * @param {import('../../../shared/zdroje.js').Pole} p */
+ * @param {import('../../shared/zdroje.js').Pole} p */
 function poleHtml(p) {
     const type = p.tajne ? 'password' : p.typ === 'url' ? 'url' : p.typ === 'email' ? 'email' : 'text';
     const mode = p.typ === 'url' ? ' inputmode="url"' : p.typ === 'email' ? ' inputmode="email"' : '';
@@ -371,7 +362,7 @@ function renderTarifa(state, draft, dom) {
     setText(dom.wzTariffDunno, T.TARIFF_DUNNO);
 }
 
-/** Farebná značka pásma: modrá lacná, červená drahá sieť. @param {import('../../../shared/config.js').PriceLevel} level */
+/** Farebná značka pásma: modrá lacná, červená drahá sieť. @param {import('../../shared/config.js').PriceLevel} level */
 const sw = (level) => `<i class="sw ${LEVEL_TIER[level]}"></i>`;
 
 /** @param {Settings} draft @param {Dom} dom @param {boolean} refill */

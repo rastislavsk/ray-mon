@@ -1,4 +1,4 @@
-// Graf dňa - ten istý na karte Teraz v oboch appkách aj v detaile dňa na karte 7 dní novej
+// Graf dňa - ten istý na karte Teraz aj v detaile dňa na karte 7 dní novej
 // appky. Geometriu aj polohu popiskov počíta shared/day-chart.js, tu sa len skladá značkovanie:
 // oblačnosť, krivky a pás v SVG, ktoré sa s grafom zväčšuje, a popisky ako HTML nad ním - tie majú
 // na každej šírke tú istú veľkosť v px. Čistý reťazec bez DOM, preto neutrálny modul (CLAUDE.md); farby dáva style.css appky.

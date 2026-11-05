@@ -1,445 +1,77 @@
-// Poslucháče udalostí (karta Môžem? a sprievodca majú vlastné súbory). Každý končí volaním setState alebo lokálnou zmenou tooltipu;
-// nikto tu nekreslí do DOM okrem tooltipov, ktoré nie sú súčasťou stavu.
+// Poslucháče. Každý končí volaním setState; nikto tu nekreslí do DOM.
 
-import { chartTooltipModel } from '../shared/chart-model.js';
-import { PRIPOJENIE_BUBLINA_MS, SWIPE, TOOLTIP_FADE_MS, TOOLTIP_HOLD_MS, WEEK_MSG_MIN_H } from '../shared/config.js';
-import { fmt2 } from '../shared/format.js';
-import { initDayPager } from './day-pager.js';
-import { PANELS } from './dom.js';
-import { backTo, closeDetail, initHistory } from './history.js';
+import { LAYOUT_PX, PANELS, PRIPOJENIE_BUBLINA_MS } from '../shared/config.js';
+import { trackHistory } from './nav-history.js';
+import { createRefresh, startTicks } from './refresh.js';
+import { setupStart } from '../shared/setup-flow.js';
+import { initMozem } from './mozem-interactions.js';
 import { obnovaMerania } from '../shared/hlavicka.js';
 import { pripojenieOf } from './render/header.js';
-import { render } from './render/index.js';
-import { weekCurveModel } from './render/sedemdni.js';
-import { createRefresh, startTicks } from './refresh.js';
-import { panelChange } from './state.js';
-import { initPrehlad } from './prehlad-interactions.js';
-import { applySettings, initSetup, setupStart, stepEdit } from './setup-interactions.js';
-import { initTerazky } from './terazky-interactions.js';
+import { initTeraz } from './teraz-interactions.js';
+import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
-/** @typedef {import('./state.js').Panel} Panel */
 
 /**
- * Čo spraví klik na deň. Deň sa dá vybrať v rebríčku, v tabuľke, v bublinách Dnes/Zajtra,
- * v prepínači dní, v páse dní pod hlavičkou detailu aj priamo v grafoch. Prehľad dní - v oboch
- * podobách - navyše otvorí detail dňa (na mobile; na širokej obrazovke sa stav neprejaví),
- * kým výber v grafoch a v prepínači len prepína, čo je na nich vidno. Čip v páse dní a tlačidlo
- * susedného dňa pod detailom deň prelistujú tak ako ťah prstom (initNavigation).
- * @param {Dom} dom @param {Element} btn
- * @returns {Partial<import('./state.js').AppState>}
- */
-function dayPick(dom, btn) {
-    const weekSelDay = Number(btn.getAttribute('data-day-index'));
-    if (dom.weekList.contains(btn) || dom.weekTbody.contains(btn) || dom.weekTrio.contains(btn)) return { weekSelDay, weekDetail: 'day' };
-    return { weekSelDay };
-}
-
-/**
- * Listovanie dní v detaile dňa (web/day-pager.js): ťah prstom, čipy dní, tlačidlá susedných dní
- * a šípky na klávesnici. Susedný deň kreslí počas ťahu ten istý render ako deň na obrazovke -
- * na chvíľu so susedným dňom v stave, potom znova so skutočným. Detail je len na mobile.
+ * Navigácia, štítok „Zadaj panely ›“ a výzvy na kartách (všetky vedú do Nastavenia) a tlačidlo
+ * Späť. Karty sa ťahom prsta nelistujú, len ťuknutím v navigácii (dni v detaile karty 7 dní
+ * listuje web/day-pager.js, viď sedem-interactions.js). V prehľade so stĺpcami navigácia
+ * neprepína obrazovku, ale presunie fokus na stĺpec (a stránku k nemu, keď nie je vidieť).
  * @param {Store} store @param {Dom} dom
  */
-function initDays(store, dom) {
-    return initDayPager({
-        area: dom.weekTrack,
-        keys: dom.panels['7dni'],
-        track: dom.weekTrack,
-        day: () => {
-            const s = store.get();
-            const count = s.forecast?.days.length ?? 0;
-            if (s.panel !== '7dni' || s.weekDetail !== 'day' || s.wide || !count) return null;
-            return { index: Math.min(s.weekSelDay, count - 1), count };
-        },
-        snapshot: (days) => {
-            const s = store.get();
-            const out = days.map((weekSelDay) => {
-                render({ ...s, weekSelDay }, dom);
-                return /** @type {HTMLElement} */ (dom.weekTrack.cloneNode(true));
-            });
-            render(s, dom);
-            return out;
-        },
-        commit: (weekSelDay) => store.setState({ weekSelDay }),
-    });
-}
-
-/** @param {Store} store @param {Dom} dom @param {ReturnType<typeof initDays>} days */
-function initNavigation(store, dom, days) {
-    // Iná karta začína navrchu. Prepnutie kartu aj tak vráti do východiskového stavu (zavrie
-    // detail dňa, rozbalené časti), takže stará pozícia by mierila do iného obsahu. Platí aj
-    // pre Späť. Dni v detaile dňa listuje day-pager.js a pozíciu na stránke nechávajú tak.
+function initNavigation(store, dom) {
+    // Iná karta začína navrchu (aj cez Späť). V prehľade so stĺpcami sa
+    // stránka nehýbe - k stĺpcu ju posunie fokus.
     store.subscribe((state, prev) => {
-        if (state.panel !== prev.panel) window.scrollTo(0, 0);
+        if (state.panel !== prev.panel && !dashboard(state)) window.scrollTo(0, 0);
     });
-    document.addEventListener('click', (e) => {
-        const target = /** @type {HTMLElement} */ (e.target);
-        // Selektor musí byť `button[data-panel]`, nie `[data-panel]`: ten istý atribút nesie aj
-        // #page (nastavuje ho renderPanels pre CSS), takže by ho našiel klik kdekoľvek v stránke
-        // a zavrel detail dňa - kartu by to prepínalo na tú istú, na ktorej používateľ stojí.
-        // Pás „Meranie treba pripojiť znova“ (aj pás odhadu na karte Teraz pri odmietnutom prístupe):
-        // v Nastavení rozbalí Elektráreň, kde je hlásenie s dôvodom - v tom istom kroku ako prepnutie karty.
-        /** @type {Partial<import('./state.js').AppState>} */
-        const pristup = target.closest('[data-pristup-go]') ? { infoOpen: 'plant' } : {};
-        const panelBtn = target.closest('button[data-panel]');
-        // panelChange dopočíta aj smer prechodu (a zavrie detail dňa), takže sa karta prisunie
-        // z tej istej strany ako pri ťahaní prstom.
-        //
-        // Karta, ktorú tento skript nepozná, sa ignoruje. Nové tlačidlo v navigácii ide von
-        // skôr než skript, ktorý kartu zapojí (pravidlo o cache v CLAUDE.md), a nová stránka
-        // so starým skriptom z cache by po kliku naň skryla všetky karty naraz.
-        if (panelBtn instanceof HTMLElement && PANELS.some((p) => p === panelBtn.dataset.panel)) {
-            store.setState({ ...panelChange(store.get().panel, /** @type {Panel} */ (panelBtn.dataset.panel)), ...pristup });
+    const go = (/** @type {import('./state.js').Panel} */ to) => {
+        if (dashboard(store.get()) && isColumn(to)) {
+            // Len iný aktívny stĺpec: panel veci, náhľad aj detail v ostatných stĺpcoch ostávajú.
+            store.setState({ panel: to });
+            dom.panels[to].focus();
+            // Nie je to krok navigácie, no položka histórie si stĺpec pamätá - Späť zo Štatistiky či
+            // Nastavenia sa tak vráti na stĺpec, z ktorého človek odišiel.
+            history.replaceState({ ...history.state, step: navStep(store.get()) }, '');
+            return;
         }
-        // Pás odhadu na karte Teraz: jeden krok navigácie do Nastavenia, bez merania rovno na krok
-        // Meranie sprievodcu (ako výzva v Štatistike), pri odmietnutom prístupe na hlásenie vyššie.
-        // To isté robí tlačidlo v bubline stavu merania v hlavičke.
-        const noteBtn = target.closest('#tz-note-btn, #pv-tip-btn');
-        if (noteBtn) {
-            const s = store.get();
-            const znova = noteBtn.hasAttribute('data-pristup-go');
-            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(znova ? pristup : stepEdit(s, 'meranie', true)) });
-        }
-        // Výzva „Zadaj panely“ v hlavičke: jeden krok navigácie do Nastavenia - kto pozná polohu,
-        // rovno na krok Panel sprievodcu (ako v Oblohe).
-        if (target.closest('#pv-setup-go')) {
-            const s = store.get();
-            store.setState({ ...panelChange(s.panel, 'nastavenie'), ...(s.known === 'poloha' ? setupStart(s) : {}) });
-        }
-        const totalBtn = target.closest('[data-week-detail]');
-        if (totalBtn instanceof HTMLElement) store.setState({ weekDetail: 'week' });
-        const weekBtn = target.closest('[data-day-index]');
-        if (weekBtn instanceof Element && dom.panels['7dni'].contains(weekBtn)) {
-            if (weekBtn.closest('.day-strip, .day-steps')) days.goTo(Number(weekBtn.getAttribute('data-day-index')));
-            else store.setState(dayPick(dom, weekBtn));
-        }
-    });
-    dom.weekDayBack.addEventListener('click', () => closeDetail(store));
-}
-
-/** @type {Array<{ wrap: HTMLElement, hide: () => void }>} */
-const tapTooltips = [];
-/** Ťuknutie mimo grafu zavrie jeho tooltip okamžite. */
-function initTapTooltipClosing() {
-    const closeOthers = (/** @type {Event} */ e) =>
-        tapTooltips.forEach(({ wrap, hide }) => !wrap.contains(/** @type {Node} */ (e.target)) && hide());
-    document.addEventListener('touchstart', closeOthers, { passive: true });
-    document.addEventListener('click', closeOthers);
-}
-
-/** Najpomalšie gesto, ktoré je ešte švihnutím ponad graf, nie prezeraním: prejsť minDistPx za
- * flickMs. Kto ide pomalšie, prezerá si krivku a tooltip ide za prstom. */
-const MIN_FLICK_SPEED = SWIPE.minDistPx / SWIPE.flickMs;
-
-/**
- * Prst nad grafom. Kým môže gesto skončiť prepnutím karty, tooltip sa neukáže - inak by pri
- * každom prelistovaní ponad graf preblikol a hneď zmizol. Ukázať a vziať späť sa nedá,
- * rozhodnúť treba skôr, než je koniec gesta známy, tak rozhoduje rýchlosť: prst pomalší než
- * najpomalšie možné švihnutie si krivku prezerá. Po uplynutí okna švihnutia sa karta prepnúť
- * nemôže, takže tam už tooltip patrí vždy.
- *
- * To isté platí pre zvislý ťah, len tam nerozhoduje rýchlosť, ale smer: krivka ide po
- * vodorovnej osi (čas), takže kto ide viac hore-dole než do strán, posúva stránku a tooltip
- * by mu len preblikol. Smer sa počíta z celého gesta a rozhoduje sa nanovo pri každom pohybe,
- * takže ťah, ktorý sa zlomí do strany, tooltip ukáže.
- *
- * Ťuknutie (prst sa nikam nepohol) neposiela touchmove, preto sa ukáže až pri zdvihnutí -
- * na pohľad je to to isté, len o pár desiatok milisekúnd neskôr.
- * @param {HTMLElement} wrap @param {(clientX: number, clientY: number) => void} handle @param {() => void} hide
- */
-function bindTouch(wrap, handle, hide) {
-    /** @typedef {{ x: number, y: number, t: number, scrollY: number }} Zaciatok */
-    /** @type {Zaciatok | null} */
-    let start = null;
-    let shown = false;
-    // Zhasnutie tooltipu po zdvihnutí prsta. Je jedno na graf: nové gesto to predošlé zruší,
-    // inak by časovač z prvého ťuknutia zhasol tooltip z druhého skôr, než by sa dal prečítať.
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let zhasni;
-    // Začiatok gesta ide dovnútra ako parameter, nie cez `start` zvonku: v touchend je už
-    // vynulovaný a vzdialenosť by sa merala od ľavého horného rohu displeja.
-    const vzdialenost = (/** @type {Touch} */ t, /** @type {Zaciatok} */ from) => Math.hypot(t.clientX - from.x, t.clientY - from.y);
-
-    wrap.addEventListener(
-        'touchstart',
-        (e) => {
-            start = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: e.timeStamp, scrollY: window.scrollY };
-            shown = false;
-            clearTimeout(zhasni);
-        },
-        { passive: true },
-    );
-    wrap.addEventListener(
-        'touchmove',
-        (e) => {
-            if (!start) return;
-            const cas = e.timeStamp - start.t;
-            const zvislo = Math.abs(e.touches[0].clientY - start.y) > Math.abs(e.touches[0].clientX - start.x);
-            if (zvislo || (cas <= SWIPE.flickMs && vzdialenost(e.touches[0], start) / (cas || 1) >= MIN_FLICK_SPEED)) return;
-            shown = true;
-            handle(e.touches[0].clientX, e.touches[0].clientY);
-        },
-        { passive: true },
-    );
-    wrap.addEventListener('touchend', (e) => {
-        const bolStart = start;
-        start = null;
-        // Ťuknutie ukáže tooltip až tu; švihnutie ho neukáže vôbec.
-        // Posunutá stránka znamená, že gesto si vzal prehliadač na scrollovanie - aj keď prst
-        // prešiel krátku vzdialenosť a na ťuknutie by inak vyzeral.
-        if (
-            !shown &&
-            bolStart &&
-            e.changedTouches.length === 1 &&
-            window.scrollY === bolStart.scrollY &&
-            vzdialenost(e.changedTouches[0], bolStart) < SWIPE.minDistPx
-        )
-            handle(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        clearTimeout(zhasni);
-        zhasni = setTimeout(hide, TOOLTIP_HOLD_MS);
-    });
-}
-
-/** Spoločná obsluha kurzora aj prsta nad grafom. @param {HTMLElement} wrap @param {HTMLElement} tooltip @param {(clientX: number, clientY: number) => void} handle */
-function bindPointer(wrap, tooltip, handle) {
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let uprac;
-    // Skrytý tooltip ostáva v layoute - mizne len cez `opacity`. Jeho súradnice sú pixely
-    // vypočítané pre vtedajší rozmer grafu, takže po otočení displeja (graf sa zúži zo 654
-    // na 324 px) by trčal ďaleko za jeho okraj a rozšíril by layout viewport - stránka by sa
-    // potom kreslila širšia než displej. Preto ich po zmiznutí zahodíme; s odstupom, nech
-    // tooltip pri miznutí nepodskočí.
-    const hide = () => {
-        tooltip.classList.remove('visible');
-        clearTimeout(uprac);
-        uprac = setTimeout(() => {
-            if (tooltip.classList.contains('visible')) return;
-            tooltip.style.left = '';
-            tooltip.style.top = '';
-        }, TOOLTIP_FADE_MS);
+        store.setState(panelChange(store.get().panel, to));
+        if (dashboard(store.get())) dom.panels[to].focus();
     };
-    tapTooltips.push({ wrap, hide });
-    // Kurzor a pero idú cez pointer udalosti, prst nie - toho obsluhuje bindTouch nižšie.
-    // Prehliadač totiž po každom ťuknutí prstom dopošle aj kurzorové udalosti (mouseover,
-    // mousemove, click, mouseout, mouseleave), takže tooltip ukázaný prstom hneď zhaslo
-    // `mouseleave` - na displeji z neho ostalo asi 15 ms bliknutie. Rozhoduje teda typ
-    // vstupu, nie druh udalosti.
-    wrap.addEventListener('pointermove', (e) => e.pointerType !== 'touch' && handle(e.clientX, e.clientY));
-    wrap.addEventListener('pointerleave', (e) => e.pointerType !== 'touch' && hide());
-    bindTouch(wrap, handle, hide);
-}
-
-/** Tooltip je vodorovne vystredený na `pos.left` (CSS transform: translateX(-50%)). Bez orezania
- * by pri bode blízko okraja grafu presiahol .chart-wrap aj viewport - mobilné prehliadače potom
- * natrvalo rozšíria layout viewport, aj keď je tooltip už dávno preč (viď README/PR história
- * pinch-zoom opravy). @param {HTMLElement} tooltip @param {string} time @param {string} text
- * @param {{ left: number, top: number, maxWidth: number }} pos maxWidth = šírka .chart-wrap */
-function showTooltip(tooltip, time, text, pos) {
-    const t = tooltip.querySelector('.tt-time');
-    const k = tooltip.querySelector('.tt-kw');
-    if (t) t.textContent = time;
-    if (k) k.textContent = text;
-    const half = tooltip.offsetWidth / 2;
-    const clampedLeft = Math.min(Math.max(pos.left, half), Math.max(pos.maxWidth - half, half));
-    tooltip.style.left = `${clampedLeft}px`;
-    tooltip.style.top = `${pos.top}px`;
-    tooltip.classList.add('visible');
-}
-
-/** Tooltip nad krivkou (interpolácia podľa X). @param {Store} store @param {HTMLElement} wrap @param {Element} svg @param {HTMLElement} tooltip @param {(s: import('./state.js').AppState) => ReturnType<typeof weekCurveModel>} modelFor */
-function initCurveTooltip(store, wrap, svg, tooltip, modelFor) {
-    bindPointer(wrap, tooltip, (clientX) => {
-        const model = modelFor(store.get());
-        if (!model) return;
-        const rect = svg.getBoundingClientRect();
-        const relX = (clientX - rect.left) / (rect.width || 1);
-        const tip = chartTooltipModel(model, relX);
-        const extra =
-            (tip.clearKw !== null ? ` · strop ${fmt2(tip.clearKw)} kW` : '') + (tip.cloud !== null ? ` · ${tip.cloud}% oblačnosť` : '');
-        showTooltip(tooltip, tip.time, `${fmt2(tip.kw)} kW${extra}`, {
-            left: clientX - rect.left,
-            top: tip.yFrac * rect.height,
-            maxWidth: rect.width,
-        });
-    });
-}
-
-/** Tooltip nad bunkami a stĺpcami (obsah je v data-tip atribútoch). @param {HTMLElement} wrap @param {HTMLElement} tooltip */
-function initRectTooltip(wrap, tooltip) {
-    bindPointer(wrap, tooltip, (clientX, clientY) => {
-        const hit = document.elementFromPoint(clientX, clientY);
-        const target = hit && hit.closest('[data-tip]');
-        if (!(target instanceof Element)) return tooltip.classList.remove('visible');
-        const wrapRect = wrap.getBoundingClientRect();
-        const cell = target.getBoundingClientRect();
-        showTooltip(tooltip, target.getAttribute('data-tip-title') || '', target.getAttribute('data-tip') || '', {
-            left: cell.left - wrapRect.left + cell.width / 2,
-            top: cell.top - wrapRect.top,
-            maxWidth: wrapRect.width,
-        });
-    });
-}
-
-/** Po pinch-zoome (najmä okolo grafov, kde .chart-wrap nenecháva prehliadaču celé gesto) sa stránka
- * niekedy vráti na zoom 1x, ale vizuálny viewport ostane posunutý od layout viewportu -
- * známa nezhoda v mobilných prehliadačoch, prejaví sa orezaným obsahom pri okraji displeja.
- * `window.scrollX` tento posun nevidí (appka nemá vodorovný scroll), signálom je
- * `visualViewport.offsetLeft/offsetTop`. Po ustálení gesta preto posun skontrolujeme a opravíme.
- *
- * Korekcia zámerne nerozlišuje, čo `resize` spustilo. Skúšali sme ju preskakovať pri zmene
- * `window.innerWidth/innerHeight` (aby nezasiahla pri otáčaní displeja), lenže presne o toľko
- * sa okno zmení aj vtedy, keď layout viewport rozšíri pretečený obsah - teda v scenári, pre
- * ktorý je táto korekcia napísaná. Podmienka ju tam vypínala, a otáčaniu aj tak nepomohla. */
-function initViewportZoomRealign() {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let settleTimer;
-    const checkAlignment = () => {
-        clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => {
-            if (vv.scale <= 1.001 && (vv.offsetLeft !== 0 || vv.offsetTop !== 0))
-                window.scrollTo(window.scrollX + vv.offsetLeft, window.scrollY + vv.offsetTop);
-        }, 150);
+    for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
+    const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzNoteBtn, dom.sdGuessBtn, dom.sdAskBtn];
+    toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn, dom.tipBtn);
+    // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi. Sú to dva kroky navigácie -
+    // Späť z panelov vráti do prehľadu Nastavenia, ako keby ich otvoril odtiaľ.
+    const toPanels = () => {
+        if (store.get().panel !== 'nastavenie') go('nastavenie');
+        if (store.get().known === 'poloha') store.setState(setupStart(store.get()));
     };
-    vv.addEventListener('resize', checkAlignment);
-    vv.addEventListener('scroll', checkAlignment);
-}
-
-/**
- * Skutočné rozmery plátien grafov idú do stavu, aby sa graf dal vykresliť presne na kartu
- * namiesto na pevné plátno. Bez toho sa SVG buď roztiahne (a skreslí popisky), alebo si
- * nechá pomer strán a v karte ostane prázdne miesto.
- *
- * Zapisuje sa len skutočná zmena. Prekreslenie totiž zapíše do plátna nové SVG a keby to
- * jeho rozmer zmenilo, ResizeObserver by sa spustil znovu - porovnanie ten kruh zastaví.
- * @param {Store} store @param {Dom} dom
- */
-function initChartSizes(store, dom) {
-    /** @type {Array<[string, HTMLElement]>} */
-    const wraps = [
-        ['weekHeat', dom.weekHeatWrap],
-        ['weekBars', dom.weekBarsWrap],
-        ['weekCurve', dom.weekCurveWrap],
-    ];
-    const measure = () => {
-        const prev = store.get().chartSizes;
-        /** @type {Record<string, { w: number, h: number }>} */ const next = {};
-        let zmena = false;
-        for (const [key, el] of wraps) {
-            const { width, height } = el.getBoundingClientRect();
-            if (!width || !height) {
-                if (prev[key]) next[key] = prev[key];
-                continue;
-            }
-            const w = Math.round(width);
-            const h = Math.round(height);
-            next[key] = { w, h };
-            if (!prev[key] || prev[key].w !== w || prev[key].h !== h) zmena = true;
-        }
-        if (zmena) store.setState({ chartSizes: next });
-    };
-    const observer = new ResizeObserver(measure);
-    for (const [, el] of wraps) observer.observe(el);
-    measure();
-}
-
-/**
- * Je okno dosť vysoké na správu týždňa v prehľade dní? Rozhoduje `visualViewport` - to je
- * to, čo je z okna naozaj vidieť. `innerHeight` v mobilnom prehliadači počíta aj pás pod
- * adresným riadkom, takže by tvrdil, že miesto je, hoci by sa muselo scrollovať.
- */
-export function isTall() {
-    return (window.visualViewport ? window.visualViewport.height : window.innerHeight) >= WEEK_MSG_MIN_H;
-}
-
-/**
- * Položky karty Nastavenie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje) sú natívne <details>:
- * rozbalí ich prehliadač sám (ťuknutie, klávesnica, hľadanie v stránke), appka to len prevezme do
- * stavu. Rozbalená je najviac jedna - render ostatné zbalí. Zbalenie ťuknutím je ten istý krok ako
- * tlačidlo Späť, preto ide cez backTo - inak by položka ostala v histórii a Späť by ju znovu
- * rozbalilo. Keď sa `open` zhoduje so stavom, udalosť spôsobilo prekreslenie a netreba nič.
- * @param {Store} store @param {Dom} dom
- */
-function initInfoItems(store, dom) {
-    for (const [key, el] of Object.entries(dom.infoItems)) {
-        el.addEventListener('toggle', () => {
-            const item = /** @type {import('./state.js').InfoItem} */ (key);
-            if (el.open === (store.get().infoOpen === item)) return;
-            if (el.open) store.setState({ infoOpen: item });
-            else backTo(store, { infoOpen: null });
-        });
-    }
-}
-
-/** Zdieľanie odkazu s nastavením a ponuka prevziať nastavenie z otvoreného odkazu. @param {Store} store @param {Dom} dom @param {() => Promise<void>} refresh */
-function initSharing(store, dom, refresh) {
-    dom.shareWithSettings.addEventListener('change', () => store.setState({ shareSettings: dom.shareWithSettings.checked }));
-    dom.shareWithKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.shareWithKiosk.checked }));
-    dom.importAccept.addEventListener('click', () => {
-        const s = store.get();
-        if (!s.incoming) return;
-        // Kto odkaz otvoril ako prvý, otázku na polohu už nepotrebuje - appka sa otvorí na prvej karte.
-        /** @type {Partial<import('./state.js').AppState>} */
-        const away = s.known === 'nic' ? { ...panelChange(s.panel, PANELS[0]), setupStep: null } : {};
-        applySettings(store, s.incoming, refresh, { incoming: null, importNote: '', ...away });
-    });
-    dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null, importNote: '' }));
-}
-
-/**
- * Karta Štatistika: prepínač obdobia a výzvy do Nastavenia. Výzva je jeden krok navigácie -
- * prepne kartu a rovno otvorí krok sprievodcu (ceny, meranie), takže Späť vráti do Štatistiky.
- * Bez zadaných panelov nie je čo upravovať, výzva len prepne na Nastavenie, kde čaká sprievodca.
- * @param {Store} store @param {Dom} dom
- */
-function initStats(store, dom) {
-    dom.statsBody.addEventListener('click', (e) => {
-        const target = /** @type {HTMLElement} */ (e.target);
-        const period = target.closest('[data-stats-period]');
-        if (period instanceof HTMLElement)
-            return store.setState({ statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ (period.dataset.statsPeriod) });
-        const go = target.closest('[data-stats-go]');
-        if (!(go instanceof HTMLElement)) return;
-        const s = store.get();
-        const step = go.dataset.statsGo || 'nastavenie';
-        store.setState({
-            ...panelChange(s.panel, 'nastavenie'),
-            ...(s.known !== 'elektraren' || step === 'nastavenie' ? {} : stepEdit(s, step, true)),
-        });
+    for (const btn of toSetup) btn.addEventListener('click', toPanels);
+    trackHistory(store, {
+        step: navStep,
+        same: sameNavStep,
+        parse: navStepFrom,
+        change: navChange,
     });
 }
 
-/** Hodiny, obnova dát, návrat z pozadia a zmeny rozmerov okna. @param {Store} store @param {{ wide: MediaQueryList }} mq */
-function initTicks(store, mq) {
-    const refresh = createRefresh(store);
-    startTicks(store, refresh);
-    mq.wide.addEventListener('change', (e) => store.setState({ wide: e.matches }));
-    // Viditeľná výška sa mení aj bez otočenia displeja - ukrytím adresného riadka pri
-    // scrollovaní, klávesnicou, priblížením. setState zahodí rovnakú hodnotu, takže
-    // z tohto poslucháča vzíde prekreslenie len vtedy, keď sa naozaj prekročí hranica.
-    const sledujVysku = () => store.setState({ tall: isTall() });
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', sledujVysku);
-    window.addEventListener('resize', sledujVysku);
-    return refresh;
-}
-
 /**
- * Bublina s vysvetlením stavu merania: bodka s časom ju otvorí aj zavrie. Ťuknutie kamkoľvek mimo nej (priehľadná vrstva,
- * aby nič pod bublinou nespustilo) a Escape ju zavrú. Tlačidlo v nej mení kartu (initNavigation),
- * a tým ju zavrie tiež (panelChange).
+ * Bublina s vysvetlením stavu merania: ťuknutie na bodku a čas ju otvorí aj zavrie, ťuknutie
+ * kamkoľvek mimo nej (priehľadná vrstva pod ňou, aby nič pod bublinou nespustilo) a Escape ju
+ * zavrú. Tlačidlo v nej vedie do Nastavenia (initNavigation) a bublinu tiež zavrie.
  * @param {Store} store @param {Dom} dom
  */
 function initStavTip(store, dom) {
-    const toggle = () => !dom.pvClock.disabled && store.setState({ stavTip: !store.get().stavTip });
-    dom.pvClock.addEventListener('click', toggle);
-    dom.pvTipBg.addEventListener('click', () => store.setState({ stavTip: false }));
+    const close = () => store.setState({ stavTip: false });
+    dom.live.addEventListener('click', () => store.setState({ stavTip: !store.get().stavTip }));
+    dom.tipBg.addEventListener('click', close);
+    dom.tipBtn.addEventListener('click', close);
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape' || !store.get().stavTip) return;
-        store.setState({ stavTip: false });
-        dom.pvClock.focus();
+        close();
+        dom.live.focus();
     });
 }
 
@@ -466,24 +98,35 @@ function initPripojene(store, dom) {
     dom.pripojene.addEventListener('click', zhasni);
 }
 
-/** @param {Store} store @param {Dom} dom @param {{ wide: MediaQueryList }} mq */
-export function initInteractions(store, dom, mq) {
-    initViewportZoomRealign();
-    initNavigation(store, dom, initDays(store, dom));
+/**
+ * Rozloženie podľa šírky okna: pri otočení tabletu či zmene okna sa prepne hneď. Stav (otvorený
+ * detail, náhľad, sprievodca) sa pri tom nemení, mení sa len to, čo je kde.
+ * @param {Store} store
+ */
+function initLayout(store) {
+    const update = () => store.setState({ layout: layoutOf(window.innerWidth) });
+    for (const px of Object.values(LAYOUT_PX)) window.matchMedia(`(min-width: ${px}px)`).addEventListener('change', update);
+}
+
+/**
+ * Poslucháče jadra appky. Karty 7 dní, Štatistika a Nastavenie majú vlastné, prihlási ich
+ * web/parts.js, keď sa ich kód načíta.
+ * @param {Store} store @param {Dom} dom @returns {() => Promise<void>} obnova dát
+ */
+export function initInteractions(store, dom) {
+    initNavigation(store, dom);
     initStavTip(store, dom);
     initPripojene(store, dom);
-    initHistory(store);
-    initTapTooltipClosing();
-    initCurveTooltip(store, dom.weekCurveWrap, dom.weekCurve, dom.weekCurveTooltip, weekCurveModel);
-    initRectTooltip(dom.weekHeatWrap, dom.weekHeatTooltip);
-    initRectTooltip(dom.weekBarsWrap, dom.weekBarsTooltip);
-    initChartSizes(store, dom);
-    const refresh = initTicks(store, mq);
-    initTerazky(store, dom, refresh);
-    initSetup(store, dom, refresh);
-    initInfoItems(store, dom);
-    initSharing(store, dom, refresh);
-    initPrehlad(store, dom);
-    initStats(store, dom);
+    initLayout(store);
+    const refresh = createRefresh(store);
+    initMozem(store, dom, refresh);
+    initTeraz(store, dom, refresh);
+    startTicks(store, refresh);
+    // Bez internetu karty povedia, prečo nemajú dáta; keď sa vráti, dáta sa hneď obnovia.
+    window.addEventListener('offline', () => store.setState({ online: false }));
+    window.addEventListener('online', () => {
+        store.setState({ online: true });
+        refresh();
+    });
     return refresh;
 }

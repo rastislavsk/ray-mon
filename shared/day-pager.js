@@ -1,6 +1,6 @@
 // Listovanie dní v detaile dňa karty 7 dní: kam sa pás po pustení prsta presunie, ako sa poddá
 // na kraji a ako dlho dobieha. Čisté výpočty bez DOM a hodín - čas aj polohu prsta dostávajú
-// ako parametre. Prst, transform a kópie susedných dní má web/day-pager.js, spoločný pre obe appky.
+// ako parametre. Prst, transform a kópie susedných dní má web/day-pager.js.
 
 import { DAY_PAGER } from './config.js';
 

@@ -1,6 +1,5 @@
 // Uloženie nastavenia elektrárne v prehliadači. Každý telefón má vlastné, žiadny server.
-// Nevie nič o stave appky, takže ho rovnakým kódom a v rovnakom formáte používa súčasná
-// appka aj nová (obloha/) - obe bežia na tej istej doméne a čítajú to isté úložisko.
+// Nevie nič o stave appky.
 // localStorage môže chýbať alebo hádzať (súkromné okno, zakázané úložisko) - appka potom
 // sa spýta na polohu ako pri prvom otvorení a uloženie ohlási ako neúspešné.
 
@@ -128,7 +127,7 @@ export function loadVymazane() {
     return read(VYMAZANE_STORAGE_KEY) !== null;
 }
 
-/** Zmaže kľúče, ktoré appka už nepoužíva (OLD_STORAGE_KEYS). Volajú ho obe appky pri štarte. */
+/** Zmaže kľúče, ktoré appka už nepoužíva (OLD_STORAGE_KEYS). Volá sa pri štarte. */
 export function dropOldStored() {
     removeAll(OLD_STORAGE_KEYS);
 }
@@ -174,7 +173,7 @@ export function saveOdmietnutie(o) {
     }
 }
 
-/** Posledný dopyt na meranie, spoločný pre obe appky (Rytmus v shared/zdroje.js); bez úložiska null. @returns {import('../shared/zdroje.js').Rytmus | null} */
+/** Posledný dopyt na meranie (Rytmus v shared/zdroje.js); bez úložiska null. @returns {import('../shared/zdroje.js').Rytmus | null} */
 export function loadRytmus() {
     return readJson(MERANIE_STORAGE_KEY, parseRytmus, null);
 }

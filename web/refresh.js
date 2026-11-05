@@ -1,5 +1,5 @@
 // Obnova dát a hodiny. Nevie nič o kartách ani o DOM - pracuje s poľami stavu, ktoré majú
-// obe appky (súčasná vo web/ aj nová v obloha/), takže dáta, meranie aj denník výroby
+// appka, takže dáta, meranie aj denník výroby
 // idú v oboch tou istou cestou.
 
 import { REFRESH, STALE_PV_MS } from '../shared/config.js';
@@ -61,7 +61,7 @@ export function nextPv(prev, result, now) {
 /**
  * Meranie od Workera so súčtami, ktoré výrobca neposlal (rok, mesiac, pri Victrone dnešok),
  * dopočítanými z celkovej výroby (shared/sucty.js). Čas merania, nie obnovy: meranie od druhej
- * appky mohlo prísť skôr. Kotvy sú spoločné pre obe appky, zapíšu sa hneď.
+ * appky mohlo prísť skôr. Kotvy sú spoločné, zapíšu sa hneď.
  * @param {import('../shared/kiosk.js').PvData | null} pv @param {import('../shared/zdroje.js').Zdroj | null} zdroj
  * @param {import('../shared/config.js').Site} site
  */

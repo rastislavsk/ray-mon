@@ -1,17 +1,10 @@
-// Vstup stránky: načíta appku a keď sa jej moduly nezídu, raz obnoví stránku so súbormi
-// priamo zo servera.
+// Vstup: načíta ju a keď sa jej moduly nezídu, raz obnoví stránku so súbormi
+// priamo zo servera. Dôvody sú v CLAUDE.md, časť o nasadení a cache.
 //
-// GitHub Pages posiela každý súbor s max-age=600 bez revalidácie, takže prehliadač po nasadení
-// vie až desať minút miešať nové súbory so starými z cache. Keď nový modul importuje export,
-// ktorý starý modul v cache ešte nemá, celý graf modulov spadne pri linkovaní („does not
-// provide an export named …“) a app.js sa vôbec nespustí. To isté sa stane, keď nový dom.js
-// hľadá prvok, ktorý staré index.html nemá. Obyčajné obnovenie stránky nepomôže - prehliadač
-// pri ňom overí len samotnú stránku, moduly vezme znova z cache.
-//
-// Tento súbor preto nesmie nič importovať staticky: musí sa spustiť, aj keď je zvyšok
-// grafu rozbitý.
+// Tento súbor nesmie nič importovať staticky: musí sa spustiť, aj keď je zvyšok grafu
+// rozbitý.
 
-const KEY = 'ray-mon-obnova';
+const KEY = 'ray-mon-obloha-obnova';
 
 /**
  * Prvý pokus o nápravu v tejto karte? Zároveň si ho zapíše, aby sa stránka neobnovovala
@@ -56,8 +49,12 @@ async function recover(err) {
             // Server nedostupný (offline): obnovenie by ukázalo len chybovú stránku prehliadača.
         }
     }
-    const line = document.getElementById('pv-updated');
+    const line = document.getElementById('hdr-status');
     if (line) line.textContent = 'appka sa nenačítala, skús to o chvíľu';
 }
 
 import('./app.js').then(loaded, recover);
+
+// Prázdny export len pre typovú kontrolu: bez neho by tsc bral súbor ako skript a jeho mená
+// by sa bili s koreňovým boot.js. Prehliadač ho načítava ako modul tak či tak.
+export {};

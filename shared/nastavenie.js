@@ -1,6 +1,6 @@
-// Karta Nastavenie oboch appiek: celý prehľad - výzva dokončiť nastavenie, hlásenie o prístupe
+// Karta Nastavenie: celý prehľad - výzva dokončiť nastavenie, hlásenie o prístupe
 // k meraniu, karta elektrárne a sekcie Elektráreň, Čo máš doma, Oznámenia, Vzhľad a Appka -
-// s textami, hodnotami a stavom volieb. Obe appky ho len kreslia, každá svojím ovládaním
+// s textami, hodnotami a stavom volieb. Appka ho len kreslí
 // (docs/navrhy/nastavenie-zjednotenie.html). Čisté funkcie - stav dostanú, texty a čísla vrátia.
 // Voľby, ktoré má len jedna appka (živá obloha, farba pozadia), si do sekcie Vzhľad pridáva kabát.
 // Sprievodca sám je spoločný tiež (shared/setup-flow.js, shared/setup-texts.js).
@@ -94,7 +94,7 @@ export const NASTAVENIE_TEXTS = {
         small: 'všetko, čo appka uložila v tomto prehliadači',
         ask: 'Vymazať všetky údaje?',
         text:
-            'Zmaže sa elektráreň, poloha, denník výroby, spotrebiče aj vzhľad – v oboch appkách, lebo majú spoločné úložisko. ' +
+            'Zmaže sa elektráreň, poloha, denník výroby, spotrebiče aj vzhľad. ' +
             'Ranné oznámenie sa vypne. Odinštalovanie appky tieto údaje samo nezmaže.',
         ok: 'Vymazať',
         cancel: 'Nechať tak',

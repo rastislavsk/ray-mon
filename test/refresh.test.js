@@ -14,7 +14,8 @@ import {
     openMeteoUrl,
 } from '../shared/config.js';
 import { createRefresh } from '../web/refresh.js';
-import { createStore, initialState } from '../web/state.js';
+import { initialState } from '../web/state.js';
+import { createStore } from '../web/store.js';
 import { FIXED_NOW, fakeStorage, fixture, pvAt } from './helpers.js';
 
 const PECAT = 'v1.AbCdEfGhIjKlMnOpQrStUvWxYz012345';
@@ -47,7 +48,7 @@ function appka(t, start = { saved: SAVED }) {
         storage.restore();
         delete (/** @type {any} */ (globalThis).fetch);
     });
-    const store = createStore(initialState(FIXED_NOW, { wide: false, tall: true }, /** @type {any} */ (start)));
+    const store = createStore(initialState(FIXED_NOW, /** @type {any} */ ({ dayLog: {}, online: true, ranna: null, ...start })));
     return { store, refresh: createRefresh(/** @type {any} */ (store)), odpovede, dopyty, saved: storage.saved };
 }
 
@@ -81,7 +82,7 @@ test('meranie: prvá obnova sa pýta, ďalšia do intervalu spôsobu nie; dopyt 
     assert.deepEqual(a.dopyty, [PECAT], 'Workeru ide zapečatený prístup');
     assert.equal(a.store.get().pokusAt, FIXED_NOW.getTime(), 'čas dokončeného pokusu (pvFreshness)');
     assert.equal(a.store.get().pv?.updatedAt, pvAt(FIXED_NOW).updatedAt);
-    assert.ok(a.saved.has(MERANIE_STORAGE_KEY), 'rytmus je spoločný pre obe appky');
+    assert.ok(a.saved.has(MERANIE_STORAGE_KEY), 'rytmus je spoločný');
     assert.ok(Object.keys(a.store.get().dayLog).length, 'dnešok je v denníku výroby');
 
     posun(t, MIN);

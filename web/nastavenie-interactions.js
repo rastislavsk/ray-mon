@@ -1,15 +1,15 @@
-// Poslucháče karty Nastavenie novej appky. Sprievodcu (aj riadky prehľadu, ktoré otvárajú jeho
-// kroky) obsluhuje web/setup-wiring.js - ten istý kód ako v súčasnej appke. Tu je len to, čím sa
-// nová appka líši: krok späť cez jej históriu, karta po odložení panelov, Escape a ponuka
+// Poslucháče karty Nastavenie. Sprievodcu (aj riadky prehľadu, ktoré otvárajú jeho
+// kroky) obsluhuje web/setup-wiring.js. Tu je len to, čím sa
+// appka líši: krok späť cez jej históriu, karta po odložení panelov, Escape a ponuka
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
-import { VOICES } from '../../shared/config.js';
-import { backAction } from '../../shared/setup-flow.js';
-import { applySettings, initSetupWiring, runSetupAction } from '../../web/setup-wiring.js';
-import { prepniSpotrebic } from '../../shared/doma.js';
-import { nastavOznamenia, vypniOznamenia } from '../../web/oznamenia.js';
-import { clearStored, saveDoma, saveLook } from '../../web/storage.js';
+import { VOICES } from '../shared/config.js';
+import { backAction } from '../shared/setup-flow.js';
+import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
+import { prepniSpotrebic } from '../shared/doma.js';
+import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
+import { clearStored, saveDoma, saveLook } from './storage.js';
 import { stepBack } from './nav-back.js';
 import { NS_FOLDS, panelChange } from './state.js';
 
@@ -21,9 +21,9 @@ import { NS_FOLDS, panelChange } from './state.js';
  */
 export function initNastavenie(store, dom, refresh) {
     const app = {
-        back: (/** @type {import('../../shared/setup-flow.js').SetupPatch} */ patch) => stepBack(store, patch),
+        back: (/** @type {import('../shared/setup-flow.js').SetupPatch} */ patch) => stepBack(store, patch),
         refresh,
-        // „Teraz nie, ukáž predpoveď“ otvorí kartu 7 dní, ako v súčasnej appke.
+        // „Teraz nie, ukáž predpoveď“ otvorí kartu 7 dní.
         skip: () => panelChange(store.get().panel, '7dni'),
     };
     initSetupWiring(store, app, { ...dom, root: dom.setupRoot });
@@ -64,11 +64,11 @@ function initFolds(store, dom) {
     }
 }
 
-/** Nová appka je v obloha/, má tam aj vlastný service worker (obloha/sw.js). */
-const APP = 'obloha/';
+/** Appka je v koreni, tam má aj service worker (sw.js). */
+const APP = './';
 
 /**
- * Čo máš doma: spotrebič pridá či uberie a uloží - spoločné so súčasnou appkou (doma-v1).
+ * Čo máš doma: spotrebič pridá či uberie a uloží (doma-v1).
  * @param {Store} store @param {Dom} dom
  */
 function initDoma(store, dom) {
@@ -82,12 +82,12 @@ function initDoma(store, dom) {
 }
 
 /**
- * Oznámenia: prepínač a hodina. Zapnutie, vypnutie a uloženie je spoločné so súčasnou appkou
+ * Oznámenia: prepínač a hodina. Zapnutie, vypnutie a uloženie
  * (web/oznamenia.js), voľba platí v oboch.
  * @param {Store} store @param {Dom} dom
  */
 function initOznam(store, dom) {
-    /** @param {Partial<import('../../shared/oznamenia.js').Oznamenia>} zmena */
+    /** @param {Partial<import('../shared/oznamenia.js').Oznamenia>} zmena */
     const nastav = async (zmena) => {
         const s = store.get();
         // Kým sa zapína, ďalšia zmena by sa po dobehnutí prepísala starou voľbou.
@@ -103,8 +103,8 @@ function initOznam(store, dom) {
 }
 
 /**
- * Vzhľad (vzhlad-v1): tón je spoločný so súčasnou appkou, živá obloha len tejto. Ukladá sa len
- * zmena - farbu pozadia súčasnej appky táto nepozná a nesmie ju prepísať.
+ * Vzhľad (vzhlad-v1): tón, živá obloha len tejto. Ukladá sa len
+ * zmena.
  * @param {Store} store @param {Dom} dom
  */
 function initLook(store, dom) {
@@ -124,7 +124,7 @@ function initLook(store, dom) {
 /**
  * Okná sekcie Appka. Otvorenie je krok navigácie, zatvorenie (krížik, Escape, ťuknutie vedľa, Nechať
  * tak) ten istý krok ako tlačidlo Späť. Vymazať údaje po potvrdení zmaže všetko uložené
- * a obnoví stránku - appka naštartuje ako pri prvom otvorení, rovnako ako v súčasnej appke. Adresu treba vyčistiť tiež: nesie uložené nastavenie a appka by ho po obnovení ponúkla prevziať.
+ * a obnoví stránku - appka naštartuje ako pri prvom otvorení. Adresu treba vyčistiť tiež: nesie uložené nastavenie a appka by ho po obnovení ponúkla prevziať.
  * @param {Store} store @param {Dom} dom
  */
 function initAppSheets(store, dom) {

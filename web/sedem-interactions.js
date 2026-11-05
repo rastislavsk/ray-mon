@@ -1,9 +1,9 @@
-// Poslucháče karty 7 dní novej appky: otvorenie detailu dňa a týždňa, návrat do prehľadu
+// Poslucháče karty 7 dní: otvorenie detailu dňa a týždňa, návrat do prehľadu
 // (šípka späť, Escape), listovanie dní v detaile dňa a „Skúsiť znova“. Každý končí volaním
 // setState (alebo krokom v histórii); kreslí render/sedem.js. Tlačidlo Späť v telefóne rieši
 // trackHistory - detail je krok navigácie, deň v ňom nie.
 
-import { initDayPager } from '../../web/day-pager.js';
+import { initDayPager } from './day-pager.js';
 import { closeDetail } from './nav-back.js';
 import { render } from './render/index.js';
 import { shows } from './state.js';
@@ -12,7 +12,7 @@ import { shows } from './state.js';
 /** @typedef {import('./dom.js').Dom} Dom */
 
 /**
- * Listovanie dní v detaile dňa (web/day-pager.js, to isté ako v súčasnej appke): ťah prstom,
+ * Listovanie dní v detaile dňa (web/day-pager.js, to isté): ťah prstom,
  * čipy dní a šípky na klávesnici. Susedný deň kreslí počas ťahu ten istý render ako deň na
  * obrazovke - na chvíľu so susedným dňom v stave, potom znova so skutočným. V prehľade so
  * stĺpcami listuje len ťah v stĺpci 7 dní - pás je v ňom.

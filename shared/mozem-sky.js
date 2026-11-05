@@ -1,4 +1,4 @@
-// Karta Môžem? v novej appke „Živá obloha“ (obloha/). Počíta sa to isté ako v súčasnej appke
+// Karta Môžem?. Počíta sa to isté
 // (mozemModel v shared/mozem.js), tu sa to len skladá pre nový vzhľad: veľké slovo, čo dá
 // strecha za celý deň, oblúk slnka a výzvy. Štítky a vetu o teraz kreslí karta Teraz. Čisté funkcie - čas, dáta
 // aj to, či je internet, prichádzajú v parametroch. Texty sú v shared/messages.js.
@@ -47,7 +47,7 @@ export function pvStatus({ now, site, pv, zdroj, pokusAt }) {
 }
 
 /**
- * Model karty Môžem? novej appky. `known: 'nic'` (appka nepozná ani polohu) je len výzva zadať
+ * Model karty Môžem?. `known: 'nic'` (appka nepozná ani polohu) je len výzva zadať
  * polohu (`ask`), bez odpovedí. Pri známej polohe bez panelov karta odpovedá z typickej strechy
  * a priznáva to (`estimate`, `guess`).
  * @param {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean, known: import('./settings.js').Known }} input

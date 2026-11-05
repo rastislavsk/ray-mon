@@ -252,7 +252,7 @@ test('stavMerania a jeho vysvetlenie: živé, zastarané, neprišlo, pripojiť z
     for (const s of [stav(at('13:10'), cerstve), stav(at('13:10'), null)]) assert.equal(text(s).tlacidlo, '');
 });
 
-test('bodka a slovo za čas: tvar podľa stavu merania, rovnaký v oboch appkách', () => {
+test('bodka a slovo za čas: tvar podľa stavu merania, rovnaký', () => {
     const s = (/** @type {any} */ druh, /** @type {any} */ pricina = null) => ({ druh, cas: '13:00', neplati: null, pricina, mlci: null });
     assert.equal(bodkaMerania(s('zive')), 'live');
     assert.equal(bodkaMerania(s('spi')), 'live');

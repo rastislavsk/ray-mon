@@ -1,5 +1,5 @@
 // Texty a čísla sprievodcu nastavením: otázky, popisy tlačidiel, hlásenia pod poľami a riadky
-// zhrnutia. Obe appky ich kreslia každá po svojom (web/render/nastavenie.js, obloha/web/render/),
+// zhrnutia. Kreslí ich web/render/nastavenie.js a web/render/sprievodca.js,
 // ale pýtajú sa rovnako - preto sú texty tu, na jednom mieste. Žiadne HTML, len reťazce a dáta.
 
 import { installedKw, SETTINGS_LIMITS, SETUP } from './config.js';

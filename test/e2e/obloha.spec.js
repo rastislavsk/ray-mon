@@ -1,8 +1,8 @@
-// E2E pre novú appku „Živá obloha“ v obloha/. Rovnako ako pri súčasnej appke: pevný čas, dáta
+// E2E: pevný čas, dáta
 // z fixtures a očakávané hodnoty počítané tou istou funkciou (shared/), ktorú volá appka.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { wordSize } from '../../obloha/web/render/mozem.js';
+import { wordSize } from '../../web/render/mozem.js';
 import { pocasieStav } from '../../web/pocasie.js';
 import {
     LOOK_STORAGE_KEY,
@@ -43,7 +43,7 @@ const TITLES = { mozem: 'Dnes', terazky: 'Teraz', '7dni': '7 dní', statistika: 
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 
 /**
- * Siete a úložisko ako pri súčasnej appke: Worker a Open-Meteo odpovedajú z fixtures (alebo
+ * Siete a úložisko: Worker a Open-Meteo odpovedajú z fixtures (alebo
  * vôbec, `offline`), nastavenie sa uloží len vtedy, keď tam ešte nič nie je.
  * @param {import('@playwright/test').Page} page
  * @param {{ offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
@@ -73,26 +73,14 @@ async function appReady(page) {
 }
 
 /**
- * Otvorí súčasnú appku a počká, kým naštartuje. Udalosť load na to nestačí: boot.js načíta appku
- * dynamickým import(), ktorý sa môže dokončiť až po nej - klik hneď po page.goto by trafil statické
- * HTML bez poslucháčov a stratil sa. „načítavam…“ v hlavičke prepíše až appka (rovnako čaká
- * appReady v app.spec.js).
- * @param {import('@playwright/test').Page} page
- */
-async function otvorSucasnuAppku(page) {
-    await page.goto('/');
-    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
-}
-
-/**
- * Otvorí novú appku s pevným časom. Bez `settings: null` má uložené Dvorany s kioskom.
+ * Otvorí appku s pevným časom. Bez `settings: null` má uložené Dvorany s kioskom.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
  */
 async function openObloha(page, { time = FIXED_NOW, ...opts } = {}) {
     const errors = await pripravSiet(page, opts);
     await page.clock.setFixedTime(time);
-    await page.goto('/obloha/');
+    await page.goto('/');
     await appReady(page);
     return errors;
 }
@@ -247,7 +235,7 @@ test('riadok stavu: čerstvé meranie bez výkonu nie je živé, rovnako ako na 
 });
 
 test('riadok stavu: čas posledného merania, nie hodiny; zastarané so slovom, bez merania slovom', async ({ page }) => {
-    // Meranie z 13:00 (posledný bod krivky), appka o 13:10: čas merania, nie 13:10 - ako súčasná appka.
+    // Meranie z 13:00 (posledný bod krivky), appka o 13:10: čas merania, nie 13:10.
     const errors = await openObloha(page, { time: at('13:10') });
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
@@ -269,7 +257,7 @@ test('riadok stavu: čas posledného merania, nie hodiny; zastarané so slovom, 
     expect(errors).toEqual([]);
 });
 
-test('riadok stavu: menič mlčí za slnka, alebo v noci spí - ten istý tvar bodky a slová ako súčasná appka', async ({ browser }) => {
+test('riadok stavu: menič mlčí za slnka, alebo v noci spí', async ({ browser }) => {
     // Dáta chodia (čas stiahnutia je teraz), krivka končí 13:00 a slnko svieti: polovičná bodka, zastarané.
     const mlci = await browser.newPage();
     const errors = await openObloha(mlci, { time: at('14:30'), pvData: { ...pv, updatedAt: at('14:30').toISOString() } });
@@ -361,19 +349,20 @@ test('bez zadaných panelov je v hlavičke „Zadaj panely ›“ a otvorí Nast
     expect(errors).toEqual([]);
 });
 
-test('nastavenie uložené súčasnou appkou nová appka vidí a nič v ňom nemení', async ({ page }) => {
+test('uložené nastavenie appka ukáže a nič v ňom nemení', async ({ page }) => {
     const chata = { ...OWNER, site: { ...SITE, name: 'Chata pod Zoborom' } };
     const errors = await pripravSiet(page, { settings: chata });
     await page.clock.setFixedTime(FIXED_NOW);
-    await otvorSucasnuAppku(page);
+    await page.goto('/');
+    await appReady(page);
     const ulozene = await page.evaluate(() => JSON.stringify(localStorage));
 
-    await page.goto('/obloha/');
+    await page.goto('/');
     await appReady(page);
     await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
     await expect(page.locator('#hdr-place')).toHaveText('Chata pod Zoborom');
     await ocakavajKartu(page, 'terazky');
-    expect(await page.evaluate(() => JSON.stringify(localStorage)), 'nová appka uložené nastavenie neprepisuje').toBe(ulozene);
+    expect(await page.evaluate(() => JSON.stringify(localStorage)), 'appka uložené nastavenie neprepisuje').toBe(ulozene);
     expect(errors).toEqual([]);
 });
 
@@ -510,7 +499,7 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         await expect(page.locator('#sd-day-live')).toHaveText(`${await page.locator('#sd-day-title').textContent()}, deň 4 zo ${pocet}`);
         await tah(page, '#sd-day-title', 220);
         await ocakavajDen(page, 2);
-        // Zvislý ťah deň neprelistuje. (Krátky ťah bez švihu skúša súčasná appka - tu prídu
+        // Zvislý ťah deň neprelistuje. (Tu prídu
         // udalosti bez pauzy, teda ako veľmi rýchly švih.)
         await tah(page, '#sd-day-title', -20, 200);
         await ocakavajDen(page, 2);
@@ -591,9 +580,22 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
     });
 });
 
-// To isté ako skupina „nasadenie a cache“ pre súčasnú appku (app.spec.js): starý modul z cache
+// Nasadenie a cache: starý modul z cache
 // hrá route - shared/config.js bez exportov, ktoré appka importuje.
-test.describe('nasadenie a cache (obloha/boot.js)', () => {
+test.describe('stará adresa obloha/', () => {
+    test('presmeruje do koreňa a zachová odkaz s nastavením', async ({ page }) => {
+        await pripravSiet(page);
+        await page.goto('/obloha/#nastavenie=abc');
+        await expect(page).toHaveURL(/:\d+\/#nastavenie=abc$/);
+    });
+
+    test('service worker a logo starých odberov ostávajú', async ({ page }) => {
+        expect((await page.request.get('/obloha/icon-192.png')).status()).toBe(200);
+        expect((await page.request.get('/obloha/sw.js')).status()).toBe(200);
+    });
+});
+
+test.describe('nasadenie a cache (boot.js)', () => {
     /** @param {import('@playwright/test').Page} page @param {number} times koľkokrát vrátiť starú verziu */
     async function staryModul(page, times) {
         let left = times;
@@ -618,14 +620,14 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
         const loads = await staryModul(page, Infinity);
         await pripravSiet(page);
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await expect(page.locator('#hdr-status')).toHaveText('appka sa nenačítala, skús to o chvíľu');
         expect(loads()).toBe(2);
     });
 
     test('chýbajúci prvok v starom index.html: to isté ako starý modul', async ({ page }) => {
         let left = 1;
-        await page.route('**/obloha/', async (route) => {
+        await page.route(/:\d+\/$/, async (route) => {
             if (left-- <= 0) return route.continue();
             const res = await route.fetch();
             route.fulfill({ response: res, body: (await res.text()).replace('id="hdr-tone"', '') });
@@ -655,10 +657,10 @@ test.describe('nasadenie a cache (obloha/boot.js)', () => {
     });
 });
 
-// Karty 7 dní, Štatistika a Nastavenie sa sťahujú až po štarte (obloha/web/parts.js) - boot.js ich
+// Karty 7 dní, Štatistika a Nastavenie sa sťahujú až po štarte (web/parts.js) - boot.js ich
 // nechráni. Starý modul z cache tu hrá shared/statistika.js bez exportov: kód karty Štatistika sa
 // nezlinkuje, zvyšok appky beží.
-test.describe('nasadenie a cache: karty načítané neskôr (obloha/web/parts.js)', () => {
+test.describe('nasadenie a cache: karty načítané neskôr (web/parts.js)', () => {
     /** @param {import('@playwright/test').Page} page @param {number} times koľkokrát vrátiť starú verziu */
     async function staraStatistika(page, times) {
         let left = times;
@@ -676,10 +678,10 @@ test.describe('nasadenie a cache: karty načítané neskôr (obloha/web/parts.js
         page.on('request', (r) => urls.push(new URL(r.url()).pathname));
         const errors = await openObloha(page);
         const neskore = (/** @type {string} */ u) =>
-            /\/obloha\/web\/part-|\/render\/(sedem|statistika|nastavenie|sprievodca)\.js|\/shared\/messages\.js/.test(u);
+            /\/web\/part-|\/render\/(sedem|statistika|nastavenie|sprievodca)\.js|\/shared\/messages\.js/.test(u);
         expect(urls.filter(neskore)).toEqual([]);
         // Keď je prehliadač voľný, stiahnu sa aj ostatné - karta je potom pri prvom otvorení hneď hotová.
-        await expect.poll(() => urls.filter((u) => u.includes('/obloha/web/part-')).length).toBe(3);
+        await expect.poll(() => urls.filter((u) => u.includes('/web/part-')).length).toBe(3);
         await page.locator('#nav-statistika').click();
         await ocakavajKartu(page, 'statistika');
         await expect(page.locator('#cakam')).toBeHidden();
@@ -725,7 +727,7 @@ test.describe('nasadenie a cache: karty načítané neskôr (obloha/web/parts.js
 
 // ---- Karta Môžem? (krok 2) ---------------------------------------------------------
 // Očakávané texty počíta tá istá funkcia ako appka (shared/mozem-sky.js, a pod ňou mozemModel
-// súčasnej appky) z tých istých dát, takže test odhalí rozdiel medzi modelom a stránkou.
+// jadra) z tých istých dát, takže test odhalí rozdiel medzi modelom a stránkou.
 
 /**
  * Model karty pre dáta z fixtures v danej chvíli, tak ako ho počíta appka.
@@ -742,7 +744,7 @@ const modelKarty = (time, extra = {}, opts = {}) => {
         ...extra,
     };
     const m = mozemSkyModel(input, opts);
-    // Čo sa mení s časťou dňa - appka to skladá tou istou funkciou (obloha/web/render/mozem.js).
+    // Čo sa mení s časťou dňa - appka to skladá tou istou funkciou (web/render/mozem.js).
     const faza = m.ask || m.state === 'loading' ? null : dnesFaza(input, m.den, m.window, { voice: opts.voice, devices: opts.devices });
     return { ...m, faza };
 };
@@ -878,7 +880,7 @@ test.describe('karta Dnes', () => {
         });
     }
 
-    test('staré zápisy „Pustil/a som“ nová appka pri štarte zmaže', async ({ page }) => {
+    test('staré zápisy „Pustil/a som“ appka pri štarte zmaže', async ({ page }) => {
         const errors = await openObloha(page);
         const stare = JSON.stringify([{ d: '2026-09-05', id: 'pracka', m: 12 * 60, sun: true }]);
         await page.evaluate(
@@ -901,7 +903,7 @@ test.describe('karta Dnes', () => {
         await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
         await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await naDnes(page);
 
@@ -927,7 +929,7 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('#mz-lead')).toHaveText(/^Nie je internet/);
     });
 
-    test('poloha bez panelov: deň z typickej strechy a výzva, súčasná appka odpovedá to isté', async ({ page }) => {
+    test('poloha bez panelov: deň z typickej strechy a výzva', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
         await naDnes(page);
         const typical = typicalSettings(SITE);
@@ -950,11 +952,6 @@ test.describe('karta Dnes', () => {
         expect(await page.locator('#mz-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
         await page.locator('#mz-guess-btn').click();
         await ocakavajKartu(page, 'nastavenie');
-
-        // Súčasná appka v tom istom stave odpovedá to isté slovo (jedno jadro, dva kabáty).
-        await otvorSucasnuAppku(page);
-        await page.locator('#nav-mozem').click();
-        await expect(page.locator('#mozem-body .mozem-word')).toHaveText(m.word);
         expect(errors).toEqual([]);
     });
 
@@ -975,7 +972,7 @@ test.describe('karta Dnes', () => {
 
 // ---- Karta Teraz (krok 3) ----------------------------------------------------------
 // Očakávané texty počíta tá istá funkcia ako appka (shared/teraz.js nad heroModel a dayPlan
-// súčasnej appky) z tých istých dát. Meranie je pvAt - snímka kiosku taká, aká by prišla
+// jadra) z tých istých dát. Meranie je pvAt - snímka kiosku taká, aká by prišla
 // v danej chvíli (ráno nie poludňajší výkon).
 
 /**
@@ -994,7 +991,7 @@ const vstupTeraz = (time, extra = {}) => ({
 });
 
 /**
- * Otvorí novú appku na karte Teraz s meraním, aké by prišlo v danej chvíli.
+ * Otvorí appku na karte Teraz s meraním, aké by prišlo v danej chvíli.
  * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1]} [opts]
  */
 async function openTeraz(page, opts = {}) {
@@ -1082,7 +1079,7 @@ test.describe('karta Teraz', () => {
     /** @type {Record<string, string | null>} */
     const pasma = { '13:00': 'sun', '19:30': 'cheap', '20:45': 'costly', '02:00': 'cheap', '08:00': null };
     for (const [hm, tone] of Object.entries(pasma)) {
-        test(`o ${hm} ukazuje ten istý výkon, vetu a odporúčanie ako model aj karta Teraz súčasnej appky`, async ({ page }) => {
+        test(`o ${hm} ukazuje ten istý výkon, vetu a odporúčanie ako model`, async ({ page }) => {
             const time = at(hm);
             const errors = await openTeraz(page, { time });
             const vstup = vstupTeraz(time);
@@ -1101,18 +1098,11 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-chart-desc')).toHaveText(m.chart?.desc ?? '');
             await expect(page.locator('#tz-retry')).toBeHidden();
             await expect(page.locator('#tz-guess')).toBeHidden();
-
-            // Súčasná appka v tom istom čase s tými istými dátami: ten istý výkon, veta aj Plán dňa.
-            await otvorSucasnuAppku(page);
-            await page.locator('#nav-terazky').click();
-            await expect(page.locator('#tz-num-val')).toHaveText(m.num);
-            await expect(page.locator('#tz-say-text')).toHaveText(m.say?.text ?? '');
-            if (m.plan) await expect(page.locator('.tz-plan-lead')).toHaveText((m.plan.next ?? m.plan).head.lead);
             expect(errors).toEqual([]);
         });
     }
 
-    test('Plán dňa: veta a časová os ako model, v súčasnej appke ten istý plán ako plagát', async ({ page }) => {
+    test('Plán dňa: veta a časová os ako model', async ({ page }) => {
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
         const plan = terazModel(vstupTeraz(time)).plan;
@@ -1132,10 +1122,6 @@ test.describe('karta Teraz', () => {
             return { ciara: ciara.left + ciara.width / 2, pras: pras.left };
         });
         expect(Math.abs(x.ciara - x.pras)).toBeLessThan(4);
-
-        await otvorSucasnuAppku(page);
-        await expect(page.locator('.tz-plan-lead')).toHaveText(plan.head.lead);
-        await expect(page.locator('.tz-plan-what')).toHaveText(plan.rows.map((r) => r.name));
         expect(errors).toEqual([]);
     });
 
@@ -1238,9 +1224,7 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz; v súčasnej appke plagát na zajtra', async ({
-        page,
-    }) => {
+    test('Plán dňa večer: os na zajtra s dňom v nadpise aj nad osou, bez čiary teraz', async ({ page }) => {
         const time = at('19:50');
         const errors = await openTeraz(page, { time });
         const plan = terazModel(vstupTeraz(time)).plan;
@@ -1257,18 +1241,6 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-plan .tl-now')).toHaveCount(0);
         await expect(page.locator('#tz-plan .tl-chip')).toHaveCount(next.lanes.others.length);
         await expect(page.locator('#tz-plan .tl-note')).toHaveText(next.note);
-
-        // Súčasná appka: ten istý plán na zajtra ako plagát - deň v nadpise, veta, dnešná lacná sieť
-        // nad riadkami a riadky v ten deň s časom.
-        await otvorSucasnuAppku(page);
-        await expect(page.locator('#tz-plan-title')).toHaveText(`${next.title} ${next.day}`);
-        await expect(page.locator('.tz-plan-day')).toHaveText(next.day);
-        await expect(page.locator('.tz-plan-lead')).toHaveText(next.head.lead);
-        await page.locator('#tz-plan-btn').click();
-        await expect(page.locator('.tz-plan-tonight')).toHaveText(next.head.tonight);
-        await expect(page.locator('.tz-plan-what')).toHaveText(next.rows.map((r) => r.name));
-        await expect(page.locator('.tz-plan-when')).toHaveText(next.rows.map((r) => r.value));
-        await expect(page.locator('.tz-plan-note')).toHaveText(next.note);
         expect(errors).toEqual([]);
     });
 
@@ -1440,7 +1412,7 @@ test.describe('karta Teraz', () => {
         await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvAt(FIXED_NOW) } })));
         await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await page.locator('#nav-terazky').click();
 
@@ -1463,7 +1435,7 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('poloha bez panelov: „~“, typická strecha a výzva do Nastavenia; súčasná appka povie to isté', async ({ page }) => {
+    test('poloha bez panelov: „~“, typická strecha a výzva do Nastavenia', async ({ page }) => {
         const errors = await openTeraz(page, { settings: null, site: SITE });
         const typical = typicalSettings(SITE);
         const m = terazModel({
@@ -1480,12 +1452,6 @@ test.describe('karta Teraz', () => {
         expect(await page.locator('#tz-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
         await page.locator('#tz-guess-btn').click();
         await ocakavajKartu(page, 'nastavenie');
-
-        // Súčasná appka v tom istom stave: ten istý odhad z typickej strechy (jedno jadro, dva kabáty).
-        await otvorSucasnuAppku(page);
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-num-val')).toHaveText(m.num);
-        await expect(page.locator('#tz-sub')).toHaveText(m.sub);
         expect(errors).toEqual([]);
     });
 
@@ -1510,7 +1476,7 @@ test.describe('karta Teraz', () => {
             await route.fulfill({ json: weather });
         });
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await page.locator('#nav-terazky').click();
         await expect(page.locator('#tz-sub')).toHaveText('Načítavam…');
@@ -1643,7 +1609,7 @@ for (const width of [390, 320]) {
 
 // ---- Karta 7 dní (krok 4) ----------------------------------------------------------
 // Očakávané texty počíta tá istá funkcia ako appka (shared/sedem-dni.js nad weekStatsModel,
-// weekListModel a plánom dňa súčasnej appky) z tých istých dát.
+// weekListModel a plánom dňa) z tých istých dát.
 
 /**
  * Vstup karty 7 dní pre dáta z fixtures, tak ako ho skladá appka: Dvorany s kioskom, meranie
@@ -1669,7 +1635,7 @@ const slabyTyzden = (() => {
 })();
 
 /**
- * Otvorí novú appku na karte 7 dní.
+ * Otvorí appku na karte 7 dní.
  * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1]} [opts]
  */
 async function openSedem(page, opts = {}) {
@@ -1735,7 +1701,6 @@ test.describe('karta 7 dní', () => {
             const errors = await openSedem(page);
             const m = sedemModel(vstupSedem());
             await expect.poll(() => prehladVStranke(page)).toEqual(prehladZModelu(m));
-            // Najlepší deň menuje nadpis aj súhrn karty 7 dní súčasnej appky.
             expect(m.title).toBe('Veľké pranie? Štvrtok.');
             await expect(page.locator('#sd-days .day')).toHaveCount(7);
             await expect(page.locator('#sd-days .day.best')).toHaveCount(1);
@@ -1827,7 +1792,7 @@ test.describe('karta 7 dní', () => {
         await page.unroute(/api\.open-meteo\.com/);
         await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: slabyTyzden }));
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await page.locator('#nav-7dni').click();
         const vstup = vstupSedem({ forecast: buildForecast(slabyTyzden, FIXED_NOW, SITE, PLANT) });
@@ -2025,7 +1990,7 @@ test.describe('karta 7 dní: stavy', () => {
         await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv } })));
         await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await page.locator('#nav-7dni').click();
         const bez = sedemModel(vstupSedem({ pv: null, forecast: null }));
@@ -2062,7 +2027,7 @@ test.describe('karta 7 dní: stavy', () => {
             await route.fulfill({ json: weather });
         });
         await page.clock.setFixedTime(FIXED_NOW);
-        await page.goto('/obloha/');
+        await page.goto('/');
         await appReady(page);
         await page.locator('#nav-7dni').click();
         await expect(page.locator('#sd-sub')).toHaveText('Načítavam…');
@@ -2111,7 +2076,7 @@ test.describe('karta 7 dní: stavy', () => {
         expect(errors).toEqual([]);
     });
 
-    test('poloha bez panelov: typická strecha, odhad v riadkoch a výzva do Nastavenia; súčasná appka ostáva', async ({ page }) => {
+    test('poloha bez panelov: typická strecha, odhad v riadkoch a výzva do Nastavenia', async ({ page }) => {
         const errors = await openSedem(page, { settings: null, site: SITE });
         const typical = typicalSettings(SITE);
         const forecast = buildForecast(weather, FIXED_NOW, SITE, typical.plant);
@@ -2132,11 +2097,6 @@ test.describe('karta 7 dní: stavy', () => {
         expect(await page.locator('#sd-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
         await page.locator('#sd-guess-btn').click();
         await ocakavajKartu(page, 'nastavenie');
-
-        // Súčasná appka v tom istom stave: karta 7 dní ako doteraz, s typickou strechou v podnadpise.
-        await otvorSucasnuAppku(page);
-        await page.locator('#nav-7dni').click();
-        await expect(page.locator('#week-sub')).toHaveText(/typická strecha/);
         expect(errors).toEqual([]);
     });
 

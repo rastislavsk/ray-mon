@@ -1,10 +1,10 @@
-// Poslucháče sprievodcu nastavením, spoločné pre obe appky. Obrazovky sprievodcu majú v oboch
+// Poslucháče sprievodcu nastavením. Obrazovky sprievodcu majú v oboch
 // appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód; čo tlačidlo urobí,
 // je v shared/setup-flow.js. Tu je len to, čo čistá funkcia nevie: pole formulára, prst na
 // kruhu tarify, vyhľadávanie polohy, pripojenie merania a uloženie do prehliadača.
 //
 // Modul je neutrálny (pravidlo v CLAUDE.md): nesiaha na stav ani DOM žiadnej z appiek, všetko
-// dostane od volajúceho - súčasná appka vo web/setup-interactions.js, nová v obloha/web/.
+// dostane od volajúceho (web/nastavenie-interactions.js).
 
 import { RING, minutesFromAngle } from '../shared/chart-model.js';
 import { SEARCH_DEBOUNCE_MS, TARIFF_LIMITS } from '../shared/config.js';

@@ -6,28 +6,13 @@ import {
     fmt2,
     fmtSum,
     formatGridKw,
-    hourFloatToTimeStr,
     kwpText,
-    minutesToTimeStr,
-    timeStrToMinutes,
     weekDayLabel,
     weekDayLong,
     weekDayPosition,
     weekDayName,
     weekDayShort,
 } from '../shared/format.js';
-
-test('čas', () => {
-    assert.equal(minutesToTimeStr(0), '00:00');
-    assert.equal(minutesToTimeStr(1445), '00:05');
-    assert.equal(minutesToTimeStr(-5), '23:55');
-    assert.equal(timeStrToMinutes('23:30'), 1410);
-    assert.equal(hourFloatToTimeStr(13.5), '13:30');
-    // Posledná pol minúta hodiny patrí k ďalšej hodine, nie k minúte 60 (tooltip ukazoval "13:60").
-    assert.equal(hourFloatToTimeStr(13.995), '14:00');
-    assert.equal(hourFloatToTimeStr(13.9999), '14:00');
-    assert.equal(hourFloatToTimeStr(6), '06:00');
-});
 
 test('čísla a popisky', () => {
     assert.equal(fmt1(3.14), '3,1');

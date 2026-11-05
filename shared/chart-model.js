@@ -2,7 +2,7 @@
 // Kreslenie (SVG reťazce) je vo web/svg.js; tu nie je nič, čo by potrebovalo DOM.
 
 import { MINUTES_PER_DAY } from './config.js';
-import { fmt1, fmt2, formatGridKw, hourLabel, hourFloatToTimeStr, weekDateLabel, weekDayName, weekDayShort } from './format.js';
+import { weekDateLabel, weekDayName, weekDayShort } from './format.js';
 
 /** @typedef {{ x: number, y: number }} Pt */
 /** @typedef {import('./solar.js').HourPoint} HourPoint */
@@ -14,18 +14,6 @@ import { fmt1, fmt2, formatGridKw, hourLabel, hourFloatToTimeStr, weekDateLabel,
 // už vtedy (východ slnka ~4:50).
 export const HOUR_RANGE = { min: 5, max: 21 };
 export const WEEK_HOURS = Array.from({ length: HOUR_RANGE.max - HOUR_RANGE.min + 1 }, (_, i) => HOUR_RANGE.min + i);
-
-/** Dve veľkosti plátna: mobil a široká karta (popisky ostávajú zhruba 1:1). @param {boolean} wide @returns {Dims} */
-export function chartDims(wide) {
-    return wide
-        ? { w: 680, h: 420, padL: 42, padR: 14, padT: 18, padB: 34, hourStep: 2, xLabelGap: 10, yAxis: true }
-        : { w: 320, h: 150, padL: 8, padR: 8, padT: 10, padB: 22, hourStep: 3, xLabelGap: 6, yAxis: false };
-}
-
-/** Rovnaké okraje ako široké plátno, ale na skutočný rozmer karty. @param {number} w @param {number} h @returns {Dims} */
-export function fillDims(w, h) {
-    return { ...chartDims(true), w: Math.round(w), h: Math.round(h) };
-}
 
 /**
  * Lineárna interpolácia poľa bodov podľa poľa `xField` (predvolene hour).
@@ -48,22 +36,6 @@ export function interpolate(pts, x, field = 'kw', xField = 'hour') {
     return last[field];
 }
 
-/** Hladká krivka cez body (kubické Béziery so stredovými kontrolnými bodmi). @param {Pt[]} points */
-export function smoothPath(points) {
-    if (!points.length) return '';
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[i];
-        const p1 = points[i + 1];
-        const cx = (p0.x + p1.x) / 2;
-        d += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
-    }
-    return d;
-}
-
-// Aspoň toľko pixelov na jeden popisok osi Y, aby sa čísla nelepili na seba.
-const Y_LABEL_SPACE_PX = 22;
-
 /**
  * Krok vodorovnej mriežky: najjemnejší s okrúhlymi číslami, ktorý sa na plátno ešte zmestí.
  * `maxLines` obmedzuje počet čiar podľa dostupnej výšky - na nízkom plátne by ich desať
@@ -77,36 +49,6 @@ export function kwGridStep(maxKw, maxLines = 10) {
     return steps.find((s) => maxKw / s <= limit) || steps[steps.length - 1];
 }
 
-/** Prevod hodina/kW -> súradnice plátna. @param {Dims} dims @param {number} maxKw */
-export function makeScale(dims, maxKw, hMin = HOUR_RANGE.min, hMax = HOUR_RANGE.max) {
-    const plotW = dims.w - dims.padL - dims.padR;
-    const plotH = dims.h - dims.padT - dims.padB;
-    return {
-        x: (/** @type {number} */ hour) => dims.padL + ((hour - hMin) / (hMax - hMin || 1)) * plotW,
-        y: (/** @type {number} */ kw) => dims.padT + (1 - kw / maxKw) * plotH,
-        yPct: (/** @type {number} */ pct) => dims.padT + (1 - pct / 100) * plotH,
-        hourAtX: (/** @type {number} */ x) => Math.max(hMin, Math.min(hMax, hMin + ((x - dims.padL) / (plotW || 1)) * (hMax - hMin))),
-    };
-}
-
-/** Zvislá mriežka po hodinách a vodorovná po kW (len na širokom plátne). @param {Dims} dims @param {ReturnType<typeof makeScale>} scale @param {number} maxKw */
-function buildGrid(dims, scale, maxKw) {
-    const { min: hMin, max: hMax } = HOUR_RANGE;
-    const gridX = [];
-    for (let h = hMin; h <= hMax; h++) {
-        if (h % dims.hourStep !== 0) continue;
-        gridX.push({ x: scale.x(h), label: `${h}:00`, anchor: h === hMin ? 'start' : h === hMax ? 'end' : 'middle' });
-    }
-    const gridY = [];
-    if (dims.yAxis) {
-        const plotH = dims.h - dims.padT - dims.padB;
-        const step = kwGridStep(maxKw, plotH / Y_LABEL_SPACE_PX);
-        // Násobenie krokom, nie pripočítavanie - inak by sa nazbierala desatinná chyba.
-        for (let i = 0; i * step <= maxKw; i++) gridY.push({ y: scale.y(i * step), label: formatGridKw(i * step) });
-    }
-    return { gridX, gridY };
-}
-
 /** Hodina v produkčnom okne grafu (HOUR_RANGE). @param {number} hour */
 const inHours = (hour) => hour >= HOUR_RANGE.min && hour <= HOUR_RANGE.max;
 
@@ -114,67 +56,6 @@ const inHours = (hour) => hour >= HOUR_RANGE.min && hour <= HOUR_RANGE.max;
  * ktoré by skreslili špičku aj text správy dňa. @template {{ hour: number }} T @param {T[]} pts */
 export function visibleHours(pts) {
     return pts.filter((p) => inHours(p.hour));
-}
-
-/**
- * Spoločný základ grafov po hodinách (krivka aj stĺpce): mierka, mriežka, namerané body
- * a značka „teraz“. `real` už je orezané na produkčné okno.
- * @param {Dims} dims @param {number} maxKw @param {Array<{ hour: number, kw: number }>} real @param {number | null} nowHour
- */
-function hourFrame(dims, maxKw, real, nowHour) {
-    const scale = makeScale(dims, maxKw);
-    const realPoints = real.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) }));
-    return {
-        scale,
-        ...buildGrid(dims, scale, maxKw),
-        real: realPoints,
-        realLast: realPoints.length ? realPoints[realPoints.length - 1] : null,
-        nowX: nowHour === null ? null : scale.x(Math.max(HOUR_RANGE.min, Math.min(HOUR_RANGE.max, nowHour))),
-    };
-}
-
-/**
- * Model grafu hodinovej výroby (Predpoveď Dnes/Zajtra aj Priebeh výroby na karte 7 dní).
- * @param {{ pts: HourPoint[], realPts?: Array<{hour: number, kw: number}>, nowHour?: number | null, dims: Dims }} input
- */
-export function forecastChartModel({ pts, realPts = [], nowHour = null, dims }) {
-    const visible = visibleHours(pts);
-    if (!visible.length) return null;
-    const real = visibleHours(realPts);
-    const maxKw = Math.max(...visible.map((p) => p.kw), ...real.map((p) => p.kw), 0.5) * 1.15;
-    const { scale, ...frame } = hourFrame(dims, maxKw, real, nowHour);
-    const cloudAvailable = visible.every((p) => Number.isFinite(p.cloud));
-    return {
-        dims,
-        // Krivka a časová os dňa majú skoro tie isté polia - kind ich rozlíši aj pre typy.
-        kind: /** @type {const} */ ('curve'),
-        maxKw,
-        pts: visible,
-        line: visible.map((p) => ({ x: scale.x(p.hour), y: scale.y(p.kw) })),
-        cloud: cloudAvailable ? visible.map((p) => ({ x: scale.x(p.hour), y: scale.yPct(/** @type {number} */ (p.cloud)) })) : null,
-        ...frame,
-    };
-}
-
-/**
- * Tooltip nad krivkou: pre relatívnu polohu kurzora (0-1 šírky plátna) vráti čas,
- * výkon, oblačnosť, prípadne bezoblačný strop a polohu bodu v % plátna.
- * @param {{ dims: Dims, maxKw: number, pts: HourPoint[], cloud: unknown[] | null }} model krivka
- * @param {number} relX
- */
-export function chartTooltipModel(model, relX) {
-    const scale = makeScale(model.dims, model.maxKw);
-    const hour = scale.hourAtX(relX * model.dims.w);
-    const kw = interpolate(model.pts, hour, 'kw');
-    const hasCloud = model.cloud !== null;
-    const hasClear = model.pts.every((p) => Number.isFinite(/** @type {any} */ (p).clearKw));
-    return {
-        time: hourFloatToTimeStr(hour),
-        kw,
-        cloud: hasCloud ? Math.round(interpolate(model.pts, hour, 'cloud')) : null,
-        clearKw: hasClear ? interpolate(model.pts, hour, 'clearKw') : null,
-        yFrac: scale.y(kw) / model.dims.h,
-    };
 }
 
 // ---- Kruh dňa (rozvrh tarify) -----------------------------------------------------
@@ -266,29 +147,6 @@ export function dayKwAt(minutes, realCurve, hourlyToday, nowMinutes) {
 
 // ---- Karta 7 dní -----------------------------------------------------------------
 
-/** @param {ForecastDay} day */
-function hourMap(day) {
-    /** @type {Record<number, import('./solar.js').DayHourPoint>} */ const map = {};
-    day.hourly.forEach((h) => {
-        map[h.hour] = h;
-    });
-    return map;
-}
-
-/** Popisky tooltipu pre bunku hodina × deň. Mapu hodín dostáva hotovú - stavať ju pre každú
- * bunku znovu znamenalo prejsť dáta dňa 13x namiesto raz. Čas je okamih, nie úsek: predpoveď
- * je okamžitý výkon o celej hodine (viď OPEN_METEO_RADIATION v config.js).
- * @param {ForecastDay} d @param {number} i @param {number} h
- * @param {Record<number, import('./solar.js').DayHourPoint>} map */
-function cellTip(d, i, h, map) {
-    const cell = map[h];
-    const cloudTxt = cell && cell.cloud != null ? ` · ${Math.round(cell.cloud)} % oblačnosť` : '';
-    return {
-        title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)} · ${hourLabel(h)}`,
-        text: `${fmt2(cell ? cell.kw : 0)} kW${cloudTxt}`,
-    };
-}
-
 /** Farebné pásmo bunky heatmapy podľa podielu z maxima (0..1): nízky výkon = červená, vysoký = zelená. @param {number} frac */
 function heatBand(frac) {
     if (frac < 1 / 3) return 'red';
@@ -313,122 +171,9 @@ export function weekDayTiers(days) {
     });
 }
 
-/** Maximum heatmapy: najsilnejšia hodina týždňa, aspoň 0,4 kW (tichý týždeň nemá vyjsť celý zelený).
- * Z neho počíta farbu heatmapa týždňa aj riadok dňa v časovej osi, aby hovorili tou istou mierkou.
- * @param {ForecastDay[]} days */
-export function weekHeatMax(days) {
-    let max = 0.4;
-    for (const d of days) for (const p of visibleHours(d.hourly)) max = Math.max(max, p.kw);
-    return max;
-}
-
-/** Stupnica pod heatmapou: desať políčok od nuly po maximum. */
-export const HEAT_LEGEND = Array.from({ length: 10 }, (_, i) => ({ frac: i / 9, tier: heatBand(i / 9) }));
-
-/**
- * Mapa výroby hodina × deň. Bez `size` si plátno určí sama (mobil), s ním sa roztiahne
- * na skutočný rozmer karty - vtedy sa riadky rozdelia o dostupnú výšku.
- * @param {ForecastDay[]} days @param {number} selDay @param {{ W: number, H: number } | null} [size]
- */
-export function weekHeatModel(days, selDay, size = null) {
-    // Miesto vľavo je na skratky dní.
-    const padL = 44;
-    const padT = 20;
-    const padR = 4;
-    const gap = 2;
-    const W = size ? size.W : 440;
-    const rh = size ? Math.max(gap + 1, (size.H - padT - 4) / days.length) : 24;
-    const cw = (W - padL - padR) / WEEK_HOURS.length;
-    const H = size ? size.H : padT + days.length * rh + 4;
-    const maps = days.map(hourMap);
-    const max = weekHeatMax(days);
-
-    const hourLabels = WEEK_HOURS.filter((h) => h % 4 === 0).map((h) => ({
-        x: padL + (h - WEEK_HOURS[0]) * cw + cw / 2,
-        y: padT - 8,
-        label: String(h),
-    }));
-    const dayLabels = days.map((d, di) => ({
-        x: padL - 8,
-        y: padT + di * rh + rh / 2 + 3.5,
-        label: weekDayShort(d.date, di),
-        dayIndex: di,
-        today: di === 0,
-        sel: di === selDay,
-    }));
-    /** @type {Array<{ x: number, y: number, w: number, h: number, frac: number, tier: ReturnType<typeof heatBand> | null, dayIndex: number, tip: { title: string, text: string } | null }>} */
-    const cells = [];
-    days.forEach((d, di) => {
-        WEEK_HOURS.forEach((h, ci) => {
-            const cell = maps[di][h];
-            const v = cell ? cell.kw : 0;
-            const frac = v / max;
-            cells.push({
-                x: padL + ci * cw + gap / 2,
-                y: padT + di * rh + gap / 2,
-                w: cw - gap,
-                h: rh - gap,
-                frac,
-                tier: frac <= 0.02 ? null : heatBand(frac),
-                dayIndex: di,
-                tip: v > 0.02 ? cellTip(d, di, h, maps[di]) : null,
-            });
-        });
-    });
-    const selRect = { x: padL - 1, y: padT + selDay * rh, w: W - padL - padR + 2, h: rh - gap };
-    return { W, H, cells, hourLabels, dayLabels, selRect, max, legend: HEAT_LEGEND };
-}
-
-/** Denná výroba v kWh, voliteľne so stropom jasnej oblohy. @param {ForecastDay[]} days @param {number} selDay @param {{ W: number, H: number }} [size] @param {boolean} [showCeiling] */
-export function weekBarsModel(days, selDay, size = { W: 440, H: 190 }, showCeiling = true) {
-    const { W, H } = size;
-    const padL = 30;
-    const padT = 14;
-    const padR = 6;
-    const padB = 32;
-    const slot = (W - padL - padR) / days.length;
-    const bw = slot * 0.5;
-    const plotH = H - padT - padB;
-    const maxV = Math.max(...days.map((d) => Math.max(d.kwhTotal, showCeiling ? d.clearKwhTotal : 0)), 1) * 1.08;
-    // Najviac štyri úseky nad nulou, viac popiskov na mobilné plátno nevojde. Krok je z toho
-    // istého okrúhleho radu ako v grafe priebehu, takže sedí na desatiny kWh aj na stovky.
-    const gridStep = kwGridStep(maxV, 4);
-    const yFor = (/** @type {number} */ v) => padT + plotH - (v / maxV) * plotH;
-
-    const grid = [];
-    // Násobenie krokom, nie pripočítavanie - inak by sa pri desatinách nazbierala chyba.
-    for (let i = 0; i * gridStep <= maxV; i++) grid.push({ y: yFor(i * gridStep), label: formatGridKw(i * gridStep) });
-    const tiers = weekDayTiers(days);
-    const bars = days.map((d, i) => {
-        const cx = padL + i * slot + slot / 2;
-        const pct = usePct(d);
-        return {
-            dayIndex: i,
-            sel: i === selDay,
-            today: i === 0,
-            tier: tiers[i],
-            x: cx - bw / 2,
-            y: yFor(d.kwhTotal),
-            w: bw,
-            h: Math.max(0, (d.kwhTotal / maxV) * plotH),
-            cx,
-            clearY: showCeiling ? yFor(d.clearKwhTotal) : null,
-            valueLabel: fmt1(d.kwhTotal),
-            dayLabel: weekDayShort(d.date, i),
-            dateLabel: weekDateLabel(d.date),
-            hit: { x: padL + i * slot, w: slot },
-            tip: {
-                title: `${weekDayShort(d.date, i)} ${weekDateLabel(d.date)}`,
-                text: `${fmt1(d.kwhTotal)} kWh · strop ${fmt1(d.clearKwhTotal)} kWh${pct == null ? '' : ` (${pct} %)`}`,
-            },
-        };
-    });
-    return { W, H, padL, padR, grid, bars, labelY: H - 14, dateY: H - 4 };
-}
-
 /**
  * Najlepší deň týždňa: najviac kWh, pri zhode skorší. Ten istý deň menuje súhrn karty 7 dní
- * súčasnej appky (weekStatsModel) aj nadpis karty 7 dní novej (shared/sedem-dni.js).
+ * weekStatsModel aj nadpis karty 7 dní (shared/sedem-dni.js).
  * @param {Array<{ kwhTotal: number }>} days
  */
 export function bestDayIndex(days) {

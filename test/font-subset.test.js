@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { CHARS } from '../scripts/font-subset.js';
 
-/** Súbory, z ktorých nová appka berie texty: obloha/, shared/ a neutrálne moduly vo web/ (nie web/render/). */
+/** Súbory, z ktorých appka berie texty: koreň, shared/ a web/. */
 function sources() {
     /** @type {string[]} */
     const files = [];
@@ -17,13 +17,13 @@ function sources() {
             } else if (/\.(js|html)$/.test(name)) files.push(path);
         }
     };
-    walk('obloha', true);
+    for (const name of ['app.js', 'index.html']) files.push(name);
     walk('shared', true);
-    walk('web', false);
+    walk('web', true);
     return files;
 }
 
-test('písmo novej appky (fonts/archivo-obloha.woff2) má každý znak, ktorý appka píše', () => {
+test('písmo (fonts/archivo-obloha.woff2) má každý znak, ktorý appka píše', () => {
     const have = new Set(CHARS);
     /** @type {Map<string, string>} */
     const missing = new Map();

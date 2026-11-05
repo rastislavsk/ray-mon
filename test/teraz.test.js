@@ -599,7 +599,7 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     const i = input(at('13:00'), { pv: stale });
     const m = terazModel(i);
     const hero = heroModel(i);
-    // Karta Teraz súčasnej appky ráta to isté (heroModel): staré číslo z kiosku sa netvári ako výkon teraz.
+    // heroModel ráta to isté: staré číslo z kiosku sa netvári ako výkon teraz.
     assert.equal(m.num, hero.powerText);
     assert.equal(hero.source, 'forecast');
     assert.ok(Number.isFinite(stale.realTimePowerKw));

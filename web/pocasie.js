@@ -1,6 +1,6 @@
-// Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy kresby pre obe appky.
+// Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy kresby.
 // Čo je vidno, rozhoduje web/pocasie.css podľa data-wx a data-noc na nosiči, farby a polohu
-// mesiaca každá appka vo svojom style.css. Stav počasia počíta shared/pocasie.js (terazModel).
+// mesiaca appka v style.css. Stav počasia počíta shared/pocasie.js (terazModel).
 // Neutrálny modul: nesiaha na DOM ani na stav appky, len skladá HTML a atribúty.
 
 import { HVIEZDY } from '../shared/config.js';

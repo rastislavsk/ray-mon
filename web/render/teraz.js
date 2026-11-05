@@ -1,19 +1,19 @@
-// Karta Teraz novej appky: veľké číslo kW a veta pod ním, štítky a veta o teraz, Plán dňa ako veta
+// Karta Teraz: veľké číslo kW a veta pod ním, štítky a veta o teraz, Plán dňa ako veta
 // a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B; večer na ďalší deň, plan-dna-zajtra.html), graf dňa s pásom plánu, náhľad iného
 // času a výzvy. Pás odporúčaní kreslí karta Dnes (render/mozem.js). Všetko počíta shared/teraz.js (nad heroModel a dayPlan,
-// tými istými ako karta Teraz súčasnej appky) a texty sú v shared/messages.js - tu sa len
+// tými istými) a texty sú v shared/messages.js - tu sa len
 // zapisuje do DOM.
 
-import { escapeHtml } from '../../../shared/format.js';
-import { hlavickaModel, stavRiadok } from '../../../shared/hlavicka.js';
-import { PLAN_DNA_TITLE, voiceTexts } from '../../../shared/messages-core.js';
-import { terazModel } from '../../../shared/teraz.js';
-import { dayChartHtml, legendHtml, readoutHtml } from '../../../web/day-chart.js';
-import { hviezdySvg, pocasieHtml, pocasieStav } from '../../../web/pocasie.js';
+import { escapeHtml } from '../../shared/format.js';
+import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
+import { PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-core.js';
+import { terazModel } from '../../shared/teraz.js';
+import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
+import { hviezdySvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
-/** @typedef {import('../../../shared/teraz.js').TerazModel} Model */
+/** @typedef {import('../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 
@@ -78,7 +78,7 @@ function renderChart(m, open, dom, TERAZ_TEXTS) {
  * štítok v ňom vyzerá ako doteraz. Počas náhľadu iného času je vypnuté - štítok platí pre teraz.
  * Starý shared/mozem.js z cache po nasadení štítku kľúč ani panel nedáva - vtedy je štítok len
  * nápis (CLAUDE.md, Nasadenie a cache).
- * @param {import('../../../shared/mozem.js').Chip} c @param {boolean} nahlad
+ * @param {import('../../shared/mozem.js').Chip} c @param {boolean} nahlad
  */
 const chipHtml = (c, nahlad) =>
     c.key && c.info
@@ -102,7 +102,7 @@ function renderSay(m, dom) {
 }
 
 /**
- * Obsah panelu štítka. @param {import('../../../shared/mozem.js').Chip} chip
+ * Obsah panelu štítka. @param {import('../../shared/mozem.js').Chip} chip
  * @param {Dom} dom @param {Texts['TERAZ_TEXTS']} TERAZ_TEXTS
  */
 function fillChipSheet(chip, dom, TERAZ_TEXTS) {
@@ -118,7 +118,7 @@ function fillChipSheet(chip, dom, TERAZ_TEXTS) {
 
 /**
  * Štítok, ktorého panel je otvorený - null, keď nie je otvorený žiadny alebo ho karta práve nemá.
- * @param {string | null} key @param {Model | null} m @returns {import('../../../shared/mozem.js').Chip | null}
+ * @param {string | null} key @param {Model | null} m @returns {import('../../shared/mozem.js').Chip | null}
  */
 const openChip = (key, m) => (key && m?.say ? (m.say.chips.find((c) => c.key === key && c.info) ?? null) : null);
 
@@ -280,7 +280,7 @@ function renderPocasie(state, m, dom) {
     // Bez nich (cez deň, alebo staršie jadro z cache po nasadení) ostanú hviezdy z CSS.
     const ma = Array.isArray(p.hviezdy);
     dom.wx.toggleAttribute('data-hviezdy', ma);
-    const [a, b] = ma ? hviezdySvg(/** @type {import('../../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy)) : ['', ''];
+    const [a, b] = ma ? hviezdySvg(/** @type {import('../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy)) : ['', ''];
     const vrstvy = dom.wx.querySelectorAll('.wx-stars, .wx-stars2');
     setHtml(vrstvy[0], a);
     setHtml(vrstvy[1], b);

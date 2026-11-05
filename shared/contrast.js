@@ -1,5 +1,5 @@
 // Kontrast textu podľa WCAG 2.2: relatívny jas farby a pomer dvoch jasov. Čisté funkcie nad
-// farbami v sRGB - používa ich živá obloha novej appky (koľko stmaviť spodok, shared/sky.js)
+// farbami v sRGB - používa ich živá obloha (koľko stmaviť spodok, shared/sky.js)
 // aj testy, ktoré merajú text na oblohe a na skle.
 
 /**

@@ -1,6 +1,6 @@
 // Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole sprievodcu s rozpísaným
 // nastavením a kam sa pohne. Čisté funkcie - dostanú stav, vrátia zmenu (patch) pre setState.
-// Používajú ich obe appky (súčasná cez web/setup-interactions.js, nová v obloha/), takže sa
+// Používa ich web/setup-wiring.js, takže sa
 // sprievodca správa v oboch rovnako. Ukladanie a sieť robí web/setup-wiring.js.
 
 import {
@@ -52,7 +52,7 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
  * @typedef {{ status: 'idle' | 'loading' | 'done' | 'error', results: Array<{ site: import('./config.js').Site, detail: string }> }} GeoSearch
  */
 /**
- * Časť stavu appky, s ktorou pracuje sprievodca. Obe appky ju majú v stave s tými istými menami.
+ * Časť stavu appky, s ktorou pracuje sprievodca.
  * @typedef {{
  *   now: Date,
  *   known: import('./settings.js').Known,
