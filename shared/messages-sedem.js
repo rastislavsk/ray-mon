@@ -150,15 +150,17 @@ export function sedemWindowsText(windows) {
 }
 
 /**
- * Celé znenie riadku dňa pre čítačku obrazovky: deň, počasie, kWh, okno - a či je to najlepší
- * deň a odhad pre typickú strechu.
- * @param {{ name: string, word: string | null, kwh: number, windows: Array<{ from: number, to: number }>, best: boolean, estimate: boolean }} d
+ * Celé znenie riadku dňa pre čítačku obrazovky. Začína tým, čo je v riadku napísané (`shown` a kWh,
+ * v tomto poradí a bez ničoho medzi tým): kto ovláda telefón hlasom, povie to, čo vidí (WCAG 2.5.3).
+ * Až potom celé meno dňa, ak je iné, počasie, okno - a či je to najlepší deň a odhad pre typickú strechu.
+ * @param {{ shown: string, name: string, word: string | null, kwh: number, windows: Array<{ from: number, to: number }>, best: boolean, estimate: boolean }} d
  */
-export function sedemRowText({ name, word, kwh, windows, best, estimate }) {
+export function sedemRowText({ shown, name, word, kwh, windows, best, estimate }) {
     const parts = [
-        name,
-        word,
+        shown,
         `${kwh} kWh`,
+        name === shown ? '' : name,
+        word,
         sedemWindowsText(windows),
         best ? SEDEM_TEXTS.best : '',
         estimate ? 'odhad pre typickú strechu' : '',

@@ -150,14 +150,15 @@ function rowsOf(days, list, windows, best, estimate) {
     return days.map((d, i) => {
         const weather = dayWeather(d);
         const word = weather ? SKY_WORDS[weather] : null;
+        const shown = rowName(d.date, i);
         return {
             index: i,
-            name: rowName(d.date, i),
+            name: shown,
             weather,
             kwh: `${estimate ? '~' : ''}${list[i].kwh} kWh`,
             band: windowBand(windows[i]),
             best: i === best,
-            label: sedemRowText({ name: list[i].name, word, kwh: list[i].kwh, windows: windows[i], best: i === best, estimate }),
+            label: sedemRowText({ shown, name: list[i].name, word, kwh: list[i].kwh, windows: windows[i], best: i === best, estimate }),
         };
     });
 }
@@ -343,9 +344,15 @@ function heatOf(input, days) {
 
 /**
  * Čipy dní nad detailom dňa: skratka dňa (aj pri dnešku - „Dnes“ stojí
- * v nadpise pod nimi), celé meno pre čítačku a ktorý deň je otvorený.
+ * v nadpise pod nimi), znenie pre čítačku a ktorý deň je otvorený. Znenie začína skratkou:
+ * kto ovláda telefón hlasom, povie to, čo vidí (WCAG 2.5.3).
  * @param {import('./solar.js').ForecastDay[]} days @param {number} sel
  */
 export function dayStripModel(days, sel) {
-    return days.map((d, i) => ({ index: i, short: dayNameShort(d.date), label: weekDayLong(d.date, i), current: i === sel }));
+    return days.map((d, i) => ({
+        index: i,
+        short: dayNameShort(d.date),
+        label: `${dayNameShort(d.date)}, ${weekDayLong(d.date, i)}`,
+        current: i === sel,
+    }));
 }
