@@ -465,11 +465,11 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         );
     }
 
-    /** Detail dňa je otvorený na `den`: nadpis je celé meno dňa, ktoré nesie jeho čip.
+    /** Detail dňa je otvorený na `den`: nadpis je celé meno dňa, ktoré nesie znenie jeho čipu.
      * @param {import('@playwright/test').Page} page @param {number} den */
     async function ocakavajDen(page, den) {
         const meno = await page.locator(`#sd-day-strip [data-day="${den}"]`).getAttribute('aria-label');
-        await expect(page.locator('#sd-day-title')).toHaveText(meno ?? '');
+        await expect(page.locator('#sd-day-title')).toHaveText((meno ?? '').split(', ')[1]);
         await expect(page.locator('.pager-ghost')).toHaveCount(0);
         await ocakavajKartu(page, '7dni');
     }
@@ -1751,7 +1751,7 @@ test.describe('karta 7 dní', () => {
             'path.wi-cloud wi-dark',
         ]);
         // Slovo počasia je v znení riadku pre čítačku.
-        await expect(page.locator('#sd-days .day').nth(2)).toHaveAttribute('aria-label', /^Pondelok, zamračené, /);
+        await expect(page.locator('#sd-days .day').nth(2)).toHaveAttribute('aria-label', /, Pondelok, zamračené, /);
         expect(errors).toEqual([]);
     });
 

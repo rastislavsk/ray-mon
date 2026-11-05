@@ -162,7 +162,10 @@ test('sedemModel: nadpis s najlepším dňom, súčet, 7 riadkov s kWh a oknom z
     // Okno v riadku Dnes je zelený úsek plánu dňa - ten istý ako na kartách Môžem? a Teraz.
     const today = planWindows(dayPlan(input), (x) => x.tier === 'green');
     assert.deepEqual(s.rows[0].band, windowBand(today));
-    assert.equal(s.rows[5].label, `Štvrtok, jasno, 63 kWh, ${sedemWindowsText(sunWindows(forecastDayPlan(input, 5)))}, najlepší deň`);
+    assert.equal(
+        s.rows[5].label,
+        `${s.rows[5].name}, 63 kWh, Štvrtok, jasno, ${sedemWindowsText(sunWindows(forecastDayPlan(input, 5)))}, najlepší deň`,
+    );
     assert.equal(s.rows[2].weather, 'zamracene');
 });
 
@@ -293,6 +296,7 @@ test('texty karty 7 dní', () => {
     );
     assert.equal(
         sedemRowText({
+            shown: 'So 5.',
             name: 'Sobota',
             word: 'polojasno',
             kwh: 36,
@@ -300,10 +304,10 @@ test('texty karty 7 dní', () => {
             best: false,
             estimate: false,
         }),
-        'Sobota, polojasno, 36 kWh, okno 10:15 až 14:30',
+        'So 5., 36 kWh, Sobota, polojasno, okno 10:15 až 14:30',
     );
     assert.equal(
-        sedemRowText({ name: 'Dnes', word: null, kwh: 3, windows: [], best: true, estimate: true }),
+        sedemRowText({ shown: 'Dnes', name: 'Dnes', word: null, kwh: 3, windows: [], best: true, estimate: true }),
         'Dnes, 3 kWh, bez okna, najlepší deň, odhad pre typickú strechu',
     );
     assert.deepEqual(sedemWindowTile({ from: m(10, 15), to: m(14, 30) }), { value: '10:15', label: 'do 14:30' });
@@ -382,8 +386,8 @@ test('dayChartModel: bez „teraz“ (iný deň) značka chýba a stupnica ide l
 test('dayStripModel: skratka dňa aj pri dnešku, celé meno pre čítačku, otvorený deň', () => {
     const days = /** @type {any} */ ([{ date: '2026-09-05' }, { date: '2026-09-06' }, { date: '2026-09-07' }]);
     assert.deepEqual(dayStripModel(days, 2), [
-        { index: 0, short: 'So', label: 'Dnes 5.9.', current: false },
-        { index: 1, short: 'Ne', label: 'Zajtra 6.9.', current: false },
-        { index: 2, short: 'Po', label: 'Pondelok 7.9.', current: true },
+        { index: 0, short: 'So', label: 'So, Dnes 5.9.', current: false },
+        { index: 1, short: 'Ne', label: 'Ne, Zajtra 6.9.', current: false },
+        { index: 2, short: 'Po', label: 'Po, Pondelok 7.9.', current: true },
     ]);
 });

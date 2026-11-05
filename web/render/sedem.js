@@ -19,6 +19,7 @@ import { setHtml, setText, show } from './write.js';
 /**
  * Riadky dní. Riadok je tlačidlo s celým znením pre čítačku; zelený pás má toľko úsekov, koľko
  * okien deň má, bez okna je prázdny. Ikona je ozdoba, deň bez oblačnosti v dátach ju nemá.
+ * Medzera pred kWh nie je vidieť (riadok je mriežka), ale bez nej by text riadku bol „Dnes63 kWh“.
  * @param {import('../../shared/sedem-dni.js').SedemModel['rows']} rows
  */
 function rowsHtml(rows) {
@@ -29,7 +30,7 @@ function rowsHtml(rows) {
                 `<span class="dn">${escapeHtml(r.name)}</span>` +
                 (r.weather ? weatherIcon(r.weather) : '<span class="wi"></span>') +
                 `<span class="rng">${r.band.map((b) => `<i style="left:${b.left}%;width:${b.width}%"></i>`).join('')}</span>` +
-                `<em>${escapeHtml(r.kwh)}</em></button>`,
+                ` <em>${escapeHtml(r.kwh)}</em></button>`,
         )
         .join('');
 }
