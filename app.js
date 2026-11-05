@@ -1,38 +1,35 @@
-// Štart appky: DOM, stav, prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
+// Štart: DOM, stav z uloženého nastavenia,
+// prekreslenie pri každej zmene, poslucháče, prvé načítanie dát.
 
 import { incomingSettings, linkHash, readLink } from './shared/settings.js';
-import { collectDom } from './web/dom.js';
-import { initInteractions, isTall } from './web/interactions.js';
-import { render } from './web/render/index.js';
+import { initUrlMirror } from './web/settings-store.js';
+import { createStore } from './web/store.js';
 import {
     dropOldStored,
-    initUrlMirror,
     loadDayLog,
     loadDoma,
-    loadLook,
     loadRanna,
+    loadLook,
     loadOdmietnutie,
     loadOznamenia,
     loadSettings,
     loadSite,
     loadVlastnaAdresa,
     loadVymazane,
-} from './web/settings-store.js';
-import { createStore, initialState } from './web/state.js';
+} from './web/storage.js';
 import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.js';
+import { collectDom } from './web/dom.js';
+import { initInteractions } from './web/interactions.js';
+import { initParts, preloadParts } from './web/parts.js';
+import { render } from './web/render/index.js';
+import { initialState, layoutOf } from './web/state.js';
 
-// Jediná šírka, o ktorej appka vie: od 768 px kreslí grafy na skutočný rozmer karty.
-// Zvyšok rozloženia (vrátane desktopu od 1024 px) rieši CSS samo.
-const mq = { wide: window.matchMedia('(min-width: 768px)') };
 const dom = collectDom();
-const now = new Date();
-// Dáta, ktoré appka už nepoužíva (zápisy „Pustil/a som“), v telefóne nenechávame.
-dropOldStored();
-// Uložená elektráreň; bez nej aspoň poloha (typická strecha), bez nej appka začne otázkou na polohu.
+// Uložená elektráreň; bez nej aspoň poloha (typická strecha).
 const saved = loadSettings();
 const site = saved ? null : loadSite();
-// Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží. V adrese
-// ostáva, kým sa človek nerozhodne (viď initUrlMirror); to isté, čo je už uložené, sa neponúka.
+// Odkaz s nastavením (#nastavenie=…): appka ho ponúkne prevziať, sama ho neuloží
+// appka. To isté, čo je už uložené, sa neponúka.
 // Odkaz, ktorý appka nevie prevziať, nezmizne potichu - ponuka povie prečo (linkError). Adresa,
 // ktorú appka v tejto karte zapísala sama, odkazom nie je - po obnovení nesie staré nastavenie.
 // Ani vlastná adresa z histórie prehliadača, keď je uložené novšie alebo boli údaje vymazané.
@@ -40,26 +37,43 @@ const hash = linkHash(location.pathname, location.hash, loadVlastnaAdresa(), sav
 const link = readLink(hash);
 const linked = link?.settings ?? null;
 const incoming = incomingSettings(linked, saved);
-const layout = { wide: mq.wide.matches, tall: isTall() };
-// Vzhľad: tón hlášok je spoločný s novou appkou, farba pozadia je len tejto appky.
-const look = loadLook();
-const store = createStore({
-    ...initialState(now, layout, { saved, site, incoming }),
-    dayLog: loadDayLog(),
-    ranna: loadRanna(),
-    pristup: loadOdmietnutie(),
-    oznamenia: loadOznamenia(),
-    oznamStav: oznamStav(),
-    doma: loadDoma(),
-    voice: look.voice,
-    bgTint: look.bgTint,
-    linkError: link?.error ?? null,
-});
+// Dáta, ktoré appky už nepoužívajú (zápisy „Pustil/a som“), v telefóne nenechávame.
+dropOldStored();
+const store = createStore(
+    initialState(new Date(), {
+        saved,
+        site,
+        incoming,
+        linkError: link?.error ?? null,
+        dayLog: loadDayLog(),
+        ranna: loadRanna(),
+        online: navigator.onLine,
+        // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
+        pristup: loadOdmietnutie(),
+        // Tón hlášok a živá obloha, vzhlad-v1.
+        look: loadLook(),
+        // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
+        layout: layoutOf(window.innerWidth),
+        // Ranné oznámenie a spotrebiče doma - voľby telefónu.
+        oznamenia: loadOznamenia(),
+        oznamStav: oznamStav(),
+        doma: loadDoma(),
+    }),
+);
 
+// Adresa nesie uložené nastavenie - appka pridaná na plochu iPhonu si ho tak prenesie zo Safari.
 initUrlMirror(store);
+// Service worker ranného oznámenia nevidí localStorage - appka mu nastavenie odkladá sama.
 initOznamZrkadlo(store, './');
 initOznamZosulad(store);
+// Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
+// skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
+// pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.
+const refresh = initInteractions(store, dom);
+// Karty 7 dní, Štatistika a Nastavenie sa sťahujú až keď treba (web/parts.js). Prvé vykreslenie
+// počká len na tie, ktoré úvodná obrazovka ukazuje - na telefóne na žiadnu.
+await initParts(store, dom, refresh);
 store.subscribe((state) => render(state, dom));
-const refresh = initInteractions(store, dom, mq);
 render(store.get(), dom);
 refresh();
+preloadParts(store, dom, refresh);

@@ -1,780 +1,266 @@
-// Karta Nastavenie: prehľad (render/prehlad.js) a sprievodca nastavením elektrárne. Sprievodca ukazuje
-// vždy jednu obrazovku (setupStep v stave); obrazovky sú v index.html, render ich len prepína
-// a dopĺňa. Hodnoty polí prepíše len pri zmene settingsRev, plochy alebo obrazovky - inak by
-// prepisoval to, čo človek práve píše. Texty sú spoločné s novou appkou (shared/setup-texts.js).
+// Karta Nastavenie: prehľad z jedného modelu (shared/nastavenie.js) -
+// výzva dokončiť, hlásenie o prístupe, karta strechy s kompasom plôch a sekcie Elektráreň, Čo máš
+// doma, Oznámenia, Vzhľad a Appka -, alebo otvorený sprievodca, a ponuka prevziať nastavenie
+// z odkazu. Sprievodcu kreslí render/sprievodca.js. Okná sekcie Appka: Zdieľať appku (QR kód
+// z knižnice na CDN, odkaz, WhatsApp) a potvrdenie Vymazať údaje.
 
-import { compassModel, panelGridModel, tariffRingModel, tiltModel } from '../../shared/chart-model.js';
-import {
-    ALL_MONTHS,
-    CURRENCIES,
-    LEVEL_TIER,
-    PLANT,
-    PRICE_LEVELS,
-    SETTINGS_LIMITS,
-    SETUP,
-    TARIFF_LIMITS,
-    TARIFF_TEMPLATES,
-} from '../../shared/config.js';
-import { escapeHtml, hoursText, kwpText, minutesToTimeStr } from '../../shared/format.js';
-import { editTabs } from '../../shared/nastavenie.js';
-import { checkSettings, readLink } from '../../shared/settings.js';
-import { SETUP_SECTIONS, TARIFF_STEPS } from '../../shared/setup.js';
-import { brushOf, schedIndex, setupReady, udajeReady, znovaModel } from '../../shared/setup-flow.js';
-import {
-    AC_GUESS,
-    bandHoursText,
-    derivedNote,
-    DIRS,
-    dirName,
-    effectivePick,
-    EXCEPTIONS,
-    fieldText,
-    footModel,
-    geoNote,
-    GUESS_MARK,
-    hasSite,
-    IMPORT_OFFER,
-    importOfferText,
-    LINK_ERRORS,
-    LEVELS,
-    linkPreview,
-    menicModel,
-    MONTH_SHORT,
-    panelsLine,
-    PECAT_NOTE,
-    pripojNote,
-    placeCard,
-    plantHero,
-    priceCheck,
-    progressSection,
-    quality,
-    roofRows,
-    schedDetail,
-    schedLabel,
-    scheduleTemplates,
-    SPRAVA_NOTE,
-    STANICA_CHECK,
-    stanicaMeta,
-    staniceTitle,
-    stepLabel,
-    subText,
-    summaryRows as summaryData,
-    TARIFF_DUNNO,
-    TARIFF_KINDS,
-    textsFor,
-    TILT_PRESETS,
-    udajeNote,
-    zdrojText,
-    WP_GUESS,
-} from '../../shared/setup-texts.js';
-import { orientationShare } from '../../shared/solar.js';
-import {
-    bandById,
-    checkTariff,
-    isSeasonSchedule,
-    isWeekendSchedule,
-    scheduleRuns,
-    scheduleTiers,
-    tariffKind,
-} from '../../shared/tariff.js';
-import { jeBeta, polaOf, sposobOf, sposobyOf, ZNACKY, znackaOf } from '../../shared/zdroje.js';
-import { SETUP_ICONS } from '../icons.js';
-import { heroGrid, miniTariff, renderPrehlad } from './prehlad.js';
-import { changedKeys, writeHtml } from '../memo.js';
-import { setupDraft } from '../state.js';
-import { compassSvg, miniCompassSvg, panelGridSvg, panelLabelSvg, tariffRingSvg, tiltSvg } from '../svg.js';
+import { APP_URL } from '../../shared/config.js';
+import { shareUrl } from '../../shared/settings.js';
+import { savedSettings } from '../../shared/setup-flow.js';
+import { escapeHtml } from '../../shared/format.js';
+import { nastavenieModel } from '../../shared/nastavenie.js';
+import { IMPORT_OFFER, importOfferText, LINK_ERRORS } from '../../shared/setup-texts.js';
+import { qrPainter } from '../qr.js';
+import { plantGrid, renderWizard } from './sprievodca.js';
+import { setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../state.js').AppState} AppState */
 /** @typedef {import('../dom.js').Dom} Dom */
-/** @typedef {import('../../shared/settings.js').Settings} Settings */
-/** @typedef {import('../../shared/setup.js').SetupStep} SetupStep */
-/** @typedef {import('../../shared/config.js').Tariff} Tariff */
+/** @typedef {ReturnType<typeof nastavenieModel>} Model */
 
-// ---- Zhrnutie sprievodcu ------------------------------------------------------------
-
-/** Jeden riadok zhrnutia. Ťuknutie naň otvorí jeho krok (data-setup-edit). extra je druhý
- * riadok pod hodnotou. */
-function sumRow(
-    /** @type {string} */ key,
-    /** @type {string} */ icon,
-    /** @type {string} */ label,
-    /** @type {string} */ value,
-    { extra = '' } = {},
-) {
-    return (
-        `<button type="button" class="sum-row" data-setup-edit="${key}"><span class="sum-ico">${icon}</span>` +
-        `<span class="t"><span class="k">${label}</span><span class="v">${value}</span>${extra}</span>${SETUP_ICONS.chevron}</button>`
-    );
-}
-
-/** Riadky zhrnutia sprievodcu: poloha, panel, plochy, menič, meranie, tarifa. @param {Settings} s @param {AppState} state */
-function summaryRows(s, state) {
-    return summaryData(s, state)
+/**
+ * Riadky sekcie Elektráreň: každý je tlačidlo, ktoré otvorí svoj krok sprievodcu. Pod hodnotou
+ * stav merania, ceny tarify a značka odhadu z „Neviem“.
+ * @param {Model['elektraren']} e
+ */
+const rowsHtml = (e) =>
+    e.rows
         .map((r) => {
-            const icon =
-                r.az !== null
-                    ? miniCompassSvg(r.az)
-                    : r.key === 'tarifa'
-                      ? miniTariff(s.tariff)
-                      : SETUP_ICONS[/** @type {keyof typeof SETUP_ICONS} */ (r.icon)];
-            const extra =
-                (r.extra ? `<span class="k2">${escapeHtml(r.extra)}</span>` : '') +
-                (r.guess ? `<span class="est">${GUESS_MARK}</span>` : '');
-            return sumRow(r.key, icon, r.label, escapeHtml(r.value), { extra });
-        })
-        .join('');
-}
-
-/** Karta elektrárne nad riadkami: vľavo ružica plôch, vpravo meno a celkový výkon. @param {Settings} s */
-function heroHtml(s) {
-    const h = plantHero(s);
-    if (!h) return `<div class="hero-t"><div class="big">– kWp</div></div>`;
-    return heroGrid(
-        `<div class="hero-t"><b class="name">${escapeHtml(h.name)}</b><div class="big">${kwpText(h.kwp).replace(' kWp', '<small> kWp</small>')}</div></div>`,
-        s.plant.strings,
-        h,
-    );
-}
-
-/** Hlásenia pod zhrnutím: chyby blokujú uloženie, varovania nie. @param {Settings} s */
-function messagesHtml(s) {
-    const { errors, warnings } = checkSettings(s);
-    return (
-        errors.map((e) => `<p class="plant-msg err">${escapeHtml(e)}</p>`).join('') +
-        warnings.map((w) => `<p class="plant-msg">${escapeHtml(w)}</p>`).join('')
-    );
-}
-
-// ---- Obrazovky sprievodcu ---------------------------------------------------------
-
-/** @param {AppState} state @param {Dom} dom */
-function renderOdkaz(state, dom) {
-    const link = readLink(state.setupLink);
-    const found = link?.settings ?? null;
-    dom.wzLinkNote.classList.toggle('hidden', !state.setupLink.trim() || !!found);
-    // Prečo odkaz nejde: poškodený (aj text bez odkazu), alebo z novšej verzie appky.
-    dom.wzLinkNote.textContent = LINK_ERRORS[link?.error ?? 'poskodeny'].paste;
-    dom.wzLinkPreview.classList.toggle('hidden', !found);
-    if (!found) return;
-    const p = linkPreview(found);
-    writeHtml(
-        dom.wzLinkPreview,
-        `<span class="lbl">V odkaze je</span><div class="name"><b>${escapeHtml(p.name)}</b><span class="meta">${p.kwp}</span></div><div class="meta">${escapeHtml(p.meta)}</div>`,
-        'wzLinkPreview',
-    );
-}
-
-/** @param {AppState['geo']} geo */
-function geoHtml(geo) {
-    const note = geoNote(geo);
-    if (note) return `<p class="geo-status">${note}</p>`;
-    if (geo.status !== 'done') return '';
-    const items = geo.results
-        .map(
-            (r, i) =>
-                `<li><button type="button" class="geo-pick" data-geo="${i}">${escapeHtml(r.site.name)}<small>${escapeHtml(r.detail)}</small></button></li>`,
-        )
-        .join('');
-    return `<ul class="geo-list">${items}</ul>`;
-}
-
-/** Potvrdenie lokality tým, čo človek pozná: kedy u neho dnes vychádza a zapadá slnko. @param {Settings} s @param {AppState} state */
-function placeCardHtml(s, state) {
-    const c = placeCard(s, state.now);
-    if (!c) return '';
-    return (
-        `<div class="place-card"><div class="name"><b>${escapeHtml(c.name)}</b><span class="meta">${c.date}</span></div>` +
-        `<div class="sunline"><span>${c.rise}<small>východ</small></span>` +
-        `<svg viewBox="0 0 120 38" aria-hidden="true"><line class="ground" x1="2" y1="34" x2="118" y2="34"/><path class="arc" d="M 4 34 Q 60 -18 116 34"/><circle class="sun" cx="60" cy="9" r="5"/></svg>` +
-        `<span class="end">${c.set}<small>západ</small></span></div>` +
-        `<div class="meta">${escapeHtml(c.meta)}</div></div>`
-    );
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderLokalita(state, draft, dom) {
-    writeHtml(dom.wzGeo, geoHtml(state.geo), 'wzGeo');
-    writeHtml(dom.wzPlaceCard, placeCardHtml(draft, state), 'wzPlaceCard');
-    dom.wzWelcome.classList.toggle('hidden', state.known !== 'nic');
-    // Odložiť panely sa dá, až keď je poloha vybraná - bez nej nie je čo ukázať.
-    dom.wzLater.classList.toggle('hidden', !setupReady(state));
-}
-
-/** Tlačidlá s bežnými hodnotami, „Iný“ a „Neviem“. @param {number[]} choices @param {number} value @param {string} pick @param {string} attr @param {string} unit */
-function chipsHtml(choices, value, pick, attr, unit) {
-    const chip = (/** @type {string} */ v, /** @type {string} */ label, /** @type {boolean} */ on, cls = 'chip') =>
-        `<button type="button" class="${cls}" data-${attr}="${v}" aria-pressed="${on}">${label}</button>`;
-    return (
-        choices.map((c) => chip(String(c), `${fieldText(c)} ${unit}`, pick === 'chip' && value === c)).join('') +
-        chip('other', 'Iný', pick === 'other') +
-        chip('guess', 'Neviem', pick === 'guess', 'chip soft')
-    );
-}
-
-/** @param {AppState} state @param {Dom} dom */
-function renderPanel(state, dom) {
-    const kwpMode = state.setupKwp !== null;
-    dom.wzWpModePanel.setAttribute('aria-pressed', String(!kwpMode));
-    dom.wzWpModeKwp.setAttribute('aria-pressed', String(kwpMode));
-    dom.wzWpPanel.classList.toggle('hidden', kwpMode);
-    dom.wzWpTotal.classList.toggle('hidden', !kwpMode);
-    const wp = state.settingsDraft.plant.panelWp;
-    const pick = effectivePick(state.setupPick.wp, wp, SETUP.panelWpChoices);
-    writeHtml(dom.wzWpLabel, panelLabelSvg(Number.isFinite(wp) ? String(wp) : '···'), 'wzWpLabel');
-    writeHtml(dom.wzWpChips, chipsHtml(SETUP.panelWpChoices, wp, pick, 'setup-wp', 'Wp'), 'wzWpChips');
-    dom.wzWpOther.classList.toggle('hidden', pick !== 'other');
-    dom.wzWpGuess.classList.toggle('hidden', pick !== 'guess');
-    dom.wzWpGuess.textContent = WP_GUESS;
-}
-
-/** Pás „koľko energie to dá oproti najlepšiemu“. @param {number} share 0-1 @param {string} what */
-function qualityHtml(share, what) {
-    const q = quality(share);
-    return (
-        `<div class="quality"><div class="row"><b>${q.label}</b><span>~${q.pct} % najlepšieho ${what}</span></div>` +
-        `<div class="meter"><i class="tier-${q.tier}" style="width:${q.pct}%"></i></div></div>`
-    );
-}
-
-/** @param {Settings} draft @param {number} roof */
-function shareOf(draft, roof) {
-    const x = draft.plant.strings[roof];
-    return hasSite(draft) ? orientationShare(draft.site, x, PLANT.albedo) : null;
-}
-
-/** @param {Settings} draft @param {number} roof @param {Dom} dom */
-function renderSmer(draft, roof, dom) {
-    const az = draft.plant.strings[roof].azimuthDeg;
-    const m = compassModel(az, draft.site.lat < 0);
-    const buttons = m.sectors
-        .map((s) => {
-            const d = DIRS.find((x) => x.az === s.az) || DIRS[0];
+            const go = r.start ? 'data-setup-go="start"' : `data-setup-edit="${r.edit}"`;
+            // Farbí sa len stav merania, značka pred ním ostáva tlmená.
+            const status = r.status && `<span data-tone="${r.status.tone}">${escapeHtml(r.status.text)}</span>`;
+            const value = [escapeHtml(r.value), status, escapeHtml(r.extra)].filter(Boolean).join(' · ');
             return (
-                `<button type="button" role="radio" class="dir-btn${s.on ? ' on' : ''}" style="left:${s.button.left.toFixed(2)}%;top:${s.button.top.toFixed(2)}%" ` +
-                `aria-checked="${s.on}" tabindex="${s.on ? 0 : -1}" aria-label="${d.name}" data-setup-az="${s.az}">${d.short}</button>`
+                `<button type="button" class="it" ${go}><span><b>${escapeHtml(r.label)}</b>` +
+                `<small>${value}</small>${r.guess ? `<small class="est">${escapeHtml(e.guessMark)}</small>` : ''}</span>` +
+                `<span aria-hidden="true">›</span></button>`
             );
         })
         .join('');
-    writeHtml(
-        dom.wzCompass,
-        `<div class="dir-dial" role="radiogroup" aria-label="Smer plochy">${compassSvg(m)}${buttons}</div>`,
-        'wzCompass',
-    );
-    dom.wzDirName.textContent = dirName(az);
-    dom.wzDirDeg.textContent = `${az}°`;
-    const share = shareOf(draft, roof);
-    writeHtml(dom.wzDirQuality, share === null ? '' : qualityHtml(share, 'smeru'), 'wzDirQuality');
-}
 
-/** @param {Settings} draft @param {number} roof @param {Dom} dom */
-function renderSklon(draft, roof, dom) {
-    const tilt = draft.plant.strings[roof].tiltDeg;
-    writeHtml(dom.wzTiltArt, tiltSvg(tiltModel(tilt), tilt), 'wzTiltArt');
-    writeHtml(
-        dom.wzTiltPresets,
-        TILT_PRESETS.map(
-            (p) =>
-                `<button type="button" class="chip chip-col" data-setup-tilt="${p.deg}" aria-pressed="${tilt === p.deg}"><b>${p.name}</b><small>${p.sub}</small></button>`,
-        ).join(''),
-        'wzTiltPresets',
-    );
-    dom.wzTiltOut.textContent = `${tilt}°`;
-    const share = shareOf(draft, roof);
-    writeHtml(dom.wzTiltQuality, share === null ? '' : qualityHtml(share, 'sklonu a smeru'), 'wzTiltQuality');
-}
+/** Voľba ako riadok s nadpisom a podtextom. @param {string} attr @param {{ label: string, small: string }} a */
+const actionHtml = (attr, a) =>
+    `<button type="button" class="it" ${attr}><span><b>${escapeHtml(a.label)}</b><small>${escapeHtml(a.small)}</small></span><span aria-hidden="true">›</span></button>`;
 
-/** @param {AppState} state @param {Settings} draft @param {number} roof @param {Dom} dom */
-function renderPocet(state, draft, roof, dom) {
-    const x = draft.plant.strings[roof];
-    writeHtml(dom.wzPanelGrid, panelGridSvg(panelGridModel(x.panels)), 'wzPanelGrid');
-    const line = panelsLine(state, draft, roof);
-    writeHtml(dom.wzPanelsKwp, line.strong ? `${line.text}<b>${line.strong}</b>` : line.text, 'wzPanelsKwp');
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderDalsia(state, draft, dom) {
-    const many = draft.plant.strings.length > 1;
-    const rows = roofRows(draft)
-        .map(
-            (r, i) =>
-                `<div class="roof-row">${miniCompassSvg(r.az)}<span class="t"><b>${r.title}</b>` +
-                `<span>${r.sub}</span></span>` +
-                `<button type="button" class="mini-act" data-setup-roof-edit="${i}">Upraviť</button>` +
-                (many ? `<button type="button" class="mini-act" data-setup-roof-del="${i}">Odstrániť</button>` : '') +
-                `</div>`,
-        )
-        .join('');
-    writeHtml(dom.wzRoofs, rows, 'wzRoofs');
-    dom.wzRoofAdd.classList.toggle('hidden', draft.plant.strings.length >= SETTINGS_LIMITS.maxStrings);
-    writeHtml(dom.wzDerived, derivedHtml(state, draft), 'wzDerived');
-}
-
-/** Výkon panelu dopočítaný z celkového výkonu - ukáže sa, keď sú spočítané všetky plochy. @param {AppState} state @param {Settings} draft */
-function derivedHtml(state, draft) {
-    const note = derivedNote(state, draft);
-    return note ? `<p class="plant-msg${note.err ? ' err' : ''}">${note.text}</p>` : '';
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderMenic(state, draft, dom) {
-    const ac = state.settingsDraft.plant.acLimitKw;
-    const m = menicModel(draft, ac);
-    const msg = m.note ? `<p class="plant-msg${m.note.ok ? ' ok' : ''}">${m.note.text}</p>` : '';
-    const bar = (/** @type {string} */ label, /** @type {{ share: number, text: string }} */ v, /** @type {string} */ cls) =>
-        `<div class="cb"><span>${label}</span><span class="track"><i class="${cls}" style="width:${(v.share * 100).toFixed(1)}%"></i></span><b>${v.text}</b></div>`;
-    writeHtml(dom.wzAcBars, bar('Panely', m.pv, 'pv') + bar('Menič', m.ac, 'ac') + msg, 'wzAcBars');
-    const pick = effectivePick(state.setupPick.ac, ac, SETUP.acChoices);
-    writeHtml(dom.wzAcChips, chipsHtml(SETUP.acChoices, ac, pick, 'setup-ac', 'kW'), 'wzAcChips');
-    dom.wzAcOther.classList.toggle('hidden', pick !== 'other');
-    dom.wzAcGuess.classList.toggle('hidden', pick !== 'guess');
-    dom.wzAcGuess.textContent = AC_GUESS;
-}
-
-/** @param {AppState} state @param {Dom} dom */
-function renderMeranie(state, dom) {
-    const zdroj = state.settingsDraft.zdroj;
-    dom.wzLiveYes.setAttribute('aria-pressed', String(state.setupLive));
-    dom.wzLiveNo.setAttribute('aria-pressed', String(!state.setupLive));
-    dom.wzLiveYesSub.textContent = zdroj ? `Pripojené: ${zdrojText(zdroj)}` : 'Vyberieš značku a spôsob pripojenia.';
-    const sposob = zdroj && sposobOf(zdroj.sposob);
-    dom.wzLiveNoSub.textContent = sposob ? `Appka zabudne prístup. ${sposob.zrusenie}` : 'Meranie sa dá pridať neskôr.';
-    dom.wzLiveZmen.classList.toggle('hidden', !zdroj || !state.setupLive);
-}
-
-/** Voľba s bodkou, nadpisom a popisom. @param {string} attrs @param {string} title @param {string} sub @param {boolean} on @param {string} [extra] */
-const choiceHtml = (attrs, title, sub, on, extra = '') =>
-    `<button type="button" class="choice" ${attrs} aria-pressed="${on}"><span class="dot"></span>` +
-    `<span class="t"><b>${escapeHtml(title)}</b><span>${escapeHtml(sub)}</span>${extra}</span></button>`;
-
-/** Štítky spôsobu: kto ho urobí, ako dlho; tretí (prečo je prvý) zvýraznený. @param {string[]} tagy */
-const tagsHtml = (tagy) =>
-    `<span class="tags">${tagy.map((t, i) => `<i class="tag${i === 2 ? ' top' : ''}">${escapeHtml(t)}</i>`).join('')}</span>`;
-
-/** @param {AppState} state @param {Dom} dom */
-function renderZnacka(state, dom) {
-    const html = ZNACKY.map((z) => {
-        const sposoby = sposobyOf(z);
-        const sub = 'nie' in z ? 'Zatiaľ sa nedá pripojiť' : sposoby.length > 1 ? `${sposoby.length} spôsoby pripojenia` : sposoby[0].nazov;
-        const attrs = `data-setup-znacka="${z.id}"${'nie' in z ? ' data-off' : ''}${jeBeta(z) ? ' data-beta' : ''}`;
-        return choiceHtml(attrs, z.meno, sub, z.id === state.setupZnacka);
-    }).join('');
-    writeHtml(dom.wzZnacky, html, 'wzZnacky');
-    dom.wzBeta.classList.toggle('hidden', !ZNACKY.some(jeBeta));
-}
-
-/** @param {AppState} state @param {Dom} dom */
-function renderSposob(state, dom) {
-    const z = znackaOf(state.setupZnacka);
-    const sposoby = z ? sposobyOf(z) : [];
-    const html = sposoby
-        .map((x) => choiceHtml(`data-setup-sposob="${x.id}"`, x.nazov, x.pod, x.id === state.setupSposob, tagsHtml(x.tagy)))
-        .join('');
-    writeHtml(dom.wzSposoby, html, 'wzSposoby');
-    dom.wzSposoby.classList.toggle('hidden', !sposoby.length);
-    dom.wzNie.classList.toggle('hidden', !z || !('nie' in z));
-}
-
-/** Pole formulára spôsobu; heslá skryje. @param {import('../../shared/zdroje.js').Pole} p */
-function poleHtml(p) {
-    const type = p.tajne ? 'password' : p.typ === 'url' ? 'url' : p.typ === 'email' ? 'email' : 'text';
-    const mode = p.typ === 'url' ? ' inputmode="url"' : p.typ === 'email' ? ' inputmode="email"' : '';
+/**
+ * Hlásenie o prístupe k meraniu: dôvod, „Pripojiť znova“ (či „Obnoviť prístup“) a pri odmietnutom
+ * prístupe aj „Skúsiť znova“. Tlačidlá obsluhuje web/setup-wiring.js.
+ * @param {NonNullable<Model['pristup']>} p
+ */
+function pristupHtml(p) {
+    const skus = p.druh === 'neplati' ? '<button type="button" class="pbtn ghost" data-pristup-skus>Skúsiť znova</button>' : '';
     return (
-        `<label class="field-label" for="wz-pole-${p.id}">${escapeHtml(p.lbl)}</label>` +
-        `<input class="field-input" id="wz-pole-${p.id}" type="${type}"${mode} autocomplete="off" autocapitalize="off" spellcheck="false" ` +
-        `data-setup-pole="${p.id}" placeholder="${escapeHtml(p.ph)}" />`
+        `<b class="big">${escapeHtml(p.nadpis)}</b><p>${escapeHtml(p.text)}</p>` +
+        (p.skus ? `<p class="wz-msg err">${escapeHtml(p.skus)}</p>` : '') +
+        `<div class="btns"><button type="button" class="pbtn" data-setup-znova>${escapeHtml(p.tlacidlo)}</button>${skus}</div>`
     );
 }
 
-/** @param {AppState} state @param {Dom} dom */
-function renderPripoj(state, dom) {
-    const sposob = sposobOf(state.setupSposob);
-    if (!sposob) return;
-    const p = state.setupPripoj;
-    // Pripájanie znova: dôvod je v úvode, návod a správa pre nové pripojenie ustúpia poliam.
-    const znova = !!znovaModel(state);
-    const kroky = sposob.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join('');
-    writeHtml(dom.wzKroky, kroky, 'wzKroky');
-    dom.wzKroky.classList.toggle('hidden', znova);
-    dom.wzSprava.classList.toggle('hidden', !sposob.sprava || znova);
-    dom.wzSpravaText.textContent = sposob.sprava ?? '';
-    dom.wzSpravaCopy.dataset.setupCopy = sposob.sprava ?? '';
-    dom.wzSpravaNote.textContent = SPRAVA_NOTE;
-    // Polia sa kreslia nanovo len pri otvorení formulára (settingsRev) - inak by zmizlo, čo človek píše.
-    const pola = `<div class="wz-zdroj" data-rev="${state.settingsRev}">${polaOf(sposob, state.setupObnova).map(poleHtml).join('')}</div>`;
-    writeHtml(dom.wzPola, pola, 'wzPola');
-    const note = pripojNote(p, sposob.id) ?? udajeNote(sposob.id, state.setupUdaje);
-    dom.wzPripojNote.classList.toggle('hidden', !note);
-    dom.wzPripojNote.classList.toggle('err', !!note?.err);
-    if (note) dom.wzPripojNote.textContent = note.text;
-    dom.wzPripojit.classList.toggle('hidden', p.status === 'done');
-    dom.wzPripojit.disabled = p.status === 'loading' || !udajeReady(state);
-    dom.wzPripojit.textContent = p.status === 'loading' ? 'Pripájam…' : 'Pripojiť';
-    renderStanice(state, sposob, dom);
-    dom.wzPecatNote.textContent = PECAT_NOTE;
-}
+/** Tlačidlá volieb (minis). @param {Array<{ attr: string, label: string, on: boolean }>} items @param {string} [off] */
+const minisHtml = (items, off = '') =>
+    items.map((x) => `<button type="button" class="mini" ${x.attr} aria-pressed="${x.on}"${off}>${escapeHtml(x.label)}</button>`).join('');
 
-/** Elektrárne nájdené pri pripojení; zvolená je pripojená.
- * @param {AppState} state @param {import('../../shared/zdroje.js').Sposob} sposob @param {Dom} dom */
-function renderStanice(state, sposob, dom) {
-    const p = state.setupPripoj;
-    const zdroj = state.settingsDraft.zdroj;
-    dom.wzStanice.classList.toggle('hidden', p.status !== 'done');
-    const html =
-        p.status !== 'done'
-            ? ''
-            : `<p class="plant-msg ok">${escapeHtml(staniceTitle(p.stanice.length, sposob.id))}</p>` +
-              p.stanice
-                  .map((st, i) =>
-                      choiceHtml(`data-setup-stanica="${i}"`, st.nazov || sposob.nazov, stanicaMeta(st), zdroj?.pecat === st.pecat),
-                  )
-                  .join('') +
-              (zdroj ? `<p class="plant-msg">${escapeHtml(STANICA_CHECK)}</p>` : '');
-    writeHtml(dom.wzStanice, html, 'wzStanice');
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderSuhrn(state, draft, dom) {
-    const derived = derivedNote(state, draft);
-    const html =
-        `<div class="setup-hero">${heroHtml(draft)}</div><div class="sum-list">${summaryRows(draft, state)}</div>` +
-        `<div class="plant-msgs">${derived?.err ? derivedHtml(state, draft) : messagesHtml(draft)}</div>`;
-    writeHtml(dom.wzSummary, html, 'wzSummary');
-}
-
-// ---- Obrazovky tarify -------------------------------------------------------------
-
-/** Malý prstenec rozvrhu. @param {Tariff} t @param {number} [i] */
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderTarifa(state, draft, dom) {
-    const kind = tariffKind(draft.tariff);
-    const icon = (/** @type {string} */ k) =>
-        k === 'spot' ? '' : miniTariff(k === kind ? draft.tariff : TARIFF_TEMPLATES[/** @type {'jedna' | 'dvoj' | 'viac'} */ (k)]);
-    writeHtml(
-        dom.wzTariffKinds,
-        TARIFF_KINDS.map(
-            (c) =>
-                `<button type="button" class="choice" data-setup-kind="${c.kind}" aria-pressed="${c.kind === kind}"${c.kind === 'spot' ? ' disabled' : ''}>` +
-                `<span class="dot"></span><span class="t"><b>${c.title}</b><span>${c.sub}</span></span>${icon(c.kind)}</button>`,
-        ).join(''),
-        'wzTariffKinds',
+/** Výzva, hlásenie o prístupe, karta strechy a sekcia Elektráreň. @param {AppState} state @param {Model} m @param {Dom} dom */
+function renderHome(state, m, dom) {
+    setText(dom.nsTitle, m.title);
+    show(dom.nsCta, !!m.cta);
+    if (m.cta) {
+        setText(dom.nsCtaTitle, m.cta.title);
+        setHtml(dom.nsCtaSteps, m.cta.steps.map((on) => `<i${on ? ' class="on"' : ''}></i>`).join(''));
+        dom.nsCtaSteps.setAttribute('aria-label', m.cta.stepsLabel);
+        setText(dom.nsCtaText, m.cta.text);
+        setText(dom.nsCtaBtn, m.cta.button);
+        setText(dom.nsCtaLink, m.cta.link);
+    }
+    show(dom.nsPristup, !!m.pristup);
+    if (m.pristup) {
+        dom.nsPristup.dataset.druh = m.pristup.druh;
+        setHtml(dom.nsPristup, pristupHtml(m.pristup));
+    }
+    show(dom.nsHero, !!m.hero);
+    if (m.hero) setHtml(dom.nsHero, plantGrid(`<p class="kwp"><b>${m.hero.kwp}</b> kWp</p>`, state.plant.strings, m.hero));
+    show(dom.nsNote, !!m.note);
+    setText(dom.nsNote, m.note);
+    const e = m.elektraren;
+    setText(dom.nsRowsTitle, e.title);
+    setText(dom.nsRowsHint, e.hint);
+    dom.nsRowsHint.classList.toggle('err', e.hintErr);
+    setHtml(dom.nsRows, rowsHtml(e));
+    setHtml(dom.nsWarn, e.warnings.map((w) => `<p class="wz-msg">${escapeHtml(w)}</p>`).join(''));
+    setHtml(
+        dom.nsActions,
+        (e.odkaz ? actionHtml('data-setup-go="odkaz"', e.odkaz) : '') +
+            (e.sprievodca ? actionHtml('data-setup-restart', e.sprievodca) : ''),
     );
-    dom.wzTariffDunno.classList.toggle('hidden', !state.setupDunno);
-    dom.wzTariffDunno.textContent = TARIFF_DUNNO;
 }
 
-/** @param {Settings} draft @param {Dom} dom @param {boolean} refill */
-function renderPasma(draft, dom, refill) {
-    const t = draft.tariff;
-    const rows = t.bands
-        .map(
-            (b, i) =>
-                `<div class="band-row"><div class="band-top"><i class="sw ${LEVEL_TIER[b.level]}"></i>` +
-                `<input class="field-input" type="text" maxlength="${TARIFF_LIMITS.nameMax}" autocomplete="off" aria-label="Meno pásma ${i + 1}" data-setup-band-name="${b.id}" />` +
-                (t.bands.length > 3 ? `<button type="button" class="mini-act" data-setup-band-del="${b.id}">Odstrániť</button>` : '') +
-                `</div><div class="seg lvl" role="group" aria-label="Úroveň pásma ${i + 1}">` +
-                PRICE_LEVELS.map(
-                    (l) =>
-                        `<button type="button" data-setup-band="${b.id}" data-setup-level="${l}" aria-pressed="${b.level === l}">${LEVELS[l].name}</button>`,
-                ).join('') +
-                `</div></div>`,
-        )
-        .join('');
-    const written = writeHtml(dom.wzBands, rows, 'wzBands');
-    if (written || refill)
-        for (const input of dom.wzBands.querySelectorAll('input[data-setup-band-name]')) {
-            const el = /** @type {HTMLInputElement} */ (input);
-            el.value = bandById(t, el.dataset.setupBandName || '').name;
+/** Čo máš doma: spotrebiče. @param {Model} m @param {Dom} dom */
+function renderDoma(m, dom) {
+    setText(dom.nsDomaTitle, m.doma.title);
+    setText(dom.nsDomaHint, m.doma.hint);
+    setHtml(dom.nsDoma, minisHtml(m.doma.devices.map((d) => ({ attr: `data-device="${d.id}"`, label: d.name, on: d.on }))));
+    setText(dom.nsDomaNote, m.doma.note);
+}
+
+/**
+ * Oznámenia: ranný plán dňa a hodina. Kým sa nedajú zapnúť (iPhone v Safari, zakázané, bez
+ * polohy), prepínač je vypnutý a hláška povie prečo.
+ * @param {Model} m @param {Dom} dom
+ */
+function renderOznamenia(m, dom) {
+    const o = m.oznamenia;
+    setText(dom.nsOznamTitle, o.title);
+    setText(dom.nsOznamHint, o.hint);
+    setText(dom.nsOznamLabel, o.label);
+    setText(dom.nsOznamSmall, o.small);
+    dom.nsOznam.setAttribute('aria-checked', String(o.on));
+    dom.nsOznam.toggleAttribute('disabled', o.blocked);
+    show(dom.nsOznamStav, !!o.stav);
+    setText(dom.nsOznamStav, o.stav);
+    setText(dom.nsOznamHourLabel, o.when);
+    setText(dom.nsOznamHourSmall, o.whenSmall);
+    // Kým sa zapína, nedá sa meniť nič - zmena by sa po dobehnutí prepísala.
+    setHtml(
+        dom.nsOznamHour,
+        minisHtml(
+            o.hours.map((h) => ({ attr: `data-hour="${h.h}"`, label: h.label, on: h.on })),
+            o.busy ? ' disabled' : '',
+        ),
+    );
+    setText(dom.nsOznamUses, o.uses);
+    setText(dom.nsOznamNote, o.privacy);
+}
+
+/** Vzhľad: tón hlášok z modelu a živá obloha. @param {AppState} state @param {Model} m @param {Dom} dom */
+function renderLook(state, m, dom) {
+    const v = m.vzhlad;
+    setText(dom.nsLookTitle, v.title);
+    setText(dom.nsLookHint, v.hint);
+    setText(dom.nsVoiceLabel, v.voiceLabel);
+    setText(dom.nsVoiceSmall, v.voiceSmall);
+    setHtml(dom.nsVoice, minisHtml(v.voices.map((x) => ({ attr: `data-voice="${x.id}"`, label: x.label, on: x.on }))));
+    dom.nsLiveSky.setAttribute('aria-checked', String(state.liveSky));
+}
+
+/** Appka: nadpis, položky okien a podpis. @param {Model} m @param {Dom} dom */
+function renderAppka(m, dom) {
+    setText(dom.nsAppTitle, m.appka.title);
+    setText(dom.nsShareRowTitle, m.share.title);
+    setText(dom.nsShareRowSmall, m.share.small);
+    setText(dom.nsResetRowTitle, m.clear.title);
+    setText(dom.nsResetRowSmall, m.clear.small);
+    m.credit.forEach((c, i) => setText(dom.nsCredits[i], c));
+}
+
+/**
+ * Odkaz, ktorý okno Zdieľať appku posiela. Typickú strechu
+ * nemá zmysel posielať ďalej - pribaľuje sa len uložená elektráreň.
+ * @param {AppState} state
+ */
+export function currentShareUrl(state) {
+    const settings = state.shareSettings && state.known === 'elektraren' ? savedSettings(state) : null;
+    return shareUrl(APP_URL, settings, state.shareKiosk);
+}
+
+/** QR kód z knižnice; vytvorí sa pri prvom otvorení okna. */
+const paintQr = qrPainter();
+
+/**
+ * QR kód s odkazom. Kým knižnica z CDN nie je (pomalá sieť, zablokovaná) alebo keď sa odkaz do
+ * kódu nezmestí, okno ukáže len odkaz.
+ * @param {string} url @param {Dom} dom
+ */
+function renderQr(url, dom) {
+    show(dom.nsQr, paintQr(dom.nsQr, url) === true);
+}
+
+/** Okno sekcie Appka, ktoré je práve otvorené - po zatvorení sa fokus vráti na jeho riadok. @type {HTMLElement | null} */
+let opener = null;
+
+/**
+ * Okná sekcie Appka podľa stavu: otvorí, prekreslí a zavrie. Okno patrí karte Nastavenie.
+ * @param {AppState} state @param {Model} m @param {Dom} dom
+ */
+function renderAppSheets(state, m, dom) {
+    const sheet = state.panel === 'nastavenie' ? state.appSheet : null;
+    const share = sheet === 'share';
+    if (share) {
+        const t = m.share;
+        setText(dom.nsShareTitle, t.title);
+        setText(dom.nsShareText, t.text);
+        show(dom.nsShareOpts, t.options);
+        dom.nsShareSettings.checked = t.settingsOn;
+        setText(dom.nsShareSettingsLabel, t.settings);
+        dom.nsShareKiosk.checked = t.kioskOn;
+        setText(dom.nsShareKioskLabel, t.kiosk);
+        show(dom.nsShareKioskRow, t.kioskShown);
+        setText(dom.nsShareWa, t.wa);
+        const url = currentShareUrl(state);
+        dom.nsShareLink.href = url;
+        setText(dom.nsShareLink, url);
+        dom.nsShareWa.href = `https://wa.me/?text=${encodeURIComponent(url)}`;
+        renderQr(url, dom);
+    }
+    if (sheet === 'reset') {
+        setText(dom.nsResetTitle, m.clear.ask);
+        setText(dom.nsResetText, m.clear.text);
+        setText(dom.nsResetOk, m.clear.ok);
+        setText(dom.nsResetCancel, m.clear.cancel);
+    }
+    for (const [d, on, from] of /** @type {const} */ ([
+        [dom.nsShareSheet, share, dom.nsShare],
+        [dom.nsResetSheet, sheet === 'reset', dom.nsReset],
+    ])) {
+        if (on && !d.open) {
+            d.showModal();
+            opener = from;
+        } else if (!on && d.open) {
+            d.close();
+            if (opener === from && state.panel === 'nastavenie') from.focus();
+            if (opener === from) opener = null;
         }
-    dom.wzBandAdd.classList.toggle('hidden', t.bands.length >= TARIFF_LIMITS.maxBands);
+    }
 }
 
-/** Možnosti výberu času po štvrťhodinách; hodnota je číslo štvrťhodiny (0 = 00:00, 96 = 24:00). @param {number} from @param {number} to */
-function timeOptions(from, to) {
-    let html = '';
-    for (let i = from; i <= to; i++)
-        html += `<option value="${i}">${i === 96 ? '24:00' : minutesToTimeStr(i * TARIFF_LIMITS.stepMin)}</option>`;
-    return html;
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderRozvrh(state, draft, dom) {
-    const t = draft.tariff;
-    const i = schedIndex(state, t);
-    const schedule = t.schedules[i];
-    dom.wzSchedTabs.classList.toggle('hidden', t.schedules.length < 2);
-    writeHtml(
-        dom.wzSchedTabs,
-        t.schedules
-            .map(
-                (_, j) =>
-                    `<button type="button" data-setup-sched="${j}" aria-pressed="${j === i}">${escapeHtml(schedLabel(t, j))}</button>`,
-            )
-            .join(''),
-        'wzSchedTabs',
-    );
-    const brush = brushOf(state, t);
-    writeHtml(dom.wzBrushes, brushesHtml(t, brush), 'wzBrushes');
-    writeHtml(
-        dom.wzTariffRingG,
-        tariffRingSvg(tariffRingModel(scheduleTiers(t, schedule)), {
-            name: brush.name,
-            level: LEVELS[brush.level].label,
-            tier: LEVEL_TIER[brush.level],
-        }),
-        'wzTariffRing',
-    );
-    dom.wzRingSum.textContent = bandHoursText(t, schedule);
-    const tpls = scheduleTemplates(t)
-        .map((x) => `<button type="button" class="chip${x.soft ? ' soft' : ''}" data-setup-tpl="${x.tpl}">${x.label}</button>`)
-        .join('');
-    writeHtml(dom.wzSchedTpls, tpls, 'wzSchedTpls');
-    writeHtml(dom.wzIvals, runsHtml(scheduleRuns(t, schedule)), 'wzIvals');
-    renderRunForm(t, brush, dom);
-}
-
-/** Pásma na výber, ktorým sa maľuje. @param {Tariff} t @param {import('../../shared/config.js').Band} brush */
-function brushesHtml(t, brush) {
-    return t.bands
-        .map(
-            (b) =>
-                `<button type="button" class="brush" role="radio" aria-checked="${b.id === brush.id}" data-setup-brush="${b.id}">` +
-                `<i class="sw ${LEVEL_TIER[b.level]}"></i>${escapeHtml(b.name)}<small>${LEVELS[b.level].label}</small></button>`,
-        )
-        .join('');
-}
-
-/** Formulár úseku pod zoznamom - presná cesta aj pre klávesnicu. Možnosti sa zapíšu raz,
- * výber pásma ostáva, kým sa pásma nezmenia. @param {Tariff} t @param {import('../../shared/config.js').Band} brush @param {Dom} dom */
-function renderRunForm(t, brush, dom) {
-    writeHtml(dom.wzIvalFrom, timeOptions(0, 95), 'wzIvalFrom');
-    writeHtml(dom.wzIvalTo, timeOptions(1, 96), 'wzIvalTo');
-    const bandOptions = t.bands.map((b) => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
-    if (writeHtml(dom.wzIvalBand, bandOptions, 'wzIvalBand')) dom.wzIvalBand.value = brush.id;
-}
-
-/** Zoznam úsekov rozvrhu s krížikom na zmazanie. @param {ReturnType<typeof scheduleRuns>} runs */
-function runsHtml(runs) {
-    return runs
-        .map((r, j) => {
-            const to = minutesToTimeStr(r.startMin + r.min);
-            const del =
-                runs.length > 1
-                    ? `<button type="button" class="x" data-setup-run-del="${j}" aria-label="Zmazať úsek ${minutesToTimeStr(r.startMin)} až ${to}"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg></button>`
-                    : '<span></span>';
-            return `<li><i class="sw ${LEVEL_TIER[r.band.level]}"></i><span>${escapeHtml(r.band.name)}</span><span class="tm">${minutesToTimeStr(r.startMin)} – ${to}<small>${hoursText(r.min)}</small></span>${del}</li>`;
-        })
-        .join('');
-}
-
-/** @param {AppState} state @param {Settings} draft @param {Dom} dom */
-function renderVynimky(state, draft, dom) {
-    const t = draft.tariff;
-    const exceptions = t.schedules.slice(1);
-    const season = exceptions.find(isSeasonSchedule);
-    const full = t.schedules.length >= TARIFF_LIMITS.maxSchedules;
-    /** @type {Record<string, boolean>} */
-    const on = { none: !exceptions.length, weekend: exceptions.some(isWeekendSchedule), season: !!season };
-    // Výnimku, ktorú už nemožno pridať, ani neponúkať (zmazať ju vždy ide).
-    const choices = EXCEPTIONS.map((c) => {
-        const can = c.what === 'none' || !full || on[c.what];
-        return `<button type="button" class="choice" data-setup-exc="${c.what}" aria-pressed="${on[c.what]}"${can ? '' : ' disabled'}><span class="dot"></span><span class="t"><b>${c.title}</b><span>${c.sub}</span></span></button>`;
-    }).join('');
-    const months = season
-        ? `<div class="field-label">Mesiace výnimky</div><div class="months" role="group" aria-label="Mesiace výnimky">` +
-          ALL_MONTHS.map(
-              (m) =>
-                  `<button type="button" class="chip" data-setup-month="${m}" aria-pressed="${season.months.includes(m)}">${MONTH_SHORT[m - 1]}</button>`,
-          ).join('') +
-          `</div>`
-        : '';
-    const list = t.schedules
-        .map(
-            (_, j) =>
-                `<div class="roof-row">${miniTariff(t, j)}<span class="t"><b>${escapeHtml(schedLabel(t, j))}</b><span>${escapeHtml(schedDetail(t, j))}</span></span>` +
-                `<button type="button" class="mini-act" data-setup-sched-edit="${j}">Upraviť</button></div>`,
-        )
-        .join('');
-    writeHtml(
-        dom.wzExc,
-        `<div class="wz-kinds">${choices}</div>${months}<div class="field-label">Rozvrhy</div><div class="roofs">${list}</div>` +
-            (full ? `<p class="plant-msg">Rozvrhov je ${TARIFF_LIMITS.maxSchedules}, viac výnimiek sa nedá.</p>` : ''),
-        'wzExc',
-    );
-}
-
-/** @param {Settings} draft @param {Dom} dom @param {boolean} refill */
-function renderCeny(draft, dom, refill) {
-    const t = draft.tariff;
-    writeHtml(
-        dom.wzCurrency,
-        CURRENCIES.map(
-            (c) =>
-                `<button type="button" class="chip" data-setup-cur="${escapeHtml(c)}" aria-pressed="${t.currency === c}">${escapeHtml(c)}</button>`,
-        ).join(''),
-        'wzCurrency',
-    );
-    const rows = t.bands
-        .map(
-            (b) =>
-                `<label class="price-row"><i class="sw ${LEVEL_TIER[b.level]}"></i><span>${escapeHtml(b.name)}</span>` +
-                `<input class="field-input num" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" data-setup-price="${b.id}" />` +
-                `<span class="cur">${escapeHtml(t.currency)}</span></label>`,
-        )
-        .join('');
-    if (writeHtml(dom.wzPrices, rows, 'wzPrices') || refill)
-        for (const input of dom.wzPrices.querySelectorAll('input[data-setup-price]')) {
-            const el = /** @type {HTMLInputElement} */ (input);
-            el.value = fieldText(bandById(t, el.dataset.setupPrice || '').price);
-        }
-    writeHtml(dom.wzPriceCheck, priceCheckHtml(t), 'wzPriceCheck');
-}
-
-/** Úrovne podľa cien a či sedia s tými, ktoré má človek pri pásmach. @param {Tariff} t */
-function priceCheckHtml(t) {
-    const c = priceCheck(t);
-    const msg = `<p class="plant-msg${c.ok ? ' ok' : ''}">${escapeHtml(c.text)}</p>`;
-    if (!c.auto) return msg;
-    const list = c.auto.map((x) => `<div><i class="sw ${LEVEL_TIER[x.level]}"></i>${escapeHtml(x.text)}</div>`).join('');
-    return (
-        `<div class="auto-levels">${list}</div>${msg}` +
-        (c.fix ? `<button type="button" class="link-btn" data-setup-autolevels>Použiť úrovne podľa cien</button>` : '')
-    );
-}
-
-/** Chyby tarify pod obrazovkami tarify (okrem voľby typu, tá chybu mať nemôže). @param {Settings} draft @param {SetupStep} step @param {Dom} dom */
-function renderTariffMsgs(draft, step, dom) {
-    const show = /** @type {readonly string[]} */ (TARIFF_STEPS).includes(step) && step !== 'tarifa';
-    const errors = show ? checkTariff(draft.tariff).errors : [];
-    dom.wzTariffMsgs.classList.toggle('hidden', !errors.length);
-    writeHtml(dom.wzTariffMsgs, errors.map((e) => `<p class="plant-msg err">${escapeHtml(e)}</p>`).join(''), 'wzTariffMsgs');
-}
-
-// ---- Hlavička, polia a tlačidlá sprievodcu ---------------------------------------
-
-/** Záložky pri úprave z prehľadu (shared/nastavenie.js). @param {HTMLElement} el @param {Array<{ step: string, label: string, on: boolean }> | null} tabs @param {string} name */
-function renderTabs(el, tabs, name) {
-    el.classList.toggle('hidden', !tabs);
-    if (tabs)
-        writeHtml(
-            el,
-            tabs.map((t) => `<button type="button" data-setup-tab="${t.step}" aria-pressed="${t.on}">${t.label}</button>`).join(''),
-            name,
-        );
-}
-
-/** @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {number} roof @param {Dom} dom */
-function renderHead(state, draft, step, roof, dom) {
-    const foot = footModel(state, draft, step, false);
-    dom.wzClose.classList.toggle('hidden', !foot.closeShown);
-    dom.wzStep.textContent = stepLabel(state, step);
-    dom.wzClose.setAttribute('aria-label', foot.close);
-    const section = progressSection(state, step);
-    const prog =
-        section < 0 ? '' : SETUP_SECTIONS.map((_, i) => `<i class="${i < section ? 'done' : i === section ? 'now' : ''}"></i>`).join('');
-    writeHtml(dom.wzProg, prog, 'wzProg');
-    dom.wzSub.textContent = subText(state, draft, step, roof);
-    const texts = textsFor(state, draft, step);
-    dom.wzTitle.textContent = texts.title;
-    dom.wzLead.textContent = texts.lead;
-    dom.wzLead.classList.toggle('hidden', !texts.lead);
-    const tabs = editTabs(state, draft, step);
-    renderTabs(dom.wzGroupTabs, tabs.group, 'wzGroupTabs');
-    dom.wzRoofTabs.classList.toggle('hidden', !tabs.roof);
-    for (const b of dom.wzRoofTabs.children)
-        b.setAttribute('aria-pressed', String(/** @type {HTMLElement} */ (b).dataset.setupTab === step));
-    renderTabs(dom.wzTariffTabs, tabs.tariff, 'wzTariffTabs');
-}
-
-/** Hodnoty polí - len keď sa zmení to, k čomu patria, nie pri každom písmene. @param {AppState} state @param {number} roof @param {Dom} dom */
-function writeFields(state, roof, dom) {
-    if (!changedKeys('setupFields', [state.settingsRev, roof, state.setupStep])) return;
-    const { site, plant } = state.settingsDraft;
-    const x = plant.strings[roof];
-    dom.wzLink.value = state.setupLink;
-    dom.wzPlace.value = site.name;
-    dom.wzLat.value = fieldText(site.lat);
-    dom.wzLon.value = fieldText(site.lon);
-    dom.wzWp.value = fieldText(plant.panelWp);
-    dom.wzKwp.value = fieldText(state.setupKwp);
-    dom.wzAc.value = fieldText(plant.acLimitKw);
-    if (!x) return;
-    dom.wzTilt.value = String(x.tiltDeg);
-    dom.wzPanels.value = fieldText(x.panels);
-}
-
-/** Tlačidlá dole: čo robí „Ďalej“ a či sa dá, rozhoduje shared/setup-flow.js podľa toho istého stavu.
- * @param {AppState} state @param {Settings} draft @param {SetupStep} step @param {boolean} ok @param {Dom} dom */
-function renderFoot(state, draft, step, ok, dom) {
-    const foot = footModel(state, draft, step, ok);
-    dom.wzNext.textContent = foot.next;
-    dom.wzNext.disabled = foot.nextOff;
-    dom.wzBack.textContent = foot.back;
-    dom.wzBack.classList.toggle('hidden', !foot.backShown);
-}
-
-/** @param {AppState} state @param {Dom} dom */
-function renderWizard(state, dom) {
-    const step = /** @type {SetupStep} */ (state.setupStep);
-    const draft = setupDraft(state);
-    const roof = Math.max(0, Math.min(state.setupRoof, draft.plant.strings.length - 1));
-    renderHead(state, draft, step, roof, dom);
-    for (const [key, el] of Object.entries(dom.wzScreens)) el.classList.toggle('hidden', key !== step);
-    writeFields(state, roof, dom);
-    // Polia tarify (mená pásiem, ceny) sa plnia len pri načítaní a pri zmene obrazovky, nie pri
-    // každom písmene - rovnako ako ostatné polia (writeFields).
-    const refill = changedKeys('tariffFields', [state.settingsRev, step]);
-    /** @type {Partial<Record<SetupStep, () => void>>} */
-    const screens = {
-        odkaz: () => renderOdkaz(state, dom),
-        lokalita: () => renderLokalita(state, draft, dom),
-        panel: () => renderPanel(state, dom),
-        smer: () => renderSmer(draft, roof, dom),
-        sklon: () => renderSklon(draft, roof, dom),
-        pocet: () => renderPocet(state, draft, roof, dom),
-        dalsia: () => renderDalsia(state, draft, dom),
-        menic: () => renderMenic(state, draft, dom),
-        meranie: () => renderMeranie(state, dom),
-        znacka: () => renderZnacka(state, dom),
-        sposob: () => renderSposob(state, dom),
-        pripoj: () => renderPripoj(state, dom),
-        tarifa: () => renderTarifa(state, draft, dom),
-        pasma: () => renderPasma(draft, dom, refill),
-        rozvrh: () => renderRozvrh(state, draft, dom),
-        vynimky: () => renderVynimky(state, draft, dom),
-        ceny: () => renderCeny(draft, dom, refill),
-        suhrn: () => renderSuhrn(state, draft, dom),
-    };
-    screens[step]?.();
-    renderTariffMsgs(draft, step, dom);
-    renderFoot(state, draft, step, setupReady(state), dom);
+/** Zbaliteľné sekcie: rozbalená je najviac jedna (nsOpen). @param {AppState} state @param {Dom} dom */
+function renderFolds(state, dom) {
+    for (const f of dom.nsFolds) {
+        const open = f.key === state.nsOpen;
+        f.head.setAttribute('aria-expanded', String(open));
+        show(f.body, open);
+    }
 }
 
 /** @param {AppState} state @param {Dom} dom */
 export function renderNastavenie(state, dom) {
-    // Sprievodca je v HTML skrytý, kým ho appka nezapne - vtedy style.css skryje starý formulár.
-    dom.setup.classList.remove('hidden');
     const open = state.setupStep !== null;
-    dom.settingsHead.classList.toggle('hidden', open);
-    dom.setupHome.classList.toggle('hidden', open);
-    dom.wizard.classList.toggle('hidden', !open);
+    show(dom.nsHome, !open);
+    show(dom.wizard, open);
+    const m = nastavenieModel(state);
     if (open) renderWizard(state, dom);
-    renderPrehlad(state, dom);
+    else {
+        renderHome(state, m, dom);
+        renderFolds(state, dom);
+        renderDoma(m, dom);
+        renderOznamenia(m, dom);
+        renderLook(state, m, dom);
+        renderAppka(m, dom);
+    }
+    renderAppSheets(state, m, dom);
 }
 
-/**
- * Ponuka prevziať nastavenie z odkazu. Je mimo kariet, aby ju bolo vidno hneď po otvorení
- * odkazu, nech je appka na ktorejkoľvek karte. Odkaz, ktorý appka nevie prevziať, povie prečo
- * a ponúkne len Zavrieť.
- * @param {AppState} state @param {Dom} dom
- */
+/** Ponuka prevziať nastavenie z otvoreného odkazu - na ktorejkoľvek karte. @param {AppState} state @param {Dom} dom */
 export function renderImportOffer(state, dom) {
     const s = state.incoming;
     const err = s ? null : state.linkError;
-    dom.importOffer.classList.toggle('hidden', !s && !err);
+    show(dom.importOffer, !!s || !!err);
     if (!s && !err) return;
-    dom.importOffer.dataset.err = err ?? '';
-    dom.importOfferTitle.textContent = err ? LINK_ERRORS[err].title : IMPORT_OFFER.title;
-    dom.importOfferText.textContent = err ? LINK_ERRORS[err].text : importOfferText(/** @type {Settings} */ (s), state.known);
-    dom.importAccept.classList.toggle('hidden', !!err);
-    dom.importDecline.textContent = err ? IMPORT_OFFER.close : IMPORT_OFFER.decline;
+    // Odkaz, ktorý appka nevie prevziať: prečo, a len Zavrieť.
+    setText(dom.importOfferTitle, err ? LINK_ERRORS[err].title : IMPORT_OFFER.title);
+    setText(
+        dom.importOfferText,
+        err ? LINK_ERRORS[err].text : importOfferText(/** @type {import('../../shared/settings.js').Settings} */ (s), state.known),
+    );
+    show(dom.importAccept, !err);
+    setText(dom.importDecline, err ? IMPORT_OFFER.close : IMPORT_OFFER.decline);
 }

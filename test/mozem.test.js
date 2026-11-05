@@ -415,7 +415,7 @@ test('Plán dňa pre kartu Teraz: časy ako dlaždice, veta nad ním a časová 
     assert.match(vecer?.then ?? '', /^\S+ zajtra \d\d:\d\d · \S+ zajtra \d\d:\d\d$/);
 });
 
-test('Plán dňa pre kartu Teraz v novej appke: časová os', () => {
+test('Plán dňa pre kartu Teraz: časová os', () => {
     // Pás pre každý spotrebič na slnku, os cez dnešné svetlo, čiara teraz.
     const t = /** @type {NonNullable<ReturnType<typeof mozemModel>['plan']>} */ (mozemModel(input(FIXED_NOW)).plan).lanes;
     assert.deepEqual(
@@ -460,7 +460,7 @@ test('Plán dňa na ďalší deň: večer os zajtrajška, dnešná lacná sieť 
     assert.equal(next.head.lead, `Práčka o ${row('pracka').value.slice(-5)}`);
     assert.equal(next.head.then, `Sušička o ${row('susicka').value.slice(-5)}`);
     assert.match(next.head.tonight, /^Dnes z lacnej siete: bojler od \d\d:\d\d$/);
-    // Riadky pre plagát súčasnej appky: bez dnešnej lacnej siete (tú povie veta), s časom v ten deň.
+    // Riadky: bez dnešnej lacnej siete (tú povie veta), s časom v ten deň.
     assert.deepEqual(
         next.rows.map((r) => [r.name, r.value]),
         [

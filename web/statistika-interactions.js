@@ -1,7 +1,7 @@
-// Poslucháče karty Štatistika novej appky: prepínač obdobia na plagáte a „Skúsiť znova“. Každý končí volaním setState; kreslí render/statistika.js.
+// Poslucháče karty Štatistika: prepínač obdobia na plagáte a „Skúsiť znova“. Každý končí volaním setState; kreslí render/statistika.js.
 // Výzvy do Nastavenia obsluhuje interactions.js.
 
-import { STATS_PERIODS } from '../../shared/stats.js';
+import { STATS_PERIODS } from '../shared/stats.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */

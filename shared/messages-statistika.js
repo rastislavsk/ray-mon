@@ -1,5 +1,5 @@
-// Texty karty Štatistika v oboch appkách: plagát obdobia (nadpis, riadky, poznámka) a výzvy.
-// Nová appka ich sťahuje až s kartou Štatistika (obloha/web/parts.js); spoločný vstup do všetkých
+// Texty karty Štatistika: plagát obdobia (nadpis, riadky, poznámka) a výzvy.
+// Appka ich sťahuje až s kartou Štatistika (web/parts.js); spoločný vstup do všetkých
 // textov je messages.js. Čisté funkcie bez DOM.
 
 import { dateParts, fmt1, fmtSum } from './format.js';

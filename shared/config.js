@@ -116,25 +116,22 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
 
 /**
  * Karty v poradí navigácie - kódové názvy, ktoré drží HTML id, CSS selektory aj stav. Popisky
- * sú v HTML a nemusia sa s nimi zhodovať (terazky je v oboch „Teraz“ - v súčasnej kedysi Terazky, mozem je v oboch
- * „Dnes“ - kedysi Môžem?). Rovnaké v oboch appkách. Prvá v zozname je karta, na ktorej sa obe
+ * sú v HTML a nemusia sa s nimi zhodovať (terazky je „Teraz“, mozem „Dnes“ - kedysi Môžem?). Prvá v zozname je karta, na ktorej sa
  * appky vždy otvárajú - karta Teraz s Plánom dňa odpovedá, čo a kedy zapnúť
  * (docs/navrhy/dnes-a-teraz.html).
  */
 export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
 
 /**
- * Sekcie karty Nastavenie v poradí na karte - rovnaké v oboch appkách (shared/nastavenie.js,
+ * Sekcie karty Nastavenie v poradí na karte - rovnaké (shared/nastavenie.js,
  * docs/navrhy/nastavenie-zjednotenie.html).
  */
 export const NASTAVENIE_SEKCIE = /** @type {const} */ (['elektraren', 'doma', 'oznamenia', 'vzhlad', 'appka']);
 
 /**
- * Šírky okna (px), od ktorých nová appka mení rozloženie. Pod `medium` je telefón aj tablet na
+ * Šírky okna (px), od ktorých appka mení rozloženie. Pod `medium` je telefón aj tablet na
  * výšku: jedna karta a navigácia dole. Od `medium` (tablet na šírku) sú Môžem?, Teraz a 7 dní
- * v dvoch stĺpcoch, od `wide` (počítač) v troch, navigácia je hore. `medium` je tá istá šírka,
- * od ktorej súčasná appka kreslí desktop (style.css, `min-width: 1024px`), takže sa obe appky
- * prepínajú naraz. Rozhoduje šírka okna, nie druh zariadenia.
+ * v dvoch stĺpcoch, od `wide` (počítač) v troch, navigácia je hore. Rozhoduje šírka okna, nie druh zariadenia.
  */
 export const LAYOUT_PX = { medium: 1024, wide: 1280 };
 
@@ -400,7 +397,7 @@ export const HOUSE_BASE_KW = 0.4;
  * `[od, do)`, keď spotrebič berie plný príkon (ohrev vody, pri sušičke a bojleri celý čas) -
  * tie potrebujú, aby nad spotrebou domu (HOUSE_BASE_KW) ostal celý príkon. Zvyšok `runKwh` sa
  * rozloží na ostatný čas programu.
- * Zoznam je jeden pre obe appky. Veci bez spotrebiča (`device: null`) sú od slnka nezávislé -
+ * Zoznam je jeden. Veci bez spotrebiča (`device: null`) sú od slnka nezávislé -
  * berú málo alebo krátko.
  * @type {Array<{ id: string, device: string | null, runMin: number | null, runKwh: number | null,
  *   heat: Array<[number, number]> | null }>}
@@ -456,7 +453,7 @@ export const DEN_TRIEDA = { reserve: 2 / 3 };
 export const RANNA_TRIEDA_STORAGE_KEY = 'ranna-trieda-v1';
 
 /**
- * Skupiny vecí v novej appke: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
+ * Skupiny vecí: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
  */
@@ -485,18 +482,18 @@ export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /**
  * Tón hlášok: drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká a je vecný. Voľba je
- * spoločná pre obe appky (Nastavenie › Vzhľad). Prvý v zozname je predvolený.
+ * spoločná (Nastavenie › Vzhľad). Prvý v zozname je predvolený.
  */
 export const VOICES = /** @type {const} */ (['drzy', 'slusny']);
 
 /**
- * Vzhľad: tón hlášok (spoločný pre obe appky), živá obloha novej appky (vypnutá = pokojná tmavá)
- * a farba pozadia podľa ceny v súčasnej (vypnutá = pokojná čierna). Formát: { ton, obloha, farba }.
+ * Vzhľad: tón hlášok, živá obloha (vypnutá = pokojná tmavá)
+ * a farba pozadia (`farba`, dnes bez účinku). Formát: { ton, obloha, farba }.
  */
 export const LOOK_STORAGE_KEY = 'vzhlad-v1';
 
 /**
- * Posledné počasie z Open-Meteo, spoločné pre obe appky (WEATHER_KEEP_MS). Formát: { url, at, json },
+ * Posledné počasie z Open-Meteo (WEATHER_KEEP_MS). Formát: { url, at, json },
  * `url` je adresa, z ktorej prišlo (určuje lokalitu), `at` čas stiahnutia v ms.
  */
 export const WEATHER_STORAGE_KEY = 'pocasie-v1';
@@ -514,14 +511,14 @@ export const PRISTUP = { odmietnutia: 2, skusMs: 60 * 60 * 1000, pripomenutMs: 7
 export const PRISTUP_STORAGE_KEY = 'pristup-v1';
 
 /**
- * Posledný dopyt na meranie v tomto prehliadači, spoločný pre obe appky (Rytmus v shared/zdroje.js).
+ * Posledný dopyt na meranie v tomto prehliadači (Rytmus v shared/zdroje.js).
  * Limity výrobcu sú na účet, nie na appku - Huawei dá dáta raz za 5 minút. Formát: { sposob, nazov, at, pv }.
  */
 export const MERANIE_STORAGE_KEY = 'meranie-v1';
 
 /**
  * Kotvy súčtov, ktoré výrobca neposiela (shared/sucty.js): celková výroba na začiatku roka, mesiaca
- * a dňa. Spoločné pre obe appky. Formát: { zdroj, posledne: { den, cas, cum }, rok, mesiac, den }.
+ * a dňa. Formát: { zdroj, posledne: { den, cas, cum }, rok, mesiac, den }.
  */
 export const SUCTY_STORAGE_KEY = 'sucty-v1';
 
@@ -603,8 +600,6 @@ export const CARBON = {
 
 // Kde appka beží a odkiaľ číta dáta.
 export const APP_URL = 'https://rastislavsk.github.io/ray-mon/';
-// Druhá appka „Živá obloha“ - na ňu vedie jej Zdieľať appku.
-export const OBLOHA_URL = `${APP_URL}obloha/`;
 export const WORKER_URL = 'https://ray-mon.rastislav-racek.workers.dev/';
 // Živé meranie z meniča, ktorý si používateľ pripojil v Nastavení (`/pv`), a pripojenie samo
 // (`/pripoj`). Zapečatený prístup aj údaje z formulára idú v tele POST požiadavky, nie
@@ -680,24 +675,6 @@ export const TIMEOUT = {
  */
 export const VYROBCA_RETRY = { attempts: 2, delayMs: 500, timeoutMs: 5 * 1000 };
 
-// Od akej viditeľnej výšky okna (px) sa v prehľade dní na karte 7 dní ukáže aj správa
-// týždňa. Prehľad sám sa zmestí od 735 px; so správou potrebuje 860 px, a pri najdlhšej
-// možnej správe na úzkom displeji (320 px) 878 px - namerané v Chromiu pri predvolenej
-// veľkosti písma. 885 je tých 878 a malá rezerva. (Pred legendou farieb a väčším písmom
-// dní to bolo o 24 px menej.)
-//
-// Rozhoduje skutočná viditeľná výška (visualViewport), nie rozlíšenie displeja: v mobilnom
-// prehliadači ukrojí adresný riadok 60-90 px, a práve o tie tu ide. Keď sa správa nezmestí,
-// jednoducho nie je - prehľad má ostať na jednu obrazovku bez scrollovania.
-export const WEEK_MSG_MIN_H = 885;
-
-// Ako dlho ostáva tooltip po ťuknutí zobrazený (ms).
-export const TOOLTIP_HOLD_MS = 1600;
-
-// Kedy je tooltip po skrytí naozaj neviditeľný. Musí byť aspoň taký dlhý ako prechod
-// `opacity` na `.chart-tooltip` v style.css - až potom sa dajú zahodiť jeho súradnice.
-export const TOOLTIP_FADE_MS = 200;
-
 // Dáta staršie než toto sú "zastarané" a appka to ukáže. Platí pre stiahnutie z kiosku
 // aj pre posledné meranie z meniča.
 export const STALE_PV_MS = 20 * 60 * 1000;
@@ -709,7 +686,7 @@ export const PRIPOJENIE_BUBLINA_MS = 5000;
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;
 
-// Náhľad iného času na grafe dňa (web/teraz-gestures.js, v oboch appkách).
+// Náhľad iného času na grafe dňa (web/teraz-gestures.js,).
 export const PREVIEW = {
     // O koľko posunie náhľad jedno ťuknutie šípkou na klávesnici.
     keyStepMin: 15,
@@ -741,7 +718,7 @@ export const DAY_PAGER = {
 };
 
 /**
- * Živá obloha - pozadie novej appky (obloha/): prechod dvoch farieb podľa času dňa
+ * Živá obloha - pozadie: prechod dvoch farieb podľa času dňa
  * a oblačnosti. Farby a ich priebeh sú z návrhu `docs/navrhy/smer-b-obloha.html` (`KEYS`
  * a `skyAt`). Hodiny v `keys` sú hodiny dňa z návrhu, v ktorom slnko vychádza o `riseH`
  * a zapadá o `setH`; skutočný východ a západ v polohe elektrárne do nich premieta

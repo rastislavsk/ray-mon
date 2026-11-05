@@ -1,11 +1,11 @@
-// Texty pre používateľa, ktoré nová appka potrebuje hneď pri štarte: hlášky podľa výroby a ceny,
+// Texty pre používateľa, ktoré appka potrebuje hneď pri štarte: hlášky podľa výroby a ceny,
 // karty Môžem? a Teraz, hlavička. Texty karty 7 dní (a denné a týždenné hlášky) sú
-// v messages-sedem.js, Štatistiky a súhrnu v messages-statistika.js - nová appka ich sťahuje, až
-// keď tie karty načíta (obloha/web/parts.js). Spoločný vstup do všetkých textov je messages.js.
+// v messages-sedem.js, Štatistiky a súhrnu v messages-statistika.js - appka ich sťahuje, až
+// keď tie karty načíta (web/parts.js). Spoločný vstup do všetkých textov je messages.js.
 // Čisté funkcie bez DOM.
 //
-// Tón hlášok: drzý (predvolený, ním hovorí súčasná appka) a slušný, ktorý vyká a je vecný - voľba
-// v novej appke (obloha/). Tón je parameter `voice` textových funkcií (posledný, predvolený drzý)
+// Tón hlášok: drzý (predvolený) a slušný, ktorý vyká a je vecný - voľba
+//. Tón je parameter `voice` textových funkcií (posledný, predvolený drzý)
 // a pevné texty v oboch tónoch vracia voiceTexts. Slušná varianta stojí pri drzej; kde text
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
@@ -321,7 +321,7 @@ export function denWord({ cls, faza, change }, voice) {
     return faza === 'vecer' ? w.vecer[cls] : w.rano[cls];
 }
 
-/** Trieda dňa slovami - štítok na karte Dnes v novej appke. Bez postoja, jedna pre oba tóny. */
+/** Trieda dňa slovami - štítok na karte Dnes. Bez postoja, jedna pre oba tóny. */
 export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slaby: 'slabý deň', nanic: 'deň skoro bez slnka' };
 
 /** Pevné texty karty Dnes podľa časti dňa (shared/dnes-faza.js). */
@@ -440,7 +440,7 @@ const laterWhen = (d) => `${d.name} od ${hm(d.start)}`;
 
 /**
  * Vety hlavičky karty Môžem? v oboch tónoch. `soon` je „zajtra“ alebo „keď vyjde slnko“.
- * Drzé sú tie isté, ktoré hovorí súčasná appka. Spotrebiče a časy do nich dopĺňa Plán dňa (PlanHero).
+ * Spotrebiče a časy do nich dopĺňa Plán dňa (PlanHero).
  */
 const HERO_SAY = {
     drzy: {
@@ -756,7 +756,6 @@ function laterItem(a, notToday, voice) {
 
 /** Nadpis, štítok riadku, ktorý je na rade, a pätka bloku Plán dňa. */
 export const PLAN_DNA_TITLE = 'Plán dňa';
-export const PLAN_DNA_NOW = 'teraz';
 export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
 
 /**
@@ -956,7 +955,7 @@ export function reminderText(row, nowMin, voice = 'drzy') {
 
 /**
  * Pevné texty oznámení: tlačidlá v oznámení, oznámenie, keď sa plán nedal vypočítať, a sekcia
- * Oznámenia v Nastavení oboch appiek (stavy povolenia v `stav`).
+ * Oznámenia v Nastavení (stavy povolenia v `stav`).
  * @param {Voice} [voice]
  */
 export function oznameniaTexts(voice = 'drzy') {
@@ -996,8 +995,8 @@ export function oznameniaTexts(voice = 'drzy') {
 }
 
 // ---- Karta Môžem?: dlaždice, panel veci a výzvy ------------------------------------
-// Odpovede, časy a vety sú tie isté ako vyššie. Dlaždice skupín a panel veci majú obe appky,
-// štítky nad slovom a výzvy len nová appka (obloha/) - výzvu z typickej strechy ukazuje aj
+// Odpovede, časy a vety sú tie isté ako vyššie. Dlaždice skupín a panel veci,
+// štítky nad slovom a výzvy len appka - výzvu z typickej strechy ukazuje aj
 // súčasná v páse pod hlavičkou. Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka
 // ich tak nehláskuje.
 
@@ -1018,7 +1017,7 @@ export const MOZEM_CHIPS = {
     draha: 'Drahá sieť',
 };
 
-/** Pevné texty karty: nadpisy a zatvorenie panelu veci (obe appky), tlačidlá a výzvy. Meno `SKY` ostalo z čias, keď ich mala len nová appka. */
+/** Pevné texty karty: nadpisy a zatvorenie panelu veci, tlačidlá a výzvy. */
 export const MOZEM_SKY_TEXTS = {
     retry: 'Skúsiť znova',
     sheetDo: 'Čo robiť',
@@ -1044,7 +1043,7 @@ const MOZEM_SKY_TEXTS_SLUSNE = {
     askBtn: 'Zadajte polohu',
 };
 
-/** Štítok v hlavičke novej appky bez zadaných panelov - otvorí Nastavenie. */
+/** Štítok v hlavičke bez zadaných panelov - otvorí Nastavenie. */
 export const HEADER_TEXTS = { setup: 'Zadaj panely ›' };
 
 /** @type {typeof HEADER_TEXTS} */
@@ -1178,9 +1177,9 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
     return `Predpoveď počasia neprišla, bez nej neviem, kedy bude slnko.${pv} ${p ? 'Skúste' : 'Skús'} to o chvíľu znova.`;
 }
 
-// ---- Karta Teraz v novej appke -----------------------------------------------------
-// Výkon, odporúčanie a plán dňa počíta to isté ako kartu Teraz súčasnej appky (heroModel,
-// dayPlan); tu sú len texty nového vzhľadu (shared/teraz.js).
+// ---- Karta Teraz -----------------------------------------------------
+// Výkon, odporúčanie a plán dňa počíta heroModel a
+// dayPlan; tu sú len texty (shared/teraz.js).
 
 /**
  * Čo znamená farba pásu plánu pod grafom: zelená slnko stačí, modrá lacná sieť, červená drahá
@@ -1552,8 +1551,7 @@ export function terazTodayText({ forecastKwh, doneKwh, measured }) {
 }
 
 /**
- * Riadok Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel, ten istý ako „Lepšie bude o“
- * v súčasnej appke) a najbližší silný deň z predpovede - podľa triedy dňa (silnyDen v den-trieda.js).
+ * Riadok Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel) a najbližší silný deň z predpovede - podľa triedy dňa (silnyDen v den-trieda.js).
  * @param {{ wait: string | null, todayStrong: boolean, next: { name: string, kwh: number } | null }} d
  */
 export function terazLaterText({ wait, todayStrong, next }) {
@@ -1567,17 +1565,12 @@ export function terazLaterText({ wait, todayStrong, next }) {
     return wait ? `Lepšie bude o ${wait}. ${day}` : day;
 }
 
-export const EMPTY_MESSAGES = {
-    forecast: { title: 'Predpoveď sa pripravuje', body: 'Hodinové dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
-    week: { title: 'Predpoveď sa pripravuje', body: 'Týždenné dáta zatiaľ nie sú k dispozícii, skús to o chvíľu.' },
-};
-
 /**
  * @typedef {{ druh: 'zive' | 'spi' | 'zastarane' | 'neprislo' | 'znova' | 'odhad', cas: string, neplati: { riadok: string } | null,
  *   pricina?: 'spojenie' | 'menic' | null, mlci?: number | null }} StavMeraniaVstup stav merania (stavMerania v hero-model.js)
  */
 
-/** Krátke slovo za čas pri zastaranom meraní, podľa príčiny - hlavička oboch appiek aj riadok v Nastavení. */
+/** Krátke slovo za čas pri zastaranom meraní, podľa príčiny - hlavička aj riadok v Nastavení. */
 export const STAV_SLOVO = { spojenie: 'bez spojenia', menic: 'zastarané' };
 
 /**
@@ -1597,7 +1590,7 @@ export function pripojenieText(druh, zdroj, ako = 'pripojene') {
 }
 
 /**
- * Slovo za čas v hlavičke (oboch appiek), alebo prázdne, keď ho netreba: pri živom meraní
+ * Slovo za čas v hlavičke, alebo prázdne, keď ho netreba: pri živom meraní
  * stačí čas, pri odhade hlavička píše vlastný text. @param {StavMeraniaVstup} stav
  */
 export function stavMeraniaSlovo(stav) {
@@ -1639,7 +1632,7 @@ function stojiText(stav) {
 }
 
 /**
- * Vysvetlenie stavu merania - bublina pri bodke a čase v hlavičke oboch appiek: nadpis, text
+ * Vysvetlenie stavu merania - bublina pri bodke a čase v hlavičke: nadpis, text
  * a pri stavoch, kde treba niečo urobiť, tlačidlo do Nastavenia (inak prázdne).
  * @param {StavMeraniaVstup} stav @param {Voice} [voice] @returns {{ nadpis: string, text: string, tlacidlo: string }}
  */
@@ -1699,7 +1692,7 @@ const STAV_SLOVA_SLUSNE = {
 
 // ---- Pevné texty podľa tónu ---------------------------------------------------------
 
-/** Pevné texty drzého tónu - tie isté objekty, ktoré používa súčasná appka. Celé (aj s kartami 7 dní a Štatistika) vracia voiceTexts v messages.js. */
+/** Pevné texty drzého tónu. Celé (aj s kartami 7 dní a Štatistika) vracia voiceTexts v messages.js. */
 const DRZY = {
     SLOT_MESSAGES,
     NIGHT_MESSAGES,

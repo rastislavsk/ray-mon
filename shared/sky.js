@@ -1,4 +1,4 @@
-// Živá obloha: dve farby pozadia novej appky (obloha/) z času dňa, východu a západu slnka
+// Živá obloha: dve farby pozadia z času dňa, východu a západu slnka
 // v polohe elektrárne a oblačnosti z predpovede. Čas aj dáta dostáva parametrom.
 
 import { SKY } from './config.js';

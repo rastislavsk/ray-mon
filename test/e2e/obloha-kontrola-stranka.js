@@ -1,4 +1,4 @@
-// Merania novej appky priamo v prehliadači pre test/e2e/obloha-kontrola.spec.js: text, jeho
+// Merania priamo v prehliadači pre test/e2e/obloha-kontrola.spec.js: text, jeho
 // farba a čo je pod ním, veľkosť písma, orezanie, dotykové plochy a nadpisy. Spec tento súbor
 // vloží do stránky (page.addInitScript) a volá ho cez window.kontrola. Nemeria zoznam menovaných
 // prvkov, ale všetko, čo v stránke naozaj je - nový prvok netreba nikam dopisovať.

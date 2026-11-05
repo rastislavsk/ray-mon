@@ -1,9 +1,9 @@
-// Texty karty 7 dní novej appky a denné a týždenné hlášky (detail dňa a týždňa súčasnej appky).
-// Nová appka ich sťahuje až s kartou 7 dní (obloha/web/parts.js); spoločný vstup do všetkých
+// Texty karty 7 dní a denné a týždenné hlášky (detail dňa a týždňa).
+// Appka ich sťahuje až s kartou 7 dní (web/parts.js); spoločný vstup do všetkých
 // textov je messages.js. Čisté funkcie bez DOM.
 
 import { fmt1, fmtSum, hourLabel, kwpRoughText, minutesToTimeStr, weekDateLabel, weekDayLabel } from './format.js';
-import { countdownText, endHm, MOZEM_SKY_TEXTS, polite, spanText, TERAZ_TEXTS } from './messages-core.js';
+import { endHm, MOZEM_SKY_TEXTS, polite, TERAZ_TEXTS } from './messages-core.js';
 
 /** @typedef {import('./messages-core.js').Voice} Voice */
 
@@ -60,8 +60,8 @@ export function weekMessage(days) {
     return { title: `Najsilnejší deň: ${bestLabel}`, body };
 }
 
-// ---- Karta 7 dní v novej appke -----------------------------------------------------
-// Predpoveď, okno na veľké veci aj najlepší deň počíta to isté ako kartu 7 dní súčasnej appky
+// ---- Karta 7 dní -----------------------------------------------------
+// Predpoveď, okno na veľké veci aj najlepší deň počíta jadro
 // (weekStatsModel, weekListModel, plán dňa); tu sú len texty nového vzhľadu (shared/sedem-dni.js).
 
 /** Počasie dňa slovom - ikona v riadku je len ozdoba, význam nesie toto slovo. @type {Record<import('./sky.js').SkyWeather, string>} */
@@ -178,7 +178,7 @@ export function sedemClearText(clearKwh, pct) {
 }
 
 /**
- * Hláška v detaile dňa: tá istá ako v detaile dňa súčasnej appky (dayDetailMessage). Deň bez
+ * Hláška v detaile dňa (dayDetailMessage). Deň bez
  * okna je pre veľké spotrebiče slabý, aj keď špička prekročí hranicu slabého dňa - hláška
  * nesmie radiť, kedy ich pustiť, keď detail hovorí „bez okna“.
  * @param {Array<{hour: number, kw: number}>} pts @param {import('./config.js').PowerThresholds} th @param {boolean} hasWindow
@@ -214,23 +214,4 @@ export function sedemHeatText(days) {
 /** Pevné texty karty v danom tóne. @param {Voice} [voice] */
 export function sedemTexts(voice = 'drzy') {
     return polite(voice) ? SEDEM_TEXTS_SLUSNE : SEDEM_TEXTS;
-}
-
-/**
- * Karta okna na veľké spotrebiče nad grafom detailu dňa súčasnej appky: veľký čas hlavného
- * okna, stav a riadok so spotrebičmi. Pri dnešku stav počíta s časom (`nowMin`), iný deň
- * hovorí, koľko slnka na veľké spotrebiče bude. `live` = okno práve beží.
- * @param {{ from: number, to: number } | null} w hlavné okno (mainWindow) @param {number | null} nowMin len pri dnešku
- * @param {number | null} peakHour hodina špičky dňa
- * @returns {{ value: string, state: string, live: boolean, note: string }}
- */
-export function dayWindowCard(w, nowMin, peakHour) {
-    const peak = peakHour === null ? '' : `najviac slnka okolo ${hourLabel(peakHour)}`;
-    if (!w) return { value: '–', state: 'Slnko na veľké spotrebiče nestačí', live: false, note: peak ? `Aj tak ${peak}.` : '' };
-    const note = ['Práčka, sušička, bojler', peak].filter(Boolean).join(' · ');
-    const card = (/** @type {string} */ state, live = false) => ({ value: spanText(w), state, live, note });
-    if (nowMin === null) return card(`${countdownText(w.to - w.from)} slnka na veľké spotrebiče`);
-    if (nowMin < w.from) return card(`Začne o ${countdownText(w.from - nowMin)}`);
-    if (nowMin < w.to) return card(`Práve prebieha · ešte ${countdownText(w.to - nowMin)}`, true);
-    return card('Na dnes už skončilo');
 }

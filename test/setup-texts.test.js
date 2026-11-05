@@ -189,7 +189,7 @@ test('karta elektrárne a riadky zhrnutia', () => {
     assert.equal(kwp[0].value, '–');
 });
 
-test('prehľad oboch appiek: výzva len bez panelov, riadky a karta elektrárne', () => {
+test('prehľad: výzva len bez panelov, riadky a karta elektrárne', () => {
     assert.equal(listText(['juh']), 'juh');
     assert.equal(listText(['juh', 'východ', 'západ']), 'juh, východ a západ');
     const cta = setupCta(state({ known: 'poloha' }));

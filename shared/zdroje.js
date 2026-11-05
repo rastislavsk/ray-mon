@@ -307,7 +307,7 @@ export function pvDue(zdroj, pv, now, lastAt = 0) {
 }
 
 /**
- * Posledný dopyt na meranie v tomto prehliadači, spoločný pre obe appky (MERANIE_STORAGE_KEY):
+ * Posledný dopyt na meranie v tomto prehliadači (MERANIE_STORAGE_KEY):
  * ku ktorému meraniu patrí (spôsob a meno elektrárne - pečať sa pri obnove tokenu mení), kedy
  * sa niektorá z nich naposledy pýtala (`at`, ms) a čo naposledy namerala (`pv`). Druhá appka podľa
  * neho čaká na interval a ukáže meranie, ktoré prvá už má.

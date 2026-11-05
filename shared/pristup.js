@@ -94,7 +94,7 @@ function denMesiac(iso, timeZone) {
 
 /**
  * Čo appka hovorí, keď výrobca prístup odmietol (pristupModel s `druh: 'neplati'`), inak null -
- * pre hlavičku, pás súčasnej appky a kartu Štatistika, ktoré pripomenutie vypršania netýka.
+ * pre hlavičku a kartu Štatistika, ktoré pripomenutie vypršania netýka.
  * @param {{ zdroj: Zdroj | null, pristup: Odmietnutie | null, now: Date, site: { timezone: string } }} s
  */
 export function neplatiOf(s) {
@@ -162,8 +162,8 @@ function vyprsiModel(zdroj, sposob, now, timezone) {
 /**
  * Čo appka o prístupe k meraniu hovorí, alebo null, keď nie je čo. `neplati`: výrobca prístup
  * opakovane odmietol. `vyprsi`: prístup na čas (Deye) čoskoro vyprší.
- * - `riadok`: veta pod číslom na karte Teraz (nová appka), `pas`: pás pod hlavičkou (súčasná),
- * - `hlavicka`: stav v hlavičke súčasnej appky, `tone`: to isté pre čítačku obrazovky v novej,
+ * - `riadok`: veta pod číslom na karte Teraz, `pas`: pás pod hlavičkou,
+ * - `hlavicka`: stav v hlavičke, `tone`: to isté pre čítačku obrazovky,
  * - `stav`: riadok Živé meranie v Nastavení (`stavKratko` bez značky), `karta`: hlásenie v Nastavení,
  * - `statistika`: veta na karte Štatistika, `sprievodca`: nadpis a úvod pri pripájaní znova.
  * @param {{ zdroj: Zdroj | null, pristup: Odmietnutie | null, now: Date, timezone: string }} s

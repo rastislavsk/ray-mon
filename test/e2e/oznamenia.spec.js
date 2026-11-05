@@ -1,4 +1,4 @@
-// E2E: Nastavenie › Oznámenia v oboch appkách. Push sa v testovacom prehliadači naozaj prihlásiť
+// E2E: Nastavenie › Oznámenia. Push sa v testovacom prehliadači naozaj prihlásiť
 // nedá (nemá push službu), testy preto overujú voľby, ich uloženie, Plán dňa podľa spotrebičov doma,
 // hlášky, keď sa oznámenia zapnúť nedajú, a že service worker sa zaregistruje (jeho importy sedia).
 import { expect, test } from '@playwright/test';
@@ -29,11 +29,11 @@ const OWNER = {
 const T = oznameniaTexts();
 
 /**
- * @param {import('@playwright/test').Page} page @param {'sucasna' | 'obloha'} app
+ * @param {import('@playwright/test').Page} page
  * @param {NotificationPermission} [permission] stav povolenia pri štarte
  * @param {NotificationPermission} [answer] čo človek odpovie na otázku (`default` = otázku zavrel)
  */
-async function otvor(page, app, permission = 'default', answer = permission === 'granted' ? 'granted' : 'denied') {
+async function otvor(page, permission = 'default', answer = permission === 'granted' ? 'granted' : 'denied') {
     // Prehliadač bez okna má oznámenia vždy zakázané - stav povolenia aj odpoveď na otázku podvrhne test.
     await page.addInitScript(
         ([p, a]) => {
@@ -51,7 +51,7 @@ async function otvor(page, app, permission = 'default', answer = permission === 
         [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))],
     );
     await page.clock.setFixedTime(FIXED_NOW);
-    await page.goto(app === 'sucasna' ? '/' : '/obloha/');
+    await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
 }
 
@@ -64,55 +64,9 @@ const doma = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?
 const plan = (devices) =>
     planDnaModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: buildForecast(weather, FIXED_NOW, SITE, PLANT) }, { devices });
 
-test.describe('oznámenia: súčasná appka', () => {
-    test('voľby v Nastavení: hodina a spotrebiče sa uložia a Plán dňa ráta len s tým, čo je doma', async ({ page }) => {
-        await otvor(page, 'sucasna');
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-oznamenia summary').click();
-        await expect(page.locator('#oznam-title')).toHaveText(T.title);
-        await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
-        await expect(page.locator('#oznam-body [data-oznam-hour="9"]')).toBeChecked();
-        await expect(page.locator('#oznam-body')).toContainText(T.uses);
-        await page.locator('#oznam-body [data-oznam-hour="7"]').check();
-        await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 7 });
-        await page.locator('#settings-doma summary').click();
-        await page.locator('#doma-body [data-doma="auto"]').uncheck();
-        await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka'] });
-        await expect(page.locator('#doma-hint')).toHaveText('Práčka, umývačka a sušička');
-        await page.locator('#nav-terazky').click();
-        const rows = plan(['pracka', 'umyvacka', 'susicka'])?.rows ?? [];
-        await expect(page.locator('.tz-plan-rows li')).toHaveText(
-            rows.map((r, i) => `${String(i + 1).padStart(2, '0')}${r.name}${r.now ? 'teraz' : r.value}${r.why}`),
-        );
-        await expect(page.locator('.tz-plan-rows')).not.toContainText('Auto');
-    });
-
-    test('odmietnuté povolenie: prepínač ostane vypnutý a hláška povie prečo', async ({ page }) => {
-        await otvor(page, 'sucasna');
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-oznamenia summary').click();
-        await page.locator('#oznam-body [data-oznam-on]').click();
-        await expect(page.locator('#oznam-body .oznam-stav')).toHaveText(T.stav.zakazane);
-        await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
-        expect((await ulozene(page)).on).toBe(false);
-    });
-
-    test('povolené, ale bez push služby: service worker sa zaregistruje, zapnutie zlyhá s hláškou', async ({ page }) => {
-        await otvor(page, 'sucasna', 'granted');
-        await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-oznamenia summary').click();
-        await page.locator('#oznam-body [data-oznam-on]').click();
-        await expect(page.locator('#oznam-body .oznam-stav')).toHaveText(T.stav.chyba);
-        await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
-        // Service worker beží - jeho importy zo shared/ sa načítali bez chyby.
-        const active = await page.evaluate(async () => (await navigator.serviceWorker.getRegistration('./sw.js'))?.active?.state ?? null);
-        expect(active).toBe('activated');
-    });
-});
-
-test.describe('oznámenia: Živá obloha', () => {
+test.describe('oznámenia', () => {
     test('sekcia Oznámenia: prepínač, hodina 9:00 predvolená a spotrebiče; voľba platí aj v Pláne dňa', async ({ page }) => {
-        await otvor(page, 'obloha');
+        await otvor(page);
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-oznamenia').click();
         await expect(page.locator('#ns-oznam-title')).toHaveText(T.title);
@@ -132,15 +86,15 @@ test.describe('oznámenia: Živá obloha', () => {
     });
 
     test('odmietnuté povolenie: prepínač vypnutý a hláška', async ({ page }) => {
-        await otvor(page, 'obloha');
+        await otvor(page);
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-oznamenia').click();
         await page.locator('#ns-oznam').click();
         await expect(page.locator('#ns-oznam-stav')).toHaveText(T.stav.zakazane);
         await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
     });
-    test('povolené, ale bez push služby: vlastný service worker oblohy s rozsahom obloha/, zapnutie zlyhá s hláškou', async ({ page }) => {
-        await otvor(page, 'obloha', 'granted');
+    test('povolené, ale bez push služby: service worker v koreni, zapnutie zlyhá s hláškou', async ({ page }) => {
+        await otvor(page, 'granted');
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-oznamenia').click();
         await page.locator('#ns-oznam').click();
@@ -153,49 +107,58 @@ test.describe('oznámenia: Živá obloha', () => {
                 state: r.active?.state ?? null,
             })),
         );
-        // Rozsah obloha/ - Android potom oznámenie pripíše nainštalovanej oblohe (jej logo), nie Chrome.
-        // Koreňový sa nezaregistroval: oznámenie posiela len appka, v ktorej sa zaplo.
-        expect(regs).toEqual([{ scope: '/obloha/', script: '/obloha/sw.js', state: 'activated' }]);
+        expect(regs).toEqual([{ scope: '/', script: '/sw.js', state: 'activated' }]);
     });
-});
-
-test.describe('oznámenia: obe appky', () => {
     test('zavretá otázka na povolenie: žiadna hláška o zákaze, dá sa skúsiť znova', async ({ page }) => {
-        await otvor(page, 'sucasna', 'default', 'default');
+        await otvor(page, 'default', 'default');
         await page.locator('#nav-nastavenie').click();
-        await page.locator('#settings-oznamenia summary').click();
-        await page.locator('#oznam-body [data-oznam-on]').click();
-        await expect(page.locator('#oznam-body [data-oznam-on]')).not.toBeChecked();
-        await expect(page.locator('#oznam-body [data-oznam-on]')).toBeEnabled();
-        await expect(page.locator('#oznam-body .oznam-stav')).toHaveCount(0);
+        await page.locator('#ns-fold-oznamenia').click();
+        await page.locator('#ns-oznam').click();
+        await expect(page.locator('#ns-oznam')).toHaveAttribute('aria-checked', 'false');
+        await expect(page.locator('#ns-oznam')).toBeEnabled();
+        await expect(page.locator('#ns-oznam-stav')).toHaveText('');
     });
 
-    for (const app of /** @type {const} */ (['sucasna', 'obloha']))
-        test(`${app}: zapnuté oznámenie bez odberu v telefóne sa pri štarte prepne na vypnuté`, async ({ page }) => {
-            await page.addInitScript(
-                ([k, v]) => localStorage.setItem(k, v),
-                [OZNAMENIA_STORAGE_KEY, JSON.stringify({ on: true, hour: 9, devices: ['pracka'] })],
-            );
-            await otvor(page, app, 'granted');
-            await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9 });
-            // Spotrebiče zo staršej verzie sa presunuli do Čo máš doma.
-            expect(await doma(page)).toEqual({ devices: ['pracka'] });
-        });
+    test('zapnuté oznámenie bez odberu v telefóne sa pri štarte prepne na vypnuté', async ({ page }) => {
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [OZNAMENIA_STORAGE_KEY, JSON.stringify({ on: true, hour: 9, devices: ['pracka'] })],
+        );
+        await otvor(page, 'granted');
+        await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9 });
+        // Spotrebiče zo staršej verzie sa presunuli do Čo máš doma.
+        expect(await doma(page)).toEqual({ devices: ['pracka'] });
+    });
     // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení), sw.js ale berie logo
-    // z koreňa rozsahu, v ktorom ho appka zaregistrovala - stačí, že tam každá appka svoje má.
-    for (const [app, scope] of /** @type {const} */ ([
-        ['sucasna', '/'],
-        ['obloha', '/obloha/'],
-    ]))
-        test(`${app}: logo pre oznámenie leží v koreni rozsahu service workera`, async ({ page }) => {
-            const res = await page.request.get(`${scope}icon-192.png`);
-            expect(res.status()).toBe(200);
-            expect(res.headers()['content-type']).toBe('image/png');
-            const manifest = await (await page.request.get(`${scope}manifest.webmanifest`)).json();
-            expect(manifest.icons[0].src).toBe('icon-192.png');
+    // z koreňa rozsahu - odber z čias, keď appka bývala v obloha/, ho musí nájsť aj tam.
+    test('starý odber: service worker v obloha/ naštartuje a logo v jeho rozsahu leží', async ({ page }) => {
+        await otvor(page);
+        const stav = await page.evaluate(async () => {
+            const reg = await navigator.serviceWorker.register('/obloha/sw.js', {
+                type: 'module',
+                updateViaCache: 'none',
+                scope: '/obloha/',
+            });
+            const sw = /** @type {ServiceWorker} */ (reg.active ?? reg.installing ?? reg.waiting);
+            await new Promise((r) =>
+                sw.state === 'activated' ? r(null) : sw.addEventListener('statechange', () => sw.state === 'activated' && r(null)),
+            );
+            return sw.state;
         });
+        expect(stav).toBe('activated');
+        const res = await page.request.get('/obloha/icon-192.png');
+        expect(res.status()).toBe(200);
+        expect(res.headers()['content-type']).toBe('image/png');
+    });
+
+    test('logo pre oznámenie leží v koreni rozsahu service workera', async ({ page }) => {
+        expect((await page.request.get('/icon-192.png')).status()).toBe(200);
+        const manifest = await (await page.request.get('/manifest.webmanifest')).json();
+        expect(manifest.icons[0].src).toBe('icon-192.png');
+    });
+
     test('zrkadlo pre service worker: po vypnutí (zmazaná cache) a novom zapnutí sa zapíše znova', async ({ page }) => {
-        await otvor(page, 'sucasna');
+        await otvor(page);
         const zapisane = await page.evaluate(async () => {
             const m = await import('/web/oznamenia.js');
             const { OZNAMENIA } = await import('/shared/config.js');

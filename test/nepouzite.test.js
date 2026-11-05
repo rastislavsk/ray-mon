@@ -8,7 +8,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Kód appky a Workera, v ktorom sa hľadajú exporty. */
-const PRODUKCIA = ['app.js', 'boot.js', 'sw.js', 'web', 'obloha', 'shared', 'worker/src'];
+const PRODUKCIA = ['app.js', 'boot.js', 'sw.js', 'web', 'shared', 'worker/src'];
 /** Kde sa hľadá použitie: všetko vlastné, s testami a skriptmi. */
 const VSETKO = [...PRODUKCIA, 'test', 'scripts', 'worker/test'];
 

@@ -1,6 +1,5 @@
-// E2E karty Nastavenie novej appky „Živá obloha“: prehľad elektrárne a sprievodca nastavením.
-// Sprievodca je ten istý ako v súčasnej appke (shared/setup-flow.js, web/setup-wiring.js) a ukladá
-// do toho istého úložiska - testy preto skúšajú aj, že si obe appky nastavenie navzájom prečítajú.
+// E2E karty Nastavenie: prehľad elektrárne a sprievodca nastavením.
+// Sprievodca: shared/setup-flow.js, web/setup-wiring.js.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { RING } from '../../shared/chart-model.js';
@@ -56,7 +55,7 @@ const GEOCODE = {
 };
 
 /**
- * Otvorí novú appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
+ * Otvorí appku s pevným časom a dátami z fixtures. Bez `settings: null` má uložené Dvorany
  * s kioskom; so `site` pozná len polohu.
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string }} [opts]
@@ -80,7 +79,7 @@ async function openObloha(page, { settings = OWNER, site = null, hash = '' } = {
     if (settings) await uloz(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
     if (site) await uloz(SITE_STORAGE_KEY, JSON.stringify(site));
     await page.clock.setFixedTime(FIXED_NOW);
-    await page.goto(`/obloha/${hash}`);
+    await page.goto(`/${hash}`);
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
     return errors;
 }
@@ -145,9 +144,7 @@ async function malujPrstom(page, minutes) {
 test.describe('sprievodca od nuly', () => {
     test.use({ hasTouch: true });
 
-    test('celý sprievodca: poloha, 2 plochy, menič, bez merania, dve pásma maľované prstom, ceny; obe appky ho prečítajú', async ({
-        page,
-    }) => {
+    test('celý sprievodca: poloha, 2 plochy, menič, bez merania, dve pásma maľované prstom, ceny', async ({ page }) => {
         test.slow();
         const errors = await openObloha(page, { settings: null });
         await nastavenie(page);
@@ -244,15 +241,6 @@ test.describe('sprievodca od nuly', () => {
         await expect(page.locator('#mz-word')).toHaveText(m.word);
         await expect(page.locator('#mz-day-lead')).toHaveText(m.day?.lead ?? '');
         await expect(page.locator('#mz-guess')).toBeHidden();
-
-        // Súčasná appka prečíta to isté nastavenie.
-        await page.goto('/');
-        await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
-        await page.locator('#nav-nastavenie').click();
-        const item = page.locator('#settings-plant');
-        if ((await item.getAttribute('open')) === null) await item.locator('> summary').click();
-        await expect(page.locator('#setup-hero .big')).toHaveText(kwp);
-        await expect(page.locator('#setup-rows [data-setup-edit="tarifa"]')).toContainText('NT 0,12 · VT 0,20 €/kWh');
         expect(errors).toEqual([]);
     });
 });
@@ -304,7 +292,7 @@ async function ocakavajKartu(page, panel) {
     await expect(page.locator(`#nav-${panel}`)).toHaveAttribute('aria-current', 'page');
 }
 
-test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, ktorú súčasná appka hneď vidí', async ({ page }) => {
+test('uložené nastavenie: prehľad, sprievodca a úprava', async ({ page }) => {
     const errors = await openObloha(page);
     await nastavenie(page);
     await expect(page.locator('#ns-home h2')).toHaveText('Moja elektráreň');
@@ -343,13 +331,6 @@ test('nastavenie uložené súčasnou appkou: prehľad, sprievodca a úprava, kt
     await page.locator('[data-setup-kind="jedna"]').click();
     await page.locator('#wz-back').click();
     await expect(page.locator('#ns-rows')).toContainText('2 pásma · lacno 20 h');
-
-    await page.goto('/');
-    await expect(page.locator('#pv-updated')).not.toHaveText('načítavam…');
-    await page.locator('#nav-nastavenie').click();
-    const item = page.locator('#settings-plant');
-    if ((await item.getAttribute('open')) === null) await item.locator('> summary').click();
-    await expect(page.locator('#setup-rows [data-setup-edit="menic"]')).toContainText('8 kW');
     expect(errors).toEqual([]);
 });
 
@@ -651,7 +632,7 @@ test.describe('prevzatie nastavenia z odkazu', () => {
         expect(errors).toEqual([]);
     });
 
-    // Obe appky majú spoločné úložisko, no každá vlastnú adresu: stará karta nesie nastavenie
+    // Karty majú spoločné úložisko, no každá vlastnú adresu: stará karta nesie nastavenie
     // z chvíle, keď ho zapísala, a prevzatie po obnovení by novšie nastavenie prepísalo starším.
     test('stará karta po zmene nastavenia inde: vlastnú adresu neponúkne, cudzí odkaz v tej istej karte áno', async ({ page }) => {
         const errors = await openObloha(page);

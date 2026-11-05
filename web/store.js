@@ -1,6 +1,5 @@
 // Úložisko stavu: jeden objekt a odberatelia. setState zlúči zmenu a zavolá odberateľov
-// práve raz; rovnaké hodnoty nič nespustia. Nevie nič o tom, čo v stave je, takže ho používa
-// súčasná appka (web/state.js) aj nová (obloha/).
+// práve raz; rovnaké hodnoty nič nespustia. Nevie nič o tom, čo v stave je.
 
 /**
  * @template T

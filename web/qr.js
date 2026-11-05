@@ -1,4 +1,4 @@
-// QR kód s odkazom na appku pre okno Zdieľať v oboch appkách. Knižnica je z CDN a nepovinná
+// QR kód s odkazom na appku pre okno Zdieľať. Knižnica je z CDN a nepovinná
 // (index.html ju načíta s `defer`), takže kým nie je, kód nie je. Neutrálny modul: nesiaha na
 // stav appky, len do prvku, ktorý dostane.
 

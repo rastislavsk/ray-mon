@@ -23,9 +23,7 @@ const args = [
     '--test-coverage-include=web/state.js',
     '--test-coverage-include=web/store.js',
     '--test-coverage-include=web/data.js',
-    '--test-coverage-include=web/memo.js',
     '--test-coverage-include=web/refresh.js',
-    '--test-coverage-include=obloha/web/state.js',
     '--test-coverage-lines=90',
     '--test-coverage-branches=90',
     // Výpis ako bez voľby (spec v termináli, inak tap) a k nemu lcov pre kontrolu po súboroch.

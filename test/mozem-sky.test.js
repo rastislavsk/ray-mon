@@ -50,7 +50,7 @@ function guessInput(now) {
     return { now, ...typical, loading: false, known: /** @type {const} */ ('poloha'), pv: null, forecast };
 }
 
-test('mozemModel: pri polohe bez panelov odpovedá z typickej strechy v oboch appkách, bez polohy nie', () => {
+test('mozemModel: pri polohe bez panelov odpovedá z typickej strechy, bez polohy nie', () => {
     const g = guessInput(FIXED_NOW);
     const odhad = mozemModel(g);
     const elektraren = mozemModel({ ...g, known: 'elektraren' });

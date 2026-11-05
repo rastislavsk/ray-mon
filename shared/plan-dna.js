@@ -250,7 +250,7 @@ function onSun(item, device, from, { ctx, currency, free }) {
 }
 
 /**
- * Model bloku Plán dňa pre obe appky: riadky (čas, spotrebič, prečo), pätka a časová os dneška
+ * Model bloku Plán dňa: riadky (čas, spotrebič, prečo), pätka a časová os dneška
  * (`lanes`). Bez predpovede alebo bez elektrárne null. Riadok, ktorého štart je teraz, má `now`,
  * `value` je jeho čas tak, ako ho povie dlaždica (planTileText: „teraz“, „o 15:00“, „zajtra 07:30“).
  * @param {import('./day-plan.js').PlanInput & { known?: import('./settings.js').Known }} input
@@ -272,7 +272,7 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
  * v ktorom je niečo na slnku, s pásmi spotrebičov v ten deň a bez čiary teraz - teraz je dnes.
  * Čo ide dnes z lacnej siete, povie veta (`head.tonight`), ostatné dni a „nie“ sú v `others`.
  * `rows` sú riadky plánu bez dnešnej lacnej siete: najprv spotrebiče v ten deň podľa času
- * (s časom „o 07:45“), potom ostatné - pre plagát súčasnej appky, ktorý os nemá.
+ * (s časom „o 07:45“), potom ostatné.
  * Keď dnes niečo na slnku je, alebo žiadny deň predpovede, null.
  * Návrh: docs/navrhy/plan-dna-zajtra.html, návrh 1.
  * @param {PlanDnaRow[]} rows

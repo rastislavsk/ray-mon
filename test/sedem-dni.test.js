@@ -1,4 +1,4 @@
-// Karta 7 dní novej appky (shared/sedem-dni.js): počíta to isté ako karta 7 dní súčasnej appky
+// Karta 7 dní (shared/sedem-dni.js)
 // (weekStatsModel, weekListModel, dayDetailMessage, weekMessage) a okno z plánu dňa.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -132,18 +132,18 @@ test('forecastDayPlan: dnešok je presne dayPlan, iný deň z predpovede toho d�
     assert.ok(plan.every((s) => (s.tier === 'green') === s.kw >= th.lowKw));
     assert.equal(plan[m(2) / 15].night, true);
     assert.equal(plan[m(13) / 15].night, false);
-    // Hodinová farba zo súčasnej appky (dayHourTiers) sedí s plánom v celú hodinu.
+    // Hodinová farba (dayHourTiers) sedí s plánom v celú hodinu.
     const tiers = dayHourTiers(day, TARIFF, PLANT);
     assert.equal(tiers[12] === 'green', plan[m(12) / 15].tier === 'green');
 });
 
-test('bestDayIndex: najviac kWh, pri zhode skorší - ten istý deň ako súhrn súčasnej appky', () => {
+test('bestDayIndex: najviac kWh, pri zhode skorší', () => {
     assert.equal(bestDayIndex(forecast.days), 5);
     assert.equal(bestDayIndex([{ kwhTotal: 3 }, { kwhTotal: 5 }, { kwhTotal: 5 }]), 1);
     assert.equal(weekStatsModel(forecast.days, null, false).best.kwh, forecast.days[5].kwhTotal);
 });
 
-test('sedemModel: nadpis s najlepším dňom, súčet, 7 riadkov s kWh zo súčasnej appky a oknom z plánu', () => {
+test('sedemModel: nadpis s najlepším dňom, súčet, 7 riadkov s kWh a oknom z plánu', () => {
     const s = sedemModel(input);
     assert.equal(s.kind, 'ok');
     assert.equal(s.title, 'Veľké pranie? Štvrtok.');
@@ -210,7 +210,7 @@ test('sedemModel: poloha bez panelov - typická strecha, odhad v riadkoch a výz
     assert.ok(s.rows.every((r) => r.kwh.startsWith('~') && r.label.endsWith('odhad pre typickú strechu')));
 });
 
-test('sedemDayModel: dnešok - čísla zo súčasnej appky, okno, „teraz“, nameraná krivka a čo nabehlo', () => {
+test('sedemDayModel: dnešok - čísla, okno, „teraz“, nameraná krivka a čo nabehlo', () => {
     const d = sedemDayModel(input, 0);
     const day = forecast.days[0];
     assert.equal(d.title, 'Dnes 5.9.');
@@ -244,7 +244,7 @@ test('sedemDayModel: iný deň bez „teraz“ a bez merania; deň bez okna „b
     assert.equal(sedemDayModel({ ...input, known: 'poloha' }, 2).sub, `${dayHeadSub(forecast.days[2])} · typická strecha`);
 });
 
-test('sedemWeekModel: čísla zo súhrnu súčasnej appky, 7 stĺpcov, mapa 7 × hodiny, hláška weekMessage', () => {
+test('sedemWeekModel: čísla zo súhrnu, 7 stĺpcov, mapa 7 × hodiny, hláška weekMessage', () => {
     const w = sedemWeekModel(input);
     const stats = weekStatsModel(forecast.days, input.pv, forecast.tomorrowSunny);
     assert.equal(w.range, '5.9. – 11.9.');

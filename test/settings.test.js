@@ -301,7 +301,7 @@ test('linkHash: adresa, ktorú appka v karte zapísala sama, odkazom nie je; cud
     const hash = '#nastavenie=abc';
     assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=abc', false), '', 'vlastná adresa po obnovení');
     assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/#nastavenie=xyz', false), hash, 'iný odkaz v tej istej karte');
-    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/obloha/#nastavenie=abc', false), hash, 'druhá appka v tej istej karte');
+    assert.equal(linkHash('/ray-mon/', hash, '/ray-mon/obloha/#nastavenie=abc', false), hash, 'adresa z čias, keď appka bývala v obloha/');
     assert.equal(linkHash('/ray-mon/', hash, null, false), hash, 'nová karta či appka z plochy');
     assert.equal(linkHash('/ray-mon/', hash, null, true), hash, 'odkaz bez značky sa ponúkne vždy');
 });

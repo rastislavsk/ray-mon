@@ -86,11 +86,11 @@ test('skyNow: aj vypnutá živá obloha a obloha bez dát majú stmavený spodok
 });
 
 /**
- * Farby čitateľnosti z :root v obloha/style.css - tie isté, ktoré kreslí appka.
+ * Farby čitateľnosti z :root v style.css - tie isté, ktoré kreslí appka.
  * @returns {Record<string, string>}
  */
 function cssTokens() {
-    const css = readFileSync(new URL('../obloha/style.css', import.meta.url), 'utf8');
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
     const root = css.match(/:root\s*{([^}]*)}/)?.[1] ?? '';
     return Object.fromEntries([...root.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
 }

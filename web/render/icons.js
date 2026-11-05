@@ -1,4 +1,4 @@
-// Ikony počasia novej appky: jasno, polojasno, zamračené. Vlastná malá sada podľa návrhu
+// Ikony počasia: jasno, polojasno, zamračené. Vlastná malá sada podľa návrhu
 // (docs/navrhy/smer-b-obloha.html, `wIcon`), nie emoji - tie kreslí každý telefón inak. Dážď
 // nie je: appka zrážky nesťahuje, preto ani zamračené nemá kvapky. Ikona je len ozdoba
 // (aria-hidden), počasie slovom nesie text vedľa nej.
@@ -11,14 +11,14 @@ const SUN =
 /** Oblak dole v ploche 24 × 24. @param {string} cls */
 const cloud = (cls) => `<path d="M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 7 11.2 3.4 3.4 0 0 0 7 18z" class="${cls}"/>`;
 
-/** @type {Record<import('../../../shared/sky.js').SkyWeather, string>} */
+/** @type {Record<import('../../shared/sky.js').SkyWeather, string>} */
 const INNER = {
     jasno: SUN,
     polojasno: `<g transform="translate(-3 -3) scale(.85)">${SUN}</g><g transform="translate(3 3) scale(.85)">${cloud('wi-cloud')}</g>`,
     zamracene: cloud('wi-cloud wi-dark'),
 };
 
-/** Ikona počasia. `data-w` nesie stav, aby ho testy aj štýly poznali bez čítania tvaru. @param {import('../../../shared/sky.js').SkyWeather} w */
+/** Ikona počasia. `data-w` nesie stav, aby ho testy aj štýly poznali bez čítania tvaru. @param {import('../../shared/sky.js').SkyWeather} w */
 export function weatherIcon(w) {
     return `<svg class="wi" data-w="${w}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${INNER[w]}</svg>`;
 }

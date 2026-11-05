@@ -1,5 +1,4 @@
-// Karta Štatistika v novej appke „Živá obloha“ (obloha/). Plagát obdobia je ten istý ako v súčasnej
-// appke (summaryModel); tu sa k nemu skladajú stavy karty, ktoré má len nová appka: bez polohy, bez
+// Karta Štatistika. Plagát obdobia dáva summaryModel; tu sa k nemu skladajú stavy karty: bez polohy, bez
 // panelov, načítavanie a bez dát. Súčty za mesiac, rok a celý čas posiela len kiosk - bez neho karta
 // ukáže dnešok z predpovede a výzvu pripojiť meranie, nič si nedoskladá. Čisté funkcie, čas aj dáta
 // prichádzajú v parametroch. Texty sú v shared/messages.js.

@@ -1,4 +1,4 @@
-// Plagát obdobia na karte Štatistika v oboch appkách: dnes, mesiac, rok alebo celý čas na streche
+// Plagát obdobia na karte Štatistika: dnes, mesiac, rok alebo celý čas na streche
 // v jednotkách, ktoré pozná každý (nabitia mobilu, km autom), najlepší deň, hodnota podľa tarify
 // a úspora CO2eq s uhlíkovou návratnosťou panelov (shared/carbon.js). Bez merania dnešok
 // z predpovede. Čisté funkcie; texty skladá shared/messages.js.

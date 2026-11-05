@@ -1,4 +1,4 @@
-// Zápis do DOM pre render funkcie novej appky: len keď sa niečo naozaj mení.
+// Zápis do DOM pre render funkcie: len keď sa niečo naozaj mení.
 
 /** Zapíše text, len keď sa líši - nezmenený zápis by prvok zbytočne označil na prepočet. @param {HTMLElement} el @param {string} text */
 export function setText(el, text) {

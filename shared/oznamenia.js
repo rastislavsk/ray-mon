@@ -19,7 +19,7 @@ export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour });
 
 /**
  * Uložená voľba (JSON z úložiska). Čokoľvek poškodené alebo neznáme sa nahradí predvolenou
- * hodnotou, nie zahodí celé - nová appka tak prečíta aj voľbu staršej. Spotrebiče, ktoré v nej
+ * hodnotou, nie zahodí celé - appka tak prečíta aj voľbu staršej. Spotrebiče, ktoré v nej
  * mala staršia verzia, presúva shared/doma.js.
  * @param {string | null} raw @returns {Oznamenia}
  */
@@ -112,7 +112,7 @@ export function morningDue(now, timeZone, hour) {
 }
 
 /**
- * Čo ukáže sekcia Oznámenia v oboch appkách: ktorá hláška (kľúč do oznameniaTexts().stav, prázdny
+ * Čo ukáže sekcia Oznámenia: ktorá hláška (kľúč do oznameniaTexts().stav, prázdny
  * bez hlášky) a či sú voľby zamknuté. Bez polohy appka nemá z čoho rátať; kým sa zapína, nedá sa
  * nič meniť, aby sa zmeny nepobili. Zapnuté oznámenie sa dá vždy vypnúť.
  * @param {import('./settings.js').Known} known @param {string} stav stav z web/oznamenia.js @param {boolean} on

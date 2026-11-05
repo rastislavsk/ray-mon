@@ -1,6 +1,5 @@
 // Hviezdy v noci na karte Teraz: kde na oblohe nad elektrárňou v danej chvíli stoja najjasnejšie
-// hviezdy (shared/hviezdy-data.js) a ktoré z nich oblaky a mesiac nechajú vidieť. Obe appky
-// kreslia ten istý zoznam, každá po svojom. Čisté funkcie, čas aj poloha prichádzajú v parametroch.
+// hviezdy (shared/hviezdy-data.js) a ktoré z nich oblaky a mesiac nechajú vidieť. Čisté funkcie, čas aj poloha prichádzajú v parametroch.
 
 import { HVIEZDY } from './config.js';
 import { HVIEZDY_DATA } from './hviezdy-data.js';

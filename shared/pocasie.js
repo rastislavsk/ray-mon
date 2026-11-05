@@ -1,6 +1,6 @@
 // Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): aký jas (jasno, polooblačno,
 // zamračené), či prší alebo sneží, či je noc, v akej fáze je Mesiac a ktoré hviezdy svietia.
-// Obe appky ho kreslia po svojom, odpoveď je jedna. Čisté funkcie, čas aj dáta prichádzajú
+// Čisté funkcie, čas aj dáta prichádzajú
 // v parametroch.
 
 import { HVIEZDY, POCASIE, SKY } from './config.js';

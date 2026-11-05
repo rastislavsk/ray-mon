@@ -1,4 +1,4 @@
-// Poslucháče karty Dnes novej appky (kódové meno mozem): „Skúsiť znova“. Končí volaním setState;
+// Poslucháče karty Dnes (kódové meno mozem): „Skúsiť znova“. Končí volaním setState;
 // kreslí render/mozem.js. Stránku pásu odporúčaní sleduje teraz-interactions.js.
 
 /** @typedef {import('./state.js').Store} Store */

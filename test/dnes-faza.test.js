@@ -31,7 +31,7 @@ function input(now, extra = {}) {
     };
 }
 
-/** Model karty tak, ako ho skladajú obe appky. @param {ReturnType<typeof input>} i @param {import('../shared/messages.js').Voice} [voice] */
+/** Model karty tak, ako ho skladá appka. @param {ReturnType<typeof input>} i @param {import('../shared/messages.js').Voice} [voice] */
 function faza(i, voice = 'drzy') {
     const m = mozemModel(i, { voice });
     return { m, d: dnesFaza(i, m.den, m.facts ? m.facts.window : null, { voice }) };

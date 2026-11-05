@@ -164,7 +164,7 @@ test('pvDue: meranie sa pýta až po intervale spôsobu, bez merania hneď', () 
     assert.equal(pvDue(fox, pv, at(175), at(120).getTime()), false, 'dopyt po meraní posúva ďalší');
 });
 
-test('rytmus: spoločný pre obe appky, patrí k meraniu podľa spôsobu a mena, nechá posledné meranie', () => {
+test('rytmus: spoločný, patrí k meraniu podľa spôsobu a mena, nechá posledné meranie', () => {
     const z = { sposob: 'huawei-northbound', pecat: 'v1.x', nazov: 'Dvorany' };
     const pv = /** @type {any} */ (fixtureData().pv);
     const r = dalsiRytmus(null, z, NOW, pv);

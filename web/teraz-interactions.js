@@ -1,10 +1,10 @@
-// Poslucháče karty Teraz novej appky: náhľad iného času na grafe (prst, kurzor, klávesnica),
+// Poslucháče karty Teraz: náhľad iného času na grafe (prst, kurzor, klávesnica),
 // „Späť na teraz“, „Skúsiť znova“, stránka pásu odporúčaní a panel štítka pod číslom. Každý končí
 // volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Pravidlá dotyku sú v CLAUDE.md, časť
 // Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
-import { localMinutes } from '../../shared/solar.js';
-import { bindDayScrub } from '../../web/teraz-gestures.js';
+import { localMinutes } from '../shared/solar.js';
+import { bindDayScrub } from './teraz-gestures.js';
 import { stepBack } from './nav-back.js';
 import { shows } from './state.js';
 

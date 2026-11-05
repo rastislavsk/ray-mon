@@ -146,7 +146,7 @@ test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pr
     assert.deepEqual(swNotice(z, [neskor], weather, at('09:00')).keep, [neskor], 'budúca ostáva');
 });
 
-test('oznamOvladanie: hláška a zámok sekcie Oznámenia, rovnaké pre obe appky', () => {
+test('oznamOvladanie: hláška a zámok sekcie Oznámenia, rovnaké', () => {
     assert.deepEqual(oznamOvladanie('elektraren', 'ok', false), { stav: 'ok', blocked: false, busy: false });
     assert.deepEqual(oznamOvladanie('nic', 'ok', false), { stav: 'bezElektrarne', blocked: true, busy: false });
     assert.deepEqual(oznamOvladanie('poloha', 'zakazane', false), { stav: 'zakazane', blocked: true, busy: false });

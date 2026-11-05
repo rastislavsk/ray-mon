@@ -1,4 +1,4 @@
-// Hlavička oboch appiek: RAY-MON, pod ním lokalita elektrárne, bez zadaných panelov vpravo výzva
+// Hlavička: RAY-MON, pod ním lokalita elektrárne, bez zadaných panelov vpravo výzva
 // „Zadaj panely ›“ (docs/navrhy/hlavicka-jednotna.html). Bodka stavu merania a čas posledného
 // merania (bez neho slovom, čo appka ukazuje) sú v riadku pod číslom karty Teraz (stavRiadok,
 // docs/navrhy/teraz-stav-merania.html); ťuknutie na riadok otvorí bublinu s vysvetlením stavu.
@@ -63,7 +63,7 @@ export function hlavickaModel(s, voice = 'drzy') {
 }
 
 /**
- * Riadok pod číslom karty Teraz v oboch appkách (docs/navrhy/teraz-stav-merania.html): bodka, čas
+ * Riadok pod číslom karty Teraz (docs/navrhy/teraz-stav-merania.html): bodka, čas
  * merania a slovo o stave z hlavickaModel, ťuknutie otvorí bublinu (`tip`). Počas náhľadu iného času
  * patrí číslo k inej chvíli (nadpis karty povie ku ktorej) - čas merania vedľa neho by klamal. Riadok
  * vtedy povie len, odkiaľ je číslo v zvolenom čase (`source` z terazModel), bez bodky (`tone: 'nahlad'`)

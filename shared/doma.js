@@ -1,5 +1,5 @@
 // Čo má človek doma: spotrebiče, s ktorými ráta Plán dňa aj ranné oznámenie. Voľba telefónu,
-// spoločná pre obe appky, uložená pod DOMA_STORAGE_KEY. Čisté funkcie bez DOM a úložiska.
+// spoločná, uložená pod DOMA_STORAGE_KEY. Čisté funkcie bez DOM a úložiska.
 
 import { MOZEM_ITEMS, PLAN_DNA } from './config.js';
 

@@ -317,7 +317,7 @@ export function readLink(text) {
 /**
  * Časť adresy za mriežkou, ktorú appka pri štarte berie ako odkaz s nastavením, alebo
  * prázdna, keď je to adresa, ktorú appka v tejto karte sama zapísala (`vlastna`, cesta a časť za
- * mriežkou). Taká adresa nesie nastavenie z chvíle zápisu - po zmene v druhej appke či inej karte by
+ * mriežkou). Taká adresa nesie nastavenie z chvíle zápisu - po zmene v inej karte by
  * ho obnovenie starej karty ponúklo prevziať a prevzatie by novšie nastavenie prepísalo starším.
  * To isté platí pre adresu so značkou VLASTNA_HASH_KEY z inej karty (história prehliadača), keď
  * má appka novšie - uložené nastavenie, alebo vymazané údaje (`novsie`). Bez neho je taká adresa
@@ -348,8 +348,7 @@ export function incomingSettings(linked, saved) {
 // ---- Vzhľad ------------------------------------------------------------------------
 
 /**
- * Vzhľad: tón hlášok (spoločný pre obe appky), živá obloha (len nová appka) a farba pozadia podľa
- * ceny (len súčasná). Uložený je pod LOOK_STORAGE_KEY ako { ton, obloha, farba }.
+ * Vzhľad: tón hlášok, živá obloha a farba pozadia (dnes bez účinku). Uložený je pod LOOK_STORAGE_KEY ako { ton, obloha, farba }.
  * @typedef {{ voice: import('./messages.js').Voice, liveSky: boolean, bgTint: boolean }} Look
  */
 

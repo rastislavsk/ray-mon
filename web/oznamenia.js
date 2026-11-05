@@ -1,6 +1,5 @@
 // Ranné oznámenie v prehliadači: čo telefón vie, zapnutie a vypnutie odberu Web Push a nastavenie
-// pre service worker (sw.js), ktorý nevidí localStorage. Nevie nič o stave ani DOM appky, takže ho
-// používajú obe appky (súčasná aj obloha/). Rozhodnutia a texty sú v shared/oznamenia.js.
+// pre service worker (sw.js), ktorý nevidí localStorage. Nevie nič o stave ani DOM appky. Rozhodnutia a texty sú v shared/oznamenia.js.
 
 import { OZNAMENIA, WORKER_OZNAMENIA_URL } from '../shared/config.js';
 import { vapidKeyBytes } from '../shared/oznamenia.js';
@@ -14,10 +13,10 @@ import { saveOznamenia } from './storage.js';
  */
 
 /**
- * Appka ako cesta voči koreňu: `./` súčasná, `obloha/` nová. Každá má vlastný service worker
- * (`sw.js`, `obloha/sw.js`) s rozsahom svojej appky - Android potom oznámenie pripíše
- * nainštalovanej appke (jej logo) a nie Chrome. Odber je však v telefóne len jeden, voľba
- * oznámení je spoločná: posiela ho appka, v ktorej sa naposledy zapol alebo zmenila hodina.
+ * Appka ako cesta voči koreňu: `./` teraz, `obloha/` adresa, kde appka bývala do novembra 2026.
+ * Telefón môže mať odber v service workeri `obloha/sw.js` - ten ostáva, aby oznámenia chodili
+ * ďalej. Prvá zmena hodiny či nové zapnutie odber presunie do koreňa a starý zruší. Keď
+ * na nikom ostane starý odber, `obloha/` z APPKY aj priečinok obloha/ môžu ísť preč.
  * @typedef {'./' | 'obloha/'} Appka
  */
 /** @type {Appka[]} */
@@ -28,7 +27,7 @@ const swUrl = (app) => new URL(`../${app}sw.js`, import.meta.url).href;
 
 /**
  * Registrácia práve tejto appky. `getRegistration` vráti registráciu s najdlhším rozsahom, ktorý
- * adresu pokrýva - pre obloha/ teda aj koreňovú, keď vlastnú ešte nemá. Preto kontrola rozsahu.
+ * adresu pokrýva - pre obloha/ teda aj koreňovú, keď vlastnú nemá. Preto kontrola rozsahu.
  * @param {Appka} app
  */
 async function registracia(app) {
@@ -125,7 +124,7 @@ function cakajNaAktivny(reg) {
 
 /**
  * Vypne ranné oznámenie: zruší odber vo Workeri aj v prehliadači a zmaže, čo mal service worker
- * odložené - v oboch appkách, voľba je spoločná. Aj keď niečo zlyhá alebo trvá priveľa, v appke
+ * odložené, voľba je spoločná. Aj keď niečo zlyhá alebo trvá priveľa, v appke
  * je vypnuté - Worker neplatný odber zmaže sám.
  */
 export async function vypniOznamenia() {
@@ -179,7 +178,7 @@ export async function initOznamZosulad(store) {
 /**
  * Odkladá service workeru nastavenie (Cache API) pri každej zmene stavu, ktorá sa ho týka - len
  * keď je oznámenie zapnuté a appka pozná aspoň polohu. `app`: ktorú appku ťuknutie na oznámenie
- * otvorí, cesta voči koreňu (`./` súčasná, `obloha/` nová). Keď sa pri zapnutom oznámení zmení
+ * otvorí, cesta voči koreňu (`./`). Keď sa pri zapnutom oznámení zmení
  * časové pásmo elektrárne (iná poloha), pošle ho aj Workeru - ráta v ňom ranný čas.
  * @param {{ get: () => MirrorSource, subscribe: (fn: (s: MirrorSource) => void) => unknown }} store
  * @param {Appka} app
@@ -218,7 +217,7 @@ export function initOznamZrkadlo(store, app) {
 }
 
 /**
- * Časť stavu oboch appiek, z ktorej vzniká zrkadlo pre service worker.
+ * Časť stavu, z ktorej vzniká zrkadlo pre service worker.
  * @typedef {{ site: import('../shared/config.js').Site, plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff, known: import('../shared/settings.js').Known,
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia, doma: string[], voice: import('../shared/messages.js').Voice }} MirrorSource

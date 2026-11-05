@@ -1,5 +1,9 @@
 # Architektúra
 
+> **Do novembra 2026 tu bežali dve appky.** Pôvodná skončila (git tag `original-posledna`), Živá obloha sa
+> presťahovala z `obloha/` do koreňa. Kde text nižšie spomína „súčasnú appku“, je to história; „nová appka“
+> je dnešná appka a jej súbory sú v koreni a vo `web/`, nie v `obloha/`.
+
 ## Prehľad
 
 ```
@@ -101,7 +105,7 @@ kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré o
 nemenil stav ani HTML. `INFO_ITEMS` dnes zahŕňa všetky rozbaľovacie položky karty (Elektráreň,
 Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je
 krokom navigácie, takže ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
-v `obloha/web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
+v `web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
 ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
@@ -168,31 +172,19 @@ plátno presne na kartu. Rozmer teda prichádza tou istou cestou ako každý in�
 
 **`worker/`** je tenký: otvor pečať (`pecat.js`), opýtaj sa výrobcu (`zdroje.js`, s opakovaním pri prechodnej chybe, `http.js`), zavolaj `shared/`, vráť JSON.
 
-## Dve appky: súčasná a „Živá obloha“
+## Živá obloha a čo ostalo po dvoch appkách
 
-Druhý dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľa súčasnej appky,
-v priečinku `obloha/`, a beží na `…/ray-mon/obloha/`. Pôvodne mal súčasnú appku nahradiť; od 22. 10. 2026 ostávajú obe natrvalo ako **jedno jadro, dva kabáty** (návrh
-`docs/navrhy/jedno-jadro-dva-kabaty.html`, pravidlá v `CLAUDE.md`). Jadro dáva obom tie isté
-odpovede, kabát smie mať vlastné obrazovky a funkcie. Štyri rozdiely, ktoré menili odpoveď
-(meranie, ktoré mlčí, dva zoznamy vecí, poloha bez panelov), sú zjednotené (návrhy
-`meranie-mlci.html`, `jeden-zoznam-veci.html`, `poloha-bez-panelov.html`) a jadro už nevie, pre ktorú
-appku počíta.
+Dizajn (návrh `docs/navrhy/smer-b-obloha.html`) vznikol po krokoch vedľa pôvodnej appky a v novembri 2026
+ju nahradil. Stránka, stav, render a poslucháče sú v koreni a vo `web/`, jadro v `shared/`.
 
-`obloha/` má vlastnú stránku (`index.html`, `style.css`, `manifest.webmanifest`), vlastný
-`boot.js` s tou istou ochranou pred zmiešanou cache ako koreňový a vlastný stav, render a
-poslucháče v `obloha/web/`. Pravidlá sú tie isté: jeden stav, jedno prekreslenie, `.hidden`
-s `!important`, žiadne `:hover`. Čo appky zdieľajú, nie je skopírované – nová appka importuje
-ten istý súbor:
-
-- **`shared/`** celé. Zmena výpočtu sa prejaví v oboch appkách naraz. Zoznam kariet `PANELS` je
-  v `config.js`, kódové názvy sú v oboch rovnaké (karta Teraz – v súčasnej appke kedysi Terazky – má kód
-  `terazky`). Obe appky sa otvárajú vždy na prvej z nich, `PANELS[0]`.
-- **Worker** – tie isté endpointy, nová appka pripája aj meria rovnako (`web/data.js`).
-- **Uložené nastavenie.** Obe appky sú na jednej doméne, a teda majú jeden `localStorage`
-  (`elektraren-v1`, `poloha-v1`, `dni-v1`, `pocasie-v1`, `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho
-  ten istý kód v `web/storage.js`, takže formát sa nemôže rozísť. `pocasie-v1` je posledné počasie
-  z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri tom
-  (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
+- **Uložené nastavenie.** Jeden `localStorage` (`elektraren-v1`, `poloha-v1`, `dni-v1`, `pocasie-v1`,
+  `pristup-v1`, `meranie-v1`, `sucty-v1`). Číta a zapisuje ho `web/storage.js`. `pocasie-v1` je posledné
+  počasie z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri
+  tom (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
+- **Prechodný priečinok `obloha/`.** `obloha/index.html` presmeruje staré odkazy do koreňa aj s hashom.
+  `obloha/sw.js` a `obloha/icon-192.png` držia odbery oznámení z čias, keď appka bývala tam; `APPKY`
+  vo `web/oznamenia.js` ich preto stále pozná. Nainštalovaná appka s `id: /ray-mon/obloha/` je pre
+  prehliadač iná appka než koreňová (`id: /ray-mon/index.html`) - treba ju preinštalovať.
 - **Prístup k meraniu neplatí** (`shared/pristup.js`, návrh `docs/navrhy/meranie-pristup-neplati.html`).
   Keď Worker na `/pv` odpovie 400, výrobca prístup odmietol - nie je to výpadok. `refresh.js` odmietnutia
   počíta za sebou (`pristup-v1`, aby appka po otvorení neskúšala zlé heslo hneď znova); po dvoch appka povie
@@ -222,25 +214,12 @@ ten istý súbor:
   Worker sa pýta pri pripojení a potom najviac raz za 15 minút (`KRIVKA` v `shared/krivka.js`), krivku
   drží v pečati a medzitým k nej pridáva aktuálny výkon (`krivkaDnes`), aby čiara v grafe dňa došla až
   k „teraz“. SolaX priebeh dňa v API nemá - graf má len bod „teraz“.
-- **Neutrálne moduly vo `web/`**, ktoré nevedia nič o stave ani DOM súčasnej appky: `store.js`
-  (`createStore`), `storage.js`, `data.js`, `refresh.js` (obnova dát, meranie a denník výroby,
-  hodiny), `day-pager.js` (listovanie dní v detaile dňa prstom), `nav-history.js` (kroky navigácie
-  v histórii prehliadača), `setup-wiring.js` (poslucháče sprievodcu nastavením a uloženie),
-  `settings-store.js` (zrkadlenie nastavenia do adresy) a `svg.js` (SVG z modelov). Vznikli vytiahnutím zo `state.js`, `settings-store.js`,
-  `interactions.js` a `history.js`; tie ich používajú ďalej a správanie súčasnej
-  appky sa nezmenilo. `state.js` a `settings-store.js` ich znova vyvážajú, aby sa nemuseli meniť
-  ich odberatelia.
-
-Nová appka nesmie importovať nič, čo siaha na DOM alebo stav súčasnej appky (`web/state.js`,
-`web/dom.js`, `web/render/`, …). Keď niečo také potrebuje, čistá časť sa vytiahne do `shared/`
-alebo do neutrálneho modulu ako vyššie.
-
-**Rýchly štart novej appky (úloha #29).** Build krok nie je, takže každý modul je samostatný súbor
-a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov. Preto:
+  **Rýchly štart novej appky (úloha #29).** Build krok nie je, takže každý modul je samostatný súbor
+  a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov. Preto:
 
 - **Neskoré časti.** Pri štarte sa sťahuje len jadro: úvodná karta (Môžem? alebo Teraz), hlavička,
   navigácia a obloha. Karty 7 dní, Štatistika a Nastavenie so sprievodcom sú tri časti
-  (`PARTS` v `obloha/web/state.js`, vstupy `obloha/web/part-*.js`), ktoré `obloha/web/parts.js`
+  (`PARTS` v `web/state.js`, vstupy `web/part-*.js`), ktoré `web/parts.js`
   načíta dynamickým `import()` – keď ich obrazovka potrebuje (`neededParts`), inak sekundu po
   prvom vykreslení, keď je prehliadač voľný. Prvé vykreslenie čaká len na časti, ktoré úvodná
   obrazovka ukazuje (na telefóne žiadnu; na širokej obrazovke stĺpec 7 dní). Stav `parts` hovorí,
@@ -258,12 +237,12 @@ a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov.
   z pôvodného súboru google/fonts; `test/font-subset.test.js` ohlási znak v textoch, ktorý
   v ňom chýba. Cudzí znak (meno obce) vykreslí záložné písmo.
 
-Rýchlosť sa meria `npm run lighthouse:obloha` (Lighthouse, emulácia pomalého mobilu, medián z 3);
+Rýchlosť sa meria `npm run lighthouse` (Lighthouse, emulácia pomalého mobilu, medián z 3);
 vypíše aj počet a veľkosť súborov stiahnutých pred prvým zobrazením. Lokálny server hovorí HTTP/2
 ako GitHub Pages (certifikát si vyrobí `openssl`, bez neho meria cez HTTP/1.1 a povie to) – pri
 HTTP/1.1 Lighthouse počíta so 6 spojeniami a appka s mnohými malými modulmi by vyšla asi o pol
 sekundy pomalšia, než naozaj je. Rozhoduje však meranie nasadenej appky (PageSpeed alebo
-`npm run lighthouse:obloha -- https://rastislavsk.github.io/ray-mon/obloha/`): zlepšenie, ktoré
+`npm run lighthouse -- https://rastislavsk.github.io/ray-mon/`): zlepšenie, ktoré
 lokálne vyzerá ako 0,1 s, sa na Pages nemusí prejaviť.
 
 Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
@@ -325,7 +304,7 @@ z `weekListModel`, hlášky z `dayDetailMessage` a `weekMessage` – čísla sú
 štvrťhodinách (`forecastDayPlan` v `day-plan.js`; dnešok je presne `dayPlan`, takže okno sedí
 s kartami Môžem? a Teraz, iný deň počíta to isté z predpovede toho dňa). Ikona počasia je
 z priemernej oblačnosti dňa cez `skyWeather` (tá istá hranica ako obloha) a kreslí ju vlastná
-sada troch SVG v `obloha/web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
+sada troch SVG v `web/render/icons.js`. Detail dňa kreslí ten istý graf ako karta Teraz
 (`web/day-chart.js`, spoločný pre obe appky), pri inom dni než dnešok bez značky „teraz“. „Teraz“ je
 bod na konci nameranej krivky, stlmené bunky pásu plánu, ktoré už prešli, a bez náhľadu aj čiara
 náhľadu s časom – stojí na „teraz“, kým ju prst neposunie. Krivky sú v SVG, ktoré sa s grafom
@@ -346,14 +325,14 @@ appke**, len v novom kabáte. Čo urobí ktoré tlačidlo, je v `shared/setup-fl
 stav → zmena), texty v `shared/setup-texts.js`, poslucháče vo `web/setup-wiring.js` – obrazovky
 sprievodcu majú v oboch appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód
 a ukladá tým istým `web/storage.js`. Každá appka si len kreslí svoje (`web/render/nastavenie.js`,
-`obloha/web/render/sprievodca.js`) a dodá krok späť cez svoju históriu. Obrazovka sprievodcu je
+`web/render/sprievodca.js`) a dodá krok späť cez svoju históriu. Obrazovka sprievodcu je
 krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); Escape je
 jeho „Späť“. Úprava panelov z prehľadu má navyše
 záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa všetko o streche.
 
 Na širšej obrazovke nová appka mení rozloženie podľa šírky okna, nie podľa druhu zariadenia.
 Hranice sú `LAYOUT_PX` v `shared/config.js` (stredná šírka je tá istá, od ktorej súčasná appka
-kreslí desktop); `layoutOf` v `obloha/web/state.js` z nich urobí `layout` v stave a render ho
+kreslí desktop); `layoutOf` v `web/state.js` z nich urobí `layout` v stave a render ho
 zapíše na `<html>` ako `data-layout` – `style.css` tak nemá v `@media` ani jednu šírku natvrdo.
 Pod strednou šírkou (telefón, tablet na výšku) je appka taká, ako bola. Od nej sú karty Môžem?,
 Teraz a 7 dní **prehľad so stĺpcami** (`dashboard`): na tablete na šírku dva, na počítači tri,

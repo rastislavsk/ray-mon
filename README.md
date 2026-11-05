@@ -20,39 +20,21 @@ Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrá
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
-- **Teraz** – karta je v navigácii prvá a appka sa na nej otvára (každý telefón si to môže
-  zmeniť v Nastavení). Rozloženie karty Teraz z novej appky vo farbách tejto: veľké číslo s aktuálnym
-  výkonom (vo farbe plánu dňa), pod ním tenký pásik s percentom (koľko z toho, čo by dala jasná
-  obloha), odkiaľ je číslo, štítky (ÁNO, LACNÁ SIEŤ…)
-  a veta o teraz („Slnko to teraz platí za nás.“). Ťuknutie na štítok otvorí panel: čo platí teraz
-  (dokedy slnko stačí, dokedy trvá pásmo siete a čo príde potom) a čo štítok znamená. Pod nimi **Plán dňa** ako plagát v štýle
-  Štatistiky: veta, čo zapnúť teraz, a očíslované riadky – čo kedy zapnúť a prečo (práčka a
-  sušička vždy v jeden deň, sušička po práčke). Pod plánom graf dňa – hore oblačnosť
-  po hodinách, krivka predpovede a nameraná krivka s osou kW, hranica veľkých spotrebičov s plochou
-  nad ňou (slnko navyše na veľké spotrebiče), pás plánu po polhodinách (zelená slnko stačí, oranžová
-  lacná sieť, červená drahá, sivá bežná cena; čo už prešlo, je stlmené) a pod ním okno „Zapni veľké“.
-  Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas, „Späť na teraz“ ho vráti.
-  Na širokej obrazovke je Plán dňa vedľa grafu. Obsah počíta ten istý model ako nová appka.
-- **Dnes** (kedysi Môžem?) – hore jedno veľké slovo o celom dni na farbe triedy dňa: ráno podľa
-  predpovede (**Oskar dnes pujde na plný koule**, **NAGOVNO DEŇ**…), cez deň, keď sa deň oproti ránu
-  zlepší či pokazí (**Tak jo, Oskar nakoniec vylezie**), a večer podľa nameraného (**Not baad, zer gút**).
-  Trieda dňa je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň v jednotkách,
-  ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej (tie isté prepočty ako
-  Štatistika). Pod tým pás kariet do strán: dnešok (predpoveď, koľko už nabehlo, okno na veľké veci)
-  a kedy bude lepšie; na širokej obrazovke sú pod sebou.
-- **7 dní** – prehľad dní: na telefóne rebríček, kde má každý deň pásik dlhý podľa výroby
-  voči najsilnejšiemu dňu v týždni, a nad ním jediné veľké číslo za celý týždeň so stĺpčekmi
-  dní v malom; pod rebríčkom legenda farieb (silný, priemerný, slabý deň); na širokej
-  obrazovke bubliny (Dnes, Zajtra, 7 dní spolu) a tabuľka so všetkými stĺpcami. Klik otvorí
-  detail: na deň okno na veľké spotrebiče (odkedy dokedy slnko stačí a pri dnešku, či už
-  beží), časová os dňa – hore riadok heatmapy dňa (výroba po hodinách v tých istých farbách
-  ako heatmapa týždňa), pod ním krivka oblačnosti a pás „zapni veľké / čiastočne / zo siete“
-  z plánu dňa – tri čísla (predpoveď, oblačnosť alebo koľko už nabehlo, špička) a tlačidlá na
-  susedné dni; pri dnešku je v grafe značka „teraz“. Na širokej obrazovke ostáva priebeh
-  výroby krivkou s oblačnosťou a nameranou výrobou. Klik na bublinu „Spolu za 7 dní“
-  (na širokej obrazovke na bublinu „7 dní spolu“) otvorí detail celého týždňa: dennú výrobu,
-  mapu výroby hodina × deň a hlášku o najsilnejšom dni. Na širokej obrazovke je vidno všetko
-  naraz.
+- **Teraz** – karta je v navigácii prvá a appka sa na nej vždy otvára. Veľké číslo s aktuálnym
+  výkonom, pod ním tenký pásik s percentom (koľko z toho, čo by dala jasná obloha), odkiaľ je číslo,
+  štítky (ÁNO, LACNÁ SIEŤ…) a veta o teraz. Ťuknutie na štítok otvorí panel: čo platí teraz a čo
+  štítok znamená. Pod nimi **Plán dňa** – veta a časová os, čo kedy zapnúť (večer na ďalší deň).
+  Pod plánom graf dňa: oblačnosť po hodinách, krivka predpovede a nameraná krivka, hranica veľkých
+  spotrebičov a pás plánu. Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas,
+  „Späť na teraz“ ho vráti.
+- **Dnes** (kedysi Môžem?) – oblúk slnka a jedno veľké slovo o celom dni podľa triedy dňa: ráno podľa
+  predpovede, cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného. Trieda dňa
+  je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň
+  v jednotkách, ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej.
+- **7 dní** – prehľad dní ako predpoveď počasia: nadpis s najlepším dňom, súčet týždňa a riadky
+  s počasím, zeleným pásom okna na veľké spotrebiče a kWh. Klik otvorí detail dňa s grafom z karty
+  Teraz alebo detail týždňa so stĺpcami a mapou výroby hodina × deň. Na širokej obrazovke sú karty
+  Dnes, Teraz a 7 dní vedľa seba v stĺpcoch.
 - **Štatistika** – plagát obdobia: dnes, tento mesiac, tento rok alebo od spustenia na streche
   (prepínač obdobia na plagáte). Veľké číslo kWh, pod ním obrázok obdobia – dnešok voči predpovedi,
   mesiac ako mriežka dní, rok ako stĺpce mesiacov, celý čas ako splatený uhlík z výroby panelov – a
@@ -81,9 +63,8 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   podľa ktorých appka sama určí, ktoré pásmo je lacné a ktoré drahé. Na čo človek nevie odpoveď, preskočí tlačidlom „Neviem“. Po uložení je
   v karte rozbaľovacia položka **Elektráreň** s prehľadom: karta s menom, celkovým výkonom,
   zostavou a kompasom plôch a pod ňou riadky, z ktorých ťuknutie otvorí len jeho krok. Tlačidlo
-  Späť na telefóne vracia v sprievodcovi o obrazovku a rozbalenú položku Nastavenia zbalí (v oboch
-  appkách; v Živej oblohe sa rovnako zbaľujú sekcie Elektráreň, Vzhľad, Oznámenia a Appka).
-  Rozbalená je najviac jedna položka. Nastavenie sa ukladá len v prehliadači.
+  Späť na telefóne vracia v sprievodcovi o obrazovku a rozbalenú sekciu Nastavenia zbalí.
+  Rozbalená je najviac jedna sekcia. Nastavenie sa ukladá len v prehliadači.
   Pod elektrárňou je sekcia **Appka** (kedysi samostatná karta Info). Appka sa otvára vždy
   na karte Teraz. **Zdieľať appku**: QR kód,
   odkaz na appku a tlačidlo na poslanie cez WhatsApp. K odkazu sa dá pribaliť vlastné
@@ -97,8 +78,7 @@ listujú dni v detaile dňa na karte 7 dní: obsah ide za prstom a vedľa neho u
 po pustení dobehne na nový deň (za tretinou šírky alebo pri rýchlom švihnutí), inak sa vráti. Na
 Dnes a na poslednom dni sa pás len poddá. Nad detailom je riadok so šípkou späť do prehľadu a
 čipmi dní – ťuknutie na čip, tlačidlá susedných dní dole aj šípky na klávesnici listujú tým istým
-pohybom. Nadpis dňa nesie ikonu oblohy a pod ním slovo (jasno, polojasno, zamračené) – v oboch
-appkách rovnako. Po prelistovaní čítačka ohlási deň a jeho poradie. Kto má v systéme zapnutý útlm
+pohybom. Nadpis dňa nesie ikonu oblohy a pod ním slovo (jasno, polojasno, zamračené). Po prelistovaní čítačka ohlási deň a jeho poradie. Kto má v systéme zapnutý útlm
 pohybu, dostane prelistovanie bez dojazdu. Nad grafom stĺpcov v detaile týždňa je pomalé ťahanie
 prezeraním s tooltipom, rýchle švihnutie ho ani neukáže. Zvislý ťah je posúvanie stránky – aj keď
 prst začne na grafe – a tooltip sa pri ňom neukáže tiež.
@@ -112,18 +92,15 @@ zatvorenie. Zatvorenie sa nikde nevynucuje dvojitým stlačením – to je zvyk 
 androidových appiek, nie webu, a stránka sa sama zavrieť ani nevie. Adresa sa pritom
 nemení, takže odkaz na appku ostáva jeden.
 
-## Druhý vzhľad „Živá obloha“
+## Živá obloha
 
-V priečinku `obloha/` je druhá appka podľa návrhu
-[`docs/navrhy/smer-b-obloha.html`](docs/navrhy/smer-b-obloha.html) (smer B; otvor ho v prehliadači,
-je klikací), na <https://rastislavsk.github.io/ray-mon/obloha/>. Pozadie je obloha podľa času dňa,
-skutočného východu a západu slnka v polohe elektrárne a oblačnosti z predpovede. Má tie isté karty
-ako súčasná appka, každú po svojom.
+Vzhľad appky je podľa návrhu [`docs/navrhy/smer-b-obloha.html`](docs/navrhy/smer-b-obloha.html):
+pozadie je obloha podľa času dňa, skutočného východu a západu slnka v polohe elektrárne
+a oblačnosti z predpovede.
 
-Obe appky ostávajú natrvalo: jedno jadro, dva kabáty
-([`docs/navrhy/jedno-jadro-dva-kabaty.html`](docs/navrhy/jedno-jadro-dva-kabaty.html)). Počítajú
-tým istým kódom (`shared/`, časť `web/`), berú dáta z toho istého Workera a čítajú to isté uložené
-nastavenie – čo si človek nastaví v jednej, vidí aj v druhej. Líšia sa obrazovkami, nie odpoveďami.
+Do novembra 2026 bola Živá obloha v priečinku `obloha/` a vedľa nej bežala pôvodná appka. Pôvodná
+appka skončila, jej posledný stav má git tag `original-posledna`. V `obloha/` ostalo presmerovanie
+pre staré odkazy a service worker pre odbery oznámení z tej doby.
 
 ## Ako to funguje
 
@@ -151,7 +128,7 @@ Keď nie je dostupné nič, appka ukáže „dáta nedostupné“ a nespadne.
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shared/`                                      | Doménová logika bez vstupov a výstupov: konštanty, fyzika slnka, parser kiosku, tarifa, texty, modely grafov. Beží v prehliadači, v Node aj vo Workeri. |
 | `web/`                                         | Stav appky, načítanie dát, vykresľovanie po kartách, poslucháče udalostí, skladanie SVG.                                                                |
-| `obloha/`                                      | Druhá appka „Živá obloha“ vedľa súčasnej. Vlastná stránka a stav, výpočty a dáta zo `shared/` a `web/`.                                                 |
+| `obloha/`                                      | Len prechod: presmerovanie starej adresy do koreňa a service worker starých odberov oznámení.                                                           |
 | `worker/`                                      | Cloudflare Worker: jeden endpoint, ktorý stiahne kiosk FusionSolar.                                                                                     |
 | `test/`                                        | Jednotkové testy, kontrakt dát a end-to-end testy v prehliadači.                                                                                        |
 | `index.html`, `style.css`, `boot.js`, `app.js` | Samotná stránka. Žiadny bundler, žiadny framework.                                                                                                      |

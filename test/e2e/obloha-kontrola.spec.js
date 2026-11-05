@@ -1,4 +1,4 @@
-// E2E kontroly kvality novej appky „Živá obloha“ na telefóne (krok 7): kontrast textu na oblohe
+// E2E kontroly kvality na telefóne (krok 7): kontrast textu na oblohe
 // a na skle, najmenšie písmo, väčšie písmo v systéme, dotykové plochy a nadpisy pre čítačku.
 // Testy neprechádzajú zoznam menovaných prvkov, ale všetko, čo v stránke naozaj je - nový prvok
 // tak netreba nikam dopisovať, test ho uvidí sám (ako „.hidden skryje každý prvok“).
@@ -53,7 +53,7 @@ const GEOCODE = {
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 
 /**
- * Otvorí novú appku s pevným časom a dátami z fixtures. Predvolene má uložené Dvorany s kioskom,
+ * Otvorí appku s pevným časom a dátami z fixtures. Predvolene má uložené Dvorany s kioskom,
  * cenami, denníkom a jedným zápisom; so `settings: null` a `site` pozná len polohu.
  * @param {import('@playwright/test').Page} page
  * @param {{ time?: Date, settings?: typeof OWNER | null, site?: typeof SITE | null, liveSky?: boolean }} [opts]
@@ -79,7 +79,7 @@ async function openObloha(page, { time = at('13:00'), settings = OWNER, site = n
     await uloz(DAYLOG_STORAGE_KEY, JSON.stringify(LOG));
     if (!liveSky) await uloz(LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ voice: 'drzy', liveSky: false })));
     await page.clock.setFixedTime(time);
-    await page.goto('/obloha/');
+    await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
     return errors;
 }
@@ -464,7 +464,7 @@ test.describe('čítačka obrazovky', () => {
         await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
         await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))]);
         await page.clock.install({ time: cas });
-        await page.goto('/obloha/');
+        await page.goto('/');
         await expect(page.locator('#page')).toHaveAttribute('data-panel', 'terazky');
         await page.locator('#nav-mozem').click();
         await expect(page.locator('#page')).toHaveAttribute('data-panel', 'mozem');
