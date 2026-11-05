@@ -2169,8 +2169,8 @@ button.live[aria-expanded='true'] {
     text-align: center;
     color: #fff;
 }
-.nast .credit:first-of-type {
-    margin-top: 16px;
+.nast .app-items + .credit {
+    margin-top: 24px;
 }
 .nast .note {
     padding-top: 10px;
