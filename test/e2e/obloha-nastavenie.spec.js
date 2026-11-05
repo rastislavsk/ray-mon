@@ -257,6 +257,47 @@ test.describe('sprievodca od nuly', () => {
     });
 });
 
+test('riadok Živé meranie: stav má farbu podľa tónu, značka ostáva tlmená', async ({ page }) => {
+    const errors = await openObloha(page);
+    await nastavenie(page);
+    const riadok = page.locator('#ns-rows [data-setup-edit="meranie"] small');
+    /** Farba CSS premennej, ako ju vypočíta prehliadač. @param {string} name */
+    const farba = (name) =>
+        page.evaluate((n) => {
+            const el = document.body.appendChild(document.createElement('i'));
+            el.style.color = `var(${n})`;
+            const c = getComputedStyle(el).color;
+            el.remove();
+            return c;
+        }, name);
+    /** @param {string} tone @param {string} text @param {string} name */
+    const stav = async (tone, text, name) => {
+        await expect(riadok).toHaveText(`Huawei · ${text}`);
+        await expect(riadok.locator('[data-tone]')).toHaveAttribute('data-tone', tone);
+        await expect(riadok.locator('[data-tone]')).toHaveText(text);
+        await expect(riadok.locator('[data-tone]')).toHaveCSS('color', await farba(name));
+        await expect(riadok).toHaveCSS('color', await farba('--dim'));
+    };
+    const znova = async () => {
+        await page.reload();
+        await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
+        await nastavenie(page);
+    };
+    await stav('ok', 'pripojené · 13:00', '--yes');
+
+    // Appka sa 30 minút nedostala k dátam: Worker stále posiela čas stiahnutia 13:00.
+    await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 30 * 60e3));
+    await znova();
+    await stav('stale', 'bez spojenia · 13:00', '--amber-text');
+
+    // Bez posledného uloženého merania (nastavenie vráti openObloha) a bez odpovede Workera.
+    await page.route(WORKER_PV_URL, (route) => route.abort());
+    await page.evaluate(() => localStorage.clear());
+    await znova();
+    await stav('off', 'nepripojené', '--costly-text');
+    expect(errors).toEqual([]);
+});
+
 /** @param {import('@playwright/test').Page} page @param {string} panel */
 async function ocakavajKartu(page, panel) {
     await expect(page.locator(`#panel-${panel}`)).toBeVisible();

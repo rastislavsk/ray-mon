@@ -38,7 +38,8 @@
     --s2: #7f858e;
     --s3: rgba(5, 10, 30, 0.13);
     /* Farba má jeden význam: zelená = slnko stačí, modrá = lacná sieť, červená = drahá sieť.
-       Obloha údaj nenesie, len náladu. */
+       Obloha údaj nenesie, len náladu. Výnimka je stav merania (bodka v hlavičke, riadok Živé
+       meranie v Nastavení): zelená beží, jantárová zastarané, červená nefunguje. */
     --yes: #b9f28c;
     --cheap: #7cc4ff;
     --costly: #ff7a66;
@@ -53,6 +54,7 @@
     --dim: rgba(255, 255, 255, 0.82);
     --cheap-text: #b0dbff;
     --costly-text: #ffc4ba;
+    --amber-text: #ffd166;
     /* Plagát obdobia na karte Štatistika: obloha pri západe slnka a tmavé písmo na nej. */
     --poster-1: #ffd36e;
     --poster-2: #ff8a5c;
@@ -2144,8 +2146,15 @@ button.live[aria-expanded='true'] {
 .set .it small.est {
     font-style: italic;
 }
-/* Neplatný prístup k meraniu v riadku Živé meranie. */
-.set .it small.err {
+/* Stav v riadku Živé meranie: tóny ako v súčasnej appke (liveStatus v shared/hero-model.js).
+   Bez pravidla ostáva `wait` - „pripájam…“ je tlmené ako zvyšok riadku. */
+.set .it small [data-tone='ok'] {
+    color: var(--yes);
+}
+.set .it small [data-tone='stale'] {
+    color: var(--amber-text);
+}
+.set .it small [data-tone='off'] {
     color: var(--costly-text);
 }
 /* Odkaz s nastavením pod výzvou - na bielej karte tmavý. */

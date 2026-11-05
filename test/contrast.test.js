@@ -119,10 +119,18 @@ function everySky() {
 
 test('čitateľnosť: každý text na každej oblohe dňa, v každej výške obrazovky, aspoň 4,5 : 1', () => {
     const t = cssTokens();
-    for (const key of ['--glass', '--bar', '--dim', '--yes', '--cheap-text', '--costly-text']) assert.ok(t[key], `${key} chýba v :root`);
+    for (const key of ['--glass', '--bar', '--dim', '--yes', '--cheap-text', '--costly-text', '--amber-text'])
+        assert.ok(t[key], `${key} chýba v :root`);
     // Text priamo na oblohe je biely. Na skle a na páse navigácie aj tlmený a farebný.
     const onSky = { biely: '#fff' };
-    const onGlass = { biely: '#fff', tlmený: t['--dim'], zelený: t['--yes'], modrý: t['--cheap-text'], červený: t['--costly-text'] };
+    const onGlass = {
+        biely: '#fff',
+        tlmený: t['--dim'],
+        zelený: t['--yes'],
+        modrý: t['--cheap-text'],
+        červený: t['--costly-text'],
+        jantárový: t['--amber-text'],
+    };
     const layers = { obloha: null, sklo: t['--glass'], navigácia: t['--bar'] };
     const skies = everySky();
     assert.equal(skies.length, 3 * 3 * 96 + 2);
