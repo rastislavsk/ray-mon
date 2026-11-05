@@ -1026,6 +1026,7 @@ const terazVStranke = (page) =>
                       label: text('#tz-jas-label'),
                       text: text('#tz-jas-text'),
                       fill: getComputedStyle(/** @type {HTMLElement} */ (document.querySelector('#tz-jas'))).getPropertyValue('--jas'),
+                      prazdny: document.querySelector('#tz-jas.prazdny') !== null,
                   },
             hint: text('#tz-hint'),
             say: text('#tz-say-text'),
@@ -1038,7 +1039,7 @@ const terazZModelu = (m) => ({
     num: m.num,
     source: m.source,
     sub: m.sub,
-    jas: m.jas && { label: m.jas.label, text: m.jas.text, fill: String((m.jas.pct ?? 0) / 100) },
+    jas: m.jas && { label: m.jas.label, text: m.jas.text, fill: String((m.jas.pct ?? 0) / 100), prazdny: m.jas.pct === null },
     hint: m.hint.text,
     say: m.say?.text ?? '',
 });

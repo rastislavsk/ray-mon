@@ -493,6 +493,12 @@ test('kurzorom: ťahanie po grafe ukáže náhľad aj s farbou pozadia, „Spä�
     await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('20:45');
     await expect(page.locator('#tz-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('20:45'))) ?? '');
     await expect(page.locator('#tz-hint')).toHaveText('');
+    // Pásik pod číslom: 20:45 je po západe - nie je vidieť, no drží miesto (graf sa nepohne).
+    expect(nahlad.jas?.pct).toBe(null);
+    expect(await page.locator('#tz-jas').evaluate((el) => [getComputedStyle(el).visibility, getComputedStyle(el).display])).toEqual([
+        'hidden',
+        'flex',
+    ]);
     // Pozadie ide s náhľadom (20:45 je drahé pásmo bez slnka). Riadok pod číslom povie, odkiaľ je číslo
     // v zvolenom čase - bez bodky a času merania, ktorý by vedľa čísla z 20:45 klamal - a neťuká sa.
     await expect(page.locator('html')).toHaveAttribute('data-tier', 'red');

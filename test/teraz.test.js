@@ -657,8 +657,11 @@ test('terazModel: noc - výkon 0, bez vety pod číslom, okno, ktoré už bolo, 
     const vecer = terazModel(input(at('21:00')));
     assert.equal(vecer.num, '0');
     assert.equal(vecer.sub, '');
-    // Pásik ostáva, len prázdny - v náhľade do noci sa graf pod prstom nepohne.
-    assert.deepEqual(vecer.jas, { pct: null, label: '–', text: 'Slnko je pod obzorom.' });
+    // V noci pásik nie je - ani v náhľade dňa, aby sa graf pod prstom nepohol.
+    assert.equal(vecer.jas, null);
+    assert.equal(terazModel(input(at('21:00'), { previewMinutes: hm(13) })).jas, null);
+    // Cez deň náhľad do noci: pásik drží miesto, ale je prázdny (appky ho skryjú).
+    assert.deepEqual(terazModel(input(at('13:00'), { previewMinutes: hm(21) })).jas, { pct: null, label: '', text: '' });
     assert.match(dnesCards(input(at('21:00')))?.today.window ?? '', /^Okno na veľké veci bolo /);
     const noc = terazModel(input(at('02:00')));
     assert.equal(noc.sub, '');
@@ -716,7 +719,6 @@ test('terazModel: predpoveď z iného dňa (po polnoci pred obnovou) netvrdí dn
 
 test('texty karty Teraz', () => {
     assert.equal(terazJasText(72), '72 % z toho, čo by dala jasná obloha.');
-    assert.equal(terazJasText(null), 'Slnko je pod obzorom.');
     assert.equal(terazSourceText('live'), 'živé meranie');
     assert.equal(terazSourceText('measured'), 'namerané');
     assert.equal(terazSourceText('forecast'), 'odhad z predpovede');

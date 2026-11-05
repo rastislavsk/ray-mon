@@ -933,6 +933,13 @@ button.live[aria-expanded='true'] {
     padding: 8px 20px 0;
     box-sizing: content-box;
 }
+/* Náhľad v noci: pásik nie je vidieť, ale miesto drží - prázdny popisok výšku riadku nestratí. */
+.jas.prazdny {
+    visibility: hidden;
+}
+#tz-jas-label:empty::before {
+    content: '0';
+}
 .jas-track {
     flex: 1;
     height: 4px;

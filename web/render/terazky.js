@@ -22,9 +22,14 @@ const textsOf = (state) => voiceTexts(state.voice).TERAZ_TEXTS;
 /** @param {HTMLElement} el @param {boolean} on */
 const show = (el, on) => el.classList.toggle('hidden', !on);
 
-/** Pásik pod číslom: koľko z jasnej oblohy, v noci prázdny. @param {Model['jas']} jas @param {Dom} dom */
+/**
+ * Pásik pod číslom: koľko z jasnej oblohy. V noci nie je (null); keď náhľad zvolí čas v noci
+ * (`pct` null), je neviditeľný, no drží miesto, aby sa graf pod prstom nepohol.
+ * @param {Model['jas']} jas @param {Dom} dom
+ */
 function renderJas(jas, dom) {
     show(dom.tzJas, !!jas);
+    dom.tzJas.classList.toggle('prazdny', jas?.pct === null);
     dom.tzJas.style.setProperty('--jas', String((jas?.pct ?? 0) / 100));
     dom.tzJasLabel.textContent = jas?.label ?? '';
     dom.tzJasText.textContent = jas?.text ?? '';
