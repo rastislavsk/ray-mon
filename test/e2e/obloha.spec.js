@@ -225,10 +225,6 @@ test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod 
     const errors = await openObloha(page, { time: at('13:00') });
     await expect(page.locator('#hdr-place')).toHaveText(SITE.name);
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
-    // Podčiarknuté je len slovo o stave - hovorí, že sa naň dá ťuknúť.
-    await expect(page.locator('#hdr-status .stav-slovo')).toHaveText('živé meranie');
-    expect(await page.locator('#hdr-status .stav-slovo').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('underline');
-    expect(await page.locator('#hdr-status').evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
     // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
     await expect(page.locator('#hdr-tone')).toHaveText('');
@@ -255,14 +251,14 @@ test('riadok stavu: čas posledného merania, nie hodiny; zastarané so slovom, 
     const errors = await openObloha(page, { time: at('13:10') });
     await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'live');
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
-    // Bez oválu, len text a bodka; „›“ (len v CSS, čítačka ho nečíta) len keď meranie nie je živé.
+    // Bez oválu, len text a bodka; malé „›“ (len v CSS, čítačka ho nečíta) hovorí, že sa dá ťuknúť.
     const naznak = () =>
         page.evaluate(() => [
             getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-live'))).backgroundColor,
             getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-status')), '::after').content,
         ]);
     expect((await naznak())[0]).toBe('rgba(0, 0, 0, 0)');
-    expect((await naznak())[1]).toBe('none');
+    expect((await naznak())[1]).toContain('›');
     // Appka sa 30 minút nedostala k dátam (Worker posiela čas stiahnutia 13:00): polovičná bodka, bez spojenia.
     await page.clock.setFixedTime(at('13:30'));
     await page.reload();
@@ -282,7 +278,7 @@ test('riadok stavu: menič mlčí za slnka, alebo v noci spí - ten istý tvar b
     await mlci.locator('#hdr-live').click();
     await expect(mlci.locator('#hdr-tip-title')).toHaveText('Meranie je zastarané');
     await expect(mlci.locator('#hdr-tip-text')).toContainText('Menič mlčí od 13:00, už 1 h 30 min, hoci slnko svieti.');
-    // V noci menič spí: plná bodka, bez „›“.
+    // V noci menič spí: plná bodka, „›“ - bublina sa dá otvoriť.
     const noc = await browser.newPage();
     await openObloha(noc, { time: at('23:10'), pvData: { ...pv, updatedAt: at('23:10').toISOString() } });
     await expect(noc.locator('#hdr-status')).toHaveText('13:00 · menič spí');
@@ -290,7 +286,7 @@ test('riadok stavu: menič mlčí za slnka, alebo v noci spí - ten istý tvar b
     await expect(noc.locator('#hdr-tone')).toHaveText('živé meranie');
     expect(
         await noc.evaluate(() => getComputedStyle(/** @type {Element} */ (document.querySelector('#hdr-status')), '::after').content),
-    ).toBe('none');
+    ).toContain('›');
     await noc.locator('#hdr-live').click();
     await expect(noc.locator('#hdr-tip-title')).toHaveText('Menič spí');
     expect(errors).toEqual([]);

@@ -30,11 +30,10 @@ const ZIVE = TONE_TEXT.live;
  * polovičná, `odhad` krúžok, `off` žiadne dáta. `status` je čas posledného merania so slovom
  * o stave: živé meranie, zastarané, menič spí (stavMeraniaSlovo) - samotný starý čas by vyzeral ako
  * zle idúce hodiny; bez merania len slovo. `toneText` dopĺňa pre čítačku obrazovky, čo bodka hovorí
- * tvarom, keď to `status` nepovie sám. `pred` je začiatok `status` pred slovom o stave (čas a „ · “),
- * bez času prázdny - riadok pod číslom podčiarkne len slovo. `tip` je vysvetlenie stavu do bubliny (null, kým appka stav merania nepozná - vtedy
+ * tvarom, keď to `status` nepovie sám. `tip` je vysvetlenie stavu do bubliny (null, kým appka stav merania nepozná - vtedy
  * sa bodka a čas neťukajú); `znova`: tlačidlo v nej vedie na hlásenie o neplatnom prístupe.
  * @param {HlavickaVstup} s @param {import('./messages-core.js').Voice} [voice]
- * @returns {{ place: string, setup: boolean, status: string, pred: string, tone: 'live' | 'stale' | 'odhad' | 'off', toneText: string,
+ * @returns {{ place: string, setup: boolean, status: string, tone: 'live' | 'stale' | 'odhad' | 'off', toneText: string,
  *   tip: (ReturnType<typeof stavMeraniaText> & { znova: boolean }) | null }}
  */
 export function hlavickaModel(s, voice = 'drzy') {
@@ -43,7 +42,6 @@ export function hlavickaModel(s, voice = 'drzy') {
         place,
         setup: false,
         status,
-        pred: '',
         tone: /** @type {const} */ ('off'),
         toneText: '',
         tip: null,
@@ -55,13 +53,13 @@ export function hlavickaModel(s, voice = 'drzy') {
     const tip = { ...stavMeraniaText(stav, voice), znova: stav.druh === 'znova' };
     const tone = bodkaMerania(stav);
     if (stav.druh === 'znova' && stav.neplati)
-        return { place, setup: false, status: stav.neplati.hlavicka, pred: '', tone, toneText: stav.neplati.tone, tip };
+        return { place, setup: false, status: stav.neplati.hlavicka, tone, toneText: stav.neplati.tone, tip };
     if (tone !== 'odhad') {
         const slovo = stavMeraniaSlovo(stav);
-        const pred = `${stav.cas} · `;
-        return { place, setup: false, tone, status: `${pred}${slovo || ZIVE}`, pred, toneText: slovo ? TONE_TEXT[tone] : '', tip };
+        const status = `${stav.cas} · ${slovo || ZIVE}`;
+        return { place, setup: false, tone, status, toneText: slovo ? TONE_TEXT[tone] : '', tip };
     }
-    return { place, setup: false, tone, pred: '', ...BEZ_CASU[stav.druh === 'neprislo' ? 'neprislo' : 'odhad'], tip };
+    return { place, setup: false, tone, ...BEZ_CASU[stav.druh === 'neprislo' ? 'neprislo' : 'odhad'], tip };
 }
 
 /**
@@ -70,16 +68,15 @@ export function hlavickaModel(s, voice = 'drzy') {
  * patrí číslo k inej chvíli (nadpis karty povie ku ktorej) - čas merania vedľa neho by klamal. Riadok
  * vtedy povie len, odkiaľ je číslo v zvolenom čase (`source` z terazModel), bez bodky (`tone: 'nahlad'`)
  * a bez bubliny. Bez zadaných panelov riadok nie je (null) - v hlavičke je výzva namiesto neho.
- * `pred` a `slovo` sú `text` rozdelený na čas a slovo o stave - appky podčiarknu len slovo.
  * @param {ReturnType<typeof hlavickaModel>} h
  * @param {{ preview: boolean, source: string }} teraz z terazModel
- * @returns {{ text: string, pred: string, slovo: string, tone: ReturnType<typeof hlavickaModel>['tone'] | 'nahlad', toneText: string,
+ * @returns {{ text: string, tone: ReturnType<typeof hlavickaModel>['tone'] | 'nahlad', toneText: string,
  *   tip: ReturnType<typeof hlavickaModel>['tip'] } | null}
  */
 export function stavRiadok(h, teraz) {
     if (h.setup) return null;
-    if (teraz.preview) return { text: teraz.source, pred: '', slovo: teraz.source, tone: 'nahlad', toneText: '', tip: null };
-    return { text: h.status, pred: h.pred, slovo: h.status.slice(h.pred.length), tone: h.tone, toneText: h.toneText, tip: h.tip };
+    if (teraz.preview) return { text: teraz.source, tone: 'nahlad', toneText: '', tip: null };
+    return { text: h.status, tone: h.tone, toneText: h.toneText, tip: h.tip };
 }
 
 /**

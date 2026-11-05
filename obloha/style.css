@@ -228,16 +228,10 @@ button.live:disabled {
 #hdr-status:empty::before {
     content: '0';
 }
-/* Keď meranie nie je živé, pribudne „›“ - vtedy má človek dôvod sa pýtať prečo. Čítačka ho nečíta
-   (alternatívny text je prázdny). */
-button.live:enabled:is([data-tone='odhad'], [data-tone='stale']) #hdr-status::after {
+/* Malé „›“ na konci hovorí, že sa na riadok dá ťuknúť (otvorí bublinu). V náhľade iného času je
+   riadok vypnutý a šípka nie je. Čítačka ho nečíta (alternatívny text je prázdny). */
+button.live:enabled #hdr-status::after {
     content: ' ›' / '';
-}
-/* Slovo o stave je podčiarknuté, keď sa na riadok dá ťuknúť (otvorí bublinu) - čas nie. */
-button.live:enabled .stav-slovo {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
 }
 button.live[aria-expanded='true'] {
     background: rgba(8, 16, 40, 0.45);

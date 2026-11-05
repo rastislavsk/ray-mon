@@ -29,10 +29,8 @@ const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
 function renderStav(state, m, dom) {
     const r = stavRiadok(hlavickaModel(state, state.voice), m ?? { preview: false, source: '' });
     show(dom.stav, !!r);
-    const { pred, slovo, tone, toneText, tip } = r ?? { pred: '', slovo: '', tone: 'off', toneText: '', tip: null };
-    // Čas a slovo o stave, slovo v .stav-slovo (podčiarknuté, keď sa dá ťuknúť). Bez textu prázdny
-    // prvok - :empty drží výšku riadku.
-    setHtml(dom.status, `${escapeHtml(pred)}${slovo ? `<span class="stav-slovo">${escapeHtml(slovo)}</span>` : ''}`);
+    const { text, tone, toneText, tip } = r ?? { text: '', tone: 'off', toneText: '', tip: null };
+    setText(dom.status, text);
     setText(dom.tone, toneText);
     dom.live.dataset.tone = tone;
     dom.live.disabled = !tip;
