@@ -19,13 +19,13 @@
     "lighthouse": "node test/lighthouse/obloha.js"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
-    "@playwright/test": "1.63.0",
-    "@types/node": "^26.6.3",
-    "eslint": "10.11.0",
-    "globals": "17.12.0",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^26.6.6",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
     "http-server": "14.1.1",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "typescript": "7.0.2"
   }
 }
