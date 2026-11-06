@@ -595,18 +595,8 @@ button.live[aria-expanded='true'] {
     font-size: min(2rem, 9vw);
     font-weight: 900;
 }
-/* Riadky pod číslami na tmavšom podklade, aby sa biele písmo dalo čítať aj na svetlej oblohe. */
-.mz-more {
-    display: grid;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: rgba(14, 36, 80, 0.32);
-}
-.mz-more p {
-    font-size: 0.9375rem;
-    line-height: 1.35;
-}
+/* Sklá pod číslami (.glass): koľko nabehlo a Kedy lepšie sú dvojica s rovnakým písmom. */
+.mz-more p,
 .later p {
     font-size: 0.9375rem;
     line-height: 1.35;
