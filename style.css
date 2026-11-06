@@ -132,7 +132,7 @@ button:focus-visible {
     font-variation-settings: 'wdth' 100;
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
-   mesiac stojí vpravo od čísla (v noci je číslo vždy „0“), zrážky končia nad vetou pod číslom. */
+   obzor oblohy je pri čiare pod číslom, zrážky končia nad vetou pod číslom. */
 .wx {
     --wx-core: 255, 255, 250;
     --wx-warm: 255, 246, 214;
@@ -140,7 +140,7 @@ button:focus-visible {
     --wx-cl: 255, 255, 255;
     --wx-cl-dark: 70, 88, 115;
     --wx-drop: 235, 242, 255;
-    --wx-moon-top: calc(env(safe-area-inset-top) + 118px);
+    --wx-obzor: calc(max(16px, env(safe-area-inset-top)) + 203px);
     --wx-prec-h: calc(env(safe-area-inset-top) + 177px);
 }
 .wx[data-noc] {
@@ -405,9 +405,11 @@ button.live[aria-expanded='true'] {
 .arc-moon {
     fill: #e8ecff;
 }
-/* Kosák: kruh vo farbe oblohy zakryje časť mesiaca. */
-.arc-moon-cut {
-    fill: var(--s1);
+/* Neosvetlená časť: tušená, s obrysom, aby bolo vidno aj nov. */
+.arc-moon-dark {
+    fill: rgba(200, 205, 230, 0.16);
+    stroke: rgba(232, 236, 255, 0.45);
+    stroke-width: 1.4;
 }
 .arc-off {
     fill: rgba(255, 255, 255, 0.35);

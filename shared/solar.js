@@ -13,9 +13,6 @@ import {
     powerThresholds,
 } from './config.js';
 
-/** Stredný synodický mesiac (od novu po nov) v dňoch. */
-const SYNODIC_MONTH = 29.530588853;
-
 /** @typedef {import('./config.js').Site} Site */
 /** @typedef {import('./config.js').Plant} Plant */
 
@@ -541,16 +538,4 @@ function forecastHours(data, site, plant) {
 export function precipOf(mm, cm) {
     if (Number.isFinite(cm) && /** @type {number} */ (cm) >= POCASIE.snehCm) return 'sneh';
     return Number.isFinite(mm) && /** @type {number} */ (mm) >= POCASIE.dazdMm ? 'dazd' : null;
-}
-
-/**
- * Fáza Mesiaca v čase `date`: 0 nov, 0,25 prvá štvrť, 0,5 spln, 0,75 posledná štvrť. Zo
- * stredného synodického mesiaca od novu 6. 1. 2000 18:14 UTC - skutočný Mesiac sa od neho
- * odchyľuje najviac asi o pol dňa, na kresbu kosáčika to stačí.
- * @param {Date} date @returns {number}
- */
-export function moonPhase(date) {
-    const days = (date.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000;
-    const phase = (days % SYNODIC_MONTH) / SYNODIC_MONTH;
-    return phase < 0 ? phase + 1 : phase;
 }

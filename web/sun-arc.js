@@ -3,12 +3,25 @@
 // ich má vo vlastnom štýle.
 
 import { minutesToTimeStr } from '../shared/format.js';
+import { mesiacTvar } from './pocasie.js';
 
 /** @typedef {ReturnType<typeof import('../shared/mozem-sky.js').sunArc>} SunArc */
 
 // Oblúk v súradniciach návrhu: polovica elipsy nad obzorom, východ vľavo, západ vpravo.
 const ARC = { cx: 160, cy: 118, rx: 140, ry: 88 };
 const MOON = { x: 262, y: 42 };
+
+/**
+ * Mesiac v jeho skutočnej fáze: dorastá sprava, ubúda zľava, na južnej pologuli naopak. Pri nove
+ * ostane z neho obrys. @param {SunArc} arc
+ */
+function mesiac({ faza, juh }) {
+    const zrkadlo = faza > 0.5 !== juh ? 'scale(-.5 .5)' : 'scale(.5)';
+    return (
+        `<g transform="${zrkadlo} translate(-23 -23)"><circle class="arc-moon-dark" cx="23" cy="23" r="23"/>` +
+        `<path class="arc-moon" d="${mesiacTvar(faza)}"/></g>`
+    );
+}
 
 /** Bod na oblúku, 0 = východ, 1 = západ. @param {number} f */
 function arcPoint(f) {
@@ -33,7 +46,7 @@ export function sunArcSvg(arc, off) {
     const body = off
         ? '<circle r="12" class="arc-off"/>'
         : arc.sun === null
-          ? '<circle r="11" class="arc-moon"/><circle cx="6" cy="-4" r="9" class="arc-moon-cut"/>'
+          ? mesiac(arc)
           : '<circle r="24" class="arc-glow"/><circle r="13" class="arc-sun"/>';
     const label = (/** @type {number | null} */ m, /** @type {number} */ x) =>
         m === null ? '' : `<text x="${x}" y="130" class="arc-t">${minutesToTimeStr(m)}</text>`;

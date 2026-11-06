@@ -9,7 +9,7 @@ import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_TITLE, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml, legendHtml, readoutHtml } from '../day-chart.js';
-import { hviezdySvg, pocasieHtml, pocasieStav } from '../pocasie.js';
+import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { setHtml, setText, show } from './write.js';
 
@@ -270,7 +270,7 @@ function renderPocasie(state, m, dom) {
     const p = state.liveSky && !dashboard(state) ? m.pocasie : null;
     show(dom.wx, !!p);
     if (!p) return;
-    setHtml(dom.wx, pocasieHtml(p.mesiac, p.juh));
+    setHtml(dom.wx, pocasieHtml());
     dom.wx.dataset.wx = pocasieStav(p);
     // Sila dažďa (docs/navrhy/dazd-sily.html); staršie jadro z cache ju nepošle - kresba ukáže bežný dážď.
     if (p.dazd) dom.wx.dataset.dazd = p.dazd;
@@ -284,4 +284,10 @@ function renderPocasie(state, m, dom) {
     const vrstvy = dom.wx.querySelectorAll('.wx-stars, .wx-stars2');
     setHtml(vrstvy[0], a);
     setHtml(vrstvy[1], b);
+    // Mesiac len vtedy, keď naozaj stojí v poli pohľadu; rovnako mimo HTML počasia.
+    const [svetlo, mesiac] = p.mesiac ? mesiacSvg(p.mesiac) : ['', ''];
+    const luna = dom.wx.querySelectorAll('.wx-moonglow, .wx-moon');
+    setHtml(luna[0], svetlo);
+    setHtml(luna[1], mesiac);
+    dom.wx.toggleAttribute('data-mesiac-stlmeny', p.mesiac?.stlmeny === true);
 }

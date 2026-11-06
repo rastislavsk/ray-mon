@@ -45,10 +45,10 @@ import {
     terazTypicalText,
     terazWindowText,
 } from '../shared/messages.js';
+import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 import { mozemModel, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
-import { moonPhase } from '../shared/solar.js';
 import { dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -765,7 +765,7 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     const den = terazModel(i).pocasie;
     assert.equal(den?.noc, false);
     assert.equal(den?.zrazky, null);
-    assert.equal(den?.mesiac, moonPhase(i.now));
+    assert.equal(den?.mesiac, null);
     const slabo = { ...i, pv: { ...i.pv, realTimePowerKw: 0.3 } };
     assert.equal(terazModel(slabo).pocasie?.jas, 'zamracene');
     // Náhľad o 18:00 je v budúcnosti - meranie nie je, jas je z predpovede (jasný deň).
@@ -775,12 +775,19 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(noc?.noc, true);
     assert.ok(Array.isArray(noc?.hviezdy));
     assert.equal(den?.hviezdy, null);
-    // Náhľad o hodinu neskôr posunie mesiac aj hviezdy do tej chvíle, nie do teraz.
-    const neskor = terazModel({ ...input(at('22:30')), previewMinutes: 23 * 60 + 32 }).pocasie;
-    assert.notDeepEqual(neskor?.hviezdy, noc?.hviezdy);
-    assert.equal(neskor?.mesiac, moonPhase(at('23:32')));
     // Bez predpovede kresba nie je.
     assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
+});
+
+test('terazModel: náhľad posunie Mesiac aj hviezdy do zvolenej chvíle, nie do teraz', () => {
+    const noc = terazModel(input(at('22:30'))).pocasie;
+    const neskor = terazModel({ ...input(at('22:30')), previewMinutes: 23 * 60 + 32 }).pocasie;
+    assert.notDeepEqual(neskor?.hviezdy, noc?.hviezdy);
+    // O 23:32 je Mesiac ešte pod obzorom, nad ránom stojí v poli.
+    assert.equal(neskor?.mesiac, null);
+    const rano = terazModel({ ...input(at('22:30')), previewMinutes: 4 * 60 }).pocasie;
+    assert.deepEqual(rano?.mesiac, mesiacVPoli(mesiacNaOblohe(at('04:00'), SITE.lat, SITE.lon)));
+    assert.ok(rano?.mesiac);
 });
 
 test('pocasieTeraz: počasie neba je v zvolenej chvíli, rovnaké ako kresba', () => {
