@@ -235,6 +235,11 @@ test('sunArc: slnko medzi skutočným východom a západom, v noci mesiac, okno 
     assert.deepEqual(noon.win, { from: 0, to: 1 });
     assert.equal(sunArc(at('22:00'), SITE, null).sun, null);
     assert.equal(sunArc(at('22:00'), SITE, null).win, null);
+    // Skutočná fáza Mesiaca: spln 24. 11. 2026, na severnej pologuli.
+    const spln = sunArc(new Date('2026-11-24T14:54:00Z'), SITE, null);
+    assert.ok(Math.abs(spln.faza - 0.5) < 0.01, String(spln.faza));
+    assert.equal(spln.juh, false);
+    assert.equal(sunArc(at('22:00'), { ...SITE, lat: -22.91, lon: -43.17 }, null).juh, true);
     // Polárna noc: východ ani západ nie je, oblúk ide cez produkčné okno grafov.
     const arctic = { ...SITE, lat: 78.2, lon: 15.6, timezone: 'Arctic/Longyearbyen' };
     const dec = sunArc(new Date('2026-12-21T11:00:00Z'), arctic, { from: 5 * 60, to: 21 * 60 });

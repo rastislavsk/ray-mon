@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { HVIEZDY, POCASIE, SKY } from '../shared/config.js';
 import { hviezdy } from '../shared/hviezdy.js';
 import { jasZMerania, pocasie } from '../shared/pocasie.js';
-import { moonPhase } from '../shared/solar.js';
+import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 
 const NOW = new Date('2026-09-05T19:32:00Z');
 const NITRA = { lat: 48.48, lon: 18.12 };
@@ -24,15 +24,14 @@ test('jasZMerania: pri nízkom slnku a bez merania o oblakoch nič nehovorí', (
     assert.equal(jasZMerania(null), null);
 });
 
-test('pocasie: jas a zrážky z hodiny predpovede, noc a fáza Mesiaca', () => {
+test('pocasie: jas a zrážky z hodiny predpovede, cez deň bez Mesiaca a hviezd', () => {
     assert.deepEqual(pocasie({ point: hodina(80, 'dazd'), noc: false, chvila: NOW, site: NITRA, merane: null }), {
         jas: 'zamracene',
         zamracenost: 1,
         zrazky: 'dazd',
         dazd: 'dazd',
         noc: false,
-        mesiac: moonPhase(NOW),
-        juh: false,
+        mesiac: null,
         hviezdy: null,
     });
     // Hodina bez poľa zrážok (staršia predpoveď) je bez zrážok.
@@ -97,22 +96,37 @@ test('pocasie: bez hodiny predpovede alebo bez oblačnosti nie je', () => {
 function nocne(cloud, chvila = NOW, site = NITRA) {
     const p = pocasie({ point: hodina(cloud), noc: true, chvila, site, merane: null });
     assert.ok(p && p.hviezdy);
-    return { juh: p.juh, hviezdy: p.hviezdy };
+    return { mesiac: p.mesiac, hviezdy: p.hviezdy };
 }
 
 test('pocasie: v noci hviezdy z chvíle zaokrúhlenej na krok, oblaky ich ubudnú', () => {
     const noc = nocne(0).hviezdy;
     const krok = HVIEZDY.krokMin * 60000;
     const t = new Date(Math.round(NOW.getTime() / krok) * krok);
-    assert.deepEqual(noc, hviezdy({ chvila: t, ...NITRA, oblacnost: 0, mesiac: moonPhase(t) }));
+    const m = mesiacNaOblohe(t, NITRA.lat, NITRA.lon);
+    const hore = m.vyska >= HVIEZDY.minVyska;
+    assert.deepEqual(noc, hviezdy({ chvila: t, ...NITRA, oblacnost: 0, mesiac: hore ? m.faza : 0 }));
     assert.ok(noc.length > 0);
     // Minúta vedľa v tom istom kroku dá tie isté hviezdy - kresba sa neprepisuje.
     assert.deepEqual(nocne(0, new Date(NOW.getTime() + 60000)).hviezdy, noc);
     assert.ok(nocne(60).hviezdy.length < noc.length);
 });
 
-test('pocasie: na južnej pologuli je kosáčik obrátený, rovník je ako sever', () => {
-    assert.equal(nocne(0).juh, false);
-    assert.equal(nocne(0, NOW, { lat: -22.91, lon: -43.17 }).juh, true);
-    assert.equal(nocne(0, NOW, { lat: 0, lon: -78.5 }).juh, false);
+test('pocasie: Mesiac v noci len tam, kde naozaj je, pod obzorom ani nerozjasní oblohu', () => {
+    // 24. 11. 2026 o 20:30: spln vysoko na východe, svetlo skryje slabé hviezdy.
+    const spln = new Date('2026-11-24T19:32:00Z');
+    const krok = HVIEZDY.krokMin * 60000;
+    const m = mesiacNaOblohe(new Date(Math.round(spln.getTime() / krok) * krok), NITRA.lat, NITRA.lon);
+    const hore = nocne(0, spln);
+    assert.deepEqual(hore.mesiac, mesiacVPoli(m));
+    assert.equal(
+        hore.hviezdy.every((h) => h.mag <= HVIEZDY.magMax - HVIEZDY.splnMag * 0.99),
+        true,
+    );
+    // 6. 11. 2026 o 22:00: Mesiac je hlboko pod obzorom, hviezdy svietia naplno, hoci je skoro kosák.
+    const dole = nocne(0, new Date('2026-11-06T21:00:00Z'));
+    assert.equal(dole.mesiac, null);
+    assert.ok(dole.hviezdy.some((h) => h.mag > HVIEZDY.magMax - 0.1));
+    // Nad obzorom, ale na západe, teda za chrbtom: 13. 1. 2027 o 22:00.
+    assert.equal(nocne(0, new Date('2027-01-13T21:00:00Z')).mesiac, null);
 });

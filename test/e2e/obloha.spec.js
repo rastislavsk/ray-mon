@@ -828,7 +828,7 @@ test.describe('karta Dnes', () => {
             await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
             await expect(page.locator('#mz-retry')).toBeHidden();
             await expect(page.locator('#mz-guess')).toBeHidden();
-            // Zelený úsek oblúka je dnešné okno so slnkom; v noci je na oblúku mesiac.
+            // Zelený úsek oblúka je dnešné okno so slnkom; v noci je pri oblúku Mesiac v skutočnej fáze.
             await expect(page.locator('#mz-arc .arc-win')).toHaveCount(m.arc?.win ? 1 : 0);
             await expect(page.locator('#mz-arc .arc-moon')).toHaveCount(m.arc?.sun === null ? 1 : 0);
             // Ráno plán, cez deň odpočet, večer vysvedčenie a zajtrajšok - porovnané v kartaVStranke.
@@ -2154,11 +2154,31 @@ test.describe('počasie v pozadí karty Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('v noci mesiac, nie slnko', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('22:30') });
+    test('v noci bez slnka, Mesiac len tam, kde naozaj je', async ({ page }) => {
+        const vecer = at('22:30');
+        const errors = await openTeraz(page, { time: vecer });
+        expect(terazModel(vstupTeraz(vecer)).pocasie?.mesiac, 'o 22:30 ešte nevyšiel do poľa').toBeNull();
         await expect(page.locator('#wx')).toHaveAttribute('data-noc', '');
-        await expect(page.locator('#wx .wx-moon')).toBeVisible();
+        await expect(page.locator('#wx .wx-moon svg')).toHaveCount(0);
+        await expect(page.locator('#wx .wx-moonglow svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-halo')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('Mesiac stojí v tom istom poli ako hviezdy a osvetlenou stranou k Slnku', async ({ page }) => {
+        const rano = new Date('2026-09-06T02:30:00+02:00');
+        const errors = await openTeraz(page, { time: rano });
+        const m = terazModel(vstupTeraz(rano)).pocasie?.mesiac;
+        if (!m) throw new Error('model nemá Mesiac');
+        const stav = await page.locator('#wx').evaluate((wx) => ({
+            transform: wx.querySelector('.wx-moon g')?.getAttribute('transform'),
+            hviezdy: wx.querySelector('.wx-stars svg')?.getBoundingClientRect().toJSON(),
+            mesiac: wx.querySelector('.wx-moon svg')?.getBoundingClientRect().toJSON(),
+        }));
+        expect(stav.transform).toContain(`translate(${m.x} ${m.y})`);
+        expect(stav.transform).toContain(`rotate(${270 - m.uhol})`);
+        expect(stav.mesiac).toEqual(stav.hviezdy);
+        await expect(page.locator('#wx .wx-moon g')).toBeVisible();
         expect(errors).toEqual([]);
     });
 

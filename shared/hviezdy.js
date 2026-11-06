@@ -1,4 +1,4 @@
-// Hviezdy v noci na karte Teraz: kde na oblohe nad elektrárňou v danej chvíli stoja najjasnejšie
+// Hviezdy v noci na karte Teraz: kde na východnej oblohe nad elektrárňou v danej chvíli stoja najjasnejšie
 // hviezdy (shared/hviezdy-data.js) a ktoré z nich oblaky a mesiac nechajú vidieť. Čisté funkcie, čas aj poloha prichádzajú v parametroch.
 
 import { HVIEZDY } from './config.js';
@@ -47,32 +47,39 @@ export function hranicaJasu(oblacnost, mesiac) {
 }
 
 /**
- * Hviezdy v poli pohľadu k rovníku nad miestom `lat`, `lon` v chvíli `chvila`, len tie, ktoré
- * oblačnosť `oblacnost` (%) a mesiac vo fáze `mesiac` nechajú vidieť. Stereografické
- * premietanie: súhvezdia majú svoj tvar, len k okrajom poľa rastú.
+ * Stereografické premietanie do poľa pohľadu na východ (`HVIEZDY.smer`): súhvezdia majú svoj tvar,
+ * len k okrajom poľa rastú. Vľavo je sever, vpravo juh, na oboch pologuliach.
+ * @param {number} vyska @param {number} azimut @returns {{ x: number, y: number }}
+ */
+export function premietni(vyska, azimut) {
+    const sin0 = Math.sin(toRad(HVIEZDY.vyskaStredu));
+    const cos0 = Math.cos(toRad(HVIEZDY.vyskaStredu));
+    const alt = toRad(vyska);
+    const daz = toRad(azimut - HVIEZDY.smer);
+    const k = toDeg(2 / (1 + sin0 * Math.sin(alt) + cos0 * Math.cos(alt) * Math.cos(daz)));
+    return {
+        x: HVIEZDY.sirka / 2 + k * Math.cos(alt) * Math.sin(daz),
+        y: HVIEZDY.vyska * HVIEZDY.stredY - k * (cos0 * Math.sin(alt) - sin0 * Math.cos(alt) * Math.cos(daz)),
+    };
+}
+
+/**
+ * Hviezdy v poli pohľadu nad miestom `lat`, `lon` v chvíli `chvila`, len tie, ktoré oblačnosť
+ * `oblacnost` (%) a mesiac nechajú vidieť. Mesiac pod obzorom oblohu nerozjasní, volajúci vtedy
+ * pošle `mesiac` 0.
  * @param {{ chvila: Date, lat: number, lon: number, oblacnost: number, mesiac: number }} vstup
  * @returns {Hviezda[]}
  */
 export function hviezdy({ chvila, lat, lon, oblacnost, mesiac }) {
     const lst = hviezdnyCas(chvila, lon);
-    const smer = lat > 0 ? 180 : 0;
     const limit = hranicaJasu(oblacnost, mesiac);
-    const sin0 = Math.sin(toRad(HVIEZDY.vyskaStredu));
-    const cos0 = Math.cos(toRad(HVIEZDY.vyskaStredu));
-    const stredX = HVIEZDY.sirka / 2;
-    const stredY = HVIEZDY.vyska * HVIEZDY.stredY;
     /** @type {Hviezda[]} */ const out = [];
     for (let i = 0; i < HVIEZDY_DATA.length; i += 3) {
         const mag = HVIEZDY_DATA[i + 2];
         if (mag > limit) continue;
         const { vyska, azimut } = naOblohe(HVIEZDY_DATA[i], HVIEZDY_DATA[i + 1], lst, lat);
         if (vyska < HVIEZDY.minVyska) continue;
-        const alt = toRad(vyska);
-        const daz = toRad(azimut - smer);
-        const cosC = sin0 * Math.sin(alt) + cos0 * Math.cos(alt) * Math.cos(daz);
-        const k = toDeg(2 / (1 + cosC));
-        const x = stredX + k * Math.cos(alt) * Math.sin(daz);
-        const y = stredY - k * (cos0 * Math.sin(alt) - sin0 * Math.cos(alt) * Math.cos(daz));
+        const { x, y } = premietni(vyska, azimut);
         if (x < 0 || x > HVIEZDY.sirka || y < 0 || y > HVIEZDY.vyska) continue;
         out.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, mag });
     }

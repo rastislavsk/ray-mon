@@ -6,6 +6,7 @@
 import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
+import { mesiacFaza } from './mesiac.js';
 import { mozemGuessText, mozemOfflineText } from './messages-core.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
@@ -13,8 +14,10 @@ import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 /** @typedef {import('./mozem.js').Window} Window */
 /**
  * Oblúk slnka: východ a západ (minúta dňa, null v polárny deň či noc), kde je slnko medzi nimi
- * (0 = východ, 1 = západ, null = noc) a dnešné okno so slnkom tým istým meradlom.
- * @typedef {{ rise: number | null, set: number | null, sun: number | null, win: { from: number, to: number } | null }} SunArc
+ * (0 = východ, 1 = západ, null = noc), dnešné okno so slnkom tým istým meradlom a fáza Mesiaca,
+ * ktorá sa na južnej pologuli (`juh`) kreslí zrkadlovo.
+ * @typedef {{ rise: number | null, set: number | null, sun: number | null, win: { from: number, to: number } | null,
+ *   faza: number, juh: boolean }} SunArc
  */
 
 /**
@@ -33,6 +36,8 @@ export function sunArc(now, site, window) {
         set,
         sun: sunUp(now, site) ? at(localMinutes(now, site.timezone)) : null,
         win: window ? { from: at(window.from), to: at(window.to) } : null,
+        faza: Math.round(mesiacFaza(now) * 100) / 100,
+        juh: site.lat < 0,
     };
 }
 

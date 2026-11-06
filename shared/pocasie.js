@@ -1,22 +1,22 @@
 // Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): aký jas (jasno, polooblačno,
-// zamračené), či prší alebo sneží, či je noc, v akej fáze je Mesiac a ktoré hviezdy svietia.
+// zamračené), či prší alebo sneží, či je noc, kde je Mesiac a ktoré hviezdy svietia.
 // Čisté funkcie, čas aj dáta prichádzajú
 // v parametroch.
 
 import { HVIEZDY, POCASIE, SKY } from './config.js';
 import { hviezdy } from './hviezdy.js';
+import { mesiacNaOblohe, mesiacVPoli } from './mesiac.js';
 import { skyWeather } from './sky.js';
-import { moonPhase } from './solar.js';
 
 /**
  * @typedef {'mrholenie' | 'slaby' | 'dazd' | 'silny'} DazdSila
  * @typedef {{ jas: import('./sky.js').SkyWeather, zamracenost: number, zrazky: import('./solar.js').Precip, dazd: DazdSila | null,
- *   noc: boolean, mesiac: number, juh: boolean, hviezdy: import('./hviezdy.js').Hviezda[] | null }} Pocasie
+ *   noc: boolean, mesiac: import('./mesiac.js').MesiacVPoli | null, hviezdy: import('./hviezdy.js').Hviezda[] | null }} Pocasie
  *   `zamracenost` 0 (jasno) až 1 (zamračené) z toho istého zdroja ako `jas`, pri zrážkach 1 - podľa nej
  *   je modrosivá Obloha (docs/navrhy/obloha-farba-podla-pocasia.html);
- *   `dazd` sila dažďa, keď prší (docs/navrhy/dazd-sily.html); `mesiac` fáza 0-1 (moonPhase); `juh`
- *   elektráreň je na južnej pologuli (kosáčik dorastá zľava); `hviezdy` v noci skutočná obloha
- *   nad elektrárňou (shared/hviezdy.js), cez deň null
+ *   `dazd` sila dažďa, keď prší (docs/navrhy/dazd-sily.html); `mesiac` v noci skutočný Mesiac v poli pohľadu
+ *   (shared/mesiac.js), null keď tam nie je; `hviezdy` v noci skutočná obloha nad elektrárňou
+ *   (shared/hviezdy.js), cez deň null
  */
 
 /**
@@ -70,6 +70,16 @@ function zamracenostZ(cloud, podiel, zrazky) {
 }
 
 /**
+ * Mesiac na kresbe (cez deň a pod obzorom nie je) a fáza, ktorou rozjasňuje oblohu: pod obzorom 0.
+ * @param {Date} t @param {boolean} noc @param {{ lat: number, lon: number }} site
+ */
+function mesiacVNoci(t, noc, site) {
+    const m = noc ? mesiacNaOblohe(t, site.lat, site.lon) : null;
+    if (!m || m.vyska < HVIEZDY.minVyska) return { mesiac: null, jasOblohy: 0 };
+    return { mesiac: mesiacVPoli(m), jasOblohy: m.faza };
+}
+
+/**
  * Počasie v zvolenej chvíli karty (`chvila`, aj v náhľade iného času). Oblačnosť je z hodiny
  * predpovede (`point`), zrážky z hodiny `zrazkyPoint`: Open-Meteo dáva pri hodine úhrn za
  * hodinu, ktorá sa v nej končí, takže o 14:20 patrí k hodine 15:00 (bez nej z `point`). Keď
@@ -90,7 +100,7 @@ export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane }) {
     const zrazky = (zrazkyPoint ?? point).precip ?? null;
     const krok = HVIEZDY.krokMin * 60000;
     const t = new Date(Math.round(chvila.getTime() / krok) * krok);
-    const mesiac = moonPhase(t);
+    const { mesiac, jasOblohy } = mesiacVNoci(t, noc, site);
     return {
         jas,
         zamracenost: zamracenostZ(point.cloud, podiel, zrazky !== null),
@@ -98,7 +108,6 @@ export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane }) {
         dazd: silaDazda(zrazkyPoint ?? point),
         noc,
         mesiac,
-        juh: site.lat < 0,
-        hviezdy: noc ? hviezdy({ chvila: t, lat: site.lat, lon: site.lon, oblacnost: point.cloud, mesiac }) : null,
+        hviezdy: noc ? hviezdy({ chvila: t, lat: site.lat, lon: site.lon, oblacnost: point.cloud, mesiac: jasOblohy }) : null,
     };
 }

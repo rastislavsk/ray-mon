@@ -17,7 +17,6 @@ import {
     localHour,
     localMinutes,
     localToUtc,
-    moonPhase,
     orientationShare,
     plantAcKw,
     poaIrradiance,
@@ -397,19 +396,6 @@ test('Open-Meteo: adresa pýta zrážky aj sneženie, predpoveď ich nesie v hod
     delete stara.hourly.precipitation;
     delete stara.hourly.snowfall;
     assert.ok(buildForecast(stara, FIXED_NOW, SITE, PLANT).hourlyToday.every((h) => h.precip === null));
-});
-
-test('moonPhase: nov, spln a ubúdajúci kosáčik v známe dni', () => {
-    // Nov 6. 1. 2000 18:14 UTC je začiatok počítania.
-    assert.equal(moonPhase(new Date(Date.UTC(2000, 0, 6, 18, 14))), 0);
-    // Spln 3. 3. 2026 11:38 UTC (zatmenie Mesiaca) - stredný mesiac sa smie mýliť o deň.
-    assert.ok(Math.abs(moonPhase(new Date('2026-03-03T11:38:00Z')) - 0.5) < 1 / 29.5);
-    // 5. 9. 2026 večer: po poslednej štvrti (4. 9.), ubúda.
-    const faza = moonPhase(new Date('2026-09-05T19:30:00Z'));
-    assert.ok(faza > 0.75 && faza < 0.85, String(faza));
-    // Pred rokom 2000 ostáva fáza v rozsahu 0-1.
-    const stara = moonPhase(new Date('1999-12-31T00:00:00Z'));
-    assert.ok(stara >= 0 && stara < 1);
 });
 
 test('localToUtc: miestny čas elektrárne na okamih, aj v deň prechodu času a na južnej pologuli', () => {
