@@ -9,7 +9,7 @@
 
 import { OZNAMENIA, openMeteoUrl, WORKER_OZNAMENIA_URL, WORKER_PRIPOMEN_URL } from './shared/config.js';
 import { oznameniaTexts } from './shared/messages-core.js';
-import { swNotice, vapidKeyBytes } from './shared/oznamenia.js';
+import { klikUrl, swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 
 // Koreň appky. Tento súbor importuje aj obloha/sw.js (odbery z čias, keď appka bývala v obloha/), takže adresy sa nesmú počítať voči
 // rozsahu ani adrese service workera, ale voči tomuto súboru.
@@ -76,14 +76,20 @@ async function pripomen(data) {
     }
 }
 
-/** Ťuknutie: tlačidlo Pripomeň, inak otvorí appku (okno práve tej appky, nie druhej). */
+/**
+ * Ťuknutie: tlačidlo Pripomeň, inak otvorí appku (okno práve tej appky, nie druhej) na karte Teraz
+ * s rozbaleným Plánom dňa. Zatvorená appka to vie z adresy, bežiaca zo správy - samotný focus by
+ * ju nechal na poslednej karte. Správa ide aj do okna, ktoré tento service worker neovláda.
+ */
 async function klik(action, data) {
     if (action === 'pripomen' && data?.remind) return pripomen(data);
     const url = new URL(data?.app ?? './', ROOT);
     const appka = (/** @type {string} */ u) => new URL(u).pathname.replace(/index\.html$/, '') === url.pathname;
     const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const okno = okna.find((c) => appka(c.url));
-    return okno ? okno.focus() : self.clients.openWindow(url.href);
+    if (!okno) return self.clients.openWindow(klikUrl(url.href));
+    okno.postMessage(OZNAMENIA.klik);
+    return okno.focus();
 }
 
 /**

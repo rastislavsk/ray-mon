@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, OZNAMENIA, PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { oznameniaTexts, planNoticeText } from '../shared/messages.js';
 import {
+    klikUrl,
+    klikZAdresy,
     morningDue,
     oznameniaDefault,
     oznamOvladanie,
@@ -34,6 +36,15 @@ const input = (now, extra = {}) => ({
     pv: null,
     forecast: fixtureData(now).forecast,
     ...extra,
+});
+
+test('ťuknutie na oznámenie: značka v adrese sa dá prečítať a odstrániť, cudzia sa nepočíta', () => {
+    const appka = 'https://priklad.sk/ray-mon/';
+    assert.equal(klikZAdresy(klikUrl(appka)), '/ray-mon/');
+    assert.equal(klikZAdresy(`${appka}?a=1&z=oznamenie#nastavenie=x`), '/ray-mon/?a=1#nastavenie=x');
+    assert.equal(klikZAdresy(appka), null);
+    assert.equal(klikZAdresy(`${appka}?z=ine`), null);
+    assert.equal(klikZAdresy(`${appka}?a=1`), null);
 });
 
 test('parseOznamenia: predvolene vypnuté o 9:00, poškodené a neznáme hodnoty nahradí, nič nezahodí celé', () => {

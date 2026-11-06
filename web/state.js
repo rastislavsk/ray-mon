@@ -14,6 +14,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * `tzListOpen` otvorený zoznam pod grafom - legenda
  * časovej osi (na začiatku zatvorený),
  * `tzPlanOpen` otvorený Plán dňa na karte Teraz (pri štarte vždy zbalený, docs/navrhy/teraz-plan-rozbalovaci.html),
+ * `tzObrys` čaká alebo beží jednorazový obrys Plánu dňa po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel štítka pod číslom karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
@@ -39,6 +40,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   terazPreview: number | null,
  *   tzListOpen: boolean,
  *   tzPlanOpen: boolean,
+ *   tzObrys: boolean,
  *   tzChip: TzChip | null,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
@@ -158,6 +160,7 @@ export function initialState(
         terazPreview: null,
         tzListOpen: false,
         tzPlanOpen: false,
+        tzObrys: false,
         tzChip: null,
         weekDetail: null,
         weekDay: 0,
@@ -195,6 +198,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         terazPreview: /** @type {number | null} */ (null),
         tzPlanOpen: false,
+        tzObrys: false,
         tzListOpen: false,
         tzChip: /** @type {TzChip | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
@@ -202,6 +206,15 @@ export function panelChange(from, to) {
         nsOpen: /** @type {NsFold | null} */ (null),
         stavTip: false,
     };
+}
+
+/**
+ * Ťuknutie na oznámenie: karta Teraz s rozbaleným Plánom dňa a jeho obrysom. Čokoľvek bolo otvorené,
+ * zatvorí sa ako pri prechode na kartu; rozbalenie je krok navigácie, Späť plán zbalí.
+ * @param {AppState} state
+ */
+export function zOznamenia(state) {
+    return { ...panelChange(state.panel, 'terazky'), tzPlanOpen: true, tzObrys: true };
 }
 
 /**

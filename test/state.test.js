@@ -17,6 +17,7 @@ import {
     ready,
     sameNavStep,
     shows,
+    zOznamenia,
 } from '../web/state.js';
 
 /** @typedef {import('../web/state.js').AppState} AppState */
@@ -194,6 +195,23 @@ test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou s
     assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', plan: true })).tzPlanOpen, true);
     // Iná karta plán zbalí.
     assert.equal(panelChange('terazky', 'mozem').tzPlanOpen, false);
+});
+
+test('ťuknutie na oznámenie: Teraz s rozbaleným plánom a obrysom, inak sa všetko zavrie', () => {
+    const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'stav', stavTip: true });
+    const po = { ...s, ...zOznamenia(s) };
+    assert.equal(po.panel, 'terazky');
+    assert.equal(po.panelDir, -1);
+    assert.equal(po.tzPlanOpen, true);
+    assert.equal(po.tzObrys, true);
+    assert.equal(po.weekDetail, null);
+    assert.equal(po.terazPreview, null);
+    assert.equal(po.tzChip, null);
+    assert.equal(po.stavTip, false);
+    // Obrys nie je krok navigácie a s kartou zhasne, aj keď ešte čakal na dáta.
+    assert.deepEqual(navStep(po), navStep({ ...po, tzObrys: false }));
+    assert.equal(panelChange('terazky', 'mozem').tzObrys, false);
+    assert.equal(stateWith().tzObrys, false);
 });
 
 test('zoznam pod grafom (legenda): otvorený je krok navigácie, Späť a iná karta ho zbalia', () => {

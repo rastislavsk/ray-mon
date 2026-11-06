@@ -730,7 +730,44 @@ button.live[aria-expanded='true'] {
    spotrebiča na dnešnom slnku, biela čiara je teraz. Blok je kontajner - dlhé slovo vety ho
    nenatiahne a veta sa zmenší s jeho šírkou. */
 #tz-plan {
+    position: relative;
     container-type: inline-size;
+    /* Ťuknutie na oznámenie k nemu posunie stránku (nech neostane pod spodnou navigáciou). */
+    scroll-margin: 12px 0 5.5rem;
+}
+/* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
+   karty. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
+@property --plan-obeh {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+#tz-plan[data-obrys]::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 2px;
+    border-radius: inherit;
+    background: conic-gradient(from var(--plan-obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    animation: plan-obrys 0.9s ease-in-out;
+}
+@keyframes plan-obrys {
+    from {
+        --plan-obeh: 0deg;
+    }
+    15%,
+    80% {
+        opacity: 1;
+    }
+    to {
+        --plan-obeh: 360deg;
+    }
 }
 /* Počas náhľadu iného času sú štítky, veta aj Plán dňa bledosivé a vypnuté: hovoria o teraz, nie
    o zvolenom čase (docs/navrhy/teraz-nahlad-neaktivne.html). Tlačidlá štítkov aj hlavička plánu sú

@@ -257,6 +257,9 @@ export function renderTeraz(state, dom) {
     renderSay(m, dom);
     renderChipSheet(state, m, dom, TERAZ_TEXTS);
     renderPlan(m.plan, state.tzPlanOpen, dom);
+    // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je plán naozaj vidieť. `=== true`: starý
+    // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
+    dom.tzPlan.toggleAttribute('data-obrys', state.tzObrys === true);
     renderChart(m, state.tzListOpen, dom, TERAZ_TEXTS);
 }
 
