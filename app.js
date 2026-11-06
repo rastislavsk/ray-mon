@@ -18,6 +18,7 @@ import {
     loadVymazane,
 } from './web/storage.js';
 import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.js';
+import { initOznamKlik } from './web/oznamenia-klik.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -75,5 +76,7 @@ const refresh = initInteractions(store, dom);
 await initParts(store, dom, refresh);
 store.subscribe((state) => render(state, dom));
 render(store.get(), dom);
+// Až po prvom prekreslení: história už beží (Späť zbalí plán) a plán dňa sa dá hľadať na stránke.
+initOznamKlik(store, dom);
 refresh();
 preloadParts(store, dom, refresh);

@@ -36,7 +36,9 @@ k Web Push a Worker si uloží len adresu odberu, hodinu a časové pásmo (KV `
 beh ho v tú hodinu zobudí prázdnym pushom. Service worker `sw.js` (v koreni, súbory necachuje;
 nová appka ho má cez `obloha/sw.js` s vlastným rozsahom, aby oznámenie nieslo jej logo a nie Chrome) si stiahne predpoveď a plán dňa vypočíta tou istou funkciou jadra ako blok
 Plán dňa na karte Môžem? (`shared/plan-dna.js`, `shared/oznamenia.js`). Nastavenie mu appka
-odkladá do Cache API, lebo service worker nevidí localStorage (`web/oznamenia.js`).
+odkladá do Cache API, lebo service worker nevidí localStorage (`web/oznamenia.js`). Ťuknutie na
+oznámenie otvorí kartu Teraz s rozbaleným Plánom dňa a jednorazovým obrysom: zatvorená appka dostane
+značku `?z=oznamenie` v adrese, bežiacej pošle service worker správu (`web/oznamenia-klik.js`).
 
 Prístup k meraniu nie je nikdy v adrese (`initUrlMirror`) – adresa končí v histórii, synchronizácii
 prehliadača aj na snímkach. Do zdieľaného odkazu ide len na výslovné zaškrtnutie, a aj vtedy

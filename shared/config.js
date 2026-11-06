@@ -642,6 +642,10 @@ export const OZNAMENIA = {
     cache: 'ray-mon-oznamenia',
     mirror: 'oznamenia-nastavenie.json',
     reminders: 'oznamenia-pripomienky.json',
+    // Ťuknutie na oznámenie: správa od service workera bežiacej appke a hodnota značky v adrese
+    // zatvorenej (shared/oznamenia.js). Obrys Plánu dňa počká na dáta najviac `obrysCakaMs`.
+    klik: 'oznamenie',
+    obrysCakaMs: 20000,
 };
 
 /**

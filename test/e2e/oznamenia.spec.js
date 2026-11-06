@@ -4,8 +4,10 @@
 import { expect, test } from '@playwright/test';
 import {
     DOMA_STORAGE_KEY,
+    OZNAMENIA,
     OZNAMENIA_STORAGE_KEY,
     PLANT,
+    REFRESH,
     SETTINGS_STORAGE_KEY,
     SITE,
     TARIFF,
@@ -32,8 +34,14 @@ const T = oznameniaTexts();
  * @param {import('@playwright/test').Page} page
  * @param {NotificationPermission} [permission] stav povolenia pri štarte
  * @param {NotificationPermission} [answer] čo človek odpovie na otázku (`default` = otázku zavrel)
+ * @param {{ adresa?: string, predpoved?: Promise<unknown> }} [o] adresa appky a na čo čaká predpoveď
  */
-async function otvor(page, permission = 'default', answer = permission === 'granted' ? 'granted' : 'denied') {
+async function otvor(
+    page,
+    permission = 'default',
+    answer = permission === 'granted' ? 'granted' : 'denied',
+    { adresa = '/', predpoved } = {},
+) {
     // Prehliadač bez okna má oznámenia vždy zakázané - stav povolenia aj odpoveď na otázku podvrhne test.
     await page.addInitScript(
         ([p, a]) => {
@@ -45,13 +53,16 @@ async function otvor(page, permission = 'default', answer = permission === 'gran
     await page.route(/cdnjs\.cloudflare\.com/, (r) => r.abort());
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
     await page.route(WORKER_OZNAMENIA_URL, (r) => r.fulfill({ json: { ok: true } }));
-    await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: weather }));
+    await page.route(/api\.open-meteo\.com/, async (r) => {
+        await predpoved;
+        await r.fulfill({ json: weather });
+    });
     await page.addInitScript(
         ([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v),
         [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(OWNER))],
     );
     await page.clock.setFixedTime(FIXED_NOW);
-    await page.goto('/');
+    await page.goto(adresa);
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
 }
 
@@ -63,6 +74,235 @@ const doma = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?
 /** Plán dňa, ako ho appka počíta so spotrebičmi doma. @param {string[]} devices */
 const plan = (devices) =>
     planDnaModel({ ...OWNER, now: FIXED_NOW, loading: false, pv, forecast: buildForecast(weather, FIXED_NOW, SITE, PLANT) }, { devices });
+
+/**
+ * Zaregistruje service worker a počká na neho.
+ * @param {import('@playwright/test').Page} page @param {string} [skript] @param {string} [rozsah]
+ */
+async function sluzba(page, skript = '/sw.js', rozsah = '/') {
+    await page.evaluate(
+        async ([s, r]) => {
+            const reg = await navigator.serviceWorker.register(s, { type: 'module', updateViaCache: 'none', scope: r });
+            const sw = /** @type {ServiceWorker} */ (reg.active ?? reg.installing ?? reg.waiting);
+            await new Promise((ok) =>
+                sw.state === 'activated' ? ok(null) : sw.addEventListener('statechange', () => sw.state === 'activated' && ok(null)),
+            );
+        },
+        [skript, rozsah],
+    );
+    await expect
+        .poll(() =>
+            page
+                .context()
+                .serviceWorkers()
+                .some((w) => w.url().endsWith(skript)),
+        )
+        .toBe(true);
+    return /** @type {import('@playwright/test').Worker} */ (
+        page
+            .context()
+            .serviceWorkers()
+            .find((w) => w.url().endsWith(skript))
+    );
+}
+
+/**
+ * Ťuknutie na oznámenie v service workeri. Skutočný notificationclick z testu nejde a prehliadač
+ * bez ťuknutia focus aj openWindow odmietne - tie dve volania sú preto len zapísané. Správa oknu je
+ * skutočná. Na telefóne to treba overiť ručne.
+ * @param {import('@playwright/test').Worker} sw @returns {Promise<string[][]>} zavolané focus a openWindow
+ */
+const tukni = (sw) =>
+    sw.evaluate(async () => {
+        const glob = /** @type {any} */ (self);
+        /** @type {string[][]} */ const volania = [];
+        Object.defineProperty(glob.clients, 'openWindow', {
+            configurable: true,
+            value: async (/** @type {string} */ url) => void volania.push(['openWindow', url]),
+        });
+        glob.WindowClient.prototype.focus = async function () {
+            volania.push(['focus']);
+            return this;
+        };
+        /** @type {Promise<unknown> | undefined} */ let hotovo;
+        const e = Object.assign(new Event('notificationclick'), {
+            action: '',
+            notification: { data: { app: './' }, close() {} },
+            waitUntil: (/** @type {Promise<unknown>} */ p) => (hotovo = p),
+        });
+        glob.dispatchEvent(e);
+        await hotovo;
+        return volania;
+    });
+
+/** Zapisuje mená CSS animácií, ktoré sa v stránke spustili. @param {import('@playwright/test').Page} page */
+const sledujAnimacie = (page) =>
+    page.addInitScript(() => {
+        const glob = /** @type {any} */ (window);
+        glob.animacie = [];
+        document.addEventListener('animationstart', (e) => glob.animacie.push(e.animationName), true);
+    });
+/** Koľkokrát obrys Plánu dňa začal. @param {import('@playwright/test').Page} page */
+const obrysov = (page) =>
+    page.evaluate(() => /** @type {any} */ (window).animacie.filter((/** @type {string} */ a) => a === 'plan-obrys').length);
+
+/** Karta a Plán dňa. @param {import('@playwright/test').Page} page @param {string} panel @param {boolean} rozbaleny */
+async function ukazuje(page, panel, rozbaleny) {
+    await expect(page.locator('#page')).toHaveAttribute('data-panel', panel);
+    await expect(page.locator('#tz-plan-btn')).toHaveAttribute('aria-expanded', String(rozbaleny));
+}
+
+/** Obrys prebehol raz a zhasol. @param {import('@playwright/test').Page} page */
+async function obrysPrebehol(page) {
+    await expect.poll(() => obrysov(page)).toBe(1);
+    await expect(page.locator('#tz-plan')).not.toHaveAttribute('data-obrys');
+}
+
+test.describe('ťuknutie na oznámenie', () => {
+    test('appka beží na inej karte: Teraz s rozbaleným plánom a obrysom, Späť sa vráti na kartu', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page);
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        const sw = await sluzba(page);
+        await page.locator('#nav-mozem').click();
+        await ukazuje(page, 'mozem', false);
+        expect(await tukni(sw)).toEqual([['focus']]);
+        await ukazuje(page, 'terazky', true);
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        await obrysPrebehol(page);
+        await page.goBack();
+        await expect(page.locator('#page')).toHaveAttribute('data-panel', 'mozem');
+        await page.locator('#nav-terazky').click();
+        await ukazuje(page, 'terazky', false);
+    });
+
+    test('appka je zatvorená: adresa so značkou otvorí plán, značka zmizne a obnovenie nič nezopakuje', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page);
+        const sw = await sluzba(page);
+        await page.goto('about:blank');
+        const [[volanie, adresa]] = await tukni(sw);
+        expect(volanie).toBe('openWindow');
+        await page.goto(adresa);
+        await ukazuje(page, 'terazky', true);
+        await obrysPrebehol(page);
+        expect(new URL(page.url()).search).toBe('');
+        await page.goBack();
+        await ukazuje(page, 'terazky', false);
+        await page.reload();
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        await ukazuje(page, 'terazky', false);
+        expect(await obrysov(page)).toBe(0);
+    });
+
+    test('bežné otvorenie appky: plán zbalený a bez obrysu', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page);
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        await ukazuje(page, 'terazky', false);
+        await page.locator('#tz-plan-btn').click();
+        await ukazuje(page, 'terazky', true);
+        expect(await obrysov(page)).toBe(0);
+    });
+
+    test('útlm pohybu: plán je rozbalený hneď a obrys nie je vidieť', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await sledujAnimacie(page);
+        await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie' });
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        await ukazuje(page, 'terazky', true);
+        expect(await obrysov(page)).toBe(0);
+        const obrys = await page.evaluate(
+            () => getComputedStyle(/** @type {Element} */ (document.querySelector('#tz-plan')), '::after').opacity,
+        );
+        expect(obrys).toBe('0');
+    });
+
+    test('dáta ešte nie sú: obrys počká na plán', async ({ page }) => {
+        await sledujAnimacie(page);
+        /** @type {(v?: unknown) => void} */ let pusti = () => {};
+        const predpoved = new Promise((ok) => (pusti = ok));
+        await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie', predpoved });
+        await expect(page.locator('#tz-plan')).toBeHidden();
+        await ukazuje(page, 'terazky', true);
+        expect(await obrysov(page)).toBe(0);
+        pusti();
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        await obrysPrebehol(page);
+    });
+
+    test('plán sa dlho neukáže: obrys prepadne a neskorá predpoveď ho nespustí', async ({ page }) => {
+        await sledujAnimacie(page);
+        /** @type {(v?: unknown) => void} */ let pusti = () => {};
+        const predpoved = new Promise((ok) => (pusti = ok));
+        await page.clock.install({ time: FIXED_NOW });
+        await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie', predpoved });
+        await expect(page.locator('#tz-plan')).toHaveAttribute('data-obrys');
+        await page.clock.fastForward(OZNAMENIA.obrysCakaMs);
+        await expect(page.locator('#tz-plan')).not.toHaveAttribute('data-obrys');
+        // Prvá požiadavka medzitým vypršala, predpoveď príde s ďalšou obnovou dát.
+        pusti();
+        await page.clock.fastForward(REFRESH.dataMs);
+        await expect(page.locator('#tz-plan-body')).toBeVisible();
+        expect(await obrysov(page)).toBe(0);
+    });
+
+    test('plán mimo obrazovky: stránka sa k nemu posunie, nad spodnú navigáciu', async ({ page }) => {
+        await page.setViewportSize({ width: 360, height: 480 });
+        await otvor(page);
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        const sw = await sluzba(page);
+        // Stránka je nízka, plán by neodišiel celý - výšku dodá test.
+        await page.evaluate(() => {
+            document.body.style.paddingBottom = '1500px';
+            window.scrollTo(0, document.documentElement.scrollHeight);
+        });
+        await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+        await expect(page.locator('#tz-plan')).not.toBeInViewport();
+        await tukni(sw);
+        await expect(page.locator('#tz-plan-body')).toBeInViewport({ ratio: 1 });
+        const hranice = await page.evaluate(() => [
+            /** @type {Element} */ (document.querySelector('#tz-plan')).getBoundingClientRect().bottom,
+            /** @type {Element} */ (document.querySelector('.tabs')).getBoundingClientRect().top,
+        ]);
+        expect(hranice[0]).toBeLessThanOrEqual(hranice[1]);
+    });
+
+    test('správa príde, kým je appka v pozadí: počká, kým je vidieť', async ({ page }) => {
+        await sledujAnimacie(page);
+        await page.addInitScript(() => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => /** @type {any} */ (window).vPozadi === true });
+        });
+        await otvor(page);
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        const sw = await sluzba(page);
+        await page.locator('#nav-mozem').click();
+        await page.evaluate(() => /** @type {any} */ (window.vPozadi = true));
+        await tukni(sw);
+        await page.evaluate(() => navigator.serviceWorker.getRegistration());
+        await ukazuje(page, 'mozem', false);
+        await page.evaluate(() => {
+            /** @type {any} */ (window).vPozadi = false;
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await ukazuje(page, 'terazky', true);
+        await obrysPrebehol(page);
+    });
+
+    test('starý odber: správa dôjde do okna v koreni aj bez ovládania, adresa prežije presmerovanie', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page);
+        await expect(page.locator('#tz-plan')).toBeVisible();
+        const sw = await sluzba(page, '/obloha/sw.js', '/obloha/');
+        await page.locator('#nav-mozem').click();
+        expect(await tukni(sw)).toEqual([['focus']]);
+        await ukazuje(page, 'terazky', true);
+        await obrysPrebehol(page);
+        await page.goto('/obloha/?z=oznamenie');
+        await ukazuje(page, 'terazky', true);
+        await expect(page).toHaveURL(/\/#nastavenie=/);
+    });
+});
 
 test.describe('oznámenia', () => {
     test('sekcia Oznámenia: prepínač, hodina 9:00 predvolená a spotrebiče; voľba platí aj v Pláne dňa', async ({ page }) => {

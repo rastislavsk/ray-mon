@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="claude:viewport-fit-sides" content="cover" />
+        <title>Ťuknutie na oznámenie</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje
+               z appky, farby a rozmery sú odpísané zo style.css. Texty oznámenia a Plánu dňa dalo jadro
+               (swNotice, planDnaModel) z testovacích dát 5. 9. 2026 o 9:00, pri zamračenom dni s predpoveďou
+               stlmenou na 3 %. Veľké číslo a veta pri zamračenom dni sú ukážkové. */
+            /* Rozloženie: tri telefóny vedľa seba nad spoločnými prepínačmi, pod nimi rozhodnutia ako tabuľky. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            @property --obeh {
+                syntax: '<angle>';
+                inherits: false;
+                initial-value: 0deg;
+            }
+            :root {
+                color-scheme: dark;
+                --noc: #0b1130;
+                --list: #121a40;
+                --ciara: rgba(255, 255, 255, 0.16);
+                --papier: #f4f5fa;
+                --tlmene: rgba(244, 245, 250, 0.72);
+                --volba: #ffd166;
+                /* Z appky: */
+                --s1: #4f555f;
+                --s2: #7f858e;
+                --s3: rgba(5, 10, 30, 0.13);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --ink: #0b1430;
+                --glass: rgba(8, 16, 40, 0.3);
+                --bar: rgba(6, 10, 28, 0.72);
+                --dim: rgba(255, 255, 255, 0.82);
+                --pismo: 'Archivo', system-ui, sans-serif;
+                --strojove: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--noc);
+                color: var(--papier);
+                font-family: var(--pismo);
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1160px;
+                margin: 0 auto;
+                padding-block: 32px 72px;
+                padding-left: max(16px, env(safe-area-inset-left, 0px));
+                padding-right: max(16px, env(safe-area-inset-right, 0px));
+                display: grid;
+                gap: 44px;
+            }
+            main > * {
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+                text-wrap: balance;
+            }
+            h1 {
+                font-size: clamp(1.9rem, 5vw, 2.75rem);
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+            }
+            h2 {
+                font-size: 1.4rem;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+            }
+            p {
+                margin: 0;
+            }
+            .uvod,
+            .sekcia {
+                display: grid;
+                gap: 12px;
+            }
+            .uvod p,
+            .sekcia > p {
+                max-width: 72ch;
+                color: var(--tlmene);
+            }
+            code {
+                font-family: var(--strojove);
+                font-size: 0.875em;
+            }
+
+            /* Prepínače nad telefónmi */
+            .pult {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px 22px;
+                align-items: end;
+                padding: 14px 16px;
+                border: 1px solid var(--ciara);
+                border-radius: 14px;
+                background: var(--list);
+            }
+            .voľba {
+                display: grid;
+                gap: 5px;
+                min-width: 0;
+            }
+            .voľba > span {
+                font-size: 0.75rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--tlmene);
+            }
+            .seg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            button {
+                font: inherit;
+                color: inherit;
+            }
+            .seg button,
+            .akcia {
+                min-height: 40px;
+                padding: 6px 12px;
+                border: 1px solid var(--ciara);
+                border-radius: 9px;
+                background: none;
+                cursor: pointer;
+            }
+            .seg button[aria-pressed='true'] {
+                background: var(--papier);
+                border-color: var(--papier);
+                color: var(--ink);
+                font-weight: 700;
+            }
+            .akcia.hlavna {
+                background: var(--volba);
+                border-color: var(--volba);
+                color: var(--ink);
+                font-weight: 800;
+            }
+            button:focus-visible {
+                outline: 3px solid var(--volba);
+                outline-offset: 2px;
+            }
+
+            /* Tri telefóny */
+            .tri {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+                gap: 30px 24px;
+            }
+            .var {
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                margin: 0;
+                min-width: 0;
+            }
+            .var figcaption {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: baseline;
+                gap: 4px 10px;
+            }
+            .var figcaption b {
+                font-size: 1.2rem;
+                font-weight: 800;
+            }
+            .znacka {
+                padding: 0 8px;
+                border-radius: 6px;
+                background: var(--volba);
+                color: var(--ink);
+                font-size: 0.8125rem;
+                font-weight: 800;
+            }
+            .trvanie {
+                margin-left: auto;
+                font-size: 0.875rem;
+                color: var(--tlmene);
+                font-variant-numeric: tabular-nums;
+            }
+            .var ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9375rem;
+                color: var(--tlmene);
+            }
+            .var ul li + li {
+                margin-top: 3px;
+            }
+            .var ul b {
+                color: var(--papier);
+                font-weight: 700;
+            }
+
+            /* Telefón: rozmery ako obrazovka 360 × 780 (skutočná karta Teraz), mierne zmenšené. */
+            .tel {
+                position: relative;
+                width: 100%;
+                max-width: 348px;
+                height: 720px;
+                overflow: hidden;
+                border: 6px solid #03050f;
+                border-radius: 30px;
+                background: #000;
+                color: #fff;
+                font-size: 15px;
+                line-height: 1.3;
+            }
+            .obloha {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, var(--s1) 0%, var(--s2) 62%, #686e78 100%);
+            }
+            .vrstva {
+                position: absolute;
+                inset: 0;
+            }
+            .tel[data-krok='pred'] .app,
+            .tel[data-krok='app'] .pred {
+                display: none;
+            }
+            /* Plocha telefónu pri zatvorenej appke */
+            .plocha {
+                background: linear-gradient(170deg, #1a2036, #06080f);
+                display: grid;
+                justify-items: center;
+                align-content: start;
+                padding-top: 210px;
+            }
+            .plocha b {
+                font-size: 3.4rem;
+                font-weight: 300;
+                font-variant-numeric: tabular-nums;
+            }
+            .plocha span {
+                color: rgba(255, 255, 255, 0.72);
+            }
+            .hlav {
+                padding: 16px 20px 0;
+            }
+            .hlav b {
+                display: block;
+                font-size: 1rem;
+                font-weight: 900;
+                letter-spacing: 0.04em;
+                font-variation-settings: 'wdth' 118;
+            }
+            .hlav span {
+                font-size: 0.8125rem;
+            }
+            .kde {
+                padding: 12px 20px 0;
+                font-size: 1.75rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                line-height: 1;
+            }
+            .knum {
+                padding: 0 20px;
+                font-size: 62px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 118;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .knum small {
+                margin-left: 5px;
+                font-size: 18px;
+                font-weight: 700;
+                letter-spacing: 0;
+            }
+            .jas {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 190px;
+                margin: 8px 0 0 20px;
+                font-size: 0.6875rem;
+                font-weight: 800;
+            }
+            .jas i {
+                position: relative;
+                flex: 1;
+                height: 4px;
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.28);
+                overflow: hidden;
+            }
+            .jas i::after {
+                content: '';
+                position: absolute;
+                inset: 0 auto 0 0;
+                width: var(--jas);
+                background: #fff;
+            }
+            .meranie {
+                margin: 10px 20px 0;
+                padding-bottom: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+                font-size: 0.6875rem;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+            }
+            .meranie i {
+                display: inline-block;
+                width: 7px;
+                height: 7px;
+                margin-right: 6px;
+                border-radius: 50%;
+                background: var(--yes);
+            }
+            .say {
+                display: grid;
+                gap: 6px;
+                padding: 10px 20px 0;
+                font-size: 0.9375rem;
+            }
+            .chips {
+                display: flex;
+                gap: 6px;
+            }
+            .chip {
+                padding: 3px 10px;
+                border-radius: 999px;
+                background: var(--yes);
+                color: var(--ink);
+                font-size: 0.6875rem;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+            }
+            .chip.lacna {
+                background: var(--cheap);
+            }
+            .glass {
+                position: relative;
+                margin: 10px 14px 0;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 22px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+            }
+            .plan-hlava {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 10px 12px 16px;
+            }
+            .plan-t {
+                flex: 1;
+                min-width: 0;
+                display: grid;
+                gap: 3px;
+            }
+            .ttl {
+                font-size: 0.6875rem;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .lead {
+                font-size: 1.125rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1.1;
+            }
+            .chev {
+                flex: none;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+            }
+            .chev::after {
+                content: '';
+                width: 8px;
+                height: 8px;
+                margin-top: 3px;
+                border-left: 2px solid #fff;
+                border-top: 2px solid #fff;
+                transform: rotate(45deg);
+            }
+            .plan-telo {
+                display: grid;
+                gap: 8px;
+                padding: 0 12px 12px 16px;
+            }
+            .plan[data-zbaleny] .plan-telo {
+                display: none;
+            }
+            .plan[data-zbaleny] .chev::after {
+                margin-top: -3px;
+                transform: rotate(225deg);
+            }
+            .then {
+                font-size: 0.875rem;
+            }
+            .tl {
+                --name: 4.25rem;
+                --pad: 0.7rem;
+                position: relative;
+                padding-right: var(--pad);
+            }
+            .tl ul {
+                display: grid;
+                gap: 7px;
+                margin: 2px 0 0;
+                padding: 0;
+                list-style: none;
+            }
+            .tl li {
+                display: grid;
+                grid-template-columns: var(--name) minmax(0, 1fr);
+                align-items: center;
+                gap: 8px;
+                font-size: 0.75rem;
+            }
+            .track {
+                position: relative;
+                height: 13px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .track i {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 7px;
+                background: var(--yes);
+            }
+            .os {
+                position: relative;
+                height: 1.5em;
+                margin-left: calc(var(--name) + 8px);
+                font-size: 0.6875rem;
+                color: var(--dim);
+            }
+            .os span {
+                position: absolute;
+                top: 3px;
+                transform: translateX(-50%);
+            }
+            .now {
+                position: absolute;
+                top: 0;
+                bottom: 1.2rem;
+                left: calc(var(--name) + 8px + (100% - var(--name) - 8px - var(--pad)) * var(--at) / 100);
+                width: 2px;
+                background: #fff;
+                transform: translateX(-1px);
+                transform-origin: top;
+            }
+            .cipy {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .cip {
+                padding: 2px 10px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 999px;
+                font-size: 0.6875rem;
+            }
+            .note {
+                font-size: 0.6875rem;
+                color: var(--dim);
+            }
+            .graf {
+                padding: 12px 16px 60px;
+            }
+            .graf b {
+                display: block;
+                font-size: 0.875rem;
+                margin-left: 22%;
+            }
+            .graf i {
+                display: block;
+                height: 11px;
+                margin-top: 6px;
+                border-radius: 3px;
+                background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.82) 0 14px, transparent 14px 17px);
+            }
+            .tabs {
+                position: absolute;
+                inset: auto 0 0 0;
+                z-index: 2;
+                display: flex;
+                justify-content: space-around;
+                padding: 8px 2px 12px;
+                background: rgba(14, 18, 40, 0.94);
+            }
+            .tabs span {
+                flex: 1 1 0;
+                display: grid;
+                justify-items: center;
+                gap: 2px;
+                font-size: 0.625rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .tabs span[data-on] {
+                color: #fff;
+            }
+            .tabs svg {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .tabs span[data-on] svg {
+                stroke: var(--yes);
+            }
+            .dnes-slovo {
+                padding: 14px 20px 0;
+                font-size: 2.25rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1.05;
+            }
+
+            /* Oznámenie ako na Androide: celé je tlačidlo. */
+            .ozn {
+                position: absolute;
+                z-index: 3;
+                inset: 12px 10px auto;
+                display: grid;
+                grid-template-columns: 34px minmax(0, 1fr);
+                gap: 2px 10px;
+                padding: 12px 14px;
+                border: 0;
+                border-radius: 22px;
+                background: #242a3b;
+                color: #fff;
+                text-align: left;
+                cursor: pointer;
+                box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+            }
+            .tel[data-krok='app'] .ozn {
+                display: none;
+            }
+            .ozn-logo {
+                grid-row: span 3;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 34% 30%, #ffe08a 0 22%, #ffb43a 23% 34%, #24346d 35%);
+            }
+            .ozn small {
+                font-size: 0.6875rem;
+                color: rgba(255, 255, 255, 0.72);
+            }
+            .ozn b {
+                font-size: 0.9375rem;
+                font-weight: 700;
+            }
+            .ozn-text {
+                font-size: 0.8125rem;
+                color: rgba(255, 255, 255, 0.86);
+            }
+            .ozn-tl {
+                grid-column: 2;
+                display: flex;
+                gap: 16px;
+                margin-top: 6px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: #a9c7ff;
+            }
+            .tipni {
+                position: absolute;
+                z-index: 3;
+                left: 0;
+                right: 0;
+                top: 164px;
+                text-align: center;
+                font-size: 0.8125rem;
+                color: rgba(255, 255, 255, 0.86);
+            }
+            .tel[data-krok='app'] .tipni {
+                display: none;
+            }
+
+            /* A: svetlo raz obehne okraj karty Plán dňa. */
+            .plan[data-anim='a']::after {
+                content: '';
+                position: absolute;
+                inset: -1px;
+                padding: 2px;
+                border-radius: 22px;
+                background: conic-gradient(from var(--obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
+                mask:
+                    linear-gradient(#000 0 0) content-box,
+                    linear-gradient(#000 0 0);
+                mask-composite: exclude;
+                -webkit-mask-composite: xor;
+                pointer-events: none;
+                animation: obeh 0.9s ease-in-out both;
+            }
+            @keyframes obeh {
+                from {
+                    --obeh: 0deg;
+                    opacity: 0;
+                }
+                15% {
+                    opacity: 1;
+                }
+                80% {
+                    opacity: 1;
+                }
+                to {
+                    --obeh: 360deg;
+                    opacity: 0;
+                }
+            }
+
+            /* B: najprv čiara teraz, potom pásy zhora nadol. Bez pásov (zamračený deň) štítky rovnakým rytmom. */
+            .plan[data-anim='b'] .now {
+                animation: ciara 0.22s ease-out backwards;
+            }
+            .plan[data-anim='b'] .track i {
+                animation: pas 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+                animation-delay: calc(0.14s + var(--i) * 0.13s);
+            }
+            .plan[data-anim='b'] .cip {
+                animation: cip 0.32s ease-out backwards;
+                animation-delay: calc(var(--i) * 0.13s);
+            }
+            @keyframes ciara {
+                from {
+                    transform: translateX(-1px) scaleY(0);
+                }
+            }
+            @keyframes pas {
+                from {
+                    clip-path: inset(0 100% 0 0 round 7px);
+                }
+                to {
+                    clip-path: inset(0 0 0 0 round 7px);
+                }
+            }
+            @keyframes cip {
+                from {
+                    opacity: 0;
+                    transform: translateY(6px);
+                }
+            }
+
+            /* C: obrys správy zo šuflíka doletí na miesto karty Plán dňa. */
+            .let {
+                position: absolute;
+                z-index: 3;
+                display: none;
+                padding: 12px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.34);
+                border-radius: 22px;
+                background: #242a3b;
+                font-size: 0.9375rem;
+                font-weight: 700;
+                overflow: hidden;
+                pointer-events: none;
+            }
+
+            /* Útlm pohybu v systéme: ten istý zámer ako style.css. Prepínač v pulte ho len napodobní. */
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    transition: none !important;
+                    animation: none !important;
+                }
+            }
+            :root[data-utlm] *,
+            :root[data-utlm] *::before,
+            :root[data-utlm] *::after {
+                animation: none !important;
+            }
+
+            /* Tabuľky rozhodnutí */
+            .obal {
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                min-width: 640px;
+                border-collapse: collapse;
+                font-size: 0.9375rem;
+            }
+            th,
+            td {
+                padding: 10px 12px;
+                border-bottom: 1px solid var(--ciara);
+                text-align: left;
+                vertical-align: top;
+            }
+            thead th {
+                font-size: 0.75rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--tlmene);
+                font-weight: 700;
+            }
+            tbody th {
+                font-weight: 700;
+            }
+            td {
+                color: var(--tlmene);
+            }
+            .zoznam {
+                margin: 0;
+                padding-left: 20px;
+                max-width: 76ch;
+                color: var(--tlmene);
+                display: grid;
+                gap: 6px;
+            }
+            .zoznam b {
+                color: var(--papier);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header class="uvod">
+                <h1>Ťuknutie na oznámenie otvorí Plán dňa</h1>
+                <p>
+                    Správa hovorí o pláne a tlačidlo v nej sa volá Otvoriť plán, no appka o tom, že prišla z oznámenia, nič nevie. Bežiacu
+                    appku service worker len vytiahne do popredia, takže ostane na poslednej karte. To je tvoj prípad s kartou Dnes.
+                    Zatvorená appka sa otvorí na karte Teraz, ale plán je zbalený. Rozhodnúť treba dve veci: animáciu a spôsob, ako appke
+                    povedať, odkiaľ prišla.
+                </p>
+            </header>
+
+            <section class="sekcia" aria-labelledby="h-anim">
+                <h2 id="h-anim">1. Animácia: ťukni na oznámenie v telefóne</h2>
+                <p>
+                    Pohyb beží raz a sám skončí. Texty a pásy dalo jadro appky z testovacích dát (5. 9. 2026 o 9:00). V appke nepribudne
+                    žiadna veta: súvis so správou má povedať obraz.
+                </p>
+                <div class="pult">
+                    <div class="voľba">
+                        <span>Appka pred ťuknutím</span>
+                        <div class="seg" data-pult="odkial">
+                            <button type="button" id="p-bezala" data-h="bezala" aria-pressed="true">bežala na Dnes</button>
+                            <button type="button" id="p-zatvorena" data-h="zatvorena" aria-pressed="false">bola zatvorená</button>
+                        </div>
+                    </div>
+                    <div class="voľba">
+                        <span>Deň</span>
+                        <div class="seg" data-pult="den">
+                            <button type="button" id="p-slnko" data-h="slnko" aria-pressed="true">slnko</button>
+                            <button type="button" id="p-mraky" data-h="mraky" aria-pressed="false">zamračené</button>
+                        </div>
+                    </div>
+                    <div class="voľba">
+                        <span>Útlm pohybu</span>
+                        <div class="seg" data-pult="utlm">
+                            <button type="button" id="p-utlm-off" data-h="nie" aria-pressed="true">vypnutý</button>
+                            <button type="button" id="p-utlm-on" data-h="ano" aria-pressed="false">zapnutý</button>
+                        </div>
+                    </div>
+                    <button type="button" class="akcia hlavna" id="vsetky">Ťuknúť vo všetkých troch</button>
+                    <button type="button" class="akcia" id="bezne">Bežné otvorenie appky</button>
+                </div>
+                <div class="tri" id="tri"></div>
+            </section>
+
+            <section class="sekcia" aria-labelledby="h-signal">
+                <h2 id="h-signal">2. Ako appka zistí, že prišla z oznámenia</h2>
+                <p>
+                    Hash v adrese na to nejde: nesie <code>#nastavenie=…</code> a appka ho stále prepisuje. Query časť zachováva
+                    (<code>initUrlMirror</code>) a prenesie ju aj presmerovanie v <code>obloha/index.html</code>. Odporúčam možnosť 1.
+                </p>
+                <div class="obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Možnosť</th>
+                                <th scope="col">Ako to funguje</th>
+                                <th scope="col">Výhody</th>
+                                <th scope="col">Nevýhody</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">1. Adresa a správa (odporúčam)</th>
+                                <td>
+                                    Zatvorená appka: <code>openWindow('…?z=oznamenie')</code>. Bežiaca: <code>postMessage</code> oknu a
+                                    <code>focus()</code>.
+                                </td>
+                                <td>
+                                    Okamžité, bez ukladania. Overil som, že správa dôjde aj do okna, ktoré service worker neovláda, aj pri
+                                    starom odbere
+                                    <code>obloha/sw.js</code>. Prežije aj jedno obnovenie cez <code>boot.js</code>.
+                                </td>
+                                <td>
+                                    Dve cesty k jednému cieľu. Appka musí parameter hneď zmazať z adresy, inak by sa pri obnovení stránky
+                                    animácia zopakovala.
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">2. Vždy nanovo načítať</th>
+                                <td><code>okno.navigate('…?z=oznamenie')</code> aj pri bežiacej appke, potom <code>focus()</code>.</td>
+                                <td>Jediná cesta: vždy adresa.</td>
+                                <td>
+                                    Sama nestačí. Overil som, že <code>navigate</code> v neovládanom okne hodí TypeError a pri starom odbere
+                                    je okno neovládané stále. Appka sa znova načíta a prišiel by si o rozpísaný sprievodca.
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">3. Odkaz v Cache API</th>
+                                <td>
+                                    Klik zapíše značku s časom do cache oznámení. Appka ju prečíta pri štarte a pri návrate do popredia a
+                                    zmaže.
+                                </td>
+                                <td>
+                                    Jedna cesta pre oba prípady. Odkaz počká aj na stránku, ktorú Android zmrazil. Staršie okno appky
+                                    neprekáža, adresa ostane čistá.
+                                </td>
+                                <td>
+                                    Najviac kódu: expirácia značky, poradie zápisu a <code>focus()</code>, viac okien. Čítanie je
+                                    asynchrónne, takže štart by buď čakal, alebo plán rozbalil až po prvom vykreslení.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="sekcia" aria-labelledby="h-spolu">
+                <h2 id="h-spolu">3. Platí pri každej voľbe</h2>
+                <ul class="zoznam">
+                    <li>
+                        <b>Späť:</b> bežiaca appka sa vráti na kartu, kde bola. Pri zatvorenej appke prvé Späť zbalí plán, ďalšie appku
+                        opustí.
+                    </li>
+                    <li>
+                        <b>Posun:</b> keď bol plán mimo obrazovky, appka k nemu posunie. Pri 360 × 780 s testovacími dátami sa rozbalený
+                        zmestí nad spodnú navigáciu.
+                    </li>
+                    <li><b>Dáta ešte nie sú:</b> plán sa zobrazí až s predpoveďou. Animácia počká na neho, nespustí sa naprázdno.</li>
+                    <li><b>Plán nemá čo ukázať:</b> otvorí sa karta Teraz bez animácie.</li>
+                    <li><b>Bežné otvorenie appky:</b> plán ostane zbalený a nič sa nehýbe.</li>
+                    <li><b>Útlm pohybu:</b> Teraz a rozbalený plán sa ukážu hneď, bez pohybu.</li>
+                    <li>
+                        <b>Pripomienka a chybové oznámenie:</b> navrhujem to isté ako pri rannom pláne. Tlačidlo Pripomeň ďalej appku
+                        neotvára.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="sekcia" aria-labelledby="h-over">
+                <h2 id="h-over">4. Čo je overené a čo nie</h2>
+                <div class="obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Prípad</th>
+                                <th scope="col">Čo spravil sw.js</th>
+                                <th scope="col">Výsledok dnes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">Bežiaca na karte Dnes</th>
+                                <td><code>focus()</code></td>
+                                <td>Ostala karta Dnes, plán zbalený</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Zatvorená</th>
+                                <td><code>openWindow('…/')</code></td>
+                                <td>Karta Teraz, plán zbalený</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Starý odber, bežiaca na Dnes</th>
+                                <td><code>focus()</code></td>
+                                <td>Rovnaké ako prvý riadok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>
+                    Overené v Chromiu z Playwrightu so skutočným <code>sw.js</code> a falošnou udalosťou <code>notificationclick</code>;
+                    <code>focus</code> a <code>openWindow</code> boli nahradené zápisom, lebo bez ťuknutia ich prehliadač odmietne. Na
+                    telefóne overené nie je: či správa dôjde do stránky, ktorú Android zmrazil, ukáže až skúška na Samsungu. Čakanie 0,6 s
+                    pri zatvorenej appke v mockupe je ilustrácia, nie meranie.
+                </p>
+            </section>
+        </main>
+
+        <script>
+            // Mockup, žiadny kód appky. Telefóny skladá jeden kus HTML, aby boli tri varianty zhodné.
+            const DNI = {
+                slnko: {
+                    ozn: {
+                        title: 'Dnes slnko do 17:30',
+                        body: 'Práčka 09:00 · umývačka 09:00 · sušička 11:00. Auto 09:20–15:45: ~230 km zo slnka.',
+                        tl: ['Pripomeň o 11:00', 'Otvoriť plán'],
+                    },
+                    lead: 'Teraz práčka a umývačka',
+                    then: 'Auto o 09:20 · sušička o 11:00',
+                    pasy: [
+                        ['Práčka', 25, 12.5],
+                        ['Umývačka', 25, 15.6],
+                        ['Auto', 27.1, 40.1],
+                        ['Sušička', 37.5, 9.4],
+                    ],
+                    cipy: [],
+                    kw: '1.8',
+                    jas: 31,
+                    chips: '<span class="chip">ÁNO</span><span class="chip lacna">LACNÁ SIEŤ</span>',
+                    veta: 'Slnko to teraz platí za nás.',
+                },
+                mraky: {
+                    ozn: {
+                        title: 'Dnes zamračené celý deň',
+                        body: 'Práčka, sušička a umývačka v lacnom pásme od 09:00. Auto nabi v lacnom pásme od 09:00.',
+                        tl: [],
+                    },
+                    lead: 'Práčka od 09:00',
+                    then: 'Umývačka od 09:00 · auto od 09:00',
+                    pasy: [],
+                    cipy: ['Práčka · od 09:00', 'Umývačka · od 09:00', 'Auto · od 09:00', 'Sušička · od 11:00'],
+                    kw: '0.2',
+                    jas: 4,
+                    chips: '<span class="chip lacna">LACNÁ SIEŤ</span>',
+                    veta: '',
+                },
+            };
+            const OS = [
+                ['6', 6.3],
+                ['9', 25],
+                ['12', 43.8],
+                ['15', 62.5],
+                ['18', 81.3],
+                ['21', 100],
+            ];
+            const VARIANTY = [
+                {
+                    id: 'a',
+                    meno: 'A. Obrys',
+                    trvanie: '0,9 s',
+                    body: [
+                        '<b>Výhody:</b> najtichšie, nesiaha na obsah, vyzerá rovnako pri každom dni.',
+                        '<b>Nevýhody:</b> povie len „pozri sem“, nie súvis so správou. Na svetlej oblohe je slabšie vidieť.',
+                    ],
+                },
+                {
+                    id: 'b',
+                    meno: 'B. Pásy podľa času',
+                    odporucam: true,
+                    trvanie: '0,95 s',
+                    body: [
+                        '<b>Výhody:</b> časy zo správy sa nakreslia na os, takže súvis vidno bez slov. Oči idú na údaje, nie na rám. Pri zamračenom dni rovnakým rytmom naskočia štítky.',
+                        '<b>Nevýhody:</b> keď pri štarte dôjde meranie a pásy sa prepíšu, animácia by sa spustila znova. Appka preto počká na dáta.',
+                    ],
+                },
+                {
+                    id: 'c',
+                    meno: 'C. Správa pristane',
+                    trvanie: '0,6 s',
+                    body: [
+                        '<b>Výhody:</b> najpriamejší súvis: tá istá správa doletí na plán.',
+                        '<b>Nevýhody:</b> najviac kódu, appka by musela dostať aj nadpis správy. Pohyb cez celú obrazovku je nápadný, každé ráno môže liezť na nervy.',
+                    ],
+                },
+            ];
+            const IKONY = {
+                Teraz: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+                Dnes: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>',
+                '7 dní': '<rect x="4" y="6" width="16" height="14" rx="3"/><path d="M4 10h16M8 3v4M16 3v4"/>',
+                Štatistika: '<path d="M6 20v-7M12 20V5M18 20v-10"/>',
+                Nastavenie: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>',
+            };
+            const tabs = (na) =>
+                `<div class="tabs" aria-hidden="true">${Object.entries(IKONY)
+                    .map(([m, p]) => `<span${m === na ? ' data-on' : ''}><svg viewBox="0 0 24 24">${p}</svg>${m}</span>`)
+                    .join('')}</div>`;
+            const nastavenie = { odkial: 'bezala', den: 'slnko', utlm: 'nie' };
+            const utlm = () => nastavenie.utlm === 'ano' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const planHtml = (d) => {
+                const pasy = d.pasy.length
+                    ? `<div class="tl"><ul>${d.pasy
+                          .map(
+                              ([m, l, w], i) =>
+                                  `<li><span>${m}</span><span class="track"><i style="left:${l}%;width:${w}%;--i:${i}"></i></span></li>`,
+                          )
+                          .join(
+                              '',
+                          )}</ul><div class="os">${OS.map(([t, at]) => `<span style="left:${at}%">${t}</span>`).join('')}</div><span class="now" style="--at:25"></span></div>`
+                    : '';
+                const cipy = d.cipy.length
+                    ? `<div class="cipy">${d.cipy.map((c, i) => `<span class="cip" style="--i:${i}">${c}</span>`).join('')}</div>`
+                    : '';
+                return `<div class="plan-hlava"><span class="plan-t"><span class="ttl">Plán dňa</span><span class="lead">${d.lead}</span></span><span class="chev"></span></div><div class="plan-telo"><p class="then">${d.then}</p>${pasy}${cipy}<p class="note">Naraz len toľko, koľko strecha utiahne.</p></div>`;
+            };
+            const appHtml = (d) =>
+                `<div class="obloha"></div><div class="vrstva"><div class="hlav"><b>RAY-MON</b><span>Dvorany nad Nitrou</span></div>
+                <div class="kde">Teraz</div><div class="knum">${d.kw}<small>kW</small></div>
+                <div class="jas" style="--jas:${d.jas}%"><i></i>${d.jas} %</div>
+                <div class="meranie"><i></i>09:00 · ŽIVÉ MERANIE ›</div>
+                <div class="say"><div class="chips">${d.chips}</div>${d.veta}</div>
+                <section class="plan glass" data-plan>${planHtml(d)}</section>
+                <div class="graf glass"><b>09:00</b><i></i></div></div>${tabs('Teraz')}`;
+            const predHtml = () =>
+                nastavenie.odkial === 'bezala'
+                    ? `<div class="obloha"></div><div class="vrstva"><div class="hlav" style="padding-top:196px"><b>RAY-MON</b><span>Dvorany nad Nitrou</span></div><div class="kde">Dnes</div><div class="dnes-slovo">Not baaad dneskaj</div></div>${tabs('Dnes')}`
+                    : `<div class="vrstva plocha"><b>09:00</b><span>sobota 5. septembra</span></div>`;
+            const oznHtml = (d) =>
+                `<span class="ozn-logo"></span><small>RAY-MON · teraz</small><b>${d.ozn.title}</b><span class="ozn-text">${d.ozn.body}</span>${
+                    d.ozn.tl.length ? `<span class="ozn-tl">${d.ozn.tl.map((t) => `<span>${t}</span>`).join('')}</span>` : ''
+                }`;
+
+            const tri = document.getElementById('tri');
+            tri.innerHTML = VARIANTY.map(
+                (v) => `<figure class="var" data-var="${v.id}">
+                    <figcaption><b>${v.meno}</b>${v.odporucam ? '<span class="znacka">odporúčam</span>' : ''}<span class="trvanie">${v.trvanie}</span></figcaption>
+                    <div class="tel" data-krok="pred">
+                        <div class="pred vrstva"></div>
+                        <div class="app vrstva"></div>
+                        <button type="button" class="ozn" id="ozn-${v.id}" aria-label="Ťuknúť na oznámenie, variant ${v.meno}"></button>
+                        <p class="tipni">Ťukni na oznámenie</p>
+                        <div class="let"></div>
+                    </div>
+                    <button type="button" class="akcia" id="znova-${v.id}">Znova od oznámenia</button>
+                    <ul>${v.body.map((b) => `<li>${b}</li>`).join('')}</ul>
+                </figure>`,
+            ).join('');
+            /** @type {Map<HTMLElement, number[]>} */
+            const casovace = new Map();
+            const zrus = (f) => {
+                (casovace.get(f) ?? []).forEach(clearTimeout);
+                casovace.set(f, []);
+            };
+            const neskor = (f, fn, ms) => casovace.get(f).push(setTimeout(fn, ms));
+
+            /** Vráti telefón pred ťuknutie. */
+            function nanovo(f) {
+                zrus(f);
+                const d = DNI[nastavenie.den];
+                const tel = f.querySelector('.tel');
+                tel.dataset.krok = 'pred';
+                f.querySelector('.pred').innerHTML = predHtml();
+                f.querySelector('.app').innerHTML = appHtml(d);
+                f.querySelector('.ozn').innerHTML = oznHtml(d);
+                f.querySelector('.let').style.display = 'none';
+            }
+            /** Variant C: obrys správy letí z miesta oznámenia na kartu plánu. */
+            function let_(f, d) {
+                const tel = f.querySelector('.tel').getBoundingClientRect();
+                const ciel = f.querySelector('[data-plan]').getBoundingClientRect();
+                const zac = f.querySelector('.ozn');
+                zac.style.display = 'grid';
+                const z = zac.getBoundingClientRect();
+                zac.style.display = '';
+                const el = f.querySelector('.let');
+                el.textContent = d.ozn.title;
+                el.style.display = 'block';
+                const miesto = (r) => ({
+                    left: `${r.left - tel.left - 6}px`,
+                    top: `${r.top - tel.top - 6}px`,
+                    width: `${r.width}px`,
+                    height: `${r.height}px`,
+                });
+                const anim = el.animate(
+                    [
+                        { ...miesto(z), opacity: 1, color: '#fff', backgroundColor: '#242a3b' },
+                        { offset: 0.72, opacity: 0.8, color: 'rgba(255,255,255,0)', backgroundColor: 'rgba(36,42,59,0.5)' },
+                        { ...miesto(ciel), opacity: 0, color: 'rgba(255,255,255,0)', backgroundColor: 'rgba(36,42,59,0)' },
+                    ],
+                    { duration: 600, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)' },
+                );
+                anim.onfinish = () => (el.style.display = 'none');
+            }
+            /** Ťuknutie: appka, po prípadnom štarte rozbalený plán a animácia variantu. */
+            function tukni(f) {
+                zrus(f);
+                const v = f.dataset.var;
+                const d = DNI[nastavenie.den];
+                const tel = f.querySelector('.tel');
+                f.querySelector('.app').innerHTML = appHtml(d);
+                const plan = f.querySelector('[data-plan]');
+                const zatvorena = nastavenie.odkial === 'zatvorena';
+                if (zatvorena) plan.style.display = 'none';
+                tel.dataset.krok = 'app';
+                neskor(
+                    f,
+                    () => {
+                        plan.style.display = '';
+                        if (utlm()) return;
+                        if (v === 'c') return let_(f, d);
+                        plan.dataset.anim = v;
+                        neskor(f, () => delete plan.dataset.anim, 1400);
+                    },
+                    zatvorena ? 600 : 160,
+                );
+            }
+            /** Bežné otvorenie: karta Teraz so zbaleným plánom, bez pohybu. */
+            function bezne(f) {
+                zrus(f);
+                const d = DNI[nastavenie.den];
+                f.querySelector('.app').innerHTML = appHtml(d);
+                f.querySelector('[data-plan]').toggleAttribute('data-zbaleny', true);
+                f.querySelector('.tel').dataset.krok = 'app';
+            }
+            const figury = [...document.querySelectorAll('.var')];
+            figury.forEach((f) => {
+                casovace.set(f, []);
+                nanovo(f);
+                f.querySelector('.ozn').addEventListener('click', () => tukni(f));
+                f.querySelector('.akcia').addEventListener('click', () => nanovo(f));
+            });
+            document.getElementById('vsetky').addEventListener('click', () => {
+                figury.forEach(nanovo);
+                figury.forEach(tukni);
+            });
+            document.getElementById('bezne').addEventListener('click', () => figury.forEach(bezne));
+            document.querySelectorAll('[data-pult]').forEach((seg) =>
+                seg.addEventListener('click', (e) => {
+                    const b = e.target.closest('button');
+                    if (!b) return;
+                    nastavenie[seg.dataset.pult] = b.dataset.h;
+                    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+                    document.documentElement.toggleAttribute('data-utlm', nastavenie.utlm === 'ano');
+                    figury.forEach(nanovo);
+                }),
+            );
+        </script>
+    </body>
+</html>

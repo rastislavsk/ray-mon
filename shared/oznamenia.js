@@ -14,6 +14,31 @@ import { buildForecast, localMinutes } from './solar.js';
  * @typedef {{ on: boolean, hour: number }} Oznamenia
  */
 
+/**
+ * Značka v adrese: appku otvorilo ťuknutie na oznámenie. V hashi byť nemôže, ten nesie nastavenie
+ * a appka ho prepisuje (web/settings-store.js). Návrh: docs/navrhy/oznamenie-plan-dna.html.
+ */
+const KLIK_PARAM = 'z';
+
+/** Adresa, ktorú service worker otvorí, keď appka nebeží. @param {string} href @returns {string} */
+export function klikUrl(href) {
+    const url = new URL(href);
+    url.searchParams.set(KLIK_PARAM, OZNAMENIA.klik);
+    return url.href;
+}
+
+/**
+ * Otvorilo appku ťuknutie na oznámenie? Vráti adresu bez značky (tú treba hneď zapísať, inak by
+ * obnovenie stránky ťuknutie zopakovalo), alebo null, keď značku nenesie.
+ * @param {string} href @returns {string | null}
+ */
+export function klikZAdresy(href) {
+    const url = new URL(href);
+    if (url.searchParams.get(KLIK_PARAM) !== OZNAMENIA.klik) return null;
+    url.searchParams.delete(KLIK_PARAM);
+    return url.pathname + url.search + url.hash;
+}
+
 /** Pred prvou voľbou: vypnuté a predvolená hodina. @returns {Oznamenia} */
 export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour });
 
