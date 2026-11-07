@@ -28,6 +28,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * otvorená bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
  * @typedef {(typeof PANELS)[number]} Panel
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
+ * @typedef {'nacitavam' | 'ok' | 'chyba' | 'mimo' | 'bezpolohy'} RadarStav
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
  * @typedef {import('../shared/mozem.js').Chip['key']} TzChip
@@ -45,6 +46,11 @@ import { setupInit } from '../shared/setup-flow.js';
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
  *   statsPeriod: import('../shared/stats.js').StatsPeriod,
+ *   radarRozsah: import('../shared/radar.js').RadarRozsah,
+ *   radarOblaky: boolean,
+ *   radarRychlost: 1 | 2 | 3,
+ *   radarHra: boolean,
+ *   radarStav: RadarStav,
  *   online: boolean,
  *   incoming: import('../shared/settings.js').Settings | null,
  *   linkError: import('../shared/settings.js').LinkError | null,
@@ -103,13 +109,25 @@ const telefon = ({
 });
 
 /**
+ * Karta Radar: čo si človek zvolil. Poloha na osi nie je v stave, patrí prehrávaču (web/radar-hrac.js).
+ * @param {{ radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3 }} ulozene
+ */
+const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
+    radarRozsah: /** @type {import('../shared/radar.js').RadarRozsah} */ ('2h'),
+    radarOblaky,
+    radarRychlost: /** @type {1 | 2 | 3} */ (radarRychlost),
+    radarHra: false,
+    radarStav: /** @type {RadarStav} */ ('nacitavam'),
+});
+
+/**
  * @param {Date} now
  * @param {{ saved: import('../shared/settings.js').Settings | null, site: import('../shared/config.js').Site | null,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   online: boolean, ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
- *   layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
+ *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
@@ -165,6 +183,7 @@ export function initialState(
         weekDetail: null,
         weekDay: 0,
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
+        ...radarStart(phone),
         online,
         incoming,
         linkError,
@@ -251,7 +270,7 @@ export const shows = (state, panel) => panel === state.panel || (dashboard(state
  * sprievodcom a ponukou prevziať nastavenie z odkazu. Úvodná karta, hlavička, navigácia a obloha
  * sú v jadre - prvé zobrazenie na ne nečaká.
  */
-export const PARTS = /** @type {const} */ (['sedem', 'statistika', 'nastavenie']);
+export const PARTS = /** @type {const} */ (['sedem', 'radar', 'statistika', 'nastavenie']);
 
 /**
  * @typedef {(typeof PARTS)[number]} Part
@@ -260,7 +279,8 @@ export const PARTS = /** @type {const} */ (['sedem', 'statistika', 'nastavenie']
  */
 
 /** Časť appky, ktorej kód karta potrebuje (null = karta je v jadre). @param {Panel} panel @returns {Part | null} */
-export const partOf = (panel) => (panel === '7dni' ? 'sedem' : panel === 'statistika' || panel === 'nastavenie' ? panel : null);
+export const partOf = (panel) =>
+    panel === '7dni' ? 'sedem' : panel === 'radar' || panel === 'statistika' || panel === 'nastavenie' ? panel : null;
 
 /** Je kód karty načítaný? Kým nie je, karta sa neukáže prázdna - namiesto nej je hláška. @param {Pick<AppState, 'parts'>} state @param {Panel} panel */
 export function ready(state, panel) {

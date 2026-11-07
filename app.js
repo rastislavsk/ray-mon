@@ -10,6 +10,7 @@ import {
     loadDoma,
     loadRanna,
     loadLook,
+    loadRadar,
     loadOdmietnutie,
     loadOznamenia,
     loadSettings,
@@ -53,6 +54,7 @@ const store = createStore(
         pristup: loadOdmietnutie(),
         // Tón hlášok a živá obloha, vzhlad-v1.
         look: loadLook(),
+        ...loadRadar(),
         // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
         layout: layoutOf(window.innerWidth),
         // Ranné oznámenie a spotrebiče doma - voľby telefónu.

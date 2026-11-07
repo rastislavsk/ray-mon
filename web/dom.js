@@ -14,6 +14,29 @@ const byId = (/** @type {string} */ id) => {
 const perPanel = (prefix) =>
     /** @type {Record<import('./state.js').Panel, HTMLElement>} */ (Object.fromEntries(PANELS.map((p) => [p, byId(`${prefix}-${p}`)])));
 
+/** Karta Radar. Mapu, snímky a polohu na osi kreslí web/radar-hrac.js. */
+function radarDom() {
+    return {
+        rdMapa: byId('rd-mapa'),
+        rdCas: byId('rd-cas'),
+        rdDruh: byId('rd-druh'),
+        rdOblaky: byId('rd-oblaky'),
+        rdHlaska: byId('rd-hlaska'),
+        rdHlaskaText: byId('rd-hlaska-text'),
+        rdZnova: byId('rd-znova'),
+        rdDok: byId('rd-dok'),
+        rdRozsahy: byId('rd-rozsahy'),
+        rdLegenda: byId('rd-legenda'),
+        rdHraj: byId('rd-hraj'),
+        rdIkonaHraj: byId('rd-ikona-hraj'),
+        rdIkonaStoj: byId('rd-ikona-stoj'),
+        rdOs: byId('rd-os'),
+        rdOsSvg: byId('rd-os-svg'),
+        rdJazdec: byId('rd-jazdec'),
+        rdRychlost: byId('rd-rychlost'),
+    };
+}
+
 /** Karta Dnes (kódové meno mozem). Pás odporúčaní pod ňou je v terazDom. */
 function mozemDom() {
     return {
@@ -420,6 +443,7 @@ function wizardTariffDom() {
 
 export function collectDom() {
     return {
+        ...radarDom(),
         ...mozemDom(),
         ...terazDom(),
         ...sedemDom(),

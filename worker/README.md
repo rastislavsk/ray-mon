@@ -5,6 +5,9 @@ ich za neho pýta tento Worker. Prístupy ani nastavenie elektrárne neukladá. 
 pamätá, sú odbery ranného oznámenia (KV `ODBERY`, nižšie), a každú štvrťhodinu ich budí plánovaným
 behom. Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
 
+**Radar:** `GET /radar/<snímka>?b=<bloky>` prepošle kúsky súboru OPERA pre kartu Radar (`src/radar.js`). Nič nepočíta
+ani neukladá, odpovede drží cache Cloudflare. Bezplatný plán má 10 ms procesora na požiadavku.
+
 Spôsoby pripojenia sú v `shared/zdroje.js` (čo vidí človek) a vo `src/zdroje.js` (ako sa
 Worker pripojí a meria). Dnes kiosk Huawei FusionSolar, kľúč Fox ESS (Open API, podpísané
 požiadavky na `www.foxesscloud.com`), token SolaX (`www.solaxcloud.com`) a token Victron VRM

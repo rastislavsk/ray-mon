@@ -12,6 +12,8 @@ import {
     OLD_STORAGE_KEYS,
     OZNAMENIA_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
+    RADAR,
+    RADAR_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
@@ -50,6 +52,24 @@ function write(key, value) {
 }
 
 /** Adresa, ktorú appka v tejto karte naposledy zapísala (ADRESA_SESSION_KEY); bez nej null. */
+/**
+ * Voľby karty Radar. Sú len v tomto prehliadači, do odkazu s nastavením nepatria.
+ * @returns {{ radarOblaky: boolean, radarRychlost: 1 | 2 | 3 }}
+ */
+export function loadRadar() {
+    try {
+        const o = JSON.parse(read(RADAR_STORAGE_KEY) ?? '{}');
+        return { radarOblaky: o?.oblaky !== false, radarRychlost: RADAR.rychlosti.find((r) => r === o?.rychlost) ?? 1 };
+    } catch {
+        return { radarOblaky: true, radarRychlost: 1 };
+    }
+}
+
+/** @param {boolean} oblaky @param {number} rychlost */
+export function saveRadar(oblaky, rychlost) {
+    write(RADAR_STORAGE_KEY, JSON.stringify({ oblaky, rychlost }));
+}
+
 export function loadVlastnaAdresa() {
     try {
         return sessionStorage.getItem(ADRESA_SESSION_KEY);

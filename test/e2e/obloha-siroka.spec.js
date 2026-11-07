@@ -2,7 +2,7 @@
 // a počítač. Rozloženie rozhoduje šírka okna (LAYOUT_PX v shared/config.js). Očakávané texty sa
 // počítajú tými istými modelmi ako na telefóne - stĺpce sú tie isté karty, len vedľa seba.
 import { expect, test } from '@playwright/test';
-import { PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
+import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
@@ -151,7 +151,7 @@ test.describe('tri rozloženia podľa šírky okna', () => {
                 return label.left >= icon.right && Math.abs(label.top + label.height / 2 - (icon.top + icon.height / 2)) < 4;
             }),
         );
-        expect(polozky).toEqual([true, true, true, true, true]);
+        expect(polozky).toEqual(PANELS.map(() => true));
         await expectTextyKariet(page);
         expect(errors).toEqual([]);
     });

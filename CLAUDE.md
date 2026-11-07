@@ -15,6 +15,23 @@ skončila v novembri 2026, jej posledný stav je v git tagu `original-posledna`.
 Jadro (`shared/`) ešte nesie zvyšky pôvodnej appky, ktoré testy nazvú použitými, hoci appka ich nečíta
 (napr. `farba` vo vzhľade, `pas` v `shared/pristup.js`). Keď na ne natrafíš, zmaž ich.
 
+## Karta Radar
+
+Návrh, merania a rozhodnutia: `docs/navrhy/radar.html`. Podmienka je **žiadne náklady**, preto nie je
+žiadny server ani plánovaná úloha: Worker (`worker/src/radar.js`) len prepošle požadované bloky súboru
+OPERA a cache Cloudflare ich podrží, rozbalenie, čistenie a pohyb počíta prehliadač (`web/radar-vypocet.js`).
+Jadro Workera aj prehliadača je v `shared/radar-data.js`. Bezplatný Worker má 10 ms procesora, do `worker/src/radar.js`
+nepatrí nič výpočtové. Použiteľný je len súbor `.h5`, GeoTIFF toho istého produktu mal 7. 11. 2026 diery a mriežku.
+
+Open-Meteo zrejme ráta každý bod mriežky ako samostatné volanie. Väčšia mriežka narazila na limit 429 a zastavila aj
+predpoveď appky, preto je `modelBodyX` × `modelBodyY` malé a model sa pýta raz za 3 hodiny. Tieto čísla nezvyšuj bez merania.
+
+Mapa je zámerne obmedzená na výrez blokov okolo polohy (`hraniceOblasti`), rozhodnuté 7. 11. 2026 ako dočasné.
+Neskôr sa to má prerobiť na širší výrez alebo dáta idúce za mapou (možnosti B a C v návrhu).
+
+Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
+sa preto vždy píše „predpoveď“, nikdy nie „radar“.
+
 ## Verzia odkazu s nastavením
 
 Odkaz `#nastavenie=…` nesie verziu formátu (`v`, `SHARE_LINK_VERSION` v `shared/config.js`).
@@ -28,9 +45,9 @@ Návrh: `docs/navrhy/odkaz-verzia.html`.
 ## Nemenné pravidlá
 
 - **Žiadny build krok, framework ani bundler.** Stránka sa servíruje tak, ako leží v repozitári.
-- **Žiadne runtime závislosti.** Jediná externá knižnica je QR kód z CDN, načítaný s `defer`
-  a nepovinný. Má v `index.html` hash v `integrity` – pri zmene verzie treba zmeniť aj ten
-  (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. Písma sú v repozitári
+- **Žiadne runtime závislosti.** Externé knižnice sú len dve a obe z CDN s hashom v `integrity` – pri
+  zmene verzie treba zmeniť aj ten (cdnjs ho uvádza pri súbore), inak ho prehliadač nespustí. QR kód
+  je v `index.html`, načítaný s `defer` a nepovinný. MapLibre je výnimka len pre kartu Radar (schválená 7. 11. 2026): načítava sa až pri jej otvorení, adresa a hashe sú v `RADAR.maplibre` v `shared/config.js`. Písma sú v repozitári
   (`fonts/`, licencia OFL), nie z Google Fonts. Písmo appky je podmnožina len so znakmi
   appky – keď texty dostanú nový znak, vyrob ju znova podľa `scripts/font-subset.js` (ohlási to
   `test/font-subset.test.js`). Vývojové závislosti (lint, testy) sú v poriadku.
@@ -83,6 +100,8 @@ cez ktoré človek scrolluje popri ceste, majú `pan-y` (graf dňa `.day-scrub` 
 `.day-track` v detaile dňa karty 7 dní): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
+
+Mapa a časová os karty Radar majú `touch-action: none`: karta zaberá celú obrazovku, stránka sa na nej neposúva.
 
 **Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii. Ťah do strán má
 jediné miesto: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`).
@@ -153,7 +172,7 @@ cache, uvidí jedno obnovenie stránky navyše.
 
 Čo treba držať:
 
-- Appka sťahuje karty 7 dní, Štatistika a Nastavenie až po štarte (`web/parts.js`) –
+- Appka sťahuje karty 7 dní, Radar, Štatistika a Nastavenie až po štarte (`web/parts.js`) –
   tie `boot.js` nechráni. Keď ich `import()` zlyhá, appka namiesto karty ukáže hlášku s tlačidlom,
   ktoré stiahne súbory znova a obnoví stránku (najviac raz). Kontroluje to e2e skupina „nasadenie
   a cache: karty načítané neskôr“. Nový modul pre tieto karty patrí do ich časti, nie do jadra.

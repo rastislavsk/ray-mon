@@ -50,34 +50,35 @@ meraní zapečatí a `refresh.js` si novú pečať uloží.
 **`shared/` – doména bez vstupov a výstupov.** Nesmie sa dotknúť DOM, siete ani
 aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 
-| Modul                                                                        | Zodpovednosť                                                                                                         |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `config.js`                                                                  | Všetky konštanty: Dvorany a typická strecha, rozsahy nastavenia, hranice výkonu, tarifa Dvorian, spotrebiče, adresy. |
-| `solar.js`                                                                   | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.              |
-| `settings.js`                                                                | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                                     |
-| `setup.js`                                                                   | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.                  |
-| `zdroje.js`                                                                  | Značky meničov a spôsoby pripojenia merania (dáta pre sprievodcu), tvar pripojeného merania, interval merania.       |
-| `foxess.js`, `solax.js`, `victron.js`, `huawei-nb.js`, `solis.js`, `deye.js` | API výrobcov meničov: adresy, podpis či hlavičky a prevod odpovede na formát `pv` (`md5.js` pre podpis Fox ESS).     |
-| `kiosk.js`                                                                   | Parser odpovede kiosku na formát `pv`.                                                                               |
-| `tariff.js`                                                                  | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.                  |
-| `day-plan.js`                                                                | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                          |
-| `messages.js`                                                                | Všetky texty pre používateľa – spoločný vstup do `messages-core.js`, `messages-sedem.js` a `messages-statistika.js`. |
-| `chart-model.js`                                                             | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                    |
-| `hero-model.js`                                                              | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                |
-| `stats.js`                                                                   | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                  |
-| `daylog.js`                                                                  | Denník výroby po dňoch pre plagát Štatistiky: kontrola, zápis vyššieho súčtu, dni obdobia.                           |
-| `summary.js`                                                                 | Plagát obdobia na karte Štatistika v oboch appkách: kWh, obrázok obdobia, prepočty, najlepší deň, hodnota a uhlík.   |
-| `mozem.js`                                                                   | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                   |
-| `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                   |
-| `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                          |
-| `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                          |
-| `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, oblúk, výzvy).          |
-| `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.      |
-| `day-chart.js`                                                               | Graf dňa (Teraz, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.         |
-| `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.      |
-| `setup-texts.js`                                                             | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.             |
-| `nastavenie.js`                                                              | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                 |
-| `sedem-dni.js`                                                               | Karta 7 dní novej appky: riadky dní s oknom a počasím, detail dňa a týždňa z modelov karty 7 dní súčasnej appky.     |
+| Modul                                                                        | Zodpovednosť                                                                                                                  |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `config.js`                                                                  | Všetky konštanty: Dvorany a typická strecha, rozsahy nastavenia, hranice výkonu, tarifa Dvorian, spotrebiče, adresy.          |
+| `solar.js`                                                                   | Poloha slnka, žiarenie na rovinu panelu, výkon elektrárne, bezoblačný strop, zloženie celej predpovede.                       |
+| `settings.js`                                                                | Nastavenie elektrárne: kontrola vstupu, uložený formát, lokality z vyhľadávania.                                              |
+| `setup.js`                                                                   | Sprievodca nastavením: poradie obrazoviek, kedy sa dá ísť ďalej, prázdne nastavenie, celkový výkon.                           |
+| `zdroje.js`                                                                  | Značky meničov a spôsoby pripojenia merania (dáta pre sprievodcu), tvar pripojeného merania, interval merania.                |
+| `foxess.js`, `solax.js`, `victron.js`, `huawei-nb.js`, `solis.js`, `deye.js` | API výrobcov meničov: adresy, podpis či hlavičky a prevod odpovede na formát `pv` (`md5.js` pre podpis Fox ESS).              |
+| `kiosk.js`                                                                   | Parser odpovede kiosku na formát `pv`.                                                                                        |
+| `tariff.js`                                                                  | Tarifa: rozvrh na deň, pásmo v minúte, farby, stav spotrebičov, kontrola a čítanie uloženej tarify.                           |
+| `day-plan.js`                                                                | Plán dňa po štvrťhodinách: pásmo tarify, výkon z krivky dňa a z toho farba.                                                   |
+| `radar.js`, `radar-data.js`                                                  | Karta Radar: čas, os, farby a štýl mapy; mriežka OPERA, index HDF5, čistenie, pohyb a model (návrh `docs/navrhy/radar.html`). |
+| `messages.js`                                                                | Všetky texty pre používateľa – spoločný vstup do `messages-core.js`, `messages-sedem.js` a `messages-statistika.js`.          |
+| `chart-model.js`                                                             | Geometria grafov ako čisté dáta: body, mriežky, tooltipy, súhrny.                                                             |
+| `hero-model.js`                                                              | Model hlavnej karty pre daný čas – rovnaký pre „teraz“ aj pre náhľad.                                                         |
+| `stats.js`                                                                   | Karta Štatistika: súčty výroby po obdobiach a ich hodnota podľa tarify, výroba rozdelená do pásiem.                           |
+| `daylog.js`                                                                  | Denník výroby po dňoch pre plagát Štatistiky: kontrola, zápis vyššieho súčtu, dni obdobia.                                    |
+| `summary.js`                                                                 | Plagát obdobia na karte Štatistika v oboch appkách: kWh, obrázok obdobia, prepočty, najlepší deň, hodnota a uhlík.            |
+| `mozem.js`                                                                   | Karta Môžem?: či teraz pustiť spotrebič, a keď nie, kedy - z plánu dňa a predpovede na ďalšie dni.                            |
+| `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                            |
+| `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                                   |
+| `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                                   |
+| `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, oblúk, výzvy).                   |
+| `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, graf dňa, pás odporúčaní.               |
+| `day-chart.js`                                                               | Graf dňa (Teraz, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.                  |
+| `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.               |
+| `setup-texts.js`                                                             | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.                      |
+| `nastavenie.js`                                                              | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                          |
+| `sedem-dni.js`                                                               | Karta 7 dní novej appky: riadky dní s oknom a počasím, detail dňa a týždňa z modelov karty 7 dní súčasnej appky.              |
 
 **`boot.js` – vstup stránky.** `index.html` spúšťa len jeho; on načíta `app.js` dynamickým
 `import()` a keď sa graf modulov nezíde (stará verzia modulu z cache prehliadača po nasadení),
@@ -220,7 +221,7 @@ ju nahradil. Stránka, stav, render a poslucháče sú v koreni a vo `web/`, jad
   a telefón ich pred prvým zobrazením sťahuje jeden po druhom podľa importov. Preto:
 
 - **Neskoré časti.** Pri štarte sa sťahuje len jadro: úvodná karta (Môžem? alebo Teraz), hlavička,
-  navigácia a obloha. Karty 7 dní, Štatistika a Nastavenie so sprievodcom sú tri časti
+  navigácia a obloha. Karty 7 dní, Radar, Štatistika a Nastavenie so sprievodcom sú štyri časti
   (`PARTS` v `web/state.js`, vstupy `web/part-*.js`), ktoré `web/parts.js`
   načíta dynamickým `import()` – keď ich obrazovka potrebuje (`neededParts`), inak sekundu po
   prvom vykreslení, keď je prehliadač voľný. Prvé vykreslenie čaká len na časti, ktoré úvodná

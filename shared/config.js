@@ -120,7 +120,7 @@ export const SITE_STORAGE_KEY = 'poloha-v1';
  * appky vždy otvárajú - karta Teraz s Plánom dňa odpovedá, čo a kedy zapnúť
  * (docs/navrhy/dnes-a-teraz.html).
  */
-export const PANELS = /** @type {const} */ (['terazky', 'mozem', '7dni', 'statistika', 'nastavenie']);
+export const PANELS = /** @type {const} */ (['terazky', 'mozem', 'radar', '7dni', 'statistika', 'nastavenie']);
 
 /**
  * Sekcie karty Nastavenie v poradí na karte - rovnaké (shared/nastavenie.js,
@@ -480,6 +480,9 @@ export const OLD_STORAGE_KEYS = ['spustenia-v1', 'prva-karta-v1'];
 export const DAYLOG = { limit: 400, fromMin: 180 };
 export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
+/** Voľby karty Radar: oblaky a rýchlosť. Len v tomto prehliadači, do odkazu nepatria. */
+export const RADAR_STORAGE_KEY = 'radar-v1';
+
 /**
  * Tón hlášok: drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká a je vecný. Voľba je
  * spoločná (Nastavenie › Vzhľad). Prvý v zozname je predvolený.
@@ -565,6 +568,7 @@ export const STORAGE_KEYS = [
     SITE_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
+    RADAR_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
@@ -615,6 +619,80 @@ export const WORKER_OZNAMENIA_PATH = '/oznamenia';
 export const WORKER_OZNAMENIA_URL = new URL(WORKER_OZNAMENIA_PATH, WORKER_URL).href;
 export const WORKER_PRIPOMEN_PATH = '/pripomen';
 export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).href;
+export const WORKER_RADAR_PATH = '/radar/';
+export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
+
+/**
+ * Karta Radar (docs/navrhy/radar.html). Kompozit OPERA má mriežku 1 km a 30 samostatne
+ * komprimovaných blokov. Worker z neho prepošle len bloky do `dosahKm` od polohy, zvyšok spočíta
+ * prehliadač. Predpoveď na 2 h je posun poslednej snímky podľa pohybu, Dnes a Zajtra model ICON-EU.
+ */
+export const RADAR = {
+    s3: 'https://s3.waw3-1.cloudferro.com/openradar-24h/',
+    stlpce: 3800,
+    riadky: 4400,
+    blokStlpce: 880,
+    blokRiadky: 760,
+    dosahKm: 250,
+    zmensenie: 2,
+    krokMin: 5,
+    minulostMin: 120,
+    buducnostMin: 120,
+    // Najnovšia snímka býva zverejnená o 4-5 minút, preto treba skúsiť aj staršie kroky.
+    pokusov: 5,
+    // Staršie snímky sa sťahujú po štyroch naraz, aby sa nečakalo jedna na druhú.
+    subezne: 4,
+    obnovaMs: 5 * 60 * 1000,
+    // Prehrávanie pri 1×: dve hodiny merania a dve predpovede za 8 s, deň za 12 s.
+    krokovZaS: 6,
+    hodinZaS: 2,
+    pauzaNaKonciMs: 1100,
+    rychlosti: /** @type {const} */ ([1, 2, 3]),
+    dbz: { od: 8, do: 60, prah: 9 },
+    cistenie: { susedia: 6, ostrov: 40 },
+    pohyb: { mriezka: 32, hladanie: 14, okno: 30, minEnergia: 1200, mierny: 20000, mierka: 20 },
+    // Predpoveď slabne, lebo posun nevie, že dážď zaniká. Zmeraná presnosť: docs/navrhy/radar.html.
+    predpovedSlabne: 0.992,
+    // Každý bod sa zrejme ráta ako samostatné volanie Open-Meteo: mriežka 20 × 30 po pár otvoreniach narazila
+    // na limit 429 a zastavila aj predpoveď appky. Model sa mení raz za 3 hodiny, častejšie sa pýtať netreba.
+    modelBodyX: 16,
+    modelBodyY: 14,
+    modelBodovNaDopyt: 300,
+    modelZjemnenie: 10,
+    modelObnovaMs: 3 * 60 * 60 * 1000,
+    farby: [
+        { dbz: 8, farba: '#2b6cff', krytie: 0 },
+        { dbz: 11, farba: '#2f7bff', krytie: 0.5 },
+        { dbz: 20, farba: '#2b8cf5', krytie: 0.78 },
+        { dbz: 26, farba: '#22b8f0', krytie: 0.86 },
+        { dbz: 32, farba: '#34e0a1', krytie: 0.92 },
+        { dbz: 39, farba: '#ffe14d', krytie: 0.96 },
+        { dbz: 46, farba: '#ff7a2f', krytie: 1 },
+        { dbz: 52, farba: '#ff2d6b', krytie: 1 },
+        { dbz: 60, farba: '#ffd0f5', krytie: 1 },
+    ],
+    mapa: { pevnina: '#141c2e', voda: '#0a1120', hranica: '#5b6b86', cesta: '#1d2942', text: '#a9b6cc', textOkraj: '#0d1422' },
+    styl: 'https://tiles.openfreemap.org/styles/dark',
+    zoom: 5.6,
+    zdroj: 'Radar EUMETNET OPERA, CC BY 4.0, upravené · Model DWD ICON-EU, Open-Meteo, CC BY 4.0',
+    // Výnimka z pravidla o závislostiach, len pre túto kartu. Pri zmene verzie treba zmeniť aj hashe (uvádza ich cdnjs).
+    maplibre: {
+        js: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.js',
+        jsHash: 'sha512-rOFgoUgWaVi69JW1dzBu6PWF9xKW9rxYfY5u2SexFABHhWk0qUWkJoWNz4UuZRMvSXsNZG66+tU5B+HlwWF5kA==',
+        css: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.css',
+        cssHash: 'sha512-KIMsMWIdnoG9OwZa+oaIafmbDonqck1UCmq+/zcUi2aaZ97N9QE6TqpTM+n36EO40HGh64hU/375zxtjx7WTyQ==',
+    },
+};
+/** Adresa modelu pre body výrezu, po hodinách, dnes a zajtra. @param {Array<{ lat: number, lon: number }>} body */
+export function radarModelUrl(body) {
+    /** @param {'lat' | 'lon'} k */
+    const zoznam = (k) => body.map((b) => b[k].toFixed(3)).join(',');
+    return (
+        'https://api.open-meteo.com/v1/forecast' +
+        `?latitude=${zoznam('lat')}&longitude=${zoznam('lon')}` +
+        '&hourly=precipitation,cloud_cover&models=icon_eu&forecast_days=2&timeformat=unixtime&timezone=auto'
+    );
+}
 
 /**
  * Ranné oznámenie s plánom dňa. `hours`: hodiny, z ktorých si človek vyberie (miestny čas),
