@@ -507,10 +507,14 @@ button.live[aria-expanded='true'] {
     font-variation-settings: 'wdth' 95;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-/* Čo dá strecha za celý deň: tri čísla vedľa seba pod jemnou čiarou. */
+/* Čo dá strecha za celý deň: veta a tri čísla vedľa seba sú jeden blok, od vety nad ním ho delí
+   jemná čiara. Stojí na bloku, nie na vete: večer je veta skrytá a čiara nad číslami ostáva. */
 .den {
     display: grid;
     gap: 10px;
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 .eq {
     display: grid;
@@ -519,8 +523,6 @@ button.live[aria-expanded='true'] {
     list-style: none;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
 /* Číslo sa na úzkom displeji zmenší, aby sa „~4 090“ zmestilo do tretiny aj na 320 px. */
