@@ -29,6 +29,8 @@ predpoveď appky, preto je `modelBodyX` × `modelBodyY` malé a model sa pýta r
 Mapa je zámerne obmedzená na výrez blokov okolo polohy (`hraniceOblasti`), rozhodnuté 7. 11. 2026 ako dočasné.
 Neskôr sa to má prerobiť na širší výrez alebo dáta idúce za mapou (možnosti B a C v návrhu).
 
+Model má vlastný Web Worker a v prehliadači sa drží 3 hodiny (`radar-model-v1`): v jednom rade so snímkami čakali oblaky na S22 20–30 s.
+
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 

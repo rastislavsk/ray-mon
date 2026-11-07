@@ -48,16 +48,13 @@ export class RadarHrac {
     terazMs = 0;
     poz = krokovMinulost;
     pocet = 2 * krokovMinulost;
-    zaKoncom = 0;
     posledny = 0;
     beh = 0;
     /** @type {{ gx: number, gy: number, g: number, bajty: Uint8Array } | null} */ pole = null;
     /** @type {Promise<void> | null} */ zaciatok = null;
     pasCaka = 0;
     obnovene = 0;
-    // Snímky sú načítané a človek ešte nezasiahol: karta sa vtedy pustí sama.
-    pripravena = false;
-    zasiahol = false;
+    /** @type {any} model, ktorý prišiel skôr než mapa */ cakaModel = null;
 
     /** @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom */
     constructor(store, dom) {
@@ -245,17 +242,10 @@ export class RadarHrac {
         this.beh = requestAnimationFrame((x) => this.tik(x));
         const dt = Math.min(0.1, (t - this.posledny) / 1000);
         this.posledny = t;
-        if (this.zaKoncom > 0) {
-            this.zaKoncom -= dt * 1000;
-            if (this.zaKoncom <= 0) this.poz = 0;
-        } else {
-            this.poz += dt * (s.radarRozsah === '2h' ? RADAR.krokovZaS : RADAR.hodinZaS) * s.radarRychlost;
-            if (this.poz >= this.pocet) {
-                this.poz = this.pocet;
-                this.zaKoncom = RADAR.pauzaNaKonciMs;
-            }
-        }
+        this.poz = Math.min(this.pocet, this.poz + dt * (s.radarRozsah === '2h' ? RADAR.krokovZaS : RADAR.hodinZaS) * s.radarRychlost);
         this.krasli();
+        // Os sa prehrá raz a na konci zastane.
+        if (this.poz >= this.pocet) this.store.setState({ radarHra: false });
     }
 
     /** @param {number} index @param {Uint8Array} f */
@@ -272,7 +262,8 @@ export class RadarHrac {
     /** @param {Omit<Model, 'tDazd' | 'tOblaky'>} m */
     naModel(m) {
         const g = this.gl;
-        if (!g) return;
+        // Mapa ešte nie je hotová, textúry počkajú na ňu.
+        if (!g?.gl) return void (this.cakaModel = m);
         for (const t of [...(this.model?.tDazd ?? []), ...(this.model?.tOblaky ?? [])]) g.zmaz(t);
         this.model = { ...m, tDazd: m.dazd.map((d) => g.textura(m.w, m.h, d)), tOblaky: m.oblaky.map((d) => g.textura(m.w, m.h, d)) };
         this.pasNeskor();
@@ -296,7 +287,6 @@ export class RadarHrac {
         this.oblast = o;
         this.bod = [((mercX(site.lon) - o.x0) / (o.x1 - o.x0)) * o.w, ((mercY(site.lat) - o.y0) / (o.y1 - o.y0)) * o.h];
         this.gl = new RadarVrstva(o, () => this.obraz());
-        this.map = await vytvorMapu(this.dom.rdMapa, site, this.gl, o);
         this.data = new RadarData({
             bloky,
             oblast: o,
@@ -304,6 +294,10 @@ export class RadarHrac {
             naPohyb: (m) => this.naPohyb(m),
             naModel: (m) => this.naModel(m),
         });
+        // Model sa začne sťahovať hneď, nečaká na mapu ani na snímky.
+        this.data.nacitajModel(Date.now()).catch(() => {});
+        this.map = await vytvorMapu(this.dom.rdMapa, site, this.gl, o);
+        if (this.cakaModel) this.naModel(this.cakaModel);
         await this.obnov();
     }
 
@@ -328,25 +322,8 @@ export class RadarHrac {
         if (this.snimky.has(indexKroku(t))) this.store.setState({ radarStav: 'ok' });
         this.kresliOs();
         this.ukaz();
-        data.dopln(t).then(
-            () => this.nacitane(),
-            () => {},
-        );
+        data.dopln(t).catch(() => {});
         data.nacitajModel(now).catch(() => {});
-    }
-
-    /** Všetky snímky sú na ceste: pri prvom otvorení sa prehrávanie začne od najstaršej. */
-    nacitane() {
-        const prvy = !this.pripravena;
-        this.pripravena = true;
-        if (prvy && !this.zasiahol && this.store.get().panel === 'radar') this.pust(true);
-    }
-
-    /** Pustí kartu, keď tlmenie pohybu nechce opak. @param {boolean} [odZaciatku] */
-    pust(odZaciatku = false) {
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        if (odZaciatku) this.poz = 0;
-        this.store.setState({ radarHra: true });
     }
 
     /** Karta je na obrazovke. Prvé otvorenie stiahne mapu aj dáta, ďalšie len doplní nové. */
@@ -354,7 +331,6 @@ export class RadarHrac {
         if (this.zaciatok) {
             if (this.data && Date.now() - this.obnovene > RADAR.obnovaMs) this.obnov().catch(() => {});
             this.map?.resize();
-            if (this.pripravena) this.pust();
             return this.kresliOs();
         }
         this.store.setState({ radarStav: 'nacitavam' });
@@ -372,9 +348,14 @@ export class RadarHrac {
     hra() {
         if (!this.store.get().radarHra || this.beh) return;
         this.posledny = performance.now();
-        this.zaKoncom = 0;
-        if (this.poz >= this.pocet) this.poz = 0;
+        // Z konca alebo z „teraz“ ide os od začiatku, inak odtiaľ, kam ju človek dal.
+        if (this.poz >= this.pocet || this.poz === this.teraz()) this.poz = 0;
         this.beh = requestAnimationFrame((t) => this.tik(t));
+    }
+
+    /** Poloha „teraz“ na osi. */
+    teraz() {
+        return osRadaru(this.rozsah, this.terazMs, polnoc(this.terazMs), posunCasu(this.terazMs)).teraz;
     }
 
     /** Nový rozsah: 2 h začína na „teraz“, Dnes na tejto hodine, Zajtra od polnoci. */
@@ -382,21 +363,18 @@ export class RadarHrac {
         const o = osRadaru(this.rozsah, this.terazMs, polnoc(this.terazMs), posunCasu(this.terazMs));
         this.pocet = o.pocet;
         this.poz = o.teraz ?? 0;
-        this.zaKoncom = 0;
         this.kresliOs();
         this.krasli();
     }
 
     /** Poloha z prsta, podiel osi od 0 do 1. @param {number} podiel */
     posun(podiel) {
-        this.zasiahol = true;
         this.poz = Math.max(0, Math.min(this.pocet, podiel * this.pocet));
         this.krasli();
     }
 
     /** Poloha z klávesnice. @param {number} krokov */
     krok(krokov) {
-        this.zasiahol = true;
         this.poz = Math.max(0, Math.min(this.pocet, Math.round(this.poz) + krokov));
         this.krasli();
     }

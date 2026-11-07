@@ -17,6 +17,7 @@ import {
     modelSnimky,
     oblastBlokov,
     ocisti,
+    parseUlozenyModel,
     pohyb,
     pohybBajty,
     radarBloky,
@@ -199,6 +200,23 @@ test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
     assert.equal(modelSnimky({ hourly: {} }), null);
     assert.equal(modelSnimky(Array.from({ length: n }, () => ({}))), null);
     assert.equal(modelSnimky(Array.from({ length: n }, (_, i) => (i ? { hourly: { time: [1] } } : bod))), null);
+});
+
+test('parseUlozenyModel: platí pre ten istý výrez, deň a čas obnovy', () => {
+    const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
+    const riadok = Array.from({ length: bodov }, () => 1);
+    const model = { casy: [1000, 3601000], dazd: [riadok, riadok], oblaky: [riadok, riadok] };
+    const at = 2000;
+    const ok = { at, kluc: 'x', model };
+    assert.deepEqual(parseUlozenyModel(ok, at + 1000, 'x'), { at, model });
+    assert.equal(parseUlozenyModel(ok, at + 1000, 'y'), null);
+    assert.equal(parseUlozenyModel(ok, at + RADAR.modelObnovaMs, 'x'), null);
+    assert.equal(parseUlozenyModel(ok, at - 1, 'x'), null);
+    assert.equal(parseUlozenyModel({ ...ok, at, model: { ...model, casy: [at - 864e5] } }, at + 1, 'x'), null);
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, dazd: [riadok] } }, at + 1000, 'x'), null);
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, oblaky: [riadok, [1]] } }, at + 1000, 'x'), null);
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, casy: [] } }, at + 1000, 'x'), null);
+    assert.equal(parseUlozenyModel(null, at, 'x'), null);
 });
 
 test('zjemni: zachová rozsah a roztiahne mriežku', () => {

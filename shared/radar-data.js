@@ -480,6 +480,25 @@ export function zjemni(v, nx, ny, k) {
     return o;
 }
 
+/** @param {unknown} at @param {number} nowMs */
+const cerstvy = (at, nowMs) => typeof at === 'number' && at <= nowMs && nowMs - at < RADAR.modelObnovaMs;
+
+/**
+ * Model uložený v prehliadači, keď ešte platí: ten istý výrez, nie starší ako obnova a z toho istého dňa.
+ * @param {unknown} raw @param {number} nowMs @param {string} kluc výrez
+ * @returns {{ at: number, model: { casy: number[], dazd: number[][], oblaky: number[][] } } | null}
+ */
+export function parseUlozenyModel(raw, nowMs, kluc) {
+    const r = /** @type {any} */ (raw);
+    const m = r?.model;
+    if (r?.kluc !== kluc || !cerstvy(r.at, nowMs)) return null;
+    if (!Array.isArray(m?.casy) || !m.casy.length || nowMs - m.casy[0] >= 864e5) return null;
+    const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
+    /** @param {unknown} v */
+    const dobre = (v) => Array.isArray(v) && v.length === m.casy.length && v.every((h) => Array.isArray(h) && h.length === bodov);
+    return dobre(m.dazd) && dobre(m.oblaky) ? { at: r.at, model: m } : null;
+}
+
 /**
  * Odpovede Open-Meteo (pole bodov po riadkoch) ako snímky po hodinách, rovnako dlhé. Cudzia odpoveď je null.
  * @param {unknown} data
