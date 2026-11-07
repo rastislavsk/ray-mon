@@ -31,6 +31,9 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   predpovede, cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného. Trieda dňa
   je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň
   v jednotkách, ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej.
+- **Radar** – dážď a oblaky nad mapou. Časová os ukazuje posledné 2 hodiny merania a odhad na ďalšie 2 hodiny,
+  prepnúť sa dá na predpoveď na dnes a zajtra. Pauza, ťah prstom po osi a rýchlosť 1×/2×/3×. Oblaky sa dajú vypnúť.
+  Dáta: radarová sieť EUMETNET OPERA a model ICON-EU cez Open-Meteo, mapa OpenFreeMap a MapLibre.
 - **7 dní** – prehľad dní ako predpoveď počasia: nadpis s najlepším dňom, súčet týždňa a riadky
   s počasím, zeleným pásom okna na veľké spotrebiče a kWh. Klik otvorí detail dňa s grafom z karty
   Teraz alebo detail týždňa so stĺpcami a mapou výroby hodina × deň. Na širokej obrazovke sú karty

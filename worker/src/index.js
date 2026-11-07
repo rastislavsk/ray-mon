@@ -9,11 +9,13 @@
 // POST /pv: zapečatený prístup -> meranie vo formáte `pv`. Prijme aj holý odkaz na kiosk, ktorý
 // posielali appky spred zapečatenia - vtedy k meraniu pribalí aj zapečatený prístup, appka si ho
 // uloží namiesto odkazu.
+// GET /radar/<snímka>?b=<bloky>: kúsky radarového súboru OPERA pre kartu Radar (worker/src/radar.js).
 
-import { WORKER_OZNAMENIA_PATH, WORKER_PRIPOJ_PATH, WORKER_PRIPOMEN_PATH, WORKER_PV_PATH } from '../../shared/config.js';
+import { WORKER_OZNAMENIA_PATH, WORKER_PRIPOJ_PATH, WORKER_PRIPOMEN_PATH, WORKER_PV_PATH, WORKER_RADAR_PATH } from '../../shared/config.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
+import { handleRadar } from './radar.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
 /** @typedef {{ PECAT_KLUC?: string } & import('./oznamenia.js').OznamEnv} Env */
@@ -168,9 +170,11 @@ export async function handleRequest(request, env = {}, now = new Date(), fetchIm
 }
 
 export default {
-    /** @param {Request} request @param {Env} env */
-    fetch(request, env) {
-        return handleRequest(request, env);
+    /** @param {Request} request @param {Env} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
+    fetch(request, env, ctx) {
+        if (!new URL(request.url).pathname.startsWith(WORKER_RADAR_PATH)) return handleRequest(request, env);
+        const cache = /** @type {any} */ (globalThis.caches).default;
+        return handleRadar(request, { fetchImpl: fetch, cache, waitUntil: (p) => ctx.waitUntil(p) });
     },
     /**
      * Plánovaný beh (cron vo wrangler.toml): zobudí telefóny, ktorým nastal čas oznámenia.

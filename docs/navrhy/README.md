@@ -16,6 +16,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | `nahlad-casu-umiestnenie.html` | Karta Spotrebiče — kam s bublinou náhľadu času: dnešný stav vs. tri umiestnenia                                       |
 | `nahlad-casu-variant-b.html`   | Rozpracovanie zvoleného variantu B: prívesok, zárez, obežnica                                                         |
+| `radar.html`                   | Karta Radar — klikací mockup zo skutočných dát, zdroje dažďa, oblakov a mapy, výsledky skúšky a merania na S22        |
 | `7dni-mobil.html`              | Karta 7 dní na mobile — dnešný stav vs. tri návrhy menej detailného prehľadu (A, B, C)                                |
 | `7dni-bez-hintu.html`          | Karta 7 dní na mobile — čo s miestom po pätke „Ťuknite na deň“ (A: bublina, B: pätka)                                 |
 | `7dni-farby-dni.html`          | Karta 7 dní — akou logikou zafarbiť výrobu po dňoch (A: z najlepšieho dňa, B: z jasnej oblohy, C: sýtosť)             |

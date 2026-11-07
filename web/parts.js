@@ -1,4 +1,4 @@
-// Neskoré časti appky (PARTS v state.js): karta 7 dní, Štatistika s plagátom a Nastavenie so
+// Neskoré časti appky (PARTS v state.js): karty 7 dní a Radar, Štatistika s plagátom a Nastavenie so
 // sprievodcom. Pri štarte sa sťahuje len to, čo je na obrazovke - na telefóne úvodná karta
 // s hlavičkou, navigáciou a oblohou. Ostatné sa načíta dynamickým import(), keď to obrazovka
 // potrebuje, inak keď je prehliadač po prvom vykreslení voľný.
@@ -24,6 +24,7 @@ export const loaded = {};
 /** @type {Record<Part, () => Promise<PartModule>>} */
 const IMPORTS = {
     sedem: () => import('./part-sedem.js'),
+    radar: () => import('./part-radar.js'),
     statistika: () => import('./part-statistika.js'),
     nastavenie: () => import('./part-nastavenie.js'),
 };

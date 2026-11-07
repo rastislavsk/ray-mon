@@ -3247,6 +3247,292 @@ button.live[aria-expanded='true'] {
     }
 }
 
+/* ===== Karta Radar =====
+   Mapa cez celú obrazovku, stránka sa na tejto karte neposúva. Navigácia stojí nad ňou. */
+.radar {
+    position: fixed;
+    inset: 0;
+    /* Navigácia má ten istý z-index, no v stránke stojí neskôr, ostáva teda nad kartou. */
+    z-index: 2;
+    background: #141c2e;
+    color: #fff;
+}
+/* Hlavička s menom appky by stála nad mapou a pod ňou by aj tak nič nebolo. */
+body:has(.radar:not(.hidden)) .st {
+    visibility: hidden;
+}
+/* MapLibre si prvok nastaví ako position: relative, rozmery preto nesmú stáť na inset. */
+.rd-mapa {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+.rd-doma {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.28),
+        0 1px 5px #000;
+}
+.rd-hore {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+}
+.rd-chvila,
+.rd-prepinac,
+.rd-dok,
+.rd-hlaska {
+    background: rgba(9, 14, 27, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.rd-chvila {
+    padding: 6px 12px 7px;
+    border-radius: 14px;
+}
+.rd-cas {
+    font-size: 1.75rem;
+    line-height: 1.1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.rd-druh {
+    min-height: 1.3em;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #dfe6f1;
+}
+.rd-druh.predpoved {
+    color: var(--amber-text);
+}
+.rd-prepinac {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 22px;
+    color: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+}
+.rd-prepinac i {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: #5a6880;
+}
+.rd-prepinac i::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+}
+.rd-prepinac[aria-pressed='true'] i {
+    background: #3f7fe0;
+}
+.rd-prepinac[aria-pressed='true'] i::after {
+    transform: translateX(14px);
+}
+.rd-hlaska {
+    position: absolute;
+    top: 38%;
+    left: 24px;
+    right: 24px;
+    max-width: 340px;
+    margin: 0 auto;
+    padding: 14px 16px;
+    border-radius: 16px;
+    text-align: center;
+}
+.rd-hlaska p {
+    margin: 0;
+}
+.rd-hlaska .pbtn {
+    margin-top: 10px;
+}
+.rd-dok {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    max-width: 624px;
+    margin: 0 auto;
+    display: grid;
+    gap: 6px;
+    padding: 8px 10px 6px;
+    border-radius: 18px;
+}
+.rd-riadok {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+.rd-seg {
+    display: flex;
+    padding: 2px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.1);
+}
+.rd-seg button {
+    min-width: 48px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #dfe6f1;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.rd-seg button[aria-pressed='true'] {
+    background: #fff;
+    color: var(--ink);
+}
+.rd-legenda {
+    flex: 1;
+    max-width: 130px;
+    min-width: 0;
+    margin-left: auto;
+    display: grid;
+    gap: 2px;
+}
+.rd-legenda b {
+    height: 6px;
+    border-radius: 3px;
+}
+.rd-legenda div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #dfe6f1;
+}
+.rd-kruh {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+.rd-kruh svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+.rd-rychlost {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.rd-os {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 52px;
+    /* Os si ťah necháva pre seba, po karte sa aj tak neposúva. */
+    touch-action: none;
+    cursor: pointer;
+}
+.rd-os svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.rd-os-min {
+    stroke: rgba(255, 255, 255, 0.75);
+}
+.rd-os-bud {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-dasharray: 3 3;
+}
+.rd-os-teraz {
+    stroke: #fff;
+}
+.rd-os-text {
+    fill: #dfe6f1;
+    font-size: 12px;
+    font-weight: 600;
+}
+.rd-os-text.hlavna {
+    fill: #fff;
+    font-weight: 700;
+}
+.rd-jazdec {
+    position: absolute;
+    top: 2px;
+    bottom: 16px;
+    left: 0;
+    width: 0;
+    will-change: transform;
+    pointer-events: none;
+}
+.rd-jazdec::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 -1px;
+    width: 2px;
+    border-radius: 1px;
+    background: #fff;
+}
+.rd-jazdec::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+/* Popis zdrojov mapy nesmie zmiznúť pod ovládaním. */
+.radar .maplibregl-ctrl-bottom-right {
+    bottom: calc(216px + env(safe-area-inset-bottom));
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .rd-hore {
+    top: calc(5rem + 10px);
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .rd-dok {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .radar .maplibregl-ctrl-bottom-right {
+    bottom: calc(160px + env(safe-area-inset-bottom));
+}
+
 /* ===== Spodná navigácia ===== */
 .tabs {
     position: fixed;
@@ -3273,10 +3559,10 @@ button.live[aria-expanded='true'] {
     background: transparent;
     border: 0;
     color: var(--dim);
-    /* Päť popisiek vedľa seba: písmo rastie so systémom len dokiaľ sa „Nastavenie“ zmestí do pätiny šírky. */
+    /* Šesť popisiek vedľa seba: užšie písmo, aby sa „Nastavenie“ zmestilo do šestiny šírky aj bez zmenšenia pod 12 px. */
     font-size: min(0.75rem, 3.75vw);
     font-weight: 600;
-    font-variation-settings: 'wdth' 92;
+    font-variation-settings: 'wdth' 74;
     line-height: 1.2;
     cursor: pointer;
 }

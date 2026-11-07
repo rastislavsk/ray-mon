@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { wordSize } from '../../web/render/mozem.js';
 import { pocasieStav } from '../../web/pocasie.js';
+import { PARTS } from '../../web/state.js';
 import {
     LOOK_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -37,7 +38,7 @@ const weather = fixture('open-meteo.json');
 const TEST_ZDROJ = { sposob: 'huawei-kiosk', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
 const OWNER = { site: SITE, plant: PLANT, tariff: TARIFF, zdroj: TEST_ZDROJ };
 const IGNORED_CONSOLE = /Failed to load resource|net::ERR_FAILED/;
-const TITLES = { mozem: 'Dnes', terazky: 'Teraz', '7dni': '7 dní', statistika: 'Štatistika', nastavenie: 'Nastavenie' };
+const TITLES = { mozem: 'Dnes', terazky: 'Teraz', radar: 'Radar', '7dni': '7 dní', statistika: 'Štatistika', nastavenie: 'Nastavenie' };
 
 /** Presný okamih daného času 5. 9. 2026 v Bratislave (letný čas, UTC+2). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
@@ -111,7 +112,7 @@ async function ocakavajKartu(page, panel) {
 }
 
 for (const width of [390, 320]) {
-    test(`navigácia prepína všetkých 5 kariet, popisky sú celé a položky aspoň 44 px (šírka ${width} px)`, async ({ page }) => {
+    test(`navigácia prepína všetkých 6 kariet, popisky sú celé a položky aspoň 44 px (šírka ${width} px)`, async ({ page }) => {
         await page.setViewportSize({ width, height: 700 });
         const errors = await openObloha(page);
         await ocakavajKartu(page, 'terazky');
@@ -681,7 +682,7 @@ test.describe('nasadenie a cache: karty načítané neskôr (web/parts.js)', () 
             /\/web\/part-|\/render\/(sedem|statistika|nastavenie|sprievodca)\.js|\/shared\/messages\.js/.test(u);
         expect(urls.filter(neskore)).toEqual([]);
         // Keď je prehliadač voľný, stiahnu sa aj ostatné - karta je potom pri prvom otvorení hneď hotová.
-        await expect.poll(() => urls.filter((u) => u.includes('/web/part-')).length).toBe(3);
+        await expect.poll(() => urls.filter((u) => u.includes('/web/part-')).length).toBe(PARTS.length);
         await page.locator('#nav-statistika').click();
         await ocakavajKartu(page, 'statistika');
         await expect(page.locator('#cakam')).toBeHidden();

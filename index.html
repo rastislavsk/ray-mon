@@ -198,6 +198,59 @@
             <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
                  aj grafy skladá render (web/render/sedem.js) z shared/sedem-dni.js, tu sú len nosiče.
                  Nadpis karty je len pre čítačku, na oblohe je otázka s najlepším dňom. -->
+            <!-- Karta Radar: dážď a oblaky nad mapou, docs/navrhy/radar.html. Mapu a os kreslí web/radar-hrac.js. -->
+            <section id="panel-radar" class="panel radar hidden" aria-labelledby="ttl-radar">
+                <h1 id="ttl-radar" class="sr">Radar</h1>
+                <div id="rd-mapa" class="rd-mapa"></div>
+                <div class="rd-hore">
+                    <div class="rd-chvila">
+                        <div id="rd-cas" class="rd-cas">--:--</div>
+                        <div id="rd-druh" class="rd-druh"></div>
+                    </div>
+                    <button type="button" id="rd-oblaky" class="rd-prepinac" aria-pressed="true"><span>Oblaky</span><i></i></button>
+                </div>
+                <div id="rd-hlaska" class="rd-hlaska hidden" aria-live="polite">
+                    <p id="rd-hlaska-text"></p>
+                    <button type="button" id="rd-znova" class="pbtn hidden">Skúsiť znova</button>
+                </div>
+                <div id="rd-dok" class="rd-dok">
+                    <div class="rd-riadok">
+                        <div id="rd-rozsahy" class="rd-seg" role="group" aria-label="Rozsah">
+                            <button type="button" data-rozsah="2h" aria-pressed="true">2 h</button>
+                            <button type="button" data-rozsah="dnes" aria-pressed="false">Dnes</button>
+                            <button type="button" data-rozsah="zajtra" aria-pressed="false">Zajtra</button>
+                        </div>
+                        <div class="rd-legenda">
+                            <b id="rd-legenda"></b>
+                            <div><span>slabý</span><span>silný</span></div>
+                        </div>
+                    </div>
+                    <div class="rd-riadok">
+                        <button type="button" id="rd-hraj" class="rd-kruh" aria-label="Pustiť">
+                            <svg id="rd-ikona-hraj" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+                            <svg id="rd-ikona-stoj" class="hidden" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="6" y="4.5" width="4.2" height="15" rx="1" />
+                                <rect x="13.8" y="4.5" width="4.2" height="15" rx="1" />
+                            </svg>
+                        </button>
+                        <div
+                            id="rd-os"
+                            class="rd-os"
+                            role="slider"
+                            tabindex="0"
+                            aria-label="Čas"
+                            aria-valuemin="0"
+                            aria-valuemax="48"
+                            aria-valuenow="24"
+                        >
+                            <svg id="rd-os-svg" aria-hidden="true"></svg>
+                            <div id="rd-jazdec" class="rd-jazdec"></div>
+                        </div>
+                        <button type="button" id="rd-rychlost" class="rd-kruh rd-rychlost" aria-label="Rýchlosť 1×">1×</button>
+                    </div>
+                </div>
+            </section>
+
             <section id="panel-7dni" class="panel sedem hidden" aria-labelledby="ttl-7dni">
                 <h1 id="ttl-7dni" class="sr">7 dní</h1>
                 <div id="sd-list">
@@ -790,6 +843,14 @@
                     />
                 </svg>
                 <span>Dnes</span>
+            </button>
+            <button type="button" id="nav-radar" data-panel="radar">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12L19 5" />
+                    <path d="M19.8 9.5A8.5 8.5 0 1 1 14.5 4" />
+                    <path d="M15.6 11A3.8 3.8 0 1 1 13 8.4" />
+                </svg>
+                <span>Radar</span>
             </button>
             <button type="button" id="nav-7dni" data-panel="7dni">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
