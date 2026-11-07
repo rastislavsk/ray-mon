@@ -74,7 +74,6 @@ async function otvor(page, { mapa = true, site = SITE } = {}) {
 }
 
 test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
     const errors = await otvor(page);
     await expect(page.locator('#rd-hlaska')).toBeHidden();
     await expect(page.locator('#rd-druh')).toHaveText('Teraz');
@@ -111,6 +110,21 @@ test('Radar: ťah po osi zastaví prehrávanie a posunie čas, klávesnica ide p
     await page.locator('#rd-os').focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('#rd-druh')).toHaveText('Pred 55 min · meranie');
+    expect(errors).toEqual([]);
+});
+
+test('Radar: nespustí sa sám, prehrá os raz od začiatku a zastane', async ({ page }) => {
+    const errors = await otvor(page);
+    await expect(page.locator('#rd-hlaska')).toBeHidden();
+    await page.waitForTimeout(600);
+    await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť');
+    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await page.locator('#rd-rychlost').click();
+    await page.locator('#rd-rychlost').click();
+    await page.locator('#rd-hraj').click();
+    await expect(page.locator('#rd-druh')).toContainText('Pred ');
+    await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť', { timeout: 10000 });
+    await expect(page.locator('#rd-druh')).toHaveText('O 2 h · predpoveď');
     expect(errors).toEqual([]);
 });
 

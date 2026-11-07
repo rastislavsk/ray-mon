@@ -482,6 +482,8 @@ export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /** Voľby karty Radar: oblaky a rýchlosť. Len v tomto prehliadači, do odkazu nepatria. */
 export const RADAR_STORAGE_KEY = 'radar-v1';
+/** Posledný model karty Radar, aby boli oblaky pri ďalšom otvorení hneď a Open-Meteo sa pýtalo menej. */
+export const RADAR_MODEL_STORAGE_KEY = 'radar-model-v1';
 
 /**
  * Tón hlášok: drzý je predvolený (rozhodnuté 2. 10. 2026), slušný vyká a je vecný. Voľba je
@@ -569,6 +571,7 @@ export const STORAGE_KEYS = [
     DAYLOG_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     RADAR_STORAGE_KEY,
+    RADAR_MODEL_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
@@ -643,10 +646,9 @@ export const RADAR = {
     // Staršie snímky sa sťahujú po štyroch naraz, aby sa nečakalo jedna na druhú.
     subezne: 4,
     obnovaMs: 5 * 60 * 1000,
-    // Prehrávanie pri 1×: dve hodiny merania a dve predpovede za 8 s, deň za 12 s.
-    krokovZaS: 6,
-    hodinZaS: 2,
-    pauzaNaKonciMs: 1100,
+    // Prehrávanie pri 1×: dve hodiny merania a dve predpovede za 16 s, deň za 23 s. Prehrá sa raz a zastane.
+    krokovZaS: 3,
+    hodinZaS: 1,
     rychlosti: /** @type {const} */ ([1, 2, 3]),
     dbz: { od: 8, do: 60, prah: 9 },
     cistenie: { susedia: 6, ostrov: 40 },

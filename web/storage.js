@@ -13,6 +13,7 @@ import {
     OZNAMENIA_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     RADAR,
+    RADAR_MODEL_STORAGE_KEY,
     RADAR_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
@@ -26,6 +27,7 @@ import { parseDayLog } from '../shared/daylog.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
+import { parseUlozenyModel } from '../shared/radar-data.js';
 import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
@@ -63,6 +65,20 @@ export function loadRadar() {
     } catch {
         return { radarOblaky: true, radarRychlost: 1 };
     }
+}
+
+/** Uložený model pre výrez, ak ešte platí. @param {number} nowMs @param {string} kluc */
+export function loadRadarModel(nowMs, kluc) {
+    try {
+        return parseUlozenyModel(JSON.parse(read(RADAR_MODEL_STORAGE_KEY) ?? 'null'), nowMs, kluc);
+    } catch {
+        return null;
+    }
+}
+
+/** @param {number} at @param {string} kluc @param {{ casy: number[], dazd: number[][], oblaky: number[][] }} model */
+export function saveRadarModel(at, kluc, model) {
+    write(RADAR_MODEL_STORAGE_KEY, JSON.stringify({ at, kluc, model }));
 }
 
 /** @param {boolean} oblaky @param {number} rychlost */

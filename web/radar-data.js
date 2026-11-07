@@ -4,6 +4,7 @@
 import { radarModelUrl, RADAR, WORKER_RADAR_URL } from '../shared/config.js';
 import { blokyParam, modelBody, modelSnimky } from '../shared/radar-data.js';
 import { krokovMinulost, radarKrok, radarTag } from '../shared/radar.js';
+import { loadRadarModel, saveRadarModel } from './storage.js';
 
 const KROK_MS = RADAR.krokMin * 60000;
 
@@ -24,6 +25,11 @@ export class RadarData {
         this.oblast = oblast;
         this.param = blokyParam(bloky);
         this.worker = new Worker(new URL('./radar-vypocet.js', import.meta.url), { type: 'module' });
+        // Model má vlastné vlákno: v rade za snímkami a pohybom by oblaky čakali aj pol minúty.
+        this.modelWorker = new Worker(new URL('./radar-vypocet.js', import.meta.url), { type: 'module' });
+        this.modelWorker.onmessage = ({ data: m }) => {
+            if (m.druh === 'model') naModel(m.model);
+        };
         this.worker.postMessage({ druh: 'oblast', oblast });
         this.worker.onmessage = ({ data: m }) => {
             if (m.druh === 'snimka') {
@@ -31,7 +37,6 @@ export class RadarData {
                 this.bezia.delete(m.index);
                 naSnimku(m.index, m.f);
             } else if (m.druh === 'pohyb') naPohyb(m);
-            else if (m.druh === 'model') naModel(m.model);
             else if (m.druh === 'chyba') this.bezia.delete(m.index);
         };
     }
@@ -90,6 +95,12 @@ export class RadarData {
     /** @param {number} nowMs */
     async nacitajModel(nowMs) {
         if (nowMs - this.modelAt < RADAR.modelObnovaMs) return;
+        const kluc = this.oblast.x0.toFixed(4);
+        const ulozeny = loadRadarModel(nowMs, kluc);
+        if (ulozeny) {
+            this.modelAt = ulozeny.at;
+            return this.modelWorker.postMessage({ druh: 'model', model: ulozeny.model });
+        }
         this.modelAt = nowMs;
         const body = modelBody(this.oblast);
         /** @type {unknown[]} */ const vsetko = [];
@@ -100,6 +111,7 @@ export class RadarData {
         }
         const snimky = modelSnimky(vsetko);
         if (!snimky) throw new Error('model');
-        this.worker.postMessage({ druh: 'model', model: snimky });
+        saveRadarModel(nowMs, kluc, snimky);
+        this.modelWorker.postMessage({ druh: 'model', model: snimky });
     }
 }

@@ -24,10 +24,7 @@ export function initRadar(store, dom) {
     if (store.get().panel === 'radar') hrac.otvor();
 
     dom.rdOblaky.addEventListener('click', () => store.setState({ radarOblaky: !store.get().radarOblaky }));
-    dom.rdHraj.addEventListener('click', () => {
-        hrac.zasiahol = true;
-        store.setState({ radarHra: !store.get().radarHra });
-    });
+    dom.rdHraj.addEventListener('click', () => store.setState({ radarHra: !store.get().radarHra }));
     dom.rdRychlost.addEventListener('click', () => {
         const r = RADAR.rychlosti;
         store.setState({ radarRychlost: r[(r.indexOf(store.get().radarRychlost) + 1) % r.length] });
