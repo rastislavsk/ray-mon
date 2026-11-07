@@ -7,6 +7,7 @@ import {
     dazdVBode,
     dbzNaBajt,
     hdf5Bloky,
+    hraniceOblasti,
     laea,
     mapaBodov,
     mercX,
@@ -66,6 +67,13 @@ test('oblastBlokov: výrez obsahuje polohu a mapa bodov mieri do plochy', () => 
     assert.equal(mapa.length, o.w * o.h);
     assert.ok(mapa.filter((v) => v >= 0).length > mapa.length / 2);
     assert.ok(mapa.every((v) => v < o.pw * o.ph));
+});
+
+test('hraniceOblasti: obdĺžnik okolo výrezu, juhozápad a severovýchod', () => {
+    const [[w, s], [e, n]] = hraniceOblasti(oblastBlokov([{ row: 2280, col: 1760 }]));
+    assert.ok(w < e && s < n);
+    assert.ok(Math.abs(mercX(w) - oblastBlokov([{ row: 2280, col: 1760 }]).x0) < 1e-9);
+    assert.ok(n > 45 && n < 60);
 });
 
 test('bajty sily: pod prahom nič, nad ním tam a späť', () => {

@@ -35,6 +35,9 @@ void main() {
     vec3 cc = mix(vec3(.62, .68, .78), vec3(.9, .93, .98), smoothstep(.45, 1., c));
     vec4 hore = vec4(r.rgb * r.a, r.a);
     o = hore + vec4(cc * ca, ca) * (1. - hore.a);
+    // Okraj dát sa stratí do mapy, ostrý obdĺžnik by vyzeral ako chyba.
+    vec2 k = smoothstep(vec2(0.), vec2(.04), uv) * smoothstep(vec2(0.), vec2(.04), 1. - uv);
+    o *= k.x * k.y;
 }`;
 
 const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L']);

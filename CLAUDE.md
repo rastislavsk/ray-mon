@@ -26,6 +26,9 @@ nepatrí nič výpočtové. Použiteľný je len súbor `.h5`, GeoTIFF toho ist�
 Open-Meteo zrejme ráta každý bod mriežky ako samostatné volanie. Väčšia mriežka narazila na limit 429 a zastavila aj
 predpoveď appky, preto je `modelBodyX` × `modelBodyY` malé a model sa pýta raz za 3 hodiny. Tieto čísla nezvyšuj bez merania.
 
+Mapa je zámerne obmedzená na výrez blokov okolo polohy (`hraniceOblasti`), rozhodnuté 7. 11. 2026 ako dočasné.
+Neskôr sa to má prerobiť na širší výrez alebo dáta idúce za mapou (možnosti B a C v návrhu).
+
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 

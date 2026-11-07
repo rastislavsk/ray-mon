@@ -111,6 +111,15 @@ export function oblastBlokov(bloky) {
 }
 
 /**
+ * Hranice mapy: človek sa nedostane tam, kde dáta nie sú (docs/navrhy/radar.html, možnosť A).
+ * @param {Pick<Oblast, 'x0' | 'y0' | 'x1' | 'y1'>} o @returns {[[number, number], [number, number]]} [juhozápad, severovýchod]
+ */
+export const hraniceOblasti = (o) => [
+    [lonZ(o.x0), latZ(o.y1)],
+    [lonZ(o.x1), latZ(o.y0)],
+];
+
+/**
  * Pre každý bod obrázka index do plochy blokov (riadok * pw + stlpec), mimo plochy -1.
  * Počíta sa raz, ostatné snímky ju len používajú.
  * @param {Oblast} o @returns {Int32Array}

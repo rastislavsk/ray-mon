@@ -2,6 +2,7 @@
 // otvorení karty, s kontrolou hashu. Je to jediná výnimka z pravidla o závislostiach (CLAUDE.md).
 
 import { RADAR } from '../shared/config.js';
+import { hraniceOblasti } from '../shared/radar-data.js';
 import { upravStyl } from '../shared/radar.js';
 
 /** @type {Promise<any> | null} */
@@ -54,15 +55,16 @@ async function styl() {
 /**
  * Mapa v prvku, stredom na polohe. Vrstva radaru je pod názvami miest.
  * @param {HTMLElement} prvok @param {{ lat: number, lon: number }} poloha @param {any} vrstva
+ * @param {import('../shared/radar-data.js').Oblast} oblast mapa neodíde mimo nej
  */
-export async function vytvorMapu(prvok, poloha, vrstva) {
+export async function vytvorMapu(prvok, poloha, vrstva, oblast) {
     const maplibregl = await nacitajKniznicu();
     const map = new maplibregl.Map({
         container: prvok,
         style: await styl(),
         center: [poloha.lon, poloha.lat],
         zoom: RADAR.zoom,
-        minZoom: 4,
+        maxBounds: hraniceOblasti(oblast),
         maxZoom: 10,
         attributionControl: { compact: true, customAttribution: RADAR.zdroj },
         dragRotate: false,

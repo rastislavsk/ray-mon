@@ -296,7 +296,7 @@ export class RadarHrac {
         this.oblast = o;
         this.bod = [((mercX(site.lon) - o.x0) / (o.x1 - o.x0)) * o.w, ((mercY(site.lat) - o.y0) / (o.y1 - o.y0)) * o.h];
         this.gl = new RadarVrstva(o, () => this.obraz());
-        this.map = await vytvorMapu(this.dom.rdMapa, site, this.gl);
+        this.map = await vytvorMapu(this.dom.rdMapa, site, this.gl, o);
         this.data = new RadarData({
             bloky,
             oblast: o,
