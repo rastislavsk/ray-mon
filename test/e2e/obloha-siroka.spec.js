@@ -2,7 +2,7 @@
 // a počítač. Rozloženie rozhoduje šírka okna (LAYOUT_PX v shared/config.js). Očakávané texty sa
 // počítajú tými istými modelmi ako na telefóne - stĺpce sú tie isté karty, len vedľa seba.
 import { expect, test } from '@playwright/test';
-import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
+import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, TERAZ_DEN_STORAGE_KEY, WORKER_PV_URL } from '../../shared/config.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
@@ -45,6 +45,8 @@ async function openObloha(page, size, { time = NOON, settings = OWNER } = {}) {
             ([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v),
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
+    // Testy grafu dňa: karta Deň ukazuje krivku (pri štarte appky je pás).
+    await page.addInitScript((k) => localStorage.getItem(k) || localStorage.setItem(k, '{"krivka":true}'), TERAZ_DEN_STORAGE_KEY);
     await page.clock.setFixedTime(time);
     await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
@@ -187,8 +189,8 @@ async function expectTextyKariet(page) {
     await expect(page.locator('#mz-day-lead')).toHaveText(mozem.day?.lead ?? '');
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
-    await expect(page.locator('#tz-say-text')).toHaveText(teraz.say?.text ?? '');
-    await expect(page.locator('#tz-plan .tl-lead')).toHaveText(teraz.plan?.head.lead ?? '');
+    await expect(page.locator('#tz-oko-t')).toHaveText(teraz.co?.hore.oko.text ?? '');
+    await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(teraz.co?.hore.dlazdice.length ?? 0);
     const sedem = sedemModel(v);
     await expect(page.locator('#sd-title')).toHaveText(sedem.title);
     await expect(page.locator('#sd-days .day em')).toHaveText(sedem.rows.map((r) => r.kwh));

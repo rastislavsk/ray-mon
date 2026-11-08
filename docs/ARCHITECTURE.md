@@ -37,7 +37,7 @@ beh ho v tú hodinu zobudí prázdnym pushom. Service worker `sw.js` (v koreni, 
 nová appka ho má cez `obloha/sw.js` s vlastným rozsahom, aby oznámenie nieslo jej logo a nie Chrome) si stiahne predpoveď a plán dňa vypočíta tou istou funkciou jadra ako blok
 Plán dňa na karte Môžem? (`shared/plan-dna.js`, `shared/oznamenia.js`). Nastavenie mu appka
 odkladá do Cache API, lebo service worker nevidí localStorage (`web/oznamenia.js`). Ťuknutie na
-oznámenie otvorí kartu Teraz s rozbaleným Plánom dňa a jednorazovým obrysom: zatvorená appka dostane
+oznámenie otvorí kartu Teraz s jednorazovým obrysom okolo toho, čo zapnúť: zatvorená appka dostane
 značku `?z=oznamenie` v adrese, bežiacej pošle service worker správu (`web/oznamenia-klik.js`).
 
 Prístup k meraniu nie je nikdy v adrese (`initUrlMirror`) – adresa končí v histórii, synchronizácii
@@ -456,12 +456,13 @@ Späť vráti do Štatistiky.
 
 ## Karta Dnes (kódové meno mozem, kedysi Môžem?)
 
-Odpoveď „čo môžem zapnúť a kedy“ dáva **Plán dňa** na karte Teraz - je v navigácii prvá
-a appka sa na nej otvára (`docs/navrhy/dnes-a-teraz.html`). Nad plánom sú štítky a veta o teraz
-(`chips` a `say` z `mozemModel` - tá istá veta ako hlavička, len bez spotrebičov a časov, ktoré
-povie plán), plán má vetu nad sebou (`planHead`) a nová appka aj časovú os (`lanes` z
-`planDnaModel`). Súčasná appka ho kreslí ako plagát s očíslovanými riadkami, nová ako vetu s časovou
-osou (`docs/navrhy/terazky-plan-dna.html`, možnosti A a B) - model je ten istý.
+Odpoveď „čo môžem zapnúť a kedy“ dáva karta Teraz - je v navigácii prvá a appka sa na nej
+otvára (`docs/navrhy/dnes-a-teraz.html`). Od prestavby (`docs/navrhy/teraz-navrh-2.html`) ju skladá
+`coZapnutModel` v `shared/teraz.js` z riadkov Plánu dňa (`planDnaModel`): dlaždice toho, čo ide teraz
+(vec v lacnom pásme ide teraz, keď v ňom teraz sme - riadok má koniec pásma `end`), inak najbližšia vec
+s odpočtom, a skupiny riadkov. Štítky (`chips` z `mozemModel`) na karte nie sú, ich vysvetlenie je za „i“
+riadku nad dlaždicami. Karta Deň (`denModel`) má pás slnka a siete alebo krivku grafu dňa a odčítanie
+zvoleného času; číslo, nebo a počasie hore ostávajú teraz.
 
 Karta Dnes (druhá v navigácii) má hore veľké slovo o celom dni (`shared/den-trieda.js`,
 `docs/navrhy/dnes-hlasky-dna.html`): trieda dňa (výborný, dobrý, slabý, nanič) z toho istého

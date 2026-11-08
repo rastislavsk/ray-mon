@@ -10,7 +10,7 @@
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
 import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
-import { dayNameLong, fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr, weekDateLabel } from './format.js';
+import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -754,43 +754,7 @@ function laterItem(a, notToday, voice) {
 // ---- Plán dňa (shared/plan-dna.js) ----------------------------------------------------
 // Riadok: čas, spotrebič a prečo. Pri bežných spotrebičoch bez ceny v €, cenu má len auto.
 
-/** Nadpis, štítok riadku, ktorý je na rade, a pätka bloku Plán dňa. */
-export const PLAN_DNA_TITLE = 'Plán dňa';
 export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
-
-/**
- * Texty Plánu dňa na ďalší deň (planNextDay): nadpis s dňom, veta ako pri dnešku (prvý spotrebič
- * s časom, za ním ďalšie dva), čo ide dnes z lacnej siete, pruh nad osou s dňom a dátumom, pätka
- * a čas každého spotrebiča v ten deň pre riadky plánu.
- * @param {{ name: string, date: string, on: Array<{ name: string, start: number }>, cheap: Array<{ name: string, start: number }> }} d
- *   `name` deň („Zajtra“, „Štvrtok“), `on` spotrebiče na slnku v ten deň podľa času, `cheap` dnes v lacnom pásme
- */
-export function planDnaNextText({ name, date, on, cheap }) {
-    const low = (/** @type {string} */ s) => s.toLowerCase();
-    /** @type {Map<number, string[]>} */ const byStart = new Map();
-    for (const c of cheap) byStart.set(c.start, [...(byStart.get(c.start) ?? []), low(c.name)]);
-    const tonight = [...byStart].map(([start, names]) => `${andList(names)} od ${hm(start)}`).join(', ');
-    const long = dayNameLong(date);
-    const at = (/** @type {{ start: number }} */ r) => `o ${hm(r.start)}`;
-    return {
-        title: 'Plán na',
-        day: low(name),
-        head: {
-            lead: `${on[0].name} ${at(on[0])}`,
-            then: cap(
-                on
-                    .slice(1, 3)
-                    .map((r) => `${low(r.name)} ${at(r)}`)
-                    .join(' · '),
-            ),
-            tonight: tonight ? `Dnes z lacnej siete: ${tonight}` : '',
-        },
-        strip: `${name === long ? name : `${name} · ${low(long)}`} ${weekDateLabel(date)}`,
-        note: 'Je to predpoveď, do rána sa ešte môže zmeniť.',
-        /** Čas každého spotrebiča z `on` v riadku plánu („o 07:45“). */
-        values: on.map(at),
-    };
-}
 
 /** „po práčke“ - na koho vec v pláne čaká (PLAN_DNA.after). */
 const PLAN_AFTER = /** @type {Record<string, string>} */ ({ pracka: 'po práčke' });
@@ -1109,21 +1073,6 @@ export function planTileText(row) {
     return { value: row.time, short: row.time, tone: row.tone, note: '' };
 }
 
-/**
- * Veta nad Plánom dňa na karte Teraz: čo ide teraz, inak čo príde najskôr, a pod ňou ďalšie
- * dve veci s časom - tie isté časy ako dlaždice (planTileText). Bez riadkov null.
- * @param {Array<{ name: string, now: boolean, value: string }>} rows riadky plánu podľa času
- */
-export function planDnaHeadText(rows) {
-    if (!rows.length) return null;
-    const low = (/** @type {string} */ s) => s.toLowerCase();
-    const now = rows.filter((r) => r.now);
-    const rest = rows.filter((r) => !r.now);
-    const lead = now.length ? `Teraz ${andList(now.map((r) => low(r.name)))}` : rest.length ? `${rest[0].name} ${rest[0].value}` : '';
-    const then = (now.length ? rest : rest.slice(1)).slice(0, 2).map((r) => `${low(r.name)} ${r.value}`);
-    return { lead, then: cap(then.join(' · ')) };
-}
-
 /** Úspora CO2eq: do 10 kg s desatinou („~2,4 kg“), do tony celé („~38 kg“), potom v tonách („~1,3 t“). @param {number} kg */
 export function posterCo2Value(kg) {
     if (kg >= 1000) return `~${fmt1(kg / 1000)} t`;
@@ -1188,6 +1137,9 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
  */
 export const TERAZ_TONES = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
 
+/** Legenda pásu karty Deň: slnko (sieť má farby a slová TERAZ_TONES). */
+export const TERAZ_PAS_SLNKO = { go: 'slnko stačí', part: 'svieti, nestačí' };
+
 /** Legenda čiar a riadkov grafu dňa (nápis hranice je TERAZ_TEXTS.limit). */
 export const DAY_CHART_KEYS = { power: 'výkon', forecast: 'predpoveď', cloud: 'oblačnosť' };
 
@@ -1196,10 +1148,11 @@ export const TERAZ_TEXTS = {
     title: 'Teraz',
     retry: MOZEM_SKY_TEXTS.retry,
     hint: 'Ťahaj prstom po grafe a pozri si iný čas.',
+    hintPas: 'Ťahaj prstom po páse a pozri si iný čas.',
     reset: 'Späť na teraz',
     limit: 'veľké spotrebiče',
     loading: 'Načítavam…',
-    slider: 'Graf dňa, šípkami si pozrieš iný čas',
+    slider: 'Deň, šípkami si pozrieš iný čas',
     strip: 'Odporúčania, posúvaj do strán',
     devices: 'Spotrebiče',
     today: 'Dnešok',
@@ -1223,7 +1176,8 @@ export const TERAZ_TEXTS = {
 const TERAZ_TEXTS_SLUSNE = {
     ...TERAZ_TEXTS,
     hint: 'Ťahajte prstom po grafe a pozrite si iný čas.',
-    slider: 'Graf dňa, šípkami si pozriete iný čas',
+    hintPas: 'Ťahajte prstom po páse a pozrite si iný čas.',
+    slider: 'Deň, šípkami si pozriete iný čas',
     strip: 'Odporúčania, posúvajte do strán',
     guessTitle: 'Koľko dáva vaša strecha?',
     guessText: 'Zadajte panely a uvidíte tu svoj výkon. S pripojeným meničom aj naozaj nameraný.',
@@ -1337,6 +1291,18 @@ export function terazVetaDnaText({ nowMin, okno, zajtraOd }) {
     return { text: 'Slnko dnes skončilo', sub: zajtraOd === null ? '' : `zajtra od ${hm(zajtraOd)}` };
 }
 
+/**
+ * Detail spotrebiča: kedy a odkiaľ prúd (`kedy`), od-do (`cas`) a prečo práve vtedy (`why`, z Plánu dňa).
+ * @param {import('./plan-dna.js').PlanRow & { why: string }} r @param {boolean} teraz ide teraz
+ */
+export function terazVecText(r, teraz) {
+    const why = r.why ? `${cap(r.why)}.` : '';
+    if (r.kind === 'none') return { kedy: 'Tento týždeň nie', cas: '–', why };
+    if (r.kind === 'later') return { kedy: `${cap(onDay(r.day.name))} zo slnka`, cas: `${hm(r.day.start)} – ${hm(r.end)}`, why };
+    const zdroj = r.kind === 'cheap' ? 'z lacnej siete' : 'zo slnka';
+    return { kedy: `${teraz ? 'Teraz' : 'Dnes'} ${zdroj}`, cas: `${hm(r.start)} – ${koniecHm(r.end)}`, why };
+}
+
 /** Sieť v odčítaní karty Deň podľa úrovne pásma. */
 const SIET_DO = /** @type {Record<string, string>} */ ({ lacna: 'lacná sieť', draha: 'drahá sieť', bezna: 'bežná cena' });
 
@@ -1434,14 +1400,6 @@ export function terazTypicalText(kwp, voice = 'drzy') {
 }
 
 /**
- * Nadpis karty počas náhľadu: číslo pod ním je výkon v tom čase, nie teraz. Spolu s ním sa číta
- * ako veta („O 15:30 · 4,89 kW“). @param {number} min
- */
-export function terazPreviewTitle(min) {
-    return `O ${hm(min)}`;
-}
-
-/**
  * Popisok čiary náhľadu v grafe: len čas. Výkon ukazuje veľké číslo nad grafom a čo vtedy platí
  * farba pásu plánu pod krivkou - v grafe by sa opakovali. @param {number} min
  */
@@ -1452,40 +1410,15 @@ export function terazPreviewTime(min) {
 // Zoznam pod grafom dňa (docs/navrhy/teraz-rozbalovaci-zoznam.html, B): hodnoty v čase, na ktorom
 // je bod grafu - teraz, alebo náhľad pod prstom.
 
-/** Riadok nad hodnotami: ku ktorému času patria. @param {number} min @param {boolean} preview */
-export function terazReadoutWhen(min, preview) {
-    return `${preview ? 'O' : 'Teraz'} ${hm(min)}`;
-}
-
-/** Výkon v zozname, s desatinnou čiarkou ako zvyšok appky. Bez údaja pomlčka. @param {number} kw */
-export function terazKwText(kw) {
-    return Number.isFinite(kw) ? `${fmt2(kw)} kW` : '–';
-}
-
 /** Oblačnosť v percentách, bez údaja pomlčka. @param {number | null} pct */
 export function terazCloudText(pct) {
     return pct === null ? '–' : `${Math.round(pct)} %`;
 }
 
-/** Odkiaľ začína hranica veľkých spotrebičov. @param {number} kw */
-export function terazLimitFrom(kw) {
-    return `od ${fmt1(kw)} kW`;
-}
-
 /** Koľko výkonu chýba do hranice veľkých spotrebičov, alebo koľko je ho navyše. @param {number} kw @param {number} limitKw */
 export function terazLimitGap(kw, limitKw) {
     if (!Number.isFinite(kw)) return '–';
-    return kw < limitKw ? `chýba ${fmt2(limitKw - kw)} kW` : `navyše ${fmt2(kw - limitKw)} kW`;
-}
-
-/** Čo platí v páse plánu a dokedy. @param {import('./day-chart.js').Tone} tone @param {number} to */
-export function terazBandText(tone, to) {
-    return `${TERAZ_TONES[tone]} do ${endHm(to)}`;
-}
-
-/** Čo v páse plánu príde potom; na konci dňa nič. @param {import('./day-chart.js').Tone | null} tone */
-export function terazBandNext(tone) {
-    return tone ? `potom ${TERAZ_TONES[tone]}` : '';
+    return kw < limitKw ? `chýba ${fmt1(limitKw - kw)} kW` : `navyše ${fmt1(kw - limitKw)} kW`;
 }
 
 // ---- Panel štítka na karte Teraz ----------------------------------------------------
@@ -1628,14 +1561,6 @@ export function mozemNetInfo(level, run, voice = 'drzy') {
     const title = cap(`${TERAZ_TONES[LEVEL_TONE[level]]} do ${runEndHm(run.to)}`);
     const now = run.next ? `Potom ${TERAZ_TONES[LEVEL_TONE[run.next.level]]} do ${runEndHm(run.next.to)}.` : '';
     return { title, now, why: chipTexts(voice).why[level] };
-}
-
-/**
- * Hodnota grafu pre čítačku (posúvač): čas, výkon a čo vtedy platí.
- * @param {number} min @param {boolean} preview @param {string} kwText @param {import('./day-chart.js').Tone} tone
- */
-export function terazSliderText(min, preview, kwText, tone) {
-    return `${preview ? 'Náhľad' : 'Teraz'} ${hm(min)}, ${kwText} kW, ${TERAZ_TONES[tone]}`;
 }
 
 /** Okno na veľké veci dnes: prebieha či príde, už bolo, alebo nebude. @param {{ from: number, to: number } | null} w @param {boolean} past */

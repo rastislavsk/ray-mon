@@ -482,6 +482,8 @@ export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /** Voľby karty Radar: oblaky a rýchlosť. Len v tomto prehliadači, do odkazu nepatria. */
 export const RADAR_STORAGE_KEY = 'radar-v1';
+/** Voľba karty Deň na karte Teraz: pás alebo krivka (web/storage.js). Patrí telefónu, do odkazu nejde. */
+export const TERAZ_DEN_STORAGE_KEY = 'teraz-den-v1';
 /** Posledný model karty Radar, aby boli oblaky pri ďalšom otvorení hneď a Open-Meteo sa pýtalo menej. */
 export const RADAR_MODEL_STORAGE_KEY = 'radar-model-v1';
 

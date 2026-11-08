@@ -21,12 +21,14 @@ sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appk
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
 - **Teraz** – karta je v navigácii prvá a appka sa na nej vždy otvára. Veľké číslo s aktuálnym
-  výkonom, pod ním tenký pásik s percentom (koľko z toho, čo by dala jasná obloha), odkiaľ je číslo,
-  štítky (ÁNO, LACNÁ SIEŤ…) a veta o teraz. Ťuknutie na štítok otvorí panel: čo platí teraz a čo
-  štítok znamená. Pod nimi **Plán dňa** – veta a časová os, čo kedy zapnúť (večer na ďalší deň).
-  Pod plánom graf dňa: oblačnosť po hodinách, krivka predpovede a nameraná krivka, hranica veľkých
-  spotrebičov a pás plánu. Ťahom prstom alebo kurzorom po grafe (aj šípkami) si pozrieš iný čas,
-  „Späť na teraz“ ho vráti.
+  výkonom, pod ním tenký pásik s percentom (koľko z toho, čo by dala jasná obloha) a stav merania.
+  Pod nimi **čo zapnúť**: riadok „Teraz zo slnka“ / „Teraz z lacnej siete“ / „Počkaj“ (za „i“
+  vysvetlenie odpovede a ceny siete), plné dlaždice toho, čo ide teraz (keď nič, najbližšia vec
+  s odpočtom), a riadky Neskôr dnes, Zajtra, V stredu… Ťuknutie na spotrebič otvorí detail: kedy,
+  od-do, jeho úsek na páse dňa a prečo. Pod tým karta **Deň**: pás slnka a siete, alebo krivka
+  (oblačnosť, predpoveď, nameraná krivka, hranica veľkých spotrebičov). Ťahom prstom alebo kurzorom
+  (aj šípkami) si v nej pozrieš iný čas – výkon, slnko, sieť, oblačnosť a čo vtedy beží; číslo hore
+  ostáva teraz, „Späť na teraz“ čas vráti.
 - **Dnes** (kedysi Môžem?) – oblúk slnka a jedno veľké slovo o celom dni podľa triedy dňa: ráno podľa
   predpovede, cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného. Trieda dňa
   je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň

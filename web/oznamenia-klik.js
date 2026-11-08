@@ -1,4 +1,4 @@
-// Ťuknutie na oznámenie: appka ukáže kartu Teraz s rozbaleným Plánom dňa a jeho obrysom
+// Ťuknutie na oznámenie: appka ukáže kartu Teraz s obrysom okolo toho, čo zapnúť
 // (docs/navrhy/oznamenie-plan-dna.html). Zatvorená appka sa to dozvie z adresy, bežiaca zo správy
 // service workera (klik v sw.js). Bežné otvorenie appky sa tohto netýka.
 
@@ -7,9 +7,9 @@ import { klikZAdresy } from '../shared/oznamenia.js';
 import { zOznamenia } from './state.js';
 
 /**
- * Plán dňa sa pri štarte objaví až s predpoveďou - posun aj obrys na neho počkajú, najviac
- * OZNAMENIA.obrysCakaMs. Obrys tak zhasne aj vtedy, keď nebeží (útlm pohybu) alebo plán nie je čo
- * ukázať. Keď sa plán počas čakania nezobrazí a človek odíde z karty, panelChange čakanie zruší.
+ * Čo zapnúť sa pri štarte objaví až s predpoveďou - posun aj obrys naň počkajú, najviac
+ * OZNAMENIA.obrysCakaMs. Obrys tak zhasne aj vtedy, keď nebeží (útlm pohybu) alebo nie je čo
+ * ukázať. Keď sa počas čakania nezobrazí a človek odíde z karty, panelChange čakanie zruší.
  * @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom
  */
 export function initOznamKlik(store, dom) {
@@ -22,9 +22,10 @@ export function initOznamKlik(store, dom) {
     };
     const posunNaPlan = () => {
         if (!store.get().tzObrys) posun = false;
-        if (!posun || dom.tzPlan.classList.contains('hidden')) return;
+        if (!posun || dom.tzCo.classList.contains('hidden')) return;
         posun = false;
-        dom.tzPlan.scrollIntoView({ block: 'nearest' });
+        // Navrch: čo zapnúť môže byť vyššie ako obrazovka, riadok nad dlaždicami musí byť vidno.
+        dom.tzCo.scrollIntoView({ block: 'start' });
     };
     const otvor = () => {
         // Správa môže prísť skôr, než je appka v popredí - obrys by dobehol nevidený.
@@ -36,7 +37,7 @@ export function initOznamKlik(store, dom) {
         posunNaPlan();
     };
     store.subscribe(posunNaPlan);
-    dom.tzPlan.addEventListener('animationend', (e) => e.animationName === 'plan-obrys' && zhasni());
+    dom.tzCo.addEventListener('animationend', (e) => e.animationName === 'plan-obrys' && zhasni());
     navigator.serviceWorker?.addEventListener('message', (e) => e.data === OZNAMENIA.klik && otvor());
     const adresa = klikZAdresy(location.href);
     if (adresa === null) return;

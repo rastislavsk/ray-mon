@@ -23,23 +23,15 @@ import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
 import {
-    DAY_CHART_KEYS,
     mozemGuessText,
     mozemOfflineText,
     TERAZ_TEXTS,
-    TERAZ_TONES,
-    terazBandNext,
-    terazBandText,
     terazChartText,
     terazCloudText,
     terazJasText,
-    terazKwText,
     terazLaterText,
-    terazLimitFrom,
     terazLimitGap,
     terazPreviewTime,
-    terazReadoutWhen,
-    terazSliderText,
     terazSourceText,
     terazTodayText,
     terazTypicalText,
@@ -48,7 +40,7 @@ import {
     terazZaText,
 } from '../shared/messages.js';
 import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
-import { mozemModel, planWindows } from '../shared/mozem.js';
+import { mozemModel } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { coZapnutModel, denModel, dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
@@ -462,14 +454,13 @@ test('limitBox: na najužšom grafe je nápis v jednotkách grafu najväčší, 
     assert.equal(limitBox(text, { x: DAY_CHART.left + 2, end: false, y: 80 }).x0, DAY_CHART.left + 2);
 });
 
-test('terazModel o 13:00: číslo, štítky s vetou a Plán dňa z mozemModel, pás odporúčaní pre kartu Dnes', () => {
+test('terazModel o 13:00: číslo teraz, čo zapnúť z Plánu dňa, karta Deň, pás odporúčaní pre kartu Dnes', () => {
     const i = input(at('13:00'));
     const m = terazModel(i);
     const hero = heroModel(i);
     assert.equal(m.kind, 'ok');
+    assert.equal(m.title, 'Teraz');
     assert.equal(m.num, hero.powerText);
-    // Mimo náhľadu hovorí o čísle riadok stavu merania (stavRiadok v shared/hlavicka.js).
-    assert.equal(m.source, '');
     assert.equal(m.preview, false);
     assert.equal(m.sub, '', 'pod číslom nie je veta');
     const today = i.forecast?.days[0];
@@ -479,14 +470,23 @@ test('terazModel o 13:00: číslo, štítky s vetou a Plán dňa z mozemModel, p
     assert.equal(m.retry, false);
     assert.equal(m.guess, false);
     const cards = dnesCards(i);
-    assert.ok(cards && m.chart && m.plan && m.say);
+    assert.ok(cards && m.chart && m.co && m.den);
     const base = mozemModel(i);
-    assert.deepEqual(m.say, { chips: base.chips, text: base.say });
-    assert.equal(m.say.text, 'Slnko to teraz platí za nás.', 'bez spotrebičov - tie povie Plán dňa');
-    assert.deepEqual(m.plan.rows, base.plan?.rows);
-    assert.deepEqual(m.plan.head, { lead: 'Teraz práčka a umývačka', then: 'Auto o 13:15 · sušička o 15:00' });
+    // Štítky nie sú na karte, ich vysvetlenie je za „i“ riadku nad dlaždicami.
+    assert.deepEqual(m.chips, base.chips);
+    const rows = base.plan?.rows ?? [];
+    assert.deepEqual(m.co, coZapnutModel(rows, { nowMin: hm(13), level: 'lacna', slnkoDnes: true }));
     assert.deepEqual(
-        terazModel(i, { devices: ['bojler'] }).plan?.rows.map((r) => r.name),
+        m.co.hore.dlazdice.map((d) => d.id),
+        ['pracka', 'umyvacka'],
+    );
+    assert.deepEqual(m.den, denModel(i, rows, null));
+    assert.deepEqual(
+        m.veci.map((v) => v.id),
+        rows.map((r) => r.id),
+    );
+    assert.deepEqual(
+        terazModel(i, { devices: ['bojler'] }).veci.map((v) => v.name),
         ['Bojler'],
         'len spotrebiče doma',
     );
@@ -496,104 +496,70 @@ test('terazModel o 13:00: číslo, štítky s vetou a Plán dňa z mozemModel, p
     );
     assert.equal(cards.today.pct, Math.round((100 * /** @type {number} */ (i.pv?.dailyEnergyKwh)) / 61.4));
     assert.equal(m.chart.value, hm(13));
-    assert.equal(m.chart.valueText, terazSliderText(hm(13), false, hero.powerText, 'sun'));
     assert.deepEqual(m.hint, { text: TERAZ_TEXTS.hint, reset: false });
-    assert.deepEqual(
-        m.chart.keys.map((l) => l.text),
-        [DAY_CHART_KEYS.power, DAY_CHART_KEYS.forecast, DAY_CHART_KEYS.cloud],
-    );
-    assert.deepEqual(
-        m.chart.bands.map((l) => l.text),
-        [TERAZ_TONES.sun, TERAZ_TONES.cheap, TERAZ_TONES.costly],
-    );
     assert.match(m.chart.desc, /^Výroba od 05:00 do 21:00\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
 });
 
-test('terazModel: zoznam pod grafom ukáže hodnoty v čase bodu grafu tak, ako ich kreslí graf', () => {
-    const i = input(at('13:00'));
-    const r = /** @type {NonNullable<ReturnType<typeof terazModel>['chart']>} */ (terazModel(i).chart).readout;
-    const hero = heroModel(i);
-    const hourly = /** @type {NonNullable<typeof i.forecast>} */ (i.forecast).hourlyToday;
-    const h13 = /** @type {{ kw: number, cloud: number }} */ (hourly.find((p) => p.hour === 13));
-    const limit = powerThresholds(PLANT).lowKw;
-    assert.equal(r.when, 'Teraz 13:00');
+test('terazModel: detail spotrebiča - kedy, od-do, prečo a úsek na páse dňa', () => {
+    const m = terazModel(input(at('13:00')));
+    const pracka = m.veci.find((v) => v.id === 'pracka');
     assert.deepEqual(
-        r.rows.map((x) => x.tone),
-        ['power', 'forecast', 'cloud', 'limit', 'sun'],
+        { ...pracka, slot: undefined },
+        {
+            id: 'pracka',
+            name: 'Práčka',
+            tone: 'go',
+            kedy: 'Teraz zo slnka',
+            cas: '13:00 – 15:00',
+            why: 'Ohrev chytí slnko.',
+            slot: undefined,
+        },
     );
-    assert.equal(r.rows[0].value, terazKwText(hero.power));
-    // V celej hodine je predpoveď presne bod čiary, oblačnosť bunka tej hodiny.
-    assert.equal(r.rows[1].value, terazKwText(h13.kw));
-    assert.equal(r.rows[2].value, `${Math.round(h13.cloud)} %`);
-    assert.equal(r.rows[3].sub, terazLimitFrom(limit));
-    assert.equal(r.rows[3].value, terazLimitGap(hero.power, limit));
-    assert.match(r.rows[3].value, /^navyše \d+,\d\d kW$/);
-    // Úsek pásu plánu: zelený úsek, v ktorom 13:00 je, a čo po ňom príde.
-    const sun = planWindows(dayPlan(i), (s) => slotTone(s) === 'sun').find((w) => w.from <= hm(13) && hm(13) < w.to);
-    assert.equal(r.rows[4].text, `slnko stačí do ${terazPreviewTime(/** @type {{ to: number }} */ (sun).to)}`);
-    assert.match(r.rows[4].sub, /^potom /);
+    assert.ok(pracka?.slot && pracka.slot.left > 0 && pracka.slot.width > 0);
+    const susicka = m.veci.find((v) => v.id === 'susicka');
+    assert.equal(susicka?.tone, '');
+    assert.equal(susicka?.kedy, 'Dnes zo slnka');
+    const vecer = terazModel(input(at('19:50')), { devices: ['pracka', 'auto'] });
+    assert.deepEqual(
+        vecer.veci.map((v) => [v.id, v.tone, v.kedy, v.cas]),
+        [
+            ['auto', 'cheap', 'Teraz z lacnej siete', '20:00 – 20:30'],
+            ['pracka', '', 'Zajtra zo slnka', '07:45 – 09:45'],
+        ],
+    );
+    assert.equal(vecer.veci[1].slot, null, 'iný deň na dnešnom páse nie je');
 });
 
-test('terazModel: zoznam pod grafom ide za náhľadom, na konci dňa nič nepríde', () => {
-    const r = (/** @type {number} */ min) =>
-        /** @type {NonNullable<ReturnType<typeof terazModel>['chart']>} */ (terazModel(input(at('13:00'), { previewMinutes: min })).chart)
-            .readout;
-    const night = r(hm(21));
-    assert.equal(night.when, 'O 21:00');
-    assert.equal(night.rows[0].value, '0,00 kW');
-    assert.match(night.rows[3].value, /^chýba /);
-    const last = r(hm(23, 45));
-    assert.match(last.rows[4].text, / do 24:00$/);
-    assert.equal(last.rows[4].sub, '');
-});
-
-test('texty zoznamu pod grafom: pomlčka bez údaja, chýba či navyše podľa hranice', () => {
-    assert.equal(terazKwText(NaN), '–');
-    assert.equal(terazKwText(1.234), '1,23 kW');
+test('texty karty Deň: pomlčka bez údaja, chýba či navyše podľa hranice', () => {
     assert.equal(terazCloudText(null), '–');
     assert.equal(terazCloudText(62.4), '62 %');
     assert.equal(terazLimitGap(NaN, 2), '–');
-    assert.equal(terazLimitGap(1.5, 2), 'chýba 0,50 kW');
-    assert.equal(terazLimitGap(2, 2), 'navyše 0,00 kW');
-    assert.equal(terazLimitFrom(2.088), 'od 2,1 kW');
-    assert.equal(terazBandText('costly', MINUTES_PER_DAY), 'drahá sieť do 24:00');
-    assert.equal(terazBandNext(null), '');
-    assert.equal(terazBandNext('cheap'), 'potom lacná sieť');
-    assert.equal(terazReadoutWhen(hm(8, 15), false), 'Teraz 08:15');
+    assert.equal(terazLimitGap(1.5, 2), 'chýba 0,5 kW');
+    assert.equal(terazLimitGap(2, 2), 'navyše 0,0 kW');
 });
 
-test('terazModel: zoznam pod grafom bez hodinovej predpovede dneška píše pomlčky', () => {
-    const i = input(at('13:00'));
-    const f = /** @type {NonNullable<typeof i.forecast>} */ (i.forecast);
-    const m = terazModel({ ...i, forecast: { ...f, hourlyToday: [] } });
-    const rows = /** @type {NonNullable<typeof m.chart>} */ (m.chart).readout.rows;
-    assert.equal(rows[1].value, '–');
-    assert.equal(rows[2].value, '–');
-});
-
-test('terazModel: náhľad iného času mení číslo, vetu a odporúčanie, „teraz“ v grafe ostáva', () => {
+test('terazModel: zvolený čas je len v karte Deň - číslo, nadpis, vysvetlenie aj čo zapnúť ostávajú teraz', () => {
     const i = input(at('13:00'), { previewMinutes: hm(15, 30) });
     const m = terazModel(i);
-    const hero = heroModel(i);
-    assert.equal(m.num, hero.powerText);
-    assert.equal(m.source, 'odhad z predpovede');
-    // Nadpis povie, ku ktorému času číslo patrí; bez náhľadu je „Teraz“.
-    assert.equal(m.title, 'O 15:30');
-    assert.equal(terazModel(input(at('13:00'))).title, 'Teraz');
-    assert.equal(terazModel(input(at('13:00'), { previewMinutes: hm(9) }), { voice: 'slusny' }).title, 'O 09:00');
-    // Čas je v grafe pri čiare, pod grafom ostáva len „Späť na teraz“.
-    assert.deepEqual(m.hint, { text: '', reset: true });
-    // Štítky a veta hovoria o teraz, nie o náhľade - pod prstom sa nemenia, appka ich zosivie a vypne.
-    assert.deepEqual(m.say, terazModel(input(at('13:00'))).say);
     const now = terazModel(input(at('13:00')));
+    assert.equal(m.num, now.num);
+    assert.equal(m.title, 'Teraz');
     assert.equal(m.preview, true);
     assert.equal(now.preview, false);
+    assert.deepEqual(m.chips, now.chips);
+    assert.deepEqual(m.co, now.co);
+    assert.deepEqual(m.jas, now.jas);
+    // Karta Deň: odčítanie zvoleného času a „Späť na teraz“.
+    assert.equal(m.den?.zvolene, true);
+    assert.equal(m.den?.citanie.cas, '15:30');
+    assert.equal(m.den?.citanie.zdroj, 'odhad z predpovede');
+    assert.deepEqual(m.hint, { text: '', reset: true });
+    // Krivka: „teraz“ ostáva, čiara náhľadu je na zvolenom čase.
     assert.equal(m.chart?.now.x, now.chart?.now.x);
     const mark = m.chart?.mark;
     assert.ok(mark);
     assert.deepEqual([mark.preview, mark.label.text, mark.cell.tone], [true, '15:30', 'sun']);
     assert.equal(m.chart?.value, hm(15, 30));
-    assert.match(m.chart?.valueText ?? '', /^Náhľad 15:30, /);
 });
 
 test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a odporúčanie z predpovede', () => {
@@ -608,7 +574,6 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
     assert.ok(Number.isFinite(stale.realTimePowerKw));
     assert.notEqual(Number(m.num), stale.realTimePowerKw);
     // Odhad povie pás pod číslom. Čas je posledný bod krivky, ten istý, aký ukazuje riadok stavu merania.
-    assert.equal(m.source, '');
     const since = pvFreshness({ now: at('13:00'), pv: stale, site: SITE }).time;
     assert.deepEqual(m.note, {
         title: TERAZ_TEXTS.noteTitle,
@@ -623,7 +588,6 @@ test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a od
 test('terazModel: bez merania pás odhadu vedie k pripojeniu, s meraním pás nie je', () => {
     const bez = input(at('13:00'), { pv: null, zdroj: null });
     const m = terazModel(bez);
-    assert.equal(m.source, '');
     assert.deepEqual(m.note, { title: TERAZ_TEXTS.noteTitle, text: TERAZ_TEXTS.noteText, btn: TERAZ_TEXTS.noteBtn, znova: false });
     assert.deepEqual(terazModel(bez, { voice: 'slusny' }).note, {
         title: 'Odhad z predpovede, nie vaša strecha',
@@ -631,13 +595,11 @@ test('terazModel: bez merania pás odhadu vedie k pripojeniu, s meraním pás ni
         btn: TERAZ_TEXTS.noteBtn,
         znova: false,
     });
-    // Náhľad pás nechá (graf sa pod prstom nepohne), aj keď ide do minulosti.
+    // Zvolený čas pás nechá, aj keď ide do minulosti.
     assert.deepEqual(terazModel({ ...bez, previewMinutes: hm(9) }).note, m.note);
-    // Živé meranie: pás nie je, ani v náhľade budúcnosti - tam ostáva riadok odhadu.
+    // Živé meranie: pás nie je, ani pri zvolenom čase v budúcnosti.
     assert.equal(terazModel(input(at('13:00'))).note, null);
-    const buduce = terazModel(input(at('13:00'), { previewMinutes: hm(15) }));
-    assert.equal(buduce.note, null);
-    assert.equal(buduce.source, 'odhad z predpovede');
+    assert.equal(terazModel(input(at('13:00'), { previewMinutes: hm(15) })).note, null);
     // Typická strecha má vlastnú výzvu, pás odhadu nie.
     assert.equal(terazModel(guessInput(at('13:00'))).note, null);
 });
@@ -660,11 +622,10 @@ test('terazModel: noc - výkon 0, bez vety pod číslom, okno, ktoré už bolo, 
     const vecer = terazModel(input(at('21:00')));
     assert.equal(vecer.num, '0');
     assert.equal(vecer.sub, '');
-    // V noci pásik nie je - ani v náhľade dňa, aby sa graf pod prstom nepohol.
+    // V noci pásik nie je; hovorí o teraz, zvolený čas v karte Deň ho nemení.
     assert.equal(vecer.jas, null);
     assert.equal(terazModel(input(at('21:00'), { previewMinutes: hm(13) })).jas, null);
-    // Cez deň náhľad do noci: pásik drží miesto, ale je prázdny (appky ho skryjú).
-    assert.deepEqual(terazModel(input(at('13:00'), { previewMinutes: hm(21) })).jas, { pct: null, label: '', text: '' });
+    assert.deepEqual(terazModel(input(at('13:00'), { previewMinutes: hm(21) })).jas, terazModel(input(at('13:00'))).jas);
     assert.match(dnesCards(input(at('21:00')))?.today.window ?? '', /^Okno na veľké veci bolo /);
     const noc = terazModel(input(at('02:00')));
     assert.equal(noc.sub, '');
@@ -685,8 +646,9 @@ test('terazModel: načítavanie, bez dát, bez polohy', () => {
     assert.equal(off.retry, true);
     assert.equal(off.sub, mozemOfflineText({ online: true, zdroj: true, pvOk: false, pvSince: null }));
     assert.equal(off.chart, null);
-    assert.equal(off.plan, null);
-    assert.equal(off.say, null);
+    assert.equal(off.co, null);
+    assert.equal(off.den, null);
+    assert.deepEqual(off.chips, []);
     assert.equal(
         terazModel(input(at('13:00'), { pv: null, forecast: null }), { online: false }).sub,
         mozemOfflineText({ online: false, zdroj: true, pvOk: false, pvSince: null }),
@@ -703,11 +665,10 @@ test('terazModel: poloha bez panelov - typická strecha s „~“ a výzva, výp
     const m = terazModel(g);
     assert.equal(m.estimate, true);
     assert.equal(m.guess, true);
-    assert.equal(m.source, '');
     assert.equal(m.num, `~${heroModel(g).powerText}`);
     assert.equal(m.sub, 'typická strecha asi 5 kWp v tvojej obci, nie tvoja');
     assert.ok(m.jas && m.jas.pct !== null && m.jas.pct > 0, 'pásik jasu aj pri odhade z typickej strechy');
-    assert.ok(m.plan, 'Plán dňa aj z typickej strechy');
+    assert.ok(m.co, 'čo zapnúť aj z typickej strechy');
     assert.match(dnesCards(g)?.today.line ?? '', /podľa nej už asi/);
 });
 
@@ -726,7 +687,6 @@ test('texty karty Teraz', () => {
     assert.equal(terazSourceText('measured'), 'namerané');
     assert.equal(terazSourceText('forecast'), 'odhad z predpovede');
     assert.equal(terazPreviewTime(hm(15, 30)), '15:30');
-    assert.equal(terazSliderText(hm(8), true, '1.20', 'costly'), 'Náhľad 08:00, 1.20 kW, drahá sieť');
     assert.equal(terazWindowText({ from: hm(9, 15), to: hm(16, 45) }, false), 'Okno na veľké veci 09:15 – 16:45.');
     assert.equal(terazWindowText({ from: hm(9), to: hm(17) }, true), 'Okno na veľké veci bolo 09:00 – 17:00.');
     assert.equal(terazWindowText(null, false), 'Okno na veľké veci dnes nebude.');
@@ -762,7 +722,7 @@ test('texty karty Teraz', () => {
     );
 });
 
-test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a v náhľade bez merania', () => {
+test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci, vždy teraz', () => {
     // 13:00: menič meria; keď dáva len zlomok jasnej oblohy, je zamračené, hoci predpoveď hovorí jasno.
     const i = input(at('13:00'));
     const den = terazModel(i).pocasie;
@@ -771,8 +731,8 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(den?.mesiac, null);
     const slabo = { ...i, pv: { ...i.pv, realTimePowerKw: 0.3 } };
     assert.equal(terazModel(slabo).pocasie?.jas, 'zamracene');
-    // Náhľad o 18:00 je v budúcnosti - meranie nie je, jas je z predpovede (jasný deň).
-    assert.equal(terazModel({ ...slabo, previewMinutes: 18 * 60 }).pocasie?.jas, 'jasno');
+    // Zvolený čas v karte Deň pozadie nemení - nad kartou Deň platí teraz.
+    assert.deepEqual(terazModel({ ...slabo, previewMinutes: 18 * 60 }).pocasie, terazModel(slabo).pocasie);
     // 22:30: noc, s hviezdami nad elektrárňou.
     const noc = terazModel(input(at('22:30'))).pocasie;
     assert.equal(noc?.noc, true);
@@ -782,25 +742,19 @@ test('terazModel: počasie v pozadí - z merania cez deň, z predpovede v noci a
     assert.equal(terazModel({ ...i, forecast: null }).pocasie, null);
 });
 
-test('terazModel: náhľad posunie Mesiac aj hviezdy do zvolenej chvíle, nie do teraz', () => {
-    const noc = terazModel(input(at('22:30'))).pocasie;
-    const neskor = terazModel({ ...input(at('22:30')), previewMinutes: 23 * 60 + 32 }).pocasie;
-    assert.notDeepEqual(neskor?.hviezdy, noc?.hviezdy);
-    // O 23:32 je Mesiac ešte pod obzorom, nad ránom stojí v poli.
-    assert.equal(neskor?.mesiac, null);
-    const rano = terazModel({ ...input(at('22:30')), previewMinutes: 4 * 60 }).pocasie;
-    assert.deepEqual(rano?.mesiac, mesiacVPoli(mesiacNaOblohe(at('04:00'), SITE.lat, SITE.lon)));
-    assert.ok(rano?.mesiac);
-});
-
-test('pocasieTeraz: počasie neba je v zvolenej chvíli, rovnaké ako kresba', () => {
+test('pocasieTeraz: počasie v zvolenej chvíli - Mesiac, hviezdy aj jas idú za časom', () => {
     const slabo = { ...input(at('13:00')), pv: { ...input(at('13:00')).pv, realTimePowerKw: 0.3 } };
     assert.deepEqual(pocasieTeraz(slabo), terazModel(slabo).pocasie);
     assert.equal(pocasieTeraz(slabo)?.jas, 'zamracene', 'teraz z merania');
-    // Náhľad o 18:00 posunie kresbu aj nebo - dopredu podľa predpovede.
-    const nahlad = { ...slabo, previewMinutes: 18 * 60 };
-    assert.deepEqual(pocasieTeraz(nahlad), terazModel(nahlad).pocasie);
-    assert.equal(pocasieTeraz(nahlad)?.jas, 'jasno');
+    // O 18:00 dopredu podľa predpovede (jasný deň).
+    assert.equal(pocasieTeraz({ ...slabo, previewMinutes: 18 * 60 })?.jas, 'jasno');
+    const noc = pocasieTeraz(input(at('22:30')));
+    const neskor = pocasieTeraz({ ...input(at('22:30')), previewMinutes: 23 * 60 + 32 });
+    assert.notDeepEqual(neskor?.hviezdy, noc?.hviezdy);
+    // O 23:32 je Mesiac ešte pod obzorom, nad ránom stojí v poli.
+    assert.equal(neskor?.mesiac, null);
+    const rano = pocasieTeraz({ ...input(at('22:30')), previewMinutes: 4 * 60 });
+    assert.deepEqual(rano?.mesiac, mesiacVPoli(mesiacNaOblohe(at('04:00'), SITE.lat, SITE.lon)));
     assert.equal(pocasieTeraz({ ...slabo, forecast: null }), null);
     assert.equal(pocasieTeraz({ ...slabo, known: 'nic' }), null);
 });
@@ -913,7 +867,7 @@ test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a ter
     assert.deepEqual(teraz.veta, { text: 'Slnko stačí ešte 4 h 30 min', sub: 'do 17:30' });
     assert.equal(teraz.citanie.cas, 'Teraz 13:00');
     assert.equal(teraz.citanie.zdroj, 'živé meranie');
-    assert.match(teraz.citanie.slnko, /^slnko stačí · navyše \d+,\d\d kW$/);
+    assert.match(teraz.citanie.slnko, /^slnko stačí · navyše \d+,\d kW$/);
     assert.equal(teraz.citanie.siet, 'lacná sieť do 20:30');
     assert.equal(teraz.citanie.plan, 'beží práčka, umývačka a bojler');
     assert.deepEqual(teraz.citanie.ikony, ['pracka', 'umyvacka', 'bojler']);

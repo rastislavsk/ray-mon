@@ -212,7 +212,7 @@ function directPlan(out, v) {
     ];
     for (const item of MOZEM_ITEMS.filter((i) => i.device))
         for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);
-    Object.assign(out, { 'plan.title': M.PLAN_DNA_TITLE, 'plan.note': M.PLAN_DNA_NOTE });
+    Object.assign(out, { 'plan.note': M.PLAN_DNA_NOTE });
     // Ranné oznámenie: pevné texty, nadpis a text pre každý druh dňa a pripomienky.
     const T = M.oznameniaTexts(v);
     strings(T, 'oznam', out);
