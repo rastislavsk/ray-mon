@@ -82,6 +82,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         veci: rows.map((r) => vecDetail(r, now.minutes, den.pas.span)),
         den,
         pocasie: pocasieOf(input, now),
+        // Obloha karty Deň: počasie v zvolenom čase (bez neho teraz).
+        pocasieDen: pocasieOf(input, hero),
         jas: jasOf(input, now),
     };
 }
@@ -194,6 +196,7 @@ function empty(kind, estimate) {
         veci: /** @type {Array<ReturnType<typeof vecDetail>>} */ ([]),
         den: /** @type {ReturnType<typeof denModel> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
+        pocasieDen: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
         jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
 }
@@ -436,9 +439,21 @@ export function denModel(input, rows, min, voice = 'drzy') {
         veta: terazVetaDnaText({ nowMin, ...oknoDna(input, plan, nowMin) }),
         citanie: citanieOf(input, plan, rows, { t, min }, voice),
         pas: denPas(plan, daylightSpan(input.site, localDateKey(input.now, tz)), nowMin),
+        slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
         min: t,
         zvolene: min !== null,
     };
+}
+
+/**
+ * Slnko na oblohe karty Deň v minúte `t`: zľava (východ) doprava (západ) po oblúku, v % plochy karty
+ * (`x` zľava, `y` zhora). Len dekorácia, poloha z dĺžky dňa, nie presná výška slnka. Mimo dňa null.
+ * @param {{ from: number, to: number }} span @param {number} t
+ */
+function slnkoVKarte(span, t) {
+    if (t < span.from || t > span.to) return null;
+    const f = (t - span.from) / (span.to - span.from);
+    return { x: Math.round(6 + f * 88), y: Math.round(78 - Math.sin(Math.PI * f) * 70) };
 }
 
 /**
@@ -454,9 +469,9 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         planWindows(plan, (s) => s.level === slot.level).find((w) => w.from <= t && t < w.to)
     );
     const hour = input.forecast?.hourlyToday.find((p) => p.hour === Math.floor(t / 60));
-    const dnes = rows.filter(dnesny);
-    const bezi = dnes.filter((r) => r.start <= t && t < r.end);
-    const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
+    // Teraz je pre plán najbližšia štvrťhodina, ako v Pláne dňa a pri dlaždiciach - inak by vec, ktorá
+    // ide teraz, bola tu „potom o …“.
+    const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t);
     const texty = terazCitanieText({
         min: t,
         teraz: min === null,
@@ -471,6 +486,17 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         dalsi: dalsi ? { name: dalsi.name, start: dalsi.start } : null,
     });
     return { ...texty, tone: { slnko, siet: slot.level }, ikony: (bezi.length ? bezi : dalsi ? [dalsi] : []).map((r) => r.id) };
+}
+
+/**
+ * Čo z Plánu dňa beží v minúte `t`, a keď nič, čo príde najskôr (inak null).
+ * @param {RiadokPlanu[]} rows @param {number} t
+ */
+function coBezi(rows, t) {
+    const dnes = rows.filter(dnesny);
+    const bezi = dnes.filter((r) => r.start <= t && t < r.end);
+    const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
+    return { bezi, dalsi };
 }
 
 /**

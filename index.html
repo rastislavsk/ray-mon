@@ -159,8 +159,10 @@
                     <div id="tz-skupiny"></div>
                 </div>
                 <!-- Karta Deň: veta o dni, pri zvolenom čase odčítanie, pod ním pás alebo krivka (posúvač času),
-                     legenda a pätka s radou alebo „Späť na teraz“. -->
+                     legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. -->
                 <section id="tz-den" class="glass tzden hidden" aria-labelledby="tz-den-ttl">
+                    <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v karte. -->
+                    <div id="tz-den-wx" class="wx wx-den hidden" aria-hidden="true"></div>
                     <div class="den-hlava">
                         <h2 id="tz-den-ttl" class="glass-ttl">Deň</h2>
                         <div class="prep" role="group" aria-label="Podoba dňa">
