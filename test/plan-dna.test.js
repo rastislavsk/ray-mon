@@ -220,3 +220,23 @@ test('auto na slnku bez ceny v tarife: len km', () => {
     const m = planDnaModel(input(at('09:00'), { tariff: FLAT }), { devices: ['auto'] });
     assert.match(row(m?.rows ?? [], 'auto').why, /^~\d+ km zo slnka$/);
 });
+
+test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďalšieho dňa', () => {
+    // 19:50: auto a bojler v lacnom pásme od 20:00 do 20:30, potom je VT.
+    const vecer = planDnaModel(input(at('19:50')), { devices: ALL });
+    const auto = row(vecer?.rows ?? [], 'auto');
+    assert.equal(auto.kind, 'cheap');
+    assert.equal(auto.start, 20 * 60);
+    assert.equal(auto.end, 20 * 60 + 30);
+    // 23:00: NT od 23:30 pokračuje cez polnoc do 07:30 ďalšieho dňa.
+    const noc = planDnaModel(input(at('23:00')), { devices: ALL });
+    const bojler = row(noc?.rows ?? [], 'bojler');
+    assert.equal(bojler.kind, 'cheap');
+    assert.equal(bojler.start, 23 * 60 + 30);
+    assert.equal(bojler.end, 24 * 60 + 7 * 60 + 30);
+    // Celý deň lacný: pásmo cez polnoc trvá aj celý ďalší deň.
+    /** @type {import('../shared/config.js').Tariff} */
+    const lacna = { ...FLAT, bands: [{ id: 'j', name: 'NT', level: 'lacna', price: null }] };
+    const cely = planDnaModel(input(at('23:00'), { tariff: lacna }), { devices: ['auto'] });
+    assert.equal(row(cely?.rows ?? [], 'auto').end, 2 * 24 * 60);
+});

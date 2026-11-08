@@ -11,20 +11,21 @@
 import { DEVICES, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
+import { bandAt, scheduleFor } from './tariff.js';
 import { planDnaNextText, planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
 import { dayCtx, freeKw, kmOf, programDraw } from './mozem.js';
-import { daylightSpan } from './solar.js';
+import { addDays, daylightSpan, localDateKey } from './solar.js';
 
 /** @typedef {import('./mozem.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem.js').LaterDay} LaterDay */
 /** @typedef {(typeof MOZEM_ITEMS)[number]} MozemItem */
 /**
  * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo
- * siete), v lacnom pásme od `start`, iný deň od `day.start` do `end` (`after`: po čom v ten deň ide),
- * alebo tento týždeň nie.
+ * siete), v lacnom pásme od `start` do konca toho pásma `end` (cez polnoc viac než 24 h), iný deň
+ * od `day.start` do `end` (`after`: po čom v ten deň ide), alebo tento týždeň nie.
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
  *     km: number | null, save: number | null, currency: string }
- *   | { id: string, kind: 'cheap', start: number }
+ *   | { id: string, kind: 'cheap', start: number, end: number }
  *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null }
  *   | { id: string, kind: 'none' }} PlanRow
  */
@@ -77,6 +78,28 @@ function cheapFrom(ctx, from) {
 }
 
 /**
+ * Riadok v lacnom pásme od `start` (alebo null, keď lacné pásmo do polnoci nie je): koniec je prvá
+ * štvrťhodina, ktorá už lacná nie je. Pásmo, ktoré siaha do polnoci, pokračuje podľa rozvrhu
+ * ďalšieho dňa (víkend môže mať iný) - koniec je potom viac než 24 h. Celý zajtrajšok lacný končí
+ * o polnoci zajtra.
+ * @param {string} id @param {number | null} start @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input
+ * @returns {PlanRow | null}
+ */
+function cheapRow(id, start, ctx, input) {
+    if (start === null) return null;
+    let end = start;
+    while (end < DAY_MIN && ctx.plan[end / STEP].level === 'lacna') end += STEP;
+    if (end === DAY_MIN) {
+        const { tariff, now, site } = input;
+        const schedule = scheduleFor(tariff, addDays(localDateKey(now, site.timezone), 1));
+        let m = 0;
+        while (m < DAY_MIN && bandAt(tariff, schedule, m).level === 'lacna') m += STEP;
+        end += m;
+    }
+    return { id, kind: 'cheap', start, end };
+}
+
+/**
  * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku,
  * alebo kam inam. Dnešok rozvrhne najlepsiDen. Čo sa dnes nezmestí: auto a bojler (cheapGrid)
  * do lacného pásma, ostatné tým istým výpočtom na ďalšie dni predpovede (iný deň má rozpočet
@@ -92,16 +115,15 @@ export function planDna(ctx, input, devices) {
     for (const r of najlepsiDen(ctx, input.tariff.currency, list)) rows.set(r.id, r);
     const rest = list.filter(({ item, device }) => {
         if (rows.has(item.id)) return false;
-        const cheap = device.cheapGrid ? cheapFrom(ctx, from0) : null;
-        if (cheap !== null) rows.set(item.id, { id: item.id, kind: 'cheap', start: cheap });
-        return cheap === null;
+        const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0), ctx, input) : null;
+        if (cheap) rows.set(item.id, cheap);
+        return !cheap;
     });
     for (const { item } of ineDni(ctx, input, rest, rows)) {
         // V lacnom pásme ide sušička až po práčke, ak tam ide aj tá.
         const prev = rows.get(PLAN_DNA.after[item.id] ?? '');
         const from = prev?.kind === 'cheap' ? prev.start + (MOZEM_ITEMS.find((i) => i.id === prev.id)?.runMin ?? 0) : from0;
-        const cheap = cheapFrom(ctx, from);
-        rows.set(item.id, cheap !== null ? { id: item.id, kind: 'cheap', start: cheap } : { id: item.id, kind: 'none' });
+        rows.set(item.id, cheapRow(item.id, cheapFrom(ctx, from), ctx, input) ?? { id: item.id, kind: 'none' });
     }
     return list.map(({ item }) => /** @type {PlanRow} */ (rows.get(item.id)));
 }

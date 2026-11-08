@@ -44,12 +44,15 @@ import {
     terazTodayText,
     terazTypicalText,
     terazWindowText,
+    terazVetaDnaText,
+    terazZaText,
 } from '../shared/messages.js';
 import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 import { mozemModel, planWindows } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
-import { dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
+import { coZapnutModel, denModel, dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
+import { planDnaModel } from '../shared/plan-dna.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
@@ -800,4 +803,161 @@ test('pocasieTeraz: počasie neba je v zvolenej chvíli, rovnaké ako kresba', (
     assert.equal(pocasieTeraz(nahlad)?.jas, 'jasno');
     assert.equal(pocasieTeraz({ ...slabo, forecast: null }), null);
     assert.equal(pocasieTeraz({ ...slabo, known: 'nic' }), null);
+});
+
+// ---- Nová karta Teraz (docs/navrhy/teraz-navrh-2.html) ----
+
+const VSETKO = ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'];
+/** Riadky Plánu dňa v danej chvíli. @param {ReturnType<typeof input>} i */
+const riadky = (i) => planDnaModel(i, { devices: VSETKO })?.rows ?? [];
+/** @param {string} hm */
+const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
+
+test('čo zapnúť na poludnie: tri dlaždice zo slnka, nepárna posledná cez celú šírku, zvyšok neskôr', () => {
+    const m = coZapnutModel(riadky(input(at('13:00'))), { nowMin: minuta('13:00'), level: 'lacna', slnkoDnes: true });
+    assert.equal(m.hore.druh, 'slnko');
+    assert.deepEqual(m.hore.oko, { text: 'Teraz zo slnka', sub: '' });
+    assert.deepEqual(
+        m.hore.dlazdice.map((d) => [d.id, d.tone, d.cela]),
+        [
+            ['pracka', 'go', false],
+            ['umyvacka', 'go', false],
+            ['bojler', 'go', true],
+        ],
+    );
+    assert.equal(m.hore.dlazdice[0].sub, 'dobehne 15:00');
+    assert.equal(m.hore.dalsi, null);
+    assert.equal(m.skupiny.length, 1);
+    assert.equal(m.skupiny[0].nazov, 'Neskôr dnes');
+    assert.deepEqual(
+        m.skupiny[0].riadky.map((r) => [r.id, r.cas, r.info]),
+        [
+            ['auto', '13:20', '~50 km zo slnka'],
+            ['susicka', '15:00', 'po práčke'],
+        ],
+    );
+});
+
+test('čo zapnúť večer: lacná sieť teraz s koncom pásma, ostatné zajtra', () => {
+    const rows = riadky(input(at('19:50')));
+    const m = coZapnutModel(rows, { nowMin: minuta('19:50'), level: 'lacna', slnkoDnes: true });
+    assert.equal(m.hore.druh, 'siet');
+    assert.equal(m.hore.oko.text, 'Teraz z lacnej siete');
+    assert.equal(m.hore.bezSlnka, '', 'dnes slnko stačilo, len už skončilo');
+    assert.equal(m.hore.dlazdice.find((d) => d.id === 'auto')?.sub, 'nabíjaj do 20:30 · lacný prúd');
+    assert.equal(m.hore.dlazdice.find((d) => d.id === 'bojler')?.sub, 'lacný prúd do 20:30');
+    assert.deepEqual(
+        m.skupiny.map((g) => g.nazov),
+        ['Zajtra'],
+    );
+    assert.equal(m.skupiny[0].riadky.find((r) => r.id === 'susicka')?.info, 'po práčke');
+    // Slušný tón a deň bez slnka: veta pod riadkom nad dlaždicami.
+    const slusne = coZapnutModel(rows, { nowMin: minuta('19:50'), level: 'lacna', slnkoDnes: false }, 'slusny');
+    assert.equal(slusne.hore.dlazdice.find((d) => d.id === 'auto')?.sub, 'nabíjajte do 20:30 · lacný prúd');
+    assert.equal(slusne.hore.bezSlnka, 'Slnko dnes na veľké veci nestačí.');
+});
+
+test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pásmo cez polnoc', () => {
+    const m = coZapnutModel(riadky(input(at('23:00'))), { nowMin: minuta('23:00'), level: 'draha', slnkoDnes: true });
+    assert.equal(m.hore.druh, 'dnesNic');
+    assert.deepEqual(m.hore.oko, { text: 'Zo slnka dnes už nič', sub: 'sieť je teraz drahá' });
+    assert.deepEqual(m.hore.dalsi, { id: 'bojler', name: 'Bojler', cas: '23:30', tone: 'cheap', sub: 'za 30 min · lacný prúd' });
+    assert.equal(m.skupiny[0].nazov, 'Potom');
+    assert.deepEqual(m.skupiny[0].riadky[0], { id: 'auto', name: 'Auto', kind: 'cheap', cas: '23:30', info: 'lacný prúd' });
+});
+
+test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie, bez riadkov nič', () => {
+    /** @type {any[]} */
+    const rows = [
+        { id: 'pracka', name: 'Práčka', kind: 'sun', start: 9 * 60, end: 11 * 60, after: null, km: null },
+        { id: 'auto', name: 'Auto', kind: 'sun', start: 12 * 60, end: 15 * 60, after: null, km: 80 },
+        {
+            id: 'umyvacka',
+            name: 'Umývačka',
+            kind: 'later',
+            day: { name: 'Streda', index: 3, start: 8 * 60 },
+            end: 10 * 60 + 30,
+            after: null,
+        },
+        { id: 'bojler', name: 'Bojler', kind: 'none' },
+    ];
+    const m = coZapnutModel(rows, { nowMin: 7 * 60 + 30, level: 'draha', slnkoDnes: true }, 'slusny');
+    assert.equal(m.hore.druh, 'pockaj');
+    assert.deepEqual(m.hore.oko, { text: 'Počkajte', sub: 'sieť je teraz drahá' });
+    assert.deepEqual(m.hore.dalsi, { id: 'pracka', name: 'Práčka', cas: '09:00', tone: 'go', sub: 'za 1 h 30 min · zo slnka' });
+    assert.deepEqual(
+        m.skupiny.map((g) => g.nazov),
+        ['Potom', 'V stredu', 'Tento týždeň nie'],
+    );
+    assert.deepEqual(m.skupiny[0].riadky[0], { id: 'auto', name: 'Auto', kind: 'sun', cas: '12:00', info: '~80 km zo slnka' });
+    assert.deepEqual(m.skupiny[1].riadky[0], { id: 'umyvacka', name: 'Umývačka', kind: 'later', cas: '08:00', info: 'dobehne 10:30' });
+    assert.deepEqual(m.skupiny[2].riadky[0], {
+        id: 'bojler',
+        name: 'Bojler',
+        kind: 'none',
+        cas: '–',
+        info: 'slnko podľa predpovede nestačí',
+    });
+    const nic = coZapnutModel([], { nowMin: 22 * 60, level: 'bezna', slnkoDnes: false });
+    assert.equal(nic.hore.druh, 'nic');
+    assert.deepEqual(nic.hore.oko, { text: 'Dnes už nič', sub: '' }, 'bežná cena slovo nemá');
+    assert.deepEqual(nic.skupiny, []);
+});
+
+test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a teraz na ňom', () => {
+    const i = input(at('13:00'));
+    const rows = riadky(i);
+    const teraz = denModel(i, rows, null);
+    assert.equal(teraz.zvolene, false);
+    assert.equal(teraz.min, 13 * 60);
+    assert.deepEqual(teraz.veta, { text: 'Slnko stačí ešte 4 h 30 min', sub: 'do 17:30' });
+    assert.equal(teraz.citanie.cas, 'Teraz 13:00');
+    assert.equal(teraz.citanie.zdroj, 'živé meranie');
+    assert.match(teraz.citanie.slnko, /^slnko stačí · navyše \d+,\d\d kW$/);
+    assert.equal(teraz.citanie.siet, 'lacná sieť do 20:30');
+    assert.equal(teraz.citanie.plan, 'beží práčka, umývačka a bojler');
+    assert.deepEqual(teraz.citanie.ikony, ['pracka', 'umyvacka', 'bojler']);
+    const neskor = denModel(i, rows, 15 * 60, 'slusny');
+    assert.equal(neskor.zvolene, true);
+    assert.equal(neskor.citanie.cas, '15:00');
+    assert.equal(neskor.citanie.zdroj, 'odhad z predpovede');
+    assert.equal(neskor.citanie.plan, 'beží umývačka a sušička');
+    assert.ok(neskor.citanie.veta.startsWith('15:00, '));
+    // Pás: slnko aj sieť pokryjú celú os bez dier, teraz je na nej.
+    for (const r of [teraz.pas.slnko, teraz.pas.siet]) {
+        assert.equal(r[0].from, teraz.pas.span.from);
+        assert.equal(r.at(-1)?.to, teraz.pas.span.to);
+        r.slice(1).forEach((u, k) => assert.equal(u.from, r[k].to));
+    }
+    assert.ok(teraz.pas.slnko.some((u) => u.l === 'go'));
+    assert.ok(teraz.pas.now !== null && teraz.pas.now > 0 && teraz.pas.now < 100);
+    assert.ok(teraz.pas.ticks.every((t) => Number(t.label) % 3 === 0));
+});
+
+test('karta Deň v noci: slnko nesvieti, oblačnosť nie, teraz mimo osi, veta so zajtrajškom', () => {
+    const i = input(at('23:00'));
+    const d = denModel(i, riadky(i), null);
+    assert.equal(d.citanie.slnko, 'slnko nesvieti');
+    assert.equal(d.citanie.mraky, '');
+    assert.equal(d.citanie.siet, 'drahá sieť do 23:30');
+    assert.equal(d.citanie.plan, 'potom bojler o 23:30');
+    assert.equal(d.pas.now, null);
+    assert.equal(d.veta.text, 'Slnko dnes skončilo');
+    assert.match(d.veta.sub, /^zajtra od \d\d:\d\d$/);
+});
+
+test('veta karty Deň a čas do niečoho', () => {
+    const okno = { from: 9 * 60, to: 17 * 60 + 30 };
+    assert.deepEqual(terazVetaDnaText({ nowMin: 7 * 60 + 30, okno, zajtraOd: null }), {
+        text: 'Slnko bude stačiť o 1 h 30 min',
+        sub: 'od 09:00',
+    });
+    assert.deepEqual(terazVetaDnaText({ nowMin: 18 * 60, okno, zajtraOd: null }), { text: 'Slnko dnes skončilo', sub: '' });
+    assert.deepEqual(terazVetaDnaText({ nowMin: 12 * 60, okno: null, zajtraOd: null }), {
+        text: 'Slnko dnes na veľké veci nestačí',
+        sub: '',
+    });
+    assert.equal(terazZaText(45), '45 min');
+    assert.equal(terazZaText(120), '2 h');
+    assert.equal(terazZaText(95), '1 h 35 min');
 });
