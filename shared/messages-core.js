@@ -1241,6 +1241,138 @@ export const endHm = (min) => (min >= MINUTES_PER_DAY ? '24:00' : hm(min));
 /** Úsek dňa „09:15 – 16:45“. @param {{ from: number, to: number }} w */
 export const spanText = (w) => `${hm(w.from)} – ${endHm(w.to)}`;
 
+// ---- Čo zapnúť na karte Teraz (docs/navrhy/teraz-navrh-2.html) -----------------------
+// Riadok nad dlaždicami (odkiaľ ide prúd teraz), dlaždice toho, čo ide teraz, skupiny riadkov
+// a karta Deň s odčítaním zvoleného času. Pri bežných spotrebičoch bez ceny, pri aute km.
+// Veľké písmená robí štýl, texty sú v bežnom tvare.
+
+/** Koniec úseku, ktorý môže ísť cez polnoc: presne polnoc je „24:00“, ďalej čas ďalšieho dňa. @param {number} min */
+const koniecHm = (min) => (min === MINUTES_PER_DAY ? '24:00' : hm(min));
+
+/** Kým niečo príde, krátko: „45 min“, „1 h 30 min“, „2 h“. @param {number} min */
+export function terazZaText(min) {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    if (!h) return `${m} min`;
+    return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** Sieť teraz do riadku nad dlaždicami; bežná cena slovo nemá. */
+const SIET_TERAZ = /** @type {Record<string, string>} */ ({ lacna: 'sieť je teraz lacná', draha: 'sieť je teraz drahá' });
+
+/**
+ * Riadok nad dlaždicami: odkiaľ ide prúd teraz (`slnko`, `siet`), a keď teraz nejde nič, či ešte
+ * dnes príde slnko (`pockaj`), alebo už nie (`dnesNic` - dnes ešte lacná sieť, `nic` - dnes nič).
+ * Keď teraz nič nejde, `sub` povie cenu siete.
+ * @param {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', level: string }} o @param {Voice} [voice]
+ */
+export function terazOkoText({ druh, level }, voice = 'drzy') {
+    if (druh === 'slnko') return { text: 'Teraz zo slnka', sub: '' };
+    if (druh === 'siet') return { text: 'Teraz z lacnej siete', sub: '' };
+    const text = druh === 'pockaj' ? voiceTexts(voice).MOZEM_CHIPS.wait : druh === 'dnesNic' ? 'Zo slnka dnes už nič' : 'Dnes už nič';
+    return { text, sub: SIET_TERAZ[level] ?? '' };
+}
+
+/** Pod riadkom nad dlaždicami, keď teraz ide len lacná sieť a slnko dnes nestačí vôbec. */
+export const TERAZ_BEZ_SLNKA = 'Slnko dnes na veľké veci nestačí.';
+
+/**
+ * Pod menom dlaždice toho, čo ide teraz: kedy dobehne, auto dokedy a koľko km zo slnka, v lacnom
+ * pásme dokedy je lacné.
+ * @param {{ id: string, kind: 'sun' | 'cheap', end: number, km?: number | null }} r @param {Voice} [voice]
+ */
+export function terazDlazdicaText(r, voice = 'drzy') {
+    if (r.kind === 'cheap') {
+        if (r.id !== 'auto') return `lacný prúd do ${koniecHm(r.end)}`;
+        return `${polite(voice) ? 'nabíjajte' : 'nabíjaj'} do ${koniecHm(r.end)} · lacný prúd`;
+    }
+    if (r.id === 'auto') return r.km ? `do ${hm(r.end)} · ~${r.km} km` : `do ${hm(r.end)}`;
+    return `dobehne ${hm(r.end)}`;
+}
+
+/**
+ * Dlaždica s rámom, keď teraz nejde nič: o koľko príde najbližšia vec a odkiaľ.
+ * @param {{ kind: 'sun' | 'cheap', start: number }} r @param {number} nowMin
+ */
+export function terazDalsiText(r, nowMin) {
+    return `za ${terazZaText(Math.max(0, r.start - nowMin))} · ${r.kind === 'cheap' ? 'lacný prúd' : 'zo slnka'}`;
+}
+
+/**
+ * Riadok v skupine: veľký čas a pod menom doplnok - dobehne, po čom ide, km auta, lacný prúd.
+ * Riadok „tento týždeň nie“ má namiesto času pomlčku.
+ * @param {import('./plan-dna.js').PlanRow} r @returns {{ cas: string, info: string }}
+ */
+export function terazRiadokText(r) {
+    if (r.kind === 'none') return { cas: '–', info: 'slnko podľa predpovede nestačí' };
+    if (r.kind === 'cheap') return { cas: hm(r.start), info: 'lacný prúd' };
+    const start = r.kind === 'later' ? r.day.start : r.start;
+    const after = r.after ? (PLAN_AFTER[r.after] ?? '') : '';
+    if (after) return { cas: hm(start), info: after };
+    if (r.id === 'auto') return { cas: hm(start), info: r.kind === 'sun' && r.km ? `~${r.km} km zo slnka` : 'zo slnka' };
+    return { cas: hm(start), info: `dobehne ${hm(r.end)}` };
+}
+
+/**
+ * Nadpis skupiny riadkov: dnes (`teraz` - nad ňou sú dlaždice toho, čo ide teraz), iný deň podľa
+ * mena dňa („Zajtra“, „V stredu“), alebo tento týždeň nie.
+ * @param {{ druh: 'dnes', teraz: boolean } | { druh: 'den', name: string } | { druh: 'nie' }} g
+ */
+export function terazSkupinaText(g) {
+    if (g.druh === 'dnes') return g.teraz ? 'Neskôr dnes' : 'Potom';
+    if (g.druh === 'den') return cap(onDay(g.name));
+    return 'Tento týždeň nie';
+}
+
+/**
+ * Veta karty Deň bez zvoleného času: koľko ešte slnko stačí, o koľko začne, že skončilo (a kedy
+ * zajtra začne), alebo že dnes nestačí. `okno` je zelený úsek, ktorý prebieha alebo príde, inak
+ * posledný, ktorý už bol.
+ * @param {{ nowMin: number, okno: { from: number, to: number } | null, zajtraOd: number | null }} d
+ */
+export function terazVetaDnaText({ nowMin, okno, zajtraOd }) {
+    if (!okno) return { text: 'Slnko dnes na veľké veci nestačí', sub: '' };
+    if (nowMin < okno.from) return { text: `Slnko bude stačiť o ${terazZaText(okno.from - nowMin)}`, sub: `od ${hm(okno.from)}` };
+    if (nowMin < okno.to) return { text: `Slnko stačí ešte ${terazZaText(okno.to - nowMin)}`, sub: `do ${endHm(okno.to)}` };
+    return { text: 'Slnko dnes skončilo', sub: zajtraOd === null ? '' : `zajtra od ${hm(zajtraOd)}` };
+}
+
+/** Sieť v odčítaní karty Deň podľa úrovne pásma. */
+const SIET_DO = /** @type {Record<string, string>} */ ({ lacna: 'lacná sieť', draha: 'drahá sieť', bezna: 'bežná cena' });
+
+/**
+ * Odčítanie karty Deň pre zvolený čas (alebo teraz): čas, výkon a odkiaľ je, či slnko stačí a o koľko,
+ * sieť a dokedy, oblačnosť a čo z plánu vtedy beží, inak čo príde. `veta` je to isté pre čítačku.
+ * @param {{ min: number, teraz: boolean, kw: number, source: 'live' | 'measured' | 'forecast' | null,
+ *   slnko: 'go' | 'part' | 'noc', limitKw: number, level: string, levelDo: number, cloud: number | null,
+ *   bezi: string[], dalsi: { name: string, start: number } | null }} c
+ */
+export function terazCitanieText(c) {
+    const kw = Number.isFinite(c.kw) ? `${fmt1(c.kw)} kW` : '–';
+    const zdroj = c.source ? terazSourceText(c.source) : '';
+    const slnko =
+        c.slnko === 'go'
+            ? `slnko stačí · ${terazLimitGap(c.kw, c.limitKw)}`
+            : c.slnko === 'part'
+              ? `svieti, nestačí · ${terazLimitGap(c.kw, c.limitKw)}`
+              : 'slnko nesvieti';
+    const siet = `${SIET_DO[c.level] ?? SIET_DO.bezna} do ${koniecHm(c.levelDo)}`;
+    const mraky = c.slnko === 'noc' || c.cloud === null ? '' : `oblačnosť ${terazCloudText(c.cloud)}`;
+    const low = (/** @type {string} */ n) => n.toLowerCase();
+    const plan = c.bezi.length ? `beží ${andList(c.bezi.map(low))}` : c.dalsi ? `potom ${low(c.dalsi.name)} o ${hm(c.dalsi.start)}` : '';
+    const cas = c.teraz ? `Teraz ${hm(c.min)}` : hm(c.min);
+    return {
+        cas,
+        kw,
+        zdroj,
+        slnko,
+        siet,
+        mraky,
+        plan,
+        veta: [`${cas}, ${kw}${zdroj ? `, ${zdroj}` : ''}`, slnko, siet, mraky, plan].filter(Boolean).join('. '),
+    };
+}
+
 /** Slová pásu spotrebičov pod grafom detailu dňa (úrovne fitLevel z day-plan.js). Zelené („Zapni veľké“)
  * nesie aj okno pod grafom dňa na karte Teraz, preto sú tu a nie v messages-sedem.js. */
 export const FIT_WORDS = { go: 'Zapni veľké', part: 'čiastočne', grid: 'zo siete' };
