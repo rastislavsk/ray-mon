@@ -203,28 +203,30 @@
                 <h1 id="ttl-radar" class="sr">Radar</h1>
                 <div id="rd-mapa" class="rd-mapa"></div>
                 <div class="rd-hore">
-                    <div class="rd-chvila">
-                        <div id="rd-cas" class="rd-cas">--:--</div>
-                        <div id="rd-druh" class="rd-druh"></div>
+                    <div class="rd-stlpec">
+                        <div class="rd-chvila">
+                            <div id="rd-cas" class="rd-cas">--:--</div>
+                            <div id="rd-druh" class="rd-druh"></div>
+                        </div>
+                        <div id="rd-rozsahy" class="rd-seg" role="group" aria-label="Rozsah">
+                            <button type="button" data-rozsah="2h" aria-pressed="true">2 h</button>
+                            <button type="button" data-rozsah="dnes" aria-pressed="false">Dnes</button>
+                            <button type="button" data-rozsah="zajtra" aria-pressed="false">Zajtra</button>
+                        </div>
                     </div>
-                    <button type="button" id="rd-oblaky" class="rd-prepinac" aria-pressed="true"><span>Oblaky</span><i></i></button>
+                    <div class="rd-stlpec vpravo">
+                        <button type="button" id="rd-oblaky" class="rd-prepinac" aria-pressed="true"><span>Oblaky</span><i></i></button>
+                        <div id="rd-intenzita" class="rd-legenda">
+                            <b id="rd-legenda"></b>
+                            <div><span>slabý</span><span>silný</span></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="rd-hlaska" class="rd-hlaska hidden" aria-live="polite">
                     <p id="rd-hlaska-text"></p>
                     <button type="button" id="rd-znova" class="pbtn hidden">Skúsiť znova</button>
                 </div>
                 <div id="rd-dok" class="rd-dok">
-                    <div class="rd-riadok">
-                        <div id="rd-rozsahy" class="rd-seg" role="group" aria-label="Rozsah">
-                            <button type="button" data-rozsah="2h" aria-pressed="true">2 h</button>
-                            <button type="button" data-rozsah="dnes" aria-pressed="false">Dnes</button>
-                            <button type="button" data-rozsah="zajtra" aria-pressed="false">Zajtra</button>
-                        </div>
-                        <div class="rd-legenda">
-                            <b id="rd-legenda"></b>
-                            <div><span>slabý</span><span>silný</span></div>
-                        </div>
-                    </div>
                     <div class="rd-riadok">
                         <button type="button" id="rd-hraj" class="rd-kruh" aria-label="Pustiť">
                             <svg id="rd-ikona-hraj" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
