@@ -207,12 +207,13 @@ export class RadarHrac {
         rdOs.setAttribute('aria-valuemax', String(o.pocet));
         rdOsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         const deti = this.pasOsi(o, w, h - 16);
-        o.znacky.forEach((z, i) => {
-            const kraj = i === 0 ? 'start' : i === o.znacky.length - 1 ? 'end' : 'middle';
+        // Popisy stoja stredom na svojom čase, aj krajné – inak by sa posledný zlepil s predposledným.
+        // Miesto na ich presah dáva okraj osi v style.css.
+        o.znacky.forEach((z) => {
             const t = svg('text', {
                 x: (z.poz / o.pocet) * w,
                 y: h - 2,
-                'text-anchor': kraj,
+                'text-anchor': 'middle',
                 class: z.hlavna ? 'rd-os-text hlavna' : 'rd-os-text',
             });
             t.textContent = z.text;

@@ -3461,6 +3461,8 @@ body:has(.radar:not(.hidden)) .st {
     flex: 1;
     min-width: 0;
     height: 52px;
+    /* Krajné popisy stoja stredom na začiatku a konci osi, polovica z nich presahuje do okraja. */
+    margin-inline: 10px;
     /* Os si ťah necháva pre seba, po karte sa aj tak neposúva. */
     touch-action: none;
     cursor: pointer;
