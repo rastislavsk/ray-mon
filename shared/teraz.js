@@ -6,39 +6,29 @@
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, powerThresholds, TARIFF_LIMITS } from './config.js';
-import { chartKeys, dayChartModel, planCells, planLegend, slotTone } from './day-chart.js';
+import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan, forecastDayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
 import {
-    DAY_CHART_KEYS,
     TERAZ_BEZ_SLNKA,
-    terazBandNext,
-    terazBandText,
     terazCitanieText,
     terazChartText,
-    terazCloudText,
     terazDalsiText,
     terazDlazdicaText,
     terazJasText,
-    terazKwText,
-    terazLimitFrom,
-    terazLimitGap,
     terazNoteText,
     terazOkoText,
     terazPreviewTime,
-    terazPreviewTitle,
-    terazReadoutWhen,
     terazRiadokText,
     terazSkupinaText,
-    terazSliderText,
-    terazSourceText,
     terazTodayText,
     terazTypicalText,
+    terazVecText,
     terazVetaDnaText,
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
-import { mozemModel, planWindows } from './mozem.js';
+import { mozemModel, planWindows, sunWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
@@ -68,49 +58,48 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
     // Meranie, ktoré mlčí, heroModel za výkon „teraz“ nepovažuje (freshPowerKw) - číslo je vtedy
-    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí.
+    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí. Číslo, obloha a čo zapnúť
+    // ostávajú teraz; zvolený čas (`hero`) je len v karte Deň (docs/navrhy/teraz-navrh-2.html).
     const hero = heroModel(input, voice);
     const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
-    // Štítky, veta a Plán dňa hovoria o teraz, nie o náhľade - pod prstom sa nemenia, aby sa graf
-    // nepohol. Počas náhľadu ich appky ukážu bledosivé a vypnuté (`preview`): v zvolenom čase neplatia.
     const m = mozemModel(input, { voice, devices });
+    const rows = m.plan ? m.plan.rows : [];
+    const den = denModel(input, rows, input.previewMinutes, voice);
+    const teraz = { nowMin: now.minutes, level: plan[Math.floor(now.minutes / STEP)].level, slnkoDnes: sunWindows(plan).length > 0 };
     return {
         ...empty('ok', estimate),
-        ...headOf(input, hero, { estimate, voice }),
+        ...headOf(input, now, { estimate, voice }),
         preview: hero.preview,
         note,
         guess: estimate,
         chart: chartOf(input, plan, hero, now),
-        // Čas náhľadu je v grafe pri čiare, pod grafom ostáva len tlačidlo „Späť na teraz“.
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
-        say: { chips: m.chips, text: m.say },
-        plan: m.plan && m.planHead ? { ...m.plan, head: m.planHead } : null,
-        pocasie: pocasieOf(input, hero),
-        jas: jasOf(input, hero, now),
+        // Štítky už nie sú na karte - ich vysvetlenie je za „i“ riadku nad dlaždicami.
+        chips: m.chips,
+        co: m.plan ? coZapnutModel(rows, teraz, voice) : null,
+        veci: rows.map((r) => vecDetail(r, now.minutes, den.pas.span)),
+        den,
+        pocasie: pocasieOf(input, now),
+        jas: jasOf(input, now),
     };
 }
 
 /**
- * Pásik pod číslom: koľko z jasnej oblohy dáva strecha vo zvolenej chvíli, aby aj menej znalý
- * videl, či je číslo veľa alebo málo. Jasná obloha je bezoblačný strop predpovede dneška
- * (`clearKw`), ten istý, z ktorého počíta percento využitia karta 7 dní. Platí aj pre odhad
- * z predpovede. V noci (slnko pod obzorom alebo strop nula) pásik nie je - na nočnej oblohe
- * rušil. Či vôbec je, rozhoduje teraz (`now`), nie náhľad: keď v náhľade zvolený čas padne do noci,
- * `pct` je null a appky pásik skryjú, no jeho miesto nechajú, aby sa graf pod prstom nepohol.
- * Cez deň aj 0 % ostáva - vtedy niečo nie je v poriadku. `text` je pre čítačku.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero zvolený čas
- * @param {ReturnType<typeof heroModel>} now teraz
+ * Pásik pod číslom: koľko z jasnej oblohy dáva strecha teraz, aby aj menej znalý videl, či je
+ * číslo veľa alebo málo. Jasná obloha je bezoblačný strop predpovede dneška (`clearKw`), ten istý,
+ * z ktorého počíta percento využitia karta 7 dní. Platí aj pre odhad z predpovede. V noci (slnko
+ * pod obzorom alebo strop nula) pásik nie je - na nočnej oblohe rušil. Cez deň aj 0 % ostáva -
+ * vtedy niečo nie je v poriadku. `text` je pre čítačku.
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
  */
-function jasOf(input, hero, now) {
+function jasOf(input, now) {
     const today = todayOf(input);
-    const clearAt = (/** @type {ReturnType<typeof heroModel>} */ h) =>
-        today && !h.isNight ? interpolate(today.hourly, h.minutes / 60, 'clearKw') : 0;
-    if (!(clearAt(now) > 0)) return null;
-    const clear = clearAt(hero);
-    if (!(clear > 0) || !Number.isFinite(hero.power)) return { pct: null, label: '', text: '' };
-    const pct = Math.min(100, Math.round((100 * hero.power) / clear));
+    const clear = today && !now.isNight ? interpolate(today.hourly, now.minutes / 60, 'clearKw') : 0;
+    if (!(clear > 0)) return null;
+    if (!Number.isFinite(now.power)) return { pct: null, label: '', text: '' };
+    const pct = Math.min(100, Math.round((100 * now.power) / clear));
     return { pct, label: `${pct} %`, text: terazJasText(pct) };
 }
 
@@ -150,22 +139,19 @@ function pocasieOf(input, hero) {
 }
 
 /**
- * Nadpis, číslo a riadok pod ním (pri vlastnej streche prázdny). Pri typickej streche „~“ a veta, že to
- * nie je vlastná strecha. Počas náhľadu nadpis namiesto „Teraz“ povie čas, ku ktorému číslo patrí -
- * text sa mení, riadok ostáva, aby sa graf pod prstom nepohol. Medzi číslom a vetou je riadok stavu
- * merania (stavRiadok v shared/hlavicka.js); `source` je preň odkiaľ je číslo v náhľade, mimo neho
- * prázdny - vtedy riadok hovorí o meraní.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ * Nadpis, číslo teraz a riadok pod ním (pri vlastnej streche prázdny). Pri typickej streche „~“
+ * a veta, že to nie je vlastná strecha. Medzi číslom a vetou je riadok stavu merania (stavRiadok
+ * v shared/hlavicka.js).
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
  * @param {{ estimate: boolean, voice: import('./messages.js').Voice }} o
  */
-function headOf(input, hero, { estimate, voice }) {
-    const title = hero.preview ? terazPreviewTitle(hero.minutes) : voiceTexts(voice).TERAZ_TEXTS.title;
+function headOf(input, now, { estimate, voice }) {
+    const title = voiceTexts(voice).TERAZ_TEXTS.title;
     if (estimate) {
-        const num = Number.isFinite(hero.power) ? `~${hero.powerText}` : hero.powerText;
-        return { title, num, source: '', sub: terazTypicalText(installedKw(input.plant), voice) };
+        const num = Number.isFinite(now.power) ? `~${now.powerText}` : now.powerText;
+        return { title, num, sub: terazTypicalText(installedKw(input.plant), voice) };
     }
-    const source = hero.preview && hero.source ? terazSourceText(hero.source) : '';
-    return { title, num: hero.powerText, source, sub: '' };
+    return { title, num: now.powerText, sub: '' };
 }
 
 /**
@@ -196,7 +182,6 @@ function empty(kind, estimate) {
         ask: false,
         title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
-        source: '',
         sub: '',
         preview: false,
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
@@ -204,8 +189,10 @@ function empty(kind, estimate) {
         guess: false,
         chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),
         hint: { text: '', reset: false },
-        say: /** @type {{ chips: import('./mozem.js').Chip[], text: string } | null} */ (null),
-        plan: /** @type {(NonNullable<import('./mozem.js').MozemModelPlan> & { head: { lead: string, then: string } }) | null} */ (null),
+        chips: /** @type {import('./mozem.js').Chip[]} */ ([]),
+        co: /** @type {ReturnType<typeof coZapnutModel> | null} */ (null),
+        veci: /** @type {Array<ReturnType<typeof vecDetail>>} */ ([]),
+        den: /** @type {ReturnType<typeof denModel> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
         jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
@@ -251,51 +238,9 @@ function chartOf(input, plan, hero, now) {
             cheap: windows('cheap'),
             costly: windows('costly'),
         }),
-        // Hodnota posúvača ostáva v jeho rozsahu aj v noci, keď je „teraz“ mimo osi; čas povie valueText.
+        // Hodnota posúvača ostáva v jeho rozsahu aj v noci, keď je „teraz“ mimo osi; čas povie
+        // odčítanie karty Deň (aria-valuetext).
         value: Math.min(geo.range.max, Math.max(geo.range.min, hero.minutes)),
-        valueText: terazSliderText(hero.minutes, hero.preview, hero.powerText, tone(hero.minutes)),
-        // Zoznam pod grafom: zatvorený ukáže prvý riadok legendy (čiary a oblačnosť), otvorený pod ním
-        // farby pásu a hodnoty vo zvolenom čase.
-        keys: chartKeys(),
-        bands: planLegend(planCells(plan, span)),
-        readout: readoutOf(input, plan, hero, limitKw),
-    };
-}
-
-/**
- * Hodnoty v čase, na ktorom je bod grafu (teraz, alebo náhľad): výkon ako veľké číslo, predpoveď
- * a oblačnosť tak, ako ich kreslí graf (čiara predpovede medzi hodinami, oblačnosť po celých
- * hodinách), odstup od hranice veľkých spotrebičov a úsek pásu plánu, v ktorom čas je.
- * `tone` je kľúč vzorky pre CSS appky (`data-tone`), ten istý ako v legende.
- * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
- * @param {ReturnType<typeof heroModel>} hero @param {number} limitKw
- */
-function readoutOf(input, plan, hero, limitKw) {
-    const min = hero.minutes;
-    const hourly = input.forecast ? input.forecast.hourlyToday : [];
-    const forecastKw = hourly.length ? interpolate(hourly, min / 60, 'kw') : NaN;
-    const hour = hourly.find((p) => p.hour === Math.floor(min / 60));
-    const cloud = hour && Number.isFinite(hour.cloud) ? /** @type {number} */ (hour.cloud) : null;
-    const step = plan[0].min;
-    const tone = slotTone(plan[Math.floor(min / step)]);
-    const span = /** @type {{ from: number, to: number }} */ (
-        planWindows(plan, (s) => slotTone(s) === tone).find((w) => w.from <= min && min < w.to)
-    );
-    const after = plan[span.to / step];
-    return {
-        when: terazReadoutWhen(min, hero.preview),
-        rows: [
-            { tone: 'power', text: DAY_CHART_KEYS.power, sub: '', value: terazKwText(hero.power) },
-            { tone: 'forecast', text: DAY_CHART_KEYS.forecast, sub: '', value: terazKwText(forecastKw) },
-            { tone: 'cloud', text: DAY_CHART_KEYS.cloud, sub: '', value: terazCloudText(cloud) },
-            {
-                tone: 'limit',
-                text: voiceTexts().TERAZ_TEXTS.limit,
-                sub: terazLimitFrom(limitKw),
-                value: terazLimitGap(hero.power, limitKw),
-            },
-            { tone, text: terazBandText(tone, span.to), sub: terazBandNext(after ? slotTone(after) : null), value: '' },
-        ],
     };
 }
 
@@ -362,7 +307,7 @@ function soFar(hourly, nowMin) {
 // Hore čo zapnúť (dlaždice a skupiny z Plánu dňa), pod tým karta Deň: veta, pás slnka a siete
 // a odčítanie zvoleného času. Číslo hore ostáva teraz, zvolený čas je len v karte Deň.
 
-/** @typedef {import('./plan-dna.js').PlanRow & { name: string }} RiadokPlanu */
+/** @typedef {import('./plan-dna.js').PlanRow & { name: string, why: string }} RiadokPlanu */
 /** @typedef {Extract<RiadokPlanu, { kind: 'sun' | 'cheap' }>} DnesnyRiadok */
 
 const STEP = TARIFF_LIMITS.stepMin;
@@ -409,6 +354,7 @@ function horeTeraz(teraz, level, slnkoDnes, voice) {
     return {
         druh,
         oko: terazOkoText({ druh, level }, voice),
+        bod: druh === 'siet' ? 'cheap' : 'go',
         bezSlnka: druh === 'siet' && !slnkoDnes ? TERAZ_BEZ_SLNKA : '',
         dlazdice: teraz.map((r, i) => ({
             id: r.id,
@@ -435,6 +381,7 @@ function horeDalsi(p, slnkoPride, { nowMin, level }, voice) {
     return {
         druh,
         oko: terazOkoText({ druh, level }, voice),
+        bod: level === 'lacna' ? 'cheap' : level === 'draha' ? 'costly' : 'plain',
         bezSlnka: '',
         dlazdice: [],
         dalsi: /** @type {CoZapnutHore['dalsi']} */ (dalsi),
@@ -465,7 +412,9 @@ function skupinyOf(rows, dnes, nieco) {
 /**
  * Hore v Čo zapnúť: `druh` (zdroj prúdu teraz, alebo prečo nič), riadok nad dlaždicami, dlaždice
  * toho, čo ide teraz, alebo najbližšia vec.
- * @typedef {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', oko: { text: string, sub: string }, bezSlnka: string,
+ * `bod` je farba bodky pred riadkom: zdroj prúdu teraz, keď teraz nejde nič, cena siete.
+ * @typedef {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', oko: { text: string, sub: string },
+ *   bod: 'go' | 'cheap' | 'costly' | 'plain', bezSlnka: string,
  *   dlazdice: Array<{ id: string, name: string, tone: 'go' | 'cheap', sub: string, cela: boolean }>,
  *   dalsi: { id: string, name: string, cas: string, tone: 'go' | 'cheap', sub: string } | null }} CoZapnutHore
  */
@@ -500,6 +449,7 @@ export function denModel(input, rows, min, voice = 'drzy') {
 function citanieOf(input, plan, rows, { t, min }, voice) {
     const hero = heroModel({ ...input, previewMinutes: min }, voice);
     const slot = plan[Math.floor(t / STEP)];
+    const slnko = slot.tier === 'green' ? 'go' : slot.night ? 'noc' : 'part';
     const pasmo = /** @type {{ from: number, to: number }} */ (
         planWindows(plan, (s) => s.level === slot.level).find((w) => w.from <= t && t < w.to)
     );
@@ -512,7 +462,7 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         teraz: min === null,
         kw: hero.power,
         source: hero.source,
-        slnko: slot.tier === 'green' ? 'go' : slot.night ? 'noc' : 'part',
+        slnko,
         limitKw: powerThresholds(input.plant).lowKw,
         level: slot.level,
         levelDo: pasmo.to,
@@ -520,7 +470,7 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         bezi: bezi.map((r) => r.name),
         dalsi: dalsi ? { name: dalsi.name, start: dalsi.start } : null,
     });
-    return { ...texty, ikony: (bezi.length ? bezi : dalsi ? [dalsi] : []).map((r) => r.id) };
+    return { ...texty, tone: { slnko, siet: slot.level }, ikony: (bezi.length ? bezi : dalsi ? [dalsi] : []).map((r) => r.id) };
 }
 
 /**
@@ -541,13 +491,32 @@ function oknoDna(input, plan, nowMin) {
 }
 
 /**
+ * Detail spotrebiča (panel po ťuknutí na dlaždicu či riadok): kedy a odkiaľ, od-do, prečo práve
+ * vtedy (to isté ako Plán dňa) a jeho úsek na páse karty Deň (`slot` v % osi, len keď ide dnes).
+ * @param {RiadokPlanu} r @param {number} nowMin @param {{ from: number, to: number }} span os pásu karty Deň
+ */
+function vecDetail(r, nowMin, span) {
+    const now = Math.ceil(nowMin / STEP) * STEP;
+    const ide = dnesny(r) && r.start <= now && now < r.end;
+    const slot = dnesny(r)
+        ? { left: spanPct(span, r.start), width: Math.round((spanPct(span, r.end) - spanPct(span, r.start)) * 10) / 10 }
+        : null;
+    const tone = !ide ? '' : r.kind === 'cheap' ? 'cheap' : 'go';
+    return { id: r.id, name: r.name, tone, ...terazVecText(r, ide), slot };
+}
+
+/** Minúta dňa ako % osi `span`, mimo osi na jej kraji. @param {{ from: number, to: number }} span @param {number} m */
+function spanPct(span, m) {
+    return Math.round(((Math.max(span.from, Math.min(span.to, m)) - span.from) / (span.to - span.from)) * 1000) / 10;
+}
+
+/**
  * Pás karty Deň na osi dnešného svetla: horný riadok slnko (stačí, svieti ale nestačí, noc), dolný
  * sieť (úroveň pásma), hodiny po troch a teraz (null mimo osi) - všetko v percentách osi.
  * @param {import('./day-plan.js').PlanSlot[]} plan @param {{ from: number, to: number }} span @param {number} nowMin
  */
 function denPas(plan, span, nowMin) {
-    const pct = (/** @type {number} */ m) =>
-        Math.round(((Math.max(span.from, Math.min(span.to, m)) - span.from) / (span.to - span.from)) * 1000) / 10;
+    const pct = (/** @type {number} */ m) => spanPct(span, m);
     /** @param {(s: import('./day-plan.js').PlanSlot) => string} fn */
     const useky = (fn) => {
         /** @type {Array<{ l: string, from: number, to: number }>} */ const out = [];

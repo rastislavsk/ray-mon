@@ -96,9 +96,9 @@
                     <p id="mz-later-text"></p>
                 </div>
             </section>
-            <!-- Karta Teraz: texty, štítky, Plán dňa aj graf skladá render (web/render/teraz.js)
-                 z shared/teraz.js, tu sú len nosiče. Graf je zároveň posúvač času: prst, kurzor
-                 aj šípky na ňom ukážu iný čas (náhľad). -->
+            <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html): číslo teraz, čo zapnúť a karta Deň. Skladá ich render
+                 (web/render/teraz.js) z shared/teraz.js, tu sú len nosiče. Pás či krivka v karte Deň je posúvač
+                 času: prst, kurzor aj šípky ukážu iný čas, číslo hore ostáva teraz. -->
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
@@ -124,11 +124,6 @@
                     </div>
                 </div>
                 <p id="tz-sub" class="sub"></p>
-                <!-- Odpoveď teraz zo shared/mozem.js: štítky a veta bez spotrebičov - tie sú v Pláne dňa. -->
-                <div id="tz-say" class="say">
-                    <div id="tz-chips" class="chips"></div>
-                    <p id="tz-say-text" class="line"></p>
-                </div>
                 <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča (bez merania, meranie
                      mlčí, výrobca prístup odmietol). Tlačidlo vedie do Nastavenia. -->
                 <div id="tz-note" class="cta note hidden">
@@ -152,23 +147,31 @@
                     <p id="tz-ask-text"></p>
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B), zbaliteľný
-                     (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je tlačidlo, zvyšok
-                     je až po otvorení. Pri štarte je zbalený, aby bol graf pri veľkom čísle. Skladá render. -->
-                <section id="tz-plan" class="glass fold hidden" aria-labelledby="tz-plan-title">
-                    <h2 class="fold-h">
-                        <button type="button" id="tz-plan-btn" class="fold-head" aria-expanded="false" aria-controls="tz-plan-body">
-                            <span class="fold-t"
-                                ><span id="tz-plan-title" class="glass-ttl"></span><span id="tz-plan-lead" class="tl-lead"></span></span
-                            ><span class="chev" aria-hidden="true"></span>
-                        </button>
-                    </h2>
-                    <div id="tz-plan-body" class="fold-body hidden"></div>
-                </section>
-                <div id="tz-plot">
+                <!-- Čo zapnúť: riadok nad dlaždicami (odkiaľ ide prúd teraz, za „i“ vysvetlenie), dlaždice toho,
+                     čo ide teraz, alebo najbližšia vec, a pod nimi skupiny riadkov (Neskôr dnes, Zajtra, …).
+                     Dlaždica aj riadok otvoria detail spotrebiča. -->
+                <div id="tz-co" class="co hidden">
+                    <button type="button" id="tz-oko" class="oko" aria-haspopup="dialog">
+                        <i id="tz-oko-bod" aria-hidden="true"></i><span id="tz-oko-t" class="oko-t"></span>
+                    </button>
+                    <p id="tz-oko-pod" class="oko-pod"></p>
+                    <div id="tz-dlazdice" class="mriezka"></div>
+                    <div id="tz-skupiny"></div>
+                </div>
+                <!-- Karta Deň: veta o dni, pri zvolenom čase odčítanie, pod ním pás alebo krivka (posúvač času),
+                     legenda a pätka s radou alebo „Späť na teraz“. -->
+                <section id="tz-den" class="glass tzden hidden" aria-labelledby="tz-den-ttl">
+                    <div class="den-hlava">
+                        <h2 id="tz-den-ttl" class="glass-ttl">Deň</h2>
+                        <div class="prep" role="group" aria-label="Podoba dňa">
+                            <button type="button" id="tz-pas-btn" aria-pressed="true">Pás</button>
+                            <button type="button" id="tz-krivka-btn" aria-pressed="false">Krivka</button>
+                        </div>
+                    </div>
+                    <div id="tz-citanie" class="citanie"></div>
                     <div
                         id="tz-chart"
-                        class="glass day-scrub"
+                        class="day-scrub"
                         role="slider"
                         tabindex="0"
                         aria-valuemin="0"
@@ -176,24 +179,12 @@
                         aria-describedby="tz-chart-desc"
                     ></div>
                     <p id="tz-chart-desc" class="sr"></p>
-                    <!-- „Späť na teraz“ nad zoznamom: pod otvoreným zoznamom by vypadol z obrazovky. -->
-                    <div class="reset-row">
-                        <button type="button" id="tz-reset" class="hint-btn"></button>
+                    <p id="tz-leg" class="leg" aria-hidden="true"></p>
+                    <div class="pata">
+                        <p id="tz-hint"></p>
+                        <button type="button" id="tz-reset" class="spat"></button>
                     </div>
-                    <!-- Zoznam pod grafom: zatvorený ukáže prvý riadok legendy, otvorený farby pásu
-                     a hodnoty v čase bodu grafu (docs/navrhy/teraz-rozbalovaci-zoznam.html). -->
-                    <div class="glass tz-list">
-                        <button type="button" id="tz-list-btn" class="list-head" aria-expanded="false" aria-controls="tz-list-body">
-                            <span id="tz-legend" class="legend"></span><span class="chev" aria-hidden="true"></span>
-                        </button>
-                        <div id="tz-list-body" class="list-body hidden">
-                            <p id="tz-bands" class="legend"></p>
-                            <p id="tz-when" class="list-when"></p>
-                            <ul id="tz-values" class="values"></ul>
-                            <p id="tz-hint" class="list-hint"></p>
-                        </div>
-                    </div>
-                </div>
+                </section>
             </section>
             <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
                  aj grafy skladá render (web/render/sedem.js) z shared/sedem-dni.js, tu sú len nosiče.
@@ -900,16 +891,31 @@
             </div>
         </dialog>
 
-        <!-- Panel štítka na karte Teraz: čo platí teraz a čo štítok znamená (docs/navrhy/teraz-odznaky-vysvetlenie.html).
-             Texty sú zo shared/mozem.js, píše ich render/teraz.js. -->
-        <dialog id="tz-chip-sheet" class="sheet chip-sheet" aria-labelledby="tz-chip-title" aria-describedby="tz-chip-now">
+        <!-- Vysvetlenie riadku nad dlaždicami karty Teraz: čo platí teraz (odpoveď a cena siete) a čo to znamená
+             (docs/navrhy/teraz-odznaky-vysvetlenie.html). Texty sú zo shared/mozem.js, píše ich render/teraz.js. -->
+        <dialog id="tz-chip-sheet" class="sheet chip-sheet" aria-labelledby="tz-chip-title">
             <div class="sheet-in">
-                <span id="tz-chip-tag" class="chip"></span>
-                <h2 id="tz-chip-title"></h2>
-                <p id="tz-chip-now"></p>
-                <p id="tz-chip-q" class="q"></p>
-                <p id="tz-chip-why" class="dim"></p>
+                <h2 id="tz-chip-title" class="sr"></h2>
+                <div id="tz-chip-body"></div>
                 <button type="button" id="tz-chip-close" class="pbtn ghost"></button>
+            </div>
+        </dialog>
+
+        <!-- Detail spotrebiča na karte Teraz: kedy a odkiaľ, od-do, jeho úsek na páse dňa a prečo práve vtedy. -->
+        <dialog id="tz-vec-sheet" class="sheet vec-sheet" aria-labelledby="tz-vec-name" aria-describedby="tz-vec-why">
+            <div class="sheet-in">
+                <div class="vec-top">
+                    <span id="tz-vec-ico" class="vec-ico" aria-hidden="true"></span>
+                    <div>
+                        <h2 id="tz-vec-name"></h2>
+                        <p id="tz-vec-kedy" class="vec-kedy"></p>
+                    </div>
+                </div>
+                <p id="tz-vec-cas" class="vec-cas"></p>
+                <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
+                <p id="tz-vec-why"></p>
+                <p id="tz-vec-note" class="dim"></p>
+                <button type="button" id="tz-vec-close" class="pbtn ghost"></button>
             </div>
         </dialog>
 

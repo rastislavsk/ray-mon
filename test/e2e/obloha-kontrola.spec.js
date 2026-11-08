@@ -110,10 +110,14 @@ async function rozbal(page, key) {
 async function kazdaKarta(page, check) {
     await karta(page, 'terazky');
     await check('Teraz');
-    await page.locator('#tz-chips [data-chip="stav"]').click();
+    await page.locator('#tz-oko').click();
     await expect(page.locator('#tz-chip-sheet')).toBeVisible();
-    await check('Teraz › panel štítka');
+    await check('Teraz › vysvetlenie');
     await page.locator('#tz-chip-close').click();
+    await page.locator('#tz-dlazdice [data-vec]').first().click();
+    await expect(page.locator('#tz-vec-sheet')).toBeVisible();
+    await check('Teraz › detail spotrebiča');
+    await page.locator('#tz-vec-close').click();
 
     await karta(page, 'mozem');
     await check('Dnes');
@@ -304,12 +308,12 @@ test.describe('kontrast textu na oblohe a na skle', () => {
         });
     }
 
-    test('karta Teraz napoludnie a za súmraku: skutočné farby z DOM, aj farebné štítky pod číslom', async ({ page }) => {
+    test('karta Teraz napoludnie a za súmraku: skutočné farby z DOM, aj farebné dlaždice', async ({ page }) => {
         for (const time of ['13:00', '19:30']) {
             await openObloha(page, { time: at(time) });
-            await expect(page.locator('#tz-chips .chip').first()).toBeVisible();
+            await expect(page.locator('#tz-dlazdice .dl').first()).toBeVisible();
             const stranka = await page.evaluate(() => window.kontrola.farby());
-            // Štítky s tmavým písmom na farbe (ÁNO, LACNÁ SIEŤ) sú v meraní naozaj zahrnuté.
+            // Dlaždice s tmavým písmom na farbe (zo slnka, z lacnej siete) sú v meraní naozaj zahrnuté.
             expect(stranka.texts.some((t) => t.color !== 'rgb(255, 255, 255)')).toBe(true);
             expect(slabyKontrast(stranka), time).toEqual([]);
         }

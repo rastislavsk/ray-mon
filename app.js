@@ -11,6 +11,7 @@ import {
     loadRanna,
     loadLook,
     loadRadar,
+    loadTerazDen,
     loadOdmietnutie,
     loadOznamenia,
     loadSettings,
@@ -55,6 +56,7 @@ const store = createStore(
         // Tón hlášok a živá obloha, vzhlad-v1.
         look: loadLook(),
         ...loadRadar(),
+        ...loadTerazDen(),
         // Rozloženie podľa šírky okna (shared/config.js, LAYOUT_PX); pri jej zmene ho prepne interactions.js.
         layout: layoutOf(window.innerWidth),
         // Ranné oznámenie a spotrebiče doma - voľby telefónu.

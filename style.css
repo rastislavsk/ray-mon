@@ -451,44 +451,6 @@ button.live[aria-expanded='true'] {
     border-color: var(--costly);
     color: #3a0b04;
 }
-/* Štítok pod číslom karty Teraz je tlačidlo, otvorí panel s vysvetlením. Tlačidlo je neviditeľný rám
-   s dotykovou plochou 44 px, štítok v ňom vyzerá ako doteraz; rad tlačidiel je zápornými okrajmi tam,
-   kde boli štítky. Malé „i“ hovorí, že sa naň dá ťuknúť - bez neho by štítok vyzeral ako popis. Znak
-   je v ::after, nie je v texte štítku. */
-.chips:has(.chip-btn) {
-    gap: 2px 8px;
-    margin-block: -10px;
-}
-.chip-btn {
-    display: inline-flex;
-    align-items: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0;
-    border: 0;
-    border-radius: 999px;
-    background: none;
-    cursor: pointer;
-}
-.chip-btn .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-.chip-btn .chip::after {
-    content: 'i';
-    content: 'i' / '';
-    box-sizing: border-box;
-    width: 13px;
-    height: 13px;
-    border: 1.5px solid currentColor;
-    border-radius: 50%;
-    font-size: 0.5625rem;
-    line-height: 10px;
-    letter-spacing: 0;
-    text-align: center;
-    text-transform: none;
-}
 /* Veľké slovo: veľkosť podľa dĺžky ako v návrhu (--word), na úzkom displeji ešte menšia podľa
    najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak
    takmer 1 em (NAHOVNO 0,96 em), preto delenie počtom znakov bez rezervy navyše. */
@@ -696,50 +658,246 @@ button.live[aria-expanded='true'] {
     color: var(--dim);
 }
 /* ===== Karta Teraz ===== */
-/* Štítky a veta o teraz pod číslom (tie isté ako mala karta Môžem?). */
-.say {
-    display: grid;
-    gap: 8px;
-    padding: 12px 20px 0;
-}
-/* Bez vety pod číslom stoja štítky hneď pod riadkom stavu merania. Obe sú tlačidlá s plochou 44 px
-   a zápornými okrajmi, takže medzi ich plochami musí byť aspoň 8 px (dotykové plochy v e2e). Medzeru
-   delí tenká čiara, odsadená ako text: hore číslo a meranie, dole štítky a čo z nich plynie. */
-#tz-sub.hidden + .say {
-    position: relative;
-    padding-top: 30px;
-}
-#tz-sub.hidden + .say::before {
-    content: '';
-    position: absolute;
-    top: 14px;
-    right: 20px;
-    left: 20px;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.4);
-}
-/* Plán dňa ako veta a časová os (docs/navrhy/terazky-plan-dna.html, možnosť B): pás každého
-   spotrebiča na dnešnom slnku, biela čiara je teraz. Blok je kontajner - dlhé slovo vety ho
-   nenatiahne a veta sa zmenší s jeho šírkou. */
-#tz-plan {
+/* Čo zapnúť (docs/navrhy/teraz-navrh-2.html): riadok nad dlaždicami, plné dlaždice toho, čo ide teraz,
+   a skupiny riadkov. Kontajner - mená v dlaždiciach sa zmenšia s jeho šírkou, nie s oknom. */
+#tz-co {
     position: relative;
     container-type: inline-size;
+    /* Medzi dotykovými plochami (stav merania, riadok nad dlaždicami, dlaždice) aspoň 8 px. */
+    padding: 20px 14px 0;
     /* Ťuknutie na oznámenie k nemu posunie stránku (nech neostane pod spodnou navigáciou). */
     scroll-margin: 12px 0 5.5rem;
 }
+/* Riadok nad dlaždicami: bodka (zdroj prúdu teraz, alebo cena siete), slovo a „i“ - ťuknutie
+   vysvetlí, čo platí (namiesto štítkov Áno a Lacná / Drahá sieť). Znak „i“ je v ::after, nie v texte. */
+.oko {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    margin: 0 -4px 8px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-align: left;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+.oko > i {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+}
+.oko > i[data-tone='go'] {
+    background: var(--yes);
+    box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.3);
+}
+.oko > i[data-tone='cheap'] {
+    background: var(--cheap);
+    box-shadow: 0 0 0 3px rgba(124, 196, 255, 0.3);
+}
+.oko > i[data-tone='costly'] {
+    background: var(--costly);
+    box-shadow: 0 0 0 3px rgba(255, 122, 102, 0.3);
+}
+.oko-t {
+    min-width: 0;
+}
+.oko-t span {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+}
+.oko::after {
+    content: 'i';
+    content: 'i' / '';
+    flex: none;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.5625rem;
+    line-height: 11px;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: none;
+}
+.oko-pod {
+    padding: 0 6px 8px 24px;
+    font-size: 0.875rem;
+}
+.mriezka {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+/* Dlaždica: plná zelená (zo slnka) či modrá (z lacnej siete), meno a kedy dobehne. Modrá má tmavý lem,
+   aby sa nestratila na modrej oblohe. */
+.dl {
+    display: grid;
+    align-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    min-height: 136px;
+    padding: 14px;
+    border: 0;
+    border-radius: 24px;
+    text-align: left;
+    cursor: pointer;
+}
+.dl.cela {
+    grid-column: 1 / -1;
+    min-height: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+}
+.dl[data-tone='go'] {
+    background: var(--yes);
+    color: #14300c;
+    box-shadow: 0 8px 30px rgba(185, 242, 140, 0.3);
+}
+.dl[data-tone='cheap'] {
+    background: var(--cheap);
+    color: #06233d;
+    box-shadow:
+        0 0 0 2px rgba(6, 35, 61, 0.35),
+        0 8px 30px rgba(124, 196, 255, 0.3);
+}
+/* Keď teraz nejde nič: najbližšia vec s rámom (zelený slnko, modrý lacná sieť) a odpočtom. */
+.dl[data-tone='next'] {
+    border: 2px solid var(--yes);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #fff;
+}
+.dl[data-tone='next'][data-cheap='true'] {
+    border-color: var(--cheap);
+}
+.dl-ico {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(20, 48, 12, 0.12);
+}
+.dl[data-tone='cheap'] .dl-ico {
+    background: rgba(6, 35, 61, 0.12);
+}
+.dl[data-tone='next'] .dl-ico {
+    background: rgba(255, 255, 255, 0.14);
+}
+.dl b {
+    display: block;
+    font-size: min(1.375rem, 7cqi);
+    font-weight: 800;
+    font-variation-settings: 'wdth' 108;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+.dl small {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+.velky {
+    display: block;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.dl .velky {
+    font-size: 1.75rem;
+}
+/* Ikona spotrebiča: čiarová, farbu berie z textu. */
+.vi {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.dl-ico .vi {
+    width: 26px;
+    height: 26px;
+}
+.co-h {
+    margin: 0;
+    padding: 18px 6px 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+.riadky {
+    display: grid;
+    gap: 8px;
+}
+/* Riadok skupiny: veľký čas, ikona, meno a doplnok. V lacnom pásme čas modrý, „tento týždeň nie“ tlmený. */
+.ri {
+    display: grid;
+    grid-template-columns: 4.1rem 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 10px;
+    min-height: 52px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 16px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    text-align: left;
+    cursor: pointer;
+}
+.ri .velky {
+    font-size: 1.375rem;
+}
+.ri[data-kind='cheap'] .velky {
+    color: var(--cheap-text);
+}
+.ri[data-kind='none'] {
+    opacity: 0.75;
+}
+.ri b {
+    display: block;
+    font-weight: 800;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+.ri small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
 /* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
-   karty. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
+   toho, čo zapnúť. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
 @property --plan-obeh {
     syntax: '<angle>';
     inherits: false;
     initial-value: 0deg;
 }
-#tz-plan[data-obrys]::after {
+#tz-co[data-obrys]::after {
     content: '';
     position: absolute;
-    inset: -1px;
+    inset: 0 8px -6px;
     padding: 2px;
-    border-radius: inherit;
+    border-radius: 24px;
     background: conic-gradient(from var(--plan-obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
     mask:
         linear-gradient(#000 0 0) content-box,
@@ -761,33 +919,7 @@ button.live[aria-expanded='true'] {
         --plan-obeh: 360deg;
     }
 }
-/* Počas náhľadu iného času sú štítky, veta aj Plán dňa bledosivé a vypnuté: hovoria o teraz, nie
-   o zvolenom čase (docs/navrhy/teraz-nahlad-neaktivne.html). Tlačidlá štítkov aj hlavička plánu sú
-   `disabled` (render/teraz.js); bez „i“ a šípky nič nesľubuje, že sa naň dá ťuknúť. */
-.say[data-nahlad],
-#tz-plan[data-nahlad] {
-    filter: grayscale(1);
-    opacity: 0.5;
-}
-.chip-btn:disabled {
-    cursor: default;
-}
-.chip-btn:disabled .chip::after {
-    display: none;
-}
-#tz-plan .fold-head:disabled {
-    cursor: default;
-}
-#tz-plan .fold-head:disabled .chev {
-    visibility: hidden;
-}
-/* Zbaliteľný Plán dňa (docs/navrhy/teraz-plan-rozbalovaci.html): hlavička s nadpisom a vetou je
-   tlačidlo cez celú šírku so šípkou ako pri zozname pod grafom, zvyšok plánu je až po otvorení.
-   Veta v hlavičke má jednu veľkosť zbalená aj otvorená - pri otvorení neskáče. */
-#tz-plan.fold {
-    display: block;
-    padding: 0;
-}
+/* Zbaliteľné sekcie (karta Nastavenie): hlavička je tlačidlo cez celú šírku so šípkou. */
 .fold-h {
     font-size: inherit;
     font-weight: inherit;
@@ -809,119 +941,6 @@ button.live[aria-expanded='true'] {
     min-width: 0;
     display: grid;
     gap: 4px;
-}
-.fold-head .tl-lead {
-    font-size: min(1.25rem, 7cqi);
-}
-.fold-body {
-    display: grid;
-    gap: 10px;
-    padding: 0 12px 14px 16px;
-}
-.tl-lead {
-    font-size: min(1.625rem, 10cqi);
-    font-weight: 900;
-    font-variation-settings: 'wdth' 112;
-    line-height: 1.1;
-    overflow-wrap: anywhere;
-}
-.tl-then {
-    font-size: 0.9375rem;
-}
-/* Plán na ďalší deň (docs/navrhy/plan-dna-zajtra.html, návrh 1): deň v nadpise zelenou plaketou,
-   dnešná lacná sieť modrou vetou, nad osou pruh s dňom a dátumom - aby sa zajtrajšie pásy nedali
-   prečítať ako dnešné. */
-.tl-day {
-    margin-left: 4px;
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--yes);
-    color: #12305e;
-}
-.tl-tonight {
-    font-size: 0.9375rem;
-    color: var(--cheap-text);
-}
-.tl-strip {
-    margin: 0 0 4px calc(var(--name) + 8px);
-    padding-bottom: 2px;
-    border-bottom: 1px solid var(--yes);
-    font-size: 0.75rem;
-    font-weight: 800;
-    color: var(--yes);
-}
-/* Stĺpec mien (--name) je v rem, aby pásy, os aj čiara teraz začínali na tom istom mieste, hoci
-   majú iné písmo. Vpravo je miesto (--pad) pre polovicu poslednej hodiny pod osou. */
-.tl {
-    --name: 4.5rem;
-    --pad: 0.75rem;
-    position: relative;
-    padding-right: var(--pad);
-}
-.tl ul {
-    display: grid;
-    gap: 8px;
-    margin: 4px 0 0;
-    padding: 0;
-    list-style: none;
-}
-.tl li {
-    display: grid;
-    grid-template-columns: var(--name) minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8125rem;
-    overflow-wrap: anywhere;
-}
-.tl-track {
-    position: relative;
-    height: 14px;
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.1);
-}
-.tl-track i {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    border-radius: 7px;
-    background: var(--yes);
-}
-.tl-axis {
-    position: relative;
-    height: 1.5em;
-    margin-left: calc(var(--name) + 8px);
-    font-size: 0.75rem;
-    color: var(--dim);
-}
-.tl-axis > span {
-    position: absolute;
-    top: 3px;
-    transform: translateX(-50%);
-}
-/* Čiara teraz cez všetky pásy: od začiatku pásov po ich koniec, `--at` je teraz v % osi. */
-.tl-now {
-    position: absolute;
-    top: 0;
-    bottom: 1.25rem;
-    left: calc(var(--name) + 8px + (100% - var(--name) - 8px - var(--pad)) * var(--at) / 100);
-    width: 2px;
-    background: #fff;
-    transform: translateX(-1px);
-}
-.tl-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-.tl-chip {
-    padding: 2px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 999px;
-    font-size: 0.75rem;
-}
-.tl-note {
-    font-size: 0.75rem;
-    color: var(--dim);
 }
 .teraz p,
 .teraz h2 {
@@ -1015,6 +1034,247 @@ button.live[aria-expanded='true'] {
     display: block;
     width: 100%;
     height: auto;
+}
+/* Karta Deň (docs/navrhy/teraz-navrh-2.html): odčítanie, pás alebo krivka (posúvač času), legenda, pätka. */
+.tzden {
+    margin-top: 18px;
+}
+.den-hlava {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+/* Prepínač pás / krivka: dve tlačidlá v jednej kapsule, vybrané biele. */
+.prep {
+    display: flex;
+    padding: 2px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
+}
+.prep button {
+    min-width: 64px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.prep button[aria-pressed='true'] {
+    background: #fff;
+    color: var(--ink);
+}
+/* Odčítanie má pevnú výšku, aby sa posúvač pod prstom nepohol, keď pribudne riadok. */
+.citanie {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-height: 116px;
+}
+.c-veta {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 106;
+    line-height: 1.25;
+}
+.c-veta span {
+    font-weight: 500;
+    color: var(--dim);
+}
+.c-cas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 10px;
+}
+.c-cas b {
+    font-size: 1.75rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.c-cas span {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.c-stav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+}
+.c-stav span {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+.c-stav [data-l='go'] {
+    background: var(--yes);
+    color: #14300c;
+}
+.c-stav [data-l='part'] {
+    background: rgba(255, 238, 190, 0.85);
+    color: #3a2d05;
+}
+.c-stav [data-l='lacna'] {
+    background: var(--cheap);
+    color: #06233d;
+}
+.c-stav [data-l='draha'] {
+    background: var(--costly);
+    color: #3a0b04;
+}
+.c-bezi {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+}
+.c-bezi .vi {
+    width: 18px;
+    height: 18px;
+}
+.tzden .day-scrub {
+    margin-top: 0;
+    padding: 0;
+}
+/* Pás: os je tá istá ako pri krivke (DAY_CHART), výška v px - nápis času, slnko, sieť a hodiny pod nimi. */
+.pas-box {
+    position: relative;
+    padding-bottom: 1.4em;
+    pointer-events: none;
+}
+.day-scrub svg.pas {
+    height: 58px;
+}
+.pas rect[data-l='go'] {
+    fill: var(--yes);
+}
+.pas rect[data-l='part'] {
+    fill: rgba(255, 238, 190, 0.42);
+}
+.pas rect[data-l='lacna'] {
+    fill: var(--cheap);
+}
+.pas rect[data-l='draha'] {
+    fill: var(--costly);
+}
+.pas rect[data-l='bezna'] {
+    fill: rgba(255, 255, 255, 0.3);
+}
+.pas .pas-noc {
+    fill: rgba(0, 0, 20, 0.3);
+}
+.pas .pas-past {
+    fill: rgba(5, 10, 30, 0.45);
+}
+.pas line {
+    vector-effect: non-scaling-stroke;
+}
+.pas .pas-now {
+    stroke: #fff;
+    stroke-width: 3;
+}
+.pas .pas-pick {
+    stroke: var(--amber-text);
+    stroke-width: 2;
+}
+.pas .pas-slot {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+}
+.pas-t {
+    position: absolute;
+    bottom: 0;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--dim);
+}
+.pas-at {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--amber-text);
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.leg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.leg span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.leg i {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+}
+.leg [data-l='go'] {
+    background: var(--yes);
+}
+.leg [data-l='part'] {
+    background: rgba(255, 238, 190, 0.6);
+}
+.leg [data-l='cheap'] {
+    background: var(--cheap);
+}
+.leg [data-l='costly'] {
+    background: var(--costly);
+}
+.leg [data-l='power'] {
+    height: 3px;
+    background: var(--yes);
+}
+.leg [data-l='forecast'] {
+    height: 0;
+    border-top: 2px dashed rgba(185, 242, 140, 0.6);
+    border-radius: 0;
+}
+.leg [data-l='limit'] {
+    height: 0;
+    border-top: 1.5px dashed #fff;
+    border-radius: 0;
+}
+.pata {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+.spat {
+    min-height: 44px;
+    padding: 6px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--amber-text);
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 800;
+    cursor: pointer;
 }
 /* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
    web/day-chart.js), bunka pod čiarou náhľadu má okraj. */
@@ -1151,84 +1411,36 @@ button.live[aria-expanded='true'] {
     gap: 6px;
     align-items: center;
 }
-.legend span::before,
-.values span::before {
+.legend span::before {
     content: '';
     width: 12px;
     height: 7px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.3);
 }
-.legend [data-tone='sun']::before,
-.values [data-tone='sun']::before {
+.legend [data-tone='sun']::before {
     background: var(--yes);
 }
-.legend [data-tone='cheap']::before,
-.values [data-tone='cheap']::before {
+.legend [data-tone='cheap']::before {
     background: var(--cheap);
 }
-.legend [data-tone='costly']::before,
-.values [data-tone='costly']::before {
+.legend [data-tone='costly']::before {
     background: var(--costly);
 }
 /* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, predpoveď prerušovane, oblačnosť od jasna po zamračené. */
-.legend [data-tone='power']::before,
-.values [data-tone='power']::before {
+.legend [data-tone='power']::before {
     height: 2.5px;
     background: var(--yes);
 }
-.legend [data-tone='forecast']::before,
-.values [data-tone='forecast']::before {
+.legend [data-tone='forecast']::before {
     height: 0;
     border-top: 2px dashed rgba(185, 242, 140, 0.6);
     border-radius: 0;
     background: none;
 }
-.legend [data-tone='cloud']::before,
-.values [data-tone='cloud']::before {
+.legend [data-tone='cloud']::before {
     width: 22px;
     background: linear-gradient(90deg, #fff, #4d5560);
-}
-/* Hranica veľkých spotrebičov v zozname: tenká prerušovaná čiara ako v grafe. */
-.values [data-tone='limit']::before {
-    height: 0;
-    border-top: 1.5px dashed rgba(185, 242, 140, 0.8);
-    border-radius: 0;
-    background: none;
-}
-/* „Späť na teraz“ nad zoznamom, vpravo. Bez náhľadu je tlačidlo skryté a riadok nezaberá nič. */
-.reset-row {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 14px;
-}
-.reset-row .hint-btn {
-    margin-top: 10px;
-}
-/* Zoznam pod grafom: prvý riadok (legenda a šípka) je tlačidlo, zvyšok vidno až po ťuknutí. */
-/* Spodný okraj: od pásu odporúčaní pod ním aspoň 8 px, aby sa ťuknutie netrafilo vedľa. */
-.tz-list {
-    display: block;
-    padding: 0;
-    margin-bottom: 8px;
-}
-.list-head {
-    width: 100%;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px 6px 16px;
-    border: 0;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-}
-.list-head .legend,
-.list-body .legend {
-    flex: 1;
-    min-width: 0;
-    padding: 0;
 }
 .chev {
     flex: none;
@@ -1248,83 +1460,8 @@ button.live[aria-expanded='true'] {
     border-bottom: 2px solid #fff;
     transform: translateY(-2px) rotate(45deg);
 }
-.list-head[aria-expanded='true'] .chev,
 .fold-head[aria-expanded='true'] .chev {
     transform: rotate(180deg);
-}
-.list-body {
-    padding: 0 16px 12px;
-}
-/* Farby pásu: druhý riadok legendy, bez čiary pod prvým. */
-.list-body > .legend {
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-}
-.list-when {
-    margin: 8px 0 2px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--dim);
-}
-.values {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: 0.84375rem;
-}
-.values li {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 36px;
-    padding: 3px 0;
-}
-.values span {
-    flex: 1;
-    min-width: 0;
-    display: grid;
-    grid-template-columns: 22px 1fr;
-    column-gap: 12px;
-    align-items: center;
-}
-.values span::before {
-    grid-row: 1 / span 2;
-    width: 22px;
-}
-.values small {
-    grid-column: 2;
-    font-size: 0.75rem;
-    color: var(--dim);
-    line-height: 1.3;
-}
-.values b {
-    flex: none;
-    font-weight: 800;
-    white-space: nowrap;
-}
-.list-hint:empty {
-    display: none;
-}
-.list-hint {
-    margin: 8px 0 0;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 0.8125rem;
-    color: var(--dim);
-}
-.hint-btn {
-    flex: none;
-    min-height: 44px;
-    padding: 6px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: #fff;
-    color: var(--ink);
-    font-size: 0.8125rem;
-    font-weight: 800;
-    cursor: pointer;
 }
 
 .bar {
@@ -2309,6 +2446,64 @@ button.live[aria-expanded='true'] {
 }
 /* Panel štítka karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html): to isté tmavé sklo, štítok
    nad nadpisom, vysvetlenie tlmené. */
+.chip-info {
+    display: grid;
+    gap: 6px;
+    justify-items: start;
+}
+.chip-info + .chip-info {
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.chip-info h3 {
+    margin: 0;
+    font-size: 1.125rem;
+}
+.chip-info p {
+    margin: 0;
+}
+.vec-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.vec-ico {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+}
+.vec-sheet[data-tone='go'] .vec-ico {
+    background: var(--yes);
+    color: #14300c;
+}
+.vec-sheet[data-tone='cheap'] .vec-ico {
+    background: var(--cheap);
+    color: #06233d;
+}
+.vec-sheet .vec-kedy {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.vec-sheet .vec-cas {
+    font-size: 2.25rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.vec-pas .pas {
+    display: block;
+    width: 100%;
+    height: 58px;
+}
 .chip-sheet .chip {
     justify-self: start;
 }

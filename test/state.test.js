@@ -39,8 +39,7 @@ const step = (patch = {}) => ({
     roof: 0,
     sheet: null,
     fold: null,
-    plan: false,
-    legend: false,
+    vec: null,
     chip: null,
     ...patch,
 });
@@ -136,6 +135,8 @@ test('navStepOf: časť kroku, ktorá nepatrí karte, sa zahodí', () => {
     assert.equal(field({ panel: 'mozem', dash: 'áno' }, 'dash'), undefined);
     // Panel veci karty Môžem? zanikol s jej dlaždicami - položka, ktorá ho nesie, vráti kartu.
     assert.deepEqual(navStepOf({ panel: 'mozem', item: 'bojler' }), step({ panel: 'mozem' }));
+    // Plán dňa a zoznam pod grafom karty Teraz zanikli s jej prestavbou.
+    assert.deepEqual(navStepOf({ panel: 'terazky', plan: true, legend: true }), step({ panel: 'terazky' }));
 });
 
 test('sameNavStep: v prehľade je prepnutie stĺpca ten istý krok, posun náhľadu tiež', () => {
@@ -178,31 +179,38 @@ test('sekcie Nastavenia: pri štarte zbalené, rozbalená je krok navigácie, s 
     assert.equal(panelChange('nastavenie', 'mozem').nsOpen, null);
 });
 
-test('Plán dňa: pri štarte zbalený, otvorený je krok navigácie, s kartou sa zbalí', () => {
-    assert.equal(stateWith().tzPlanOpen, false);
-    const open = stateWith({ panel: 'terazky', tzPlanOpen: true });
-    assert.equal(navStep(open).plan, true);
+test('detail spotrebiča na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {
+    assert.equal(stateWith().tzVec, null);
+    const open = stateWith({ panel: 'terazky', tzVec: 'pracka' });
+    assert.equal(navStep(open).vec, 'pracka');
     assert.deepEqual(navStepOf(navStep(open)), navStep(open));
-    // Otvorenie je nový krok - Späť ho zbalí.
-    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzPlanOpen: false })));
-    // Plán patrí karte Teraz, v prehľade ktorémukoľvek stĺpcu; položka zo skoršej verzie ho nemá.
-    assert.equal(field({ panel: 'mozem', plan: true }, 'plan'), false);
-    assert.equal(field({ panel: 'mozem', plan: true, dash: true }, 'plan'), true);
-    assert.equal(field({ panel: 'terazky', plan: 'áno' }, 'plan'), false);
-    assert.equal(field({ panel: 'terazky' }, 'plan'), false);
-    // Späť na krok so zbaleným plánom ho zbalí, na krok s otvoreným ho otvorí.
-    assert.equal(navChange(open, step({ panel: 'terazky' })).tzPlanOpen, false);
-    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', plan: true })).tzPlanOpen, true);
-    // Iná karta plán zbalí.
-    assert.equal(panelChange('terazky', 'mozem').tzPlanOpen, false);
+    // Otvorenie je nový krok, iný spotrebič tiež - Späť ho zavrie.
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzVec: null })));
+    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzVec: 'auto' })));
+    // Patrí karte Teraz, v prehľade ktorémukoľvek stĺpcu; cudzia vec detail nemá.
+    assert.equal(field({ panel: 'mozem', vec: 'pracka' }, 'vec'), null);
+    assert.equal(field({ panel: 'mozem', vec: 'pracka', dash: true }, 'vec'), 'pracka');
+    assert.equal(field({ panel: 'terazky', vec: 'raketa' }, 'vec'), null);
+    assert.equal(field({ panel: 'terazky' }, 'vec'), null);
+    assert.equal(navChange(open, step({ panel: 'terazky' })).tzVec, null);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', vec: 'auto' })).tzVec, 'auto');
+    assert.equal(panelChange('terazky', 'mozem').tzVec, null);
 });
 
-test('ťuknutie na oznámenie: Teraz s rozbaleným plánom a obrysom, inak sa všetko zavrie', () => {
-    const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'stav', stavTip: true });
+test('karta Deň: krivka či pás je voľba telefónu, nie krok navigácie', () => {
+    assert.equal(stateWith().tzKrivka, false);
+    const s = initialState(NOW, { saved: null, site: SITE, dayLog: {}, online: true, tzKrivka: true });
+    assert.equal(s.tzKrivka, true);
+    assert.deepEqual(navStep(s), navStep({ ...s, tzKrivka: false }));
+    assert.equal('tzKrivka' in panelChange('terazky', 'mozem'), false);
+});
+
+test('ťuknutie na oznámenie: Teraz s obrysom okolo toho, čo zapnúť, inak sa všetko zavrie', () => {
+    const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'stav', tzVec: 'pracka', stavTip: true });
     const po = { ...s, ...zOznamenia(s) };
     assert.equal(po.panel, 'terazky');
     assert.equal(po.panelDir, -1);
-    assert.equal(po.tzPlanOpen, true);
+    assert.equal(po.tzVec, null);
     assert.equal(po.tzObrys, true);
     assert.equal(po.weekDetail, null);
     assert.equal(po.terazPreview, null);
@@ -212,20 +220,6 @@ test('ťuknutie na oznámenie: Teraz s rozbaleným plánom a obrysom, inak sa v�
     assert.deepEqual(navStep(po), navStep({ ...po, tzObrys: false }));
     assert.equal(panelChange('terazky', 'mozem').tzObrys, false);
     assert.equal(stateWith().tzObrys, false);
-});
-
-test('zoznam pod grafom (legenda): otvorený je krok navigácie, Späť a iná karta ho zbalia', () => {
-    assert.equal(stateWith().tzListOpen, false);
-    const open = stateWith({ panel: 'terazky', tzListOpen: true });
-    assert.equal(navStep(open).legend, true);
-    assert.deepEqual(navStepOf(navStep(open)), navStep(open));
-    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzListOpen: false })));
-    assert.equal(field({ panel: 'mozem', legend: true }, 'legend'), false);
-    assert.equal(field({ panel: 'mozem', legend: true, dash: true }, 'legend'), true);
-    assert.equal(field({ panel: 'terazky' }, 'legend'), false);
-    assert.equal(navChange(open, step({ panel: 'terazky' })).tzListOpen, false);
-    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', legend: true })).tzListOpen, true);
-    assert.equal(panelChange('terazky', 'mozem').tzListOpen, false);
 });
 
 test('panel štítka na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {

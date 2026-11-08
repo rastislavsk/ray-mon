@@ -30,7 +30,6 @@ import {
     mozemStripText,
     mozemTileNote,
     mozemTileValue,
-    planDnaHeadText,
     planGroupNote,
     planTileText,
     voiceTexts,
@@ -359,8 +358,8 @@ function emptyHead(loading, noPanels, voice) {
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín.
  * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`), takže karta nikde
- * nepovie nič iné než plán. Karty Teraz kreslia plán s vetou nad ním (`planHead`), pod číslom
- * štítky (`chips`) a len tú časť vety, ktorá plán neopakuje (`say`). Karta Dnes ukazuje, čo dá
+ * nepovie nič iné než plán. Karta Teraz z neho skladá, čo zapnúť, a vysvetľuje štítky (`chips`);
+ * `say` je len tá časť vety, ktorá plán neopakuje. Karta Dnes ukazuje, čo dá
  * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
  * Veľké slovo hovorí o celom dni (`den`: trieda, časť dňa a zmena oproti rannej triede `ranna`,
@@ -387,7 +386,6 @@ export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices, 
         estimate,
         items,
         plan,
-        planHead: planDnaHeadText(rows),
         // Kým sa načítava, karta nič netvrdí - dlaždice nie sú.
         list: head.state === 'loading' ? null : { title: mozemListTitle(estimate), estimate },
         groups: planGroups(items, head.strip, rows),

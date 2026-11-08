@@ -119,12 +119,12 @@ const modelMozem = (time, voice) =>
     );
 
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo na Dnes a vetu na Teraz aj pätu plagátu a po obnovení ostane', async ({ page }) => {
+    test('Slušný zmení slovo na Dnes a radu na Teraz aj pätu plagátu a po obnovení ostane', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
         expect(slusny.word).toBe('Dnes bude dobrý deň');
-        await expect(page.locator('#tz-say-text')).toHaveText('Slnko to teraz platí za nás.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po páse a pozri si iný čas.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
@@ -141,11 +141,11 @@ test.describe('tón hlášok', () => {
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
         await karta(page, 'terazky');
-        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po páse a pozrite si iný čas.');
 
         await page.reload();
         await appReady(page);
-        await expect(page.locator('#tz-say-text')).toHaveText('Elektrinu teraz dodáva slnko.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po páse a pozrite si iný čas.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
         expect(errors).toEqual([]);
