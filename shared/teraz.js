@@ -469,9 +469,9 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         planWindows(plan, (s) => s.level === slot.level).find((w) => w.from <= t && t < w.to)
     );
     const hour = input.forecast?.hourlyToday.find((p) => p.hour === Math.floor(t / 60));
-    const dnes = rows.filter(dnesny);
-    const bezi = dnes.filter((r) => r.start <= t && t < r.end);
-    const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
+    // Teraz je pre plán najbližšia štvrťhodina, ako v Pláne dňa a pri dlaždiciach - inak by vec, ktorá
+    // ide teraz, bola tu „potom o …“.
+    const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t);
     const texty = terazCitanieText({
         min: t,
         teraz: min === null,
@@ -486,6 +486,17 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         dalsi: dalsi ? { name: dalsi.name, start: dalsi.start } : null,
     });
     return { ...texty, tone: { slnko, siet: slot.level }, ikony: (bezi.length ? bezi : dalsi ? [dalsi] : []).map((r) => r.id) };
+}
+
+/**
+ * Čo z Plánu dňa beží v minúte `t`, a keď nič, čo príde najskôr (inak null).
+ * @param {RiadokPlanu[]} rows @param {number} t
+ */
+function coBezi(rows, t) {
+    const dnes = rows.filter(dnesny);
+    const bezi = dnes.filter((r) => r.start <= t && t < r.end);
+    const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
+    return { bezi, dalsi };
 }
 
 /**

@@ -931,3 +931,16 @@ test('karta Deň má oblohu zvoleného času: počasie v tej chvíli a slnko na 
     assert.ok(rano && rano.x < 15 && rano.y > 60, JSON.stringify(rano));
     assert.equal(vecer.den?.slnko, null);
 });
+
+test('karta Deň a dlaždice sa zhodnú: čo ide teraz, aj v karte Deň beží (teraz je najbližšia štvrťhodina)', () => {
+    const i = input(at('19:50'));
+    const rows = riadky(i);
+    const co = coZapnutModel(rows, { nowMin: minuta('19:50'), level: 'lacna', slnkoDnes: true });
+    assert.deepEqual(
+        co.hore.dlazdice.map((d) => d.id),
+        ['bojler', 'auto'],
+    );
+    assert.equal(denModel(i, rows, null).citanie.plan, 'beží bojler a auto');
+    // Zvolený čas sa nezaokrúhľuje - 19:45 je pred lacným pásmom.
+    assert.equal(denModel(i, rows, minuta('19:45')).citanie.plan, 'potom bojler o 20:00');
+});
