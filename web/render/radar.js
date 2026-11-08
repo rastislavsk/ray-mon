@@ -28,5 +28,9 @@ export function renderRadar(state, dom) {
     show(dom.rdHlaska, !!hlaska);
     dom.rdHlaskaText.textContent = hlaska;
     show(dom.rdZnova, state.radarStav === 'chyba');
-    show(dom.rdDok, state.radarStav !== 'mimo' && state.radarStav !== 'bezpolohy');
+    // Bez radaru niet čo prehrať ani čím merať, rozsah a intenzita hore zmiznú spolu s osou.
+    const sRadarom = state.radarStav !== 'mimo' && state.radarStav !== 'bezpolohy';
+    show(dom.rdDok, sRadarom);
+    show(dom.rdRozsahy, sRadarom);
+    show(dom.rdIntenzita, sRadarom);
 }

@@ -26,6 +26,7 @@ function radarDom() {
         rdZnova: byId('rd-znova'),
         rdDok: byId('rd-dok'),
         rdRozsahy: byId('rd-rozsahy'),
+        rdIntenzita: byId('rd-intenzita'),
         rdLegenda: byId('rd-legenda'),
         rdHraj: byId('rd-hraj'),
         rdIkonaHraj: byId('rd-ikona-hraj'),

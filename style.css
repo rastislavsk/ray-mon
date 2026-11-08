@@ -3276,38 +3276,49 @@ body:has(.radar:not(.hidden)) .st {
         0 0 0 3px rgba(255, 255, 255, 0.28),
         0 1px 5px #000;
 }
+/* Ovládanie hore aj dole stojí na tmavom prechode od okraja, nie v sklenených rámoch: mapa k okrajom
+   len stmavne. Každý prvok je vysoký 44 px a zaoblený na polovicu, docs/navrhy/radar-horna-cast.html (H3). */
 .rd-hore {
     position: absolute;
-    top: calc(env(safe-area-inset-top) + 10px);
-    left: 10px;
-    right: 10px;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 8px;
+    padding: calc(env(safe-area-inset-top) + 10px) 10px 44px;
+    background: linear-gradient(to bottom, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
     pointer-events: none;
 }
-.rd-chvila,
-.rd-prepinac,
-.rd-dok,
+.rd-stlpec {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+}
+.rd-stlpec.vpravo {
+    justify-items: end;
+}
 .rd-hlaska {
     background: rgba(9, 14, 27, 0.82);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
 }
 .rd-chvila {
-    padding: 6px 12px 7px;
-    border-radius: 14px;
+    min-height: 44px;
+    padding: 0 4px;
 }
 .rd-cas {
     font-size: 1.75rem;
-    line-height: 1.1;
+    line-height: 28px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
 .rd-druh {
-    min-height: 1.3em;
+    min-height: 16px;
     font-size: 0.8125rem;
+    line-height: 16px;
     font-weight: 600;
     color: #dfe6f1;
 }
@@ -3319,10 +3330,12 @@ body:has(.radar:not(.hidden)) .st {
     align-items: center;
     gap: 8px;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 12px 0 14px;
     border: 0;
     border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
     color: #fff;
+    text-shadow: inherit;
     font: inherit;
     font-size: 0.875rem;
     font-weight: 600;
@@ -3371,52 +3384,56 @@ body:has(.radar:not(.hidden)) .st {
 }
 .rd-dok {
     position: absolute;
-    left: 8px;
-    right: 8px;
-    bottom: calc(72px + env(safe-area-inset-bottom));
-    max-width: 624px;
-    margin: 0 auto;
-    display: grid;
-    gap: 6px;
-    padding: 8px 10px 6px;
-    border-radius: 18px;
+    left: 0;
+    right: 0;
+    /* Prechod ide až pod navigáciu, jej výška závisí od zariadenia a nad ňou nesmie presvitať pásik mapy. */
+    bottom: 0;
+    padding: 22px 18px calc(78px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(9, 14, 27, 0.9) 60%, rgba(9, 14, 27, 0));
+    /* Prechod nad osou je mapa, ťah po ňom patrí jej. */
+    pointer-events: none;
 }
 .rd-riadok {
+    max-width: 624px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
     gap: 9px;
     min-width: 0;
+    pointer-events: auto;
 }
 .rd-seg {
     display: flex;
-    padding: 2px;
-    border-radius: 11px;
-    background: rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: auto;
 }
 .rd-seg button {
-    min-width: 48px;
+    min-width: 52px;
     min-height: 44px;
-    padding: 0 10px;
+    padding: 0 11px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 22px;
     background: transparent;
     color: #dfe6f1;
     font: inherit;
     font-size: 0.875rem;
     font-weight: 600;
+    text-shadow: inherit;
     cursor: pointer;
 }
 .rd-seg button[aria-pressed='true'] {
     background: #fff;
     color: var(--ink);
+    text-shadow: none;
 }
 .rd-legenda {
-    flex: 1;
-    max-width: 130px;
-    min-width: 0;
-    margin-left: auto;
+    width: 130px;
+    min-height: 44px;
+    padding: 0 4px;
     display: grid;
-    gap: 2px;
+    align-content: center;
+    gap: 3px;
 }
 .rd-legenda b {
     height: 6px;
@@ -3523,16 +3540,16 @@ body:has(.radar:not(.hidden)) .st {
 }
 /* Popis zdrojov mapy nesmie zmiznúť pod ovládaním. */
 .radar .maplibregl-ctrl-bottom-right {
-    bottom: calc(216px + env(safe-area-inset-bottom));
+    bottom: calc(156px + env(safe-area-inset-bottom));
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .rd-hore {
-    top: calc(5rem + 10px);
+    padding-top: calc(5rem + 10px);
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .rd-dok {
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .radar .maplibregl-ctrl-bottom-right {
-    bottom: calc(160px + env(safe-area-inset-bottom));
+    bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
 /* ===== Spodná navigácia ===== */

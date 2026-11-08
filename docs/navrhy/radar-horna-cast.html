@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Radar: horná časť</title>
+        <style>
+            :root {
+                --ink: #0b1430;
+                --amber: #ffc94d;
+                --h: 44px;
+                --gap: 6px;
+                --okraj: 10px;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 24px 16px 48px;
+                background: #e9edf3;
+                color: #1b2335;
+                font:
+                    15px/1.45 system-ui,
+                    sans-serif;
+            }
+            h1 {
+                margin: 0 0 4px;
+                font-size: 1.5rem;
+            }
+            .uvod {
+                max-width: 900px;
+                margin: 0 0 24px;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            .mozn {
+                width: 300px;
+            }
+            .mozn h2 {
+                margin: 0 0 2px;
+                font-size: 1.05rem;
+            }
+            .mozn .pod {
+                margin: 0 0 10px;
+                font-size: 0.85rem;
+                color: #5a6477;
+                min-height: 3.9em;
+            }
+            .mozn ul {
+                margin: 12px 0 0;
+                padding-left: 18px;
+                font-size: 0.85rem;
+            }
+            .mozn li.plus::marker {
+                content: '+  ';
+                color: #1c8a4a;
+                font-weight: 700;
+            }
+            .mozn li.minus::marker {
+                content: '−  ';
+                color: #c23b3b;
+                font-weight: 700;
+            }
+            .ramec {
+                width: 300px;
+                height: 649px;
+                border-radius: 28px;
+                overflow: hidden;
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+            }
+            .tel {
+                width: 390px;
+                height: 844px;
+                transform: scale(0.7692);
+                transform-origin: 0 0;
+                position: relative;
+                color: #fff;
+                background:
+                    radial-gradient(ellipse 70px 50px at 72% 44%, #ff7a2f 0 30%, #ffe14d 45%, #34e0a1 65%, #22b8f0cc 80%, transparent 100%),
+                    radial-gradient(ellipse 140px 70px at 30% 58%, #34e0a1 0 15%, #22b8f0 40%, #2b8cf5bb 70%, transparent 100%),
+                    radial-gradient(ellipse 110px 90px at 22% 14%, #22b8f0 0 25%, #2b8cf5aa 60%, transparent 100%),
+                    radial-gradient(ellipse 90px 120px at 60% 22%, #2b8cf5aa 0 50%, transparent 100%),
+                    radial-gradient(ellipse 120px 60px at 40% 86%, #ffe14d 0 20%, #34e0a1 45%, #2b8cf5aa 75%, transparent 100%), #141c2e;
+            }
+            .tel::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background:
+                    linear-gradient(115deg, transparent 48.5%, #5b6b86 49%, transparent 49.5%),
+                    linear-gradient(20deg, transparent 60%, #5b6b86 60.3%, transparent 60.8%);
+                opacity: 0.6;
+            }
+            .doma {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow:
+                    0 0 0 3px rgba(255, 255, 255, 0.28),
+                    0 1px 5px #000;
+            }
+            .mesto {
+                position: absolute;
+                font-size: 12px;
+                color: #a9b6cc;
+                text-shadow: 0 0 3px #0d1422;
+            }
+            .sklo {
+                background: rgba(9, 14, 27, 0.82);
+                backdrop-filter: blur(14px);
+            }
+
+            /* spoločné: jedna výška, jeden polomer, jedna medzera */
+            .hore {
+                position: absolute;
+                top: var(--okraj);
+                left: var(--okraj);
+                right: var(--okraj);
+                display: grid;
+                grid-template-columns: auto auto;
+                justify-content: space-between;
+                gap: var(--gap);
+            }
+            .pil {
+                height: var(--h);
+                border-radius: calc(var(--h) / 2);
+                display: flex;
+                align-items: center;
+            }
+            .cas {
+                padding: 0 14px;
+                gap: 8px;
+                justify-content: center;
+            }
+            .cas b {
+                font-size: 1.25rem;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
+            }
+            .cas small {
+                font-size: 0.8125rem;
+                font-weight: 600;
+                color: var(--amber);
+            }
+            .seg {
+                padding: 3px;
+                gap: 0;
+            }
+            .seg b {
+                height: calc(var(--h) - 6px);
+                min-width: 52px;
+                padding: 0 11px;
+                display: grid;
+                place-items: center;
+                border-radius: calc((var(--h) - 6px) / 2);
+                color: #dfe6f1;
+                font-size: 0.875rem;
+            }
+            .seg b.on {
+                background: #fff;
+                color: var(--ink);
+            }
+            .prep {
+                padding: 0 12px 0 14px;
+                gap: 10px;
+                justify-content: space-between;
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+            .prep i {
+                position: relative;
+                width: 32px;
+                height: 18px;
+                border-radius: 9px;
+                background: #3f7fe0;
+                flex: none;
+            }
+            .prep i::after {
+                content: '';
+                position: absolute;
+                left: 16px;
+                top: 2px;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .leg {
+                padding: 0 14px;
+                flex-direction: column;
+                justify-content: center;
+                align-items: stretch;
+                gap: 3px;
+            }
+            .leg span {
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, #2f7bff, #2b8cf5, #22b8f0, #34e0a1, #ffe14d, #ff7a2f, #ff2d6b);
+            }
+            .leg div {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                line-height: 1.1;
+                font-weight: 600;
+                color: #dfe6f1;
+            }
+            .vlavo {
+                justify-self: start;
+            }
+            .vpravo {
+                justify-self: end;
+            }
+
+            /* spodok podľa B */
+            .dok {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 72px;
+                padding: 22px 18px 6px;
+                background: linear-gradient(to top, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+            }
+            .riadok {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+            }
+            .kruh {
+                flex: none;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: #fff;
+                display: grid;
+                place-items: center;
+                color: var(--ink);
+                font-weight: 700;
+            }
+            .kruh svg {
+                width: 20px;
+                height: 20px;
+                fill: currentColor;
+            }
+            .kruh.rych {
+                background: rgba(255, 255, 255, 0.14);
+                color: #fff;
+                font-size: 0.9375rem;
+            }
+            .os {
+                flex: 1;
+                height: 52px;
+                margin-inline: 10px;
+                position: relative;
+            }
+            .os::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 14px;
+                height: 16px;
+                background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.75) 0 1px, transparent 1px 12.5%);
+            }
+            .os::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 30px;
+                height: 1px;
+                background: rgba(255, 255, 255, 0.6);
+            }
+            .os .j {
+                position: absolute;
+                left: 50%;
+                top: 2px;
+                bottom: 16px;
+                width: 2px;
+                background: #fff;
+            }
+            .os .j::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: -5px;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .os .t {
+                position: absolute;
+                bottom: 0;
+                font-size: 12px;
+                font-weight: 600;
+                color: #dfe6f1;
+                transform: translateX(-50%);
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 72px;
+                background: #1f2638;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 12px;
+                font-weight: 600;
+                color: #c9d1de;
+            }
+            .nav .on {
+                color: #fff;
+            }
+
+            /* H1: štyri rovnaké pilulky, stĺpce rovnako široké */
+            .h1 .stlp {
+                display: grid;
+                gap: var(--gap);
+            }
+            .h1 .vl {
+                width: 192px;
+            }
+            .h1 .vr {
+                width: 136px;
+            }
+            .h1 .vl .pil,
+            .h1 .vr .pil {
+                width: 100%;
+            }
+            .h1 .seg b {
+                flex: 1;
+                min-width: 0;
+            }
+
+            /* H2: jeden panel cez celú šírku, dva riadky */
+            .h2 .panel {
+                position: absolute;
+                top: var(--okraj);
+                left: var(--okraj);
+                right: var(--okraj);
+                border-radius: 22px;
+                padding: 4px;
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 2px 8px;
+                align-items: center;
+            }
+            .h2 .panel .pil {
+                background: none;
+                backdrop-filter: none;
+            }
+            .h2 .seg {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .h2 .leg {
+                width: 130px;
+                padding: 0 10px;
+            }
+
+            /* H3: bez skla, tmavý prechod zhora ako os dole */
+            .h3 .hore {
+                padding: 0;
+            }
+            .h3 .tien {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                height: 150px;
+                background: linear-gradient(to bottom, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+            }
+            .h3 .stlp {
+                display: grid;
+                gap: var(--gap);
+            }
+            .h3 .vr {
+                justify-items: end;
+            }
+            .h3 .cas {
+                padding: 0 4px;
+            }
+            .h3 .cas b {
+                font-size: 1.75rem;
+            }
+            .h3 .seg {
+                background: rgba(255, 255, 255, 0.12);
+            }
+            .h3 .prep {
+                background: rgba(255, 255, 255, 0.12);
+            }
+            .h3 .leg {
+                width: 130px;
+                padding: 0 4px;
+            }
+            .h3 .vl .cas {
+                justify-content: flex-start;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Karta Radar: horná časť</h1>
+        <p class="uvod">
+            Spodok je vo všetkých troch podľa B (os bez panelu). Hore platí v každej možnosti jedna mriežka: každý prvok je vysoký 44 px,
+            zaoblenie je polovica výšky, medzera 6 px, okraj 10 px. Čas je o niečo menší a „predpoveď“ stojí vedľa neho, aby sa zmestil do
+            44 px. Rozmery sú z mockupu, nie z telefónu, a mapa je kulisa.
+        </p>
+
+        <div class="rad">
+            <!-- H1 -->
+            <div class="mozn">
+                <h2>H1 · Štyri rovnaké pilulky</h2>
+                <p class="pod">Dva stĺpce, v každom dve pilulky rovnako široké a vysoké. Riadky sedia presne vedľa seba.</p>
+                <div class="ramec">
+                    <div class="tel h1">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="hore">
+                            <div class="stlp vl">
+                                <div class="pil cas sklo"><b>14:40</b><small>predpoveď</small></div>
+                                <div class="pil seg sklo"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            </div>
+                            <div class="stlp vr">
+                                <div class="pil prep sklo"><span>Oblaky</span><i></i></div>
+                                <div class="pil leg sklo">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dok">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Najusporiadanejšie: dva zarovnané riadky, žiadny prvok netrčí.</li>
+                    <li class="plus">Stred hore ostane voľný a mapa medzi stĺpcami presvitá.</li>
+                    <li class="minus">
+                        Pod osou je mapa „otvorená“, hore sú štyri sklenené tvary, takže štýl hore a dole nie je ten istý.
+                    </li>
+                </ul>
+            </div>
+
+            <!-- H2 -->
+            <div class="mozn">
+                <h2>H2 · Jeden panel hore</h2>
+                <p class="pod">Všetko v jednom sklenenom paneli cez celú šírku, dva riadky. Zrkadlo kedysi spodného panelu.</p>
+                <div class="ramec">
+                    <div class="tel h2">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="panel sklo">
+                            <div class="pil cas" style="justify-content: flex-start"><b>14:40</b><small>predpoveď</small></div>
+                            <div class="pil prep"><span>Oblaky</span><i></i></div>
+                            <div class="pil seg" style="justify-self: start"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            <div class="pil leg">
+                                <span></span>
+                                <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                            </div>
+                        </div>
+                        <div class="dok">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Jeden pokojný celok, nič nie je rozhádzané.</li>
+                    <li class="minus">Zakryje celý pruh hore (~100 px cez celú šírku), mapy ubudne najviac.</li>
+                    <li class="minus">Ťažký vršok a ľahký spodok pôsobia nevyvážene.</li>
+                </ul>
+            </div>
+
+            <!-- H3 -->
+            <div class="mozn">
+                <h2>H3 · Bez skla, ako os dole</h2>
+                <p class="pod">
+                    Hore rovnaký tmavý prechod ako pod osou. Čas ostane veľký, ovládače sú polopriehľadné pilulky na prechode.
+                </p>
+                <div class="ramec">
+                    <div class="tel h3">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="tien"></div>
+                        <div class="hore">
+                            <div class="stlp vl">
+                                <div class="pil cas"><b>14:40</b><small>predpoveď</small></div>
+                                <div class="pil seg"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            </div>
+                            <div class="stlp vr">
+                                <div class="pil prep"><span>Oblaky</span><i></i></div>
+                                <div class="pil leg">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dok">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Hore aj dole jeden jazyk: mapa sa k okrajom len stmavne, nikde nie sú rámy.</li>
+                    <li class="plus">Najvzdušnejšie, čas môže ostať veľký.</li>
+                    <li class="minus">Čitateľnosť nad svetlým dažďom hore treba overiť na telefóne (rovnaké riziko ako pri osi).</li>
+                    <li class="minus">Horný pruh mapy je stále trochu stmavený, aj keď ovládače sú len v rohoch.</li>
+                </ul>
+            </div>
+        </div>
+    </body>
+</html>

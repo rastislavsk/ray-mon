@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Radar: ovládače hore</title>
+        <style>
+            :root {
+                --ink: #0b1430;
+                --amber: #ffc94d;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 24px 16px 48px;
+                background: #e9edf3;
+                color: #1b2335;
+                font:
+                    15px/1.45 system-ui,
+                    sans-serif;
+            }
+            h1 {
+                margin: 0 0 4px;
+                font-size: 1.5rem;
+            }
+            .uvod {
+                max-width: 900px;
+                margin: 0 0 24px;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            .mozn {
+                width: 300px;
+            }
+            .mozn h2 {
+                margin: 0 0 2px;
+                font-size: 1.05rem;
+            }
+            .mozn .pod {
+                margin: 0 0 10px;
+                font-size: 0.85rem;
+                color: #5a6477;
+                min-height: 2.6em;
+            }
+            .mozn ul {
+                margin: 12px 0 0;
+                padding-left: 18px;
+                font-size: 0.85rem;
+            }
+            .mozn li.plus::marker {
+                content: '+  ';
+                color: #1c8a4a;
+                font-weight: 700;
+            }
+            .mozn li.minus::marker {
+                content: '−  ';
+                color: #c23b3b;
+                font-weight: 700;
+            }
+            .ramec {
+                width: 300px;
+                height: 649px;
+                border-radius: 28px;
+                overflow: hidden;
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+            }
+            .tel {
+                width: 390px;
+                height: 844px;
+                transform: scale(0.7692);
+                transform-origin: 0 0;
+                position: relative;
+                color: #fff;
+                background:
+                    radial-gradient(ellipse 70px 50px at 72% 44%, #ff7a2f 0 30%, #ffe14d 45%, #34e0a1 65%, #22b8f0cc 80%, transparent 100%),
+                    radial-gradient(ellipse 140px 70px at 30% 58%, #34e0a1 0 15%, #22b8f0 40%, #2b8cf5bb 70%, transparent 100%),
+                    radial-gradient(ellipse 90px 120px at 60% 22%, #2b8cf5aa 0 50%, transparent 100%),
+                    radial-gradient(ellipse 120px 60px at 40% 82%, #2b8cf5aa 0 50%, transparent 100%),
+                    radial-gradient(ellipse 260px 200px at 50% 50%, rgba(220, 230, 245, 0.18), transparent 70%), #141c2e;
+            }
+            .tel::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background:
+                    linear-gradient(115deg, transparent 48.5%, #5b6b86 49%, transparent 49.5%),
+                    linear-gradient(20deg, transparent 60%, #5b6b86 60.3%, transparent 60.8%);
+                opacity: 0.6;
+            }
+            .doma {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow:
+                    0 0 0 3px rgba(255, 255, 255, 0.28),
+                    0 1px 5px #000;
+            }
+            .mesto {
+                position: absolute;
+                font-size: 12px;
+                color: #a9b6cc;
+                text-shadow: 0 0 3px #0d1422;
+            }
+            .sklo {
+                background: rgba(9, 14, 27, 0.82);
+                backdrop-filter: blur(14px);
+            }
+            .hore {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .stlpec {
+                display: grid;
+                gap: 6px;
+            }
+            .stlpec.vpravo {
+                justify-items: end;
+            }
+            .chvila {
+                padding: 6px 12px 7px;
+                border-radius: 14px;
+            }
+            .cas {
+                font-size: 1.75rem;
+                line-height: 1.1;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
+            }
+            .druh {
+                font-size: 0.8125rem;
+                font-weight: 600;
+                color: var(--amber);
+            }
+            .prep {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 12px;
+                border-radius: 22px;
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+            .prep i {
+                position: relative;
+                width: 32px;
+                height: 18px;
+                border-radius: 9px;
+                background: #3f7fe0;
+            }
+            .prep i::after {
+                content: '';
+                position: absolute;
+                left: 16px;
+                top: 2px;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .seg {
+                display: flex;
+                padding: 2px;
+                border-radius: 11px;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .seg.sklo {
+                background: rgba(9, 14, 27, 0.82);
+                padding: 3px;
+                border-radius: 13px;
+            }
+            .seg b {
+                min-width: 48px;
+                min-height: 44px;
+                padding: 0 10px;
+                display: grid;
+                place-items: center;
+                border-radius: 9px;
+                color: #dfe6f1;
+                font-size: 0.875rem;
+            }
+            .seg b.on {
+                background: #fff;
+                color: var(--ink);
+            }
+            .leg {
+                width: 130px;
+                display: grid;
+                gap: 2px;
+            }
+            .leg.sklo {
+                padding: 8px 10px 6px;
+                border-radius: 12px;
+            }
+            .leg span {
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, #2f7bff, #2b8cf5, #22b8f0, #34e0a1, #ffe14d, #ff7a2f, #ff2d6b);
+            }
+            .leg div {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                line-height: 1.2;
+                font-weight: 600;
+                color: #dfe6f1;
+            }
+            .dok {
+                position: absolute;
+                left: 8px;
+                right: 8px;
+                bottom: 72px;
+                display: grid;
+                gap: 6px;
+                padding: 8px 10px 6px;
+                border-radius: 18px;
+            }
+            .riadok {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+            }
+            .kruh {
+                flex: none;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: #fff;
+                display: grid;
+                place-items: center;
+                color: var(--ink);
+                font-weight: 700;
+            }
+            .kruh svg {
+                width: 20px;
+                height: 20px;
+                fill: currentColor;
+            }
+            .kruh.rych {
+                background: rgba(255, 255, 255, 0.14);
+                color: #fff;
+                font-size: 0.9375rem;
+            }
+            .os {
+                flex: 1;
+                height: 52px;
+                margin-inline: 10px;
+                position: relative;
+            }
+            .os::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 14px;
+                height: 16px;
+                background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.75) 0 1px, transparent 1px 12.5%);
+            }
+            .os::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 30px;
+                height: 1px;
+                background: rgba(255, 255, 255, 0.6);
+            }
+            .os .j {
+                position: absolute;
+                left: 50%;
+                top: 2px;
+                bottom: 16px;
+                width: 2px;
+                background: #fff;
+            }
+            .os .j::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: -5px;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .os .t {
+                position: absolute;
+                bottom: 0;
+                font-size: 12px;
+                font-weight: 600;
+                color: #dfe6f1;
+                transform: translateX(-50%);
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 72px;
+                background: #1f2638;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 12px;
+                font-weight: 600;
+                color: #c9d1de;
+            }
+            .nav .on {
+                color: #fff;
+            }
+            .dok.bez {
+                background: linear-gradient(to top, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+                backdrop-filter: none;
+                left: 0;
+                right: 0;
+                bottom: 72px;
+                border-radius: 0;
+                padding: 22px 18px 6px;
+            }
+            .karta {
+                padding: 6px 8px 8px 12px;
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+            }
+            .karta.vpravo {
+                padding: 4px 8px 8px;
+                justify-items: end;
+            }
+            .karta .prep {
+                background: none;
+                padding: 0 4px;
+            }
+            .karta .seg {
+                margin-left: -6px;
+            }
+            .ziva {
+                position: absolute;
+                left: 0;
+                right: 0;
+                border: 2px dashed rgba(255, 255, 255, 0.55);
+                border-radius: 10px;
+                display: grid;
+                place-items: center;
+                font-size: 13px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.85);
+                pointer-events: none;
+            }
+            .ziva span {
+                background: rgba(9, 14, 27, 0.6);
+                padding: 2px 8px;
+                border-radius: 8px;
+            }
+            .cisla {
+                margin-top: 8px;
+                font-size: 0.8rem;
+                color: #5a6477;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Karta Radar: ovládače hore, mapa vzdušnejšia</h1>
+        <p class="uvod">
+            Telefón 390 × 844 (zmenšené). Prerušovaný rámik je pás mapy medzi ovládačmi, percento je plocha mapy nad navigáciou, ktorú
+            zakrývajú sklenené prvky. Výšky sú odhad z rozmerov v <code>style.css</code> (tlačidlá 44 px, os 52 px), nie meranie na
+            telefóne. Úprimne: plochy presun ušetrí málo (~2 body), hlavný zisk je, že spodný panel klesne zo ~124 px na ~68 px a pás nad
+            navigáciou sa otvorí. Mapa v pozadí je len kulisa, nie skutočné dáta.
+        </p>
+
+        <div class="rad">
+            <!-- ============ TERAZ ============ -->
+            <div class="mozn">
+                <h2>Teraz</h2>
+                <p class="pod">Rozsah a intenzita sú v spodnom paneli, panel má dva riadky.</p>
+                <div class="ramec">
+                    <div class="tel">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="ziva" style="top: 80px; bottom: 206px"><span>ovládače zakrývajú ≈ 19 % mapy</span></div>
+                        <div class="hore">
+                            <div class="chvila sklo">
+                                <div class="cas">14:40</div>
+                                <div class="druh">predpoveď</div>
+                            </div>
+                            <div class="prep sklo"><span>Oblaky</span><i></i></div>
+                        </div>
+                        <div class="dok sklo">
+                            <div class="riadok">
+                                <div class="seg"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                                <div class="leg" style="margin-left: auto">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ A ============ -->
+            <div class="mozn">
+                <h2>A · Tvoj návrh</h2>
+                <p class="pod">2 h / Dnes / Zajtra pod časom, intenzita pod Oblakmi. Dole ostane jeden riadok.</p>
+                <div class="ramec">
+                    <div class="tel">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="ziva" style="top: 132px; bottom: 150px"><span>zakrývajú ≈ 17 %, panel dole o polovicu nižší</span></div>
+                        <div class="hore">
+                            <div class="stlpec">
+                                <div class="chvila sklo">
+                                    <div class="cas">14:40</div>
+                                    <div class="druh">predpoveď</div>
+                                </div>
+                                <div class="seg sklo"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            </div>
+                            <div class="stlpec vpravo">
+                                <div class="prep sklo"><span>Oblaky</span><i></i></div>
+                                <div class="leg sklo">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dok sklo">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Najmenšia zmena: len presun prvkov v HTML a CSS, logika ostáva.</li>
+                    <li class="plus">Spodný panel klesne z ~124 px na ~68 px, celý pás nad navigáciou sa uvoľní.</li>
+                    <li class="minus">Hore pribudnú štyri samostatné ostrovčeky, rohy mapy sú plnšie.</li>
+                    <li class="minus">Rozsah je ďaleko od osi, ktorú mení (prst ťuká hore, pozerá dole).</li>
+                </ul>
+            </div>
+
+            <!-- ============ B ============ -->
+            <div class="mozn">
+                <h2>B · Ako A, os bez panelu</h2>
+                <p class="pod">Horná časť ako A. Os dole nemá sklenený panel, len tmavý prechod od navigácie.</p>
+                <div class="ramec">
+                    <div class="tel">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="ziva" style="top: 132px; bottom: 150px"><span>≈ 17 %, no dole mapa presvitá</span></div>
+                        <div class="hore">
+                            <div class="stlpec">
+                                <div class="chvila sklo">
+                                    <div class="cas">14:40</div>
+                                    <div class="druh">predpoveď</div>
+                                </div>
+                                <div class="seg sklo"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            </div>
+                            <div class="stlpec vpravo">
+                                <div class="prep sklo"><span>Oblaky</span><i></i></div>
+                                <div class="leg sklo">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dok bez">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Mapa ide opticky až k navigácii, najvzdušnejší dojem.</li>
+                    <li class="minus">
+                        Nad svetlým dažďom (žltá, ružová) môžu byť biele popisy osi horšie čitateľné; treba overiť na telefóne.
+                    </li>
+                    <li class="minus">Odlišný štýl od ostatných sklenených prvkov karty.</li>
+                </ul>
+            </div>
+
+            <!-- ============ C ============ -->
+            <div class="mozn">
+                <h2>C · Dve karty hore</h2>
+                <p class="pod">Čas a rozsah v jednej karte vľavo, Oblaky a intenzita v jednej vpravo. Dole ako A.</p>
+                <div class="ramec">
+                    <div class="tel">
+                        <span class="mesto" style="left: 30%; top: 47%">Bratislava</span
+                        ><span class="mesto" style="left: 62%; top: 30%">Žilina</span
+                        ><span class="mesto" style="left: 74%; top: 52%">Košice</span>
+                        <div class="doma"></div>
+                        <div class="ziva" style="top: 136px; bottom: 150px"><span>zakrývajú ≈ 20 %, hore 2 ostrovy</span></div>
+                        <div class="hore">
+                            <div class="karta sklo">
+                                <div>
+                                    <div class="cas">14:40</div>
+                                    <div class="druh">predpoveď</div>
+                                </div>
+                                <div class="seg"><b class="on">2 h</b><b>Dnes</b><b>Zajtra</b></div>
+                            </div>
+                            <div class="karta vpravo sklo">
+                                <div class="prep"><span>Oblaky</span><i></i></div>
+                                <div class="leg">
+                                    <span></span>
+                                    <div><em style="font-style: normal">slabý</em><em style="font-style: normal">silný</em></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dok sklo">
+                            <div class="riadok">
+                                <div class="kruh">
+                                    <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
+                                </div>
+                                <div class="os">
+                                    <div class="j"></div>
+                                    <span class="t" style="left: 0">14:00</span><span class="t" style="left: 50%">15:00</span
+                                    ><span class="t" style="left: 100%">16:00</span>
+                                </div>
+                                <div class="kruh rych">1×</div>
+                            </div>
+                        </div>
+                        <div class="nav">
+                            <span>Teraz</span><span>Dnes</span><span class="on">Radar</span><span>7 dní</span><span>Štatistika</span
+                            ><span>Nastav.</span>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Pokojnejšie: dva celky namiesto štyroch, jasné „čo kedy“ vľavo a „čo vidím“ vpravo.</li>
+                    <li class="plus">Rovnaká úspora dole ako A.</li>
+                    <li class="minus">Ľavá karta je širšia (segment je širší ako čas), zaberie viac ľavého horného rohu.</li>
+                    <li class="minus">O trochu viac CSS zmien ako A.</li>
+                </ul>
+            </div>
+        </div>
+        <p class="cisla">Na širších obrazovkách (tablet, počítač) by platilo to isté, len horné prvky stoja pod hlavičkou ako dnes.</p>
+    </body>
+</html>

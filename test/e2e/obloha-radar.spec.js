@@ -153,6 +153,8 @@ test('Radar: mimo Európy a bez polohy len povie prečo', async ({ page }) => {
     await otvor(page, { site: { ...SITE, name: 'Sydney', lat: -33.9, lon: 151.2, timezone: 'Australia/Sydney' } });
     await expect(page.locator('#rd-hlaska-text')).toHaveText('Pre toto miesto radar nemáme. Pokrýva len Európu.');
     await expect(page.locator('#rd-dok')).toBeHidden();
+    await expect(page.locator('#rd-rozsahy')).toBeHidden();
+    await expect(page.locator('#rd-intenzita')).toBeHidden();
 });
 
 test('Radar: bez polohy pošle do Nastavenia', async ({ page }) => {
