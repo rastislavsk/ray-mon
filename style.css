@@ -1039,6 +1039,79 @@ button.live[aria-expanded='true'] {
 .tzden {
     margin-top: 18px;
 }
+/* Obloha zvoleného času v karte Deň: farby neba (--d1, --d2) a stmavený spodok (--d3, skyShade -
+   biely text má kontrast v každej výške) prelína CSS ako pozadie appky, pod obsahom je kresba
+   počasia. Karta je izolovaná, kresba a stmavenie stoja pod obsahom (z-index -1). */
+/* Poloha slnka kresby je zaregistrovaná, aby sa v karte Deň slnko pri ťahu posúvalo plynule. */
+@property --wx-sx {
+    syntax: '<length-percentage>';
+    inherits: true;
+    initial-value: 0px;
+}
+@property --wx-sy {
+    syntax: '<length-percentage>';
+    inherits: true;
+    initial-value: 0px;
+}
+@property --d1 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #1767c9;
+}
+@property --d2 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #4fa3e2;
+}
+@property --d3 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgba(5, 10, 30, 0.13);
+}
+.tzden.nebo {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: rgba(255, 255, 255, 0.28);
+    background: linear-gradient(180deg, var(--d1), var(--d2));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition:
+        --d1 0.7s,
+        --d2 0.7s,
+        --d3 0.7s;
+}
+.tzden.nebo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(8, 16, 40, 0.2), var(--d3));
+    pointer-events: none;
+}
+/* Kresba počasia v karte: v karte, nie cez obrazovku; obzor a koniec zrážok na spodku karty. Slnko
+   (--wx-sx, --wx-sy) dáva render podľa zvoleného času. */
+.wx.wx-den {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    width: auto;
+    height: auto;
+    --wx-obzor: 100%;
+    --wx-prec-h: 100%;
+    -webkit-mask-image: none;
+    mask-image: none;
+    transition:
+        --wx-sx 0.7s,
+        --wx-sy 0.7s;
+}
+/* Lúče sú dve otáčajúce sa plochy 1040 × 1040 px - v karte by sa krútili druhýkrát popri pozadí
+   a zdvojnásobili prácu telefónu aj pri ťahu. Slnko v karte je žiara bez lúčov. */
+/* Špecificita prebije pravidlá „čo je v ktorom stave vidno“ vo web/pocasie.css (0,4,0). */
+.tzden .wx.wx-den[data-wx] :is(.wx-r1, .wx-r2, .wx-flare) {
+    display: none;
+}
 .den-hlava {
     display: flex;
     align-items: center;

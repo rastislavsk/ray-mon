@@ -7,6 +7,7 @@ import { DAY_CHART } from '../../shared/day-chart.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_PAS_SLNKO, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
+import { skyNow } from '../../shared/sky.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml } from '../day-chart.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
@@ -334,6 +335,7 @@ export function renderTeraz(state, dom) {
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
     renderDen(m, state.tzKrivka === true, dom, T);
+    renderDenNebo(state, m, dom);
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom, T);
 }
@@ -347,25 +349,54 @@ export function renderTeraz(state, dom) {
 function renderPocasie(state, m, dom) {
     const p = state.liveSky && !dashboard(state) ? m.pocasie : null;
     show(dom.wx, !!p);
-    if (!p) return;
-    setHtml(dom.wx, pocasieHtml());
-    dom.wx.dataset.wx = pocasieStav(p);
+    if (p) kresliPocasie(dom.wx, p);
+}
+
+/**
+ * Karta Deň má oblohu zvoleného času (docs/navrhy/teraz-navrh-2.html): farby neba z toho istého
+ * výpočtu ako pozadie appky (skyNow v tej chvíli) a tá istá kresba počasia - slnko podľa času na
+ * oblúku karty, oblaky, dážď, sneh, hviezdy a Mesiac. Farby prelína CSS (zaregistrované --d1 až --d3).
+ * S vypnutou živou oblohou (Nastavenie › Vzhľad) je karta sklo ako ostatné.
+ * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
+ */
+function renderDenNebo(state, m, dom) {
+    const p = state.liveSky && m.den ? m.pocasieDen : null;
+    dom.tzDen.classList.toggle('nebo', !!p);
+    show(dom.tzDenWx, !!p);
+    if (!p || !m.den) return;
+    const sky = skyNow({ ...state, previewMinutes: state.terazPreview }, true, p);
+    dom.tzDen.style.setProperty('--d1', sky.top);
+    dom.tzDen.style.setProperty('--d2', sky.bottom);
+    dom.tzDen.style.setProperty('--d3', sky.shade);
+    kresliPocasie(dom.tzDenWx, p);
+    const s = m.den.slnko;
+    dom.tzDenWx.style.setProperty('--wx-sx', s ? `${s.x}%` : '50%');
+    dom.tzDenWx.style.setProperty('--wx-sy', s ? `${s.y}%` : '130%');
+}
+
+/**
+ * Kresba počasia do nosiča `el` (pozadie karty, karta Deň): vrstvy, stav, sila dažďa, noc, skutočné
+ * hviezdy a Mesiac. @param {HTMLElement} el @param {import('../../shared/pocasie.js').Pocasie} p
+ */
+function kresliPocasie(el, p) {
+    setHtml(el, pocasieHtml());
+    el.dataset.wx = pocasieStav(p);
     // Sila dažďa (docs/navrhy/dazd-sily.html); staršie jadro z cache ju nepošle - kresba ukáže bežný dážď.
-    if (p.dazd) dom.wx.dataset.dazd = p.dazd;
-    else delete dom.wx.dataset.dazd;
-    dom.wx.toggleAttribute('data-noc', p.noc);
+    if (p.dazd) el.dataset.dazd = p.dazd;
+    else delete el.dataset.dazd;
+    el.toggleAttribute('data-noc', p.noc);
     // Skutočné hviezdy do vlastných vrstiev, mimo HTML počasia - ich posun nereštartuje oblaky.
     // Bez nich (cez deň, alebo staršie jadro z cache po nasadení) ostanú hviezdy z CSS.
     const ma = Array.isArray(p.hviezdy);
-    dom.wx.toggleAttribute('data-hviezdy', ma);
+    el.toggleAttribute('data-hviezdy', ma);
     const [a, b] = ma ? hviezdySvg(/** @type {import('../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy)) : ['', ''];
-    const vrstvy = dom.wx.querySelectorAll('.wx-stars, .wx-stars2');
+    const vrstvy = el.querySelectorAll('.wx-stars, .wx-stars2');
     setHtml(vrstvy[0], a);
     setHtml(vrstvy[1], b);
     // Mesiac len vtedy, keď naozaj stojí v poli pohľadu; rovnako mimo HTML počasia.
     const [svetlo, mesiac] = p.mesiac ? mesiacSvg(p.mesiac) : ['', ''];
-    const luna = dom.wx.querySelectorAll('.wx-moonglow, .wx-moon');
+    const luna = el.querySelectorAll('.wx-moonglow, .wx-moon');
     setHtml(luna[0], svetlo);
     setHtml(luna[1], mesiac);
-    dom.wx.toggleAttribute('data-mesiac-stlmeny', p.mesiac?.stlmeny === true);
+    el.toggleAttribute('data-mesiac-stlmeny', p.mesiac?.stlmeny === true);
 }

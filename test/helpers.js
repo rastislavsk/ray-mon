@@ -147,8 +147,8 @@ export async function overHlavicku(page, sel) {
  * dátach nemusí byť dnes) a prečíta v tom istom kroku - inak by ho prekreslenie appky medzitým vrátilo.
  * @param {import('@playwright/test').Page} page @param {string | null} sila
  */
-export function dazdKresba(page, sila) {
-    return page.locator('#wx').evaluate((el, s) => {
+export function dazdKresba(page, sila, sel = '#wx') {
+    return page.locator(sel).evaluate((el, s) => {
         el.dataset.wx = 'dazd';
         if (s) el.dataset.dazd = s;
         else delete el.dataset.dazd;

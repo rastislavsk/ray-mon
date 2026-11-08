@@ -82,6 +82,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         veci: rows.map((r) => vecDetail(r, now.minutes, den.pas.span)),
         den,
         pocasie: pocasieOf(input, now),
+        // Obloha karty Deň: počasie v zvolenom čase (bez neho teraz).
+        pocasieDen: pocasieOf(input, hero),
         jas: jasOf(input, now),
     };
 }
@@ -194,6 +196,7 @@ function empty(kind, estimate) {
         veci: /** @type {Array<ReturnType<typeof vecDetail>>} */ ([]),
         den: /** @type {ReturnType<typeof denModel> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
+        pocasieDen: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
         jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
 }
@@ -436,9 +439,21 @@ export function denModel(input, rows, min, voice = 'drzy') {
         veta: terazVetaDnaText({ nowMin, ...oknoDna(input, plan, nowMin) }),
         citanie: citanieOf(input, plan, rows, { t, min }, voice),
         pas: denPas(plan, daylightSpan(input.site, localDateKey(input.now, tz)), nowMin),
+        slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
         min: t,
         zvolene: min !== null,
     };
+}
+
+/**
+ * Slnko na oblohe karty Deň v minúte `t`: zľava (východ) doprava (západ) po oblúku, v % plochy karty
+ * (`x` zľava, `y` zhora). Len dekorácia, poloha z dĺžky dňa, nie presná výška slnka. Mimo dňa null.
+ * @param {{ from: number, to: number }} span @param {number} t
+ */
+function slnkoVKarte(span, t) {
+    if (t < span.from || t > span.to) return null;
+    const f = (t - span.from) / (span.to - span.from);
+    return { x: Math.round(6 + f * 88), y: Math.round(78 - Math.sin(Math.PI * f) * 70) };
 }
 
 /**

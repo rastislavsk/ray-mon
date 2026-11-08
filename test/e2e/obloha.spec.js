@@ -2118,13 +2118,48 @@ test.describe('počasie v pozadí karty Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('dážď v štyroch silách: každá má svoje kvapky, mrholenie bez blízkych', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('13:00') });
-        const kresby = [];
-        for (const sila of ['mrholenie', 'slaby', 'dazd', 'silny']) kresby.push(await dazdKresba(page, sila));
-        for (const k of kresby) expect(k[1]).toMatch(/^url\("data:image\/svg\+xml,/);
-        expect(kresby.map((k) => k[2] === 'skryté')).toEqual([true, false, false, false]);
-        expect(new Set(kresby.map((k) => k[0])).size).toBe(4);
+    for (const sel of ['#wx', '#tz-den-wx'])
+        test(`dážď v štyroch silách (${sel}): každá má svoje kvapky, mrholenie bez blízkych`, async ({ page }) => {
+            const errors = await openTeraz(page, { time: at('13:00') });
+            await page.locator(sel).scrollIntoViewIfNeeded();
+            const kresby = [];
+            for (const sila of ['mrholenie', 'slaby', 'dazd', 'silny']) kresby.push(await dazdKresba(page, sila, sel));
+            for (const k of kresby) expect(k[1]).toMatch(/^url\("data:image\/svg\+xml,/);
+            expect(kresby.map((k) => k[2] === 'skryté')).toEqual([true, false, false, false]);
+            expect(new Set(kresby.map((k) => k[0])).size).toBe(4);
+            expect(errors).toEqual([]);
+        });
+
+    test('karta Deň: obloha zvoleného času - farby neba a počasie v tej chvíli, pozadie ostáva teraz', async ({ page }) => {
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        const den = page.locator('#tz-den');
+        const farby = () => den.evaluate((el) => [el.style.getPropertyValue('--d1'), el.style.getPropertyValue('--d2')]);
+        const ocakavane = (/** @type {number | null} */ min) => {
+            const v = vstupTeraz(time, { pv, previewMinutes: min });
+            const s = skyNow(v, true, pocasieTeraz(v));
+            return { farby: [s.top, s.bottom], wx: pocasieStav(/** @type {any} */ (pocasieTeraz(v))) };
+        };
+        await expect(den).toHaveClass(/\bnebo\b/);
+        await expect.poll(farby).toEqual(ocakavane(null).farby);
+        await expect(page.locator('#tz-den-wx')).toHaveAttribute('data-wx', ocakavane(null).wx);
+        const pozadie = await oblohaVStranke(page);
+        // 22:30 cez End a šípky nejde (os končí so slnkom) - 20:45 je posledná štvrťhodina osi.
+        await page.locator('#tz-chart').focus();
+        await page.keyboard.press('End');
+        await expect.poll(farby).toEqual(ocakavane(minuta('20:45')).farby);
+        await expect(page.locator('#tz-den-wx')).toHaveAttribute('data-wx', ocakavane(minuta('20:45')).wx);
+        expect(await oblohaVStranke(page)).toEqual(pozadie);
+        // Vypnutá živá obloha: karta Deň je sklo bez kresby.
+        await page.evaluate(
+            ([k, v]) => localStorage.setItem(k, v),
+            [LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ voice: 'drzy', liveSky: false }))],
+        );
+        await page.reload();
+        await appReady(page);
+        await page.locator('#nav-terazky').click();
+        await expect(den).not.toHaveClass(/\bnebo\b/);
+        await expect(page.locator('#tz-den-wx')).toBeHidden();
         expect(errors).toEqual([]);
     });
 

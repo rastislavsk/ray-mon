@@ -915,3 +915,19 @@ test('veta karty Deň a čas do niečoho', () => {
     assert.equal(terazZaText(120), '2 h');
     assert.equal(terazZaText(95), '1 h 35 min');
 });
+
+test('karta Deň má oblohu zvoleného času: počasie v tej chvíli a slnko na oblúku karty', () => {
+    const i = input(at('13:00'));
+    const teraz = terazModel(i);
+    assert.deepEqual(teraz.pocasieDen, teraz.pocasie, 'bez zvoleného času je obloha karty teraz');
+    const vecer = terazModel({ ...i, previewMinutes: hm(22, 30) });
+    assert.deepEqual(vecer.pocasieDen, pocasieTeraz({ ...i, previewMinutes: hm(22, 30) }));
+    assert.equal(vecer.pocasieDen?.noc, true);
+    assert.deepEqual(vecer.pocasie, teraz.pocasie, 'pozadie ostáva teraz');
+    // Slnko: na poludnie vysoko v strede, ráno vľavo nízko, v noci nie je.
+    const pol = teraz.den?.slnko;
+    assert.ok(pol && pol.x > 40 && pol.x < 70 && pol.y < 20, JSON.stringify(pol));
+    const rano = terazModel({ ...i, previewMinutes: hm(6) }).den?.slnko;
+    assert.ok(rano && rano.x < 15 && rano.y > 60, JSON.stringify(rano));
+    assert.equal(vecer.den?.slnko, null);
+});

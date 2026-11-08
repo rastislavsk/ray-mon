@@ -126,6 +126,7 @@ function terazDom() {
         tzAskText: byId('tz-ask-text'),
         tzAskBtn: byId('tz-ask-btn'),
         tzDen: byId('tz-den'),
+        tzDenWx: byId('tz-den-wx'),
         tzPasBtn: byId('tz-pas-btn'),
         tzKrivkaBtn: byId('tz-krivka-btn'),
         tzCitanie: byId('tz-citanie'),
