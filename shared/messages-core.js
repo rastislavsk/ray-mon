@@ -1137,9 +1137,6 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
  */
 export const TERAZ_TONES = { sun: 'slnko stačí', cheap: 'lacná sieť', costly: 'drahá sieť', plain: 'bežná cena' };
 
-/** Legenda pásu karty Deň: slnko (sieť má farby a slová TERAZ_TONES). */
-export const TERAZ_PAS_SLNKO = { go: 'slnko stačí', part: 'svieti, nestačí' };
-
 /** Legenda čiar a riadkov grafu dňa (nápis hranice je TERAZ_TEXTS.limit). */
 export const DAY_CHART_KEYS = { power: 'výkon', forecast: 'predpoveď', cloud: 'oblačnosť' };
 
@@ -1148,7 +1145,6 @@ export const TERAZ_TEXTS = {
     title: 'Teraz',
     retry: MOZEM_SKY_TEXTS.retry,
     hint: 'Ťahaj prstom po grafe a pozri si iný čas.',
-    hintPas: 'Ťahaj prstom po páse a pozri si iný čas.',
     reset: 'Späť na teraz',
     limit: 'veľké spotrebiče',
     loading: 'Načítavam…',
@@ -1176,7 +1172,6 @@ export const TERAZ_TEXTS = {
 const TERAZ_TEXTS_SLUSNE = {
     ...TERAZ_TEXTS,
     hint: 'Ťahajte prstom po grafe a pozrite si iný čas.',
-    hintPas: 'Ťahajte prstom po páse a pozrite si iný čas.',
     slider: 'Deň, šípkami si pozriete iný čas',
     strip: 'Odporúčania, posúvajte do strán',
     guessTitle: 'Koľko dáva vaša strecha?',
@@ -1279,19 +1274,6 @@ export function terazSkupinaText(g) {
 }
 
 /**
- * Veta karty Deň bez zvoleného času: koľko ešte slnko stačí, o koľko začne, že skončilo (a kedy
- * zajtra začne), alebo že dnes nestačí. `okno` je zelený úsek, ktorý prebieha alebo príde, inak
- * posledný, ktorý už bol.
- * @param {{ nowMin: number, okno: { from: number, to: number } | null, zajtraOd: number | null }} d
- */
-export function terazVetaDnaText({ nowMin, okno, zajtraOd }) {
-    if (!okno) return { text: 'Slnko dnes na veľké veci nestačí', sub: '' };
-    if (nowMin < okno.from) return { text: `Slnko bude stačiť o ${terazZaText(okno.from - nowMin)}`, sub: `od ${hm(okno.from)}` };
-    if (nowMin < okno.to) return { text: `Slnko stačí ešte ${terazZaText(okno.to - nowMin)}`, sub: `do ${endHm(okno.to)}` };
-    return { text: 'Slnko dnes skončilo', sub: zajtraOd === null ? '' : `zajtra od ${hm(zajtraOd)}` };
-}
-
-/**
  * Detail spotrebiča: kedy a odkiaľ prúd (`kedy`), od-do (`cas`) a prečo práve vtedy (`why`, z Plánu dňa).
  * @param {import('./plan-dna.js').PlanRow & { why: string }} r @param {boolean} teraz ide teraz
  */
@@ -1307,8 +1289,9 @@ export function terazVecText(r, teraz) {
 const SIET_DO = /** @type {Record<string, string>} */ ({ lacna: 'lacná sieť', draha: 'drahá sieť', bezna: 'bežná cena' });
 
 /**
- * Odčítanie karty Deň pre zvolený čas (alebo teraz): čas, výkon a odkiaľ je, či slnko stačí a o koľko,
- * sieť a dokedy, oblačnosť a čo z plánu vtedy beží, inak čo príde. `veta` je to isté pre čítačku.
+ * Odčítanie karty Deň pre zvolený čas (alebo teraz): čas, výkon a odkiaľ je. `veta` je pre čítačku
+ * a povie aj to, čo karta ukazuje krivkou a farbami: či slnko stačí a o koľko, sieť a dokedy,
+ * oblačnosť a čo z plánu vtedy beží, inak čo príde.
  * @param {{ min: number, teraz: boolean, kw: number, source: 'live' | 'measured' | 'forecast' | null,
  *   slnko: 'go' | 'part' | 'noc', limitKw: number, level: string, levelDo: number, cloud: number | null,
  *   bezi: string[], dalsi: { name: string, start: number } | null }} c
@@ -1331,10 +1314,6 @@ export function terazCitanieText(c) {
         cas,
         kw,
         zdroj,
-        slnko,
-        siet,
-        mraky,
-        plan,
         veta: [`${cas}, ${kw}${zdroj ? `, ${zdroj}` : ''}`, slnko, siet, mraky, plan].filter(Boolean).join('. '),
     };
 }

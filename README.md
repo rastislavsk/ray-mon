@@ -25,10 +25,10 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   Pod nimi **čo zapnúť**: riadok „Teraz zo slnka“ / „Teraz z lacnej siete“ / „Počkaj“ (za „i“
   vysvetlenie odpovede a ceny siete), plné dlaždice toho, čo ide teraz (keď nič, najbližšia vec
   s odpočtom), a riadky Neskôr dnes, Zajtra, V stredu… Ťuknutie na spotrebič otvorí detail: kedy,
-  od-do, jeho úsek na páse dňa a prečo. Pod tým karta **Deň**: pás slnka a siete, alebo krivka
-  (oblačnosť, predpoveď, nameraná krivka, hranica veľkých spotrebičov). Ťahom prstom alebo kurzorom
-  (aj šípkami) si v nej pozrieš iný čas – výkon, slnko, sieť, oblačnosť a čo vtedy beží; číslo hore
-  ostáva teraz, „Späť na teraz“ čas vráti.
+  od-do, jeho úsek na páse dňa a prečo. Pod tým karta **Deň**: hore výkon (nameraný alebo odhad
+  z predpovede) a čas, pod nimi krivka dňa (oblačnosť, predpoveď, nameraná krivka, hranica veľkých
+  spotrebičov, slnko a cena siete). Ťahom prstom alebo kurzorom (aj šípkami) si v nej pozrieš iný
+  čas; číslo hore ostáva teraz, „Späť na teraz“ čas vráti.
 - **Dnes** (kedysi Môžem?) – oblúk slnka a jedno veľké slovo o celom dni podľa triedy dňa: ráno podľa
   predpovede, cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného. Trieda dňa
   je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň

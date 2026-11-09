@@ -1035,7 +1035,7 @@ button.live[aria-expanded='true'] {
     width: 100%;
     height: auto;
 }
-/* Karta Deň (docs/navrhy/teraz-navrh-2.html): odčítanie, pás alebo krivka (posúvač času), legenda, pätka. */
+/* Karta Deň (docs/navrhy/teraz-navrh-2.html): výkon a čas, krivka (posúvač času), legenda, pätka. */
 .tzden {
     margin-top: 18px;
 }
@@ -1112,122 +1112,51 @@ button.live[aria-expanded='true'] {
 .tzden .wx.wx-den[data-wx] :is(.wx-r1, .wx-r2, .wx-flare) {
     display: none;
 }
-.den-hlava {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-/* Prepínač pás / krivka: dve tlačidlá v jednej kapsule, vybrané biele. */
-.prep {
-    display: flex;
-    padding: 2px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.25);
-}
-.prep button {
-    min-width: 64px;
-    min-height: 44px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 999px;
-    background: none;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-.prep button[aria-pressed='true'] {
-    background: #fff;
-    color: var(--ink);
-}
-/* Odčítanie má pevnú výšku, aby sa posúvač pod prstom nepohol, keď pribudne riadok. */
+/* Hlava karty Deň: výkon a odkiaľ je vľavo, čas vpravo. Bežne jeden riadok, takže sa posúvač pod
+   prstom nepohne, keď sa zmení zvolený čas; s veľkým písmom v systéme zíde čas pod výkon. */
 .citanie {
-    display: grid;
-    align-content: start;
-    gap: 6px;
-    min-height: 116px;
-}
-.c-veta {
-    font-size: 1.0625rem;
-    font-weight: 800;
-    font-variation-settings: 'wdth' 106;
-    line-height: 1.25;
-}
-.c-veta span {
-    font-weight: 500;
-    color: var(--dim);
-}
-.c-cas {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 10px;
+    align-items: flex-start;
+    gap: 4px 12px;
 }
-.c-cas b {
-    font-size: 1.75rem;
+.c-kw {
+    display: grid;
+    gap: 4px;
+}
+.c-kw b,
+.c-cas {
     font-weight: 900;
     font-variation-settings: 'wdth' 112;
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
-.c-cas span {
+.c-kw b {
+    font-size: 1.75rem;
+}
+.c-kw span {
     font-size: 0.8125rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--dim);
 }
-.c-stav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
+/* Čas o štvrtinu menší ako výkon, vždy vpravo (dve triedy - `.teraz p` nuluje okraje). */
+.c-cas {
+    font-size: 1.3125rem;
 }
-.c-stav span {
-    padding: 2px 9px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
-    font-size: 0.8125rem;
-    font-weight: 700;
-}
-.c-stav [data-l='go'] {
-    background: var(--yes);
-    color: #14300c;
-}
-.c-stav [data-l='part'] {
-    background: rgba(255, 238, 190, 0.85);
-    color: #3a2d05;
-}
-.c-stav [data-l='lacna'] {
-    background: var(--cheap);
-    color: #06233d;
-}
-.c-stav [data-l='draha'] {
-    background: var(--costly);
-    color: #3a0b04;
-}
-.c-bezi {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.875rem;
-}
-.c-bezi .vi {
-    width: 18px;
-    height: 18px;
+.citanie .c-cas {
+    margin-left: auto;
 }
 .tzden .day-scrub {
     margin-top: 0;
     padding: 0;
 }
-/* Pás: os je tá istá ako pri krivke (DAY_CHART), výška v px - nápis času, slnko, sieť a hodiny pod nimi. */
+/* Pás dňa v detaile spotrebiča: os je tá istá ako pri krivke (DAY_CHART), výška v px - slnko, sieť a hodiny pod nimi. */
 .pas-box {
     position: relative;
     padding-bottom: 1.4em;
     pointer-events: none;
-}
-.day-scrub svg.pas {
-    height: 58px;
 }
 .pas rect[data-l='go'] {
     fill: var(--yes);
@@ -1257,10 +1186,6 @@ button.live[aria-expanded='true'] {
     stroke: #fff;
     stroke-width: 3;
 }
-.pas .pas-pick {
-    stroke: var(--amber-text);
-    stroke-width: 2;
-}
 .pas .pas-slot {
     fill: none;
     stroke: #fff;
@@ -1274,19 +1199,6 @@ button.live[aria-expanded='true'] {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--dim);
-}
-.pas-at {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--amber-text);
-    color: var(--ink);
-    font-size: 0.75rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
 }
 .leg {
     display: flex;

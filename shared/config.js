@@ -467,9 +467,9 @@ export const MOZEM_GROUPS = [
  * Kľúče, ktoré appka už nepoužíva a pri štarte ich zmaže. Mená sa nesmú použiť znova na niečo
  * iné - v starších telefónoch pod nimi môžu ležať staré dáta. `spustenia-v1` boli zápisy
  * „Pustil/a som“ z karty Môžem?, `prva-karta-v1` voľba úvodnej karty - appka sa dnes otvára vždy
- * na karte Teraz.
+ * na karte Teraz, `teraz-den-v1` voľba pásu alebo krivky v karte Deň - dnes je tam len krivka.
  */
-export const OLD_STORAGE_KEYS = ['spustenia-v1', 'prva-karta-v1'];
+export const OLD_STORAGE_KEYS = ['spustenia-v1', 'prva-karta-v1', 'teraz-den-v1'];
 
 /**
  * Denník výroby po dňoch pre súhrn na zdieľanie. Kiosk posiela len súčty (dnes, mesiac, rok),
@@ -482,8 +482,6 @@ export const DAYLOG_STORAGE_KEY = 'dni-v1';
 
 /** Voľby karty Radar: oblaky a rýchlosť. Len v tomto prehliadači, do odkazu nepatria. */
 export const RADAR_STORAGE_KEY = 'radar-v1';
-/** Voľba karty Deň na karte Teraz: pás alebo krivka (web/storage.js). Patrí telefónu, do odkazu nejde. */
-export const TERAZ_DEN_STORAGE_KEY = 'teraz-den-v1';
 /** Posledný model karty Radar, aby boli oblaky pri ďalšom otvorení hneď a Open-Meteo sa pýtalo menej. */
 export const RADAR_MODEL_STORAGE_KEY = 'radar-model-v1';
 

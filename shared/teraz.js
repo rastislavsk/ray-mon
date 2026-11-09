@@ -7,7 +7,7 @@
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
-import { dayPlan, forecastDayPlan } from './day-plan.js';
+import { dayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
 import {
     TERAZ_BEZ_SLNKA,
@@ -24,7 +24,6 @@ import {
     terazTodayText,
     terazTypicalText,
     terazVecText,
-    terazVetaDnaText,
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
@@ -32,7 +31,7 @@ import { mozemModel, planWindows, sunWindows } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
-import { addDays, daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
+import { daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
@@ -423,9 +422,9 @@ function skupinyOf(rows, dnes, nieco) {
  */
 
 /**
- * Karta Deň: veta o dni, pás slnka a siete na osi dnešného svetla a odčítanie zvoleného času
- * (`min`, null = teraz) - výkon a odkiaľ je, či slnko stačí, sieť, oblačnosť a čo z Plánu dňa
- * (`rows`) vtedy beží. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
+ * Karta Deň: odčítanie zvoleného času (`min`, null = teraz) - výkon a odkiaľ je, pre čítačku aj či
+ * slnko stačí, sieť, oblačnosť a čo z Plánu dňa (`rows`) vtedy beží - a pás slnka a siete na osi
+ * dnešného svetla pre detail spotrebiča. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
  * dopredu predpoveď.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {number | null} min
  * @param {import('./messages.js').Voice} [voice]
@@ -436,7 +435,6 @@ export function denModel(input, rows, min, voice = 'drzy') {
     const plan = dayPlan(input);
     const t = Math.max(0, Math.min(plan.length * STEP - 1, min ?? nowMin));
     return {
-        veta: terazVetaDnaText({ nowMin, ...oknoDna(input, plan, nowMin) }),
         citanie: citanieOf(input, plan, rows, { t, min }, voice),
         pas: denPas(plan, daylightSpan(input.site, localDateKey(input.now, tz)), nowMin),
         slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
@@ -457,8 +455,7 @@ function slnkoVKarte(span, t) {
 }
 
 /**
- * Odčítanie karty Deň v minúte `t` (zvolený čas `min`, null = teraz) a ikony toho, čo vtedy beží
- * (alebo príde). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
+ * Odčítanie karty Deň v minúte `t` (zvolený čas `min`, null = teraz). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {RiadokPlanu[]} rows @param {{ t: number, min: number | null }} cas @param {import('./messages.js').Voice} voice
  */
 function citanieOf(input, plan, rows, { t, min }, voice) {
@@ -472,7 +469,7 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
     // Teraz je pre plán najbližšia štvrťhodina, ako v Pláne dňa a pri dlaždiciach - inak by vec, ktorá
     // ide teraz, bola tu „potom o …“.
     const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t);
-    const texty = terazCitanieText({
+    return terazCitanieText({
         min: t,
         teraz: min === null,
         kw: hero.power,
@@ -485,7 +482,6 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
         bezi: bezi.map((r) => r.name),
         dalsi: dalsi ? { name: dalsi.name, start: dalsi.start } : null,
     });
-    return { ...texty, tone: { slnko, siet: slot.level }, ikony: (bezi.length ? bezi : dalsi ? [dalsi] : []).map((r) => r.id) };
 }
 
 /**
@@ -497,23 +493,6 @@ function coBezi(rows, t) {
     const bezi = dnes.filter((r) => r.start <= t && t < r.end);
     const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
     return { bezi, dalsi };
-}
-
-/**
- * Okno na veľké veci pre vetu karty Deň: zelený úsek, ktorý prebieha alebo príde, inak posledný,
- * ktorý už bol (null, keď dnes nebol žiadny). Keď dnešné okná skončili, aj kedy zajtra slnko začne
- * stačiť (z predpovede zajtrajška), inak null.
- * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan @param {number} nowMin
- */
-function oknoDna(input, plan, nowMin) {
-    const okna = planWindows(plan, (s) => s.tier === 'green');
-    const pred = okna.find((w) => w.to > nowMin) ?? null;
-    if (pred || !input.forecast) return { okno: pred ?? okna.at(-1) ?? null, zajtraOd: null };
-    const forecast = input.forecast;
-    const zajtra = addDays(localDateKey(input.now, input.site.timezone), 1);
-    const i = forecast.days.findIndex((d) => d.date === zajtra);
-    const prve = i < 0 ? null : (planWindows(forecastDayPlan({ ...input, forecast }, i), (s) => s.tier === 'green')[0] ?? null);
-    return { okno: okna.at(-1) ?? null, zajtraOd: prve ? prve.from : null };
 }
 
 /**

@@ -15,7 +15,6 @@ import {
     RADAR,
     RADAR_MODEL_STORAGE_KEY,
     RADAR_STORAGE_KEY,
-    TERAZ_DEN_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
@@ -80,23 +79,6 @@ export function loadRadarModel(nowMs, kluc) {
 /** @param {number} at @param {string} kluc @param {{ casy: number[], dazd: number[][], oblaky: number[][] }} model */
 export function saveRadarModel(at, kluc, model) {
     write(RADAR_MODEL_STORAGE_KEY, JSON.stringify({ at, kluc, model }));
-}
-
-/**
- * Či karta Deň na karte Teraz ukazuje krivku namiesto pásu. Len v tomto prehliadači, do odkazu
- * s nastavením nepatrí. @returns {{ tzKrivka: boolean }}
- */
-export function loadTerazDen() {
-    try {
-        return { tzKrivka: JSON.parse(read(TERAZ_DEN_STORAGE_KEY) ?? '{}')?.krivka === true };
-    } catch {
-        return { tzKrivka: false };
-    }
-}
-
-/** @param {boolean} krivka */
-export function saveTerazDen(krivka) {
-    write(TERAZ_DEN_STORAGE_KEY, JSON.stringify({ krivka }));
 }
 
 /** @param {boolean} oblaky @param {number} rychlost */

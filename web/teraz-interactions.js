@@ -1,5 +1,5 @@
-// Poslucháče karty Teraz: zvolený čas v karte Deň (prst, kurzor, klávesnica po páse aj krivke),
-// „Späť na teraz“, pás či krivka, „Skúsiť znova“, vysvetlenie riadku nad dlaždicami a detail
+// Poslucháče karty Teraz: zvolený čas v karte Deň (prst, kurzor, klávesnica po krivke),
+// „Späť na teraz“, „Skúsiť znova“, vysvetlenie riadku nad dlaždicami a detail
 // spotrebiča. Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Pravidlá
 // dotyku sú v CLAUDE.md, časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
@@ -7,7 +7,6 @@ import { localMinutes } from '../shared/solar.js';
 import { bindDayScrub } from './teraz-gestures.js';
 import { stepBack } from './nav-back.js';
 import { shows } from './state.js';
-import { saveTerazDen } from './storage.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -19,7 +18,6 @@ const hasDay = (s) => shows(s, 'terazky') && s.known !== 'nic' && !!s.forecast;
  * @param {Store} store @param {Dom} dom @param {(opts?: { skus?: boolean }) => Promise<void>} refresh obnova dát, tá istá ako pri štarte
  */
 export function initTeraz(store, dom, refresh) {
-    // Pás aj krivka majú tú istú os (DAY_CHART), takže jeden posúvač slúži obom.
     bindDayScrub(dom.tzChart, {
         active: () => hasDay(store.get()),
         current: () => store.get().terazPreview,
@@ -33,14 +31,6 @@ export function initTeraz(store, dom, refresh) {
         // Tlačidlo po návrate zmizne; fokus ostane na posúvači, z ktorého sa dá pokračovať.
         dom.tzChart.focus();
     });
-    /** @param {boolean} krivka */
-    const podoba = (krivka) => {
-        if (store.get().tzKrivka === krivka) return;
-        store.setState({ tzKrivka: krivka });
-        saveTerazDen(krivka);
-    };
-    dom.tzPasBtn.addEventListener('click', () => podoba(false));
-    dom.tzKrivkaBtn.addEventListener('click', () => podoba(true));
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Zavrieť, Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));

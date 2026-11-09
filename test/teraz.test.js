@@ -36,7 +36,6 @@ import {
     terazTodayText,
     terazTypicalText,
     terazWindowText,
-    terazVetaDnaText,
     terazZaText,
 } from '../shared/messages.js';
 import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
@@ -858,25 +857,30 @@ test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie,
     assert.deepEqual(nic.skupiny, []);
 });
 
+/** Časti vety pre čítačku: čas a výkon, slnko, sieť, oblačnosť, čo beží. @param {string} veta */
+const casti = (veta) => veta.split('. ');
+
 test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a teraz na ňom', () => {
     const i = input(at('13:00'));
     const rows = riadky(i);
     const teraz = denModel(i, rows, null);
     assert.equal(teraz.zvolene, false);
     assert.equal(teraz.min, 13 * 60);
-    assert.deepEqual(teraz.veta, { text: 'Slnko stačí ešte 4 h 30 min', sub: 'do 17:30' });
     assert.equal(teraz.citanie.cas, 'Teraz 13:00');
+    assert.match(teraz.citanie.kw, /^\d+,\d kW$/);
     assert.equal(teraz.citanie.zdroj, 'živé meranie');
-    assert.match(teraz.citanie.slnko, /^slnko stačí · navyše \d+,\d kW$/);
-    assert.equal(teraz.citanie.siet, 'lacná sieť do 20:30');
-    assert.equal(teraz.citanie.plan, 'beží práčka, umývačka a bojler');
-    assert.deepEqual(teraz.citanie.ikony, ['pracka', 'umyvacka', 'bojler']);
+    const v = casti(teraz.citanie.veta);
+    assert.equal(v[0], `Teraz 13:00, ${teraz.citanie.kw}, živé meranie`);
+    assert.match(v[1], /^slnko stačí · navyše \d+,\d kW$/);
+    assert.equal(v[2], 'lacná sieť do 20:30');
+    assert.match(v[3], /^oblačnosť /);
+    assert.equal(v[4], 'beží práčka, umývačka a bojler');
     const neskor = denModel(i, rows, 15 * 60, 'slusny');
     assert.equal(neskor.zvolene, true);
     assert.equal(neskor.citanie.cas, '15:00');
     assert.equal(neskor.citanie.zdroj, 'odhad z predpovede');
-    assert.equal(neskor.citanie.plan, 'beží umývačka a sušička');
     assert.ok(neskor.citanie.veta.startsWith('15:00, '));
+    assert.equal(casti(neskor.citanie.veta).at(-1), 'beží umývačka a sušička');
     // Pás: slnko aj sieť pokryjú celú os bez dier, teraz je na nej.
     for (const r of [teraz.pas.slnko, teraz.pas.siet]) {
         assert.equal(r[0].from, teraz.pas.span.from);
@@ -888,29 +892,14 @@ test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a ter
     assert.ok(teraz.pas.ticks.every((t) => Number(t.label) % 3 === 0));
 });
 
-test('karta Deň v noci: slnko nesvieti, oblačnosť nie, teraz mimo osi, veta so zajtrajškom', () => {
+test('karta Deň v noci: slnko nesvieti, oblačnosť nie, teraz mimo osi', () => {
     const i = input(at('23:00'));
     const d = denModel(i, riadky(i), null);
-    assert.equal(d.citanie.slnko, 'slnko nesvieti');
-    assert.equal(d.citanie.mraky, '');
-    assert.equal(d.citanie.siet, 'drahá sieť do 23:30');
-    assert.equal(d.citanie.plan, 'potom bojler o 23:30');
+    assert.deepEqual(casti(d.citanie.veta).slice(1), ['slnko nesvieti', 'drahá sieť do 23:30', 'potom bojler o 23:30']);
     assert.equal(d.pas.now, null);
-    assert.equal(d.veta.text, 'Slnko dnes skončilo');
-    assert.match(d.veta.sub, /^zajtra od \d\d:\d\d$/);
 });
 
-test('veta karty Deň a čas do niečoho', () => {
-    const okno = { from: 9 * 60, to: 17 * 60 + 30 };
-    assert.deepEqual(terazVetaDnaText({ nowMin: 7 * 60 + 30, okno, zajtraOd: null }), {
-        text: 'Slnko bude stačiť o 1 h 30 min',
-        sub: 'od 09:00',
-    });
-    assert.deepEqual(terazVetaDnaText({ nowMin: 18 * 60, okno, zajtraOd: null }), { text: 'Slnko dnes skončilo', sub: '' });
-    assert.deepEqual(terazVetaDnaText({ nowMin: 12 * 60, okno: null, zajtraOd: null }), {
-        text: 'Slnko dnes na veľké veci nestačí',
-        sub: '',
-    });
+test('čas do niečoho', () => {
     assert.equal(terazZaText(45), '45 min');
     assert.equal(terazZaText(120), '2 h');
     assert.equal(terazZaText(95), '1 h 35 min');
@@ -940,7 +929,7 @@ test('karta Deň a dlaždice sa zhodnú: čo ide teraz, aj v karte Deň beží (
         co.hore.dlazdice.map((d) => d.id),
         ['bojler', 'auto'],
     );
-    assert.equal(denModel(i, rows, null).citanie.plan, 'beží bojler a auto');
+    assert.equal(casti(denModel(i, rows, null).citanie.veta).at(-1), 'beží bojler a auto');
     // Zvolený čas sa nezaokrúhľuje - 19:45 je pred lacným pásmom.
-    assert.equal(denModel(i, rows, minuta('19:45')).citanie.plan, 'potom bojler o 20:00');
+    assert.equal(casti(denModel(i, rows, minuta('19:45')).citanie.veta).at(-1), 'potom bojler o 20:00');
 });

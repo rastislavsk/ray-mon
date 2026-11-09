@@ -16,7 +16,6 @@ import {
     SITE_STORAGE_KEY,
     SKY,
     TARIFF,
-    TERAZ_DEN_STORAGE_KEY,
     WORKER_PV_URL,
 } from '../../shared/config.js';
 import { MOZEM_WORDS } from '../../shared/messages.js';
@@ -973,14 +972,11 @@ const vstupTeraz = (time, extra = {}) => ({
 });
 
 /**
- * Otvorí appku na karte Teraz s meraním, aké by prišlo v danej chvíli; karta Deň ukazuje krivku,
- * s `krivka: false` pás.
- * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1] & { krivka?: boolean }} [opts]
+ * Otvorí appku na karte Teraz s meraním, aké by prišlo v danej chvíli.
+ * @param {import('@playwright/test').Page} page @param {Parameters<typeof openObloha>[1]} [opts]
  */
 async function openTeraz(page, opts = {}) {
     const time = opts.time ?? FIXED_NOW;
-    // Testy grafu bežia nad krivkou; pás ide s `krivka: false` (pri štarte appky je pás).
-    if (opts.krivka !== false) await page.addInitScript((k) => localStorage.setItem(k, '{"krivka":true}'), TERAZ_DEN_STORAGE_KEY);
     const errors = await openObloha(page, { pvData: pvAt(time), ...opts, time });
     await page.locator('#nav-terazky').click();
     await ocakavajKartu(page, 'terazky');
@@ -1008,13 +1004,13 @@ const terazVStranke = (page) =>
         };
     });
 
-/** To isté z modelu; `krivka` hovorí, či karta Deň ukazuje krivku, alebo pás. @param {ReturnType<typeof terazModel>} m @param {boolean} [krivka] */
-const terazZModelu = (m, krivka = true) => ({
+/** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
+const terazZModelu = (m) => ({
     title: m.title,
     num: m.num,
     sub: m.sub,
     jas: m.jas && { label: m.jas.label, text: m.jas.text, fill: String((m.jas.pct ?? 0) / 100), prazdny: m.jas.pct === null },
-    hint: !m.den || m.hint.reset ? '' : krivka ? m.hint.text : 'Ťahaj prstom po páse a pozri si iný čas.',
+    hint: !m.den || m.hint.reset ? '' : m.hint.text,
 });
 
 /** Čo zapnúť v stránke: riadok nad dlaždicami, dlaždice a skupiny riadkov. @param {import('@playwright/test').Page} page */
@@ -1080,14 +1076,6 @@ async function bodGrafu(page, min) {
 async function farbaNaOsi(page, min) {
     const bunka = page.locator(`#tz-chart rect[data-from="${Math.floor(min / 30) * 30}"]`);
     return (await bunka.count()) ? bunka.getAttribute('data-tone') : null;
-}
-
-/** Bod na páse karty Deň pre minútu dňa - pás má tú istú os ako krivka. @param {import('@playwright/test').Page} page @param {number} min */
-async function bodPasu(page, min) {
-    await page.locator('#tz-chart').evaluate((e) => e.scrollIntoView({ block: 'center' }));
-    const box = await page.locator('#tz-chart svg.pas').boundingBox();
-    if (!box) throw new Error('pás nie je vidno');
-    return { x: box.x + (chartX(min, await osGrafu(page)) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.6 };
 }
 
 /** Čo má byť v páse v čase „teraz“: farba, alebo nič, keď je teraz mimo osi. @param {ReturnType<typeof terazModel>} m @param {string} tone */
@@ -1233,46 +1221,40 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('pás a krivka: pri štarte pás, prepínač prepne podobu a voľba ostane aj po obnovení stránky', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('13:00'), krivka: false });
-        const pas = page.locator('#tz-pas-btn');
-        const krivka = page.locator('#tz-krivka-btn');
-        await expect(pas).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('#tz-chart svg.pas')).toHaveCount(1);
-        await expect(page.locator('#tz-chart .dc')).toHaveCount(0);
-        await expect(page.locator('#tz-leg span')).toHaveText(['slnko stačí', 'svieti, nestačí', 'lacná sieť', 'drahá sieť']);
-        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po páse a pozri si iný čas.');
-        await expect(page.locator('#tz-chart .pas-t')).toHaveText(
-            terazModel(vstupTeraz(at('13:00'))).den?.pas.ticks.map((t) => t.label) ?? [],
-        );
-        await krivka.click();
-        await expect(krivka).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('#tz-chart .dc')).toHaveCount(1);
-        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
-        await page.reload();
-        await appReady(page);
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-krivka-btn')).toHaveAttribute('aria-pressed', 'true');
-        await expect(page.locator('#tz-chart .dc')).toHaveCount(1);
-        expect(errors).toEqual([]);
-    });
-
-    test('pás: ťuknutie kurzorom vyberie čas - odčítanie a čas nad pásom; číslo hore ostáva teraz', async ({ page }) => {
+    test('karta Deň: hore výkon a odkiaľ je, vpravo čas - teraz aj zvolený; prepínač pás / krivka nie je', async ({ page }) => {
         const time = at('13:00');
-        const errors = await openTeraz(page, { time, krivka: false });
-        const teraz = terazModel(vstupTeraz(time));
-        const zvolene = terazModel(vstupTeraz(time, { previewMinutes: minuta('15:30') }));
-        const bod = await bodPasu(page, minuta('15:30'));
+        const errors = await openTeraz(page, { time });
+        const teraz = /** @type {NonNullable<ReturnType<typeof terazModel>['den']>} */ (terazModel(vstupTeraz(time)).den).citanie;
+        const zvolene = /** @type {NonNullable<ReturnType<typeof terazModel>['den']>} */ (
+            terazModel(vstupTeraz(time, { previewMinutes: minuta('15:30') })).den
+        ).citanie;
+        await expect(page.locator('#tz-den button[aria-pressed]')).toHaveCount(0);
+        await expect(page.locator('#tz-citanie > *')).toHaveText([`${teraz.kw}${teraz.zdroj}`, 'Teraz 13:00']);
+        await expect(page.locator('#tz-citanie .c-kw span')).toHaveText('živé meranie');
+        const bod = await bodGrafu(page, minuta('15:30'));
         await page.mouse.click(bod.x, bod.y);
-        await expect(page.locator('#tz-citanie .c-cas b').first()).toHaveText('15:30');
-        await expect(page.locator('#tz-citanie .c-cas b').nth(1)).toHaveText(zvolene.den?.citanie.kw ?? '');
-        await expect(page.locator('#tz-chart .pas-at')).toHaveText('15:30');
-        await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', zvolene.den?.citanie.veta ?? '');
-        await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
-        await expect(page.locator('#ttl-terazky')).toHaveText('Teraz');
+        await expect(page.locator('#tz-citanie .c-cas')).toHaveText('15:30');
+        await expect(page.locator('#tz-citanie .c-kw b')).toHaveText(zvolene.kw);
+        await expect(page.locator('#tz-citanie .c-kw span')).toHaveText('odhad z predpovede');
+        await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', zvolene.veta);
+        // Výkon vľavo, čas v pravom rohu v jednom riadku; čas je o štvrtinu menší.
+        const [kw, cas, hlava] = await page.evaluate(() =>
+            ['#tz-citanie .c-kw b', '#tz-citanie .c-cas', '#tz-citanie'].map((sel) => {
+                const r = /** @type {Element} */ (document.querySelector(sel)).getBoundingClientRect();
+                return {
+                    left: r.left,
+                    right: r.right,
+                    top: r.top,
+                    px: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector(sel))).fontSize),
+                };
+            }),
+        );
+        expect(kw.right).toBeLessThan(cas.left);
+        expect(Math.abs(kw.top - cas.top)).toBeLessThan(8);
+        expect(Math.abs(cas.right - hlava.right), 'čas je pri pravom okraji').toBeLessThan(1);
+        expect(cas.px).toBeCloseTo(kw.px * 0.75, 1);
         await page.getByRole('button', { name: 'Späť na teraz' }).click();
-        await expect(page.locator('#tz-chart .pas-at')).toHaveCount(0);
-        await expect(page.locator('#tz-citanie .c-veta')).toHaveText(`${teraz.den?.veta.text} · ${teraz.den?.veta.sub}`);
+        await expect(page.locator('#tz-citanie .c-cas')).toHaveText('Teraz 13:00');
         expect(errors).toEqual([]);
     });
 
@@ -1294,7 +1276,7 @@ test.describe('karta Teraz', () => {
         expect(zvolene.title).toBe('Teraz');
         await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
         await expect(page.locator('#hdr-live')).toBeEnabled();
-        await expect(page.locator('#tz-citanie .c-cas b').first()).toHaveText('15:30');
+        await expect(page.locator('#tz-citanie .c-cas')).toHaveText('15:30');
         // Graf sa pod kurzorom nepohne (do pixela - test ho pred meraním znova vycentruje).
         expect(Math.abs((await bodGrafu(page, minuta('15:30'))).y - na.y)).toBeLessThan(1);
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('15:30');
@@ -1345,7 +1327,7 @@ test.describe('karta Teraz', () => {
         const errors = await openObloha(page, { time: at('13:00'), settings: { ...OWNER, zdroj: null } });
         await page.locator('#nav-terazky').click();
         const m = terazModel(vstupTeraz(at('13:00'), { zdroj: null, pv: null }));
-        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m, false));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
         await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'odhad');
         await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
         await expect(page.locator('#tz-note-text')).toHaveText(m.note?.text ?? '');
@@ -1360,7 +1342,7 @@ test.describe('karta Teraz', () => {
         const errors = await openObloha(page, { time: at('13:00'), pvData: stare });
         await page.locator('#nav-terazky').click();
         const m = terazModel(vstupTeraz(at('13:00'), { pv: stare }));
-        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m, false));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
         await expect(page.locator('#hdr-live')).toHaveAttribute('data-tone', 'stale');
         await expect(page.locator('#tz-note-title')).toHaveText(m.note?.title ?? '');
         await expect(page.locator('#tz-note-text')).toHaveText(
@@ -1385,7 +1367,7 @@ test.describe('karta Teraz', () => {
         await page.locator('#nav-terazky').click();
 
         const bez = terazModel(vstupTeraz(FIXED_NOW, { pv: null, forecast: null }));
-        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(bez, false));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(bez));
         await expect(page.locator('#tz-num-val')).toHaveText('–');
         await expect(page.locator('#tz-sub')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
         // Žiadne vymyslené čísla: deň ani čo zapnúť sa neukážu.
@@ -1397,7 +1379,7 @@ test.describe('karta Teraz', () => {
 
         offline = false;
         await znova.click();
-        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(terazModel(vstupTeraz(FIXED_NOW)), false));
+        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(terazModel(vstupTeraz(FIXED_NOW))));
         await expect(znova).toBeHidden();
         await expect(page.locator('#tz-den')).toBeVisible();
         expect(errors).toEqual([]);
@@ -1454,14 +1436,11 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-den')).toBeVisible();
     });
 
-    test('prístupnosť: žiadne závažné nálezy axe so zvoleným časom, v páse ani bez dát', async ({ page }) => {
+    test('prístupnosť: žiadne závažné nálezy axe so zvoleným časom ani bez dát', async ({ page }) => {
         await openTeraz(page, { time: at('13:00') });
         await page.locator('#tz-chart').focus();
         await page.keyboard.press('ArrowRight');
         await expect(page.locator('#tz-reset')).toBeVisible();
-        expect(await vazneNalezy(page)).toEqual([]);
-        await page.locator('#tz-pas-btn').click();
-        await expect(page.locator('#tz-chart svg.pas')).toHaveCount(1);
         expect(await vazneNalezy(page)).toEqual([]);
         await openTeraz(page, { offline: true });
         expect(await vazneNalezy(page)).toEqual([]);
@@ -1492,7 +1471,7 @@ test.describe('karta Teraz prstom', () => {
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('16:00');
         await page.waitForTimeout(2000);
         await expect(page.locator('#tz-chart .dc-at-t')).toHaveText('16:00');
-        await expect(page.locator('#tz-citanie .c-cas b').first()).toHaveText('16:00');
+        await expect(page.locator('#tz-citanie .c-cas')).toHaveText('16:00');
         await expect(page.locator('#tz-num-val')).toHaveText(terazModel(vstupTeraz(at('13:00'))).num);
         expect(errors).toEqual([]);
     });
@@ -1569,7 +1548,7 @@ for (const width of [390, 320]) {
         );
         expect(mimo, 'tieto prvky trčia z obrazovky').toEqual([]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
-        for (const sel of ['#tz-reset', '#tz-oko', '#tz-pas-btn', '#tz-krivka-btn', '#tz-dlazdice [data-vec]', '#tz-skupiny [data-vec]'])
+        for (const sel of ['#tz-reset', '#tz-oko', '#tz-dlazdice [data-vec]', '#tz-skupiny [data-vec]'])
             for (const box of await page.locator(sel).evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height)))
                 expect(box, sel).toBeGreaterThanOrEqual(44);
         // Mená v dlaždiciach sa nezalomia uprostred slova.
