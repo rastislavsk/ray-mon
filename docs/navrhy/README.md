@@ -84,3 +84,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `obloha-noc.html` | Obloha – súmrak podľa výšky slnka (−6° súmrak, −12° noc, −18° najhlbšia noc, ráno opačne) a tmavšie nočné farby; zima aj leto, pás od poludnia do poludnia |
 | `oznamenie-plan-dna.html` | Ťuknutie na ranné oznámenie: karta Teraz s rozbaleným Plánom dňa, animácia obrys (A, vybraná), pásy podľa času (B), správa pristane (C), a ako sa appka dozvie, že prišla z oznámenia (adresa a správa, vybrané) |
 | `dnes-upravy.html` | Karta Dnes – vysvetlenie odznaku triedy dňa (A panel, B bublina, C rozbalenie), čiara pod číslami, tučné časy okna, pás kariet na posúvanie s novými kartami (Mraky a dážď, Najviac slnka, …) a názov namiesto Vysvedčenie |
+| `teraz-iny-den.html` | Karta Teraz – detail spotrebiča (A os s kapsulou, B krivka, C oblúk) a odporúčanie na iný deň (A deň pri čase, B karta dňa, C deň namiesto času); vybrané 1A a 2B |

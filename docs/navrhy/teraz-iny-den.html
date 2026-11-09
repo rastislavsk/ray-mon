@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: detail spotrebiča a iný deň</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Obrázky sú snímky skutočnej appky
+               (fixtures testov, 5. 9. 2026, Dvorany nad Nitrou) s ručne vloženými zmenami. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(300px, 100%);
+            }
+            figure.wide {
+                width: min(390px, 100%);
+            }
+            figure img {
+                width: 100%;
+                border-radius: 22px;
+                border: 1px solid var(--line);
+                display: block;
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                padding: 14px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .opt.rec {
+                border-color: var(--green);
+            }
+            .opt h3 {
+                font-size: 1rem;
+            }
+            .opt .tag {
+                justify-self: start;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 600;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Teraz – detail spotrebiča a odporúčanie na iný deň</h1>
+                <p class="dim">
+                    Snímky sú zo skutočnej appky (fixtures testov, 5. 9. 2026 o 13:00 a 18:30) s ručne vloženými zmenami. Koniec sušičky
+                    „11:45“ vo variante 2C je vymyslený na ukážku. Vybrané 9. 11. 2026: <b>1A</b> a <b>2B</b> s pravidlami nižšie.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Bod 1</small>Detail spotrebiča: grafika „kedy“</h2>
+                <p>
+                    Pás so slnkom a sieťou a úsek spotrebiča s bielym obrysom nebol na prvý pohľad jasný. Čas od–do ostáva veľký v hlavičke,
+                    grafika ukazuje len polohu v dni.
+                </p>
+                <div class="phones">
+                    <figure class="wide">
+                        <img src="teraz-iny-den/detail-dnes.png" alt="Detail práčky s pásom dňa" />
+                        <figcaption>Dnes: pás s obrysom</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/detail-a.png" alt="Os dňa so zelenou kapsulou" />
+                        <figcaption>A: os dňa s kapsulou (vybrané)</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/detail-b.png" alt="Krivka dňa s vyfarbeným úsekom" />
+                        <figcaption>B: krivka dňa s vyfarbeným úsekom</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/detail-c.png" alt="Oblúk slnka s úsekom" />
+                        <figcaption>C: oblúk slnka</figcaption>
+                    </figure>
+                </div>
+                <div class="opts">
+                    <div class="opt rec">
+                        <span class="tag">Vybrané</span>
+                        <h3>A – os dňa s kapsulou</h3>
+                        <ul>
+                            <li class="plus">najjednoduchšie, jasné na prvý pohľad, aj krátke okno je vidno</li>
+                            <li class="minus">nepovie, prečo práve vtedy</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>B – krivka s vyfarbeným úsekom</h3>
+                        <ul>
+                            <li class="plus">vidno, že ide o vrchol slnka; ladí s kartou Deň</li>
+                            <li class="minus">viac kresby, večerné okno je nízke</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C – oblúk slnka</h3>
+                        <ul>
+                            <li class="plus">najviac obraz</li>
+                            <li class="minus">poloha na oblúku sa číta horšie, krátke okno je malé</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Bod 2</small>Odporúčanie na iný deň</h2>
+                <p>
+                    Riadky zajtrajška vyzerali ako dnešné, len pod malým nadpisom „ZAJTRA“ – časy sa dali prečítať ako dnešné, hoci dnes už
+                    slnko nestačí.
+                </p>
+                <div class="phones">
+                    <figure class="wide">
+                        <img src="teraz-iny-den/zoznam-dnes.png" alt="Zoznam o 18:30" />
+                        <figcaption>Dnes (18:30)</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/zoznam-a.png" alt="Deň pri každom čase" />
+                        <figcaption>A: deň pri každom čase</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/zoznam-b.png" alt="Karta dňa" />
+                        <figcaption>B: karta dňa (vybrané)</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/zoznam-c.png" alt="Deň namiesto času" />
+                        <figcaption>C: deň namiesto času</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="teraz-iny-den/detail-zajtra.png" alt="Detail zajtrajšej veci" />
+                        <figcaption>Detail zajtrajšej veci</figcaption>
+                    </figure>
+                </div>
+                <div class="opts">
+                    <div class="opt">
+                        <h3>A – deň pri každom čase</h3>
+                        <ul>
+                            <li class="plus">nedá sa pomýliť ani pri jednom riadku</li>
+                            <li class="minus">„Zajtra“ sa opakuje, rušné</li>
+                        </ul>
+                    </div>
+                    <div class="opt rec">
+                        <span class="tag">Vybrané</span>
+                        <h3>B – karta dňa</h3>
+                        <ul>
+                            <li class="plus">hranica dneška je samostatný prvok, časy ostávajú čitateľné, karta pre každý deň</li>
+                            <li class="minus">trochu viac miesta</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C – deň namiesto času</h3>
+                        <ul>
+                            <li class="plus">oko prečíta najprv deň</li>
+                            <li class="minus">časy sa nedajú prebehnúť, opakovanie</li>
+                        </ul>
+                    </div>
+                </div>
+                <h3>Pravidlá</h3>
+                <table>
+                    <tr>
+                        <th>1</th>
+                        <td>Čas iného dňa nikde bez dňa: v karte dňa, v detaile („ZAJTRA“ nad časom), oznámenie už deň hovorí.</td>
+                    </tr>
+                    <tr>
+                        <th>2</th>
+                        <td>
+                            Detail veci na iný deň má tú istú os dňa ako dnešná, len bez čiary „teraz“. Úsek celý mimo osi (lacná sieť v
+                            noci) os nemá.
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>3</th>
+                        <td>Keď zo slnka dnes už nič, riadok nad dlaždicami povie aj kedy ďalej: „Dnes už nič · zajtra od 07:30“.</td>
+                    </tr>
+                    <tr>
+                        <th>4</th>
+                        <td>Prvá karta iného dňa povie „dnes už slnko nestačí“ len vtedy, keď dnes zo slnka už nič nepôjde.</td>
+                    </tr>
+                </table>
+            </section>
+        </main>
+    </body>
+</html>
