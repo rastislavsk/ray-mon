@@ -50,14 +50,14 @@ const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
  * @param {{ offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
  *   `pvData` meranie, ktoré pošle Worker (predvolene snímka z fixtures o 13:00)
  */
-async function pripravSiet(page, { offline = false, settings = OWNER, site = null, pvData = pv } = {}) {
+async function pripravSiet(page, { offline = false, settings = OWNER, site = null, pvData = pv, pocasie = weather } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvData } })));
-    await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: weather })));
+    await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: pocasie })));
     /** @param {string} key @param {string} value */
     const uloz = (key, value) => page.addInitScript(([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v), [key, value]);
     if (settings) await uloz(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
@@ -76,7 +76,8 @@ async function appReady(page) {
 /**
  * Otvorí appku s pevným časom. Bez `settings: null` má uložené Dvorany s kioskom.
  * @param {import('@playwright/test').Page} page
- * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv }} [opts]
+ * @param {{ time?: Date, offline?: boolean, settings?: typeof OWNER | null, site?: typeof SITE | null, pvData?: typeof pv,
+ *   pocasie?: typeof weather }} [opts]
  */
 async function openObloha(page, { time = FIXED_NOW, ...opts } = {}) {
     const errors = await pripravSiet(page, opts);
@@ -1328,6 +1329,35 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-vec-pas .os-usek')).toHaveCount(1);
         await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(0);
         expect(await vazneNalezy(page)).toEqual([]);
+        expect(errors).toEqual([]);
+    });
+
+    test('slnko až o viac dní: riadok hore, pás dní od dneška po deň so slnkom a karta „o 3 dni“; „i“ povie, že predpoveď je menej istá', async ({
+        page,
+    }) => {
+        // Nedeľa a pondelok zamračené: slnko až v utorok 8. 9.
+        const zamracene = structuredClone(weather);
+        const keys = ['shortwave_radiation_instant', 'direct_normal_irradiance_instant', 'diffuse_radiation_instant'];
+        for (const [i, t] of zamracene.hourly.time.entries())
+            if (t.startsWith('2026-09-06') || t.startsWith('2026-09-07')) for (const k of keys) zamracene.hourly[k][i] *= 0.05;
+        const time = at('19:50');
+        const errors = await openTeraz(page, { time, pocasie: zamracene });
+        const m = terazModel(vstupTeraz(time, { forecast: buildForecast(zamracene, time, SITE, PLANT) }));
+        const pas = m.co?.pas;
+        if (!pas) throw new Error('model nemá pás dní');
+        expect(pas.map((d) => d.druh)).toEqual(['dnes', 'oblak', 'oblak', 'slnko']);
+        await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
+        await expect(page.locator('#tz-oko-t')).toHaveText('Slnko až v utorok · 2 dni zamračené');
+        await expect(page.locator('#tz-oko-bod')).toHaveAttribute('data-tone', 'cloud');
+        await expect(page.locator('#tz-oko-pod')).toBeHidden();
+        await expect(page.locator('#tz-pas > span')).toHaveText(pas.map((d) => `${d.den}${d.pod}`));
+        expect(await page.locator('#tz-pas > span').evaluateAll((s) => s.map((e) => e.getAttribute('data-druh')))).toEqual(
+            pas.map((d) => d.druh),
+        );
+        await expect(page.locator('#tz-skupiny .den-karta-h span').first()).toHaveText('8.9. · o 3 dni');
+        expect(await vazneNalezy(page)).toEqual([]);
+        await page.locator('#tz-oko').click();
+        await expect(page.locator('#tz-chip-body .istota')).toHaveText('Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.');
         expect(errors).toEqual([]);
     });
 
