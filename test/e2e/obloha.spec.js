@@ -1139,12 +1139,17 @@ const coVStranke = (page) =>
                 tone: d.getAttribute('data-tone'),
                 text: t(d.querySelector('small')),
             })),
-            skupiny: [...document.querySelectorAll('#tz-skupiny .co-h')].map((h) => ({
-                nazov: t(h),
-                riadky: [...(h.nextElementSibling?.querySelectorAll('.ri') ?? [])].map(
-                    (r) => `${t(r.querySelector('.velky'))} ${t(r.querySelector('b'))} ${t(r.querySelector('small'))}`,
-                ),
-            })),
+            // Skupina je nadpis s riadkami pod ním, iný deň karta s hlavičkou a riadkami v nej.
+            skupiny: [...document.querySelectorAll('#tz-skupiny .co-h, #tz-skupiny .den-karta')].map((g) => {
+                const karta = g.classList.contains('den-karta');
+                return {
+                    nazov: t(karta ? g.querySelector('h2') : g),
+                    pod: karta ? t(g.querySelector('.den-karta-h span')) : '',
+                    riadky: [...((karta ? g : g.nextElementSibling)?.querySelectorAll('.ri') ?? [])].map(
+                        (r) => `${t(r.querySelector('.velky'))} ${t(r.querySelector('b'))} ${t(r.querySelector('small'))}`,
+                    ),
+                };
+            }),
         };
     });
 
@@ -1159,7 +1164,11 @@ const coZModelu = (m) => {
                   ...(h.dalsi ? [{ id: h.dalsi.id, tone: 'next', text: h.dalsi.sub }] : []),
               ]
             : [],
-        skupiny: (m.co?.skupiny ?? []).map((g) => ({ nazov: g.nazov, riadky: g.riadky.map((r) => `${r.cas} ${r.name} ${r.info}`) })),
+        skupiny: (m.co?.skupiny ?? []).map((g) => ({
+            nazov: g.nazov,
+            pod: g.karta ? [g.karta.datum, g.karta.pozn].filter(Boolean).join(' · ') : '',
+            riadky: g.riadky.map((r) => `${r.cas} ${r.name} ${r.info}`),
+        })),
     };
 };
 
@@ -1246,8 +1255,9 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-vec-cas')).toHaveText(v.cas);
             await expect(page.locator('#tz-vec-why')).toHaveText(v.why);
             await expect(page.locator('#tz-vec-note')).toHaveText('Naraz len toľko, koľko strecha utiahne.');
-            // Úsek spotrebiča na páse dňa.
-            await expect(page.locator('#tz-vec-pas .pas-slot')).toHaveCount(1);
+            // Úsek spotrebiča na osi dňa a dnes aj „teraz“.
+            await expect(page.locator('#tz-vec-pas .os-usek')).toHaveAttribute('data-tone', v.slot?.tone ?? '');
+            await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(1);
             expect(await vazneNalezy(page)).toEqual([]);
             // Zavrieť vráti fokus na dlaždicu či riadok, z ktorého sa detail otvoril.
             await page.locator('#tz-vec-close').click();
@@ -1297,7 +1307,7 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('večer: auto z lacnej siete teraz s koncom pásma, ostatné v skupine Zajtra', async ({ page }) => {
+    test('večer: auto z lacnej siete teraz s koncom pásma, ostatné v karte Zajtra s dňom aj v detaile', async ({ page }) => {
         const time = at('19:50');
         const errors = await openTeraz(page, { time });
         const m = terazModel(vstupTeraz(time));
@@ -1305,8 +1315,19 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-oko-bod')).toHaveAttribute('data-tone', 'cheap');
         await expect(page.locator('#tz-dlazdice [data-vec="auto"]')).toHaveAttribute('data-tone', 'cheap');
         await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText(/^nabíjaj do \d\d:\d\d · lacný prúd$/);
-        await expect(page.locator('#tz-skupiny .co-h')).toHaveText(m.co?.skupiny.map((g) => g.nazov) ?? []);
-        expect(m.co?.skupiny.map((g) => g.nazov)).toContain('Zajtra');
+        await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
+        // Zajtrajšok je karta so zlatou hlavičkou; jeho časy nestoja pod nadpisom ako dnešné.
+        await expect(page.locator('#tz-skupiny .den-karta h2')).toHaveText('Zajtra');
+        await expect(page.locator('#tz-skupiny .den-karta-h span')).toHaveText('nedeľa 6.9. · dnes už slnko nestačí');
+        // Detail zajtrajšej veci: deň nad časom, úsek na osi, ale bez „teraz“.
+        const later = m.veci.find((v) => v.den);
+        if (!later) throw new Error('model nemá vec na iný deň');
+        await page.locator(`#tz-skupiny [data-vec="${later.id}"]`).click();
+        await expect(page.locator('#tz-vec-cas .vec-den')).toHaveText('Zajtra');
+        await expect(page.locator('#tz-vec-cas')).toHaveText(`Zajtra${later.cas}`);
+        await expect(page.locator('#tz-vec-pas .os-usek')).toHaveCount(1);
+        await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(0);
+        expect(await vazneNalezy(page)).toEqual([]);
         expect(errors).toEqual([]);
     });
 

@@ -141,7 +141,7 @@ function ineDni(ctx, input, rest, rows) {
         const plan = forecastDayPlan({ ...input, forecast }, index);
         const dctx = { ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw };
         for (const r of najlepsiDen(dctx, input.tariff.currency, rest)) {
-            const at = { name: weekDayName(day.date, index), index, start: r.start };
+            const at = { name: weekDayName(day.date, index), date: day.date, index, start: r.start };
             rows.set(r.id, { id: r.id, kind: 'later', day: at, end: r.end, after: r.after });
         }
         rest = rest.filter(({ item }) => !rows.has(item.id));

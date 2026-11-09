@@ -50,7 +50,7 @@ import { denFaza, denSlovo, denTrieda, rannaFor } from './den-trieda.js';
 /**
  * Najbližší iný deň, keď slnko stačí: meno pre text („Zajtra“, „Pondelok“), poradie v predpovedi
  * (1 = zajtra) a kedy začína.
- * @typedef {{ name: string, index: number, start: number }} LaterDay
+ * @typedef {{ name: string, date: string, index: number, start: number }} LaterDay
  */
 /**
  * Odpoveď pre jednu vec. Pri `go` je `until` posledný štart, pri ktorom ťažké úseky programu
@@ -125,7 +125,7 @@ export function laterDay(ctx, minKw, weakOk) {
             continue;
         }
         const w = dayWindow(day, minKw);
-        if (w) return { day: { name: weekDayName(day.date, index), index, start: w.from }, weakSkipped };
+        if (w) return { day: { name: weekDayName(day.date, index), date: day.date, index, start: w.from }, weakSkipped };
     }
     return { day: null, weakSkipped };
 }

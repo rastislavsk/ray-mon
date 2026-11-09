@@ -1052,6 +1052,46 @@ button.live[aria-expanded='true'] {
     font-size: 0.75rem;
     color: var(--dim);
 }
+/* Iný deň ako karta (docs/navrhy/teraz-iny-den.html, 2B): zlatá hlavička s dňom a dátumom, riadky
+   v nej bez vlastného rámu, oddelené čiarou - aby sa časy iného dňa nečítali ako dnešné. */
+.den-karta {
+    margin-top: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 209, 102, 0.55);
+    border-radius: 22px;
+    background: rgba(10, 20, 50, 0.35);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.den-karta-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 10px;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, rgba(255, 209, 102, 0.35), rgba(255, 209, 102, 0.08));
+}
+.den-karta-h h2 {
+    font-size: 1.375rem;
+    font-weight: 900;
+}
+.den-karta-h span {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.den-karta .ri {
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.den-karta .ri + .ri {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
 /* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
    toho, čo zapnúť. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
 @property --plan-obeh {
@@ -1319,47 +1359,45 @@ button.live[aria-expanded='true'] {
     margin-top: 0;
     padding: 0;
 }
-/* Pás dňa v detaile spotrebiča: os je tá istá ako pri krivke (DAY_CHART), výška v px - slnko, sieť a hodiny pod nimi. */
-.pas-box {
+/* Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, plný úsek spotrebiča,
+   pri dnešku biela čiara „teraz“ a hodiny pod tým. Polohy sú v % osi. */
+.os {
     position: relative;
-    padding-bottom: 1.4em;
-    pointer-events: none;
+    height: 64px;
+    margin: 4px 6px 0;
 }
-.pas rect[data-l='go'] {
-    fill: var(--yes);
+.os i {
+    position: absolute;
 }
-.pas rect[data-l='part'] {
-    fill: rgba(255, 238, 190, 0.42);
+.os-ciara {
+    top: 22px;
+    right: 0;
+    left: 0;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
 }
-.pas rect[data-l='lacna'] {
-    fill: var(--cheap);
+.os-usek {
+    top: 14px;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: var(--yes);
+    box-shadow: 0 0 18px rgba(185, 242, 140, 0.6);
 }
-.pas rect[data-l='draha'] {
-    fill: var(--costly);
+.os-usek[data-tone='cheap'] {
+    background: var(--cheap);
+    box-shadow: 0 0 18px rgba(124, 196, 255, 0.6);
 }
-.pas rect[data-l='bezna'] {
-    fill: rgba(255, 255, 255, 0.3);
+.os-teraz {
+    top: 8px;
+    width: 3px;
+    height: 36px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #fff;
 }
-.pas .pas-noc {
-    fill: rgba(0, 0, 20, 0.3);
-}
-.pas .pas-past {
-    fill: rgba(5, 10, 30, 0.45);
-}
-.pas line {
-    vector-effect: non-scaling-stroke;
-}
-.pas .pas-now {
-    stroke: #fff;
-    stroke-width: 3;
-}
-.pas .pas-slot {
-    fill: none;
-    stroke: #fff;
-    stroke-width: 2.5;
-    vector-effect: non-scaling-stroke;
-}
-.pas-t {
+.os-t {
     position: absolute;
     bottom: 0;
     transform: translateX(-50%);
@@ -2756,10 +2794,14 @@ button.live[aria-expanded='true'] {
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
-.vec-pas .pas {
+/* Deň nad časom, keď vec ide iný deň - čas bez dňa by sa čítal ako dnešný. */
+.vec-den {
     display: block;
-    width: 100%;
-    height: 58px;
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber-text);
 }
 .chip-sheet .chip {
     justify-self: start;

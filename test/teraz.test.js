@@ -498,7 +498,7 @@ test('terazModel o 13:00: číslo teraz, čo zapnúť z Plánu dňa, karta Deň,
     assert.match(m.chart.desc, /^Výroba od 05:00 do 21:00\. Teraz 13:00: .* kW, slnko stačí\. Okno na veľké veci /);
 });
 
-test('terazModel: detail spotrebiča - kedy, od-do, prečo a úsek na páse dňa', () => {
+test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi dňa', () => {
     const m = terazModel(input(at('13:00')));
     const pracka = m.veci.find((v) => v.id === 'pracka');
     assert.deepEqual(
@@ -507,6 +507,7 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo a úsek na páse dňa
             id: 'pracka',
             name: 'Práčka',
             tone: 'go',
+            den: '',
             kedy: 'Teraz zo slnka',
             cas: '13:00 – 15:00',
             why: 'Ohrev chytí slnko.',
@@ -514,6 +515,8 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo a úsek na páse dňa
         },
     );
     assert.ok(pracka?.slot && pracka.slot.left > 0 && pracka.slot.width > 0);
+    assert.equal(pracka?.slot?.tone, 'go');
+    assert.equal(pracka?.slot?.dnes, true);
     const susicka = m.veci.find((v) => v.id === 'susicka');
     assert.equal(susicka?.tone, '');
     assert.equal(susicka?.kedy, 'Dnes zo slnka');
@@ -525,7 +528,20 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo a úsek na páse dňa
             ['pracka', '', 'Zajtra zo slnka', '07:45 – 09:45'],
         ],
     );
-    assert.equal(vecer.veci[1].slot, null, 'iný deň na dnešnom páse nie je');
+});
+
+test('detail spotrebiča večer: iný deň s dňom pri čase, lacná sieť modrá, noc mimo osi', () => {
+    const vecer = terazModel(input(at('19:50')), { devices: ['pracka', 'auto'] });
+    // Iný deň: deň pri čase a úsek na tej istej osi, bez „teraz“; lacná sieť modrá.
+    assert.equal(vecer.veci[1].den, 'Zajtra');
+    assert.equal(vecer.veci[1].slot?.dnes, false);
+    assert.equal(vecer.veci[1].slot?.tone, 'go');
+    assert.equal(vecer.veci[0].den, '');
+    assert.equal(vecer.veci[0].slot?.tone, 'cheap');
+    // Lacná sieť celá v noci je mimo osi dňa - úsek nie je, aby sa neprilepil na kraj.
+    const noc = terazModel(input(at('23:00')), { devices: ['bojler'] });
+    assert.equal(noc.veci[0].cas, '23:30 – 07:30');
+    assert.equal(noc.veci[0].slot, null);
 });
 
 test('texty karty Deň: pomlčka bez údaja, chýba či navyše podľa hranice', () => {
@@ -804,10 +820,13 @@ test('čo zapnúť večer: lacná sieť teraz s koncom pásma, ostatné zajtra',
 test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pásmo cez polnoc', () => {
     const m = coZapnutModel(riadky(input(at('23:00'))), { nowMin: minuta('23:00'), level: 'draha', slnkoDnes: true });
     assert.equal(m.hore.druh, 'dnesNic');
-    assert.deepEqual(m.hore.oko, { text: 'Zo slnka dnes už nič', sub: 'sieť je teraz drahá' });
+    // Zoznam pod tým sú časy zajtrajška - riadok hore povie, odkedy.
+    assert.deepEqual(m.hore.oko, { text: 'Zo slnka dnes už nič', sub: 'zajtra od 07:30' });
     assert.deepEqual(m.hore.dalsi, { id: 'bojler', name: 'Bojler', cas: '23:30', tone: 'cheap', sub: 'za 30 min · lacný prúd' });
     assert.equal(m.skupiny[0].nazov, 'Potom');
     assert.deepEqual(m.skupiny[0].riadky[0], { id: 'auto', name: 'Auto', kind: 'cheap', cas: '23:30', info: 'lacný prúd' });
+    assert.equal(m.skupiny[0].karta, null);
+    assert.deepEqual(m.skupiny[1].karta, { datum: 'nedeľa 6.9.', pozn: 'dnes už slnko nestačí' });
 });
 
 test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie, bez riadkov nič', () => {
@@ -819,7 +838,7 @@ test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie,
             id: 'umyvacka',
             name: 'Umývačka',
             kind: 'later',
-            day: { name: 'Streda', index: 3, start: 8 * 60 },
+            day: { name: 'Streda', date: '2026-09-09', index: 3, start: 8 * 60 },
             end: 10 * 60 + 30,
             after: null,
         },
@@ -835,6 +854,8 @@ test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie,
     );
     assert.deepEqual(m.skupiny[0].riadky[0], { id: 'auto', name: 'Auto', kind: 'sun', cas: '12:00', info: '~80 km zo slnka' });
     assert.deepEqual(m.skupiny[1].riadky[0], { id: 'umyvacka', name: 'Umývačka', kind: 'later', cas: '08:00', info: 'dobehne 10:30' });
+    // Dnes ešte slnko príde - karta stredy nehovorí, že dnes nestačí; pri inom dni ako zajtra len dátum.
+    assert.deepEqual(m.skupiny[1].karta, { datum: '9.9.', pozn: '' });
     assert.deepEqual(m.skupiny[2].riadky[0], {
         id: 'bojler',
         name: 'Bojler',
@@ -851,7 +872,7 @@ test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie,
 /** Časti vety pre čítačku: čas a výkon, slnko, sieť, oblačnosť, čo beží. @param {string} veta */
 const casti = (veta) => veta.split('. ');
 
-test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a teraz na ňom', () => {
+test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, os dňa a teraz na nej', () => {
     const i = input(at('13:00'));
     const rows = riadky(i);
     const teraz = denModel(i, rows, null);
@@ -872,22 +893,16 @@ test('karta Deň: odčítanie teraz a v inom čase, čo vtedy beží, pás a ter
     assert.equal(neskor.citanie.zdroj, 'odhad z predpovede');
     assert.ok(neskor.citanie.veta.startsWith('15:00, '));
     assert.equal(casti(neskor.citanie.veta).at(-1), 'beží umývačka a sušička');
-    // Pás: slnko aj sieť pokryjú celú os bez dier, teraz je na nej.
-    for (const r of [teraz.pas.slnko, teraz.pas.siet]) {
-        assert.equal(r[0].from, teraz.pas.span.from);
-        assert.equal(r.at(-1)?.to, teraz.pas.span.to);
-        r.slice(1).forEach((u, k) => assert.equal(u.from, r[k].to));
-    }
-    assert.ok(teraz.pas.slnko.some((u) => u.l === 'go'));
-    assert.ok(teraz.pas.now !== null && teraz.pas.now > 0 && teraz.pas.now < 100);
-    assert.ok(teraz.pas.ticks.every((t) => Number(t.label) % 3 === 0));
+    // Os dňa: teraz je na nej, hodiny po troch.
+    assert.ok(teraz.os.now !== null && teraz.os.now > 0 && teraz.os.now < 100);
+    assert.ok(teraz.os.ticks.every((t) => Number(t.label) % 3 === 0));
 });
 
 test('karta Deň v noci: slnko nesvieti, oblačnosť nie, teraz mimo osi', () => {
     const i = input(at('23:00'));
     const d = denModel(i, riadky(i), null);
     assert.deepEqual(casti(d.citanie.veta).slice(1), ['slnko nesvieti', 'drahá sieť do 23:30', 'potom bojler o 23:30']);
-    assert.equal(d.pas.now, null);
+    assert.equal(d.os.now, null);
 });
 
 test('čas do niečoho', () => {

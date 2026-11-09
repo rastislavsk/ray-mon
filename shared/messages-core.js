@@ -10,7 +10,7 @@
 // nikoho neoslovuje a nemá postoj (čísla, časy, popisky), je jeden pre oba tóny.
 
 import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
-import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr } from './format.js';
+import { fmt1, fmt2, fmtSum, kwpRoughText, minutesToTimeStr, weekDateLabel, weekDayName } from './format.js';
 import { productionLevel } from './tariff.js';
 
 /** @typedef {import('./config.js').PriceLevel} PriceLevel */
@@ -1262,13 +1262,16 @@ const SIET_TERAZ = /** @type {Record<string, string>} */ ({ lacna: 'sieť je ter
 /**
  * Riadok nad dlaždicami: odkiaľ ide prúd teraz (`slnko`, `siet`), a keď teraz nejde nič, či ešte
  * dnes príde slnko (`pockaj`), alebo už nie (`dnesNic` - dnes ešte lacná sieť, `nic` - dnes nič).
- * Keď teraz nič nejde, `sub` povie cenu siete.
- * @param {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', level: string }} o @param {Voice} [voice]
+ * Keď teraz nič nejde, `sub` povie cenu siete. Keď zo slnka dnes už nič a niečo pôjde zo slnka iný
+ * deň (`dalej`), povie namiesto ceny kedy („zajtra od 07:30“) - zoznam pod tým sú časy iného dňa.
+ * @param {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', level: string, dalej?: { name: string, start: number } | null }} o
+ * @param {Voice} [voice]
  */
-export function terazOkoText({ druh, level }, voice = 'drzy') {
+export function terazOkoText({ druh, level, dalej = null }, voice = 'drzy') {
     if (druh === 'slnko') return { text: 'Teraz zo slnka', sub: '' };
     if (druh === 'siet') return { text: 'Teraz z lacnej siete', sub: '' };
     const text = druh === 'pockaj' ? voiceTexts(voice).MOZEM_CHIPS.wait : druh === 'dnesNic' ? 'Zo slnka dnes už nič' : 'Dnes už nič';
+    if (druh !== 'pockaj' && dalej) return { text, sub: `${onDay(dalej.name)} od ${hm(dalej.start)}` };
     return { text, sub: SIET_TERAZ[level] ?? '' };
 }
 
@@ -1321,6 +1324,16 @@ export function terazSkupinaText(g) {
     if (g.druh === 'dnes') return g.teraz ? 'Neskôr dnes' : 'Potom';
     if (g.druh === 'den') return cap(onDay(g.name));
     return 'Tento týždeň nie';
+}
+
+/**
+ * Hlavička karty iného dňa vedľa nadpisu: dátum (pri zajtrajšku aj meno dňa, „nedeľa 6.9.“ - nadpis
+ * je „Zajtra“) a pri prvej karte, keď dnes slnko už na nič nestačí, aj to (`slnkoDnes` false).
+ * @param {{ date: string, index: number, prva: boolean, slnkoDnes: boolean }} d
+ */
+export function terazDenKartaText({ date, index, prva, slnkoDnes }) {
+    const datum = index === 1 ? `${weekDayName(date, 2).toLowerCase()} ${weekDateLabel(date)}` : weekDateLabel(date);
+    return { datum, pozn: prva && !slnkoDnes ? 'dnes už slnko nestačí' : '' };
 }
 
 /**

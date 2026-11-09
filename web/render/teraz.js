@@ -3,7 +3,6 @@
 // času, panel s vysvetlením, detail spotrebiča a výzvy. Číslo hore ostáva teraz, zvolený čas je len
 // v karte Deň. Všetko počíta shared/teraz.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
-import { DAY_CHART } from '../../shared/day-chart.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
@@ -79,63 +78,39 @@ function renderCo(co, dom) {
         : '';
     setHtml(dom.tzDlazdice, dlazdice.join('') + dalsi);
     show(dom.tzDlazdice, dlazdice.length > 0 || !!p);
-    setHtml(
-        dom.tzSkupiny,
-        co.skupiny
-            .map(
-                (g) =>
-                    `<h2 class="co-h">${escapeHtml(g.nazov)}</h2><div class="riadky">` +
-                    g.riadky
-                        .map(
-                            (r) =>
-                                `<button type="button" class="ri" data-kind="${r.kind}" data-vec="${r.id}"><span class="velky">${escapeHtml(r.cas)}</span>` +
-                                `<span class="ri-ico" aria-hidden="true">${vecIcon(r.id)}</span>` +
-                                `<span><b>${escapeHtml(r.name)}</b><small>${escapeHtml(r.info)}</small></span></button>`,
-                        )
-                        .join('') +
-                    '</div>',
-            )
-            .join(''),
-    );
+    setHtml(dom.tzSkupiny, co.skupiny.map(skupinaHtml).join(''));
 }
 
-/** Vodorovná poloha na osi grafu (viewBox DAY_CHART) pre % osi pásu - pás a krivka majú tú istú os. @param {number} pct */
-const pasX = (pct) => Math.round((DAY_CHART.left + (pct / 100) * (DAY_CHART.right - DAY_CHART.left)) * 10) / 10;
-
-/** Poloha v % šírky pásu pre bod viewBoxu `x`. @param {number} x */
-const pasPct = (x) => `${Math.round((x / DAY_CHART.w) * 10000) / 100}%`;
-
-/** Rozmery pásu v px: slnko, sieť. */
-const PAS = { h: 58, sunY: 22, sunH: 22, netY: 48, netH: 6 };
+/** Riadok skupiny: veľký čas, ikona, meno a doplnok. @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r */
+const riadokHtml = (r) =>
+    `<button type="button" class="ri" data-kind="${r.kind}" data-vec="${r.id}"><span class="velky">${escapeHtml(r.cas)}</span>` +
+    `<span class="ri-ico" aria-hidden="true">${vecIcon(r.id)}</span>` +
+    `<span><b>${escapeHtml(r.name)}</b><small>${escapeHtml(r.info)}</small></span></button>`;
 
 /**
- * Pás dňa v detaile spotrebiča: slnko a sieť po úsekoch na tej istej osi ako krivka karty Deň (DAY_CHART),
- * prejdená časť stlmená, teraz biela čiara a zvýraznený úsek spotrebiča (`slot`, v % osi).
- * Výška je v px, šírka sa naťahuje (preserveAspectRatio none, čiary bez zmeny hrúbky).
- * @param {NonNullable<Model['den']>['pas']} pas @param {{ left: number, width: number }} slot
+ * Skupina riadkov. Iný deň je karta s hlavičkou (deň, dátum, pri prvej či dnes slnko už nestačí,
+ * docs/navrhy/teraz-iny-den.html, 2B), aby sa jeho časy nečítali ako dnešné.
+ * @param {NonNullable<Model['co']>['skupiny'][number]} g
  */
-function pasHtml(pas, slot) {
-    const rect = (/** @type {{ left: number, width: number, l: string }} */ u, /** @type {number} */ y, /** @type {number} */ h) =>
-        `<rect x="${pasX(u.left)}" y="${y}" width="${Math.max(0.5, pasX(u.left + u.width) - pasX(u.left))}" height="${h}" data-l="${u.l}"/>`;
-    const sun = pas.slnko.filter((u) => u.l !== 'noc').map((u) => rect(u, PAS.sunY, PAS.sunH));
-    const net = pas.siet.map((u) => rect(u, PAS.netY, PAS.netH));
-    const nowX = pas.now === null ? null : pasX(pas.now);
-    const past =
-        nowX === null
-            ? ''
-            : `<rect x="${DAY_CHART.left}" y="${PAS.sunY}" width="${nowX - DAY_CHART.left}" height="${PAS.netY + PAS.netH - PAS.sunY}" class="pas-past"/>`;
-    const nowLine = nowX === null ? '' : `<line x1="${nowX}" x2="${nowX}" y1="${PAS.sunY - 3}" y2="${PAS.h}" class="pas-now"/>`;
-    const slotEl = `<rect x="${pasX(slot.left)}" y="${PAS.sunY}" width="${pasX(slot.left + slot.width) - pasX(slot.left)}" height="${PAS.sunH}" rx="4" class="pas-slot"/>`;
-    const ticks = pas.ticks.map((t) => `<span class="pas-t" style="left:${pasPct(pasX(t.at))}">${t.label}</span>`).join('');
+function skupinaHtml(g) {
+    const riadky = g.riadky.map(riadokHtml).join('');
+    if (!g.karta) return `<h2 class="co-h">${escapeHtml(g.nazov)}</h2><div class="riadky">${riadky}</div>`;
+    const pod = [g.karta.datum, g.karta.pozn].filter(Boolean).map(escapeHtml).join(' · ');
+    return `<section class="den-karta"><div class="den-karta-h"><h2>${escapeHtml(g.nazov)}</h2><span>${pod}</span></div>${riadky}</section>`;
+}
+
+/**
+ * Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, na nej plný úsek
+ * spotrebiča (zo slnka zelený, z lacnej siete modrý), pri dnešku biela čiara „teraz“, pod tým hodiny.
+ * Všetko v % osi, takže sa naťahuje so šírkou panelu.
+ * @param {NonNullable<Model['den']>['os']} os @param {NonNullable<Model['veci'][number]['slot']>} slot
+ */
+function osHtml(os, slot) {
+    const now = slot.dnes && os.now !== null ? `<i class="os-teraz" style="left:${os.now}%"></i>` : '';
+    const ticks = os.ticks.map((t) => `<span class="os-t" style="left:${t.at}%">${t.label}</span>`).join('');
     return (
-        `<div class="pas-box" aria-hidden="true"><svg class="pas" viewBox="0 0 ${DAY_CHART.w} ${PAS.h}" preserveAspectRatio="none">` +
-        `<rect x="${DAY_CHART.left}" y="${PAS.sunY}" width="${DAY_CHART.right - DAY_CHART.left}" height="${PAS.sunH}" class="pas-noc"/>` +
-        sun.join('') +
-        net.join('') +
-        past +
-        slotEl +
-        nowLine +
-        `</svg>${ticks}</div>`
+        `<div class="os"><i class="os-ciara"></i>` +
+        `<i class="os-usek" data-tone="${slot.tone}" style="left:${slot.left}%;width:${slot.width}%"></i>${now}${ticks}</div>`
     );
 }
 
@@ -208,7 +183,7 @@ function renderChipSheet(state, m, dom, T) {
 }
 
 /**
- * Detail spotrebiča: ikona, meno, kedy a odkiaľ, od-do, jeho úsek na páse dňa (keď ide dnes),
+ * Detail spotrebiča: ikona, meno, kedy a odkiaľ, od-do (pri inom dni aj deň), jeho úsek na osi dňa,
  * prečo práve vtedy a že naraz ide len toľko, koľko strecha utiahne. Otvorený, kým je v stave
  * a spotrebič je v pláne.
  * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
@@ -220,9 +195,10 @@ function renderVecSheet(state, m, dom, T) {
         setHtml(dom.tzVecIco, vecIcon(v.id));
         setText(dom.tzVecName, v.name);
         setText(dom.tzVecKedy, v.kedy);
-        setText(dom.tzVecCas, v.cas);
+        // Čas iného dňa nikdy bez dňa - inak by sa čítal ako dnešný.
+        setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
         show(dom.tzVecPas, !!v.slot);
-        setHtml(dom.tzVecPas, v.slot ? pasHtml(m.den.pas, v.slot) : '');
+        setHtml(dom.tzVecPas, v.slot ? osHtml(m.den.os, v.slot) : '');
         setText(dom.tzVecWhy, v.why);
         setText(dom.tzVecNote, PLAN_DNA_NOTE);
         setText(dom.tzVecClose, T.chipClose);
