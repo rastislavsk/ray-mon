@@ -1,5 +1,9 @@
-// Poslucháče karty Dnes (kódové meno mozem): „Skúsiť znova“. Končí volaním setState;
-// kreslí render/mozem.js. Stránku pásu odporúčaní sleduje teraz-interactions.js.
+// Poslucháče karty Dnes (kódové meno mozem): „Skúsiť znova“, vysvetlenie odznaku triedy dňa
+// a pás kariet. Odznak končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
+
+import { bindKarty } from './mozem-karty.js';
+import { stepBack } from './nav-back.js';
+import { initSheet } from './sheet.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -14,4 +18,10 @@ export function initMozem(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
+    // Vysvetlenie odznaku je krok navigácie (robí z Dnes aktívny stĺpec prehľadu), zatvorenie ten istý
+    // krok ako tlačidlo Späť.
+    dom.mzChip.addEventListener('click', () => store.setState({ mzChip: 'dnes', panel: 'mozem' }));
+    dom.mzTomChip.addEventListener('click', () => store.setState({ mzChip: 'zajtra', panel: 'mozem' }));
+    initSheet(dom.mzTriedaSheet, dom.mzTriedaClose, () => stepBack(store, { mzChip: null }));
+    bindKarty(dom.mzKarty, dom.mzBodky);
 }

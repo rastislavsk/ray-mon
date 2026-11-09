@@ -6,6 +6,7 @@
 import { localMinutes } from '../shared/solar.js';
 import { bindDayScrub } from './teraz-gestures.js';
 import { stepBack } from './nav-back.js';
+import { initSheet } from './sheet.js';
 import { shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -45,18 +46,4 @@ export function initTeraz(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
-}
-
-/**
- * Panel zdola: Zavrieť, Escape a ťuknutie vedľa (na stmavenú stránku trafí samotný dialóg, nie jeho
- * obsah) ho zavrú krokom späť. Escape dialóg nezavrie sám - zavrie ho render podľa stavu.
- * @param {HTMLDialogElement} d @param {HTMLElement} btn @param {() => void} close
- */
-function initSheet(d, btn, close) {
-    d.addEventListener('click', (e) => e.target === d && close());
-    d.addEventListener('cancel', (e) => {
-        e.preventDefault();
-        close();
-    });
-    btn.addEventListener('click', close);
 }

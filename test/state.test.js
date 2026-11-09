@@ -41,6 +41,7 @@ const step = (patch = {}) => ({
     fold: null,
     vec: null,
     chip: null,
+    trieda: null,
     ...patch,
 });
 

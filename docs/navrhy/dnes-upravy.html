@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: úpravy karty Dnes</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Obrázky sú snímky skutočnej appky
+               (fixtures testov, 5. 9. 2026, Dvorany nad Nitrou) s ručne vloženými zmenami. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(300px, 100%);
+            }
+            figure.wide {
+                width: min(390px, 100%);
+            }
+            figure img {
+                width: 100%;
+                border-radius: 22px;
+                border: 1px solid var(--line);
+                display: block;
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                padding: 14px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .opt.rec {
+                border-color: var(--green);
+            }
+            .opt h3 {
+                font-size: 1rem;
+            }
+            .opt .tag {
+                justify-self: start;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 600;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Dnes – päť úprav</h1>
+                <p class="dim">
+                    Snímky sú zo skutočnej appky (fixtures testov, 5. 9. 2026 o 13:00, ráno 6:00 a večer 20:30) s ručne vloženými zmenami.
+                    Čísla v karte <b>Mraky a dážď</b> pre zamračený deň a panel <b>slabý deň</b> sú vymyslené na ukážku, appka ich v ten deň
+                    neráta (deň je dobrý a jasný). Večerných 31,7 kWh oproti predpovedi 61 kWh je chyba testovacích dát – meranie v nich
+                    končí o 13:00.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Bod 1</small>Ťuknutie na odznak vysvetlí triedu dňa</h2>
+                <p>
+                    Odznak dostane malé <b>(i)</b>, aby bolo vidno, že sa naň dá ťuknúť. Panel povie, čo trieda znamená
+                    <b>pre tvoje spotrebiče</b> (✓ zmestí sa na slnko, – nezmestí) a ukáže stupnicu všetkých štyroch tried, aby bolo jasné,
+                    kde je hranica medzi slabým a dobrým dňom. Večer to isté pre odznak „zajtra …“.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <img src="dnes-upravy/odznak-dobry.png" alt="Panel s vysvetlením dobrého dňa" />
+                        <figcaption>Dobrý deň (skutočný výpočet: zmestia sa všetky štyri veci).</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-upravy/odznak-slaby.png" alt="Panel s vysvetlením slabého dňa" />
+                        <figcaption>Slabý deň – ukážka, nie výpočet.</figcaption>
+                    </figure>
+                </div>
+                <table>
+                    <tr>
+                        <th>Trieda</th>
+                        <th>Nadpis v paneli</th>
+                        <th>Veta</th>
+                    </tr>
+                    <tr>
+                        <td>výborný deň</td>
+                        <td>Na slnko sa zmestí všetko, aj s rezervou</td>
+                        <td>Všetky tvoje veľké veci dnes stihnú bežať zo strechy, aj keby prišiel mrak a strecha dala o tretinu menej.</td>
+                    </tr>
+                    <tr>
+                        <td>dobrý deň</td>
+                        <td>Na slnko sa zmestí všetko</td>
+                        <td>
+                            Všetky tvoje veľké veci dnes stihnú bežať zo strechy. Rezerva však nie je – keď príde mrak, niečo pôjde zo
+                            siete.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>slabý deň</td>
+                        <td>Na slnko sa zmestí len časť</td>
+                        <td>Dnes stihnú zo strechy 2 zo 4 veľkých vecí. Ostatné pôjdu zo siete, alebo počkaj na lepší deň.</td>
+                    </tr>
+                    <tr>
+                        <td>deň skoro bez slnka</td>
+                        <td>Na slnko sa nezmestí nič</td>
+                        <td>Dnes nestihne zo strechy ani jedna veľká vec. Čo nepočká, pôjde zo siete.</td>
+                    </tr>
+                </table>
+                <p class="dim">
+                    Pod stupnicou: „Ráta s veľkými vecami, ktoré máš v Nastavení, a so slnkom celého dňa – ráno z predpovede, cez deň z
+                    merania a predpovede, večer z merania.“ Pri vykaní tie isté vety vo vykaní.
+                </p>
+                <div class="opts">
+                    <div class="opt rec">
+                        <span class="tag">odporúčam</span>
+                        <h3>A. Panel zdola (na snímkach)</h3>
+                        <ul>
+                            <li class="plus">rovnaký vzor ako štítky na karte Teraz, kód panelu už existuje</li>
+                            <li class="plus">miesto na spotrebiče aj stupnicu</li>
+                            <li class="minus">na chvíľu zakryje kartu</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>B. Bublina pod odznakom</h3>
+                        <p class="dim">ako bublina stavu merania na karte Teraz</p>
+                        <ul>
+                            <li class="plus">ostáva pri odznaku, ľahšia</li>
+                            <li class="minus">málo miesta: veta a stupnica, spotrebiče sa nezmestia</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C. Rozbalenie priamo v karte</h3>
+                        <ul>
+                            <li class="plus">žiadna vrstva navyše</li>
+                            <li class="minus">karta poskočí, odpočet a čísla zídu nižšie</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Bod 2 a 3</small>Čiara pod troma číslami a tučný čas</h2>
+                <div class="phones">
+                    <figure>
+                        <img src="dnes-upravy/poludnie.png" alt="Karta Dnes na poludnie" />
+                        <figcaption>Poludnie: „do <b>17:30</b>“, čiara pod číslami, pod ňou pás kariet.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-upravy/rano.png" alt="Karta Dnes ráno" />
+                        <figcaption>Ráno: „Veľké veci daj medzi <b>07:15 – 17:30</b>.“</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-upravy/vecer.png" alt="Karta Dnes večer" />
+                        <figcaption>Večer: nový názov, zajtrajšie okno tučne.</figcaption>
+                    </figure>
+                </div>
+                <p>
+                    <b>Čiara:</b> rozumné riešenie je len jedno – blok „Dnes zo strechy … To je:“ dostane dole tú istú čiaru, akú má hore.
+                    Dá sa aj len väčšia medzera bez čiary, ale tá blok oddelí slabšie, než chceš.
+                </p>
+                <div class="opts">
+                    <div class="opt">
+                        <h3>A. Tučne len odpočet</h3>
+                        <p>„ešte slnka na veľké veci, do <b>17:30</b>“ – presne podľa zadania.</p>
+                        <ul>
+                            <li class="plus">najmenšia zmena</li>
+                            <li class="minus">ten istý čas okna je ráno, pred oknom a večer pri zajtrajšku obyčajným písmom</li>
+                        </ul>
+                    </div>
+                    <div class="opt rec">
+                        <span class="tag">odporúčam</span>
+                        <h3>B. Tučne každý čas okna na karte</h3>
+                        <p>
+                            odpočet, ráno „medzi <b>07:15 – 17:30</b>“, pred oknom, po okne „bolo <b>09:00 – 17:30</b>“, zajtra „<b
+                                >07:30 – 17:00</b
+                            >“
+                        </p>
+                        <ul>
+                            <li class="plus">rovnaký údaj vyzerá všade rovnako, oko ho nájde</li>
+                            <li class="minus">o pár textových funkcií viac (vrátia čas zvlášť, render ho zvýrazní – bez HTML v textoch)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Bod 4</small>Nabehlo a Kedy lepšie ako pás kariet na posúvanie</h2>
+                <p>
+                    Každá karta v páse má rovnaký tvar: <b>nadpis, jedno veľké číslo alebo obrázok, jedna veta</b>. Preto aj Nabehlo a Kedy
+                    lepšie dostanú veľké číslo („31,7 kWh“, „zajtra“). Susedná karta vykukuje sprava a bodky pod pásom ukazujú, koľko kariet
+                    je a kde si. Zvislé posúvanie stránky cez pás ostáva.
+                </p>
+                <div class="phones">
+                    <figure class="wide">
+                        <img src="dnes-upravy/pas-1.png" alt="Pás kariet: Nabehlo" />
+                        <figcaption>1 · Nabehlo</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="dnes-upravy/pas-2.png" alt="Pás kariet: Kedy lepšie" />
+                        <figcaption>2 · Kedy lepšie</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="dnes-upravy/pas-3.png" alt="Pás kariet: Mraky a dážď, jasný deň" />
+                        <figcaption>3 · Mraky a dážď – skutočný jasný deň z testovacích dát</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="dnes-upravy/pas-3-zamracene.png" alt="Pás kariet: Mraky a dážď, zamračené popoludnie" />
+                        <figcaption>3 · Mraky a dážď – ukážkové zamračené popoludnie s dažďom (vymyslené)</figcaption>
+                    </figure>
+                    <figure class="wide">
+                        <img src="dnes-upravy/pas-4.png" alt="Pás kariet: Najviac slnka" />
+                        <figcaption>4 · Najviac slnka</figcaption>
+                    </figure>
+                </div>
+
+                <h3>Ako posúvanie urobiť</h3>
+                <div class="opts">
+                    <div class="opt rec">
+                        <span class="tag">odporúčam</span>
+                        <h3>A. Posúvanie prehliadača (CSS scroll-snap)</h3>
+                        <ul>
+                            <li class="plus">málo kódu, JS len prepína bodky</li>
+                            <li class="plus">prirodzený pocit na telefóne, funguje aj trackpad, Shift + koliesko a klávesnica</li>
+                            <li class="minus">menej kontroly nad pružením a rýchlosťou</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>B. Vlastný ťah ako dni v detaile 7 dní</h3>
+                        <ul>
+                            <li class="plus">rovnaké správanie ako pás dní, plná kontrola</li>
+                            <li class="minus">veľa kódu a testov, myš potrebuje šípky navyše</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C. Bez ťahu: štítky nad jednou kartou</h3>
+                        <p class="dim">Nabehlo · Kedy lepšie · Mraky · Slnko</p>
+                        <ul>
+                            <li class="plus">najjednoduchšie na pochopenie, nič sa neskrýva za okrajom</li>
+                            <li class="minus">nie je to swipe, menej „živé“</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="note">
+                    Pravidlo v <code>CLAUDE.md</code> hovorí, že ťah do strán má v appke jediné miesto (dni v detaile 7 dní). Pás by bol
+                    druhé – pravidlo pri kódovaní upravím. Na širokej obrazovke (prehľad v stĺpcoch) by karty neboli pás, ale mriežka 2 × 2.
+                    <br />Ráno ešte nič nenabehlo, takže pás začne kartou Kedy lepšie. Večer navrhujem nechať ako dnes (predpoveď a Zajtra),
+                    bez pásu.
+                </div>
+
+                <h3>Dve nové informácie o dnešku – kandidáti</h3>
+                <table>
+                    <tr>
+                        <th>Karta</th>
+                        <th>Čo ukáže a odkiaľ</th>
+                        <th>Výhody</th>
+                        <th>Nevýhody</th>
+                    </tr>
+                    <tr>
+                        <td><b>Mraky a dážď</b> ✔ odporúčam</td>
+                        <td>
+                            pás hodín 6:00 – 19:00: žltá jasno, sivá mraky, kvapka dážď, a veta „Od 14:00 sa zaťahuje…“. Z predpovede, ktorú
+                            appka už sťahuje.
+                        </td>
+                        <td>vysvetlí, prečo okno končí; pomôže aj s prádlom vonku</td>
+                        <td>oblačnosť po hodinách je z predpovedí najmenej presná; Radar ukazuje dážď na 2 h (toto celý deň, hrubšie)</td>
+                    </tr>
+                    <tr>
+                        <td><b>Najviac slnka</b> ✔ odporúčam</td>
+                        <td>najsilnejšia hodina, stĺpčeky hodín a „strecha vtedy dá až ~7,9 kW“. Z predpovede.</td>
+                        <td>kam dať auto alebo dve veci naraz</td>
+                        <td>krivka na karte Teraz ukazuje vrchol tiež, len menej priamo</td>
+                    </tr>
+                    <tr>
+                        <td>Dnes oproti včerajšku</td>
+                        <td>dva stĺpce a „o 12 kWh viac ako včera“. Z denníka výroby v telefóne.</td>
+                        <td>zaujímavé, ľahko sa číta</td>
+                        <td>len s meraním, prvý deň prázdne; nie je to rada, čo robiť</td>
+                    </tr>
+                    <tr>
+                        <td>Dĺžka dňa</td>
+                        <td>„13 h 15 min, o 3 min kratší ako včera“. Zo slnka, bez dát.</td>
+                        <td>funguje vždy, aj bez siete</td>
+                        <td>pre spotrebiče málo užitočné, oblúk už ukazuje východ a západ</td>
+                    </tr>
+                    <tr>
+                        <td>Teplo a panely</td>
+                        <td>„Až 31 °C – horúce panely dajú o pár % menej.“ Z predpovede.</td>
+                        <td>vysvetlí letný pokles</td>
+                        <td>väčšinu roka nemá čo povedať</td>
+                    </tr>
+                </table>
+                <p class="dim">Hodnotu dňa v € zámerne nenavrhujem – pri spotrebičoch ceny nechceš a úspora je v Štatistike.</p>
+            </section>
+
+            <section>
+                <h2><small>Bod 5</small>Názov namiesto „Vysvedčenie“</h2>
+                <table>
+                    <tr>
+                        <th>Názov</th>
+                        <th>Poznámka</th>
+                    </tr>
+                    <tr>
+                        <td><b>Ako dopadol dnešok</b> ✔ odporúčam (na snímke)</td>
+                        <td>hovorí ako zvyšok karty, pekne nadväzuje na „Zajtra“ nižšie</td>
+                    </tr>
+                    <tr>
+                        <td>Súhrn dňa</td>
+                        <td>tvoj návrh; jasný a neutrálny, trochu úradný</td>
+                    </tr>
+                    <tr>
+                        <td>Dnešok v kocke</td>
+                        <td>krátky, hovorový</td>
+                    </tr>
+                    <tr>
+                        <td>Bilancia dňa</td>
+                        <td>presné, ale znie ako účtovníctvo</td>
+                    </tr>
+                    <tr>
+                        <td>Záver dňa</td>
+                        <td>krátke, trochu chladné</td>
+                    </tr>
+                </table>
+            </section>
+        </main>
+    </body>
+</html>

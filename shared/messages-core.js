@@ -325,7 +325,53 @@ export function denWord({ cls, faza, change }, voice) {
 export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slaby: 'slabý deň', nanic: 'deň skoro bez slnka' };
 
 /** Pevné texty karty Dnes podľa časti dňa (shared/dnes-faza.js). */
-export const DNES_TEXTS = { plan: 'Plán na dnes', grade: 'Vysvedčenie', gradeLabel: 'Dnes zo strechy', later: 'Kedy lepšie' };
+export const DNES_TEXTS = {
+    plan: 'Plán na dnes',
+    grade: 'Ako dopadol dnešok',
+    gradeLabel: 'Dnes zo strechy',
+    later: 'Kedy lepšie',
+    obloha: 'Mraky a dážď',
+    slnko: 'Najviac slnka',
+    karty: 'Viac o dnešku',
+    stupnica: 'Ako appka deň hodnotí',
+};
+
+/**
+ * Stupnica tried dňa vo vysvetlení odznaku (docs/navrhy/dnes-upravy.html): krátke meno a čo trieda znamená
+ * pre veľké veci. Bez postoja, jedna pre oba tóny.
+ */
+export const DEN_STUPNICA = {
+    nanic: { label: 'skoro bez slnka', pop: 'nezmestí sa nič' },
+    slaby: { label: 'slabý', pop: 'zmestí sa časť' },
+    dobry: { label: 'dobrý', pop: 'zmestí sa všetko' },
+    vyborny: { label: 'výborný', pop: 'všetko, aj keď príde mrak' },
+};
+
+/**
+ * Vysvetlenie triedy dňa po ťuknutí na odznak karty Dnes: nadpis, veta o veľkých veciach a ako appka
+ * deň ráta. `kedy` je dnešok, alebo večer zajtrajšok.
+ * @param {import('./den-trieda.js').DenTrieda} cls @param {'dnes' | 'zajtra'} kedy @param {Voice} voice
+ */
+export function denVysvetlenieText(cls, kedy, voice) {
+    const p = polite(voice);
+    const veci = p ? 'vaše' : 'tvoje';
+    const Kedy = kedy === 'dnes' ? 'Dnes' : 'Zajtra';
+    const title = {
+        vyborny: 'Na slnko sa zmestí všetko, aj s rezervou',
+        dobry: 'Na slnko sa zmestí všetko',
+        slaby: 'Na slnko sa zmestí len časť',
+        nanic: 'Na slnko sa nezmestí nič',
+    }[cls];
+    const text = {
+        vyborny: `Všetky ${veci} veľké veci ${kedy} stihnú bežať zo strechy, aj keby prišiel mrak a strecha dala menej.`,
+        dobry: `Všetky ${veci} veľké veci ${kedy} stihnú bežať zo strechy. Rezerva však nie je – keď príde mrak, niečo pôjde zo siete.`,
+        slaby: `${Kedy} stihne zo strechy len časť ${p ? 'vašich' : 'tvojich'} veľkých vecí. Ostatné pôjdu zo siete, alebo ${p ? 'počkajte' : 'počkaj'} na lepší deň.`,
+        nanic: `${Kedy} nestihne zo strechy ani jedna veľká vec. Čo nepočká, pôjde zo siete.`,
+    }[cls];
+    const slnko = kedy === 'dnes' ? 'čo už bolo, podľa merania, zvyšok podľa predpovede' : 'podľa predpovede';
+    const note = `Ráta s veľkými vecami, ktoré ${p ? 'máte' : 'máš'} v Nastavení, a so slnkom celého dňa: ${slnko}.`;
+    return { title, text, note };
+}
 
 /** Ráno: kedy dnes pustiť veľké veci. @param {{ from: number, to: number } | null} w @param {Voice} voice */
 export function dnesPlanText(w, voice) {
@@ -343,12 +389,16 @@ export function dnesCountText(kind, w, left) {
 }
 
 /**
- * Cez deň: koľko už nabehlo z predpovede dneška - z merania naisto, bez neho podľa predpovede.
- * @param {{ forecastKwh: number, doneKwh: number, measured: boolean }} d
+ * Cez deň: karta Nabehlo - koľko už nabehlo z predpovede dneška, z merania naisto, bez neho podľa predpovede.
+ * @param {{ forecastKwh: number, doneKwh: number, measured: boolean, pct: number | null }} d
  */
-export function dnesProgressText({ forecastKwh, doneKwh, measured }) {
-    const of = `${fmt1(doneKwh)} z ~${fmtSum(Math.round(forecastKwh), 0)} kWh`;
-    return measured ? `Nabehlo ${of}.` : `Podľa predpovede už asi ${of}.`;
+export function dnesNabehloText({ forecastKwh, doneKwh, measured, pct }) {
+    const z = `z ~${fmtSum(Math.round(forecastKwh), 0)} kWh na celý deň`;
+    return {
+        title: measured ? 'Nabehlo' : 'Nabehlo asi',
+        value: `${fmt1(doneKwh)} kWh`,
+        text: `${pct === null ? z.charAt(0).toUpperCase() + z.slice(1) : `${pct} % ${z}`}${measured ? '' : ', podľa predpovede'}.`,
+    };
 }
 
 /** Večer: namerané za dnešok a čo sľubovala predpoveď. @param {number} kwh @param {number | null} forecastKwh */
@@ -1587,18 +1637,74 @@ export function terazTodayText({ forecastKwh, doneKwh, measured }) {
 }
 
 /**
- * Riadok Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel) a najbližší silný deň z predpovede - podľa triedy dňa (silnyDen v den-trieda.js).
+ * Karta Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel) a najbližší silný deň z predpovede - podľa
+ * triedy dňa (silnyDen v den-trieda.js). Veľká hodnota je kedy, veta k nej.
  * @param {{ wait: string | null, todayStrong: boolean, next: { name: string, kwh: number } | null }} d
  */
-export function terazLaterText({ wait, todayStrong, next }) {
-    const day = next
-        ? todayStrong
-            ? `Dnes je silný deň. Ďalší taký: ${next.name.toLowerCase()}, okolo ${Math.round(next.kwh)} kWh.`
-            : `Najbližší silný deň: ${next.name.toLowerCase()}, okolo ${Math.round(next.kwh)} kWh.`
-        : todayStrong
-          ? 'Dnes je silný deň. Ďalší taký v predpovedi nie je.'
-          : 'Silný deň v predpovedi na týždeň nie je.';
-    return wait ? `Lepšie bude o ${wait}. ${day}` : day;
+export function dnesLepsieText({ wait, todayStrong, next }) {
+    const name = next ? next.name.toLowerCase() : '';
+    const okolo = next ? `okolo ${Math.round(next.kwh)} kWh` : '';
+    if (wait)
+        return {
+            value: `o ${wait}`,
+            text: next ? `Dnes ešte silnejšie slnko. Najbližší silný deň: ${name}, ${okolo}.` : 'Dnes ešte silnejšie slnko.',
+        };
+    if (next) return { value: name, text: `Najbližší silný deň, ${okolo}.${todayStrong ? ' Aj dnešok je silný.' : ''}` };
+    return todayStrong
+        ? { value: 'dnes', text: 'Dnes je silný deň, ďalší taký v predpovedi nie je.' }
+        : { value: 'tento týždeň nie', text: 'Silný deň v predpovedi na týždeň nie je.' };
+}
+
+/** @typedef {{ hour: number, ton: 'jasno' | 'oblacno' | 'zamracene', zrazky: 'dazd' | 'sneh' | null }} OblohaHodina */
+
+/**
+ * Karta Mraky a dážď: veta o oblohe dneška z hodín medzi východom a západom (shared/dnes-faza.js) -
+ * mraky a potom zrážky. @param {OblohaHodina[]} hodiny
+ */
+export function dnesOblohaText(hodiny) {
+    const z = zrazkyText(hodiny);
+    return z ? `${mrakyText(hodiny)} ${z}` : mrakyText(hodiny);
+}
+
+/** Mraky počas dňa jednou vetou. @param {OblohaHodina[]} hodiny */
+function mrakyText(hodiny) {
+    const tony = hodiny.map((h) => h.ton);
+    const at = (/** @type {number} */ i) => hm(hodiny[i].hour * 60);
+    const prva = tony.indexOf('zamracene');
+    const posledna = tony.lastIndexOf('zamracene');
+    if (prva < 0) {
+        if (tony.every((t) => t === 'jasno')) return 'Jasno celý deň.';
+        return tony.filter((t) => t === 'jasno').length * 2 >= tony.length ? 'Väčšinou jasno.' : 'Polooblačno.';
+    }
+    if (tony.every((t) => t === 'zamracene')) return 'Zamračené celý deň.';
+    if (prva > 0 && tony.slice(prva).every((t) => t !== 'jasno')) return `Od ${at(prva)} sa zaťahuje.`;
+    if (prva === 0 && posledna < tony.length - 1 && tony.slice(posledna + 1).every((t) => t !== 'zamracene'))
+        return `Od ${at(posledna + 1)} sa vyjasní.`;
+    return 'Striedavo oblačno.';
+}
+
+/** Prvé zrážky dňa: kedy, alebo od kedy s prestávkami; bez zrážok prázdne. @param {OblohaHodina[]} hodiny */
+function zrazkyText(hodiny) {
+    const s = hodiny.findIndex((h) => h.zrazky);
+    if (s < 0) return '';
+    let e = s;
+    while (e + 1 < hodiny.length && hodiny[e + 1].zrazky) e++;
+    const druh = hodiny[s].zrazky === 'sneh' ? 'Sneh' : 'Dážď';
+    const od = hm(hodiny[s].hour * 60);
+    return hodiny.slice(e + 1).some((h) => h.zrazky)
+        ? `${druh} od ${od}, s prestávkami.`
+        : `${druh} ${od} – ${endHm((hodiny[e].hour + 1) * 60)}.`;
+}
+
+/**
+ * Karta Najviac slnka: najsilnejšia hodina dneška podľa predpovede.
+ * @param {{ from: number, kw: number }} d minúta začiatku hodiny a výkon strechy v nej @param {Voice} voice
+ */
+export function dnesSlnkoText({ from, kw }, voice) {
+    return {
+        value: `${hm(from)} – ${endHm(from + 60)}`,
+        text: `Strecha vtedy dá až ~${fmt1(kw)} kW. Auto alebo dve veci naraz ${polite(voice) ? 'dajte' : 'daj'} sem.`,
+    };
 }
 
 /**

@@ -83,3 +83,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `teraz-stav-merania.html` | Karta Teraz (Obloha) – bodka a čas merania z hlavičky do riadku pod číslom, bez oválu; tvoj návrh a finálny (celý riadok sa ťuká, slovo podľa stavu, náhľad času bez bodky); dizajnér a skeptik |
 | `obloha-noc.html` | Obloha – súmrak podľa výšky slnka (−6° súmrak, −12° noc, −18° najhlbšia noc, ráno opačne) a tmavšie nočné farby; zima aj leto, pás od poludnia do poludnia |
 | `oznamenie-plan-dna.html` | Ťuknutie na ranné oznámenie: karta Teraz s rozbaleným Plánom dňa, animácia obrys (A, vybraná), pásy podľa času (B), správa pristane (C), a ako sa appka dozvie, že prišla z oznámenia (adresa a správa, vybrané) |
+| `dnes-upravy.html` | Karta Dnes – vysvetlenie odznaku triedy dňa (A panel, B bublina, C rozbalenie), čiara pod číslami, tučné časy okna, pás kariet na posúvanie s novými kartami (Mraky a dážď, Najviac slnka, …) a názov namiesto Vysvedčenie |

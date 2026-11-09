@@ -50,28 +50,32 @@
             <!-- Karta Dnes (kódové meno mozem, doteraz Môžem?): texty a stav skladá render (web/render/mozem.js)
                  z shared/mozem-sky.js a shared/dnes-faza.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka,
                  pod ním čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html); zvyšok sa mení s časťou dňa - ráno plán,
-                 cez deň odpočet okna, večer vysvedčenie a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
+                 cez deň odpočet okna, večer ako dopadol dnešok a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
+                 Pod číslami pás kariet na posúvanie a ťuknutie na odznak vysvetlí triedu dňa (docs/navrhy/dnes-upravy.html).
                  Nadpis karty je len pre čítačku. -->
             <section id="panel-mozem" class="panel mozem hidden" aria-labelledby="ttl-mozem">
                 <h1 id="ttl-mozem" class="sr">Dnes</h1>
                 <div id="mz-arc" class="arc" aria-hidden="true"></div>
                 <div id="mz-answer" class="big">
-                    <span id="mz-chip" class="chip"></span>
+                    <!-- Tlačidlo má výšku na prst (44 px), odznak v ňom je menší. -->
+                    <button type="button" id="mz-chip" class="chip-tap" aria-haspopup="dialog">
+                        <span id="mz-chip-text" class="chip info"></span>
+                    </button>
                     <p id="mz-kick" class="kick"></p>
                     <p id="mz-word" class="word"></p>
                     <p id="mz-count" class="count"><b id="mz-count-val"></b><span id="mz-count-text"></span></p>
                     <p id="mz-grade" class="grade"><span id="mz-grade-label"></span><b id="mz-grade-val"></b></p>
+                    <p id="mz-line" class="line"></p>
                     <p id="mz-lead" class="line"></p>
                     <div id="mz-day" class="den">
                         <p id="mz-day-lead" class="line"></p>
                         <ul id="mz-day-eq" class="eq"></ul>
                     </div>
                 </div>
-                <div id="mz-more" class="glass mz-more">
-                    <p id="mz-line"></p>
-                    <p id="mz-progress"></p>
-                    <div id="mz-bar" class="bar" aria-hidden="true"><i id="mz-bar-val"></i></div>
-                </div>
+                <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a ťuknutím na kartu
+                     preskočia (render/mozem.js, mozem-interactions.js). Ťah do strán je tu druhý v appke. -->
+                <div id="mz-karty" class="karty" tabindex="0" role="group"></div>
+                <div id="mz-bodky" class="bodky"></div>
                 <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
                 <p id="mz-live" class="sr" role="status"></p>
                 <button type="button" id="mz-retry" class="pbtn retry"></button>
@@ -85,15 +89,13 @@
                     <p id="mz-ask-text"></p>
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Večer zajtrajšok, inak riadok Kedy lepšie (shared/dnes-faza.js). -->
+                <!-- Večer zajtrajšok namiesto pásu (shared/dnes-faza.js). -->
                 <div id="mz-tom" class="glass tom">
-                    <span id="mz-tom-chip" class="chip"></span>
+                    <button type="button" id="mz-tom-chip" class="chip-tap" aria-haspopup="dialog">
+                        <span id="mz-tom-chip-text" class="chip info"></span>
+                    </button>
                     <p id="mz-tom-word" class="word"></p>
                     <p id="mz-tom-text" class="line"></p>
-                </div>
-                <div id="mz-later" class="glass later">
-                    <h2 id="mz-later-title" class="glass-ttl"></h2>
-                    <p id="mz-later-text"></p>
                 </div>
             </section>
             <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html): číslo teraz, čo zapnúť a karta Deň. Skladá ich render
@@ -894,6 +896,21 @@
                 <h2 id="tz-chip-title" class="sr"></h2>
                 <div id="tz-chip-body"></div>
                 <button type="button" id="tz-chip-close" class="pbtn ghost"></button>
+            </div>
+        </dialog>
+
+        <!-- Vysvetlenie odznaku triedy dňa na karte Dnes (docs/navrhy/dnes-upravy.html): čo trieda znamená, ktoré
+             veľké veci sa zmestia na slnko a stupnica tried. Model je shared/dnes-faza.js (denVysvetlenie), píše ho render/mozem.js. -->
+        <dialog id="mz-trieda-sheet" class="sheet trieda-sheet" aria-labelledby="mz-trieda-title" aria-describedby="mz-trieda-text">
+            <div class="sheet-in">
+                <span id="mz-trieda-chip" class="chip"></span>
+                <h2 id="mz-trieda-title"></h2>
+                <p id="mz-trieda-text"></p>
+                <ul id="mz-trieda-veci" class="veci"></ul>
+                <p id="mz-trieda-q" class="q"></p>
+                <ol id="mz-trieda-stupnica" class="stupnica"></ol>
+                <p id="mz-trieda-note" class="dim"></p>
+                <button type="button" id="mz-trieda-close" class="pbtn ghost"></button>
             </div>
         </dialog>
 

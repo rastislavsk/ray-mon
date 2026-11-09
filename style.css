@@ -469,14 +469,18 @@ button.live[aria-expanded='true'] {
     font-variation-settings: 'wdth' 95;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-/* Čo dá strecha za celý deň: veta a tri čísla vedľa seba sú jeden blok, od vety nad ním ho delí
-   jemná čiara. Stojí na bloku, nie na vete: večer je veta skrytá a čiara nad číslami ostáva. */
+/* Čo dá strecha za celý deň: veta a tri čísla vedľa seba sú jeden blok, od zvyšku karty ho delí
+   jemná čiara nad ním aj pod ním. Stojí na bloku, nie na vete: večer je veta skrytá a čiary ostávajú. */
 .den {
     display: grid;
     gap: 10px;
     margin-top: 6px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    padding-block: 12px 14px;
+    border-block: 1px solid rgba(255, 255, 255, 0.3);
+}
+/* Čas okna vo vete je tučne - údaj, ktorý oko hľadá (docs/navrhy/dnes-upravy.html). */
+.cas {
+    font-weight: 800;
 }
 .eq {
     display: grid;
@@ -503,10 +507,44 @@ button.live[aria-expanded='true'] {
     line-height: 1.25;
 }
 /* Karta Dnes podľa časti dňa (docs/navrhy/dnes-tri-smery.html, smer C): štítok s triedou dňa,
-   riadok nad slovom, odpočet okna či vysvedčenie dneška a večer zajtrajšok v skle. */
+   riadok nad slovom, odpočet okna či ako dopadol dnešok a večer zajtrajšok v skle. */
 .mozem .chip {
     justify-self: start;
     background: rgba(14, 36, 80, 0.3);
+}
+/* Odznak, ktorý sa dá ťuknúť: vysvetlenie triedy dňa. Tlačidlo má výšku na prst, odznak v ňom je
+   menší; krúžok s i hovorí, že je za ním viac. */
+.chip-tap {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+.chip.info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.chip.info::after {
+    content: 'i';
+    display: grid;
+    place-items: center;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.625rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: none;
 }
 .mozem .chip[data-cls='vyborny'] {
     background: var(--yes);
@@ -559,11 +597,140 @@ button.live[aria-expanded='true'] {
     font-size: min(2rem, 9vw);
     font-weight: 900;
 }
-/* Sklá pod číslami (.glass): koľko nabehlo a Kedy lepšie sú dvojica s rovnakým písmom. */
-.mz-more p,
-.later p {
+/* Pás kariet pod číslami (docs/navrhy/dnes-upravy.html): posúva ho prehliadač, karta zastane na
+   začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva stránku - touch-action netreba. */
+.karty {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+.karty::-webkit-scrollbar {
+    display: none;
+}
+/* Fokus klávesnice: pás sa potom posúva šípkami. Obrys dnu - von by ho orezal okraj displeja. */
+.karty:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+    border-radius: 22px;
+}
+.karta {
+    flex: 0 0 calc(100% - 52px);
+    align-content: start;
+    margin: 0;
+    scroll-snap-align: start;
+}
+/* Jediná karta (večer bez zajtrajška) má celú šírku - nie je k čomu posúvať. */
+.karta:only-child {
+    flex-basis: 100%;
+}
+.karta .glass-ttl {
+    margin: 0;
+}
+.k-val {
+    font-size: 2rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+}
+.k-text {
     font-size: 0.9375rem;
     line-height: 1.35;
+}
+/* Pás hodín: žltá jasno, tlmená žltá oblačno, sivá zamračené, kvapka dážď či sneh. */
+.k-hodiny {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 3px;
+}
+.k-hodiny i {
+    position: relative;
+    height: 30px;
+    border-radius: 5px;
+    background: #ffe28a;
+}
+.k-hodiny i[data-ton='oblacno'] {
+    background: rgba(255, 226, 138, 0.55);
+}
+.k-hodiny i[data-ton='zamracene'] {
+    background: rgba(210, 218, 235, 0.75);
+}
+.k-hodiny i[data-zrazky]::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    width: 5px;
+    height: 8px;
+    margin-left: -2.5px;
+    border-radius: 3px;
+    background: #2f7fd6;
+}
+.k-hodiny i[data-zrazky='sneh']::after {
+    height: 5px;
+    background: #fff;
+}
+.k-stlpce i[data-preslo] {
+    opacity: 0.45;
+}
+.k-os {
+    display: flex;
+    justify-content: space-between;
+    margin-top: -4px;
+    font-size: 0.75rem;
+}
+/* Stĺpce výkonu po hodinách, najsilnejšia hodina zelená. */
+.k-stlpce {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    align-items: end;
+    gap: 3px;
+    height: 44px;
+}
+.k-stlpce i {
+    border-radius: 3px 3px 0 0;
+    background: rgba(255, 255, 255, 0.4);
+}
+.k-stlpce i[data-max] {
+    background: var(--yes);
+}
+/* Bodky pod pásom: kde pás stojí; ťuknutím preskočia na kartu. Tlačidlo má plochu na prst (44 px),
+   bodka v ňom je malá. */
+.bodky {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+.bodky button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+.bodky button::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    transition: width 0.2s;
+}
+.bodky button[aria-current]::before {
+    width: 20px;
+    background: #fff;
 }
 .pbtn {
     justify-self: start;
@@ -2428,6 +2595,111 @@ button.live[aria-expanded='true'] {
     justify-self: stretch;
     text-align: center;
     text-decoration: none;
+}
+/* Vysvetlenie odznaku triedy dňa na karte Dnes (docs/navrhy/dnes-upravy.html): veľké veci so značkou,
+   či sa zmestia na slnko, a stupnica tried s dnešnou zvýraznenou. */
+.trieda-sheet .chip {
+    justify-self: start;
+    background: rgba(14, 36, 80, 0.3);
+}
+.trieda-sheet .chip[data-cls='vyborny'] {
+    background: var(--yes);
+    border-color: var(--yes);
+    color: #14300c;
+}
+.trieda-sheet .chip[data-cls='dobry'] {
+    background: #ffc94a;
+    border-color: #ffc94a;
+    color: #3a2a00;
+}
+.trieda-sheet h2 {
+    padding-right: 0;
+}
+.veci,
+.stupnica {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 8px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.veci li {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    text-align: center;
+}
+.veci .vec-ico {
+    position: relative;
+}
+.veci li[data-ok='true'] .vec-ico {
+    background: var(--yes);
+    color: #14300c;
+}
+.veci li[data-ok='false'] .vec-ico {
+    color: var(--dim);
+}
+.znacka {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    background: #0a1026;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.veci li[data-ok='true'] .znacka {
+    color: var(--yes);
+}
+.stupnica {
+    gap: 4px;
+}
+.stupnica li {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    color: var(--dim);
+}
+.stupnica i {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.18);
+}
+.stupnica b {
+    font-weight: 600;
+}
+.stupnica li[aria-current] {
+    color: #fff;
+}
+.stupnica li[aria-current] b {
+    font-weight: 800;
+}
+.stupnica li[aria-current] i {
+    background: #fff;
+}
+.stupnica li[aria-current][data-cls='vyborny'] i {
+    background: var(--yes);
+}
+.stupnica li[aria-current][data-cls='dobry'] i {
+    background: #ffc94a;
+}
+.stupnica li[aria-current][data-cls='nanic'] i {
+    background: #9aa4c0;
+}
+.trieda-sheet .dim {
+    font-size: 0.8125rem;
+    color: var(--dim);
 }
 /* Panel štítka karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html): to isté tmavé sklo, štítok
    nad nadpisom, vysvetlenie tlmené. */
