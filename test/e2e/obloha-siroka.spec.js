@@ -2,7 +2,7 @@
 // a počítač. Rozloženie rozhoduje šírka okna (LAYOUT_PX v shared/config.js). Očakávané texty sa
 // počítajú tými istými modelmi ako na telefóne - stĺpce sú tie isté karty, len vedľa seba.
 import { expect, test } from '@playwright/test';
-import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, TERAZ_DEN_STORAGE_KEY, WORKER_PV_URL } from '../../shared/config.js';
+import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
@@ -45,8 +45,6 @@ async function openObloha(page, size, { time = NOON, settings = OWNER } = {}) {
             ([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v),
             [SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings))],
         );
-    // Testy grafu dňa: karta Deň ukazuje krivku (pri štarte appky je pás).
-    await page.addInitScript((k) => localStorage.getItem(k) || localStorage.setItem(k, '{"krivka":true}'), TERAZ_DEN_STORAGE_KEY);
     await page.clock.setFixedTime(time);
     await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);

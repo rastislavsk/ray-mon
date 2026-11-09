@@ -197,14 +197,6 @@ test('detail spotrebiča na karte Teraz: otvorený je krok navigácie, Späť a 
     assert.equal(panelChange('terazky', 'mozem').tzVec, null);
 });
 
-test('karta Deň: krivka či pás je voľba telefónu, nie krok navigácie', () => {
-    assert.equal(stateWith().tzKrivka, false);
-    const s = initialState(NOW, { saved: null, site: SITE, dayLog: {}, online: true, tzKrivka: true });
-    assert.equal(s.tzKrivka, true);
-    assert.deepEqual(navStep(s), navStep({ ...s, tzKrivka: false }));
-    assert.equal('tzKrivka' in panelChange('terazky', 'mozem'), false);
-});
-
 test('ťuknutie na oznámenie: Teraz s obrysom okolo toho, čo zapnúť, inak sa všetko zavrie', () => {
     const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'stav', tzVec: 'pracka', stavTip: true });
     const po = { ...s, ...zOznamenia(s) };

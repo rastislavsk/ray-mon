@@ -124,7 +124,7 @@ test.describe('tón hlášok', () => {
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
         expect(slusny.word).toBe('Dnes bude dobrý deň');
-        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po páse a pozri si iný čas.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
@@ -141,11 +141,11 @@ test.describe('tón hlášok', () => {
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
         await karta(page, 'terazky');
-        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po páse a pozrite si iný čas.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po grafe a pozrite si iný čas.');
 
         await page.reload();
         await appReady(page);
-        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po páse a pozrite si iný čas.');
+        await expect(page.locator('#tz-hint')).toHaveText('Ťahajte prstom po grafe a pozrite si iný čas.');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
         expect(errors).toEqual([]);

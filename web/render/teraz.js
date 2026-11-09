@@ -1,12 +1,12 @@
 // Karta Teraz (docs/navrhy/teraz-navrh-2.html): veľké číslo kW teraz, čo zapnúť (riadok nad dlaždicami,
-// dlaždice toho, čo ide teraz, skupiny riadkov), karta Deň s pásom alebo krivkou a odčítaním zvoleného
+// dlaždice toho, čo ide teraz, skupiny riadkov), karta Deň s krivkou a výkonom zvoleného
 // času, panel s vysvetlením, detail spotrebiča a výzvy. Číslo hore ostáva teraz, zvolený čas je len
 // v karte Deň. Všetko počíta shared/teraz.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
 
 import { DAY_CHART } from '../../shared/day-chart.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_PAS_SLNKO, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
+import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
 import { skyNow } from '../../shared/sky.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml } from '../day-chart.js';
@@ -105,18 +105,16 @@ const pasX = (pct) => Math.round((DAY_CHART.left + (pct / 100) * (DAY_CHART.righ
 /** Poloha v % šírky pásu pre bod viewBoxu `x`. @param {number} x */
 const pasPct = (x) => `${Math.round((x / DAY_CHART.w) * 10000) / 100}%`;
 
-/** Rozmery pásu v px: nápis času navrchu, slnko, sieť. */
+/** Rozmery pásu v px: slnko, sieť. */
 const PAS = { h: 58, sunY: 22, sunH: 22, netY: 48, netH: 6 };
 
 /**
- * Pás karty Deň (a v detaile spotrebiča): slnko a sieť po úsekoch na tej istej osi ako krivka
- * (DAY_CHART, aby posúvač prepočítal polohu prsta rovnako), prejdená časť stlmená, teraz biela
- * čiara, zvolený čas žltá čiara s časom navrchu, v detaile zvýraznený úsek spotrebiča (`slot`).
+ * Pás dňa v detaile spotrebiča: slnko a sieť po úsekoch na tej istej osi ako krivka karty Deň (DAY_CHART),
+ * prejdená časť stlmená, teraz biela čiara a zvýraznený úsek spotrebiča (`slot`, v % osi).
  * Výška je v px, šírka sa naťahuje (preserveAspectRatio none, čiary bez zmeny hrúbky).
- * @param {NonNullable<Model['den']>['pas']} pas
- * @param {{ pick?: { at: number, text: string } | null, slot?: { left: number, width: number } | null }} [o] `at` v % osi
+ * @param {NonNullable<Model['den']>['pas']} pas @param {{ left: number, width: number }} slot
  */
-function pasHtml(pas, { pick = null, slot = null } = {}) {
+function pasHtml(pas, slot) {
     const rect = (/** @type {{ left: number, width: number, l: string }} */ u, /** @type {number} */ y, /** @type {number} */ h) =>
         `<rect x="${pasX(u.left)}" y="${y}" width="${Math.max(0.5, pasX(u.left + u.width) - pasX(u.left))}" height="${h}" data-l="${u.l}"/>`;
     const sun = pas.slnko.filter((u) => u.l !== 'noc').map((u) => rect(u, PAS.sunY, PAS.sunH));
@@ -127,15 +125,8 @@ function pasHtml(pas, { pick = null, slot = null } = {}) {
             ? ''
             : `<rect x="${DAY_CHART.left}" y="${PAS.sunY}" width="${nowX - DAY_CHART.left}" height="${PAS.netY + PAS.netH - PAS.sunY}" class="pas-past"/>`;
     const nowLine = nowX === null ? '' : `<line x1="${nowX}" x2="${nowX}" y1="${PAS.sunY - 3}" y2="${PAS.h}" class="pas-now"/>`;
-    const slotEl = slot
-        ? `<rect x="${pasX(slot.left)}" y="${PAS.sunY}" width="${pasX(slot.left + slot.width) - pasX(slot.left)}" height="${PAS.sunH}" rx="4" class="pas-slot"/>`
-        : '';
-    const pickX = pick ? pasX(pick.at) : 0;
-    const pickLine = pick ? `<line x1="${pickX}" x2="${pickX}" y1="14" y2="${PAS.h}" class="pas-pick"/>` : '';
+    const slotEl = `<rect x="${pasX(slot.left)}" y="${PAS.sunY}" width="${pasX(slot.left + slot.width) - pasX(slot.left)}" height="${PAS.sunH}" rx="4" class="pas-slot"/>`;
     const ticks = pas.ticks.map((t) => `<span class="pas-t" style="left:${pasPct(pasX(t.at))}">${t.label}</span>`).join('');
-    const label = pick
-        ? `<span class="pas-at" style="left:clamp(24px, ${pasPct(pickX)}, calc(100% - 24px))">${escapeHtml(pick.text)}</span>`
-        : '';
     return (
         `<div class="pas-box" aria-hidden="true"><svg class="pas" viewBox="0 0 ${DAY_CHART.w} ${PAS.h}" preserveAspectRatio="none">` +
         `<rect x="${DAY_CHART.left}" y="${PAS.sunY}" width="${DAY_CHART.right - DAY_CHART.left}" height="${PAS.sunH}" class="pas-noc"/>` +
@@ -144,78 +135,49 @@ function pasHtml(pas, { pick = null, slot = null } = {}) {
         past +
         slotEl +
         nowLine +
-        pickLine +
-        `</svg>${ticks}${label}</div>`
+        `</svg>${ticks}</div>`
     );
 }
 
-/** Legenda pod pásom alebo krivkou: farba a slovo. @param {Array<[string, string]>} items */
+/** Legenda pod krivkou: farba a slovo. @param {Array<[string, string]>} items */
 const legHtml = (items) => items.map(([l, t]) => `<span><i data-l="${l}"></i>${escapeHtml(t)}</span>`).join('');
 
 /**
- * Odčítanie karty Deň: bez zvoleného času veta o dni a pod ňou sieť, oblačnosť a čo beží; so
- * zvoleným časom čas, výkon a odkiaľ je, slnko, sieť, oblačnosť a čo vtedy beží.
- * @param {NonNullable<Model['den']>} d
+ * Karta Deň: hore výkon a odkiaľ je (meranie alebo odhad z predpovede) a vpravo čas - teraz alebo
+ * zvolený. Pod tým krivka dňa (posúvač času), legenda a pätka s radou alebo „Späť na teraz“.
+ * Bez predpovede nie je.
+ * @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
  */
-function citanieHtml(d) {
-    const c = d.citanie;
-    const siet = `<span data-l="${c.tone.siet}">${escapeHtml(c.siet)}</span>`;
-    const mraky = c.mraky ? `<span>${escapeHtml(c.mraky)}</span>` : '';
-    const plan = c.plan ? `<p class="c-bezi">${c.ikony.map(vecIcon).join('')}${escapeHtml(c.plan)}</p>` : '';
-    if (!d.zvolene) {
-        const v = d.veta;
-        return `<p class="c-veta">${escapeHtml(v.text)}${v.sub ? ` <span>· ${escapeHtml(v.sub)}</span>` : ''}</p><p class="c-stav">${siet}${mraky}</p>${plan}`;
-    }
-    return (
-        `<p class="c-cas"><b>${escapeHtml(c.cas)}</b><b>${escapeHtml(c.kw)}</b><span>${escapeHtml(c.zdroj)}</span></p>` +
-        `<p class="c-stav"><span data-l="${c.tone.slnko}">${escapeHtml(c.slnko)}</span>${siet}${mraky}</p>${plan}`
-    );
-}
-
-/**
- * Karta Deň: prepínač pás / krivka, odčítanie, posúvač času (pás alebo krivka - tá istá os, ten istý
- * posúvač), legenda a pätka s radou alebo „Späť na teraz“. Bez predpovede nie je.
- * @param {Model} m @param {boolean} krivka @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
- */
-function renderDen(m, krivka, dom, T) {
+function renderDen(m, dom, T) {
     const d = m.den;
     const c = m.chart;
     show(dom.tzDen, !!d && !!c);
     if (!d || !c) return;
-    dom.tzPasBtn.setAttribute('aria-pressed', String(!krivka));
-    dom.tzKrivkaBtn.setAttribute('aria-pressed', String(krivka));
-    setHtml(dom.tzCitanie, citanieHtml(d));
-    dom.tzChart.dataset.view = krivka ? 'krivka' : 'pas';
-    const pick = d.zvolene
-        ? { at: Math.max(0, Math.min(100, ((d.min - d.pas.span.from) / (d.pas.span.to - d.pas.span.from)) * 100)), text: d.citanie.cas }
-        : null;
-    setHtml(dom.tzChart, krivka ? dayChartHtml(c) : pasHtml(d.pas, { pick }));
+    const k = d.citanie;
+    setHtml(
+        dom.tzCitanie,
+        `<p class="c-kw"><b>${escapeHtml(k.kw)}</b><span>${escapeHtml(k.zdroj)}</span></p><p class="c-cas">${escapeHtml(k.cas)}</p>`,
+    );
+    setHtml(dom.tzChart, dayChartHtml(c));
     dom.tzChart.setAttribute('aria-label', T.slider);
     dom.tzChart.setAttribute('aria-valuemin', String(c.range.min));
     dom.tzChart.setAttribute('aria-valuemax', String(c.range.max));
     dom.tzChart.setAttribute('aria-valuenow', String(c.value));
-    dom.tzChart.setAttribute('aria-valuetext', d.citanie.veta);
+    dom.tzChart.setAttribute('aria-valuetext', k.veta);
     setText(dom.tzChartDesc, c.desc);
-    const siet = /** @type {Array<[string, string]>} */ ([
-        ['cheap', TERAZ_TONES.cheap],
-        ['costly', TERAZ_TONES.costly],
-    ]);
     setHtml(
         dom.tzLeg,
-        legHtml(
-            krivka
-                ? [
-                      ['power', DAY_CHART_KEYS.power],
-                      ['forecast', DAY_CHART_KEYS.forecast],
-                      ['limit', T.limit],
-                      ['go', TERAZ_TONES.sun],
-                      ...siet,
-                  ]
-                : [['go', TERAZ_PAS_SLNKO.go], ['part', TERAZ_PAS_SLNKO.part], ...siet],
-        ),
+        legHtml([
+            ['power', DAY_CHART_KEYS.power],
+            ['forecast', DAY_CHART_KEYS.forecast],
+            ['limit', T.limit],
+            ['go', TERAZ_TONES.sun],
+            ['cheap', TERAZ_TONES.cheap],
+            ['costly', TERAZ_TONES.costly],
+        ]),
     );
     show(dom.tzHint, !d.zvolene);
-    setText(dom.tzHint, krivka ? T.hint : T.hintPas);
+    setText(dom.tzHint, T.hint);
     show(dom.tzReset, d.zvolene);
     setText(dom.tzReset, T.reset);
 }
@@ -273,7 +235,7 @@ function renderVecSheet(state, m, dom, T) {
         setText(dom.tzVecKedy, v.kedy);
         setText(dom.tzVecCas, v.cas);
         show(dom.tzVecPas, !!v.slot);
-        setHtml(dom.tzVecPas, v.slot ? pasHtml(m.den.pas, { slot: v.slot }) : '');
+        setHtml(dom.tzVecPas, v.slot ? pasHtml(m.den.pas, v.slot) : '');
         setText(dom.tzVecWhy, v.why);
         setText(dom.tzVecNote, PLAN_DNA_NOTE);
         setText(dom.tzVecClose, T.chipClose);
@@ -334,7 +296,7 @@ export function renderTeraz(state, dom) {
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
-    renderDen(m, state.tzKrivka === true, dom, T);
+    renderDen(m, dom, T);
     renderDenNebo(state, m, dom);
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom, T);

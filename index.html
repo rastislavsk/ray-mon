@@ -158,18 +158,12 @@
                     <div id="tz-dlazdice" class="mriezka"></div>
                     <div id="tz-skupiny"></div>
                 </div>
-                <!-- Karta Deň: veta o dni, pri zvolenom čase odčítanie, pod ním pás alebo krivka (posúvač času),
+                <!-- Karta Deň: výkon a odkiaľ je (vľavo), čas (vpravo), pod tým krivka dňa (posúvač času),
                      legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. -->
                 <section id="tz-den" class="glass tzden hidden" aria-labelledby="tz-den-ttl">
                     <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v karte. -->
                     <div id="tz-den-wx" class="wx wx-den hidden" aria-hidden="true"></div>
-                    <div class="den-hlava">
-                        <h2 id="tz-den-ttl" class="glass-ttl">Deň</h2>
-                        <div class="prep" role="group" aria-label="Podoba dňa">
-                            <button type="button" id="tz-pas-btn" aria-pressed="true">Pás</button>
-                            <button type="button" id="tz-krivka-btn" aria-pressed="false">Krivka</button>
-                        </div>
-                    </div>
+                    <h2 id="tz-den-ttl" class="sr">Deň</h2>
                     <div id="tz-citanie" class="citanie"></div>
                     <div
                         id="tz-chart"

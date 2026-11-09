@@ -11,8 +11,7 @@ import { setupInit } from '../shared/setup-flow.js';
 
 /**
  * Stav. `terazPreview` zvolený čas v karte Deň na karte Teraz (minúta dňa, null = teraz; číslo hore
- * ostáva teraz, docs/navrhy/teraz-navrh-2.html), `tzKrivka` karta Deň ukazuje krivku namiesto pásu
- * (voľba sa pamätá v telefóne), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
+ * ostáva teraz, docs/navrhy/teraz-navrh-2.html), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
  * `tzObrys` čaká alebo beží jednorazový obrys toho, čo zapnúť, po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel s vysvetlením riadku nad dlaždicami karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
@@ -38,7 +37,6 @@ import { setupInit } from '../shared/setup-flow.js';
  *   layout: Layout,
  *   tariff: import('../shared/config.js').Tariff,
  *   terazPreview: number | null,
- *   tzKrivka: boolean,
  *   tzVec: string | null,
  *   tzObrys: boolean,
  *   tzChip: TzChip | null,
@@ -95,19 +93,16 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
 /**
  * Voľby telefónu: ranné oznámenie, čo s oznámeniami telefón vie,
  * a spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
- * Aj či karta Deň na karte Teraz ukazuje krivku namiesto pásu.
- * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], tzKrivka?: boolean }} o
+ * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
     oznamStav = /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
     doma = domaDefault(),
-    tzKrivka = false,
 }) => ({
     oznamenia,
     oznamStav,
     doma,
-    tzKrivka,
 });
 
 /**
@@ -130,7 +125,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
- *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], tzKrivka?: boolean }} start
+ *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
