@@ -869,6 +869,81 @@ test('čo zapnúť: počkaj na slnko, iný deň ako zajtra, tento týždeň nie,
     assert.deepEqual(nic.skupiny, []);
 });
 
+test('čo zapnúť: slnko až o viac dní - riadok hore, pás dní a karta „o 5 dní“', () => {
+    // Pondelok 9. 11., do soboty zamračené.
+    const dni = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15'];
+    /** @param {string} name @param {string} date @param {number} index @returns {any} */
+    const neskor = (name, date, index) => ({
+        id: 'pracka',
+        name: 'Práčka',
+        kind: 'later',
+        day: { name, date, index, start: 10 * 60 + 15 },
+        end: 11 * 60 + 45,
+        after: null,
+    });
+    /** @type {any[]} */
+    const rows = [
+        { id: 'auto', name: 'Auto', kind: 'cheap', start: 22 * 60, end: 30 * 60, after: null },
+        neskor('Sobota', '2026-11-14', 5),
+        { ...neskor('Sobota', '2026-11-14', 5), id: 'umyvacka', name: 'Umývačka' },
+    ];
+    const teraz = { nowMin: minuta('16:40'), level: 'draha', slnkoDnes: false, dni };
+    const m = coZapnutModel(rows, teraz);
+    assert.deepEqual(m.hore.oko, { text: 'Slnko až v sobotu', sub: '4 dni zamračené' });
+    assert.equal(m.hore.bod, 'cloud');
+    assert.deepEqual(m.pas, [
+        { den: 'Po', pod: 'dnes', druh: 'dnes' },
+        { den: 'Ut', pod: '', druh: 'oblak' },
+        { den: 'St', pod: '', druh: 'oblak' },
+        { den: 'Št', pod: '', druh: 'oblak' },
+        { den: 'Pi', pod: '', druh: 'oblak' },
+        { den: 'So', pod: '', druh: 'slnko' },
+    ]);
+    assert.deepEqual(m.skupiny.at(-1)?.karta, { datum: '14.11.', pozn: 'o 5 dní' });
+    // Auto teraz z lacnej siete: dlaždica ostáva, veta „slnko dnes nestačí“ nie - povie to pás.
+    const vLacnom = coZapnutModel(rows, { ...teraz, nowMin: minuta('22:00'), level: 'lacna' });
+    assert.equal(vLacnom.hore.druh, 'siet');
+    assert.equal(vLacnom.hore.oko.text, 'Slnko až v sobotu');
+    assert.equal(vLacnom.hore.bezSlnka, '');
+    // Pozajtra: jeden zamračený deň.
+    const streda = coZapnutModel([neskor('Streda', '2026-11-11', 2)], teraz);
+    assert.deepEqual(streda.hore.oko, { text: 'Slnko až v stredu', sub: 'zajtra zamračené' });
+    assert.equal(streda.pas?.length, 3);
+    assert.deepEqual(streda.skupiny[0].karta, { datum: '11.11.', pozn: 'o 2 dni' });
+    // Šesť dní: „zamračených“.
+    assert.equal(coZapnutModel([neskor('Nedeľa', '2026-11-15', 6)], teraz).hore.oko.sub, '5 dní zamračených');
+    // V predpovedi žiadny deň so slnkom: pás cez celú predpoveď, slnko v ňom nie je.
+    const nikdy = coZapnutModel([{ id: 'pracka', name: 'Práčka', kind: 'none' }], teraz);
+    assert.deepEqual(nikdy.hore.oko, { text: 'Slnko tento týždeň nestačí', sub: 'celý týždeň zamračené' });
+    assert.deepEqual(
+        nikdy.pas?.map((d) => d.druh),
+        ['dnes', 'oblak', 'oblak', 'oblak', 'oblak', 'oblak', 'oblak'],
+    );
+});
+
+test('čo zapnúť: pás dní nie je pri zajtrajšku, pri slnku dnes, bez dátumov ani bez vecí', () => {
+    const dni = ['2026-11-09', '2026-11-10', '2026-11-11'];
+    /** @type {any} */
+    const streda = {
+        id: 'pracka',
+        name: 'Práčka',
+        kind: 'later',
+        day: { name: 'Streda', date: dni[2], index: 2, start: 600 },
+        end: 700,
+        after: null,
+    };
+    const teraz = { nowMin: minuta('16:40'), level: 'draha', slnkoDnes: false, dni };
+    const zajtra = coZapnutModel([{ ...streda, day: { ...streda.day, name: 'Zajtra', date: dni[1], index: 1 } }], teraz);
+    assert.equal(zajtra.pas, null);
+    assert.deepEqual(zajtra.skupiny[0].karta, { datum: 'utorok 10.11.', pozn: 'dnes už slnko nestačí' });
+    /** @type {any} */
+    const dnesSlnko = { id: 'auto', name: 'Auto', kind: 'sun', start: 17 * 60, end: 18 * 60, after: null, km: 10 };
+    assert.equal(coZapnutModel([dnesSlnko, streda], teraz).pas, null);
+    assert.equal(coZapnutModel([streda], { ...teraz, dni: [] }).pas, null, 'predpoveď nezačína dneškom');
+    assert.equal(coZapnutModel([streda], { ...teraz, dni: dni.slice(0, 2) }).pas, null, 'deň mimo dátumov');
+    assert.equal(coZapnutModel([], teraz).pas, null);
+});
+
 /** Časti vety pre čítačku: čas a výkon, slnko, sieť, oblačnosť, čo beží. @param {string} veta */
 const casti = (veta) => veta.split('. ');
 

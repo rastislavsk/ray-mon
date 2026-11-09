@@ -107,6 +107,7 @@ function terazDom() {
         tzOkoBod: byId('tz-oko-bod'),
         tzOkoT: byId('tz-oko-t'),
         tzOkoPod: byId('tz-oko-pod'),
+        tzPas: byId('tz-pas'),
         tzDlazdice: byId('tz-dlazdice'),
         tzSkupiny: byId('tz-skupiny'),
         tzVecSheet: /** @type {HTMLDialogElement} */ (byId('tz-vec-sheet')),

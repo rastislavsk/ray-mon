@@ -1328,13 +1328,36 @@ export function terazSkupinaText(g) {
 
 /**
  * Hlavička karty iného dňa vedľa nadpisu: dátum (pri zajtrajšku aj meno dňa, „nedeľa 6.9.“ - nadpis
- * je „Zajtra“) a pri prvej karte, keď dnes slnko už na nič nestačí, aj to (`slnkoDnes` false).
- * @param {{ date: string, index: number, prva: boolean, slnkoDnes: boolean }} d
+ * je „Zajtra“) a pri prvej karte, keď dnes slnko už na nič nestačí, aj to (`slnkoDnes` false). Keď je
+ * nad kartami pás dní (`pas`), prvá karta namiesto toho povie, o koľko dní je („o 5 dní“).
+ * @param {{ date: string, index: number, prva: boolean, slnkoDnes: boolean, pas?: boolean }} d
  */
-export function terazDenKartaText({ date, index, prva, slnkoDnes }) {
+export function terazDenKartaText({ date, index, prva, slnkoDnes, pas = false }) {
     const datum = index === 1 ? `${weekDayName(date, 2).toLowerCase()} ${weekDateLabel(date)}` : weekDateLabel(date);
+    if (prva && pas) return { datum, pozn: `o ${index} ${dniSlovo(index)}` };
     return { datum, pozn: prva && !slnkoDnes ? 'dnes už slnko nestačí' : '' };
 }
+
+/** Slovo za počtom dní: „1 deň“, „3 dni“, „5 dní“. @param {number} n */
+const dniSlovo = (n) => (n === 1 ? 'deň' : n < 5 ? 'dni' : 'dní');
+
+/**
+ * Riadok nad dlaždicami, keď slnko na spotrebiče príde až o viac dní (pás dní,
+ * docs/navrhy/teraz-viac-dni-bez-slnka.html, A): deň so slnkom (`name`, null = v predpovedi žiadny)
+ * a koľko dní pred ním je zamračených (`oblacne`).
+ * @param {{ name: string | null, oblacne: number }} p
+ */
+export function terazPasOkoText({ name, oblacne }) {
+    if (!name) return { text: 'Slnko tento týždeň nestačí', sub: 'celý týždeň zamračené' };
+    if (oblacne === 1) return { text: `Slnko až ${onDay(name)}`, sub: 'zajtra zamračené' };
+    return { text: `Slnko až ${onDay(name)}`, sub: `${oblacne} ${dniSlovo(oblacne)} ${oblacne < 5 ? 'zamračené' : 'zamračených'}` };
+}
+
+/** Pod dneškom v páse dní. */
+export const TERAZ_PAS_DNES = 'dnes';
+
+/** Vo vysvetlení za „i“, keď je na karte pás dní - predpoveď o niekoľko dní je menej istá. */
+export const TERAZ_PAS_ISTOTA = 'Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.';
 
 /**
  * Detail spotrebiča: kedy a odkiaľ prúd (`kedy`), od-do (`cas`) a prečo práve vtedy (`why`, z Plánu dňa).

@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: slnko až o niekoľko dní</title>
+        <style>
+            /* Zmrazený návrh (viď README v tomto priečinku). Telefóny sú kreslené ručne podľa štýlov appky,
+               nie snímky. Scenár je vymyslený: pondelok 9. 11. 2026 o 16:40, utorok až piatok zamračené,
+               slnko v sobotu 14. 11. Čísla kWh aj časy sú na ukážku. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --cheap: #7cc4ff;
+                --cloud: #b4c3dc;
+                --glass: rgba(10, 20, 50, 0.35);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(350px, 100%);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            button.znova {
+                justify-self: start;
+                font: inherit;
+                font-size: 0.85rem;
+                color: var(--ink);
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 14px;
+                cursor: pointer;
+            }
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                padding: 14px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .opt.rec {
+                border-color: var(--green);
+            }
+            .opt h3 {
+                font-size: 1rem;
+            }
+            .opt .tag {
+                justify-self: start;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 600;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+
+            /* ---------- telefón (kópia štýlov appky, zjednodušená) ---------- */
+            .tel {
+                position: relative;
+                padding: 18px 14px 22px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #4a5068 0%, #6b6577 55%, #857580 100%);
+                overflow: hidden;
+                min-height: 470px;
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 2px;
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .oko > i {
+                flex: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.8);
+            }
+            .oko > i.cloud {
+                background: var(--cloud);
+                box-shadow: 0 0 0 3px rgba(180, 195, 220, 0.3);
+            }
+            .oko-t span {
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: none;
+            }
+            .oko-t span.c {
+                color: var(--cloud);
+            }
+            .oko::after {
+                content: 'i';
+                flex: none;
+                width: 14px;
+                height: 14px;
+                border: 1.5px solid currentColor;
+                border-radius: 50%;
+                font-size: 0.5625rem;
+                line-height: 11px;
+                letter-spacing: 0;
+                text-align: center;
+                text-transform: none;
+            }
+            .dlazdica {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 16px;
+                border-radius: 22px;
+                background: var(--cheap);
+                color: #0b2440;
+                border: 1px solid rgba(11, 36, 64, 0.35);
+            }
+            .dlazdica .ico {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                background: rgba(11, 36, 64, 0.12);
+                display: grid;
+                place-items: center;
+            }
+            .dlazdica b {
+                display: block;
+                font-size: 1.25rem;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            .dlazdica small {
+                font-size: 0.8rem;
+            }
+            .den-karta {
+                margin-top: 16px;
+                overflow: hidden;
+                border: 1px solid rgba(255, 209, 102, 0.55);
+                border-radius: 22px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+            }
+            .den-karta-h {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 2px 10px;
+                padding: 12px 16px;
+                background: linear-gradient(90deg, rgba(255, 209, 102, 0.35), rgba(255, 209, 102, 0.08));
+            }
+            .den-karta-h h4 {
+                margin: 0;
+                font-size: 1.375rem;
+                font-weight: 900;
+                color: var(--ink);
+            }
+            .den-karta-h span {
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .ri {
+                display: grid;
+                grid-template-columns: 4.1rem 24px minmax(0, 1fr);
+                align-items: center;
+                gap: 0 10px;
+                min-height: 52px;
+                padding: 6px 14px;
+            }
+            .ri + .ri {
+                border-top: 1px solid rgba(255, 255, 255, 0.15);
+            }
+            .ri .velky {
+                font-size: 1.375rem;
+                font-weight: 800;
+            }
+            .ri .ico {
+                width: 22px;
+                height: 22px;
+                border: 2px solid currentColor;
+                border-radius: 5px;
+                opacity: 0.85;
+            }
+            .ri b {
+                display: block;
+                font-weight: 800;
+                line-height: 1.15;
+            }
+            .ri small {
+                display: block;
+                font-size: 0.75rem;
+                color: var(--dim);
+            }
+
+            /* ---------- A: pás dní ---------- */
+            .pas {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 4px;
+                margin: 4px 0 2px;
+            }
+            .pas div {
+                display: grid;
+                justify-items: center;
+                gap: 2px;
+                padding: 6px 0 5px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--cloud);
+                background: rgba(180, 195, 220, 0.12);
+            }
+            .pas div small {
+                font-weight: 600;
+                letter-spacing: 0;
+                text-transform: none;
+                color: var(--dim);
+            }
+            .pas div.dnes {
+                background: none;
+                border: 1px dashed rgba(255, 255, 255, 0.3);
+                color: var(--dim);
+            }
+            .pas div.slnko {
+                color: #3a2a00;
+                background: var(--gold);
+                box-shadow: 0 0 18px rgba(255, 209, 102, 0.55);
+            }
+            .pas div.slnko small {
+                color: rgba(58, 42, 0, 0.75);
+            }
+            .pas svg {
+                width: 22px;
+                height: 16px;
+            }
+            /* Animácia A: dni sa raz odkryjú zľava, oblaky jemne priplávajú, slnko v sobotu sa rozžiari. */
+            .hra .pas div {
+                animation: odkry 0.45s both;
+            }
+            .hra .pas div:nth-child(2) {
+                animation-delay: 0.15s;
+            }
+            .hra .pas div:nth-child(3) {
+                animation-delay: 0.3s;
+            }
+            .hra .pas div:nth-child(4) {
+                animation-delay: 0.45s;
+            }
+            .hra .pas div:nth-child(5) {
+                animation-delay: 0.6s;
+            }
+            .hra .pas div.slnko {
+                animation:
+                    odkry 0.45s 0.8s both,
+                    rozziar 1.2s 1.1s both;
+            }
+            @keyframes odkry {
+                from {
+                    opacity: 0;
+                    transform: translateX(-8px);
+                }
+            }
+            @keyframes rozziar {
+                from {
+                    box-shadow: 0 0 0 rgba(255, 209, 102, 0);
+                    filter: saturate(0.4) brightness(0.8);
+                }
+                60% {
+                    box-shadow: 0 0 30px rgba(255, 209, 102, 0.9);
+                }
+            }
+
+            /* ---------- B: sivý most dní bez slnka ---------- */
+            .most {
+                margin-top: 14px;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                align-items: center;
+                gap: 2px 12px;
+                padding: 10px 16px;
+                border: 1px dashed rgba(180, 195, 220, 0.5);
+                border-radius: 18px;
+                background: rgba(180, 195, 220, 0.1);
+                color: var(--cloud);
+                overflow: hidden;
+                position: relative;
+            }
+            .most b {
+                font-size: 1rem;
+                font-weight: 800;
+            }
+            .most small {
+                grid-column: 2;
+                font-size: 0.75rem;
+                color: var(--dim);
+            }
+            .most .oblaky {
+                grid-row: span 2;
+                display: flex;
+                gap: 2px;
+            }
+            .most .oblaky svg {
+                width: 18px;
+                height: 13px;
+            }
+            .hra .most .oblaky svg {
+                animation: plavaj 1.4s ease-out both;
+            }
+            .hra .most .oblaky svg:nth-child(2) {
+                animation-delay: 0.12s;
+            }
+            .hra .most .oblaky svg:nth-child(3) {
+                animation-delay: 0.24s;
+            }
+            .hra .most .oblaky svg:nth-child(4) {
+                animation-delay: 0.36s;
+            }
+            @keyframes plavaj {
+                from {
+                    opacity: 0;
+                    transform: translateX(-14px);
+                }
+            }
+            .spoj {
+                width: 2px;
+                height: 14px;
+                margin: 0 auto;
+                background: repeating-linear-gradient(rgba(180, 195, 220, 0.6) 0 3px, transparent 3px 6px);
+            }
+            .most + .spoj + .den-karta {
+                margin-top: 0;
+            }
+
+            /* ---------- C: hlavička s odpočtom ---------- */
+            .den-karta.dalej {
+                border-color: rgba(255, 209, 102, 0.8);
+            }
+            .den-karta.dalej .den-karta-h {
+                align-items: center;
+            }
+            .odpocet {
+                display: grid;
+                justify-items: end;
+                line-height: 1;
+            }
+            .odpocet b {
+                font-size: 1.75rem;
+                font-weight: 900;
+                color: var(--gold);
+            }
+            .odpocet small {
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .den-karta-pozn {
+                padding: 8px 16px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: var(--cloud);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            }
+            .hra .den-karta.dalej {
+                animation: obeh 1.6s 0.2s both;
+            }
+            @keyframes obeh {
+                0% {
+                    box-shadow: 0 0 0 0 rgba(255, 209, 102, 0);
+                }
+                40% {
+                    box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.55);
+                }
+                100% {
+                    box-shadow: 0 0 0 10px rgba(255, 209, 102, 0);
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="0" height="0" style="position: absolute">
+            <symbol id="oblak" viewBox="0 0 24 16">
+                <path d="M6 15h12a5 5 0 0 0 0-10 6.5 6.5 0 0 0-12.3 2A4 4 0 0 0 6 15z" fill="currentColor" opacity="0.85" />
+            </symbol>
+            <symbol id="slnko" viewBox="0 0 24 16">
+                <circle cx="12" cy="8" r="4.5" fill="currentColor" />
+                <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <path d="M12 0.8v1.6M12 13.6v1.6M4.8 8H3.2M20.8 8h-1.6M6.9 2.9l1.1 1.1M16 12l1.1 1.1M6.9 13.1 8 12M16 4l1.1-1.1" />
+                </g>
+            </symbol>
+            <symbol id="auto" viewBox="0 0 24 24">
+                <path
+                    d="M4 15l1.6-5A2 2 0 0 1 7.5 8.6h9a2 2 0 0 1 1.9 1.4L20 15v3h-2v-1.5H6V18H4zM7 14h.1M17 14h.1"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </symbol>
+        </svg>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Teraz – slnko až o niekoľko dní</h1>
+                <p class="dim">
+                    Telefóny sú kreslené ručne podľa štýlov appky, nie snímky z appky. Scenár je vymyslený: pondelok 9. 11. 2026 o 16:40,
+                    utorok až piatok zamračené, slnko až v sobotu 14. 11. Časy spotrebičov a kWh sú na ukážku. Animácie sa spustia pri
+                    otvorení a tlačidlom „Prehrať znova“; pri útlme pohybu nie sú. Vybrané 9. 11. 2026: <b>A – pás dní</b>, platí už od
+                    jedného zamračeného dňa (slnko pozajtra), veta o istote predpovede je vo vysvetlení pod „i“.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Problém</small>Sobota vyzerá ako zajtrajšok</h2>
+                <p>
+                    Karta iného dňa (2B) je dnes rovnaká pre zajtrajšok aj pre deň o päť dní. Zlatá hlavička hovorí „iný deň“, ale nie „a
+                    medzitým nič“. Kto pozrie letmo, uvidí časy 10:15 a 11:45 a nevie, že do soboty sa slnko na spotrebiče nedá čakať.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko">
+                                <i></i>
+                                <span class="oko-t">Zo slnka dnes už nič <span>· v sobotu od 10:15</span></span>
+                            </div>
+                            <div class="dlazdica">
+                                <span class="ico"
+                                    ><svg width="22" height="22"><use href="#auto" /></svg
+                                ></span>
+                                <span><b>Auto</b><small>nabíjaj do 06:00 · lacný prúd</small></span>
+                            </div>
+                            <div class="den-karta">
+                                <div class="den-karta-h">
+                                    <h4>V sobotu</h4>
+                                    <span>14. 11.</span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption><b>Dnes v appke</b> (prekreslené). Text „v sobotu“ je len drobným písmom v riadku hore.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Návrh</small>Tri spôsoby, ako ukázať „slnko až o 5 dní“</h2>
+                <button class="znova" type="button" id="znova">Prehrať animácie znova</button>
+                <div class="phones hra" id="hra">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko">
+                                <i class="cloud"></i>
+                                <span class="oko-t">Slnko až v sobotu <span class="c">· 4 dni zamračené</span></span>
+                            </div>
+                            <div class="pas" aria-label="Pondelok dnes, utorok až piatok zamračené, sobota slnko">
+                                <div class="dnes">Po<small>dnes</small></div>
+                                <div>
+                                    <svg><use href="#oblak" /></svg>Ut
+                                </div>
+                                <div>
+                                    <svg><use href="#oblak" /></svg>St
+                                </div>
+                                <div>
+                                    <svg><use href="#oblak" /></svg>Št
+                                </div>
+                                <div>
+                                    <svg><use href="#oblak" /></svg>Pi
+                                </div>
+                                <div class="slnko">
+                                    <svg><use href="#slnko" /></svg>So
+                                </div>
+                            </div>
+                            <div class="dlazdica" style="margin-top: 14px">
+                                <span class="ico"
+                                    ><svg width="22" height="22"><use href="#auto" /></svg
+                                ></span>
+                                <span><b>Auto</b><small>nabíjaj do 06:00 · lacný prúd</small></span>
+                            </div>
+                            <div class="den-karta">
+                                <div class="den-karta-h">
+                                    <h4>V sobotu</h4>
+                                    <span>14. 11. · o 5 dní</span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A – pás dní.</b> Pod riadkom hore šesť políčok od dneška po deň so slnkom: sivé oblaky, zlaté slnko.
+                            Animácia: dni sa raz odkryjú zľava, sobota sa rozžiari.
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="tel">
+                            <div class="oko">
+                                <i class="cloud"></i>
+                                <span class="oko-t">Slnko až v sobotu <span class="c">· 4 dni zamračené</span></span>
+                            </div>
+                            <div class="dlazdica">
+                                <span class="ico"
+                                    ><svg width="22" height="22"><use href="#auto" /></svg
+                                ></span>
+                                <span><b>Auto</b><small>nabíjaj do 06:00 · lacný prúd</small></span>
+                            </div>
+                            <div class="most">
+                                <span class="oblaky"
+                                    ><svg><use href="#oblak" /></svg><svg><use href="#oblak" /></svg><svg><use href="#oblak" /></svg
+                                    ><svg><use href="#oblak" /></svg
+                                ></span>
+                                <b>Utorok až piatok</b>
+                                <small>slnko nestačí na nič</small>
+                            </div>
+                            <div class="spoj"></div>
+                            <div class="den-karta">
+                                <div class="den-karta-h">
+                                    <h4>V sobotu</h4>
+                                    <span>14. 11.</span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>B – sivý most.</b> Preskočené dni sú ako sivá prerušovaná karta pred sobotou, spojená bodkovanou čiarou – v
+                            zozname „stoja v rade“ pred sobotou. Animácia: oblaky priplávajú.
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="tel">
+                            <div class="oko">
+                                <i class="cloud"></i>
+                                <span class="oko-t">Slnko až v sobotu <span class="c">· 4 dni zamračené</span></span>
+                            </div>
+                            <div class="dlazdica">
+                                <span class="ico"
+                                    ><svg width="22" height="22"><use href="#auto" /></svg
+                                ></span>
+                                <span><b>Auto</b><small>nabíjaj do 06:00 · lacný prúd</small></span>
+                            </div>
+                            <div class="den-karta dalej">
+                                <div class="den-karta-h">
+                                    <span style="display: grid; gap: 0"
+                                        ><h4>V sobotu</h4>
+                                        <span>14. 11.</span></span
+                                    >
+                                    <span class="odpocet"><b>o 5 dní</b><small>najbližšie slnko</small></span>
+                                </div>
+                                <div class="den-karta-pozn">Do soboty slnko nestačí. Predpoveď sa ešte môže zmeniť.</div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>C – odpočet v hlavičke.</b> Veľké zlaté „o 5 dní“ vpravo, sivomodrá veta pod hlavičkou. Animácia: okraj karty
+                            raz zapulzuje.
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <div class="opts">
+                    <div class="opt rec">
+                        <span class="tag">Odporúčam</span>
+                        <h3>A – pás dní</h3>
+                        <ul>
+                            <li class="plus">obraz namiesto vety – „4 oblaky, potom slnko“ sa prečíta za sekundu</li>
+                            <li class="plus">rovnaké farby ako zvyšok appky: zlatá = deň so slnkom, sivomodrá = oblaky</li>
+                            <li class="plus">pás má zmysel aj pri dvoch dňoch (zajtra oblak, pozajtra slnko)</li>
+                            <li class="minus">pridá riadok na vrch karty; pri 6 a viac dňoch sa políčka zúžia</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>B – sivý most</h3>
+                        <ul>
+                            <li class="plus">dni bez slnka sú v zozname tam, kde časovo patria – pred sobotou</li>
+                            <li class="plus">dá sa naň ťuknúť a ukázať, prečo (kWh po dňoch)</li>
+                            <li class="minus">ďalšia karta v zozname, viac čítania</li>
+                            <li class="minus">pri dlhom rade oblakov (6 dní) sa veta „Utorok až nedeľa“ čudne číta</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C – odpočet v hlavičke</h3>
+                        <ul>
+                            <li class="plus">najmenej nových prvkov, len úprava karty 2B</li>
+                            <li class="plus">„o 5 dní“ je veľké a zlaté, prehliadnuť sa nedá</li>
+                            <li class="minus">opäť text, nie obraz; nevidno, ktoré dni chýbajú</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="dim">
+                    Najjednoduchšia možnosť (nekreslená): nechať všetko a len zmeniť riadok hore na „Slnko až v sobotu · 4 dni zamračené“ so
+                    sivomodrou bodkou. Takmer žiadny kód, ale je to stále drobné písmo, ktoré sa dnes prehliada.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>Texty</small>Riadok hore podľa toho, kedy slnko príde</h2>
+                <table>
+                    <tr>
+                        <th>Najbližší deň so slnkom</th>
+                        <th>Riadok hore (oko)</th>
+                        <th>Hlavička karty</th>
+                        <th>Bodka</th>
+                    </tr>
+                    <tr>
+                        <td>zajtra</td>
+                        <td>Zo slnka dnes už nič · zajtra od 10:15 <span class="dim">(bez zmeny)</span></td>
+                        <td>Zajtra · utorok 10. 11.</td>
+                        <td>cena siete <span class="dim">(bez zmeny)</span></td>
+                    </tr>
+                    <tr>
+                        <td>pozajtra (1 deň oblakov)</td>
+                        <td>Slnko až v stredu · zajtra zamračené</td>
+                        <td>V stredu · 11. 11. · o 2 dni</td>
+                        <td>sivomodrá</td>
+                    </tr>
+                    <tr>
+                        <td>o 3–6 dní</td>
+                        <td>Slnko až v sobotu · 4 dni zamračené</td>
+                        <td>V sobotu · 14. 11. · o 5 dní</td>
+                        <td>sivomodrá</td>
+                    </tr>
+                    <tr>
+                        <td>v predpovedi žiadny</td>
+                        <td>Slnko tento týždeň nestačí · celý týždeň zamračené</td>
+                        <td>len skupina „Tento týždeň nie“</td>
+                        <td>sivomodrá</td>
+                    </tr>
+                </table>
+                <p class="note">
+                    Na rozhodnutie: od kedy platí „viac dní“ – už keď zajtra nestačí (pozajtra = 1 oblačný deň), alebo až od 2 oblačných
+                    dní? Dni bez slnka = dni pred prvým dňom, keď sa zmestí aspoň jeden spotrebič (to isté, čo dnes vyberá kartu dňa).
+                    Predpoveď o 5 dní je menej istá – veta „Predpoveď sa ešte môže zmeniť“ je v C; v A a B by bola vo vysvetlení pod „i“.
+                </p>
+            </section>
+        </main>
+        <script>
+            document.getElementById('znova').addEventListener('click', () => {
+                const h = document.getElementById('hra');
+                h.classList.remove('hra');
+                void h.offsetWidth;
+                h.classList.add('hra');
+            });
+        </script>
+    </body>
+</html>

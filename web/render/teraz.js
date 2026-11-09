@@ -5,13 +5,13 @@
 
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
+import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_PAS_ISTOTA, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
 import { skyNow } from '../../shared/sky.js';
 import { terazModel } from '../../shared/teraz.js';
 import { dayChartHtml } from '../day-chart.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { vecIcon } from './icons.js';
+import { vecIcon, weatherIcon } from './icons.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -66,6 +66,8 @@ function renderCo(co, dom) {
     setHtml(dom.tzOkoT, `${escapeHtml(h.oko.text)}${h.oko.sub ? ` <span>· ${escapeHtml(h.oko.sub)}</span>` : ''}`);
     show(dom.tzOkoPod, !!h.bezSlnka);
     setText(dom.tzOkoPod, h.bezSlnka);
+    show(dom.tzPas, !!co.pas);
+    setHtml(dom.tzPas, (co.pas ?? []).map(pasDenHtml).join(''));
     const dlazdice = h.dlazdice.map(
         (d) =>
             `<button type="button" class="dl${d.cela ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
@@ -80,6 +82,16 @@ function renderCo(co, dom) {
     show(dom.tzDlazdice, dlazdice.length > 0 || !!p);
     setHtml(dom.tzSkupiny, co.skupiny.map(skupinaHtml).join(''));
 }
+
+/**
+ * Deň v páse dní (docs/navrhy/teraz-viac-dni-bez-slnka.html, A): dnes bez ikony, zamračený deň s oblakom,
+ * deň so slnkom zlatý. `--i` je poradie - dni sa pri zobrazení odkryjú zľava.
+ * @param {NonNullable<NonNullable<Model['co']>['pas']>[number]} d @param {number} i
+ */
+const pasDenHtml = (d, i) =>
+    `<span data-druh="${d.druh}" style="--i:${i}">` +
+    `${d.druh === 'dnes' ? '' : weatherIcon(d.druh === 'slnko' ? 'jasno' : 'zamracene')}${escapeHtml(d.den)}` +
+    `${d.pod ? `<small>${escapeHtml(d.pod)}</small>` : ''}</span>`;
 
 /** Riadok skupiny: veľký čas, ikona, meno a doplnok. @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r */
 const riadokHtml = (r) =>
@@ -175,7 +187,7 @@ function renderChipSheet(state, m, dom, T) {
                         `<h3>${escapeHtml(c.info.title)}</h3>${c.info.now ? `<p>${escapeHtml(c.info.now)}</p>` : ''}` +
                         `<p class="q">${escapeHtml(T.chipWhy)}</p><p class="dim">${escapeHtml(c.info.why)}</p></section>`,
                 )
-                .join(''),
+                .join('') + (m?.co?.pas ? `<p class="istota">${escapeHtml(TERAZ_PAS_ISTOTA)}</p>` : ''),
         );
         setText(dom.tzChipClose, T.chipClose);
     }
