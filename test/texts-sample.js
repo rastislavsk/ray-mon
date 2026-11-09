@@ -16,7 +16,7 @@ import { statistikaModel } from '../shared/statistika.js';
 import { STATS_PERIODS } from '../shared/stats.js';
 import { summaryModel } from '../shared/summary.js';
 import { dnesCards, terazModel } from '../shared/teraz.js';
-import { dnesFaza } from '../shared/dnes-faza.js';
+import { denVysvetlenie, dnesFaza } from '../shared/dnes-faza.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave. @param {string} hm */
@@ -85,6 +85,10 @@ export function sampleTexts(voice) {
             if (i.forecast) strings(dnesCards({ ...i, previewMinutes: null }, v), `${p}.dnesCards`, out);
             const mz = mozemModel(i, { voice: v });
             strings(dnesFaza(i, mz.den, mz.facts ? mz.facts.window : null, { voice: v }), `${p}.dnesFaza`, out);
+            // Vysvetlenie odznaku triedy dňa: dnešok a zajtrajšok.
+            if (i.forecast)
+                for (const kedy of /** @type {const} */ (['dnes', 'zajtra']))
+                    strings(denVysvetlenie(i, kedy, { voice: v }), `${p}.trieda.${kedy}`, out);
             // Len práčka: popoludní ide ešte dnes (so sušičkou by čakala na zajtra).
             strings(mozemModel(i, { voice: v, devices: ['pracka'] }), `${p}.mozemPracka`, out);
             for (const online of [true, false]) {

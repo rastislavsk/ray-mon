@@ -106,7 +106,11 @@ to je pre bežný obsah správne, dopisovať ho netreba.
 Mapa a časová os karty Radar majú `touch-action: none`: karta zaberá celú obrazovku, stránka sa na nej neposúva.
 
 **Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii. Ťah do strán má
-jediné miesto: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`).
+dve miesta: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`)
+a pás kariet pod číslami na karte Dnes. Pás posúva prehliadač sám (CSS scroll-snap, `web/mozem-karty.js`
+len zladí bodky), žiadny vlastný kód nad touch udalosťami; zvislý ťah cez neho posúva stránku a myš
+ho posúva ťuknutím na bodky. Ďalšie miesto pridávaj len s rovnakým rozmyslom
+(návrh: `docs/navrhy/dnes-upravy.html`). Pri dňoch v detaile karty 7 dní platí:
 Obsah dňa ide za prstom a vedľa neho stojí susedný deň, ktorý nakreslil ten istý render (appka ho na
 chvíľu zavolá so susedným dňom a výsledok skopíruje) – iný kód na kreslenie dňa preto nepíš. Kópie
 sú bez `id` (inak by boli v stránke dvakrát), takže štýly obsahu dňa stoja na triedach, nie na `id`. Posun

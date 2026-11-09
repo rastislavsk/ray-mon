@@ -24,7 +24,7 @@ import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js'
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText } from '../../shared/messages-core.js';
-import { dnesFaza } from '../../shared/dnes-faza.js';
+import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
@@ -744,19 +744,25 @@ const kartaVStranke = (page) =>
             lead: ak('#mz-lead'),
             day: vidno('#mz-day') ? ak('#mz-day-lead') : '',
             eq: [...document.querySelectorAll('#mz-day-eq b')].map((el) => el.textContent),
-            chip: ak('#mz-chip'),
+            chip: vidno('#mz-chip') ? text('#mz-chip-text') : '',
             kick: ak('#mz-kick'),
             count: ak('#mz-count'),
             grade: ak('#mz-grade'),
-            line: vidno('#mz-more') ? ak('#mz-line') : '',
-            progress: vidno('#mz-more') ? ak('#mz-progress') : '',
-            tomorrow: vidno('#mz-tom') ? [text('#mz-tom-chip'), text('#mz-tom-word'), text('#mz-tom-text')] : null,
-            later: vidno('#mz-later') ? text('#mz-later-text') : '',
+            line: ak('#mz-line'),
+            karty: vidno('#mz-karty')
+                ? [...document.querySelectorAll('#mz-karty .karta')].map((el) => [
+                      el.getAttribute('data-kind'),
+                      el.querySelector('.glass-ttl')?.textContent ?? '',
+                      el.querySelector('.k-val')?.textContent ?? '',
+                      el.querySelector('.k-text')?.textContent ?? '',
+                  ])
+                : [],
+            tomorrow: vidno('#mz-tom') ? [text('#mz-tom-chip-text'), text('#mz-tom-word'), text('#mz-tom-text')] : null,
         };
     });
 
 /** Karta bez časti dňa (dáta nie sú, poloha chýba). @type {import('../../shared/dnes-faza.js').DnesFaza} */
-const BEZ_FAZY = { faza: 'den', chip: '', kick: '', count: null, progress: null, grade: null, line: '', later: '', tomorrow: null };
+const BEZ_FAZY = { faza: 'den', chip: '', kick: '', count: null, grade: null, line: '', karty: [], tomorrow: null };
 
 /** Časť dňa z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').DnesFaza} d */
 const fazaZModelu = (d) => ({
@@ -765,9 +771,8 @@ const fazaZModelu = (d) => ({
     count: d.count ? d.count.value + d.count.text : '',
     grade: d.grade ? d.grade.label + d.grade.value : '',
     line: d.line,
-    progress: d.progress ? d.progress.text : '',
+    karty: d.karty.map((k) => [k.kind, k.title, 'value' in k ? k.value : '', k.text]),
     tomorrow: d.tomorrow ? [d.tomorrow.chip, d.tomorrow.word, d.tomorrow.text] : null,
-    later: d.later,
 });
 
 /** To isté z modelu. @param {ReturnType<typeof modelKarty>} m */
@@ -812,12 +817,122 @@ test.describe('karta Dnes', () => {
             // Zelený úsek oblúka je dnešné okno so slnkom; v noci je pri oblúku Mesiac v skutočnej fáze.
             await expect(page.locator('#mz-arc .arc-win')).toHaveCount(m.arc?.win ? 1 : 0);
             await expect(page.locator('#mz-arc .arc-moon')).toHaveCount(m.arc?.sun === null ? 1 : 0);
-            // Ráno plán, cez deň odpočet, večer vysvedčenie a zajtrajšok - porovnané v kartaVStranke.
+            // Ráno plán, cez deň odpočet, večer ako dopadol dnešok a zajtrajšok - porovnané v kartaVStranke.
             await expect(page.locator('#mz-kick')).toHaveText(m.faza?.kick || /^$/);
             if (hm === '21:00') await expect(page.locator('#mz-tom')).toBeVisible();
             expect(errors).toEqual([]);
         });
     }
+
+    test('časy okna sú tučne: odpočet cez deň, plán ráno aj zajtrajšok večer', async ({ page }) => {
+        for (const [hm, sel] of /** @type {const} */ ([
+            ['13:00', '#mz-count-text'],
+            ['05:30', '#mz-line'],
+            ['21:00', '#mz-tom-text'],
+        ])) {
+            const errors = await openObloha(page, { time: at(hm) });
+            await naDnes(page);
+            const cas = page.locator(`${sel} strong.cas`);
+            await expect(cas).toHaveCount(1);
+            await expect(cas).toHaveText(/^\d\d:\d\d( – \d\d:\d\d)?$/);
+            expect(Number(await cas.evaluate((el) => getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(700);
+            expect(errors).toEqual([]);
+        }
+    });
+
+    test('pás kariet: bodka ukazuje, kde pás stojí, ťuknutie na bodku pás posunie; zvislý ťah posúva stránku', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 700 });
+        const errors = await openObloha(page, { time: at('13:00') });
+        await naDnes(page);
+        const karty = page.locator('#mz-karty .karta');
+        await expect(karty).toHaveCount(4);
+        const bodky = page.locator('#mz-bodky button');
+        await expect(bodky).toHaveCount(4);
+        const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('aria-current')));
+        await expect.poll(aktivna).toBe(0);
+        // Susedná karta vykukuje sprava - je vidno, že pás ide ďalej.
+        const druha = await karty.nth(1).boundingBox();
+        expect(druha && druha.x < 390 && druha.x + druha.width > 390, 'druhá karta vykukuje').toBe(true);
+        await bodky.nth(2).click();
+        await expect.poll(aktivna).toBe(2);
+        // Karta zastane na začiatku pásu (pás posúva plynulo - čaká sa na koniec).
+        await expect.poll(async () => Math.round((await karty.nth(2).boundingBox())?.x ?? -1)).toBe(14);
+        // Posun pásu (ako prstom) rozsvieti bodku sám.
+        await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+        await expect.poll(aktivna).toBe(3);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
+        // Zvislý ťah prstom cez pás posúva stránku.
+        await page.locator('#mz-karty').scrollIntoViewIfNeeded();
+        await page.evaluate(() => scrollTo(0, 0));
+        const box = await page.locator('#mz-karty').boundingBox();
+        expect(box).not.toBeNull();
+        if (box) await prst(page, { x: box.x + 100, y: box.y + 40, dy: -200 });
+        await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+        expect(errors).toEqual([]);
+    });
+
+    test('ťuknutie na odznak vysvetlí triedu dňa modelom; Zavrieť, Escape a Späť ho zavrú', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const time = at('13:00');
+        const errors = await openObloha(page, { time });
+        await naDnes(page);
+        const input = {
+            ...OWNER,
+            now: time,
+            loading: false,
+            known: /** @type {const} */ ('elektraren'),
+            pv,
+            forecast: buildForecast(weather, time, SITE, PLANT),
+        };
+        const v = /** @type {import('../../shared/dnes-faza.js').DenVysvetlenie} */ (denVysvetlenie(input, 'dnes'));
+        expect(v).not.toBeNull();
+        const panel = page.locator('#mz-trieda-sheet');
+        const chip = page.locator('#mz-chip');
+        await chip.click();
+        await expect(panel).toBeVisible();
+        await expect(page.locator('#mz-trieda-chip')).toHaveText(v.chip);
+        await expect(page.locator('#mz-trieda-title')).toHaveText(v.title);
+        await expect(page.locator('#mz-trieda-text')).toHaveText(v.text);
+        await expect(page.locator('#mz-trieda-veci > li')).toHaveCount(v.veci.length);
+        await expect(page.locator('#mz-trieda-veci > li[data-ok="true"]')).toHaveCount(v.veci.filter((x) => x.ok).length);
+        await expect(page.locator('#mz-trieda-stupnica > li b')).toHaveText(v.stupnica.map((s) => s.label));
+        await expect(page.locator('#mz-trieda-stupnica > li[aria-current]')).toHaveAttribute('data-cls', v.cls);
+        expect(await vazneNalezy(page)).toEqual([]);
+        await page.locator('#mz-trieda-close').click();
+        await expect(panel).toBeHidden();
+        await expect(chip).toBeFocused();
+        await chip.click();
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        await chip.click();
+        await page.goBack();
+        await expect(panel).toBeHidden();
+        await ocakavajKartu(page, 'mozem');
+        expect(errors).toEqual([]);
+    });
+
+    test('večer vysvetlí odznak zajtrajška', async ({ page }) => {
+        const time = at('21:00');
+        const errors = await openObloha(page, { time });
+        await naDnes(page);
+        const input = {
+            ...OWNER,
+            now: time,
+            loading: false,
+            known: /** @type {const} */ ('elektraren'),
+            pv,
+            forecast: buildForecast(weather, time, SITE, PLANT),
+        };
+        const v = denVysvetlenie(input, 'zajtra');
+        await expect(page.locator('#mz-chip')).toBeHidden();
+        await page.locator('#mz-tom-chip').click();
+        await expect(page.locator('#mz-trieda-sheet')).toBeVisible();
+        await expect(page.locator('#mz-trieda-chip')).toHaveText(v?.chip ?? '-');
+        await expect(page.locator('#mz-trieda-text')).toHaveText(v?.text ?? '-');
+        await page.locator('#mz-trieda-close').click();
+        await expect(page.locator('#mz-tom-chip')).toBeFocused();
+        expect(errors).toEqual([]);
+    });
 
     for (const width of [390, 320]) {
         test(`šírka ${width} px: čísla dňa sa neorežú, žiadne veľké slovo nepretečie`, async ({ page }) => {
@@ -899,7 +1014,7 @@ test.describe('karta Dnes', () => {
         await znova.click();
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW)));
         await expect(znova).toBeHidden();
-        await expect(page.locator('#mz-later')).toBeVisible();
+        await expect(page.locator('#mz-karty')).toBeVisible();
         expect(errors).toEqual([]);
     });
 

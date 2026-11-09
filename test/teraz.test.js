@@ -29,7 +29,6 @@ import {
     terazChartText,
     terazCloudText,
     terazJasText,
-    terazLaterText,
     terazLimitGap,
     terazPreviewTime,
     terazSourceText,
@@ -691,14 +690,6 @@ test('texty karty Teraz', () => {
     assert.equal(terazWindowText(null, false), 'Okno na veľké veci dnes nebude.');
     assert.equal(terazTodayText({ forecastKwh: 61.4, doneKwh: 31.7, measured: true }), 'Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.');
     assert.equal(terazTodayText({ forecastKwh: 30, doneKwh: 12.04, measured: false }), 'Predpoveď 30,0 kWh, podľa nej už asi 12,0 kWh.');
-    const next = { name: 'Zajtra', kwh: 48.5 };
-    assert.equal(terazLaterText({ wait: null, todayStrong: true, next }), 'Dnes je silný deň. Ďalší taký: zajtra, okolo 49 kWh.');
-    assert.equal(
-        terazLaterText({ wait: '11:00', todayStrong: false, next: { name: 'Pondelok', kwh: 50 } }),
-        'Lepšie bude o 11:00. Najbližší silný deň: pondelok, okolo 50 kWh.',
-    );
-    assert.equal(terazLaterText({ wait: null, todayStrong: true, next: null }), 'Dnes je silný deň. Ďalší taký v predpovedi nie je.');
-    assert.equal(terazLaterText({ wait: null, todayStrong: false, next: null }), 'Silný deň v predpovedi na týždeň nie je.');
     const desc = terazChartText({
         span: { from: hm(5), to: hm(21) },
         nowMin: hm(13),

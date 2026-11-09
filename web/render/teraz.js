@@ -13,7 +13,7 @@ import { dayChartHtml } from '../day-chart.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { vecIcon } from './icons.js';
-import { setHtml, setText, show } from './write.js';
+import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
@@ -180,19 +180,6 @@ function renderDen(m, dom, T) {
     setText(dom.tzHint, T.hint);
     show(dom.tzReset, d.zvolene);
     setText(dom.tzReset, T.reset);
-}
-
-/**
- * Otvorí alebo zavrie dialóg podľa stavu; pri zatvorení vráti fokus na prvok, ktorý ho otvoril.
- * @param {HTMLDialogElement} d @param {boolean} open @param {() => Element | null} opener
- */
-function dialog(d, open, opener) {
-    if (open && !d.open) d.showModal();
-    else if (!open && d.open) {
-        d.close();
-        const btn = opener();
-        if (btn instanceof HTMLElement) btn.focus();
-    }
 }
 
 /**

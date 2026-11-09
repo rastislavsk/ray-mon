@@ -18,7 +18,7 @@ import { DATE_RE } from './valid.js';
 /** Triedy od najlepšej. @type {readonly DenTrieda[]} */
 export const DEN_TRIEDY = ['vyborny', 'dobry', 'slaby', 'nanic'];
 
-/** Silný deň - zmestia sa všetky spotrebiče (riadok Kedy lepšie na karte Dnes). @param {DenTrieda} cls */
+/** Silný deň - zmestia sa všetky spotrebiče (karta Kedy lepšie na karte Dnes). @param {DenTrieda} cls */
 export const silnyDen = (cls) => cls === 'vyborny' || cls === 'dobry';
 
 /**
@@ -28,7 +28,7 @@ export const silnyDen = (cls) => cls === 'vyborny' || cls === 'dobry';
  * @returns {DenTrieda}
  */
 export function denTrieda(input, devices) {
-    return triedaOf({ ...dayCtx(input), nowMin: 0 }, input.tariff.currency, devices);
+    return rozbor(dnesCtx(input), input.tariff.currency, devices).cls;
 }
 
 /**
@@ -38,25 +38,51 @@ export function denTrieda(input, devices) {
  * @param {readonly string[]} devices spotrebiče doma @returns {DenTrieda}
  */
 export function denTriedaDna(input, index, devices) {
-    const ctx = dayCtx(input);
-    const day = input.forecast.days[index];
-    const plan = forecastDayPlan(input, index);
-    return triedaOf({ ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw }, input.tariff.currency, devices);
+    return rozbor(dnaCtx(input, index), input.tariff.currency, devices).cls;
 }
 
 /**
- * Trieda dňa z jeho kontextu (rozpočet slnka od polnoci): koľko spotrebičov sa za deň zmestí na slnko.
- * @param {import('./mozem.js').DayCtx} ctx @param {string} currency @param {readonly string[]} devices @returns {DenTrieda}
+ * Trieda dňa aj s tým, ktoré veľké veci sa v ten deň zmestia na slnko - vysvetlenie odznaku na karte
+ * Dnes (docs/navrhy/dnes-upravy.html). `index` null je dnešok (ako denTrieda), inak deň predpovede
+ * (ako denTriedaDna). Bez spotrebičov doma ráta s predvolenými, tak ako trieda.
+ * @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices @param {number | null} [index]
+ * @returns {{ cls: DenTrieda, veci: { id: string, ok: boolean }[] }}
  */
-function triedaOf(ctx, currency, devices) {
+export function denTriedaVeci(input, devices, index = null) {
+    const ctx = index === null || !input.forecast ? dnesCtx(input) : dnaCtx({ ...input, forecast: input.forecast }, index);
+    return rozbor(ctx, input.tariff.currency, devices);
+}
+
+/** Kontext dneška od polnoci. @param {import('./day-plan.js').PlanInput} input */
+const dnesCtx = (input) => ({ ...dayCtx(input), nowMin: 0 });
+
+/**
+ * Kontext iného dňa predpovede od polnoci, z jeho plánu.
+ * @param {import('./day-plan.js').PlanInput & { forecast: import('./solar.js').Forecast }} input @param {number} index
+ */
+function dnaCtx(input, index) {
+    const ctx = dayCtx(input);
+    const day = input.forecast.days[index];
+    return { ...ctx, nowMin: 0, plan: forecastDayPlan(input, index), weakToday: day.peakKw < ctx.th.weakPeakKw };
+}
+
+/**
+ * Trieda dňa z jeho kontextu (rozpočet slnka od polnoci): koľko spotrebičov sa za deň zmestí na slnko,
+ * a ktoré to sú.
+ * @param {import('./mozem.js').DayCtx} ctx @param {string} currency @param {readonly string[]} devices
+ * @returns {{ cls: DenTrieda, veci: { id: string, ok: boolean }[] }}
+ */
+function rozbor(ctx, currency, devices) {
     const own = chosen(devices);
     const list = own.length ? own : chosen(PLAN_DNA.devices);
-    const fit = najlepsiDen(ctx, currency, list).length;
-    if (!fit) return 'nanic';
-    if (fit < list.length) return 'slaby';
+    const rows = najlepsiDen(ctx, currency, list);
+    const veci = list.map(({ item }) => ({ id: item.id, ok: rows.some((r) => r.id === item.id) }));
+    const fit = rows.length;
+    if (!fit) return { cls: 'nanic', veci };
+    if (fit < list.length) return { cls: 'slaby', veci };
     // Rezerva na mrak: zmestia sa všetky, aj keby strecha dala len časť výkonu?
     const slabsi = { ...ctx, plan: ctx.plan.map((s) => ({ ...s, kw: s.kw * DEN_TRIEDA.reserve })) };
-    return najlepsiDen(slabsi, currency, list).length === list.length ? 'vyborny' : 'dobry';
+    return { cls: najlepsiDen(slabsi, currency, list).length === list.length ? 'vyborny' : 'dobry', veci };
 }
 
 /**

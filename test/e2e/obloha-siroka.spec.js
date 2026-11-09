@@ -389,7 +389,7 @@ test.describe('tablet na šírku prstom', () => {
 });
 
 test.describe('klávesnica na počítači', () => {
-    test('Tab ide stavom merania v hlavičke, stĺpcami zľava doprava, potom navigáciou; fokus je vždy vidieť', async ({ page }) => {
+    test('Tab ide stĺpcami zľava doprava (v Teraz najprv stavom merania), potom navigáciou; fokus je vždy vidieť', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         /** @type {Array<{ name: string, column: number, nav: boolean, visible: boolean, inView: boolean }>} */
         const kroky = [];
@@ -415,9 +415,7 @@ test.describe('klávesnica na počítači', () => {
             kroky.push(k);
             if (k.nav) break;
         }
-        // Prvá zastávka je bodka a čas v hlavičke (bublina so stavom merania), až potom stĺpce.
-        expect(kroky[0]?.name).toBe('hdr-live');
-        const vStlpcoch = kroky.slice(1).filter((k) => !k.nav);
+        const vStlpcoch = kroky.filter((k) => !k.nav);
         expect(kroky.at(-1)?.nav, 'Tab sa nedostal do navigácie').toBe(true);
         expect(
             vStlpcoch.every((k) => k.column >= 0),
@@ -425,8 +423,11 @@ test.describe('klávesnica na počítači', () => {
         ).toBe(true);
         const stlpce = vStlpcoch.map((k) => k.column);
         expect(stlpce).toEqual([...stlpce].sort((a, b) => a - b));
-        // Stĺpec Dnes nemá ovládače, ktoré by čakali na klávesnicu - Tab ho preskočí.
-        expect(new Set(stlpce)).toEqual(new Set([1, 2]));
+        // V stĺpci Dnes odznak triedy dňa a pás kariet (posúva sa šípkami), bodky pod ním Tab preskočí.
+        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-chip', 'mz-karty']);
+        // V stĺpci Teraz je prvá bodka a čas merania pod číslom (bublina so stavom merania).
+        expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('hdr-live');
+        expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));
         expect(kroky.filter((k) => !k.visible).map((k) => k.name)).toEqual([]);
         expect(kroky.filter((k) => !k.inView).map((k) => k.name)).toEqual([]);
         expect(errors).toEqual([]);

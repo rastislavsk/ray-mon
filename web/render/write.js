@@ -29,3 +29,16 @@ export function setHtml(el, html) {
 
 /** @param {HTMLElement} el @param {boolean} on */
 export const show = (el, on) => el.classList.toggle('hidden', !on);
+
+/**
+ * Otvorí alebo zavrie dialóg podľa stavu; pri zatvorení vráti fokus na prvok, ktorý ho otvoril.
+ * @param {HTMLDialogElement} d @param {boolean} open @param {() => Element | null} opener
+ */
+export function dialog(d, open, opener) {
+    if (open && !d.open) d.showModal();
+    else if (!open && d.open) {
+        d.close();
+        const btn = opener();
+        if (btn instanceof HTMLElement) btn.focus();
+    }
+}
