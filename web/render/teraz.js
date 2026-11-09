@@ -68,6 +68,7 @@ function renderCo(co, dom) {
     setText(dom.tzOkoPod, h.bezSlnka);
     show(dom.tzPas, !!co.pas);
     setHtml(dom.tzPas, (co.pas ?? []).map(pasDenHtml).join(''));
+    renderVyhlad(co.vyhlad, dom);
     const dlazdice = h.dlazdice.map(
         (d) =>
             `<button type="button" class="dl${d.cela ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
@@ -92,6 +93,26 @@ const pasDenHtml = (d, i) =>
     `<span data-druh="${d.druh}" style="--i:${i}">` +
     `${d.druh === 'dnes' ? '' : weatherIcon(d.druh === 'slnko' ? 'jasno' : 'zamracene')}${escapeHtml(d.den)}` +
     `${d.pod ? `<small>${escapeHtml(d.pod)}</small>` : ''}</span>`;
+
+/**
+ * Využi dnešok (docs/navrhy/vyhlad-dni-bez-slnka.html): slovo s výhľadom a pás dní od dneška - dnes
+ * a dni so slnkom zlaté, dni bez slnka s oblakom. Ten istý pás ako pri dňoch bez slnka.
+ * @param {NonNullable<Model['co']>['vyhlad']} v @param {Dom} dom
+ */
+function renderVyhlad(v, dom) {
+    show(dom.tzVyhlad, !!v);
+    setHtml(dom.tzVyhladT, v ? `${escapeHtml(v.text)} <span>· ${escapeHtml(v.sub)}</span>` : '');
+    setHtml(
+        dom.tzVyhladPas,
+        (v?.dni ?? [])
+            .map(
+                (d, i) =>
+                    `<span data-druh="${d.slnko ? 'slnko' : 'oblak'}"${d.dnes ? ' data-dnes' : ''} style="--i:${i}">` +
+                    `${weatherIcon(d.slnko ? 'jasno' : 'zamracene')}${escapeHtml(d.den)}</span>`,
+            )
+            .join(''),
+    );
+}
 
 /** Riadok skupiny: veľký čas, ikona, meno a doplnok. @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r */
 const riadokHtml = (r) =>

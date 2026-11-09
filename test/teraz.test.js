@@ -473,7 +473,8 @@ test('terazModel o 13:00: číslo teraz, čo zapnúť z Plánu dňa, karta Deň,
     // Štítky nie sú na karte, ich vysvetlenie je za „i“ riadku nad dlaždicami.
     assert.deepEqual(m.chips, base.chips);
     const rows = base.plan?.rows ?? [];
-    assert.deepEqual(m.co, coZapnutModel(rows, { nowMin: hm(13), level: 'lacna', slnkoDnes: true }));
+    // Výhľad dní bez slnka nie je - v predpovedi z fixtures majú slnko všetky dni.
+    assert.deepEqual(m.co, { ...coZapnutModel(rows, { nowMin: hm(13), level: 'lacna', slnkoDnes: true }), vyhlad: null });
     assert.deepEqual(
         m.co.hore.dlazdice.map((d) => d.id),
         ['pracka', 'umyvacka'],

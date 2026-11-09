@@ -878,6 +878,85 @@ const andList = (list) => (list.length < 2 ? list.join('') : `${list.slice(0, -1
 /** @param {string} s */
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Výhľad dní bez slnka: „od štvrtka“, „do stredy“ - meno dňa v druhom páde. */
+const DNA_GEN = /** @type {Record<string, string>} */ ({
+    Zajtra: 'zajtra',
+    Pondelok: 'pondelka',
+    Utorok: 'utorka',
+    Streda: 'stredy',
+    Štvrtok: 'štvrtka',
+    Piatok: 'piatka',
+    Sobota: 'soboty',
+    Nedeľa: 'nedele',
+});
+/** @param {string} name */
+const dnaGen = (name) => DNA_GEN[name] ?? name.toLowerCase();
+
+/** Výhľad dní bez slnka: vety, ktoré sa v tónoch líšia. */
+const VYHLAD_SAY = {
+    drzy: { oper: 'oper dnes', vyuzi: 'využi dnešok', stihni: 'stihni', pas: 'Využi dnešok' },
+    slusny: { oper: 'operte dnes', vyuzi: 'využite dnešok', stihni: 'stihnite', pas: 'Využite dnešok' },
+};
+
+/**
+ * Dni bez slnka za sebou (shared/vyhlad.js): prvý z nich (`name` ako v Pláne dňa, „Zajtra“, „Štvrtok“),
+ * koľko ich je a deň pred nimi (`pred`, null keď začínajú zajtra).
+ * @typedef {{ name: string, date: string, index: number, pocet: number, pred: string | null }} BehBezSlnka
+ */
+
+/** „Zajtra slnko nebude“, „Od štvrtka 4 dni bez slnka“. @param {BehBezSlnka} b */
+function behVeta(b) {
+    if (b.pocet === 1) return `${cap(onDay(b.name))} slnko nebude`;
+    return `Od ${dnaGen(b.name)} ${b.pocet} ${dniSlovo(b.pocet)} bez slnka`;
+}
+
+/**
+ * Čo s tým dnes: pred zajtrajškom „Oper dnes.“, inak „Veľké pranie stihni do stredy.“ Bez práčky
+ * doma „využi dnešok“ a „veľké veci“.
+ * @param {BehBezSlnka} b @param {boolean} pracka @param {Voice} voice
+ */
+function behRada(b, pracka, voice) {
+    const S = VYHLAD_SAY[voice];
+    if (!b.pred) return `${cap(pracka ? S.oper : S.vyuzi)}.`;
+    return `${pracka ? 'Veľké pranie' : 'Veľké veci'} ${S.stihni} do ${dnaGen(b.pred)}.`;
+}
+
+/**
+ * Výhľad v rannom oznámení (docs/navrhy/vyhlad-dni-bez-slnka.html): nadpis a úvod textu, pred
+ * ktorým ide dnešný plán. Výstraha (`zmena` null) - dni bez slnka; zmena oproti tomu, čo oznámenie
+ * povedalo naposledy (`predtym` - vtedajší prvý deň bez slnka): „Lepšie: …“, „Horšie: …“. Rada,
+ * čo stihnúť, len keď dnes slnko je (`dnes`). Bez výhľadu null.
+ * @param {{ beh: BehBezSlnka | null, zmena: import('./vyhlad.js').Zmena | null, predtym: string | null, dnes: boolean, pracka: boolean }} v
+ * @param {Voice} [voice]
+ */
+export function vyhladNoticeText({ beh, zmena, predtym, dnes, pracka }, voice = 'drzy') {
+    if (zmena === 'zmizli') return { title: 'Lepšie: zamračené dni zmizli', uvod: 'Predpoveď už dni bez slnka nečaká.' };
+    if (!beh) return null;
+    const veta = behVeta(beh);
+    const rada = dnes ? behRada(beh, pracka, voice) : '';
+    if (!zmena) {
+        if (!beh.pred && beh.pocet === 1)
+            return { title: `${veta} – ${pracka ? VYHLAD_SAY[voice].oper : VYHLAD_SAY[voice].vyuzi}`, uvod: '' };
+        return { title: veta, uvod: rada };
+    }
+    const dni = `${beh.pocet} ${dniSlovo(beh.pocet)}`;
+    const title = {
+        neskor: `Lepšie: ${(predtym ?? beh.name).toLowerCase()} predsa so slnkom`,
+        skor: `Horšie: zamračí sa už ${onDay(beh.name)}`,
+        dlhsie: `Horšie: bez slnka ${dni}`,
+        kratsie: `Lepšie: bez slnka len ${dni}`,
+    }[zmena];
+    return { title, uvod: [`${veta}.`, rada].filter(Boolean).join(' ') };
+}
+
+/**
+ * Pás „Využi dnešok“ na karte Teraz: slovo a za ním výhľad („od štvrtka 4 dni bez slnka“).
+ * @param {BehBezSlnka} beh @param {Voice} [voice]
+ */
+export function vyhladPasText(beh, voice = 'drzy') {
+    return { text: VYHLAD_SAY[voice].pas, sub: low1(behVeta(beh)) };
+}
+
 /** Vety oznámení, ktoré sa v tónoch líšia. */
 const NOTICE_SAY = {
     drzy: {

@@ -5,7 +5,7 @@
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
-import { installedKw, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { dayNameShort } from './format.js';
@@ -36,6 +36,7 @@ import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
+import { vyhladPas } from './vyhlad.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
@@ -86,7 +87,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
         // Štítky už nie sú na karte - ich vysvetlenie je za „i“ riadku nad dlaždicami.
         chips: m.chips,
-        co: m.plan ? coZapnutModel(rows, teraz, voice) : null,
+        co: m.plan ? coOf(input, rows, teraz, devices, voice) : null,
         veci: rows.map((r) => vecDetail(r, now.minutes, den.os.span)),
         den,
         pocasie: pocasieOf(input, now),
@@ -94,6 +95,15 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         pocasieDen: pocasieOf(input, hero),
         jas: jasOf(input, now),
     };
+}
+
+/**
+ * Čo zapnúť a nad tým pás „Využi dnešok“, keď idú dni bez slnka (docs/navrhy/vyhlad-dni-bez-slnka.html).
+ * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {Parameters<typeof coZapnutModel>[1]} teraz
+ * @param {readonly string[] | undefined} devices @param {import('./messages.js').Voice} voice
+ */
+function coOf(input, rows, teraz, devices, voice) {
+    return { ...coZapnutModel(rows, teraz, voice), vyhlad: vyhladPas(input, devices ?? PLAN_DNA.devices, voice) };
 }
 
 /**
@@ -200,7 +210,7 @@ function empty(kind, estimate) {
         chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),
         hint: { text: '', reset: false },
         chips: /** @type {import('./mozem.js').Chip[]} */ ([]),
-        co: /** @type {ReturnType<typeof coZapnutModel> | null} */ (null),
+        co: /** @type {ReturnType<typeof coOf> | null} */ (null),
         veci: /** @type {Array<ReturnType<typeof vecDetail>>} */ ([]),
         den: /** @type {ReturnType<typeof denModel> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),

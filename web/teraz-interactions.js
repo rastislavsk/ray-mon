@@ -7,7 +7,7 @@ import { localMinutes } from '../shared/solar.js';
 import { bindDayScrub } from './teraz-gestures.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
-import { shows } from './state.js';
+import { panelChange, shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -35,6 +35,8 @@ export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Zavrieť, Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
+    // Využi dnešok: dni dopredu sú na karte 7 dní.
+    dom.tzVyhlad.addEventListener('click', () => store.setState(panelChange(store.get().panel, '7dni')));
     dom.tzCo.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-vec]') : null;
         if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky' });

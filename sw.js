@@ -48,8 +48,9 @@ async function ukaz() {
         z = await citaj(OZNAMENIA.mirror, null);
         if (!z) throw new Error('bez nastavenia');
         const weather = await (await ziskaj(openMeteoUrl(z.site))).json();
-        const n = swNotice(z, await citaj(OZNAMENIA.reminders, []), weather, new Date());
+        const n = swNotice(z, await citaj(OZNAMENIA.reminders, []), weather, new Date(), await citaj(OZNAMENIA.vyhlad, null));
         await zapis(OZNAMENIA.reminders, n.keep);
+        await zapis(OZNAMENIA.vyhlad, n.vyhlad);
         const actions = n.remind
             ? [
                   { action: 'pripomen', title: n.remind.label },

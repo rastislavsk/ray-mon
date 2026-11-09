@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: výhľad dní bez slnka vopred</title>
+        <style>
+            /* Zmrazený návrh (viď README v tomto priečinku). Oznámenia aj karta sú kreslené ručne podľa
+               štýlov appky, nie snímky. Scenáre sú vymyslené (pondelok 9. 11. 2026 ráno), časy na ukážku. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --cheap: #7cc4ff;
+                --cloud: #b4c3dc;
+                --glass: rgba(10, 20, 50, 0.35);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                padding: 14px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .opt.rec {
+                border-color: var(--green);
+            }
+            .opt h3 {
+                font-size: 1rem;
+            }
+            .opt .tag {
+                justify-self: start;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+
+            /* ---------- pravidlo: riadky dní ---------- */
+            .scen {
+                display: grid;
+                gap: 14px;
+            }
+            .riadok {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 6px;
+                padding: 12px 14px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+            }
+            .riadok > p {
+                font-size: 0.9rem;
+            }
+            .riadok > p b {
+                color: var(--ink);
+            }
+            .dni {
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                gap: 4px;
+                max-width: 460px;
+            }
+            .dni span {
+                display: grid;
+                justify-items: center;
+                padding: 5px 0;
+                border-radius: 10px;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .dni .s {
+                background: rgba(255, 209, 102, 0.85);
+                color: #3a2a00;
+            }
+            .dni .o {
+                background: rgba(180, 195, 220, 0.18);
+                color: var(--cloud);
+            }
+            .dni .dnes {
+                outline: 2px solid #fff;
+                outline-offset: 1px;
+            }
+            .dni .zvon {
+                position: relative;
+            }
+            .dni .zvon::after {
+                content: '🔔';
+                position: absolute;
+                top: -12px;
+                right: -4px;
+                font-size: 0.8rem;
+            }
+            .vysl {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+
+            /* ---------- oznámenie (Android) ---------- */
+            .notifs {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(360px, 100%);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            .notif {
+                display: grid;
+                grid-template-columns: 36px minmax(0, 1fr);
+                gap: 4px 12px;
+                padding: 14px 16px;
+                border-radius: 24px;
+                background: #2a2d36;
+                color: #eceef4;
+                font-family: system-ui, sans-serif;
+            }
+            .notif .logo {
+                grid-row: span 3;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 50% 45%, #ffe27a 0 30%, #3b4a8a 32%);
+            }
+            .notif .app {
+                font-size: 0.75rem;
+                color: #a9adbb;
+            }
+            .notif .t {
+                font-weight: 700;
+                font-size: 0.95rem;
+            }
+            .notif .b {
+                font-size: 0.875rem;
+                color: #c9ccd6;
+            }
+            .notif .btns {
+                grid-column: 2;
+                display: flex;
+                gap: 18px;
+                margin-top: 6px;
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: #9fc4ff;
+            }
+            .notif .nove {
+                color: var(--gold);
+            }
+
+            /* ---------- telefón (karta Teraz) ---------- */
+            .tel {
+                padding: 18px 14px 22px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f6fb8 0%, #5b9be0 60%, #8cc0f0 100%);
+                min-height: 420px;
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 2px;
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .oko > i {
+                flex: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--green);
+                box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.3);
+            }
+            .oko::after {
+                content: 'i';
+                flex: none;
+                width: 14px;
+                height: 14px;
+                border: 1.5px solid currentColor;
+                border-radius: 50%;
+                font-size: 0.5625rem;
+                line-height: 11px;
+                letter-spacing: 0;
+                text-align: center;
+            }
+            .vyhlad {
+                margin: 0 0 12px;
+                padding: 10px 12px 12px;
+                border-radius: 18px;
+                background: rgba(10, 20, 50, 0.38);
+                display: grid;
+                gap: 8px;
+            }
+            .vyhlad p {
+                font-size: 0.875rem;
+                font-weight: 700;
+            }
+            .vyhlad p span {
+                color: var(--cloud);
+                font-weight: 600;
+            }
+            .pas {
+                display: grid;
+                grid-auto-columns: minmax(0, 1fr);
+                grid-auto-flow: column;
+                gap: 4px;
+            }
+            .pas span {
+                display: grid;
+                justify-items: center;
+                align-content: center;
+                min-height: 50px;
+                border-radius: 12px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #dfe7f3;
+                background: rgba(180, 195, 220, 0.18);
+            }
+            .pas span.s {
+                background: var(--gold);
+                color: #3a2a00;
+                box-shadow: 0 0 14px rgba(255, 209, 102, 0.5);
+            }
+            .pas span.dnes {
+                outline: 2px solid #fff;
+                outline-offset: -2px;
+            }
+            .pas svg {
+                width: 20px;
+                height: 15px;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .dl {
+                padding: 12px 14px;
+                border-radius: 22px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .dl.cela {
+                grid-column: span 2;
+            }
+            .dl b {
+                display: block;
+                font-size: 1.15rem;
+                font-weight: 900;
+            }
+            .dl small {
+                font-size: 0.8rem;
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="0" height="0" style="position: absolute">
+            <symbol id="oblak" viewBox="0 0 24 16">
+                <path d="M6 15h12a5 5 0 0 0 0-10 6.5 6.5 0 0 0-12.3 2A4 4 0 0 0 6 15z" fill="currentColor" opacity="0.85" />
+            </symbol>
+            <symbol id="slnko" viewBox="0 0 24 16">
+                <circle cx="12" cy="8" r="4.5" fill="currentColor" />
+                <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <path d="M12 0.8v1.6M12 13.6v1.6M4.8 8H3.2M20.8 8h-1.6M6.9 2.9l1.1 1.1M16 12l1.1 1.1M6.9 13.1 8 12M16 4l1.1-1.1" />
+                </g>
+            </symbol>
+        </svg>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Výhľad: dni bez slnka vopred</h1>
+                <p class="dim">
+                    Appka dnes reaguje až v deň, keď slnko nie je. Návrh: ranné oznámenie a karta Teraz povedia vopred, že prídu dni bez
+                    slnka, a že treba využiť dnešok. Oznámenia a karta sú kreslené ručne, nie snímky z appky. Scenáre sú vymyslené (pondelok
+                    9. 11. 2026, ranné oznámenie o 9:00), časy spotrebičov na ukážku. Vybrané 9. 11. 2026: zmena predpovede
+                    <b>A – len v rannom oznámení</b>; ostatné podľa návrhu (najviac 3 dni, deň bez slnka podľa spotrebičov, pás „Využi
+                    dnešok“ na karte Teraz, hlási aj posun začiatku).
+                </p>
+            </header>
+
+            <section>
+                <h2><small>1. Pravidlo</small>Kedy upozorniť a ako dlho vopred</h2>
+                <p>
+                    <b>Deň bez slnka</b> = deň, keď sa zo slnka nezmestí ani jeden zo spotrebičov z „Čo máš doma“ – ten istý výpočet, aký
+                    robí Plán dňa a pás dní na karte Teraz. Upozorniť má zmysel len vtedy, keď <b>dnes slnko je</b>, inak niet čo presunúť.
+                </p>
+                <p>
+                    <b>Ako dlho vopred</b> = podľa dĺžky zamračeného obdobia, najviac 3 dni: jeden deň bez slnka → upozorní deň vopred, dva
+                    dni → dva dni vopred, tri a viac → tri dni vopred. Dni medzi dneškom a zamračeným obdobím musia byť slnečné (inak to už
+                    ukazuje pás dní z PR #453).
+                </p>
+                <div class="scen">
+                    <div class="riadok">
+                        <div class="dni">
+                            <span class="s dnes zvon">Po</span><span class="o">Ut</span><span class="s">St</span><span class="s">Št</span
+                            ><span class="s">Pi</span><span class="s">So</span><span class="s">Ne</span>
+                        </div>
+                        <p class="vysl"><b>Jeden deň bez slnka</b> (utorok) → v pondelok ráno: „Zajtra slnko nebude“.</p>
+                    </div>
+                    <div class="riadok">
+                        <div class="dni">
+                            <span class="s dnes zvon">Po</span><span class="s">Ut</span><span class="o">St</span><span class="o">Št</span
+                            ><span class="s">Pi</span><span class="s">So</span><span class="s">Ne</span>
+                        </div>
+                        <p class="vysl"><b>Dva dni</b> (streda, štvrtok) → upozorní 2 dni vopred, teda už v pondelok aj v utorok.</p>
+                    </div>
+                    <div class="riadok">
+                        <div class="dni">
+                            <span class="s dnes zvon">Po</span><span class="s">Ut</span><span class="s">St</span><span class="o">Št</span
+                            ><span class="o">Pi</span><span class="o">So</span><span class="o">Ne</span>
+                        </div>
+                        <p class="vysl"><b>Štyri dni</b> (od štvrtka) → upozorní 3 dni vopred: v pondelok, utorok aj stredu.</p>
+                    </div>
+                    <div class="riadok">
+                        <div class="dni">
+                            <span class="s dnes">Po</span><span class="s">Ut</span><span class="s">St</span><span class="s">Št</span
+                            ><span class="o">Pi</span><span class="o">So</span><span class="s">Ne</span>
+                        </div>
+                        <p class="vysl"><b>Dva dni o 4 dni</b> → v pondelok ešte nič, upozorní až v stredu (2 dni vopred).</p>
+                    </div>
+                </div>
+                <p class="note">
+                    Predpoveď o 3 dni je menej istá ako na zajtra. Preto len 3 dni, nie celý týždeň, a text vždy hovorí „podľa predpovede“.
+                    Zvoniec 🔔 = v ten deň ranné oznámenie nesie výhľad.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>2. Ranné oznámenie</small>Výhľad v nadpise, plán dňa v texte</h2>
+                <p>
+                    Ide o to isté jediné ranné oznámenie (7, 8 alebo 9 h), žiadne nové. Keď je výstraha, ide do <b>nadpisu</b> – na
+                    zamknutom telefóne je vidno hlavne ten. Text pod ním je dnešný plán ako doteraz, s výzvou využiť dnešok.
+                </p>
+                <div class="notifs">
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t">Dnes slnko do 15:30</span>
+                            <span class="b">Práčka 10:15 · sušička 11:45 · umývačka 12:00.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Dnes</b> – bežný deň, bez výhľadu.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t">Zajtra slnko nebude – oper dnes</span>
+                            <span class="b">Práčka 10:15 · sušička 11:45 · umývačka 12:00. Dnes slnko do 15:30.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Jeden deň</b> bez slnka zajtra.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t">Od štvrtka 4 dni bez slnka</span>
+                            <span class="b">Veľké pranie stihni do stredy. Dnes: práčka 10:15 · sušička 11:45 · umývačka 12:00.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Viac dní</b> – 3 dni vopred.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t"><span class="nove">Lepšie:</span> štvrtok predsa so slnkom</span>
+                            <span class="b">Bez slnka už len piatok a sobota. Dnes: práčka 10:15 · sušička 11:45.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Zmena k lepšiemu</b> oproti tomu, čo oznámenie povedalo včera.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t"><span class="nove">Horšie:</span> zamračí sa už zajtra</span>
+                            <span class="b">Od utorka 5 dní bez slnka. Oper dnes: práčka 10:15 · sušička 11:45 · umývačka 12:00.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Zmena k horšiemu.</b></figcaption>
+                    </figure>
+                    <figure>
+                        <div class="notif">
+                            <span class="logo"></span><span class="app">Živá obloha · 9:00</span>
+                            <span class="t"><span class="nove">Lepšie:</span> zamračené dni zmizli</span>
+                            <span class="b">Predpoveď už dni bez slnka nečaká. Dnes: práčka 10:15 · sušička 11:45.</span>
+                            <span class="btns"><span>Pripomeň o 10:15</span><span>Otvoriť</span></span>
+                        </div>
+                        <figcaption><b>Výstraha zrušená</b> – povie to raz, potom zas bežné oznámenie.</figcaption>
+                    </figure>
+                </div>
+                <p class="dim">
+                    Slušný tón: „Zajtra slnko nebude – operte dnes“, „Veľké pranie stihnite do stredy“. Zmena sa ráta oproti výhľadu, ktorý
+                    oznámenie povedalo naposledy (service worker si ho odloží ako dnes pripomienky).
+                </p>
+            </section>
+
+            <section>
+                <h2><small>3. V appke</small>Karta Teraz: „Využi dnešok“</h2>
+                <p>
+                    Ten istý pás dní ako pri dňoch bez slnka, len obrátene: dnes zlatý, potom oblaky. Je nad dlaždicami toho, čo ide teraz,
+                    a je len v dňoch, keď by ranné oznámenie nieslo výstrahu – aj pre toho, kto oznámenia nemá zapnuté.
+                </p>
+                <div class="notifs">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko"><i></i><span>Teraz zo slnka</span></div>
+                            <div class="vyhlad">
+                                <p>Využi dnešok <span>· od štvrtka 4 dni bez slnka</span></p>
+                                <div class="pas">
+                                    <span class="s dnes"
+                                        ><svg><use href="#slnko" /></svg>Po</span
+                                    >
+                                    <span class="s"
+                                        ><svg><use href="#slnko" /></svg>Ut</span
+                                    >
+                                    <span class="s"
+                                        ><svg><use href="#slnko" /></svg>St</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Št</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Pi</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>So</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Ne</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="mriezka">
+                                <div class="dl"><b>Práčka</b><small>dobehne 11:45</small></div>
+                                <div class="dl"><b>Umývačka</b><small>dobehne 14:00</small></div>
+                                <div class="dl cela"><b>Bojler</b><small>dobehne 13:00</small></div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Karta Teraz</b> v pondelok o 10:30. Pás pod riadkom hore, ťuknutie naň otvorí kartu 7 dní.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>4. Na výber</small>Ako dať vedieť, keď sa predpoveď zmení</h2>
+                <p>
+                    Webové oznámenie má jedno pravidlo, ktoré rozhoduje: <b>každé budenie telefónu musí niečo ukázať</b>. Telefón sa nedá
+                    potichu zobudiť, prepočítať a ozvať sa len pri zmene (Chrome by ukázal vlastné „stránka sa aktualizovala“, iPhone by
+                    odber po pár razoch zrušil). Preto tri cesty:
+                </p>
+                <div class="opts">
+                    <div class="opt rec">
+                        <span class="tag">Odporúčam</span>
+                        <h3>A – len v rannom oznámení</h3>
+                        <ul>
+                            <li class="plus">žiadne oznámenie navyše, nič nové vo Workeri, žiadne náklady</li>
+                            <li class="plus">zmena sa povie každé ráno („Lepšie: …“, „Horšie: …“)</li>
+                            <li class="plus">rovnaký výpočet ako appka, jedno miesto pravdy</li>
+                            <li class="minus">zmena cez deň príde až ďalšie ráno</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>B – ráno + večerná kontrola v dňoch s výstrahou</h3>
+                        <ul>
+                            <li class="plus">ranné oznámenie si samo objedná budenie na 19:00 (to isté, čo dnes robí „Pripomeň“)</li>
+                            <li class="plus">večer stihne lacné pásmo, keď sa zajtrajšok pokazil</li>
+                            <li class="minus">
+                                večer sa ukáže vždy, aj keď sa nič nezmenilo („Výhľad platí“) – druhé oznámenie za deň si raz zamietol ako
+                                otravné
+                            </li>
+                            <li class="minus">viac budení = viac zápisov do KV (limit 1 000 denne)</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C – Worker sleduje predpoveď sám</h3>
+                        <ul>
+                            <li class="plus">oznámenie len pri skutočnej zmene, kedykoľvek cez deň – najviac „proaktívne“</li>
+                            <li class="minus">Worker by si musel pamätať polohu a panely každého telefónu (dnes nevie nič)</li>
+                            <li class="minus">druhý, zjednodušený výpočet vo Workeri (limit 10 ms) – rozíde sa s appkou</li>
+                            <li class="minus">viac volaní Open-Meteo – už raz sme narazili na limit 429</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="dim">
+                    Najjednoduchšia možnosť (bez obrázka): len výstraha v rannom oznámení, bez porovnania so včerajškom a bez pásu v appke.
+                    Zmena predpovede by sa ukázala tak, že výstraha zmizne alebo sa posunie – bez slova „Lepšie / Horšie“.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>5. Na rozhodnutie</small>Otvorené otázky</h2>
+                <ul>
+                    <li>Najviac 3 dni vopred – stačí, alebo dlhšie?</li>
+                    <li>Deň bez slnka podľa spotrebičov (nezmestí sa nič), alebo podľa triedy dňa z karty Dnes (slabý / takmer nič)?</li>
+                    <li>Pás „Využi dnešok“ na karte Teraz áno / nie, prípadne aj na karte Dnes v páse kariet?</li>
+                    <li>
+                        Hlásiť zmenu, aj keď sa len posunie začiatok (štvrtok → piatok), alebo len keď výstraha vznikne / zmizne / zmení
+                        počet dní?
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>

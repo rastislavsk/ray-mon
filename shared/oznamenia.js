@@ -7,6 +7,7 @@ import { oznameniaTexts, planNoticeText, reminderText } from './messages-core.js
 import { dayCtx, planWindows } from './mozem.js';
 import { planDna } from './plan-dna.js';
 import { buildForecast, localMinutes } from './solar.js';
+import { vyhladOznamenia } from './vyhlad.js';
 
 /**
  * Voľba telefónu: oznámenie zapnuté a hodina (miestny čas, jedna z OZNAMENIA.hours). Spotrebiče,
@@ -62,10 +63,14 @@ export function parseOznamenia(raw) {
 
 /**
  * Obsah ranného oznámenia z plánu dňa od teraz: nadpis, text a pripomienka, ktorú ponúkne
- * tlačidlo (najbližší spotrebič, ktorý ešte nie je na rade) - alebo null.
- * @param {import('./day-plan.js').PlanInput} input @param {{ devices: readonly string[], voice?: import('./messages.js').Voice }} opts
+ * tlačidlo (najbližší spotrebič, ktorý ešte nie je na rade) - alebo null. Keď idú dni bez slnka
+ * alebo sa výhľad zmenil oproti tomu, čo oznámenie povedalo naposledy (`posledny`), nadpis je
+ * výhľad a dnešok ide do textu (docs/navrhy/vyhlad-dni-bez-slnka.html). `vyhlad` si service
+ * worker zapamätá na zajtra.
+ * @param {import('./day-plan.js').PlanInput} input
+ * @param {{ devices: readonly string[], voice?: import('./messages.js').Voice, posledny?: import('./vyhlad.js').Vyhlad | null }} opts
  */
-export function planNotice(input, { devices, voice = 'drzy' }) {
+export function planNotice(input, { devices, voice = 'drzy', posledny = null }) {
     const ctx = dayCtx(input);
     const rows = planDna(ctx, input, devices);
     const green = planWindows(ctx.plan, (s) => Number.isFinite(s.kw) && s.kw >= ctx.th.lowKw).filter((w) => w.to > ctx.nowMin);
@@ -73,7 +78,11 @@ export function planNotice(input, { devices, voice = 'drzy' }) {
     const now = Math.ceil(ctx.nowMin / TARIFF_LIMITS.stepMin) * TARIFF_LIMITS.stepMin;
     const next = rows.filter((r) => r.kind === 'sun' && r.id !== 'auto' && r.start > now).sort((a, b) => sortStart(a) - sortStart(b))[0];
     const remind = next && next.kind === 'sun' ? { id: next.id, at: next.start } : null;
-    return { ...planNoticeText({ rows, sunEnd, weak: ctx.weakToday }, voice), remind };
+    const plan = planNoticeText({ rows, sunEnd, weak: ctx.weakToday }, voice);
+    const v = vyhladOznamenia(input, devices, posledny, voice);
+    if (!v.text) return { ...plan, remind, vyhlad: v.vyhlad };
+    const body = [v.text.uvod, `${plan.title}.`, plan.body].filter(Boolean).join(' ');
+    return { title: v.text.title, body, remind, vyhlad: v.vyhlad };
 }
 
 /** @param {import('./plan-dna.js').PlanRow} r */
@@ -103,18 +112,20 @@ export function reminderNotice(input, { id, voice = 'drzy' }) {
 /**
  * Čo ukáže service worker, keď ho Worker zobudí: pripomienka, ak jej čas práve nastal, inak ranný
  * plán dňa - s tlačidlom na pripomienku najbližšieho spotrebiča (`remind`: ISO čas a nápis).
- * `keep` sú pripomienky, ktoré ešte čakajú.
+ * `keep` sú pripomienky, ktoré ešte čakajú, `vyhlad` čo si zapamätať z výhľadu dní bez slnka
+ * (`posledny` je to, čo si service worker pamätal doteraz).
  * @param {Zrkadlo} z @param {Pripomienka[]} reminders @param {Parameters<typeof buildForecast>[0]} weather @param {Date} now
+ * @param {import('./vyhlad.js').Vyhlad | null} [posledny]
  */
-export function swNotice(z, reminders, weather, now) {
+export function swNotice(z, reminders, weather, now, posledny = null) {
     const forecast = buildForecast(weather, now, z.site, z.plant);
     const input = { now, site: z.site, plant: z.plant, tariff: z.tariff, pv: null, forecast };
     const off = (/** @type {Pripomienka} */ r) => (new Date(r.at).getTime() - now.getTime()) / 60000;
     const due = reminders.find((r) => Math.abs(off(r)) <= OZNAMENIA.remindWindowMin);
     const keep = reminders.filter((r) => r !== due && off(r) > -OZNAMENIA.remindWindowMin);
     const reminder = due ? reminderNotice(input, { id: due.id, voice: z.voice }) : null;
-    if (reminder) return { ...reminder, remind: null, keep, reminder: true };
-    const n = planNotice(input, { devices: z.devices, voice: z.voice });
+    if (reminder) return { ...reminder, remind: null, keep, reminder: true, vyhlad: posledny };
+    const n = planNotice(input, { devices: z.devices, voice: z.voice, posledny });
     const nowMin = localMinutes(now, z.site.timezone);
     const remind = n.remind
         ? {
@@ -123,7 +134,7 @@ export function swNotice(z, reminders, weather, now) {
               label: oznameniaTexts(z.voice).remind(n.remind.at),
           }
         : null;
-    return { title: n.title, body: n.body, remind, keep, reminder: false };
+    return { title: n.title, body: n.body, remind, keep, reminder: false, vyhlad: n.vyhlad };
 }
 
 /**
