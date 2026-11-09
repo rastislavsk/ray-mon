@@ -960,6 +960,37 @@ button.live[aria-expanded='true'] {
 .pas > span[data-druh='slnko'] .wi-rays {
     stroke: #3a2a00;
 }
+/* Využi dnešok (docs/navrhy/vyhlad-dni-bez-slnka.html): tmavšie sklo, veta a pod ňou pás dní, v ňom
+   dnes s bielym okrajom. Ťuknutie otvorí kartu 7 dní. */
+.vyhlad {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    border: 0;
+    border-radius: 18px;
+    background: rgba(10, 20, 50, 0.38);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.vyhlad-t {
+    font-size: 0.875rem;
+    font-weight: 800;
+}
+.vyhlad-t span {
+    font-weight: 600;
+    color: #dfe7f3;
+}
+.vyhlad .pas {
+    margin: 0;
+}
+.pas > span[data-dnes] {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+}
 @keyframes pas-den {
     from {
         opacity: 0;

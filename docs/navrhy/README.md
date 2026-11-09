@@ -86,3 +86,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `dnes-upravy.html` | Karta Dnes – vysvetlenie odznaku triedy dňa (A panel, B bublina, C rozbalenie), čiara pod číslami, tučné časy okna, pás kariet na posúvanie s novými kartami (Mraky a dážď, Najviac slnka, …) a názov namiesto Vysvedčenie |
 | `teraz-iny-den.html` | Karta Teraz – detail spotrebiča (A os s kapsulou, B krivka, C oblúk) a odporúčanie na iný deň (A deň pri čase, B karta dňa, C deň namiesto času); vybrané 1A a 2B |
 | `teraz-viac-dni-bez-slnka.html` | Karta Teraz – slnko až o niekoľko dní: pás dní (A), sivý most (B), odpočet v hlavičke (C), texty riadku hore; vybrané A |
+| `vyhlad-dni-bez-slnka.html` | Výhľad dní bez slnka vopred – pravidlo (najviac 3 dni vopred), ranné oznámenie s výstrahou a zmenou, pás „Využi dnešok“, ako hlásiť zmenu (A ráno, B večerná kontrola, C Worker); vybrané A |

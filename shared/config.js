@@ -706,6 +706,12 @@ export function radarModelUrl(body) {
  * pripomienka patrí budeniu do toľkých minút od svojho času. `jwtH`: ako dlho platí podpis VAPID.
  * `timeoutMs`: najdlhšie čakanie na service worker a Worker, potom appka povie, že sa nepodarilo.
  */
+/**
+ * Výhľad dní bez slnka (docs/navrhy/vyhlad-dni-bez-slnka.html): ranné oznámenie a karta Teraz
+ * upozornia vopred o toľko dní, koľko dní bez slnka ide za sebou, najviac `maxDni`.
+ */
+export const VYHLAD = { maxDni: 3 };
+
 export const OZNAMENIA = {
     hours: [7, 8, 9],
     hour: 9,
@@ -722,6 +728,8 @@ export const OZNAMENIA = {
     cache: 'ray-mon-oznamenia',
     mirror: 'oznamenia-nastavenie.json',
     reminders: 'oznamenia-pripomienky.json',
+    // Výhľad dní bez slnka, ktorý oznámenie povedalo naposledy - z neho je „Lepšie / Horšie“.
+    vyhlad: 'oznamenia-vyhlad.json',
     // Ťuknutie na oznámenie: správa od service workera bežiacej appke a hodnota značky v adrese
     // zatvorenej (shared/oznamenia.js). Obrys Plánu dňa počká na dáta najviac `obrysCakaMs`.
     klik: 'oznamenie',

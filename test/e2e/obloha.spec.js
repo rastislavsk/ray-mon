@@ -1361,6 +1361,32 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
+    test('Využi dnešok: zajtra bez slnka - pás od dneška, text z modelu, ťuknutie otvorí kartu 7 dní', async ({ page }) => {
+        const zamracene = structuredClone(weather);
+        const keys = ['shortwave_radiation_instant', 'direct_normal_irradiance_instant', 'diffuse_radiation_instant'];
+        for (const [i, t] of zamracene.hourly.time.entries())
+            if (t.startsWith('2026-09-06')) for (const k of keys) zamracene.hourly[k][i] *= 0.05;
+        const time = at('10:00');
+        const errors = await openTeraz(page, { time, pocasie: zamracene });
+        const v = terazModel(vstupTeraz(time, { forecast: buildForecast(zamracene, time, SITE, PLANT) })).co?.vyhlad;
+        if (!v) throw new Error('model nemá výhľad');
+        const btn = page.locator('#tz-vyhlad');
+        await expect(btn).toBeVisible();
+        await expect(page.locator('#tz-vyhlad-t')).toHaveText(`${v.text} · ${v.sub}`);
+        await expect(page.locator('#tz-vyhlad-t')).toHaveText('Využi dnešok · zajtra slnko nebude');
+        await expect(page.locator('#tz-vyhlad-pas > span')).toHaveText(v.dni.map((d) => d.den));
+        expect(
+            await page
+                .locator('#tz-vyhlad-pas > span')
+                .evaluateAll((s) => s.map((e) => [e.getAttribute('data-druh'), e.hasAttribute('data-dnes')])),
+        ).toEqual(v.dni.map((d) => [d.slnko ? 'slnko' : 'oblak', d.dnes]));
+        await expect(page.locator('#tz-pas')).toBeHidden();
+        expect(await vazneNalezy(page)).toEqual([]);
+        await btn.click();
+        await ocakavajKartu(page, '7dni');
+        expect(errors).toEqual([]);
+    });
+
     test('krivka: nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({
         page,
     }) => {
