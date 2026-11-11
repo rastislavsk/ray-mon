@@ -333,7 +333,7 @@ export const DNES_TEXTS = {
     predpoved: 'Predpoveď',
     predpovedZajtra: 'Predpoveď na zajtra',
     oblacnost: 'oblačnosť',
-    graf: 'Graf dňa',
+    graf: 'Graf dňa – for Kheinshmetkes only',
     slnko: 'Najviac slnka',
     karty: 'Viac o dnešku',
     stupnica: 'Ako appka deň hodnotí',
