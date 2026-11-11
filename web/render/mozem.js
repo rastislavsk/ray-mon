@@ -1,7 +1,8 @@
 // Karta Dnes (kódové meno mozem, doteraz Môžem?): oblúk slnka, veľké slovo, čo dá
 // strecha za celý deň a výzvy (docs/navrhy/dnes-a-teraz.html). Zvyšok sa mení s časťou dňa - ráno
 // plán, cez deň odpočet okna na veľké veci, večer ako dopadol dnešok a zajtrajšok (docs/navrhy/dnes-tri-smery.html,
-// smer C). Pod číslami pás kariet na posúvanie a vysvetlenie odznaku triedy dňa (docs/navrhy/dnes-upravy.html).
+// smer C). Pod číslami pás kariet na posúvanie a vysvetlenie odznaku triedy dňa (docs/navrhy/dnes-upravy.html),
+// v páse Predpoveď a Graf dňa, ktorý otvorí panel s grafom (docs/navrhy/dnes-predpoved-graf.html, render/graf.js).
 // Všetko počíta shared/mozem-sky.js a shared/dnes-faza.js, texty sú v shared/messages.js - tu sa len
 // zapisuje do DOM.
 
@@ -12,7 +13,7 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { syncBodky } from '../mozem-karty.js';
 import { sunArcSvg } from '../sun-arc.js';
 import { shows } from '../state.js';
-import { vecIcon } from './icons.js';
+import { vecIcon, weatherIcon } from './icons.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/mozem-sky.js').MozemSkyModel} Model */
@@ -105,29 +106,56 @@ function renderFaza(d, m, dom) {
     setTimes(dom.mzLine, d.line);
 }
 
-/** Hodiny pod pásom hodín: prvá, poludnie a posledná. @param {{ hour: number }[]} h */
-function hodinyOs(h) {
-    const hh = (/** @type {number} */ x) => `${String(x).padStart(2, '0')}:00`;
-    return `<p class="k-os" aria-hidden="true"><span>${hh(h[0].hour)}</span><span>12:00</span><span>${hh(h[h.length - 1].hour)}</span></p>`;
+/**
+ * Karta Predpoveď (docs/navrhy/dnes-predpoved-graf.html, B): ikona a popis počasia, pod tým teplomer od
+ * najnižšej po najvyššiu teplotu a oblačnosť dňa. Pásiky sú len obraz - čísla pri nich sú text.
+ * @param {Extract<Karta, { kind: 'predpoved' }>} k
+ */
+function predpovedHtml(k) {
+    const obl =
+        k.oblacnost === null
+            ? ''
+            : `<p class="k-obl"><span>${escapeHtml(DNES_TEXTS.oblacnost)}</span>` +
+              `<i aria-hidden="true"><b style="width:${k.oblacnost}%"></b></i><span>${k.oblacnost} %</span></p>`;
+    return (
+        `<div class="k-wx">${k.weather ? weatherIcon(k.weather) : ''}<p class="k-popis">${escapeHtml(k.popis)}</p></div>` +
+        `<p class="k-teplo"><span><span class="sr">najnižšia </span>${escapeHtml(k.min)}</span><i aria-hidden="true"></i>` +
+        `<span><span class="sr">najvyššia </span>${escapeHtml(k.max)}</span></p>${obl}`
+    );
 }
 
 /**
- * Jedna karta pásu: nadpis, veľká hodnota alebo obrázok a veta. Obrázky (pás hodín, stĺpce) sú pre
- * čítačku skryté - to isté povie veta. @param {Karta} k
+ * Karta Graf dňa: celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel s grafom (render/graf.js).
+ * Nadpis so šípkou je jeho meno, náhľad krivky je len obraz: predpoveď čiarou, nameraná krivka plochou.
+ * @param {Extract<Karta, { kind: 'graf' }>} k
+ */
+function grafHtml(k) {
+    const body = k.real.split(' ');
+    const plocha = k.real
+        ? `<polygon class="k-real" points="${body[0].split(',')[0]},40 ${k.real} ${body.at(-1)?.split(',')[0]},40"/>`
+        : '';
+    return (
+        `<button type="button" class="k-otvor" aria-haspopup="dialog"><span class="glass-ttl">${escapeHtml(k.title)}` +
+        `<span aria-hidden="true"> ›</span></span>` +
+        `<svg class="k-graf" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${plocha}` +
+        `<polyline class="k-fc" points="${k.fc}"/></svg></button>`
+    );
+}
+
+/**
+ * Jedna karta pásu: nadpis, veľká hodnota alebo obrázok a veta. Obrázky (stĺpce, náhľad krivky) sú pre
+ * čítačku skryté - to isté povie veta či text vedľa nich. @param {Karta} k
  */
 function kartaHtml(k) {
+    if (k.kind === 'graf') return `<section class="karta glass" data-kind="graf">${grafHtml(k)}</section>`;
     const head = `<h2 class="glass-ttl">${escapeHtml(k.title)}</h2>`;
+    if (k.kind === 'predpoved') return `<section class="karta glass" data-kind="predpoved">${head}${predpovedHtml(k)}</section>`;
     const text = `<p class="k-text">${escapeHtml(k.text)}</p>`;
     const val = (/** @type {string} */ v) => `<p class="k-val">${escapeHtml(v)}</p>`;
     /** @type {string} */ let body;
     if (k.kind === 'nabehlo')
         body = `${val(k.value)}${k.pct === null ? '' : `<div class="bar" aria-hidden="true"><i style="width:${k.pct}%"></i></div>`}`;
     else if (k.kind === 'lepsie') body = val(k.value);
-    else if (k.kind === 'obloha')
-        body =
-            `<div class="k-hodiny" aria-hidden="true">${k.hodiny
-                .map((h) => `<i data-ton="${h.ton}"${h.zrazky ? ` data-zrazky="${h.zrazky}"` : ''}></i>`)
-                .join('')}</div>` + hodinyOs(k.hodiny);
     else
         body =
             val(k.value) +
@@ -138,7 +166,7 @@ function kartaHtml(k) {
 }
 
 /**
- * Pás kariet pod číslami a bodky pod ním (jedna karta bez bodiek), večer zajtrajšok namiesto pásu.
+ * Pás kariet pod číslami a bodky pod ním (jedna karta bez bodiek), večer nad pásom zajtrajšok.
  * Ktorá bodka svieti, závisí od posunu pásu - nastaví ju syncBodky (aj pri posúvaní, mozem-interactions.js).
  * @param {DnesFaza} d @param {Dom} dom
  */

@@ -19,7 +19,7 @@ import {
 import { contrastTarget, parseColor, textContrast, over } from '../../shared/contrast.js';
 import { lookToStored, toUser } from '../../shared/settings.js';
 import { skyAt } from '../../shared/sky.js';
-import { fixture, fixtureData, pvAt } from '../helpers.js';
+import { fixture, fixtureData, otvorGraf, pvAt } from '../helpers.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { buildForecast } from '../../shared/solar.js';
 
@@ -501,9 +501,10 @@ test.describe('čítačka obrazovky', () => {
 
     test('grafy majú textový popis pre čítačku', async ({ page }) => {
         await openObloha(page);
-        await karta(page, 'terazky');
-        await expect(page.locator('#tz-chart')).toHaveAttribute('aria-valuetext', /.+/);
-        await expect(page.locator('#tz-chart-desc')).not.toBeEmpty();
+        await otvorGraf(page);
+        await expect(page.locator('#gr-chart')).toHaveAttribute('aria-valuetext', /.+/);
+        await expect(page.locator('#gr-chart-desc')).not.toBeEmpty();
+        await page.keyboard.press('Escape');
         await karta(page, '7dni');
         await page.locator('#sd-days .day').first().click();
         await expect(page.locator('#sd-day-chart')).toHaveAttribute('aria-label', /.+/);

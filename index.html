@@ -72,6 +72,14 @@
                         <ul id="mz-day-eq" class="eq"></ul>
                     </div>
                 </div>
+                <!-- Večer zajtrajšok nad pásom, v páse potom len Graf dňa a Predpoveď na zajtra (shared/dnes-faza.js). -->
+                <div id="mz-tom" class="glass tom">
+                    <button type="button" id="mz-tom-chip" class="chip-tap" aria-haspopup="dialog">
+                        <span id="mz-tom-chip-text" class="chip info"></span>
+                    </button>
+                    <p id="mz-tom-word" class="word"></p>
+                    <p id="mz-tom-text" class="line"></p>
+                </div>
                 <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a ťuknutím na kartu
                      preskočia (render/mozem.js, mozem-interactions.js). Ťah do strán je tu druhý v appke. -->
                 <div id="mz-karty" class="karty" tabindex="0" role="group"></div>
@@ -89,18 +97,9 @@
                     <p id="mz-ask-text"></p>
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Večer zajtrajšok namiesto pásu (shared/dnes-faza.js). -->
-                <div id="mz-tom" class="glass tom">
-                    <button type="button" id="mz-tom-chip" class="chip-tap" aria-haspopup="dialog">
-                        <span id="mz-tom-chip-text" class="chip info"></span>
-                    </button>
-                    <p id="mz-tom-word" class="word"></p>
-                    <p id="mz-tom-text" class="line"></p>
-                </div>
             </section>
-            <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html): číslo teraz, čo zapnúť a karta Deň. Skladá ich render
-                 (web/render/teraz.js) z shared/teraz.js, tu sú len nosiče. Pás či krivka v karte Deň je posúvač
-                 času: prst, kurzor aj šípky ukážu iný čas, číslo hore ostáva teraz. -->
+            <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html): číslo teraz a čo zapnúť. Skladá ich render
+                 (web/render/teraz.js) z shared/teraz.js, tu sú len nosiče. Graf dňa je v paneli karty Dnes. -->
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
@@ -167,29 +166,6 @@
                     <div id="tz-dlazdice" class="mriezka"></div>
                     <div id="tz-skupiny"></div>
                 </div>
-                <!-- Karta Deň: výkon a odkiaľ je (vľavo), čas (vpravo), pod tým krivka dňa (posúvač času),
-                     legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. -->
-                <section id="tz-den" class="glass tzden hidden" aria-labelledby="tz-den-ttl">
-                    <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v karte. -->
-                    <div id="tz-den-wx" class="wx wx-den hidden" aria-hidden="true"></div>
-                    <h2 id="tz-den-ttl" class="sr">Deň</h2>
-                    <div id="tz-citanie" class="citanie"></div>
-                    <div
-                        id="tz-chart"
-                        class="day-scrub"
-                        role="slider"
-                        tabindex="0"
-                        aria-valuemin="0"
-                        aria-valuemax="1425"
-                        aria-describedby="tz-chart-desc"
-                    ></div>
-                    <p id="tz-chart-desc" class="sr"></p>
-                    <p id="tz-leg" class="leg" aria-hidden="true"></p>
-                    <div class="pata">
-                        <p id="tz-hint"></p>
-                        <button type="button" id="tz-reset" class="spat"></button>
-                    </div>
-                </section>
             </section>
             <!-- Karta 7 dní: prehľad dní ako predpoveď počasia a dva detaily (deň, týždeň). Texty, riadky
                  aj grafy skladá render (web/render/sedem.js) z shared/sedem-dni.js, tu sú len nosiče.
@@ -919,6 +895,34 @@
                 <p id="mz-trieda-note" class="dim"></p>
                 <button type="button" id="mz-trieda-close" class="pbtn ghost"></button>
             </div>
+        </dialog>
+
+        <!-- Graf dňa (docs/navrhy/dnes-predpoved-graf.html): panel zdola z karty Graf dňa na karte Dnes. Hore výkon
+             a odkiaľ je (vľavo) a čas (vpravo), pod tým krivka dňa (posúvač času: prst, kurzor aj šípky ukážu iný čas),
+             legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. Tlačidlo Zavrieť nemá -
+             zavrie ho ťuknutie vedľa, Escape a Späť. Píše ho render/graf.js z grafModel v shared/teraz.js. -->
+        <dialog id="gr-sheet" class="sheet graf-sheet" aria-labelledby="gr-ttl">
+            <section id="gr-den" class="sheet-in grden">
+                <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v paneli. -->
+                <div id="gr-wx" class="wx wx-den hidden" aria-hidden="true"></div>
+                <h2 id="gr-ttl" class="sr">Graf dňa</h2>
+                <div id="gr-citanie" class="citanie"></div>
+                <div
+                    id="gr-chart"
+                    class="day-scrub"
+                    role="slider"
+                    tabindex="0"
+                    aria-valuemin="0"
+                    aria-valuemax="1425"
+                    aria-describedby="gr-chart-desc"
+                ></div>
+                <p id="gr-chart-desc" class="sr"></p>
+                <p id="gr-leg" class="leg" aria-hidden="true"></p>
+                <div class="pata">
+                    <p id="gr-hint"></p>
+                    <button type="button" id="gr-reset" class="spat"></button>
+                </div>
+            </section>
         </dialog>
 
         <!-- Detail spotrebiča na karte Teraz: kedy a odkiaľ, od-do, jeho úsek na páse dňa a prečo práve vtedy. -->

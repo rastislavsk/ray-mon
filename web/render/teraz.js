@@ -1,14 +1,12 @@
 // Karta Teraz (docs/navrhy/teraz-navrh-2.html): veľké číslo kW teraz, čo zapnúť (riadok nad dlaždicami,
-// dlaždice toho, čo ide teraz, skupiny riadkov), karta Deň s krivkou a výkonom zvoleného
-// času, panel s vysvetlením, detail spotrebiča a výzvy. Číslo hore ostáva teraz, zvolený čas je len
-// v karte Deň. Všetko počíta shared/teraz.js a texty sú v shared/messages.js - tu sa len zapisuje do DOM.
+// dlaždice toho, čo ide teraz, skupiny riadkov), panel s vysvetlením, detail spotrebiča a výzvy. Graf
+// dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
+// shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { DAY_CHART_KEYS, PLAN_DNA_NOTE, TERAZ_PAS_ISTOTA, TERAZ_TONES, voiceTexts } from '../../shared/messages-core.js';
-import { skyNow } from '../../shared/sky.js';
+import { PLAN_DNA_NOTE, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
-import { dayChartHtml } from '../day-chart.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { vecIcon, weatherIcon } from './icons.js';
@@ -21,7 +19,7 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** Texty bubliny, keď riadok bublinu nemá. */
 const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
 
-/** Riadok stavu merania hovorí vždy o teraz - zvolený čas je len v karte Deň. */
+/** Riadok stavu merania hovorí vždy o teraz - zvolený čas je len v grafe dňa. */
 const TERAZ = { preview: false, source: '' };
 
 /**
@@ -136,7 +134,7 @@ function skupinaHtml(g) {
  * Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, na nej plný úsek
  * spotrebiča (zo slnka zelený, z lacnej siete modrý), pri dnešku biela čiara „teraz“, pod tým hodiny.
  * Všetko v % osi, takže sa naťahuje so šírkou panelu.
- * @param {NonNullable<Model['den']>['os']} os @param {NonNullable<Model['veci'][number]['slot']>} slot
+ * @param {NonNullable<Model['os']>} os @param {NonNullable<Model['veci'][number]['slot']>} slot
  */
 function osHtml(os, slot) {
     const now = slot.dnes && os.now !== null ? `<i class="os-teraz" style="left:${os.now}%"></i>` : '';
@@ -145,49 +143,6 @@ function osHtml(os, slot) {
         `<div class="os"><i class="os-ciara"></i>` +
         `<i class="os-usek" data-tone="${slot.tone}" style="left:${slot.left}%;width:${slot.width}%"></i>${now}${ticks}</div>`
     );
-}
-
-/** Legenda pod krivkou: farba a slovo. @param {Array<[string, string]>} items */
-const legHtml = (items) => items.map(([l, t]) => `<span><i data-l="${l}"></i>${escapeHtml(t)}</span>`).join('');
-
-/**
- * Karta Deň: hore výkon a odkiaľ je (meranie alebo odhad z predpovede) a vpravo čas - teraz alebo
- * zvolený. Pod tým krivka dňa (posúvač času), legenda a pätka s radou alebo „Späť na teraz“.
- * Bez predpovede nie je.
- * @param {Model} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
- */
-function renderDen(m, dom, T) {
-    const d = m.den;
-    const c = m.chart;
-    show(dom.tzDen, !!d && !!c);
-    if (!d || !c) return;
-    const k = d.citanie;
-    setHtml(
-        dom.tzCitanie,
-        `<p class="c-kw"><b>${escapeHtml(k.kw)}</b><span>${escapeHtml(k.zdroj)}</span></p><p class="c-cas">${escapeHtml(k.cas)}</p>`,
-    );
-    setHtml(dom.tzChart, dayChartHtml(c));
-    dom.tzChart.setAttribute('aria-label', T.slider);
-    dom.tzChart.setAttribute('aria-valuemin', String(c.range.min));
-    dom.tzChart.setAttribute('aria-valuemax', String(c.range.max));
-    dom.tzChart.setAttribute('aria-valuenow', String(c.value));
-    dom.tzChart.setAttribute('aria-valuetext', k.veta);
-    setText(dom.tzChartDesc, c.desc);
-    setHtml(
-        dom.tzLeg,
-        legHtml([
-            ['power', DAY_CHART_KEYS.power],
-            ['forecast', DAY_CHART_KEYS.forecast],
-            ['limit', T.limit],
-            ['go', TERAZ_TONES.sun],
-            ['cheap', TERAZ_TONES.cheap],
-            ['costly', TERAZ_TONES.costly],
-        ]),
-    );
-    show(dom.tzHint, !d.zvolene);
-    setText(dom.tzHint, T.hint);
-    show(dom.tzReset, d.zvolene);
-    setText(dom.tzReset, T.reset);
 }
 
 /**
@@ -223,7 +178,7 @@ function renderChipSheet(state, m, dom, T) {
  */
 function renderVecSheet(state, m, dom, T) {
     const v = state.tzVec && m ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
-    if (v && m?.den) {
+    if (v && m?.os) {
         dom.tzVecSheet.dataset.tone = v.tone;
         setHtml(dom.tzVecIco, vecIcon(v.id));
         setText(dom.tzVecName, v.name);
@@ -231,7 +186,7 @@ function renderVecSheet(state, m, dom, T) {
         // Čas iného dňa nikdy bez dňa - inak by sa čítal ako dnešný.
         setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
         show(dom.tzVecPas, !!v.slot);
-        setHtml(dom.tzVecPas, v.slot ? osHtml(m.den.os, v.slot) : '');
+        setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
         setText(dom.tzVecWhy, v.why);
         setText(dom.tzVecNote, PLAN_DNA_NOTE);
         setText(dom.tzVecClose, T.chipClose);
@@ -261,10 +216,7 @@ export function renderTeraz(state, dom) {
         renderVecSheet(state, null, dom, T);
         return;
     }
-    const m = terazModel(
-        { ...state, previewMinutes: state.terazPreview },
-        { online: state.online, voice: state.voice, devices: state.doma },
-    );
+    const m = terazModel({ ...state, previewMinutes: null }, { online: state.online, voice: state.voice, devices: state.doma });
     renderPocasie(state, m, dom);
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
@@ -292,8 +244,6 @@ export function renderTeraz(state, dom) {
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
-    renderDen(m, dom, T);
-    renderDenNebo(state, m, dom);
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom, T);
 }
@@ -311,32 +261,10 @@ function renderPocasie(state, m, dom) {
 }
 
 /**
- * Karta Deň má oblohu zvoleného času (docs/navrhy/teraz-navrh-2.html): farby neba z toho istého
- * výpočtu ako pozadie appky (skyNow v tej chvíli) a tá istá kresba počasia - slnko podľa času na
- * oblúku karty, oblaky, dážď, sneh, hviezdy a Mesiac. Farby prelína CSS (zaregistrované --d1 až --d3).
- * S vypnutou živou oblohou (Nastavenie › Vzhľad) je karta sklo ako ostatné.
- * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
- */
-function renderDenNebo(state, m, dom) {
-    const p = state.liveSky && m.den ? m.pocasieDen : null;
-    dom.tzDen.classList.toggle('nebo', !!p);
-    show(dom.tzDenWx, !!p);
-    if (!p || !m.den) return;
-    const sky = skyNow({ ...state, previewMinutes: state.terazPreview }, true, p);
-    dom.tzDen.style.setProperty('--d1', sky.top);
-    dom.tzDen.style.setProperty('--d2', sky.bottom);
-    dom.tzDen.style.setProperty('--d3', sky.shade);
-    kresliPocasie(dom.tzDenWx, p);
-    const s = m.den.slnko;
-    dom.tzDenWx.style.setProperty('--wx-sx', s ? `${s.x}%` : '50%');
-    dom.tzDenWx.style.setProperty('--wx-sy', s ? `${s.y}%` : '130%');
-}
-
-/**
- * Kresba počasia do nosiča `el` (pozadie karty, karta Deň): vrstvy, stav, sila dažďa, noc, skutočné
+ * Kresba počasia do nosiča `el` (pozadie karty, panel s grafom dňa): vrstvy, stav, sila dažďa, noc, skutočné
  * hviezdy a Mesiac. @param {HTMLElement} el @param {import('../../shared/pocasie.js').Pocasie} p
  */
-function kresliPocasie(el, p) {
+export function kresliPocasie(el, p) {
     setHtml(el, pocasieHtml());
     el.dataset.wx = pocasieStav(p);
     // Sila dažďa (docs/navrhy/dazd-sily.html); staršie jadro z cache ju nepošle - kresba ukáže bežný dážď.

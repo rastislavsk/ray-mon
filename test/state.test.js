@@ -42,6 +42,7 @@ const step = (patch = {}) => ({
     vec: null,
     chip: null,
     trieda: null,
+    graf: false,
     ...patch,
 });
 
@@ -90,7 +91,7 @@ test('neededParts: karty na obrazovke a ponuka nastavenia z odkazu', () => {
 });
 
 test('navStep → navStepOf: krok prežije cestu cez históriu', () => {
-    const s = stateWith({ panel: 'terazky', terazPreview: 600 });
+    const s = stateWith({ panel: 'mozem', mzGraf: true, terazPreview: 600 });
     assert.deepEqual(navStepOf(navStep(s)), navStep(s));
     const dash = stateWith({ layout: 'wide', panel: '7dni', weekDetail: 'day' });
     assert.deepEqual(navStepOf(navStep(dash)), navStep(dash));
@@ -118,10 +119,16 @@ test('navStepOf: cudzia hodnota je null', () => {
 const field = (raw, key) => /** @type {any} */ (navStepOf(raw))?.[key];
 
 test('navStepOf: časť kroku, ktorá nepatrí karte, sa zahodí', () => {
-    // Náhľad mimo dňa nie je náhľad.
-    assert.equal(field({ panel: 'terazky', preview: 1440 }, 'preview'), null);
-    assert.equal(field({ panel: 'terazky', preview: -1 }, 'preview'), null);
-    assert.equal(field({ panel: 'terazky', preview: 0 }, 'preview'), 0);
+    // Náhľad mimo dňa nie je náhľad, rovnako mimo panelu s grafom dňa - položka z čias, keď bol graf
+    // na karte Teraz, vráti len kartu.
+    assert.equal(field({ panel: 'mozem', graf: true, preview: 1440 }, 'preview'), null);
+    assert.equal(field({ panel: 'mozem', graf: true, preview: -1 }, 'preview'), null);
+    assert.equal(field({ panel: 'mozem', graf: true, preview: 0 }, 'preview'), 0);
+    assert.deepEqual(navStepOf({ panel: 'terazky', preview: 600 }), step({ panel: 'terazky' }));
+    // Graf dňa patrí karte Dnes, v prehľade ktorémukoľvek stĺpcu.
+    assert.equal(field({ panel: 'terazky', graf: true }, 'graf'), false);
+    assert.equal(field({ panel: 'terazky', graf: true, dash: true }, 'graf'), true);
+    assert.equal(field({ panel: 'mozem', graf: 'áno' }, 'graf'), false);
     // Detail patrí len karte 7 dní, v prehľade ktorémukoľvek stĺpcu.
     assert.equal(field({ panel: 'mozem', detail: 'day' }, 'detail'), null);
     assert.equal(field({ panel: 'mozem', detail: 'day', dash: true }, 'detail'), 'day');
@@ -154,8 +161,12 @@ test('navChange: návrat na krok vráti kartu aj s tým, čo bolo otvorené', ()
     assert.equal(back.weekDetail, 'day');
     assert.equal(back.setupReturn, null, 'návrat mimo sprievodcu ukončí úpravu jedného kroku');
     // Náhľad, ktorý už beží, ostane, kde ho prst nechal.
-    assert.equal(navChange(stateWith({ panel: 'terazky', terazPreview: 900 }), step({ panel: 'terazky', preview: 600 })).terazPreview, 900);
-    assert.equal(navChange(stateWith({ panel: 'mozem' }), step({ panel: 'terazky', preview: 600 })).terazPreview, 600);
+    const graf = step({ graf: true, preview: 600 });
+    assert.equal(navChange(stateWith({ mzGraf: true, terazPreview: 900 }), graf).terazPreview, 900);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), graf).terazPreview, 600);
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), graf).mzGraf, true);
+    // Panel s grafom je krok - Späť ho zavrie.
+    assert.ok(!sameNavStep(navStep(stateWith({ mzGraf: true })), navStep(stateWith())));
     // Krok uprostred sprievodcu úpravu neukončí.
     assert.ok(!('setupReturn' in navChange(stateWith(), step({ panel: 'nastavenie', setup: 'lokalita' }))));
     assert.equal(navChange(stateWith(), step({ panel: 'nastavenie', setup: 'suhrn' })).setupReturn, null);

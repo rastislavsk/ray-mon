@@ -438,6 +438,12 @@ export const PLAN_DNA = {
 };
 
 /**
+ * Hodiny, v ktorých karta Predpoveď na karte Dnes hľadá zrážky (od `od` do `do` bez nej): deň, ako ho
+ * ľudia žijú, nie len svetlo - dážď o siedmej večer patrí do predpovede, o tretej v noci nie.
+ */
+export const PREDPOVED_HODINY = { od: 6, do: 22 };
+
+/**
  * Trieda celého dňa pre veľké slovo karty Dnes (docs/navrhy/dnes-hlasky-dna.html), zo slnka
  * celého dňa od polnoci: výborný, keď sa všetky spotrebiče zmestia na slnko aj vtedy, keď by
  * strecha dala len `reserve` výkonu (rezerva na mrak), dobrý, keď sa zmestia všetky, slabý, keď

@@ -6,6 +6,7 @@ import { skyNow } from '../../shared/sky.js';
 import { pocasieTeraz } from '../../shared/teraz.js';
 import { loaded } from '../parts.js';
 import { dashboard, isColumn, PARTS, partOf, ready, shows } from '../state.js';
+import { renderGraf } from './graf.js';
 import { renderHeader } from './header.js';
 import { renderMozem } from './mozem.js';
 import { renderTeraz } from './teraz.js';
@@ -19,7 +20,7 @@ import { show } from './write.js';
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    // Nebo je vždy z tejto chvíle - zvolený čas na karte Teraz má vlastnú oblohu len karta Deň.
+    // Nebo je vždy z tejto chvíle - zvolený čas v grafe dňa má vlastnú oblohu len panel s grafom.
     const chvila = { ...state, previewMinutes: null };
     const sky = skyNow(chvila, state.liveSky, pocasieTeraz(chvila));
     dom.root.style.setProperty('--s1', sky.top);
@@ -86,6 +87,7 @@ export function render(state, dom) {
     renderPanels(state, dom);
     renderWait(state, dom);
     renderMozem(state, dom);
+    renderGraf(state, dom);
     renderTeraz(state, dom);
     for (const part of PARTS) if (state.parts[part] === 'ok') loaded[part]?.render(state, dom);
 }

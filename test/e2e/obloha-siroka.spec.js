@@ -8,7 +8,7 @@ import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
 import { buildForecast } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
-import { fixture, pvAt } from '../helpers.js';
+import { fixture, otvorGraf, pvAt } from '../helpers.js';
 
 const weather = fixture('open-meteo.json');
 /** Pripojené meranie v testoch: zapečatený prístup ku kiosku, Worker naň odpovedá nameraným pv z fixtures. */
@@ -104,8 +104,8 @@ test.describe('tri rozloženia podľa šírky okna', () => {
     test('tablet na výšku (820 px): jedna karta s rozumnou šírkou a väčším grafom, navigácia dole', async ({ page }) => {
         // Graf dňa na telefóne pre porovnanie.
         await openObloha(page, TELEFON);
-        await page.locator('#nav-terazky').click();
-        const naTelefone = /** @type {{ width: number }} */ (await page.locator('#tz-chart').boundingBox()).width;
+        await otvorGraf(page);
+        const naTelefone = /** @type {{ width: number }} */ (await page.locator('#gr-chart').boundingBox()).width;
 
         const errors = await openObloha(page, TABLET_VYSKA);
         const r = await rozlozenie(page);
@@ -115,7 +115,8 @@ test.describe('tri rozloženia podľa šírky okna', () => {
         const [teraz] = r.panels;
         expect(teraz.right - teraz.left).toBeLessThanOrEqual(680);
         expect(Math.abs(teraz.left - (TABLET_VYSKA.width - teraz.right))).toBeLessThanOrEqual(1);
-        const graf = /** @type {{ width: number }} */ (await page.locator('#tz-chart').boundingBox()).width;
+        await otvorGraf(page);
+        const graf = /** @type {{ width: number }} */ (await page.locator('#gr-chart').boundingBox()).width;
         expect(graf).toBeGreaterThan(naTelefone * 1.4);
         expect(errors).toEqual([]);
     });
@@ -215,19 +216,18 @@ test.describe('zmena šírky okna nič nestratí', () => {
         expect(errors).toEqual([]);
     });
 
-    test('náhľad času na grafe: ostane ten istý čas aj číslo', async ({ page }) => {
+    test('náhľad času na grafe: ostane otvorený graf aj ten istý čas', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
-        await page.locator('#tz-chart').focus();
+        await otvorGraf(page);
+        await page.locator('#gr-chart').focus();
         for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
-        const cas = await page.locator('#tz-chart .dc-at-t').textContent();
-        const num = await page.locator('#tz-num-val').textContent();
+        const cas = await page.locator('#gr-chart .dc-at-t').textContent();
         expect(cas).toMatch(/^\d\d:\d\d$/);
         for (const size of [TELEFON, TABLET_SIRKA, TABLET_VYSKA, POCITAC]) {
             await page.setViewportSize(size);
-            await expect(page.locator('#tz-chart')).toBeVisible();
-            await expect(page.locator('#tz-chart .dc-at-t')).toHaveText(cas ?? '');
-            await expect(page.locator('#tz-num-val')).toHaveText(num ?? '');
-            await expect(page.locator('#tz-reset')).toBeVisible();
+            await expect(page.locator('#gr-chart')).toBeVisible();
+            await expect(page.locator('#gr-chart .dc-at-t')).toHaveText(cas ?? '');
+            await expect(page.locator('#gr-reset')).toBeVisible();
         }
         expect(errors).toEqual([]);
     });
@@ -325,11 +325,14 @@ test.describe('dialógy na počítači', () => {
     test('Escape v náhľade grafu vráti teraz, otvorený detail dňa v stĺpci 7 dní nechá', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
         await page.locator('#sd-days [data-day="1"]').click();
-        await page.locator('#tz-chart').focus();
+        await otvorGraf(page);
+        await page.locator('#gr-chart').focus();
         await page.keyboard.press('ArrowRight');
-        await expect(page.locator('#tz-reset')).toBeVisible();
+        await expect(page.locator('#gr-reset')).toBeVisible();
         await page.keyboard.press('Escape');
-        await expect(page.locator('#tz-reset')).toBeHidden();
+        await expect(page.locator('#gr-reset')).toBeHidden();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#gr-sheet')).toBeHidden();
         await expect(page.locator('#sd-day')).toBeVisible();
         expect(errors).toEqual([]);
     });
@@ -423,8 +426,9 @@ test.describe('klávesnica na počítači', () => {
         ).toBe(true);
         const stlpce = vStlpcoch.map((k) => k.column);
         expect(stlpce).toEqual([...stlpce].sort((a, b) => a - b));
-        // V stĺpci Dnes odznak triedy dňa a pás kariet (posúva sa šípkami), bodky pod ním Tab preskočí.
-        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-chip', 'mz-karty']);
+        // V stĺpci Dnes odznak triedy dňa, pás kariet (posúva sa šípkami) a v ňom karta Graf dňa; bodky
+        // pod ním Tab preskočí.
+        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-chip', 'mz-karty', 'button.k-otvor']);
         // V stĺpci Teraz je prvá bodka a čas merania pod číslom (bublina so stavom merania).
         expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('hdr-live');
         expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));
@@ -435,15 +439,16 @@ test.describe('klávesnica na počítači', () => {
 
     test('kurzor nad grafom ukáže náhľad času ako na telefóne', async ({ page }) => {
         const errors = await openObloha(page, POCITAC);
+        await otvorGraf(page);
         const box = /** @type {{ x: number, y: number, width: number, height: number }} */ (
-            await page.locator('#tz-chart svg').boundingBox()
+            await page.locator('#gr-chart svg').boundingBox()
         );
         await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2);
         await page.mouse.down();
         await page.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2);
         await page.mouse.up();
-        await expect(page.locator('#tz-chart .dc-at-t')).toHaveText(/^\d\d:\d\d$/);
-        await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
+        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText(/^\d\d:\d\d$/);
+        await expect(page.locator('#nav-mozem')).toHaveAttribute('aria-current', 'page');
         expect(errors).toEqual([]);
     });
 });
@@ -456,7 +461,7 @@ test.describe('klávesnica na počítači', () => {
 /**
  * Vykreslené popisky grafu a čo nápis hranice prekrýva: body kriviek (predpoveď, nameraná),
  * značku „teraz“, čiaru náhľadu a čas nad ňou v jeho obdĺžniku.
- * @param {import('@playwright/test').Page} page @param {string} sel graf (#tz-chart, #sd-day-chart)
+ * @param {import('@playwright/test').Page} page @param {string} sel graf (#gr-chart, #sd-day-chart)
  */
 const popiskyGrafu = (page, sel) =>
     page.locator(sel).evaluate((chart) => {
@@ -499,12 +504,12 @@ test.describe('graf dňa na každej šírke', () => {
         const merania = [];
         for (const size of SIRKY) {
             await openObloha(page, size);
-            if (size === TELEFON || size === TABLET_VYSKA) await page.locator('#nav-terazky').click();
-            await page.locator('#tz-chart').focus();
+            await otvorGraf(page);
+            await page.locator('#gr-chart').focus();
             // Šípka na grafe zapne náhľad (čas nad čiarou).
             await page.keyboard.press('ArrowRight');
-            await expect(page.locator('#tz-chart .dc-at-t')).toBeVisible();
-            merania.push(await popiskyGrafu(page, '#tz-chart'));
+            await expect(page.locator('#gr-chart .dc-at-t')).toBeVisible();
+            merania.push(await popiskyGrafu(page, '#gr-chart'));
         }
         const [telefon] = merania;
         // Os 5–21 (deň so slnkom): 5, 9, 12, 15, 18, 21.
@@ -518,7 +523,7 @@ test.describe('graf dňa na každej šírke', () => {
     });
 
     for (const size of SIRKY)
-        test(`šírka ${size.width} px: nápis „veľké spotrebiče“ neprekrýva krivku ani „teraz“ na karte Teraz ani v detaile dňa`, async ({
+        test(`šírka ${size.width} px: nápis „veľké spotrebiče“ neprekrýva krivku ani „teraz“ v grafe dňa ani v detaile dňa`, async ({
             page,
         }) => {
             test.slow();
@@ -527,9 +532,11 @@ test.describe('graf dňa na každej šírke', () => {
             for (const hm of CASY) {
                 const errors = await openObloha(page, size, { time: at(hm) });
                 const stlpce = size === TABLET_SIRKA || size === POCITAC;
-                if (!stlpce) await page.locator('#nav-terazky').click();
-                await expect(page.locator('#tz-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
-                for (const h of (await popiskyGrafu(page, '#tz-chart')).hits) zle.push(`Teraz o ${hm}: ${h}`);
+                await otvorGraf(page);
+                await expect(page.locator('#gr-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
+                for (const h of (await popiskyGrafu(page, '#gr-chart')).hits) zle.push(`graf dňa o ${hm}: ${h}`);
+                await page.keyboard.press('Escape');
+                await expect(page.locator('#gr-sheet')).toBeHidden();
                 // Detail dňa: dnes (so značkou „teraz“) a pozajtra.
                 for (const day of [0, 2]) {
                     if (!stlpce) await page.locator('#nav-7dni').click();
@@ -549,8 +556,8 @@ test.describe('graf dňa na každej šírke', () => {
         }) => {
             test.slow();
             const errors = await openObloha(page, size, { time: at('13:00') });
-            if (size === TELEFON || size === TABLET_VYSKA) await page.locator('#nav-terazky').click();
-            const graf = page.locator('#tz-chart');
+            await otvorGraf(page);
+            const graf = page.locator('#gr-chart');
             await graf.focus();
             await page.keyboard.press('Home');
             /** @type {string[]} */
@@ -559,8 +566,8 @@ test.describe('graf dňa na každej šírke', () => {
             const od = Number(await graf.getAttribute('aria-valuemin'));
             const po = Number(await graf.getAttribute('aria-valuemax'));
             for (let i = 0; i <= (po - od) / 30; i++) {
-                const cas = (await page.locator('#tz-chart .dc-at-t').textContent()) ?? '';
-                for (const h of (await popiskyGrafu(page, '#tz-chart')).hits) zle.push(`náhľad ${cas}: ${h}`);
+                const cas = (await page.locator('#gr-chart .dc-at-t').textContent()) ?? '';
+                for (const h of (await popiskyGrafu(page, '#gr-chart')).hits) zle.push(`náhľad ${cas}: ${h}`);
                 await page.keyboard.press('ArrowRight');
                 await page.keyboard.press('ArrowRight');
             }

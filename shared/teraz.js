@@ -1,7 +1,8 @@
-// Karta Teraz. Výkon, pásmo a odporúčanie sú z heroModel (aj náhľad
-// iného času cez `previewMinutes`), plán dňa z dayPlan, odpoveď teraz a Plán dňa z mozemModel - tie isté
-// ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou, Plán dňa a graf dňa s pásom plánu.
-// Dnešok a kedy lepšie (dnesCards) berie karta Dnes (shared/dnes-faza.js). Čisté funkcie,
+// Karta Teraz. Výkon, pásmo a odporúčanie sú z heroModel, plán dňa z dayPlan, odpoveď teraz a Plán dňa
+// z mozemModel - tie isté ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou a čo zapnúť.
+// Graf dňa s pásom plánu a zvoleným časom (`previewMinutes`, grafModel) je v paneli karty Dnes
+// (docs/navrhy/dnes-predpoved-graf.html), dnešok a kedy lepšie (dnesCards) berie karta Dnes
+// (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { interpolate, realCurveBoundary } from './chart-model.js';
@@ -62,15 +63,14 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
         return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
     // Meranie, ktoré mlčí, heroModel za výkon „teraz“ nepovažuje (freshPowerKw) - číslo je vtedy
-    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí. Číslo, obloha a čo zapnúť
-    // ostávajú teraz; zvolený čas (`hero`) je len v karte Deň (docs/navrhy/teraz-navrh-2.html).
-    const hero = heroModel(input, voice);
-    const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
+    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí. Karta Teraz je vždy teraz -
+    // zvolený čas je len v grafe dňa (grafModel).
+    const now = heroModel({ ...input, previewMinutes: null }, voice);
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
     const m = mozemModel(input, { voice, devices });
     const rows = m.plan ? m.plan.rows : [];
-    const den = denModel(input, rows, input.previewMinutes, voice);
+    const os = denOs(daylightSpan(input.site, localDateKey(input.now, input.site.timezone)), localMinutes(input.now, input.site.timezone));
     const teraz = {
         nowMin: now.minutes,
         level: plan[Math.floor(now.minutes / STEP)].level,
@@ -80,20 +80,34 @@ export function terazModel(input, { online = true, voice = 'drzy', devices } = {
     return {
         ...empty('ok', estimate),
         ...headOf(input, now, { estimate, voice }),
-        preview: hero.preview,
         note,
         guess: estimate,
-        chart: chartOf(input, plan, hero, now),
-        hint: hero.preview ? { text: '', reset: true } : { text: TERAZ_TEXTS.hint, reset: false },
         // Štítky už nie sú na karte - ich vysvetlenie je za „i“ riadku nad dlaždicami.
         chips: m.chips,
         co: m.plan ? coOf(input, rows, teraz, devices, voice) : null,
-        veci: rows.map((r) => vecDetail(r, now.minutes, den.os.span)),
-        den,
+        veci: rows.map((r) => vecDetail(r, now.minutes, os.span)),
+        os,
         pocasie: pocasieOf(input, now),
-        // Obloha karty Deň: počasie v zvolenom čase (bez neho teraz).
-        pocasieDen: pocasieOf(input, hero),
         jas: jasOf(input, now),
+    };
+}
+
+/**
+ * Graf dňa v paneli karty Dnes (docs/navrhy/dnes-predpoved-graf.html, predtým karta Deň na karte Teraz):
+ * krivka dňa ako posúvač času (`chart`), odčítanie zvoleného času (`den`: výkon, odkiaľ je, čas) a obloha
+ * v tej chvíli (`pocasie`). `previewMinutes` je zvolený čas, null teraz. Bez polohy a bez predpovede null.
+ * @param {TerazInput} input
+ * @param {{ voice?: import('./messages.js').Voice, devices?: readonly string[] }} [opts] tón hlášok a spotrebiče doma
+ */
+export function grafModel(input, { voice = 'drzy', devices } = {}) {
+    if (input.known === 'nic' || !input.forecast) return null;
+    const hero = heroModel(input, voice);
+    const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
+    const m = mozemModel(input, { voice, devices });
+    return {
+        chart: chartOf(input, dayPlan(input), hero, now),
+        den: denModel(input, m.plan ? m.plan.rows : [], input.previewMinutes, voice),
+        pocasie: pocasieOf(input, hero),
     };
 }
 
@@ -203,18 +217,14 @@ function empty(kind, estimate) {
         title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
         sub: '',
-        preview: false,
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,
-        chart: /** @type {ReturnType<typeof chartOf> | null} */ (null),
-        hint: { text: '', reset: false },
         chips: /** @type {import('./mozem.js').Chip[]} */ ([]),
         co: /** @type {ReturnType<typeof coOf> | null} */ (null),
         veci: /** @type {Array<ReturnType<typeof vecDetail>>} */ ([]),
-        den: /** @type {ReturnType<typeof denModel> | null} */ (null),
+        os: /** @type {ReturnType<typeof denOs> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
-        pocasieDen: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
         jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
 }
@@ -268,7 +278,7 @@ function chartOf(input, plan, hero, now) {
             costly: windows('costly'),
         }),
         // Hodnota posúvača ostáva v jeho rozsahu aj v noci, keď je „teraz“ mimo osi; čas povie
-        // odčítanie karty Deň (aria-valuetext).
+        // odčítanie grafu dňa (aria-valuetext).
         value: Math.min(geo.range.max, Math.max(geo.range.min, hero.minutes)),
     };
 }
@@ -333,8 +343,8 @@ function soFar(hourly, nowMin) {
 /** @typedef {ReturnType<typeof terazModel>} TerazModel */
 
 // ---- Nová karta Teraz (docs/navrhy/teraz-navrh-2.html) ----------------------------------
-// Hore čo zapnúť (dlaždice a skupiny z Plánu dňa), pod tým karta Deň: veta, pás slnka a siete
-// a odčítanie zvoleného času. Číslo hore ostáva teraz, zvolený čas je len v karte Deň.
+// Čo zapnúť (dlaždice a skupiny z Plánu dňa) a detail spotrebiča. Graf dňa s odčítaním zvoleného času
+// je v paneli karty Dnes (grafModel), číslo karty Teraz je vždy teraz.
 
 /** @typedef {import('./plan-dna.js').PlanRow & { name: string, why: string }} RiadokPlanu */
 /** @typedef {Extract<RiadokPlanu, { kind: 'sun' | 'cheap' }>} DnesnyRiadok */
@@ -490,9 +500,8 @@ function skupinyOf(rows, dnes, nieco, slnkoDnes, pas) {
  */
 
 /**
- * Karta Deň: odčítanie zvoleného času (`min`, null = teraz) - výkon a odkiaľ je, pre čítačku aj či
- * slnko stačí, sieť, oblačnosť a čo z Plánu dňa (`rows`) vtedy beží - a os dnešného svetla pre
- * detail spotrebiča. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
+ * Graf dňa: odčítanie zvoleného času (`min`, null = teraz) - výkon a odkiaľ je, pre čítačku aj či
+ * slnko stačí, sieť, oblačnosť a čo z Plánu dňa (`rows`) vtedy beží - a slnko na oblohe panelu. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
  * dopredu predpoveď.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {number | null} min
  * @param {import('./messages.js').Voice} [voice]
@@ -504,7 +513,6 @@ export function denModel(input, rows, min, voice = 'drzy') {
     const t = Math.max(0, Math.min(plan.length * STEP - 1, min ?? nowMin));
     return {
         citanie: citanieOf(input, plan, rows, { t, min }, voice),
-        os: denOs(daylightSpan(input.site, localDateKey(input.now, tz)), nowMin),
         slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
         min: t,
         zvolene: min !== null,
@@ -512,7 +520,7 @@ export function denModel(input, rows, min, voice = 'drzy') {
 }
 
 /**
- * Slnko na oblohe karty Deň v minúte `t`: zľava (východ) doprava (západ) po oblúku, v % plochy karty
+ * Slnko na oblohe panelu s grafom dňa v minúte `t`: zľava (východ) doprava (západ) po oblúku, v % plochy panelu
  * (`x` zľava, `y` zhora). Len dekorácia, poloha z dĺžky dňa, nie presná výška slnka. Mimo dňa null.
  * @param {{ from: number, to: number }} span @param {number} t
  */
@@ -523,7 +531,7 @@ function slnkoVKarte(span, t) {
 }
 
 /**
- * Odčítanie karty Deň v minúte `t` (zvolený čas `min`, null = teraz). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
+ * Odčítanie grafu dňa v minúte `t` (zvolený čas `min`, null = teraz). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
  * @param {RiadokPlanu[]} rows @param {{ t: number, min: number | null }} cas @param {import('./messages.js').Voice} voice
  */
 function citanieOf(input, plan, rows, { t, min }, voice) {

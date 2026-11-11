@@ -59,11 +59,11 @@ export function initSedem(store, dom, refresh) {
     dom.sdSum.addEventListener('click', () => store.setState({ weekDetail: 'week', panel: '7dni' }));
     for (const btn of [dom.sdDayBack, dom.sdWeekBack]) btn.addEventListener('click', () => closeDetail(store));
     // Escape v detaile robí to isté ako „‹ 7 dní“. Na iných kartách si Escape berú ich prvky - v
-    // prehľade so stĺpcami aj graf karty Teraz (náhľad) a otvorený dialóg, ktorý zavrie najprv seba.
+    // prehľade so stĺpcami otvorený dialóg (panel s grafom dňa, okno sekcie Appka, …), ktorý zavrie najprv seba.
     document.addEventListener('keydown', (e) => {
         const s = store.get();
         if (e.key !== 'Escape' || e.defaultPrevented || !shows(s, '7dni') || !s.weekDetail) return;
-        if (s.appSheet) return;
+        if (document.querySelector('dialog:modal')) return;
         e.preventDefault();
         closeDetail(store);
     });
