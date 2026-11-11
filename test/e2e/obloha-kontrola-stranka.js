@@ -207,8 +207,22 @@
     }
 
     /**
+     * Ovládač v posúvanom páse (pás kariet na karte Dnes), ktorý nie je celý v jeho okne: prst ho
+     * trafí až po posunutí pásu, dovtedy je jeho plocha orezaná. @param {Element} el @param {DOMRect} r
+     */
+    function mimoPasu(el, r) {
+        for (let a = el.parentElement; a; a = a.parentElement) {
+            if (!/^(auto|scroll)$/.test(getComputedStyle(a).overflowX)) continue;
+            const p = a.getBoundingClientRect();
+            if (r.left < p.left - 0.5 || r.right > p.right + 0.5) return true;
+        }
+        return false;
+    }
+
+    /**
      * Ovládacie prvky, ktoré je vidieť: pri zaškrtávacom poli celý popis, na ktorý sa dá ťuknúť;
-     * pri otvorenom modálnom dialógu len to, čo je v ňom (zvyšok stránky je nedostupný).
+     * pri otvorenom modálnom dialógu len to, čo je v ňom (zvyšok stránky je nedostupný), a v posúvanom
+     * páse len to, čo je v jeho okne celé.
      */
     function ovladace() {
         const modal = document.querySelector('dialog:modal');
@@ -217,7 +231,7 @@
             const el = raw.matches('input[type="checkbox"], input[type="radio"]') ? (raw.closest('label') ?? raw) : raw;
             if ((modal && !modal.contains(el)) || out.some((t) => t.el === el)) continue;
             const r = el.getBoundingClientRect();
-            if (!el.checkVisibility({ visibilityProperty: true }) || r.width < 1 || r.height < 1) continue;
+            if (!el.checkVisibility({ visibilityProperty: true }) || r.width < 1 || r.height < 1 || mimoPasu(el, r)) continue;
             out.push({ el, r, layer: vrstva(el), name: `${meno(el)} „${(el.textContent ?? '').trim().slice(0, 18)}“` });
         }
         return out;

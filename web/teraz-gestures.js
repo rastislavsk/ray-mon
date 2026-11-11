@@ -1,4 +1,4 @@
-// Ovládanie karty Teraz: graf dňa ako posúvač
+// Ovládanie grafu dňa (panel karty Dnes) ako posúvača
 // času (prst, kurzor, klávesnica) a stránka pásu odporúčaní. Neutrálny modul (CLAUDE.md) - stav
 // nepozná, čo s časom spraviť, mu povie appka cez `ScrubHooks`. Pravidlá dotyku sú v CLAUDE.md,
 // časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.

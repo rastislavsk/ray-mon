@@ -159,3 +159,14 @@ export function dazdKresba(page, sila, sel = '#wx') {
         });
     }, sila);
 }
+
+/**
+ * Otvorí panel s grafom dňa (docs/navrhy/dnes-predpoved-graf.html): karta Dnes, keď ešte nie je vidieť,
+ * a ťuknutie na kartu Graf dňa v páse.
+ * @param {import('@playwright/test').Page} page
+ */
+export async function otvorGraf(page) {
+    if (!(await page.locator('#panel-mozem').isVisible())) await page.locator('#nav-mozem').click();
+    await page.locator('#mz-karty [data-kind="graf"] .k-otvor').click();
+    await page.locator('#gr-sheet[open]').waitFor();
+}

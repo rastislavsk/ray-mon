@@ -15,7 +15,7 @@ import { typicalSettings } from '../shared/settings.js';
 import { statistikaModel } from '../shared/statistika.js';
 import { STATS_PERIODS } from '../shared/stats.js';
 import { summaryModel } from '../shared/summary.js';
-import { dnesCards, terazModel } from '../shared/teraz.js';
+import { dnesCards, grafModel, terazModel } from '../shared/teraz.js';
 import { denVysvetlenie, dnesFaza } from '../shared/dnes-faza.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -95,13 +95,14 @@ export function sampleTexts(voice) {
                 const o = `${p}.${online ? 'online' : 'offline'}`;
                 strings(mozemSkyModel(i, { online, voice: v }), `${o}.mozemSky`, out);
                 strings(terazModel(i, { online, voice: v }), `${o}.teraz`, out);
+                strings(grafModel(i, { voice: v }), `${o}.graf`, out);
                 strings(sedemModel(i, { online, voice: v }), `${o}.sedem`, out);
                 for (const period of STATS_PERIODS) strings(statistikaModel(i, period, { online, voice: v }), `${o}.stats.${period}`, out);
             }
             if (i.forecast) {
                 strings(heroModel(i, v), `${p}.hero`, out);
                 strings(heroModel({ ...i, previewMinutes: 600 }, v), `${p}.heroPreview`, out);
-                strings(terazModel({ ...i, previewMinutes: 840 }, { voice: v }), `${p}.terazPreview`, out);
+                strings(grafModel({ ...i, previewMinutes: 840 }, { voice: v }), `${p}.grafPreview`, out);
                 i.forecast.days.forEach((/** @type {unknown} */ _, /** @type {number} */ d) =>
                     strings(sedemDayModel(i, d, v), `${p}.day${d}`, out),
                 );

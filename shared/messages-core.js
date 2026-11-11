@@ -330,7 +330,10 @@ export const DNES_TEXTS = {
     grade: 'Ako dopadol dnešok',
     gradeLabel: 'Dnes zo strechy',
     later: 'Kedy lepšie',
-    obloha: 'Mraky a dážď',
+    predpoved: 'Predpoveď',
+    predpovedZajtra: 'Predpoveď na zajtra',
+    oblacnost: 'oblačnosť',
+    graf: 'Graf dňa',
     slnko: 'Najviac slnka',
     karty: 'Viac o dnešku',
     stupnica: 'Ako appka deň hodnotí',
@@ -1770,45 +1773,40 @@ export function dnesLepsieText({ wait, todayStrong, next }) {
         : { value: 'tento týždeň nie', text: 'Silný deň v predpovedi na týždeň nie je.' };
 }
 
-/** @typedef {{ hour: number, ton: 'jasno' | 'oblacno' | 'zamracene', zrazky: 'dazd' | 'sneh' | null }} OblohaHodina */
+/** Počasie dňa slovom - ikona je len ozdoba, význam nesie toto slovo (karta 7 dní, Predpoveď na karte Dnes). @type {Record<import('./sky.js').SkyWeather, string>} */
+export const SKY_WORDS = { jasno: 'jasno', polojasno: 'polojasno', zamracene: 'zamračené' };
+
+/** Teplota v celých stupňoch: „8°“, pod nulou so znamienkom mínus („−3°“). @param {number} c */
+export const stupne = (c) => `${Math.round(c) < 0 ? '−' : ''}${Math.abs(Math.round(c))}°`;
 
 /**
- * Karta Mraky a dážď: veta o oblohe dneška z hodín medzi východom a západom (shared/dnes-faza.js) -
- * mraky a potom zrážky. @param {OblohaHodina[]} hodiny
+ * Teplota dňa v celých stupňoch, od najnižšej po najvyššiu: „6° / 22°“, pod nulou so znamienkom
+ * mínus („−3° / 4°“). Bez teploty v dátach prázdny text.
+ * @param {{ tempMinC: number | null, tempMaxC: number | null }} day
  */
-export function dnesOblohaText(hodiny) {
-    const z = zrazkyText(hodiny);
-    return z ? `${mrakyText(hodiny)} ${z}` : mrakyText(hodiny);
+export function dayTempText(day) {
+    if (day.tempMinC == null || day.tempMaxC == null) return '';
+    return `${stupne(day.tempMinC)} / ${stupne(day.tempMaxC)}`;
 }
 
-/** Mraky počas dňa jednou vetou. @param {OblohaHodina[]} hodiny */
-function mrakyText(hodiny) {
-    const tony = hodiny.map((h) => h.ton);
-    const at = (/** @type {number} */ i) => hm(hodiny[i].hour * 60);
-    const prva = tony.indexOf('zamracene');
-    const posledna = tony.lastIndexOf('zamracene');
-    if (prva < 0) {
-        if (tony.every((t) => t === 'jasno')) return 'Jasno celý deň.';
-        return tony.filter((t) => t === 'jasno').length * 2 >= tony.length ? 'Väčšinou jasno.' : 'Polooblačno.';
-    }
-    if (tony.every((t) => t === 'zamracene')) return 'Zamračené celý deň.';
-    if (prva > 0 && tony.slice(prva).every((t) => t !== 'jasno')) return `Od ${at(prva)} sa zaťahuje.`;
-    if (prva === 0 && posledna < tony.length - 1 && tony.slice(posledna + 1).every((t) => t !== 'zamracene'))
-        return `Od ${at(posledna + 1)} sa vyjasní.`;
-    return 'Striedavo oblačno.';
-}
+/** Časti dňa pre zrážky v popise počasia, od hodiny `od` (shared/dnes-faza.js, PREDPOVED_HODINY). */
+export const CASTI_DNA = [
+    { od: 0, slovo: 'ráno' },
+    { od: 10, slovo: 'dopoludnia' },
+    { od: 12, slovo: 'popoludní' },
+    { od: 17, slovo: 'večer' },
+];
 
-/** Prvé zrážky dňa: kedy, alebo od kedy s prestávkami; bez zrážok prázdne. @param {OblohaHodina[]} hodiny */
-function zrazkyText(hodiny) {
-    const s = hodiny.findIndex((h) => h.zrazky);
-    if (s < 0) return '';
-    let e = s;
-    while (e + 1 < hodiny.length && hodiny[e + 1].zrazky) e++;
-    const druh = hodiny[s].zrazky === 'sneh' ? 'Sneh' : 'Dážď';
-    const od = hm(hodiny[s].hour * 60);
-    return hodiny.slice(e + 1).some((h) => h.zrazky)
-        ? `${druh} od ${od}, s prestávkami.`
-        : `${druh} ${od} – ${endHm((hodiny[e].hour + 1) * 60)}.`;
+/**
+ * Popis počasia na kartu Predpoveď (docs/navrhy/dnes-predpoved-graf.html) na dve-tri slová: oblačnosť
+ * slovom ako v karte 7 dní a zrážky, keď prídu - s časťou dňa, keď padajú len v jednej:
+ * „Jasno“, „Polojasno, sneh“, „Zamračené, večer dážď“. Bez oblačnosti aj zrážok prázdny text.
+ * @param {{ weather: import('./sky.js').SkyWeather | null, zrazky: { druh: 'dazd' | 'sneh', cast: string | null } | null }} d
+ */
+export function dnesPopisText({ weather, zrazky }) {
+    const z = zrazky ? [zrazky.cast, zrazky.druh === 'sneh' ? 'sneh' : 'dážď'].filter(Boolean).join(' ') : '';
+    const text = [weather ? SKY_WORDS[weather] : '', z].filter(Boolean).join(', ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /**

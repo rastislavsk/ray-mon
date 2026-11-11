@@ -135,14 +135,15 @@ function terazDom() {
         tzAskTitle: byId('tz-ask-title'),
         tzAskText: byId('tz-ask-text'),
         tzAskBtn: byId('tz-ask-btn'),
-        tzDen: byId('tz-den'),
-        tzDenWx: byId('tz-den-wx'),
-        tzCitanie: byId('tz-citanie'),
-        tzChart: byId('tz-chart'),
-        tzChartDesc: byId('tz-chart-desc'),
-        tzLeg: byId('tz-leg'),
-        tzHint: byId('tz-hint'),
-        tzReset: byId('tz-reset'),
+        grSheet: /** @type {HTMLDialogElement} */ (byId('gr-sheet')),
+        grDen: byId('gr-den'),
+        grWx: byId('gr-wx'),
+        grCitanie: byId('gr-citanie'),
+        grChart: byId('gr-chart'),
+        grChartDesc: byId('gr-chart-desc'),
+        grLeg: byId('gr-leg'),
+        grHint: byId('gr-hint'),
+        grReset: byId('gr-reset'),
     };
 }
 
