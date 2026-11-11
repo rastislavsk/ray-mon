@@ -41,12 +41,12 @@ import { dnesCards, todayOf } from './teraz.js';
  * Karta v páse pod číslami. `preslo` pri stĺpcoch: hodina je už za nami (kreslí sa stlmene).
  * Predpoveď: `weather` oblačnosť dňa (ikona), `min` a `max` teplota („3°“), `oblacnost` priemerná
  * oblačnosť v % (null = nie je v dátach). Graf dňa: náhľad krivky v ploche 100 × 40 - body predpovede
- * a nameranej krivky („x,y x,y …“), celý graf je v paneli zdola (web/render/graf.js).
+ * a nameranej krivky („x,y x,y …“), `stitok` venovanie pod názvom, celý graf je v paneli zdola (web/render/graf.js).
  * @typedef {{ kind: 'nabehlo', title: string, value: string, text: string, pct: number | null }
  *   | { kind: 'lepsie', title: string, value: string, text: string }
  *   | { kind: 'predpoved', title: string, popis: string, weather: import('./sky.js').SkyWeather | null,
  *       min: string, max: string, oblacnost: number | null }
- *   | { kind: 'graf', title: string, fc: string, real: string }
+ *   | { kind: 'graf', title: string, stitok: string, fc: string, real: string }
  *   | { kind: 'slnko', title: string, value: string, text: string,
  *       stlpce: { hour: number, pct: number, max: boolean, preslo: boolean }[] }} Karta
  */
@@ -206,7 +206,7 @@ function grafOf(input) {
                     `${Math.round((1000 * (p.min - span.from)) / (span.to - span.from)) / 10},${Math.round(380 - (340 * p.kw) / top) / 10}`,
             )
             .join(' ');
-    return { kind: 'graf', title: DNES_TEXTS.graf, fc: body(fc), real: body(real) };
+    return { kind: 'graf', title: DNES_TEXTS.graf, stitok: DNES_TEXTS.grafStitok, fc: body(fc), real: body(real) };
 }
 
 /**

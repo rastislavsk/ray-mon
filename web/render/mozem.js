@@ -126,7 +126,8 @@ function predpovedHtml(k) {
 
 /**
  * Karta Graf dňa: celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel s grafom (render/graf.js).
- * Nadpis so šípkou je jeho meno, náhľad krivky je len obraz: predpoveď čiarou, nameraná krivka plochou.
+ * Názov, štítok s venovaním a biely krúžok so šípkou (docs/navrhy/dnes-graf-karta.html, A) sú jeho meno,
+ * náhľad krivky je len obraz: predpoveď čiarou, nameraná krivka plochou.
  * @param {Extract<Karta, { kind: 'graf' }>} k
  */
 function grafHtml(k) {
@@ -135,8 +136,9 @@ function grafHtml(k) {
         ? `<polygon class="k-real" points="${body[0].split(',')[0]},40 ${k.real} ${body.at(-1)?.split(',')[0]},40"/>`
         : '';
     return (
-        `<button type="button" class="k-otvor" aria-haspopup="dialog"><span class="glass-ttl">${escapeHtml(k.title)}` +
-        `<span aria-hidden="true"> ›</span></span>` +
+        `<button type="button" class="k-otvor" aria-haspopup="dialog"><span class="k-hlava"><span class="k-meno">` +
+        `<b>${escapeHtml(k.title)}</b><span class="k-stitok">${escapeHtml(k.stitok)}</span></span>` +
+        `<span class="k-kruh" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></span></span>` +
         `<svg class="k-graf" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${plocha}` +
         `<polyline class="k-fc" points="${k.fc}"/></svg></button>`
     );
