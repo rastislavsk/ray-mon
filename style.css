@@ -694,8 +694,10 @@ button.live[aria-expanded='true'] {
     border-radius: 3px;
     background: rgba(210, 218, 235, 0.9);
 }
-/* Graf dňa: celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel s grafom. Tlačidlo vyplní kartu
-   aj s jej odsadením. Náhľad krivky: predpoveď čiarou, nameraná krivka plochou. */
+/* Graf dňa (docs/navrhy/dnes-graf-karta.html, A): celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel
+   s grafom. Tlačidlo vyplní kartu aj s jej odsadením. Že sa naň dá ťuknúť, povie biely krúžok so šípkou -
+   jediný plný biely prvok v páse - a pri ťuknutí karta stmavne. Náhľad krivky: predpoveď čiarou, nameraná
+   krivka plochou. */
 .karta[data-kind='graf'] {
     padding: 0;
 }
@@ -713,10 +715,56 @@ button.live[aria-expanded='true'] {
     font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: background-color 0.12s;
+}
+.k-otvor:active {
+    background: rgba(8, 16, 40, 0.3);
 }
 .k-otvor:focus-visible {
     outline: 3px solid #fff;
     outline-offset: -3px;
+}
+.k-hlava {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+.k-meno {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+}
+.k-meno b {
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.k-stitok {
+    padding: 2px 9px;
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.k-kruh {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--ink);
+}
+.k-kruh svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 .k-graf {
     display: block;

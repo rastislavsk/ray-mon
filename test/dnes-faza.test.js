@@ -271,6 +271,7 @@ test('karta Graf dňa: náhľad predpovede a nameranej krivky v ploche 100 × 40
     const k = faza(input(at('13:00'))).d?.karty[2];
     assert.ok(k?.kind === 'graf');
     assert.equal(k.title, DNES_TEXTS.graf);
+    assert.equal(k.stitok, DNES_TEXTS.grafStitok);
     const body = (/** @type {string} */ t) => t.split(' ').map((p) => p.split(',').map(Number));
     const fc = body(k.fc);
     const real = body(k.real);

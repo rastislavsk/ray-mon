@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: karta Graf dňa v páse karty Dnes</title>
+        <style>
+            /* Zmrazený návrh (viď README v tomto priečinku). Telefóny sú kreslené ručne podľa štýlov appky,
+               nie snímky. Scenár: dnešok 11. 11. 2026 o 10:30, zamračený deň. Krivka je na ukážku. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 22px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                width: min(330px, 100%);
+            }
+            figcaption {
+                font-size: 0.86rem;
+                color: var(--dim);
+                display: grid;
+                gap: 6px;
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            figcaption ul {
+                margin: 0;
+                padding-left: 18px;
+            }
+            .plus::marker {
+                content: '+  ';
+                color: var(--green);
+            }
+            .minus::marker {
+                content: '–  ';
+                color: #ff9b8a;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.88rem;
+                width: 100%;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 600;
+            }
+
+            /* --- telefón: zamračená obloha a pás kariet ako v appke --- */
+            .phone {
+                overflow: hidden;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #8a8d92 0%, #76797f 55%, #686b71 100%);
+                color: #fff;
+                padding: 18px 0 12px;
+                display: grid;
+                gap: 10px;
+            }
+            .pad {
+                padding: 0 14px;
+            }
+            .word {
+                font-size: 2.2rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 125;
+                line-height: 0.95;
+                text-transform: uppercase;
+            }
+            .pas {
+                display: flex;
+                gap: 8px;
+                padding: 0 14px;
+                overflow: hidden;
+            }
+            .karta {
+                position: relative;
+                flex: 0 0 calc(100% - 40px);
+                background: var(--glass);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                padding: 14px;
+                display: grid;
+                gap: 8px;
+                align-content: start;
+                min-height: 176px;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
+            button.karta {
+                font: inherit;
+                color: inherit;
+                text-align: left;
+                cursor: pointer;
+                transition:
+                    transform 0.12s,
+                    background-color 0.12s;
+            }
+            /* Odozva na ťuknutie vo všetkých variantoch: karta sa na okamih stlačí (:active, nie :hover). */
+            button.karta:active {
+                transform: scale(0.97);
+                background-color: rgba(8, 16, 40, 0.5);
+            }
+            .ttl {
+                font-size: 0.68rem;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.82);
+            }
+            .val {
+                font-size: 1.7rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .txt {
+                font-size: 0.82rem;
+            }
+            .graf {
+                display: block;
+                width: 100%;
+                height: 84px;
+            }
+            .fc {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.8);
+                stroke-width: 1.6;
+                stroke-dasharray: 4 3;
+                vector-effect: non-scaling-stroke;
+            }
+            .real {
+                fill: rgba(185, 242, 140, 0.75);
+            }
+            .os {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.68rem;
+                margin-top: -4px;
+            }
+            .bodky {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                padding: 4px 0;
+            }
+            .bodky i {
+                width: 7px;
+                height: 7px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.4);
+            }
+            .bodky i.on {
+                width: 20px;
+                background: #fff;
+            }
+
+            /* --- A: nadpis + štítok, šípka v krúžku --- */
+            .a-hlava {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .a-meno {
+                display: grid;
+                gap: 6px;
+                justify-items: start;
+            }
+            .a-meno b {
+                font-size: 1.15rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .stitok {
+                font-size: 0.7rem;
+                font-weight: 700;
+                padding: 2px 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.75);
+                border-radius: 999px;
+            }
+            .kruh {
+                flex: none;
+                display: grid;
+                place-items: center;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: #fff;
+                color: #1b2236;
+            }
+            .kruh svg,
+            .cta svg,
+            .zvacsi svg {
+                display: block;
+            }
+
+            /* --- B: pečiatka + tlačidlo dole --- */
+            .b-hlava {
+                position: relative;
+                min-height: 34px;
+            }
+            .b-hlava b {
+                font-size: 1.15rem;
+                font-weight: 800;
+            }
+            .peciatka {
+                position: absolute;
+                right: 0;
+                top: -2px;
+                transform: rotate(-7deg);
+                padding: 3px 8px;
+                border: 2px solid var(--amber);
+                border-radius: 6px;
+                color: var(--amber);
+                font-size: 0.66rem;
+                font-weight: 900;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                line-height: 1.15;
+                text-align: center;
+                background: rgba(8, 16, 40, 0.35);
+            }
+            .cta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                min-height: 44px;
+                padding: 0 14px 0 16px;
+                border-radius: 14px;
+                background: #fff;
+                color: #1b2236;
+                font-size: 0.9rem;
+                font-weight: 800;
+            }
+
+            /* --- C: iná karta - svetlejšie sklo, podpis, ikona zväčšenia --- */
+            .karta.c {
+                background: rgba(255, 255, 255, 0.16);
+                border: 1.5px solid rgba(255, 255, 255, 0.55);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+            }
+            .c-meno b {
+                display: block;
+                font-size: 1.15rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .c-meno i {
+                font-size: 0.82rem;
+                color: rgba(255, 255, 255, 0.85);
+            }
+            .zvacsi {
+                position: absolute;
+                right: 12px;
+                top: 12px;
+                display: grid;
+                place-items: center;
+                width: 36px;
+                height: 36px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.22);
+            }
+
+            /* --- D: len nadpis ako veta s odkazom --- */
+            .d-meno {
+                font-size: 1.05rem;
+                font-weight: 800;
+                line-height: 1.2;
+            }
+            .d-meno span {
+                font-weight: 500;
+                color: rgba(255, 255, 255, 0.82);
+            }
+            .d-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                justify-self: start;
+                font-size: 0.86rem;
+                font-weight: 800;
+                color: #fff;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                text-decoration-thickness: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+            <symbol id="chev" viewBox="0 0 20 20">
+                <path
+                    d="M7.5 4.5 13 10l-5.5 5.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </symbol>
+            <symbol id="expand" viewBox="0 0 20 20">
+                <path
+                    d="M11.5 3.5h5v5M16.5 3.5l-5.5 5.5M8.5 16.5h-5v-5M3.5 16.5 9 11"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </symbol>
+            <symbol id="krivka" viewBox="0 0 100 40" preserveAspectRatio="none">
+                <polygon class="real" points="0,40 0,39 6,37 12,33 18,30 24,27 30,29 36,24 42,22 45,23 45,40" />
+                <polyline class="fc" points="0,39 8,36 16,31 24,26 32,21 40,17 48,15 56,15 64,18 72,23 80,29 88,34 94,37 100,39" />
+            </symbol>
+        </svg>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Graf dňa v páse karty Dnes</h1>
+                <p class="dim">
+                    Dve veci: (1) nadpis „Graf dňa – for Kheinshmetkes only“ teraz vyzerá ako obyčajná veta malými sivými verzálkami,
+                    rovnako ako nadpisy ostatných kariet. (2) Karta je jediná v páse, na ktorú sa dá ťuknúť, ale prezrádza to len slabá „›“
+                    na konci nadpisu. Nižšie je dnešný stav a štyri návrhy. Na každý telefón sa dá ťuknúť – karta Graf dňa ukáže odozvu na
+                    stlačenie.
+                </p>
+                <p class="note">
+                    Kreslené ručne podľa štýlov appky, nie snímky. Vedľajšia karta vpravo je Predpoveď, aby bolo vidieť rozdiel medzi
+                    kartou, na ktorú sa ťuká, a tou, na ktorú nie. Ikony (šípka, zväčšenie) sú SVG, nie znaky – podmnožinu písma netreba
+                    meniť.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Dnes</small>Súčasný stav</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <p class="pad word">Slabý deň</p>
+                            <div class="pas">
+                                <button type="button" class="karta">
+                                    <span class="ttl">Graf dňa – for Kheinshmetkes only <span aria-hidden="true">›</span></span>
+                                    <svg class="graf"><use href="#krivka" /></svg>
+                                </button>
+                                <div class="karta">
+                                    <p class="ttl">Predpoveď</p>
+                                    <p class="val">8° / 3°</p>
+                                    <p class="txt">Zamračené, večer dážď</p>
+                                </div>
+                            </div>
+                            <div class="bodky"><i></i><i class="on"></i><i></i><i></i></div>
+                        </div>
+                        <figcaption>
+                            <span
+                                >Nadpis sa nedá odlíšiť od nadpisov ostatných kariet, „›“ je malá a sivá, karta vyzerá rovnako ako
+                                ostatné.</span
+                            >
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Návrhy</small>Štyri spôsoby</h2>
+                <div class="phones">
+                    <!-- A -->
+                    <figure>
+                        <div class="phone">
+                            <p class="pad word">Slabý deň</p>
+                            <div class="pas">
+                                <button type="button" class="karta">
+                                    <span class="a-hlava">
+                                        <span class="a-meno">
+                                            <b>Graf dňa</b>
+                                            <span class="stitok">for Kheinshmetkes only</span>
+                                        </span>
+                                        <span class="kruh" aria-hidden="true"
+                                            ><svg width="18" height="18"><use href="#chev" /></svg
+                                        ></span>
+                                    </span>
+                                    <svg class="graf"><use href="#krivka" /></svg>
+                                </button>
+                                <div class="karta">
+                                    <p class="ttl">Predpoveď</p>
+                                    <p class="val">8° / 3°</p>
+                                    <p class="txt">Zamračené, večer dážď</p>
+                                </div>
+                            </div>
+                            <div class="bodky"><i></i><i class="on"></i><i></i><i></i></div>
+                        </div>
+                        <figcaption>
+                            <b>A – Nadpis so štítkom, biely krúžok so šípkou.</b>
+                            <span
+                                >„Graf dňa“ veľkým tučným písmom, venovanie v obrysovom štítku (rovnaký tvar ako odznak triedy dňa). Vpravo
+                                hore plný biely krúžok so šípkou – známy znak „otvorí sa niečo ďalej“.</span
+                            >
+                            <ul>
+                                <li class="plus">najmenšia zmena, graf ostáva rovnako veľký</li>
+                                <li class="plus">krúžok je jediný plný biely prvok v páse – oko ho nájde hneď</li>
+                                <li class="minus">štítok vyzerá ako odznak triedy dňa – môže pôsobiť ako ďalší stav, nie žart</li>
+                            </ul>
+                        </figcaption>
+                    </figure>
+
+                    <!-- B -->
+                    <figure>
+                        <div class="phone">
+                            <p class="pad word">Slabý deň</p>
+                            <div class="pas">
+                                <button type="button" class="karta">
+                                    <span class="b-hlava">
+                                        <b>Graf dňa</b>
+                                        <span class="peciatka">for Kheinshmetkes<br />only</span>
+                                    </span>
+                                    <svg class="graf" style="height: 62px"><use href="#krivka" /></svg>
+                                    <span class="cta"
+                                        >Otvoriť graf <svg width="18" height="18" aria-hidden="true"><use href="#chev" /></svg
+                                    ></span>
+                                </button>
+                                <div class="karta">
+                                    <p class="ttl">Predpoveď</p>
+                                    <p class="val">8° / 3°</p>
+                                    <p class="txt">Zamračené, večer dážď</p>
+                                </div>
+                            </div>
+                            <div class="bodky"><i></i><i class="on"></i><i></i><i></i></div>
+                        </div>
+                        <figcaption>
+                            <b>B – Pečiatka a tlačidlo dole.</b>
+                            <span
+                                >Venovanie ako šikmá jantárová pečiatka vpravo hore – vidno, že je to vtip. Dole biele tlačidlo „Otvoriť
+                                graf ›“ rovnakého tvaru ako ostatné tlačidlá appky. Ťuknúť sa dá stále na celú kartu.</span
+                            >
+                            <ul>
+                                <li class="plus">najjasnejšie – slovami povie, čo sa stane</li>
+                                <li class="plus">pečiatka dá venovaniu charakter, nemieša sa so stavmi appky</li>
+                                <li class="minus">náhľad krivky je nižší (62 px namiesto 84 px), aby sa karta nepredĺžila</li>
+                                <li class="minus">najťažšie: v páse jediné plné tlačidlo, pôsobí ako výzva na akciu</li>
+                            </ul>
+                        </figcaption>
+                    </figure>
+
+                    <!-- C -->
+                    <figure>
+                        <div class="phone">
+                            <p class="pad word">Slabý deň</p>
+                            <div class="pas">
+                                <button type="button" class="karta c">
+                                    <span class="c-meno">
+                                        <b>Graf dňa</b>
+                                        <i>for Kheinshmetkes only</i>
+                                    </span>
+                                    <span class="zvacsi" aria-hidden="true"
+                                        ><svg width="18" height="18"><use href="#expand" /></svg
+                                    ></span>
+                                    <svg class="graf"><use href="#krivka" /></svg>
+                                </button>
+                                <div class="karta">
+                                    <p class="ttl">Predpoveď</p>
+                                    <p class="val">8° / 3°</p>
+                                    <p class="txt">Zamračené, večer dážď</p>
+                                </div>
+                            </div>
+                            <div class="bodky"><i></i><i class="on"></i><i></i><i></i></div>
+                        </div>
+                        <figcaption>
+                            <b>C – Iná karta: svetlejšie sklo, podpis a ikona zväčšenia.</b>
+                            <span
+                                >Celá karta je svetlejšia s výrazným obrysom a tieňom – vystúpi z pásu ako tlačidlo. Venovanie pod nadpisom
+                                kurzívou ako podpis. Ikona zväčšenia hovorí „graf sa otvorí väčší“.</span
+                            >
+                            <ul>
+                                <li class="plus">klikateľnosť nesie celá karta, nie jeden malý znak</li>
+                                <li class="plus">podpis je najdiskrétnejší, graf ostáva veľký</li>
+                                <li class="minus">
+                                    svetlé sklo na poludňajšej jasnej oblohe stráca kontrast bieleho textu – treba overiť na S22
+                                </li>
+                                <li class="minus">kurzíva v písme appky nie je, prehliadač ju len nakloní</li>
+                            </ul>
+                        </figcaption>
+                    </figure>
+
+                    <!-- D -->
+                    <figure>
+                        <div class="phone">
+                            <p class="pad word">Slabý deň</p>
+                            <div class="pas">
+                                <button type="button" class="karta">
+                                    <span class="d-meno">Graf dňa <span>– for Kheinshmetkes only</span></span>
+                                    <svg class="graf" style="height: 72px"><use href="#krivka" /></svg>
+                                    <span class="d-link"
+                                        >Pozrieť celý deň <svg width="16" height="16" aria-hidden="true"><use href="#chev" /></svg
+                                    ></span>
+                                </button>
+                                <div class="karta">
+                                    <p class="ttl">Predpoveď</p>
+                                    <p class="val">8° / 3°</p>
+                                    <p class="txt">Zamračené, večer dážď</p>
+                                </div>
+                            </div>
+                            <div class="bodky"><i></i><i class="on"></i><i></i><i></i></div>
+                        </div>
+                        <figcaption>
+                            <b>D – Najjednoduchšie: veta a podčiarknutý odkaz.</b>
+                            <span
+                                >Nadpis ostane jedna veta, len „Graf dňa“ tučne a väčšie. Pod grafom podčiarknutý odkaz „Pozrieť celý deň
+                                ›“.</span
+                            >
+                            <ul>
+                                <li class="plus">najmenej nových tvarov, najmenej CSS</li>
+                                <li class="minus">podčiarknutý text je zvyk z webu, v appke inde nie je</li>
+                                <li class="minus">venovanie ostáva „len veta“ – prvú výhradu rieši najmenej</li>
+                            </ul>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Porovnanie</small>Čo ktorý variant rieši</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Nadpis</th>
+                        <th>Že sa dá ťuknúť</th>
+                        <th>Graf</th>
+                        <th>Zložitosť</th>
+                    </tr>
+                    <tr>
+                        <td><b>A</b></td>
+                        <td>tučný nadpis + štítok</td>
+                        <td>biely krúžok so šípkou</td>
+                        <td>84 px</td>
+                        <td>malá</td>
+                    </tr>
+                    <tr>
+                        <td><b>B</b></td>
+                        <td>tučný nadpis + pečiatka</td>
+                        <td>tlačidlo „Otvoriť graf“</td>
+                        <td>62 px</td>
+                        <td>malá</td>
+                    </tr>
+                    <tr>
+                        <td><b>C</b></td>
+                        <td>tučný nadpis + podpis</td>
+                        <td>celá karta svetlejšia, ikona zväčšenia</td>
+                        <td>84 px</td>
+                        <td>malá, treba overiť kontrast</td>
+                    </tr>
+                    <tr>
+                        <td><b>D</b></td>
+                        <td>veta, tučné len „Graf dňa“</td>
+                        <td>podčiarknutý odkaz</td>
+                        <td>72 px</td>
+                        <td>najmenšia</td>
+                    </tr>
+                </table>
+                <p class="note">
+                    Vo všetkých variantoch: celá karta ostáva jedno tlačidlo, šípka či ikona sú pre čítačku skryté a pri ťuknutí sa karta na
+                    okamih stlačí (<code>:active</code>, nie <code>:hover</code>). Časti sa dajú kombinovať, napr. pečiatka z B s krúžkom z
+                    A.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>
