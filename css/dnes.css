@@ -1,0 +1,558 @@
+/* Štýly karty Dnes. Poradie súborov v index.html je poradie kaskády - nemeň ho. */
+/* ===== Karta Dnes (kódové meno mozem, doteraz Môžem?) ===== */
+.mozem p,
+.mozem h2 {
+    margin: 0;
+}
+/* Oblúk má po bokoch ten istý odstup ako ostatný obsah karty - časy východu a západu pod
+   jeho koncami tak nestoja na okraji displeja. */
+.arc {
+    padding: 4px 20px 0;
+}
+.arc svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    /* Žiara slnka pri východe a západe siaha za okraj oblúka. */
+    overflow: visible;
+}
+.arc-path {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 2;
+    stroke-dasharray: 3 6;
+}
+.arc-win {
+    fill: none;
+    stroke: var(--yes);
+    stroke-width: 4;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+.arc-ground {
+    stroke: rgba(255, 255, 255, 0.3);
+}
+.arc-t {
+    fill: #fff;
+    font-size: 12px;
+    text-anchor: middle;
+}
+.arc-glow {
+    fill: rgba(255, 240, 190, 0.22);
+}
+.arc-sun {
+    fill: #fff4c4;
+}
+.arc-moon {
+    fill: #e8ecff;
+}
+/* Neosvetlená časť: tušená, s obrysom, aby bolo vidno aj nov. */
+.arc-moon-dark {
+    fill: rgba(200, 205, 230, 0.16);
+    stroke: rgba(232, 236, 255, 0.45);
+    stroke-width: 1.4;
+}
+.arc-off {
+    fill: rgba(255, 255, 255, 0.35);
+}
+
+/* Odstup zhora: štítky nesmú priliehať k časom východu a západu pod oblúkom. */
+.big {
+    display: grid;
+    gap: 8px;
+    padding: 16px 20px 0;
+}
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.chip {
+    padding: 4px 10px;
+    border: 1.5px solid #fff;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 100;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.chip[data-tone='go'] {
+    background: var(--yes);
+    border-color: var(--yes);
+    color: #14300c;
+}
+.chip[data-tone='cheap'] {
+    background: var(--cheap);
+    border-color: var(--cheap);
+    color: #06233d;
+}
+.chip[data-tone='costly'] {
+    background: var(--costly);
+    border-color: var(--costly);
+    color: #3a0b04;
+}
+/* Veľké slovo: veľkosť podľa dĺžky ako v návrhu (--word), na úzkom displeji ešte menšia podľa
+   najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak
+   takmer 1 em (NAHOVNO 0,96 em), preto delenie počtom znakov bez rezervy navyše. */
+.word {
+    font-size: min(var(--word, 50px), calc((min(100vw, 640px) - 40px) / var(--word-len, 10)));
+    font-weight: 900;
+    font-variation-settings: 'wdth' 125;
+    letter-spacing: -0.02em;
+    line-height: 0.92;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+    text-wrap: balance;
+}
+.line {
+    font-size: 1.0938rem;
+    line-height: 1.3;
+    font-variation-settings: 'wdth' 95;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+/* Čo dá strecha za celý deň: veta a tri čísla vedľa seba sú jeden blok, od zvyšku karty ho delí
+   jemná čiara nad ním aj pod ním. Stojí na bloku, nie na vete: večer je veta skrytá a čiary ostávajú. */
+.den {
+    display: grid;
+    gap: 10px;
+    margin-top: 6px;
+    padding-block: 12px 14px;
+    border-block: 1px solid rgba(255, 255, 255, 0.3);
+}
+/* Čas okna vo vete je tučne - údaj, ktorý oko hľadá (docs/navrhy/dnes-upravy.html). */
+.cas {
+    font-weight: 800;
+}
+.eq {
+    display: grid;
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+/* Číslo sa na úzkom displeji zmenší, aby sa „~4 090“ zmestilo do tretiny aj na 320 px. */
+.eq b {
+    display: block;
+    font-size: min(1.375rem, 5.4vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 100;
+    white-space: nowrap;
+    line-height: 1.1;
+}
+.eq span {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+}
+/* Karta Dnes podľa časti dňa (docs/navrhy/dnes-tri-smery.html, smer C): štítok s triedou dňa,
+   riadok nad slovom, odpočet okna či ako dopadol dnešok a večer zajtrajšok v skle. */
+.mozem .chip {
+    justify-self: start;
+    background: rgba(14, 36, 80, 0.3);
+}
+/* Odznak, ktorý sa dá ťuknúť: vysvetlenie triedy dňa. Tlačidlo má výšku na prst, odznak v ňom je
+   menší; krúžok s i hovorí, že je za ním viac. */
+.chip-tap {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+.chip.info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.chip.info::after {
+    content: 'i';
+    display: grid;
+    place-items: center;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.625rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.mozem .chip[data-cls='vyborny'] {
+    background: var(--yes);
+    border-color: var(--yes);
+    color: #14300c;
+}
+.mozem .chip[data-cls='dobry'] {
+    background: #ffc94a;
+    border-color: #ffc94a;
+    color: #3a2a00;
+}
+.kick {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+/* Cez deň s odpočtom, večer s vysvedčením a v zajtrajšku je slovo menšie - hlavné je číslo pod
+   ním. Veľkosť z renderu (--word) tu neplatí, na úzkom displeji rozhoduje najdlhšie slovo. */
+.word.sm,
+.tom .word {
+    font-size: min(2rem, calc((min(100vw, 640px) - 40px) / var(--word-len, 10)));
+}
+.count b {
+    display: block;
+    font-size: min(3.25rem, 14vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+}
+.count span {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.0938rem;
+    line-height: 1.3;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.grade {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-size: 1.0938rem;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.grade b {
+    font-size: min(2rem, 9vw);
+    font-weight: 900;
+}
+/* Pás kariet pod číslami (docs/navrhy/dnes-upravy.html): posúva ho prehliadač, karta zastane na
+   začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva stránku - touch-action netreba. */
+.karty {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+.karty::-webkit-scrollbar {
+    display: none;
+}
+/* Fokus klávesnice: pás sa potom posúva šípkami. Obrys dnu - von by ho orezal okraj displeja. */
+.karty:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+    border-radius: 22px;
+}
+.karta {
+    flex: 0 0 calc(100% - 52px);
+    align-content: start;
+    margin: 0;
+    scroll-snap-align: start;
+}
+/* Jediná karta (večer bez zajtrajška) má celú šírku - nie je k čomu posúvať. */
+.karta:only-child {
+    flex-basis: 100%;
+}
+.karta .glass-ttl {
+    margin: 0;
+}
+.k-val {
+    font-size: 2rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+}
+.k-text {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+}
+/* Predpoveď (docs/navrhy/dnes-predpoved-graf.html, B): ikona a popis, teplomer od najnižšej po najvyššiu
+   teplotu a oblačnosť dňa. Pásiky sú len obraz, čísla pri nich sú text. */
+.k-wx {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.k-wx .wi {
+    flex: none;
+    width: 52px;
+    height: 52px;
+}
+.k-popis {
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.k-teplo,
+.k-obl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-variant-numeric: tabular-nums;
+}
+.k-teplo {
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+.k-teplo > i {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--cheap), var(--amber-text));
+}
+.k-obl {
+    font-size: 0.875rem;
+}
+.k-obl > span:last-child {
+    font-weight: 800;
+}
+.k-obl > i {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.22);
+}
+.k-obl b {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: rgba(210, 218, 235, 0.9);
+}
+/* Graf dňa (docs/navrhy/dnes-graf-tajomno.html, D): celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel
+   s grafom. Tlačidlo vyplní kartu aj s jej odsadením. Vidno len venovanie, veľké a tenké, ktorým raz za pár
+   sekúnd prebehne lesk, a šípku v tenkej obruči. Pri ťuknutí karta stmavne. */
+.karta[data-kind='graf'] {
+    align-content: stretch;
+    padding: 0;
+}
+.k-otvor {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 30px 44px;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.12s;
+}
+.k-otvor:active {
+    background: rgba(8, 16, 40, 0.3);
+}
+.k-otvor:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+}
+.k-obruc {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+}
+.k-obruc svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.k-lesk {
+    font-size: 1.3rem;
+    font-weight: 300;
+    font-variation-settings: 'wdth' 125;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    text-wrap: balance;
+    background: linear-gradient(100deg, rgba(255, 255, 255, 0.72) 40%, #fff 48%, #ffe7a8 50%, #fff 52%, rgba(255, 255, 255, 0.72) 60%) 100%
+        0 / 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: lesk 6s ease-in-out infinite;
+}
+@keyframes lesk {
+    0%,
+    55% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+.k-stlpce i[data-preslo] {
+    opacity: 0.45;
+}
+.k-os {
+    display: flex;
+    justify-content: space-between;
+    margin-top: -4px;
+    font-size: 0.75rem;
+}
+/* Stĺpce výkonu po hodinách, najsilnejšia hodina zelená. */
+.k-stlpce {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    align-items: end;
+    gap: 3px;
+    height: 44px;
+}
+.k-stlpce i {
+    border-radius: 3px 3px 0 0;
+    background: rgba(255, 255, 255, 0.4);
+}
+.k-stlpce i[data-max] {
+    background: var(--yes);
+}
+/* Bodky pod pásom: kde pás stojí; ťuknutím preskočia na kartu. Tlačidlo má plochu na prst (44 px),
+   bodka v ňom je malá. */
+.bodky {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+.bodky button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+.bodky button::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    transition: width 0.2s;
+}
+.bodky button[aria-current]::before {
+    width: 20px;
+    background: #fff;
+}
+.pbtn {
+    justify-self: start;
+    min-height: 44px;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+/* Vedľajšie tlačidlo je tmavé sklo s obrysom - svetlé priesvitné by biely text na svetlej oblohe zjedlo. */
+.pbtn.ghost {
+    background: var(--glass);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+.retry {
+    display: block;
+    margin: 14px 20px 0;
+}
+/* Hláška namiesto karty, ktorej kód sa ešte sťahuje alebo sa stiahnuť nepodaril (web/parts.js). */
+.cakam {
+    padding-top: 12px;
+}
+/* Výzva: biela, nie červená - nie je to chyba, len chýbajúci krok. */
+.cta {
+    display: grid;
+    gap: 8px;
+    margin: 14px 14px 0;
+    padding: 16px;
+    border-radius: 22px;
+    background: #fff;
+    color: var(--ink);
+}
+.cta b {
+    font-size: 1.1875rem;
+    line-height: 1.2;
+    font-variation-settings: 'wdth' 108;
+}
+.cta p {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    color: #2b3550;
+}
+.cta .pbtn {
+    background: var(--ink);
+    color: #fff;
+}
+.cta .pbtn:focus-visible {
+    outline-color: var(--ink);
+}
+/* Pás „Odhad z predpovede“ na karte Teraz: ikona počasia vľavo, text a tlačidlo vedľa nej. */
+.note {
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    margin-top: 12px;
+}
+.note-ico {
+    grid-row: span 3;
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+.note-ico .fill {
+    fill: currentColor;
+    fill-opacity: 0.15;
+}
+
+/* Tmavé sklo: biely text sa dá čítať aj na svetlej poludňajšej oblohe. */
+.glass {
+    display: grid;
+    gap: 10px;
+    margin: 12px 14px 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 22px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.glass-ttl {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+}

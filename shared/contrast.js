@@ -17,7 +17,7 @@ export const CONTRAST_LARGE = 3;
 
 /**
  * Farba z CSS zápisu `#rgb`, `#rrggbb`, `rgb(…)`, `rgba(…)` alebo `transparent` - tak, ako ju
- * vráti getComputedStyle aj ako ju píše style.css.
+ * vráti getComputedStyle aj ako ju píše css/.
  * @param {string} css @returns {Rgba}
  */
 export function parseColor(css) {

@@ -153,7 +153,7 @@ je ten istý krok ako tlačidlo Späť, preto volajú `history.back()`
 
 Prechod medzi kartami je iba CSS: `panelChange` v `state.js` dopočíta k novej karte aj smer
 (`panelDir`), `renderPanels` ho vyloží na `#page[data-dir]` a zvyšok je animácia `panel-in-*`
-v `style.css`. Spúšťa sa sama tým, že karta prejde z `display: none` do zobrazenia, takže ju
+v `css/`. Spúšťa sa sama tým, že karta prejde z `display: none` do zobrazenia, takže ju
 nič nereštartuje a JS o nej nevie. Posun je malý (24 px) a `.page` má `overflow-x: clip`,
 aby posunutá karta nešla poscrollovať do strany; stráži to e2e test, ktorý meria pretečenie
 počas celého prechodu, nie až po ňom.
@@ -235,7 +235,8 @@ ju nahradil. Stránka, stav, render a poslucháče sú v koreni a vo `web/`, jad
   stránku – v jednej karte prehliadača najviac raz (`sessionStorage`), potom už len „skús to
   o chvíľu“. Záznam sa zmaže, keď sa načítajú všetky časti.
 - **Texty po kartách.** `shared/messages.js` je spoločný vstup pre súčasnú appku a testy; texty sú
-  v `messages-core.js` (hlášky, Môžem?, Teraz, hlavička), `messages-sedem.js` a
+  v `messages-core.js` (vstup jadra: `messages-zaklad.js` tón a spoločné tvary, `messages-mozem.js` karta Dnes
+  a Plán dňa, `messages-teraz.js`, `messages-oznamenia.js`), `messages-sedem.js` a
   `messages-statistika.js`. Jadro novej appky a moduly `shared/`, ktoré potrebuje, importujú
   len `messages-core.js`.
 - **Jedno písmo.** Archivo je jeden súbor `fonts/archivo-obloha.woff2` len so znakmi, ktoré appka
@@ -252,7 +253,7 @@ sekundy pomalšia, než naozaj je. Rozhoduje však meranie nasadenej appky (Page
 lokálne vyzerá ako 0,1 s, sa na Pages nemusí prejaviť.
 
 Pozadie novej appky je obloha: `skyNow` v `shared/sky.js` z času, polohy a predpovede vráti dve
-farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `style.css` zaregistrované
+farby a render ich zapíše na `<html>` ako `--s1` a `--s2`. Tie sú v `css/` zaregistrované
 cez `@property` ako farby, takže sa dajú plynulo prelínať; útlm pohybu prechod vypne tým istým
 pravidlom ako všetky animácie. Hodiny v tabuľke farieb (`SKY` v `config.js`) sú hodiny dňa
 z návrhu, kde slnko vychádza o 7:00 a zapadá o 18:30 – skutočný východ a západ (`sunTimes`) sa do
@@ -320,7 +321,7 @@ HTML nad ním s pevnou veľkosťou v px, takže na tablete a počítači nerast�
 `limitSpot` v `shared/day-chart.js` tak, aby na žiadnej šírke neprekryl krivky, bod
 „teraz“ ani čiaru náhľadu (aj s časom nad ňou): tesne nad čiaru na konci alebo na začiatku, inak nad
 krivku. Keď prst pri náhľade prejde ponad nápis, nápis preskočí na voľné miesto. Polohy sú dve – pre úzky graf a pre
-graf široký aspoň 448 px – a vyberá ich container query v `style.css`. Detail je krok
+graf široký aspoň 448 px – a vyberá ich container query v `css/`. Detail je krok
 navigácie (`detail` v kroku histórie): Späť, Escape aj šípka späť (v detaile dňa prvý čip v riadku
 dní) vrátia do prehľadu, posun prehľadu aj fokus na riadok si pamätá render. Listovanie dní
 v detaile nový krok nepridá; ťahom, čipmi aj šípkami na klávesnici ho vedie `web/day-pager.js`,
@@ -340,7 +341,7 @@ záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa vše
 Na širšej obrazovke nová appka mení rozloženie podľa šírky okna, nie podľa druhu zariadenia.
 Hranice sú `LAYOUT_PX` v `shared/config.js` (stredná šírka je tá istá, od ktorej súčasná appka
 kreslí desktop); `layoutOf` v `web/state.js` z nich urobí `layout` v stave a render ho
-zapíše na `<html>` ako `data-layout` – `style.css` tak nemá v `@media` ani jednu šírku natvrdo.
+zapíše na `<html>` ako `data-layout` – `css/` tak nemá v `@media` ani jednu šírku natvrdo.
 Pod strednou šírkou (telefón, tablet na výšku) je appka taká, ako bola. Od nej sú karty Môžem?,
 Teraz a 7 dní **prehľad so stĺpcami** (`dashboard`): na tablete na šírku dva, na počítači tri,
 navigácia je hore. Stĺpce sú tie isté karty, ktoré vidno naraz (`shows`), nie druhá verzia –
@@ -558,7 +559,7 @@ spotrebičov z plánu dňa po
 dňa (`smartTier`), _čiastočne_ je slnko aspoň na úrovni špičky slabého dňa, zvyšok _zo siete_.
 Tarifa do pásu nevstupuje – hovorí len o slnku. Zelené okno je navyše jemná plocha cez celý
 graf. Pás spotrebičov je jeden odtieň zelenej v troch stupňoch jasu, overený na farbosleposť
-(pozri komentár pri tokenoch v `style.css`). Oblačnosť zaberá presne plochu medzi `padT`
+(pozri komentár pri tokenoch v `css/`). Oblačnosť zaberá presne plochu medzi `padT`
 a `h - padB`, takže tooltip (`chartTooltipModel`) je ten istý ako nad krivkou, len bod kreslí
 na oblačnosti. Na
 širokej obrazovke detail dňa nie je a priebeh ostáva krivkou s oblačnosťou.
@@ -642,7 +643,7 @@ vlastné okraje.
 
 ## Pozor na kaskádu v CSS
 
-Utilita `.hidden` ako jediná v `style.css` používa `!important`. Predtým stála len na konci
+Utilita `.hidden` ako jediná v `css/` používa `!important`. Predtým stála len na konci
 súboru a spoliehala sa na poradie, lenže poradie rozhoduje iba pri rovnakej špecificite:
 pätnásť pravidiel s `display` ju prebíjalo a dve z nich sa naozaj prejavili – legenda grafu
 ohlasovala krivku, ktorá sa nekreslila. Podrobnosti a pravidlo sú v `CLAUDE.md`; stráži to

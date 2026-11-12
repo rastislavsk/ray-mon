@@ -14,7 +14,7 @@ import { show } from './write.js';
 
 /**
  * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok a počasie na <html>; prechod
- * medzi farbami robí CSS (zaregistrované --s1 a --s2 v style.css), takže pri útlme pohybu ho
+ * medzi farbami robí CSS (zaregistrované --s1 a --s2 v css/), takže pri útlme pohybu ho
  * vypne to isté pravidlo ako všetky ostatné prechody. Nebo je v tej istej chvíli a s tým istým
  * počasím ako kresba na karte Teraz.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
@@ -35,7 +35,7 @@ function renderSky(state, dom) {
 
 /**
  * Viditeľné karty. Rozloženie podľa šírky okna (`data-layout`) a prehľad so stĺpcami (`data-dash`)
- * sú na <html> - style.css podľa nich skladá stĺpce, hlavičku aj navigáciu, žiadna šírka v ňom nie
+ * sú na <html> - css/ podľa nich skladá stĺpce, hlavičku aj navigáciu, žiadna šírka v ňom nie
  * je natvrdo. V prehľade sú nadpisy kariet o úroveň nižšie pod spoločným nadpisom (čítačka) a
  * aktívny stĺpec je zvýraznený; navigácia naň vie presunúť fokus.
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
@@ -65,7 +65,7 @@ function renderPanels(state, dom) {
 /**
  * Hláška namiesto karty, ktorej kód ešte nie je načítaný: kým sa sťahuje, „načítavam…“; keď sa
  * nepodaril, tlačidlo, ktoré ho stiahne znova a obnoví stránku; keď sa nepodaril ani potom, len
- * nech to človek skúsi o chvíľu. V prehľade so stĺpcami stojí na mieste stĺpca (style.css).
+ * nech to človek skúsi o chvíľu. V prehľade so stĺpcami stojí na mieste stĺpca (css/).
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderWait(state, dom) {

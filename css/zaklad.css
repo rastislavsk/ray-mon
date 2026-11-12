@@ -1,0 +1,358 @@
+/* Appka (návrh docs/navrhy/smer-b-obloha.html). Pozor na kaskádu: .hidden
+   je jediné pravidlo s !important (spolu s útlmom pohybu) - viď CLAUDE.md. Žiadne :hover. */
+
+/* Archivo s premenlivou šírkou (wdth 62-125 %) aj hrúbkou (100-900), licencia OFL
+   (fonts/OFL-Archivo.txt). Jeden súbor len so znakmi, ktoré appka píše (scripts/font-subset.js);
+   znak, ktorý v ňom nie je (cudzie meno obce), vykreslí záložné písmo. */
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 100 900;
+    font-stretch: 62% 125%;
+    font-display: swap;
+    src: url('../fonts/archivo-obloha.woff2') format('woff2');
+}
+
+/* Farby oblohy zapisuje render na <html>. Zaregistrované ako farby, aby sa dali plynulo
+   prelínať - obyčajná custom property by pri zmene preskočila naraz. */
+@property --s1 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #4f555f;
+}
+@property --s2 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #7f858e;
+}
+/* Stmavený spodok (skyShade v shared/sky.js): render ho počíta s oblohou, aby biely text mal
+   kontrast v každej výške obrazovky. Prvá hodnota patrí sivej oblohe bez dát. */
+@property --s3 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgba(5, 10, 30, 0.13);
+}
+
+:root {
+    --s1: #4f555f;
+    --s2: #7f858e;
+    --s3: rgba(5, 10, 30, 0.13);
+    /* Farba má jeden význam: zelená = slnko stačí, modrá = lacná sieť, červená = drahá sieť.
+       Obloha údaj nenesie, len náladu. Výnimka je stav merania (bodka v hlavičke, riadok Živé
+       meranie v Nastavení): zelená beží, jantárová zastarané, červená nefunguje. */
+    --yes: #b9f28c;
+    --cheap: #7cc4ff;
+    --costly: #ff7a66;
+    --ink: #0b1430;
+    /* Čitateľnosť (WCAG, aspoň 4,5 : 1 pri každej oblohe - test/contrast.test.js ich prejde
+       všetky). Text priamo na oblohe je vždy biely: stmavený spodok (--s3) je spočítaný práve
+       naň. Tlmený text (--dim) a farebné texty patria na tmavé sklo (--glass) či pás navigácie
+       (--bar). Farebný text má svetlejší odtieň tej istej farby - plná modrá a červená by na
+       skle nad svetlou oblohou nebola čitateľná. */
+    --glass: rgba(8, 16, 40, 0.3);
+    --bar: rgba(6, 10, 28, 0.72);
+    --dim: rgba(255, 255, 255, 0.82);
+    --cheap-text: #b0dbff;
+    --costly-text: #ffc4ba;
+    --amber-text: #ffd166;
+    /* Plagát obdobia na karte Štatistika: obloha pri západe slnka a tmavé písmo na nej. */
+    --poster-1: #ffd36e;
+    --poster-2: #ff8a5c;
+    --poster-3: #6d55d6;
+    --poster-angle: 165deg;
+    --poster-ink: #1d1030;
+    --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+    color-scheme: dark;
+    background: #4f555f;
+    transition:
+        --s1 0.7s,
+        --s2 0.7s,
+        --s3 0.7s;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 1rem;
+    line-height: 1.45;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Obloha cez celú obrazovku a cez ňu stmavený spodok, aby sa dal čítať biely text: prechod od
+   priehľadnej hore k --s3 dole. Obe vrstvy stoja na mieste, keď sa obsah posúva - text tak má
+   v danej výške obrazovky pod sebou vždy to, čo počíta skyAt v shared/sky.js. */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    pointer-events: none;
+}
+body::before {
+    inset: 0;
+    background: linear-gradient(180deg, var(--s1), var(--s2));
+}
+body::after {
+    inset: 0;
+    background: linear-gradient(180deg, transparent, var(--s3));
+}
+
+button {
+    font: inherit;
+    color: inherit;
+}
+button:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+
+/* ===== Hlavička ===== */
+/* Vľavo RAY-MON a pod ním miesto elektrárne, vpravo bodka a čas na výšku
+   oboch riadkov (docs/navrhy/hlavicka-jednotna.html) - bez zadaných panelov tam ostala výzva. Je priehľadná a nie je prilepená hore -
+   pri posune odíde s obsahom, takže pod ňou aj pod stavovým riadkom je tá istá obloha a počasie
+   ako na stránke. Prilepenú by Safari na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou
+   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky. Bodka a čas merania sú
+   v riadku pod číslom karty Teraz (.stav, docs/navrhy/teraz-stav-merania.html). */
+.st {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: max(16px, env(safe-area-inset-top)) max(20px, calc((100% - 600px) / 2)) 10px;
+    font-size: 0.875rem;
+    font-variation-settings: 'wdth' 100;
+}
+/* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
+   obzor oblohy je pri čiare pod číslom, zrážky končia nad vetou pod číslom. */
+.wx {
+    --wx-core: 255, 255, 250;
+    --wx-warm: 255, 246, 214;
+    --wx-ray: 255, 255, 240;
+    --wx-cl: 255, 255, 255;
+    --wx-cl-dark: 70, 88, 115;
+    --wx-drop: 235, 242, 255;
+    --wx-obzor: calc(max(16px, env(safe-area-inset-top)) + 203px);
+    --wx-prec-h: calc(env(safe-area-inset-top) + 177px);
+}
+.wx[data-noc] {
+    --wx-cl: 170, 180, 210;
+    --wx-cl-dark: 10, 14, 32;
+}
+.st .name {
+    font-weight: 800;
+    font-size: 1.0625rem;
+    letter-spacing: 0.06em;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1.25;
+}
+/* Dlhé meno miesta sa radšej zalomí, než by sa orezalo (aj pri väčšom písme v systéme). Biele
+   ako všetko na holej oblohe - tlmený text (--dim) patrí len na tmavé sklo. */
+.st .place {
+    grid-row: 2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.8125rem;
+}
+.st .need {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+/* ===== Stav merania pod číslom karty Teraz ===== */
+/* Bodka, čas a slovo o stave (stavRiadok v shared/hlavicka.js) písmom riadku pod číslom, bez
+   pozadia - ako ostatný text na holej oblohe. Pri otvorenej bubline je riadok nad vrstvou .tip-bg
+   (z-index 4), aby ostal ťukateľný a bublina pri ňom. */
+.stav {
+    position: relative;
+    padding: 8px 20px 0;
+}
+.stav.open {
+    z-index: 5;
+}
+.live {
+    display: inline-flex;
+    flex: none;
+    gap: 7px;
+    align-items: center;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+.live i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c9cdd4;
+}
+.live[data-tone='live'] i {
+    background: var(--yes);
+}
+/* Polovičná bodka: meranie je pripojené, ale nové neprišlo (bodkaMerania v shared/hero-model.js). */
+.live[data-tone='stale'] i {
+    background: linear-gradient(90deg, #fff 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1.5px #fff;
+}
+.live[data-tone='odhad'] i {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px #fff;
+}
+/* Pri náhľade iného času riadok hovorí len, odkiaľ je číslo v zvolenom čase - bodka patrí k teraz. */
+.live[data-tone='nahlad'] i {
+    display: none;
+}
+/* Celý riadok je tlačidlo, ktoré otvorí bublinu s vysvetlením stavu: vyzerá ako text, plocha na
+   ťuknutie má 44 px a výšku riadku nemení (záporný okraj). Kým appka stav merania nepozná
+   (načítavam…) a počas náhľadu je vypnuté. Prázdne (náhľad bez čísla) drží výšku riadku. */
+button.live {
+    min-height: 44px;
+    margin: -14px -10px -13px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 22px;
+    background: none;
+    cursor: pointer;
+}
+button.live:disabled {
+    cursor: default;
+}
+#hdr-status:empty::before {
+    content: '0';
+}
+/* Malé „›“ na konci hovorí, že sa na riadok dá ťuknúť (otvorí bublinu). V náhľade iného času je
+   riadok vypnutý a šípka nie je. Čítačka ho nečíta (alternatívny text je prázdny). */
+button.live:enabled #hdr-status::after {
+    content: ' ›' / '';
+}
+button.live[aria-expanded='true'] {
+    background: rgba(8, 16, 40, 0.45);
+}
+/* Vrstva pod riadkom stavu: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
+.tip-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    background: rgba(5, 8, 20, 0.3);
+}
+/* Bublina pod riadkom stavu, šípka ukazuje hore na bodku. */
+.tip {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 12px;
+    width: min(320px, calc(100% - 24px));
+    padding: 14px 16px 16px;
+    border-radius: 18px;
+    background: rgba(10, 16, 38, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+}
+.tip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 18px;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: rgba(10, 16, 38, 0.94);
+    transform: rotate(45deg);
+}
+.tip b {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 1.0625rem;
+}
+.tip p {
+    margin: 0;
+    color: var(--dim);
+}
+.tip-btn {
+    margin-top: 12px;
+    padding: 10px 16px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 99px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+/* Štítok je na oko malý (32 px), plocha na ťuknutie má 44 px: priehľadný okraj, pozadie len pod obsahom. */
+.need {
+    display: inline-flex;
+    flex: none;
+    gap: 6px;
+    align-items: center;
+    background: #fff;
+    background-clip: padding-box;
+    color: var(--ink);
+    border: 6px solid transparent;
+    border-radius: 999px;
+    padding: 5px 11px;
+    margin: -6px -6px -2px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: 44px;
+}
+.need::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink);
+}
+
+/* ===== Karty ===== */
+.page {
+    max-width: 640px;
+    margin: 0 auto;
+    /* Miesto pre spodnú navigáciu, ktorá stojí nad obsahom. */
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    overflow-x: clip;
+}
+/* Kým appka kartu prvý raz nevykreslí (render zapíše data-panel), sú v stránke len prázdne
+   nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
+   zaberajú ďalej, len ich nevidno. Okrem riadku stavu merania na karte Teraz, ktorú stránka ukáže
+   pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“). */
+.page:not([data-panel]) {
+    visibility: hidden;
+}
+.page:not([data-panel]) .stav {
+    visibility: visible;
+}
+/* Nadpis rastie s písmom v systéme, no najviac tak, aby sa slovo ako „Štatistika“ zmestilo na úzky displej. */
+.ttl {
+    margin: 0;
+    padding: 8px 20px 0;
+    font-size: min(1.875rem, 13vw);
+    overflow-wrap: anywhere;
+    font-weight: 800;
+    font-variation-settings: 'wdth' 112;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+}
+.sub {
+    margin: 0;
+    padding: 4px 20px 0;
+    font-size: 0.9375rem;
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}

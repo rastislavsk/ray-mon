@@ -5,7 +5,7 @@
 Statická webová appka (GitHub Pages) pre domácnosť s fotovoltikou + Cloudflare Worker,
 ktorý jej dodáva dáta. Podrobnosti v `README.md` a `docs/ARCHITECTURE.md`.
 
-Appka je jedna: „Živá obloha“ v koreni (`index.html`, `app.js`, `style.css`, `web/`). Pôvodná appka
+Appka je jedna: „Živá obloha“ v koreni (`index.html`, `app.js`, `css/`, `web/`). Pôvodná appka
 skončila v novembri 2026, jej posledný stav je v git tagu `original-posledna`.
 
 `obloha/` je len prechod a nič nové doň nepatrí: `index.html` presmeruje staré odkazy aj s hashom,
@@ -77,13 +77,17 @@ v prehliadači. Stráži to `test/csp.test.js`. Do HTML nepíš `<script>` s obs
 **Invariant: nič nesmie prebiť utilitu `.hidden`.** Keď jej appka pridá triedu, prvok musí
 zmiznúť – inak by ukazovala niečo, čo tvrdí, že skrýva.
 
-`.hidden` preto ako **jediné miesto v `style.css` používa `!important`**. Nie je to
+`.hidden` preto ako **jediné miesto v štýloch (`css/`) používa `!important`**. Nie je to
 nedbalosť: skôr stála len na konci súboru a spoliehala sa na poradie, lenže poradie
 rozhoduje iba pri rovnakej špecificite. Pätnásť pravidiel s `display` ju prebíjalo a dve
 z nich sa naozaj prejavili. Vymenúvať, čo je zakázané (ID selektory, potomkovské
 selektory, …), nefunguje – to sme už raz skúsili a chyba prišla dierou, ktorá v zozname
 nebola. Inde `!important` nepíš. Jedinou ďalšou výnimkou je `prefers-reduced-motion`, ktoré
 musí vypnúť animácie a prechody všade – z rovnakého dôvodu: nesmie ho nič prebiť.
+
+Štýly sú rozdelené podľa kariet v `css/` a `index.html` ich načítava v pevnom poradí – to poradie je poradie
+kaskády. `zaklad.css` je prvý (premenné, písmo, hlavička, sklá), `rozlozenie.css` posledný (navigácia, rozloženie
+na šírku, `.hidden`, útlm pohybu). Nový súbor patrí medzi ne; štýl karty do súboru tej karty.
 
 Kontroluje to e2e test „`.hidden` skryje každý prvok v stránke“, ktorý prejde všetky
 prvky vo všetkých kartách. Nový prvok netreba nikam dopisovať – test ho uvidí sám.
@@ -101,7 +105,7 @@ vo `web/teraz-gestures.js` a `web/day-pager.js`).
 
 Typ zariadenia nezisťuj – žiadne `maxTouchPoints`, `@media (hover: hover)` ani userAgent. Appka
 reaguje na to, čím sa práve ovláda, nie na to, čo to je za prístroj; mobil s myšou aj notebook
-s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `style.css` ani jedno pravidlo
+s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `css/` ani jedno pravidlo
 `:hover` – na dotyku by ostávalo visieť po ťuknutí.
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
