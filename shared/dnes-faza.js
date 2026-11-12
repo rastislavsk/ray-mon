@@ -1,7 +1,8 @@
 // Karta Dnes podľa časti dňa (smer C v docs/navrhy/dnes-tri-smery.html): ráno plán na dnes, cez deň
 // odpočet okna na veľké veci, večer ako dopadol dnešok a zajtrajšok. Pod číslami pás kariet na
-// posúvanie (docs/navrhy/dnes-upravy.html, poradie a nové karty docs/navrhy/dnes-predpoved-graf.html):
-// Predpoveď, Najviac slnka, Graf dňa, Nabehlo a Kedy lepšie, večer Graf dňa a Predpoveď na zajtra.
+// posúvanie (docs/navrhy/dnes-upravy.html, nové karty docs/navrhy/dnes-predpoved-graf.html): Predpoveď,
+// Najviac slnka, Nabehlo a Kedy lepšie, večer Predpoveď na zajtra. Graf dňa je vždy posledný
+// (docs/navrhy/dnes-graf-tajomno.html).
 // K tomu vysvetlenie odznaku triedy dňa. Veľké slovo a čo dá strecha za celý deň počíta
 // shared/mozem.js, tu je len to, čo sa mení s časťou dňa. Čisté funkcie bez DOM, texty sú
 // v messages-core.js.
@@ -30,7 +31,7 @@ import {
 } from './messages-core.js';
 import { mainWindow, sunWindows } from './mozem.js';
 import { skyWeather } from './sky.js';
-import { daylightSpan, localDateKey, localMinutes, sunTimes } from './solar.js';
+import { localDateKey, localMinutes, sunTimes } from './solar.js';
 import { dnesCards, todayOf } from './teraz.js';
 
 /** @typedef {import('./mozem.js').Window} Window */
@@ -40,13 +41,13 @@ import { dnesCards, todayOf } from './teraz.js';
 /**
  * Karta v páse pod číslami. `preslo` pri stĺpcoch: hodina je už za nami (kreslí sa stlmene).
  * Predpoveď: `weather` oblačnosť dňa (ikona), `min` a `max` teplota („3°“), `oblacnost` priemerná
- * oblačnosť v % (null = nie je v dátach). Graf dňa: náhľad krivky v ploche 100 × 40 - body predpovede
- * a nameranej krivky („x,y x,y …“), `stitok` venovanie pod názvom, celý graf je v paneli zdola (web/render/graf.js).
+ * oblačnosť v % (null = nie je v dátach). Graf dňa: karta ukáže len venovanie `stitok`, `title` je jej meno
+ * pre čítačku a bodky; graf je v paneli zdola (web/render/graf.js).
  * @typedef {{ kind: 'nabehlo', title: string, value: string, text: string, pct: number | null }
  *   | { kind: 'lepsie', title: string, value: string, text: string }
  *   | { kind: 'predpoved', title: string, popis: string, weather: import('./sky.js').SkyWeather | null,
  *       min: string, max: string, oblacnost: number | null }
- *   | { kind: 'graf', title: string, stitok: string, fc: string, real: string }
+ *   | { kind: 'graf', title: string, stitok: string }
  *   | { kind: 'slnko', title: string, value: string, text: string,
  *       stlpce: { hour: number, pct: number, max: boolean, preslo: boolean }[] }} Karta
  */
@@ -78,13 +79,13 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         /** @type {ReturnType<typeof dnesCountText> | null} */ count: null,
         /** @type {{ label: string, value: string } | null} */ grade: null,
         line: '',
-        /** @type {Karta[]} */ karty: pas([predpoved, slnko, graf, lepsie]),
+        /** @type {Karta[]} */ karty: pas([predpoved, slnko, lepsie, graf]),
         /** @type {Tomorrow | null} */ tomorrow: null,
     };
     if (den.faza === 'rano') return { ...base, kick: DNES_TEXTS.plan, line: dnesPlanText(window, voice) };
     if (den.faza === 'den') {
         const d = cezDen(input, window, cards.today);
-        return { ...base, count: d.count, line: d.line, karty: pas([predpoved, slnko, graf, d.nabehlo, lepsie]) };
+        return { ...base, count: d.count, line: d.line, karty: pas([predpoved, slnko, d.nabehlo, lepsie, graf]) };
     }
     const t = cards.today;
     const grade = dnesGradeText(t.doneKwh, t.forecastKwh);
@@ -95,9 +96,9 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         kick: DNES_TEXTS.grade,
         grade: { label: DNES_TEXTS.gradeLabel, value: grade.value },
         line: grade.line,
-        // Pod zajtrajškom graf dneška (ako dopadol) a predpoveď na zajtra. Kedy lepšie povie zajtrajšok
+        // Pod zajtrajškom predpoveď na zajtra a graf dneška (ako dopadol). Kedy lepšie povie zajtrajšok
         // presnejšie; mraky a najsilnejšia hodina dneška už nič neradia. Bez zajtrajška len Kedy lepšie.
-        karty: tomorrow ? pas([graf, predpovedOf(input, 1)]) : [lepsie],
+        karty: tomorrow ? pas([predpovedOf(input, 1), graf]) : [lepsie],
         tomorrow,
     };
 }
@@ -184,29 +185,13 @@ function predpovedOf(input, i) {
 }
 
 /**
- * Karta Graf dňa: náhľad krivky dneška v ploche 100 × 40 (vodorovne deň od svitania po súmrak ako
- * graf v paneli, zvislo výkon) - predpoveď po hodinách a nameraná krivka. Celý graf s posúvaním
- * času je v paneli zdola: v páse by sa vodorovný ťah bil s posúvaním pásu. Bez predpovede dneška null.
+ * Karta Graf dňa: len venovanie, žiadny náhľad (docs/navrhy/dnes-graf-tajomno.html, D). Celý graf s posúvaním
+ * času je v paneli zdola. Bez predpovede dneška null - panel by nemal čo ukázať.
  * @param {Input} input @returns {Karta | null}
  */
 function grafOf(input) {
     if (!todayOf(input) || !input.forecast) return null;
-    const span = daylightSpan(input.site, localDateKey(input.now, input.site.timezone));
-    const fc = input.forecast.hourlyToday
-        .map((h) => ({ min: h.hour * 60 + 30, kw: h.kw }))
-        .filter((p) => p.min >= span.from && p.min <= span.to);
-    const real = (input.pv ? input.pv.realCurveToday : [])
-        .map((p) => ({ min: p.hour * 60, kw: p.kw }))
-        .filter((p) => p.min >= span.from && p.min <= span.to);
-    const top = Math.max(0.1, ...fc.map((p) => p.kw), ...real.map((p) => p.kw));
-    const body = (/** @type {{ min: number, kw: number }[]} */ list) =>
-        list
-            .map(
-                (p) =>
-                    `${Math.round((1000 * (p.min - span.from)) / (span.to - span.from)) / 10},${Math.round(380 - (340 * p.kw) / top) / 10}`,
-            )
-            .join(' ');
-    return { kind: 'graf', title: DNES_TEXTS.graf, stitok: DNES_TEXTS.grafStitok, fc: body(fc), real: body(real) };
+    return { kind: 'graf', title: DNES_TEXTS.graf, stitok: DNES_TEXTS.grafStitok };
 }
 
 /**

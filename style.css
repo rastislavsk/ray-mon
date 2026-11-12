@@ -694,26 +694,26 @@ button.live[aria-expanded='true'] {
     border-radius: 3px;
     background: rgba(210, 218, 235, 0.9);
 }
-/* Graf dňa (docs/navrhy/dnes-graf-karta.html, A): celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel
-   s grafom. Tlačidlo vyplní kartu aj s jej odsadením. Že sa naň dá ťuknúť, povie biely krúžok so šípkou -
-   jediný plný biely prvok v páse - a pri ťuknutí karta stmavne. Náhľad krivky: predpoveď čiarou, nameraná
-   krivka plochou. */
+/* Graf dňa (docs/navrhy/dnes-graf-tajomno.html, D): celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel
+   s grafom. Tlačidlo vyplní kartu aj s jej odsadením. Vidno len venovanie, veľké a tenké, ktorým raz za pár
+   sekúnd prebehne lesk, a šípku v tenkej obruči. Pri ťuknutí karta stmavne. */
 .karta[data-kind='graf'] {
+    align-content: stretch;
     padding: 0;
 }
 .k-otvor {
+    position: relative;
     display: grid;
-    align-content: start;
-    gap: 10px;
+    place-items: center;
     width: 100%;
     height: 100%;
-    padding: 14px 16px;
+    padding: 30px 44px;
     border: 0;
     border-radius: inherit;
     background: none;
     color: inherit;
     font: inherit;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
     transition: background-color 0.12s;
 }
@@ -724,62 +724,48 @@ button.live[aria-expanded='true'] {
     outline: 3px solid #fff;
     outline-offset: -3px;
 }
-.k-hlava {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-}
-.k-meno {
+.k-obruc {
+    position: absolute;
+    top: 12px;
+    right: 12px;
     display: grid;
-    justify-items: start;
-    gap: 6px;
-}
-.k-meno b {
-    font-size: 1.125rem;
-    font-weight: 800;
-    line-height: 1.1;
-}
-.k-stitok {
-    padding: 2px 9px;
-    border: 1.5px solid rgba(255, 255, 255, 0.75);
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-}
-.k-kruh {
-    display: grid;
-    flex: none;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
     border-radius: 50%;
-    background: #fff;
-    color: var(--ink);
 }
-.k-kruh svg {
-    width: 18px;
-    height: 18px;
+.k-obruc svg {
+    width: 15px;
+    height: 15px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2.6;
+    stroke-width: 2.2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-.k-graf {
-    display: block;
-    width: 100%;
-    height: 84px;
+.k-lesk {
+    font-size: 1.3rem;
+    font-weight: 300;
+    font-variation-settings: 'wdth' 125;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    text-wrap: balance;
+    background: linear-gradient(100deg, rgba(255, 255, 255, 0.72) 40%, #fff 48%, #ffe7a8 50%, #fff 52%, rgba(255, 255, 255, 0.72) 60%) 100%
+        0 / 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: lesk 6s ease-in-out infinite;
 }
-.k-graf .k-fc {
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.8);
-    stroke-width: 1.6;
-    stroke-dasharray: 4 3;
-    vector-effect: non-scaling-stroke;
-}
-.k-graf .k-real {
-    fill: rgba(185, 242, 140, 0.75);
+@keyframes lesk {
+    0%,
+    55% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
 }
 .k-stlpce i[data-preslo] {
     opacity: 0.45;

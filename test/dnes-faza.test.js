@@ -60,7 +60,7 @@ test('ráno pred východom: plán na dnes s oknom na veľké veci a trieda dňa'
     assert.equal(d.tomorrow, null);
     assert.deepEqual(
         d.karty.map((k) => k.kind),
-        ['predpoved', 'slnko', 'graf', 'lepsie'],
+        ['predpoved', 'slnko', 'lepsie', 'graf'],
         'ráno ešte nič nenabehlo',
     );
     assert.equal(faza(input(at('05:30')), 'slusny').d?.line.startsWith('Veľké veci dajte medzi'), true, 'slušne vyká');
@@ -78,9 +78,9 @@ test('cez deň v okne: odpočet do konca okna a koľko už nabehlo', () => {
     });
     assert.deepEqual(
         d.karty.map((k) => k.kind),
-        ['predpoved', 'slnko', 'graf', 'nabehlo', 'lepsie'],
+        ['predpoved', 'slnko', 'nabehlo', 'lepsie', 'graf'],
     );
-    const n = d.karty[3];
+    const n = d.karty[2];
     assert.ok(n.kind === 'nabehlo' && n.pct !== null && n.pct > 0);
     assert.equal(n.title, 'Nabehlo');
     assert.match(n.value, /^\d+,\d kWh$/);
@@ -112,7 +112,7 @@ test('bez merania: odhad z predpovede', () => {
     assert.match(n.text, /^\d+ % z ~61 kWh na celý deň, podľa predpovede\.$/);
 });
 
-test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse graf dneška a predpoveď na zajtra', () => {
+test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpoveď na zajtra a graf dneška', () => {
     const i = input(at('21:00'));
     const { d } = faza(i);
     assert.ok(d && d.tomorrow && d.grade && i.pv && i.forecast);
@@ -124,11 +124,11 @@ test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse graf dne�
     assert.deepEqual(
         d.karty.map((k) => [k.kind, k.title]),
         [
-            ['graf', DNES_TEXTS.graf],
             ['predpoved', DNES_TEXTS.predpovedZajtra],
+            ['graf', DNES_TEXTS.graf],
         ],
     );
-    const p = d.karty[1];
+    const p = d.karty[0];
     assert.ok(p.kind === 'predpoved');
     assert.equal(p.oblacnost, i.forecast.days[1].cloudAvgPct, 'predpoveď na zajtra je zo zajtrajška');
     const cls = denTriedaDna(i, 1, PLAN_DNA.devices);
@@ -267,20 +267,13 @@ test('karta Predpoveď: zrážky s časťou dňa, sneh, celý deň a mimo hodín
     assert.equal(dnesPopisText({ weather: null, zrazky: null }), '');
 });
 
-test('karta Graf dňa: náhľad predpovede a nameranej krivky v ploche 100 × 40', () => {
-    const k = faza(input(at('13:00'))).d?.karty[2];
-    assert.ok(k?.kind === 'graf');
-    assert.equal(k.title, DNES_TEXTS.graf);
-    assert.equal(k.stitok, DNES_TEXTS.grafStitok);
-    const body = (/** @type {string} */ t) => t.split(' ').map((p) => p.split(',').map(Number));
-    const fc = body(k.fc);
-    const real = body(k.real);
-    assert.ok(fc.length > 10 && real.length > 1);
-    for (const [x, y] of [...fc, ...real]) assert.ok(x >= 0 && x <= 100 && y >= 4 && y <= 38, `${x},${y}`);
-    assert.ok(Math.max(...real.map(([x]) => x)) < 60, 'nameraná krivka končí o 13:00');
-    // Bez merania len predpoveď.
-    const bez = faza(input(at('13:00'), { pv: null })).d?.karty[2];
-    assert.ok(bez?.kind === 'graf' && bez.real === '' && bez.fc === k.fc);
+test('karta Graf dňa: len venovanie, vždy posledná; bez predpovede nie je', () => {
+    const i = input(at('13:00'));
+    for (const d of [faza(i).d, faza(input(at('05:30'))).d, faza(input(at('21:00'))).d, faza({ ...i, pv: null }).d])
+        assert.deepEqual(d?.karty.at(-1), { kind: 'graf', title: DNES_TEXTS.graf, stitok: DNES_TEXTS.grafStitok });
+    assert.equal(DNES_TEXTS.grafStitok, 'Kheinshmetke only');
+    const bez = faza({ ...i, forecast: i.forecast && { ...i.forecast, days: [] } }).d;
+    assert.ok(!bez || !bez.karty.some((k) => k.kind === 'graf'));
 });
 
 test('karta Najviac slnka: najsilnejšia hodina, stĺpce a čo je už za nami', () => {
