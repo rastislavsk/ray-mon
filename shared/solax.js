@@ -29,9 +29,8 @@ const num = (/** @type {unknown} */ v) => (typeof v === 'number' && Number.isFin
  * @param {unknown} json @param {Date} now @returns {PvData}
  */
 export function parseSolax(json, now) {
-    if (!isObj(json) || /** @type {any} */ (json).success !== true || !isObj(/** @type {any} */ (json).result))
-        throw new Error('SolaX: neúspešná odpoveď');
-    const r = /** @type {Record<string, unknown>} */ (/** @type {any} */ (json).result);
+    if (!isObj(json) || json.success !== true || !isObj(json.result)) throw new Error('SolaX: neúspešná odpoveď');
+    const r = json.result;
     const dc = ['powerdc1', 'powerdc2', 'powerdc3', 'powerdc4'].map((k) => num(r[k])).filter((v) => v !== null);
     const watts = dc.length ? dc.reduce((a, b) => a + b, 0) : num(r.acpower);
     return {

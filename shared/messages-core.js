@@ -461,9 +461,9 @@ const MOZEM_UNKNOWN_SLUSNE = {
     text: 'Bez dát neviem, či svieti. Ak to potrebujete, zapnite to, nič sa nestane.',
 };
 
-/** @typedef {import('./mozem.js').DayCtx} DayCtx */
-/** @typedef {import('./mozem.js').LaterDay} LaterDay */
-/** @typedef {import('./mozem.js').Window} MozemWindow */
+/** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
+/** @typedef {import('./mozem-jadro.js').LaterDay} LaterDay */
+/** @typedef {import('./mozem-jadro.js').Window} MozemWindow */
 /** @typedef {(typeof import('./config.js').MOZEM_ITEMS)[number]} MozemItem */
 /** Veci karty podľa id. */
 const MOZEM_ITEMS_BY_ID = Object.fromEntries(MOZEM_ITEMS.map((i) => [i.id, i]));
@@ -661,7 +661,7 @@ export function mozemStripText(state, { ctx, window, nextDay }) {
  * Riadok veci v mriežke a jej rozbalenie: krátka odpoveď, veta, vysvetlenie a pri spotrebičoch
  * „čo keď mrak“ alebo „musíš hneď“ s cenou, keď ju tarifa pozná. `more` je to posledné ako otázka
  * a odpoveď pod vlastným nadpisom (panel veci); bez vysvetlenia je null.
- * @param {MozemItem} item @param {import('./mozem.js').Answer} a
+ * @param {MozemItem} item @param {import('./mozem-jadro.js').Answer} a
  * @param {{ ctx: DayCtx, cost: number | null } | null} env
  * @param {Voice} [voice]
  * @returns {{ name: string, tone: 'go' | 'wait' | 'cheap' | 'no' | 'unk', short: string, head: string, text: string,
@@ -788,7 +788,7 @@ function notTodayText(item) {
     return why[p.shape];
 }
 
-/** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem.js').Answer} a @param {string} notToday @param {Voice} voice */
+/** Iný deň, alebo tento týždeň vôbec. @param {import('./mozem-jadro.js').Answer} a @param {string} notToday @param {Voice} voice */
 function laterItem(a, notToday, voice) {
     if (a.kind !== 'later')
         return {
@@ -1160,7 +1160,7 @@ export const MOZEM_GROUP_NAMES = {
 /**
  * Krátka odpoveď dlaždice: keď svieti, koniec slnka - ten je pre všetky veci skupiny rovnaký,
  * dokedy pustiť ktorý program, povie panel. Inak krátka odpoveď veci.
- * @param {import('./mozem.js').Answer} a @param {string} short krátka odpoveď veci
+ * @param {import('./mozem-jadro.js').Answer} a @param {string} short krátka odpoveď veci
  */
 export function mozemTileValue(a, short) {
     if (a.kind === 'go') return `do ${hm(a.end)}`;
@@ -1169,7 +1169,7 @@ export function mozemTileValue(a, short) {
 
 /**
  * Riadok pod odpoveďou dlaždice s jednou vecou: odkiaľ pôjde prúd, pri aute koľko km chytí.
- * @param {import('./mozem.js').Answer} a
+ * @param {import('./mozem-jadro.js').Answer} a
  */
 export function mozemTileNote(a) {
     if (a.kind === 'go') return a.km ? `asi ${a.km} km zo slnka` : 'zo slnka';

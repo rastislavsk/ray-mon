@@ -11,7 +11,7 @@ import { mozemGuessText, mozemOfflineText } from './messages-core.js';
 import { mozemModel } from './mozem.js';
 import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
 
-/** @typedef {import('./mozem.js').Window} Window */
+/** @typedef {import('./mozem-jadro.js').Window} Window */
 /**
  * Oblúk slnka: východ a západ (minúta dňa, null v polárny deň či noc), kde je slnko medzi nimi
  * (0 = východ, 1 = západ, null = noc), dnešné okno so slnkom tým istým meradlom a fáza Mesiaca,
@@ -103,7 +103,7 @@ function emptyCard() {
         lead: '',
         day: /** @type {ReturnType<typeof mozemModel>['day']} */ (null),
         den: /** @type {ReturnType<typeof mozemModel>['den']} */ (null),
-        window: /** @type {import('./mozem.js').Window | null} */ (null),
+        window: /** @type {import('./mozem-jadro.js').Window | null} */ (null),
         retry: false,
         guess: '',
         list: null,

@@ -2,6 +2,7 @@
 // spoločná, uložená pod DOMA_STORAGE_KEY. Čisté funkcie bez DOM a úložiska.
 
 import { MOZEM_ITEMS, PLAN_DNA } from './config.js';
+import { isObj } from './valid.js';
 
 /** Spotrebiče, ktoré sa dajú vybrať: veci karty Môžem?, ktoré majú spotrebič. */
 export const DOMA_DEVICES = MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id);
@@ -18,7 +19,7 @@ function devicesOf(list) {
     return [...new Set(list.map(String).filter((d) => DOMA_DEVICES.includes(d)))];
 }
 
-/** @param {string | null} raw @returns {any} */
+/** @param {string | null} raw @returns {unknown} */
 function jsonOf(raw) {
     try {
         return raw ? JSON.parse(raw) : null;
@@ -33,7 +34,7 @@ function jsonOf(raw) {
  */
 export function parseDoma(raw) {
     const v = jsonOf(raw);
-    return (v && typeof v === 'object' && devicesOf(v.devices)) || domaDefault();
+    return (isObj(v) && devicesOf(v.devices)) || domaDefault();
 }
 
 /**
@@ -43,7 +44,7 @@ export function parseDoma(raw) {
  */
 export function domaZOznameni(rawOznamenia) {
     const v = jsonOf(rawOznamenia);
-    return v && typeof v === 'object' ? devicesOf(v.devices) : null;
+    return isObj(v) ? devicesOf(v.devices) : null;
 }
 
 /** Voľba v tvare na uloženie. @param {readonly string[]} devices */

@@ -8,11 +8,11 @@ import { DEVICES, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA, PREDPOVED_HODINY, TARI
 import { forecastDayPlan } from './day-plan.js';
 import { dayNameShort, weekDayName } from './format.js';
 import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazSkupinaText, terazVecText } from './messages-core.js';
-import { dayCtx, freeKw, programDraw } from './mozem.js';
+import { dayCtx, freeKw, programDraw } from './mozem-jadro.js';
 import { cheapFrom, chosen, najlepsiDen } from './plan-dna.js';
 import { localDateKey } from './solar.js';
 
-/** @typedef {import('./mozem.js').DayCtx} DayCtx */
+/** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
 /** @typedef {import('./plan-dna.js').SunRow} SunRow */
 /** @typedef {import('./messages.js').Voice} Voice */
 /**

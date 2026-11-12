@@ -5,7 +5,7 @@
 
 import { DEN_TRIEDA, PLAN_DNA } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
-import { dayCtx } from './mozem.js';
+import { dayCtx } from './mozem-jadro.js';
 import { chosen, najlepsiDen } from './plan-dna.js';
 import { localDateKey, localMinutes, sunTimes } from './solar.js';
 import { DATE_RE } from './valid.js';
@@ -69,7 +69,7 @@ function dnaCtx(input, index) {
 /**
  * Trieda dňa z jeho kontextu (rozpočet slnka od polnoci): koľko spotrebičov sa za deň zmestí na slnko,
  * a ktoré to sú.
- * @param {import('./mozem.js').DayCtx} ctx @param {string} currency @param {readonly string[]} devices
+ * @param {import('./mozem-jadro.js').DayCtx} ctx @param {string} currency @param {readonly string[]} devices
  * @returns {{ cls: DenTrieda, veci: { id: string, ok: boolean }[] }}
  */
 function rozbor(ctx, currency, devices) {

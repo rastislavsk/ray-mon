@@ -4,9 +4,10 @@
 
 import { OZNAMENIA, TARIFF_LIMITS } from './config.js';
 import { oznameniaTexts, planNoticeText, reminderText } from './messages-core.js';
-import { dayCtx, planWindows } from './mozem.js';
+import { dayCtx, planWindows } from './mozem-jadro.js';
 import { planDna } from './plan-dna.js';
 import { buildForecast, localMinutes } from './solar.js';
+import { isObj } from './valid.js';
 import { vyhladOznamenia } from './vyhlad.js';
 
 /**
@@ -58,14 +59,14 @@ export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour });
  */
 export function parseOznamenia(raw) {
     const base = oznameniaDefault();
-    /** @type {any} */ let v = null;
+    /** @type {unknown} */ let v = null;
     try {
         v = raw ? JSON.parse(raw) : null;
     } catch {
         return base;
     }
-    if (!v || typeof v !== 'object') return base;
-    return { on: v.on === true, hour: OZNAMENIA.hours.includes(v.hour) ? v.hour : base.hour };
+    if (!isObj(v)) return base;
+    return { on: v.on === true, hour: typeof v.hour === 'number' && OZNAMENIA.hours.includes(v.hour) ? v.hour : base.hour };
 }
 
 /**

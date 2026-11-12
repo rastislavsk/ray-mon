@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN_DNA, PLANT, SITE, TARIFF, TYZDEN } from '../shared/config.js';
 import { terazDenHlavickaText, terazNudzaText, terazPotomText } from '../shared/messages.js';
-import { dayCtx } from '../shared/mozem.js';
+import { dayCtx } from '../shared/mozem-jadro.js';
 import { terazModel } from '../shared/teraz.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzoveCasy } from '../shared/tyzden.js';
 import { fixtureData } from './helpers.js';

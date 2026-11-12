@@ -287,23 +287,22 @@ export function parseStoredTariff(raw) {
     if (!isObj(raw) || !Array.isArray(raw.bands) || !Array.isArray(raw.schedules)) return null;
     const str = (/** @type {unknown} */ v) => (typeof v === 'string' ? v : '');
     const nums = (/** @type {unknown} */ v) => (Array.isArray(v) ? v.map(Number) : []);
+    // Položka, ktorá nie je objekt, sa číta ako prázdna - neprejde potom kontrolou tarify.
+    const obj = (/** @type {unknown} */ v) => (isObj(v) ? v : {});
     /** @type {Tariff} */
     const tariff = {
         currency: str(raw.currency).trim(),
-        bands: raw.bands.map((/** @type {any} */ b) => ({
-            id: str(b && b.id),
-            name: str(b && b.name),
-            level: /** @type {PriceLevel} */ (str(b && b.level)),
-            price: b && b.price !== null && b.price !== undefined ? Number(b.price) : null,
+        bands: raw.bands.map(obj).map((b) => ({
+            id: str(b.id),
+            name: str(b.name),
+            level: /** @type {PriceLevel} */ (str(b.level)),
+            price: b.price !== null && b.price !== undefined ? Number(b.price) : null,
         })),
-        schedules: raw.schedules.map((/** @type {any} */ s) => ({
-            days: nums(s && s.days),
-            months: nums(s && s.months),
+        schedules: raw.schedules.map(obj).map((s) => ({
+            days: nums(s.days),
+            months: nums(s.months),
             changes: mergeChanges(
-                (s && Array.isArray(s.changes) ? s.changes : []).map((/** @type {any} */ c) => ({
-                    from: str(c && c.from),
-                    band: str(c && c.band),
-                })),
+                (Array.isArray(s.changes) ? s.changes : []).map(obj).map((c) => ({ from: str(c.from), band: str(c.band) })),
             ),
         })),
     };

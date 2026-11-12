@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, DEVICES, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
-import { dayCtx, freeKw, programDraw } from '../shared/mozem.js';
+import { dayCtx, freeKw, programDraw } from '../shared/mozem-jadro.js';
 import { planDna, planDnaModel } from '../shared/plan-dna.js';
 import { PLAN_DNA_NOTE } from '../shared/messages.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';

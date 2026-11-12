@@ -140,7 +140,7 @@ export function realCurveBoundary(realCurve, nowMinutes) {
  */
 export function dayKwAt(minutes, realCurve, hourlyToday, nowMinutes) {
     const boundary = realCurveBoundary(realCurve, nowMinutes);
-    if (boundary !== null && minutes <= boundary) return interpolate(/** @type {any} */ (realCurve), minutes / 60, 'kw');
+    if (boundary !== null && minutes <= boundary) return interpolate(realCurve ?? [], minutes / 60, 'kw');
     if (!hourlyToday || !hourlyToday.length) return NaN;
     return interpolate(hourlyToday, minutes / 60, 'kw');
 }

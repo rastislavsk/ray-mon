@@ -142,6 +142,8 @@ Pokrytie `shared/` musí ostať aspoň 90 % riadkov, inak `npm test` zlyhá. Okr
 každý súbor zvlášť (85 % riadkov, 75 % vetiev, `FILE_MIN` v `test/run.js`), aby nový modul bez testov
 nezapadol v priemere. Test, ktorý načíta ten istý modul viackrát (`import('…?značka')`), patrí do
 `test/bez-pokrytia/` – v jednom behu s ostatnými by Node 22 pokrytie toho modulu spočítal zle.
+Kruhový import a import appky z `shared/` zhodí `test/cykly.test.js` – keď dva moduly potrebujú jeden druhého,
+spoločné výpočty patria do tretieho (takto vzniklo `shared/mozem-jadro.js`).
 Export, ktorý nikto nepoužíva (ani testy), zhodí `test/nepouzite.test.js` – keď zmena prestane
 niečo používať, zmaž aj definíciu. Očakávané texty
 v e2e testoch sa počítajú tou istou funkciou ako v appke, takže test odhalí rozdiel medzi

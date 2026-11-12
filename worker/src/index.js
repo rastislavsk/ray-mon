@@ -23,6 +23,7 @@ import {
     ZDIELANIE,
 } from '../../shared/config.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
+import { isObj } from '../../shared/valid.js';
 import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
 import { handleRadar } from './radar.js';
@@ -125,16 +126,21 @@ export async function handlePv(request, env, now, fetchImpl) {
  * @returns {{ sposob: string, zdroj: import('./zdroje.js').Zdroj, udaje: Record<string, string>, pecat: string } | null}
  */
 function pripojReq(body) {
-    /** @type {any} */ let req;
+    /** @type {unknown} */ let req;
     try {
         req = JSON.parse(body ?? '');
     } catch {
         return null;
     }
-    const zdroj = req && typeof req.sposob === 'string' ? ZDROJE[req.sposob] : undefined;
-    const udaje = req && req.udaje && typeof req.udaje === 'object' ? req.udaje : null;
-    if (!zdroj || !udaje || !Object.values(udaje).every((v) => typeof v === 'string')) return null;
-    return { sposob: req.sposob, zdroj, udaje, pecat: typeof req.pecat === 'string' ? req.pecat : '' };
+    if (!isObj(req) || typeof req.sposob !== 'string' || !Object.hasOwn(ZDROJE, req.sposob) || !isObj(req.udaje)) return null;
+    const udaje = Object.entries(req.udaje);
+    if (!udaje.every((u) => typeof u[1] === 'string')) return null;
+    return {
+        sposob: req.sposob,
+        zdroj: ZDROJE[req.sposob],
+        udaje: Object.fromEntries(udaje.map(([k, v]) => [k, String(v)])),
+        pecat: typeof req.pecat === 'string' ? req.pecat : '',
+    };
 }
 
 /**

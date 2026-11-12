@@ -173,11 +173,10 @@ export function parseStoredSettings(raw) {
     /** @type {UserSettings} */
     const user = {
         site: siteFrom(o.site),
-        strings: o.strings.map((/** @type {any} */ x) => ({
-            panels: Number(x && x.panels),
-            azimuthDeg: Number(x && x.azimuthDeg),
-            tiltDeg: Number(x && x.tiltDeg),
-        })),
+        strings: o.strings.map((/** @type {unknown} */ raw) => {
+            const x = isObj(raw) ? raw : {};
+            return { panels: Number(x.panels), azimuthDeg: Number(x.azimuthDeg), tiltDeg: Number(x.tiltDeg) };
+        }),
         panelWp: Number(o.panelWp),
         acLimitKw: Number(o.acLimitKw),
         // Nastavenia uložené pred pridaním kiosku ho nemajú - to je „bez merania“. Tie spred
