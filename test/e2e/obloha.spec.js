@@ -764,7 +764,7 @@ const kartaVStranke = (page) =>
             karty: vidno('#mz-karty')
                 ? [...document.querySelectorAll('#mz-karty .karta')].map((el) => [
                       el.getAttribute('data-kind'),
-                      el.querySelector('.glass-ttl, .k-meno')?.textContent ?? '',
+                      el.querySelector('.glass-ttl, .k-otvor')?.textContent ?? '',
                       el.querySelector('.k-val, .k-popis')?.textContent ?? '',
                       el.querySelector('.k-text, .k-teplo')?.textContent ?? '',
                       el.querySelector('.k-obl')?.textContent ?? '',
@@ -786,7 +786,7 @@ const fazaZModelu = (d) => ({
     line: d.line,
     karty: d.karty.map((k) =>
         k.kind === 'graf'
-            ? [k.kind, k.title + k.stitok, '', '', '']
+            ? [k.kind, `${k.title} – ${k.stitok}`, '', '', '']
             : k.kind === 'predpoved'
               ? [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, k.oblacnost === null ? '' : `oblačnosť${k.oblacnost} %`]
               : [k.kind, k.title, 'value' in k ? k.value : '', k.text, ''],

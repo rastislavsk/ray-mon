@@ -1,5 +1,5 @@
 {
-  "hash": "c850a61b522abe73d918dbd17e976d889e00beed934385f4aa8a2d3c803a1c63",
+  "hash": "6e93d003539d0198b958e66ba7fd92e59a600275aaaae6893d2e1d97d322502a",
   "texts": [
     "(prázdne)",
     "0,0 kW",
@@ -208,6 +208,7 @@
     "Kedy",
     "Kedy lepšie",
     "Keď ich zadáš, uvidíš",
+    "Kheinshmetke only",
     "Koľko dáva tvoja strecha?",
     "Ktorý deň je najlepší, viem z počasia. Koľko kWh, záleží od tvojich panelov. Teraz ukazujem typickú strechu asi 5 kWp.",
     "Lacná elektrina",
@@ -746,7 +747,6 @@
     "estimate",
     "ešte slnka na veľké veci, do 17:30",
     "ešte slnka na veľké veci, do 18:15",
-    "for Kheinshmetkes only",
     "forecast",
     "go",
     "graf",
