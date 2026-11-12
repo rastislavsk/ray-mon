@@ -45,7 +45,7 @@ try {
     await pockajNaServer(url);
     const { pv } = fixtureData();
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-    // reducedMotion vypne v appke prechody (style.css), takže snímka zachytí konečný stav.
+    // reducedMotion vypne v appke prechody (css/rozlozenie.css), takže snímka zachytí konečný stav.
     // Inak prechody ešte dobiehali a o výsledku rozhodovalo, ako
     // rýchlo sa načítali písma - tá istá appka dala raz takú, raz inú terazky.png.
     const page = await browser.newPage({

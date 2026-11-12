@@ -208,7 +208,7 @@ export class RadarHrac {
         rdOsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         const deti = this.pasOsi(o, w, h - 16);
         // Popisy stoja stredom na svojom čase, aj krajné – inak by sa posledný zlepil s predposledným.
-        // Miesto na ich presah dáva okraj osi v style.css.
+        // Miesto na ich presah dáva okraj osi v css/.
         o.znacky.forEach((z) => {
             const t = svg('text', {
                 x: (z.poz / o.pocet) * w,

@@ -1,7 +1,7 @@
 // Graf dňa - ten istý na karte Teraz aj v detaile dňa na karte 7 dní novej
 // appky. Geometriu aj polohu popiskov počíta shared/day-chart.js, tu sa len skladá značkovanie:
 // oblačnosť, krivky a pás v SVG, ktoré sa s grafom zväčšuje, a popisky ako HTML nad ním - tie majú
-// na každej šírke tú istú veľkosť v px. Čistý reťazec bez DOM, preto neutrálny modul (CLAUDE.md); farby dáva style.css appky.
+// na každej šírke tú istú veľkosť v px. Čistý reťazec bez DOM, preto neutrálny modul (CLAUDE.md); farby dáva css/ appky.
 
 import { escapeHtml } from '../shared/format.js';
 import { DAY_CHART } from '../shared/day-chart.js';
@@ -23,19 +23,19 @@ const MARK_TOP = DAY_CHART.cloudY - 2;
 /** Spodok čiary náhľadu: tesne pod pásom plánu. */
 const MARK_BOTTOM = DAY_CHART.bandY + DAY_CHART.bandH + 2;
 
-/** Poloha nápisu hranice ako premenné pre style.css. @param {string} key @param {import('../shared/day-chart.js').Spot} s */
+/** Poloha nápisu hranice ako premenné pre css/. @param {string} key @param {import('../shared/day-chart.js').Spot} s */
 const spotVars = (key, s) => `--${key}x:${pctX(s.x)};--${key}y:${pctY(s.y)};--${key}a:${s.end ? '-100%' : '0%'}`;
 
 /** Vodorovná poloha nápisu so šírkou `w` px vystredeného na `x`, no celého v grafe (CSS clamp). @param {number} x @param {number} w */
 const clampX = (x, w) => `clamp(${w / 2 + 2}px, ${pctX(x)}, calc(100% - ${w / 2 + 2}px))`;
 
-/** Oblačnosť bunky v % pre style.css (`--c`): jasno svetlé, zamračené tmavosivé. @param {number} pct */
+/** Oblačnosť bunky v % pre css/ (`--c`): jasno svetlé, zamračené tmavosivé. @param {number} pct */
 const cloudPct = (pct) => `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
 
 /**
  * Popisky nad SVG: čísla osi kW, hodiny pod pásom plánu, nápis hranice veľkých spotrebičov tam, kde
  * ho model položil (spodkom na `y`, zarovnaný začiatkom alebo koncom; na úzkom a na širokom grafe
- * inde - vyberá style.css podľa šírky grafu) a čas náhľadu (alebo „teraz“) spodkom nad riadkom
+ * inde - vyberá css/ podľa šírky grafu) a čas náhľadu (alebo „teraz“) spodkom nad riadkom
  * oblačnosti, vystredený, no celý v grafe.
  * @param {Chart} c
  */
@@ -57,7 +57,7 @@ function labelsHtml(c) {
 /**
  * Odhora: oblačnosť po hodinách, mriežka osi kW, plocha pod krivkou dňa nad hranicou veľkých
  * spotrebičov, hranica, predpoveď (prerušovaná) a meranie (plná čiara), pás plánu, „teraz“ (len pri dnešku: bod na krivke a stlmené bunky pásu,
- * ktoré už prešli) a čiara náhľadu, nad tým popisky. Farby sú v style.css appky; pás podľa
+ * ktoré už prešli) a čiara náhľadu, nad tým popisky. Farby sú v css/ appky; pás podľa
  * `data-tone`, `data-from` nesie začiatok bunky (minúta dňa).
  * @param {Chart} c
  */

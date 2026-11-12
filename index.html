@@ -26,7 +26,17 @@
              písmach povinný, inak by ho prehliadač stiahol dvakrát. -->
         <link rel="preload" href="fonts/archivo-obloha.woff2" as="font" type="font/woff2" crossorigin />
         <link rel="stylesheet" href="web/pocasie.css" />
-        <link rel="stylesheet" href="style.css" />
+        <!-- Štýly sú rozdelené podľa kariet (css/). Poradie je poradie kaskády: zaklad prvý,
+             rozlozenie posledné - nesie .hidden a útlm pohybu, ktoré nesmie nič prebiť. -->
+        <link rel="stylesheet" href="css/zaklad.css" />
+        <link rel="stylesheet" href="css/dnes.css" />
+        <link rel="stylesheet" href="css/teraz.css" />
+        <link rel="stylesheet" href="css/sedem.css" />
+        <link rel="stylesheet" href="css/statistika.css" />
+        <link rel="stylesheet" href="css/nastavenie.css" />
+        <link rel="stylesheet" href="css/sprievodca.css" />
+        <link rel="stylesheet" href="css/radar.css" />
+        <link rel="stylesheet" href="css/rozlozenie.css" />
         <!-- Appku spúšťa boot.js: keď sa po nasadení zmiešajú staré a nové moduly z cache,
              stiahne ich znova a raz obnoví stránku. Žiadny iný modul appky sa tu nenačítava. -->
         <script type="module" src="boot.js"></script>

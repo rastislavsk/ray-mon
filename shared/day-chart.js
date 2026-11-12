@@ -41,13 +41,13 @@ export const DAY_CHART = {
 /**
  * Popisky grafu - hodiny, čísla osi kW, nápis hranice veľkých spotrebičov a čas náhľadu -
  * majú na každej šírke tú istú veľkosť v px ako na telefóne: graf sa s oknom zväčšuje, písmo nie.
- * Kreslia sa preto ako HTML nad SVG (web/day-chart.js) a ich poloha je v % grafu. Písmo je v style.css
+ * Kreslia sa preto ako HTML nad SVG (web/day-chart.js) a ich poloha je v % grafu. Písmo je v css/
  * (.dc-t, .dc-y, .dc-limit-t, .dc-at-t) a musí sedieť s číslami tu: `limitPx` a `timePx` veľkosť písma,
  * `charEm` a `timeCharEm` šírka znaku s rezervou, `lineEm` výška riadku, `gapPx` odstup nápisu
  * od čiary. `minScale` je najmenšia mierka grafu (px na jednotku
  * viewBoxu): graf široký 274 px na displeji 320 px - tam zaberá nápis v jednotkách grafu najviac.
  * `wideScale` je mierka, od ktorej má nápis vlastnú polohu (graf aspoň 448 px - container query
- * v style.css musí sedieť): na širokom grafe je nápis v pomere ku grafu malý a zmestí sa aj tam,
+ * v css/ musí sedieť): na širokom grafe je nápis v pomere ku grafu malý a zmestí sa aj tam,
  * kde by na telefóne prekryl krivku.
  */
 export const DAY_CHART_LABELS = {

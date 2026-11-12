@@ -1,5 +1,5 @@
 // Skladanie SVG reťazcov z modelov (shared/chart-model.js). Žiadne výpočty, iba zápis.
-// Farby idú cez CSS triedy (style.css), nie cez atribúty.
+// Farby idú cez CSS triedy (css/), nie cez atribúty.
 
 import { compassPoint, planesRoseModel, RING } from '../shared/chart-model.js';
 import { escapeHtml } from '../shared/format.js';

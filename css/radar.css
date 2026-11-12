@@ -1,0 +1,305 @@
+/* Štýly karty Radar. */
+/* ===== Karta Radar =====
+   Mapa cez celú obrazovku, stránka sa na tejto karte neposúva. Navigácia stojí nad ňou. */
+.radar {
+    position: fixed;
+    inset: 0;
+    /* Navigácia má ten istý z-index, no v stránke stojí neskôr, ostáva teda nad kartou. */
+    z-index: 2;
+    background: #141c2e;
+    color: #fff;
+}
+/* Hlavička s menom appky by stála nad mapou a pod ňou by aj tak nič nebolo. */
+body:has(.radar:not(.hidden)) .st {
+    visibility: hidden;
+}
+/* MapLibre si prvok nastaví ako position: relative, rozmery preto nesmú stáť na inset. */
+.rd-mapa {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+.rd-doma {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.28),
+        0 1px 5px #000;
+}
+/* Ovládanie hore aj dole stojí na tmavom prechode od okraja, nie v sklenených rámoch: mapa k okrajom
+   len stmavne. Každý prvok je vysoký 44 px a zaoblený na polovicu, docs/navrhy/radar-horna-cast.html (H3). */
+.rd-hore {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding: calc(env(safe-area-inset-top) + 10px) 10px 44px;
+    background: linear-gradient(to bottom, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+.rd-stlpec {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+}
+.rd-stlpec.vpravo {
+    justify-items: end;
+}
+.rd-hlaska {
+    background: rgba(9, 14, 27, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.rd-chvila {
+    min-height: 44px;
+    padding: 0 4px;
+}
+.rd-cas {
+    font-size: 1.75rem;
+    line-height: 28px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.rd-druh {
+    min-height: 16px;
+    font-size: 0.8125rem;
+    line-height: 16px;
+    font-weight: 600;
+    color: #dfe6f1;
+}
+.rd-druh.predpoved {
+    color: var(--amber-text);
+}
+.rd-prepinac {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px 0 14px;
+    border: 0;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    text-shadow: inherit;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+}
+.rd-prepinac i {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: #5a6880;
+}
+.rd-prepinac i::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+}
+.rd-prepinac[aria-pressed='true'] i {
+    background: #3f7fe0;
+}
+.rd-prepinac[aria-pressed='true'] i::after {
+    transform: translateX(14px);
+}
+.rd-hlaska {
+    position: absolute;
+    top: 38%;
+    left: 24px;
+    right: 24px;
+    max-width: 340px;
+    margin: 0 auto;
+    padding: 14px 16px;
+    border-radius: 16px;
+    text-align: center;
+}
+.rd-hlaska p {
+    margin: 0;
+}
+.rd-hlaska .pbtn {
+    margin-top: 10px;
+}
+.rd-dok {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* Prechod ide až pod navigáciu, jej výška závisí od zariadenia a nad ňou nesmie presvitať pásik mapy. */
+    bottom: 0;
+    padding: 22px 18px calc(78px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(9, 14, 27, 0.9) 60%, rgba(9, 14, 27, 0));
+    /* Prechod nad osou je mapa, ťah po ňom patrí jej. */
+    pointer-events: none;
+}
+.rd-riadok {
+    max-width: 624px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    pointer-events: auto;
+}
+.rd-seg {
+    display: flex;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: auto;
+}
+.rd-seg button {
+    min-width: 52px;
+    min-height: 44px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 22px;
+    background: transparent;
+    color: #dfe6f1;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-shadow: inherit;
+    cursor: pointer;
+}
+.rd-seg button[aria-pressed='true'] {
+    background: #fff;
+    color: var(--ink);
+    text-shadow: none;
+}
+.rd-legenda {
+    width: 130px;
+    min-height: 44px;
+    padding: 0 4px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+}
+.rd-legenda b {
+    height: 6px;
+    border-radius: 3px;
+}
+.rd-legenda div {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #dfe6f1;
+}
+.rd-kruh {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+.rd-kruh svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+.rd-rychlost {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.rd-os {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 52px;
+    /* Krajné popisy stoja stredom na začiatku a konci osi, polovica z nich presahuje do okraja. */
+    margin-inline: 10px;
+    /* Os si ťah necháva pre seba, po karte sa aj tak neposúva. */
+    touch-action: none;
+    cursor: pointer;
+}
+.rd-os svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.rd-os-min {
+    stroke: rgba(255, 255, 255, 0.75);
+}
+.rd-os-bud {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-dasharray: 3 3;
+}
+.rd-os-teraz {
+    stroke: #fff;
+}
+.rd-os-text {
+    fill: #dfe6f1;
+    font-size: 12px;
+    font-weight: 600;
+}
+.rd-os-text.hlavna {
+    fill: #fff;
+    font-weight: 700;
+}
+.rd-jazdec {
+    position: absolute;
+    top: 2px;
+    bottom: 16px;
+    left: 0;
+    width: 0;
+    will-change: transform;
+    pointer-events: none;
+}
+.rd-jazdec::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 -1px;
+    width: 2px;
+    border-radius: 1px;
+    background: #fff;
+}
+.rd-jazdec::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+/* Popis zdrojov mapy nesmie zmiznúť pod ovládaním. */
+.radar .maplibregl-ctrl-bottom-right {
+    bottom: calc(156px + env(safe-area-inset-bottom));
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .rd-hore {
+    padding-top: calc(5rem + 10px);
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .rd-dok {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .radar .maplibregl-ctrl-bottom-right {
+    bottom: calc(100px + env(safe-area-inset-bottom));
+}

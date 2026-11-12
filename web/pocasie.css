@@ -1,9 +1,9 @@
 /* Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html).
    Vrstvy skladá web/pocasie.js, stav (data-wx, data-noc) zapisuje render karty Teraz. Svetlo
    prichádza z pravého horného rohu obrazovky (aj spod stavového riadku) a k číslu výkonu slabne.
-   Farby, výšku obzoru a koniec zrážok si appka nastaví v style.css cez premenné.
+   Farby, výšku obzoru a koniec zrážok si appka nastaví v css/ cez premenné.
    Kresba je dekorácia: nezachytí dotyk, čítačka ju nevidí (aria-hidden v HTML), útlm pohybu
-   zastaví jej pohyb (pravidlo prefers-reduced-motion v style.css). */
+   zastaví jej pohyb (pravidlo prefers-reduced-motion v css/). */
 .wx {
     --wx-sx: calc(100% + 14px);
     --wx-sy: -20px;
@@ -208,7 +208,7 @@
 /* Zamračené (docs/navrhy/zamracene-oblaky.html): svetlosivé oblaky cez deň aj v noci, v oboch
    appkách rovnaké, preto stoja na vrstve a nie na .wx, kde farby nastavuje appka. Za nimi sivá
    obloha – appka ju má z jadra (SKY.sivost)
-   a --wx-sivo vo svojom style.css. */
+   a --wx-sivo vo svojom css/. */
 .wx[data-wx='zamracene'] .wx-deck {
     --wx-cl: 235, 236, 237;
     --wx-cl-dark: 89, 90, 90;

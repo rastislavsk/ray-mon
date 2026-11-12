@@ -1,0 +1,306 @@
+/* Štýly karty 7 dní. */
+/* ===== Karta 7 dní ===== */
+.sedem p,
+.sedem h2,
+.sedem h3 {
+    margin: 0;
+}
+.sedem .note {
+    font-size: 0.8438rem;
+    color: #fff;
+}
+.sub.note {
+    padding: 12px 20px 16px;
+}
+/* Súčet týždňa je odkaz na detail týždňa: podčiarknutý text, nie tlačidlo na pozadí. */
+.sumbtn {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    min-height: 44px;
+    margin: 2px 14px 0;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+/* Riadky dní ako predpoveď počasia: deň, ikona, pás okna, kWh. */
+.days {
+    display: grid;
+    gap: 8px;
+    padding: 10px 14px 0;
+}
+.day {
+    display: grid;
+    grid-template-columns: 3.6em 24px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    background: var(--glass);
+    font-size: 0.9063rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+/* Najlepší deň: výkon podčiarknutý zelenou linkou. Rám nie - zvýraznený rám vyzerá ako
+   vybraná položka. Linku vysvetľuje text pod zoznamom (SEDEM_TEXTS.hint). */
+.day.best em {
+    padding-bottom: 3px;
+    border-bottom: 2px solid var(--yes);
+}
+.dn {
+    white-space: nowrap;
+}
+.day em {
+    min-width: 4.4em;
+    font-style: normal;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+/* Kilowatthodiny typickej strechy sú odhad - priznáva to aj písmo. */
+.days.est .day em,
+.nums.est b {
+    font-style: italic;
+}
+.rng {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    overflow: hidden;
+}
+.rng i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: var(--yes);
+}
+/* Ikony počasia (web/render/icons.js). */
+.wi {
+    display: block;
+    width: 24px;
+    height: 24px;
+}
+.wi-sun {
+    fill: #ffe27a;
+}
+.wi-rays {
+    fill: none;
+    stroke: #ffe27a;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+.wi-cloud {
+    fill: #eef3fa;
+}
+.wi-cloud.wi-dark {
+    fill: #c9d2de;
+}
+
+/* Detail dňa a týždňa. */
+.back {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    min-height: 44px;
+    margin: 4px 8px 0;
+    padding: 8px 12px;
+    border: 0;
+    background: transparent;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+/* Detail dňa: šípka späť a čipy dní v jednom riadku hore, pod nimi pás s dňom, ktorý pri listovaní
+   ide za prstom (web/day-pager.js). Vedľa pásu stoja počas ťahu kópie susedných dní (.pager-ghost),
+   orezané na šírku detailu - na telefóne aj v stĺpci 7 dní prehľadu. Zvislý posun si nad pásom
+   necháva prehliadač (pan-y), vodorovný ťah patrí listovaniu. */
+/* Šípka aj čipy majú dotykovú plochu 44 × 44 px a stoja tesne vedľa seba ako jeden pás (2 px).
+   Kde sa osem plôch do šírky nezmestí (úzky telefón, väčšie písmo), čipy sa posúvajú do strán
+   s prichytávaním (scroll-snap) a šípka stojí. */
+.day-nav {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    padding: 10px 12px 0;
+}
+.day-back {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    background: var(--glass);
+    cursor: pointer;
+}
+.day-back svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.day-strip {
+    display: flex;
+    flex: 1 1 0;
+    gap: 2px;
+    min-width: 0;
+    position: relative;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+}
+.day-chip {
+    flex: 1 0 44px;
+    scroll-snap-align: center;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.day-chip[aria-current='true'] {
+    background: var(--glass);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    color: inherit;
+}
+.day-pager {
+    overflow-x: clip;
+    touch-action: pan-y;
+}
+.day-track {
+    position: relative;
+}
+.pager-ghost {
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+.dttl {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.dttl .wi {
+    flex: none;
+    width: 30px;
+    height: 30px;
+}
+/* Tri čísla vedľa seba; pri väčšom písme v systéme pod seba, aby sa číslo neorezalo. */
+.nums {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
+    gap: 8px;
+    padding: 12px 14px 0;
+}
+.nums div {
+    padding: 10px;
+    border-radius: 14px;
+    background: var(--glass);
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+.nums b {
+    display: block;
+    font-size: 1.25rem;
+    font-variation-settings: 'wdth' 108;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.dchart {
+    padding: 10px 8px 6px;
+}
+.dc,
+.chartbox svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.facts p,
+.msg p {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+}
+.msg h3 {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+/* Stĺpce dní: najlepší zelený, ostatné biele priesvitné. */
+.wb {
+    fill: rgba(255, 255, 255, 0.45);
+}
+.wb.best {
+    fill: var(--yes);
+}
+.wb-v {
+    fill: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+.wb-n {
+    fill: var(--dim);
+    font-size: 13px;
+    text-anchor: middle;
+}
+/* Mapa hodina × deň: zelené políčko slnko stačí, inak biele; sýtosť nesie fill-opacity z modelu. */
+.hm-t {
+    fill: var(--dim);
+    font-size: 13px;
+}
+.hm-d {
+    fill: #fff;
+    font-size: 13px;
+}
+/* Mená dní a hodiny užším rezom, aby sa pri čitateľnej veľkosti zmestili vedľa seba. */
+.wb-n,
+.hm-t,
+.hm-d {
+    font-variation-settings: 'wdth' 80;
+}
+.hc {
+    fill: #fff;
+}
+.hc.sun {
+    fill: var(--yes);
+}
+
+/* Odkaz na plagát na karte Môžem?: nenápadný podčiarknutý text pod dlaždicami, nie tlačidlo. */
+.lnk {
+    display: block;
+    min-height: 44px;
+    margin: -8px 14px 12px;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 0.8438rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}

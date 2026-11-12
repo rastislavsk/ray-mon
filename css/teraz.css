@@ -1,0 +1,914 @@
+/* Štýly karty Teraz a grafu dňa. */
+/* ===== Karta Teraz ===== */
+/* Čo zapnúť (docs/navrhy/teraz-navrh-2.html): riadok nad dlaždicami, plné dlaždice toho, čo ide teraz,
+   a skupiny riadkov. Kontajner - mená v dlaždiciach sa zmenšia s jeho šírkou, nie s oknom. */
+#tz-co {
+    position: relative;
+    container-type: inline-size;
+    /* Medzi dotykovými plochami (stav merania, riadok nad dlaždicami, dlaždice) aspoň 8 px. */
+    padding: 20px 14px 0;
+    /* Ťuknutie na oznámenie k nemu posunie stránku (nech neostane pod spodnou navigáciou). */
+    scroll-margin: 12px 0 5.5rem;
+}
+/* Riadok nad dlaždicami: bodka (zdroj prúdu teraz, alebo cena siete), slovo a „i“ - ťuknutie
+   vysvetlí, čo platí (namiesto štítkov Áno a Lacná / Drahá sieť). Znak „i“ je v ::after, nie v texte. */
+.oko {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    margin: 0 -4px 8px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-align: left;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+.oko > i {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+}
+.oko > i[data-tone='go'] {
+    background: var(--yes);
+    box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.3);
+}
+.oko > i[data-tone='cheap'] {
+    background: var(--cheap);
+    box-shadow: 0 0 0 3px rgba(124, 196, 255, 0.3);
+}
+.oko > i[data-tone='costly'] {
+    background: var(--costly);
+    box-shadow: 0 0 0 3px rgba(255, 122, 102, 0.3);
+}
+.oko-t {
+    min-width: 0;
+}
+.oko-t span {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+}
+.oko::after {
+    content: 'i';
+    content: 'i' / '';
+    flex: none;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.5625rem;
+    line-height: 11px;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: none;
+}
+.oko-pod {
+    padding: 0 6px 8px 24px;
+    font-size: 0.875rem;
+}
+/* Slnko až o viac dní (docs/navrhy/teraz-viac-dni-bez-slnka.html, A): bodka sivomodrá ako oblak. */
+.oko > i[data-tone='cloud'] {
+    background: #b4c3dc;
+    box-shadow: 0 0 0 3px rgba(180, 195, 220, 0.3);
+}
+/* Hrebeň týždňa (docs/navrhy/teraz-vyhlad-alternativy.html, C): krivky dní predpovede vedľa seba na tmavom
+   skle, nad hranicou veľkých spotrebičov zlaté, pod ňou sivomodré. Cez každý stĺpec je tlačidlo dňa s menom
+   dole - zvolený deň má biely rámik. Hrebeň siaha takmer po okraje karty a nemá vnútorný okraj po stranách:
+   sedem tlačidiel má aj na šírke 320 px aspoň 44 px. */
+.hreben {
+    position: relative;
+    margin: 0 -10px 12px;
+    padding: 10px 0 8px;
+    border-radius: 18px;
+    background: rgba(10, 20, 50, 0.38);
+}
+.hreben svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.hr-pod {
+    fill: rgba(180, 195, 220, 0.5);
+}
+.hr-nad {
+    fill: #ffd166;
+}
+.hr-hranica {
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-dasharray: 3 4;
+}
+.hr-os {
+    stroke: rgba(255, 255, 255, 0.25);
+}
+.hr-teraz {
+    fill: #fff;
+    stroke: rgba(10, 20, 50, 0.6);
+    stroke-width: 1.5;
+}
+.hreben-dni {
+    position: absolute;
+    inset: 4px 0;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+}
+.hreben-dni button {
+    display: grid;
+    align-content: end;
+    justify-items: center;
+    padding: 0 0 3px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: #dfe7f3;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.hreben-dni button[data-nad] {
+    color: #ffd166;
+}
+.hreben-dni button[data-dnes] {
+    color: #fff;
+}
+.hreben-dni button[aria-pressed='true'] {
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+}
+/* Hlavička plánu iného dňa: meno dňa a vedľa neho dátum, o koľko dní a či slnko stačí. */
+.den-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 10px;
+    min-height: 44px;
+    padding: 6px 6px 0;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+.den-h h2 {
+    font-size: 1.375rem;
+    font-weight: 900;
+}
+.den-h span {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.mriezka {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+/* Dlaždica: plná zelená (zo slnka) či modrá (z lacnej siete), meno a kedy dobehne. Modrá má tmavý lem,
+   aby sa nestratila na modrej oblohe. */
+.dl {
+    display: grid;
+    align-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    min-height: 136px;
+    padding: 14px;
+    border: 0;
+    border-radius: 24px;
+    text-align: left;
+    cursor: pointer;
+}
+.dl.cela {
+    grid-column: 1 / -1;
+    min-height: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+}
+.dl[data-tone='go'] {
+    background: var(--yes);
+    color: #14300c;
+    box-shadow: 0 8px 30px rgba(185, 242, 140, 0.3);
+}
+.dl[data-tone='cheap'] {
+    background: var(--cheap);
+    color: #06233d;
+    box-shadow:
+        0 0 0 2px rgba(6, 35, 61, 0.35),
+        0 8px 30px rgba(124, 196, 255, 0.3);
+}
+/* Keď teraz nejde nič: najbližšia vec s rámom (zelený slnko, modrý lacná sieť) a odpočtom. */
+.dl[data-tone='next'] {
+    border: 2px solid var(--yes);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #fff;
+}
+.dl[data-tone='next'][data-cheap='true'] {
+    border-color: var(--cheap);
+}
+.dl-ico {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(20, 48, 12, 0.12);
+}
+.dl[data-tone='cheap'] .dl-ico {
+    background: rgba(6, 35, 61, 0.12);
+}
+.dl[data-tone='next'] .dl-ico {
+    background: rgba(255, 255, 255, 0.14);
+}
+.dl b {
+    display: block;
+    font-size: min(1.375rem, 7cqi);
+    font-weight: 800;
+    font-variation-settings: 'wdth' 108;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+}
+.dl small {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+.velky {
+    display: block;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.dl .velky {
+    font-size: 1.75rem;
+}
+/* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. */
+.potom {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(20, 48, 12, 0.14);
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: 800;
+    line-height: 1.3;
+}
+.potom[data-dlho] {
+    background: #14300c;
+    color: #ffd166;
+}
+/* Ikona spotrebiča: čiarová, farbu berie z textu. */
+.vi {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.dl-ico .vi {
+    width: 26px;
+    height: 26px;
+}
+.co-h {
+    margin: 0;
+    padding: 18px 6px 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+.riadky {
+    display: grid;
+    gap: 8px;
+}
+/* Riadok skupiny: veľký čas, ikona, meno a doplnok. V lacnom pásme čas modrý, „tento týždeň nie“ tlmený. */
+.ri {
+    display: grid;
+    grid-template-columns: 4.1rem 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 10px;
+    min-height: 52px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 16px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    text-align: left;
+    cursor: pointer;
+}
+.ri .velky {
+    font-size: 1.375rem;
+}
+.ri[data-kind='cheap'] .velky {
+    color: var(--cheap-text);
+}
+.ri b {
+    display: block;
+    font-weight: 800;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+.ri small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+/* Núdzový čas: pásik, koľko programu dá slnko (zlatá) a koľko sieť (modrá). */
+.podiel {
+    display: block;
+    height: 6px;
+    margin: 5px 0 3px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #ffd166 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+}
+/* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
+   toho, čo zapnúť. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
+@property --plan-obeh {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+#tz-co[data-obrys]::after {
+    content: '';
+    position: absolute;
+    inset: 0 8px -6px;
+    padding: 2px;
+    border-radius: 24px;
+    background: conic-gradient(from var(--plan-obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    animation: plan-obrys 0.9s ease-in-out;
+}
+@keyframes plan-obrys {
+    from {
+        --plan-obeh: 0deg;
+    }
+    15%,
+    80% {
+        opacity: 1;
+    }
+    to {
+        --plan-obeh: 360deg;
+    }
+}
+/* Zbaliteľné sekcie (karta Nastavenie): hlavička je tlačidlo cez celú šírku so šípkou. */
+.fold-h {
+    font-size: inherit;
+    font-weight: inherit;
+}
+.fold-head {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 10px 12px 16px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+.fold-t {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+.teraz p,
+.teraz h2 {
+    margin: 0;
+}
+/* Veľké číslo: na úzkom displeji sa zmenší s jeho šírkou, aby sa „~10.25 kW“ nezalomilo. */
+.knum {
+    padding: 2px 20px 0;
+    font-size: min(76px, 19vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 118;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    white-space: nowrap;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+}
+.knum small {
+    margin-left: 6px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+/* Číslo z typickej strechy priznáva odhad aj písmom. */
+.knum.est {
+    font-style: italic;
+}
+/* Pásik pod číslom: koľko z jasnej oblohy (teraz.jas v shared/teraz.js). Pevná šírka, aby sa
+   s číslom nemenil; v noci prázdny, nie skrytý, aby sa v náhľade graf pod prstom nepohol. */
+.jas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: min(190px, 100% - 40px);
+    margin: 0;
+    padding: 8px 20px 0;
+    box-sizing: content-box;
+}
+/* Náhľad v noci: pásik nie je vidieť, ale miesto drží - prázdny popisok výšku riadku nestratí. */
+.jas.prazdny {
+    visibility: hidden;
+}
+#tz-jas-label:empty::before {
+    content: '0';
+}
+.jas-track {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+}
+.jas-track i {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: #fff;
+    transform: scaleX(var(--jas, 0));
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+#tz-jas-label {
+    min-width: 4ch;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: right;
+    color: #fff;
+}
+
+/* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
+   ten obsluhuje JS (teraz-interactions.js). */
+.day-scrub {
+    margin-top: 14px;
+    padding: 10px 8px 6px;
+    touch-action: pan-y;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.day-scrub:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+/* Prst aj kurzor trafia vždy rámček grafu, nie graf v ňom (SVG s popiskami): render ho pri každom
+   posune náhľadu vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove
+   by k rámčeku nedošli a náhľad by zamrzol po prvom pohybe. */
+.day-scrub .dc-box {
+    pointer-events: none;
+}
+.day-scrub svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+/* Panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html, predtým karta Deň na karte
+   Teraz): výkon a čas, krivka (posúvač času), legenda, pätka. Obsah panelu nesie aj oblohu - zaoblený
+   je ako panel, aby ho obloha nepresahovala. */
+.grden {
+    border-radius: inherit;
+}
+/* Obloha zvoleného času v paneli s grafom: farby neba (--d1, --d2) a stmavený spodok (--d3, skyShade -
+   biely text má kontrast v každej výške) prelína CSS ako pozadie appky, pod obsahom je kresba
+   počasia. Obsah je izolovaný, kresba a stmavenie stoja pod ním (z-index -1). */
+/* Poloha slnka kresby je zaregistrovaná, aby sa v paneli slnko pri ťahu posúvalo plynule. */
+@property --wx-sx {
+    syntax: '<length-percentage>';
+    inherits: true;
+    initial-value: 0px;
+}
+@property --wx-sy {
+    syntax: '<length-percentage>';
+    inherits: true;
+    initial-value: 0px;
+}
+@property --d1 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #1767c9;
+}
+@property --d2 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #4fa3e2;
+}
+@property --d3 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgba(5, 10, 30, 0.13);
+}
+.grden.nebo {
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--d1), var(--d2));
+    transition:
+        --d1 0.7s,
+        --d2 0.7s,
+        --d3 0.7s;
+}
+.grden.nebo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(8, 16, 40, 0.2), var(--d3));
+    pointer-events: none;
+}
+/* Kresba počasia v paneli: v ňom, nie cez obrazovku; obzor a koniec zrážok na spodku panelu. Slnko
+   (--wx-sx, --wx-sy) dáva render podľa zvoleného času. */
+.wx.wx-den {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    width: auto;
+    height: auto;
+    --wx-obzor: 100%;
+    --wx-prec-h: 100%;
+    -webkit-mask-image: none;
+    mask-image: none;
+    transition:
+        --wx-sx 0.7s,
+        --wx-sy 0.7s;
+}
+/* Lúče sú dve otáčajúce sa plochy 1040 × 1040 px - v paneli by sa krútili druhýkrát popri pozadí
+   a zdvojnásobili prácu telefónu aj pri ťahu. Slnko v karte je žiara bez lúčov. */
+/* Špecificita prebije pravidlá „čo je v ktorom stave vidno“ vo web/pocasie.css (0,4,0). */
+.grden .wx.wx-den[data-wx] :is(.wx-r1, .wx-r2, .wx-flare) {
+    display: none;
+}
+/* Hlava grafu dňa: výkon a odkiaľ je vľavo, čas vpravo. Bežne jeden riadok, takže sa posúvač pod
+   prstom nepohne, keď sa zmení zvolený čas; s veľkým písmom v systéme zíde čas pod výkon. */
+.citanie {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 4px 12px;
+}
+.c-kw {
+    display: grid;
+    gap: 4px;
+}
+.c-kw b,
+.c-cas {
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.c-kw b {
+    font-size: 1.75rem;
+}
+.c-kw span {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+/* Čas o štvrtinu menší ako výkon, vždy vpravo. Dve triedy: v paneli by ich inak prebilo `.sheet p`. */
+.citanie .c-cas {
+    margin-left: auto;
+    font-size: 1.3125rem;
+    line-height: 1;
+}
+.grden .day-scrub {
+    margin-top: 0;
+    padding: 0;
+}
+/* Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, plný úsek spotrebiča,
+   pri dnešku biela čiara „teraz“ a hodiny pod tým. Polohy sú v % osi. */
+.os {
+    position: relative;
+    height: 64px;
+    margin: 4px 6px 0;
+}
+.os i {
+    position: absolute;
+}
+.os-ciara {
+    top: 22px;
+    right: 0;
+    left: 0;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+}
+.os-usek {
+    top: 14px;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: var(--yes);
+    box-shadow: 0 0 18px rgba(185, 242, 140, 0.6);
+}
+.os-usek[data-tone='cheap'] {
+    background: var(--cheap);
+    box-shadow: 0 0 18px rgba(124, 196, 255, 0.6);
+}
+.os-usek[data-tone='part'] {
+    background: #ffd166;
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.6);
+}
+.os-teraz {
+    top: 8px;
+    width: 3px;
+    height: 36px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #fff;
+}
+.os-t {
+    position: absolute;
+    bottom: 0;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--dim);
+}
+.leg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.leg span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.leg i {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+}
+.leg [data-l='go'] {
+    background: var(--yes);
+}
+.leg [data-l='part'] {
+    background: rgba(255, 238, 190, 0.6);
+}
+.leg [data-l='cheap'] {
+    background: var(--cheap);
+}
+.leg [data-l='costly'] {
+    background: var(--costly);
+}
+.leg [data-l='power'] {
+    height: 3px;
+    background: var(--yes);
+}
+.leg [data-l='forecast'] {
+    height: 0;
+    border-top: 2px dashed rgba(185, 242, 140, 0.6);
+    border-radius: 0;
+}
+.leg [data-l='limit'] {
+    height: 0;
+    border-top: 1.5px dashed #fff;
+    border-radius: 0;
+}
+.pata {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+.spat {
+    min-height: 44px;
+    padding: 6px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--amber-text);
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+/* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
+   web/day-chart.js), bunka pod čiarou náhľadu má okraj. */
+.dc-cloud {
+    fill: color-mix(in srgb, #4d5560 var(--c), #fff);
+}
+.dc-cloud-on {
+    stroke: #fff;
+    stroke-width: 1.3;
+}
+.dc-grid {
+    stroke: rgba(255, 255, 255, 0.16);
+}
+/* Plocha pod krivkou dňa len nad hranicou veľkých spotrebičov (slnko navyše na ne). */
+.dc-over {
+    fill: rgba(185, 242, 140, 0.5);
+}
+/* Predpoveď prerušovaná, nameraná krivka dneška plná - obe zelené: zelená v grafe je len slnko. */
+.dc-fc {
+    fill: none;
+    stroke: rgba(185, 242, 140, 0.6);
+    stroke-width: 1.3;
+    stroke-dasharray: 4 3;
+    stroke-linejoin: round;
+}
+.dc-real {
+    fill: none;
+    stroke: var(--yes);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.dc-limit {
+    stroke: #fff;
+    stroke-dasharray: 3 4;
+}
+/* Popisky grafu sú HTML nad SVG: graf sa s oknom zväčšuje, písmo nie - na každej šírke má tú istú
+   veľkosť ako na telefóne. Poloha je v % grafu (web/day-chart.js), veľkosti musia sedieť
+   s DAY_CHART_LABELS v shared/day-chart.js - podľa nich model kladie nápis hranice mimo kriviek. */
+.dc-box {
+    position: relative;
+    container-type: inline-size;
+}
+.dc-box > span {
+    position: absolute;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+/* Hodiny pod pásom plánu, vystredené na svojom čase. */
+.dc-t {
+    color: var(--dim);
+    font-size: 13px;
+    transform: translate(-50%, 2px);
+}
+/* Čísla osi kW vľavo od grafu, zarovnané koncom a vystredené na čiare mriežky. */
+.dc-y {
+    color: var(--dim);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    transform: translate(-100%, -50%);
+}
+/* Nápis hranice: spodkom tesne nad svojím miestom (čiara, alebo voľné miesto nad krivkou),
+   zarovnaný k nemu začiatkom alebo koncom. Na grafe širokom aspoň 448 px (wideScale 1,4 v
+   shared/day-chart.js) má vlastnú polohu - je tam v pomere ku grafu menší. */
+.dc-limit-t {
+    left: var(--nx);
+    top: var(--ny);
+    color: var(--dim);
+    font-size: 12px;
+    transform: translate(var(--na), calc(-100% - 2px));
+}
+@container (min-width: 448px) {
+    .dc-limit-t {
+        left: var(--wx);
+        top: var(--wy);
+        transform: translate(var(--wa), calc(-100% - 2px));
+    }
+}
+.dc-now-dot {
+    fill: var(--yes);
+}
+.dc-prev {
+    stroke: #fff;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+}
+.dc-prev-dot {
+    fill: var(--ink);
+    stroke: #fff;
+    stroke-width: 2;
+}
+/* Čas náhľadu: popisok na vrchu čiary bez pozadia, v reči ostatných popiskov grafu - len biely
+   a tučný. Spodkom tesne nad čiarou, vystredený na nej; polohu dáva render. */
+.dc-at-t {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    transform: translate(-50%, calc(-100% - 2px));
+}
+/* Bunka pásu pod čiarou náhľadu: väčšia a s okrajom, jej farba povie, čo vtedy platí. */
+.dc-cell-on {
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+/* Farby pásu plánu aj legendy pod ním: tie isté tri významy ako všade v appke. */
+.dc [data-tone='plain'] {
+    fill: rgba(255, 255, 255, 0.3);
+}
+.dc [data-tone='sun'] {
+    fill: var(--yes);
+}
+.dc [data-tone='cheap'] {
+    fill: var(--cheap);
+}
+.dc [data-tone='costly'] {
+    fill: var(--costly);
+}
+/* Bunky pásu, ktoré dnes už prešli: stlmené, hranica s plným pásom je „teraz“. */
+.dc .dc-past {
+    fill-opacity: 0.35;
+}
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 8px 20px 0;
+    font-size: 0.8125rem;
+    color: #fff;
+}
+.legend span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+.legend span::before {
+    content: '';
+    width: 12px;
+    height: 7px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+.legend [data-tone='sun']::before {
+    background: var(--yes);
+}
+.legend [data-tone='cheap']::before {
+    background: var(--cheap);
+}
+.legend [data-tone='costly']::before {
+    background: var(--costly);
+}
+/* Čiary a riadok oblačnosti v legende: výkon plnou čiarou, predpoveď prerušovane, oblačnosť od jasna po zamračené. */
+.legend [data-tone='power']::before {
+    height: 2.5px;
+    background: var(--yes);
+}
+.legend [data-tone='forecast']::before {
+    height: 0;
+    border-top: 2px dashed rgba(185, 242, 140, 0.6);
+    border-radius: 0;
+    background: none;
+}
+.legend [data-tone='cloud']::before {
+    width: 22px;
+    background: linear-gradient(90deg, #fff, #4d5560);
+}
+.chev {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    transition: transform 0.2s;
+}
+.chev::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: translateY(-2px) rotate(45deg);
+}
+.fold-head[aria-expanded='true'] .chev {
+    transform: rotate(180deg);
+}
+
+.bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+}
+.bar i {
+    display: block;
+    height: 100%;
+    background: var(--yes);
+}
