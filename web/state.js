@@ -12,6 +12,7 @@ import { setupInit } from '../shared/setup-flow.js';
 /**
  * Stav. `mzGraf` otvorený panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html) a `terazPreview`
  * zvolený čas v ňom (minúta dňa, null = teraz; meno ostalo z čias, keď bol graf na karte Teraz), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
+ * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzObrys` čaká alebo beží jednorazový obrys toho, čo zapnúť, po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel s vysvetlením riadku nad dlaždicami karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
  * `mzChip` otvorené vysvetlenie odznaku triedy dňa na karte Dnes - dnešného, alebo večer zajtrajšieho (docs/navrhy/dnes-upravy.html),
@@ -41,6 +42,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   mzGraf: boolean,
  *   terazPreview: number | null,
  *   tzVec: string | null,
+ *   tzDen: number,
  *   tzObrys: boolean,
  *   tzChip: TzChip | null,
  *   mzChip: MzChip | null,
@@ -198,8 +200,8 @@ export function initialState(
 }
 
 /**
- * Zmena karty aj so smerom podľa poradia v navigácii. Zvolený čas, detail spotrebiča a vysvetlenie
- * patria karte Teraz, vysvetlenie odznaku karte Dnes a detail karte 7 dní - s kartou sa zatvoria.
+ * Zmena karty aj so smerom podľa poradia v navigácii. Zvolený deň, detail spotrebiča a vysvetlenie
+ * patria karte Teraz, zvolený čas grafu a vysvetlenie odznaku karte Dnes a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
@@ -209,6 +211,7 @@ export function panelChange(from, to) {
         mzGraf: false,
         terazPreview: /** @type {number | null} */ (null),
         tzVec: /** @type {string | null} */ (null),
+        tzDen: 0,
         tzObrys: false,
         tzChip: /** @type {TzChip | null} */ (null),
         mzChip: /** @type {MzChip | null} */ (null),
@@ -450,6 +453,8 @@ export function navChange(state, step) {
         appSheet: step.sheet,
         nsOpen: step.fold,
         tzVec: step.vec,
+        // Zatvorenie detailu spotrebiča či vysvetlenia (krok späť na tej istej karte) nechá zvolený deň.
+        tzDen: panel === state.panel ? state.tzDen : 0,
         tzChip: step.chip,
         mzChip: step.trieda,
         mzGraf: step.graf,

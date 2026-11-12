@@ -5,11 +5,11 @@
 
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { PLAN_DNA_NOTE, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { vecIcon, weatherIcon } from './icons.js';
+import { vecIcon } from './icons.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -50,27 +50,86 @@ function renderStav(state, dom) {
 /** Ikona spotrebiča v kruhu dlaždice. @param {string} id */
 const ikona = (id) => `<span class="dl-ico" aria-hidden="true">${vecIcon(id)}</span>`;
 
+/** Rozmery hrebeňa v jednotkách SVG: šírka, výška, os (spodok kriviek) a výška najvyššieho bodu. */
+const HREBEN = { w: 322, h: 92, os: 70, vyska: 60 };
+
 /**
- * Čo zapnúť: riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri ničom aj cena siete), dlaždice toho,
- * čo ide teraz (alebo najbližšia vec s rámom) a skupiny riadkov. Dlaždica aj riadok nesú `data-vec`,
- * ťuknutie otvorí detail spotrebiča. Bez Plánu dňa (bez predpovede, nič doma) nie je.
+ * Krivka jedného dňa ako uzavretá plocha nad osou: body spojené oblúkmi cez stredy úsečiek.
+ * @param {number[]} body výšky 0 až 1 @param {number} x0 ľavý kraj stĺpca dňa @param {number} sirka šírka stĺpca
+ */
+function plochaDna(body, x0, sirka) {
+    const p = body.map((v, i) => [x0 + 3 + (i * (sirka - 6)) / (body.length - 1), HREBEN.os - v * HREBEN.vyska]);
+    const r = (/** @type {number} */ n) => Math.round(n * 10) / 10;
+    let d = `M${r(p[0][0])},${HREBEN.os}L${r(p[0][0])},${r(p[0][1])}`;
+    for (let i = 1; i < p.length - 1; i++)
+        d += `Q${r(p[i][0])},${r(p[i][1])} ${r((p[i][0] + p[i + 1][0]) / 2)},${r((p[i][1] + p[i + 1][1]) / 2)}`;
+    const k = p[p.length - 1];
+    return `${d}L${r(k[0])},${r(k[1])}L${r(k[0])},${HREBEN.os}Z`;
+}
+
+/**
+ * Hrebeň týždňa (docs/navrhy/teraz-vyhlad-alternativy.html, C): krivky dní vedľa seba, čo je nad hranicou
+ * veľkých spotrebičov zlaté, pod ňou sivomodré, vzdialenejšie dni bledšie (predpoveď je menej istá),
+ * biela bodka je teraz. Pod každým dňom je tlačidlo cez celý stĺpec - ťuknutie ukáže plán toho dňa.
+ * @param {Model['hreben']} h @param {Dom} dom
+ */
+function renderHreben(h, dom) {
+    show(dom.tzHreben, !!h);
+    if (!h) return;
+    const sirka = HREBEN.w / h.dni.length;
+    const y = HREBEN.os - h.hranica * HREBEN.vyska;
+    const dni = h.dni
+        .map((d, i) => `<path d="${plochaDna(d.body, i * sirka, sirka)}" opacity="${i < 3 ? 1 : i < 5 ? 0.75 : 0.55}"/>`)
+        .join('');
+    const t = h.teraz;
+    const teraz = t ? `<circle class="hr-teraz" cx="${3 + t.x * (sirka - 6)}" cy="${HREBEN.os - t.y * HREBEN.vyska}" r="3.5"/>` : '';
+    setHtml(
+        dom.tzHrebenSvg,
+        `<svg viewBox="0 0 ${HREBEN.w} ${HREBEN.h}"><defs><clipPath id="tz-hreben-nad"><rect width="${HREBEN.w}" height="${y}"/></clipPath></defs>` +
+            `<g class="hr-pod">${dni}</g><g class="hr-nad" clip-path="url(#tz-hreben-nad)">${dni}</g>` +
+            `<line class="hr-hranica" x1="0" x2="${HREBEN.w}" y1="${y}" y2="${y}"/><line class="hr-os" x1="0" x2="${HREBEN.w}" y1="${HREBEN.os}" y2="${HREBEN.os}"/>${teraz}</svg>`,
+    );
+    dom.tzHrebenDni.setAttribute('aria-label', TERAZ_HREBEN.label);
+    // Zvolený deň nie je v HTML tlačidiel - ťuknutie ich tak neprepíše a fokus ostane, kde bol.
+    setHtml(
+        dom.tzHrebenDni,
+        h.dni
+            .map(
+                (d, i) =>
+                    // Meno dňa a či slnko stačí je pre čítačku za skratkou - prístupné meno tak obsahuje to, čo je vidno.
+                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}` +
+                    `<span class="sr"> – ${escapeHtml(d.nad ? d.name : `${d.name}, ${TERAZ_HREBEN.pod}`)}</span></button>`,
+            )
+            .join(''),
+    );
+    Array.from(dom.tzHrebenDni.children).forEach((b, i) => b.setAttribute('aria-pressed', String(i === h.zvoleny)));
+}
+
+/**
+ * Čo zapnúť: pri dnešku riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri ničom aj cena siete) a dlaždice
+ * toho, čo ide teraz (alebo najbližšia vec s rámom), pri inom dni jeho hlavička; pod tým skupiny riadkov
+ * zvoleného dňa. Dlaždica aj riadok nesú `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
+ * (bez predpovede, nič doma) nie je.
  * @param {Model['co']} co @param {Dom} dom
  */
 function renderCo(co, dom) {
     show(dom.tzCo, !!co);
     if (!co) return;
     const h = co.hore;
+    const dnes = !co.den;
+    show(dom.tzDen, !dnes);
+    setText(dom.tzDenNazov, co.den?.nazov ?? '');
+    setText(dom.tzDenPod, co.den?.pod ?? '');
+    show(dom.tzOko, dnes);
     dom.tzOkoBod.dataset.tone = h.bod;
     setHtml(dom.tzOkoT, `${escapeHtml(h.oko.text)}${h.oko.sub ? ` <span>· ${escapeHtml(h.oko.sub)}</span>` : ''}`);
-    show(dom.tzOkoPod, !!h.bezSlnka);
+    show(dom.tzOkoPod, dnes && !!h.bezSlnka);
     setText(dom.tzOkoPod, h.bezSlnka);
-    show(dom.tzPas, !!co.pas);
-    setHtml(dom.tzPas, (co.pas ?? []).map(pasDenHtml).join(''));
-    renderVyhlad(co.vyhlad, dom);
     const dlazdice = h.dlazdice.map(
         (d) =>
             `<button type="button" class="dl${d.cela ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
-            `<span><b>${escapeHtml(d.name)}</b><small>${escapeHtml(d.sub)}</small></span></button>`,
+            `<span><b>${escapeHtml(d.name)}</b><small>${escapeHtml(d.sub)}</small>` +
+            `${d.potom ? `<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</span></button>`,
     );
     const p = h.dalsi;
     const dalsi = p
@@ -78,57 +137,22 @@ function renderCo(co, dom) {
           `<span><span class="velky">${escapeHtml(p.cas)}</span><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.sub)}</small></span></button>`
         : '';
     setHtml(dom.tzDlazdice, dlazdice.join('') + dalsi);
-    show(dom.tzDlazdice, dlazdice.length > 0 || !!p);
+    show(dom.tzDlazdice, dnes && (dlazdice.length > 0 || !!p));
     setHtml(dom.tzSkupiny, co.skupiny.map(skupinaHtml).join(''));
 }
 
 /**
- * Deň v páse dní (docs/navrhy/teraz-viac-dni-bez-slnka.html, A): dnes bez ikony, zamračený deň s oblakom,
- * deň so slnkom zlatý. `--i` je poradie - dni sa pri zobrazení odkryjú zľava.
- * @param {NonNullable<NonNullable<Model['co']>['pas']>[number]} d @param {number} i
+ * Riadok skupiny: veľký čas, ikona, meno a doplnok; pri núdzovom čase pásik, koľko programu dá slnko
+ * (zlatá) a koľko sieť (modrá). @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r
  */
-const pasDenHtml = (d, i) =>
-    `<span data-druh="${d.druh}" style="--i:${i}">` +
-    `${d.druh === 'dnes' ? '' : weatherIcon(d.druh === 'slnko' ? 'jasno' : 'zamracene')}${escapeHtml(d.den)}` +
-    `${d.pod ? `<small>${escapeHtml(d.pod)}</small>` : ''}</span>`;
-
-/**
- * Využi dnešok (docs/navrhy/vyhlad-dni-bez-slnka.html): slovo s výhľadom a pás dní od dneška - dnes
- * a dni so slnkom zlaté, dni bez slnka s oblakom. Ten istý pás ako pri dňoch bez slnka.
- * @param {NonNullable<Model['co']>['vyhlad']} v @param {Dom} dom
- */
-function renderVyhlad(v, dom) {
-    show(dom.tzVyhlad, !!v);
-    setHtml(dom.tzVyhladT, v ? `${escapeHtml(v.text)} <span>· ${escapeHtml(v.sub)}</span>` : '');
-    setHtml(
-        dom.tzVyhladPas,
-        (v?.dni ?? [])
-            .map(
-                (d, i) =>
-                    `<span data-druh="${d.slnko ? 'slnko' : 'oblak'}"${d.dnes ? ' data-dnes' : ''} style="--i:${i}">` +
-                    `${weatherIcon(d.slnko ? 'jasno' : 'zamracene')}${escapeHtml(d.den)}</span>`,
-            )
-            .join(''),
-    );
-}
-
-/** Riadok skupiny: veľký čas, ikona, meno a doplnok. @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r */
 const riadokHtml = (r) =>
     `<button type="button" class="ri" data-kind="${r.kind}" data-vec="${r.id}"><span class="velky">${escapeHtml(r.cas)}</span>` +
     `<span class="ri-ico" aria-hidden="true">${vecIcon(r.id)}</span>` +
-    `<span><b>${escapeHtml(r.name)}</b><small>${escapeHtml(r.info)}</small></span></button>`;
+    `<span><b>${escapeHtml(r.name)}</b>${r.podiel === null ? '' : `<i class="podiel" style="--s:${r.podiel}%"></i>`}` +
+    `<small>${escapeHtml(r.info)}</small></span></button>`;
 
-/**
- * Skupina riadkov. Iný deň je karta s hlavičkou (deň, dátum, pri prvej či dnes slnko už nestačí,
- * docs/navrhy/teraz-iny-den.html, 2B), aby sa jeho časy nečítali ako dnešné.
- * @param {NonNullable<Model['co']>['skupiny'][number]} g
- */
-function skupinaHtml(g) {
-    const riadky = g.riadky.map(riadokHtml).join('');
-    if (!g.karta) return `<h2 class="co-h">${escapeHtml(g.nazov)}</h2><div class="riadky">${riadky}</div>`;
-    const pod = [g.karta.datum, g.karta.pozn].filter(Boolean).map(escapeHtml).join(' · ');
-    return `<section class="den-karta"><div class="den-karta-h"><h2>${escapeHtml(g.nazov)}</h2><span>${pod}</span></div>${riadky}</section>`;
-}
+/** Skupina riadkov s nadpisom. @param {NonNullable<Model['co']>['skupiny'][number]} g */
+const skupinaHtml = (g) => `<h2 class="co-h">${escapeHtml(g.nazov)}</h2><div class="riadky">${g.riadky.map(riadokHtml).join('')}</div>`;
 
 /**
  * Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, na nej plný úsek
@@ -163,7 +187,7 @@ function renderChipSheet(state, m, dom, T) {
                         `<h3>${escapeHtml(c.info.title)}</h3>${c.info.now ? `<p>${escapeHtml(c.info.now)}</p>` : ''}` +
                         `<p class="q">${escapeHtml(T.chipWhy)}</p><p class="dim">${escapeHtml(c.info.why)}</p></section>`,
                 )
-                .join('') + (m?.co?.pas ? `<p class="istota">${escapeHtml(TERAZ_PAS_ISTOTA)}</p>` : ''),
+                .join('') + (m?.co?.dlho ? `<p class="istota">${escapeHtml(TERAZ_PAS_ISTOTA)}</p>` : ''),
         );
         setText(dom.tzChipClose, T.chipClose);
     }
@@ -216,7 +240,11 @@ export function renderTeraz(state, dom) {
         renderVecSheet(state, null, dom, T);
         return;
     }
-    const m = terazModel({ ...state, previewMinutes: null }, { online: state.online, voice: state.voice, devices: state.doma });
+    const m = terazModel(
+        { ...state, previewMinutes: null },
+        // `?? 0`: starý web/state.js z cache po nasadení pole tzDen nemá (CLAUDE.md, Nasadenie a cache).
+        { online: state.online, voice: state.voice, devices: state.doma, den: state.tzDen ?? 0 },
+    );
     renderPocasie(state, m, dom);
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
@@ -240,6 +268,7 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskTitle, T.askTitle);
     setText(dom.tzAskText, T.askText);
     setText(dom.tzAskBtn, T.askBtn);
+    renderHreben(m.co ? m.hreben : null, dom);
     renderCo(m.co, dom);
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).

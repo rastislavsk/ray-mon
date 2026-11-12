@@ -1,10 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { vyhladNoticeText, vyhladPasText } from '../shared/messages.js';
+import { vyhladNoticeText } from '../shared/messages.js';
 import { planNotice, swNotice } from '../shared/oznamenia.js';
-import { terazModel } from '../shared/teraz.js';
-import { dniVyhladu, prvyBeh, vyhladOznamenia, vyhladPas, vyhladZmena } from '../shared/vyhlad.js';
+import { dniVyhladu, prvyBeh, vyhladOznamenia, vyhladZmena } from '../shared/vyhlad.js';
 import { fixture, fixtureData } from './helpers.js';
 
 const DEVICES = [...PLAN_DNA.devices];
@@ -109,8 +108,6 @@ test('vyhladNoticeText: výstraha s radou podľa toho, či je doma práčka, a z
         uvod: 'Predpoveď už dni bez slnka nečaká.',
     });
     assert.equal(v({ beh: null }), null);
-    assert.deepEqual(vyhladPasText(stvrtok), { text: 'Využi dnešok', sub: 'od štvrtka 4 dni bez slnka' });
-    assert.equal(vyhladPasText(zajtra, 'slusny').sub, 'zajtra slnko nebude');
 });
 
 test('vyhladOznamenia: upozorní o toľko dní vopred, koľko ich je bez slnka, najviac 3', () => {
@@ -165,29 +162,4 @@ test('ranné oznámenie: výhľad v nadpise, dnešok v texte; service worker vr�
     const pripomienka = swNotice(z, [{ id: 'pracka', at: at('10:30').toISOString() }], weather, at('10:30'), rano.vyhlad);
     assert.equal(pripomienka.reminder, true);
     assert.deepEqual(pripomienka.vyhlad, rano.vyhlad, 'pripomienka výhľad nemení');
-});
-
-test('pás Využi dnešok: dnes a dni po posledný deň bez slnka, len keď je čas; na karte Teraz', () => {
-    const p = vyhladPas(input(['2026-09-07', '2026-09-08']), DEVICES);
-    assert.deepEqual(p, {
-        text: 'Využi dnešok',
-        sub: 'od pondelka 2 dni bez slnka',
-        dni: [
-            { den: 'So', slnko: true, dnes: true },
-            { den: 'Ne', slnko: true, dnes: false },
-            { den: 'Po', slnko: false, dnes: false },
-            { den: 'Ut', slnko: false, dnes: false },
-        ],
-    });
-    assert.equal(vyhladPas(input(['2026-09-08', '2026-09-09']), DEVICES), null);
-    const teraz = terazModel({ ...input(['2026-09-06']), zdroj: null, loading: false, known: 'elektraren', previewMinutes: null });
-    assert.equal(teraz.co?.vyhlad?.sub, 'zajtra slnko nebude');
-    const vecer = terazModel({
-        ...input(['2026-09-06'], at('19:50')),
-        zdroj: null,
-        loading: false,
-        known: 'elektraren',
-        previewMinutes: null,
-    });
-    assert.equal(vecer.co?.vyhlad, null, 'večer dnes slnko už nie je');
 });

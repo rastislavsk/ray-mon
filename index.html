@@ -148,21 +148,24 @@
                     <p id="tz-ask-text"></p>
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
-                <!-- Čo zapnúť: riadok nad dlaždicami (odkiaľ ide prúd teraz, za „i“ vysvetlenie), dlaždice toho,
-                     čo ide teraz, alebo najbližšia vec, a pod nimi skupiny riadkov (Neskôr dnes, Zajtra, …).
-                     Dlaždica aj riadok otvoria detail spotrebiča. -->
+                <!-- Čo zapnúť: hrebeň týždňa (krivky dní predpovede s hranicou veľkých spotrebičov; ťuknutie
+                     na deň ukáže jeho plán), pri inom dni jeho hlavička, pri dnešku riadok nad dlaždicami
+                     (odkiaľ ide prúd teraz, za „i“ vysvetlenie) a dlaždice toho, čo ide teraz, alebo
+                     najbližšia vec. Pod tým skupiny riadkov zvoleného dňa. Dlaždica aj riadok otvoria
+                     detail spotrebiča. -->
                 <div id="tz-co" class="co hidden">
+                    <div id="tz-hreben" class="hreben hidden">
+                        <div id="tz-hreben-svg" aria-hidden="true"></div>
+                        <div id="tz-hreben-dni" class="hreben-dni" role="group"></div>
+                    </div>
+                    <div id="tz-den" class="den-h hidden">
+                        <h2 id="tz-den-nazov"></h2>
+                        <span id="tz-den-pod"></span>
+                    </div>
                     <button type="button" id="tz-oko" class="oko" aria-haspopup="dialog">
                         <i id="tz-oko-bod" aria-hidden="true"></i><span id="tz-oko-t" class="oko-t"></span>
                     </button>
                     <p id="tz-oko-pod" class="oko-pod"></p>
-                    <!-- Pás dní, keď slnko príde až o viac dní: dnes, zamračené dni a deň so slnkom. Slovami
-                         to hovorí riadok nad ním, pás je len obraz. -->
-                    <div id="tz-pas" class="pas" aria-hidden="true"></div>
-                    <!-- Využi dnešok: dnes slnko je, potom prídu dni bez slnka. Ťuknutie otvorí kartu 7 dní. -->
-                    <button type="button" id="tz-vyhlad" class="vyhlad hidden">
-                        <span id="tz-vyhlad-t" class="vyhlad-t"></span><span id="tz-vyhlad-pas" class="pas" aria-hidden="true"></span>
-                    </button>
                     <div id="tz-dlazdice" class="mriezka"></div>
                     <div id="tz-skupiny"></div>
                 </div>
