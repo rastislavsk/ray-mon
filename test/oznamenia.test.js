@@ -6,6 +6,7 @@ import {
     klikUrl,
     klikZAdresy,
     morningDue,
+    odberTrebaObnovit,
     oznameniaDefault,
     oznamOvladanie,
     parseOznamenia,
@@ -55,6 +56,14 @@ test('parseOznamenia: predvolene vypnuté o 9:00, poškodené a neznáme hodnoty
     // Spotrebiče zo staršej verzie sa tu ignorujú - presúva ich shared/doma.js.
     assert.deepEqual(parseOznamenia(JSON.stringify({ on: true, hour: 7, devices: ['pracka', 'bojler'] })), { on: true, hour: 7 });
     assert.deepEqual(parseOznamenia(JSON.stringify({ on: 'ano', hour: 13 })), { on: false, hour: 9 });
+});
+
+test('odberTrebaObnovit: po OZNAMENIA.obnovDni dňoch, bez záznamu hneď; Worker ho drží dlhšie', () => {
+    const den = 24 * 3600 * 1000;
+    assert.ok(odberTrebaObnovit(0, 1e12));
+    assert.ok(!odberTrebaObnovit(1e12, 1e12 + OZNAMENIA.obnovDni * den - 1));
+    assert.ok(odberTrebaObnovit(1e12, 1e12 + OZNAMENIA.obnovDni * den));
+    assert.ok(OZNAMENIA.odberDni > 2 * OZNAMENIA.obnovDni);
 });
 
 test('morningDue: prvá štvrťhodina zvolenej hodiny v pásme telefónu', () => {

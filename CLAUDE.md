@@ -64,6 +64,14 @@ Návrh: `docs/navrhy/odkaz-verzia.html`.
 - **Slovenčina** v komentároch, textoch pre používateľa aj v správach commitov.
 - **KISS.** Keď sú dve riešenia rovnako dobré, vyhráva jednoduchšie.
 
+## Content-Security-Policy
+
+`index.html` má CSP v značke `<meta>` (GitHub Pages hlavičky nevie): skripty len vlastné a z cdnjs,
+nič vložené v HTML, pripojenia len na vymenované adresy. Keď appka začne čítať z novej adresy alebo
+načítavať novú knižnicu, patrí aj do CSP – inak to prejde testami (sieť podvrhujú) a zlyhá až
+v prehliadači. Stráži to `test/csp.test.js`. Do HTML nepíš `<script>` s obsahom, `<style>` ani
+`onclick=`; štýl v atribúte `style` povolený je (grafy). `obloha/index.html` CSP nemá, je to len presmerovanie.
+
 ## Pozor na kaskádu v CSS
 
 **Invariant: nič nesmie prebiť utilitu `.hidden`.** Keď jej appka pridá triedu, prvok musí

@@ -3,6 +3,9 @@
 // ktorý vie otvoriť iba tento Worker - kto vytiahne úložisko telefónu, prístup k účtu výrobcu
 // nezíska. Tajný kľúč je v nastavení Workera (`wrangler secret put PECAT_KLUC`), nie v repozitári.
 // Keď sa vymení, staré balíčky sa neotvoria a každý sa musí pripojiť znova.
+//
+// Pečať do zdieľaného odkazu má navyše platnosť (`platiDo`): odkaz, ktorý ostal v správach, po nej
+// už nič nenameria. Kto ho otvoril včas, dostane pri prvom meraní trvalú pečať (worker/src/index.js).
 
 const VERZIA = 'v1';
 // Viaže šifru na tento účel: balíček z inej appky s tým istým kľúčom by sa neotvoril.
@@ -43,11 +46,14 @@ export function pecatKey(secret) {
 
 /**
  * Zapečatí prístup: `sposob` (id zo shared/zdroje.js) a údaje, ktoré Worker potrebuje na meranie.
- * @param {Promise<CryptoKey>} key @param {{ sposob: string, pristup: Record<string, unknown> }} obsah
+ * `platiDo` (ms) je len pri pečati do zdieľaného odkazu.
+ * @param {Promise<CryptoKey>} key @param {{ sposob: string, pristup: Record<string, unknown>, platiDo?: number }} obsah
  */
 export async function zapecat(key, obsah) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const data = new TextEncoder().encode(JSON.stringify({ s: obsah.sposob, p: obsah.pristup }));
+    const telo =
+        obsah.platiDo === undefined ? { s: obsah.sposob, p: obsah.pristup } : { s: obsah.sposob, p: obsah.pristup, x: obsah.platiDo };
+    const data = new TextEncoder().encode(JSON.stringify(telo));
     const sifra = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: UCEL }, await key, data));
     const out = new Uint8Array(iv.length + sifra.length);
     out.set(iv);
@@ -56,11 +62,12 @@ export async function zapecat(key, obsah) {
 }
 
 /**
- * Otvorí zapečatený prístup. Cudzí, poškodený alebo iným kľúčom zapečatený balíček je null.
- * @param {Promise<CryptoKey>} key @param {string} pecat
- * @returns {Promise<{ sposob: string, pristup: Record<string, unknown> } | null>}
+ * Otvorí zapečatený prístup. Cudzí, poškodený alebo iným kľúčom zapečatený balíček je null,
+ * rovnako pečať zo zdieľaného odkazu po platnosti (`now`).
+ * @param {Promise<CryptoKey>} key @param {string} pecat @param {Date} now
+ * @returns {Promise<{ sposob: string, pristup: Record<string, unknown>, platiDo?: number } | null>}
  */
-export async function otvor(key, pecat) {
+export async function otvor(key, pecat, now) {
     const [verzia, telo] = pecat.split('.');
     if (verzia !== VERZIA || !telo) return null;
     try {
@@ -71,7 +78,9 @@ export async function otvor(key, pecat) {
             bytes.slice(12),
         );
         const o = JSON.parse(new TextDecoder().decode(data));
-        return typeof o.s === 'string' && o.p && typeof o.p === 'object' ? { sposob: o.s, pristup: o.p } : null;
+        if (typeof o.s !== 'string' || !o.p || typeof o.p !== 'object') return null;
+        if (o.x === undefined) return { sposob: o.s, pristup: o.p };
+        return typeof o.x === 'number' && o.x > now.getTime() ? { sposob: o.s, pristup: o.p, platiDo: o.x } : null;
     } catch {
         return null;
     }

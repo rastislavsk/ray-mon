@@ -40,6 +40,13 @@ export function klikZAdresy(href) {
     return url.pathname + url.search + url.hash;
 }
 
+/**
+ * Treba odber poslať Workeru znova? Worker ho drží len OZNAMENIA.odberDni dní od posledného
+ * poslania; appka ho obnovuje po OZNAMENIA.obnovDni dňoch. Bez záznamu (odber spred obnovovania) áno.
+ * @param {number} poslaneAt kedy naposledy (ms), 0 nikdy @param {number} nowMs
+ */
+export const odberTrebaObnovit = (poslaneAt, nowMs) => nowMs - poslaneAt >= OZNAMENIA.obnovDni * 24 * 3600 * 1000;
+
 /** Pred prvou voľbou: vypnuté a predvolená hodina. @returns {Oznamenia} */
 export const oznameniaDefault = () => ({ on: false, hour: OZNAMENIA.hour });
 

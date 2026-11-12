@@ -10,6 +10,7 @@ import {
     WEATHER_KEEP_MS,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
@@ -72,6 +73,22 @@ async function loadPv(zdroj, fetchImpl) {
     const pv = validPv(body.pv);
     if (!pv) throw new Error('Meranie neprišlo v platnom tvare');
     return { pv, pecat: typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null };
+}
+
+/**
+ * Pečať do odkazu Zdieľať appku: ten istý prístup k meraniu, ale len na ZDIELANIE.platiDni dní.
+ * Nikdy nehádže - keď ju Worker nevydá, je null a odkaz ide bez merania.
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<string | null>}
+ */
+export async function zdielajPecat(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_ZDIELAJ_URL, pecat, fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
 }
 
 /**

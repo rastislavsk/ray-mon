@@ -17,12 +17,12 @@ async function testKeys() {
 
 /** KV v pamäti: hodnoty, metadáta, zoznam po stránkach s kurzorom. */
 function fakeKv(pageSize = 2) {
-    /** @type {Map<string, { metadata: any, expiration?: number }>} */ const data = new Map();
+    /** @type {Map<string, { metadata: any, expiration?: number, expirationTtl?: number }>} */ const data = new Map();
     return {
         data,
-        /** @param {string} key @param {string} _v @param {{ metadata?: any, expiration?: number }} [opts] */
+        /** @param {string} key @param {string} _v @param {{ metadata?: any, expiration?: number, expirationTtl?: number }} [opts] */
         async put(key, _v, opts = {}) {
-            data.set(key, { metadata: opts.metadata, expiration: opts.expiration });
+            data.set(key, { metadata: opts.metadata, expiration: opts.expiration, expirationTtl: opts.expirationTtl });
         },
         /** @param {string} key */
         async delete(key) {
@@ -67,6 +67,7 @@ test('POST /oznamenia uloží odber do metadát, on: false ho zruší; zlé úda
     assert.match(key, /^o:[0-9a-f]{32}$/);
     assert.ok(!key.includes('abc123'), 'adresa nie je v kľúči');
     assert.deepEqual(val.metadata, { e: FCM, h: 9, tz: 'Europe/Bratislava' });
+    assert.equal(val.expirationTtl, OZNAMENIA.odberDni * 24 * 3600, 'neobnovený odber sám vyprší');
     res = await handleRequest(post('/oznamenia', { endpoint: FCM, on: false }), env);
     assert.equal(res.status, 200);
     assert.equal(ODBERY.data.size, 0);

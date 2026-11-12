@@ -9,16 +9,29 @@
 // POST /pv: zapečatený prístup -> meranie vo formáte `pv`. Prijme aj holý odkaz na kiosk, ktorý
 // posielali appky spred zapečatenia - vtedy k meraniu pribalí aj zapečatený prístup, appka si ho
 // uloží namiesto odkazu.
+// POST /zdielaj: zapečatený prístup -> ten istý prístup s platnosťou ZDIELANIE.platiDni dní, do
+// odkazu Zdieľať appku. Kto odkaz otvorí včas, dostane pri prvom meraní (/pv) trvalú pečať.
 // GET /radar/<snímka>?b=<bloky>: kúsky radarového súboru OPERA pre kartu Radar (worker/src/radar.js).
 
-import { WORKER_OZNAMENIA_PATH, WORKER_PRIPOJ_PATH, WORKER_PRIPOMEN_PATH, WORKER_PV_PATH, WORKER_RADAR_PATH } from '../../shared/config.js';
+import {
+    WORKER_OZNAMENIA_PATH,
+    WORKER_PRIPOJ_PATH,
+    WORKER_PRIPOMEN_PATH,
+    WORKER_PV_PATH,
+    WORKER_RADAR_PATH,
+    WORKER_ZDIELAJ_PATH,
+    ZDIELANIE,
+} from '../../shared/config.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
 import { handleRadar } from './radar.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
-/** @typedef {{ PECAT_KLUC?: string } & import('./oznamenia.js').OznamEnv} Env */
+/**
+ * `LIMIT`: obmedzenie počtu volaní z jednej adresy (väzba `ratelimits` vo wrangler.toml).
+ * @typedef {{ PECAT_KLUC?: string, LIMIT?: { limit: (o: { key: string }) => Promise<{ success: boolean }> } } & import('./oznamenia.js').OznamEnv} Env
+ */
 
 const HEADERS = {
     'access-control-allow-origin': '*',
@@ -62,6 +75,18 @@ async function telo(request) {
 }
 
 /**
+ * Pečať, ktorú si appka po meraní uloží namiesto doterajšej, alebo nič. Novú treba, keď sa prístup
+ * zmenil (nový token), a keď appka merala s pečaťou zo zdieľaného odkazu - tá sa pri prvom meraní
+ * vymení za trvalú.
+ * @param {Promise<CryptoKey>} key @param {{ sposob: string, pristup: Record<string, unknown>, platiDo?: number }} obsah
+ * @param {Record<string, unknown> | undefined} zmeneny prístup, ktorý vrátilo meranie
+ */
+async function novaPecat(key, obsah, zmeneny) {
+    const pristup = zmeneny ?? (obsah.platiDo === undefined ? null : obsah.pristup);
+    return pristup ? zapecat(key, { sposob: obsah.sposob, pristup }) : undefined;
+}
+
+/**
  * POST /pv: meranie zo zapečateného prístupu (text v tele), alebo z holého odkazu na kiosk.
  * @param {Request} request @param {Env} env @param {Date} now @param {typeof fetch} fetchImpl
  */
@@ -80,12 +105,12 @@ export async function handlePv(request, env, now, fetchImpl) {
             return chyba(err);
         }
     }
-    const obsah = key && (await otvor(key, body));
+    const obsah = key && (await otvor(key, body, now));
     const zdroj = obsah && ZDROJE[obsah.sposob];
     if (!obsah || !zdroj) return json(400, { chyba: 'udaje' });
     try {
         const res = await zdroj.meraj(obsah.pristup, ctx);
-        const pecat = res.pristup && key ? await zapecat(key, { sposob: obsah.sposob, pristup: res.pristup }) : undefined;
+        const pecat = await novaPecat(key, obsah, res.pristup);
         zalogujMeranie(obsah.sposob, res.pv);
         return json(200, { pv: res.pv, pecat });
     } catch (err) {
@@ -115,10 +140,10 @@ function pripojReq(body) {
 /**
  * Údaje formulára doplnené zo starej pečate toho istého spôsobu (obnova prístupu: Deye pýta len
  * heslo). Čo človek zadal, má prednosť; cudzia či neplatná pečať nič nedoplní.
- * @param {NonNullable<ReturnType<typeof pripojReq>>} req @param {Promise<CryptoKey>} key
+ * @param {NonNullable<ReturnType<typeof pripojReq>>} req @param {Promise<CryptoKey>} key @param {Date} now
  */
-async function sPecatou(req, key) {
-    const stara = req.pecat && req.zdroj.zPecate ? await otvor(key, req.pecat) : null;
+async function sPecatou(req, key, now) {
+    const stara = req.pecat && req.zdroj.zPecate ? await otvor(key, req.pecat, now) : null;
     if (!stara || stara.sposob !== req.sposob || !req.zdroj.zPecate) return req.udaje;
     const z = Object.entries(req.zdroj.zPecate(stara.pristup)).filter(([, v]) => v);
     return { ...Object.fromEntries(z), ...req.udaje };
@@ -135,7 +160,7 @@ export async function handlePripoj(request, env, now, fetchImpl) {
     const req = pripojReq(await telo(request));
     if (!req) return json(400, { chyba: 'udaje' });
     try {
-        const najdene = await req.zdroj.pripoj(await sPecatou(req, key), { now, fetchImpl });
+        const najdene = await req.zdroj.pripoj(await sPecatou(req, key, now), { now, fetchImpl });
         const stanice = await Promise.all(
             najdene.map(async (n) => ({
                 nazov: n.nazov,
@@ -150,23 +175,69 @@ export async function handlePripoj(request, env, now, fetchImpl) {
     }
 }
 
+/**
+ * POST /zdielaj: zapečatený prístup (alebo holý odkaz na kiosk spred zapečatenia) v tele -> pečať
+ * toho istého prístupu s platnosťou ZDIELANIE.platiDni dní. Výrobcu sa nepýta.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleZdielaj(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key) return json(503, { chyba: 'server' });
+    const body = await telo(request);
+    const obsah =
+        body === null ? null : kioskApiUrl(body) ? { sposob: 'huawei-kiosk', pristup: { odkaz: body } } : await otvor(key, body, now);
+    if (!obsah || !ZDROJE[obsah.sposob]) return json(400, { chyba: 'udaje' });
+    const platiDo = now.getTime() + ZDIELANIE.platiDni * 24 * 3600 * 1000;
+    return json(200, { pecat: await zapecat(key, { sposob: obsah.sposob, pristup: obsah.pristup, platiDo }) });
+}
+
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
+
+/**
+ * Uloženie odberu či pripomienky. Zlyhaný zápis do KV (denný limit zápisov) je 503 s hlavičkami
+ * CORS, nie holá chyba Workera.
+ * @param {(body: string | null) => Promise<number>} uloz @param {Request} request
+ */
+const oznam = async (uloz, request) => oznamOdpoved(await uloz(await telo(request)).catch(() => 503));
+
+/**
+ * Cesty POST. `limit`: počet volaní z jednej adresy je obmedzený - pripojenie by sa inak dalo
+ * použiť na skúšanie cudzích hesiel u výrobcov a odbery na zapĺňanie úložiska. Meranie (/pv)
+ * obmedzené nie je: pýta sa každú minútu z každej otvorenej appky a bez platnej pečate nič nespraví.
+ * @type {Record<string, { limit: boolean, run: (request: Request, env: Env, now: Date, fetchImpl: typeof fetch) => Promise<Response> }>}
+ */
+const CESTY = {
+    [WORKER_PV_PATH]: { limit: false, run: handlePv },
+    [WORKER_PRIPOJ_PATH]: { limit: true, run: handlePripoj },
+    [WORKER_ZDIELAJ_PATH]: { limit: true, run: handleZdielaj },
+    [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
+    [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
+};
+
+/**
+ * Smie táto adresa volať cestu? Bez väzby (testy, miestny beh) a pri jej chybe áno - výpadok
+ * počítadla nemá zastaviť appku.
+ * @param {Request} request @param {Env} env @param {string} path
+ */
+async function vLimite(request, env, path) {
+    if (!env.LIMIT) return true;
+    const adresa = request.headers.get('cf-connecting-ip') ?? '';
+    return env.LIMIT.limit({ key: `${path}:${adresa}` }).then(
+        (r) => r.success,
+        () => true,
+    );
+}
 
 /** @param {Request} request @param {Env} [env] @param {Date} [now] @param {typeof fetch} [fetchImpl] */
 export async function handleRequest(request, env = {}, now = new Date(), fetchImpl = fetch) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: HEADERS });
     const path = new URL(request.url).pathname;
-    const paths = [WORKER_PV_PATH, WORKER_PRIPOJ_PATH, WORKER_OZNAMENIA_PATH, WORKER_PRIPOMEN_PATH];
-    if (!paths.includes(path)) return json(404, { error: 'neznáma cesta' });
+    const cesta = Object.hasOwn(CESTY, path) ? CESTY[path] : null;
+    if (!cesta) return json(404, { error: 'neznáma cesta' });
     if (request.method !== 'POST') return json(405, { error: 'nepovolená metóda' });
-    if (path === WORKER_OZNAMENIA_PATH || path === WORKER_PRIPOMEN_PATH) {
-        const body = await telo(request);
-        // Zlyhaný zápis do KV (denný limit zápisov) je 503 s hlavičkami CORS, nie holá chyba Workera.
-        const status = await (path === WORKER_OZNAMENIA_PATH ? ulozOdber(body, env) : ulozPripomienku(body, env, now)).catch(() => 503);
-        return oznamOdpoved(status);
-    }
-    return path === WORKER_PV_PATH ? handlePv(request, env, now, fetchImpl) : handlePripoj(request, env, now, fetchImpl);
+    if (cesta.limit && !(await vLimite(request, env, path))) return json(429, { chyba: 'server' });
+    return cesta.run(request, env, now, fetchImpl);
 }
 
 export default {

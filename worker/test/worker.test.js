@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { ZDIELANIE } from '../../shared/config.js';
 import { handlePripoj, handlePv, handleRequest } from '../src/index.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
 
@@ -37,11 +38,11 @@ test('pečať: zapečatený prístup sa otvorí len tým istým kľúčom a ned�
     assert.match(pecat, /^v1\.[A-Za-z0-9_-]+$/);
     assert.ok(!pecat.includes('Abc123xyz'));
     assert.notEqual(await zapecat(key, { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } }), pecat, 'zakaždým iný vektor');
-    assert.deepEqual(await otvor(key, pecat), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
+    assert.deepEqual(await otvor(key, pecat, NOW), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
     const iny = /** @type {Promise<CryptoKey>} */ (pecatKey(INY.PECAT_KLUC));
-    assert.equal(await otvor(iny, pecat), null);
-    assert.equal(await otvor(key, `${pecat.slice(0, -2)}AA`), null, 'pozmenený balíček');
-    assert.equal(await otvor(key, 'v2.abc'), null);
+    assert.equal(await otvor(iny, pecat, NOW), null);
+    assert.equal(await otvor(key, `${pecat.slice(0, -2)}AA`, NOW), null, 'pozmenený balíček');
+    assert.equal(await otvor(key, 'v2.abc', NOW), null);
     assert.equal(pecatKey(undefined), null);
     assert.throws(() => pecatKey(btoa('kratky')), /32 bajtov/);
 });
@@ -108,7 +109,7 @@ test('POST /pv: holý odkaz na kiosk (appka spred zapečatenia) vráti pv aj zap
     assert.equal(body.pv.realTimePowerKw, 6.412);
     assert.equal(body.pv.updatedAt, NOW.toISOString());
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
-    assert.deepEqual(await otvor(key, body.pecat), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
+    assert.deepEqual(await otvor(key, body.pecat, NOW), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
     // Bez kľúča Workera meria ďalej, len bez pečate.
     const bezKluca = await (await handleRequest(pvRequest(KIOSK_PAGE), {}, NOW, kioskOk())).json();
     assert.equal(bezKluca.pv.realTimePowerKw, 6.412);
@@ -417,7 +418,7 @@ test('Huawei Northbound: priebeh dňa z device/history najviac raz za 15 minút,
     const potom = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(15), s.impl)).json();
     assert.equal(historie().length, 2);
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
-    assert.equal((await otvor(await key, potom.pecat))?.pristup.krivkaAt, o(15).getTime());
+    assert.equal((await otvor(await key, potom.pecat, NOW))?.pristup.krivkaAt, o(15).getTime());
     // Účet bez povoleného rozhrania: meranie prejde bez krivky a ďalší pokus až o 15 minút.
     const bez = northbound({ historiaFail: 401, platne: ['t1'] });
     const r = await (await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, bez.impl)).json();
@@ -441,7 +442,7 @@ test('Huawei Northbound: priebeh dňa z device/history najviac raz za 15 minút,
     const m = northbound({ platne: ['t1'] });
     const prve = await (await handlePv(pvRequest(stara), ENV, NOW, m.impl)).json();
     assert.deepEqual(prve.pv.realCurveToday, dnes);
-    assert.deepEqual((await otvor(await key, prve.pecat))?.pristup.dns, { 38: ['NE=11'] });
+    assert.deepEqual((await otvor(await key, prve.pecat, NOW))?.pristup.dns, { 38: ['NE=11'] });
     await handlePv(pvRequest(prve.pecat), ENV, o(5), m.impl);
     assert.equal(m.calls.filter((c) => c.path === '/thirdData/getDevList').length, 1, 'zoznam zariadení len raz');
 });
@@ -459,13 +460,13 @@ test('Huawei Northbound: rok z getKpiStationYear najviac raz za 6 hodín, bez ne
     assert.equal(skoro.pv.yearEnergyKwh, null);
     assert.equal(roky(), 1);
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
-    const pristup = (await otvor(await key, stanice[0].pecat))?.pristup;
+    const pristup = (await otvor(await key, stanice[0].pecat, NOW))?.pristup;
     assert.equal(pristup?.rokAt, NOW.getTime());
     const pecat = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...pristup, tokenAt: o(6 * 60).getTime() } });
     const potom = await (await handlePv(pvRequest(pecat), ENV, o(6 * 60), s.impl)).json();
     assert.equal(potom.pv.yearEnergyKwh, 4321.5);
     assert.equal(roky(), 2);
-    assert.equal((await otvor(await key, potom.pecat))?.pristup.rokAt, o(6 * 60).getTime());
+    assert.equal((await otvor(await key, potom.pecat, NOW))?.pristup.rokAt, o(6 * 60).getTime());
     // Účet bez povoleného rozhrania: meranie prejde, rok ostane prázdny a ďalší pokus až o 6 hodín.
     const bez = northbound({ rokFail: 401 });
     const r = await (await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, bez.impl)).json();
@@ -513,7 +514,7 @@ test('Huawei Northbound: menič s batériou (23093) - pripojenie ho nájde, star
     const m = northbound({ devTyp: 23093, platne: ['t1'] });
     const prve = await (await handlePv(pvRequest(stara), ENV, NOW, m.impl)).json();
     assert.equal(prve.pv.realTimePowerKw, 4.2);
-    assert.equal((await otvor(await key, prve.pecat))?.pristup.devs['23093'][0], 11);
+    assert.equal((await otvor(await key, prve.pecat, NOW))?.pristup.devs['23093'][0], 11);
     const druhe = await (await handlePv(pvRequest(prve.pecat), ENV, NOW, m.impl)).json();
     assert.equal(druhe.pv.realTimePowerKw, 4.2);
     assert.equal(m.calls.filter((c) => c.path === '/thirdData/getDevList').length, 1, 'zoznam zariadení len raz');
@@ -659,7 +660,7 @@ test('Deye: heslo ide len ako SHA-256 a do pečate nie, meria výkon a dnešok t
     assert.equal(login.password, createHash('sha256').update('moje-heslo').digest('hex'));
     assert.ok(!JSON.stringify(f.calls).includes('moje-heslo'), 'heslo nikam neodišlo v čitateľnej podobe');
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
-    const obsah = await otvor(key, r.json.stanice[0].pecat);
+    const obsah = await otvor(key, r.json.stanice[0].pecat, NOW);
     assert.ok(
         obsah && !JSON.stringify(obsah).includes('moje-heslo') && !JSON.stringify(obsah).includes(login.password),
         'v pečati nie je heslo ani jeho hash',
@@ -848,7 +849,7 @@ async function overKrivku(p) {
     // Po 15 minútach znova, s novým časom v pečati.
     const potom = await (await handlePv(pvRequest(stanice[0].pecat), ENV, o(15), f.impl)).json();
     assert.equal(pocet(), 2, p.sposob);
-    assert.equal((await otvor(await key, potom.pecat))?.pristup.krivkaAt, o(15).getTime(), p.sposob);
+    assert.equal((await otvor(await key, potom.pecat, NOW))?.pristup.krivkaAt, o(15).getTime(), p.sposob);
 }
 
 test('krivka dňa: Fox ESS, Solis, Deye a Victron - priebeh dňa pri pripojení, potom najviac raz za 15 minút', async () => {
@@ -863,4 +864,55 @@ test('krivka dňa: Fox ESS, Solis, Deye a Victron - priebeh dňa pri pripojení,
     const r = await (await handlePripoj(pripojRequest({ sposob: 'foxess-kluc', udaje: { kluc: 'k' } }), ENV, NOW, bez.impl)).json();
     assert.equal(r.stanice[0].pv.realTimePowerKw, 3.4);
     assert.deepEqual(r.stanice[0].pv.realCurveToday, []);
+});
+
+test('POST /zdielaj: pečať do odkazu platí ZDIELANIE.platiDni dní, prvé meranie ju vymení za trvalú', async () => {
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const trvala = await zapecat(key, { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
+    const res = await handleRequest(post('/zdielaj', trvala), ENV, NOW);
+    assert.equal(res.status, 200);
+    const { pecat } = await res.json();
+    const platiDo = NOW.getTime() + ZDIELANIE.platiDni * 24 * 3600 * 1000;
+    assert.deepEqual(await otvor(key, pecat, NOW), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE }, platiDo });
+    assert.equal(await otvor(key, pecat, new Date(platiDo)), null, 'po platnosti sa neotvorí');
+
+    // Včas: meranie prejde a appka dostane trvalú pečať namiesto dočasnej.
+    const vcas = await handleRequest(pvRequest(pecat), ENV, new Date(platiDo - 1000), kioskOk());
+    assert.equal(vcas.status, 200);
+    const nova = (await vcas.json()).pecat;
+    assert.deepEqual(await otvor(key, nova, new Date(platiDo + 1e9)), { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
+    // Neskoro: 400 bez sťahovania, appka vyzve pripojiť meranie znova.
+    const neskoro = await handleRequest(
+        pvRequest(pecat),
+        ENV,
+        new Date(platiDo),
+        asFetch(async () => assert.fail('nesmie sťahovať')),
+    );
+    assert.equal(neskoro.status, 400);
+    // Trvalá pečať sa pri meraní nemení - kiosk nový prístup nevracia.
+    assert.equal((await (await handleRequest(pvRequest(trvala), ENV, NOW, kioskOk())).json()).pecat, undefined);
+
+    // Holý odkaz na kiosk (appka spred zapečatenia) sa do odkazu zapečatí tiež.
+    const zKiosku = await (await handleRequest(post('/zdielaj', KIOSK_PAGE), ENV, NOW)).json();
+    assert.equal((await otvor(key, zKiosku.pecat, NOW))?.platiDo, platiDo);
+    assert.equal((await handleRequest(post('/zdielaj', 'v1.cudzie'), ENV, NOW)).status, 400);
+    assert.equal((await handleRequest(post('/zdielaj', 'x'.repeat(10001)), ENV, NOW)).status, 400);
+    assert.equal((await handleRequest(post('/zdielaj', trvala), {}, NOW)).status, 503);
+});
+
+test('obmedzenie počtu volaní: pripojenie, zdieľanie a odbery 429 nad limit, meranie nie; chyba počítadla nič nezastaví', async () => {
+    /** @type {string[]} */ const keys = [];
+    const plny = { ...ENV, LIMIT: { limit: async (/** @type {{ key: string }} */ o) => (keys.push(o.key), { success: false }) } };
+    const zAdresy = (/** @type {string} */ path) =>
+        new Request(`https://w.test${path}`, { method: 'POST', body: 'x', headers: { 'cf-connecting-ip': '203.0.113.7' } });
+    for (const path of ['/pripoj', '/zdielaj', '/oznamenia', '/pripomen']) {
+        const res = await handleRequest(zAdresy(path), plny, NOW);
+        assert.equal(res.status, 429, path);
+        assert.equal(res.headers.get('access-control-allow-origin'), '*', 'appka musí odpoveď vidieť');
+    }
+    assert.deepEqual(keys, ['/pripoj:203.0.113.7', '/zdielaj:203.0.113.7', '/oznamenia:203.0.113.7', '/pripomen:203.0.113.7']);
+    assert.equal((await handleRequest(zAdresy('/pv'), plny, NOW)).status, 400, 'meranie sa nepočíta');
+    assert.equal(keys.length, 4);
+    const pokazeny = { ...ENV, LIMIT: { limit: async () => Promise.reject(new Error('výpadok')) } };
+    assert.equal((await handleRequest(zAdresy('/zdielaj'), pokazeny, NOW)).status, 400, 'prešlo ďalej, zlé telo');
 });

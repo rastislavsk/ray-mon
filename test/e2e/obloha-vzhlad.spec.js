@@ -16,6 +16,7 @@ import {
     TARIFF,
     VYMAZANE_STORAGE_KEY,
     WORKER_PV_URL,
+    WORKER_ZDIELAJ_URL,
 } from '../../shared/config.js';
 import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
 import { NS_FOLDS } from '../../web/state.js';
@@ -315,9 +316,27 @@ test.describe('Zdieľať appku', () => {
         await expect(odkaz).toHaveText(sNastavenim);
         await expect(odkaz).toHaveAttribute('href', sNastavenim);
         expect(settingsFromLink(sNastavenim)?.zdroj).toBe(null);
+        // Meranie ide do odkazu len s pečaťou na čas, ktorú vydá Worker - trvalá z telefónu neodchádza.
+        const docasna = `v1.${'d'.repeat(40)}`;
+        /** @type {string[]} */ const poslane = [];
+        await page.route(WORKER_ZDIELAJ_URL, (route) => {
+            poslane.push(route.request().postData() ?? '');
+            return route.fulfill({ json: { pecat: docasna } });
+        });
         await page.locator('#ns-share-kiosk').check();
-        await expect(odkaz).toHaveText(shareUrl(APP_URL, OWNER, true));
+        const sMeranim = shareUrl(APP_URL, { ...OWNER, zdroj: { ...TEST_ZDROJ, pecat: docasna } }, true);
+        await expect(odkaz).toHaveText(sMeranim);
+        expect(poslane).toEqual([TEST_ZDROJ.pecat]);
+        expect(sMeranim).not.toContain(shareUrl(APP_URL, OWNER, true).split('=')[1]);
         await page.locator('#ns-share-kiosk').uncheck();
+        await expect(odkaz).toHaveText(sNastavenim);
+        // Worker pečať nevydá: odkaz ostane bez merania a voľba to povie.
+        await page.route(WORKER_ZDIELAJ_URL, (route) => route.fulfill({ status: 503, json: { chyba: 'server' } }));
+        // click, nie check: voľba sa po odmietnutí hneď vráti a check by čakal na zaškrtnutie.
+        await page.locator('#ns-share-kiosk').click();
+        await expect(page.locator('#ns-share-kiosk-label')).toContainText('pribaliť nedá');
+        await expect(page.locator('#ns-share-kiosk')).not.toBeChecked();
+        await expect(odkaz).toHaveText(sNastavenim);
 
         // Escape zavrie okno a fokus sa vráti na riadok.
         await page.keyboard.press('Escape');
