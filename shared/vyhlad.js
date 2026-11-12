@@ -1,5 +1,6 @@
-// Výhľad dní bez slnka vopred (docs/navrhy/vyhlad-dni-bez-slnka.html, A): ranné oznámenie a karta
-// Teraz povedia vopred, že prídu dni bez slnka a treba využiť dnešok. Deň bez slnka je deň, keď sa
+// Výhľad dní bez slnka vopred (docs/navrhy/vyhlad-dni-bez-slnka.html, A): ranné oznámenie povie
+// vopred, že prídu dni bez slnka a treba využiť dnešok (na karte Teraz to ukazuje hrebeň týždňa,
+// shared/tyzden.js). Deň bez slnka je deň, keď sa
 // zo slnka nezmestí ani jeden spotrebič z Čo máš doma - ten istý rozvrh, aký robí Plán dňa
 // (shared/plan-dna.js). Upozorní sa o toľko dní vopred, koľko dní bez slnka ide za sebou, najviac
 // VYHLAD.maxDni, a len keď dnes slnko je. Zmenu predpovede povie len ranné oznámenie, oproti tomu,
@@ -7,8 +8,8 @@
 
 import { VYHLAD } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
-import { dayNameShort, weekDayName } from './format.js';
-import { vyhladNoticeText, vyhladPasText } from './messages-core.js';
+import { weekDayName } from './format.js';
+import { vyhladNoticeText } from './messages-core.js';
 import { dayCtx } from './mozem.js';
 import { chosen, najlepsiDen, planDna } from './plan-dna.js';
 import { localDateKey } from './solar.js';
@@ -101,22 +102,5 @@ export function vyhladOznamenia(input, devices, posledny, voice = 'drzy') {
     return {
         text: vyhladNoticeText({ beh: povie, zmena, predtym, dnes, pracka: devices.includes('pracka') }, voice),
         vyhlad: povie && { date: povie.date, pocet: povie.pocet },
-    };
-}
-
-/**
- * Pás „Využi dnešok“ na karte Teraz: keď by ranné oznámenie nieslo výstrahu - dnes slnko je
- * a dni bez slnka sú dosť blízko. Dni od dneška po posledný deň bez slnka. Inak null.
- * @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices @param {import('./messages.js').Voice} [voice]
- */
-export function vyhladPas(input, devices, voice = 'drzy') {
-    const { dnes, dni } = dniVyhladu(input, devices);
-    const beh = prvyBeh(dni);
-    if (!vystraha(dnes, beh)) return null;
-    const dnesKey = localDateKey(input.now, input.site.timezone);
-    const den = (/** @type {string} */ date, /** @type {boolean} */ slnko) => ({ den: dayNameShort(date), slnko, dnes: date === dnesKey });
-    return {
-        ...vyhladPasText(beh, voice),
-        dni: [den(dnesKey, true), ...dni.slice(0, beh.index - 1 + beh.pocet).map((d) => den(d.date, d.slnko))],
     };
 }

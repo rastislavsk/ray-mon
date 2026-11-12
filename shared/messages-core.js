@@ -899,8 +899,8 @@ const dnaGen = (name) => DNA_GEN[name] ?? name.toLowerCase();
 
 /** Výhľad dní bez slnka: vety, ktoré sa v tónoch líšia. */
 const VYHLAD_SAY = {
-    drzy: { oper: 'oper dnes', vyuzi: 'využi dnešok', stihni: 'stihni', pas: 'Využi dnešok' },
-    slusny: { oper: 'operte dnes', vyuzi: 'využite dnešok', stihni: 'stihnite', pas: 'Využite dnešok' },
+    drzy: { oper: 'oper dnes', vyuzi: 'využi dnešok', stihni: 'stihni' },
+    slusny: { oper: 'operte dnes', vyuzi: 'využite dnešok', stihni: 'stihnite' },
 };
 
 /**
@@ -952,14 +952,6 @@ export function vyhladNoticeText({ beh, zmena, predtym, dnes, pracka }, voice = 
         kratsie: `Lepšie: bez slnka len ${dni}`,
     }[zmena];
     return { title, uvod: [`${veta}.`, rada].filter(Boolean).join(' ') };
-}
-
-/**
- * Pás „Využi dnešok“ na karte Teraz: slovo a za ním výhľad („od štvrtka 4 dni bez slnka“).
- * @param {BehBezSlnka} beh @param {Voice} [voice]
- */
-export function vyhladPasText(beh, voice = 'drzy') {
-    return { text: VYHLAD_SAY[voice].pas, sub: low1(behVeta(beh)) };
 }
 
 /** Vety oznámení, ktoré sa v tónoch líšia. */
@@ -1400,35 +1392,33 @@ export function terazRiadokText(r) {
 }
 
 /**
- * Nadpis skupiny riadkov: dnes (`teraz` - nad ňou sú dlaždice toho, čo ide teraz), iný deň podľa
- * mena dňa („Zajtra“, „V stredu“), alebo tento týždeň nie.
- * @param {{ druh: 'dnes', teraz: boolean } | { druh: 'den', name: string } | { druh: 'nie' }} g
+ * Nadpis skupiny riadkov: dnes neskôr (`teraz` - nad ňou sú dlaždice toho, čo ide teraz), čo ide
+ * v zvolený deň zo slnka, a čo sa na slnko nezmestí a pôjde aspoň najmenej zo siete.
+ * @param {{ druh: 'dnes', teraz: boolean } | { druh: 'slnko' } | { druh: 'nudza' }} g
  */
 export function terazSkupinaText(g) {
     if (g.druh === 'dnes') return g.teraz ? 'Neskôr dnes' : 'Potom';
-    if (g.druh === 'den') return cap(onDay(g.name));
-    return 'Tento týždeň nie';
+    return g.druh === 'slnko' ? 'Zo slnka' : 'Najmenej zo siete';
 }
 
 /**
- * Hlavička karty iného dňa vedľa nadpisu: dátum (pri zajtrajšku aj meno dňa, „nedeľa 6.9.“ - nadpis
- * je „Zajtra“) a pri prvej karte, keď dnes slnko už na nič nestačí, aj to (`slnkoDnes` false). Keď je
- * nad kartami pás dní (`pas`), prvá karta namiesto toho povie, o koľko dní je („o 5 dní“).
- * @param {{ date: string, index: number, prva: boolean, slnkoDnes: boolean, pas?: boolean }} d
+ * Hlavička plánu iného dňa na karte Teraz (docs/navrhy/teraz-vyhlad-alternativy.html, C): meno dňa
+ * a pod ním dátum (pri zajtrajšku aj meno dňa - nadpis je „Zajtra“), o koľko dní to je a keď slnko
+ * na veľké spotrebiče v ten deň nestačí (`nad` false), aj to.
+ * @param {{ date: string, index: number, nad: boolean }} d
  */
-export function terazDenKartaText({ date, index, prva, slnkoDnes, pas = false }) {
+export function terazDenHlavickaText({ date, index, nad }) {
     const datum = index === 1 ? `${weekDayName(date, 2).toLowerCase()} ${weekDateLabel(date)}` : weekDateLabel(date);
-    if (prva && pas) return { datum, pozn: `o ${index} ${dniSlovo(index)}` };
-    return { datum, pozn: prva && !slnkoDnes ? 'dnes už slnko nestačí' : '' };
+    const pod = [datum, index > 1 ? `o ${index} ${dniSlovo(index)}` : '', nad ? '' : 'pod hranicou'].filter(Boolean).join(' · ');
+    return { nazov: weekDayName(date, index), pod };
 }
 
 /** Slovo za počtom dní: „1 deň“, „3 dni“, „5 dní“. @param {number} n */
 const dniSlovo = (n) => (n === 1 ? 'deň' : n < 5 ? 'dni' : 'dní');
 
 /**
- * Riadok nad dlaždicami, keď slnko na spotrebiče príde až o viac dní (pás dní,
- * docs/navrhy/teraz-viac-dni-bez-slnka.html, A): deň so slnkom (`name`, null = v predpovedi žiadny)
- * a koľko dní pred ním je zamračených (`oblacne`).
+ * Riadok nad dlaždicami, keď slnko na spotrebiče príde až o viac dní: deň so slnkom (`name`,
+ * null = v predpovedi žiadny) a koľko dní pred ním je zamračených (`oblacne`).
  * @param {{ name: string | null, oblacne: number }} p
  */
 export function terazPasOkoText({ name, oblacne }) {
@@ -1437,11 +1427,65 @@ export function terazPasOkoText({ name, oblacne }) {
     return { text: `Slnko až ${onDay(name)}`, sub: `${oblacne} ${dniSlovo(oblacne)} ${oblacne < 5 ? 'zamračené' : 'zamračených'}` };
 }
 
-/** Pod dneškom v páse dní. */
-export const TERAZ_PAS_DNES = 'dnes';
-
-/** Vo vysvetlení za „i“, keď je na karte pás dní - predpoveď o niekoľko dní je menej istá. */
+/** Vo vysvetlení za „i“, keď slnko príde až o viac dní - predpoveď o niekoľko dní je menej istá. */
 export const TERAZ_PAS_ISTOTA = 'Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.';
+
+/** Hrebeň týždňa na karte Teraz: meno skupiny tlačidiel dní a čo čítačka povie o dni pod hranicou. */
+export const TERAZ_HREBEN = { label: 'Plán podľa dňa', pod: 'slnko na veľké spotrebiče nestačí' };
+
+/**
+ * Odznak na dlaždici a v riadku toho, čo ide dnes zo slnka: kedy bude slnko na ten spotrebič
+ * najbližšie, keď to nie je zajtra (`dalsi` null = v predpovedi už nie). `dlho`: dva a viac dní bez slnka.
+ * @param {{ name: string, index: number } | null} dalsi
+ */
+export function terazPotomText(dalsi) {
+    if (!dalsi) return { text: 'potom tento týždeň nie', dlho: true };
+    const dlho = dalsi.index > 2;
+    return { text: `potom ${dlho ? 'až ' : ''}${onDay(dalsi.name)}`, dlho };
+}
+
+/** Koľko programu pokryje slnko, slovom. @param {number} p podiel 0 až 1 */
+function podielSlovo(p) {
+    if (p >= 0.85) return 'takmer celé zo slnka';
+    if (p >= 0.6) return 'dve tretiny zo slnka';
+    if (p >= 0.42) return 'polovica zo slnka';
+    return p >= 0.25 ? 'tretina zo slnka' : 'trochu zo slnka';
+}
+
+/**
+ * Núdzový čas spotrebiča v deň, keď sa na slnko nezmestí (shared/tyzden.js): veľký čas a doplnok
+ * riadku, a pre detail kedy, od-do a prečo. `zdroj`: cez deň s kúskom slnka, v lacnom pásme, aspoň
+ * mimo drahého pásma, alebo je to jedno (`start` null). Pri dnešku (`dnes`) povie aj, kedy pôjde celý zo slnka (`potom`, meno
+ * dňa, null = v predpovedi nie). Bez ceny v € - tá je len pri aute.
+ * @param {{ start: number | null, end: number | null, podiel: number | null, zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet',
+ *   dnes: boolean, potom: string | null }} r
+ * @param {Voice} [voice]
+ */
+export function terazNudzaText(r, voice = 'drzy') {
+    const od = r.start === null ? '' : hm(r.start);
+    const info = { slnko: podielSlovo(r.podiel ?? 0), lacna: 'lacný prúd', bezna: 'mimo drahej siete', siet: 'slnko nepomôže' }[r.zdroj];
+    return {
+        cas: od || '–',
+        info: r.dnes && r.potom ? `${info} · naplno ${onDay(r.potom)}` : info,
+        kedy: 'Najmenej zo siete',
+        odDo: r.start === null || r.end === null ? '–' : `${od} – ${koniecHm(r.end)}`,
+        why: `${nudzaWhy(r.zdroj, od, r.dnes, voice)}${r.dnes ? nudzaPotom(r.potom) : ''}`,
+    };
+}
+
+/**
+ * Prečo práve vtedy, v detaile núdzového času. @param {'slnko' | 'lacna' | 'bezna' | 'siet'} zdroj @param {string} od čas štartu
+ * @param {boolean} dnes @param {Voice} voice
+ */
+function nudzaWhy(zdroj, od, dnes, voice) {
+    if (zdroj === 'slnko') return `Slnko na celý program nestačí. O ${od} ho pokryje najviac, zvyšok pôjde zo siete.`;
+    if (zdroj === 'lacna') return `Slnko nepomôže, najmenej to stojí v lacnom pásme od ${od}.`;
+    if (zdroj === 'bezna') return `Slnko nepomôže, od ${od} to aspoň nejde z drahej siete.`;
+    return `Slnko nepomôže a sieť ${dnes ? 'dnes už lacnejšia nebude' : 'je v ten deň stále rovnako drahá'}. ${polite(voice) ? 'Pustite' : 'Pusti'}, keď treba.`;
+}
+
+/** Veta v detaile dnešného núdzového času, kedy pôjde spotrebič celý zo slnka. @param {string | null} potom meno dňa */
+const nudzaPotom = (potom) => (potom ? ` Celé zo slnka ${onDay(potom)}.` : ' Celé zo slnka tento týždeň podľa predpovede nie.');
 
 /**
  * Detail spotrebiča: kedy a odkiaľ prúd (`kedy`), od-do (`cas`) a prečo práve vtedy (`why`, z Plánu dňa).

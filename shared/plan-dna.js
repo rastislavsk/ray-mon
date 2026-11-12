@@ -72,7 +72,7 @@ function autoSpan(free, minKw, from) {
 }
 
 /** Prvá štvrťhodina lacného pásma od `from` do polnoci, alebo null. @param {DayCtx} ctx @param {number} from */
-function cheapFrom(ctx, from) {
+export function cheapFrom(ctx, from) {
     const slot = ctx.plan.find((s) => s.startMin >= from && s.level === 'lacna');
     return slot ? slot.startMin : null;
 }

@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: karta Teraz – dni bez slnka inak</title>
+        <style>
+            /* Zmrazený návrh (viď README v tomto priečinku). Telefóny sú kreslené ručne podľa štýlov appky,
+               nie snímky. Scenáre sú vymyslené (streda 11. 11. 2026 o 10:30 a štvrtok 12. 11. o 9:30),
+               krivky dní, časy aj podiely slnka sú na ukážku. Ikony spotrebičov sú zástupné štvorčeky. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --cheap: #7cc4ff;
+                --cloud: #b4c3dc;
+                --glass: rgba(10, 20, 50, 0.38);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1,
+            h2,
+            h3,
+            h4 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 28px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(350px, 100%);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            ul.slabiny {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                max-width: 760px;
+            }
+            .opts {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 12px;
+            }
+            .opt {
+                padding: 14px 16px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .opt.rec {
+                border-color: var(--green);
+            }
+            .opt h3 {
+                font-size: 1rem;
+            }
+            .opt .tag {
+                justify-self: start;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 600;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+            }
+
+            /* ---------- telefón (kópia štýlov appky, zjednodušená) ---------- */
+            .tel {
+                position: relative;
+                padding: 18px 14px 22px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f6fb8 0%, #5b9be0 60%, #8cc0f0 100%);
+                overflow: hidden;
+                min-height: 500px;
+            }
+            .tel.sivy {
+                background: linear-gradient(180deg, #4a5068 0%, #6b6577 55%, #857580 100%);
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 2px;
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .oko > i {
+                flex: none;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--green);
+                box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.3);
+            }
+            .oko > i.cloud {
+                background: var(--cloud);
+                box-shadow: 0 0 0 3px rgba(180, 195, 220, 0.3);
+            }
+            .oko-t span {
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: none;
+            }
+            .oko-t span.c {
+                color: var(--cloud);
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .dl {
+                padding: 12px 14px;
+                border-radius: 22px;
+                background: var(--green);
+                color: #14300c;
+            }
+            .dl.cela {
+                grid-column: span 2;
+            }
+            .dl.cheap {
+                background: var(--cheap);
+                color: #0b2440;
+            }
+            .dl b {
+                display: block;
+                font-size: 1.15rem;
+                font-weight: 900;
+                line-height: 1.15;
+            }
+            .dl small {
+                display: block;
+                font-size: 0.8rem;
+            }
+            .dl .velky {
+                font-size: 1.375rem;
+                font-weight: 800;
+            }
+            /* Odznak v dlaždici: kedy bude slnko na tento spotrebič najbližšie. */
+            .dl .potom {
+                display: inline-block;
+                margin-top: 6px;
+                padding: 2px 8px;
+                border-radius: 999px;
+                font-size: 0.66rem;
+                font-weight: 800;
+                white-space: nowrap;
+                background: rgba(20, 48, 12, 0.14);
+            }
+            .dl .potom.dlho {
+                background: #14300c;
+                color: var(--gold);
+            }
+            .co-h {
+                margin: 16px 2px 8px;
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .co-h span {
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: none;
+                color: var(--dim);
+            }
+            .riadky,
+            .den-karta {
+                overflow: hidden;
+                border-radius: 22px;
+                background: var(--glass);
+            }
+            .den-karta {
+                margin-top: 16px;
+                border: 1px solid rgba(255, 209, 102, 0.55);
+            }
+            .den-karta-h {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 2px 10px;
+                padding: 12px 16px;
+                background: linear-gradient(90deg, rgba(255, 209, 102, 0.35), rgba(255, 209, 102, 0.08));
+            }
+            .den-karta-h h4 {
+                font-size: 1.375rem;
+                font-weight: 900;
+            }
+            .den-karta-h span {
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .den-karta.mala .den-karta-h h4 {
+                font-size: 1.05rem;
+            }
+            .den-karta .veta {
+                padding: 10px 16px 12px;
+                font-size: 0.875rem;
+                font-weight: 700;
+            }
+            .ri {
+                display: grid;
+                grid-template-columns: 4.1rem 24px minmax(0, 1fr);
+                align-items: center;
+                gap: 0 10px;
+                min-height: 54px;
+                padding: 6px 14px;
+            }
+            .ri + .ri {
+                border-top: 1px solid rgba(255, 255, 255, 0.15);
+            }
+            .ri .velky {
+                font-size: 1.375rem;
+                font-weight: 800;
+            }
+            .ri .ico {
+                width: 22px;
+                height: 22px;
+                border: 2px solid currentColor;
+                border-radius: 5px;
+                opacity: 0.85;
+            }
+            .ri b {
+                display: block;
+                font-weight: 800;
+                line-height: 1.15;
+            }
+            .ri small {
+                display: block;
+                font-size: 0.75rem;
+                color: var(--dim);
+            }
+            /* Podiel slnka a siete pri núdzovom čase: zlatá = zo slnka, modrá = zo siete. */
+            .podiel {
+                display: block;
+                height: 6px;
+                margin: 5px 0 3px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, var(--gold) 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+            }
+
+            /* ---------- dnešný stav: pás dní ---------- */
+            .pas {
+                display: grid;
+                grid-auto-columns: minmax(0, 1fr);
+                grid-auto-flow: column;
+                gap: 4px;
+                margin: 4px 0 2px;
+            }
+            .pas span {
+                display: grid;
+                justify-items: center;
+                align-content: center;
+                gap: 2px;
+                min-height: 50px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--cloud);
+                background: rgba(180, 195, 220, 0.16);
+            }
+            .pas span small {
+                font-weight: 600;
+                letter-spacing: 0;
+                text-transform: none;
+                color: var(--dim);
+            }
+            .pas span.s {
+                background: var(--gold);
+                color: #3a2a00;
+                box-shadow: 0 0 14px rgba(255, 209, 102, 0.5);
+            }
+            .pas span.dnes {
+                outline: 2px solid #fff;
+                outline-offset: -2px;
+            }
+            .pas span.ciarka {
+                background: none;
+                border: 1px dashed rgba(255, 255, 255, 0.3);
+                color: var(--dim);
+            }
+            .pas svg {
+                width: 20px;
+                height: 15px;
+            }
+            .vyhlad {
+                margin: 0 0 12px;
+                padding: 10px 12px 12px;
+                border-radius: 18px;
+                background: var(--glass);
+                display: grid;
+                gap: 8px;
+            }
+            .vyhlad > p {
+                font-size: 0.875rem;
+                font-weight: 700;
+            }
+            .vyhlad > p span {
+                color: var(--cloud);
+                font-weight: 600;
+            }
+
+            /* ---------- nové: hrebeň týždňa ---------- */
+            .hreben {
+                position: relative;
+            }
+            .hreben svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            .hreben .dni {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+            }
+            .hreben .dni > * {
+                display: grid;
+                align-content: end;
+                justify-items: center;
+                padding: 0 0 1px;
+                border: 0;
+                border-radius: 12px;
+                background: none;
+                font: inherit;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--cloud);
+            }
+            .hreben .dni > .nad {
+                color: var(--gold);
+            }
+            .hreben .dni > .dnes {
+                color: #fff;
+            }
+            .hreben .dni > button {
+                cursor: pointer;
+            }
+            .hreben .dni > .zvoleny {
+                background: rgba(255, 255, 255, 0.14);
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+            }
+            .hreben-leg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 2px 12px;
+                font-size: 0.7rem;
+                color: var(--dim);
+            }
+            .hreben-leg i {
+                display: inline-block;
+                width: 9px;
+                height: 9px;
+                margin-right: 4px;
+                border-radius: 2px;
+                background: var(--gold);
+            }
+            .hreben-leg i.pod {
+                background: rgba(180, 195, 220, 0.55);
+            }
+            .hreben-leg i.ciara {
+                height: 0;
+                border-top: 2px dashed rgba(255, 255, 255, 0.7);
+                border-radius: 0;
+                background: none;
+                vertical-align: middle;
+            }
+            .cislo {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                padding: 0 2px 8px;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .cislo b {
+                font-size: 2.6rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .cislo span {
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .stav-h {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 8px;
+                margin: 14px 2px 8px;
+            }
+            .stav-h h4 {
+                font-size: 1.25rem;
+                font-weight: 900;
+            }
+            .stav-h span {
+                font-size: 0.8125rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="0" height="0" style="position: absolute">
+            <symbol id="oblak" viewBox="0 0 24 16">
+                <path d="M6 15h12a5 5 0 0 0 0-10 6.5 6.5 0 0 0-12.3 2A4 4 0 0 0 6 15z" fill="currentColor" opacity="0.85" />
+            </symbol>
+            <symbol id="slnko" viewBox="0 0 24 16">
+                <circle cx="12" cy="8" r="4.5" fill="currentColor" />
+                <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <path d="M12 0.8v1.6M12 13.6v1.6M4.8 8H3.2M20.8 8h-1.6M6.9 2.9l1.1 1.1M16 12l1.1 1.1M6.9 13.1 8 12M16 4l1.1-1.1" />
+                </g>
+            </symbol>
+        </svg>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Teraz – dni bez slnka inak</h1>
+                <p class="dim">
+                    Alternatíva k pásom dní z PR #453 a #454. Telefóny sú kreslené ručne podľa štýlov appky, nie snímky z appky. Scenáre sú
+                    vymyslené: <b>pred</b> = streda 11. 11. 2026 o 10:30, dnes slnko, štvrtok až nedeľa zamračené (v piatok sa na chvíľu
+                    ukáže), slnko od pondelka; <b>počas</b> = štvrtok 12. 11. o 9:30. Krivky dní, časy a podiely slnka sú na ukážku, nie
+                    vypočítané. Vybrané 12. 11. 2026: <b>C – Teraz ako týždeň</b> s radami z B: núdzový čas dostane každý spotrebič, pri
+                    jednej cene stačí hodina s najviac slnkom, radšej cez deň než v noci, hrebeň neotvára kartu 7 dní (len prepína deň
+                    karty).
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Ako je to dnes</small>Dva pásy dní, deň je buď slnko, alebo oblak</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko"><i></i><span class="oko-t">Teraz zo slnka</span></div>
+                            <div class="vyhlad">
+                                <p>Využi dnešok <span>· od zajtra 4 dni bez slnka</span></p>
+                                <div class="pas">
+                                    <span class="s dnes"
+                                        ><svg><use href="#slnko" /></svg>St</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Št</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Pi</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>So</span
+                                    >
+                                    <span
+                                        ><svg><use href="#oblak" /></svg>Ne</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="mriezka">
+                                <div class="dl"><b>Práčka</b><small>dobehne 11:45</small></div>
+                                <div class="dl"><b>Umývačka</b><small>dobehne 14:00</small></div>
+                                <div class="dl cela"><b>Auto</b><small>nabíjaj do 14:30 · +45 km</small></div>
+                            </div>
+                        </div>
+                        <figcaption><b>Pred</b> (PR #454, prekreslené): pás „Využi dnešok“, ťuknutie otvorí 7 dní.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel sivy">
+                            <div class="oko">
+                                <i class="cloud"></i><span class="oko-t">Slnko až v pondelok <span class="c">· 3 dni zamračené</span></span>
+                            </div>
+                            <div class="pas">
+                                <span class="ciarka">Št<small>dnes</small></span>
+                                <span
+                                    ><svg><use href="#oblak" /></svg>Pi</span
+                                >
+                                <span
+                                    ><svg><use href="#oblak" /></svg>So</span
+                                >
+                                <span
+                                    ><svg><use href="#oblak" /></svg>Ne</span
+                                >
+                                <span class="s"
+                                    ><svg><use href="#slnko" /></svg>Po</span
+                                >
+                            </div>
+                            <div class="mriezka" style="margin-top: 14px">
+                                <div class="dl cheap cela">
+                                    <span class="velky">22:00</span><b>Auto</b><small>lacný prúd do 06:00</small>
+                                </div>
+                            </div>
+                            <div class="den-karta">
+                                <div class="den-karta-h">
+                                    <h4>V pondelok</h4>
+                                    <span>16. 11. · o 4 dni</span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption><b>Počas</b> (PR #453, prekreslené): pás dní po prvý deň so slnkom.</figcaption>
+                    </figure>
+                </div>
+                <ul class="slabiny">
+                    <li>
+                        <b>Deň je len áno / nie.</b> Piatok, keď sa slnko na hodinu ukáže a umývačka by sa zmestila, je rovnaký oblak ako
+                        sobota, keď nejde nič. A slabý deň, kam sa zmestí jedna vec, je rovnaké zlaté slnko ako jasný deň.
+                    </li>
+                    <li>
+                        <b>Hovorí o počasí, nie o tom, čo urobiť.</b> „Využi dnešok“ nepovie čím. „Slnko až v pondelok“ nechá štyri dni bez
+                        rady – umývačku ani pranie nikto štyri dni neodkladá, a appka vtedy nepovie, kedy je to zo siete najmenej zlé.
+                    </li>
+                    <li>
+                        <b>Počíta za celú domácnosť.</b> Deň „so slnkom“ je deň, keď sa zmestí aspoň jedna vec. Že práčka so sušičkou musia
+                        čakať do pondelka, ale umývačka pôjde už v piatok, z pásu nevidno.
+                    </li>
+                    <li>
+                        <b>Dva pásy, dve pravidlá.</b> Jeden je nad dlaždicami v rámčeku, druhý pod riadkom hore, každý sa zjaví inokedy a
+                        po pár dňoch zmizne. Človek sa ich nestihne naučiť čítať.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>A</small>Hrebeň týždňa – jeden obraz namiesto dvoch pásov</h2>
+                <p>
+                    Sedem dní ako sedem malých kriviek výkonu vedľa seba a cez ne tá istá čiarkovaná hranica „veľké spotrebiče“ ako na
+                    krivke dňa. Čo je nad hranicou, je zlaté, pod ňou sivomodré. Zamračené dni sú viditeľná rovina, slabý deň nízky kopec,
+                    piatok krátka zlatá špička. Vzdialenejšie dni sú bledšie – istotu predpovede vidno, netreba ju písať. Pravidlá, kedy sa
+                    obraz ukáže, ostávajú ako dnes.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko"><i></i><span class="oko-t">Teraz zo slnka</span></div>
+                            <div class="vyhlad">
+                                <p>Využi dnešok <span>· potom 4 dni pod hranicou</span></p>
+                                <div class="hreben" data-hreben="pred"></div>
+                            </div>
+                            <div class="mriezka">
+                                <div class="dl"><b>Práčka</b><small>dobehne 11:45</small></div>
+                                <div class="dl"><b>Umývačka</b><small>dobehne 14:00</small></div>
+                                <div class="dl cela"><b>Auto</b><small>nabíjaj do 14:30 · +45 km</small></div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A pred.</b> Biela bodka je „teraz“ na dnešnej krivke. Ťuknutie na deň otvorí jeho detail na karte 7 dní.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel sivy">
+                            <div class="oko">
+                                <i class="cloud"></i><span class="oko-t">Slnko až v pondelok <span class="c">· 3 dni zamračené</span></span>
+                            </div>
+                            <div class="vyhlad">
+                                <div class="hreben" data-hreben="pocas"></div>
+                            </div>
+                            <div class="mriezka">
+                                <div class="dl cheap cela">
+                                    <span class="velky">22:00</span><b>Auto</b><small>lacný prúd do 06:00</small>
+                                </div>
+                            </div>
+                            <div class="den-karta">
+                                <div class="den-karta-h">
+                                    <h4>V pondelok</h4>
+                                    <span>16. 11. · o 4 dni</span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">10:15</span><i class="ico"></i
+                                    ><span><b>Práčka</b><small>dobehne 11:45</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i><span><b>Sušička</b><small>po práčke</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:00</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><small>dobehne 14:00</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption><b>A počas.</b> Ten istý obraz, len dnešok je už v rovine. Zvyšok karty bez zmeny.</figcaption>
+                    </figure>
+                </div>
+                <p class="hreben-leg">
+                    <span><i></i>nad hranicou – veľké spotrebiče zo slnka</span><span><i class="pod"></i>pod hranicou</span
+                    ><span><i class="ciara"></i>hranica (tá istá ako na krivke dňa)</span>
+                </p>
+            </section>
+
+            <section>
+                <h2><small>B</small>Hrebeň + „Kým príde slnko“ – rada pre každý spotrebič</h2>
+                <p>
+                    Obraz z A a k nemu to, čo dnes chýba. <b>Pred</b>: každá dlaždica povie, kedy bude slnko na ten spotrebič najbližšie –
+                    podľa toho sa človek rozhodne, čo stihnúť dnes. <b>Počas</b>: namiesto „čakaj do pondelka“ dostane každý spotrebič čas,
+                    keď ho to dnes stojí najmenej zo siete (lacné pásmo, alebo hodina, keď slnko pokryje aspoň časť), s pásikom, koľko z
+                    toho dá slnko. Pondelok ostáva ako možnosť počkať.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="oko"><i></i><span class="oko-t">Teraz zo slnka</span></div>
+                            <div class="vyhlad">
+                                <p>Využi dnešok <span>· potom 4 dni pod hranicou</span></p>
+                                <div class="hreben" data-hreben="pred"></div>
+                            </div>
+                            <div class="mriezka">
+                                <div class="dl">
+                                    <b>Práčka</b><small>dobehne 11:45</small><span class="potom dlho">potom až v pondelok</span>
+                                </div>
+                                <div class="dl"><b>Umývačka</b><small>dobehne 14:00</small><span class="potom">potom v piatok</span></div>
+                                <div class="dl cela">
+                                    <b>Auto</b><small>nabíjaj do 14:30 · +45 km</small><span class="potom dlho">potom až v pondelok</span>
+                                </div>
+                            </div>
+                            <h3 class="co-h">Dnes ešte</h3>
+                            <div class="riadky">
+                                <div class="ri">
+                                    <span class="velky">11:45</span><i class="ico"></i
+                                    ><span><b>Sušička</b><small>po práčke · potom až v pondelok</small></span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>B pred.</b> Odznak je tmavý, keď slnko na ten spotrebič nepríde dva a viac dní. Umývačka sa zmestí aj do
+                            piatkovej špičky, pranie nie.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel sivy">
+                            <div class="oko">
+                                <i class="cloud"></i><span class="oko-t">Slnko až v pondelok <span class="c">· 3 dni zamračené</span></span>
+                            </div>
+                            <div class="vyhlad">
+                                <div class="hreben" data-hreben="pocas"></div>
+                            </div>
+                            <h3 class="co-h" style="margin-top: 4px">Kým príde slnko <span>· dnes najmenej zo siete</span></h3>
+                            <div class="riadky">
+                                <div class="ri">
+                                    <span class="velky">11:30</span><i class="ico"></i
+                                    ><span><b>Umývačka</b><i class="podiel" style="--s: 50%"></i><small>polovica zo slnka</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">12:30</span><i class="ico"></i
+                                    ><span><b>Práčka</b><i class="podiel" style="--s: 30%"></i><small>tretina zo slnka</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">22:00</span><i class="ico"></i
+                                    ><span><b>Sušička</b><i class="podiel" style="--s: 0%"></i><small>lacný prúd</small></span>
+                                </div>
+                                <div class="ri">
+                                    <span class="velky">22:00</span><i class="ico"></i
+                                    ><span><b>Auto</b><i class="podiel" style="--s: 0%"></i><small>lacný prúd do 06:00</small></span>
+                                </div>
+                            </div>
+                            <div class="den-karta mala">
+                                <div class="den-karta-h">
+                                    <h4>Celé zo slnka až v pondelok</h4>
+                                    <span>o 4 dni</span>
+                                </div>
+                                <p class="veta">Práčka 10:15 · sušička 11:45 · umývačka 12:00</p>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>B počas.</b> Pásik: zlatá = zo slnka, modrá = zo siete. Bez ceny v € (tá je len pri aute). Kto môže, počká na
+                            pondelok.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>C</small>Teraz ako týždeň – hrebeň je ovládač celej karty</h2>
+                <p>
+                    Úplná prestavba. Hrebeň je na karte stále, hneď pod číslom, a je to prepínač dňa: ťukneš na deň a dlaždice pod ním ukážu
+                    plán toho dňa (zo slnka, alebo „najmenej zo siete“ ako v B). Zvláštne režimy „pred“ a „počas“ zaniknú – dni bez slnka sú
+                    jednoducho rovina na obraze, ktorý je tam vždy. Krivka dňa pod tým ukáže zvolený deň.
+                    <b>Tento telefón je klikací</b> – ťukni na dni.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel" id="c-tel">
+                            <div class="cislo"><b>2,4 kW</b><span>teraz · meranie</span></div>
+                            <div class="vyhlad" style="margin-bottom: 0">
+                                <div class="hreben" data-hreben="pred" data-klik></div>
+                            </div>
+                            <div id="c-obsah"></div>
+                        </div>
+                        <figcaption>
+                            <b>C.</b> Dni sa prepínajú ťuknutím, nie ťahom (pravidlo appky). Biely rámik je zvolený deň, po návrate na kartu
+                            je vždy dnešok.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Na výber</small>Čo ktorá možnosť dá a čo stojí</h2>
+                <div class="opts">
+                    <div class="opt">
+                        <h3>A – hrebeň týždňa</h3>
+                        <ul>
+                            <li class="plus">deň už nie je áno / nie: vidno koľko, kedy a ako isto</li>
+                            <li class="plus">rovnaká reč ako krivka dňa (hranica, zlatá nad ňou) – netreba sa nič nové učiť</li>
+                            <li class="plus">jeden obraz pre „pred“ aj „počas“; výpočet sa nemení, dáta už appka má</li>
+                            <li class="minus">stále len počasie – nepovie, čo urobiť</li>
+                            <li class="minus">vyšší ako dnešný pás (asi o 30 px)</li>
+                        </ul>
+                    </div>
+                    <div class="opt rec">
+                        <span class="tag">Odporúčam</span>
+                        <h3>B – hrebeň + „Kým príde slnko“</h3>
+                        <ul>
+                            <li class="plus">odpovedá na skutočnú otázku: „operiem dnes, alebo počkám?“</li>
+                            <li class="plus">počas zamračených dní appka konečne niečo radí, nie len „o 4 dni“</li>
+                            <li class="plus">rada je pre každý spotrebič zvlášť (umývačka v piatok, pranie v pondelok)</li>
+                            <li class="minus">nový výpočet v <code>shared/</code>: najlacnejší čas zo siete a podiel slnka; treba testy</li>
+                            <li class="minus">karta je počas zamračených dní dlhšia (4 riadky + malá karta pondelka)</li>
+                            <li class="minus">ranné oznámenie by malo hovoriť to isté – ďalšia úprava textov</li>
+                        </ul>
+                    </div>
+                    <div class="opt">
+                        <h3>C – Teraz ako týždeň</h3>
+                        <ul>
+                            <li class="plus">žiadne zvláštne režimy; plán ktoréhokoľvek dňa na jedno ťuknutie</li>
+                            <li class="plus">obraz je tam vždy, človek sa ho naučí čítať</li>
+                            <li class="minus">najväčšia práca: prestavba karty, ktorá sa menila 8. a 9. 11.</li>
+                            <li class="minus">prekrýva sa s kartou 7 dní – bolo by treba rozhodnúť, čo z nej ostane</li>
+                            <li class="minus">hrebeň zaberá miesto aj v lete, keď je každý deň rovnaký kopec</li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="dim">
+                    Najjednoduchšia možnosť (nekreslená): nechať dnešné pásy a políčko dňa len vyplniť zdola podľa toho, koľko slnka deň dá.
+                    Pár riadkov CSS a jedno číslo v modeli, ale ostáva to počasie bez rady a dva pásy.
+                </p>
+                <p class="note">
+                    Odporúčam B, lebo ako jediné mení to, čo appka <b>povie</b>, nie len ako to vyzerá. Dá sa urobiť v dvoch krokoch: najprv
+                    A (obraz), potom rada z B. C by som nechal až vtedy, keď sa B osvedčí – hrebeň aj výpočet by sa v ňom použili znova.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>Logika</small>Čo by sa zmenilo vo výpočte</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Dnes</th>
+                        <th>A</th>
+                        <th>B a C</th>
+                    </tr>
+                    <tr>
+                        <td>Deň bez slnka</td>
+                        <td>nezmestí sa ani jeden spotrebič (áno / nie)</td>
+                        <td>bez zmeny; obraz navyše ukáže krivku a hranicu</td>
+                        <td>pre každý spotrebič zvlášť: najbližší deň, keď sa zmestí</td>
+                    </tr>
+                    <tr>
+                        <td>Kedy sa ukáže „pred“</td>
+                        <td>dnes slnko je a dni bez slnka sú najviac o toľko dní, koľko ich je (max. 3)</td>
+                        <td>bez zmeny</td>
+                        <td>hrebeň ako dnes; odznak na dlaždici vždy, keď spotrebič zajtra na slnko nepôjde</td>
+                    </tr>
+                    <tr>
+                        <td>Čo radí „počas“</td>
+                        <td>auto a bojler do lacného pásma, ostatné „v pondelok“</td>
+                        <td>bez zmeny</td>
+                        <td>každý spotrebič: čas s najnižšou cenou zo siete dnes (cena pásma × to, čo nepokryje slnko) + pondelok</td>
+                    </tr>
+                    <tr>
+                        <td>Ranné oznámenie</td>
+                        <td>výhľad v nadpise, plán v texte</td>
+                        <td>bez zmeny</td>
+                        <td>v zamračený deň by plán v texte niesol tie isté núdzové časy</td>
+                    </tr>
+                </table>
+                <p class="note">
+                    Na rozhodnutie pri B: (1) Má núdzový čas dostať každý spotrebič, alebo len tie, čo sa nedajú odložiť (umývačka), a
+                    pranie nech čaká? (2) Keď je tarifa s jednou cenou, ostane len „hodina s najviac slnkom“ – stačí to? (3) Od akého
+                    podielu slnka sa oplatí radiť deň namiesto noci, keď je nočný prúd lacnejší – čisto podľa ceny, alebo radšej cez deň,
+                    keď je človek doma? (4) Má byť hrebeň ťukací (otvorí 7 dní), alebo len obraz?
+                </p>
+            </section>
+        </main>
+        <script>
+            // Krivky dní na ukážku: 9 bodov od východu po západ, 1 = najviac, čo strecha v novembri dá.
+            const JASNY = [0, 0.15, 0.45, 0.75, 0.9, 0.85, 0.6, 0.25, 0];
+            const SLABY = [0, 0.1, 0.3, 0.5, 0.62, 0.52, 0.35, 0.12, 0];
+            const OBLAK = [0, 0.04, 0.1, 0.16, 0.2, 0.18, 0.12, 0.05, 0];
+            const SPICKA = [0, 0.05, 0.12, 0.2, 0.36, 0.56, 0.3, 0.1, 0];
+            const HRANICA = 0.42;
+            const TYZDNE = {
+                pred: {
+                    teraz: 0.4,
+                    dni: [
+                        ['St', JASNY],
+                        ['Št', OBLAK],
+                        ['Pi', SPICKA],
+                        ['So', OBLAK],
+                        ['Ne', OBLAK],
+                        ['Po', JASNY],
+                        ['Ut', SLABY],
+                    ],
+                },
+                pocas: {
+                    teraz: 0.3,
+                    dni: [
+                        ['Št', OBLAK],
+                        ['Pi', SPICKA],
+                        ['So', OBLAK],
+                        ['Ne', OBLAK],
+                        ['Po', JASNY],
+                        ['Ut', SLABY],
+                        ['St', JASNY],
+                    ],
+                },
+            };
+            const W = 322;
+            const H = 92;
+            const BASE = 70;
+            const VYSKA = 60;
+            const SIRKA = W / 7;
+            let poradie = 0;
+
+            /** Krivka jedného dňa ako uzavretá plocha nad osou. */
+            function plocha(vzorky, x0) {
+                const body = vzorky.map((v, i) => [x0 + 3 + (i * (SIRKA - 6)) / (vzorky.length - 1), BASE - v * VYSKA]);
+                let d = `M${body[0][0]},${BASE} L${body[0][0]},${body[0][1]}`;
+                for (let i = 1; i < body.length - 1; i++) {
+                    const [x, y] = body[i];
+                    const [nx, ny] = body[i + 1];
+                    d += ` Q${x},${y} ${(x + nx) / 2},${(y + ny) / 2}`;
+                }
+                const k = body[body.length - 1];
+                return `${d} L${k[0]},${k[1]} Z`;
+            }
+
+            /** Výška krivky v zlomku dňa `f` (0 až 1), lineárne medzi bodmi. */
+            function vyskaV(vzorky, f) {
+                const p = f * (vzorky.length - 1);
+                const i = Math.floor(p);
+                return vzorky[i] + (vzorky[Math.min(i + 1, vzorky.length - 1)] - vzorky[i]) * (p - i);
+            }
+
+            function hreben(el) {
+                const t = TYZDNE[el.dataset.hreben];
+                const id = `nad${poradie++}`;
+                const y = BASE - HRANICA * VYSKA;
+                const dni = t.dni
+                    .map(([, v], i) => `<path d="${plocha(v, i * SIRKA)}" opacity="${i < 3 ? 1 : i < 5 ? 0.75 : 0.55}"/>`)
+                    .join('');
+                const tx = 3 + t.teraz * (SIRKA - 6);
+                const ty = BASE - vyskaV(t.dni[0][1], t.teraz) * VYSKA;
+                const klik = el.hasAttribute('data-klik');
+                el.innerHTML =
+                    `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><clipPath id="${id}"><rect width="${W}" height="${y}"/></clipPath></defs>` +
+                    `<g fill="rgba(180,195,220,0.5)">${dni}</g><g fill="#ffd166" clip-path="url(#${id})">${dni}</g>` +
+                    `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,0.7)" stroke-width="1" stroke-dasharray="3 4"/>` +
+                    `<line x1="0" x2="${W}" y1="${BASE}" y2="${BASE}" stroke="rgba(255,255,255,0.25)"/>` +
+                    `<circle cx="${tx}" cy="${ty}" r="3.5" fill="#fff" stroke="rgba(10,20,50,0.6)" stroke-width="1.5"/></svg>` +
+                    `<div class="dni">${t.dni
+                        .map(([n, v], i) => {
+                            const cls = [i === 0 ? 'dnes' : Math.max(...v) > HRANICA ? 'nad' : '', klik && i === 0 ? 'zvoleny' : ''].join(
+                                ' ',
+                            );
+                            return klik
+                                ? `<button type="button" class="${cls}" data-den="${i}">${n}</button>`
+                                : `<span class="${cls}">${n}</span>`;
+                        })
+                        .join('')}</div>`;
+            }
+            document.querySelectorAll('[data-hreben]').forEach(hreben);
+
+            // ---- C: klikací telefón ----
+            const ri = (cas, meno, pod, s) =>
+                `<div class="ri"><span class="velky">${cas}</span><i class="ico"></i><span><b>${meno}</b>` +
+                `${s === undefined ? '' : `<i class="podiel" style="--s:${s}%"></i>`}<small>${pod}</small></span></div>`;
+            const zoSiete = (umyvacka) =>
+                `<h3 class="co-h">Najmenej zo siete</h3><div class="riadky">${umyvacka}` +
+                ri('12:30', 'Práčka', 'tretina zo slnka', 30) +
+                ri('22:00', 'Sušička', 'lacný prúd', 0) +
+                ri('22:00', 'Auto', 'lacný prúd do 06:00', 0) +
+                `</div>`;
+            const slnecny = (auto) =>
+                `<h3 class="co-h">Zo slnka</h3><div class="riadky">` +
+                ri('10:15', 'Práčka', 'dobehne 11:45') +
+                ri('11:45', 'Sušička', 'po práčke') +
+                ri('12:00', 'Umývačka', 'dobehne 14:00') +
+                auto +
+                `</div>`;
+            const bezSlnka = zoSiete(ri('11:30', 'Umývačka', 'polovica zo slnka', 50));
+            const STAVY = [
+                {
+                    h: ['Dnes', 'streda 11. 11.'],
+                    sivy: false,
+                    html:
+                        `<div class="oko" style="min-height:36px"><i></i><span class="oko-t">Teraz zo slnka</span></div><div class="mriezka">` +
+                        `<div class="dl"><b>Práčka</b><small>dobehne 11:45</small><span class="potom dlho">potom až v pondelok</span></div>` +
+                        `<div class="dl"><b>Umývačka</b><small>dobehne 14:00</small><span class="potom">potom v piatok</span></div>` +
+                        `<div class="dl cela"><b>Auto</b><small>nabíjaj do 14:30 · +45 km</small><span class="potom dlho">potom až v pondelok</span></div></div>`,
+                },
+                { h: ['Zajtra', 'štvrtok 12. 11. · pod hranicou'], sivy: true, html: bezSlnka },
+                {
+                    h: ['Piatok', '13. 11. · slnko len na chvíľu'],
+                    sivy: true,
+                    html:
+                        `<h3 class="co-h">Zo slnka</h3><div class="riadky">${ri('12:15', 'Umývačka', 'dobehne 14:15')}</div>` + zoSiete(''),
+                },
+                { h: ['Sobota', '14. 11. · pod hranicou'], sivy: true, html: bezSlnka },
+                { h: ['Nedeľa', '15. 11. · pod hranicou'], sivy: true, html: bezSlnka },
+                { h: ['Pondelok', '16. 11. · o 5 dní'], sivy: false, html: slnecny(ri('12:30', 'Auto', 'nabíjaj do 14:30 · +40 km')) },
+                { h: ['Utorok', '17. 11. · o 6 dní · slabšie slnko'], sivy: false, html: slnecny('') },
+            ];
+            const tel = document.getElementById('c-tel');
+            const obsah = document.getElementById('c-obsah');
+            function zvol(i) {
+                const s = STAVY[i];
+                tel.classList.toggle('sivy', s.sivy);
+                tel.querySelectorAll('[data-den]').forEach((b) => b.classList.toggle('zvoleny', Number(b.dataset.den) === i));
+                obsah.innerHTML = `<div class="stav-h"><h4>${s.h[0]}</h4><span>${s.h[1]}</span></div>${s.html}`;
+            }
+            tel.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-den]');
+                if (b) zvol(Number(b.dataset.den));
+            });
+            zvol(0);
+        </script>
+    </body>
+</html>

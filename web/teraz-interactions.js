@@ -1,10 +1,9 @@
-// Poslucháče karty Teraz: „Skúsiť znova“, vysvetlenie riadku nad dlaždicami a detail spotrebiča.
+// Poslucháče karty Teraz: „Skúsiť znova“, deň v hrebeni týždňa, vysvetlenie riadku nad dlaždicami a detail spotrebiča.
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Graf dňa je v paneli
 // karty Dnes (mozem-interactions.js).
 
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
-import { panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -16,8 +15,11 @@ export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Zavrieť, Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
-    // Využi dnešok: dni dopredu sú na karte 7 dní.
-    dom.tzVyhlad.addEventListener('click', () => store.setState(panelChange(store.get().panel, '7dni')));
+    // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
+    dom.tzHrebenDni.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-den]') : null;
+        if (btn instanceof HTMLElement) store.setState({ tzDen: Number(btn.dataset.den), panel: 'terazky' });
+    });
     dom.tzCo.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-vec]') : null;
         if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky' });

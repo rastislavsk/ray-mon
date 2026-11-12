@@ -465,6 +465,15 @@ s odpočtom, a skupiny riadkov. Štítky (`chips` z `mozemModel`) na karte nie s
 riadku nad dlaždicami. Karta Deň (`denModel`) má pás slnka a siete alebo krivku grafu dňa a odčítanie
 zvoleného času; číslo, nebo a počasie hore ostávajú teraz.
 
+Pod číslom je hrebeň týždňa (`docs/navrhy/teraz-vyhlad-alternativy.html`, C s radami z B; `shared/tyzden.js`):
+krivky dní predpovede vedľa seba s hranicou veľkých spotrebičov. Ťuknutie na deň (`tzDen` v stave, nie je
+krokom navigácie, odchod z karty ho vráti na dnešok) ukáže plán toho dňa - každý deň rozvrhuje ten istý
+výpočet ako Plán dňa, sám za seba od polnoci. Čo sa v deň na slnko nezmestí, dostane núdzový čas
+(`nudzoveCasy`): radšej cez deň, keď slnko pokryje aspoň `TYZDEN.minPodiel` programu, inak štart, pri
+ktorom to, čo slnko nepokryje, stojí zo siete najmenej. Čo dnes zo slnka ide, nesie odznak, kedy bude
+slnko na ten spotrebič najbližšie, keď to nie je zajtra. Karta Dnes a ranné oznámenie núdzové časy
+nepoznajú - vec, ktorá sa dnes nezmestí, tam stále čaká na deň so slnkom.
+
 Karta Dnes (druhá v navigácii) má hore veľké slovo o celom dni (`shared/den-trieda.js`,
 `docs/navrhy/dnes-hlasky-dna.html`): trieda dňa (výborný, dobrý, slabý, nanič) z toho istého
 rozvrhu ako Plán dňa, len od polnoci - koľko spotrebičov sa za deň zmestí na slnko, a či aj
