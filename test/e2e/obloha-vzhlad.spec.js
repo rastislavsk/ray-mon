@@ -332,7 +332,8 @@ test.describe('Zdieľať appku', () => {
         await expect(odkaz).toHaveText(sNastavenim);
         // Worker pečať nevydá: odkaz ostane bez merania a voľba to povie.
         await page.route(WORKER_ZDIELAJ_URL, (route) => route.fulfill({ status: 503, json: { chyba: 'server' } }));
-        await page.locator('#ns-share-kiosk').check();
+        // click, nie check: voľba sa po odmietnutí hneď vráti a check by čakal na zaškrtnutie.
+        await page.locator('#ns-share-kiosk').click();
         await expect(page.locator('#ns-share-kiosk-label')).toContainText('pribaliť nedá');
         await expect(page.locator('#ns-share-kiosk')).not.toBeChecked();
         await expect(odkaz).toHaveText(sNastavenim);
