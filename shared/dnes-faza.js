@@ -29,12 +29,12 @@ import {
     MOZEM_ITEM_TEXTS,
     stupne,
 } from './messages-core.js';
-import { mainWindow, sunWindows } from './mozem.js';
+import { mainWindow, sunWindows } from './mozem-jadro.js';
 import { skyWeather } from './sky.js';
 import { localDateKey, localMinutes, sunTimes } from './solar.js';
 import { dnesCards, todayOf } from './teraz.js';
 
-/** @typedef {import('./mozem.js').Window} Window */
+/** @typedef {import('./mozem-jadro.js').Window} Window */
 /** @typedef {{ cls: import('./den-trieda.js').DenTrieda, faza: import('./den-trieda.js').DenFaza }} Den */
 /** @typedef {ReturnType<typeof dnesZajtraText> & { cls: import('./den-trieda.js').DenTrieda }} Tomorrow */
 /** @typedef {Omit<import('./teraz.js').TerazInput, 'previewMinutes'>} Input */

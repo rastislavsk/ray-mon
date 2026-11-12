@@ -15,6 +15,7 @@ import {
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
+import { isObj, objs, textOf } from '../shared/valid.js';
 import { isIso, isPecat } from '../shared/zdroje.js';
 import { loadStoredWeather, saveStoredWeather } from './storage.js';
 
@@ -30,8 +31,8 @@ import { loadStoredWeather, saveStoredWeather } from './storage.js';
  *   odmietnute: string | null, forecast: import('../shared/solar.js').Forecast | null }} DataResult
  */
 
-/** Krok a kód chyby od výrobcu z odpovede Workera (napr. `prihlasenie:20400`); len krátky text bez tajomstiev. @param {any} body */
-const kodOf = (body) => (body && typeof body.kod === 'string' && /^[a-z]+(:[A-Za-z0-9 ]{1,20})?$/.test(body.kod) ? body.kod : '');
+/** Krok a kód chyby od výrobcu z odpovede Workera (napr. `prihlasenie:20400`); len krátky text bez tajomstiev. @param {unknown} body */
+const kodOf = (body) => (isObj(body) && typeof body.kod === 'string' && /^[a-z]+(:[A-Za-z0-9 ]{1,20})?$/.test(body.kod) ? body.kod : '');
 
 /** Výrobca prístup odmietol (Worker odpovedal 400); `kod` je krok a kód chyby od neho. */
 class Odmietnute extends Error {
@@ -102,20 +103,23 @@ export async function zdielajPecat(pecat, fetchImpl = fetch) {
 export async function pripojZdroj(sposob, udaje, fetchImpl = fetch, pecat = '') {
     try {
         const res = await postWorker(WORKER_PRIPOJ_URL, JSON.stringify(pecat ? { sposob, udaje, pecat } : { sposob, udaje }), fetchImpl);
-        const body = await res.json().catch(() => ({}));
+        /** @type {unknown} */ const body = await res.json().catch(() => null);
         const kod = kodOf(body);
         if (res.status === 400) return { chyba: 'udaje', kod };
         if (!res.ok) return { chyba: res.status === 502 ? 'vyrobca' : 'server', kod };
-        const stanice = Array.isArray(body.stanice) ? body.stanice : [];
         return {
-            stanice: stanice
-                .filter((/** @type {any} */ x) => x && typeof x.pecat === 'string' && isPecat(x.pecat))
-                .map((/** @type {any} */ x) => ({
-                    nazov: typeof x.nazov === 'string' ? x.nazov.slice(0, 80) : '',
-                    pecat: x.pecat,
-                    pv: validPv(x.pv),
-                    ...(isIso(x.platiDo) ? { platiDo: x.platiDo } : {}),
-                })),
+            stanice: objs(isObj(body) ? body.stanice : null).flatMap((x) =>
+                typeof x.pecat === 'string' && isPecat(x.pecat)
+                    ? [
+                          {
+                              nazov: textOf(x.nazov).slice(0, 80),
+                              pecat: x.pecat,
+                              pv: validPv(x.pv),
+                              ...(isIso(x.platiDo) ? { platiDo: x.platiDo } : {}),
+                          },
+                      ]
+                    : [],
+            ),
         };
     } catch {
         return { chyba: 'server' };

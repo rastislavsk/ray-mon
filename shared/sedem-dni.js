@@ -36,7 +36,7 @@ import {
     voiceTexts,
     weekMessage,
 } from './messages.js';
-import { mainWindow, planWindows, sunWindows } from './mozem.js';
+import { mainWindow, planWindows, sunWindows } from './mozem-jadro.js';
 
 export { mainWindow, sunWindows };
 import { offlineLead } from './mozem-sky.js';

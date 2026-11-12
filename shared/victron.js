@@ -7,7 +7,7 @@
 // Dnešnú výrobu dokumentácia jednoznačne nepomenúva, preto ostáva prázdna.
 
 import { krivkaZBodov } from './krivka.js';
-import { isObj } from './valid.js';
+import { isObj, objs, textOf } from './valid.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
 
@@ -29,22 +29,20 @@ export const VICTRON = {
 /** Hlavičky s prístupovým tokenom (formát `Token <token>`). @param {string} token */
 export const victronHeaders = (token) => ({ 'x-authorization': `Token ${token}` });
 
-/** @param {unknown} json */
-const ok = (json) => isObj(json) && /** @type {any} */ (json).success === true;
+/** @param {unknown} json @returns {json is Record<string, unknown>} */
+const ok = (json) => isObj(json) && json.success === true;
 
 /** Id prihláseného používateľa z `/users/me`, alebo null. @param {unknown} json @returns {number | null} */
 export function parseVictronMe(json) {
-    const id = ok(json) && isObj(/** @type {any} */ (json).user) ? /** @type {any} */ (json).user.id : null;
-    return Number.isInteger(id) ? id : null;
+    const id = ok(json) && isObj(json.user) ? json.user.id : null;
+    return typeof id === 'number' && Number.isInteger(id) ? id : null;
 }
 
 /** Inštalácie používateľa: id a meno. @param {unknown} json @returns {Array<{ idSite: number, nazov: string }>} */
 export function parseVictronSites(json) {
-    const records =
-        ok(json) && Array.isArray(/** @type {any} */ (json).records) ? /** @type {any[]} */ (/** @type {any} */ (json).records) : [];
-    return records
-        .filter((r) => isObj(r) && Number.isInteger(r.idSite))
-        .map((r) => ({ idSite: r.idSite, nazov: typeof r.name === 'string' ? r.name : '' }));
+    return objs(ok(json) ? json.records : null).flatMap((r) =>
+        typeof r.idSite === 'number' && Number.isInteger(r.idSite) ? [{ idSite: r.idSite, nazov: textOf(r.name) }] : [],
+    );
 }
 
 /** Cesty D-Bus, z ktorých sa skladá výkon (W) a celková výroba (kWh), podľa typu zariadenia. */
@@ -53,11 +51,11 @@ const TOTAL = { solarcharger: '/Yield/System', pvinverter: '/Ac/Energy/Forward' 
 
 /**
  * Súčet hodnôt danej cesty cez všetky zariadenia; null, keď ju nemá ani jedno.
- * @param {any[]} records @param {Record<string, string>} paths
+ * @param {Array<Record<string, unknown>>} records @param {Record<string, string>} paths
  */
 function sumOf(records, paths) {
     const values = records
-        .filter((r) => isObj(r) && paths[r.dbusServiceType] === r.dbusPath)
+        .filter((r) => typeof r.dbusServiceType === 'string' && paths[r.dbusServiceType] === r.dbusPath)
         .map((r) => Number(r.rawValue))
         .filter((v) => Number.isFinite(v));
     return values.length ? values.reduce((a, b) => a + b, 0) : null;
@@ -68,8 +66,8 @@ function sumOf(records, paths) {
  * @param {unknown} json @param {string} nazov @param {Date} now @returns {PvData}
  */
 export function parseVictronPv(json, nazov, now) {
-    if (!ok(json) || !Array.isArray(/** @type {any} */ (json).records)) throw new Error('Victron: neúspešná odpoveď');
-    const records = /** @type {any[]} */ (/** @type {any} */ (json).records);
+    if (!ok(json) || !Array.isArray(json.records)) throw new Error('Victron: neúspešná odpoveď');
+    const records = objs(json.records);
     const watts = sumOf(records, POWER);
     return {
         realTimePowerKw: watts === null ? null : watts / 1000,
@@ -92,7 +90,7 @@ export function parseVictronPv(json, nazov, now) {
  */
 export function parseVictronYield(json, now, tz) {
     if (!ok(json)) throw new Error('Victron: stats bez success');
-    const records = /** @type {any} */ (json).records;
+    const { records } = json;
     const series = isObj(records) ? Object.values(records).filter(Array.isArray) : [];
     const body = series.flatMap((rows) =>
         /** @type {unknown[]} */ (rows)

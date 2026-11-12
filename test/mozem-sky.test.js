@@ -13,7 +13,8 @@ import {
     mozemTileValue,
     phonesPerHour,
 } from '../shared/messages.js';
-import { itemAnswer, mozemModel } from '../shared/mozem.js';
+import { itemAnswer } from '../shared/mozem-jadro.js';
+import { mozemModel } from '../shared/mozem.js';
 import { mozemSkyModel, sunArc } from '../shared/mozem-sky.js';
 import { typicalSettings } from '../shared/settings.js';
 import { sunTimes } from '../shared/solar.js';

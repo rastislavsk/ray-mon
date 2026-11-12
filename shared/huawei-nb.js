@@ -13,7 +13,7 @@
 
 import { KIOSK, SITE } from './config.js';
 import { krivkaZBodov } from './krivka.js';
-import { isObj } from './valid.js';
+import { isObj, objs, textOf } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
@@ -94,17 +94,13 @@ export function checkNbLogin(json) {
  */
 export function parseNbStations(json) {
     const d = data(json);
-    const list = Array.isArray(d)
-        ? d
-        : isObj(d) && Array.isArray(/** @type {any} */ (d).list)
-          ? /** @type {any[]} */ (/** @type {any} */ (d).list)
-          : [];
-    return list
-        .filter(isObj)
+    return objs(Array.isArray(d) ? d : isObj(d) ? d.list : null)
         .map((p) => ({ plant: p.plantCode ?? p.stationCode, nazov: p.plantName ?? p.stationName }))
-        .filter((p) => typeof p.plant === 'string' && p.plant)
-        .map((p) => ({ plant: p.plant, nazov: typeof p.nazov === 'string' ? p.nazov : '' }));
+        .flatMap((p) => (typeof p.plant === 'string' && p.plant ? [{ plant: p.plant, nazov: textOf(p.nazov) }] : []));
 }
+
+/** Je to typ zariadenia, ktorý appka berie ako menič (NB.inverterTypes)? @param {unknown} typ @returns {typ is number} */
+const jeMenic = (typ) => typeof typ === 'number' && NB.inverterTypes.includes(typ);
 
 /**
  * Meniče elektrární zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 1: [id…] } }`.
@@ -113,11 +109,11 @@ export function parseNbStations(json) {
 export function parseNbDevices(json) {
     const d = data(json);
     /** @type {Record<string, Record<string, number[]>>} */ const out = {};
-    for (const dev of Array.isArray(d) ? d : []) {
-        if (!isObj(dev) || !NB.inverterTypes.includes(dev.devTypeId) || !Number.isSafeInteger(dev.id)) continue;
-        const plant = typeof dev.stationCode === 'string' ? dev.stationCode : '';
-        const byType = (out[plant] ??= {});
-        (byType[dev.devTypeId] ??= []).push(dev.id);
+    for (const dev of objs(d)) {
+        const { devTypeId: typ, id } = dev;
+        if (!jeMenic(typ) || typeof id !== 'number' || !Number.isSafeInteger(id)) continue;
+        const byType = (out[textOf(dev.stationCode)] ??= {});
+        (byType[typ] ??= []).push(id);
     }
     return out;
 }
@@ -130,11 +126,11 @@ export function parseNbDevices(json) {
 export function parseNbDevDns(json) {
     const d = data(json);
     /** @type {Record<string, Record<string, string[]>>} */ const out = {};
-    for (const dev of Array.isArray(d) ? d : []) {
-        if (!isObj(dev) || !NB.inverterTypes.includes(dev.devTypeId) || typeof dev.devDn !== 'string' || !dev.devDn) continue;
-        const plant = typeof dev.stationCode === 'string' ? dev.stationCode : '';
-        const byType = (out[plant] ??= {});
-        (byType[dev.devTypeId] ??= []).push(dev.devDn);
+    for (const dev of objs(d)) {
+        const { devTypeId: typ, devDn } = dev;
+        if (!jeMenic(typ) || typeof devDn !== 'string' || !devDn) continue;
+        const byType = (out[textOf(dev.stationCode)] ??= {});
+        (byType[typ] ??= []).push(devDn);
     }
     return out;
 }
@@ -157,11 +153,8 @@ function num(v) {
  * @param {unknown[]} jsons @param {number[]} ids @returns {{ kw: number | null, day: number | null, total: number | null }}
  */
 export function parseNbDevReal(jsons, ids) {
-    const rows = jsons.flatMap((json) => {
-        const d = data(json);
-        return Array.isArray(d) ? d : [];
-    });
-    const maps = rows.filter((x) => isObj(x) && ids.includes(x.devId) && isObj(x.dataItemMap)).map((x) => x.dataItemMap);
+    const rows = jsons.flatMap((json) => objs(data(json)));
+    const maps = rows.flatMap((x) => (typeof x.devId === 'number' && ids.includes(x.devId) && isObj(x.dataItemMap) ? [x.dataItemMap] : []));
     /** @param {string} key */
     const sum = (key) => {
         const v = maps.map((m) => num(m[key])).filter((x) => x !== null);
@@ -177,8 +170,8 @@ export function parseNbDevReal(jsons, ids) {
  */
 export function parseNbStationReal(json, plant) {
     const d = data(json);
-    const row = (Array.isArray(d) ? d : []).find((x) => isObj(x) && x.stationCode === plant);
-    const m = row && isObj(row.dataItemMap) ? row.dataItemMap : {};
+    const mapa = objs(d).find((x) => x.stationCode === plant)?.dataItemMap;
+    /** @type {Record<string, unknown>} */ const m = isObj(mapa) ? mapa : {};
     return { day: num(m.day_power), month: num(m.month_power), total: num(m.total_power) };
 }
 
@@ -192,16 +185,10 @@ export function parseNbStationReal(json, plant) {
 export function parseNbStationYear(json, plant, now) {
     const d = data(json);
     const rok = now.getUTCFullYear();
-    const row = (Array.isArray(d) ? d : []).find(
-        (x) =>
-            isObj(x) &&
-            x.stationCode === plant &&
-            Number.isFinite(x.collectTime) &&
-            new Date(x.collectTime + 24 * 60 * 60 * 1000).getUTCFullYear() === rok &&
-            isObj(x.dataItemMap),
-    );
-    if (!row) return null;
-    return num(row.dataItemMap.PVYield) ?? num(row.dataItemMap.inverter_power);
+    /** Začína sa riadok v roku `rok`? @param {unknown} t */
+    const vRoku = (t) => typeof t === 'number' && Number.isFinite(t) && new Date(t + 24 * 60 * 60 * 1000).getUTCFullYear() === rok;
+    const m = objs(d).find((x) => x.stationCode === plant && vRoku(x.collectTime) && isObj(x.dataItemMap))?.dataItemMap;
+    return isObj(m) ? (num(m.PVYield) ?? num(m.inverter_power)) : null;
 }
 
 /**

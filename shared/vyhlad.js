@@ -10,7 +10,7 @@ import { VYHLAD } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { vyhladNoticeText } from './messages-core.js';
-import { dayCtx } from './mozem.js';
+import { dayCtx } from './mozem-jadro.js';
 import { chosen, najlepsiDen, planDna } from './plan-dna.js';
 import { localDateKey } from './solar.js';
 

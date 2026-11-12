@@ -3,7 +3,7 @@
 
 import { krivkaZBodov } from './krivka.js';
 import { md5 } from './md5.js';
-import { isObj } from './valid.js';
+import { isObj, objs, textOf } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
@@ -54,10 +54,9 @@ function result(json) {
  */
 export function parseFoxList(json) {
     const r = result(json);
-    const data = isObj(r) && Array.isArray(/** @type {any} */ (r).data) ? /** @type {any[]} */ (/** @type {any} */ (r).data) : [];
-    return data
-        .filter((d) => isObj(d) && typeof d.deviceSN === 'string' && d.deviceSN)
-        .map((d) => ({ sn: d.deviceSN, nazov: typeof d.stationName === 'string' ? d.stationName : '' }));
+    return objs(isObj(r) ? r.data : null).flatMap((d) =>
+        typeof d.deviceSN === 'string' && d.deviceSN ? [{ sn: d.deviceSN, nazov: textOf(d.stationName) }] : [],
+    );
 }
 
 const num = (/** @type {unknown} */ v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -71,9 +70,7 @@ export function parseFoxPv(realJson, genJson, nazov, now) {
     const real = result(realJson);
     const gen = /** @type {Record<string, unknown>} */ (result(genJson) ?? {});
     const device = Array.isArray(real) ? real[0] : null;
-    const datas =
-        isObj(device) && Array.isArray(/** @type {any} */ (device).datas) ? /** @type {any[]} */ (/** @type {any} */ (device).datas) : [];
-    const pv = datas.find((d) => isObj(d) && d.variable === 'pvPower');
+    const pv = objs(isObj(device) ? device.datas : null).find((d) => d.variable === 'pvPower');
     return {
         realTimePowerKw: pv ? num(pv.value) : null,
         dailyEnergyKwh: num(gen.today),
@@ -107,11 +104,9 @@ export function foxCas(text) {
 export function parseFoxHistory(json, now, tz) {
     const r = result(json);
     const device = Array.isArray(r) ? r[0] : null;
-    const datas =
-        isObj(device) && Array.isArray(/** @type {any} */ (device).datas) ? /** @type {any[]} */ (/** @type {any} */ (device).datas) : [];
-    const pv = datas.find((d) => isObj(d) && d.variable === 'pvPower');
+    const pv = objs(isObj(device) ? device.datas : null).find((d) => d.variable === 'pvPower');
     const nasobok = pv?.unit === 'W' ? 0.001 : 1;
-    const body = Array.isArray(pv?.data) ? /** @type {any[]} */ (pv.data).filter(isObj) : [];
+    const body = objs(pv?.data);
     return krivkaZBodov(
         body.map((b) => {
             const kw = num(b.value);

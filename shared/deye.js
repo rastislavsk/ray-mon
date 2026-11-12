@@ -11,7 +11,7 @@
 // nemôže byť v kW, je vo wattoch.
 
 import { krivkaZBodov } from './krivka.js';
-import { isObj } from './valid.js';
+import { isObj, objs } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
@@ -30,9 +30,8 @@ export const DEYE = {
 
 /** Overí obálku odpovede (`success: true`); inak hádže s kódom. @param {unknown} json */
 function ok(json) {
-    if (!isObj(json) || /** @type {any} */ (json).success !== true)
-        throw new VyrobcaChyba('DeyeCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
-    return /** @type {Record<string, any>} */ (json);
+    if (!isObj(json) || json.success !== true) throw new VyrobcaChyba('DeyeCloud', isObj(json) ? String(json.code ?? '') : '');
+    return json;
 }
 
 /** Token z odpovede /account/token. @param {unknown} json */
@@ -121,8 +120,7 @@ export function deyePv(kw, dnes, nazov, now) {
  * @param {unknown} json @param {number | null} kwp @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
  */
 export function parseDeyeFrames(json, kwp, now, tz) {
-    const items = ok(json).stationDataItems;
-    const body = Array.isArray(items) ? /** @type {any[]} */ (items).filter(isObj) : [];
+    const body = objs(ok(json).stationDataItems);
     return krivkaZBodov(
         body.map((b) => {
             const t = Number(b.timeStamp);

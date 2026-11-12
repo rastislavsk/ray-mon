@@ -13,11 +13,11 @@ import { forecastDayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { bandAt, scheduleFor } from './tariff.js';
 import { planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
-import { dayCtx, freeKw, kmOf, programDraw } from './mozem.js';
+import { dayCtx, freeKw, kmOf, programDraw } from './mozem-jadro.js';
 import { addDays, localDateKey } from './solar.js';
 
-/** @typedef {import('./mozem.js').DayCtx} DayCtx */
-/** @typedef {import('./mozem.js').LaterDay} LaterDay */
+/** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
+/** @typedef {import('./mozem-jadro.js').LaterDay} LaterDay */
 /** @typedef {(typeof MOZEM_ITEMS)[number]} MozemItem */
 /**
  * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo

@@ -6,7 +6,7 @@
 
 import { krivkaZBodov } from './krivka.js';
 import { md5 } from './md5.js';
-import { isObj } from './valid.js';
+import { isObj, objs } from './valid.js';
 import { VyrobcaChyba } from './vyrobca.js';
 
 /** @typedef {import('./kiosk.js').PvData} PvData */
@@ -61,9 +61,8 @@ function kilo(v, unit) {
 
 /** Overí odpoveď: úspech je `code: "0"` (príklad v dokumentácii pole `success` nemá); kód chyby, napr. I0012 zlý účet. @param {unknown} json */
 function ok(json) {
-    if (!isObj(json) || String(/** @type {any} */ (json).code) !== '0')
-        throw new VyrobcaChyba('SolisCloud', isObj(json) ? String(/** @type {any} */ (json).code ?? '') : '');
-    return /** @type {any} */ (json);
+    if (!isObj(json) || String(json.code) !== '0') throw new VyrobcaChyba('SolisCloud', isObj(json) ? String(json.code ?? '') : '');
+    return json;
 }
 
 /**
@@ -72,10 +71,10 @@ function ok(json) {
  * @param {unknown} json @param {Date} now @returns {Array<{ id: string, nazov: string, tz: number | null, pv: PvData }>}
  */
 export function parseSolisStations(json, now) {
-    const page = ok(json).data?.page;
-    const records = Array.isArray(page?.records) ? /** @type {any[]} */ (page.records) : [];
-    return records
-        .filter((r) => isObj(r) && r.id !== undefined && r.id !== null)
+    const { data } = ok(json);
+    const page = isObj(data) ? data.page : null;
+    return objs(isObj(page) ? page.records : null)
+        .filter((r) => r.id !== undefined && r.id !== null)
         .map((r) => {
             const nazov = typeof r.stationName === 'string' ? r.stationName : '';
             return {
@@ -102,8 +101,7 @@ export function parseSolisStations(json, now) {
  * @param {unknown} json @param {Date} now @param {string} tz @returns {import('./krivka.js').Krivka}
  */
 export function parseSolisDay(json, now, tz) {
-    const data = ok(json).data;
-    const body = Array.isArray(data) ? /** @type {any[]} */ (data).filter(isObj) : [];
+    const body = objs(ok(json).data);
     return krivkaZBodov(
         body.map((b) => ({ t: Number(b.time), kw: kilo(b.power, b.powerStr) })),
         now,

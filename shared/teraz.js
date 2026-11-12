@@ -30,7 +30,8 @@ import {
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
-import { dayCtx, mozemModel, planWindows, sunWindows } from './mozem.js';
+import { dayCtx, planWindows, sunWindows } from './mozem-jadro.js';
+import { mozemModel } from './mozem.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';

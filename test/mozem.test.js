@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
-import { dayWindow, itemAnswer, itemCost, mozemModel, mozemSheetOf, planWindows, stripGeometry, sunShare } from '../shared/mozem.js';
+import { dayWindow, itemAnswer, itemCost, planWindows, sunShare } from '../shared/mozem-jadro.js';
+import { mozemModel, mozemSheetOf, stripGeometry } from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 

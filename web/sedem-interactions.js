@@ -5,7 +5,7 @@
 
 import { initDayPager } from './day-pager.js';
 import { closeDetail } from './nav-back.js';
-import { render } from './render/index.js';
+import { renderSedem } from './render/sedem.js';
 import { shows } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -13,8 +13,9 @@ import { shows } from './state.js';
 
 /**
  * Listovanie dní v detaile dňa (web/day-pager.js, to isté): ťah prstom,
- * čipy dní a šípky na klávesnici. Susedný deň kreslí počas ťahu ten istý render ako deň na
- * obrazovke - na chvíľu so susedným dňom v stave, potom znova so skutočným. V prehľade so
+ * čipy dní a šípky na klávesnici. Susedný deň kreslí počas ťahu ten istý render karty ako deň na
+ * obrazovke - na chvíľu so susedným dňom v stave, potom znova so skutočným. Stačí render karty
+ * 7 dní, nie celej appky: kopíruje sa len pás dňa (a hlavný render by importoval túto časť späť). V prehľade so
  * stĺpcami listuje len ťah v stĺpci 7 dní - pás je v ňom.
  * @param {Store} store @param {Dom} dom
  */
@@ -32,10 +33,10 @@ function initDays(store, dom) {
         snapshot: (days) => {
             const s = store.get();
             const out = days.map((weekDay) => {
-                render({ ...s, weekDay }, dom);
+                renderSedem({ ...s, weekDay }, dom);
                 return /** @type {HTMLElement} */ (dom.sdDayTrack.cloneNode(true));
             });
-            render(s, dom);
+            renderSedem(s, dom);
             return out;
         },
         commit: (weekDay) => store.setState({ weekDay }),

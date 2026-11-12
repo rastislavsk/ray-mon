@@ -25,7 +25,7 @@ import {
     terazChartText,
     weekMessage,
 } from '../shared/messages.js';
-import { planWindows } from '../shared/mozem.js';
+import { planWindows } from '../shared/mozem-jadro.js';
 import {
     dayHeadSub,
     dayStripModel,

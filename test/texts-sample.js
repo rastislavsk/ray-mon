@@ -156,7 +156,7 @@ function directItems(out, v) {
     // Veci karty Môžem? pri každej odpovedi, s cenou aj bez nej, v drahom pásme aj mimo neho.
     const day = { name: 'Zajtra', index: 1, start: 660 };
     const later = { name: 'Pondelok', index: 3, start: 600 };
-    /** @type {Array<[string, import('../shared/mozem.js').Answer]>} */
+    /** @type {Array<[string, import('../shared/mozem-jadro.js').Answer]>} */
     const answers = [
         ['goAuto', { kind: 'go', end: 900, until: 900, km: 40 }],
         ['goAutoBezKm', { kind: 'go', end: 900, until: 900, km: 0 }],
