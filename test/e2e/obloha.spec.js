@@ -197,7 +197,10 @@ test('stavový riadok telefónu má farbu vrchu oblohy', async ({ page }) => {
     // Porovnáva sa farba oblohy: počasie karty Teraz (#wx) je kresba nad ňou, ktorá zámerne
     // svieti aj spod stavového riadku (slnko v pravom hornom rohu), a pri meraní je skryté.
     // Cez vlastnosť prvku, nie vloženým <style> - ten CSP stránky nepustí.
-    const skryPocasie = () => page.locator('#wx').evaluate((el) => /** @type {HTMLElement} */ ((el).style.visibility = 'hidden'));
+    const skryPocasie = () =>
+        page.locator('#wx').evaluate((el) => {
+            el.style.visibility = 'hidden';
+        });
     const errors = await openObloha(page, { time: at('13:00') });
     await skryPocasie();
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', ocakavanaObloha(at('13:00')).top);
