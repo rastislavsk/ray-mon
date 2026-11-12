@@ -3,6 +3,15 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <!-- Čo smie stránka načítať a kam sa smie pripojiť. Skripty len vlastné a z cdnjs (QR kód,
+             mapa karty Radar), žiadne vložené v HTML - keby sa do stránky dostal cudzí text ako HTML,
+             prehliadač ho nespustí a nikam nič neodošle. Štýly v atribúte `style` ostávajú povolené,
+             kreslia nimi grafy. Nová adresa, z ktorej appka číta, patrí aj sem; stráži to
+             test/csp.test.js. -->
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://cdnjs.cloudflare.com; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://ray-mon.rastislav-racek.workers.dev https://tiles.openfreemap.org; worker-src 'self' blob:; child-src blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
+        />
         <meta name="theme-color" content="#4f555f" />
         <meta name="description" content="Kedy zapínať spotrebiče: živý výkon fotovoltiky, predpoveď výroby a odporúčania podľa tarify." />
         <title>RAY-MON</title>

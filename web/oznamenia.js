@@ -2,8 +2,8 @@
 // pre service worker (sw.js), ktorý nevidí localStorage. Nevie nič o stave ani DOM appky. Rozhodnutia a texty sú v shared/oznamenia.js.
 
 import { OZNAMENIA, WORKER_OZNAMENIA_URL } from '../shared/config.js';
-import { vapidKeyBytes } from '../shared/oznamenia.js';
-import { saveOznamenia } from './storage.js';
+import { odberTrebaObnovit, vapidKeyBytes } from '../shared/oznamenia.js';
+import { loadOdberAt, saveOdberAt, saveOznamenia } from './storage.js';
 
 /**
  * Stav oznámení na tomto telefóne: `ok` sa dajú zapnúť, `plocha` iPhone v Safari (oznámenia má
@@ -82,6 +82,8 @@ async function zrusOdber(sub) {
 async function posliOdber(sub, hour, timeZone) {
     const body = JSON.stringify({ endpoint: sub.endpoint, on: true, hour, tz: timeZone });
     const res = await doLimitu(fetch(WORKER_OZNAMENIA_URL, { method: 'POST', body }));
+    // Worker odber drží len obmedzený čas od posledného poslania - appka si pamätá, kedy to bolo.
+    if (res.ok) saveOdberAt(Date.now());
     return res.ok;
 }
 
@@ -161,7 +163,8 @@ export async function nastavOznamenia(o, zmena, { app, timeZone }) {
 /**
  * Pri štarte appky: keď je oznámenie zapnuté, ale telefón už povolenie alebo odber nemá (človek
  * ho odobral v prehliadači, push služba odber zrušila), prepne ho na vypnuté - prepínač nesmie
- * tvrdiť, že oznámenia chodia, keď nechodia.
+ * tvrdiť, že oznámenia chodia, keď nechodia. Odber, ktorý appka dlho neposlala, pošle Workeru
+ * znova - ten ho inak po OZNAMENIA.odberDni dňoch zabudne.
  * @param {{ get: () => MirrorSource, setState: (patch: { oznamenia: import('../shared/oznamenia.js').Oznamenia }) => void }} store
  */
 export async function initOznamZosulad(store) {
@@ -169,7 +172,10 @@ export async function initOznamZosulad(store) {
     if (!o.on) return;
     const granted = 'Notification' in window && Notification.permission === 'granted';
     const sub = granted ? await odber().catch(() => null) : null;
-    if (sub) return;
+    if (sub) {
+        if (odberTrebaObnovit(loadOdberAt(), Date.now())) await posliOdber(sub, o.hour, store.get().site.timezone).catch(() => false);
+        return;
+    }
     const next = { ...store.get().oznamenia, on: false };
     saveOznamenia(next);
     store.setState({ oznamenia: next });

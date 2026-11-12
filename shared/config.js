@@ -560,6 +560,8 @@ export const VYMAZANE_STORAGE_KEY = 'vymazane-v1';
  * nejde. Staršia verzia v ňom mala aj spotrebiče - tie sú teraz pod DOMA_STORAGE_KEY.
  */
 export const OZNAMENIA_STORAGE_KEY = 'oznamenia-v1';
+/** Kedy appka naposledy poslala odber Workeru (ms) - podľa toho ho obnovuje (OZNAMENIA.obnovDni). */
+export const ODBER_STORAGE_KEY = 'odber-v1';
 
 /**
  * Čo má človek doma: spotrebiče, s ktorými ráta Plán dňa aj ranné oznámenie (shared/doma.js).
@@ -584,6 +586,7 @@ export const STORAGE_KEYS = [
     SUCTY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
+    ODBER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
 ];
@@ -628,6 +631,11 @@ export const WORKER_OZNAMENIA_PATH = '/oznamenia';
 export const WORKER_OZNAMENIA_URL = new URL(WORKER_OZNAMENIA_PATH, WORKER_URL).href;
 export const WORKER_PRIPOMEN_PATH = '/pripomen';
 export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).href;
+// Pečať do odkazu Zdieľať appku (`/zdielaj`): prístup k meraniu s platnosťou `platiDni` dní. Odkaz
+// ostáva v správach natrvalo, prístup v ňom nie - kto ho otvorí neskôr, pripojí si meranie sám.
+export const WORKER_ZDIELAJ_PATH = '/zdielaj';
+export const WORKER_ZDIELAJ_URL = new URL(WORKER_ZDIELAJ_PATH, WORKER_URL).href;
+export const ZDIELANIE = { platiDni: 7 };
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 
@@ -734,6 +742,11 @@ export const OZNAMENIA = {
     remindWindowMin: 20,
     jwtH: 12,
     timeoutMs: 15000,
+    // Odber, ktorý appka `odberDni` dní neobnovila, vo Workeri sám vyprší; appka ho pri štarte
+    // obnoví, keď je starší než `obnovDni` dní. Telefón, na ktorom appku nikto neotvára, tak
+    // v úložisku Workera neostane navždy.
+    odberDni: 180,
+    obnovDni: 30,
     vapidPublic: 'BN5f22u_HXM_8YkH2CWmaNESDDADrK5RfWog4dSGGNl8OVAywRlD6bRL_3lX6bP2xXLWut8K6YrwFJRIoqoFGac',
     pushHosts: ['fcm.googleapis.com', 'updates.push.services.mozilla.com', '.push.apple.com', '.notify.windows.com'],
     maxEndpoint: 900,

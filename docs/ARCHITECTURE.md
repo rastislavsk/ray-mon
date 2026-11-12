@@ -43,7 +43,9 @@ značku `?z=oznamenie` v adrese, bežiacej pošle service worker správu (`web/o
 Prístup k meraniu nie je nikdy v adrese (`initUrlMirror`) – adresa končí v histórii, synchronizácii
 prehliadača aj na snímkach. Do zdieľaného odkazu ide len na výslovné zaškrtnutie, a aj vtedy
 zapečatený. Nastavenia spred zapečatenia majú v `pecat` holý odkaz na kiosk; Worker ho pri prvom
-meraní zapečatí a `refresh.js` si novú pečať uloží.
+meraní zapečatí a `refresh.js` si novú pečať uloží. Do odkazu Zdieľať appku ide pečať s platnosťou
+7 dní (`/zdielaj`, `ZDIELANIE` v `shared/config.js`), ktorú Worker pri prvom meraní vymení za trvalú –
+tou istou cestou cez `refresh.js`.
 
 ## Vrstvy
 

@@ -159,7 +159,10 @@ function renderAppka(m, dom) {
  */
 export function currentShareUrl(state) {
     const settings = state.shareSettings && state.known === 'elektraren' ? savedSettings(state) : null;
-    return shareUrl(APP_URL, settings, state.shareKiosk);
+    // Meranie ide do odkazu len s pečaťou na čas (sharePecat) - trvalá pečať appky z telefónu neodchádza.
+    const pecat = state.shareKiosk ? state.sharePecat : null;
+    if (!settings || !settings.zdroj || !pecat) return shareUrl(APP_URL, settings, false);
+    return shareUrl(APP_URL, { ...settings, zdroj: { ...settings.zdroj, pecat } }, true);
 }
 
 /** QR kód z knižnice; vytvorí sa pri prvom otvorení okna. */

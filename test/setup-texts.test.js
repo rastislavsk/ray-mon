@@ -24,6 +24,7 @@ function state(patch = {}) {
         oznamStav: 'ok',
         shareSettings: false,
         shareKiosk: false,
+        shareKioskFail: false,
     };
     return { now: FIXED_NOW, known, ...start, ...setupInit(start, known), pv: null, loading: false, pristup: null, ...phone, ...patch };
 }
@@ -282,6 +283,8 @@ test('prehľad: Čo máš doma, Oznámenia, Vzhľad a Appka v oboch tónoch', ()
     );
     assert.deepEqual([m.share.options, m.share.kioskShown], [true, false]);
     assert.equal(nastavenieModel(state({ shareSettings: true })).share.kioskShown, true);
+    assert.match(m.share.kiosk, /do 7 dní/);
+    assert.match(nastavenieModel(state({ shareKioskFail: true })).share.kiosk, /pribaliť nedá/);
     assert.equal(nastavenieModel(state({ known: 'poloha' })).share.options, false);
     assert.equal(m.clear.title, 'Vymazať údaje');
     assert.equal(m.credit.length, 2);

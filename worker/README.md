@@ -5,6 +5,12 @@ ich za neho pýta tento Worker. Prístupy ani nastavenie elektrárne neukladá. 
 pamätá, sú odbery ranného oznámenia (KV `ODBERY`, nižšie), a každú štvrťhodinu ich budí plánovaným
 behom. Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
 
+**Zdieľanie:** `POST /zdielaj` dostane zapečatený prístup a vráti ten istý prístup s platnosťou
+`ZDIELANIE.platiDni` dní (7). Len tá ide do odkazu Zdieľať appku – odkaz ostáva v správach
+natrvalo, prístup v ňom nie. Kto ho otvorí včas, dostane pri prvom meraní (`/pv`) trvalú pečať;
+neskôr Worker pečať odmietne (400) a appka vyzve pripojiť meranie znova. Odkazy z appiek spred
+tejto zmeny nesú trvalú pečať a platia ďalej.
+
 **Radar:** `GET /radar/<snímka>?b=<bloky>` prepošle kúsky súboru OPERA pre kartu Radar (`src/radar.js`). Nič nepočíta
 ani neukladá, odpovede drží cache Cloudflare. Bezplatný plán má 10 ms procesora na požiadavku.
 
@@ -157,7 +163,10 @@ denne (odbery a pripomienky, plus jednu na každých ďalších 1 000 kľúčov)
 Jeden plánovaný beh smie na bezplatnom pláne poslať najviac 50 požiadaviek – teda okolo 48 pushov
 v jednej štvrťhodine (kľúč VAPID sa importuje raz za beh). Keby odberov pribudlo viac, treba
 Workers Paid alebo rozložiť budenie; koľko pushov zlyhalo, píše log `budenie: … zlyhalo`.
-Odbery samy nevypršia, mažú sa pri vypnutí alebo keď push služba povie 404 či 410.
+Odber sa maže pri vypnutí, keď push služba povie 404 či 410, a sám vyprší `OZNAMENIA.odberDni`
+dní (180) po poslednom poslaní z appky. Appka ho pri štarte pošle znova, keď je starší než
+`OZNAMENIA.obnovDni` dní (30) – telefón, na ktorom appku už nikto neotvára, tak v úložisku neostane
+navždy. Odbery uložené pred touto zmenou lehotu dostanú pri prvej obnove.
 
 Prečo nie Durable Object s alarmom: migráciu Durable Objectu nejde nahrať cez
 `wrangler versions upload`, ktorým sa nasadzujú pull requesty – každý taký PR by v CI spadol.
@@ -182,10 +191,13 @@ appka potom ukazuje len odhad z predpovede. Každý otvorený a viditeľný tele
 znamená jednu požiadavku za minútu, takže limit by vyčerpalo zhruba 70 kariet otvorených
 celý deň, alebo niekto úmyselne.
 
-Obmedzenie počtu požiadaviek vo Workeri (väzba `ratelimit`) zámerne nie je. Na kvótu by
-nepomohlo: aby Worker požiadavku odmietol, musí sa spustiť, a každé spustenie sa do limitu
-počíta. Chránilo by len kiosky FusionSolar pred zahltením cez tento Worker – pri pár
-používateľoch zbytočné.
+Obmedzenie počtu požiadaviek vo Workeri (väzba `ratelimits`, `LIMIT` vo `wrangler.toml`) kvótu
+nechráni: aby Worker požiadavku odmietol, musí sa spustiť, a každé spustenie sa do limitu počíta.
+Chráni niečo iné – cesty, ktoré sa dajú zneužiť: `/pripoj` (skúšanie cudzích hesiel u výrobcov
+cez tento Worker), `/zdielaj`, `/oznamenia` a `/pripomen` (zapĺňanie KV). Tie majú 10 volaní za
+minútu na adresu a cestu (`CESTY` v `src/index.js`), nad to Worker vráti 429. Počítadlo je
+približné a zvlášť v každom mieste Cloudflare; keď zlyhá, požiadavka prejde. Meranie (`/pv`)
+obmedzené nie je: pýta sa každú minútu z každej otvorenej appky a bez platnej pečate nič nespraví.
 
 Keby sa limit začal míňať, možnosti sú dve:
 

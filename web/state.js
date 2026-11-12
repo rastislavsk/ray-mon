@@ -22,7 +22,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
  * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Vymazať údaje), `nsOpen` rozbalená sekcia
  * karty Nastavenie (NS_FOLDS; pri štarte sú všetky zbalené) a `shareSettings`,
- * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu. Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté
+ * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu (`sharePecat` pečať na čas, ktorú naň vydal Worker; `shareKioskFail` nevydal ju). Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
  * `parts` hovorí, ktoré časti appky (PARTS) sú načítané, a ktoré sa načítať nepodarilo. `stavTip` je
  * otvorená bublina s vysvetlením stavu merania pod bodkou a časom v hlavičke.
@@ -63,6 +63,8 @@ import { setupInit } from '../shared/setup-flow.js';
  *   nsOpen: NsFold | null,
  *   shareSettings: boolean,
  *   shareKiosk: boolean,
+ *   sharePecat: string | null,
+ *   shareKioskFail: boolean,
  *   parts: Partial<Record<Part, PartState>>,
  *   stavTip: boolean,
  *   meranieBublina: '' | 'pripojene' | 'obnovene',
@@ -187,6 +189,8 @@ export function initialState(
         liveSky: look.liveSky,
         shareSettings: false,
         shareKiosk: false,
+        sharePecat: null,
+        shareKioskFail: false,
         // Neskoré časti appky (web/parts.js) zatiaľ nie sú načítané.
         parts: {},
         // Bublina, ktorú appka ešte neukázala: meranie sa práve pripojilo (web/setup-wiring.js), alebo

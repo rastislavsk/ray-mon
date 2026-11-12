@@ -8,6 +8,7 @@ import { VOICES } from '../shared/config.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
+import { zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { clearStored, saveDoma, saveLook } from './storage.js';
 import { stepBack } from './nav-back.js';
@@ -129,7 +130,9 @@ function initLook(store, dom) {
  */
 function initAppSheets(store, dom) {
     const close = () => stepBack(store, { appSheet: null });
-    dom.nsShare.addEventListener('click', () => store.setState({ appSheet: 'share' }));
+    // Pečať do odkazu platí len pár dní, preto si ju okno pri každom otvorení pýta nanovo.
+    const bezMerania = { shareKiosk: false, sharePecat: null, shareKioskFail: false };
+    dom.nsShare.addEventListener('click', () => store.setState({ appSheet: 'share', ...bezMerania }));
     dom.nsReset.addEventListener('click', () => store.setState({ appSheet: 'reset' }));
     for (const d of [dom.nsShareSheet, dom.nsResetSheet]) {
         // Ťuknutie vedľa okna (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
@@ -143,7 +146,16 @@ function initAppSheets(store, dom) {
     dom.nsShareX.addEventListener('click', close);
     dom.nsResetCancel.addEventListener('click', close);
     dom.nsShareSettings.addEventListener('change', () => store.setState({ shareSettings: dom.nsShareSettings.checked }));
-    dom.nsShareKiosk.addEventListener('change', () => store.setState({ shareKiosk: dom.nsShareKiosk.checked }));
+    dom.nsShareKiosk.addEventListener('change', async () => {
+        const { zdroj } = store.get();
+        if (!dom.nsShareKiosk.checked || !zdroj) return store.setState(bezMerania);
+        store.setState({ ...bezMerania, shareKiosk: true });
+        const sharePecat = await zdielajPecat(zdroj.pecat);
+        // Kým Worker odpovedal, človek mohol voľbu zrušiť alebo okno zavrieť a otvoriť znova.
+        const s = store.get();
+        if (!s.shareKiosk || s.zdroj?.pecat !== zdroj.pecat) return;
+        store.setState(sharePecat ? { sharePecat } : { ...bezMerania, shareKioskFail: true });
+    });
     dom.nsResetOk.addEventListener('click', async () => {
         // Aj ranné oznámenie: inak by Worker telefón budil ďalej s nastavením, ktoré už nie je.
         await vypniOznamenia();

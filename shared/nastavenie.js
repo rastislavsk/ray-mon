@@ -5,7 +5,7 @@
 // Voľby, ktoré má len jedna appka (živá obloha, farba pozadia), si do sekcie Vzhľad pridáva kabát.
 // Sprievodca sám je spoločný tiež (shared/setup-flow.js, shared/setup-texts.js).
 
-import { OZNAMENIA, VOICES } from './config.js';
+import { OZNAMENIA, VOICES, ZDIELANIE } from './config.js';
 import { DOMA_DEVICES } from './doma.js';
 import { kwpText } from './format.js';
 import { liveStatus } from './hero-model.js';
@@ -26,7 +26,7 @@ import { menoZnacky } from './zdroje.js';
  * Stav, z ktorého sa karta skladá: sprievodca, živé meranie, tón, spotrebiče doma, ranné
  * oznámenie a voľby zdieľania.
  * @typedef {SetupState & { pv: import('./kiosk.js').PvData | null, loading: boolean, voice: Voice, doma: readonly string[],
- *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean }} NastavenieState
+ *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean }} NastavenieState
  */
 /**
  * Riadok sekcie Elektráreň. `edit` je krok, ktorý riadok otvorí na úpravu uloženej elektrárne
@@ -84,8 +84,13 @@ export const NASTAVENIE_TEXTS = {
         ]),
         settings: 'Pridať moje nastavenie elektrárne',
         kiosk: /** @type {[string, string]} */ ([
-            'aj živé meranie – kto odkaz dostane, uvidí tvoju výrobu',
-            'aj živé meranie – kto odkaz dostane, uvidí vašu výrobu',
+            `aj živé meranie – kto odkaz otvorí do ${ZDIELANIE.platiDni} dní, uvidí tvoju výrobu`,
+            `aj živé meranie – kto odkaz otvorí do ${ZDIELANIE.platiDni} dní, uvidí vašu výrobu`,
+        ]),
+        // Worker pečať do odkazu nevydal (bez internetu, výpadok): odkaz ide bez merania.
+        kioskFail: /** @type {[string, string]} */ ([
+            'živé meranie sa teraz pribaliť nedá, skús to neskôr',
+            'živé meranie sa teraz pribaliť nedá, skúste to neskôr',
         ]),
         wa: 'Poslať cez WhatsApp',
     },
@@ -224,7 +229,7 @@ function shareSekcia(state) {
         options: state.known === 'elektraren',
         settings: T.settings,
         settingsOn: state.shareSettings,
-        kiosk: inVoice(T.kiosk, state.voice),
+        kiosk: inVoice(state.shareKioskFail ? T.kioskFail : T.kiosk, state.voice),
         kioskShown: state.shareSettings && !!state.zdroj,
         kioskOn: state.shareKiosk,
         wa: T.wa,

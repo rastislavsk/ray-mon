@@ -1,5 +1,6 @@
 // Ranné oznámenie: Worker si pamätá len adresu odberu telefónu, hodinu a časové pásmo (KV
-// ODBERY, všetko v metadátach kľúča - budenie tak zoznam prečíta jedinou operáciou). Polohu,
+// ODBERY, všetko v metadátach kľúča - budenie tak zoznam prečíta jedinou operáciou), najdlhšie
+// OZNAMENIA.odberDni dní od posledného zapnutia či obnovy z appky. Polohu,
 // panely, tarifu ani prístup k meraniu nepozná; plán si telefón počíta sám, keď ho Worker
 // zobudí. Budenie beží každých OZNAMENIA.stepMin minút (cron vo wrangler.toml).
 //
@@ -13,7 +14,7 @@ import { platnyOdber, posliPush, vapidKlic } from './webpush.js';
 
 /**
  * KV, ako ho Worker používa: kľúč, prázdna hodnota a metadáta.
- * @typedef {{ put: (key: string, value: string, opts?: { metadata?: unknown, expiration?: number }) => Promise<void>,
+ * @typedef {{ put: (key: string, value: string, opts?: { metadata?: unknown, expiration?: number, expirationTtl?: number }) => Promise<void>,
  *   delete: (key: string) => Promise<void>,
  *   list: (opts: { prefix: string, cursor?: string }) => Promise<{ keys: Array<{ name: string, metadata?: any }>, list_complete: boolean, cursor?: string }> }} Kv
  */
@@ -61,7 +62,11 @@ export async function ulozOdber(body, env) {
         return 200;
     }
     if (!OZNAMENIA.hours.includes(req.hour) || !platnePasmo(req.tz)) return 400;
-    await env.ODBERY.put(key, '', { metadata: { e: req.endpoint, h: req.hour, tz: req.tz } });
+    // Odber sám vyprší, keď ho appka dlho neobnoví - telefón, na ktorom ju už nikto neotvára.
+    await env.ODBERY.put(key, '', {
+        metadata: { e: req.endpoint, h: req.hour, tz: req.tz },
+        expirationTtl: OZNAMENIA.odberDni * 24 * 3600,
+    });
     return 200;
 }
 

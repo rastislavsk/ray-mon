@@ -10,6 +10,7 @@ import {
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
+    ODBER_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     RADAR,
@@ -257,6 +258,17 @@ export function loadOznamenia() {
 /** @param {import('../shared/oznamenia.js').Oznamenia} o @returns {boolean} podarilo sa? */
 export function saveOznamenia(o) {
     return write(OZNAMENIA_STORAGE_KEY, JSON.stringify(o));
+}
+
+/** Kedy appka naposledy poslala odber Workeru (ms); nikdy alebo bez úložiska 0. */
+export function loadOdberAt() {
+    const at = Number(read(ODBER_STORAGE_KEY));
+    return Number.isFinite(at) ? at : 0;
+}
+
+/** @param {number} at */
+export function saveOdberAt(at) {
+    return write(ODBER_STORAGE_KEY, String(at));
 }
 
 /**
