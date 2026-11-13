@@ -206,7 +206,8 @@ export function summaryMeter(d) {
 
 /**
  * Čísla plagátu obdobia zo živého merania (shared/summary.js).
- * @typedef {{ period: StatsPeriod, month: string, year: string, kwh: number, phones: number, km: number, cesta: import('./trasy.js').Cesta,
+ * `phonesPerDay`: mobily nabité priemerne za deň obdobia - pri mesiaci a roku, inak null.
+ * @typedef {{ period: StatsPeriod, month: string, year: string, kwh: number, phones: number, phonesPerDay: number | null, km: number, cesta: import('./trasy.js').Cesta,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, valuePerDay: number | null, currency: string,
  *   rest: { kwh: number, total: number } | null, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
  *   carbon: CarbonFactors, od: string | null, znacka: string }} SummaryFacts
@@ -223,7 +224,7 @@ export function summaryTexts(d, voice = 'drzy') {
     const heading = d.od ? `${kick} ${odText(d.od)}` : kick;
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
-        rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
+        rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d) });
         rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: cestaText(d.cesta, d.km, d.period) });
     }
     if (d.rest)
@@ -292,8 +293,23 @@ function carbonRows(d) {
     ];
 }
 
+/**
+ * Podnadpis nabití mobilu. Mesiac a rok: koľko mobilov to je za deň („ako 190 mobilov nabitých každý
+ * deň“). Celý čas bez podnadpisu - appka nevie, odkedy elektráreň beží, a „jeden mobil na 1 461 rokov“
+ * nič nehovorí. Dnes: na koľko dní či rokov to stačí jednému mobilu.
+ * @param {{ period: StatsPeriod, phones: number, phonesPerDay: number | null }} d
+ */
+function phonesSub(d) {
+    if (d.period === 'spolu') return '';
+    if (d.phonesPerDay !== null) {
+        const n = Math.max(1, Math.round(d.phonesPerDay));
+        return `ako ${fmtSum(n, 0)} ${plural(n, ['mobil nabitý', 'mobily nabité', 'mobilov nabitých'])} každý deň`;
+    }
+    return oneLong(d.phones);
+}
+
 /** Jeden mobil na koľko: „na 12 rokov“, „na 40 dní“ - pri nabíjaní raz denne. @param {number} phones */
-function phonesSub(phones) {
+function oneLong(phones) {
     const years = Math.floor(phones / 365);
     if (years >= 1) return `jeden mobil nabíjaný každý deň na ${fmtSum(years, 0)} ${plural(years, ['rok', 'roky', 'rokov'])}`;
     const days = Math.max(1, Math.round(phones));

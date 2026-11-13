@@ -66,7 +66,10 @@ function vizHtml(viz) {
 function posterHtml(m, T) {
     const kwh = `${m.big} kWh`;
     const rows = m.rows
-        .map((r, i) => `<p class="prow"><b>0${i + 1}</b><span>${escapeHtml(r.t)}<small>${escapeHtml(r.s)}</small></span></p>`)
+        .map(
+            (r, i) =>
+                `<p class="prow"><b>0${i + 1}</b><span>${escapeHtml(r.t)}${r.s ? `<small>${escapeHtml(r.s)}</small>` : ''}</span></p>`,
+        )
         .join('');
     return (
         segHtml(m, T) +
