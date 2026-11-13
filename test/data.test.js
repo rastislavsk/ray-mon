@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    WORKER_TRASY_URL,
     geocodeUrl,
     openMeteoUrl,
     PLANT,
@@ -10,7 +11,7 @@ import {
     TYPICAL_PLANT,
     WEATHER_CACHE_MS,
 } from '../shared/config.js';
-import { loadData, pripojZdroj, searchPlaces } from '../web/data.js';
+import { loadData, pripojZdroj, searchPlaces, stiahniTrasy } from '../web/data.js';
 import { FIXED_NOW, fakeFetch, fixture, fixtureData } from './helpers.js';
 
 /** Iná elektráreň než Dvorany - na overenie, že sa sťahuje pre ňu. */
@@ -189,4 +190,24 @@ test('výrobca prístup odmietol (400): odlíši sa od výpadku a nesie kód chy
     assert.equal((await loadData(s, FIXED_NOW, worker(400, { chyba: 'udaje', kod: '<x>' }))).odmietnute, '', 'nezmyselný kód sa zahodí');
     assert.equal((await loadData(s, FIXED_NOW, worker(502, { chyba: 'vyrobca' }))).odmietnute, null, 'výpadok nie je odmietnutie');
     assert.equal((await loadData({ ...s, zdroj: null }, FIXED_NOW, worker(400, {}))).odmietnute, null);
+});
+
+test('stiahniTrasy: poloha zaokrúhlená, neznáme mestá vypadnú, výpadok je null', async () => {
+    const f = fakeFetch({
+        [WORKER_TRASY_URL]: {
+            trasy: [
+                { id: 'brno', km: 244 },
+                { id: 'atlantida', km: 3 },
+            ],
+        },
+    });
+    assert.deepEqual(await stiahniTrasy({ ...SITE, lat: 48.4812, lon: 18.1249 }, f.impl), {
+        lat: 48.48,
+        lon: 18.12,
+        trasy: [{ id: 'brno', km: 244 }],
+    });
+    assert.equal(await stiahniTrasy(SITE, fakeFetch({}).impl), null, 'Worker odpovedal chybou');
+    assert.equal(await stiahniTrasy(SITE, fakeFetch({ [WORKER_TRASY_URL]: { trasy: 'x' } }).impl), null);
+    const pada = /** @type {typeof fetch} */ (/** @type {unknown} */ (async () => Promise.reject(new Error('offline'))));
+    assert.equal(await stiahniTrasy(SITE, pada), null, 'bez siete');
 });

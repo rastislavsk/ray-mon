@@ -4,7 +4,7 @@ import { DAYLOG, EVERYDAY, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { lastDays, monthDays, parseDayLog, recordDay, yearDays } from '../shared/daylog.js';
 import { fmt1, fmtSum } from '../shared/format.js';
 import { carbonFacts, carbonPayback, co2SavedKg } from '../shared/carbon.js';
-import { plural, posterCo2Value, posterPayback, STATISTIKA_TEXTS, SUMMARY_TRIPS, suctyOdNote } from '../shared/messages.js';
+import { plural, posterCo2Value, posterPayback, STATISTIKA_TEXTS, suctyOdNote } from '../shared/messages.js';
 import { bestOf, bigText, kwhText, restToday, summaryModel, yearMonths } from '../shared/summary.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -81,14 +81,10 @@ test('yearMonths: súčet známych dní, neúplný, prázdny a budúci mesiac, n
     assert.ok(yearMonths(yearDays({}, '2026-09-05'), '2026-09-05').every((x) => x.frac === null && !x.best));
 });
 
-test('plural a trasy', () => {
+test('plural', () => {
     assert.equal(plural(1, ['rok', 'roky', 'rokov']), 'rok');
     assert.equal(plural(3, ['rok', 'roky', 'rokov']), 'roky');
     assert.equal(plural(7, ['rok', 'roky', 'rokov']), 'rokov');
-    assert.ok(
-        SUMMARY_TRIPS.every((t, i) => i === 0 || t.km > SUMMARY_TRIPS[i - 1].km),
-        'trasy idú od najkratšej',
-    );
 });
 
 test('bestOf: najvyšší deň, deň bez čísla sa nepočíta, pri rovnosti skorší, z jedného dňa nič', () => {
@@ -210,7 +206,7 @@ test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň ro
     assert.equal(months.length, 12);
     assert.equal(months.find((x) => x.best)?.month, '2026-06', 'jún má najviac zo známych dní');
     assert.equal(m.rows.find((r) => r.t.startsWith('Najlepší deň'))?.t, 'Najlepší deň: 14. 6.', 'minulý rok sa nepočíta');
-    assert.equal(m.rows.find((r) => r.t.endsWith('km autom'))?.s, 'raz okolo Zeme');
+    assert.equal(m.rows.find((r) => r.t.endsWith('km autom'))?.s, '1,3-krát okolo Zeme', 'bez trás rok ráta s cestou okolo Zeme');
     assert.match(m.note, /^Za 245 dní appka čísla nemá/);
     const bezRoka = summaryModel({ ...BASE, dayLog, pv: { ...pv, yearEnergyKwh: null } }, 'rok');
     assert.equal(bezRoka.kwh, 63.2 + 50 + /** @type {number} */ (pv.dailyEnergyKwh), 'bez súčtu z kiosku súčet denníka');
@@ -227,7 +223,7 @@ test('summaryModel spolu: súčet od spustenia, pás splateného uhlíka, dlh pa
     assert.equal(m.kwh, kwh);
     const payback = posterPayback(/** @type {number} */ (carbonPayback(kwh, PLANT)));
     assert.deepEqual(m.viz, { kind: 'meter', pct: payback.pct, left: 'uhlík z výroby panelov', right: `${payback.pct} % splatené` });
-    assert.equal(m.rows[1].s, 'trikrát okolo Zeme');
+    assert.equal(m.rows[1].s, `3,2-krát okolo Zeme · do štvrtého kola chýba ${fmtSum(31000, 0)} km`);
     assert.ok(!m.rows.some((r) => r.t.startsWith('Najlepší deň')));
     assert.deepEqual(m.rows.at(-1), {
         t: `${posterCo2Value(co2SavedKg(kwh))} CO2eq menej`,
@@ -235,7 +231,7 @@ test('summaryModel spolu: súčet od spustenia, pás splateného uhlíka, dlh pa
     });
     const splatene = summaryModel({ ...BASE, pv: { ...pv, cumulativeEnergyKwh: 1e6 } }, 'spolu');
     assert.equal(splatene.viz?.kind === 'meter' && splatene.viz.right, 'splatený');
-    assert.equal(splatene.rows[1].s, `${Math.floor((1e6 * EVERYDAY.evKmPerKwh) / 40000)}-krát okolo Zeme`);
+    assert.equal(splatene.rows[1].s, 'na Mesiac a späť', '6 miliónov km');
     const bez = summaryModel({ ...BASE, pv: { ...pv, cumulativeEnergyKwh: null } }, 'spolu');
     assert.equal(bez.big, '–');
     assert.deepEqual(bez.rows, []);

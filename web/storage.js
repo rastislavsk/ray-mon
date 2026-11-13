@@ -21,6 +21,7 @@ import {
     SITE_STORAGE_KEY,
     STORAGE_KEYS,
     SUCTY_STORAGE_KEY,
+    TRASY_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
@@ -33,6 +34,7 @@ import { parseOdmietnutie } from '../shared/pristup.js';
 import { parseRytmus } from '../shared/zdroje.js';
 import { parseStoredWeather } from '../shared/schema.js';
 import { parseSucty } from '../shared/sucty.js';
+import { parseTrasy } from '../shared/trasy.js';
 import { DEFAULT_LOOK, lookToStored, parseLook, parseStoredSettings, parseStoredSite, toUser } from '../shared/settings.js';
 
 /** Hodnota z localStorage; keď nie je, alebo úložisko chýba či hádže, null. @param {string} key */
@@ -238,6 +240,16 @@ export function loadStoredWeather() {
 /** @param {import('../shared/schema.js').StoredWeather} weather @returns {boolean} podarilo sa? */
 export function saveStoredWeather(weather) {
     return write(WEATHER_STORAGE_KEY, JSON.stringify(weather));
+}
+
+/** Trasy autom z domu (TRASY_STORAGE_KEY, shared/trasy.js); bez úložiska null. @returns {import('../shared/trasy.js').UlozeneTrasy | null} */
+export function loadTrasy() {
+    return readJson(TRASY_STORAGE_KEY, parseTrasy, null);
+}
+
+/** @param {import('../shared/trasy.js').UlozeneTrasy} t @returns {boolean} podarilo sa? */
+export function saveTrasy(t) {
+    return write(TRASY_STORAGE_KEY, JSON.stringify(t));
 }
 
 /** Trieda dňa, ktorú appka dnes videla ráno (RANNA_TRIEDA_STORAGE_KEY); bez úložiska null. @returns {import('../shared/den-trieda.js').RannaTrieda | null} */

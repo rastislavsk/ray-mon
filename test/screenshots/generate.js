@@ -6,7 +6,7 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
-import { PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_PV_URL } from '../../shared/config.js';
+import { PLANT, SETTINGS_STORAGE_KEY, SITE, WORKER_PV_URL, WORKER_TRASY_URL } from '../../shared/config.js';
 import { toUser } from '../../shared/settings.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -57,6 +57,16 @@ try {
     // Živé zdroje sa nahradia fixtures, zvyšok (písma z fonts/, QR knižnica z CDN) sa načíta ako v appke.
     // Obrázky ukazujú elektráreň v Dvoranoch, nie ukážku - pre ňu sú fixtures.
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
+    // Trasy autom z Dvorian (OSRM, 13. 11. 2026) pre podnadpis km autom na Štatistike.
+    const trasy = [
+        { id: 'nitra', km: 25 },
+        { id: 'bratislava', km: 112 },
+        { id: 'zilina', km: 148 },
+        { id: 'viden', km: 187 },
+        { id: 'budapest', km: 188 },
+        { id: 'brno', km: 244 },
+    ];
+    await page.route(WORKER_TRASY_URL, (r) => r.fulfill({ json: { trasy } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: fixture('open-meteo.json') }));
     await page.addInitScript(
         ([key, value]) => localStorage.setItem(key, value),

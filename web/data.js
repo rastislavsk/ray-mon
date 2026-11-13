@@ -10,11 +10,13 @@ import {
     WEATHER_KEEP_MS,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    WORKER_TRASY_URL,
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
+import { parseZoznam, zaokruhli } from '../shared/trasy.js';
 import { isObj, objs, textOf } from '../shared/valid.js';
 import { isIso, isPecat } from '../shared/zdroje.js';
 import { loadStoredWeather, saveStoredWeather } from './storage.js';
@@ -87,6 +89,24 @@ export async function zdielajPecat(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_ZDIELAJ_URL, pecat, fetchImpl);
         const body = res.ok ? await res.json() : null;
         return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Trasy autom z domu pre podnadpis „km autom“ (shared/trasy.js): poloha ide Workeru v tele,
+ * zaokrúhlená. Nikdy nehádže - keď to nevyjde, null a plagát počíta s cestou okolo Zeme.
+ * @param {import('../shared/config.js').Site} site @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<import('../shared/trasy.js').UlozeneTrasy | null>}
+ */
+export async function stiahniTrasy(site, fetchImpl = fetch) {
+    const p = zaokruhli(site);
+    try {
+        const res = await postWorker(WORKER_TRASY_URL, JSON.stringify(p), fetchImpl);
+        /** @type {unknown} */ const body = res.ok ? await res.json() : null;
+        const trasy = parseZoznam(isObj(body) ? body.trasy : null);
+        return trasy && { ...p, trasy };
     } catch {
         return null;
     }

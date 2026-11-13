@@ -3,7 +3,17 @@
 // volá appka - test tak odhalí rozdiel medzi modelom a tým, čo je naozaj v DOM.
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { DAYLOG_STORAGE_KEY, PLANT, SETTINGS_STORAGE_KEY, SITE, SITE_STORAGE_KEY, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
+import {
+    DAYLOG_STORAGE_KEY,
+    PLANT,
+    SETTINGS_STORAGE_KEY,
+    SITE,
+    SITE_STORAGE_KEY,
+    TARIFF,
+    TRASY_STORAGE_KEY,
+    WORKER_PV_URL,
+    WORKER_TRASY_URL,
+} from '../../shared/config.js';
 import { recordDay } from '../../shared/daylog.js';
 import { kwpText } from '../../shared/format.js';
 import { STATISTIKA_TEXTS } from '../../shared/messages.js';
@@ -13,6 +23,7 @@ import { STATS_PERIODS } from '../../shared/stats.js';
 import { doplnSucty, suctyZdroj } from '../../shared/sucty.js';
 import { statistikaModel } from '../../shared/statistika.js';
 import { bigText } from '../../shared/summary.js';
+import { zaokruhli } from '../../shared/trasy.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
 const { pv } = fixtureData();
@@ -25,15 +36,23 @@ const PRICED = { ...TARIFF, bands: TARIFF.bands.map((b) => ({ ...b, price: b.id 
 const OWNER = { site: SITE, plant: PLANT, tariff: PRICED, zdroj: TEST_ZDROJ };
 /** Denník výroby: tri dni septembra (3. chýba) a jeden augustový. */
 const LOG = { '2026-08-31': 30, '2026-09-01': 38.2, '2026-09-02': 52.1, '2026-09-04': 41.7 };
+/** Trasy autom z Dvorian, ako ich vráti Worker (POST /trasy). */
+const TRASY = [
+    { id: 'nitra', km: 25 },
+    { id: 'bratislava', km: 112 },
+    { id: 'brno', km: 244 },
+    { id: 'krakov', km: 342 },
+    { id: 'londyn', km: 1680 },
+];
 
 /**
  * Otvorí appku s pevným časom, uloženým nastavením a denníkom. `net.off`
  * zhodí Worker aj Open-Meteo, kým ho test neprepne späť. `onPv` odpovedá namiesto Workera.
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, net?: { off: boolean }, panel?: string,
- *   onPv?: (route: import('@playwright/test').Route) => unknown }} [opts]
+ *   onPv?: (route: import('@playwright/test').Route) => unknown, onTrasy?: (route: import('@playwright/test').Route) => unknown }} [opts]
  */
-async function openStat(page, { settings = OWNER, site = null, net = { off: false }, panel = 'statistika', onPv } = {}) {
+async function openStat(page, { settings = OWNER, site = null, net = { off: false }, panel = 'statistika', onPv, onTrasy } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -41,6 +60,7 @@ async function openStat(page, { settings = OWNER, site = null, net = { off: fals
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, onPv ?? ((route) => (net.off ? route.abort() : route.fulfill({ json: { pv } }))));
     await page.route(/api\.open-meteo\.com/, (route) => (net.off ? route.abort() : route.fulfill({ json: weather })));
+    await page.route(WORKER_TRASY_URL, onTrasy ?? ((route) => route.fulfill({ json: { trasy: TRASY } })));
     /** @param {string} key @param {string} value */
     const uloz = (key, value) => page.addInitScript(([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v), [key, value]);
     if (settings) await uloz(SETTINGS_STORAGE_KEY, JSON.stringify(toUser(settings)));
@@ -65,6 +85,7 @@ const vstup = (extra = {}) => ({
     loading: false,
     known: /** @type {import('../../shared/settings.js').Known} */ ('elektraren'),
     pv,
+    trasy: { ...zaokruhli(SITE), trasy: TRASY },
     forecast: buildForecast(weather, FIXED_NOW, SITE, PLANT),
     dayLog: recordDay(LOG, '2026-09-05', localMinutes(FIXED_NOW, SITE.timezone), pv.dailyEnergyKwh),
     ...extra,
@@ -96,6 +117,27 @@ const vazneNalezy = async (page) =>
         .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 
 test.describe('karta Štatistika', () => {
+    test('trasy autom: appka ich stiahne raz pre polohu, odloží a podnadpis km autom je z nich', async ({ page }) => {
+        /** @type {string[]} */
+        const poslane = [];
+        await openStat(page, {
+            onTrasy: (route) => {
+                poslane.push(route.request().postData() ?? '');
+                return route.fulfill({ json: { trasy: TRASY } });
+            },
+        });
+        await expect.poll(() => plagatVStranke(page)).toEqual(plagatZModelu(statistikaModel(vstup(), 'dnes')));
+        await expect(page.locator('#st-poster .prow').nth(1)).toContainText('z domu do');
+        expect(poslane).toEqual([JSON.stringify(zaokruhli(SITE))]);
+        const ulozene = await page.evaluate((k) => localStorage.getItem(k), TRASY_STORAGE_KEY);
+        expect(JSON.parse(ulozene ?? 'null')).toEqual({ ...zaokruhli(SITE), trasy: TRASY });
+        await page.locator('#st-poster [data-period="mesiac"]').click();
+        await page.locator('#nav-terazky').click();
+        await page.locator('#nav-statistika').click();
+        await expect(page.locator('#panel-statistika')).toBeVisible();
+        expect(poslane.length, 'pre tú istú polohu sa nepýta znova').toBe(1);
+    });
+
     test('každé obdobie: plagát ako statistikaModel, obrázok obdobia a prepínač na plagáte', async ({ page }) => {
         const errors = await openStat(page);
         await expect(page.locator('#st-sub')).toHaveText(kwpText(10.44));

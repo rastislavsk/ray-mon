@@ -15,6 +15,7 @@ import {
     TARIFF,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
+    WORKER_TRASY_URL,
 } from '../../shared/config.js';
 import { contrastTarget, parseColor, textContrast, over } from '../../shared/contrast.js';
 import { lookToStored, toUser } from '../../shared/settings.js';
@@ -66,6 +67,8 @@ async function openObloha(page, { time = at('13:00'), settings = OWNER, site = n
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.addInitScript({ path: MERANIA });
     await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv } }));
+    // Trasy autom pre Štatistiku: bez nich plagát počíta s cestou okolo Zeme a test nesiaha na Worker.
+    await page.route(WORKER_TRASY_URL, (route) => route.abort());
     // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
     await page.route(WORKER_PRIPOJ_URL, (route) =>
         route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),

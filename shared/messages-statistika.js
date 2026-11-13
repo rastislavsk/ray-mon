@@ -2,7 +2,9 @@
 // Appka ich sťahuje až s kartou Štatistika (web/parts.js); spoločný vstup do všetkých
 // textov je messages.js. Čisté funkcie bez DOM.
 
+import { TRASY } from './config.js';
 import { dateParts, fmt1, fmtSum } from './format.js';
+import { koloZeme } from './trasy.js';
 import { DATE_RE } from './valid.js';
 import { MOZEM_SKY_TEXTS, polite, posterCo2Value, TERAZ_TEXTS } from './messages-core.js';
 
@@ -129,29 +131,50 @@ export function plural(n, [one, few, many]) {
     return n >= 2 && n <= 4 ? few : many;
 }
 
-/**
- * Trasy na porovnanie kilometrov, od najkratšej. Plagát vyberie najdlhšiu, na ktorú to stačí.
- * Vzdialenosti sú po ceste z Bratislavy, zaokrúhlené; rok na streche dá aj obvod Zeme (40 075 km).
- */
-export const SUMMARY_TRIPS = [
-    { km: 130, text: 'ako z Bratislavy do Trnavy a späť' },
-    { km: 330, text: 'ako z Bratislavy do Prahy' },
-    { km: 800, text: 'Bratislava – Košice a späť' },
-    { km: 1800, text: 'až do Barcelony' },
-    { km: 3600, text: 'do Barcelony a späť' },
-    { km: 7200, text: 'dvakrát do Barcelony a späť' },
-    { km: 40000, text: 'raz okolo Zeme' },
-];
+/** Míľniky v podnadpise km autom (TRASY.milniky v shared/config.js). */
+const MILNIKY = { route66: 'celá Route 66 v USA', transsib: 'celá Transsibírska magistrála' };
 
-/** Koľkokrát okolo Zeme, od dvoch: „dvakrát“, „päťkrát“, od desať „12-krát“. */
+/** Koľkokrát okolo Zeme slovom, kým je to celé číslo do desať. */
 const TIMES = ['', 'raz', 'dvakrát', 'trikrát', 'štyrikrát', 'päťkrát', 'šesťkrát', 'sedemkrát', 'osemkrát', 'deväťkrát'];
 
-/** Na čo stačia kilometre: najdlhšia trasa, od dvoch obvodov Zeme ich počet. @param {number} km */
-function tripText(km) {
-    const earth = Math.floor(km / SUMMARY_TRIPS[SUMMARY_TRIPS.length - 1].km);
-    if (earth >= 2) return `${TIMES[earth] ?? `${earth}-krát`} okolo Zeme`;
-    const trip = SUMMARY_TRIPS.filter((x) => x.km <= km).pop();
-    return trip ? trip.text : 'na elektrinu, zo strechy';
+/** Koľké kolo okolo Zeme, v tvare „do … kola“. */
+const KOLO = ['prvého', 'druhého', 'tretieho', 'štvrtého', 'piateho', 'šiesteho', 'siedmeho', 'ôsmeho', 'deviateho', 'desiateho'];
+
+/** Kilometre do textu s nezlomiteľnou medzerou pred jednotkou: „3 360 km“. @param {number} km */
+const kmText = (km) => `${fmtSum(Math.round(km), 0)} km`;
+
+/**
+ * Cesta okolo Zeme: pod jedno kolo percentá („37 % cesty okolo Zeme“, pod percento s desatinou),
+ * potom násobky („1,6-krát“, celé slovom, od desať „12-krát“). Vždy nadol, aby text nesľuboval viac.
+ * @param {number} n násobok obvodu Zeme
+ */
+function zemText(n) {
+    if (n < 0.001) return 'menej ako 0,1 % cesty okolo Zeme';
+    if (n < 0.01) return `${fmt1(Math.floor(n * 1000) / 10)} % cesty okolo Zeme`;
+    if (n < 1) return `${Math.floor(n * 100)} % cesty okolo Zeme`;
+    if (n >= 10) return `${Math.floor(n)}-krát okolo Zeme`;
+    const t = Math.floor(n * 10) / 10;
+    return Number.isInteger(t) ? `${TIMES[t]} okolo Zeme` : `${fmt1(t)}-krát okolo Zeme`;
+}
+
+/** Kolo okolo Zeme, ktoré je na rade, a koľko mu chýba: „do druhého kola chýba 32 000 km“. @param {number} km */
+function koloText(km) {
+    const { kolo, chyba } = koloZeme(km);
+    const zvysok = chyba >= 1000 ? Math.round(chyba / 1000) * 1000 : Math.max(10, Math.round(chyba / 10) * 10);
+    return `do ${KOLO[kolo - 1] ?? `${kolo}.`} kola chýba ${kmText(zvysok)}`;
+}
+
+/**
+ * Podnadpis riadku km autom: na čo kilometre stačia (shared/trasy.js, vyberCestu). Pri celom čase
+ * k ceste okolo Zeme aj to, koľko chýba do ďalšieho kola.
+ * @param {import('./trasy.js').Cesta} c @param {number} km @param {StatsPeriod} period
+ */
+export function cestaText(c, km, period) {
+    if (c.kind === 'mesiac') return c.spat ? 'na Mesiac a späť' : `až na Mesiac (${kmText(TRASY.mesiacKm)})`;
+    if (c.kind === 'zem') return period === 'spolu' ? `${zemText(c.nasobok)} · ${koloText(km)}` : zemText(c.nasobok);
+    if (c.kind === 'milnik') return `ako ${MILNIKY[/** @type {keyof typeof MILNIKY} */ (c.id)]} (${kmText(c.km)})`;
+    const ciel = `z domu do ${c.do}${c.spat ? ' a späť' : ''} (${kmText(c.km)})`;
+    return { ako: `ako ${ciel}`, skoro: `skoro ako ${ciel}`, dalej: `ďalej než ${ciel}`, kus: `kus cesty ${ciel}` }[c.presne];
 }
 
 /**
@@ -183,7 +206,7 @@ export function summaryMeter(d) {
 
 /**
  * Čísla plagátu obdobia zo živého merania (shared/summary.js).
- * @typedef {{ period: StatsPeriod, month: string, year: string, kwh: number, phones: number, km: number,
+ * @typedef {{ period: StatsPeriod, month: string, year: string, kwh: number, phones: number, km: number, cesta: import('./trasy.js').Cesta,
  *   best: { date: string, kwh: number, today: boolean } | null, value: number | null, valuePerDay: number | null, currency: string,
  *   rest: { kwh: number, total: number } | null, missing: number, co2Kg: number, payback: number | null, debtT: number | null,
  *   carbon: CarbonFactors, od: string | null, znacka: string }} SummaryFacts
@@ -201,7 +224,7 @@ export function summaryTexts(d, voice = 'drzy') {
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
         rows.push({ t: `${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: phonesSub(d.phones) });
-        rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: tripText(d.km) });
+        rows.push({ t: `${fmtSum(Math.round(d.km), 0)} km autom`, s: cestaText(d.cesta, d.km, d.period) });
     }
     if (d.rest)
         rows.push({ t: `Do večera ešte ~${fmt1(d.rest.kwh)} kWh`, s: `podľa predpovede, spolu by bolo ~${fmt1(d.rest.total)} kWh` });
@@ -216,21 +239,21 @@ export function summaryTexts(d, voice = 'drzy') {
 
 /**
  * Plagát dneška bez merania: odhad z predpovede, vlnovka pred každým číslom.
- * @param {{ kwh: number, phones: number, km: number, value: number | null, currency: string }} d
+ * @param {{ kwh: number, phones: number, km: number, cesta: import('./trasy.js').Cesta, value: number | null, currency: string }} d
  */
 export function summaryEstimateTexts(d) {
     /** @type {Array<{ t: string, s: string }>} */ const rows = [];
     if (d.kwh > 0) {
         rows.push({ t: `~${fmtSum(Math.round(d.phones), 0)} nabití mobilu`, s: 'ak vyjde predpoveď' });
-        rows.push({ t: `~${fmtSum(Math.round(d.km), 0)} km autom`, s: tripText(d.km) });
+        rows.push({ t: `~${fmtSum(Math.round(d.km), 0)} km autom`, s: cestaText(d.cesta, d.km, 'dnes') });
         if (d.value !== null) rows.push({ t: `Hodnota ~${money(d.value, d.currency)}`, s: 'toľko by sme za to dali sieti' });
     }
     return { kick: 'Dnes podľa predpovede', heading: 'Dnes podľa predpovede', rows };
 }
 
 /**
- * Poznámka pod plagátom: súčet od prvého merania, dni, ktoré v denníku chýbajú, čo je hodnota
- * a s akými faktormi sa počíta CO2eq.
+ * Poznámka pod plagátom: súčet od prvého merania, dni, ktoré v denníku chýbajú, čo je hodnota,
+ * s akými faktormi sa počíta CO2eq a odkiaľ sú trasy autom.
  * @param {SummaryFacts} d @param {Voice} voice
  */
 function summaryNote(d, voice) {
@@ -241,7 +264,9 @@ function summaryNote(d, voice) {
         : '';
     const value = d.value !== null && d.kwh > 0 ? statistikaTexts(voice).note : '';
     const carbon = d.kwh > 0 || d.payback !== null ? posterCarbonNote({ ...d.carbon, debtT: d.debtT }) : '';
-    return [od, missing, value, carbon].filter(Boolean).join(' ');
+    // Trasy sú z mapy OpenStreetMap a jej licencia (ODbL) chce, aby bol zdroj uvedený.
+    const trasy = d.kwh > 0 && d.cesta.kind === 'mesto' ? 'Trasy autom sú z mapy OpenStreetMap a jej prispievateľov.' : '';
+    return [od, missing, value, carbon, trasy].filter(Boolean).join(' ');
 }
 
 /**

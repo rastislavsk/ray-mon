@@ -9,7 +9,7 @@
 ```
    Open-Meteo (žiarenie, teplota, oblačnosť)      výrobca meniča (napr. kiosk FusionSolar)
             │ pre lokalitu z Nastavenia                   │
-            │                                  Cloudflare Worker: POST /pripoj, /pv
+            │                                  Cloudflare Worker: POST /pripoj, /pv, /trasy
             │                                  worker/src/zdroje.js → shared/ → pv
             └──────────────┬──────────────────────────────┘
                            ▼
@@ -46,6 +46,13 @@ zapečatený. Nastavenia spred zapečatenia majú v `pecat` holý odkaz na kiosk
 meraní zapečatí a `refresh.js` si novú pečať uloží. Do odkazu Zdieľať appku ide pečať s platnosťou
 7 dní (`/zdielaj`, `ZDIELANIE` v `shared/config.js`), ktorú Worker pri prvom meraní vymení za trvalú –
 tou istou cestou cez `refresh.js`.
+
+Podnadpis „km autom“ na karte Štatistika stojí na skutočných trasách autom z domu do miest zo zoznamu
+(`shared/trasy-mesta.js`). Ráta ich Worker (`POST /trasy`, `worker/src/trasy.js`) jednou požiadavkou na
+smerovač OSRM nad mapou OpenStreetMap; poloha ide v tele a len zaokrúhlená na stotiny stupňa. Appka sa
+pýta, až keď je Štatistika na obrazovke, raz pre polohu, a trasy si odloží (`TRASY_STORAGE_KEY`). Výber
+trasy, míľnika či cesty okolo Zeme je v `shared/trasy.js`. Verejný server OSRM je bez záruky a len na
+nekomerčné použitie – pred obchodmi ho treba vymeniť (`TRASY.osrmUrl`); appka o smerovači nevie.
 
 ## Vrstvy
 

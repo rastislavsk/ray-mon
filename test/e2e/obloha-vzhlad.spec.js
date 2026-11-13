@@ -16,6 +16,7 @@ import {
     TARIFF,
     VYMAZANE_STORAGE_KEY,
     WORKER_PV_URL,
+    WORKER_TRASY_URL,
     WORKER_ZDIELAJ_URL,
 } from '../../shared/config.js';
 import { NASTAVENIE_TEXTS } from '../../shared/nastavenie.js';
@@ -69,6 +70,8 @@ async function pripravSiet(page, { settings = OWNER, site = null, time = FIXED_N
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv } }));
+    // Trasy autom pre Štatistiku: bez nich plagát počíta s cestou okolo Zeme a test nesiaha na Worker.
+    await page.route(WORKER_TRASY_URL, (route) => route.abort());
     await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
     /** @type {Record<string, string>} */ const store = {};
     if (settings) store[SETTINGS_STORAGE_KEY] = JSON.stringify(toUser(settings));
