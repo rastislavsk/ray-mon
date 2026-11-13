@@ -66,6 +66,8 @@ export const NASTAVENIE_TEXTS = {
     },
     doma: /** @type {[string, string]} */ (['Čo máš doma', 'Čo máte doma']),
     domaNic: 'zatiaľ nič',
+    /** V Čo máš doma sa auto volá celým menom, inde v appke ostáva „Auto“. @type {Record<string, string>} */
+    domaNazvy: { auto: 'Elektromobil' },
     domaNote: /** @type {[string, string]} */ ([
         'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíš.',
         'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíte.',
@@ -250,7 +252,9 @@ export function nastavenieModel(state) {
     const h = done ? plantHero(saved) : null;
     const p = done ? pristupOf(state) : null;
     const names = voiceTexts(voice).MOZEM_ITEM_TEXTS;
-    const doma = DOMA_DEVICES.filter((id) => state.doma.includes(id)).map((id, i) => (i ? names[id].name.toLowerCase() : names[id].name));
+    /** @param {string} id */
+    const domaName = (id) => T.domaNazvy[id] ?? names[id].name;
+    const doma = DOMA_DEVICES.filter((id) => state.doma.includes(id)).map((id, i) => (i ? domaName(id).toLowerCase() : domaName(id)));
     return {
         title: T.title,
         cta: setupCta(state, voice),
@@ -270,7 +274,7 @@ export function nastavenieModel(state) {
         doma: {
             title: inVoice(T.doma, voice),
             hint: doma.length ? listText(doma) : T.domaNic,
-            devices: DOMA_DEVICES.map((id) => ({ id, name: names[id].name, on: state.doma.includes(id) })),
+            devices: DOMA_DEVICES.map((id) => ({ id, name: domaName(id), on: state.doma.includes(id) })),
             note: inVoice(T.domaNote, voice),
         },
         oznamenia: oznameniaSekcia(state),
