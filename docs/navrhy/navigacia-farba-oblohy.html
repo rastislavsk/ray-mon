@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: aktívna karta vo farbe oblohy</title>
+        <style>
+            /* Mockup (13. 11. 2026). Farby oblohy počíta zjednodušená kópia skyColors zo shared/sky.js:
+               hodina návrhu = hodina na hodinách (bez skutočného východu a západu), kľúče, oblaky a
+               stmavený spodok sú tie isté ako v SKY v shared/config.js. Pás navigácie je --bar z css/zaklad.css. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --bar: rgba(6, 10, 28, 0.72);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 32px;
+            }
+            h1 {
+                margin: 0;
+                font-size: 1.6rem;
+                line-height: 1.2;
+            }
+            h2 {
+                margin: 0 0 4px;
+                font-size: 1.15rem;
+            }
+            p {
+                margin: 0;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .ovl {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+                display: grid;
+                gap: 10px;
+                padding: 12px 0;
+                background: #070b18;
+                border-bottom: 1px solid var(--line);
+            }
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .chips button {
+                font: inherit;
+                font-size: 0.85rem;
+                color: var(--ink);
+                background: transparent;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 4px 12px;
+                cursor: pointer;
+            }
+            .chips button[aria-pressed='true'] {
+                background: var(--ink);
+                color: #070b18;
+            }
+            input[type='range'] {
+                width: 100%;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 20px;
+            }
+            .opt {
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                padding: 14px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+            }
+            .opt.now {
+                border-style: dashed;
+            }
+            .phone {
+                position: relative;
+                height: 150px;
+                border-radius: 14px;
+                overflow: hidden;
+            }
+            .phone .tabs {
+                position: absolute;
+                inset: auto 0 0 0;
+                display: flex;
+                justify-content: space-around;
+                padding: 8px 2px 12px;
+                background: var(--bar);
+                backdrop-filter: blur(12px);
+            }
+            .tabs .b {
+                position: relative;
+                flex: 1 1 0;
+                display: grid;
+                justify-items: center;
+                gap: 2px;
+                color: rgba(255, 255, 255, 0.82);
+                font-size: 0.72rem;
+                font-weight: 600;
+                font-variation-settings: 'wdth' 74;
+            }
+            .tabs .b.on {
+                color: #fff;
+            }
+            .tabs svg,
+            .mini svg {
+                width: 22px;
+                height: 22px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                overflow: visible;
+            }
+            .ico {
+                position: relative;
+                display: grid;
+                place-items: center;
+                width: 22px;
+                height: 22px;
+            }
+            /* Možnosť C: okienko oblohy za ikonou */
+            .okno {
+                position: absolute;
+                inset: -4px -17px;
+                border-radius: 999px;
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+            }
+            .ico svg {
+                position: relative;
+            }
+            /* Možnosť D: čiarka nad ikonou */
+            .ciarka {
+                position: absolute;
+                top: -8px;
+                width: 24px;
+                height: 3px;
+                border-radius: 0 0 3px 3px;
+            }
+            .den {
+                display: grid;
+                grid-template-columns: repeat(8, 1fr);
+                gap: 4px;
+            }
+            .mini {
+                display: grid;
+                justify-items: center;
+                gap: 3px;
+                padding: 10px 0 6px;
+                border-radius: 8px;
+                font-size: 0.68rem;
+                color: var(--dim);
+            }
+            .mini .ico {
+                margin-bottom: 2px;
+            }
+            ul {
+                margin: 0;
+                padding-left: 18px;
+            }
+            li {
+                margin: 2px 0;
+            }
+            .plus {
+                color: #b9f28c;
+            }
+            .minus {
+                color: #ffc4ba;
+            }
+            .k {
+                font-size: 0.8rem;
+                color: var(--dim);
+            }
+            .ver {
+                display: grid;
+                gap: 8px;
+                padding: 16px;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.05);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 8px">
+                <h1>Aktívna karta v navigácii vo farbe oblohy</h1>
+                <p class="dim">
+                    Dnes svieti ikona aktívnej karty zelenou (<code>--yes</code>). Tá má v appke význam „slnko stačí“, takže v navigácii ho
+                    vlastne požičiava na niečo iné. Nižšie sú štyri spôsoby, ako ju zafarbiť oblohou. Hore si zvoľ čas a oblačnosť; pod
+                    každou možnosťou je aj celý deň naraz.
+                </p>
+                <p class="k">
+                    Farby počíta zjednodušená kópia <code>skyColors</code> (hodina na hodinách, bez skutočného východu a západu Slnka). Je
+                    to mockup, nie appka.
+                </p>
+            </header>
+
+            <section class="ovl" aria-label="Obloha">
+                <div class="chips" id="hod"></div>
+                <input type="range" id="slider" min="0" max="24" step="0.25" value="12" aria-label="Hodina" />
+                <div class="chips" id="obl"></div>
+            </section>
+
+            <section class="grid" id="moznosti"></section>
+
+            <section class="ver">
+                <h2>Na čo treba myslieť pri každej možnosti</h2>
+                <ul>
+                    <li>
+                        Pás navigácie je tmavý. Samotná farba oblohy na ňom v noci zmizne (noc je takmer čierna) a cez deň je modrá hore
+                        príliš tmavá. Preto ju A, B a D <b>zosvetlia</b> na kontrast 11 : 1 voči pásu, čo je jas dnešnej zelenej (neaktívne
+                        ikony majú asi 9,5 : 1). Pri 3 : 1 (minimum WCAG pre grafiku) bola aktívna ikona tmavšia ako neaktívne biele a
+                        vyzerala vypnutá. V noci tak vyjde bledomodrá, cez deň svetlomodrá, pri západe broskyňová.
+                    </li>
+                    <li>
+                        Farba by sa menila plynule s oblohou (rovnaký 0,7 s prechod ako pozadie) – nič navyše sa nepočíta,
+                        <code>--s1</code> a <code>--s2</code> appka už nastavuje. Zosvetlenie by spočítal render spolu s
+                        <code>skyShade</code> a test by ho prešiel pri každej oblohe ako dnes text.
+                    </li>
+                    <li>
+                        <b>Rozhodnutie 13. 11. 2026: možnosť A.</b> V appke sa ukázalo, že pri jase dnešnej zelenej je farba oblohy len
+                        nádych a aktívna ikona sa od neaktívnych skoro nelíši. Preto sú neaktívne ikony tlmené na 50 % bielej
+                        (<code>--icon-dim</code>, popisky ostali) a aktívna má jas 0,45 (<code>SKY.navJas</code>) – sýtejšia farba a stále
+                        najsvetlejšia. Mockup vyššie ukazuje pôvodný stav bez tlmenia.
+                    </li>
+                    <li>Pri vypnutej živej oblohe (<code>SKY.calm</code>) a bez dát (sivá) by ikona bola pokojná modrá, resp. sivá.</li>
+                </ul>
+            </section>
+        </main>
+
+        <script>
+            const SKY = {
+                riseH: 7,
+                setH: 18.5,
+                keys: [
+                    [0, '#030616', '#081028'],
+                    [5.5, '#0a1029', '#1c2147'],
+                    [7, '#4b5aa6', '#f0a98a'],
+                    [8.5, '#2f72c0', '#93c8ec'],
+                    [12, '#1767c9', '#4fa3e2'],
+                    [16, '#2864b4', '#cf9f6c'],
+                    [18, '#463a8a', '#e3804f'],
+                    [19.5, '#141947', '#433262'],
+                    [21, '#060a1f', '#0d1430'],
+                    [24, '#030616', '#081028'],
+                ],
+                cloudMix: { jasno: 0, polojasno: 0.45, zamracene: 0.78 },
+                cloud: ['#5b6b82', '#98a5b5'],
+                sivost: { jasno: 0, polojasno: 0, zamracene: 1 },
+                offline: ['#4f555f', '#7f858e'],
+                shade: [5, 10, 30],
+            };
+            const BAR = [6, 10, 28, 0.72];
+            const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+            const mix = (a, b, f) => a.map((v, i) => v + (b[i] - v) * f);
+            const css = (c) => `rgb(${c.map(Math.round).join(', ')})`;
+            const naSivu = ([r, g, b]) => {
+                const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                return [y, y, y];
+            };
+            const lin = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+            const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+            const kontrast = (a, b) => {
+                const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+                return (x + 0.05) / (y + 0.05);
+            };
+            const over = ([r, g, b, a], pod) => pod.map((v, i) => v + ([r, g, b][i] - v) * a);
+            const skyAt = (s, t) => over([...SKY.shade, s.shade * t], mix(s.top, s.bottom, t));
+            function shade(top, bottom) {
+                for (let a = 0; a <= 100; a++) {
+                    const s = { top, bottom, shade: a / 100 };
+                    let ok = true;
+                    for (let i = 0; i <= 50 && ok; i++) ok = kontrast([255, 255, 255], skyAt(s, i / 50)) >= 4.6;
+                    if (ok) return a / 100;
+                }
+                return 1;
+            }
+            const STRED = { jasno: 0, polojasno: 0.5, zamracene: 1 };
+            const podla = (tab, z) =>
+                z <= 0.5
+                    ? tab.jasno + (tab.polojasno - tab.jasno) * (z / 0.5)
+                    : tab.polojasno + (tab.zamracene - tab.polojasno) * ((z - 0.5) / 0.5);
+            function obloha(t, pocasie) {
+                if (pocasie === 'bez') {
+                    const [top, bottom] = SKY.offline.map(rgb);
+                    return { top, bottom, shade: shade(top, bottom) };
+                }
+                let i = 0;
+                while (SKY.keys[i + 1][0] < t) i++;
+                const [ha, a1, a2] = SKY.keys[i];
+                const [hb, b1, b2] = SKY.keys[i + 1];
+                const f = (t - ha) / (hb - ha);
+                let top = mix(rgb(a1), rgb(b1), f);
+                let bottom = mix(rgb(a2), rgb(b2), f);
+                const { riseH, setH } = SKY;
+                const day = t >= riseH - 1 && t <= setH + 1 ? Math.sin((Math.PI * (t - riseH + 1)) / (setH - riseH + 2)) : 0;
+                const z = STRED[pocasie];
+                const cf = podla(SKY.cloudMix, z) * Math.max(0.25, Math.min(1, day));
+                const siva = podla(SKY.sivost, z);
+                const farba = (c, m) => {
+                    const x = mix(c, rgb(m), cf);
+                    return mix(x, naSivu(x), siva);
+                };
+                top = farba(top, SKY.cloud[0]);
+                bottom = farba(bottom, SKY.cloud[1]);
+                return { top, bottom, shade: shade(top, bottom) };
+            }
+            /** Pás navigácie nad spodkom obrazovky. */
+            const podPasom = (s) => over(BAR, skyAt(s, 0.97));
+            /** Farba zosvetlená bielou, kým nemá voči pásu kontrast `k`. */
+            function zosvetli(c, s, k = 11) {
+                const pod = podPasom(s);
+                for (let f = 0; f <= 1.0001; f += 0.01) {
+                    const x = mix(c, [255, 255, 255], f);
+                    if (kontrast(x, pod) >= k) return x;
+                }
+                return [255, 255, 255];
+            }
+
+            const IKONY = {
+                Teraz: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+                Dnes: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+                Radar: '<path d="M12 12L19 5"/><path d="M19.8 9.5A8.5 8.5 0 1 1 14.5 4"/><path d="M15.6 11A3.8 3.8 0 1 1 13 8.4"/>',
+                '7 dní': '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+                Štatistika: '<path d="M5 20V12M12 20V5M19 20v-9"/>',
+                Nastavenie: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+            };
+            let gid = 0;
+            /** Aktívna ikona podľa možnosti. */
+            function aktivna(m, s, cesta) {
+                const horizont = zosvetli(s.bottom, s);
+                if (m === 'dnes') return `<span class="ico"><svg viewBox="0 0 24 24" style="stroke:#b9f28c">${cesta}</svg></span>`;
+                if (m === 'A') return `<span class="ico"><svg viewBox="0 0 24 24" style="stroke:${css(horizont)}">${cesta}</svg></span>`;
+                if (m === 'B') {
+                    const id = 'g' + gid++;
+                    const hore = zosvetli(s.top, s);
+                    return `<span class="ico"><svg viewBox="0 0 24 24" style="stroke:url(#${id})"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css(hore)}"/><stop offset="1" stop-color="${css(horizont)}"/></linearGradient></defs>${cesta}</svg></span>`;
+                }
+                if (m === 'C')
+                    return `<span class="ico"><span class="okno" style="background:linear-gradient(180deg,${css(s.top)},${css(s.bottom)})"></span><svg viewBox="0 0 24 24" style="stroke:#fff">${cesta}</svg></span>`;
+                if (m === 'D')
+                    return `<span class="ico"><span class="ciarka" style="background:${css(horizont)}"></span><svg viewBox="0 0 24 24" style="stroke:#fff">${cesta}</svg></span>`;
+            }
+            const MOZNOSTI = [
+                {
+                    m: 'dnes',
+                    meno: 'Dnes: zelená',
+                    plus: ['Výrazná, vždy rovnaká.'],
+                    minus: [
+                        'Zelená inde znamená „slnko stačí“ – v navigácii nič také nehovorí.',
+                        'S oblohou nesúvisí, cez deň pôsobí cudzo.',
+                    ],
+                },
+                {
+                    m: 'A',
+                    meno: 'A: farba obzoru',
+                    popis: 'Ikona má farbu spodku oblohy (--s2), zosvetlenú na jas dnešnej zelenej.',
+                    plus: [
+                        'Najjednoduchšie – jedna farba, CSS premenná.',
+                        'Spodok oblohy je najfarebnejší (ráno a večer broskyňa, cez deň svetlomodrá).',
+                    ],
+                    minus: ['V noci a pri zamračení vyjde bledá, skoro biela – aktívna karta sa odlíši menej.'],
+                },
+                {
+                    m: 'B',
+                    meno: 'B: prechod oblohy v ikone',
+                    popis: 'Ťah ikony ide zhora nadol od farby vrchu oblohy k farbe obzoru, obe zosvetlené.',
+                    plus: ['Ikona je ako malý kúsok oblohy, najvernejšie „živé“.'],
+                    minus: [
+                        'Na 22 px je prechod sotva vidno, cez deň vyjde takmer ako A.',
+                        'Treba SVG prechod v stránke (jeden &lt;linearGradient&gt;).',
+                    ],
+                },
+                {
+                    m: 'C',
+                    meno: 'C: okienko oblohy',
+                    popis: 'Za ikonou je pilulka s oblohou v malom (ako --s1 → --s2 na pozadí), ikona biela.',
+                    plus: ['Najvýraznejšie a najkrajšie cez deň a pri západe.', 'Biela ikona má vždy rovnaký kontrast.'],
+                    minus: ['V noci je okienko tmavé na tmavom páse – drží ho len tenký obrys.', 'Najviac sa líši od dnešného vzhľadu.'],
+                },
+                {
+                    m: 'D',
+                    meno: 'D: čiarka farbou obzoru',
+                    popis: 'Biela ikona a nad ňou krátka čiarka farbou obzoru (zosvetlená).',
+                    plus: ['Nenápadné, ikony ostanú jednotné.', 'Čiarka unesie aj bledšiu farbu.'],
+                    minus: ['Farba oblohy je len v troch pixeloch – na telefóne si ju takmer nevšimneš.'],
+                },
+            ];
+            const HODINY = [
+                ['Noc', 2],
+                ['Úsvit', 6.5],
+                ['Východ', 7.25],
+                ['Doobeda', 9.5],
+                ['Poludnie', 12],
+                ['Popoludnie', 16],
+                ['Západ', 18],
+                ['Súmrak', 19.5],
+            ];
+            const POCASIE = [
+                ['Jasno', 'jasno'],
+                ['Polojasno', 'polojasno'],
+                ['Zamračené', 'zamracene'],
+                ['Bez dát', 'bez'],
+            ];
+            let hod = 12;
+            let poc = 'jasno';
+            const hh = (t) => `${Math.floor(t)}:${String(Math.round((t % 1) * 60)).padStart(2, '0')}`;
+
+            function kresli() {
+                const s = obloha(hod, poc);
+                document.getElementById('moznosti').innerHTML = MOZNOSTI.map((o) => {
+                    const pas = Object.entries(IKONY)
+                        .map(([meno, cesta], i) =>
+                            i === 0
+                                ? `<span class="b on">${aktivna(o.m, s, cesta)}<span>${meno}</span></span>`
+                                : `<span class="b"><span class="ico"><svg viewBox="0 0 24 24">${cesta}</svg></span><span>${meno}</span></span>`,
+                        )
+                        .join('');
+                    const den = HODINY.map(([meno, t]) => {
+                        const x = obloha(t, poc);
+                        return `<div class="mini" style="background:linear-gradient(${css(over(BAR, skyAt(x, 0.97)))},${css(over(BAR, skyAt(x, 0.97)))})">${aktivna(o.m, x, IKONY.Teraz)}<span>${meno}</span></div>`;
+                    }).join('');
+                    const sky = `background:linear-gradient(180deg, ${css(skyAt(s, 0.55))}, ${css(skyAt(s, 1))})`;
+                    return `<article class="opt${o.m === 'dnes' ? ' now' : ''}">
+                        <div><h2>${o.meno}</h2>${o.popis ? `<p class="dim">${o.popis}</p>` : ''}</div>
+                        <div class="phone" style="${sky}"><div class="tabs">${pas}</div></div>
+                        <div class="den">${den}</div>
+                        <ul>${o.plus.map((p) => `<li class="plus">${p}</li>`).join('')}${o.minus.map((p) => `<li class="minus">${p}</li>`).join('')}</ul>
+                    </article>`;
+                }).join('');
+                document.querySelectorAll('#hod button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.t === hod)));
+                document.querySelectorAll('#obl button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.p === poc)));
+                document.getElementById('slider').value = String(hod);
+                document.getElementById('slider').setAttribute('aria-valuetext', hh(hod));
+            }
+            document.getElementById('hod').innerHTML = HODINY.map(
+                ([m, t]) => `<button type="button" data-t="${t}">${m} ${hh(t)}</button>`,
+            ).join('');
+            document.getElementById('obl').innerHTML = POCASIE.map(([m, p]) => `<button type="button" data-p="${p}">${m}</button>`).join(
+                '',
+            );
+            document.getElementById('hod').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((hod = +b.dataset.t), kresli());
+            });
+            document.getElementById('obl').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) ((poc = b.dataset.p), kresli());
+            });
+            document.getElementById('slider').addEventListener('input', (e) => {
+                hod = +e.target.value;
+                kresli();
+            });
+            kresli();
+        </script>
+    </body>
+</html>

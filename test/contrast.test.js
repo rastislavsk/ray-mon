@@ -12,7 +12,7 @@ import {
     parseColor,
     textContrast,
 } from '../shared/contrast.js';
-import { skyAt, skyColors, skyNow, skyShade } from '../shared/sky.js';
+import { skyAt, skyColors, skyNav, skyNow, skyShade } from '../shared/sky.js';
 import { localToUtc } from '../shared/solar.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -153,6 +153,43 @@ test('čitateľnosť: každý text na každej oblohe dňa, v každej výške obr
                     : slabe(`${name}, výška ${h}, ${layer}`, bare, onSky);
             }),
         ),
+    );
+    assert.deepEqual(zle.slice(0, 20), []);
+});
+
+test('skyNav: svetlý obzor ostane, tmavý sa zosvetlí na SKY.navJas a najmenej, ako treba', () => {
+    assert.equal(skyNav('#ffffff'), 'rgb(255, 255, 255)');
+    const noc = parseColor(skyNav('#081028'));
+    assert.ok(luminance(noc) >= SKY.navJas);
+    // Nádych oblohy ostane: modrá zložka je najväčšia.
+    assert.ok(noc[2] > noc[0]);
+    const menej = /** @type {import('../shared/contrast.js').Rgb} */ ([0, 1, 2].map((i) => noc[i] - 3));
+    assert.ok(luminance(menej) < SKY.navJas);
+    // Západ ostane teplý.
+    const zapad = parseColor(skyNav('#e3804f'));
+    assert.ok(zapad[0] > zapad[2]);
+});
+
+test('navigácia: ikona aktívnej karty vo farbe obzoru je na každej oblohe zreteľne výraznejšia ako neaktívne', () => {
+    const t = cssTokens();
+    assert.ok(t['--icon-dim'], '--icon-dim chýba v :root');
+    // O koľko musí mať aktívna ikona väčší kontrast ako neaktívne, aby sa dala rozoznať.
+    const NAVYSE = 1.4;
+    const zle = everySky().flatMap(({ name, sky }) =>
+        [0, 1].flatMap((h) => {
+            // Pás je dole (telefón) alebo hore (na šírku, aktívna karta má navyše bielu pilulku).
+            const pas = over(parseColor(t['--bar']), skyAt(sky, h));
+            const neaktivna = textContrast(parseColor(t['--icon-dim']), pas);
+            const miesto = `${name}, výška ${h}`;
+            const out = neaktivna >= CONTRAST_LARGE ? [] : [`${miesto}: neaktívna ikona ${neaktivna.toFixed(2)} : 1`];
+            const naPase = textContrast(parseColor(sky.nav), pas);
+            if (naPase < CONTRAST_TEXT || naPase < neaktivna * NAVYSE)
+                out.push(`${miesto}: aktívna ${naPase.toFixed(2)} : 1, neaktívna ${neaktivna.toFixed(2)} : 1`);
+            const naPilulke = textContrast(parseColor(sky.nav), over([255, 255, 255, 0.16], pas));
+            // Ikona je grafika (WCAG 1.4.11), na pilulke jej stačí 3 : 1; popisok pod ňou je biely.
+            if (naPilulke < CONTRAST_LARGE) out.push(`${miesto}, pilulka: aktívna ${naPilulke.toFixed(2)} : 1`);
+            return out;
+        }),
     );
     assert.deepEqual(zle.slice(0, 20), []);
 });

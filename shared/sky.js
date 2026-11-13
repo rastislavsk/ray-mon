@@ -2,14 +2,14 @@
 // v polohe elektrárne a oblačnosti z predpovede. Čas aj dáta dostáva parametrom.
 
 import { SKY } from './config.js';
-import { over, parseColor, textContrast } from './contrast.js';
+import { luminance, over, parseColor, textContrast } from './contrast.js';
 import { localDateKey, localMinutes, localToUtc, solarPosition, sunTimes, SUNRISE_ELEVATION_DEG } from './solar.js';
 
 /**
  * Počasie na oblohe. Dážď zatiaľ nie je - appka zrážky nesťahuje.
  * @typedef {'jasno' | 'polojasno' | 'zamracene'} SkyWeather
- * @typedef {{ weather: SkyWeather | null, top: string, bottom: string, shade: string }} Sky `weather` null = bez dát,
- *   `shade` farba stmaveného spodku (skyShade)
+ * @typedef {{ weather: SkyWeather | null, top: string, bottom: string, shade: string, nav: string }} Sky `weather` null = bez dát,
+ *   `shade` farba stmaveného spodku (skyShade), `nav` farba aktívnej karty v navigácii (skyNav)
  */
 
 // Výšky, v ktorých sa meria kontrast textu na oblohe: od vrchu (0) po spodok obrazovky (1).
@@ -50,8 +50,27 @@ export function skyShade(top, bottom) {
     return shade(lo);
 }
 
+/**
+ * Farba ikony aktívnej karty v navigácii: obzor `bottom` zosvetlený bielou (po stotinách) práve
+ * natoľko, aby mal relatívny jas aspoň SKY.navJas. Svetlý obzor (západ, deň) ostane sýty, tmavý
+ * (noc) vyjde bledý s nádychom oblohy.
+ * @param {string} bottom @returns {string} farba `rgb(…)` pre CSS
+ */
+export function skyNav(bottom) {
+    const c = parseColor(bottom);
+    const farba = (/** @type {number} */ f) =>
+        /** @type {import('./contrast.js').Rgb} */ ([0, 1, 2].map((i) => Math.round(c[i] + (255 - c[i]) * (f / 100))));
+    let [lo, hi] = [0, 100];
+    while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (luminance(farba(mid)) >= SKY.navJas) hi = mid;
+        else lo = mid + 1;
+    }
+    return `rgb(${farba(lo).join(', ')})`;
+}
+
 /** Obloha s farbami `top` a `bottom` aj so stmaveným spodkom. @param {SkyWeather | null} weather @param {string} top @param {string} bottom @returns {Sky} */
-const sky = (weather, top, bottom) => ({ weather, top, bottom, shade: skyShade(top, bottom) });
+const sky = (weather, top, bottom) => ({ weather, top, bottom, shade: skyShade(top, bottom), nav: skyNav(bottom) });
 
 /** Počasie z oblačnosti v %. @param {number} cloudPct @returns {SkyWeather} */
 export function skyWeather(cloudPct) {

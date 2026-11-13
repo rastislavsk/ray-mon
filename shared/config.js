@@ -901,6 +901,11 @@ export const SKY = {
     // navyše je rezerva na zaokrúhlenie farieb v prehliadači a výšky medzi meranými bodmi.
     shade: '#050a1e',
     shadeContrast: 4.6,
+    // Ikona aktívnej karty v navigácii má farbu obzoru (spodok oblohy) zosvetlenú bielou na tento
+    // relatívny jas (WCAG, 0-1). Samotná obloha by na tmavom páse navigácie v noci zmizla. Neaktívne
+    // ikony sú tlmené (--icon-dim v css/zaklad.css), takže aktívna je pri tomto jase vždy najsvetlejšia
+    // a odtieň oblohy jej ostane (docs/navrhy/navigacia-farba-oblohy.html).
+    navJas: 0.45,
 };
 
 /**
