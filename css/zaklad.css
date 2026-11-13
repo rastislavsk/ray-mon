@@ -84,6 +84,9 @@
 
 * {
     box-sizing: border-box;
+    /* Chrome na Androide by pri každom ťuknutí prebliknul polopriehľadný obdĺžnik v tvare prvku.
+       Pôvodná appka ho mala vypnutý tiež; s jej štýlmi (#434) to pravidlo zmizlo. */
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
