@@ -11,6 +11,7 @@
 // uloží namiesto odkazu.
 // POST /zdielaj: zapečatený prístup -> ten istý prístup s platnosťou ZDIELANIE.platiDni dní, do
 // odkazu Zdieľať appku. Kto odkaz otvorí včas, dostane pri prvom meraní (/pv) trvalú pečať.
+// POST /trasy: poloha -> trasy autom do miest pre kartu Štatistika (worker/src/trasy.js).
 // GET /radar/<snímka>?b=<bloky>: kúsky radarového súboru OPERA pre kartu Radar (worker/src/radar.js).
 
 import {
@@ -19,6 +20,7 @@ import {
     WORKER_PRIPOMEN_PATH,
     WORKER_PV_PATH,
     WORKER_RADAR_PATH,
+    WORKER_TRASY_PATH,
     WORKER_ZDIELAJ_PATH,
     ZDIELANIE,
 } from '../../shared/config.js';
@@ -27,6 +29,7 @@ import { isObj } from '../../shared/valid.js';
 import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
 import { handleRadar } from './radar.js';
+import { trasy } from './trasy.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
 /**
@@ -219,6 +222,13 @@ const CESTY = {
     [WORKER_ZDIELAJ_PATH]: { limit: true, run: handleZdielaj },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
+    [WORKER_TRASY_PATH]: {
+        limit: true,
+        run: async (request, env, now, fetchImpl) => {
+            const r = await trasy(await telo(request), fetchImpl);
+            return json(r.status, r.body);
+        },
+    },
 };
 
 /**

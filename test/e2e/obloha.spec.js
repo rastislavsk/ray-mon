@@ -17,6 +17,7 @@ import {
     SKY,
     TARIFF,
     WORKER_PV_URL,
+    WORKER_TRASY_URL,
 } from '../../shared/config.js';
 import { MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
@@ -67,6 +68,8 @@ async function pripravSiet(page, { offline = false, settings = OWNER, site = nul
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => (offline ? route.abort() : route.fulfill({ json: { pv: pvData } })));
+    // Trasy autom pre Štatistiku: bez nich plagát počíta s cestou okolo Zeme a test nesiaha na Worker.
+    await page.route(WORKER_TRASY_URL, (route) => route.abort());
     await page.route(/api\.open-meteo\.com/, (route) => (offline ? route.abort() : route.fulfill({ json: pocasie })));
     /** @param {string} key @param {string} value */
     const uloz = (key, value) => page.addInitScript(([k, v]) => localStorage.getItem(k) || localStorage.setItem(k, v), [key, value]);

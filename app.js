@@ -9,6 +9,7 @@ import {
     loadDayLog,
     loadDoma,
     loadRanna,
+    loadTrasy,
     loadLook,
     loadRadar,
     loadOdmietnutie,
@@ -49,6 +50,7 @@ const store = createStore(
         linkError: link?.error ?? null,
         dayLog: loadDayLog(),
         ranna: loadRanna(),
+        trasy: loadTrasy(),
         online: navigator.onLine,
         // Prístup k meraniu, ktorý výrobca odmietol - appka po otvorení neskúša zlé heslo hneď znova.
         pristup: loadOdmietnutie(),

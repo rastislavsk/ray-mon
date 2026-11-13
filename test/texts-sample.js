@@ -261,6 +261,7 @@ function directMisc(out, v) {
                         kwh: 300,
                         phones: 20000,
                         km: 1800,
+                        cesta: { kind: 'mesto', do: 'Barcelony', km: 1979, spat: false, presne: 'ako' },
                         best: { date: '2026-09-03', kwh: 35.5, today: false },
                         value: 50,
                         valuePerDay: 1.6,
@@ -284,6 +285,33 @@ function directMisc(out, v) {
                 out,
             );
     directSucty(out);
+    directCesty(out);
+}
+
+/** Podnadpis km autom: každý druh cesty (shared/trasy.js) a cesta okolo Zeme pri celom čase. @param {Record<string, string>} out */
+function directCesty(out) {
+    /** @type {Record<string, [import('../shared/trasy.js').Cesta, number]>} */
+    const cesty = {
+        ako: [{ kind: 'mesto', do: 'Brna', km: 244, spat: false, presne: 'ako' }, 251],
+        spat: [{ kind: 'mesto', do: 'Bratislavy', km: 224, spat: true, presne: 'ako' }, 251],
+        skoro: [{ kind: 'mesto', do: 'Kantonu', km: 320, spat: true, presne: 'skoro' }, 251],
+        dalej: [{ kind: 'mesto', do: 'Nitry', km: 25, spat: false, presne: 'dalej' }, 30],
+        kus: [{ kind: 'mesto', do: 'Nitry', km: 25, spat: false, presne: 'kus' }, 6],
+        route66: [{ kind: 'milnik', id: 'route66', km: 3940 }, 3600],
+        transsib: [{ kind: 'milnik', id: 'transsib', km: 9289 }, 9000],
+        zemMalo: [{ kind: 'zem', nasobok: 0.0004 }, 16],
+        zemPromile: [{ kind: 'zem', nasobok: 0.006 }, 240],
+        zem: [{ kind: 'zem', nasobok: 0.37 }, 15000],
+        zemRaz: [{ kind: 'zem', nasobok: 1.02 }, 41000],
+        zemKrat: [{ kind: 'zem', nasobok: 1.6 }, 66000],
+        zemVela: [{ kind: 'zem', nasobok: 12.4 }, 497000],
+        mesiac: [{ kind: 'mesiac', spat: false }, 400000],
+        mesiacSpat: [{ kind: 'mesiac', spat: true }, 800000],
+    };
+    for (const [k, [c, km]] of Object.entries(cesty)) {
+        out[`cesta.${k}`] = M.cestaText(c, km, 'rok');
+        out[`cesta.${k}.spolu`] = M.cestaText(c, km, 'spolu');
+    }
 }
 
 /** Súčty len od prvého merania (shared/sucty.js): veta Štatistiky, podnadpis a súhrn. @param {Record<string, string>} out */
@@ -303,6 +331,7 @@ function directSucty(out) {
                 kwh: 46.2,
                 phones: 3080,
                 km: 277,
+                cesta: { kind: 'zem', nasobok: 277 / 40075 },
                 best: { date: '2026-10-21', kwh: 24.8, today: false },
                 value: null,
                 valuePerDay: null,

@@ -459,6 +459,13 @@ export const DEN_TRIEDA = { reserve: 2 / 3 };
 export const RANNA_TRIEDA_STORAGE_KEY = 'ranna-trieda-v1';
 
 /**
+ * Trasy autom z polohy elektrárne do miest zo zoznamu (shared/trasy.js) pre podnadpis „km autom“
+ * na karte Štatistika. Patria polohe, s ktorou boli stiahnuté; do odkazu s nastavením nejdú.
+ * Formát: { lat, lon, trasy: [{ id, km }] }.
+ */
+export const TRASY_STORAGE_KEY = 'trasy-v1';
+
+/**
  * Skupiny vecí: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
@@ -589,10 +596,40 @@ export const STORAGE_KEYS = [
     ODBER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
+    TRASY_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
 export const EVERYDAY = { phoneChargeKwh: 0.015, evKmPerKwh: 6 };
+
+/**
+ * Na čo stačia kilometre autom (shared/trasy.js): skutočné trasy autom z domu do miest zo zoznamu,
+ * míľniky, cesta okolo Zeme a na Mesiac.
+ * - Trasy ráta Worker (POST /trasy) cez smerovač OSRM nad mapou OpenStreetMap, raz pre polohu.
+ *   Verejný server OSRM je bez záruky a len na nekomerčné použitie - pred obchodmi treba iného
+ *   poskytovateľa alebo vlastný server; vymení sa len tu a vo Workeri.
+ * - `najviacMiest` najbližších miest do `dosahKm` vzdušnou čiarou ide v jednej požiadavke.
+ * - `prichytenieM`: smerovač cieľ, kam autom nevedie cesta (ostrov), prichytí k najbližšej ceste -
+ *   ďalej než toľko metrov od mesta je to iné miesto a trasa sa zahodí. To isté platí pre domov.
+ * - `tolerancia`: trasa sedí, keď sa od kilometrov líši najviac o tento podiel.
+ * - `zemOdKm`: keď nesedí žiadna trasa, od tejto vzdialenosti podiel cesty okolo Zeme.
+ * - Dĺžky: rovník Zeme 40 075 km, priemerná vzdialenosť Mesiaca 384 400 km (NASA), Route 66
+ *   3 940 km, Transsibírska magistrála Moskva – Vladivostok 9 289 km.
+ */
+export const TRASY = {
+    osrmUrl: 'https://router.project-osrm.org/table/v1/driving/',
+    najviacMiest: 90,
+    dosahKm: 4000,
+    prichytenieM: 5000,
+    tolerancia: 0.15,
+    zemOdKm: 5000,
+    zemKm: 40075,
+    mesiacKm: 384400,
+    milniky: [
+        { id: 'route66', km: 3940 },
+        { id: 'transsib', km: 9289 },
+    ],
+};
 
 /**
  * Uhlík elektriny za celý životný cyklus (stavba, palivo, prevádzka, likvidácia), v CO2eq.
@@ -636,6 +673,9 @@ export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).hre
 export const WORKER_ZDIELAJ_PATH = '/zdielaj';
 export const WORKER_ZDIELAJ_URL = new URL(WORKER_ZDIELAJ_PATH, WORKER_URL).href;
 export const ZDIELANIE = { platiDni: 7 };
+// Trasy autom z polohy (`/trasy`) pre podnadpis „km autom“ na karte Štatistika. Poloha ide v tele.
+export const WORKER_TRASY_PATH = '/trasy';
+export const WORKER_TRASY_URL = new URL(WORKER_TRASY_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

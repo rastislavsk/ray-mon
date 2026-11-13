@@ -71,6 +71,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
+ *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
@@ -130,6 +131,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  * @param {{ saved: import('../shared/settings.js').Settings | null, site: import('../shared/config.js').Site | null,
  *   dayLog: import('../shared/daylog.js').DayLog,
  *   online: boolean, ranna: import('../shared/den-trieda.js').RannaTrieda | null,
+ *   trasy?: import('../shared/trasy.js').UlozeneTrasy | null,
  *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
@@ -147,6 +149,7 @@ export function initialState(
         dayLog,
         online,
         ranna,
+        trasy = null,
         incoming = null,
         linkError = null,
         look = DEFAULT_LOOK,
@@ -179,6 +182,8 @@ export function initialState(
         dayLog,
         // Trieda dňa, ktorú appka dnes videla ráno (shared/den-trieda.js); zapisuje ju obnova dát.
         ranna,
+        // Trasy autom z domu pre plagát Štatistiky (shared/trasy.js); sťahuje ich časť Štatistika.
+        trasy,
         weekDay: 0,
         statsPeriod: /** @type {import('../shared/stats.js').StatsPeriod} */ ('dnes'),
         ...radarStart(phone),

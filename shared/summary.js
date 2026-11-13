@@ -14,13 +14,16 @@ import { monthDays, yearDays } from './daylog.js';
 import { summaryEstimateTexts, summaryMeter, summaryTexts } from './messages.js';
 import { localDateKey, localMinutes } from './solar.js';
 import { longPrice, MONTHS, statsModel } from './stats.js';
+import { trasyPre, vyberCestu } from './trasy.js';
 import { menoZnacky } from './zdroje.js';
 
 /** @typedef {import('./stats.js').StatsPeriod} StatsPeriod */
 
 /**
+ * `trasy`: trasy autom z domu, ktoré appka stiahla (shared/trasy.js) - platia len pre polohu, s ktorou prišli.
  * @typedef {import('./stats.js').StatsInput & {
- *   dayLog: import('./daylog.js').DayLog, plant: import('./config.js').Plant }} SummaryInput
+ *   dayLog: import('./daylog.js').DayLog, plant: import('./config.js').Plant,
+ *   trasy?: import('./trasy.js').UlozeneTrasy | null }} SummaryInput
  * @typedef {{ kind: 'meter', pct: number, left: string, right: string }
  *   | { kind: 'days', days: Array<{ date: string, frac: number | null, future: boolean }> }
  *   | { kind: 'months', months: YearMonths }} SummaryViz
@@ -120,6 +123,13 @@ export function restToday(input, today, kwh) {
     return rest >= 0.1 ? { kwh: rest, total: kwh + rest } : null;
 }
 
+/**
+ * Na čo stačia kilometre autom: trasa z domu, míľnik či cesta okolo Zeme. Deň a obdobie vyberajú medzi
+ * rovnako dobrými, aby sa podnadpis neopakoval.
+ * @param {SummaryInput} input @param {number} km @param {string} today @param {StatsPeriod} period
+ */
+const cestaOf = (input, km, today, period) => vyberCestu(km, trasyPre(input.trasy ?? null, input.site) ?? [], `${today}|${period}`);
+
 /** Veľké číslo: do 100 kWh s desatinou („18,4“), potom celé („9 112“); bez súčtu pomlčka. @param {number | null} kwh */
 export const bigText = (kwh) => (kwh === null ? '–' : fmtSum(kwh < 100 ? Math.round(kwh * 10) / 10 : Math.round(kwh), kwh < 100 ? 1 : 0));
 
@@ -181,10 +191,12 @@ export function summaryModel(input, period, voice = 'drzy') {
             big: '',
             rows: [],
         };
+    const km = f.kwh * EVERYDAY.evKmPerKwh;
     const t = summaryEstimateTexts({
         kwh: f.kwh,
         phones: f.kwh / EVERYDAY.phoneChargeKwh,
-        km: f.kwh * EVERYDAY.evKmPerKwh,
+        km,
+        cesta: cestaOf(input, km, localDateKey(input.now, input.site.timezone), 'dnes'),
         value: f.value,
         currency: s.currency,
     });
@@ -242,13 +254,15 @@ function factsOf(input, { period, s, days, today, kwh, carbon }) {
     const value = valueOf(input, s, kwh);
     const best = bestOf(days);
     const perDay = s.hero.perDay;
+    const km = kwh * EVERYDAY.evKmPerKwh;
     return {
         period,
         month: MONTHS[Number(today.slice(5, 7)) - 1],
         year: today.slice(0, 4),
         kwh,
         phones: kwh / EVERYDAY.phoneChargeKwh,
-        km: kwh * EVERYDAY.evKmPerKwh,
+        km,
+        cesta: cestaOf(input, km, today, period),
         best: best && { ...best, today: best.date === today },
         value,
         valuePerDay: value !== null && perDay !== null && kwh > 0 ? (value * perDay) / kwh : null,

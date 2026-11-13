@@ -2,7 +2,7 @@
 // a počítač. Rozloženie rozhoduje šírka okna (LAYOUT_PX v shared/config.js). Očakávané texty sa
 // počítajú tými istými modelmi ako na telefóne - stĺpce sú tie isté karty, len vedľa seba.
 import { expect, test } from '@playwright/test';
-import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL } from '../../shared/config.js';
+import { PANELS, PLANT, SETTINGS_STORAGE_KEY, SITE, TARIFF, WORKER_PV_URL, WORKER_TRASY_URL } from '../../shared/config.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
@@ -38,6 +38,8 @@ async function openObloha(page, size, { time = NOON, settings = OWNER } = {}) {
     await page.setViewportSize(size);
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv: pvAt(time) } }));
+    // Trasy autom pre Štatistiku: bez nich plagát počíta s cestou okolo Zeme a test nesiaha na Worker.
+    await page.route(WORKER_TRASY_URL, (route) => route.abort());
     await page.route(/api\.open-meteo\.com/, (route) => route.fulfill({ json: weather }));
     await page.route(/geocoding-api\.open-meteo\.com/, (route) => route.fulfill({ json: { results: [] } }));
     if (settings)
