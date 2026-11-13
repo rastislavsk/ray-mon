@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { RADAR } from '../../shared/config.js';
 import { handleRadar, parseBloky } from '../src/radar.js';
 
 const URL_OK = 'https://x.dev/radar/20261107T0730?b=2280_1760';
@@ -72,6 +73,32 @@ test('handleRadar: nezverejnená snímka je 404 bez cache, výpadok 502', async 
     assert.equal(r.headers.get('cache-control'), 'no-store');
     assert.equal((await handleRadar(new Request(URL_OK), server(403))).status, 404);
     assert.equal((await handleRadar(new Request(URL_OK), server(500))).status, 502);
+});
+
+test('handleRadar: snímku, ktorú hlavný zdroj nemá, vezme zo zálohy, aj s blokmi', async () => {
+    /** @type {string[]} */ const adresy = [];
+    const fetchImpl = /** @type {typeof fetch} */ (
+        /** @type {unknown} */ (
+            async (/** @type {string} */ url, /** @type {{ headers: { range: string } }} */ init) => {
+                adresy.push(url);
+                if (url.startsWith(RADAR.s3[0])) return new Response('', { status: 404 });
+                return new Response(init.headers.range.startsWith('bytes=0-') ? hlavicka() : new Uint8Array([1, 2, 3]), { status: 206 });
+            }
+        )
+    );
+    const r = await handleRadar(new Request(URL_OK), { fetchImpl, cache: null, waitUntil: () => {} });
+    assert.equal(r.status, 200);
+    assert.deepEqual(
+        adresy.map((a) => RADAR.s3.findIndex((z) => a.startsWith(z))),
+        [0, 1, 1],
+    );
+    assert.ok(adresy[1].endsWith('2026/11/07/OPERA/COMP/OPERA@20261107T0730@0@DBZH.h5'));
+});
+
+test('handleRadar: výpadok hlavného zdroja zálohu neskúša', async () => {
+    const s = server(500);
+    assert.equal((await handleRadar(new Request(URL_OK), s)).status, 502);
+    assert.equal(s.rozsahy.length, 1);
 });
 
 test('handleRadar: blok, ktorý súbor nemá, je 502', async () => {

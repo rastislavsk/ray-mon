@@ -10,10 +10,10 @@ const NAJVIAC_BLOKOV = 4;
 /** Kde v súbore končí hlavička s indexom (prvé dáta začínali na 13 kB). */
 const HLAVICKA_BAJTOV = 16384;
 
-/** @param {string} tag */
-function adresa(tag) {
+/** @param {string} zdroj @param {string} tag */
+function adresa(zdroj, tag) {
     const den = `${tag.slice(0, 4)}/${tag.slice(4, 6)}/${tag.slice(6, 8)}`;
-    return `${RADAR.s3}${den}/OPERA/COMP/OPERA@${tag}@0@DBZH.h5`;
+    return `${zdroj}${den}/OPERA/COMP/OPERA@${tag}@0@DBZH.h5`;
 }
 
 /** Bloky z adresy. Iba násobky rozmerov bloku v mriežke, inak null. @param {string | null} b */
@@ -46,6 +46,20 @@ async function indexSuboru(subor, fetchImpl) {
 }
 
 /**
+ * Prvý zdroj z RADAR.s3, ktorý snímku má. Chýbajúca (404) posunie na ďalší zdroj, výpadok (502) nie:
+ * vtedy nevieme, či by ju ďalší mal novšiu či inú.
+ * @param {string} tag @param {typeof fetch} fetchImpl
+ */
+async function najdiSubor(tag, fetchImpl) {
+    for (const zdroj of RADAR.s3) {
+        const subor = adresa(zdroj, tag);
+        const index = await indexSuboru(subor, fetchImpl);
+        if (index.status !== 404) return { subor, ...index };
+    }
+    return { subor: '', status: 404, bloky: undefined };
+}
+
+/**
  * Hlavička s rozmermi a bloky za ňou.
  * @param {string} subor @param {Array<{ row: number, col: number, size: number, addr: number }>} vyber @param {typeof fetch} fetchImpl
  */
@@ -69,8 +83,7 @@ export async function handleRadar(request, { fetchImpl, cache, waitUntil }) {
     if (request.method !== 'GET' || !tag || !chcem) return new Response('', { status: 400, headers: HLAVICKA });
     const hit = await cache?.match(request);
     if (hit) return hit;
-    const subor = adresa(tag);
-    const { bloky, status } = await indexSuboru(subor, fetchImpl);
+    const { subor, bloky, status } = await najdiSubor(tag, fetchImpl);
     if (status) return new Response('', { status, headers: { ...HLAVICKA, 'cache-control': 'no-store' } });
     const vyber = bloky?.filter((b) => chcem.some(([row, col]) => row === b.row && col === b.col));
     if (!vyber?.length) return new Response('', { status: 502, headers: HLAVICKA });

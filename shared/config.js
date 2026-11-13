@@ -645,7 +645,10 @@ export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
  * prehliadač. Predpoveď na 2 h je posun poslednej snímky podľa pohybu, Dnes a Zajtra model ICON-EU.
  */
 export const RADAR = {
-    s3: 'https://s3.waw3-1.cloudferro.com/openradar-24h/',
+    // Zdroje snímok v poradí pokusov. Hlavný (CloudFerro) bol 13. 11. 2026 prázdny a OPERA ho
+    // dočasne nahradila zálohou na ECMWF s tými istými menami súborov. Worker skúsi hlavný a pri 404
+    // zálohu, takže keď sa hlavný vráti alebo záloha skončí, netreba nič meniť.
+    s3: ['https://s3.waw3-1.cloudferro.com/openradar-24h/', 'https://object-store.os-api.cci1.ecmwf.int/openradar-24h-backup/'],
     stlpce: 3800,
     riadky: 4400,
     blokStlpce: 880,
