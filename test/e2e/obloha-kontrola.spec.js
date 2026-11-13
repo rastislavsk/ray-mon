@@ -116,11 +116,11 @@ async function kazdaKarta(page, check) {
     await page.locator('#tz-oko').click();
     await expect(page.locator('#tz-chip-sheet')).toBeVisible();
     await check('Teraz › vysvetlenie');
-    await page.locator('#tz-chip-close').click();
+    await page.keyboard.press('Escape');
     await page.locator('#tz-dlazdice [data-vec]').first().click();
     await expect(page.locator('#tz-vec-sheet')).toBeVisible();
     await check('Teraz › detail spotrebiča');
-    await page.locator('#tz-vec-close').click();
+    await page.keyboard.press('Escape');
 
     await karta(page, 'mozem');
     await check('Dnes');

@@ -897,7 +897,7 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('ťuknutie na odznak vysvetlí triedu dňa modelom; Zavrieť, Escape a Späť ho zavrú', async ({ page }) => {
+    test('ťuknutie na odznak vysvetlí triedu dňa modelom; Escape, ťuknutie vedľa a Späť ho zavrú', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openObloha(page, { time });
@@ -924,11 +924,14 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('#mz-trieda-stupnica > li b')).toHaveText(v.stupnica.map((s) => s.label));
         await expect(page.locator('#mz-trieda-stupnica > li[aria-current]')).toHaveAttribute('data-cls', v.cls);
         expect(await vazneNalezy(page)).toEqual([]);
-        await page.locator('#mz-trieda-close').click();
+        // Tlačidlo Zavrieť panel nemá: zatvára ho Escape, ťuknutie vedľa a Späť.
+        await expect(panel.locator('button')).toHaveCount(0);
+        await page.keyboard.press('Escape');
         await expect(panel).toBeHidden();
         await expect(chip).toBeFocused();
+        // Ťuknutie vedľa panelu (na stmavenú stránku nad ním) trafí dialóg a zavrie ho.
         await chip.click();
-        await page.keyboard.press('Escape');
+        await page.mouse.click(187, 60);
         await expect(panel).toBeHidden();
         await chip.click();
         await page.goBack();
@@ -955,7 +958,7 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('#mz-trieda-sheet')).toBeVisible();
         await expect(page.locator('#mz-trieda-chip')).toHaveText(v?.chip ?? '-');
         await expect(page.locator('#mz-trieda-text')).toHaveText(v?.text ?? '-');
-        await page.locator('#mz-trieda-close').click();
+        await page.keyboard.press('Escape');
         await expect(page.locator('#mz-tom-chip')).toBeFocused();
         expect(errors).toEqual([]);
     });
@@ -1266,7 +1269,7 @@ test.describe('karta Teraz', () => {
         });
     }
 
-    test('dlaždica aj riadok otvoria detail spotrebiča z modelu; Zavrieť, Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
+    test('dlaždica aj riadok otvoria detail spotrebiča z modelu; Escape, ťuknutie vedľa aj Späť ho zavrú', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
@@ -1288,14 +1291,12 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-vec-pas .os-usek')).toHaveAttribute('data-tone', v.slot?.tone ?? '');
             await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(1);
             expect(await vazneNalezy(page)).toEqual([]);
-            // Zavrieť vráti fokus na dlaždicu či riadok, z ktorého sa detail otvoril.
-            await page.locator('#tz-vec-close').click();
+            // Tlačidlo Zavrieť panel nemá. Escape vráti fokus na dlaždicu či riadok, z ktorého sa detail otvoril.
+            await expect(panel.locator('button')).toHaveCount(0);
+            await page.keyboard.press('Escape');
             await expect(panel).toBeHidden();
             await expect(vec(id)).toBeFocused();
         }
-        await vec('pracka').click();
-        await page.keyboard.press('Escape');
-        await expect(panel).toBeHidden();
         // Ťuknutie vedľa panelu (na stmavenú stránku nad ním) trafí dialóg a zavrie ho.
         await vec('pracka').click();
         await page.mouse.click(187, 60);
@@ -1309,7 +1310,9 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('„i“ za riadkom nad dlaždicami vysvetlí odpoveď aj cenu siete textom z modelu; Zavrieť a Späť ho zavrú', async ({ page }) => {
+    test('„i“ za riadkom nad dlaždicami vysvetlí odpoveď aj cenu siete textom z modelu; Escape, ťuknutie vedľa a Späť ho zavrú', async ({
+        page,
+    }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
@@ -1323,11 +1326,13 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-chip-body h3')).toHaveText(chips.map((c) => c.info.title));
         await expect(page.locator('#tz-chip-body .dim')).toHaveText(chips.map((c) => c.info.why));
         expect(await vazneNalezy(page)).toEqual([]);
-        await page.locator('#tz-chip-close').click();
+        // Tlačidlo Zavrieť panel nemá: zatvára ho Escape, ťuknutie vedľa a Späť.
+        await expect(panel.locator('button')).toHaveCount(0);
+        await page.keyboard.press('Escape');
         await expect(panel).toBeHidden();
         await expect(oko).toBeFocused();
         await oko.click();
-        await page.keyboard.press('Escape');
+        await page.mouse.click(187, 60);
         await expect(panel).toBeHidden();
         await oko.click();
         await page.goBack();

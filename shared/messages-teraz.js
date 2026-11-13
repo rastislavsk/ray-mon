@@ -42,9 +42,8 @@ export const TERAZ_TEXTS = {
     noteText: 'Appka nemá údaje z tvojho meniča. Číslo počíta z počasia.',
     noteBtn: 'Pripojiť meranie',
     noteAgainBtn: 'Pripojiť znova',
-    // Panel štítka pod číslom: nadpis vysvetlenia a zatvorenie.
+    // Panel štítka pod číslom: nadpis vysvetlenia.
     chipWhy: 'Čo to znamená',
-    chipClose: MOZEM_SKY_TEXTS.close,
 };
 
 /** @type {typeof TERAZ_TEXTS} */

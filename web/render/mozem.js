@@ -8,7 +8,7 @@
 
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { escapeHtml } from '../../shared/format.js';
-import { MOZEM_SKY_TEXTS as SKY, DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
+import { DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { syncBodky } from '../mozem-karty.js';
 import { sunArcSvg } from '../sun-arc.js';
@@ -225,7 +225,6 @@ function renderTrieda(state, dom) {
                 .join(''),
         );
         setText(dom.mzTriedaNote, v.note);
-        setText(dom.mzTriedaClose, SKY.close);
     }
     dialog(dom.mzTriedaSheet, !!v, () => (!shows(state, 'mozem') ? null : kedy === 'zajtra' ? dom.mzTomChip : dom.mzChip));
 }

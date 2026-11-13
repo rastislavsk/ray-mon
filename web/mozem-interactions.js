@@ -27,7 +27,7 @@ export function initMozem(store, dom, refresh) {
     // krok ako tlačidlo Späť.
     dom.mzChip.addEventListener('click', () => store.setState({ mzChip: 'dnes', panel: 'mozem' }));
     dom.mzTomChip.addEventListener('click', () => store.setState({ mzChip: 'zajtra', panel: 'mozem' }));
-    initSheet(dom.mzTriedaSheet, dom.mzTriedaClose, () => stepBack(store, { mzChip: null }));
+    initSheet(dom.mzTriedaSheet, () => stepBack(store, { mzChip: null }));
     bindKarty(dom.mzKarty, dom.mzBodky);
     initGraf(store, dom);
 }
@@ -42,7 +42,7 @@ function initGraf(store, dom) {
         if (e.target instanceof Element && e.target.closest('[data-kind="graf"]')) store.setState({ mzGraf: true, panel: 'mozem' });
     });
     // Zatvorenie vráti aj zvolený čas na teraz - otvorený graf ukáže vždy teraz.
-    initSheet(dom.grSheet, null, () => stepBack(store, { mzGraf: false, terazPreview: null }));
+    initSheet(dom.grSheet, () => stepBack(store, { mzGraf: false, terazPreview: null }));
     bindDayScrub(dom.grChart, {
         active: () => {
             const s = store.get();

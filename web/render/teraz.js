@@ -187,7 +187,6 @@ function renderChipSheet(state, m, dom, T) {
                 )
                 .join('') + (m?.co?.dlho ? `<p class="istota">${escapeHtml(TERAZ_PAS_ISTOTA)}</p>` : ''),
         );
-        setText(dom.tzChipClose, T.chipClose);
     }
     dialog(dom.tzChipSheet, chips.length > 0, () => (shows(state, 'terazky') ? dom.tzOko : null));
 }
@@ -196,9 +195,9 @@ function renderChipSheet(state, m, dom, T) {
  * Detail spotrebiča: ikona, meno, kedy a odkiaľ, od-do (pri inom dni aj deň), jeho úsek na osi dňa,
  * prečo práve vtedy a že naraz ide len toľko, koľko strecha utiahne. Otvorený, kým je v stave
  * a spotrebič je v pláne.
- * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
+ * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
  */
-function renderVecSheet(state, m, dom, T) {
+function renderVecSheet(state, m, dom) {
     const v = state.tzVec && m ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
     if (v && m?.os) {
         dom.tzVecSheet.dataset.tone = v.tone;
@@ -211,7 +210,6 @@ function renderVecSheet(state, m, dom, T) {
         setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
         setText(dom.tzVecWhy, v.why);
         setText(dom.tzVecNote, PLAN_DNA_NOTE);
-        setText(dom.tzVecClose, T.chipClose);
     }
     const id = state.tzVec;
     dialog(dom.tzVecSheet, !!v, () => (shows(state, 'terazky') && id ? dom.tzCo.querySelector(`[data-vec="${id}"]`) : null));
@@ -235,7 +233,7 @@ export function renderTeraz(state, dom) {
     renderStav(state, dom);
     if (!shows(state, 'terazky')) {
         renderChipSheet(state, null, dom, T);
-        renderVecSheet(state, null, dom, T);
+        renderVecSheet(state, null, dom);
         return;
     }
     const m = terazModel(
@@ -272,7 +270,7 @@ export function renderTeraz(state, dom) {
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
     renderChipSheet(state, m, dom, T);
-    renderVecSheet(state, m, dom, T);
+    renderVecSheet(state, m, dom);
 }
 
 /**

@@ -13,7 +13,7 @@ import { initSheet } from './sheet.js';
  */
 export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
-    // zatvorenie (Zavrieť, Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
+    // zatvorenie (Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
     // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
     dom.tzHrebenDni.addEventListener('click', (e) => {
@@ -24,8 +24,8 @@ export function initTeraz(store, dom, refresh) {
         const btn = e.target instanceof Element ? e.target.closest('[data-vec]') : null;
         if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky' });
     });
-    initSheet(dom.tzChipSheet, dom.tzChipClose, () => stepBack(store, { tzChip: null }));
-    initSheet(dom.tzVecSheet, dom.tzVecClose, () => stepBack(store, { tzVec: null }));
+    initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
+    initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
