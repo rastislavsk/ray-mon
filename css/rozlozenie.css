@@ -31,6 +31,10 @@
     font-variation-settings: 'wdth' 74;
     line-height: 1.2;
     cursor: pointer;
+    /* Chrome na Androide pri ťuknutí preblikne zvýraznenie v tvare tlačidla - bez zaoblenia ako
+       ostrý štvorec. Tvar a farba sú ako pilulka aktívnej karty na šírke (docs/navrhy/navigacia-farba-oblohy.html). */
+    border-radius: 999px;
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.16);
 }
 .tabs span {
     white-space: nowrap;
@@ -94,7 +98,6 @@
     align-items: center;
     gap: 8px;
     padding: 6px 16px;
-    border-radius: 999px;
     font-size: 0.875rem;
 }
 :root:is([data-layout='medium'], [data-layout='wide']) .tabs button[aria-current='page'] {
