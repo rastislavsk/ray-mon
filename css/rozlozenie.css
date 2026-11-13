@@ -39,7 +39,7 @@
     width: 22px;
     height: 22px;
     fill: none;
-    stroke: currentColor;
+    stroke: var(--icon-dim);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -47,8 +47,9 @@
 .tabs button[aria-current='page'] {
     color: #fff;
 }
+/* Aktívna karta má farbu obzoru oblohy (--s4), nie zelenú: tá znamená „slnko stačí“. */
 .tabs button[aria-current='page'] svg {
-    stroke: var(--yes);
+    stroke: var(--s4);
 }
 
 /* ===== Tablet na šírku a počítač =====

@@ -13,7 +13,8 @@ import { renderTeraz } from './teraz.js';
 import { show } from './write.js';
 
 /**
- * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok a počasie na <html>; prechod
+ * Obloha je pozadie celej stránky. Render zapíše dve farby, stmavený spodok, farbu aktívnej karty
+ * v navigácii a počasie na <html>; prechod
  * medzi farbami robí CSS (zaregistrované --s1 a --s2 v css/), takže pri útlme pohybu ho
  * vypne to isté pravidlo ako všetky ostatné prechody. Nebo je v tej istej chvíli a s tým istým
  * počasím ako kresba na karte Teraz.
@@ -26,6 +27,7 @@ function renderSky(state, dom) {
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
     dom.root.style.setProperty('--s3', sky.shade);
+    dom.root.style.setProperty('--s4', sky.nav);
     // Stavový riadok telefónu má farbu vrchu oblohy - Android pod neho stránku nepustí.
     if (dom.themeColor.content !== sky.top) dom.themeColor.content = sky.top;
     dom.root.dataset.sky = sky.weather ?? 'offline';

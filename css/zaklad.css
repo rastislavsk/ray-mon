@@ -32,11 +32,19 @@
     inherits: true;
     initial-value: rgba(5, 10, 30, 0.13);
 }
+/* Ikona aktívnej karty v navigácii: obzor zosvetlený na jas SKY.navJas (skyNav v shared/sky.js).
+   Prvá hodnota patrí sivej oblohe bez dát. */
+@property --s4 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgb(177, 181, 186);
+}
 
 :root {
     --s1: #4f555f;
     --s2: #7f858e;
     --s3: rgba(5, 10, 30, 0.13);
+    --s4: rgb(177, 181, 186);
     /* Farba má jeden význam: zelená = slnko stačí, modrá = lacná sieť, červená = drahá sieť.
        Obloha údaj nenesie, len náladu. Výnimka je stav merania (bodka v hlavičke, riadok Živé
        meranie v Nastavení): zelená beží, jantárová zastarané, červená nefunguje. */
@@ -52,6 +60,9 @@
     --glass: rgba(8, 16, 40, 0.3);
     --bar: rgba(6, 10, 28, 0.72);
     --dim: rgba(255, 255, 255, 0.82);
+    /* Neaktívne ikony v navigácii: tlmenejšie ako popisky, aby ikona aktívnej karty vo farbe
+       oblohy (--s4) bola vždy najsvetlejšia. Grafike stačí 3 : 1. */
+    --icon-dim: rgba(255, 255, 255, 0.5);
     --cheap-text: #b0dbff;
     --costly-text: #ffc4ba;
     --amber-text: #ffd166;
@@ -67,7 +78,8 @@
     transition:
         --s1 0.7s,
         --s2 0.7s,
-        --s3 0.7s;
+        --s3 0.7s,
+        --s4 0.7s;
 }
 
 * {
