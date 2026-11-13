@@ -900,7 +900,6 @@
             <div class="sheet-in">
                 <h2 id="tz-chip-title" class="sr"></h2>
                 <div id="tz-chip-body"></div>
-                <button type="button" id="tz-chip-close" class="pbtn ghost"></button>
             </div>
         </dialog>
 
@@ -915,14 +914,13 @@
                 <p id="mz-trieda-q" class="q"></p>
                 <ol id="mz-trieda-stupnica" class="stupnica"></ol>
                 <p id="mz-trieda-note" class="dim"></p>
-                <button type="button" id="mz-trieda-close" class="pbtn ghost"></button>
             </div>
         </dialog>
 
         <!-- Graf dňa (docs/navrhy/dnes-predpoved-graf.html): panel zdola z karty Graf dňa na karte Dnes. Hore výkon
              a odkiaľ je (vľavo) a čas (vpravo), pod tým krivka dňa (posúvač času: prst, kurzor aj šípky ukážu iný čas),
-             legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. Tlačidlo Zavrieť nemá -
-             zavrie ho ťuknutie vedľa, Escape a Späť. Píše ho render/graf.js z grafModel v shared/teraz.js. -->
+             legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. Tlačidlo Zavrieť nemá
+             (ako ani ostatné panely kariet Teraz a Dnes) - zavrie ho ťuknutie vedľa, Escape a Späť. Píše ho render/graf.js z grafModel v shared/teraz.js. -->
         <dialog id="gr-sheet" class="sheet graf-sheet" aria-labelledby="gr-ttl">
             <section id="gr-den" class="sheet-in grden">
                 <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v paneli. -->
@@ -961,7 +959,6 @@
                 <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
                 <p id="tz-vec-why"></p>
                 <p id="tz-vec-note" class="dim"></p>
-                <button type="button" id="tz-vec-close" class="pbtn ghost"></button>
             </div>
         </dialog>
 

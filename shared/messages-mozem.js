@@ -647,12 +647,11 @@ export const MOZEM_CHIPS = {
     draha: 'Drahá sieť',
 };
 
-/** Pevné texty karty: nadpisy a zatvorenie panelu veci, tlačidlá a výzvy. */
+/** Pevné texty karty: nadpisy panelu veci, tlačidlá a výzvy. */
 export const MOZEM_SKY_TEXTS = {
     retry: 'Skúsiť znova',
     sheetDo: 'Čo robiť',
     sheetWhy: 'Prečo',
-    close: 'Zavrieť',
     guessTitle: 'Hádam podľa suseda',
     guessBtn: 'Zadaj panely',
     askTitle: 'Kde máš strechu?',
