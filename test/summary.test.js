@@ -175,6 +175,11 @@ test('summaryModel mesiac: súčet z kiosku, štvorčeky do konca mesiaca, prepo
     assert.equal(days.filter((d) => d.future).length, 25, '6. až 30. ešte len príde');
     assert.equal(days[4].frac, 1, 'dnešok z kiosku je jediný známy deň');
     assert.equal(m.rows[0].t, `${fmtSum(Math.round(kwh / EVERYDAY.phoneChargeKwh), 0)} nabití mobilu`);
+    assert.equal(
+        m.rows[0].s,
+        `ako ${fmtSum(Math.round(kwh / 5 / EVERYDAY.phoneChargeKwh), 0)} mobilov nabitých každý deň`,
+        'priemer za 5 dní septembra',
+    );
     assert.equal(m.rows[1].t, `${fmtSum(Math.round(kwh * EVERYDAY.evKmPerKwh), 0)} km autom`);
     assert.ok(!m.rows.some((r) => r.t.startsWith('Najlepší deň')), 'z jedného dňa najlepší nie je');
     const value = m.rows.find((r) => r.t.startsWith('Hodnota ~'));
@@ -210,6 +215,11 @@ test('summaryModel rok: súčet z kiosku, mesiace z denníka, najlepší deň ro
     assert.match(m.note, /^Za 245 dní appka čísla nemá/);
     const bezRoka = summaryModel({ ...BASE, dayLog, pv: { ...pv, yearEnergyKwh: null } }, 'rok');
     assert.equal(bezRoka.kwh, 63.2 + 50 + /** @type {number} */ (pv.dailyEnergyKwh), 'bez súčtu z kiosku súčet denníka');
+    assert.equal(
+        bezRoka.rows[0].s,
+        `ako ${fmtSum(Math.round(/** @type {number} */ (bezRoka.kwh) / 3 / EVERYDAY.phoneChargeKwh), 0)} mobilov nabitých každý deň`,
+        'súčet denníka za tri známe dni',
+    );
     assert.ok(
         bezRoka.rows.some((r) => r.t.startsWith('Hodnota ~')),
         'aj súčet denníka má hodnotu',
@@ -223,6 +233,7 @@ test('summaryModel spolu: súčet od spustenia, pás splateného uhlíka, dlh pa
     assert.equal(m.kwh, kwh);
     const payback = posterPayback(/** @type {number} */ (carbonPayback(kwh, PLANT)));
     assert.deepEqual(m.viz, { kind: 'meter', pct: payback.pct, left: 'uhlík z výroby panelov', right: `${payback.pct} % splatené` });
+    assert.equal(m.rows[0].s, '', 'od spustenia appka dni nepozná, mobily bez podnadpisu');
     assert.equal(m.rows[1].s, `3,2-krát okolo Zeme · do štvrtého kola chýba ${fmtSum(31000, 0)} km`);
     assert.ok(!m.rows.some((r) => r.t.startsWith('Najlepší deň')));
     assert.deepEqual(m.rows.at(-1), {

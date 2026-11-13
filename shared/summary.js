@@ -255,12 +255,16 @@ function factsOf(input, { period, s, days, today, kwh, carbon }) {
     const best = bestOf(days);
     const perDay = s.hero.perDay;
     const km = kwh * EVERYDAY.evKmPerKwh;
+    // Priemer na deň: zo súčtu od výrobcu, pri súčte z denníka za dni, ktoré denník pozná.
+    const known = days.filter((d) => d.kwh !== null).length;
+    const kwhPerDay = period === 'mesiac' || period === 'rok' ? (perDay ?? (known ? kwh / known : null)) : null;
     return {
         period,
         month: MONTHS[Number(today.slice(5, 7)) - 1],
         year: today.slice(0, 4),
         kwh,
         phones: kwh / EVERYDAY.phoneChargeKwh,
+        phonesPerDay: kwhPerDay === null ? null : kwhPerDay / EVERYDAY.phoneChargeKwh,
         km,
         cesta: cestaOf(input, km, today, period),
         best: best && { ...best, today: best.date === today },
