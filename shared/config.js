@@ -735,7 +735,7 @@ export const VYHLAD = { maxDni: 3 };
  * 1 / `nadHranicou` výšky, aby ostala vidno aj v týždni bez slnka. Núdzový čas v deň, keď sa spotrebič
  * na slnko nezmestí: cez deň, keď slnko pokryje aspoň `minPodiel` programu, inak v lacnom pásme.
  */
-export const TYZDEN = { dni: 7, body: 12, nadHranicou: 1.25, minPodiel: 0.25 };
+export const TYZDEN = { dni: 4, body: 12, nadHranicou: 1.25, minPodiel: 0.25 };
 
 export const OZNAMENIA = {
     hours: [7, 8, 9],
