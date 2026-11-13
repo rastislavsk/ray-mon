@@ -31,10 +31,9 @@
     font-variation-settings: 'wdth' 74;
     line-height: 1.2;
     cursor: pointer;
-    /* Chrome na Androide pri ťuknutí preblikne zvýraznenie v tvare tlačidla - bez zaoblenia ako
-       ostrý štvorec. Tvar a farba sú ako pilulka aktívnej karty na šírke (docs/navrhy/navigacia-farba-oblohy.html). */
+    /* Zaoblené ako pilulka aktívnej karty na šírke (docs/navrhy/navigacia-farba-oblohy.html),
+       aj obrys fokusu z klávesnice. */
     border-radius: 999px;
-    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.16);
 }
 .tabs span {
     white-space: nowrap;
