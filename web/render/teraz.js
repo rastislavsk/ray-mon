@@ -69,7 +69,7 @@ function plochaDna(body, x0, sirka) {
 
 /**
  * Hrebeň týždňa (docs/navrhy/teraz-vyhlad-alternativy.html, C): krivky dní vedľa seba, čo je nad hranicou
- * veľkých spotrebičov zlaté, pod ňou sivomodré, vzdialenejšie dni bledšie (predpoveď je menej istá),
+ * veľkých spotrebičov zlaté, pod ňou sivomodré (len 4 dni: ďalšie sú príliš nepresné),
  * biela bodka je teraz. Pod každým dňom je tlačidlo cez celý stĺpec - ťuknutie ukáže plán toho dňa.
  * @param {Model['hreben']} h @param {Dom} dom
  */
@@ -78,9 +78,7 @@ function renderHreben(h, dom) {
     if (!h) return;
     const sirka = HREBEN.w / h.dni.length;
     const y = HREBEN.os - h.hranica * HREBEN.vyska;
-    const dni = h.dni
-        .map((d, i) => `<path d="${plochaDna(d.body, i * sirka, sirka)}" opacity="${i < 3 ? 1 : i < 5 ? 0.75 : 0.55}"/>`)
-        .join('');
+    const dni = h.dni.map((d, i) => `<path d="${plochaDna(d.body, i * sirka, sirka)}"/>`).join('');
     const t = h.teraz;
     const teraz = t ? `<circle class="hr-teraz" cx="${3 + t.x * (sirka - 6)}" cy="${HREBEN.os - t.y * HREBEN.vyska}" r="3.5"/>` : '';
     setHtml(
@@ -97,7 +95,7 @@ function renderHreben(h, dom) {
             .map(
                 (d, i) =>
                     // Meno dňa a či slnko stačí je pre čítačku za skratkou - prístupné meno tak obsahuje to, čo je vidno.
-                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}` +
+                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}<small aria-hidden="true">${escapeHtml(d.datum)}</small>` +
                     `<span class="sr"> – ${escapeHtml(d.nad ? d.name : `${d.name}, ${TERAZ_HREBEN.pod}`)}</span></button>`,
             )
             .join(''),

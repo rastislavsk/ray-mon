@@ -137,6 +137,12 @@
     text-transform: uppercase;
     cursor: pointer;
 }
+.hreben-dni small {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+}
 .hreben-dni button[data-nad] {
     color: #ffd166;
 }

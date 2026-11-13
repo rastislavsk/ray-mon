@@ -103,11 +103,9 @@ test('hrebenModel: krivky dní v mierke týždňa, hranica veľkých spotrebičo
             ['Ne', false],
             ['Po', false],
             ['Ut', true],
-            ['St', true],
-            ['Št', true],
-            ['Pi', true],
         ],
     );
+    assert.equal(h.dni.length, TYZDEN.dni);
     assert.ok(h.dni.every((d) => d.body.length === TYZDEN.body + 1 && d.body.every((v) => v >= 0 && v <= 1)));
     assert.equal(Math.max(...h.dni.flatMap((d) => d.body)), 1, 'najvyšší bod týždňa je navrchu');
     assert.ok(h.hranica > 0 && h.hranica < 1);

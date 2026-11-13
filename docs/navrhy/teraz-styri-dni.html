@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: karta Teraz – len 4 dni</title>
+        <style>
+            /* Mockup, nie snímka z appky. Telefóny sú kreslené ručne podľa štýlov hrebeňa z teraz-vyhlad-alternativy.html.
+               Scenár je vymyslený (streda 11. 11. 2026, 10:30); krivky dní a čísla sú na ukážku. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --cloud: #b4c3dc;
+                --glass: rgba(10, 20, 50, 0.38);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 36px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 0;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                padding-top: 24px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(350px, 100%);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+                max-width: 760px;
+            }
+            ul {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                max-width: 760px;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            .tel {
+                padding: 18px 14px 22px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f6fb8 0%, #5b9be0 60%, #8cc0f0 100%);
+                overflow: hidden;
+            }
+            .cislo {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                padding: 0 2px 8px;
+            }
+            .cislo b {
+                font-size: 2.4rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .cislo span {
+                font-size: 0.8rem;
+                color: var(--dim);
+            }
+            .hreben {
+                position: relative;
+            }
+            .hreben svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            .hreben .dni {
+                position: absolute;
+                inset: 0;
+                display: grid;
+            }
+            .hreben .dni > span {
+                display: grid;
+                align-content: end;
+                justify-items: center;
+                padding-bottom: 1px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--cloud);
+                line-height: 1.15;
+            }
+            .hreben .dni > span small {
+                font-size: 0.62rem;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                text-transform: none;
+                opacity: 0.85;
+            }
+            .hreben .dni > .nad {
+                color: var(--gold);
+            }
+            .hreben .dni > .dnes {
+                color: #fff;
+                background: rgba(255, 255, 255, 0.14);
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+            }
+            .vyhlad {
+                padding: 8px 8px 6px;
+                border-radius: 22px;
+                background: var(--glass);
+            }
+            .co-h {
+                margin: 14px 2px 8px;
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .riadky {
+                overflow: hidden;
+                border-radius: 22px;
+                background: var(--glass);
+            }
+            .ri {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 14px;
+                border-bottom: 1px solid var(--line);
+            }
+            .ri:last-child {
+                border-bottom: 0;
+            }
+            .ri .velky {
+                font-size: 1.2rem;
+                font-weight: 800;
+                min-width: 3.4rem;
+            }
+            .ri b {
+                display: block;
+                font-size: 0.95rem;
+            }
+            .ri small {
+                color: var(--dim);
+                font-size: 0.78rem;
+            }
+            .potom {
+                margin: 0 2px;
+                font-size: 0.72rem;
+                color: var(--dim);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 8px">
+                <h1>Karta Teraz – len 4 dni namiesto 7</h1>
+                <p class="note">
+                    Mockup na schválenie, v appke sa nič nezmenilo. Dôvod: predpoveď na celý týždeň je často nepresná, tak ju appka nemá
+                    ukazovať ako rovnako spoľahlivú. Krivky a čísla sú vymyslené, rozloženie je podľa skutočného hrebeňa.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Porovnanie</small>Dnes (7 dní) a dve podoby so 4 dňami</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="cislo"><b>2,4 kW</b><span>teraz · meranie</span></div>
+                            <div class="vyhlad"><div class="hreben" data-dni="7"></div></div>
+                            <div data-obsah></div>
+                        </div>
+                        <figcaption>
+                            <b>Dnes.</b> 7 dní. Stĺpec je ~45 px, krivka dňa má len pár bodov, štítok je dvojpísmenový („Pi“).
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="cislo"><b>2,4 kW</b><span>teraz · meranie</span></div>
+                            <div class="vyhlad"><div class="hreben" data-dni="4" data-stitok="datum"></div></div>
+                            <div data-obsah></div>
+                        </div>
+                        <figcaption>
+                            <b>A. Štyri rovnaké dni.</b> Ten istý hrebeň, len širší: stĺpec ~75 px, štítok „Pi“ aj s dátumom „13. 11.“. Dnes
+                            má biely rámik ako doteraz.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="cislo"><b>2,4 kW</b><span>teraz · meranie</span></div>
+                            <div class="vyhlad"><div class="hreben" data-dni="4" data-stitok="datum" data-blednutie></div></div>
+                            <div data-obsah></div>
+                        </div>
+                        <figcaption>
+                            <b>B. Štyri dni, vzdialenejšie blednú.</b> Ako A, ale 3. a 4. deň sú čoraz priehľadnejšie a pod hrebeňom stojí
+                            drobné „predpoveď sa k štvrtku mení“. Appka tak priznáva, že ďalšie dni sú menej isté.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Na výber</small>Čo ktorá možnosť dá a čo stojí</h2>
+                <ul>
+                    <li>
+                        <b>7 dní (dnes).</b>
+                        <span class="plus">Vidno, kedy príde ďalší slnečný deň, aj keď je pred nami dlhé zamračenie.</span>
+                        <span class="minus">Posledné dni sú často iné, než sa ukáže, a pritom vyzerajú rovnako isto ako dnešok.</span>
+                    </li>
+                    <li>
+                        <b>A. 4 rovnaké dni.</b>
+                        <span class="plus"
+                            >Najjednoduchšie: v kóde je to jedno číslo (<code>TYZDEN.dni</code>), hrebeň je čitateľnejší a ťuknutie na deň
+                            sa trafí ľahšie.</span
+                        >
+                        <span class="minus"
+                            >Karta „Teraz“ prestane vedieť, kedy bude slnko po štvrtku: odznak „potom až v pondelok“ by musel často povedať
+                            „do 4 dní nie“.</span
+                        >
+                    </li>
+                    <li>
+                        <b>B. 4 dni s blednutím.</b>
+                        <span class="plus">Hovorí pravdu o istote predpovede, nič sa nerozhoduje podľa „istého“ štvrtého dňa.</span>
+                        <span class="minus"
+                            >Trochu viac práce (priehľadnosť v SVG, jeden text navyše) a nová vec, ktorú treba vysvetliť.</span
+                        >
+                    </li>
+                    <li>
+                        <b>Nekonvenčne: 7 dní len na ťuknutie.</b> Hrebeň ostane na 4 dni a ďalšie tri sa ukážu až po „Ukáž viac“.
+                        <span class="minus">Pridáva ovládací prvok kvôli veci, ktorá je často nepresná – tú radšej neukazovať.</span>
+                    </li>
+                </ul>
+                <p class="note">
+                    Odporúčam <b>A</b>: je najjednoduchšie a vyhovuje pravidlu KISS. B sa oplatí, ak budeš chcieť, aby appka sama priznávala
+                    neistotu. Zmena v A by sa týkala len <code>TYZDEN.dni</code> v <code>shared/config.js</code>, zámer „potom až v
+                    pondelok“ a texty pásov by sa upravili podľa toho, čo ti ukáže ďalší krok. Nič z toho som nerobil – čakám na tvoj výber.
+                </p>
+            </section>
+        </main>
+        <script>
+            const W = 322;
+            const H = 92;
+            const BASE = 70;
+            const VYSKA = 60;
+            const HRANICA = 0.45;
+            const DNI = [
+                ['St', '11. 11.', 0.85],
+                ['Št', '12. 11.', 0.35],
+                ['Pi', '13. 11.', 1.0],
+                ['So', '14. 11.', 0.3],
+                ['Ne', '15. 11.', 0.28],
+                ['Po', '16. 11.', 0.75],
+                ['Ut', '17. 11.', 0.2],
+            ];
+            const krivka = (a) => Array.from({ length: 13 }, (_, i) => a * Math.exp(-(((i - 6) / 3.2) ** 2)));
+
+            function plocha(v, x0, sirka) {
+                const p = v.map((y, i) => [x0 + 3 + (i * (sirka - 6)) / (v.length - 1), BASE - y * VYSKA]);
+                let d = `M${p[0][0]},${BASE}L${p[0][0]},${p[0][1]}`;
+                for (let i = 1; i < p.length - 1; i++) {
+                    const [x, y] = p[i];
+                    const [nx, ny] = p[i + 1];
+                    d += `Q${x},${y} ${(x + nx) / 2},${(y + ny) / 2}`;
+                }
+                const k = p[p.length - 1];
+                return `${d}L${k[0]},${k[1]}L${k[0]},${BASE}Z`;
+            }
+
+            let n = 0;
+            document.querySelectorAll('.hreben').forEach((el) => {
+                const pocet = Number(el.dataset.dni);
+                const sirka = W / pocet;
+                const datum = el.dataset.stitok === 'datum';
+                const bledne = el.hasAttribute('data-blednutie');
+                const id = `nad${n++}`;
+                const y = BASE - HRANICA * VYSKA;
+                const dni = DNI.slice(0, pocet);
+                const op = (i) => (bledne ? [1, 1, 0.7, 0.45][i] : pocet === 7 ? (i < 3 ? 1 : i < 5 ? 0.75 : 0.55) : 1);
+                const cesty = dni.map(([, , a], i) => `<path d="${plocha(krivka(a), i * sirka, sirka)}" opacity="${op(i)}"/>`).join('');
+                const tx = 3 + 0.4 * (sirka - 6);
+                const ty = BASE - krivka(dni[0][2])[Math.round(0.4 * 12)] * VYSKA;
+                el.innerHTML =
+                    `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><clipPath id="${id}"><rect width="${W}" height="${y}"/></clipPath></defs>` +
+                    `<g fill="rgba(180,195,220,0.5)">${cesty}</g><g fill="#ffd166" clip-path="url(#${id})">${cesty}</g>` +
+                    `<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,0.7)" stroke-dasharray="3 4"/>` +
+                    `<line x1="0" x2="${W}" y1="${BASE}" y2="${BASE}" stroke="rgba(255,255,255,0.25)"/>` +
+                    `<circle cx="${tx}" cy="${ty}" r="3.5" fill="#fff" stroke="rgba(10,20,50,0.6)" stroke-width="1.5"/></svg>` +
+                    `<div class="dni" style="grid-template-columns:repeat(${pocet},1fr)">${dni
+                        .map(([d, dat, a], i) => {
+                            const cls = i === 0 ? 'dnes' : a > HRANICA ? 'nad' : '';
+                            return `<span class="${cls}">${d}${datum ? `<small>${dat}</small>` : ''}</span>`;
+                        })
+                        .join('')}</div>`;
+                if (bledne) el.insertAdjacentHTML('afterend', '<p class="potom">Ďalšie dni sa ešte môžu zmeniť.</p>');
+            });
+
+            const ri = (cas, meno, pod) =>
+                `<div class="ri"><span class="velky">${cas}</span><span><b>${meno}</b><small>${pod}</small></span></div>`;
+            document.querySelectorAll('[data-obsah]').forEach((el) => {
+                el.innerHTML =
+                    `<h3 class="co-h">Zo slnka</h3><div class="riadky">` +
+                    ri('10:15', 'Práčka', 'dobehne 11:45') +
+                    ri('11:45', 'Sušička', 'po práčke') +
+                    ri('12:00', 'Umývačka', 'dobehne 14:00') +
+                    `</div>`;
+            });
+        </script>
+    </body>
+</html>
