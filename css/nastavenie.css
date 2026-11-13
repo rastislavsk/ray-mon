@@ -165,9 +165,10 @@
 }
 /* Sekcie karty Nastavenie sa zbaľujú: nadpis so šípkou je tlačidlo
    cez celú šírku (ten istý vzor ako Plán dňa), riadky sú až po rozbalení. */
-/* Odstupy: aspoň 8 px medzi nadpisom a prvým riadkom aj medzi zbalenou sekciou a odkazom pod ňou. */
+/* Zbalená sekcia nemá pod nadpisom žiadny odstup navyše, inak by nadpis s podnadpisom nestáli
+   v strede skla (hore 12 px, dole 16 px). Odstup pod rozbaleným obsahom drží .ns-body. */
 .set.fold {
-    padding: 0 0 4px;
+    padding: 0;
 }
 .set.fold .fold-head {
     padding-right: 6px;
@@ -195,7 +196,7 @@
     padding: 2px 16px;
 }
 .ns-body {
-    padding: 8px 16px 6px;
+    padding: 8px 16px 10px;
 }
 .set .it {
     display: flex;
