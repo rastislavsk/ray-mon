@@ -6,7 +6,7 @@
 
 import { DEVICES, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA, PREDPOVED_HODINY, TARIFF_LIMITS, TYZDEN } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
-import { dayNameShort, weekDateLabel, weekDayName } from './format.js';
+import { dayNameShort, weekDayName } from './format.js';
 import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazSkupinaText, terazVecText } from './messages-core.js';
 import { dayCtx, freeKw, programDraw } from './mozem-jadro.js';
 import { cheapFrom, chosen, najlepsiDen } from './plan-dna.js';
@@ -70,7 +70,6 @@ export function hrebenModel(dni) {
             : null,
         dni: dni.map((d, i) => ({
             den: dayNameShort(d.day.date),
-            datum: weekDateLabel(d.day.date),
             name: d.name,
             body: kw[i].map(r),
             nad: d.ctx.plan.some((s) => !s.night && s.kw >= th.lowKw),

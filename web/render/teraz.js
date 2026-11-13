@@ -95,7 +95,7 @@ function renderHreben(h, dom) {
             .map(
                 (d, i) =>
                     // Meno dňa a či slnko stačí je pre čítačku za skratkou - prístupné meno tak obsahuje to, čo je vidno.
-                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}<small aria-hidden="true">${escapeHtml(d.datum)}</small>` +
+                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}` +
                     `<span class="sr"> – ${escapeHtml(d.nad ? d.name : `${d.name}, ${TERAZ_HREBEN.pod}`)}</span></button>`,
             )
             .join(''),
