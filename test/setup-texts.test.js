@@ -254,10 +254,13 @@ test('prehľad: neplatný prístup k meraniu je navrchu, v podnadpise aj v riadk
 test('prehľad: Čo máš doma, Oznámenia, Vzhľad a Appka v oboch tónoch', () => {
     const m = nastavenieModel(state());
     assert.equal(m.doma.title, 'Čo máš doma');
-    assert.equal(m.doma.hint, 'Práčka a auto');
+    assert.equal(m.doma.hint, 'Práčka a elektromobil');
     assert.deepEqual(
-        m.doma.devices.filter((d) => d.on).map((d) => d.id),
-        ['pracka', 'auto'],
+        m.doma.devices.filter((d) => d.on).map((d) => [d.id, d.name]),
+        [
+            ['pracka', 'Práčka'],
+            ['auto', 'Elektromobil'],
+        ],
     );
     assert.equal(nastavenieModel(state({ doma: [] })).doma.hint, 'zatiaľ nič');
     assert.equal(m.oznamenia.hint, 'Ráno plán dňa: kedy pustiť ktorý spotrebič');
