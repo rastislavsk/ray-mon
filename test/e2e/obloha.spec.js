@@ -1389,9 +1389,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-oko-bod')).toHaveAttribute('data-tone', 'cloud');
         await expect(page.locator('#tz-oko-pod')).toBeHidden();
         const dni = page.locator('#tz-hreben-dni button');
-        await expect(dni).toHaveText(
-            h.dni.map((d) => `${d.den}${d.datum} – ${d.nad ? d.name : `${d.name}, slnko na veľké spotrebiče nestačí`}`),
-        );
+        await expect(dni).toHaveText(h.dni.map((d) => `${d.den} – ${d.nad ? d.name : `${d.name}, slnko na veľké spotrebiče nestačí`}`));
         expect(await dni.evaluateAll((s) => s.map((e) => [e.hasAttribute('data-nad'), e.getAttribute('aria-pressed')]))).toEqual(
             h.dni.map((d, i) => [d.nad, String(i === 0)]),
         );
