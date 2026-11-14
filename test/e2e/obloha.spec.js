@@ -638,6 +638,8 @@ test.describe('nasadenie a cache (boot.js)', () => {
         await page.goto('/');
         await expect(page.locator('#hdr-status')).toHaveText('appka sa nenačítala, skús to o chvíľu');
         expect(loads()).toBe(2);
+        // Svitanie by inak tvrdilo, že sa ešte načítava.
+        await expect(page.locator('#tz-svitanie')).toBeHidden();
     });
 
     test('chýbajúci prvok v starom index.html: to isté ako starý modul', async ({ page }) => {
@@ -653,6 +655,45 @@ test.describe('nasadenie a cache (boot.js)', () => {
         await expect.poll(() => loads).toBe(2);
         await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
         expect(errors).toEqual([expect.stringContaining('Chýba element #hdr-tone')]);
+    });
+});
+
+// Svitanie (docs/navrhy/nacitanie.html): krivka dňa na karte Teraz, kým appka čaká na prvé dáta.
+// Je v statickom HTML, takže beží aj skôr, ako sa stiahne appka; skryje ju render.
+test.describe('svitanie počas načítania', () => {
+    test('vidno ho, kým sa appka sťahuje', async ({ page }) => {
+        await pripravSiet(page);
+        // boot.js nikdy neodpovie: v stránke ostane statické HTML.
+        await page.route('**/boot.js', () => {});
+        await page.goto('/', { waitUntil: 'commit' });
+        await expect(page.locator('#tz-svitanie')).toBeVisible();
+        await expect(page.locator('#hdr-status')).toHaveText('načítavam…');
+    });
+
+    test('vidno ho, kým appka čaká na predpoveď, potom zmizne', async ({ page }) => {
+        const errors = await pripravSiet(page);
+        /** @type {() => void} */
+        let pust = () => {};
+        const cakaj = new Promise((r) => (pust = () => r(undefined)));
+        // Neskôr registrovaná route má prednosť pred tou z pripravSiet.
+        await page.route(/api\.open-meteo\.com/, async (route) => {
+            await cakaj;
+            await route.fulfill({ json: weather });
+        });
+        await page.clock.setFixedTime(FIXED_NOW);
+        await page.goto('/');
+        await appReady(page);
+        await expect(page.locator('#tz-svitanie')).toBeVisible();
+        pust();
+        await expect(page.locator('#hdr-status')).toHaveText(/^\d\d:\d\d · /);
+        await expect(page.locator('#tz-svitanie')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('bez polohy ho po štarte nevidno', async ({ page }) => {
+        const errors = await openObloha(page, { settings: null });
+        await expect(page.locator('#tz-svitanie')).toBeHidden();
+        expect(errors).toEqual([]);
     });
 });
 

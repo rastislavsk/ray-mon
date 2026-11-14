@@ -244,6 +244,8 @@ export function renderTeraz(state, dom) {
     renderPocasie(state, m, dom);
     setText(dom.tzTitle, m.title);
     show(dom.tzNum, m.num !== '');
+    // Svitanie (index.html): krivka dňa beží, kým appka čaká na prvú predpoveď.
+    show(dom.tzSvitanie, m.kind === 'loading');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
     renderJas(m.jas, dom);

@@ -93,6 +93,7 @@ function terazDom() {
         tzTitle: byId('ttl-terazky'),
         tzNum: byId('tz-num'),
         tzNumVal: byId('tz-num-val'),
+        tzSvitanie: byId('tz-svitanie'),
         tzSub: byId('tz-sub'),
         tzJas: byId('tz-jas'),
         tzJasLabel: byId('tz-jas-label'),
