@@ -51,6 +51,8 @@ async function recover(err) {
     }
     const line = document.getElementById('hdr-status');
     if (line) line.textContent = 'appka sa nenačítala, skús to o chvíľu';
+    // Animácia čakania by inak tvrdila, že sa ešte načítava. Starý index.html ju nemá, preto `?.`.
+    document.getElementById('tz-svitanie')?.classList.add('hidden');
 }
 
 import('./app.js').then(loaded, recover);

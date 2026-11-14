@@ -422,6 +422,98 @@
 .knum.est {
     font-style: italic;
 }
+
+/* Čakanie na prvé dáta (docs/navrhy/nacitanie.html): krivka dňa sa kreslí a po nej ide slnko.
+   Objaví sa až po 0,4 s - z cache appka nabehne skôr a animácia by len preblikla. Pokojový stav
+   (bez animácie, napr. pri obmedzenom pohybe) je dokreslená krivka so slnkom na vrchole. Rozmer je
+   pevný, aby dráha slnka (offset-path, v pixeloch) sedela na krivke v SVG. */
+.svitanie {
+    position: relative;
+    width: 200px;
+    height: 60px;
+    margin: 10px 20px 4px;
+    animation: svitanie-zjav 0.5s ease-out 0.4s both;
+}
+.svitanie svg {
+    display: block;
+    overflow: visible;
+}
+.svitanie-zem {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.28);
+    stroke-dasharray: 3 4;
+}
+.svitanie-plocha {
+    fill: #ffd166;
+    opacity: 0.18;
+    animation: svitanie-dych 2.4s ease-in-out infinite;
+}
+.svitanie-krivka {
+    fill: none;
+    stroke: #ffd166;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    animation: svitanie-kresli 2.4s ease-in-out infinite;
+}
+.svitanie-slnko {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255, 241, 200, 0.9);
+    offset-path: path('M0 56C40 56 60 6 100 6S160 56 200 56');
+    offset-distance: 50%;
+    animation: svitanie-putuj 2.4s ease-in-out infinite;
+}
+@keyframes svitanie-zjav {
+    from {
+        opacity: 0;
+    }
+}
+@keyframes svitanie-kresli {
+    0% {
+        stroke-dashoffset: 100;
+    }
+    55%,
+    80% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 0;
+    }
+}
+@keyframes svitanie-dych {
+    0%,
+    30%,
+    100% {
+        opacity: 0;
+    }
+    60%,
+    80% {
+        opacity: 0.18;
+    }
+}
+@keyframes svitanie-putuj {
+    0% {
+        offset-distance: 0%;
+        opacity: 1;
+    }
+    55%,
+    80% {
+        offset-distance: 100%;
+        opacity: 1;
+    }
+    100% {
+        offset-distance: 100%;
+        opacity: 0;
+    }
+}
 /* Pásik pod číslom: koľko z jasnej oblohy (teraz.jas v shared/teraz.js). Pevná šírka, aby sa
    s číslom nemenil; v noci prázdny, nie skrytý, aby sa v náhľade graf pod prstom nepohol. */
 .jas {

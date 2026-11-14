@@ -345,11 +345,13 @@ button.live[aria-expanded='true'] {
 /* Kým appka kartu prvý raz nevykreslí (render zapíše data-panel), sú v stránke len prázdne
    nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
    zaberajú ďalej, len ich nevidno. Okrem riadku stavu merania na karte Teraz, ktorú stránka ukáže
-   pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“). */
+   pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“).
+   A okrem animácie čakania nad ním (.svitanie v css/teraz.css), ktorá je na to, aby bola vidieť práve vtedy. */
 .page:not([data-panel]) {
     visibility: hidden;
 }
-.page:not([data-panel]) .stav {
+.page:not([data-panel]) .stav,
+.page:not([data-panel]) .svitanie {
     visibility: visible;
 }
 /* Nadpis rastie s písmom v systéme, no najviac tak, aby sa slovo ako „Štatistika“ zmestilo na úzky displej. */
