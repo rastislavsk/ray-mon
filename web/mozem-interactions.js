@@ -51,10 +51,11 @@ function initGraf(store, dom) {
         current: () => store.get().terazPreview,
         nowMin: () => localMinutes(store.get().now, store.get().site.timezone),
         preview: (min) => store.setState({ terazPreview: min, panel: 'mozem' }),
-        reset: () => stepBack(store, { terazPreview: null }),
+        // Zvolený čas nie je krok navigácie (NavStep) - návrat na teraz ide priamo cez setState.
+        reset: () => store.setState({ terazPreview: null }),
     });
     dom.grReset.addEventListener('click', () => {
-        stepBack(store, { terazPreview: null });
+        store.setState({ terazPreview: null });
         // Tlačidlo po návrate zmizne; fokus ostane na posúvači, z ktorého sa dá pokračovať.
         dom.grChart.focus();
     });

@@ -1587,18 +1587,22 @@ test.describe('karta Teraz', () => {
         await expect(spat).toBeHidden();
         await expect(page.locator('#gr-chart')).toBeFocused();
 
-        // Tlačidlo Späť v telefóne: najprv vráti teraz, potom zavrie panel, ďalšie predošlú kartu.
+        // Tlačidlo Späť v telefóne zavrie panel naraz, nech sa po grafe chodilo akokoľvek (posun aj
+        // „Späť na teraz“ nie sú kroky), a ďalšie vráti predošlú kartu - graf sa znovu neotvorí.
+        await page.mouse.click(z.x, z.y);
         await page.mouse.click(na.x, na.y);
         await expect(cas).toHaveText('15:30');
-        await page.goBack();
-        await expect(cas).toHaveText('Teraz 13:00');
-        await expect(page.locator('#gr-sheet')).toBeVisible();
         await page.goBack();
         await expect(page.locator('#gr-sheet')).toBeHidden();
         await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#mz-karty [data-kind="graf"] .k-otvor')).toBeFocused();
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
+        await expect(page.locator('#gr-sheet')).toBeHidden();
+        // Graf sa otvorí znovu na teraz.
+        await page.goForward();
+        await ocakavajKartu(page, 'mozem');
+        await expect(page.locator('#gr-sheet')).toBeHidden();
         // Karta Teraz zvolený čas nepozná - číslo a riadok stavu sú teraz.
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(terazModel(vstupTeraz(at('13:00')))));
         await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
