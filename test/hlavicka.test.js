@@ -73,7 +73,9 @@ test('hlavička: bez panelov výzva, pri načítaní a bez dát slovo bez bublin
         assert.equal(m.tip, null);
     }
     const nacitavam = model({ loading: true });
-    assert.deepEqual([nacitavam.status, nacitavam.tone, nacitavam.tip], ['načítavam…', 'off', null]);
+    assert.deepEqual([nacitavam.status, nacitavam.tone, nacitavam.tip], ['', 'off', null]);
+    // Pri načítaní riadok pod číslom nie je: čakanie ukazuje obrazec v strede obrazovky.
+    assert.equal(stavRiadok(nacitavam, { preview: false, source: '' }), null);
     const bezDat = model({ pv: null, forecast: null });
     assert.deepEqual([bezDat.status, bezDat.tone, bezDat.tip], ['bez dát', 'off', null]);
 });

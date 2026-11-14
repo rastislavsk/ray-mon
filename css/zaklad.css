@@ -344,13 +344,13 @@ button.live[aria-expanded='true'] {
 }
 /* Kým appka kartu prvý raz nevykreslí (render zapíše data-panel), sú v stránke len prázdne
    nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
-   zaberajú ďalej, len ich nevidno. Okrem riadku stavu merania na karte Teraz, ktorú stránka ukáže
-   pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“).
-   A okrem animácie čakania v strede obrazovky (.svitanie v css/teraz.css), ktorá je na to, aby bola vidieť práve vtedy. */
+   zaberajú ďalej, len ich nevidno. Okrem animácie čakania v strede obrazovky (.svitanie v css/teraz.css),
+   ktorá je na to, aby bola vidieť práve vtedy. A okrem riadku stavu merania na karte Teraz, keď doň
+   boot.js napísal hlášku, že sa appka nenačítala - inak je prázdny a čakanie ukazuje len obrazec. */
 .page:not([data-panel]) {
     visibility: hidden;
 }
-.page:not([data-panel]) .stav,
+.page:not([data-panel]) .stav:has(#hdr-status:not(:empty)),
 .page:not([data-panel]) .svitanie {
     visibility: visible;
 }

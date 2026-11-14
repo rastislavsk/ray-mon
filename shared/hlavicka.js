@@ -47,7 +47,8 @@ export function hlavickaModel(s, voice = 'drzy') {
         tip: null,
     });
     if (s.known !== 'elektraren') return { ...off(''), setup: true };
-    if (s.loading) return off('načítavam…');
+    // Pri načítaní riadok nie je (prázdny stav, stavRiadok): čakanie ukazuje obrazec v strede obrazovky.
+    if (s.loading) return off('');
     if (!s.pv && !s.forecast) return off('bez dát');
     const stav = stavMerania(s);
     const tip = { ...stavMeraniaText(stav, voice), znova: stav.druh === 'znova' };
@@ -67,14 +68,15 @@ export function hlavickaModel(s, voice = 'drzy') {
  * merania a slovo o stave z hlavickaModel, ťuknutie otvorí bublinu (`tip`). Počas náhľadu iného času
  * patrí číslo k inej chvíli (nadpis karty povie ku ktorej) - čas merania vedľa neho by klamal. Riadok
  * vtedy povie len, odkiaľ je číslo v zvolenom čase (`source` z terazModel), bez bodky (`tone: 'nahlad'`)
- * a bez bubliny. Bez zadaných panelov riadok nie je (null) - v hlavičke je výzva namiesto neho.
+ * a bez bubliny. Bez zadaných panelov riadok nie je (null) - v hlavičke je výzva namiesto neho. Ani pri
+ * načítaní (prázdny stav) - čakanie ukazuje obrazec v strede obrazovky (#tz-svitanie).
  * @param {ReturnType<typeof hlavickaModel>} h
  * @param {{ preview: boolean, source: string }} teraz z terazModel
  * @returns {{ text: string, tone: ReturnType<typeof hlavickaModel>['tone'] | 'nahlad', toneText: string,
  *   tip: ReturnType<typeof hlavickaModel>['tip'] } | null}
  */
 export function stavRiadok(h, teraz) {
-    if (h.setup) return null;
+    if (h.setup || !h.status) return null;
     if (teraz.preview) return { text: teraz.source, tone: 'nahlad', toneText: '', tip: null };
     return { text: h.status, tone: h.tone, toneText: h.toneText, tip: h.tip };
 }

@@ -659,7 +659,7 @@ test('terazModel: načítavanie, bez dát, bez polohy', () => {
     assert.equal(loading.kind, 'loading');
     assert.equal(loading.num, '');
     assert.equal(loading.retry, false);
-    assert.equal(loading.sub, TERAZ_TEXTS.loading);
+    assert.equal(loading.sub, '');
     assert.equal(grafModel(input(at('13:00'), { pv: null, forecast: null, loading: true })), null);
 
     const off = terazModel(input(at('13:00'), { pv: null, forecast: null }));

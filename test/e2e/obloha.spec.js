@@ -667,7 +667,9 @@ test.describe('svitanie počas načítania', () => {
         await page.route('**/boot.js', () => {});
         await page.goto('/', { waitUntil: 'commit' });
         await expect(page.locator('#tz-svitanie')).toBeVisible();
-        await expect(page.locator('#hdr-status')).toHaveText('načítavam…');
+        // Text „načítavam…“ nie je, riadok stavu ostane skrytý - čakanie ukazuje len obrazec.
+        await expect(page.locator('#hdr-status')).toBeEmpty();
+        await expect(page.locator('#tz-stav')).toBeHidden();
     });
 
     test('vidno ho, kým appka čaká na predpoveď, potom zmizne', async ({ page }) => {
@@ -1751,7 +1753,10 @@ test.describe('karta Teraz', () => {
         await page.goto('/');
         await appReady(page);
         await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-sub')).toHaveText('Načítavam…');
+        // Bez vety „Načítavam…“: čakanie ukazuje len obrazec v strede obrazovky.
+        await expect(page.locator('#tz-svitanie')).toBeVisible();
+        await expect(page.locator('#tz-sub')).toBeHidden();
+        await expect(page.locator('#tz-stav')).toBeHidden();
         await expect(page.locator('#tz-retry')).toBeHidden();
         await expect(page.locator('#tz-num')).toBeHidden();
         pusti();
@@ -2346,10 +2351,10 @@ test.describe('karta 7 dní: stavy', () => {
         };
         // O dve hodiny: počasie treba stiahnuť znova, no dni sú tu z odloženého, kým appka ešte načítava.
         await otvorNeskor(2);
-        await expect(page.locator('#hdr-status')).toHaveText('načítavam…');
+        await expect(page.locator('#hdr-status')).toHaveText('');
         await expect(page.locator('#sd-days .day')).toHaveCount(7);
         pusti();
-        await expect(page.locator('#hdr-status')).not.toHaveText('načítavam…');
+        await expect(page.locator('#hdr-status')).toHaveText(/\S/);
         await expect(page.locator('#sd-days .day')).toHaveCount(7);
         // O 15 hodín je aj posledné stiahnuté počasie (o 2 hodiny) priveľmi staré: len načítavanie.
         brana = new Promise((r) => (pusti = () => r(undefined)));

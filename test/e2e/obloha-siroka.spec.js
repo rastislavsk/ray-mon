@@ -50,7 +50,8 @@ async function openObloha(page, size, { time = NOON, settings = OWNER } = {}) {
     await page.clock.setFixedTime(time);
     await page.goto('/');
     await expect(page.locator('#page')).toHaveAttribute('data-panel', /.+/);
-    await expect(page.locator('#hdr-status')).not.toHaveText('načítavam…');
+    // Kým appka načítava, riadok stavu je prázdny; s elektrárňou potom niečo povie.
+    if (settings) await expect(page.locator('#hdr-status')).toHaveText(/\S/);
     return errors;
 }
 
