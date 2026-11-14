@@ -2,7 +2,7 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MINUTES_PER_DAY, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
+import { LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
 import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
@@ -77,16 +77,15 @@ import { setupInit } from '../shared/setup-flow.js';
  */
 /**
  * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci, panel s grafom
- * dňa na karte Dnes (`graf`), náhľad iného času v ňom a detail karty 7 dní. Pri náhľade je krokom to, že beží - posun
- * po grafe nový krok nepridá (porovnáva sameNavStep); `preview` si pamätá čas, s ktorým sa doň
- * vstúpilo. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
+ * dňa na karte Dnes (`graf`) a detail karty 7 dní. Zvolený čas v grafe krokom nie je - posun po grafe
+ * ani „Späť na teraz“ do histórie nič nepridajú, Späť zavrie celý graf naraz. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
  * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený detail spotrebiča na karte Teraz (`vec`)
  * a panel s vysvetlením nad jej dlaždicami (`chip`) Späť zavrie, rovnako vysvetlenie odznaku na karte Dnes (`trieda`). `dash` hovorí, že krok patrí prehľadu so stĺpcami
  * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
- * @typedef {{ panel: Panel, preview: number | null, detail: WeekDetail | null,
+ * @typedef {{ panel: Panel, detail: WeekDetail | null,
  *   setup: import('../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
  *   vec: string | null, chip: TzChip | null, trieda: MzChip | null, graf: boolean, dash?: true }} NavStep
  */
@@ -306,7 +305,6 @@ export function neededParts(state) {
 export function navStep(state) {
     return {
         panel: state.panel,
-        preview: state.terazPreview,
         detail: state.weekDetail,
         setup: state.setupStep,
         roof: state.setupRoof,
@@ -325,11 +323,7 @@ export function navStep(state) {
  * @param {NavStep} a @param {NavStep} b
  */
 export function sameNavStep(a, b) {
-    return (
-        (a.panel === b.panel || (!!a.dash && !!b.dash)) &&
-        (a.preview === null) === (b.preview === null) &&
-        ROVNAKE_V_KROKU.every((k) => a[k] === b[k])
-    );
+    return (a.panel === b.panel || (!!a.dash && !!b.dash)) && ROVNAKE_V_KROKU.every((k) => a[k] === b[k]);
 }
 
 /** Časti kroku, ktoré musia byť rovnaké, aby to bol ten istý krok. @type {(keyof NavStep)[]} */
@@ -408,9 +402,10 @@ export function navStepOf(raw) {
     if (typeof raw === 'string') raw = { panel: raw };
     if (!raw || typeof raw !== 'object') return null;
     // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami, Plán dňa (`plan`) a zoznam pod grafom
-    // (`legend`) s prestavbou karty Teraz; položka, ktorá ich ešte nesie, vráti len kartu.
-    const { panel, preview, detail, setup, roof, sheet, fold, vec, chip, trieda, graf, dash } =
-        /** @type {{ panel?: unknown, preview?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
+    // (`legend`) s prestavbou karty Teraz; položka, ktorá ich ešte nesie, vráti len kartu. Zvolený čas
+    // v grafe (`preview`) krokom býval - položka, ktorá ho nesie, vráti graf bez neho.
+    const { panel, detail, setup, roof, sheet, fold, vec, chip, trieda, graf, dash } =
+        /** @type {{ panel?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
          *   sheet?: unknown, fold?: unknown, vec?: unknown, chip?: unknown, trieda?: unknown, graf?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
@@ -418,12 +413,8 @@ export function navStepOf(raw) {
     const d = dashOf(p, dash);
     const inDash = !!d.dash;
     const g = mzGrafOf(p, inDash, graf);
-    // Náhľad mimo dňa (cudzia či poškodená položka) nie je náhľad, rovnako mimo grafu - položka zo
-    // skoršej verzie, keď bol graf na karte Teraz, vráti len kartu.
-    const at = g && Number.isInteger(preview) && /** @type {number} */ (preview) >= 0 && /** @type {number} */ (preview) < MINUTES_PER_DAY;
     return {
         panel: p,
-        preview: at ? /** @type {number} */ (preview) : null,
         detail: weekDetailOf(p, inDash, detail),
         ...place,
         sheet: appSheetOf(p, sheet),
@@ -443,19 +434,18 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
 /**
- * Návrat na krok z histórie (tlačidlo Späť): karta, zvolený čas, detaily a panely tak, ako boli.
- * Náhľad, ktorý už beží, ostane na čase, kde ho prst nechal; detail dňa na dni, kde sa naposledy
+ * Návrat na krok z histórie (tlačidlo Späť): karta, detaily a panely tak, ako boli. Zvolený čas
+ * v grafe ostane, kým je graf otvorený, so zatvoreným grafom sa vráti na teraz; detail dňa na dni, kde sa naposledy
  * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
  * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
  * @param {AppState} state @param {NavStep} step
  */
 export function navChange(state, step) {
-    const preview = step.preview === null ? null : (state.terazPreview ?? step.preview);
     const endsEdit = step.setup === null || step.setup === 'suhrn';
     const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
     return {
         ...panelChange(state.panel, panel),
-        terazPreview: preview,
+        terazPreview: step.graf ? state.terazPreview : null,
         weekDetail: step.detail,
         setupStep: step.setup,
         setupRoof: step.roof,

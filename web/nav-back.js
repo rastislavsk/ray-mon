@@ -1,5 +1,5 @@
-// Zatvorenie niečoho, čo bolo krokom navigácie (panel veci na karte Môžem?, náhľad iného času
-// na karte Teraz), krížikom či tlačidlom v appke. Je to ten istý krok ako tlačidlo Späť.
+// Zatvorenie niečoho, čo bolo krokom navigácie (detail spotrebiča na karte Teraz, graf dňa
+// na karte Dnes), krížikom či tlačidlom v appke. Je to ten istý krok ako tlačidlo Späť.
 
 import { navPrevFrom, navStep, navStepFrom, sameNavStep } from './state.js';
 
