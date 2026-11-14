@@ -14,8 +14,7 @@ import { klikUrl, swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 // Koreň appky. Tento súbor importuje aj obloha/sw.js (odbery z čias, keď appka bývala v obloha/), takže adresy sa nesmú počítať voči
 // rozsahu ani adrese service workera, ale voči tomuto súboru.
 const ROOT = new URL('./', import.meta.url).href;
-// Logo v oznámení: leží v koreni rozsahu service workera (icon-192.png, pre staré odbery obloha/icon-192.png).
-const ICON = new URL('icon-192.png', self.registration.scope).href;
+// Veľké logo (`icon`) oznámenie zámerne nemá: Samsung ho kreslí vpravo popri ikone appky vľavo, dve rovnaké ikony vedľa seba.
 // Malá ikona v lište (a na čistom Androide aj vľavo v oznámení). Android z nej berie len tvar
 // (priehľadnosť), farbu dá sám; bez nej tam ukáže logo Chrome. Zdroj je badge.svg.
 const BADGE = new URL('badge-96.png', ROOT).href;
@@ -38,7 +37,7 @@ const ziskaj = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.tim
 
 /** @param {string} tag @param {{ title: string, body: string }} n @param {object} [extra] */
 const ukazOznamenie = (tag, n, extra = {}) =>
-    self.registration.showNotification(n.title, { body: n.body, icon: ICON, badge: BADGE, tag, renotify: true, ...extra });
+    self.registration.showNotification(n.title, { body: n.body, badge: BADGE, tag, renotify: true, ...extra });
 
 /** Oznámenie z plánu dňa; keď sa nedá vypočítať, aspoň výzva pozrieť appku. */
 async function ukaz() {
