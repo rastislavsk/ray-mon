@@ -346,7 +346,7 @@ button.live[aria-expanded='true'] {
    nosiče - výzvy, tlačidlá, sklo. Ukázať ich a hneď skryť by obsah rozhádzalo (CLS); miesto
    zaberajú ďalej, len ich nevidno. Okrem riadku stavu merania na karte Teraz, ktorú stránka ukáže
    pred prvým vykreslením: do neho píše boot.js hlášku, keď sa appka nenačíta (inak „načítavam…“).
-   A okrem animácie čakania nad ním (.svitanie v css/teraz.css), ktorá je na to, aby bola vidieť práve vtedy. */
+   A okrem animácie čakania v strede obrazovky (.svitanie v css/teraz.css), ktorá je na to, aby bola vidieť práve vtedy. */
 .page:not([data-panel]) {
     visibility: hidden;
 }

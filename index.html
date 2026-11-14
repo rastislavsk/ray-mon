@@ -122,16 +122,30 @@
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="ttl">Teraz</h1>
                 <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
-                <!-- Kým appka čaká na prvé dáta, na mieste čísla sa kreslí krivka dňa a po nej ide slnko
-                     (docs/navrhy/nacitanie.html). Je viditeľná už v statickom HTML, skryje ju render
-                     (web/render/teraz.js), pri zlyhaní štartu boot.js. Len CSS, žiadny skript. -->
+                <!-- Kým appka čaká na prvé dáta, v strede obrazovky obiehajú slnko a mesiac okolo obzoru
+                     (docs/navrhy/nacitanie-stred.html, variant C). Je viditeľné už v statickom HTML, skryje ho
+                     render (web/render/teraz.js), pri zlyhaní štartu boot.js. Len CSS, žiadny skript. -->
                 <div id="tz-svitanie" class="svitanie" aria-hidden="true">
-                    <svg viewBox="0 0 200 60" width="200" height="60">
-                        <path class="svitanie-zem" d="M0 56H200" />
-                        <path class="svitanie-plocha" d="M0 56C40 56 60 6 100 6S160 56 200 56Z" />
-                        <path class="svitanie-krivka" pathLength="100" d="M0 56C40 56 60 6 100 6S160 56 200 56" />
+                    <svg viewBox="-50 -50 100 100" width="76" height="76">
+                        <defs>
+                            <mask id="svitanie-noc" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120">
+                                <rect x="-60" y="-60" width="120" height="60" fill="#fff" />
+                                <rect x="-60" y="0" width="120" height="60" fill="#5a5a5a" />
+                            </mask>
+                            <mask id="svitanie-kosak" maskUnits="userSpaceOnUse" x="-12" y="22" width="24" height="24">
+                                <rect x="-12" y="22" width="24" height="24" fill="#fff" />
+                                <circle cx="5" cy="30" r="8" fill="#000" />
+                            </mask>
+                        </defs>
+                        <circle class="svitanie-draha" r="34" />
+                        <g mask="url(#svitanie-noc)">
+                            <g class="svitanie-obeh">
+                                <circle class="svitanie-slnko" cy="-34" r="10" />
+                                <circle class="svitanie-mesiac" cy="34" r="9" mask="url(#svitanie-kosak)" />
+                            </g>
+                        </g>
+                        <line class="svitanie-obzor" x1="-46" y1="0" x2="46" y2="0" />
                     </svg>
-                    <i class="svitanie-slnko"></i>
                 </div>
                 <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
                 <p id="tz-jas" class="jas hidden">

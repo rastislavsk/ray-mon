@@ -91,3 +91,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `dnes-graf-karta.html` | Karta Graf dňa v páse karty Dnes – vzhľad nadpisu a jasnejšie, že sa na ňu dá ťuknúť: štítok a krúžok so šípkou (A), pečiatka a tlačidlo (B), svetlejšia karta s ikonou zväčšenia (C), veta a odkaz (D) |
 | `teraz-vyhlad-alternativy.html` | Karta Teraz – dni bez slnka inak: hrebeň týždňa (A), hrebeň + „Kým príde slnko“ (B), Teraz ako týždeň (C, vybraný s radami z B) |
 | `nacitanie.html` | Čo ukázať, kým sa appka načítava: slnečný oblúk na mieste čísla (A, vybraný), kostra karty (B), svitanie v rohu (C) |
+| `nacitanie-stred.html` | Obrazec v strede obrazovky počas načítania namiesto slnečného oblúka: lúče (A), slnko a mesiac na polotočky (B), deň a noc okolo obzoru (C, vybraný) |

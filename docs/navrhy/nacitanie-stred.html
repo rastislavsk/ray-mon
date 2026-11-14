@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Ray-mon točiace sa slnko</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400;62..125,600;62..125,800&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* Rozloženie: úvod, tri telefóny s animáciou v strede obrazovky, pod každým popis, na konci odporúčanie.
+       Jeden tmavý vzhľad zámerne: appka je tmavá obloha, návrh sa má dať porovnať s ňou. */
+            :root {
+                --page: #0e1526;
+                --panel: #172036;
+                --text: #f3f5f9;
+                --dim: rgba(243, 245, 249, 0.72);
+                --line: rgba(243, 245, 249, 0.14);
+                --sun: #ffd166;
+                --moon: #eef1f6;
+                --yes: #b9f28c;
+                --s1: #4f555f;
+                --s2: #7f858e;
+                --sky1: #2f6fc4;
+                --sky2: #7fb0e6;
+                --bar: rgba(6, 10, 28, 0.72);
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+                color-scheme: dark;
+            }
+            body {
+                background: var(--page);
+                color: var(--text);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding-block: 32px 56px;
+                padding-left: max(16px, env(safe-area-inset-left, 0px));
+                padding-right: max(16px, env(safe-area-inset-right, 0px));
+                display: grid;
+                gap: 32px;
+            }
+            h1 {
+                font-size: clamp(1.8rem, 5vw, 2.6rem);
+                font-weight: 800;
+                font-stretch: 112%;
+                line-height: 1.1;
+                margin: 0 0 12px;
+                text-wrap: balance;
+            }
+            h2 {
+                font-size: 1.15rem;
+                font-weight: 800;
+                font-stretch: 112%;
+                margin: 0;
+            }
+            p {
+                margin: 0;
+                max-width: 65ch;
+            }
+            .lead {
+                color: var(--dim);
+            }
+            .ctrl {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: center;
+            }
+            button {
+                font: inherit;
+                font-weight: 600;
+                color: var(--page);
+                background: var(--text);
+                border: 0;
+                border-radius: 999px;
+                padding: 10px 18px;
+                cursor: pointer;
+            }
+            button.alt {
+                background: transparent;
+                color: var(--text);
+                box-shadow: inset 0 0 0 1.5px var(--line);
+            }
+            button:focus-visible {
+                outline: 3px solid var(--sun);
+                outline-offset: 3px;
+            }
+            .hint {
+                color: var(--dim);
+                font-size: 0.9rem;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 28px;
+            }
+            .opt {
+                display: grid;
+                gap: 14px;
+                align-content: start;
+                min-width: 0;
+            }
+            .opt-head {
+                display: flex;
+                gap: 10px;
+                align-items: baseline;
+                flex-wrap: wrap;
+            }
+            .tag {
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                padding: 3px 8px;
+                border-radius: 999px;
+                background: var(--yes);
+                color: var(--page);
+            }
+            .opt p,
+            .opt ul {
+                color: var(--dim);
+                font-size: 0.94rem;
+            }
+            .opt ul {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 4px;
+            }
+            .plus::marker {
+                content: '+  ';
+                color: var(--yes);
+            }
+            .minus::marker {
+                content: '−  ';
+                color: #ff9d8c;
+            }
+
+            /* ---------- Telefón ---------- */
+            .phone {
+                position: relative;
+                width: 100%;
+                max-width: 300px;
+                aspect-ratio: 9 / 18;
+                margin: 0 auto;
+                border-radius: 28px;
+                overflow: hidden;
+                border: 6px solid #05080f;
+                background: linear-gradient(180deg, var(--s1), var(--s2));
+                isolation: isolate;
+            }
+            .phone::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, var(--sky1), var(--sky2));
+                opacity: 0;
+                transition: opacity 0.7s;
+                z-index: -1;
+            }
+            .phone.ok::before {
+                opacity: 1;
+            }
+            .brand {
+                position: absolute;
+                top: 16px;
+                left: 16px;
+                font-weight: 800;
+                font-stretch: 118%;
+                font-size: 0.85rem;
+                letter-spacing: 0.04em;
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 46px;
+                background: var(--bar);
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                place-items: center;
+            }
+            .nav i {
+                width: 14px;
+                height: 14px;
+                border-radius: 4px;
+                border: 1.5px solid rgba(255, 255, 255, 0.5);
+            }
+            .stav {
+                position: absolute;
+                left: 16px;
+                top: 108px;
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                font-size: 0.66rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .stav b {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #c9cdd4;
+            }
+            .phone.ok .stav b {
+                background: var(--yes);
+            }
+            .phone .t-ok,
+            .phone.ok .t-load {
+                display: none;
+            }
+            .phone.ok .t-ok {
+                display: inline;
+            }
+            .app {
+                position: absolute;
+                inset: 34px 16px 46px;
+                opacity: 0;
+                transition: opacity 0.4s;
+            }
+            .phone.ok .app {
+                opacity: 1;
+            }
+            .app .ttl {
+                font-weight: 800;
+                font-stretch: 112%;
+                font-size: 1.05rem;
+                margin-top: 10px;
+            }
+            .app .num {
+                font-weight: 800;
+                font-stretch: 125%;
+                font-size: 2.3rem;
+                line-height: 1;
+                margin-top: 2px;
+            }
+            .app .num small {
+                font-size: 0.8rem;
+                margin-left: 2px;
+            }
+            .comb {
+                margin-top: 46px;
+                height: 70px;
+                border-radius: 12px;
+                background: rgba(8, 16, 40, 0.3);
+                display: block;
+                width: 100%;
+            }
+            .tiles {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-top: 14px;
+            }
+            .tiles span {
+                height: 74px;
+                border-radius: 14px;
+                background: var(--yes);
+            }
+
+            /* Obrazec v strede: ukáže sa po 0,4 s, po načítaní zmizne. */
+            .spin {
+                position: absolute;
+                left: 50%;
+                top: 46%;
+                width: 76px;
+                height: 76px;
+                margin: -38px 0 0 -38px;
+                animation: zjav 0.5s ease-out 0.4s both;
+            }
+            .spin svg {
+                display: block;
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+            }
+            .phone.ok .spin {
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            @keyframes zjav {
+                from {
+                    opacity: 0;
+                }
+            }
+
+            /* ---------- A: Lúče (lúče zhasínajú dookola ako v Androide, kotúč stojí) ---------- */
+            .a-disk {
+                fill: var(--sun);
+            }
+            .a-luce line {
+                stroke: var(--sun);
+                stroke-width: 5;
+                stroke-linecap: round;
+            }
+            .a-luce {
+                transform-origin: 0 0;
+                animation: krok 1.2s steps(12) infinite;
+            }
+            @keyframes krok {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* ---------- B: Slnko a mesiac na polotočky ---------- */
+            .b {
+                animation: tocB 4s linear infinite;
+            }
+            @keyframes tocB {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .b-disk {
+                animation: farbaB 4s ease-in-out infinite;
+                fill: var(--sun);
+            }
+            @keyframes farbaB {
+                0%,
+                38%,
+                100% {
+                    fill: var(--sun);
+                }
+                50%,
+                88% {
+                    fill: var(--moon);
+                }
+            }
+            .b-luce {
+                transform-origin: 0 0;
+                animation: luceB 4s ease-in-out infinite;
+            }
+            .b-luce line {
+                stroke: var(--sun);
+                stroke-width: 4.5;
+                stroke-linecap: round;
+            }
+            @keyframes luceB {
+                0%,
+                36%,
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                48%,
+                90% {
+                    transform: scale(0.4);
+                    opacity: 0;
+                }
+            }
+            .b-tien {
+                animation: tienB 4s ease-in-out infinite;
+            }
+            @keyframes tienB {
+                0%,
+                38%,
+                100% {
+                    transform: translate(44px, -20px);
+                }
+                52%,
+                86% {
+                    transform: translate(10px, -6px);
+                }
+            }
+
+            /* ---------- C: Deň a noc (slnko a mesiac obiehajú okolo obzoru) ---------- */
+            .c-obeh {
+                transform-origin: 0 0;
+                animation: krok2 3.2s linear infinite;
+            }
+            @keyframes krok2 {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .c-draha {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.2);
+                stroke-width: 1.2;
+            }
+            .c-obzor {
+                stroke: rgba(255, 255, 255, 0.55);
+                stroke-width: 1.6;
+                stroke-linecap: round;
+            }
+            .c-slnko {
+                fill: var(--sun);
+            }
+            .c-mesiac {
+                fill: var(--moon);
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                *,
+                *::before,
+                *::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition: none !important;
+                }
+            }
+
+            /* Veľké náhľady obrazcov pod sebou, aby bolo vidieť detail. */
+            .big {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+                padding: 24px 16px;
+                border-radius: 18px;
+                background: linear-gradient(180deg, var(--s1), var(--s2));
+            }
+            .big figure {
+                margin: 0;
+                display: grid;
+                justify-items: center;
+                gap: 10px;
+                font-size: 0.85rem;
+                font-weight: 600;
+            }
+            .big .spin {
+                position: relative;
+                left: auto;
+                top: auto;
+                margin: 0;
+                width: 120px;
+                height: 120px;
+                animation: none;
+            }
+
+            .rec {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 20px;
+                display: grid;
+                gap: 12px;
+            }
+            .rec ul {
+                margin: 0;
+                padding-left: 18px;
+                display: grid;
+                gap: 6px;
+                color: var(--dim);
+                max-width: 70ch;
+            }
+            code {
+                font-size: 0.88em;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="wrap">
+            <header>
+                <h1>Obrazec v strede, kým sa appka načítava</h1>
+                <p class="lead">
+                    Namiesto točiaceho sa kruhu ako v Androide či Windowse niečo z oblohy. Tri návrhy bežia naživo: telefón sa „načítava“ 3
+                    sekundy, potom sa ukáže hotová karta Teraz. Telefóny sú zjednodušené, farby a písmo sú z appky.
+                </p>
+            </header>
+
+            <div class="big" aria-label="Zväčšené obrazce">
+                <figure>
+                    <div class="spin" data-sym="a"></div>
+                    <figcaption>A · Lúče</figcaption>
+                </figure>
+                <figure>
+                    <div class="spin" data-sym="b"></div>
+                    <figcaption>B · Slnko a mesiac</figcaption>
+                </figure>
+                <figure>
+                    <div class="spin" data-sym="c"></div>
+                    <figcaption>C · Deň a noc</figcaption>
+                </figure>
+            </div>
+
+            <div class="ctrl">
+                <button type="button" id="replay">Prehrať načítanie znova</button>
+                <span class="hint">Prehráva sa dokola každých 6 s.</span>
+            </div>
+
+            <section class="grid" aria-label="Návrhy">
+                <article class="opt">
+                    <div class="phone" data-v="a"></div>
+                    <div class="opt-head"><h2>A · Lúče</h2></div>
+                    <p>
+                        Slnko stojí a jeho lúče dookola zhasínajú a rozsvecujú sa, ako pri bežnom krúžku v Androide alebo iPhone. Je
+                        okamžite jasné, že sa čaká.
+                    </p>
+                    <ul>
+                        <li class="plus">Najčitateľnejší, ľudia ten pohyb poznajú.</li>
+                        <li class="plus">Najjednoduchší kód: jedno otáčanie po krokoch.</li>
+                        <li class="minus">Najmenej prekvapivý.</li>
+                    </ul>
+                </article>
+
+                <article class="opt">
+                    <div class="phone" data-v="b"></div>
+                    <div class="opt-head">
+                        <h2>B · Slnko a mesiac</h2>
+                        <span class="tag">tvoj nápad</span>
+                    </div>
+                    <p>
+                        Obrazec sa točí. Každú polotočku sa zo slnka stane mesiac: lúče sa zatiahnu, kotúč zbledne a nasunie sa naň tieň.
+                        Ďalšiu polotočku späť.
+                    </p>
+                    <ul>
+                        <li class="plus">Najzaujímavejší na pozeranie.</li>
+                        <li class="minus">Na jeden cyklus treba 4 s, pri krátkom načítaní človek uvidí len kus premeny.</li>
+                        <li class="minus">
+                            Tieň mesiaca je vyrezaný maskou. Na telefóne treba overiť, či ju všetky prehliadače kreslia rovnako.
+                        </li>
+                    </ul>
+                </article>
+
+                <article class="opt">
+                    <div class="phone" data-v="c"></div>
+                    <div class="opt-head">
+                        <h2>C · Deň a noc</h2>
+                        <span class="tag">odporúčam</span>
+                    </div>
+                    <p>
+                        Slnko a mesiac obiehajú proti sebe okolo vodorovnej čiary obzoru. Keď slnko zapadne, mesiac vyjde. Pod obzorom sú
+                        stlmené.
+                    </p>
+                    <ul>
+                        <li class="plus">Slnko aj mesiac sú vidieť stále, nie až po polotočke.</li>
+                        <li class="plus">Jednoduché: jedno otáčanie, nič sa nemení tvarom.</li>
+                        <li class="plus">Sedí k appke, ktorá rieši, kedy je slnko.</li>
+                        <li class="minus">Pri veľmi malej veľkosti je obzor sotva vidieť.</li>
+                    </ul>
+                </article>
+            </section>
+
+            <section class="rec">
+                <h2>Ako by sa to spravilo v appke</h2>
+                <ul>
+                    <li>
+                        Rovnako ako dnešný slnečný oblúk: CSS a malé SVG priamo v <code>index.html</code>, žiadny skript. Ukáže sa po 0,4 s
+                        a zmizne v tej istej chvíli.
+                    </li>
+                    <li>
+                        <b>Treba rozhodnúť, čo s oblúkom.</b> Dva ukazovatele čakania naraz (oblúk hore a obrazec v strede) by si
+                        konkurovali. Navrhujem obrazec namiesto oblúka. Alternatíva: obrazec len počas sťahovania appky, oblúk len počas
+                        čakania na predpoveď. Je to zložitejšie a človek ten rozdiel nepotrebuje vedieť.
+                    </li>
+                    <li>Pri zapnutom „obmedziť pohyb“ ostane stáť jeden obrázok: pri A a B slnko, pri C slnko nad obzorom.</li>
+                    <li>Načítanie sa tým nezrýchli. To, že bude čakanie pôsobiť kratšie, je len môj odhad, nemeral som to.</li>
+                </ul>
+            </section>
+        </main>
+
+        <template id="sym-a">
+            <svg viewBox="-50 -50 100 100" aria-hidden="true">
+                <g class="a-luce">
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="1" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.92" transform="rotate(-30)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.84" transform="rotate(-60)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.76" transform="rotate(-90)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.68" transform="rotate(-120)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.6" transform="rotate(-150)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.52" transform="rotate(-180)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.44" transform="rotate(-210)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.36" transform="rotate(-240)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.28" transform="rotate(-270)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.22" transform="rotate(-300)" />
+                    <line x1="0" y1="-26" x2="0" y2="-40" opacity="0.16" transform="rotate(-330)" />
+                </g>
+                <circle class="a-disk" r="17" />
+            </svg>
+        </template>
+
+        <template id="sym-b">
+            <svg viewBox="-50 -50 100 100" aria-hidden="true">
+                <defs>
+                    <mask id="MASK" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120">
+                        <rect x="-60" y="-60" width="120" height="120" fill="#fff" />
+                        <circle class="b-tien" r="19" fill="#000" />
+                    </mask>
+                </defs>
+                <g class="b">
+                    <g class="b-luce">
+                        <line x1="0" y1="-27" x2="0" y2="-38" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(45)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(90)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(135)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(180)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(225)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(270)" />
+                        <line x1="0" y1="-27" x2="0" y2="-38" transform="rotate(315)" />
+                    </g>
+                    <circle class="b-disk" r="19" mask="url(#MASK)" />
+                </g>
+            </svg>
+        </template>
+
+        <template id="sym-c">
+            <svg viewBox="-50 -50 100 100" aria-hidden="true">
+                <defs>
+                    <mask id="MASK" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120">
+                        <rect x="-60" y="-60" width="120" height="60" fill="#fff" />
+                        <rect x="-60" y="0" width="120" height="60" fill="#5a5a5a" />
+                    </mask>
+                    <mask id="MASK-m" maskUnits="userSpaceOnUse" x="-12" y="22" width="24" height="24">
+                        <rect x="-12" y="22" width="24" height="24" fill="#fff" />
+                        <circle cx="5" cy="30" r="8" fill="#000" />
+                    </mask>
+                </defs>
+                <circle class="c-draha" r="34" />
+                <g mask="url(#MASK)">
+                    <g class="c-obeh">
+                        <circle class="c-slnko" cy="-34" r="10" />
+                        <circle class="c-mesiac" cy="34" r="9" mask="url(#MASK-m)" />
+                    </g>
+                </g>
+                <line class="c-obzor" x1="-46" y1="0" x2="46" y2="0" />
+            </svg>
+        </template>
+
+        <template id="phone">
+            <span class="brand">RAY-MON</span>
+            <div class="stav"><b></b><span class="t-load">načítavam…</span><span class="t-ok">13:00 · živé meranie</span></div>
+            <div class="app">
+                <div class="ttl">Teraz</div>
+                <div class="num">6.4<small>kW</small></div>
+                <svg class="comb" viewBox="0 0 200 70" aria-hidden="true">
+                    <path
+                        fill="#ffd36e"
+                        d="M6 60 C 18 60, 22 14, 30 14 S 44 60, 54 60 Z M56 60 C 66 60, 70 32, 78 32 S 92 60, 102 60 Z M106 60 C 116 60, 120 44, 128 44 S 142 60, 152 60 Z M154 60 C 164 60, 168 26, 176 26 S 190 60, 196 60 Z"
+                    />
+                </svg>
+                <div class="tiles"><span></span><span></span></div>
+            </div>
+            <div class="spin"></div>
+            <div class="nav" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </template>
+
+        <script>
+            // Každý obrazec dostane vlastné id masky, aby sa viac kópií v stránke nebilo.
+            let n = 0;
+            const symbol = (v) => document.getElementById('sym-' + v).innerHTML.replaceAll('MASK', 'mask' + v + ++n);
+            document.querySelectorAll('.big .spin').forEach((el) => (el.innerHTML = symbol(el.dataset.sym)));
+            const phones = [...document.querySelectorAll('.phone')];
+            phones.forEach((p) => {
+                p.innerHTML = document.getElementById('phone').innerHTML;
+                p.querySelector('.spin').innerHTML = symbol(p.dataset.v);
+            });
+            let timer = null;
+            function play() {
+                phones.forEach((p) => {
+                    p.classList.remove('ok');
+                    const s = p.querySelector('.spin');
+                    s.replaceWith(s.cloneNode(true));
+                });
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    phones.forEach((p) => p.classList.add('ok'));
+                    timer = setTimeout(play, 3000);
+                }, 3000);
+            }
+            document.getElementById('replay').addEventListener('click', play);
+            play();
+        </script>
+    </body>
+</html>
