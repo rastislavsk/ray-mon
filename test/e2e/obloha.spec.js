@@ -605,8 +605,7 @@ test.describe('stará adresa obloha/', () => {
         await expect(page).toHaveURL(/:\d+\/#nastavenie=abc$/);
     });
 
-    test('service worker a logo starých odberov ostávajú', async ({ page }) => {
-        expect((await page.request.get('/obloha/icon-192.png')).status()).toBe(200);
+    test('service worker starých odberov ostáva', async ({ page }) => {
         expect((await page.request.get('/obloha/sw.js')).status()).toBe(200);
     });
 });

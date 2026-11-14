@@ -361,9 +361,9 @@ test.describe('oznámenia', () => {
         // Spotrebiče zo staršej verzie sa presunuli do Čo máš doma.
         expect(await doma(page)).toEqual({ devices: ['pracka'] });
     });
-    // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení), sw.js ale berie logo
-    // z koreňa rozsahu - odber z čias, keď appka bývala v obloha/, ho musí nájsť aj tam.
-    test('starý odber: service worker v obloha/ naštartuje a logo v jeho rozsahu leží', async ({ page }) => {
+    // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení) - odber z čias,
+    // keď appka bývala v obloha/, musí aspoň naštartovať service worker.
+    test('starý odber: service worker v obloha/ naštartuje', async ({ page }) => {
         await otvor(page);
         const stav = await page.evaluate(async () => {
             const reg = await navigator.serviceWorker.register('/obloha/sw.js', {
@@ -378,15 +378,6 @@ test.describe('oznámenia', () => {
             return sw.state;
         });
         expect(stav).toBe('activated');
-        const res = await page.request.get('/obloha/icon-192.png');
-        expect(res.status()).toBe(200);
-        expect(res.headers()['content-type']).toBe('image/png');
-    });
-
-    test('logo pre oznámenie leží v koreni rozsahu service workera', async ({ page }) => {
-        expect((await page.request.get('/icon-192.png')).status()).toBe(200);
-        const manifest = await (await page.request.get('/manifest.webmanifest')).json();
-        expect(manifest.icons[0].src).toBe('icon-192.png');
     });
 
     test('zrkadlo pre service worker: po vypnutí (zmazaná cache) a novom zapnutí sa zapíše znova', async ({ page }) => {

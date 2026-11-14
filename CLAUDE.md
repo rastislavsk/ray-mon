@@ -9,7 +9,7 @@ Appka je jedna: „Živá obloha“ v koreni (`index.html`, `app.js`, `css/`, `w
 skončila v novembri 2026, jej posledný stav je v git tagu `original-posledna`.
 
 `obloha/` je len prechod a nič nové doň nepatrí: `index.html` presmeruje staré odkazy aj s hashom,
-`sw.js` a `icon-192.png` držia odbery oznámení z čias, keď appka bývala tam (`APPKY` vo
+`sw.js` drží odbery oznámení z čias, keď appka bývala tam (`APPKY` vo
 `web/oznamenia.js`). Odstrániť sa dá, až keď na žiadnom telefóne nebude starý odber.
 
 Jadro (`shared/`) ešte nesie zvyšky pôvodnej appky, ktoré testy nazvú použitými, hoci appka ich nečíta

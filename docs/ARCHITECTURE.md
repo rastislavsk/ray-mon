@@ -195,7 +195,7 @@ ju nahradil. Stránka, stav, render a poslucháče sú v koreni a vo `web/`, jad
   počasie z Open-Meteo: po otvorení z neho `refresh.js` hneď ukáže predpoveď a čerstvé dáta dotiahne popri
   tom (najviac `WEATHER_KEEP_MS` staré, meranie sa neodkladá).
 - **Prechodný priečinok `obloha/`.** `obloha/index.html` presmeruje staré odkazy do koreňa aj s hashom.
-  `obloha/sw.js` a `obloha/icon-192.png` držia odbery oznámení z čias, keď appka bývala tam; `APPKY`
+  `obloha/sw.js` drží odbery oznámení z čias, keď appka bývala tam; `APPKY`
   vo `web/oznamenia.js` ich preto stále pozná. Nainštalovaná appka s `id: /ray-mon/obloha/` je pre
   prehliadač iná appka než koreňová (`id: /ray-mon/index.html`) - treba ju preinštalovať.
 - **Prístup k meraniu neplatí** (`shared/pristup.js`, návrh `docs/navrhy/meranie-pristup-neplati.html`).
