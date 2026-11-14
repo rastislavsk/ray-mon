@@ -56,11 +56,11 @@ import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveC
  *   či má telefón internet (veta bez dát), tón hlášok, spotrebiče doma (s nimi ráta Plán dňa) a zvolený deň
  */
 export function terazModel(input, { online = true, voice = 'drzy', devices, den = 0 } = {}) {
-    const TERAZ_TEXTS = voiceTexts(voice).TERAZ_TEXTS;
     const estimate = input.known === 'poloha';
     if (input.known === 'nic') return { ...empty('ask', estimate), ask: true };
     if (!input.forecast) {
-        if (input.loading) return { ...empty('loading', estimate), sub: TERAZ_TEXTS.loading };
+        // Bez vety: čakanie ukazuje obrazec v strede obrazovky (#tz-svitanie).
+        if (input.loading) return empty('loading', estimate);
         return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
     // Meranie, ktoré mlčí, heroModel za výkon „teraz“ nepovažuje (freshPowerKw) - číslo je vtedy
