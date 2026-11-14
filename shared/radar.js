@@ -134,15 +134,15 @@ function napis(l) {
     return { ...l, layout, paint: { 'text-color': RADAR.mapa.text, 'text-halo-color': RADAR.mapa.textOkraj, 'text-halo-width': 1.2 } };
 }
 
-/** Farby čiar: hranice svetlejšie, cesty sotva viditeľné. @param {any} l */
+/** Farby čiar: rieky ako voda, hranice svetlejšie, cesty sotva viditeľné. @param {any} l */
 function ciara(l) {
+    if (/water/.test(l.id)) return { ...l, paint: { 'line-color': RADAR.mapa.voda, 'line-width': 1 } };
     if (/boundary|admin/i.test(l.id)) return { ...l, paint: { 'line-color': RADAR.mapa.hranica, 'line-width': 1 } };
     return /^(highway|road)/.test(l.id) ? { ...l, paint: { 'line-color': RADAR.mapa.cesta, 'line-width': 0.8 } } : l;
 }
 
 /** @param {any} l */
 function vrstvaMapy(l) {
-    if (l.id === 'background') return { ...l, paint: { 'background-color': RADAR.mapa.pevnina } };
     if (l.source === 'ne2_shaded') return { ...l, layout: { ...l.layout, visibility: 'none' } };
     if (l.type === 'fill' && /water/.test(l.id)) return { ...l, paint: { 'fill-color': RADAR.mapa.voda } };
     if (l.type === 'line') return ciara(l);
@@ -157,7 +157,9 @@ function vrstvaMapy(l) {
 export function upravStyl(styl) {
     const prec =
         /poi|highway-name|road_shield|aeroway|housenumber|building|landuse|park|transit|rail|bridge|tunnel|highway_(minor|path|service)|place_(village|suburb|hamlet|other)|state|province|region|boundary_(3|4|5|6|7|8|disputed)|admin_sub|^road_(path|minor|service|link|pier|area)/i;
-    return { ...styl, layers: styl.layers.filter((/** @type {{ id: string }} */ l) => !prec.test(l.id)).map(vrstvaMapy) };
+    // Pozadie mapy preč: pod mapou je obloha appky (css/radar.css).
+    const ostava = (/** @type {{ id: string, type: string }} */ l) => l.type !== 'background' && !prec.test(l.id);
+    return { ...styl, layers: styl.layers.filter(ostava).map(vrstvaMapy) };
 }
 
 /**

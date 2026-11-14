@@ -37,7 +37,7 @@ function nacitajKniznicu() {
     return kniznica;
 }
 
-/** Štýl mapy. Bez neho ostane jednoliate pozadie, radar funguje ďalej. */
+/** Štýl mapy. Bez neho ostane len obloha pod mapou, radar funguje ďalej. */
 async function styl() {
     try {
         const r = await fetch(RADAR.styl);
@@ -45,11 +45,7 @@ async function styl() {
     } catch {
         // Spadne to na pozadie nižšie.
     }
-    return {
-        version: 8,
-        sources: {},
-        layers: [{ id: 'background', type: 'background', paint: { 'background-color': RADAR.mapa.pevnina } }],
-    };
+    return { version: 8, sources: {}, layers: [] };
 }
 
 /**
