@@ -279,6 +279,7 @@ test('upravStyl: drobnosti preč, mená po slovensky, farby appky', () => {
         { id: 'boundary_country', type: 'line' },
         { id: 'highway_motorway', type: 'line' },
         { id: 'other_line', type: 'line' },
+        { id: 'waterway_river', type: 'line' },
         { id: 'place_city', type: 'symbol', layout: { 'text-field': 'x', 'text-variable-anchor': ['top'], 'icon-image': 'y' } },
         { id: 'place_country', type: 'symbol', layout: { 'text-field': 'x' } },
         { id: 'sym', type: 'symbol', layout: {} },
@@ -287,12 +288,13 @@ test('upravStyl: drobnosti preč, mená po slovensky, farby appky', () => {
     /** @param {string} id */
     const l = (id) => s.layers.find((/** @type {{ id: string }} */ x) => x.id === id);
     assert.equal(l('poi_r1'), undefined);
-    assert.equal(l('background').paint['background-color'], RADAR.mapa.pevnina);
+    assert.equal(l('background'), undefined);
     assert.equal(l('ne').layout.visibility, 'none');
     assert.equal(l('water').paint['fill-color'], RADAR.mapa.voda);
     assert.equal(l('boundary_country').paint['line-color'], RADAR.mapa.hranica);
     assert.equal(l('highway_motorway').paint['line-color'], RADAR.mapa.cesta);
     assert.equal(l('other_line').paint, undefined);
+    assert.equal(l('waterway_river').paint['line-color'], RADAR.mapa.voda);
     assert.equal(l('place_city').layout['text-anchor'], 'top');
     assert.equal(l('place_city').layout['icon-image'], undefined);
     assert.equal(l('place_country').layout['text-anchor'], 'center');

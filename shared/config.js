@@ -730,7 +730,15 @@ export const RADAR = {
         { dbz: 52, farba: '#ff2d6b', krytie: 1 },
         { dbz: 60, farba: '#ffd0f5', krytie: 1 },
     ],
-    mapa: { pevnina: '#141c2e', voda: '#0a1120', hranica: '#5b6b86', cesta: '#1d2942', text: '#a9b6cc', textOkraj: '#0d1422' },
+    // Mapa nemá vlastné pozadie, pod ňou je obloha appky so závojom (css/radar.css, rozhodnuté 14. 11. 2026).
+    // Voda a čiary sú preto priesvitné, aby ladili s každou farbou oblohy.
+    mapa: {
+        voda: 'rgba(5, 10, 30, 0.32)',
+        hranica: 'rgba(255, 255, 255, 0.45)',
+        cesta: 'rgba(255, 255, 255, 0.1)',
+        text: '#a9b6cc',
+        textOkraj: '#0d1422',
+    },
     styl: 'https://tiles.openfreemap.org/styles/dark',
     zoom: 5.6,
     zdroj: 'Radar EUMETNET OPERA, CC BY 4.0, upravené · Model DWD ICON-EU, Open-Meteo, CC BY 4.0',

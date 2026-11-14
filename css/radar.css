@@ -6,7 +6,11 @@
     inset: 0;
     /* Navigácia má ten istý z-index, no v stránke stojí neskôr, ostáva teda nad kartou. */
     z-index: 2;
-    background: #141c2e;
+    /* Obloha appky (--s1 až --s3 ako na karte Teraz) pod tmavým závojom: nálada dňa ostane, no slabý
+       modrý dážď nesplynie s modrou oblohou. Mapa vlastné pozadie nemá (upravStyl v shared/radar.js). */
+    background:
+        linear-gradient(rgba(9, 14, 27, 0.5), rgba(9, 14, 27, 0.5)), linear-gradient(180deg, transparent, var(--s3)),
+        linear-gradient(180deg, var(--s1), var(--s2));
     color: #fff;
 }
 /* Hlavička s menom appky by stála nad mapou a pod ňou by aj tak nič nebolo. */
