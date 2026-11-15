@@ -109,15 +109,15 @@ test('ručný režim: dlaždica na skle bez rady - hreje, voda nahriata, vypnut�
     const rucne = (/** @type {object} */ o = {}) => bojlerDlazdica(info({ rucne: true, ...o }), NOW, TZ);
     assert.deepEqual(rucne(), { tone: 'tiche', riadi: 'bezi', velky: '2,2 kW', meno: 'Hreje', sub: 'ručne · od 12:30' });
     assert.equal(rucne({ den: null }).sub, 'ručne');
-    // Termostat vypol: dnešné kWh spolu (zo slnka aj zo siete).
+    // Termostat vypol: veľké číslo je odber teraz, dnešné kWh spolu (zo slnka aj zo siete) v doplnku.
     assert.deepEqual(rucne({ w: 3 }), {
         tone: 'tiche',
         riadi: 'caka',
-        velky: '3,9 kWh',
+        velky: '0,0 kW',
         meno: 'Voda nahriata',
-        sub: 'ručne · zásuvka zapnutá',
+        sub: 'ručne · dnes 3,9 kWh',
     });
-    assert.equal(rucne({ w: 3, den: null }).velky, '0,0 kWh');
+    assert.equal(rucne({ w: 3, den: null }).sub, 'ručne · dnes 0,0 kWh');
     const vyp = { rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } };
     assert.deepEqual(rucne(vyp), { tone: 'tiche', riadi: 'vyp', velky: '0 kW', meno: 'Vypnutý', sub: 'ručne · od 11:25' });
     assert.equal(rucne({ rele: false, w: 0, den: null }).sub, 'ručne');

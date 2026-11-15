@@ -8,7 +8,7 @@ import { md5 } from '../shared/md5.js';
 import { validatePv } from '../shared/schema.js';
 import { parseSolax, solaxUrl } from '../shared/solax.js';
 import { parseVictronMe, parseVictronPv, parseVictronSites, VICTRON, victronHeaders } from '../shared/victron.js';
-import { dalsiRytmus, parseRytmus, pvDue, rytmusOf, SPOSOBY, udajeOk } from '../shared/zdroje.js';
+import { dalsiRytmus, parseRytmus, pvDue, rytmusOf, rytmusSBojlerom, SPOSOBY, udajeOk } from '../shared/zdroje.js';
 import { fixtureData } from './helpers.js';
 
 const NOW = new Date('2026-09-05T11:00:00Z');
@@ -188,6 +188,12 @@ test('rytmus: spoločný, patrí k meraniu podľa spôsobu a mena, nechá posled
     const stary = /** @type {any} */ ({ ...r });
     delete stary.bojler;
     assert.equal(parseRytmus(stary)?.bojler, null, 'rytmus spred bojlera');
+    // Zmena režimu v appke prepíše stav bojlera v rytme - meranie a čas dopytu ostanú.
+    const rucne = { ...bojler, rucne: true };
+    assert.deepEqual(rytmusSBojlerom(sBojlerom, z, rucne), { ...sBojlerom, bojler: rucne });
+    assert.equal(rytmusSBojlerom(sBojlerom, { ...z, nazov: 'Chata' }, rucne), null, 'iná elektráreň');
+    assert.equal(rytmusSBojlerom({ ...sBojlerom, pv: null }, z, rucne), null, 'bez merania');
+    assert.equal(rytmusSBojlerom(null, z, rucne), null);
 });
 
 test('Solis: Content-MD5 podľa príkladu z dokumentácie, dátum a text na podpis', async () => {

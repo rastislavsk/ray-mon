@@ -1136,6 +1136,11 @@ test.describe('bojler na prebytky', () => {
         const info = { ...BOJLER_INFO, rucne: true };
         await expect(page.locator('#tz-bojler-pod')).toHaveText(bojlerDetail(info, FIXED_NOW, SITE.timezone).pod);
         expect((await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze()).violations).toEqual([]);
+        // Obnovenie stránky pred ďalším meraním: režim drží (uložený rytmus nesie nový stav bojlera).
+        await page.reload();
+        await expect(page.locator('#tz-dlazdice [data-vec="bojler"]')).toHaveAttribute('data-tone', 'tiche');
+        await page.locator('#tz-dlazdice [data-vec="bojler"]').click();
+        await expect(rucne).toHaveAttribute('aria-pressed', 'true');
         // Nepodarí sa uložiť: prepínač sa vráti a povie to.
         zlyhaj = true;
         await appka.click();
