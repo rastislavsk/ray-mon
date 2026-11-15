@@ -182,3 +182,31 @@ test('kým sa sťahovalo, človek uložil inú elektráreň: stará odpoveď sa 
     assert.equal(a.store.get().pv, null);
     assert.equal(a.store.get().loading, true, 'stav novej elektrárne odpoveď nezmenila');
 });
+
+test('bojler: stav z merania ide do rytmu a po obnovení stránky ho appka prevezme bez dopytu', async (t) => {
+    const a = appka(t);
+    const bojler = {
+        kontaktAt: FIXED_NOW.getTime() - MIN,
+        rele: true,
+        w: 2200,
+        prebytokKw: 2.6,
+        prahy: { zapKw: 2.3, vypKw: 2 },
+        den: null,
+    };
+    a.odpovede.push({ status: 200, body: { pv: pvAt(FIXED_NOW), bojler } });
+    await a.refresh();
+    assert.deepEqual(a.store.get().bojler, bojler);
+    // Obnovenie stránky o minútu: nová appka, to isté úložisko, na meranie ešte nie je čas.
+    posun(t, MIN);
+    const znova = createStore(
+        initialState(new Date(Date.now()), /** @type {any} */ ({ saved: SAVED, dayLog: {}, online: true, ranna: null })),
+    );
+    await createRefresh(/** @type {any} */ (znova))();
+    assert.equal(a.dopyty.length, 1, 'Worker sa nepýtal');
+    assert.deepEqual(znova.get().bojler, bojler, 'dlaždica Bojler hneď po obnovení');
+    // Meranie bez bojlera (zásuvka zastavená) stav v rytme prepíše.
+    posun(t, 5 * MIN);
+    a.odpovede.push(meranie(new Date(Date.now())));
+    await a.refresh();
+    assert.equal(a.store.get().bojler, null);
+});

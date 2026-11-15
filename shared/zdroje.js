@@ -4,6 +4,7 @@
 // Návrh: docs/navrhy/meranie-cez-api.html. Len spôsoby, ktoré má človek sám alebo si ich vypýta
 // od inštalatéra či podpory výrobcu - nič, čo by vyžadovalo registráciu appky u výrobcu.
 
+import { bojlerInfoZ } from './bojler.js';
 import { REFRESH } from './config.js';
 import { nbServer } from './huawei-nb.js';
 import { kioskApiUrl } from './kiosk.js';
@@ -309,9 +310,11 @@ export function pvDue(zdroj, pv, now, lastAt = 0) {
 /**
  * Posledný dopyt na meranie v tomto prehliadači (MERANIE_STORAGE_KEY):
  * ku ktorému meraniu patrí (spôsob a meno elektrárne - pečať sa pri obnove tokenu mení), kedy
- * sa niektorá z nich naposledy pýtala (`at`, ms) a čo naposledy namerala (`pv`). Druhá appka podľa
- * neho čaká na interval a ukáže meranie, ktoré prvá už má.
- * @typedef {{ sposob: string, nazov: string, at: number, pv: import('./kiosk.js').PvData | null }} Rytmus
+ * sa niektorá z nich naposledy pýtala (`at`, ms) a čo naposledy namerala (`pv`) aj so stavom bojlera
+ * na prebytky, ktorý Worker k meraniu pribalil (`bojler`, shared/bojler.js). Druhá appka podľa neho
+ * čaká na interval a ukáže meranie, ktoré prvá už má; tá istá appka po obnovení stránky tiež.
+ * @typedef {{ sposob: string, nazov: string, at: number, pv: import('./kiosk.js').PvData | null,
+ *   bojler: import('./bojler.js').BojlerInfo | null }} Rytmus
  */
 
 /** Rytmus z úložiska; čokoľvek iné je null. @param {unknown} raw @returns {Rytmus | null} */
@@ -320,16 +323,21 @@ export function parseRytmus(raw) {
     const o = /** @type {Record<string, unknown>} */ (raw);
     if (typeof o.sposob !== 'string' || typeof o.nazov !== 'string' || !Number.isFinite(o.at)) return null;
     const pv = o.pv && validatePv(o.pv).length === 0 ? /** @type {import('./kiosk.js').PvData} */ (o.pv) : null;
-    return { sposob: o.sposob, nazov: o.nazov, at: /** @type {number} */ (o.at), pv };
+    // Rytmus spred bojlera na prebytky pole nemá - stav bojlera príde s ďalším meraním.
+    return { sposob: o.sposob, nazov: o.nazov, at: /** @type {number} */ (o.at), pv, bojler: pv ? bojlerInfoZ(o.bojler) : null };
 }
 
 /** Rytmus, ak patrí k tomuto meraniu, inak null. @param {Rytmus | null} r @param {Zdroj | null} zdroj */
 export const rytmusOf = (r, zdroj) => (r && zdroj && r.sposob === zdroj.sposob && r.nazov === zdroj.nazov ? r : null);
 
 /**
- * Rytmus po dopyte (alebo pripájaní): teraz sa pýtalo; nové meranie, inak to, ktoré už bolo.
- * @param {Rytmus | null} prev @param {Zdroj} zdroj @param {Date} now @param {import('./kiosk.js').PvData | null} pv @returns {Rytmus}
+ * Rytmus po dopyte (alebo pripájaní): teraz sa pýtalo; nové meranie aj so stavom bojlera, ktorý
+ * k nemu prišiel, inak to, ktoré už bolo.
+ * @param {Rytmus | null} prev @param {Zdroj} zdroj @param {Date} now @param {import('./kiosk.js').PvData | null} pv
+ * @param {import('./bojler.js').BojlerInfo | null} [bojler] @returns {Rytmus}
  */
-export function dalsiRytmus(prev, zdroj, now, pv) {
-    return { sposob: zdroj.sposob, nazov: zdroj.nazov, at: now.getTime(), pv: pv ?? rytmusOf(prev, zdroj)?.pv ?? null };
+export function dalsiRytmus(prev, zdroj, now, pv, bojler = null) {
+    const stary = rytmusOf(prev, zdroj);
+    const meranie = pv ? { pv, bojler } : { pv: stary?.pv ?? null, bojler: stary?.bojler ?? null };
+    return { sposob: zdroj.sposob, nazov: zdroj.nazov, at: now.getTime(), ...meranie };
 }

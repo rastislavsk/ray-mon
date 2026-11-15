@@ -149,15 +149,18 @@ function zUloziska(s) {
 }
 
 /**
- * Meranie, keď sa appka nepýtala: novšie z toho, čo má, a čo medzitým namerala druhá appka.
- * Keď prístup neplatí, nič.
+ * Meranie, keď sa appka nepýtala: novšie z toho, čo má, a čo medzitým namerala druhá appka - aj
+ * so stavom bojlera, ktorý k nemu prišiel (inak by po obnovení stránky dlaždica Bojler čakala na
+ * ďalšie meranie). Keď prístup neplatí, nič.
  * @param {RefreshState} teraz @param {import('../shared/zdroje.js').Rytmus | null} rytmus
+ * @returns {Pick<RefreshState, 'pv'> & Partial<Pick<RefreshState, 'bojler'>>}
  */
 function bezDopytu(teraz, rytmus) {
     const ine = rytmus?.pv;
     if (!ine || neplati(teraz.pristup, teraz.zdroj)) return { pv: teraz.pv };
     const novsie = !teraz.pv || Date.parse(ine.updatedAt) > Date.parse(teraz.pv.updatedAt);
-    return { pv: novsie ? sSuctami(ine, teraz.zdroj, teraz.site) : teraz.pv };
+    if (!novsie) return { pv: teraz.pv, ...(teraz.bojler ? {} : { bojler: rytmus.bojler }) };
+    return { pv: sSuctami(ine, teraz.zdroj, teraz.site), bojler: rytmus.bojler };
 }
 
 /**
@@ -171,7 +174,7 @@ async function stiahni(s, settings, skus) {
     const due = pvNow(s, zdroj, skus, rytmus?.at ?? 0);
     if (due && zdroj) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), null));
     const result = await loadData({ ...settings, zdroj: due ? zdroj : null }, new Date());
-    if (due && zdroj && result.pv) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), result.pv));
+    if (due && zdroj && result.pv) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), result.pv, result.bojler));
     return { due, rytmus, result };
 }
 
@@ -209,7 +212,7 @@ export function createRefresh(store) {
             : teraz.dayLog;
         if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
-        // Stav bojlera prichádza len s čerstvým meraním; bez neho ostáva posledný známy.
+        // Stav bojlera prichádza s čerstvým meraním; bez dopytu ho prinesie rytmus (bezDopytu).
         const bojler = result.pv && due ? { bojler: result.bojler } : {};
         // Čas dokončeného pokusu: podľa neho sa posudzuje, či meranie mlčí (pvFreshness) - kým sa
         // appka po návrate z pozadia neopýta, výpadok nehlási.
