@@ -168,7 +168,7 @@ test('rytmus: spoločný, patrí k meraniu podľa spôsobu a mena, nechá posled
     const z = { sposob: 'huawei-northbound', pecat: 'v1.x', nazov: 'Dvorany' };
     const pv = /** @type {any} */ (fixtureData().pv);
     const r = dalsiRytmus(null, z, NOW, pv);
-    assert.deepEqual(r, { sposob: z.sposob, nazov: 'Dvorany', at: NOW.getTime(), pv });
+    assert.deepEqual(r, { sposob: z.sposob, nazov: 'Dvorany', at: NOW.getTime(), pv, bojler: null });
     assert.deepEqual(parseRytmus(JSON.parse(JSON.stringify(r))), r);
     const dalsi = dalsiRytmus(r, { ...z, pecat: 'v1.nova' }, new Date(NOW.getTime() + 1000), null);
     assert.equal(dalsi.pv, pv, 'nevydarený dopyt nechá posledné meranie; pečať sa pri obnove tokenu mení');
@@ -177,6 +177,17 @@ test('rytmus: spoločný, patrí k meraniu podľa spôsobu a mena, nechá posled
     assert.equal(rytmusOf(r, null), null);
     assert.equal(parseRytmus({ ...r, pv: { x: 1 } })?.pv, null, 'nezmyselné meranie sa zahodí');
     for (const bad of [null, 'x', { ...r, at: 'x' }, { ...r, sposob: 1 }]) assert.equal(parseRytmus(bad), null);
+
+    // Stav bojlera ide s meraním: nevydarený dopyt ho nechá, nové meranie bez neho ho zmaže.
+    const bojler = { kontaktAt: 1, rele: true, w: 2200, prebytokKw: 2.5, prahy: { zapKw: 2.3, vypKw: 2 }, den: null };
+    const sBojlerom = dalsiRytmus(r, z, NOW, pv, bojler);
+    assert.deepEqual(parseRytmus(JSON.parse(JSON.stringify(sBojlerom)))?.bojler, bojler);
+    assert.deepEqual(dalsiRytmus(sBojlerom, z, NOW, null).bojler, bojler);
+    assert.equal(dalsiRytmus(sBojlerom, z, NOW, pv).bojler, null);
+    assert.equal(parseRytmus({ ...sBojlerom, pv: null })?.bojler, null, 'bez merania ani bojler');
+    const stary = /** @type {any} */ ({ ...r });
+    delete stary.bojler;
+    assert.equal(parseRytmus(stary)?.bojler, null, 'rytmus spred bojlera');
 });
 
 test('Solis: Content-MD5 podľa príkladu z dokumentácie, dátum a text na podpis', async () => {
