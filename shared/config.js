@@ -707,11 +707,14 @@ export const ZDIELANIE = { platiDni: 7 };
 export const WORKER_TRASY_PATH = '/trasy';
 export const WORKER_TRASY_URL = new URL(WORKER_TRASY_PATH, WORKER_URL).href;
 // Bojler na prebytky (docs/navrhy/bojler-prebytky.html): skript v zásuvke Shelly sa každú minútu
-// opýta `/bojler`, či má bojler zapnúť. `/bojler-pecat` vydá appke pečať do skriptu.
+// opýta `/bojler`, či má bojler zapnúť. `/bojler-pecat` vydá appke pečať do skriptu, `/bojler-rezim`
+// uloží, či bojler riadi appka, alebo ho človek zapína ručne.
 export const WORKER_BOJLER_PATH = '/bojler';
 export const WORKER_BOJLER_URL = new URL(WORKER_BOJLER_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_PECAT_PATH = '/bojler-pecat';
 export const WORKER_BOJLER_PECAT_URL = new URL(WORKER_BOJLER_PECAT_PATH, WORKER_URL).href;
+export const WORKER_BOJLER_REZIM_PATH = '/bojler-rezim';
+export const WORKER_BOJLER_REZIM_URL = new URL(WORKER_BOJLER_REZIM_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

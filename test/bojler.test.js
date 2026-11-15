@@ -85,6 +85,22 @@ test('bez elektromera, so starým meraním či po ručnom prepnutí', () => {
     assert.deepEqual([a.pamat.nad, b.pamat.nad], [1, 1]);
 });
 
+test('ručný režim: relé ostane, ako je - pri slabom aj silnom prebytku a so starým meraním', () => {
+    const v = { rele: true, w: 2200, sietKw: -2, meranieAt: T0, now: T0, prahy: PRAHY, rucne: true };
+    let pamat = PAMAT_ZACIATOK;
+    for (let i = 0; i < 6; i++) {
+        const r = rozhodni(pamat, { ...v, meranieAt: T0 + i * 5 * MIN, now: T0 + i * 5 * MIN });
+        pamat = r.pamat;
+        assert.equal(r.zapni, true, `zapnutý ručne, meranie ${i}`);
+    }
+    assert.equal(pamat.pod, 6, 'počítanie beží ďalej');
+    // Po návrate k riadeniu appka vypne hneď - prebytok bol dlho pod prahom a beh trval dosť.
+    assert.equal(rozhodni(pamat, { ...v, rucne: false, meranieAt: T0 + 30 * MIN, now: T0 + 30 * MIN }).zapni, false);
+    const vyp = rozhodni(PAMAT_ZACIATOK, { ...v, rele: false, w: 0, sietKw: 5 });
+    assert.equal(vyp.zapni, false, 'vypnutý ručne ostane vypnutý aj pri prebytku');
+    assert.equal(rozhodni(PAMAT_ZACIATOK, { ...v, now: T0 + 30 * MIN }).zapni, true, 'staré meranie ho v ručnom režime nevypne');
+});
+
 test('záznam dňa: behy, energia z počítadla, podiel zo siete, nahriata voda a nový deň', () => {
     const tz = 'Europe/Bratislava';
     const v = (/** @type {number} */ min, /** @type {object} */ o) => ({
@@ -130,8 +146,9 @@ test('záznam dňa: behy, energia z počítadla, podiel zo siete, nahriata voda 
 });
 
 test('stav dlaždice: mlčí, hreje, nahriata, čaká', () => {
-    const b = { kontaktAt: T0, rele: true, w: 2200, prebytokKw: 2.5, prahy: PRAHY, den: null };
+    const b = { kontaktAt: T0, rele: true, w: 2200, prebytokKw: 2.5, prahy: PRAHY, den: null, rucne: false };
     assert.equal(bojlerStav(b, T0 + MIN), 'hreje');
     assert.equal(bojlerStav({ ...b, rele: false }, T0), 'caka');
+    assert.equal(bojlerStav({ ...b, rele: false, rucne: true }, T0), 'vypnuty');
     assert.equal(bojlerStav(b, T0 + 16 * MIN), 'mlci');
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ZDIELANIE } from '../../shared/config.js';
-import { handleBojler, handleBojlerPecat, handlePripoj, handlePv, handleRequest } from '../src/index.js';
+import { handleBojler, handleBojlerPecat, handleBojlerRezim, handlePripoj, handlePv, handleRequest } from '../src/index.js';
 import { UcetHuawei } from '../src/ucet.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
 
@@ -1050,6 +1050,31 @@ test('Durable Object: zásuvka zapne bojler po dvoch meraniach nad prahom a tele
     assert.equal(m.bojler.rele, true);
     assert.equal(m.bojler.den.behy.length, 1);
     assert.equal(m.bojler.prahy.zapKw, 2.3);
+});
+
+test('ručný režim: appka ho uloží, zásuvka dostane stav relé a rucne, telefón ho vidí; zdieľaný odkaz nie', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => 100 });
+    const rezim = (/** @type {string} */ pecat, /** @type {unknown} */ rucne) =>
+        handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat, rucne })), env, po(1));
+    // Zásuvka sa ešte neozvala: režim sa uloží, stav bojlera zatiaľ nie je.
+    assert.deepEqual(await (await rezim(telefon, true)).json(), { ok: true, bojler: null });
+    // Človek zapol bojler v appke Shelly pri slabom prebytku: Worker ho nechá zapnutý.
+    const r = await (await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(2))).json();
+    assert.deepEqual([r.zapni, r.rucne], [true, true]);
+    const m = await (await handlePv(pvRequest(telefon), env, po(3), s.impl)).json();
+    assert.equal(m.bojler.rucne, true);
+    // Späť k riadeniu: stav bojlera príde hneď s novým režimom.
+    const spat = await (await rezim(telefon, false)).json();
+    assert.deepEqual([spat.ok, spat.bojler.rucne, spat.bojler.rele], [true, false, true]);
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });
+    assert.equal((await rezim(zdielana, true)).status, 400, 'zo zdieľaného odkazu nie');
+    assert.equal((await rezim(telefon, 'ano')).status, 400);
+    assert.equal((await handleBojlerRezim(post('/bojler-rezim', 'nie json'), env, NOW)).status, 400);
+    assert.equal((await handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: true })), ENV, NOW)).status, 503);
+    const cez = await handleRequest(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: false })), env, po(4));
+    assert.equal(cez.status, 200);
 });
 
 test('pečať zásuvky: len Huawei Northbound, bez relácie a krivky, krátka; zlé dopyty 400, bez objektov 503', async () => {

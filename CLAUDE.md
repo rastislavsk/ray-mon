@@ -43,6 +43,8 @@ vo W – overené 15. 11. 2026). Všetky merania účtu Huawei Northbound idú c
 (`worker/src/ucet.js`): Huawei pri prihlásení zruší staršiu reláciu a meranie dovolí raz za 5 minút, telefón a zásuvka
 by sa inak navzájom odhlasovali. Do objektu nepatrí heslo – prichádza vždy v pečati. Jazyk skriptov Shelly je starší
 JavaScript (bez šípok a čiarok na konci) a HTTP.POST nesmie mať prázdne telo; stráži to `test/bojler-skript.test.js`.
+Ručný režim (prepínač v paneli Bojler dnes, `/bojler-rezim`, kľúč `br:` v objekte): skript beží ďalej a hlási,
+ale relé neprepne ani pri tichu; Worker mu vtedy vráti `zapni` rovné stavu relé, aby nič neprepol ani starší skript.
 Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má dlaždicu so stavom a panel Bojler dnes
 (`shared/teraz-bojler.js`), otvorený tým istým krokom `tzVec` ako detail spotrebiča.
 

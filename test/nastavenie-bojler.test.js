@@ -113,7 +113,9 @@ test('stav bojlera z Workera: kontrola tvaru, záznam dňa len s platnými behmi
         prebytokKw: null,
         prahy: { zapKw: 2.5, vypKw: 2.2 },
         den: { den: '2026-11-15', behy: [beh], hotovo: 700, posledneAt: 2 },
+        rucne: false,
     });
+    assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, rucne: true })?.rucne, true);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, prebytokKw: 1, den: { den: 5 } })?.den, null);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, den: { den: 'd', behy: [], posledneAt: 1 } })?.den?.hotovo, null);
 });

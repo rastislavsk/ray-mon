@@ -21,20 +21,27 @@ export const TERAZ_BOJLER_TEXTS = {
     hrejeSiet: 'Hreje',
     caka: 'Čaká na slnko',
     hotovo: 'Voda nahriata',
-    mlci: 'Zásuvka mlčí',
+    mlci: 'Zásuvka sa neozýva',
     prebytok: 'prebytok',
     od: 'od',
     zapneOd: 'zapne od',
     prebytokTeraz: 'prebytok teraz',
     dnesZoSlnka: 'dnes zo slnka',
     hotovoO: 'hotovo',
-    bezSpojenia: 'bez spojenia so zásuvkou',
+    bezSpojenia: 'skript nebeží alebo je bez Wi-Fi',
+    rucne: 'ručne',
+    hrejeRucne: 'Hreje',
+    vypnuty: 'Vypnutý',
+    zasuvkaZap: 'zásuvka zapnutá',
     detail: 'Bojler dnes',
     detailPod: {
         hreje: 'hreje od',
         caka: 'čaká na prebytok',
         hotovo: 'voda nahriata o',
-        mlci: 'zásuvka sa neozvala od',
+        mlci: 'zásuvka sa neozýva od',
+        vypnuty: 'vypnutý od',
+        vypnutyBez: 'vypnutý',
+        hrejeBez: 'hreje',
         nic: 'dnes ešte nehrial',
     },
     zapnuty: 'zapnutý',
@@ -44,6 +51,14 @@ export const TERAZ_BOJLER_TEXTS = {
     teraz: 'teraz',
     nahriata: 'nahriata',
     behSiet: (/** @type {string} */ kwh) => `${kwh} kWh zo siete`,
+    rezim: {
+        nazov: 'Kto zapína bojler',
+        appka: 'Riadi appka',
+        rucne: 'Ručne',
+        popisRucne: 'Zapína sa ručne alebo časovačom v appke Shelly. Ray-mon len zapisuje, čo bojler robí.',
+        popisAppka: (/** @type {string} */ zap, /** @type {string} */ vyp) => `Zapne pri prebytku od ${zap} kW, vypne pod ${vyp} kW.`,
+        chyba: 'Režim sa nepodarilo uložiť, ostal pôvodný.',
+    },
     tokNadpis: 'Elektrina teraz',
     tokPod: 'meranie elektromera o',
     panely: 'panely',
@@ -153,6 +168,49 @@ function dlazdicaHreje(b, den) {
     };
 }
 
+/** Kedy sa relé naposledy vyplo: koniec posledného behu dneška, alebo null. @param {import('./bojler.js').Den | null} den */
+const vypnuteOd = (den) => {
+    const posledny = den?.behy[den.behy.length - 1];
+    return posledny && posledny.do !== null ? posledny.do : null;
+};
+
+/**
+ * Dlaždica v ručnom režime (docs/navrhy/teraz-auto-tok.html, ručný režim): na skle, bez rady -
+ * hreje (príkon a od kedy), voda nahriata (dnešné kWh spolu) alebo vypnutý (od kedy).
+ * @param {BojlerInfo} b @param {'hreje' | 'hotovo' | 'caka' | 'vypnuty'} stav @param {import('./bojler.js').Den | null} den
+ */
+function dlazdicaRucne(b, stav, den) {
+    const T = TERAZ_BOJLER_TEXTS;
+    if (stav === 'hreje') {
+        const beh = den?.behy.find((x) => x.do === null);
+        return {
+            tone: 'tiche',
+            riadi: 'bezi',
+            velky: `${fmt1(b.w / 1000)} kW`,
+            meno: T.hrejeRucne,
+            sub: `${T.rucne}${beh ? ` · ${T.od} ${minutesToTimeStr(beh.od)}` : ''}`,
+        };
+    }
+    if (stav === 'hotovo') {
+        const s = den ? suctyDna(den) : null;
+        return {
+            tone: 'tiche',
+            riadi: 'caka',
+            velky: `${fmt1(s ? s.slnkoKwh + s.sietKwh : 0)} kWh`,
+            meno: T.hotovo,
+            sub: `${T.rucne} · ${T.zasuvkaZap}`,
+        };
+    }
+    const od = vypnuteOd(den);
+    return {
+        tone: 'tiche',
+        riadi: 'vyp',
+        velky: '0 kW',
+        meno: T.vypnuty,
+        sub: `${T.rucne}${od === null ? '' : ` · ${T.od} ${minutesToTimeStr(od)}`}`,
+    };
+}
+
 /**
  * Dlaždica Bojler (variant A, len stav): tón ako ostatné dlaždice (`go` hreje, `next` čaká, `tiche`
  * nahriata, `chyba` mlčí), bodka pri ikone (`bezi`, `caka`, `mlci`), veľké číslo, meno a doplnok.
@@ -163,6 +221,7 @@ export function bojlerDlazdica(b, now, tz) {
     const stav = bojlerStav(b, now.getTime());
     if (stav === 'mlci')
         return { tone: 'chyba', riadi: 'mlci', velky: ticho(now.getTime() - b.kontaktAt), meno: T.mlci, sub: T.bezSpojenia };
+    if (b.rucne) return dlazdicaRucne(b, stav, dnes(b, now, tz));
     if (stav === 'caka')
         return {
             tone: 'next',
@@ -216,10 +275,25 @@ function pasDna(den, terazMin) {
 function podDetail(b, den, now, tz) {
     const T = TERAZ_BOJLER_TEXTS.detailPod;
     const stav = bojlerStav(b, now.getTime());
-    const bezi = den?.behy.find((x) => x.do === null);
     if (stav === 'mlci') return `${T.mlci} ${cas(b.kontaktAt, now, tz)}`;
+    if (b.rucne) return `${TERAZ_BOJLER_TEXTS.rucne} · ${podStavu(stav, den)}`;
+    return podStavu(stav, den);
+}
+
+/**
+ * Čo bojler robí teraz, keď sa zásuvka ozýva.
+ * @param {'hreje' | 'hotovo' | 'caka' | 'vypnuty'} stav @param {import('./bojler.js').Den | null} den
+ */
+function podStavu(stav, den) {
+    const T = TERAZ_BOJLER_TEXTS.detailPod;
+    const bezi = den?.behy.find((x) => x.do === null);
+    if (stav === 'vypnuty') {
+        const od = vypnuteOd(den);
+        return od === null ? T.vypnutyBez : `${T.vypnuty} ${minutesToTimeStr(od)}`;
+    }
     if (stav === 'hotovo' && den?.hotovo != null) return `${T.hotovo} ${minutesToTimeStr(den.hotovo)}`;
-    if (stav === 'hreje' && bezi) return `${T.hreje} ${minutesToTimeStr(bezi.od)}`;
+    // Hreje, hoci záznam dňa beh ešte nemá (Worker ho práve začal): bez času.
+    if (stav === 'hreje') return bezi ? `${T.hreje} ${minutesToTimeStr(bezi.od)}` : T.hrejeBez;
     return den?.behy.length ? T.caka : T.nic;
 }
 
@@ -249,6 +323,7 @@ export function bojlerDetail(b, now, tz) {
     return {
         nadpis: T.detail,
         pod: podDetail(b, den, now, tz),
+        rezim: { rucne: b.rucne, popis: b.rucne ? T.rezim.popisRucne : T.rezim.popisAppka(fmt1(b.prahy.zapKw), fmt1(b.prahy.vypKw)) },
         pas: pasDna(den, localMinutes(now, tz)),
         cisla: [
             { v: `${s.zapnuti}×`, l: T.zapnuty, tone: '' },

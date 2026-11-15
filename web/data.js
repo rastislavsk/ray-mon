@@ -9,6 +9,7 @@ import {
     WEATHER_CACHE_MS,
     WEATHER_KEEP_MS,
     WORKER_BOJLER_PECAT_URL,
+    WORKER_BOJLER_REZIM_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
@@ -91,6 +92,22 @@ export async function bojlerPecat(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BOJLER_PECAT_URL, pecat, fetchImpl);
         const body = res.ok ? await res.json() : null;
         return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Režim bojlera (Worker `/bojler-rezim`): ručne alebo riadi appka. Vráti stav bojlera s novým režimom
+ * (`bojler` null, keď sa zásuvka ešte neozvala), alebo null, keď sa uložiť nepodarilo.
+ * @param {string} pecat zapečatený prístup tejto appky @param {boolean} rucne @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ bojler: import('../shared/bojler.js').BojlerInfo | null } | null>}
+ */
+export async function ulozRezimBojlera(pecat, rucne, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_BOJLER_REZIM_URL, JSON.stringify({ pecat, rucne }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && body.ok === true ? { bojler: bojlerInfoZ(body.bojler) } : null;
     } catch {
         return null;
     }

@@ -74,6 +74,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   bojlerPrahy: import('../shared/bojler.js').Prahy,
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
+ *   bojlerRezim: 'uklada' | 'chyba' | null,
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
@@ -121,6 +122,8 @@ const telefon = ({
     // Stav bojlera hlási Worker pri meraní; skript do zásuvky appka pripraví až na požiadanie.
     bojler: null,
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
+    // Prepínač režimu v paneli Bojler dnes: ukladá sa, alebo sa uložiť nepodarilo.
+    bojlerRezim: /** @type {'uklada' | 'chyba' | null} */ (null),
 });
 
 /**

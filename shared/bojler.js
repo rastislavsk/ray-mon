@@ -45,26 +45,34 @@ export const prebytokBezBojlera = (sietKw, rele, w) => Math.round((sietKw + (rel
  * Má byť bojler zapnutý? Nové meranie Huawei (iný `meranieAt` než posledné) sa započíta do `nad`
  * alebo `pod`; zapne sa po BOJLER.potvrdenia meraniach nad `zapKw`, vypne po toľkých pod `vypKw`,
  * najskôr po BOJLER.minChodMin od zapnutia a BOJLER.minPauzaMin od vypnutia. Meranie staršie než
- * BOJLER.tichoMin či bez elektromera vypne. Relé prepnuté ručne sa berie ako zmena.
+ * BOJLER.tichoMin či bez elektromera vypne. Relé prepnuté ručne sa berie ako zmena. V ručnom režime
+ * (`rucne`, prepínač v appke) nechá relé, ako je - počítanie merania beží ďalej, aby sa po návrate
+ * k riadeniu nezačínalo od nuly.
  * @param {Pamat} pamat
- * @param {{ rele: boolean, w: number, sietKw: number | null, meranieAt: number, now: number, prahy: Prahy }} v
+ * @param {{ rele: boolean, w: number, sietKw: number | null, meranieAt: number, now: number, prahy: Prahy, rucne?: boolean }} v
  * @returns {{ zapni: boolean, pamat: Pamat, prebytokKw: number | null }}
  */
 export function rozhodni(pamat, v) {
     const zmenaAt = v.rele === pamat.rele ? pamat.zmenaAt : v.now;
     const stare = v.sietKw === null || v.now - v.meranieAt > BOJLER.tichoMin * MIN;
-    if (stare) return vysledok(false, { ...pamat, rele: v.rele, zmenaAt, nad: 0, pod: 0 }, v, null);
+    if (stare) return vysledok(!!v.rucne && v.rele, { ...pamat, rele: v.rele, zmenaAt, nad: 0, pod: 0 }, v, null);
     const prebytokKw = prebytokBezBojlera(/** @type {number} */ (v.sietKw), v.rele, v.w);
     const nove = v.meranieAt !== pamat.meranieAt;
     const nad = nove ? (prebytokKw >= v.prahy.zapKw - 1e-9 ? pamat.nad + 1 : 0) : pamat.nad;
     const pod = nove ? (prebytokKw < v.prahy.vypKw - 1e-9 ? pamat.pod + 1 : 0) : pamat.pod;
     const p = { meranieAt: v.meranieAt, nad, pod, rele: v.rele, zmenaAt };
-    const odZmeny = v.now - zmenaAt;
-    const zapni = v.rele
-        ? !(pod >= BOJLER.potvrdenia && odZmeny >= BOJLER.minChodMin * MIN)
-        : nad >= BOJLER.potvrdenia && odZmeny >= BOJLER.minPauzaMin * MIN;
-    return vysledok(zapni, p, v, prebytokKw);
+    return vysledok(v.rucne ? v.rele : zapnut(p, v.rele, v.now - zmenaAt), p, v, prebytokKw);
 }
+
+/**
+ * Prepnúť? Zapnutý vypne po BOJLER.potvrdenia meraniach pod prahom, vypnutý zapne po toľkých nad -
+ * najskôr po minimálnom behu či pauze od poslednej zmeny.
+ * @param {{ nad: number, pod: number }} p @param {boolean} rele @param {number} odZmeny ms
+ */
+const zapnut = (p, rele, odZmeny) =>
+    rele
+        ? !(p.pod >= BOJLER.potvrdenia && odZmeny >= BOJLER.minChodMin * MIN)
+        : p.nad >= BOJLER.potvrdenia && odZmeny >= BOJLER.minPauzaMin * MIN;
 
 /**
  * Výsledok rozhodnutia: keď sa relé prepne, začína nové počítanie a nový čas zmeny.
@@ -156,18 +164,19 @@ function zapocitaj(beh, v, cas, hreje, min) {
 }
 
 /**
- * Stav bojlera pre appku: čo hlásila zásuvka naposledy a záznam dňa.
- * @typedef {{ kontaktAt: number, rele: boolean, w: number, prebytokKw: number | null, prahy: Prahy, den: Den | null }} BojlerInfo
+ * Stav bojlera pre appku: čo hlásila zásuvka naposledy, záznam dňa a či bojler zapína človek (`rucne`).
+ * @typedef {{ kontaktAt: number, rele: boolean, w: number, prebytokKw: number | null, prahy: Prahy, den: Den | null, rucne: boolean }} BojlerInfo
  */
 
 /**
  * Čo dlaždica Bojler ukáže: `mlci` zásuvka sa dlhšie neozvala, `hreje` relé zapnuté a bojler berie,
- * `hotovo` relé zapnuté, ale termostat vypol (voda nahriata), `caka` relé vypnuté.
- * @param {BojlerInfo} b @param {number} now @returns {'mlci' | 'hreje' | 'hotovo' | 'caka'}
+ * `hotovo` relé zapnuté, ale termostat vypol (voda nahriata), `caka` relé vypnuté a appka čaká na
+ * prebytok, `vypnuty` relé vypnuté v ručnom režime.
+ * @param {BojlerInfo} b @param {number} now @returns {'mlci' | 'hreje' | 'hotovo' | 'caka' | 'vypnuty'}
  */
 export function bojlerStav(b, now) {
     if (now - b.kontaktAt > BOJLER.tichoMin * MIN) return 'mlci';
-    if (!b.rele) return 'caka';
+    if (!b.rele) return b.rucne ? 'vypnuty' : 'caka';
     return b.w >= BOJLER.hotovoW ? 'hreje' : 'hotovo';
 }
 
@@ -219,6 +228,8 @@ export function bojlerInfoZ(raw) {
         prebytokKw,
         prahy: prahyZ(o.prahy),
         den: denZ(o.den),
+        // Starší Worker režim neposiela - vtedy riadi appka.
+        rucne: o.rucne === true,
     };
 }
 
