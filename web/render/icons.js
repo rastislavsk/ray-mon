@@ -45,3 +45,20 @@ export function vecIcon(id) {
     const inner = VECI[id];
     return inner ? `<svg class="vi" data-ikona="${id}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${inner}</svg>` : '';
 }
+
+/**
+ * Tok elektriny na karte Teraz (docs/navrhy/teraz-auto-tok.html): slnko (panely), dom a stĺp siete
+ * čiarou ako spotrebiče. `attrs` umiestni ikonu vnútri iného SVG (panel Elektrina teraz).
+ * @type {Record<'slnko' | 'dom' | 'stlp', string>}
+ */
+const TOK = {
+    slnko:
+        '<circle cx="12" cy="12" r="4"/>' +
+        '<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    dom: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+    stlp: '<path d="M12 2.5 7.5 21.5M12 2.5l4.5 19"/><path d="M5 7h14M6.5 11.5h11M9 16.5h6"/><path d="M5 7v2M19 7v2"/>',
+};
+
+/** Ikona toku elektriny. @param {'slnko' | 'dom' | 'stlp'} id @param {string} [attrs] */
+export const tokIcon = (id, attrs = '') =>
+    `<svg class="vi" data-ikona="${id}"${attrs ? ` ${attrs}` : ''} viewBox="0 0 24 24" aria-hidden="true" focusable="false">${TOK[id]}</svg>`;

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../shared/config.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokSiete } from '../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokDetail, tokSiete } from '../shared/teraz-bojler.js';
 
 const NOW = new Date('2026-11-15T13:00:00Z'); // 14:00 SEČ
 const MIN = 60000;
@@ -29,11 +29,40 @@ const info = (/** @type {object} */ o = {}) => ({
 });
 
 test('smer toku: do siete, zo siete, okolo nuly a bez elektromera nič', () => {
-    assert.deepEqual(tokSiete(0.4), { smer: 'von', text: '↑ do siete 0,4 kW' });
-    assert.deepEqual(tokSiete(-1.409), { smer: 'dnu', text: '↓ zo siete 1,4 kW' });
+    assert.deepEqual(tokSiete(0.4), { smer: 'von', kw: '0,4 kW', slovo: 'do siete' });
+    assert.deepEqual(tokSiete(-1.409), { smer: 'dnu', kw: '1,4 kW', slovo: 'zo siete' });
     assert.equal(tokSiete(0.02), null);
     assert.equal(tokSiete(null), null);
     assert.equal(tokSiete(undefined), null);
+});
+
+test('panel Elektrina teraz: panely, dom a sieť, bodky rýchlejšie pri väčšom toku', () => {
+    const at = NOW.getTime() - 2 * MIN;
+    /** @param {number | null} vyrobaKw @param {number} sietKw */
+    const detail = (vyrobaKw, sietKw) =>
+        /** @type {NonNullable<ReturnType<typeof tokDetail>>} */ (tokDetail({ vyrobaKw, sietKw, meraneAt: at }, NOW, TZ));
+    const von = detail(6.4, 2.4);
+    assert.deepEqual(
+        von.uzly.map((u) => [u.id, u.kw, u.l]),
+        [
+            ['slnko', '6,4 kW', 'panely'],
+            ['dom', '4,0 kW', 'dom'],
+            ['stlp', '2,4 kW', 'do siete'],
+        ],
+    );
+    assert.equal(von.smer, 'von');
+    assert.equal(von.popis, 'panely 6,4 kW, dom 4,0 kW, do siete 2,4 kW');
+    assert.equal(von.pod, 'meranie elektromera o 13:58');
+    // Odber: dom berie zo slnka aj zo siete.
+    const dnu = detail(0.8, -1.2);
+    assert.deepEqual([dnu.smer, dnu.uzly[1].kw, dnu.uzly[2].l], ['dnu', '2,0 kW', 'zo siete']);
+    assert.ok(von.krokSiet < dnu.krokSiet, '2,4 kW tečie rýchlejšie ako 1,2 kW');
+    assert.equal(detail(20, 15).krokSiet, 0.35, 'najrýchlejšie');
+    // V noci po prvom vedení nič netečie, výroba bez údaja je nula.
+    const noc = detail(null, -0.3);
+    assert.deepEqual([noc.krokSlnko, noc.uzly[0].kw, noc.uzly[1].kw], [null, '0,0 kW', '0,3 kW']);
+    assert.equal(tokDetail({ vyrobaKw: 3, sietKw: 0.01, meraneAt: at }, NOW, TZ), null);
+    assert.equal(tokDetail({ vyrobaKw: 3, sietKw: null, meraneAt: at }, NOW, TZ), null);
 });
 
 test('riadi zásuvka: len keď sa ozvala za posledný deň', () => {

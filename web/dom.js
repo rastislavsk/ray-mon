@@ -89,7 +89,12 @@ function mozemDom() {
 /** Karta Teraz: smer toku pod číslom a panel Bojler dnes (bojler na prebytky). */
 function terazBojlerDom() {
     return {
-        tzTok: byId('tz-tok'),
+        tzTok: /** @type {HTMLButtonElement} */ (byId('tz-tok')),
+        tzTokSheet: /** @type {HTMLDialogElement} */ (byId('tz-tok-sheet')),
+        tzTokIco: byId('tz-tok-ico'),
+        tzTokTtl: byId('tz-tok-ttl'),
+        tzTokPod: byId('tz-tok-pod'),
+        tzTokGraf: byId('tz-tok-graf'),
         tzBojlerSheet: /** @type {HTMLDialogElement} */ (byId('tz-bojler-sheet')),
         tzBojlerIco: byId('tz-bojler-ico'),
         tzBojlerTtl: byId('tz-bojler-ttl'),
@@ -109,9 +114,6 @@ function terazDom() {
         tzNumVal: byId('tz-num-val'),
         tzSvitanie: byId('tz-svitanie'),
         tzSub: byId('tz-sub'),
-        tzJas: byId('tz-jas'),
-        tzJasLabel: byId('tz-jas-label'),
-        tzJasText: byId('tz-jas-text'),
         tzChipSheet: /** @type {HTMLDialogElement} */ (byId('tz-chip-sheet')),
         tzChipTitle: byId('tz-chip-title'),
         tzChipBody: byId('tz-chip-body'),

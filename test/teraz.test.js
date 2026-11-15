@@ -18,7 +18,6 @@ import {
     slotTone,
     tickHours,
 } from '../shared/day-chart.js';
-import { interpolate } from '../shared/chart-model.js';
 import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
@@ -28,7 +27,6 @@ import {
     TERAZ_TEXTS,
     terazChartText,
     terazCloudText,
-    terazJasText,
     terazLimitGap,
     terazPreviewTime,
     terazSourceText,
@@ -41,7 +39,7 @@ import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 import { mozemModel } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
-import { coZapnutModel, denModel, dnesCards, grafModel, pocasieTeraz, terazModel } from '../shared/teraz.js';
+import { celaDlazdica, coZapnutModel, denModel, dnesCards, grafModel, pocasieTeraz, terazModel } from '../shared/teraz.js';
 import { planDnaModel } from '../shared/plan-dna.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -460,10 +458,6 @@ test('terazModel o 13:00: číslo teraz, čo zapnúť z Plánu dňa, pás odpor�
     assert.equal(m.title, 'Teraz');
     assert.equal(m.num, hero.powerText);
     assert.equal(m.sub, '', 'pod číslom nie je veta');
-    const today = i.forecast?.days[0];
-    const clear = today ? interpolate(today.hourly, hero.minutes / 60, 'clearKw') : 0;
-    const pct = Math.min(100, Math.round((100 * hero.power) / clear));
-    assert.deepEqual(m.jas, { pct, label: `${pct} %`, text: terazJasText(pct) });
     assert.equal(m.retry, false);
     assert.equal(m.guess, false);
     const cards = dnesCards(i);
@@ -644,10 +638,6 @@ test('terazModel: noc - výkon 0, bez vety pod číslom, okno, ktoré už bolo, 
     const vecer = terazModel(input(at('21:00')));
     assert.equal(vecer.num, '0');
     assert.equal(vecer.sub, '');
-    // V noci pásik nie je; hovorí o teraz, zvolený čas v grafe dňa ho nemení.
-    assert.equal(vecer.jas, null);
-    assert.equal(terazModel(input(at('21:00'), { previewMinutes: hm(13) })).jas, null);
-    assert.deepEqual(terazModel(input(at('13:00'), { previewMinutes: hm(21) })).jas, terazModel(input(at('13:00'))).jas);
     assert.match(dnesCards(input(at('21:00')))?.today.window ?? '', /^Okno na veľké veci bolo /);
     const noc = terazModel(input(at('02:00')));
     assert.equal(noc.sub, '');
@@ -688,7 +678,6 @@ test('terazModel: poloha bez panelov - typická strecha s „~“ a výzva, výp
     assert.equal(m.guess, true);
     assert.equal(m.num, `~${heroModel(g).powerText}`);
     assert.equal(m.sub, 'typická strecha asi 5 kWp v tvojej obci, nie tvoja');
-    assert.ok(m.jas && m.jas.pct !== null && m.jas.pct > 0, 'pásik jasu aj pri odhade z typickej strechy');
     assert.ok(m.co, 'čo zapnúť aj z typickej strechy');
     assert.match(dnesCards(g)?.today.line ?? '', /podľa nej už asi/);
 });
@@ -703,7 +692,6 @@ test('terazModel: predpoveď z iného dňa (po polnoci pred obnovou) netvrdí dn
 });
 
 test('texty karty Teraz', () => {
-    assert.equal(terazJasText(72), '72 % z toho, čo by dala jasná obloha.');
     assert.equal(terazSourceText('live'), 'živé meranie');
     assert.equal(terazSourceText('measured'), 'namerané');
     assert.equal(terazSourceText('forecast'), 'odhad z predpovede');
@@ -785,14 +773,28 @@ test('čo zapnúť na poludnie: tri dlaždice zo slnka, nepárna posledná cez c
     assert.equal(m.hore.druh, 'slnko');
     assert.deepEqual(m.hore.oko, { text: 'Teraz zo slnka', sub: '' });
     assert.deepEqual(
-        m.hore.dlazdice.map((d) => [d.id, d.tone, d.cela]),
+        m.hore.dlazdice.map((d) => [d.id, d.tone]),
         [
-            ['pracka', 'go', false],
-            ['umyvacka', 'go', false],
-            ['bojler', 'go', true],
+            ['pracka', 'go'],
+            ['umyvacka', 'go'],
+            ['bojler', 'go'],
         ],
     );
-    assert.equal(m.hore.dlazdice[0].sub, 'dobehne 15:00');
+    // Dlaždica v tvare Bojlera (A3): veľké číslo, čo urobiť a doplnok.
+    assert.deepEqual(
+        [m.hore.dlazdice[0].velky, m.hore.dlazdice[0].meno, m.hore.dlazdice[0].sub],
+        ['15:00', 'Zapni práčku', 'dobehne zo slnka'],
+    );
+    // Nepárna posledná cez celú šírku; Bojler, ktorý riadi zásuvka, sa ráta do počtu.
+    assert.deepEqual(
+        [0, 1, 2].map((i) => celaDlazdica(i, 3)),
+        [false, false, true],
+    );
+    assert.deepEqual(
+        [0, 1, 2, 3].map((i) => celaDlazdica(i, 4)),
+        [false, false, false, false],
+    );
+    assert.equal(celaDlazdica(0, 1), true);
     assert.equal(m.hore.dalsi, null);
     assert.equal(m.skupiny.length, 1);
     assert.equal(m.skupiny[0].nazov, 'Neskôr dnes');
@@ -811,13 +813,18 @@ test('čo zapnúť večer: lacná sieť teraz s koncom pásma', () => {
     assert.equal(m.hore.druh, 'siet');
     assert.equal(m.hore.oko.text, 'Teraz z lacnej siete');
     assert.equal(m.hore.bezSlnka, '', 'dnes slnko stačilo, len už skončilo');
-    assert.equal(m.hore.dlazdice.find((d) => d.id === 'auto')?.sub, 'nabíjaj do 20:30 · lacný prúd');
-    assert.equal(m.hore.dlazdice.find((d) => d.id === 'bojler')?.sub, 'lacný prúd do 20:30');
+    const dl = (/** @type {typeof m} */ x, /** @type {string} */ id) => {
+        const d = x.hore.dlazdice.find((y) => y.id === id);
+        return d && [d.velky, d.meno, d.sub];
+    };
+    assert.deepEqual(dl(m, 'auto'), ['20:30', 'Nabíjaj auto', 'lacný prúd dovtedy']);
+    assert.deepEqual(dl(m, 'bojler'), ['20:30', 'Zapni bojler', 'lacný prúd dovtedy']);
     // Čo čaká na iný deň, v skupinách nie je - núdzové časy dodáva karta (shared/tyzden.js).
     assert.deepEqual(m.skupiny, []);
     // Slušný tón a deň bez slnka: veta pod riadkom nad dlaždicami.
     const slusne = coZapnutModel(rows, { nowMin: minuta('19:50'), level: 'lacna', slnkoDnes: false }, 'slusny');
-    assert.equal(slusne.hore.dlazdice.find((d) => d.id === 'auto')?.sub, 'nabíjajte do 20:30 · lacný prúd');
+    assert.deepEqual(dl(slusne, 'auto'), ['20:30', 'Nabíjajte auto', 'lacný prúd dovtedy']);
+    assert.deepEqual(dl(slusne, 'bojler'), ['20:30', 'Zapnite bojler', 'lacný prúd dovtedy']);
     assert.equal(slusne.hore.bezSlnka, 'Slnko dnes na veľké veci nestačí.');
 });
 

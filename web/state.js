@@ -31,7 +31,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {'nacitavam' | 'ok' | 'chyba' | 'mimo' | 'bezpolohy'} RadarStav
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
- * @typedef {import('../shared/mozem.js').Chip['key']} TzChip
+ * @typedef {import('../shared/mozem.js').Chip['key'] | 'tok'} TzChip
  * @typedef {'dnes' | 'zajtra'} MzChip
  * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('./refresh.js').RefreshState & import('../shared/setup-flow.js').SetupState & {
@@ -370,7 +370,8 @@ const tzVecOf = (panel, dash, vec) => ((panel === 'terazky' || dash) && MOZEM_IT
  * Otvorený panel štítka z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
  * ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} chip @returns {TzChip | null}
  */
-const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet') ? chip : null);
+const tzChipOf = (panel, dash, chip) =>
+    (panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet' || chip === 'tok') ? chip : null;
 
 /**
  * Otvorené vysvetlenie odznaku karty Dnes z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek

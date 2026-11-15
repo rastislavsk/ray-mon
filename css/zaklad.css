@@ -185,9 +185,20 @@ button:focus-visible {
 /* Bodka, čas a slovo o stave (stavRiadok v shared/hlavicka.js) písmom riadku pod číslom, bez
    pozadia - ako ostatný text na holej oblohe. Pri otvorenej bubline je riadok nad vrstvou .tip-bg
    (z-index 4), aby ostal ťukateľný a bublina pri ňom. */
+/* V tom istom riadku vpravo smer toku z elektromera (.tok v teraz.css); keď sa nezmestí, zalomí sa. */
 .stav {
     position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 16px;
+    align-items: center;
+    justify-content: space-between;
     padding: 8px 20px 0;
+}
+/* V riadku so smerom toku sa stav pri väčšom písme zalomí, nevytŕča. */
+.stav .live {
+    flex: 0 1 auto;
+    min-width: 0;
 }
 .stav.open {
     z-index: 5;

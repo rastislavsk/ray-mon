@@ -15,6 +15,8 @@ export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
+    // Smer toku v riadku stavu otvorí panel Elektrina teraz - ten istý krok ako vysvetlenie (tzChip).
+    dom.tzTok.addEventListener('click', () => store.setState({ tzChip: 'tok', panel: 'terazky' }));
     // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
     dom.tzHrebenDni.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-den]') : null;
@@ -28,6 +30,7 @@ export function initTeraz(store, dom, refresh) {
     initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
     // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - ten istý krok (tzVec).
     initSheet(dom.tzBojlerSheet, () => stepBack(store, { tzVec: null }));
+    initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).

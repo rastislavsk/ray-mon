@@ -100,18 +100,26 @@ export function terazOkoText({ druh, level, dalej = null }, voice = 'drzy') {
 /** Pod riadkom nad dlaždicami, keď teraz ide len lacná sieť a slnko dnes nestačí vôbec. */
 export const TERAZ_BEZ_SLNKA = 'Slnko dnes na veľké veci nestačí.';
 
+/** Spotrebič v 4. páde za „Zapni“; neznámy malým písmenom, ako je. */
+const AKUZATIV = /** @type {Record<string, string>} */ ({ pracka: 'práčku', susicka: 'sušičku', umyvacka: 'umývačku', bojler: 'bojler' });
+
 /**
- * Pod menom dlaždice toho, čo ide teraz: kedy dobehne, auto dokedy a koľko km zo slnka, v lacnom
- * pásme dokedy je lacné.
- * @param {{ id: string, kind: 'sun' | 'cheap', end: number, km?: number | null }} r @param {import('./messages-zaklad.js').Voice} [voice]
+ * Dlaždica toho, čo ide teraz, v tvare dlaždice Bojler (docs/navrhy/teraz-auto-tok.html, A3): veľké
+ * číslo, čo urobiť a doplnok. Spotrebič zo slnka: kedy dobehne; auto zo slnka: koľko km (bez odhadu
+ * dokedy); v lacnom pásme dokedy je lacné.
+ * @param {{ id: string, name: string, kind: 'sun' | 'cheap', end: number, km?: number | null }} r @param {import('./messages-zaklad.js').Voice} [voice]
+ * @returns {{ velky: string, meno: string, sub: string }}
  */
 export function terazDlazdicaText(r, voice = 'drzy') {
-    if (r.kind === 'cheap') {
-        if (r.id !== 'auto') return `lacný prúd do ${koniecHm(r.end)}`;
-        return `${polite(voice) ? 'nabíjajte' : 'nabíjaj'} do ${koniecHm(r.end)} · lacný prúd`;
+    const vy = polite(voice);
+    if (r.id === 'auto') {
+        if (r.kind === 'cheap') return { velky: koniecHm(r.end), meno: vy ? 'Nabíjajte auto' : 'Nabíjaj auto', sub: 'lacný prúd dovtedy' };
+        const meno = vy ? 'Nabíjajte zo slnka' : 'Nabíjaj zo slnka';
+        return r.km ? { velky: `~${r.km} km`, meno, sub: `do ${hm(r.end)}` } : { velky: hm(r.end), meno, sub: 'dovtedy' };
     }
-    if (r.id === 'auto') return r.km ? `do ${hm(r.end)} · ~${r.km} km` : `do ${hm(r.end)}`;
-    return `dobehne ${hm(r.end)}`;
+    const meno = `${vy ? 'Zapnite' : 'Zapni'} ${AKUZATIV[r.id] ?? r.name.toLowerCase()}`;
+    if (r.kind === 'cheap') return { velky: koniecHm(r.end), meno, sub: 'lacný prúd dovtedy' };
+    return { velky: hm(r.end), meno, sub: 'dobehne zo slnka' };
 }
 
 /**
@@ -322,11 +330,6 @@ export function terazSourceText(source) {
 export function terazNoteText({ since, riadok }, voice = 'drzy') {
     if (riadok) return `${riadok}. Kým meranie ${polite(voice) ? 'nepripojíte' : 'nepripojíš'} znova, číslo počíta z počasia.`;
     return `${since ? `Meranie neodpovedá od ${since}` : 'Meranie neodpovedá'}. Kým sa neozve, číslo počíta z počasia.`;
-}
-
-/** Pásik pod číslom karty Teraz pre čítačku: koľko z jasnej oblohy. @param {number} pct */
-export function terazJasText(pct) {
-    return `${pct} % z toho, čo by dala jasná obloha.`;
 }
 
 /** Veta pod číslom pri typickej streche: priznáva, že nejde o vlastnú strechu. @param {number} kwp @param {import('./messages-zaklad.js').Voice} [voice] */

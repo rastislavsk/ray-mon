@@ -147,14 +147,6 @@
                         <line class="svitanie-obzor" x1="-46" y1="0" x2="46" y2="0" />
                     </svg>
                 </div>
-                <!-- Koľko z jasnej oblohy: pásik a percento, čítačke veta. -->
-                <p id="tz-jas" class="jas hidden">
-                    <span class="jas-track" aria-hidden="true"><i></i></span>
-                    <span id="tz-jas-label" aria-hidden="true"></span>
-                    <span id="tz-jas-text" class="sr"></span>
-                </p>
-                <!-- Smer toku na odbernom mieste z elektromera (len Huawei Northbound s elektromerom): do siete či zo siete. -->
-                <p id="tz-tok" class="tok hidden"></p>
                 <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
                      ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
                      do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
@@ -164,6 +156,9 @@
                         <span id="hdr-status"></span>
                         <span id="hdr-tone" class="sr"></span>
                     </button>
+                    <!-- Smer toku z elektromera (len Huawei Northbound s elektromerom, docs/navrhy/teraz-auto-tok.html, T1):
+                         dom, šípky a stĺp, ťuknutie otvorí panel Elektrina teraz. -->
+                    <button type="button" id="tz-tok" class="tok hidden" aria-haspopup="dialog"></button>
                     <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
                         <b id="hdr-tip-title"></b>
                         <p id="hdr-tip-text"></p>
@@ -1024,6 +1019,21 @@
                 <div id="tz-bojler-pas" aria-hidden="true"></div>
                 <div id="tz-bojler-cisla" class="bj-cisla"></div>
                 <div id="tz-bojler-behy" class="bj-behy"></div>
+            </div>
+        </dialog>
+
+        <!-- Elektrina teraz (docs/navrhy/teraz-auto-tok.html, T3): otvorí ho smer toku v riadku stavu merania.
+             Panely, dom a sieť s hodnotami, po vedeniach tečú bodky. -->
+        <dialog id="tz-tok-sheet" class="sheet vec-sheet tok-sheet" aria-labelledby="tz-tok-ttl">
+            <div class="sheet-in">
+                <div class="vec-top">
+                    <span id="tz-tok-ico" class="vec-ico" aria-hidden="true"></span>
+                    <div>
+                        <h2 id="tz-tok-ttl"></h2>
+                        <p id="tz-tok-pod" class="vec-kedy"></p>
+                    </div>
+                </div>
+                <div id="tz-tok-graf" class="tok-graf"></div>
             </div>
         </dialog>
 

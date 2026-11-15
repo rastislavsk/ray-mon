@@ -314,7 +314,7 @@ test.describe('oznámenia', () => {
         await page.locator('#nav-terazky').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.rows ?? [];
         await expect(page.locator('#tz-co [data-vec]')).toHaveCount(rows.length);
-        await expect(page.locator('#tz-co [data-vec="bojler"]')).toContainText('Bojler');
+        await expect(page.locator('#tz-co [data-vec="bojler"]')).toContainText(/bojler/i);
     });
 
     test('odmietnuté povolenie: prepínač vypnutý a hláška', async ({ page }) => {

@@ -24,7 +24,7 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
-import { bojlerDetail, bojlerDlazdica, tokSiete } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -1064,7 +1064,30 @@ test.describe('bojler na prebytky', () => {
             bojler: info,
             pvNavyse: { sietKw: 0.4, measuredAt: FIXED_NOW.toISOString() },
         });
-        await expect(page.locator('#tz-tok')).toHaveText(/** @type {any} */ (tokSiete(0.4)).text);
+        // Smer toku v riadku stavu merania (T1): slovo len pre čítačku, ťuknutie otvorí panel Elektrina teraz.
+        const tok = /** @type {NonNullable<ReturnType<typeof tokSiete>>} */ (tokSiete(0.4));
+        const t1 = page.locator('#tz-stav #tz-tok');
+        await expect(t1).toHaveAttribute('data-smer', 'von');
+        await expect(t1).toHaveAccessibleName(`${tok.slovo} ${tok.kw}`);
+        const riadok = await page.locator('#hdr-live').boundingBox();
+        const t1box = await t1.boundingBox();
+        expect(Math.abs((riadok?.y ?? 0) - (t1box?.y ?? 99)), 'T1 je v riadku so stavom merania').toBeLessThan(4);
+        await t1.click();
+        const tokSheet = page.locator('#tz-tok-sheet');
+        await expect(tokSheet).toBeVisible();
+        const td = /** @type {NonNullable<ReturnType<typeof tokDetail>>} */ (
+            tokDetail({ vyrobaKw: pv.realTimePowerKw, sietKw: 0.4, meraneAt: FIXED_NOW.getTime() }, FIXED_NOW, SITE.timezone)
+        );
+        await expect(page.locator('#tz-tok-ttl')).toHaveText(td.nadpis);
+        await expect(page.locator('#tz-tok-pod')).toHaveText(td.pod);
+        await expect(page.locator('#tz-tok-graf > svg')).toHaveAttribute('aria-label', td.popis);
+        await expect(page.locator('#tz-tok-graf .tok-bod')).toHaveCount(2);
+        expect((await new AxeBuilder({ page }).include('#tz-tok-sheet').analyze()).violations).toEqual([]);
+        await page.keyboard.press('Escape');
+        await expect(tokSheet).toBeHidden();
+        await expect(t1).toBeFocused();
+        // Všetky dlaždice v tvare Bojlera (A3): s veľkým číslom.
+        await expect(page.locator('#tz-dlazdice .dl .velky')).toHaveCount(await page.locator('#tz-dlazdice .dl').count());
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);
         const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
         await expect(dl).toHaveAttribute('data-tone', t.tone);

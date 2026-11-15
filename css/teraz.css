@@ -252,8 +252,9 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
+/* Veľké číslo dlaždice sa nezalomí - pri väčšom písme v systéme sa zmenší so šírkou Čo zapnúť (#tz-co). */
 .dl .velky {
-    font-size: 1.75rem;
+    font-size: min(1.75rem, 10cqi);
 }
 /* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. */
 .potom {
@@ -472,48 +473,6 @@
         transform: rotate(360deg);
     }
 }
-/* Pásik pod číslom: koľko z jasnej oblohy (teraz.jas v shared/teraz.js). Pevná šírka, aby sa
-   s číslom nemenil; v noci prázdny, nie skrytý, aby sa v náhľade graf pod prstom nepohol. */
-.jas {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: min(190px, 100% - 40px);
-    margin: 0;
-    padding: 8px 20px 0;
-    box-sizing: content-box;
-}
-/* Náhľad v noci: pásik nie je vidieť, ale miesto drží - prázdny popisok výšku riadku nestratí. */
-.jas.prazdny {
-    visibility: hidden;
-}
-#tz-jas-label:empty::before {
-    content: '0';
-}
-.jas-track {
-    flex: 1;
-    height: 4px;
-    overflow: hidden;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.22);
-}
-.jas-track i {
-    display: block;
-    height: 100%;
-    border-radius: 2px;
-    background: #fff;
-    transform: scaleX(var(--jas, 0));
-    transform-origin: left;
-    transition: transform 0.4s ease;
-}
-#tz-jas-label {
-    min-width: 4ch;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-align: right;
-    color: #fff;
-}
-
 /* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
    ten obsluhuje JS (teraz-interactions.js). */
 .day-scrub {
@@ -964,23 +923,107 @@
 }
 
 /* ===== Bojler na prebytky (docs/navrhy/bojler-prebytky.html) ===== */
-/* Smer toku pod číslom: do siete zelený, zo siete svetločervený, na tmavom skle. */
+/* Smer toku v riadku stavu merania (docs/navrhy/teraz-auto-tok.html, T1): dom, šípky a stĺp bez pozadia
+   ako ostatný text na holej oblohe. Text je biely (na holej oblohe len biely, test/contrast.test.js),
+   smer nesú šípky tvarom, farba len pridáva. Plocha na ťuknutie 44 px bez zmeny výšky riadku, ako .live. */
 .tok {
-    justify-self: start;
-    width: max-content;
-    margin: 6px 0 0;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--glass);
-    font-size: 0.8125rem;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    min-height: 44px;
+    margin: -14px -10px -13px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 22px;
+    background: none;
+    color: #fff;
+    font-size: 0.875rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
 }
-.tok[data-smer='von'] {
+.tok .vi {
+    width: 20px;
+    height: 20px;
+    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.3));
+}
+.tok-sip {
+    width: 20px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.3));
+}
+.tok[data-smer='von'] .tok-sip {
     color: var(--yes);
 }
-.tok[data-smer='dnu'] {
-    color: var(--costly-text);
+.tok[data-smer='dnu'] .tok-sip {
+    color: var(--costly);
+    transform: scaleX(-1);
+}
+/* Panel Elektrina teraz (T3): uzly, vedenia a bodky, ktoré po nich tečú (rýchlosť --krok z modelu). */
+.tok-graf svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 8px;
+}
+.tok-uzol {
+    fill: rgba(255, 255, 255, 0.12);
+}
+.tok-graf .vi {
+    stroke-width: 1.8;
+}
+.tok-ved {
+    stroke: rgba(255, 255, 255, 0.22);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+.tok-bod {
+    stroke: var(--amber-text);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 0 12;
+    animation: tok-tec var(--krok, 1s) linear infinite;
+}
+.tok-bod[data-tone='von'] {
+    stroke: var(--yes);
+}
+.tok-bod[data-tone='dnu'] {
+    stroke: var(--costly);
+}
+.tok-bod[data-spat] {
+    animation-direction: reverse;
+}
+@keyframes tok-tec {
+    to {
+        stroke-dashoffset: -12;
+    }
+}
+.tok-kw {
+    fill: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    text-anchor: middle;
+    font-variant-numeric: tabular-nums;
+}
+.tok-kw[data-smer='von'] {
+    fill: var(--yes);
+}
+.tok-kw[data-smer='dnu'] {
+    fill: var(--costly-text);
+}
+.tok-l {
+    fill: var(--dim);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-anchor: middle;
+    text-transform: uppercase;
 }
 /* Dlaždica bojlera: nahriata voda tichá na skle, zásuvka bez spojenia s jantárovým rámom. */
 .dl[data-tone='tiche'] {
