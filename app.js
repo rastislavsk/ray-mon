@@ -7,6 +7,7 @@ import { createStore } from './web/store.js';
 import {
     dropOldStored,
     loadDayLog,
+    loadBojlerPrahy,
     loadDoma,
     loadRanna,
     loadTrasy,
@@ -63,6 +64,7 @@ const store = createStore(
         oznamenia: loadOznamenia(),
         oznamStav: oznamStav(),
         doma: loadDoma(),
+        bojlerPrahy: loadBojlerPrahy(),
     }),
 );
 

@@ -10,6 +10,10 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     TARIFF,
+    BOJLER_STORAGE_KEY,
+    DOMA_STORAGE_KEY,
+    WORKER_BOJLER_PECAT_URL,
+    WORKER_BOJLER_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     SHARE_HASH_KEY,
@@ -17,6 +21,9 @@ import {
     PRIPOJENIE_BUBLINA_MS,
 } from '../../shared/config.js';
 import { pripojenieText } from '../../shared/messages-core.js';
+import { skriptBojlera } from '../../shared/bojler-skript.js';
+import { domaToStored } from '../../shared/doma.js';
+import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -60,13 +67,14 @@ const GEOCODE = {
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string }} [opts]
  */
-async function openObloha(page, { settings = OWNER, site = null, hash = '' } = {}) {
+async function openObloha(page, { settings = OWNER, site = null, hash = '', bojler = /** @type {object | null} */ (null) } = {}) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
-    await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: { pv } }));
+    // Stav bojlera na prebytky pribalí Worker k meraniu, keď ho zásuvka hlási.
+    await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: bojler ? { pv, bojler } : { pv } }));
     // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
     await page.route(WORKER_PRIPOJ_URL, (route) =>
         route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
@@ -957,3 +965,76 @@ for (const width of [320, 390]) {
         expect(errors).toEqual([]);
     });
 }
+
+test.describe('bojler na prebytky', () => {
+    const NB_ZDROJ = { sposob: 'huawei-northbound', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
+    const PECAT_ZASUVKY = 'v1.Zasuvka0123456789abcdefgh';
+    /** Zásuvka sa ozvala pred minútou a bojler hreje. */
+    const BOJLER_INFO = {
+        kontaktAt: FIXED_NOW.getTime() - 60000,
+        rele: true,
+        w: 2210,
+        prebytokKw: 2.6,
+        prahy: { zapKw: 2.3, vypKw: 2 },
+        den: null,
+    };
+
+    /** @param {import('@playwright/test').Page} page */
+    async function otvor(page) {
+        // Schránka: test si skopírovaný text odloží, prehliadač bez povolenia by ho zahodil.
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: (/** @type {string} */ t) => /** @type {any} */ ((window.__schranka = t), Promise.resolve()) },
+            });
+        });
+        await page.route(WORKER_BOJLER_PECAT_URL, (route) => route.fulfill({ json: { pecat: PECAT_ZASUVKY } }));
+        // Sekcia je len s bojlerom v Čo máš doma.
+        await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        return errors;
+    }
+
+    test('stav zásuvky, prahy a skript do schránky', async ({ page }) => {
+        const errors = await otvor(page);
+        const sekcia = page.locator('#ns-bojler');
+        await expect(sekcia).toBeVisible();
+        const model = /** @type {any} */ (
+            bojlerSekcia({
+                zdroj: NB_ZDROJ,
+                doma: ['bojler'],
+                bojler: BOJLER_INFO,
+                bojlerPrahy: { zapKw: 2.3, vypKw: 2 },
+                bojlerSkript: { stav: 'nic', text: '', schranka: false },
+                now: FIXED_NOW,
+                site: SITE,
+                voice: 'drzy',
+            })
+        );
+        await expect(page.locator('#ns-bojler-stav')).toHaveText(model.stav.text);
+        await expect(page.locator('#ns-bojler-prahy .prah-v')).toHaveText(['2,3 kW', '2,0 kW']);
+        // Zapnutie o krok vyššie: uloží sa a skript ho ponesie.
+        await page.locator('[data-bojler-prah="zapKw"][data-smer="1"]').click();
+        await expect(page.locator('#ns-bojler-prahy .prah-v')).toHaveText(['2,4 kW', '2,0 kW']);
+        expect(await page.evaluate((k) => localStorage.getItem(k), BOJLER_STORAGE_KEY)).toBe(JSON.stringify({ zapKw: 2.4, vypKw: 2 }));
+        await expect(page.locator('#ns-bojler-ine')).toHaveText(model.ine || /prahy 2,3 a 2,0 kW/);
+        await page.locator('#ns-bojler-skript').click();
+        await expect(page.locator('#ns-bojler-sprava')).toHaveText(BOJLER_TEXTS.hotovo[0]);
+        const skript = await page.evaluate(() => /** @type {any} */ (window).__schranka);
+        expect(skript).toBe(skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT_ZASUVKY, zapKw: 2.4, vypKw: 2 }));
+        await expect(page.locator('#ns-bojler-text')).toBeHidden();
+        const axe = await new AxeBuilder({ page }).include('#ns-bojler').analyze();
+        expect(axe.violations).toEqual([]);
+        expect(errors).toEqual([]);
+    });
+
+    test('bez bojlera doma či pri inom meraní sekcia nie je', async ({ page }) => {
+        const errors = await openObloha(page);
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        await expect(page.locator('#ns-doma')).toBeVisible();
+        await expect(page.locator('#ns-bojler')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+});

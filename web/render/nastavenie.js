@@ -94,12 +94,51 @@ function renderHome(state, m, dom) {
     );
 }
 
-/** Čo máš doma: spotrebiče. @param {Model} m @param {Dom} dom */
+/** Čo máš doma: spotrebiče a pri bojleri riadenie podľa prebytkov. @param {Model} m @param {Dom} dom */
 function renderDoma(m, dom) {
     setText(dom.nsDomaTitle, m.doma.title);
     setText(dom.nsDomaHint, m.doma.hint);
     setHtml(dom.nsDoma, minisHtml(m.doma.devices.map((d) => ({ attr: `data-device="${d.id}"`, label: d.name, on: d.on }))));
     setText(dom.nsDomaNote, m.doma.note);
+    renderBojler(m.doma.bojler, dom);
+}
+
+/**
+ * Bojler na prebytky: prahy s tlačidlami menej a viac, stav zásuvky, skript a kroky, ako ho nahrať.
+ * Tlačidlá obsluhuje web/nastavenie-interactions.js.
+ * @param {Model['doma']['bojler']} b @param {Dom} dom
+ */
+function renderBojler(b, dom) {
+    show(dom.nsBojler, !!b);
+    if (!b) return;
+    setText(dom.nsBojlerTitle, b.title);
+    setText(dom.nsBojlerIntro, b.intro);
+    setHtml(
+        dom.nsBojlerPrahy,
+        b.prahy
+            .map(
+                (p) =>
+                    `<div class="it pick"><span><b>${escapeHtml(p.label)}</b><small>${escapeHtml(b.prahSmall)}</small></span>` +
+                    `<span class="minis prah"><button type="button" class="mini" data-bojler-prah="${p.key}" data-smer="-1"` +
+                    ` aria-label="${escapeHtml(`${p.label}: ${b.menej}`)}"${p.menej ? '' : ' disabled'}>-</button>` +
+                    `<b class="prah-v">${escapeHtml(p.value)}</b>` +
+                    `<button type="button" class="mini" data-bojler-prah="${p.key}" data-smer="1"` +
+                    ` aria-label="${escapeHtml(`${p.label}: ${b.viac}`)}"${p.viac ? '' : ' disabled'}>+</button></span></div>`,
+            )
+            .join(''),
+    );
+    setText(dom.nsBojlerZasuvka, b.zasuvka);
+    setHtml(dom.nsBojlerStav, `<span data-tone="${b.stav.tone}">${escapeHtml(b.stav.text)}</span>`);
+    show(dom.nsBojlerIne, !!b.ine);
+    setText(dom.nsBojlerIne, b.ine);
+    setText(dom.nsBojlerSkript, b.tlacidlo);
+    dom.nsBojlerSkript.disabled = b.robim;
+    show(dom.nsBojlerSprava, !!b.sprava);
+    setText(dom.nsBojlerSprava, b.sprava?.text ?? '');
+    dom.nsBojlerSprava.classList.toggle('err', !!b.sprava?.chyba);
+    show(dom.nsBojlerText, !!b.skript);
+    if (dom.nsBojlerText.value !== b.skript) dom.nsBojlerText.value = b.skript;
+    setHtml(dom.nsBojlerKroky, b.kroky.map((k) => `<li>${escapeHtml(k)}</li>`).join(''));
 }
 
 /**

@@ -2,7 +2,7 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
+import { BOJLER, LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
 import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
@@ -71,6 +71,9 @@ import { setupInit } from '../shared/setup-flow.js';
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
+ *   bojler: import('../shared/bojler.js').BojlerInfo | null,
+ *   bojlerPrahy: import('../shared/bojler.js').Prahy,
+ *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
@@ -100,17 +103,24 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
 
 /**
  * Voľby telefónu: ranné oznámenie, čo s oznámeniami telefón vie,
- * a spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie.
- * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} o
+ * spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie - a prahy
+ * bojlera na prebytky (do skriptu zásuvky).
+ * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
+ *   bojlerPrahy?: import('../shared/bojler.js').Prahy }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
     oznamStav = /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
     doma = domaDefault(),
+    bojlerPrahy = { zapKw: BOJLER.zapKw, vypKw: BOJLER.vypKw },
 }) => ({
     oznamenia,
     oznamStav,
     doma,
+    bojlerPrahy,
+    // Stav bojlera hlási Worker pri meraní; skript do zásuvky appka pripraví až na požiadanie.
+    bojler: null,
+    bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
 });
 
 /**
@@ -134,7 +144,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
- *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[] }} start
+ *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

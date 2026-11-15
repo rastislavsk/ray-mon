@@ -29,3 +29,13 @@ namespace_id = "1001"
   [ratelimits.simple]
   limit = 10
   period = 60
+
+# Účty Huawei Northbound (worker/src/ucet.js): telefón aj zásuvka s bojlerom merajú cez jeden objekt
+# na účet, aby sa navzájom neodhlasovali a nepreťažili limit Huawei. Len SQLite (bezplatný plán).
+[[durable_objects.bindings]]
+name = "UCTY"
+class_name = "UcetHuawei"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UcetHuawei"]

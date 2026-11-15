@@ -1,15 +1,25 @@
 # Worker `ray-mon`
 
 Živé meranie pre appku. Prehliadač sa na servery výrobcov meničov priamo nedostane, preto sa
-ich za neho pýta tento Worker. Prístupy ani nastavenie elektrárne neukladá. Jediné, čo si
-pamätá, sú odbery ranného oznámenia (KV `ODBERY`, nižšie), a každú štvrťhodinu ich budí plánovaným
-behom. Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
+ich za neho pýta tento Worker. Heslá ani nastavenie elektrárne neukladá. Pamätá si odbery ranného
+oznámenia (KV `ODBERY`, nižšie), ktoré každú štvrťhodinu budí plánovaným behom, a pri Huawei
+Northbound reláciu, posledné meranie a stav bojlera (Durable Object, nižšie). Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
 
 **Zdieľanie:** `POST /zdielaj` dostane zapečatený prístup a vráti ten istý prístup s platnosťou
 `ZDIELANIE.platiDni` dní (7). Len tá ide do odkazu Zdieľať appku – odkaz ostáva v správach
 natrvalo, prístup v ňom nie. Kto ho otvorí včas, dostane pri prvom meraní (`/pv`) trvalú pečať;
 neskôr Worker pečať odmietne (400) a appka vyzve pripojiť meranie znova. Odkazy z appiek spred
 tejto zmeny nesú trvalú pečať a platia ďalej.
+
+**Huawei Northbound a bojler na prebytky:** merania účtu Huawei Northbound idú cez Durable Object
+`UcetHuawei` (`src/ucet.js`, väzba `UCTY`, len SQLite – bezplatný plán). Huawei pri každom prihlásení
+zruší predchádzajúcu reláciu a meranie dovolí raz za 5 minút, takže telefón a zásuvka s bojlerom by sa
+inak navzájom odhlasovali. Objekt drží reláciu (token platí 30 minút), čo meranie zistilo o elektrárni,
+posledné meranie a stav bojlera; heslo nie, to prichádza vždy v pečati. `POST /bojler-pecat` vydá
+z pečate telefónu menšiu pečať do skriptu zásuvky Shelly, `POST /bojler` je dopyt toho skriptu
+každú minútu (`{ pecat, rele, w, e, zapKw, vypKw }` → `{ zapni }`). Rozhodnutie je v `shared/bojler.js`,
+skript v `shared/bojler-skript.js`, návrh v `docs/navrhy/bojler-prebytky.html`. Bezplatný plán
+Durable Objects dovolí 100 000 dopytov denne; zásuvka a telefón ich minú asi 3 000.
 
 **Radar:** `GET /radar/<snímka>?b=<bloky>` prepošle kúsky súboru OPERA pre kartu Radar (`src/radar.js`). Nič nepočíta
 ani neukladá, odpovede drží cache Cloudflare. Bezplatný plán má 10 ms procesora na požiadavku.

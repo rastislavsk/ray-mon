@@ -11,6 +11,8 @@ import {
     parseNbDevices,
     parseNbDevReal,
     parseNbHistory,
+    parseNbMeters,
+    parseNbSiet,
     parseNbStationReal,
     parseNbStations,
     parseNbStationYear,
@@ -93,6 +95,26 @@ test('zoznam elektrární a meničov podľa príkladov z referencie', () => {
         () => parseNbDevices({ success: false, data: null, failCode: 20009 }),
         (e) => e instanceof VyrobcaChyba && e.kod === '20009' && !e.zamietol,
     );
+});
+
+test('elektromer: typ 17 aj 47, active_power vo W, kladný dodávka do siete, záporný odber', () => {
+    const devices = {
+        success: true,
+        failCode: 0,
+        data: [
+            { id: 1, stationCode: 'NE=1', devTypeId: 1 },
+            { id: 5, stationCode: 'NE=1', devTypeId: 47, devName: 'Meter-1' },
+            { id: 6, stationCode: 'NE=2', devTypeId: 17 },
+            { id: 7, stationCode: 'NE=2', devTypeId: 62 },
+        ],
+    };
+    assert.deepEqual(parseNbMeters(devices), { 'NE=1': { 47: [5] }, 'NE=2': { 17: [6] } });
+    assert.deepEqual(parseNbDevices(devices), { 'NE=1': { 1: [1] } }, 'elektromer nie je menič');
+    // Skutočná odpoveď z 15. 11. 2026 10:44: dom 2,9 kW, výroba 1,5 kW, zo siete 1,4 kW.
+    const real = { success: true, failCode: 0, data: [{ devId: 5, dataItemMap: { active_power: -1409, active_cap: 18653.5 } }] };
+    assert.equal(parseNbSiet([real], [5]), -1.409);
+    assert.equal(parseNbSiet([{ success: true, data: [{ devId: 5, dataItemMap: { active_power: '2350.4' } }] }], [5]), 2.35);
+    assert.equal(parseNbSiet([real], [9]), null);
 });
 
 test('meranie: výkon meničov elektrárne, súčty z elektrárne, inak z meničov', () => {

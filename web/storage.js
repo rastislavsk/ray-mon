@@ -7,6 +7,7 @@ import {
     ADRESA_SESSION_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    BOJLER_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -25,6 +26,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
+import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { parseRanna } from '../shared/den-trieda.js';
@@ -300,4 +302,18 @@ export function loadDoma() {
 /** @param {readonly string[]} devices @returns {boolean} podarilo sa? */
 export function saveDoma(devices) {
     return write(DOMA_STORAGE_KEY, JSON.stringify(domaToStored(devices)));
+}
+
+/** Prahy bojlera (BOJLER_STORAGE_KEY); bez úložiska či pokazené predvolené. @returns {import('../shared/bojler.js').Prahy} */
+export function loadBojlerPrahy() {
+    try {
+        return prahyZ(JSON.parse(read(BOJLER_STORAGE_KEY) ?? 'null'));
+    } catch {
+        return prahyZ(null);
+    }
+}
+
+/** @param {import('../shared/bojler.js').Prahy} prahy @returns {boolean} podarilo sa? */
+export function saveBojlerPrahy(prahy) {
+    return write(BOJLER_STORAGE_KEY, JSON.stringify(prahy));
 }

@@ -466,6 +466,30 @@ export const RANNA_TRIEDA_STORAGE_KEY = 'ranna-trieda-v1';
 export const TRASY_STORAGE_KEY = 'trasy-v1';
 
 /**
+ * Bojler na prebytky (shared/bojler.js, návrh docs/navrhy/bojler-prebytky.html). Rozhoduje sa podľa
+ * prebytku bez bojlera = dodávka do siete z elektromera + príkon bojlera zo zásuvky (elektromer meria
+ * celý dom vrátane bojlera). `zapKw`/`vypKw` sú predvolené prahy (zvolené 15. 11. 2026), každý musí
+ * platiť `potvrdenia` meraní Huawei za sebou (meranie je raz za 5 minút). Po zapnutí beží aspoň
+ * `minChodMin`, po vypnutí čaká aspoň `minPauzaMin`. Bez merania staršieho než `tichoMin` vypne;
+ * to isté robí skript v zásuvke, keď mu `tichoMin` neodpovedá Worker. Príkon pod `hotovoW` pri
+ * zapnutom relé znamená, že termostat bojler vypol (voda nahriata). Prahy sa v appke dajú meniť
+ * po `krokKw` medzi `minKw` a `maxKw`; vypnutie musí byť aspoň o `medzeraKw` nižšie ako zapnutie.
+ */
+export const BOJLER = {
+    zapKw: 2.3,
+    vypKw: 2.0,
+    potvrdenia: 2,
+    minChodMin: 15,
+    minPauzaMin: 10,
+    tichoMin: 15,
+    hotovoW: 50,
+    krokKw: 0.1,
+    minKw: 0.5,
+    maxKw: 5,
+    medzeraKw: 0.2,
+};
+
+/**
  * Skupiny vecí: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
@@ -576,6 +600,9 @@ export const ODBER_STORAGE_KEY = 'odber-v1';
  */
 export const DOMA_STORAGE_KEY = 'doma-v1';
 
+/** Prahy bojlera na prebytky (shared/bojler.js), ktoré appka dá do skriptu zásuvky. Patria telefónu. */
+export const BOJLER_STORAGE_KEY = 'bojler-v1';
+
 /**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
@@ -595,6 +622,7 @@ export const STORAGE_KEYS = [
     OZNAMENIA_STORAGE_KEY,
     ODBER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    BOJLER_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];
@@ -676,6 +704,12 @@ export const ZDIELANIE = { platiDni: 7 };
 // Trasy autom z polohy (`/trasy`) pre podnadpis „km autom“ na karte Štatistika. Poloha ide v tele.
 export const WORKER_TRASY_PATH = '/trasy';
 export const WORKER_TRASY_URL = new URL(WORKER_TRASY_PATH, WORKER_URL).href;
+// Bojler na prebytky (docs/navrhy/bojler-prebytky.html): skript v zásuvke Shelly sa každú minútu
+// opýta `/bojler`, či má bojler zapnúť. `/bojler-pecat` vydá appke pečať do skriptu.
+export const WORKER_BOJLER_PATH = '/bojler';
+export const WORKER_BOJLER_URL = new URL(WORKER_BOJLER_PATH, WORKER_URL).href;
+export const WORKER_BOJLER_PECAT_PATH = '/bojler-pecat';
+export const WORKER_BOJLER_PECAT_URL = new URL(WORKER_BOJLER_PECAT_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

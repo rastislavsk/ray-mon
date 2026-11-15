@@ -8,11 +8,13 @@ import {
     TIMEOUT,
     WEATHER_CACHE_MS,
     WEATHER_KEEP_MS,
+    WORKER_BOJLER_PECAT_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
+import { bojlerInfoZ } from '../shared/bojler.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -28,9 +30,11 @@ import { loadStoredWeather, saveStoredWeather } from './storage.js';
  * zapečatený prístup, keď ho Worker pri meraní vydal (obnovený token, alebo zapečatený holý odkaz
  * na kiosk z nastavení spred zapečatenia) - appka si ho uloží namiesto starého. `odmietnute` je
  * krok a kód chyby (aj prázdny), keď výrobca prístup odmietol - nie výpadok, ale zlý či neplatný
- * prístup (shared/pristup.js); inak null.
+ * prístup (shared/pristup.js); inak null. `bojler` je stav bojlera na prebytky, keď ho Worker
+ * k meraniu pribalil (shared/bojler.js).
  * @typedef {{ pv: import('../shared/kiosk.js').PvData | null, pvFailed: boolean, pecat: string | null,
- *   odmietnute: string | null, forecast: import('../shared/solar.js').Forecast | null }} DataResult
+ *   odmietnute: string | null, forecast: import('../shared/solar.js').Forecast | null,
+ *   bojler: import('../shared/bojler.js').BojlerInfo | null }} DataResult
  */
 
 /** Krok a kód chyby od výrobcu z odpovede Workera (napr. `prihlasenie:20400`); len krátky text bez tajomstiev. @param {unknown} body */
@@ -75,7 +79,21 @@ async function loadPv(zdroj, fetchImpl) {
     const body = await res.json();
     const pv = validPv(body.pv);
     if (!pv) throw new Error('Meranie neprišlo v platnom tvare');
-    return { pv, pecat: typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null };
+    return { pv, pecat: typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null, bojler: bojlerInfoZ(body.bojler) };
+}
+
+/**
+ * Pečať do skriptu zásuvky s bojlerom (Worker `/bojler-pecat`), alebo null, keď ju Worker nevydá.
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl] @returns {Promise<string | null>}
+ */
+export async function bojlerPecat(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_BOJLER_PECAT_URL, pecat, fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -204,7 +222,14 @@ export async function loadData(settings, now, fetchImpl = fetch) {
     const live = pvRes.status === 'fulfilled' ? pvRes.value : null;
     const forecast = weatherRes.status === 'fulfilled' ? forecastFrom(weatherRes.value, now, settings) : null;
     const odmietnute = pvRes.status === 'rejected' && pvRes.reason instanceof Odmietnute ? pvRes.reason.kod : null;
-    return { pv: live && live.pv, pvFailed: pvRes.status === 'rejected', pecat: live && live.pecat, odmietnute, forecast };
+    return {
+        pv: live && live.pv,
+        pvFailed: pvRes.status === 'rejected',
+        pecat: live && live.pecat,
+        odmietnute,
+        forecast,
+        bojler: live && live.bojler,
+    };
 }
 
 /**
