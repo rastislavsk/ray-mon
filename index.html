@@ -153,6 +153,8 @@
                     <span id="tz-jas-label" aria-hidden="true"></span>
                     <span id="tz-jas-text" class="sr"></span>
                 </p>
+                <!-- Smer toku na odbernom mieste z elektromera (len Huawei Northbound s elektromerom): do siete či zo siete. -->
+                <p id="tz-tok" class="tok hidden"></p>
                 <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
                      ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
                      do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
@@ -1005,6 +1007,23 @@
                 <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
                 <p id="tz-vec-why"></p>
                 <p id="tz-vec-note" class="dim"></p>
+            </div>
+        </dialog>
+
+        <!-- Bojler dnes (docs/navrhy/bojler-prebytky.html): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka.
+             Pás dňa (zo slnka, zo siete, voda nahriata), počet zapnutí, ako dlho hrial, kWh a jednotlivé behy. -->
+        <dialog id="tz-bojler-sheet" class="sheet vec-sheet bojler-sheet" aria-labelledby="tz-bojler-ttl">
+            <div class="sheet-in">
+                <div class="vec-top">
+                    <span id="tz-bojler-ico" class="vec-ico" aria-hidden="true"></span>
+                    <div>
+                        <h2 id="tz-bojler-ttl"></h2>
+                        <p id="tz-bojler-pod" class="vec-kedy"></p>
+                    </div>
+                </div>
+                <div id="tz-bojler-pas" aria-hidden="true"></div>
+                <div id="tz-bojler-cisla" class="bj-cisla"></div>
+                <div id="tz-bojler-behy" class="bj-behy"></div>
             </div>
         </dialog>
 

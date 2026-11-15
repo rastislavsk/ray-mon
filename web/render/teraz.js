@@ -7,6 +7,7 @@ import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokSiete } from '../../shared/teraz-bojler.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { vecIcon } from './icons.js';
@@ -107,10 +108,10 @@ function renderHreben(h, dom) {
  * Čo zapnúť: pri dnešku riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri ničom aj cena siete) a dlaždice
  * toho, čo ide teraz (alebo najbližšia vec s rámom), pri inom dni jeho hlavička; pod tým skupiny riadkov
  * zvoleného dňa. Dlaždica aj riadok nesú `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
- * (bez predpovede, nič doma) nie je.
- * @param {Model['co']} co @param {Dom} dom
+ * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak prázdna).
+ * @param {Model['co']} co @param {Dom} dom @param {string} bojler
  */
-function renderCo(co, dom) {
+function renderCo(co, dom, bojler) {
     show(dom.tzCo, !!co);
     if (!co) return;
     const h = co.hore;
@@ -134,8 +135,9 @@ function renderCo(co, dom) {
         ? `<button type="button" class="dl cela" data-tone="next" data-cheap="${p.tone === 'cheap'}" data-vec="${p.id}">${ikona(p.id)}` +
           `<span><span class="velky">${escapeHtml(p.cas)}</span><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.sub)}</small></span></button>`
         : '';
-    setHtml(dom.tzDlazdice, dlazdice.join('') + dalsi);
-    show(dom.tzDlazdice, dnes && (dlazdice.length > 0 || !!p));
+    const html = dlazdice.join('') + dalsi + bojler;
+    setHtml(dom.tzDlazdice, html);
+    show(dom.tzDlazdice, dnes && html !== '');
     setHtml(dom.tzSkupiny, co.skupiny.map(skupinaHtml).join(''));
 }
 
@@ -198,7 +200,7 @@ function renderChipSheet(state, m, dom, T) {
  * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
  */
 function renderVecSheet(state, m, dom) {
-    const v = state.tzVec && m ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
+    const v = state.tzVec && m && !(state.tzVec === 'bojler' && riadeny(state)) ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
     if (v && m?.os) {
         dom.tzVecSheet.dataset.tone = v.tone;
         setHtml(dom.tzVecIco, vecIcon(v.id));
@@ -227,19 +229,98 @@ function renderJas(jas, dom) {
     setText(dom.tzJasText, jas?.text ?? '');
 }
 
+/**
+ * Riadi bojler zásuvka? `?? null`: starý web/state.js z cache po nasadení pole bojler nemá.
+ * @param {import('../state.js').AppState} state
+ */
+const riadeny = (state) => bojlerRiadeny(state.bojler ?? null, state.now);
+
+/**
+ * Spotrebiče, s ktorými appka radí: bojler, ktorý riadi zásuvka, nie - má vlastnú dlaždicu so stavom.
+ * @param {import('../state.js').AppState} state
+ */
+const spotrebice = (state) => (riadeny(state) ? state.doma.filter((d) => d !== 'bojler') : state.doma);
+
+/**
+ * Smer toku pod číslom z elektromera - len k čerstvému meraniu (nie staršiemu než 15 minút).
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderTok(state, dom) {
+    const pv = state.pv;
+    const cerstve = !!pv?.measuredAt && state.now.getTime() - Date.parse(pv.measuredAt) < 15 * 60 * 1000;
+    const tok = cerstve ? tokSiete(pv?.sietKw) : null;
+    show(dom.tzTok, !!tok);
+    if (tok) dom.tzTok.dataset.smer = tok.smer;
+    setText(dom.tzTok, tok?.text ?? '');
+}
+
+/**
+ * Dlaždica bojlera, ktorý riadi zásuvka (docs/navrhy/bojler-prebytky.html, variant A): stav namiesto rady.
+ * Ťuknutie otvorí panel Bojler dnes (ten istý krok ako detail spotrebiča). Inak prázdny text.
+ * @param {import('../state.js').AppState} state @param {Model['co']} co
+ */
+function bojlerHtml(state, co) {
+    // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
+    if (!co || co.den || !riadeny(state) || !state.bojler) return '';
+    const t = bojlerDlazdica(state.bojler, state.now, state.site.timezone);
+    return (
+        `<button type="button" class="dl" data-tone="${t.tone}" data-vec="bojler">` +
+        `<span class="dl-ico" data-riadi="${t.riadi}" aria-hidden="true">${vecIcon('bojler')}</span>` +
+        `<span><span class="velky">${escapeHtml(t.velky)}</span><b>${escapeHtml(t.meno)}</b><small>${escapeHtml(t.sub)}</small></span></button>`
+    );
+}
+
+/**
+ * Panel Bojler dnes: pás dňa, štyri čísla a behy. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderBojlerSheet(state, dom) {
+    const b = state.tzVec === 'bojler' && riadeny(state) ? state.bojler : null;
+    if (b) {
+        const d = bojlerDetail(b, state.now, state.site.timezone);
+        setHtml(dom.tzBojlerIco, vecIcon('bojler'));
+        setText(dom.tzBojlerTtl, d.nadpis);
+        setText(dom.tzBojlerPod, d.pod);
+        const teraz = d.pas.teraz === null ? '' : `<i class="os-teraz" style="left:${d.pas.teraz}%"></i>`;
+        setHtml(
+            dom.tzBojlerPas,
+            `<div class="os bj-pas"><i class="os-ciara"></i>` +
+                d.pas.useky.map((u) => `<i class="os-usek" data-tone="${u.tone}" style="left:${u.left}%;width:${u.width}%"></i>`).join('') +
+                teraz +
+                d.pas.ticks.map((t) => `<span class="os-t" style="left:${t.at}%">${t.label}</span>`).join('') +
+                `</div>`,
+        );
+        setHtml(
+            dom.tzBojlerCisla,
+            d.cisla
+                .map(
+                    (c) => `<div><b${c.tone ? ` data-tone="${c.tone}"` : ''}>${escapeHtml(c.v)}</b><small>${escapeHtml(c.l)}</small></div>`,
+                )
+                .join(''),
+        );
+        setHtml(
+            dom.tzBojlerBehy,
+            d.behy.map((r) => `<p><span>${escapeHtml(r.cas)}</span><i data-tone="${r.tone}">${escapeHtml(r.info)}</i></p>`).join(''),
+        );
+    }
+    dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));
+}
+
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderTeraz(state, dom) {
     const T = voiceTexts(state.voice).TERAZ_TEXTS;
     renderStav(state, dom);
+    renderTok(state, dom);
     if (!shows(state, 'terazky')) {
         renderChipSheet(state, null, dom, T);
         renderVecSheet(state, null, dom);
+        dialog(dom.tzBojlerSheet, false, () => null);
         return;
     }
     const m = terazModel(
         { ...state, previewMinutes: null },
         // `?? 0`: starý web/state.js z cache po nasadení pole tzDen nemá (CLAUDE.md, Nasadenie a cache).
-        { online: state.online, voice: state.voice, devices: state.doma, den: state.tzDen ?? 0 },
+        { online: state.online, voice: state.voice, devices: spotrebice(state), den: state.tzDen ?? 0 },
     );
     renderPocasie(state, m, dom);
     setText(dom.tzTitle, m.title);
@@ -267,12 +348,13 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, T.askText);
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
-    renderCo(m.co, dom);
+    renderCo(m.co, dom, bojlerHtml(state, m.co));
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom);
+    renderBojlerSheet(state, dom);
 }
 
 /**

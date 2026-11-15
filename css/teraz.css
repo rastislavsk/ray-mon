@@ -962,3 +962,125 @@
     height: 100%;
     background: var(--yes);
 }
+
+/* ===== Bojler na prebytky (docs/navrhy/bojler-prebytky.html) ===== */
+/* Smer toku pod číslom: do siete zelený, zo siete svetločervený, na tmavom skle. */
+.tok {
+    justify-self: start;
+    width: max-content;
+    margin: 6px 0 0;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--glass);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.tok[data-smer='von'] {
+    color: var(--yes);
+}
+.tok[data-smer='dnu'] {
+    color: var(--costly-text);
+}
+/* Dlaždica bojlera: nahriata voda tichá na skle, zásuvka bez spojenia s jantárovým rámom. */
+.dl[data-tone='tiche'] {
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #fff;
+}
+.dl[data-tone='chyba'] {
+    border: 2px solid var(--amber-text);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #fff;
+}
+.dl[data-tone='tiche'] .dl-ico,
+.dl[data-tone='chyba'] .dl-ico {
+    background: rgba(255, 255, 255, 0.14);
+}
+/* Bodka pri ikone: bojler riadi zásuvka - beží (zelená), čaká (biela), mlčí (jantárová). */
+.dl-ico[data-riadi] {
+    position: relative;
+}
+.dl-ico[data-riadi]::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.35);
+}
+.dl-ico[data-riadi='bezi']::after {
+    background: #2f8a17;
+    box-shadow: 0 0 0 2px var(--yes);
+}
+.dl-ico[data-riadi='mlci']::after {
+    background: var(--amber-text);
+}
+/* Panel Bojler dnes: pás dňa z úsekov bez minimálnej šírky, štyri čísla a behy. */
+.bj-pas .os-usek {
+    top: 20px;
+    min-width: 0;
+    height: 12px;
+    border-radius: 0;
+    box-shadow: none;
+}
+.bj-pas .os-usek[data-tone='siet'] {
+    background: var(--costly);
+}
+.bj-pas .os-usek[data-tone='hotovo'] {
+    background: rgba(255, 255, 255, 0.45);
+}
+.bj-cisla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0;
+}
+.bj-cisla div {
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.07);
+}
+.bj-cisla b {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+.bj-cisla small {
+    font-size: 0.78rem;
+    color: var(--dim);
+}
+.bj-cisla b[data-tone='slnko'],
+.bj-behy i[data-tone='slnko'] {
+    color: var(--yes);
+}
+.bj-cisla b[data-tone='siet'],
+.bj-behy i[data-tone='siet'] {
+    color: var(--costly-text);
+}
+.bj-behy p {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+    padding: 8px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+.bj-behy p:last-child {
+    border-bottom: 0;
+}
+.bj-behy i {
+    font-style: normal;
+    font-weight: 700;
+    text-align: right;
+}

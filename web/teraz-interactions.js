@@ -26,6 +26,8 @@ export function initTeraz(store, dom, refresh) {
     });
     initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
     initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
+    // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - ten istý krok (tzVec).
+    initSheet(dom.tzBojlerSheet, () => stepBack(store, { tzVec: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
