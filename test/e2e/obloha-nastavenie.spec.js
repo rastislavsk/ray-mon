@@ -24,6 +24,7 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
+import { bojlerDetail, bojlerDlazdica, tokSiete } from '../../shared/teraz-bojler.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -67,14 +68,18 @@ const GEOCODE = {
  * @param {import('@playwright/test').Page} page
  * @param {{ settings?: typeof OWNER | null, site?: typeof SITE | null, hash?: string }} [opts]
  */
-async function openObloha(page, { settings = OWNER, site = null, hash = '', bojler = /** @type {object | null} */ (null) } = {}) {
+async function openObloha(
+    page,
+    { settings = OWNER, site = null, hash = '', bojler = /** @type {object | null} */ (null), pvNavyse = /** @type {object} */ ({}) } = {},
+) {
     /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => msg.type() === 'error' && !IGNORED_CONSOLE.test(msg.text()) && errors.push(msg.text()));
     await page.route(/cdnjs\.cloudflare\.com/, (route) => route.abort());
     // Stav bojlera na prebytky pribalí Worker k meraniu, keď ho zásuvka hlási.
-    await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: bojler ? { pv, bojler } : { pv } }));
+    const meranie = { ...pv, ...pvNavyse };
+    await page.route(WORKER_PV_URL, (route) => route.fulfill({ json: bojler ? { pv: meranie, bojler } : { pv: meranie } }));
     // Pripojenie v sprievodcovi: Worker nájde jednu elektráreň so zapečateným prístupom.
     await page.route(WORKER_PRIPOJ_URL, (route) =>
         route.fulfill({ json: { stanice: [{ nazov: 'Dvorany', pecat: TEST_ZDROJ.pecat, pv: pv }] } }),
@@ -1035,6 +1040,50 @@ test.describe('bojler na prebytky', () => {
         await page.locator('#ns-fold-doma').click();
         await expect(page.locator('#ns-doma')).toBeVisible();
         await expect(page.locator('#ns-bojler')).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
+    test('karta Teraz: smer toku, dlaždica Bojler a panel Bojler dnes', async ({ page }) => {
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['pracka', 'bojler']))],
+        );
+        // Dnes od 10:40 dva behy, druhý beží; zásuvka sa ozvala pred minútou a bojler hreje.
+        const den = {
+            den: '2026-09-05',
+            behy: [
+                { od: 640, do: 685, wh: 1650, whSiet: 0, e0: 1000, hrejeMin: 45 },
+                { od: 705, do: null, wh: 2050, whSiet: 120, e0: 2650, hrejeMin: 55 },
+            ],
+            hotovo: null,
+            posledneAt: FIXED_NOW.getTime() - 60000,
+        };
+        const info = { ...BOJLER_INFO, den };
+        const errors = await openObloha(page, {
+            settings: { ...OWNER, zdroj: NB_ZDROJ },
+            bojler: info,
+            pvNavyse: { sietKw: 0.4, measuredAt: FIXED_NOW.toISOString() },
+        });
+        await expect(page.locator('#tz-tok')).toHaveText(/** @type {any} */ (tokSiete(0.4)).text);
+        const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);
+        const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
+        await expect(dl).toHaveAttribute('data-tone', t.tone);
+        await expect(dl).toContainText(t.meno);
+        await expect(dl).toContainText(t.sub);
+        await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
+        await dl.click();
+        const sheet = page.locator('#tz-bojler-sheet');
+        await expect(sheet).toBeVisible();
+        await expect(page.locator('#tz-vec-sheet')).toBeHidden();
+        const d = bojlerDetail(info, FIXED_NOW, SITE.timezone);
+        await expect(page.locator('#tz-bojler-pod')).toHaveText(d.pod);
+        await expect(page.locator('#tz-bojler-cisla b')).toHaveText(d.cisla.map((c) => c.v));
+        await expect(page.locator('#tz-bojler-behy p')).toHaveCount(2);
+        await expect(page.locator('#tz-bojler-pas .os-usek')).toHaveCount(d.pas.useky.length);
+        const axe = await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze();
+        expect(axe.violations).toEqual([]);
+        await page.keyboard.press('Escape');
+        await expect(sheet).toBeHidden();
         expect(errors).toEqual([]);
     });
 });

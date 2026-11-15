@@ -86,6 +86,20 @@ function mozemDom() {
     };
 }
 
+/** Karta Teraz: smer toku pod číslom a panel Bojler dnes (bojler na prebytky). */
+function terazBojlerDom() {
+    return {
+        tzTok: byId('tz-tok'),
+        tzBojlerSheet: /** @type {HTMLDialogElement} */ (byId('tz-bojler-sheet')),
+        tzBojlerIco: byId('tz-bojler-ico'),
+        tzBojlerTtl: byId('tz-bojler-ttl'),
+        tzBojlerPod: byId('tz-bojler-pod'),
+        tzBojlerPas: byId('tz-bojler-pas'),
+        tzBojlerCisla: byId('tz-bojler-cisla'),
+        tzBojlerBehy: byId('tz-bojler-behy'),
+    };
+}
+
 /** Karta Teraz. */
 function terazDom() {
     return {
@@ -471,6 +485,7 @@ export function collectDom() {
         ...radarDom(),
         ...mozemDom(),
         ...terazDom(),
+        ...terazBojlerDom(),
         ...sedemDom(),
         ...statistikaDom(),
         ...nastavenieDom(),

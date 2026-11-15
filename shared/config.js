@@ -474,6 +474,7 @@ export const TRASY_STORAGE_KEY = 'trasy-v1';
  * to isté robí skript v zásuvke, keď mu `tichoMin` neodpovedá Worker. Príkon pod `hotovoW` pri
  * zapnutom relé znamená, že termostat bojler vypol (voda nahriata). Prahy sa v appke dajú meniť
  * po `krokKw` medzi `minKw` a `maxKw`; vypnutie musí byť aspoň o `medzeraKw` nižšie ako zapnutie.
+ * Zásuvka, ktorá sa neozvala `riadenyHod` hodín, bojler už neriadi - appka s ním radí ako predtým.
  */
 export const BOJLER = {
     zapKw: 2.3,
@@ -487,6 +488,7 @@ export const BOJLER = {
     minKw: 0.5,
     maxKw: 5,
     medzeraKw: 0.2,
+    riadenyHod: 24,
 };
 
 /**
