@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Auto ako Bojler a tok do/zo siete</title>
+        <style>
+            /* Mockup, nie snímka z appky. Telefóny sú kreslené ručne podľa css/teraz.css a css/zaklad.css.
+               Čísla scenárov sú vymyslené, nie merania. Animácie sú len ukážka v tejto stránke, v appke nie sú. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --costly-text: #ffc4ba;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p {
+                margin: 6px 0;
+            }
+            .note {
+                color: rgba(242, 240, 234, 0.7);
+                font-size: 0.9rem;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                width: 330px;
+                max-width: 100%;
+            }
+            figcaption {
+                margin-top: 10px;
+                font-size: 0.9rem;
+            }
+            figcaption b {
+                display: block;
+                font-size: 1rem;
+                color: #fff;
+            }
+            .pro,
+            .proti {
+                display: block;
+                font-size: 0.85rem;
+            }
+            .pro::before {
+                content: '+ ';
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .proti::before {
+                content: '– ';
+                color: var(--costly);
+                font-weight: 800;
+            }
+            .scen {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 0;
+                background: #070b18;
+            }
+            .scen button {
+                padding: 8px 14px;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                background: none;
+                color: var(--ink);
+                font: inherit;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            .scen button[aria-pressed='true'] {
+                background: #fff;
+                color: #0b1430;
+            }
+
+            /* ===== Telefón ===== */
+            .phone {
+                width: 330px;
+                max-width: 100%;
+                padding: 18px 14px 18px;
+                border-radius: 30px;
+                background:
+                    radial-gradient(circle at 92% 0%, rgba(255, 255, 255, 0.55), transparent 32%),
+                    linear-gradient(180deg, #3f7cc4 0%, #4f8fd2 45%, #6a9fd6 100%);
+                color: #fff;
+                overflow: hidden;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+            }
+            .lbl {
+                font-size: 1.6rem;
+                font-weight: 900;
+            }
+            .num {
+                display: flex;
+                align-items: baseline;
+                gap: 4px;
+                margin-top: -6px;
+            }
+            .num b {
+                font-size: 4.4rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1;
+                letter-spacing: -0.02em;
+            }
+            .num span {
+                font-size: 1.3rem;
+                font-weight: 800;
+            }
+            .jas {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+                font-size: 0.8rem;
+                font-weight: 800;
+            }
+            .track {
+                width: 180px;
+                height: 5px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.3);
+                overflow: hidden;
+            }
+            .track i {
+                display: block;
+                height: 100%;
+                background: #fff;
+            }
+            .stav {
+                margin-top: 10px;
+                font-size: 0.78rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+            .stav i {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                margin-right: 8px;
+                border-radius: 50%;
+                background: var(--yes);
+            }
+            .stary {
+                display: inline-block;
+                margin-top: 6px;
+                padding: 3px 10px;
+                border-radius: 999px;
+                background: var(--glass);
+                font-size: 0.8125rem;
+                font-weight: 800;
+            }
+            .zelena {
+                color: var(--yes);
+            }
+            .cervena {
+                color: var(--costly-text);
+            }
+
+            /* ===== Dlaždice (podľa .dl v css/teraz.css) ===== */
+            .co-h {
+                margin: 16px 2px 10px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .co-h i {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                margin-right: 8px;
+                border-radius: 50%;
+                background: var(--yes);
+                box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.35);
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                align-content: space-between;
+                gap: 14px;
+                min-height: 136px;
+                padding: 14px;
+                border-radius: 24px;
+                background: var(--yes);
+                color: #14300c;
+                text-shadow: none;
+                box-shadow: 0 8px 30px rgba(185, 242, 140, 0.3);
+            }
+            .dl.tiche {
+                background: var(--glass);
+                color: #fff;
+                box-shadow: none;
+            }
+            .dl-ico {
+                position: relative;
+                width: 44px;
+                height: 44px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .dl-ico[data-riadi]::after {
+                content: '';
+                position: absolute;
+                top: 1px;
+                right: 1px;
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: #2f8a17;
+                box-shadow: 0 0 0 2px var(--yes);
+            }
+            .dl b {
+                display: block;
+                font-size: 1.2rem;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+                line-height: 1.1;
+            }
+            .dl small {
+                display: block;
+                margin-top: 3px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                line-height: 1.25;
+            }
+            .velky {
+                display: block;
+                font-size: 1.6rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+            .vi {
+                width: 26px;
+                height: 26px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .zmena {
+                outline: 2px dashed var(--amber);
+                outline-offset: 3px;
+            }
+
+            /* ===== T1: pilulka dom – sieť ===== */
+            .t1 {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 4px 12px 4px 8px;
+                border-radius: 999px;
+                background: var(--glass);
+                font-size: 0.875rem;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+            }
+            .t1 svg {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .t1 .sipky {
+                width: 22px;
+                height: 14px;
+            }
+            .t1[data-smer='dnu'] .sipky {
+                transform: scaleX(-1);
+            }
+            .t1[data-smer='von'] {
+                color: var(--yes);
+            }
+            .t1[data-smer='dnu'] {
+                color: var(--costly-text);
+            }
+            .t1 .ikona {
+                color: #fff;
+            }
+
+            /* ===== T2: dvojsmerná stupnica ===== */
+            .t2 {
+                margin-top: 10px;
+                width: 230px;
+            }
+            .t2-track {
+                position: relative;
+                height: 8px;
+                border-radius: 999px;
+                background: var(--glass);
+            }
+            .t2-track::before {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: -4px;
+                bottom: -4px;
+                width: 2px;
+                margin-left: -1px;
+                border-radius: 2px;
+                background: #fff;
+            }
+            .t2-fill {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 999px;
+                transition:
+                    left 0.5s,
+                    width 0.5s,
+                    background 0.5s;
+            }
+            .t2-pop {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 5px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .t2-pop .on {
+                color: #fff;
+            }
+            .t2-pop .on b {
+                font-size: 0.85rem;
+                letter-spacing: 0;
+            }
+
+            /* ===== T3: prúd po vedení ===== */
+            .t3 {
+                margin: 12px -4px 0;
+                padding: 10px 10px 8px;
+                border-radius: 20px;
+                background: var(--glass);
+            }
+            .t3 svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .t3 .uzol {
+                fill: rgba(255, 255, 255, 0.14);
+            }
+            .t3 .ik {
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .t3 .ved {
+                stroke: rgba(255, 255, 255, 0.25);
+                stroke-width: 3;
+                stroke-linecap: round;
+            }
+            .t3 .bod {
+                stroke-width: 4;
+                stroke-linecap: round;
+                fill: none;
+                animation: tec linear infinite;
+            }
+            .t3 .h {
+                fill: #fff;
+                font-size: 13px;
+                font-weight: 800;
+                text-anchor: middle;
+                font-variant-numeric: tabular-nums;
+            }
+            .t3 .p {
+                fill: rgba(255, 255, 255, 0.75);
+                font-size: 10px;
+                font-weight: 700;
+                text-anchor: middle;
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+            @keyframes tec {
+                to {
+                    stroke-dashoffset: -24;
+                }
+            }
+            .spat {
+                animation-direction: reverse !important;
+            }
+
+            /* ===== T4: kam ide výkon ===== */
+            .t4 {
+                margin-top: 12px;
+            }
+            .t4-riadok {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .t4-bar {
+                position: relative;
+                flex: 1;
+                display: flex;
+                height: 22px;
+                border-radius: 999px;
+                overflow: hidden;
+                background: var(--glass);
+            }
+            .t4-bar span {
+                position: relative;
+                display: grid;
+                place-items: center;
+                min-width: 0;
+                overflow: hidden;
+                font-size: 0.72rem;
+                font-weight: 900;
+                color: #14300c;
+                text-shadow: none;
+                white-space: nowrap;
+                transition: flex-basis 0.5s;
+            }
+            .t4-bar span::after {
+                /* lesk, ktorý tečie smerom toku */
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+                background-size: 40% 100%;
+                background-repeat: no-repeat;
+                animation: lesk 1.6s linear infinite;
+            }
+            .t4-bar[data-smer='dnu'] span::after {
+                animation-direction: reverse;
+            }
+            @keyframes lesk {
+                from {
+                    background-position: -60% 0;
+                }
+                to {
+                    background-position: 160% 0;
+                }
+            }
+            .t4-kraj {
+                width: 30px;
+                height: 30px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: var(--glass);
+            }
+            .t4-kraj svg {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .t4-pop {
+                display: flex;
+                justify-content: space-between;
+                margin: 4px 38px 0;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+            .tab {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+            .tab th,
+            .tab td {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                text-align: left;
+                vertical-align: top;
+            }
+            .tab th {
+                color: var(--amber);
+                font-size: 0.75rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Karta Teraz: Auto ako Bojler a tok do/zo siete</h1>
+                <p class="note">
+                    Návrh 15. 11. 2026. Telefóny sú kreslené ručne podľa štýlov appky, nie snímky. Čísla scenárov sú vymyslené. Animácie
+                    bežia len v tejto stránke; pri zapnutom „obmedziť pohyb“ stoja, rovnako by to bolo v appke.
+                </p>
+                <p class="note">
+                    Čo je dnes rozbité (snímka z e2e testu s práčkou, autom a bojlerom): dlaždica Bojler má navyše veľké číslo, je vyššia
+                    ako Práčka a Auto a sama v riadku pôsobí ako z inej appky. Pilulka „↑ do siete 0,4 kW“ je tretí druh prvku medzi pásikom
+                    jasu a stavom merania (nie je to pásik, ani riadok stavu) a šípka hore/dole nehovorí, kam.
+                </p>
+                <p class="note">
+                    <b>Rozhodnuté 15. 11. 2026:</b> A3 (všetky dlaždice s veľkým číslom). T1 bez pozadia v jednom riadku so stavom merania
+                    (najprv meranie, potom T1), ťuknutie na T1 otvorí panel zdola „Elektrina teraz“ s T3. Pásik jasu (koľko z jasnej oblohy)
+                    zmazaný všade, aj pri meničoch bez elektromera. Číslo pri T1 je biele (na holej oblohe len biely text), farbu nesú
+                    šípky. Varianty T2, T4 a bublina pre T3 zamietnuté.
+                </p>
+            </header>
+
+            <!-- ===================== ČASŤ 1: AUTO ===================== -->
+            <section>
+                <h2><small>Časť 1</small>Dlaždica Auto v štýle Bojlera</h2>
+                <p class="note">
+                    Bojler má tri riadky: veľké číslo, stav slovom, doplnok. Auto dnes len meno a doplnok. Obrys označuje, čo sa mení.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <div class="phone">
+                            <div class="co-h"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span><b>Práčka</b><small>dobehne 15:00</small></span>
+                                </div>
+                                <div class="dl">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span><b>Auto</b><small>do 15:45 · ~90 km</small></span>
+                                </div>
+                                <div class="dl">
+                                    <span class="dl-ico" data-riadi
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-bojler" /></svg
+                                    ></span>
+                                    <span
+                                        ><span class="velky">2,2 kW</span><b>Hreje zo slnka</b
+                                        ><small>prebytok 2,6 kW · od 11:45</small></span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption><b>Dnes</b>Auto a Bojler hovoria iným jazykom.</figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="co-h"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span><b>Práčka</b><small>dobehne 15:00</small></span>
+                                </div>
+                                <div class="dl zmena">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span><span class="velky">~90 km</span><b>Nabíjaj zo slnka</b><small>do 15:45</small></span>
+                                </div>
+                                <div class="dl">
+                                    <span class="dl-ico" data-riadi
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-bojler" /></svg
+                                    ></span>
+                                    <span
+                                        ><span class="velky">2,2 kW</span><b>Hreje zo slnka</b
+                                        ><small>prebytok 2,6 kW · od 11:45</small></span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A1 · Veľké km</b>
+                            <span class="pro">presne vzor Bojlera: číslo, stav, doplnok</span>
+                            <span class="pro">km je to, čo pri aute zaujíma (úspora)</span>
+                            <span class="proti">bez odhadu km (nová appka, žiadne km) by bol veľký čas – dva tvary</span>
+                            <span class="proti">Práčka ostane jediná bez čísla</span>
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="co-h"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span><b>Práčka</b><small>dobehne 15:00</small></span>
+                                </div>
+                                <div class="dl zmena">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span><span class="velky">15:45</span><b>Nabíjaj auto</b><small>dovtedy ~90 km zo slnka</small></span>
+                                </div>
+                                <div class="dl">
+                                    <span class="dl-ico" data-riadi
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-bojler" /></svg
+                                    ></span>
+                                    <span
+                                        ><span class="velky">2,2 kW</span><b>Hreje zo slnka</b
+                                        ><small>prebytok 2,6 kW · od 11:45</small></span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A2 · Veľký čas</b>
+                            <span class="pro">vždy rovnaký tvar, aj bez km</span>
+                            <span class="pro">čas je to isté, čo ukazuje dlaždica „najbližšia vec“</span>
+                            <span class="proti">km (úspora) sa stratí v malom písme</span>
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="co-h"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl zmena">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span><span class="velky">15:00</span><b>Zapni práčku</b><small>dobehne zo slnka</small></span>
+                                </div>
+                                <div class="dl zmena">
+                                    <span class="dl-ico"
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span><span class="velky">~90 km</span><b>Nabíjaj zo slnka</b><small>do 15:45</small></span>
+                                </div>
+                                <div class="dl">
+                                    <span class="dl-ico" data-riadi
+                                        ><svg class="vi" viewBox="0 0 24 24"><use href="#i-bojler" /></svg
+                                    ></span>
+                                    <span
+                                        ><span class="velky">2,2 kW</span><b>Hreje zo slnka</b
+                                        ><small>prebytok 2,6 kW · od 11:45</small></span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A3 · Všetky dlaždice rovnako – vybrané 15. 11. 2026</b>
+                            <span class="pro">jedna mriežka, rovnaká výška, žiadna dlaždica „navyše“</span>
+                            <span class="pro">umývačka a sušička rovnako ako práčka (čas dobehnutia)</span>
+                            <span class="proti">mení sa viac textov a testov; väčší zásah, než si pýtal</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <!-- ===================== ČASŤ 2: TOK ===================== -->
+            <section>
+                <h2><small>Časť 2</small>Tok do siete a zo siete</h2>
+                <p class="note">Prepni scenár – všetky štyri telefóny ho prekreslia (animované aj rýchlosťou podľa kW).</p>
+                <div class="scen" role="group" aria-label="Scenár">
+                    <button type="button" data-s="0" aria-pressed="true">Poludnie: do siete 2,4 kW</button>
+                    <button type="button" data-s="1" aria-pressed="false">Hreje bojler: do siete 0,4 kW</button>
+                    <button type="button" data-s="2" aria-pressed="false">Oblak: zo siete 1,2 kW</button>
+                </div>
+
+                <div class="rad">
+                    <figure>
+                        <div class="phone">
+                            <div class="lbl">Teraz</div>
+                            <div class="num"><b data-v="vyroba">6.4</b><span>kW</span></div>
+                            <div class="jas">
+                                <span class="track"><i data-jas style="width: 80%"></i></span><span data-v="jas">80 %</span>
+                            </div>
+                            <span class="stary" data-stary></span>
+                            <div class="stav"><i></i>13:00 · ŽIVÉ MERANIE ›</div>
+                        </div>
+                        <figcaption><b>Dnes</b>Pilulka so šípkou ↑/↓ a slovom.</figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="lbl">Teraz</div>
+                            <div class="num"><b data-v="vyroba">6.4</b><span>kW</span></div>
+                            <span class="t1 zmena" data-t1>
+                                <svg class="ikona" viewBox="0 0 24 24"><use href="#i-dom" /></svg>
+                                <svg class="sipky" viewBox="0 0 22 14"><path d="M3 2l5 5-5 5M11 2l5 5-5 5" /></svg>
+                                <svg class="ikona" viewBox="0 0 24 24"><use href="#i-stlp" /></svg>
+                                <span data-t1v></span>
+                            </span>
+                            <div class="stav"><i></i>13:00 · ŽIVÉ MERANIE ›</div>
+                        </div>
+                        <figcaption>
+                            <b>T1 · Dom ›› stĺp (na mieste)</b>
+                            Tá istá pilulka, namiesto slova dve ikony a šípky medzi nimi: šípky ukazujú od domu k stĺpu (zelené) alebo od
+                            stĺpu k domu (červené). Slovo ostane len pre čítačku. Pásik jasu (koľko z jasnej oblohy) odpadá.
+                            <span class="pro">najmenší zásah, obrázok namiesto slova „do siete“</span>
+                            <span class="pro">jasný smer, aj bez farby</span>
+                            <span class="proti">stále samostatný „ostrov“ medzi pásikom a stavom</span>
+                            <span class="proti">veľkosť toku len číslom</span>
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="lbl">Teraz</div>
+                            <div class="num"><b data-v="vyroba">6.4</b><span>kW</span></div>
+                            <div class="jas">
+                                <span class="track"><i data-jas style="width: 80%"></i></span><span data-v="jas">80 %</span>
+                            </div>
+                            <div class="t2 zmena">
+                                <div class="t2-track"><i class="t2-fill" data-t2></i></div>
+                                <div class="t2-pop">
+                                    <span data-t2l>zo siete</span>
+                                    <span data-t2r>do siete</span>
+                                </div>
+                            </div>
+                            <div class="stav"><i></i>13:00 · ŽIVÉ MERANIE ›</div>
+                        </div>
+                        <figcaption>
+                            <b>T2 · Váhy od nuly (na mieste)</b>
+                            Stupnica s nulou v strede: doprava zelená (do siete), doľava červená (zo siete). Dĺžka podľa kW (do 5 kW), číslo
+                            stojí na tej strane, kam to tečie.
+                            <span class="pro">veľkosť vidno pohľadom, ladí s pásikom jasu</span>
+                            <span class="pro">pri nule je to len čiarka, nič nekričí</span>
+                            <span class="proti">dva pásiky pod sebou si človek spočiatku pomýli</span>
+                            <span class="proti">vľavo/vpravo je dohoda, nie obraz domu a siete</span>
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <div class="rad" style="margin-top: 28px">
+                    <figure>
+                        <div class="phone">
+                            <div class="lbl">Teraz</div>
+                            <div class="num"><b data-v="vyroba">6.4</b><span>kW</span></div>
+                            <div class="t3 zmena">
+                                <svg viewBox="0 0 280 92" aria-hidden="true">
+                                    <!-- vedenia -->
+                                    <line class="ved" x1="56" y1="30" x2="118" y2="30" />
+                                    <line class="ved" x1="162" y1="30" x2="224" y2="30" />
+                                    <line class="bod" data-t3a x1="56" y1="30" x2="118" y2="30" stroke-dasharray="0 12" />
+                                    <line class="bod" data-t3b x1="162" y1="30" x2="224" y2="30" stroke-dasharray="0 12" />
+                                    <!-- uzly -->
+                                    <circle class="uzol" cx="34" cy="30" r="22" />
+                                    <circle class="uzol" cx="140" cy="30" r="22" />
+                                    <circle class="uzol" cx="246" cy="30" r="22" />
+                                    <g transform="translate(22 18)"><use class="ik" href="#i-slnko" /></g>
+                                    <g transform="translate(128 18)"><use class="ik" href="#i-dom" /></g>
+                                    <g transform="translate(234 18)"><use class="ik" href="#i-stlp" /></g>
+                                    <text class="h" x="34" y="72" data-t3h1>6,4 kW</text>
+                                    <text class="h" x="140" y="72" data-t3h2>4,0 kW</text>
+                                    <text class="h" x="246" y="72" data-t3h3>2,4 kW</text>
+                                    <text class="p" x="34" y="86">panely</text>
+                                    <text class="p" x="140" y="86">dom</text>
+                                    <text class="p" x="246" y="86" data-t3p3>do siete</text>
+                                </svg>
+                            </div>
+                            <div class="stav"><i></i>13:00 · ŽIVÉ MERANIE ›</div>
+                        </div>
+                        <figcaption>
+                            <b>T3 · Prúd po vedení (animácia, väčšia úprava)</b>
+                            Panely → dom → stĺp, po vedení tečú body. Rýchlosť podľa kW, pri odbere sa smer otočí a body sú červené.
+                            Nahrádza pilulku; pásik jasu (koľko z jasnej oblohy) odpadá.
+                            <span class="pro">najzrozumiteľnejšie: odkiaľ, kam a koľko, bez jediného slova navyše</span>
+                            <span class="pro">dom ukáže aj spotrebu domu (výroba − dodávka)</span>
+                            <span class="proti">zaberie ~90 px nad hrebeňom dní, dlaždice klesnú nižšie</span>
+                            <span class="proti">bez elektromera (iné meniče) by tam bol len prvý uzol – treba iný tvar</span>
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="lbl">Teraz</div>
+                            <div class="num"><b data-v="vyroba">6.4</b><span>kW</span></div>
+                            <div class="t4 zmena">
+                                <div class="t4-riadok">
+                                    <span class="t4-kraj"
+                                        ><svg viewBox="0 0 24 24"><use data-t4lico href="#i-slnko" /></svg
+                                    ></span>
+                                    <div class="t4-bar" data-t4bar>
+                                        <span data-t4a></span>
+                                        <span data-t4b></span>
+                                    </div>
+                                    <span class="t4-kraj"
+                                        ><svg viewBox="0 0 24 24"><use href="#i-stlp" /></svg
+                                    ></span>
+                                </div>
+                                <div class="t4-pop"><span data-t4la></span><span data-t4lb></span></div>
+                            </div>
+                            <div class="stav"><i></i>13:00 · ŽIVÉ MERANIE ›</div>
+                        </div>
+                        <figcaption>
+                            <b>T4 · Kam ide výkon (animácia, väčšia úprava)</b>
+                            Jeden pás pod číslom: pri dodávke je to výroba rozdelená na dom (biela) a sieť (zelená), lesk tečie k stĺpu. Pri
+                            odbere spotreba domu zo slnka (zlatá) a zo siete (červená), lesk tečie od stĺpu.
+                            <span class="pro">ukáže pomer – „polovica ide preč“ vidno hneď</span>
+                            <span class="pro">plochý, zaberie len jeden riadok ako dnešný pásik jasu</span>
+                            <span class="proti">pás mení význam (výroba vs. spotreba) podľa smeru – treba sa ho naučiť</span>
+                            <span class="proti">pri malej dodávke (0,4 kW) je zelený kúsok úzky</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Porovnanie</small>Tok do/zo siete</h2>
+                <table class="tab">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Zložitosť</th>
+                            <th>Miesto</th>
+                            <th>Čo ukáže</th>
+                            <th>Bez elektromera</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><b>T1</b> dom ›› stĺp</td>
+                            <td>malá (CSS + 2 ikony)</td>
+                            <td>ako dnes</td>
+                            <td>smer, číslo</td>
+                            <td>skryté ako dnes</td>
+                        </tr>
+                        <tr>
+                            <td><b>T2</b> váhy od nuly</td>
+                            <td>malá</td>
+                            <td>ako dnes</td>
+                            <td>smer, veľkosť pohľadom</td>
+                            <td>skryté ako dnes</td>
+                        </tr>
+                        <tr>
+                            <td><b>T3</b> prúd po vedení</td>
+                            <td>stredná (SVG, animácia, nový model v shared/)</td>
+                            <td>+ ~60 px, nahradí pásik jasu</td>
+                            <td>odkiaľ, kam, koľko; spotreba domu</td>
+                            <td>treba rozhodnúť (len panely, alebo starý pásik)</td>
+                        </tr>
+                        <tr>
+                            <td><b>T4</b> kam ide výkon</td>
+                            <td>stredná</td>
+                            <td>ako pásik jasu (nahradí ho)</td>
+                            <td>pomer dom/sieť</td>
+                            <td>treba rozhodnúť (pásik jasu)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+
+        <!-- Ikony: spotrebiče z web/render/icons.js, dom, stĺp a slnko kreslené pre tento návrh. -->
+        <svg width="0" height="0" style="position: absolute">
+            <defs>
+                <g id="i-pracka">
+                    <rect x="4" y="3" width="16" height="18" rx="3" />
+                    <path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01" />
+                    <circle cx="12" cy="14" r="4" />
+                </g>
+                <g id="i-auto">
+                    <path
+                        d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"
+                    />
+                    <path d="M3.5 12.3h17" />
+                    <circle cx="7.5" cy="16.5" r="1.7" />
+                    <circle cx="16.5" cy="16.5" r="1.7" />
+                </g>
+                <g id="i-bojler">
+                    <rect x="6" y="2.5" width="12" height="19" rx="6" />
+                    <path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z" />
+                </g>
+                <g id="i-dom">
+                    <path d="M3.5 11 12 4l8.5 7" />
+                    <path d="M6 9.5V20h12V9.5" />
+                    <path d="M10 20v-5h4v5" />
+                </g>
+                <g id="i-stlp">
+                    <path d="M12 2.5 7.5 21.5M12 2.5l4.5 19" />
+                    <path d="M5 7h14M6.5 11.5h11M9 16.5h6" />
+                    <path d="M5 7v2M19 7v2" />
+                </g>
+                <g id="i-slnko">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+                </g>
+            </defs>
+        </svg>
+
+        <script>
+            // Scenáre sú vymyslené: výroba, do siete (+) / zo siete (−), pásik jasu.
+            const S = [
+                { vyroba: 6.4, siet: 2.4, jas: 80 },
+                { vyroba: 6.4, siet: 0.4, jas: 80 },
+                { vyroba: 0.8, siet: -1.2, jas: 12 },
+            ];
+            const f = (x) => x.toFixed(1).replace('.', ',');
+            const all = (sel) => document.querySelectorAll(sel);
+            const MAX = 5;
+
+            function kresli(i) {
+                const s = S[i];
+                const von = s.siet > 0;
+                const k = Math.abs(s.siet);
+                const dom = s.vyroba - s.siet;
+                all('[data-v="vyroba"]').forEach((e) => (e.textContent = s.vyroba.toFixed(1)));
+                all('[data-v="jas"]').forEach((e) => (e.textContent = `${s.jas} %`));
+                all('[data-jas]').forEach((e) => (e.style.width = `${s.jas}%`));
+                all('[data-stary]').forEach((e) => {
+                    e.textContent = `${von ? '↑ do siete' : '↓ zo siete'} ${f(k)} kW`;
+                    e.className = `stary ${von ? 'zelena' : 'cervena'}`;
+                });
+                // T1
+                all('[data-t1]').forEach((e) => (e.dataset.smer = von ? 'von' : 'dnu'));
+                all('[data-t1v]').forEach((e) => (e.textContent = `${f(k)} kW`));
+                // T2
+                const w = Math.min(1, k / MAX) * 50;
+                all('[data-t2]').forEach((e) => {
+                    e.style.left = von ? '50%' : `${50 - w}%`;
+                    e.style.width = `${w}%`;
+                    e.style.background = von ? 'var(--yes)' : 'var(--costly)';
+                });
+                all('[data-t2l]').forEach((e) => {
+                    e.className = von ? '' : 'on';
+                    e.innerHTML = von ? 'zo siete' : `<b>${f(k)} kW</b> zo siete`;
+                });
+                all('[data-t2r]').forEach((e) => {
+                    e.className = von ? 'on' : '';
+                    e.innerHTML = von ? `do siete <b>${f(k)} kW</b>` : 'do siete';
+                });
+                // T3: rýchlosť bodov podľa kW (viac kW = rýchlejšie)
+                const dur = (kw) => `${Math.max(0.35, 2.4 - kw * 0.4).toFixed(2)}s`;
+                all('[data-t3a]').forEach((e) => {
+                    e.style.stroke = 'var(--gold)';
+                    e.style.animationDuration = dur(s.vyroba);
+                });
+                all('[data-t3b]').forEach((e) => {
+                    e.style.stroke = von ? 'var(--yes)' : 'var(--costly)';
+                    e.style.animationDuration = dur(k);
+                    e.classList.toggle('spat', !von);
+                });
+                all('[data-t3h1]').forEach((e) => (e.textContent = `${f(s.vyroba)} kW`));
+                all('[data-t3h2]').forEach((e) => (e.textContent = `${f(dom)} kW`));
+                all('[data-t3h3]').forEach((e) => (e.textContent = `${f(k)} kW`));
+                all('[data-t3p3]').forEach((e) => (e.textContent = von ? 'do siete' : 'zo siete'));
+                // T4
+                all('[data-t4bar]').forEach((e) => (e.dataset.smer = von ? 'von' : 'dnu'));
+                const celok = von ? s.vyroba : dom;
+                const a = von ? dom : s.vyroba;
+                all('[data-t4a]').forEach((e) => {
+                    e.style.flex = `0 0 ${(a / celok) * 100}%`;
+                    e.style.background = von ? '#fff' : 'var(--gold)';
+                    e.textContent = `${f(a)}`;
+                });
+                all('[data-t4b]').forEach((e) => {
+                    e.style.flex = `0 0 ${(k / celok) * 100}%`;
+                    e.style.background = von ? 'var(--yes)' : 'var(--costly)';
+                    e.textContent = `${f(k)}`;
+                });
+                all('[data-t4la]').forEach((e) => (e.textContent = von ? 'dom' : 'zo slnka'));
+                all('[data-t4lb]').forEach((e) => {
+                    e.textContent = von ? 'do siete' : 'zo siete';
+                    e.style.color = von ? 'var(--yes)' : 'var(--costly-text)';
+                });
+                all('.scen button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === String(i))));
+            }
+            all('.scen button').forEach((b) => b.addEventListener('click', () => kresli(Number(b.dataset.s))));
+            kresli(0);
+        </script>
+    </body>
+</html>

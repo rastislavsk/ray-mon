@@ -6,11 +6,11 @@
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
-import { terazModel } from '../../shared/teraz.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokSiete } from '../../shared/teraz-bojler.js';
+import { celaDlazdica, terazModel } from '../../shared/teraz.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { vecIcon } from './icons.js';
+import { tokIcon, vecIcon } from './icons.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -124,10 +124,12 @@ function renderCo(co, dom, bojler) {
     setHtml(dom.tzOkoT, `${escapeHtml(h.oko.text)}${h.oko.sub ? ` <span>· ${escapeHtml(h.oko.sub)}</span>` : ''}`);
     show(dom.tzOkoPod, dnes && !!h.bezSlnka);
     setText(dom.tzOkoPod, h.bezSlnka);
+    // Bojler, ktorý riadi zásuvka, stojí v tej istej mriežke za dlaždicami - ráta sa do šírky.
+    const n = h.dlazdice.length + (bojler ? 1 : 0);
     const dlazdice = h.dlazdice.map(
-        (d) =>
-            `<button type="button" class="dl${d.cela ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
-            `<span><b>${escapeHtml(d.name)}</b><small>${escapeHtml(d.sub)}</small>` +
+        (d, i) =>
+            `<button type="button" class="dl${celaDlazdica(i, n) ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
+            `<span><span class="velky">${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b><small>${escapeHtml(d.sub)}</small>` +
             `${d.potom ? `<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</span></button>`,
     );
     const p = h.dalsi;
@@ -175,7 +177,7 @@ function osHtml(os, slot) {
  * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
  */
 function renderChipSheet(state, m, dom, T) {
-    const chips = state.tzChip && m ? m.chips.filter((c) => c.info) : [];
+    const chips = state.tzChip && state.tzChip !== 'tok' && m ? m.chips.filter((c) => c.info) : [];
     if (chips.length) {
         setText(dom.tzChipTitle, m?.co?.hore.oko.text ?? chips[0].info.title);
         setHtml(
@@ -218,18 +220,6 @@ function renderVecSheet(state, m, dom) {
 }
 
 /**
- * Pásik pod číslom: koľko z jasnej oblohy. V noci nie je (null).
- * @param {Model['jas']} jas @param {Dom} dom
- */
-function renderJas(jas, dom) {
-    show(dom.tzJas, !!jas);
-    dom.tzJas.classList.toggle('prazdny', jas?.pct === null);
-    dom.tzJas.style.setProperty('--jas', String((jas?.pct ?? 0) / 100));
-    setText(dom.tzJasLabel, jas?.label ?? '');
-    setText(dom.tzJasText, jas?.text ?? '');
-}
-
-/**
  * Riadi bojler zásuvka? `?? null`: starý web/state.js z cache po nasadení pole bojler nemá.
  * @param {import('../state.js').AppState} state
  */
@@ -242,16 +232,69 @@ const riadeny = (state) => bojlerRiadeny(state.bojler ?? null, state.now);
 const spotrebice = (state) => (riadeny(state) ? state.doma.filter((d) => d !== 'bojler') : state.doma);
 
 /**
- * Smer toku pod číslom z elektromera - len k čerstvému meraniu (nie staršiemu než 15 minút).
+ * Meranie elektromera pre smer toku - len čerstvé (nie staršie než 15 minút), inak null.
+ * @param {import('../state.js').AppState} state
+ */
+function meranieToku(state) {
+    const pv = state.pv;
+    const at = pv?.measuredAt ? Date.parse(pv.measuredAt) : NaN;
+    return pv && state.now.getTime() - at < 15 * 60 * 1000 ? { vyrobaKw: pv.realTimePowerKw, sietKw: pv.sietKw, meraneAt: at } : null;
+}
+
+/** Šípky medzi domom a stĺpom; smer otáča štýl (data-smer). */
+const SIPKY = '<svg class="tok-sip" viewBox="0 0 22 14" aria-hidden="true" focusable="false"><path d="M3 2l5 5-5 5M11 2l5 5-5 5"/></svg>';
+
+/**
+ * Smer toku v riadku stavu merania (docs/navrhy/teraz-auto-tok.html, T1): dom, šípky, stĺp a kW,
+ * slovo len pre čítačku. Ťuknutie otvorí panel Elektrina teraz.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
 function renderTok(state, dom) {
-    const pv = state.pv;
-    const cerstve = !!pv?.measuredAt && state.now.getTime() - Date.parse(pv.measuredAt) < 15 * 60 * 1000;
-    const tok = cerstve ? tokSiete(pv?.sietKw) : null;
+    const tok = tokSiete(meranieToku(state)?.sietKw);
     show(dom.tzTok, !!tok);
     if (tok) dom.tzTok.dataset.smer = tok.smer;
-    setText(dom.tzTok, tok?.text ?? '');
+    setHtml(
+        dom.tzTok,
+        tok ? `${tokIcon('dom')}${SIPKY}${tokIcon('stlp')}<span class="sr">${escapeHtml(tok.slovo)} </span>${escapeHtml(tok.kw)}` : '',
+    );
+}
+
+/**
+ * Panel Elektrina teraz (T3): panely → dom → stĺp, po vedeniach tečú bodky (rýchlosť podľa kW, pri odbere
+ * od stĺpu k domu). Otvorený, kým je v stave tzChip 'tok' a meranie je čerstvé.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderTokSheet(state, dom) {
+    const m = state.tzChip === 'tok' ? meranieToku(state) : null;
+    const d = m ? tokDetail(m, state.now, state.site.timezone) : null;
+    if (d) {
+        setHtml(dom.tzTokIco, tokIcon('dom'));
+        setText(dom.tzTokTtl, d.nadpis);
+        setText(dom.tzTokPod, d.pod);
+        const x = [34, 140, 246];
+        /** @param {number} a @param {number} b @param {number | null} krok @param {string} tone @param {boolean} spat */
+        const vedenie = (a, b, krok, tone, spat) =>
+            `<line class="tok-ved" x1="${a}" y1="30" x2="${b}" y2="30"/>` +
+            (krok === null
+                ? ''
+                : `<line class="tok-bod" data-tone="${tone}"${spat ? ' data-spat' : ''} x1="${a}" y1="30" x2="${b}" y2="30" style="--krok:${krok}s"/>`);
+        setHtml(
+            dom.tzTokGraf,
+            `<svg viewBox="0 0 280 92" role="img" aria-label="${escapeHtml(d.popis)}">` +
+                vedenie(x[0] + 22, x[1] - 22, d.krokSlnko, 'slnko', false) +
+                vedenie(x[1] + 22, x[2] - 22, d.krokSiet, d.smer, d.smer === 'dnu') +
+                d.uzly
+                    .map(
+                        (u, i) =>
+                            `<circle class="tok-uzol" cx="${x[i]}" cy="30" r="22"/>${tokIcon(u.id, `x="${x[i] - 12}" y="18" width="24" height="24"`)}` +
+                            `<text class="tok-kw"${i === 2 ? ` data-smer="${d.smer}"` : ''} x="${x[i]}" y="72">${escapeHtml(u.kw)}</text>` +
+                            `<text class="tok-l" x="${x[i]}" y="87">${escapeHtml(u.l)}</text>`,
+                    )
+                    .join('') +
+                `</svg>`,
+        );
+    }
+    dialog(dom.tzTokSheet, !!d, () => (shows(state, 'terazky') ? dom.tzTok : null));
 }
 
 /**
@@ -263,8 +306,9 @@ function bojlerHtml(state, co) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
     if (!co || co.den || !riadeny(state) || !state.bojler) return '';
     const t = bojlerDlazdica(state.bojler, state.now, state.site.timezone);
+    const n = co.hore.dlazdice.length + 1;
     return (
-        `<button type="button" class="dl" data-tone="${t.tone}" data-vec="bojler">` +
+        `<button type="button" class="dl${celaDlazdica(n - 1, n) ? ' cela' : ''}" data-tone="${t.tone}" data-vec="bojler">` +
         `<span class="dl-ico" data-riadi="${t.riadi}" aria-hidden="true">${vecIcon('bojler')}</span>` +
         `<span><span class="velky">${escapeHtml(t.velky)}</span><b>${escapeHtml(t.meno)}</b><small>${escapeHtml(t.sub)}</small></span></button>`
     );
@@ -315,6 +359,7 @@ export function renderTeraz(state, dom) {
         renderChipSheet(state, null, dom, T);
         renderVecSheet(state, null, dom);
         dialog(dom.tzBojlerSheet, false, () => null);
+        dialog(dom.tzTokSheet, false, () => null);
         return;
     }
     const m = terazModel(
@@ -329,7 +374,6 @@ export function renderTeraz(state, dom) {
     show(dom.tzSvitanie, m.kind === 'loading');
     dom.tzNum.classList.toggle('est', m.estimate);
     setText(dom.tzNumVal, m.num);
-    renderJas(m.jas, dom);
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
     show(dom.tzNote, !!m.note);
@@ -355,6 +399,7 @@ export function renderTeraz(state, dom) {
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom);
+    renderTokSheet(state, dom);
 }
 
 /**

@@ -44,6 +44,10 @@ export const TERAZ_BOJLER_TEXTS = {
     teraz: 'teraz',
     nahriata: 'nahriata',
     behSiet: (/** @type {string} */ kwh) => `${kwh} kWh zo siete`,
+    tokNadpis: 'Elektrina teraz',
+    tokPod: 'meranie elektromera o',
+    panely: 'panely',
+    dom: 'dom',
 };
 
 /**
@@ -54,14 +58,47 @@ export const TERAZ_BOJLER_TEXTS = {
 export const bojlerRiadeny = (b, now) => !!b && now.getTime() - b.kontaktAt < BOJLER.riadenyHod * 60 * MIN;
 
 /**
- * Smer toku na odbernom mieste pod veľkým číslom: koľko ide do siete (`von`) alebo zo siete (`dnu`).
+ * Smer toku na odbernom mieste vedľa stavu merania (docs/navrhy/teraz-auto-tok.html, T1): šípky od domu
+ * k stĺpu (`von`, do siete) alebo od stĺpu k domu (`dnu`, zo siete), koľko kW a to isté slovom pre čítačku.
  * Bez elektromera či pri takmer nule nič.
- * @param {number | null | undefined} sietKw kladné dodávka @returns {{ smer: 'von' | 'dnu', text: string } | null}
+ * @param {number | null | undefined} sietKw kladné dodávka
+ * @returns {{ smer: 'von' | 'dnu', kw: string, slovo: string } | null}
  */
 export function tokSiete(sietKw) {
     if (typeof sietKw !== 'number' || Math.abs(sietKw) < 0.05) return null;
     const T = TERAZ_BOJLER_TEXTS;
-    return sietKw > 0 ? { smer: 'von', text: `↑ ${T.von} ${fmt1(sietKw)} kW` } : { smer: 'dnu', text: `↓ ${T.dnu} ${fmt1(-sietKw)} kW` };
+    return sietKw > 0 ? { smer: 'von', kw: `${fmt1(sietKw)} kW`, slovo: T.von } : { smer: 'dnu', kw: `${fmt1(-sietKw)} kW`, slovo: T.dnu };
+}
+
+/** Čas, za ktorý bodka prejde po vedení jeden krok (s): viac kW tečie rýchlejšie. @param {number} kw */
+const krok = (kw) => Math.round(Math.max(0.35, 2.4 - 0.4 * Math.max(0, kw)) * 100) / 100;
+
+/**
+ * Panel Elektrina teraz (T3): panely → dom → stĺp s hodnotami a rýchlosťou bodiek na oboch vedeniach.
+ * Dom je výroba mínus dodávka (plus odber) - batériu appka nepozná. Bez smeru toku null.
+ * @param {{ vyrobaKw: number | null, sietKw: number | null | undefined, meraneAt: number }} v @param {Date} now @param {string} tz
+ */
+export function tokDetail({ vyrobaKw, sietKw, meraneAt }, now, tz) {
+    const tok = tokSiete(sietKw);
+    if (!tok || typeof sietKw !== 'number') return null;
+    const T = TERAZ_BOJLER_TEXTS;
+    const vyroba = Math.max(0, vyrobaKw ?? 0);
+    const dom = Math.max(0, vyroba - sietKw);
+    const uzly = [
+        { id: /** @type {const} */ ('slnko'), kw: `${fmt1(vyroba)} kW`, l: T.panely },
+        { id: /** @type {const} */ ('dom'), kw: `${fmt1(dom)} kW`, l: T.dom },
+        { id: /** @type {const} */ ('stlp'), kw: tok.kw, l: tok.slovo },
+    ];
+    return {
+        nadpis: T.tokNadpis,
+        pod: `${T.tokPod} ${cas(meraneAt, now, tz)}`,
+        smer: tok.smer,
+        uzly,
+        // Bez výroby (noc) po prvom vedení nič netečie.
+        krokSlnko: vyroba >= 0.05 ? krok(vyroba) : null,
+        krokSiet: krok(Math.abs(sietKw)),
+        popis: uzly.map((u) => `${u.l} ${u.kw}`).join(', '),
+    };
 }
 
 /** Čas kontaktu ako „14:05“, alebo s dátumom, keď nebol dnes. @param {number} at @param {Date} now @param {string} tz */

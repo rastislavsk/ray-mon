@@ -1169,24 +1169,11 @@ async function openTeraz(page, opts = {}) {
     return errors;
 }
 
-/** Čo karta ukazuje: nadpis, číslo, riadok pod ním, pásik a rada pod dňom. @param {import('@playwright/test').Page} page */
+/** Čo karta ukazuje: nadpis, číslo a riadok pod ním. @param {import('@playwright/test').Page} page */
 const terazVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
-        return {
-            title: text('#ttl-terazky'),
-            num: text('#tz-num-val'),
-            sub: text('#tz-sub'),
-            // Pásik pod číslom: percento, veta pre čítačku a koľko z dĺžky je vyplnené.
-            jas: document.querySelector('#tz-jas.hidden')
-                ? null
-                : {
-                      label: text('#tz-jas-label'),
-                      text: text('#tz-jas-text'),
-                      fill: getComputedStyle(/** @type {HTMLElement} */ (document.querySelector('#tz-jas'))).getPropertyValue('--jas'),
-                      prazdny: document.querySelector('#tz-jas.prazdny') !== null,
-                  },
-        };
+        return { title: text('#ttl-terazky'), num: text('#tz-num-val'), sub: text('#tz-sub') };
     });
 
 /** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
@@ -1194,7 +1181,6 @@ const terazZModelu = (m) => ({
     title: m.title,
     num: m.num,
     sub: m.sub,
-    jas: m.jas && { label: m.jas.label, text: m.jas.text, fill: String((m.jas.pct ?? 0) / 100), prazdny: m.jas.pct === null },
 });
 
 /** Čo zapnúť v stránke: hlavička iného dňa, riadok nad dlaždicami, dlaždice s odznakom a skupiny riadkov. @param {import('@playwright/test').Page} page */
@@ -1209,7 +1195,7 @@ const coVStranke = (page) =>
             dlazdice: [...document.querySelectorAll('#tz-dlazdice [data-vec]')].map((d) => ({
                 id: /** @type {HTMLElement} */ (d).dataset.vec,
                 tone: d.getAttribute('data-tone'),
-                text: t(d.querySelector('small')),
+                text: `${t(d.querySelector('.velky'))} ${t(d.querySelector('b'))} ${t(d.querySelector('small'))}`,
                 potom: t(d.querySelector('.potom')),
             })),
             // Skupina je nadpis s riadkami pod ním; pásik pri riadku je podiel slnka núdzového času.
@@ -1232,8 +1218,8 @@ const coZModelu = (m) => {
         oko: h ? `${h.oko.text}${h.oko.sub ? ` · ${h.oko.sub}` : ''}` : '',
         dlazdice: h
             ? [
-                  ...h.dlazdice.map((d) => ({ id: d.id, tone: d.tone, text: d.sub, potom: d.potom?.text ?? '' })),
-                  ...(h.dalsi ? [{ id: h.dalsi.id, tone: 'next', text: h.dalsi.sub, potom: '' }] : []),
+                  ...h.dlazdice.map((d) => ({ id: d.id, tone: d.tone, text: `${d.velky} ${d.meno} ${d.sub}`, potom: d.potom?.text ?? '' })),
+                  ...(h.dalsi ? [{ id: h.dalsi.id, tone: 'next', text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.sub}`, potom: '' }] : []),
               ]
             : [],
         skupiny: (m.co?.skupiny ?? []).map((g) => ({
@@ -1392,7 +1378,8 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-oko-t')).toHaveText('Teraz z lacnej siete');
         await expect(page.locator('#tz-oko-bod')).toHaveAttribute('data-tone', 'cheap');
         await expect(page.locator('#tz-dlazdice [data-vec="auto"]')).toHaveAttribute('data-tone', 'cheap');
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText(/^nabíjaj do \d\d:\d\d · lacný prúd$/);
+        await expect(page.locator('#tz-dlazdice [data-vec="auto"] b')).toHaveText('Nabíjaj auto');
+        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('lacný prúd dovtedy');
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
         await expect(page.locator('#tz-skupiny .co-h')).toHaveText(['Najmenej zo siete']);

@@ -16,7 +16,6 @@ import {
     terazChartText,
     terazDalsiText,
     terazDlazdicaText,
-    terazJasText,
     terazNoteText,
     terazOkoText,
     terazPasOkoText,
@@ -88,7 +87,6 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
         ...(m.plan ? tyzdenOf(input, rows, teraz, { span: os.span, devices: devices ?? PLAN_DNA.devices, den, voice }) : {}),
         os,
         pocasie: pocasieOf(input, now),
-        jas: jasOf(input, now),
     };
 }
 
@@ -158,23 +156,6 @@ function dnesOf(input, rows, teraz, span, voice) {
         co: coZapnutModel(rows, { ...teraz, nudza: nudza.map((n) => n.riadok), potom }, voice),
         veci: [...rows.filter((r) => dnesny(r)).map((r) => vecDetail(r, teraz.nowMin, span)), ...nudza.map((n) => n.detail)],
     };
-}
-
-/**
- * Pásik pod číslom: koľko z jasnej oblohy dáva strecha teraz, aby aj menej znalý videl, či je
- * číslo veľa alebo málo. Jasná obloha je bezoblačný strop predpovede dneška (`clearKw`), ten istý,
- * z ktorého počíta percento využitia karta 7 dní. Platí aj pre odhad z predpovede. V noci (slnko
- * pod obzorom alebo strop nula) pásik nie je - na nočnej oblohe rušil. Cez deň aj 0 % ostáva -
- * vtedy niečo nie je v poriadku. `text` je pre čítačku.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
- */
-function jasOf(input, now) {
-    const today = todayOf(input);
-    const clear = today && !now.isNight ? interpolate(today.hourly, now.minutes / 60, 'clearKw') : 0;
-    if (!(clear > 0)) return null;
-    if (!Number.isFinite(now.power)) return { pct: null, label: '', text: '' };
-    const pct = Math.min(100, Math.round((100 * now.power) / clear));
-    return { pct, label: `${pct} %`, text: terazJasText(pct) };
 }
 
 /**
@@ -266,7 +247,6 @@ function empty(kind, estimate) {
         hreben: /** @type {(NonNullable<ReturnType<typeof hrebenModel>> & { zvoleny: number }) | null} */ (null),
         os: /** @type {ReturnType<typeof denOs> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
-        jas: /** @type {{ pct: number | null, label: string, text: string } | null} */ (null),
     };
 }
 
@@ -480,23 +460,26 @@ function najskorsiInyDen(rows) {
  */
 function horeTeraz(teraz, { level, slnkoDnes, potom }, voice) {
     const druh = teraz.every((r) => r.kind === 'cheap') ? 'siet' : 'slnko';
-    const n = teraz.length;
     return {
         druh,
         oko: terazOkoText({ druh, level }, voice),
         bod: druh === 'siet' ? 'cheap' : 'go',
         bezSlnka: druh === 'siet' && !slnkoDnes ? TERAZ_BEZ_SLNKA : '',
-        dlazdice: teraz.map((r, i) => ({
+        dlazdice: teraz.map((r) => ({
             id: r.id,
-            name: r.name,
             tone: r.kind === 'cheap' ? /** @type {const} */ ('cheap') : /** @type {const} */ ('go'),
-            sub: terazDlazdicaText(r, voice),
+            ...terazDlazdicaText(r, voice),
             potom: r.kind === 'sun' ? (potom[r.id] ?? null) : null,
-            cela: n === 1 || (n % 2 === 1 && i === n - 1),
         })),
         dalsi: null,
     };
 }
+
+/**
+ * Dlaždica cez celú šírku mriežky: jediná, alebo posledná z nepárneho počtu. `n` ráta všetky dlaždice
+ * v mriežke, aj Bojler, ktorý riadi zásuvka (pridá ho render). @param {number} i @param {number} n
+ */
+export const celaDlazdica = (i, n) => n === 1 || (n % 2 === 1 && i === n - 1);
 
 /**
  * Keď teraz nejde nič: najbližšia vec dneška `p` (null, keď dnes už nič) a či dnes ešte niečo
@@ -526,7 +509,7 @@ function horeDalsi(p, slnkoPride, { nowMin, level, dalej }, voice) {
  * `bod` je farba bodky pred riadkom: zdroj prúdu teraz, keď teraz nejde nič, cena siete.
  * @typedef {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', oko: { text: string, sub: string },
  *   bod: 'go' | 'cheap' | 'costly' | 'plain' | 'cloud', bezSlnka: string,
- *   dlazdice: Array<{ id: string, name: string, tone: 'go' | 'cheap', sub: string, potom: Potom | null, cela: boolean }>,
+ *   dlazdice: Array<{ id: string, tone: 'go' | 'cheap', velky: string, meno: string, sub: string, potom: Potom | null }>,
  *   dalsi: { id: string, name: string, cas: string, tone: 'go' | 'cheap', sub: string } | null }} CoZapnutHore
  */
 
