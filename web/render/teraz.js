@@ -7,7 +7,7 @@ import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { celaDlazdica, terazModel } from '../../shared/teraz.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { tokIcon, vecIcon } from './icons.js';
@@ -325,6 +325,17 @@ function renderBojlerSheet(state, dom) {
         setHtml(dom.tzBojlerIco, vecIcon('bojler'));
         setText(dom.tzBojlerTtl, d.nadpis);
         setText(dom.tzBojlerPod, d.pod);
+        const R = TERAZ_BOJLER_TEXTS.rezim;
+        setText(dom.tzBojlerRezimN, R.nazov);
+        for (const btn of dom.tzBojlerRezim.querySelectorAll('button')) {
+            const rucne = btn.dataset.bojlerRezim === 'rucne';
+            setText(btn, rucne ? R.rucne : R.appka);
+            btn.setAttribute('aria-pressed', String(rucne === d.rezim.rucne));
+            btn.disabled = state.bojlerRezim === 'uklada';
+        }
+        setText(dom.tzBojlerRezimT, d.rezim.popis);
+        show(dom.tzBojlerRezimChyba, state.bojlerRezim === 'chyba');
+        setText(dom.tzBojlerRezimChyba, R.chyba);
         const teraz = d.pas.teraz === null ? '' : `<i class="os-teraz" style="left:${d.pas.teraz}%"></i>`;
         setHtml(
             dom.tzBojlerPas,

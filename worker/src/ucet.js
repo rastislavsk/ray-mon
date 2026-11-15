@@ -7,7 +7,8 @@
 //
 // Ukladá: reláciu (token a cookies, platia 30 minút), čo meranie zistilo o elektrárni (zariadenia,
 // krivku, časy dopytov - bez hesla), posledné meranie a pre bojler pamäť rozhodovania, posledný
-// kontakt zásuvky a záznam dňa. Heslo neukladá: prichádza vždy v pečati od telefónu či zásuvky.
+// kontakt zásuvky, záznam dňa a režim (ručne / riadi appka). Heslo neukladá: prichádza vždy
+// v pečati od telefónu či zásuvky.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
@@ -54,7 +55,12 @@ export class UcetHuawei {
         const now = new Date(req.now);
         try {
             const path = new URL(request.url).pathname;
-            const body = path === '/bojler' ? await this.bojler(req, now) : await this.pv(req.pristup, now);
+            const body =
+                path === '/bojler'
+                    ? await this.bojler(req, now)
+                    : path === '/rezim'
+                      ? await this.rezim(req, now)
+                      : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -136,12 +142,27 @@ export class UcetHuawei {
         const sietKw = typeof pv?.sietKw === 'number' ? pv.sietKw : null;
         const meranieAt = pv?.measuredAt ? Date.parse(pv.measuredAt) : 0;
         const pamat = /** @type {import('../../shared/bojler.js').Pamat | undefined} */ (await this.storage.get(`bp:${plant}`));
-        const r = rozhodni(pamat ?? PAMAT_ZACIATOK, { rele, w, sietKw, meranieAt, now: now.getTime(), prahy });
+        const rucne = (await this.storage.get(`br:${plant}`)) === true;
+        const r = rozhodni(pamat ?? PAMAT_ZACIATOK, { rele, w, sietKw, meranieAt, now: now.getTime(), prahy, rucne });
         const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
         const energiaWh = cislo(req.e);
         const den = zaznamenaj(stary?.den ?? null, { now, tz: NB.pasmo, rele, w, energiaWh, sietKw });
-        /** @type {BojlerInfo} */ const info = { kontaktAt: now.getTime(), rele, w, prebytokKw: r.prebytokKw, prahy, den };
+        /** @type {BojlerInfo} */ const info = { kontaktAt: now.getTime(), rele, w, prebytokKw: r.prebytokKw, prahy, den, rucne };
         await this.storage.put({ [`bp:${plant}`]: r.pamat, [`b:${plant}`]: info });
-        return { zapni: r.zapni, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
+        return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
+    }
+
+    /**
+     * Režim od appky: ručne (skript relé neprepína) alebo riadi appka. Uloží ho a vráti stav bojlera
+     * s novým režimom (null, keď sa zásuvka ešte neozvala).
+     * @param {{ pristup: Record<string, unknown>, rucne: unknown }} req @param {Date} _now
+     */
+    async rezim(req, _now) {
+        const plant = String(req.pristup.plant ?? '');
+        const rucne = req.rucne === true;
+        const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const bojler = stary ? { ...stary, rucne } : null;
+        await this.storage.put({ [`br:${plant}`]: rucne, ...(bojler ? { [`b:${plant}`]: bojler } : {}) });
+        return { bojler };
     }
 }

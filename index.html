@@ -1006,6 +1006,7 @@
         </dialog>
 
         <!-- Bojler dnes (docs/navrhy/bojler-prebytky.html): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka.
+             Prepínač režimu (ručne / riadi appka): docs/navrhy/teraz-auto-tok.html.
              Pás dňa (zo slnka, zo siete, voda nahriata), počet zapnutí, ako dlho hrial, kWh a jednotlivé behy. -->
         <dialog id="tz-bojler-sheet" class="sheet vec-sheet bojler-sheet" aria-labelledby="tz-bojler-ttl">
             <div class="sheet-in">
@@ -1016,6 +1017,15 @@
                         <p id="tz-bojler-pod" class="vec-kedy"></p>
                     </div>
                 </div>
+                <!-- Kto zapína bojler: appka podľa prebytku, alebo človek (ručne, časovačom v appke Shelly) - vtedy
+                     skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
+                <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">
+                    <span id="tz-bojler-rezim-n" class="sr"></span>
+                    <button type="button" data-bojler-rezim="appka" aria-pressed="true"></button>
+                    <button type="button" data-bojler-rezim="rucne" aria-pressed="false"></button>
+                </div>
+                <p id="tz-bojler-rezim-t" class="bj-rezim-t"></p>
+                <p id="tz-bojler-rezim-chyba" class="wz-msg hidden" role="status"></p>
                 <div id="tz-bojler-pas" aria-hidden="true"></div>
                 <div id="tz-bojler-cisla" class="bj-cisla"></div>
                 <div id="tz-bojler-behy" class="bj-behy"></div>

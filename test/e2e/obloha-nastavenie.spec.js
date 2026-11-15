@@ -13,6 +13,7 @@ import {
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     WORKER_BOJLER_PECAT_URL,
+    WORKER_BOJLER_REZIM_URL,
     WORKER_BOJLER_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
@@ -24,7 +25,7 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
-import { bojlerDetail, bojlerDlazdica, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -1107,6 +1108,45 @@ test.describe('bojler na prebytky', () => {
         expect(axe.violations).toEqual([]);
         await page.keyboard.press('Escape');
         await expect(sheet).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+    test('ručný režim: prepínač v paneli Bojler dnes uloží režim a dlaždica prestane radiť', async ({ page }) => {
+        await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
+        /** @type {any[]} */ const ulozene = [];
+        let zlyhaj = false;
+        await page.route(WORKER_BOJLER_REZIM_URL, (route) => {
+            const telo = JSON.parse(route.request().postData() ?? '{}');
+            ulozene.push(telo);
+            return zlyhaj
+                ? route.fulfill({ status: 503, json: { chyba: 'server' } })
+                : route.fulfill({ json: { ok: true, bojler: { ...BOJLER_INFO, rucne: telo.rucne } } });
+        });
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
+        const R = TERAZ_BOJLER_TEXTS.rezim;
+        await page.locator('#tz-dlazdice [data-vec="bojler"]').click();
+        const appka = page.locator('[data-bojler-rezim="appka"]');
+        const rucne = page.locator('[data-bojler-rezim="rucne"]');
+        await expect(appka).toHaveText(R.appka);
+        await expect(appka).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#tz-bojler-rezim-t')).toHaveText(R.popisAppka('2,3', '2,0'));
+        await rucne.click();
+        await expect(rucne).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#tz-bojler-rezim-t')).toHaveText(R.popisRucne);
+        expect(ulozene).toEqual([{ pecat: NB_ZDROJ.pecat, rucne: true }]);
+        const info = { ...BOJLER_INFO, rucne: true };
+        await expect(page.locator('#tz-bojler-pod')).toHaveText(bojlerDetail(info, FIXED_NOW, SITE.timezone).pod);
+        expect((await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze()).violations).toEqual([]);
+        // Nepodarí sa uložiť: prepínač sa vráti a povie to.
+        zlyhaj = true;
+        await appka.click();
+        await expect(page.locator('#tz-bojler-rezim-chyba')).toHaveText(R.chyba);
+        await expect(rucne).toHaveAttribute('aria-pressed', 'true');
+        await page.keyboard.press('Escape');
+        const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);
+        const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
+        await expect(dl).toHaveAttribute('data-tone', 'tiche');
+        await expect(dl).toContainText(t.meno);
+        await expect(dl).toContainText(t.sub);
         expect(errors).toEqual([]);
     });
 });

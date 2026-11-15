@@ -22,6 +22,7 @@
 import {
     WORKER_BOJLER_PATH,
     WORKER_BOJLER_PECAT_PATH,
+    WORKER_BOJLER_REZIM_PATH,
     WORKER_OZNAMENIA_PATH,
     WORKER_PRIPOJ_PATH,
     WORKER_PRIPOMEN_PATH,
@@ -260,25 +261,56 @@ export async function handleBojlerPecat(request, env, now) {
 }
 
 /**
+ * JSON od zásuvky či appky s pečaťou Huawei Northbound (nie odkazom na zdieľanie): telo a otvorená pečať,
+ * alebo `obsah` null, keď telo či pečať nesedí.
+ * @param {Request} request @param {Promise<CryptoKey>} key @param {Date} now
+ * @returns {Promise<{ req: any, obsah: Awaited<ReturnType<typeof otvor>> }>}
+ */
+async function dopytBojlera(request, key, now) {
+    /** @type {any} */ let req = null;
+    try {
+        req = JSON.parse((await telo(request)) ?? '');
+    } catch {
+        return { req: null, obsah: null };
+    }
+    const obsah = isObj(req) && typeof req.pecat === 'string' ? await otvor(key, req.pecat, now) : null;
+    const nb = !!obsah && obsah.sposob === 'huawei-northbound' && obsah.platiDo === undefined;
+    return { req, obsah: nb ? obsah : null };
+}
+
+/**
  * POST /bojler: `{ pecat, rele, w, e, zapKw, vypKw }` od skriptu zásuvky (stav relé, príkon vo W,
- * počítadlo energie vo Wh, prahy) -> `{ zapni }`. Rozhoduje Durable Object účtu (shared/bojler.js).
+ * počítadlo energie vo Wh, prahy) -> `{ zapni, rucne }`. V ručnom režime je `zapni` stav relé, takže ho
+ * nezmení ani starší skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js).
  * @param {Request} request @param {Env} env @param {Date} now
  */
 export async function handleBojler(request, env, now) {
     const key = pecatKey(env.PECAT_KLUC);
     if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    /** @type {any} */ let req = null;
-    try {
-        req = JSON.parse((await telo(request)) ?? '');
-    } catch {
-        return json(400, { chyba: 'udaje' });
-    }
-    const obsah = isObj(req) && typeof req.pecat === 'string' ? await otvor(key, req.pecat, now) : null;
-    if (!obsah || obsah.sposob !== 'huawei-northbound' || obsah.platiDo !== undefined) return json(400, { chyba: 'udaje' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
     try {
         const prahy = { zapKw: req.zapKw, vypKw: req.vypKw };
         const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, { rele: req.rele, w: req.w, e: req.e, prahy });
-        return json(200, { zapni: r.zapni === true, prebytokKw: r.prebytokKw ?? null });
+        return json(200, { zapni: r.zapni === true, rucne: r.rucne === true, prebytokKw: r.prebytokKw ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
+ * POST /bojler-rezim: `{ pecat, rucne }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ ok, bojler }`.
+ * V ručnom režime skript v zásuvke relé neprepína, len hlási (docs/navrhy/teraz-auto-tok.html).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojlerRezim(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah || typeof req.rucne !== 'boolean') return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/rezim', now, { rucne: req.rucne });
+        return json(200, { ok: true, bojler: r.bojler ?? null });
     } catch (err) {
         return chyba(err);
     }
@@ -307,6 +339,7 @@ const CESTY = {
     // Zásuvka sa pýta každú minútu a bez platnej pečate nič nespraví, ako meranie.
     [WORKER_BOJLER_PATH]: { limit: false, run: handleBojler },
     [WORKER_BOJLER_PECAT_PATH]: { limit: true, run: handleBojlerPecat },
+    [WORKER_BOJLER_REZIM_PATH]: { limit: true, run: handleBojlerRezim },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
     [WORKER_TRASY_PATH]: {

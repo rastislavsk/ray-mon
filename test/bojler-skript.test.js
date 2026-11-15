@@ -70,6 +70,20 @@ test('skript: bez odpovede drží stav a po BOJLER.tichoMin minútach vypne', ()
     assert.deepEqual([z.z.output, n.z.output], [false, false]);
 });
 
+test('skript: v ručnom režime relé neprepne - ani na pokyn, ani pri tichu', () => {
+    const kod = /** @type {string} */ (skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2 }));
+    let ok = true;
+    const s = zasuvka(kod, () => (ok ? { code: 200, body: '{"zapni":false,"rucne":true}' } : null));
+    // Človek zapol bojler v appke Shelly: skript to len nahlási.
+    s.z.output = true;
+    s.minuta();
+    assert.equal(s.z.output, true);
+    assert.equal(s.dopyty[1].telo.rele, true);
+    ok = false;
+    for (let i = 0; i < BOJLER.tichoMin + 2; i++) s.minuta();
+    assert.equal(s.z.output, true, 'v ručnom režime ani výpadok internetu bojler nevypne');
+});
+
 test('skript: pečať ani adresa s úvodzovkami sa do skriptu nedostanú', () => {
     assert.equal(skriptBojlera({ url: WORKER_BOJLER_URL, pecat: "v1.a';Shelly.call('Switch.Set')", zapKw: 2.3, vypKw: 2 }), null);
     assert.equal(skriptBojlera({ url: "https://x.sk/'", pecat: PECAT, zapKw: 2.3, vypKw: 2 }), null);

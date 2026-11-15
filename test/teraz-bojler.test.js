@@ -25,6 +25,7 @@ const info = (/** @type {object} */ o = {}) => ({
     prebytokKw: 2.6,
     prahy: PRAHY,
     den: DEN,
+    rucne: false,
     ...o,
 });
 
@@ -98,10 +99,43 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí', ()
         tone: 'chyba',
         riadi: 'mlci',
         velky: '18 min',
-        meno: 'Zásuvka mlčí',
-        sub: 'bez spojenia so zásuvkou',
+        meno: 'Zásuvka sa neozýva',
+        sub: 'skript nebeží alebo je bez Wi-Fi',
     });
     assert.equal(bojlerDlazdica(info({ kontaktAt: NOW.getTime() - 130 * MIN }), NOW, TZ).velky, '2 h');
+});
+
+test('ručný režim: dlaždica na skle bez rady - hreje, voda nahriata, vypnutý; mlčí ako vždy', () => {
+    const rucne = (/** @type {object} */ o = {}) => bojlerDlazdica(info({ rucne: true, ...o }), NOW, TZ);
+    assert.deepEqual(rucne(), { tone: 'tiche', riadi: 'bezi', velky: '2,2 kW', meno: 'Hreje', sub: 'ručne · od 12:30' });
+    assert.equal(rucne({ den: null }).sub, 'ručne');
+    // Termostat vypol: dnešné kWh spolu (zo slnka aj zo siete).
+    assert.deepEqual(rucne({ w: 3 }), {
+        tone: 'tiche',
+        riadi: 'caka',
+        velky: '3,9 kWh',
+        meno: 'Voda nahriata',
+        sub: 'ručne · zásuvka zapnutá',
+    });
+    assert.equal(rucne({ w: 3, den: null }).velky, '0,0 kWh');
+    const vyp = { rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } };
+    assert.deepEqual(rucne(vyp), { tone: 'tiche', riadi: 'vyp', velky: '0 kW', meno: 'Vypnutý', sub: 'ručne · od 11:25' });
+    assert.equal(rucne({ rele: false, w: 0, den: null }).sub, 'ručne');
+    assert.equal(rucne({ kontaktAt: NOW.getTime() - 18 * MIN }).meno, 'Zásuvka sa neozýva');
+});
+
+test('ručný režim v paneli: riadok pod nadpisom a prepínač s popisom', () => {
+    const auto = bojlerDetail(info(), NOW, TZ);
+    assert.deepEqual(auto.rezim, { rucne: false, popis: 'Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.' });
+    const r = bojlerDetail(info({ rucne: true }), NOW, TZ);
+    assert.equal(r.pod, 'ručne · hreje od 12:30');
+    assert.equal(r.rezim.rucne, true);
+    assert.match(r.rezim.popis, /appke Shelly/);
+    const vyp = bojlerDetail(info({ rucne: true, rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } }), NOW, TZ);
+    assert.equal(vyp.pod, 'ručne · vypnutý od 11:25');
+    assert.equal(bojlerDetail(info({ rucne: true, rele: false, w: 0, den: null }), NOW, TZ).pod, 'ručne · vypnutý');
+    assert.equal(bojlerDetail(info({ rucne: true, den: null }), NOW, TZ).pod, 'ručne · hreje');
+    assert.equal(bojlerDetail(info({ den: null }), NOW, TZ).pod, 'hreje');
 });
 
 test('panel Bojler dnes: pás, čísla a behy', () => {
@@ -134,9 +168,9 @@ test('panel: nahriata voda, mlčiaca zásuvka a deň bez behov', () => {
     assert.equal(hotovo.pod, 'voda nahriata o 13:55');
     assert.equal(hotovo.behy[1].info, '0,2 kWh zo siete · nahriata 13:55');
     assert.deepEqual(hotovo.pas.useky.at(-1)?.tone, 'hotovo');
-    assert.equal(bojlerDetail(info({ kontaktAt: NOW.getTime() - 20 * MIN }), NOW, TZ).pod, 'zásuvka sa neozvala od 13:40');
+    assert.equal(bojlerDetail(info({ kontaktAt: NOW.getTime() - 20 * MIN }), NOW, TZ).pod, 'zásuvka sa neozýva od 13:40');
     const vcera = bojlerDetail(info({ kontaktAt: NOW.getTime() - 22 * 60 * MIN }), NOW, TZ);
-    assert.equal(vcera.pod, 'zásuvka sa neozvala od 14. 11. 16:00');
+    assert.equal(vcera.pod, 'zásuvka sa neozýva od 14. 11. 16:00');
     const caka = bojlerDetail(info({ rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } }), NOW, TZ);
     assert.equal(caka.pod, 'čaká na prebytok');
     const nic = bojlerDetail(info({ rele: false, w: 0, den: null }), NOW, TZ);

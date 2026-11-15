@@ -2,6 +2,7 @@
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Graf dňa je v paneli
 // karty Dnes (mozem-interactions.js).
 
+import { ulozRezimBojlera } from './data.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 
@@ -24,16 +25,35 @@ export function initTeraz(store, dom, refresh) {
     });
     dom.tzCo.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-vec]') : null;
-        if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky' });
+        // Hláška o neuloženom režime bojlera patrí len k ťuknutiu, po ktorom vznikla.
+        if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky', bojlerRezim: null });
     });
     initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
     initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
     // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - ten istý krok (tzVec).
     initSheet(dom.tzBojlerSheet, () => stepBack(store, { tzVec: null }));
+    dom.tzBojlerRezim.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-bojler-rezim]') : null;
+        if (btn instanceof HTMLElement) zmenRezim(store, btn.dataset.bojlerRezim === 'rucne');
+    });
     initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
+}
+
+/**
+ * Prepínač režimu bojlera: hneď ukáže nový režim a uloží ho vo Workeri; keď sa nepodarí, vráti pôvodný
+ * a povie to. @param {Store} store @param {boolean} rucne
+ */
+async function zmenRezim(store, rucne) {
+    const { zdroj, bojler, bojlerRezim } = store.get();
+    if (!zdroj || !bojler || bojler.rucne === rucne || bojlerRezim === 'uklada') return;
+    store.setState({ bojler: { ...bojler, rucne }, bojlerRezim: 'uklada' });
+    const r = await ulozRezimBojlera(zdroj.pecat, rucne);
+    const teraz = store.get().bojler;
+    if (r) store.setState({ bojler: r.bojler ?? teraz, bojlerRezim: null });
+    else store.setState({ bojler: teraz && { ...teraz, rucne: !rucne }, bojlerRezim: 'chyba' });
 }

@@ -192,6 +192,7 @@ test('bojler: stav z merania ide do rytmu a po obnovení stránky ho appka preve
         prebytokKw: 2.6,
         prahy: { zapKw: 2.3, vypKw: 2 },
         den: null,
+        rucne: false,
     };
     a.odpovede.push({ status: 200, body: { pv: pvAt(FIXED_NOW), bojler } });
     await a.refresh();

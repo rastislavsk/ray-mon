@@ -33,6 +33,7 @@ export const BOJLER_TEXTS = {
         hreje: 'hreje',
         caka: 'čaká na prebytok',
         hotovo: 'voda nahriata',
+        vypnuty: 'vypnutý ručne',
     },
     mlci: 'neozvala sa od',
     ine: /** @type {[string, string]} */ ([

@@ -179,7 +179,7 @@ test('rytmus: spoločný, patrí k meraniu podľa spôsobu a mena, nechá posled
     for (const bad of [null, 'x', { ...r, at: 'x' }, { ...r, sposob: 1 }]) assert.equal(parseRytmus(bad), null);
 
     // Stav bojlera ide s meraním: nevydarený dopyt ho nechá, nové meranie bez neho ho zmaže.
-    const bojler = { kontaktAt: 1, rele: true, w: 2200, prebytokKw: 2.5, prahy: { zapKw: 2.3, vypKw: 2 }, den: null };
+    const bojler = { kontaktAt: 1, rele: true, w: 2200, prebytokKw: 2.5, prahy: { zapKw: 2.3, vypKw: 2 }, den: null, rucne: false };
     const sBojlerom = dalsiRytmus(r, z, NOW, pv, bojler);
     assert.deepEqual(parseRytmus(JSON.parse(JSON.stringify(sBojlerom)))?.bojler, bojler);
     assert.deepEqual(dalsiRytmus(sBojlerom, z, NOW, null).bojler, bojler);
