@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: bojler na prebytky</title>
+        <style>
+            /* Mockup, nie snímka z appky. Dlaždice sú kreslené ručne podľa css/teraz.css (farby zo zaklad.css).
+               Scenár je vymyslený (nedeľa 15. 11. 2026); simulácia dňa je odhad, nie meranie. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.7);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --amber: #ffc94a;
+                --gold: #ffd166;
+                --glass: rgba(8, 16, 40, 0.3);
+                --tmava: #0b1430;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 36px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            h3 {
+                font-size: 1rem;
+            }
+            p {
+                margin: 0;
+                max-width: 760px;
+            }
+            code {
+                font-size: 0.88em;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 5px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                padding-top: 24px;
+                grid-template-columns: minmax(0, 1fr);
+                border-top: 1px solid var(--line);
+                min-width: 0;
+            }
+            .note {
+                padding: 12px 14px;
+                border-left: 3px solid var(--amber);
+                background: rgba(255, 201, 74, 0.07);
+                font-size: 0.9rem;
+                max-width: 760px;
+            }
+            ul,
+            ol {
+                margin: 0;
+                padding-left: 20px;
+                display: grid;
+                gap: 6px;
+                max-width: 760px;
+            }
+            .plus {
+                color: var(--yes);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+
+            /* Schéma: kto sa koho pýta */
+            .schema {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 12px;
+                max-width: 980px;
+            }
+            .uzol {
+                padding: 14px;
+                border-radius: 18px;
+                border: 1px solid var(--line);
+                background: rgba(255, 255, 255, 0.04);
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            .uzol b {
+                font-size: 1rem;
+            }
+            .uzol small {
+                color: var(--dim);
+                font-size: 0.84rem;
+            }
+            .uzol .sipka {
+                color: var(--gold);
+                font-weight: 800;
+                font-size: 0.8rem;
+                letter-spacing: 0.04em;
+            }
+            .uzol[data-novy] {
+                border-color: var(--gold);
+            }
+
+            /* Simulácia dňa */
+            .sim {
+                display: grid;
+                gap: 12px;
+                padding: 16px;
+                border-radius: 22px;
+                background: linear-gradient(180deg, #2f6fb8 0%, #4d8bd2 100%);
+                max-width: 980px;
+            }
+            .ovl {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px 22px;
+                align-items: center;
+            }
+            .ovl label {
+                display: grid;
+                gap: 2px;
+                font-size: 0.82rem;
+                font-weight: 700;
+            }
+            .ovl output {
+                font-variant-numeric: tabular-nums;
+                color: var(--gold);
+            }
+            .ovl input[type='range'] {
+                width: 170px;
+                accent-color: var(--gold);
+            }
+            .dni-sim {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .dni-sim button {
+                font: inherit;
+                font-size: 0.82rem;
+                font-weight: 800;
+                padding: 6px 12px;
+                border-radius: 999px;
+                border: 1.5px solid rgba(255, 255, 255, 0.5);
+                background: transparent;
+                color: #fff;
+                cursor: pointer;
+            }
+            .dni-sim button[aria-pressed='true'] {
+                background: #fff;
+                color: var(--tmava);
+            }
+            .graf svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            .sucet {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                gap: 8px;
+            }
+            .sucet div {
+                padding: 10px 12px;
+                border-radius: 16px;
+                background: var(--glass);
+            }
+            .sucet b {
+                display: block;
+                font-size: 1.35rem;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+            }
+            .sucet small {
+                font-size: 0.78rem;
+                color: var(--dim);
+            }
+            .legenda {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 16px;
+                font-size: 0.78rem;
+                color: rgba(255, 255, 255, 0.9);
+            }
+            .legenda i {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 3px;
+                vertical-align: -1px;
+                margin-right: 5px;
+            }
+
+            /* Telefóny */
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(350px, 100%);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            .tel {
+                padding: 18px 14px 22px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f6fb8 0%, #5b9be0 60%, #8cc0f0 100%);
+                overflow: hidden;
+                display: grid;
+                gap: 10px;
+            }
+            .tel[data-zamracene] {
+                background: linear-gradient(180deg, #4a5a72 0%, #6f7f96 60%, #9aa7b8 100%);
+            }
+            .cislo {
+                display: flex;
+                align-items: baseline;
+                flex-wrap: wrap;
+                gap: 4px 8px;
+                padding: 0 2px;
+            }
+            .cislo b {
+                font-size: 2.4rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .cislo span {
+                font-size: 0.8rem;
+                color: #fff;
+            }
+            .tok {
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                padding: 3px 10px;
+                border-radius: 999px;
+                background: var(--glass);
+                font-size: 0.8rem;
+                font-weight: 800;
+                width: max-content;
+            }
+            .tok[data-smer='von'] {
+                color: var(--yes);
+            }
+            .tok[data-smer='dnu'] {
+                color: #ffc4ba;
+            }
+            .co-h {
+                margin: 6px 6px 0;
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                align-content: space-between;
+                gap: 12px;
+                min-width: 0;
+                min-height: 136px;
+                padding: 14px;
+                border-radius: 24px;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+                box-shadow: 0 8px 30px rgba(185, 242, 140, 0.3);
+            }
+            .dl[data-tone='next'] {
+                border: 2px solid var(--yes);
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl[data-tone='tiche'] {
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl[data-tone='chyba'] {
+                border: 2px solid var(--amber);
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl-ico {
+                width: 44px;
+                height: 44px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(20, 48, 12, 0.12);
+                position: relative;
+            }
+            .dl[data-tone='next'] .dl-ico,
+            .dl[data-tone='tiche'] .dl-ico,
+            .dl[data-tone='chyba'] .dl-ico {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            /* Bodka „riadi zásuvka“: beží (zelená), čaká (biela), mlčí (jantárová). */
+            .dl-ico[data-riadi]::after {
+                content: '';
+                position: absolute;
+                right: 1px;
+                top: 1px;
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.35);
+            }
+            .dl-ico[data-riadi='bezi']::after {
+                background: #2f8a17;
+                box-shadow: 0 0 0 2px var(--yes);
+            }
+            .dl-ico[data-riadi='mlci']::after {
+                background: var(--amber);
+            }
+            .vi {
+                width: 26px;
+                height: 26px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .dl b {
+                display: block;
+                font-size: 1.3rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .dl small {
+                display: block;
+                margin-top: 3px;
+                font-size: 0.84rem;
+                font-weight: 600;
+                line-height: 1.25;
+            }
+            .dl .velky {
+                display: block;
+                font-size: 1.6rem;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .dl.cela {
+                grid-column: 1 / -1;
+                min-height: 0;
+            }
+            /* Pás dneška v dlaždici (variant B): kedy bojler bežal. */
+            .pasik {
+                display: grid;
+                gap: 3px;
+            }
+            .pasik svg {
+                display: block;
+                width: 100%;
+                height: 16px;
+            }
+            .pasik span {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.66rem;
+                font-weight: 700;
+                opacity: 0.8;
+            }
+            .malo {
+                min-height: 136px;
+                border-radius: 24px;
+                background: var(--glass);
+                padding: 14px;
+                display: grid;
+                align-content: end;
+                font-size: 0.8rem;
+                color: var(--dim);
+            }
+
+            /* Detail bojlera: panel zdola nad stlmenou kartou */
+            .detail-tel {
+                position: relative;
+                min-height: 560px;
+                align-content: end;
+                padding: 0;
+            }
+            .za-panelom {
+                position: absolute;
+                inset: 0;
+                background: rgba(4, 8, 20, 0.45);
+            }
+            .panel {
+                position: relative;
+                display: grid;
+                gap: 14px;
+                padding: 10px 16px 22px;
+                border-radius: 26px 26px 0 0;
+                background: rgba(12, 24, 58, 0.92);
+            }
+            .uchyt {
+                justify-self: center;
+                width: 40px;
+                height: 4px;
+                border-radius: 2px;
+                background: rgba(255, 255, 255, 0.4);
+            }
+            .panel-h {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .panel-h b {
+                display: block;
+                font-size: 1.2rem;
+                font-weight: 800;
+            }
+            .panel-h small {
+                color: var(--dim);
+                font-size: 0.84rem;
+            }
+            .cisla4 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .cisla4 div {
+                padding: 10px 12px;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.07);
+            }
+            .cisla4 b {
+                display: block;
+                font-size: 1.3rem;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+            }
+            .cisla4 small {
+                font-size: 0.78rem;
+                color: var(--dim);
+            }
+            .behy {
+                display: grid;
+            }
+            .behy div {
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 8px 2px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                font-size: 0.88rem;
+                font-variant-numeric: tabular-nums;
+            }
+            .behy div:last-child {
+                border-bottom: 0;
+            }
+            .behy i {
+                font-style: normal;
+                font-weight: 700;
+                text-align: right;
+            }
+            .zel {
+                color: var(--yes);
+            }
+            .cerv {
+                color: #ffc4ba;
+            }
+
+            /* Nastavenie */
+            .sklo {
+                border-radius: 22px;
+                background: var(--glass);
+                overflow: hidden;
+            }
+            .riadok {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 12px 14px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+                font-size: 0.92rem;
+            }
+            .riadok:last-child {
+                border-bottom: 0;
+            }
+            .riadok small {
+                display: block;
+                color: var(--dim);
+                font-size: 0.78rem;
+            }
+            .prepinac {
+                flex: none;
+                width: 46px;
+                height: 28px;
+                border-radius: 999px;
+                background: var(--yes);
+                position: relative;
+            }
+            .prepinac::after {
+                content: '';
+                position: absolute;
+                right: 3px;
+                top: 3px;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #14300c;
+            }
+            .hodnota {
+                flex: none;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                padding: 4px 10px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .tlacidlo {
+                display: block;
+                text-align: center;
+                padding: 12px;
+                border-radius: 999px;
+                background: #fff;
+                color: var(--tmava);
+                font-weight: 800;
+                font-size: 0.92rem;
+            }
+            .stav-ok {
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .kroky {
+                font-size: 0.84rem;
+                padding-left: 22px;
+                gap: 4px;
+            }
+            pre {
+                margin: 0;
+                padding: 14px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid var(--line);
+                font-size: 0.8rem;
+                line-height: 1.45;
+                overflow-x: auto;
+                max-width: 760px;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.88rem;
+                max-width: 760px;
+            }
+            td,
+            th {
+                text-align: left;
+                padding: 6px 12px 6px 0;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--amber);
+                font-size: 0.78rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 8px">
+                <h1>Bojler na prebytky – možnosť B</h1>
+                <p class="note">
+                    Mockup na schválenie, v appke sa nič nezmenilo. Skript v zásuvke sa každú minútu opýta Workera, či má bojler zapnúť.
+                    Worker odpovie podľa elektromera Huawei. Simulácia dňa nižšie je odhad z vymyslenej krivky, nie meranie. Bojler Dražice
+                    OKHE 160 má 2,2 kW, Shelly Plug M Gen3 znesie 3000 W, takže je tam rezerva.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>1 · Ako to funguje</small>Kto sa koho pýta</h2>
+                <div class="schema">
+                    <div class="uzol" data-novy>
+                        <b>Zásuvka Shelly (skript)</b>
+                        <small>Každú minútu pošle svoj príkon a stav relé, dostane späť „zapni“ alebo „vypni“ a poslúchne.</small>
+                        <small
+                            >Poistka priamo v zásuvke: keď 15 minút nepríde odpoveď, vypne sa. Pri výpadku internetu bojler nepôjde zo
+                            siete.</small
+                        >
+                        <span class="sipka">→ POST /bojler každú minútu</span>
+                    </div>
+                    <div class="uzol" data-novy>
+                        <b>Worker</b>
+                        <small
+                            >Rozhodne funkciou zo <code>shared/</code> (otestovanou). Na Huawei siahne najviac raz za 5 minút, inak odpovedá
+                            z cache.</small
+                        >
+                        <small>Nič neukladá natrvalo, ako doteraz. Prístup k Huawei mu pošle zásuvka v pečati, rovnako ako telefón.</small>
+                        <span class="sipka">→ getDevRealKpi, typ 17</span>
+                    </div>
+                    <div class="uzol">
+                        <b>Huawei Northbound</b>
+                        <small
+                            >Elektromer (typ 17) meria čistý export celého domu vrátane bojlera. Keď bojler zapne, export klesne o jeho
+                            príkon. Rozhodovať sa preto musí podľa prebytku <b>bez bojlera</b> = <b>export + príkon bojlera zo zásuvky</b>.
+                            Keby sa rozhodovalo podľa samotného exportu, bojler by sa hneď po zapnutí vypol.</small
+                        >
+                    </div>
+                    <div class="uzol">
+                        <b>Telefón (appka)</b>
+                        <small
+                            >Meria ako doteraz, ale z tej istej cache. Telefón a zásuvka tak nenarazia na limit Huawei (407) a jeden druhému
+                            neodhlásia reláciu.</small
+                        >
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>2 · Pravidlo</small>Kedy zapnúť a kedy vypnúť</h2>
+                <ul>
+                    <li><b>Zapni</b>, keď je prebytok ≥ <b>2,3 kW</b> v dvoch meraniach Huawei za sebou (10 min).</li>
+                    <li>
+                        <b>Vypni</b>, keď prebytok bez bojlera (export + príkon bojlera) klesne pod <b>2,0 kW</b> v dvoch meraniach za
+                        sebou. Na elektromeri to znamená, že dom začal brať zo siete viac ako 0,2 kW.
+                    </li>
+                    <li>Keď sa zapne, beží aspoň <b>15 min</b>. Po vypnutí sa znova zapne najskôr o <b>10 min</b>. Relé tak necvaká.</li>
+                    <li>
+                        Keď je voda nahriata, termostat bojlera ho vypne sám a zásuvka hlási ~0 W. Prebytok vtedy rovná sa dodávke do siete
+                        a zásuvka ostane zapnutá. To je v poriadku, nič to nestojí.
+                    </li>
+                    <li><b>Bez údajov</b> (Huawei mlčí, Worker neodpovedá) 15 minút: vypni.</li>
+                </ul>
+                <p class="note">
+                    Prahy 2,3 / 2,0 si zvolil ty. Bojler má 2,2 kW, takže si zo siete zoberie najviac ~0,2 kW, kým ho pravidlo vypne. Po
+                    zapnutí ukáže elektromer export ~0,1 kW. Posuvníkmi si môžeš vyskúšať iné prahy.
+                </p>
+
+                <div class="sim">
+                    <div class="dni-sim" role="group" aria-label="Deň simulácie">
+                        <button type="button" data-den="jasno" aria-pressed="true">Jasno</button>
+                        <button type="button" data-den="oblaky">Prechádzajú oblaky</button>
+                        <button type="button" data-den="rano">Zamračené dopoludnia</button>
+                    </div>
+                    <div class="ovl">
+                        <label
+                            >Zapni od <output id="o-zap">2,3 kW</output
+                            ><input id="zap" type="range" min="1.5" max="3.5" step="0.1" value="2.3"
+                        /></label>
+                        <label
+                            >Vypni pod <output id="o-vyp">2,0 kW</output
+                            ><input id="vyp" type="range" min="0.5" max="3" step="0.1" value="2.0"
+                        /></label>
+                    </div>
+                    <div class="graf" id="graf"></div>
+                    <div class="legenda">
+                        <span><i style="background: #ffd166"></i>prebytok bez bojlera (výroba − dom)</span>
+                        <span><i style="background: #b9f28c"></i>bojler hreje zo slnka</span>
+                        <span><i style="background: #ff7a66"></i>bojler berie zo siete</span>
+                        <span><i style="background: rgba(255, 255, 255, 0.35)"></i>zásuvka zapnutá, voda nahriata</span>
+                    </div>
+                    <div class="sucet" id="sucet"></div>
+                </div>
+                <p style="font-size: 0.84rem; color: var(--dim)">
+                    Simulácia ráta po 5 minútach, ako ich dáva Huawei, a rozhoduje s jedným meraním meškania. Dom berie 0,35 kW, od 10 do
+                    11:30 beží práčka (+0,6 kW). Voda dnes potrebuje 7 kWh, potom termostat bojler vypne. Všetky čísla sú vymyslené.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>3 · Appka</small>Dlaždica Bojler na karte Teraz</h2>
+                <p>
+                    Dlaždica Bojler na karte Teraz už existuje, dnes radí podľa predpovede. Keď bojler riadi zásuvka, appka namiesto rady
+                    ukáže, čo sa naozaj deje. Pod veľkým číslom pribudne smer toku (do siete / zo siete), ten vie appka z elektromera aj bez
+                    zásuvky.
+                </p>
+                <h3>Dlaždica: len stav (variant A)</h3>
+                <div class="phones" id="tel-a"></div>
+                <h3>Detail po ťuknutí na dlaždicu</h3>
+                <p>
+                    Ťuknutie na dlaždicu otvorí panel zdola, rovnaký ako panely na kartách Teraz a Dnes a zatvára sa rovnako ako ony. V ňom
+                    je pás dneška, počet zapnutí a jednotlivé behy.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel detail-tel">
+                            <div class="za-panelom"></div>
+                            <div class="panel">
+                                <span class="uchyt"></span>
+                                <div class="panel-h">
+                                    <span class="dl-ico" data-riadi="caka" style="background: rgba(255, 255, 255, 0.14)"
+                                        ><svg class="vi" viewBox="0 0 24 24" aria-hidden="true">
+                                            <rect x="6" y="2.5" width="12" height="19" rx="6" />
+                                            <path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z" /></svg
+                                    ></span>
+                                    <span><b>Bojler dnes</b><small>voda nahriata o 14:05</small></span>
+                                </div>
+                                <div id="detail-pas"></div>
+                                <div class="cisla4">
+                                    <div><b>3×</b><small>zapnutý</small></div>
+                                    <div><b>2 h 50 min</b><small>hrial</small></div>
+                                    <div><b class="zel">6,1 kWh</b><small>zo slnka</small></div>
+                                    <div><b class="cerv">0,1 kWh</b><small>zo siete</small></div>
+                                </div>
+                                <div class="behy">
+                                    <div><span>10:40 – 11:25</span><i class="zel">zo slnka</i></div>
+                                    <div><span>11:45 – 12:15</span><i class="cerv">oblak · 0,1 kWh zo siete</i></div>
+                                    <div><span>12:30 – teraz</span><i class="zel">zo slnka · nahriata 14:05</i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Panel Bojler dnes.</b> Pás 6–18 h: zelená = hrial zo slnka, červená = bral zo siete (prechádzajúci oblak),
+                            sivá = zásuvka zapnutá, ale voda už nahriata. Biela čiarka je teraz. „3×“ je počet zapnutí relé za deň, riadky
+                            pod ním sú jednotlivé behy.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>4 · Nastavenie</small>Zapojenie zásuvky</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="co-h">Bojler na prebytky</div>
+                            <div class="sklo">
+                                <div class="riadok"><span>Riadiť podľa prebytkov</span><span class="prepinac"></span></div>
+                                <div class="riadok">
+                                    <span>Zapni od<small>dva razy po sebe, 10 min</small></span
+                                    ><span class="hodnota">2,3 kW</span>
+                                </div>
+                                <div class="riadok">
+                                    <span>Vypni pod<small>dva razy po sebe, 10 min</small></span
+                                    ><span class="hodnota">2,0 kW</span>
+                                </div>
+                                <div class="riadok">
+                                    <span>Zásuvka<small>ozvala sa pred 40 s · hreje 2,21 kW</small></span
+                                    ><span class="stav-ok">● spojená</span>
+                                </div>
+                            </div>
+                            <span class="tlacidlo">Skopíruj skript do zásuvky</span>
+                        </div>
+                        <figcaption>
+                            <b>V Nastavení pod Čo máš doma → Bojler.</b> Prahy sú súčasťou skriptu. Po zmene treba skript skopírovať znova,
+                            appka to povie.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="co-h">Ako skript nahrať</div>
+                            <div class="sklo" style="padding: 12px 14px">
+                                <ol class="kroky">
+                                    <li>V appke Shelly otvor zásuvku → <b>Skripty</b> → <b>Nový skript</b>.</li>
+                                    <li>Vlož skopírovaný text, ulož.</li>
+                                    <li>Zapni <b>Spustiť pri štarte</b> a skript spusti.</li>
+                                    <li>Do minúty sa tu ukáže „spojená“.</li>
+                                </ol>
+                            </div>
+                            <div class="sklo" style="padding: 12px 14px; font-size: 0.82rem">
+                                Skript nesie pečať prístupu k meraniu, nie heslo k Huawei. Kto by ho zo zásuvky vytiahol, vie cez Worker
+                                čítať tvoje meranie, nič viac. Zásuvka by preto mala mať heslo na webové rozhranie.
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Návod v appke.</b> Presné názvy položiek v appke Shelly overím, keď sa ku kódu dostaneme. Kroky tu píšem
+                            spamäti.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>4b · História dňa</small>Odkiaľ panel Bojler dnes vie, čo sa dialo</h2>
+                <p>
+                    Riadenie beží bez telefónu, takže históriu dňa musí niekto viesť aj vtedy, keď appka nie je otvorená. Návrh: vedie ju
+                    <b>zásuvka</b> a Worker ju odloží len vtedy, keď sa niečo zmení.
+                </p>
+                <ol>
+                    <li>
+                        <b>Zásuvka si zapisuje behy</b> do svojho trvalého úložiska (KVS) pod jeden kľúč: dátum a behy ako minúty od
+                        polnoci, ku každému Wh z počítadla zásuvky (<code>aenergy.total</code>) a Wh zo siete. Príklad:
+                        <code>251115|640-685:1650:0|705-735:1100:100|750-:3450:0</code>. Jeden beh je ~16 znakov, takže sa zmestí ~14 behov
+                        za deň.
+                    </li>
+                    <li>
+                        <b>Koľko išlo zo siete</b> vie len Worker, lebo ten vidí elektromer. Vráti to zásuvke v odpovedi (Wh za poslednú
+                        minútu) a zásuvka si to pripočíta k behu.
+                    </li>
+                    <li>
+                        <b>Záznam ide s každým dopytom</b> (každú minútu) do Workera. Worker ho zapíše do Cloudflare KV
+                        <b>len pri zmene</b> (zapnutie, vypnutie, voda nahriata), teda pár zápisov za deň.
+                    </li>
+                    <li><b>Telefón si záznam prečíta</b> cez Worker, keď otvoríš panel Bojler dnes.</li>
+                    <li>O polnoci zásuvka začne nový deň. História ostáva len za dnešok.</li>
+                </ol>
+                <table>
+                    <tr>
+                        <th>Overené v dokumentácii (15. 11. 2026)</th>
+                        <th>Čo z toho plynie</th>
+                    </tr>
+                    <tr>
+                        <td>Shelly KVS: hodnota najviac 253 znakov, najviac 50 kľúčov, „persistent storage“.</td>
+                        <td>Záznam dňa sa zmestí do jedného kľúča a prežije reštart zásuvky (pri výpadku prúdu).</td>
+                    </tr>
+                    <tr>
+                        <td>Shelly HTTP.POST podporuje HTTPS, celý dopyt najviac 8192 B, odpoveď najviac 16 kB.</td>
+                        <td>Záznam (~250 B) aj pečať sa do dopytu zmestia s rezervou.</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Switch.GetStatus: <code>aenergy.total</code> vo Wh. <code>counts.switch_on</code> tvoja zásuvka (firmvér 1.8.99)
+                            <b>neposiela</b>, overené 15. 11. 2026.
+                        </td>
+                        <td>Energiu behu netreba rátať, stačí rozdiel počítadla. Zapnutia si skript počíta sám.</td>
+                    </tr>
+                    <tr>
+                        <td>Cloudflare KV zadarmo: 1000 zápisov a 100 000 čítaní za deň, do jedného kľúča najviac 1× za sekundu.</td>
+                        <td>
+                            Zápis každú minútu by bol 1440 za deň, teda nad limitom. Zápis len pri zmene je ~2–30 za deň, takže to stačí aj
+                            pre desiatky domácností.
+                        </td>
+                    </tr>
+                </table>
+                <h3>Iné cesty a prečo nie</h3>
+                <ul>
+                    <li>
+                        <b>Len cache Cloudflare.</b> <span class="plus">Žiadne úložisko.</span>
+                        <span class="minus"
+                            >Cache je pre každé miesto Cloudflare zvlášť a môže zmiznúť. Telefón na cestách by videl prázdny deň.</span
+                        >
+                    </li>
+                    <li><b>KV pri každom dopyte.</b> <span class="minus">1440 zápisov za deň, nad bezplatným limitom.</span></li>
+                    <li>
+                        <b>Telefón sa pýta priamo zásuvky.</b> <span class="plus">Nič v cloude.</span>
+                        <span class="minus"
+                            >Funguje len doma na Wi-Fi a stránka na HTTPS nesmie volať zásuvku cez HTTP (zmiešaný obsah).</span
+                        >
+                    </li>
+                    <li>
+                        <b>Shelly Cloud.</b>
+                        <span class="minus">Treba kľúč, ktorý ovláda všetky tvoje zariadenia. To sme pri B zamietli.</span>
+                    </li>
+                </ul>
+                <p class="note">
+                    Zmena oproti doterajšiemu stavu: Worker dnes ukladá do KV len odbery oznámení. Pribudne kľúč na domácnosť s dnešnými
+                    behmi bojlera. Je to len časy a Wh, žiadny prístup ani heslo. Kľúč je odtlačok pečate, nie meno.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>5 · Pod kapotou</small>Čo sa zmení v kóde</h2>
+                <table>
+                    <tr>
+                        <th>Kde</th>
+                        <th>Čo</th>
+                    </tr>
+                    <tr>
+                        <td><code>shared/bojler.js</code> (nový)</td>
+                        <td>
+                            Čisté rozhodnutie: (meranie, príkon zásuvky, stav, časy) → zapni / vypni. Hysterézia, min. chod a pauza,
+                            poistka.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>shared/huawei-nb.js</code></td>
+                        <td>Elektromer (typ 17) zo zoznamu zariadení a <code>active_power</code> elektromera do merania.</td>
+                    </tr>
+                    <tr>
+                        <td><code>worker/src/index.js</code></td>
+                        <td>
+                            Cesta <code>POST /bojler</code> s limitom volaní. Záznam dňa do KV len pri zmene, čítanie pre panel. Cache
+                            merania pre jeden účet (Cloudflare Cache API, zadarmo, bez KV).
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>scripts/shelly-bojler.js</code> (nový)</td>
+                        <td>Skript do zásuvky. Appka do neho dosadí adresu, pečať a prahy.</td>
+                    </tr>
+                    <tr>
+                        <td><code>web/</code></td>
+                        <td>Dlaždica Bojler v stavoch, smer toku pod číslom, riadok v Nastavení.</td>
+                    </tr>
+                </table>
+                <h3>Náčrt skriptu (orientačný)</h3>
+                <pre>
+// Bojler na prebytky - každú minútu sa opýta Workera a poslúchne.
+let ticho = 0; // minúty bez odpovede
+Timer.set(60 * 1000, true, function () {
+  let sw = Shelly.getComponentStatus('switch', 0);
+  Shelly.call('HTTP.POST', {
+    url: 'https://…workers.dev/bojler',
+    body: JSON.stringify({ pecat: PECAT, prahy: PRAHY, zapnute: sw.output, w: sw.apower }),
+    timeout: 20,
+  }, function (res) {
+    let ok = res &amp;&amp; res.code === 200;
+    ticho = ok ? 0 : ticho + 1;
+    let zapni = ok ? JSON.parse(res.body).zapni : (ticho &lt; 15 &amp;&amp; sw.output);
+    if (zapni !== sw.output) Shelly.call('Switch.Set', { id: 0, on: zapni });
+  });
+});</pre>
+            </section>
+
+            <section>
+                <h2><small>6 · Treba overiť</small>Čo neviem naisto</h2>
+                <ul>
+                    <li>
+                        <b>Elektromer overený: záporné = odber zo siete, kladné = dodávka.</b> Potvrdil to používateľ podľa toku v
+                        elektrárni o 10:44 (dom 2,9 kW, výroba 1,5 kW, zo siete 1,4 kW). Pôvodná poznámka: Referencia SmartPVMS 26.2.0:
+                        <code>active_power</code> elektromera je vo <b>W</b> (menič kW). Skutočná odpoveď z elektrárne 15. 11. 2026 10:44:
+                        elektromer je <b>typ 47</b> (power sensor, „Meter-1“), nie 17, <code>active_power = -1409</code> pri výrobe meniča
+                        1,5 kW, <code>active_cap = 18653,5</code>, <code>reverse_active_cap = 17408,75</code> kWh. Znamienko referencia
+                        nepíše. Z tejto jednej odpovede ho jednoznačne určiť nejde: −1,4 kW pri výrobe 1,5 kW môže byť odber aj dodávka. Môj
+                        odhad je <b>kladné = dodávka, záporné = odber</b> (tak to má podľa mojej pamäte Modbus meničov SUN2000). Potvrdí ho
+                        porovnanie <code>active_cap</code> s celkovou dodávkou do siete v appke FusionSolar. Appka bude brať typ 17 aj 47.
+                    </li>
+                    <li>
+                        <b>Cache je na mieste Cloudflare, nie globálna.</b> Telefón doma a zásuvka pôjdu takmer vždy cez to isté miesto
+                        (Viedeň či Bratislava). Telefón na cestách môže ísť cez iné a raz za 5 minút sa opýtať Huawei sám. Či to narazí na
+                        limit, ukáže skúška.
+                    </li>
+                    <li>
+                        <b>Relácia Huawei.</b> Keby telefón a zásuvka mali každý svoj token, nové prihlásenie by mohlo odhlásiť to druhé.
+                        Riešenie: token v tej istej cache. Huawei pri častom prihlasovaní účet na chvíľu zamyká, preto toto musí sedieť ešte
+                        pred prvým nasadením.
+                    </li>
+                    <li>
+                        <b>HTTPS zo zásuvky: overené 15. 11. 2026.</b> Zásuvka (10.10.10.121, firmvér 1.8.99) zavolala Worker a dostala 400,
+                        cez Cloudflare v Bratislave (BTS). Prázdne telo <code>''</code> Shelly odmietne (−103 „Missing required argument
+                        'body'“), skript musí poslať aspoň <code>{}</code>.
+                    </li>
+                    <li>
+                        <b>Pamäť: dosť.</b> Voľných 125 kB z 260 kB, najmenej bolo 93 kB. Zásuvka beží 27 dní bez reštartu, takže či
+                        <code>aenergy.total</code> (633 kWh) prežije reštart, ešte overené nie je.
+                    </li>
+                    <li>
+                        <b>Zásuvka má dnes rozvrh:</b> zapni o 10:31, vypni o 16:00 každý deň. S riadením podľa prebytkov by sa bil, pri
+                        zapnutí riadenia ho treba vypnúť (návod v appke to musí povedať).
+                    </li>
+                    <li>
+                        <b>Teplota zásuvky 50 °C</b> pri 9,5 A (bojler beží). Do limitu má rezervu, ale skript ju môže posielať a appka
+                        upozorniť, keby rástla. Webové rozhranie zásuvky nemá heslo (<code>auth_en: false</code>), ktokoľvek v domácej sieti
+                        ju môže ovládať.
+                    </li>
+                </ul>
+                <p class="note">
+                    Rozhodnuté 15. 11. 2026: dlaždica <b>A</b> (len stav), pás dneška a počet zapnutí v paneli po ťuknutí, prahy
+                    <b>2,3 / 2,0 kW</b> nad prebytkom bez bojlera. Kód zatiaľ nie je.
+                </p>
+            </section>
+        </main>
+        <script>
+            const BOJLER = 2.2;
+            const DOM = 0.35;
+            const POTREBA = 7; // kWh do nahriatia
+            const OD = 7 * 12; // 7:00 v 5-min krokoch
+            const DO = 17 * 12;
+            const fmt = (x, d = 1) => x.toFixed(d).replace('.', ',');
+            const cas = (k) => `${Math.floor(k / 12)}:${String((k % 12) * 5).padStart(2, '0')}`;
+
+            /** Výroba v kW v kroku k (5 min) pre scenár dňa. */
+            function vyroba(den, k) {
+                const h = k / 12;
+                const jas = Math.max(0, 6.2 * Math.exp(-(((h - 12.2) / 2.6) ** 2)));
+                if (den === 'jasno') return jas;
+                if (den === 'rano') return h < 11.3 ? jas * 0.18 : jas * (h < 11.8 ? 0.6 : 0.97);
+                // Prechádzajú oblaky: tiene rôznej dĺžky, deterministicky.
+                const tiene = [
+                    [9.6, 9.9],
+                    [10.6, 10.75],
+                    [11.4, 11.6],
+                    [12.25, 12.35],
+                    [13.1, 13.6],
+                    [14.2, 14.3],
+                    [14.9, 15.05],
+                ];
+                return tiene.some(([a, b]) => h >= a && h < b) ? jas * 0.25 : jas * 0.95;
+            }
+            const dom = (k) => DOM + (k >= 120 && k < 138 ? 0.6 : 0);
+
+            function simuluj(den, zap, vyp) {
+                const kroky = [];
+                let zapnute = false;
+                let odZmeny = 99; // kroky od poslednej zmeny relé
+                let nad = 0;
+                let pod = 0;
+                let energia = 0;
+                let zapnuti = 0;
+                let prev = 0;
+                for (let k = OD; k < DO; k++) {
+                    const s = vyroba(den, k) - dom(k);
+                    // Rozhodnutie z merania o krok staršieho (Huawei mešká).
+                    nad = prev >= zap ? nad + 1 : 0;
+                    pod = prev < vyp ? pod + 1 : 0;
+                    if (!zapnute && nad >= 2 && odZmeny >= 2) {
+                        zapnute = true;
+                        odZmeny = 0;
+                        zapnuti++;
+                    } else if (zapnute && pod >= 2 && odZmeny >= 3) {
+                        zapnute = false;
+                        odZmeny = 0;
+                    } else odZmeny++;
+                    const hreje = zapnute && energia < POTREBA;
+                    const p = hreje ? Math.min(BOJLER, (POTREBA - energia) * 12) : 0;
+                    if (hreje) energia += p / 12;
+                    const zoSiete = hreje ? Math.max(0, p - Math.max(0, s)) : 0;
+                    kroky.push({ k, s, zapnute, hreje, p, zoSiete });
+                    prev = s;
+                }
+                return kroky;
+            }
+
+            function kresli() {
+                const den = document.querySelector('.dni-sim [aria-pressed="true"]').dataset.den;
+                const zapEl = document.getElementById('zap');
+                const vypEl = document.getElementById('vyp');
+                let zap = Number(zapEl.value);
+                let vyp = Number(vypEl.value);
+                if (vyp > zap - 0.2) {
+                    vyp = Math.round((zap - 0.2) * 10) / 10;
+                    vypEl.value = String(vyp);
+                }
+                document.getElementById('o-zap').textContent = `${fmt(zap)} kW`;
+                document.getElementById('o-vyp').textContent = `${fmt(vyp)} kW`;
+                const kroky = simuluj(den, zap, vyp);
+
+                const W = 940;
+                const H = 280;
+                const L = 34;
+                const T = 10;
+                const PAS = 236;
+                const VY = 200;
+                const MAX = 6.5;
+                const x = (k) => L + ((k - OD) / (DO - OD)) * (W - L - 6);
+                const y = (kw) => T + VY - (Math.max(0, kw) / MAX) * VY;
+                const dx = x(OD + 1) - x(OD);
+                let plocha = `M${x(OD)},${y(0)}`;
+                for (const s of kroky) plocha += `L${x(s.k)},${y(s.s)}L${x(s.k) + dx},${y(s.s)}`;
+                plocha += `L${x(DO)},${y(0)}Z`;
+                const mriezka = [0, 1, 2, 3, 4, 5, 6]
+                    .map(
+                        (v) =>
+                            `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,0.12)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`,
+                    )
+                    .join('');
+                const hodiny = [8, 10, 12, 14, 16]
+                    .map((h) => `<text x="${x(h * 12)}" y="${H - 4}" text-anchor="middle">${h}:00</text>`)
+                    .join('');
+                const pas = kroky
+                    .map((s) => {
+                        if (!s.zapnute) return '';
+                        const farba = !s.hreje ? 'rgba(255,255,255,0.35)' : s.zoSiete > 0.05 ? '#ff7a66' : '#b9f28c';
+                        return `<rect x="${x(s.k)}" y="${PAS}" width="${dx + 0.4}" height="18" fill="${farba}"/>`;
+                    })
+                    .join('');
+                const ciara = (v, t) =>
+                    `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#fff" stroke-dasharray="5 5"/><text x="${W - 4}" y="${y(v) - 5}" text-anchor="end" fill="#fff" font-weight="800">${t} ${fmt(v)}</text>`;
+                document.getElementById('graf').innerHTML =
+                    `<svg viewBox="0 0 ${W} ${H}" font-size="12" fill="rgba(255,255,255,0.85)" role="img" aria-label="Simulácia dňa">${mriezka}` +
+                    `<path d="${plocha}" fill="rgba(255,209,102,0.85)"/>` +
+                    ciara(zap, 'zapni od') +
+                    ciara(vyp, 'vypni pod') +
+                    `<rect x="${L}" y="${PAS}" width="${W - L - 6}" height="18" rx="4" fill="rgba(8,16,40,0.35)"/>${pas}` +
+                    `<text x="${L - 6}" y="${PAS + 13}" text-anchor="end">bojler</text>${hodiny}</svg>`;
+
+                const slnko = kroky.reduce((a, s) => a + (s.hreje ? (s.p - s.zoSiete) / 12 : 0), 0);
+                const siet = kroky.reduce((a, s) => a + s.zoSiete / 12, 0);
+                const hreje = kroky.filter((s) => s.hreje).length * 5;
+                const zapnuti = kroky.filter((s, i) => s.zapnute && !kroky[i - 1]?.zapnute).length;
+                const hotovo = kroky.find((s, i) => i && kroky[i - 1].hreje && !s.hreje && s.zapnute);
+                document.getElementById('sucet').innerHTML =
+                    `<div><b>${fmt(slnko)} kWh</b><small>do vody zo slnka</small></div>` +
+                    `<div><b>${fmt(siet, 2)} kWh</b><small>zo siete počas behu</small></div>` +
+                    `<div><b>${Math.floor(hreje / 60)} h ${hreje % 60} min</b><small>bojler hrial</small></div>` +
+                    `<div><b>${zapnuti}×</b><small>zapnutie relé</small></div>` +
+                    `<div><b>${hotovo ? cas(hotovo.k) : slnko + siet >= POTREBA - 0.05 ? 'áno' : 'nie'}</b><small>${hotovo ? 'voda nahriata' : 'voda nahriata?'}</small></div>`;
+            }
+            document.querySelectorAll('.dni-sim button').forEach((b) =>
+                b.addEventListener('click', () => {
+                    document.querySelectorAll('.dni-sim button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+                    kresli();
+                }),
+            );
+            document.getElementById('zap').addEventListener('input', kresli);
+            document.getElementById('vyp').addEventListener('input', kresli);
+            kresli();
+
+            // Dlaždice v stavoch
+            const IKONA =
+                '<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/></svg>';
+            /** Pás dneška 6–18 h: úseky [od, do, farba] v hodinách, teraz v hodinách. */
+            function pasik(useky, teraz, svetly) {
+                const x = (h) => ((h - 6) / 12) * 100;
+                const zaklad = svetly ? 'rgba(20,48,12,0.16)' : 'rgba(255,255,255,0.18)';
+                const farby = {
+                    slnko: svetly ? '#2f8a17' : '#b9f28c',
+                    siet: '#ff7a66',
+                    hotovo: svetly ? 'rgba(20,48,12,0.35)' : 'rgba(255,255,255,0.45)',
+                };
+                return (
+                    `<div class="pasik"><svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">` +
+                    `<rect x="0" y="4" width="100" height="8" rx="4" fill="${zaklad}"/>` +
+                    useky.map(([a, b, f]) => `<rect x="${x(a)}" y="4" width="${x(b) - x(a)}" height="8" fill="${farby[f]}"/>`).join('') +
+                    `<rect x="${x(teraz) - 0.6}" y="0" width="1.2" height="16" fill="${svetly ? '#14300c' : '#fff'}"/></svg>` +
+                    `<span><i>6</i><i>9</i><i>12</i><i>15</i><i>18</i></span></div>`
+                );
+            }
+            const STAVY = [
+                {
+                    meno: 'Hreje zo slnka',
+                    tone: 'go',
+                    riadi: 'bezi',
+                    velky: '2,2 kW',
+                    pod: 'prebytok 2,6 kW · od 10:40',
+                    tok: ['von', '↑ do siete 0,4 kW'],
+                    vykon: '3,0 kW',
+                    useky: [[10.67, 12.25, 'slnko']],
+                    teraz: 12.25,
+                    popis: '<b>Beží zo slnka.</b> Dlaždica je zelená ako každá vec, ktorá ide práve zo slnka. Bodka pri ikone hovorí, že bojler riadi zásuvka.',
+                },
+                {
+                    meno: 'Čaká na slnko',
+                    tone: 'next',
+                    riadi: 'caka',
+                    velky: '1,1 kW',
+                    pod: 'prebytok teraz · zapne od 2,3',
+                    tok: ['von', '↑ do siete 1,1 kW'],
+                    vykon: '1,5 kW',
+                    useky: [],
+                    teraz: 9.5,
+                    popis: '<b>Čaká.</b> Zelený rám, ako keď vec čaká na slnko. Veľké číslo je prebytok teraz, pod ním hranica zapnutia.',
+                },
+                {
+                    meno: 'Voda nahriata',
+                    tone: 'tiche',
+                    riadi: 'caka',
+                    velky: '6,1 kWh',
+                    pod: 'dnes zo slnka · hotovo 14:05',
+                    tok: ['von', '↑ do siete 2,8 kW'],
+                    vykon: '3,2 kW',
+                    useky: [
+                        [10.67, 11.4, 'slnko'],
+                        [11.4, 11.6, 'siet'],
+                        [11.6, 14.08, 'slnko'],
+                        [14.08, 14.5, 'hotovo'],
+                    ],
+                    teraz: 14.5,
+                    popis: '<b>Hotovo.</b> Termostat bojler vypol, zásuvka hlási ~0 W. Dlaždica stíchne a ukáže, koľko išlo do vody zo slnka.',
+                },
+                {
+                    meno: 'Zásuvka mlčí',
+                    tone: 'chyba',
+                    riadi: 'mlci',
+                    velky: '18 min',
+                    pod: 'bez spojenia · bojler vypnutý',
+                    tok: ['von', '↑ do siete 2,9 kW'],
+                    vykon: '3,3 kW',
+                    useky: [[10.67, 12.0, 'slnko']],
+                    teraz: 12.3,
+                    popis: '<b>Zásuvka sa neozýva.</b> Jantárový rám ako pri zastaranom meraní. Poistka v zásuvke ju po 15 min vypla, ak ešte žije.',
+                    zamracene: false,
+                },
+            ];
+            const dlazdica = (s) =>
+                `<div class="dl" data-tone="${s.tone}"><span class="dl-ico" data-riadi="${s.riadi}">${IKONA}</span>` +
+                `<span><span class="velky">${s.velky}</span><b>${s.meno}</b><small>${s.pod}</small></span></div>`;
+            document.getElementById('tel-a').innerHTML = STAVY.map(
+                (s) =>
+                    `<figure><div class="tel"><div class="cislo"><b>${s.vykon}</b><span>teraz · meranie</span></div>` +
+                    `<span class="tok" data-smer="${s.tok[0]}">${s.tok[1]}</span>` +
+                    `<div class="co-h">Zo slnka</div><div class="mriezka"><div class="malo">Auto</div>${dlazdica(s)}</div></div>` +
+                    `<figcaption>${s.popis}</figcaption></figure>`,
+            ).join('');
+            document.getElementById('detail-pas').innerHTML = pasik(
+                [
+                    [10.67, 11.42, 'slnko'],
+                    [11.75, 11.92, 'slnko'],
+                    [11.92, 12.08, 'siet'],
+                    [12.08, 12.25, 'slnko'],
+                    [12.5, 14.08, 'slnko'],
+                    [14.08, 14.9, 'hotovo'],
+                ],
+                14.9,
+                false,
+            );
+        </script>
+    </body>
+</html>

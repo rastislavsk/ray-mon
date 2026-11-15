@@ -53,6 +53,7 @@ Otvoriť sa dajú priamo dvojklikom, alebo cez `npm run serve` na
 | `plan-dna-zajtra.html`         | Plán dňa (Obloha) večer, keď dnes nič nejde na slnko: os sa prepne na zajtra (1), jedna os cez noc (2)                                                 |
 | `teraz-bez-grafu.html`         | Karta Teraz bez grafu dňa: 6 návrhov a posudok; príbeh dňa (A), hodiny okolo teraz (B) – zamietnuté, chce obraz                                        |
 | `teraz-obraz-dna.html`         | Karta Teraz – obraz dňa namiesto grafu: 8 vizuálnych variantov a posudok; stuha dňa (A), plán na dráhe (B)                                             |
+| `bojler-prebytky.html`         | Bojler na prebytky (Huawei elektromer + skript v Shelly): prahy 2,3 / 2,0 so simuláciou dňa, dlaždica len stav (A), pás dňa a zapnutia v paneli        |
 
 ## Prečo je to v repozitári
 

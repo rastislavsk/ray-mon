@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ZDIELANIE } from '../../shared/config.js';
-import { handlePripoj, handlePv, handleRequest } from '../src/index.js';
+import { handleBojler, handleBojlerPecat, handlePripoj, handlePv, handleRequest } from '../src/index.js';
+import { UcetHuawei } from '../src/ucet.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
 
 const fixture = (/** @type {string} */ name) => readFileSync(new URL(`../../test/fixtures/${name}`, import.meta.url), 'utf8');
@@ -289,6 +290,12 @@ const NB_HISTORIA = [
     { devDn: 'NE=11', collectTime: Date.UTC(2026, 8, 5, 10, 50), dataItems: { active_power: 4.0 } },
 ];
 
+/** Dáta getDevRealKpi: menič 11 a elektromer 5 (W). @param {number} sietW */
+const nbReal = (sietW) => [
+    { devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } },
+    { devId: 5, dataItemMap: { active_power: sietW, active_cap: 18653.5 } },
+];
+
 /**
  * Podvrhnutý server Northbound. Prihlásenie vráti token v hlavičke `xsrf-token`, dáta len
  * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
@@ -306,6 +313,8 @@ function northbound(
         devTyp = 38,
         rokFail,
         historiaFail,
+        elektromer = false,
+        sietW = () => -1409,
     } = /** @type {any} */ ({}),
 ) {
     /** @type {Array<{ path: string, body: any, token: string | null, cookie: string | null }>} */ const calls = [];
@@ -319,10 +328,13 @@ function northbound(
         // Starší zoznam (Historical Interfaces): bez stránkovania, stationCode a stationName.
         '/thirdData/getStationList': () =>
             stareFail ? fail(stareFail) : ok([{ stationCode: 'NE=1', stationName: 'Dvorany', capacity: 0.01 }]),
-        '/thirdData/getDevList': () => ok([{ id: 11, devDn: 'NE=11', stationCode: 'NE=1', devTypeId: devTyp }]),
+        '/thirdData/getDevList': () =>
+            ok([
+                { id: 11, devDn: 'NE=11', stationCode: 'NE=1', devTypeId: devTyp },
+                ...(elektromer ? [{ id: 5, devDn: 'NE=5', stationCode: 'NE=1', devTypeId: 47 }] : []),
+            ]),
         '/rest/openapi/pvms/nbi/v1/device/history': () => (historiaFail ? fail(historiaFail) : ok(NB_HISTORIA)),
-        '/thirdData/getDevRealKpi': () =>
-            realFail ? fail(realFail) : ok([{ devId: 11, dataItemMap: { active_power: 4.2, day_cap: 20, total_cap: 5000 } }]),
+        '/thirdData/getDevRealKpi': () => (realFail ? fail(realFail) : ok(nbReal(sietW()))),
         '/thirdData/getStationRealKpi': () =>
             ok([{ stationCode: 'NE=1', dataItemMap: { day_power: 21.5, month_power: 400, total_power: 5100 } }]),
         '/thirdData/getKpiStationYear': () => (rokFail ? fail(rokFail) : ok(NB_ROKY)),
@@ -388,6 +400,45 @@ test('Huawei Northbound: prihlásenie, elektrárne, meniče a meranie jedným do
     assert.equal(meranie.pv.realTimePowerKw, 4.2);
     assert.equal(meranie.pecat, undefined);
     assert.equal(s.prihlasenia(), 1);
+});
+
+test('Huawei Northbound: elektromer (47) do merania, staršej pečati sa doplní raz', async () => {
+    const s = northbound({ elektromer: true });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    assert.equal(stanice[0].pv.sietKw, -1.409, 'W na kW, záporný odber');
+    assert.equal(stanice[0].pv.realTimePowerKw, 4.2, 'elektromer sa k výkonu meničov nepripočíta');
+    const real = s.calls.filter((c) => c.path === '/thirdData/getDevRealKpi').map((c) => c.body);
+    assert.deepEqual(real, [
+        { devIds: '11', devTypeId: 38 },
+        { devIds: '5', devTypeId: 47 },
+    ]);
+    // Bez elektromera pole sietKw v meraní nie je.
+    const bez = northbound();
+    const r = await (await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, bez.impl)).json();
+    assert.equal('sietKw' in r.stanice[0].pv, false);
+    // Pečať spred elektromera (bez `meters`): zoznam zariadení sa vypýta raz a elektromer sa zapečatí.
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const pristup = {
+        ...NB_UDAJE,
+        plant: 'NE=1',
+        nazov: 'Dvorany',
+        devs: { 38: [11] },
+        dns: { 38: ['NE=11'] },
+        token: 't1',
+        tokenAt: NOW.getTime(),
+        krivkaAt: NOW.getTime(),
+        rokAt: NOW.getTime(),
+    };
+    const stara = await zapecat(key, { sposob: 'huawei-northbound', pristup });
+    const m = await (await handlePv(pvRequest(stara), ENV, NOW, s.impl)).json();
+    assert.equal(m.pv.sietKw, -1.409);
+    const nova = await otvor(key, m.pecat, NOW);
+    assert.deepEqual(nova?.pristup.meters, { 47: [5] });
+    const zoznamy = s.calls.filter((c) => c.path === '/thirdData/getDevList').length;
+    await handlePv(pvRequest(m.pecat), ENV, NOW, s.impl);
+    assert.equal(s.calls.filter((c) => c.path === '/thirdData/getDevList').length, zoznamy, 'druhý raz už nie');
 });
 
 test('Huawei Northbound: priebeh dňa z device/history najviac raz za 15 minút, medzitým posledná krivka a aktuálny bod', async () => {
@@ -915,4 +966,127 @@ test('obmedzenie počtu volaní: pripojenie, zdieľanie a odbery 429 nad limit, 
     assert.equal(keys.length, 4);
     const pokazeny = { ...ENV, LIMIT: { limit: async () => Promise.reject(new Error('výpadok')) } };
     assert.equal((await handleRequest(zAdresy('/zdielaj'), pokazeny, NOW)).status, 400, 'prešlo ďalej, zlé telo');
+});
+
+// ---- Durable Object účtu Huawei a bojler na prebytky -------------------------------------
+
+/** Úložisko Durable Object v pamäti (get/put ako v Cloudflare, hodnoty sa kopírujú). */
+function uloziste() {
+    /** @type {Map<string, unknown>} */ const m = new Map();
+    return {
+        m,
+        get: async (/** @type {string} */ k) => structuredClone(m.get(k)),
+        put: async (/** @type {any} */ k, /** @type {unknown} */ v) => {
+            for (const [a, b] of Object.entries(typeof k === 'string' ? { [k]: v } : k)) m.set(a, structuredClone(b));
+        },
+    };
+}
+
+/** Menný priestor Durable Objects ako v Cloudflare: jeden objekt na meno. @param {typeof fetch} impl */
+function ucty(impl) {
+    /** @type {Map<string, { o: UcetHuawei, u: ReturnType<typeof uloziste> }>} */ const objekty = new Map();
+    return {
+        objekty,
+        idFromName: (/** @type {string} */ n) => n,
+        get: (/** @type {any} */ id) => {
+            if (!objekty.has(id)) {
+                const u = uloziste();
+                objekty.set(id, { o: new UcetHuawei({ storage: u }, {}, impl), u });
+            }
+            const { o } = /** @type {{ o: UcetHuawei }} */ (objekty.get(id));
+            return { fetch: (/** @type {string} */ url, /** @type {RequestInit} */ init) => o.fetch(new Request(url, init)) };
+        },
+    };
+}
+
+const po = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60000);
+const bojlerReq = (/** @type {object} */ body) => post('/bojler', JSON.stringify(body));
+
+/** Pripojí elektráreň s elektromerom a vráti pečať telefónu, pečať zásuvky a prostredie s objektmi. */
+async function sBojlerom(/** @type {object} */ opts = {}) {
+    const s = northbound({ elektromer: true, ...opts });
+    const env = { ...ENV, UCTY: ucty(s.impl) };
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), env, NOW, s.impl)
+    ).json();
+    const r = await (await handleBojlerPecat(post('/bojler-pecat', stanice[0].pecat), env, NOW)).json();
+    return { s, env, telefon: stanice[0].pecat, zasuvka: r.pecat };
+}
+
+test('Durable Object: telefón aj zásuvka merajú z jedného prihlásenia, Huawei najviac raz za 5 minút', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom();
+    const real = () => s.calls.filter((c) => c.path === '/thirdData/getDevRealKpi').length;
+    const pred = real();
+    for (let min = 1; min <= 12; min++) {
+        const m = await (await handlePv(pvRequest(telefon), env, po(min), s.impl)).json();
+        assert.equal(m.pv.sietKw, -1.409);
+        const b = await handleBojler(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 1000 }), env, po(min));
+        assert.equal(b.status, 200);
+    }
+    assert.equal(s.prihlasenia(), 1, 'žiadne ďalšie prihlásenie, zásuvka nemá token v pečati');
+    // Objekt meria prvý raz v 1. minúte, potom v 6. a 11. - zakaždým menič aj elektromer.
+    assert.equal(real() - pred, 3 * 2);
+});
+
+test('Durable Object: zásuvka zapne bojler po dvoch meraniach nad prahom a telefón vidí jeho stav', async () => {
+    let w = 2500;
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => w });
+    const pytaj = async (/** @type {number} */ min, /** @type {boolean} */ rele) =>
+        (
+            await handleBojler(
+                bojlerReq({ pecat: zasuvka, rele, w: rele ? 2200 : 0, e: 5000 + min * 30, zapKw: 2.3, vypKw: 2 }),
+                env,
+                po(min),
+            )
+        ).json();
+    assert.equal((await pytaj(1, false)).zapni, false, 'prvé meranie nad prahom');
+    assert.equal((await pytaj(3, false)).zapni, false, 'to isté meranie');
+    const r = await pytaj(6, false);
+    assert.deepEqual([r.zapni, r.prebytokKw], [true, 2.5]);
+    // Bojler beží: elektromer ukáže len 0,3 kW, prebytok bez bojlera je 2,5 kW - drží.
+    w = 300;
+    assert.equal((await pytaj(11, true)).zapni, true);
+    const m = await (await handlePv(pvRequest(telefon), env, po(12), s.impl)).json();
+    assert.equal(m.bojler.rele, true);
+    assert.equal(m.bojler.den.behy.length, 1);
+    assert.equal(m.bojler.prahy.zapKw, 2.3);
+});
+
+test('pečať zásuvky: len Huawei Northbound, bez relácie a krivky, krátka; zlé dopyty 400, bez objektov 503', async () => {
+    const { env, telefon, zasuvka } = await sBojlerom();
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = await otvor(key, zasuvka, NOW);
+    assert.deepEqual(Object.keys(obsah?.pristup ?? {}).sort(), ['devs', 'dns', 'heslo', 'meno', 'meters', 'nazov', 'plant', 'server']);
+    assert.ok(zasuvka.length < 1500, `skript ju posiela každú minútu (${zasuvka.length} znakov)`);
+    const kiosk = await zapecat(key, { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
+    assert.equal((await handleBojlerPecat(post('/bojler-pecat', kiosk), env, NOW)).status, 400);
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah?.pristup ?? {}, platiDo: po(60).getTime() });
+    assert.equal((await handleBojlerPecat(post('/bojler-pecat', zdielana), env, NOW)).status, 400, 'zo zdieľaného odkazu nie');
+    assert.equal((await handleBojler(post('/bojler', 'nie json'), env, NOW)).status, 400);
+    assert.equal((await handleBojler(bojlerReq({ pecat: kiosk }), env, NOW)).status, 400);
+    assert.equal((await handleBojler(bojlerReq({ pecat: zasuvka }), ENV, NOW)).status, 503);
+    assert.equal((await handleBojlerPecat(post('/bojler-pecat', telefon), ENV, NOW)).status, 503);
+    const cez = await handleRequest(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 0 }), env, po(1));
+    assert.equal(cez.status, 200);
+});
+
+test('Durable Object: zlé heslo zásuvky nezastaví rozhodovanie, bez merania bojler vypne', async () => {
+    const { s, env, zasuvka } = await sBojlerom({ sietW: () => 3000 });
+    const ok = await (await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(1))).json();
+    assert.equal(ok.zapni, true, 'beží, prebytok 5,2 kW');
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, zasuvka, NOW));
+    const zle = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...obsah.pristup, heslo: 'zle', meno: 'iny-ucet' } });
+    const r = await handleBojler(bojlerReq({ pecat: zle, rele: true, w: 2200, e: 1 }), env, po(2));
+    assert.equal(r.status, 200, 'chybu merania objekt prehltne a rozhoduje z posledného');
+    assert.equal((await r.json()).zapni, false, 'iný účet nemá žiadne meranie');
+    // Pôvodný účet: meranie z 1. minúty platí do 16. minúty, potom bez nového merania vypne.
+    const neskor = northbound({ elektromer: true, realFail: 407, platne: ['t1'] });
+    const objekt = env.UCTY.objekty.get(`${NB_UDAJE.server}|${NB_UDAJE.meno}`);
+    assert.ok(objekt);
+    objekt.o.fetchImpl = neskor.impl;
+    assert.equal((await (await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(10))).json()).zapni, true);
+    assert.equal((await (await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(17))).json()).zapni, false);
+    // Pripojenie a prvé meranie objektu (pečať zásuvky token nemá); ďalšie už z objektu.
+    assert.equal(s.prihlasenia(), 2);
 });

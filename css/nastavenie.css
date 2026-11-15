@@ -565,3 +565,53 @@
 .minis.wrap {
     flex-wrap: wrap;
 }
+
+/* ===== Nastavenie › Čo máš doma › Bojler na prebytky ===== */
+.ns-bojler {
+    display: grid;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.ns-sub {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 800;
+}
+/* Prah: menej, hodnota, viac. */
+.minis.prah {
+    align-items: center;
+}
+.prah-v {
+    min-width: 4.2em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.ns-bojler .btns {
+    display: flex;
+    padding: 6px 0;
+}
+.ns-bojler .pbtn {
+    flex: 1;
+}
+/* Skript na ručné skopírovanie, keď schránka nie je dostupná. */
+.ns-bojler-text {
+    width: 100%;
+    font:
+        0.75rem/1.4 ui-monospace,
+        monospace;
+    color: var(--ink);
+    background: #fff;
+    border: 0;
+    border-radius: 12px;
+    padding: 10px;
+}
+.ns-kroky {
+    margin: 4px 0 0;
+    padding-left: 1.3em;
+    font-size: 0.8125rem;
+    color: var(--dim);
+    display: grid;
+    gap: 4px;
+}

@@ -23,6 +23,7 @@ export function validatePv(pv) {
         if (!isNumOrNull(o[key])) errors.push(`pv.${key}: číslo alebo null`);
     }
     if (o.stationName !== null && typeof o.stationName !== 'string') errors.push('pv.stationName: text alebo null');
+    if ('sietKw' in o && !isNumOrNull(o.sietKw)) errors.push('pv.sietKw: číslo alebo null');
     checkHourPoints(o.realCurveToday, 'pv.realCurveToday', errors);
     if ('measuredAt' in o && !isIso(o.measuredAt)) errors.push('pv.measuredAt: ISO dátum');
     if (!isIso(o.updatedAt)) errors.push('pv.updatedAt: ISO dátum');

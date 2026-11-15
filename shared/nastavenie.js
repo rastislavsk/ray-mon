@@ -18,6 +18,7 @@ import { savedSettings } from './setup-flow.js';
 import { GUESS_MARK, kwText, plantHero, TARIFF_TABS, zdrojText } from './setup-texts.js';
 import { tariffHint, tariffKind, tariffPricesText } from './tariff.js';
 import { menoZnacky } from './zdroje.js';
+import { bojlerSekcia } from './nastavenie-bojler.js';
 
 /** @typedef {import('./setup-flow.js').SetupState} SetupState */
 /** @typedef {import('./setup.js').SetupStep} SetupStep */
@@ -26,7 +27,9 @@ import { menoZnacky } from './zdroje.js';
  * Stav, z ktorého sa karta skladá: sprievodca, živé meranie, tón, spotrebiče doma, ranné
  * oznámenie a voľby zdieľania.
  * @typedef {SetupState & { pv: import('./kiosk.js').PvData | null, loading: boolean, voice: Voice, doma: readonly string[],
- *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean }} NastavenieState
+ *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean,
+ *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
+ *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript }} NastavenieState
  */
 /**
  * Riadok sekcie Elektráreň. `edit` je krok, ktorý riadok otvorí na úpravu uloženej elektrárne
@@ -276,6 +279,7 @@ export function nastavenieModel(state) {
             hint: doma.length ? listText(doma) : T.domaNic,
             devices: DOMA_DEVICES.map((id) => ({ id, name: domaName(id), on: state.doma.includes(id) })),
             note: inVoice(T.domaNote, voice),
+            bojler: bojlerSekcia({ ...state, voice }),
         },
         oznamenia: oznameniaSekcia(state),
         vzhlad: {

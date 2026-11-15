@@ -450,6 +450,27 @@
                                     <span id="ns-doma" class="minis wrap" role="group" aria-labelledby="ns-doma-title"></span>
                                 </div>
                                 <p id="ns-doma-note" class="oznam-note"></p>
+                                <!-- Bojler na prebytky (docs/navrhy/bojler-prebytky.html): prahy, stav zásuvky Shelly a skript do nej.
+                                     Len pri meraní Huawei Northbound a s bojlerom doma. -->
+                                <div id="ns-bojler" class="ns-bojler hidden" role="group" aria-labelledby="ns-bojler-title">
+                                    <h4 id="ns-bojler-title" class="ns-sub"></h4>
+                                    <p id="ns-bojler-intro" class="oznam-note"></p>
+                                    <div id="ns-bojler-prahy"></div>
+                                    <div class="it">
+                                        <span><b id="ns-bojler-zasuvka"></b><small id="ns-bojler-stav"></small></span>
+                                    </div>
+                                    <p id="ns-bojler-ine" class="wz-msg hidden"></p>
+                                    <div class="btns"><button type="button" id="ns-bojler-skript" class="pbtn"></button></div>
+                                    <p id="ns-bojler-sprava" class="wz-msg hidden" role="status"></p>
+                                    <textarea
+                                        id="ns-bojler-text"
+                                        class="ns-bojler-text hidden"
+                                        readonly
+                                        rows="6"
+                                        aria-labelledby="ns-bojler-sprava"
+                                    ></textarea>
+                                    <ol id="ns-bojler-kroky" class="ns-kroky"></ol>
+                                </div>
                             </div>
                         </section>
                         <!-- Oznámenia: ranný plán dňa - voľba telefónu (oznamenia-v1). -->

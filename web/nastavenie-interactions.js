@@ -4,13 +4,15 @@
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
-import { VOICES } from '../shared/config.js';
+import { VOICES, WORKER_BOJLER_URL } from '../shared/config.js';
+import { posunPrahy } from '../shared/bojler.js';
+import { skriptBojlera } from '../shared/bojler-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
-import { zdielajPecat } from './data.js';
+import { bojlerPecat, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
-import { clearStored, saveDoma, saveLook } from './storage.js';
+import { clearStored, saveBojlerPrahy, saveDoma, saveLook } from './storage.js';
 import { stepBack } from './nav-back.js';
 import { NS_FOLDS, panelChange } from './state.js';
 
@@ -44,6 +46,7 @@ export function initNastavenie(store, dom, refresh) {
     dom.importDecline.addEventListener('click', () => store.setState({ incoming: null, linkError: null }));
     initFolds(store, dom);
     initDoma(store, dom);
+    initBojler(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
@@ -79,6 +82,40 @@ function initDoma(store, dom) {
         const doma = prepniSpotrebic(store.get().doma, btn.dataset.device);
         saveDoma(doma);
         store.setState({ doma });
+    });
+}
+
+/**
+ * Bojler na prebytky: prahy (uložia sa, bojler-v1) a „Skopíruj skript“ - appka si od Workera
+ * vypýta pečať pre zásuvku, poskladá skript a dá ho do schránky. Kde schránka nie je, skript
+ * ukáže v poli na ručné skopírovanie.
+ * @param {Store} store @param {Dom} dom
+ */
+function initBojler(store, dom) {
+    dom.nsBojlerPrahy.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-bojler-prah]') : null;
+        if (!(btn instanceof HTMLElement)) return;
+        const ktory = btn.dataset.bojlerPrah === 'vypKw' ? 'vypKw' : 'zapKw';
+        const bojlerPrahy = posunPrahy(store.get().bojlerPrahy, ktory, btn.dataset.smer === '-1' ? -1 : 1);
+        saveBojlerPrahy(bojlerPrahy);
+        // Starý skript má staré prahy - pole s ním zmizne.
+        store.setState({ bojlerPrahy, bojlerSkript: { stav: 'nic', text: '', schranka: false } });
+    });
+    dom.nsBojlerSkript.addEventListener('click', async () => {
+        const { zdroj, bojlerPrahy } = store.get();
+        if (!zdroj) return;
+        store.setState({ bojlerSkript: { stav: 'robim', text: '', schranka: false } });
+        const pecat = await bojlerPecat(zdroj.pecat);
+        const text = pecat && skriptBojlera({ url: WORKER_BOJLER_URL, pecat, ...bojlerPrahy });
+        if (!text) {
+            store.setState({ bojlerSkript: { stav: 'chyba', text: '', schranka: false } });
+            return;
+        }
+        const schranka = await navigator.clipboard?.writeText(text).then(
+            () => true,
+            () => false,
+        );
+        store.setState({ bojlerSkript: { stav: 'hotovo', text, schranka: schranka === true } });
     });
 }
 

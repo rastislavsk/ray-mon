@@ -24,6 +24,8 @@ import {
     parseNbDevices,
     parseNbDevReal,
     parseNbHistory,
+    parseNbMeters,
+    parseNbSiet,
     parseNbStationReal,
     parseNbStations,
     parseNbStationYear,
@@ -213,8 +215,9 @@ async function solaxPv(token, sn, ctx) {
 
 /**
  * Elektráreň Northbound: id, meno a meniče po typoch - číselné id (`devs`, `{ 1: [id…] }`) pre
- * meranie a textové `devDn` (`dns`) pre priebeh dňa -, ako ich vrátil zoznam zariadení.
- * @typedef {{ plant: string, nazov: string, devs: Record<string, number[]>, dns: Record<string, string[]> }} NbPlant
+ * meranie a textové `devDn` (`dns`) pre priebeh dňa -, a elektromery (`meters`, `{ 47: [id] }`),
+ * ako ich vrátil zoznam zariadení.
+ * @typedef {{ plant: string, nazov: string, devs: Record<string, number[]>, dns: Record<string, string[]>, meters: Record<string, number[]> }} NbPlant
  */
 
 /**
@@ -302,18 +305,34 @@ async function nbStanice(sp) {
  */
 async function nbMeraj(sp, plants) {
     const types = [...new Set(plants.flatMap((p) => Object.keys(p.devs)))];
-    const [station, ...devs] = await Promise.all([
+    const meterTypes = [...new Set(plants.flatMap((p) => Object.keys(p.meters)))];
+    /** @param {'devs' | 'meters'} k @param {string} t */
+    const real = (k, t) => ({ devIds: plants.flatMap((p) => p[k][t] ?? []).join(','), devTypeId: Number(t) });
+    const [station, ...rest] = await Promise.all([
         nbPost(sp, NB.stationReal, { stationCodes: plants.map((p) => p.plant).join(',') }, 'meranie'),
-        ...types.map((t) =>
-            nbPost(sp, NB.devReal, { devIds: plants.flatMap((p) => p.devs[t] ?? []).join(','), devTypeId: Number(t) }, 'meranie'),
-        ),
+        ...types.map((t) => nbPost(sp, NB.devReal, real('devs', t), 'meranie')),
+        // Elektromer meranie nezastaví: bez neho appka len nevie, čo ide do siete.
+        ...meterTypes.map((t) => nbPost(sp, NB.devReal, real('meters', t), 'meranie').catch(() => null)),
     ]);
+    const devs = rest.slice(0, types.length);
+    const meters = rest.slice(types.length).filter((j) => j !== null);
     return new Map(
-        plants.map((p) => [
-            p.plant,
-            nbPv(parseNbDevReal(devs, Object.values(p.devs).flat()), parseNbStationReal(station, p.plant), p.nazov, sp.ctx.now),
-        ]),
+        plants.map((p) => {
+            const pv = nbPv(parseNbDevReal(devs, Object.values(p.devs).flat()), parseNbStationReal(station, p.plant), p.nazov, sp.ctx.now);
+            const ids = Object.values(p.meters).flat();
+            if (ids.length) pv.sietKw = sietOf(meters, ids);
+            return [p.plant, pv];
+        }),
     );
+}
+
+/** Výkon na odbernom mieste (parseNbSiet); odpoveď s chybou (napr. 407) je null. @param {unknown[]} jsons @param {number[]} ids */
+function sietOf(jsons, ids) {
+    try {
+        return parseNbSiet(jsons, ids);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -329,7 +348,8 @@ async function nbNajdi(server, rel, udaje, ctx) {
     const devJson = await nbPost(sp, NB.devList, { stationCodes: stanice.map((st) => st.plant).join(',') }, 'zariadenia');
     const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
     const dns = prevod(() => parseNbDevDns(devJson), 'zariadenia');
-    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {}, dns: dns[st.plant] ?? {} }));
+    const meters = prevod(() => parseNbMeters(devJson), 'zariadenia');
+    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {}, dns: dns[st.plant] ?? {}, meters: meters[st.plant] ?? {} }));
     const pv = await nbMeraj(sp, plants).catch(() => null);
     const rok = await nbRok(sp, plants);
     // Priebeh dňa hneď pri pripojení, nech je v grafe od prvého merania.
@@ -379,15 +399,20 @@ async function nbRok(sp, plants) {
 }
 
 /**
- * Meniče elektrárne, ktorá ich v pečati nemá - pripojenej skôr, než appka poznala menič s batériou
- * (23093) či priebeh dňa (`devDn`). Zoznam zariadení má limit 25 denne, preto sa pýta raz: volajúci
+ * Meniče a elektromer elektrárne, ktorá ich v pečati nemá - pripojenej skôr, než appka poznala menič
+ * s batériou (23093), priebeh dňa (`devDn`) či elektromer. Zoznam zariadení má limit 25 denne, preto sa pýta raz: volajúci
  * zapečatí čas pokusu, aj keď zoznam nevyjde. Bez neho sa meria ďalej ako doteraz.
  * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<NbPlant>}
  */
 async function nbDoplnDevs(sp, plant) {
     try {
         const json = await nbPost(sp, NB.devList, { stationCodes: plant.plant }, 'zariadenia');
-        return { ...plant, devs: parseNbDevices(json)[plant.plant] ?? {}, dns: parseNbDevDns(json)[plant.plant] ?? {} };
+        return {
+            ...plant,
+            devs: parseNbDevices(json)[plant.plant] ?? {},
+            dns: parseNbDevDns(json)[plant.plant] ?? {},
+            meters: parseNbMeters(json)[plant.plant] ?? {},
+        };
     } catch {
         return plant;
     }
@@ -421,8 +446,10 @@ async function nbKrivka(sp, plant) {
  */
 function nbPlan(pristup, plant, now) {
     const chyba = (/** @type {'devs' | 'dns'} */ k, /** @type {string} */ at) => !Object.keys(plant[k]).length && !Number(pristup[at]);
+    // Elektromer: pečať spred 11/2026 ho nemá vôbec (prázdne `meters` znamená, že elektráreň žiadny nemá).
+    const bezElektromera = pristup.meters === undefined && !Number(pristup.metersAt);
     return {
-        devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') ? now : 0,
+        devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') || bezElektromera ? now : 0,
         rokAt: now - (Number(pristup.rokAt) || 0) >= NB.rokMs ? now : 0,
         krivkaAt: now - (Number(pristup.krivkaAt) || 0) >= KRIVKA.ms ? now : 0,
     };
@@ -471,6 +498,7 @@ async function nbSRelaciou(p, ctx, fn) {
 function nbPristup(p) {
     const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
     const dns = p.dns && typeof p.dns === 'object' ? /** @type {Record<string, string[]>} */ (p.dns) : {};
+    const meters = p.meters && typeof p.meters === 'object' ? /** @type {Record<string, number[]>} */ (p.meters) : {};
     return {
         server: nbServer(p.server),
         meno: str(p.meno),
@@ -478,7 +506,7 @@ function nbPristup(p) {
         token: str(p.token),
         cookie: str(p.cookie),
         tokenAt: Number(p.tokenAt) || 0,
-        plant: { plant: str(p.plant), nazov: str(p.nazov), devs, dns },
+        plant: { plant: str(p.plant), nazov: str(p.nazov), devs, dns, meters },
     };
 }
 
@@ -621,7 +649,16 @@ export const ZDROJE = {
             pv.realCurveToday = krivkaDnes(krivka, pv.realTimePowerKw, ctx.now, NB.pasmo);
             const zmeny = {
                 ...relacia,
-                ...(plan.devsAt ? { devs: zariadenia.devs, dns: zariadenia.dns, devsAt: plan.devsAt, dnsAt: plan.devsAt } : {}),
+                ...(plan.devsAt
+                    ? {
+                          devs: zariadenia.devs,
+                          dns: zariadenia.dns,
+                          meters: zariadenia.meters,
+                          devsAt: plan.devsAt,
+                          dnsAt: plan.devsAt,
+                          metersAt: plan.devsAt,
+                      }
+                    : {}),
                 ...(plan.rokAt ? { rokAt: plan.rokAt } : {}),
                 ...(krivkaAt ? { krivkaAt, krivka } : {}),
             };

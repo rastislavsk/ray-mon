@@ -34,6 +34,16 @@ Model má vlastný Web Worker a v prehliadači sa drží 3 hodiny (`radar-model-
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 
+## Bojler na prebytky
+
+Návrh a rozhodnutia: `docs/navrhy/bojler-prebytky.html`. Zásuvka Shelly s bojlerom má skript (`shared/bojler-skript.js`),
+ktorý sa každú minútu pýta Workera (`/bojler`); rozhoduje `shared/bojler.js` podľa prebytku **bez bojlera** = dodávka
+do siete z elektromera + príkon zásuvky (elektromer meria celý dom vrátane bojlera, kladný `active_power` je dodávka,
+vo W – overené 15. 11. 2026). Všetky merania účtu Huawei Northbound idú cez Durable Object `UcetHuawei`
+(`worker/src/ucet.js`): Huawei pri prihlásení zruší staršiu reláciu a meranie dovolí raz za 5 minút, telefón a zásuvka
+by sa inak navzájom odhlasovali. Do objektu nepatrí heslo – prichádza vždy v pečati. Jazyk skriptov Shelly je starší
+JavaScript (bez šípok a čiarok na konci) a HTTP.POST nesmie mať prázdne telo; stráži to `test/bojler-skript.test.js`.
+
 ## Verzia odkazu s nastavením
 
 Odkaz `#nastavenie=…` nesie verziu formátu (`v`, `SHARE_LINK_VERSION` v `shared/config.js`).

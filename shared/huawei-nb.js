@@ -40,8 +40,15 @@ export const NB = {
     // Typy zariadení, ktoré sú meniče: string inverter, residential inverter a menič s batériou
     // (PV&ESS, od SmartPVMS 26.2.0). Všetky posielajú active_power, day_cap a total_cap.
     inverterTypes: [1, 38, 23093],
+    // Elektromer na odbernom mieste: grid meter a power sensor (domáci DTSU666-H). `active_power`
+    // je vo W (menič kW), kladný je dodávka do siete, záporný odber - overené na skutočnej
+    // elektrárni 15. 11. 2026 (dom 2,9 kW, výroba 1,5 kW, elektromer -1409 W).
+    meterTypes: [17, 47],
     // Token je platný 30 minút; Worker ho vymení o niečo skôr, nech nevyprší počas merania.
     tokenMs: 25 * 60 * 1000,
+    // Dáta v reálnom čase dovolí Huawei raz za 5 minút na účet. Telefón aj zásuvka s bojlerom
+    // medzitým dostanú posledné meranie (worker/src/ucet.js).
+    meranieMs: 5 * 60 * 1000,
     notLoggedIn: 305,
     tooFrequent: 407,
     // Zlé meno či heslo, zablokovaný či vypršaný účet (20400), obmedzené prihlásenie (20403),
@@ -102,21 +109,36 @@ export function parseNbStations(json) {
 /** Je to typ zariadenia, ktorý appka berie ako menič (NB.inverterTypes)? @param {unknown} typ @returns {typ is number} */
 const jeMenic = (typ) => typeof typ === 'number' && NB.inverterTypes.includes(typ);
 
+/** Je to elektromer na odbernom mieste (NB.meterTypes)? @param {unknown} typ @returns {typ is number} */
+const jeElektromer = (typ) => typeof typ === 'number' && NB.meterTypes.includes(typ);
+
 /**
- * Meniče elektrární zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 1: [id…] } }`.
- * @param {unknown} json @returns {Record<string, Record<string, number[]>>}
+ * Číselné id zariadení vybraného druhu zo zoznamu zariadení, po elektrárňach a typoch.
+ * @param {unknown} json @param {(typ: unknown) => typ is number} druh @returns {Record<string, Record<string, number[]>>}
  */
-export function parseNbDevices(json) {
+function idsPodlaTypu(json, druh) {
     const d = data(json);
     /** @type {Record<string, Record<string, number[]>>} */ const out = {};
     for (const dev of objs(d)) {
         const { devTypeId: typ, id } = dev;
-        if (!jeMenic(typ) || typeof id !== 'number' || !Number.isSafeInteger(id)) continue;
+        if (!druh(typ) || typeof id !== 'number' || !Number.isSafeInteger(id)) continue;
         const byType = (out[textOf(dev.stationCode)] ??= {});
         (byType[typ] ??= []).push(id);
     }
     return out;
 }
+
+/**
+ * Meniče elektrární zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 1: [id…] } }`.
+ * @param {unknown} json @returns {Record<string, Record<string, number[]>>}
+ */
+export const parseNbDevices = (json) => idsPodlaTypu(json, jeMenic);
+
+/**
+ * Elektromery elektrární zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 47: [id] } }`.
+ * @param {unknown} json @returns {Record<string, Record<string, number[]>>}
+ */
+export const parseNbMeters = (json) => idsPodlaTypu(json, jeElektromer);
 
 /**
  * Textové id meničov (`devDn`) zo zoznamu zariadení, po elektrárňach a typoch:
@@ -161,6 +183,16 @@ export function parseNbDevReal(jsons, ids) {
         return v.length ? v.reduce((a, b) => a + b, 0) : null;
     };
     return { kw: sum('active_power'), day: sum('day_cap'), total: sum('total_cap') };
+}
+
+/**
+ * Výkon na odbernom mieste v kW z odpovedí getDevRealKpi elektromerov (`active_power` vo W):
+ * kladný dodávka do siete, záporný odber. Elektromery s id z `ids` sa sčítajú; keď nič neposlali, null.
+ * @param {unknown[]} jsons @param {number[]} ids @returns {number | null}
+ */
+export function parseNbSiet(jsons, ids) {
+    const w = parseNbDevReal(jsons, ids).kw;
+    return w === null ? null : Math.round(w) / 1000;
 }
 
 /**

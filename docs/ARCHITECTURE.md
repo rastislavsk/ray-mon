@@ -9,7 +9,7 @@
 ```
    Open-Meteo (žiarenie, teplota, oblačnosť)      výrobca meniča (napr. kiosk FusionSolar)
             │ pre lokalitu z Nastavenia                   │
-            │                                  Cloudflare Worker: POST /pripoj, /pv, /trasy
+            │                                  Cloudflare Worker: POST /pripoj, /pv, /trasy, /bojler
             │                                  worker/src/zdroje.js → shared/ → pv
             └──────────────┬──────────────────────────────┘
                            ▼
@@ -53,6 +53,13 @@ smerovač OSRM nad mapou OpenStreetMap; poloha ide v tele a len zaokrúhlená na
 pýta, až keď je Štatistika na obrazovke, raz pre polohu, a trasy si odloží (`TRASY_STORAGE_KEY`). Výber
 trasy, míľnika či cesty okolo Zeme je v `shared/trasy.js`. Verejný server OSRM je bez záruky a len na
 nekomerčné použitie – pred obchodmi ho treba vymeniť (`TRASY.osrmUrl`); appka o smerovači nevie.
+
+Bojler na prebytky (`docs/navrhy/bojler-prebytky.html`): skript v zásuvke Shelly sa každú minútu opýta
+Workera (`POST /bojler`), či má bojler zapnúť, a poslúchne; keď 15 minút nedostane odpoveď, vypne ho.
+Rozhoduje Durable Object účtu Huawei (`worker/src/ucet.js`) funkciou `rozhodni` zo `shared/bojler.js` podľa
+elektromera (Huawei typ 17/47, `pv.sietKw`) a príkonu zásuvky. Cez ten istý objekt meria aj telefón, aby sa
+so zásuvkou neodhlasovali. Skript skladá appka (`shared/bojler-skript.js`, Nastavenie › Čo máš doma › Bojler)
+s pečaťou, ktorú vydá `POST /bojler-pecat`. Riadenie beží bez telefónu.
 
 ## Vrstvy
 

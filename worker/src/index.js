@@ -13,8 +13,15 @@
 // odkazu Zdieľať appku. Kto odkaz otvorí včas, dostane pri prvom meraní (/pv) trvalú pečať.
 // POST /trasy: poloha -> trasy autom do miest pre kartu Štatistika (worker/src/trasy.js).
 // GET /radar/<snímka>?b=<bloky>: kúsky radarového súboru OPERA pre kartu Radar (worker/src/radar.js).
+// POST /bojler: skript v zásuvke Shelly s bojlerom sa každú minútu pýta, či ho má zapnúť
+// (docs/navrhy/bojler-prebytky.html). POST /bojler-pecat: pečať telefónu -> menšia pečať do skriptu.
+//
+// Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
+// navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
 
 import {
+    WORKER_BOJLER_PATH,
+    WORKER_BOJLER_PECAT_PATH,
     WORKER_OZNAMENIA_PATH,
     WORKER_PRIPOJ_PATH,
     WORKER_PRIPOMEN_PATH,
@@ -32,9 +39,14 @@ import { handleRadar } from './radar.js';
 import { trasy } from './trasy.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
+export { UcetHuawei } from './ucet.js';
+
 /**
  * `LIMIT`: obmedzenie počtu volaní z jednej adresy (väzba `ratelimits` vo wrangler.toml).
- * @typedef {{ PECAT_KLUC?: string, LIMIT?: { limit: (o: { key: string }) => Promise<{ success: boolean }> } } & import('./oznamenia.js').OznamEnv} Env
+ * `UCTY`: Durable Objects účtov Huawei Northbound (worker/src/ucet.js). Bez nich (testy) Worker
+ * meria priamo a bojler nevie riadiť.
+ * @typedef {{ idFromName: (n: string) => unknown, get: (id: unknown) => { fetch: (url: string, init: RequestInit) => Promise<Response> } }} UctyNs
+ * @typedef {{ PECAT_KLUC?: string, LIMIT?: { limit: (o: { key: string }) => Promise<{ success: boolean }> }, UCTY?: UctyNs } & import('./oznamenia.js').OznamEnv} Env
  */
 
 const HEADERS = {
@@ -91,6 +103,33 @@ async function novaPecat(key, obsah, zmeneny) {
 }
 
 /**
+ * Dopyt na Durable Object účtu Huawei, do ktorého prístup patrí (server a meno). Chybu zdroja
+ * vráti ako ZdrojChyba, akoby merala sama.
+ * @param {UctyNs} ucty @param {Record<string, unknown>} pristup @param {string} path @param {Date} now @param {object} [navyse]
+ * @returns {Promise<any>}
+ */
+async function ucet(ucty, pristup, path, now, navyse = {}) {
+    const stub = ucty.get(ucty.idFromName(`${String(pristup.server)}|${String(pristup.meno)}`));
+    const res = await stub.fetch(`https://ucet${path}`, {
+        method: 'POST',
+        body: JSON.stringify({ ...navyse, pristup, now: now.toISOString() }),
+    });
+    const body = /** @type {any} */ (await res.json());
+    if (body.chyba) throw new ZdrojChyba(body.chyba.druh, body.chyba.kod);
+    return body;
+}
+
+/**
+ * Meranie Huawei Northbound cez Durable Object účtu: k meraniu aj stav bojlera, keď ho zásuvka hlási.
+ * @param {UctyNs} ucty @param {Promise<CryptoKey>} key @param {{ sposob: string, pristup: Record<string, unknown>, platiDo?: number }} obsah @param {Date} now
+ */
+async function pvCezUcet(ucty, key, obsah, now) {
+    const r = await ucet(ucty, obsah.pristup, '/pv', now);
+    zalogujMeranie(obsah.sposob, r.pv);
+    return json(200, { pv: r.pv, pecat: await novaPecat(key, obsah, r.pristup), ...(r.bojler ? { bojler: r.bojler } : {}) });
+}
+
+/**
  * POST /pv: meranie zo zapečateného prístupu (text v tele), alebo z holého odkazu na kiosk.
  * @param {Request} request @param {Env} env @param {Date} now @param {typeof fetch} fetchImpl
  */
@@ -113,6 +152,7 @@ export async function handlePv(request, env, now, fetchImpl) {
     const zdroj = obsah && ZDROJE[obsah.sposob];
     if (!obsah || !zdroj) return json(400, { chyba: 'udaje' });
     try {
+        if (obsah.sposob === 'huawei-northbound' && env.UCTY) return await pvCezUcet(env.UCTY, key, obsah, now);
         const res = await zdroj.meraj(obsah.pristup, ctx);
         const pecat = await novaPecat(key, obsah, res.pristup);
         zalogujMeranie(obsah.sposob, res.pv);
@@ -200,6 +240,50 @@ export async function handleZdielaj(request, env, now) {
     return json(200, { pecat: await zapecat(key, { sposob: obsah.sposob, pristup: obsah.pristup, platiDo }) });
 }
 
+// Čo pečať pre zásuvku nesie: na meranie stačí prístup bez relácie a bez toho, čo si meranie
+// zapamätá samo (krivka, časy) - to drží Durable Object účtu. Skript ju posiela s každým dopytom.
+const BOJLER_PRISTUP = ['server', 'meno', 'heslo', 'plant', 'nazov', 'devs', 'dns', 'meters', 'devsAt', 'dnsAt', 'metersAt'];
+
+/**
+ * POST /bojler-pecat: pečať telefónu v tele -> pečať do skriptu zásuvky. Len Huawei Northbound,
+ * iné zdroje elektromer nemajú.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojlerPecat(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const body = await telo(request);
+    const obsah = body === null ? null : await otvor(key, body, now);
+    if (!obsah || obsah.sposob !== 'huawei-northbound' || obsah.platiDo !== undefined) return json(400, { chyba: 'udaje' });
+    const pristup = Object.fromEntries(Object.entries(obsah.pristup).filter(([k]) => BOJLER_PRISTUP.includes(k)));
+    return json(200, { pecat: await zapecat(key, { sposob: obsah.sposob, pristup }) });
+}
+
+/**
+ * POST /bojler: `{ pecat, rele, w, e, zapKw, vypKw }` od skriptu zásuvky (stav relé, príkon vo W,
+ * počítadlo energie vo Wh, prahy) -> `{ zapni }`. Rozhoduje Durable Object účtu (shared/bojler.js).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojler(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    /** @type {any} */ let req = null;
+    try {
+        req = JSON.parse((await telo(request)) ?? '');
+    } catch {
+        return json(400, { chyba: 'udaje' });
+    }
+    const obsah = isObj(req) && typeof req.pecat === 'string' ? await otvor(key, req.pecat, now) : null;
+    if (!obsah || obsah.sposob !== 'huawei-northbound' || obsah.platiDo !== undefined) return json(400, { chyba: 'udaje' });
+    try {
+        const prahy = { zapKw: req.zapKw, vypKw: req.vypKw };
+        const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, { rele: req.rele, w: req.w, e: req.e, prahy });
+        return json(200, { zapni: r.zapni === true, prebytokKw: r.prebytokKw ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
 
@@ -220,6 +304,9 @@ const CESTY = {
     [WORKER_PV_PATH]: { limit: false, run: handlePv },
     [WORKER_PRIPOJ_PATH]: { limit: true, run: handlePripoj },
     [WORKER_ZDIELAJ_PATH]: { limit: true, run: handleZdielaj },
+    // Zásuvka sa pýta každú minútu a bez platnej pečate nič nespraví, ako meranie.
+    [WORKER_BOJLER_PATH]: { limit: false, run: handleBojler },
+    [WORKER_BOJLER_PECAT_PATH]: { limit: true, run: handleBojlerPecat },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
     [WORKER_TRASY_PATH]: {
