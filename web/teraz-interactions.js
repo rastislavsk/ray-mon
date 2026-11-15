@@ -2,9 +2,11 @@
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Graf dňa je v paneli
 // karty Dnes (mozem-interactions.js).
 
+import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { ulozRezimBojlera } from './data.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
+import { loadRytmus, saveRytmus } from './storage.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -54,6 +56,13 @@ async function zmenRezim(store, rucne) {
     store.setState({ bojler: { ...bojler, rucne }, bojlerRezim: 'uklada' });
     const r = await ulozRezimBojlera(zdroj.pecat, rucne);
     const teraz = store.get().bojler;
-    if (r) store.setState({ bojler: r.bojler ?? teraz, bojlerRezim: null });
-    else store.setState({ bojler: teraz && { ...teraz, rucne: !rucne }, bojlerRezim: 'chyba' });
+    if (!r) {
+        store.setState({ bojler: teraz && { ...teraz, rucne: !rucne }, bojlerRezim: 'chyba' });
+        return;
+    }
+    const novy = r.bojler ?? teraz;
+    // Uložený rytmus nesie stav bojlera z posledného merania - po obnovení stránky by ukázal starý režim.
+    const rytmus = novy && rytmusSBojlerom(loadRytmus(), zdroj, novy);
+    if (rytmus) saveRytmus(rytmus);
+    store.setState({ bojler: novy, bojlerRezim: null });
 }

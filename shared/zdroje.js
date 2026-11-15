@@ -341,3 +341,13 @@ export function dalsiRytmus(prev, zdroj, now, pv, bojler = null) {
     const meranie = pv ? { pv, bojler } : { pv: stary?.pv ?? null, bojler: stary?.bojler ?? null };
     return { sposob: zdroj.sposob, nazov: zdroj.nazov, at: now.getTime(), ...meranie };
 }
+
+/**
+ * Rytmus s novým stavom bojlera (po zmene režimu v appke), alebo null, keď rytmus k tomuto meraniu
+ * nepatrí či ešte nemá meranie. Bez toho by obnovenie stránky do ďalšieho merania ukázalo starý režim.
+ * @param {Rytmus | null} r @param {Zdroj} zdroj @param {import('./bojler.js').BojlerInfo} bojler @returns {Rytmus | null}
+ */
+export function rytmusSBojlerom(r, zdroj, bojler) {
+    const moj = rytmusOf(r, zdroj);
+    return moj && moj.pv ? { ...moj, bojler } : null;
+}

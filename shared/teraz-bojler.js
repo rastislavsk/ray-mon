@@ -32,7 +32,7 @@ export const TERAZ_BOJLER_TEXTS = {
     rucne: 'ručne',
     hrejeRucne: 'Hreje',
     vypnuty: 'Vypnutý',
-    zasuvkaZap: 'zásuvka zapnutá',
+    dnesKwh: (/** @type {string} */ kwh) => `dnes ${kwh} kWh`,
     detail: 'Bojler dnes',
     detailPod: {
         hreje: 'hreje od',
@@ -192,13 +192,14 @@ function dlazdicaRucne(b, stav, den) {
         };
     }
     if (stav === 'hotovo') {
+        // Veľké číslo je odber teraz (ako pri Hreje a Vypnutý), dnešné kWh až v doplnku.
         const s = den ? suctyDna(den) : null;
         return {
             tone: 'tiche',
             riadi: 'caka',
-            velky: `${fmt1(s ? s.slnkoKwh + s.sietKwh : 0)} kWh`,
+            velky: `${fmt1(b.w / 1000)} kW`,
             meno: T.hotovo,
-            sub: `${T.rucne} · ${T.zasuvkaZap}`,
+            sub: `${T.rucne} · ${T.dnesKwh(fmt1(s ? s.slnkoKwh + s.sietKwh : 0))}`,
         };
     }
     const od = vypnuteOd(den);
