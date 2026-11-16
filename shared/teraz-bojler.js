@@ -48,8 +48,6 @@ export const TERAZ_BOJLER_TEXTS = {
     zoSlnka: 'zo slnka',
     zoSiete: 'zo siete',
     teraz: 'teraz',
-    nahriata: 'nahriata',
-    behSiet: (/** @type {string} */ kwh) => `${kwh} kWh zo siete`,
     rezim: {
         nazov: 'Kto zapína bojler',
         appka: 'Riadi appka',
@@ -286,16 +284,28 @@ function podStavu(stav, den) {
     return den?.behy.length ? T.caka : T.nic;
 }
 
-/** Riadok behu: od - do (bežiaci „teraz“), odkiaľ a kedy bola voda nahriata. @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} x */
-function behRiadok(den, x) {
-    const T = TERAZ_BOJLER_TEXTS;
-    const siet = x.whSiet >= 50;
-    const nahriata = hotovoV(den, x, x.do ?? Number.POSITIVE_INFINITY);
-    const odkial = siet ? T.behSiet(fmt1(x.whSiet / 1000)) : T.zoSlnka;
+/**
+ * Kde sa končí otvorený beh: hreje - „teraz“; termostat vypol - kedy bola voda nahriata; zásuvka mlčí -
+ * jej posledné hlásenie. Relé ostáva zapnuté, preto sa beh v zázname ešte neuzavrel.
+ * @param {BojlerInfo} b @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} x @param {Date} now @param {string} tz
+ */
+function koniecBehu(b, den, x, now, tz) {
+    const stav = bojlerStav(b, now.getTime());
+    if (stav === 'mlci') return minutesToTimeStr(localMinutes(new Date(b.kontaktAt), tz));
+    const nahriata = stav === 'hotovo' ? hotovoV(den, x, Number.POSITIVE_INFINITY) : null;
+    return nahriata === null ? TERAZ_BOJLER_TEXTS.teraz : minutesToTimeStr(nahriata);
+}
+
+/**
+ * Riadok behu: od - do a koľko kWh išlo zo slnka a koľko zo siete (farby, bez popisu; `sr` pre čítačku).
+ * @param {BojlerInfo} b @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} x @param {Date} now @param {string} tz
+ */
+function behRiadok(b, den, x, now, tz) {
+    const siet = Math.min(x.wh, x.whSiet);
     return {
-        cas: `${minutesToTimeStr(x.od)} – ${x.do === null ? T.teraz : minutesToTimeStr(x.do)}`,
-        tone: siet ? 'siet' : 'slnko',
-        info: nahriata === null ? odkial : `${odkial} · ${T.nahriata} ${minutesToTimeStr(nahriata)}`,
+        cas: `${minutesToTimeStr(x.od)} – ${x.do === null ? koniecBehu(b, den, x, now, tz) : minutesToTimeStr(x.do)}`,
+        slnko: `${fmt1((x.wh - siet) / 1000)} kWh`,
+        siet: `${fmt1(siet / 1000)} kWh`,
     };
 }
 
@@ -320,6 +330,6 @@ export function bojlerDetail(b, now, tz) {
             { v: `${fmt1(s.slnkoKwh)} kWh`, l: T.zoSlnka, tone: 'slnko' },
             { v: `${fmt1(s.sietKwh)} kWh`, l: T.zoSiete, tone: 'siet' },
         ],
-        behy: den ? den.behy.map((x) => behRiadok(den, x)) : [],
+        behy: den ? den.behy.map((x) => behRiadok(b, den, x, now, tz)) : [],
     };
 }
