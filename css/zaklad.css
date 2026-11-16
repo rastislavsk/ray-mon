@@ -201,7 +201,7 @@ button:focus-visible {
     min-width: 0;
 }
 /* Plocha na ťuknutie 44 × 44 px aj pre samotnú bodku, hore aj dole rovnako za riadok - bodka tak stojí
-   v strede riadku s miestom. */
+   v strede riadku s miestom. Od scény pod hlavičkou ju delí 8 px (okraj .scena v css/teraz.css). */
 .stav .live {
     flex: 0 1 auto;
     justify-content: center;
