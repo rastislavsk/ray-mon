@@ -1145,6 +1145,28 @@
     font-size: 0.875rem;
     color: var(--dim);
 }
+.bj-rezim-ok {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--yes);
+}
+.bj-rezim-ok svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+.bj-rezim-ok circle {
+    fill: var(--yes);
+}
+.bj-rezim-ok path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
 /* Panel Bojler dnes: pás dňa z úsekov bez minimálnej šírky, štyri čísla a behy. */
 .bj-pas .os-usek {
     top: 20px;

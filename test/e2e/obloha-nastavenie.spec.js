@@ -1142,6 +1142,12 @@ test.describe('bojler na prebytky', () => {
         await rucne.click();
         await expect(rucne).toHaveAttribute('aria-pressed', 'true');
         await expect(page.locator('#tz-bojler-rezim'), 'biela plocha prejde pod Ručne').toHaveAttribute('data-rucne', 'true');
+        // Worker uložil: na chvíľu zelené „Uložené“ namiesto popisu, potom sa popis vráti sám.
+        const ok = page.locator('#tz-bojler-rezim-ok');
+        await expect(ok).toBeVisible();
+        await expect(ok).toHaveText(R.ulozene(true));
+        await expect(page.locator('#tz-bojler-rezim-t')).toBeHidden();
+        await expect(ok).toBeHidden();
         await expect(page.locator('#tz-bojler-rezim-t')).toHaveText(R.popisRucne);
         expect(ulozene).toEqual([{ pecat: NB_ZDROJ.pecat, rucne: true }]);
         const info = { ...BOJLER_INFO, rucne: true };
@@ -1156,6 +1162,7 @@ test.describe('bojler na prebytky', () => {
         zlyhaj = true;
         await appka.click();
         await expect(page.locator('#tz-bojler-rezim-chyba')).toHaveText(R.chyba);
+        await expect(ok, 'neuložené nepotvrdí').toBeHidden();
         await expect(rucne).toHaveAttribute('aria-pressed', 'true');
         await page.keyboard.press('Escape');
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);

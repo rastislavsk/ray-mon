@@ -103,6 +103,8 @@ function terazBojlerDom() {
         tzBojlerRezimN: byId('tz-bojler-rezim-n'),
         tzBojlerRezimT: byId('tz-bojler-rezim-t'),
         tzBojlerRezimChyba: byId('tz-bojler-rezim-chyba'),
+        tzBojlerRezimOk: byId('tz-bojler-rezim-ok'),
+        tzBojlerRezimOkT: byId('tz-bojler-rezim-ok-t'),
         tzBojlerPas: byId('tz-bojler-pas'),
         tzBojlerCisla: byId('tz-bojler-cisla'),
         tzBojlerBehy: byId('tz-bojler-behy'),

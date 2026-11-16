@@ -891,6 +891,9 @@ export const STALE_PV_MS = 20 * 60 * 1000;
 /** Ako dlho svieti bublina „Meranie pripojené“ nad navigáciou, kým sama zmizne (ms). */
 export const PRIPOJENIE_BUBLINA_MS = 5000;
 
+/** Ako dlho svieti zelené „Uložené“ pod prepínačom režimu bojlera, kým sa vráti popis režimu (ms). */
+export const BOJLER_ULOZENE_MS = 2500;
+
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;
