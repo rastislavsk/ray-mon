@@ -133,8 +133,8 @@ button:focus-visible {
    oboch riadkov (docs/navrhy/hlavicka-jednotna.html) - bez zadaných panelov tam ostala výzva. Je priehľadná a nie je prilepená hore -
    pri posune odíde s obsahom, takže pod ňou aj pod stavovým riadkom je tá istá obloha a počasie
    ako na stránke. Prilepenú by Safari na iPhone (iOS 26+) zafarbil spolu so stavovým riadkom jednou
-   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky. Bodka a čas merania sú
-   v riadku pod číslom karty Teraz (.stav, docs/navrhy/teraz-stav-merania.html). */
+   farbou (vyskúšané na telefóne, 4. 11. 2026). Obsah v šírke stránky. Na karte Teraz je za miestom bodka
+   stavu merania (.stav, docs/navrhy/teraz-tok-energie.html). */
 .st {
     position: relative;
     z-index: 5;
@@ -147,8 +147,12 @@ button:focus-visible {
     font-variation-settings: 'wdth' 100;
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
-   obzor oblohy je pri čiare pod číslom, zrážky končia nad vetou pod číslom. */
+   obzor oblohy je pri čiare pod číslom, zrážky končia nad vetou pod číslom. Slnko svieti z ľavého horného
+   rohu: v scéne toku energie je tam elektráreň a panely domu hľadia doľava (docs/navrhy/teraz-tok-energie.html). */
 .wx {
+    --wx-sx: -14px;
+    --wx-flare-dx: 104px;
+    --wx-diff-x: 15%;
     --wx-core: 255, 255, 250;
     --wx-warm: 255, 246, 214;
     --wx-ray: 255, 255, 240;
@@ -169,10 +173,16 @@ button:focus-visible {
     font-variation-settings: 'wdth' 112;
     line-height: 1.25;
 }
+/* Druhý riadok: miesto a za ním bodka stavu merania. */
+.st .miesto {
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
 /* Dlhé meno miesta sa radšej zalomí, než by sa orezalo (aj pri väčšom písme v systéme). Biele
    ako všetko na holej oblohe - tlmený text (--dim) patrí len na tmavé sklo. */
 .st .place {
-    grid-row: 2;
     min-width: 0;
     overflow-wrap: anywhere;
     font-size: 0.8125rem;
@@ -181,22 +191,24 @@ button:focus-visible {
     grid-column: 2;
     grid-row: 1 / span 2;
 }
-/* ===== Stav merania pod číslom karty Teraz ===== */
-/* Bodka, čas a slovo o stave (stavRiadok v shared/hlavicka.js) písmom riadku pod číslom, bez
-   pozadia - ako ostatný text na holej oblohe. Pri otvorenej bubline je riadok nad vrstvou .tip-bg
-   (z-index 4), aby ostal ťukateľný a bublina pri ňom. */
-/* V tom istom riadku vpravo smer toku z elektromera (.tok v teraz.css); keď sa nezmestí, zalomí sa. */
+/* ===== Stav merania v hlavičke karty Teraz ===== */
+/* Za miestom len bodka (stavRiadok v shared/hlavicka.js); čas a slovo sa ukážu po ťuknutí spolu s bublinou
+   (docs/navrhy/teraz-tok-energie.html). Bez pozadia - ako ostatný text na holej oblohe. Hlavička je nad
+   vrstvou .tip-bg (z-index 4), takže bodka ostane ťukateľná a bublina pri nej. */
 .stav {
-    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    gap: 14px 16px;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 20px 0;
+    min-width: 0;
 }
-/* V riadku so smerom toku sa stav pri väčšom písme zalomí, nevytŕča. */
+/* Plocha na ťuknutie 44 × 44 px aj pre samotnú bodku. Dole siaha len kúsok pod riadok, aby od scény pod
+   hlavičkou ostal odstup. */
 .stav .live {
+    flex: 0 1 auto;
+    justify-content: center;
+    min-width: 44px;
+    margin-bottom: -6px;
+}
+.live {
     flex: 0 1 auto;
     min-width: 0;
 }
@@ -253,8 +265,8 @@ button.live {
 button.live:disabled {
     cursor: default;
 }
-#hdr-status:empty::before {
-    content: '0';
+#hdr-status:empty {
+    display: none;
 }
 /* Malé „›“ na konci hovorí, že sa na riadok dá ťuknúť (otvorí bublinu). V náhľade iného času je
    riadok vypnutý a šípka nie je. Čítačka ho nečíta (alternatívny text je prázdny). */
@@ -271,11 +283,11 @@ button.live[aria-expanded='true'] {
     z-index: 4;
     background: rgba(5, 8, 20, 0.3);
 }
-/* Bublina pod riadkom stavu, šípka ukazuje hore na bodku. */
+/* Bublina pod hlavičkou v šírke obsahu stránky; šípky nemá, bodka môže stáť kdekoľvek za miestom. */
 .tip {
     position: absolute;
-    top: calc(100% + 12px);
-    left: 12px;
+    top: calc(100% - 2px);
+    left: max(12px, calc((100% - 624px) / 2));
     width: min(320px, calc(100% - 24px));
     padding: 14px 16px 16px;
     border-radius: 18px;
@@ -286,17 +298,6 @@ button.live[aria-expanded='true'] {
     color: #fff;
     font-size: 0.9375rem;
     line-height: 1.4;
-}
-.tip::before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    left: 18px;
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    background: rgba(10, 16, 38, 0.94);
-    transform: rotate(45deg);
 }
 .tip b {
     display: block;

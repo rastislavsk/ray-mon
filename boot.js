@@ -51,6 +51,9 @@ async function recover(err) {
     }
     const line = document.getElementById('hdr-status');
     if (line) line.textContent = 'appka sa nenačítala, skús to o chvíľu';
+    // Hláška stojí v hlavičke pri bodke stavu merania, ktorá je do prvého prekreslenia skrytá. Starý index.html
+    // ju má viditeľnú pod číslom, preto `?.`.
+    document.getElementById('tz-stav')?.classList.remove('hidden');
     // Animácia čakania by inak tvrdila, že sa ešte načítava. Starý index.html ju nemá, preto `?.`.
     document.getElementById('tz-svitanie')?.classList.add('hidden');
 }

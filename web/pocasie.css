@@ -1,6 +1,6 @@
 /* Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html).
-   Vrstvy skladá web/pocasie.js, stav (data-wx, data-noc) zapisuje render karty Teraz. Svetlo
-   prichádza z pravého horného rohu obrazovky (aj spod stavového riadku) a k číslu výkonu slabne.
+   Vrstvy skladá web/pocasie.js, stav (data-wx, data-noc) zapisuje render karty Teraz. Svetlo (predvolene
+   z pravého horného rohu obrazovky, appka ho presúva cez --wx-sx) prichádza aj spod stavového riadku a nadol slabne.
    Farby, výšku obzoru a koniec zrážok si appka nastaví v css/ cez premenné.
    Kresba je dekorácia: nezachytí dotyk, čítačka ju nevidí (aria-hidden v HTML), útlm pohybu
    zastaví jej pohyb (pravidlo prefers-reduced-motion v css/). */
@@ -91,7 +91,7 @@
 .wx-flare {
     width: 46px;
     height: 46px;
-    left: calc(var(--wx-sx) - 150px);
+    left: calc(var(--wx-sx) + var(--wx-flare-dx, -150px));
     top: 130px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(var(--wx-ray), 0.16), rgba(var(--wx-ray), 0.05) 60%, transparent 70%);
@@ -100,7 +100,12 @@
 /* ---- rozptýlené svetlo za oblakmi ---- */
 .wx-diffuse {
     inset: 0;
-    background: radial-gradient(ellipse 70% 55% at 85% 0%, rgba(var(--wx-core), 0.3), rgba(var(--wx-core), 0.1) 45%, transparent 75%);
+    background: radial-gradient(
+        ellipse 70% 55% at var(--wx-diff-x, 85%) 0%,
+        rgba(var(--wx-core), 0.3),
+        rgba(var(--wx-core), 0.1) 45%,
+        transparent 75%
+    );
 }
 
 /* ---- oblaky: mäkké kopy z rozmazaných kruhov ---- */

@@ -25,7 +25,8 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
-import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { scenaModel } from '../../shared/teraz-scena.js';
 import { kwpText } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
@@ -1065,15 +1066,17 @@ test.describe('bojler na prebytky', () => {
             bojler: info,
             pvNavyse: { sietKw: 0.4, measuredAt: FIXED_NOW.toISOString() },
         });
-        // Smer toku v riadku stavu merania (T1): slovo len pre čítačku, ťuknutie otvorí panel Elektrina teraz.
-        const tok = /** @type {NonNullable<ReturnType<typeof tokSiete>>} */ (tokSiete(0.4));
-        const t1 = page.locator('#tz-stav #tz-tok');
-        await expect(t1).toHaveAttribute('data-smer', 'von');
-        await expect(t1).toHaveAccessibleName(`${tok.slovo} ${tok.kw}`);
-        const riadok = await page.locator('#hdr-live').boundingBox();
-        const t1box = await t1.boundingBox();
-        expect(Math.abs((riadok?.y ?? 0) - (t1box?.y ?? 99)), 'T1 je v riadku so stavom merania').toBeLessThan(4);
-        await t1.click();
+        // Scéna toku energie (docs/navrhy/teraz-tok-energie.html): vetu dostane čítačka, prvé ťuknutie ukáže čísla
+        // v scéne bez slov, druhé otvorí panel Elektrina teraz.
+        const s = scenaModel({ vyrobaKw: pv.realTimePowerKw, odhad: false, sietKw: 0.4 });
+        const scena = page.locator('#tz-scena');
+        await expect(scena).toHaveAccessibleName(s.popis);
+        await expect(scena.locator('.sc-bod[data-smer="von"]')).toHaveCount(s.body);
+        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveCount(0);
+        await scena.click();
+        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveText([`${s.vyroba}kW`, `${s.dom}kW`, `${s.siet?.kw}kW`]);
+        await scena.click();
+        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveCount(0);
         const tokSheet = page.locator('#tz-tok-sheet');
         await expect(tokSheet).toBeVisible();
         const td = /** @type {NonNullable<ReturnType<typeof tokDetail>>} */ (
@@ -1086,7 +1089,7 @@ test.describe('bojler na prebytky', () => {
         expect((await new AxeBuilder({ page }).include('#tz-tok-sheet').analyze()).violations).toEqual([]);
         await page.keyboard.press('Escape');
         await expect(tokSheet).toBeHidden();
-        await expect(t1).toBeFocused();
+        await expect(scena).toBeFocused();
         // Všetky dlaždice v tvare Bojlera (A3): s veľkým číslom.
         await expect(page.locator('#tz-dlazdice .dl .velky')).toHaveCount(await page.locator('#tz-dlazdice .dl').count());
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);

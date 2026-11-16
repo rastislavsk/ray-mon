@@ -86,10 +86,12 @@ function mozemDom() {
     };
 }
 
-/** Karta Teraz: smer toku pod číslom a panel Bojler dnes (bojler na prebytky). */
+/** Karta Teraz: scéna toku energie, panel Elektrina teraz a panel Bojler dnes (bojler na prebytky). */
 function terazBojlerDom() {
     return {
-        tzTok: /** @type {HTMLButtonElement} */ (byId('tz-tok')),
+        tzScena: /** @type {HTMLButtonElement} */ (byId('tz-scena')),
+        tzScenaKresba: byId('tz-scena-kresba'),
+        tzScenaCisla: byId('tz-scena-cisla'),
         tzTokSheet: /** @type {HTMLDialogElement} */ (byId('tz-tok-sheet')),
         tzTokIco: byId('tz-tok-ico'),
         tzTokTtl: byId('tz-tok-ttl'),
@@ -115,9 +117,6 @@ function terazBojlerDom() {
 function terazDom() {
     return {
         wx: byId('wx'),
-        tzTitle: byId('ttl-terazky'),
-        tzNum: byId('tz-num'),
-        tzNumVal: byId('tz-num-val'),
         tzSvitanie: byId('tz-svitanie'),
         tzSub: byId('tz-sub'),
         tzChipSheet: /** @type {HTMLDialogElement} */ (byId('tz-chip-sheet')),
@@ -506,7 +505,7 @@ export function collectDom() {
         themeColor: /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="theme-color"]')),
         page: byId('page'),
         place: byId('hdr-place'),
-        // Bodka, čas merania a bublina sú v riadku pod číslom karty Teraz, mená ostali z hlavičky.
+        // Bodka merania karty Teraz v hlavičke za miestom, čas, slovo a bublina po ťuknutí.
         stav: byId('tz-stav'),
         live: /** @type {HTMLButtonElement} */ (byId('hdr-live')),
         status: byId('hdr-status'),

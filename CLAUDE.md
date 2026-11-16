@@ -48,6 +48,17 @@ ale relé neprepne ani pri tichu; Worker mu vtedy vráti `zapni` rovné stavu re
 Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má dlaždicu so stavom a panel Bojler dnes
 (`shared/teraz-bojler.js`), otvorený tým istým krokom `tzVec` ako detail spotrebiča.
 
+## Scéna toku energie na karte Teraz
+
+Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom
+je čiarová kresba `img/dom.png` (biele čiary na priehľadnom pozadí), elektráreň a vedenie kreslí
+`web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe
+hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
+zrkadlová. Čísla v scéne sú bez slov (význam dáva miesto) a biele ako všetok text na holej oblohe; ťuknutie ich
+ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektromerom). Body na vedení sú SMIL, nie CSS -
+pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom, čas
+a slovo len po ťuknutí; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
+
 ## Verzia odkazu s nastavením
 
 Odkaz `#nastavenie=…` nesie verziu formátu (`v`, `SHARE_LINK_VERSION` v `shared/config.js`).
