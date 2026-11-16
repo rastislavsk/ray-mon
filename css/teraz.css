@@ -1,7 +1,7 @@
 /* Štýly karty Teraz a grafu dňa. */
 /* ===== Karta Teraz ===== */
-/* Čo zapnúť (docs/navrhy/teraz-navrh-2.html): riadok nad dlaždicami, plné dlaždice toho, čo ide teraz,
-   a skupiny riadkov. Kontajner - mená v dlaždiciach sa zmenšia s jeho šírkou, nie s oknom. */
+/* Čo zapnúť (docs/navrhy/teraz-navrh-2.html, docs/navrhy/teraz-dlazdice.html): riadok nad dlaždicami a mriežka
+   dlaždíc. Kontajner - mená v dlaždiciach sa zmenšia s jeho šírkou, nie s oknom, a široký má dlaždice po troch. */
 #tz-co {
     position: relative;
     container-type: inline-size;
@@ -167,31 +167,31 @@
     font-weight: 700;
     color: var(--dim);
 }
+/* Čo zapnúť (docs/navrhy/teraz-dlazdice.html): jedna mriežka polovičných dlaždíc, aj pri nepárnom počte;
+   v širokom stĺpci po troch (nižšie, za veľkosťami písma). */
 .mriezka {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
-/* Dlaždica: plná zelená (zo slnka) či modrá (z lacnej siete), meno a kedy dobehne. Modrá má tmavý lem,
-   aby sa nestratila na modrej oblohe. */
+/* Dlaždica: plná zelená (ide teraz zo slnka) či modrá (z lacnej siete), ostatné na skle. Ploché, bez lemu.
+   Dlaždice v rade zdieľajú šesť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, doplnok, odznak -
+   číslo aj pásik sú tak v celom rade na rovnakej výške, aj keď sa meno v jednej zalomí. Medzery
+   v dlaždici robia okraje prvkov, nie medzera mriežky (tá je medzi dlaždicami). */
 .dl {
+    grid-row: span 6;
     display: grid;
-    align-content: space-between;
-    gap: 14px;
+    grid-template-rows: subgrid;
+    row-gap: 0;
     min-width: 0;
-    min-height: 136px;
     padding: 14px;
     border: 0;
     border-radius: 24px;
     text-align: left;
     cursor: pointer;
 }
-.dl.cela {
-    grid-column: 1 / -1;
-    min-height: 0;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    column-gap: 14px;
+.dl > span:not(.dl-ico) {
+    display: contents;
 }
 .dl[data-tone='go'] {
     background: var(--yes);
@@ -201,24 +201,12 @@
 .dl[data-tone='cheap'] {
     background: var(--cheap);
     color: #06233d;
-    box-shadow:
-        0 0 0 2px rgba(6, 35, 61, 0.35),
-        0 8px 30px rgba(124, 196, 255, 0.3);
-}
-/* Keď teraz nejde nič: najbližšia vec s rámom (zelený slnko, modrý lacná sieť) a odpočtom. */
-.dl[data-tone='next'] {
-    border: 2px solid var(--yes);
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    color: #fff;
-}
-.dl[data-tone='next'][data-cheap='true'] {
-    border-color: var(--cheap);
+    box-shadow: 0 8px 30px rgba(124, 196, 255, 0.3);
 }
 .dl-ico {
     width: 44px;
     height: 44px;
+    margin-bottom: 22px;
     display: grid;
     place-items: center;
     border-radius: 50%;
@@ -227,20 +215,26 @@
 .dl[data-tone='cheap'] .dl-ico {
     background: rgba(6, 35, 61, 0.12);
 }
-.dl[data-tone='next'] .dl-ico {
-    background: rgba(255, 255, 255, 0.14);
+.dl .velky {
+    align-self: end;
+}
+/* Ďalší spotrebič v lacnom pásme: čas modrý, ako bol v riadku. */
+.dl[data-kind='cheap'] .velky {
+    color: var(--cheap-text);
 }
 .dl b {
+    align-self: start;
     display: block;
-    font-size: min(1.375rem, 7cqi);
+    margin-top: 2px;
+    font-size: min(1.375rem, 6.4cqi);
     font-weight: 800;
     font-variation-settings: 'wdth' 108;
     line-height: 1.1;
     overflow-wrap: anywhere;
 }
 .dl small {
+    align-self: start;
     display: block;
-    margin-top: 3px;
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.25;
@@ -252,16 +246,11 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
-/* Malé slovo pred veľkým číslom: v dlaždici v riadku s časom, v riadku skupiny nad ním (stĺpec času je úzky). */
+/* Malé slovo pred veľkým číslom („do“, „od“), v riadku s časom. */
 .velky .pred {
     font-size: 0.55em;
     font-weight: 800;
     font-variation-settings: normal;
-}
-.ri .velky .pred {
-    display: block;
-    font-size: 0.75rem;
-    line-height: 1.1;
 }
 /* Veľké číslo dlaždice sa nezalomí - pri väčšom písme v systéme sa zmenší so šírkou Čo zapnúť (#tz-co). */
 .dl .velky {
@@ -269,7 +258,8 @@
 }
 /* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. */
 .potom {
-    display: inline-block;
+    justify-self: start;
+    align-self: start;
     margin-top: 6px;
     padding: 2px 8px;
     border-radius: 999px;
@@ -297,59 +287,30 @@
     width: 26px;
     height: 26px;
 }
-.co-h {
-    margin: 0;
-    padding: 18px 6px 8px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
-}
-.riadky {
-    display: grid;
-    gap: 8px;
-}
-/* Riadok skupiny: veľký čas, ikona, meno a doplnok. V lacnom pásme čas modrý, „tento týždeň nie“ tlmený. */
-.ri {
-    display: grid;
-    grid-template-columns: 4.1rem 24px minmax(0, 1fr);
-    align-items: center;
-    gap: 0 10px;
-    min-height: 52px;
-    padding: 6px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 16px;
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    text-align: left;
-    cursor: pointer;
-}
-.ri .velky {
-    font-size: 1.375rem;
-}
-.ri[data-kind='cheap'] .velky {
-    color: var(--cheap-text);
-}
-.ri b {
-    display: block;
-    font-weight: 800;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-}
-.ri small {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--dim);
-}
-/* Núdzový čas: pásik, koľko programu dá slnko (zlatá) a koľko sieť (modrá). */
+/* Núdzový čas: pásik, koľko programu dá slnko (zlatá) a koľko sieť (modrá). Kde nie je čo ukázať,
+   je prázdny a drží miesto - doplnok pod ním tak sedí s vedľajšou dlaždicou. */
 .podiel {
+    align-self: start;
     display: block;
     height: 6px;
-    margin: 5px 0 3px;
+    margin: 8px 0 4px;
     border-radius: 3px;
     background: linear-gradient(90deg, #ffd166 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+}
+.podiel[data-prazdny] {
+    visibility: hidden;
+}
+/* Široký stĺpec (prehľad so stĺpcami, tablet): dlaždice po troch, meno a číslo sa zmenšia s ich šírkou. */
+@container (min-width: 420px) {
+    .mriezka {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .dl b {
+        font-size: min(1.375rem, 4.3cqi);
+    }
+    .dl .velky {
+        font-size: min(1.75rem, 6.6cqi);
+    }
 }
 /* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
    toho, čo zapnúť. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
@@ -1036,8 +997,9 @@
     text-anchor: middle;
     text-transform: uppercase;
 }
-/* Dlaždica bojlera: nahriata voda tichá na skle, zásuvka bez spojenia s jantárovým rámom. */
-.dl[data-tone='tiche'] {
+/* Dlaždice na skle: ďalšie spotrebiče a Bojler (nahriata voda, čaká); zásuvka bez spojenia s jantárovým rámom. */
+.dl[data-tone='tiche'],
+.dl[data-tone='next'] {
     background: var(--glass);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -1051,6 +1013,7 @@
     color: #fff;
 }
 .dl[data-tone='tiche'] .dl-ico,
+.dl[data-tone='next'] .dl-ico,
 .dl[data-tone='chyba'] .dl-ico {
     background: rgba(255, 255, 255, 0.14);
 }

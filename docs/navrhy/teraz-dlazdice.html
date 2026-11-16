@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Karta Teraz – všetky spotrebiče ako dlaždice</title>
+        <style>
+            /* Mockup, nie snímka z appky. Telefóny sú kreslené ručne podľa css/teraz.css a css/zaklad.css.
+               Scenár Ráno vychádza zo stavu appky 16. 11. 2026 dopoludnia (Auto a Bojler podľa snímky z telefónu),
+               scenár Na slnku je vymyslený. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --cheap-text: #b0dbff;
+                --costly: #ff7a66;
+                --amber: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 36px;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p,
+            li {
+                margin: 6px 0;
+            }
+            .note {
+                color: rgba(242, 240, 234, 0.7);
+                font-size: 0.9rem;
+            }
+            .scen {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 0;
+                background: #070b18;
+            }
+            .scen button {
+                padding: 8px 14px;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                background: none;
+                color: var(--ink);
+                font: inherit;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            .scen button[aria-pressed='true'] {
+                background: #fff;
+                color: #0b1430;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                width: 375px;
+                max-width: 100%;
+            }
+            figcaption {
+                margin-top: 10px;
+                font-size: 0.9rem;
+            }
+            figcaption b {
+                display: block;
+                font-size: 1rem;
+                color: #fff;
+            }
+            .pro,
+            .proti {
+                display: block;
+                font-size: 0.85rem;
+            }
+            .pro::before {
+                content: '+ ';
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .proti::before {
+                content: '– ';
+                color: var(--costly);
+                font-weight: 800;
+            }
+
+            /* ===== Telefón ===== */
+            .phone {
+                padding: 16px 12px 18px;
+                border-radius: 30px;
+                background: linear-gradient(180deg, #5b626e 0%, #6b717c 55%, #7a8089 100%);
+                color: #fff;
+                overflow: hidden;
+                container-type: inline-size;
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0 4px 12px;
+                font-size: 0.8rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .oko i {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #c9d3e6;
+            }
+            .oko span {
+                font-weight: 600;
+                letter-spacing: 0;
+                text-transform: none;
+            }
+            .vi {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                display: block;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+            .pred {
+                font-size: 0.55em;
+                font-weight: 800;
+                font-variation-settings: normal;
+            }
+            .podiel {
+                display: block;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, #ffd166 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+            }
+
+            /* Dnes: dlaždice (jedna cez celú šírku) a pod nimi riadky v skupinách. */
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                align-content: space-between;
+                gap: 14px;
+                min-width: 0;
+                min-height: 136px;
+                padding: 14px;
+                border-radius: 24px;
+                text-align: left;
+            }
+            .dl.cela {
+                grid-column: 1 / -1;
+                min-height: 0;
+                grid-template-columns: auto minmax(0, 1fr);
+                align-items: center;
+                column-gap: 14px;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+            }
+            .dl[data-tone='cheap'] {
+                background: var(--cheap);
+                color: #06233d;
+            }
+            .dnes .dl[data-tone='cheap'] {
+                box-shadow: 0 0 0 2px rgba(6, 35, 61, 0.35);
+            }
+            .dl[data-tone='tiche'] {
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl-ico {
+                position: relative;
+                width: 44px;
+                height: 44px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .dl[data-tone='cheap'] .dl-ico {
+                background: rgba(6, 35, 61, 0.12);
+            }
+            .dl[data-tone='tiche'] .dl-ico {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl-ico .vi {
+                width: 26px;
+                height: 26px;
+            }
+            .dl-ico[data-riadi]::after {
+                content: '';
+                position: absolute;
+                top: 1px;
+                right: 1px;
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: #2f8a17;
+                box-shadow: 0 0 0 2px var(--yes);
+            }
+            .dl .velky {
+                font-size: min(1.75rem, 10cqi);
+            }
+            .dl b {
+                display: block;
+                font-size: min(1.375rem, 7cqi);
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+                line-height: 1.1;
+                overflow-wrap: anywhere;
+            }
+            .dl small {
+                display: block;
+                margin-top: 3px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.25;
+            }
+            .co-h {
+                margin: 0;
+                padding: 18px 6px 8px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .riadky {
+                display: grid;
+                gap: 8px;
+            }
+            .ri {
+                display: grid;
+                grid-template-columns: 4.1rem 24px minmax(0, 1fr);
+                align-items: center;
+                gap: 0 10px;
+                min-height: 52px;
+                padding: 6px 14px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 16px;
+                background: var(--glass);
+            }
+            .ri .velky {
+                font-size: 1.375rem;
+            }
+            .ri b {
+                display: block;
+                font-weight: 800;
+                line-height: 1.15;
+            }
+            .ri small {
+                display: block;
+                font-size: 0.75rem;
+                color: var(--dim);
+            }
+            .ri .podiel {
+                margin: 5px 0 3px;
+            }
+
+            /* Návrh: jedna mriežka polovičných dlaždíc, ploché, bez lemu. Dlaždice v rade zdieľajú riadky
+               (subgrid): ikona, číslo, meno, pásik, text - číslo aj pásik sú v rade na rovnakej výške. */
+            .navrh .mriezka .dl {
+                grid-row: span 5;
+                grid-template-rows: subgrid;
+                gap: 0;
+                align-content: normal;
+            }
+            .navrh .dl > span:not(.dl-ico) {
+                display: contents;
+            }
+            .navrh .dl-ico {
+                margin-bottom: 22px;
+            }
+            .navrh .dl .velky {
+                align-self: end;
+            }
+            .navrh .dl b {
+                align-self: start;
+                margin-top: 2px;
+            }
+            .navrh .dl .podiel {
+                align-self: start;
+                margin: 8px 0 4px;
+            }
+            /* Dlaždica bez pásika drží jeho miesto, aby text pod ním sedel s vedľajšou. */
+            .navrh .dl .podiel.prazdny {
+                visibility: hidden;
+            }
+            .navrh .dl small {
+                align-self: start;
+                margin-top: 0;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--amber);
+                font-size: 0.75rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Karta Teraz – všetky spotrebiče ako dlaždice</h1>
+                <p class="note">
+                    16. 11. 2026. Dnes má dlaždicu len to, čo ide teraz (a Bojler riadený zásuvkou), ostatné sú riadky v skupinách. Návrh:
+                    každý spotrebič má polovičnú dlaždicu ako Auto a Bojler, všetky v jednej mriežke, ploché, bez lemu, s pásikom
+                    slnko/sieť. Vybrané v náhľade v prehliadači; 3D štýly (vankúš, klávesa, sklo) boli zamietnuté v prospech plochého.
+                </p>
+            </header>
+
+            <div class="scen" role="group" aria-label="Scenár">
+                <button type="button" data-scen="rano" aria-pressed="true">Ráno, lacná sieť</button>
+                <button type="button" data-scen="slnko" aria-pressed="false">Na slnku (vymyslený)</button>
+            </div>
+
+            <section>
+                <h2><small>Porovnanie</small>Dnes vs. návrh</h2>
+                <div class="rad">
+                    <figure>
+                        <div class="phone dnes" id="ph-dnes"></div>
+                        <figcaption>
+                            <b>Dnes</b>
+                            Čo ide teraz je dlaždica (jediná cez celú šírku), zvyšok riadky pod nadpisom skupiny.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone navrh" id="ph-navrh"></div>
+                        <figcaption>
+                            <b>Návrh – jedna mriežka dlaždíc</b>
+                            <span class="pro">Všetky spotrebiče vyzerajú rovnako, ikona v kruhu všade.</span>
+                            <span class="pro">Číslo a pásik sú v rade dlaždíc na rovnakej výške.</span>
+                            <span class="pro">Pásik slnko/sieť ostáva.</span>
+                            <span class="proti">Karta je dlhšia (dlaždica ~140 px vs. riadok ~60 px).</span>
+                            <span class="proti">Čo ide teraz a čo neskôr, rozlišuje len farba – nadpis skupiny nie je.</span>
+                            <span class="proti">Dlhý text pod menom sa v polovičnej dlaždici zalomí na 2–3 riadky.</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Pravidlá</small>Čo sa mení</h2>
+                <table>
+                    <tr>
+                        <th>Čo</th>
+                        <th>Dnes</th>
+                        <th>Návrh</th>
+                    </tr>
+                    <tr>
+                        <td>Tvar</td>
+                        <td>Dlaždica len pre to, čo ide teraz; ostatné riadky</td>
+                        <td>Každý spotrebič polovičná dlaždica</td>
+                    </tr>
+                    <tr>
+                        <td>Nepárny počet</td>
+                        <td>Posledná (alebo jediná) cez celú šírku</td>
+                        <td>Vždy polovičná, posledná ostane vľavo sama</td>
+                    </tr>
+                    <tr>
+                        <td>Skupiny</td>
+                        <td>Nadpisy „Dnes ešte“, „Najmenej zo siete“</td>
+                        <td>Jedna mriežka bez nadpisov; poradie: čo ide teraz, Bojler, potom podľa času</td>
+                    </tr>
+                    <tr>
+                        <td>Farba</td>
+                        <td>Ide teraz: zelená / modrá s tmavým lemom; ďalšia vec: rám</td>
+                        <td>Ide teraz: zelená / modrá bez lemu; ostatné sivé sklo ako Bojler, bez rámu</td>
+                    </tr>
+                    <tr>
+                        <td>Pásik slnko/sieť</td>
+                        <td>V riadku pri núdzovom čase</td>
+                        <td>V dlaždici pod menom; kde nie je, ostane prázdne miesto</td>
+                    </tr>
+                    <tr>
+                        <td>Zarovnanie</td>
+                        <td>Obsah dlaždice pritlačený dole</td>
+                        <td>Dlaždice v rade zdieľajú riadky (CSS subgrid): číslo aj pásik na rovnakej výške</td>
+                    </tr>
+                    <tr>
+                        <td>Ťuknutie</td>
+                        <td colspan="2">Bez zmeny: dlaždica otvorí detail spotrebiča, Bojler panel Bojler dnes</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2><small>Otvorené</small>Na rozhodnutie</h2>
+                <ul>
+                    <li>Nadpis „Najmenej zo siete“ zmizne – stačí, že to povie pásik a text pod menom?</li>
+                    <li>
+                        Texty pod menom sú písané pre riadok („polovica zo slnka · celá zo slnka v stredu“). V dlaždici sa zalomia; skrátiť,
+                        napr. „pol zo slnka · celá v stredu“?
+                    </li>
+                    <li>Dlaždice zo slnka neskôr nemajú pásik (appka ho počíta len pri núdzovom čase) – nechať prázdne miesto?</li>
+                    <li>Prehľad so stĺpcami (široká obrazovka): mriežka po dvoch, alebo po troch?</li>
+                </ul>
+            </section>
+        </main>
+        <script>
+            const ICO = {
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/><path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+            };
+            const ikona = (id) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${ICO[id]}</svg>`;
+
+            // teraz: dlaždica už dnes (ide teraz / Bojler); inak riadok v skupine `skupina`. s: podiel slnka v % (null = bez pásika).
+            const SCEN = {
+                rano: {
+                    oko: ['Slnko až v stredu', 'zajtra zamračené'],
+                    veci: [
+                        {
+                            id: 'auto',
+                            tone: 'cheap',
+                            teraz: true,
+                            pred: 'do ',
+                            cas: '09:30',
+                            meno: 'Nabíjaj auto',
+                            sub: 'lacný prúd dovtedy',
+                            s: null,
+                        },
+                        {
+                            id: 'bojler',
+                            tone: 'tiche',
+                            teraz: true,
+                            riadi: true,
+                            cas: '2,2 kW',
+                            meno: 'Hreje',
+                            sub: 'ručne · od 08:31',
+                            s: null,
+                        },
+                        {
+                            id: 'umyvacka',
+                            skupina: 'Najmenej zo siete',
+                            cas: '10:30',
+                            meno: 'Umývačka',
+                            sub: 'polovica zo slnka · celá zo slnka v stredu',
+                            s: 49,
+                        },
+                        {
+                            id: 'pracka',
+                            skupina: 'Najmenej zo siete',
+                            cas: '11:00',
+                            meno: 'Práčka',
+                            sub: 'polovica zo slnka · celá zo slnka vo štvrtok',
+                            s: 55,
+                        },
+                        {
+                            id: 'susicka',
+                            skupina: 'Najmenej zo siete',
+                            cas: '13:00',
+                            meno: 'Sušička',
+                            sub: 'lacná elektrina · celá zo slnka vo štvrtok',
+                            s: 22,
+                        },
+                    ],
+                },
+                slnko: {
+                    oko: ['Teraz zo slnka', 'do 14:30'],
+                    veci: [
+                        { id: 'pracka', tone: 'go', teraz: true, pred: 'do ', cas: '13:10', meno: 'Práčka', sub: 'zo slnka', s: null },
+                        { id: 'umyvacka', tone: 'go', teraz: true, pred: 'do ', cas: '12:40', meno: 'Umývačka', sub: 'zo slnka', s: null },
+                        {
+                            id: 'bojler',
+                            tone: 'tiche',
+                            teraz: true,
+                            riadi: true,
+                            cas: '2,1 kW',
+                            meno: 'Hreje',
+                            sub: 'zo slnka · od 10:55',
+                            s: null,
+                        },
+                        { id: 'susicka', skupina: 'Dnes ešte', cas: '13:15', meno: 'Sušička', sub: 'po práčke, zo slnka', s: null },
+                        { id: 'auto', skupina: 'Dnes ešte', cas: '13:30', meno: 'Auto', sub: '2 h zo slnka', s: null },
+                    ],
+                },
+            };
+
+            const oko = (o) => `<div class="oko"><i></i>${o[0]} <span>· ${o[1]}</span></div>`;
+            const velky = (v) => `<span class="velky">${v.pred ? `<span class="pred">${v.pred}</span>` : ''}${v.cas}</span>`;
+            const pasik = (s, prazdny) =>
+                s === null ? (prazdny ? '<i class="podiel prazdny"></i>' : '') : `<i class="podiel" style="--s:${s}%"></i>`;
+            const dlazdica = (v, cela, navrh) =>
+                `<div class="dl${cela ? ' cela' : ''}" data-tone="${v.tone ?? 'tiche'}"><span class="dl-ico"${v.riadi ? ' data-riadi' : ''}>${ikona(v.id)}</span>` +
+                `<span>${velky(v)}<b>${v.meno}</b>${navrh ? pasik(v.s, true) : ''}<small>${v.sub}</small></span></div>`;
+            const riadok = (v) =>
+                `<div class="ri">${velky(v)}<span>${ikona(v.id)}</span><span><b>${v.meno}</b>${pasik(v.s, false)}<small>${v.sub}</small></span></div>`;
+
+            function kresli(id) {
+                const sc = SCEN[id];
+                const hore = sc.veci.filter((v) => v.teraz);
+                const n = hore.length;
+                let dnes =
+                    oko(sc.oko) +
+                    `<div class="mriezka">${hore.map((v, i) => dlazdica(v, n === 1 || (n % 2 === 1 && i === n - 1), false)).join('')}</div>`;
+                const skupiny = [...new Set(sc.veci.filter((v) => !v.teraz).map((v) => v.skupina))];
+                for (const g of skupiny)
+                    dnes += `<h3 class="co-h">${g}</h3><div class="riadky">${sc.veci
+                        .filter((v) => v.skupina === g)
+                        .map(riadok)
+                        .join('')}</div>`;
+                document.getElementById('ph-dnes').innerHTML = dnes;
+                document.getElementById('ph-navrh').innerHTML =
+                    oko(sc.oko) + `<div class="mriezka">${sc.veci.map((v) => dlazdica(v, false, true)).join('')}</div>`;
+                document.querySelectorAll('.scen button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scen === id)));
+            }
+            document.querySelector('.scen').addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (b) kresli(b.dataset.scen);
+            });
+            kresli('rano');
+        </script>
+    </body>
+</html>

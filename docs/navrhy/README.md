@@ -93,3 +93,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `teraz-vyhlad-alternativy.html` | Karta Teraz – dni bez slnka inak: hrebeň týždňa (A), hrebeň + „Kým príde slnko“ (B), Teraz ako týždeň (C, vybraný s radami z B) |
 | `nacitanie.html` | Čo ukázať, kým sa appka načítava: slnečný oblúk na mieste čísla (A, vybraný), kostra karty (B), svitanie v rohu (C) |
 | `nacitanie-stred.html` | Obrazec v strede obrazovky počas načítania namiesto slnečného oblúka: lúče (A), slnko a mesiac na polotočky (B), deň a noc okolo obzoru (C, vybraný) |
+| `teraz-dlazdice.html` | Karta Teraz – všetky spotrebiče ako polovičné dlaždice v jednej mriežke (aj pri nepárnom počte), ploché bez lemu, s pásikom slnko/sieť, číslo a pásik zarovnané v rade (subgrid); 3D štýly vankúš, klávesa a sklo zamietnuté |

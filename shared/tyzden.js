@@ -7,7 +7,7 @@
 import { DEVICES, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA, PREDPOVED_HODINY, TARIFF_LIMITS, TYZDEN } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayNameShort, weekDayName } from './format.js';
-import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazSkupinaText, terazVecText } from './messages-core.js';
+import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
 import { dayCtx, freeKw, programDraw } from './mozem-jadro.js';
 import { cheapFrom, chosen, najlepsiDen } from './plan-dna.js';
 import { localDateKey } from './solar.js';
@@ -256,8 +256,8 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
 }
 
 /**
- * Plán iného dňa pre kartu Teraz: hlavička (meno dňa, dátum, o koľko dní), skupiny riadkov - čo ide
- * v ten deň zo slnka a čo aspoň najmenej zo siete - a detaily spotrebičov pre panel.
+ * Plán iného dňa pre kartu Teraz: hlavička (meno dňa, dátum, o koľko dní), spotrebiče do mriežky - najprv čo
+ * ide v ten deň zo slnka, potom čo aspoň najmenej zo siete - a detaily spotrebičov pre panel.
  * @param {DenTyzdna} d @param {readonly string[]} devices @param {boolean} nad deň aspoň chvíľu nad hranicou
  * @param {Voice} [voice]
  */
@@ -295,11 +295,9 @@ export function denInyModel(d, devices, nad, voice = 'drzy') {
     const nudza = nudzoveCasy(d.ctx, d.slnko, zvysok).map((n) =>
         nudzaRiadok(n, { name: planDnaRowText({ id: n.id, kind: 'none' }, voice).name, span, den: d.name, potom: null }, voice),
     );
-    const skupina = (/** @type {'slnko' | 'nudza'} */ druh, /** @type {typeof slnko} */ r) =>
-        r.length ? [{ nazov: terazSkupinaText({ druh }), riadky: r.map((x) => x.riadok) }] : [];
     return {
         hlavicka: terazDenHlavickaText({ date: d.day.date, index: d.index, nad }),
-        skupiny: [...skupina('slnko', slnko), ...skupina('nudza', nudza)],
+        riadky: [...slnko, ...nudza].map((x) => x.riadok),
         veci: [...slnko, ...nudza].map((x) => x.detail),
     };
 }

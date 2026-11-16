@@ -133,7 +133,6 @@ function terazDom() {
         tzDenNazov: byId('tz-den-nazov'),
         tzDenPod: byId('tz-den-pod'),
         tzDlazdice: byId('tz-dlazdice'),
-        tzSkupiny: byId('tz-skupiny'),
         tzVecSheet: /** @type {HTMLDialogElement} */ (byId('tz-vec-sheet')),
         tzVecIco: byId('tz-vec-ico'),
         tzVecName: byId('tz-vec-name'),
