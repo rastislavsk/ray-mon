@@ -26,8 +26,7 @@ const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
 const TERAZ = { preview: false, source: '' };
 
 /**
- * Stav merania v hlavičke za miestom (shared/hlavicka.js, stavRiadok): bodka, a po ťuknutí čas a slovo s bublinou
- * s vysvetlením. Tvar bodky drží data-tone na tlačidle. Patrí karte Teraz - na ostatných kartách nie je.
+ * Stav merania v hlavičke za miestom (shared/hlavicka.js, stavRiadok): bodka, po ťuknutí bublina s vysvetlením. Tvar bodky drží data-tone na tlačidle. Patrí karte Teraz - na ostatných kartách nie je.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
 function renderStav(state, dom) {
@@ -41,9 +40,10 @@ function renderStav(state, dom) {
     const open = state.stavTip && !!tip;
     dom.stav.classList.toggle('open', open);
     dom.live.setAttribute('aria-expanded', String(open));
-    // Čas a slovo len po ťuknutí (zakryté ich čítačka číta ďalej). Bez bubliny - a kým appka nenabehla, keď do
-    // nich boot.js píše hlášku o chybe - sú vidno.
-    dom.status.classList.toggle('sr', !!tip && !open);
+    // Čas a slovo vidno len bez bubliny - a kým appka nenabehla, keď do nich boot.js píše hlášku o chybe. S bublinou
+    // ich čítačka číta ďalej, na oko stav vysvetľuje bublina (jej nadpis začína tou istou bodkou).
+    dom.status.classList.toggle('sr', !!tip);
+    dom.tip.dataset.tone = tone;
     show(dom.tip, open);
     show(dom.tipBg, open);
     const t = tip ?? BEZ_BUBLINY;

@@ -234,7 +234,8 @@ test('hlavička: miesto elektrárne a za ním bodka živého merania; čas a slo
     // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
     await expect(page.locator('#hdr-tone')).toHaveText('');
     await expect(page.locator('#hdr-setup')).toBeHidden();
-    // Bodka je v hlavičke za miestom (docs/navrhy/teraz-tok-energie.html), čas a slovo sú zakryté až do ťuknutia.
+    // Bodka je v hlavičke za miestom (docs/navrhy/teraz-tok-energie.html), čas a slovo sú zakryté aj po ťuknutí -
+    // stav vysvetľuje bublina, ktorej nadpis začína tou istou bodkou.
     // Veta pod scénou je len pri typickej streche, s vlastnou je skrytá.
     await expect(page.locator('header .miesto #hdr-live')).toHaveCount(1);
     await expect(page.locator('#tz-sub')).toBeHidden();
@@ -242,7 +243,15 @@ test('hlavička: miesto elektrárne a za ním bodka živého merania; čas a slo
     expect(await sirka()).toBeLessThanOrEqual(1);
     await page.locator('#hdr-live').click();
     await expect(page.locator('#hdr-tip')).toBeVisible();
-    expect(await sirka()).toBeGreaterThan(40);
+    await expect(page.locator('#hdr-tip')).toHaveAttribute('data-tone', 'live');
+    expect(await sirka()).toBeLessThanOrEqual(1);
+    // Bodka stojí v strede riadku s miestom (na pol pixela).
+    const stred = (/** @type {string} */ sel) =>
+        page.locator(sel).evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            return r.top + r.height / 2;
+        });
+    expect(Math.abs((await stred('#hdr-live i')) - (await stred('#hdr-place')))).toBeLessThanOrEqual(0.5);
     expect(errors).toEqual([]);
 });
 
