@@ -1093,7 +1093,9 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
-        await expect(dl).toContainText(t.sub);
+        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
+        // Značka v rohu: riadi appka (docs/navrhy/teraz-dlazdice-odrazky.html, A).
+        await expect(dl.locator('.dl-rz')).toHaveAttribute('data-rezim', 'appka');
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
         const sheet = page.locator('#tz-bojler-sheet');
@@ -1151,7 +1153,11 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
         await expect(dl).toHaveAttribute('data-tone', 'tiche');
         await expect(dl).toContainText(t.meno);
-        await expect(dl).toContainText(t.sub);
+        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
+        // Ručný režim ukáže značka s rukou, nie slovo v texte; čítačka ho počuje v mene dlaždice.
+        await expect(dl.locator('.dl-rz')).toHaveAttribute('data-rezim', 'rucne');
+        await expect(dl).not.toContainText('ručne');
+        await expect(dl).toHaveAccessibleName(new RegExp(R.rucne));
         expect(errors).toEqual([]);
     });
 });

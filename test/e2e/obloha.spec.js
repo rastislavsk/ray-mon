@@ -1210,7 +1210,7 @@ const horeZModelu = (h) => [
         id: d.id,
         tone: d.tone,
         kind: '',
-        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${d.sub}`,
+        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${d.odr.join(', ')}`,
         podiel: '',
         potom: d.potom?.text ?? '',
     })),
@@ -1220,7 +1220,7 @@ const horeZModelu = (h) => [
                   id: h.dalsi.id,
                   tone: 'tiche',
                   kind: h.dalsi.tone,
-                  text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.sub}`,
+                  text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.odr.join(', ')}`,
                   podiel: '',
                   potom: '',
               },
@@ -1233,7 +1233,7 @@ const riadokZModelu = (r) => ({
     id: r.id,
     tone: 'tiche',
     kind: r.kind,
-    text: `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.info}`,
+    text: `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.odr.join(', ')}`,
     podiel: r.podiel === null ? '' : `${r.podiel}%`,
     potom: '',
 });
@@ -1399,11 +1399,13 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-oko-t')).toHaveText('Teraz z lacnej siete');
         await expect(page.locator('#tz-oko-bod')).toHaveAttribute('data-tone', 'cheap');
         await expect(page.locator('#tz-dlazdice [data-vec="auto"]')).toHaveAttribute('data-tone', 'cheap');
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] b')).toHaveText('Nabíjaj auto');
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('na lacnú elektrinu');
+        await expect(page.locator('#tz-dlazdice [data-vec="auto"] b')).toHaveText('Auto');
+        // Odrážky: každá svoj riadok, pre čítačku oddelené čiarkou.
+        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small > span:not(.sr)')).toHaveText(['nabíjaj teraz', 'lacná elektrina']);
+        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('nabíjaj teraz, lacná elektrina');
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
-        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/ · celá zajtra$/);
+        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);
         // Zajtrajšok: ťuknutie na deň v hrebeni ukáže jeho plán s hlavičkou, dnešné dlaždice zmiznú.
         await page.locator('#tz-hreben-dni [data-den="1"]').click();
         const zajtra = terazModel(vstupTeraz(time), { den: 1 });
@@ -1449,7 +1451,7 @@ test.describe('karta Teraz', () => {
         );
         await expect(dni.nth(1)).toHaveAccessibleName('Ne – Zajtra, slnko na veľké spotrebiče nestačí');
         await expect(page.locator('#tz-hreben-svg .hr-nad path')).toHaveCount(h.dni.length);
-        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/ · celá v utorok$/);
+        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
         expect(await vazneNalezy(page)).toEqual([]);
         await page.locator('#tz-oko').click();
         await expect(page.locator('#tz-chip-body .istota')).toHaveText('Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.');

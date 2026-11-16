@@ -239,7 +239,7 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
             name,
             kind: /** @type {const} */ ('nudza'),
             cas: t.cas,
-            info: t.info,
+            odr: t.odr,
             podiel: n.podiel === null ? null : Math.round(n.podiel * 100),
         },
         detail: {

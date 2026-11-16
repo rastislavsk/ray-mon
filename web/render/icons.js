@@ -62,3 +62,14 @@ const TOK = {
 /** Ikona toku elektriny. @param {'slnko' | 'dom' | 'stlp'} id @param {string} [attrs] */
 export const tokIcon = (id, attrs = '') =>
     `<svg class="vi" data-ikona="${id}"${attrs ? ` ${attrs}` : ''} viewBox="0 0 24 24" aria-hidden="true" focusable="false">${TOK[id]}</svg>`;
+
+/** Ruka: bojler sa zapína ručne (docs/navrhy/teraz-dlazdice-odrazky.html, A). */
+const RUKA =
+    '<path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5"/>' +
+    '<path d="M14 10.5V5.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-4.6-2.2L4.2 15a1.5 1.5 0 0 1 2.3-1.9L8 14.5"/>';
+
+/** Značka režimu bojlera v rohu dlaždice: ruka (ručne), slnko (riadi appka). @param {'appka' | 'rucne'} rezim */
+export const rezimIcon = (rezim) =>
+    rezim === 'rucne'
+        ? `<svg class="vi" data-ikona="ruka" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${RUKA}</svg>`
+        : tokIcon('slnko');
