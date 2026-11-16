@@ -192,21 +192,21 @@ button:focus-visible {
     grid-row: 1 / span 2;
 }
 /* ===== Stav merania v hlavičke karty Teraz ===== */
-/* Za miestom len bodka (stavRiadok v shared/hlavicka.js); čas a slovo sa ukážu po ťuknutí spolu s bublinou
-   (docs/navrhy/teraz-tok-energie.html). Bez pozadia - ako ostatný text na holej oblohe. Hlavička je nad
+/* Za miestom len bodka (stavRiadok v shared/hlavicka.js), na stred riadku s miestom; ťuknutie ukáže bublinu,
+   ktorej nadpis začína tou istou bodkou (docs/navrhy/teraz-tok-energie.html). Bez pozadia - ako ostatný text na holej oblohe. Hlavička je nad
    vrstvou .tip-bg (z-index 4), takže bodka ostane ťukateľná a bublina pri nej. */
 .stav {
     display: flex;
     align-items: center;
     min-width: 0;
 }
-/* Plocha na ťuknutie 44 × 44 px aj pre samotnú bodku. Dole siaha len kúsok pod riadok, aby od scény pod
-   hlavičkou ostal odstup. */
+/* Plocha na ťuknutie 44 × 44 px aj pre samotnú bodku, hore aj dole rovnako za riadok - bodka tak stojí
+   v strede riadku s miestom. */
 .stav .live {
     flex: 0 1 auto;
     justify-content: center;
     min-width: 44px;
-    margin-bottom: -6px;
+    margin-block: -10px;
 }
 .live {
     flex: 0 1 auto;
@@ -228,21 +228,25 @@ button:focus-visible {
     font-variant-numeric: tabular-nums;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-.live i {
+.live i,
+.tip b::before {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: #c9cdd4;
 }
-.live[data-tone='live'] i {
+.live[data-tone='live'] i,
+.tip[data-tone='live'] b::before {
     background: var(--yes);
 }
 /* Polovičná bodka: meranie je pripojené, ale nové neprišlo (bodkaMerania v shared/hero-model.js). */
-.live[data-tone='stale'] i {
+.live[data-tone='stale'] i,
+.tip[data-tone='stale'] b::before {
     background: linear-gradient(90deg, #fff 50%, transparent 50%);
     box-shadow: inset 0 0 0 1.5px #fff;
 }
-.live[data-tone='odhad'] i {
+.live[data-tone='odhad'] i,
+.tip[data-tone='odhad'] b::before {
     background: transparent;
     box-shadow: inset 0 0 0 1.5px #fff;
 }
@@ -273,9 +277,6 @@ button.live:disabled {
 button.live:enabled #hdr-status::after {
     content: ' ›' / '';
 }
-button.live[aria-expanded='true'] {
-    background: rgba(8, 16, 40, 0.45);
-}
 /* Vrstva pod riadkom stavu: pri otvorenej bubline zachytí ťuknutie kamkoľvek inam. */
 .tip-bg {
     position: fixed;
@@ -299,10 +300,19 @@ button.live[aria-expanded='true'] {
     font-size: 0.9375rem;
     line-height: 1.4;
 }
+/* Nadpis bubliny začína bodkou stavu z hlavičky (tvar podľa data-tone, zapisuje render/teraz.js). */
 .tip b {
-    display: block;
+    display: flex;
+    gap: 9px;
+    align-items: center;
     margin-bottom: 6px;
     font-size: 1.0625rem;
+}
+.tip b::before {
+    content: '';
+    flex: none;
+    width: 9px;
+    height: 9px;
 }
 .tip p {
     margin: 0;

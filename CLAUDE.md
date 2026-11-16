@@ -56,8 +56,8 @@ je čiarová kresba `img/dom.png` (biele čiary na priehľadnom pozadí), elektr
 hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
 zrkadlová. Čísla v scéne sú bez slov (význam dáva miesto) a biele ako všetok text na holej oblohe; ťuknutie ich
 ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektromerom). Body na vedení sú SMIL, nie CSS -
-pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom, čas
-a slovo len po ťuknutí; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
+pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom (na stred riadku),
+ťuknutie ukáže len bublinu, ktorej nadpis začína tou istou bodkou; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
 
 ## Verzia odkazu s nastavením
 

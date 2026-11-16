@@ -611,10 +611,10 @@
 [data-noc] .sc-dom {
     opacity: 0.55;
 }
-/* Čísla po ťuknutí: veľké, bez slov - čo znamenajú, hovorí miesto. Dvojitý tieň drží čitateľnosť na jasnej oblohe. */
+/* Čísla po ťuknutí: bez slov - čo znamenajú, hovorí miesto. Dvojitý tieň drží čitateľnosť na jasnej oblohe. */
 .sc-cislo {
     fill: #fff;
-    font-size: 30px;
+    font-size: 15px;
     font-weight: 900;
     font-variation-settings: 'wdth' 118;
     font-variant-numeric: tabular-nums;
@@ -625,10 +625,10 @@
     animation: sc-cisla 0.25s ease-out;
 }
 .sc-cislo[data-k='dom'] {
-    font-size: 27px;
+    font-size: 13.5px;
 }
 .sc-kw {
-    font-size: 13px;
+    font-size: 6.5px;
     font-weight: 800;
     letter-spacing: 0;
 }

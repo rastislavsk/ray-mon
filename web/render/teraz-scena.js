@@ -151,7 +151,7 @@ export function cislaSvg(s, ukaz) {
     if (!ukaz) return '';
     /** @param {string} k @param {number[]} p @param {string} v */
     const c = (k, p, v) =>
-        `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="2">kW</tspan></text>`;
+        `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="1">kW</tspan></text>`;
     let o = '';
     if (s.vyroba) o += c('slnko', [64, 54], s.vyroba);
     if (s.dom) o += c('dom', [288, 62], s.dom);
