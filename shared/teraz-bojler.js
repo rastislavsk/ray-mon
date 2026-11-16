@@ -55,6 +55,7 @@ export const TERAZ_BOJLER_TEXTS = {
         popisRucne: 'Zapína sa ručne alebo časovačom v appke Shelly. Ray-mon len zapisuje, čo bojler robí.',
         popisAppka: (/** @type {string} */ zap, /** @type {string} */ vyp) => `Zapne pri prebytku od ${zap} kW, vypne pod ${vyp} kW.`,
         chyba: 'Režim sa nepodarilo uložiť, ostal pôvodný.',
+        ulozene: (/** @type {boolean} */ rucne) => `Uložené · ${rucne ? 'zapínaš ručne' : 'riadi appka'}`,
     },
     tokNadpis: 'Elektrina teraz',
     tokPod: 'meranie elektromera o',

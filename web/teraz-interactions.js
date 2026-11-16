@@ -2,6 +2,7 @@
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Graf dňa je v paneli
 // karty Dnes (mozem-interactions.js).
 
+import { BOJLER_ULOZENE_MS } from '../shared/config.js';
 import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { ulozRezimBojlera } from './data.js';
 import { stepBack } from './nav-back.js';
@@ -46,9 +47,13 @@ export function initTeraz(store, dom, refresh) {
     });
 }
 
+/** Čakanie na zhasnutie „Uložené“ pod prepínačom režimu bojlera. @type {ReturnType<typeof setTimeout> | undefined} */
+let ulozeneTimer;
+
 /**
  * Prepínač režimu bojlera: hneď ukáže nový režim a uloží ho vo Workeri; keď sa nepodarí, vráti pôvodný
- * a povie to. @param {Store} store @param {boolean} rucne
+ * a povie to. Keď Worker uloženie potvrdí, ukáže na BOJLER_ULOZENE_MS „Uložené“.
+ * @param {Store} store @param {boolean} rucne
  */
 async function zmenRezim(store, rucne) {
     const { zdroj, bojler, bojlerRezim } = store.get();
@@ -64,5 +69,9 @@ async function zmenRezim(store, rucne) {
     // Uložený rytmus nesie stav bojlera z posledného merania - po obnovení stránky by ukázal starý režim.
     const rytmus = novy && rytmusSBojlerom(loadRytmus(), zdroj, novy);
     if (rytmus) saveRytmus(rytmus);
-    store.setState({ bojler: novy, bojlerRezim: null });
+    store.setState({ bojler: novy, bojlerRezim: 'ulozene' });
+    clearTimeout(ulozeneTimer);
+    ulozeneTimer = setTimeout(() => {
+        if (store.get().bojlerRezim === 'ulozene') store.setState({ bojlerRezim: null });
+    }, BOJLER_ULOZENE_MS);
 }

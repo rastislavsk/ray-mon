@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE } from '../shared/config.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, tokDetail, tokSiete } from '../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../shared/teraz-bojler.js';
 
 const NOW = new Date('2026-11-15T13:00:00Z'); // 14:00 SEČ
 const MIN = 60000;
@@ -151,6 +151,10 @@ test('ručný režim v paneli: riadok pod nadpisom a prepínač s popisom', () =
     assert.equal(r.pod, 'ručne · hreje od 12:30');
     assert.equal(r.rezim.rucne, true);
     assert.match(r.rezim.popis, /appke Shelly/);
+    assert.deepEqual(
+        [TERAZ_BOJLER_TEXTS.rezim.ulozene(true), TERAZ_BOJLER_TEXTS.rezim.ulozene(false)],
+        ['Uložené · zapínaš ručne', 'Uložené · riadi appka'],
+    );
     const vyp = bojlerDetail(info({ rucne: true, rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } }), NOW, TZ);
     assert.equal(vyp.pod, 'ručne · vypnutý od 11:25');
     assert.equal(bojlerDetail(info({ rucne: true, rele: false, w: 0, den: null }), NOW, TZ).pod, 'ručne · vypnutý');

@@ -346,6 +346,11 @@ function renderBojlerSheet(state, dom) {
             btn.disabled = state.bojlerRezim === 'uklada';
         }
         setText(dom.tzBojlerRezimT, d.rezim.popis);
+        // Po uložení na chvíľu zelené „Uložené“ namiesto popisu režimu.
+        const ulozene = state.bojlerRezim === 'ulozene';
+        show(dom.tzBojlerRezimT, !ulozene);
+        show(dom.tzBojlerRezimOk, ulozene);
+        setText(dom.tzBojlerRezimOkT, R.ulozene(d.rezim.rucne));
         show(dom.tzBojlerRezimChyba, state.bojlerRezim === 'chyba');
         setText(dom.tzBojlerRezimChyba, R.chyba);
         const teraz = d.pas.teraz === null ? '' : `<i class="os-teraz" style="left:${d.pas.teraz}%"></i>`;
