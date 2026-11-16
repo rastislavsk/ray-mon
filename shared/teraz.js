@@ -22,7 +22,6 @@ import {
     terazPotomText,
     terazPreviewTime,
     terazRiadokText,
-    terazSkupinaText,
     terazTodayText,
     terazTypicalText,
     terazVecText,
@@ -103,7 +102,7 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
     const dnes = dnesOf(input, rows, { ...teraz, tyzden: dni }, span, voice);
     const iny = hreben && zvoleny > 0 ? denInyModel(dni[zvoleny], devices, hreben.dni[zvoleny].nad, voice) : null;
     return {
-        co: { ...dnes.co, den: iny ? iny.hlavicka : null, skupiny: iny ? iny.skupiny : dnes.co.skupiny },
+        co: { ...dnes.co, den: iny ? iny.hlavicka : null, riadky: iny ? iny.riadky : dnes.co.riadky },
         veci: iny ? iny.veci : dnes.veci,
         hreben: hreben && { ...hreben, zvoleny },
     };
@@ -370,7 +369,7 @@ function soFar(hourly, nowMin) {
  */
 
 // ---- Nová karta Teraz (docs/navrhy/teraz-navrh-2.html) ----------------------------------
-// Čo zapnúť (dlaždice a skupiny z Plánu dňa) a detail spotrebiča. Graf dňa s odčítaním zvoleného času
+// Čo zapnúť (mriežka dlaždíc z Plánu dňa) a detail spotrebiča. Graf dňa s odčítaním zvoleného času
 // je v paneli karty Dnes (grafModel), číslo karty Teraz je vždy teraz.
 
 /** @typedef {import('./plan-dna.js').PlanRow & { name: string, why: string }} RiadokPlanu */
@@ -382,18 +381,18 @@ const STEP = TARIFF_LIMITS.stepMin;
 const dnesny = (r) => r.kind === 'sun' || r.kind === 'cheap';
 
 /**
- * Riadok skupiny: veľký čas, meno, doplnok a pri núdzovom čase podiel slnka v % (pásik; inak null).
+ * Ďalší spotrebič v mriežke Čo zapnúť (docs/navrhy/teraz-dlazdice.html): veľký čas, meno, doplnok a pri
+ * núdzovom čase podiel slnka v % (pásik; inak null). Kreslí sa ako dlaždica na skle.
  * @typedef {{ id: string, name: string, kind: string, pred?: string, cas: string, info: string, podiel: number | null }} Riadok
  */
 /** Odznak, kedy bude slnko na spotrebič najbližšie. @typedef {{ text: string, dlho: boolean }} Potom */
 
 /**
- * Čo zapnúť dnes: hore dlaždice toho, čo ide teraz (zo slnka alebo z lacnej siete), a keď teraz nejde
- * nič, jedna dlaždica s najbližšou vecou a odpočtom; pod tým skupiny riadkov - zvyšok dneška a čo sa
- * dnes na slnko nezmestí, s núdzovým časom (`nudza`, počíta shared/tyzden.js). Riadky sú z Plánu dňa
- * (planDnaModel), nič sa nepočíta znova. Vec v lacnom pásme ide teraz, keď v tom pásme teraz sme.
- * Dlaždíc je jedna cez celú šírku, dve vedľa seba, viac po dvoch a nepárna posledná cez celú šírku
- * (`cela`). Čo ide zo slnka, nesie odznak, kedy bude slnko najbližšie (`potom`, podľa id veci).
+ * Čo zapnúť dnes (docs/navrhy/teraz-dlazdice.html): dlaždice toho, čo ide teraz (zo slnka alebo z lacnej
+ * siete), a keď teraz nejde nič, najbližšia vec s odpočtom; za nimi v tej istej mriežke `riadky` - zvyšok
+ * dneška podľa času a čo sa dnes na slnko nezmestí, s núdzovým časom (`nudza`, počíta shared/tyzden.js).
+ * Riadky sú z Plánu dňa (planDnaModel), nič sa nepočíta znova. Vec v lacnom pásme ide teraz, keď v tom
+ * pásme teraz sme. Čo ide zo slnka, nesie odznak, kedy bude slnko najbližšie (`potom`, podľa id veci).
  * Keď dnes zo slnka nejde nič a slnko príde až o viac dní, riadok hore to povie (`dlho`).
  * @param {RiadokPlanu[]} rows
  * @param {{ nowMin: number, level: string, slnkoDnes: boolean, dni?: string[], nudza?: Riadok[], potom?: Record<string, Potom> }} teraz
@@ -426,14 +425,11 @@ export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza 
             podiel: null,
         };
     };
-    /** @type {Array<{ nazov: string, riadky: Riadok[] }>} */ const skupiny = [];
-    if (dnes.length) skupiny.push({ nazov: terazSkupinaText({ druh: 'dnes', teraz: teraz.length > 0 }), riadky: dnes.map(riadok) });
-    if (nudza.length) skupiny.push({ nazov: terazSkupinaText({ druh: 'nudza' }), riadky: nudza });
     return {
         // Riadok o viacerých dňoch povie, že dnes slnko nestačí - veta pod ním by to opakovala.
         hore: oko ? { ...hore, oko, bod: /** @type {const} */ ('cloud'), bezSlnka: '' } : hore,
         dlho: !!oko,
-        skupiny,
+        /** @type {Riadok[]} */ riadky: [...dnes.map(riadok), ...nudza],
     };
 }
 
@@ -482,12 +478,6 @@ function horeTeraz(teraz, { level, slnkoDnes, potom }, voice) {
         dalsi: null,
     };
 }
-
-/**
- * Dlaždica cez celú šírku mriežky: jediná, alebo posledná z nepárneho počtu. `n` ráta všetky dlaždice
- * v mriežke, aj Bojler, ktorý riadi zásuvka (pridá ho render). @param {number} i @param {number} n
- */
-export const celaDlazdica = (i, n) => n === 1 || (n % 2 === 1 && i === n - 1);
 
 /**
  * Keď teraz nejde nič: najbližšia vec dneška `p` (null, keď dnes už nič) a či dnes ešte niečo

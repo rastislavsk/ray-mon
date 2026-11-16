@@ -1183,7 +1183,7 @@ const terazZModelu = (m) => ({
     sub: m.sub,
 });
 
-/** Čo zapnúť v stránke: hlavička iného dňa, riadok nad dlaždicami, dlaždice s odznakom a skupiny riadkov. @param {import('@playwright/test').Page} page */
+/** Čo zapnúť v stránke: hlavička iného dňa, riadok nad dlaždicami a mriežka dlaždíc s odznakom a pásikom. @param {import('@playwright/test').Page} page */
 const coVStranke = (page) =>
     page.evaluate(() => {
         const t = (/** @type {Element | null} */ el) => el?.textContent ?? '';
@@ -1192,47 +1192,61 @@ const coVStranke = (page) =>
                 ? ''
                 : `${t(document.querySelector('#tz-den-nazov'))} ${t(document.querySelector('#tz-den-pod'))}`,
             oko: t(document.querySelector('#tz-oko-t')),
+            // Pásik je podiel slnka núdzového času; prázdny drží miesto a nič neukazuje.
             dlazdice: [...document.querySelectorAll('#tz-dlazdice [data-vec]')].map((d) => ({
                 id: /** @type {HTMLElement} */ (d).dataset.vec,
                 tone: d.getAttribute('data-tone'),
+                kind: d.getAttribute('data-kind') ?? '',
                 text: `${t(d.querySelector('.velky'))} ${t(d.querySelector('b'))} ${t(d.querySelector('small'))}`,
+                podiel: /** @type {HTMLElement | null} */ (d.querySelector('.podiel'))?.style.getPropertyValue('--s') ?? '',
                 potom: t(d.querySelector('.potom')),
-            })),
-            // Skupina je nadpis s riadkami pod ním; pásik pri riadku je podiel slnka núdzového času.
-            skupiny: [...document.querySelectorAll('#tz-skupiny .co-h')].map((g) => ({
-                nazov: t(g),
-                riadky: [...(g.nextElementSibling?.querySelectorAll('.ri') ?? [])].map(
-                    (r) =>
-                        `${t(r.querySelector('.velky'))} ${t(r.querySelector('b'))} ${t(r.querySelector('small'))} ` +
-                        `${/** @type {HTMLElement | null} */ (r.querySelector('.podiel'))?.style.getPropertyValue('--s') ?? ''}`,
-                ),
             })),
         };
     });
 
+/** Dlaždice dneška, ktoré idú teraz, alebo najbližšia vec. @param {NonNullable<ReturnType<typeof terazModel>['co']>['hore']} h */
+const horeZModelu = (h) => [
+    ...h.dlazdice.map((d) => ({
+        id: d.id,
+        tone: d.tone,
+        kind: '',
+        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${d.sub}`,
+        podiel: '',
+        potom: d.potom?.text ?? '',
+    })),
+    ...(h.dalsi
+        ? [
+              {
+                  id: h.dalsi.id,
+                  tone: 'tiche',
+                  kind: h.dalsi.tone,
+                  text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.sub}`,
+                  podiel: '',
+                  potom: '',
+              },
+          ]
+        : []),
+];
+
+/** Ďalší spotrebič zvoleného dňa ako dlaždica na skle. @param {NonNullable<ReturnType<typeof terazModel>['co']>['riadky'][number]} r */
+const riadokZModelu = (r) => ({
+    id: r.id,
+    tone: 'tiche',
+    kind: r.kind,
+    text: `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.info}`,
+    podiel: r.podiel === null ? '' : `${r.podiel}%`,
+    potom: '',
+});
+
 /** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
 const coZModelu = (m) => {
-    const h = m.co?.hore;
+    const co = m.co;
+    if (!co) return { den: '', oko: '', dlazdice: [] };
+    const h = co.hore;
     return {
-        den: m.co?.den ? `${m.co.den.nazov} ${m.co.den.pod}` : '',
-        oko: h ? `${h.oko.text}${h.oko.sub ? ` · ${h.oko.sub}` : ''}` : '',
-        dlazdice: h
-            ? [
-                  ...h.dlazdice.map((d) => ({
-                      id: d.id,
-                      tone: d.tone,
-                      text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${d.sub}`,
-                      potom: d.potom?.text ?? '',
-                  })),
-                  ...(h.dalsi ? [{ id: h.dalsi.id, tone: 'next', text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.sub}`, potom: '' }] : []),
-              ]
-            : [],
-        skupiny: (m.co?.skupiny ?? []).map((g) => ({
-            nazov: g.nazov,
-            riadky: g.riadky.map(
-                (r) => `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.info} ${r.podiel === null ? '' : `${r.podiel}%`}`,
-            ),
-        })),
+        den: co.den ? `${co.den.nazov} ${co.den.pod}` : '',
+        oko: `${h.oko.text}${h.oko.sub ? ` · ${h.oko.sub}` : ''}`,
+        dlazdice: [...(co.den ? [] : horeZModelu(h)), ...co.riadky.map(riadokZModelu)],
     };
 };
 
@@ -1389,20 +1403,19 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('na lacnú elektrinu');
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
-        await expect(page.locator('#tz-skupiny .co-h')).toHaveText(['Najmenej zo siete']);
-        await expect(page.locator('#tz-skupiny .ri small').first()).toHaveText(/ · celá zo slnka zajtra$/);
+        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/ · celá zajtra$/);
         // Zajtrajšok: ťuknutie na deň v hrebeni ukáže jeho plán s hlavičkou, dnešné dlaždice zmiznú.
         await page.locator('#tz-hreben-dni [data-den="1"]').click();
         const zajtra = terazModel(vstupTeraz(time), { den: 1 });
         await expect(page.locator('#tz-den-nazov')).toHaveText('Zajtra');
         await expect(page.locator('#tz-den-pod')).toHaveText('nedeľa 6.9.');
         await expect(page.locator('#tz-oko')).toBeHidden();
-        await expect(page.locator('#tz-dlazdice')).toBeHidden();
+        await expect(page.locator('#tz-dlazdice [data-tone="go"], #tz-dlazdice [data-tone="cheap"]')).toHaveCount(0);
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(zajtra));
         // Detail zajtrajšej veci: deň nad časom, úsek na osi, ale bez „teraz“.
         const later = zajtra.veci.find((v) => v.slot);
         if (!later) throw new Error('model nemá vec na zajtra');
-        await page.locator(`#tz-skupiny [data-vec="${later.id}"]`).click();
+        await page.locator(`#tz-dlazdice [data-vec="${later.id}"]`).click();
         await expect(page.locator('#tz-vec-cas .vec-den')).toHaveText('Zajtra');
         await expect(page.locator('#tz-vec-cas')).toHaveText(`Zajtra${later.cas}`);
         await expect(page.locator('#tz-vec-pas .os-usek')).toHaveCount(1);
@@ -1436,7 +1449,7 @@ test.describe('karta Teraz', () => {
         );
         await expect(dni.nth(1)).toHaveAccessibleName('Ne – Zajtra, slnko na veľké spotrebiče nestačí');
         await expect(page.locator('#tz-hreben-svg .hr-nad path')).toHaveCount(h.dni.length);
-        await expect(page.locator('#tz-skupiny .ri small').first()).toHaveText(/ · celá zo slnka v utorok$/);
+        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/ · celá v utorok$/);
         expect(await vazneNalezy(page)).toEqual([]);
         await page.locator('#tz-oko').click();
         await expect(page.locator('#tz-chip-body .istota')).toHaveText('Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.');
@@ -1466,11 +1479,15 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-den-pod')).toHaveText('nedeľa 6.9. · pod hranicou');
         await expect(page.locator('#tz-oko')).toBeHidden();
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(zajtra));
-        await expect(page.locator('#tz-skupiny .co-h')).toHaveText(['Najmenej zo siete']);
-        expect(await page.locator('#tz-skupiny .podiel').count()).toBeGreaterThan(0);
+        expect(
+            await page
+                .locator('#tz-dlazdice [data-kind]')
+                .evaluateAll((e) => [...new Set(e.map((x) => /** @type {HTMLElement} */ (x).dataset.kind))]),
+        ).toEqual(['nudza']);
+        expect(await page.locator('#tz-dlazdice .podiel:not([data-prazdny])').count()).toBeGreaterThan(0);
         expect(await vazneNalezy(page)).toEqual([]);
         // Detail spotrebiča a jeho zatvorenie nechá zvolený deň.
-        await page.locator('#tz-skupiny .ri').first().click();
+        await page.locator('#tz-dlazdice [data-vec]').first().click();
         await expect(page.locator('#tz-vec-kedy')).toHaveText('Najmenej zo siete');
         await expect(page.locator('#tz-vec-cas .vec-den')).toHaveText('Zajtra');
         await page.keyboard.press('Escape');
@@ -1479,7 +1496,7 @@ test.describe('karta Teraz', () => {
         // Deň so slnkom a späť na dnešok.
         await dni.nth(2).click();
         await expect(page.locator('#tz-den-nazov')).toHaveText('Pondelok');
-        await expect(page.locator('#tz-skupiny .co-h').first()).toHaveText('Zo slnka');
+        await expect(page.locator('#tz-dlazdice [data-kind]').first()).toHaveAttribute('data-kind', 'later');
         await dni.nth(0).click();
         await expect(page.locator('#tz-den')).toBeHidden();
         await expect(page.locator('#tz-oko')).toBeVisible();
@@ -1874,15 +1891,29 @@ for (const width of [390, 320]) {
                         .map(({ sel }) => sel),
                 sels,
             );
-        expect(await trcia(['#tz-num', '#tz-stav', '#tz-oko', '#tz-dlazdice', '#tz-skupiny']), 'tieto prvky trčia z obrazovky').toEqual([]);
+        expect(await trcia(['#tz-num', '#tz-stav', '#tz-oko', '#tz-dlazdice']), 'tieto prvky trčia z obrazovky').toEqual([]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
-        for (const sel of ['#tz-oko', '#tz-dlazdice [data-vec]', '#tz-skupiny [data-vec]'])
+        for (const sel of ['#tz-oko', '#tz-dlazdice [data-vec]'])
             for (const box of await page.locator(sel).evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height)))
                 expect(box, sel).toBeGreaterThanOrEqual(44);
-        // Mená v dlaždiciach sa nezalomia uprostred slova.
-        const zlomene = await page
-            .locator('#tz-dlazdice b')
-            .evaluateAll((els) => els.filter((b) => b.scrollWidth > b.clientWidth + 0.5).map((b) => b.textContent));
+        // Mená v dlaždiciach sa nezalomia uprostred slova: ani nepretečú, ani slovo nemá časť na ďalšom riadku
+        // (overflow-wrap: anywhere by ho inak potichu rozdelil, docs/navrhy/teraz-dlazdice.html).
+        const zlomene = await page.locator('#tz-dlazdice b').evaluateAll((els) =>
+            els
+                .filter((b) => {
+                    if (b.scrollWidth > b.clientWidth + 0.5) return true;
+                    const uzol = b.firstChild;
+                    if (!uzol) return false;
+                    const text = uzol.textContent ?? '';
+                    const range = document.createRange();
+                    return [...text.matchAll(/\S+/g)].some((w) => {
+                        range.setStart(uzol, w.index);
+                        range.setEnd(uzol, w.index + w[0].length);
+                        return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size > 1;
+                    });
+                })
+                .map((b) => b.textContent),
+        );
         expect(zlomene).toEqual([]);
         // Graf dňa v paneli karty Dnes.
         await otvorGraf(page);

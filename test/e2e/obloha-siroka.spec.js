@@ -192,7 +192,15 @@ async function expectTextyKariet(page) {
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
     await expect(page.locator('#tz-oko-t')).toHaveText(teraz.co?.hore.oko.text ?? '');
-    await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(teraz.co?.hore.dlazdice.length ?? 0);
+    // Jedna mriežka: čo ide teraz (alebo najbližšia vec) a za tým ďalšie spotrebiče dňa.
+    const co = teraz.co;
+    await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(
+        co ? co.hore.dlazdice.length + (co.hore.dalsi ? 1 : 0) + co.riadky.length : 0,
+    );
+    // V širokom stĺpci po troch.
+    await expect
+        .poll(() => page.locator('#tz-dlazdice').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length))
+        .toBe(3);
     const sedem = sedemModel(v);
     await expect(page.locator('#sd-title')).toHaveText(sedem.title);
     await expect(page.locator('#sd-days .day em')).toHaveText(sedem.rows.map((r) => r.kwh));
