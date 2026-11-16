@@ -394,27 +394,279 @@
 .teraz h2 {
     margin: 0;
 }
-/* Veľké číslo: na úzkom displeji sa zmenší s jeho šírkou, aby sa „~10.25 kW“ nezalomilo. */
-.knum {
-    padding: 2px 20px 0;
-    font-size: min(76px, 19vw);
+/* ===== Scéna toku energie (docs/navrhy/teraz-tok-energie.html, návrh 1) ===== */
+/* Medzi hlavičkou a hrebeňom dní: spolu s hlavičkou 40 % výšky obrazovky. Je to jedno tlačidlo cez celú šírku -
+   ťuknutie ukáže čísla (render/teraz-scena.js). Kresba siaha až do kraja obrazovky; do strán sa oreže, hore
+   z nej lúče zo slnka siahajú až pod hlavičku. Čísla sú biele ako všetok text na holej oblohe. */
+.scena {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: clamp(180px, calc(40svh - 59px - max(16px, env(safe-area-inset-top))), 340px);
+    margin: 4px 0 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    overflow-x: clip;
+    overflow-y: visible;
+    -webkit-tap-highlight-color: transparent;
+}
+.scena > span {
+    position: absolute;
+    inset: 0;
+}
+.scena svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+#tz-scena-cisla {
+    pointer-events: none;
+}
+.sc-kopce {
+    fill: rgba(40, 80, 140, 0.28);
+}
+.sc-pod {
+    fill: url(#sc-zem);
+}
+.sc-zem0 {
+    stop-color: rgba(25, 55, 105, 0.35);
+}
+.sc-zem1 {
+    stop-color: rgba(8, 16, 40, 0);
+}
+.sc-elektraren {
+    opacity: 0.82;
+}
+.sc-veza {
+    fill: url(#sc-veza);
+}
+.sc-veza0 {
+    stop-color: #9aa8c4;
+}
+.sc-veza1 {
+    stop-color: #dde4f1;
+}
+.sc-veza2 {
+    stop-color: #f2f5fa;
+}
+.sc-veza-hrdlo {
+    fill: rgba(90, 105, 135, 0.55);
+}
+.sc-blok {
+    fill: rgba(150, 165, 195, 0.75);
+}
+.sc-blok2 {
+    fill: rgba(170, 183, 210, 0.8);
+}
+.sc-komin {
+    fill: rgba(205, 212, 228, 0.85);
+}
+.sc-pas {
+    fill: rgba(220, 80, 70, 0.8);
+}
+.sc-okno {
+    display: none;
+    fill: #ffd88a;
+}
+.sc-blik {
+    fill: #ff5a4a;
+    animation: sc-blik 1.6s steps(2, jump-none) infinite;
+}
+.sc-pary {
+    filter: blur(2.2px);
+}
+.sc-para {
+    fill: rgba(246, 248, 252, 0.75);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sc-para 7s linear infinite;
+}
+.sc-stoziar {
+    fill: none;
+    stroke: rgba(225, 232, 248, 0.75);
+    stroke-width: 0.6;
+    stroke-linejoin: round;
+}
+.sc-drot {
+    fill: none;
+    stroke: rgba(235, 240, 255, 0.55);
+    stroke-width: 0.7;
+}
+.sc-trafo line {
+    stroke: rgba(225, 230, 240, 0.85);
+}
+.sc-trafo rect {
+    fill: rgba(190, 198, 215, 0.95);
+}
+/* Bod na vedení: zlatý von do siete, modrobiely dnu. Pri obmedzenom pohybe namiesto neho šípka smeru. */
+.sc-bod {
+    color: #ffd166;
+}
+.sc-bod[data-smer='dnu'],
+.sc-sipka[data-smer='dnu'] circle {
+    color: #a8dcff;
+    fill: #a8dcff;
+}
+.sc-jadro {
+    fill: #fff;
+}
+.sc-sipka {
+    display: none;
+}
+.sc-sipka circle {
+    fill: #ffd166;
+    opacity: 0.4;
+}
+.sc-sipka path {
+    fill: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-bod {
+        display: none;
+    }
+    .sc-sipka {
+        display: inline;
+    }
+}
+/* Panely sú jediná plná plocha domu, aby bolo vidno, kam padajú lúče. */
+.sc-panely {
+    fill: url(#sc-panely);
+    opacity: 0.55;
+}
+.sc-lesk {
+    fill: url(#sc-lesk);
+    animation: sc-lesk 3.2s ease-in-out infinite alternate;
+}
+.sc-dom {
+    opacity: 0.92;
+}
+/* Lúče do panelov: zlaté čiarky, ktoré bežia zo slnka na strechu (výrazne hustejšie než lúče oblohy). */
+.sc-luc,
+.sc-luc-g {
+    stroke: url(#sc-luc);
+    stroke-linecap: round;
+    stroke-dasharray: 5 38;
+    animation: sc-luc var(--d, 0.6s) linear infinite;
+}
+.sc-luc {
+    stroke-width: 1.4;
+}
+.sc-luc-g {
+    stroke-width: 4;
+    opacity: 0.22;
+}
+/* V noci krajina a dom stmavnú, v elektrárni svietia okná. */
+[data-noc] .sc-kopce {
+    fill: rgba(10, 16, 42, 0.55);
+}
+[data-noc] .sc-zem0 {
+    stop-color: rgba(8, 12, 32, 0.55);
+}
+[data-noc] .sc-elektraren {
+    opacity: 0.75;
+}
+[data-noc] .sc-veza0 {
+    stop-color: #26305a;
+}
+[data-noc] .sc-veza1 {
+    stop-color: #323d6c;
+}
+[data-noc] .sc-veza2 {
+    stop-color: #2a3462;
+}
+[data-noc] .sc-blok {
+    fill: #2a355e;
+}
+[data-noc] .sc-blok2 {
+    fill: #2f3b66;
+}
+[data-noc] .sc-komin {
+    fill: #3a4573;
+}
+[data-noc] .sc-okno {
+    display: inline;
+}
+[data-noc] .sc-para {
+    fill: rgba(170, 180, 210, 0.35);
+}
+[data-noc] .sc-stoziar {
+    stroke: #56628f;
+}
+[data-noc] .sc-drot {
+    stroke: rgba(150, 165, 210, 0.5);
+}
+[data-noc] .sc-trafo line {
+    stroke: #56608a;
+}
+[data-noc] .sc-trafo rect {
+    fill: #3c4670;
+}
+[data-noc] .sc-panely {
+    opacity: 0.45;
+}
+[data-noc] .sc-dom {
+    opacity: 0.55;
+}
+/* Čísla po ťuknutí: veľké, bez slov - čo znamenajú, hovorí miesto. Dvojitý tieň drží čitateľnosť na jasnej oblohe. */
+.sc-cislo {
+    fill: #fff;
+    font-size: 30px;
     font-weight: 900;
     font-variation-settings: 'wdth' 118;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
-    line-height: 0.95;
-    white-space: nowrap;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.18);
+    letter-spacing: -0.02em;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+    animation: sc-cisla 0.25s ease-out;
 }
-.knum small {
-    margin-left: 6px;
-    font-size: 20px;
-    font-weight: 700;
+.sc-cislo[data-k='dom'] {
+    font-size: 27px;
+}
+.sc-kw {
+    font-size: 13px;
+    font-weight: 800;
     letter-spacing: 0;
 }
-/* Číslo z typickej strechy priznáva odhad aj písmom. */
-.knum.est {
-    font-style: italic;
+@keyframes sc-luc {
+    to {
+        stroke-dashoffset: -43;
+    }
+}
+@keyframes sc-para {
+    0% {
+        transform: translate(0, 0) scale(0.5);
+        opacity: 0;
+    }
+    12% {
+        opacity: 0.85;
+    }
+    100% {
+        transform: translate(-18px, -40px) scale(2.4);
+        opacity: 0;
+    }
+}
+@keyframes sc-lesk {
+    from {
+        opacity: 0.1;
+    }
+    to {
+        opacity: 0.4;
+    }
+}
+@keyframes sc-blik {
+    50% {
+        opacity: 0.15;
+    }
+}
+@keyframes sc-cisla {
+    from {
+        opacity: 0;
+    }
 }
 
 /* Čakanie na prvé dáta (docs/navrhy/nacitanie-stred.html, variant C): v strede obrazovky obiehajú
@@ -916,48 +1168,6 @@
 }
 
 /* ===== Bojler na prebytky (docs/navrhy/bojler-prebytky.html) ===== */
-/* Smer toku v riadku stavu merania (docs/navrhy/teraz-auto-tok.html, T1): dom, šípky a stĺp bez pozadia
-   ako ostatný text na holej oblohe. Text je biely (na holej oblohe len biely, test/contrast.test.js),
-   smer nesú šípky tvarom, farba len pridáva. Plocha na ťuknutie 44 px bez zmeny výšky riadku, ako .live. */
-.tok {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    min-height: 44px;
-    margin: -14px -10px -13px;
-    padding: 0 10px;
-    border: 0;
-    border-radius: 22px;
-    background: none;
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-}
-.tok .vi {
-    width: 20px;
-    height: 20px;
-    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.3));
-}
-.tok-sip {
-    width: 20px;
-    height: 13px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2.2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.3));
-}
-.tok[data-smer='von'] .tok-sip {
-    color: var(--yes);
-}
-.tok[data-smer='dnu'] .tok-sip {
-    color: var(--costly);
-    transform: scaleX(-1);
-}
 /* Panel Elektrina teraz (T3): uzly, vedenia a bodky, ktoré po nich tečú (rýchlosť --krok z modelu). */
 .tok-graf svg {
     display: block;

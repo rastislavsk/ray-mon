@@ -20,8 +20,10 @@ Snímky sú z testovacích dát a pevného času (13:00), nie zo živej elektrá
 sú syntetické. Prekresliť ich vie `npm run screenshots`. Položky sekcie Appka
 v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí knižnica z CDN.
 
-- **Teraz** – karta je v navigácii prvá a appka sa na nej vždy otvára. Veľké číslo s aktuálnym
-  výkonom, pod ním tenký pásik s percentom (koľko z toho, čo by dala jasná obloha) a stav merania.
+- **Teraz** – karta je v navigácii prvá a appka sa na nej vždy otvára. Hore **scéna toku energie**:
+  náš dom, elektráreň a vedenie; zo slnka padajú do panelov zlaté čiarky a po vedení beží bod
+  tam, kam práve tečie elektrina. Ťuknutie ukáže v scéne výkon panelov, domu a siete. Bodka stavu
+  merania je v hlavičke za miestom.
   Pod nimi **čo zapnúť**: riadok „Teraz zo slnka“ / „Teraz z lacnej siete“ / „Počkaj“ (za „i“
   vysvetlenie odpovede a ceny siete), plné dlaždice toho, čo ide teraz (keď nič, najbližšia vec
   s odpočtom), riadky Neskôr dnes a pod nimi každý ďalší deň (Zajtra, V stredu…) ako vlastná karta

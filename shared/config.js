@@ -894,6 +894,9 @@ export const PRIPOJENIE_BUBLINA_MS = 5000;
 /** Ako dlho svieti zelené „Uložené“ pod prepínačom režimu bojlera, kým sa vráti popis režimu (ms). */
 export const BOJLER_ULOZENE_MS = 2500;
 
+/** Ako dlho svietia čísla v scéne toku energie karty Teraz po ťuknutí, kým samy zhasnú (ms). */
+export const TERAZ_CISLA_MS = 8000;
+
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;

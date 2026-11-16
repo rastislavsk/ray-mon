@@ -58,8 +58,25 @@
         <div id="hdr-tip-bg" class="tip-bg hidden"></div>
         <header class="st">
             <span class="name">RAY-MON</span>
-            <span id="hdr-place" class="place"></span>
+            <div class="miesto">
+                <span id="hdr-place" class="place"></span>
+                <!-- Stav merania na karte Teraz (docs/navrhy/teraz-tok-energie.html): za miestom len bodka, čas a slovo
+                     sa ukážu po ťuknutí spolu s bublinou s vysvetlením (render/teraz.js). Do #hdr-status píše boot.js
+                     hlášku, keď sa appka nenačíta - vtedy je tlačidlo vypnuté a text viditeľný. -->
+                <div id="tz-stav" class="stav hidden">
+                    <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
+                        <i aria-hidden="true"></i>
+                        <span id="hdr-status"></span>
+                        <span id="hdr-tone" class="sr"></span>
+                    </button>
+                </div>
+            </div>
             <button type="button" id="hdr-setup" class="need hidden"></button>
+            <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
+                <b id="hdr-tip-title"></b>
+                <p id="hdr-tip-text"></p>
+                <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
+            </div>
         </header>
 
         <main id="page" class="page">
@@ -117,11 +134,17 @@
                     <button type="button" id="mz-ask-btn" class="pbtn"></button>
                 </div>
             </section>
-            <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html): číslo teraz a čo zapnúť. Skladá ich render
-                 (web/render/teraz.js) z shared/teraz.js, tu sú len nosiče. Graf dňa je v paneli karty Dnes. -->
+            <!-- Karta Teraz (docs/navrhy/teraz-navrh-2.html, teraz-tok-energie.html): scéna toku energie a čo zapnúť.
+                 Skladá ich render (web/render/teraz.js) z shared/teraz.js, tu sú len nosiče. Graf dňa je v paneli karty Dnes.
+                 Nadpis je len pre čítačku. -->
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
-                <h1 id="ttl-terazky" class="ttl">Teraz</h1>
-                <p id="tz-num" class="knum"><span id="tz-num-val"></span><small>kW</small></p>
+                <h1 id="ttl-terazky" class="sr">Teraz</h1>
+                <!-- Scéna toku energie (docs/navrhy/teraz-tok-energie.html, návrh 1): slnko a elektráreň vľavo, náš dom
+                     vpravo. Ťuknutie ukáže čísla v scéne, ďalšie otvorí panel Elektrina teraz (s elektromerom), inak ich skryje.
+                     Kreslí render/teraz-scena.js, čo kresliť, počíta shared/teraz-scena.js. -->
+                <button type="button" id="tz-scena" class="scena hidden">
+                    <span id="tz-scena-kresba"></span><span id="tz-scena-cisla"></span>
+                </button>
                 <!-- Kým appka čaká na prvé dáta, v strede obrazovky obiehajú slnko a mesiac okolo obzoru
                      (docs/navrhy/nacitanie-stred.html, variant C). Je viditeľné už v statickom HTML, skryje ho
                      render (web/render/teraz.js), pri zlyhaní štartu boot.js. Len CSS, žiadny skript. -->
@@ -146,24 +169,6 @@
                         </g>
                         <line class="svitanie-obzor" x1="-46" y1="0" x2="46" y2="0" />
                     </svg>
-                </div>
-                <!-- Stav merania pod číslom (docs/navrhy/teraz-stav-merania.html): bodka, čas a slovo,
-                     ťuknutie otvorí bublinu s vysvetlením (render/teraz.js). Mená prvkov ostali z hlavičky -
-                     do #hdr-status píše boot.js hlášku, keď sa appka nenačíta. -->
-                <div id="tz-stav" class="stav">
-                    <button type="button" id="hdr-live" class="live" data-tone="off" aria-expanded="false" aria-controls="hdr-tip" disabled>
-                        <i aria-hidden="true"></i>
-                        <span id="hdr-status"></span>
-                        <span id="hdr-tone" class="sr"></span>
-                    </button>
-                    <!-- Smer toku z elektromera (len Huawei Northbound s elektromerom, docs/navrhy/teraz-auto-tok.html, T1):
-                         dom, šípky a stĺp, ťuknutie otvorí panel Elektrina teraz. -->
-                    <button type="button" id="tz-tok" class="tok hidden" aria-haspopup="dialog"></button>
-                    <div id="hdr-tip" class="tip hidden" role="region" aria-labelledby="hdr-tip-title">
-                        <b id="hdr-tip-title"></b>
-                        <p id="hdr-tip-text"></p>
-                        <button type="button" id="hdr-tip-btn" class="tip-btn hidden"></button>
-                    </div>
                 </div>
                 <p id="tz-sub" class="sub"></p>
                 <!-- Číslo je odhad z predpovede, lebo appka teraz nemá údaje z meniča (bez merania, meranie
@@ -1039,7 +1044,7 @@
             </div>
         </dialog>
 
-        <!-- Elektrina teraz (docs/navrhy/teraz-auto-tok.html, T3): otvorí ho smer toku v riadku stavu merania.
+        <!-- Elektrina teraz (docs/navrhy/teraz-auto-tok.html, T3): otvorí ho druhé ťuknutie na scénu karty Teraz (s elektromerom).
              Panely, dom a sieť s hodnotami, po vedeniach tečú bodky. -->
         <dialog id="tz-tok-sheet" class="sheet vec-sheet tok-sheet" aria-labelledby="tz-tok-ttl">
             <div class="sheet-in">

@@ -1,4 +1,4 @@
-// Karta Teraz (docs/navrhy/teraz-navrh-2.html): veľké číslo kW teraz, čo zapnúť (riadok nad dlaždicami
+// Karta Teraz (docs/navrhy/teraz-navrh-2.html): scéna toku energie (docs/navrhy/teraz-tok-energie.html), čo zapnúť (riadok nad dlaždicami
 // a mriežka dlaždíc, docs/navrhy/teraz-dlazdice.html), panel s vysvetlením, detail spotrebiča a výzvy. Graf
 // dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
 // shared/messages.js - tu sa len zapisuje do DOM.
@@ -7,10 +7,12 @@ import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { scenaModel } from '../../shared/teraz-scena.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { rezimIcon, tokIcon, vecIcon } from './icons.js';
+import { cislaSvg, scenaSvg } from './teraz-scena.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -24,13 +26,13 @@ const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
 const TERAZ = { preview: false, source: '' };
 
 /**
- * Riadok stavu merania pod číslom (shared/hlavicka.js, stavRiadok): bodka, čas a slovo, a bublina
- * s vysvetlením, keď je otvorená. Tvar bodky drží data-tone na tlačidle.
+ * Stav merania v hlavičke za miestom (shared/hlavicka.js, stavRiadok): bodka, a po ťuknutí čas a slovo s bublinou
+ * s vysvetlením. Tvar bodky drží data-tone na tlačidle. Patrí karte Teraz - na ostatných kartách nie je.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
 function renderStav(state, dom) {
     const r = stavRiadok(hlavickaModel(state, state.voice), TERAZ);
-    show(dom.stav, !!r);
+    show(dom.stav, !!r && shows(state, 'terazky'));
     const { text, tone, toneText, tip } = r ?? { text: '', tone: 'off', toneText: '', tip: null };
     setText(dom.status, text);
     setText(dom.tone, toneText);
@@ -39,6 +41,9 @@ function renderStav(state, dom) {
     const open = state.stavTip && !!tip;
     dom.stav.classList.toggle('open', open);
     dom.live.setAttribute('aria-expanded', String(open));
+    // Čas a slovo len po ťuknutí (zakryté ich čítačka číta ďalej). Bez bubliny - a kým appka nenabehla, keď do
+    // nich boot.js píše hlášku o chybe - sú vidno.
+    dom.status.classList.toggle('sr', !!tip && !open);
     show(dom.tip, open);
     show(dom.tipBg, open);
     const t = tip ?? BEZ_BUBLINY;
@@ -256,26 +261,27 @@ function meranieToku(state) {
     return pv && state.now.getTime() - at < 15 * 60 * 1000 ? { vyrobaKw: pv.realTimePowerKw, sietKw: pv.sietKw, meraneAt: at } : null;
 }
 
-/** Šípky medzi domom a stĺpom; smer otáča štýl (data-smer). */
-const SIPKY = '<svg class="tok-sip" viewBox="0 0 22 14" aria-hidden="true" focusable="false"><path d="M3 2l5 5-5 5M11 2l5 5-5 5"/></svg>';
-
 /**
- * Smer toku v riadku stavu merania (docs/navrhy/teraz-auto-tok.html, T1): dom, šípky, stĺp a kW,
- * slovo len pre čítačku. Ťuknutie otvorí panel Elektrina teraz.
- * @param {import('../state.js').AppState} state @param {Dom} dom
+ * Scéna toku energie (docs/navrhy/teraz-tok-energie.html): kresba, a po ťuknutí čísla v nej. Výkon panelov je
+ * číslo karty (meranie, inak predpoveď), sieť a dom len z čerstvého merania elektromera. Bez predpovede scéna
+ * nie je. `data-tok` hovorí obsluhe ťuknutia, že je čo ukázať v paneli Elektrina teraz.
+ * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
  */
-function renderTok(state, dom) {
-    const tok = tokSiete(meranieToku(state)?.sietKw);
-    show(dom.tzTok, !!tok);
-    if (tok) dom.tzTok.dataset.smer = tok.smer;
-    setHtml(
-        dom.tzTok,
-        tok ? `${tokIcon('dom')}${SIPKY}${tokIcon('stlp')}<span class="sr">${escapeHtml(tok.slovo)} </span>${escapeHtml(tok.kw)}` : '',
-    );
+function renderScena(state, m, dom) {
+    const ok = m.kind === 'ok';
+    show(dom.tzScena, ok);
+    if (!ok) return;
+    const siet = meranieToku(state)?.sietKw;
+    const s = scenaModel({ vyrobaKw: m.vykon, odhad: m.odhadVykonu, sietKw: typeof siet === 'number' ? siet : null });
+    // `=== true`: starý web/state.js z cache po nasadení pole tzCisla nemá (CLAUDE.md, Nasadenie a cache).
+    setHtml(dom.tzScenaKresba, scenaSvg(s, m.pocasie?.noc === true));
+    setHtml(dom.tzScenaCisla, cislaSvg(s, state.tzCisla === true));
+    dom.tzScena.setAttribute('aria-label', s.popis);
+    dom.tzScena.toggleAttribute('data-tok', !!s.siet);
 }
 
 /**
- * Panel Elektrina teraz (T3): panely → dom → stĺp, po vedeniach tečú bodky (rýchlosť podľa kW, pri odbere
+ * Panel Elektrina teraz (T3, otvorí ho druhé ťuknutie na scénu): panely → dom → stĺp, po vedeniach tečú bodky (rýchlosť podľa kW, pri odbere
  * od stĺpu k domu). Otvorený, kým je v stave tzChip 'tok' a meranie je čerstvé.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
@@ -309,7 +315,7 @@ function renderTokSheet(state, dom) {
                 `</svg>`,
         );
     }
-    dialog(dom.tzTokSheet, !!d, () => (shows(state, 'terazky') ? dom.tzTok : null));
+    dialog(dom.tzTokSheet, !!d, () => (shows(state, 'terazky') ? dom.tzScena : null));
 }
 
 /**
@@ -388,7 +394,6 @@ function renderBojlerSheet(state, dom) {
 export function renderTeraz(state, dom) {
     const T = voiceTexts(state.voice).TERAZ_TEXTS;
     renderStav(state, dom);
-    renderTok(state, dom);
     if (!shows(state, 'terazky')) {
         renderChipSheet(state, null, dom, T);
         renderVecSheet(state, null, dom);
@@ -402,12 +407,9 @@ export function renderTeraz(state, dom) {
         { online: state.online, voice: state.voice, devices: spotrebice(state), den: state.tzDen ?? 0 },
     );
     renderPocasie(state, m, dom);
-    setText(dom.tzTitle, m.title);
-    show(dom.tzNum, m.num !== '');
+    renderScena(state, m, dom);
     // Svitanie (index.html): krivka dňa beží, kým appka čaká na prvú predpoveď.
     show(dom.tzSvitanie, m.kind === 'loading');
-    dom.tzNum.classList.toggle('est', m.estimate);
-    setText(dom.tzNumVal, m.num);
     show(dom.tzSub, m.sub !== '');
     setText(dom.tzSub, m.sub);
     show(dom.tzNote, !!m.note);

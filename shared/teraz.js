@@ -193,7 +193,7 @@ function pocasieOf(input, hero) {
 }
 
 /**
- * Nadpis, číslo teraz a riadok pod ním (pri vlastnej streche prázdny). Pri typickej streche „~“
+ * Nadpis, číslo teraz (aj ako číslo pre scénu toku energie) a riadok pod ním (pri vlastnej streche prázdny). Pri typickej streche „~“
  * a veta, že to nie je vlastná strecha. Medzi číslom a vetou je riadok stavu merania (stavRiadok
  * v shared/hlavicka.js).
  * @param {TerazInput} input @param {ReturnType<typeof heroModel>} now
@@ -201,11 +201,13 @@ function pocasieOf(input, hero) {
  */
 function headOf(input, now, { estimate, voice }) {
     const title = voiceTexts(voice).TERAZ_TEXTS.title;
+    // Výkon teraz ako číslo pre scénu toku energie (shared/teraz-scena.js); z predpovede je to odhad.
+    const vykon = { vykon: now.power, odhadVykonu: estimate || now.source === 'forecast' };
     if (estimate) {
         const num = Number.isFinite(now.power) ? `~${now.powerText}` : now.powerText;
-        return { title, num, sub: terazTypicalText(installedKw(input.plant), voice) };
+        return { title, num, sub: terazTypicalText(installedKw(input.plant), voice), ...vykon };
     }
-    return { title, num: now.powerText, sub: '' };
+    return { title, num: now.powerText, sub: '', ...vykon };
 }
 
 /**
@@ -237,6 +239,8 @@ function empty(kind, estimate) {
         title: voiceTexts().TERAZ_TEXTS.title,
         num: '',
         sub: '',
+        vykon: NaN,
+        odhadVykonu: false,
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,

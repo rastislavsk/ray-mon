@@ -8,6 +8,7 @@ import { sedemModel } from '../../shared/sedem-dni.js';
 import { toUser } from '../../shared/settings.js';
 import { buildForecast } from '../../shared/solar.js';
 import { terazModel } from '../../shared/teraz.js';
+import { scenaModel } from '../../shared/teraz-scena.js';
 import { fixture, otvorGraf, pvAt } from '../helpers.js';
 
 const weather = fixture('open-meteo.json');
@@ -190,7 +191,9 @@ async function expectTextyKariet(page) {
     await expect(page.locator('#mz-word')).toHaveText(mozem.word);
     await expect(page.locator('#mz-day-lead')).toHaveText(mozem.day?.lead ?? '');
     const teraz = terazModel({ ...v, previewMinutes: null });
-    await expect(page.locator('#tz-num-val')).toHaveText(teraz.num);
+    await expect(page.locator('#tz-scena')).toHaveAccessibleName(
+        scenaModel({ vyrobaKw: teraz.vykon, odhad: teraz.odhadVykonu, sietKw: null }).popis,
+    );
     await expect(page.locator('#tz-oko-t')).toHaveText(teraz.co?.hore.oko.text ?? '');
     // Jedna mriežka: čo ide teraz (alebo najbližšia vec) a za tým ďalšie spotrebiče dňa.
     const co = teraz.co;
@@ -379,7 +382,7 @@ test.describe('tablet na šírku prstom', () => {
             await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
             await expect.poll(async () => (await rozlozenie(page)).panels.map((p) => p.id)).toEqual(['mozem', 'terazky', '7dni']);
         }
-        await tah(page, '#tz-num', -160);
+        await tah(page, '#tz-scena', -160);
         await page.waitForTimeout(200);
         await expect(page.locator('#nav-terazky')).toHaveAttribute('aria-current', 'page');
 
@@ -403,7 +406,9 @@ test.describe('tablet na šírku prstom', () => {
 });
 
 test.describe('klávesnica na počítači', () => {
-    test('Tab ide stĺpcami zľava doprava (v Teraz najprv stavom merania), potom navigáciou; fokus je vždy vidieť', async ({ page }) => {
+    test('Tab ide stavom merania v hlavičke, stĺpcami zľava doprava (v Teraz najprv scénou), potom navigáciou; fokus je vždy vidieť', async ({
+        page,
+    }) => {
         const errors = await openObloha(page, POCITAC);
         /** @type {Array<{ name: string, column: number, nav: boolean, visible: boolean, inView: boolean }>} */
         const kroky = [];
@@ -429,7 +434,9 @@ test.describe('klávesnica na počítači', () => {
             kroky.push(k);
             if (k.nav) break;
         }
-        const vStlpcoch = kroky.filter((k) => !k.nav);
+        // Prvá je bodka stavu merania v hlavičke (patrí karte Teraz, docs/navrhy/teraz-tok-energie.html).
+        expect(kroky[0]?.name).toBe('hdr-live');
+        const vStlpcoch = kroky.slice(1).filter((k) => !k.nav);
         expect(kroky.at(-1)?.nav, 'Tab sa nedostal do navigácie').toBe(true);
         expect(
             vStlpcoch.every((k) => k.column >= 0),
@@ -440,8 +447,8 @@ test.describe('klávesnica na počítači', () => {
         // V stĺpci Dnes odznak triedy dňa, pás kariet (posúva sa šípkami) a v ňom karta Graf dňa; bodky
         // pod ním Tab preskočí.
         expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-chip', 'mz-karty', 'button.k-otvor']);
-        // V stĺpci Teraz je prvá bodka a čas merania pod číslom (bublina so stavom merania).
-        expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('hdr-live');
+        // V stĺpci Teraz je prvá scéna toku energie (ťuknutie ukáže čísla).
+        expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('tz-scena');
         expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));
         expect(kroky.filter((k) => !k.visible).map((k) => k.name)).toEqual([]);
         expect(kroky.filter((k) => !k.inView).map((k) => k.name)).toEqual([]);

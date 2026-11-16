@@ -27,6 +27,7 @@ import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText, TERAZ_TEXTS } from '../../shared/messages-core.js';
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
+import { scenaModel } from '../../shared/teraz-scena.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -225,7 +226,7 @@ test('bez dát je obloha sivá a riadok stavu to povie', async ({ page }) => {
     expect(await oblohaVStranke(page)).toEqual({ top: SKY.offline[0], bottom: SKY.offline[1], sky: 'offline' });
 });
 
-test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod číslom karty Teraz', async ({ page }) => {
+test('hlavička: miesto elektrárne a za ním bodka živého merania; čas a slovo až po ťuknutí', async ({ page }) => {
     const errors = await openObloha(page, { time: at('13:00') });
     await expect(page.locator('#hdr-place')).toHaveText(SITE.name);
     await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
@@ -233,13 +234,15 @@ test('hlavička: miesto elektrárne; bodka a čas živého merania v riadku pod 
     // Slovo povie riadok sám, čítačka nepotrebuje dopĺňať, čo hovorí bodka.
     await expect(page.locator('#hdr-tone')).toHaveText('');
     await expect(page.locator('#hdr-setup')).toBeHidden();
-    // Riadok nie je v hlavičke, ale pod číslom nad tým, čo zapnúť (docs/navrhy/teraz-stav-merania.html).
-    // Veta pod číslom je len pri typickej streche, s vlastnou je skrytá.
-    await expect(page.locator('header #hdr-live')).toHaveCount(0);
+    // Bodka je v hlavičke za miestom (docs/navrhy/teraz-tok-energie.html), čas a slovo sú zakryté až do ťuknutia.
+    // Veta pod scénou je len pri typickej streche, s vlastnou je skrytá.
+    await expect(page.locator('header .miesto #hdr-live')).toHaveCount(1);
     await expect(page.locator('#tz-sub')).toBeHidden();
-    const y = (/** @type {string} */ sel) => page.locator(sel).evaluate((el) => el.getBoundingClientRect().top);
-    expect(await y('#tz-stav')).toBeGreaterThan(await y('#tz-num'));
-    expect(await y('#tz-stav')).toBeLessThan(await y('#tz-co'));
+    const sirka = () => page.locator('#hdr-status').evaluate((el) => el.getBoundingClientRect().width);
+    expect(await sirka()).toBeLessThanOrEqual(1);
+    await page.locator('#hdr-live').click();
+    await expect(page.locator('#hdr-tip')).toBeVisible();
+    expect(await sirka()).toBeGreaterThan(40);
     expect(errors).toEqual([]);
 });
 
@@ -495,7 +498,7 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         const errors = await openObloha(page);
         await ocakavajKartu(page, 'terazky');
         for (const dx of [-200, 200]) {
-            await tah(page, '#tz-num', dx);
+            await tah(page, '#tz-scena', dx);
             await ocakavajKartu(page, 'terazky');
         }
         expect(errors).toEqual([]);
@@ -1169,17 +1172,18 @@ async function openTeraz(page, opts = {}) {
     return errors;
 }
 
-/** Čo karta ukazuje: nadpis, číslo a riadok pod ním. @param {import('@playwright/test').Page} page */
+/** Čo karta ukazuje: nadpis, scénu toku energie (veta pre čítačku, skrytá je prázdna) a riadok pod ňou. @param {import('@playwright/test').Page} page */
 const terazVStranke = (page) =>
     page.evaluate(() => {
         const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
-        return { title: text('#ttl-terazky'), num: text('#tz-num-val'), sub: text('#tz-sub') };
+        const scena = document.querySelector('#tz-scena:not(.hidden)');
+        return { title: text('#ttl-terazky'), scena: scena?.getAttribute('aria-label') ?? '', sub: text('#tz-sub') };
     });
 
-/** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
+/** To isté z modelu (meranie elektromera v týchto dátach nie je). @param {ReturnType<typeof terazModel>} m */
 const terazZModelu = (m) => ({
     title: m.title,
-    num: m.num,
+    scena: m.kind === 'ok' ? scenaModel({ vyrobaKw: m.vykon, odhad: m.odhadVykonu, sietKw: null }).popis : '',
     sub: m.sub,
 });
 
@@ -1711,7 +1715,7 @@ test.describe('karta Teraz', () => {
 
         const bez = terazModel(vstupTeraz(FIXED_NOW, { pv: null, forecast: null }));
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(bez));
-        await expect(page.locator('#tz-num-val')).toHaveText('–');
+        await expect(page.locator('#tz-scena')).toBeHidden();
         await expect(page.locator('#tz-sub')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
         // Žiadne vymyslené čísla: čo zapnúť sa neukáže.
         await expect(page.locator('#tz-co')).toBeHidden();
@@ -1738,7 +1742,7 @@ test.describe('karta Teraz', () => {
             forecast: buildForecast(weather, FIXED_NOW, SITE, typical.plant),
         });
         await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(m));
-        await expect(page.locator('#tz-num-val')).toHaveText(/^~\d/);
+        await expect(page.locator('#tz-scena')).toHaveAttribute('aria-label', /^Zo slnka ~\d/);
         await expect(page.locator('#tz-sub')).toHaveText('typická strecha asi 5 kWp v tvojej obci, nie tvoja');
         await expect(page.locator('#tz-guess-title')).toHaveText('Koľko dáva tvoja strecha?');
         expect(await page.locator('#tz-guess').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 255, 255)');
@@ -1751,7 +1755,7 @@ test.describe('karta Teraz', () => {
         const errors = await openTeraz(page, { settings: null });
         await expect(page.locator('#tz-ask')).toBeVisible();
         await expect(page.locator('#tz-co')).toBeHidden();
-        await expect(page.locator('#tz-num')).toBeHidden();
+        await expect(page.locator('#tz-scena')).toBeHidden();
         await page.locator('#tz-ask-btn').click();
         await ocakavajKartu(page, 'nastavenie');
         expect(errors).toEqual([]);
@@ -1775,7 +1779,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-sub')).toBeHidden();
         await expect(page.locator('#tz-stav')).toBeHidden();
         await expect(page.locator('#tz-retry')).toBeHidden();
-        await expect(page.locator('#tz-num')).toBeHidden();
+        await expect(page.locator('#tz-scena')).toBeHidden();
         pusti();
         await expect(page.locator('#tz-co')).toBeVisible();
     });
@@ -1893,7 +1897,7 @@ for (const width of [390, 320]) {
                         .map(({ sel }) => sel),
                 sels,
             );
-        expect(await trcia(['#tz-num', '#tz-stav', '#tz-oko', '#tz-dlazdice']), 'tieto prvky trčia z obrazovky').toEqual([]);
+        expect(await trcia(['#tz-scena', '#tz-stav', '#tz-oko', '#tz-dlazdice']), 'tieto prvky trčia z obrazovky').toEqual([]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         for (const sel of ['#tz-oko', '#tz-dlazdice [data-vec]'])
             for (const box of await page.locator(sel).evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height)))
