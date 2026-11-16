@@ -100,7 +100,7 @@ const TEXTS = {
 /** Typy sadzby na výber. Spot appka zatiaľ nevie, ponúka sa vypnutý. */
 export const TARIFF_KINDS = /** @type {const} */ ([
     { kind: 'jedna', title: 'Jedna cena celý deň', sub: 'jednotarif' },
-    { kind: 'dvoj', title: 'Lacnejšie a drahšie hodiny', sub: 'dvojtarif · VT a NT · nočný prúd' },
+    { kind: 'dvoj', title: 'Lacnejšie a drahšie hodiny', sub: 'dvojtarif · VT a NT · nočná elektrina' },
     { kind: 'viac', title: 'Tri a viac pásiem', sub: 'špička · bežné · mimo špičky' },
     { kind: 'spot', title: 'Cena sa mení každú hodinu', sub: 'spot · dynamická cena · pripravujeme' },
 ]);

@@ -33,11 +33,11 @@ test('veľké číslo výkonu má jedno desatinné miesto s bodkou, nula je len 
     assert.equal(vykon(0), '0');
 });
 
-test('02:00 v noci: text o lacnom nočnom prúde', () => {
+test('02:00 v noci: text o lacnej nočnej elektrine', () => {
     const m = heroModel({ ...base, now: at('02:00'), pv: { ...pv, realTimePowerKw: 0 } });
     assert.ok(m.isNight);
     assert.equal(m.tier, 'amber');
-    assert.equal(m.message.headline, 'Lacný nočný prúd');
+    assert.equal(m.message.headline, 'Lacná nočná elektrina');
 });
 
 test('21:00 VT bez slnka: červená a text o drahej sieti v tme', () => {

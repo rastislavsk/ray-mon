@@ -87,11 +87,11 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí', ()
         riadi: 'caka',
         velky: '0,0 kW',
         meno: 'Čaká na slnko',
-        sub: 'prebytok teraz · zapne od 2,3',
+        sub: 'prebytok teraz · zapne pri 2,3 kW',
     });
     assert.equal(bojlerDlazdica(info({ rele: false, prebytokKw: null }), NOW, TZ).velky, '–');
     const hotovo = bojlerDlazdica(info({ w: 3, den: { ...DEN, hotovo: 835 } }), NOW, TZ);
-    assert.deepEqual([hotovo.tone, hotovo.velky, hotovo.sub], ['tiche', '3,6 kWh', 'dnes zo slnka · hotovo 13:55']);
+    assert.deepEqual([hotovo.tone, hotovo.velky, hotovo.meno, hotovo.sub], ['tiche', '3,6 kWh', 'Voda nahriata o 13:55', 'dnes zo slnka']);
     // Záznam zo včera sa nepočíta.
     const vcera = bojlerDlazdica(info({ w: 3, den: { ...DEN, den: '2026-11-14' } }), NOW, TZ);
     assert.deepEqual([vcera.velky, vcera.sub], ['0,0 kWh', 'dnes zo slnka']);

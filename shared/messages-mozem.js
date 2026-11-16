@@ -205,7 +205,7 @@ export function dnesZajtraText({ cls, kwh, window }, voice) {
 export const MOZEM_ITEM_TEXTS = {
     pracka: { name: 'Práčka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie na začiatku pri ohreve vody.' },
     umyvacka: { name: 'Umývačka', verb: 'Pusti', pron: 'ju', cloud: 'Nevadí. Najviac berie pri ohreve vody.' },
-    susicka: { name: 'Sušička', verb: 'Pusti', pron: 'ju', cloud: 'Sušička berie prúd celý čas, zvyšok pôjde zo siete.' },
+    susicka: { name: 'Sušička', verb: 'Pusti', pron: 'ju', cloud: 'Sušička berie elektrinu celý čas, zvyšok pôjde zo siete.' },
     auto: { name: 'Auto', verb: 'Zapoj', pron: 'ho', cloud: 'Nabíja sa ďalej, len zo siete.' },
     bojler: { name: 'Bojler', verb: 'Zapni', pron: 'ho', cloud: 'Vodu dohreje sieť.', run: 'Ohrev trvá asi' },
 };
@@ -264,21 +264,21 @@ export const HERO_SAY = {
     drzy: {
         bezpanelov: 'Nepoznám tvoje panely, takže netuším, koľko toho strecha utiahne. Ak musíš, pusti to.',
         offline: 'Nemám predpoveď ani meranie. Skús o chvíľu, alebo sa spýtaj toho, kto platí elektrinu.',
-        pay: ' Teraz by si platil drahý prúd.',
+        pay: ' Teraz by si platil drahú elektrinu.',
         slabo: (/** @type {string} */ soon) => `Mraky celý deň. Veľké veci radšej ${soon}.`,
         done: 'Slnko skončilo zmenu.',
-        cheap: (/** @type {string} */ soon) => ` Auto na lacný prúd je OK, zvyšok ${soon}.`,
+        cheap: (/** @type {string} */ soon) => ` Auto na lacnú elektrinu je OK, zvyšok ${soon}.`,
         rest: (/** @type {string} */ soon) => ` Zvyšok ${soon}.`,
         made: 'dnes strecha nahnala',
         live: 'Slnko to teraz platí za nás.',
         nostrong: 'Na veľké veci už slnko nestačí.',
-        onCheap: (/** @type {string} */ name, /** @type {string} */ time) => `${name} od ${time} na lacný prúd`,
+        onCheap: (/** @type {string} */ name, /** @type {string} */ time) => `${name} od ${time} na lacnú elektrinu`,
         restWord: 'zvyšok',
     },
     slusny: {
         bezpanelov: 'Nepoznám vaše panely, takže neviem, koľko strecha zvládne. Ak to potrebujete, zapnite to.',
         offline: 'Nemám predpoveď ani meranie. Skúste to o chvíľu znova.',
-        pay: ' Teraz by ste platili drahý prúd.',
+        pay: ' Teraz by ste platili drahú elektrinu.',
         slabo: (/** @type {string} */ soon) => `Celý deň je oblačno. Veľké spotrebiče radšej ${soon}.`,
         done: 'Slnko dnes už nevyrába.',
         cheap: (/** @type {string} */ soon) => ` Auto môžete nabíjať z lacnej siete, ostatné ${soon}.`,
@@ -415,7 +415,7 @@ function goHero({ live, silentSince, kwNow, typicalKwp = null, plan }, say) {
 export function mozemStripText(state, { ctx, window, nextDay }) {
     const next = nextDay ? ` ${laterWhen(nextDay)}.` : '';
     if (state === 'go' && window) return `Slnko do ${hm(window.to)}. Ešte ${countdownText(window.to - ctx.nowMin)}.`;
-    if (state === 'wait' && window) return `Slnko ${hm(window.from)} – ${hm(window.to)}.${ctx.draha ? ' Teraz je drahý prúd.' : ''}`;
+    if (state === 'wait' && window) return `Slnko ${hm(window.from)} – ${hm(window.to)}.${ctx.draha ? ' Teraz je drahá elektrina.' : ''}`;
     if (state === 'none' && window) return `Slnko skončilo o ${hm(window.to)}.${next}`;
     return `Dnes slnko veľké spotrebiče neutiahne.${next}`;
 }
@@ -458,7 +458,7 @@ function cheapItem(t, next) {
     return {
         tone: /** @type {const} */ ('cheap'),
         short: 'lacno',
-        head: `${t.verb} ${t.pron}, prúd je lacný.`,
+        head: `${t.verb} ${t.pron}, elektrina je lacná.`,
         text: 'Slnko to dnes už neutiahne, ale sieť je teraz lacná.',
         more: sun ? { q: 'A zo slnka?', a: sun } : null,
     };
