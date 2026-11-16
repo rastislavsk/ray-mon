@@ -24,10 +24,10 @@ export const TERAZ_BOJLER_TEXTS = {
     mlci: 'Zásuvka sa neozýva',
     prebytok: 'prebytok',
     od: 'od',
-    zapneOd: 'zapne od',
+    zapnePri: 'zapne pri',
     prebytokTeraz: 'prebytok teraz',
     dnesZoSlnka: 'dnes zo slnka',
-    hotovoO: 'hotovo',
+    o: 'o',
     bezSpojenia: 'skript nebeží alebo je bez Wi-Fi',
     rucne: 'ručne',
     hrejeRucne: 'Hreje',
@@ -140,7 +140,7 @@ const hotovoV = (den, beh, koniec) => (den.hotovo !== null && den.hotovo >= beh.
 /** Prebytok na dlaždicu: nezáporný, bez neho pomlčka. @param {BojlerInfo} b */
 const prebytokText = (b) => (b.prebytokKw === null ? '–' : `${fmt1(Math.max(0, b.prebytokKw))} kW`);
 
-/** Dlaždica nahriatej vody: koľko išlo dnes zo slnka a kedy bolo hotovo. @param {import('./bojler.js').Den | null} den */
+/** Dlaždica nahriatej vody: koľko išlo dnes zo slnka a kedy bola voda nahriata. @param {import('./bojler.js').Den | null} den */
 function dlazdicaHotovo(den) {
     const T = TERAZ_BOJLER_TEXTS;
     const kedy = den?.hotovo ?? null;
@@ -148,8 +148,8 @@ function dlazdicaHotovo(den) {
         tone: 'tiche',
         riadi: 'caka',
         velky: `${fmt1(den ? suctyDna(den).slnkoKwh : 0)} kWh`,
-        meno: T.hotovo,
-        sub: kedy === null ? T.dnesZoSlnka : `${T.dnesZoSlnka} · ${T.hotovoO} ${minutesToTimeStr(kedy)}`,
+        meno: kedy === null ? T.hotovo : `${T.hotovo} ${T.o} ${minutesToTimeStr(kedy)}`,
+        sub: T.dnesZoSlnka,
     };
 }
 
@@ -229,7 +229,7 @@ export function bojlerDlazdica(b, now, tz) {
             riadi: 'caka',
             velky: prebytokText(b),
             meno: T.caka,
-            sub: `${T.prebytokTeraz} · ${T.zapneOd} ${fmt1(b.prahy.zapKw)}`,
+            sub: `${T.prebytokTeraz} · ${T.zapnePri} ${fmt1(b.prahy.zapKw)} kW`,
         };
     return stav === 'hotovo' ? dlazdicaHotovo(dnes(b, now, tz)) : dlazdicaHreje(b, dnes(b, now, tz));
 }

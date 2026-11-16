@@ -129,7 +129,7 @@ function renderCo(co, dom, bojler) {
     const dlazdice = h.dlazdice.map(
         (d, i) =>
             `<button type="button" class="dl${celaDlazdica(i, n) ? ' cela' : ''}" data-tone="${d.tone}" data-vec="${d.id}">${ikona(d.id)}` +
-            `<span><span class="velky">${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b><small>${escapeHtml(d.sub)}</small>` +
+            `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${d.sub ? `<small>${escapeHtml(d.sub)}</small>` : ''}` +
             `${d.potom ? `<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</span></button>`,
     );
     const p = h.dalsi;
@@ -143,12 +143,15 @@ function renderCo(co, dom, bojler) {
     setHtml(dom.tzSkupiny, co.skupiny.map(skupinaHtml).join(''));
 }
 
+/** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“). @param {string | undefined} pred */
+const predHtml = (pred) => (pred ? `<span class="pred">${escapeHtml(pred)} </span>` : '');
+
 /**
  * Riadok skupiny: veľký čas, ikona, meno a doplnok; pri núdzovom čase pásik, koľko programu dá slnko
  * (zlatá) a koľko sieť (modrá). @param {NonNullable<Model['co']>['skupiny'][number]['riadky'][number]} r
  */
 const riadokHtml = (r) =>
-    `<button type="button" class="ri" data-kind="${r.kind}" data-vec="${r.id}"><span class="velky">${escapeHtml(r.cas)}</span>` +
+    `<button type="button" class="ri" data-kind="${r.kind}" data-vec="${r.id}"><span class="velky">${predHtml(r.pred)}${escapeHtml(r.cas)}</span>` +
     `<span class="ri-ico" aria-hidden="true">${vecIcon(r.id)}</span>` +
     `<span><b>${escapeHtml(r.name)}</b>${r.podiel === null ? '' : `<i class="podiel" style="--s:${r.podiel}%"></i>`}` +
     `<small>${escapeHtml(r.info)}</small></span></button>`;

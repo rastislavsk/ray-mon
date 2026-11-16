@@ -63,7 +63,7 @@ export const TERAZ_TEXTS_SLUSNE = {
 };
 
 // ---- Čo zapnúť na karte Teraz (docs/navrhy/teraz-navrh-2.html) -----------------------
-// Riadok nad dlaždicami (odkiaľ ide prúd teraz), dlaždice toho, čo ide teraz, skupiny riadkov
+// Riadok nad dlaždicami (odkiaľ ide elektrina teraz), dlaždice toho, čo ide teraz, skupiny riadkov
 // a karta Deň s odčítaním zvoleného času. Pri bežných spotrebičoch bez ceny, pri aute km.
 // Veľké písmená robí štýl, texty sú v bežnom tvare.
 
@@ -105,21 +105,25 @@ const AKUZATIV = /** @type {Record<string, string>} */ ({ pracka: 'práčku', su
 
 /**
  * Dlaždica toho, čo ide teraz, v tvare dlaždice Bojler (docs/navrhy/teraz-auto-tok.html, A3): veľké
- * číslo, čo urobiť a doplnok. Spotrebič zo slnka: kedy dobehne; auto zo slnka: koľko km (bez odhadu
- * dokedy); v lacnom pásme dokedy je lacné.
- * @param {{ id: string, name: string, kind: 'sun' | 'cheap', end: number, km?: number | null }} r @param {import('./messages-zaklad.js').Voice} [voice]
- * @returns {{ velky: string, meno: string, sub: string }}
+ * číslo, čo urobiť a doplnok. Spotrebič zo slnka: kedy ho zapnúť (bez doplnku); auto zo slnka: koľko
+ * km, alebo dokedy slnko stačí; v lacnom pásme dokedy je lacné. `pred` je malé slovo pred veľkým
+ * číslom („do“), prázdne keď nie je.
+ * @param {{ id: string, name: string, kind: 'sun' | 'cheap', start: number, end: number, km?: number | null }} r @param {import('./messages-zaklad.js').Voice} [voice]
+ * @returns {{ pred: string, velky: string, meno: string, sub: string }}
  */
 export function terazDlazdicaText(r, voice = 'drzy') {
     const vy = polite(voice);
     if (r.id === 'auto') {
-        if (r.kind === 'cheap') return { velky: koniecHm(r.end), meno: vy ? 'Nabíjajte auto' : 'Nabíjaj auto', sub: 'lacný prúd dovtedy' };
+        if (r.kind === 'cheap')
+            return { pred: 'do', velky: koniecHm(r.end), meno: vy ? 'Nabíjajte auto' : 'Nabíjaj auto', sub: 'na lacnú elektrinu' };
         const meno = vy ? 'Nabíjajte zo slnka' : 'Nabíjaj zo slnka';
-        return r.km ? { velky: `~${r.km} km`, meno, sub: `do ${hm(r.end)}` } : { velky: hm(r.end), meno, sub: 'dovtedy' };
+        return r.km
+            ? { pred: '', velky: `~${r.km} km`, meno, sub: `do ${hm(r.end)}` }
+            : { pred: 'do', velky: hm(r.end), meno, sub: 'slnko dovtedy stačí' };
     }
     const meno = `${vy ? 'Zapnite' : 'Zapni'} ${AKUZATIV[r.id] ?? r.name.toLowerCase()}`;
-    if (r.kind === 'cheap') return { velky: koniecHm(r.end), meno, sub: 'lacný prúd dovtedy' };
-    return { velky: hm(r.end), meno, sub: 'dobehne zo slnka' };
+    if (r.kind === 'cheap') return { pred: 'do', velky: koniecHm(r.end), meno, sub: 'elektrina je dovtedy lacná' };
+    return { pred: '', velky: hm(r.start), meno, sub: '' };
 }
 
 /**
@@ -127,17 +131,17 @@ export function terazDlazdicaText(r, voice = 'drzy') {
  * @param {{ kind: 'sun' | 'cheap', start: number }} r @param {number} nowMin
  */
 export function terazDalsiText(r, nowMin) {
-    return `za ${terazZaText(Math.max(0, r.start - nowMin))} · ${r.kind === 'cheap' ? 'lacný prúd' : 'zo slnka'}`;
+    return `za ${terazZaText(Math.max(0, r.start - nowMin))} · ${r.kind === 'cheap' ? 'elektrina bude lacná' : 'zo slnka'}`;
 }
 
 /**
- * Riadok v skupine: veľký čas a pod menom doplnok - dobehne, po čom ide, km auta, lacný prúd.
- * Riadok „tento týždeň nie“ má namiesto času pomlčku.
- * @param {import('./plan-dna.js').PlanRow} r @returns {{ cas: string, info: string }}
+ * Riadok v skupine: veľký čas a pod menom doplnok - dobehne, po čom ide, km auta, lacná elektrina.
+ * Riadok „tento týždeň nie“ má namiesto času pomlčku. Lacné pásmo má pred časom malé „od“ (`pred`).
+ * @param {import('./plan-dna.js').PlanRow} r @returns {{ pred?: string, cas: string, info: string }}
  */
 export function terazRiadokText(r) {
     if (r.kind === 'none') return { cas: '–', info: 'slnko podľa predpovede nestačí' };
-    if (r.kind === 'cheap') return { cas: hm(r.start), info: 'lacný prúd' };
+    if (r.kind === 'cheap') return { pred: 'od', cas: hm(r.start), info: 'lacná elektrina' };
     const start = r.kind === 'later' ? r.day.start : r.start;
     const after = r.after ? (PLAN_AFTER[r.after] ?? '') : '';
     if (after) return { cas: hm(start), info: after };
@@ -203,21 +207,26 @@ function podielSlovo(p) {
     return p >= 0.25 ? 'tretina zo slnka' : 'trochu zo slnka';
 }
 
+/** „Celá zo slnka“ v rode spotrebiča; práčka, sušička a umývačka sú „celá“. */
+const CELY = /** @type {Record<string, string>} */ ({ bojler: 'celý', auto: 'celé' });
+
 /**
  * Núdzový čas spotrebiča v deň, keď sa na slnko nezmestí (shared/tyzden.js): veľký čas a doplnok
  * riadku, a pre detail kedy, od-do a prečo. `zdroj`: cez deň s kúskom slnka, v lacnom pásme, aspoň
  * mimo drahého pásma, alebo je to jedno (`start` null). Pri dnešku (`dnes`) povie aj, kedy pôjde celý zo slnka (`potom`, meno
  * dňa, null = v predpovedi nie). Bez ceny v € - tá je len pri aute.
- * @param {{ start: number | null, end: number | null, podiel: number | null, zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet',
+ * @param {{ id?: string, start: number | null, end: number | null, podiel: number | null, zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet',
  *   dnes: boolean, potom: string | null }} r
  * @param {import('./messages-zaklad.js').Voice} [voice]
  */
 export function terazNudzaText(r, voice = 'drzy') {
     const od = r.start === null ? '' : hm(r.start);
-    const info = { slnko: podielSlovo(r.podiel ?? 0), lacna: 'lacný prúd', bezna: 'mimo drahej siete', siet: 'slnko nepomôže' }[r.zdroj];
+    const info = { slnko: podielSlovo(r.podiel ?? 0), lacna: 'lacná elektrina', bezna: 'elektrina nie je drahá', siet: 'slnko nepomôže' }[
+        r.zdroj
+    ];
     return {
         cas: od || '–',
-        info: r.dnes && r.potom ? `${info} · naplno ${onDay(r.potom)}` : info,
+        info: r.dnes && r.potom ? `${info} · ${CELY[r.id ?? ''] ?? 'celá'} zo slnka ${onDay(r.potom)}` : info,
         kedy: 'Najmenej zo siete',
         odDo: r.start === null || r.end === null ? '–' : `${od} – ${koniecHm(r.end)}`,
         why: `${nudzaWhy(r.zdroj, od, r.dnes, voice)}${r.dnes ? nudzaPotom(r.potom) : ''}`,
@@ -382,7 +391,7 @@ const CHIP_TEXTS = {
         },
         why: {
             go: 'Áno znamená, že strecha teraz vyrába viac, než minie dom a k tomu veľký spotrebič. Čo zapneš, ide zo slnka, nie zo siete.',
-            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť prúdu zo siete.',
+            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť elektriny zo siete.',
             slabo: 'Je oblačno a výkon dnes ani na chvíľu nedosiahne čiaru „veľké spotrebiče“ v grafe.',
             none: 'Na veľké spotrebiče už dnes slnko nestačí. Čo zapneš, pôjde väčšinou zo siete.',
             offline: 'Bez predpovede a merania netvrdím áno ani nie. Keď sa dáta vrátia, odpoveď príde sama.',
@@ -406,7 +415,7 @@ const CHIP_TEXTS = {
         },
         why: {
             go: 'Áno znamená, že strecha teraz vyrába viac, než minie dom a k tomu veľký spotrebič. Čo zapnete, ide zo slnka, nie zo siete.',
-            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť prúdu zo siete.',
+            wait: 'Strecha už vyrába, ale na veľký spotrebič ešte nestačí – teraz by ťahal časť elektriny zo siete.',
             slabo: 'Je oblačno a výkon dnes ani na chvíľu nedosiahne čiaru „veľké spotrebiče“ v grafe.',
             none: 'Na veľké spotrebiče už dnes slnko nestačí. Čo zapnete, pôjde väčšinou zo siete.',
             offline: 'Bez predpovede a merania netvrdím áno ani nie. Keď sa dáta vrátia, odpoveď príde sama.',

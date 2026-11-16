@@ -782,8 +782,8 @@ test('čo zapnúť na poludnie: tri dlaždice zo slnka, nepárna posledná cez c
     );
     // Dlaždica v tvare Bojlera (A3): veľké číslo, čo urobiť a doplnok.
     assert.deepEqual(
-        [m.hore.dlazdice[0].velky, m.hore.dlazdice[0].meno, m.hore.dlazdice[0].sub],
-        ['15:00', 'Zapni práčku', 'dobehne zo slnka'],
+        [m.hore.dlazdice[0].pred, m.hore.dlazdice[0].velky, m.hore.dlazdice[0].meno, m.hore.dlazdice[0].sub],
+        ['', '13:00', 'Zapni práčku', ''],
     );
     // Nepárna posledná cez celú šírku; Bojler, ktorý riadi zásuvka, sa ráta do počtu.
     assert.deepEqual(
@@ -815,16 +815,16 @@ test('čo zapnúť večer: lacná sieť teraz s koncom pásma', () => {
     assert.equal(m.hore.bezSlnka, '', 'dnes slnko stačilo, len už skončilo');
     const dl = (/** @type {typeof m} */ x, /** @type {string} */ id) => {
         const d = x.hore.dlazdice.find((y) => y.id === id);
-        return d && [d.velky, d.meno, d.sub];
+        return d && [d.pred, d.velky, d.meno, d.sub];
     };
-    assert.deepEqual(dl(m, 'auto'), ['20:30', 'Nabíjaj auto', 'lacný prúd dovtedy']);
-    assert.deepEqual(dl(m, 'bojler'), ['20:30', 'Zapni bojler', 'lacný prúd dovtedy']);
+    assert.deepEqual(dl(m, 'auto'), ['do', '20:30', 'Nabíjaj auto', 'na lacnú elektrinu']);
+    assert.deepEqual(dl(m, 'bojler'), ['do', '20:30', 'Zapni bojler', 'elektrina je dovtedy lacná']);
     // Čo čaká na iný deň, v skupinách nie je - núdzové časy dodáva karta (shared/tyzden.js).
     assert.deepEqual(m.skupiny, []);
     // Slušný tón a deň bez slnka: veta pod riadkom nad dlaždicami.
     const slusne = coZapnutModel(rows, { nowMin: minuta('19:50'), level: 'lacna', slnkoDnes: false }, 'slusny');
-    assert.deepEqual(dl(slusne, 'auto'), ['20:30', 'Nabíjajte auto', 'lacný prúd dovtedy']);
-    assert.deepEqual(dl(slusne, 'bojler'), ['20:30', 'Zapnite bojler', 'lacný prúd dovtedy']);
+    assert.deepEqual(dl(slusne, 'auto'), ['do', '20:30', 'Nabíjajte auto', 'na lacnú elektrinu']);
+    assert.deepEqual(dl(slusne, 'bojler'), ['do', '20:30', 'Zapnite bojler', 'elektrina je dovtedy lacná']);
     assert.equal(slusne.hore.bezSlnka, 'Slnko dnes na veľké veci nestačí.');
 });
 
@@ -833,9 +833,17 @@ test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pás
     assert.equal(m.hore.druh, 'dnesNic');
     // Zoznam pod tým sú časy zajtrajška - riadok hore povie, odkedy.
     assert.deepEqual(m.hore.oko, { text: 'Zo slnka dnes už nič', sub: 'zajtra od 07:30' });
-    assert.deepEqual(m.hore.dalsi, { id: 'bojler', name: 'Bojler', cas: '23:30', tone: 'cheap', sub: 'za 30 min · lacný prúd' });
+    assert.deepEqual(m.hore.dalsi, { id: 'bojler', name: 'Bojler', cas: '23:30', tone: 'cheap', sub: 'za 30 min · elektrina bude lacná' });
     assert.equal(m.skupiny[0].nazov, 'Potom');
-    assert.deepEqual(m.skupiny[0].riadky[0], { id: 'auto', name: 'Auto', kind: 'cheap', cas: '23:30', info: 'lacný prúd', podiel: null });
+    assert.deepEqual(m.skupiny[0].riadky[0], {
+        id: 'auto',
+        name: 'Auto',
+        kind: 'cheap',
+        pred: 'od',
+        cas: '23:30',
+        info: 'lacná elektrina',
+        podiel: null,
+    });
     assert.equal(m.skupiny.length, 1);
 });
 
@@ -855,7 +863,7 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         { id: 'bojler', name: 'Bojler', kind: 'none' },
     ];
     const nudza = [
-        { id: 'umyvacka', name: 'Umývačka', kind: 'nudza', cas: '12:00', info: 'polovica zo slnka · naplno v stredu', podiel: 50 },
+        { id: 'umyvacka', name: 'Umývačka', kind: 'nudza', cas: '12:00', info: 'polovica zo slnka · celá zo slnka v stredu', podiel: 50 },
     ];
     const potom = { auto: { text: 'potom až v stredu', dlho: true } };
     const m = coZapnutModel(rows, { nowMin: 7 * 60 + 30, level: 'draha', slnkoDnes: true, nudza, potom }, 'slusny');

@@ -163,7 +163,8 @@ export function reminderText(row, nowMin, voice = 'drzy') {
         return { title: `${name} · teraz`, body: `${cap(planDnaRowText(row, voice).why)}. Dobehne o ${hm(row.end)}.` };
     if (row.kind === 'sun') return { title: `${name} až o ${hm(row.start)}`, body: 'Slnko sa posunulo, skôr by to išlo zo siete.' };
     if (row.kind === 'later') return { title: `${name} radšej ${onDay(row.day.name)}`, body: 'Zatiahlo sa a dnes by to išlo zo siete.' };
-    if (row.kind === 'cheap') return { title: `${name} v lacnom pásme`, body: `Slnko dnes nestačí, od ${hm(row.start)} je lacný prúd.` };
+    if (row.kind === 'cheap')
+        return { title: `${name} v lacnom pásme`, body: `Slnko dnes nestačí, od ${hm(row.start)} je elektrina lacná.` };
     return { title: `${name} dnes nie`, body: 'Slnko podľa predpovede tento týždeň nestačí.' };
 }
 

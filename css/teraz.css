@@ -252,6 +252,17 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
+/* Malé slovo pred veľkým číslom: v dlaždici v riadku s časom, v riadku skupiny nad ním (stĺpec času je úzky). */
+.velky .pred {
+    font-size: 0.55em;
+    font-weight: 800;
+    font-variation-settings: normal;
+}
+.ri .velky .pred {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.1;
+}
 /* Veľké číslo dlaždice sa nezalomí - pri väčšom písme v systéme sa zmenší so šírkou Čo zapnúť (#tz-co). */
 .dl .velky {
     font-size: min(1.75rem, 10cqi);

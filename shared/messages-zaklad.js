@@ -179,7 +179,7 @@ export const NIGHT_MESSAGES = {
         headline: 'Slnko nesvieti',
         body: 'Zo siete platíš bežnú cenu. Čo môže počkať, nechaj na zajtra na slnko.',
     },
-    lacna: { headline: 'Lacný nočný prúd', body: 'Slnko nesvieti, no sieť je lacná. Vhodné na bojler a nabíjanie auta.' },
+    lacna: { headline: 'Lacná nočná elektrina', body: 'Slnko nesvieti, no sieť je lacná. Vhodné na bojler a nabíjanie auta.' },
 };
 
 /** Bez výkonu (žiadne dáta) ostáva len cena. @type {Record<PriceLevel, Message>} */

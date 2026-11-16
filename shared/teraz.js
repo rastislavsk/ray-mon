@@ -383,7 +383,7 @@ const dnesny = (r) => r.kind === 'sun' || r.kind === 'cheap';
 
 /**
  * Riadok skupiny: veľký čas, meno, doplnok a pri núdzovom čase podiel slnka v % (pásik; inak null).
- * @typedef {{ id: string, name: string, kind: string, cas: string, info: string, podiel: number | null }} Riadok
+ * @typedef {{ id: string, name: string, kind: string, pred?: string, cas: string, info: string, podiel: number | null }} Riadok
  */
 /** Odznak, kedy bude slnko na spotrebič najbližšie. @typedef {{ text: string, dlho: boolean }} Potom */
 
@@ -416,7 +416,15 @@ export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza 
     const riadok = (/** @type {DnesnyRiadok} */ r) => {
         const t = terazRiadokText(r);
         const p = r.kind === 'sun' ? potom[r.id] : null;
-        return { id: r.id, name: r.name, kind: r.kind, cas: t.cas, info: p ? `${t.info} · ${p.text}` : t.info, podiel: null };
+        return {
+            id: r.id,
+            name: r.name,
+            kind: r.kind,
+            ...(t.pred ? { pred: t.pred } : {}),
+            cas: t.cas,
+            info: p ? `${t.info} · ${p.text}` : t.info,
+            podiel: null,
+        };
     };
     /** @type {Array<{ nazov: string, riadky: Riadok[] }>} */ const skupiny = [];
     if (dnes.length) skupiny.push({ nazov: terazSkupinaText({ druh: 'dnes', teraz: teraz.length > 0 }), riadky: dnes.map(riadok) });
@@ -509,7 +517,7 @@ function horeDalsi(p, slnkoPride, { nowMin, level, dalej }, voice) {
  * `bod` je farba bodky pred riadkom: zdroj prúdu teraz, keď teraz nejde nič, cena siete.
  * @typedef {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', oko: { text: string, sub: string },
  *   bod: 'go' | 'cheap' | 'costly' | 'plain' | 'cloud', bezSlnka: string,
- *   dlazdice: Array<{ id: string, tone: 'go' | 'cheap', velky: string, meno: string, sub: string, potom: Potom | null }>,
+ *   dlazdice: Array<{ id: string, tone: 'go' | 'cheap', pred: string, velky: string, meno: string, sub: string, potom: Potom | null }>,
  *   dalsi: { id: string, name: string, cas: string, tone: 'go' | 'cheap', sub: string } | null }} CoZapnutHore
  */
 

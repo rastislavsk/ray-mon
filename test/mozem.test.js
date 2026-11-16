@@ -153,7 +153,7 @@ test('v drahom pásme rano to karta povie, aj čo z plánu pôjde prvé', () => 
     const DRAHA = { ...FLAT, bands: [{ ...FLAT.bands[0], level: /** @type {const} */ ('draha'), price: 0.19 }] };
     const m = mozemModel(input(at('07:00'), { pv: null, tariff: DRAHA }));
     assert.equal(m.state, 'wait');
-    assert.equal(m.hero.lead, 'Za 15 min pôjde zo strechy umývačka. Teraz by si platil drahý prúd.');
+    assert.equal(m.hero.lead, 'Za 15 min pôjde zo strechy umývačka. Teraz by si platil drahú elektrinu.');
     assert.match(item(m, 'susicka').text, /práve drahá/);
 });
 
@@ -165,7 +165,7 @@ test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z
     // 17:10: zelená ešte svieti, ale na nič z plánu už nestačí - nie „zapni“.
     const vecer = mozemModel(input(at('17:10')));
     assert.equal(vecer.state, 'none');
-    assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Auto od 17:15 na lacný prúd, zvyšok zajtra.');
+    assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Auto od 17:15 na lacnú elektrinu, zvyšok zajtra.');
     assert.match(vecer.strip?.text ?? '', /^Slnko do /, 'pás dňa ostáva podľa slnka');
     assert.equal(vecer.groups[0].value, 'zajtra 07:30');
     assert.equal(vecer.groups[0].note, 'Umývačka zajtra 07:30 · Práčka zajtra 07:45 · Sušička zajtra 09:45');
@@ -178,10 +178,10 @@ test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z
     assert.equal(nic.groups.length, 3);
 });
 
-test('večer: dnes už nie, auto na lacný prúd, ostatné zajtra', () => {
+test('večer: dnes už nie, auto na lacnú elektrinu, ostatné zajtra', () => {
     const m = mozemModel(input(at('19:50')));
     assert.equal(m.state, 'none');
-    assert.match(m.hero.lead, /Auto na lacný prúd/);
+    assert.match(m.hero.lead, /Auto na lacnú elektrinu/);
     assert.match(m.strip?.text || '', /^Slnko skončilo o/);
     assert.equal(item(m, 'auto').tone, 'cheap');
     assert.match(item(m, 'auto').more?.a ?? '', /^Zajtra od/);
