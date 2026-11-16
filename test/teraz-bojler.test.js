@@ -167,8 +167,8 @@ test('panel Bojler dnes: pás, čísla a behy', () => {
         ['2×', '1 h 45 min', '3,6 kWh', '0,2 kWh'],
     );
     assert.deepEqual(d.behy, [
-        { cas: '10:40 – 11:25', tone: 'slnko', info: 'zo slnka' },
-        { cas: '12:30 – teraz', tone: 'siet', info: '0,2 kWh zo siete' },
+        { cas: '10:40 – 11:25', slnko: '1,6 kWh', siet: '0,0 kWh' },
+        { cas: '12:30 – teraz', slnko: '2,0 kWh', siet: '0,2 kWh' },
     ]);
     // Pás 6-18 h: prvý beh celý zo slnka, druhý zo slnka a na konci 10 % zo siete; teraz 14:00.
     assert.equal(d.pas.teraz, 66.67);
@@ -186,9 +186,12 @@ test('panel Bojler dnes: pás, čísla a behy', () => {
 test('panel: nahriata voda, mlčiaca zásuvka a deň bez behov', () => {
     const hotovo = bojlerDetail(info({ w: 2, den: { ...DEN, hotovo: 835 } }), NOW, TZ);
     assert.equal(hotovo.pod, 'voda nahriata o 13:55');
-    assert.equal(hotovo.behy[1].info, '0,2 kWh zo siete · nahriata 13:55');
+    // Relé ostalo zapnuté, beh je otvorený: koniec je čas nahriatia, nie „teraz“.
+    assert.equal(hotovo.behy[1].cas, '12:30 – 13:55');
+    assert.equal(bojlerDetail(info({ w: 2 }), NOW, TZ).behy[1].cas, '12:30 – teraz', 'nahriatie bez času v zázname');
     assert.deepEqual(hotovo.pas.useky.at(-1)?.tone, 'hotovo');
-    assert.equal(bojlerDetail(info({ kontaktAt: NOW.getTime() - 20 * MIN }), NOW, TZ).pod, 'zásuvka sa neozýva od 13:40');
+    const mlci = bojlerDetail(info({ kontaktAt: NOW.getTime() - 20 * MIN }), NOW, TZ);
+    assert.deepEqual([mlci.pod, mlci.behy[1].cas], ['zásuvka sa neozýva od 13:40', '12:30 – 13:40']);
     const vcera = bojlerDetail(info({ kontaktAt: NOW.getTime() - 22 * 60 * MIN }), NOW, TZ);
     assert.equal(vcera.pod, 'zásuvka sa neozýva od 14. 11. 16:00');
     const caka = bojlerDetail(info({ rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } }), NOW, TZ);

@@ -337,6 +337,8 @@ function renderBojlerSheet(state, dom) {
         setText(dom.tzBojlerPod, d.pod);
         const R = TERAZ_BOJLER_TEXTS.rezim;
         setText(dom.tzBojlerRezimN, R.nazov);
+        // Biela plocha pod zvoleným tlačidlom prejde na druhú stranu (css/teraz.css, .bj-rezim::before).
+        dom.tzBojlerRezim.dataset.rucne = String(d.rezim.rucne);
         for (const btn of dom.tzBojlerRezim.querySelectorAll('button')) {
             const rucne = btn.dataset.bojlerRezim === 'rucne';
             setText(btn, rucne ? R.rucne : R.appka);
@@ -365,7 +367,13 @@ function renderBojlerSheet(state, dom) {
         );
         setHtml(
             dom.tzBojlerBehy,
-            d.behy.map((r) => `<p><span>${escapeHtml(r.cas)}</span><i data-tone="${r.tone}">${escapeHtml(r.info)}</i></p>`).join(''),
+            d.behy
+                .map(
+                    (r) =>
+                        `<p><span>${escapeHtml(r.cas)}</span><i data-tone="slnko">${escapeHtml(r.slnko)}<span class="sr"> ${TERAZ_BOJLER_TEXTS.zoSlnka}</span></i>` +
+                        `<i data-tone="siet">${escapeHtml(r.siet)}<span class="sr"> ${TERAZ_BOJLER_TEXTS.zoSiete}</span></i></p>`,
+                )
+                .join(''),
         );
     }
     dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));

@@ -1105,6 +1105,13 @@ test.describe('bojler na prebytky', () => {
         await expect(page.locator('#tz-bojler-pod')).toHaveText(d.pod);
         await expect(page.locator('#tz-bojler-cisla b')).toHaveText(d.cisla.map((c) => c.v));
         await expect(page.locator('#tz-bojler-behy p')).toHaveCount(2);
+        // Riadok behu: čas, kWh zo slnka a zo siete, na jeden riadok a všetky rovnako vysoké.
+        await expect(page.locator('#tz-bojler-behy p > span')).toHaveText(d.behy.map((r) => r.cas));
+        await expect(page.locator('#tz-bojler-behy i[data-tone="slnko"]')).toHaveText(
+            d.behy.map((r) => `${r.slnko} ${TERAZ_BOJLER_TEXTS.zoSlnka}`),
+        );
+        const vysky = await page.locator('#tz-bojler-behy p').evaluateAll((ps) => ps.map((p) => p.getBoundingClientRect().height));
+        expect(new Set(vysky).size, 'riadky behov rovnako vysoké').toBe(1);
         await expect(page.locator('#tz-bojler-pas .os-usek')).toHaveCount(d.pas.useky.length);
         const axe = await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze();
         expect(axe.violations).toEqual([]);
@@ -1131,8 +1138,10 @@ test.describe('bojler na prebytky', () => {
         await expect(appka).toHaveText(R.appka);
         await expect(appka).toHaveAttribute('aria-pressed', 'true');
         await expect(page.locator('#tz-bojler-rezim-t')).toHaveText(R.popisAppka('2,3', '2,0'));
+        await expect(page.locator('#tz-bojler-rezim')).toHaveAttribute('data-rucne', 'false');
         await rucne.click();
         await expect(rucne).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#tz-bojler-rezim'), 'biela plocha prejde pod Ručne').toHaveAttribute('data-rucne', 'true');
         await expect(page.locator('#tz-bojler-rezim-t')).toHaveText(R.popisRucne);
         expect(ulozene).toEqual([{ pecat: NB_ZDROJ.pecat, rucne: true }]);
         const info = { ...BOJLER_INFO, rucne: true };
