@@ -10,7 +10,7 @@ import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../../shared/teraz-bojler.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { tokIcon, vecIcon } from './icons.js';
+import { rezimIcon, tokIcon, vecIcon } from './icons.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -102,19 +102,28 @@ function renderHreben(h, dom) {
 }
 
 /**
- * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice.html): ikona v kruhu, veľké číslo, meno, pásik slnka a siete,
- * doplnok a odznak. Prvky idú vždy v tomto poradí a pásik je aj tam, kde nie je čo ukázať (prázdny, drží
- * miesto): dlaždice v rade zdieľajú riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške.
- * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `riadi` bodka bojlera so zásuvkou.
- * @param {{ id: string, tone: string, kind?: string, riadi?: string, pred?: string, velky: string, meno: string,
- *   podiel: number | null, sub: string, potom?: { text: string, dlho: boolean } | null }} d
+ * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice.html, teraz-dlazdice-odrazky.html): ikona v kruhu, veľké číslo,
+ * meno, pásik slnka a siete, najviac dve odrážky a odznak. Prvky idú vždy v tomto poradí a pásik je aj tam, kde
+ * nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú riadky mriežky, takže číslo aj pásik sú
+ * v nich na rovnakej výške. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
+ * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `riadi` bodka stavu bojlera so zásuvkou,
+ * `rezim` značka v rohu, kto bojler zapína.
+ * @param {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
+ *   meno: string, podiel: number | null, odr: string[], potom?: { text: string, dlho: boolean } | null }} d
  */
 const dlazdicaHtml = (d) =>
     `<button type="button" class="dl" data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''} data-vec="${d.id}">` +
     `<span class="dl-ico"${d.riadi ? ` data-riadi="${d.riadi}"` : ''} aria-hidden="true">${vecIcon(d.id)}</span>` +
-    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>` +
-    `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i><small>${escapeHtml(d.sub)}</small>` +
+    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimHtml(d.rezim)}` +
+    `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
+    `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}</small>` +
     `${d.potom ? `<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</span></button>`;
+
+/** Značka režimu bojlera v rohu dlaždice, pre čítačku slovom. @param {'appka' | 'rucne' | null | undefined} rezim */
+const rezimHtml = (rezim) =>
+    rezim
+        ? `<i class="dl-rz" data-rezim="${rezim}">${rezimIcon(rezim)}<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim[rezim])}</span></i>`
+        : '';
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri dnešku riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri
@@ -141,7 +150,7 @@ function renderCo(co, dom, bojler) {
     const hore = dnes
         ? [
               ...h.dlazdice.map((d) => ({ ...d, podiel: null })),
-              ...(p ? [{ id: p.id, tone: 'tiche', kind: p.tone, velky: p.cas, meno: p.name, podiel: null, sub: p.sub }] : []),
+              ...(p ? [{ id: p.id, tone: 'tiche', kind: p.tone, velky: p.cas, meno: p.name, podiel: null, odr: p.odr }] : []),
           ]
         : [];
     const dalsie = co.riadky.map((r) => ({
@@ -152,7 +161,7 @@ function renderCo(co, dom, bojler) {
         velky: r.cas,
         meno: r.name,
         podiel: r.podiel,
-        sub: r.info,
+        odr: r.odr,
     }));
     const html = hore.map(dlazdicaHtml).join('') + (dnes ? bojler : '') + dalsie.map(dlazdicaHtml).join('');
     setHtml(dom.tzDlazdice, html);
@@ -312,7 +321,7 @@ function bojlerHtml(state, co) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
     if (!co || co.den || !riadeny(state) || !state.bojler) return '';
     const t = bojlerDlazdica(state.bojler, state.now, state.site.timezone);
-    return dlazdicaHtml({ id: 'bojler', tone: t.tone, riadi: t.riadi, velky: t.velky, meno: t.meno, podiel: null, sub: t.sub });
+    return dlazdicaHtml({ id: 'bojler', ...t, podiel: null });
 }
 
 /**

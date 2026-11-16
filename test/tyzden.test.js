@@ -189,7 +189,7 @@ test('denInyModel: hlavička dňa, čo ide zo slnka a čo najmenej zo siete, det
     const riadky = utorok.riadky;
     assert.deepEqual(riadky.map((r) => r.id).sort(), [...DEVICES].sort());
     assert.ok(riadky.every((r, i) => r.kind === 'later' && r.podiel === null && (i === 0 || r.cas >= riadky[i - 1].cas)));
-    assert.equal(riadky.find((r) => r.id === 'susicka')?.info, 'po práčke');
+    assert.deepEqual(riadky.find((r) => r.id === 'susicka')?.odr, ['po práčke']);
     const pracka = utorok.veci.find((v) => v.id === 'pracka');
     assert.equal(pracka?.den, 'Utorok');
     assert.equal(pracka?.kedy, 'V utorok zo slnka');
@@ -207,7 +207,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         name: 'Práčka',
         kind: 'nudza',
         cas: '10:30',
-        info: 'lacná elektrina',
+        odr: ['lacná elektrina'],
         podiel: 0,
     });
     const v = nedela.veci.find((x) => x.id === 'pracka');
@@ -232,7 +232,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         name: 'Auto',
         kind: 'nudza',
         cas: '–',
-        info: 'slnko nepomôže',
+        odr: ['slnko nepomôže'],
         podiel: null,
     });
     assert.equal(jedna.veci[0].slot, null);
@@ -249,7 +249,7 @@ test('karta Teraz pred dňami bez slnka: odznak „potom až v utorok“ na dla�
             ['umyvacka', { text: 'potom až v utorok', dlho: true }],
         ],
     );
-    assert.equal(m.co?.riadky.find((r) => r.id === 'susicka')?.info, 'po práčke · potom až v utorok');
+    assert.deepEqual(m.co?.riadky.find((r) => r.id === 'susicka')?.odr, ['po práčke', 'potom až v utorok']);
     // Zajtra slnko je: odznak nie je. Pozajtra: svetlý odznak bez „až“.
     assert.ok(terazModel(input({})).co?.hore.dlazdice.every((d) => d.potom === null));
     assert.deepEqual(terazModel(input({ '2026-09-06': ZAMRACENE })).co?.hore.dlazdice[0].potom, { text: 'potom v pondelok', dlho: false });
@@ -260,11 +260,11 @@ test('karta Teraz počas dní bez slnka: núdzové časy namiesto „o 3 dni“,
     assert.deepEqual(m.co?.hore.oko, { text: 'Slnko až v utorok', sub: '2 dni zamračené' });
     assert.equal(m.co?.dlho, true);
     assert.deepEqual(
-        m.co?.riadky.map((r) => [r.id, r.kind, r.cas, r.info, r.podiel]),
+        m.co?.riadky.map((r) => [r.id, r.kind, r.cas, r.odr, r.podiel]),
         [
-            ['pracka', 'nudza', '10:30', 'lacná elektrina · celá v utorok', 0],
-            ['umyvacka', 'nudza', '10:30', 'lacná elektrina · celá v utorok', 0],
-            ['susicka', 'nudza', '12:30', 'lacná elektrina · celá v utorok', 0],
+            ['pracka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
+            ['umyvacka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
+            ['susicka', 'nudza', '12:30', ['lacná elektrina', 'celá v utorok'], 0],
         ],
     );
     const pracka = m.veci.find((v) => v.id === 'pracka');
@@ -279,7 +279,7 @@ test('karta Teraz v slabý deň: umývačka sa zmestí, pranie dostane čas s ku
         nudza.map((r) => r.id),
         ['pracka', 'susicka'],
     );
-    assert.ok(nudza.every((r) => r.podiel !== null && r.podiel >= 25 && / zo slnka · celá v pondelok$/.test(r.info)));
+    assert.ok(nudza.every((r) => r.podiel !== null && r.podiel >= 25 && / zo slnka$/.test(r.odr[0]) && r.odr[1] === 'celá v pondelok'));
     assert.equal(slabo.veci.find((v) => v.id === 'pracka')?.slot?.tone, 'part');
 });
 
@@ -304,7 +304,7 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
 });
 
 test('texty týždňa: odznak, hlavička dňa a núdzový čas v oboch tónoch', () => {
-    assert.deepEqual(terazPotomText(null), { text: 'potom tento týždeň nie', dlho: true });
+    assert.deepEqual(terazPotomText(null), { text: 'tento týždeň už nie', dlho: true });
     assert.deepEqual(terazPotomText({ name: 'Piatok', index: 2 }), { text: 'potom v piatok', dlho: false });
     assert.deepEqual(terazDenHlavickaText({ date: '2026-09-10', index: 5, nad: false }), {
         nazov: 'Štvrtok',
@@ -314,22 +314,22 @@ test('texty týždňa: odznak, hlavička dňa a núdzový čas v oboch tónoch',
     const n = (r) => terazNudzaText({ start: 750, end: 870, podiel: 0.5, zdroj: 'slnko', dnes: true, potom: 'Pondelok', ...r });
     assert.deepEqual(n({}), {
         cas: '12:30',
-        info: 'polovica zo slnka · celá v pondelok',
+        odr: ['polovica zo slnka', 'celá v pondelok'],
         kedy: 'Najmenej zo siete',
         odDo: '12:30 – 14:30',
         why: 'Slnko na celý program nestačí. O 12:30 ho pokryje najviac, zvyšok pôjde zo siete. Celé zo slnka v pondelok.',
     });
     assert.deepEqual(
-        [0.1, 0.3, 0.7, 0.9].map((podiel) => n({ podiel, dnes: false }).info),
-        ['trochu zo slnka', 'tretina zo slnka', 'dve tretiny zo slnka', 'takmer celé zo slnka'],
+        [0.1, 0.3, 0.7, 0.9].map((podiel) => n({ podiel, dnes: false }).odr),
+        [['trochu zo slnka'], ['tretina zo slnka'], ['väčšina zo slnka'], ['skoro celé zo slnka']],
     );
-    assert.equal(n({ zdroj: 'bezna', potom: null }).info, 'bežná elektrina');
+    assert.deepEqual(n({ zdroj: 'bezna', potom: null }).odr, ['bežná elektrina']);
     assert.equal(
         n({ zdroj: 'bezna', potom: null }).why,
         'Slnko nepomôže, od 12:30 to aspoň nejde z drahej siete. Celé zo slnka tento týždeň podľa predpovede nie.',
     );
     const jedno = { start: null, end: null, podiel: 0, zdroj: /** @type {const} */ ('siet') };
-    assert.deepEqual([n(jedno).cas, n(jedno).odDo, n(jedno).info], ['–', '–', 'slnko nepomôže · celá v pondelok']);
+    assert.deepEqual([n(jedno).cas, n(jedno).odDo, n(jedno).odr], ['–', '–', ['slnko nepomôže', 'celá v pondelok']]);
     assert.equal(n({ ...jedno, potom: null }).why.startsWith('Slnko nepomôže a sieť dnes už lacnejšia nebude. Pusti, keď treba.'), true);
     assert.equal(
         terazNudzaText({ ...jedno, dnes: false, potom: null }, 'slusny').why,

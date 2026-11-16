@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Dlaždice Teraz – odrážky a režim bojlera</title>
+        <style>
+            /* Mockup, nie snímka z appky. Telefóny sú kreslené ručne podľa css/teraz.css. Scenár Ráno vychádza
+               z docs/navrhy/teraz-dlazdice.html (stav 16. 11. 2026 dopoludnia), scenár Na slnku je vymyslený. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --cheap-text: #b0dbff;
+                --costly: #ff7a66;
+                --amber: #ffc94a;
+                --amber-text: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p,
+            li {
+                margin: 6px 0;
+            }
+            .note {
+                color: rgba(242, 240, 234, 0.7);
+                font-size: 0.9rem;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+                margin-top: 14px;
+            }
+            figure {
+                margin: 0;
+                width: 375px;
+                max-width: 100%;
+            }
+            figcaption {
+                margin-top: 10px;
+                font-size: 0.9rem;
+            }
+            figcaption b {
+                display: block;
+                font-size: 1rem;
+                color: #fff;
+            }
+            .pro,
+            .proti {
+                display: block;
+                font-size: 0.85rem;
+            }
+            .pro::before {
+                content: '+ ';
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .proti::before {
+                content: '– ';
+                color: var(--costly);
+                font-weight: 800;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+                margin-top: 12px;
+            }
+            th,
+            td {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--amber);
+                font-size: 0.75rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            td s {
+                color: rgba(242, 240, 234, 0.5);
+            }
+
+            /* ===== Telefón ===== */
+            .phone {
+                padding: 16px 12px 18px;
+                border-radius: 30px;
+                background: linear-gradient(180deg, #4a72b8 0%, #5b86c9 55%, #6d95d1 100%);
+                color: #fff;
+                overflow: hidden;
+                container-type: inline-size;
+            }
+            .phone.sivy {
+                background: linear-gradient(180deg, #5b626e 0%, #6b717c 55%, #7a8089 100%);
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0 4px 12px;
+                font-size: 0.8rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .oko i {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: #c9d3e6;
+            }
+            .oko i[data-tone='go'] {
+                background: var(--yes);
+            }
+            .oko span {
+                font-weight: 600;
+                letter-spacing: 0;
+                text-transform: none;
+            }
+            .vi {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                display: block;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+            .pred {
+                font-size: 0.55em;
+                font-weight: 800;
+                font-variation-settings: normal;
+            }
+            .podiel {
+                display: block;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, #ffd166 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+            }
+
+            /* Mriežka a dlaždica ako v css/teraz.css: dlaždice v rade zdieľajú riadky (subgrid). */
+            .mriezka {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .dl {
+                position: relative;
+                grid-row: span 6;
+                display: grid;
+                grid-template-rows: subgrid;
+                row-gap: 0;
+                min-width: 0;
+                padding: 14px;
+                border-radius: 24px;
+                text-align: left;
+            }
+            .dl > span:not(.dl-ico):not(.rz) {
+                display: contents;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+            }
+            .dl[data-tone='cheap'] {
+                background: var(--cheap);
+                color: #06233d;
+            }
+            .dl[data-tone='tiche'],
+            .dl[data-tone='next'] {
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl[data-tone='chyba'] {
+                border: 2px solid var(--amber-text);
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl-ico {
+                position: relative;
+                width: 44px;
+                height: 44px;
+                margin-bottom: 22px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .dl[data-tone='cheap'] .dl-ico {
+                background: rgba(6, 35, 61, 0.12);
+            }
+            .dl[data-tone='tiche'] .dl-ico,
+            .dl[data-tone='next'] .dl-ico,
+            .dl[data-tone='chyba'] .dl-ico {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl-ico .vi {
+                width: 26px;
+                height: 26px;
+            }
+            /* Bodka stavu bojlera (ako dnes): beží zelená, čaká biela, mlčí jantárová, vypnutý prázdny krúžok. */
+            .dl-ico[data-riadi]::after {
+                content: '';
+                position: absolute;
+                top: 1px;
+                right: 1px;
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.35);
+            }
+            .dl-ico[data-riadi='bezi']::after {
+                background: #2f8a17;
+                box-shadow: 0 0 0 2px var(--yes);
+            }
+            .dl-ico[data-riadi='mlci']::after {
+                background: var(--amber-text);
+            }
+            .dl-ico[data-riadi='vyp']::after {
+                background: transparent;
+                box-shadow:
+                    inset 0 0 0 2px #fff,
+                    0 0 0 2px rgba(8, 16, 40, 0.35);
+            }
+            .dl .velky {
+                align-self: end;
+                font-size: min(1.75rem, 10cqi);
+            }
+            .dl[data-kind='cheap'] .velky {
+                color: var(--cheap-text);
+            }
+            .dl b {
+                align-self: start;
+                display: block;
+                margin-top: 2px;
+                font-size: min(1.375rem, 6.4cqi);
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+                line-height: 1.1;
+                overflow-wrap: anywhere;
+            }
+            .dl .podiel {
+                align-self: start;
+                margin: 8px 0 4px;
+            }
+            .dl .podiel.prazdny {
+                visibility: hidden;
+            }
+            .dl small {
+                align-self: start;
+                display: block;
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.25;
+            }
+            .potom {
+                justify-self: start;
+                align-self: start;
+                margin-top: 6px;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: rgba(20, 48, 12, 0.14);
+                font-size: 0.75rem;
+                font-style: normal;
+                font-weight: 800;
+                line-height: 1.3;
+            }
+            .dl[data-tone='tiche'] .potom {
+                background: rgba(255, 255, 255, 0.16);
+            }
+
+            /* ===== Návrh: odrážky ===== */
+            /* Doplnok ako zoznam: každá položka svoj riadok s bodkou, riadok sa nezalomí (dlhý sa skráti „…“). */
+            .dl ul.odr {
+                align-self: start;
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.3;
+            }
+            .dl ul.odr li {
+                margin: 0;
+                padding-left: 0.85em;
+                text-indent: -0.85em;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .dl ul.odr li::before {
+                content: '•';
+                display: inline-block;
+                width: 0.85em;
+                text-indent: 0;
+                font-weight: 900;
+            }
+            /* Obrys: čo sa oproti dnešku zmenilo. */
+            .zmena {
+                outline: 2px dashed rgba(255, 209, 102, 0.9);
+                outline-offset: 2px;
+                border-radius: 6px;
+            }
+
+            /* ===== Režim bojlera, variant A: značka v rohu dlaždice ===== */
+            .rz {
+                position: absolute;
+                top: 14px;
+                right: 14px;
+                display: grid;
+                place-items: center;
+            }
+            .rz-a {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl[data-tone='go'] .rz-a {
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .rz-a .vi {
+                width: 18px;
+                height: 18px;
+            }
+            /* Ručne: biely kruh s tmavou rukou - vidno ho aj z diaľky, appka je len tichá ikona. */
+            .rz-a[data-rezim='rucne'] {
+                background: #fff;
+                color: #0b1430;
+            }
+
+            /* ===== Režim bojlera, variant B: malý prepínač ako v paneli Bojler dnes ===== */
+            .rz-b {
+                display: flex;
+                gap: 2px;
+                padding: 2px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.28);
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .dl[data-tone='go'] .rz-b {
+                border-color: rgba(20, 48, 12, 0.3);
+                background: rgba(20, 48, 12, 0.06);
+            }
+            .rz-b span {
+                width: 24px;
+                height: 22px;
+                display: grid;
+                place-items: center;
+                border-radius: 999px;
+                opacity: 0.55;
+            }
+            .rz-b .vi {
+                width: 15px;
+                height: 15px;
+            }
+            .rz-b span[data-on] {
+                opacity: 1;
+                background: #fff;
+                color: #0b1430;
+            }
+            .dl[data-tone='go'] .rz-b span[data-on] {
+                background: #14300c;
+                color: var(--yes);
+            }
+
+            /* Legenda pod variantmi. */
+            .leg {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 16px;
+                margin-top: 8px;
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Karta Teraz – odrážky v dlaždiciach a režim bojlera</h1>
+                <p class="note">
+                    16. 11. 2026. Nadväzuje na docs/navrhy/teraz-dlazdice.html. Tri veci: (1) doplnok pod menom už nie je veta s „·“, ale
+                    vždy najviac dva riadky s odrážkami, žiadny sa nezalomí; (2) Auto a Bojler majú rovnaké riadky ako spotrebiče - číslo,
+                    pod ním len „Auto“ / „Bojler“, pod tým odrážky; (3) ručný režim bojlera ukazuje obrázok, nie slovo „ručne“. Obrys
+                    <span class="zmena">takto</span> = zmena oproti dnešku. Mockup je kreslený ručne, nie z appky.
+                </p>
+                <p class="note">
+                    <b>Rozhodnuté 16. 11. 2026:</b> režim bojlera variant A (značka v rohu). Ostatné ako v mockupe, aj spotrebiče, ktoré idú
+                    teraz („Práčka · zapni teraz · zo slnka“). Pri zavedení sa zmenilo: odrážka, ktorá sa nezmestí (väčšie písmo v
+                    systéme), sa zalomí pod seba s odsadením, neskráti sa „…“ – skrátený text by bol skrytý. Aby sa na S22 (360 px) pri
+                    bežnom písme zmestilo všetko do riadku: „takmer celé“ → „skoro celé zo slnka“, „dve tretiny“ → „väčšina zo slnka“,
+                    „potom tento týždeň nie“ → „tento týždeň už nie“; Auto neskôr ostáva v jednej odrážke („~40 km zo slnka“), pri zásuvke,
+                    čo mlčí, „skript alebo Wi-Fi“ namiesto rozkazu.
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Časť 1 a 2</small>Odrážky, Auto a Bojler ako spotrebiče</h2>
+                <p class="note">
+                    Dlaždica má vždy rovnaké poradie: ikona, číslo, meno, pásik (ak je), odrážky, odznak. Riadky sú v rade spoločné, takže
+                    číslo je vo všetkých dlaždiciach rade na tej istej výške a v tej istej veľkosti - aj u Auta a Bojlera.
+                </p>
+                <div class="rad" id="rad-ctr"></div>
+            </section>
+
+            <section>
+                <h2><small>Časť 3</small>Bojler: kto ho zapína – dve alternatívy</h2>
+                <p class="note">
+                    Bodka pri ikone ostáva a hovorí o stave (hreje / čaká / vypnutý / mlčí). Režim je samostatná značka v pravom hornom rohu
+                    dlaždice - to miesto je dnes prázdne, takže dlaždica nezvyšuje výšku ani neposúva číslo. Slovo „ručne“ z textu zmizne.
+                </p>
+                <div class="rad" id="rad-rz"></div>
+            </section>
+
+            <section>
+                <h2><small>Texty</small>Dnes → návrh</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dlaždica</th>
+                            <th>Dnes (meno · doplnok)</th>
+                            <th>Návrh (meno, odrážky)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tab"></tbody>
+                </table>
+                <p class="note">
+                    Pravidlo pre dĺžku: na S22 sa do polovičnej dlaždice zmestí asi 18 znakov na riadok. Dlhší riadok sa nezalomí, ale
+                    skráti „…“ – preto texty v tabuľke sú pod touto hranicou. Spotrebič s jedinou informáciou má jednu odrážku a druhý
+                    riadok prázdny (aby sa odznak pod ním nehýbal).
+                </p>
+            </section>
+
+            <section>
+                <h2><small>Otvorené</small>Na rozhodnutie</h2>
+                <ul>
+                    <li>
+                        <b>Režim bojlera: A, alebo B?</b> A = jedna značka v rohu (ruka na bielom kruhu, appka tichá ikona slnka so šípkou).
+                        B = malý prepínač s oboma polohami, ako v paneli Bojler dnes.
+                    </li>
+                    <li>
+                        <b>Spotrebiče, ktoré idú teraz</b> („13:00 / Zapni práčku“): ostať pri „Zapni …“, alebo aj tu len meno a „zapni
+                        teraz“ do odrážky, ako pri Aute? Toto si nepýtal, v mockupe je to zjednotené (scenár Na slnku) - povedz, či áno.
+                    </li>
+                    <li>
+                        <b>Bojler – tri údaje na dva riadky.</b> Dnes ukazuje „Hreje zo slnka“, prebytok aj „od 10:55“. Navrhujem nechať
+                        stav a čas, prebytok je v paneli Bojler dnes. Pri „Čaká na slnko“ by veľké číslo bol odber bojlera (0 kW) ako pri
+                        ostatných stavoch, nie prebytok – prebytok by bol v odrážke („zapne pri 1,5 kW“).
+                    </li>
+                    <li>
+                        <b>Malé „do“ pred číslom</b> („do 09:30“) ostáva v riadku čísla. Ak má číslo začínať vždy na tom istom mieste, „do“
+                        sa presunie do odrážky („• lacná do 09:30“) – ale číslo bez neho stráca zmysel.
+                    </li>
+                </ul>
+            </section>
+        </main>
+        <script>
+            const ICO = {
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/><path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+                // Ruka (ručný režim) a slnko so šípkou do kruhu (riadi appka) - kreslené pre tento návrh.
+                ruka: '<path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5"/><path d="M14 10.5V5.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.5a6 6 0 0 1-4.6-2.2L4.2 15a1.5 1.5 0 0 1 2.3-1.9L8 14.5"/>',
+                appka: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/>',
+            };
+            const ikona = (id) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${ICO[id]}</svg>`;
+            const velky = (v) => `<span class="velky">${v.pred ? `<span class="pred">${v.pred} </span>` : ''}${v.cas}</span>`;
+            const pasik = (s) => (s == null ? '<i class="podiel prazdny"></i>' : `<i class="podiel" style="--s:${s}%"></i>`);
+            const potom = (p) => (p ? `<em class="potom">${p}</em>` : '<span></span>');
+
+            // Dnešná dlaždica: meno a doplnok s „·“, ako to kreslí web/render/teraz.js.
+            const dnes = (v) =>
+                `<div class="dl" data-tone="${v.tone ?? 'tiche'}"${v.kind ? ` data-kind="${v.kind}"` : ''}>` +
+                `<span class="dl-ico"${v.riadi ? ` data-riadi="${v.riadi}"` : ''}>${ikona(v.id)}</span>` +
+                `<span>${velky(v)}<b>${v.meno}</b>${pasik(v.s)}<small>${v.sub}</small>${potom(v.potom)}</span></div>`;
+
+            // Návrh: meno a odrážky; `rz` = značka režimu bojlera ('a' / 'b'), `z` = zmenené časti s obrysom.
+            const rezim = (v, rz) => {
+                if (!rz || !v.rezim) return '';
+                if (rz === 'a')
+                    return `<span class="rz rz-a" data-rezim="${v.rezim}" title="${v.rezim === 'rucne' ? 'Ručne' : 'Riadi appka'}">${ikona(v.rezim === 'rucne' ? 'ruka' : 'appka')}</span>`;
+                return (
+                    `<span class="rz rz-b" title="${v.rezim === 'rucne' ? 'Ručne' : 'Riadi appka'}">` +
+                    `<span${v.rezim === 'appka' ? ' data-on' : ''}>${ikona('appka')}</span><span${v.rezim === 'rucne' ? ' data-on' : ''}>${ikona('ruka')}</span></span>`
+                );
+            };
+            const navrh = (v, rz, z = true) =>
+                `<div class="dl" data-tone="${v.tone ?? 'tiche'}"${v.kind ? ` data-kind="${v.kind}"` : ''}>` +
+                `<span class="dl-ico"${v.riadi ? ` data-riadi="${v.riadi}"` : ''}>${ikona(v.id)}</span>${rezim(v, rz)}` +
+                `<span>${velky(v)}<b${z && v.zm ? ' class="zmena"' : ''}>${v.n.meno}</b>${pasik(v.s)}` +
+                `<ul class="odr${z ? ' zmena' : ''}">${v.n.odr.map((t) => `<li>${t}</li>`).join('')}${v.n.odr.length < 2 ? '<li style="visibility:hidden">–</li>' : ''}</ul>${potom(v.n.potom === undefined ? v.potom : v.n.potom)}</span></div>`;
+
+            const SCEN = {
+                rano: {
+                    nazov: 'Ráno, lacná sieť',
+                    sivy: true,
+                    oko: ['', 'Slnko až v stredu', 'zajtra zamračené'],
+                    veci: [
+                        {
+                            id: 'auto',
+                            tone: 'cheap',
+                            pred: 'do',
+                            cas: '09:30',
+                            meno: 'Nabíjaj auto',
+                            sub: 'na lacnú elektrinu',
+                            zm: true,
+                            n: { meno: 'Auto', odr: ['nabíjaj teraz', 'lacná elektrina'] },
+                        },
+                        {
+                            id: 'bojler',
+                            riadi: 'bezi',
+                            rezim: 'rucne',
+                            cas: '2,2 kW',
+                            meno: 'Hreje',
+                            sub: 'ručne · od 08:31',
+                            zm: true,
+                            n: { meno: 'Bojler', odr: ['hreje', 'od 08:31'] },
+                        },
+                        {
+                            id: 'umyvacka',
+                            cas: '10:30',
+                            meno: 'Umývačka',
+                            sub: 'polovica zo slnka · celá v stredu',
+                            s: 49,
+                            n: { meno: 'Umývačka', odr: ['polovica zo slnka', 'celá v stredu'] },
+                        },
+                        {
+                            id: 'pracka',
+                            cas: '11:00',
+                            meno: 'Práčka',
+                            sub: 'polovica zo slnka · celá vo štvrtok',
+                            s: 55,
+                            n: { meno: 'Práčka', odr: ['polovica zo slnka', 'celá vo štvrtok'] },
+                        },
+                        {
+                            id: 'susicka',
+                            kind: 'cheap',
+                            pred: 'od',
+                            cas: '13:00',
+                            meno: 'Sušička',
+                            sub: 'lacná elektrina · celá vo štvrtok',
+                            s: 22,
+                            n: { meno: 'Sušička', odr: ['lacná elektrina', 'celá vo štvrtok'] },
+                        },
+                    ],
+                },
+                slnko: {
+                    nazov: 'Na slnku (vymyslený)',
+                    oko: ['go', 'Teraz zo slnka', 'do 14:30'],
+                    veci: [
+                        {
+                            id: 'pracka',
+                            tone: 'go',
+                            cas: '12:00',
+                            meno: 'Zapni práčku',
+                            sub: '',
+                            potom: 'potom až v piatok',
+                            zm: true,
+                            n: { meno: 'Práčka', odr: ['zapni teraz', 'zo slnka'] },
+                        },
+                        {
+                            id: 'auto',
+                            tone: 'go',
+                            cas: '~40 km',
+                            meno: 'Nabíjaj zo slnka',
+                            sub: 'do 14:30',
+                            zm: true,
+                            n: { meno: 'Auto', odr: ['nabíjaj zo slnka', 'do 14:30'] },
+                        },
+                        {
+                            id: 'bojler',
+                            tone: 'go',
+                            riadi: 'bezi',
+                            rezim: 'appka',
+                            cas: '2,1 kW',
+                            meno: 'Hreje zo slnka',
+                            sub: 'prebytok 2,6 kW · od 10:55',
+                            zm: true,
+                            n: { meno: 'Bojler', odr: ['hreje zo slnka', 'od 10:55'] },
+                        },
+                        {
+                            id: 'umyvacka',
+                            cas: '13:15',
+                            meno: 'Umývačka',
+                            sub: 'po práčke',
+                            n: { meno: 'Umývačka', odr: ['po práčke'] },
+                        },
+                        {
+                            id: 'susicka',
+                            cas: '14:00',
+                            meno: 'Sušička',
+                            sub: 'dobehne 15:30',
+                            n: { meno: 'Sušička', odr: ['dobehne 15:30'] },
+                        },
+                    ],
+                },
+            };
+
+            const oko = (o) => `<div class="oko"><i${o[0] ? ` data-tone="${o[0]}"` : ''}></i>${o[1]} <span>· ${o[2]}</span></div>`;
+            const telefon = (sc, f, rz) =>
+                `<div class="phone${sc.sivy ? ' sivy' : ''}">${oko(sc.oko)}<div class="mriezka">${sc.veci.map((v) => f(v, rz)).join('')}</div></div>`;
+
+            const ctr = document.getElementById('rad-ctr');
+            for (const id of ['rano', 'slnko']) {
+                const sc = SCEN[id];
+                ctr.innerHTML +=
+                    `<figure>${telefon(sc, dnes)}<figcaption><b>Dnes · ${sc.nazov}</b>Doplnok s „·“ sa zalamuje kdekoľvek; Auto a Bojler majú v mene vetu.</figcaption></figure>` +
+                    `<figure>${telefon(sc, navrh, 'a')}<figcaption><b>Návrh · ${sc.nazov}</b>` +
+                    `<span class="pro">pod číslom vždy len meno, všetky dlaždice čítaš rovnako</span>` +
+                    `<span class="pro">dva krátke riadky, nič sa nezalamuje</span>` +
+                    `<span class="proti">pokyn („nabíjaj“, „zapni“) je menší, už nie veľkým písmom</span>` +
+                    `<span class="note">Bojler tu s variantom A.</span></figcaption></figure>`;
+            }
+
+            // Bojler vo všetkých stavoch a oboch režimoch.
+            const B = [
+                { tone: 'go', riadi: 'bezi', rezim: 'appka', cas: '2,1 kW', n: { meno: 'Bojler', odr: ['hreje zo slnka', 'od 10:55'] } },
+                {
+                    tone: 'next',
+                    riadi: 'caka',
+                    rezim: 'appka',
+                    cas: '0 kW',
+                    n: { meno: 'Bojler', odr: ['čaká na slnko', 'zapne pri 1,5 kW'] },
+                },
+                { riadi: 'caka', rezim: 'appka', cas: '3,1 kWh', n: { meno: 'Bojler', odr: ['nahriata o 12:10', 'dnes zo slnka'] } },
+                { riadi: 'bezi', rezim: 'rucne', cas: '2,2 kW', n: { meno: 'Bojler', odr: ['hreje', 'od 08:31'] } },
+                { riadi: 'vyp', rezim: 'rucne', cas: '0 kW', n: { meno: 'Bojler', odr: ['vypnutý', 'od 13:40'] } },
+                { tone: 'chyba', riadi: 'mlci', cas: '25 min', n: { meno: 'Bojler', odr: ['zásuvka mlčí', 'skontroluj Wi-Fi'] } },
+            ].map((v) => ({ id: 'bojler', ...v }));
+            const rz = document.getElementById('rad-rz');
+            const VAR = {
+                a: {
+                    nazov: 'A · značka v rohu',
+                    pro: ['ručný režim je biely kruh s rukou – vidno ho na prvý pohľad', 'jeden symbol, nič navyše na čítanie'],
+                    proti: [
+                        'symbol slnka v kruhu pri „Riadi appka“ si treba raz vysvetliť',
+                        'pri zásuvke, čo mlčí, režim nevidno (nevieme ho)',
+                    ],
+                },
+                b: {
+                    nazov: 'B · malý prepínač',
+                    pro: ['vyzerá ako prepínač v paneli – je jasné, kde sa mení', 'vidno obe možnosti, nielen tú zapnutú'],
+                    proti: ['vyzerá ako ovládač, ale ťuknutie otvorí panel (neprepne)', 'je to viac tvaru v rohu malej dlaždice'],
+                },
+            };
+            for (const k of ['a', 'b']) {
+                const x = VAR[k];
+                rz.innerHTML +=
+                    `<figure><div class="phone sivy"><div class="mriezka">${B.map((v) => navrh(v, k, false)).join('')}</div></div>` +
+                    `<figcaption><b>${x.nazov}</b>${x.pro.map((t) => `<span class="pro">${t}</span>`).join('')}${x.proti.map((t) => `<span class="proti">${t}</span>`).join('')}` +
+                    `<div class="leg"><span>riadok 1: appka hreje · appka čaká</span><span>riadok 2: appka nahriata · ručne hreje</span><span>riadok 3: ručne vypnutý · zásuvka mlčí</span></div></figcaption></figure>`;
+            }
+
+            // Tabuľka textov.
+            const T = [
+                ['Auto, lacné pásmo teraz', 'Nabíjaj auto · na lacnú elektrinu', 'Auto · nabíjaj teraz · lacná elektrina'],
+                ['Auto zo slnka teraz', 'Nabíjaj zo slnka · do 14:30', 'Auto · nabíjaj zo slnka · do 14:30'],
+                ['Auto neskôr dnes', 'Auto · ~40 km zo slnka', 'Auto · zo slnka · ~40 km'],
+                ['Spotrebič teraz zo slnka', 'Zapni práčku', 'Práčka · zapni teraz · zo slnka (otvorené)'],
+                ['Spotrebič teraz, lacné', 'Zapni práčku · dovtedy lacná', 'Práčka · zapni teraz · lacná elektrina'],
+                ['Núdzový čas', 'polovica zo slnka · celá vo štvrtok', 'polovica zo slnka · celá vo štvrtok'],
+                ['Najbližšia vec (nič nejde)', 'za 40 min · zo slnka', 'za 40 min · zo slnka'],
+                ['Bojler appka hreje', 'Hreje zo slnka · prebytok 2,6 kW · od 10:55', 'Bojler · hreje zo slnka · od 10:55'],
+                ['Bojler appka hreje aj zo siete', 'Hreje · prebytok 0,9 kW · od 10:55', 'Bojler · hreje aj zo siete · od 10:55'],
+                [
+                    'Bojler čaká',
+                    '0,8 kW · Čaká na slnko · prebytok teraz · zapne pri 1,5 kW',
+                    '0 kW · Bojler · čaká na slnko · zapne pri 1,5 kW',
+                ],
+                ['Bojler nahriata', 'Voda nahriata o 12:10 · dnes zo slnka', 'Bojler · nahriata o 12:10 · dnes zo slnka'],
+                ['Bojler ručne hreje', 'Hreje · ručne · od 08:31', 'Bojler · hreje · od 08:31 (+ značka)'],
+                ['Bojler ručne nahriata', 'Voda nahriata · ručne · dnes 4,2 kWh', 'Bojler · nahriata · dnes 4,2 kWh (+ značka)'],
+                ['Bojler ručne vypnutý', 'Vypnutý · ručne · od 13:40', 'Bojler · vypnutý · od 13:40 (+ značka)'],
+                ['Bojler mlčí', 'Zásuvka sa neozýva · skript nebeží alebo je bez Wi-Fi', 'Bojler · zásuvka mlčí · skontroluj Wi-Fi'],
+            ];
+            document.getElementById('tab').innerHTML = T.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+        </script>
+    </body>
+</html>
