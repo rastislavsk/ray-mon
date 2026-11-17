@@ -19,9 +19,10 @@ const SLNKO = [-14, -80];
 /**
  * Kresba domu: 550 × 681 px, biele čiary na priehľadnom pozadí, pod ňou výplň rovnakej veľkosti. Na scénu ju
  * posunie a zmenší `x`, `k`; riadok kresby `dno` (päta prístrešku) leží na `y`. Pravý okraj kresby je odrezaný,
- * preto je za okrajom scény. Ľavý roh steny (riadok 375) stojí na vrchu kopca (KOPEC).
+ * preto je za okrajom scény. Kopec za domom (KOPEC) siaha
+ * vyššie než ľavý roh steny (riadok 375), takže dom stojí pred ním, nie na jeho vrchole.
  */
-const DOM = { x: 232, y: 232, k: 0.2, dno: 652, w: 550, h: 681 };
+const DOM = { x: 243, y: 232, k: 0.18, dno: 652, w: 550, h: 681 };
 /** Rohy poľa panelov na kresbe: hore vľavo, hore vpravo, dole vľavo, dole vpravo. */
 const PANELY = [
     [168, 118],
@@ -44,10 +45,10 @@ const r1 = (n) => Math.round(n * 10) / 10;
 /** Krajina je kreslená o ZEM vyššie (posunie ju transform). */
 const ZEM = 8;
 /**
- * Kopec v krajine: pri dome (vľavo v krajine) vystúpi až k ľavému rohu steny, k elektrárni klesá. Spolu so zemou
+ * Kopec v krajine: pri dome (vľavo v krajine) vystúpi nad ľavý roh steny, k elektrárni klesá. Spolu so zemou
  * pod ním je plný a siaha pod spodok scény, aby za ním nebolo vidno počasie.
  */
-const KOPEC = 'M-10 168 C40 167 80 169 110 175 S170 190 230 188 S300 182 340 186 L340 250 L-10 250Z';
+const KOPEC = 'M-10 160 C40 159 80 162 110 171 S170 190 230 188 S300 182 340 186 L340 250 L-10 250Z';
 /** Krajina (stĺp, stožiar, elektráreň) je kreslená sprava a zrkadlí sa doľava; bod domu do nej prepočíta. @param {number[]} p */
 const doKrajiny = (p) => [SCENA.w - p[0], p[1] - ZEM];
 
@@ -182,7 +183,7 @@ export function cislaSvg(s, ukaz) {
         `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="1">kW</tspan></text>`;
     let o = '';
     if (s.vyroba) o += c('slnko', [64, 54], s.vyroba);
-    if (s.dom) o += c('dom', [290, 90], s.dom);
+    if (s.dom) o += c('dom', [292, 104], s.dom);
     if (s.siet) o += c(s.siet.smer, [96, 120], s.siet.kw);
     return `${SVG}>${o}</svg>`;
 }
