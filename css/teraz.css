@@ -552,7 +552,7 @@
     animation: sc-lesk 3.2s ease-in-out infinite alternate;
 }
 .sc-dom {
-    opacity: 0.92;
+    opacity: 0.8;
 }
 /* Lúče do panelov: zlaté čiarky, ktoré bežia zo slnka na strechu (výrazne hustejšie než lúče oblohy). */
 .sc-luc,

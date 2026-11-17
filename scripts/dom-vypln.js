@@ -1,5 +1,5 @@
 // Výplň domu pre scénu na karte Teraz: img/dom-vypln.png leží pod čiarovou kresbou img/dom.png a robí z nej
-// plný dom (svetlé steny a strecha, tmavé okná a panely, modrý strom a auto). Plný dom zakryje dážď, sneh
+// plný dom (steny a strecha svetlé asi ako elektráreň, tmavé okná a panely, modrý strom a auto). Plný dom zakryje dážď, sneh
 // aj oblaky za sebou (docs/navrhy/teraz-scena-zem.html, počasie B). Nie je súčasťou behu appky - výsledok
 // leží v repozitári a stránka ho servíruje tak, ako je.
 //
@@ -18,9 +18,9 @@ import { chromium } from '@playwright/test';
 
 /** Farby plôch (RGB). */
 const FARBY = {
-    strecha: [230, 238, 249],
-    stena: [211, 224, 242],
-    tien: [185, 204, 230],
+    strecha: [206, 216, 233],
+    stena: [188, 201, 222],
+    tien: [160, 177, 204],
     okno: [45, 85, 151],
     panel: [28, 47, 99],
     strom: [61, 112, 187],
