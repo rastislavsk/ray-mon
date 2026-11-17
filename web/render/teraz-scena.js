@@ -1,8 +1,10 @@
 // Scéna toku energie na karte Teraz (docs/navrhy/teraz-tok-energie.html, návrh 1): slnko a elektráreň vľavo,
-// náš dom vpravo (čiarová kresba img/dom.png), medzi nimi stĺp s transformátorom, stožiar a vedenie. Zo slnka
-// padajú do panelov zlaté čiarky, po vedení beží žiariaci bod - zlatý von do siete, modrobiely dnu. Čísla
-// (po ťuknutí) sú priamo v scéne, bez slov. Čo kresliť, počíta shared/teraz-scena.js; tu sa len skladá SVG.
-// Pohyb je v CSS (lúče, para) a SMIL (body na vedení); pri obmedzenom pohybe CSS body skryje a ukáže šípku.
+// náš dom vpravo na kopci (čiarová kresba img/dom.png s výplňou img/dom-vypln.png), medzi nimi stĺp
+// s transformátorom, stožiar a vedenie. Zo slnka padajú do panelov zlaté čiarky, po vedení bežia impulzy -
+// zlaté von do siete, modrobiele dnu. Čísla (po ťuknutí) sú priamo v scéne, bez slov. Čo kresliť, počíta
+// shared/teraz-scena.js; tu sa len skladá SVG. Zem, dom aj elektráreň sú plné, takže zakryjú dážď, sneh
+// a oblaky živej oblohy za sebou (docs/navrhy/teraz-scena-zem.html).
+// Pohyb je v CSS (lúče, para) a SMIL (impulzy); pri obmedzenom pohybe CSS impulzy skryje a ukáže šípku.
 
 import { escapeHtml } from '../../shared/format.js';
 
@@ -15,10 +17,11 @@ export const SCENA = { w: 330, h: 234 };
 const SLNKO = [-14, -80];
 
 /**
- * Kresba domu: 550 × 681 px, biele čiary na priehľadnom pozadí. Na scénu ju posunie a zmenší `x`, `k`;
- * riadok kresby `dno` leží na zemi `y`. Pravý okraj kresby je odrezaný, preto je za okrajom scény.
+ * Kresba domu: 550 × 681 px, biele čiary na priehľadnom pozadí, pod ňou výplň rovnakej veľkosti. Na scénu ju
+ * posunie a zmenší `x`, `k`; riadok kresby `dno` (päta prístrešku) leží na `y`. Pravý okraj kresby je odrezaný,
+ * preto je za okrajom scény. Ľavý roh steny (riadok 375) stojí na vrchu kopca (KOPEC).
  */
-const DOM = { x: 219, y: 230, k: 0.224, dno: 650, w: 550, h: 681 };
+const DOM = { x: 232, y: 232, k: 0.2, dno: 652, w: 550, h: 681 };
 /** Rohy poľa panelov na kresbe: hore vľavo, hore vpravo, dole vľavo, dole vpravo. */
 const PANELY = [
     [168, 118],
@@ -40,6 +43,11 @@ const r1 = (n) => Math.round(n * 10) / 10;
 
 /** Krajina je kreslená o ZEM vyššie (posunie ju transform). */
 const ZEM = 8;
+/**
+ * Kopec v krajine: pri dome (vľavo v krajine) vystúpi až k ľavému rohu steny, k elektrárni klesá. Spolu so zemou
+ * pod ním je plný a siaha pod spodok scény, aby za ním nebolo vidno počasie.
+ */
+const KOPEC = 'M-10 168 C40 167 80 169 110 175 S170 190 230 188 S300 182 340 186 L340 250 L-10 250Z';
 /** Krajina (stĺp, stožiar, elektráreň) je kreslená sprava a zrkadlí sa doľava; bod domu do nej prepočíta. @param {number[]} p */
 const doKrajiny = (p) => [SCENA.w - p[0], p[1] - ZEM];
 
@@ -123,17 +131,37 @@ function luce(s) {
     return g + '</g>';
 }
 
-/** Žiariace body na vedení (SMIL) a šípka smeru pre obmedzený pohyb. @param {Scena} s */
-function body(s) {
+/**
+ * Svetlý úsek vedenia, ktorý beží po drôte (SMIL): čiarka dĺžky `L` z dĺžky drôtu 100 (pathLength). Hlava čiarky
+ * je pri `von` na jej konci, pri `dnu` na začiatku - chvost tak vždy ťahá za ňou.
+ * @param {string} d drôt @param {number} L @param {string} trieda @param {boolean} von @param {string} anim
+ */
+function vyboj(d, L, trieda, von, anim) {
+    const [od, po] = von ? [L, L - 100] : [-100, 0];
+    return (
+        `<path class="${trieda}" d="${d}" pathLength="100" stroke-dasharray="${L} ${100 - L}">` +
+        `<animate attributeName="stroke-dashoffset" from="${od}" to="${po}"${anim}/></path>`
+    );
+}
+
+/**
+ * Impulzy na vedení: výboj s chvostom a jasnou hlavou, ktorý beží po drôte ako signál po vlákne, a šípka smeru
+ * pre obmedzený pohyb. @param {Scena} s @param {string} d drôt
+ */
+function body(s, d) {
     if (!s.siet) return '';
     const von = s.siet.smer === 'von';
-    const dur = 3.8;
+    const dur = 2.4;
     let g = '';
-    for (let i = 0; i < s.body; i++)
+    for (let i = 0; i < s.body; i++) {
+        const anim = ` dur="${dur}s" begin="${-r1((dur * i) / s.body)}s" repeatCount="indefinite"`;
         g +=
-            `<g class="sc-bod" data-smer="${s.siet.smer}"><circle r="9" fill="url(#sc-bod)"/><circle r="2.4" class="sc-jadro"/>` +
-            `<animateMotion dur="${dur}s" begin="${-r1((dur * i) / s.body)}s" repeatCount="indefinite"${von ? '' : ' keyPoints="1;0" keyTimes="0;1" calcMode="linear"'}>` +
-            `<mpath href="#sc-vedenie"/></animateMotion></g>`;
+            `<g class="sc-bod" data-smer="${s.siet.smer}">` +
+            vyboj(d, 7, 'sc-imp-g', von, anim) +
+            vyboj(d, 4.2, 'sc-imp', von, anim) +
+            `<g><circle r="2.6" fill="url(#sc-bod)"/><circle r="0.85" class="sc-jadro"/>` +
+            `<animateMotion${anim}${von ? '' : ' keyPoints="1;0" keyTimes="0;1" calcMode="linear"'}><mpath href="#sc-vedenie"/></animateMotion></g></g>`;
+    }
     // Šípka v polovici vedenia (v krajine, ktorá je zrkadlová: vo vlastných súradniciach ide od domu doprava).
     g += `<g class="sc-sipka" data-smer="${s.siet.smer}" transform="translate(164 170) rotate(${von ? -8 : 172})"><circle r="6"/><path d="M-4 -3.5L3 0L-4 3.5Z"/></g>`;
     return g;
@@ -154,7 +182,7 @@ export function cislaSvg(s, ukaz) {
         `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="1">kW</tspan></text>`;
     let o = '';
     if (s.vyroba) o += c('slnko', [64, 54], s.vyroba);
-    if (s.dom) o += c('dom', [288, 62], s.dom);
+    if (s.dom) o += c('dom', [290, 90], s.dom);
     if (s.siet) o += c(s.siet.smer, [96, 120], s.siet.kw);
     return `${SVG}>${o}</svg>`;
 }
@@ -169,31 +197,33 @@ export function scenaSvg(s, noc) {
     const druha = vedenie([[206, 156], [216, 156], r2[1], [270, 168]]);
     const panely = [PANELY[0], PANELY[1], PANELY[3], PANELY[2]].map((p) => T(p).map(r1).join(',')).join(' ');
     const stred = T(quad(PANELY, 0.5, 0.5));
-    const y = DOM.y - DOM.dno * DOM.k;
+    const obraz = `x="${DOM.x}" y="${r1(DOM.y - DOM.dno * DOM.k)}" width="${r1(DOM.w * DOM.k)}" height="${r1(DOM.h * DOM.k)}"`;
     return (
         `${SVG}${noc ? ' data-noc' : ''}>` +
         `<defs><linearGradient id="sc-luc" gradientUnits="userSpaceOnUse" x1="${SLNKO[0]}" y1="${SLNKO[1]}" x2="${r1(stred[0])}" y2="${r1(stred[1])}">` +
         '<stop offset="0" stop-color="#ffe7a0" stop-opacity="0"/><stop offset=".35" stop-color="#ffe7a0" stop-opacity=".15"/>' +
         '<stop offset=".8" stop-color="#ffd166" stop-opacity=".95"/><stop offset="1" stop-color="#fff2c4"/></linearGradient>' +
         '<linearGradient id="sc-zem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sc-zem0"/><stop offset="1" class="sc-zem1"/></linearGradient>' +
+        // Zem sa k spodku scény (v krajine y 226) rozplynie.
+        '<linearGradient id="sc-zem-mg" gradientUnits="userSpaceOnUse" x1="0" y1="212" x2="0" y2="228"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+        '<mask id="sc-zem-m" maskUnits="userSpaceOnUse" x="-20" y="100" width="380" height="200"><rect x="-20" y="100" width="380" height="200" fill="url(#sc-zem-mg)"/></mask>' +
         '<linearGradient id="sc-veza" x1="0" x2="1"><stop offset="0" class="sc-veza0"/><stop offset=".65" class="sc-veza1"/><stop offset="1" class="sc-veza2"/></linearGradient>' +
-        '<linearGradient id="sc-panely" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c2a5a"/><stop offset="1" stop-color="#0f1838"/></linearGradient>' +
         '<linearGradient id="sc-lesk" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset=".5" stop-color="#fff6d8" stop-opacity=".1"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></linearGradient>' +
         '<radialGradient id="sc-bod"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="currentColor"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>' +
         // Krajina sprava, zrkadlená doľava: elektráreň pri slnku, dom na druhej strane.
         `<g transform="translate(0 ${ZEM}) matrix(-1 0 0 1 ${SCENA.w} 0)">` +
-        '<path class="sc-kopce" d="M-10 196 C40 186 90 192 150 186 S250 178 340 184 L340 240 L-10 240Z"/>' +
+        `<path class="sc-kopce" mask="url(#sc-zem-m)" d="${KOPEC}"/>` +
         elektraren() +
-        '<path class="sc-pod" d="M-10 214 C60 204 140 210 210 204 S300 198 340 202 L340 240 L-10 240Z"/>' +
+        '<path class="sc-pod" mask="url(#sc-zem-m)" d="M-10 214 C60 204 140 210 210 204 S300 198 340 202 L340 250 L-10 250Z"/>' +
         stoziar(238, 198, 40) +
         `<path class="sc-drot" d="${druha}"/><path id="sc-vedenie" class="sc-drot" d="${hlavna}"/>` +
         trafo(206) +
-        body(s) +
+        body(s, hlavna) +
         '</g>' +
-        // Dom: panely sú jediná plná plocha, aby bolo vidno, kam padajú lúče.
-        `<polygon class="sc-panely" points="${panely}"/>` +
+        // Dom: výplň, nad ňou lesk panelov (keď svieti slnko) a navrchu čiarová kresba.
+        `<image class="sc-vypln" href="img/dom-vypln.png" ${obraz}/>` +
         (s.luce ? `<polygon class="sc-lesk" points="${panely}"/>` : '') +
-        `<image class="sc-dom" href="img/dom.png" x="${DOM.x}" y="${r1(y)}" width="${r1(DOM.w * DOM.k)}" height="${r1(DOM.h * DOM.k)}"/>` +
+        `<image class="sc-dom" href="img/dom.png" ${obraz}/>` +
         luce(s) +
         '</svg>'
     );

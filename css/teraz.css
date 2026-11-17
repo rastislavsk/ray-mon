@@ -426,20 +426,20 @@
 #tz-scena-cisla {
     pointer-events: none;
 }
+/* Zem je plná, aby za ňou nebolo vidno dážď, sneh ani oblaky (docs/navrhy/teraz-scena-zem.html). Farbu berie
+   zo spodku oblohy (--s2), takže v noci, za šera aj pod sivou oblohou stmavne s ňou; k spodku scény sa
+   rozplynie (maska #sc-zem-m), aby nemala hranu nad hrebeňom dní. */
 .sc-kopce {
-    fill: rgba(40, 80, 140, 0.28);
+    fill: color-mix(in srgb, var(--s2) 52%, #0e2a62);
 }
 .sc-pod {
     fill: url(#sc-zem);
 }
 .sc-zem0 {
-    stop-color: rgba(25, 55, 105, 0.35);
+    stop-color: color-mix(in srgb, var(--s2) 40%, #0c2352);
 }
 .sc-zem1 {
-    stop-color: rgba(8, 16, 40, 0);
-}
-.sc-elektraren {
-    opacity: 0.82;
+    stop-color: color-mix(in srgb, var(--s2) 34%, #0a1d45);
 }
 .sc-veza {
     fill: url(#sc-veza);
@@ -502,7 +502,7 @@
 .sc-trafo rect {
     fill: rgba(190, 198, 215, 0.95);
 }
-/* Bod na vedení: zlatý von do siete, modrobiely dnu. Pri obmedzenom pohybe namiesto neho šípka smeru. */
+/* Impulz na vedení: zlatý von do siete, modrobiely dnu. Pri obmedzenom pohybe namiesto neho šípka smeru. */
 .sc-bod {
     color: #ffd166;
 }
@@ -513,6 +513,21 @@
 }
 .sc-jadro {
     fill: #fff;
+}
+/* Impulz: krátky svetlý úsek drôtu (chvost so žiarou) a jasná hlava. */
+.sc-imp,
+.sc-imp-g {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+}
+.sc-imp {
+    stroke-width: 1.2;
+    opacity: 0.7;
+}
+.sc-imp-g {
+    stroke-width: 2.6;
+    opacity: 0.22;
 }
 .sc-sipka {
     display: none;
@@ -531,11 +546,6 @@
     .sc-sipka {
         display: inline;
     }
-}
-/* Panely sú jediná plná plocha domu, aby bolo vidno, kam padajú lúče. */
-.sc-panely {
-    fill: url(#sc-panely);
-    opacity: 0.55;
 }
 .sc-lesk {
     fill: url(#sc-lesk);
@@ -560,15 +570,6 @@
     opacity: 0.22;
 }
 /* V noci krajina a dom stmavnú, v elektrárni svietia okná. */
-[data-noc] .sc-kopce {
-    fill: rgba(10, 16, 42, 0.55);
-}
-[data-noc] .sc-zem0 {
-    stop-color: rgba(8, 12, 32, 0.55);
-}
-[data-noc] .sc-elektraren {
-    opacity: 0.75;
-}
 [data-noc] .sc-veza0 {
     stop-color: #26305a;
 }
@@ -605,8 +606,8 @@
 [data-noc] .sc-trafo rect {
     fill: #3c4670;
 }
-[data-noc] .sc-panely {
-    opacity: 0.45;
+[data-noc] .sc-vypln {
+    filter: brightness(0.4) saturate(0.8);
 }
 [data-noc] .sc-dom {
     opacity: 0.55;
