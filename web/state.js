@@ -56,6 +56,8 @@ import { setupInit } from '../shared/setup-flow.js';
  *   radarRychlost: 1 | 2 | 3,
  *   radarHra: boolean,
  *   radarStav: RadarStav,
+ *   radarHotovo: boolean,
+ *   radarBezModelu: boolean,
  *   online: boolean,
  *   incoming: import('../shared/settings.js').Settings | null,
  *   linkError: import('../shared/settings.js').LinkError | null,
@@ -130,6 +132,7 @@ const telefon = ({
 
 /**
  * Karta Radar: čo si človek zvolil. Poloha na osi nie je v stave, patrí prehrávaču (web/radar-hrac.js).
+ * `radarHotovo`: načítané je všetko a dá sa prehrávať, `radarBezModelu`: model sa pritom nenačítal.
  * @param {{ radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3 }} ulozene
  */
 const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
@@ -138,6 +141,8 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
     radarRychlost: /** @type {1 | 2 | 3} */ (radarRychlost),
     radarHra: false,
     radarStav: /** @type {RadarStav} */ ('nacitavam'),
+    radarHotovo: false,
+    radarBezModelu: false,
 });
 
 /**

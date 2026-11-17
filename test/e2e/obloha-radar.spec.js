@@ -49,9 +49,10 @@ const FALOSNA_MAPA = `window.maplibregl = {
 
 /**
  * @param {import('@playwright/test').Page} page
- * @param {{ mapa?: boolean, site?: typeof SITE | null }} [opts]
+ * @param {{ mapa?: boolean, site?: typeof SITE | null, model?: (r: import('@playwright/test').Route) => Promise<void> }} [opts]
+ * `model` odpovie namiesto predpovede na dopyt modelu karty Radar.
  */
-async function otvor(page, { mapa = true, site = SITE } = {}) {
+async function otvor(page, { mapa = true, site = SITE, model } = {}) {
     /** @type {string[]} */ const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const telo = teloRadaru();
@@ -60,6 +61,7 @@ async function otvor(page, { mapa = true, site = SITE } = {}) {
     await page.route(/tiles\.openfreemap\.org/, (r) => r.abort());
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: weather }));
+    if (model) await page.route(/models=icon_eu/, model);
     await page.route(`${WORKER_RADAR_URL}*`, (r) => r.fulfill({ body: telo, headers: { 'access-control-allow-origin': '*' } }));
     if (site)
         await page.addInitScript(
@@ -73,9 +75,18 @@ async function otvor(page, { mapa = true, site = SITE } = {}) {
     return errors;
 }
 
+/**
+ * Všetko je načítané a dá sa prehrávať. Pri súbežných testoch rozbalí 25 falošných snímok aj za desať sekúnd.
+ * @param {import('@playwright/test').Page} page
+ */
+async function pripraveny(page) {
+    await expect(page.locator('#rd-hraj')).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator('#rd-hlaska')).toBeHidden();
+}
+
 test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => {
     const errors = await otvor(page);
-    await expect(page.locator('#rd-hlaska')).toBeHidden();
+    await pripraveny(page);
     await expect(page.locator('#rd-druh')).toHaveText('Teraz');
     await expect(page.locator('#rd-os-svg text')).toHaveCount(5);
     await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť');
@@ -97,9 +108,49 @@ test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => 
     expect(errors).toEqual([]);
 });
 
+test('Radar: kým sa nenačíta všetko, obiehajú slnko a mesiac a prehrávanie čaká', async ({ page }) => {
+    /** @type {() => void} */
+    let pust = () => {};
+    const cakaj = new Promise((res) => (pust = () => res(undefined)));
+    const errors = await otvor(page, {
+        model: async (r) => {
+            await cakaj;
+            await r.fulfill({ status: 500 });
+        },
+    });
+    // Najnovšia snímka je už na mape, model ešte nie.
+    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-svitanie')).toBeVisible();
+    await expect(page.locator('#rd-hlaska')).toBeHidden();
+    await expect(page.locator('#rd-hraj')).toBeDisabled();
+    await expect(page.locator('[data-rozsah="dnes"]')).toBeDisabled();
+    await expect(page.locator('#rd-bez-modelu')).toBeHidden();
+    await page.locator('#rd-os').focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    pust();
+    await pripraveny(page);
+    await expect(page.locator('#rd-svitanie')).toBeHidden();
+    await expect(page.locator('#rd-bez-modelu')).toBeVisible();
+    expect(errors).toEqual([]);
+});
+
+test('Radar: po návrate o 6 minút sa nové snímky vymenia naraz, bez slnka a mesiaca', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    const pred = await page.locator('#rd-cas').textContent();
+    await page.locator('#nav-terazky').click();
+    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + 6 * 60000);
+    await page.locator('#nav-radar').click();
+    await expect(page.locator('#rd-cas')).not.toHaveText(/** @type {string} */ (pred), { timeout: 30000 });
+    await expect(page.locator('#rd-svitanie')).toBeHidden();
+    await expect(page.locator('#rd-hraj')).toBeEnabled();
+    expect(errors).toEqual([]);
+});
+
 test('Radar: ťah po osi zastaví prehrávanie a posunie čas, klávesnica ide po krokoch', async ({ page }) => {
     const errors = await otvor(page);
-    await expect(page.locator('#rd-hlaska')).toBeHidden();
+    await pripraveny(page);
     const os = /** @type {{ x: number, y: number, width: number, height: number }} */ (await page.locator('#rd-os').boundingBox());
     await page.mouse.move(os.x + os.width * 0.5, os.y + 10);
     await page.mouse.down();
@@ -115,7 +166,7 @@ test('Radar: ťah po osi zastaví prehrávanie a posunie čas, klávesnica ide p
 
 test('Radar: nespustí sa sám, prehrá os raz od začiatku a zastane', async ({ page }) => {
     const errors = await otvor(page);
-    await expect(page.locator('#rd-hlaska')).toBeHidden();
+    await pripraveny(page);
     await page.waitForTimeout(600);
     await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť');
     await expect(page.locator('#rd-druh')).toHaveText('Teraz');

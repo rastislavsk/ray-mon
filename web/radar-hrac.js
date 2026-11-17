@@ -33,6 +33,9 @@ function polnoc(ms) {
  * Model po hodinách s textúrami.
  * @typedef {{ casy: number[], w: number, h: number, dazd: Uint8Array[], oblaky: Uint8Array[],
  *   tDazd: Array<WebGLTexture | null>, tOblaky: Array<WebGLTexture | null> }} Model
+ * Dáta z obnovy, ktoré čakajú bokom, kým nepríde všetko a os nestojí: prehrávanie tak nikdy nemieša staré s novými.
+ * @typedef {{ terazMs: number, hotove: boolean, snimky: Map<number, Uint8Array>,
+ *   pole: { gx: number, gy: number, g: number, bajty: Uint8Array } | null, model: Omit<Model, 'tDazd' | 'tOblaky'> | null }} Nove
  */
 
 export class RadarHrac {
@@ -55,6 +58,7 @@ export class RadarHrac {
     pasCaka = 0;
     obnovene = 0;
     /** @type {any} model, ktorý prišiel skôr než mapa */ cakaModel = null;
+    /** @type {Nove | null} */ nove = null;
 
     /** @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom */
     constructor(store, dom) {
@@ -250,11 +254,17 @@ export class RadarHrac {
     }
 
     /** @param {number} index @param {Uint8Array} f */
-    naSnimku(index, f) {
+    vlozSnimku(index, f) {
         const { gl, oblast } = this;
         if (!gl || !oblast) return;
         gl.zmaz(this.snimky.get(index)?.t ?? null);
         this.snimky.set(index, { t: gl.textura(oblast.w, oblast.h, f, true), f });
+    }
+
+    /** @param {number} index @param {Uint8Array} f */
+    naSnimku(index, f) {
+        if (this.nove) return void this.nove.snimky.set(index, f);
+        this.vlozSnimku(index, f);
         if (index === indexKroku(this.terazMs)) this.store.setState({ radarStav: 'ok' });
         this.pasNeskor();
         this.krasli();
@@ -262,6 +272,7 @@ export class RadarHrac {
 
     /** @param {Omit<Model, 'tDazd' | 'tOblaky'>} m */
     naModel(m) {
+        if (this.nove) return void (this.nove.model = m);
         const g = this.gl;
         // Mapa ešte nie je hotová, textúry počkajú na ňu.
         if (!g?.gl) return void (this.cakaModel = m);
@@ -273,6 +284,7 @@ export class RadarHrac {
 
     /** @param {{ gx: number, gy: number, g: number, bajty: Uint8Array }} m */
     naPohyb(m) {
+        if (this.nove) return void (this.nove.pole = m);
         this.pole = m;
         this.gl?.pohyb(m);
         this.pasNeskor();
@@ -297,34 +309,67 @@ export class RadarHrac {
         });
         // Model sa začne sťahovať hneď, nečaká na mapu ani na snímky.
         this.data.nacitajModel(Date.now()).catch(() => {});
-        this.map = await vytvorMapu(this.dom.rdMapa, site, this.gl, o);
+        const map = await vytvorMapu(this.dom.rdMapa, site, this.gl, o);
+        this.map = map;
+        // Mapa je „idle“, keď má všetky dlaždice výrezu.
+        const mapa = new Promise((res) => map.once('idle', res));
         if (this.cakaModel) this.naModel(this.cakaModel);
-        await this.obnov();
+        await this.obnov(mapa);
     }
 
-    /** Najnovšie snímky a model. */
-    async obnov() {
+    /**
+     * Najnovšie snímky a model. Prvé načítanie ukazuje snímky hneď (najnovšia je na mape, kým sa dopĺňa zvyšok)
+     * a na konci pustí prehrávanie. Ďalšie obnovy sťahujú bokom (`nove`) a vymenia všetko naraz.
+     * @param {Promise<unknown>} [mapa] dlaždice mapy pri prvom načítaní
+     */
+    async obnov(mapa) {
         const data = this.data;
-        if (!data) return;
+        if (!data || this.nove) return;
         const now = Date.now();
         this.obnovene = now;
-        const t = await data.najnovsia(now);
-        if (t === null) throw new Error('radar: žiadna snímka');
-        if (t !== this.terazMs) {
-            // Staršie než dve hodiny už na osi nie sú.
-            const pod = indexKroku(t) - krokovMinulost;
-            for (const [i, s] of this.snimky) {
-                if (i >= pod) continue;
-                this.gl?.zmaz(s.t);
-                this.snimky.delete(i);
+        /** @type {Nove | null} */
+        const nove = this.terazMs ? { terazMs: 0, hotove: false, snimky: new Map(), pole: null, model: null } : null;
+        this.nove = nove;
+        try {
+            const t = await data.najnovsia(now);
+            if (t === null) throw new Error('radar: žiadna snímka');
+            if (nove) nove.terazMs = t;
+            else {
+                this.terazMs = t;
+                if (this.snimky.has(indexKroku(t))) this.store.setState({ radarStav: 'ok' });
+                this.kresliOs();
+                this.ukaz();
             }
-            this.terazMs = t;
+            const vsetko = Promise.all([data.dopln(t).catch(() => {}), data.nacitajModel(now).catch(() => {}), mapa]);
+            await Promise.race([vsetko, new Promise((res) => setTimeout(res, RADAR.cakanieMs))]);
+        } catch (err) {
+            this.nove = null;
+            throw err;
         }
-        if (this.snimky.has(indexKroku(t))) this.store.setState({ radarStav: 'ok' });
+        if (!nove) return this.store.setState({ radarHotovo: true, radarBezModelu: !this.model });
+        nove.hotove = true;
+        this.prevezmi();
+    }
+
+    /** Dáta z obnovy na os, keď sú všetky a os stojí. */
+    prevezmi() {
+        const n = this.nove;
+        if (!n?.hotove || this.store.get().radarHra) return;
+        this.nove = null;
+        // Staršie než dve hodiny už na osi nie sú.
+        const pod = indexKroku(n.terazMs) - krokovMinulost;
+        for (const [i, s] of this.snimky) {
+            if (i >= pod) continue;
+            this.gl?.zmaz(s.t);
+            this.snimky.delete(i);
+        }
+        this.terazMs = n.terazMs;
+        for (const [i, f] of n.snimky) if (i >= pod) this.vlozSnimku(i, f);
+        if (n.pole) this.naPohyb(n.pole);
+        if (n.model) this.naModel(n.model);
+        this.store.setState({ radarBezModelu: !this.model });
         this.kresliOs();
-        this.ukaz();
-        data.dopln(t).catch(() => {});
-        data.nacitajModel(now).catch(() => {});
+        this.krasli();
     }
 
     /** Karta je na obrazovke. Prvé otvorenie stiahne mapu aj dáta, ďalšie len doplní nové. */
@@ -341,13 +386,17 @@ export class RadarHrac {
             this.map?.remove();
             this.map = null;
             this.data = null;
-            this.store.setState({ radarStav: 'chyba', radarHra: false });
+            this.nove = null;
+            this.terazMs = 0;
+            this.store.setState({ radarStav: 'chyba', radarHra: false, radarHotovo: false });
         });
     }
 
     /** Prehrávanie podľa stavu. */
     hra() {
-        if (!this.store.get().radarHra || this.beh) return;
+        // Os zastala: teraz môžu prísť dáta, ktoré obnova pripravila bokom.
+        if (!this.store.get().radarHra) return this.prevezmi();
+        if (this.beh) return;
         this.posledny = performance.now();
         // Z konca alebo z „teraz“ ide os od začiatku, inak odtiaľ, kam ju človek dal.
         if (this.poz >= this.pocet || this.poz === this.teraz()) this.poz = 0;

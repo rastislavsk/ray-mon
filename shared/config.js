@@ -742,6 +742,8 @@ export const RADAR = {
     // Staršie snímky sa sťahujú po štyroch naraz, aby sa nečakalo jedna na druhú.
     subezne: 4,
     obnovaMs: 5 * 60 * 1000,
+    // Najdlhšie čakanie na všetky dáta pred prehrávaním. Potom sa prehrá to, čo prišlo (napr. bez modelu pri limite 429).
+    cakanieMs: 30000,
     // Prehrávanie pri 1×: dve hodiny merania a dve predpovede za 16 s, deň za 23 s. Prehrá sa raz a zastane.
     krokovZaS: 3,
     hodinZaS: 1,

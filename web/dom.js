@@ -35,6 +35,8 @@ function radarDom() {
         rdOsSvg: byId('rd-os-svg'),
         rdJazdec: byId('rd-jazdec'),
         rdRychlost: byId('rd-rychlost'),
+        rdSvitanie: byId('rd-svitanie'),
+        rdBezModelu: byId('rd-bez-modelu'),
     };
 }
 

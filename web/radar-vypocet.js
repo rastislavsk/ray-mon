@@ -62,15 +62,16 @@ async function spracuj(m) {
             snimky.set(m.index, f);
             postMessage({ druh: 'snimka', index: m.index, f: f.slice() });
         } else if (m.druh === 'pohyb') {
+            // Odpovie vždy, aj bez pohybu: prehrávač podľa toho vie, že sú spracované všetky snímky pred ním.
             const p = pohybZ(m.indexy);
-            if (p) postMessage({ druh: 'pohyb', gx: p.gx, gy: p.gy, g: p.g, bajty: pohybBajty(p) });
+            postMessage(p ? { druh: 'pohyb', gx: p.gx, gy: p.gy, g: p.g, bajty: pohybBajty(p) } : { druh: 'pohyb', bajty: null });
         } else if (m.druh === 'zabudni') {
             for (const k of snimky.keys()) if (k < m.pod) snimky.delete(k);
         } else if (m.druh === 'model') {
             postMessage({ druh: 'model', model: model(m.model) });
         }
     } catch (err) {
-        postMessage({ druh: 'chyba', index: m.index, sprava: String(err) });
+        postMessage({ druh: 'chyba', zdroj: m.druh, index: m.index, sprava: String(err) });
     }
 }
 

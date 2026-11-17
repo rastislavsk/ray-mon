@@ -31,6 +31,11 @@ Neskôr sa to má prerobiť na širší výrez alebo dáta idúce za mapou (mož
 
 Model má vlastný Web Worker a v prehliadači sa drží 3 hodiny (`radar-model-v1`): v jednom rade so snímkami čakali oblaky na S22 20–30 s.
 
+Pri načítaní je najnovšia snímka hneď na mape, no kým neprídu všetky snímky, pohyb, model a dlaždice mapy (najviac
+`RADAR.cakanieMs`), v strede obiehajú slnko a mesiac (`#rd-svitanie`) a Play, os aj rozsahy čakajú (`radarHotovo`):
+prehrávanie potom nič nedoťahuje. Obnova po `obnovaMs` sťahuje bokom (`nove` v `web/radar-hrac.js`) a vymení všetko
+naraz, keď os stojí.
+
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 

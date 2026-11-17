@@ -15,6 +15,9 @@ export class RadarData {
     /** @type {Set<number>} */ hotove = new Set();
     /** @type {Set<number>} */ bezia = new Set();
     modelAt = 0;
+    /** @type {Promise<void> | null} práve bežiace sťahovanie modelu */ modelBeh = null;
+    /** @type {(() => void) | null} */ pohybHotovy = null;
+    /** @type {(() => void) | null} */ modelHotovy = null;
 
     /**
      * @param {{ bloky: Array<{ row: number, col: number }>, oblast: import('../shared/radar-data.js').Oblast,
@@ -29,6 +32,8 @@ export class RadarData {
         this.modelWorker = new Worker(new URL('./radar-vypocet.js', import.meta.url), { type: 'module' });
         this.modelWorker.onmessage = ({ data: m }) => {
             if (m.druh === 'model') naModel(m.model);
+            this.modelHotovy?.();
+            this.modelHotovy = null;
         };
         this.worker.postMessage({ druh: 'oblast', oblast });
         this.worker.onmessage = ({ data: m }) => {
@@ -36,9 +41,19 @@ export class RadarData {
                 this.hotove.add(m.index);
                 this.bezia.delete(m.index);
                 naSnimku(m.index, m.f);
-            } else if (m.druh === 'pohyb') naPohyb(m);
-            else if (m.druh === 'chyba') this.bezia.delete(m.index);
+            } else if (m.druh === 'pohyb') {
+                if (m.bajty) naPohyb(m);
+                this.hotovyPohyb();
+            } else if (m.druh === 'chyba') {
+                this.bezia.delete(m.index);
+                if (m.zdroj === 'pohyb') this.hotovyPohyb();
+            }
         };
+    }
+
+    hotovyPohyb() {
+        this.pohybHotovy?.();
+        this.pohybHotovy = null;
     }
 
     /** @param {number} ms */
@@ -72,7 +87,10 @@ export class RadarData {
         return null;
     }
 
-    /** Staršie snímky do poslednej, potom pohyb. @param {number} najnovsia */
+    /**
+     * Staršie snímky do poslednej, potom pohyb. Skončí, keď vlákno odpovie na pohyb – správy idú v ňom po jednej,
+     * takže sú vtedy spracované aj všetky snímky. @param {number} najnovsia
+     */
     async dopln(najnovsia) {
         const rad = Array.from({ length: krokovMinulost }, (_, i) => najnovsia - (i + 1) * KROK_MS).filter(
             (ms) => !this.hotove.has(indexKroku(ms)) && !this.bezia.has(indexKroku(ms)),
@@ -89,17 +107,39 @@ export class RadarData {
         await Promise.all(Array.from({ length: RADAR.subezne }, stahuj));
         const n = indexKroku(najnovsia);
         this.worker.postMessage({ druh: 'zabudni', pod: n - krokovMinulost - 1 });
-        this.worker.postMessage({ druh: 'pohyb', indexy: [n, n - 2, n - 4] });
+        await new Promise((res) => {
+            this.hotovyPohyb();
+            this.pohybHotovy = () => res(undefined);
+            this.worker.postMessage({ druh: 'pohyb', indexy: [n, n - 2, n - 4] });
+        });
+    }
+
+    /** Model do vlákna, skončí jeho odpoveďou. @param {unknown} model */
+    spracujModel(model) {
+        return new Promise((res) => {
+            this.modelHotovy = () => res(undefined);
+            this.modelWorker.postMessage({ druh: 'model', model });
+        });
+    }
+
+    /**
+     * Model, keď je starší než modelObnovaMs. Skončí, keď ho vlákno spracuje; kto sa pýta počas sťahovania,
+     * čaká na to isté. @param {number} nowMs
+     */
+    nacitajModel(nowMs) {
+        if (this.modelBeh) return this.modelBeh;
+        if (nowMs - this.modelAt < RADAR.modelObnovaMs) return Promise.resolve();
+        this.modelBeh = this.stiahniModel(nowMs).finally(() => (this.modelBeh = null));
+        return this.modelBeh;
     }
 
     /** @param {number} nowMs */
-    async nacitajModel(nowMs) {
-        if (nowMs - this.modelAt < RADAR.modelObnovaMs) return;
+    async stiahniModel(nowMs) {
         const kluc = this.oblast.x0.toFixed(4);
         const ulozeny = loadRadarModel(nowMs, kluc);
         if (ulozeny) {
             this.modelAt = ulozeny.at;
-            return this.modelWorker.postMessage({ druh: 'model', model: ulozeny.model });
+            return this.spracujModel(ulozeny.model);
         }
         this.modelAt = nowMs;
         const body = modelBody(this.oblast);
@@ -112,6 +152,6 @@ export class RadarData {
         const snimky = modelSnimky(vsetko);
         if (!snimky) throw new Error('model');
         saveRadarModel(nowMs, kluc, snimky);
-        this.modelWorker.postMessage({ druh: 'model', model: snimky });
+        await this.spracujModel(snimky);
     }
 }

@@ -121,6 +121,29 @@ body:has(.radar:not(.hidden)) .st {
 .rd-prepinac[aria-pressed='true'] i::after {
     transform: translateX(14px);
 }
+/* Slnko a mesiac pri načítaní (.svitanie v css/teraz.css) stoja nad mapou, ťuknutia idú cez ne na mapu. */
+.rd-svitanie {
+    z-index: 1;
+}
+/* Kým sa načítava, prehrávanie a rozsahy čakajú: sú stlmené a nereagujú (render/radar.js). */
+.rd-dok.caka .rd-riadok,
+.rd-seg button:disabled {
+    opacity: 0.45;
+}
+.rd-kruh:disabled {
+    cursor: default;
+}
+.rd-dok.caka .rd-os {
+    pointer-events: none;
+}
+.rd-poznamka {
+    max-width: 150px;
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-align: right;
+    color: #dfe6f1;
+}
 .rd-hlaska {
     position: absolute;
     top: 38%;
