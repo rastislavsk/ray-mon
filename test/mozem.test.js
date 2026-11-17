@@ -421,7 +421,8 @@ test('mozemModel: veta bez spotrebičov, štítky a čo dá strecha za celý de�
     );
     // Predpoveď dňa 61,4 kWh je viac, než nabehlo - ráta sa celý deň.
     assert.deepEqual(m.day, {
-        lead: 'Dnes zo strechy asi 61 kWh. To je:',
+        label: 'Dnes zo strechy',
+        value: '~61 kWh',
         eq: [
             { value: '~4\u00a0090', label: 'nabitých mobilov' },
             { value: '~370 km', label: 'elektrickým autom' },

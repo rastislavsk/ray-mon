@@ -77,7 +77,7 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         chip: DEN_NAZVY[den.cls],
         kick: '',
         /** @type {ReturnType<typeof dnesCountText> | null} */ count: null,
-        /** @type {{ label: string, value: string } | null} */ grade: null,
+        /** @type {string | null} */ grade: null,
         line: '',
         /** @type {Karta[]} */ karty: pas([predpoved, slnko, lepsie, graf]),
         /** @type {Tomorrow | null} */ tomorrow: null,
@@ -94,7 +94,7 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         ...base,
         chip: '',
         kick: DNES_TEXTS.grade,
-        grade: { label: DNES_TEXTS.gradeLabel, value: grade.value },
+        grade: grade.value,
         line: grade.line,
         // Pod zajtrajškom predpoveď na zajtra a graf dneška (ako dopadol). Kedy lepšie povie zajtrajšok
         // presnejšie; mraky a najsilnejšia hodina dneška už nič neradia. Bez zajtrajška len Kedy lepšie.

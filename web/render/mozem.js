@@ -62,7 +62,7 @@ function renderCard(m, dom, voice) {
     show(dom.mzLead, !m.day);
     setText(dom.mzLead, m.day ? '' : m.lead);
     show(dom.mzDay, !!m.day);
-    setText(dom.mzDayLead, m.day ? m.day.lead : '');
+    setText(dom.mzDayLabel, m.day ? m.day.label : '');
     setHtml(
         dom.mzDayEq,
         m.day ? m.day.eq.map((e) => `<li><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></li>`).join('') : '',
@@ -97,11 +97,8 @@ function renderFaza(d, m, dom) {
     show(dom.mzCount, !!d.count);
     setText(dom.mzCountVal, d.count ? d.count.value : '');
     setTimes(dom.mzCountText, d.count ? d.count.text : '');
-    show(dom.mzGrade, !!d.grade);
-    setText(dom.mzGradeLabel, d.grade ? d.grade.label : '');
-    setText(dom.mzGradeVal, d.grade ? d.grade.value : '');
-    // Večer povie namerané presne riadok s číslom - veta „Dnes zo strechy asi…“ by ho opakovala.
-    show(dom.mzDayLead, !d.grade);
+    // Večer bublina povie namerané presne, cez deň odhad celého dňa. Jednotka je menšia ako číslo.
+    setHtml(dom.mzDayVal, escapeHtml(d.grade ?? m.day?.value ?? '').replace(/ kWh$/, ' <small>kWh</small>'));
     show(dom.mzLine, !!d.line);
     setTimes(dom.mzLine, d.line);
 }

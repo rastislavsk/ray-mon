@@ -111,14 +111,40 @@
     font-variation-settings: 'wdth' 95;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
 }
-/* Čo dá strecha za celý deň: veta a tri čísla vedľa seba sú jeden blok, od zvyšku karty ho delí
-   jemná čiara nad ním aj pod ním. Stojí na bloku, nie na vete: večer je veta skrytá a čiary ostávajú. */
-.den {
-    display: grid;
-    gap: 10px;
-    margin-top: 6px;
-    padding-block: 12px 14px;
-    border-block: 1px solid rgba(255, 255, 255, 0.3);
+/* Čo dá strecha za celý deň (večer namerané): bublina zo skla (.glass), hore štítok a veľké číslo,
+   pod čiarou tri prirovnania (docs/navrhy/dnes-zo-strechy-bublina.html). Široká ako sklo zajtrajška
+   pod ňou - okraj .big je 20 px, sklá stoja 14 px od kraja. */
+.big > .den {
+    margin: 4px -6px 0;
+}
+.den-cislo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 12px;
+}
+.den-cislo span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.den-cislo b {
+    font-size: min(1.75rem, 8vw);
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+    white-space: nowrap;
+}
+.den-cislo small {
+    font-size: 1rem;
+    font-weight: 800;
+}
+.den .eq {
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    text-shadow: none;
 }
 /* Čas okna vo vete je tučne - údaj, ktorý oko hľadá (docs/navrhy/dnes-upravy.html). */
 .cas {
@@ -225,19 +251,6 @@
     font-size: 1.0938rem;
     line-height: 1.3;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
-}
-.grade {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 4px 12px;
-    font-size: 1.0938rem;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
-}
-.grade b {
-    font-size: min(2rem, 9vw);
-    font-weight: 900;
 }
 /* Pás kariet pod číslami (docs/navrhy/dnes-upravy.html): posúva ho prehliadač, karta zastane na
    začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva stránku - touch-action netreba. */
