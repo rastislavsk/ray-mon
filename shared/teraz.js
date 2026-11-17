@@ -381,13 +381,16 @@ function soFar(hourly, nowMin) {
 
 const STEP = TARIFF_LIMITS.stepMin;
 
+/** Podiel 0 až 1 ako celé percentá pre pásik dlaždice. @param {number} p */
+const pct = (p) => Math.round(p * 100);
+
 /** Riadok, ktorý ide dnes (na slnku alebo v lacnom pásme). @param {RiadokPlanu} r @returns {r is DnesnyRiadok} */
 const dnesny = (r) => r.kind === 'sun' || r.kind === 'cheap';
 
 /**
- * Ďalší spotrebič v mriežke Čo zapnúť (docs/navrhy/teraz-dlazdice.html): veľký čas, meno, doplnok a pri
- * núdzovom čase podiel slnka v % (pásik; inak null). Kreslí sa ako dlaždica na skle.
- * @typedef {{ id: string, name: string, kind: string, pred?: string, cas: string, odr: string[], podiel: number | null }} Riadok
+ * Ďalší spotrebič v mriežke Čo zapnúť (docs/navrhy/teraz-dlazdice.html): veľký čas, meno, najviac dve odrážky
+ * a podiel programu zo slnka v % pre pásik (docs/navrhy/teraz-pasik-zdroje.html, B). Kreslí sa ako dlaždica na skle.
+ * @typedef {{ id: string, name: string, kind: string, pred?: string, cas: string, odr: string[], podiel: number }} Riadok
  */
 /** Odznak, kedy bude slnko na spotrebič najbližšie. @typedef {{ text: string, dlho: boolean }} Potom */
 
@@ -425,8 +428,9 @@ export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza 
             kind: r.kind,
             ...(t.pred ? { pred: t.pred } : {}),
             cas: t.cas,
-            odr: p ? [...t.odr, p.text] : t.odr,
-            podiel: null,
+            // Odznak nahradí slovo o podiele slnka - ten ukáže pásik. Odrážky sú najviac dve.
+            odr: p ? [t.odr[0], p.text] : t.odr,
+            podiel: pct(r.podiel),
         };
     };
     return {
@@ -473,12 +477,19 @@ function horeTeraz(teraz, { level, slnkoDnes, potom }, voice) {
         oko: terazOkoText({ druh, level }, voice),
         bod: druh === 'siet' ? 'cheap' : 'go',
         bezSlnka: druh === 'siet' && !slnkoDnes ? TERAZ_BEZ_SLNKA : '',
-        dlazdice: teraz.map((r) => ({
-            id: r.id,
-            tone: r.kind === 'cheap' ? /** @type {const} */ ('cheap') : /** @type {const} */ ('go'),
-            ...terazDlazdicaText(r, voice),
-            potom: r.kind === 'sun' ? (potom[r.id] ?? null) : null,
-        })),
+        dlazdice: teraz.map((r) => {
+            const t = terazDlazdicaText(r, voice);
+            const p = r.kind === 'sun' ? (potom[r.id] ?? null) : null;
+            return {
+                id: r.id,
+                tone: r.kind === 'cheap' ? /** @type {const} */ ('cheap') : /** @type {const} */ ('go'),
+                ...t,
+                // Odznak zaberie miesto druhej odrážky, aby boli dlaždice rovnako vysoké.
+                odr: p ? t.odr.slice(0, 1) : t.odr,
+                podiel: pct(r.podiel),
+                potom: p,
+            };
+        }),
         dalsi: null,
     };
 }
@@ -493,7 +504,14 @@ function horeTeraz(teraz, { level, slnkoDnes, potom }, voice) {
 function horeDalsi(p, slnkoPride, { nowMin, level, dalej }, voice) {
     const druh = !p ? 'nic' : slnkoPride ? 'pockaj' : 'dnesNic';
     const dalsi = p
-        ? { id: p.id, name: p.name, cas: terazRiadokText(p).cas, tone: p.kind === 'cheap' ? 'cheap' : 'go', odr: terazDalsiText(p, nowMin) }
+        ? {
+              id: p.id,
+              name: p.name,
+              cas: terazRiadokText(p).cas,
+              tone: p.kind === 'cheap' ? 'cheap' : 'go',
+              odr: terazDalsiText(p, nowMin),
+              podiel: pct(p.podiel),
+          }
         : null;
     return {
         druh,
@@ -511,8 +529,8 @@ function horeDalsi(p, slnkoPride, { nowMin, level, dalej }, voice) {
  * `bod` je farba bodky pred riadkom: zdroj prúdu teraz, keď teraz nejde nič, cena siete.
  * @typedef {{ druh: 'slnko' | 'siet' | 'pockaj' | 'dnesNic' | 'nic', oko: { text: string, sub: string },
  *   bod: 'go' | 'cheap' | 'costly' | 'plain' | 'cloud', bezSlnka: string,
- *   dlazdice: Array<{ id: string, tone: 'go' | 'cheap', pred: string, velky: string, meno: string, odr: string[], potom: Potom | null }>,
- *   dalsi: { id: string, name: string, cas: string, tone: 'go' | 'cheap', odr: string[] } | null }} CoZapnutHore
+ *   dlazdice: Array<{ id: string, tone: 'go' | 'cheap', pred: string, velky: string, meno: string, odr: string[], podiel: number, potom: Potom | null }>,
+ *   dalsi: { id: string, name: string, cas: string, tone: 'go' | 'cheap', odr: string[], podiel: number } | null }} CoZapnutHore
  */
 
 /**

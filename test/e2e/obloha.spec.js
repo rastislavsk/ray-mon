@@ -1203,7 +1203,7 @@ const coVStranke = (page) =>
                 ? ''
                 : `${t(document.querySelector('#tz-den-nazov'))} ${t(document.querySelector('#tz-den-pod'))}`,
             oko: t(document.querySelector('#tz-oko-t')),
-            // Pásik je podiel slnka núdzového času; prázdny drží miesto a nič neukazuje.
+            // Pásik je podiel programu zo slnka; prázdny drží miesto a nič neukazuje. Odznak je v odrážkach.
             dlazdice: [...document.querySelectorAll('#tz-dlazdice [data-vec]')].map((d) => ({
                 id: /** @type {HTMLElement} */ (d).dataset.vec,
                 tone: d.getAttribute('data-tone'),
@@ -1215,14 +1215,33 @@ const coVStranke = (page) =>
         };
     });
 
+/**
+ * Rozmery dlaždíc Čo zapnúť: rôzne výšky dlaždíc a koľko dlaždíc nemá číslo, pásik a odrážky na rovnakej výške
+ * ako dlaždica vedľa nej (docs/navrhy/teraz-pasik-zdroje.html - všetky rovnako veľké, rady zarovnané).
+ * @param {import('@playwright/test').Page} page
+ */
+const rozmeryDlazdic = (page) =>
+    page.evaluate(() => {
+        const dl = [...document.querySelectorAll('#tz-dlazdice .dl')];
+        const top = (/** @type {Element} */ d, /** @type {string} */ sel) =>
+            Math.round(d.querySelector(sel)?.getBoundingClientRect().top ?? -1);
+        const vysky = new Set(dl.map((d) => Math.round(d.getBoundingClientRect().height)));
+        const vedla = dl.filter((d, i) => {
+            const sused = dl[i - 1];
+            if (!sused || top(sused, '.dl-ico') !== top(d, '.dl-ico')) return false;
+            return ['.velky', '.podiel', '.odr'].some((sel) => top(sused, sel) !== top(d, sel));
+        });
+        return { vysky: vysky.size, nezarovnane: vedla.length };
+    });
+
 /** Dlaždice dneška, ktoré idú teraz, alebo najbližšia vec. @param {NonNullable<ReturnType<typeof terazModel>['co']>['hore']} h */
 const horeZModelu = (h) => [
     ...h.dlazdice.map((d) => ({
         id: d.id,
         tone: d.tone,
         kind: '',
-        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${d.odr.join(', ')}`,
-        podiel: '',
+        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${[...d.odr, ...(d.potom ? [d.potom.text] : [])].join(', ')}`,
+        podiel: `${d.podiel}%`,
         potom: d.potom?.text ?? '',
     })),
     ...(h.dalsi
@@ -1232,7 +1251,7 @@ const horeZModelu = (h) => [
                   tone: 'tiche',
                   kind: h.dalsi.tone,
                   text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.odr.join(', ')}`,
-                  podiel: '',
+                  podiel: `${h.dalsi.podiel}%`,
                   potom: '',
               },
           ]
@@ -1245,7 +1264,7 @@ const riadokZModelu = (r) => ({
     tone: 'tiche',
     kind: r.kind,
     text: `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.odr.join(', ')}`,
-    podiel: r.podiel === null ? '' : `${r.podiel}%`,
+    podiel: `${r.podiel}%`,
     potom: '',
 });
 
@@ -1313,6 +1332,8 @@ test.describe('karta Teraz', () => {
             // Pri čerstvom meraní je to presne heroModel - to isté, čo počíta karta Teraz.
             expect(m.num).toBe(hero.powerText);
             await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
+            // Všetky dlaždice rovnako vysoké, číslo, pásik aj odrážky vedľa seba na rovnakej výške.
+            expect(await rozmeryDlazdic(page)).toEqual({ vysky: m.co ? 1 : 0, nezarovnane: 0 });
             await expect(page.locator('#tz-retry')).toBeHidden();
             await expect(page.locator('#tz-guess')).toBeHidden();
             // Graf dňa v paneli karty Dnes: pás pod krivkou má v čase „teraz“ farbu toho istého plánu dňa.

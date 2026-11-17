@@ -188,7 +188,7 @@ test('denInyModel: hlavička dňa, čo ide zo slnka a čo najmenej zo siete, det
     // Všetko ide zo slnka - mriežka bez núdzových časov.
     const riadky = utorok.riadky;
     assert.deepEqual(riadky.map((r) => r.id).sort(), [...DEVICES].sort());
-    assert.ok(riadky.every((r, i) => r.kind === 'later' && r.podiel === null && (i === 0 || r.cas >= riadky[i - 1].cas)));
+    assert.ok(riadky.every((r, i) => r.kind === 'later' && r.podiel >= 50 && r.podiel <= 100 && (i === 0 || r.cas >= riadky[i - 1].cas)));
     assert.deepEqual(riadky.find((r) => r.id === 'susicka')?.odr, ['po práčke']);
     const pracka = utorok.veci.find((v) => v.id === 'pracka');
     assert.equal(pracka?.den, 'Utorok');
@@ -233,7 +233,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         kind: 'nudza',
         cas: '–',
         odr: ['slnko nepomôže'],
-        podiel: null,
+        podiel: 0,
     });
     assert.equal(jedna.veci[0].slot, null);
 });

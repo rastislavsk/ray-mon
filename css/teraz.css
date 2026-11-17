@@ -175,12 +175,14 @@
     gap: 10px;
 }
 /* Dlaždica: plná zelená (ide teraz zo slnka) či modrá (z lacnej siete), ostatné na skle. Ploché, bez lemu.
-   Dlaždice v rade zdieľajú šesť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, doplnok, odznak -
-   číslo aj pásik sú tak v celom rade na rovnakej výške, aj keď sa meno v jednej zalomí. Medzery
+   Dlaždice v rade zdieľajú päť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, odrážky s odznakom -
+   číslo aj pásik sú tak v celom rade na rovnakej výške, aj keď sa meno v jednej zalomí. Odrážky majú vždy
+   miesto na dva riadky (odznak je jeden z nich), takže sú všetky dlaždice rovnako vysoké, kým sa pri väčšom
+   písme v systéme niečo nezalomí (docs/navrhy/teraz-pasik-zdroje.html). Medzery
    v dlaždici robia okraje prvkov, nie medzera mriežky (tá je medzi dlaždicami). */
 .dl {
     position: relative;
-    grid-row: span 6;
+    grid-row: span 5;
     display: grid;
     grid-template-rows: subgrid;
     grid-template-columns: minmax(0, 1fr);
@@ -241,6 +243,8 @@
     align-self: start;
     display: block;
     min-width: 0;
+    /* Dva riadky odrážok, druhý aj s medzerou nad odznakom. */
+    min-height: calc(2 * 0.875rem * 1.3 + 2px);
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.3;
@@ -277,18 +281,19 @@
 .dl .velky {
     font-size: min(1.75rem, 10cqi);
 }
-/* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. */
+/* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. Stojí
+   v odrážkach namiesto druhej a je presne taký vysoký ako jej riadok. */
 .potom {
-    justify-self: start;
-    align-self: start;
-    margin-top: 6px;
-    padding: 2px 8px;
+    display: block;
+    width: fit-content;
+    margin-top: 2px;
+    padding: 0 8px;
     border-radius: 999px;
     background: rgba(20, 48, 12, 0.14);
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 800;
-    line-height: 1.3;
+    line-height: calc(0.875rem * 1.3);
 }
 .potom[data-dlho] {
     background: #14300c;
@@ -308,18 +313,27 @@
     width: 26px;
     height: 26px;
 }
-/* Núdzový čas: pásik, koľko programu dá slnko (zlatá) a koľko sieť (modrá). Kde nie je čo ukázať,
-   je prázdny a drží miesto - doplnok pod ním tak sedí s vedľajšou dlaždicou. */
+/* Pásik: koľko programu dá slnko (zlatá) a koľko sieť (modrá), docs/navrhy/teraz-pasik-zdroje.html. Kde nie je
+   čo ukázať (bojler, ktorý dnes ešte nehrial), je prázdny a drží miesto - odrážky pod ním tak sedia s vedľajšou
+   dlaždicou. */
 .podiel {
     align-self: start;
     display: block;
     height: 6px;
     margin: 8px 0 4px;
     border-radius: 3px;
-    background: linear-gradient(90deg, #ffd166 0 var(--s), rgba(124, 196, 255, 0.75) var(--s) 100%);
+    background: linear-gradient(90deg, #ffd166 0 var(--s), var(--pas-siet, rgba(124, 196, 255, 0.75)) var(--s) 100%);
 }
 .podiel[data-prazdny] {
     visibility: hidden;
+}
+/* Na plnej zelenej dlaždici by zlatá zanikla - pásik má tmavý lem. Na plnej modrej je sieť sýtejšia modrá,
+   svetlá by splynula s dlaždicou. */
+.dl[data-tone='go'] .podiel {
+    box-shadow: 0 0 0 1.5px rgba(20, 48, 12, 0.35);
+}
+.dl[data-tone='cheap'] .podiel {
+    --pas-siet: #2f7fd0;
 }
 /* Široký stĺpec (prehľad so stĺpcami, tablet): dlaždice po troch, meno a číslo sa zmenšia s ich šírkou. */
 @container (min-width: 420px) {

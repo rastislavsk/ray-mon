@@ -80,9 +80,12 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje zo slnka', 'od 12:30'],
+        podiel: 94,
     });
     const oblak = bojlerDlazdica(info({ prebytokKw: 1.2, den: null }), NOW, TZ);
     assert.deepEqual([oblak.tone, oblak.odr], ['next', ['hreje aj zo siete']]);
+    // Pásik: koľko dnes išlo zo slnka; kým dnes nehrial, je prázdny.
+    assert.equal(oblak.podiel, null);
     // Veľké číslo je odber bojlera, prebytok, pri ktorom zapne, je v odrážke.
     assert.deepEqual(bojlerDlazdica(info({ rele: false, w: 0, prebytokKw: -0.4 }), NOW, TZ), {
         tone: 'next',
@@ -91,6 +94,7 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['čaká na slnko', 'zapne pri 2,3 kW'],
+        podiel: 94,
     });
     const hotovo = bojlerDlazdica(info({ w: 3, den: { ...DEN, hotovo: 835 } }), NOW, TZ);
     assert.deepEqual([hotovo.tone, hotovo.velky, hotovo.odr], ['tiche', '3,6 kWh', ['nahriata o 13:55', 'dnes zo slnka']]);
@@ -105,6 +109,7 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
         velky: '18 min',
         meno: 'Bojler',
         odr: ['zásuvka mlčí', 'skript alebo Wi-Fi'],
+        podiel: 94,
     });
     assert.equal(bojlerDlazdica(info({ kontaktAt: NOW.getTime() - 130 * MIN }), NOW, TZ).velky, '2 h');
 });
@@ -118,6 +123,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje', 'od 12:30'],
+        podiel: 94,
     });
     assert.deepEqual(rucne({ den: null }).odr, ['hreje']);
     // Termostat vypol: veľké číslo je odber teraz, dnešné kWh spolu (zo slnka aj zo siete) v odrážke.
@@ -128,6 +134,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '0,0 kW',
         meno: 'Bojler',
         odr: ['nahriata', 'dnes 3,9 kWh'],
+        podiel: 94,
     });
     assert.deepEqual(rucne({ w: 3, den: null }).odr, ['nahriata', 'dnes 0,0 kWh']);
     const vyp = { rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } };
@@ -138,6 +145,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['vypnutý', 'od 11:25'],
+        podiel: 100,
     });
     assert.deepEqual(rucne({ rele: false, w: 0, den: null }).odr, ['vypnutý']);
     const ticho = rucne({ kontaktAt: NOW.getTime() - 18 * MIN });

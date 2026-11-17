@@ -104,8 +104,9 @@ export const TERAZ_BEZ_SLNKA = 'Slnko dnes na veľké veci nestačí.';
  * Dlaždica toho, čo ide teraz (docs/navrhy/teraz-dlazdice-odrazky.html): veľké číslo, pod ním len meno
  * a najviac dve odrážky - čo urobiť a odkiaľ ide prúd. Spotrebič zo slnka: kedy ho zapnúť; auto zo slnka:
  * koľko km, alebo dokedy slnko stačí; v lacnom pásme dokedy je lacné. `pred` je malé slovo pred veľkým
- * číslom („do“), prázdne keď nie je.
- * @param {{ id: string, name: string, kind: 'sun' | 'cheap', start: number, end: number, km?: number | null }} r @param {import('./messages-zaklad.js').Voice} [voice]
+ * číslom („do“), prázdne keď nie je. Keď slnko nepokryje celý program, povie „zo slnka“ slovom, koľko.
+ * @param {{ id: string, name: string, kind: 'sun' | 'cheap', start: number, end: number, km?: number | null, podiel: number }} r
+ * @param {import('./messages-zaklad.js').Voice} [voice]
  * @returns {{ pred: string, velky: string, meno: string, odr: string[] }}
  */
 export function terazDlazdicaText(r, voice = 'drzy') {
@@ -121,31 +122,39 @@ export function terazDlazdicaText(r, voice = 'drzy') {
     }
     const zapni = vy ? 'zapnite teraz' : 'zapni teraz';
     if (r.kind === 'cheap') return { pred: 'do', velky: koniecHm(r.end), meno: r.name, odr: [zapni, lacna] };
-    return { pred: '', velky: hm(r.start), meno: r.name, odr: [zapni, 'zo slnka'] };
+    return { pred: '', velky: hm(r.start), meno: r.name, odr: [zapni, zoSlnkaSlovo(r.podiel)] };
 }
 
 /**
  * Dlaždica najbližšej veci, keď teraz nejde nič: o koľko príde a odkiaľ.
- * @param {{ kind: 'sun' | 'cheap', start: number }} r @param {number} nowMin
+ * @param {{ kind: 'sun' | 'cheap', start: number, podiel: number }} r @param {number} nowMin
  */
 export function terazDalsiText(r, nowMin) {
-    return [`za ${terazZaText(Math.max(0, r.start - nowMin))}`, r.kind === 'cheap' ? 'lacná elektrina' : 'zo slnka'];
+    return [`za ${terazZaText(Math.max(0, r.start - nowMin))}`, r.kind === 'cheap' ? 'lacná elektrina' : zoSlnkaSlovo(r.podiel)];
 }
+
+/** Od tohto podielu slnka je vec „zo slnka“ bez ďalšieho slova - zvyšok ukáže pásik dlaždice. */
+const CELE_ZO_SLNKA = 0.85;
+
+/** „Zo slnka“, a keď slnko nepokryje skoro celý program, slovom koľko. @param {number} p podiel 0 až 1 */
+const zoSlnkaSlovo = (p) => (p >= CELE_ZO_SLNKA ? 'zo slnka' : podielSlovo(p));
 
 /**
  * Dlaždica ďalšieho spotrebiča: veľký čas a pod menom krátky doplnok - dobehne, po čom ide, km auta, lacná
- * elektrina - ako odrážky (jedna, odznak spotrebiča môže pribudnúť ako druhá). „Tento týždeň nie“ má namiesto
- * času pomlčku. Lacné pásmo má pred časom malé „od“ (`pred`).
+ * elektrina - ako odrážky. Keď slnko nepokryje skoro celý program, druhá odrážka povie koľko („väčšina zo
+ * slnka“); odznak spotrebiča ju môže nahradiť. „Tento týždeň nie“ má namiesto času pomlčku. Lacné pásmo má
+ * pred časom malé „od“ (`pred`).
  * @param {import('./plan-dna.js').PlanRow} r @returns {{ pred?: string, cas: string, odr: string[] }}
  */
 export function terazRiadokText(r) {
     if (r.kind === 'none') return { cas: '–', odr: ['slnko nestačí'] };
     if (r.kind === 'cheap') return { pred: 'od', cas: hm(r.start), odr: ['lacná elektrina'] };
     const start = r.kind === 'later' ? r.day.start : r.start;
+    const kolko = r.podiel < CELE_ZO_SLNKA ? [podielSlovo(r.podiel)] : [];
     const after = r.after ? (PLAN_AFTER[r.after] ?? '') : '';
-    if (after) return { cas: hm(start), odr: [after] };
+    if (after) return { cas: hm(start), odr: [after, ...kolko] };
     if (r.id === 'auto') return { cas: hm(start), odr: [r.kind === 'sun' && r.km ? `~${r.km} km zo slnka` : 'zo slnka'] };
-    return { cas: hm(start), odr: [`dobehne ${hm(r.end)}`] };
+    return { cas: hm(start), odr: [`dobehne ${hm(r.end)}`, ...kolko] };
 }
 
 /**
@@ -190,7 +199,7 @@ export function terazPotomText(dalsi) {
 
 /** Koľko programu pokryje slnko, slovom - na riadok odrážky v dlaždici, na S22 najviac asi 18 znakov. @param {number} p podiel 0 až 1 */
 function podielSlovo(p) {
-    if (p >= 0.85) return 'skoro celé zo slnka';
+    if (p >= CELE_ZO_SLNKA) return 'skoro celé zo slnka';
     if (p >= 0.6) return 'väčšina zo slnka';
     if (p >= 0.42) return 'polovica zo slnka';
     return p >= 0.25 ? 'tretina zo slnka' : 'trochu zo slnka';

@@ -22,11 +22,13 @@ import { addDays, localDateKey } from './solar.js';
 /**
  * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo
  * siete), v lacnom pásme od `start` do konca toho pásma `end` (cez polnoc viac než 24 h), iný deň
- * od `day.start` do `end` (`after`: po čom v ten deň ide), alebo tento týždeň nie.
+ * od `day.start` do `end` (`after`: po čom v ten deň ide), alebo tento týždeň nie. `podiel`: koľko
+ * energie programu v tom čase dá slnko, 0 až 1 (podielSlnka) - na slnku nemusí byť celý, stačí, keď
+ * slnko pokryje ohrevy.
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
- *     km: number | null, save: number | null, currency: string }
- *   | { id: string, kind: 'cheap', start: number, end: number }
- *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null }
+ *     km: number | null, save: number | null, currency: string, podiel: number }
+ *   | { id: string, kind: 'cheap', start: number, end: number, podiel: number }
+ *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null, podiel: number }
  *   | { id: string, kind: 'none' }} PlanRow
  */
 /** Miesto na slnku v jednom dni. @typedef {Extract<PlanRow, { kind: 'sun' }>} SunRow */
@@ -71,6 +73,51 @@ function autoSpan(free, minKw, from) {
     return best;
 }
 
+/**
+ * Podiel energie programu `draw` pusteného o `start`, ktorý pokryje voľný výkon `free` (0 až 1).
+ * Za polnocou slnko nie je. Ten istý výpočet ako pri núdzovom čase (shared/tyzden.js).
+ * @param {Array<{ kw: number }>} draw @param {number[]} free @param {number} start
+ */
+export function podielSlnka(draw, free, start) {
+    let all = 0;
+    let sun = 0;
+    draw.forEach(({ kw }, m) => {
+        all += kw;
+        sun += Math.min(kw, Math.max(0, free[start + m] ?? 0));
+    });
+    return all > 0 ? sun / all : 0;
+}
+
+/** Vec a jej spotrebič podľa id. @param {string} id */
+export function vec(id) {
+    const item = /** @type {MozemItem} */ (MOZEM_ITEMS.find((i) => i.id === id));
+    return { item, device: /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === item.device)) };
+}
+
+/**
+ * Voľný výkon dňa po minútach bez toho, čo si už vzali spotrebiče na slnku (`slnko`).
+ * @param {DayCtx} ctx @param {SunRow[]} slnko
+ */
+export function volne(ctx, slnko) {
+    const free = Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m));
+    for (const r of slnko) {
+        const { item, device } = vec(r.id);
+        const draw = item.runMin === null ? null : programDraw(item, device.powerKw);
+        for (let m = r.start; m < Math.min(r.end, DAY_MIN); m++) {
+            free[m] = Math.max(0, free[m] - (draw ? (draw[m - r.start]?.kw ?? 0) : device.powerKw));
+        }
+    }
+    return free;
+}
+
+/** Odber veci v lacnom pásme po minútach: program, auto príkonom nabíjačky po celý úsek. @param {Extract<PlanRow, { kind: 'cheap' }>} r */
+function cheapDraw(r) {
+    const { item, device } = vec(r.id);
+    return item.runMin === null
+        ? Array.from({ length: r.end - r.start }, () => ({ kw: device.powerKw }))
+        : programDraw(item, device.powerKw);
+}
+
 /** Prvá štvrťhodina lacného pásma od `from` do polnoci, alebo null. @param {DayCtx} ctx @param {number} from */
 export function cheapFrom(ctx, from) {
     const slot = ctx.plan.find((s) => s.startMin >= from && s.level === 'lacna');
@@ -96,7 +143,7 @@ function cheapRow(id, start, ctx, input) {
         while (m < DAY_MIN && bandAt(tariff, schedule, m).level === 'lacna') m += STEP;
         end += m;
     }
-    return { id, kind: 'cheap', start, end };
+    return { id, kind: 'cheap', start, end, podiel: 0 };
 }
 
 /**
@@ -112,7 +159,8 @@ export function planDna(ctx, input, devices) {
     const list = chosen(devices);
     /** @type {Map<string, PlanRow>} */ const rows = new Map();
     const from0 = Math.ceil(ctx.nowMin / STEP) * STEP;
-    for (const r of najlepsiDen(ctx, input.tariff.currency, list)) rows.set(r.id, r);
+    const slnko = najlepsiDen(ctx, input.tariff.currency, list);
+    for (const r of slnko) rows.set(r.id, r);
     const rest = list.filter(({ item, device }) => {
         if (rows.has(item.id)) return false;
         const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0), ctx, input) : null;
@@ -125,7 +173,12 @@ export function planDna(ctx, input, devices) {
         const from = prev?.kind === 'cheap' ? prev.start + (MOZEM_ITEMS.find((i) => i.id === prev.id)?.runMin ?? 0) : from0;
         rows.set(item.id, cheapRow(item.id, cheapFrom(ctx, from), ctx, input) ?? { id: item.id, kind: 'none' });
     }
-    return list.map(({ item }) => /** @type {PlanRow} */ (rows.get(item.id)));
+    // Lacné pásmo môže byť aj cez deň: podiel z toho slnka, čo ostane po veciach na slnku.
+    const free = volne(ctx, slnko);
+    return list.map(({ item }) => {
+        const r = /** @type {PlanRow} */ (rows.get(item.id));
+        return r.kind === 'cheap' ? { ...r, podiel: podielSlnka(cheapDraw(r), free, r.start) } : r;
+    });
 }
 
 /**
@@ -142,7 +195,7 @@ function ineDni(ctx, input, rest, rows) {
         const dctx = { ...ctx, nowMin: 0, plan, weakToday: day.peakKw < ctx.th.weakPeakKw };
         for (const r of najlepsiDen(dctx, input.tariff.currency, rest)) {
             const at = { name: weekDayName(day.date, index), date: day.date, index, start: r.start };
-            rows.set(r.id, { id: r.id, kind: 'later', day: at, end: r.end, after: r.after });
+            rows.set(r.id, { id: r.id, kind: 'later', day: at, end: r.end, after: r.after, podiel: r.podiel });
         }
         rest = rest.filter(({ item }) => !rows.has(item.id));
     }
@@ -260,15 +313,17 @@ function onSun(item, device, from, { ctx, currency, free }) {
             save = save === null || price === null ? null : save + (take / 60) * price;
             free[m] -= take;
         }
-        return { ...base, start: span[0], end: span[1], km: kmOf(kwh), save };
+        // Auto berie zo slnka len to, čo je - je celé zo slnka.
+        return { ...base, start: span[0], end: span[1], km: kmOf(kwh), save, podiel: 1 };
     }
     const draw = programDraw(item, device.powerKw);
     const start = sunStart(draw, free, from);
     if (start === null) return null;
+    const podiel = podielSlnka(draw, free, start);
     draw.forEach(({ kw }, m) => {
         if (start + m < DAY_MIN) free[start + m] -= kw;
     });
-    return { ...base, start, end: start + item.runMin, km: null, save: null };
+    return { ...base, start, end: start + item.runMin, km: null, save: null, podiel };
 }
 
 /**
