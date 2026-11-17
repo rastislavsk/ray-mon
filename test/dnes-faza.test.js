@@ -119,7 +119,7 @@ test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpove�
     assert.equal(d.faza, 'vecer');
     assert.equal(d.kick, DNES_TEXTS.grade);
     assert.equal(d.chip, '', 'večer hovorí štítok zajtrajška');
-    assert.equal(d.grade.value, `${String(i.pv.dailyEnergyKwh.toFixed(1)).replace('.', ',')} kWh`);
+    assert.equal(d.grade, `${String(i.pv.dailyEnergyKwh.toFixed(1)).replace('.', ',')} kWh`);
     assert.equal(d.line, `Predpoveď bola ${Math.round(i.forecast.days[0].kwhTotal)} kWh.`);
     assert.deepEqual(
         d.karty.map((k) => [k.kind, k.title]),

@@ -815,12 +815,11 @@ const kartaVStranke = (page) =>
         return {
             word: text('#mz-word'),
             lead: ak('#mz-lead'),
-            day: vidno('#mz-day') ? ak('#mz-day-lead') : '',
+            day: vidno('#mz-day') ? text('#mz-day-label') + text('#mz-day-val') : '',
             eq: [...document.querySelectorAll('#mz-day-eq b')].map((el) => el.textContent),
             chip: vidno('#mz-chip') ? text('#mz-chip-text') : '',
             kick: ak('#mz-kick'),
             count: ak('#mz-count'),
-            grade: ak('#mz-grade'),
             line: ak('#mz-line'),
             karty: vidno('#mz-karty')
                 ? [...document.querySelectorAll('#mz-karty .karta')].map((el) => [
@@ -843,7 +842,6 @@ const fazaZModelu = (d) => ({
     chip: d.chip,
     kick: d.kick,
     count: d.count ? d.count.value + d.count.text : '',
-    grade: d.grade ? d.grade.label + d.grade.value : '',
     line: d.line,
     karty: d.karty.map((k) =>
         k.kind === 'graf'
@@ -859,7 +857,7 @@ const fazaZModelu = (d) => ({
 const kartaZModelu = (m) => ({
     word: m.word,
     lead: m.day ? '' : m.lead,
-    day: m.day && !m.faza?.grade ? m.day.lead : '',
+    day: m.day ? m.day.label + (m.faza?.grade ?? m.day.value) : '',
     eq: m.day ? m.day.eq.map((e) => e.value) : [],
     ...fazaZModelu(m.faza ?? BEZ_FAZY),
 });

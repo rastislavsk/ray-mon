@@ -96,7 +96,7 @@ export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slab
 export const DNES_TEXTS = {
     plan: 'Plán na dnes',
     grade: 'Ako dopadol dnešok',
-    gradeLabel: 'Dnes zo strechy',
+    zoStrechy: 'Dnes zo strechy',
     later: 'Kedy lepšie',
     predpoved: 'Predpoveď',
     predpovedZajtra: 'Predpoveď na zajtra',
@@ -745,14 +745,16 @@ export function posterCo2Value(kg) {
 }
 
 /**
- * Čo dá strecha za celý deň v jednotkách, ktoré pozná každý - hlavička karty Dnes. Mobily a km
- * zaokrúhlené na desiatky, je to odhad z predpovede (k večeru blízko nameranému).
+ * Čo dá strecha za celý deň v jednotkách, ktoré pozná každý - bublina na karte Dnes
+ * (docs/navrhy/dnes-zo-strechy-bublina.html). Mobily a km zaokrúhlené na desiatky, je to odhad
+ * z predpovede (k večeru blízko nameranému); večer povie číslo presne render z `grade`.
  * @param {{ kwh: number, phones: number, km: number, co2Kg: number }} d
  */
 export function dnesDayText({ kwh, phones, km, co2Kg }) {
     const tens = (/** @type {number} */ n) => fmtSum(Math.round(n / 10) * 10, 0);
     return {
-        lead: `Dnes zo strechy asi ${fmtSum(Math.round(kwh), 0)} kWh. To je:`,
+        label: DNES_TEXTS.zoStrechy,
+        value: `~${fmtSum(Math.round(kwh), 0)} kWh`,
         eq: [
             { value: `~${tens(phones)}`, label: 'nabitých mobilov' },
             { value: `~${tens(km)} km`, label: 'elektrickým autom' },

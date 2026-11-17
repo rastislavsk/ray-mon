@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Dnes zo strechy ako bublina</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Obrázky sú snímky skutočnej appky
+               (fixtures testov, 5. 9. 2026, Dvorany nad Nitrou, 390 × 844), do „po“ je bublina vložená
+               štýlom a presunom prvkov v stránke, kód appky je nezmenený. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            p {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            h2 {
+                font-size: 1.4rem;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                padding-top: 26px;
+                border-top: 1px solid var(--line);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 22px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                width: min(390px, 100%);
+            }
+            figure img {
+                width: 100%;
+                display: block;
+                border-radius: 22px;
+                border: 1px solid var(--line);
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+                line-height: 1.45;
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            ul {
+                margin: 0;
+                padding-left: 20px;
+                display: grid;
+                gap: 6px;
+            }
+            .plus {
+                color: var(--green);
+            }
+            .minus {
+                color: #ff9c8a;
+            }
+            code {
+                font-size: 0.85em;
+                color: #ffc94a;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 8px">
+                <h1>Karta Dnes: „Dnes zo strechy“ ako bublina</h1>
+                <p class="dim">
+                    Návrh 17. 11. 2026, jeden variant. Celé obrazovky skutočnej appky (fixtures testov, 390 × 844), vľavo dnes, vpravo s
+                    bublinou. Mení sa len blok „Dnes zo strechy“, výpočty a čísla ostávajú.
+                </p>
+            </header>
+
+            <section>
+                <h2>Cez deň (13:00)</h2>
+                <div class="phones">
+                    <figure>
+                        <img src="dnes-zo-strechy-bublina/den-pred.png" alt="Karta Dnes dnes cez deň" />
+                        <figcaption><b>Dnes.</b> Veta „Dnes zo strechy asi 61 kWh. To je:“ a tri čísla medzi dvoma čiarami.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-zo-strechy-bublina/den-po.png" alt="Karta Dnes s bublinou cez deň" />
+                        <figcaption>
+                            <b>Návrh.</b> Ten istý blok v skle, ako majú karty pod ním. Hore štítok DNES ZO STRECHY a veľké ~61 kWh, pod
+                            tenkou čiarou tri prirovnania.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Večer (20:30)</h2>
+                <div class="phones">
+                    <figure>
+                        <img src="dnes-zo-strechy-bublina/vecer-pred.png" alt="Karta Dnes dnes večer" />
+                        <figcaption>
+                            <b>Dnes.</b> Riadok „Dnes zo strechy 31,7 kWh“ stojí pod slovom, prirovnania sú až pod vetou o predpovedi, medzi
+                            čiarami.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-zo-strechy-bublina/vecer-po.png" alt="Karta Dnes s bublinou večer" />
+                        <figcaption>
+                            <b>Návrh.</b> Namerané číslo ide do tej istej bubliny ako cez deň, presne a bez vlnovky. Veta „Predpoveď bola 61
+                            kWh.“ ostáva pod slovom.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo sa mení</h2>
+                <ul>
+                    <li>Veta „Dnes zo strechy asi 61 kWh. To je:“ sa rozdelí na štítok a veľké číslo, „asi“ nahradí vlnovka.</li>
+                    <li>Čiary nad a pod blokom zmiznú, oddeľuje ho sklo.</li>
+                    <li>Večer sa riadok <code>#mz-grade</code> neukazuje osobitne, jeho číslo je v bubline.</li>
+                    <li>Pre čítačku ostáva jeden text: „Dnes zo strechy asi 61 kWh“ a tri prirovnania.</li>
+                </ul>
+                <ul>
+                    <li class="plus">+ Číslo dňa (kWh) je čitateľné na prvý pohľad, nie schované vo vete.</li>
+                    <li class="plus">+ Cez deň aj večer je na tom istom mieste.</li>
+                    <li class="minus">− Cez deň je blok vyšší (bublina má vnútorný okraj), pás kariet sa posunie nižšie.</li>
+                    <li class="minus">− Večer sú pod sebou dve sklá (bublina a zajtrajšok). Odlišuje ich len obsah.</li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>

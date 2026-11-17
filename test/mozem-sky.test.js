@@ -156,7 +156,8 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta, odpovede aj deň v číslach 
         ],
     );
     assert.deepEqual(m.day, base.day);
-    assert.match(m.day?.lead ?? '', /^Dnes zo strechy asi \d+ kWh\. To je:$/);
+    assert.equal(m.day?.label, 'Dnes zo strechy');
+    assert.match(m.day?.value ?? '', /^~\d+ kWh$/);
     assert.equal(m.list?.title, 'Čo môžem');
     assert.equal(m.retry, false);
     assert.equal(m.guess, '');

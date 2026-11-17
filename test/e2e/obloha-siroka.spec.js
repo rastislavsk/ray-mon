@@ -189,7 +189,7 @@ async function expectTextyKariet(page) {
     const v = vstup(NOON);
     const mozem = mozemSkyModel(v);
     await expect(page.locator('#mz-word')).toHaveText(mozem.word);
-    await expect(page.locator('#mz-day-lead')).toHaveText(mozem.day?.lead ?? '');
+    await expect(page.locator('#mz-day-val')).toHaveText(mozem.day?.value ?? '');
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-scena')).toHaveAccessibleName(
         scenaModel({ vyrobaKw: teraz.vykon, odhad: teraz.odhadVykonu, sietKw: null }).popis,
